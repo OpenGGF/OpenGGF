@@ -169,6 +169,17 @@ frames, item monitors, icons and drawn effects). Enemy looks are code
   `76abd6aa0`: engine-suite tests that build the example, run its tests and smoke-test the
   scene against S3K.
 
+- Later the same day: every card got its own picture (`7e2d8fe85`, by a subagent); the
+  shop, capsule and grid-scrolling fixes (`1175d5ce2`); settings (`f2dc43a45`); card motion
+  (`d40fc56c0`); the final boss ending the run without rewards (`d7e207fab`); the act map
+  turned left to right at the user's request (`c84b878a2`); `SceneRomArt.zoneBackdrop` and
+  `levelOverview` (written by a subagent from a research write-up, cherry-picked); and the
+  mod drawing over both (`f9312cbbc`).
+- `77846eb7d`: `-Pguards` found that the scene work had made `game` depend on `mods`
+  (`GameModule.startupScene()` returned `ModSceneFactory`), closing a package cycle. The
+  startup scene now travels through the existing `getGameService(ModSceneFactory.class)`
+  lookup and `startupScene()` left the unpublished candidate pin.
+
 ### Rejected approaches and their evidence
 
 - **Enums and static tables in the mod.** The mod validator rejects class initialisers and
@@ -189,6 +200,8 @@ frames, item monitors, icons and drawn effects). Enemy looks are code
   Two real rules bugs it did find: a manual 1-Up use set HP to 30% (AUTO potions are now
   blocked from manual use), and a permanently Intangible elite (Intangible now expires at
   its owner's turn start, as StS).
+- **Moving the scene API into `com.openggf.game`** to break the `game -> mods` cycle. It
+  would have renamed every public scene type for a problem that one service lookup removes.
 - **Half-dead bosses counted as inactive.** Two-phase bosses (Beam Rocket, Mecha Sonic)
   ended the fight when they "died" before reviving. `Enemy.isPresent()` (still takes turns,
   blocks victory) is now separate from `isActive()` (targetable).
