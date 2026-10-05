@@ -13,6 +13,10 @@ import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.List;
+import javax.tools.ToolProvider;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
 import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarEntry;
@@ -278,6 +282,134 @@ class TestModValidator {
         assertCode(mismatch, "CLASS_ENTRY_NAME_MISMATCH", ModValidationFinding.Severity.ERROR);
         var injected = ModValidator.class.getDeclaredConstructor(Set.class);
         assertFalse(Modifier.isPublic(injected.getModifiers()));
+    }
+
+    @Test
+    void acceptsJavaCompilerImmutableEnumsAndGeneratedSwitchTables() throws Exception {
+        var classes = compileConstants("""
+                enum Course {
+                    EHZ1(320, "one"), EHZ2(800, "two");
+                    final int width; final String label;
+                    Course(int width, String label) { this.width = width; this.label = label; }
+                }
+                enum Result { SETTLED, FINISH, DAMAGE }
+                class Choice {
+                    int choose(Course course, Result result) {
+                        return switch (course) {
+                            case EHZ1 -> switch (result) { case FINISH -> 1; default -> 2; };
+                            case EHZ2 -> 3;
+                        };
+                    }
+                }
+                """);
+        var report = new ModValidator().validate(jar(classes), "example.Entry");
+        assertTrue(report.eligible(), report.findings().toString());
+        assertTrue(classes.keySet().stream().anyMatch(name -> name.endsWith("$1")), "real javac switch helper fixture");
+    }
+
+    @Test
+    void rejectsMutableEnumsAndEnumConstructorCallbacksWithoutExecutingThem() throws Exception {
+        for (String declaration : List.of(
+                "enum Course { ONE; int mutable; }",
+                "enum Course { ONE; final int[] state = new int[1]; }",
+                "enum Course { ONE; Course() { System.setProperty(\"openggf.mod.validator.enumExecuted\", \"true\"); } }",
+                "enum Course { ONE; static { System.setProperty(\"openggf.mod.validator.enumExecuted\", \"true\"); } }",
+                "enum Course { ONE; final int value = Integer.parseInt(\"1\"); }")) {
+            System.clearProperty("openggf.mod.validator.enumExecuted");
+            var report = new ModValidator().validate(jar(compileConstants(declaration)), "example.Entry");
+            assertFalse(report.eligible(), declaration);
+            assertCode(report, "STATIC_STATE_UNSUPPORTED", ModValidationFinding.Severity.ERROR);
+            assertNull(System.getProperty("openggf.mod.validator.enumExecuted"), "validator never loads creator enum");
+        }
+    }
+
+    @Test
+    void rejectsSyntheticSwitchHelperWithCallbackOrRuntimeTableRewrites() throws Exception {
+        var clean = compileConstants("enum Course { ONE, TWO } class Choice { int choose(Course c) { return switch(c) { case ONE -> 1; case TWO -> 2; }; } }");
+        String helper = clean.keySet().stream().filter(name -> name.endsWith("$1")).findFirst().orElseThrow();
+        for (boolean callback : List.of(true, false)) {
+            var modified = new LinkedHashMap<>(clean);
+            ClassWriter writer = new ClassWriter(0);
+            new ClassReader(clean.get(helper)).accept(new ClassVisitor(Opcodes.ASM9, writer) {
+                @Override public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+                    MethodVisitor delegate = super.visitMethod(access, name, descriptor, signature, exceptions);
+                    if (!name.equals("<clinit>") || !callback) return delegate;
+                    return new MethodVisitor(Opcodes.ASM9, delegate) {
+                        @Override public void visitInsn(int opcode) {
+                            if (opcode == Opcodes.RETURN) {
+                                super.visitLdcInsn("openggf.mod.validator.enumExecuted"); super.visitLdcInsn("true");
+                                super.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/System", "setProperty",
+                                        "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", false);
+                                super.visitInsn(Opcodes.POP);
+                            }
+                            super.visitInsn(opcode);
+                        }
+                    };
+                }
+                @Override public void visitEnd() {
+                    if (!callback) {
+                        MethodVisitor reset = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "reset", "()V", null, null);
+                        reset.visitCode(); reset.visitInsn(Opcodes.ICONST_0); reset.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_INT);
+                        reset.visitFieldInsn(Opcodes.PUTSTATIC, helper, "$SwitchMap$example$Course", "[I");
+                        reset.visitInsn(Opcodes.RETURN); reset.visitMaxs(1, 0); reset.visitEnd();
+                    }
+                    super.visitEnd();
+                }
+            }, 0);
+            modified.put(helper, writer.toByteArray());
+            System.clearProperty("openggf.mod.validator.enumExecuted");
+            var report = new ModValidator().validate(jar(modified), "example.Entry");
+            assertFalse(report.eligible(), "synthetic metadata cannot whitelist callbacks or table mutation");
+            assertCode(report, "STATIC_STATE_UNSUPPORTED", ModValidationFinding.Severity.ERROR);
+            assertNull(System.getProperty("openggf.mod.validator.enumExecuted"));
+        }
+    }
+
+    @Test
+    void rejectsForgedEnumBackingArrayAccessAndNonCompilerExceptionGuards() throws Exception {
+        var clean = compileConstants("enum Course { ONE, TWO } class Choice { int choose(Course c) { return switch(c) { case ONE -> 1; case TWO -> 2; }; } }");
+        var leaked = new LinkedHashMap<>(clean);
+        ClassWriter enumWriter = new ClassWriter(0);
+        new ClassReader(clean.get("example/Course")).accept(new ClassVisitor(Opcodes.ASM9, enumWriter) {
+            @Override public void visitEnd() {
+                MethodVisitor accessor = super.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "values", "(I)[Lexample/Course;", null, null);
+                accessor.visitCode(); accessor.visitFieldInsn(Opcodes.GETSTATIC, "example/Course", "$VALUES", "[Lexample/Course;");
+                accessor.visitInsn(Opcodes.ARETURN); accessor.visitMaxs(1, 1); accessor.visitEnd();
+                super.visitEnd();
+            }
+        }, 0);
+        leaked.put("example/Course", enumWriter.toByteArray());
+        assertFalse(new ModValidator().validate(jar(leaked), "example.Entry").eligible(), "an overloaded values method cannot leak static enum array");
+        String helper = clean.keySet().stream().filter(name -> name.endsWith("$1")).findFirst().orElseThrow();
+        var forged = new LinkedHashMap<>(clean);
+        ClassWriter helperWriter = new ClassWriter(0);
+        new ClassReader(clean.get(helper)).accept(new ClassVisitor(Opcodes.ASM9, helperWriter) {
+            @Override public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+                return new MethodVisitor(Opcodes.ASM9, super.visitMethod(access, name, descriptor, signature, exceptions)) {
+                    @Override public void visitTryCatchBlock(org.objectweb.asm.Label start, org.objectweb.asm.Label end,
+                            org.objectweb.asm.Label handler, String type) {
+                        super.visitTryCatchBlock(start, end, handler, "java/lang/RuntimeException");
+                    }
+                };
+            }
+        }, 0);
+        forged.put(helper, helperWriter.toByteArray());
+        assertFalse(new ModValidator().validate(jar(forged), "example.Entry").eligible(), "synthetic switch exception guards must match javac shape");
+    }
+
+    private Map<String, byte[]> compileConstants(String declarations) throws Exception {
+        Path directory = Files.createTempDirectory(temp, "java-constants-");
+        Path source = directory.resolve("Entry.java");
+        Files.writeString(source, "package example; public class Entry implements com.openggf.mods.code.GgfMod { public void register(com.openggf.mods.code.ModContext context) { } } " + declarations);
+        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, "--release", "21", "-classpath",
+                System.getProperty("java.class.path"), "-d", directory.toString(), source.toString()));
+        var result = new LinkedHashMap<String, byte[]>();
+        try (var files = Files.walk(directory)) {
+            for (Path file : files.filter(p -> p.toString().endsWith(".class")).sorted().toList()) {
+                result.put(directory.relativize(file).toString().replace('\\', '/').replaceFirst("\\.class$", ""), Files.readAllBytes(file));
+            }
+        }
+        return result;
     }
 
     private Path jar(Map<String, byte[]> classes) throws Exception {

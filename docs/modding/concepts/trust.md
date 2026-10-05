@@ -14,6 +14,20 @@ access, missing rewind recreation/identity coverage, and invalid entrypoints. Di
 references to non-`@ModApi` engine internals are compatibility warnings: they may
 break without an API migration promise.
 
+Static gameplay state remains unsupported: keep it on instances or session services,
+including state that an immutable record happens to contain. Literal compile-time
+primitive/String constants are allowed. A bounded ASM check also recognizes simple
+Java 21 enum constants with final primitive/String instance fields and compiler-generated
+enum switch tables. Enum parameters must be literals, and constructors may only call
+`Enum(String, int)` and directly assign those fields; helper calls, constant-specific
+subclasses, implemented interfaces, arbitrary initialization, and mutable enum fields
+are rejected. The generated backing array factory and cloning `values()` method are
+checked too. Switch tables must reference enums validated in the same jar, use the
+compiler's literal ordinal assignments and `NoSuchFieldError` guards, and have no
+additional methods or runtime writes. Flags or synthetic-looking names alone never
+make a class eligible. Validation reads classfiles without defining or executing
+creator classes; it does not grant general static array, collection, or object state.
+
 Runtime registration is transactional. A callback failure disables the owner for the
 session and routes through the engine fault boundary; it must not publish a partial
 registry. Use the [finding catalog](../troubleshooting.md) before asking users to grant

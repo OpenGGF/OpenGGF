@@ -117,8 +117,19 @@ public final class ModValidator {
             }
         }
 
+        Map<String, CompilerConstantStatics.Shape> immutableEnums = new HashMap<>();
+        Map<String, Set<String>> compilerConstants = new HashMap<>();
         for (ClassInfo info : classes.values()) {
-            validateStatics(info, findings);
+            Set<String> fields = CompilerConstantStatics.immutableEnumFields(info.constantShape);
+            if (!fields.isEmpty()) {
+                immutableEnums.put(info.name, info.constantShape);
+                compilerConstants.put(info.name, fields);
+            }
+        }
+        for (ClassInfo info : classes.values()) {
+            Set<String> fields = compilerConstants.getOrDefault(info.name,
+                    CompilerConstantStatics.enumSwitchFields(info.constantShape, immutableEnums));
+            validateStatics(info, fields, findings);
             boolean objectInstance = isAssignable(info.name, OBJECT_INSTANCE, classes);
             boolean supportedObjectBase = isAssignable(info.name, OBJECT_BASE, classes);
             if (objectInstance && !supportedObjectBase && (info.access & Opcodes.ACC_ABSTRACT) == 0) {
@@ -212,6 +223,7 @@ public final class ModValidator {
 
     private static ClassInfo parse(byte[] bytes) {
         ClassInfo info = new ClassInfo();
+        info.constantShape = CompilerConstantStatics.inspect(bytes);
         new ClassReader(bytes).accept(new ClassVisitor(Opcodes.ASM9) {
             @Override public void visit(int version, int access, String name, String signature,
                                         String superName, String[] interfaces) {
@@ -323,13 +335,13 @@ public final class ModValidator {
         return info;
     }
 
-    private static void validateStatics(ClassInfo info, List<ModValidationFinding> findings) {
-        if (info.classInitializer) {
+    private static void validateStatics(ClassInfo info, Set<String> compilerConstants, List<ModValidationFinding> findings) {
+        if (info.classInitializer && compilerConstants.isEmpty()) {
             findings.add(error("STATIC_STATE_UNSUPPORTED", info.name, "<clinit>",
-                    "Author classes may not declare a class initializer"));
+                    "Only verified immutable enum/compiler switch initialization is supported"));
         }
         for (FieldInfo field : info.fields) {
-            if ((field.access & Opcodes.ACC_STATIC) == 0) continue;
+            if ((field.access & Opcodes.ACC_STATIC) == 0 || compilerConstants.contains(field.name)) continue;
             boolean finalField = (field.access & Opcodes.ACC_FINAL) != 0;
             boolean constantType = field.descriptor.length() == 1 || field.descriptor.equals("Ljava/lang/String;");
             if (!finalField || !constantType || field.value == null || info.staticWrites.contains(field.name)) {
@@ -495,6 +507,7 @@ public final class ModValidator {
     }
 
     private static final class ClassInfo {
+        CompilerConstantStatics.Shape constantShape;
         String name; String superName; int access; boolean publicNoArgConstructor;
         boolean constructorServices; boolean validRecreateMethod; boolean classInitializer;
         final List<String> interfaces = new ArrayList<>();
