@@ -12,31 +12,30 @@ import slaytherobotnik.ui.Gfx;
  * Rings, Flickies, emeralds, the Egg Mobile) and simple pixel shapes for the rest.
  */
 final class EventArt {
-    private static final int SKY_TOP = 0xFF246CB6;
-    private static final int SKY_BOTTOM = 0xFF0A1C48;
-    private static final int CAVE_TOP = 0xFF1C1424;
-    private static final int CAVE_BOTTOM = 0xFF3C2C24;
-    private static final int LAB_TOP = 0xFF102030;
-    private static final int LAB_BOTTOM = 0xFF203848;
-    private static final int GRASS = 0xFF24A048;
-    private static final int GRASS_DARK = 0xFF146C24;
-    private static final int STONE = 0xFF8C7C6C;
-    private static final int STONE_DARK = 0xFF5C4C40;
-    private static final int GOLD = 0xFFFFDA24;
-    private static final int GOLD_DARK = 0xFFB48C00;
+    static final int SKY_TOP = 0xFF246CB6;
+    static final int SKY_BOTTOM = 0xFF0A1C48;
+    static final int CAVE_TOP = 0xFF1C1424;
+    static final int CAVE_BOTTOM = 0xFF3C2C24;
+    static final int LAB_TOP = 0xFF102030;
+    static final int LAB_BOTTOM = 0xFF203848;
+    static final int GRASS = 0xFF24A048;
+    static final int GRASS_DARK = 0xFF146C24;
+    static final int STONE = 0xFF8C7C6C;
+    static final int STONE_DARK = 0xFF5C4C40;
+    static final int GOLD = 0xFFFFDA24;
+    static final int GOLD_DARK = 0xFFB48C00;
 
     private EventArt() {
     }
 
-    /** Draws event art {@code art}; {@code reels} turns the slot machine's reels (null: at rest). */
-    static void draw(Shell shell, SceneCanvas c, String art, int x, int y, int w, int h, SlotReels reels) {
+    /** Draws event art {@code art} (pictures with their own class draw themselves; see {@link EventPictures}). */
+    static void draw(Shell shell, SceneCanvas c, String art, int x, int y, int w, int h) {
         long t = shell.ticks;
         int cx = x + w / 2;
         int ground = y + h - 22;
-        c.clip(x, y, w, h);
         switch (art) {
             case "event:giant_ring" -> {
-                outdoors(c, x, y, w, h, ground);
+                level(shell, c, x, y, w, h, ground);
                 SceneSprite ring = bigRing(shell, t);
                 if (ring != null) {
                     Poses.centre(c, ring, cx, y + 56 + bob(t, 3), SceneDraw.plain());
@@ -62,7 +61,6 @@ final class EventArt {
                     monitor(shell, c, cx - 36 + i * 36, ground, faces[i], t + i * 7);
                 }
             }
-            case "event:slot_machine" -> slotMachine(shell, c, x, y, w, h, cx, ground, t, reels);
             case "event:emerald_altar" -> {
                 cave(c, x, y, w, h, ground);
                 pedestal(c, cx, ground, 30, 40);
@@ -303,19 +301,31 @@ final class EventArt {
                         SceneDraw.plain().withScale(3));
             }
         }
-        c.unclip();
     }
 
     // ------------------------------------------------------------------ backdrops
 
-    private static void outdoors(SceneCanvas c, int x, int y, int w, int h, int ground) {
+    /**
+     * The act's real level as the picture's setting: the room's stage in the window, its floor
+     * on row {@code ground}; the drawn outdoors without ROM art. Returns the placement (window
+     * columns to window rows: {@code placement.feet(px - x) + y}) or null.
+     */
+    static LevelStages.Placement level(Shell shell, SceneCanvas c, int x, int y, int w, int h, int ground) {
+        LevelStages.Placement placement = LevelStages.drawWindow(shell, c, x, y, w, h, ground - y);
+        if (placement == null) {
+            outdoors(c, x, y, w, h, ground);
+        }
+        return placement;
+    }
+
+    static void outdoors(SceneCanvas c, int x, int y, int w, int h, int ground) {
         Gfx.gradient(c, x, y, w, h, SKY_TOP, 0xFF6CB6FF);
         c.fill(x, ground, w, y + h - ground, GRASS);
         c.fill(x, ground, w, 3, 0xFF6CDA48);
         c.fill(x, ground + 8, w, y + h - ground - 8, GRASS_DARK);
     }
 
-    private static void cave(SceneCanvas c, int x, int y, int w, int h, int ground) {
+    static void cave(SceneCanvas c, int x, int y, int w, int h, int ground) {
         Gfx.gradient(c, x, y, w, h, CAVE_TOP, CAVE_BOTTOM);
         c.fill(x, ground, w, y + h - ground, STONE_DARK);
         for (int i = 0; i < w; i += 16) {
@@ -323,7 +333,7 @@ final class EventArt {
         }
     }
 
-    private static void indoors(SceneCanvas c, int x, int y, int w, int h, int ground, int top, int bottom) {
+    static void indoors(SceneCanvas c, int x, int y, int w, int h, int ground, int top, int bottom) {
         Gfx.gradient(c, x, y, w, h, top, bottom);
         c.fill(x, ground, w, y + h - ground, 0xFF242C34);
         c.fill(x, ground, w, 2, 0xFF6C7C8C);
@@ -331,12 +341,12 @@ final class EventArt {
 
     // ------------------------------------------------------------------ props
 
-    private static int bob(long t, int amount) {
+    static int bob(long t, int amount) {
         return (int) Math.round(Math.sin(t * 0.06) * amount);
     }
 
     /** A monitor standing on {@code ground}; its face blinks to static now and then, like the ROM's. */
-    private static void monitor(Shell shell, SceneCanvas c, int x, int ground, String face, long t) {
+    static void monitor(Shell shell, SceneCanvas c, int x, int ground, String face, long t) {
         SceneSprite box = shell.art.romFrame("monitor", 0);
         if (box == null) {
             c.fill(x - 14, ground - 30, 28, 30, 0xFF6C6C6C);
@@ -347,11 +357,11 @@ final class EventArt {
     }
 
     /** The Giant Ring turning: Map_SSEntryRing frames 8-11 (0-7 are it forming). */
-    private static SceneSprite bigRing(Shell shell, long t) {
+    static SceneSprite bigRing(Shell shell, long t) {
         return shell.art.romFrame("big_ring", 8 + (int) ((t / 6) % 4));
     }
 
-    private static void ring(Shell shell, SceneCanvas c, int x, int y, long t) {
+    static void ring(Shell shell, SceneCanvas c, int x, int y, long t) {
         SceneSprite ring = shell.art.romFrame("ring", (int) ((t / 8) % 4));
         if (ring != null) {
             c.draw(ring, x, y, SceneDraw.plain());
@@ -360,14 +370,14 @@ final class EventArt {
         }
     }
 
-    private static void drawnRing(SceneCanvas c, int cx, int cy, int r) {
+    static void drawnRing(SceneCanvas c, int cx, int cy, int r) {
         for (int i = 0; i < 48; i++) {
             double a = i * Math.PI / 24;
             c.fill(cx + (int) (Math.cos(a) * r) - 2, cy + (int) (Math.sin(a) * r) - 2, 4, 4, GOLD);
         }
     }
 
-    private static void sparkles(Shell shell, SceneCanvas c, int cx, int cy, int r, long t) {
+    static void sparkles(Shell shell, SceneCanvas c, int cx, int cy, int r, long t) {
         for (int i = 0; i < 4; i++) {
             SceneSprite s = shell.art.romFrame("ring", 4 + (int) (((t / 6) + i) % 4));
             double a = t * 0.03 + i * Math.PI / 2;
@@ -381,7 +391,7 @@ final class EventArt {
         }
     }
 
-    private static void hearts(SceneCanvas c, int x, int y, long t) {
+    static void hearts(SceneCanvas c, int x, int y, long t) {
         int rise = (int) ((t / 3) % 16);
         int col = Colors.alpha(0xFFFF4890, 1f - rise / 16f);
         c.fill(x, y - rise, 2, 2, col);
@@ -389,14 +399,14 @@ final class EventArt {
         c.fill(x + 1, y + 2 - rise, 3, 2, col);
     }
 
-    private static void pedestal(SceneCanvas c, int cx, int ground, int w, int h) {
+    static void pedestal(SceneCanvas c, int cx, int ground, int w, int h) {
         c.fill(cx - w / 2 - 4, ground - 6, w + 8, 6, STONE_DARK);
         c.fill(cx - w / 2, ground - h, w, h - 6, STONE);
         c.fill(cx - w / 2 - 3, ground - h - 4, w + 6, 5, STONE_DARK);
     }
 
     /** One of the intro's Chaos Emeralds (frames 0-6 are the seven colours). */
-    private static void emerald(Shell shell, SceneCanvas c, int x, int y, int colour, long t) {
+    static void emerald(Shell shell, SceneCanvas c, int x, int y, int colour, long t) {
         SceneSprite gem = shell.art.romFrame("intro_emeralds", colour);
         if (gem != null) {
             Poses.centre(c, gem, x, y, SceneDraw.plain().withScale(2).withFlash((t / 10) % 8 == 0 ? 0x80FFFFFF : 0));
@@ -405,7 +415,7 @@ final class EventArt {
         }
     }
 
-    private static void mushroom(SceneCanvas c, int x, int ground, int r, int stalk, int cap, long t) {
+    static void mushroom(SceneCanvas c, int x, int ground, int r, int stalk, int cap, long t) {
         int squash = (int) Math.round(Math.abs(Math.sin(t * 0.05)) * 3);
         c.fill(x - 3, ground - stalk, 6, stalk, 0xFFDAC8A0);
         int top = ground - stalk - 10 + squash;
@@ -415,7 +425,7 @@ final class EventArt {
         c.fill(x + r / 3, top + 4, 3, 2, Colors.WHITE);
     }
 
-    private static void stars(SceneCanvas c, int x, int y, int w, int h, long t) {
+    static void stars(SceneCanvas c, int x, int y, int w, int h, long t) {
         for (int i = 0; i < 24; i++) {
             int sx = x + (i * 53) % w;
             int sy = y + (i * 31) % (h - 30);
@@ -426,7 +436,7 @@ final class EventArt {
     }
 
     /** The Special Stage globe: a blue and white checkered sphere that scrolls. */
-    private static void checkerSphere(SceneCanvas c, int cx, int cy, int r, long t) {
+    static void checkerSphere(SceneCanvas c, int cx, int cy, int r, long t) {
         for (int dy = -r; dy <= r; dy += 2) {
             int half = (int) Math.sqrt(r * r - dy * dy);
             for (int dx = -half; dx <= half; dx += 2) {
@@ -438,7 +448,7 @@ final class EventArt {
         }
     }
 
-    private static void fire(SceneCanvas c, int cx, int ground, long t) {
+    static void fire(SceneCanvas c, int cx, int ground, long t) {
         c.fill(cx - 12, ground - 3, 24, 4, 0xFF5C3C1C);
         for (int i = 0; i < 6; i++) {
             int fh = 8 + (int) ((Math.sin(t * 0.3 + i * 1.7) + 1) * 6);
@@ -448,7 +458,7 @@ final class EventArt {
         c.fill(cx - 2, ground - 10, 4, 6, Colors.WHITE);
     }
 
-    private static void tube(SceneCanvas c, int x, int ground, int liquid, long t) {
+    static void tube(SceneCanvas c, int x, int ground, int liquid, long t) {
         c.fill(x, ground - 70, 20, 70, 0xFF485868);
         c.fill(x + 2, ground - 66, 16, 62, 0xFF203040);
         int level = 30 + (int) (Math.sin(t * 0.04) * 4);
@@ -461,7 +471,7 @@ final class EventArt {
     }
 
     /** A Chao: round blue body, yellow-tipped head, and a floating ball above. */
-    private static void chao(SceneCanvas c, int cx, int top, long t) {
+    static void chao(SceneCanvas c, int cx, int top, long t) {
         c.fill(cx - 2, top - 8, 4, 4, GOLD);
         c.fill(cx - 7, top - 2, 14, 12, 0xFF6CB6FF);
         c.fill(cx - 5, top - 4, 10, 2, 0xFF6CB6FF);
@@ -471,70 +481,5 @@ final class EventArt {
         c.fill(cx - 10, top + 9 + (int) ((t / 10) % 2), 4, 3, 0xFF6CB6FF);
         c.fill(cx + 6, top + 9 + (int) ((t / 10 + 1) % 2), 4, 3, 0xFF6CB6FF);
         c.fill(cx - 5, top + 15, 10, 2, GOLD_DARK);
-    }
-
-    /**
-     * A slot machine cabinet around the Slot Machine bonus stage's own reels: its 32-pixel faces
-     * from the ROM, turning as {@code reels} says (at rest without them, or the monitor faces
-     * the cabinet showed before when the ROM art is missing).
-     */
-    private static void slotMachine(Shell shell, SceneCanvas c, int x, int y, int w, int h, int cx, int ground,
-            long t, SlotReels reels) {
-        Gfx.gradient(c, x, y, w, h, 0xFF300848, 0xFF100420);
-        stars(c, x, y, w, h, t);
-        c.fill(x, ground, w, y + h - ground, 0xFF201030);
-        c.fill(cx - 56, y + 18, 112, ground - y - 18, 0xFFDA2424);
-        c.fill(cx - 52, y + 22, 104, 14, GOLD);
-        // Chasing lights round the top panel; all of them blink once the reels pay out.
-        boolean won = reels != null && reels.sinceStop() >= 0 && reels.sinceStop() < 90;
-        for (int i = 0; i < 13; i++) {
-            boolean on = won ? (t / 8) % 2 == 0 : (t / 6 + i) % 3 == 0;
-            c.fill(cx - 50 + i * 8, y + 26, 5, 5, on ? Colors.WHITE : GOLD_DARK);
-        }
-        int wy = y + 45;
-        c.fill(cx - 53, wy - 3, 106, 38, won && (t / 8) % 2 == 0 ? GOLD : Colors.BLACK);
-        c.fill(cx - 52, wy - 2, 104, 36, Colors.BLACK);
-        for (int i = 0; i < 3; i++) {
-            int rx = cx - 51 + i * 35;
-            if (!drawReel(shell, c, reels, i, rx, wy)) {
-                // Without the ROM's reel art, a monitor face stands in.
-                c.fill(rx, wy, 32, 32, Colors.WHITE);
-                String[] faces = {"3", "4", "10", "5", "9"};
-                SceneSprite box = shell.art.romFrame("monitor", 0);
-                if (box != null) {
-                    float s = 0.8f;
-                    HudIcons.monitor(shell, c, faces[i], rx + 16 - (box.width() / 2f - box.originX()) * s,
-                            wy + 16 - (box.height() / 2f - box.originY()) * s, s, t);
-                }
-            }
-        }
-        // The lever: pulled down for a moment when the player pulls it.
-        boolean down = reels != null && reels.sincePull() >= 0 && reels.sincePull() < 12;
-        int knobY = down ? y + 58 : y + 34;
-        int pivotY = y + 76;
-        c.fill(cx + 57, knobY + 4, 4, pivotY - knobY - 4, 0xFFB6B6B6);
-        c.fill(cx + 55, knobY, 8, 8, Colors.BLACK);
-        c.fill(cx + 56, knobY + 1, 6, 6, 0xFFDA2424);
-    }
-
-    /**
-     * One reel's window: the 32 rows from the reel's position down, the rest of its top face
-     * then the start of the next (the stage copies them the same way). False without ROM art.
-     */
-    private static boolean drawReel(Shell shell, SceneCanvas c, SlotReels reels, int reel, int x, int y) {
-        if (reels == null) {
-            return false;
-        }
-        var top = shell.art.slotFace(reels.face(reel));
-        var next = shell.art.slotFace(reels.nextFace(reel));
-        if (top == null || next == null) {
-            return false;
-        }
-        int row = reels.row(reel);
-        c.drawRegion(top, 0, row, 32, 32 - row, x, y, 32, 32 - row, SceneDraw.plain());
-        if (row > 0) {
-            c.drawRegion(next, 0, 0, 32, row, x, y + 32 - row, 32, row, SceneDraw.plain());
-        }
-        return true;
     }
 }

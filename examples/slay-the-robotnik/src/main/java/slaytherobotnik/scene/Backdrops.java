@@ -61,6 +61,32 @@ public final class Backdrops {
         drawn(shell, c, zone, scroll);
     }
 
+    /**
+     * The zone act's ROM backdrop in a window at ({@code x}, {@code y}), {@code w} x {@code h}
+     * (clipped by the caller), its top row as for a full screen; false when the game has none.
+     */
+    static boolean zoneWindow(Shell shell, SceneCanvas c, int zone, int act, long scroll, int x, int y, int w,
+            int h) {
+        SceneBackdrop bg = shell.art.zoneBackdrop(zone, act);
+        if (bg == null) {
+            return false;
+        }
+        int imageW = bg.image().width();
+        int top = Math.max(0, Math.min(windowTop(zone, act), bg.image().height() - h));
+        for (SceneBackdrop.Band band : bg.bands()) {
+            int y0 = Math.max(band.top(), top);
+            int y1 = Math.min(band.top() + band.height(), top + h);
+            if (y0 >= y1) {
+                continue;
+            }
+            for (int bx = -bg.column(band, scroll, shell.ticks); bx < w; bx += imageW) {
+                c.drawRegion(bg.image(), 0, y0, imageW, y1 - y0, x + bx, y + y0 - top, imageW, y1 - y0,
+                        SceneDraw.plain());
+            }
+        }
+        return true;
+    }
+
     /** Which backdrop row sits at the top of the screen: the part of each zone that reads best. */
     private static int windowTop(int zone, int act) {
         return switch (zone) {

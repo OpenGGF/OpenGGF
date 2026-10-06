@@ -53,6 +53,35 @@ final class LevelStages {
         return new Placement(stage, top);
     }
 
+    /**
+     * The room's stage in a window at ({@code x}, {@code y}), {@code w} x {@code h}: the
+     * backdrop and the middle {@code w} columns of the stage's level, its median floor on window
+     * row {@code groundRow} (from the window's top), inside the caller's clip. Returns where it went, with
+     * {@link Placement#feet} taking window-relative columns and giving window-relative rows; null
+     * (having drawn nothing) without ROM art, so the caller can draw its own.
+     */
+    static Placement drawWindow(Shell shell, SceneCanvas c, int x, int y, int w, int h, int groundRow) {
+        int zone = shell.run.act().zone();
+        int act = shell.run.act().zoneAct();
+        SceneLevelStage stage = pick(shell, zone, act);
+        if (stage == null) {
+            return null;
+        }
+        int left = stage.x() + Math.max(0, (stage.width() - w) / 2);
+        int top = stage.floorY() - groundRow;
+        Backdrops.zoneWindow(shell, c, zone, act, left, x, y, w, h);
+        SceneImage front = shell.art.levelForeground(zone, act, left, top, w, h);
+        if (front != null) {
+            c.draw(front, x, y);
+        }
+        // Re-base the stage on the window, so feet(column) reads the floor under that column.
+        int[] floor = new int[w];
+        for (int i = 0; i < w; i++) {
+            floor[i] = stage.floorAt(left + i);
+        }
+        return new Placement(new SceneLevelStage(0, stage.floorY(), w, floor), top);
+    }
+
     /** The screen row a character at {@code screenX} stands on: the floor there, or {@code groundRow} without a stage. */
     static int feet(Placement placement, int screenX, int groundRow) {
         return placement == null ? groundRow : placement.feet(screenX);

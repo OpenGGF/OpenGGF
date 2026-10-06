@@ -14,9 +14,10 @@ final class EventView implements RunScreen.RoomView {
     private final EventRoom room;
     private final Hotspots spots = new Hotspots();
     private int bannerTicks;
-    /** The slot machine's reels, for that event; null elsewhere or without the ROM's reel art. */
-    private SlotReels reels;
-    private boolean pulled;
+    /** The event's picture, made on first use. */
+    private EventPicture picture;
+    /** True once the picture has been shown the detail the event is waiting on. */
+    private boolean showing;
 
     EventView(EventRoom room) {
         this.room = room;
@@ -52,34 +53,27 @@ final class EventView implements RunScreen.RoomView {
         }
     }
 
+    private EventPicture picture(Shell shell) {
+        if (picture == null) {
+            picture = EventPictures.create(shell, room.def().art());
+        }
+        return picture;
+    }
+
     /**
-     * Plays what the event asked its picture to show ({@code EventRoom.illustrate}): the slot
-     * machine's reels spin to the rolled face, clattering as the stage does, and the event
-     * carries on when they stop. Returns true while it waits (no input meanwhile). Pictures
-     * that show nothing carry on at once.
+     * Plays what the event asked its picture to show ({@code EventRoom.illustrate}) and carries
+     * the event on once the picture is done; returns true while the event waits (no input
+     * meanwhile). A picture that animates nothing finishes at once.
      */
     private boolean playIllustration(Shell shell) {
-        if (reels == null && room.def().art().equals("event:slot_machine") && shell.art.slotStrips() != null) {
-            reels = new SlotReels(shell.art.slotStrips(), (int) shell.ticks);
+        EventPicture p = picture(shell);
+        if (room.awaitingIllustration() && !showing) {
+            p.show(shell, room.illustration());
+            showing = true;
         }
-        if (reels == null) {
-            room.illustrationShown();
-            return false;
-        }
-        if (room.awaitingIllustration() && !pulled) {
-            reels.pull(Integer.parseInt(room.illustration()), (int) shell.ticks);
-            pulled = true;
-            shell.sfx(Sounds.SFX_SWITCH);
-        }
-        reels.tick();
-        if (reels.running() && shell.ticks % 16 == 0) {
-            shell.sfx(Sounds.SFX_SLOT_MACHINE);
-        }
-        if (pulled && !reels.running()) {
-            pulled = false;
-            // Robotnik's spike balls and the Bar's dud sting; anything else pays out.
-            String face = room.illustration();
-            shell.sfx(face.equals("4") || face.equals("6") ? Sounds.SFX_SPIKES : Sounds.SFX_RING);
+        p.tick(shell);
+        if (showing && !p.busy()) {
+            showing = false;
             room.illustrationShown();
         }
         return room.awaitingIllustration();
@@ -97,7 +91,9 @@ final class EventView implements RunScreen.RoomView {
         f.drawOutlined(c, title, 150, 36, Colors.GOLD, 2);
         // Illustration panel.
         Gfx.panel(c, 10, 34, 130, 150);
-        EventArt.draw(shell, c, room.def().art(), 12, 36, 126, 146, reels);
+        c.clip(12, 36, EventPicture.WIDTH, EventPicture.HEIGHT);
+        picture(shell).draw(shell, c, 12, 36, EventPicture.WIDTH, EventPicture.HEIGHT);
+        c.unclip();
         Gfx.panel(c, 146, 52, w - 152, 94);
         List<String> lines = f.wrap(room.text(), w - 166);
         int y = 58;
