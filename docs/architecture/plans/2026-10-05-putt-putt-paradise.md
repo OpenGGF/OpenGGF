@@ -1253,3 +1253,55 @@ directly. No full-suite pass is claimed. The guide remains AIM-only and does not
 predict terrain/object collision or charged power; those limits are recorded in
 the act matrix and example README. All changes remain local; the executable
 launcher stays uncommitted and main `develop` remains preserved.
+
+### ROM-themed title follow-up (2026-10-06)
+
+The user requested more Sonic theming with original ROM assets. Against local
+base `508dcba4a`, the creator title now uses the existing Sonic 2 title decoder
+for its landscape, four palettes, winged emblem, Sonic/Tails final portraits,
+hands and animated sparkles. A half-size emblem leaves space for a red/gold
+Putt Putt Paradise banner, Sonic 2 Mini Golf subtitle and blue option panels.
+The horizon scrolls; the landscape repeats across the advertised wide presets.
+Setup/input behavior is preserved. Re-entering the title invalidates its GPU
+cache so course palettes cannot leak into it. ROM-derived art remains in memory,
+with no extracted resources in the package and no new engine/API contracts.
+The existing title decoder/mapping helpers are internal engine dependencies,
+like the example's existing `GameServices` use, with no new compatibility promise.
+
+The first SDK packaging check rejected computed static atlas-base fields under
+the creator static-state policy. Those values now belong to the renderer
+instance; the normal verifier passes without relaxing the policy. No duplicated
+ROM decoder or independently baked artwork was needed.
+
+Final focused verification completed at 01:17 BST on this base plus the follow-up:
+15 tests, zero failures/errors/skips. It covers five ROM-backed viewport widths,
+both character banks, the emblem and full-width background, drawn tile bounds,
+steady-frame palette cache reuse, re-entry restoration, every existing menu
+input/setup check, normal development-directory boot through title selection,
+SDK validation and the package's ROM-free resource contract. `SONIC2_ROM_PATH`
+below denotes the verified existing absolute path of the S2 World REV01 ROM.
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestGolfMenu,TestPuttPuttParadise#titleRemixesRomArtAcrossWidthsAndRestoresPalettesOnReturn+artifactPassesNormalSdkPackaging+packagedPatchUsesOnlySonicAndTailsWithoutBundlingRomAssets+normalDevelopmentBootUsesStockProfileAndTitleSelectionBeforeEntryFade' "-Dsonic2.rom.path=$SONIC2_ROM_PATH" test
+python3 examples/putt-putt-paradise/build.py
+```
+
+The refreshed SDK-validated jar contains 84 classes and only its manifest as a
+non-class resource: 138,989 bytes, SHA-256
+`099fd07284479ed97b9e51c26d86fe63ba14c38a6c89fba0560aaadadbafca86`.
+Native OpenGL captures from that jar are retained under
+`~/scratch/gameplay-captures/putt-putt-paradise-title-20261006/`: seven PNGs each
+at 320 and 800 pixels, showing the mode picker, four setup screens, Join editor,
+and a second sparkle phase. Header pixels differ between neutral menu ticks 0
+and 8. The images were inspected for readable fields and correct ROM art. These
+are explicit title-provider fixtures in `HeadlessGameBoot`, not stock intro
+animation parity or a separate production SDK boot claim. The temporary probe
+is removed after use; retained fixture notes describe the capture inputs.
+
+The change-based plan against `508dcba4a` falls back to all 2,976 ordinary classes
+for external example/root-launcher paths. Proportionate focused verification
+replaces that run: changes are confined to creator title rendering and reuse
+the existing ROM-loading/cache owners. Asset loading, viewport layout, cache
+lifecycle, real title inputs/launch and native graphics were exercised directly.
+No full-suite pass is claimed. The work remains on the local concept/mod branch;
+the executable launcher stays uncommitted and no integration or push is made.

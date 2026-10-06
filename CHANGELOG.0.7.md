@@ -832,7 +832,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   practice, alternating local matches, or direct IP/port matches. Golfers retain
   independent course worlds; penalties restore the pre-shot world, and the
   online host owns simulation and scores while guests render ROM-backed views.
-  Includes the creator menu, scorecards, native spindash audio, all existing
+  Includes a creator menu themed with the ROM's title landscape, winged emblem,
+  Sonic/Tails portraits and sparkles, scorecards, native spindash audio, all existing
   viewport presets, a half-power aiming guide aligned with the rolling launch
   centre and supporting slope, and a build/package/launch script. The unpublished
   candidate API now supports held gameplay admission, opaque course checkpoints and

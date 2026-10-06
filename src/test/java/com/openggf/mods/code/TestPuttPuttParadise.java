@@ -63,6 +63,64 @@ class TestPuttPuttParadise {
                 "--out", temp.resolve("validated.jar").toString()}, System.out));
     }
 
+    private record TitleTile(int id, int palette, float x, float y, float width, float height) { }
+    private static final class TitleGraphics extends com.openggf.graphics.GraphicsManager {
+        final int width;
+        final Map<Integer, com.openggf.level.Pattern> patterns = new HashMap<>();
+        final Map<Integer, com.openggf.level.Palette> palettes = new HashMap<>();
+        final List<TitleTile> tiles = new ArrayList<>();
+        int paletteUploads;
+        TitleGraphics(int width) { this.width = width; }
+        @Override public boolean isHeadlessMode() { return false; }
+        @Override public int getProjectionWidth() { return width; }
+        @Override public void cachePatternTexture(com.openggf.level.Pattern pattern, int id) { patterns.put(id, pattern); }
+        @Override public void cachePaletteTexture(com.openggf.level.Palette palette, int id) {
+            palettes.put(id, palette); paletteUploads++;
+        }
+        @Override public void renderPatternWithId(int id, com.openggf.level.PatternDesc desc, int x, int y) {
+            renderPatternWithIdScaled(id, desc, x, y, 8, 8);
+        }
+        @Override public void renderPatternWithIdScaled(int id, com.openggf.level.PatternDesc desc,
+                                                       float x, float y, float w, float h) {
+            tiles.add(new TitleTile(id, desc.getPaletteIndex(), x, y, w, h));
+        }
+        @Override public void registerCommand(com.openggf.graphics.GLCommandable command) { }
+    }
+
+    @ParameterizedTest @CsvSource({"320", "352", "400", "528", "800"})
+    void titleRemixesRomArtAcrossWidthsAndRestoresPalettesOnReturn(int width) throws Exception {
+        bootstrap = SharedLevel.load(SonicGame.SONIC_2, 0, 0);
+        var graphics = new TitleGraphics(width);
+        try (var services = org.mockito.Mockito.mockStatic(GameServices.class, org.mockito.Mockito.CALLS_REAL_METHODS)) {
+            services.when(GameServices::graphics).thenReturn(graphics);
+            var module = (GameModule) loader.loadClass("paradise.GolfModule").getConstructor(GameModule.class)
+                    .newInstance(new com.openggf.game.sonic2.Sonic2GameModule());
+            var title = module.getTitleScreenProvider();
+            title.initialize(); title.draw();
+            assertEquals(Set.of(0, 1, 2, 3), graphics.palettes.keySet(), "all four original title palettes");
+            assertTrue(graphics.patterns.size() > 700, "ROM title/background and character banks are decoded");
+            assertTrue(graphics.tiles.stream().anyMatch(t -> t.id() >= 0x70000 && t.palette() == 0), "Sonic portrait");
+            assertTrue(graphics.tiles.stream().anyMatch(t -> t.id() >= 0x70000 && t.palette() == 1), "Tails portrait");
+            assertTrue(graphics.tiles.stream().anyMatch(t -> t.id() < 0x70000 && t.palette() == 3), "winged emblem");
+            assertTrue(graphics.tiles.stream().anyMatch(t -> t.id() < 0x70000 && t.palette() == 2 && t.x() == width - 8),
+                    "ROM landscape covers the full viewport");
+            for (var tile : graphics.tiles) {
+                assertTrue(graphics.patterns.containsKey(tile.id()), "drawn tile has ROM-backed cached art");
+                assertTrue(tile.x() >= 0 && tile.y() >= 0 && tile.x() + tile.width() <= width
+                        && tile.y() + tile.height() <= 224, "title tiles remain inside the viewport");
+            }
+            assertEquals(4, graphics.paletteUploads);
+            title.draw();
+            assertEquals(4, graphics.paletteUploads, "steady menu does not re-upload palettes every frame");
+            // A course replaces palette contents; another visit must upload the original title set again.
+            graphics.palettes.clear(); title.reset(); title.initialize(); title.draw();
+            assertEquals(8, graphics.paletteUploads);
+            assertEquals(Set.of(0, 1, 2, 3), graphics.palettes.keySet());
+            assertEquals(TitleScreenProvider.State.ACTIVE, title.getState());
+            assertNull(title.getClass().getMethod("getSelection").invoke(title), "rendering never launches a game");
+        }
+    }
+
     private ModRegistrationPlan registrations() throws Exception {
         try (var assets = ModAssetRoot.jar(temp, jar, ModInputLimits.production())) {
             var context = new ModContext("putt-putt-paradise", "s2", assets);

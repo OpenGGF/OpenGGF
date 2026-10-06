@@ -30,7 +30,7 @@ public final class GolfModule extends DelegatingGameModule {
                             selection.playerOne().code());
                     config.setSessionOverride(com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
                     mode.configure(selection);
-                });
+                }, new paradise.ui.GolfTitleArt(GameServices.graphics()));
         return menu;
     }
     @Override public Level loadLevelOverride(int index) throws java.io.IOException {

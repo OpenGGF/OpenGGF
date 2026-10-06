@@ -37,6 +37,12 @@ trust its Java code in Mod Manager. Restart the JVM after replacing a code mod.
 
 ## Play
 
+The title screen remixes Sonic 2's original landscape, winged emblem, Sonic and
+Tails portraits, palettes, and sparkle art, loaded from your ROM at runtime. A
+red-and-gold Putt Putt Paradise banner sits above the blue golf menu. The jar
+contains no extracted artwork. The landscape fills every supported viewport;
+the emblem stays centred, and returning from a course restores its title palettes.
+
 The title menu offers Practice on either act, local alternating two-player
 competition, Host, and Join. Both golfers can choose Sonic or Tails independently,
 including Sonic/Sonic or Tails/Tails. Competition plays Act 1 then Act 2, reversing
