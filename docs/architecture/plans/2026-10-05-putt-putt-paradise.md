@@ -1592,3 +1592,66 @@ the shared queue lacked memory capacity; it is not recorded as a build pass.
 The unchanged, uncommitted launcher still performs its normal queued engine
 compile and bootstrap-metadata refresh when run. Main `develop` remains at
 `fc4729c375`; this follow-up has no merge or push.
+
+### Held duck follow-up (2026-10-06)
+
+Local task base: `34e9a06af432039bac141faf23718e8a2bc3a37f`. The scene pose
+projector took every script frame modulo the full frame count. In Sonic 2,
+`SonAni_Duck` is `5,$4C,$4D,$FE,1`: after the entry mapping, only the final
+mapping repeats. Duck projection now clamps at that final mapping after the
+native entry delay. Spindash still loops; native gameplay animation, clocks,
+pose values, API signatures and wire format are unchanged. Both local scene
+capture and guest-local overlays consume the same corrected projector.
+
+The new native-Down pixel regression failed in both facings at pose tick 12
+on the base projector, then passed after correction. It compares the initial
+entry and ten held-clock samples (including `Long.MAX_VALUE`) with native
+Down input, checks both local and guest projection, and proves that the course
+and accepted guest frame remain unchanged. The pixel oracle is deliberately
+Sonic-only: an initial full-image Tails comparison also found pixel differences
+already on the base, despite its single `$5B` duck body mapping. The cause of
+those full-image differences was not isolated in this correction.
+Existing Tails duck/charge and scene checks remain part of the focused run;
+this correction does not certify full Tails pose-overlay pixel parity.
+
+The inspected change-based plan selected 2,976 classes because the projector
+and preserved untracked launcher are unclassified. Proportionate validation
+uses the native regression and all scene/course/online mod consumers for this
+bounded render-only frame-selection correction. No physics, timing authority,
+mutable state or public contract changes require a second broad engine run.
+The queued focused Maven request was cancelled before admission because the
+machine lacked the queue's memory reservation. The installed JUnit Console
+1.10.3 runner executed the real Jupiter tests with a bounded two-GiB heap,
+using the existing worktree engine/dependencies and separately compiled changed
+projector/test classes. Reproduction commands, with existing build output:
+
+```sh
+DUCK_CHECK=target/duck-pose-check
+CONSOLE_JAR="$HOME/.m2/repository/org/junit/platform/junit-platform-console-standalone/1.10.3/junit-platform-console-standalone-1.10.3.jar"
+ENGINE_CP="target/test-classes:target/classes:$(cat target/putt-putt-paradise/engine-classpath.txt)"
+mkdir -p "$DUCK_CHECK/classes" "$DUCK_CHECK/tmp"
+javac --release 21 -cp "$ENGINE_CP:$CONSOLE_JAR" -d "$DUCK_CHECK/classes" \
+  src/main/java/com/openggf/game/presentation/ScenePoseProjector.java \
+  src/test/java/com/openggf/game/presentation/TestGolfScenePresentation.java
+java -Xmx2g "-Djava.io.tmpdir=$DUCK_CHECK/tmp" \
+  "-Dorg.lwjgl.system.SharedLibraryExtractPath=$DUCK_CHECK/tmp/lwjgl" \
+  "-Dsonic2.rom.path=${S2_ROM}" \
+  -cp "$DUCK_CHECK/classes:$ENGINE_CP:$CONSOLE_JAR" \
+  org.junit.platform.console.ConsoleLauncher execute --include-engine junit-jupiter \
+  --config junit.jupiter.execution.parallel.enabled=false \
+  --config 'junit.jupiter.testclass.order.default=org.junit.jupiter.api.ClassOrderer$ClassName' \
+  --select-class com.openggf.game.presentation.TestGolfScenePresentation \
+  --select-class com.openggf.mods.code.TestPuttPuttParadise \
+  --select-class com.openggf.mods.code.TestGolfOnlineIntegration \
+  --disable-banner --disable-ansi-colors --details summary --fail-if-no-tests
+```
+
+S2_ROM is the discovered existing absolute Sonic 2 REV01 path. The completed
+run passed 128 cases with no failures, errors, skips or aborted cases (46.255
+seconds): 29 scene checks, 98 actual mod/course checks and the two-process
+online case. This is focused validation, not a new full-suite or guard pass.
+The launch tree's projector was then compiled with Java 21 and its class bytes
+matched the tested projector exactly. Creator sources and jar are unchanged.
+The launcher remains executable, unchanged and uncommitted; work remains local.
+Consumed JUnit XML/logs, probe classes and native extraction were inspected and
+removed; the verified runtime projector remains in this worktree's build output.

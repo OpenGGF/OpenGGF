@@ -89,6 +89,8 @@ movement; the bias retries while rising so the ball can move over the edge once
 it clears the wall. It stops retrying at the apex and never moves through a wall.
 Tall obstacles still need enough shot power to clear them.
 
+During shot selection, the duck pose plays its native entry once and holds the
+settled crouch, as when holding Down in-game.
 After power locks, feedback and a short pause lead to automatic release.
 The gauge rises and falls once; missing it commits a very light shot. Further
 charge/cancel presses cannot undo a committed stroke. The golfer stays rolling

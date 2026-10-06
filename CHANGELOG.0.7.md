@@ -835,7 +835,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   online host owns simulation and scores while guests render ROM-backed views.
   Recorded play uses the same neutral flight input as live play.
   Includes a creator menu themed with the ROM's title landscape, winged emblem,
-  Sonic/Tails portraits and sparkles, scorecards, native spindash audio, all existing
+  Sonic/Tails portraits and sparkles, scorecards, a held native duck pose during
+  shot selection, native spindash audio, all existing
   viewport presets, a spin/power departure guide aligned with the rolling launch
   centre and supporting slope (including authoritative online guest coordinates),
   upward springs that also fire on rolling side entry, 90-degree chips with a

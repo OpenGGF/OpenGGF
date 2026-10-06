@@ -22,7 +22,13 @@ final class ScenePoseProjector {
         int animation = pose.kind() == PlayerPresentationPose.Kind.DUCK ? profile.getDuckAnimId() : profile.getSpindashAnimId();
         var script = set.animationSet().getScript(animation);
         if (script == null || script.frames().isEmpty()) throw new IllegalStateException("Native pose script unavailable");
-        int frame = script.frames().get((int) ((pose.tick() / Math.max(1, script.delay() + 1)) % script.frames().size()));
+        long elapsedFrames = pose.tick() / Math.max(1, script.delay() + 1);
+        // A held duck stops at its settled mapping. S2 SonAni_Duck's $FE,1
+        // repeats only $4D after $4C; TailsAni_Duck has the single $5B frame.
+        int frameIndex = pose.kind() == PlayerPresentationPose.Kind.DUCK
+                ? (int) Math.min(elapsedFrames, script.frames().size() - 1)
+                : (int) (elapsedFrames % script.frames().size());
+        int frame = script.frames().get(frameIndex);
         projectArtFrame(tiles, "player/" + player.character(), set, frame, player.centreX() - cameraX,
                 player.centreY() - cameraY, pose.facing() < 0, priority);
         if (pose.kind() == PlayerPresentationPose.Kind.SPINDASH) {

@@ -244,6 +244,39 @@ class TestGolfScenePresentation {
     }
 
     @RequiresRom(SonicGame.SONIC_2)
+    @ParameterizedTest @ValueSource(ints = {-1, 1})
+    void heldDuckMatchesNativeDownWithoutRepeatingTheEntryFrame(int facing) throws Exception {
+        var fixture = launch(0, 320, "sonic"); fixture.stepIdleFrames(20);
+        fixture.sprite().setDirection(facing < 0 ? com.openggf.physics.Direction.LEFT : com.openggf.physics.Direction.RIGHT);
+        for (int i = 0; i < 32; i++) fixture.stepFrame(false, true, false, false, false);
+        // s2.asm: SonAni_Duck is 5,$4C,$4D,$FE,1, holding $4D after its entry frame.
+        assertTrue(fixture.sprite().getCrouching());
+        assertEquals(0x4D, fixture.sprite().getMappingFrame(), "Native Down must reach the held ROM duck mapping");
+        var level = GameServices.level();
+        var nativeFrame = level.captureScene(1, PlayerPresentationPose.nativePose());
+        byte[] acceptedBytes = SceneFrameCodec.encode(nativeFrame);
+        var before = snapshot();
+        try (var host = level.createScenePresenter(); var guest = level.createScenePresenter()) {
+            host.accept(nativeFrame); guest.accept(SceneFrameCodec.decode(acceptedBytes));
+            int[] expected = host.image(0, 0).argb();
+            host.accept(level.captureScene(2, new PlayerPresentationPose(PlayerPresentationPose.Kind.DUCK, 0, facing)));
+            assertFalse(Arrays.equals(expected, host.image(0, 0).argb()), "Duck must still play its native entry frame once");
+            long revision = 2;
+            for (long tick : new long[]{6, 7, 11, 12, 18, 24, 60, 120, 1000, Long.MAX_VALUE}) {
+                var pose = new PlayerPresentationPose(PlayerPresentationPose.Kind.DUCK, tick, facing);
+                host.accept(level.captureScene(++revision, pose));
+                assertArrayEquals(expected, host.image(0, 0).argb(), "Host must hold native duck at pose tick " + tick);
+                var player = new ScenePlayerPose("sonic", fixture.sprite().getRenderCentreX(),
+                        fixture.sprite().getRenderCentreY(), pose);
+                assertArrayEquals(expected, guest.image(0, 0, player).argb(), "Guest must hold native duck at pose tick " + tick);
+            }
+            assertEquals(1, guest.revision());
+            assertArrayEquals(acceptedBytes, SceneFrameCodec.encode(nativeFrame));
+            assertUnchanged(before, snapshot());
+        }
+    }
+
+    @RequiresRom(SonicGame.SONIC_2)
     @ParameterizedTest @CsvSource({"0,320,sonic", "1,800,tails"})
     void locallyComposedSceneMatchesTheProductionFramebuffer(int act, int width, String character) throws Exception {
         var settings = new com.openggf.tools.GameplayCaptureSession.Settings(width, character, "", "off", null, 0x600, 0x2C0);
