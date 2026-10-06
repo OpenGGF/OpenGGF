@@ -128,6 +128,7 @@ final class ShopView implements RunScreen.RoomView {
         Gfx.panel(c, 4, 32, 94, 160, 0xE0100820, 0xFF904890);
         if (hovered != null && hovered.card() != null) {
             screen.cards.drawBig(c, hovered.card(), null, null, 7, 34, false);
+            shell.cardTips(hovered.card(), 4, 34, 94);
         } else {
             drawEggRobo(shell, c, 51, 96);
             f.drawCentered(c, "EGG ROBO", 51, 136, Colors.TEXT_BAD);

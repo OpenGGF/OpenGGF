@@ -205,6 +205,7 @@ final class CompendiumScreen implements Screen {
             Card focus = grid.focusedCard(spots);
             if (focus != null) {
                 renderer.drawBig(c, focus, null, null, shell.width() - CardRenderer.BIG_W - 14, GRID_TOP + 2, false);
+                shell.cardTips(focus, shell.width() - CardRenderer.BIG_W - 14, GRID_TOP + 2, CardRenderer.BIG_W);
                 String rarity = focus.rarity().toUpperCase();
                 f.drawShadowed(c, rarity, shell.width() - CardRenderer.BIG_W / 2 - 14 - f.width(rarity) / 2,
                         GRID_TOP + CardRenderer.BIG_H + 6, Colors.TEXT_DIM);

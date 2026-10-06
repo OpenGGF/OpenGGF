@@ -54,6 +54,7 @@ final class DeckViewer {
         Card focus = grid.focusedCard(spots);
         if (focus != null) {
             screen.cards.drawBig(c, focus, null, null, shell.width() - CardRenderer.BIG_W - 14, 50, false);
+            shell.cardTips(focus, shell.width() - CardRenderer.BIG_W - 14, 50, CardRenderer.BIG_W);
         }
     }
 }

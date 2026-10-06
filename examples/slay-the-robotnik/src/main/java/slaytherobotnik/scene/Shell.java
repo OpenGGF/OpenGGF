@@ -3,6 +3,7 @@ package slaytherobotnik.scene;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneContext;
 import slaytherobotnik.art.Art;
+import slaytherobotnik.core.Card;
 import slaytherobotnik.core.Catalog;
 import slaytherobotnik.run.Run;
 import slaytherobotnik.run.SaveCodec;
@@ -33,6 +34,7 @@ public final class Shell {
     private int fadeIn;
     private int currentMusic = -1;
     private int shake;
+    private final CardTips cardTips = new CardTips();
 
     Shell(SceneContext ctx, SmallFont font, Art art, Catalog catalog) {
         this.ctx = ctx;
@@ -175,6 +177,7 @@ public final class Shell {
         if (screen != null) {
             screen.draw(this, canvas);
         }
+        cardTips.draw(this, canvas);
         float dark = 0f;
         if (fadeOut > 0) {
             dark = 1f - fadeOut / (float) FADE_TICKS;
@@ -184,6 +187,14 @@ public final class Shell {
         if (dark > 0f) {
             canvas.fill(0, 0, width(), height(), Colors.alpha(Colors.BLACK, dark));
         }
+    }
+
+    /**
+     * Explains the gold terms of {@code card} beside it this frame (see {@link CardTips}); views
+     * call it for the card they show at full size, giving its position and width.
+     */
+    public void cardTips(Card card, int x, int y, int w) {
+        cardTips.show(this, card, x, y, w);
     }
 
     /** Horizontal shake offset for this frame. */

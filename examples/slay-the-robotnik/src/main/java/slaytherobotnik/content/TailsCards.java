@@ -99,13 +99,13 @@ public final class TailsCards {
         // Blade Dance.
         c.add(card("tails:bomb_bag", "Bomb Bag", CardType.SKILL, CardRarity.COMMON)
                 .cost(1).target(CardTarget.SELF).magic(3, 1)
-                .text("Add {M|Ring Bomb} to your hand.")
+                .text("Add {M|*Ring Bomb*} to your hand.")
                 .effect(p -> p.addToHand(RING_BOMB, p.magic(), false))
                 .build());
         // Cloak and Dagger: the decoy ring from Sonic Heroes, with a bomb inside.
         c.add(card("tails:dummy_ring", "Dummy Ring", CardType.SKILL, CardRarity.COMMON)
                 .cost(1).target(CardTarget.SELF).block(6, 0).magic(1, 1)
-                .text("Gain {B} Block. Add {M|Ring Bomb} to your hand.")
+                .text("Gain {B} Block. Add {M|*Ring Bomb*} to your hand.")
                 .effect(p -> {
                     p.gainBlock();
                     p.addToHand(RING_BOMB, p.magic(), false);
@@ -243,14 +243,14 @@ public final class TailsCards {
         // Accuracy.
         c.add(card("tails:blast_radius", "Blast Radius", CardType.POWER, CardRarity.UNCOMMON)
                 .cost(1).target(CardTarget.SELF).magic(4, 2)
-                .text("Ring Bombs deal {M} additional damage.")
+                .text("*Ring Bombs* deal {M} additional damage.")
                 .effect(p -> p.applyToSelf(blastRadius(p.magic())))
                 .build());
         // Infinite Blades.
         c.add(card("tails:remote_robot", "Remote Robot", CardType.POWER, CardRarity.UNCOMMON)
                 .cost(1).target(CardTarget.SELF)
                 .addOnUpgrade(Keyword.INNATE)
-                .text("At the start of your turn, add a Ring Bomb to your hand.")
+                .text("At the start of your turn, add a *Ring Bomb* to your hand.")
                 .effect(p -> p.applyToSelf(remoteRobot(1)))
                 .build());
         // Reflex.
@@ -367,7 +367,7 @@ public final class TailsCards {
         // Perfected Strike, counting the Ring Bombs thrown this combat.
         c.add(card("tails:large_bomb", "Large Bomb", CardType.ATTACK, CardRarity.UNCOMMON)
                 .cost(2).damage(10, 0).magic(2, 1)
-                .text("Deal {D} damage. Deals {M} additional damage for each Ring Bomb played this combat.")
+                .text("Deal {D} damage. Deals {M} additional damage for each *Ring Bomb* played this combat.")
                 .damageFormula((combat, card, target) -> card.damage() + card.magic() * ringBombsPlayed(combat))
                 .effect(p -> p.attack())
                 .build());
@@ -401,8 +401,8 @@ public final class TailsCards {
         // Storm of Steel.
         c.add(card("tails:bomb_barrage", "Bomb Barrage", CardType.SKILL, CardRarity.RARE)
                 .cost(1).target(CardTarget.SELF)
-                .text("Discard your hand. Add 1 Ring Bomb to your hand for each card discarded.")
-                .upgradedText("Discard your hand. Add 1 Ring Bomb+ to your hand for each card discarded.")
+                .text("Discard your hand. Add 1 *Ring Bomb* to your hand for each card discarded.")
+                .upgradedText("Discard your hand. Add 1 *Ring Bomb+* to your hand for each card discarded.")
                 .effect(p -> p.addToHand(RING_BOMB, discardHand(p.combat()).size(), p.upgraded()))
                 .build());
         // Die Die Die.
@@ -448,7 +448,7 @@ public final class TailsCards {
         // Envenom's slot: every discard becomes a bomb instead of poison.
         c.add(card("tails:recycler", "Recycler", CardType.POWER, CardRarity.RARE)
                 .cost(2).upgradedCost(1).target(CardTarget.SELF)
-                .text("Whenever you discard a card, add a Ring Bomb to your hand.")
+                .text("Whenever you discard a card, add a *Ring Bomb* to your hand.")
                 .effect(p -> p.applyToSelf(recycler(1)))
                 .build());
     }

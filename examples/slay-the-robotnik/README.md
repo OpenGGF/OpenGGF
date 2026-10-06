@@ -65,8 +65,9 @@ behave as in *Slay the Spire*.
 | Scroll a map or card list | arrows (left / right on the map viewed from a room) | d-pad | wheel |
 
 To play a card, pick it and then pick a target. Card numbers show the damage the card
-would really deal to the highlighted enemy. Runs save at every room, so you can quit and
-**Continue** later. The title screen also has the **Compendium** (every card, upgraded or
+would really deal to the highlighted enemy, and its gold terms (Exhaust, Combo,
+Vulnerable, Ring Bomb...) are explained in tips beside whichever card you point at. Runs
+save at every room, so you can quit and **Continue** later. The title screen also has the **Compendium** (every card, upgraded or
 not; every relic; every monitor), **Records** (runs, wins, best floor per hero) and
 **Settings** (combat speed, screen shake, music and sound effects).
 

@@ -117,6 +117,7 @@ final class DeckChoiceView {
                 screen.cards.drawBig(c, options.get(i), null, null, s.x(), s.y() - (focus ? 3 : 0), false);
                 if (focus) {
                     Gfx.focusFrame(c, s.x(), s.y() - 3, s.w(), s.h(), shell.ticks);
+                    shell.cardTips(options.get(i), s.x(), s.y() - 3, s.w());
                 }
             }
         } else {
@@ -130,8 +131,12 @@ final class DeckChoiceView {
                     screen.cards.drawBig(c, focus, null, null, px - CardRenderer.BIG_W - 8, 50, false);
                     f.drawOutlined(c, ">", px - 7, 108, Colors.TEXT_GOOD, 1);
                     screen.cards.drawBig(c, preview, null, null, px, 50, false);
+                    // Both cards' terms, beside the pair (the upgrade can add or remove keywords).
+                    shell.cardTips(preview, px - CardRenderer.BIG_W - 8, 50, 2 * CardRenderer.BIG_W + 8);
+                    shell.cardTips(focus, px - CardRenderer.BIG_W - 8, 50, 2 * CardRenderer.BIG_W + 8);
                 } else {
                     screen.cards.drawBig(c, focus, null, null, px, 50, false);
+                    shell.cardTips(focus, px, 50, CardRenderer.BIG_W);
                 }
             }
         }

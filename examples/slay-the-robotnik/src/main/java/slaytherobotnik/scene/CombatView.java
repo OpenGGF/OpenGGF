@@ -1147,6 +1147,7 @@ final class CombatView implements RunScreen.RoomView {
             int bx = Math.max(4, Math.min(w - CardRenderer.BIG_W - 4, focusX + CardRenderer.SMALL_W / 2
                     - CardRenderer.BIG_W / 2));
             screen.cards.drawBig(c, focusCard, combat, null, bx, HAND_Y - CardRenderer.BIG_H - 12, false);
+            shell.cardTips(focusCard, bx, HAND_Y - CardRenderer.BIG_H - 12, CardRenderer.BIG_W);
         }
     }
 
@@ -1181,6 +1182,7 @@ final class CombatView implements RunScreen.RoomView {
                 Card focus = grid.focusedCard(spots);
                 if (focus != null) {
                     screen.cards.drawBig(c, focus, combat, null, w - CardRenderer.BIG_W - 6, 50, false);
+                    shell.cardTips(focus, w - CardRenderer.BIG_W - 6, 50, CardRenderer.BIG_W);
                 }
                 options = List.of();
             }
@@ -1197,6 +1199,7 @@ final class CombatView implements RunScreen.RoomView {
                 }
                 if (focus) {
                     Gfx.focusFrame(c, s.x(), s.y() - 3, s.w(), s.h(), shell.ticks);
+                    shell.cardTips(options.get(i), s.x(), s.y() - 3, s.w());
                 }
             }
         }

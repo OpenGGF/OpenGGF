@@ -1,5 +1,6 @@
 package slaytherobotnik;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -24,6 +25,28 @@ import slaytherobotnik.core.RunState;
 /** Every piece of content is well formed: texts resolve, relics describe themselves, enemies act. */
 class ContentIntegrityTest {
     private final Catalog catalog = Content.build();
+
+    @Test
+    void everyHighlightedCardTermIsExplained() {
+        int terms = 0;
+        for (CardDef def : catalog.allCards()) {
+            for (boolean up : new boolean[] {false, true}) {
+                for (String term : Cards.terms(new Card(def, up))) {
+                    assertFalse(Cards.explainTerm(catalog, term).isEmpty(), def.id() + " term " + term);
+                    terms++;
+                }
+            }
+        }
+        assertTrue(terms > 100, "terms checked: " + terms);
+        // A term naming a card is explained by that card, plural and upgraded forms included.
+        assertTrue(Cards.explainTerm(catalog, "Ring Bombs").startsWith("0-cost Attack. Deal 4 damage."),
+                Cards.explainTerm(catalog, "Ring Bombs"));
+        assertTrue(Cards.explainTerm(catalog, "Ring Bomb+").contains("Deal 6 damage."));
+        assertTrue(Cards.explainTerm(catalog, "Unknown Thing").isEmpty());
+        assertEquals("Ring Bomb", Cards.termName(catalog, "Ring Bombs"));
+        assertEquals("Ring Bomb+", Cards.termName(catalog, "Ring Bomb+"));
+        assertEquals("Exhaust", Cards.termName(catalog, "Exhausted"));
+    }
 
     @Test
     void cardTextsHaveNoUnresolvedPlaceholders() {

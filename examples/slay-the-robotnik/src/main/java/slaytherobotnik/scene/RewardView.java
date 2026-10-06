@@ -177,6 +177,7 @@ final class RewardView implements RunScreen.RoomView {
                 screen.cards.drawBig(c, card, null, null, s.x(), s.y() - (focus ? 4 : 0), false);
                 if (focus) {
                     Gfx.focusFrame(c, s.x(), s.y() - 4, s.w(), s.h(), shell.ticks);
+                    shell.cardTips(card, s.x(), s.y() - 4, s.w());
                 }
             }
             Hotspots.Spot skip = spots.spot("skip");
