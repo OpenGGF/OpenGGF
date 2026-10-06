@@ -45,6 +45,11 @@ final class RunScreen implements Screen {
 
     CardRenderer cards;
     private Room shownRoom;
+    /** Room changes dip through black: frames left of the old room fading out, and of the new one fading in. */
+    private static final int ROOM_OUT_TICKS = 10;
+    private static final int ROOM_IN_TICKS = 14;
+    private int roomOut;
+    private int roomIn;
     private RoomView view;
     private DeckChoiceView choiceView;
     private DeckViewer deckViewer;
@@ -68,10 +73,23 @@ final class RunScreen implements Screen {
     public void update(Shell shell) {
         Run run = shell.run;
         if (run.room() != shownRoom) {
+            // The old room holds still while it fades out; the first room appears under the shell's fade.
+            if (view != null && roomOut == 0) {
+                roomOut = ROOM_OUT_TICKS;
+            }
+            if (roomOut > 0 && --roomOut > 0) {
+                tooltipTitle = null;
+                return;
+            }
+            boolean first = view == null;
             shownRoom = run.room();
             view = createView(shell, shownRoom);
             playRoomMusic(shell, shownRoom);
             shell.in.consume();
+            roomIn = first ? 0 : ROOM_IN_TICKS;
+        }
+        if (roomIn > 0) {
+            roomIn--;
         }
         tooltipTitle = null;
         if (run.deckChoice() != null) {
@@ -197,6 +215,11 @@ final class RunScreen implements Screen {
         }
         if (tooltipTitle != null) {
             drawTooltip(shell, c);
+        }
+        float dark = roomOut > 0 ? 1f - roomOut / (float) ROOM_OUT_TICKS
+                : roomIn > 0 ? roomIn / (float) ROOM_IN_TICKS : 0f;
+        if (dark > 0f) {
+            c.fill(0, 0, shell.width(), shell.height(), Colors.alpha(Colors.BLACK, dark));
         }
     }
 

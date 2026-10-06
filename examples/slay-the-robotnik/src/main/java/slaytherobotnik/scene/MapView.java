@@ -36,6 +36,10 @@ final class MapView implements RunScreen.RoomView {
     private float targetScroll;
     /** The floor the view last centred on; a change re-centres it. */
     private int followedFloor = Integer.MIN_VALUE;
+    /** A picked room the hero is hopping to (its spot id), and how far through the hop it is. */
+    private static final int HOP_TICKS = 26;
+    private String hopTarget;
+    private int hopTicks;
 
     MapView(boolean peek) {
         this.peek = peek;
@@ -126,6 +130,13 @@ final class MapView implements RunScreen.RoomView {
         if (peek) {
             return;
         }
+        if (hopTarget != null) {
+            // The hero spin-jumps along the path to the picked room; the room opens on landing.
+            if (++hopTicks >= HOP_TICKS) {
+                travel(run, hopTarget);
+            }
+            return;
+        }
         layout(shell);
         String before = spots.focused();
         String picked = spots.update(shell.in);
@@ -136,12 +147,29 @@ final class MapView implements RunScreen.RoomView {
             return;
         }
         shell.sfx(Sounds.SFX_JUMP);
-        if (picked.equals("boss")) {
+        hopTarget = picked;
+        hopTicks = 0;
+        int[] to = spotCentre(shell, picked);
+        targetScroll = clampScroll(shell, scroll + to[0] - 150);
+    }
+
+    private static void travel(Run run, String spot) {
+        if (spot.equals("boss")) {
             run.travelToBoss();
             return;
         }
-        String[] xy = picked.substring(4).split("_");
+        String[] xy = spot.substring(4).split("_");
         run.travelTo(run.map().node(Integer.parseInt(xy[0]), Integer.parseInt(xy[1])));
+    }
+
+    /** Screen centre of a node or the boss, from its spot id. */
+    private int[] spotCentre(Shell shell, String spot) {
+        if (spot.equals("boss")) {
+            return new int[] {bossX(), bossY(shell)};
+        }
+        String[] xy = spot.substring(4).split("_");
+        MapNode n = shell.run.map().node(Integer.parseInt(xy[0]), Integer.parseInt(xy[1]));
+        return new int[] {nodeScreenX(n), nodeScreenY(shell, n)};
     }
 
     @Override
@@ -193,7 +221,7 @@ final class MapView implements RunScreen.RoomView {
             if (visited(run, n) && !here) {
                 c.fill(x - 6, y + 7, 13, 2, Colors.GOLD);
             }
-            if (here) {
+            if (here && hopTarget == null) {
                 drawHero(shell, c, x, y - 10);
             }
             String id = "node" + n.x() + "_" + n.y();
@@ -204,6 +232,9 @@ final class MapView implements RunScreen.RoomView {
             }
         }
         drawBoss(shell, screen, c);
+        if (hopTarget != null) {
+            drawHop(shell, c);
+        }
         c.unclip();
         drawLegend(shell, c);
         if (!peek && run.state().actFloor() < 0) {
@@ -237,6 +268,28 @@ final class MapView implements RunScreen.RoomView {
         float x = drawnW <= w ? (w - drawnW) / 2f : -(drawnW - w) * pan;
         c.draw(level, x, areaTop, SceneDraw.plain().withScale(scale));
         c.fill(0, areaTop, w, areaH, 0x58000818);
+    }
+
+    /**
+     * The hero in a spin jump (the roll animation) from their room to the picked one, in an arc;
+     * at the act's start they drop in from above, off the Tornado.
+     */
+    private void drawHop(Shell shell, SceneCanvas c) {
+        int[] to = spotCentre(shell, hopTarget);
+        int floor = shell.run.state().actFloor();
+        MapNode here = floor >= 0 ? shell.run.map().node(shell.run.state().nodeX(), floor) : null;
+        int fromX = here != null ? nodeScreenX(here) : to[0] - 46;
+        int fromY = here != null ? nodeScreenY(shell, here) : to[1] - 40;
+        float p = Math.min(1f, hopTicks / (float) HOP_TICKS);
+        float e = Ease.inOutQuad(p);
+        float x = fromX + (to[0] - fromX) * e;
+        float y = fromY + (to[1] - fromY) * e - (float) Math.sin(p * Math.PI) * 22 - 10;
+        SceneSprite ball = Poses.frame(shell.art.character(shell.run.state().character().id()), Poses.ROLL, hopTicks);
+        if (ball != null) {
+            c.draw(ball, x, y + 8, SceneDraw.plain().withScale(0.75f));
+        } else {
+            c.fill(Math.round(x) - 3, Math.round(y) - 3, 7, 7, Colors.GOLD);
+        }
     }
 
     private void drawHero(Shell shell, SceneCanvas c, int x, int y) {
