@@ -279,9 +279,9 @@ Mod scenes add the `com.openggf.mods.scene` package to the candidate surface:
 `ModScene`, `ModSceneFactory`, `SceneContext`, `SceneCanvas`, `SceneDraw`, `SceneImage`,
 `SceneSprite`, `SceneArt`, `SceneRomArt`, `SceneSpriteSet`, `RomSpriteRequest` (with its
 `Compression` and `DplcLayout` enums), `SceneBackdrop` (with its `Band` record),
-`SceneLevelStage`, `SceneMouse`,
+`SceneLevelStage`, `SceneMouse`, `SceneButtons`, `SceneKeys`, `DebuggableScene`,
 `SceneAudio` and `SceneStorage`, plus
-`ModContext.registerStartupScene` and
+`ModContext.registerStartupScene`, `ModContext.requireDisplayWidth` and
 `GameMode.MOD_SCENE`. The mouse wheel stays off the pinned `InputHandler`: the engine-internal
 `control.MouseWheel` (one per input handler, `MouseWheel.of(input)`) collects scroll movement
 for whichever screen reads the mouse, the master title or a scene. The engine finds the registered scene as the effective module's
