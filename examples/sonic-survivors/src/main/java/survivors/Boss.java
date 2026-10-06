@@ -1,0 +1,423 @@
+package survivors;
+
+import com.openggf.game.PlayableEntity;
+import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
+import com.openggf.level.objects.*;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import java.util.List;
+
+/**
+ * The stage boss, arriving when the survival clock runs out: Eggman in the zone's own vehicle
+ * (drawn with the zone's ROM boss art), sweeping the arena, dropping volleys of the zone's
+ * projectile and swooping at Sonic; or, on the Death Egg, Silver Sonic, who walks, crouches
+ * and spin-dashes across the arena (harmful while spinning). Stomps rebound Sonic off it with
+ * the stock boss bounce. Spawn subtype: the stage index and the {@link #RUNNER} flag; the
+ * hitpoints come through the constructor.
+ */
+public final class Boss extends AbstractObjectInstance
+        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener, TouchResponseAttackable {
+    static final int ENTER = 0, SWEEP = 1, VOLLEY = 2, SWOOP = 3, RISE = 4, DEFEATED = 5;
+    // Silver Sonic.
+    static final int WALK = 10, CROUCH = 11, SPIN = 12, LEAP = 13;
+    // The Death Egg finale: Eggman on foot, fleeing.
+    static final int FLEE = 20, VAULT = 21;
+    /** Subtype flag: the fleeing Eggman rather than the stage's boss. */
+    static final int RUNNER = 0x10;
+    static final int RUNNER_HITS = 3;
+    static final int HIT_FLASH = 32;
+    static final int DEFEAT_FRAMES = 150;
+
+    private int x;
+    private int y;
+    private int vx;
+    private int vy;
+    private int subX;
+    private int subY;
+    private int hp;
+    private int maxHp;
+    private int state;
+    private int timer;
+    private int ticks;
+    private int flash;
+    private int iframes;
+    private int laugh;
+    private int shots;
+    private boolean facingLeft = true;
+
+    public Boss(ObjectSpawn spawn) {
+        this(spawn, 1);
+    }
+
+    public Boss(ObjectSpawn spawn, int hitpoints) {
+        super(spawn, "Survivors boss");
+        x = spawn.x();
+        y = spawn.y();
+        hp = maxHp = Math.max(1, hitpoints);
+        state = runner() ? FLEE : silver() ? WALK : ENTER;
+    }
+
+    static ObjectSpawn spawnAt(int x, int y, int stage) {
+        return new ObjectSpawn(x, y, 0, stage & 0x0F, 0, false, y, -1,
+                SurvivorsMod.ID, SurvivorsMod.ID + ":boss");
+    }
+
+    /** The Death Egg finale's fleeing Eggman: three stomps catch him. */
+    static ObjectSpawn runnerAt(int x, int y) {
+        return new ObjectSpawn(x, y, 0, Stages.DEZ | RUNNER, 0, false, y, -1,
+                SurvivorsMod.ID, SurvivorsMod.ID + ":boss");
+    }
+
+    int stage() { return spawn.subtype() & 0x0F; }
+    boolean runner() { return (spawn.subtype() & RUNNER) != 0; }
+    boolean silver() { return stage() == Stages.DEZ && !runner(); }
+    int hp() { return hp; }
+    int maxHp() { return maxHp; }
+    boolean alive() { return !isDestroyed() && state != DEFEATED; }
+
+    @Override public int getX() { return x; }
+    @Override public int getY() { return y; }
+    @Override public boolean isPersistent() { return !isDestroyed(); }
+    @Override public boolean isHighPriority() { return true; }
+    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+        return new Boss(context.spawn());
+    }
+
+    private Arena arena() { return services().gameService(Arena.class); }
+
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
+        var run = services().gameService(RunState.class);
+        if (run != null && run.paused) return;
+        ticks++;
+        if (flash > 0) flash--;
+        if (iframes > 0) iframes--;
+        if (laugh > 0) laugh--;
+        int px = player == null ? x : player.getCentreX();
+        int py = player == null ? y : player.getCentreY();
+        if (state == DEFEATED) { defeated(); return; }
+        if (runner()) flee(px); else if (silver()) silverSonic(px); else eggman(px, py);
+        updateDynamicSpawn(x, y);
+    }
+
+    private void step() {
+        subX += vx;
+        subY += vy;
+        x += subX >> 8;
+        y += subY >> 8;
+        subX &= 0xFF;
+        subY &= 0xFF;
+    }
+
+    /** Eggman hovers within a jump of the floor beneath him (Sonic's jump reaches about 100px). */
+    private int hoverY() {
+        var arena = arena();
+        if (arena == null) return y;
+        int floor = floorAt(x, arena.floorTop() - 8);
+        if (floor == Integer.MIN_VALUE) floor = arena.floorTop();
+        return floor - 88;
+    }
+
+    private void eggman(int px, int py) {
+        var arena = arena();
+        timer++;
+        switch (state) {
+            case ENTER -> {
+                y += 2;
+                if (y >= hoverY()) { y = hoverY(); state = SWEEP; timer = 0; vx = facingLeft ? -0x180 : 0x180; }
+            }
+            case SWEEP -> {
+                step();
+                y = hoverY() + (int) Math.round(Math.sin(ticks * 0.06) * 10);
+                if (arena != null && (x < arena.left() + 48 || x > arena.right() - 48)) {
+                    x = arena.clampX(x, 48);
+                    vx = -vx;
+                }
+                facingLeft = vx < 0;
+                int enraged = hp * 2 < maxHp ? 40 : 0;
+                if (timer > 150 - enraged) {
+                    timer = 0;
+                    state = ticks / 150 % 2 == 0 ? VOLLEY : SWOOP;
+                    shots = 0;
+                }
+            }
+            case VOLLEY -> {
+                facingLeft = px < x;
+                int count = hp * 2 < maxHp ? 5 : 3;
+                if (timer % 18 == 0 && shots < count) {
+                    shots++;
+                    fire(px, py);
+                }
+                if (timer > 18 * count + 20) { state = SWEEP; timer = 0; vx = facingLeft ? -0x180 : 0x180; }
+            }
+            case SWOOP -> {
+                // Dive toward where Sonic stands, then climb back.
+                facingLeft = px < x;
+                int floor = arena == null ? py : arena.floorTop() - 24;
+                vx = Integer.signum(px - x) * Math.min(Math.abs(px - x) * 16, 0x300);
+                vy = Integer.signum(floor - y) * Math.min(Math.abs(floor - y) * 16, 0x400);
+                step();
+                if (timer > 60 || Math.abs(floor - y) < 6 && Math.abs(px - x) < 12) { state = RISE; timer = 0; }
+            }
+            case RISE -> {
+                vx = 0;
+                y -= 2;
+                if (y <= hoverY()) { y = hoverY(); state = SWEEP; timer = 0; vx = facingLeft ? -0x180 : 0x180; }
+            }
+            default -> { }
+        }
+    }
+
+    private void fire(int px, int py) {
+        if (!services().objectManager().hasFreeDynamicSlot()) return;
+        int stage = stage();
+        String key = Stages.bossShotKey(stage);
+        int frame = Stages.bossShotFrame(stage);
+        int svx, svy;
+        boolean gravity;
+        if (stage == Stages.MCZ) {
+            // Mystic Cave: rocks fall from the cave roof above Sonic.
+            var arena = arena();
+            int rx = (arena == null ? px : arena.clampX(px, 16)) + (shots - 2) * 40;
+            spawnFreeChild(() -> Shot.of(rx, y - 120, key, frame, true, 0, 0));
+            return;
+        }
+        double dx = px - x, dy = py - y;
+        double length = Math.max(1, Math.hypot(dx, dy));
+        svx = (int) (dx / length * 0x280);
+        svy = (int) (dy / length * 0x280);
+        gravity = stage == Stages.EHZ || stage == Stages.MTZ;
+        if (gravity) { svx = (int) Math.signum(dx) * (0x80 + shots * 0x60); svy = -0x100; }
+        int fvx = svx, fvy = svy, sy = y + 16;
+        boolean lob = gravity;
+        spawnFreeChild(() -> Shot.of(x, sy, key, frame, lob, fvx, fvy));
+        services().playSfx(0xAE); // S2 sfx_ArrowFiring.
+    }
+
+    private int floorAt(int fx, int feetY) {
+        var levelManager = services().levelManager();
+        for (int probe = feetY - 24; probe <= feetY + 200; probe += 16) {
+            var r = ObjectTerrainUtils.checkFloorDist(levelManager, fx, probe);
+            if (r.foundSurface() && r.distance() >= -16 && r.distance() < 16) return probe + r.distance();
+        }
+        return Integer.MIN_VALUE;
+    }
+
+    /** Silver Sonic: walk at Sonic, crouch, then spin-dash wall to wall; leap when enraged. */
+    private void silverSonic(int px) {
+        var arena = arena();
+        timer++;
+        int depth = 24;
+        switch (state) {
+            case WALK -> {
+                facingLeft = px < x;
+                vx = facingLeft ? -0x140 : 0x140;
+                step();
+                if (timer > 90) { state = CROUCH; timer = 0; vx = 0; services().playSfx(0xEE); }
+            }
+            case CROUCH -> {
+                if (timer > 40) {
+                    state = SPIN;
+                    timer = 0;
+                    vx = facingLeft ? -0x700 : 0x700;
+                    services().playSfx(0xBC); // sfx_SpindashRelease.
+                }
+            }
+            case SPIN -> {
+                step();
+                if (arena != null && (x < arena.left() + 24 || x > arena.right() - 24)) {
+                    x = arena.clampX(x, 24);
+                    vx = -vx;
+                    facingLeft = vx < 0;
+                    shots++;
+                }
+                if (shots >= (hp * 2 < maxHp ? 3 : 2)) {
+                    shots = 0;
+                    timer = 0;
+                    state = hp * 2 < maxHp ? LEAP : WALK;
+                    if (state == LEAP) { vy = -0x780; vx = Integer.signum(px - x) * 0x300; }
+                }
+            }
+            case LEAP -> {
+                vy += 0x38;
+                step();
+                if (arena != null) x = arena.clampX(x, 24);
+                int floor = floorAt(x, y + depth);
+                if (vy > 0 && floor != Integer.MIN_VALUE && y + depth >= floor) {
+                    y = floor - depth;
+                    vy = 0;
+                    state = WALK;
+                    timer = 0;
+                    services().playSfx(0xBD); // sfx_Hammer: the landing thud.
+                    for (int i = -1; i <= 1; i += 2) {
+                        int dir = i, sy = y + 12;
+                        spawnFreeChild(() -> Shot.of(x, sy, Stages.bossShotKey(Stages.DEZ), 15, false, dir * 0x300, 0));
+                    }
+                }
+                return;
+            }
+            default -> { }
+        }
+        int floor = floorAt(x, y + depth);
+        if (floor != Integer.MIN_VALUE) y = floor - depth;
+        else y += 2;
+    }
+
+    /**
+     * Eggman runs from Sonic along the floor, a little slower than Sonic's top speed. Cornered
+     * against a wall, he vaults back over Sonic's head.
+     */
+    private void flee(int px) {
+        var arena = arena();
+        int depth = 20;
+        timer++;
+        if (state == VAULT) {
+            vy += 0x38;
+            step();
+            if (arena != null) x = arena.clampX(x, 24);
+            int floor = floorAt(x, y + depth);
+            if (vy > 0 && floor != Integer.MIN_VALUE && y + depth >= floor) {
+                y = floor - depth;
+                vy = 0;
+                state = FLEE;
+                timer = 0;
+            }
+            return;
+        }
+        int away = px < x ? 1 : -1;
+        facingLeft = away < 0;
+        vx = away * (hp == 1 ? 0x500 : 0x440);
+        step();
+        if (arena != null && (x <= arena.left() + 32 || x >= arena.right() - 32) && Math.abs(px - x) < 120) {
+            x = arena.clampX(x, 32);
+            state = VAULT;
+            timer = 0;
+            vy = -0x800;
+            vx = -away * 0x300;
+            facingLeft = vx < 0;
+            services().playSfx(0xA0); // sfx_Jump.
+            return;
+        }
+        if (arena != null) x = arena.clampX(x, 32);
+        int floor = floorAt(x, y + depth);
+        if (floor != Integer.MIN_VALUE) y = floor - depth;
+        else y += 2;
+    }
+
+    private void defeated() {
+        timer++;
+        if (timer % 8 == 0) services().playSfx(0xC4); // sfx_BossExplosion.
+        if (!silver() && !runner()) y += 1;
+        if (timer >= DEFEAT_FRAMES) {
+            Stage stage = Stage.find(services());
+            if (stage != null) stage.onBossDefeated(x, y);
+            setDestroyed(true);
+        }
+    }
+
+    /** Sonic was hurt: Eggman laughs. */
+    void laugh() { laugh = 60; }
+
+    private boolean spinning() { return silver() && (state == SPIN || state == LEAP); }
+
+    @Override public int getCollisionFlags() {
+        var run = services().gameService(RunState.class);
+        if (isDestroyed() || state == DEFEATED || flash > 0 || state == ENTER || run != null && run.paused) return 0;
+        // $0F (24x24): a hazard while Silver Sonic spins, otherwise an enemy that bounces Sonic off.
+        return spinning() ? 0x80 | 0x0F : 0x0F;
+    }
+
+    /** Nonzero while alive: the engine applies the stock boss rebound (Touch_Enemy_Part2). */
+    @Override public int getCollisionProperty() { return hp > 0 ? 1 : 0; }
+    /** Arena objects are always near the camera; touch them without waiting for a render pass. */
+    @Override public boolean requiresRenderFlagForTouch() { return false; }
+
+    @Override public void onTouchResponse(PlayableEntity entity, TouchResponseResult result, int frameCounter) {
+        if (isDestroyed() || !(entity instanceof AbstractPlayableSprite player) || player.isCpuControlled()) return;
+        if (Guard.absorb(services(), player, result)) laugh();
+    }
+
+    @Override public void onPlayerAttack(PlayableEntity entity, TouchResponseResult result) {
+        if (!alive()) return;
+        var run = services().gameService(RunState.class);
+        boolean bounce = entity.getAir() && entity.getCentreY() < y;
+        if (bounce && run != null) {
+            run.combo++;
+            run.bestCombo = Math.max(run.bestCombo, run.combo);
+        }
+        double scale = run == null ? 1 : run.damageMultiplier() * run.comboMultiplier();
+        int base = run == null ? 1 : run.stompDamage();
+        damage(Math.max(1, (int) Math.round(base * 2 * scale)));
+        flash = HIT_FLASH;
+        Stage stage = Stage.find(services());
+        if (stage != null && bounce) stage.onBounce(x, y);
+    }
+
+    /** Weapon damage, with brief i-frames between weapon hits. */
+    boolean hurt(int amount) {
+        if (!alive() || iframes > 0 || state == ENTER || runner() && flash > 0) return false;
+        iframes = 10;
+        damage(amount);
+        return state == DEFEATED;
+    }
+
+    private void damage(int amount) {
+        if (runner()) {
+            amount = 1;
+            flash = 60;
+        }
+        hp -= amount;
+        services().playSfx(0xAC); // sfx_HitBoss.
+        Stage stage = Stage.find(services());
+        if (stage != null) stage.popup(x, y - 24, amount, true);
+        if (hp <= 0) {
+            hp = 0;
+            state = DEFEATED;
+            timer = 0;
+            vx = vy = 0;
+            if (stage != null) stage.onBossBeaten();
+        }
+    }
+
+    @Override public int getPriorityBucket() { return RenderPriority.bucket(3); }
+    @Override public int getOnScreenHalfWidth() { return 48; }
+
+    @Override public void appendRenderCommands(List<GLCommand> commands) {
+        if (isDestroyed()) return;
+        int stage = stage();
+        int[] frames = Stages.bossFrames(stage);
+        var renderer = getRenderer(Stages.bossKey(stage));
+        if (state == DEFEATED) {
+            var boom = getRenderer("boss_explosion");
+            if (boom != null) {
+                for (int i = 0; i < 3; i++) {
+                    int seed = (timer / 6 + i * 3) * 2654435;
+                    boom.drawFrameIndex((timer / 3 + i * 2) % 7, x + seed % 40 - 20, y + (seed >> 8) % 32 - 16, false, false);
+                }
+            }
+        }
+        if (flash > 0 && (flash & 2) != 0) return;
+        if (renderer == null) {
+            Draw.circleWorld(services(), x, y, 20, 20, Draw.GREY, 1f);
+            return;
+        }
+        int frame;
+        if (runner()) {
+            frame = state == DEFEATED ? 6 : state == VAULT ? 4 : 2 + (ticks / 4) % 3;
+            var eggman = getRenderer("dez_eggman");
+            if (eggman != null) eggman.drawFrameIndex(frame, x, y, !facingLeft, false);
+            return;
+        } else if (silver()) {
+            frame = switch (state) {
+                case CROUCH -> 3;
+                case SPIN, LEAP -> 6 + (ticks / 2) % 3;
+                default -> (ticks / 8) % 3;
+            };
+            if (state == DEFEATED) frame = 5;
+        } else {
+            frame = state == DEFEATED || flash > 0 ? frames[2] : laugh > 0 ? frames[1] : frames[0];
+        }
+        // The vehicle art faces left; mirror it while it travels right.
+        renderer.drawFrameIndex(frame, x, y, !facingLeft, false);
+    }
+}

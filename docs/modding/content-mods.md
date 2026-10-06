@@ -102,6 +102,14 @@ Do not add mutable static gameplay state, uncaptured object references, or immut
 classes for these object, service, and rewind rules before the engine creates an
 owner class loader.
 
+An `ObjectSpawn` keeps the ROM's field widths: `subtype` and `objectId` are one byte and
+`renderFlags` two bits, so anything packed above them is silently dropped. Pass larger
+initial values (hitpoints, art indices, amounts) to a constructor that stores them in
+fields; the rewind schema restores fields, and `recreateForRewind` only needs a constructor
+that accepts the bare spawn. Objects that implement `TouchResponseProvider` are touchable
+only after they have rendered once (`requiresRenderFlagForTouch()`), which headless tests
+never do; return `false` there for objects that are always near the camera.
+
 Art sheets are registered with `registerObjectArt` and a `BakedSheetRef`; editor
 previews use `registerObjectPreview`. The sheet YAML assigns each 8-by-8 tile to a
 Genesis palette line and describes bounded pieces. `convert art` rejects images
