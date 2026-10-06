@@ -114,14 +114,15 @@ final class Stages {
     }
 
     /** Survival time before the boss arrives, in seconds. Death Egg is a straight boss fight. */
-    static int survivalSeconds(int stage) {
+    static int survivalSeconds(int stage, int mode) {
         if (stage == DEZ) return 0;
+        if (mode == RunState.ENDLESS) return -1;
         // Development: -Dsonic-survivors.survival=N shortens every stage's clock (for filming and tests).
         String override = System.getProperty("sonic-survivors.survival");
         if (override != null) {
             try { return Math.max(1, Integer.parseInt(override.trim())); } catch (NumberFormatException ignored) { }
         }
-        return 120;
+        return mode == RunState.LONG ? 300 : 120;
     }
 
     /** Overall difficulty tier: one per stage, plus the act's extra difficulty. */

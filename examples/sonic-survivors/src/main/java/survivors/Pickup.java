@@ -156,7 +156,7 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         Stage stage = Stage.find(services());
         switch (kind()) {
             case RING -> {
-                services().audioManager().playSecondarySfx(GameSound.RING);
+                playRingSound(run, value);
                 player.addRings(value);
                 if (run != null && !lostRing) {
                     run.ringsCollected += value;
@@ -173,11 +173,15 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         }
     }
 
+    private void playRingSound(RunState run, int amount) {
+        if (run == null || run.ringSound(amount)) services().audioManager().playSecondarySfx(GameSound.RING);
+    }
+
     private void breakMonitor(AbstractPlayableSprite player, RunState run, Stage stage) {
         services().playSfx(0xC1);
         switch (value) {
             case MON_RINGS -> {
-                services().audioManager().playSecondarySfx(GameSound.RING);
+                playRingSound(run, 10);
                 player.addRings(10);
                 if (run != null) { run.ringsCollected += 10; run.gainXp(10); }
             }

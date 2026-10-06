@@ -325,6 +325,7 @@ class TestSonicSurvivors {
         assertEquals(CLEAR, phase(), "the clear screen follows the boss");
         assertTrue((boolean) call(profile(), "hasEmerald", 0), "Emerald Hill's emerald is kept");
         assertEquals(1, getInt(profile(), "unlocked"), "Chemical Plant can now start a run");
+        assertTrue((boolean) call(profile(), "extendedModesUnlocked"), "the first clear unlocks longer modes");
         int rings = fixture.sprite().getRingCount();
         // Choose act 2 of Chemical Plant.
         fixture.stepIdleFrames(30);
@@ -647,4 +648,144 @@ class TestSonicSurvivors {
             config.setConfigValue(SonicConfiguration.START, oldStart);
         }
     }
+
+    private Object reloadProfile() throws Exception {
+        var constructor = loader.loadClass("survivors.Profile").getDeclaredConstructor(Path.class);
+        constructor.setAccessible(true);
+        return call(constructor.newInstance(com.openggf.game.save.SavePaths.root()
+                .resolve("sonic-survivors/profile.txt")), "load");
+    }
+
+    @Test void campModesUnlockAfterClearPersistAndCycleBackToStandard() throws Exception {
+        var fixture = launch(0, 0);
+        fixture.stepIdleFrames(30);
+        for (int i = 0; i < 8; i++) tapDown(fixture);
+        tapEnter(fixture);
+        assertEquals(0, getInt(profile(), "mode"));
+        assertFalse((boolean) call(profile(), "extendedModesUnlocked"));
+        // Existing profiles with a completed boss must unlock without replaying that boss.
+        set(profile(), "unlocked", 1);
+        tapEnter(fixture);
+        assertEquals(1, getInt(reloadProfile(), "mode"));
+        tapEnter(fixture);
+        assertEquals(2, getInt(reloadProfile(), "mode"));
+        tapEnter(fixture);
+        assertEquals(0, getInt(reloadProfile(), "mode"));
+    }
+
+    @Test void oldAndInvalidProfilesKeepTheTwoMinuteDefaultAndCannotBypassTheUnlock() throws Exception {
+        launch(0, 0);
+        Path file = com.openggf.game.save.SavePaths.root().resolve("sonic-survivors/profile.txt");
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, "unlocked=1\nbank=123\n");
+        assertEquals(0, call(reloadProfile(), "selectedMode"));
+        Files.writeString(file, "unlocked=1\nmode=99\n");
+        assertEquals(0, call(reloadProfile(), "selectedMode"));
+        Files.writeString(file, "mode=2\n");
+        assertEquals(0, call(reloadProfile(), "selectedMode"));
+        Files.writeString(file, "emeralds=1\nmode=2\n");
+        assertEquals(2, call(reloadProfile(), "selectedMode"));
+    }
+
+    @Test void fiveMinuteClockPassesTwoMinutesThenSpawnsBossAndReplaysItsBoundary() throws Exception {
+        var fixture = launch(0, 0);
+        set(profile(), "unlocked", 1);
+        set(profile(), "mode", 1);
+        startRun(fixture);
+        assertEquals(300, call(stage(), "survivalSeconds"));
+        assertTrue(getInt(stage(), "stageFrames") > 17900);
+        // Changing a saved preference cannot change a run in progress.
+        set(profile(), "mode", 2);
+        set(stage(), "fightFrames", 7199);
+        set(stage(), "stageFrames", 10801);
+        fixture.stepIdleFrames(2);
+        assertEquals(FIGHT, phase());
+        assertTrue(objects("Boss").isEmpty());
+        set(stage(), "stageFrames", 1);
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        fixture.stepIdleFrames(1);
+        assertEquals(BOSS, phase());
+        assertEquals(1, objects("Boss").size());
+        registry.restore(snapshot);
+        assertEquals(1, getInt(run(), "mode"));
+        fixture.stepIdleFrames(1);
+        assertEquals(BOSS, phase());
+        assertEquals(1, objects("Boss").size());
+    }
+
+    @Test void endlessHasNoBossDeadlinePausesRewindsAndBanksOnRetirement() throws Exception {
+        var fixture = launch(0, 0);
+        set(profile(), "unlocked", 1);
+        set(profile(), "mode", 2);
+        startRun(fixture);
+        assertTrue((boolean) call(stage(), "endless"));
+        set(stage(), "fightFrames", 18000);
+        fixture.stepIdleFrames(2);
+        assertEquals(FIGHT, phase());
+        assertTrue(objects("Boss").isEmpty());
+        assertEquals(0, getInt(stage(), "stageFrames"));
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        int elapsed = getInt(stage(), "fightFrames");
+        fixture.stepIdleFrames(3);
+        registry.restore(snapshot);
+        assertEquals(elapsed, getInt(stage(), "fightFrames"));
+        assertEquals(2, getInt(run(), "mode"));
+        call(run(), "gainXp", 5);
+        fixture.stepIdleFrames(10);
+        assertEquals(elapsed, getInt(stage(), "fightFrames"), "the card menu freezes elapsed time");
+        set(run(), "ringsCollected", 100);
+        fixture.sprite().setRingCount(40);
+        call(stage(), "retire", true);
+        assertEquals(90, getInt(profile(), "bank"));
+        assertFalse((boolean) get(run(), "active"));
+        assertTrue((boolean) get(stage(), "exiting"));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {1, 2})
+    void deathEggKeepsItsBossFinaleInLongAndEndlessModes(int mode) throws Exception {
+        var fixture = launch(10, 0);
+        set(profile(), "unlocked", 9);
+        set(profile(), "mode", mode);
+        startRun(fixture);
+        assertEquals(BOSS, phase());
+        assertFalse((boolean) call(stage(), "endless"));
+        assertEquals(1, objects("Boss").size());
+    }
+
+    @Test void ringShowersBatchSoundWithoutLosingRewardsAndRestoreTheirCooldown() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var player = fixture.sprite();
+        call(stage(), "dropRings", player.getCentreX(), player.getCentreY(), 30);
+        var rings = objects("Pickup");
+        assertEquals(3, rings.size());
+        var audio = com.openggf.audio.AudioManager.getInstance();
+        var requests = new ArrayList<Integer>();
+        audio.setRequestObserver((kind, id) -> requests.add(id));
+        try {
+            int before = player.getRingCount();
+            for (var ring : rings) call(ring, "collect", player);
+            assertEquals(before + 30, player.getRingCount());
+            assertEquals(30, getInt(run(), "ringsCollected"));
+            assertTrue(getInt(run(), "pendingLevels") > 0, "all XP still reaches level-ups");
+            assertEquals(1, requests.size(), "a whole shower in one frame chimes only once");
+            Object snapshot = call(run(), "capture");
+            set(run(), "frames", getInt(run(), "frames") + 11);
+            assertFalse((boolean) call(run(), "ringSound", 10));
+            set(run(), "frames", getInt(run(), "frames") + 1);
+            assertTrue((boolean) call(run(), "ringSound", 1));
+            call(run(), "restore", snapshot);
+            assertFalse((boolean) call(run(), "ringSound", 1), "rewind restores the cooldown");
+            set(run(), "frames", getInt(run(), "frames") + 30);
+            assertTrue((boolean) call(run(), "ringSound", 1), "an isolated pickup remains audible");
+            call(run(), "begin", 0, profile(), 123L);
+            assertTrue((boolean) call(run(), "ringSound", 1), "a new run resets audio grouping");
+        } finally {
+            audio.setRequestObserver(null);
+        }
+    }
+
 }

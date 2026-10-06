@@ -231,12 +231,15 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         phaseFrames = 0;
     }
 
+    int survivalSeconds() { return Stages.survivalSeconds(arena().stage(), run().mode); }
+
+    boolean endless() { return survivalSeconds() < 0; }
+
     private void beginFight() {
-        var arena = arena();
-        phase = Stages.survivalSeconds(arena.stage()) > 0 ? FIGHT : BOSS;
+        phase = survivalSeconds() != 0 ? FIGHT : BOSS;
         phaseFrames = 0;
         fightFrames = 0;
-        stageFrames = Stages.survivalSeconds(arena.stage()) * 60;
+        stageFrames = Math.max(0, survivalSeconds()) * 60;
         spawnTimer = 30;
         eliteTimer = ELITE_PERIOD;
         if (phase == BOSS) spawnBoss();
@@ -246,7 +249,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         var run = run();
         run.frames++;
         fightFrames++;
-        if (phase == FIGHT) {
+        if (phase == FIGHT && !endless()) {
             int before = stageFrames / 60;
             stageFrames--;
             if (stageFrames <= 5 * 60 && stageFrames / 60 < before) services().playSfx(0xBA); // sfx_Ding countdown.
@@ -291,7 +294,9 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         if (ground.length + air.length == 0) return;
         var run = run();
         int tier = Stages.tier(stage, arena.act());
-        int seconds = fightFrames / 60;
+        // Stretch the timed wave ramp to five minutes; endless retains the normal ramp
+        // and existing population/spawn caps rather than growing an unbounded object pool.
+        int seconds = (int) (fightFrames / 60.0 * 120 / Math.max(120, survivalSeconds()));
         int alive = enemies().size();
         int maxAlive = Math.min(34, 7 + 2 * tier + seconds / 10) / (phase == BOSS ? 2 : 1);
         if (--eliteTimer <= 0 && phase == FIGHT) {
@@ -329,7 +334,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             x = arena.clampX(camera.getX() + 24 + run.nextInt(Math.max(1, camera.getWidth() - 48)), 24);
             y = camera.getY() - 24;
         }
-        double progress = fightFrames / (double) Math.max(1, Stages.survivalSeconds(arena.stage()) * 60);
+        double progress = fightFrames / (double) (Math.max(120, survivalSeconds()) * 60);
         double actScale = 1 + 0.2 * arena.act();
         int hp = (int) Math.round(t.hp() * (1 + 0.25 * tier) * (1 + 0.5 * Math.min(1.2, progress)) * actScale);
         if (elite) hp = hp * 6 + 10;
@@ -941,15 +946,26 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     }
 
     // ---- Camp: shop, then start ----
-    static final int CAMP_START = 0, CAMP_TITLE = Profile.SHOP_COUNT + 1;
+    static final int CAMP_START = 0, CAMP_MODE = Profile.SHOP_COUNT + 1, CAMP_TITLE = Profile.SHOP_COUNT + 2;
 
     private void campMenu(AbstractPlayableSprite player) {
-        moveCursor(menuMove(player), Profile.SHOP_COUNT + 2);
+        moveCursor(menuMove(player), Profile.SHOP_COUNT + 3);
         if (!menuConfirm(player)) return;
         if (menuIndex == CAMP_START) { beginRun(player); return; }
         if (menuIndex == CAMP_TITLE) { exitToTitle(); return; }
-        int item = menuIndex - 1;
         var profile = profile();
+        if (menuIndex == CAMP_MODE) {
+            if (arena().stage() == Stages.DEZ) {
+                banner("DEATH EGG IS ALWAYS THE BOSS FINALE", 90, Draw.CYAN);
+            } else if (profile.cycleMode()) {
+                services().playSfx(0xCD);
+            } else {
+                banner("CLEAR A BOSS TO UNLOCK LONGER MODES", 90, Draw.GOLD);
+                services().playSfx(0xED);
+            }
+            return;
+        }
+        int item = menuIndex - 1;
         if (profile.buy(item)) {
             services().playSfx(0xC0); // sfx_CasinoBonus.
             banner(Profile.shopName(item) + " " + profile.shop[item], 60, Draw.GREEN);

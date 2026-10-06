@@ -175,9 +175,10 @@ final class Hud {
             double fraction = boss == null ? 0 : boss.hp() / (double) Math.max(1, boss.maxHp());
             Draw.bar(s, s.camera().getWidth() / 2 - 64, 16, 128, 6, fraction, Draw.RED, 1f);
         } else {
-            String time = clock(stage.phase == Stage.INTRO ? Stages.survivalSeconds(stage.arena().stage()) * 60
-                    : stage.stageFrames);
-            boolean hurry = stage.phase == Stage.FIGHT && stage.stageFrames < 10 * 60;
+            String time = stage.endless() ? clock(stage.fightFrames / 60 * 60)
+                    : clock(stage.phase == Stage.INTRO ? stage.survivalSeconds() * 60 : stage.stageFrames);
+            if (stage.endless()) Draw.centred(s, "ENDLESS", 25, 1, Draw.CYAN, 1f);
+            boolean hurry = stage.phase == Stage.FIGHT && !stage.endless() && stage.stageFrames < 10 * 60;
             Draw.centred(s, time, 6, 2, hurry && (stage.frameTick / 10) % 2 == 0 ? Draw.RED : Draw.WHITE, 1f);
         }
         // Zone and kills, top right.
@@ -225,9 +226,10 @@ final class Hud {
         var arena = stage.arena();
         Draw.centred(s, Stages.name(arena.stage()), 92, 2, Draw.GOLD, alpha);
         String goal = arena.stage() == Stages.DEZ ? "DEFEAT SILVER SONIC!"
-                : "SURVIVE " + clock(Stages.survivalSeconds(arena.stage()) * 60) + "!";
+                : stage.endless() ? "ENDLESS SURVIVAL!" : "SURVIVE " + clock(stage.survivalSeconds() * 60) + "!";
         Draw.centred(s, goal, 114, 2, Draw.WHITE, alpha);
-        Draw.centred(s, "BOUNCE ON BADNIKS TO KEEP YOUR COMBO GOING", 140, 1, Draw.CYAN, alpha);
+        Draw.centred(s, stage.endless() ? "ESC / BACK: BANK RINGS AND LEAVE"
+                : "BOUNCE ON BADNIKS TO KEEP YOUR COMBO GOING", 140, 1, Draw.CYAN, alpha);
     }
 
     // ---- Level up ----
@@ -285,12 +287,17 @@ final class Hud {
         Draw.shadow(s, bank, left + 10, top + 46, 1, Draw.YELLOW, 1f);
         drawEmeralds(s, profile, left + panelW - 10 - 7 * 12, top + 44);
         int y = top + 62;
-        for (int row = 0; row < Profile.SHOP_COUNT + 2; row++) {
+        for (int row = 0; row < Profile.SHOP_COUNT + 3; row++) {
             boolean selected = stage.menuIndex == row;
             int colour = selected ? Draw.GOLD : Draw.WHITE;
             if (selected) Draw.rect(s, left + 6, y - 2, panelW - 12, 11, 0x2A3C90, 1f);
             if (row == Stage.CAMP_START) {
                 Draw.shadow(s, (selected ? "> " : "  ") + "START RUN", left + 10, y, 1, selected ? Draw.GREEN : Draw.GREEN, 1f);
+            } else if (row == Stage.CAMP_MODE) {
+                String label = stage.arena().stage() == Stages.DEZ ? "MODE: BOSS FINALE"
+                        : !profile.extendedModesUnlocked() ? "MODE: 2 MIN (CLEAR A BOSS TO UNLOCK)"
+                        : "MODE: " + RunState.modeName(profile.selectedMode()) + " (ENTER TO CHANGE)";
+                Draw.shadow(s, (selected ? "> " : "  ") + label, left + 10, y, 1, colour, 1f);
             } else if (row == Stage.CAMP_TITLE) {
                 Draw.shadow(s, (selected ? "> " : "  ") + "BACK TO TITLE", left + 10, y, 1, colour, 1f);
             } else {

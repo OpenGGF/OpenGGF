@@ -7,7 +7,7 @@ Your character starts with nothing but their jump: **bounce on badniks to keep g
 enemy chains a **combo** that multiplies stomp damage and ring drops, every tenth chained bounce
 sets off **Fever** (the stock invincibility), and defeated badniks drop **rings**, which are both
 your **health** and **experience**. Level up to pick new weapons, moves and passives,
-survive the two-minute clock, beat the zone's **boss**, choose the next act, and push on to
+survive the two- or five-minute clock, beat the zone's **boss**, choose the next act, and push on to
 the Death Egg. Rings and Chaos Emeralds won along the way upgrade both characters between runs.
 
 The stock act can never be finished: the signpost, capsule, boss triggers and every stock object
@@ -36,7 +36,15 @@ Sky Chase has no ground to fight on and is skipped.
    run has reached. Starting further along grants two catch-up level-ups per skipped zone (at
    most ten). Start opens that zone's first act in **camp**.
 2. **Camp.** Spend banked rings in the shop, then START RUN. A run begins with **30 rings**.
-3. **Survive.** The clock counts down **2:00**. Badniks spawn just off-screen on both sides and
+   The **MODE** row cycles with Enter/Start between **2 MINUTES**, **5 MINUTES** and **ENDLESS**.
+   Five-minute and endless modes unlock permanently after your first boss clear; existing
+   profiles with a cleared boss already qualify. The choice is saved and fixed for the run.
+   Five-minute mode stretches the wave difficulty ramp across the longer clock, keeping
+   30-second elites and 10-second ring formations. Endless stays in the starting arena,
+   shows elapsed time, and keeps spawning waves without a boss or route transition;
+   enemy counts and spawn rates retain their caps. Escape/Back retires and banks held rings
+   too; dying uses the usual game-over payout. Death Egg always stays a direct boss finale.
+3. **Survive.** The clock counts down **2:00** or **5:00** (upwards in endless). Badniks spawn just off-screen on both sides and
    drop in from above, faster and tougher as the clock runs down and further along the route.
    Every 10 seconds a formation of five floating rings appears somewhere in the arena away
    from Sonic. Red chevrons at the screen edges point at badniks approaching from off-screen. Every 30
@@ -72,6 +80,10 @@ expire after five seconds; reward rings remain magnetic. A shield absorbs a hit 
 A hit with **no rings** is lethal, unless a revive remains (Revival shop item, Oil Ocean's
 emerald), which restores 20 rings. Rings flash red on the HUD while one more hit would empty
 them. As in stock Sonic 2, rings cannot be collected during the first half-second after a hit.
+Ring pickup chimes are grouped: the first pickup after half a second without a chime is
+immediately audible, while rapid collections chime roughly every ten rings, at most five
+times per second. This includes lost rings and Super Ring monitors; every ring still grants
+its full health and, for reward rings, experience. A single large pickup makes at most one chime.
 
 ## Bouncing and the combo
 
@@ -167,7 +179,7 @@ java -XstartOnFirstThread -cp "target/classes:$(cat target/survivors-classpath.t
 ```
 
 (`-XstartOnFirstThread` is for macOS only.) Development properties: `sonic-survivors.seed`
-pins the run's random stream, `sonic-survivors.survival=N` shortens every stage's clock to N
+pins the run's random stream, `sonic-survivors.survival=N` overrides timed survival clocks to N
 seconds and `sonic-survivors.bossHp=N` sets every boss's hitpoints.
 
 ## How it is built

@@ -238,3 +238,50 @@ they do not establish ROM parity for these intentionally custom combat rules.
   cases were subsequently rerun with their required S3K property: all four passed,
   zero skipped. The combined final focused coverage is 235 passing checks; this does
   not supersede the incomplete broad run or unresolved unrelated guard findings.
+
+
+## Longer modes and quieter pickups (2026-10-06)
+
+The existing Survivors branch was reconciled with destination `develop` at `2d91ef756e`
+and pushed as merge `a54dcf56f8` before this follow-up. The checkout stayed on the personal
+feature branch. Conflicts combined documentation additions and the API version comment;
+the shared engine merged automatically. Focused merge verification used queued Maven with
+`TestSonicSurvivors,TestGameLoop,TestGameLoopFreshLevelHandoff,TestModApiSignatureSurface,
+TestGameplayCaptureToolArgs,TestBootstrapModuleProviderCachingGuard,TestArchitecturalSourceGuard`
+and absolute root S2/S3K ROM paths: 250 checks passed, zero skipped.
+
+The user selected both five-minute and endless modes. The camp MODE row cycles through
+2 minutes, 5 minutes and endless, after any first boss clear. Existing route unlocks,
+emeralds or wins establish that unlock without a profile migration; the persisted integer
+mode defaults to standard if absent/invalid and cannot bypass the unlock. A run copies the
+mode at its start and captures it for rewind, so later profile changes do not alter it.
+Five-minute waves stretch the normal difficulty ramp, with the existing real-time ring and
+elite cadence. Endless counts elapsed active gameplay, never schedules the stage boss,
+retains enemy-count/spawn-rate caps, and uses existing death/retirement banking. It does not
+award a clear or emerald for elapsed time. The Death Egg remains a direct boss finale.
+
+Pickup audio grouping lives in the mod's run state, shared by reward piles, lost rings and
+Super Ring monitors. A pickup after 30 gameplay frames without a chime sounds immediately;
+otherwise a ten-ring batch needs a 12-frame minimum interval. Large merged pickups emit at
+most once and do not schedule a backlog of sounds. Both the batch and last chime frame are
+rewind state, reset on new runs. Health, XP, bank credit and the host audio API are unchanged.
+A simple every-tenth-pickup counter was rejected because merged piles have different ring
+values and isolated rings would often give no feedback.
+
+The mod act/character matrix above inherits its prior gaps. Added checks focus on saved
+mode/unlock compatibility, camp navigation, the timed boss boundary, endless pause/rewind
+and retirement, the Death Egg exception, and actual audio request counts with full rewards.
+Human difficulty balance and audio listening remain separate from deterministic checks.
+
+
+Focused follow-up verification: `maven_queue.py -B -Dmse=off -Dtest=TestSonicSurvivors
+-Dsonic2.rom.path=<absolute-root-S2> test` exercised 62 cases. Sixty passed immediately;
+two new Death Egg cases had used the raw ROM zone index 14 instead of registry index 10.
+After correcting that test setup, the matched two-case rerun passed without skips.
+`examples/sonic-survivors/build.py` packaged mod 0.3.0 successfully through `ggfmod`.
+`GameplayCaptureTool` at 400x224 with the packaged mod and seed 123 verified fresh locked,
+unlocked five-minute, and endless profiles in separate native JVMs. Frame 29 shows camp,
+100 the intro, and 240 the active clock; CSV rows confirm live solo Sonic in LEVEL mode.
+Artifacts: `/private/tmp/sonic-survivors-modes-20261006`. The 300-frame Start input was
+round-tripped by `InputLogAuthorTool`; seeded capture profiles are presentation setup,
+not evidence of earning the unlock. Full route progression remains covered by tests.

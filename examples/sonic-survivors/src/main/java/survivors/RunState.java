@@ -9,6 +9,8 @@ import com.openggf.game.rewind.RewindSnapshottable;
  * the only place to shop, so a run's bonuses never change underneath it). Captured for rewind.
  */
 final class RunState implements RewindSnapshottable<RunState.Snapshot> {
+    static final int STANDARD = 0, LONG = 1, ENDLESS = 2;
+    static final int RING_SOUND_BATCH = 10, RING_SOUND_COOLDOWN = 12, RING_SOUND_QUIET = 30;
     static final int BASE_TOLL = 10;
     static final int BASE_COMBO_CAP = 6;
     /** Every run starts with these rings (three ring tolls) plus the shop's Ring Start. */
@@ -16,6 +18,8 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
 
     boolean active;
     int startStage, stage, act;
+    int mode;
+    int ringSoundRings, ringSoundFrame = -RING_SOUND_QUIET;
     int[] levels = new int[Upgrades.COUNT];
     int xp, level, pendingLevels;
     int rerolls, revives;
@@ -31,6 +35,9 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
     /** Starts a new run at {@code stage}, act 0, with the profile's permanent bonuses. */
     void begin(int stage, Profile profile, long seed) {
         active = true;
+        mode = profile.selectedMode();
+        ringSoundRings = 0;
+        ringSoundFrame = -RING_SOUND_QUIET;
         startStage = this.stage = stage;
         act = 0;
         levels = new int[Upgrades.COUNT];
@@ -55,6 +62,26 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
         level = catchUp;
         pendingLevels = catchUp + (relic(0) ? 1 : 0);
         rerolls = rerollsPerStage();
+    }
+
+    static String modeName(int mode) {
+        return switch (mode) {
+            case LONG -> "5 MINUTES";
+            case ENDLESS -> "ENDLESS";
+            default -> "2 MINUTES";
+        };
+    }
+
+    /** One immediate chime after quiet, then batches with at most five chimes per second.
+     * Uses gameplay time so modal menus cannot consume the cooldown; captured with the run. */
+    boolean ringSound(int value) {
+        ringSoundRings = Math.min(RING_SOUND_BATCH, ringSoundRings + Math.min(RING_SOUND_BATCH, value));
+        int elapsed = frames - ringSoundFrame;
+        if (elapsed < RING_SOUND_QUIET
+                && (elapsed < RING_SOUND_COOLDOWN || ringSoundRings < RING_SOUND_BATCH)) return false;
+        ringSoundRings = 0;
+        ringSoundFrame = frames;
+        return true;
     }
 
     void end() {
@@ -158,7 +185,7 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
 
     @Override public Snapshot capture() {
         return new Snapshot(active, startStage, stage, act, levels.clone(), xp, level, pendingLevels, rerolls, revives,
-                kills, ringsCollected, bestCombo, frames, stagesCleared, emeraldsWon, carriedRings, combo, paused, rng,
+                kills, ringsCollected, bestCombo, frames, stagesCleared, emeraldsWon, carriedRings, combo, paused, rng, mode, ringSoundRings, ringSoundFrame,
                 new int[]{shopPower, shopRings, shopReroll, shopMagnet, shopGrowth, shopRevival, shopTalent, relics});
     }
 
@@ -183,6 +210,9 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
         combo = s.combo();
         paused = s.paused();
         rng = s.rng();
+        mode = s.mode();
+        ringSoundRings = s.ringSoundRings();
+        ringSoundFrame = s.ringSoundFrame();
         int[] shop = s.shop();
         shopPower = shop[0];
         shopRings = shop[1];
@@ -201,5 +231,5 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
     record Snapshot(boolean active, int startStage, int stage, int act, int[] levels, int xp, int level,
                     int pendingLevels, int rerolls, int revives, int kills, int ringsCollected, int bestCombo,
                     int frames, int stagesCleared, int emeraldsWon, int carriedRings, int combo, boolean paused,
-                    long rng, int[] shop) { }
+                    long rng, int mode, int ringSoundRings, int ringSoundFrame, int[] shop) { }
 }

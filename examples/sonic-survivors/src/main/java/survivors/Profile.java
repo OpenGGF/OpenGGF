@@ -27,6 +27,7 @@ final class Profile {
     int emeralds;
     /** Highest stage index a run may start from (0 = Emerald Hill only). */
     int unlocked;
+    int mode;
     int runs, wins, bestStages, bestKills, totalKills, bestCombo, bankedTotal;
 
     Profile(Path file) { this.file = file; }
@@ -106,6 +107,18 @@ final class Profile {
     int emeraldCount() { return Integer.bitCount(emeralds & 0x7F); }
     boolean allEmeralds() { return emeraldCount() == EMERALDS; }
 
+    /** Old profiles already record a first clear in their route unlocks or emeralds. */
+    boolean extendedModesUnlocked() { return unlocked > 0 || emeralds != 0 || wins > 0; }
+
+    int selectedMode() { return extendedModesUnlocked() ? mode : RunState.STANDARD; }
+
+    boolean cycleMode() {
+        if (!extendedModesUnlocked()) return false;
+        mode = (mode + 1) % 3;
+        save();
+        return true;
+    }
+
     boolean canBuy(int item) {
         return shop[item] < shopMax(item) && bank >= shopCost(item, shop[item]);
     }
@@ -131,6 +144,8 @@ final class Profile {
                 try { value = Integer.parseInt(line.substring(eq + 1).trim()); }
                 catch (NumberFormatException bad) { continue; }
                 switch (key) {
+                    case "mode" -> mode = value >= RunState.STANDARD && value <= RunState.ENDLESS
+                            ? value : RunState.STANDARD;
                     case "bank" -> bank = Math.max(0, value);
                     case "emeralds" -> emeralds = value & 0x7F;
                     case "unlocked" -> unlocked = Math.max(0, Math.min(Stages.COUNT - 1, value));
@@ -159,6 +174,7 @@ final class Profile {
 
     void save() {
         var out = new StringBuilder();
+        out.append("mode=").append(mode).append('\n');
         out.append("bank=").append(bank).append('\n');
         out.append("emeralds=").append(emeralds).append('\n');
         out.append("unlocked=").append(unlocked).append('\n');
