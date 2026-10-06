@@ -22,11 +22,262 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAudioPresentationProducerRewind {
+    @Test
+    void recordedReplayReversesTheFinalStereoPacketAndChangesOnlyItsOwnRate() {
+        Fixture fixture = fixture();
+        fixture.producer.setHistoryArmed(false);
+        fixture.startMusic();
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        var replay = fixture.producer.recordReplay(3);
+        fixture.producer.present(1, PresentationMode.FORWARD);
+        fixture.producer.present(2, PresentationMode.FORWARD);
+        fixture.producer.present(3, PresentationMode.FORWARD);
+        long voicePosition = fixture.musicPosition();
+        var capture = fixture.producer.attachCapture(2);
+
+        replay.beginReverse(1);
+        fixture.producer.present(4, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {7, 107, 6, 106}, fixture.sink.lastPacket());
+        short[] captured = new short[4];
+        assertEquals(2, capture.drainPresentationFrame(captured));
+        assertArrayEquals(fixture.sink.lastPacket(), captured);
+
+        replay.setRate(2);
+        fixture.producer.present(5, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {5, 105, 3, 103}, fixture.sink.lastPacket());
+        assertEquals(voicePosition, fixture.musicPosition());
+        assertEquals(0, fixture.producer.transactionFingerprint().history().storedFrames(),
+                "a scoped recording must not arm the developer's PCM history");
+        replay.close();
+        capture.close();
+    }
+
+    @Test
+    void silentRowsFreezeRecordedReplayCursorAndRecordNoPauseSamples() {
+        Fixture fixture = fixture();
+        fixture.startMusic();
+        var replay = fixture.producer.recordReplay(2);
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        fixture.producer.present(1, PresentationMode.SILENT);
+        fixture.producer.present(2, PresentationMode.FORWARD);
+        replay.beginReverse(1);
+        fixture.producer.present(3, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {3, 103, 2, 102}, fixture.sink.lastPacket());
+        fixture.producer.present(4, PresentationMode.SILENT);
+        assertArrayEquals(new short[4], fixture.sink.lastPacket());
+        fixture.producer.present(5, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {1, 101, 0, 100}, fixture.sink.lastPacket());
+        fixture.producer.present(6, PresentationMode.REVERSE);
+        assertArrayEquals(new short[4], fixture.sink.lastPacket());
+        replay.close();
+    }
+
+    @Test
+    void recordedReplayOwnsABoundedFloorAndCannotReadBeforeCaptureStarted() {
+        Fixture fixture = fixture();
+        fixture.startMusic();
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        var replay = fixture.producer.recordReplay(1);
+        for (int frame = 1; frame <= 3; frame++) {
+            fixture.producer.present(frame, PresentationMode.FORWARD);
+        }
+        replay.beginReverse(1);
+        fixture.producer.present(4, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {7, 107, 6, 106}, fixture.sink.lastPacket());
+        fixture.producer.present(5, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {5, 105, 4, 104}, fixture.sink.lastPacket());
+        fixture.producer.present(6, PresentationMode.REVERSE);
+        assertArrayEquals(new short[4], fixture.sink.lastPacket(),
+                "an overwritten origin is silence, never pre-shot or wrapped PCM");
+        replay.close();
+    }
+
+    @Test
+    void recordedReplaySurvivesDeveloperHistoryDisarmAndClearAndPreservesItsReleaseState() {
+        Fixture fixture = fixture();
+        fixture.startMusic();
+        var replay = fixture.producer.recordReplay(3);
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        fixture.producer.setHistoryArmed(false);
+        fixture.producer.present(1, PresentationMode.FORWARD);
+        fixture.producer.clearHistory();
+        fixture.producer.setHistoryArmed(true);
+        fixture.producer.present(2, PresentationMode.FORWARD);
+        fixture.producer.prepareRestoreSelection(fixture.producer.snapshot(), fixture.resolver);
+        var before = fixture.producer.transactionFingerprint();
+        long voicePosition = fixture.musicPosition();
+
+        replay.beginReverse(1);
+        fixture.producer.present(3, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {5, 105, 4, 104}, fixture.sink.lastPacket());
+        replay.stop();
+        var after = fixture.producer.transactionFingerprint();
+        assertEquals(before.history(), after.history());
+        assertEquals(before.historyArmed(), after.historyArmed());
+        assertEquals(before.selectedRestoreIdentity(), after.selectedRestoreIdentity());
+        assertEquals(before.preparedSelectedRestoreIdentity(), after.preparedSelectedRestoreIdentity());
+        assertEquals(before.voiceIdentities(), after.voiceIdentities());
+        assertEquals(voicePosition, fixture.musicPosition());
+        assertEquals(2, after.releaseCrossfadeRemaining());
+        fixture.producer.present(4, PresentationMode.FORWARD);
+        assertArrayEquals(new short[] {5, 105, 7, 107}, fixture.sink.lastPacket(),
+                "the live voice resumes at its held position, with one release crossfade");
+        assertEquals(0, fixture.producer.transactionFingerprint().releaseCrossfadeRemaining());
+        replay.close();
+    }
+
+    @Test
+    void clearingDeveloperHistoryDuringScopedReverseKeepsItsCursorAndCrossfadeSource() {
+        Fixture fixture = fixture();
+        fixture.startMusic();
+        var replay = fixture.producer.recordReplay(2);
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        fixture.producer.present(1, PresentationMode.FORWARD);
+        replay.beginReverse(1);
+        fixture.producer.present(2, PresentationMode.REVERSE);
+        fixture.producer.clearHistory();
+        replay.stop();
+        fixture.producer.present(3, PresentationMode.FORWARD);
+        assertArrayEquals(new short[] {3, 103, 5, 105}, fixture.sink.lastPacket(),
+                "the recorded last sample still owns the release crossfade after a debug history clear");
+        replay.beginReverse(1);
+        fixture.producer.present(4, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {3, 103, 2, 102}, fixture.sink.lastPacket(),
+                "forward resume never appends to an already sealed clip");
+        fixture.producer.present(5, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {1, 101, 0, 100}, fixture.sink.lastPacket());
+        replay.close();
+    }
+
+    @Test
+    void scopedReverseReleasePreservesTransientVoiceIdentitiesAndCursors() {
+        Fixture fixture = fixture();
+        fixture.startMusic();
+        var sfx = SampleBackedVoice.oneShot(2, 1, fixture.pcm,
+                fixture.pcm.sampleRate(), 1, 1);
+        fixture.commands.submit(AudioPresentationCommand.StartSampleSfx.fromVoice(sfx),
+                () -> true, fixture.registry::apply);
+        var replay = fixture.producer.recordReplay(2);
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        var before = fixture.producer.snapshot();
+        var identities = fixture.producer.transactionFingerprint().voiceIdentities();
+        assertEquals(2, identities.size());
+        replay.beginReverse(1);
+        fixture.producer.present(1, PresentationMode.REVERSE);
+        replay.close();
+        assertEquals(before, fixture.producer.snapshot());
+        assertEquals(identities, fixture.producer.transactionFingerprint().voiceIdentities(),
+                "presentation-only release must not stop or recreate an in-flight SFX");
+    }
+
+    @Test
+    void failedScopedSinkBoundaryLeavesRecordingAndReverseCursorRetryable() {
+        Fixture fixture = fixture();
+        fixture.startMusic();
+        var replay = fixture.producer.recordReplay(3);
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        var before = fixture.producer.transactionFingerprint();
+        fixture.sink.boundaryFailure = new IllegalStateException("injected sink boundary failure");
+        assertThrows(IllegalStateException.class, () -> replay.beginReverse(1));
+        assertEquals(before, fixture.producer.transactionFingerprint());
+        assertFalse(fixture.producer.isReplayReverseActive());
+        fixture.producer.present(1, PresentationMode.FORWARD);
+        fixture.sink.boundaryFailure = null;
+        replay.beginReverse(1);
+        fixture.producer.present(2, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {3, 103, 2, 102}, fixture.sink.lastPacket());
+        before = fixture.producer.transactionFingerprint();
+        fixture.sink.boundaryFailure = new IllegalStateException("injected sink boundary failure");
+        assertThrows(IllegalStateException.class, replay::close);
+        assertEquals(before, fixture.producer.transactionFingerprint());
+        assertFalse(replay.isClosed());
+        assertTrue(fixture.producer.isReplayReverseActive());
+        fixture.producer.present(3, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {1, 101, 0, 100}, fixture.sink.lastPacket());
+        fixture.sink.boundaryFailure = null;
+        replay.close();
+        assertTrue(replay.isClosed());
+        assertFalse(fixture.producer.isReplayReverseActive());
+    }
+
+    @Test
+    void offOwnerReplayCloseCannotReleaseOrDetachTheLiveHandle() throws InterruptedException {
+        Fixture fixture = fixture();
+        fixture.startMusic();
+        var replay = fixture.producer.recordReplay(2);
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        var failure = new AtomicReference<Throwable>();
+        Thread thread = new Thread(() -> {
+            try { replay.close(); }
+            catch (Throwable expected) { failure.set(expected); }
+        });
+        thread.start();
+        thread.join();
+        assertTrue(failure.get() instanceof IllegalStateException);
+        assertFalse(replay.isClosed());
+        replay.beginReverse(1);
+        fixture.producer.present(1, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {1, 101, 0, 100}, fixture.sink.lastPacket());
+        replay.close();
+    }
+
+    @Test
+    void conflictingReverseOwnersCannotReplaceOrSealARecordedReplay() {
+        Fixture fixture = fixture();
+        fixture.startMusic();
+        var first = fixture.producer.recordReplay(3);
+        var second = fixture.producer.recordReplay(3);
+        fixture.producer.present(0, PresentationMode.FORWARD);
+        first.beginReverse(1);
+        var before = fixture.producer.transactionFingerprint();
+        assertThrows(IllegalStateException.class, () -> second.beginReverse(2));
+        assertThrows(IllegalStateException.class, () -> first.beginReverse(2));
+        assertThrows(IllegalStateException.class, () -> fixture.producer.beginReverse(2));
+        assertEquals(before, fixture.producer.transactionFingerprint());
+        fixture.producer.present(1, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {1, 101, 0, 100}, fixture.sink.lastPacket());
+        first.stop();
+        fixture.producer.present(2, PresentationMode.FORWARD);
+        second.beginReverse(1);
+        fixture.producer.present(3, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {3, 103, 1, 101}, fixture.sink.lastPacket(),
+                "a rejected begin must leave the second recording able to capture forward PCM");
+        second.stop();
+        fixture.producer.beginReverse(1);
+        before = fixture.producer.transactionFingerprint();
+        assertThrows(IllegalStateException.class, () -> first.beginReverse(2));
+        assertEquals(before, fixture.producer.transactionFingerprint());
+        fixture.producer.endReverse();
+        first.close();
+        second.close();
+    }
+
+    @Test
+    void recordingBoundsAndProducerCloseInvalidateEveryHandle() {
+        Fixture fixture = fixture();
+        assertThrows(IllegalArgumentException.class, () -> fixture.producer.recordReplay(0));
+        assertThrows(IllegalArgumentException.class, () -> fixture.producer.recordReplay(121));
+        var recordings = new ArrayList<AudioPresentationProducer.RecordedReplay>();
+        for (int index = 0; index < 4; index++) recordings.add(fixture.producer.recordReplay(1));
+        assertThrows(IllegalStateException.class, () -> fixture.producer.recordReplay(1));
+        recordings.getFirst().close();
+        recordings.add(fixture.producer.recordReplay(120));
+        recordings.getLast().beginReverse(1);
+        fixture.producer.close();
+        assertFalse(fixture.producer.isReplayReverseActive());
+        for (var replay : recordings) {
+            assertTrue(replay.isClosed());
+            replay.close();
+            assertThrows(IllegalStateException.class, () -> replay.beginReverse(1));
+        }
+    }
+
     @Test
     void transactionIdentityFingerprintsContainOnlyScalarTokens() {
         Fixture fixture = fixture();
@@ -447,6 +698,7 @@ class TestAudioPresentationProducerRewind {
         private final short[] packet;
         private int copiedFrames;
         private boolean expectCrossfade;
+        private RuntimeException boundaryFailure;
 
         private EventSink(int sampleRate, int maxStereoFrames) {
             this.sampleRate = sampleRate;
@@ -475,6 +727,7 @@ class TestAudioPresentationProducerRewind {
 
         @Override
         public void onReverseBoundary() {
+            if (boundaryFailure != null) throw boundaryFailure;
             events.add("reverse-boundary");
         }
 

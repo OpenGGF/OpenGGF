@@ -40,13 +40,13 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
     private static final int PER_LINE_FLAG = 0x8000;
 
     /** AIZ1_DeformArray heights. $800D = per-line flag | 13 scanlines. */
-    private static final int[] AIZ1_DEFORM_HEIGHTS = {
+    static final int[] AIZ1_DEFORM_HEIGHTS = {
             0xD0, 0x20, 0x30, 0x30, 0x10, 0x10, 0x10,
             0x800D, 0x0F, 0x06, 0x0E, 0x50, 0x20
     };
 
     /** AIZ2_BGDeformArray heights (24 bands, no per-line flags). */
-    private static final int[] AIZ2_DEFORM_HEIGHTS = {
+    static final int[] AIZ2_DEFORM_HEIGHTS = {
             0x10, 0x20, 0x38, 0x58, 0x28, 0x40, 0x38, 0x18,
             0x18, 0x90, 0x48, 0x10, 0x18, 0x20, 0x38, 0x58,
             0x28, 0x40, 0x38, 0x18, 0x18, 0x90, 0x48, 0x10
@@ -57,7 +57,7 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
      * AIZ2_BGDeformMake scatter pattern. Creates a wave: speeds increase
      * from center (index 9,21 = speed 0) outward (index 3,15 = speed 6).
      */
-    private static final int[] AIZ2_SPEED_MAP = {
+    static final int[] AIZ2_SPEED_MAP = {
             3, 4, 5, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3,
             4, 5, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3
     };

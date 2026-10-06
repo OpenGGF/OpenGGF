@@ -41,8 +41,24 @@ public class GamepadInputManager {
     private String presentationName = "";
 
     private ControllerPromptStyle presentationStyle = ControllerPromptStyle.forName("");
+    // Pads currently assigned to logical players, for per-player button prompts.
+    private final ControllerPromptStyle[] playerStyles = new ControllerPromptStyle[2];
+    private final boolean[] playerPrimary = new boolean[2];
+
+    /** Physical buttons that produce the logical Genesis actions; prompts and mapping share them. */
+    static final int ACTION_A_BUTTON = GLFW_GAMEPAD_BUTTON_X;
+    static final int ACTION_B_BUTTON = GLFW_GAMEPAD_BUTTON_A;
+    static final int ACTION_C_BUTTON = GLFW_GAMEPAD_BUTTON_B;
+    static final int START_BUTTON = GLFW_GAMEPAD_BUTTON_START;
+    static final int REWIND_BUTTON = GLFW_GAMEPAD_BUTTON_LEFT_BUMPER;
 
     ControllerPromptStyle presentationStyle() { return presentationStyle; }
+
+    /** Prompt family of the pad assigned to a logical player at the last poll, or null. */
+    ControllerPromptStyle playerStyle(int player) { return playerStyles[player]; }
+
+    /** Whether that player's pad is the primary pad, which owns the shared rewind bumper. */
+    boolean playerPadIsPrimary(int player) { return playerPrimary[player]; }
 
     public GamepadInputManager(GamepadStateSource stateSource) {
         this.stateSource = Objects.requireNonNull(stateSource, "stateSource");
@@ -57,14 +73,18 @@ public class GamepadInputManager {
         List<GamepadStateSource.DeviceState> connected = connectedDevices();
         trackPresentation(connected, bindings.controllerDeadzone());
         int nextPad = 0;
+        java.util.Arrays.fill(playerStyles, null);
+        java.util.Arrays.fill(playerPrimary, false);
 
         PlayerInputState p1 = PlayerInputState.neutral();
         if (isAuto(bindings.controllerPlayer1()) && nextPad < connected.size()) {
+            assign(0, connected.get(nextPad), nextPad == 0);
             p1 = mapDevice(connected.get(nextPad++), bindings.controllerDeadzone(), previousP1);
         }
 
         PlayerInputState p2 = PlayerInputState.neutral();
         if (isAuto(bindings.controllerPlayer2()) && nextPad < connected.size()) {
+            assign(1, connected.get(nextPad), nextPad == 0);
             p2 = mapDevice(connected.get(nextPad), bindings.controllerDeadzone(), previousP2);
         }
 
@@ -75,7 +95,7 @@ public class GamepadInputManager {
         boolean debugModeHeld = primary != null && primary.buttonDown(GLFW_GAMEPAD_BUTTON_Y);
         debugModeTogglePressed = debugModeHeld && !previousDebugModeButtonHeld;
         previousDebugModeButtonHeld = debugModeHeld;
-        rewindHeld = primary != null && primary.buttonDown(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER);
+        rewindHeld = primary != null && primary.buttonDown(REWIND_BUTTON);
 
         boolean backButtonHeld = primary != null && primary.buttonDown(GLFW_GAMEPAD_BUTTON_BACK);
         backButtonPressed = backButtonHeld && !previousBackButtonHeld;
@@ -163,6 +183,11 @@ public class GamepadInputManager {
         presentationHeld.keySet().retainAll(connectedIds);
     }
 
+    private void assign(int player, GamepadStateSource.DeviceState device, boolean primary) {
+        playerStyles[player] = ControllerPromptStyle.forName(device.name());
+        playerPrimary[player] = primary;
+    }
+
     private List<GamepadStateSource.DeviceState> connectedDevices() {
         List<GamepadStateSource.DeviceState> connected = new ArrayList<>();
         for (GamepadStateSource.DeviceState device : stateSource.pollDevices()) {
@@ -179,7 +204,7 @@ public class GamepadInputManager {
             PlayerInputState previous) {
         int heldMask = directionMask(device, deadzone);
         int actionHeldMask = actionMask(device);
-        boolean startHeld = device.buttonDown(GLFW_GAMEPAD_BUTTON_START);
+        boolean startHeld = device.buttonDown(START_BUTTON);
 
         int pressedMask = heldMask & ~previous.heldMask();
         int actionPressedMask = actionHeldMask & ~previous.actionHeldMask();
@@ -213,13 +238,13 @@ public class GamepadInputManager {
 
     private int actionMask(GamepadStateSource.DeviceState device) {
         int mask = 0;
-        if (device.buttonDown(GLFW_GAMEPAD_BUTTON_X)) {
+        if (device.buttonDown(ACTION_A_BUTTON)) {
             mask |= InputActionMasks.ACTION_A;
         }
-        if (device.buttonDown(GLFW_GAMEPAD_BUTTON_A)) {
+        if (device.buttonDown(ACTION_B_BUTTON)) {
             mask |= InputActionMasks.ACTION_B;
         }
-        if (device.buttonDown(GLFW_GAMEPAD_BUTTON_B)) {
+        if (device.buttonDown(ACTION_C_BUTTON)) {
             mask |= InputActionMasks.ACTION_C;
         }
         return mask;
@@ -230,6 +255,8 @@ public class GamepadInputManager {
     }
 
     private void resetPreviousStates() {
+        java.util.Arrays.fill(playerStyles, null);
+        java.util.Arrays.fill(playerPrimary, false);
         presentationHeld.clear();
         presentationPress = false;
         previousP1 = PlayerInputState.neutral();

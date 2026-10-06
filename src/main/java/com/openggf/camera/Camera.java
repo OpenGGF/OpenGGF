@@ -166,6 +166,13 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				configService.getString(SonicConfiguration.WIDESCREEN_DEADZONE_MODE));
 	}
 
+    /** Applies a module-selected viewport before loading its destination course. */
+    public void refreshViewportDimensions(SonicConfigurationService config) {
+        width = config.getShort(SonicConfiguration.SCREEN_WIDTH_PIXELS);
+        height = config.getShort(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+        deadzoneMode = DeadzoneMode.parse(config.getString(SonicConfiguration.WIDESCREEN_DEADZONE_MODE));
+    }
+
 	public void updatePosition() {
 		updatePosition(false);
 	}

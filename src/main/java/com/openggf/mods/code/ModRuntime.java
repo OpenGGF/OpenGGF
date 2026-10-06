@@ -9,6 +9,7 @@ import com.openggf.game.patch.RegisteredPatch;
 import com.openggf.game.patch.ModPatchPlanAssembler;
 import com.openggf.mods.ModDependency;
 import com.openggf.mods.ModDescriptor;
+import com.openggf.mods.runtime.OwnerBoundGamePatch;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -133,22 +134,24 @@ public final class ModRuntime implements AutoCloseable {
                         throw new ModRegistrationException(owner,
                                 "Standalone module requires an installed fault boundary");
                     }
-                    standalone = OwnerAwareStandaloneModule.wrap(
-                            owner, plan.standaloneModule(), faultBoundary, plan.characters(),
-                            plan.preparedObjectArt());
+                    standalone = OwnerBoundGamePatch.wrapStandaloneRewinds(owner,
+                            OwnerAwareStandaloneModule.wrap(owner, plan.standaloneModule(), faultBoundary,
+                                    plan.characters(), plan.preparedObjectArt()), faultBoundary);
                     standalone.getPlayableCharacterRegistry();
                     ownerRegistrations = List.of();
                 } else if (plan.hasContent()) {
                     ModBackedGamePatch backing = new ModBackedGamePatch(plan, faultBoundary, saveFindingSink);
                     ownerRegistrations = ModPatchPlanAssembler.backingFirst(patchOwner, backing,
-                            plan.explicitPatches());
+                            plan.explicitPatches().stream()
+                                    .map(patch -> OwnerBoundGamePatch.wrap(owner, patch, faultBoundary)).toList());
                 } else {
                     ownerRegistrations = new ArrayList<>();
                     long index = 0;
                     for (var patch : plan.explicitPatches()) {
                         String namespaced = patch.id().indexOf(':') >= 0
                                 ? patch.id() : owner + ":" + patch.id();
-                        ownerRegistrations.add(new RegisteredPatch(patchOwner, namespaced, patch,
+                        ownerRegistrations.add(new RegisteredPatch(patchOwner, namespaced,
+                                OwnerBoundGamePatch.wrap(owner, patch, faultBoundary),
                                 index++));
                     }
                 }

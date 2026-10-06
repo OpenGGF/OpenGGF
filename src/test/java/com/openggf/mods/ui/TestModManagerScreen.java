@@ -60,6 +60,52 @@ class TestModManagerScreen {
     @TempDir Path temp;
 
     @Test
+    void fixedLaunchShowsActiveModDetailsAndNoticesWithoutEditingOrSaving() {
+        ModDescriptor mod = codeDescriptor("dev-code", "Development Mod", "a".repeat(64));
+        ModState startup = new ModState(1, List.of(
+                new ModState.Entry("dev-code", true, 0, true, mod.sha256())));
+        ModCatalog catalog = new EffectiveCatalogBuilder().build(List.of(mod), startup);
+        PendingModStateEditor editor = PendingModStateEditor.readOnly(startup, catalog.scanned());
+        ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
+        findings.replaceOwner("dev-code", List.of(finding(ModFindingSeverity.WARNING,
+                "DEV_WARNING", "Runtime notice")));
+        RecordingFont font = new RecordingFont();
+        ModManagerScreen screen = new ModManagerScreen(catalog, editor, findings, textSink(font));
+
+        screen.suppressInputUntilNeutral();
+        press(screen, Action.ACCEPT);
+        screen.render();
+        assertTrue(screen.rows().getFirst().enabled());
+        assertTrue(font.drawn.stream().anyMatch(line -> line.startsWith("[ON] Development Mod")));
+        assertTrue(font.drawn.contains("Back"));
+        assertFalse(font.drawn.contains("Order"));
+        assertFalse(font.drawn.contains("Apply"));
+
+        font.drawn.clear();
+        press(screen, Action.LEFT);
+        press(screen, Action.ACCEPT);
+        screen.render();
+        assertTrue(font.drawn.contains("MOD DETAILS"));
+        press(screen, Action.BACK);
+        press(screen, Action.RIGHT);
+        press(screen, Action.RIGHT);
+        press(screen, Action.ACCEPT);
+        font.drawn.clear();
+        screen.render();
+        assertTrue(font.drawn.contains("MOD NOTICES"));
+        assertTrue(screen.detailLines().stream().anyMatch(line -> line.contains("Runtime notice")));
+        press(screen, Action.BACK);
+        press(screen, Action.RIGHT);
+        press(screen, Action.ACCEPT);
+
+        assertTrue(screen.consumeCloseRequested());
+        assertEquals(startup, editor.pendingState());
+        assertFalse(editor.dirty());
+        assertFalse(editor.restartRequired());
+        assertFalse(Files.exists(temp.resolve("modstate.json")));
+    }
+
+    @Test
     void rowsAndDetailsExposeValidInvalidRepositoryEligibilityAndRuntimeFindings() {
         ModDescriptor core = descriptor("pack-core", "Core Pack", List.of(), List.of(
                 finding(ModFindingSeverity.WARNING, "OVERRIDE_CONFLICT", "Later pack wins")));

@@ -1,0 +1,212 @@
+# Slay the Robotnik card illustrations (format: slaytherobotnik.art.CardRecipes).
+#
+#   card-id: layer; layer; ...        layers are drawn back to front
+#
+#   bg RRGGBB                         backdrop colour (default: red Attack, blue Skill, gold Power)
+#   hero sonic|tails|knuckles FRAME   a character mapping frame (hex), or anim=ID for an animation's first frame
+#   rom KEY FRAME                     a ROM sprite frame (keys in art/RomSprites.java); anim=F1/F2@TICKS shows F1
+#   monitor FACE                      an item monitor: Map_Monitor face 3-10, static, or up to 3 characters
+#   icon NAME                         a text-art icon from icons.txt
+#   fx speed|burst|sparkle|stars|rings|fire|water|zap
+#
+# Card pictures are stills: animated layers and effects show their first frame.
+#
+# Then optionally: X,Y offset from the art window's centre (large-card pixels, 76x42 window),
+# flip, xSCALE (x2, x0.5) and aALPHA (a0.5). Small cards draw the same picture at half size.
+#
+# Useful frames. Sonic: 0x96 ball, 0x8f air dash, 0x62 dive, 0xec flying, 0x8e spring, 0x8d hurt,
+# 0x9b duck, 0x9d skid, 0xac gulp, 0xb3 thumbs up, 0xba stand, 0xbb tapping foot, 0xd9 point.
+# Tails (drawn with his tails): 0x80 cheer, 0x8d lunge, 0x9c sitting, 0xa6 victory, 0xc6 tail swipe,
+# 0xc7 tail spin, 0xc9 tail flick, 0xcd crouch, 0xcf carrying, 0xd1 flying, 0xe4 throw.
+# Knuckles: 0xb4 ready, 0xdd jab, 0xde big punch, 0xd8 guard, 0xc0 glide, 0xc6 drop, 0xcd landing,
+# 0xb9 climb, 0x8e uppercut, 0xa1 lunge, 0xa3 flail, 0xec roar, 0xd6 look up, 0xe7 arms up.
+# Animations: 1 run, 2 roll, 9 spindash, 0x10 spring, 0x13 victory, 0x1f super transformation.
+
+# ---------------------------------------------------------------- Sonic: basics
+sonic:spin_attack: fx speed; hero sonic anim=0x2 -6,2; rom explosion anim=0/1/2/3/4@4 18,0 x0.75
+sonic:side_step: hero sonic 0x9d -16,2 a0.3; hero sonic 0x9d -2,2; rom explosion 3 -6,16 x0.4; rom bloominator 4 24,-10
+sonic:spin_dash: fx speed a0.5; rom explosion anim=1/2/3/4@3 -20,10 x0.5; hero sonic anim=0x9 2,4
+sonic:homing_attack: rom buggernaut anim=0/1@4 22,-8; rom starpost_stars anim=0/1/2@4 22,-8; hero sonic 0x96 -22,12 x0.6 a0.3; hero sonic 0x96 -12,6 x0.8 a0.55; hero sonic 0x96 2,0
+
+# ---------------------------------------------------------------- Sonic: commons
+sonic:air_dash: bg 3C78C8; fx speed; hero sonic 0x8f -14,0 a0.3; hero sonic 0x8f 4,0
+sonic:slide_kick: fx speed; rom rhinobot 0 24,4; hero sonic 0x5c -4,8; rom explosion 0 14,6; rom explosion 2 -26,12 x0.5 a0.7
+sonic:bumper_bounce: rom starpost 3 -24,10; rom starpost 2 0,-12; rom starpost 3 24,10; hero sonic 0x96 -12,0 x0.6 a0.4; hero sonic 0x96 12,-2 x0.8
+sonic:tornado_spin: rom monkey_dude 0 -26,4 x0.7; rom monkey_dude 0 26,4 flip x0.7; rom shield_insta anim=3/4/5@3 -10,0 flip; rom shield_insta anim=3/4/5@3 10,0; hero sonic 0x49 0,2
+sonic:sonic_wind: fx speed; hero sonic anim=0x1 -12,2; rom shield_insta anim=3/4/5@4 10,0; rom shield_insta anim=4/5/3@4 22,0 a0.5
+sonic:too_slow: rom snale_blaster 0 20,6; hero sonic anim=0x13 -10,0
+sonic:wall_jump: rom spikes 6 -34,0; hero sonic 0x8e -16,8 a0.3; hero sonic 0x8e 2,-2
+sonic:insta_shield: fx sparkle; hero sonic anim=0x2 -4,0; rom shield_insta anim=0/1/2/3/4/5@3 6,0 a0.85
+sonic:bounce_attack: rom ribot 0 0,14; rom explosion anim=0/1/2@6 0,8 x0.6; hero sonic 0x96 0,-10; icon pow_energy 24,-12 x1.5
+sonic:drop_dash: fx speed; hero sonic 0x96 -18,-12 x0.6 a0.3; hero sonic 0x96 -10,-6 x0.8 a0.5; rom explosion anim=1/2/3/4@4 -18,12 x0.5; hero sonic anim=0x9 4,4
+sonic:chili_dog: bg A05020; hero sonic 0xac 0,2; icon pow_energy -20,-8 x1.5; icon pow_energy 20,-8 x1.5
+sonic:spring: rom spring 0 0,14; hero sonic 0x8e 0,-8
+sonic:rev_up: fx burst 0,6; rom explosion anim=2/3/4@4 -18,12 x0.4 flip; rom explosion anim=3/4/2@4 18,12 x0.4; hero sonic 0x9c 0,6
+sonic:spin_ball: bg 1C5C8C; fx water; rom jawz 0 20,0; hero sonic anim=0x2 -10,0; rom explosion anim=1/2/3@4 12,0 x0.6
+sonic:jump_dash: fx speed; rom flybot 0 22,-6; hero sonic 0x62 -6,2
+sonic:skid_stop: hero sonic 0x9e 4,2; rom explosion anim=2/3/4@5 -14,14 x0.45; rom explosion anim=3/4/2@5 -22,12 x0.35
+sonic:cheap_shot: rom rhinobot 0 12,6 flip; rom starpost_stars anim=0/1/2@4 12,-8; hero sonic 0x96 -16,2 x0.8; rom explosion 0 -2,4 x0.75
+
+# ---------------------------------------------------------------- Sonic: uncommons
+sonic:light_speed_dash: bg 202060; fx speed; rom ring anim=0/1/2/3@6 8,0; rom ring anim=1/2/3/0@6 18,0; rom ring anim=2/3/0/1@6 28,0; hero sonic 0xec -14,0
+sonic:boost: fx speed; fx burst -12,2; hero sonic anim=0x1 -18,2 a0.3; hero sonic anim=0x1 -4,2
+sonic:fire_dash: bg B04010; fx fire; rom shield_fire anim=10/11/13/14@3 -4,0; hero sonic 0x96 6,0
+sonic:thunder_jump: bg 302058; fx zap 18,0; hero sonic 0x96 0,0; rom shield_lightning anim=0/1/2/3/4/5/6/7/8@3 0,0
+sonic:bubble_bounce: bg 1C6C90; fx water; rom jawz 0 0,14 x0.75; rom shield_bubble anim=9/11/12/11@6 0,0; hero sonic 0x96 0,-4
+sonic:peel_out: rom explosion anim=1/2/3/4@3 -20,12 x0.5; rom explosion anim=3/4/1/2@3 -30,8 x0.35; hero sonic anim=0x1 2,2; fx sparkle
+sonic:gotta_juice: fx speed; hero sonic 0xb3 0,0; fx sparkle
+sonic:way_past_cool: fx stars; hero sonic 0xbb 0,0
+sonic:skid_turn: hero sonic 0x9d -12,2 a0.4; rom explosion anim=2/3/4@5 0,14 x0.45; hero sonic 0x9d 8,2 flip
+sonic:spindash_charge: fx burst 0,4; fx zap 0,0 a0.6; rom explosion anim=1/2/3/4@2 -18,10 x0.5; hero sonic anim=0x9 0,4
+sonic:super_peel_out: fx speed; rom explosion anim=1/2/3/4@4 20,2 x0.75; hero sonic anim=0x1 -6,2
+sonic:afterburner: bg 5C2408; fx speed; rom shield_fire anim=10/13/11/14@3 -14,2; hero sonic anim=0x1 6,2
+sonic:show_off: fx sparkle; rom rhinobot 0 -22,8 flip; rom monkey_dude 0 23,6 flip; hero sonic 0xb1 0,0
+sonic:twirl_attack: rom bloominator 0 24,2 x0.75; rom starpost_stars anim=0/1/2@4 22,-12; hero sonic 0x49 -12,0; rom shield_insta anim=2/3/4@3 6,0
+sonic:blue_tornado: rom turbo_spiker 0 4,6; hero sonic 0x96 -20,6 x0.5 a0.3; hero sonic 0x96 -10,-10 x0.5 a0.5; hero sonic 0x96 12,-12 x0.5 a0.7; hero sonic 0x96 24,2 x0.6
+sonic:rapid_fire: rom explosion anim=1/2/3/4@3 -24,-10 x0.5; rom explosion anim=2/3/4/1@3 24,-8 x0.5; rom explosion anim=3/4/1/2@3 20,12 x0.5; hero sonic 0x96 -16,8 x0.6 a0.4; hero sonic 0x96 -4,0 x0.8
+sonic:dodge_roll: rom blastoid 3 10,-12; rom blastoid 3 22,-12; hero sonic 0x96 -16,8 x0.8 a0.3; hero sonic anim=0x2 4,8 x0.8
+
+# ---------------------------------------------------------------- Sonic: rares
+sonic:super_sonic: fx sparkle; rom intro_emeralds 0 -28,0; rom intro_emeralds 1 -20,-14; rom intro_emeralds 2 -6,-18; rom intro_emeralds 3 8,-18; rom intro_emeralds 4 22,-14; rom intro_emeralds 5 28,0; rom intro_emeralds 6 0,16; hero sonic anim=0x1f 0,2
+sonic:spin_cyclone: fx burst 0,0; rom mega_chopper 0 -26,-10 a0.7; rom mega_chopper 0 26,10 flip a0.7; rom shield_insta anim=3/4/5@2 -12,0 flip; rom shield_insta anim=3/4/5@2 12,0; hero sonic anim=0x2 0,0 x1.2
+sonic:speed_lines: fx speed; fx speed a0.6; hero sonic 0x21 -24,2 a0.2; hero sonic 0x21 -14,2 a0.4; hero sonic anim=0x1 0,2
+sonic:max_speed: bg 202048; fx speed; fx speed a0.7; fx burst -14,2; hero sonic anim=0x1 4,2 x1.1
+sonic:light_speed_attack: bg 2C2C6C; fx burst 0,0; fx sparkle; rom explosion anim=1/2/3/4@4 -26,-10 x0.5; rom explosion anim=3/4/1/2@4 26,10 x0.5; hero sonic anim=0x9 0,0
+sonic:afterimage: hero sonic 0xd9 -16,0 a0.3; hero sonic 0xd9 16,0 a0.3; hero sonic 0xd9 0,0
+sonic:comeback: rom big_ring anim=8/9/10/11@6 0,0 x0.6; hero sonic 0x8e 4,0
+sonic:boost_mode: bg 1C2C6C; fx speed; fx zap -18,0; hero sonic anim=0x1 2,2; rom shield_lightning anim=0/1/2/3/4/5/6/7/8@3 2,2 a0.6
+sonic:sharp_eye: rom blastoid 0 20,6; hero sonic 0xd9 -14,0; rom starpost_stars anim=0/1/2/1@5 -8,-12
+
+# ---------------------------------------------------------------- Tails: basics
+tails:tail_swipe: fx speed a0.5; hero tails 0xc6 -6,0; rom explosion anim=0/1/2/3/4@4 18,2 x0.75
+tails:tail_guard: rom blastoid 3 22,-6; rom starpost_stars anim=0/1/2@4 12,-4; hero tails 0xc7 -4,0
+tails:tail_flick: rom mega_chopper 0 20,-4; rom starpost_stars anim=0/1/2@4 20,-12; hero tails 0xc9 -8,0
+tails:tinker: icon pow_wrench -18,-6 x1.5; icon ui_gear 18,8 x1.5; hero tails 0x9c 0,2
+tails:ring_bomb: hero tails 0xe4 -18,2; rom ring anim=0/1/2/3@5 4,-6 x1.25; rom boss_explosion anim=1/2/3/4@4 20,6
+
+# ---------------------------------------------------------------- Tails: commons
+tails:bomb_bag: rom ring anim=0/1/2/3@6 -16,-10; rom ring anim=1/2/3/0@6 0,-14; rom ring anim=2/3/0/1@6 16,-10; hero tails 0x80 0,6
+tails:dummy_ring: hero tails 0x99 -12,6; rom ring anim=0/1/2/3@6 14,-2 x1.5; rom starpost_stars anim=0/1/2@4 20,-10
+tails:wrench_throw: hero tails 0xe4 -12,0; icon pow_wrench 14,-6 x1.5; rom explosion 0 26,2
+tails:twin_tail_strike: hero tails 0xc5 -6,0; rom explosion anim=1/2/3/4@4 18,-8 x0.5; rom explosion anim=3/4/1/2@4 20,8 x0.5
+tails:tornado_flyby: bg 3C78C8; fx speed; rom tornado 0 0,0 x0.6
+tails:thunder_shoot: bg 302058; fx zap 10,0; hero tails 0xe4 -14,2; rom shield_lightning anim=9/10/11@3 14,-2 x0.6
+tails:hover: bg 3C78C8; hero tails 0xd1 0,-2; fx sparkle
+tails:propeller_flight: bg 3C78C8; fx speed a0.4; hero tails 0xd0 0,0
+tails:rummage: icon pow_wrench -20,-10; rom monkey_dude 6 14,-8; icon ui_gear 18,4; hero tails 0xcd -4,4
+tails:recalibrate: hero tails 0xad -10,2; icon ui_gear 14,-4 x2; icon ui_gear 22,8 x1.25
+tails:duck_and_cover: rom boss_explosion anim=1/2/3/4@4 16,-10; rom explosion 3 -16,-12 x0.6; hero tails 0x99 0,6
+tails:hammer_tap: rom ribot 0 18,6; rom explosion 0 14,-4; hero tails 0xe4 -10,0
+tails:booby_trap: hero tails 0xa6 -20,2; rom spikes 1 14,16; rom rhinobot 0 14,0; rom boss_explosion anim=0/1/2/3@5 14,8 x0.6
+tails:spark_shot: rom ribot 0 20,4; fx zap 20,0 a0.6; rom starpost_stars anim=0/1/2@3 6,-2; hero tails 0x8d -14,2
+tails:flight_plan: bg 3C78C8; icon ui_map -16,4 x2; rom tornado 0 12,-4 x0.4
+tails:signal_jammer: fx zap 14,0 a0.5; monitor static 14,4; hero tails 0xa6 -14,2
+
+# ---------------------------------------------------------------- Tails: uncommons
+tails:blast_radius: fx burst 0,0; rom boss_explosion anim=1/2/3/4/5@5 0,0 x1.5; rom ring anim=0/1/2/3@6 0,0
+tails:remote_robot: rom ribot anim=0/1/2@8 14,4; rom ring anim=0/1/2/3@6 14,-14 x0.75; hero tails 0x82 -16,2
+tails:junk_drawer: rom spring 0 10,12; icon ui_gear 2,-6 x1.5; icon pow_wrench 20,-8 x1.5; rom monkey_dude 6 -16,10
+tails:battery_pack: monitor 7 0,2; icon pow_energy -18,-6 x1.5; icon pow_energy 18,-6 x1.5
+tails:trial_and_error: fx stars; rom explosion 3 0,-10 x0.8 a0.7; hero tails 0x9c 0,4
+tails:brainstorm: fx sparkle; hero tails 0xb3 -6,2; rom starpost_stars anim=0/1/2@4 10,-14; icon pow_energy 18,-4 x1.5
+tails:napalm_bomb: bg B04010; fx fire; rom boss_explosion anim=1/2/3/4@4 -18,4; rom boss_explosion anim=2/3/4/1@4 0,-6; rom boss_explosion anim=3/4/1/2@4 18,4
+tails:chain_reaction: rom explosion 0 -26,8 x0.5; rom boss_explosion anim=1/2/3@5 -10,4 x0.8; rom boss_explosion anim=2/3/4@5 10,0 x1.2; rom boss_explosion anim=3/4/1@5 28,-4 x1.5
+tails:smoke_bomb: rom explosion anim=1/2/3@8 -12,4 x1.2; rom explosion anim=2/3/1@8 12,0 x1.2; hero tails 0x99 0,6 a0.6
+tails:aerobatics: bg 3C78C8; fx sparkle; hero tails anim=0x10 0,0
+tails:minefield: rom orbinaut 1 -22,10; rom orbinaut 1 0,12; rom orbinaut 1 22,10; rom boss_explosion anim=1/2/3/4@4 0,-6
+tails:rocket_booster: fx speed; rom tornado 5 4,6 x0.6; hero tails 0xd1 0,-6
+tails:weak_spot: rom pointdexter 0 14,4; rom starpost_stars anim=0/1/2@4 14,-4; hero tails 0xc9 -14,0
+tails:anti_air_missile: bg 3C78C8; rom boss_explosion anim=1/2/3/4@4 14,-4 x0.75; rom flybot 0 24,-10; rom tornado 6 -10,6 x0.6
+tails:energy_cannon: bg 202048; rom egg_robo 7 12,-2; rom boss_explosion anim=1/2/3@4 34,-2; hero tails 0xa6 -20,2
+tails:holding_pattern: bg 3C78C8; fx sparkle; hero sonic 0x80 0,8 x0.7; hero tails 0xcf 0,-9 x0.7
+tails:large_bomb: fx rings; rom boss_explosion anim=1/2/3/4@6 14,-8; rom lbz_final_boss1 22 -2,2 x1.25
+tails:super_tails: fx sparkle; hero tails 0xa6 0,2; rom flicky anim=0/1@4 -22,-10; rom flicky anim=1/0@4 22,-10 flip; rom flicky anim=0/1@4 -24,10; rom flicky anim=1/0@4 24,10 flip
+tails:overdrive: bg 5C2408; fx burst 0,4; fx zap 0,0 a0.7; hero tails anim=0x9 0,4
+tails:workbench: rom monitor 11 10,12; icon pow_wrench 4,-6 x1.5; icon ui_gear 20,-10 x1.5; hero tails 0xae -14,2
+tails:bomb_barrage: bg 3C78C8; hero tails 0xd1 0,-5 x0.8; rom ring anim=0/1/2/3@6 -6,8; rom ring anim=2/3/0/1@6 6,13; rom boss_explosion anim=1/2/3/4@4 -20,12; rom boss_explosion anim=3/4/1/2@4 20,10
+tails:proton_bomb: bg 202048; fx burst 0,0; rom shield_lightning 11 0,0 x0.8 a0.8; rom boss_explosion anim=1/2/3/4@4 -20,6; rom boss_explosion anim=3/4/1/2@4 20,6
+tails:cyclone_volley: hero tails anim=0x2 -10,2; rom shield_insta anim=3/4/5@3 -10,2; rom ring anim=0/1/2/3@6 14,-6; rom ring anim=2/3/0/1@6 24,6
+tails:lock_on: rom jawz anim=0/1@6 6,2; icon pow_lockon 6,0 x3
+tails:system_hack: rom egg_robo 1 12,2 x0.8; fx zap 12,0 a0.7; icon pow_jammed -18,-6 x2
+tails:recycler: rom monitor 11 -18,10; fx sparkle; rom ring anim=0/1/2/3@6 16,-2 x1.5; rom ring anim=4/5/6/7@6 0,-4
+
+# ---------------------------------------------------------------- Knuckles: basics
+knuckles:punch: hero knuckles 0xdd -8,2; rom explosion anim=0/1/2/3/4@4 18,0 x0.75
+knuckles:guard: rom blastoid 3 22,-4; rom starpost_stars anim=0/1/2@3 12,-4; hero knuckles 0xd8 -4,2
+knuckles:hammer_punch: hero knuckles 0xde -6,0; rom boss_explosion anim=1/2/3/4@4 18,8
+
+# ---------------------------------------------------------------- Knuckles: commons
+knuckles:haymaker: fx burst 16,0; hero knuckles 0xa1 -8,2; rom boss_explosion anim=1/2/3/4@4 20,0 x1.25
+knuckles:one_two_punch: hero knuckles 0xdc -14,2 a0.5; hero knuckles 0xdd -4,2; rom explosion anim=1/2/3/4@4 18,-6 x0.5; rom explosion anim=3/4/1/2@4 22,6 x0.5
+knuckles:rock_smash: bg 6C4824; hero knuckles 0xa5 0,-2; rom boss_explosion anim=1/2/3/4@4 -22,10; rom boss_explosion anim=3/4/1/2@4 22,10
+knuckles:ground_pound: fx burst 0,16; hero knuckles 0xcd 0,4; rom explosion anim=2/3/4@4 -20,12 x0.6 flip; rom explosion anim=2/3/4@4 20,12 x0.6
+knuckles:claw_swipes: hero knuckles 0xc0 -8,2; rom shield_insta anim=2/3/4@3 16,-6 x0.7; rom shield_insta anim=3/4/2@3 20,6 x0.7
+knuckles:shoulder_charge: fx speed; hero knuckles 0x8f -4,2; rom explosion anim=0/1/2/3@4 20,0 x0.6
+knuckles:fisticuffs: fx burst 16,-2; hero knuckles 0xd9 -6,2; rom explosion anim=0/1/2/3@5 16,-4 x0.5
+knuckles:hothead: rom boss_explosion anim=1/2/3/4@4 4,-14 x0.75; hero knuckles 0xa3 0,2
+knuckles:wild_swing: hero knuckles 0xa2 -4,2; rom explosion anim=1/2/3/4@4 20,-6 x0.6
+knuckles:signature_punch: fx stars; fx burst 18,0; hero knuckles 0xde -6,2
+knuckles:jab: hero knuckles 0xdc -6,2; rom explosion 0 16,-2
+knuckles:knuckle_crack: hero knuckles 0xd7 0,2; rom starpost_stars anim=0/1/2@4 8,-2
+knuckles:glide: bg 3C78C8; fx speed a0.6; hero knuckles 0xc0 0,0
+knuckles:knuckle_up: fx stars; hero knuckles anim=0x13 0,2; fx sparkle
+knuckles:wall_climb: rom explosion anim=3/4@8 10,14 x0.4; hero knuckles 0xb9 0,0
+knuckles:treasure_hunt: hero knuckles 0xcd -8,4; rom ring anim=0/1/2/3@6 14,-6; rom intro_emeralds 3 14,10; rom starpost_stars anim=0/1/2@4 18,4
+
+# ---------------------------------------------------------------- Knuckles: uncommons
+knuckles:spiral_upper: rom shield_insta anim=2/3/4/5@3 0,4; hero knuckles 0x8e 0,0; rom explosion anim=0/1/2@4 10,-14 x0.6
+knuckles:bare_knuckle: icon ui_heart -24,-12 x1.5 a0.8; hero knuckles 0xde -6,2; rom boss_explosion anim=1/2/3/4@4 18,0
+knuckles:mounting_fury: hero knuckles 0xdd -14,2; rom explosion 0 4,-2 x0.5; rom boss_explosion anim=1/2/3@5 14,-2 x0.8; rom boss_explosion anim=2/3/4@5 27,-2 x1.2
+knuckles:knuckle_barrage: hero knuckles 0xdd -10,-4 a0.4; hero knuckles 0xdd -10,4 a0.4; hero knuckles 0xdd -6,0; rom explosion anim=1/2/3/4@3 16,-8 x0.5; rom explosion anim=2/3/4/1@3 20,2 x0.5; rom explosion anim=3/4/1/2@3 16,10 x0.5
+knuckles:payback: hero knuckles 0x8d -18,0 a0.35; hero knuckles 0xdd 6,2; rom boss_explosion anim=1/2/3/4@4 26,0 x0.8
+knuckles:drill_claw: bg 5C3C1C; fx speed; rom explosion anim=1/2/3/4@4 0,14 x0.6; hero knuckles 0x96 0,-6
+knuckles:tough_it_out: hero knuckles 0x8d 0,2; icon pow_energy 20,-10 x1.5
+knuckles:spiked_knuckles: hero knuckles 0xb4 -6,2; rom orbinaut 1 12,0
+knuckles:dig_in: rom explosion anim=2/3/4@5 -12,-4 x0.5; rom explosion anim=3/4/2@5 12,-6 x0.5; hero knuckles 0x9b 0,8
+knuckles:take_the_hit: hero knuckles 0xd8 -6,2; rom boss_explosion anim=1/2/3/4@4 10,-4; rom explosion 0 14,8
+knuckles:sizing_up: rom egg_robo 1 16,0 x0.9; hero knuckles 0xd6 -18,2
+knuckles:knock_loose: rom egg_robo 2 18,-10; rom starpost_stars anim=0/1/2@4 12,-2; hero knuckles 0xdd -14,2
+knuckles:emerald_radar: fx burst 14,-4; rom intro_emeralds 3 14,-4 x1.5; hero knuckles 0xd6 -12,2
+knuckles:echidna_pride: fx burst 0,0; fx stars; hero knuckles 0xd2 0,2
+knuckles:battle_scars: fx burst 0,0; hero knuckles 0x8d 0,2
+knuckles:guardians_duty: rom intro_emeralds 0 14,4 x3; hero knuckles 0xd2 -14,2
+knuckles:fired_up: rom shield_fire anim=0/1/2/3/4/5/6/7/8@3 0,0; hero knuckles 0xec 0,0
+
+# ---------------------------------------------------------------- Knuckles: rares
+knuckles:hyper_knuckles: fx sparkle; fx zap 0,0 a0.5; rom intro_emeralds 0 -28,0; rom intro_emeralds 1 -20,-14; rom intro_emeralds 2 -6,-18; rom intro_emeralds 3 8,-18; rom intro_emeralds 4 22,-14; rom intro_emeralds 5 28,0; rom intro_emeralds 6 0,16; hero knuckles 0xec 0,2
+knuckles:maximum_heat: bg B04010; fx speed; rom shield_fire anim=10/11/13/14@3 -8,0; hero knuckles 0xc0 4,0; rom boss_explosion anim=1/2/3/4@4 28,0
+knuckles:hunters_trophy: fx sparkle; hero knuckles 0xe7 0,6; rom intro_emeralds 5 0,-16 x1.5
+knuckles:ancestral_fury: hero knuckles 0xec 0,-2 x1.6 a0.35; fx burst 18,0; hero knuckles 0xde -4,2
+knuckles:eternal_vigil: bg 18183C; fx stars; rom starpost 4 18,0; hero knuckles 0xd8 -8,2
+knuckles:unbreakable: rom spikes 1 0,18; hero knuckles 0xd4 0,-4; fx sparkle
+knuckles:boiling_point: bg 6C1808; fx fire; rom boss_explosion anim=1/2/3/4@4 -22,-6; rom boss_explosion anim=3/4/1/2@4 22,-6; hero knuckles 0xec 0,2
+knuckles:altar_offering: fx sparkle; rom intro_emeralds 0 -24,-10; rom intro_emeralds 1 -16,-16; rom intro_emeralds 2 -8,-18; rom intro_emeralds 3 0,-19; rom intro_emeralds 4 8,-18; rom intro_emeralds 5 16,-16; rom intro_emeralds 6 24,-10; hero knuckles 0x9b 0,8
+knuckles:tricked_again: fx stars; rom robotnik_ship 5 16,0 x0.6; rom robotnik_ship anim=2/0@10 16,-10; hero knuckles 0xd6 -14,2
+
+# ---------------------------------------------------------------- Status
+status:dizzy: hero sonic 0x8d 0,4; rom starpost_stars anim=0/1/2@4 -8,-14; rom starpost_stars anim=1/2/0@4 8,-14; fx stars
+status:burn: bg 5C1C08; fx fire; rom aiz_miniboss_flame anim=0/1/2/3/4@6 0,0
+status:dent: fx stars; rom monitor 11 0,6 x1.5
+status:oil_slick: bg 5C5C6C; rom tornado 7 0,14 x0.7; hero sonic 0xa4 0,-4
+status:static: fx zap 0,0; monitor static 0,2 x1.5
+
+# ---------------------------------------------------------------- Curses
+curse:lost_rings: fx rings; hero sonic 0x8d 0,2
+curse:sprained_ankle: rom starpost_stars anim=0/1/2@4 10,8; hero tails 0x9c 0,2
+curse:robotniks_laugh: rom robotnik_ship 5 0,6 x0.8; rom robotnik_ship anim=2/0@10 0,-6 x1.25
+curse:self_doubt: rom mecha_sonic 0 14,0 flip a0.6; hero sonic 0xbb -12,2
+curse:rust: bg 5C3018; rom ribot 0 0,6 x1.25 a0.6; rom explosion anim=2/3/4@10 8,-10 x0.5 a0.6; rom explosion anim=3/4/2@10 -10,-8 x0.4 a0.5
+curse:tangled: fx stars; hero sonic 0x72 0,2
+
+# ---------------------------------------------------------------- Colorless
+colorless:robo_arm: rom egg_robo 2 -6,0 x1.25; rom explosion anim=0/1/2/3@4 18,0 x0.6; icon ui_heart -22,-10 x1.5
+colorless:speed_shoes: fx speed; hero sonic anim=0x1 14,2 a0.5; monitor 5 -10,4
+colorless:flicky_flock: bg 3C78C8; rom flicky anim=0/1@4 -20,-8; rom flicky anim=1/0@4 0,4; rom flicky anim=0/1@4 20,-6; rom flicky anim=1/0@4 -8,12
+colorless:blue_shield: fx water; monitor 8 0,2 x0.9; rom shield_bubble anim=9/10@8 0,0 a0.8; fx sparkle
+colorless:super_ring: fx rings; monitor 4 0,4 x1.25
+colorless:spring_trap: rom spring 0 0,14; rom rhinobot 0 0,-8; rom starpost_stars anim=0/1/2@4 8,-16
+colorless:ring_heist: fx rings; rom boss_explosion anim=1/2/3/4@4 0,2 x1.5; rom ring anim=0/1/2/3@6 -16,-8; rom ring anim=2/3/0/1@6 16,-8
+colorless:invincibility: fx stars; monitor 9 0,4 x1.25; fx sparkle
+colorless:master_plan: icon ui_map -16,0 x2; rom robotnik_ship 0 14,-2 x1.5
+colorless:chili_dog_combo: hero tails 0xa6 -22,2 x0.8; hero knuckles 0xd2 22,2 x0.8 flip; hero sonic 0xb3 0,2; icon ui_heart 0,-16 x1.5
+colorless:banana_peel: rom monkey_dude 0 -14,0; rom monkey_dude 6 16,10 x1.5

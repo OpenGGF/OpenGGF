@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -48,6 +49,17 @@ public final class LrzFlameObjectInstance extends AbstractObjectInstance
     private static final int HALF_EXTENT = 0x0C;
     /** {@code move.b #$98,collision_flags(a1)} (:89303). */
     private static final int COLLISION_FLAGS = 0x98;
+    /** Both {@code loc_43E4E} and {@code loc_43F84}: {@code bset #4,shield_reaction(a1)}. */
+    private static final int SHIELD_REACTION_FLAGS = 0x10;
+    private static final TouchResponseProfile TOUCH_PROFILE = TouchResponseProfile.fromCanonical(
+            new com.openggf.game.profiles.touchresponse.TouchResponseProfile(
+                    com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode.NORMAL,
+                    false, true, false,
+                    com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability.NONE,
+                    SHIELD_REACTION_FLAGS,
+                    com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                    com.openggf.game.profiles.touchresponse.TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                    com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS));
     /** {@code move.b #8,$24(a0)} (:89316). */
     private static final int FRAME_STEP_RELOAD = 8;
     /** {@code move.b #7,$24(a0)} on the step (:89436). */
@@ -153,6 +165,16 @@ public final class LrzFlameObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_PROFILE;
+    }
+
+    @Override
     public int getCollisionFlags() {
         return COLLISION_FLAGS;
     }
@@ -165,7 +187,8 @@ public final class LrzFlameObjectInstance extends AbstractObjectInstance
     @Override
     public int getShieldReactionFlags() {
         // loc_43E4E / loc_43F84: bset #4,shield_reaction(a1) in both jet variants.
-        return 0x10;
+        // Bit 4 selects fire-shield immunity, not bit 3's projectile deflection.
+        return SHIELD_REACTION_FLAGS;
     }
 
     @Override

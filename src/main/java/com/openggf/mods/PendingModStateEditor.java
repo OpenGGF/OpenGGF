@@ -9,7 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.Objects;
 import java.util.Set;
 
-/** Mutable manager-session editor for pending state only. */
+/** Manager-session state: a pending editor for installed mods or a frozen launch view. */
 public final class PendingModStateEditor {
     private final ModState startup;
     private final Set<String> editableIds;
@@ -20,9 +20,20 @@ public final class PendingModStateEditor {
 
     public PendingModStateEditor(ModState startup, List<? extends ModCatalogEntry> scanned,
                                  ModStateStore store) {
+        this(startup, scanned, store, false);
+    }
+
+    /** Frozen launch state for development runs that deliberately have no persisted settings. */
+    public static PendingModStateEditor readOnly(ModState startup,
+                                                 List<? extends ModCatalogEntry> scanned) {
+        return new PendingModStateEditor(startup, scanned, null, true);
+    }
+
+    private PendingModStateEditor(ModState startup, List<? extends ModCatalogEntry> scanned,
+                                  ModStateStore store, boolean readOnly) {
         Objects.requireNonNull(startup, "startup");
         Objects.requireNonNull(scanned, "scanned");
-        this.store = Objects.requireNonNull(store, "store");
+        this.store = readOnly ? null : Objects.requireNonNull(store, "store");
         this.startup = startup.normalize(scanned);
         this.pending = this.startup;
         this.saved = this.startup;
@@ -37,6 +48,8 @@ public final class PendingModStateEditor {
         editableIds = Set.copyOf(ids);
         descriptorsById = Map.copyOf(descriptors);
     }
+
+    public boolean editable() { return store != null; }
 
     public ModState pendingState() {
         return pending;
@@ -60,6 +73,7 @@ public final class PendingModStateEditor {
     }
 
     public void setEnabledCascade(Collection<String> ids, boolean enabled) {
+        requireWritable();
         Set<String> requested = new HashSet<>(Objects.requireNonNull(ids, "ids"));
         requested.forEach(this::requireEditable);
         replaceEnabled(requested, enabled);
@@ -102,6 +116,7 @@ public final class PendingModStateEditor {
     public void discardDraft() { pending = saved; }
 
     public ModStateSaveResult save() {
+        requireWritable();
         ModStateSaveResult result = store.save(pending);
         if (result instanceof ModStateSaveResult.Saved) saved = pending;
         return result;
@@ -128,9 +143,14 @@ public final class PendingModStateEditor {
     }
 
     private void requireEditable(String id) {
+        requireWritable();
         Objects.requireNonNull(id, "id");
         if (!editableIds.contains(id)) {
             throw new IllegalArgumentException("Unknown scanned mod id: " + id);
         }
+    }
+
+    private void requireWritable() {
+        if (!editable()) throw new IllegalStateException("Mod selection is fixed for this launch");
     }
 }

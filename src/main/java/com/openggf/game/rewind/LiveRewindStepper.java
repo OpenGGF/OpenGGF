@@ -50,6 +50,11 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
         if (gameplayMode == null) {
             return LevelFrameResult.PAUSED;
         }
+        if (com.openggf.game.mode.ControlledFrameRuntime.controller(gameplayMode) != null) {
+            var previous = inputs.read(Math.max(inputs.earliestFrame(), input.frameIndex() - 1));
+            return com.openggf.game.mode.ControlledFrameRuntime.step(gameplayMode, liveInput,
+                    RecordedInputSnapshots.fromBk2(input, previous), true);
+        }
         return gameplayMode.plcFrameLifecycle().runReplayedLogicalIteration(
                 gameplayMode.getFadeManager()::update,
                 frame -> step(input, sprites, level, camera, liveInput, frame));

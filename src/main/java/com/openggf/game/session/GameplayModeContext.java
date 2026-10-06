@@ -84,6 +84,22 @@ import com.openggf.trace.replay.runs.TraceRunFrameDriver;
 
 @com.openggf.game.ModApi
 public final class GameplayModeContext implements ModeContext {
+    private final Object courseCheckpointIdentity = new Object();
+    private final List<com.openggf.audio.AudioReplay> audioReplays = new ArrayList<>();
+
+    /** Engine lifetime owner for controlled-mode PCM recordings; use CourseControl in creator code. */
+    public com.openggf.audio.AudioReplay recordAudioReplay(int maxSeconds) {
+        if (managersTornDown) throw new IllegalStateException("Gameplay session has closed");
+        audioReplays.removeIf(com.openggf.audio.AudioReplay::isClosed);
+        if (audioManager == null) throw new IllegalStateException("Gameplay audio has not been attached");
+        var replay = audioManager.recordPresentationAudio(maxSeconds);
+        audioReplays.add(replay);
+        return replay;
+    }
+
+    /** Identity-only course tag; snapshots cannot retain the mutable session graph. */
+    public Object courseCheckpointIdentity() { return courseCheckpointIdentity; }
+
     private static final Logger LOG =
             Logger.getLogger(GameplayModeContext.class.getName());
     private static final String PATTERN_ANIMATOR_REWIND_KEY = "pattern-animator";
@@ -325,7 +341,7 @@ public final class GameplayModeContext implements ModeContext {
             dynamicArtLifecycle.beginRun();
         }
 
-        this.rewindRegistry = new RewindRegistry(profiler);
+        this.rewindRegistry = new RewindRegistry(profiler, worldSession.getGameModule().gameplayFrameController());
         this.levelEventExtraRewindKeys.clear();
         this.rewindRegistry.register(hardwareTiming);
         this.rewindRegistry.register(dynamicArtLifecycle);
@@ -1147,13 +1163,29 @@ public final class GameplayModeContext implements ModeContext {
         EngineServices.current().vIntRunCounter().unbindObjectClock();
         installGameplayInputFilter(GameplayInputFilter.IDENTITY);
         RuntimeException replayCloseFailure = null;
+        var frameController = worldSession.getGameModule().gameplayFrameController();
+        if (frameController != null) {
+            try { frameController.close(); }
+            catch (RuntimeException failure) { replayCloseFailure = failure; }
+        }
+        // Creator cleanup may fail or omit a resource. The host still releases every PCM lease
+        // before tearing down its audio/session owners.
+        for (var replay : audioReplays) {
+            try { replay.close(); }
+            catch (RuntimeException failure) {
+                if (replayCloseFailure == null) replayCloseFailure = failure;
+                else replayCloseFailure.addSuppressed(failure);
+            }
+        }
+        audioReplays.clear();
         Runnable replayClose = hardwareTimingReplayCloseHook;
         hardwareTimingReplayCloseHook = null;
         if (replayClose != null) {
             try {
                 replayClose.run();
             } catch (RuntimeException failure) {
-                replayCloseFailure = failure;
+                if (replayCloseFailure == null) replayCloseFailure = failure;
+                else replayCloseFailure.addSuppressed(failure);
             }
         }
         if (rewindRegistry != null) {

@@ -16,6 +16,41 @@ against a disassembly trace without converting. Y increases downward (Mega Drive
 convention). VDP coordinates in the disassembly are offset by +128; the engine uses direct
 screen coordinates.
 
+**Replacing a player is not initializing a camera.** `Camera.setFocusedSprite`
+also resets live and render-copy coordinates to the sprite's top-left. During
+held gameplay, preserve and restore the camera snapshot around roster replacement;
+the restore rebinds its target through the new registered main character. Merely
+changing the target can hide the next golfer under the HUD until physics resumes.
+`TestCourseControl.characterReplacementPreservesTheEntireCameraViewAndRebindsItsTarget`
+and the independent-golfer turn tests cover both view and target identity.
+
+**Creator object ownership follows the registered placement key.** Returning
+creator instances for untagged native placements from a custom registry does
+not assign their callback owner: placed registration clears ownership for a
+null spawn owner. Register a namespaced factory through `ModContext`, preserve
+the ROM placement fields when tagging selected objects, and retain the
+framework's backing registry. A wrapper that only forwards factory calls can
+also hide its `Supplier` callback-boundary capability. Verify a real placed
+object's owner scope through the production loader before and after forced
+rewind recreation; dynamic-object containment alone misses this boundary.
+
+**Camera limits are not terrain extents.** Sonic 2's decoded `maxY` limits the
+camera origin; `Sonic_Boundary_CheckBottom` compares the player centre with
+`maxY + $E0`. A custom lost-ball rule based on `maxY` alone rejects valid low
+floors. Boss-free courses also need the native outgoing camera extent: EHZ2's
+egg-prison placement lies beyond the closed boss arena, and `loc_2F460` opens
+the camera toward `$2AB0`. Derive the custom finish from ROM placements and
+release its view bound explicitly, rather than simulating a boss to open it.
+
+**A title can select a different viewport after manager construction.** Refresh
+the camera dimensions before level load, and rebuild render geometry from the
+resolved presentation configuration. Trace playback intentionally keeps a320px
+gameplay camera even with wider presentation; using that camera for render-cache
+sizing breaks the native-camera/wide-presentation split. A scene-only width fix
+still leaves the native framebuffer or
+background period using the manager's old cache. Putt Putt Paradise's normal
+title-to-level and 320→800 scene tests cover both boundaries.
+
 **Touch listeners are not the ROM's special-touch branch.** The shared controller
 notifies listeners for harmful contacts too. An object whose collision byte changes
 category must gate its own property writes: SSZ MTZ orbs use harmful `$87`, armed

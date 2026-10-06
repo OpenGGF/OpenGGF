@@ -54,6 +54,27 @@ Use `ggfmod validate <mod.jar>` to print the sorted findings for an existing jar
 engine with `-Dggfmod.dev.modDir=<absolute-build-output>`. The engine snapshots that
 directory once into engine-owned immutable storage and never rereads the creator tree
 during the session. Merely enabling test mode does not enable directory loading.
+The development mod is enabled and trusted for that launch. Mods on the title
+screen shows its details and notices in a read-only view; enable/disable, ordering,
+and Apply remain available for normally installed mods. Development launches do
+not read or write installed-mod settings.
+
+A development run of a patch mod skips the game picker and opens the mod's `baseGame`
+directly (its startup scene, if it registers one); holding Escape still returns to the
+master title, and deterministic test mode keeps the configured startup.
+
+`sprites <rom> <s1|s2|s3k> <out.png> art=<addr> map=<addr> [...]` draws every mapping frame
+of a ROM sprite into one numbered PNG grid, with each frame's origin marked, so you can check a
+mod scene's `RomSpriteRequest` before writing code. Options mirror the request: `comp=`
+(`NEMESIS`, `KOSINSKI`, `KOSINSKI_MODULED`, `UNCOMPRESSED`), `size=` (uncompressed bytes),
+`dplc=` and `layout=` (`OBJECT` or `PLAYER`), `line=` (the palette line), `offset=` (a tile
+offset), and `pal=<addr>:<colours>:<firstLine>`, which may repeat. `char=<sonic|tails|knuckles>`
+instead boots the game headless, draws a playable character's frames and prints its animation
+scripts. See the [mod scene guide](guides/mod-scenes.md#4-art-from-the-players-rom).
+
+```text
+ggfmod sprites s3k.gen s3k ring.png art=0x192AEE comp=NEMESIS map=0x01A99A line=1 pal=0x0A8A3C:16:0 pal=0x0A8B7C:48:1
+```
 
 For complete Mod API 0.7 examples, see [Content mods](content-mods.md),
 [Playable characters](characters.md), and [Standalone games](standalone-games.md).

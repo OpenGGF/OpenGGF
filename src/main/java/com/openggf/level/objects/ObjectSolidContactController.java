@@ -5251,6 +5251,8 @@ public final class ObjectSolidContactController {
     }
 
     private void clearRollingOnLanding(PlayableEntity player) {
+        if (player instanceof AbstractPlayableSprite ball
+                && com.openggf.game.mode.ControlledFrameRuntime.retainRolling(ball)) return;
         if (player == null || player.getPinballMode()) {
             return;
         }

@@ -3257,7 +3257,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				? Math.abs(gSpeed) < minRollSpeed
 				: gSpeed == 0;
 		if (stopRolling) {
-			if (sprite.getPinballMode()) {
+			if (com.openggf.game.mode.ControlledFrameRuntime.retainRolling(sprite)) {
+				// Controlled rolling retains zero inertia; native pinball keeps its ROM boost.
+			} else if (sprite.getPinballMode()) {
 				gSpeed = (short) (sprite.getDirection() == Direction.LEFT ? -0x400 : 0x400);
 			} else if (objectPreservedRollStop) {
 				// Object-scoped ROM handoff: S2 Obj85 leaves Tails curled in
@@ -4115,7 +4117,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				&& movementRules.landing().pinballLandingPreservesPinballMode();
 		boolean preserveObjectLandingRoll = sprite.consumePreserveRollingOnNextLanding();
 		boolean skipLandingRollClear = sprite.getRolling()
-				&& ((sprite.getPinballMode() && preservePinballRoll) || preserveObjectLandingRoll);
+				&& (com.openggf.game.mode.ControlledFrameRuntime.retainRolling(sprite)
+				|| (sprite.getPinballMode() && preservePinballRoll) || preserveObjectLandingRoll);
 		boolean clearsRolling = sprite.getRolling() && !skipLandingRollClear;
 		if (clearsRolling) {
 			if (movementRules != null && movementRules.landing().landingRollClearUsesCurrentYRadiusDelta()) {

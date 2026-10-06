@@ -1546,16 +1546,32 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void beginReverseAudioPresentation() {
+        ensureShadowPresentation();
+        // Check presentation ownership before replacing the logical rewind
+        // ledger: a scoped recorded replay may already own audible reverse.
+        shadowProducer.beginReverse(1.0);
         deferredReverseLogicalSnapshot = null;
         deferredReverseLogicalPrepared = false;
         postBoundaryReverseTarget = false;
         reverseAudioPresentationActive = true;
-        ensureShadowPresentation();
-        shadowProducer.beginReverse(1.0);
     }
 
     public boolean isReverseAudioPresentationActive() {
         return reverseAudioPresentationActive;
+    }
+
+    /** Audible reverse ownership, including a scoped captured presentation.
+     * Logical rewind restore decisions must keep using {@link #isReverseAudioPresentationActive()}. */
+    public boolean isReverseAudioOutputActive() {
+        return reverseAudioPresentationActive
+                || shadowProducer != null && shadowProducer.isReplayReverseActive();
+    }
+
+    /** Records actual final forward PCM without changing developer rewind history.
+     * Session-owned public replay capabilities retain and close this exact producer handle. */
+    public AudioReplay recordPresentationAudio(int maxSeconds) {
+        ensureShadowPresentation();
+        return new AudioReplay(shadowProducer.recordReplay(maxSeconds));
     }
 
     /**

@@ -40,6 +40,14 @@ engineApiRange: ">=0.7.0 <0.8.0"
 Manifest `formatVersion: 1` is a separate wire-format version. It does not mean
 Mod API 1.x and must not be used to infer compiled-code compatibility.
 
+The controlled-entry follow-up changes `CourseControl.advanceEntryPresentation()`
+from `void` to `boolean`: it reports whether the row advanced an active entry
+fade. `presentationReady()` includes completion of the native released title
+overlay. Modes can hold a settled world during that final presentation and capture
+a reusable checkpoint afterward. This is an unpublished candidate signature
+change; rebuild compiled mods. The `0.7` pin and `ModApiVersion` description
+are updated together while the descriptor retains candidate `0.7.0`.
+
 The KiS2 trace-readiness follow-up adds semantic movement and checkpoint-ring
 rules, the saved ring bank in checkpoint/load snapshots, separate boss duck-frame
 selection, and an explicit title-to-level-select action plus post-reset menu
@@ -66,6 +74,20 @@ before host and native ROM pause handling in LEVEL mode. `handleInput(InputHandl
 UI owns Start/Enter for that frame; the UI remains responsible for freezing its gameplay.
 Modules without the service retain normal pause behavior. This replaces no input bindings
 and changes only the mutable `0.7` pin; the descriptor and `ModApiVersion` remain at `0.7.0`.
+
+The controlled-level additions expose `GameplayFrameController`, `CourseControl`,
+opaque session/hole/layout-tagged `CourseCheckpoint`, `MenuInput`, title act
+selection, and typed ROM-backed scene values/presenters. The default controller
+is absent, retaining stock admission. Controlled HOLD is a recorded mode row;
+SETUP_ONLY is not. Opaque course rollback excludes the engine-bound controller
+adapter by identity and preserves past debug history; actual act loads reset it.
+Prepared scenes carry value/art identities, never ROM bytes or mutable snapshots.
+The additive `PlayerPresentationPose.Kind.IDLE` selects a ROM-backed held idle
+view immediately after a roster switch; appendage selection remains internal
+and shares native tail scripts with the live renderer.
+Compiler-generated immutable enum constants and switch tables are now accepted
+by the static initializer validator; arbitrary author static objects remain rejected.
+These extend the mutable candidate pin and keep `0.7.0` unpublished.
 
 ## What the 0.7 candidate includes
 
@@ -280,3 +302,135 @@ host ignore `LEVEL_SELECT_ON_STARTUP`, route a title level-select exit to one-pl
 play, and ignore the in-level level-select key. Both are delegated by
 `DelegatingGameModule` and additive to the unpublished 0.7 candidate; the pin is
 updated in place.
+
+Putt Putt Paradise's course controller and bounded scene values extend this same
+unpublished candidate. Atlas residency lookup and packed `PatternVersion` data
+remain engine-internal presentation details; creators use the ROM-backed scene
+contract instead. The candidate pin is regenerated in place when removing the
+initial internal-sampler exposure; version/status and published pins are unchanged.
+
+
+Final Putt Putt Paradise polish keeps the mutable candidate controller facade
+semantic: `CourseControl.PlayerState` / `playerState`, `launchRolling` with native
+signed 8.8 velocities, and explicit `loadLevel(zone, act)` replace provisional
+ball/loft/EHZ-specific operations. Exact registered character construction is
+completed before the single live roster is replaced. Sound, shot limits and
+scoring remain creator-owned. `MenuInput.Pointer` adds shared logical menu mouse
+coordinates without adding a window handle to the creator signature. Both changes
+are represented by the regenerated `0.7` candidate pin; published pins and the
+release policy descriptor remain unchanged.
+
+The final presentation follow-up adds the bounded `RewindPresentation` record
+and optional controller request to the mutable 0.7 candidate. Default/null
+requests retain stock rendering. This is a view-only value: native admission,
+world checkpoints and undo permission remain unchanged. Candidate pins and
+`ModApiVersion` are refreshed while the release descriptor is retained; API version/status
+and immutable published baselines do not change.
+
+The turn-handoff follow-up adds `ButtonPrompts` (with its `Button` enum) and
+`CourseControl.buttonLabel(player, button)`. A prompt names one local player's own
+binding on that player's last intentional device: the bound key ("Space", "Right
+Shift"), or the physical pad button that produces the action in the assigned pad's
+family ("X", "Square", "West"); `REWIND` names the shared rewind key or the primary
+pad's bumper. Labels are presentation values derived from live bindings and never
+alter input, replay rows or gameplay. The regenerated 0.7 candidate pin adds 17
+signature lines; `ModApiVersion` documents the capability; the release descriptor,
+API version/status and published baselines are unchanged.
+
+
+Shot-audio follow-up promotes bounded reverse presentation into the mutable 0.7
+candidate. `SceneReplay` records immutable value scenes with adaptive interior
+sampling; `CourseControl.recordAudioReplay` returns a session-owned `AudioReplay`
+that records the final heard PCM and reverses it at the caller's view rate.
+The producer retains ownership of PCM buffers, cursors and sink transitions.
+Neither resource supplies gameplay state or changes developer rewind ownership.
+Creator rules still select permission, duration, checkpoint restore and score
+refund. Session teardown closes forgotten audio resources even after a creator
+cleanup failure. The candidate signature pin and `ModApiVersion` commentary are
+updated together; the release descriptor, candidate version and published pins
+remain unchanged. See the [creator replay recipe](../modding/content-mods.md#replay-a-view-and-its-audio).
+
+Mod scenes add the `com.openggf.mods.scene` package to the candidate surface:
+`ModScene`, `ModSceneFactory`, `SceneContext`, `SceneCanvas`, `SceneDraw`, `SceneImage`,
+`SceneSprite`, `SceneArt`, `SceneRomArt`, `SceneSpriteSet`, `RomSpriteRequest` (with its
+`Compression` and `DplcLayout` enums), `SceneBackdrop` (with its `Band` record),
+`SceneLevelStage`, `SceneMouse`, `SceneButtons`, `SceneKeys`, `DebuggableScene`,
+`SceneAudio` and `SceneStorage`, plus
+`ModContext.registerStartupScene`, `ModContext.requireDisplayWidth` and
+`GameMode.MOD_SCENE`. The mouse wheel stays off the pinned `InputHandler`: the engine-internal
+`control.MouseWheel` (one per input handler, `MouseWheel.of(input)`) collects scroll movement
+for whichever screen reads the mouse, the master title or a scene. The engine finds the registered scene as the effective module's
+`getGameService(OwnedSceneFactory.class)`, so the `game` package never depends on mod types.
+`mods.code.OwnedSceneFactory` is engine-internal and only that package can construct it, so a
+patch cannot forge a scene's owner or run one outside the owner's fault boundary; a
+`ModSceneFactory` served under its own type is ignored. The creator package holds only the API;
+the host (`ModSceneHost`, `SceneServices`, `SceneRomArtFactory`, the renderer, recording canvas,
+texture cache, storage, PNG and sprite rasterisers) lives in the engine-internal
+`com.openggf.mods.scene.host` package, which no signature reaches. It reads image pixels
+through `SceneImage.pixels()` (one copy per upload) and builds `SceneMouse` values through a
+private-constructor lookup, so the API types need no package-private hooks. `GameLoop`'s scene
+entry points are package-private for the same reason. The engine closes an open scene at shutdown (so `ModScene.exit` runs) and
+deletes a scene image's GPU texture once the image goes 120 frames undrawn, uploading it again
+if it is drawn later.
+
+Value types are built to evolve without breaking callers: `SceneDraw`, `SceneMouse` and
+`SceneLevelStage` are final classes rather than records, so no canonical constructor is pinned.
+`SceneDraw` is built only from `plain()` and its `with...` methods; `SceneMouse` only by the
+engine (`none()` for tests), with left and right `Down`/`Pressed`/`Released` edges and
+`lastInputWasMouse()` (the latest input was the mouse rather than a key or pad press) in place
+of the old latching `active`; `SceneLevelStage` keeps its `(x, floorY, width, floor)`
+constructor and gains value equality. `RomSpriteRequest` stays a record but its constructor
+rejects a null DPLC layout, a DPLC address below `-1` and a size on compressed art, and gains
+the `uncompressed` and `compressedWithDplc` factories. Images built from pixels have one
+constructor, `new SceneImage(width, height, argb)`; `SceneArt` keeps `png` and `rom`.
+
+Input and drawing helpers replace the raw numbers and loops scenes used to copy.
+`SceneButtons` (the pad's own `SACBRLDU` bits) and `SceneKeys` (the engine's GLFW key codes
+under stable names) are constant holders; no signature names them, so they are curated roots
+in `ModApiSurfaceInventory`. `SceneContext.buttonDown`, `buttonPressed` and `buttonRepeated`
+read player 1's pad by those bits; `buttonRepeated` uses the engine menus' own repeat
+(`control.MenuRepeat`, now a public engine-internal class: 24 ticks, then every 4). Scenes
+settle the back button on the Genesis convention: in a scene `input().menuAccept()` is A, C or
+Start and `menuBack()` is B (the engine's own menus keep C as back). `SceneCanvas.drawBackdrop`
+(a window and a full-screen overload) draws a `SceneBackdrop` exactly inside its rectangle as
+default methods built on `drawRegion`, so test canvases need not implement them.
+`SceneRomArt.tiles(address, compression, firstTile, widthTiles, heightTiles, columnMajor,
+palette)` decodes raw 8x8 tiles in row or column order. A palette-lines helper was considered
+and left out: it would save one `System.arraycopy` per line.
+
+`ModContext.requireDisplayWidth(width)` lets a patch mod fix its session's logical width to a
+`display.aspect` preset width without a `GamePatch`: the frozen `ModRegistrationPlan` carries
+the preset name (a new trailing component with a compatibility constructor for the previous
+shape) and `ModBackedGamePatch`'s module returns it from `requiredDisplayAspect()`, so the
+existing session-override and window-refit path applies it. Registration rejects other widths,
+a second call and standalone manifests. `DebuggableScene` is an optional `@ModApi` interface
+(`boolean debugJump(String)`) a scene implements so tools reach its screens without
+reflection; the engine-internal host's `debugJump(String)` runs it inside the owner's fault
+boundary through `OwnedSceneFactory`.
+
+`SceneContext`, `SceneCanvas`, `SceneArt`, `SceneRomArt`, `SceneSpriteSet`, `SceneStorage` and
+`SceneAudio` are implemented by the engine; creators use them (and may fake them in tests) but
+the candidate may add methods to them. `SceneRomArt`'s zone pictures are abstract methods with
+an explicit support query instead of defaults that returned `null`: `hasZonePictures(zone, act)`
+is true exactly where `zoneBackdrop`, `levelOverview(zone, act, maxHeight)`,
+`levelStages(zone, act, width, headroom, maxRise)` and `levelForeground(zone, act, x, y, width,
+height)` produce pictures. Today that is five Sonic 3 & Knuckles acts, each in one
+representative presentation state its Javadoc names (AIZ1 after the intro, AIZ2 as a fresh act
+2 load, HCZ1 below the waterline, LBZ1 as loaded, SSZ1's backdrop as the cloud sea); they are
+the acts the Slay the Robotnik example visits, and further acts or states are extension points.
+`hasTitleCard(zone, act)` and `titleCard(zone, act)` return an act's stock title card as four
+sprites (banner, zone name, "ZONE", act) from the card's own KosM art and mappings
+(`game.sonic3k.titlecard.Sonic3kTitleCardArt`, reusing `Sonic3kTitleCardMappings` and the VRAM
+layout `Sonic3kTitleCardManager` loads), with the ROM's slide-in, hold and exit timings
+documented so a scene can animate it; Sonic 1 and Sonic 2 have neither yet. Stages come from the
+engine-internal `level.render.LevelFloorScanner`, which reads the act's primary-path collision
+the way a floor sensor does (layout cell, block, chunk descriptor flips and solidity bits, solid
+tile height) and never touches a live level. The stock implementation converts values from the
+engine-internal `level.render.ZonePictureSource`, which a game module offers as
+`getGameService(ZonePictureSource.Factory.class)` (shared engine code has no per-game switch);
+for S3K, `Sonic3kZoneArt` builds a detached
+level from explicit inputs (no session, settings or live graphics), primes animated tiles into a
+private tile array and rasterises on the CPU with `PlaneRasterizer`. Keeping the source in
+`level.render` leaves `game` free of `mods` dependencies (the ArchUnit cycle ratchet). These are
+in-place changes to the unpublished 0.7 candidate; the descriptor and `ModApiVersion` remain
+0.7.0 and the normalized pin is updated in place.

@@ -34,6 +34,7 @@ public final class RewindController {
 
     private int currentFrame;
     private boolean audioRestoreDeferred;
+    private int replayDepth;
     private RewindDeterminismAuditor determinismAuditor;
 
     public RewindController(
@@ -157,6 +158,18 @@ public final class RewindController {
             audioKeyframes.clear();
             audioTimelineFrames.clear();
             captureAudioKeyframe(0);
+        }
+    }
+
+    /** Course replacement abandons speculative future state while preserving rewindable past. */
+    public void invalidateCourseFuture() {
+        // Reconstructing an old input segment must not invalidate the strip currently being built.
+        if (replayDepth != 0) return;
+        segmentCache.invalidate();
+        keyframes.discardAfter(currentFrame);
+        if (audioKeyframes != null) {
+            audioKeyframes.discardAfter(currentFrame);
+            audioTimelineFrames.tailMap(currentFrame, false).clear();
         }
     }
 
@@ -612,8 +625,13 @@ public final class RewindController {
     }
 
     private void stepReplayInput(Bk2FrameInput input) {
-        while (engineStepper.step(input) == com.openggf.LevelFrameResult.SETUP_ONLY) {
-            // Initial Process_Sprites consumes no input row or rewind time.
+        replayDepth++;
+        try {
+            while (engineStepper.step(input) == com.openggf.LevelFrameResult.SETUP_ONLY) {
+                // Initial Process_Sprites consumes no input row or rewind time.
+            }
+        } finally {
+            replayDepth--;
         }
     }
 }

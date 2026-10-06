@@ -28,6 +28,10 @@ public final class ModApiSurfaceInventory {
             "com.openggf.level.objects.ObjectLifetimeOps",
             "com.openggf.level.objects.ObjectPlayerQuery",
             "com.openggf.game.PhysicsProfile",
+            "com.openggf.game.presentation.SceneFrameCodec",
+            "com.openggf.game.presentation.SceneReplay",
+            "com.openggf.control.MenuInput",
+            "com.openggf.control.ButtonPrompts",
             "com.openggf.physics.GroundSensor",
             "com.openggf.level.objects.SubpixelMotion",
             "com.openggf.level.objects.PatrolMovementHelper",
@@ -45,7 +49,12 @@ public final class ModApiSurfaceInventory {
             "com.openggf.level.objects.PlayableSheetMaterializer",
             "com.openggf.level.objects.ObjectFactory",
             "com.openggf.level.objects.RewindRecreatable",
-            "com.openggf.level.spawn.SpawnPoint");
+            "com.openggf.level.spawn.SpawnPoint",
+            // Scene constant holders: mods use their constants, which no signature names.
+            "com.openggf.mods.scene.SceneButtons",
+            "com.openggf.mods.scene.SceneKeys",
+            // Optional interface a scene implements; the engine finds it with instanceof.
+            "com.openggf.mods.scene.DebuggableScene");
 
     private ModApiSurfaceInventory() { }
 

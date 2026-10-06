@@ -37,7 +37,7 @@ public final class EngineRenderDispatcher {
             case DATA_SELECT -> actions.dataSelect();
             case CREDITS_TEXT, ENDING_CUTSCENE -> actions.ending();
             case CONTINUE_SCREEN, TRY_AGAIN_END, MASTER_TITLE_SCREEN, LEGAL_DISCLAIMER, NATIVE_MOD_NOTICE,
-                    EDITOR -> actions.black();
+                    EDITOR, MOD_SCENE -> actions.black();
             case TITLE_CARD -> actions.level();
             default -> actions.level();
         }
@@ -74,6 +74,7 @@ public final class EngineRenderDispatcher {
             case TITLE_SCREEN -> actions.titleScreen();
             case LEVEL_SELECT -> actions.levelSelect();
             case DATA_SELECT -> actions.dataSelect();
+            case MOD_SCENE -> actions.modScene();
             case CONTINUE_SCREEN -> actions.continueScreen();
             case ENDING_CUTSCENE -> actions.endingCutscene();
             case CREDITS_TEXT -> actions.creditsText();
@@ -118,6 +119,7 @@ public final class EngineRenderDispatcher {
         void titleScreen();
         void levelSelect();
         void dataSelect();
+        void modScene();
         void endingCutscene();
         void creditsText();
         void creditsDemo();

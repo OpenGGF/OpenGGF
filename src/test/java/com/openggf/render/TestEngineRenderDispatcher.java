@@ -165,6 +165,7 @@ class TestEngineRenderDispatcher {
         @Override public void continueScreen() { calls.add("continueScreen"); }
         @Override public void levelSelect() { calls.add("levelSelect"); }
         @Override public void dataSelect() { calls.add("dataSelect"); }
+        @Override public void modScene() { calls.add("modScene"); }
         @Override public void endingCutscene() { calls.add("endingCutscene"); }
         @Override public void creditsText() { calls.add("creditsText"); }
         @Override public void creditsDemo() { calls.add("creditsDemo"); }

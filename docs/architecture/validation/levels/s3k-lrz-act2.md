@@ -1166,3 +1166,14 @@ are covered directly. Broad preflight found Lua 5.4 and PowerShell unavailable;
 no full suite or structural-guard pass is claimed. Existing route/rewind,
 viewport, donor and roster obligations remain inherited; this check does not
 certify those products or add an act-route replay.
+
+### Flame touch-profile guard follow-up (2026-10-06)
+
+PR #211, starting at `96a6042f2`, declares the flame's existing touch behavior
+through an explicit profile as required by the object standardization guard.
+The ROM's collision byte `$98` and fire-shield bit 4, single-region overlap,
+render gating and absence of shield deflection are preserved. The same real
+four-shield collision regression and flame lifecycle checks above apply.
+There is no new act-route, rewind, viewport, donor or roster coverage; the
+inherited gaps remain. Combined validation is recorded in the
+[PR task design](../../designs/2026-10-05-slay-the-robotnik.md#ci-guard-follow-up-2026-10-06).

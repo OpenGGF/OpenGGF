@@ -30,8 +30,12 @@ public class InputHandler {
 	private double mouseX;
 	private double mouseY;
 	private boolean mouseInputSeen;
+	/** Engine-internal ({@link MouseWheel#of}); not part of the creator API. */
+	final MouseWheel wheel = new MouseWheel(this);
 	private boolean controllerPresentation;
 	private boolean keyboardPresentationPending;
+	// Per logical player: null until that player's first intentional press, then whether it was a pad.
+	private final Boolean[] playerControllerPresentation = new Boolean[2];
 	final MenuRepeat menuRepeat = new MenuRepeat();
 	long menuFrame;
 	private final StringBuilder menuTypedText = new StringBuilder();
@@ -93,6 +97,11 @@ public class InputHandler {
 		mouseInputSeen = true;
 	}
 
+	/** The wheel reaches mouse-input tracking through {@link MouseWheel#scroll}. */
+	void noteMouseInput() {
+		mouseInputSeen = true;
+	}
+
 	public void handleMouseButton(int button, int action) {
 		mouseInputSeen = true;
 		if (button >= 0 && button < MAX_MOUSE_BUTTONS) {
@@ -127,6 +136,17 @@ public class InputHandler {
 			return true;
 		}
 		return keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld();
+	}
+
+	/**
+	 * Returns the configured keyboard rewind key or the primary pad's rewind bumper,
+	 * independently of whether developer live rewind is enabled. Unbinding the key
+	 * leaves the bumper available. Movie/trace-owned frames suppress this live input;
+	 * the caller owns rewind permission, allowances and press-edge detection.
+	 */
+	public boolean isRewindHeld() {
+		return logicalOverride == null && (isPhysicalKeyDown(inputBindings.rewindKey())
+				|| gamepadInputManager.isRewindHeld());
 	}
 
 	/** Returns raw keyboard state, ignoring any trace/replay logical override. */
@@ -329,6 +349,8 @@ public class InputHandler {
 			controllerPresentation = true;
 		}
 		keyboardPresentationPending = false;
+		notePlayerDevice(0, keyboardP1, gamepadSnapshot.player1());
+		notePlayerDevice(1, keyboardP2, gamepadSnapshot.player2());
 		if (logicalOverride != null) {
 			logicalSnapshot = logicalOverride;
 			return;
@@ -350,6 +372,28 @@ public class InputHandler {
 	boolean usesControllerPresentation() {
 		return controllerPresentation;
 	}
+
+	private void notePlayerDevice(int player, PlayerInputState keyboard, PlayerInputState pad) {
+		// Keyboard edges win a same-frame tie, matching the session-wide presentation rule.
+		if (intentional(keyboard)) playerControllerPresentation[player] = false;
+		else if (intentional(pad)) playerControllerPresentation[player] = true;
+	}
+
+	private static boolean intentional(PlayerInputState state) {
+		return state.pressedMask() != 0 || state.actionPressedMask() != 0 || state.startPressed();
+	}
+
+	/** Last intentional device of one logical player, or the session-wide choice before their first press. */
+	boolean playerUsesControllerPresentation(int player) {
+		Boolean known = playerControllerPresentation[player];
+		return known != null ? known : controllerPresentation;
+	}
+
+	InputBindings currentBindings() { return inputBindings; }
+
+	ControllerPromptStyle playerControllerStyle(int player) { return gamepadInputManager.playerStyle(player); }
+
+	boolean playerPadIsPrimary(int player) { return gamepadInputManager.playerPadIsPrimary(player); }
 
 	void appendMenuCodepoint(int codepoint) {
 		if (Character.isValidCodePoint(codepoint) && !Character.isISOControl(codepoint)

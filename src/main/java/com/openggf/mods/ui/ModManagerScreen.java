@@ -208,11 +208,16 @@ public final class ModManagerScreen {
         }
         if (actionFocus || rows.isEmpty()) {
             actionFocus = true;
-            if (left || right) selectedAction = Math.floorMod(selectedAction + (right ? 1 : -1), 4);
+            if (left || right) selectedAction = Math.floorMod(selectedAction + (right ? 1 : -1),
+                    editor.editable() ? 4 : 3);
             if ((up || down) && !rows.isEmpty()) { actionFocus = false; return; }
             if (accept) {
                 pageOffset = 0;
                 if (selectedAction == 0) { detailsPage = true; detailScrollOffset = 0; }
+                else if (!editor.editable()) {
+                    if (selectedAction == 1) noticesPage = true;
+                    else closeRequested = true;
+                }
                 else if (selectedAction == 1) orderPage = true;
                 else if (selectedAction == 2) noticesPage = true;
                 else applyDraft();
@@ -236,7 +241,11 @@ public final class ModManagerScreen {
             else { actionFocus = true; selectedAction = 0; }
             return;
         }
-        if (accept) { pageOffset = 0; toggleSelected(); }
+        if (accept) {
+            pageOffset = 0;
+            if (editor.editable()) toggleSelected();
+            else { detailsPage = true; detailScrollOffset = 0; }
+        }
     }
 
     public void render() {
@@ -277,7 +286,8 @@ public final class ModManagerScreen {
             if (noticesPage) {
                 renderReadingPage("MOD NOTICES", noticeLines(), pageOffset,
                         directionLabel + " Read  " + backLabel + " Back",
-                        saveFailure != null ? confirmLabel + " Retry save and return" : "Changes apply after restart");
+                        saveFailure != null ? confirmLabel + " Retry save and return"
+                                : editor.editable() ? "Changes apply after restart" : "Mods are fixed for this launch");
                 return;
             }
             text.page("MOD MANAGER", patternBudgetLine());
@@ -302,9 +312,10 @@ public final class ModManagerScreen {
                     : banners.isEmpty() ? "SAVED: changes apply after restart" : banners.getFirst();
             draw(banner, 9, 153, 1f, .65f, .3f);
             if (!statusMessage.isBlank()) draw(statusMessage, 9, 165, 1f, .75f, .25f);
-            String[] actions = {"Details", "Order", "Notices", "Apply"};
-            int[] actionX = {8, 86, 146, 226};
-            int[] actionWidth = {74, 56, 76, 86};
+            String[] actions = editor.editable() ? new String[]{"Details", "Order", "Notices", "Apply"}
+                    : new String[]{"Details", "Notices", "Back"};
+            int[] actionX = editor.editable() ? new int[]{8, 86, 146, 226} : new int[]{8, 112, 216};
+            int[] actionWidth = editor.editable() ? new int[]{74, 56, 76, 86} : new int[]{96, 96, 96};
             for (int i = 0; i < actions.length; i++) {
                 int x = actionX[i];
                 text.panel(x, 178, actionWidth[i], 16);
@@ -312,7 +323,7 @@ public final class ModManagerScreen {
                 drawPrimary(actions[i], x + 4, text.primaryTextY(178, 16), 1f, 1f, 1f);
             }
             text.footer(actionFocus ? confirmLabel + " Open  " + backLabel + (rows.isEmpty() ? " Back" : " List")
-                            : confirmLabel + " Toggle  Right Actions",
+                            : confirmLabel + (editor.editable() ? " Toggle  Right Actions" : " Details  Right Actions"),
                     actionFocus ? "Left/Right Choose  Up/Down List" : backLabel + " Back  Up/Down Select");
         } finally {
             text.end();
@@ -334,7 +345,8 @@ public final class ModManagerScreen {
         List<String> lines = new ArrayList<>();
         if (!statusMessage.isBlank()) lines.add(statusMessage);
         lines.addAll(bannerLines());
-        if (lines.isEmpty()) lines.add("No notices. Changes apply after restart.");
+        if (lines.isEmpty()) lines.add(editor.editable() ? "No notices. Changes apply after restart."
+                : "No notices. Mods are fixed for this launch.");
         return wrapped(lines);
     }
 
@@ -387,6 +399,7 @@ public final class ModManagerScreen {
 
     public List<String> bannerLines() {
         List<String> banners = new ArrayList<>();
+        if (!editor.editable()) banners.add("Mods are fixed for this launch");
         for (RepositoryScanFailure failure : repositoryFailures) {
             for (ModFinding finding : failure.findings()) {
                 banners.add("Repository error: " + finding.message());
@@ -645,6 +658,7 @@ public final class ModManagerScreen {
     }
 
     private void reorderSelected(int delta) {
+        if (!editor.editable()) return;
         if (rows.isEmpty()) return;
         Row row = rows.get(selectedIndex);
         if (row.descriptor() == null) {
@@ -958,6 +972,7 @@ public final class ModManagerScreen {
     }
 
     private void normalizeDependencyOrder() {
+        if (!editor.editable()) return;
         List<ModState.Entry> current = editor.pendingState().entries();
         List<String> currentIds = current.stream().map(ModState.Entry::id).toList();
         Set<String> currentSet = Set.copyOf(currentIds);

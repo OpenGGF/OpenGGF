@@ -1,0 +1,72 @@
+# Slay the Robotnik relic pictures (same format as cards.txt; see slaytherobotnik.art.CardRecipes).
+# Each picture is laid out in a 24x24 box around its centre; the relic bar draws it at half size.
+# 12x12 text-art icons therefore use x2, and 32x32 monitors about x0.7.
+
+# ---------------------------------------------------------------- starter
+relic:red_sneakers: monitor 5 x0.7
+relic:tinker_kit: icon pow_wrench x2.4
+relic:master_emerald_shard: rom intro_emeralds 0 x2.4
+
+# ---------------------------------------------------------------- event
+relic:circlet: rom ring anim=0/1/2/3@8 x1.4
+relic:emerald_idol: rom intro_emeralds 0 x2.4; fx sparkle a0.6
+relic:mushroom_cap: icon relic_mushroom x2
+relic:ancient_tablet: icon relic_tablet x2
+relic:collectors_badge: icon relic_badge x2
+
+# ---------------------------------------------------------------- common
+relic:blue_shield: monitor 8 x0.7
+relic:spike_ball: rom orbinaut 1 x1.3
+relic:starting_line: icon relic_flag x2
+relic:spiked_shell: rom turbo_spiker 3 x0.9
+relic:ring_alarm: rom ring anim=0/1/2/3@4 x1.3; icon intent_attack 6,-6 a0.9
+relic:lucky_flower: rom bloominator 3 x0.6
+relic:lamppost: rom starpost 0 0,2 x0.45
+relic:power_bracelet: icon relic_bracelet x2
+relic:grip_gloves: icon relic_glove x2
+relic:energy_capsule: rom egg_capsule 0 x0.3
+relic:pinball_flipper: icon relic_flipper x2
+relic:emergency_shield: rom shield_bubble anim=0/1/2/3@6 x0.6
+relic:item_box: monitor static x0.7
+relic:comfy_cushion: icon relic_cushion x2
+relic:toy_tornado: rom tornado 0 x0.2
+relic:ring_magnet: monitor 7 x0.7
+relic:tune_up_kit: icon pow_wrench x2.2; icon pow_energy 6,6
+relic:tool_belt: icon relic_belt x2
+relic:energy_drink: icon relic_can x2
+
+# ---------------------------------------------------------------- uncommon
+relic:power_sneakers: monitor 5 x0.7; fx stars a0.8
+relic:wrist_guards: icon relic_guard x2
+relic:rhythm_badge: icon relic_note x2
+relic:spin_fan: rom hcz_end_boss anim=2/3/4/5@3 x0.7
+relic:flicky_rescue: rom flicky anim=0/1@6 x1.4
+relic:chili_dog_stand: icon relic_chilidog x2
+relic:turbo_ring: rom ring anim=0/1/2/3@2 x1.4; fx speed a0.7
+relic:magnifying_glass: icon relic_magnifier x2
+relic:gadget_wrench: icon pow_wrench x2.4
+relic:big_ring: rom big_ring anim=8/9/10/11@6 x0.26
+
+# ---------------------------------------------------------------- rare
+relic:extra_life: monitor 1UP x0.7
+relic:spinning_top: icon relic_top x2
+relic:metal_plating: icon pow_metallicize x2.4
+relic:tornado_wheel: icon relic_wheel x2
+relic:shovel_claw: icon relic_claw x2
+relic:thermos: icon relic_thermos x2
+
+# ---------------------------------------------------------------- boss
+relic:chaos_emerald: rom intro_emeralds anim=0/1/2/3/4/5/6@20 x2.4; fx sparkle a0.7
+relic:overclocked_engine: icon pow_fire x2.4
+relic:piko_hammer: icon relic_hammer x2
+relic:cracked_crown: icon relic_crown x2
+relic:mystery_monitor: monitor ? x0.7
+relic:star_emblem: icon pow_super x2.4
+relic:light_speed_shoes: monitor 5 x0.7; fx speed
+relic:workshop: icon relic_bin x1.6 -2,3; icon pow_wrench 5,-4 x1.4
+relic:master_emerald: rom intro_emeralds 0 x3.2; fx sparkle
+
+# ---------------------------------------------------------------- shop
+relic:vip_card: icon relic_card x2
+relic:clean_oil: icon relic_oil x2
+relic:spare_parts_bin: icon relic_bin x2

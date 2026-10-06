@@ -1,0 +1,391 @@
+package paradise.ui;
+
+import com.openggf.control.InputHandler;
+import com.openggf.control.MenuInput;
+import com.openggf.game.TitleScreenProvider;
+import com.openggf.graphics.GraphicsManager;
+import paradise.model.RewindAllowance;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.function.IntSupplier;
+
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE;
+
+/** Standalone creator title screen. Launch selections arrive before the standard one-player exit. */
+public final class GolfMenu implements TitleScreenProvider {
+    public enum Mode { PRACTICE, LOCAL, HOST, JOIN }
+    public enum CharacterChoice {
+        SONIC("sonic"), TAILS("tails");
+        private final String code;
+        CharacterChoice(String code) { this.code = code; }
+        public String code() { return code; }
+    }
+    public enum Viewport {
+        NATIVE_4_3(320), WIDE_16_10(352), WIDE_16_9(400), ULTRA_21_9(528), SUPER_32_9(800);
+        private final int width;
+        Viewport(int width) { this.width = width; }
+        public int pixelWidth() { return width; }
+        public String configName() { return name(); }
+    }
+    public enum Field { MODE, PLAYER_ONE, PLAYER_TWO, ACT, VIEWPORT, REWINDS_HOLE, REWINDS_TURN, ADDRESS, PORT, START, BACK }
+    /** Menu sounds requested from the adapter, which plays them from the ROM. */
+    public enum Cue { MUSIC, MOVE, ENTER, LAUNCH, ERROR }
+
+    public record Selection(Mode mode, CharacterChoice playerOne, CharacterChoice playerTwo,
+                            int actIndex, String address, int port, Viewport viewport, RewindAllowance.Rules rewinds) {
+        public Selection(Mode mode, CharacterChoice playerOne, CharacterChoice playerTwo,
+                         int actIndex, String address, int port, Viewport viewport) {
+            this(mode, playerOne, playerTwo, actIndex, address, port, viewport, RewindAllowance.Rules.defaults());
+        }
+        public Selection {
+            Objects.requireNonNull(mode, "mode"); Objects.requireNonNull(playerOne, "playerOne");
+            Objects.requireNonNull(playerTwo, "playerTwo"); Objects.requireNonNull(viewport, "viewport");
+            Objects.requireNonNull(rewinds, "rewinds");
+            address = Objects.requireNonNull(address, "address").trim();
+            if (address.isBlank() || address.length() > 253 || port < 1 || port > 65535 || actIndex < 0 || actIndex > 1
+                    || (mode != Mode.PRACTICE && actIndex != 0)) throw new IllegalArgumentException("Invalid golf launch selection");
+        }
+    }
+
+    private final GraphicsManager graphics;
+    private final IntSupplier logicalWidth;
+    private final Consumer<Selection> launchConsumer;
+    private final GolfTitleArt titleArt;
+    private final Consumer<Cue> cues;
+    private long animationTick;
+    // Presentation-only easing anchors: when the panel last changed page and the highlight last moved.
+    private long pageTick = -100, rowTick = -100;
+    private int fromRow;
+    private State state = State.INACTIVE;
+    private Mode mode = Mode.PRACTICE;
+    private boolean setup;
+    private int selectedMode;
+    private int row;
+    private int pointerX = Integer.MIN_VALUE, pointerY = Integer.MIN_VALUE;
+    private CharacterChoice playerOne = CharacterChoice.SONIC;
+    private CharacterChoice playerTwo = CharacterChoice.TAILS;
+    private int practiceAct;
+    private Viewport viewport = Viewport.NATIVE_4_3;
+    private RewindAllowance.Rules rewinds = RewindAllowance.Rules.defaults();
+    private String address = "127.0.0.1";
+    private String portText = "20502";
+    private boolean editing;
+    private String editBuffer = "";
+    private boolean replaceOnType;
+    private String error = "";
+    private String controlsHint = "ARROWS / MOUSE  ENTER SELECT  ESC BACK";
+    private Selection selected;
+    private TitleScreenAction exitAction = TitleScreenAction.OTHER;
+
+    public GolfMenu(GraphicsManager graphics, IntSupplier logicalWidth, Consumer<Selection> launchConsumer) {
+        this(graphics, logicalWidth, launchConsumer, null);
+    }
+    public GolfMenu(GraphicsManager graphics, IntSupplier logicalWidth, Consumer<Selection> launchConsumer,
+                    GolfTitleArt titleArt) {
+        this(graphics, logicalWidth, launchConsumer, titleArt, cue -> { });
+    }
+    public GolfMenu(GraphicsManager graphics, IntSupplier logicalWidth, Consumer<Selection> launchConsumer,
+                    GolfTitleArt titleArt, Consumer<Cue> cues) {
+        this.graphics = graphics;
+        this.logicalWidth = Objects.requireNonNull(logicalWidth, "logicalWidth");
+        this.launchConsumer = Objects.requireNonNull(launchConsumer, "launchConsumer");
+        this.titleArt = titleArt;
+        this.cues = Objects.requireNonNull(cues, "cues");
+    }
+    public GolfMenu(GraphicsManager graphics, Consumer<Selection> launchConsumer) { this(graphics, () -> 320, launchConsumer); }
+
+    @Override public void initialize() {
+        if (titleArt != null) titleArt.initialize();
+        animationTick = 0; pageTick = rowTick = -100; fromRow = 0;
+        cues.accept(Cue.MUSIC);
+        state = State.ACTIVE; setup = false; row = 0; editing = false; error = "";
+        selected = null; exitAction = TitleScreenAction.OTHER;
+        pointerX = pointerY = Integer.MIN_VALUE;
+        controlsHint = "ARROWS / MOUSE  ENTER SELECT  ESC BACK";
+    }
+    @Override public void reset() { state = State.INACTIVE; editing = false; selected = null; exitAction = TitleScreenAction.OTHER; }
+    @Override public State getState() { return state; }
+    @Override public boolean isExiting() { return state == State.EXITING; }
+    @Override public boolean isActive() { return state != State.INACTIVE; }
+    @Override public int startZoneIndex() { return 0; }
+    @Override public int startActIndex() { return selected == null ? 0 : selected.actIndex(); }
+    @Override public TitleScreenAction consumeExitAction() {
+        TitleScreenAction action = exitAction; exitAction = TitleScreenAction.OTHER; return action;
+    }
+    public Selection getSelection() { return selected; }
+    public String errorMessage() { return error; }
+    public boolean editing() { return editing; }
+    public String controlsHint() { return controlsHint; }
+    public Field focusedField() { return setup ? fields().get(row) : Field.MODE; }
+
+    @Override public void update(InputHandler input) {
+        if (state == State.ACTIVE) animationTick++;
+        if (input == null || state != State.ACTIVE) return;
+        boolean wasSetup = setup, wasEditing = editing;
+        int oldRow = setup ? row : selectedMode;
+        String oldValues = values(), oldError = error;
+        handle(input);
+        int newRow = setup ? row : selectedMode;
+        if (setup != wasSetup) { pageTick = animationTick; fromRow = 0; rowTick = -100; }
+        else if (newRow != oldRow) { fromRow = oldRow; rowTick = animationTick; }
+        // Sonic 2's title menu blips on each selection change (s2.asm Obj0F); the adapter maps cues to ROM sounds.
+        if (state == State.EXITING) cues.accept(Cue.LAUNCH);
+        else if (!error.isEmpty() && !error.equals(oldError)) cues.accept(Cue.ERROR);
+        else if (setup && !wasSetup || editing && !wasEditing) cues.accept(Cue.ENTER);
+        else if (setup != wasSetup || newRow != oldRow || !values().equals(oldValues) || wasEditing && !editing) cues.accept(Cue.MOVE);
+    }
+
+    private String values() { return playerOne + "/" + playerTwo + "/" + practiceAct + "/" + viewport + "/" + rewinds + "/" + address + "/" + portText; }
+
+    private void handle(InputHandler input) {
+        controlsHint = MenuInput.controller(input)
+                ? MenuInput.directionLabel(input) + "  " + MenuInput.confirmLabel(input) + " SELECT  "
+                    + MenuInput.backLabel(input) + " BACK"
+                : "ARROWS / MOUSE  ENTER SELECT  ESC BACK";
+        String text = MenuInput.consumeText(input); // Discard typing outside the editor; never replay it on later focus.
+        if (editing) { updateEditor(input, text); return; }
+        if (MenuInput.back(input)) {
+            if (setup) { setup = false; row = 0; error = ""; }
+            return;
+        }
+        int vertical = (MenuInput.down(input) ? 1 : 0) - (MenuInput.up(input) ? 1 : 0);
+        int horizontal = (MenuInput.right(input) ? 1 : 0) - (MenuInput.left(input) ? 1 : 0);
+        boolean accept = MenuInput.accept(input);
+        if (vertical == 0 && horizontal == 0 && !accept
+                && updatePointer(MenuInput.pointer(input, logicalWidth.getAsInt(), 224))) return;
+        if (!setup) {
+            if (vertical != 0 || horizontal != 0) selectedMode = Math.floorMod(selectedMode + (vertical != 0 ? vertical : horizontal), 4);
+            if (accept) { mode = Mode.values()[selectedMode]; setup = true; row = 0; error = ""; }
+            return;
+        }
+        if (vertical != 0) { row = Math.floorMod(row + vertical, fields().size()); error = ""; }
+        Field field = focusedField();
+        if (horizontal != 0) change(field, horizontal);
+        if (accept) activate(field);
+    }
+
+    private void activate(Field field) {
+        switch (field) {
+            case PLAYER_ONE, PLAYER_TWO, ACT, VIEWPORT, REWINDS_HOLE, REWINDS_TURN -> change(field, 1);
+            case ADDRESS, PORT -> {
+                editing = true; editBuffer = field == Field.ADDRESS ? address : portText;
+                replaceOnType = true; error = "";
+            }
+            case START -> launch();
+            case BACK -> { setup = false; row = 0; }
+            default -> { }
+        }
+    }
+
+    /** Shared logical coordinates; only the creator knows the title's hit regions. */
+    boolean updatePointer(MenuInput.Pointer pointer) {
+        if (state != State.ACTIVE || editing || !pointer.inside()) return false;
+        if (pointer.rightPressed()) {
+            if (setup) { setup = false; row = 0; error = ""; }
+            return true;
+        }
+        boolean moved = pointer.x() != pointerX || pointer.y() != pointerY;
+        pointerX = pointer.x(); pointerY = pointer.y();
+        if (!moved && !pointer.leftPressed()) return false;
+        int width = Math.clamp(logicalWidth.getAsInt(), 320, 800);
+        int panelWidth = Math.min(width - 24, 376), left = (width - panelWidth) / 2;
+        int count = setup ? fields().size() : Mode.values().length;
+        for (int index = 0; index < count; index++) {
+            int top = setup ? 122 + index * 9 : 126 + index * 17;
+            if (!pointer.over(left + 7, top, panelWidth - 14, setup ? 9 : 13)) continue;
+            if (setup) row = index; else selectedMode = index;
+            error = "";
+            if (pointer.leftPressed()) {
+                if (setup) activate(focusedField());
+                else { mode = Mode.values()[selectedMode]; setup = true; row = 0; }
+                return true;
+            }
+            break;
+        }
+        return false;
+    }
+
+    private void change(Field field, int direction) {
+        switch (field) {
+            case PLAYER_ONE -> playerOne = playerOne == CharacterChoice.SONIC ? CharacterChoice.TAILS : CharacterChoice.SONIC;
+            case PLAYER_TWO -> playerTwo = playerTwo == CharacterChoice.SONIC ? CharacterChoice.TAILS : CharacterChoice.SONIC;
+            case ACT -> practiceAct = 1 - practiceAct;
+            case VIEWPORT -> viewport = Viewport.values()[Math.floorMod(viewport.ordinal() + direction, Viewport.values().length)];
+            case REWINDS_HOLE -> rewinds = new RewindAllowance.Rules(cycle(new int[]{0, 3, 5, -1}, rewinds.perHole(), direction), rewinds.perTurn());
+            case REWINDS_TURN -> rewinds = new RewindAllowance.Rules(rewinds.perHole(), cycle(new int[]{1, 3, -1}, rewinds.perTurn(), direction));
+            default -> { }
+        }
+    }
+
+    private static int cycle(int[] values, int current, int direction) {
+        for (int i = 0; i < values.length; i++) if (values[i] == current) return values[Math.floorMod(i + direction, values.length)];
+        throw new IllegalArgumentException("Unknown rewind setting");
+    }
+
+    private void updateEditor(InputHandler input, String text) {
+        if (MenuInput.textBack(input)) { editing = false; error = ""; return; }
+        if (MenuInput.textKeyRepeated(input, GLFW_KEY_BACKSPACE)) {
+            if (!editBuffer.isEmpty()) editBuffer = editBuffer.substring(0, editBuffer.length() - 1);
+            replaceOnType = false; error = "";
+        }
+        if (!text.isEmpty()) {
+            if (replaceOnType) editBuffer = "";
+            replaceOnType = false; error = "";
+            int limit = focusedField() == Field.PORT ? 6 : 253;
+            for (int i = 0; i < text.length() && editBuffer.length() < limit; i++) {
+                char c = text.charAt(i);
+                if (focusedField() == Field.PORT ? c >= '0' && c <= '9' : c >= 32 && c <= 126) editBuffer += c;
+            }
+        }
+        if (!MenuInput.textAccept(input)) return;
+        if (focusedField() == Field.ADDRESS) {
+            if (editBuffer.isBlank()) { error = "ENTER AN IP OR HOSTNAME"; replaceOnType = true; return; }
+            address = editBuffer.trim();
+        } else {
+            if (!validPort(editBuffer)) { error = "PORT MUST BE 1-65535"; replaceOnType = true; return; }
+            portText = editBuffer;
+        }
+        editing = false; error = "";
+    }
+
+    private static boolean validPort(String text) {
+        if (text.isEmpty() || text.length() > 5) return false;
+        try { int port = Integer.parseInt(text); return port >= 1 && port <= 65535; }
+        catch (NumberFormatException invalid) { return false; }
+    }
+
+    private void launch() {
+        if (address.isBlank() || !validPort(portText)) { error = "CHECK ADDRESS AND PORT"; return; }
+        Selection choice = new Selection(mode, playerOne, playerTwo, mode == Mode.PRACTICE ? practiceAct : 0,
+                address, Integer.parseInt(portText), viewport, rewinds);
+        launchConsumer.accept(choice);
+        selected = choice; exitAction = TitleScreenAction.ONE_PLAYER; state = State.EXITING;
+    }
+
+    private List<Field> fields() {
+        return switch (mode) {
+            case PRACTICE -> List.of(Field.PLAYER_ONE, Field.ACT, Field.VIEWPORT, Field.REWINDS_HOLE, Field.REWINDS_TURN, Field.START, Field.BACK);
+            case LOCAL -> List.of(Field.PLAYER_ONE, Field.PLAYER_TWO, Field.VIEWPORT, Field.REWINDS_HOLE, Field.REWINDS_TURN, Field.START, Field.BACK);
+            case HOST -> List.of(Field.PLAYER_ONE, Field.VIEWPORT, Field.REWINDS_HOLE, Field.REWINDS_TURN, Field.PORT, Field.START, Field.BACK);
+            case JOIN -> List.of(Field.PLAYER_ONE, Field.VIEWPORT, Field.REWINDS_HOLE, Field.REWINDS_TURN, Field.ADDRESS, Field.PORT, Field.START, Field.BACK);
+        };
+    }
+
+    /** The ROM-backed backdrop covers the viewport without a direct GL clear-color call. */
+    @Override public void setClearColor() { }
+
+    @Override public void draw() {
+        if (state == State.INACTIVE) return;
+        Objects.requireNonNull(graphics, "Rendering the menu requires injected graphics");
+        int width = Math.clamp(logicalWidth.getAsInt(), 320, 800);
+        if (titleArt != null) titleArt.draw(width, animationTick);
+        else backdrop(width); // Geometry-only preview and input fixtures need no ROM.
+        var c = new GolfCanvas(graphics, width, 224);
+        // The banner drops in and settles; the menu panel rises after it.
+        float banner = GolfMotion.easeOutBack(GolfMotion.progress(animationTick, 22));
+        var top = c.offset(0, GolfMotion.lerp(-30, 0, banner));
+        int bannerLeft = (width - 236) / 2;
+        top.rect(bannerLeft + 2, 4, 236, 22, 0x3A0A1A, 0.6f);
+        top.rect(bannerLeft, 2, 236, 22, 0xAC2638);
+        top.rect(bannerLeft, 2, 236, 2, 0xE0505E);
+        top.frame(bannerLeft, 2, 236, 22, GolfText.GOLD);
+        top.centered("PUTT PUTT PARADISE", 8, 2, 0x641B36);
+        top.centered("PUTT PUTT PARADISE", 7, 2, GolfText.GOLD);
+        // A glint sweeps across the title every few seconds.
+        long glint = Math.floorMod(animationTick, 240);
+        if (glint < 30) top.rect(bannerLeft + (int) (glint * 236 / 30) - 6, 3, 4, 20, GolfOverlay.WHITE, 0.35f);
+        var subtitle = c.fade(GolfMotion.progress(animationTick - 10, 14));
+        subtitle.rect((width - 112) / 2, 24, 112, 10, 0x15254F);
+        subtitle.centered("SONIC 2 MINI GOLF", 26, 1, GolfText.CREAM);
+        int panelWidth = Math.min(width - 24, 376), left = (width - panelWidth) / 2;
+        var panel = c.offset(0, GolfMotion.lerp(130, 0, GolfMotion.easeOut(GolfMotion.progress(animationTick - 6, 24))));
+        panel.rect(left + 2, 109, panelWidth, 101, 0x06112B, 0.8f);
+        panel.rect(left, 107, panelWidth, 101, 0x15254F, 0.96f);
+        panel.rect(left, 107, panelWidth, 1, 0x3D5FA8);
+        panel.frame(left, 107, panelWidth, 101, GolfText.GOLD);
+        // Page changes slide the contents in from the side they lead to.
+        float page = GolfMotion.easeOut(GolfMotion.progress(animationTick - pageTick, 12));
+        var content = panel.offset(Math.round((1 - page) * (setup ? 18 : -18)), 0).fade(page);
+        if (setup) drawSetup(content, left, panelWidth);
+        else drawModes(content, left, panelWidth);
+        var footer = c.fade(GolfMotion.progress(animationTick - 20, 12));
+        footer.rect((width - 222) / 2, 212, 222, 10, 0x15254F, 0.96f);
+        footer.centered(controlsHint, 214, 1, GolfText.CREAM);
+    }
+
+    /** Highlight bar eases from the previous row; the selected label's cursor nudges in time. */
+    private int highlightY(int index, int first, int spacing) {
+        float t = GolfMotion.easeOut(GolfMotion.progress(animationTick - rowTick, 6));
+        return GolfMotion.lerp(first + fromRow * spacing, first + index * spacing, t);
+    }
+
+    private void backdrop(int width) {
+        GolfText.panel(graphics, 0, 0, width, 224, GolfText.BLUE, 1);
+        for (int y = 52; y < 78; y++) {
+            int rise = y - 52;
+            GolfText.panel(graphics, 0, y, width, 1, y < 62 ? 0x56A185 : 0x278B69, 1);
+            int hillWidth = Math.min(width, 80 + rise * 9);
+            GolfText.panel(graphics, (width - hillWidth) / 2, y, hillWidth, 1, 0x33835D, 1);
+        }
+        GolfText.panel(graphics, 0, 204, width, 20, 0x1F654E, 1);
+        GolfText.panel(graphics, width - 29, 52, 2, 23, GolfText.CREAM, 1);
+        for (int i = 0; i < 10; i++) GolfText.panel(graphics, width - 27, 52 + i, 12 - i, 1, GolfText.GOLD, 1);
+        GolfText.panel(graphics, 23, 62, 7, 7, GolfText.CREAM, 1);
+        GolfText.panel(graphics, 25, 64, 1, 1, 0xB4C9BD, 1);
+        GolfText.panel(graphics, 28, 67, 1, 1, 0xB4C9BD, 1);
+    }
+
+    private static String modeLabel(Mode mode) {
+        return switch (mode) { case PRACTICE -> "PRACTICE"; case LOCAL -> "LOCAL TWO PLAYERS"; case HOST -> "HOST ONLINE MATCH"; case JOIN -> "JOIN ONLINE MATCH"; };
+    }
+
+    private void drawModes(GolfCanvas c, int left, int panelWidth) {
+        c.text("FULL EMERALD HILL ACTS 1 + 2", left + 12, 113, 1, GolfText.CREAM);
+        c.rect(left + 7, highlightY(selectedMode, 126, 17), panelWidth - 14, 13, 0xAC2638);
+        int nudge = Math.round(GolfMotion.pulse(animationTick, 30));
+        for (int i = 0; i < 4; i++) {
+            int y = 129 + i * 17;
+            boolean on = i == selectedMode;
+            c.text((on ? ">" : " "), left + 12 + (on ? nudge : 0), y, 1, GolfText.GOLD);
+            c.text(modeLabel(Mode.values()[i]), left + 24, y, 1, on ? GolfText.GOLD : GolfText.CREAM);
+        }
+        c.text("PUTT. CHIP. ROLL TO THE FINISH.", left + 12, 197, 1, 0x90B9E7);
+    }
+
+    private void drawSetup(GolfCanvas c, int left, int panelWidth) {
+        c.text(modeLabel(mode), left + 12, 113, 1, GolfText.GOLD);
+        List<Field> fields = fields();
+        c.rect(left + 7, highlightY(row, 122, 9), panelWidth - 14, 9, 0xAC2638);
+        for (int i = 0; i < fields.size(); i++) {
+            Field field = fields.get(i);
+            int y = 124 + i * 9;
+            String label = switch (field) {
+                case PLAYER_ONE -> mode == Mode.HOST || mode == Mode.JOIN ? "YOUR CHARACTER" : "PLAYER 1"; case PLAYER_TWO -> "PLAYER 2"; case ACT -> "PRACTICE ACT";
+                case VIEWPORT -> "VIEWPORT"; case ADDRESS -> "HOST ADDRESS"; case PORT -> "PORT";
+                case REWINDS_HOLE -> "REWINDS / HOLE"; case REWINDS_TURN -> "REWINDS / TURN";
+                case START -> "READY - START"; case BACK -> "BACK TO MODES"; default -> "";
+            };
+            String value = switch (field) {
+                case PLAYER_ONE -> playerOne.name(); case PLAYER_TWO -> playerTwo.name(); case ACT -> "EHZ " + (practiceAct + 1);
+                case VIEWPORT -> viewport.pixelWidth() + " PX"; case ADDRESS -> address; case PORT -> portText; default -> "";
+                case REWINDS_HOLE -> rewinds.holeLabel(); case REWINDS_TURN -> rewinds.turnLabel();
+            };
+            boolean on = i == row;
+            if (editing && on) value = editBuffer + (GolfMotion.blink(animationTick, 30) ? "_" : " ");
+            else if (on && !value.isEmpty() && field != Field.ADDRESS && field != Field.PORT) value = "< " + value + " >";
+            value = GolfText.fit(value, panelWidth - 120, 1);
+            c.text(label, left + 12, y, 1, on ? GolfText.GOLD : GolfText.CREAM);
+            int valueColour = field == Field.PLAYER_ONE || field == Field.PLAYER_TWO
+                    ? GolfOverlay.characterColour(field == Field.PLAYER_ONE ? playerOne.name() : playerTwo.name()) : GolfText.CREAM;
+            if (field == Field.PLAYER_ONE || field == Field.PLAYER_TWO)
+                c.rect(left + panelWidth - 16 - GolfText.width(value, 1) - 6, y + 1, 4, 5, valueColour);
+            c.text(value, left + panelWidth - 12 - GolfText.width(value, 1), y, 1, GolfText.CREAM);
+        }
+        String help = !error.isEmpty() ? error : editing ? "TYPE TO REPLACE  BACKSPACE TO EDIT"
+                : focusedField() == Field.REWINDS_HOLE || focusedField() == Field.REWINDS_TURN ? "* UNLIMITED  BUDGET PER GOLFER"
+                : mode == Mode.JOIN || mode == Mode.HOST ? "MATCH ROM, VIEWPORT + REWIND RULES" : "LEFT/RIGHT CHANGES OPTIONS";
+        c.text(GolfText.fit(help, panelWidth - 24, 1), left + 12, 198, 1, error.isEmpty() ? 0x90B9E7 : GolfText.GOLD);
+    }
+}

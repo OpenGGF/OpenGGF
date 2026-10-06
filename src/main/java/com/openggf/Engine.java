@@ -446,7 +446,9 @@ public class Engine {
 		// Set up game mode change listener to update projection width
 		gameLoop.setGameModeChangeListener((oldMode, newMode) -> {
             com.openggf.editor.EditorCommandPalette.forController(levelEditorController).close();
-			// Keep projection at 320 for both modes
+			if (newMode == GameMode.LEVEL && GameServices.hasRuntime())
+                applyRequiredDisplayAspect(GameServices.module());
+            // Resolve module-selected dimensions before the title hands off.
 			projectionWidth = realWidth;
 		});
 		gameLoop.setEditorInputHandler(editorInputHandler);
@@ -582,6 +584,11 @@ public class Engine {
 		glfwSetMouseButtonCallback(window, (windowHandle, button, action, mods) -> {
 			if (inputHandler != null) {
 				inputHandler.handleMouseButton(button, action);
+			}
+		});
+		org.lwjgl.glfw.GLFW.glfwSetScrollCallback(window, (windowHandle, xOffset, yOffset) -> {
+			if (inputHandler != null) {
+				com.openggf.control.MouseWheel.of(inputHandler).scroll(yOffset);
 			}
 		});
 
@@ -1020,8 +1027,12 @@ public class Engine {
 		projectionWidth = realWidth;
 		graphicsManager.setProjectionWidth((int) projectionWidth);
 		graphicsManager.applyResolvedDisplayWidth((int) projectionWidth);
+        var camera = GameServices.cameraOrNull();
+        if (camera != null) camera.refreshViewportDimensions(configService);
 
 		if (glfwInitialized && window != 0L) {
+			DisplayWindowFit.apply(window, configService.getBoolean(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE),
+					(int) realWidth, (int) realHeight);
 			FramebufferDimensions framebuffer = readCurrentFramebufferDimensions();
 			windowWidth = framebuffer.width();
 			windowHeight = framebuffer.height();
@@ -1450,16 +1461,35 @@ public class Engine {
 	private void proceedToMasterTitleOrGame(boolean fadeFromBlack) {
 		boolean masterTitleOnStartup = configService.getBoolean(
 				SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP);
+		// `ggfmod run` of a patch mod opens its base game at once (holding Escape still reaches
+		// the master title); deterministic test mode keeps the configured startup.
+		java.util.Optional<String> developmentGame = configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
+				? java.util.Optional.empty() : ModSubsystem.current().developmentBaseGame();
 		if (masterTitleOnStartup) {
 			masterTitleScreen = createMasterTitleScreen();
 			masterTitleScreen.initialize();
 			gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+			if (developmentGame.isPresent() && launchDevelopmentGame(developmentGame.get())) {
+				return;
+			}
 		} else {
+			developmentGame.ifPresent(game -> configService.setSessionOverride(SonicConfiguration.DEFAULT_ROM, game));
 			initializeGame();
 		}
 
 		if (fadeFromBlack) {
 			graphicsManager.getFadeManager().startFadeFromBlack(null);
+		}
+	}
+
+	/** Selects the development mod's base game on the master title; false (staying there) if it cannot start. */
+	private boolean launchDevelopmentGame(String gameId) {
+		try {
+			gameLoop.launchGameByEntry(MasterTitleScreen.GameEntry.fromGameId(gameId), null);
+			return true;
+		} catch (RuntimeException unavailable) {
+			LOGGER.warning("Development mod's base game " + gameId + " cannot start: " + unavailable.getMessage());
+			return false;
 		}
 	}
 
@@ -1878,6 +1908,10 @@ public class Engine {
 	}
 
 	private void enterConfiguredStartupMode() {
+		if (ModSceneLauncher.openStartupScene(gameLoop, configService, window, graphicsManager,
+				(int) projectionWidth, (int) realHeight)) {
+			return;
+		}
 		boolean titleScreenOnStartup = configService.getBoolean(SonicConfiguration.TITLE_SCREEN_ON_STARTUP);
 		boolean levelSelectOnStartup = configService.getBoolean(SonicConfiguration.LEVEL_SELECT_ON_STARTUP);
 		if (titleScreenOnStartup) {
@@ -3038,7 +3072,7 @@ public class Engine {
 				rewindVhsEffectPass.apply(
 						rewindEffectIntensity,
 						gameLoop.liveRewindEffectSpeed(),
-						-1.0f,
+						RewindVhsEffectPass.REWIND_SCROLL_DIRECTION,
 						configService.getBoolean(SonicConfiguration.LIVE_REWIND_VHS_TEAR_BANDS),
 						configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS),
 						configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS),
@@ -3267,7 +3301,7 @@ public class Engine {
 			case LEVEL, TITLE_CARD, SPECIAL_STAGE, SPECIAL_STAGE_RESULTS,
 					TITLE_SCREEN, CONTINUE_SCREEN, DATA_SELECT, LEVEL_SELECT, EDITOR, CREDITS_TEXT,
 					CREDITS_DEMO, MASTER_TITLE_SCREEN, LEGAL_DISCLAIMER, TRY_AGAIN_END,
-					ENDING_CUTSCENE, BONUS_STAGE, NATIVE_MOD_NOTICE -> true;
+					ENDING_CUTSCENE, BONUS_STAGE, NATIVE_MOD_NOTICE, MOD_SCENE -> true;
 		};
 		boolean renderedState = switch (Objects.requireNonNull(state, "state")) {
 			case NORMAL, MODAL_SHADER_PICKER, PAUSED, FRAME_STEP, REWIND -> true;
@@ -3564,6 +3598,10 @@ public class Engine {
 		}
 		@Override public void levelSelect() { drawLevelSelect(); }
 		@Override public void dataSelect() { drawDataSelect(); }
+		@Override public void modScene() {
+			resetCameraForScreenSpace();
+			ModSceneLauncher.draw(gameLoop, graphicsManager, getProjectionMatrixBuffer());
+		}
 		@Override public void endingCutscene() { drawEndingCutscene(); }
 		@Override public void creditsText() { drawCreditsText(); }
 		@Override public void creditsDemo() { drawCreditsDemo(); }
@@ -4139,7 +4177,14 @@ public class Engine {
 	}
 
 	private void drawLevel() {
-		levelManager.drawWithSpritePriority(spriteManager);
+		var controller = com.openggf.game.mode.ControlledFrameRuntime.controller(
+				com.openggf.game.session.SessionManager.getCurrentGameplayMode());
+		if (controller == null || !controller.drawScene()) levelManager.drawWithSpritePriority(spriteManager);
+		if (controller != null) {
+			graphicsManager.flush();
+			controller.drawOverlay();
+			graphicsManager.flushScreenSpace();
+		}
 		drawActiveLevelTitleCardOverlay();
 	}
 
@@ -4194,6 +4239,8 @@ public class Engine {
 	}
 
 	private void cleanup() {
+		// First, while GL, audio and the session are intact: an open mod scene saves in ModScene.exit.
+		cleanupStep("mod scene", gameLoop.modSceneHost::cleanup);
 		cleanupStep("multiplayer time attack", this::leaveTimeAttackRoom);
 		cleanupStep("screenshots", screenshotWriter::close);
 		cleanupStep("live capture", liveCaptureController::close);

@@ -216,6 +216,53 @@ class TestInputHandlerLogicalSnapshot {
     }
 
     @Test
+    void rewindShortcutKeepsPrimaryBumperWhenKeyboardBindingIsUnbound() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_KEY, -1);
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), source);
+
+        source.setDevices(connectedPad(0, buttons(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER)));
+        input.refreshLogicalSnapshot();
+
+        assertTrue(input.isRewindHeld());
+        assertFalse(input.isKeyDown(-1), "The bumper must not activate unrelated unbound keys");
+        assertEquals(0, input.logical().player1().actionHeldMask());
+        assertEquals(0, input.logical().player2().actionHeldMask());
+
+        input.setLogicalOverride(LogicalInputSnapshot.neutral());
+        assertFalse(input.isRewindHeld(), "Live shortcuts must not alter movie-owned frames");
+        input.clearLogicalOverride();
+        assertTrue(input.isRewindHeld());
+
+        source.setDevices(connectedPad(0, buttons()));
+        input.refreshLogicalSnapshot();
+        assertFalse(input.isRewindHeld());
+    }
+
+    @Test
+    void rewindShortcutUsesConfiguredKeyIndependentlyOfDeveloperRewind() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_KEY, GLFW_KEY_F1);
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        input.refreshLogicalSnapshot();
+        assertFalse(input.isRewindHeld());
+
+        input.handleKeyEvent(GLFW_KEY_F1, GLFW_PRESS);
+        assertTrue(input.isRewindHeld());
+        input.setLogicalOverride(LogicalInputSnapshot.neutral());
+        assertFalse(input.isRewindHeld());
+        input.clearLogicalOverride();
+        assertTrue(input.isRewindHeld());
+        input.handleKeyEvent(GLFW_KEY_F1, GLFW_RELEASE);
+        assertFalse(input.isRewindHeld());
+    }
+
+    @Test
     void gamepadRightBumperTriggersFrameStepKeyPressedEdge() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone();
         config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);

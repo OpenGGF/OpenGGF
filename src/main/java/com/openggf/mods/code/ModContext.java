@@ -48,6 +48,8 @@ public final class ModContext {
     private boolean frozen;
     private ModRegistrationException poison;
     private com.openggf.game.GameModule gameModule;
+    private com.openggf.mods.scene.ModSceneFactory startupScene;
+    private String requiredDisplayAspect;
 
     ModContext(String owner, String baseGame, ModAssetRoot assets) {
         this(owner, baseGame, assets, null);
@@ -221,6 +223,48 @@ public final class ModContext {
         });
     }
 
+    /**
+     * Opens a full-screen {@link com.openggf.mods.scene.ModScene} instead of the base game's
+     * title screen whenever this patch mod is active. The scene draws with a
+     * {@link com.openggf.mods.scene.SceneCanvas} and can return to the stock title
+     * ({@link com.openggf.mods.scene.SceneContext#exitToGameTitle()}) or the master title.
+     * Every scene callback runs inside the mod fault boundary. One startup scene per mod;
+     * when several enabled mods register one, the last mod applied wins.
+     */
+    public void registerStartupScene(com.openggf.mods.scene.ModSceneFactory factory) {
+        mutate(() -> {
+            if (standalone) throw failure("Standalone manifests cannot register a startup scene");
+            Objects.requireNonNull(factory, "factory");
+            if (startupScene != null) throw failure("Startup scene is already registered");
+            startupScene = factory;
+        });
+    }
+
+    /**
+     * Runs this patch mod's sessions at a fixed logical display width instead of the player's
+     * {@code display.aspect} setting: 320 (4:3), 352, 400 (16:9), 528 or 800 pixels, always
+     * 224 tall. The engine applies the matching preset as a session override when the mod's
+     * game launches, before a startup scene opens, refitting the window; the player's setting
+     * returns at the master title. Trace and deterministic test launches keep their own aspect.
+     * Without this call {@code SceneContext.width()} follows the player's setting. One call per
+     * mod; when several enabled mods ask, the mod applied last wins.
+     */
+    public void requireDisplayWidth(int width) {
+        mutate(() -> {
+            if (standalone) throw failure("Standalone manifests cannot require a display width");
+            if (requiredDisplayAspect != null) throw failure("A display width is already required");
+            String preset = null;
+            for (com.openggf.configuration.WidescreenAspect aspect
+                    : com.openggf.configuration.WidescreenAspect.values()) {
+                if (aspect.pixelWidth() == width) preset = aspect.name();
+            }
+            if (preset == null) {
+                throw failure("Display width " + width + " is not a preset (320, 352, 400, 528 or 800)");
+            }
+            requiredDisplayAspect = preset;
+        });
+    }
+
     public void registerHudProfile(ModHudProfileContribution contribution) {
         mutate(() -> {
             Objects.requireNonNull(contribution, "contribution");
@@ -282,7 +326,7 @@ public final class ModContext {
             frozen = true;
             return new ModRegistrationPlan(owner, baseGame, objects, art, Map.of(), patches,
                     zones, prepared,objectPreviewArtKeys,characters,gameModule,romArt,
-                    launchTeams, inputFilters, hudProfiles);
+                    launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect);
         } catch (java.io.IOException | RuntimeException rejected) {
             if (rejected instanceof ModRegistrationException registration) poison = registration;
             else poison = new ModRegistrationException(owner, "MOD_LEVEL_ASSET_INVALID",
