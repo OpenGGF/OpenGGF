@@ -208,7 +208,10 @@ frames, item monitors, icons and drawn effects). Enemy looks are code
   `SceneLevelStage` became engine-made final classes; named keys and buttons, menu repeat,
   `drawBackdrop`, raw `tiles`, and title cards were added for things the example had
   worked around; the display aspect is requested without a `GamePatch`; zone pictures are
-  served by the game module; `DebuggableScene` replaces reflective debug entry.
+  served by the game module (`fc6bc330e` keeps the launcher's standalone test in
+  `GameModuleRouting`); `DebuggableScene` replaces reflective debug entry. GameLoop's two
+  escape fades were folded into one helper (`3620fdf6d`) so the scene hooks leave the
+  release-critical file at develop's size.
 - Tooling: `ExampleModHarness` and `ExampleModCapture` build any example mod from source
   and capture its scene to PNG, MP4 and WAV (`d9be9a254`, written for the example's highlight reel), and `examples/hello-scene` is a
   two-class starter for newcomers (`3fd553324`).
@@ -235,6 +238,15 @@ frames, item monitors, icons and drawn effects). Enemy looks are code
   its owner's turn start, as StS).
 - **Moving the scene API into `com.openggf.game`** to break the `game -> mods` cycle. It
   would have renamed every public scene type for a problem that one service lookup removes.
+- **A palette-lines helper on `SceneRomArt`.** It would save one array copy per palette line,
+  too little for an API method.
+- **A context parameter on `DebuggableScene.debugJump`.** Left out so tools can send a command
+  without a `SceneContext`, and so reflective callers kept working during the migration.
+- **Package-private hooks from the creator package to the host.** The host builds `SceneMouse`
+  through a `MethodHandles` lookup and uploads images from the public pixel accessor, so the
+  creator package exposes nothing engine-only.
+- **B as back in every menu.** Scenes follow the Genesis convention (B backs out; A, C or Start
+  confirms); the engine's own menus keep C as back rather than change stock behaviour here.
 - **Halving the fights per act.** The literal request after the first review; the user then
   said the problem was the clutter of branches, so the map lost paths (six to three), not
   fights.
