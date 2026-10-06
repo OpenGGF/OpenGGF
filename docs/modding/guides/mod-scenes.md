@@ -80,7 +80,8 @@ public final class HelloScene implements ModScene {
   the player to the master title with a finding in the Mod Manager instead of crashing.
 - **No static state.** The mod validator rejects enums, static collections and static
   initialisers in mod classes. Keep state on the scene (or objects it owns) and use
-  `String` or `int` constants for kinds. Slay the Robotnik's `CardType`, `Keyword` and
+  `String` or `int` constants for kinds. The code javac itself adds for `assert` and for a
+  `switch` over an enum (such as `RomSpriteRequest.Compression`) is allowed. Slay the Robotnik's `CardType`, `Keyword` and
   friends show the pattern.
 
 `SceneContext` also gives the screen size (`width()`, `height()`): 224 rows, and a width

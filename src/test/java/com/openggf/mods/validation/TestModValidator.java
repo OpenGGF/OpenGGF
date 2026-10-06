@@ -125,6 +125,68 @@ class TestModValidator {
     }
 
     @Test
+    void javacEnumSwitchAndAssertArtefactsAreNotModState() throws Exception {
+        // A switch over an enum makes javac emit a synthetic Entry$1 holding a $SwitchMap$ table
+        // and a class initializer; an assert adds a synthetic $assertionsDisabled flag. Neither
+        // holds mod state, so the validator accepts them.
+        Map<String, byte[]> classes = compile("""
+                package example;
+                public final class Entry implements com.openggf.mods.code.GgfMod {
+                    @Override public void register(com.openggf.mods.code.ModContext context) { }
+                    int code(java.time.DayOfWeek day) {
+                        switch (day) { case MONDAY: return 1; case FRIDAY: return 5; default: return 0; }
+                    }
+                    int positive(int x) { assert x > 0 : "positive"; return x; }
+                }
+                """);
+        assertTrue(classes.containsKey("example/Entry$1"), "javac's switch-map class: " + classes.keySet());
+        ModValidationReport report = new ModValidator(Set.of()).validate(jar(classes), "example.Entry");
+        assertTrue(report.findings().stream().noneMatch(f -> f.code().equals("STATIC_STATE_UNSUPPORTED")),
+                report.findings().toString());
+    }
+
+    @Test
+    void initializersDoingMoreThanJavacsArtefactsAreStillRejected() throws Exception {
+        Map<String, byte[]> classes = compile("""
+                package example;
+                public final class Entry implements com.openggf.mods.code.GgfMod {
+                    static { System.setProperty("openggf.mod.validator.probe", "ran"); }
+                    static final int[] $SwitchMap$fake = {1};
+                    @Override public void register(com.openggf.mods.code.ModContext context) { }
+                    int positive(int x) { assert x > 0; return x; }
+                }
+                """);
+        ModValidationReport report = new ModValidator(Set.of()).validate(jar(classes), "example.Entry");
+        assertTrue(report.findings().stream().anyMatch(f -> f.code().equals("STATIC_STATE_UNSUPPORTED")
+                && f.member().equals("<clinit>")), "a real static block: " + report.findings());
+        assertTrue(report.findings().stream().anyMatch(f -> f.code().equals("STATIC_STATE_UNSUPPORTED")
+                && f.member().equals("$SwitchMap$fake")), "a hand-written table is not synthetic: " + report.findings());
+    }
+
+    /** Compiles one source file with javac and returns its classes by internal name. */
+    private Map<String, byte[]> compile(String source) throws Exception {
+        Path src = Files.createDirectories(temp.resolve("src-" + System.nanoTime()).resolve("example"));
+        Files.writeString(src.resolve("Entry.java"), source);
+        Path out = Files.createDirectories(temp.resolve("out-" + System.nanoTime()));
+        // The engine's own classes (GgfMod) wherever this runner put them, plus the test classpath.
+        String engine = Path.of(com.openggf.mods.code.GgfMod.class.getProtectionDomain().getCodeSource().getLocation()
+                .toURI()).toString();
+        ByteArrayOutputStream errors = new ByteArrayOutputStream();
+        int result = javax.tools.ToolProvider.getSystemJavaCompiler().run(null, null, errors, "--release", "21",
+                "-cp", engine + java.io.File.pathSeparator + System.getProperty("java.class.path"),
+                "-d", out.toString(), src.resolve("Entry.java").toString());
+        assertEquals(0, result, () -> "javac: " + errors);
+        Map<String, byte[]> classes = new LinkedHashMap<>();
+        try (var files = Files.walk(out)) {
+            for (Path p : files.filter(f -> f.toString().endsWith(".class")).toList()) {
+                String name = out.relativize(p).toString().replace('\\', '/').replaceAll("\\.class$", "");
+                classes.put(name, Files.readAllBytes(p));
+            }
+        }
+        return classes;
+    }
+
+    @Test
     void rejectsEveryStaticExceptCompileTimePrimitiveOrStringConstants() throws Exception {
         byte[] object = objectClass(true, writer -> {
             writer.visitField(Opcodes.ACC_STATIC, "mutable", "I", null, null).visitEnd();
