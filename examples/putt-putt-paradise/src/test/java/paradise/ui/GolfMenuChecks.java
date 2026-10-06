@@ -176,10 +176,10 @@ public final class GolfMenuChecks {
             }
             require(graphics.queued.size() < 6000, "codeglyph drawing has bounded frame cost");
             graphics.queued.clear();
-            var view = new GolfOverlay.View("LOCAL", "SECOND_CHARGE", 45, -1, 650, 300, 350, 400, 1,
+            var view = new GolfOverlay.View("LOCAL", "SPIN", 45, -1, 650, -50, 50, 75, 1,
                     List.of(new GolfOverlay.PlayerScore("SONIC", 3, 1, true, false),
                             new GolfOverlay.PlayerScore("TAILS", 2, 0, false, false)), 1,
-                    "UP/DOWN ELEVATION  A CHARGE", false, false);
+                    "UP/DOWN HIT POINT  A STOP MARKER", false, false);
             GolfOverlay.draw(graphics, width, view);
             require(!graphics.queued.isEmpty(), "HUD queues visible values");
             preview(graphics, width, "hud");
@@ -189,6 +189,20 @@ public final class GolfMenuChecks {
                         && rect.y() + rect.height() <= 224, "HUD geometry outside selected viewport");
             }
             graphics.queued.clear();
+            for(String stage:List.of("POWER","FEEDBACK","PRE_RELEASE","WATCH")) {
+                var full=new GolfOverlay.View("PRACTICE",stage,90,1,1000,100,100,1000,0,
+                        List.of(new GolfOverlay.PlayerScore("SONIC",1,0,false,false)),0,
+                        "A STOP POWER - ONE RISE AND FALL",false,false);
+                GolfOverlay.draw(graphics,width,full);
+                require(graphics.queued.stream().map(p->(GolfText.Rect)p).anyMatch(r->r.rgb()==GolfText.PINK),
+                        "full-power gauge turns pink in every release stage");
+                for(var primitive:graphics.queued) {
+                    var rect=(GolfText.Rect)primitive;
+                    require(rect.x()>=0&&rect.y()>=0&&rect.x()+rect.width()<=width&&rect.y()+rect.height()<=224,
+                            "power/contact panel geometry outside selected viewport");
+                }
+                graphics.queued.clear();
+            }
             var input = new InputHandler();
             for (int i = 0; i < 3; i++) {
                 input.handleKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS); input.refreshLogicalSnapshot(); menu.update(input); input.update();

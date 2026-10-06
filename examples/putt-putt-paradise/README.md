@@ -64,11 +64,22 @@ engine settings.
 | --- | --- |
 | Up / Down | Continuously raise/lower loft from a flat putt to a 90° chip |
 | Left / Right | Face the shot direction without walking |
-| First A | Duck and start the oscillating power meter |
-| Next two A presses | Lock two charge contributions; the second commits the stroke |
-| B before commitment | Cancel freely and return to aiming |
-| C while aiming | Toggle survey; arrows pan, C returns to the golfer |
+| A while aiming | Open the shot panel; putts go to power, chips first time a contact point |
+| Up / Down in the chip panel | Choose intended topspin / backspin; the cyan target and dots update |
+| A in the chip panel | Stop the moving hit marker; matching the target gives the planned spin |
+| A on the power gauge | Stop one rising/falling sweep and commit the stroke; full power turns pink |
+| B before commitment (optional binding) | Cancel freely and return to aiming |
+| C while aiming (optional binding) | Toggle survey; arrows pan, C returns to the golfer |
 | Start | Pause; choose Resume, Concede, or Main Menu with arrows and A |
+
+A and the aiming arrows are sufficient for every shot. Default keyboard A is
+Space for P1 and Right Shift for P2; B/C are unbound unless configured. Ground
+putts use two A taps; chips use three. The chip marker's position determines
+neutral, forward topspin or backward spin. Timing outside the selected cyan
+band changes the spin to the stopped marker position, rather than changing loft
+or facing. Topspin increases forward flight/carry; backspin reduces it and can
+reverse the first landing. These are Sonic physics adaptations of Dream Course's
+hit-point controls, not SNES physics emulation.
 
 Upward springs also fire when a rolling golfer enters from either side, using
 their original ROM strength, animation and sound. Other spring orientations
@@ -78,17 +89,21 @@ movement; the bias retries while rising so the ball can move over the edge once
 it clears the wall. It stops retrying at the apex and never moves through a wall.
 Tall obstacles still need enough shot power to clear them.
 
-After the second charge, feedback and a short pause lead to automatic release.
-There is no extra launch button or accuracy stage. Further charge/cancel presses
-cannot undo the committed stroke. The golfer stays rolling until settled.
-Higher power requests more native charge sounds before the same brief pause. The
-charge/release sounds use the game's existing native spindash behavior and pitch
-rise; the mod adds no pitch calculation.
+After power locks, feedback and a short pause lead to automatic release.
+The gauge rises and falls once; missing it commits a very light shot. Further
+charge/cancel presses cannot undo a committed stroke. The golfer stays rolling
+until settled. Higher power requests more native charge sounds before the same
+brief pause; charge/release sounds retain the game's native spindash pitch behavior.
 
-While aiming, the dots use a fixed half-power reference: a surface-tangent putt
-or an initial clear-air chip arc. They start at the released ball's centre and
-reflect loft and facing relative to the supporting slope. The guide is not a
-prediction of terrain contacts, loops, springs, or the final lie.
+The initial guide uses full power, as in Dream Course. The chip panel previews
+the intended hit point; the power panel previews the actual stopped spin and
+current meter power. All shown dots share the real release's spin-adjusted,
+surface-relative velocity and rolling-centre correction. They show a short
+departure arc, stop before the starting support plane, and do not predict later
+terrain/object contacts, landing spin, loops, springs, or the final lie. Online
+guest guides use the host's lie, surface angle, roll offset and accepted scene
+camera; guest gameplay never advances. Old charge-format peers cannot connect
+with the new power/spin wire schema.
 
 Damage, death, a lost ball, or the bounded shot watchdog restores the pre-shot
 course state and adds one penalty while retaining the committed stroke. A finish

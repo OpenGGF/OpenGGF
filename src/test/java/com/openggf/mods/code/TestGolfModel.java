@@ -53,9 +53,12 @@ class TestGolfModel {
         }
     }
 
-    @Test void bothTimedChargesBuildPowerWithoutASecondAccuracyStage() throws Exception { check("bothCharges"); }
+    @Test void puttUsesAForOnePowerSweepThenAutomaticallyReleases() throws Exception { check("puttTiming"); }
+    @Test void chipTimesContactPointThenOneIndependentPowerSweep() throws Exception { check("chipTiming"); }
+    @Test void missingTheOnlyPowerSweepSealsAVeryLightShotOnce() throws Exception { check("softExpiry"); }
+    @Test void topAndBackContactPointsChangeDepartureAndLandingCarry() throws Exception { check("spinPhysics"); }
     @Test void heldAAndPostCommitCancelCannotDuplicateTheStrokeOrLaunch() throws Exception { check("buttonEdges"); }
-    @Test void cancelBeforeCommitRestartsWithoutLeakingThePreviousCharge() throws Exception { check("freeCancel"); }
+    @Test void optionalCancelRestartsWithoutLeakingThePreviousSpin() throws Exception { check("freeCancel"); }
     @Test void restoredMidChargeProducesTheSameAutomaticLaunchAndEvents() throws Exception { check("meterReplay"); }
     @Test void higherPowerProducesMoreNativeChargeRequestsBeforeTheSameRelease() throws Exception { check("powerFeedback"); }
     @Test void aimingClampsElevationAndLocksItOnTheFirstA() throws Exception { check("aimLocks"); }

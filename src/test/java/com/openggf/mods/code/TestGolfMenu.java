@@ -30,7 +30,7 @@ class TestGolfMenu {
         Path classes = Files.createDirectory(temp.resolve("classes"));
         var args = new ArrayList<>(List.of("--release", "21", "-classpath", System.getProperty("java.class.path"),
                 "-d", classes.toString()));
-        for (Path root : List.of(source, project.resolve("src/test/java/paradise/ui"))) {
+        for (Path root : List.of(source, project.resolve("src/main/java/paradise/model"), project.resolve("src/test/java/paradise/ui"))) {
             try (var files = Files.walk(root)) {
                 files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));
             }

@@ -62,11 +62,18 @@ class TestGolfOnlineIntegration {
                         700, "host shot resolves through native physics into guest turn");
                 compareViewAndScores(host, guest);
 
+                assertTrue(guest.state.flag("guideAvailable"),"guest guide has authoritative turn and accepted frame");
+                assertEquals(host.state.number("ballX"),guest.state.number("guideCentreX"));
+                assertEquals(host.state.number("ballY"),guest.state.number("guideCentreY"));
+                assertEquals(host.state.number("ballAngle"),guest.state.number("guideAngle"));
+                assertEquals(host.state.number("cameraX"),guest.state.number("guideCameraX"));
+                assertEquals(host.state.number("cameraY"),guest.state.number("guideCameraY"));
                 long guestTurn = host.state.number("turn"), gameplayBeforeGuest = host.state.number("gameplayRows");
                 guest.step(60, 1, 0, false); guest.step(30, 1, 0, false);
                 assertEquals(90, guest.state.number("elevation"), "guest can submit the vertical chip through its real meter");
-                shot(guest);
-                assertEquals("FEEDBACK", guest.state.text("stage"), "guest locks its own timed charges");
+                shot(guest,-100);
+                assertEquals("FEEDBACK", guest.state.text("stage"), "guest locks spin and power");
+                assertEquals(-100,guest.state.number("spin"));
                 guest.step(1, 0, 0, true); // Cross the request/acceptance boundary with a real guest menu pause.
                 pump(host, guest, (one, two) -> one.flag("held") && two.flag("held"), 80, "guest pause reaches authoritative host");
                 host.step(1, 0, 0, true); host.step(1, 0, 0, false); // Add the host's own pause contribution.
@@ -77,6 +84,7 @@ class TestGolfOnlineIntegration {
                 host.step(1, 0, 0, true);
                 pump(host, guest, (one, two) -> one.number("pending") == 2 && two.flag("accepted"), 80, "one accepted remote shot resumes");
                 assertEquals(1, host.state.number("strokes1"), "remote request accepted exactly once across pause/retry");
+                assertEquals(-100,host.state.number("spin"),"host accepted signed backspin");
                 pump(host, guest, (one, two) -> one.number("turn") > guestTurn && one.number("owner") == 0 && two.number("turn") == one.number("turn"),
                         700, "guest shot resolves through host native physics into next turn");
                 assertTrue(host.state.number("gameplayRows") > gameplayBeforeGuest, "host simulated the remote flight");
@@ -85,6 +93,18 @@ class TestGolfOnlineIntegration {
                 assertEquals(0, guest.state.number("gameplayRows"), "guest never executes native gameplay");
                 assertTrue(guest.state.number("heldRows") > 20, "every post-TurnOpened held guest row was checked");
 
+                long thirdTurn=host.state.number("turn"); shot(host);
+                assertEquals(1,host.state.number("chargeCues"),"local putt has one startup charge request");
+                pump(host,guest,(one,two)->one.number("turn")>thirdTurn&&one.number("owner")==1
+                        &&two.number("turn")==one.number("turn"),700,"second guest turn");
+                long fourthTurn=host.state.number("turn"); shot(guest);
+                pump(host,guest,(one,two)->one.number("pending")==4&&two.flag("accepted"),80,"remote putt accepted");
+                host.step(3,0,0,false);
+                assertEquals(1,host.state.number("chargeCues"),"remote putt uses the same startup native charge count");
+                pump(host,guest,(one,two)->one.number("turn")>fourthTurn&&one.number("owner")==0
+                        &&two.number("turn")==one.number("turn"),700,"remote putt resolves once");
+                assertEquals(2,host.state.number("strokes0"));assertEquals(2,host.state.number("strokes1"));
+                compareViewAndScores(host,guest);
                 String score0 = guest.state.text("wire0"), score1 = guest.state.text("wire1");
                 guest.step(1, 0, 0, true); guest.step(1, 0, 0, false);
                 guest.step(1, 2, 0, false); guest.step(1, 0, 0, false); guest.step(1, 0, ACTION_A, false); // Menu: Concede.
@@ -112,9 +132,15 @@ class TestGolfOnlineIntegration {
         assertEquals(0, GgfModCli.run(new String[]{"package", "--input", classes.toString(), "--out", jar.toString()}, System.out), "normal SDK validation is required");
         return jar;
     }
-    private static void shot(Peer peer) throws Exception {
-        peer.step(1, 0, 0, false); peer.step(1, 0, ACTION_A, false); peer.step(2, 0, 0, false);
-        peer.step(1, 0, ACTION_A, false); peer.step(2, 0, 0, false); peer.step(1, 0, ACTION_A, false);
+    private static void shot(Peer peer) throws Exception { shot(peer,0); }
+    private static void shot(Peer peer,int spin) throws Exception {
+        peer.step(1, 0, 0, false); peer.step(1, 0, ACTION_A, false);
+        if (peer.state.text("stage").equals("SPIN")) {
+            if(spin<0) { peer.step(60,0,0,false);peer.step(30,0,0,false); }
+            else peer.step(60,0,0,false);
+            peer.step(1,0,ACTION_A,false);
+        }
+        peer.step(2, 0, 0, false); peer.step(1, 0, ACTION_A, false);
     }
     private static void pump(Peer host, Peer guest, BiPredicate<State, State> condition, int maxRows, String message) throws Exception {
         for (int row = 0; row < maxRows && !condition.test(host.state, guest.state); row++) {

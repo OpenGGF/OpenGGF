@@ -610,6 +610,11 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
     }
 
     private void applyP1ActionPressEdge(int bk2Index) {
+        // A session controller receives the original logical row and owns native
+        // input suppression. Do not bypass its neutral course input with a forced jump.
+        if (com.openggf.game.mode.ControlledFrameRuntime.controller(SessionManager.getCurrentGameplayMode()) != null) {
+            return;
+        }
         if (hasNewP1ActionPressForLogicalInput(bk2Movie, bk2Index, sprite.isControlLocked())) {
             sprite.setForcedJumpPress(true);
         }

@@ -81,6 +81,15 @@ points to preserved palette-upload latch/pending state across graphics resource
 cleanup, with S2 lacking the publication profile that releases it. CPU palette
 bytes alone do not prove the native GPU view has published the same phase.
 
+Compact failure messages can be prefixes (2026-10-06): the retained category
+summary capped an SSZ rewind assertion at 2,048 characters, while its fresh XML
+message contained 2,915. Its `RewindObjectStateBlob@hex` text also varied across
+JVMs: that class's hash includes a `Class<?>` reference, so the hash is not a
+portable state comparison. Check the owning hash implementation before ignoring
+such text. Compare test identity, first-error frame and concrete fields, and
+state when only a bounded baseline prefix is available; do not claim a full
+message or full state match from it.
+
 
 Pitch is not note tempo (2026-10-02): accelerated sample-voice tests passed at
 `5637105e5c` while real SMPS songs retained normal note durations. Their chip

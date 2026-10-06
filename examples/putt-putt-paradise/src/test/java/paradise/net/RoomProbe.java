@@ -72,7 +72,7 @@ public final class RoomProbe {
         try (var rooms = new Rooms()) {
             var host = rooms.host; var guest = rooms.guest;
             pump(host, guest, () -> host.state().ready() && guest.state().ready(), "pending pause handshake");
-            var opened = new TurnOpened(new ShotId(host.state().match(), 1, 1, 1, 1), 100, 200, score, score);
+            var opened = new TurnOpened(new ShotId(host.state().match(), 1, 1, 1, 1), 100, 200, 0, 5, score, score);
             host.publishTurn(opened);
             pump(host, guest, () -> opened.equals(guest.state().remoteTurnOpened()), "pending pause turn");
             host.drainEvents(); guest.drainEvents();
@@ -132,7 +132,7 @@ public final class RoomProbe {
                 var host = rooms.host; var guest = rooms.guest;
                 pump(host, guest, () -> host.state().ready() && guest.state().ready(), "concession handshake");
                 var one = new Score(5, 2, false); var two = new Score(7, 1, false);
-                var opened = new TurnOpened(new ShotId(host.state().match(), 1, 1, 1, 0), 100, 200, one, two);
+                var opened = new TurnOpened(new ShotId(host.state().match(), 1, 1, 1, 0), 100, 200, 0, 5, one, two);
                 host.publishTurn(opened);
                 pump(host, guest, () -> opened.equals(guest.state().remoteTurnOpened()), "concession scores arrive");
                 host.drainEvents(); guest.drainEvents();
@@ -189,7 +189,7 @@ public final class RoomProbe {
             UUID match = host.state().match();
             check(match.equals(guest.state().match()) && guest.state().roomToken() != null, "assigned match and room token");
             var turn = new ShotId(match, 1, 0, 0, 1);
-            var opened = new TurnOpened(turn, 100, 200, score, score);
+            var opened = new TurnOpened(turn, 100, 200, 0, 5, score, score);
             host.publishTurn(opened);
             pump(host, guest, () -> opened.equals(guest.state().remoteTurnOpened()), "authoritative turn arrives");
             host.drainEvents(); guest.drainEvents();
@@ -235,7 +235,7 @@ public final class RoomProbe {
             TransportProbe.await(() -> host.activeWorkers() == 0 && guest.activeWorkers() == 0, 3000, "room workers released");
         }
         try (var reused = GolfRoom.host(port, prints(), "tails")) { check(reused.boundPort() == port, "room port reusable"); }
-        var other = new Fingerprints(1, "0.7.0", "different-engine", "paradise", "rules", Fingerprints.SONIC_2_SHA1, "competition", 800, 224);
+        var other = new Fingerprints(GolfCodec.SCHEMA, "0.7.0", "different-engine", "paradise", "rules", Fingerprints.SONIC_2_SHA1, "competition", 800, 224);
         try (var host = GolfRoom.host(0, prints(), "sonic");
              var guest = GolfRoom.join("localhost", host.boundPort(), other, "sonic")) {
             pump(host, guest, () -> guest.state().ended(), "mismatched fingerprints rejected before play");

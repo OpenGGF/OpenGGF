@@ -8,7 +8,7 @@ public final class GolfModelChecks {
     private static final ShotMeter.Input NONE = new ShotMeter.Input(false, false, false, false, false, false);
     private static final ShotMeter.Input A = new ShotMeter.Input(false, false, false, false, true, false);
     private static final ShotMeter.Input B = new ShotMeter.Input(false, false, false, false, false, true);
-    private static final GolfShot SHOT = new GolfShot(1, 0, 250, 250);
+    private static final GolfShot SHOT = new GolfShot(1, 0, 500, 0);
     private static final GolfOutcome.Candidates FINISH = new GolfOutcome.Candidates(false, false, true, false, false, false);
     private static final GolfOutcome.Candidates SETTLE = new GolfOutcome.Candidates(false, false, false, true, false, false);
 
@@ -22,107 +22,154 @@ public final class GolfModelChecks {
         return events.stream().filter(e -> e.kind() == kind).count();
     }
 
-    public static void bothCharges() {
+    private static ShotMeter chip() {
         var meter = new ShotMeter();
-        same(1L, count(press(meter), ShotMeter.Kind.DUCK), "first A must duck, not charge");
+        meter.tick(new ShotMeter.Input(true, false, false, false, false, false));
+        press(meter); return meter;
+    }
+
+    public static void puttTiming() {
+        same(32, GolfRules.powerAtPhase(2), "light shots preserve the existing native power granularity");
+        same(332, GolfRules.powerAtPhase(20), "single sweep preserves intermediate shot strength");
+        var meter = new ShotMeter();
+        same(1L, count(press(meter), ShotMeter.Kind.DUCK), "A opens the shot panel");
+        same(ShotMeter.Stage.POWER, meter.snapshot().stage(), "putt starts its single power sweep");
         idle(meter, 60);
-        same(1L, count(press(meter), ShotMeter.Kind.CHARGE), "first timed A charges");
-        idle(meter, 30);
         var events = press(meter);
-        same(1L, count(events, ShotMeter.Kind.CHARGE), "second timed A charges");
-        same(1L, count(events, ShotMeter.Kind.COMMIT), "second timed A commits");
-        GolfShot shot = meter.snapshot().shot();
-        same(500, shot.firstCharge(), "peak first contribution");
-        same(250, shot.secondCharge(), "half-height second contribution");
-        same(750, shot.normalizedPower(), "both power-building hits contribute");
-        require(new GolfShot(1, 0, 0, 0).speedFixed() < 0x200, "precision putt must be slower than native spindash minimum");
-        require(new GolfShot(1, 0, 500, 500).speedFixed() >= 0xA00, "full power must have useful loop speed");
-        require(new GolfShot(1, 0, 400, 500).speedFixed() < new GolfShot(1, 0, 500, 500).speedFixed(), "power must be monotonic");
+        same(1L, count(events, ShotMeter.Kind.COMMIT), "next A seals the shot");
+        same(1000, meter.snapshot().shot().normalizedPower(), "peak power follows the full-power guide");
+        same(0, meter.snapshot().shot().spin(), "putts have no vertical spin stage");
+        require(new GolfShot(1, 0, 0, 0).speedFixed() < 0x200, "very light finishing putt");
+    }
+
+    public static void chipTiming() {
+        for (int ticks : new int[]{30, 60, 90}) {
+            var meter = chip();
+            same(ShotMeter.Stage.SPIN, meter.snapshot().stage(), "chip opens spin marker");
+            idle(meter, ticks);
+            var spinEvents = press(meter);
+            same(1L, count(spinEvents, ShotMeter.Kind.CHARGE), "stopping spin requests native charge");
+            same(0L, count(spinEvents, ShotMeter.Kind.COMMIT), "spin alone cannot seal a stroke");
+            int expected = ticks == 30 ? 100 : ticks == 60 ? 0 : -100;
+            same(expected, meter.snapshot().spin(), "top, neutral and back contact points");
+            same(ShotMeter.Stage.POWER, meter.snapshot().stage(), "spin leads to power");
+            idle(meter, 45); press(meter);
+            same(750, meter.snapshot().shot().normalizedPower(), "power is independent of spin");
+            same(expected, meter.snapshot().shot().spin(), "power hit preserves spin");
+            same(1, meter.snapshot().shot().elevationDegrees(), "spin never rewrites aim");
+        }
+        var meter = chip();
+        for (int i=0;i<10;i++) meter.tick(new ShotMeter.Input(true,false,false,false,false,false));
+        same(50, meter.snapshot().targetSpin(), "up adjusts intended contact point rather than locked elevation");
+        idle(meter, 5); press(meter);
+        same(50, meter.snapshot().spin(), "overlapping marker and target matches the planned spin");
+        same(1, meter.snapshot().elevationDegrees(), "contact panel preserves loft");
+    }
+
+    public static void softExpiry() {
+        for (boolean fly : new boolean[]{false,true}) {
+            var meter = fly ? chip() : new ShotMeter();
+            if (fly) { idle(meter,60); press(meter); } else press(meter);
+            idle(meter,120);
+            require(meter.snapshot().shot() == null, "end frame is still hittable");
+            var events = new ArrayList<>(meter.tick(NONE));
+            same(1L, count(events,ShotMeter.Kind.COMMIT), "miss seals one very light shot");
+            same(0, meter.snapshot().power(), "expiry cannot recycle the power sweep");
+            require(meter.snapshot().timedOut(), "expiry is visible to the HUD and rewind");
+            for(int i=0;i<200;i++) events.addAll(meter.tick(A));
+            same(1L, count(events,ShotMeter.Kind.RELEASE), "miss releases automatically once");
+            same(1L, count(events,ShotMeter.Kind.COMMIT), "late A cannot retry a missed sweep");
+        }
+        var falling = new ShotMeter(); press(falling); idle(falling,90); press(falling);
+        same(500,falling.snapshot().power(),"falling half remains usable");
     }
 
     public static void buttonEdges() {
-        var meter = new ShotMeter();
-        press(meter);
-        for (int i = 0; i < 200; i++) require(meter.tick(A).isEmpty(), "held A cannot charge");
-        same(ShotMeter.Stage.FIRST_CHARGE, meter.snapshot().stage(), "held A stays at first charge");
-        meter.tick(NONE); press(meter); meter.tick(NONE);
-        var events = new ArrayList<>(press(meter));
-        require(events.stream().noneMatch(e -> e.kind() == ShotMeter.Kind.RELEASE), "commit cannot launch immediately");
-        for (int i = 0; i < 120; i++) events.addAll(meter.tick(i % 2 == 0 ? B : A));
-        same(1L, count(events, ShotMeter.Kind.COMMIT), "extra A cannot double commit");
-        same(1L, count(events, ShotMeter.Kind.RELEASE), "automatic release exactly once");
-        same(0L, count(events, ShotMeter.Kind.CANCEL), "postcommit B is ignored");
-        same(ShotMeter.Stage.WATCH, meter.snapshot().stage(), "automatically watching without launch input");
+        var meter = chip();
+        for(int i=0;i<200;i++) require(meter.tick(A).isEmpty(), "held A cannot stop spin");
+        same(ShotMeter.Stage.SPIN,meter.snapshot().stage(),"spin waits for a fresh A edge");
+        meter.tick(NONE); press(meter);
+        var events = new ArrayList<ShotMeter.Event>();
+        for(int i=0;i<200;i++) events.addAll(meter.tick(A));
+        same(1L,count(events,ShotMeter.Kind.COMMIT),"held A cannot hit power; it eventually expires once");
+        same(1L,count(events,ShotMeter.Kind.RELEASE),"automatic release exactly once");
+        same(ShotMeter.Stage.WATCH,meter.snapshot().stage(),"shot settles without another launch input");
+        for(int i=0;i<30;i++) require(meter.tick(i%2==0?A:B).isEmpty(),"postcommit controls cannot duplicate/cancel");
     }
 
     public static void freeCancel() {
-        var meter = new ShotMeter();
-        press(meter); idle(meter, 60); press(meter); meter.tick(NONE);
-        same(1L, count(meter.tick(B), ShotMeter.Kind.CANCEL), "cancel second meter before commitment");
-        same(ShotMeter.Stage.AIM, meter.snapshot().stage(), "back to aim");
-        same(0, meter.snapshot().firstCharge(), "previous power cleared");
-        require(meter.snapshot().shot() == null, "cancel does not seal a shot");
-        meter.tick(NONE); press(meter); meter.tick(NONE);
-        same(1L, count(press(meter), ShotMeter.Kind.CHARGE), "fresh first charge");
-        same(ShotMeter.Stage.SECOND_CHARGE, meter.snapshot().stage(), "fresh shot still needs second charge");
+        var meter = chip(); idle(meter,30); press(meter); idle(meter,15);
+        same(1L,count(meter.tick(B),ShotMeter.Kind.CANCEL),"optional B cancels an unsealed panel");
+        same(ShotMeter.Stage.AIM,meter.snapshot().stage(),"back to aim");
+        same(0,meter.snapshot().spin(),"previous contact point cleared");
+        same(0,meter.snapshot().targetSpin(),"previous preview cleared");
+        require(meter.snapshot().shot()==null,"cancel does not seal a shot");
+        meter.tick(NONE); press(meter);
+        same(ShotMeter.Stage.SPIN,meter.snapshot().stage(),"fresh chip starts with spin again");
     }
 
     public static void meterReplay() {
-        var meter = new ShotMeter();
-        press(meter); idle(meter, 20); press(meter); idle(meter, 15);
-        ShotMeter.State saved = meter.snapshot();
-        var suffix = new ArrayList<ShotMeter.Input>();
-        suffix.add(A);
-        for (int i = 0; i < 100; i++) suffix.add(NONE);
-        var expected = new ArrayList<ShotMeter.Event>();
-        for (var input : suffix) expected.addAll(meter.tick(input));
-        var expectedState = meter.snapshot();
-        meter.restore(saved);
-        var actual = new ArrayList<ShotMeter.Event>();
-        for (var input : suffix) actual.addAll(meter.tick(input));
-        same(expected, actual, "midcharge replay event ordering");
-        same(expectedState, meter.snapshot(), "midcharge replay complete state");
-        require(saved.shot() == null && saved.stage() == ShotMeter.Stage.SECOND_CHARGE, "snapshot cannot alias live state");
-        var held = new ShotMeter(); press(held);
-        var heldState = held.snapshot();
-        held.tick(NONE); press(held); held.restore(heldState);
-        require(held.tick(A).isEmpty(), "restored held A cannot become a new edge");
+        for(boolean expired:new boolean[]{false,true}) {
+            var meter=chip(); idle(meter,90); press(meter); idle(meter,35);
+            var saved=meter.snapshot(); var events=new ArrayList<ShotMeter.Event>();
+            if(!expired) events.addAll(press(meter));
+            for(int i=0;i<200;i++) events.addAll(meter.tick(NONE));
+            var expected=meter.snapshot(); meter.restore(saved); var replay=new ArrayList<ShotMeter.Event>();
+            if(!expired) replay.addAll(press(meter));
+            for(int i=0;i<200;i++) replay.addAll(meter.tick(NONE));
+            same(events,replay,"power/expiry replay event order"); same(expected,meter.snapshot(),"complete meter state");
+        }
+        var held=chip(); var state=held.snapshot(); held.tick(NONE); press(held); held.restore(state);
+        require(held.tick(A).isEmpty(),"restored held A cannot become a fresh edge");
+        var target=chip(); target.tick(new ShotMeter.Input(false,true,false,false,false,false));
+        var saved=target.snapshot(); var events=press(target); var expected=target.snapshot();
+        target.restore(saved); same(events,press(target),"spin marker/target replay events");
+        same(expected,target.snapshot(),"spin marker/target replay state");
     }
 
     public static void powerFeedback() {
-        long previous = -1;
-        for (int ticks : new int[]{1,15,30,45,60}) {
-            var meter = new ShotMeter();
-            press(meter); idle(meter,ticks); press(meter); idle(meter,ticks); press(meter);
-            var saved = meter.snapshot();
-            var events = new ArrayList<ShotMeter.Event>();
-            for (int i=0;i<GolfRules.CHARGE_FEEDBACK_TICKS + GolfRules.PRE_RELEASE_TICKS;i++)
-                events.addAll(meter.tick(NONE));
-            long charges = count(events, ShotMeter.Kind.CHARGE);
-            require(charges > previous, "more power produces more native charge requests"); previous = charges;
-            same(1L, count(events, ShotMeter.Kind.RELEASE), "fixed automatic release after feedback and pause");
-            meter.restore(saved);
-            var replay = new ArrayList<ShotMeter.Event>();
-            for (int i=0;i<GolfRules.CHARGE_FEEDBACK_TICKS + GolfRules.PRE_RELEASE_TICKS;i++)
-                replay.addAll(meter.tick(NONE));
-            same(events, replay, "feedback restore retains charge cadence");
+        long previous=-1;
+        for(int ticks:new int[]{1,15,30,45,60}) {
+            var meter=new ShotMeter(); press(meter); idle(meter,ticks); press(meter);
+            var saved=meter.snapshot(); var events=new ArrayList<ShotMeter.Event>();
+            for(int i=0;i<GolfRules.CHARGE_FEEDBACK_TICKS+GolfRules.PRE_RELEASE_TICKS;i++) events.addAll(meter.tick(NONE));
+            long charges=count(events,ShotMeter.Kind.CHARGE);
+            require(charges>previous,"more power requests more native charges");previous=charges;
+            same(1L,count(events,ShotMeter.Kind.RELEASE),"fixed release after native feedback/pause");
+            meter.restore(saved);var replay=new ArrayList<ShotMeter.Event>();
+            for(int i=0;i<GolfRules.CHARGE_FEEDBACK_TICKS+GolfRules.PRE_RELEASE_TICKS;i++) replay.addAll(meter.tick(NONE));
+            same(events,replay,"feedback cadence restores");
         }
     }
 
     public static void aimLocks() {
-        var meter = new ShotMeter();
-        var upLeft = new ShotMeter.Input(true, false, true, false, false, false);
-        for (int i = 0; i < 1000; i++) meter.tick(upLeft);
-        same(90, meter.snapshot().elevationDegrees(), "elevation reaches vertical without wrapping");
-        same(-1, meter.snapshot().direction(), "left changes facing");
+        var meter=new ShotMeter();
+        for(int i=0;i<1000;i++) meter.tick(new ShotMeter.Input(true,false,true,false,false,false));
+        same(90,meter.snapshot().elevationDegrees(),"vertical aim clamp");same(-1,meter.snapshot().direction(),"left faces left");
         press(meter);
-        for (int i = 0; i < 100; i++) meter.tick(new ShotMeter.Input(false, true, false, true, false, false));
-        same(90, meter.snapshot().elevationDegrees(), "first A locks elevation");
-        same(-1, meter.snapshot().direction(), "first A locks facing");
-        meter.tick(B); meter.tick(NONE);
-        for (int i = 0; i < 1000; i++) meter.tick(new ShotMeter.Input(false, true, false, true, false, false));
-        same(0, meter.snapshot().elevationDegrees(), "down returns to putt without wrapping");
-        same(1, meter.snapshot().direction(), "right faces right");
+        for(int i=0;i<100;i++) meter.tick(new ShotMeter.Input(false,true,false,true,false,false));
+        same(90,meter.snapshot().elevationDegrees(),"panel locks loft");same(-1,meter.snapshot().direction(),"panel locks facing");
+        same(-100,meter.snapshot().targetSpin(),"down in contact panel chooses backspin");
+        meter.tick(B);meter.tick(NONE);
+        for(int i=0;i<1000;i++)meter.tick(new ShotMeter.Input(false,true,false,true,false,false));
+        same(0,meter.snapshot().elevationDegrees(),"down returns to putt");same(1,meter.snapshot().direction(),"right faces right");
+    }
+
+    public static void spinPhysics() {
+        for(int direction:new int[]{-1,1}) for(int angle:new int[]{0,16,248}) {
+            var back=GolfRules.launchVelocity(direction,45,0x800,angle,-100);
+            var neutral=GolfRules.launchVelocity(direction,45,0x800,angle,0);
+            var top=GolfRules.launchVelocity(direction,45,0x800,angle,100);
+            require(back.ground()*direction<neutral.ground()*direction && neutral.ground()*direction<top.ground()*direction,
+                    "contact point changes the shared surface-relative departure");
+            same(neutral,GolfRules.launchVelocity(direction,45,0x800,angle),"neutral keeps native departure");
+            require(GolfRules.landingSpeed(direction*300,new GolfShot(direction,45,1000,-100))*direction<0,"backspin can reverse at landing");
+            require(GolfRules.landingSpeed(direction*300,new GolfShot(direction,45,1000,100))*direction>300,"topspin carries forward");
+        }
+        for(int spin:new int[]{-101,101}) {
+            try { new GolfShot(1,45,1000,spin); throw new AssertionError("invalid spin accepted"); }
+            catch(IllegalArgumentException expected) { }
+        }
     }
 
     private static GolfMatch.Resolution play(GolfMatch match, GolfOutcome.Candidates candidates) {
@@ -160,7 +207,7 @@ public final class GolfModelChecks {
         var id = match.nextShotId();
         same(GolfMatch.Decision.ACCEPTED, match.commit(id, SHOT), "first commit");
         same(GolfMatch.Decision.DUPLICATE, match.commit(id, SHOT), "repeat commit does not increment strokes");
-        same(GolfMatch.Decision.REJECTED, match.commit(id, new GolfShot(-1, 0, 250, 250)), "conflicting payload rejected");
+        same(GolfMatch.Decision.REJECTED, match.commit(id, new GolfShot(-1, 0, 500, 0)), "conflicting payload rejected");
         var all = new GolfOutcome.Candidates(true, true, true, true, true, true);
         same(GolfOutcome.DAMAGE, match.resolve(id, all).outcome(), "damage takes priority over finish");
         var score = match.snapshot().golfers().get(0).holes().get(0);

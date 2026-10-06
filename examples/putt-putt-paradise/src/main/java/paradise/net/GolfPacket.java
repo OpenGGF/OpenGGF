@@ -3,6 +3,7 @@ package paradise.net;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
+import paradise.model.GolfRules;
 
 /** Immutable wire values. No gameplay snapshots, ROM bytes, executable objects or pitch values. */
 public sealed interface GolfPacket {
@@ -38,16 +39,18 @@ public sealed interface GolfPacket {
         public Ready { Objects.requireNonNull(match); player(owner); Objects.requireNonNull(roomToken);
             Objects.requireNonNull(fingerprints); GolfPacket.character(character); }
     }
-    record TurnOpened(ShotId id, int lieX, int lieY, Score player0, Score player1) implements GolfPacket {
-        public TurnOpened { Objects.requireNonNull(id); Objects.requireNonNull(player0); Objects.requireNonNull(player1); }
+    record TurnOpened(ShotId id, int lieX, int lieY, int surfaceAngle, int rollOffset, Score player0, Score player1) implements GolfPacket {
+        public TurnOpened { Objects.requireNonNull(id); Objects.requireNonNull(player0); Objects.requireNonNull(player1);
+            range(surfaceAngle, 0, 255, "surface angle"); range(rollOffset, 0, 64, "roll offset"); }
     }
-    /** Elevation is degrees 0..90; charges are each normalized 0..500. No client-supplied score. */
-    record ShotRequest(ShotId id, int facing, int elevationDegrees, int firstCharge, int secondCharge) implements GolfPacket {
+    /** Elevation 0..90, power 0..1000, chip back/topspin -100..100. No client-supplied score. */
+    record ShotRequest(ShotId id, int facing, int elevationDegrees, int normalizedPower, int spin) implements GolfPacket {
         public ShotRequest {
             Objects.requireNonNull(id);
             if (facing != -1 && facing != 1) throw new IllegalArgumentException("facing");
-            range(elevationDegrees, 0, 90, "elevation"); range(firstCharge, 0, 500, "first charge");
-            range(secondCharge, 0, 500, "second charge");
+            range(elevationDegrees, 0, 90, "elevation"); range(normalizedPower, 0, GolfRules.MAX_POWER, "power");
+            range(spin, -GolfRules.MAX_SPIN, GolfRules.MAX_SPIN, "spin");
+            if (elevationDegrees == 0 && spin != 0) throw new IllegalArgumentException("putt spin");
         }
         public boolean isPutt() { return elevationDegrees == 0; }
     }

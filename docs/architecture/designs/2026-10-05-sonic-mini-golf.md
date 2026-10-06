@@ -88,58 +88,68 @@ other spring orientations retain their existing behavior; stock game modules
 never tag these placements or install the namespaced golf factory. These rules participate in the
 direct-connect fingerprint and must survive course restore and forward replay.
 
-A dotted guide shows the intended departure at a reference power. As the two
-charges establish power it updates to the earned power. For a chip, show the
-initial flight only, ending at the first predicted collision or the preview
-horizon. For a putt,
-show the departure direction and strength. Do not draw a promised final lie
-through loops, springs or moving objects unless a later predictor actually
-models them. Previewing never advances or mutates the real course.
+A dotted guide shows departure at full reference power while aiming. The chip
+panel uses the intended contact point; the power panel uses the actual stopped
+spin and current meter power. It shares the release velocity calculation,
+including surface angle and the standing-to-ball origin correction. The short
+preview ends before crossing the initial support plane; it does not predict
+terrain, objects, spring contacts, landing spin or a final lie. Previewing never
+advances or mutates the real course. Online guests use the host's turn origin,
+surface angle and accepted scene camera rather than their held local world.
 
-### 2. Duck and start the power meter
+### 2. Duck and open the shot panel
 
 **A** confirms the selected direction and elevation, makes the main character
-duck, and starts an oscillating power meter. Direction and elevation remain
-locked during charging. The course stays paused while the meter advances on
-its presentation clock; ducking and charge feedback cannot creep the character
-away from its lie.
+duck, and opens power for a putt or contact-point timing for a chip. Direction
+and elevation remain locked. The course stays paused while the panel advances
+on its presentation clock; ducking and charge feedback cannot creep the
+character away from its lie.
 
-### 3. Time two spindash charges
+### 3. Time contact point and power with A
 
-Press **A** at the desired spot on the meter to initiate the spindash and earn
-the first charge. The meter then offers a second timed hit: press **A** again
-at the desired spot to add another charge. Both timings contribute to the
-final power; the first establishes the initial charge and the second increases
-it, up to the shared maximum. Weak putts are for precision; strong putts are
-for distance and loops; powerful chips trade forward travel against height.
+The user's 2026-10-06 instruction to mimic Kirby's Dream Course supersedes the
+previous two additive charges and the unshipped bank-or-boost brainstorm.
+[Nintendo's manual](https://manuals.plus/m/67c7da172a34ce3239bc014f14a9514b42e3772456425496419e9a37805b3ddf),
+sections 7–8, supplies the shot flow: fly shots time a top/backspin marker, then
+power; power rises and falls once, pink identifies full power, and a missed
+sweep makes a very light shot. Clock lengths and impulses below are Sonic
+adaptations, not a claim of exact SNES physics or frame timings.
 
-The meter's value-to-charge mapping is deterministic and must make both weak
-and strong shots deliberately achievable. These are two power-building hits,
-not a power hit followed by an angle-accuracy test. The selected elevation does
-not acquire timing error or random dispersion.
+First A ducks and opens the panel. A putt proceeds directly to the power gauge.
+A chip first offers a moving contact marker: Up/Down sets a desired signed
+contact point (-100 backspin, 0 neutral, +100 topspin), with a cyan target band.
+A stops the marker; within eight units it matches the target, otherwise its
+actual stopped position becomes the spin. The trajectory updates from intended
+to actual contact point. This adds a shot-shaping challenge without random error
+or silently rewriting the selected elevation/facing.
 
-Apply earned charges through the game's existing Sonic 2 spindash mechanics,
-preserving their charge sounds and innate pitch rise. This is existing game
-behavior to retain, not a new audio feature or a separately tuned power-to-pitch
-curve. After the second timed hit, complete the existing charge feedback, hold
-a brief pause, then release automatically. No further A press is required to
-launch, and extra presses cannot add more charges during that feedback or pause.
-The brief pause duration is a golf presentation tuning parameter; the spindash
-sound and pitch behavior remain native.
+The next A stops a single 120-tick power sweep (full at tick 60, back to zero at
+120); expiry commits zero normalized power, mapped to the existing very light
+velocity. Accepted power is 0–1000; the gauge preserves its previous 500-step
+resolution, now two units per step, so equal neutral-shot timing retains its
+native departure speed.
+Commitment costs one stroke. Native charge
+feedback, a brief pause, and automatic release follow; no more launch input is
+required and extra presses cannot cancel or add charges. B may cancel an
+uncommitted panel, but is optional: default keyboard B/C are unbound, so every
+shot needs only A and arrows.
 
-Power is a normalized shot parameter. Its velocity mapping must be tuned
-against the S2 rolling and airborne profiles, with identical limits for both
-characters. It must cover short finishing putts and viable EHZ loop routes.
-Native spindash speed is a starting reference, not proof of a good golf range.
+Signed chip spin scales the launch's surface tangent by 0.5–1.5, capped at the
+normal maximum; its normal component retains the selected elevation. At its
+first unassisted floor contact, one capped tangent impulse adds signed spin
+carry. Backspin can reverse and topspin carries forward. Afterwards the ordinary
+S2 rolling/collision rules own motion. Neutral spin preserves the native
+departure. The pending landing impulse, contact target, stopped marker, power,
+clocks and button latches are rewind values. Existing spring/wall behavior is
+preserved; a neutral 90-degree chip still has only its small forward bias.
 
-**B** returns to aim before the second timed hit is accepted and costs no
-stroke. Acceptance of that final charge commits the shot and costs one stroke;
-the ensuing feedback, pause and automatic release cannot be used to cancel or
-retry it. Show the final power before the character departs.
-
-An optional slower-meter setting can follow the core prototype. Both players
-use the same room setting. Direct power/angle selection is a practice aid,
-not the default competition control scheme.
+The guide shares the release velocity calculation and rolling-centre correction.
+AIM/SPIN uses full power and the desired hit point; POWER uses stopped spin and
+current meter power. It is a short departure guide, clipped before the starting
+support plane, not a terrain/contact or post-landing predictor. Guests consume
+authoritative turn surface/roll values and accepted-scene camera coordinates;
+they never simulate gameplay to draw their guide. Native charge sounds and the
+innate pitch rise remain owned by the original spindash/audio mechanics.
 
 ### 4. Watch it play out
 
@@ -249,11 +259,12 @@ afterward. If both leave without a result, record no winner.
 stateDiagram-v2
     [*] --> Lobby
     Lobby --> Aim: both ready / practice start
-    Aim --> FirstCharge: A / duck and start meter
-    FirstCharge --> SecondCharge: timed A / initiate spindash
-    FirstCharge --> Aim: cancel
-    SecondCharge --> Aim: cancel before final charge
-    SecondCharge --> Prelaunch: timed A / add charge and count stroke
+    Aim --> Power: A on putt / duck
+    Aim --> ContactPoint: A on chip / duck
+    ContactPoint --> Power: timed A / stop spin marker and initiate spindash
+    ContactPoint --> Aim: optional cancel
+    Power --> Aim: optional cancel before commitment
+    Power --> Prelaunch: timed A or sweep expiry / commit one stroke
     Prelaunch --> Resolving: charge feedback and brief pause / automatic release
     Resolving --> ResolveTurn: settlement, finish or penalty
     ResolveTurn --> Aim: restore next unfinished golfer
@@ -265,10 +276,11 @@ stateDiagram-v2
 ```
 
 The HUD shows course, active player, stroke totals, shot type, power and chip
-angle. A turn announcement recentres the camera. During charging, one power
-meter shows the current charge stage (first or second) and earned total power
-in a compact lower strip; during flight that strip reduces to stroke and player
-information. Results show strokes, penalties and total for each act.
+angle. A turn announcement recentres the camera. Chip contact timing shows a
+moving hit marker and cyan intended-contact band, with a top/backspin diagram.
+The subsequent power sweep highlights full power in pink. During flight the
+lower strip reduces to stroke and player information. Results show strokes,
+penalties and total for each act.
 Rings remain secondary statistics and do not break a tied golf score.
 
 ## Emerald Hill course treatment
@@ -312,9 +324,8 @@ course states, shot simulation, penalties, turn order and score. Remote clients
 never submit their own lie or resulting score as authoritative gameplay.
 
 The active player runs the power meter locally and submits the **locked result**
-(direction, shot kind, elevation and the two earned charge values), tagged with
-match, hole, turn and shot identities. The host derives final power using the
-shared charge mapping. This deliberately trusts the player's meter results;
+(direction, elevation, normalized power and signed spin), tagged with
+match, hole, turn and shot identities. The host derives velocity from the shared power/spin rules. This deliberately trusts the player's meter results;
 no anti-cheat project is needed. Bounds, turn ownership and duplicate handling
 still prevent accidental double shots and invalid session state. Network
 round-trip time must not decide whether the marker hit the intended spot.
@@ -395,7 +406,7 @@ object graphs or transmit executable creator content.
    Demonstrate short putts, steep chips, slopes, successful loops, rollback,
    settlement and the signpost-area golf finish using ROM-backed assets.
 2. **Add the game feel.** Up/Down elevation, Left/Right direction, A-to-duck,
-   two timed spindash charges preserving native charge feedback, brief prelaunch
+   Dream Course contact/power timing preserving native charge feedback, brief prelaunch
    pause, automatic release and rolling until settlement. Add the truthful departure
    guide, survey camera, shot HUD and penalty flow. Remove free movement and
    stock progression/reward systems from the golf session.
@@ -415,8 +426,8 @@ remote world presentation, not the power meter.
 | Acceptance scenario | Required observable behavior |
 | --- | --- |
 | Up/Down elevation and Left/Right direction | Up raises putt into progressively steeper chips; Down returns to putt; facing changes without moving the character |
-| A and two timed charges | Initial A ducks and starts the meter; first timed A initiates spindash; second adds charge; feedback and pause lead to automatic release |
-| Charge timing and selected elevation | Both hits determine power; selected elevation is preserved without a separate accuracy stage |
+| A shot panel | Putts time power; chips time contact point then power; native feedback and pause lead to automatic release |
+| Contact point and power | Intended/actual spin updates the guide; one power sweep expires to a very light shot; loft and facing remain locked |
 | Native spindash feedback | Preserve S2's existing charge sounds and pitch rise; extra A presses after commitment do not add charges or count strokes |
 | Very weak / full-power putt | Distinct useful distances, coherent rolling state, no input steering |
 | Chip onto a slope | Native collision resolves landing; turn waits for settlement |

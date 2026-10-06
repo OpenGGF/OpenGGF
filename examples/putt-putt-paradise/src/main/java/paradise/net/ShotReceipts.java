@@ -30,7 +30,7 @@ public final class ShotReceipts {
     public Result accept(ShotRequest request, int senderOwner, long acceptedTick) {
         Result inspection = inspect(request, senderOwner);
         if (inspection.status() != Status.ACCEPTED) return inspection;
-        var ack = new ShotAccepted(request.id(), acceptedTick, request.firstCharge() + request.secondCharge());
+        var ack = new ShotAccepted(request.id(), acceptedTick, request.normalizedPower());
         current = new Receipt(request, ack, null);
         return new Result(Status.ACCEPTED, current);
     }

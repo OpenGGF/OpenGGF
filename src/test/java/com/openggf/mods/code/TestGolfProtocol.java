@@ -27,7 +27,7 @@ class TestGolfProtocol {
         assertTrue(Files.isDirectory(sources), "the external golf transport has not been implemented");
         Path classes = Files.createDirectories(temp.resolve("classes"));
         var args = new ArrayList<>(List.of("--release", "21", "-classpath", classes.toString(), "-d", classes.toString()));
-        for (Path directory : List.of(sources, project.resolve("src/test/java/paradise/net"))) {
+        for (Path directory : List.of(sources, project.resolve("src/main/java/paradise/model"), project.resolve("src/test/java/paradise/net"))) {
             try (var files = Files.walk(directory)) {
                 files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));
             }

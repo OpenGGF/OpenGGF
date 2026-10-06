@@ -165,7 +165,27 @@ public final class GolfOnlinePeerProbe {
             values.put("dnf" + owner, golfer != null && (boolean)value(golfer, "dnf"));
         }
         Object online = field(controller, "online");
+        Object meter=value(controller,"shotState");
+        values.put("spin",value(meter,"spin")); values.put("targetSpin",value(meter,"targetSpin"));
+        values.put("power",value(meter,"power"));
+        if(!host && online!=null) {
+            Object basis=declaredValue(online,"guestGuide");
+            values.put("guideAvailable",basis!=null);
+            if(basis!=null) {
+                values.put("guideCentreX",declaredValue(basis,"centreX"));
+                values.put("guideCentreY",declaredValue(basis,"centreY"));
+                values.put("guideAngle",declaredValue(basis,"angle"));
+                values.put("guideCameraX",declaredValue(basis,"cameraX"));
+                values.put("guideCameraY",declaredValue(basis,"cameraY"));
+            }
+        }
+        if(host) {
+            var p=GameServices.camera().getFocusedSprite();
+            values.put("ballX",p.getCentreX()); values.put("ballY",p.getCentreY()); values.put("ballAngle",p.getAngle()&255);
+            values.put("cameraX",GameServices.camera().getX()); values.put("cameraY",GameServices.camera().getY());
+        }
         values.put("accepted", online != null && (boolean)declaredValue(online, "guestAccepted"));
+        values.put("chargeCues", online==null?0:field(online,"cue"));
         values.put("concededOwner", online == null ? -1 : declaredValue(online, "concededOwner"));
         long revision = -1; String imageHash = "none";
         if (online != null && host) {

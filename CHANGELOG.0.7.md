@@ -828,15 +828,18 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 - **Putt Putt Paradise — Sonic 2 Mini Golf:** added an external source-first mod
   using the player's full Emerald Hill acts. Sonic and Tails putt or chip with
-  two timed spindash charges, stay rolling until supported settlement, and play
+  Dream Course-style A-only power timing and chip top/backspin contact points,
+  stay rolling until supported settlement, and play
   practice, alternating local matches, or direct IP/port matches. Golfers retain
   independent course worlds; penalties restore the pre-shot world, and the
   online host owns simulation and scores while guests render ROM-backed views.
+  Recorded play uses the same neutral flight input as live play.
   Includes a creator menu themed with the ROM's title landscape, winged emblem,
   Sonic/Tails portraits and sparkles, scorecards, native spindash audio, all existing
-  viewport presets, a half-power aiming guide aligned with the rolling launch
-  centre and supporting slope, upward springs that also fire on rolling side
-  entry, 90-degree chips with a small forward bias for clearing walls, and a
+  viewport presets, a spin/power departure guide aligned with the rolling launch
+  centre and supporting slope (including authoritative online guest coordinates),
+  upward springs that also fire on rolling side entry, 90-degree chips with a
+  small forward bias for clearing walls, and a
   build/package/launch script. The unpublished
   candidate API now supports held gameplay admission, opaque course checkpoints and
   read-only value scenes without changing stock modules' frame behavior.

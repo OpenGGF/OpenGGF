@@ -13,6 +13,7 @@ import java.util.List;
 final class GolfOnline implements AutoCloseable {
     private final GolfRoom room;
     private SceneViewPresenter presenter;
+    private ScenePresentationFrame lastFrame;
     private GolfPacket.ShotId turn;
     private long revision, cue;
     private String error = "";
@@ -39,11 +40,12 @@ final class GolfOnline implements AutoCloseable {
     void receive(GolfPacket packet) {
         if (packet instanceof GolfPacket.TurnOpened opened) {
             if (turn == null || !turn.equals(opened.id())) accepted = null;
-            turn = opened.id(); error = "";
+            turn = opened.id(); lastFrame = null; error = "";
         } else if (packet instanceof GolfPacket.ViewFrame frame) {
             try {
                 if (presenter == null) presenter = GameServices.level().createScenePresenter();
-                presenter.accept(SceneFrameCodec.decode(frame.payload()));
+                var decoded = SceneFrameCodec.decode(frame.payload());
+                if (presenter.accept(decoded)) lastFrame = decoded;
             } catch (IOException | IllegalArgumentException invalid) {
                 error = "INVALID COURSE VIEW"; room.close();
             }
@@ -57,7 +59,9 @@ final class GolfOnline implements AutoCloseable {
     }
     void open(GolfMatch.State state, GolfMatch.ShotId id, CourseControl.Ball ball) {
         turn = wire(id); cue = 0;
-        room.publishTurn(new GolfPacket.TurnOpened(turn, ball.x(), ball.y(), score(state, 0), score(state, 1)));
+        room.publishTurn(new GolfPacket.TurnOpened(turn, ball.x(), ball.y(), ball.angle() & 255,
+                GameServices.camera().getFocusedSprite().getYRadius() - GameServices.camera().getFocusedSprite().getRollYRadius(),
+                score(state, 0), score(state, 1)));
     }
     GolfPacket.ShotId wire(GolfMatch.ShotId id) {
         return new GolfPacket.ShotId(room.state().match(), id.actIndex() + 1, id.turnSequence(), id.shotSequence(), id.player());
@@ -65,17 +69,18 @@ final class GolfOnline implements AutoCloseable {
     boolean accepts(GolfPacket.ShotRequest request, long tick) { return room.acceptShot(request, tick).newlyAccepted(); }
     void acceptLocal(GolfShot shot, long tick) {
         if (!accepts(new GolfPacket.ShotRequest(turn, shot.direction(), shot.elevationDegrees(),
-                shot.firstCharge(), shot.secondCharge()), tick)) throw new IllegalStateException("Host shot was not accepted");
+                shot.normalizedPower(), shot.spin()), tick)) throw new IllegalStateException("Host shot was not accepted");
     }
     boolean submit(GolfShot shot) {
         error = "";
         return turn != null && room.submitShot(new GolfPacket.ShotRequest(turn, shot.direction(), shot.elevationDegrees(),
-                shot.firstCharge(), shot.secondCharge()));
+                shot.normalizedPower(), shot.spin()));
     }
     void committed(GolfMatch.State state, GolfMatch.ShotId id, GolfOutcome outcome, CourseControl.Ball ball) {
         var value = outcome == GolfOutcome.FINISH ? GolfPacket.Outcome.FINISHED
                 : outcome.isPenalty() ? GolfPacket.Outcome.PENALTY : GolfPacket.Outcome.SETTLED;
-        room.publishCommitted(new GolfPacket.TurnCommitted(wire(id), value, ball.x(), ball.y(), score(state, 0), score(state, 1),
+        room.publishCommitted(new GolfPacket.TurnCommitted(wire(id), value, ball.x(), ball.y(),
+                score(state, 0), score(state, 1),
                 state.status() == GolfMatch.Status.PLAYING ? state.activePlayer() : -1));
     }
     private GolfPacket.Score score(GolfMatch.State state, int player) {
@@ -92,6 +97,13 @@ final class GolfOnline implements AutoCloseable {
         } catch (IOException oversized) { error = "COURSE VIEW TOO LARGE"; room.close(); }
     }
     void sound(long tick, String sound) { if (turn != null) room.cue(new GolfPacket.SoundCue(turn, ++cue, tick, sound)); }
+    record GuideBasis(int centreX, int centreY, int angle, int rollOffset, int cameraX, int cameraY) { }
+    GuideBasis guestGuide() {
+        var opened = room.state().remoteTurnOpened();
+        if (lastFrame == null || opened == null || room.state().owner() != 1 || !opened.id().equals(turn)) return null;
+        return new GuideBasis(opened.lieX(), opened.lieY(), opened.surfaceAngle(), opened.rollOffset(),
+                lastFrame.cameraX(), lastFrame.cameraY());
+    }
     boolean draw(int dx, int dy, PlayerPresentationPose pose) {
         if (presenter != null && presenter.revision() >= 0) {
             var opened = room.state().remoteTurnOpened();

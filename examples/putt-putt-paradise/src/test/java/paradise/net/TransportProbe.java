@@ -102,12 +102,12 @@ public final class TransportProbe {
         var frames = new ByteArrayOutputStream(); var framed = new DataOutputStream(frames);
         for (int type = 1; type <= 13; type++) {
             var payload = new ByteArrayOutputStream(); var out = new DataOutputStream(payload);
-            out.writeByte(1); out.writeByte(type);
+            out.writeByte(GolfCodec.SCHEMA); out.writeByte(type);
             switch (type) {
                 case 1 -> { rawFingerprints(out); rawText(out, "tails"); }
                 case 2 -> { rawUuid(out); out.writeByte(1); rawUuid(out); rawFingerprints(out); rawText(out, "sonic"); }
-                case 3 -> { rawId(out); out.writeInt(100); out.writeInt(200); rawScore(out); rawScore(out); }
-                case 4 -> { rawId(out); out.writeByte(1); out.writeByte(25); out.writeShort(200); out.writeShort(300); }
+                case 3 -> { rawId(out); out.writeInt(100); out.writeInt(200); out.writeByte(224); out.writeByte(5); rawScore(out); rawScore(out); }
+                case 4 -> { rawId(out); out.writeByte(1); out.writeByte(25); out.writeShort(500); out.writeShort(-100); }
                 case 5 -> { rawId(out); out.writeLong(10); out.writeShort(500); }
                 case 6 -> { rawId(out); out.writeLong(1); out.writeLong(10); out.writeInt(0); }
                 case 7 -> { rawId(out); out.writeByte(0); out.writeInt(100); out.writeInt(200); rawScore(out); rawScore(out); out.writeByte(0); }
@@ -129,7 +129,7 @@ public final class TransportProbe {
         byte[] bytes = text.getBytes(java.nio.charset.StandardCharsets.US_ASCII); out.writeByte(bytes.length); out.write(bytes);
     }
     private static void rawFingerprints(DataOutputStream out) throws IOException {
-        out.writeByte(1);
+        out.writeByte(GolfCodec.SCHEMA);
         for (String text : new String[]{"0.7.0", "engine", "mod", "rules", "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9", "competition"}) rawText(out, text);
         out.writeShort(320); out.writeShort(224);
     }

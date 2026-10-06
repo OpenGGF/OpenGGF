@@ -252,11 +252,11 @@ class TestPuttPuttParadise {
     private Object matchState() throws Exception { return value(mode(), "matchState"); }
 
     @ParameterizedTest
-    @CsvSource({"sonic,0,1,0,NATIVE_4_3,19,5", "sonic,45,1,0,NATIVE_4_3,13,-7",
-            "tails,75,-1,0,SUPER_32_9,-5,-16", "sonic,0,1,224,NATIVE_4_3,17,-9",
-            "tails,45,-1,224,SUPER_32_9,-18,2", "sonic,0,-1,32,NATIVE_4_3,-17,-9",
-            "tails,15,1,0,WIDE_16_9,18,-3", "sonic,90,1,0,NATIVE_4_3,1,-13",
-            "tails,90,-1,0,SUPER_32_9,-1,-17"})
+    @CsvSource({"sonic,0,1,0,NATIVE_4_3,36,5", "sonic,45,1,0,NATIVE_4_3,25,-19",
+            "tails,75,-1,0,SUPER_32_9,-9,-33", "sonic,0,1,224,NATIVE_4_3,29,-21",
+            "tails,45,-1,224,SUPER_32_9,-35,2", "sonic,0,-1,32,NATIVE_4_3,-29,-21",
+            "tails,15,1,0,WIDE_16_9,35,-7", "sonic,90,1,0,NATIVE_4_3,2,-30",
+            "tails,90,-1,0,SUPER_32_9,-2,-34"})
     void aimingGuideMatchesLaunchOriginAtReferencePowerAndSelectedAngle(String character, int elevation,
             int facing, int surfaceAngle, String aspect, int firstDx, int firstDy) throws Exception {
         var fixture = launch(character, 0, aspect); fixture.stepIdleFrames(120);
@@ -306,11 +306,65 @@ class TestPuttPuttParadise {
         final List<com.openggf.graphics.GLCommandable> commands = new ArrayList<>();
         @Override public void registerCommand(com.openggf.graphics.GLCommandable command) { commands.add(command); }
     }
+    @ParameterizedTest @CsvSource({"sonic,100,1", "sonic,-100,1", "sonic,100,-1", "sonic,-100,-1",
+            "tails,100,1", "tails,-100,1", "tails,100,-1", "tails,-100,-1"})
+    void hitPointPreviewAndReleasedChipShareSpinVelocity(String character, int spin, int facing) throws Exception {
+        var f=launch(character,0,"SUPER_32_9"); f.stepIdleFrames(120);
+        for(int i=0;i<45;i++) f.stepFrame(true,false,false,false,false);
+        f.stepFrame(false,false,facing<0,facing>0,false);
+        int x=f.sprite().getCentreX()-f.camera().getX(), y=f.sprite().getCentreY()-f.camera().getY();
+        int radius=f.sprite().getYRadius()-f.sprite().getRollYRadius();
+        pressA(f); assertEquals("SPIN",value(shotState(),"stage").toString());
+        for(int i=0;i<20;i++) f.stepFrame(spin>0,spin<0,false,false,false);
+        assertEquals(spin,value(shotState(),"targetSpin"));
+        var targetDots=guideDots(); assertFalse(targetDots.isEmpty());
+        int tangent=spin>0?3072:1086;
+        assertEquals(x+(int)Math.round(facing*tangent/256.0*3),value(targetDots.getFirst(),"x"));
+        assertEquals(y+radius-24,value(targetDots.getFirst(),"y"));
+        f.stepIdleFrames(spin>0?10:70); pressA(f);
+        assertEquals(spin,value(shotState(),"spin"));
+        f.stepIdleFrames(60);
+        var powerDots=guideDots();
+        assertEquals(value(targetDots.getFirst(),"x"),value(powerDots.getFirst(),"x"));
+        assertEquals(value(targetDots.getFirst(),"y"),value(powerDots.getFirst(),"y"));
+        pressA(f); f.stepIdleFrames(30);
+        assertEquals(tangent*facing,(int)f.sprite().getXSpeed(),"release uses the same spin-adjusted tangent");
+        assertEquals(spin,value(value(shotState(),"shot"),"spin"));
+    }
+
+    @ParameterizedTest @CsvSource({"sonic,100", "sonic,-100", "tails,100", "tails,-100"})
+    void firstLandingSpinIsAppliedOnceAndReplaysFromFlight(String character, int spin) throws Exception {
+        var f=launch(character,0); f.stepIdleFrames(120);
+        for(int i=0;i<45;i++) f.stepFrame(true,false,false,false,false);
+        pressA(f); f.stepIdleFrames(spin>0?30:90); pressA(f); f.stepIdleFrames(30); pressA(f);
+        f.stepIdleFrames(30); assertTrue(f.sprite().getAir());
+        var registry=f.runtime().getRewindRegistry(); var before=registry.capture();
+        var rows=new ArrayList<com.openggf.game.mode.CourseControl.Ball>();
+        int landing=-1;
+        for(int i=0;i<100;i++) {
+            f.stepIdleFrames(1); var ball=checkpointCourse(f).ball(); rows.add(ball);
+            if(ball.floorSupport()&&!ball.airborne()) { landing=i; break; }
+        }
+        assertTrue(landing>=0,"chip reaches real EHZ floor");
+        assertFalse((boolean)value(((com.openggf.game.rewind.RewindSnapshottable<?>)mode()).capture(),"landingSpinPending"));
+        if(spin<0) assertTrue(f.sprite().getGSpeed()<0,"backspin reverses the first landing carry");
+        else assertTrue(f.sprite().getGSpeed()>0x800,"topspin adds forward landing carry");
+        f.stepIdleFrames(1); rows.add(checkpointCourse(f).ball());
+        if(spin>0) assertTrue(Math.abs(f.sprite().getGSpeed())<0xC00,"next row is native rolling, without another impulse");
+        var after=registry.capture(); registry.restore(before);
+        for(var expected:rows) { f.stepIdleFrames(1); assertEquals(expected,checkpointCourse(f).ball(),"spin flight/landing replay"); }
+        var replay=registry.capture();
+        for(var key:after.entries().keySet()) assertEquals(List.of(),
+                com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key,after.get(key),replay.get(key)),key);
+    }
+
     private void pressA(HeadlessTestFixture fixture) { fixture.stepFrame(false, false, false, false, true); }
-    private void commit(HeadlessTestFixture fixture, int meterTicks) {
+    private void commit(HeadlessTestFixture fixture, int meterTicks) throws Exception {
         pressA(fixture);
-        fixture.stepIdleFrames(meterTicks);
-        pressA(fixture);
+        if (value(shotState(), "stage").toString().equals("SPIN")) {
+            fixture.stepIdleFrames(60); // Neutral hit point; preserves existing route departure.
+            pressA(fixture);
+        }
         fixture.stepIdleFrames(meterTicks);
         pressA(fixture);
     }
@@ -563,7 +617,7 @@ class TestPuttPuttParadise {
                 .toList();
         assertTrue(requests.size() >= 3, requests.toString());
         assertTrue(requests.stream().map(com.openggf.audio.rewind.AudioTimelineEntry::frame).distinct().count() >= 3,
-                "two charges and release have distinct mode row stamps");
+                "shot-panel transitions and release have distinct mode row stamps");
         for (var request : requests)
             assertEquals(1.0f, ((com.openggf.audio.rewind.AudioCommand.PlaySfx) request.command()).pitch(),
                     "native driver alone owns innate spindash pitch");
@@ -746,6 +800,7 @@ class TestPuttPuttParadise {
         for (int row = 0; row < 360; row++) {
             int aimRow = row - 120;
             rows.add(new com.openggf.debug.playback.Bk2FrameInput(row, 0,
+                    // The third A is now an extra WATCH press: both paths must ignore it.
                     aimRow == 1 || aimRow == 32 || aimRow == 63 ? 1 : 0,
                     aimRow == 12 || aimRow == 20, ""));
         }
@@ -793,7 +848,8 @@ class TestPuttPuttParadise {
             assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
             for (int row = 1; row <= 1200; row++) {
                 int directions = row <= 20 ? 1 : 0;
-                int actions = row == 621 || row == 652 || row == 683 ? com.openggf.control.InputActionMasks.ACTION_A : 0;
+                // Neutral chip contact after 60 ticks, then the original half-power shot.
+                int actions = row == 621 || row == 682 || row == 713 ? com.openggf.control.InputActionMasks.ACTION_A : 0;
                 var player = com.openggf.control.PlayerInputState.of(directions, directions, actions, actions, false, false);
                 input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(player,
                         com.openggf.control.PlayerInputState.neutral()));
@@ -801,7 +857,7 @@ class TestPuttPuttParadise {
                 assertNotEquals(com.openggf.LevelFrameResult.SETUP_ONLY, result);
                 manager.recordExternalFrame(GameMode.LEVEL, false, input);
                 input.update();
-                if (row == 303 || row == 620 || row == 633 || row == 664 || row == 700 || row == 721)
+                if (row == 303 || row == 620 || row == 633 || row == 664 || row == 700 || row == 721 || row == 752)
                     expected.put(row, rewindExpected(f));
                 if (value(matchState(), "lastResolved") != null) {
                     assertEquals("DAMAGE", value(value(matchState(), "lastResolved"), "outcome").toString());

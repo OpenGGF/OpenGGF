@@ -1453,3 +1453,131 @@ No ROM, extracted artwork or deleted registry-interception class is bundled.
 The package uses this worktree's engine classes, already built by the completed
 broad/focused commands; final bootstrap metadata is refreshed after the local
 commit. Main `develop` remains at `fc4729c375`; no merge or push is authorized.
+
+
+### Dream Course shot follow-up (2026-10-06)
+
+Local task base: `6c210d4821a6940ecee32b05e9e4c9f7e1dc8fd8`. The initial
+bank-or-boost draft was superseded before delivery when the user instructed
+“Just mimic the KDC shot mechanics.” Its owned prototype was removed. The user
+also pointed out that B/C are not default keyboard bindings. Required shot
+controls therefore use A and the already mapped aiming arrows.
+
+Reference: Nintendo's Kirby's Dream Course manual, sections 7–8, available at
+[manual mirror](https://manuals.plus/m/67c7da172a34ce3239bc014f14a9514b42e3772456425496419e9a37805b3ddf).
+Chips time the top/backspin marker, then power; putts proceed straight to power.
+The power gauge rises and falls once, full power highlights pink, and expiry
+makes a light shot. B remains an optional cancellation shortcut, C an optional
+survey shortcut. Neither is required to shoot. Guide power changes to the
+manual's full-power reference. No bank/boost choice or risk bands remain.
+
+The control flow follows the manual; clock lengths and the spin impulse are
+explicit Sonic adaptations, not claims of SNES physics parity. Chip spin scales
+its departure tangent and adds one capped impulse on first unassisted ground
+contact; neutral spin retains the existing native departure and rolling. All clocks,
+edge latches and pending spin must rewind. Native spindash audio/pitch stays
+owned by the game. The immutable local/wire shot becomes power plus signed
+spin, with a new wire schema and fingerprint to reject old peers.
+
+Verify engine-free timing, held edges, soft-shot expiry, both spin directions,
+pose/HOLD behavior, pause/rewind, complete EHZ routes and two-JVM online shots.
+Keep this work local, refresh the SDK package, and preserve the launcher.
+
+
+The initial putt-flow regression failed on the old meter: expected `POWER`,
+received `FIRST_CHARGE`. Eighteen engine-free model scenarios then passed, with
+one-sweep expiry and marker/target restore included. Separate creator compilation
+and signed-spin protocol checks passed. Code-drawn HUD geometry and pink-power
+states passed at all five widths; the 320px queued-primitive raster was inspected
+(the preview is not a native gameplay screenshot).
+
+A read-only review caught two integration issues before delivery: guest dots
+initially read the held guest world's camera/slope, and host replay initially
+added a second startup charge even for guest putts. The first was replaced with
+bounded authoritative TurnOpened surface/roll metadata plus accepted-scene
+camera; the second schedules the extra startup request only for chips. Online
+regressions now compare the authoritative guide basis, accept signed backspin,
+and compare local/remote putt startup charge counts. The review also caught an
+accidental TurnCommitted constructor edit while adding TurnOpened metadata;
+its original signature is retained and separately compiled successfully.
+
+The first native follow-up completed 176 cases: ten failures, one error, zero
+skips. All twelve new spin/departure/landing-replay cases and the four-shot
+online test passed. Eight EHZ2 routes exposed the one-unit difference between
+`2 * floor(500 * phase / 60)` and `floor(1000 * phase / 60)`: the new sweep
+shifted very light putt speeds. A new model regression observed expected 32,
+actual 33, before correction. The single sweep now preserves the existing
+two-unit power granularity; no native physics constants or per-route rules
+were changed. All eighteen model scenarios then passed again.
+
+The live/BK2 comparison's extra A during WATCH also exposed the recording
+driver's synthetic forced jump, which bypassed ControlledFrameRuntime's neutral
+input. RecordingFrameDriver now leaves action-edge authority with any active
+session controller; stock recorded input retains its existing path. The
+comparison retains that extra A as a regression. The damage/rewind authoring
+was migrated to neutral chip contact then half power, instead of inadvertently
+stopping the new marker at topspin. The remaining transport error was a
+mismatched-engine fixture still constructing schema 1; it now uses the current
+schema so the intended engine-fingerprint rejection reaches the room boundary.
+The focused rerun adds stock recording input-only, hardware timing and BK2
+action-edge checks with the existing absolute S3K ROM property.
+
+The corrected focused run completed 191 cases with zero failures, errors or
+skips (2m20s). Command:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  "-Dtest=TestGolfModel,TestGolfMenu,TestGolfProtocol,TestGolfTransport,TestGolfOnlineIntegration,TestPuttPuttParadise,TestGolfScenePresentation,TestSpringObjectInstance,TestRecordingFrameDriverInputOnly,TestRecordingFrameDriverHardwareTiming,TestHeadlessTestRunnerBk2Input" \
+  "-Dsonic2.rom.path=${S2_ROM}" "-Ds3k.rom.path=${S3K_ROM}" test
+```
+
+S2_ROM and S3K_ROM are the discovered existing absolute paths. The 98 external
+mod cases include all act/character/viewport fresh routes, all local pairings,
+contact extremes in both directions, single landing impulses with whole-state
+replay, guide geometry, pause and live/BK2 equality. The two-process online
+case completes four shots and checks signed backspin, authoritative guest
+coordinates and matched putt startup charge counts. The additional fifteen
+recording checks pass on the unchanged stock input path. Native PCM/pitch
+waveforms and a continuous two-act online traversal remain outside this run.
+
+Java 21/Lua 5.4/PowerShell preflight passed. The normal change-based plan selects
+all 2,976 classes because creator example paths are unclassified. Flight and
+landing rules plus the recording input boundary justify running the full
+selection with two workers, a 90-minute limit and the standard ten-minute idle
+limit. Prior broad failure identities/messages are retained in memory for
+comparison; consumed prior diagnostics are pruned by the runner, not archived.
+
+The normal broad command completed on the uncommitted candidate from
+`6c210d4821a6940ecee32b05e9e4c9f7e1dc8fd8`:
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 6c210d4821a6940ecee32b05e9e4c9f7e1dc8fd8 \
+  --workers 2 --max-minutes 90 --run
+```
+
+Ordinary: 2,974 reports, 25,700 cases, 28 failures, no errors, 41 skips
+(2,070 seconds). Fresh guards: 86 reports, 672 checks, two failures, no errors
+or skips (212 seconds). All golf cases and the recording regressions passed
+in this broad invocation. This is a completed red broad run, not a full-suite
+pass. No new failure identities or first-error fields were observed against
+the prior broad result recorded above.
+
+Twenty-seven ordinary failure messages and both guard messages match the
+retained baseline exactly. The remaining SSZ Tails replay failure matches test
+identity, frame 4018, missing child IDs/slot fields and the stored 2,048-character
+concrete prefix after normalizing RewindObjectStateBlob hash text. That hash
+includes a Class reference and is not portable between JVMs; the current raw
+XML message is 2,915 characters. This is a bounded failure-signature comparison,
+not a claim that the complete opaque state or unretained message tail matches.
+The previous order-sensitive GPU golf scene failure did not occur in this run.
+Its earlier paired palette-latch evidence remains valid; no shared renderer
+change was made here, so this pass does not establish that the hazard is fixed.
+
+The 41 skips were inspected: opt-in diagnostics/captures, twelve unavailable
+Infinite Sonic platform placements, four unavailable native GL/EGL checks, the
+maintained CPZ spin-tube assumption, and missing/request-disabled audio
+reference captures. No golf ROM coverage skipped. The broad invocation used
+all three automatically discovered absolute ROM properties. Diagnostics were
+inspected and deleted with `run_categories.py --acknowledge
+20261006T033103Z-3e0b6bd6`; no raw output is archived.

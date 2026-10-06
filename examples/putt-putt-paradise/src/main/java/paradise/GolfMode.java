@@ -15,7 +15,7 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
     public record State(GolfMatch.State match, ShotMeter.State meter, List<CourseCheckpoint> lies,
                         CourseCheckpoint neutralLie, long tick, int initialSteps, int watchSteps,
                         int dwell, int previousX, int previousY, boolean paused, boolean startHeld,
-                        boolean inputBlocked, boolean survey, int surveyX, int surveyY, int pauseRow, boolean cHeld, String connectionError) {
+                        boolean inputBlocked, boolean survey, int surveyX, int surveyY, int pauseRow, boolean cHeld, String connectionError, boolean landingSpinPending) {
         public State { lies = List.copyOf(lies); }
     }
     private GolfMatch match;
@@ -24,7 +24,7 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
     private CourseCheckpoint neutralLie;
     private long tick, renderRevision;
     private int initialSteps, watchSteps, dwell, previousX, previousY, remoteFeedback;
-    private boolean paused, startHeld, inputBlocked, survey, cHeld, titleRequest;
+    private boolean paused, startHeld, inputBlocked, survey, cHeld, titleRequest, landingSpinPending;
     private int surveyX, surveyY, pauseRow;
     private GolfMenu.Selection selection;
     private int finishX, finishY, viewport = 320;
@@ -34,7 +34,7 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
 
     public void configure(GolfMenu.Selection choice) {
         close(); selection = choice; match = null; neutralLie = null; Arrays.fill(lies, null);
-        meter = new ShotMeter(); paused = false; startHeld = true; inputBlocked = true;
+        meter = new ShotMeter(); paused = false; startHeld = true; inputBlocked = true; landingSpinPending = false;
         survey = false; cHeld = false; titleRequest = false; tick = 0; initialSteps = 0;
         surveyX = surveyY = pauseRow = 0; connectionError = "";
     }
@@ -48,7 +48,7 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
         if (lies[1] != null) saved.add(lies[1]);
         return new State(match == null ? null : match.snapshot(), meter.snapshot(), saved, neutralLie,
                 tick, initialSteps, watchSteps, dwell, previousX, previousY, paused, startHeld,
-                inputBlocked, survey, surveyX, surveyY, pauseRow, cHeld, connectionError);
+                inputBlocked, survey, surveyX, surveyY, pauseRow, cHeld, connectionError, landingSpinPending);
     }
     @Override public void restore(State state) {
         if (state.match() == null) match = null;
@@ -64,7 +64,7 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
         watchSteps = state.watchSteps(); dwell = state.dwell(); previousX = state.previousX();
         previousY = state.previousY(); paused = state.paused(); startHeld = state.startHeld();
         inputBlocked = state.inputBlocked(); survey = state.survey(); surveyX = state.surveyX();
-        surveyY = state.surveyY(); pauseRow = state.pauseRow(); cHeld = state.cHeld(); connectionError = state.connectionError();
+        surveyY = state.surveyY(); pauseRow = state.pauseRow(); cHeld = state.cHeld(); connectionError = state.connectionError(); landingSpinPending = state.landingSpinPending();
     }
     public GolfMatch.State matchState() { return match == null ? null : match.snapshot(); }
     public ShotMeter.State shotState() { return meter.snapshot(); }
@@ -106,11 +106,11 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
                         && !paused && meter.snapshot().stage() == ShotMeter.Stage.AIM
                         && match.snapshot().activePlayer() == 1 && online.wire(match.nextShotId()).equals(request.id())
                         && online.accepts(request, tick)) {
-                    var shot = new GolfShot(request.facing(), request.elevationDegrees(), request.firstCharge(), request.secondCharge());
+                    var shot = new GolfShot(request.facing(), request.elevationDegrees(), request.normalizedPower(), request.spin());
                     match.commit(match.nextShotId(), shot);
                     meter.restore(new ShotMeter.State(ShotMeter.Stage.FEEDBACK, shot.direction(), shot.elevationDegrees(),
-                            0, shot.firstCharge(), shot.secondCharge(), GolfRules.CHARGE_FEEDBACK_TICKS, true, false, shot));
-                    remoteFeedback = 2; inputBlocked = false; charge(course);
+                            0, shot.normalizedPower(), shot.spin(), shot.spin(), GolfRules.CHARGE_FEEDBACK_TICKS, true, false, shot, false));
+                    remoteFeedback = shot.isPutt() ? 0 : 2; inputBlocked = false; charge(course);
                 }
             }
             if (online.state().ended() && match != null && match.snapshot().status() == GolfMatch.Status.PLAYING)
@@ -191,14 +191,15 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
     }
     private void launch(CourseControl course, GolfShot shot) {
         var player = GameServices.camera().getFocusedSprite();
-        var velocity = GolfRules.launchVelocity(shot.direction(), shot.elevationDegrees(), shot.speedFixed(), player.getAngle());
+        var velocity = GolfRules.launchVelocity(shot.direction(), shot.elevationDegrees(), shot.speedFixed(), player.getAngle(), shot.spin());
         // The candidate CourseControl contract stops at 75 degrees. Reuse its native
         // curl, centre correction, support release and sound before the mod's steeper departure.
         course.launch(shot.direction(), Math.min(75, shot.elevationDegrees()), shot.speedFixed());
-        if (shot.elevationDegrees() > 75) {
+        if (shot.elevationDegrees() > 75 || shot.spin() != 0) {
             player.setXSpeed((short) velocity.x()); player.setYSpeed((short) velocity.y());
             player.setGSpeed((short) velocity.ground());
         }
+        landingSpinPending = !shot.isPutt() && shot.spin() != 0;
     }
     private void resumeVerticalDrive() {
         var state = meter.snapshot();
@@ -209,14 +210,27 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
                 && !player.getDead() && !player.isHurt() && !player.getSpringing()) {
             // Retry a wall-stopped forward bias while ascending. Native collision
             // still clamps each step; never push during descent or overwrite a bounce.
-            player.setXSpeed((short) (state.shot().direction() * GolfRules.verticalDriftFixed(state.shot().speedFixed())));
+            player.setXSpeed((short) GolfRules.launchVelocity(state.shot().direction(), 90,
+                    state.shot().speedFixed(), 0, state.shot().spin()).x());
         }
     }
     private void charge(CourseControl course) { course.chargeSound(); if (online != null) online.sound(tick, "charge"); }
     @Override public boolean retainRolling() { return meter.snapshot().stage() == ShotMeter.Stage.WATCH; }
     @Override public void afterTick(CourseControl course, boolean advanced) {
-        if (advanced) observe(course);
+        if (advanced) { applyLandingSpin(course); observe(course); }
         if (online != null && online.state().host() && tick % 3 == 0) online.publish(tick, pose(), finishX, finishY);
+    }
+    private void applyLandingSpin(CourseControl course) {
+        if (!landingSpinPending || meter.snapshot().stage() != ShotMeter.Stage.WATCH) return;
+        var player = GameServices.camera().getFocusedSprite();
+        if (player.getAir() || !course.ball().floorSupport() || player.getDead()
+                || player.isHurt() || player.getSpringing()) return;
+        int ground = GolfRules.landingSpeed(player.getGSpeed(), meter.snapshot().shot());
+        double angle = (player.getAngle() & 255) * Math.PI / 128;
+        player.setGSpeed((short) ground);
+        player.setXSpeed((short) Math.round(ground * Math.cos(angle)));
+        player.setYSpeed((short) Math.round(ground * Math.sin(angle)));
+        landingSpinPending = false;
     }
     private void observe(CourseControl course) {
         var ball = course.ball();
@@ -273,13 +287,14 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
     }
     private void openTurn(CourseControl course) {
         neutralLie = course.capture(); lies[match.snapshot().activePlayer()] = neutralLie;
-        meter = new ShotMeter(); watchSteps = dwell = 0; remoteFeedback = 0;
+        meter = new ShotMeter(); watchSteps = dwell = 0; remoteFeedback = 0; landingSpinPending = false;
         survey = false; inputBlocked = true; previousX = course.ball().x(); previousY = course.ball().y();
         if (online != null) online.open(match.snapshot(), match.nextShotId(), course.ball());
     }
     private PlayerPresentationPose pose() {
-        var m = meter.snapshot(); var kind = m.stage() == ShotMeter.Stage.FIRST_CHARGE ? PlayerPresentationPose.Kind.DUCK
-                : m.stage() == ShotMeter.Stage.SECOND_CHARGE || m.stage() == ShotMeter.Stage.FEEDBACK || m.stage() == ShotMeter.Stage.PRE_RELEASE
+        var m = meter.snapshot(); var kind = m.stage() == ShotMeter.Stage.SPIN
+                || (m.stage() == ShotMeter.Stage.POWER && m.elevationDegrees() == 0) ? PlayerPresentationPose.Kind.DUCK
+                : m.stage() == ShotMeter.Stage.POWER || m.stage() == ShotMeter.Stage.FEEDBACK || m.stage() == ShotMeter.Stage.PRE_RELEASE
                 ? PlayerPresentationPose.Kind.SPINDASH : PlayerPresentationPose.Kind.NATIVE;
         return new PlayerPresentationPose(kind, tick, m.direction());
     }
@@ -315,16 +330,20 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
                 : online != null && (!online.state().ready() || online.state().held() || !online.notice().isEmpty()) ? online.message()
                 : survey ? "SURVEY TERRAIN: ARROWS PAN  C RETURN"
                 : switch (m.stage()) {
-                    case AIM -> "UP/DOWN LOFT  A CHARGE  C SURVEY";
-                    case FIRST_CHARGE, SECOND_CHARGE -> "A LOCK POWER  B CANCEL";
-                    case FEEDBACK, PRE_RELEASE -> "SHOT COMMITTED - RELEASING";
+                    case AIM -> "UP/DOWN LOFT  LEFT/RIGHT AIM  A SHOT";
+                    case SPIN -> "UP/DOWN HIT POINT  A STOP MARKER";
+                    case POWER -> "A STOP POWER - ONE RISE AND FALL";
+                    case FEEDBACK, PRE_RELEASE -> m.timedOut() ? "MISSED POWER - SOFT SHOT"
+                            : m.power() == GolfRules.MAX_POWER ? "FULL POWER - RELEASING" : "SHOT COMMITTED - RELEASING";
                     case WATCH -> "WATCH THE BALL - START PAUSE";
                 };
+        boolean ownsAim = online == null || online.state().owner() == (online.state().host() ? 0 : 1);
+        if (!paused && !survey && ownsAim && (m.stage() == ShotMeter.Stage.AIM || m.stage() == ShotMeter.Stage.SPIN
+                || m.stage() == ShotMeter.Stage.POWER) && (match != null || online != null)) drawPreview();
         GolfOverlay.draw(GameServices.graphics(), viewport, new GolfOverlay.View(mode, m.stage().name(), m.elevationDegrees(), m.direction(),
-                m.firstCharge() + m.secondCharge(), m.firstCharge(), m.secondCharge(), meter.meterValue(), owner, scores, act, message, paused, results()));
+                m.power(), m.spin(), m.targetSpin(), meter.meterValue(), owner, scores, act, message, paused, results()));
         if (paused) for (int i = 0; i < 3; i++) GolfText.centered(GameServices.graphics(), (pauseRow == i ? "> " : "  ")
                 + List.of("RESUME", "CONCEDE", "MAIN MENU").get(i), viewport, 105 + i * 16, 1, pauseRow == i ? GolfText.GOLD : GolfText.CREAM);
-        else if (!survey && m.stage() == ShotMeter.Stage.AIM && match != null) drawPreview();
     }
     private String resultMessage(List<GolfOverlay.PlayerScore> scores) {
         if (scores.size() == 1) return scores.getFirst().dnf() ? "DNF - START FOR MENU" : "HOLE COMPLETE - START FOR MENU";
@@ -337,26 +356,40 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
         return (winner < 0 ? "DRAW" : "P" + (winner + 1) + " " + scores.get(winner).name() + " WINS") + " - START FOR MENU";
     }
     private void drawPreview() {
-        var p = GameServices.camera().getFocusedSprite(); var m = meter.snapshot();
-        double angle = (p.getAngle() & 255) * Math.PI / 128;
-        // AIM has no running power meter: use the reference half-power departure.
-        // Reading meterValue here selected a near-minimum chip whose arc immediately fell.
+        var m = meter.snapshot();
+        int centreX, centreY, surfaceAngle, radiusDelta, cameraX, cameraY;
+        if (online != null && !online.state().host()) {
+            var basis = online.guestGuide();
+            if (basis == null || online.guestAccepted()) return;
+            centreX = basis.centreX(); centreY = basis.centreY(); surfaceAngle = basis.angle();
+            radiusDelta = basis.rollOffset(); cameraX = basis.cameraX(); cameraY = basis.cameraY();
+        } else {
+            var p = GameServices.camera().getFocusedSprite();
+            centreX = p.getCentreX(); centreY = p.getCentreY(); surfaceAngle = p.getAngle();
+            radiusDelta = p.getYRadius() - p.getRollYRadius();
+            cameraX = GameServices.camera().getX(); cameraY = GameServices.camera().getY();
+        }
+        double angle = (surfaceAngle & 255) * Math.PI / 128;
+        // Full-power intended hit point during SPIN; actual stopped hit/current power during POWER.
         var velocity = GolfRules.launchVelocity(m.direction(), m.elevationDegrees(),
-                GolfRules.speedFixed(GolfRules.MAX_POWER / 2), p.getAngle());
+                GolfRules.speedFixed(m.stage() == ShotMeter.Stage.POWER ? meter.meterValue() : GolfRules.MAX_POWER),
+                surfaceAngle, m.stage() == ShotMeter.Stage.SPIN ? m.targetSpin() : m.spin());
         double vx = velocity.x() / 256.0, vy = velocity.y() / 256.0;
-        // Match CourseControl.launch's standing-to-ball offset without changing the player.
-        int radiusDelta = p.getYRadius() - p.getRollYRadius();
-        int x = p.getCentreX() - (int) Math.round(Math.sin(angle) * radiusDelta) - GameServices.camera().getX();
-        int y = p.getCentreY() + (int) Math.round(Math.cos(angle) * radiusDelta) - GameServices.camera().getY();
+        // Native standing-to-ball centre correction, from local or authoritative turn values.
+        int x = centreX - (int) Math.round(Math.sin(angle) * radiusDelta) - cameraX;
+        int y = centreY + (int) Math.round(Math.cos(angle) * radiusDelta) - cameraY;
         for (int t = 3; t <= 24; t += 3) {
+            // Departure guide only: do not invent a post-contact arc or landing spin on unseen terrain.
+            if (m.elevationDegrees() > 0 && -Math.sin(angle) * vx * t
+                    + Math.cos(angle) * (vy * t + 0.109375 * t * t) > 0) break;
             int px = x + (int) Math.round(vx * t), py = y + (int) Math.round(vy * t + (m.elevationDegrees() > 0 ? 0.109375 * t * t : 0));
             if (px >= 1 && px + 3 <= viewport && py >= 1 && py + 3 <= 224) {
                 GolfText.panel(GameServices.graphics(), px - 1, py - 1, 4, 4, GolfText.INK, 0.95f);
                 GolfText.panel(GameServices.graphics(), px, py, 2, 2, GolfText.GOLD, 0.8f);
             }
         }
-        GolfText.draw(GameServices.graphics(), m.elevationDegrees() == 0 ? "GUIDE: HALF-POWER PUTT"
-                : "GUIDE: HALF-POWER ARC", 8, 168, 1, GolfText.CREAM);
+        GolfText.draw(GameServices.graphics(), m.stage() == ShotMeter.Stage.POWER ? "GUIDE: CURRENT POWER + SPIN" : m.elevationDegrees() == 0 ? "GUIDE: FULL-POWER PUTT"
+                : "GUIDE: FULL POWER + SPIN", 8, 168, 1, GolfText.CREAM);
     }
     @Override public void close() {
         if (online != null) { online.close(); online = null; }

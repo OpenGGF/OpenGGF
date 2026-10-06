@@ -9,7 +9,7 @@ import static paradise.net.GolfPacket.*;
 public final class ProtocolProbe {
     static final UUID MATCH = UUID.randomUUID();
     static ShotId id(long turn, int owner) { return new ShotId(MATCH, 1, turn, turn, owner); }
-    static ShotRequest request(ShotId id) { return new ShotRequest(id, 1, 25, 230, 410); }
+    static ShotRequest request(ShotId id) { return new ShotRequest(id, 1, 25, 640, -50); }
     static Fingerprints prints() {
         return new Fingerprints(GolfCodec.SCHEMA, "0.7.0", "engine", "paradise", "rules",
                 Fingerprints.SONIC_2_SHA1, "competition", 800, 224);
@@ -32,8 +32,8 @@ public final class ProtocolProbe {
         check(view.payload()[0] == 1, "accessor must copy scene payload");
         List<GolfPacket> packets = List.of(new Hello(prints(), "sonic"),
                 new Ready(MATCH, 1, UUID.randomUUID(), prints(), "tails"),
-                new TurnOpened(shot.id(), 10, 20, score, score), shot,
-                new ShotRequest(shot.id(), -1, 90, 500, 500),
+                new TurnOpened(shot.id(), 10, 20, 224, 5, score, score), shot,
+                new ShotRequest(shot.id(), -1, 90, 1000, 100),
                 new ShotAccepted(shot.id(), 23, 640), view,
                 new TurnCommitted(shot.id(), Outcome.SETTLED, 100, 200, score, score, 1),
                 new Pause(MATCH, "disconnect"), new Resume(MATCH, 25), new Leave(MATCH, 1, "quit"),
@@ -52,9 +52,12 @@ public final class ProtocolProbe {
         rejects(() -> GolfCodec.read(new ByteArrayInputStream(new byte[]{0, 32, 0, 1})));
         rejects(() -> GolfCodec.read(new ByteArrayInputStream(new byte[]{0, 0, 0, 2, 99, 1})));
         rejects(() -> GolfCodec.read(new ByteArrayInputStream(new byte[]{0, 0, 0, 2, 1, 99})));
+        rejects(() -> GolfCodec.read(new ByteArrayInputStream(new byte[]{0, 0, 0, 2, 1, 1})));
+        rejects(() -> new ShotRequest(shot.id(), 1, 45, 1000, -101));
+        rejects(() -> new ShotRequest(shot.id(), 1, 0, 1000, 1));
         byte[] encoded = GolfCodec.encode(shot);
         byte[] invalidCharge = encoded.clone();
-        invalidCharge[42] = 2; invalidCharge[43] = 0; // 512, outside the shared 0..500 charge range.
+        invalidCharge[44] = 0; invalidCharge[45] = 101; // signed spin 101, outside -100..100.
         rejects(() -> GolfCodec.read(new ByteArrayInputStream(invalidCharge)));
         byte[] trailing = Arrays.copyOf(encoded, encoded.length + 1);
         int size = encoded.length - 4 + 1;
@@ -63,7 +66,7 @@ public final class ProtocolProbe {
         rejects(() -> GolfCodec.read(new ByteArrayInputStream(trailing)));
         rejects(() -> new ShotRequest(shot.id(), 0, 1, 1, 1));
         rejects(() -> new ShotRequest(shot.id(), 1, 91, 1, 1));
-        rejects(() -> new ShotRequest(shot.id(), 1, 1, 501, 1));
+        rejects(() -> new ShotRequest(shot.id(), 1, 1, 1001, 1));
         rejects(() -> new ShotId(MATCH, 0, 0, 0, 0));
         rejects(() -> new Hello(prints(), "knuckles"));
         rejects(() -> new ViewFrame(shot.id(), 1, 0, new byte[GolfCodec.MAX_FRAME_BYTES]));
@@ -80,7 +83,7 @@ public final class ProtocolProbe {
         receipts.openTurn(shot.id());
         check(receipts.accept(shot, 20).status() == ShotReceipts.Status.ACCEPTED, "first acceptance");
         check(receipts.accept(shot, 21).status() == ShotReceipts.Status.DUPLICATE, "same shot accepted once");
-        check(receipts.accept(new ShotRequest(shot.id(), -1, 25, 230, 410), 22).status()
+        check(receipts.accept(new ShotRequest(shot.id(), -1, 25, 640, -50), 22).status()
                 == ShotReceipts.Status.CONFLICT, "contradictory payload rejected");
         check(receipts.accept(request(id(0, 1)), 22).status() == ShotReceipts.Status.WRONG_TURN, "wrong owner rejected");
         check(receipts.accept(shot, 1, 22).status() == ShotReceipts.Status.WRONG_TURN, "sender cannot forge another owner");
