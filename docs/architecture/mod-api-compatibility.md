@@ -40,6 +40,14 @@ engineApiRange: ">=0.7.0 <0.8.0"
 Manifest `formatVersion: 1` is a separate wire-format version. It does not mean
 Mod API 1.x and must not be used to infer compiled-code compatibility.
 
+The controlled-entry follow-up changes `CourseControl.advanceEntryPresentation()`
+from `void` to `boolean`: it reports whether the row advanced an active entry
+fade. `presentationReady()` includes completion of the native released title
+overlay. Modes can hold a settled world during that final presentation and capture
+a reusable checkpoint afterward. This is an unpublished candidate signature
+change; rebuild compiled mods. The `0.7` pin and `ModApiVersion` description
+are updated together while the descriptor retains candidate `0.7.0`.
+
 The KiS2 trace-readiness follow-up adds semantic movement and checkpoint-ring
 rules, the saved ring bank in checkpoint/load snapshots, separate boss duck-frame
 selection, and an explicit title-to-level-select action plus post-reset menu
@@ -60,6 +68,20 @@ The Hidden Palace completion adds `SpecialStageProvider.resultsExitFadesToWhite(
 `true`: the Sonic 1/2 exit SFX and white fade; Sonic 3&K leaves silently through black) and
 `GameLoop.debugCompleteSpecialStageWithEmerald()`, the debug completion that capture tools
 request without reading a key binding. Both update the mutable `0.7` pin.
+
+The controlled-level additions expose `GameplayFrameController`, `CourseControl`,
+opaque session/hole/layout-tagged `CourseCheckpoint`, `MenuInput`, title act
+selection, and typed ROM-backed scene values/presenters. The default controller
+is absent, retaining stock admission. Controlled HOLD is a recorded mode row;
+SETUP_ONLY is not. Opaque course rollback excludes the engine-bound controller
+adapter by identity and preserves past debug history; actual act loads reset it.
+Prepared scenes carry value/art identities, never ROM bytes or mutable snapshots.
+The additive `PlayerPresentationPose.Kind.IDLE` selects a ROM-backed held idle
+view immediately after a roster switch; appendage selection remains internal
+and shares native tail scripts with the live renderer.
+Compiler-generated immutable enum constants and switch tables are now accepted
+by the static initializer validator; arbitrary author static objects remain rejected.
+These extend the mutable candidate pin and keep `0.7.0` unpublished.
 
 ## What the 0.7 candidate includes
 
@@ -274,6 +296,53 @@ host ignore `LEVEL_SELECT_ON_STARTUP`, route a title level-select exit to one-pl
 play, and ignore the in-level level-select key. Both are delegated by
 `DelegatingGameModule` and additive to the unpublished 0.7 candidate; the pin is
 updated in place.
+
+Putt Putt Paradise's course controller and bounded scene values extend this same
+unpublished candidate. Atlas residency lookup and packed `PatternVersion` data
+remain engine-internal presentation details; creators use the ROM-backed scene
+contract instead. The candidate pin is regenerated in place when removing the
+initial internal-sampler exposure; version/status and published pins are unchanged.
+
+
+Final Putt Putt Paradise polish keeps the mutable candidate controller facade
+semantic: `CourseControl.PlayerState` / `playerState`, `launchRolling` with native
+signed 8.8 velocities, and explicit `loadLevel(zone, act)` replace provisional
+ball/loft/EHZ-specific operations. Exact registered character construction is
+completed before the single live roster is replaced. Sound, shot limits and
+scoring remain creator-owned. `MenuInput.Pointer` adds shared logical menu mouse
+coordinates without adding a window handle to the creator signature. Both changes
+are represented by the regenerated `0.7` candidate pin; published pins and the
+release policy descriptor remain unchanged.
+
+The final presentation follow-up adds the bounded `RewindPresentation` record
+and optional controller request to the mutable 0.7 candidate. Default/null
+requests retain stock rendering. This is a view-only value: native admission,
+world checkpoints and undo permission remain unchanged. Candidate pins and
+`ModApiVersion` are refreshed while the release descriptor is retained; API version/status
+and immutable published baselines do not change.
+
+The turn-handoff follow-up adds `ButtonPrompts` (with its `Button` enum) and
+`CourseControl.buttonLabel(player, button)`. A prompt names one local player's own
+binding on that player's last intentional device: the bound key ("Space", "Right
+Shift"), or the physical pad button that produces the action in the assigned pad's
+family ("X", "Square", "West"); `REWIND` names the shared rewind key or the primary
+pad's bumper. Labels are presentation values derived from live bindings and never
+alter input, replay rows or gameplay. The regenerated 0.7 candidate pin adds 17
+signature lines; `ModApiVersion` documents the capability; the release descriptor,
+API version/status and published baselines are unchanged.
+
+
+Shot-audio follow-up promotes bounded reverse presentation into the mutable 0.7
+candidate. `SceneReplay` records immutable value scenes with adaptive interior
+sampling; `CourseControl.recordAudioReplay` returns a session-owned `AudioReplay`
+that records the final heard PCM and reverses it at the caller's view rate.
+The producer retains ownership of PCM buffers, cursors and sink transitions.
+Neither resource supplies gameplay state or changes developer rewind ownership.
+Creator rules still select permission, duration, checkpoint restore and score
+refund. Session teardown closes forgotten audio resources even after a creator
+cleanup failure. The candidate signature pin and `ModApiVersion` commentary are
+updated together; the release descriptor, candidate version and published pins
+remain unchanged. See the [creator replay recipe](../modding/content-mods.md#replay-a-view-and-its-audio).
 
 Mod scenes add the `com.openggf.mods.scene` package to the candidate surface:
 `ModScene`, `ModSceneFactory`, `SceneContext`, `SceneCanvas`, `SceneDraw`, `SceneImage`,

@@ -71,6 +71,46 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Direct level-load captures can hide title-route faults (2026-10-06, Putt Putt
+Paradise at `b34da10e4`): the footage and course tests matched physics while the
+real menu reset erased the selected act and controlled LEVEL rows froze the
+released native title overlay. Exercise menu input, exit fade, destination load
+and the overlay exit through `GameLoop.step`, then record the actual act and
+overlay lifetime. A headless test intentionally omits the locked title display;
+it still retains the native exit tail. Use a rendered production-route capture
+to cover the visible title-card phase, and restore the initial shot checkpoint
+to verify that completed title text does not return on rollback.
+
+Nonzero PCM can be constant DC (2026-10-06, Putt Putt Paradise polish): a
+captured Sonic 2 music track measured about −21 dBFS RMS while long windows
+contained an almost constant offset rather than music. Inspect mean and
+AC variance, flat-window duration and actual sequencer requests alongside RMS
+and loudness. One healthy opening window does not certify an entire capture.
+Compare stock and controlled playback through the same presentation/capture
+path, and interleave each service with its corresponding synthesized packet.
+The corrected course-entry path leaves the ROM-timed music publication in
+charge and services its pending countdown on held presentation rows.
+
+Palette publication can survive resource cleanup (2026-10-06): at `c20731b13`,
+S3K presentation followed by the first S2 native-graphics scene produced 24,783
+waterfall pixel differences with identical geometry and a four-color rotation.
+`TestSonic3kUnifiedAudioPresentationRomIntegration,TestGolfScenePresentation`
+reproduced the same failure in one reused fork on base and candidate, with no
+ROM skips; the scene class passed in a fresh invocation. Source inspection
+points to preserved palette-upload latch/pending state across graphics resource
+cleanup, with S2 lacking the publication profile that releases it. CPU palette
+bytes alone do not prove the native GPU view has published the same phase.
+
+Compact failure messages can be prefixes (2026-10-06): the retained category
+summary capped an SSZ rewind assertion at 2,048 characters, while its fresh XML
+message contained 2,915. Its `RewindObjectStateBlob@hex` text also varied across
+JVMs: that class's hash includes a `Class<?>` reference, so the hash is not a
+portable state comparison. Check the owning hash implementation before ignoring
+such text. Compare test identity, first-error frame and concrete fields, and
+state when only a bounded baseline prefix is available; do not claim a full
+message or full state match from it.
+
+
 Pitch is not note tempo (2026-10-02): accelerated sample-voice tests passed at
 `5637105e5c` while real SMPS songs retained normal note durations. Their chip
 render clock advanced faster, but the driver still received one service per
@@ -94,7 +134,9 @@ classes/build output, reproduced all 43 failure/error case keys and messages.
 `@RequiresRom` can retain an available `RomCache` handle while a later
 `RomTestUtils` lookup rereads reset configuration and returns null. A skipped
 baseline is not exonerating evidence. Match launch context before attributing
-failures; never rename or link ROMs to make the comparison pass.
+failures; never rename or link ROMs to make the comparison pass. Failed direct Maven
+invocations can retain older XML: compare selected class reports and their
+modification times, rather than summing the entire report directory.
 
 Playback surviving a prefix (2026-10-03): a run-chain prefix that closes only its
 comparator and timing owners leaves the process-wide `PlaybackDebugManager` movie

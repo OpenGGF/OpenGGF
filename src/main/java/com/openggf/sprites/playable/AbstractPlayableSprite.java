@@ -1834,11 +1834,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void publishRunAsPreviousAnimation() { controller.publishRunAsPreviousAnimation(); }
 
         public void setAnimationId(int animationId) {
+                if (com.openggf.game.mode.ControlledFrameRuntime.retainRolling(this)) {
+                        int roll = resolveAnimationId(CanonicalAnimation.ROLL);
+                        if (roll >= 0) animationId = roll;
+                }
                 this.animationId = Math.max(0, animationId);
         }
 
         public void setAnimationId(AnimationId animationId) {
-                this.animationId = Math.max(0, animationId.id());
+                setAnimationId(animationId.id());
         }
 
         public int getForcedAnimationId() {
@@ -4428,6 +4432,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * @param rolling true to enter rolling state, false to exit
          */
         public void setRolling(boolean rolling) {
+                if (!rolling && com.openggf.game.mode.ControlledFrameRuntime.retainRolling(this)) return;
                 if (this.rolling == rolling) {
                         if (rolling) {
                                 applyRollAnimationFromProfile(); setSkidding(false);

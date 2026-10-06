@@ -18,6 +18,7 @@ import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.configuration.WidescreenAspect;
 import com.openggf.graphics.pipeline.UiRenderPipeline;
+import com.openggf.graphics.shaderlib.RewindVhsEffectPass;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -56,6 +57,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
     private final HeadlessGameBoot boot;
     private final int width;
     private GameLoop loop;
+    private final RewindVhsEffectPass rewindEffect = new RewindVhsEffectPass();
     private AbstractPlayableSprite player;
     private Bk2FrameInput previousInput;
     private boolean closed;
@@ -106,6 +108,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
             throw new IllegalStateException("session is already booted");
         }
         loop = boot.boot(romPath, zone, act);
+        if (GameServices.configuration().getBoolean(SonicConfiguration.LIVE_REWIND_VHS_EFFECT)) {
+            rewindEffect.prewarm(width, HEIGHT, width, HEIGHT);
+        }
         LevelManager level = GameServices.level();
         showTitleCard = settings.showTitleCard();
         completeSpecialStage = settings.completeSpecialStage();
@@ -308,8 +313,16 @@ public final class GameplayCaptureSession implements AutoCloseable {
         }
         level.setClearColor();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        level.drawWithSpritePriority(GameServices.sprites(), includeSprites);
+        var controller = includeSprites ? com.openggf.game.mode.ControlledFrameRuntime.controller(
+                com.openggf.game.session.SessionManager.getCurrentGameplayMode()) : null;
+        if (controller == null || !controller.drawScene())
+            level.drawWithSpritePriority(GameServices.sprites(), includeSprites);
         graphics.flush();
+        if (controller != null) {
+            graphics.resetForFixedFunction();
+            controller.drawOverlay();
+            graphics.flushScreenSpace();
+        }
         var titleCard = showTitleCard ? loop.getTitleCardProvider() : null;
         if (titleCard != null && (loop.getCurrentGameMode() == GameMode.TITLE_CARD
                 || titleCard.isOverlayActive())) {
@@ -321,6 +334,13 @@ public final class GameplayCaptureSession implements AutoCloseable {
         UiRenderPipeline ui = graphics.getUiRenderPipeline();
         if (ui != null) {
             ui.renderFadePass();
+        }
+        if (GameServices.configuration().getBoolean(SonicConfiguration.LIVE_REWIND_VHS_EFFECT)) {
+            rewindEffect.apply(loop.liveRewindEffectIntensity(), loop.liveRewindEffectSpeed(),
+                    RewindVhsEffectPass.REWIND_SCROLL_DIRECTION,
+                    GameServices.configuration().getBoolean(SonicConfiguration.LIVE_REWIND_VHS_TEAR_BANDS),
+                    width, HEIGHT, graphics.getViewportX(), graphics.getViewportY(),
+                    graphics.getViewportWidth(), graphics.getViewportHeight());
         }
         glFinish();
         return ScreenshotCapture.captureFramebuffer(width, HEIGHT);
@@ -432,6 +452,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
         }
         closed = true;
         try {
+            rewindEffect.dispose();
             // The graphics singleton caches shader, atlas and palette GL objects that
             // belong to this window's context. Release them while the context is still
             // current, or a second session in the same process renders black frames.

@@ -63,7 +63,8 @@ public interface TitleScreenProvider {
     void setClearColor();
 
     /**
-     * Resets the manager to inactive state.
+     * Resets the manager to inactive state. The host reads the selected launch
+     * zone and act before calling this method, so a provider may clear its selection.
      */
     void reset();
 
@@ -106,13 +107,17 @@ public interface TitleScreenProvider {
     }
 
     /**
-     * Zone index a one-player title exit starts at, always on its first act.
+     * Zone index a one-player title exit starts at.
      * Stock titles start the first zone; a title that offers a zone choice
      * returns the selected index. Out-of-range values start the first zone.
      */
     default int startZoneIndex() {
         return 0;
     }
+
+    /** Logical act selected by an alternative title, defaulting to the first act.
+     * The host validates it against the selected zone and reads it before {@link #reset()}. */
+    default int startActIndex() { return 0; }
 
     default void setExitToLevelHandler(Runnable handler) {
         // Default: no-op.

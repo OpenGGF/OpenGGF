@@ -152,6 +152,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     Game game;
     GameModule gameModule;
     private boolean levelEntryBegun;
+    private com.openggf.game.presentation.LoadedLevelScene sceneResources;
+    private Level sceneResourceLevel;
+    private long sceneResourceGeneration = -1;
 
     public Game getGame() {
         return game;
@@ -159,6 +162,60 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     public GameModule getGameModule() {
         return gameModule;
+    }
+
+    /** Project the current visible course without ticking camera, objects, animation or loading windows. */
+    public com.openggf.game.presentation.ScenePresentationFrame captureScene(
+            long revision, com.openggf.game.presentation.PlayerPresentationPose pose) {
+        return captureScene(revision, pose, 0, 0);
+    }
+
+    /**
+     * Projects a bounded decoded-terrain envelope around the current native view.
+     * Surveying preserves the current animation/deformation phase and native
+     * visible object pass; it never moves the camera or loads another object window.
+     */
+    public com.openggf.game.presentation.ScenePresentationFrame captureScene(
+            long revision, com.openggf.game.presentation.PlayerPresentationPose pose, int marginX, int marginY) {
+        int width = camera.getWidth(), height = camera.getHeight();
+        if (marginX < 0 || marginX > width || marginY < 0 || marginY > height
+                || (long) (width + 2 * marginX) * (height + 2 * marginY) > 1_612_800) {
+            throw new IllegalArgumentException("Terrain survey envelope exceeds limits");
+        }
+        var resources = sceneResources();
+        var sprites = levelRenderer.captureSceneSpriteTable(spriteManager);
+        int[] horizontal = parallaxManager == null ? new int[cachedScreenHeight] : parallaxManager.getHScrollForShader().clone();
+        var renderMode = levelRenderer.getCurrentAdvancedRenderFrameState();
+        if (!renderMode.enableForegroundHeatHaze() && !renderMode.enablePerLineForegroundScroll()) {
+            // The production FG tile pass uses uniform camera X unless its render mode
+            // selects per-line scrolling. EHZ's unwritten final HScroll words affect BG only.
+            int foreground = (-camera.getXWithShake() & 0xFFFF) << 16;
+            for (int line = 0; line < horizontal.length; line++) horizontal[line] = foreground | (horizontal[line] & 0xFFFF);
+        }
+        int foregroundY = parallaxManager == null ? camera.getY() : parallaxManager.getVscrollFactorFG();
+        int backgroundY = parallaxManager == null ? 0 : parallaxManager.getVscrollFactorBG();
+        return resources.capture(revision, java.util.Objects.requireNonNull(pose), sprites, camera.getFocusedSprite(),
+                camera.getXWithShake(), camera.getYWithShake(), width, height,
+                horizontal, foregroundY, backgroundY, marginX, marginY);
+    }
+
+    /** Create a presentation-only consumer using art decoded from this session's own ROM load. */
+    public com.openggf.game.presentation.SceneViewPresenter createScenePresenter() {
+        return sceneResources().presenter(camera.getWidth(), camera.getHeight());
+    }
+
+    private com.openggf.game.presentation.LoadedLevelScene sceneResources() {
+        if (level == null) throw new IllegalStateException("No loaded course resources");
+        if (sceneResources == null || sceneResourceLevel != level || sceneResourceGeneration != completedProductionLoadGeneration) {
+            try {
+                sceneResources = new com.openggf.game.presentation.LoadedLevelScene(this, graphicsManager);
+                sceneResourceLevel = level;
+                sceneResourceGeneration = completedProductionLoadGeneration;
+            } catch (IOException e) {
+                throw new java.io.UncheckedIOException("ROM scene resources could not be decoded", e);
+            }
+        }
+        return sceneResources;
     }
 
     GameModule activeGameModule() {
@@ -775,6 +832,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (level == null) {
             return;
         }
+        // A creator title can select its session aspect after this manager was
+        // constructed. Trace gameplay can retain a native-width camera, so render
+        // geometry must use the resolved presentation dimensions independently.
+        cachedScreenWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
+        cachedScreenHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
         blockPixelSize = level.getBlockPixelSize();
         chunksPerBlockSide = level.getChunksPerBlockSide();
         debugRenderer = new LevelDebugRenderer(new LevelDebugContext(

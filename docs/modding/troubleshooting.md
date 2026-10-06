@@ -64,7 +64,7 @@ the remaining rows can be produced while validating one packed jar.
 | `DUPLICATE_CLASS` / `CLASS_ENTRY_NAME_MISMATCH` / `MALFORMED_CLASSFILE` | Rebuild unique valid class entries at paths matching their binary names. |
 | `RESERVED_ENGINE_PACKAGE` | Move creator classes out of `com.openggf.*`. |
 | `OBJECT_BASE_CONTRACT` | Extend a supported public mod object base rather than implementing internals directly. |
-| `STATIC_STATE_UNSUPPORTED` | Keep gameplay state on instances/session services; only compile-time primitive/String constants may be static. javac's own synthetic `$assertionsDisabled` flag (`assert`) and `$SwitchMap$` tables (`switch` over an enum, in a synthetic `Outer$1` class) are allowed, but a class initializer that does anything more is not. |
+| `STATIC_STATE_UNSUPPORTED` | Keep gameplay state on instances/session services. Literal compile-time primitive/String constants, verified simple immutable Java enums, and javac's synthetic assertion flags/enum switch tables are supported; arbitrary class initialization, mutable enums and other static arrays/objects are not. See [executable-mod trust](concepts/trust.md). |
 | `OBJECT_RECREATE_PATH_MISSING` | Implement the supported rewind recreation contract for every concrete mod object. |
 | `FINAL_SCALAR_REWIND_GAP` | Make changing scalar state capturable/restorable instead of uncaptured final instance state. |
 | `OBJECT_REFERENCE_REWIND_ID_MISSING` | Capture referenced objects by rewind identity and restore through the supported context. |

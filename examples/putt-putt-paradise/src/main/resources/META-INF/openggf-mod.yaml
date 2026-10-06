@@ -1,0 +1,14 @@
+formatVersion: 1
+id: putt-putt-paradise
+name: Putt Putt Paradise
+version: 0.1.0
+authors:
+  - OpenGGF contributors
+description: Sonic 2 Mini Golf. Putt or chip Sonic and Tails through Emerald Hill, with timed spindash charges and alternating turns.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s2
+entrypoint: paradise.PuttPuttParadiseMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

@@ -23,6 +23,8 @@ import com.openggf.audio.rewind.AudioCommandTimeline;
 public final class AudioPresentationProducer {
     private static final int CHANNELS = 2;
     private static final int MAX_CAPTURE_HANDLES = 32;
+    private static final int MAX_RECORDED_REPLAYS = 4;
+    private static final int MAX_REPLAY_SECONDS = 120;
 
     /**
      * Ceiling on {@link #setForwardRate}. Each whole multiple costs another
@@ -48,6 +50,8 @@ public final class AudioPresentationProducer {
     private final AudioPresentationFrameView frameView;
     private final CaptureHandle[] captures =
             new CaptureHandle[MAX_CAPTURE_HANDLES];
+    private final RecordedReplay[] recordedReplays =
+            new RecordedReplay[MAX_RECORDED_REPLAYS];
     private final Consumer<AudioPresentationCommand> commandApplier;
     private final IdentityTokenRegistry diagnosticIdentityTokens =
             new IdentityTokenRegistry();
@@ -69,6 +73,8 @@ public final class AudioPresentationProducer {
     private int sourceSampleRemainder;
     private boolean forwardSfxTrackStopped;
     private int captureCount;
+    private int recordedReplayCount;
+    private RecordedReplay activeReplay;
     private int releaseCrossfadeRemaining;
     private short lastReverseLeft;
     private short lastReverseRight;
@@ -280,6 +286,12 @@ public final class AudioPresentationProducer {
                 if (historyArmed) {
                     history.write(pcm, stereoFrames);
                 }
+                for (int index = 0; index < recordedReplayCount; index++) {
+                    RecordedReplay replay = recordedReplays[index];
+                    if (replay.recording) {
+                        replay.recordedHistory.write(pcm, stereoFrames);
+                    }
+                }
             } else if (mode == PresentationMode.SILENT) {
                 if (smpsSession != null) {
                     applyPendingSessionCommandsTransactionally();
@@ -300,10 +312,12 @@ public final class AudioPresentationProducer {
                 pcm = silence;
             } else {
                 Arrays.fill(reversePcm, 0, stereoFrames * CHANNELS, (short) 0);
-                if (reverseCursor != null) {
+                if (activeReplay != null) {
+                    activeReplay.cursor.readPrevious(reversePcm, stereoFrames);
+                } else if (reverseCursor != null) {
                     reverseCursor.readPrevious(reversePcm, stereoFrames);
                 }
-                if (reverseActive && stereoFrames > 0) {
+                if ((reverseActive || activeReplay != null) && stereoFrames > 0) {
                     rememberLastReverseFrame(reversePcm, stereoFrames);
                 }
                 pcm = reversePcm;
@@ -352,6 +366,9 @@ public final class AudioPresentationProducer {
 
     public void beginReverse(double rate) {
         assertOwnerBoundary();
+        if (activeReplay != null) {
+            throw new IllegalStateException("a recorded replay owns reverse audio presentation");
+        }
         discardPreparedRestore(preparedSelectedRestore);
         preparedSelectedRestore = null;
         selectedRestore = null;
@@ -367,6 +384,149 @@ public final class AudioPresentationProducer {
         assertOwnerBoundary();
         if (reverseCursor != null) {
             reverseCursor.setRate(rate);
+        }
+    }
+
+    /**
+     * Records final forward presentation packets into a separate bounded PCM
+     * history. The recording never arms or changes developer rewind history;
+     * pauses and reverse output do not append samples. Reaching the duration
+     * bound drops the oldest samples, and reverse exhaustion yields silence.
+     */
+    public RecordedReplay recordReplay(int maxSeconds) {
+        assertOwnerBoundary();
+        if (maxSeconds < 1 || maxSeconds > MAX_REPLAY_SECONDS) {
+            throw new IllegalArgumentException("replay duration must be between 1 and 120 seconds");
+        }
+        if (recordedReplayCount == recordedReplays.length) {
+            throw new IllegalStateException("recorded audio replay capacity exhausted");
+        }
+        int capacityFrames = Math.multiplyExact(sampleRate, maxSeconds);
+        Math.multiplyExact(capacityFrames, CHANNELS);
+        RecordedReplay replay = new RecordedReplay(capacityFrames);
+        recordedReplays[recordedReplayCount++] = replay;
+        return replay;
+    }
+
+    /** Presentation-only reverse ownership, independent of logical rewind. */
+    public boolean isReplayReverseActive() {
+        return activeReplay != null;
+    }
+
+    /**
+     * Internal owner-thread handle for a captured presentation. Beginning
+     * reverse seals the recording; stopping keeps the sealed clip available
+     * for another playback. Closing releases its history and recording slot.
+     * None of these operations restore or stop sound-driver or voice state.
+     */
+    public final class RecordedReplay implements AutoCloseable {
+        private PcmHistoryRing recordedHistory;
+        private PcmHistoryRing.ReverseCursor cursor;
+        private boolean recording = true;
+        private boolean replayClosed;
+
+        private RecordedReplay(int capacityFrames) {
+            recordedHistory = new PcmHistoryRing(capacityFrames);
+        }
+
+        public void beginReverse(double rate) {
+            assertUsable();
+            if (reverseActive || activeReplay != null) {
+                throw new IllegalStateException("another owner already presents reverse audio");
+            }
+            PcmHistoryRing.ReverseCursor preparedCursor = recordedHistory.createReverseCursor();
+            preparedCursor.setRate(rate);
+            // A sink failure must leave this recording and the existing
+            // presentation state usable for a retry.
+            sink.onReverseBoundary();
+            cancelReleaseCrossfade();
+            cursor = preparedCursor;
+            recording = false;
+            activeReplay = this;
+        }
+
+        public void setRate(double rate) {
+            assertUsable();
+            if (cursor != null) {
+                cursor.setRate(rate);
+            }
+        }
+
+        /** Stops only this clip's reverse presentation; live audio resumes in place. */
+        public void stop() {
+            assertUsable();
+            if (activeReplay != this) {
+                return;
+            }
+            // Flush queued reverse packets before releasing ownership. A
+            // failure leaves the same cursor selected for a retry.
+            sink.onReverseBoundary();
+            cursor = null;
+            activeReplay = null;
+            armReleaseCrossfade();
+        }
+
+        public boolean isClosed() {
+            return replayClosed;
+        }
+
+        @Override
+        public void close() {
+            if (replayClosed) {
+                return;
+            }
+            stop();
+            release();
+            removeRecording();
+        }
+
+        /**
+         * Releases a creator resource even if its sink cannot flush. The boundary
+         * failure is still reported, but cannot strand audible reverse ownership
+         * after a session has discarded its resources. Explicit stop remains retryable.
+         */
+        public void dispose() {
+            if (replayClosed) return;
+            assertOwnerBoundary();
+            try { close(); }
+            finally {
+                if (!replayClosed) {
+                    if (activeReplay == this) {
+                        activeReplay = null;
+                        armReleaseCrossfade();
+                    }
+                    release();
+                    removeRecording();
+                }
+            }
+        }
+
+        private void removeRecording() {
+            for (int index = 0; index < recordedReplayCount; index++) {
+                if (recordedReplays[index] == this) {
+                    int remaining = recordedReplayCount - index - 1;
+                    if (remaining > 0) {
+                        System.arraycopy(recordedReplays, index + 1,
+                                recordedReplays, index, remaining);
+                    }
+                    recordedReplays[--recordedReplayCount] = null;
+                    break;
+                }
+            }
+        }
+
+        private void assertUsable() {
+            assertOwnerBoundary();
+            if (replayClosed) {
+                throw new IllegalStateException("recorded audio replay is closed");
+            }
+        }
+
+        private void release() {
+            replayClosed = true;
+            recording = false;
+            cursor = null;
+            recordedHistory = null;
         }
     }
 
@@ -416,11 +576,7 @@ public final class AudioPresentationProducer {
         selectedRestore = null;
         selectedRestoreResolver = null;
         preparedSelectedRestore = null;
-        if (hasLastReverseFrame && reverseFrameOutput
-                && crossfadeFrames > 0) {
-            releaseCrossfadeRemaining = crossfadeFrames;
-        }
-        reverseFrameOutput = false;
+        armReleaseCrossfade();
         sink.onReverseBoundary();
     }
 
@@ -431,7 +587,9 @@ public final class AudioPresentationProducer {
         selectedRestoreResolver = null;
         discardPreparedRestore(preparedSelectedRestore);
         preparedSelectedRestore = null;
-        cancelReleaseCrossfade();
+        if (activeReplay == null) {
+            cancelReleaseCrossfade();
+        }
     }
 
     public void setHistoryArmed(boolean armed) {
@@ -889,6 +1047,12 @@ public final class AudioPresentationProducer {
             }
         }
         captureCount = 0;
+        for (int index = 0; index < recordedReplayCount; index++) {
+            recordedReplays[index].release();
+            recordedReplays[index] = null;
+        }
+        recordedReplayCount = 0;
+        activeReplay = null;
         PreparedPresentationRestore prepared =
                 preparedSelectedRestore;
         preparedSelectedRestore = null;
@@ -1316,6 +1480,13 @@ public final class AudioPresentationProducer {
         hasLastReverseFrame = false;
         reverseFrameOutput = false;
         releaseCrossfadeRemaining = 0;
+    }
+
+    private void armReleaseCrossfade() {
+        if (hasLastReverseFrame && reverseFrameOutput && crossfadeFrames > 0) {
+            releaseCrossfadeRemaining = crossfadeFrames;
+        }
+        reverseFrameOutput = false;
     }
 
     private static short crossfade(

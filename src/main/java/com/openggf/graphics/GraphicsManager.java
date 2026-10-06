@@ -641,6 +641,7 @@ public class GraphicsManager {
 	}
 
 	public void updatePatternTexture(Pattern pattern, int patternId) {
+		// Native null uploads allocate residency but leave existing GPU bytes intact.
 		ensurePatternAtlas();
 		if (headlessMode || !glInitialized) {
 			patternAtlas.updatePatternHeadless(pattern, patternId);
@@ -1966,6 +1967,11 @@ public class GraphicsManager {
 			return spritePriorityShaderProgram;
 		}
 		return currentShaderProgram;
+	}
+
+	/** Immutable local cache sample for ROM-recipe projection; never supplies guest art content. */
+	SpritePresentation.PatternVersion scenePatternSample(int patternId) {
+		return patternAtlas == null ? null : patternAtlas.scenePatternSample(patternId);
 	}
 
 	/**

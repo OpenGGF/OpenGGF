@@ -2137,6 +2137,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 
 			@Override
 			public void restore(com.openggf.game.rewind.snapshot.SpriteManagerSnapshot s) {
+				com.openggf.game.mode.ControlledFrameRuntime.prepareRoster(
+						com.openggf.game.session.SessionManager.getCurrentGameplayMode(), s);
 				frameCounter = s.frameCounter();
 				java.util.Set<String> snapshotCodes = new java.util.HashSet<>();
 				for (com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry entry : s.sprites()) {

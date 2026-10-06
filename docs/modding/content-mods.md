@@ -10,7 +10,7 @@ standalone games. Mods are discovered from the
 process `mods/` directory at restart; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
 
-The current Mod API is the unpublished, mutable `0.7.0` candidate on `next`; no
+The current Mod API is the unpublished, mutable `0.7.0` candidate on `develop`; no
 creator contract has been published yet. Maintained samples should
 declare `engineApiRange: ">=0.7.0 <0.8.0"`; see the
 [compatibility guide](../architecture/mod-api-compatibility.md). Start with the
@@ -343,3 +343,157 @@ enabled, only the named art lookup is decorated.
 
 For the complete CLI invocation and launcher details, see [the `ggfmod` guide](ggfmod.md).
 For streamed stock-music replacement metadata, see [Music packs](music-packs.md).
+
+## Controlled level modes and course views
+
+Return a stable `GameplayFrameController` from a patch's module and register that
+same controller through `rewindAdapters()` if its mode state is rewindable.
+The host invokes `beforeTick(CourseControl, LogicalInputSnapshot)` once per mode
+row: `false` holds course physics, objects, clocks, animation and PLC work; `true`
+admits one native step with neutral player input. `afterTick` receives whether
+that step ran. Keep aim, menus and feedback in the controller; keep physics in
+native gameplay. Stock modules return no controller and retain their normal path.
+Initial setup rows are excluded from movie/history input; subsequent HOLD rows
+are included. Released native title-card text continues its presentation exit,
+including its normal control-lock ownership, on controlled rows. Pending entry
+music also retains its native presentation countdown. `presentationReady()`
+waits for the entry fade and title overlay to finish; capture the first reusable
+course checkpoint after that boundary so rollback cannot bring an entry card back.
+`advanceEntryPresentation()` returns whether it serviced an active fade on this
+row. A mode can settle its initial ball through those fade rows, then hold the
+settled world while the remaining title text exits.
+Window focus and configured keyboard pause freeze both native and
+creator rows; the configured frame-step key admits one row while paused. Start
+remains available for the creator's own menu. Holding Escape services the host's
+return fade independently of HOLD or pause. `allowsDebugRewind()` controls admission of live developer rewind.
+Modes with their own rewind allowance should return false in every mode so the
+developer shortcut cannot bypass it. `CourseControl.rewindHeld()` supplies the
+configured rewind key/primary-pad bumper for the current live row, independent
+of the developer rewind enabled setting; the controller owns its press latch.
+It is false while a logical movie override is active. Supply an A-operated menu
+command for Genesis movie replay, whose controller rows cannot encode that key
+or bumper. This accessor is part of the unpublished 0.7 candidate surface; its
+normalized pin is regenerated without changing the policy/version descriptor.
+
+`GameplayFrameController.rewindPresentation()` optionally returns a finite,
+bounded `RewindPresentation` value for creator-owned reverse playback. The host
+uses its existing VHS pass and settings; the value cannot seek history, restore
+world state or grant rewind permission. Stock controllers and null requests have
+no effect. Host pause suppresses the creator request. Keep playback and allowances
+in the mod, as Putt Putt Paradise does, rather than calling developer rewind.
+
+### Replay a view and its audio
+
+`SceneReplay` records immutable ROM-backed scenes into an 8 MiB / 128-sample
+history. It preserves both endpoints and reduces the interior sample density
+as a recording grows. The mod chooses the tick and playback speed; the helper
+knows nothing about shots, scores or rewind allowances. `frame(revision)` returns
+a fresh revision for the normal scene presenter. Its snapshot contains view
+values, never gameplay objects or renderer allocations.
+
+`CourseControl.recordAudioReplay(maxSeconds)` records the **actual final PCM**
+heard during forward presentation. Its opaque `AudioReplay` is independent of
+developer history, works with developer rewind disabled, and owns no logical
+sound-driver restore. Pause produces silence without advancing the clip.
+Choose enough time for your longest recording, including PAL presentation.
+The host bounds recordings to 1–120 seconds and four live leases per audio producer; an exhausted
+bounded tail yields silence instead of audio from before the recording began.
+Close a lease on settlement, cancellation or replay completion; closing releases
+its ownership even if a failed sink flush reports an exception. Session teardown
+also closes forgotten leases if a creator's cleanup fails.
+
+The controller pattern is small:
+
+```java
+import com.openggf.audio.AudioReplay;
+import com.openggf.game.mode.CourseCheckpoint;
+import com.openggf.game.presentation.SceneReplay;
+
+// Capture your reusable world before the action; keep budgets/scores separately.
+CourseCheckpoint before = course.capture();
+SceneReplay views = new SceneReplay();
+views.record(0, initialScene);
+AudioReplay sound = course.recordAudioReplay(80); // immediately before release
+
+// afterTick, for admitted forward rows only:
+if (views.wantsSample(++elapsed)) views.record(elapsed, currentScene);
+
+// When your rules accept a rewind, hold world simulation:
+views.begin(elapsed, speed, latestScene);
+sound.beginReverse(speed);
+
+// Each unpaused reverse beforeTick:
+if (!views.atOrigin()) {
+    views.step();                    // draw views.frame(nextRevision)
+} else {
+    sound.close();                   // previous row presented the final PCM
+    course.restore(before);          // one rollback, after reverse playback
+    views.clear();
+}
+// Return false during this reverse sequence. Close sound on all other exits.
+```
+
+`GameplayFrameController.presentationPaused()` supplies the audio hold;
+`rewindPresentation()` independently requests the user's configured VHS effect.
+Release crossfades back to the live voices without stopping music, truncating
+developer history or making scores rewindable. A second reverse owner is rejected
+before changing the existing selection. Use `AudioReplay.setRate` if your view
+speed changes; finite positive rates up to 64 are supported.
+
+Network mods publish their authoritative replay phase/rate and close local clips
+at the accepted result. A clip contains what that machine actually heard, so it
+is a local presentation resource, not a snapshot or wire payload. If a peer joins
+mid-action it has no earlier local audio to replay; do not invent that missing
+history. Putt Putt Paradise's thin `ShotReplay` shows how a mod layers its duration
+policy over these generic tools.
+
+`CourseControl.capture()` returns an opaque whole-course checkpoint. Restore
+validates session, loaded hole and registry generation before changing character,
+world or audio. The controller adapter is excluded by its engine-bound identity,
+so a shot's ledger can survive course rollback; creator key prefixes do not grant
+exemption. Full debug rewind restores the controller too. Course replacement
+invalidates speculative future history and preserves past; actual act loads reset
+history. Checkpoints are in-process handles, not a network format.
+
+`CourseControl.playerState()` returns centre coordinates, native 8.8 speeds,
+registered character identity and support/camera observations. `launchRolling`
+accepts a creator-calculated facing, X/Y/ground impulse and airborne flag;
+it validates signed native speeds, corrects rolling radii and releases support.
+The creator chooses loft, spin, power and sounds. `loadLevel(zone, act)` loads an
+explicit module-owned destination; `selectCharacter(code)` requires an exact
+registered character and constructs it before replacing the single main roster.
+This capability has no golf/zone/character-name restrictions. Controllers
+can retain rolling without enabling pinball's minimum-speed boost, draw a
+presentation-only scene/overlay, and request title return. Use session overrides
+for selected characters and viewport rather than writing user preferences.
+
+`LevelManager.captureScene()` captures prepared terrain, object/player tiles,
+palette and procedural primitives. `SceneFrameCodec` provides a bounded value
+encoding; `SceneViewPresenter` resolves art identities from the local ROM and
+composes or draws a read-only view. It never steps the recipient's world, loads
+objects from the sender, or accepts ROM/art bytes as a fallback.
+`PlayerPresentationPose` selects a native displayed frame or a ROM-backed idle,
+duck or spindash view. These held views include native appendages such as Tails'
+tails and use the caller's presentation clock, without changing animation,
+physics or dynamic-art clocks in the playable world.
+[Putt Putt Paradise](../../examples/putt-putt-paradise/README.md) demonstrates
+independent golfer checkpoints and a host-authoritative direct TCP room. Its
+transport is separate from time-attack ghost races.
+
+
+Module title screens can read `MenuInput.pointer(input, width, height)`, an
+immutable logical-coordinate `Pointer` with `inside`, left/right press edges and
+`over(left, top, width, height)`. The engine shares its letterbox/framebuffer
+mapper with mod scenes; menus own their hit regions and hover policy. A missing
+window, unseen pointer, headless graphics or logical movie override produces
+`Pointer.none()`. Mouse state is physical presentation input and never replaces
+recorded controller rows. [Putt Putt Paradise's source guide](../../examples/putt-putt-paradise/README.md#learn-from-this-example)
+walks through registration, one controlled shot and safe extension points.
+
+Gameplay prompts should name the player's actual control rather than a fixed key.
+`ButtonPrompts.label(input, player, button)` (or `CourseControl.buttonLabel` inside a
+controlled level) returns the incoming player's own binding: P1's A defaults to
+"Space" and P2's to "Right Shift", remaps are followed, and a player whose last
+intentional input came from their pad sees that pad family's physical button. An
+empty result means neither device can produce the button. `MenuInput.confirmLabel`
+remains the fixed menu-confirm prompt and is not a substitute for a player binding.

@@ -177,7 +177,7 @@ public final class ConfigCatalog {
         put(LIVE_REWIND_TAPE_COAST_MIN_STEPS, of("rewind", "tapeCoastMinSteps", DOUBLE,
                 "Minimum rewind steps per tick; below 1.0 gives slow-motion rewind"));
         put(LIVE_REWIND_VHS_EFFECT, of("rewind", "vhsEffect", BOOL,
-                "Render a VHS picture-search effect while live rewind is active"));
+                "Render a VHS picture-search effect during live or controller-owned rewind"));
         put(LIVE_REWIND_VHS_TEAR_BANDS, of("rewind", "vhsTearBands", BOOL,
                 "Include the scrolling tear bands in the VHS rewind effect"));
         put(REWIND_HISTORY_SECONDS, of("rewind", "historySeconds", INT,

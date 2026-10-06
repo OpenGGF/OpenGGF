@@ -100,6 +100,7 @@ CF-ANNOTATION TYPE com.openggf.architecture.CompositionRoot visible @com.openggf
 CF-ANNOTATION TYPE com.openggf.architecture.CompositionRoot visible @java.lang.annotation.Retention(value=java.lang.annotation.RetentionPolicy.RUNTIME)
 CF-ANNOTATION TYPE com.openggf.architecture.CompositionRoot visible @java.lang.annotation.Target(value=[java.lang.annotation.ElementType.TYPE])
 CF-ANNOTATION TYPE com.openggf.audio.AudioManager visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.AudioReplay visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.ChannelType visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.GameAudioProfile visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.GameAudioProfile$MusicDuringOverridePolicy visible @com.openggf.game.ModApi
@@ -193,11 +194,15 @@ CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$VolMode visible @c
 CF-ANNOTATION TYPE com.openggf.camera.Camera visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.configuration.SonicConfiguration visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.configuration.SonicConfigurationService visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.control.ButtonPrompts visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.control.ButtonPrompts$Button visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.GamepadStateSource visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.GamepadStateSource$DeviceState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.InputBindings visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.InputHandler visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.LogicalInputSnapshot visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.control.MenuInput visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.control.MenuInput$Pointer visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.PlayerInputState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.data.Game visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.data.PlayerSpriteArtProvider visible @com.openggf.game.ModApi
@@ -422,6 +427,10 @@ CF-ANNOTATION TYPE com.openggf.game.ghost.GhostRenderRegistry$GhostLayerRenderer
 CF-ANNOTATION TYPE com.openggf.game.launch.LaunchProfile visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.launch.LaunchProfile$Row visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.launch.LaunchProfileStore visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.mode.CourseCheckpoint visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.mode.CourseControl visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.mode.CourseControl$PlayerState visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.mode.GameplayFrameController visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.modzone.ModObjectZoneSet visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.modzone.ModPaletteClaim visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.modzone.ModZoneAdapter visible @com.openggf.game.ModApi
@@ -466,6 +475,23 @@ CF-ANNOTATION TYPE com.openggf.game.patch.ResolutionContext visible @com.openggf
 CF-ANNOTATION TYPE com.openggf.game.patch.ResolutionResult visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.patch.ResolutionResult$LaunchAborted visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.patch.ResolutionResult$Resolved visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.PlayerPresentationPose visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.PlayerPresentationPose$Kind visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.RewindPresentation visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.SceneFrameCodec visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.SceneImage visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePlayerPose visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePresentationFrame visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePresentationFrame$ArtReference visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePresentationFrame$Layer visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePresentationFrame$Primitive visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePresentationFrame$Tile visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePresentationFrame$Vertex visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.SceneReplay visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.SceneReplay$Sample visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.SceneReplay$State visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.SceneViewPresenter visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.profiles.touchresponse.TouchActorContextPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode visible @com.openggf.game.ModApi
@@ -1187,6 +1213,7 @@ CONSTRUCTOR com.openggf.control.InputHandler public  <init>()
 CONSTRUCTOR com.openggf.control.InputHandler public  <init>(java.util.function.Supplier<com.openggf.control.InputBindings>)
 CONSTRUCTOR com.openggf.control.InputHandler public  <init>(java.util.function.Supplier<com.openggf.control.InputBindings>,com.openggf.control.GamepadStateSource)
 CONSTRUCTOR com.openggf.control.LogicalInputSnapshot public  <init>(com.openggf.control.PlayerInputState,com.openggf.control.PlayerInputState,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.control.MenuInput$Pointer public  <init>(int,int,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.control.PlayerInputState public  <init>(int,int,int,int,boolean,boolean)
 CONSTRUCTOR com.openggf.data.Game public  <init>()
 CONSTRUCTOR com.openggf.data.Rom public  <init>()
@@ -1293,6 +1320,7 @@ CONSTRUCTOR com.openggf.game.launch.LaunchProfile public  <init>(boolean,java.la
 CONSTRUCTOR com.openggf.game.launch.LaunchProfileStore public  <init>(com.openggf.configuration.SonicConfigurationService)
 CONSTRUCTOR com.openggf.game.launch.LaunchProfileStore public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.game.patch.ModuleResolutionService,com.openggf.game.patch.ModuleResolutionService$PreparedLaunch)
 CONSTRUCTOR com.openggf.game.launch.LaunchProfileStore public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.game.patch.ModuleResolutionService,com.openggf.game.patch.ResolutionContext)
+CONSTRUCTOR com.openggf.game.mode.CourseControl$PlayerState public  <init>(java.lang.String,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean,int,int,int,int,int)
 CONSTRUCTOR com.openggf.game.modzone.ModPaletteClaim public  <init>(int,int,int)
 CONSTRUCTOR com.openggf.game.modzone.ModZoneHostMetadata public  <init>(com.openggf.game.modzone.ModObjectZoneSet)
 CONSTRUCTOR com.openggf.game.modzone.ModZoneLevelData public  <init>(int,int,int,int,int,int,int,int,int,byte[],byte[],byte[],byte[],byte[],byte[],byte[],byte[],int[],int[],byte[][],java.util.Optional<com.openggf.game.modzone.ModZoneHostMetadata>,java.util.List<com.openggf.game.modzone.ModPaletteClaim>,java.util.List<com.openggf.level.objects.ObjectSpawn>,java.util.List<com.openggf.level.rings.RingSpawn>,int,int,int)
@@ -1318,6 +1346,18 @@ CONSTRUCTOR com.openggf.game.patch.ResolutionResult$LaunchAborted public  <init>
 CONSTRUCTOR com.openggf.game.patch.ResolutionResult$LaunchAborted public  <init>(com.openggf.game.patch.PatchOwner,java.lang.String,java.lang.Throwable,java.util.Set<com.openggf.game.patch.PatchOwner>)
 CONSTRUCTOR com.openggf.game.patch.ResolutionResult$Resolved public  <init>(com.openggf.game.GameModule)
 CONSTRUCTOR com.openggf.game.patch.ResolutionResult$Resolved public  <init>(com.openggf.game.GameModule,java.util.Map<com.openggf.game.patch.PatchOwner,java.lang.Throwable>)
+CONSTRUCTOR com.openggf.game.presentation.PlayerPresentationPose public  <init>(com.openggf.game.presentation.PlayerPresentationPose$Kind,long,int)
+CONSTRUCTOR com.openggf.game.presentation.RewindPresentation public  <init>(float,float)
+CONSTRUCTOR com.openggf.game.presentation.SceneImage public  <init>(int,int,int[])
+CONSTRUCTOR com.openggf.game.presentation.ScenePlayerPose public  <init>(java.lang.String,int,int,com.openggf.game.presentation.PlayerPresentationPose)
+CONSTRUCTOR com.openggf.game.presentation.ScenePresentationFrame public  <init>(long,int,int,int,int,int,int,int[],java.util.List<com.openggf.game.presentation.ScenePresentationFrame$Tile>,java.util.List<com.openggf.game.presentation.ScenePresentationFrame$Primitive>)
+CONSTRUCTOR com.openggf.game.presentation.ScenePresentationFrame$ArtReference public  <init>(java.lang.String,int)
+CONSTRUCTOR com.openggf.game.presentation.ScenePresentationFrame$Primitive public  <init>(int,com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind,int,java.util.List<com.openggf.game.presentation.ScenePresentationFrame$Vertex>)
+CONSTRUCTOR com.openggf.game.presentation.ScenePresentationFrame$Tile public  <init>(com.openggf.game.presentation.ScenePresentationFrame$Layer,com.openggf.game.presentation.ScenePresentationFrame$ArtReference,int,boolean,boolean,boolean,int,int,int,int,int,int,int,int)
+CONSTRUCTOR com.openggf.game.presentation.ScenePresentationFrame$Vertex public  <init>(int,int,int,int,int)
+CONSTRUCTOR com.openggf.game.presentation.SceneReplay public  <init>()
+CONSTRUCTOR com.openggf.game.presentation.SceneReplay$Sample public  <init>(int,byte[])
+CONSTRUCTOR com.openggf.game.presentation.SceneReplay$State public  <init>(java.util.List<com.openggf.game.presentation.SceneReplay$Sample>,int,int,int,boolean)
 CONSTRUCTOR com.openggf.game.profiles.touchresponse.TouchResponseProfile public  <init>(com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode,boolean,boolean,boolean,com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability,int,boolean,com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy,com.openggf.game.profiles.touchresponse.TouchActorContextPolicy,com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy)
 CONSTRUCTOR com.openggf.game.profiles.touchresponse.TouchResponseProfile public  <init>(com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode,boolean,boolean,boolean,com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability,int,com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy,com.openggf.game.profiles.touchresponse.TouchActorContextPolicy,com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy)
 CONSTRUCTOR com.openggf.game.recording.RecordingDeterminismMetadata public  <init>(java.lang.Integer,java.lang.Long)
@@ -1347,6 +1387,7 @@ CONSTRUCTOR com.openggf.game.rewind.RewindDeterminismAuditor public  <init>()
 CONSTRUCTOR com.openggf.game.rewind.RewindDeterminismAuditor public  <init>(java.util.function.Consumer<java.lang.String>)
 CONSTRUCTOR com.openggf.game.rewind.RewindRegistry public  <init>()
 CONSTRUCTOR com.openggf.game.rewind.RewindRegistry public  <init>(com.openggf.debug.SectionProfiler)
+CONSTRUCTOR com.openggf.game.rewind.RewindRegistry public  <init>(com.openggf.debug.SectionProfiler,com.openggf.game.mode.GameplayFrameController)
 CONSTRUCTOR com.openggf.game.rewind.identity.ObjectRefId public  <init>(int,int,int,int,com.openggf.game.rewind.identity.ObjectRefKind)
 CONSTRUCTOR com.openggf.game.rewind.identity.PlayerRefId public  <init>(int)
 CONSTRUCTOR com.openggf.game.rewind.identity.RewindIdentityTable public  <init>()
@@ -1898,6 +1939,7 @@ FIELD com.openggf.EscapeToMasterTitleController public,static,final java.lang.St
 FIELD com.openggf.EscapeToMasterTitleController public,static,final java.lang.String MESSAGE
 FIELD com.openggf.EscapeToMasterTitleController public,static,final java.lang.String RETURN_MESSAGE
 FIELD com.openggf.LevelFrameResult public,static,final com.openggf.LevelFrameResult GAMEPLAY_FRAME
+FIELD com.openggf.LevelFrameResult public,static,final com.openggf.LevelFrameResult HELD
 FIELD com.openggf.LevelFrameResult public,static,final com.openggf.LevelFrameResult PAUSED
 FIELD com.openggf.LevelFrameResult public,static,final com.openggf.LevelFrameResult SETUP_ONLY
 FIELD com.openggf.audio.ChannelType public,static,final com.openggf.audio.ChannelType DAC
@@ -2236,6 +2278,11 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration UP
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration VERSION
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration WIDESCREEN_DEADZONE_MODE
+FIELD com.openggf.control.ButtonPrompts$Button public,static,final com.openggf.control.ButtonPrompts$Button A
+FIELD com.openggf.control.ButtonPrompts$Button public,static,final com.openggf.control.ButtonPrompts$Button B
+FIELD com.openggf.control.ButtonPrompts$Button public,static,final com.openggf.control.ButtonPrompts$Button C
+FIELD com.openggf.control.ButtonPrompts$Button public,static,final com.openggf.control.ButtonPrompts$Button REWIND
+FIELD com.openggf.control.ButtonPrompts$Button public,static,final com.openggf.control.ButtonPrompts$Button START
 FIELD com.openggf.debug.DebugColor public,static,final com.openggf.debug.DebugColor BLACK
 FIELD com.openggf.debug.DebugColor public,static,final com.openggf.debug.DebugColor BLUE
 FIELD com.openggf.debug.DebugColor public,static,final com.openggf.debug.DebugColor CYAN
@@ -2562,6 +2609,24 @@ FIELD com.openggf.game.patch.ModuleResolutionService$LaunchPolicy public,static,
 FIELD com.openggf.game.patch.ModuleResolutionService$LaunchPolicy public,static,final com.openggf.game.patch.ModuleResolutionService$LaunchPolicy STANDARD
 FIELD com.openggf.game.patch.PatchEnablement public,static,final com.openggf.game.patch.PatchEnablement ALL_ENABLED
 FIELD com.openggf.game.patch.PatchEnablement public,static,final int BUILTIN_ORDER
+FIELD com.openggf.game.presentation.PlayerPresentationPose$Kind public,static,final com.openggf.game.presentation.PlayerPresentationPose$Kind DUCK
+FIELD com.openggf.game.presentation.PlayerPresentationPose$Kind public,static,final com.openggf.game.presentation.PlayerPresentationPose$Kind IDLE
+FIELD com.openggf.game.presentation.PlayerPresentationPose$Kind public,static,final com.openggf.game.presentation.PlayerPresentationPose$Kind NATIVE
+FIELD com.openggf.game.presentation.PlayerPresentationPose$Kind public,static,final com.openggf.game.presentation.PlayerPresentationPose$Kind SPINDASH
+FIELD com.openggf.game.presentation.RewindPresentation public,static,final com.openggf.game.presentation.RewindPresentation NONE
+FIELD com.openggf.game.presentation.SceneFrameCodec public,static,final int MAX_BYTES
+FIELD com.openggf.game.presentation.ScenePresentationFrame public,static,final int MAX_PRIMITIVES
+FIELD com.openggf.game.presentation.ScenePresentationFrame public,static,final int MAX_TILES
+FIELD com.openggf.game.presentation.ScenePresentationFrame public,static,final int SCHEMA
+FIELD com.openggf.game.presentation.ScenePresentationFrame$Layer public,static,final com.openggf.game.presentation.ScenePresentationFrame$Layer BACKGROUND
+FIELD com.openggf.game.presentation.ScenePresentationFrame$Layer public,static,final com.openggf.game.presentation.ScenePresentationFrame$Layer FOREGROUND
+FIELD com.openggf.game.presentation.ScenePresentationFrame$Layer public,static,final com.openggf.game.presentation.ScenePresentationFrame$Layer OBJECT
+FIELD com.openggf.game.presentation.ScenePresentationFrame$Layer public,static,final com.openggf.game.presentation.ScenePresentationFrame$Layer PLAYER
+FIELD com.openggf.game.presentation.ScenePresentationFrame$Layer public,static,final com.openggf.game.presentation.ScenePresentationFrame$Layer RINGS
+FIELD com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind public,static,final com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind RECTANGLE
+FIELD com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind public,static,final com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind VERTEX
+FIELD com.openggf.game.presentation.SceneReplay public,static,final int MAX_BYTES
+FIELD com.openggf.game.presentation.SceneReplay public,static,final int MAX_SAMPLES
 FIELD com.openggf.game.profiles.touchresponse.TouchActorContextPolicy public,static,final com.openggf.game.profiles.touchresponse.TouchActorContextPolicy MAIN_FULL_SIDEKICK_HURT_ONLY
 FIELD com.openggf.game.profiles.touchresponse.TouchActorContextPolicy public,static,final com.openggf.game.profiles.touchresponse.TouchActorContextPolicy MAIN_ONLY
 FIELD com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy public,static,final com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy BOSS_REFLECT
@@ -3288,6 +3353,7 @@ FIELD com.openggf.trace.VerificationGroup public,static,final com.openggf.trace.
 INTERFACE com.openggf.GameLoop$GameModeChangeListener com.openggf.GameModeChangeListener
 INTERFACE com.openggf.architecture.CompositionRoot java.lang.annotation.Annotation
 INTERFACE com.openggf.audio.AudioManager com.openggf.audio.MusicRestoreSink
+INTERFACE com.openggf.audio.AudioReplay java.lang.AutoCloseable
 INTERFACE com.openggf.audio.StreamedMusicPort java.lang.AutoCloseable
 INTERFACE com.openggf.audio.StreamedMusicPort$OneShot java.lang.AutoCloseable
 INTERFACE com.openggf.audio.rewind.AudioCommand$ChangeMusicTempo com.openggf.audio.rewind.AudioCommand
@@ -3346,6 +3412,7 @@ INTERFACE com.openggf.game.patch.PatchOwner$BuiltIn com.openggf.game.patch.Patch
 INTERFACE com.openggf.game.patch.PatchOwner$Mod com.openggf.game.patch.PatchOwner
 INTERFACE com.openggf.game.patch.ResolutionResult$LaunchAborted com.openggf.game.patch.ResolutionResult
 INTERFACE com.openggf.game.patch.ResolutionResult$Resolved com.openggf.game.patch.ResolutionResult
+INTERFACE com.openggf.game.presentation.SceneViewPresenter java.lang.AutoCloseable
 INTERFACE com.openggf.game.render.AdvancedRenderModeController com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot>
 INTERFACE com.openggf.game.render.SpecialRenderEffectRegistry com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.SpecialRenderEffectSnapshot>
 INTERFACE com.openggf.game.rewind.RewindDeferred java.lang.annotation.Annotation
@@ -3608,6 +3675,7 @@ METHOD com.openggf.audio.AudioManager public  boolean endDonorMusicOverride(java
 METHOD com.openggf.audio.AudioManager public  boolean endMusicOverride(com.openggf.audio.GameMusic)
 METHOD com.openggf.audio.AudioManager public  boolean endReverseAudioPresentation()
 METHOD com.openggf.audio.AudioManager public  boolean isMuted(com.openggf.audio.ChannelType,int)
+METHOD com.openggf.audio.AudioManager public  boolean isReverseAudioOutputActive()
 METHOD com.openggf.audio.AudioManager public  boolean isReverseAudioPresentationActive()
 METHOD com.openggf.audio.AudioManager public  boolean isRewindReplaySuppressed()
 METHOD com.openggf.audio.AudioManager public  boolean isSoloed(com.openggf.audio.ChannelType,int)
@@ -3619,6 +3687,7 @@ METHOD com.openggf.audio.AudioManager public  boolean playSfx(int)
 METHOD com.openggf.audio.AudioManager public  boolean playSfx(int,float)
 METHOD com.openggf.audio.AudioManager public  boolean preparePostBoundaryReverseRelease()
 METHOD com.openggf.audio.AudioManager public  com.openggf.audio.AudioBackend getBackend()
+METHOD com.openggf.audio.AudioManager public  com.openggf.audio.AudioReplay recordPresentationAudio(int)
 METHOD com.openggf.audio.AudioManager public  com.openggf.audio.GameAudioProfile getAudioProfile()
 METHOD com.openggf.audio.AudioManager public  com.openggf.audio.rewind.AudioCommandTimeline commandTimeline()
 METHOD com.openggf.audio.AudioManager public  com.openggf.audio.rewind.AudioLogicalSnapshot captureLogicalSnapshot()
@@ -3707,6 +3776,11 @@ METHOD com.openggf.audio.AudioManager public,synchronized  void setDriverService
 METHOD com.openggf.audio.AudioManager public,synchronized  void setRequestObserver(com.openggf.audio.AudioRequestObserver)
 METHOD com.openggf.audio.AudioManager public,synchronized  void setRom(com.openggf.data.Rom)
 METHOD com.openggf.audio.AudioManager public,synchronized  void setSfxContentionObserver(com.openggf.audio.driver.SfxContentionObserver)
+METHOD com.openggf.audio.AudioReplay public  boolean isClosed()
+METHOD com.openggf.audio.AudioReplay public  void beginReverse(double)
+METHOD com.openggf.audio.AudioReplay public  void close()
+METHOD com.openggf.audio.AudioReplay public  void setRate(double)
+METHOD com.openggf.audio.AudioReplay public  void stop()
 METHOD com.openggf.audio.ChannelType public,static  com.openggf.audio.ChannelType valueOf(java.lang.String)
 METHOD com.openggf.audio.ChannelType public,static  com.openggf.audio.ChannelType[] values()
 METHOD com.openggf.audio.GameAudioProfile public  boolean blocksSfxDuringMusicRestoreFadeIn()
@@ -4317,6 +4391,7 @@ METHOD com.openggf.camera.Camera public  void easeYBiasToDefault()
 METHOD com.openggf.camera.Camera public  void incrementLookUpBias()
 METHOD com.openggf.camera.Camera public  void incrementX(short)
 METHOD com.openggf.camera.Camera public  void incrementY(short)
+METHOD com.openggf.camera.Camera public  void refreshViewportDimensions(com.openggf.configuration.SonicConfigurationService)
 METHOD com.openggf.camera.Camera public  void requestFastVerticalScroll()
 METHOD com.openggf.camera.Camera public  void requestForcedScroll(int,int)
 METHOD com.openggf.camera.Camera public  void resetState()
@@ -4382,6 +4457,10 @@ METHOD com.openggf.configuration.SonicConfigurationService public  void setSessi
 METHOD com.openggf.configuration.SonicConfigurationService public,static  com.openggf.configuration.SonicConfigurationService createStandalone()
 METHOD com.openggf.configuration.SonicConfigurationService public,static  com.openggf.configuration.SonicConfigurationService createStandalone(java.nio.file.Path)
 METHOD com.openggf.configuration.SonicConfigurationService public,static,synchronized  com.openggf.configuration.SonicConfigurationService getInstance()
+METHOD com.openggf.control.ButtonPrompts public,static  java.util.Optional<java.lang.String> keyName(int)
+METHOD com.openggf.control.ButtonPrompts public,static  java.util.Optional<java.lang.String> label(com.openggf.control.InputHandler,int,com.openggf.control.ButtonPrompts$Button)
+METHOD com.openggf.control.ButtonPrompts$Button public,static  com.openggf.control.ButtonPrompts$Button valueOf(java.lang.String)
+METHOD com.openggf.control.ButtonPrompts$Button public,static  com.openggf.control.ButtonPrompts$Button[] values()
 METHOD com.openggf.control.GamepadStateSource public,abstract  java.util.List<com.openggf.control.GamepadStateSource$DeviceState> pollDevices()
 METHOD com.openggf.control.GamepadStateSource public,static  com.openggf.control.GamepadStateSource noop()
 METHOD com.openggf.control.GamepadStateSource$DeviceState public  boolean buttonDown(int)
@@ -4440,6 +4519,7 @@ METHOD com.openggf.control.InputHandler public  boolean isPhysicalControlDown()
 METHOD com.openggf.control.InputHandler public  boolean isPhysicalKeyDown(int)
 METHOD com.openggf.control.InputHandler public  boolean isPhysicalShiftDown()
 METHOD com.openggf.control.InputHandler public  boolean isPhysicalSuperDown()
+METHOD com.openggf.control.InputHandler public  boolean isRewindHeld()
 METHOD com.openggf.control.InputHandler public  boolean isShiftDown()
 METHOD com.openggf.control.InputHandler public  boolean isSuperDown()
 METHOD com.openggf.control.InputHandler public  boolean menuAcceptExcludingBackAction()
@@ -4477,6 +4557,41 @@ METHOD com.openggf.control.LogicalInputSnapshot public,final  int hashCode()
 METHOD com.openggf.control.LogicalInputSnapshot public,final  java.lang.String toString()
 METHOD com.openggf.control.LogicalInputSnapshot public,static  com.openggf.control.LogicalInputSnapshot neutral()
 METHOD com.openggf.control.LogicalInputSnapshot public,static  com.openggf.control.LogicalInputSnapshot ofPlayers(com.openggf.control.PlayerInputState,com.openggf.control.PlayerInputState)
+METHOD com.openggf.control.MenuInput public,static  boolean accept(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  boolean back(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  boolean controller(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  boolean details(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  boolean down(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  boolean left(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  boolean right(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  boolean textAccept(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  boolean textBack(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  boolean textDetails(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  boolean textDown(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  boolean textKeyPressed(com.openggf.control.InputHandler,int)
+METHOD com.openggf.control.MenuInput public,static  boolean textKeyRepeated(com.openggf.control.InputHandler,int)
+METHOD com.openggf.control.MenuInput public,static  boolean textLeft(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  boolean textRight(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  boolean textUp(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  boolean up(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  com.openggf.control.MenuInput$Pointer pointer(com.openggf.control.InputHandler,int,int)
+METHOD com.openggf.control.MenuInput public,static  java.lang.String backLabel(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  java.lang.String confirmLabel(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  java.lang.String consumeText(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  java.lang.String detailsLabel(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  java.lang.String directionLabel(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  java.lang.String horizontalLabel(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  void handleCharEvent(com.openggf.control.InputHandler,int)
+METHOD com.openggf.control.MenuInput$Pointer public  boolean inside()
+METHOD com.openggf.control.MenuInput$Pointer public  boolean leftPressed()
+METHOD com.openggf.control.MenuInput$Pointer public  boolean over(int,int,int,int)
+METHOD com.openggf.control.MenuInput$Pointer public  boolean rightPressed()
+METHOD com.openggf.control.MenuInput$Pointer public  int x()
+METHOD com.openggf.control.MenuInput$Pointer public  int y()
+METHOD com.openggf.control.MenuInput$Pointer public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.control.MenuInput$Pointer public,final  int hashCode()
+METHOD com.openggf.control.MenuInput$Pointer public,final  java.lang.String toString()
+METHOD com.openggf.control.MenuInput$Pointer public,static  com.openggf.control.MenuInput$Pointer none()
 METHOD com.openggf.control.PlayerInputState public  boolean startHeld()
 METHOD com.openggf.control.PlayerInputState public  boolean startPressed()
 METHOD com.openggf.control.PlayerInputState public  com.openggf.control.PlayerInputState merge(com.openggf.control.PlayerInputState)
@@ -5288,6 +5403,7 @@ METHOD com.openggf.game.GameModule public  com.openggf.game.WaterDataProvider ge
 METHOD com.openggf.game.GameModule public  com.openggf.game.ZoneArtProvider getZoneArtProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.dataselect.DataSelectHostProfile getDataSelectHostProfile()
 METHOD com.openggf.game.GameModule public  com.openggf.game.dataselect.DataSelectPresentationProvider getDataSelectPresentationProvider()
+METHOD com.openggf.game.GameModule public  com.openggf.game.mode.GameplayFrameController gameplayFrameController()
 METHOD com.openggf.game.GameModule public  com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter()
 METHOD com.openggf.game.GameModule public  com.openggf.game.palette.CustomZonePaletteBridge createCustomZonePaletteBridge(com.openggf.game.modzone.ModZoneRuntimeContribution,com.openggf.level.Level,com.openggf.game.ObjectArtProvider)
 METHOD com.openggf.game.GameModule public  com.openggf.game.profiles.trace.TracePlaybackProfile getTracePlaybackProfile()
@@ -6090,6 +6206,7 @@ METHOD com.openggf.game.TitleCardProvider public,abstract  void reset()
 METHOD com.openggf.game.TitleCardProvider public,abstract  void update()
 METHOD com.openggf.game.TitleScreenProvider public  boolean supportsLevelSelectOverlay()
 METHOD com.openggf.game.TitleScreenProvider public  com.openggf.game.TitleScreenProvider$TitleScreenAction consumeExitAction()
+METHOD com.openggf.game.TitleScreenProvider public  int startActIndex()
 METHOD com.openggf.game.TitleScreenProvider public  int startZoneIndex()
 METHOD com.openggf.game.TitleScreenProvider public  void drawFrozenForLevelSelect()
 METHOD com.openggf.game.TitleScreenProvider public  void setExitToLevelHandler(java.lang.Runnable)
@@ -6424,6 +6541,57 @@ METHOD com.openggf.game.launch.LaunchProfileStore public  com.openggf.game.launc
 METHOD com.openggf.game.launch.LaunchProfileStore public  com.openggf.game.launch.LaunchProfile withPrevious(com.openggf.game.launch.LaunchProfile,com.openggf.game.launch.LaunchProfile$Row,com.openggf.game.MasterTitleScreen$GameEntry)
 METHOD com.openggf.game.launch.LaunchProfileStore public  java.lang.String displayValue(com.openggf.game.launch.LaunchProfile,com.openggf.game.launch.LaunchProfile$Row,com.openggf.game.MasterTitleScreen$GameEntry)
 METHOD com.openggf.game.launch.LaunchProfileStore public  void save(com.openggf.game.MasterTitleScreen$GameEntry,com.openggf.game.launch.LaunchProfile)
+METHOD com.openggf.game.mode.CourseControl public  boolean advanceEntryPresentation()
+METHOD com.openggf.game.mode.CourseControl public  boolean presentationReady()
+METHOD com.openggf.game.mode.CourseControl public  boolean rewindHeld()
+METHOD com.openggf.game.mode.CourseControl public  com.openggf.audio.AudioReplay recordAudioReplay(int)
+METHOD com.openggf.game.mode.CourseControl public  com.openggf.game.mode.CourseCheckpoint capture()
+METHOD com.openggf.game.mode.CourseControl public  com.openggf.game.mode.CourseControl$PlayerState playerState()
+METHOD com.openggf.game.mode.CourseControl public  int actIndex()
+METHOD com.openggf.game.mode.CourseControl public  int courseMaxX()
+METHOD com.openggf.game.mode.CourseControl public  int courseMaxY()
+METHOD com.openggf.game.mode.CourseControl public  int viewportWidth()
+METHOD com.openggf.game.mode.CourseControl public  java.lang.String apiIdentity()
+METHOD com.openggf.game.mode.CourseControl public  java.lang.String engineIdentity()
+METHOD com.openggf.game.mode.CourseControl public  java.lang.String modContentSha256()
+METHOD com.openggf.game.mode.CourseControl public  java.lang.String romSha1()
+METHOD com.openggf.game.mode.CourseControl public  java.util.Optional<java.lang.String> buttonLabel(int,com.openggf.control.ButtonPrompts$Button)
+METHOD com.openggf.game.mode.CourseControl public  void finishInitialPresentation()
+METHOD com.openggf.game.mode.CourseControl public  void launchRolling(int,int,int,int,boolean)
+METHOD com.openggf.game.mode.CourseControl public  void loadLevel(int,int)
+METHOD com.openggf.game.mode.CourseControl public  void restore(com.openggf.game.mode.CourseCheckpoint)
+METHOD com.openggf.game.mode.CourseControl public  void selectCharacter(java.lang.String)
+METHOD com.openggf.game.mode.CourseControl public  void settle()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  boolean airborne()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  boolean dead()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  boolean floorSupport()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  boolean hurt()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  boolean rolling()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int angle()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int cameraX()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int cameraY()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int groundSpeed()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int radius()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int supportDx()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int supportDy()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int x()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int xSpeed()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int y()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int ySpeed()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  java.lang.String character()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.mode.CourseControl$PlayerState public,final  int hashCode()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public,final  java.lang.String toString()
+METHOD com.openggf.game.mode.GameplayFrameController public  boolean allowsDebugRewind()
+METHOD com.openggf.game.mode.GameplayFrameController public  boolean consumeTitleRequest()
+METHOD com.openggf.game.mode.GameplayFrameController public  boolean drawScene()
+METHOD com.openggf.game.mode.GameplayFrameController public  boolean presentationPaused()
+METHOD com.openggf.game.mode.GameplayFrameController public  boolean retainRolling()
+METHOD com.openggf.game.mode.GameplayFrameController public  com.openggf.game.presentation.RewindPresentation rewindPresentation()
+METHOD com.openggf.game.mode.GameplayFrameController public  void close()
+METHOD com.openggf.game.mode.GameplayFrameController public  void drawOverlay()
+METHOD com.openggf.game.mode.GameplayFrameController public,abstract  boolean beforeTick(com.openggf.game.mode.CourseControl,com.openggf.control.LogicalInputSnapshot)
+METHOD com.openggf.game.mode.GameplayFrameController public,abstract  void afterTick(com.openggf.game.mode.CourseControl,boolean)
 METHOD com.openggf.game.modzone.ModObjectZoneSet public,static  com.openggf.game.modzone.ModObjectZoneSet valueOf(java.lang.String)
 METHOD com.openggf.game.modzone.ModObjectZoneSet public,static  com.openggf.game.modzone.ModObjectZoneSet[] values()
 METHOD com.openggf.game.modzone.ModPaletteClaim public  int color()
@@ -6599,6 +6767,7 @@ METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.Zone
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.ZoneRegistry getZoneRegistry()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.dataselect.DataSelectHostProfile getDataSelectHostProfile()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.dataselect.DataSelectPresentationProvider getDataSelectPresentationProvider()
+METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.mode.GameplayFrameController gameplayFrameController()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.palette.CustomZonePaletteBridge createCustomZonePaletteBridge(com.openggf.game.modzone.ModZoneRuntimeContribution,com.openggf.level.Level,com.openggf.game.ObjectArtProvider)
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.profiles.trace.TracePlaybackProfile getTracePlaybackProfile()
@@ -6733,6 +6902,122 @@ METHOD com.openggf.game.patch.ResolutionResult$Resolved public  java.util.Map<co
 METHOD com.openggf.game.patch.ResolutionResult$Resolved public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.patch.ResolutionResult$Resolved public,final  int hashCode()
 METHOD com.openggf.game.patch.ResolutionResult$Resolved public,final  java.lang.String toString()
+METHOD com.openggf.game.presentation.PlayerPresentationPose public  com.openggf.game.presentation.PlayerPresentationPose$Kind kind()
+METHOD com.openggf.game.presentation.PlayerPresentationPose public  int facing()
+METHOD com.openggf.game.presentation.PlayerPresentationPose public  long tick()
+METHOD com.openggf.game.presentation.PlayerPresentationPose public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.presentation.PlayerPresentationPose public,final  int hashCode()
+METHOD com.openggf.game.presentation.PlayerPresentationPose public,final  java.lang.String toString()
+METHOD com.openggf.game.presentation.PlayerPresentationPose public,static  com.openggf.game.presentation.PlayerPresentationPose nativePose()
+METHOD com.openggf.game.presentation.PlayerPresentationPose$Kind public,static  com.openggf.game.presentation.PlayerPresentationPose$Kind valueOf(java.lang.String)
+METHOD com.openggf.game.presentation.PlayerPresentationPose$Kind public,static  com.openggf.game.presentation.PlayerPresentationPose$Kind[] values()
+METHOD com.openggf.game.presentation.RewindPresentation public  float intensity()
+METHOD com.openggf.game.presentation.RewindPresentation public  float speed()
+METHOD com.openggf.game.presentation.RewindPresentation public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.presentation.RewindPresentation public,final  int hashCode()
+METHOD com.openggf.game.presentation.RewindPresentation public,final  java.lang.String toString()
+METHOD com.openggf.game.presentation.SceneFrameCodec public,static  byte[] encode(com.openggf.game.presentation.ScenePresentationFrame) THROWS java.io.IOException
+METHOD com.openggf.game.presentation.SceneFrameCodec public,static  com.openggf.game.presentation.ScenePresentationFrame decode(byte[]) THROWS java.io.IOException
+METHOD com.openggf.game.presentation.SceneImage public  int height()
+METHOD com.openggf.game.presentation.SceneImage public  int width()
+METHOD com.openggf.game.presentation.SceneImage public  int[] argb()
+METHOD com.openggf.game.presentation.SceneImage public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.presentation.SceneImage public,final  int hashCode()
+METHOD com.openggf.game.presentation.SceneImage public,final  java.lang.String toString()
+METHOD com.openggf.game.presentation.ScenePlayerPose public  com.openggf.game.presentation.PlayerPresentationPose pose()
+METHOD com.openggf.game.presentation.ScenePlayerPose public  int centreX()
+METHOD com.openggf.game.presentation.ScenePlayerPose public  int centreY()
+METHOD com.openggf.game.presentation.ScenePlayerPose public  java.lang.String character()
+METHOD com.openggf.game.presentation.ScenePlayerPose public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.presentation.ScenePlayerPose public,final  int hashCode()
+METHOD com.openggf.game.presentation.ScenePlayerPose public,final  java.lang.String toString()
+METHOD com.openggf.game.presentation.ScenePresentationFrame public  int act()
+METHOD com.openggf.game.presentation.ScenePresentationFrame public  int backdropArgb()
+METHOD com.openggf.game.presentation.ScenePresentationFrame public  int cameraX()
+METHOD com.openggf.game.presentation.ScenePresentationFrame public  int cameraY()
+METHOD com.openggf.game.presentation.ScenePresentationFrame public  int height()
+METHOD com.openggf.game.presentation.ScenePresentationFrame public  int width()
+METHOD com.openggf.game.presentation.ScenePresentationFrame public  int[] paletteArgb()
+METHOD com.openggf.game.presentation.ScenePresentationFrame public  java.util.List<com.openggf.game.presentation.ScenePresentationFrame$Primitive> primitives()
+METHOD com.openggf.game.presentation.ScenePresentationFrame public  java.util.List<com.openggf.game.presentation.ScenePresentationFrame$Tile> tiles()
+METHOD com.openggf.game.presentation.ScenePresentationFrame public  long revision()
+METHOD com.openggf.game.presentation.ScenePresentationFrame public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.presentation.ScenePresentationFrame public,final  int hashCode()
+METHOD com.openggf.game.presentation.ScenePresentationFrame public,final  java.lang.String toString()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$ArtReference public  int tile()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$ArtReference public  java.lang.String recipe()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$ArtReference public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.presentation.ScenePresentationFrame$ArtReference public,final  int hashCode()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$ArtReference public,final  java.lang.String toString()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Layer public,static  com.openggf.game.presentation.ScenePresentationFrame$Layer valueOf(java.lang.String)
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Layer public,static  com.openggf.game.presentation.ScenePresentationFrame$Layer[] values()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Primitive public  com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind kind()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Primitive public  int beforeTile()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Primitive public  int method()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Primitive public  java.util.List<com.openggf.game.presentation.ScenePresentationFrame$Vertex> vertices()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Primitive public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Primitive public,final  int hashCode()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Primitive public,final  java.lang.String toString()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind public,static  com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind valueOf(java.lang.String)
+METHOD com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind public,static  com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind[] values()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public  boolean hFlip()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public  boolean priority()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public  boolean vFlip()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public  com.openggf.game.presentation.ScenePresentationFrame$ArtReference art()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public  com.openggf.game.presentation.ScenePresentationFrame$Layer layer()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public  com.openggf.game.presentation.ScenePresentationFrame$Tile translated(int,int)
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public  int alpha()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public  int height()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public  int occlusionMask()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public  int palette()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public  int rowEnd()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public  int rowStart()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public  int width()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public  int x()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public  int y()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public,final  int hashCode()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Tile public,final  java.lang.String toString()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Vertex public  int argb()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Vertex public  int x1()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Vertex public  int x2()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Vertex public  int y1()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Vertex public  int y2()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Vertex public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Vertex public,final  int hashCode()
+METHOD com.openggf.game.presentation.ScenePresentationFrame$Vertex public,final  java.lang.String toString()
+METHOD com.openggf.game.presentation.SceneReplay public  boolean atOrigin()
+METHOD com.openggf.game.presentation.SceneReplay public  boolean playing()
+METHOD com.openggf.game.presentation.SceneReplay public  boolean step()
+METHOD com.openggf.game.presentation.SceneReplay public  boolean wantsSample(int)
+METHOD com.openggf.game.presentation.SceneReplay public  com.openggf.game.presentation.ScenePresentationFrame frame(long)
+METHOD com.openggf.game.presentation.SceneReplay public  com.openggf.game.presentation.SceneReplay$State snapshot()
+METHOD com.openggf.game.presentation.SceneReplay public  int speed()
+METHOD com.openggf.game.presentation.SceneReplay public  void begin(int,int,com.openggf.game.presentation.ScenePresentationFrame)
+METHOD com.openggf.game.presentation.SceneReplay public  void clear()
+METHOD com.openggf.game.presentation.SceneReplay public  void record(int,com.openggf.game.presentation.ScenePresentationFrame)
+METHOD com.openggf.game.presentation.SceneReplay public  void restore(com.openggf.game.presentation.SceneReplay$State)
+METHOD com.openggf.game.presentation.SceneReplay public,static  com.openggf.game.presentation.ScenePresentationFrame revision(com.openggf.game.presentation.ScenePresentationFrame,long)
+METHOD com.openggf.game.presentation.SceneReplay$Sample public  boolean equals(java.lang.Object)
+METHOD com.openggf.game.presentation.SceneReplay$Sample public  byte[] scene()
+METHOD com.openggf.game.presentation.SceneReplay$Sample public  int hashCode()
+METHOD com.openggf.game.presentation.SceneReplay$Sample public  int tick()
+METHOD com.openggf.game.presentation.SceneReplay$Sample public,final  java.lang.String toString()
+METHOD com.openggf.game.presentation.SceneReplay$State public  boolean playing()
+METHOD com.openggf.game.presentation.SceneReplay$State public  int cursor()
+METHOD com.openggf.game.presentation.SceneReplay$State public  int speed()
+METHOD com.openggf.game.presentation.SceneReplay$State public  int stride()
+METHOD com.openggf.game.presentation.SceneReplay$State public  java.util.List<com.openggf.game.presentation.SceneReplay$Sample> samples()
+METHOD com.openggf.game.presentation.SceneReplay$State public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.presentation.SceneReplay$State public,final  int hashCode()
+METHOD com.openggf.game.presentation.SceneReplay$State public,final  java.lang.String toString()
+METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  boolean accept(com.openggf.game.presentation.ScenePresentationFrame)
+METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  com.openggf.game.presentation.SceneImage image(int,int)
+METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  com.openggf.game.presentation.SceneImage image(int,int,com.openggf.game.presentation.ScenePlayerPose)
+METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  long revision()
+METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  void close()
+METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  void draw(int,int)
+METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  void draw(int,int,com.openggf.game.presentation.ScenePlayerPose)
 METHOD com.openggf.game.profiles.touchresponse.TouchActorContextPolicy public,static  com.openggf.game.profiles.touchresponse.TouchActorContextPolicy valueOf(java.lang.String)
 METHOD com.openggf.game.profiles.touchresponse.TouchActorContextPolicy public,static  com.openggf.game.profiles.touchresponse.TouchActorContextPolicy[] values()
 METHOD com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy public,static  com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy valueOf(java.lang.String)
@@ -6956,6 +7241,7 @@ METHOD com.openggf.game.rewind.RewindController public  int currentFrame()
 METHOD com.openggf.game.rewind.RewindController public  int earliestAvailableFrame()
 METHOD com.openggf.game.rewind.RewindController public  int pruneHistoryToRetainFrames(int)
 METHOD com.openggf.game.rewind.RewindController public  void commitDeferredAudioRestore()
+METHOD com.openggf.game.rewind.RewindController public  void invalidateCourseFuture()
 METHOD com.openggf.game.rewind.RewindController public  void resetBufferAtCurrentFrame()
 METHOD com.openggf.game.rewind.RewindController public  void resetToFrameZero()
 METHOD com.openggf.game.rewind.RewindController public  void seekTo(int)
@@ -6966,11 +7252,15 @@ METHOD com.openggf.game.rewind.RewindDeferred public,abstract  java.lang.String 
 METHOD com.openggf.game.rewind.RewindDeterminismAuditor public  boolean report(int,int,com.openggf.game.rewind.CompositeSnapshot,com.openggf.game.rewind.CompositeSnapshot)
 METHOD com.openggf.game.rewind.RewindDeterminismAuditor public  int divergentSegmentCount()
 METHOD com.openggf.game.rewind.RewindRegistry public  com.openggf.game.rewind.CompositeSnapshot capture()
+METHOD com.openggf.game.rewind.RewindRegistry public  com.openggf.game.rewind.CompositeSnapshot captureCourse()
+METHOD com.openggf.game.rewind.RewindRegistry public  long courseLayoutVersion()
 METHOD com.openggf.game.rewind.RewindRegistry public  void deregister(java.lang.String)
 METHOD com.openggf.game.rewind.RewindRegistry public  void deregisterPostRestoreCallback(java.lang.String)
 METHOD com.openggf.game.rewind.RewindRegistry public  void register(com.openggf.game.rewind.RewindSnapshottable<?>)
 METHOD com.openggf.game.rewind.RewindRegistry public  void registerPostRestoreCallback(java.lang.String,java.lang.Runnable)
+METHOD com.openggf.game.rewind.RewindRegistry public  void requireCourseLayout(com.openggf.game.rewind.CompositeSnapshot)
 METHOD com.openggf.game.rewind.RewindRegistry public  void restore(com.openggf.game.rewind.CompositeSnapshot)
+METHOD com.openggf.game.rewind.RewindRegistry public  void restoreCourse(com.openggf.game.rewind.CompositeSnapshot)
 METHOD com.openggf.game.rewind.RewindSnapshottable public  void resetForMissingSnapshot()
 METHOD com.openggf.game.rewind.RewindSnapshottable public,abstract  S capture()
 METHOD com.openggf.game.rewind.RewindSnapshottable public,abstract  java.lang.String key()
@@ -7712,6 +8002,7 @@ METHOD com.openggf.game.session.EngineContext public,static  com.openggf.game.se
 METHOD com.openggf.game.session.GameplayModeContext public  boolean consumeRunGapFirstRow()
 METHOD com.openggf.game.session.GameplayModeContext public  boolean hasResumeStash()
 METHOD com.openggf.game.session.GameplayModeContext public  boolean isGameplayRuntimeReady()
+METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.audio.AudioReplay recordAudioReplay(int)
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.camera.Camera getCamera()
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.game.BonusStageProvider getActiveBonusStageProvider()
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.game.GameMode getGameMode()
@@ -7754,6 +8045,7 @@ METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.timer.Ti
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.trace.replay.runs.RunLevelLoadTracker runLevelLoads()
 METHOD com.openggf.game.session.GameplayModeContext public  int getSpawnX()
 METHOD com.openggf.game.session.GameplayModeContext public  int getSpawnY()
+METHOD com.openggf.game.session.GameplayModeContext public  java.lang.Object courseCheckpointIdentity()
 METHOD com.openggf.game.session.GameplayModeContext public  java.util.List<com.openggf.game.resources.QueueDiagnosticSnapshot> captureQueueDiagnostics()
 METHOD com.openggf.game.session.GameplayModeContext public  java.util.Optional<com.openggf.game.session.EditorPlaytestStash> getResumeStash()
 METHOD com.openggf.game.session.GameplayModeContext public  java.util.Optional<com.openggf.trace.replay.runs.TraceRunFrameDriver> traceRunFrameDriver()
@@ -8898,6 +9190,9 @@ METHOD com.openggf.level.LevelManager public  com.openggf.game.LevelState getLev
 METHOD com.openggf.level.LevelManager public  com.openggf.game.RespawnState getCheckpointState()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.SpecialStageEntryRequest consumeSpecialStageEntryRequest()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.ZoneFeatureProvider getZoneFeatureProvider()
+METHOD com.openggf.level.LevelManager public  com.openggf.game.presentation.ScenePresentationFrame captureScene(long,com.openggf.game.presentation.PlayerPresentationPose)
+METHOD com.openggf.level.LevelManager public  com.openggf.game.presentation.ScenePresentationFrame captureScene(long,com.openggf.game.presentation.PlayerPresentationPose,int,int)
+METHOD com.openggf.level.LevelManager public  com.openggf.game.presentation.SceneViewPresenter createScenePresenter()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.resources.DynamicArtDecisionOwner playerArtDplcOwner(java.lang.String)
 METHOD com.openggf.level.LevelManager public  com.openggf.game.rewind.RewindSnapshottable<?> levelTransitionRewindSnapshottable()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.LevelSnapshot> levelRewindSnapshottable()
@@ -14348,7 +14643,9 @@ NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSeq
 NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$TempoMode
 NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$VolMode
 NESTED com.openggf.camera.Camera com.openggf.camera.Camera$UpdateObserver
+NESTED com.openggf.control.ButtonPrompts com.openggf.control.ButtonPrompts$Button
 NESTED com.openggf.control.GamepadStateSource com.openggf.control.GamepadStateSource$DeviceState
+NESTED com.openggf.control.MenuInput com.openggf.control.MenuInput$Pointer
 NESTED com.openggf.debug.DebugRenderContext com.openggf.debug.DebugRenderContext$DebugTextEntry
 NESTED com.openggf.debug.MemoryStats com.openggf.debug.MemoryStats$SectionAllocation
 NESTED com.openggf.debug.MemoryStats com.openggf.debug.MemoryStats$Snapshot
@@ -14414,6 +14711,7 @@ NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan
 NESTED com.openggf.game.dataselect.HostSlotPreview com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType
 NESTED com.openggf.game.ghost.GhostRenderRegistry com.openggf.game.ghost.GhostRenderRegistry$GhostLayerRenderer
 NESTED com.openggf.game.launch.LaunchProfile com.openggf.game.launch.LaunchProfile$Row
+NESTED com.openggf.game.mode.CourseControl com.openggf.game.mode.CourseControl$PlayerState
 NESTED com.openggf.game.modzone.ModZoneRuntimeProfile com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy
 NESTED com.openggf.game.patch.LogicalRomResolver com.openggf.game.patch.LogicalRomResolver$CombinedRomBytesSource
 NESTED com.openggf.game.patch.ModuleResolutionService com.openggf.game.patch.ModuleResolutionService$LaunchPolicy
@@ -14426,6 +14724,15 @@ NESTED com.openggf.game.patch.PatchOwner com.openggf.game.patch.PatchOwner$Built
 NESTED com.openggf.game.patch.PatchOwner com.openggf.game.patch.PatchOwner$Mod
 NESTED com.openggf.game.patch.ResolutionResult com.openggf.game.patch.ResolutionResult$LaunchAborted
 NESTED com.openggf.game.patch.ResolutionResult com.openggf.game.patch.ResolutionResult$Resolved
+NESTED com.openggf.game.presentation.PlayerPresentationPose com.openggf.game.presentation.PlayerPresentationPose$Kind
+NESTED com.openggf.game.presentation.ScenePresentationFrame com.openggf.game.presentation.ScenePresentationFrame$ArtReference
+NESTED com.openggf.game.presentation.ScenePresentationFrame com.openggf.game.presentation.ScenePresentationFrame$Layer
+NESTED com.openggf.game.presentation.ScenePresentationFrame com.openggf.game.presentation.ScenePresentationFrame$Primitive
+NESTED com.openggf.game.presentation.ScenePresentationFrame com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind
+NESTED com.openggf.game.presentation.ScenePresentationFrame com.openggf.game.presentation.ScenePresentationFrame$Tile
+NESTED com.openggf.game.presentation.ScenePresentationFrame com.openggf.game.presentation.ScenePresentationFrame$Vertex
+NESTED com.openggf.game.presentation.SceneReplay com.openggf.game.presentation.SceneReplay$Sample
+NESTED com.openggf.game.presentation.SceneReplay com.openggf.game.presentation.SceneReplay$State
 NESTED com.openggf.game.recording.menu.UserRecordingMenu com.openggf.game.recording.menu.UserRecordingMenu$PlaybackStarter
 NESTED com.openggf.game.recording.menu.UserRecordingMenuState com.openggf.game.recording.menu.UserRecordingMenuState$PlaybackRequest
 NESTED com.openggf.game.render.AdvancedRenderFrameState com.openggf.game.render.AdvancedRenderFrameState$Builder
@@ -14930,6 +15237,11 @@ RECORD-COMPONENT com.openggf.control.LogicalInputSnapshot menuStart boolean
 RECORD-COMPONENT com.openggf.control.LogicalInputSnapshot menuUp boolean
 RECORD-COMPONENT com.openggf.control.LogicalInputSnapshot player1 com.openggf.control.PlayerInputState
 RECORD-COMPONENT com.openggf.control.LogicalInputSnapshot player2 com.openggf.control.PlayerInputState
+RECORD-COMPONENT com.openggf.control.MenuInput$Pointer inside boolean
+RECORD-COMPONENT com.openggf.control.MenuInput$Pointer leftPressed boolean
+RECORD-COMPONENT com.openggf.control.MenuInput$Pointer rightPressed boolean
+RECORD-COMPONENT com.openggf.control.MenuInput$Pointer x int
+RECORD-COMPONENT com.openggf.control.MenuInput$Pointer y int
 RECORD-COMPONENT com.openggf.control.PlayerInputState actionHeldMask int
 RECORD-COMPONENT com.openggf.control.PlayerInputState actionPressedMask int
 RECORD-COMPONENT com.openggf.control.PlayerInputState heldMask int
@@ -15182,6 +15494,23 @@ RECORD-COMPONENT com.openggf.game.launch.LaunchProfile debugTools boolean
 RECORD-COMPONENT com.openggf.game.launch.LaunchProfile mainCharacter java.lang.String
 RECORD-COMPONENT com.openggf.game.launch.LaunchProfile rewind boolean
 RECORD-COMPONENT com.openggf.game.launch.LaunchProfile sidekick java.lang.String
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState airborne boolean
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState angle int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState cameraX int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState cameraY int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState character java.lang.String
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState dead boolean
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState floorSupport boolean
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState groundSpeed int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState hurt boolean
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState radius int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState rolling boolean
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState supportDx int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState supportDy int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState x int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState xSpeed int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState y int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState ySpeed int
 RECORD-COMPONENT com.openggf.game.modzone.ModPaletteClaim color int
 RECORD-COMPONENT com.openggf.game.modzone.ModPaletteClaim line int
 RECORD-COMPONENT com.openggf.game.modzone.ModPaletteClaim segaColor int
@@ -15217,6 +15546,60 @@ RECORD-COMPONENT com.openggf.game.patch.ResolutionResult$LaunchAborted failedOwn
 RECORD-COMPONENT com.openggf.game.patch.ResolutionResult$LaunchAborted patchId java.lang.String
 RECORD-COMPONENT com.openggf.game.patch.ResolutionResult$Resolved module com.openggf.game.GameModule
 RECORD-COMPONENT com.openggf.game.patch.ResolutionResult$Resolved ownerFailures java.util.Map<com.openggf.game.patch.PatchOwner,java.lang.Throwable>
+RECORD-COMPONENT com.openggf.game.presentation.PlayerPresentationPose facing int
+RECORD-COMPONENT com.openggf.game.presentation.PlayerPresentationPose kind com.openggf.game.presentation.PlayerPresentationPose$Kind
+RECORD-COMPONENT com.openggf.game.presentation.PlayerPresentationPose tick long
+RECORD-COMPONENT com.openggf.game.presentation.RewindPresentation intensity float
+RECORD-COMPONENT com.openggf.game.presentation.RewindPresentation speed float
+RECORD-COMPONENT com.openggf.game.presentation.SceneImage argb int[]
+RECORD-COMPONENT com.openggf.game.presentation.SceneImage height int
+RECORD-COMPONENT com.openggf.game.presentation.SceneImage width int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePlayerPose centreX int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePlayerPose centreY int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePlayerPose character java.lang.String
+RECORD-COMPONENT com.openggf.game.presentation.ScenePlayerPose pose com.openggf.game.presentation.PlayerPresentationPose
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame act int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame backdropArgb int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame cameraX int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame cameraY int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame height int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame paletteArgb int[]
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame primitives java.util.List<com.openggf.game.presentation.ScenePresentationFrame$Primitive>
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame revision long
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame tiles java.util.List<com.openggf.game.presentation.ScenePresentationFrame$Tile>
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame width int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$ArtReference recipe java.lang.String
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$ArtReference tile int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Primitive beforeTile int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Primitive kind com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Primitive method int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Primitive vertices java.util.List<com.openggf.game.presentation.ScenePresentationFrame$Vertex>
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Tile alpha int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Tile art com.openggf.game.presentation.ScenePresentationFrame$ArtReference
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Tile hFlip boolean
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Tile height int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Tile layer com.openggf.game.presentation.ScenePresentationFrame$Layer
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Tile occlusionMask int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Tile palette int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Tile priority boolean
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Tile rowEnd int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Tile rowStart int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Tile vFlip boolean
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Tile width int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Tile x int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Tile y int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Vertex argb int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Vertex x1 int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Vertex x2 int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Vertex y1 int
+RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Vertex y2 int
+RECORD-COMPONENT com.openggf.game.presentation.SceneReplay$Sample scene byte[]
+RECORD-COMPONENT com.openggf.game.presentation.SceneReplay$Sample tick int
+RECORD-COMPONENT com.openggf.game.presentation.SceneReplay$State cursor int
+RECORD-COMPONENT com.openggf.game.presentation.SceneReplay$State playing boolean
+RECORD-COMPONENT com.openggf.game.presentation.SceneReplay$State samples java.util.List<com.openggf.game.presentation.SceneReplay$Sample>
+RECORD-COMPONENT com.openggf.game.presentation.SceneReplay$State speed int
+RECORD-COMPONENT com.openggf.game.presentation.SceneReplay$State stride int
 RECORD-COMPONENT com.openggf.game.profiles.touchresponse.TouchResponseProfile actorContextPolicy com.openggf.game.profiles.touchresponse.TouchActorContextPolicy
 RECORD-COMPONENT com.openggf.game.profiles.touchresponse.TouchResponseProfile attackBouncePolicy com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy
 RECORD-COMPONENT com.openggf.game.profiles.touchresponse.TouchResponseProfile categoryDecodeMode com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode
@@ -17492,9 +17875,12 @@ TYPE class public,abstract com.openggf.sprites.managers.AbstractSpriteMovementMa
 TYPE class public,abstract com.openggf.sprites.playable.AbstractPlayableSprite SUPER com.openggf.sprites.AbstractSprite
 TYPE class public,abstract com.openggf.sprites.playable.SuperStateController SUPER java.lang.Object
 TYPE class public,final com.openggf.EscapeToMasterTitleController SUPER java.lang.Object
+TYPE class public,final com.openggf.audio.AudioReplay SUPER java.lang.Object
 TYPE class public,final com.openggf.audio.rewind.AudioCommandTimeline SUPER java.lang.Object
 TYPE class public,final com.openggf.audio.smps.DacData SUPER java.lang.Object
 TYPE class public,final com.openggf.audio.smps.SmpsSequencerConfig SUPER java.lang.Object
+TYPE class public,final com.openggf.control.ButtonPrompts SUPER java.lang.Object
+TYPE class public,final com.openggf.control.MenuInput SUPER java.lang.Object
 TYPE class public,final com.openggf.debug.DebugColor SUPER java.lang.Object
 TYPE class public,final com.openggf.debug.playback.Bk2Movie SUPER java.lang.Object
 TYPE class public,final com.openggf.debug.playback.PlaybackDebugManager SUPER java.lang.Object
@@ -17515,6 +17901,8 @@ TYPE class public,final com.openggf.game.animation.AnimatedTileChannelGraph SUPE
 TYPE class public,final com.openggf.game.dataselect.DataSelectPresentationProvider SUPER com.openggf.game.dataselect.AbstractDataSelectProvider
 TYPE class public,final com.openggf.game.ghost.GhostRecording SUPER java.lang.Object
 TYPE class public,final com.openggf.game.ghost.GhostRenderRegistry SUPER java.lang.Object
+TYPE class public,final com.openggf.game.mode.CourseCheckpoint SUPER java.lang.Object
+TYPE class public,final com.openggf.game.mode.CourseControl SUPER java.lang.Object
 TYPE class public,final com.openggf.game.modzone.ModZoneLevelData SUPER java.lang.Object
 TYPE class public,final com.openggf.game.mutation.LayoutMutationContext SUPER java.lang.Object
 TYPE class public,final com.openggf.game.mutation.ZoneLayoutMutationPipeline SUPER java.lang.Object
@@ -17525,6 +17913,8 @@ TYPE class public,final com.openggf.game.patch.ModuleResolutionService SUPER jav
 TYPE class public,final com.openggf.game.patch.PatchContext SUPER java.lang.Object
 TYPE class public,final com.openggf.game.patch.RegisteredPatch SUPER java.lang.Object
 TYPE class public,final com.openggf.game.patch.ResolutionContext SUPER java.lang.Object
+TYPE class public,final com.openggf.game.presentation.SceneFrameCodec SUPER java.lang.Object
+TYPE class public,final com.openggf.game.presentation.SceneReplay SUPER java.lang.Object
 TYPE class public,final com.openggf.game.recording.menu.UserRecordingMenu SUPER java.lang.Object
 TYPE class public,final com.openggf.game.recording.menu.UserRecordingMenuState SUPER java.lang.Object
 TYPE class public,final com.openggf.game.render.AdvancedRenderFrameState SUPER java.lang.Object
@@ -17730,6 +18120,7 @@ TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxTrac
 TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode>
 TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$TempoMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$TempoMode>
 TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$VolMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$VolMode>
+TYPE enum public,static,final com.openggf.control.ButtonPrompts$Button SUPER java.lang.Enum<com.openggf.control.ButtonPrompts$Button>
 TYPE enum public,static,final com.openggf.editor.EditorInputHandler$Action SUPER java.lang.Enum<com.openggf.editor.EditorInputHandler$Action>
 TYPE enum public,static,final com.openggf.editor.EditorStockObjectPalette$Navigation SUPER java.lang.Enum<com.openggf.editor.EditorStockObjectPalette$Navigation>
 TYPE enum public,static,final com.openggf.editor.persistence.EditorSaveManager$ApplyResult SUPER java.lang.Enum<com.openggf.editor.persistence.EditorSaveManager$ApplyResult>
@@ -17749,6 +18140,9 @@ TYPE enum public,static,final com.openggf.game.dataselect.HostSlotPreview$HostSl
 TYPE enum public,static,final com.openggf.game.launch.LaunchProfile$Row SUPER java.lang.Enum<com.openggf.game.launch.LaunchProfile$Row>
 TYPE enum public,static,final com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy SUPER java.lang.Enum<com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy>
 TYPE enum public,static,final com.openggf.game.patch.ModuleResolutionService$LaunchPolicy SUPER java.lang.Enum<com.openggf.game.patch.ModuleResolutionService$LaunchPolicy>
+TYPE enum public,static,final com.openggf.game.presentation.PlayerPresentationPose$Kind SUPER java.lang.Enum<com.openggf.game.presentation.PlayerPresentationPose$Kind>
+TYPE enum public,static,final com.openggf.game.presentation.ScenePresentationFrame$Layer SUPER java.lang.Enum<com.openggf.game.presentation.ScenePresentationFrame$Layer>
+TYPE enum public,static,final com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind SUPER java.lang.Enum<com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind>
 TYPE enum public,static,final com.openggf.game.rewind.PlaybackController$State SUPER java.lang.Enum<com.openggf.game.rewind.PlaybackController$State>
 TYPE enum public,static,final com.openggf.game.timeattack.TimeAttackMenuState$Mode SUPER java.lang.Enum<com.openggf.game.timeattack.TimeAttackMenuState$Mode>
 TYPE enum public,static,final com.openggf.game.timeattack.TimeAttackMenuState$Row SUPER java.lang.Enum<com.openggf.game.timeattack.TimeAttackMenuState$Row>
@@ -17837,12 +18231,14 @@ TYPE interface public,abstract com.openggf.game.animation.ChannelGuard SUPER <no
 TYPE interface public,abstract com.openggf.game.animation.PhaseSource SUPER <none>
 TYPE interface public,abstract com.openggf.game.dataselect.DataSelectGameProfile SUPER <none>
 TYPE interface public,abstract com.openggf.game.dataselect.DataSelectHostProfile SUPER <none>
+TYPE interface public,abstract com.openggf.game.mode.GameplayFrameController SUPER <none>
 TYPE interface public,abstract com.openggf.game.modzone.ModZoneAdapter SUPER <none>
 TYPE interface public,abstract com.openggf.game.mutation.LayoutMutationIntent SUPER <none>
 TYPE interface public,abstract com.openggf.game.mutation.LevelMutationSurface SUPER <none>
 TYPE interface public,abstract com.openggf.game.palette.CustomZonePaletteBridge SUPER <none>
 TYPE interface public,abstract com.openggf.game.patch.GamePatch SUPER <none>
 TYPE interface public,abstract com.openggf.game.patch.PatchEnablement SUPER <none>
+TYPE interface public,abstract com.openggf.game.presentation.SceneViewPresenter SUPER <none>
 TYPE interface public,abstract com.openggf.game.render.AdvancedRenderMode SUPER <none>
 TYPE interface public,abstract com.openggf.game.render.SpecialRenderEffect SUPER <none>
 TYPE interface public,abstract com.openggf.game.rewind.EngineStepper SUPER <none>
@@ -17999,6 +18395,11 @@ TYPE record public,final com.openggf.game.modzone.ModZoneRuntimeContribution SUP
 TYPE record public,final com.openggf.game.modzone.ModZoneRuntimeProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.game.mutation.MutationEffects SUPER java.lang.Record
 TYPE record public,final com.openggf.game.patch.GameplayLaunchRequest SUPER java.lang.Record
+TYPE record public,final com.openggf.game.presentation.PlayerPresentationPose SUPER java.lang.Record
+TYPE record public,final com.openggf.game.presentation.RewindPresentation SUPER java.lang.Record
+TYPE record public,final com.openggf.game.presentation.SceneImage SUPER java.lang.Record
+TYPE record public,final com.openggf.game.presentation.ScenePlayerPose SUPER java.lang.Record
+TYPE record public,final com.openggf.game.presentation.ScenePresentationFrame SUPER java.lang.Record
 TYPE record public,final com.openggf.game.profiles.touchresponse.TouchResponseProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.game.recording.RecordingDeterminismMetadata SUPER java.lang.Record
 TYPE record public,final com.openggf.game.recording.RecordingLaunchContext SUPER java.lang.Record
@@ -18150,6 +18551,7 @@ TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$StopSegaPc
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$StopSmpsSfx SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioLogicalSnapshot$DonorSfxBindingSnapshot SUPER java.lang.Record
 TYPE record public,static,final com.openggf.control.GamepadStateSource$DeviceState SUPER java.lang.Record
+TYPE record public,static,final com.openggf.control.MenuInput$Pointer SUPER java.lang.Record
 TYPE record public,static,final com.openggf.debug.DebugRenderContext$DebugTextEntry SUPER java.lang.Record
 TYPE record public,static,final com.openggf.debug.MemoryStats$SectionAllocation SUPER java.lang.Record
 TYPE record public,static,final com.openggf.editor.EditorStockObjectPalette$Entry SUPER java.lang.Record
@@ -18178,12 +18580,19 @@ TYPE record public,static,final com.openggf.game.ZoneKey$Mod SUPER java.lang.Rec
 TYPE record public,static,final com.openggf.game.ZoneKey$Stock SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneProgressionPlan$Successor SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneProgressionPlan$ZoneMetadata SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.mode.CourseControl$PlayerState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.ModuleResolutionService$PatchPlan SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.PatchOwner$BuiltIn SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.PatchOwner$Mod SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.ResolutionResult$LaunchAborted SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.ResolutionResult$Resolved SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.presentation.ScenePresentationFrame$ArtReference SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.presentation.ScenePresentationFrame$Primitive SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.presentation.ScenePresentationFrame$Tile SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.presentation.ScenePresentationFrame$Vertex SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.presentation.SceneReplay$Sample SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.presentation.SceneReplay$State SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.recording.menu.UserRecordingMenuState$PlaybackRequest SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.rewind.KeyframeStore$Entry SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot$ModeState SUPER java.lang.Record
@@ -18390,6 +18799,7 @@ TYPE-ANNOTATION com.openggf.architecture.CompositionRoot @com.openggf.game.ModAp
 TYPE-ANNOTATION com.openggf.architecture.CompositionRoot @java.lang.annotation.Retention(value=java.lang.annotation.RetentionPolicy.RUNTIME)
 TYPE-ANNOTATION com.openggf.architecture.CompositionRoot @java.lang.annotation.Target(value=[java.lang.annotation.ElementType.TYPE])
 TYPE-ANNOTATION com.openggf.audio.AudioManager @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.AudioReplay @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.ChannelType @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.GameAudioProfile @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.GameAudioProfile$MusicDuringOverridePolicy @com.openggf.game.ModApi
@@ -18483,11 +18893,15 @@ TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$VolMode @com.openggf.
 TYPE-ANNOTATION com.openggf.camera.Camera @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.configuration.SonicConfiguration @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.configuration.SonicConfigurationService @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.control.ButtonPrompts @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.control.ButtonPrompts$Button @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.GamepadStateSource @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.GamepadStateSource$DeviceState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.InputBindings @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.InputHandler @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.LogicalInputSnapshot @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.control.MenuInput @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.control.MenuInput$Pointer @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.PlayerInputState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.data.Game @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.data.PlayerSpriteArtProvider @com.openggf.game.ModApi
@@ -18712,6 +19126,10 @@ TYPE-ANNOTATION com.openggf.game.ghost.GhostRenderRegistry$GhostLayerRenderer @j
 TYPE-ANNOTATION com.openggf.game.launch.LaunchProfile @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.launch.LaunchProfile$Row @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.launch.LaunchProfileStore @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.mode.CourseCheckpoint @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.mode.CourseControl @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.mode.CourseControl$PlayerState @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.mode.GameplayFrameController @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.modzone.ModObjectZoneSet @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.modzone.ModPaletteClaim @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.modzone.ModZoneAdapter @com.openggf.game.ModApi
@@ -18756,6 +19174,23 @@ TYPE-ANNOTATION com.openggf.game.patch.ResolutionContext @com.openggf.game.ModAp
 TYPE-ANNOTATION com.openggf.game.patch.ResolutionResult @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.patch.ResolutionResult$LaunchAborted @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.patch.ResolutionResult$Resolved @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.PlayerPresentationPose @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.PlayerPresentationPose$Kind @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.RewindPresentation @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.SceneFrameCodec @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.SceneImage @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.ScenePlayerPose @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.ScenePresentationFrame @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.ScenePresentationFrame$ArtReference @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.ScenePresentationFrame$Layer @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.ScenePresentationFrame$Primitive @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.ScenePresentationFrame$Tile @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.ScenePresentationFrame$Vertex @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.SceneReplay @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.SceneReplay$Sample @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.SceneReplay$State @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.SceneViewPresenter @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.profiles.touchresponse.TouchActorContextPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode @com.openggf.game.ModApi

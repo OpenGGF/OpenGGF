@@ -20,6 +20,24 @@ class TestPendingModStateEditor {
     Path temp;
 
     @Test
+    void frozenLaunchStateRejectsSettingsChangesAndCannotSave() {
+        ModDescriptor code = codeDescriptor("dev-code", "a".repeat(64));
+        ModState startup = new ModState(1, List.of(
+                new ModState.Entry("dev-code", true, 0, true, code.sha256())));
+        PendingModStateEditor editor = PendingModStateEditor.readOnly(startup, List.of(code));
+
+        assertThrows(IllegalStateException.class, () -> editor.disable("dev-code"));
+        assertThrows(IllegalStateException.class, () -> editor.setEnabledCascade(List.of("dev-code"), false));
+        assertThrows(IllegalStateException.class, () -> editor.trust("dev-code"));
+        assertThrows(IllegalStateException.class, () -> editor.move("dev-code", 0));
+        assertThrows(IllegalStateException.class, editor::save);
+        assertEquals(startup, editor.pendingState());
+        assertFalse(editor.dirty());
+        assertFalse(editor.restartRequired());
+        assertFalse(Files.exists(temp.resolve("modstate.json")));
+    }
+
+    @Test
     void normalizationRetainsUnknownIdsAndAppendsNewDescriptorsDisabledInStableOrder() {
         ModState persisted = new ModState(1, List.of(
                 new ModState.Entry("known-b", true, 4),

@@ -117,8 +117,26 @@ public final class ModValidator {
             }
         }
 
+        Map<String, CompilerConstantStatics.Shape> immutableEnums = new HashMap<>();
+        Map<String, Set<String>> compilerConstants = new HashMap<>();
         for (ClassInfo info : classes.values()) {
-            validateStatics(info, findings);
+            Set<String> fields = CompilerConstantStatics.immutableEnumFields(info.constantShape);
+            if (!fields.isEmpty()) {
+                immutableEnums.put(info.name, info.constantShape);
+                compilerConstants.put(info.name, fields);
+            }
+        }
+        Map<String, CompilerConstantStatics.Shape> externalEnums = new HashMap<>();
+        for (ClassInfo info : classes.values()) {
+            Set<String> fields = compilerConstants.get(info.name);
+            if (fields == null) fields = CompilerConstantStatics.assertionFields(info.constantShape);
+            if (fields.isEmpty()) fields = CompilerConstantStatics.enumSwitchFields(info.constantShape, name -> {
+                // Rejected author enums must never fall back to a classpath/resource lookup.
+                if (classes.containsKey(name)) return immutableEnums.get(name);
+                if (!externalEnums.containsKey(name)) externalEnums.put(name, externalEnum(name));
+                return externalEnums.get(name);
+            });
+            validateStatics(info, fields, findings);
             boolean objectInstance = isAssignable(info.name, OBJECT_INSTANCE, classes);
             boolean supportedObjectBase = isAssignable(info.name, OBJECT_BASE, classes);
             if (objectInstance && !supportedObjectBase && (info.access & Opcodes.ACC_ABSTRACT) == 0) {
@@ -145,6 +163,26 @@ public final class ModValidator {
     private boolean isTrustedApi(String internalName) {
         if (trustedApi.contains(internalName)) return true;
         return engineClass(internalName).modApi;
+    }
+
+    private CompilerConstantStatics.Shape externalEnum(String internalName) {
+        ClassLoader resources;
+        if (internalName.startsWith("com/openggf/")) {
+            if (!isTrustedApi(internalName)) return null;
+            resources = ModValidator.class.getClassLoader();
+        } else {
+            // The platform loader also owns JDK enum packages such as javax.swing.
+            resources = ClassLoader.getPlatformClassLoader();
+        }
+        // Read only engine/platform-owned bytes. No creator class loader, Class.forName or initialization.
+        try (InputStream input = resources.getResourceAsStream(internalName + ".class")) {
+            if (input == null) return null;
+            CompilerConstantStatics.Shape shape = CompilerConstantStatics.inspectExternalEnum(
+                    readBounded(input, limits.maxAssetBytes()));
+            return shape != null && internalName.equals(shape.name) ? shape : null;
+        } catch (IOException | RuntimeException malformed) {
+            return null;
+        }
     }
 
     private Map<String, ClassInfo> readClasses(byte[] jarBytes, List<ModValidationFinding> findings) {
@@ -212,6 +250,7 @@ public final class ModValidator {
 
     private static ClassInfo parse(byte[] bytes) {
         ClassInfo info = new ClassInfo();
+        info.constantShape = CompilerConstantStatics.inspect(bytes);
         new ClassReader(bytes).accept(new ClassVisitor(Opcodes.ASM9) {
             @Override public void visit(int version, int access, String name, String signature,
                                         String superName, String[] interfaces) {
@@ -263,20 +302,8 @@ public final class ModValidator {
                         && (access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_ABSTRACT)) == Opcodes.ACC_PUBLIC) {
                     info.validRecreateMethod = true;
                 }
-                boolean initializer = name.equals("<clinit>");
                 return new MethodVisitor(Opcodes.ASM9) {
                     final String methodKey = name + descriptor;
-                    /** Anything a class initializer does beyond javac's own enum-switch and assert code. */
-                    void initializerStep(boolean compilerPattern) {
-                        if (initializer && !compilerPattern) info.initializerBeyondCompilerArtifacts = true;
-                    }
-                    @Override public void visitInsn(int opcode) {
-                        initializerStep(opcode != Opcodes.ATHROW && opcode != Opcodes.MONITORENTER
-                                && opcode != Opcodes.MONITOREXIT);
-                    }
-                    @Override public void visitIntInsn(int opcode, int operand) {
-                        initializerStep(opcode != Opcodes.NEWARRAY || operand == Opcodes.T_INT);
-                    }
                     @Override public AnnotationVisitor visitAnnotation(String annotation, boolean visible) {
                         info.referenceDescriptor(annotation); return info.annotationValues();
                     }
@@ -303,13 +330,6 @@ public final class ModValidator {
                     @Override public void visitMethodInsn(int opcode, String owner, String method,
                                                           String desc, boolean isInterface) {
                         info.reference(owner); info.referenceMethodDescriptor(desc);
-                        // javac's assert flag (Class.desiredAssertionStatus) and enum-switch table
-                        // (Enum.values().length, constant.ordinal()) are the only calls it emits there.
-                        initializerStep((opcode == Opcodes.INVOKEVIRTUAL && owner.equals("java/lang/Class")
-                                && method.equals("desiredAssertionStatus") && desc.equals("()Z"))
-                                || (opcode == Opcodes.INVOKESTATIC && method.equals("values")
-                                        && desc.equals("()[L" + owner + ";"))
-                                || (opcode == Opcodes.INVOKEVIRTUAL && method.equals("ordinal") && desc.equals("()I")));
                         if (method.equals("services")
                                 && desc.endsWith("Lcom/openggf/level/objects/ObjectServices;")) {
                             info.servicesMethods.add(methodKey);
@@ -322,28 +342,23 @@ public final class ModValidator {
                         info.reference(owner); info.referenceDescriptor(desc);
                         if (opcode == Opcodes.PUTSTATIC && owner.equals(info.name)) {
                             info.staticWrites.add(field);
-                            if (!initializer) info.staticWritesOutsideInitializer.add(field);
                         }
-                        initializerStep(opcode == Opcodes.GETSTATIC || (opcode == Opcodes.PUTSTATIC
-                                && owner.equals(info.name) && info.fields.stream().anyMatch(
-                                        f -> f.name().equals(field) && compilerArtifact(f))));
                         if (owner.equals(info.name)) {
                             info.fieldUses.computeIfAbsent(methodKey, ignored -> new HashSet<>()).add(field);
                         }
                     }
                     @Override public void visitTypeInsn(int opcode, String type) {
-                        info.reference(type); initializerStep(false);
+                        info.reference(type);
                     }
                     @Override public void visitLdcInsn(Object value) {
                         info.referenceValue(value);
                     }
                     @Override public void visitInvokeDynamicInsn(String method, String desc, Handle bootstrap, Object... args) {
-                        initializerStep(false);
                         info.referenceMethodDescriptor(desc); info.referenceHandle(bootstrap);
                         for (Object arg : args) info.referenceValue(arg);
                     }
                     @Override public void visitMultiANewArrayInsn(String desc, int dimensions) {
-                        info.referenceDescriptor(desc); initializerStep(false);
+                        info.referenceDescriptor(desc);
                     }
                     @Override public void visitTryCatchBlock(org.objectweb.asm.Label start, org.objectweb.asm.Label end,
                                                              org.objectweb.asm.Label handler, String type) { info.reference(type); }
@@ -353,23 +368,13 @@ public final class ModValidator {
         return info;
     }
 
-    /**
-     * Static state is rejected, except javac's own artefacts that hold no mod state: the
-     * synthetic {@code $assertionsDisabled} flag an {@code assert} statement adds, and the
-     * synthetic {@code $SwitchMap$...} tables (in a synthetic {@code Outer$1} class) a
-     * {@code switch} over an enum adds. Their class initializer is allowed only while it does
-     * nothing else: reads statics, calls {@code desiredAssertionStatus}, an enum's
-     * {@code values()} and {@code ordinal()}, builds int arrays and writes those fields.
-     */
-    private static void validateStatics(ClassInfo info, List<ModValidationFinding> findings) {
-        if (info.classInitializer && info.initializerBeyondCompilerArtifacts) {
+    private static void validateStatics(ClassInfo info, Set<String> compilerConstants, List<ModValidationFinding> findings) {
+        if (info.classInitializer && compilerConstants.isEmpty()) {
             findings.add(error("STATIC_STATE_UNSUPPORTED", info.name, "<clinit>",
-                    "Author classes may not declare a class initializer (javac's own code for assert"
-                            + " and switch over an enum is allowed)"));
+                    "Only verified immutable enum, assertion flag or compiler switch initialization is supported"));
         }
         for (FieldInfo field : info.fields) {
-            if ((field.access & Opcodes.ACC_STATIC) == 0) continue;
-            if (compilerArtifact(field) && !info.staticWritesOutsideInitializer.contains(field.name)) continue;
+            if ((field.access & Opcodes.ACC_STATIC) == 0 || compilerConstants.contains(field.name)) continue;
             boolean finalField = (field.access & Opcodes.ACC_FINAL) != 0;
             boolean constantType = field.descriptor.length() == 1 || field.descriptor.equals("Ljava/lang/String;");
             if (!finalField || !constantType || field.value == null || info.staticWrites.contains(field.name)) {
@@ -377,14 +382,6 @@ public final class ModValidator {
                         "Only literal compile-time primitive/String constants may be static"));
             }
         }
-    }
-
-    /** javac's synthetic {@code $assertionsDisabled} flag or {@code $SwitchMap$} enum-switch table. */
-    private static boolean compilerArtifact(FieldInfo field) {
-        int flags = Opcodes.ACC_STATIC | Opcodes.ACC_FINAL | Opcodes.ACC_SYNTHETIC;
-        if ((field.access() & flags) != flags) return false;
-        return (field.name().equals("$assertionsDisabled") && field.descriptor().equals("Z"))
-                || (field.name().startsWith("$SwitchMap$") && field.descriptor().equals("[I"));
     }
 
     private static void validateObject(ClassInfo info, Map<String, ClassInfo> classes,
@@ -543,14 +540,13 @@ public final class ModValidator {
     }
 
     private static final class ClassInfo {
+        CompilerConstantStatics.Shape constantShape;
         String name; String superName; int access; boolean publicNoArgConstructor;
         boolean constructorServices; boolean validRecreateMethod; boolean classInitializer;
-        boolean initializerBeyondCompilerArtifacts;
         final List<String> interfaces = new ArrayList<>();
         final List<FieldInfo> fields = new ArrayList<>();
         final Set<String> engineReferences = new HashSet<>();
         final Set<String> staticWrites = new HashSet<>();
-        final Set<String> staticWritesOutsideInitializer = new HashSet<>();
         final Set<String> servicesMethods = new HashSet<>();
         final Map<String, Set<String>> methodCalls = new HashMap<>();
         final Map<String, Set<String>> fieldUses = new HashMap<>();

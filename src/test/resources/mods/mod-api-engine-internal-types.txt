@@ -102,6 +102,7 @@ com.openggf.level.objects.ObjectSolidContactController
 com.openggf.sprites.managers.InitialPlayableInput
 com.openggf.sprites.managers.PlayableSstDispatcher
 com.openggf.sprites.managers.ProcessSpritesEpoch
+com.openggf.sprites.managers.TailsTailPose
 com.openggf.sprites.managers.TailsTailsController$RewindState
 com.openggf.trace.BootstrapDivergence
 com.openggf.trace.DynamicArtTransfer

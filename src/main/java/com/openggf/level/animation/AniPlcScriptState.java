@@ -110,6 +110,16 @@ public class AniPlcScriptState {
         return tilesPerFrame;
     }
 
+    /** Presentation-only residency copies every decoded source tile without advancing the script. */
+    public Pattern[] copySceneArtPatterns() {
+        Pattern[] copies = new Pattern[artPatterns.length];
+        for (int i = 0; i < copies.length; i++) {
+            copies[i] = new Pattern();
+            copies[i].copyFrom(artPatterns[i]);
+        }
+        return copies;
+    }
+
     public void prime(Level level, GraphicsManager graphicsManager) {
         if (frameTileIds.length == 0 || artPatterns.length == 0) {
             return;

@@ -10,7 +10,14 @@ public final class ModApiVersion {
      * Current unpublished compiled-mod API candidate, including the 0.7
      * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,
      * deferred SMPS header construction, explicit dynamic solid-contact rewind binding,
-     * and opt-in whole-game presentation pacing.
+     * opt-in whole-game presentation pacing, controlled level admission and opaque
+     * course checkpoints, semantic native impulses, logical menu pointers, and read-only
+     * ROM-backed value scenes, held idle poses, controller-owned rewind presentation values
+     * and per-player button prompt labels derived from live bindings. Controlled
+     * entry fade admission reports whether it advanced; checkpoint readiness includes
+     * the native released title overlay's completion. Bounded scene replay and
+     * session-owned actual-PCM recording support creator rewind without giving
+     * it developer-history or sound-driver restore ownership.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

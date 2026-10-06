@@ -28,6 +28,43 @@ class TestRewindRegistry {
         };
     }
 
+    private static final class ModeAdapter implements RewindSnapshottable<Integer>,
+            com.openggf.game.mode.GameplayFrameController {
+        int value;
+        @Override public String key() { return "arbitrary-controller-key"; }
+        @Override public Integer capture() { return value; }
+        @Override public void restore(Integer value) { this.value = value; }
+        @Override public boolean beforeTick(com.openggf.game.mode.CourseControl course,
+                com.openggf.control.LogicalInputSnapshot input) { return false; }
+        @Override public void afterTick(com.openggf.game.mode.CourseControl course, boolean advanced) { }
+    }
+
+    @Test
+    void coursePartitionExcludesOnlySessionControllerIdentity() {
+        var mode = new ModeAdapter();
+        var reg = new RewindRegistry(null, mode);
+        AtomicInteger creatorValue = new AtomicInteger(7);
+        reg.register(mode);
+        reg.register(intSnap("mode:creator-chosen-prefix", creatorValue));
+        var checkpoint = reg.captureCourse();
+        assertFalse(checkpoint.containsKey(mode.key()));
+        assertTrue(checkpoint.containsKey("mode:creator-chosen-prefix"));
+        mode.value = 99; creatorValue.set(88);
+        reg.restoreCourse(checkpoint);
+        assertEquals(99, mode.value, "mode ledger is outside course rollback regardless of its key");
+        assertEquals(7, creatorValue.get(), "creator prefix cannot exempt arbitrary state");
+    }
+
+    @Test
+    void courseEpochChangesForSameKeyReplacementIncludingModePrefixedContent() {
+        var reg = new RewindRegistry();
+        reg.register(intSnap("mode:content", new AtomicInteger()));
+        long before = reg.courseLayoutVersion();
+        reg.deregister("mode:content");
+        reg.register(intSnap("mode:content", new AtomicInteger()));
+        assertNotEquals(before, reg.courseLayoutVersion());
+    }
+
     @Test
     void captureWalksRegistrationOrder() {
         RewindRegistry reg = new RewindRegistry();

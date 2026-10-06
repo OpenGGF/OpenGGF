@@ -1,6 +1,7 @@
 package com.openggf.audio;
 
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.presentation.OuterFramePresentation;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.AudioPresentationDependencyResolver;
 import com.openggf.audio.presentation.AudioPresentationSnapshot;
@@ -38,6 +39,30 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAudioManagerPresentationModes {
+
+    @Test
+    void recordedReverseOwnsOuterPresentationWithoutTakingLogicalRewindOwnership() {
+        AudioManager audio = AudioManager.getInstance();
+        var outer = new OuterFramePresentation(audio);
+        var replay = audio.recordPresentationAudio(1);
+        audio.submitShadowRawPcmForTesting(new byte[8_000], 48_000);
+        outer.present(false, false, false);
+        var history = AudioManagerTestDiagnostics.producerFingerprint(audio).history();
+        replay.beginReverse(1);
+        assertFalse(audio.isReverseAudioPresentationActive());
+        assertTrue(audio.isReverseAudioOutputActive());
+        assertEquals(PresentationMode.REVERSE, outer.modeFor(false, false, false));
+        assertEquals(PresentationMode.SILENT, outer.modeFor(false, true, false));
+        assertThrows(IllegalStateException.class, audio::beginReverseAudioPresentation);
+        assertFalse(audio.isReverseAudioPresentationActive(),
+                "a conflicting debug begin must not publish logical rewind ownership");
+        outer.present(false, false, false);
+        assertEquals(1, AudioManagerTestDiagnostics.shadowParitySnapshot(audio).reverseFrames());
+        replay.close();
+        assertFalse(audio.isReverseAudioOutputActive());
+        assertEquals(PresentationMode.FORWARD, outer.modeFor(false, false, false));
+        assertEquals(history, AudioManagerTestDiagnostics.producerFingerprint(audio).history());
+    }
 
     @AfterEach
     void tearDown() {

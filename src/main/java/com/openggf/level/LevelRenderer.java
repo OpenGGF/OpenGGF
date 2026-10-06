@@ -883,6 +883,21 @@ public final class LevelRenderer {
     private boolean preparingSpritePresentation;
     private LevelScrollPresentation currentScrollPresentation;
 
+    /** Capture the same full player/object/ring pass used for gameplay, before any GPU submission.
+     * This deliberately excludes HUD and never resolves deformation/camera-follow/world events.
+     */
+    SpritePresentation.Frame captureSceneSpriteTable(SpriteManager sprites) {
+        if (lm.graphicsManager == null || lm.camera == null) throw new IllegalStateException("Renderer not attached");
+        boolean previous = preparingSpritePresentation;
+        preparingSpritePresentation = true;
+        try {
+            return com.openggf.level.render.SpritePresentationRenderer.prepare(lm.graphicsManager,
+                    lm.camera.getXWithShake(), lm.camera.getYWithShake(), () -> prepareOrDrawLiveSprites(sprites));
+        } finally {
+            preparingSpritePresentation = previous;
+        }
+    }
+
     /** Select the VDP scroll generation paired with the displayed sprite table. */
     private LevelScrollPresentation scrollForDraw() {
         return LevelSpritePresentation.enabled(lm) ? spriteTables.publishedScroll() : null;

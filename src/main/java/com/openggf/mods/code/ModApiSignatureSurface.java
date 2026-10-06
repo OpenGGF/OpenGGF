@@ -179,6 +179,7 @@ public final class ModApiSignatureSurface {
             "com.openggf.game.timing.LoadTimeSimulationMode",
             "com.openggf.level.CarriedTitlePublicationTiming",
             "com.openggf.level.objects.FixedSstSlotSink",
+            "com.openggf.sprites.managers.TailsTailPose",
             "com.openggf.sprites.managers.TailsTailsController$RewindState",
             "com.openggf.trace.BootstrapDivergence",
             "com.openggf.trace.DynamicArtTransfer",

@@ -181,7 +181,7 @@ public class SpringObjectInstance extends BoxObjectInstance
      * - In our engine, Y increases upward, so we SUBTRACT to push down (away from
      * spring face)
      */
-    private void applyUpSpring(AbstractPlayableSprite player) {
+    protected void applyUpSpring(AbstractPlayableSprite player) {
         // ROM: addq.w #8,y_pos(a1) — push player down 8px (away from spring face)
         // before launching. y_pos is center coordinate.
         player.setCentreYPreserveSubpixel((short) (player.getCentreY() + 8));
