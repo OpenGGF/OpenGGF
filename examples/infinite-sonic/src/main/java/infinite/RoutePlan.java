@@ -75,7 +75,8 @@ public final class RoutePlan {
         long end = (stretch * 4 + 2) * 512 + END_OFFSET;
         int high = Integer.MAX_VALUE;
         int low = Integer.MIN_VALUE;
-        for (long x = start - APPROACH; x <= end; x += 4) {
+        // Every pixel: mixed ROM halves can crest between coarser samples.
+        for (long x = start - APPROACH; x <= end; x++) {
             int floor = terrain.floorAt(x);
             if (floor < 0) return null;
             high = Math.min(high, floor);

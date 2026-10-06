@@ -963,3 +963,79 @@ spot, runway) and restarts the level music, as the ghost version did without the
 **Removed.** The ghost glide (`drawGhost`, its pose capture and the 45-90 frame camera glide).
 `RESUME_READY` is now 1.
 
+
+## Platform rafts and bounce flyers (0.24.0)
+
+Follow-up on `29696afd70`, 2026-10-06. Request: pits with two platforms and a gap between
+them were hard to time; bring them together in the middle, and for some chasms put flying
+badniks to bounce off instead of or as well as the platforms, at random.
+
+**Rafts.** `PlatformPlan` used to space one to three stones evenly, so a 448 px pit with
+two 64 px platforms left three 106 px spans. A held jump runs about 310 px at top speed, so
+every hop had to be cut short and steered onto a 64 px target. The stones now sit flush
+(`RoutePlan.GAP`, 8 px, the high road's proven run-across gap) as one raft centred in the
+pit; the count is the fewest that leave both outer spans at most `MAX_SPAN` (144 px), so a
+448 px pit of 64 px platforms takes three (208 px raft, 120 px spans).
+
+**Crossings.** `PlatformPlan.crossing` seeds each stretch: `RAFT` half, `BOUNCE` a quarter
+(no stones), `BOTH` a quarter. Acts with no bounceable flyer (`CourseSpecies.Traits.bounceable`:
+flying, no `col_hurt` bit, not the spiked Orbinaut) always use `RAFT`, so SLZ and SBZ are
+unchanged. `PlatformPlan.bouncer` places the flyer; the controller spawns it as a
+`CourseBadnik` with the `HOVER` subtype bit (bob, never patrol) and its own section bitmask,
+outside `EncounterPlan`, whose flyers must clear the terrain below them.
+
+**Bounce geometry.** The engine's `EnemyDefeatBounce` (`React_Enemy`) negates a falling
+Sonic's `y_vel` when he is above the badnik, so a flyer met on the way down returns a full
+jump. `BOUNCE` puts the flyer 288 px past the lip (capped 48 px short of the far wall) with its
+centre 24 px below the near bank. A ballistic sweep (held jump, gravity $38, no air steering,
+bob -8..+7, touch boxes 32 x 23) hits it from takeoffs 8-80 px before the lip at 0x540,
+0-64 px at 5 px/frame and 0-32 px at 4.5; slower runs need air steering. `BOTH` puts the flyer
+below the middle of the far gap, 24 px below the raft, where a full jump from the near lip that
+overshoots the raft comes down. Rings trace the rebound (t = 8..32 frames at 0x540/-0x680).
+
+**Rejected.** Adding the bounce flyers through `EncounterPlan` (its flyer-clearance and
+spacing contracts would no longer hold over a pit); a flyer in the near gap as a safety net
+(a Sonic who walks off the bank is not rolling and would be hurt, not bounced); a flyer above
+the raft (a jump from the near lip is still near its peak there, so a hit gives no rebound).
+
+
+## Mixed halves and slope tiers (0.25.0)
+
+Follow-up on `e142a2ec66`, 2026-10-06. Request: the terrain often looks like the same piece
+mirrored; add height and general variety.
+
+**Cause.** Every open section was one ROM column followed by its own reflection, so it
+always returned to its entry height. Height changed only at corridors, once per four sections.
+The byte layout's 256 block slots were nearly spent (GHZ 223 of 249 after the ground tier,
+SBZ 246 of 246), so new shapes could not come from new blocks.
+
+**Mixed halves.** `TerrainLibrary` now pairs the left half of any section with the mirrored
+right half of any section wherever the two floors meet at the same middle height
+(`profile[255]`). Both halves are already interned, so this adds no blocks. `pairs[left][right]`
+lists the joins for each pair of edge tiers. A section picks uniformly among them with the
+same seeded random as before. The column's own mirror stays one option.
+
+**Slope tiers.** Halves from different tiers join where a ROM slope covers the difference.
+For example, GHZ column 3 climbs 64 px at ground tier and meets a flat half at tier 0. The
+corridor banks (stretch parts 0 and 3) keep the stretch tier, so corridor steps, pit widths
+and platform stretches are unchanged. `edgeTier` lets the two edges between a stretch's open
+sections wander: the first goes to any tier that joins the stretch tier both ways, the second
+to any tier that joins the first and leads back. Neither set can be empty, because a tier
+always joins itself. A platform stretch keeps its flat approach bank (4k+2) at the stretch
+tier. Stretches 0 and 1 stay level (`DRIFT_FIRST_STRETCH`). Everything stays stateless.
+
+**Reach by zone** (pinned seed, 1,000 sections): GHZ 514 of 697 open sections asymmetric, 176
+climbs and 176 drops; SBZ 308 asymmetric, 154 climbs; MZ 481 asymmetric with no tier change
+(its 14 px bumps and 160 px drop fit no 32 px tier); SYZ, LZ and SLZ floors are flat or unique,
+so mixing varies their look only.
+
+**Plan fallout.** `RoutePlan` sampled the floor every 4 px. Mixed slopes can crest between those
+samples, so it now samples every pixel. Its window reaches past the last road platform, so
+the road may sit higher than 128 px above the floor directly beneath it. The test now checks
+"at least 128 px". The CONTINUE rewind test's `<` became `<=`: on the new terrain the
+first fair moment fell exactly 60 frames before the death, which meets the documented
+"at least a second".
+
+**Not attempted.** Tier changes for the flat zones (a 16 px step is a wall to Sonic's floor
+sensors, so it would need generated slopes) and checks on art continuity where two columns
+meet. Seams below the floor are not visually reviewed.

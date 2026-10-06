@@ -9,10 +9,13 @@ import java.util.List;
 
 /**
  * ROM-art remix with bounded mod patrols, not a replacement for stock badnik behavior.
- * The spawn subtype holds the {@link CourseSpecies} ordinal chosen for the zone.
+ * The spawn subtype holds the {@link CourseSpecies} ordinal chosen for the zone, plus
+ * {@link #HOVER} for a flyer that holds its place over a pit for Sonic to bounce off.
  */
 public final class CourseBadnik extends AbstractBadnikInstance
         implements RewindRecreatable, TouchResponseListener {
+    /** Subtype flag: bob in place instead of patrolling ({@link PlatformPlan.Bouncer}). */
+    public static final int HOVER = 0x40;
     private long worldAnchor;
     private int anchorX;
     private int anchorY;
@@ -27,15 +30,16 @@ public final class CourseBadnik extends AbstractBadnikInstance
     }
 
     public CourseBadnik(ObjectSpawn spawn, long worldAnchor) {
-        super(spawn, "Course " + CourseSpecies.of(spawn.subtype()).name());
+        super(spawn, "Course " + CourseSpecies.of(spawn.subtype() & ~HOVER).name());
         this.worldAnchor = worldAnchor;
         anchorX = spawn.x();
         anchorY = spawn.y();
     }
 
     /** The {@link CourseSpecies} id. */
-    public int species() { return Math.floorMod(spawn.subtype(), CourseSpecies.COUNT); }
-    private CourseSpecies.Traits traits() { return CourseSpecies.of(spawn.subtype()); }
+    public int species() { return Math.floorMod(spawn.subtype() & ~HOVER, CourseSpecies.COUNT); }
+    public boolean hover() { return (spawn.subtype() & HOVER) != 0; }
+    private CourseSpecies.Traits traits() { return CourseSpecies.of(species()); }
     public boolean flying() { return traits().flying(); }
     public long worldAnchor() { return worldAnchor; }
     @Override public boolean isPersistent() { return !isDestroyed(); }
@@ -59,12 +63,12 @@ public final class CourseBadnik extends AbstractBadnikInstance
         }
         var species = traits();
         ticks = (ticks + 1) & 127;
-        if (species.patrols()) {
+        if (species.patrols() && !hover()) {
             offset += direction;
             if (Math.abs(offset) >= EncounterPlan.PATROL_RADIUS) direction = -direction;
             facingLeft = direction < 0;
         } else {
-            // Stationary hoppers turn to face Sonic.
+            // Stationary hoppers and hovering flyers turn to face Sonic.
             facingLeft = player == null || player.getCentreX() < currentX;
         }
         currentX = anchorX + offset;
