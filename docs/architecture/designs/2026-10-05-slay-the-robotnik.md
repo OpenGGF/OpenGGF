@@ -89,9 +89,10 @@ counterpart to the Silent's Shiv; bombs are Tails' weapon in *Tails Adventure*.
 
 ### Run structure
 
-- Three acts, each a zone map of 15 floors in the StS layout (seven columns, six
-  generated paths, enemies on floor 1, treasure on floor 9, rest sites before the boss),
-  followed by the final boss.
+- Three acts, each a zone map of 15 floors in the StS layout (seven columns, enemies on
+  floor 1, treasure on floor 9, rest sites before the boss), followed by the final boss.
+  The generator walks three paths from distinct starts that meet before the boss; StS's six
+  overlapping paths read as clutter on the left-to-right zone map.
 - The StS map rules apply: no elites or rest sites before floor 6, no two consecutive
   shops/rest sites/elites on a path, and siblings branching from the same node use
   different node types.
@@ -179,6 +180,38 @@ frames, item monitors, icons and drawn effects). Enemy looks are code
   (`GameModule.startupScene()` returned `ModSceneFactory`), closing a package cycle. The
   startup scene now travels through the existing `getGameService(ModSceneFactory.class)`
   lookup and `startupScene()` left the unpublished candidate pin.
+- 2026-10-05/06, after the first review on PR #211: the map wheel scrolls by a fixed step
+  and stops at either end (`bc26dbcea`); gold card terms and every HUD and fight readout
+  have tips (`5844b7cda`, `ab8d61cbd`); rooms are staged on the act's real level:
+  `LevelFloorScanner` finds runs of solid floor with headroom in the level's collision, and
+  `SceneRomArt.levelStages`/`levelForeground` hand them to the mod (`a40bbf626`).
+- The slot machine event spins the bonus stage's own reels (`SlotReels`, after
+  `S3kSlotOptionCycleSystem`) and shows the faces it pays out; every one of the 22 events
+  then got a picture class that plays out the chosen option with the game's objects before
+  the result appears (`d6b03fdec` for the framework, then three subagent lanes in their own
+  worktrees, cherry-picked: `acefe24a8`, `2b8f2876a`, `2d95d9d72`).
+- Maps: the user asked to halve the fights per act, then clarified that the real problem
+  was the clutter of branches; the generator now walks three paths from distinct starts
+  that meet before the boss instead of six (`af75de7b5`).
+- The engine window now refits to the mod's 16:9 aspect instead of letterboxing it
+  (`DisplayWindowFit`, `4c464a508`).
+- Final polish round: the title screen flies through four zones' real levels with the
+  Tornado chase; character select spin-dashes off; rooms dip between each other; rings,
+  cards, monitors and relics fly to where they belong; HP readouts trail a ghost of lost
+  HP; fights open with an entrance (bosses named); each act opens with the zone's title
+  card from the ROM; the Starpost shows its rest and tune-up; game over follows
+  `Obj_GameOver` and victory runs the hero in beside the summary (`7ec37dd9e` to
+  `c4c746335`).
+- Mod API clean-up from an encapsulation audit (`f1132bf10`, `08ebe6066`, `8bd871eed` to
+  `895cd7601`, written by a subagent lane): scenes close at shutdown; scene textures are evicted when unused; the startup scene goes only through an
+  engine-keyed factory behind the fault boundary; `SceneMouse`, `SceneDraw` and
+  `SceneLevelStage` became engine-made final classes; named keys and buttons, menu repeat,
+  `drawBackdrop`, raw `tiles`, and title cards were added for things the example had
+  worked around; the display aspect is requested without a `GamePatch`; zone pictures are
+  served by the game module; `DebuggableScene` replaces reflective debug entry.
+- Tooling: `ExampleModHarness` and `ExampleModCapture` build any example mod from source
+  and capture its scene to PNG, MP4 and WAV (`d9be9a254`, written for the example's highlight reel), and `examples/hello-scene` is a
+  two-class starter for newcomers (`3fd553324`).
 
 ### Rejected approaches and their evidence
 
@@ -202,6 +235,12 @@ frames, item monitors, icons and drawn effects). Enemy looks are code
   its owner's turn start, as StS).
 - **Moving the scene API into `com.openggf.game`** to break the `game -> mods` cycle. It
   would have renamed every public scene type for a problem that one service lookup removes.
+- **Halving the fights per act.** The literal request after the first review; the user then
+  said the problem was the clutter of branches, so the map lost paths (six to three), not
+  fights.
+- **Advancing animation timers in `draw`.** Worked on screen, but headless capture draws only
+  sampled frames, so readouts animated at the sampling rate. All timers now advance in
+  `update`.
 - **Half-dead bosses counted as inactive.** Two-phase bosses (Beam Rocket, Mecha Sonic)
   ended the fight when they "died" before reviving. `Enemy.isPresent()` (still takes turns,
   blocks victory) is now separate from `isActive()` (targetable).
