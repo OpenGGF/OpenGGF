@@ -165,6 +165,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
     private long monitors;
     // One section bit per placed zone hazard.
     private long hazards;
+    // One section bit per placed bounce flyer (PlatformPlan.Bouncer).
+    private long bouncers;
     public long originPixels() { return origin * 256; }
     public CourseController(ObjectSpawn spawn) { super(spawn, "Infinite Sonic course"); }
     @Override public boolean isPersistent() { return true; }
@@ -621,6 +623,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
         }
         if (delta == 0) {
             populateEncounters();
+            populateBouncers();
             populateRings();
             populateStones();
             populateMonitors();
@@ -643,6 +646,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
         stones7 = shiftSections(stones7);
         monitors = shiftSections(monitors);
         hazards = shiftSections(hazards);
+        bouncers = shiftSections(bouncers);
         services().objectManager().applyLevelRepeatOffsetToActiveObjects(-delta, 0);
         var library = services().gameService(TerrainLibrary.class);
         var level = services().currentLevel();
@@ -660,6 +664,7 @@ public final class CourseController extends AbstractObjectInstance implements Re
         camera.setXCopy((short) (camera.getXCopy() - delta));
         services().levelManager().invalidateAllTilemaps();
         populateEncounters();
+        populateBouncers();
         populateRings();
         populateStones();
         populateMonitors();
@@ -814,6 +819,25 @@ public final class CourseController extends AbstractObjectInstance implements Re
                     0, false, encounter.y(), -1, "infinite-sonic", "infinite-sonic:badnik");
             spawnChild(() -> new CourseBadnik(spawn, encounter.worldX()));
             visited |= bit;
+        }
+    }
+
+    /** Flyers hovering over platform stretches' pits, spawned as hovering course badniks. */
+    private void populateBouncers() {
+        var library = services().gameService(TerrainLibrary.class);
+        var camera = services().camera();
+        for (int i = 0; i < TerrainLibrary.WIDTH / 2; i++) {
+            long bit = 1L << i;
+            if ((bouncers & bit) != 0) continue;
+            var bouncer = PlatformPlan.bouncer(library, origin / 2 + i);
+            if (bouncer == null) { bouncers |= bit; continue; }
+            int localX = (int) (bouncer.worldX() - originPixels());
+            if (localX < camera.getX() - 192 || localX > camera.getX() + camera.getWidth() + 192) continue;
+            if (!services().objectManager().hasFreeDynamicSlot()) continue;
+            var spawn = new ObjectSpawn(localX, bouncer.y(), 0, bouncer.species() | CourseBadnik.HOVER,
+                    0, false, bouncer.y(), -1, "infinite-sonic", "infinite-sonic:badnik");
+            spawnChild(() -> new CourseBadnik(spawn, bouncer.worldX()));
+            bouncers |= bit;
         }
     }
 }

@@ -108,8 +108,9 @@ Other character/team selections retain their stock behavior.
 
 The mod reads your Sonic 1 ROM through the normal level loader. It selects continuous
 floor sections with at least 112 pixels of open space above them (so mazes, tunnels and
-overhangs are skipped), aligns them vertically, and pairs them with horizontal reflections
-so their outside edges join. Every run lays a **new random course**: a fresh seed is drawn each
+overhangs are skipped) and aligns them vertically. Each 512-pixel section is the left half
+of one ROM column joined to the mirrored right half of another wherever their floors meet
+at the same height in the middle, so a section is seldom one column and its reflection. Every run lays a **new random course**: a fresh seed is drawn each
 time a course loads (starting from the title, RESTART), while CONTINUE keeps the course it revives
 on. The seed chooses sections as you move. Leaderboards are per zone, whatever the course. Art, palettes,
 music and collision tiles come from the ROM; the jar contains only code and a manifest.
@@ -152,13 +153,20 @@ Every fourth section after the opening is a jump corridor: a 64 to 192 pixel pit
 between flat banks, with at least 160 pixels of approach on either side. Corridors
 also change elevation. The course moves between four ground levels 32 pixels apart,
 climbing or dropping up to 64 pixels per corridor. Climbs use pits of at most 128
-pixels, and 192 pixel pits stay level. Some drops are a plain ledge with no pit. Hold Jump while moving to clear a pit;
+pixels, and 192 pixel pits stay level. From the third stretch on, the ground between
+corridors can also climb or drop a level on the zone's own slopes and come back before
+the next corridor, where a ROM column's slope meets another level's floor (Green Hill's
+64-pixel hills and Scrap Brain's 32-pixel ramps; Marble's bumps vary the floor within a level,
+and the flat floors of Spring Yard, Labyrinth and Star Light vary only in look). Some drops are a plain ledge with no pit. Hold Jump while moving to clear a pit;
 releasing Jump early shortens the arc. Enemy patrols never occupy these corridors.
 Four rings arc over each pit, highest in the middle, tracing the jump that clears it.
 
 From the third corridor on, about a third of corridors become a **platform stretch**:
 a 320 to 448 pixel bottomless pit bridged by one to three of the zone's own stock
-platforms, level with the lower bank, with at most 144 pixels between footholds. These
+platforms, level with the lower bank. They sit flush together as one **raft in the middle
+of the pit** (8 pixels apart, so Sonic runs straight across), with at most 144 pixels of
+open pit either side, so each crossing is two ordinary jumps rather than a run of short,
+timed hops. These
 are the shipped Sonic 1 objects themselves, with their ROM art, solidity, riding and
 sink: Green Hill and Spring Yard use the floating platform (Obj18), half
 the time as the kind that falls 30 frames after Sonic lands; Marble and Scrap Brain use
@@ -167,6 +175,18 @@ the wide moving blocks (Obj52) held stationary; Star Light uses its 80-pixel ele
 act's own stock layout places are used, and only those at least 64 pixels wide, so the
 Labyrinth course (whose only block is 32 pixels) keeps ordinary corridors. Rings sit above each platform. A strong run-up can clear smaller
 stretches in one jump; wider ones need a platform. No enemies patrol platform stretches.
+
+In zones whose sky has a flyer Sonic can break (Buzz Bombers and Batbrains: Green Hill,
+Marble and Spring Yard), the crossing is picked at random for each stretch: half are a raft
+alone, a quarter have **no platforms and a hovering flyer to bounce off** instead, and a
+quarter have the raft **and** a flyer. A bounce flyer holds its place (bobbing, never
+patrolling) 288 pixels into the pit and 24 pixels below the near bank, where a held jump from
+just before the lip at full speed comes down onto it: Sonic breaks it and the stock rebound
+throws him back up a full jump, onto the far bank. Four rings trace that rebound. With a raft,
+the flyer hovers below the middle of the far gap instead, a safety net that bounces a jump
+which overshoots the raft on to the far bank. Spiked Orbinauts cannot be bounced off, so
+Star Light and Scrap Brain keep rafts only. Touching a flyer without jumping hurts as any
+badnik does.
 
 Half of the stretches from the third on split into two paths where the ground
 allows (it varies by at most 64 pixels over the stretch): a **high road** built from those

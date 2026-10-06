@@ -48,6 +48,9 @@ public final class TerrainLibrary {
     private final List<CoursePlatforms.Kind> platformKinds;
     /** An empty column: the open middle of a platform stretch's pit. */
     private final int[] emptyHalf;
+    /** Open-section half pairs by [left edge tier][right edge tier]: (left index << 16) | right
+     * index into those tiers' sections, wherever the two halves' floors meet in the middle. */
+    private final int[][][] pairs = new int[TIER_COUNT][TIER_COUNT][];
 
     /** One walkable 256px floor in a ROM foreground column. {@code profile} holds source Y. */
     private record Candidate(int column, int[] profile, int clearance) {
@@ -181,6 +184,22 @@ public final class TerrainLibrary {
                 sections.get(tier).add(flatHalves[tier]);
                 int floor = seamHeight + tierOffset(tier);
                 floorProfiles.get(tier).add(java.util.stream.IntStream.range(0, 512).map(x -> floor).toArray());
+            }
+        }
+        // Any left half may meet any mirrored right half whose floor reaches the same middle
+        // height, so a section need not be one column and its reflection. Halves from different
+        // tiers join where a ROM slope climbs or drops the difference. Mod design; no new blocks.
+        for (int left = 0; left < TIER_COUNT; left++) {
+            for (int right = 0; right < TIER_COUNT; right++) {
+                var joined = new ArrayList<Integer>();
+                var lefts = floorProfiles.get(left);
+                var rights = floorProfiles.get(right);
+                for (int i = 0; i < lefts.size(); i++) {
+                    for (int j = 0; j < rights.size(); j++) {
+                        if (lefts.get(i)[255] == rights.get(j)[256]) joined.add(i << 16 | j);
+                    }
+                }
+                pairs[left][right] = joined.stream().mapToInt(Integer::intValue).toArray();
             }
         }
     }
@@ -327,8 +346,47 @@ public final class TerrainLibrary {
         plans.put(key, java.util.Optional.ofNullable(value));
         return value;
     }
-    private int sectionIndex(long section, int tier) {
-        return (int) Long.remainderUnsigned(random(section + seed), sections.get(tier).size());
+    /** Halves of an open section: {left tier, left index, right tier, right index}. */
+    private int[] halves(long section) {
+        int left = edgeTier(section);
+        int right = edgeTier(section + 1);
+        int[] options = pairs[left][right];
+        int pair = options[(int) Long.remainderUnsigned(random(section + seed), options.length)];
+        return new int[] { left, pair >>> 16, right, pair & 0xFFFF };
+    }
+
+    /** Stretches before this keep one tier throughout: the opening and first taught jump. */
+    static final int DRIFT_FIRST_STRETCH = 2;
+
+    /**
+     * Tier at the left edge of section 4k+part. Corridor banks (parts 0 and 3) keep the stretch
+     * tier; the two edges between a stretch's open sections may wander to any tier a ROM slope
+     * reaches and still lead back, so hills climb into raised ground mid-stretch. A platform
+     * stretch keeps its flat approach bank (4k+2) at the stretch tier. Stateless; mod design.
+     */
+    private int edgeTier(long section) {
+        long stretch = Math.floorDiv(section, 4);
+        int part = (int) Math.floorMod(section, 4);
+        int home = stretchTier(stretch);
+        if (part == 0 || part == 3 || stretch < DRIFT_FIRST_STRETCH) return home;
+        long random = random(stretch + seed + 0x4452494654L);
+        int first = pickTier(random, t -> joins(home, t) && joins(t, home));
+        if (part == 1) return first;
+        if (platformStretch(stretch)) return home;
+        return pickTier(random >>> 32, t -> joins(first, t) && joins(t, home));
+    }
+
+    private boolean joins(int left, int right) { return pairs[left][right].length > 0; }
+
+    private static int pickTier(long random, java.util.function.IntPredicate allowed) {
+        int count = 0;
+        for (int tier = 0; tier < TIER_COUNT; tier++) {
+            if (allowed.test(tier)) count++;
+        }
+        int pick = (int) Long.remainderUnsigned(random, count);
+        for (int tier = 0; ; tier++) {
+            if (allowed.test(tier) && pick-- == 0) return tier;
+        }
     }
 
     public long seed() { return seed; }
@@ -397,7 +455,8 @@ public final class TerrainLibrary {
             return side == 0 ? emptyHalf[row] : gapHalves[platformCut(stretch, 1)][tier][1][row];
         }
         if (!isCorridor(section)) {
-            return sections.get(tier).get(sectionIndex(section, tier))[side][row];
+            int[] halves = halves(section);
+            return sections.get(halves[side * 2]).get(halves[side * 2 + 1])[side][row];
         }
         int width = gapWidth(section);
         return width == 0 ? flatHalves[tier][side][row]
@@ -470,7 +529,8 @@ public final class TerrainLibrary {
             int width = gapWidth(section);
             return x >= 256 - width / 2 && x < 256 + width / 2 ? -1 : seamHeight + tierOffset(tier);
         }
-        return floorProfiles.get(tier).get(sectionIndex(section, tier))[x];
+        int[] halves = halves(section);
+        return floorProfiles.get(halves[side * 2]).get(halves[side * 2 + 1])[x];
     }
 
     /** Top floor in a decoded S1 column; rejects ceilings, walls and missing floor. */

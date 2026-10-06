@@ -37,6 +37,8 @@ public final class CourseSpecies {
         public boolean hazard() { return (collision & 0x80) != 0; }
         /** Ball Hogs stand their ground; everything else patrols. */
         public boolean patrols() { return id != BALL_HOG; }
+        /** A flyer a falling Sonic can break and rebound from: no hazard flag and no circling spikes. */
+        public boolean bounceable() { return flying && !hazard() && id != ORBINAUT; }
     }
 
     public static Traits of(int id) {
