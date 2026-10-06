@@ -45,6 +45,7 @@ public final class Boss extends AbstractObjectInstance
     private int laugh;
     private int shots;
     private boolean facingLeft = true;
+    private int groundY;
 
     public Boss(ObjectSpawn spawn) {
         this(spawn, 1);
@@ -109,18 +110,35 @@ public final class Boss extends AbstractObjectInstance
         subY &= 0xFF;
     }
 
-    /** Eggman hovers within a jump of the floor beneath him (Sonic's jump reaches about 100px). */
+    /**
+     * Eggman hovers within a jump of the ground Sonic last stood on (Sonic's jump reaches about
+     * 100px), so he stays reachable and on camera however the arena floor rises and falls.
+     */
     private int hoverY() {
         var arena = arena();
-        if (arena == null) return y;
-        int floor = floorAt(x, arena.floorTop() - 8);
-        if (floor == Integer.MIN_VALUE) floor = arena.floorTop();
-        return floor - 88;
+        if (groundY == 0) groundY = arena == null ? y + 88 : arena.floorTop();
+        return groundY - (tank() ? 28 : 88);
+    }
+
+    /** Hill Top's boss is a tank: it rolls along the ground and charges instead of swooping. */
+    private boolean tank() { return stage() == Stages.HTZ && !runner(); }
+
+    /** Follows the ground Sonic stands on; held while he is airborne. */
+    private void trackGround() {
+        var player = services().camera().getFocusedSprite();
+        if (player != null && !player.getAir() && !player.getDead()) groundY = player.getCentreY() + 19;
+    }
+
+    /** Eases toward the hover height rather than snapping when Sonic changes level. */
+    private void approachHover(int bob) {
+        int target = hoverY() + bob;
+        y += Integer.signum(target - y) * Math.min(Math.abs(target - y), 2);
     }
 
     private void eggman(int px, int py) {
         var arena = arena();
         timer++;
+        trackGround();
         switch (state) {
             case ENTER -> {
                 y += 2;
@@ -128,7 +146,7 @@ public final class Boss extends AbstractObjectInstance
             }
             case SWEEP -> {
                 step();
-                y = hoverY() + (int) Math.round(Math.sin(ticks * 0.06) * 10);
+                approachHover(tank() ? 0 : (int) Math.round(Math.sin(ticks * 0.06) * 10));
                 if (arena != null && (x < arena.left() + 48 || x > arena.right() - 48)) {
                     x = arena.clampX(x, 48);
                     vx = -vx;
@@ -151,9 +169,23 @@ public final class Boss extends AbstractObjectInstance
                 if (timer > 18 * count + 20) { state = SWEEP; timer = 0; vx = facingLeft ? -0x180 : 0x180; }
             }
             case SWOOP -> {
+                if (tank()) {
+                    // Charge along the ground at Sonic, then resume the patrol.
+                    if (timer == 1) vx = (px < x ? -1 : 1) * 0x400;
+                    facingLeft = vx < 0;
+                    step();
+                    approachHover(0);
+                    if (arena != null && (x < arena.left() + 48 || x > arena.right() - 48) || timer > 70) {
+                        x = arena == null ? x : arena.clampX(x, 48);
+                        state = SWEEP;
+                        timer = 0;
+                        vx = facingLeft ? 0x180 : -0x180;
+                    }
+                    break;
+                }
                 // Dive toward where Sonic stands, then climb back.
                 facingLeft = px < x;
-                int floor = arena == null ? py : arena.floorTop() - 24;
+                int floor = groundY - 24;
                 vx = Integer.signum(px - x) * Math.min(Math.abs(px - x) * 16, 0x300);
                 vy = Integer.signum(floor - y) * Math.min(Math.abs(floor - y) * 16, 0x400);
                 step();
@@ -379,6 +411,30 @@ public final class Boss extends AbstractObjectInstance
         }
     }
 
+    /**
+     * Acts that load no Eggman art (Metropolis act 3 is its own ROM zone) get an Eggman core:
+     * a code-drawn metal sphere with a red eye, ringed by the zone's own flying badniks.
+     */
+    private void drawCore() {
+        var s = services();
+        int[] air = Stages.air(stage());
+        var guard = air.length == 0 ? null : getRenderer(Species.of(air[0]).artKey());
+        if (guard != null) {
+            var traits = Species.of(air[0]);
+            for (int i = 0; i < 4; i++) {
+                double a = ticks * 0.05 + i * Math.PI / 2;
+                guard.drawFrameIndex(traits.frame(ticks), x + (int) (Math.cos(a) * 30), y + (int) (Math.sin(a) * 30),
+                        false, false);
+            }
+        }
+        Draw.circleWorld(s, x, y, 19, 19, Draw.NAVY, 1f);
+        Draw.circleWorld(s, x, y, 17, 17, 0x8088A0, 1f);
+        Draw.circleWorld(s, x - 4, y - 5, 7, 7, 0xC8D0E0, 1f);
+        int eye = laugh > 0 ? Draw.YELLOW : flash > 0 ? Draw.WHITE : Draw.RED;
+        Draw.circleWorld(s, x + (facingLeft ? -5 : 5), y + 2, 6, 6, Draw.NAVY, 1f);
+        Draw.circleWorld(s, x + (facingLeft ? -5 : 5), y + 2, 4, 4, eye, 1f);
+    }
+
     @Override public int getPriorityBucket() { return RenderPriority.bucket(3); }
     @Override public int getOnScreenHalfWidth() { return 48; }
 
@@ -398,7 +454,7 @@ public final class Boss extends AbstractObjectInstance
         }
         if (flash > 0 && (flash & 2) != 0) return;
         if (renderer == null) {
-            Draw.circleWorld(services(), x, y, 20, 20, Draw.GREY, 1f);
+            drawCore();
             return;
         }
         int frame;

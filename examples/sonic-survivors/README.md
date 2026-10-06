@@ -39,9 +39,11 @@ Sky Chase has no ground to fight on and is skipped.
    drop in from above, faster and tougher as the clock runs down and further along the route.
    Red chevrons at the screen edges point at badniks approaching from off-screen. Every 30
    seconds an **elite** (gold health bar, six times the hitpoints) arrives; it drops a monitor.
-4. **Boss.** At 0:00 Eggman arrives in the zone's own vehicle (ROM boss art for every zone),
-   sweeping the arena, dropping volleys of the zone's projectiles (Mystic Cave drops rocks from
-   the roof) and swooping at Sonic. He enrages below half health. Stomps rebound Sonic off him
+4. **Boss.** At 0:00 Eggman arrives in the zone's own vehicle (ROM boss art), hovering within a
+   jump of the ground Sonic stands on, sweeping the arena, dropping volleys of the zone's
+   projectiles (Mystic Cave drops rocks from the roof) and swooping at Sonic; Hill Top's tank
+   rolls along the ground and charges instead. Metropolis act 3 loads no Eggman art, so there
+   he fights from an armoured core ringed by Asterons. He enrages below half health. Stomps rebound Sonic off him
    with the stock boss bounce; weapons hit him too. Beating him destroys every badnik still
    standing (their rings are the prize).
 5. **Clear.** The first time you beat each boss from Emerald Hill to Oil Ocean it drops that
