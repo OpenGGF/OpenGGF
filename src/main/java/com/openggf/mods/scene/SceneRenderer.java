@@ -47,15 +47,15 @@ import com.openggf.graphics.ShaderProgram;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
 import org.lwjgl.system.MemoryUtil;
 
 /**
  * Submits a scene's recorded {@link SceneDrawOp}s with one small shader, batching
  * consecutive quads that share a texture and clip. Images become GL textures on first use
- * and are deleted by {@link #release()} when the scene closes. Engine-internal.
+ * ({@link SceneTextureCache}); a texture not drawn for {@link SceneTextureCache#IDLE_FRAMES}
+ * frames is deleted, and {@link #releaseTextures()} deletes the rest when the scene closes.
+ * Engine-internal.
  */
 final class SceneRenderer {
     private static final int FLOATS_PER_VERTEX = 12;
@@ -69,7 +69,17 @@ final class SceneRenderer {
     private int vbo;
     private FloatBuffer vertices;
     private int whiteTexture;
-    private final Map<SceneImage, Integer> textures = new IdentityHashMap<>();
+    private final SceneTextureCache textures = new SceneTextureCache(new SceneTextureCache.Gpu() {
+        @Override
+        public int upload(SceneImage image) {
+            return SceneRenderer.upload(image.width(), image.height(), image.rawPixels());
+        }
+
+        @Override
+        public void delete(int texture) {
+            glDeleteTextures(texture);
+        }
+    });
 
     void init() throws IOException {
         shader = new ShaderProgram("shaders/shader_scene.vert", "shaders/shader_scene.frag");
@@ -104,9 +114,17 @@ final class SceneRenderer {
      * is the framebuffer rectangle {x, y, w, h} the logical screen is scaled into.
      */
     void render(List<SceneDrawOp> ops, float[] projection, int logicalWidth, int logicalHeight, int[] viewport) {
-        if (ops.isEmpty()) {
-            return;
+        try {
+            if (!ops.isEmpty()) {
+                submit(ops, projection, logicalWidth, logicalHeight, viewport);
+            }
+        } finally {
+            textures.endFrame();
         }
+    }
+
+    private void submit(List<SceneDrawOp> ops, float[] projection, int logicalWidth, int logicalHeight,
+            int[] viewport) {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         shader.use();
@@ -120,7 +138,7 @@ final class SceneRenderer {
         // which would otherwise change the texture of the batch still waiting to be flushed.
         for (SceneDrawOp op : ops) {
             if (op.image() != null) {
-                texture(op.image());
+                textures.texture(op.image());
             }
         }
         int batchTexture = -1;
@@ -128,7 +146,7 @@ final class SceneRenderer {
         int quads = 0;
         vertices.clear();
         for (SceneDrawOp op : ops) {
-            int texture = op.image() == null ? whiteTexture : texture(op.image());
+            int texture = op.image() == null ? whiteTexture : textures.texture(op.image());
             if (quads > 0 && (texture != batchTexture || op.clip() != batchClip || quads == MAX_QUADS)) {
                 flush(quads);
                 quads = 0;
@@ -218,15 +236,6 @@ final class SceneRenderer {
         vertices.put(x).put(y).put(u).put(v).put(r).put(g).put(b).put(a).put(fr).put(fg).put(fb).put(fa);
     }
 
-    private int texture(SceneImage image) {
-        Integer id = textures.get(image);
-        if (id == null) {
-            id = upload(image.width(), image.height(), image.rawPixels());
-            textures.put(image, id);
-        }
-        return id;
-    }
-
     private static int upload(int width, int height, int[] argb) {
         ByteBuffer rgba = MemoryUtil.memAlloc(width * height * 4);
         try {
@@ -250,10 +259,7 @@ final class SceneRenderer {
 
     /** Deletes the scene's textures (the shader and buffers are kept for the next visit). */
     void releaseTextures() {
-        for (int id : textures.values()) {
-            glDeleteTextures(id);
-        }
-        textures.clear();
+        textures.releaseAll();
     }
 
     void cleanup() {

@@ -44,7 +44,10 @@ public record SceneDraw(float scaleX, float scaleY, boolean flipX, boolean flipY
         return new SceneDraw(scaleX, scaleY, flipX, flipY, argb, flash);
     }
 
-    /** Multiplies alpha (0-1) into the tint. */
+    /**
+     * Multiplies alpha (0-1) into the current tint's alpha. Order matters: a later
+     * {@link #withTint} replaces the whole tint, alpha included, so call this after it.
+     */
     public SceneDraw withAlpha(float alpha) {
         int a = Math.max(0, Math.min(255, Math.round(((tint >>> 24) & 0xFF) * alpha)));
         return new SceneDraw(scaleX, scaleY, flipX, flipY, (a << 24) | (tint & 0xFFFFFF), flash);

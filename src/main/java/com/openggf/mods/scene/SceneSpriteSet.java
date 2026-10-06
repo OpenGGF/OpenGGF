@@ -8,7 +8,10 @@ package com.openggf.mods.scene;
 public interface SceneSpriteSet {
     int frameCount();
 
-    /** One frame; empty frames come back as a 1x1 transparent sprite. */
+    /**
+     * One frame, rasterised on first use; empty frames and indices outside
+     * {@code 0 .. frameCount() - 1} come back as a 1x1 transparent sprite.
+     */
     SceneSprite frame(int index);
 
     /**
@@ -17,6 +20,12 @@ public interface SceneSpriteSet {
      */
     int[] animationFrames(int animationId);
 
-    /** Ticks per frame of that animation script (its first byte), or 8 when unknown. */
+    /**
+     * Ticks per frame of that animation script: its first (delay) byte plus one, as the ROM's
+     * animation routine counts it, or 8 when unknown. The players' speed-driven scripts
+     * (walking, running, rolling, pushing: delay bytes {@code $FF}, {@code $FE}, {@code $FD})
+     * have no fixed rate, because the ROM derives their delay from ground speed each frame;
+     * for those this returns 256, 255 or 254 and a scene should pick its own rate.
+     */
     int animationDelay(int animationId);
 }

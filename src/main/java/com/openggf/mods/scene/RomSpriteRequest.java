@@ -3,7 +3,7 @@ package com.openggf.mods.scene;
 /**
  * Where a sprite lives in the ROM: its tile art, its mapping table and, for art that is
  * streamed per frame, its DPLC table. Addresses come from the game's disassembly (labels
- * such as {@code ArtKosM_Rhinobot} and {@code Map_Rhinobot}).
+ * such as {@code ArtKosM_AIZ_Bloominator} and {@code Map_Bloominator}).
  *
  * <p>{@code paletteLine} is the line the object's {@code art_tile} selects (0-3); each
  * mapping piece adds its own line on top. {@code tileOffset} is subtracted from mapping

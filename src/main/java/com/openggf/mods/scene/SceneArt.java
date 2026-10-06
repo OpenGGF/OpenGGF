@@ -18,9 +18,16 @@ public interface SceneArt {
     /** Decodes a PNG. Throws {@link IllegalArgumentException} for invalid data. */
     SceneImage png(byte[] pngBytes);
 
-    /** An image from {@code width * height} {@code 0xAARRGGBB} pixels. */
+    /**
+     * An image from {@code width * height} {@code 0xAARRGGBB} pixels, row by row from the top
+     * (copied). Each side is 1 to 4096 pixels.
+     */
     SceneImage image(int width, int height, int[] argb);
 
-    /** ROM art for the running game, or {@code null} when no ROM is loaded (standalone games). */
+    /**
+     * ROM art for the running game, or {@code null} when the engine could not prepare it (for
+     * example the ROM could not be read); the engine logs why. Startup scenes belong to patch
+     * mods, so a ROM is always loaded.
+     */
     SceneRomArt rom();
 }

@@ -3,6 +3,7 @@ package com.openggf.mods.scene;
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.mods.code.ModFaultBoundary;
+import com.openggf.mods.code.OwnedSceneFactory;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -32,16 +33,18 @@ public final class ModSceneHost {
         return scene != null;
     }
 
-    /** Opens a scene from {@code factory}; any previous scene is closed first. */
-    public void open(ModSceneFactory factory, SceneServices services, int logicalWidth, int logicalHeight) {
+    /**
+     * Opens a scene from {@code factory} (a registered startup scene, which runs every call
+     * inside its owner's fault boundary); any previous scene is closed first.
+     */
+    public void open(OwnedSceneFactory factory, SceneServices services, int logicalWidth, int logicalHeight) {
         close();
         width = logicalWidth;
         height = logicalHeight;
         if (font == null) {
             font = SceneFontAtlas.load();
         }
-        String owner = factory instanceof OwnedSceneFactory owned ? owned.ownerModId() : "scene";
-        context = new Context(owner, services);
+        context = new Context(factory.ownerModId(), services);
         exiting = false;
         scene = factory.create();
         scene.enter(context);
@@ -106,7 +109,10 @@ public final class ModSceneHost {
         }
     }
 
-    /** Releases GL resources at engine shutdown. */
+    /**
+     * Engine shutdown: closes the open scene (so its {@link ModScene#exit} runs and can save)
+     * and releases GL resources. Call while the GL context is still alive.
+     */
     public void cleanup() {
         close();
         renderer.cleanup();

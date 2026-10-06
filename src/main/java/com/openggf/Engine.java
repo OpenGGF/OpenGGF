@@ -4228,6 +4228,8 @@ public class Engine {
 	}
 
 	private void cleanup() {
+		// First, while GL, audio and the session are intact: an open mod scene saves in ModScene.exit.
+		cleanupStep("mod scene", gameLoop.modSceneHost::cleanup);
 		cleanupStep("multiplayer time attack", this::leaveTimeAttackRoom);
 		cleanupStep("screenshots", screenshotWriter::close);
 		cleanupStep("live capture", liveCaptureController::close);

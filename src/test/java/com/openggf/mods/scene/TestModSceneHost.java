@@ -3,6 +3,8 @@ package com.openggf.mods.scene;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -21,6 +23,7 @@ import com.openggf.mods.code.ModContextTestAccess;
 import com.openggf.mods.code.ModFaultBoundary;
 import com.openggf.mods.code.ModRegistrationException;
 import com.openggf.mods.code.ModRegistrationPlan;
+import com.openggf.mods.code.OwnedSceneFactory;
 import com.openggf.mods.ModStateSaveResult;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -79,6 +82,10 @@ class TestModSceneHost {
         return new ModFaultBoundary(Map.of(), findings, owners -> new ModStateSaveResult.Saved(), owners -> { });
     }
 
+    private static OwnedSceneFactory owned(ModSceneFactory factory) {
+        return ModContextTestAccess.ownedScene("cards", factory, boundary(new ModRuntimeFindingStore()));
+    }
+
     private SceneServices services(List<String> exits) {
         return new SceneServices(null, null, temp, null, () -> exits.add("game"), () -> exits.add("master"));
     }
@@ -90,15 +97,28 @@ class TestModSceneHost {
     }
 
     @Test
-    void registeredStartupSceneIsServedThroughTheFaultBoundary() {
+    void registeredStartupSceneIsServedOnlyUnderTheEngineKey() {
         ProbeScene probe = new ProbeScene();
         ModRegistrationPlan plan = ModContextTestAccess.freezeWithStartupScene("cards", "s3k", () -> probe);
         GameModule base = mock(GameModule.class);
         GameModule module = new ModBackedGamePatch(plan, boundary(new ModRuntimeFindingStore()))
                 .apply(base, mock(PatchContext.class));
         OwnedSceneFactory factory = assertInstanceOf(OwnedSceneFactory.class,
-                module.getGameService(ModSceneFactory.class));
+                module.getGameService(OwnedSceneFactory.class));
         assertEquals("cards", factory.ownerModId());
+        assertSame(probe, OwnedSceneFactory.unwrap(factory.create()), "the creator's scene, wrapped");
+        assertNull(module.getGameService(ModSceneFactory.class),
+                "the creator's raw factory is not served; only the owned wrapper opens");
+    }
+
+    @Test
+    void aFailingSceneFactoryIsCaughtByTheFaultBoundary() {
+        ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
+        OwnedSceneFactory factory = ModContextTestAccess.ownedScene("cards", () -> {
+            throw new IllegalStateException("no scene today");
+        }, boundary(findings));
+        assertThrows(ModFaultBoundary.CallbackAborted.class, factory::create);
+        assertTrue(findings.snapshot().containsKey("cards"), "the failure is recorded against the owner");
     }
 
     @Test
@@ -112,7 +132,7 @@ class TestModSceneHost {
         ProbeScene probe = new ProbeScene();
         List<String> exits = new ArrayList<>();
         ModSceneHost host = new ModSceneHost();
-        host.open(new OwnedSceneFactory("cards", () -> probe, (owner, r) -> r.run()), services(exits), 400, 224);
+        host.open(owned(() -> probe), services(exits), 400, 224);
         assertEquals("level=3", probe.stored);
         assertTrue(temp.resolve("mods/cards/progress.txt").toFile().isFile());
 
@@ -144,9 +164,23 @@ class TestModSceneHost {
         ProbeScene probe = new ProbeScene();
         probe.failOnUpdate = true;
         ModSceneHost host = new ModSceneHost();
-        host.open(new OwnedSceneFactory("cards", () -> probe, boundary::run), services(new ArrayList<>()), 320, 224);
+        host.open(ModContextTestAccess.ownedScene("cards", () -> probe, boundary), services(new ArrayList<>()), 320,
+                224);
         assertThrows(ModFaultBoundary.CallbackAborted.class, () -> host.update(input()));
         host.close();
+    }
+
+    @Test
+    void engineShutdownRunsTheOpenScenesExit() {
+        ProbeScene probe = new ProbeScene();
+        ModSceneHost host = new ModSceneHost();
+        host.open(owned(() -> probe), services(new ArrayList<>()), 320, 224);
+        host.update(input());
+        host.cleanup();
+        assertFalse(host.isOpen());
+        assertEquals(List.of("enter", "update:0", "exit"), probe.calls, "exit runs once, at shutdown");
+        host.cleanup();
+        assertEquals(3, probe.calls.size(), "a second cleanup has nothing left to close");
     }
 
     @Test

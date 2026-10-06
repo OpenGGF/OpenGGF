@@ -281,13 +281,18 @@ Mod scenes add the `com.openggf.mods.scene` package to the candidate surface:
 `Compression` and `DplcLayout` enums), `SceneBackdrop` (with its `Band` record),
 `SceneLevelStage`, `SceneMouse`,
 `SceneAudio` and `SceneStorage`, plus
-`ModContext.registerStartupScene` (the engine finds the scene as the effective module's
-`getGameService(ModSceneFactory.class)`, so the `game` package never depends on mod types),
+`ModContext.registerStartupScene`,
 `GameMode.MOD_SCENE`, and `InputHandler.handleScroll` /
-`consumeScrollNotches`. The host classes in the same package (`ModSceneHost`,
-`SceneServices`, `OwnedSceneFactory`, `SceneRomArtFactory`) are engine-internal and stay
+`consumeScrollNotches`. The engine finds the registered scene as the effective module's
+`getGameService(OwnedSceneFactory.class)`, so the `game` package never depends on mod types.
+`mods.code.OwnedSceneFactory` is engine-internal and only that package can construct it, so a
+patch cannot forge a scene's owner or run one outside the owner's fault boundary; a
+`ModSceneFactory` served under its own type is ignored. The host classes in the scene package
+(`ModSceneHost`, `SceneServices`, `SceneRomArtFactory`) are engine-internal and stay
 unreachable from the pinned surface; `GameLoop`'s scene entry points are package-private
-for that reason. `SceneRomArt.zoneBackdrop(zone, act)`,
+for that reason. The engine closes an open scene at shutdown (so `ModScene.exit` runs) and
+deletes a scene image's GPU texture once the image goes 120 frames undrawn, uploading it again
+if it is drawn later. `SceneRomArt.zoneBackdrop(zone, act)`,
 `SceneRomArt.levelOverview(zone, act, maxHeight)` and
 `SceneRomArt.levelForeground(zone, act, x, y, width, height)` are default methods returning
 `null`, and `SceneRomArt.levelStages(zone, act, width, headroom, maxRise)` one returning an

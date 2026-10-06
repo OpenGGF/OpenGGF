@@ -11,7 +11,11 @@ public interface SceneContext {
     /** The mod that owns the scene. */
     String ownerModId();
 
-    /** Logical screen width in pixels: 320 for 4:3, 400 for 16:9 (see the mod's required aspect). */
+    /**
+     * Logical screen width in pixels, fixed while the scene is open: the player's display
+     * aspect decides it (320 for 4:3, 352, 400 for 16:9, 528 or 800) unless the mod requires
+     * an aspect. Lay out from this value rather than assuming one width.
+     */
     int width();
 
     /** Logical screen height in pixels (224). */

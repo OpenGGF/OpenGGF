@@ -14,7 +14,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kZoneArt;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.render.ZonePictureSource;
-import com.openggf.mods.scene.ModSceneFactory;
+import com.openggf.mods.code.OwnedSceneFactory;
 import com.openggf.mods.scene.SceneRomArtFactory;
 import com.openggf.mods.scene.SceneServices;
 import java.io.IOException;
@@ -41,7 +41,9 @@ final class ModSceneLauncher {
     static boolean openStartupScene(GameLoop gameLoop, SonicConfigurationService config, long window,
             GraphicsManager graphics, int logicalWidth, int logicalHeight) {
         GameModule module = GameServices.module();
-        ModSceneFactory factory = module == null ? null : module.getGameService(ModSceneFactory.class);
+        // Only the engine-internal key opens a scene: ModBackedGamePatch serves it for the mod that
+        // registered one, with its fault boundary. A ModSceneFactory served by any patch is ignored.
+        OwnedSceneFactory factory = module == null ? null : module.getGameService(OwnedSceneFactory.class);
         if (factory == null || config.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
             return false;
         }

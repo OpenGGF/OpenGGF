@@ -83,7 +83,9 @@ public final class HelloScene implements ModScene {
   `String` or `int` constants for kinds. Slay the Robotnik's `CardType`, `Keyword` and
   friends show the pattern.
 
-`SceneContext` also gives the screen size (`width()`, `height()`: 320 or 400 × 224),
+`SceneContext` also gives the screen size (`width()`, `height()`): 224 rows, and a width
+the player's display aspect decides (320 for 4:3, 352, 400 for 16:9, 528 or 800) unless your
+mod requires an aspect, so lay out from `width()`;
 `ticks()` since the scene opened, `keyDown`/`keyPressed` for raw GLFW keys, and
 `mouse()` in game pixels (position, buttons, `wheel()` notches, `over(x, y, w, h)`).
 `input()` is the merged keyboard and gamepad state with `menu*` flags for single presses;
@@ -115,13 +117,19 @@ SceneImage dot = ctx.art().image(2, 2, new int[] {           // pixels made in c
         0xFFFFFFFF, 0xFFFF0000, 0xFFFF0000, 0xFFFFFFFF});
 ```
 
+The engine uploads an image to the GPU the first time it is drawn and deletes that copy once
+the image has gone about two seconds without being drawn (or when the scene closes), so build
+images once and reuse them; an image built every frame is uploaded every frame.
+
 Mod files can only be read during `register`, so read them there
 (`context.modAssets().readBounded(path, limit)`) and pass the bytes to the scene.
 Slay the Robotnik keeps its font, icons and card pictures as editable text this way.
 
 ## 4. Art from the player's ROM
 
-`ctx.art().rom()` is a `SceneRomArt` for the running game (null for standalone games).
+`ctx.art().rom()` is a `SceneRomArt` for the running game (null only when the engine could
+not prepare ROM art, which it logs). Call it only from the scene's own calls, never from
+another thread.
 It decodes ROM sprites on the CPU into RGBA images, so every sprite keeps its own colours
 and there are no palette-line conflicts.
 

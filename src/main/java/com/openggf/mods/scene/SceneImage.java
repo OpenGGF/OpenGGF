@@ -4,11 +4,14 @@ import java.util.Objects;
 
 /**
  * An RGBA picture a scene can draw: decoded from a PNG, built from pixels in code, or
- * rasterised from ROM sprite art. Pixels are {@code 0xAARRGGBB}; alpha 0 is transparent.
+ * rasterised from ROM sprite art. Pixels are {@code 0xAARRGGBB}; alpha 0 is transparent. Each
+ * side is 1 to 4096 pixels.
  *
- * <p>Images are immutable. The engine uploads each one to the GPU the first time it is
- * drawn and releases it when the scene closes, so creating images in {@link ModScene#enter}
- * (or lazily) and reusing them is the intended pattern.
+ * <p>Images are immutable. The engine uploads each one to the GPU the first time it is drawn,
+ * and deletes the GPU copy once the image has gone about two seconds (120 frames) without
+ * being drawn, or when the scene closes; drawing it again uploads it again. So build images
+ * once (in {@link ModScene#enter} or lazily) and reuse them: an image made every frame is
+ * uploaded every frame.
  */
 @com.openggf.game.ModApi
 public final class SceneImage {
@@ -16,7 +19,11 @@ public final class SceneImage {
     private final int height;
     private final int[] argb;
 
-    /** Copies {@code argb} ({@code width * height} pixels, row by row from the top). */
+    /**
+     * Copies {@code argb} ({@code width * height} pixels, row by row from the top).
+     *
+     * @throws IllegalArgumentException when a side is outside 1-4096 or the pixel count differs
+     */
     public SceneImage(int width, int height, int[] argb) {
         if (width <= 0 || height <= 0 || width > 4096 || height > 4096) {
             throw new IllegalArgumentException("Image size out of range: " + width + "x" + height);
@@ -56,7 +63,10 @@ public final class SceneImage {
         return argb;
     }
 
-    /** A new image cut from this one. */
+    /**
+     * A new {@code w} x {@code h} image cut from this one at ({@code x}, {@code y}); parts of the
+     * rectangle outside this image come out transparent.
+     */
     public SceneImage crop(int x, int y, int w, int h) {
         int[] out = new int[w * h];
         for (int row = 0; row < h; row++) {

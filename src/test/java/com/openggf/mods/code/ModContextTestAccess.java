@@ -14,6 +14,11 @@ public final class ModContextTestAccess {
         return context.freeze();
     }
 
+    /** The engine's wrapper for a registered startup scene, as {@link ModBackedGamePatch} serves it. */
+    public static OwnedSceneFactory ownedScene(String owner, ModSceneFactory factory, ModFaultBoundary boundary) {
+        return new OwnedSceneFactory(owner, factory, boundary);
+    }
+
     public static ModRegistrationPlan freezeStandaloneWithStartupScene(String owner, ModSceneFactory factory) {
         ModContext context = new ModContext(owner, null, ModAssetRoot.forTests(owner), null, true);
         context.registerStartupScene(factory);

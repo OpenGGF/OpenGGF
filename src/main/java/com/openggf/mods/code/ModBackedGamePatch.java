@@ -265,15 +265,15 @@ public final class ModBackedGamePatch implements GamePatch {
             }
 
             /**
-             * The mod's startup scene is served as the {@code ModSceneFactory} game service, so the
-             * game package never depends on mod scene types; it runs inside the fault boundary.
+             * The mod's startup scene is served as the engine-internal {@link OwnedSceneFactory}
+             * game service (so the game package never depends on mod scene types). Only this
+             * package can build one, and it runs every scene callback inside the fault boundary.
              */
             @Override
             @SuppressWarnings("unchecked")
             public <T> T getGameService(Class<T> type) {
-                if (type == com.openggf.mods.scene.ModSceneFactory.class && plan.startupScene() != null) {
-                    return (T) new com.openggf.mods.scene.OwnedSceneFactory(plan.ownerModId(), plan.startupScene(),
-                            faultBoundary::run);
+                if (type == OwnedSceneFactory.class && plan.startupScene() != null) {
+                    return (T) new OwnedSceneFactory(plan.ownerModId(), plan.startupScene(), faultBoundary);
                 }
                 return super.getGameService(type);
             }
