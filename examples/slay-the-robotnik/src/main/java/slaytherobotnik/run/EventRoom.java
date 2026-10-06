@@ -27,6 +27,8 @@ public final class EventRoom implements Room, EventContext {
     private final List<Reward> pendingRewards = new ArrayList<>();
     private String banner;
     private boolean finished;
+    private String illustration;
+    private Runnable afterIllustration;
 
     EventRoom(Run run, EventDef def) {
         this.run = run;
@@ -44,11 +46,24 @@ public final class EventRoom implements Room, EventContext {
     public String banner() { return banner; }
     public void clearBanner() { banner = null; }
     public boolean finished() { return finished; }
+    /** What the event's picture is showing ({@link #illustrate}), or null. */
+    public String illustration() { return illustration; }
+    /** True while the event waits for its picture to show the illustration. */
+    public boolean awaitingIllustration() { return afterIllustration != null; }
+
+    /** The picture has shown the illustration: the event carries on. */
+    public void illustrationShown() {
+        Runnable then = afterIllustration;
+        afterIllustration = null;
+        if (then != null) {
+            then.run();
+        }
+    }
 
     /** Picks an option on the current page. */
     public boolean choose(int index) {
         if (finished || index < 0 || index >= options.size() || !options.get(index).enabled()
-                || run.deckChoice() != null) {
+                || run.deckChoice() != null || awaitingIllustration()) {
             return false;
         }
         options.get(index).action().run();
@@ -69,6 +84,13 @@ public final class EventRoom implements Room, EventContext {
     @Override
     public Rng rng() {
         return run.state().rngs().stream(RunRngs.EVENTS);
+    }
+
+    @Override
+    public void illustrate(String detail, Runnable then) {
+        illustration = detail;
+        options = List.of();
+        afterIllustration = then;
     }
 
     @Override

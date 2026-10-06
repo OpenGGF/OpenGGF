@@ -77,6 +77,11 @@ final class RunBot {
                 case CombatRoom combat -> fight(combat);
                 case RewardRoom rewards -> collect(rewards);
                 case EventRoom event -> {
+                    // No scene plays the event's picture here: carry straight on.
+                    if (event.awaitingIllustration()) {
+                        event.illustrationShown();
+                        continue;
+                    }
                     List<Integer> enabled = new ArrayList<>();
                     for (int i = 0; i < event.options().size(); i++) {
                         if (event.options().get(i).enabled()) {

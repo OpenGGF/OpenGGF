@@ -28,7 +28,8 @@ final class EventArt {
     private EventArt() {
     }
 
-    static void draw(Shell shell, SceneCanvas c, String art, int x, int y, int w, int h) {
+    /** Draws event art {@code art}; {@code reels} turns the slot machine's reels (null: at rest). */
+    static void draw(Shell shell, SceneCanvas c, String art, int x, int y, int w, int h, SlotReels reels) {
         long t = shell.ticks;
         int cx = x + w / 2;
         int ground = y + h - 22;
@@ -61,7 +62,7 @@ final class EventArt {
                     monitor(shell, c, cx - 36 + i * 36, ground, faces[i], t + i * 7);
                 }
             }
-            case "event:slot_machine" -> slotMachine(shell, c, x, y, w, h, cx, ground, t);
+            case "event:slot_machine" -> slotMachine(shell, c, x, y, w, h, cx, ground, t, reels);
             case "event:emerald_altar" -> {
                 cave(c, x, y, w, h, ground);
                 pedestal(c, cx, ground, 30, 40);
@@ -472,34 +473,68 @@ final class EventArt {
         c.fill(cx - 5, top + 15, 10, 2, GOLD_DARK);
     }
 
+    /**
+     * A slot machine cabinet around the Slot Machine bonus stage's own reels: its 32-pixel faces
+     * from the ROM, turning as {@code reels} says (at rest without them, or the monitor faces
+     * the cabinet showed before when the ROM art is missing).
+     */
     private static void slotMachine(Shell shell, SceneCanvas c, int x, int y, int w, int h, int cx, int ground,
-            long t) {
+            long t, SlotReels reels) {
         Gfx.gradient(c, x, y, w, h, 0xFF300848, 0xFF100420);
         stars(c, x, y, w, h, t);
         c.fill(x, ground, w, y + h - ground, 0xFF201030);
-        c.fill(cx - 46, y + 18, 92, ground - y - 18, 0xFFDA2424);
-        c.fill(cx - 42, y + 22, 84, 14, GOLD);
-        c.fill(cx - 42, y + 42, 84, 40, Colors.BLACK);
-        // Three reels showing monitor faces; they tick round slowly.
-        String[] faces = {"3", "4", "10", "5", "9"};
+        c.fill(cx - 56, y + 18, 112, ground - y - 18, 0xFFDA2424);
+        c.fill(cx - 52, y + 22, 104, 14, GOLD);
+        // Chasing lights round the top panel; all of them blink once the reels pay out.
+        boolean won = reels != null && reels.sinceStop() >= 0 && reels.sinceStop() < 90;
+        for (int i = 0; i < 13; i++) {
+            boolean on = won ? (t / 8) % 2 == 0 : (t / 6 + i) % 3 == 0;
+            c.fill(cx - 50 + i * 8, y + 26, 5, 5, on ? Colors.WHITE : GOLD_DARK);
+        }
+        int wy = y + 45;
+        c.fill(cx - 53, wy - 3, 106, 38, won && (t / 8) % 2 == 0 ? GOLD : Colors.BLACK);
+        c.fill(cx - 52, wy - 2, 104, 36, Colors.BLACK);
         for (int i = 0; i < 3; i++) {
-            int rx = cx - 28 + i * 28;
-            c.fill(rx - 12, y + 44, 24, 36, Colors.WHITE);
-            String face = faces[(int) ((t / (20 + i * 7) + i) % faces.length)];
-            SceneSprite box = shell.art.romFrame("monitor", 0);
-            if (box != null) {
-                float s = 0.8f;
-                HudIcons.monitor(shell, c, face, rx - (box.width() / 2f - box.originX()) * s,
-                        y + 62 - (box.height() / 2f - box.originY()) * s, s, t);
+            int rx = cx - 51 + i * 35;
+            if (!drawReel(shell, c, reels, i, rx, wy)) {
+                // Without the ROM's reel art, a monitor face stands in.
+                c.fill(rx, wy, 32, 32, Colors.WHITE);
+                String[] faces = {"3", "4", "10", "5", "9"};
+                SceneSprite box = shell.art.romFrame("monitor", 0);
+                if (box != null) {
+                    float s = 0.8f;
+                    HudIcons.monitor(shell, c, faces[i], rx + 16 - (box.width() / 2f - box.originX()) * s,
+                            wy + 16 - (box.height() / 2f - box.originY()) * s, s, t);
+                }
             }
         }
-        // Chasing lights round the top panel.
-        for (int i = 0; i < 10; i++) {
-            boolean on = (t / 6 + i) % 3 == 0;
-            c.fill(cx - 40 + i * 8, y + 26, 5, 5, on ? Colors.WHITE : GOLD_DARK);
+        // The lever: pulled down for a moment when the player pulls it.
+        boolean down = reels != null && reels.sincePull() >= 0 && reels.sincePull() < 12;
+        int knobY = down ? y + 58 : y + 34;
+        int pivotY = y + 76;
+        c.fill(cx + 57, knobY + 4, 4, pivotY - knobY - 4, 0xFFB6B6B6);
+        c.fill(cx + 55, knobY, 8, 8, Colors.BLACK);
+        c.fill(cx + 56, knobY + 1, 6, 6, 0xFFDA2424);
+    }
+
+    /**
+     * One reel's window: the 32 rows from the reel's position down, the rest of its top face
+     * then the start of the next (the stage copies them the same way). False without ROM art.
+     */
+    private static boolean drawReel(Shell shell, SceneCanvas c, SlotReels reels, int reel, int x, int y) {
+        if (reels == null) {
+            return false;
         }
-        c.fill(cx + 46, y + 40, 4, 34, 0xFFB6B6B6);
-        c.fill(cx + 44, y + 34, 8, 8, Colors.BLACK);
-        c.fill(cx + 45, y + 35, 6, 6, 0xFFDA2424);
+        var top = shell.art.slotFace(reels.face(reel));
+        var next = shell.art.slotFace(reels.nextFace(reel));
+        if (top == null || next == null) {
+            return false;
+        }
+        int row = reels.row(reel);
+        c.drawRegion(top, 0, row, 32, 32 - row, x, y, 32, 32 - row, SceneDraw.plain());
+        if (row > 0) {
+            c.drawRegion(next, 0, 0, 32, row, x, y + 32 - row, 32, row, SceneDraw.plain());
+        }
+        return true;
     }
 }

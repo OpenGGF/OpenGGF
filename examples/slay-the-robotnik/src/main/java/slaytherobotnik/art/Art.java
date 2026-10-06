@@ -157,6 +157,64 @@ public final class Art {
         return image;
     }
 
+    /** ArtUnc_SlotOptions: the Slot Machine bonus stage's eight reel faces, $200 bytes each. */
+    private static final int SLOT_FACES = 0x158CAE;
+    /** Pal_Slot_Special: its first line colours the reels. */
+    private static final int SLOT_PALETTE = 0xA9C7C;
+    /** byte_4C8CC: reel A's strip of eight faces; reels B and C follow 8 and 16 bytes on. */
+    private static final int SLOT_STRIPS = 0x4C8CC;
+    private SceneImage[] slotFaces;
+    private int[][] slotStrips;
+
+    /**
+     * A Slot Machine bonus stage reel face (0 Jackpot, 1 Sonic, 2 Tails, 3 Knuckles, 4 Robotnik,
+     * 5 Ring, 6 Bar, 7 Super Sonic), 32 pixels square, or null without the ROM. Each face is
+     * sixteen 8x8 tiles stored a column at a time, as the stage's reel copy reads them.
+     */
+    public SceneImage slotFace(int face) {
+        if (slotFaces == null) {
+            slotFaces = new SceneImage[8];
+            try {
+                if (hasRom()) {
+                    byte[] art = rom().read(SLOT_FACES, 8 * 0x200);
+                    int[] palette = rom().palette(SLOT_PALETTE, 16);
+                    for (int f = 0; f < 8; f++) {
+                        int[] pixels = new int[32 * 32];
+                        for (int i = 0; i < 0x200 * 2; i++) {
+                            int tile = i / 64;
+                            int x = (tile / 4) * 8 + i % 8;
+                            int y = (tile % 4) * 8 + (i % 64) / 8;
+                            int b = art[f * 0x200 + i / 2] & 0xFF;
+                            int colour = (i & 1) == 0 ? b >> 4 : b & 15;
+                            pixels[y * 32 + x] = colour == 0 ? 0 : palette[colour];
+                        }
+                        slotFaces[f] = ctx.art().image(32, 32, pixels);
+                    }
+                }
+            } catch (RuntimeException e) {
+                slotFaces = new SceneImage[8];
+            }
+        }
+        return face >= 0 && face < 8 ? slotFaces[face] : null;
+    }
+
+    /** The three reels' strips of faces (byte_4C8CC and the two after it), or null without the ROM. */
+    public int[][] slotStrips() {
+        if (slotStrips == null && hasRom()) {
+            try {
+                byte[] bytes = rom().read(SLOT_STRIPS, 24);
+                int[][] strips = new int[3][8];
+                for (int i = 0; i < 24; i++) {
+                    strips[i / 8][i % 8] = bytes[i] & 7;
+                }
+                slotStrips = strips;
+            } catch (RuntimeException e) {
+                slotStrips = null;
+            }
+        }
+        return slotStrips;
+    }
+
     /** A zone act's parallax background from the ROM ({@link SceneRomArt#zoneBackdrop}), or null. */
     public SceneBackdrop zoneBackdrop(int zone, int act) {
         String key = zone + ":" + act;

@@ -402,9 +402,36 @@ public final class Events {
 
     // ------------------------------------------------------------------ helpers
 
+    /*
+     * The Slot Machine bonus stage's reel faces, in ArtUnc_SlotOptions order (the payout table
+     * word_4C8A4 lists them the same way): 0 Jackpot, 1 Sonic, 2 Tails, 3 Knuckles, 4 Robotnik,
+     * 5 Ring, 6 Bar, 7 Super Sonic.
+     */
+    private static final int FACE_SONIC = 1;
+    private static final int FACE_TAILS = 2;
+    private static final int FACE_KNUCKLES = 3;
+    private static final int FACE_ROBOTNIK = 4;
+    private static final int FACE_RING = 5;
+    private static final int FACE_BAR = 6;
+
+    /** Pulls the lever: the reels spin to three of the rolled face, then it pays out. */
     private static void spin(EventContext ctx) {
+        int outcome = ctx.rng().nextInt(6);
+        int face = switch (outcome) {
+            case 0 -> FACE_RING;
+            case 1 -> FACE_SONIC;
+            case 2 -> FACE_TAILS;
+            case 3 -> FACE_ROBOTNIK;
+            case 4 -> FACE_KNUCKLES;
+            default -> FACE_BAR;
+        };
+        ctx.page("You pull the lever. The reels spin...");
+        ctx.illustrate(Integer.toString(face), () -> payOut(ctx, outcome));
+    }
+
+    private static void payOut(EventContext ctx, int outcome) {
         RunState run = ctx.run();
-        switch (ctx.rng().nextInt(6)) {
+        switch (outcome) {
             case 0 -> {
                 int rings = 100 * run.act();
                 run.gainRings(rings);

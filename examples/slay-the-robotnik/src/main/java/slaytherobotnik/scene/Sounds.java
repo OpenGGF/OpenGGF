@@ -43,6 +43,8 @@ public final class Sounds {
     public static final int SFX_EXPLODE = 0xB4;
     public static final int SFX_DASH = 0xB6;
     public static final int SFX_CURSOR = 0xB7;
+    /** sfx_SlotMachine: the reels' clatter, every 16 frames while they turn (the cursor tick is the same sound). */
+    public static final int SFX_SLOT_MACHINE = 0xB7;
     public static final int SFX_RING_LOSS = 0xB9;
     public static final int SFX_SPINDASH = 0xAB;
 

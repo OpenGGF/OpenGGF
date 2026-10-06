@@ -73,4 +73,11 @@ public interface EventContext {
 
     /** Obtains a random relic of {@code tier} ({@link RelicTier}); returns its name, or null. */
     String obtainRelicOfTier(String tier);
+
+    /**
+     * Shows {@code detail} in the event's picture (the slot machine's winning reel face, "3"),
+     * keeps the current text with no options, and runs {@code then} once the picture has shown
+     * it: when the scene's reels stop, or at once where nothing animates it.
+     */
+    void illustrate(String detail, Runnable then);
 }

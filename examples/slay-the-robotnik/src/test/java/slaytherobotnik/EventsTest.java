@@ -73,6 +73,35 @@ class EventsTest {
     }
 
     @Test
+    void slotMachineWaitsForItsReelsThenPaysTheFaceShown() {
+        Catalog catalog = Content.build();
+        java.util.Map<String, String> names = java.util.Map.of("1", "SONIC!", "2", "TAILS!", "3", "KNUCKLES!",
+                "4", "ROBOTNIK!", "5", "RING!", "6", "BAR!");
+        Set<String> seen = new TreeSet<>();
+        for (int seed = 0; seed < 40; seed++) {
+            Run run = Run.start(catalog, HEROES[seed % 3], 5000L + seed);
+            run.state().setPosition(1, run.state().floor(), run.state().actFloor(), run.state().nodeX());
+            run.enterEvent("event:slot_machine");
+            EventRoom room = (EventRoom) run.room();
+            assertTrue(room.choose(0), "pull the lever");
+            assertTrue(room.awaitingIllustration(), "the event waits for the reels");
+            assertEquals(List.of(), room.options(), "nothing to pick while they spin");
+            String face = room.illustration();
+            seen.add(face);
+            room.illustrationShown();
+            assertFalse(room.awaitingIllustration());
+            if (face.equals("3")) {
+                // Knuckles punches a card out of the deck: the removal comes first.
+                assertTrue(run.deckChoice() != null, "seed " + seed + ": Knuckles asks for a card");
+            } else {
+                assertTrue(room.text().startsWith(names.get(face)), "seed " + seed + " face " + face + ": "
+                        + room.text());
+            }
+        }
+        assertEquals(Set.of("1", "2", "3", "4", "5", "6"), seen, "every outcome has its own face");
+    }
+
+    @Test
     void emeraldAltarGivesTheIdolAndAToll() {
         Catalog catalog = Content.build();
         Run run = Run.start(catalog, Characters.SONIC, 7L);
