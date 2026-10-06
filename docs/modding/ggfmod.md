@@ -53,7 +53,10 @@ Use `ggfmod validate <mod.jar>` to print the sorted findings for an existing jar
 `run <build-output>` is the only development-directory entry point. It launches the
 engine with `-Dggfmod.dev.modDir=<absolute-build-output>`. The engine snapshots that
 directory once into engine-owned immutable storage and never rereads the creator tree
-during the session. Merely enabling test mode does not enable directory loading.
+during the session. Merely enabling test mode does not enable directory loading. A
+development run of a patch mod skips the game picker and opens the mod's `baseGame`
+directly (its startup scene, if it registers one); holding Escape still returns to the
+master title, and deterministic test mode keeps the configured startup.
 
 For complete Mod API 0.7 examples, see [Content mods](content-mods.md),
 [Playable characters](characters.md), and [Standalone games](standalone-games.md).

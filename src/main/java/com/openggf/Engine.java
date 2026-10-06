@@ -1455,16 +1455,35 @@ public class Engine {
 	private void proceedToMasterTitleOrGame(boolean fadeFromBlack) {
 		boolean masterTitleOnStartup = configService.getBoolean(
 				SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP);
+		// `ggfmod run` of a patch mod opens its base game at once (holding Escape still reaches
+		// the master title); deterministic test mode keeps the configured startup.
+		java.util.Optional<String> developmentGame = configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
+				? java.util.Optional.empty() : ModSubsystem.current().developmentBaseGame();
 		if (masterTitleOnStartup) {
 			masterTitleScreen = createMasterTitleScreen();
 			masterTitleScreen.initialize();
 			gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+			if (developmentGame.isPresent() && launchDevelopmentGame(developmentGame.get())) {
+				return;
+			}
 		} else {
+			developmentGame.ifPresent(game -> configService.setSessionOverride(SonicConfiguration.DEFAULT_ROM, game));
 			initializeGame();
 		}
 
 		if (fadeFromBlack) {
 			graphicsManager.getFadeManager().startFadeFromBlack(null);
+		}
+	}
+
+	/** Selects the development mod's base game on the master title; false (staying there) if it cannot start. */
+	private boolean launchDevelopmentGame(String gameId) {
+		try {
+			gameLoop.launchGameByEntry(MasterTitleScreen.GameEntry.fromGameId(gameId), null);
+			return true;
+		} catch (RuntimeException unavailable) {
+			LOGGER.warning("Development mod's base game " + gameId + " cannot start: " + unavailable.getMessage());
+			return false;
 		}
 	}
 

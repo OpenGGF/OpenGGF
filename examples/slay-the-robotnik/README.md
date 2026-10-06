@@ -20,14 +20,17 @@ The jar holds only code and text files.
 ## Build and run
 
 ```bash
-python3 examples/slay-the-robotnik/build.py          # compile + package target/slay-the-robotnik/slay-the-robotnik.jar
-python3 examples/slay-the-robotnik/build.py --run    # ...then launch the engine with it as a development mod
-python3 examples/slay-the-robotnik/build.py --run --skip-engine   # reuse the engine build already in target/
+examples/slay-the-robotnik/play.sh             # build what changed and play (opens straight into the mod)
+examples/slay-the-robotnik/play.sh --fresh     # ...after deleting the saved run, records and settings
+examples/slay-the-robotnik/play.sh --rebuild   # ...forcing an engine rebuild
+python3 examples/slay-the-robotnik/build.py    # just compile and package target/slay-the-robotnik/slay-the-robotnik.jar
 ```
 
-To install it normally, copy the jar into `mods/` and enable it in the Mod Manager. Then
-choose **Sonic 3 & Knuckles** on the master title: the mod's title screen opens instead
-of the stock one. *Play Sonic 3 & Knuckles* on that menu returns to the stock game, and
+`play.sh` (and `build.py --run`) launches the engine with the mod as a development mod,
+which opens Sonic 3 & Knuckles, and so the mod's title screen, straight away. To install it
+normally instead, copy the jar into `mods/` and enable it in the Mod Manager; then choose
+**Sonic 3 & Knuckles** on the master title and the mod's title screen opens instead of the
+stock one. *Play Sonic 3 & Knuckles* on that menu returns to the stock game, and
 holding Escape returns to the master title as everywhere else. The mod always plays in
 16:9 (400×224); your aspect setting returns at the master title.
 
