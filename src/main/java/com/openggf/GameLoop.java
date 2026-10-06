@@ -453,8 +453,8 @@ public class GameLoop {
                 audioManager::fadeOutMusic, callback -> fadeManager.startFadeToBlack(callback));
         this.escapeToMasterTitleController = new EscapeToMasterTitleController(
                 () -> resolveFadeManager().isActive(),
-                this::startEscapeToMasterTitleTransition,
-                this::startEscapeApplicationExitTransition);
+                () -> fadeOutTo(this::returnToMasterTitle),
+                () -> fadeOutTo(applicationExitHandler));
         this.presenceManager = new PresenceManager(
                 configService.getBoolean(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED),
                 configService.getBoolean(SonicConfiguration.DISCORD_RICH_PRESENCE_SHOW_TIMER),
@@ -1327,7 +1327,7 @@ public class GameLoop {
                     inputHandler,
                     this::exitMasterTitleScreen);
             if (!resolveFadeManager().isActive()) {
-                com.openggf.game.TitleInputOwnership.routeQuit(masterScreen, this::startEscapeApplicationExitTransition);
+                com.openggf.game.TitleInputOwnership.routeQuit(masterScreen, () -> fadeOutTo(applicationExitHandler));
             }
             finishTimeAttackMasterTitleFrame(masterScreen);
             return;
@@ -3799,13 +3799,17 @@ public class GameLoop {
         masterTitleLaunchCoordinator.returnToMasterTitle();
     }
 
-    void startEscapeToMasterTitleTransition() {
+    /**
+     * Fades the music and picture out, then runs {@code next} (back to the master title, or the
+     * application exit); does nothing while a fade is already running.
+     */
+    void fadeOutTo(Runnable next) {
         FadeManager manager = resolveFadeManager();
         if (manager.isActive()) {
             return;
         }
         audioManager.fadeOutMusic();
-        manager.startFadeToBlack(this::returnToMasterTitle);
+        manager.startFadeToBlack(next);
     }
 
     /**
@@ -3824,15 +3828,6 @@ public class GameLoop {
         pendingReopenTimeAttackMenu = multiplayerRaceCoordinator == null;
         audioManager.fadeOutMusic();
         manager.startFadeToBlack(this::returnToMasterTitle);
-    }
-
-    private void startEscapeApplicationExitTransition() {
-        FadeManager manager = resolveFadeManager();
-        if (manager.isActive()) {
-            return;
-        }
-        audioManager.fadeOutMusic();
-        manager.startFadeToBlack(applicationExitHandler);
     }
 
     /**

@@ -606,7 +606,7 @@ public class TestGameLoop {
     public void returnToMasterTitleTearsDownUserRecordingSessionsBeforeLeavingLevel() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int methodStart = source.indexOf("void returnToMasterTitle()");
-        int methodEnd = source.indexOf("void startEscapeToMasterTitleTransition()", methodStart);
+        int methodEnd = source.indexOf("void fadeOutTo(Runnable next)", methodStart);
         assertTrue(methodStart >= 0 && methodEnd > methodStart, "returnToMasterTitle method must exist");
         String methodBody = source.substring(methodStart, methodEnd);
 

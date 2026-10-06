@@ -47,7 +47,7 @@ final class ModSceneLauncher {
                 SavePaths.root(),
                 window == 0 ? null : mouseMapper(window, graphics, logicalWidth, logicalHeight),
                 () -> exitToGameTitle(gameLoop),
-                gameLoop::startEscapeToMasterTitleTransition);
+                () -> gameLoop.fadeOutTo(gameLoop::returnToMasterTitle));
         gameLoop.setGameMode(GameMode.MOD_SCENE);
         gameLoop.modSceneHost.open(factory, services, logicalWidth, logicalHeight);
         gameLoop.resolveFadeManager().startFadeFromBlack(null);
