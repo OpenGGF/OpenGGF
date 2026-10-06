@@ -163,12 +163,12 @@ final class ShopView implements RunScreen.RoomView {
                 HudIcons.relic(shell, c, shell.catalog.newRelic(item.relicId()), s.x() + 5, s.y() + 5, 16);
             } else {
                 Gfx.panel(c, s.x(), s.y(), s.w(), s.h());
-                HudIcons.potion(shell, c, item.potion(), s.x() + 7, s.y() + 7);
+                HudIcons.potion(shell, c, item.potion(), s.x() + 3, s.y() + 3, Math.min(s.w(), s.h()) - 6);
             }
             String price = Integer.toString(item.price());
             int py = s.y() + s.h() + 2;
-            HudIcons.ring(shell, c, s.x(), py - 2, shell.ticks);
-            f.drawShadowed(c, price, s.x() + 12, py + 1, affordable ? (item.onSale() ? Colors.TEXT_GOOD : Colors.RING)
+            HudIcons.ring(shell, c, s.x(), py - 1, 9, shell.ticks);
+            f.drawShadowed(c, price, s.x() + 11, py + 1, affordable ? (item.onSale() ? Colors.TEXT_GOOD : Colors.RING)
                     : Colors.TEXT_BAD);
             if (item.onSale()) {
                 f.drawOutlined(c, "SALE", s.x() + 4, s.y() - 6, Colors.TEXT_GOOD, 1);

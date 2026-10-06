@@ -233,7 +233,7 @@ final class CompendiumScreen implements Screen {
             if (tab == 4) {
                 HudIcons.relic(shell, c, relics.get(i), s.x() + 1, s.y() + 1, 20);
             } else {
-                HudIcons.potion(shell, c, potions.get(i), s.x() + 5, s.y() + 4);
+                HudIcons.potion(shell, c, potions.get(i), s.x() + 2, s.y() + 2, Math.min(s.w(), s.h()) - 4);
             }
             if (spots.isFocused(s.id())) {
                 Gfx.focusFrame(c, s.x(), s.y(), s.w(), s.h(), shell.ticks);

@@ -144,11 +144,11 @@ final class RewardView implements RunScreen.RoomView {
         int color = done ? Colors.TEXT_DIM : Colors.TEXT;
         switch (r) {
             case Reward.Rings rings -> {
-                HudIcons.ring(shell, c, x, y - 4, shell.ticks);
+                HudIcons.ring(shell, c, x, y - 4, 12, shell.ticks);
                 f.drawShadowed(c, rings.amount() + " RINGS", x + 16, y, done ? color : Colors.RING);
             }
             case Reward.Potion p -> {
-                HudIcons.potion(shell, c, p.potion(), x, y - 4);
+                HudIcons.potion(shell, c, p.potion(), x, y - 4, 12);
                 f.drawShadowed(c, p.potion().name().toUpperCase(), x + 16, y, color);
             }
             case Reward.RelicReward rr -> {

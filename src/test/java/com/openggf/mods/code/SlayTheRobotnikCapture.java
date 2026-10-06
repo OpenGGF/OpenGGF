@@ -22,7 +22,8 @@ import org.lwjgl.glfw.GLFW;
  * Arguments: ROM path, output directory, key script ("tick:key ..." with keys enter, space,
  * up, down, left, right, back, e, d, m; {@code jump=<room>} to jump into a room such as
  * "sonic:42:fight:hcz:big_shaker", see SlayScene.debugJump; {@code mouse=x,y} to point at a
- * game pixel; or {@code wheel=n} to turn the wheel n notches), the capture interval in ticks,
+ * game pixel; {@code click=x,y} to point there and click the left button; or {@code wheel=n}
+ * to turn the wheel n notches), the capture interval in ticks,
  * the total ticks, and optionally a room to jump to before the first tick.
  * Origin: Slay the Robotnik example mod, 2026-10-05.
  */
@@ -48,7 +49,8 @@ public final class SlayTheRobotnikCapture {
             int tick = Integer.parseInt(parts[0]);
             if (parts[1].startsWith("jump=")) {
                 jumps.put(tick, parts[1].substring(5));
-            } else if (parts[1].startsWith("mouse=") || parts[1].startsWith("wheel=")) {
+            } else if (parts[1].startsWith("mouse=") || parts[1].startsWith("wheel=")
+                    || parts[1].startsWith("click=")) {
                 pointer.put(tick, parts[1]);
             } else {
                 keys.add(new int[] {tick, key(parts[1])});
@@ -77,11 +79,18 @@ public final class SlayTheRobotnikCapture {
                         scene.getClass().getMethod("debugJump", String.class).invoke(scene, jumps.get(tick));
                     }
                     String move = pointer.get(tick);
-                    if (move != null && move.startsWith("mouse=")) {
+                    if (move != null && (move.startsWith("mouse=") || move.startsWith("click="))) {
                         String[] xy = move.substring(6).split(",");
                         harness.input().handleMouseMove(Double.parseDouble(xy[0]), Double.parseDouble(xy[1]));
+                        if (move.startsWith("click=")) {
+                            harness.input().handleMouseButton(GLFW.GLFW_MOUSE_BUTTON_LEFT, GLFW.GLFW_PRESS);
+                        }
                     } else if (move != null) {
                         harness.input().handleScroll(Double.parseDouble(move.substring(6)));
+                    }
+                    String earlier = pointer.get(tick - 2);
+                    if (earlier != null && earlier.startsWith("click=")) {
+                        harness.input().handleMouseButton(GLFW.GLFW_MOUSE_BUTTON_LEFT, GLFW.GLFW_RELEASE);
                     }
                     for (int[] k : keys) {
                         if (k[0] == tick) {

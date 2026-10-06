@@ -224,7 +224,7 @@ final class RunScreen implements Screen {
                     + "Starpost to heal.", x, TOP_BAR + 2);
         }
         x += 10 + f.width(hp) + 10;
-        HudIcons.ring(shell, c, x, 2, shell.ticks);
+        HudIcons.ring(shell, c, x, 1, 12, shell.ticks);
         f.drawShadowed(c, Integer.toString(s.rings()), x + 12, 5, Colors.RING);
         if (mouse.over(x, 1, 12 + f.width(Integer.toString(s.rings())), 12)) {
             tooltip("RINGS", "Won in fights and events. Spend them in the Egg Robo's shop on cards, relics and item "
@@ -234,7 +234,7 @@ final class RunScreen implements Screen {
         for (int i = 0; i < s.potionSlots(); i++) {
             int px = potionSlotX(shell, i);
             PotionDef potion = s.potionAt(i);
-            HudIcons.potion(shell, c, potion, px, 1);
+            HudIcons.potion(shell, c, potion, px, 1, 12);
             if (shell.in.mouse.over(px, 1, 12, 12)) {
                 if (potion != null) {
                     tooltip(potion.name().toUpperCase(), potion.describe(s.potionPotency(potion)), px, TOP_BAR + 2);

@@ -13,31 +13,48 @@ final class HudIcons {
     private HudIcons() {
     }
 
-    /** A spinning ring, 12x12. */
-    static void ring(Shell shell, SceneCanvas c, int x, int y, long ticks) {
+    /**
+     * A spinning ROM ring fitted into the {@code size}-pixel square at ({@code x}, {@code y}):
+     * scaled by its full-face frame, so the narrower spin frames stay centred in the square.
+     */
+    static void ring(Shell shell, SceneCanvas c, int x, int y, int size, long ticks) {
+        SceneSprite face = shell.art.romFrame("ring", 0);
         SceneSprite ring = shell.art.romFrame("ring", (int) ((ticks / 8) % 4));
-        if (ring != null) {
-            c.draw(ring, x + 6, y + 6, com.openggf.mods.scene.SceneDraw.plain());
+        if (face != null && ring != null) {
+            float scale = size / (float) Math.max(face.width(), face.height());
+            Poses.centre(c, ring, x + size / 2f, y + size / 2f, SceneDraw.plain().withScale(scale));
             return;
         }
         int phase = (int) ((ticks / 8) % 4);
-        int rw = phase == 2 ? 2 : phase == 1 || phase == 3 ? 6 : 10;
-        int rx = x + (12 - rw) / 2;
-        c.fill(rx, y + 1, rw, 10, Colors.BLACK);
-        c.fill(rx + 1, y + 2, Math.max(1, rw - 2), 8, 0xFFFFDA24);
+        int rw = (phase == 2 ? 2 : phase == 1 || phase == 3 ? 6 : 10) * size / 12;
+        int rh = size * 10 / 12;
+        int rx = x + (size - rw) / 2;
+        c.fill(rx, y + 1, rw, rh, Colors.BLACK);
+        c.fill(rx + 1, y + 2, Math.max(1, rw - 2), rh - 2, 0xFFFFDA24);
         if (rw > 4) {
-            c.fill(rx + 3, y + 4, rw - 6, 4, 0xFF906C00);
+            c.fill(rx + 3, y + 4, rw - 6, Math.max(1, rh - 6), 0xFF906C00);
         }
     }
 
-    /** An item monitor for a potion slot (empty slots draw a dim box). */
-    static void potion(Shell shell, SceneCanvas c, PotionDef potion, int x, int y) {
+    /**
+     * An item monitor for a potion fitted into the {@code size}-pixel square at ({@code x},
+     * {@code y}), scaled by the monitor box's height; an empty slot draws a dim box.
+     */
+    static void potion(Shell shell, SceneCanvas c, PotionDef potion, int x, int y, int size) {
         if (potion == null) {
-            c.draw(shell.art.icon("ui_potion_slot"), x + 1, y + 1);
+            var slot = shell.art.icon("ui_potion_slot");
+            float scale = size / (float) Math.max(slot.width(), slot.height());
+            c.draw(slot, x + (size - slot.width() * scale) / 2f, y + (size - slot.height() * scale) / 2f,
+                    SceneDraw.plain().withScale(scale));
             return;
         }
-        if (shell.art.romFrame("monitor", 0) != null) {
-            monitor(shell, c, monitorFace(potion.id()), x + 6, y + 12, 0.75f, shell.ticks);
+        SceneSprite box = shell.art.romFrame("monitor", 0);
+        if (box != null) {
+            float scale = size / (float) box.height();
+            // The face is painted relative to the sprite origin; centre the box in the square.
+            float ox = x + size / 2f - (box.width() / 2f - box.originX()) * scale;
+            float oy = y + size / 2f - (box.height() / 2f - box.originY()) * scale;
+            monitor(shell, c, monitorFace(potion.id()), ox, oy, scale, shell.ticks);
             return;
         }
         int color = switch (potion.rarity()) {
@@ -45,9 +62,9 @@ final class HudIcons {
             case "Uncommon" -> 0xFF6CB6FF;
             default -> 0xFFB6B6B6;
         };
-        c.fill(x, y, 12, 11, Colors.BLACK);
-        c.fill(x + 1, y + 1, 10, 9, 0xFF6C6C6C);
-        c.fill(x + 2, y + 2, 8, 6, color);
+        c.fill(x, y, size, size - 1, Colors.BLACK);
+        c.fill(x + 1, y + 1, size - 2, size - 3, 0xFF6C6C6C);
+        c.fill(x + 2, y + 2, size - 4, size - 6, color);
         c.fill(x + 3, y + 3, 2, 2, Colors.WHITE);
     }
 
