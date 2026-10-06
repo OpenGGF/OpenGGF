@@ -210,12 +210,13 @@ zones 0-12, 22 and 23 today). Slay the Robotnik stages its fights, Starposts and
 (`scene/LevelStages`, standing each character on the floor under it) and draws its act maps
 over the overview (`scene/MapView`).
 
-The engine's test tree has a CPU-only tool to see every frame of a sprite at once:
+`ggfmod sprites` draws every frame of a sprite into one numbered PNG, with each frame's origin
+marked, so you can pick frames and check a request before writing any scene code:
 
 ```bash
-java -cp target/test-classes:target/classes:<classpath> com.openggf.mods.scene.SpriteSheetDump \
-  s3k.gen s3k rhinobot.png art=0x36732A comp=UNCOMPRESSED size=0xAA0 map=0x3615A8 \
+ggfmod sprites s3k.gen s3k rhinobot.png art=0x36732A comp=UNCOMPRESSED size=0xAA0 map=0x3615A8 \
   dplc=0x36156E layout=OBJECT line=1 pal=0x0A8A3C:16:0 pal=0x0A8B7C:48:1
+ggfmod sprites s3k.gen s3k knuckles.png char=knuckles   # a playable character, plus its animation scripts
 ```
 
 ## 5. Audio and storage
@@ -241,5 +242,19 @@ rendering them. The engine tests `TestModSceneHost`, `TestSlayTheRobotnikExample
   tools can go straight to any screen through the host; return false for commands the scene
   does not know. Slay the Robotnik's `SlayScene.debugJump` documents its command grammar.
 
-`SlayTheRobotnikCapture` renders headless screenshots of the example with GL; reuse its
-approach for your own scene.
+Two engine test-tree tools work with any example mod under `examples/` that registers a
+startup scene. `ExampleModHarness` builds the mod from source, packages and validates it,
+registers it and opens its scene, for your own tests. `ExampleModCapture` boots the base
+game headless with GL and plays a script of inputs (`tick:key`, `+ticks:click=x,y`,
+`wheel=n`, `jump=<debug command>`...). It saves PNG frames, and can also record the scene's
+music and sound effects to a WAV and encode an MP4 with ffmpeg:
+
+```bash
+java -cp target/test-classes:target/classes:$(cat target/test-classpath.txt) \
+  com.openggf.mods.code.ExampleModCapture --rom s3k.gen --mod examples/slay-the-robotnik \
+  --out /tmp/cap --jump "sonic:42:fight:hcz:big_shaker" --script "150:enter +30:enter" \
+  --every 30 --video /tmp/cap/fight.mp4 --audio /tmp/cap/fight.wav
+```
+
+The class's Javadoc lists every option and script step. To get the classpath file, run
+`mvn dependency:build-classpath -Dmdep.outputFile=target/test-classpath.txt -Dmdep.includeScope=test`.

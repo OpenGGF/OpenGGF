@@ -108,6 +108,11 @@ public final class ModSceneHost {
         return scene != null && OwnedSceneFactory.debugJump(scene, command);
     }
 
+    /** The open scene as the host holds it (inside its fault-boundary wrapper), or null; for tests. */
+    ModScene openScene() {
+        return scene;
+    }
+
     /** Draw calls recorded by the last {@link #draw} (for tests and diagnostics). */
     List<SceneDrawOp> lastFrame() {
         return lastFrame;

@@ -26,6 +26,7 @@ import org.junit.jupiter.api.io.TempDir;
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSlayTheRobotnikScene {
+    private static final Path PROJECT = Path.of("examples/slay-the-robotnik");
     private static final String[] POOLS = {"Weak", "Strong", "Elite", "Boss"};
 
     @TempDir
@@ -43,24 +44,23 @@ class TestSlayTheRobotnikScene {
     @Test
     void everyFightAndEventOpensDrawsAndEndsWithoutFaults() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
-        try (SlayTheRobotnikHarness harness = SlayTheRobotnikHarness.build(work.resolve("build"))) {
+        try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
             GameModule effective = harness.apply(GameServices.module());
             harness.open(effective, work.resolve("saves"), 400, 224);
             play(harness, 30);
             Object scene = harness.scene();
-            Method jump = scene.getClass().getMethod("debugJump", String.class);
             List<String> rooms = rooms(harness);
             assertTrue(rooms.size() > 60, "fights and events found: " + rooms.size());
             int hero = 0;
             int fightsWon = 0;
             for (String room : rooms) {
                 String character = new String[] {"sonic", "tails", "knuckles"}[hero++ % 3];
-                jump.invoke(scene, character + ":7:" + room);
+                assertTrue(harness.debugJump(character + ":7:" + room), "jumped to " + room);
                 play(harness, 40);
                 boolean fight = room.startsWith("fight:");
                 assertEquals(fight ? "CombatRoom" : "EventRoom", currentRoom(scene), "after jumping to " + room);
                 if (fight) {
-                    jump.invoke(scene, "kill");
+                    assertTrue(harness.debugJump("kill"), "killed every enemy in " + room);
                     // Long enough for a boss's entrance, the replay and the victory banner.
                     play(harness, 260);
                     // Two-phase bosses revive instead of dying; everything else is beaten.
@@ -78,12 +78,12 @@ class TestSlayTheRobotnikScene {
     @Test
     void mapWheelScrollHoldsUntilThePlayerMovesOn() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
-        try (SlayTheRobotnikHarness harness = SlayTheRobotnikHarness.build(work.resolve("build"))) {
+        try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
             GameModule effective = harness.apply(GameServices.module());
             harness.open(effective, work.resolve("saves"), 400, 224);
             play(harness, 30);
             Object scene = harness.scene();
-            scene.getClass().getMethod("debugJump", String.class).invoke(scene, "sonic:7:map:1");
+            assertTrue(harness.debugJump("sonic:7:map:1"));
             play(harness, 90);
             assertEquals("MapRoom", currentRoom(scene));
             float start = mapScroll(scene);
@@ -123,7 +123,7 @@ class TestSlayTheRobotnikScene {
     }
 
     /** Every encounter and event id, as debugJump commands ("fight:aiz:rhinobot", "event:event:giant_ring"). */
-    private static List<String> rooms(SlayTheRobotnikHarness harness) throws Exception {
+    private static List<String> rooms(ExampleModHarness harness) throws Exception {
         Object catalog = harness.loader().loadClass("slaytherobotnik.content.Content").getMethod("build").invoke(null);
         List<String> rooms = new ArrayList<>();
         int acts = (int) catalog.getClass().getMethod("actCount").invoke(catalog);
@@ -142,7 +142,7 @@ class TestSlayTheRobotnikScene {
     }
 
     /** Ticks and draws (recording the canvas without rendering), as the frame loop would. */
-    private static void play(SlayTheRobotnikHarness harness, int frames) {
+    private static void play(ExampleModHarness harness, int frames) {
         ModSceneHost host = harness.host();
         for (int i = 0; i < frames; i++) {
             harness.tick();

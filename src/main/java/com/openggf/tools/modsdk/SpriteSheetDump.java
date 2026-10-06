@@ -1,32 +1,43 @@
-package com.openggf.mods.scene;
+package com.openggf.tools.modsdk;
 
 import com.openggf.data.Rom;
 import com.openggf.game.GameId;
 import com.openggf.io.PixelImage;
 import com.openggf.io.PngCodec;
+import com.openggf.mods.scene.RomSpriteRequest;
+import com.openggf.mods.scene.SceneRomArt;
+import com.openggf.mods.scene.SceneSprite;
+import com.openggf.mods.scene.SceneSpriteSet;
 import com.openggf.mods.scene.host.SceneRomArtFactory;
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Renders every frame of a ROM sprite into one PNG grid (frame number above each cell), for
- * finding the frames and offsets a mod scene needs. CPU only; no GL or engine boot.
+ * {@code ggfmod sprites}: renders every frame of a ROM sprite into one PNG grid (frame number
+ * above each cell, origin marked in magenta), for finding the frames and offsets a mod scene's
+ * {@code RomSpriteRequest} needs. ROM sprites need no GL or engine boot.
  *
  * <pre>
- * java -cp target/test-classes:target/classes:... com.openggf.mods.scene.SpriteSheetDump \
- *   s3k.gen s3k out.png art=0x367DCA comp=KOSINSKI_MODULED map=0x3616C0 line=1 \
+ * ggfmod sprites s3k.gen s3k out.png art=0x367DCA comp=KOSINSKI_MODULED map=0x3616C0 line=1 \
  *   pal=0x0A8A3C:16:0 pal=0x0A8B7C:48:1 [dplc=0x36156E layout=OBJECT size=0xAA0 offset=0]
  * </pre>
- * {@code pal=address:colours:firstLine} may repeat; {@code char=sonic} (or tails, knuckles, tails_tails)
- * dumps a playable character's sheet and prints its animation scripts instead. Origin: Slay the
- * Robotnik, 2026-10-05.
+ * {@code pal=address:colours:firstLine} may repeat; {@code char=sonic} (or tails, knuckles,
+ * tails_tails) boots the game headless, dumps a playable character's sheet and prints its
+ * animation scripts. Origin: Slay the Robotnik, 2026-10-05; a ggfmod subcommand since 2026-10-06.
  */
 public final class SpriteSheetDump {
     private SpriteSheetDump() {
     }
 
-    public static void main(String[] args) throws Exception {
+    /** Runs {@code ggfmod sprites <rom> <s1|s2|s3k> <out.png> key=value...} (args without "sprites"). */
+    static int run(String[] args, PrintStream output) throws Exception {
+        if (args.length < 4) {
+            output.println("Usage: ggfmod sprites <rom> <s1|s2|s3k> <out.png> art=... map=... [comp=... dplc=..."
+                    + " layout=... size=... line=... offset=... pal=address:colours:firstLine] | char=<name>");
+            return 1;
+        }
         Rom rom = new Rom();
         rom.open(args[0]);
         GameId game = switch (args[1]) {
@@ -96,7 +107,7 @@ public final class SpriteSheetDump {
                     for (int f : frames) {
                         sb.append(" 0x").append(Integer.toHexString(f));
                     }
-                    System.out.println(sb);
+                    output.println(sb);
                 }
             }
         } else {
@@ -138,10 +149,11 @@ public final class SpriteSheetDump {
             }
         }
         PngCodec.write(out, sheet);
-        System.out.println(set.frameCount() + " frames -> " + out);
+        output.println(set.frameCount() + " frames -> " + out);
         if (boot != null) {
             boot.close();
         }
+        return 0;
     }
 
     private static void digits(PixelImage sheet, int value, int x, int y) {

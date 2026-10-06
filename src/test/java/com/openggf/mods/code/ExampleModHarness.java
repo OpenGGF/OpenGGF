@@ -1,12 +1,12 @@
 package com.openggf.mods.code;
 
 import com.openggf.control.InputHandler;
-import com.openggf.game.GameId;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
-import com.openggf.game.session.SessionManager;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
+import com.openggf.mods.ModManifest;
+import com.openggf.mods.ModManifestParser;
 import com.openggf.mods.ModRuntimeFindingStore;
 import com.openggf.mods.ModStateSaveResult;
 import com.openggf.mods.scene.host.ModSceneHost;
@@ -25,12 +25,16 @@ import java.util.stream.Stream;
 import javax.tools.ToolProvider;
 
 /**
- * Builds the Slay the Robotnik example from source and runs its startup scene against the
- * current S3K session, for tests and the screenshot capture tool. Not part of the mod.
+ * Builds an example mod from its source tree ({@code examples/<name>}), packages and validates
+ * it through {@code ggfmod}, registers it as the engine would, and runs its startup scene
+ * against the current session. Tests and {@link ExampleModCapture} use it; it is not part of
+ * any mod. The mod's id, base game and entry point come from its manifest.
+ *
+ * <p>Origin: the Slay the Robotnik example mod's harness (2026-10-05), generalised to any
+ * example mod with a startup scene on 2026-10-06.
  */
-public final class SlayTheRobotnikHarness implements AutoCloseable {
-    public static final Path PROJECT = Path.of("examples/slay-the-robotnik");
-
+public final class ExampleModHarness implements AutoCloseable {
+    private final ModManifest manifest;
     private final URLClassLoader loader;
     private final ModRegistrationPlan plan;
     private final ModSceneHost host = new ModSceneHost();
@@ -38,41 +42,49 @@ public final class SlayTheRobotnikHarness implements AutoCloseable {
     private final List<String> exits = new ArrayList<>();
     private final ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
 
-    private SlayTheRobotnikHarness(URLClassLoader loader, ModRegistrationPlan plan) {
+    private ExampleModHarness(ModManifest manifest, URLClassLoader loader, ModRegistrationPlan plan) {
+        this.manifest = manifest;
         this.loader = loader;
         this.plan = plan;
     }
 
-    /** Compiles {@code examples/slay-the-robotnik} into {@code work} and registers it as the engine would. */
-    public static SlayTheRobotnikHarness build(Path work) throws Exception {
+    /**
+     * Compiles {@code project/src/main/java} into {@code work}, packages it with its resources
+     * through {@code ggfmod package} (which runs the mod validator) and registers it.
+     */
+    public static ExampleModHarness build(Path project, Path work) throws Exception {
+        ModManifest manifest = new ModManifestParser().parse(
+                Files.readAllBytes(project.resolve("src/main/resources/META-INF/openggf-mod.yaml")));
         Path classes = Files.createDirectories(work.resolve("classes"));
         List<String> args = new ArrayList<>(List.of("--release", "21", "-cp", System.getProperty("java.class.path"),
                 "-d", classes.toString()));
-        try (Stream<Path> files = Files.walk(PROJECT.resolve("src/main/java"))) {
+        try (Stream<Path> files = Files.walk(project.resolve("src/main/java"))) {
             files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));
         }
         if (ToolProvider.getSystemJavaCompiler().run(null, null, null, args.toArray(String[]::new)) != 0) {
-            throw new IllegalStateException("Slay the Robotnik failed to compile");
+            throw new IllegalStateException(manifest.id() + " failed to compile");
         }
-        copyTree(PROJECT.resolve("src/main/resources"), classes);
-        Path jar = work.resolve("slay-the-robotnik.jar");
+        copyTree(project.resolve("src/main/resources"), classes);
+        Path jar = work.resolve(manifest.id() + ".jar");
         if (GgfModCli.run(new String[] {"package", "--input", classes.toString(), "--out", jar.toString()},
                 System.out) != 0) {
-            throw new IllegalStateException("Slay the Robotnik failed to package");
+            throw new IllegalStateException(manifest.id() + " failed to package");
         }
         URLClassLoader loader = new URLClassLoader(new java.net.URL[] {jar.toUri().toURL()},
-                SlayTheRobotnikHarness.class.getClassLoader());
+                ExampleModHarness.class.getClassLoader());
         ModRegistrationPlan plan;
         try (var assets = ModAssetRoot.jar(work, jar, ModInputLimits.production())) {
-            ModContext context = new ModContext("slay-the-robotnik", "s3k", assets);
-            ((GgfMod) loader.loadClass("slaytherobotnik.SlayTheRobotnikMod").getConstructor().newInstance())
-                    .register(context);
+            ModContext context = new ModContext(manifest.id(), manifest.baseGame(), assets);
+            ((GgfMod) loader.loadClass(manifest.entrypoint()).getConstructor().newInstance()).register(context);
             plan = context.freeze();
         }
-        return new SlayTheRobotnikHarness(loader, plan);
+        return new ExampleModHarness(manifest, loader, plan);
     }
 
     private static void copyTree(Path from, Path to) throws IOException {
+        if (!Files.isDirectory(from)) {
+            return;
+        }
         try (Stream<Path> files = Files.walk(from)) {
             for (Path p : files.toList()) {
                 Path target = to.resolve(from.relativize(p).toString());
@@ -84,6 +96,10 @@ public final class SlayTheRobotnikHarness implements AutoCloseable {
                 }
             }
         }
+    }
+
+    public ModManifest manifest() {
+        return manifest;
     }
 
     /** Faults the engine's fault boundary caught from the mod, by owner (empty when it ran cleanly). */
@@ -106,26 +122,26 @@ public final class SlayTheRobotnikHarness implements AutoCloseable {
         return effective;
     }
 
-    /** Opens the startup scene with ROM art from the current session and storage under {@code saves}. */
+    /** Opens the startup scene with ROM art from the current session and storage under {@code saves}, silently. */
     public void open(GameModule effective, Path saves, int width, int height) {
-        OwnedSceneFactory factory = effective.getGameService(OwnedSceneFactory.class);
-        var players = new java.util.function.Supplier<com.openggf.data.PlayerSpriteArtProvider>() {
-            private com.openggf.data.PlayerSpriteArtProvider cached;
+        open(effective, saves, width, height, false);
+    }
 
-            @Override
-            public com.openggf.data.PlayerSpriteArtProvider get() {
-                if (cached == null) {
-                    var session = SessionManager.getCurrentWorldSession();
-                    Object game = effective.createGame(session.getDataSource());
-                    cached = (com.openggf.data.PlayerSpriteArtProvider) game;
-                }
-                return cached;
-            }
-        };
+    /**
+     * Opens the startup scene with ROM art from the current session and storage under
+     * {@code saves}; with {@code audio}, its music and sound effects go to the session's audio
+     * manager (for recording), otherwise nowhere.
+     */
+    public void open(GameModule effective, Path saves, int width, int height, boolean audio) {
+        OwnedSceneFactory factory = effective.getGameService(OwnedSceneFactory.class);
+        if (factory == null) {
+            throw new IllegalStateException(manifest.id() + " registers no startup scene");
+        }
         try {
-            var rom = GameServices.rom().getRom();
-            SceneServices services = new SceneServices(null, SceneRomArtFactory.create(rom, GameId.S3K, players,
-                    effective::loadTailsTailArt, new com.openggf.game.sonic3k.Sonic3kZoneArt(rom)),
+            // The same ROM art the engine gives the scene: the module's characters, zone pictures
+            // and title cards.
+            SceneServices services = new SceneServices(audio ? GameServices.audio() : null,
+                    SceneRomArtFactory.forModule(effective, GameServices.rom().getRom()),
                     saves, (x, y) -> new int[] {(int) x, (int) y, 1}, () -> exits.add("game"),
                     () -> exits.add("master"));
             host.open(factory, services, width, height);
@@ -142,6 +158,7 @@ public final class SlayTheRobotnikHarness implements AutoCloseable {
         return input;
     }
 
+    /** Where the scene asked to go ("game" or "master"), in order. */
     public List<String> exits() {
         return exits;
     }
@@ -162,25 +179,17 @@ public final class SlayTheRobotnikHarness implements AutoCloseable {
         tick();
     }
 
-    /** The open scene object (from the mod's class loader), unwrapped from the engine's fault-boundary wrapper. */
-    public Object scene() throws ReflectiveOperationException {
-        var field = ModSceneHost.class.getDeclaredField("scene");
-        field.setAccessible(true);
-        Object scene = field.get(host);
-        while (scene != null && scene.getClass().getName().startsWith("com.openggf.")) {
-            Object inner = null;
-            for (var f : scene.getClass().getDeclaredFields()) {
-                if (com.openggf.mods.scene.ModScene.class.isAssignableFrom(f.getType())) {
-                    f.setAccessible(true);
-                    inner = f.get(scene);
-                }
-            }
-            if (inner == null) {
-                break;
-            }
-            scene = inner;
-        }
-        return scene;
+    /**
+     * Sends a debug command to the open scene through {@code DebuggableScene}, inside the mod's
+     * fault boundary; false when the scene has no debug entry or did not take the command.
+     */
+    public boolean debugJump(String command) {
+        return host.debugJump(command);
+    }
+
+    /** The open scene object (from the mod's class loader), for tests that drive it directly. */
+    public Object scene() {
+        return com.openggf.mods.scene.host.SceneHostTestAccess.scene(host);
     }
 
     public ClassLoader loader() {
