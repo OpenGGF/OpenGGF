@@ -92,10 +92,12 @@ final class TitleScreen implements Screen {
         long t = shell.ticks;
         long age = opened < 0 ? Long.MAX_VALUE / 2 : t - opened;
         show.draw(shell, c, age);
-        // Shade the column so the menu reads over the level, fading out towards the chase.
-        for (int i = 0; i < 12; i++) {
-            int x0 = COLUMN_X + COLUMN_W - 40 + i * 6;
-            c.fill(i == 0 ? 0 : x0, 0, i == 0 ? x0 : 6, h, Colors.alpha(0xFF000818, 0.5f * (1f - i / 12f)));
+        // Shade the column so the menu reads over the level, then fade it out towards the chase
+        // in 6-pixel bands that start where the solid shade ends.
+        int fadeX = COLUMN_X + COLUMN_W - 40;
+        c.fill(0, 0, fadeX, h, Colors.alpha(0xFF000818, 0.5f));
+        for (int i = 1; i < 12; i++) {
+            c.fill(fadeX + (i - 1) * 6, 0, 6, h, Colors.alpha(0xFF000818, 0.5f * (1f - i / 12f)));
         }
         // The logo drops in from above and settles with a small bounce.
         float drop = age >= LOGO_TICKS ? 1f : Ease.outBack(age / (float) LOGO_TICKS);

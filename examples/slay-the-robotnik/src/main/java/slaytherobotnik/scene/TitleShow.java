@@ -31,8 +31,12 @@ final class TitleShow {
     private static final int CARRY_FRAME_TICKS = 12;
     /** Tails' Carry pose ($22 -> mapping frame $A2) and the tail's Fly1 script (AniTails_Tail0B: $27, $28, two frames each). */
     private static final int TAILS_CARRY_FRAME = 0xA2;
-    /** Knuckles' side-on glide (Map_Knuckles frame $C4). */
-    private static final int KNUCKLES_GLIDE_FRAME = 0xC4;
+    /**
+     * Knuckles' side-on glide facing right, the way the chase flies: Map_Knuckles frame $C0
+     * (Knuckles_Set_Gliding_Animation). $C4 is the same glide facing left, which the ROM itself
+     * never shows, drawing $C0 mirrored instead.
+     */
+    private static final int KNUCKLES_GLIDE_FRAME = 0xC0;
 
     /** Zone and act of each shot: Angel Island, Hydrocity, Launch Base, Sky Sanctuary. */
     private final int[][] shots = {{0, 0}, {1, 0}, {6, 0}, {10, 0}};
