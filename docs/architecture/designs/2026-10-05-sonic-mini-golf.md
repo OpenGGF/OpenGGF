@@ -70,8 +70,23 @@ without moving the character or changing the selected elevation.
 
 A putt follows the supporting surface's tangent; it is not a world-horizontal
 velocity that clips into a slope. Chip elevation is measured away from that
-tangent. The first prototype should offer a useful range of low through steep
-chips, rather than claiming an untested exact degree limit.
+tangent. The implemented range is 0–90 degrees. A 90-degree chip retains full
+normal launch speed and adds a small tangent component in the selected facing:
+one sixteenth of shot speed, with a minimum of `0x40` native velocity units
+(0.25 pixels/step). During ascent only, a wall-stopped X velocity retries that
+small forward component. Collision still owns position separation; this allows
+the golfer to rise beside a wall and advance after clearing its edge, without
+teleporting or steering during WATCH. The retry ends at the apex and yields to
+native spring control and nonzero bounce velocities. Short power cannot clear
+an arbitrarily tall wall.
+
+Upward Obj41 springs additionally accept rolling entry into either side in
+golf. The mod preserves incoming forward momentum through the spring housing
+while reusing the native upward impulse, animation, subtype effects and sound.
+Side entry omits the ROM's top-landing Y correction. Native top contact and all
+other spring orientations retain their existing behavior; stock game modules
+never tag these placements or install the namespaced golf factory. These rules participate in the
+direct-connect fingerprint and must survive course restore and forward replay.
 
 A dotted guide shows the intended departure at a reference power. As the two
 charges establish power it updates to the earned power. For a chip, show the

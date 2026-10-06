@@ -33,6 +33,7 @@ public final class ProtocolProbe {
         List<GolfPacket> packets = List.of(new Hello(prints(), "sonic"),
                 new Ready(MATCH, 1, UUID.randomUUID(), prints(), "tails"),
                 new TurnOpened(shot.id(), 10, 20, score, score), shot,
+                new ShotRequest(shot.id(), -1, 90, 500, 500),
                 new ShotAccepted(shot.id(), 23, 640), view,
                 new TurnCommitted(shot.id(), Outcome.SETTLED, 100, 200, score, score, 1),
                 new Pause(MATCH, "disconnect"), new Resume(MATCH, 25), new Leave(MATCH, 1, "quit"),
@@ -61,7 +62,7 @@ public final class ProtocolProbe {
         trailing[2] = (byte)(size >>> 8); trailing[3] = (byte)size;
         rejects(() -> GolfCodec.read(new ByteArrayInputStream(trailing)));
         rejects(() -> new ShotRequest(shot.id(), 0, 1, 1, 1));
-        rejects(() -> new ShotRequest(shot.id(), 1, 76, 1, 1));
+        rejects(() -> new ShotRequest(shot.id(), 1, 91, 1, 1));
         rejects(() -> new ShotRequest(shot.id(), 1, 1, 501, 1));
         rejects(() -> new ShotId(MATCH, 0, 0, 0, 0));
         rejects(() -> new Hello(prints(), "knuckles"));

@@ -2,7 +2,9 @@ package paradise.model;
 
 /** Integer golf tuning; engine adapters supply the ROM-backed physics and native sounds. */
 public final class GolfRules {
-    public static final int MAX_ELEVATION_DEGREES = 75;
+    public static final int MAX_ELEVATION_DEGREES = 90;
+    public static final int VERTICAL_DRIFT_DIVISOR = 16;
+    public static final int MIN_VERTICAL_DRIFT_FIXED = 0x40;
     public static final int ELEVATION_STEP_DEGREES = 1;
     public static final int MAX_CHARGE = 500;
     public static final int MAX_POWER = 1000;
@@ -26,6 +28,8 @@ public final class GolfRules {
                 + CHARGE_FEEDBACK_TICKS + ":" + PRE_RELEASE_TICKS + ":" + MIN_SPEED_FIXED + ":"
                 + MAX_SPEED_FIXED + ":" + SETTLE_DWELL_TICKS + ":" + LOST_BALL_MARGIN + ":" + WATCHDOG_TICKS
                 + ":" + EXTRA_CHARGE_INTERVAL_TICKS + ":" + EXTRA_CHARGE_POWER_STEP
+                + ":" + VERTICAL_DRIFT_DIVISOR + ":" + MIN_VERTICAL_DRIFT_FIXED
+                + ":up-spring-side-entry:vertical-ascent-drive"
                 + ":damage,death,finish,settled,lost,watchdog:gate32,-96,48:independent-worlds:ehz1,ehz2";
         try {
             return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
@@ -36,6 +40,22 @@ public final class GolfRules {
     }
 
     private GolfRules() { }
+
+    public record LaunchVelocity(int x, int y, int ground) { }
+
+    public static int verticalDriftFixed(int speedFixed) {
+        return Math.max(MIN_VERTICAL_DRIFT_FIXED, speedFixed / VERTICAL_DRIFT_DIVISOR);
+    }
+
+    /** The same surface-relative departure for the shot and its half-power guide. */
+    public static LaunchVelocity launchVelocity(int direction, int elevationDegrees, int speedFixed, int surfaceAngle) {
+        double elevation = Math.toRadians(elevationDegrees), angle = (surfaceAngle & 255) * Math.PI / 128;
+        double tangent = direction * (elevationDegrees == MAX_ELEVATION_DEGREES
+                ? verticalDriftFixed(speedFixed) : Math.cos(elevation) * speedFixed);
+        double normal = Math.sin(elevation) * speedFixed;
+        return new LaunchVelocity((int) Math.round(tangent * Math.cos(angle) + normal * Math.sin(angle)),
+                (int) Math.round(tangent * Math.sin(angle) - normal * Math.cos(angle)), (int) Math.round(tangent));
+    }
 
     public static int speedFixed(int normalizedPower) {
         if (normalizedPower < 0 || normalizedPower > MAX_POWER) {

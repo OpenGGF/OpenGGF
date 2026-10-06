@@ -63,6 +63,8 @@ class TestGolfOnlineIntegration {
                 compareViewAndScores(host, guest);
 
                 long guestTurn = host.state.number("turn"), gameplayBeforeGuest = host.state.number("gameplayRows");
+                guest.step(60, 1, 0, false); guest.step(30, 1, 0, false);
+                assertEquals(90, guest.state.number("elevation"), "guest can submit the vertical chip through its real meter");
                 shot(guest);
                 assertEquals("FEEDBACK", guest.state.text("stage"), "guest locks its own timed charges");
                 guest.step(1, 0, 0, true); // Cross the request/acceptance boundary with a real guest menu pause.

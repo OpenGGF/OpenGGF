@@ -9,7 +9,11 @@ import java.util.Set;
 
 /** ROM-backed Sonic 2 Mini Golf creator entry point. */
 public final class PuttPuttParadiseMod implements GgfMod {
-    @Override public void register(ModContext context) { context.registerGamePatch(new Patch()); }
+    @Override public void register(ModContext context) {
+        context.registerObject("up-spring", (spawn, registry) ->
+                new paradise.objects.GolfUpSpring(spawn, registry.getPrimaryName(spawn.objectId())));
+        context.registerGamePatch(new Patch());
+    }
 
     public static final class Patch implements GamePatch {
         @Override public String id() { return "putt-putt-paradise:golf"; }

@@ -75,7 +75,11 @@ public final class GolfOnlinePeerProbe {
                 try (var assets = ModAssetRoot.jar(jar.getParent(), jar, ModInputLimits.production())) {
                     var context = new ModContext("putt-putt-paradise", "s2", assets);
                     ((GgfMod)loader.loadClass("paradise.PuttPuttParadiseMod").getConstructor().newInstance()).register(context);
-                    for (var patch : context.freeze().explicitPatches()) effective = patch.apply(effective, null);
+                    var plan = context.freeze();
+                    var boundary = new ModFaultBoundary(Map.of(), new com.openggf.mods.ModRuntimeFindingStore(),
+                            owners -> new com.openggf.mods.ModStateSaveResult.Saved(), owners -> { });
+                    effective = new ModBackedGamePatch(plan, boundary).apply(effective, null);
+                    for (var patch : plan.explicitPatches()) effective = patch.apply(effective, null);
                 }
                 SessionManager.clear(); GameModuleRegistry.setCurrent(effective); TestEnvironment.activeGameplayMode();
                 var fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
@@ -154,6 +158,7 @@ public final class GolfOnlinePeerProbe {
         values.put("matchStatus", match == null ? "none" : value(match, "status"));
         values.put("pending", pending == null ? -1 : value(value(pending, "id"), "shotSequence"));
         values.put("stage", value(value(controller, "shotState"), "stage"));
+        values.put("elevation", value(value(controller, "shotState"), "elevationDegrees"));
         for (int owner = 0; owner < 2; owner++) {
             Object golfer = match == null ? null : ((List<?>)value(match, "golfers")).get(owner);
             values.put("strokes" + owner, golfer == null ? -1 : ((List<?>)value(golfer, "holes")).stream().mapToInt(s -> integer(s, "strokes")).sum());

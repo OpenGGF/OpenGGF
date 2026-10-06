@@ -110,6 +110,21 @@ class TestSpringObjectInstance {
     }
 
     @Test
+    void stockUpSpringDoesNotFireOnRollingSideEntry() throws Exception {
+        var spring = new SpringObjectInstance(new ObjectSpawn(0x100, 0x100, 0x41, 0, 0, false, 0), "StockSpring");
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
+        invoke(spring, "ensureInitialized");
+        var player = new TestableSprite("sonic");
+        player.setRolling(true); player.setAir(false);
+        var side = new PlayerSolidContactResult(ContactKind.SIDE, false, false, true, false,
+                new PreContactState((short) 0x400, (short) 0, true, false, 0), PostContactState.ZERO, 0);
+        invoke(spring, "applyCheckpointContact",
+                new Class<?>[]{AbstractPlayableSprite.class, PlayerSolidContactResult.class}, player, side);
+        assertEquals(0, player.getYSpeed());
+        assertFalse(player.getAir()); assertFalse(player.getSpringing());
+    }
+
+    @Test
     void upSpringPositionNudgePreservesYSubpixel() throws Exception {
         SpringObjectInstance spring = new SpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, 0x41, 0x00, 0, false, 0),

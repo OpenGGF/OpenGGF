@@ -157,6 +157,7 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
         meterTick(course, input, true); return false;
     }
     private boolean meterTick(CourseControl course, PlayerInputState input, boolean guest) {
+        if (!guest) resumeVerticalDrive();
         int held = input.heldMask(), actions = input.actionHeldMask();
         if (inputBlocked) {
             if (actions == 0 && !input.startHeld()) inputBlocked = false;
@@ -181,12 +182,35 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
             }
             case RELEASE -> {
                 if (!guest) {
-                    course.launch(event.shot().direction(), event.shot().elevationDegrees(), event.shot().speedFixed());
+                    launch(course, event.shot());
                     if (online != null) online.sound(tick, "release"); watchSteps = dwell = 0;
                 }
             }
         }
         return meter.snapshot().stage() == ShotMeter.Stage.WATCH && !guest;
+    }
+    private void launch(CourseControl course, GolfShot shot) {
+        var player = GameServices.camera().getFocusedSprite();
+        var velocity = GolfRules.launchVelocity(shot.direction(), shot.elevationDegrees(), shot.speedFixed(), player.getAngle());
+        // The candidate CourseControl contract stops at 75 degrees. Reuse its native
+        // curl, centre correction, support release and sound before the mod's steeper departure.
+        course.launch(shot.direction(), Math.min(75, shot.elevationDegrees()), shot.speedFixed());
+        if (shot.elevationDegrees() > 75) {
+            player.setXSpeed((short) velocity.x()); player.setYSpeed((short) velocity.y());
+            player.setGSpeed((short) velocity.ground());
+        }
+    }
+    private void resumeVerticalDrive() {
+        var state = meter.snapshot();
+        if (state.stage() != ShotMeter.Stage.WATCH || state.shot() == null
+                || state.shot().elevationDegrees() != GolfRules.MAX_ELEVATION_DEGREES) return;
+        var player = GameServices.camera().getFocusedSprite();
+        if (player.getAir() && player.getYSpeed() < 0 && player.getXSpeed() == 0
+                && !player.getDead() && !player.isHurt() && !player.getSpringing()) {
+            // Retry a wall-stopped forward bias while ascending. Native collision
+            // still clamps each step; never push during descent or overwrite a bounce.
+            player.setXSpeed((short) (state.shot().direction() * GolfRules.verticalDriftFixed(state.shot().speedFixed())));
+        }
     }
     private void charge(CourseControl course) { course.chargeSound(); if (online != null) online.sound(tick, "charge"); }
     @Override public boolean retainRolling() { return meter.snapshot().stage() == ShotMeter.Stage.WATCH; }
@@ -314,12 +338,12 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
     }
     private void drawPreview() {
         var p = GameServices.camera().getFocusedSprite(); var m = meter.snapshot();
-        double angle = (p.getAngle() & 255) * Math.PI / 128, elevation = Math.toRadians(m.elevationDegrees());
+        double angle = (p.getAngle() & 255) * Math.PI / 128;
         // AIM has no running power meter: use the reference half-power departure.
         // Reading meterValue here selected a near-minimum chip whose arc immediately fell.
-        double speed = GolfRules.speedFixed(GolfRules.MAX_POWER / 2) / 256.0;
-        double tangent = m.direction() * Math.cos(elevation) * speed, normal = Math.sin(elevation) * speed;
-        double vx = tangent * Math.cos(angle) + normal * Math.sin(angle), vy = tangent * Math.sin(angle) - normal * Math.cos(angle);
+        var velocity = GolfRules.launchVelocity(m.direction(), m.elevationDegrees(),
+                GolfRules.speedFixed(GolfRules.MAX_POWER / 2), p.getAngle());
+        double vx = velocity.x() / 256.0, vy = velocity.y() / 256.0;
         // Match CourseControl.launch's standing-to-ball offset without changing the player.
         int radiusDelta = p.getYRadius() - p.getRollYRadius();
         int x = p.getCentreX() - (int) Math.round(Math.sin(angle) * radiusDelta) - GameServices.camera().getX();

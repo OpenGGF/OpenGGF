@@ -835,7 +835,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Includes a creator menu themed with the ROM's title landscape, winged emblem,
   Sonic/Tails portraits and sparkles, scorecards, native spindash audio, all existing
   viewport presets, a half-power aiming guide aligned with the rolling launch
-  centre and supporting slope, and a build/package/launch script. The unpublished
+  centre and supporting slope, upward springs that also fire on rolling side
+  entry, 90-degree chips with a small forward bias for clearing walls, and a
+  build/package/launch script. The unpublished
   candidate API now supports held gameplay admission, opaque course checkpoints and
   read-only value scenes without changing stock modules' frame behavior.
 

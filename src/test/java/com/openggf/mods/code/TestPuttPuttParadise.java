@@ -153,6 +153,25 @@ class TestPuttPuttParadise {
         assertEquals(0, GameServices.level().getCurrentLevel().getZoneIndex());
         assertEquals(act, GameServices.level().getCurrentAct());
         assertFalse(GameServices.level().getCurrentLevel().getObjects().isEmpty(), "keep ROM course objects");
+        var original = new com.openggf.game.sonic2.Sonic2GameModule()
+                .createGame(GameServices.rom().getRom()).loadLevel(act);
+        var expected = original.getObjects().stream()
+                .filter(s -> s.objectId() != 0x0D && s.objectId() != 0x3E).toList();
+        var actual = GameServices.level().getCurrentLevel().getObjects();
+        assertEquals(expected.size(), actual.size(), "only ROM end markers are removed");
+        int tagged = 0;
+        for (int index = 0; index < expected.size(); index++) {
+            var nativeSpawn = expected.get(index); var golfSpawn = actual.get(index);
+            var nativeFields = new com.openggf.level.objects.ObjectSpawn(golfSpawn.x(), golfSpawn.y(),
+                    golfSpawn.objectId(), golfSpawn.subtype(), golfSpawn.renderFlags(), golfSpawn.respawnTracked(),
+                    golfSpawn.rawYWord(), golfSpawn.layoutIndex());
+            assertEquals(nativeSpawn, nativeFields, "preserve ROM placement fields and table order at " + index);
+            if (nativeSpawn.objectId() == 0x41 && ((nativeSpawn.subtype() >> 3) & 0xE) == 0) {
+                assertEquals("putt-putt-paradise", golfSpawn.ownerModId());
+                assertEquals("putt-putt-paradise:up-spring", golfSpawn.objectKey()); tagged++;
+            } else assertEquals(nativeSpawn, golfSpawn, "other native objects remain untagged");
+        }
+        assertTrue(tagged > 0, "each EHZ act includes upward ROM springs");
     }
 
     private HeadlessTestFixture launch(String character, int act) throws Exception {
@@ -168,7 +187,11 @@ class TestPuttPuttParadise {
         config.resolveDisplayAspect();
         GameServices.graphics().setProjectionWidth(config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
         GameModule effective = GameServices.module();
-        for (var patch : registrations().explicitPatches()) effective = patch.apply(effective, null);
+        var plan = registrations();
+        var boundary = new ModFaultBoundary(Map.of(), new com.openggf.mods.ModRuntimeFindingStore(),
+                owners -> new com.openggf.mods.ModStateSaveResult.Saved(), owners -> { });
+        effective = new ModBackedGamePatch(plan, boundary).apply(effective, null);
+        for (var patch : plan.explicitPatches()) effective = patch.apply(effective, null);
         SessionManager.clear();
         GameModuleRegistry.setCurrent(effective);
         TestEnvironment.activeGameplayMode();
@@ -232,7 +255,8 @@ class TestPuttPuttParadise {
     @CsvSource({"sonic,0,1,0,NATIVE_4_3,19,5", "sonic,45,1,0,NATIVE_4_3,13,-7",
             "tails,75,-1,0,SUPER_32_9,-5,-16", "sonic,0,1,224,NATIVE_4_3,17,-9",
             "tails,45,-1,224,SUPER_32_9,-18,2", "sonic,0,-1,32,NATIVE_4_3,-17,-9",
-            "tails,15,1,0,WIDE_16_9,18,-3"})
+            "tails,15,1,0,WIDE_16_9,18,-3", "sonic,90,1,0,NATIVE_4_3,1,-13",
+            "tails,90,-1,0,SUPER_32_9,-1,-17"})
     void aimingGuideMatchesLaunchOriginAtReferencePowerAndSelectedAngle(String character, int elevation,
             int facing, int surfaceAngle, String aspect, int firstDx, int firstDy) throws Exception {
         var fixture = launch(character, 0, aspect); fixture.stepIdleFrames(120);
@@ -291,7 +315,8 @@ class TestPuttPuttParadise {
         pressA(fixture);
     }
 
-    @ParameterizedTest @CsvSource({"sonic,0", "tails,0", "sonic,45", "tails,45"})
+    @ParameterizedTest @CsvSource({"sonic,0", "tails,0", "sonic,45", "tails,45",
+            "sonic,85", "tails,85", "sonic,90", "tails,90"})
     void chargesCommitOnceAndReleaseIntoNativeRolling(String character, int elevation) throws Exception {
         var fixture = launch(character, 0);
         fixture.stepIdleFrames(120);
@@ -313,7 +338,10 @@ class TestPuttPuttParadise {
         fixture.stepIdleFrames(1);
         assertEquals("WATCH", value(shotState(), "stage").toString());
         assertTrue(fixture.sprite().getRolling());
-        assertTrue(fixture.sprite().getCentreX() > x);
+        if (elevation > 75) {
+            assertTrue(fixture.sprite().getCentreX() >= x);
+            assertTrue(fixture.sprite().getXSpeed() > 0, "steep chip retains a subpixel forward component");
+        } else assertTrue(fixture.sprite().getCentreX() > x);
         if (elevation > 0) assertTrue(fixture.sprite().getAir());
         assertFalse(fixture.sprite().getPinballMode(), "golf must not use native pinball speed boosts");
     }
@@ -631,6 +659,7 @@ class TestPuttPuttParadise {
             assertEquals("tails", team.mainSprite().getCode());
             assertTrue(team.sidekicks().isEmpty());
             GameServices.camera().setFocusedSprite(team.mainSprite());
+            GameServices.level().setRewindClassResolver(new ModClassResolver(runtime, getClass().getClassLoader()));
             GameServices.level().loadZoneAndAct(title.startZoneIndex(), title.startActIndex());
             com.openggf.physics.GroundSensor.setLevelManager(GameServices.level());
             session.getFadeManager().startFadeFromBlack(null);
@@ -658,6 +687,27 @@ class TestPuttPuttParadise {
             assertEquals("tails", GameServices.camera().getFocusedSprite().getCode());
             assertEquals(1, GameServices.sprites().getAllSprites().stream()
                     .filter(com.openggf.sprites.playable.AbstractPlayableSprite.class::isInstance).count());
+            // Materialize a real ROM spring through the production registry, then
+            // force reconstruction to cover the ownership path used by rewind.
+            var manager = GameServices.level().getObjectManager();
+            var springSpawn = GameServices.level().getCurrentLevel().getObjects().stream()
+                    .filter(s -> s.objectId() == 0x41 && ((s.subtype() >> 3) & 0xE) == 0)
+                    .findFirst().orElseThrow();
+            manager.reset(Math.max(0, springSpawn.x() - 160));
+            var spring = manager.getActiveObjectForRewind(springSpawn);
+            assertNotNull(spring);
+            assertEquals("paradise.objects.GolfUpSpring", spring.getClass().getName());
+            assertGolfCallbackOwner(manager, spring);
+            var adapter = manager.rewindSnapshottable();
+            var snapshot = adapter.capture();
+            manager.setRewindInPlaceRestoreEnabledForTest(false);
+            try {
+                adapter.restore(snapshot);
+                var recreated = manager.getActiveObjectForRewind(springSpawn);
+                assertNotSame(spring, recreated, "exercise fresh placed-object reconstruction");
+                assertEquals(spring.getClass(), recreated.getClass());
+                assertGolfCallbackOwner(manager, recreated);
+            } finally { manager.setRewindInPlaceRestoreEnabledForTest(true); }
         } finally {
             SessionManager.clear();
             if (runtime != null) runtime.close();
@@ -667,6 +717,18 @@ class TestPuttPuttParadise {
             previousServices.graphics().setProjectionWidth(previousWidth);
             com.openggf.game.session.EngineServices.configure(previousServices);
         }
+    }
+
+    private static void assertGolfCallbackOwner(com.openggf.level.objects.ObjectManager manager,
+                                               com.openggf.level.objects.ObjectInstance spring) throws Exception {
+        var dispatch = com.openggf.level.objects.ObjectManager.class.getDeclaredMethod("callObjectCallback",
+                com.openggf.level.objects.ObjectInstance.class, java.util.function.Supplier.class);
+        dispatch.setAccessible(true);
+        assertNull(OwnerCallbackScope.current(), "ambient creator scope is clear");
+        assertEquals("putt-putt-paradise", dispatch.invoke(manager, spring,
+                (java.util.function.Supplier<String>) OwnerCallbackScope::current),
+                "a placed golf spring dispatches through its owner fault boundary");
+        assertNull(OwnerCallbackScope.current(), "creator scope does not leak after dispatch");
     }
 
     private void titleTap(TitleScreenProvider title, com.openggf.control.InputHandler input, int key) {
@@ -929,6 +991,113 @@ class TestPuttPuttParadise {
                         "unsupported row cannot resolve as settled; damage/loss remains a valid penalty");
         }
         assertTrue(nearApex, "real ROM chip must cross its apex within the bounded probe");
+    }
+
+    @ParameterizedTest @CsvSource({"sonic,1,false", "sonic,-1,false", "tails,1,false", "tails,-1,false",
+            "sonic,1,true", "sonic,-1,true", "tails,1,true", "tails,-1,true"})
+    void upwardRomSpringFiresFromEitherSideAndReplaysAfterRestore(String character, int facing,
+            boolean arrivingFromAnotherSpring) throws Exception {
+        var fixture = launch(character, 0); fixture.stepIdleFrames(120);
+        var spring = GameServices.level().getCurrentLevel().getObjects().stream()
+                .filter(spawn -> spawn.objectId() == 0x41 && ((spawn.subtype() >> 3) & 0xE) == 0)
+                .findFirst().orElseThrow();
+        commit(fixture, 1); fixture.stepIdleFrames(30);
+        var sprite = fixture.sprite();
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(sprite, spring.x() - facing * 31);
+        com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(sprite, spring.y() - 8);
+        sprite.setAir(true); sprite.setOnObject(false); sprite.setPushing(false);
+        if (arrivingFromAnotherSpring) sprite.setSpringing(15);
+        sprite.setXSpeed((short) (facing * 0x400)); sprite.setYSpeed((short) 0);
+        sprite.setGSpeed((short) (facing * 0x400)); sprite.updateSensors(sprite.getX(), sprite.getY());
+        fixture.camera().setX((short) Math.max(0, spring.x() - 160));
+        fixture.camera().setY((short) Math.max(0, spring.y() - 112));
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        var expected = new ArrayList<com.openggf.game.mode.CourseControl.Ball>();
+        com.openggf.game.rewind.CompositeSnapshot duringBounce = null;
+        int impulses = 0, previousYSpeed = sprite.getYSpeed();
+        for (int row = 0; row < 8; row++) {
+            fixture.stepIdleFrames(1);
+            var ball = checkpointCourse(fixture).ball(); expected.add(ball);
+            if (ball.ySpeed() < previousYSpeed) impulses++;
+            previousYSpeed = ball.ySpeed();
+            if (row == 1) duringBounce = registry.capture();
+        }
+        assertEquals(1, impulses, "leaving the housing must not fire repeated upward impulses");
+        int strength = (spring.subtype() & 2) == 0 ? -0x1000 : -0xA00;
+        assertTrue(expected.stream().anyMatch(ball -> Math.abs(ball.ySpeed() - strength) <= 0x40),
+                "a rolling SIDE contact must fire the native spring strength");
+        assertTrue(sprite.getAir());
+        assertTrue(expected.getLast().rolling());
+        assertTrue(expected.getLast().xSpeed() * facing > 0,
+                () -> "side entry keeps forward momentum: " + spring + " / " + expected);
+        assertFalse(sprite.getPushing(), "release the native object pushing latch");
+        var after = registry.capture();
+        registry.restore(before);
+        for (int row = 0; row < expected.size(); row++) {
+            fixture.stepIdleFrames(1);
+            assertEquals(expected.get(row), checkpointCourse(fixture).ball(), "side spring replay row " + row);
+        }
+        var replay = registry.capture();
+        for (String key : after.entries().keySet()) assertEquals(List.of(),
+                com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key, after.get(key), replay.get(key)), key);
+        registry.restore(duringBounce);
+        for (int row = 2; row < expected.size(); row++) {
+            fixture.stepIdleFrames(1);
+            assertEquals(expected.get(row), checkpointCourse(fixture).ball(), "in-contact restore row " + row);
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"sonic,1", "sonic,-1", "tails,1", "tails,-1"})
+    void verticalChipClearsSolidWallBeforeMovingOverItsEdge(String character, int facing) throws Exception {
+        var fixture = launch(character, 0); fixture.stepIdleFrames(120);
+        var sprite = fixture.sprite();
+        int startX = sprite.getCentreX();
+        int floorY = sprite.getCentreY() + sprite.getYRadius();
+        // Controlled solid fixture exercises the production collision owner in a real ROM course.
+        // It is not evidence of a particular EHZ terrain wall or an authored route.
+        int wallX = startX + facing * 29, wallTop = floorY - 64;
+        GameServices.level().getObjectManager().addDynamicObject(new GolfWallFixture(
+                new com.openggf.level.objects.ObjectSpawn(wallX, floorY - 32, 0, 0, 0, false, 0)));
+        for (int i = 0; i < 90; i++) fixture.stepFrame(true, false, false, false, false);
+        fixture.stepFrame(false, false, facing < 0, facing > 0, false);
+        assertEquals(90, value(shotState(), "elevationDegrees"));
+        commit(fixture, 55); fixture.stepIdleFrames(29);
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        var observed = new ArrayList<com.openggf.game.mode.CourseControl.Ball>();
+        boolean blocked = false, advanced = false;
+        for (int row = 0; row < 50; row++) {
+            fixture.stepIdleFrames(1);
+            var ball = checkpointCourse(fixture).ball(); observed.add(ball);
+            if (ball.y() + sprite.getYRadius() > wallTop && ball.xSpeed() == 0) blocked = true;
+            if ((ball.x() - startX) * facing > 2) {
+                assertTrue(ball.y() + sprite.getYRadius() <= wallTop,
+                        "forward movement must wait until the ball clears the solid wall");
+                advanced = true; break;
+            }
+        }
+        assertTrue(blocked, "native side collision must first stop the shot");
+        assertTrue(advanced, "vertical chip must resume forward movement above the wall");
+        registry.restore(before);
+        for (int row = 0; row < observed.size(); row++) {
+            fixture.stepIdleFrames(1);
+            assertEquals(observed.get(row), checkpointCourse(fixture).ball(), "vertical chip replay row " + row);
+        }
+    }
+
+    public static final class GolfWallFixture extends com.openggf.level.objects.BoxObjectInstance
+            implements com.openggf.level.objects.SolidObjectProvider {
+        public GolfWallFixture(com.openggf.level.objects.ObjectSpawn spawn) {
+            super(spawn, "golf test wall", 16, 32, 1, 1, 1, false);
+        }
+        @Override public com.openggf.level.objects.SolidObjectParams getSolidParams() {
+            return com.openggf.level.objects.SolidObjectParams.of(29, 32, 32);
+        }
+        @Override public com.openggf.level.objects.AbstractObjectInstance recreateForRewind(
+                com.openggf.level.objects.RewindRecreateContext context) {
+            return new GolfWallFixture(context.spawn());
+        }
     }
 
     @Test void actualEmeraldHillSpringKeepsGolfCurledAcrossTwoNativeBounces() throws Exception {

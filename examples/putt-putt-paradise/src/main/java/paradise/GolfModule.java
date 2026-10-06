@@ -44,8 +44,18 @@ public final class GolfModule extends DelegatingGameModule {
                         () -> new IllegalStateException("ROM course has no end marker"));
         mode.finishGate(endpoint.x(), endpoint.y());
         var course = MutableLevel.snapshot(original);
-        for (var spawn : original.getObjects())
-            if (spawn.objectId() == 0x0D || spawn.objectId() == 0x3E) course.removeObjectSpawn(spawn);
+        course.replaceObjectSpawnsPersisted(original.getObjects().stream()
+                .filter(spawn -> spawn.objectId() != 0x0D && spawn.objectId() != 0x3E)
+                .map(spawn -> {
+                    // Keep every ROM placement field and layout order. The registered
+                    // namespaced key gives the creator callbacks their trusted owner.
+                    if (spawn.objectKey() == null && spawn.objectId() == 0x41
+                            && ((spawn.subtype() >> 3) & 0xE) == 0)
+                        return new com.openggf.level.objects.ObjectSpawn(spawn.x(), spawn.y(), spawn.objectId(),
+                                spawn.subtype(), spawn.renderFlags(), spawn.respawnTracked(), spawn.rawYWord(),
+                                spawn.layoutIndex(), "putt-putt-paradise", "putt-putt-paradise:up-spring");
+                    return spawn;
+                }).toList());
         return course;
     }
     private final LevelEventProvider courseEvents = new LevelEventProvider() {

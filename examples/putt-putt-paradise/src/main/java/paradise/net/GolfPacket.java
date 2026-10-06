@@ -41,12 +41,12 @@ public sealed interface GolfPacket {
     record TurnOpened(ShotId id, int lieX, int lieY, Score player0, Score player1) implements GolfPacket {
         public TurnOpened { Objects.requireNonNull(id); Objects.requireNonNull(player0); Objects.requireNonNull(player1); }
     }
-    /** Elevation is degrees 0..75; charges are each normalized 0..500. No client-supplied score. */
+    /** Elevation is degrees 0..90; charges are each normalized 0..500. No client-supplied score. */
     record ShotRequest(ShotId id, int facing, int elevationDegrees, int firstCharge, int secondCharge) implements GolfPacket {
         public ShotRequest {
             Objects.requireNonNull(id);
             if (facing != -1 && facing != 1) throw new IllegalArgumentException("facing");
-            range(elevationDegrees, 0, 75, "elevation"); range(firstCharge, 0, 500, "first charge");
+            range(elevationDegrees, 0, 90, "elevation"); range(firstCharge, 0, 500, "first charge");
             range(secondCharge, 0, 500, "second charge");
         }
         public boolean isPutt() { return elevationDegrees == 0; }

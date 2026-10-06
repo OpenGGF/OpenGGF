@@ -113,11 +113,11 @@ public final class GolfModelChecks {
         var meter = new ShotMeter();
         var upLeft = new ShotMeter.Input(true, false, true, false, false, false);
         for (int i = 0; i < 1000; i++) meter.tick(upLeft);
-        same(75, meter.snapshot().elevationDegrees(), "elevation clamps");
+        same(90, meter.snapshot().elevationDegrees(), "elevation reaches vertical without wrapping");
         same(-1, meter.snapshot().direction(), "left changes facing");
         press(meter);
         for (int i = 0; i < 100; i++) meter.tick(new ShotMeter.Input(false, true, false, true, false, false));
-        same(75, meter.snapshot().elevationDegrees(), "first A locks elevation");
+        same(90, meter.snapshot().elevationDegrees(), "first A locks elevation");
         same(-1, meter.snapshot().direction(), "first A locks facing");
         meter.tick(B); meter.tick(NONE);
         for (int i = 0; i < 1000; i++) meter.tick(new ShotMeter.Input(false, true, false, true, false, false));

@@ -71,6 +71,17 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Palette publication can survive resource cleanup (2026-10-06): at `c20731b13`,
+S3K presentation followed by the first S2 native-graphics scene produced 24,783
+waterfall pixel differences with identical geometry and a four-color rotation.
+`TestSonic3kUnifiedAudioPresentationRomIntegration,TestGolfScenePresentation`
+reproduced the same failure in one reused fork on base and candidate, with no
+ROM skips; the scene class passed in a fresh invocation. Source inspection
+points to preserved palette-upload latch/pending state across graphics resource
+cleanup, with S2 lacking the publication profile that releases it. CPU palette
+bytes alone do not prove the native GPU view has published the same phase.
+
+
 Pitch is not note tempo (2026-10-02): accelerated sample-voice tests passed at
 `5637105e5c` while real SMPS songs retained normal note durations. Their chip
 render clock advanced faster, but the driver still received one service per
@@ -94,7 +105,9 @@ classes/build output, reproduced all 43 failure/error case keys and messages.
 `@RequiresRom` can retain an available `RomCache` handle while a later
 `RomTestUtils` lookup rereads reset configuration and returns null. A skipped
 baseline is not exonerating evidence. Match launch context before attributing
-failures; never rename or link ROMs to make the comparison pass.
+failures; never rename or link ROMs to make the comparison pass. Failed direct Maven
+invocations can retain older XML: compare selected class reports and their
+modification times, rather than summing the entire report directory.
 
 Playback surviving a prefix (2026-10-03): a run-chain prefix that closes only its
 comparator and timing owners leaves the process-wide `PlaybackDebugManager` movie

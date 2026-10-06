@@ -21,7 +21,7 @@ public final class GolfOverlay {
             Objects.requireNonNull(mode, "mode"); Objects.requireNonNull(stage, "stage"); Objects.requireNonNull(message, "message");
             players = List.copyOf(players);
             if (players.isEmpty() || players.size() > 2 || activePlayer < 0 || activePlayer >= players.size()
-                    || actIndex < 0 || actIndex > 1 || elevationDegrees < 0 || elevationDegrees > 75
+                    || actIndex < 0 || actIndex > 1 || elevationDegrees < 0 || elevationDegrees > 90
                     || (direction != -1 && direction != 1) || power < 0 || power > 1000
                     || firstCharge < 0 || firstCharge > 500 || secondCharge < 0 || secondCharge > 500
                     || meterValue < 0 || meterValue > 500) throw new IllegalArgumentException("Invalid golf view");

@@ -16,6 +16,16 @@ against a disassembly trace without converting. Y increases downward (Mega Drive
 convention). VDP coordinates in the disassembly are offset by +128; the engine uses direct
 screen coordinates.
 
+**Creator object ownership follows the registered placement key.** Returning
+creator instances for untagged native placements from a custom registry does
+not assign their callback owner: placed registration clears ownership for a
+null spawn owner. Register a namespaced factory through `ModContext`, preserve
+the ROM placement fields when tagging selected objects, and retain the
+framework's backing registry. A wrapper that only forwards factory calls can
+also hide its `Supplier` callback-boundary capability. Verify a real placed
+object's owner scope through the production loader before and after forced
+rewind recreation; dynamic-object containment alone misses this boundary.
+
 **Camera limits are not terrain extents.** Sonic 2's decoded `maxY` limits the
 camera origin; `Sonic_Boundary_CheckBottom` compares the player centre with
 `maxY + $E0`. A custom lost-ball rule based on `maxY` alone rejects valid low

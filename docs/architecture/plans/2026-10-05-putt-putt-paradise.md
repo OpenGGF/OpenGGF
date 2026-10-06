@@ -1305,3 +1305,151 @@ the existing ROM-loading/cache owners. Asset loading, viewport layout, cache
 lifecycle, real title inputs/launch and native graphics were exercised directly.
 No full-suite pass is claimed. The work remains on the local concept/mod branch;
 the executable launcher stays uncommitted and no integration or push is made.
+
+
+### Spring and wall obstruction follow-up (2026-10-06)
+
+Against local base `c20731b13`, the user requested side activation for upward
+springs and a vertical chip that can advance after clearing an obstruction.
+The golf mod registers the namespaced `putt-putt-paradise:up-spring` factory
+through `ModContext` and tags only untagged upward Obj41 placements. Every
+native placement field and the table order are preserved. `GolfUpSpring` uses
+the existing ROM-backed native spring implementation; its upward impulse helper becomes protected without changing
+stock execution or the published/candidate Mod API surface. Native
+`Obj41_Up` / `loc_189CA` in `docs/s2disasm/s2.asm` checks top standing only.
+Golf side entry recovers incoming horizontal/inertia values after native solid
+separation, clears the pushing/support latches and omits the top-only +8px
+Y correction. Native strength, subtype effects, art, animation and sound stay
+with Obj41. The ascent may touch the housing again: momentum survives that
+contact, but the upward impulse fires only once per continuous side contact.
+
+An initial player-wide `springing` lock was rejected. The short regression
+showed that all four character/facing combinations failed to fire this spring
+when arriving under another spring's input lock. A per-object scalar contact
+latch now resets on separation and survives recreation/capture/restore. The
+test counts exactly one impulse and replays both pre-contact and active-contact
+checkpoints. The original native top-contact two-bounce check remains intact.
+
+Loft now clamps at 90 degrees in aim, overlay and wire requests. Existing
+0–75-degree shots use the unchanged `CourseControl.launch` contract. Steeper
+shots reuse its native curl/centre/support/sound setup at 75 degrees, then apply
+the creator's chosen surface-relative velocity before the admitted physics
+step. At 90 degrees, full normal speed combines with tangent bias of one
+sixteenth shot speed (minimum `0x40`, 0.25px/step). While airborne and rising,
+a zero X velocity retries the facing bias; collision still owns separation.
+No retry occurs during descent, damage/death or native spring control, and
+nonzero bounce velocities are preserved. The AIM half-power guide shares the
+departure calculation and includes the small 90-degree bias. New bounds,
+constants and spring/retry rules enter the direct-connect fingerprint.
+
+A bounded code review rejected the initial native-ID registry interception.
+First, omitting the inherited `Supplier<Object>` capability dropped delegated
+creator fault containment; the regression exposed a raw exception instead of
+`CallbackAborted`. Forwarding that capability repaired inherited callbacks,
+but further production-path review showed that the golf springs themselves
+remained unowned: untagged placed spawns explicitly clear their callback owner,
+and an explicit-patch-only plan creates no backing content registry. Classloader
+fallback only covered dynamic/inherited registrations. The final namespaced
+factory uses the existing backing-first composition and trusted registry owner
+lookup instead. Direct fixtures now compose that backing patch too. The normal
+development loader checks owner scope on a real placed spring, then forces
+fresh rewind reconstruction and checks its callback scope again. No public API,
+numeric mod ID, runtime art fallback or engine ownership algorithm was added.
+
+Initial focused red checks reproduced the 75-degree cap, invalid 90-degree
+wire request and blocked spring-side entry. Subsequent checks cover real ROM
+spring entry for Sonic/Tails and both facings, native top returns, 85/90-degree
+release, literal guide coordinates, a 64px controlled solid wall with initial
+collision stop and subsequent clearance, whole-course restore/replay, and
+explicit stock rolling-side contact that must not fire. The solid fixture is
+not a claim about a specific EHZ terrain wall. The existing full fresh courses
+and all local character pairings passed unchanged. The two-JVM test now submits
+a guest-selected 90-degree shot and checks host acceptance, physics, views,
+scores, pause ownership, permanent guest HOLD and worker/port teardown.
+
+The combined change-based plan selects all 2,976 ordinary classes plus guards.
+Because this follow-up changes creator shot/contact physics and registry
+composition, normal broad validation is retained. Preflight initially rejected
+the default Lua version; selecting existing `/usr/bin/lua5.4` passed Java 21,
+Lua 5.4 and PowerShell checks. The stated reference cost is about 24 minutes
+ordinary plus 10 minutes guards. The earlier complete run actually used two
+ordinary workers and a 65-minute invocation limit; this follow-up uses that
+established shape, retaining the 10-minute no-output limit. An initial
+single-worker/default-limit attempt (`20261006T004753Z-65cfbfe0`) was cancelled
+before lane completion when that prior evidence was read. Its status was
+incomplete, no final results inventory was written, and its diagnostics were
+inspected and acknowledged. It contributes no passing-suite claim. Baseline
+comparison, final commands/counts and packaging outcome follow below. All work remains local;
+the user's executable launcher is preserved uncommitted.
+
+
+The completed broad command on `c20731b13` plus this follow-up's pre-registration
+candidate was:
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base c20731b13 --workers 2 --max-minutes 65 --run
+```
+
+Run `20261006T004949Z-5d7e82af` completed 2,974 ordinary reports / 25,686 cases
+in 2,973.22 seconds: 29 failures, zero errors and 41 inspected skips. All 87
+then-current golf integration cases passed without skips, as did the two-JVM
+90-degree guest shot and the 12 stock spring checks. The 28 existing ordinary
+failure identities and assertions match the prior bounded attribution above;
+the remaining failure was the first 320px EHZ1 native-framebuffer comparison
+with 24,783 waterfall pixels differing. The 86-report guard lane completed
+672 checks in 211.10 seconds, with the same two existing LrzFlame touch-profile
+and S1 title virtual-pattern failures, zero errors/skips. This is a completed
+red broad run, not a full-suite pass. The skips include opt-in diagnostics,
+12 unavailable Infinite Sonic platform placements, four unavailable native
+GL/EGL checks, the maintained CPZ assumption and missing audio-reference inputs;
+none are missing-ROM golf coverage.
+
+The waterfall pixels differ only by a four-color palette rotation. A read-only
+review found that `GraphicsManager.clearPaletteTextures/resetState` preserves
+`paletteUploadLatched` and pending uploads. Earlier S3K presentation can set
+that latch; S2 lacks the sprite-table publication profile that releases it.
+These paths are unchanged at `c20731b13`. The initial queued immediate 15-class
+prefix was cancelled before execution when this owning predecessor was found.
+The bounded paired comparison uses `TestSonic3kUnifiedAudioPresentationRomIntegration`
+and `TestGolfScenePresentation` in one reused fork on the detached base and
+candidate, with all three discovered absolute ROM properties. Its outcome,
+final registration regression and packaging results are recorded next.
+
+
+The paired palette reproducer ran 29 selected cases on detached `c20731b13`
+and the corrected candidate. Both failed only
+`TestGolfScenePresentation.locallyComposedSceneMatchesTheProductionFramebuffer[1]`
+with the identical 24,783-pixel assertion, zero errors and no selected-case skips.
+Source review points to preserved palette-publication latch/pending state; this
+follow-up leaves that unrelated shared rendering owner unchanged. Selected XML
+reports, rather than the full raw report directory, own the paired comparison:
+older failed invocations can leave unrelated reports behind.
+
+The new production-owner regression failed before the correction: one case,
+one failure, zero errors/skips, expected `putt-putt-paradise`, observed null.
+After namespaced registration, the final focused command was:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  "-Dtest=TestGolfModel,TestGolfMenu,TestGolfProtocol,TestGolfTransport,TestGolfOnlineIntegration,TestPuttPuttParadise,TestGolfScenePresentation,TestSpringObjectInstance" \
+  "-Dsonic2.rom.path=${S2_ROM}" test
+```
+
+It completed 161 cases with zero failures, errors or skips (91 seconds), including
+86 external-mod integration cases. The full native placement fields and ordering
+match the ROM in both acts; production callback scope survives fresh spring
+reconstruction. All character/viewport fresh courses and local pairings,
+side/top springs, vertical wall clearance, whole-state replay, guides, normal
+boot, SDK validation and two-JVM online acceptance passed. This focused follow-up
+covers the bounded creator registration correction after the preceding broad
+run; it is not a second full engine suite. The engine's only production change
+remains the already broadly checked native spring helper visibility.
+
+The normal SDK packager built 86 classes and only `META-INF/openggf-mod.yaml`:
+143,125 bytes, SHA-256
+`19a5e2244cdc0567f97b7be3f81f1391aa38cba91f73f08774f74ffdae442861`.
+No ROM, extracted artwork or deleted registry-interception class is bundled.
+The package uses this worktree's engine classes, already built by the completed
+broad/focused commands; final bootstrap metadata is refreshed after the local
+commit. Main `develop` remains at `fc4729c375`; no merge or push is authorized.

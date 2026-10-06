@@ -62,13 +62,21 @@ engine settings.
 
 | Input | Action |
 | --- | --- |
-| Up / Down | Continuously raise/lower loft from a flat putt to a higher chip |
+| Up / Down | Continuously raise/lower loft from a flat putt to a 90° chip |
 | Left / Right | Face the shot direction without walking |
 | First A | Duck and start the oscillating power meter |
 | Next two A presses | Lock two charge contributions; the second commits the stroke |
 | B before commitment | Cancel freely and return to aiming |
 | C while aiming | Toggle survey; arrows pan, C returns to the golfer |
 | Start | Pause; choose Resume, Concede, or Main Menu with arrows and A |
+
+Upward springs also fire when a rolling golfer enters from either side, using
+their original ROM strength, animation and sound. Other spring orientations
+keep their native contact rules. At 90° the chip keeps full upward power plus a
+small forward bias in the selected direction. A wall still stops horizontal
+movement; the bias retries while rising so the ball can move over the edge once
+it clears the wall. It stops retrying at the apex and never moves through a wall.
+Tall obstacles still need enough shot power to clear them.
 
 After the second charge, feedback and a short pause lead to automatic release.
 There is no extra launch button or accuracy stage. Further charge/cancel presses
