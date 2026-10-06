@@ -6,13 +6,16 @@ import slaytherobotnik.core.RoomType;
 import slaytherobotnik.core.Rng;
 
 /**
- * Slay the Spire's map algorithm.
+ * Slay the Spire's map algorithm, thinned out so a map reads at a glance.
  *
  * <ol>
- *   <li>Six paths climb a 7x15 grid. Each starts in a random column (the first two in
- *       different columns) and moves up one floor at a time, left, straight or right.
- *       Paths never cross: a step is clamped so it cannot pass a neighbour's edge, and two
- *       paths that merge must not have split less than three floors earlier.</li>
+ *   <li>Three paths (Slay the Spire uses six) climb a 7x15 grid. Each starts in its own column
+ *       and moves up one floor at a time, left, straight or right. Paths never cross: a step
+ *       is clamped so it cannot pass a neighbour's edge, and two paths that merge must not
+ *       have split less than three floors earlier.</li>
+ *   <li>All paths meet in a single room on floor 9 (the treasure) and on the last floor (the
+ *       Starpost before the boss): each path steers for the middle column as those floors
+ *       come near, so the act is two stretches of branches joined by corridors.</li>
  *   <li>Fixed floors: the first is all fights, floor 9 is treasure, the last is a Starpost
  *       (rest site) before the boss.</li>
  *   <li>The other rooms come from a shuffled bag (22% events, 12% rest sites, 8% elites,
@@ -22,7 +25,7 @@ import slaytherobotnik.core.Rng;
  * </ol>
  */
 public final class MapGenerator {
-    private static final int PATHS = 6;
+    private static final int PATHS = 3;
     private static final int TREASURE_FLOOR = 8;
     private static final int MIN_ANCESTOR_GAP = 3;
     private static final int MAX_ANCESTOR_GAP = 5;
@@ -37,15 +40,13 @@ public final class MapGenerator {
                 grid[y][x] = new MapNode(x, y);
             }
         }
-        int firstStart = -1;
+        List<Integer> starts = new ArrayList<>();
         for (int i = 0; i < PATHS; i++) {
             int start = rng.range(0, ActMap.WIDTH - 1);
-            if (i == 0) {
-                firstStart = start;
-            }
-            while (i == 1 && start == firstStart) {
+            while (starts.contains(start)) {
                 start = rng.range(0, ActMap.WIDTH - 1);
             }
+            starts.add(start);
             climb(grid, grid[0][start], rng);
         }
         assignRooms(grid, rng);
@@ -119,6 +120,13 @@ public final class MapGenerator {
                     }
                     candidate = grid[y + 1][nx];
                 }
+            }
+
+            // Steer for the next meeting room: never further from its column than the floors left.
+            int meet = y + 1 <= TREASURE_FLOOR ? TREASURE_FLOOR : ActMap.HEIGHT - 1;
+            int target = ActMap.WIDTH / 2;
+            if (Math.abs(nx - target) > meet - (y + 1)) {
+                nx = x + Integer.signum(target - x);
             }
 
             // Never cross a neighbour's edges.
