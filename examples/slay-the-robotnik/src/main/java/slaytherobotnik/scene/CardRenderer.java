@@ -136,6 +136,36 @@ public final class CardRenderer {
         }
     }
 
+    /**
+     * A card in flight, centred on ({@code cx}, {@code cy}) at {@code scale} of a hand card: its
+     * frame, its real picture (zoomed with the card) and its type stripe, so it shrinks smoothly
+     * into the deck.
+     */
+    public void drawMini(SceneCanvas c, Card card, float cx, float cy, float scale) {
+        int w = Math.max(3, Math.round(SMALL_W * scale));
+        int h = Math.max(4, Math.round(SMALL_H * scale));
+        int x = Math.round(cx - w / 2f);
+        int y = Math.round(cy - h / 2f);
+        int color = frameColor(card);
+        c.fill(x, y, w, h, Colors.BLACK);
+        c.fill(x + 1, y + 1, w - 2, h - 2, color);
+        if (w < 10 || h < 12) {
+            return;
+        }
+        c.fill(x + 2, y + 2, w - 4, h - 4, Colors.mix(color, Colors.BLACK, 0.55f));
+        int artX = Math.round(x + 4 * scale);
+        int artY = Math.round(y + 9 * scale);
+        art.draw(c, card, artX, artY, Math.max(1, w - Math.round(8 * scale)), Math.max(1, Math.round(28 * scale)),
+                0.5f * scale);
+        int stripe = switch (card.type()) {
+            case CardType.ATTACK -> 0xFFDA4824;
+            case CardType.SKILL -> 0xFF2490DA;
+            case CardType.POWER -> 0xFFDAB624;
+            default -> 0xFF6C6C6C;
+        };
+        c.fill(artX, Math.round(y + 38 * scale), w - Math.round(8 * scale), Math.max(1, Math.round(2 * scale)), stripe);
+    }
+
     private String abbreviate(String name, int width) {
         SmallFont f = shell.font;
         if (f.width(name) <= width) {

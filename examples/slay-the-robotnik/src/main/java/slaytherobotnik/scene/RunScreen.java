@@ -50,6 +50,10 @@ final class RunScreen implements Screen {
     private static final int ROOM_IN_TICKS = 14;
     private int roomOut;
     private int roomIn;
+    /** Rewards and purchases flying to the HUD, and the ring count it shows (rolling to the real one). */
+    private final Flyers flyers = new Flyers();
+    private float shownRings = -1;
+    private int ringHold;
     private RoomView view;
     private DeckChoiceView choiceView;
     private DeckViewer deckViewer;
@@ -72,6 +76,8 @@ final class RunScreen implements Screen {
     @Override
     public void update(Shell shell) {
         Run run = shell.run;
+        flyers.update(shell);
+        rollRings(run.state().rings());
         if (run.room() != shownRoom) {
             // The old room holds still while it fades out; the first room appears under the shell's fade.
             if (view != null && roomOut == 0) {
@@ -190,6 +196,68 @@ final class RunScreen implements Screen {
     }
 
     /** Shows a tooltip this frame with its bottom edge just above {@code bottom}, for things low on the screen. */
+    /**
+     * The HUD's ring count rolls towards the real one, a few rings a frame like the games' tally;
+     * it waits while claimed rings are still flying in.
+     */
+    private void rollRings(int rings) {
+        if (shownRings < 0) {
+            shownRings = rings;
+        }
+        if (ringHold > 0) {
+            ringHold--;
+            return;
+        }
+        float diff = rings - shownRings;
+        if (Math.abs(diff) < 0.5f) {
+            shownRings = rings;
+            return;
+        }
+        float step = Math.max(1f, Math.abs(diff) / 12f);
+        shownRings += Math.signum(diff) * Math.min(Math.abs(diff), step);
+    }
+
+    /** Where the ring counter's ring sits, the centre of the deck icon, a monitor slot, a relic slot. */
+    private int ringIconX(Shell shell) {
+        RunState s = shell.run.state();
+        SmallFont f = shell.font;
+        return 4 + f.width(s.character().name().toUpperCase()) + 8 + 10 + f.width(s.hp() + "/" + s.maxHp()) + 10;
+    }
+
+    /** Sends {@code count} rings from a point to the ring counter, which waits for them. */
+    void flyRings(Shell shell, float fromX, float fromY, int count) {
+        int tx = ringIconX(shell) + 6;
+        for (int i = 0; i < count; i++) {
+            flyers.add((c, x, y, scale) -> HudIcons.ring(shell, c, Math.round(x - 6 * scale),
+                    Math.round(y - 6 * scale), Math.max(4, Math.round(12 * scale)), shell.ticks),
+                    fromX + (i % 3 - 1) * 6, fromY + (i / 3) * 4, tx, 7, 1.2f, 1f, i * 3, 26, Sounds.SFX_RING);
+        }
+        ringHold = (count - 1) * 3 + 26;
+    }
+
+    /** Sends a card from a point into the deck icon. */
+    void flyCard(Shell shell, slaytherobotnik.core.Card card, float fromX, float fromY) {
+        flyers.add((c, x, y, scale) -> cards.drawMini(c, card, x, y, scale), fromX, fromY, shell.width() - 40, 8,
+                1f, 0.2f, 0, 30, Sounds.SFX_SWITCH);
+    }
+
+    /** Sends a monitor from a point into potion slot {@code slot}. */
+    void flyPotion(Shell shell, PotionDef potion, int slot, float fromX, float fromY) {
+        int px = potionSlotX(shell, slot);
+        flyers.add((c, x, y, scale) -> {
+            int size = Math.max(4, Math.round(12 * scale));
+            HudIcons.potion(shell, c, potion, Math.round(x - size / 2f), Math.round(y - size / 2f), size);
+        }, fromX, fromY, px + 6, 7, 2f, 1f, 0, 28, Sounds.SFX_SWITCH);
+    }
+
+    /** Sends a relic from a point into relic-bar slot {@code slot}. */
+    void flyRelic(Shell shell, Relic relic, int slot, float fromX, float fromY) {
+        flyers.add((c, x, y, scale) -> {
+            int size = Math.max(4, Math.round(12 * scale));
+            HudIcons.relic(shell, c, relic, Math.round(x - size / 2f), Math.round(y - size / 2f), size);
+        }, fromX, fromY, 4 + slot * 14 + 6, TOP_BAR + 7, 2f, 1f, 0, 30, Sounds.SFX_SUPER_EMERALD);
+    }
+
     void tooltipAbove(String title, String body, int x, int bottom) {
         tooltip(title, body, x, bottom);
         tooltipAbove = true;
@@ -216,6 +284,7 @@ final class RunScreen implements Screen {
         if (tooltipTitle != null) {
             drawTooltip(shell, c);
         }
+        flyers.draw(c);
         float dark = roomOut > 0 ? 1f - roomOut / (float) ROOM_OUT_TICKS
                 : roomIn > 0 ? roomIn / (float) ROOM_IN_TICKS : 0f;
         if (dark > 0f) {
@@ -248,7 +317,9 @@ final class RunScreen implements Screen {
         }
         x += 10 + f.width(hp) + 10;
         HudIcons.ring(shell, c, x, 1, 12, shell.ticks);
-        f.drawShadowed(c, Integer.toString(s.rings()), x + 12, 5, Colors.RING);
+        String ringText = Integer.toString(shownRings < 0 ? s.rings() : Math.round(shownRings));
+        f.drawShadowed(c, ringText, x + 12, 5, ringHold > 0 || Math.round(shownRings) == s.rings() ? Colors.RING
+                : Colors.WHITE);
         if (mouse.over(x, 1, 12 + f.width(Integer.toString(s.rings())), 12)) {
             tooltip("RINGS", "Won in fights and events. Spend them in the Egg Robo's shop on cards, relics and item "
                     + "monitors.", x, TOP_BAR + 2);

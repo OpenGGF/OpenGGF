@@ -52,6 +52,12 @@ final class CardArt {
     }
 
     void draw(SceneCanvas c, Card card, int x, int y, int w, int h) {
+        // Small cards show the middle of the large picture at a smaller scale.
+        draw(c, card, x, y, w, h, w < RECIPE_W ? 0.5f : 1f);
+    }
+
+    /** The card's picture in a window, its recipe drawn at {@code zoom} (a card in flight shrinks it). */
+    void draw(SceneCanvas c, Card card, int x, int y, int w, int h, float zoom) {
         List<CardRecipes.Layer> recipe = shell.art.cards().recipe(card.id());
         int bg = background(card);
         if (recipe != null) {
@@ -66,8 +72,6 @@ final class CardArt {
         float cx = x + w / 2f;
         float cy = y + h / 2f;
         if (recipe != null) {
-            // Small cards show the middle of the large picture at a smaller scale.
-            float zoom = w < RECIPE_W ? 0.5f : 1f;
             painter.paint(c, recipe, cx, cy, zoom, x, y, w, h, STILL);
         } else {
             fallback(c, card, x, y, w, h, cx, cy);

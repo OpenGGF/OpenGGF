@@ -76,9 +76,13 @@ final class RewardView implements RunScreen.RoomView {
                 return;
             }
             int i = Integer.parseInt(picked.substring(4));
+            Hotspots.Spot from = spots.spot(picked);
             if (r instanceof Reward.CardChoice cc) {
                 room.pickCard(open, cc.cards().get(i));
                 shell.sfx(Sounds.SFX_RING);
+                if (from != null) {
+                    screen.flyCard(shell, cc.cards().get(i), from.x() + from.w() / 2f, from.y() + from.h() / 2f);
+                }
             } else if (r instanceof Reward.BossRelicChoice b) {
                 room.pickBossRelic(open, b.relicIds().get(i));
                 shell.sfx(Sounds.SFX_SUPER_EMERALD);
@@ -100,6 +104,25 @@ final class RewardView implements RunScreen.RoomView {
         }
         if (room.claim(i)) {
             shell.sfx(r instanceof Reward.Rings ? Sounds.SFX_RING : Sounds.SFX_SUPER_EMERALD);
+            Hotspots.Spot from = spots.spot(picked);
+            float fx = from == null ? shell.width() / 2f : from.x() + 10;
+            float fy = from == null ? shell.height() / 2f : from.y() + from.h() / 2f;
+            var state = shell.run.state();
+            switch (r) {
+                case Reward.Rings rings -> screen.flyRings(shell, fx, fy, Math.min(10, Math.max(3, rings.amount() / 5)));
+                case Reward.Potion p -> {
+                    for (int slot = state.potionSlots() - 1; slot >= 0; slot--) {
+                        if (state.potionAt(slot) == p.potion()) {
+                            screen.flyPotion(shell, p.potion(), slot, fx, fy);
+                            break;
+                        }
+                    }
+                }
+                case Reward.RelicReward rr -> screen.flyRelic(shell, shell.catalog.newRelic(rr.relicId()),
+                        state.relics().size() - 1, fx, fy);
+                default -> {
+                }
+            }
         } else {
             toast = "POTION SLOTS ARE FULL";
             toastTicks = 80;

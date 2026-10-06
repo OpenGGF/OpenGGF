@@ -99,9 +99,27 @@ final class ShopView implements RunScreen.RoomView {
             }
             default -> {
                 int i = Integer.parseInt(picked.substring(1));
+                var item = room.items().get(i);
+                Hotspots.Spot from = spots.spot(picked);
                 if (room.buy(i)) {
                     shell.sfx(Sounds.SFX_REGISTER);
                     say(shell, thanks);
+                    // The purchase flies to where it now lives: the deck, a monitor slot, the relic bar.
+                    float fx = from.x() + from.w() / 2f;
+                    float fy = from.y() + from.h() / 2f;
+                    var state = shell.run.state();
+                    if (item.card() != null) {
+                        screen.flyCard(shell, item.card(), fx, fy);
+                    } else if (item.relicId() != null) {
+                        screen.flyRelic(shell, shell.catalog.newRelic(item.relicId()), state.relics().size() - 1, fx, fy);
+                    } else if (item.potion() != null) {
+                        for (int slot = state.potionSlots() - 1; slot >= 0; slot--) {
+                            if (state.potionAt(slot) == item.potion()) {
+                                screen.flyPotion(shell, item.potion(), slot, fx, fy);
+                                break;
+                            }
+                        }
+                    }
                 } else {
                     shell.sfx(Sounds.SFX_ERROR);
                     say(shell, shell.run.state().rings() < room.items().get(i).price() ? broke
