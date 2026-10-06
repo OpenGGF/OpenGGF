@@ -191,4 +191,50 @@ they do not establish ROM parity for these intentionally custom combat rules.
   Buzzers spawned through the actual mod controller, not traversal evidence.
 - The first broad run was interrupted to finish the remapped-Start and hover-height fixes.
   It produced no completed suite result; its incomplete diagnostics were inspected and
-  acknowledged. Final broad results follow below.
+  acknowledged.
+
+- Final change-based invocation: `JAVA_HOME=<JDK21> LUA_BIN=/opt/homebrew/bin/lua5.4
+  python3 tools/testing/run_categories.py --base be1b3982c271df5803791864c7a7673facf0b137 --run`,
+  worktree `.worktrees/sonic-survivors-v2`, implementation committed as `2e2fc0c9c9`.
+  Run `20261006T184137Z-2935d039` selected all 2,969 ordinary classes plus guards.
+  It reached the 40-minute limit during ordinary tests: 2,528 reports, 21,834 checks,
+  two failures, four errors, 151 skips. This is **incomplete validation**, not a full
+  suite pass. All 55 Survivors cases passed with no skips. Long checkpoint routes and
+  repository-policy checks consumed substantial runtime; guards were queued separately.
+- Three policy errors came from an unsupported comment added to the strict release
+  descriptor. The comment was removed before `2e2fc0c9c9`; the descriptor remains at its
+  unchanged mutable 0.7 candidate. Focused `TestModApiReleasePolicy,TestModApiRuntimePolicy,
+  TestModApiPinPolicy` then passed 18 checks with no skips.
+- Matched single-test baseline (`be1b3982c2`, main checkout) and candidate runs reproduced
+  the macOS GLSL 410 compilation error in
+  `TestS3kDataSelectPresentation#visualCapture_selectedSaveSlotShowsRightBodyRail`, the
+  macOS `base64` argument failure in `TestPhase3SampleCharacterIntegration`, and the
+  `instaShieldRegistered` restore mismatch in `TestFbzSandopolisTimelineHeadless`.
+  Commands used `maven_queue.py -B -Dmse=off -Dtest=<case> test` with absolute root ROM
+  properties. These unrelated failures were left unchanged; no broad baseline rerun.
+- Skips were inspected: hardcoded `s2.gen`/`s1.gen` and other ROM assumptions despite
+  absolute configured paths, missing optional KiS2 dump, inapplicable platform routes,
+  unavailable graphics contexts, and explicitly opt-in diagnostics/soaks. No ROM aliases
+  were created to conceal those coverage gaps.
+- Installing the v2 mod before updating the user's IntelliJ engine produced
+  `NoClassDefFoundError: LevelInputOverlay`. The main checkout was then fast-forwarded
+  to the matching engine code and rebuilt; an old running JVM must be restarted.
+
+- Separate `maven_queue.py -B -Dmse=off -Pguards test` on `2e2fc0c9c9` completed
+  672 checks with five failures, one error, zero skips. Two findings were addressed in
+  the main checkout: use the active world's module for modal input, and extract pause,
+  frame-step and takeover decisions into `GameLoopPauseInput` to meet the GameLoop size
+  ratchet. The extraction preserves host audio and playback-takeover behavior.
+  Remaining guard findings are explicitly unattributed: the LRZ flame object's touch
+  profile hook, S1 title background pattern-range constant, release-trace path
+  normalization Python test, and the object-clock tooling subprocess timing out after
+  120 seconds (`Stream closed`). These paths were not changed to make the suite green.
+
+- Final main-checkout focused run after extraction: `maven_queue.py -B -Dmse=off
+  -Dtest=TestSonicSurvivors,TestGameLoop,TestGameLoopFreshLevelHandoff,TestBootstrapModuleProviderCachingGuard,TestArchitecturalSourceGuard
+  -Dsonic2.rom.path=<absolute-root-S2> test`: 235 checks, zero failures/errors, four
+  S3K handoff checks skipped because that invocation only supplied S2. Thus 231 passed,
+  including all 55 Survivors cases and both repaired structural guards. The handoff
+  cases were subsequently rerun with their required S3K property: all four passed,
+  zero skipped. The combined final focused coverage is 235 passing checks; this does
+  not supersede the incomplete broad run or unresolved unrelated guard findings.

@@ -867,11 +867,7 @@ public class GameLoop {
      * Audio should be paused if either window or user pause is active.
      */
     private synchronized void updateAudioPauseState() {
-        if (paused || userPaused) {
-            audioManager.pause();
-        } else {
-            audioManager.resume();
-        }
+        GameLoopPauseInput.updateAudio(audioManager, paused || userPaused);
     }
 
     /**
@@ -1372,34 +1368,16 @@ public class GameLoop {
             handleTimeAttackRetryInput();
         }
 
-        var levelOverlay = currentGameMode == GameMode.LEVEL
-                ? GameServices.currentOrBootstrapGameModule().getGameService(
-                        com.openggf.game.LevelInputOverlay.class) : null;
-        boolean overlayOwnsPause = levelOverlay != null && levelOverlay.handleInput(inputHandler);
-        int pauseKey = configService.getInt(SonicConfiguration.PAUSE_KEY);
-        if (!userPauseInputAllowedForCurrentMode() && userPaused) {
-            userPaused = false;
+        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler);
+        boolean nextUserPaused = GameLoopPauseInput.nextUserPaused(currentGameMode, inputHandler,
+                configService, userPaused, overlayOwnsPause, playbackTakeoverConsumedPausePress,
+                playbackDebugManager, userRecordingControls::handlePlaybackTakeoverRequest);
+        if (nextUserPaused != userPaused) {
+            userPaused = nextUserPaused;
             updateAudioPauseState();
         }
-        // Gamepad Start toggles this pause (not the silent ROM Game_paused pause
-        // below) because this is the one with visible feedback: the "PAUSED" HUD
-        // overlay and the audio halt both key off userPaused/isUserPaused().
-        if (!overlayOwnsPause && !playbackTakeoverConsumedPausePress
-                && userPauseInputAllowedForCurrentMode()
-                && (inputHandler.isKeyPressed(pauseKey)
-                || (!TraceSessionLauncher.isRunFrameDriverActive()
-                && !playbackDebugManager.isDriving(currentGameMode)
-                && inputHandler.logical().player1().startPressed()))) {
-            if (userPaused && userRecordingControls.handlePlaybackTakeoverRequest()) {
-                userPaused = false;
-                updateAudioPauseState();
-            } else {
-                toggleUserPause();
-            }
-        }
 
-        int frameStepKey = configService.getInt(SonicConfiguration.FRAME_STEP_KEY);
-        boolean doFrameStep = isPaused() && inputHandler.isKeyPressed(frameStepKey);
+        boolean doFrameStep = GameLoopPauseInput.frameStep(inputHandler, configService, isPaused());
 
         if (isPaused() && !doFrameStep) {
             inputHandler.update();
@@ -2237,11 +2215,8 @@ public class GameLoop {
     }
 
     boolean handlePlaybackTakeoverBeforePlaybackInputBridge(InputHandler input) {
-        if (input == null || !userPaused || !userPauseInputAllowedForCurrentMode()) {
-            return false;
-        }
-        int pauseKey = configService.getInt(SonicConfiguration.PAUSE_KEY);
-        if (!input.isKeyPressed(pauseKey) || !userRecordingControls.handlePlaybackTakeoverRequest()) {
+        if (!GameLoopPauseInput.requestTakeover(currentGameMode, input, configService, userPaused,
+                userRecordingControls::handlePlaybackTakeoverRequest)) {
             return false;
         }
         userPaused = false;
@@ -2356,13 +2331,6 @@ public class GameLoop {
 
     private boolean debugShortcutsEnabled() {
         return configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
-    }
-
-    private boolean userPauseInputAllowedForCurrentMode() {
-        return switch (currentGameMode) {
-            case LEVEL, TITLE_CARD, SPECIAL_STAGE, SPECIAL_STAGE_RESULTS, BONUS_STAGE -> true;
-            default -> false;
-        };
     }
 
     static BonusStageType resolveBonusStageDebugShortcut(InputHandler inputHandler) {
