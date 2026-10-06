@@ -100,6 +100,11 @@ public final class GameplayCaptureSession implements AutoCloseable {
     private boolean showTitleCard;
     private boolean completeSpecialStage;
 
+    /** Boots with a packaged patch mod applied, as if it were enabled in the launcher. */
+    public void applyMod(Path modJar) throws IOException {
+        boot.setModuleDecorator(com.openggf.mods.code.DevelopmentPatchLoader.fromJar(modJar));
+    }
+
     /** Boots the level, consumes the title card, and optionally teleports the leader. */
     public void boot(Path romPath, int zone, int act, Settings settings) throws IOException {
         if (loop != null) {

@@ -79,6 +79,7 @@ public final class GameplayCaptureTool {
         String stopReason = "frame budget reached";
         try (GameplayCaptureSession session = new GameplayCaptureSession(settings);
              BufferedWriter state = Files.newBufferedWriter(outDir.resolve("state.csv"), StandardCharsets.UTF_8)) {
+            if (arguments.mod() != null) session.applyMod(arguments.mod());
             session.boot(romPath, zone, act, settings);
             state.write(GameplayCaptureSession.stateHeader());
             state.newLine();
@@ -172,7 +173,8 @@ public final class GameplayCaptureTool {
                             int settle, int inputStart, Integer frames, int captureFrom, int every, Set<Integer> stills,
                             boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
                             Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
-                            Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity) {
+                            Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
+                            Path mod) {
 
         public static Arguments parse(String[] argv) {
             String game = "s3k";
@@ -207,11 +209,13 @@ public final class GameplayCaptureTool {
             Integer rings = null;
             boolean titleCard = false;
             boolean completeSpecialStage = false;
+            Path mod = null;
             for (int i = 0; i < argv.length; i++) {
                 String flag = argv[i];
                 switch (flag) {
                     case "--game" -> game = value(argv, ++i, flag).toLowerCase(Locale.ROOT);
                     case "--rom" -> rom = Path.of(value(argv, ++i, flag));
+                    case "--mod" -> mod = Path.of(value(argv, ++i, flag));
                     case "--zone" -> zone = value(argv, ++i, flag);
                     case "--act" -> act = number(value(argv, ++i, flag), flag);
                     case "--x" -> startX = number(value(argv, ++i, flag), flag);
@@ -269,7 +273,7 @@ public final class GameplayCaptureTool {
             return new Arguments(game, rom, zone, act - 1, startX, startY, width, main, sidekick, donor, donorRom, input,
                     settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
                     video, scale, fps, outDir, emeralds, titleCard, completeSpecialStage,
-                    vIntRunCount, cameraXSub, starPost, rings, reverseGravity);
+                    vIntRunCount, cameraXSub, starPost, rings, reverseGravity, mod);
         }
 
         private static String value(String[] argv, int index, String flag) {

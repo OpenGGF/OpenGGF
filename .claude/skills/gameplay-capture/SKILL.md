@@ -31,11 +31,15 @@ python3 tools/testing/maven_queue.py exec:java "-Dexec.mainClass=com.openggf.too
 ```
 
 `exec:java` does not recompile; add `compile` after editing engine code.
+On macOS GLFW must own the first thread, which `exec:java` cannot give it: run the tool with
+`java -XstartOnFirstThread -cp "target/classes:<dependency classpath>" com.openggf.tools.GameplayCaptureTool ...`
+(the dependency classpath from `mvn dependency:build-classpath`).
 Use a task directory outside the repository for captures the user should keep.
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
 | `--game s1\|s2\|s3k` | `s3k` | Host game; ROM from configuration unless `--rom <path>` |
+| `--mod <jar>` | none | Apply a packaged patch mod (as an enabled, trusted mod would be) before boot, to film mod gameplay |
 | `--zone <name\|n>` | required | Zone constant name (`aiz`, `fbz`, `ghz`, `ehz`) or number |
 | `--act <n>` | required | One-based act |
 | `--x`, `--y` | level start | Teleport the leader (ROM `x_pos`/`y_pos`, hex `0x`/`$` ok) |

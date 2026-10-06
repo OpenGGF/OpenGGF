@@ -47,6 +47,14 @@ class TestGameplayCaptureToolArgs {
     }
 
     @Test
+    void modJarIsOptional() {
+        assertNull(GameplayCaptureTool.Arguments.parse(new String[] {
+                "--game", "s2", "--zone", "0", "--act", "1", "--out-dir", "out"}).mod());
+        assertEquals(Path.of("target/mod.jar"), GameplayCaptureTool.Arguments.parse(new String[] {
+                "--game", "s2", "--zone", "0", "--act", "1", "--out-dir", "out", "--mod", "target/mod.jar"}).mod());
+    }
+
+    @Test
     void checkpointRingsAndReverseGravityRemainIndependentAfterCampaignMerge() {
         var args = GameplayCaptureTool.Arguments.parse(new String[] {
                 "--zone", "dez", "--act", "2", "--out-dir", "out",
