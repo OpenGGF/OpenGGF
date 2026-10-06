@@ -2295,3 +2295,78 @@ failures/errors/skips. The replay-specific ownership guard remains 38/38. The
 final local/online concession checks and failed-sink host port reuse passed.
 All 45 checked local link paths resolve and the candidate generator reproduces
 the full canonical 19,508-line pin; `git diff --check` passes.
+
+
+### Reconciliation with merged Slay The Robotnik — 2026-10-06
+
+The user reported PR #211 merged while the final `82a6854b` validation was
+running. Fetch observed `develop` at `f4b40f5026988c5152eb2ae1fadaaf7c648f5618`.
+Main stayed on develop and fast-forwarded from `eaceceda4`; its three dirty
+reference submodules, two untracked BizHawk archives and `raiscan-0.6-thoughts.md`
+were preserved. The feature and uncommitted launcher remain separate for PR #212.
+No develop merge/push or shared-history rewrite is requested.
+
+The superseded run `20261006T154608Z-19c2c5fe` selected all 2,980 ordinary
+classes with two workers and fresh guards against `eaceceda4`. It was deliberately
+interrupted before completion when the destination changed: 2,775 partial reports,
+24,177 checks, four failures, no errors and 58 skips were present at the checkpoint.
+The registered wrapper received SIGINT, returned 130 and reaped its Maven tree;
+consumed diagnostics were acknowledged and deleted. These are partial observations,
+not a completed suite result. A fresh, isolated eace baseline had completed 30
+selected native/CLI checks (27 failures, no errors/skips) and 62 structural checks
+(two failures, no errors/skips). The later base fixes both structural assertions.
+
+The new merge reconciles five conflicts by behavior: one `LogicalMouse` window
+entry point retains the same HiDPI/letterbox computation and delegates to the pure
+mapping seam used by golf's coordinate tests. Scene constant/debug roots and golf's
+scene/input/replay roots are retained together; the canonical generator reproduces
+the union pin byte for byte, with 19,855 signatures. Mod API version/status and
+published pins are unchanged. CLI prose retains development trust/read-only
+manager behavior alongside direct base-game launch and the sprite inspector.
+The compatibility guide retains both scene and controlled-course contracts.
+
+The validator combines legitimate javac assertions and platform/public API enum
+switches with golf's immutable creator-enum support. A single bounded bytecode
+recognizer checks the complete initializer, literal switch assignments, guard
+shape and writes; synthetic flags alone are not an exemption. External metadata
+comes only from the platform loader or allowlisted engine resources, without
+class initialization or a creator loader. A rejected creator enum present in the
+jar cannot fall back to those resources. Tests retain both branches' cases and
+add mixed assertions/own/JDK/API switches, seven forged-artifact mutations and
+an explicit API allowlist case. The trust guide documents the resulting boundary.
+
+The queued Java 21 `-Dmse=off -DskipTests test-compile` command succeeded. The
+queued focused command used all three verified absolute ROM properties and:
+
+```text
+-Dmse=off -Dtest=TestModValidator,TestMenuInput,TestLogicalMouse,TestGolfMenu,TestMasterTitleMouse,TestModSceneHost,TestRecordingCanvas,TestSceneTextureCache,TestSceneKeys,TestSceneApiValues,TestSlayTheRobotnikExample,TestHelloSceneExample,TestDevelopmentModBoot,TestDevelopmentModSource,TestPendingModStateEditor,TestGameLoop,TestStartupRouteResolver,TestTraceSuppressedRowClosure,TestInLevelTitleCardCoordinator,TestModZoneTitleCardPolicy,TestCourseControl,TestPuttPuttParadise,TestGolfOnlineIntegration,TestAudioPresentationProducerRewind,TestAudioManagerPresentationModes,TestSceneReplay,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy test
+```
+
+It completed 543 checks with no failures, one fixture error and no skips; all 542
+other checks passed. A direct javac reproduction proved that an exhaustive switch
+on a nested creator enum emits no switch-map helper. Moving only the mutation
+fixture's enum to the top level emits the real helper, now asserted explicitly.
+The corrected queued `-Dmse=off -Dtest=TestModValidator test` invocation passed
+all 23 checks, with no failures/errors/skips. This corrects the fixture rather
+than relaxing the recognizer.
+
+The owned baseline worktree fast-forwarded cleanly to `f4b40f502`. Repeating the
+25 exact native/CLI method selectors listed above with `-Ptest-concurrent` and
+all three absolute ROM properties completed 30 checks: 27 failures, no errors or
+skips. Full failure messages are compared by identity and concrete assertion,
+ignoring only the already-documented `RewindObjectStateBlob` JVM class hash.
+The fresh `LUA_BIN=/usr/bin/lua5.4 ... -Dmse=off -Pguards
+-Dtest=TestArchUnitRules,TestObjectPhysicsStandardizationGuard test` baseline
+completed 62 checks with no failures/errors/skips. Old failure totals are not
+carried over as the new base's guard status.
+
+
+The merged feature's focused structural command,
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards
+-Dtest=TestArchUnitRules,TestObjectPhysicsStandardizationGuard,TestArchitecturalSourceGuard,TestArchitecturalReviewGuard,TestModEngineWiringSeams,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy test`,
+passed **180 checks, no failures/errors/skips**. Tool preflight passed in the
+actual Java 21/Lua 5.4/PowerShell environment. The reviewed replacement plan
+against `f4b40f502` selects **2,992/2,992 ordinary classes plus fresh guards**,
+two ordinary workers, with a 90-minute execution limit excluding queue wait and
+a 10-minute no-output limit. It is a broad validation expected to take tens of
+minutes; the superseded prefix is not used as its completion evidence.

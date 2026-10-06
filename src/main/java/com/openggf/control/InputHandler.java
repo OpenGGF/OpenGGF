@@ -30,6 +30,8 @@ public class InputHandler {
 	private double mouseX;
 	private double mouseY;
 	private boolean mouseInputSeen;
+	/** Engine-internal ({@link MouseWheel#of}); not part of the creator API. */
+	final MouseWheel wheel = new MouseWheel(this);
 	private boolean controllerPresentation;
 	private boolean keyboardPresentationPending;
 	// Per logical player: null until that player's first intentional press, then whether it was a pad.
@@ -92,6 +94,11 @@ public class InputHandler {
 	public void handleMouseMove(double x, double y) {
 		mouseX = x;
 		mouseY = y;
+		mouseInputSeen = true;
+	}
+
+	/** The wheel reaches mouse-input tracking through {@link MouseWheel#scroll}. */
+	void noteMouseInput() {
 		mouseInputSeen = true;
 	}
 

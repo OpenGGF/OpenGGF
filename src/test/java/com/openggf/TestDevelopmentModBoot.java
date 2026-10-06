@@ -39,6 +39,8 @@ class TestDevelopmentModBoot {
             ModSubsystem active = subsystem;
             assertDoesNotThrow(() -> active.createManager(null));
             assertFalse(Files.exists(normalRoot.resolve("modstate.json")));
+            // A development run of a patch mod opens its base game directly (Engine startup).
+            assertEquals(java.util.Optional.of("s2"),subsystem.developmentBaseGame());
         } finally {
             if(subsystem!=null)subsystem.close();
             if(previous==null)System.clearProperty(DevelopmentModSource.PROPERTY);

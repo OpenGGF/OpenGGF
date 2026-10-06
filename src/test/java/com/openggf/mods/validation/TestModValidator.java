@@ -129,6 +129,68 @@ class TestModValidator {
     }
 
     @Test
+    void javacEnumSwitchAndAssertArtefactsAreNotModState() throws Exception {
+        // A switch over an enum makes javac emit a synthetic Entry$1 holding a $SwitchMap$ table
+        // and a class initializer; an assert adds a synthetic $assertionsDisabled flag. Neither
+        // holds mod state, so the validator accepts them.
+        Map<String, byte[]> classes = compile("""
+                package example;
+                public final class Entry implements com.openggf.mods.code.GgfMod {
+                    @Override public void register(com.openggf.mods.code.ModContext context) { }
+                    int code(java.time.DayOfWeek day) {
+                        switch (day) { case MONDAY: return 1; case FRIDAY: return 5; default: return 0; }
+                    }
+                    int positive(int x) { assert x > 0 : "positive"; return x; }
+                }
+                """);
+        assertTrue(classes.containsKey("example/Entry$1"), "javac's switch-map class: " + classes.keySet());
+        ModValidationReport report = new ModValidator(Set.of()).validate(jar(classes), "example.Entry");
+        assertTrue(report.findings().stream().noneMatch(f -> f.code().equals("STATIC_STATE_UNSUPPORTED")),
+                report.findings().toString());
+    }
+
+    @Test
+    void initializersDoingMoreThanJavacsArtefactsAreStillRejected() throws Exception {
+        Map<String, byte[]> classes = compile("""
+                package example;
+                public final class Entry implements com.openggf.mods.code.GgfMod {
+                    static { System.setProperty("openggf.mod.validator.probe", "ran"); }
+                    static final int[] $SwitchMap$fake = {1};
+                    @Override public void register(com.openggf.mods.code.ModContext context) { }
+                    int positive(int x) { assert x > 0; return x; }
+                }
+                """);
+        ModValidationReport report = new ModValidator(Set.of()).validate(jar(classes), "example.Entry");
+        assertTrue(report.findings().stream().anyMatch(f -> f.code().equals("STATIC_STATE_UNSUPPORTED")
+                && f.member().equals("<clinit>")), "a real static block: " + report.findings());
+        assertTrue(report.findings().stream().anyMatch(f -> f.code().equals("STATIC_STATE_UNSUPPORTED")
+                && f.member().equals("$SwitchMap$fake")), "a hand-written table is not synthetic: " + report.findings());
+    }
+
+    /** Compiles one source file with javac and returns its classes by internal name. */
+    private Map<String, byte[]> compile(String source) throws Exception {
+        Path src = Files.createDirectories(temp.resolve("src-" + System.nanoTime()).resolve("example"));
+        Files.writeString(src.resolve("Entry.java"), source);
+        Path out = Files.createDirectories(temp.resolve("out-" + System.nanoTime()));
+        // The engine's own classes (GgfMod) wherever this runner put them, plus the test classpath.
+        String engine = Path.of(com.openggf.mods.code.GgfMod.class.getProtectionDomain().getCodeSource().getLocation()
+                .toURI()).toString();
+        ByteArrayOutputStream errors = new ByteArrayOutputStream();
+        int result = javax.tools.ToolProvider.getSystemJavaCompiler().run(null, null, errors, "--release", "21",
+                "-cp", engine + java.io.File.pathSeparator + System.getProperty("java.class.path"),
+                "-d", out.toString(), src.resolve("Entry.java").toString());
+        assertEquals(0, result, () -> "javac: " + errors);
+        Map<String, byte[]> classes = new LinkedHashMap<>();
+        try (var files = Files.walk(out)) {
+            for (Path p : files.filter(f -> f.toString().endsWith(".class")).toList()) {
+                String name = out.relativize(p).toString().replace('\\', '/').replaceAll("\\.class$", "");
+                classes.put(name, Files.readAllBytes(p));
+            }
+        }
+        return classes;
+    }
+
+    @Test
     void rejectsEveryStaticExceptCompileTimePrimitiveOrStringConstants() throws Exception {
         byte[] object = objectClass(true, writer -> {
             writer.visitField(Opcodes.ACC_STATIC, "mutable", "I", null, null).visitEnd();
@@ -305,6 +367,116 @@ class TestModValidator {
         var report = new ModValidator().validate(jar(classes), "example.Entry");
         assertTrue(report.eligible(), report.findings().toString());
         assertTrue(classes.keySet().stream().anyMatch(name -> name.endsWith("$1")), "real javac switch helper fixture");
+    }
+
+    @Test
+    void acceptsAssertionsAlongsideOwnPlatformAndApiEnumSwitches() throws Exception {
+        var classes = compile("""
+                package example;
+                public final class Entry implements com.openggf.mods.code.GgfMod {
+                    @Override public void register(com.openggf.mods.code.ModContext context) { }
+                    enum Course {
+                        ONE, TWO;
+                        int displayOrdinal() { assert ordinal() >= 0; return ordinal(); }
+                    }
+                    static final class Choice {
+                        int positive(int value) { assert value > 0; return value; }
+                    }
+                    int code(Course course, java.time.DayOfWeek day, com.openggf.game.GameId game) {
+                        assert course != null;
+                        return switch (course) { case ONE -> 1; case TWO -> 2; }
+                                + switch (day) { case MONDAY -> 1; default -> 0; }
+                                + switch (game) { case S1 -> 1; default -> 0; };
+                    }
+                }
+                """);
+        var report = new ModValidator().validate(jar(classes), "example.Entry");
+        assertTrue(report.eligible(), report.findings().toString());
+        assertTrue(classes.containsKey("example/Entry$1"), "one compiler helper covers all three enum owners");
+    }
+
+    @Test
+    void rejectsMutatedCompilerArtifactsWhenAssertionsAndOwnEnumSwitchOverlap() throws Exception {
+        var clean = compile("""
+                package example;
+                enum Course { ONE, TWO }
+                public final class Entry implements com.openggf.mods.code.GgfMod {
+                    @Override public void register(com.openggf.mods.code.ModContext context) { }
+                    int code(Course course) {
+                        assert course != null;
+                        return switch (course) { case ONE -> 1; case TWO -> 2; };
+                    }
+                }
+                """);
+        String helper = "example/Entry$1";
+        assertTrue(clean.containsKey(helper), "top-level enum produces a real javac switch-map helper");
+        for (String mutation : List.of("assertFlags", "switchFlags", "assertCallback", "switchCallback",
+                "extraRead", "assertBranch", "assertHost")) {
+            String owner = mutation.startsWith("switch") ? helper : ENTRY;
+            var modified = new LinkedHashMap<>(clean);
+            ClassWriter writer = new ClassWriter(0);
+            new ClassReader(clean.get(owner)).accept(new ClassVisitor(Opcodes.ASM9, writer) {
+                @Override public org.objectweb.asm.FieldVisitor visitField(int access, String name, String descriptor,
+                        String signature, Object value) {
+                    if (mutation.endsWith("Flags") && (name.equals("$assertionsDisabled") || name.startsWith("$SwitchMap$"))) {
+                        access &= ~Opcodes.ACC_SYNTHETIC;
+                    }
+                    return super.visitField(access, name, descriptor, signature, value);
+                }
+                @Override public MethodVisitor visitMethod(int access, String name, String descriptor,
+                        String signature, String[] exceptions) {
+                    MethodVisitor delegate = super.visitMethod(access, name, descriptor, signature, exceptions);
+                    if (!name.equals("<clinit>")) return delegate;
+                    return new MethodVisitor(Opcodes.ASM9, delegate) {
+                        @Override public void visitInsn(int opcode) {
+                            if (opcode == Opcodes.RETURN && mutation.endsWith("Callback")) {
+                                super.visitLdcInsn("openggf.mod.validator.enumExecuted"); super.visitLdcInsn("true");
+                                super.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/System", "setProperty",
+                                        "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", false);
+                                super.visitInsn(Opcodes.POP);
+                            } else if (opcode == Opcodes.RETURN && mutation.equals("extraRead")) {
+                                super.visitFieldInsn(Opcodes.GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
+                                super.visitInsn(Opcodes.POP);
+                            }
+                            super.visitInsn(opcode);
+                        }
+                        @Override public void visitJumpInsn(int opcode, org.objectweb.asm.Label label) {
+                            super.visitJumpInsn(mutation.equals("assertBranch") && opcode == Opcodes.IFNE
+                                    ? Opcodes.IFEQ : opcode, label);
+                        }
+                        @Override public void visitLdcInsn(Object value) {
+                            super.visitLdcInsn(mutation.equals("assertHost") && value instanceof org.objectweb.asm.Type
+                                    ? org.objectweb.asm.Type.getObjectType("java/lang/Object") : value);
+                        }
+                    };
+                }
+            }, 0);
+            modified.put(owner, writer.toByteArray());
+            System.clearProperty("openggf.mod.validator.enumExecuted");
+            var report = new ModValidator().validate(jar(modified), "example.Entry");
+            assertFalse(report.eligible(), mutation + ": " + report.findings());
+            assertTrue(report.findings().stream().anyMatch(f -> f.code().equals("STATIC_STATE_UNSUPPORTED")
+                    && f.className().equals(owner)), mutation + ": " + report.findings());
+            assertNull(System.getProperty("openggf.mod.validator.enumExecuted"), "validator never executes " + mutation);
+        }
+    }
+
+    @Test
+    void engineEnumSwitchRecognitionRequiresTheApiAllowlist() throws Exception {
+        var classes = compile("""
+                package example;
+                public final class Entry implements com.openggf.mods.code.GgfMod {
+                    @Override public void register(com.openggf.mods.code.ModContext context) { }
+                    int code(com.openggf.game.LevelAssemblyKind kind) {
+                        return switch (kind) { case DECODE_ONLY -> 1; default -> 0; };
+                    }
+                }
+                """);
+        var rejected = new ModValidator().validate(jar(classes), "example.Entry");
+        assertCode(rejected, "STATIC_STATE_UNSUPPORTED", ModValidationFinding.Severity.ERROR);
+        assertCode(rejected, "NON_API_ENGINE_REFERENCE", ModValidationFinding.Severity.WARNING);
+        var allowed = new ModValidator(Set.of("com/openggf/game/LevelAssemblyKind")).validate(jar(classes), "example.Entry");
+        assertTrue(allowed.eligible(), allowed.findings().toString());
     }
 
     @Test

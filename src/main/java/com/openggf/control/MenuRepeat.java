@@ -3,13 +3,22 @@ package com.openggf.control;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Menu-only repeat at the UI update cadence; gameplay edges are never changed. */
-final class MenuRepeat {
-    static final int DELAY = 24;
-    static final int INTERVAL = 4;
+/**
+ * Menu-only repeat at the UI update cadence; gameplay edges are never changed. A key pulses on
+ * the frame it goes down, then every {@link #INTERVAL} frames once it has been held for
+ * {@link #DELAY}. The engine's menus and mod scenes ({@code SceneContext.buttonRepeated}) share
+ * these timings. Engine-internal.
+ */
+public final class MenuRepeat {
+    public static final int DELAY = 24;
+    public static final int INTERVAL = 4;
     private final Map<Integer, State> states = new HashMap<>();
 
-    boolean pulse(int key, long frame, boolean held, boolean pressed) {
+    /**
+     * Whether {@code key} pulses on {@code frame}, given whether it is held and went down this
+     * frame. Call once per frame per key (repeat calls within a frame return the same answer).
+     */
+    public boolean pulse(int key, long frame, boolean held, boolean pressed) {
         State state = states.computeIfAbsent(key, ignored -> new State());
         if (state.frame == frame && state.held == held && state.pressed == pressed) return state.pulse;
         state.held = held;

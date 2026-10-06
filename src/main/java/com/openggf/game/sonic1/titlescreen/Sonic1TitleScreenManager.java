@@ -11,6 +11,7 @@ import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.game.sonic1.scroll.SwScrlGhz;
 import com.openggf.game.titlescreen.SegaPaletteFade;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -193,8 +194,8 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
      * Pattern IDs a {@link BackgroundOverride} may cache its art at: the upper half of the
      * title background range, clear of the stock GHZ background patterns below it.
      */
-    public static final int BACKGROUND_OVERRIDE_PATTERN_BASE =
-            Sonic1TitleScreenDataLoader.GHZ_PATTERN_BASE + 0x4000;
+    public static final int BACKGROUND_OVERRIDE_PATTERN_BASE = PatternAtlasRange.SONIC1_TITLE_GHZ_BACKGROUND.base()
+            + 0x4000;
     public static final int BACKGROUND_OVERRIDE_PATTERN_LIMIT = 0x4000;
 
     /**

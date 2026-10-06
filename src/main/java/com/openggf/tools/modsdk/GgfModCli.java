@@ -37,6 +37,7 @@ public final class GgfModCli {
                 case "init" -> init(args, output);
                 case "package" -> packageMod(args, output);
                 case "run" -> runEngine(args, output);
+                case "sprites" -> SpriteSheetDump.run(java.util.Arrays.copyOfRange(args, 1, args.length), output);
                 default -> usage(output);
             };
         } catch (InvalidPathException error) {
@@ -217,6 +218,8 @@ public final class GgfModCli {
                 + " [--solid-tiles <profile-dir>] [--music <owner:localName>] --out <dir>");
         output.println("       ggfmod convert audio --owner <id> --manifest <yaml> --root <dir> --out <dir>");
         output.println("       ggfmod package --input <classes/resources> --out <jar> | run <build-output>");
+        output.println("       ggfmod sprites <rom> <s1|s2|s3k> <out.png> art=<addr> map=<addr> [comp= dplc= layout="
+                + " size= line= offset= pal=<addr>:<colours>:<line>] | char=<sonic|tails|knuckles>");
         return 1;
     }
 }

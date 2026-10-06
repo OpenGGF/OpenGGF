@@ -174,6 +174,18 @@ class TestModEngineWiringSeams {
                 "cleanupStep(\"audio manager\", audioManager::destroy)");
     }
 
+    @Test
+    void engineShutdownClosesTheModSceneWhileGraphicsAreAlive() throws IOException {
+        // ModScene.exit is documented to run when the engine shuts down; the host also frees GL there.
+        String source = source("Engine.java");
+        assertMethodOrder(source, "private void cleanup()",
+                "cleanupStep(\"mod scene\", gameLoop.modSceneHost::cleanup)",
+                "cleanupStep(\"session state\", SessionManager::clear)");
+        assertMethodOrder(source, "private void cleanup()",
+                "cleanupStep(\"mod scene\", gameLoop.modSceneHost::cleanup)",
+                "cleanupStep(\"graphics manager\", graphicsManager::cleanup)");
+    }
+
     private static void assertBefore(String relativePath, String first, String second)
             throws IOException {
         String source = source(relativePath);

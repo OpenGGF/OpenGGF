@@ -38,12 +38,18 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
   `sample-platformer` gallery sample: a no-ROM standalone game with a Tiled-authored
   level, an original character with a double jump, a patrolling badnik, and a spring
   gimmick.
+- [Mod scenes](guides/mod-scenes.md) — full-screen menus and games drawn by the mod: the
+  startup-scene registration, lifecycle and fault boundary, the canvas, ROM sprites and
+  characters, audio, storage and headless testing. Start from
+  [hello-scene](../../examples/hello-scene/README.md), a two-class starter; Slay the Robotnik
+  is the complete example.
 - [AI-generated art](guides/ai-art.md) — prompting, quantizing, and laying out
   original sprite/tile PNGs for `ggfmod convert art`, and swapping generated art into
   either build-along sample.
 
 ## Experimental projects
 
+- [Slay the Robotnik](../../examples/slay-the-robotnik/README.md) — a Slay the Spire-style deck-building roguelike on Sonic 3 & Knuckles, built as a mod scene: three heroes, four acts of zone maps, ROM-drawn badniks and bosses, events, shops and relics.
 - [Infinite Sonic](../../examples/infinite-sonic/README.md) — a separate endless Sonic 1 project with terrain-aware ground/flying encounters using ROM-derived sections, seeded world recycling and the existing code-patch API. Not part of the eight maintained gallery samples.
 
 - [Putt Putt Paradise](../../examples/putt-putt-paradise/README.md) — Sonic 2 Mini Golf using ROM-backed Emerald Hill courses, timed charges, independent alternating golfers, and host-authoritative direct TCP play. An external candidate-API project, not one of the eight maintained gallery samples.

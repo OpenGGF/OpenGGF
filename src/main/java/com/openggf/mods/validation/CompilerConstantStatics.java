@@ -15,21 +15,24 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
- * Non-executing recognizer for javac's immutable enum constants and enum switch maps.
+ * Non-executing recognizer for javac's immutable enum constants, assertion flags and enum switch maps.
  * Flags/names alone never grant an exception: every instruction that can run during
  * initialization, including called enum constructors/array factories, must match.
  */
 final class CompilerConstantStatics {
     private static final int MAX_CAPTURED_INSTRUCTIONS = 16_384;
     private static final String STRING = "Ljava/lang/String;";
+    private static final String ASSERTIONS_DISABLED = "$assertionsDisabled";
 
     private CompilerConstantStatics() { }
 
     static final class Shape {
         String name;
         String parent;
+        String nestHost;
         int access;
         boolean hasInterfaces;
         boolean complete = true;
@@ -57,12 +60,32 @@ final class CompilerConstantStatics {
     }
 
     static Shape inspect(byte[] bytes) {
+        return inspect(bytes, false);
+    }
+
+    /** Trusted platform/API enum metadata needs no inspection or execution of its initializer. */
+    static Shape inspectExternalEnum(byte[] bytes) {
+        Shape shape = inspect(bytes, true);
+        String descriptor = "L" + shape.name + ";";
+        Method values = shape.methods.get("values()[" + descriptor);
+        if (!shape.complete || !"java/lang/Enum".equals(shape.parent) || (shape.access & Opcodes.ACC_ENUM) == 0
+                || values == null || values.access != (Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC)) return null;
+        int expected = Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL | Opcodes.ACC_ENUM;
+        for (Field field : shape.fields) {
+            if ((field.access & Opcodes.ACC_ENUM) != 0
+                    && (field.access != expected || !field.descriptor.equals(descriptor))) return null;
+        }
+        return shape;
+    }
+
+    private static Shape inspect(byte[] bytes, boolean metadataOnly) {
         Shape shape = new Shape();
         new ClassReader(bytes).accept(new ClassVisitor(Opcodes.ASM9) {
             @Override public void visit(int version, int access, String name, String signature, String parent, String[] interfaces) {
                 shape.name = name; shape.parent = parent; shape.access = access;
                 shape.hasInterfaces = interfaces != null && interfaces.length != 0;
             }
+            @Override public void visitNestHost(String nestHost) { shape.nestHost = nestHost; }
             @Override public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
                 shape.fields.add(new Field(access, name, descriptor, value)); return null;
             }
@@ -113,7 +136,7 @@ final class CompilerConstantStatics {
                     }
                 };
             }
-        }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES | (metadataOnly ? ClassReader.SKIP_CODE : 0));
         return shape;
     }
 
@@ -139,7 +162,7 @@ final class CompilerConstantStatics {
                 int expected = Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL | Opcodes.ACC_SYNTHETIC;
                 if (arrayField || field.access != expected || !field.descriptor.equals(array) || field.constant != null) return Set.of();
                 arrayField = true;
-            } else if (!literalField(field)) return Set.of();
+            } else if (!assertionField(field) && !literalField(field)) return Set.of();
         }
         if (!arrayField || shape.methods.containsKey("ordinal()I")) return Set.of();
         boolean constructor = false;
@@ -151,7 +174,44 @@ final class CompilerConstantStatics {
                 || !enumInitializer(shape, descriptor, array, constants)) return Set.of();
         Set<String> result = new HashSet<>();
         constants.forEach(field -> result.add(field.name)); result.add("$VALUES");
+        if (hasAssertionField(shape)) result.add(ASSERTIONS_DISABLED);
         return Set.copyOf(result);
+    }
+
+    static Set<String> assertionFields(Shape shape) {
+        if (!shape.complete || shape.writesOutsideClinit || !hasAssertionField(shape)) return Set.of();
+        Method method = shape.methods.get("<clinit>()V");
+        if (method == null || method.access != Opcodes.ACC_STATIC || !method.guards.isEmpty()) return Set.of();
+        Cursor code = new Cursor(method);
+        return assertionInitializer(shape, method, code) && code.op(Opcodes.RETURN) && code.end()
+                ? Set.of(ASSERTIONS_DISABLED) : Set.of();
+    }
+
+    private static boolean assertionField(Field field) {
+        return field.name.equals(ASSERTIONS_DISABLED) && field.descriptor.equals("Z") && field.constant == null
+                && field.access == (Opcodes.ACC_STATIC | Opcodes.ACC_FINAL | Opcodes.ACC_SYNTHETIC);
+    }
+
+    private static boolean hasAssertionField(Shape shape) {
+        return shape.fields.stream().filter(f -> f.name.equals(ASSERTIONS_DISABLED)).count() == 1
+                && shape.fields.stream().anyMatch(CompilerConstantStatics::assertionField);
+    }
+
+    /** javac reads the top-level nest's assertion status and stores its exact boolean inverse. */
+    private static boolean assertionInitializer(Shape shape, Method method, Cursor code) {
+        if (!hasAssertionField(shape)) return true;
+        Instruction host = code.take();
+        if (host == null || host.opcode != Opcodes.LDC || !(host.value instanceof Type type)
+                || type.getSort() != Type.OBJECT || !(type.getInternalName().equals(shape.name)
+                || type.getInternalName().equals(shape.nestHost))
+                || !code.call(Opcodes.INVOKEVIRTUAL, "java/lang/Class", "desiredAssertionStatus", "()Z")) return false;
+        Instruction enabled = code.take();
+        if (enabled == null || enabled.opcode != Opcodes.IFNE || !code.integer(1)) return false;
+        Instruction store = code.take();
+        if (store == null || store.opcode != Opcodes.GOTO
+                || !Integer.valueOf(code.index).equals(method.labels.get(enabled.value)) || !code.integer(0)
+                || !Integer.valueOf(code.index).equals(method.labels.get(store.value))) return false;
+        return code.field(Opcodes.PUTSTATIC, shape.name, ASSERTIONS_DISABLED, "Z");
     }
 
     private static boolean enumConstructor(Shape shape, Method method, Map<String, Field> fields) {
@@ -212,6 +272,7 @@ final class CompilerConstantStatics {
         Method method = shape.methods.get("<clinit>()V");
         if (method == null || method.access != Opcodes.ACC_STATIC || !method.guards.isEmpty()) return false;
         Cursor code = new Cursor(method);
+        if (!assertionInitializer(shape, method, code)) return false;
         for (int i = 0; i < constants.size(); i++) {
             Field field = constants.get(i);
             if (!code.type(Opcodes.NEW, shape.name) || !code.op(Opcodes.DUP) || !code.string(field.name) || !code.integer(i)) return false;
@@ -232,7 +293,7 @@ final class CompilerConstantStatics {
                 && code.field(Opcodes.PUTSTATIC, shape.name, "$VALUES", array) && code.op(Opcodes.RETURN) && code.end();
     }
 
-    static Set<String> enumSwitchFields(Shape shape, Map<String, Shape> enums) {
+    static Set<String> enumSwitchFields(Shape shape, Function<String, Shape> enums) {
         if (!shape.complete || shape.hasInterfaces || (shape.access & Opcodes.ACC_SYNTHETIC) == 0 || !"java/lang/Object".equals(shape.parent)
                 || shape.fields.isEmpty() || shape.writesOutsideClinit || shape.methods.size() != 1) return Set.of();
         Set<String> fields = new HashSet<>();
@@ -250,7 +311,7 @@ final class CompilerConstantStatics {
             Instruction allocation = code.take();
             if (allocation == null || allocation.opcode != Opcodes.INVOKESTATIC || !"values".equals(allocation.name)
                     || Boolean.TRUE.equals(allocation.value)) return Set.of();
-            Shape enumeration = enums.get(allocation.owner);
+            Shape enumeration = enums.apply(allocation.owner);
             String enumArray = "[L" + allocation.owner + ";";
             if (enumeration == null || !allocation.descriptor.equals("()" + enumArray)) return Set.of();
             String field = "$SwitchMap$" + allocation.owner.replace('/', '$');
