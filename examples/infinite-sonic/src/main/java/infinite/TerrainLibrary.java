@@ -9,7 +9,8 @@ import java.util.TreeSet;
 /** Selects ROM columns with continuous walkable floors and matching seam heights. */
 public final class TerrainLibrary {
     public static final int WIDTH = 64;
-    public static final long SEED = 0x534F4E4943L;
+    /** The original fixed course; the mod now draws a fresh seed for every run. */
+    public static final long FIXED_SEED = 0x534F4E4943L;
     /** Elevation tiers -64, -32, 0 and +32px from the seam floor (negative is higher). Mod design. */
     static final int TIER_COUNT = 4;
     static final int TIER_STEP = 32;
@@ -54,7 +55,13 @@ public final class TerrainLibrary {
         boolean flat() { return Arrays.stream(profile).allMatch(y -> y == profile[0]); }
     }
 
-    public TerrainLibrary(Level source) {
+    /** Chooses every section, gap, platform, encounter and hazard; fixed for the library's life. */
+    private final long seed;
+
+    public TerrainLibrary(Level source) { this(source, FIXED_SEED); }
+
+    public TerrainLibrary(Level source, long seed) {
+        this.seed = seed;
         romZone = source.getZoneIndex();
         // The act's own stock placement decides which badniks the course uses.
         var stockObjects = source.getObjects();
@@ -321,8 +328,10 @@ public final class TerrainLibrary {
         return value;
     }
     private int sectionIndex(long section, int tier) {
-        return (int) Long.remainderUnsigned(random(section + SEED), sections.get(tier).size());
+        return (int) Long.remainderUnsigned(random(section + seed), sections.get(tier).size());
     }
+
+    public long seed() { return seed; }
 
     static long random(long value) {
         value = (value ^ (value >>> 30)) * 0xbf58476d1ce4e5b9L;
@@ -339,7 +348,7 @@ public final class TerrainLibrary {
      * even stretches pick freely; odd stretches pick a tier within MAX_STEP of both neighbours. */
     int stretchTier(long stretch) {
         if (stretch <= 1) return GROUND_TIER; // Opening and first taught jump stay on the ground.
-        long random = random(stretch + SEED + 0x5449455253L);
+        long random = random(stretch + seed + 0x5449455253L);
         if (Math.floorMod(stretch, 2) == 0) return (int) Long.remainderUnsigned(random, TIER_COUNT);
         int before = tierOffset(stretchTier(stretch - 1));
         int after = tierOffset(stretchTier(stretch + 1));
@@ -407,7 +416,7 @@ public final class TerrainLibrary {
         // Teach the jump requirement before speed can carry Sonic over narrower pits.
         if (section == 3) return 128;
         int step = stepHeight(section);
-        long random = random(section + SEED + 0x474150L);
+        long random = random(section + seed + 0x474150L);
         if (step > 0 && Long.remainderUnsigned(random >>> 16, 3) == 0) return 0;
         int choices = Math.abs(step) > 32 ? 3 : Math.abs(step) > 0 ? 4 : 5;
         return gapWidthAt((int) Long.remainderUnsigned(random, choices));
@@ -427,12 +436,12 @@ public final class TerrainLibrary {
     public boolean platformStretch(long stretch) {
         if (platformKinds.isEmpty() || stretch < 2) return false;
         if (Math.abs(stepHeight(stretch * 4 + 3)) > TIER_STEP) return false;
-        return Long.remainderUnsigned(random(stretch + SEED + 0x504c4154L), 3) == 0;
+        return Long.remainderUnsigned(random(stretch + seed + 0x504c4154L), 3) == 0;
     }
 
     /** Corridor cut index for the near (0) or far (1) edge of a platform stretch's pit. */
     private int platformCut(long stretch, int side) {
-        return (int) Long.remainderUnsigned(random(stretch + SEED + 0x435554L) >>> (side * 16), GAP_COUNT);
+        return (int) Long.remainderUnsigned(random(stretch + seed + 0x435554L) >>> (side * 16), GAP_COUNT);
     }
 
     /** First open pixel of a platform stretch's pit. */

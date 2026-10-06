@@ -171,6 +171,15 @@ ramped too aggressively in play. Each stage now adds 0.25× linearly (1× → 1.
 → 1.5× → 1.75× → 2×); the 32× ceiling and MAX SPEED label are unchanged but now
 sit far beyond a realistic run.
 
+Follow-up, 2026-10-05 (later): equal +0.25× steps felt smaller the faster the game already
+ran, since what the player notices is the relative change. Each stage now adds a quarter of
+the current speed, rounded to 0.05× in integer hundredths (1× → 1.25× → 1.55× → 1.95× →
+2.45× → 3.05× → 3.8× → 4.75×; about 20 stages reach the 32× ceiling). This is a 1.25×
+compounding curve, gentler than the rejected 1.5× one: by two minutes it is at 2.45×
+against 1.5×'s 5.06× and linear's 2×. The first step is unchanged. Each stage's glide now
+takes 60 frames whatever its size (the per-frame ramp is the stage's step / 60, never less
+than 0.25/60), so larger steps still arrive in about a second.
+
 The camera advances at least 4px per simulation tick (4.5px before 0.13.0), retaining fractional
 pixels and vertical tracking. Sonic can gain ground until his centre reaches a
 follow point at 60% of the viewport width (just right of centre); the camera then follows his position. It follows world
@@ -775,7 +784,7 @@ back at the same point instead of a quarter of the way across.
 lives already earned for it are not paid twice. RESTART and EXIT reload, which clears them.
 
 **Speed ramp.** `ChallengeClock` keeps a live `rate` that moves 0.25/60 per presentation
-frame toward the stage multiplier, as `RewindSpeedController` ramps the tape coast; the step
+frame (later: the stage's step / 60, so every stage glides over 60 frames) toward the stage multiplier, as `RewindSpeedController` ramps the tape coast; the step
 budget, the audio rate and the countdown's real-time conversion all read it. The stage
 (HUD speed, score per second, leaderboard speed) still changes on the boundary. The rate is
 in the rewind snapshot; the old four-field snapshot constructor now means a settled rate.
@@ -870,3 +879,87 @@ alternating sides, arcing up and falling over 18 updates and fading at the end; 
 `dangerFrames` counter (rewound with the controller) drives them. The HUD ring count flashes
 red eight updates on, eight off. The HUD now reads TOP (the zone's best, or the run's score
 once ahead), SCORE, SPEED and RINGS/LIVES; the speed-up warning moved down to y 72 to clear it.
+
+## Random courses and the speed-up flourish (0.22.0)
+
+Follow-up on `374775a40d`, 2026-10-05. Requests: make each level random and different every time
+while keeping one leaderboard per zone regardless of seed; make speed-ups feel like a moment
+(a screen-edge streak or palette flash); and keep the picked zone's background through the
+title-to-zone transition if that does not need messy engine code.
+
+**Random seed.** `TerrainLibrary.SEED` was a static constant read by every plan. It is now a
+per-library `seed()`: `InfiniteSonicMod.Module.loadLevelOverride` builds each course's library
+with `courseSeed()`, a fresh `ThreadLocalRandom` long, or the `infinite-sonic.seed` system
+property when set (`Long.decode`, so decimal or `0x` hex). Every load (title start, RESTART)
+therefore lays a new course; CONTINUE never reloads, so it keeps its course, and rewind within
+a run restores against the same library. `MonitorPlan.kind` gained the terrain parameter it now
+needs. The leaderboard was already keyed by zone and run id only, so no change was needed for
+it. `TestInfiniteSonic` pins `FIXED_SEED` (`0x534F4E4943`, the old constant) so the layout
+assertions keep their course; a new test clears the property and checks three loads draw three
+seeds and lay different maps.
+
+**Speed-up flourish.** Rejected: a true palette flash (palette lines are shared and the stock
+palette fade belongs to the engine's FadeManager). The controller notes when `tick` raises the
+displayed multiplier and starts `speedUpFrames` (60 updates, rewound with the controller). For
+its first 12 updates a warm translucent rectangle over the screen fades out; 16 speed lines,
+each with a fixed hashed length, pace and band (the outer 30% of the screen height, alternating
+top and bottom), rush right to left and fade over the last 15 updates; and the HUD draws
+`SPEED n.nnX` in gold at the countdown's place (y 72), which the countdown has just vacated.
+Nothing shows during the death menu or CONTINUE. No new sound: Sonic 1 has no dash effect in the
+mapped set, and the countdown chimes already lead in.
+
+**Title-to-zone background (not done).** The fade is owned by `GameLoop.exitTitleScreen`, which
+fades to black whenever `shouldFadeTitleScreenExit(route)` holds, then resets the title, loads the
+level and fades the title card in from black. No `TitleScreenProvider` or `GameModule` hook skips
+or replaces that fade, so carrying the background over would need a new engine hook in the
+fresh-title boundary that the trace fixtures guard. The user asked not to proceed if it meant
+messy engine code, so this was left alone.
+
+## CONTINUE by the engine's rewind (0.23.0)
+
+Follow-up on `4fd1997e3e`, 2026-10-05. Request: CONTINUE should use the engine's rewind
+rather than a ghost moving back to the restart spot.
+
+**Engine hook.** Live rewind was only driven by the held key, and only recorded when the
+player's `LIVE_REWIND_ENABLED` setting was on. `GameModule.scriptedRewind()` (default
+`null`) returns a `ScriptedRewind`; `LiveRewindManager` takes it through a supplier that
+`GameLoop` passes from `LevelRewindFrameRecorder.activeScriptedRewind` (level mode only, never
+bonus or special stages; `GameLoop` grows by that one argument line). While one is returned, history is
+recorded whatever the setting; the key still needs the setting. When `requested()` holds,
+`stepScripted` runs the same presentation as the key (reverse audio, reverse fade, VHS envelope),
+takes `stepsThisFrame()` backward steps, checks `reachedTarget()` after each (the scripted
+path shares the held key's presentation calls, adding no new global-service access to the
+rewind package), and on reaching it
+or the history floor calls `ended(atTarget)` and does the ordinary release. The debug
+`REWIND n` HUD label is suppressed for a scripted rewind. Stock modules return `null`, so their
+paths are unchanged.
+
+**Course side.** `CourseRewind` (module-owned, deliberately not a rewind adapter) is the
+director. CONTINUE calls `start(spareLives - 1)` and sets `continueRequested`; the rewind starts
+on the next presentation frame, so that update is never replayed and `continueRequested` is
+never true in a restored state. Steps: 12 per frame while the restored state is dead or in the
+menu (a long wait at the menu passes quickly), 3 per frame through play. Target: at least 60
+steps of living play, then the first state where `CourseController.resumableHere()` holds: alive,
+grounded, unhurt, not already in READY, centre at least 20% of the screen from the left edge
+(45% follow point less a quarter screen), and the old restart tests (`safeFloor`, 448 px
+`runwayClear`). After `ended`, the controller's next live update calls `land`: spare lives set
+from the director, speeds zeroed and object control on for READY, the clock captured into the
+session and ended (READY then GO! as before, easing up from 1x), and the camera X held. The
+landed check reads non-rewound state only once the rewind is over, so replayed updates during
+the rewind behave as recorded.
+
+**What rewinds.** Everything in the registry: score, rings, enemies, terrain window, shield,
+clock stage and countdown. Only the spent life and the leaderboard (which only raises a run's
+entry) survive. Ring lives: the controller counts 100-ring crossings in a rewound field and the
+director pays only crossings past the most it has paid this run, so hundreds won back after a
+rewind do not pay twice (updates replayed during the rewind find nothing new to pay, which only
+affects states the rewind passes through).
+
+**Fallback.** If the rewind cannot start (no history in the headless fixture, a blocked rewind)
+the next live update sees `continueRequested` and lands at once; if it ends at the floor without
+a fair moment, `land` places Sonic with the old restart-spot search (`resetState`, last safe
+spot, runway) and restarts the level music, as the ghost version did without the glide.
+
+**Removed.** The ghost glide (`drawGhost`, its pose capture and the 45-90 frame camera glide).
+`RESUME_READY` is now 1.
+

@@ -13,7 +13,7 @@ speed. The player's own aspect returns at the master title. Trace test mode stil
 forces native 4:3. On the course Sonic's top running speed is **7/8 of stock** (0x540
 instead of 0x600; acceleration, jumps and rolling are unchanged), and he starts running at
 that speed. He still shows the stock full-speed running frames (and the faster rolling frames),
-from 0x500 instead of the stock 0x600 he can no longer reach. The whole game speeds up by **+0.25× every 30 seconds of active play**: 1× → 1.25× → 1.5× → 1.75× → 2× and so on. Each step glides in over about a second
+from 0x500 instead of the stock 0x600 he can no longer reach. The whole game speeds up **every 30 seconds of active play**, each time by a quarter of its current speed (rounded to 0.05×), so every step feels about as big as the last: 1× → 1.25× → 1.55× → 1.95× → 2.45× → 3.05× and so on. Each step glides in over about a second
 (as the rewind tape coast ramps its speed) rather than snapping. Pausing stops the countdown.
 The camera scrolls at a minimum of **two thirds of Sonic’s stock maximum run speed** (4 pixels per tick),
 letting Sonic gain ground until his centre reaches **45% of the screen width**, just left of centre, so
@@ -39,22 +39,27 @@ lives). They use the ROM monitor art and its flickering icons, but
 unlike the solid stock box any touch breaks them, so running into one never stalls Sonic
 against the scrolling edge. Breaking a shield box plays the stock break and shield sounds
 and puts the stock shield on Sonic; one broken while already shielded only plays the sound.
-Death, CONTINUE and RESTART clear the shield.
+Death and RESTART clear the shield; CONTINUE's rewind gives back a shield Sonic had at the
+moment it rewinds to (its no-history fallback does not).
 
 A session starts with **no spare lives**. The only way to earn one is rings: every time
 the ring counter reaches 100, 200, 300 and so on, you gain a life (reaching 100 again
 after losing your rings counts too). Points never award lives. Spare lives are shown on
 the HUD. When Sonic dies with a spare life, the stock card is replaced by a menu:
-**CONTINUE** spends the life and revives Sonic right where the run is, with no level reload.
-The restart spot is the last safe spot he stood on (solid, pit-free floor), or the nearest one
-behind it with **448 pixels of floor and no pit ahead**, so a run never restarts on the lip of
-a hole. A translucent ghost of Sonic, with two fading echoes, glides back from where he died
-to that spot (45 to 90 frames) while the camera follows. Then Sonic appears and **READY**
-waits until you press right or jump (or two seconds pass); he sets off with a running start,
-**GO!** flashes, and the game speed eases back up from 1× to the speed stage it died at over
-a second and a half. The clock, score and scrolling wait through the glide and READY. Score, speed, the
-countdown to the next speedup, the terrain, cleared enemies and Sonic's rings all carry on, and
-Sonic blinks for two seconds. Only RESTART, EXIT and GAME OVER clear the rings. **RESTART** reloads a fresh session at 1× with no
+**CONTINUE** spends the life and **rewinds the run** with the engine's own rewind (the VHS
+picture and reversed sound of held live rewind, which the course uses even with live rewind
+switched off), with no level reload. The tape runs quickly back through the death and the menu,
+then at three times speed through play, and stops at the first moment at least a second before
+the death that makes a fair restart: Sonic alive, on the ground and unhurt, keeping up with the
+scroll, on solid floor with **448 pixels of floor and no pit ahead**, so a run never restarts on
+the lip of a hole. Everything is as it was at that moment: the score, rings, enemies, terrain, and
+the speed stage and countdown. Only the spent life stays spent, and ring lives already paid are
+not paid again for the same hundreds. **READY** then holds Sonic there until you press right or
+jump (or two seconds pass); he sets off with a running start, **GO!** flashes, and the game speed
+eases back up from 1× to its speed stage over a second and a half. The clock, score and scrolling
+wait through READY, and Sonic blinks for two seconds. If no fair moment is left in the rewind
+history, Sonic is instead revived on the last safe spot (or the nearest one behind it with that
+runway), keeping the run as it was when he died. RESTART, EXIT and GAME OVER clear the rings. **RESTART** reloads a fresh session at 1× with no
 spare lives and a zero score. **EXIT** fades out to the Sonic 1 title screen, where the zone
 picker can start another course. Press up/down to choose and **SPACE** (player 1 button A)
 to confirm. Dying with no spare lives shows the mod's own GAME OVER text over a
@@ -90,6 +95,8 @@ shield and fewer than 20 rings, so the next hit knocks him back and takes every 
 him with none) he sweats: little drops fly off the back of his head (twice as often with no
 rings), and the ring count flashes red.
 The last five seconds also show a large centered countdown with a chime each
+second. When the speed-up lands, the screen flashes, speed lines rush past along the top and
+bottom edges, and the new speed (for example **SPEED 1.25X**) takes the countdown's place for a
 second. Music and sound effects speed up and rise in pitch with the challenge;
 pause, rewind, game over and leaving the level release the playback rate.
 Survival earns one point per minimum-scroll pixel: **240 points/second at 1×**,
@@ -102,7 +109,9 @@ Other character/team selections retain their stock behavior.
 The mod reads your Sonic 1 ROM through the normal level loader. It selects continuous
 floor sections with at least 112 pixels of open space above them (so mazes, tunnels and
 overhangs are skipped), aligns them vertically, and pairs them with horizontal reflections
-so their outside edges join. A fixed seed chooses sections as you move. Art, palettes,
+so their outside edges join. Every run lays a **new random course**: a fresh seed is drawn each
+time a course loads (starting from the title, RESTART), while CONTINUE keeps the course it revives
+on. The seed chooses sections as you move. Leaderboards are per zone, whatever the course. Art, palettes,
 music and collision tiles come from the ROM; the jar contains only code and a manifest.
 It never reads the disassembly or includes exported Sega assets.
 
@@ -226,8 +235,10 @@ python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestInfiniteSonic \
 ```
 
 The finite 64-column window recycles in 16-column steps while preserving Sonic's
-fractional position and speed. The same logical coordinates always generate the same
-terrain. Change `TerrainLibrary.SEED` and rebuild for another course.
+fractional position and speed. Within a run the same logical coordinates always generate the
+same terrain. To replay one course every time, start the JVM with
+`-Dinfinite-sonic.seed=<number>` (decimal or `0x` hex; the original fixed course was
+`0x534F4E4943`); the tests pin that seed.
 Enemy positions and patrol phases shift with the world and participate in rewind.
 Cleared encounters stay cleared within the retained window; revisiting terrain discarded
 from that window can regenerate its encounters. Stock platforms keep their own

@@ -20,7 +20,7 @@ public final class PlatformPlan {
         long end = terrain.platformPitEnd(stretch);
         int width = (int) (end - start);
         var kinds = terrain.platformKinds();
-        long random = TerrainLibrary.random(stretch + TerrainLibrary.SEED + 0x53544f4e45L);
+        long random = TerrainLibrary.random(stretch + terrain.seed() + 0x53544f4e45L);
         var kind = kinds.get((int) Long.remainderUnsigned(random, kinds.size()));
         int span = kind.halfWidth() * 2;
         int count = 1;

@@ -54,7 +54,7 @@ public final class HazardPlan {
 
     private static Hazard plan(TerrainLibrary terrain, long section) {
         if (section < FIRST_SECTION || terrain.platformRun(section)) return null;
-        long random = TerrainLibrary.random(section + TerrainLibrary.SEED + 0x48415a415244L);
+        long random = TerrainLibrary.random(section + terrain.seed() + 0x48415a415244L);
         int phase = (int) Long.remainderUnsigned(random >>> 40, 256);
         if (terrain.isCorridor(section)) {
             int gap = terrain.gapWidth(section);

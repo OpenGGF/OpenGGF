@@ -331,7 +331,8 @@ public class GameLoop {
         this.liveRewindManager = new LiveRewindManager(
                 configService,
                 () -> currentGameMode,
-                this::getActiveSpecialStageProvider);
+                this::getActiveSpecialStageProvider,
+                LevelRewindFrameRecorder::activeScriptedRewind);
         this.userRecordingSessionLauncher = new UserRecordingSessionLauncher(this);
         this.userRecordingControls = new UserRecordingRuntimeControls(
                 new LiveUserRecordingRuntime(configService, userRecordingSessionLauncher, playbackDebugManager,
