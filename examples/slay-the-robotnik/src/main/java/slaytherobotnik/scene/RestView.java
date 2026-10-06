@@ -3,15 +3,24 @@ package slaytherobotnik.scene;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneSprite;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
+import slaytherobotnik.core.Card;
 import slaytherobotnik.core.RestOption;
 import slaytherobotnik.run.RestRoom;
 import slaytherobotnik.ui.Colors;
+import slaytherobotnik.ui.Ease;
 import slaytherobotnik.ui.Gfx;
 import slaytherobotnik.ui.Hotspots;
 import slaytherobotnik.ui.SmallFont;
 
-/** A Starpost: rest, tune up a card, or use a relic's option. */
+/**
+ * A Starpost: rest, tune up a card, or use a relic's option. Resting crouches the hero for a
+ * breather while the healing rises off them; a tuned-up card appears beside the post and flashes
+ * into its upgrade as the post's ball spins.
+ */
 final class RestView implements RunScreen.RoomView {
     private final RestRoom room;
     private final Hotspots spots = new Hotspots();
@@ -25,6 +34,17 @@ final class RestView implements RunScreen.RoomView {
      * above the post; then the post flashes frames 0 and 4 every 4 frames (Ani_Starpost_Spinning).
      */
     private static final int ORBIT_FRAMES = 0x20;
+    /** Mod timing for the tuned-up card: rising in, then the flash into its upgrade. */
+    private static final int CARD_RISE = 14;
+    private static final int CARD_FLASH = 30;
+    /** Frames since resting (the healing popup and sparkles), or -1. */
+    private int restAge = -1;
+    private int healed;
+    /** The card the smith option upgraded, once its pick is made, and frames since. */
+    private Card smithed;
+    private int smithAge;
+    /** Cards already upgraded before the smith pick, to tell which one it upgraded. */
+    private final Set<Card> upgradedBefore = Collections.newSetFromMap(new IdentityHashMap<>());
 
     RestView(RestRoom room) {
         this.room = room;
@@ -50,6 +70,23 @@ final class RestView implements RunScreen.RoomView {
         if (spin > 0) {
             spin--;
         }
+        if (restAge >= 0) {
+            restAge++;
+        }
+        if (smithed != null) {
+            smithAge++;
+        } else if ("smith".equals(room.chosen()) && shell.run.deckChoice() == null) {
+            // The pick is made: the card it upgraded appears, and only now does the post spin.
+            for (Card card : shell.run.state().deck()) {
+                if (card.upgraded() && !upgradedBefore.contains(card)) {
+                    smithed = card;
+                    smithAge = 0;
+                    spin = ORBIT_FRAMES;
+                    shell.sfx(Sounds.SFX_STARPOST);
+                    break;
+                }
+            }
+        }
         layout(shell);
         String picked = spots.update(shell.in);
         if (picked == null) {
@@ -61,9 +98,18 @@ final class RestView implements RunScreen.RoomView {
             return;
         }
         RestOption option = room.options().get(Integer.parseInt(picked.substring(1)));
-        if (room.choose(option.id())) {
+        int hpBefore = shell.run.state().hp();
+        upgradedBefore.clear();
+        for (Card card : shell.run.state().deck()) {
+            if (card.upgraded()) {
+                upgradedBefore.add(card);
+            }
+        }
+        if (room.choose(option.id()) && !option.id().equals("smith")) {
             spin = ORBIT_FRAMES;
             shell.sfx(Sounds.SFX_STARPOST);
+            healed = shell.run.state().hp() - hpBefore;
+            restAge = 0;
         }
     }
 
@@ -87,6 +133,43 @@ final class RestView implements RunScreen.RoomView {
         }
     }
 
+    /** The healing rising off the resting hero, with sparkles about them. */
+    private void drawRest(Shell shell, SceneCanvas c, int heroX, int feet) {
+        if (restAge < 0 || restAge >= 80) {
+            return;
+        }
+        if (restAge < 60) {
+            EventArt.sparkles(shell, c, heroX, feet - 18, 16 + restAge / 6, shell.ticks);
+        }
+        if (healed > 0) {
+            String text = "+" + healed + " HP";
+            float alpha = restAge < 60 ? 1f : 1f - (restAge - 60) / 20f;
+            shell.font.drawOutlined(c, text, heroX - shell.font.width(text), Math.round(feet - 44 - restAge * 0.4f),
+                    Colors.alpha(Colors.TEXT_GOOD, alpha), 2);
+        }
+    }
+
+    /** The tuned-up card beside the post: rising in, then flashing into its upgrade. */
+    private void drawSmithed(Shell shell, RunScreen screen, SceneCanvas c, int cx, int feet) {
+        if (smithed == null) {
+            return;
+        }
+        int x = cx - CardRenderer.SMALL_W / 2;
+        int top = feet - CardRenderer.SMALL_H - 6;
+        if (smithAge < CARD_RISE) {
+            top += Math.round((1f - Ease.outCubic(smithAge / (float) CARD_RISE)) * 30);
+        }
+        boolean upgraded = smithAge >= CARD_FLASH + 4;
+        screen.cards.drawSmall(c, upgraded ? smithed : new Card(smithed.def(), false), null, x, top, true, false);
+        if (smithAge >= CARD_FLASH && smithAge < CARD_FLASH + 10) {
+            float k = 1f - Math.abs(smithAge - CARD_FLASH - 4) / 6f;
+            c.fill(x, top, CardRenderer.SMALL_W, CardRenderer.SMALL_H, Colors.alpha(Colors.WHITE, Math.max(0f, k)));
+        }
+        if (upgraded) {
+            EventArt.sparkles(shell, c, cx, top + CardRenderer.SMALL_H / 2, 30, shell.ticks);
+        }
+    }
+
     @Override
     public void draw(Shell shell, RunScreen screen, SceneCanvas c) {
         int w = shell.width();
@@ -96,9 +179,12 @@ final class RestView implements RunScreen.RoomView {
         f.drawOutlined(c, "STARPOST", (w - f.width("STARPOST") * 2) / 2, 36, Colors.GOLD, 2);
         drawStarpost(shell, c, w / 2 + 16, LevelStages.feet(stage, w / 2 + 16, GROUND));
         int heroX = w / 2 - 40;
+        int heroFeet = LevelStages.feet(stage, heroX, GROUND);
         Poses.hero(shell, c, shell.run.state().character().id(),
                 room.chosen() != null && room.chosen().equals("rest") ? Poses.DUCK : Poses.WAIT, shell.ticks,
-                heroX, LevelStages.feet(stage, heroX, GROUND), SceneDraw.plain());
+                heroX, heroFeet, SceneDraw.plain());
+        drawRest(shell, c, heroX, heroFeet);
+        drawSmithed(shell, screen, c, w / 2 + 70, LevelStages.feet(stage, w / 2 + 16, GROUND));
         layout(shell);
         if (room.chosen() == null) {
             for (int i = 0; i < room.options().size(); i++) {
