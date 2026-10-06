@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * Engine side of mod scenes: decides whether the resolved module opens a startup scene,
@@ -106,27 +105,7 @@ final class ModSceneLauncher {
     /** Window coordinates (GLFW screen units) to logical scene pixels, through the letterboxed viewport. */
     private static SceneServices.MouseMapper mouseMapper(long window, GraphicsManager graphics, int logicalWidth,
             int logicalHeight) {
-        return (wx, wy) -> {
-            int[] ww = new int[1];
-            int[] wh = new int[1];
-            int[] fw = new int[1];
-            int[] fh = new int[1];
-            GLFW.glfwGetWindowSize(window, ww, wh);
-            GLFW.glfwGetFramebufferSize(window, fw, fh);
-            double scaleX = ww[0] > 0 ? fw[0] / (double) ww[0] : 1.0;
-            double scaleY = wh[0] > 0 ? fh[0] / (double) wh[0] : 1.0;
-            double fx = wx * scaleX;
-            // Framebuffer y grows upwards from the bottom; window y grows downwards.
-            double fy = fh[0] - wy * scaleY;
-            int vx = graphics.getViewportX();
-            int vy = graphics.getViewportY();
-            int vw = Math.max(1, graphics.getViewportWidth());
-            int vh = Math.max(1, graphics.getViewportHeight());
-            int x = (int) Math.floor((fx - vx) * logicalWidth / vw);
-            int y = (int) Math.floor((vy + vh - fy) * logicalHeight / vh);
-            boolean inside = x >= 0 && y >= 0 && x < logicalWidth && y < logicalHeight;
-            return new int[] {x, y, inside ? 1 : 0};
-        };
+        return (wx, wy) -> com.openggf.graphics.LogicalMouse.map(window, graphics, wx, wy, logicalWidth, logicalHeight);
     }
 
     /** Draws the open scene in screen space. */
