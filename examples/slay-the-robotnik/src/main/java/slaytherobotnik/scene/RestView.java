@@ -50,9 +50,17 @@ final class RestView implements RunScreen.RoomView {
         this.room = room;
     }
 
+    /** Whether the smith option is waiting for its card to be picked. */
+    private boolean picking() {
+        return "smith".equals(room.chosen()) && smithed == null;
+    }
+
     private void layout(Shell shell) {
         spots.clear();
         int w = shell.width();
+        if (picking()) {
+            return;
+        }
         if (room.chosen() != null) {
             spots.add("go", w / 2 - 50, 196, 100, 16);
             return;
@@ -123,7 +131,7 @@ final class RestView implements RunScreen.RoomView {
         }
         // Every frame shares the object's origin; the idle post's bottom stands on the ground.
         float originY = ground - (idle.height() - idle.originY());
-        int frame = spin > 0 ? 1 : room.chosen() != null && (shell.ticks / 4) % 2 == 1 ? 4 : 0;
+        int frame = spin > 0 ? 1 : room.chosen() != null && !picking() && (shell.ticks / 4) % 2 == 1 ? 4 : 0;
         c.draw(shell.art.romFrame("starpost", frame), x, originY, SceneDraw.plain());
         if (spin > 0) {
             int angle = (-0x10 * (ORBIT_FRAMES - spin) - 0x40) & 0xFF;
@@ -200,7 +208,7 @@ final class RestView implements RunScreen.RoomView {
                     ly += SmallFont.LINE;
                 }
             }
-        } else {
+        } else if (!picking()) {
             String done = switch (room.chosen()) {
                 case "rest" -> "YOU CATCH YOUR BREATH.";
                 case "smith" -> "GOOD AS NEW - BETTER, EVEN.";
