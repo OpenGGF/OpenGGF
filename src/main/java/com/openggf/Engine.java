@@ -1027,6 +1027,8 @@ public class Engine {
 		graphicsManager.applyResolvedDisplayWidth((int) projectionWidth);
 
 		if (glfwInitialized && window != 0L) {
+			DisplayWindowFit.apply(window, configService.getBoolean(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE),
+					(int) realWidth, (int) realHeight);
 			FramebufferDimensions framebuffer = readCurrentFramebufferDimensions();
 			windowWidth = framebuffer.width();
 			windowHeight = framebuffer.height();

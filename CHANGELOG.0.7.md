@@ -6,6 +6,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **Window and display aspect:** a launch that changes the display aspect (a launch
+  profile's aspect, or a module's required aspect such as a mod laid out for 16:9) now
+  refits the window instead of letterboxing the new picture inside the old window: a
+  windowed window keeps its whole-number height scale and takes the new aspect's width,
+  within the monitor. Fullscreen and maximised windows, and `display.windowAutosize: false`,
+  are left alone.
 - **S3K level entry:** Initialize the camera with the ROM’s zero/maximum clamps,
   independently of the runtime minimum bounds. This removes the opening AIZ1
   camera offset while preserving MHZ1’s separate locked-on camera focus.
