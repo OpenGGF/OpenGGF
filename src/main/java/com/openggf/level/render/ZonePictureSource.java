@@ -1,14 +1,18 @@
 package com.openggf.level.render;
 
+import com.openggf.level.Pattern;
 import java.util.List;
 
 /**
- * A stock game's zone pictures for presentation (mod scenes' {@code SceneRomArt.zoneBackdrop}
- * and {@code levelOverview}, which convert these values to the API types). Engine-internal.
+ * A stock game's zone pictures for presentation (mod scenes' {@code SceneRomArt} zone pictures
+ * and title cards, which convert these values to the API types). Engine-internal.
  * Implementations read only the ROM, on the calling thread, and never touch the running level,
  * graphics, session or settings. Results are not cached here.
  */
 public interface ZonePictureSource {
+    /** Whether {@link #backdrop}, {@link #overview}, {@link #stages} and {@link #foreground} picture the act. */
+    boolean supports(int zone, int act);
+
     /** The zone's background with its parallax bands, or null when unsupported. */
     Backdrop backdrop(int zone, int act);
 
@@ -23,17 +27,19 @@ public interface ZonePictureSource {
      * and at most {@code maxRise} rows between their highest and lowest floor, inside the
      * playable area, left to right ({@link LevelFloorScanner#stages}); empty when unsupported.
      */
-    default List<LevelFloorScanner.Stage> stages(int zone, int act, int width, int headroom, int maxRise) {
-        return List.of();
-    }
+    List<LevelFloorScanner.Stage> stages(int zone, int act, int width, int headroom, int maxRise);
 
     /**
      * The act's foreground plane for a world rectangle, unscaled, transparent where the plane
      * shows what is behind it (and outside the playable foreground), or null when unsupported.
      */
-    default Picture foreground(int zone, int act, int x, int y, int width, int height) {
-        return null;
-    }
+    Picture foreground(int zone, int act, int x, int y, int width, int height);
+
+    /** Whether {@link #titleCard} has the act's title card. */
+    boolean hasTitleCard(int zone, int act);
+
+    /** The act's title card elements, or null when it has none. */
+    Sprites titleCard(int zone, int act);
 
     /** {@code 0xAARRGGBB} pixels, row by row from the top; opaque except in {@link #foreground}. */
     record Picture(int width, int height, int[] argb) {
@@ -48,5 +54,13 @@ public interface ZonePictureSource {
 
     /** A background picture whose rows repeat at its width, with bands covering every row. */
     record Backdrop(Picture picture, List<Band> bands) {
+    }
+
+    /**
+     * Sprite frames over a private tile copy: each frame's piece tile indices index
+     * {@code tiles}, every piece uses palette line 0, and {@code paletteWords} holds that line
+     * as 16 Mega Drive colour words (32 bytes).
+     */
+    record Sprites(Pattern[] tiles, List<SpriteMappingFrame> frames, byte[] paletteWords) {
     }
 }

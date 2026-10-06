@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.openggf.mods.scene.RomSpriteRequest;
+import com.openggf.mods.scene.SceneBackdrop;
+import com.openggf.mods.scene.SceneImage;
+import com.openggf.mods.scene.SceneLevelStage;
 import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneSprite;
 import com.openggf.mods.scene.SceneSpriteSet;
@@ -43,6 +46,17 @@ class CardRecipesTest {
         @Override public SceneSpriteSet character(String characterCode) { return EMPTY; }
         @Override public SceneSpriteSet characterAccessory(String characterCode) { return EMPTY; }
         @Override public int[] characterPalette(String characterCode) { return new int[16]; }
+        @Override public boolean hasZonePictures(int zone, int act) { return false; }
+        @Override public SceneBackdrop zoneBackdrop(int zone, int act) { return null; }
+        @Override public SceneImage levelOverview(int zone, int act, int maxHeight) { return null; }
+        @Override public List<SceneLevelStage> levelStages(int zone, int act, int width, int headroom, int maxRise) {
+            return List.of();
+        }
+        @Override public SceneImage levelForeground(int zone, int act, int x, int y, int width, int height) {
+            return null;
+        }
+        @Override public boolean hasTitleCard(int zone, int act) { return false; }
+        @Override public SceneSpriteSet titleCard(int zone, int act) { return null; }
     };
 
     private static final SceneSpriteSet EMPTY = new SceneSpriteSet() {

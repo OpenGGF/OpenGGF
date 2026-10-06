@@ -28,7 +28,7 @@ public final class SlayScene implements ModScene {
 
     @Override
     public void enter(SceneContext ctx) {
-        SmallFont font = new SmallFont(ctx.art(), fontText);
+        SmallFont font = new SmallFont(fontText);
         Art art = new Art(ctx, iconText, cardText, relicText);
         shell = new Shell(ctx, font, art, Content.build());
         shell.goNow(new TitleScreen());

@@ -137,10 +137,11 @@ public final class ModSceneHost {
         private InputHandler input;
         private LogicalInputSnapshot logical = LogicalInputSnapshot.neutral();
         private SceneMouse mouse = SceneMouse.none();
-        private boolean[] previousButtons = new boolean[2];
+        private boolean previousLeft;
+        private boolean previousRight;
         private int lastX = -1;
         private int lastY = -1;
-        private boolean mouseActive;
+        private boolean mouseLast;
 
         Context(String owner, SceneServices services) {
             this.owner = owner;
@@ -149,11 +150,6 @@ public final class ModSceneHost {
                 @Override
                 public SceneImage png(byte[] pngBytes) {
                     return ScenePng.decode(pngBytes);
-                }
-
-                @Override
-                public SceneImage image(int w, int h, int[] argb) {
-                    return new SceneImage(w, h, argb);
                 }
 
                 @Override
@@ -212,15 +208,27 @@ public final class ModSceneHost {
                     ? services.mouse().map(handler.getMouseX(), handler.getMouseY())
                     : new int[] {-1, -1, 0};
             boolean moved = handler.hasMouseInputSeen() && (p[0] != lastX || p[1] != lastY);
-            if (moved || left || right || wheel != 0) {
-                mouseActive = true;
+            boolean leftPressed = left && !previousLeft;
+            boolean rightPressed = right && !previousRight;
+            // The latest input decides: mouse activity sets it, a key or pad press clears it.
+            if (moved || leftPressed || rightPressed || wheel != 0) {
+                mouseLast = true;
             }
-            SceneMouse m = new SceneMouse(p[0], p[1], p[2] != 0, moved, left, left && !previousButtons[0],
-                    !left && previousButtons[0], right && !previousButtons[1], wheel, mouseActive);
+            if (handler.isAnyKeyJustPressed() || padPressed(logical)) {
+                mouseLast = false;
+            }
+            SceneMouse m = new SceneMouse(p[0], p[1], p[2] != 0, moved, left, leftPressed, !left && previousLeft,
+                    right, rightPressed, !right && previousRight, wheel, mouseLast);
             lastX = p[0];
             lastY = p[1];
-            previousButtons = new boolean[] {left, right};
+            previousLeft = left;
+            previousRight = right;
             return m;
+        }
+
+        private static boolean padPressed(LogicalInputSnapshot in) {
+            return in.player1().pressedMask() != 0 || in.player1().actionPressedMask() != 0
+                    || in.player1().startPressed();
         }
 
         @Override

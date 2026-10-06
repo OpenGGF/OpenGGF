@@ -68,7 +68,7 @@ class TestModSceneHost {
             canvas.clear(0x102040);
             canvas.fill(10, 10, 20, 5, 0x80FF0000);
             canvas.text("Hi!", 4, 4, 0xFFFFFFFF);
-            canvas.draw(ctx.art().image(2, 1, new int[] {0xFFFF0000, 0x00000000}), 50, 50,
+            canvas.draw(new SceneImage(2, 1, new int[] {0xFFFF0000, 0x00000000}), 50, 50,
                     SceneDraw.plain().withFlipX(true).withScale(2));
         }
 
@@ -181,6 +181,51 @@ class TestModSceneHost {
         assertEquals(List.of("enter", "update:0", "exit"), probe.calls, "exit runs once, at shutdown");
         host.cleanup();
         assertEquals(3, probe.calls.size(), "a second cleanup has nothing left to close");
+    }
+
+    @Test
+    void theMouseReportsBothButtonsEdgesAndWhetherItWasTheLastInput() {
+        List<SceneMouse> seen = new ArrayList<>();
+        ModSceneHost host = new ModSceneHost();
+        host.open(owned(() -> new ModScene() {
+            @Override
+            public void enter(SceneContext ctx) {
+            }
+
+            @Override
+            public void update(SceneContext ctx) {
+                seen.add(ctx.mouse());
+            }
+
+            @Override
+            public void draw(SceneContext ctx, SceneCanvas canvas) {
+            }
+        }), new SceneServices(null, null, temp, (x, y) -> new int[] {(int) x / 2, (int) y / 2, 1}, () -> { },
+                () -> { }), 320, 224);
+        InputHandler input = new InputHandler();
+        Runnable tick = () -> {
+            input.refreshLogicalSnapshot();
+            host.update(input);
+            input.update();
+        };
+        input.handleMouseMove(100, 60);
+        tick.run();
+        input.handleMouseButton(org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        tick.run();
+        tick.run();
+        input.handleMouseButton(org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+        tick.run();
+        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_E, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        tick.run();
+
+        SceneMouse moved = seen.get(0);
+        assertEquals(50, moved.x(), "mapped to logical pixels");
+        assertTrue(moved.moved() && moved.inside() && moved.lastInputWasMouse());
+        assertTrue(seen.get(1).rightPressed() && seen.get(1).rightDown());
+        assertTrue(seen.get(2).rightDown() && !seen.get(2).rightPressed(), "held, not pressed again");
+        assertTrue(seen.get(3).rightReleased() && !seen.get(3).rightDown());
+        assertFalse(seen.get(4).lastInputWasMouse(), "a key press hands the last input back to the keyboard");
+        host.close();
     }
 
     @Test

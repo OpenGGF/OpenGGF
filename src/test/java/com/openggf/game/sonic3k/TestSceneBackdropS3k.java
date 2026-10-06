@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -194,9 +195,57 @@ class TestSceneBackdropS3k {
         assertNull(art.levelOverview(2, 0, MAP_HEIGHT), "MGZ1 overview");
         assertNull(art.levelOverview(10, 1, MAP_HEIGHT), "SSZ2 overview");
         assertThrows(IllegalArgumentException.class, () -> art.levelOverview(1, 0, 0), "maxHeight 0");
+        assertTrue(art.levelStages(2, 0, STAGE_WIDTH, STAGE_HEADROOM, STAGE_RISE).isEmpty(), "MGZ1 stages");
+        assertNull(art.levelForeground(2, 0, 0, 0, STAGE_WIDTH, STAGE_HEIGHT), "MGZ1 foreground");
+        for (Zone zone : SUPPORTED) {
+            assertTrue(art.hasZonePictures(zone.zone(), zone.act()), zone.name() + " is supported");
+        }
+        assertFalse(art.hasZonePictures(2, 0), "MGZ1 is asked, not guessed");
+        assertFalse(art.hasZonePictures(10, 1), "SSZ2");
+        assertFalse(art.hasZonePictures(-1, 0), "negative zone");
         SceneRomArt none = SceneRomArtFactory.create(rom, GameId.S3K, () -> null, () -> null);
+        assertFalse(none.hasZonePictures(0, 0), "no source");
         assertNull(none.zoneBackdrop(0, 0), "no source");
         assertNull(none.levelOverview(0, 0, MAP_HEIGHT), "no source overview");
+        assertFalse(none.hasTitleCard(0, 0), "no source");
+        assertNull(none.titleCard(0, 0), "no source title card");
+    }
+
+    @Test
+    void titleCardsHaveTheirFourElements() throws Exception {
+        Rom rom = TestEnvironment.currentRom();
+        SceneRomArt art = SceneRomArtFactory.create(rom, GameId.S3K, () -> null, () -> null,
+                new Sonic3kZoneArt(rom));
+        Path dir = Files.createDirectories(Path.of("target", "scene-backdrops"));
+        Map<String, int[]> zoneNames = new LinkedHashMap<>();
+        for (Zone zone : List.of(SUPPORTED.get(0), SUPPORTED.get(2), SUPPORTED.get(3), SUPPORTED.get(4))) {
+            assertTrue(art.hasTitleCard(zone.zone(), zone.act()), zone.name());
+            com.openggf.mods.scene.SceneSpriteSet card = art.titleCard(zone.zone(), zone.act());
+            assertNotNull(card, zone.name());
+            assertSame(card, art.titleCard(zone.zone(), zone.act()), zone.name() + " cached");
+            assertEquals(4, card.frameCount(), zone.name() + ": banner, zone name, ZONE, act");
+            for (int frame = 0; frame < 4; frame++) {
+                SceneImage image = card.frame(frame).image();
+                writePng(image, dir.resolve("titlecard-" + zone.name() + "-" + frame + ".png").toFile());
+                Set<Integer> colours = new HashSet<>();
+                int opaque = 0;
+                for (int pixel : image.pixels()) {
+                    if ((pixel >>> 24) != 0) {
+                        opaque++;
+                        colours.add(pixel);
+                    }
+                }
+                assertTrue(image.width() > 8 && opaque > 40, zone.name() + " frame " + frame + " is drawn: "
+                        + image.width() + "x" + image.height() + ", " + opaque + " pixels");
+                assertTrue(colours.size() >= 2, zone.name() + " frame " + frame + " has its colours");
+            }
+            zoneNames.put(zone.name(), card.frame(1).image().pixels());
+        }
+        assertFalse(java.util.Arrays.equals(zoneNames.get("aiz1"), zoneNames.get("hcz1")),
+                "each zone's name comes from its own letters");
+        assertFalse(art.hasTitleCard(13, 0), "no card for a competition stage");
+        assertFalse(art.hasTitleCard(0, 2), "no act 3");
+        assertNull(art.titleCard(13, 0));
     }
 
     /**

@@ -5,6 +5,7 @@ import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.scroll.S3kBackdropBands;
+import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardArt;
 import com.openggf.level.Map;
 import com.openggf.level.Pattern;
 import com.openggf.level.animation.AniPlcParser;
@@ -19,7 +20,8 @@ import java.util.function.IntFunction;
 
 /**
  * S3K zone pictures for mod scenes ({@code SceneRomArt.zoneBackdrop}, {@code levelOverview},
- * {@code levelStages} and {@code levelForeground}). Each supported act is built as a detached level
+ * {@code levelStages} and {@code levelForeground}; title cards come from
+ * {@link Sonic3kTitleCardArt}). Each supported act is built as a detached level
  * ({@link Sonic3k#buildDetachedLevel}: explicit bootstrap mode and Sonic's palette, nothing
  * published), its animated tiles are put at the state the level shows on load into a private
  * copy of the tile array, and the planes are rasterised on the CPU. Nothing here reads a live
@@ -152,6 +154,25 @@ public final class Sonic3kZoneArt implements ZonePictureSource {
                     0x500, 0, 0, 0xB00, Integer.MAX_VALUE, S3kBackdropBands::ssz1Clouds, Integer.MAX_VALUE);
         }
         return null;
+    }
+
+    @Override
+    public boolean supports(int zone, int act) {
+        return profile(zone, act) != null;
+    }
+
+    @Override
+    public boolean hasTitleCard(int zone, int act) {
+        return Sonic3kTitleCardArt.supports(zone, act);
+    }
+
+    @Override
+    public Sprites titleCard(int zone, int act) {
+        try {
+            return Sonic3kTitleCardArt.build(rom, zone, act);
+        } catch (IOException e) {
+            throw new IllegalStateException("Title card art unavailable: " + e.getMessage(), e);
+        }
     }
 
     @Override

@@ -292,16 +292,40 @@ patch cannot forge a scene's owner or run one outside the owner's fault boundary
 unreachable from the pinned surface; `GameLoop`'s scene entry points are package-private
 for that reason. The engine closes an open scene at shutdown (so `ModScene.exit` runs) and
 deletes a scene image's GPU texture once the image goes 120 frames undrawn, uploading it again
-if it is drawn later. `SceneRomArt.zoneBackdrop(zone, act)`,
-`SceneRomArt.levelOverview(zone, act, maxHeight)` and
-`SceneRomArt.levelForeground(zone, act, x, y, width, height)` are default methods returning
-`null`, and `SceneRomArt.levelStages(zone, act, width, headroom, maxRise)` one returning an
-empty list, so existing implementors keep compiling. Stages come from the engine-internal
-`level.render.LevelFloorScanner`, which reads the act's primary-path collision the way a floor
-sensor does (layout cell, block, chunk descriptor flips and solidity bits, solid tile height)
-and never touches a live level; `SceneLevelStage` copies its per-column floor array in and out. The stock implementation converts values from the
+if it is drawn later.
+
+Value types are built to evolve without breaking callers: `SceneDraw`, `SceneMouse` and
+`SceneLevelStage` are final classes rather than records, so no canonical constructor is pinned.
+`SceneDraw` is built only from `plain()` and its `with...` methods; `SceneMouse` only by the
+engine (`none()` for tests), with left and right `Down`/`Pressed`/`Released` edges and
+`lastInputWasMouse()` (the latest input was the mouse rather than a key or pad press) in place
+of the old latching `active`; `SceneLevelStage` keeps its `(x, floorY, width, floor)`
+constructor and gains value equality. `RomSpriteRequest` stays a record but its constructor
+rejects a null DPLC layout, a DPLC address below `-1` and a size on compressed art, and gains
+the `uncompressed` and `compressedWithDplc` factories. Images built from pixels have one
+constructor, `new SceneImage(width, height, argb)`; `SceneArt` keeps `png` and `rom`.
+
+`SceneContext`, `SceneCanvas`, `SceneArt`, `SceneRomArt`, `SceneSpriteSet`, `SceneStorage` and
+`SceneAudio` are implemented by the engine; creators use them (and may fake them in tests) but
+the candidate may add methods to them. `SceneRomArt`'s zone pictures are abstract methods with
+an explicit support query instead of defaults that returned `null`: `hasZonePictures(zone, act)`
+is true exactly where `zoneBackdrop`, `levelOverview(zone, act, maxHeight)`,
+`levelStages(zone, act, width, headroom, maxRise)` and `levelForeground(zone, act, x, y, width,
+height)` produce pictures. Today that is five Sonic 3 & Knuckles acts, each in one
+representative presentation state its Javadoc names (AIZ1 after the intro, AIZ2 as a fresh act
+2 load, HCZ1 below the waterline, LBZ1 as loaded, SSZ1's backdrop as the cloud sea); they are
+the acts the Slay the Robotnik example visits, and further acts or states are extension points.
+`hasTitleCard(zone, act)` and `titleCard(zone, act)` return an act's stock title card as four
+sprites (banner, zone name, "ZONE", act) from the card's own KosM art and mappings
+(`game.sonic3k.titlecard.Sonic3kTitleCardArt`, reusing `Sonic3kTitleCardMappings` and the VRAM
+layout `Sonic3kTitleCardManager` loads), with the ROM's slide-in, hold and exit timings
+documented so a scene can animate it; Sonic 1 and Sonic 2 have neither yet. Stages come from the
+engine-internal `level.render.LevelFloorScanner`, which reads the act's primary-path collision
+the way a floor sensor does (layout cell, block, chunk descriptor flips and solidity bits, solid
+tile height) and never touches a live level. The stock implementation converts values from the
 engine-internal `level.render.ZonePictureSource`; for S3K, `Sonic3kZoneArt` builds a detached
 level from explicit inputs (no session, settings or live graphics), primes animated tiles into a
 private tile array and rasterises on the CPU with `PlaneRasterizer`. Keeping the source in
-`level.render` leaves `game` free of `mods` dependencies (the ArchUnit cycle ratchet). All additions are additive to the unpublished 0.7 candidate; the
-descriptor and `ModApiVersion` remain 0.7.0 and the normalized pin is updated in place.
+`level.render` leaves `game` free of `mods` dependencies (the ArchUnit cycle ratchet). These are
+in-place changes to the unpublished 0.7 candidate; the descriptor and `ModApiVersion` remain
+0.7.0 and the normalized pin is updated in place.

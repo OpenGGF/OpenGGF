@@ -1,6 +1,5 @@
 package slaytherobotnik.art;
 
-import com.openggf.mods.scene.SceneArt;
 import com.openggf.mods.scene.SceneImage;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -33,7 +32,7 @@ public final class TextArt {
     }
 
     /** Parses every sprite in the file. */
-    public static Map<String, SceneImage> parse(SceneArt art, byte[] text) {
+    public static Map<String, SceneImage> parse(byte[] text) {
         Map<Character, Integer> palette = new HashMap<>();
         palette.put('.', 0);
         Map<String, SceneImage> out = new LinkedHashMap<>();
@@ -47,7 +46,7 @@ public final class TextArt {
             }
             if (line.isBlank()) {
                 if (spriteName != null) {
-                    out.put(spriteName, build(art, rows, palette));
+                    out.put(spriteName, build(rows, palette));
                     spriteName = null;
                     rows.clear();
                 }
@@ -61,7 +60,7 @@ public final class TextArt {
             }
             if (line.startsWith("sprite ")) {
                 if (spriteName != null) {
-                    out.put(spriteName, build(art, rows, palette));
+                    out.put(spriteName, build(rows, palette));
                     rows.clear();
                 }
                 mode = "sprite";
@@ -78,12 +77,12 @@ public final class TextArt {
             }
         }
         if (spriteName != null) {
-            out.put(spriteName, build(art, rows, palette));
+            out.put(spriteName, build(rows, palette));
         }
         return out;
     }
 
-    private static SceneImage build(SceneArt art, List<String> rows, Map<Character, Integer> palette) {
+    private static SceneImage build(List<String> rows, Map<Character, Integer> palette) {
         int width = 1;
         for (String row : rows) {
             width = Math.max(width, row.length());
@@ -97,6 +96,6 @@ public final class TextArt {
                 pixels[y * width + x] = color == null ? 0 : color;
             }
         }
-        return art.image(width, height, pixels);
+        return new SceneImage(width, height, pixels);
     }
 }

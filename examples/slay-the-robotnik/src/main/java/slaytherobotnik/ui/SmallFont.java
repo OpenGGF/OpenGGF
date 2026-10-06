@@ -1,6 +1,5 @@
 package slaytherobotnik.ui;
 
-import com.openggf.mods.scene.SceneArt;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneImage;
@@ -27,7 +26,7 @@ public final class SmallFont {
     private final SceneImage atlas;
     private final Map<Character, int[]> glyphs = new HashMap<>();
 
-    public SmallFont(SceneArt art, byte[] fontText) {
+    public SmallFont(byte[] fontText) {
         Map<Character, List<String>> parsed = new HashMap<>();
         Character current = null;
         for (String raw : new String(fontText, StandardCharsets.UTF_8).split("\n")) {
@@ -63,7 +62,7 @@ public final class SmallFont {
             glyphs.put(e.getKey(), new int[] {x, w});
             x += w + 1;
         }
-        atlas = art.image(Math.max(1, totalWidth), HEIGHT, pixels);
+        atlas = new SceneImage(Math.max(1, totalWidth), HEIGHT, pixels);
     }
 
     private int[] glyph(char c) {

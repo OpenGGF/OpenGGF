@@ -43,6 +43,8 @@ final class RomSceneArt implements SceneRomArt {
     private final Map<List<Integer>, Optional<SceneImage>> overviewCache = new HashMap<>();
     /** Per zone, act, width, headroom and rise. */
     private final Map<List<Integer>, List<SceneLevelStage>> stageCache = new HashMap<>();
+    /** Per zone and act. */
+    private final Map<List<Integer>, SceneSpriteSet> titleCardCache = new HashMap<>();
 
     RomSceneArt(Rom rom, GameId game, Supplier<PlayerSpriteArtProvider> players, Supplier<SpriteArtSet> tailsTails,
             ZonePictureSource zones) {
@@ -150,8 +152,13 @@ final class RomSceneArt implements SceneRomArt {
 
     // Zone pictures are built on the calling thread: the ROM's reads share one channel position.
     @Override
+    public boolean hasZonePictures(int zone, int act) {
+        return zones != null && zone >= 0 && act >= 0 && zones.supports(zone, act);
+    }
+
+    @Override
     public SceneBackdrop zoneBackdrop(int zone, int act) {
-        if (zones == null || zone < 0 || act < 0) {
+        if (!hasZonePictures(zone, act)) {
             return null;
         }
         return backdropCache.computeIfAbsent(List.of(zone, act),
@@ -164,7 +171,7 @@ final class RomSceneArt implements SceneRomArt {
         if (maxHeight < 1) {
             throw new IllegalArgumentException("maxHeight must be positive: " + maxHeight);
         }
-        if (zones == null || zone < 0 || act < 0) {
+        if (!hasZonePictures(zone, act)) {
             return null;
         }
         int rows = Math.min(maxHeight, 4096);
@@ -179,7 +186,7 @@ final class RomSceneArt implements SceneRomArt {
             throw new IllegalArgumentException("Invalid stage size: width " + width + ", headroom " + headroom
                     + ", maxRise " + maxRise);
         }
-        if (zones == null || zone < 0 || act < 0) {
+        if (!hasZonePictures(zone, act)) {
             return List.of();
         }
         return stageCache.computeIfAbsent(List.of(zone, act, width, headroom, maxRise), key -> {
@@ -196,11 +203,28 @@ final class RomSceneArt implements SceneRomArt {
         if (width < 1 || height < 1 || width > 4096 || height > 4096) {
             throw new IllegalArgumentException("Foreground size must be 1-4096: " + width + "x" + height);
         }
-        if (zones == null || zone < 0 || act < 0) {
+        if (!hasZonePictures(zone, act)) {
             return null;
         }
         ZonePictureSource.Picture picture = zones.foreground(zone, act, x, y, width, height);
         return picture == null ? null : toSceneImage(picture);
+    }
+
+    @Override
+    public boolean hasTitleCard(int zone, int act) {
+        return zones != null && zone >= 0 && act >= 0 && zones.hasTitleCard(zone, act);
+    }
+
+    @Override
+    public SceneSpriteSet titleCard(int zone, int act) {
+        if (!hasTitleCard(zone, act)) {
+            return null;
+        }
+        return titleCardCache.computeIfAbsent(List.of(zone, act), key -> {
+            ZonePictureSource.Sprites card = zones.titleCard(zone, act);
+            return new LazySpriteSet(card.frames(), List.of(), card.tiles(), padPalette(
+                    SpriteRasterizer.colors(card.paletteWords())), 0, 0, null);
+        });
     }
 
     private static SceneImage toSceneImage(ZonePictureSource.Picture picture) {

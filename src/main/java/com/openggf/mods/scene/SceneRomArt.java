@@ -67,23 +67,39 @@ public interface SceneRomArt {
     int[] characterPalette(String characterCode);
 
     /**
-     * A zone's background as the game loads it (level art, layout, load-time palette and
-     * animated tiles at their first frame), with its parallax bands; see
-     * {@link SceneBackdrop} for drawing it. Built from the ROM on the first request for a
-     * zone and act (tens of milliseconds) and cached; it never touches a running level.
+     * Whether this act has zone pictures: {@link #zoneBackdrop}, {@link #levelOverview},
+     * {@link #levelStages} and {@link #levelForeground} return null (or no stages) exactly when
+     * this is false. Sonic 1 and Sonic 2 have none yet.
      *
-     * <p>Sonic 3 &amp; Knuckles zone ids: 0 Angel Island, 1 Hydrocity, 6 Launch Base,
-     * 10 Sky Sanctuary. Supported today: Angel Island acts 1 and 2 (act 1's main level, not
-     * the intro beach), Hydrocity act 1 (seen from below the waterline), Launch Base act 1
-     * and Sky Sanctuary act 1 (its cloud sea).
+     * <p>Sonic 3 &amp; Knuckles zone ids: 0 Angel Island, 1 Hydrocity, 6 Launch Base, 10 Sky
+     * Sanctuary (act 0 is act 1, act 1 is act 2). Five acts are supported, each pictured in one
+     * representative state chosen for presentation, from the act's own level data:
+     * <ul>
+     *   <li>Angel Island act 1 ({@code 0, 0}): the main level after the intro, with the art and
+     *       palette its skip-intro load uses; never the intro beach.</li>
+     *   <li>Angel Island act 2 ({@code 0, 1}): the burnt jungle a fresh act 2 load shows (not
+     *       act 1's fire transition palette).</li>
+     *   <li>Hydrocity act 1 ({@code 1, 0}): seen from below the waterline: the background art
+     *       strips the act uploads once the camera is well under the water.</li>
+     *   <li>Launch Base act 1 ({@code 6, 0}): as it loads.</li>
+     *   <li>Sky Sanctuary act 1 ({@code 10, 0}): the backdrop is the cloud sea the act draws
+     *       while the camera is among the clouds; the overview and foreground are as it loads.</li>
+     * </ul>
+     * Animated tiles show their first frame. Further acts and states are extension points.
+     */
+    boolean hasZonePictures(int zone, int act);
+
+    /**
+     * A zone's background (level art, layout, palette and animated tiles in the state
+     * {@link #hasZonePictures} describes) with its parallax bands; see {@link SceneBackdrop} for
+     * drawing it. Built from the ROM on the first request
+     * for a zone and act (tens of milliseconds) and cached; it never touches a running level.
      *
      * @param zone the game's zone id
      * @param act  0 for act 1, 1 for act 2
-     * @return the backdrop, or null when this game or zone has none
+     * @return the backdrop, or null when {@link #hasZonePictures} is false
      */
-    default SceneBackdrop zoneBackdrop(int zone, int act) {
-        return null;
-    }
+    SceneBackdrop zoneBackdrop(int zone, int act);
 
     /**
      * A whole act as one small opaque picture, for maps and level-select screens: the
@@ -101,19 +117,16 @@ public interface SceneRomArt {
      *         map.height(), SceneDraw.plain());
      * }</pre>
      *
-     * <p>Same zones and acts as {@link #zoneBackdrop}. Built on the first request (up to about
-     * a second for a long act) and cached per zone, act and {@code maxHeight}; it never touches
-     * a running level.
+     * <p>Built on the first request (up to about a second for a long act) and cached per zone,
+     * act and {@code maxHeight}; it never touches a running level.
      *
      * @param zone      the game's zone id
      * @param act       0 for act 1, 1 for act 2
      * @param maxHeight the tallest result wanted, in pixels (1 or more; 4096 at most is used)
-     * @return the picture, or null when this game or zone has none
+     * @return the picture, or null when {@link #hasZonePictures} is false
      * @throws IllegalArgumentException when {@code maxHeight} is less than 1
      */
-    default SceneImage levelOverview(int zone, int act, int maxHeight) {
-        return null;
-    }
+    SceneImage levelOverview(int zone, int act, int maxHeight);
 
     /**
      * Where an act's floor runs with room above it: stages at least {@code width} pixels wide
@@ -136,21 +149,19 @@ public interface SceneRomArt {
      * // screen row stage.floorAt(stage.x() + x) - top
      * }</pre>
      *
-     * <p>Same zones and acts as {@link #zoneBackdrop}; empty for others. Found on the first
-     * request for a zone, act and sizes and cached; it never touches a running level.
+     * <p>Found on the first request for a zone, act and sizes and cached; it never touches a
+     * running level.
      *
      * @param zone     the game's zone id
      * @param act      0 for act 1, 1 for act 2
      * @param width    the narrowest stage wanted, in pixels (1 or more)
      * @param headroom the clear height wanted above the floor, in pixels (1 or more)
      * @param maxRise  how far the floor may rise or fall along a stage, in pixels (0 or more)
-     * @return the stages, possibly none
+     * @return the stages, possibly none; always none when {@link #hasZonePictures} is false
      * @throws IllegalArgumentException when {@code width} or {@code headroom} is less than 1 or
      *                                  {@code maxRise} is negative
      */
-    default java.util.List<SceneLevelStage> levelStages(int zone, int act, int width, int headroom, int maxRise) {
-        return java.util.List.of();
-    }
+    java.util.List<SceneLevelStage> levelStages(int zone, int act, int width, int headroom, int maxRise);
 
     /**
      * An act's foreground plane for a rectangle of level pixels, unscaled: the level art the
@@ -159,18 +170,58 @@ public interface SceneRomArt {
      * layout, so a {@link #zoneBackdrop} drawn first shows through. Both priorities are drawn.
      * Not cached: build it once per placement and keep it.
      *
-     * <p>Same zones and acts as {@link #zoneBackdrop}.
-     *
      * @param zone   the game's zone id
      * @param act    0 for act 1, 1 for act 2
      * @param x      the rectangle's left edge in level pixels (may be negative)
      * @param y      its top edge (may be negative)
      * @param width  1 to 4096 pixels
      * @param height 1 to 4096 pixels
-     * @return the picture, or null when this game or zone has none
+     * @return the picture, or null when {@link #hasZonePictures} is false
      * @throws IllegalArgumentException when a side is outside 1-4096
      */
-    default SceneImage levelForeground(int zone, int act, int x, int y, int width, int height) {
-        return null;
-    }
+    SceneImage levelForeground(int zone, int act, int x, int y, int width, int height);
+
+    /**
+     * Whether {@link #titleCard} has this act's card. Sonic 3 &amp; Knuckles has one for zones
+     * 0-12 (acts 0 and 1), zone 22 (Lava Reef's boss act 0 and Hidden Palace act 1) and zone 23
+     * act 0 (the Death Egg boss act). Sonic 1 and Sonic 2 have none yet.
+     */
+    boolean hasTitleCard(int zone, int act);
+
+    /**
+     * The act's title card as four sprites: the four objects the ROM's title card slides on
+     * and off screen ({@code ObjArray_TtlCard}), from the card's own art and mappings, coloured
+     * with Sonic's palette line ({@code Pal_SonicTails}: the card draws in line 0, the player's
+     * line, so this is how it looks when Sonic or Tails plays). Each frame's origin is its
+     * object's position. Cached per zone and act.
+     *
+     * <ol start="0">
+     *   <li>the red banner, with "SONIC 3 &amp; KNUCKLES" at its foot;</li>
+     *   <li>the zone's name;</li>
+     *   <li>"ZONE";</li>
+     *   <li>"ACT" and the act number. The ROM leaves this one out for Sky Sanctuary (10),
+     *       Doomsday (12) and Hidden Palace (22, act 1).</li>
+     * </ol>
+     *
+     * <p>To animate it as the ROM does, on its 320-pixel-wide screen (on a wider screen add
+     * {@code (width - 320) / 2} to every x to centre it):
+     * <table>
+     *   <caption>Title card elements</caption>
+     *   <tr><th>Frame</th><th>Starts at</th><th>Slides to</th><th>Moves</th><th>Exit tick</th></tr>
+     *   <tr><td>0 banner</td><td>(96, -112)</td><td>(96, 64)</td><td>vertically</td><td>1</td></tr>
+     *   <tr><td>1 zone name</td><td>(480, 96)</td><td>(160, 96)</td><td>horizontally</td><td>3</td></tr>
+     *   <tr><td>2 "ZONE"</td><td>(636, 128)</td><td>(252, 128)</td><td>horizontally</td><td>5</td></tr>
+     *   <tr><td>3 act</td><td>(708, 160)</td><td>(260, 160)</td><td>horizontally</td><td>7</td></tr>
+     * </table>
+     * All of them slide in together at 16 pixels per frame and stop on their targets. Once every
+     * one has arrived, the card holds for 90 frames. Then an exit counter counts 1, 2, 3, ...
+     * once per frame, and each element starts leaving at 32 pixels per frame (the banner
+     * upwards, the others to the right) when the counter reaches its exit tick, until it is off
+     * screen.
+     *
+     * @param zone the game's zone id
+     * @param act  0 for act 1, 1 for act 2
+     * @return the four frames, or null when {@link #hasTitleCard} is false
+     */
+    SceneSpriteSet titleCard(int zone, int act);
 }

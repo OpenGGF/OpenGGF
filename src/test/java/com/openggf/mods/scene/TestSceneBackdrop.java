@@ -1,7 +1,7 @@
 package com.openggf.mods.scene;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
@@ -54,50 +54,6 @@ class TestSceneBackdrop {
     }
 
     @Test
-    void romArtWithoutBackdropsReturnsNull() {
-        SceneRomArt plain = new SceneRomArt() {
-            @Override
-            public String gameId() {
-                return "s3k";
-            }
-
-            @Override
-            public byte[] read(int address, int length) {
-                return new byte[length];
-            }
-
-            @Override
-            public int[] palette(int address, int colors) {
-                return new int[colors];
-            }
-
-            @Override
-            public SceneSpriteSet sprites(RomSpriteRequest request, int[] palette) {
-                return null;
-            }
-
-            @Override
-            public SceneSpriteSet character(String characterCode) {
-                return null;
-            }
-
-            @Override
-            public SceneSpriteSet characterAccessory(String characterCode) {
-                return null;
-            }
-
-            @Override
-            public int[] characterPalette(String characterCode) {
-                return new int[16];
-            }
-        };
-        assertNull(plain.zoneBackdrop(0, 0), "the default keeps existing implementors compiling and unsupported");
-        assertNull(plain.levelOverview(0, 0, 100));
-        assertEquals(List.of(), plain.levelStages(0, 0, 400, 100, 24));
-        assertNull(plain.levelForeground(0, 0, 0, 0, 400, 224));
-    }
-
-    @Test
     void levelStagesKeepTheirOwnFloor() {
         int[] floor = {100, 101, 102, 103};
         SceneLevelStage stage = new SceneLevelStage(500, 101, 4, floor);
@@ -111,5 +67,8 @@ class TestSceneBackdrop {
         assertThrows(IllegalArgumentException.class, () -> new SceneLevelStage(0, 0, 3, floor), "one row per column");
         assertThrows(IllegalArgumentException.class, () -> new SceneLevelStage(0, 0, 0, new int[0]), "empty");
         assertThrows(IllegalArgumentException.class, () -> new SceneLevelStage(0, 0, 1, null), "no floor");
+        assertEquals(4, stage.width());
+        assertEquals(new SceneLevelStage(500, 101, 4, new int[] {100, 101, 102, 103}), stage, "a value");
+        assertNotEquals(new SceneLevelStage(500, 101, 4, new int[] {100, 101, 102, 104}), stage);
     }
 }

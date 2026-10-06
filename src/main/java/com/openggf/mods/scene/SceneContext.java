@@ -41,7 +41,7 @@ public interface SceneContext {
     /** The mouse, in logical screen pixels. */
     SceneMouse mouse();
 
-    /** Image creation: PNGs, pixels built in code, and ROM sprites. */
+    /** Image decoding: PNGs from the mod's files and art from the player's ROM. */
     SceneArt art();
 
     /** Music and sound effects (the base game's sound driver and IDs). */

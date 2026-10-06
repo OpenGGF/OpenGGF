@@ -33,7 +33,7 @@ public final class Art {
 
     public Art(SceneContext ctx, byte[] iconText, byte[] cardText, byte[] relicText) {
         this.ctx = ctx;
-        this.icons = TextArt.parse(ctx.art(), iconText);
+        this.icons = TextArt.parse(iconText);
         this.cards = new CardRecipes(cardText);
         this.relics = new CardRecipes(relicText);
     }
@@ -62,7 +62,7 @@ public final class Art {
         SceneImage image = icons.get(name);
         if (image == null) {
             if (blank == null) {
-                blank = ctx.art().image(1, 1, new int[1]);
+                blank = new SceneImage(1, 1, new int[1]);
             }
             return blank;
         }
@@ -188,7 +188,7 @@ public final class Art {
                             int colour = (i & 1) == 0 ? b >> 4 : b & 15;
                             pixels[y * 32 + x] = colour == 0 ? 0 : palette[colour];
                         }
-                        slotFaces[f] = ctx.art().image(32, 32, pixels);
+                        slotFaces[f] = new SceneImage(32, 32, pixels);
                     }
                 }
             } catch (RuntimeException e) {
@@ -254,7 +254,7 @@ public final class Art {
                     pixels[y * w + x] = pilot ? 0 : image.pixel(x, y);
                 }
             }
-            emptyTornado = new SceneSprite(ctx.art().image(w, h, pixels), plane.originX(), plane.originY());
+            emptyTornado = new SceneSprite(new SceneImage(w, h, pixels), plane.originX(), plane.originY());
         }
         return emptyTornado;
     }

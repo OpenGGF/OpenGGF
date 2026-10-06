@@ -87,7 +87,9 @@ public final class HelloScene implements ModScene {
 the player's display aspect decides (320 for 4:3, 352, 400 for 16:9, 528 or 800) unless your
 mod requires an aspect, so lay out from `width()`;
 `ticks()` since the scene opened, `keyDown`/`keyPressed` for raw GLFW keys, and
-`mouse()` in game pixels (position, buttons, `wheel()` notches, `over(x, y, w, h)`).
+`mouse()` in game pixels (position, left and right button down/pressed/released edges,
+`wheel()` notches, `over(x, y, w, h)`, and `lastInputWasMouse()` for showing hover highlights
+only to mouse players).
 `input()` is the merged keyboard and gamepad state with `menu*` flags for single presses;
 its `player1()` masks let you build key repeat (Slay the Robotnik's `ui/Controls`).
 
@@ -113,7 +115,7 @@ Images come from `ctx.art()`:
 
 ```java
 SceneImage logo = ctx.art().png(pngBytes);                  // a PNG from your mod's files
-SceneImage dot = ctx.art().image(2, 2, new int[] {           // pixels made in code
+SceneImage dot = new SceneImage(2, 2, new int[] {            // pixels made in code
         0xFFFFFFFF, 0xFFFF0000, 0xFFFF0000, 0xFFFFFFFF});
 ```
 
@@ -168,8 +170,25 @@ zoomed-out picture of the act's whole level. To put characters in the level itse
 above them, read from its collision, each with the floor row of every column, and
 `rom.levelForeground(zone, act, x, y, width, height)` renders that part of the level at full
 size with transparent sky, to draw over the backdrop. All of these are built from the level
-data without starting a level and return null (or no stages) for zones the engine cannot
-picture. Slay the Robotnik stages its fights, Starposts and capsules on the level
+data without starting a level. Ask `rom.hasZonePictures(zone, act)` first: today it is true for
+five acts (zone ids 0 Angel Island, 1 Hydrocity, 6 Launch Base, 10 Sky Sanctuary; act 0 is act
+1), each shown in one state chosen for presentation:
+
+| Zone, act | Pictured as |
+|---|---|
+| 0, 0 (Angel Island 1) | the main level after the intro (never the intro beach) |
+| 0, 1 (Angel Island 2) | the burnt jungle a fresh act 2 load shows |
+| 1, 0 (Hydrocity 1) | from below the waterline |
+| 6, 0 (Launch Base 1) | as it loads |
+| 10, 0 (Sky Sanctuary 1) | backdrop: the cloud sea; overview and foreground as it loads |
+
+Elsewhere, and in Sonic 1 and 2, the methods return null (or no stages).
+
+`rom.titleCard(zone, act)` returns an act's stock title card as four sprites (the red banner,
+the zone's name, "ZONE" and the act number) whose origins are the ROM's object positions; its
+javadoc lists where each slides from and to, at what speed, and when each leaves, so a scene
+can play the card. `rom.hasTitleCard(zone, act)` says which acts have one (Sonic 3 & Knuckles
+zones 0-12, 22 and 23 today). Slay the Robotnik stages its fights, Starposts and capsules on the level
 (`scene/LevelStages`, standing each character on the floor under it) and draws its act maps
 over the overview (`scene/MapView`).
 
