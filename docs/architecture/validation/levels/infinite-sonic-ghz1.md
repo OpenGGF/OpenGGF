@@ -620,3 +620,16 @@ Main checkout, `feature/ai-infinite-sonic`, base `29696afd70`; mod, tests and do
 **236 run, 0 failures, 32 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01; skips are the
 two crossing tests in acts without platforms or bounceable flyers). The policy steers in the air;
 an unsteered ballistic sweep is recorded in the design note. Not covered: rendering and live play.
+
+## Mixed halves and slope tiers (0.25.0, 2026-10-06)
+
+Main checkout, `feature/ai-infinite-sonic`, base `e142a2ec66`; mod, tests and docs only.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| Section joins and slope tiers | `openSectionsMixRomHalvesAndClimbBetweenTiers` | GHZ1, 1,000 sections: halves meet without a step, open sections change by whole 32 px tiers, the first two stretches stay level, more than 30 climbs and 30 drops, more than 300 asymmetric sections |
+| Traversal on mixed terrain | `everyZoneActBuildsATraversableDryCourse`, `protectedTraversalPreservesEncountersAcrossRebaseAndReplay` and the plan tests | All 18 acts; corridors, platforms, roads, hazards, monitors and encounters re-derived from the new floors |
+
+**237 run, 0 failures, 32 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01; the skips are the
+two crossing tests in acts without platforms or bounceable flyers). The plan fallout is in the design
+note. Not covered: rendering (art continuity where two columns meet) and live play.

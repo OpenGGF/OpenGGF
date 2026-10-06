@@ -922,7 +922,8 @@ class TestInfiniteSonic {
             assertTrue(frames > 10, "and took a visible moment: " + frames);
             loop.step(); // the course takes over from the restored state
             int landed = history.currentFrame();
-            assertTrue(landed < menuFrame - 240 - 60, "at least a second of play before the death");
+            // The death is 240 frames before the menu; a landing exactly 60 frames before it is a full second.
+            assertTrue(landed <= menuFrame - 240 - 60, "at least a second of play before the death");
 
             assertFalse(gameOver());
             assertFalse(player.getDead());
@@ -1652,6 +1653,27 @@ class TestInfiniteSonic {
         assertTrue(ledges > 10, "some drops are plain ledges: " + ledges);
     }
 
+    @Test void openSectionsMixRomHalvesAndClimbBetweenTiers() throws Exception {
+        launch(WidescreenAspect.NATIVE_4_3);
+        int mixed = 0, climbs = 0, drops = 0;
+        for (long section = 0; section < 1000; section++) {
+            if (isCorridor(section) || platformRun(section)) continue;
+            long base = section * 512;
+            assertEquals(floorAt(base + 255), floorAt(base + 256), "halves meet without a step");
+            int step = floorAt(base + 511) - floorAt(base);
+            if (section < 8) assertEquals(0, step, "the opening stretches keep one tier");
+            assertEquals(0, Math.floorMod(step, 32), "open sections join whole tiers");
+            if (step < 0) climbs++;
+            if (step > 0) drops++;
+            for (int x = 0; x < 256; x++) {
+                if (floorAt(base + x) != floorAt(base + 511 - x)) { mixed++; break; }
+            }
+        }
+        // Green Hill's own columns climb and drop 64px, so some stretches rise mid-stretch.
+        assertTrue(climbs > 30 && drops > 30, "slopes change tier: " + climbs + " up, " + drops + " down");
+        assertTrue(mixed > 300, "most sections are not one column and its mirror: " + mixed);
+    }
+
     @ParameterizedTest @ValueSource(ints = {64, 96, 128, 160, 192})
     void realPhysicsCanClearEachGapInBothDirections(int width) throws Exception {
         var fixture = launch(WidescreenAspect.NATIVE_4_3);
@@ -2019,7 +2041,9 @@ class TestInfiniteSonic {
                 high = Math.min(high, floorAt(x));
                 low = Math.max(low, floorAt(x));
             }
-            assertEquals(high - 128, surface, "the road runs 128px above the highest floor beneath it");
+            // The plan measures its whole window, which may reach a higher crest past the last platform.
+            assertTrue(surface <= high - 128, "the road runs at least 128px above the highest floor beneath it: "
+                    + surface + " over " + high);
             assertTrue(end <= (stretch * 4 + 2) * 512 + 320, "the road ends with ground left before the next corridor");
             int previous = low;
             long previousRight = start - 160;

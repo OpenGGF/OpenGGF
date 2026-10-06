@@ -108,8 +108,9 @@ Other character/team selections retain their stock behavior.
 
 The mod reads your Sonic 1 ROM through the normal level loader. It selects continuous
 floor sections with at least 112 pixels of open space above them (so mazes, tunnels and
-overhangs are skipped), aligns them vertically, and pairs them with horizontal reflections
-so their outside edges join. Every run lays a **new random course**: a fresh seed is drawn each
+overhangs are skipped) and aligns them vertically. Each 512-pixel section is the left half
+of one ROM column joined to the mirrored right half of another wherever their floors meet
+at the same height in the middle, so a section is seldom one column and its reflection. Every run lays a **new random course**: a fresh seed is drawn each
 time a course loads (starting from the title, RESTART), while CONTINUE keeps the course it revives
 on. The seed chooses sections as you move. Leaderboards are per zone, whatever the course. Art, palettes,
 music and collision tiles come from the ROM; the jar contains only code and a manifest.
@@ -152,7 +153,11 @@ Every fourth section after the opening is a jump corridor: a 64 to 192 pixel pit
 between flat banks, with at least 160 pixels of approach on either side. Corridors
 also change elevation. The course moves between four ground levels 32 pixels apart,
 climbing or dropping up to 64 pixels per corridor. Climbs use pits of at most 128
-pixels, and 192 pixel pits stay level. Some drops are a plain ledge with no pit. Hold Jump while moving to clear a pit;
+pixels, and 192 pixel pits stay level. From the third stretch on, the ground between
+corridors can also climb or drop a level on the zone's own slopes and come back before
+the next corridor, where a ROM column's slope meets another level's floor (Green Hill's
+64-pixel hills and Scrap Brain's 32-pixel ramps; Marble's bumps vary the floor within a level,
+and the flat floors of Spring Yard, Labyrinth and Star Light vary only in look). Some drops are a plain ledge with no pit. Hold Jump while moving to clear a pit;
 releasing Jump early shortens the arc. Enemy patrols never occupy these corridors.
 Four rings arc over each pit, highest in the middle, tracing the jump that clears it.
 
