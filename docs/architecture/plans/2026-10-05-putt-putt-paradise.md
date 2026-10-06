@@ -1581,3 +1581,14 @@ reference captures. No golf ROM coverage skipped. The broad invocation used
 all three automatically discovered absolute ROM properties. Diagnostics were
 inspected and deleted with `run_categories.py --acknowledge
 20261006T033103Z-3e0b6bd6`; no raw output is archived.
+
+Implementation is retained locally in `332f042ea1b7ae60e027742be807b6aa2536df21`.
+The final creator sources compiled with `javac --release 21` against this
+worktree's engine classes from the completed focused/broad runs, then passed
+the normal `GgfModCli package` boundary. The refreshed jar contains 87 classes
+and only `META-INF/openggf-mod.yaml` (147,329 bytes). The additional engine
+compile requested by `build.py` was cancelled before Maven admission because
+the shared queue lacked memory capacity; it is not recorded as a build pass.
+The unchanged, uncommitted launcher still performs its normal queued engine
+compile and bootstrap-metadata refresh when run. Main `develop` remains at
+`fc4729c375`; this follow-up has no merge or push.
