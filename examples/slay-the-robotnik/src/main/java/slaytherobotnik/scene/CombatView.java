@@ -87,6 +87,16 @@ final class CombatView implements RunScreen.RoomView {
     private int cursor;
     private int wait;
 
+    // Entrance: the hero runs in, the enemies arrive one after another (a boss drops in and is
+    // named), and only then does the first turn's replay start.
+    private static final int HERO_ENTRY = 22;
+    private static final int ENEMY_ENTRY = 20;
+    private static final int ENEMY_STAGGER = 6;
+    private static final int BOSS_NAME_TICKS = 56;
+    private final boolean bossFight;
+    private final int entranceLength;
+    private int entrance;
+
     // Interaction.
     private Card selected;
     private int potionMenu = -1;
@@ -183,6 +193,21 @@ final class CombatView implements RunScreen.RoomView {
         }
         // The opening draw and start-of-combat effects replay from the first event.
         snapshotStart();
+        bossFight = combat.roomType().equals("Boss");
+        entranceLength = enemiesInAt() + (bossFight ? BOSS_NAME_TICKS : 0);
+    }
+
+    /** The frame of the entrance by which every enemy has arrived. */
+    private int enemiesInAt() {
+        return Math.max(HERO_ENTRY, ENEMY_STAGGER * (shown.size() - 1) + ENEMY_ENTRY);
+    }
+
+    /** How far the hero (index -1) or enemy {@code index} is through arriving, 0 to 1. */
+    private float arrival(int index) {
+        if (index < 0) {
+            return Math.min(1f, entrance / (float) HERO_ENTRY);
+        }
+        return Math.max(0f, Math.min(1f, (entrance - index * ENEMY_STAGGER) / (float) ENEMY_ENTRY));
     }
 
     /** Presented state before any event: full starting values, empty hand. */
@@ -267,6 +292,14 @@ final class CombatView implements RunScreen.RoomView {
         tickEffects();
         easeHand(shell.width());
         boolean fast = shell.ctx.input().player1().actionHeldMask() != 0 || shell.in.mouse.leftDown();
+        if (entrance < entranceLength) {
+            int before = entrance;
+            entrance = Math.min(entranceLength, entrance + (fast ? 3 : 1));
+            if (bossFight && before < enemiesInAt() && entrance >= enemiesInAt()) {
+                showBanner(room.encounterName().toUpperCase(), BOSS_NAME_TICKS);
+            }
+            return;
+        }
         if (wait > 0) {
             wait -= (fast ? 3 : 1) * (shell.profile.get(SettingsScreen.FAST_COMBAT) == 1 ? 2 : 1);
             if (wait > 0) {
@@ -927,13 +960,14 @@ final class CombatView implements RunScreen.RoomView {
         }
         if (bannerTicks > 0 && banner != null) {
             float t = Math.min(1f, bannerTicks / 10f);
-            int bw = shell.font.width(banner) * 3 + 24;
+            int scale = shell.font.width(banner) * 3 + 24 <= w ? 3 : 2;
+            int bw = shell.font.width(banner) * scale + 24;
             int bx = (w - bw) / 2;
             int by = 70;
             c.fill(0, by - 6, w, 27, Colors.alpha(0xFF000020, 0.7f * t));
             c.fill(0, by - 6, w, 1, Colors.alpha(Colors.GOLD, t));
             c.fill(0, by + 20, w, 1, Colors.alpha(Colors.GOLD, t));
-            shell.font.drawOutlined(c, banner, bx + 12, by, Colors.alpha(Colors.GOLD, t), 3);
+            shell.font.drawOutlined(c, banner, bx + 12, by + (3 - scale) * 3, Colors.alpha(Colors.GOLD, t), scale);
         }
         if (messageTicks > 0 && message != null) {
             float t = Math.min(1f, messageTicks / 15f);
@@ -963,6 +997,13 @@ final class CombatView implements RunScreen.RoomView {
         }
         int x = PLAYER_X + Math.round(lungeOffset) + shake;
         int ground = feet(PLAYER_X);
+        float in = arrival(-1);
+        if (in < 1f) {
+            // Running in from the left edge, slowing to the spot.
+            int runX = Math.round(-24 + (PLAYER_X + 24) * Ease.outCubic(in));
+            Poses.hero(shell, c, id, Poses.RUN, shell.ticks, runX, feet(Math.max(0, runX)), SceneDraw.plain());
+            return;
+        }
         c.fill(x - 14, ground - 2, 28, 3, 0x50000000);
         float f = flash.getOrDefault(player, 0) / 6f;
         Poses.hero(shell, c, id, anim, animTicks, x, ground,
@@ -1007,6 +1048,18 @@ final class CombatView implements RunScreen.RoomView {
             f = 1f;
         }
         int ground = feet(enemyX(index));
+        float in = arrival(index);
+        if (in < 1f) {
+            // Arriving: a boss drops in from above, everything else comes in from the right.
+            float rest = 1f - Ease.outCubic(in);
+            if (bossFight) {
+                EnemyVisuals.draw(shell, c, enemy, x, Math.round(ground - rest * (ground + 40)), shell.ticks, 0f, 1f);
+            } else {
+                EnemyVisuals.draw(shell, c, enemy, x + Math.round(rest * (shell.width() + 60 - x)), ground,
+                        shell.ticks + index * 17L, 0f, 1f);
+            }
+            return;
+        }
         EnemyVisuals.Box box = EnemyVisuals.draw(shell, c, enemy, x, ground, shell.ticks + index * 17L, f, alpha);
         boxes.put(enemy, box);
         if (deathTicks != null) {

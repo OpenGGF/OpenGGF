@@ -61,7 +61,8 @@ class TestSlayTheRobotnikScene {
                 assertEquals(fight ? "CombatRoom" : "EventRoom", currentRoom(scene), "after jumping to " + room);
                 if (fight) {
                     jump.invoke(scene, "kill");
-                    play(harness, 200);
+                    // Long enough for a boss's entrance, the replay and the victory banner.
+                    play(harness, 260);
                     // Two-phase bosses revive instead of dying; everything else is beaten.
                     if (!currentRoom(scene).equals("CombatRoom")) {
                         fightsWon++;
