@@ -18,6 +18,9 @@ import slaytherobotnik.ui.Gfx;
  * middle of the same picture.
  */
 final class CardArt {
+    /** Card pictures are stills: every animated layer shows its first frame. */
+    private static final long STILL = 0;
+
     /** Width of the large card's art window, which recipe offsets are measured in. */
     private static final int RECIPE_W = 76;
 
@@ -65,7 +68,7 @@ final class CardArt {
         if (recipe != null) {
             // Small cards show the middle of the large picture at a smaller scale.
             float zoom = w < RECIPE_W ? 0.5f : 1f;
-            painter.paint(c, recipe, cx, cy, zoom, x, y, w, h);
+            painter.paint(c, recipe, cx, cy, zoom, x, y, w, h, STILL);
         } else {
             fallback(c, card, x, y, w, h, cx, cy);
         }
@@ -76,7 +79,7 @@ final class CardArt {
     private void fallback(SceneCanvas c, Card card, int x, int y, int w, int h, float cx, float cy) {
         String who = characterFor(card);
         if (card.type().equals(CardType.ATTACK)) {
-            painter.effect(c, "speed", x, y, w, h, cx, cy, 1f, shell.ticks);
+            painter.effect(c, "speed", x, y, w, h, cx, cy, 1f, STILL);
         }
         if (who != null) {
             int anim = switch (card.type()) {

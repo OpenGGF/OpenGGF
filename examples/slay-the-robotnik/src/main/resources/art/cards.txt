@@ -3,11 +3,13 @@
 #   card-id: layer; layer; ...        layers are drawn back to front
 #
 #   bg RRGGBB                         backdrop colour (default: red Attack, blue Skill, gold Power)
-#   hero sonic|tails|knuckles FRAME   a character mapping frame (hex), or anim=ID to animate
-#   rom KEY FRAME                     a ROM sprite frame (keys in art/RomSprites.java), or anim=F1/F2@TICKS
+#   hero sonic|tails|knuckles FRAME   a character mapping frame (hex), or anim=ID for an animation's first frame
+#   rom KEY FRAME                     a ROM sprite frame (keys in art/RomSprites.java); anim=F1/F2@TICKS shows F1
 #   monitor FACE                      an item monitor: Map_Monitor face 3-10, static, or up to 3 characters
 #   icon NAME                         a text-art icon from icons.txt
 #   fx speed|burst|sparkle|stars|rings|fire|water|zap
+#
+# Card pictures are stills: animated layers and effects show their first frame.
 #
 # Then optionally: X,Y offset from the art window's centre (large-card pixels, 76x42 window),
 # flip, xSCALE (x2, x0.5) and aALPHA (a0.5). Small cards draw the same picture at half size.

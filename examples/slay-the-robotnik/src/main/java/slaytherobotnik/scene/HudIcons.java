@@ -129,7 +129,8 @@ final class HudIcons {
         java.util.List<slaytherobotnik.art.CardRecipes.Layer> picture = shell.art.relics().recipe(relic.id());
         if (picture != null) {
             c.clip(x, y, size, size);
-            new RecipePainter(shell).paint(c, picture, x + size / 2f, y + size / 2f, size / 24f, x, y, size, size);
+            new RecipePainter(shell).paint(c, picture, x + size / 2f, y + size / 2f, size / 24f, x, y, size, size,
+                    shell.ticks);
             c.unclip();
         } else {
             gem(shell, c, relic, x + (size - 12) / 2, y + (size - 12) / 2);

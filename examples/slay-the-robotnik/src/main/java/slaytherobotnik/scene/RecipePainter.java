@@ -22,22 +22,23 @@ final class RecipePainter {
     /**
      * Paints {@code layers} centred on {@code cx, cy}; offsets and scales are multiplied by
      * {@code zoom}. Whole-window effects fill {@code x, y, w, h}. Backdrop layers are skipped
-     * (the caller draws the backdrop).
+     * (the caller draws the backdrop). Animated layers and effects show their state at
+     * {@code ticks}; pass a constant for a still picture.
      */
     void paint(SceneCanvas c, List<CardRecipes.Layer> layers, float cx, float cy, float zoom, int x, int y, int w,
-            int h) {
+            int h, long ticks) {
         for (CardRecipes.Layer layer : layers) {
-            drawLayer(c, layer, cx, cy, zoom, x, y, w, h);
+            drawLayer(c, layer, cx, cy, zoom, x, y, w, h, ticks);
         }
     }
 
     private void drawLayer(SceneCanvas c, CardRecipes.Layer layer, float cx, float cy, float zoom, int x, int y,
-            int w, int h) {
+            int w, int h, long ticks) {
         float lx = cx + layer.x() * zoom;
         float ly = cy + layer.y() * zoom;
         SceneDraw style = SceneDraw.plain().withScale(layer.scale() * zoom).withFlipX(layer.flip())
                 .withAlpha(layer.alpha());
-        long t = shell.ticks;
+        long t = ticks;
         switch (layer.kind()) {
             case "hero" -> {
                 var set = shell.art.character(layer.key());
