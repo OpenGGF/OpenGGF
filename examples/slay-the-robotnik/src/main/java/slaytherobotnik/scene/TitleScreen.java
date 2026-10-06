@@ -1,25 +1,37 @@
 package slaytherobotnik.scene;
 
 import com.openggf.mods.scene.SceneCanvas;
-import com.openggf.mods.scene.SceneDraw;
-import com.openggf.mods.scene.SceneSprite;
 import java.util.ArrayList;
 import java.util.List;
 import slaytherobotnik.run.Run;
 import slaytherobotnik.ui.Colors;
+import slaytherobotnik.ui.Ease;
 import slaytherobotnik.ui.Gfx;
 import slaytherobotnik.ui.Hotspots;
 import slaytherobotnik.ui.SmallFont;
 
-/** The mod's title: logo, the three heroes, and the main menu. */
+/**
+ * The mod's title: a fly-through of the run's zones ({@link TitleShow}), the logo dropping in
+ * and the main menu sliding in beneath it.
+ */
 final class TitleScreen implements Screen {
+    /** Frames the logo takes to drop in, and between one menu item sliding in and the next. */
+    private static final int LOGO_TICKS = 30;
+    private static final int ITEM_STAGGER = 4;
+    private static final int ITEM_TICKS = 16;
+    /** The left column holding the logo and the menu; the chase plays across the rest. */
+    private static final int COLUMN_X = 10;
+    private static final int COLUMN_W = 196;
     private final Hotspots spots = new Hotspots();
     private final List<String[]> items = new ArrayList<>();
+    private final TitleShow show = new TitleShow();
     private boolean hasSave;
+    private long opened = -1;
 
     @Override
     public void enter(Shell shell) {
         shell.music(Sounds.MUSIC_TITLE);
+        opened = shell.ticks;
         hasSave = shell.hasSavedRun();
         items.clear();
         if (hasSave) {
@@ -36,8 +48,8 @@ final class TitleScreen implements Screen {
     private void layout(Shell shell) {
         spots.clear();
         int w = 150;
-        int x = (shell.width() - w) / 2;
-        int y = 116 - (items.size() - 6) * 7;
+        int x = COLUMN_X + (COLUMN_W - w) / 2;
+        int y = 82 - (items.size() - 6) * 7;
         for (String[] item : items) {
             spots.add(item[0], x, y, w, 13);
             y += 14;
@@ -78,25 +90,46 @@ final class TitleScreen implements Screen {
         int w = shell.width();
         int h = shell.height();
         long t = shell.ticks;
-        Backdrops.menu(c, w, h, t);
-        drawLogo(shell, c, w / 2, 18, t);
-        drawHeroes(shell, c, w, h, t);
+        long age = opened < 0 ? Long.MAX_VALUE / 2 : t - opened;
+        show.draw(shell, c, age);
+        // Shade the column so the menu reads over the level, fading out towards the chase.
+        for (int i = 0; i < 12; i++) {
+            int x0 = COLUMN_X + COLUMN_W - 40 + i * 6;
+            c.fill(i == 0 ? 0 : x0, 0, i == 0 ? x0 : 6, h, Colors.alpha(0xFF000818, 0.5f * (1f - i / 12f)));
+        }
+        // The logo drops in from above and settles with a small bounce.
+        float drop = age >= LOGO_TICKS ? 1f : Ease.outBack(age / (float) LOGO_TICKS);
+        drawLogo(shell, c, COLUMN_X + COLUMN_W / 2, Math.round(-50 + 60 * drop), 4, t);
         layout(shell);
+        List<Hotspots.Spot> spotList = spots.spots();
+        if (!spotList.isEmpty()) {
+            Hotspots.Spot first = spotList.get(0);
+            Hotspots.Spot last = spotList.get(spotList.size() - 1);
+            float panel = Math.min(1f, Math.max(0f, (age - LOGO_TICKS / 2f) / ITEM_TICKS));
+            c.fill(first.x() - 8, first.y() - 6, first.w() + 16, last.y() + last.h() - first.y() + 12,
+                    Colors.alpha(0xFF000818, 0.45f * panel));
+        }
         for (int i = 0; i < items.size(); i++) {
-            Hotspots.Spot s = spots.spots().get(i);
-            Gfx.button(c, shell.font, items.get(i)[1], s.x(), s.y(), s.w(), s.h(), spots.isFocused(s.id()), true, t);
+            Hotspots.Spot s = spotList.get(i);
+            float in = Math.min(1f, Math.max(0f, (age - LOGO_TICKS / 2f - i * ITEM_STAGGER) / ITEM_TICKS));
+            if (in <= 0f) {
+                continue;
+            }
+            int slide = Math.round((1f - Ease.outCubic(in)) * -(s.x() + s.w()));
+            Gfx.button(c, shell.font, items.get(i)[1], s.x() + slide, s.y(), s.w(), s.h(), spots.isFocused(s.id()),
+                    true, t);
         }
         String foot = "FAN-MADE • USES YOUR SONIC 3 & KNUCKLES ROM • V0.1";
         shell.font.drawShadowed(c, foot.replace("•", "-"), (w - shell.font.width(foot.replace("•", "-"))) / 2,
                 h - 8, Colors.TEXT_DIM);
     }
 
-    static void drawLogo(Shell shell, SceneCanvas c, int cx, int y, long t) {
+    /** The logo centred on {@code cx}: "SLAY THE" over a big two-tone "ROBOTNIK" at {@code scale}. */
+    static void drawLogo(Shell shell, SceneCanvas c, int cx, int y, int scale, long t) {
         SmallFont f = shell.font;
         String top = "SLAY THE";
         f.drawOutlined(c, top, cx - f.width(top) * 2 / 2, y, Colors.WHITE, 2);
         String big = "ROBOTNIK";
-        int scale = 5;
         int bw = f.width(big) * scale;
         int bx = cx - bw / 2;
         int by = y + 16;
@@ -109,22 +142,12 @@ final class TitleScreen implements Screen {
         }
         f.draw(c, big, bx, by + bob + 2, 0xFF900000, scale);
         f.draw(c, big, bx, by + bob, 0xFFDA2424, scale);
-        c.clip(bx - 2, by + bob, bw + 4, 12);
+        c.clip(bx - 2, by + bob, bw + 4, scale * 5 / 2);
         f.draw(c, big, bx, by + bob, 0xFFFFDA24, scale);
         c.unclip();
         int shine = (int) ((t * 3) % (bw + 120)) - 60;
-        c.clip(bx, by + bob, bw, 25);
-        c.fill(bx + shine, by + bob, 6, 25, 0x60FFFFFF);
+        c.clip(bx, by + bob, bw, scale * 5);
+        c.fill(bx + shine, by + bob, 6, scale * 5, 0x60FFFFFF);
         c.unclip();
-    }
-
-    private static void drawHeroes(Shell shell, SceneCanvas c, int w, int h, long t) {
-        int floor = h - 48;
-        String[] heroes = {"tails", "sonic", "knuckles"};
-        int[] xs = {w / 2 - 150, w / 2 - 118, w / 2 + 130};
-        for (int i = 0; i < heroes.length; i++) {
-            Poses.hero(shell, c, heroes[i], Poses.WAIT, t + i * 37L, xs[i], floor + 1,
-                    SceneDraw.plain().withFlipX(i == 2));
-        }
     }
 }
