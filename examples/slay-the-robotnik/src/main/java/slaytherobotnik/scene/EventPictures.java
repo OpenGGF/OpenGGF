@@ -17,6 +17,13 @@ final class EventPictures {
             case "event:collector" -> new CollectorPicture(shell);
             case "event:campfire" -> new CampfirePicture(shell);
             case "event:clogged_pipe" -> new PipePicture(shell);
+            case "event:medic" -> new MedicPicture(shell);
+            case "event:workbench" -> new WorkbenchPicture(shell);
+            case "event:mirror_monitor" -> new MirrorMonitorPicture(shell);
+            case "event:terminal" -> new TerminalPicture(shell);
+            case "event:lab" -> new LabPicture(shell);
+            case "event:hyper_remote" -> new HyperRemotePicture(shell);
+            case "event:robotnik_offer" -> new RobotnikOfferPicture(shell);
             default -> new StaticPicture(art);
         };
     }

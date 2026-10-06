@@ -11,6 +11,7 @@ public final class Poses {
     public static final int WALK = 0x00;
     public static final int RUN = 0x01;
     public static final int ROLL = 0x02;
+    public static final int PUSH = 0x04;
     public static final int WAIT = 0x05;
     public static final int LOOK_UP = 0x07;
     public static final int DUCK = 0x08;
@@ -87,6 +88,8 @@ public final class Poses {
             int tailFrame = switch (anim) {
                 case WAIT, DUCK, LOOK_UP, VICTORY -> 0x22 + (int) ((ticks / 8) % 5);
                 case ROLL, SPINDASH -> 5 + (int) ((ticks / 3) % 4);
+                // Obj_Tails_Tail_AniSelection: pushing uses AniTails_Tail09, frames $1E-$21 every 10 frames.
+                case PUSH -> 0x1E + (int) ((ticks / 10) % 4);
                 default -> -1;
             };
             if (tails != null && tailFrame >= 0) {

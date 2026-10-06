@@ -46,20 +46,26 @@ public final class Events {
             int removeCost = 50;
             boolean canHeal = ctx.run().rings() >= healCost;
             boolean canRemove = ctx.run().rings() >= removeCost && !ctx.run().removableCards().isEmpty();
-            ctx.page("A rabbit in a medic's cap waves from beside a Starpost. \"Patch you up? Or I can take "
+            ctx.page("A rabbit with a first-aid kit waves from beside a Starpost. \"Patch you up? Or I can take "
                             + "something off your hands. Rings only, sorry!\"",
                     canHeal ? EventOption.of("[Heal]", "Pay " + healCost + " rings. Heal 25% of your Max HP.", () -> {
-                        ctx.run().spendRings(healCost);
-                        ctx.run().heal(ctx.run().maxHp() / 4);
-                        ctx.page("You feel much better.", ctx.leave());
+                        ctx.page("The rabbit counts your rings, then gives the Starpost a spin.");
+                        ctx.illustrate("heal", () -> {
+                            ctx.run().spendRings(healCost);
+                            ctx.run().heal(ctx.run().maxHp() / 4);
+                            ctx.page("You feel much better.", ctx.leave());
+                        });
                     }) : EventOption.locked("[Heal]", "Requires " + healCost + " rings."),
                     canRemove ? EventOption.of("[Purify]", "Pay " + removeCost + " rings. Remove a card.", () ->
                             ctx.chooseCards("Choose a card to remove.", ctx.run().removableCards(), 1, 1, chosen -> {
-                                ctx.run().spendRings(removeCost);
-                                for (Card card : chosen) {
-                                    ctx.run().removeCard(card);
-                                }
-                                ctx.page("\"There, all lighter now!\"", ctx.leave());
+                                ctx.page("The rabbit takes your rings and the card, and gives a little hop...");
+                                ctx.illustrate("purify:" + named(chosen.get(0)), () -> {
+                                    ctx.run().spendRings(removeCost);
+                                    for (Card card : chosen) {
+                                        ctx.run().removeCard(card);
+                                    }
+                                    ctx.page("\"There, all lighter now!\"", ctx.leave());
+                                });
                             })) : EventOption.locked("[Purify]", "Requires " + removeCost + " rings."),
                     ctx.leave());
         }));
@@ -162,8 +168,16 @@ public final class Events {
                                             + "just where you put them."
                                     : "Someone has left a workbench out here, tools neatly laid out. A note reads: "
                                             + "BACK IN 5 MINUTES. -T.",
-                            EventOption.of("[Tinker]", "Upgrade a card.", () ->
-                                    ctx.upgradeCards(1, () -> ctx.page("Good as new. Better, even.", ctx.leave()))),
+                            EventOption.of("[Tinker]", "Upgrade a card.", () -> {
+                                List<Card> before = ctx.run().upgradableCards();
+                                ctx.upgradeCards(1, () -> {
+                                    Card upgraded = firstUpgraded(before);
+                                    ctx.page(tails ? "You pick up your spanner and get to work." : "You borrow the tools. "
+                                            + "Sparks fly.");
+                                    ctx.illustrate("tinker" + (upgraded == null ? "" : ":" + named(upgraded)),
+                                            () -> ctx.page("Good as new. Better, even.", ctx.leave()));
+                                });
+                            }),
                             ctx.leave());
                 }));
 
@@ -190,9 +204,16 @@ public final class Events {
         c.addEvent(new EventDef("event:mirror_monitor", "Mirror Monitor", "event:mirror_monitor", Set.of(2, 3), null,
                 ctx -> ctx.page("A monitor shows your own reflection. Then a second reflection appears beside the "
                                 + "first.",
-                        EventOption.of("[Copy]", "Duplicate a card in your deck.", () ->
-                                ctx.duplicateCard(() -> ctx.page("The screen fizzles out. Your deck feels heavier.",
-                                        ctx.leave()))),
+                        EventOption.of("[Copy]", "Duplicate a card in your deck.", () -> {
+                            int before = ctx.run().deck().size();
+                            ctx.duplicateCard(() -> {
+                                List<Card> deck = ctx.run().deck();
+                                Card copy = deck.size() > before ? deck.get(before) : null;
+                                ctx.page("You hold the card up to the screen. Your reflection reaches back...");
+                                ctx.illustrate("copy" + (copy == null ? "" : ":" + named(copy)),
+                                        () -> ctx.page("The screen fizzles out. Your deck feels heavier.", ctx.leave()));
+                            });
+                        }),
                         ctx.leave())));
 
         // Scrap Ooze.
@@ -232,13 +253,19 @@ public final class Events {
                             }
                         }
                         ctx.chooseCards("Choose a card to add to your deck.", cards, 1, 1, chosen -> {
-                            ctx.obtainCard(chosen.get(0).id(), false);
-                            ctx.page("You download the file and close the terminal.", ctx.leave());
+                            ctx.page("The file starts to download...");
+                            ctx.illustrate("read:" + named(chosen.get(0)), () -> {
+                                ctx.obtainCard(chosen.get(0).id(), false);
+                                ctx.page("You download the file and close the terminal.", ctx.leave());
+                            });
                         });
                     }),
                     EventOption.of("[Rest]", "Heal " + heal + " HP.", () -> {
-                        ctx.run().heal(heal);
-                        ctx.page("The hum of the servers sends you to sleep.", ctx.leave());
+                        ctx.page("You sit down by the warm, humming servers. Just for a minute...");
+                        ctx.illustrate("rest", () -> {
+                            ctx.run().heal(heal);
+                            ctx.page("The hum of the servers sends you to sleep.", ctx.leave());
+                        });
                     }));
         }));
 
@@ -246,13 +273,22 @@ public final class Events {
         c.addEvent(new EventDef("event:robotnik_lab", "Robotnik's Lab", "event:lab", Set.of(2), null, ctx ->
                 ctx.page("Bubbling tubes line the walls of an abandoned laboratory. Most are labelled DO NOT DRINK.",
                         EventOption.of("[Search]", "Find 3 random potions.", () -> {
+                            List<PotionDef> found = new ArrayList<>();
                             for (int i = 0; i < 3; i++) {
                                 PotionDef potion = randomPotion(ctx);
                                 if (potion != null) {
-                                    ctx.addReward(new Reward.Potion(potion));
+                                    found.add(potion);
                                 }
                             }
-                            ctx.page("You fill your pockets with the least alarming colours.", ctx.leave());
+                            List<String> ids = new ArrayList<>();
+                            found.forEach(potion -> ids.add(potion.id()));
+                            ctx.page("You pull the drain levers. The tubes gurgle empty...");
+                            ctx.illustrate("search:" + String.join(",", ids), () -> {
+                                for (PotionDef potion : found) {
+                                    ctx.addReward(new Reward.Potion(potion));
+                                }
+                                ctx.page("You fill your pockets with the least alarming colours.", ctx.leave());
+                            });
                         }))));
 
         // The Woman in Blue.
@@ -310,27 +346,37 @@ public final class Events {
                             boss == null ? EventOption.locked("[Rematch]", "Nothing answers.")
                                     : EventOption.of("[Rematch]", "Fight " + boss.name()
                                             + " again. Obtain a rare relic.", () -> {
-                                        String relic = ctx.run().takeRelicFromPool(RelicTier.RARE);
-                                        if (relic != null) {
-                                            ctx.addReward(new Reward.RelicReward(relic));
-                                        }
-                                        ctx.fight(boss.id(), null);
+                                        ctx.page("You press the red button. Alarms wail, and " + boss.name()
+                                                + " fills the screen.");
+                                        ctx.illustrate("rematch:" + boss.id(), () -> {
+                                            String relic = ctx.run().takeRelicFromPool(RelicTier.RARE);
+                                            if (relic != null) {
+                                                ctx.addReward(new Reward.RelicReward(relic));
+                                            }
+                                            ctx.fight(boss.id(), null);
+                                        });
                                     }),
                             EventOption.of("[Jackpot]", "Gain 999 rings. Become <r>Cursed</r>: 2 Lost Rings.", () -> {
-                                ctx.run().gainRings(999);
-                                ctx.obtainCard(CommonCards.LOST_RINGS, false);
-                                ctx.obtainCard(CommonCards.LOST_RINGS, false);
-                                ctx.page("Rings pour from the ceiling until you are standing in a golden sea.",
-                                        ctx.leave());
+                                ctx.page("You press the yellow button. Something rumbles in the ceiling...");
+                                ctx.illustrate("jackpot", () -> {
+                                    ctx.run().gainRings(999);
+                                    ctx.obtainCard(CommonCards.LOST_RINGS, false);
+                                    ctx.obtainCard(CommonCards.LOST_RINGS, false);
+                                    ctx.page("Rings pour from the ceiling until you are standing in a golden sea.",
+                                            ctx.leave());
+                                });
                             }),
                             EventOption.of("[Overclock]", "Upgrade all cards. Become <r>Cursed</r>: Robotnik's "
                                     + "Laugh.", () -> {
-                                        for (Card card : ctx.run().upgradableCards()) {
-                                            ctx.run().upgradeCard(card);
-                                        }
-                                        ctx.obtainCard(CommonCards.ROBOTNIKS_LAUGH, false);
-                                        ctx.page("Every card in your deck crackles with energy. Somewhere, Robotnik "
-                                                + "is laughing.", ctx.leave());
+                                        ctx.page("You press the blue button. The remote crackles in your hand.");
+                                        ctx.illustrate("overclock", () -> {
+                                            for (Card card : ctx.run().upgradableCards()) {
+                                                ctx.run().upgradeCard(card);
+                                            }
+                                            ctx.obtainCard(CommonCards.ROBOTNIKS_LAUGH, false);
+                                            ctx.page("Every card in your deck crackles with energy. Somewhere, "
+                                                    + "Robotnik is laughing.", ctx.leave());
+                                        });
                                     }));
                 }));
 
@@ -356,18 +402,24 @@ public final class Events {
                                     + "arms! No more aching muscles! And a very reasonable warranty.\"",
                             EventOption.of("[Accept]", "Lose " + loss + " Max HP. Replace all basic Attacks with "
                                     + "5 <g>Robo Arms</g>.", () -> {
-                                        ctx.run().setMaxHp(ctx.run().maxHp() - loss);
-                                        for (Card card : basicAttacks(ctx.run())) {
-                                            ctx.run().removeCard(card);
-                                        }
-                                        for (int i = 0; i < 5; i++) {
-                                            ctx.obtainCard(CommonCards.ROBO_ARM, false);
-                                        }
-                                        ctx.page("\"Excellent! Do come back for the rest of the procedure.\"",
-                                                ctx.leave());
+                                        ctx.page("\"Hold still! This won't hurt a bit.\" Two metal arms swing in...");
+                                        ctx.illustrate("accept", () -> {
+                                            ctx.run().setMaxHp(ctx.run().maxHp() - loss);
+                                            for (Card card : basicAttacks(ctx.run())) {
+                                                ctx.run().removeCard(card);
+                                            }
+                                            for (int i = 0; i < 5; i++) {
+                                                ctx.obtainCard(CommonCards.ROBO_ARM, false);
+                                            }
+                                            ctx.page("\"Excellent! Do come back for the rest of the procedure.\"",
+                                                    ctx.leave());
+                                        });
                                     }),
-                            EventOption.of("[Refuse]", "", () -> ctx.page("\"Your loss, rodent!\" The speaker "
-                                    + "clicks off.", ctx.leave())));
+                            EventOption.of("[Refuse]", "", () -> {
+                                ctx.page("\"Your loss, rodent!\"");
+                                ctx.illustrate("refuse", () -> ctx.page("\"Your loss, rodent!\" The speaker clicks "
+                                        + "off.", ctx.leave()));
+                            }));
                 }));
     }
 
@@ -646,6 +698,21 @@ public final class Events {
                 ctx.page("\"Ooh. Shiny. Here, have this. It's a badge. It means we're friends.\"", ctx.leave());
             });
         });
+    }
+
+    /** How an event's picture is told a card: its id, with "+" when upgraded. */
+    private static String named(Card card) {
+        return card.id() + (card.upgraded() ? "+" : "");
+    }
+
+    /** The first of {@code before} that has since been upgraded (the card an upgrade choice picked), or null. */
+    private static Card firstUpgraded(List<Card> before) {
+        for (Card card : before) {
+            if (card.upgraded()) {
+                return card;
+            }
+        }
+        return null;
     }
 
     private static List<Card> basicAttacks(RunState run) {

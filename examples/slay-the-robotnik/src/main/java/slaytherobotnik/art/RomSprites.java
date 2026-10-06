@@ -32,6 +32,7 @@ final class RomSprites {
     private static final int PAL_MECHA_SUPER1 = 0x07DADC;     // Super Mecha Sonic cycle (word_7DA60 .headr2)
     private static final int PAL_MECHA_SUPER2 = 0x07DAFE;
     private static final int PAL_MECHA_SUPER3 = 0x07DB20;
+    private static final int PAL_KNUCKLES = 0x0A8AFC;          // Pal_Knuckles (line 0 when playing as Knuckles)
 
     private RomSprites() {
     }
@@ -215,6 +216,23 @@ final class RomSprites {
                     0x100000, 0x40060,                  // ArtUnc_Sonic
                     0x146816, 0x148378,                 // Map_SuperSonic, PLC_SuperSonic
                     DplcLayout.PLAYER, 0), superSonic(rom, key.charAt(key.length() - 1) - '0'));
+            case "lightning_sparks" -> rom.sprites(new RomSpriteRequest(
+                    0x18F8E4, Compression.UNCOMPRESSED, 0xA0, // ArtUnc_LightningShield_Sparks, at ArtTile_Shield_Sparks:
+                    0x019DC8, -1, DplcLayout.OBJECT, 0, 0x1F), aiz(rom)); // Map_LightningShield frames $C/$D, $1F tiles on
+            case "rabbit" -> rom.sprites(RomSpriteRequest.of(
+                    0x193706, Compression.NEMESIS,       // ArtNem_Rabbit (Pocky, Obj_Animal type 0)
+                    0x02CF32, 0), aiz(rom));             // Map_Animals5 (falling 0, hopping 1, popped out 2)
+            // The 1-Up monitor's face: Map_Monitor frame 2 puts the life icon (ArtTile_PlayerLifeIcon, $310
+            // tiles past ArtTile_Monitors) on the screen; drawn alone it is the face over a monitor box.
+            case "life_icon_sonic" -> rom.sprites(RomSpriteRequest.of(
+                    0x190D34, Compression.NEMESIS,       // ArtNem_SonicLifeIcon (PLC_01)
+                    0x01DBA2, 0).withTileOffset(0x310), aiz(rom));
+            case "life_icon_tails" -> rom.sprites(RomSpriteRequest.of(
+                    0x35CFFE, Compression.NEMESIS,       // ArtNem_TailsLifeIcon (PLC_07)
+                    0x01DBA2, 0).withTileOffset(0x310), aiz(rom));
+            case "life_icon_knuckles" -> rom.sprites(RomSpriteRequest.of(
+                    0x190E4C, Compression.NEMESIS,       // ArtNem_KnucklesLifeIcon (PLC_05), Pal_Knuckles on line 0
+                    0x01DBA2, 0).withTileOffset(0x310), lines(rom, PAL_KNUCKLES, 0, 16));
             default -> null;
         };
     }

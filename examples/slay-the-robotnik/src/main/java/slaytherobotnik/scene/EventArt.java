@@ -44,16 +44,6 @@ final class EventArt {
                 }
                 sparkles(shell, c, cx, y + 56, 40, t);
             }
-            case "event:medic" -> {
-                outdoors(c, x, y, w, h, ground);
-                Poses.stand(c, shell.art.romFrame("starpost", 0), cx + 22, ground, SceneDraw.plain());
-                // A first-aid box: white case, red cross.
-                c.fill(cx - 34, ground - 18, 30, 18, Colors.BLACK);
-                c.fill(cx - 33, ground - 17, 28, 16, Colors.WHITE);
-                c.fill(cx - 21, ground - 15, 4, 12, 0xFFDA2424);
-                c.fill(cx - 25, ground - 11, 12, 4, 0xFFDA2424);
-                hearts(c, cx - 19, ground - 28, t);
-            }
             case "event:monitor_row" -> {
                 outdoors(c, x, y, w, h, ground);
                 String[] faces = {"4", "1UP", "3"};
@@ -83,20 +73,6 @@ final class EventArt {
                     ring(shell, c, cx - 14 + i * 7, ground - 28 - (i % 2) * 4, t + i * 3);
                 }
             }
-            case "event:workbench" -> {
-                indoors(c, x, y, w, h, ground, 0xFF4C3424, 0xFF2C1C14);
-                // Bench, tools and a spring on top.
-                c.fill(cx - 44, ground - 26, 88, 6, 0xFF8C5C2C);
-                c.fill(cx - 40, ground - 20, 4, 20, 0xFF6C4420);
-                c.fill(cx + 36, ground - 20, 4, 20, 0xFF6C4420);
-                Poses.stand(c, shell.art.romFrame("spring", 0), cx + 20, ground - 26, SceneDraw.plain());
-                c.fill(cx - 30, ground - 30, 14, 3, 0xFFB6B6B6);  // spanner
-                c.fill(cx - 32, ground - 32, 4, 7, 0xFFB6B6B6);
-                c.fill(cx - 8, ground - 34, 3, 8, 0xFFDA2424);    // screwdriver
-                c.fill(cx - 8, ground - 30, 3, 4, 0xFFFFDA24);
-                Poses.hero(shell, c, "tails", Poses.WAIT, t, cx - 26, ground, SceneDraw.plain().withAlpha(
-                        shell.run != null && "tails".equals(shell.run.state().character().id()) ? 1f : 0.25f));
-            }
             case "event:waterfall" -> {
                 outdoors(c, x, y, w, h, ground);
                 c.fill(cx - 20, y, 40, ground - y, 0xFF2448B6);
@@ -119,35 +95,6 @@ final class EventArt {
                     Poses.centre(c, ring, cx, y + 64, SceneDraw.plain().withScale(0.9f).withAlpha(0.8f));
                 }
             }
-            case "event:mirror_monitor" -> {
-                indoors(c, x, y, w, h, ground, LAB_TOP, LAB_BOTTOM);
-                String hero = shell.run != null ? shell.run.state().character().id() : "sonic";
-                Poses.hero(shell, c, hero, Poses.WAIT, t, cx - 22, ground - 26, SceneDraw.plain());
-                Poses.hero(shell, c, hero, Poses.WAIT, t, cx + 22, ground - 26,
-                        SceneDraw.plain().withFlipX(true).withTint(0xA0B6DAFF));
-                monitor(shell, c, cx, ground, "1UP", t);
-            }
-            case "event:terminal" -> {
-                indoors(c, x, y, w, h, ground, LAB_TOP, LAB_BOTTOM);
-                c.fill(cx - 46, y + 20, 92, 70, 0xFF6C7C8C);
-                c.fill(cx - 42, y + 24, 84, 58, 0xFF001800);
-                for (int i = 0; i < 9; i++) {
-                    int len = 10 + (int) (((i * 37 + t / 6) * 13) % 60);
-                    c.fill(cx - 38, y + 28 + i * 6, len, 3, 0xFF24DA48);
-                }
-                if ((t / 20) % 2 == 0) {
-                    c.fill(cx - 38 + 4, y + 28 + 54, 4, 3, 0xFF24DA48);
-                }
-                c.fill(cx - 10, y + 90, 20, 10, 0xFF485868);
-                c.fill(cx - 30, ground - 8, 60, 8, 0xFF485868);
-            }
-            case "event:lab" -> {
-                indoors(c, x, y, w, h, ground, LAB_TOP, LAB_BOTTOM);
-                int[] liquids = {0xFF24DA48, 0xFFDA2490, 0xFF2490FF, 0xFFFFDA24};
-                for (int i = 0; i < 4; i++) {
-                    tube(c, x + 12 + i * 28, ground, liquids[i], t + i * 11);
-                }
-            }
             case "event:chao_cart" -> {
                 outdoors(c, x, y, w, h, ground);
                 c.fill(cx - 40, ground - 34, 80, 24, 0xFFB46C24);
@@ -166,40 +113,6 @@ final class EventArt {
                     }
                 }
                 chao(c, cx, ground - 64 + bob(t, 2), t);
-            }
-            case "event:hyper_remote" -> {
-                indoors(c, x, y, w, h, ground, 0xFF200810, 0xFF481020);
-                c.fill(cx - 18, y + 28, 36, 80, Colors.BLACK);
-                c.fill(cx - 16, y + 30, 32, 76, 0xFF6C6C6C);
-                c.fill(cx - 12, y + 34, 24, 14, 0xFF241C1C);
-                int[] buttons = {0xFFDA2424, 0xFFFFDA24, 0xFF2490FF};
-                for (int i = 0; i < 3; i++) {
-                    boolean lit = (t / 15) % 3 == i;
-                    c.fill(cx - 8, y + 56 + i * 16, 16, 10, Colors.BLACK);
-                    c.fill(cx - 7, y + 57 + i * 16, 14, 8, lit ? Colors.WHITE : buttons[i]);
-                }
-                SceneSprite head = shell.art.romFrame("robotnik_ship", (int) ((t / 20) % 2));
-                if (head != null) {
-                    Poses.centre(c, head, cx, y + 41, SceneDraw.plain().withScale(0.75f));
-                }
-            }
-            case "event:robotnik_offer" -> {
-                indoors(c, x, y, w, h, ground, LAB_TOP, LAB_BOTTOM);
-                c.fill(cx - 44, y + 16, 88, 70, 0xFF485868);
-                c.fill(cx - 40, y + 20, 80, 60, 0xFF102040);
-                SceneSprite head = shell.art.romFrame("robotnik_ship", (int) ((t / 8) % 2));
-                SceneSprite mobile = shell.art.romFrame("robotnik_ship", 5);
-                if (mobile != null) {
-                    Poses.centre(c, mobile, cx, y + 60, SceneDraw.plain());
-                }
-                if (head != null) {
-                    Poses.centre(c, head, cx, y + 44, SceneDraw.plain());
-                }
-                // Scanlines over the screen.
-                for (int i = 0; i < 30; i++) {
-                    c.fill(cx - 40, y + 20 + i * 2, 80, 1, 0x30000000);
-                }
-                c.fill(cx - 6, y + 90, 12, 18, 0xFF384858);
             }
             default -> {
                 Gfx.gradient(c, x, y, w, h, SKY_TOP, SKY_BOTTOM);
@@ -365,17 +278,6 @@ final class EventArt {
         c.fill(cx - 2, ground - 10, 4, 6, Colors.WHITE);
     }
 
-    static void tube(SceneCanvas c, int x, int ground, int liquid, long t) {
-        c.fill(x, ground - 70, 20, 70, 0xFF485868);
-        c.fill(x + 2, ground - 66, 16, 62, 0xFF203040);
-        int level = 30 + (int) (Math.sin(t * 0.04) * 4);
-        c.fill(x + 2, ground - 4 - level, 16, level, liquid);
-        for (int i = 0; i < 3; i++) {
-            int by = (int) ((t + i * 13) % level);
-            c.fill(x + 5 + i * 4, ground - 6 - by, 2, 2, Colors.WHITE);
-        }
-        c.fill(x - 1, ground - 72, 22, 4, 0xFF6C7C8C);
-    }
 
     /** A Chao: round blue body, yellow-tipped head, and a floating ball above. */
     static void chao(SceneCanvas c, int cx, int top, long t) {

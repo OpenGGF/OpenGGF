@@ -502,4 +502,26 @@ final class EnemyVisuals {
         c.unclip();
         return true;
     }
+
+    /**
+     * An enemy's composition (by encounter or enemy art id) scaled to fit {@code maxW} x
+     * {@code maxH} (never above {@code maxScale}), centred on {@code x} with its base on
+     * {@code bottomY}, without clipping; false when it has no art.
+     */
+    static boolean drawFitted(Shell shell, SceneCanvas c, String art, float x, float bottomY, float maxW, float maxH,
+            float maxScale, long ticks, int flash) {
+        List<Part> parts = compose(shell, null, art, ticks);
+        if (parts.isEmpty()) {
+            return false;
+        }
+        float[] b = bounds(parts);
+        float scale = Math.min(maxScale, Math.min(maxW / (b[2] - b[0]), maxH / (b[3] - b[1])));
+        float ox = x - (b[0] + b[2]) / 2f * scale;
+        float oy = bottomY - b[3] * scale;
+        for (Part p : parts) {
+            c.draw(p.sprite(), ox + p.dx() * scale, oy + p.dy() * scale,
+                    SceneDraw.plain().withScale(scale).withFlipX(p.flipX()).withFlash(flash));
+        }
+        return true;
+    }
 }

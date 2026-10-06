@@ -65,6 +65,18 @@ public final class Sounds {
     public static final int SFX_SIGNPOST = 0xB8;
     /** sfx_RingLeft: Collect_Ring alternates it with sfx_RingRight for each ring. */
     public static final int SFX_RING_LEFT = 0x34;
+    /** sfx_Bubble: an air bubble gulped underwater; the Lab's tubes gurgle as they drain. */
+    public static final int SFX_BUBBLE = 0x38;
+    /** sfx_ElectricAttack: the Lightning Shield's double jump, which throws its four sparks. */
+    public static final int SFX_ELECTRIC_ATTACK = 0x45;
+    /** sfx_MechaSpark: Mecha Sonic's sparks (Obj_MechaSonic_Sparks). */
+    public static final int SFX_MECHA_SPARK = 0x5C;
+    /** sfx_Transporter: the Sky Sanctuary / Hidden Palace teleporter beaming something away. */
+    public static final int SFX_TRANSPORTER = 0x73;
+    /** sfx_Alarm: Launch Base's alarm (Obj_LBZAlarm). */
+    public static final int SFX_ALARM = 0x86;
+    /** sfx_GhostAppear: a Hyudoro ghost fading in (Obj_Hyudoro). */
+    public static final int SFX_GHOST_APPEAR = 0x92;
 
     private Sounds() {
     }
