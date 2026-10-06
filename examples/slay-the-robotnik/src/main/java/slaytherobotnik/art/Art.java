@@ -127,6 +127,35 @@ public final class Art {
         return backdrops.get(key);
     }
 
+    private SceneSprite emptyTornado;
+
+    /**
+     * The Tornado (Map_AIZIntroPlane frame 0) with its cockpit emptied. The ROM art has Tails at
+     * the controls; his pixels all lie in the box x 50-70, y 7-23 of the frame, above the
+     * fuselage's top edge (row 24) and left of the windshield (x 72), so clearing that box
+     * leaves the plane whole for someone else to fly.
+     */
+    public SceneSprite emptyTornado() {
+        if (emptyTornado == null) {
+            SceneSprite plane = romFrame("tornado", 0);
+            if (plane == null) {
+                return null;
+            }
+            SceneImage image = plane.image();
+            int w = image.width();
+            int h = image.height();
+            int[] pixels = new int[w * h];
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    boolean pilot = x >= 50 && x <= 70 && y >= 7 && y <= 23;
+                    pixels[y * w + x] = pilot ? 0 : image.pixel(x, y);
+                }
+            }
+            emptyTornado = new SceneSprite(ctx.art().image(w, h, pixels), plane.originX(), plane.originY());
+        }
+        return emptyTornado;
+    }
+
     /** One frame of a ROM sprite, or null. */
     public SceneSprite romFrame(String key, int frame) {
         SceneSpriteSet set = rom(key);

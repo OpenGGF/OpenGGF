@@ -72,14 +72,22 @@ final class StartView implements RunScreen.RoomView {
         // The Tornado crossing the sky, with the hero standing on the wing.
         float bob = (float) Math.sin(t * 0.06) * 3;
         int px = 110 + (int) (Math.sin(t * 0.013) * 30);
-        int py = 66 + Math.round(bob);
-        SceneSprite plane = shell.art.romFrame("tornado", 0);
+        int py = 71 + Math.round(bob);
         String who = shell.run.state().character().id();
+        // The plane art has Tails at the controls. In a Tails run Sonic takes them and Tails
+        // rides the wing; otherwise the chosen hero rides the wing.
+        boolean tailsRun = who.equals("tails");
+        SceneSprite plane = tailsRun ? shell.art.emptyTornado() : shell.art.romFrame("tornado", 0);
         if (plane != null) {
-            // The plane art includes Tails at the controls, so in a Tails run Sonic rides the wing.
-            // In the AIZ intro the plane sits at (rider -$22, rider +$2C).
-            String rider = who.equals("tails") ? "sonic" : who;
-            Poses.hero(shell, c, rider, Poses.WAIT, t, px + 0x22, py - 0x2C + 24, SceneDraw.plain());
+            if (tailsRun) {
+                // Sonic sits where Tails' head is in the ROM art; the fuselage hides him below
+                // the cockpit rim because he is drawn first.
+                int cockpitX = px - plane.originX() + 60;
+                int seatY = py - plane.originY() + 46;
+                Poses.hero(shell, c, "sonic", Poses.WAIT, t, cockpitX, seatY, SceneDraw.plain());
+            }
+            // In the AIZ intro the rider stands at (plane +$22, plane -$2C).
+            Poses.hero(shell, c, who, Poses.WAIT, t, px + 0x22, py - 0x2C + 24, SceneDraw.plain());
             c.draw(plane, px, py, SceneDraw.plain());
             int[] propeller = {1, 2, 3, 4, 3, 2};
             c.draw(shell.art.romFrame("tornado", propeller[(int) (t % propeller.length)]), px + 0x38, py + 4,

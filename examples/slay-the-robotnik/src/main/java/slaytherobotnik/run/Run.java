@@ -116,8 +116,8 @@ public final class Run {
     private String tornadoSpeech() {
         String zone = act().zoneName();
         return switch (state.character().id()) {
-            case "tails" -> "You level the Tornado out over " + zone
-                    + ". Sonic gives you a thumbs-up from the wing. Time to raid the cargo hold!";
+            case "tails" -> "Sonic: \"My turn to fly! Hang on up there, Tails - " + zone
+                    + " dead ahead. Grab whatever you need from the cargo hold!\"";
             case "knuckles" -> "Tails: \"Hang on tight, Knuckles! " + zone
                     + " is right below us. Grab whatever you need from the back!\"";
             default -> "Tails: \"There it is, Sonic, " + zone

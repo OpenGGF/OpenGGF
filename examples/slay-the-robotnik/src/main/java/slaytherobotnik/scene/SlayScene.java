@@ -89,6 +89,9 @@ public final class SlayScene implements ModScene {
         shell.attach(run);
         if (parts[2].equals("fight")) {
             run.enterFight(parts[3]);
+        } else if (parts[2].equals("start")) {
+            // "tails:7:start:" is the new run's Tornado start, where Run.start leaves it.
+            run.room();
         } else if (parts[2].equals("map")) {
             run.skipToMap(Integer.parseInt(parts[3]));
         } else if (parts[2].equals("room")) {
