@@ -2370,3 +2370,102 @@ against `f4b40f502` selects **2,992/2,992 ordinary classes plus fresh guards**,
 two ordinary workers, with a 90-minute execution limit excluding queue wait and
 a 10-minute no-output limit. It is a broad validation expected to take tens of
 minutes; the superseded prefix is not used as its completion evidence.
+
+### Completed merged-source validation and public promo — 2026-10-06
+
+Production source is `09d5ed2a22db4b759cfd955233ab35df2837b147`, reconciled
+against develop `f4b40f5026988c5152eb2ae1fadaaf7c648f5618`. The complete selected
+command was `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py
+--base f4b40f5026988c5152eb2ae1fadaaf7c648f5618 --workers 2 --max-minutes 90
+--run`. Run `20261006T163159Z-94ef3f46` selected all 2,992 ordinary classes and
+fresh guards, with Java 21 and all three verified absolute ROM properties.
+Ordinary completed **2,990 reports / 25,998 checks, 28 failures, no errors,
+61 skips**, in 2,246.45 seconds. Fresh guards completed **86 reports / 672 checks, no failures/errors/skips**,
+in 212.02 seconds. The wrapper exits 1 because ordinary testing is red, not
+because validation is incomplete.
+
+All 118 golf course cases and both actual two-JVM integration cases passed with
+no skips. Each of the 27 native-route failures matches the fresh f4 develop
+baseline by class, parameterized test, kind, type and full assertion. The longest
+SSZ message is 2,915 characters, compared from raw completed XML before
+compaction; only the owned `RewindObjectStateBlob@hex` JVM hash is normalized,
+not any gameplay field. The baseline command covered the 25 listed selectors:
+30 checks, 27 failures, no errors/skips. This is a matched focused baseline,
+not a full baseline-suite pass.
+
+The remaining framebuffer failure is the same 24,783-pixel waterfall palette
+rotation reproduced on pre-polish `6da29127a` above. Develop f4 lacks this golf
+scene API/test, so no direct new-base attribution is claimed for that case.
+The queued merged-source `maven_queue.py -Dmse=off
+-Dtest=TestGolfScenePresentation -Dsonic2.rom.path=<absolute S2 REV01> test`
+then passed the complete **37-case scene class, no failures/errors/skips**,
+in a fresh JVM. This isolates the reused-fork condition without removing the
+broad failure or weakening the assertion. The complete broad invocation remains red; it is
+not reported as a green suite. Inspected skips cover opt-in measurements,
+soak/capture/native-reference diagnostics, unavailable GL/EGL probes and level
+assumptions; none reports a missing ROM. Separate trace/native/diagnostic
+profiles are not certified by ordinary selection.
+
+The source-first example build ran once after reconciliation through the shared
+queue. Independent Java 21 compilation against the capture runtime snapshot
+matches all **123 classes plus the manifest byte for byte**. SDK validation exits
+0 with the ten documented internal-bridge warnings, not zero warnings. Jar
+SHA-256 is `55c6e3fc6f04ed58f53cb7abd6113c502b6d874a44fce6b44f8b90391607296a`.
+Engine Java digest is `e54abff60866814fd2f92db14df859ce38e5e1373d0ac8dc1d87f1351c3367a7`;
+golf main Java is `73d3ddc77f914eadcd6a80fd04be809381b98c12c4efb1fc79140fed5d228407`.
+The canonical candidate union has 19,855 signatures; published pins/version/status
+remain unchanged. All 47 checked local documentation links resolve. The
+release-tree/push policy audit is checked against the prepared feature delivery.
+
+Opus 5.5 Extra High recaptured all four scenarios from the merged build via the
+real menu -> fade -> Sonic 2 title card -> LEVEL route, with a runtime snapshot
+that the broad run cannot modify. EHZ1 Sonic restores the whole shot at row 400
+and holes out at 4443; EHZ2 Tails retains act index 1 and holes out at 7371 in
+25 strokes. The two-hole local match completes at 31291. The real two-JVM TCP
+session has 4,985 rows including the guest's rewind. Native title text clears
+before the first lie at row 56 and does not return after rollback. Every PNG,
+WAV and state row matches the preceding 82a captures; re-rendering yields the
+same MP4. The earlier f3/82a sources remain explicitly superseded evidence.
+
+The final public film is **88.8 s / 5,328 frames / 1920x1080 H.264 at 60 Hz**,
+48 kHz stereo AAC and 12 chapters. Its opening introduces OpenGGF; styled chapter
+cards and a staged one-button panel explain the action; real local/online
+handoffs, both holes and a full finish remain at normal speed. Five quiet card
+whooshes and opener/end-card music are disclosed ROM sounds added in editing;
+other action audio is the captured game output. Full decode, 80 source-picture
+checks, moving-source cadence, all 16 audio-sync samples, loudness and reverse
+checks pass. Audio is -15.0 LUFS / -2.1 dBTP with no clipping; its only silent
+run is the game's 18-row title-card gap. Audio was checked numerically, without
+a human listening assessment.
+
+The reusable rewind helpers are verified in the actual film as well as tests:
+parent stereo comparisons find **70 practice, 41 host and 41 guest interior
+packets exactly equal to the recorded forward samples played backward**, with
+zero integer difference. Initial crossfade packets are excluded explicitly.
+Decoded-film median reverse correlation is 0.9986 / 0.9997. Parent normal-speed,
+unmuted browser playback reaches the end without an error or corrupted frame;
+12 of 5,328 client frames drop under the concurrent broad run. Opus's independent
+browser run drops none. The complete file decode/source-cadence checks remain
+independent of these browser counters.
+
+Durable media is under
+`<capture-root>/putt-putt-paradise-20261005/` (outside the checkout):
+
+- `promo-opus-20261006/final-verified/putt-putt-paradise-promo.mp4`, SHA-256
+  `5bb6b99d0437ff023710e5671ca3ed2f96b0eaea11d77c133b3182de2c5579e3`.
+- `promo-opus-20261006/final-verified/putt-putt-paradise-promo-kit.zip`, SHA-256
+  `80a46bde8ef7b3489ba6880b15b98c375f1580a8133d8b4de75a04a0874679ae`.
+- `showcase-20261006-opus-final/` retains native PNG/WAV sources and a current
+  five-role manifest that excludes superseded captures.
+
+The 93-file kit passes its ZIP integrity check and includes capture/render/check
+scripts, inputs, state/provenance, the chapter/edit maps, the rewind checker and
+all three current reverse-audio reports. It contains no ROMs, engine classes,
+WAVs or native PNG rows. Owned runtime/harness class snapshots and both preview
+servers/tabs are removed; useful captures/drafts are retained. Consumed category diagnostics were acknowledged and removed. All owned
+validation units are stopped; the clean, fully accounted baseline worktree and
+its local branch are removed. Its only ignored content was generated resource
+links, a runtime configuration template, Python caches and Maven/test outputs.
+The open PR delivery preserves the feature branch/worktree and the user's
+untracked launcher. Main remains on develop with unrelated changes preserved;
+this work does not integrate or push develop.
