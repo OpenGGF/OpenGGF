@@ -8,7 +8,7 @@ import static paradise.net.GolfPacket.*;
 
 /** Four-byte big-endian payload length, one-byte schema, one-byte type, bounded typed fields. */
 public final class GolfCodec {
-    public static final int SCHEMA = 3;
+    public static final int SCHEMA = 4;
     public static final int MAX_FRAME_BYTES = 2 * 1024 * 1024;
     public static final int MAX_VIEW_BYTES = MAX_FRAME_BYTES - 128;
     private GolfCodec() { }

@@ -58,6 +58,78 @@ class TestPuttPuttParadise {
     @AfterAll static void closeLoader() throws Exception { if (loader != null) loader.close(); }
     @AfterEach void closeSession() { if (bootstrap != null) bootstrap.dispose(); }
 
+    @Test void hostFocusAndKeyboardPauseFreezeControlledRowsAndFrameStepAdmitsOne() throws Exception {
+        var fixture = launch("sonic", 0); fixture.stepIdleFrames(120);
+        var input = new com.openggf.control.InputHandler();
+        var loop = new com.openggf.GameLoop(input);
+        loop.setGameplayMode(fixture.runtime()); loop.setGameMode(GameMode.LEVEL);
+        var aimCourse = checkpointCourse(fixture).playerState(); var aimMeter = shotState();
+        loop.pause();
+        for (int row = 0; row < 20; row++) loop.step();
+        assertEquals(aimCourse, checkpointCourse(fixture).playerState());
+        assertEquals(aimMeter, shotState(), "focus pause freezes creator AIM rows too");
+        loop.resume();
+        commit(fixture, 60); fixture.stepIdleFrames(32);
+        assertEquals("WATCH", value(shotState(), "stage").toString());
+        var pausedCourse = checkpointCourse(fixture).playerState(); var pausedMeter = shotState();
+        loop.pause();
+        for (int row = 0; row < 20; row++) loop.step();
+        assertEquals(pausedCourse, checkpointCourse(fixture).playerState());
+        assertEquals(pausedMeter, shotState());
+        loop.resume();
+        int pauseKey = GameServices.configuration().getInt(SonicConfiguration.PAUSE_KEY);
+        input.handleKeyEvent(pauseKey, org.lwjgl.glfw.GLFW.GLFW_PRESS); loop.step();
+        input.handleKeyEvent(pauseKey, org.lwjgl.glfw.GLFW.GLFW_RELEASE); loop.step();
+        assertTrue(loop.isUserPaused(), "configured keyboard pause remains available in controlled modes");
+        assertEquals(pausedCourse, checkpointCourse(fixture).playerState());
+        int frameKey = GameServices.configuration().getInt(SonicConfiguration.FRAME_STEP_KEY);
+        input.handleKeyEvent(frameKey, org.lwjgl.glfw.GLFW.GLFW_PRESS); loop.step();
+        input.handleKeyEvent(frameKey, org.lwjgl.glfw.GLFW.GLFW_RELEASE); loop.step();
+        var stepped = checkpointCourse(fixture).playerState();
+        assertNotEquals(pausedCourse, stepped, "frame step admits one native WATCH frame");
+        for (int row = 0; row < 20; row++) loop.step();
+        assertEquals(stepped, checkpointCourse(fixture).playerState(), "released frame key cannot keep advancing");
+        loop.toggleUserPause(); loop.step();
+        assertNotEquals(stepped, checkpointCourse(fixture).playerState());
+    }
+
+    @Test void escapeReturnFadeCompletesWhileTheCreatorHoldsAim() throws Exception {
+        var fixture = launch("sonic", 0); fixture.stepIdleFrames(120);
+        var input = new com.openggf.control.InputHandler();
+        var loop = new com.openggf.GameLoop(input);
+        loop.setGameplayMode(fixture.runtime()); loop.setGameMode(GameMode.LEVEL);
+        var before = checkpointCourse(fixture).playerState(); var meter = shotState();
+        var returned = new java.util.concurrent.atomic.AtomicInteger();
+        var handler = com.openggf.GameLoop.class.getDeclaredMethod("setReturnToMasterTitleHandler", Runnable.class);
+        handler.setAccessible(true); handler.invoke(loop, (Runnable) returned::incrementAndGet);
+        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        for (int row = 0; row < 240 && returned.get() == 0; row++) loop.step();
+        assertEquals(1, returned.get(), "host fade completes independently of creator HOLD");
+        assertEquals(before, checkpointCourse(fixture).playerState());
+        assertEquals(meter, shotState(), "return fade cannot commit a shot or advance its meter");
+    }
+
+    @Test void duckEntryUsesItsOwnClockAndPauseFreezesThePose() throws Exception {
+        var fixture = launch("sonic", 0); fixture.stepIdleFrames(180);
+        var poseMethod = mode().getClass().getDeclaredMethod("pose"); poseMethod.setAccessible(true);
+        fixture.stepFrame(false, false, false, false, true);
+        var entry = (com.openggf.game.presentation.PlayerPresentationPose) poseMethod.invoke(mode());
+        assertEquals(com.openggf.game.presentation.PlayerPresentationPose.Kind.DUCK, entry.kind());
+        assertEquals(0, entry.tick(), "a fresh duck starts with the native entry frame, not course age");
+        fixture.stepIdleFrames(4);
+        var playing = (com.openggf.game.presentation.PlayerPresentationPose) poseMethod.invoke(mode());
+        assertEquals(4, playing.tick());
+        var input = new com.openggf.control.InputHandler();
+        var start = com.openggf.control.LogicalInputSnapshot.ofPlayers(
+                com.openggf.control.PlayerInputState.of(0, 0, 0, 0, true, true),
+                com.openggf.control.PlayerInputState.neutral());
+        input.setLogicalOverride(start);
+        com.openggf.game.mode.ControlledFrameRuntime.step(fixture.runtime(), input, start);
+        var paused = (com.openggf.game.presentation.PlayerPresentationPose) poseMethod.invoke(mode());
+        fixture.stepIdleFrames(20);
+        assertEquals(paused, poseMethod.invoke(mode()), "pause holds the native pose animation");
+    }
+
     @Test void artifactPassesNormalSdkPackaging() throws Exception {
         assertEquals(0, GgfModCli.run(new String[]{"package", "--input", temp.resolve("classes").toString(),
                 "--out", temp.resolve("validated.jar").toString()}, System.out));
@@ -342,20 +414,20 @@ class TestPuttPuttParadise {
         pressA(f); f.stepIdleFrames(spin>0?30:90); pressA(f); f.stepIdleFrames(30); pressA(f);
         f.stepIdleFrames(30); assertTrue(f.sprite().getAir());
         var registry=f.runtime().getRewindRegistry(); var before=registry.capture();
-        var rows=new ArrayList<com.openggf.game.mode.CourseControl.Ball>();
+        var rows=new ArrayList<com.openggf.game.mode.CourseControl.PlayerState>();
         int landing=-1;
         for(int i=0;i<100;i++) {
-            f.stepIdleFrames(1); var ball=checkpointCourse(f).ball(); rows.add(ball);
+            f.stepIdleFrames(1); var ball=checkpointCourse(f).playerState(); rows.add(ball);
             if(ball.floorSupport()&&!ball.airborne()) { landing=i; break; }
         }
         assertTrue(landing>=0,"chip reaches real EHZ floor");
         assertFalse((boolean)value(((com.openggf.game.rewind.RewindSnapshottable<?>)mode()).capture(),"landingSpinPending"));
         if(spin<0) assertTrue(f.sprite().getGSpeed()<0,"backspin reverses the first landing carry");
         else assertTrue(f.sprite().getGSpeed()>0x800,"topspin adds forward landing carry");
-        f.stepIdleFrames(1); rows.add(checkpointCourse(f).ball());
+        f.stepIdleFrames(1); rows.add(checkpointCourse(f).playerState());
         if(spin>0) assertTrue(Math.abs(f.sprite().getGSpeed())<0xC00,"next row is native rolling, without another impulse");
         var after=registry.capture(); registry.restore(before);
-        for(var expected:rows) { f.stepIdleFrames(1); assertEquals(expected,checkpointCourse(f).ball(),"spin flight/landing replay"); }
+        for(var expected:rows) { f.stepIdleFrames(1); assertEquals(expected,checkpointCourse(f).playerState(),"spin flight/landing replay"); }
         var replay=registry.capture();
         for(var key:after.entries().keySet()) assertEquals(List.of(),
                 com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key,after.get(key),replay.get(key)),key);
@@ -442,9 +514,9 @@ class TestPuttPuttParadise {
     void shotRewindRestoresEveryCourseOwnerAndRefundsStrokeOnce(String character, int act) throws Exception {
         var f = launch(character, act); configureRewinds("PRACTICE", character, "tails", act, "NATIVE_4_3", 3, 1);
         f.stepIdleFrames(120); var registry = f.runtime().getRewindRegistry();
-        var before = registry.captureCourse(); var start = checkpointCourse(f).ball();
+        var before = registry.captureCourse(); var start = checkpointCourse(f).playerState();
         commit(f, 55); f.stepIdleFrames(45);
-        assertNotEquals(start.x(), checkpointCourse(f).ball().x(), "shot really travelled");
+        assertNotEquals(start.x(), checkpointCourse(f).playerState().x(), "shot really travelled");
         long retired = (long) value(value(value(matchState(), "pending"), "id"), "shotSequence");
         var input = new com.openggf.control.InputHandler();
         input.handleKeyEvent(GameServices.configuration().getInt(SonicConfiguration.LIVE_REWIND_KEY), org.lwjgl.glfw.GLFW.GLFW_PRESS);
@@ -453,7 +525,7 @@ class TestPuttPuttParadise {
         do { loop.step(); rows++; } while (value(matchState(), "pending") != null && rows < 100);
         assertTrue(rows < 100, "rewind completion is bounded");
         assertEquals("AIM", value(shotState(), "stage").toString());
-        assertEquals(start, checkpointCourse(f).ball());
+        assertEquals(start, checkpointCourse(f).playerState());
         for (var entry : before.entries().entrySet()) assertEquals(List.of(), com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
                 entry.getKey(), entry.getValue(), registry.captureCourse().get(entry.getKey())), "restored " + entry.getKey());
         Object saved = ((com.openggf.game.rewind.RewindSnapshottable<?>) mode()).capture();
@@ -521,51 +593,46 @@ class TestPuttPuttParadise {
     }
 
     @ParameterizedTest @CsvSource({"0", "1"})
-    void finishingShotCanBeRewoundBeforeResultsAndThenKept(int act) throws Exception {
-        var f=launch("sonic",act); configureRewinds("PRACTICE","sonic","tails",act,"NATIVE_4_3",3,3); f.stepIdleFrames(120);
-        var shots=route(act,"NATIVE_4_3"); com.openggf.game.mode.CourseControl.Ball before=null; int finishingIndex=-1;
-        for(int index=0;index<shots.length;index++) {
-            before=checkpointCourse(f).ball(); reviewShot(f,shots[index]);
-            Object result=value(((com.openggf.game.rewind.RewindSnapshottable<?>)mode()).capture(),"review");
-            assertNotNull(result,"EHZ"+(act+1)+" shot "+index);
-            if((boolean)value(result,"finish")) { finishingIndex=index; break; }
-            pressA(f); f.stepIdleFrames(1);
+    void finishingShotPassesDirectlyToResultsWithRewindsRemaining(int act) throws Exception {
+        var f = launch("sonic", act); configureRewinds("PRACTICE", "sonic", "tails", act, "NATIVE_4_3", 3, 3);
+        f.stepIdleFrames(120);
+        for (var shot : route(act, "NATIVE_4_3")) {
+            shoot(f, shot[0], shot[1], shot[2]);
+            if (value(matchState(), "status").toString().equals("COMPLETE")) break;
         }
-        Object review=value(((com.openggf.game.rewind.RewindSnapshottable<?>)mode()).capture(),"review");
-        assertEquals(true,value(review,"finish")); assertEquals("PLAYING",value(matchState(),"status").toString());
-        long turn=(long)value(matchState(),"turnSequence");
-        tick(f,0,0,true);tick(f,0,0,false);tick(f,2,0,false);tick(f,0,com.openggf.control.InputActionMasks.ACTION_A,false);
-        f.stepIdleFrames(100); assertEquals(before,checkpointCourse(f).ball());
-        assertEquals(turn,value(matchState(),"turnSequence")); assertEquals(act,GameServices.level().getCurrentAct());
-        assertTrue(finishingIndex>=0);reviewShot(f,shots[finishingIndex]);pressA(f);f.stepIdleFrames(1);
-        assertEquals("COMPLETE",value(matchState(),"status").toString());
-    }
-    private void reviewShot(HeadlessTestFixture f,int[] shot) throws Exception {
-        f.stepIdleFrames(1);f.stepFrame(false,false,shot[0]<0,shot[0]>0,false);
-        int old=(int)value(shotState(),"elevationDegrees");
-        for(int i=old;i<shot[1];i++)f.stepFrame(true,false,false,false,false);
-        for(int i=old;i>shot[1];i--)f.stepFrame(false,true,false,false,false);
-        f.stepIdleFrames(1);commit(f,shot[2]);
-        for(int row=0;row<3700 && value(((com.openggf.game.rewind.RewindSnapshottable<?>)mode()).capture(),"review")==null;row++)f.stepIdleFrames(1);
+        assertEquals("COMPLETE", value(matchState(), "status").toString(), "finish needs no acceptance press");
+        assertNull(value(matchState(), "pending"));
     }
 
-    @Test void settledAndPenaltyShotsCanBeReviewedAndRewoundBeforeTurnPasses() throws Exception {
-        var f = launch("sonic", 0); configureRewinds("LOCAL", "sonic", "tails", 0, "NATIVE_4_3", 5, 3); f.stepIdleFrames(120);
-        var start = checkpointCourse(f).ball();
-        commit(f, 1); f.stepIdleFrames(100);
-        assertNotNull(value(((com.openggf.game.rewind.RewindSnapshottable<?>) mode()).capture(), "review"));
-        assertEquals(0, value(matchState(), "activePlayer"));
-        // An all-A/arrow/Start command can be recorded in a Genesis movie.
+    @Test void settledAndPenaltyShotsPassTurnsAutomaticallyAndRejectLateRewind() throws Exception {
+        var f = launch("sonic", 0); configureRewinds("LOCAL", "sonic", "tails", 0, "NATIVE_4_3", 5, 3);
+        f.stepIdleFrames(120); commit(f, 1); f.stepIdleFrames(100);
+        assertEquals(1, value(matchState(), "activePlayer"), "settlement automatically opens player two's turn");
+        assertNull(value(matchState(), "pending"));
+        var before = ((com.openggf.game.rewind.RewindSnapshottable<?>) mode()).capture();
+        var input = new com.openggf.control.InputHandler();
+        input.handleKeyEvent(GameServices.configuration().getInt(SonicConfiguration.LIVE_REWIND_KEY), org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        var loop = new com.openggf.GameLoop(input); loop.setGameplayMode(f.runtime()); loop.setGameMode(GameMode.LEVEL);
+        loop.step();
+        assertEquals(1, value(matchState(), "activePlayer"), "late rewind cannot undo the preceding turn");
+        assertEquals(value(before, "allowance"), value(((com.openggf.game.rewind.RewindSnapshottable<?>) mode()).capture(), "allowance"));
+        commit(f, 55); f.stepIdleFrames(32); GameServices.camera().getFocusedSprite().setHurt(true); f.stepIdleFrames(1);
+        assertEquals(0, value(matchState(), "activePlayer"), "penalty automatically passes the turn");
+        var golfer = ((List<?>) value(matchState(), "golfers")).get(1);
+        assertEquals(2, value(golfer, "total"), "one stroke plus one penalty");
+    }
+
+    @Test void pauseMenuCanRewindAnInFlightShotWithGenesisInputs() throws Exception {
+        var f = launch("sonic", 0); configureRewinds("PRACTICE", "sonic", "tails", 0, "NATIVE_4_3", 3, 1);
+        f.stepIdleFrames(120); var start = checkpointCourse(f).playerState();
+        commit(f, 55); f.stepIdleFrames(45);
+        assertEquals("WATCH", value(shotState(), "stage").toString());
         tick(f, 0, 0, true); tick(f, 0, 0, false);
         tick(f, 2, 0, false); tick(f, 0, com.openggf.control.InputActionMasks.ACTION_A, false);
-        f.stepIdleFrames(100); assertEquals(start, checkpointCourse(f).ball());
-        assertEquals(0, value(matchState(), "activePlayer"));
-        commit(f, 55); f.stepIdleFrames(32); GameServices.camera().getFocusedSprite().setHurt(true); f.stepIdleFrames(1);
-        assertNotNull(value(((com.openggf.game.rewind.RewindSnapshottable<?>) mode()).capture(), "review"));
-        pressA(f); f.stepIdleFrames(1);
-        assertEquals(1, value(matchState(), "activePlayer"), "A keeps penalty and passes turn");
-        var golfer = ((List<?>) value(matchState(), "golfers")).getFirst();
-        assertEquals(2, value(golfer, "total"), "kept penalty is one stroke plus one penalty");
+        f.stepIdleFrames(100);
+        assertEquals(start, checkpointCourse(f).playerState());
+        assertNull(value(matchState(), "pending"));
+        assertEquals(1L, value(matchState(), "turnSequence"));
     }
     @ParameterizedTest @CsvSource({"sonic,tails", "tails,sonic", "sonic,sonic", "tails,tails"})
     void alternateIndependentGolferWorldsAndRewindRoster(String one, String two) throws Exception {
@@ -576,6 +643,8 @@ class TestPuttPuttParadise {
         GameServices.camera().getFocusedSprite().setHurt(true); fixture.stepIdleFrames(1);
         assertEquals(1, value(matchState(), "activePlayer"));
         assertEquals(two, GameServices.camera().getFocusedSprite().getCode());
+        assertEquals(firstNeutral.get("camera"), GameServices.camera().capture(),
+                "the next golfer keeps the prepared view instead of disappearing under the HUD");
         fixture.stepIdleFrames(1); commit(fixture, 55); fixture.stepIdleFrames(32);
         GameServices.camera().getFocusedSprite().setHurt(true); fixture.stepIdleFrames(1);
         assertEquals(0, value(matchState(), "activePlayer"));
@@ -944,7 +1013,7 @@ class TestPuttPuttParadise {
                     aimRow == 1 || aimRow == 32 || aimRow == 63 ? 1 : 0,
                     aimRow == 12 || aimRow == 20, ""));
         }
-        record Observed(com.openggf.game.mode.CourseControl.Ball ball, Object meter, Object ledger) { }
+        record Observed(com.openggf.game.mode.CourseControl.PlayerState ball, Object meter, Object ledger) { }
         var expected = new ArrayList<Observed>();
         var f = launch("sonic", 0);
         var input = new com.openggf.control.InputHandler();
@@ -954,7 +1023,7 @@ class TestPuttPuttParadise {
         for (var row : rows) {
             input.setLogicalOverride(com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(row, previous));
             loop.step(); previous = row;
-            expected.add(new Observed(checkpointCourse(f).ball(), shotState(), matchState()));
+            expected.add(new Observed(checkpointCourse(f).playerState(), shotState(), matchState()));
         }
         assertEquals("WATCH", value(expected.get(220).meter(), "stage").toString());
         assertTrue(expected.get(220).ball().rolling());
@@ -967,7 +1036,7 @@ class TestPuttPuttParadise {
                 Path.of("golf-held-rows.bk2"), "logkey", Map.of(), rows, 1), 0);
         for (int row = 0; row < rows.size(); row++) {
             driver.stepFrameFromRecording();
-            var observed = new Observed(checkpointCourse(f).ball(), shotState(), matchState());
+            var observed = new Observed(checkpointCourse(f).playerState(), shotState(), matchState());
             assertEquals(expected.get(row), observed, "live/BK2 mode row " + row);
             if (row == 0) assertEquals(com.openggf.LevelFrameResult.GAMEPLAY_FRAME, driver.getLastFrameResult());
             if (row == 1) assertEquals(com.openggf.LevelFrameResult.HELD, driver.getLastFrameResult());
@@ -1056,7 +1125,7 @@ class TestPuttPuttParadise {
         var course = checkpointCourse(fixture);
         var checkpoint = course.capture();
         course.selectCharacter("tails");
-        course.loadAct(1);
+        course.loadLevel(0, 1);
         assertEquals(1, GameServices.level().getCurrentAct());
         assertRejectedCheckpointLeavesCourseUntouched(fixture, course, checkpoint);
     }
@@ -1088,14 +1157,14 @@ class TestPuttPuttParadise {
     private void assertRejectedCheckpointLeavesCourseUntouched(HeadlessTestFixture fixture,
             com.openggf.game.mode.CourseControl course, com.openggf.game.mode.CourseCheckpoint checkpoint) {
         var focused = GameServices.camera().getFocusedSprite();
-        var ball = course.ball();
+        var ball = course.playerState();
         var level = GameServices.level().getCurrentLevel();
         var before = fixture.runtime().getRewindRegistry().captureCourse();
         int audioEntries = GameServices.audio().commandTimeline().entryCount();
         assertThrows(IllegalArgumentException.class, () -> course.restore(checkpoint));
         assertSame(focused, GameServices.camera().getFocusedSprite(), "reject before roster replacement");
         assertSame(level, GameServices.level().getCurrentLevel(), "reject before level replacement");
-        assertEquals(ball, course.ball(), "position, velocity, character and camera remain unchanged");
+        assertEquals(ball, course.playerState(), "position, velocity, character and camera remain unchanged");
         var after = fixture.runtime().getRewindRegistry().captureCourse();
         assertEquals(before.entries().keySet(), after.entries().keySet());
         for (var entry : before.entries().entrySet())
@@ -1147,7 +1216,7 @@ class TestPuttPuttParadise {
         var course = checkpointCourse(fixture);
         commit(fixture, 1); fixture.stepIdleFrames(30);
         assertEquals("WATCH", value(shotState(), "stage").toString());
-        assertTrue(course.ball().floorSupport(), "weak flat putt starts on the verified spawn floor");
+        assertTrue(course.playerState().floorSupport(), "weak flat putt starts on the verified spawn floor");
         var sprite = GameServices.camera().getFocusedSprite();
         // Arrange the exact zero-speed boundary once; production rows must preserve
         // curl and earn their own support dwell, not a manually supplied result.
@@ -1159,8 +1228,8 @@ class TestPuttPuttParadise {
         }
         assertEquals("AIM", value(shotState(), "stage").toString());
         assertEquals("SETTLED", value(value(matchState(), "lastResolved"), "outcome").toString());
-        assertTrue(course.ball().floorSupport());
-        assertTrue(course.ball().rolling());
+        assertTrue(course.playerState().floorSupport());
+        assertTrue(course.playerState().rolling());
         assertTrue(rows >= 19, "settlement requires actual supported dwell");
     }
 
@@ -1171,9 +1240,9 @@ class TestPuttPuttParadise {
         commit(fixture, 60); fixture.stepIdleFrames(30);
         boolean nearApex = false;
         for (int row = 0; row < 180 && value(shotState(), "stage").toString().equals("WATCH"); row++) {
-            var before = course.ball();
+            var before = course.playerState();
             fixture.stepIdleFrames(1);
-            var after = course.ball();
+            var after = course.playerState();
             if (after.airborne() && Math.abs(after.ySpeed()) <= 0x80) {
                 nearApex = true;
                 assertFalse(after.floorSupport());
@@ -1209,12 +1278,12 @@ class TestPuttPuttParadise {
         fixture.camera().setY((short) Math.max(0, spring.y() - 112));
         var registry = fixture.runtime().getRewindRegistry();
         var before = registry.capture();
-        var expected = new ArrayList<com.openggf.game.mode.CourseControl.Ball>();
+        var expected = new ArrayList<com.openggf.game.mode.CourseControl.PlayerState>();
         com.openggf.game.rewind.CompositeSnapshot duringBounce = null;
         int impulses = 0, previousYSpeed = sprite.getYSpeed();
         for (int row = 0; row < 8; row++) {
             fixture.stepIdleFrames(1);
-            var ball = checkpointCourse(fixture).ball(); expected.add(ball);
+            var ball = checkpointCourse(fixture).playerState(); expected.add(ball);
             if (ball.ySpeed() < previousYSpeed) impulses++;
             previousYSpeed = ball.ySpeed();
             if (row == 1) duringBounce = registry.capture();
@@ -1232,7 +1301,7 @@ class TestPuttPuttParadise {
         registry.restore(before);
         for (int row = 0; row < expected.size(); row++) {
             fixture.stepIdleFrames(1);
-            assertEquals(expected.get(row), checkpointCourse(fixture).ball(), "side spring replay row " + row);
+            assertEquals(expected.get(row), checkpointCourse(fixture).playerState(), "side spring replay row " + row);
         }
         var replay = registry.capture();
         for (String key : after.entries().keySet()) assertEquals(List.of(),
@@ -1240,7 +1309,7 @@ class TestPuttPuttParadise {
         registry.restore(duringBounce);
         for (int row = 2; row < expected.size(); row++) {
             fixture.stepIdleFrames(1);
-            assertEquals(expected.get(row), checkpointCourse(fixture).ball(), "in-contact restore row " + row);
+            assertEquals(expected.get(row), checkpointCourse(fixture).playerState(), "in-contact restore row " + row);
         }
     }
 
@@ -1261,11 +1330,11 @@ class TestPuttPuttParadise {
         commit(fixture, 55); fixture.stepIdleFrames(29);
         var registry = fixture.runtime().getRewindRegistry();
         var before = registry.capture();
-        var observed = new ArrayList<com.openggf.game.mode.CourseControl.Ball>();
+        var observed = new ArrayList<com.openggf.game.mode.CourseControl.PlayerState>();
         boolean blocked = false, advanced = false;
         for (int row = 0; row < 50; row++) {
             fixture.stepIdleFrames(1);
-            var ball = checkpointCourse(fixture).ball(); observed.add(ball);
+            var ball = checkpointCourse(fixture).playerState(); observed.add(ball);
             if (ball.y() + sprite.getYRadius() > wallTop && ball.xSpeed() == 0) blocked = true;
             if ((ball.x() - startX) * facing > 2) {
                 assertTrue(ball.y() + sprite.getYRadius() <= wallTop,
@@ -1278,7 +1347,7 @@ class TestPuttPuttParadise {
         registry.restore(before);
         for (int row = 0; row < observed.size(); row++) {
             fixture.stepIdleFrames(1);
-            assertEquals(observed.get(row), checkpointCourse(fixture).ball(), "vertical chip replay row " + row);
+            assertEquals(observed.get(row), checkpointCourse(fixture).playerState(), "vertical chip replay row " + row);
         }
     }
 
@@ -1316,9 +1385,9 @@ class TestPuttPuttParadise {
         int impulses = 0; boolean descending = false;
         int expectedImpulse = (spring.subtype() & 2) == 0 ? -0x1000 : -0xA00;
         for (int row = 0; row < 420 && impulses < 2; row++) {
-            var before = course.ball();
+            var before = course.playerState();
             fixture.stepIdleFrames(1);
-            var after = course.ball();
+            var after = course.playerState();
             assertEquals("WATCH", value(shotState(), "stage").toString(), "spring flight/contact must not prematurely settle");
             assertTrue(after.rolling(), "native spring and landing must preserve curl");
             if (after.ySpeed() < -0x800 && before.ySpeed() >= 0) {

@@ -1,10 +1,8 @@
 package com.openggf.game.mode;
 
-import com.openggf.audio.GameSound;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.*;
 import com.openggf.game.session.GameplayModeContext;
-import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -22,16 +20,16 @@ public final class CourseControl {
     public boolean rewindHeld() { return rewindHeld; }
 
     @ModApi
-    public record Ball(String character, int x, int y, int xSpeed, int ySpeed, int groundSpeed,
+    public record PlayerState(String character, int x, int y, int xSpeed, int ySpeed, int groundSpeed,
                        int angle, boolean airborne, boolean floorSupport, boolean hurt,
                        boolean dead, boolean rolling, int radius, int supportDx, int supportDy,
                        int cameraX, int cameraY) { }
 
     private AbstractPlayableSprite player() {
-        return java.util.Objects.requireNonNull(context.getCamera().getFocusedSprite(), "active ball");
+        return java.util.Objects.requireNonNull(context.getCamera().getFocusedSprite(), "controlled player");
     }
 
-    public Ball ball() {
+    public PlayerState playerState() {
         var p = player();
         var support = context.getLevelManager().getObjectManager().getRidingObject(p);
         int supportDx = 0, supportDy = 0;
@@ -39,7 +37,7 @@ public final class CourseControl {
             supportDx = object.getX() - object.getPreUpdateX();
             supportDy = object.getY() - object.getPreUpdateY();
         }
-        return new Ball(p.getCode(), p.getCentreX(), p.getCentreY(), p.getXSpeed(), p.getYSpeed(),
+        return new PlayerState(p.getCode(), p.getCentreX(), p.getCentreY(), p.getXSpeed(), p.getYSpeed(),
                 p.getGSpeed(), p.getAngle() & 255, p.getAir(),
                 !p.getAir() && p.getGroundMode() == GroundMode.GROUND
                         && (!p.isOnObject() || (support != null && !support.isDestroyed())),
@@ -102,17 +100,23 @@ public final class CourseControl {
     }
 
     public void selectCharacter(String character) {
-        if (!character.equals("sonic") && !character.equals("tails"))
-            throw new IllegalArgumentException("Unsupported course character");
+        var registry = context.getWorldSession().getGameModule().getPlayableCharacterRegistry();
+        var key = CharacterKey.parsePersisted(java.util.Objects.requireNonNull(character, "character"));
+        var definition = registry.find(key).orElseThrow(
+                () -> new IllegalArgumentException("Unavailable controlled character: " + character));
         if (player().getCode().equals(character)) return;
         var previous = player();
         int x = previous.getCentreX(), y = previous.getCentreY();
+        var camera = context.getCamera();
+        var view = camera.capture();
         var config = GameServices.configuration();
+        // Construct first: a creator factory failure must leave the live roster intact.
+        var p = java.util.Objects.requireNonNull(definition.spriteFactory().create(character,
+                previous.getX(), previous.getY()), "controlled character factory");
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, character);
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
         context.getSpriteManager().clearAllSprites();
-        var p = GameplayTeamBootstrap.registerActiveTeam(context.getWorldSession().getGameModule(),
-                context.getSpriteManager(), config).mainSprite();
+        context.getSpriteManager().addSprite(p);
         p.setAir(previous.getAir()); p.setOnObject(previous.isOnObject());
         p.setAngle(previous.getAngle()); p.setGroundMode(previous.getGroundMode());
         p.setRolling(previous.getRolling()); p.setGSpeed(previous.getGSpeed());
@@ -123,7 +127,10 @@ public final class CourseControl {
         NativePositionOps.writeXPosResetSubpixel(p, x - (int) Math.round(Math.sin(angle) * radiusDelta));
         NativePositionOps.writeYPosResetSubpixel(p, y + (int) Math.round(Math.cos(angle) * radiusDelta));
         p.updateSensors(p.getX(), p.getY());
-        context.getCamera().setFocusedSprite(p);
+        // Native setFocusedSprite initializes a new view at sprite top-left.
+        // Replacing a controlled roster must retain its held/checkpoint view.
+        camera.setFocusedSprite(p);
+        camera.restore(view);
         context.getLevelManager().refreshPlayableSpriteArt();
     }
 
@@ -134,49 +141,51 @@ public final class CourseControl {
         new CourseControl(context).selectCharacter(snapshot.sprites()[0].code());
     }
 
-    /** Launches relative to the supported surface without running native charge physics. */
-    public void launch(int facing, int elevationDegrees, int speedFixed) {
-        if ((facing != -1 && facing != 1) || elevationDegrees < 0 || elevationDegrees > 75
-                || speedFixed < 0x80 || speedFixed > 0x2000) throw new IllegalArgumentException("Invalid shot");
+    /**
+     * Applies a creator-calculated rolling impulse. Speeds use native signed 8.8 units
+     * (256 = one pixel per physics step). Corrects the centre for rolling radii and,
+     * when airborne, releases native object support. Does not choose power, angle,
+     * trajectory, sound or a subsequent gameplay step.
+     */
+    public void launchRolling(int facing, int xSpeed, int ySpeed, int groundSpeed, boolean airborne) {
+        if ((facing != -1 && facing != 1) || xSpeed < Short.MIN_VALUE || xSpeed > Short.MAX_VALUE
+                || ySpeed < Short.MIN_VALUE || ySpeed > Short.MAX_VALUE
+                || groundSpeed < Short.MIN_VALUE || groundSpeed > Short.MAX_VALUE) {
+            throw new IllegalArgumentException("Invalid native rolling impulse");
+        }
         var p = player();
         int oldRadius = p.getYRadius(), oldX = p.getCentreX(), oldY = p.getCentreY();
         double angle = (p.getAngle() & 255) * Math.PI / 128.0;
         p.setDirection(facing < 0 ? Direction.LEFT : Direction.RIGHT);
         p.setSpindash(false);
-        // A golf chip is an external impulse, not a held-button variable-height jump.
+        // An external impulse has no held-button variable-height jump latch.
         p.setJumping(false); p.setRollingJump(false); p.setPushing(false); p.setStickToConvex(false);
         p.setRolling(true);
         // Keep the support contact fixed when replacing standing radii with ball radii.
         int radiusDelta = oldRadius - p.getYRadius();
         NativePositionOps.writeXPosResetSubpixel(p, oldX - (int) Math.round(Math.sin(angle) * radiusDelta));
         NativePositionOps.writeYPosResetSubpixel(p, oldY + (int) Math.round(Math.cos(angle) * radiusDelta));
-        double elevation = Math.toRadians(elevationDegrees);
-        double tangent = facing * Math.cos(elevation) * speedFixed;
-        double normal = Math.sin(elevation) * speedFixed;
-        p.setGSpeed((short) Math.round(tangent));
-        p.setXSpeed((short) Math.round(tangent * Math.cos(angle) + normal * Math.sin(angle)));
-        p.setYSpeed((short) Math.round(tangent * Math.sin(angle) - normal * Math.cos(angle)));
-        if (elevationDegrees > 0) {
+        p.setGSpeed((short) groundSpeed);
+        p.setXSpeed((short) xSpeed);
+        p.setYSpeed((short) ySpeed);
+        if (airborne) {
             context.getLevelManager().getObjectManager().clearRidingObjectForJump(p);
             p.setAir(true); p.setOnObject(false);
         }
         p.updateSensors(p.getX(), p.getY());
-        GameServices.audio().playSfx(GameSound.SPINDASH_RELEASE);
     }
 
-    /** Pins the supported ball coherently after dwell; ceiling/wall/apex callers are rejected. */
+    /** Pins the supported player coherently after dwell; ceiling/wall/apex callers are rejected. */
     public void settle() {
-        if (!ball().floorSupport()) throw new IllegalStateException("Ball has no floor support");
+        if (!playerState().floorSupport()) throw new IllegalStateException("Player has no floor support");
         var p = player();
         p.setGSpeed((short) 0); p.setXSpeed((short) 0); p.setYSpeed((short) 0);
         p.setSubpixelRaw(0, 0); p.setRolling(true); p.updateSensors(p.getX(), p.getY());
     }
-    /** Preserves the game's native charge request and its innate sound-driver pitch ladder. */
-    public void chargeSound() { GameServices.audio().playSfx(GameSound.SPINDASH_CHARGE); }
-
-    public void loadAct(int act) {
-        if (act < 0 || act > 1) throw new IllegalArgumentException("Invalid hole");
-        try { context.getLevelManager().loadZoneAndAct(0, act); }
-        catch (java.io.IOException failure) { throw new IllegalStateException("Cannot load course", failure); }
+    /** Loads an explicit native zone/act. Destination availability is owned by the active module. */
+    public void loadLevel(int zone, int act) {
+        if (zone < 0 || act < 0) throw new IllegalArgumentException("Negative level destination");
+        try { context.getLevelManager().loadZoneAndAct(zone, act); }
+        catch (java.io.IOException failure) { throw new IllegalStateException("Cannot load controlled level", failure); }
     }
 }

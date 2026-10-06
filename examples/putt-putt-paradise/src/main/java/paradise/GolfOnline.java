@@ -64,7 +64,7 @@ final class GolfOnline implements AutoCloseable {
         else if (packet instanceof GolfPacket.TurnCommitted committed) completed = committed.nextOwner() < 0;
         else if (packet instanceof GolfPacket.Leave leave && GolfRoom.CONCEDED_REASON.equals(leave.reason())) concededOwner = leave.owner();
     }
-    void open(GolfMatch.State state, GolfMatch.ShotId id, CourseControl.Ball ball) {
+    void open(GolfMatch.State state, GolfMatch.ShotId id, CourseControl.PlayerState ball) {
         turn = wire(id); cue = 0;
         room.publishTurn(new GolfPacket.TurnOpened(turn, ball.x(), ball.y(), ball.angle() & 255,
                 GameServices.camera().getFocusedSprite().getYRadius() - GameServices.camera().getFocusedSprite().getRollYRadius(),
@@ -90,11 +90,11 @@ final class GolfOnline implements AutoCloseable {
         shotStatus = new GolfPacket.ShotStatus(wire(id), phase, budget.holeRemaining(id.player(), id.actIndex()), budget.turnRemaining(id));
         room.publishStatus(shotStatus);
     }
-    void rewound(GolfMatch.State state, GolfMatch.ShotId id, CourseControl.Ball ball) {
+    void rewound(GolfMatch.State state, GolfMatch.ShotId id, CourseControl.PlayerState ball) {
         room.publishCommitted(new GolfPacket.TurnCommitted(wire(id), GolfPacket.Outcome.REWOUND, ball.x(), ball.y(),
                 score(state, 0), score(state, 1), state.activePlayer()));
     }
-    void committed(GolfMatch.State state, GolfMatch.ShotId id, GolfOutcome outcome, CourseControl.Ball ball) {
+    void committed(GolfMatch.State state, GolfMatch.ShotId id, GolfOutcome outcome, CourseControl.PlayerState ball) {
         var value = outcome == GolfOutcome.FINISH ? GolfPacket.Outcome.FINISHED
                 : outcome.isPenalty() ? GolfPacket.Outcome.PENALTY : GolfPacket.Outcome.SETTLED;
         room.publishCommitted(new GolfPacket.TurnCommitted(wire(id), value, ball.x(), ball.y(),

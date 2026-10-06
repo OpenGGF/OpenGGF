@@ -53,6 +53,22 @@ class TestGolfScenePresentation {
         assertThrows(UnsupportedOperationException.class, () -> decoded.tiles().clear());
     }
 
+    @Test void unsupportedVertexMethodsAreRejectedBeforeAFrameCanBePublished() {
+        var vertices = List.of(new ScenePresentationFrame.Vertex(0, 0, 0, 0, 0xFFFFFFFF));
+        for (int method = 4; method <= 7; method++) {
+            int unsupported = method;
+            assertThrows(IllegalArgumentException.class, () -> new ScenePresentationFrame.Primitive(
+                    0, ScenePresentationFrame.PrimitiveKind.VERTEX, unsupported, vertices));
+        }
+        for (int method = 0; method <= 3; method++) {
+            var primitive = new ScenePresentationFrame.Primitive(0,
+                    ScenePresentationFrame.PrimitiveKind.VERTEX, method, vertices);
+            var source = new ScenePresentationFrame(1, 0, 320, 224, 0, 0, 0,
+                    palette(), List.of(), List.of(primitive));
+            assertDoesNotThrow(() -> SceneCompositor.compose(source, new RomSceneArtCatalog(), 0, 0));
+        }
+    }
+
     @Test void decoderRejectsOversizeMalformedCountsUnknownVersionsAndTrailingBytes() throws Exception {
         byte[] valid = SceneFrameCodec.encode(frame(List.of()));
         assertThrows(IOException.class, () -> SceneFrameCodec.decode(new byte[SceneFrameCodec.MAX_BYTES + 1]));

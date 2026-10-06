@@ -130,17 +130,17 @@ class TestGolfOnlineIntegration {
                         700, "rewind room opens");
                 long x = host.state.number("ballX"), y = host.state.number("ballY"), turn = host.state.number("turn"), id = host.state.number("shot");
                 shot(host);
-                pump(host, guest, (a,b) -> a.text("phase").equals("REVIEW") && b.text("phase").equals("REVIEW"), 700, "settled host shot remains reviewable");
+                pump(host, guest, (a,b) -> a.text("phase").equals("WATCH") && b.text("phase").equals("WATCH"), 700, "host shot can rewind during motion");
                 pauseRewind(host);
                 pump(host, guest, (a,b) -> a.text("phase").equals("AIM") && b.text("phase").equals("AIM") && a.number("shot") > id && b.number("shot") == a.number("shot"), 200, "host rewind reaches origin on both peers");
                 assertEquals(turn, host.state.number("turn")); assertEquals(0, host.state.number("strokes0"));
                 assertEquals(x,host.state.number("ballX")); assertEquals(y,host.state.number("ballY"));
                 assertEquals(2,guest.state.number("holeRewinds")); assertEquals(0,guest.state.number("turnRewinds")); compareViewAndScores(host,guest);
                 shot(host);
-                pump(host,guest,(a,b)->a.number("owner")==1 && b.number("owner")==1 && a.number("turn")>turn,700,"kept retry passes to guest");
+                pump(host,guest,(a,b)->a.number("owner")==1 && b.number("owner")==1 && a.number("turn")>turn,700,"settled retry automatically passes to guest");
                 long guestTurn=host.state.number("turn"), guestId=host.state.number("shot"), guestX=host.state.number("ballX"), guestY=host.state.number("ballY");
                 shot(guest);
-                pump(host,guest,(a,b)->a.text("phase").equals("REVIEW") && b.text("phase").equals("REVIEW"),700,"guest shot reviewed by host");
+                pump(host,guest,(a,b)->a.text("phase").equals("WATCH") && b.text("phase").equals("WATCH"),700,"guest shot is in flight on the host");
                 pauseRewind(guest);
                 pump(host,guest,(a,b)->a.text("phase").equals("AIM") && b.text("phase").equals("AIM") && a.number("shot")>guestId && b.number("shot")==a.number("shot"),200,"guest rewind is host-owned");
                 assertEquals(guestTurn,host.state.number("turn")); assertEquals(0,host.state.number("strokes1"));
@@ -148,12 +148,11 @@ class TestGolfOnlineIntegration {
                 assertEquals(2,guest.state.number("holeRewinds")); assertEquals(0,guest.state.number("turnRewinds")); compareViewAndScores(host,guest);
                 assertEquals(0,guest.state.number("gameplayRows"),"guest never simulates reverse or forward physics");
                 shot(guest);
-                pump(host,guest,(a,b)->a.number("owner")==0 && b.number("owner")==0 && a.number("turn")>guestTurn,700,"guest keeps retry");
+                pump(host,guest,(a,b)->a.number("owner")==0 && b.number("owner")==0 && a.number("turn")>guestTurn,700,"guest retry automatically passes the turn");
                 shot(host);
-                pump(host,guest,(a,b)->a.text("phase").equals("REVIEW") && b.text("phase").equals("REVIEW"),700,"new host turn renews per-turn allowance");
+                pump(host,guest,(a,b)->a.text("phase").equals("WATCH") && b.text("phase").equals("WATCH"),700,"new host turn renews per-turn allowance");
                 assertEquals(1,host.state.number("turnRewinds"));
-                host.step(1,0,ACTION_A,false); host.step(1,0,0,false);
-                pump(host,guest,(a,b)->a.number("owner")==1 && b.number("owner")==1,100,"A keeps review and passes turn online");
+                pump(host,guest,(a,b)->a.number("owner")==1 && b.number("owner")==1,700,"settlement passes the turn online without A");
                 compareViewAndScores(host,guest);
             }
         }
@@ -249,7 +248,12 @@ class TestGolfOnlineIntegration {
         }
         void step(int count, int held, int actions, boolean start) throws Exception { command("STEP " + count + " " + held + " " + actions + " " + start); }
         void command(String command) throws Exception {
-            commands.write(command); commands.newLine(); commands.flush(); state = response(Duration.ofSeconds(15));
+            try {
+                commands.write(command); commands.newLine(); commands.flush(); state = response(Duration.ofSeconds(15));
+            } catch (java.io.IOException failure) {
+                String output; synchronized (diagnostic) { output = String.join("\n", diagnostic); }
+                throw new java.io.IOException("Peer command failed: " + command + "\n" + output, failure);
+            }
         }
         private State response(Duration timeout) throws Exception {
             long deadline = System.nanoTime() + timeout.toNanos();

@@ -7,20 +7,45 @@ import com.openggf.game.mode.ControlledFrameRuntime;
 import com.openggf.game.recording.UserRecordingRuntimeControls;
 import com.openggf.game.rewind.LiveRewindManager;
 import com.openggf.game.session.GameplayModeContext;
+import java.util.function.BooleanSupplier;
 
 /** Host-row orchestration for creator-controlled gameplay, shared owners remain injected. */
 final class ControlledLevelIteration {
     private ControlledLevelIteration() { }
 
+    /** Host pause remains independent of a creator's own Start-button menu. */
+    record HostPause(int pauseKey, int frameStepKey, BooleanSupplier paused,
+            BooleanSupplier consumePlaybackPause, Runnable toggleUserPause) {
+        boolean frameStep(InputHandler input) {
+            if (!consumePlaybackPause.getAsBoolean() && input.isKeyPressed(pauseKey)) {
+                toggleUserPause.run();
+            }
+            return paused.getAsBoolean() && input.isKeyPressed(frameStepKey);
+        }
+    }
+
     static void step(GameplayModeContext context, InputHandler input,
             EscapeToMasterTitleController escape, UserRecordingRuntimeControls recording,
             LiveRewindManager rewind, PlaybackDebugManager playback,
-            Runnable syncPlayback, Runnable beginAudio, Runnable finishAudio, Runnable showTitle) {
-        if (ControlledFrameRuntime.prepareSetup(context)) return;
+            HostPause hostPause, Runnable syncPlayback, Runnable beginAudio,
+            Runnable finishAudio, Runnable showTitle) {
         input.refreshLogicalSnapshot();
-        var controller = ControlledFrameRuntime.controller(context);
         escape.update(GameMode.LEVEL, input);
+        // Returning to the host is presentation work: HOLD and window/user
+        // pause must not prevent its fade callback from completing.
+        if (escape.transitionStarted()) {
+            context.plcFrameLifecycle().runLogicalIteration(context.getFadeManager()::update, frame -> null);
+            input.update();
+            return;
+        }
         recording.updateLevelControlInput(input);
+        boolean frameStep = hostPause.frameStep(input);
+        if (hostPause.paused().getAsBoolean() && !frameStep) {
+            input.update();
+            return;
+        }
+        if (ControlledFrameRuntime.prepareSetup(context)) return;
+        var controller = ControlledFrameRuntime.controller(context);
         if (controller.allowsDebugRewind()
                 && rewind.handleRealtimeRewindInput(GameMode.LEVEL, false, input)) {
             input.update();
@@ -36,7 +61,7 @@ final class ControlledLevelIteration {
             recording.afterLevelFrame();
             playback.onCurrentGameplayTickExecuted();
             playback.onLevelFrameAdvanced();
-            rewind.recordExternalFrame(GameMode.LEVEL, false, input);
+            rewind.recordExternalFrame(GameMode.LEVEL, frameStep, input);
         }
         finishAudio.run();
         if (controller.consumeTitleRequest()) {

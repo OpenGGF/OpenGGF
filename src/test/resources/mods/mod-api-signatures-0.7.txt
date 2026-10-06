@@ -199,6 +199,7 @@ CF-ANNOTATION TYPE com.openggf.control.InputBindings visible @com.openggf.game.M
 CF-ANNOTATION TYPE com.openggf.control.InputHandler visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.LogicalInputSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.MenuInput visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.control.MenuInput$Pointer visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.PlayerInputState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.data.Game visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.data.PlayerSpriteArtProvider visible @com.openggf.game.ModApi
@@ -425,7 +426,7 @@ CF-ANNOTATION TYPE com.openggf.game.launch.LaunchProfile$Row visible @com.opengg
 CF-ANNOTATION TYPE com.openggf.game.launch.LaunchProfileStore visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.mode.CourseCheckpoint visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.mode.CourseControl visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.mode.CourseControl$Ball visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.mode.CourseControl$PlayerState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.mode.GameplayFrameController visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.modzone.ModObjectZoneSet visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.modzone.ModPaletteClaim visible @com.openggf.game.ModApi
@@ -1182,6 +1183,7 @@ CONSTRUCTOR com.openggf.control.InputHandler public  <init>()
 CONSTRUCTOR com.openggf.control.InputHandler public  <init>(java.util.function.Supplier<com.openggf.control.InputBindings>)
 CONSTRUCTOR com.openggf.control.InputHandler public  <init>(java.util.function.Supplier<com.openggf.control.InputBindings>,com.openggf.control.GamepadStateSource)
 CONSTRUCTOR com.openggf.control.LogicalInputSnapshot public  <init>(com.openggf.control.PlayerInputState,com.openggf.control.PlayerInputState,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.control.MenuInput$Pointer public  <init>(int,int,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.control.PlayerInputState public  <init>(int,int,int,int,boolean,boolean)
 CONSTRUCTOR com.openggf.data.Game public  <init>()
 CONSTRUCTOR com.openggf.data.Rom public  <init>()
@@ -1288,7 +1290,7 @@ CONSTRUCTOR com.openggf.game.launch.LaunchProfile public  <init>(boolean,java.la
 CONSTRUCTOR com.openggf.game.launch.LaunchProfileStore public  <init>(com.openggf.configuration.SonicConfigurationService)
 CONSTRUCTOR com.openggf.game.launch.LaunchProfileStore public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.game.patch.ModuleResolutionService,com.openggf.game.patch.ModuleResolutionService$PreparedLaunch)
 CONSTRUCTOR com.openggf.game.launch.LaunchProfileStore public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.game.patch.ModuleResolutionService,com.openggf.game.patch.ResolutionContext)
-CONSTRUCTOR com.openggf.game.mode.CourseControl$Ball public  <init>(java.lang.String,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean,int,int,int,int,int)
+CONSTRUCTOR com.openggf.game.mode.CourseControl$PlayerState public  <init>(java.lang.String,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean,int,int,int,int,int)
 CONSTRUCTOR com.openggf.game.modzone.ModPaletteClaim public  <init>(int,int,int)
 CONSTRUCTOR com.openggf.game.modzone.ModZoneHostMetadata public  <init>(com.openggf.game.modzone.ModObjectZoneSet)
 CONSTRUCTOR com.openggf.game.modzone.ModZoneLevelData public  <init>(int,int,int,int,int,int,int,int,int,byte[],byte[],byte[],byte[],byte[],byte[],byte[],byte[],int[],int[],byte[][],java.util.Optional<com.openggf.game.modzone.ModZoneHostMetadata>,java.util.List<com.openggf.game.modzone.ModPaletteClaim>,java.util.List<com.openggf.level.objects.ObjectSpawn>,java.util.List<com.openggf.level.rings.RingSpawn>,int,int,int)
@@ -4413,6 +4415,7 @@ METHOD com.openggf.control.MenuInput public,static  boolean textLeft(com.openggf
 METHOD com.openggf.control.MenuInput public,static  boolean textRight(com.openggf.control.InputHandler)
 METHOD com.openggf.control.MenuInput public,static  boolean textUp(com.openggf.control.InputHandler)
 METHOD com.openggf.control.MenuInput public,static  boolean up(com.openggf.control.InputHandler)
+METHOD com.openggf.control.MenuInput public,static  com.openggf.control.MenuInput$Pointer pointer(com.openggf.control.InputHandler,int,int)
 METHOD com.openggf.control.MenuInput public,static  java.lang.String backLabel(com.openggf.control.InputHandler)
 METHOD com.openggf.control.MenuInput public,static  java.lang.String confirmLabel(com.openggf.control.InputHandler)
 METHOD com.openggf.control.MenuInput public,static  java.lang.String consumeText(com.openggf.control.InputHandler)
@@ -4420,6 +4423,16 @@ METHOD com.openggf.control.MenuInput public,static  java.lang.String detailsLabe
 METHOD com.openggf.control.MenuInput public,static  java.lang.String directionLabel(com.openggf.control.InputHandler)
 METHOD com.openggf.control.MenuInput public,static  java.lang.String horizontalLabel(com.openggf.control.InputHandler)
 METHOD com.openggf.control.MenuInput public,static  void handleCharEvent(com.openggf.control.InputHandler,int)
+METHOD com.openggf.control.MenuInput$Pointer public  boolean inside()
+METHOD com.openggf.control.MenuInput$Pointer public  boolean leftPressed()
+METHOD com.openggf.control.MenuInput$Pointer public  boolean over(int,int,int,int)
+METHOD com.openggf.control.MenuInput$Pointer public  boolean rightPressed()
+METHOD com.openggf.control.MenuInput$Pointer public  int x()
+METHOD com.openggf.control.MenuInput$Pointer public  int y()
+METHOD com.openggf.control.MenuInput$Pointer public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.control.MenuInput$Pointer public,final  int hashCode()
+METHOD com.openggf.control.MenuInput$Pointer public,final  java.lang.String toString()
+METHOD com.openggf.control.MenuInput$Pointer public,static  com.openggf.control.MenuInput$Pointer none()
 METHOD com.openggf.control.PlayerInputState public  boolean startHeld()
 METHOD com.openggf.control.PlayerInputState public  boolean startPressed()
 METHOD com.openggf.control.PlayerInputState public  com.openggf.control.PlayerInputState merge(com.openggf.control.PlayerInputState)
@@ -6372,7 +6385,7 @@ METHOD com.openggf.game.launch.LaunchProfileStore public  void save(com.openggf.
 METHOD com.openggf.game.mode.CourseControl public  boolean presentationReady()
 METHOD com.openggf.game.mode.CourseControl public  boolean rewindHeld()
 METHOD com.openggf.game.mode.CourseControl public  com.openggf.game.mode.CourseCheckpoint capture()
-METHOD com.openggf.game.mode.CourseControl public  com.openggf.game.mode.CourseControl$Ball ball()
+METHOD com.openggf.game.mode.CourseControl public  com.openggf.game.mode.CourseControl$PlayerState playerState()
 METHOD com.openggf.game.mode.CourseControl public  int actIndex()
 METHOD com.openggf.game.mode.CourseControl public  int courseMaxX()
 METHOD com.openggf.game.mode.CourseControl public  int courseMaxY()
@@ -6382,33 +6395,32 @@ METHOD com.openggf.game.mode.CourseControl public  java.lang.String engineIdenti
 METHOD com.openggf.game.mode.CourseControl public  java.lang.String modContentSha256()
 METHOD com.openggf.game.mode.CourseControl public  java.lang.String romSha1()
 METHOD com.openggf.game.mode.CourseControl public  void advanceEntryPresentation()
-METHOD com.openggf.game.mode.CourseControl public  void chargeSound()
 METHOD com.openggf.game.mode.CourseControl public  void finishInitialPresentation()
-METHOD com.openggf.game.mode.CourseControl public  void launch(int,int,int)
-METHOD com.openggf.game.mode.CourseControl public  void loadAct(int)
+METHOD com.openggf.game.mode.CourseControl public  void launchRolling(int,int,int,int,boolean)
+METHOD com.openggf.game.mode.CourseControl public  void loadLevel(int,int)
 METHOD com.openggf.game.mode.CourseControl public  void restore(com.openggf.game.mode.CourseCheckpoint)
 METHOD com.openggf.game.mode.CourseControl public  void selectCharacter(java.lang.String)
 METHOD com.openggf.game.mode.CourseControl public  void settle()
-METHOD com.openggf.game.mode.CourseControl$Ball public  boolean airborne()
-METHOD com.openggf.game.mode.CourseControl$Ball public  boolean dead()
-METHOD com.openggf.game.mode.CourseControl$Ball public  boolean floorSupport()
-METHOD com.openggf.game.mode.CourseControl$Ball public  boolean hurt()
-METHOD com.openggf.game.mode.CourseControl$Ball public  boolean rolling()
-METHOD com.openggf.game.mode.CourseControl$Ball public  int angle()
-METHOD com.openggf.game.mode.CourseControl$Ball public  int cameraX()
-METHOD com.openggf.game.mode.CourseControl$Ball public  int cameraY()
-METHOD com.openggf.game.mode.CourseControl$Ball public  int groundSpeed()
-METHOD com.openggf.game.mode.CourseControl$Ball public  int radius()
-METHOD com.openggf.game.mode.CourseControl$Ball public  int supportDx()
-METHOD com.openggf.game.mode.CourseControl$Ball public  int supportDy()
-METHOD com.openggf.game.mode.CourseControl$Ball public  int x()
-METHOD com.openggf.game.mode.CourseControl$Ball public  int xSpeed()
-METHOD com.openggf.game.mode.CourseControl$Ball public  int y()
-METHOD com.openggf.game.mode.CourseControl$Ball public  int ySpeed()
-METHOD com.openggf.game.mode.CourseControl$Ball public  java.lang.String character()
-METHOD com.openggf.game.mode.CourseControl$Ball public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.mode.CourseControl$Ball public,final  int hashCode()
-METHOD com.openggf.game.mode.CourseControl$Ball public,final  java.lang.String toString()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  boolean airborne()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  boolean dead()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  boolean floorSupport()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  boolean hurt()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  boolean rolling()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int angle()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int cameraX()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int cameraY()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int groundSpeed()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int radius()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int supportDx()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int supportDy()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int x()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int xSpeed()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int y()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  int ySpeed()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public  java.lang.String character()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.mode.CourseControl$PlayerState public,final  int hashCode()
+METHOD com.openggf.game.mode.CourseControl$PlayerState public,final  java.lang.String toString()
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean allowsDebugRewind()
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean consumeTitleRequest()
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean drawScene()
@@ -14284,6 +14296,7 @@ NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSeq
 NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$VolMode
 NESTED com.openggf.camera.Camera com.openggf.camera.Camera$UpdateObserver
 NESTED com.openggf.control.GamepadStateSource com.openggf.control.GamepadStateSource$DeviceState
+NESTED com.openggf.control.MenuInput com.openggf.control.MenuInput$Pointer
 NESTED com.openggf.debug.DebugRenderContext com.openggf.debug.DebugRenderContext$DebugTextEntry
 NESTED com.openggf.debug.MemoryStats com.openggf.debug.MemoryStats$SectionAllocation
 NESTED com.openggf.debug.MemoryStats com.openggf.debug.MemoryStats$Snapshot
@@ -14349,7 +14362,7 @@ NESTED com.openggf.game.ZoneProgressionPlan com.openggf.game.ZoneProgressionPlan
 NESTED com.openggf.game.dataselect.HostSlotPreview com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType
 NESTED com.openggf.game.ghost.GhostRenderRegistry com.openggf.game.ghost.GhostRenderRegistry$GhostLayerRenderer
 NESTED com.openggf.game.launch.LaunchProfile com.openggf.game.launch.LaunchProfile$Row
-NESTED com.openggf.game.mode.CourseControl com.openggf.game.mode.CourseControl$Ball
+NESTED com.openggf.game.mode.CourseControl com.openggf.game.mode.CourseControl$PlayerState
 NESTED com.openggf.game.modzone.ModZoneRuntimeProfile com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy
 NESTED com.openggf.game.patch.LogicalRomResolver com.openggf.game.patch.LogicalRomResolver$CombinedRomBytesSource
 NESTED com.openggf.game.patch.ModuleResolutionService com.openggf.game.patch.ModuleResolutionService$LaunchPolicy
@@ -14870,6 +14883,11 @@ RECORD-COMPONENT com.openggf.control.LogicalInputSnapshot menuStart boolean
 RECORD-COMPONENT com.openggf.control.LogicalInputSnapshot menuUp boolean
 RECORD-COMPONENT com.openggf.control.LogicalInputSnapshot player1 com.openggf.control.PlayerInputState
 RECORD-COMPONENT com.openggf.control.LogicalInputSnapshot player2 com.openggf.control.PlayerInputState
+RECORD-COMPONENT com.openggf.control.MenuInput$Pointer inside boolean
+RECORD-COMPONENT com.openggf.control.MenuInput$Pointer leftPressed boolean
+RECORD-COMPONENT com.openggf.control.MenuInput$Pointer rightPressed boolean
+RECORD-COMPONENT com.openggf.control.MenuInput$Pointer x int
+RECORD-COMPONENT com.openggf.control.MenuInput$Pointer y int
 RECORD-COMPONENT com.openggf.control.PlayerInputState actionHeldMask int
 RECORD-COMPONENT com.openggf.control.PlayerInputState actionPressedMask int
 RECORD-COMPONENT com.openggf.control.PlayerInputState heldMask int
@@ -15122,23 +15140,23 @@ RECORD-COMPONENT com.openggf.game.launch.LaunchProfile debugTools boolean
 RECORD-COMPONENT com.openggf.game.launch.LaunchProfile mainCharacter java.lang.String
 RECORD-COMPONENT com.openggf.game.launch.LaunchProfile rewind boolean
 RECORD-COMPONENT com.openggf.game.launch.LaunchProfile sidekick java.lang.String
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball airborne boolean
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball angle int
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball cameraX int
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball cameraY int
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball character java.lang.String
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball dead boolean
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball floorSupport boolean
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball groundSpeed int
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball hurt boolean
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball radius int
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball rolling boolean
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball supportDx int
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball supportDy int
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball x int
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball xSpeed int
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball y int
-RECORD-COMPONENT com.openggf.game.mode.CourseControl$Ball ySpeed int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState airborne boolean
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState angle int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState cameraX int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState cameraY int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState character java.lang.String
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState dead boolean
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState floorSupport boolean
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState groundSpeed int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState hurt boolean
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState radius int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState rolling boolean
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState supportDx int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState supportDy int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState x int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState xSpeed int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState y int
+RECORD-COMPONENT com.openggf.game.mode.CourseControl$PlayerState ySpeed int
 RECORD-COMPONENT com.openggf.game.modzone.ModPaletteClaim color int
 RECORD-COMPONENT com.openggf.game.modzone.ModPaletteClaim line int
 RECORD-COMPONENT com.openggf.game.modzone.ModPaletteClaim segaColor int
@@ -18127,6 +18145,7 @@ TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$StopSegaPc
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$StopSmpsSfx SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioLogicalSnapshot$DonorSfxBindingSnapshot SUPER java.lang.Record
 TYPE record public,static,final com.openggf.control.GamepadStateSource$DeviceState SUPER java.lang.Record
+TYPE record public,static,final com.openggf.control.MenuInput$Pointer SUPER java.lang.Record
 TYPE record public,static,final com.openggf.debug.DebugRenderContext$DebugTextEntry SUPER java.lang.Record
 TYPE record public,static,final com.openggf.debug.MemoryStats$SectionAllocation SUPER java.lang.Record
 TYPE record public,static,final com.openggf.editor.EditorStockObjectPalette$Entry SUPER java.lang.Record
@@ -18155,7 +18174,7 @@ TYPE record public,static,final com.openggf.game.ZoneKey$Mod SUPER java.lang.Rec
 TYPE record public,static,final com.openggf.game.ZoneKey$Stock SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneProgressionPlan$Successor SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.ZoneProgressionPlan$ZoneMetadata SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.mode.CourseControl$Ball SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.mode.CourseControl$PlayerState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.ModuleResolutionService$PatchPlan SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.patch.PatchOwner$BuiltIn SUPER java.lang.Record
@@ -18470,6 +18489,7 @@ TYPE-ANNOTATION com.openggf.control.InputBindings @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.InputHandler @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.LogicalInputSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.MenuInput @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.control.MenuInput$Pointer @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.PlayerInputState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.data.Game @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.data.PlayerSpriteArtProvider @com.openggf.game.ModApi
@@ -18696,7 +18716,7 @@ TYPE-ANNOTATION com.openggf.game.launch.LaunchProfile$Row @com.openggf.game.ModA
 TYPE-ANNOTATION com.openggf.game.launch.LaunchProfileStore @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.mode.CourseCheckpoint @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.mode.CourseControl @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.mode.CourseControl$Ball @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.mode.CourseControl$PlayerState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.mode.GameplayFrameController @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.modzone.ModObjectZoneSet @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.modzone.ModPaletteClaim @com.openggf.game.ModApi

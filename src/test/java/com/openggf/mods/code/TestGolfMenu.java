@@ -49,6 +49,7 @@ class TestGolfMenu {
             throw failure;
         }
     }
+    @Test void sharedLogicalMouseCanSelectConfigureAndLaunchWithoutLetterboxClicks() throws Exception { check("mouseMenu"); }
     @Test void practiceActTwoReachesConsumerBeforeStandardOnePlayerExit() throws Exception { check("practice"); }
     @Test void twoLocalGolfersCanChooseDifferentOrDuplicateCharacters() throws Exception { check("characters"); }
     @Test void heldAcceptCannotEnterSetupAndLaunchInOnePress() throws Exception { check("heldAccept"); }

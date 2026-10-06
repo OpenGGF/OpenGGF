@@ -47,7 +47,7 @@ public final class RoomProbe {
             var requests = new ArrayList<GolfPacket>();
             pump(host, guest, () -> { requests.addAll(packets(host)); return requests.contains(request); }, "shot accepted before control");
             check(host.acceptShot(request).newlyAccepted(), "one accepted shot");
-            host.publishStatus(new ShotStatus(id, ShotPhase.REVIEW, 3, 1));
+            host.publishStatus(new ShotStatus(id, ShotPhase.WATCH, 3, 1));
             guest.drainEvents(); host.drainEvents();
             var control = new ShotControl(id, ShotAction.REWIND);
             check(guest.submitControl(control) && guest.submitControl(control), "duplicate control retained once");

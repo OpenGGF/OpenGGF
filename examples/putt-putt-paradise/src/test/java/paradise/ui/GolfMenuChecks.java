@@ -49,6 +49,27 @@ public final class GolfMenuChecks {
         GolfMenu.Selection launch() { focus(GolfMenu.Field.START); tap(GLFW_KEY_ENTER); return launches.getLast(); }
     }
 
+    public static void mouseMenu() throws Exception {
+        var f = new Fixture();
+        // This is the logical pointer that the shared engine viewport mapper supplies.
+        f.menu.updatePointer(new MenuInput.Pointer(35, 146, true, true, false));
+        same(GolfMenu.Field.PLAYER_ONE, f.menu.focusedField(), "click chooses Local and opens setup");
+        // Local setup: P1, P2, viewport, hole/turn rewinds, ready, back.
+        f.menu.updatePointer(new MenuInput.Pointer(40, 124, true, true, false));
+        f.menu.updatePointer(new MenuInput.Pointer(40, 169, false, true, false));
+        same(0, f.launches.size(), "letterbox clicks cannot launch");
+        f.menu.updatePointer(new MenuInput.Pointer(40, 169, true, true, false));
+        same(1, f.launches.size(), "one left click launches exactly once");
+        same(GolfMenu.Mode.LOCAL, f.launches.getFirst().mode(), "clicked Local match");
+        same(GolfMenu.CharacterChoice.TAILS, f.launches.getFirst().playerOne(), "click cycles a setting");
+        f.menu.updatePointer(new MenuInput.Pointer(40, 169, true, true, false));
+        same(1, f.launches.size(), "an exiting menu ignores more clicks");
+        f.menu.initialize();
+        f.menu.updatePointer(new MenuInput.Pointer(35, 129, true, true, false));
+        f.menu.updatePointer(new MenuInput.Pointer(35, 124, true, false, true));
+        same(GolfMenu.Field.MODE, f.menu.focusedField(), "right click returns to mode picker");
+    }
+
     public static void practice() {
         var f = new Fixture(); f.mode(0);
         f.focus(GolfMenu.Field.ACT); f.tap(GLFW_KEY_RIGHT);

@@ -61,7 +61,7 @@ The Hidden Palace completion adds `SpecialStageProvider.resultsExitFadesToWhite(
 `GameLoop.debugCompleteSpecialStageWithEmerald()`, the debug completion that capture tools
 request without reading a key binding. Both update the mutable `0.7` pin.
 
-The Putt Putt Paradise additions expose `GameplayFrameController`, `CourseControl`,
+The controlled-level additions expose `GameplayFrameController`, `CourseControl`,
 opaque session/hole/layout-tagged `CourseCheckpoint`, `MenuInput`, title act
 selection, and typed ROM-backed scene values/presenters. The default controller
 is absent, retaining stock admission. Controlled HOLD is a recorded mode row;
@@ -291,3 +291,14 @@ unpublished candidate. Atlas residency lookup and packed `PatternVersion` data
 remain engine-internal presentation details; creators use the ROM-backed scene
 contract instead. The candidate pin is regenerated in place when removing the
 initial internal-sampler exposure; version/status and published pins are unchanged.
+
+
+Final Putt Putt Paradise polish keeps the mutable candidate controller facade
+semantic: `CourseControl.PlayerState` / `playerState`, `launchRolling` with native
+signed 8.8 velocities, and explicit `loadLevel(zone, act)` replace provisional
+ball/loft/EHZ-specific operations. Exact registered character construction is
+completed before the single live roster is replaced. Sound, shot limits and
+scoring remain creator-owned. `MenuInput.Pointer` adds shared logical menu mouse
+coordinates without adding a window handle to the creator signature. Both changes
+are represented by the regenerated `0.7` candidate pin; published pins and the
+release policy descriptor remain unchanged.

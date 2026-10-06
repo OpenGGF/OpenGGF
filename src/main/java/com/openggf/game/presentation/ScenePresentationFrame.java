@@ -63,7 +63,7 @@ public record ScenePresentationFrame(long revision, int act, int width, int heig
         public Primitive {
             Objects.requireNonNull(kind, "kind");
             vertices = List.copyOf(vertices);
-            if (beforeTile < 0 || beforeTile > MAX_TILES || method < 0 || method > 7
+            if (beforeTile < 0 || beforeTile > MAX_TILES || method < 0 || method > 3
                     || vertices.isEmpty() || vertices.size() > 256) {
                 throw new IllegalArgumentException("Invalid scene primitive");
             }

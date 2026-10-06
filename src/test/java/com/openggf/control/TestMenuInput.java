@@ -11,6 +11,17 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.lwjgl.glfw.GLFW.*;
 
 class TestMenuInput {
+    @Test void logicalMovieOwnershipSuppressesPhysicalMenuPointer() {
+        var input = new InputHandler();
+        input.handleMouseMove(100, 100);
+        input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
+        input.setLogicalOverride(LogicalInputSnapshot.neutral());
+        assertEquals(MenuInput.Pointer.none(), MenuInput.pointer(input, 320, 224));
+        assertEquals(MenuInput.Pointer.none(), MenuInput.pointer(null, 320, 224));
+        assertThrows(IllegalArgumentException.class, () -> MenuInput.pointer(input, 0, 224));
+        assertFalse(new MenuInput.Pointer(10, 10, true, true, false).over(0, 0, -1, 20));
+    }
+
     @Test
     void promptsFollowKeyboardControllerKeyboardWithoutHeldInputsStealingFocus() {
         Fixture fixture = new Fixture();

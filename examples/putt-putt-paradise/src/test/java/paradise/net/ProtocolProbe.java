@@ -39,8 +39,8 @@ public final class ProtocolProbe {
                 new Pause(MATCH, "disconnect"), new Resume(MATCH, 25), new Leave(MATCH, 1, "quit"),
                 new Reconnect(MATCH, 1, UUID.randomUUID(), 1, 4),
                 new SoundCue(shot.id(), 4, 2, "spindash"), new Rejected(shot.id(), "wrong owner"),
-                new ShotControl(shot.id(), ShotAction.REWIND), new ShotControl(shot.id(), ShotAction.KEEP),
-                new ShotStatus(shot.id(), ShotPhase.REVIEW, 3, 1), new ShotStatus(shot.id(), ShotPhase.REWINDING, -1, -1));
+                new ShotControl(shot.id(), ShotAction.REWIND),
+                new ShotStatus(shot.id(), ShotPhase.WATCH, 3, 1), new ShotStatus(shot.id(), ShotPhase.REWINDING, -1, -1));
         var combined = new ByteArrayOutputStream();
         for (var packet : packets) GolfCodec.write(combined, packet);
         InputStream fragmented = new FilterInputStream(new ByteArrayInputStream(combined.toByteArray())) {
@@ -105,8 +105,8 @@ public final class ProtocolProbe {
         retries.openTurn(retry);
         check(retries.accept(shot, 20).receipt().committed().equals(rewound), "old accepted shot retains rewind receipt");
         check(retries.accept(request(retry), 20).newlyAccepted(), "same-turn retry with fresh shot ID");
-        rejects(() -> new ShotStatus(shot.id(), ShotPhase.REVIEW, 6, 1));
-        rejects(() -> new ShotStatus(shot.id(), ShotPhase.REVIEW, 3, -2));
+        rejects(() -> new ShotStatus(shot.id(), ShotPhase.WATCH, 6, 1));
+        rejects(() -> new ShotStatus(shot.id(), ShotPhase.WATCH, 3, -2));
 
         var reconnect = new ReconnectSessions(Duration.ofSeconds(30));
         UUID token = reconnect.register(MATCH, 1);

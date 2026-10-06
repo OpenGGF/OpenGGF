@@ -20,7 +20,8 @@ namespaced slot-1 saves/audio), playable-subclass rewind capture hooks, the host
 S3K custom-zone/palette bridge, and exclusive game-start selection with destination-scoped
 launch teams, deterministic input filters, and row-only HUD profiles. Controlled level modes opt into `GameModule.gameplayFrameController()`:
 held iterations record mode input/audio while admitting no world clocks or physics.
-`CourseControl` exposes validated opaque whole-course checkpoints and native
+`CourseControl` exposes validated opaque whole-course checkpoints, exact registered
+single-player replacement, explicit level destinations, and creator-calculated native
 launch/audio operations; the controller's registered identity stays outside
 course rollback while full debug rewind includes it. Prepared value scenes are
 composed from locally ROM-loaded art and can be transmitted to a permanently held

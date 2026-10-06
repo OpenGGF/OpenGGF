@@ -16,6 +16,14 @@ against a disassembly trace without converting. Y increases downward (Mega Drive
 convention). VDP coordinates in the disassembly are offset by +128; the engine uses direct
 screen coordinates.
 
+**Replacing a player is not initializing a camera.** `Camera.setFocusedSprite`
+also resets live and render-copy coordinates to the sprite's top-left. During
+held gameplay, preserve and restore the camera snapshot around roster replacement;
+the restore rebinds its target through the new registered main character. Merely
+changing the target can hide the next golfer under the HUD until physics resumes.
+`TestCourseControl.characterReplacementPreservesTheEntireCameraViewAndRebindsItsTarget`
+and the independent-golfer turn tests cover both view and target identity.
+
 **Creator object ownership follows the registered placement key.** Returning
 creator instances for untagged native placements from a custom registry does
 not assign their callback owner: placed registration clears ownership for a

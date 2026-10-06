@@ -82,6 +82,10 @@ public final class EscapeToMasterTitleController {
         return Math.min(1.0, heldFrames / (double) HOLD_FRAMES);
     }
 
+    boolean transitionStarted() {
+        return transitionStarted;
+    }
+
     public void reset() {
         activeTarget = null;
         promptFramesRemaining = 0;

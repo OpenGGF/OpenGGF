@@ -1786,3 +1786,190 @@ the SDK-validated local mod artifact is retained for testing. `git diff --check`
 launcher `bash -n`, builder dry-run and relative documentation-link checks passed.
 The final change stays on `feature/ai-putt-putt-paradise`, with main `develop`
 unchanged at `fc4729c375de0273659d262f89cfb6966acc6308`; no merge or push.
+
+
+## Final polish and PR preparation (2026-10-06)
+
+The final author-facing review found that the original course facade retained
+Sonic/Tails, EHZ and 75-degree shot policy. The replacement contract exposes a
+registered single-player state, an explicit module-owned level destination and
+a bounded native rolling impulse. `GolfSwing` owns golf velocity/spin and native
+sound requests. This removes the mod's old launch-at-75-then-overwrite workaround.
+Character factories run before the live roster is replaced. Candidate 0.7 pins
+are regenerated together; no published baseline or version policy changes.
+
+The review also reproduced two defects: entering a duck after 180 aim rows
+started at pose tick 181 rather than zero, and VERTEX drawing methods 4..7 were
+accepted although the compositor supports 0..3. The regression-first focused
+run failed both assertions with no skips. A captured creator pose clock now
+starts each pose at zero and freezes during pause/room holds; scene values reject
+unsupported methods before publication.
+
+Mouse comparison uses Slay The Robotnik PR #211, source
+`25b57f886aa748e27b229ff7a64393fd8a8f3e56`. Golf previously had no pointer
+handling. Reuse its engine-internal `LogicalMouse` viewport mapper rather than
+copying a golf-only mapper or importing its independent scene host/deck rules.
+A small `MenuInput.Pointer` value lets module title screens use the same logical
+coordinates. The mapper retains the same existing window entry point so the two
+PRs can share it; pure coordinate tests cover letterboxing and framebuffer scale.
+Logical movie input suppresses the physical pointer. Click/hover remains creator
+menu policy.
+
+Polish checklist:
+
+- [x] General native controller operations, creator golf adapter and candidate pins.
+- [x] Pose-clock and malformed-scene regressions; menu pointer integration.
+- [x] Human reading path and one-shot/extension walkthrough in the example README.
+- [x] Review the combined updated-develop diff and run focused and broad validation.
+- [x] Capture real gameplay outside the repository, retain inputs/state/edit provenance,
+      verify the reel, and prepare delivery through a develop PR without merging it.
+
+Updated develop is `dee7a93c99f3984fc2d8cd3b425ca4315cc9c19b`.
+Merge `6da29127a9a744ccea703561e6f0ddc52c70936b` reconciles the Infinite Sonic
+scripted rewind hook and golf controller hook by retaining both delegations;
+the release note retains the updated Infinite Sonic entry and golf's entry.
+The main checkout fast-forwarded on its existing develop branch, preserving its
+three dirty disassembly submodules and unrelated untracked files.
+
+The final host review reproduced focus/keyboard pause advancing WATCH rows and
+Escape's return fade stalling in AIM. `ControlledLevelIteration` now owns the
+host pause/frame-step gate and services host return fades before creator work.
+Start remains creator input. Both regression tests failed before the fix and
+passed afterward with GameLoop, Escape, recording, PLC and signature checks:
+155 tests, no failures/errors/skips. The earlier polish checks passed 243 tests
+and the generic S3K controller/API follow-up passed 25 tests without skips.
+
+Final user steering retains in-flight rewind and automatic turn passing. The
+earlier terminal-review approach above is superseded: settlement/finish/penalty
+resolves immediately, and charging/completed turns cannot spend an allowance.
+The new settlement regression first failed with player one still active. The
+creator removes its REVIEW/KEEP state and wire commands; schema 4 and the rules
+fingerprint identify WATCH-only undo. Offline actual finish routes, late-input
+rejection, Genesis pause-menu undo and two-JVM host/guest undo cover this policy.
+
+Moving-video inspection found a further roster/view defect: the first Tails turn
+held at camera `(86,645)` rather than the prepared `(0,560)`, placing the player
+under the HUD during charging. `Camera.setFocusedSprite` initializes camera words
+from sprite top-left; native physics eventually masked this when WATCH resumed.
+The generic character capability now preserves the complete camera snapshot while
+rebinding its target. The stock S3K regression failed first (expected `(0,912)`,
+actual `(54,1037)`); local turn tests also assert the preserved prepared view.
+The first broad invocation was deliberately interrupted before completion to fix
+this defect; it supplies no completed broad validation claim. Its temporary
+diagnostics were inspected and acknowledged. Fresh final captures and the combined
+broad invocation follow the correction.
+
+The camera correction passed the complete focused invocation:
+`python3 tools/testing/maven_queue.py -Dmse=off
+'-Dtest=TestCourseControl,TestPuttPuttParadise,TestGolfOnlineIntegration,TestCamera,TestModApiSignatureSurface'
+-Dsonic2.rom.path=<absolute S2 REV01> -Ds3k.rom.path=<absolute S3&K> test`:
+156 tests, zero failures/errors/skips. The new captures confirm that Tails keeps
+`(0,560)` through AIM, SPIN and release feedback, with the same two-turn route
+outcome. Both complete practice routes and the whole-shot rewind were recaptured
+through the final engine capability. The SDK example build also passed.
+
+
+The final combined run used `--base dee7a93c99f3984fc2d8cd3b425ca4315cc9c19b
+--workers 2 --max-minutes 90 --run`, with Java 21, Lua 5.4 and all three existing
+absolute ROM paths. Ordinary completed 2,976 reports / 25,735 cases in 2,113.25
+seconds: 29 failures, no errors and 41 inspected skips. All 111 golf integration
+cases and both two-JVM cases passed. Skips are the same opt-in/native/Infinite
+Sonic/CPZ/audio-reference categories recorded above; none are golf ROM omissions.
+Fresh guards completed 86 reports / 672 checks in 206.70 seconds: three failures,
+no errors or skips. This is a completed red broad run, not a suite pass.
+
+Two guards retain the known LrzFlame touch-profile and S1 title atlas failures.
+The new guard rejects `control -> game` and `control -> graphics`: physical
+pointer lookup had been placed directly in `MenuInput`. The corrected boundary
+matches the existing host composition pattern used by `InputBindingFactory`:
+`MenuInput` delegates to host-owned `MenuPointerRuntime`, which resolves engine
+graphics and the shared mapper. The public pointer contract and mapper are
+unchanged; no package-edge ratchet or guard is relaxed. Focused pointer/API tests
+and the complete fresh guard lane verify this correction rather than repeating
+unaffected native routes.
+
+The S3K-to-S2 palette-order reproducer ran on pre-polish merge `6da29127a` and
+the broad candidate: 31 and 32 selected cases respectively, each with only the
+same 24,783-pixel framebuffer failure and no errors/skips. Its full assertion
+matches exactly. The candidate scene class alone passed all 30 cases in a fresh
+invocation. This retains the previously recorded graphics cleanup hazard; it
+is not evidence of a mod simulation or shot defect. Updated-develop attribution
+of the remaining native failures and the post-boundary guard result follow below.
+
+
+Updated develop `dee7a93c99f3984fc2d8cd3b425ca4315cc9c19b` ran the 25 failed
+native methods below through queued Maven with `-Dmse=off -Ptest-concurrent
+-Dtest=<comma-joined selectors> test` and all three existing absolute ROM paths.
+Isolated reports and temporary directories were under that checkout's `target/`.
+It completed **30 cases, 28 failures, no errors/skips**. Every candidate failure
+matches by class, parameterized case identity, failure type and full assertion.
+Only `RewindObjectStateBlob@<hex>` identity text is normalized, as documented in
+the measurement hazards. This fresh full-assertion comparison includes the
+previously prefix-only SSZ assertion; no gameplay/state fields are normalized.
+
+```text
+com.openggf.tests.TestFbzSandopolisTimelineHeadless#productionExitResetsTimelineAndFreshDestinationRestoresAndReplaysTwice
+com.openggf.tests.TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries
+com.openggf.tools.TestDezIncomingFinalRouteCapture#coldEmeraldTeamClearsBothActsFinalFightAndDoomsday
+com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding
+com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding
+com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding
+com.openggf.tools.TestDezIncomingFinalRouteCapture#coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding
+com.openggf.tools.TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase
+com.openggf.tools.TestLrzActTwoColdRouteCapture#coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState
+com.openggf.tools.TestLrzBossColdRouteCapture#coldTeamCompletesBossActWithEarnedShieldAndRepeatableWorldState
+com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace
+com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff
+com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsCompletesActTwoAndRestoresTheBoulderHandoff
+com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsCompletesBossActAndReachesPlayableHiddenPalace
+com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsRestoresActTwoTraversalToTheMiddleCorridor
+com.openggf.tools.TestLrzWideBossColdRouteCapture#coldWideTeamClearsBossAndReleasesHiddenPalaceWithRepeatableWorld
+com.openggf.tools.TestMhzPairColdRouteCapture#pairedColdCompletionIsolatesTheLiveTimelineAtTheActualFbzLoad
+com.openggf.tools.TestMhzWideColdRouteCapture#wideSonicCompletesBothActsThroughProductionLoopWithWholeWorldReplay
+com.openggf.tools.TestSszColdRouteCapture#coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents
+com.openggf.tools.TestSszColdRouteCapture#coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport
+com.openggf.tools.TestSszSoloColdRouteCapture#coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches
+com.openggf.tools.TestSszSoloColdRouteCapture#coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory
+com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters
+com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory
+com.openggf.tools.audio.timeline.TestS1GameplayAudioTimelineCli#shellUsesAbsoluteBootstrapToolsAndRejectsInjectedEnvironmentBeforePathLookup
+```
+
+The baseline's separate fresh invocation,
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards
+-Dtest=TestArchUnitRules,TestObjectPhysicsStandardizationGuard test`, also supplied
+all three absolute ROM properties. It completed **62 checks, two failures,
+no errors/skips**; both inherited guard assertions match exactly.
+
+After extracting physical pointer lookup to the host, the queued focused command
+`-Dmse=off -Dtest=TestMenuInput,TestLogicalMouse,TestGolfMenu,TestModApiSignatureSurface
+test` with the absolute S2 ROM passed **34 checks with no failures/errors/skips**.
+The complete fresh `-Pguards test -B` invocation, Java 21/Lua 5.4 and all three
+absolute ROM paths, completed **672 checks with two baseline-matched failures,
+no errors/skips**. The new package-edge assertion now passes. This focused repair
+changes ownership of the same pointer computation, not shot/physics behavior or
+the public API, so unaffected ordinary routes are not repeated after the completed
+broad invocation. The candidate remains red on the inherited 28 ordinary cases,
+the independently matched palette-order case and the two inherited guards.
+No full-suite-green claim is made.
+
+Fresh final-source captures retain the complete EHZ1 Sonic practice finish
+(10 counted strokes plus a refunded rewind), EHZ2 Tails finish (25 strokes), and
+a two-turn local Sonic/Tails sequence. Inputs and every state row match the
+preceding corrected captures; all **7,104 native PNGs** also match byte for byte
+while the provenance records the final Java source digest. The 80.5-second
+30fps silent reel has 12 act-ordered chapters, full source videos, Genesis inputs,
+state/events and an exact edit map outside the repository. Native sources and
+the reel are fully decoded; frame count, chapter count, cadence, moving playback
+and every cut are checked. The reel demonstrates practice/local play, not a
+continuous online two-act completion or captured native audio.
+
+
+Consumed category diagnostics are acknowledged and removed. Matched-baseline,
+pointer/API and guard diagnostics are discarded after comparison. The owned
+pre-polish baseline worktree is removed; its tracked/untracked tree was clean,
+with only task test output, queue Python caches, a runtime-generated configuration
+template and post-checkout resource links. The feature worktree and uncommitted
+launcher remain for the PR; main stays on updated develop with its unrelated
+changes preserved. PR creation/push is the remaining delivery action from this
+prepared commit. No shared history is rewritten and no develop merge is requested.

@@ -57,6 +57,7 @@ public final class GolfMenu implements TitleScreenProvider {
     private boolean setup;
     private int selectedMode;
     private int row;
+    private int pointerX = Integer.MIN_VALUE, pointerY = Integer.MIN_VALUE;
     private CharacterChoice playerOne = CharacterChoice.SONIC;
     private CharacterChoice playerTwo = CharacterChoice.TAILS;
     private int practiceAct;
@@ -88,14 +89,14 @@ public final class GolfMenu implements TitleScreenProvider {
         animationTick = 0;
         state = State.ACTIVE; setup = false; row = 0; editing = false; error = "";
         selected = null; exitAction = TitleScreenAction.OTHER;
+        pointerX = pointerY = Integer.MIN_VALUE;
     }
     @Override public void reset() { state = State.INACTIVE; editing = false; selected = null; exitAction = TitleScreenAction.OTHER; }
     @Override public State getState() { return state; }
     @Override public boolean isExiting() { return state == State.EXITING; }
     @Override public boolean isActive() { return state != State.INACTIVE; }
     @Override public int startZoneIndex() { return 0; }
-    // Parent integration adds this semantic title-launch seam to TitleScreenProvider.
-    public int startActIndex() { return selected == null ? 0 : selected.actIndex(); }
+    @Override public int startActIndex() { return selected == null ? 0 : selected.actIndex(); }
     @Override public TitleScreenAction consumeExitAction() {
         TitleScreenAction action = exitAction; exitAction = TitleScreenAction.OTHER; return action;
     }
@@ -115,15 +116,21 @@ public final class GolfMenu implements TitleScreenProvider {
         }
         int vertical = (MenuInput.down(input) ? 1 : 0) - (MenuInput.up(input) ? 1 : 0);
         int horizontal = (MenuInput.right(input) ? 1 : 0) - (MenuInput.left(input) ? 1 : 0);
+        boolean accept = MenuInput.accept(input);
+        if (vertical == 0 && horizontal == 0 && !accept
+                && updatePointer(MenuInput.pointer(input, logicalWidth.getAsInt(), 224))) return;
         if (!setup) {
             if (vertical != 0 || horizontal != 0) selectedMode = Math.floorMod(selectedMode + (vertical != 0 ? vertical : horizontal), 4);
-            if (MenuInput.accept(input)) { mode = Mode.values()[selectedMode]; setup = true; row = 0; error = ""; }
+            if (accept) { mode = Mode.values()[selectedMode]; setup = true; row = 0; error = ""; }
             return;
         }
         if (vertical != 0) { row = Math.floorMod(row + vertical, fields().size()); error = ""; }
         Field field = focusedField();
         if (horizontal != 0) change(field, horizontal);
-        if (!MenuInput.accept(input)) return;
+        if (accept) activate(field);
+    }
+
+    private void activate(Field field) {
         switch (field) {
             case PLAYER_ONE, PLAYER_TWO, ACT, VIEWPORT, REWINDS_HOLE, REWINDS_TURN -> change(field, 1);
             case ADDRESS, PORT -> {
@@ -134,6 +141,34 @@ public final class GolfMenu implements TitleScreenProvider {
             case BACK -> { setup = false; row = 0; }
             default -> { }
         }
+    }
+
+    /** Shared logical coordinates; only the creator knows the title's hit regions. */
+    boolean updatePointer(MenuInput.Pointer pointer) {
+        if (state != State.ACTIVE || editing || !pointer.inside()) return false;
+        if (pointer.rightPressed()) {
+            if (setup) { setup = false; row = 0; error = ""; }
+            return true;
+        }
+        boolean moved = pointer.x() != pointerX || pointer.y() != pointerY;
+        pointerX = pointer.x(); pointerY = pointer.y();
+        if (!moved && !pointer.leftPressed()) return false;
+        int width = Math.clamp(logicalWidth.getAsInt(), 320, 800);
+        int panelWidth = Math.min(width - 24, 376), left = (width - panelWidth) / 2;
+        int count = setup ? fields().size() : Mode.values().length;
+        for (int index = 0; index < count; index++) {
+            int top = setup ? 122 + index * 9 : 126 + index * 17;
+            if (!pointer.over(left + 7, top, panelWidth - 14, setup ? 9 : 13)) continue;
+            if (setup) row = index; else selectedMode = index;
+            error = "";
+            if (pointer.leftPressed()) {
+                if (setup) activate(focusedField());
+                else { mode = Mode.values()[selectedMode]; setup = true; row = 0; }
+                return true;
+            }
+            break;
+        }
+        return false;
     }
 
     private void change(Field field, int direction) {
@@ -225,7 +260,7 @@ public final class GolfMenu implements TitleScreenProvider {
         if (setup) drawSetup(left, panelWidth);
         else drawModes(left, panelWidth);
         GolfText.panel(graphics, (width - 222) / 2, 212, 222, 10, 0x15254F, 0.96f);
-        GolfText.centered(graphics, "ARROWS CHOOSE  ENTER CONFIRM  ESC BACK", width, 214, 1, GolfText.CREAM);
+        GolfText.centered(graphics, "ARROWS / MOUSE  ENTER SELECT  ESC BACK", width, 214, 1, GolfText.CREAM);
     }
 
     private void backdrop(int width) {

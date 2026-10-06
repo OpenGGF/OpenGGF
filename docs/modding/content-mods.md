@@ -351,7 +351,10 @@ admits one native step with neutral player input. `afterTick` receives whether
 that step ran. Keep aim, menus and feedback in the controller; keep physics in
 native gameplay. Stock modules return no controller and retain their normal path.
 Initial setup rows are excluded from movie/history input; subsequent HOLD rows
-are included. `allowsDebugRewind()` controls admission of live developer rewind.
+are included. Window focus and configured keyboard pause freeze both native and
+creator rows; the configured frame-step key admits one row while paused. Start
+remains available for the creator's own menu. Holding Escape services the host's
+return fade independently of HOLD or pause. `allowsDebugRewind()` controls admission of live developer rewind.
 Modes with their own rewind allowance should return false in every mode so the
 developer shortcut cannot bypass it. `CourseControl.rewindHeld()` supplies the
 configured rewind key/primary-pad bumper for the current live row, independent
@@ -369,8 +372,14 @@ exemption. Full debug rewind restores the controller too. Course replacement
 invalidates speculative future history and preserves past; actual act loads reset
 history. Checkpoints are in-process handles, not a network format.
 
-`CourseControl.launch()` applies a supported-surface-relative curled impulse;
-`chargeSound()` preserves the native sound driver's pitch behavior. Controllers
+`CourseControl.playerState()` returns centre coordinates, native 8.8 speeds,
+registered character identity and support/camera observations. `launchRolling`
+accepts a creator-calculated facing, X/Y/ground impulse and airborne flag;
+it validates signed native speeds, corrects rolling radii and releases support.
+The creator chooses loft, spin, power and sounds. `loadLevel(zone, act)` loads an
+explicit module-owned destination; `selectCharacter(code)` requires an exact
+registered character and constructs it before replacing the single main roster.
+This capability has no golf/zone/character-name restrictions. Controllers
 can retain rolling without enabling pinball's minimum-speed boost, draw a
 presentation-only scene/overlay, and request title return. Use session overrides
 for selected characters and viewport rather than writing user preferences.
@@ -383,3 +392,13 @@ objects from the sender, or accepts ROM/art bytes as a fallback.
 [Putt Putt Paradise](../../examples/putt-putt-paradise/README.md) demonstrates
 independent golfer checkpoints and a host-authoritative direct TCP room. Its
 transport is separate from time-attack ghost races.
+
+
+Module title screens can read `MenuInput.pointer(input, width, height)`, an
+immutable logical-coordinate `Pointer` with `inside`, left/right press edges and
+`over(left, top, width, height)`. The engine shares its letterbox/framebuffer
+mapper with mod scenes; menus own their hit regions and hover policy. A missing
+window, unseen pointer, headless graphics or logical movie override produces
+`Pointer.none()`. Mouse state is physical presentation input and never replaces
+recorded controller rows. [Putt Putt Paradise's source guide](../../examples/putt-putt-paradise/README.md#learn-from-this-example)
+walks through registration, one controlled shot and safe extension points.

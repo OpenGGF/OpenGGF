@@ -120,9 +120,9 @@ public final class GolfOnlinePeerProbe {
 
     private void step(int held, int actions, boolean start) throws Exception {
         var before = fixture.gameplayMode().getRewindRegistry().captureCourse();
-        Object beforeRoom = value(controller, "roomState");
-        Object beforeTurn = beforeRoom == null ? null : value(beforeRoom, "remoteTurnOpened");
-        Object beforeId = beforeTurn == null ? null : value(beforeTurn, "id");
+        Object beforeMatch = value(controller, "matchState");
+        Object beforePending = beforeMatch == null ? null : value(beforeMatch, "pending");
+        Object beforeId = beforePending == null ? null : value(beforePending, "id");
         Object beforeOnline = field(controller, "online");
         Object beforeStatus = beforeOnline == null ? null : declaredValue(beforeOnline, "shotStatus");
         String beforePhase = beforeStatus == null ? "AIM" : value(beforeStatus, "phase").toString();
@@ -135,9 +135,13 @@ public final class GolfOnlinePeerProbe {
         else if (result == LevelFrameResult.SETUP_ONLY) setupRows++;
         else if (result == LevelFrameResult.HELD && opened()) {
             heldRows++;
-            Object afterId = value(value(value(controller, "roomState"), "remoteTurnOpened"), "id");
-            if (host && !java.util.Objects.equals(beforeId, afterId)
-                    && (beforePhase.equals("REVIEW") || beforePhase.equals("REWINDING"))) return; // Explicit restore at keep/rewind boundary.
+            Object afterMatch = value(controller, "matchState");
+            // A short WATCH can finish its reverse playback in this very row.
+            // Authoritative pending identity, not the guest-only room turn view,
+            // identifies the deliberate whole-course restore/refund boundary.
+            if (host && beforeId != null && value(afterMatch, "pending") == null
+                    && value(beforeMatch, "turnSequence").equals(value(afterMatch, "turnSequence"))
+                    && (beforePhase.equals("WATCH") || beforePhase.equals("REWINDING"))) return;
             var after = fixture.gameplayMode().getRewindRegistry().captureCourse();
             require(before.entries().keySet().equals(after.entries().keySet()), "held row changed course adapter layout");
             for (var entry : before.entries().entrySet()) {

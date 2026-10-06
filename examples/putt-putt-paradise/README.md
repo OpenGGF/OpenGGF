@@ -72,7 +72,9 @@ engine settings.
 | C while aiming (optional binding) | Toggle survey; arrows pan, C returns to the golfer |
 | Start | Pause; choose Resume, Rewind Shot, Concede, or Main Menu with arrows and A |
 
-A and the aiming arrows are sufficient for every shot. Default keyboard A is
+The title menu also accepts mouse hover/left click, with right click to return to
+the mode picker. Letterbox clicks are ignored. Keyboard/controller navigation
+remains available. A and the aiming arrows are sufficient for every shot. Default keyboard A is
 Space for P1 and Right Shift for P2; B/C are unbound unless configured. Ground
 putts use two A taps; chips use three. The chip marker's position determines
 neutral, forward topspin or backward spin. Timing outside the selected cyan
@@ -124,11 +126,10 @@ Long shots rewind faster, taking at most 90 presentation ticks (about 1.5 second
 at 60 Hz). The playback uses bounded recordings of ROM-backed scenes; course
 physics remains held until the checkpoint is restored.
 
-While an allowance remains, a completed shot waits for **A to keep the result**
-or rewind to retry. This includes finishes and penalties, before score changes
-or turn/act transitions are finalized. With rewinds off or either budget spent,
-shots pass the turn automatically. The setup menu offers **off / 3 / 5 / \*** per
-hole and **1 / 3 / \*** per turn; `*` means unlimited. Budgets belong to each
+Rewind is available during WATCH, while the shot is moving. Settlement, finishes
+and penalties resolve automatically and pass the turn; there is no A-to-accept
+step. A completed turn cannot be rewound. The setup menu offers **off / 3 / 5 / `*`**
+per hole and **1 / 3 / \*** per turn; `*` means unlimited. Budgets belong to each
 golfer, and the next hole grants its own fresh allowance. Online peers select
 matching rewind rules; the host validates ownership, restores the world and
 publishes the spent budget and refunded score, including after reconnect.
@@ -142,6 +143,69 @@ The online host owns simulation and scoring. The guest sends shot choices and
 renders authoritative course views; it does not run its own gameplay simulation.
 Disconnects hold play while the room allows a 30-second reconnect window. After
 match results, Start returns to the title menu.
+
+## Learn from this example
+
+Start with the small registration and pure rules files. Networking and scene
+streaming are optional layers; a first mod does not need them.
+
+| Read in this order | Responsibility | Useful pattern to copy |
+| --- | --- | --- |
+| [Manifest](src/main/resources/META-INF/openggf-mod.yaml) and [entry point](src/main/java/paradise/PuttPuttParadiseMod.java) | Declare the candidate API and register one patch and one namespaced object | Register through `ModContext`; let the engine assign ownership |
+| [GolfModule](src/main/java/paradise/GolfModule.java) | Wrap the S2 module, keep ROM geometry/art, replace selected object placements, supply the title and controller | Delegate stock behavior and override only what your rules need |
+| [GolfMenu](src/main/java/paradise/ui/GolfMenu.java) | Turn menu choices into one validated `Selection` before gameplay starts | Keep setup separate from frame simulation |
+| [ShotMeter](src/main/java/paradise/model/ShotMeter.java) and [GolfRules](src/main/java/paradise/model/GolfRules.java) | A-only shot state machine and deterministic power/spin math | Test rules without a ROM, renderer or socket |
+| [GolfMatch](src/main/java/paradise/model/GolfMatch.java) and [RewindAllowance](src/main/java/paradise/model/RewindAllowance.java) | Scores, turns, shot identity and undo budgets | Keep the ledger outside world rollback |
+| [GolfMode](src/main/java/paradise/GolfMode.java) and [GolfSwing](src/main/java/paradise/GolfSwing.java) | Coordinate held/native frames, then apply golf's calculated impulse and landing spin | Choose policy in the mod; use bounded native operations for world changes |
+| [GolfPoseClock](src/main/java/paradise/presentation/GolfPoseClock.java), [GolfScene](src/main/java/paradise/presentation/GolfScene.java) and [ShotReplay](src/main/java/paradise/presentation/ShotReplay.java) | Pose timing, finish decoration and bounded reverse playback | Render immutable values without advancing gameplay |
+| [GolfOnline](src/main/java/paradise/GolfOnline.java) then [GolfRoom](src/main/java/paradise/net/GolfRoom.java) | Adapt the game to a bounded TCP room with host-owned decisions | Keep protocol and transport away from physics rules |
+
+### Follow one shot
+
+1. `GolfMenu.Selection` configures the controller. The ROM-backed spawn settles
+   before `GolfMode.openTurn` captures a neutral lie.
+2. `beforeTick` advances the shot meter from logical A and arrow inputs. It
+   returns `false` while aiming, charging or rewinding; native world
+   timers, objects and physics remain held.
+3. The meter emits a committed `GolfShot`. `GolfMatch` assigns its identity and
+   charges a stroke; `GolfSwing` calculates the same velocity used by the dots,
+   calls `CourseControl.launchRolling`, and requests the native release sound.
+4. During WATCH, `beforeTick` admits one neutral native frame. `afterTick`
+   observes support, damage and the finish gate, applies the first landing's
+   spin, and records a bounded view sample if an undo is available.
+5. Settlement resolves the result and automatically opens the next turn. Rewinding plays
+   views backward, restores the opaque pre-shot `CourseCheckpoint`, refunds the
+   stroke and spends the separate allowance. A checkpoint excludes the mode
+   adapter, so restoring the world cannot restore a spent allowance.
+
+`CourseControl` owns checkpoint compatibility, native rolling-radius/support
+changes, exact registered character replacement and explicit level loading.
+It knows nothing about EHZ, golf power, spin, scoring, turn order or sounds.
+Those decisions belong to the files above. Character replacement is for a
+single controlled main player; this example intentionally has no CPU sidekick.
+Speeds passed to `launchRolling` use signed native 8.8 units: **256 = one pixel
+per physics step**. Positions in `playerState()` are character centres.
+
+### Make a small change first
+
+Try changing `GolfRules.POWER_SWEEP_TICKS` from 120 to 150 and rebuilding. The
+meter, its preview and the online rules fingerprint all read that constant.
+Run `TestGolfModel` before trying a ROM route. Changing just the HUD would show
+a different timing bar while retaining the old shot decisions.
+
+For a different course, change the mod's level selection, finish-marker lookup
+and explicit `loadLevel(zone, act)` destination together. The engine capability
+accepts a module-owned destination; this mod's `GolfModule` deliberately admits
+only Emerald Hill. Add a route check for every new act and character before
+claiming it works. For a different object rule, register your own namespaced
+factory and preserve the ROM placement fields when replacing the spawn.
+
+Use instance-owned state. Capture every field that affects subsequent frames
+in the controller's `State`; dispose owned presenters and sockets in `close`.
+The SDK rejects mutable static creator state and validates the same jar that
+users install. Do not package ROM bytes or use disassembly assets at runtime.
+For a smaller starting point, follow the examples in the
+[creator handbook](../../docs/modding/index.md).
 
 ## Source and checks
 

@@ -10,6 +10,25 @@ public final class MenuInput {
     private MenuInput() {
     }
 
+    /** Logical-screen pointer and button edges for module menus. No window means no pointer. */
+    @com.openggf.game.ModApi
+    public record Pointer(int x, int y, boolean inside, boolean leftPressed, boolean rightPressed) {
+        public static Pointer none() { return new Pointer(-1, -1, false, false, false); }
+        public boolean over(int left, int top, int width, int height) {
+            return inside && width > 0 && height > 0 && x >= left && y >= top
+                    && (long) x < (long) left + width && (long) y < (long) top + height;
+        }
+    }
+
+    /**
+     * Maps physical mouse input through the same letterboxed viewport as mod scenes.
+     * Logical movie/trace overrides suppress the pointer, preserving replay authority.
+     * Hover and click policy remain with the menu; calling this does not consume input.
+     */
+    public static Pointer pointer(InputHandler input, int width, int height) {
+        return com.openggf.MenuPointerRuntime.pointer(input, width, height);
+    }
+
     /** GLFW text input is consumed only by an active editor, never gameplay bindings. */
     public static void handleCharEvent(InputHandler input, int codepoint) {
         input.appendMenuCodepoint(codepoint);

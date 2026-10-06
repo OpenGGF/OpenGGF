@@ -1142,6 +1142,9 @@ public class GameLoop {
             audioUpdatedThisStep = false;
             ControlledLevelIteration.step(lifecycleContext, inputHandler, escapeToMasterTitleController,
                     userRecordingControls, liveRewindManager, playbackDebugManager,
+                    new ControlledLevelIteration.HostPause(configService.getInt(SonicConfiguration.PAUSE_KEY),
+                            configService.getInt(SonicConfiguration.FRAME_STEP_KEY), this::isPaused,
+                            () -> handlePlaybackTakeoverBeforePlaybackInputBridge(inputHandler), this::toggleUserPause),
                     this::syncPlaybackInputBridge, this::beginGameplayAudioFrameForTick,
                     () -> advanceGameplayAudioFrameForTick(false),
                     () -> { audioManager.resume(); initializeTitleScreenMode(); });

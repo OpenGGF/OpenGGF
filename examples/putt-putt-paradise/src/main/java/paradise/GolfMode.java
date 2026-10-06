@@ -9,6 +9,7 @@ import paradise.model.*;
 import paradise.net.*;
 import paradise.ui.*;
 import paradise.presentation.ShotReplay;
+import paradise.presentation.GolfPoseClock;
 import java.util.*;
 
 /** One live course, independent golfer worlds, and a ledger outside course rollback. */
@@ -17,15 +18,15 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
                         CourseCheckpoint neutralLie, long tick, int initialSteps, int watchSteps,
                         int dwell, int previousX, int previousY, boolean paused, boolean startHeld,
                         boolean inputBlocked, boolean survey, int surveyX, int surveyY, int pauseRow, boolean cHeld, String connectionError, boolean landingSpinPending,
-                        RewindAllowance.State allowance, ShotReplay.State replay, GolfOutcome.Candidates review,
-                        boolean rewindHeld, boolean rewindQueued) {
+                        RewindAllowance.State allowance, ShotReplay.State replay,
+                        boolean rewindHeld, boolean rewindQueued, GolfPoseClock.State poseClock) {
         public State { lies = List.copyOf(lies); }
     }
     private GolfMatch match;
     private ShotMeter meter = new ShotMeter();
     private RewindAllowance allowance = new RewindAllowance(RewindAllowance.Rules.defaults());
     private final ShotReplay replay = new ShotReplay();
-    private GolfOutcome.Candidates review;
+    private final GolfPoseClock poseClock = new GolfPoseClock();
     private boolean rewindHeld, rewindQueued;
     private final CourseCheckpoint[] lies = new CourseCheckpoint[2];
     private CourseCheckpoint neutralLie;
@@ -44,7 +45,7 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
         meter = new ShotMeter(); paused = false; startHeld = true; inputBlocked = true; landingSpinPending = false;
         survey = false; cHeld = false; titleRequest = false; tick = 0; initialSteps = 0;
         surveyX = surveyY = pauseRow = 0; connectionError = "";
-        allowance = new RewindAllowance(choice.rewinds()); replay.clear(); review = null; rewindHeld = rewindQueued = false;
+        allowance = new RewindAllowance(choice.rewinds()); replay.clear(); rewindHeld = rewindQueued = false; poseClock.reset();
     }
     public void finishGate(int x, int y) { finishX = x; finishY = y; }
     public int finishX() { return finishX; }
@@ -56,7 +57,7 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
         if (lies[1] != null) saved.add(lies[1]);
         return new State(match == null ? null : match.snapshot(), meter.snapshot(), saved, neutralLie,
                 tick, initialSteps, watchSteps, dwell, previousX, previousY, paused, startHeld,
-                inputBlocked, survey, surveyX, surveyY, pauseRow, cHeld, connectionError, landingSpinPending, allowance.snapshot(), replay.snapshot(), review, rewindHeld, rewindQueued);
+                inputBlocked, survey, surveyX, surveyY, pauseRow, cHeld, connectionError, landingSpinPending, allowance.snapshot(), replay.snapshot(), rewindHeld, rewindQueued, poseClock.snapshot());
     }
     @Override public void restore(State state) {
         if (state.match() == null) match = null;
@@ -73,8 +74,9 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
         previousY = state.previousY(); paused = state.paused(); startHeld = state.startHeld();
         inputBlocked = state.inputBlocked(); survey = state.survey(); surveyX = state.surveyX();
         surveyY = state.surveyY(); pauseRow = state.pauseRow(); cHeld = state.cHeld(); connectionError = state.connectionError(); landingSpinPending = state.landingSpinPending();
-        allowance.restore(state.allowance()); replay.restore(state.replay()); review = state.review();
+        allowance.restore(state.allowance()); replay.restore(state.replay());
         rewindHeld = state.rewindHeld(); rewindQueued = state.rewindQueued();
+        poseClock.restore(state.poseClock());
     }
     public GolfMatch.State matchState() { return match == null ? null : match.snapshot(); }
     public ShotMeter.State shotState() { return meter.snapshot(); }
@@ -92,6 +94,12 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
                 one.startHeld() || two.startHeld(), one.startPressed() || two.startPressed());
     }
     @Override public boolean beforeTick(CourseControl course, LogicalInputSnapshot input) {
+        boolean advanced = updateBeforeTick(course, input);
+        poseClock.update(poseKind(), !presentationPaused());
+        return advanced;
+    }
+
+    private boolean updateBeforeTick(CourseControl course, LogicalInputSnapshot input) {
         tick++; viewport = course.viewportWidth();
         if (neutralLie == null) course.advanceEntryPresentation();
         var playerInput = controls(input);
@@ -124,13 +132,12 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
                     publishStatus(GolfPacket.ShotPhase.CHARGING);
                     meter.restore(new ShotMeter.State(ShotMeter.Stage.FEEDBACK, shot.direction(), shot.elevationDegrees(),
                             0, shot.normalizedPower(), shot.spin(), shot.spin(), GolfRules.CHARGE_FEEDBACK_TICKS, true, false, shot, false));
-                    remoteFeedback = shot.isPutt() ? 0 : 2; inputBlocked = false; charge(course);
+                    remoteFeedback = shot.isPutt() ? 0 : 2; inputBlocked = false; charge();
                 }
                 if (online.state().host() && packet instanceof GolfPacket.ShotControl control && match != null
                         && match.snapshot().pending() != null && online.wire(match.snapshot().pending().id()).equals(control.id())
                         && control.id().owner() == 1 && !paused && !online.state().held()) {
                     if (control.action() == GolfPacket.ShotAction.REWIND) beginRewind(course);
-                    else if (review != null && !replay.playing()) keepShot(course);
                     if (match.snapshot().pending() != null) publishStatus(currentPhase());
                 }
             }
@@ -165,17 +172,12 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
         if (online != null && !online.state().host()) {
             var status = online.shotStatus();
             if (rewindQueued) { online.control(GolfPacket.ShotAction.REWIND); rewindQueued = false; }
-            if (status != null && (status.phase() == GolfPacket.ShotPhase.REVIEW || status.phase() == GolfPacket.ShotPhase.REWINDING)) {
-                if (status.phase() == GolfPacket.ShotPhase.REVIEW
-                        && (playerInput.actionPressedMask() & InputActionMasks.ACTION_A) != 0)
-                    online.control(GolfPacket.ShotAction.KEEP);
-                return false;
-            }
+            if (status != null && status.phase() == GolfPacket.ShotPhase.REWINDING) return false;
             return guestTick(course, playerInput);
         }
         if (match == null) {
             if (selection == null || selection.mode() == GolfMenu.Mode.PRACTICE)
-                match = GolfMatch.practice(character(course.ball().character()), course.actIndex());
+                match = GolfMatch.practice(character(course.playerState().character()), course.actIndex());
             else match = GolfMatch.competition(character(online == null ? selection.playerOne().code() : online.state().hostCharacter()),
                     character(online == null ? selection.playerTwo().code() : online.state().guestCharacter()));
         }
@@ -186,12 +188,8 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
             if (replay.step()) finishRewind(course);
             return false;
         }
-        if (review != null) {
-            if (ownsShot() && (playerInput.actionPressedMask() & InputActionMasks.ACTION_A) != 0) keepShot(course);
-            return false;
-        }
         if (online != null && match.snapshot().activePlayer() == 1 && match.snapshot().pending() == null) return false;
-        if (remoteFeedback > 0 && --remoteFeedback == 0) charge(course);
+        if (remoteFeedback > 0 && --remoteFeedback == 0) charge();
         return meterTick(course, online != null && match.snapshot().activePlayer() == 1 ? PlayerInputState.neutral() : playerInput, false);
     }
     private GolfMatch.Character character(String code) { return "tails".equals(code) ? GolfMatch.Character.TAILS : GolfMatch.Character.SONIC; }
@@ -201,7 +199,7 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
         meterTick(course, input, true); return false;
     }
     private boolean meterTick(CourseControl course, PlayerInputState input, boolean guest) {
-        if (!guest) resumeVerticalDrive();
+        if (!guest) GolfSwing.resumeVerticalDrive(meter.snapshot());
         int held = input.heldMask(), actions = input.actionHeldMask();
         if (inputBlocked) {
             if (actions == 0 && !input.startHeld()) inputBlocked = false;
@@ -219,7 +217,7 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
                 (actions & InputActionMasks.ACTION_A) != 0, (actions & InputActionMasks.ACTION_B) != 0);
         for (var event : meter.tick(controls)) switch (event.kind()) {
             case DUCK, CANCEL -> { }
-            case CHARGE -> { if (guest) course.chargeSound(); else charge(course); }
+            case CHARGE -> { if (guest) GolfSwing.chargeSound(); else charge(); }
             case COMMIT -> {
                 if (guest) { if (!online.submit(event.shot())) meter = new ShotMeter(); }
                 else {
@@ -244,18 +242,19 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
     }
     private boolean canRewind() {
         if (online != null && !online.state().host()) return online.shotStatus() != null && online.shotStatus().canRewind();
-        return match != null && match.snapshot().pending() != null && !replay.playing() && allowance.available(match.snapshot().pending().id());
+        return match != null && match.snapshot().pending() != null && meter.snapshot().stage() == ShotMeter.Stage.WATCH
+                && !replay.playing() && allowance.available(match.snapshot().pending().id());
     }
     private ScenePresentationFrame recordScene() {
         return paradise.presentation.GolfScene.withFinishFlag(GameServices.level().captureScene(0,
                 PlayerPresentationPose.nativePose(), 0, 0), finishX, finishY);
     }
     private void startRecording() {
-        replay.clear(); review = null;
+        replay.clear();
         if (allowance.available(match.nextShotId())) replay.record(0, recordScene());
     }
     private GolfPacket.ShotPhase currentPhase() {
-        return replay.playing() ? GolfPacket.ShotPhase.REWINDING : review != null ? GolfPacket.ShotPhase.REVIEW
+        return replay.playing() ? GolfPacket.ShotPhase.REWINDING
                 : meter.snapshot().stage() == ShotMeter.Stage.WATCH ? GolfPacket.ShotPhase.WATCH
                 : match.snapshot().pending() != null ? GolfPacket.ShotPhase.CHARGING : GolfPacket.ShotPhase.AIM;
     }
@@ -269,41 +268,20 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
         if (!canRewind() || neutralLie == null) return false;
         var id = match.snapshot().pending().id();
         if (!allowance.spend(id)) return false;
-        replay.begin(watchSteps, recordScene()); review = null; survey = false; landingSpinPending = false;
+        replay.begin(watchSteps, recordScene()); survey = false; landingSpinPending = false;
         inputBlocked = true; GameServices.audio().stopAllSfx(); publishStatus(GolfPacket.ShotPhase.REWINDING); return true;
     }
     private void finishRewind(CourseControl course) {
         var id = match.snapshot().pending().id(); course.restore(neutralLie);
         if (match.rewind(id) != GolfMatch.Decision.ACCEPTED) throw new IllegalStateException("Rewound shot lost its ledger");
-        if (online != null) online.rewound(match.snapshot(), id, course.ball());
+        if (online != null) online.rewound(match.snapshot(), id, course.playerState());
         openTurn(course);
     }
     private void launch(CourseControl course, GolfShot shot) {
-        var player = GameServices.camera().getFocusedSprite();
-        var velocity = GolfRules.launchVelocity(shot.direction(), shot.elevationDegrees(), shot.speedFixed(), player.getAngle(), shot.spin());
-        // The candidate CourseControl contract stops at 75 degrees. Reuse its native
-        // curl, centre correction, support release and sound before the mod's steeper departure.
-        course.launch(shot.direction(), Math.min(75, shot.elevationDegrees()), shot.speedFixed());
-        if (shot.elevationDegrees() > 75 || shot.spin() != 0) {
-            player.setXSpeed((short) velocity.x()); player.setYSpeed((short) velocity.y());
-            player.setGSpeed((short) velocity.ground());
-        }
+        GolfSwing.launch(course, shot);
         landingSpinPending = !shot.isPutt() && shot.spin() != 0;
     }
-    private void resumeVerticalDrive() {
-        var state = meter.snapshot();
-        if (state.stage() != ShotMeter.Stage.WATCH || state.shot() == null
-                || state.shot().elevationDegrees() != GolfRules.MAX_ELEVATION_DEGREES) return;
-        var player = GameServices.camera().getFocusedSprite();
-        if (player.getAir() && player.getYSpeed() < 0 && player.getXSpeed() == 0
-                && !player.getDead() && !player.isHurt() && !player.getSpringing()) {
-            // Retry a wall-stopped forward bias while ascending. Native collision
-            // still clamps each step; never push during descent or overwrite a bounce.
-            player.setXSpeed((short) GolfRules.launchVelocity(state.shot().direction(), 90,
-                    state.shot().speedFixed(), 0, state.shot().spin()).x());
-        }
-    }
-    private void charge(CourseControl course) { course.chargeSound(); if (online != null) online.sound(tick, "charge"); }
+    private void charge() { GolfSwing.chargeSound(); if (online != null) online.sound(tick, "charge"); }
     @Override public boolean retainRolling() { return meter.snapshot().stage() == ShotMeter.Stage.WATCH; }
     @Override public void afterTick(CourseControl course, boolean advanced) {
         if (advanced) {
@@ -319,18 +297,10 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
     }
     private void applyLandingSpin(CourseControl course) {
         if (!landingSpinPending || meter.snapshot().stage() != ShotMeter.Stage.WATCH) return;
-        var player = GameServices.camera().getFocusedSprite();
-        if (player.getAir() || !course.ball().floorSupport() || player.getDead()
-                || player.isHurt() || player.getSpringing()) return;
-        int ground = GolfRules.landingSpeed(player.getGSpeed(), meter.snapshot().shot());
-        double angle = (player.getAngle() & 255) * Math.PI / 128;
-        player.setGSpeed((short) ground);
-        player.setXSpeed((short) Math.round(ground * Math.cos(angle)));
-        player.setYSpeed((short) Math.round(ground * Math.sin(angle)));
-        landingSpinPending = false;
+        if (GolfSwing.applyLandingSpin(course, meter.snapshot().shot())) landingSpinPending = false;
     }
     private void observe(CourseControl course) {
-        var ball = course.ball();
+        var ball = course.playerState();
         if (neutralLie == null) {
             initialSteps++;
             if (course.presentationReady() && ball.floorSupport() && Math.abs(ball.groundSpeed()) <= 0x40) {
@@ -359,15 +329,7 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
         previousX = ball.x(); previousY = ball.y();
         if (GolfOutcome.choose(candidates) == GolfOutcome.NONE) return;
         var pending = match.snapshot().pending(); if (pending == null) return;
-        if (allowance.available(pending.id())) {
-            review = candidates; replay.record(watchSteps, recordScene());
-            publishStatus(GolfPacket.ShotPhase.REVIEW); return;
-        }
         resolveShot(course, candidates);
-    }
-    private void keepShot(CourseControl course) {
-        if (review == null || replay.playing()) return;
-        var kept = review; review = null; resolveShot(course, kept);
     }
     private void resolveShot(CourseControl course, GolfOutcome.Candidates candidates) {
         var pending = match.snapshot().pending(); if (pending == null) return;
@@ -376,9 +338,9 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
         if (result.outcome().isPenalty()) course.restore(neutralLie);
         else if (result.outcome() == GolfOutcome.SETTLED) course.settle();
         lies[owner] = course.capture();
-        if (online != null) online.committed(match.snapshot(), pending.id(), result.outcome(), course.ball());
+        if (online != null) online.committed(match.snapshot(), pending.id(), result.outcome(), course.playerState());
         if (result.holeAdvanced()) {
-            course.loadAct(1); neutralLie = null; Arrays.fill(lies, null); meter = new ShotMeter(); initialSteps = 0; return;
+            course.loadLevel(0, 1); neutralLie = null; Arrays.fill(lies, null); meter = new ShotMeter(); initialSteps = 0; return;
         }
         if (match.snapshot().status() == GolfMatch.Status.PLAYING) {
             course.restore(lies[match.snapshot().activePlayer()]); openTurn(course);
@@ -397,16 +359,20 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
     private void openTurn(CourseControl course) {
         neutralLie = course.capture(); lies[match.snapshot().activePlayer()] = neutralLie;
         meter = new ShotMeter(); watchSteps = dwell = 0; remoteFeedback = 0; landingSpinPending = false;
-        replay.clear(); review = null; rewindQueued = false;
-        survey = false; inputBlocked = true; previousX = course.ball().x(); previousY = course.ball().y();
-        if (online != null) { online.open(match.snapshot(), match.nextShotId(), course.ball()); publishStatus(GolfPacket.ShotPhase.AIM); }
+        replay.clear(); rewindQueued = false;
+        survey = false; inputBlocked = true; previousX = course.playerState().x(); previousY = course.playerState().y();
+        if (online != null) { online.open(match.snapshot(), match.nextShotId(), course.playerState()); publishStatus(GolfPacket.ShotPhase.AIM); }
     }
-    private PlayerPresentationPose pose() {
+    private PlayerPresentationPose.Kind poseKind() {
         var m = meter.snapshot(); var kind = m.stage() == ShotMeter.Stage.SPIN
                 || (m.stage() == ShotMeter.Stage.POWER && m.elevationDegrees() == 0) ? PlayerPresentationPose.Kind.DUCK
                 : m.stage() == ShotMeter.Stage.POWER || m.stage() == ShotMeter.Stage.FEEDBACK || m.stage() == ShotMeter.Stage.PRE_RELEASE
                 ? PlayerPresentationPose.Kind.SPINDASH : PlayerPresentationPose.Kind.NATIVE;
-        return new PlayerPresentationPose(kind, tick, m.direction());
+        return kind;
+    }
+
+    private PlayerPresentationPose pose() {
+        return poseClock.pose(meter.snapshot().direction());
     }
     @Override public boolean drawScene() {
         if (online != null && !online.state().host()) return online.draw(surveyX, surveyY, pose());
@@ -439,7 +405,6 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
                 : results() ? resultMessage(scores)
                 : online != null && (!online.state().ready() || online.state().held() || !online.notice().isEmpty()) ? online.message()
                 : replay.playing() || online != null && online.shotStatus() != null && online.shotStatus().phase() == GolfPacket.ShotPhase.REWINDING ? "REWINDING SHOT TO ITS START"
-                : review != null || online != null && online.shotStatus() != null && online.shotStatus().phase() == GolfPacket.ShotPhase.REVIEW ? "A KEEP SHOT  REWIND TO RETRY"
                 : survey ? "SURVEY TERRAIN: ARROWS PAN  C RETURN"
                 : switch (m.stage()) {
                     case AIM -> "UP/DOWN LOFT  LEFT/RIGHT AIM  A SHOT";
@@ -454,7 +419,7 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
                 || m.stage() == ShotMeter.Stage.POWER) && (match != null || online != null)) drawPreview();
         var status = online == null ? null : online.shotStatus();
         String stageLabel = replay.playing() || status != null && status.phase() == GolfPacket.ShotPhase.REWINDING ? "REWIND"
-                : review != null || status != null && status.phase() == GolfPacket.ShotPhase.REVIEW ? "REVIEW" : m.stage().name();
+                : m.stage().name();
         GolfOverlay.draw(GameServices.graphics(), viewport, new GolfOverlay.View(mode, stageLabel, m.elevationDegrees(), m.direction(),
                 m.power(), m.spin(), m.targetSpin(), meter.meterValue(), owner, scores, act, message, paused, results()));
         if (!paused && !results()) {

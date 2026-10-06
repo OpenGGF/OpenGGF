@@ -11,7 +11,8 @@ public final class ModApiVersion {
      * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,
      * deferred SMPS header construction, explicit dynamic solid-contact rewind binding,
      * opt-in whole-game presentation pacing, controlled level admission and opaque
-     * course checkpoints, and read-only ROM-backed value scenes.
+     * course checkpoints, semantic native impulses, logical menu pointers, and read-only
+     * ROM-backed value scenes.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

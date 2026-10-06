@@ -931,7 +931,8 @@ for whole-shot undo with its own setup allowances: rewinds per hole
 `off / 3 / 5 / *`, rewinds per turn `1 / 3 / *` (`*` is unlimited). Defaults are
 three per golfer/hole and one per turn. Unbinding the keyboard shortcut keeps
 the bumper available to controlled mods. Start → Rewind Shot provides an
-A-operated alternative, including for Genesis movie replay; live shortcut input
+A-operated alternative during WATCH, including for Genesis movie replay. Settled
+shots pass the turn automatically; completed turns cannot be rewound. Live shortcut input
 is suppressed while a movie owns the controller rows.
 
 ### Debug Navigation
