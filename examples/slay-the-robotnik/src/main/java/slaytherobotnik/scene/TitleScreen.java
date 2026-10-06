@@ -119,16 +119,16 @@ final class TitleScreen implements Screen {
             Gfx.button(c, shell.font, items.get(i)[1], s.x() + slide, s.y(), s.w(), s.h(), spots.isFocused(s.id()),
                     true, t);
         }
-        String foot = "FAN-MADE • USES YOUR SONIC 3 & KNUCKLES ROM • V0.1";
-        shell.font.drawShadowed(c, foot.replace("•", "-"), (w - shell.font.width(foot.replace("•", "-"))) / 2,
-                h - 8, Colors.TEXT_DIM);
+        String foot = "FAN-MADE - USES YOUR SONIC 3 & KNUCKLES ROM - V0.1";
+        shell.font.drawShadowed(c, foot, (w - shell.font.width(foot)) / 2, h - 8, Colors.TEXT_DIM);
     }
 
     /** The logo centred on {@code cx}: "SLAY THE" over a big two-tone "ROBOTNIK" at {@code scale}. */
     static void drawLogo(Shell shell, SceneCanvas c, int cx, int y, int scale, long t) {
         SmallFont f = shell.font;
         String top = "SLAY THE";
-        f.drawOutlined(c, top, cx - f.width(top) * 2 / 2, y, Colors.WHITE, 2);
+        int topScale = 2;
+        f.drawOutlined(c, top, cx - f.width(top) * topScale / 2, y, Colors.WHITE, topScale);
         String big = "ROBOTNIK";
         int bw = f.width(big) * scale;
         int bx = cx - bw / 2;

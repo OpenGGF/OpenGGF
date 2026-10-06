@@ -3,7 +3,11 @@ package slaytherobotnik.map;
 import java.util.ArrayList;
 import java.util.List;
 
-/** The generated map of one act: a 7x15 grid of nodes plus the boss at the top. */
+/**
+ * The generated map of one act: a 7-lane by 15-floor grid of nodes, then the boss. In the model
+ * floors run upward from 0 to the boss, as in Slay the Spire; {@code MapView} draws them left
+ * to right through the zone instead.
+ */
 public final class ActMap {
     public static final int WIDTH = 7;
     public static final int HEIGHT = 15;

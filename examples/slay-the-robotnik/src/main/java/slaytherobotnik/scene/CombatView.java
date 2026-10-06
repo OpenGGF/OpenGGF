@@ -47,7 +47,20 @@ final class CombatView implements RunScreen.RoomView {
     private final Hotspots spots = new Hotspots();
 
     // Presented state.
-    private final Map<Creature, int[]> stats = new IdentityHashMap<>();
+    /** Each creature's numbers as the replay has shown them so far (they trail the model while events play). */
+    private static final class Shown {
+        int hp;
+        int maxHp;
+        int block;
+
+        Shown(int hp, int maxHp, int block) {
+            this.hp = hp;
+            this.maxHp = maxHp;
+            this.block = block;
+        }
+    }
+
+    private final Map<Creature, Shown> stats = new IdentityHashMap<>();
     private final Map<Creature, Map<String, Integer>> powers = new IdentityHashMap<>();
     private final List<Card> hand = new ArrayList<>();
     private final List<Enemy> shown = new ArrayList<>();
@@ -177,15 +190,15 @@ final class CombatView implements RunScreen.RoomView {
         for (Creature cr : creatures()) {
             int hpBefore = cr.hp();
             int block = 0;
-            stats.put(cr, new int[] {hpBefore, cr.maxHp(), block});
+            stats.put(cr, new Shown(hpBefore, cr.maxHp(), block));
             powers.put(cr, new LinkedHashMap<>());
         }
         // Undo what the events will redo: damage and Block from start-of-combat effects.
         for (CombatEvent e : combat.events()) {
             if (e instanceof CombatEvent.Damaged d && stats.containsKey(d.target())) {
-                stats.get(d.target())[0] += d.hpLost();
+                stats.get(d.target()).hp += d.hpLost();
             } else if (e instanceof CombatEvent.Healed h && stats.containsKey(h.target())) {
-                stats.get(h.target())[0] -= h.amount();
+                stats.get(h.target()).hp -= h.amount();
             }
         }
         energy = 0;
@@ -210,14 +223,14 @@ final class CombatView implements RunScreen.RoomView {
         return list;
     }
 
-    private int[] stat(Creature c) {
-        return stats.computeIfAbsent(c, k -> new int[] {k.hp(), k.maxHp(), k.block()});
+    private Shown stat(Creature c) {
+        return stats.computeIfAbsent(c, k -> new Shown(k.hp(), k.maxHp(), k.block()));
     }
 
     /** Copies the model into the presented state (when the replay is idle). */
     private void sync() {
         for (Creature cr : creatures()) {
-            stats.put(cr, new int[] {cr.hp(), cr.maxHp(), cr.block()});
+            stats.put(cr, new Shown(cr.hp(), cr.maxHp(), cr.block()));
             Map<String, Integer> p = new LinkedHashMap<>();
             for (Power power : cr.powers()) {
                 p.put(power.id(), power.amount());
@@ -354,7 +367,12 @@ final class CombatView implements RunScreen.RoomView {
 
     // ------------------------------------------------------------------ replay
 
-    /** Applies one event to the presented state and returns how many ticks to show it for. */
+    /**
+     * Applies one event to the presented state and returns how many frames the replay holds it
+     * before the next one: this is the fight's pacing. Big moments get room to read (an enemy's
+     * move 16, a death 18, the turn banners 18-22, a shuffle 10), cards flow quickly (a draw 3, a
+     * discard 1-4, a play 7), and pure bookkeeping (energy, messages, the end) takes none.
+     */
     private int apply(Shell shell, CombatEvent event) {
         return switch (event) {
             case CombatEvent.TurnStarted t -> {
@@ -424,9 +442,9 @@ final class CombatView implements RunScreen.RoomView {
                 yield 10;
             }
             case CombatEvent.Damaged d -> {
-                int[] st = stat(d.target());
-                st[0] = Math.max(0, st[0] - d.hpLost());
-                st[2] = Math.max(0, st[2] - d.blocked());
+                Shown st = stat(d.target());
+                st.hp = Math.max(0, st.hp - d.hpLost());
+                st.block = Math.max(0, st.block - d.blocked());
                 flash.put(d.target(), 6);
                 float[] at = anchor(d.target());
                 if (d.hpLost() > 0) {
@@ -447,7 +465,7 @@ final class CombatView implements RunScreen.RoomView {
                 yield 8;
             }
             case CombatEvent.BlockGained b -> {
-                stat(b.target())[2] += b.amount();
+                stat(b.target()).block += b.amount();
                 float[] at = anchor(b.target());
                 popup("+" + b.amount(), Colors.BLOCK_BLUE, at[0], at[1] + 8, 26, 1);
                 if (b.target().isPlayer()) {
@@ -480,15 +498,15 @@ final class CombatView implements RunScreen.RoomView {
                 yield 4;
             }
             case CombatEvent.Healed h -> {
-                int[] st = stat(h.target());
-                st[0] = Math.min(st[1], st[0] + h.amount());
+                Shown st = stat(h.target());
+                st.hp = Math.min(st.maxHp, st.hp + h.amount());
                 float[] at = anchor(h.target());
                 popup("+" + h.amount(), Colors.TEXT_GOOD, at[0], at[1], 34, 2);
                 shell.sfx(Sounds.SFX_RING);
                 yield 6;
             }
             case CombatEvent.MaxHpChanged m -> {
-                stat(m.target())[1] += m.delta();
+                stat(m.target()).maxHp += m.delta();
                 yield 2;
             }
             case CombatEvent.EnergyChanged e -> {
@@ -509,7 +527,7 @@ final class CombatView implements RunScreen.RoomView {
                     shown.add(s.enemy());
                     shown.sort((a, b) -> Integer.compare(combat.enemies().indexOf(a), combat.enemies().indexOf(b)));
                 }
-                stats.put(s.enemy(), new int[] {s.enemy().hp(), s.enemy().maxHp(), s.enemy().block()});
+                stats.put(s.enemy(), new Shown(s.enemy().hp(), s.enemy().maxHp(), s.enemy().block()));
                 intents.put(s.enemy(), s.enemy().intent(combat));
                 yield 10;
             }
@@ -931,7 +949,7 @@ final class CombatView implements RunScreen.RoomView {
         float lungeOffset = lungeTicks > 0 ? (float) Math.sin((14 - lungeTicks) / 14f * Math.PI) * 36 : 0;
         int anim;
         long animTicks = shell.ticks;
-        if (stat(player)[0] <= 0) {
+        if (stat(player).hp <= 0) {
             anim = Poses.DEATH;
         } else if (hurt.containsKey(player)) {
             anim = Poses.HURT;
@@ -949,28 +967,28 @@ final class CombatView implements RunScreen.RoomView {
         float f = flash.getOrDefault(player, 0) / 6f;
         Poses.hero(shell, c, id, anim, animTicks, x, ground,
                 SceneDraw.plain().withFlash(f > 0 ? Colors.alpha(Colors.WHITE, f) : 0));
-        int[] st = stat(player);
-        if (st[2] > 0) {
+        Shown st = stat(player);
+        if (st.block > 0) {
             c.draw(shell.art.icon("ui_block"), PLAYER_X - 30, ground + 3);
-            shell.font.drawOutlined(c, Integer.toString(st[2]), PLAYER_X - 27 - shell.font.width(
-                    Integer.toString(st[2])) / 2 + 3, ground + 4, Colors.WHITE, 1);
+            shell.font.drawOutlined(c, Integer.toString(st.block), PLAYER_X - 27 - shell.font.width(
+                    Integer.toString(st.block)) / 2 + 3, ground + 4, Colors.WHITE, 1);
         }
-        Gfx.hpBar(c, shell.font, PLAYER_X - 22, ground + 4, 50, st[0], st[1], st[2], ghostHp(player, st[0]));
+        Gfx.hpBar(c, shell.font, PLAYER_X - 22, ground + 4, 50, st.hp, st.maxHp, st.block, ghostHp(player, st.hp));
         drawPowers(shell, c, player, PLAYER_X - 22, ground + 13);
         statTips(shell, screen, null, PLAYER_X - 22, ground, st);
     }
 
     /** HP and Block tips while the pointer is over a creature's bar or Block badge ({@code enemy} null for the hero). */
-    private void statTips(Shell shell, RunScreen screen, Enemy enemy, int barX, int ground, int[] st) {
+    private void statTips(Shell shell, RunScreen screen, Enemy enemy, int barX, int ground, Shown st) {
         var mouse = shell.in.mouse;
-        if (st[2] > 0 && mouse.over(barX - 8, ground + 3, 9, 9)) {
-            screen.tooltip("BLOCK", "Stops the next " + st[2] + " damage. Removed at the start of "
+        if (st.block > 0 && mouse.over(barX - 8, ground + 3, 9, 9)) {
+            screen.tooltip("BLOCK", "Stops the next " + st.block + " damage. Removed at the start of "
                     + (enemy == null ? "your" : "its") + " next turn.", barX - 8, ground + 24);
         } else if (mouse.over(barX - 1, ground + 3, 52, 7)) {
             String body = enemy == null
                     ? "Your health. The run ends if it reaches 0."
                     : enemy.name() + " is beaten when its HP reaches 0.";
-            screen.tooltip("HP " + Math.max(0, st[0]) + "/" + st[1], body + (st[2] > 0 ? " Block is used up first." : ""),
+            screen.tooltip("HP " + Math.max(0, st.hp) + "/" + st.maxHp, body + (st.block > 0 ? " Block is used up first." : ""),
                     barX, ground + 24);
         }
     }
@@ -994,11 +1012,11 @@ final class CombatView implements RunScreen.RoomView {
         if (deathTicks != null) {
             return;
         }
-        int[] st = stat(enemy);
-        Gfx.hpBar(c, shell.font, x - 25, ground + 4, 50, st[0], st[1], st[2], ghostHp(enemy, st[0]));
-        if (st[2] > 0) {
+        Shown st = stat(enemy);
+        Gfx.hpBar(c, shell.font, x - 25, ground + 4, 50, st.hp, st.maxHp, st.block, ghostHp(enemy, st.hp));
+        if (st.block > 0) {
             c.draw(shell.art.icon("ui_block"), x - 33, ground + 3);
-            shell.font.drawOutlined(c, Integer.toString(st[2]), x - 30 - shell.font.width(Integer.toString(st[2])) / 2
+            shell.font.drawOutlined(c, Integer.toString(st.block), x - 30 - shell.font.width(Integer.toString(st.block)) / 2
                     + 3, ground + 4, Colors.WHITE, 1);
         }
         drawPowers(shell, c, enemy, x - 25, ground + 13);
@@ -1123,7 +1141,7 @@ final class CombatView implements RunScreen.RoomView {
      */
     private void animateReadouts() {
         for (Creature creature : creatures()) {
-            int hp = stat(creature)[0];
+            int hp = stat(creature).hp;
             float[] g = ghosts.computeIfAbsent(creature, k -> new float[] {hp, 0});
             if (hp >= g[0]) {
                 g[0] = hp;

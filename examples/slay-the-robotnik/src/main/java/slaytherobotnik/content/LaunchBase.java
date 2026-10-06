@@ -29,8 +29,9 @@ public final class LaunchBase {
     }
 
     public static void register(Catalog c) {
-        // S3K zone 6 (LBZ): act 1 art (the Death Egg on its pad), act 2 music 0x0E; miniboss 0x18; boss 0x19.
-        c.addAct(new ActDef(ACT, "Act 3", "Launch Base", 6, 0, 0x0E, 0x19, 0x18,
+        c.addAct(new ActDef(ACT, "Act 3", "Launch Base",
+                6, 0,               // ROM zone and act: Launch Base act 1's art (the Death Egg on its pad)
+                0x0E, 0x19, 0x18,   // music for the map (LBZ2), the boss (boss theme), elites (miniboss theme)
                 "Robotnik's launch site. The Death Egg is fuelled and ready.", null));
 
         c.addEncounter(new EncounterDef("lbz:snale_trio", "Snale Blasters", ACT, EncounterDef.WEAK, 1,

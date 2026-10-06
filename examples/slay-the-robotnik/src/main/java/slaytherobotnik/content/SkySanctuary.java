@@ -29,8 +29,9 @@ public final class SkySanctuary {
     }
 
     public static void register(Catalog c) {
-        // S3K zone 10 (SSZ). Music: SSZ 0x15; Egg Robos use the miniboss theme; Mecha Sonic the final boss theme.
-        c.addAct(new ActDef(ACT, "Final Act", "Sky Sanctuary", 10, 0, 0x15, 0x30, 0x18,
+        c.addAct(new ActDef(ACT, "Final Act", "Sky Sanctuary",
+                10, 0,              // ROM zone and act: Sky Sanctuary act 1
+                0x15, 0x30, 0x18,   // music for the map (SSZ), Mecha Sonic (final boss theme), the Egg Robos (miniboss)
                 "The ancient sanctuary above the clouds. Mecha Sonic waits at the summit.",
                 List.of(RoomType.REST, RoomType.SHOP, RoomType.ELITE)));
 

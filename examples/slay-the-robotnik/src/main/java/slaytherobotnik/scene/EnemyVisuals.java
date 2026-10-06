@@ -14,6 +14,11 @@ import slaytherobotnik.ui.Colors;
  * the object's {@code ChildObjDat}/{@code ObjDat} tables in the S3K disassembly (cited per
  * enemy), with parts listed back to front (the ROM's sprite priority, then object slot
  * order). Elites are scaled up. Enemies without art get a labelled placeholder.
+ *
+ * <p>Adding an enemy's look: give its {@code Enemy} an art key in {@code content/<Zone>.java},
+ * add a {@code case} for that key to {@code compose} listing its parts, add any sprite it needs
+ * to {@code art/RomSprites}, and only if it should not stand at normal size on the ground, give
+ * it a {@code scale} or a {@code lift}.
  */
 final class EnemyVisuals {
     /** Where an enemy was drawn this frame (for hotspots, intents and effects). */

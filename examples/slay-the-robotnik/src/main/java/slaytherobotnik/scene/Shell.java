@@ -14,6 +14,10 @@ import slaytherobotnik.ui.SmallFont;
 /**
  * Shared state and services for all screens: the scene context, input, font, art, content
  * catalog, the current run, music, saving, and fade transitions between screens.
+ *
+ * <p>The fields are public and some are mutable on purpose: every screen reads the same tick's
+ * input and state from here, and wrapping each in a getter would add ceremony without
+ * protecting anything in a single-threaded scene.
  */
 public final class Shell {
     private static final int FADE_TICKS = 14;

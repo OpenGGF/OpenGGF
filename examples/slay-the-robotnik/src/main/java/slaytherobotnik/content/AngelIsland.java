@@ -27,8 +27,9 @@ public final class AngelIsland {
     }
 
     public static void register(Catalog c) {
-        // S3K zone 0 (AIZ), act 1. Music: AIZ1 0x01; miniboss 0x18; boss 0x19.
-        c.addAct(new ActDef(ACT, "Act 1", "Angel Island", 0, 0, 0x01, 0x19, 0x18,
+        c.addAct(new ActDef(ACT, "Act 1", "Angel Island",
+                0, 0,               // ROM zone and act: Angel Island act 1
+                0x01, 0x19, 0x18,   // music for the map (AIZ1), the boss (boss theme), elites (miniboss theme)
                 "The floating island, burning under Robotnik's bombers.", null));
 
         c.addEncounter(new EncounterDef("aiz:rhinobot", "Rhinobot", ACT, EncounterDef.WEAK, 1,
@@ -69,7 +70,7 @@ public final class AngelIsland {
 
     // ================================================================== normal badniks
 
-    /** Jaw Worm. Charges, skids for Block, revs up for Strength. */
+    /** Plays Slay the Spire's Jaw Worm: charges, skids for Block, revs up for Strength. */
     public static final class Rhinobot extends Enemy {
         private final Move charge = Move.attack("charge", "Charge", 11);
         private final Move skid = Move.of("skid", "Skid Turn", IntentKind.ATTACK_DEFEND, 7, 1);
@@ -85,6 +86,8 @@ public final class AngelIsland {
                 setMove(charge);
                 return;
             }
+            // Slay the Spire's Jaw Worm table: 25% charge, 30% skid, 45% rev up, with a reroll when a
+            // move would repeat too often. The odds inside each reroll are the original's.
             int roll = ai.nextInt(100);
             if (roll < 25) {
                 setMove(lastMove("charge") ? (ai.chance(0.5625) ? revUp : skid) : charge);

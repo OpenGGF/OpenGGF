@@ -29,8 +29,9 @@ public final class Hydrocity {
     }
 
     public static void register(Catalog c) {
-        // S3K zone 1 (HCZ). Music: HCZ1 0x03; miniboss 0x18; boss 0x19.
-        c.addAct(new ActDef(ACT, "Act 2", "Hydrocity", 1, 0, 0x03, 0x19, 0x18,
+        c.addAct(new ActDef(ACT, "Act 2", "Hydrocity",
+                1, 0,               // ROM zone and act: Hydrocity act 1
+                0x03, 0x19, 0x18,   // music for the map (HCZ1), the boss (boss theme), elites (miniboss theme)
                 "Flooded ruins, roaring pumps and a lot of very hungry fish.", null));
 
         c.addEncounter(new EncounterDef("hcz:jawz_school", "Jawz School", ACT, EncounterDef.WEAK, 1,
