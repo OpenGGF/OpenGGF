@@ -129,6 +129,17 @@ public class InputHandler {
 		return keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld();
 	}
 
+	/**
+	 * Returns the configured keyboard rewind key or the primary pad's rewind bumper,
+	 * independently of whether developer live rewind is enabled. Unbinding the key
+	 * leaves the bumper available. Movie/trace-owned frames suppress this live input;
+	 * the caller owns rewind permission, allowances and press-edge detection.
+	 */
+	public boolean isRewindHeld() {
+		return logicalOverride == null && (isPhysicalKeyDown(inputBindings.rewindKey())
+				|| gamepadInputManager.isRewindHeld());
+	}
+
 	/** Returns raw keyboard state, ignoring any trace/replay logical override. */
 	public boolean isPhysicalKeyDown(int keyCode) {
 		return keyCode >= 0 && keyCode < MAX_KEYS && keys[keyCode];

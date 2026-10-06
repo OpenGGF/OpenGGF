@@ -59,6 +59,8 @@ public final class GolfRoom implements AutoCloseable {
     private long tickOrdinal;
     private TurnOpened turn;
     private ViewFrame latestView;
+    private ShotStatus latestStatus;
+    private ShotControl pendingControl;
     private ShotRequest pendingRemote;
     private ShotRequest pendingGuest;
     private Score player0 = new Score(0, 0, false);
@@ -171,6 +173,9 @@ public final class GolfRoom implements AutoCloseable {
             else if (held) send(new Rejected(request.id(), "room held"));
             else if (pendingRemote == null) { pendingRemote = request; emit(request); }
             else if (!pendingRemote.equals(request)) send(new Rejected(request.id(), "conflicting pending shot"));
+        } else if (packet instanceof ShotControl control && ready && match.equals(control.id().match()) && control.id().owner() == 1) {
+            if (current(control.id()) && !held) emit(control);
+            else if (latestStatus != null) send(latestStatus);
         } else if (packet instanceof Pause pause && match.equals(pause.match())) {
             // Only assigned fingerprint/token-validated peers reach this handler. Pause intent precedes Ready.
             remotePaused = true; remotePauseReason = pause.reason(); publishHold();
@@ -204,29 +209,36 @@ public final class GolfRoom implements AutoCloseable {
             connected = true; ready = true; remotePaused = false; held = localPaused;
             disconnectSeconds = -1; message = held ? localPauseReason : "ready"; emit(packet);
             if (!held && pendingGuest != null) send(pendingGuest);
+            if (!held && pendingControl != null) send(pendingControl);
         } else if (packet instanceof Pause pause && match.equals(pause.match())) {
             connected = true; ready = true; remotePaused = true; held = true;
             disconnectSeconds = -1; message = pause.reason(); emit(packet);
         } else if (packet instanceof TurnOpened opened && match.equals(opened.id().match())) {
             if (turn != null && (opened.id().hole() < turn.id().hole()
-                    || opened.id().hole() == turn.id().hole() && opened.id().turn() < turn.id().turn())) return;
+                    || opened.id().hole() == turn.id().hole() && (opened.id().turn() < turn.id().turn()
+                    || opened.id().turn() == turn.id().turn() && opened.id().shot() < turn.id().shot()))) return;
             boolean same = turn != null && turn.id().equals(opened.id());
             turn = opened; player0 = opened.player0(); player1 = opened.player1(); owner = opened.id().owner();
             revisions.begin(opened.id(), same ? revisions.lastRevision() : -1);
             sounds.begin(opened.id(), same ? sounds.lastCue() : -1);
             if (pendingGuest != null && !pendingGuest.id().equals(opened.id())) pendingGuest = null;
+            if (!same) { latestStatus = null; pendingControl = null; }
             emit(packet);
         } else if (packet instanceof ShotAccepted accepted && current(accepted.id())) emit(packet);
+        else if (packet instanceof ShotStatus status && current(status.id())) {
+            latestStatus = status; pendingControl = null; emit(packet);
+        }
         else if (packet instanceof TurnCommitted committed && current(committed.id())) {
             player0 = committed.player0(); player1 = committed.player1(); owner = committed.nextOwner();
             if (pendingGuest != null && pendingGuest.id().equals(committed.id())) pendingGuest = null;
+            pendingControl = null;
             emit(packet);
         } else if (packet instanceof ViewFrame frame && revisions.accept(frame)) emit(packet);
         else if (packet instanceof SoundCue cue && sounds.accept(cue)) emit(packet);
         else if (packet instanceof Rejected rejected && current(rejected.id())) {
             pendingGuest = null; message = rejected.reason(); emit(packet);
         } else if (!(packet instanceof ShotAccepted || packet instanceof TurnCommitted || packet instanceof ViewFrame
-                || packet instanceof SoundCue || packet instanceof Rejected)) violation("unauthorized host packet");
+                || packet instanceof SoundCue || packet instanceof Rejected || packet instanceof ShotStatus)) violation("unauthorized host packet");
     }
     private boolean current(ShotId id) { return turn != null && turn.id().equals(id); }
     private void send(GolfPacket packet) { if (peer != null && !peer.send(packet)) lost("outbound queue overflow"); }
@@ -234,6 +246,7 @@ public final class GolfRoom implements AutoCloseable {
         receipts.last().ifPresent(this::replayReceipt);
         if (turn != null) send(turn);
         receipts.current().ifPresent(this::replayReceipt);
+        if (latestStatus != null) send(latestStatus);
         if (latestView != null) send(latestView);
         // Old charge cues are not replayed. Guest watermarks and held course state retain sound ownership.
     }
@@ -248,7 +261,7 @@ public final class GolfRoom implements AutoCloseable {
             if (!turn.equals(opened)) throw new IllegalArgumentException("contradictory turn publication");
             return;
         }
-        receipts.openTurn(opened.id()); turn = opened; latestView = null; pendingRemote = null;
+        receipts.openTurn(opened.id()); turn = opened; latestView = null; latestStatus = null; pendingRemote = null;
         player0 = opened.player0(); player1 = opened.player1(); owner = opened.id().owner();
         if (ready) send(opened);
     }
@@ -259,6 +272,15 @@ public final class GolfRoom implements AutoCloseable {
         pendingGuest = request; send(request); return true;
     }
     public ShotReceipts.Result acceptShot(ShotRequest request) { return acceptShot(request, tickOrdinal); }
+    public boolean submitControl(ShotControl control) {
+        if (host || ended || !ready || held || !current(control.id()) || control.id().owner() != 1) return false;
+        if (pendingControl != null) return pendingControl.equals(control);
+        pendingControl = control; send(control); return true;
+    }
+    public void publishStatus(ShotStatus status) {
+        requireHost(); if (!current(status.id())) throw new IllegalArgumentException("status turn");
+        latestStatus = status; if (ready) send(status);
+    }
     public ShotReceipts.Result acceptShot(ShotRequest request, long acceptedTick) {
         requireHost(); Objects.requireNonNull(request);
         var inspection = receipts.inspect(request, request.id().owner());

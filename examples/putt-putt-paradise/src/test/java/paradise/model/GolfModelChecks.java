@@ -296,6 +296,52 @@ public final class GolfModelChecks {
         require(match.snapshot().golfers().size() == 1, "no sidekick or second golfer");
     }
 
+    public static void shotRewind() {
+        var match = GolfMatch.competition(GolfMatch.Character.SONIC, GolfMatch.Character.TAILS);
+        var before = match.snapshot(); var oldId = match.nextShotId();
+        match.commit(oldId, SHOT);
+        same(GolfMatch.Decision.ACCEPTED, match.rewind(oldId), "rewind pending shot");
+        same(before.golfers(), match.snapshot().golfers(), "refund shot without changing score history");
+        same(before.turnSequence(), match.snapshot().turnSequence(), "retry keeps turn");
+        same(before.activePlayer(), match.snapshot().activePlayer(), "retry keeps golfer");
+        require(match.nextShotId().shotSequence() > oldId.shotSequence(), "retry identity must advance");
+        same(GolfMatch.Decision.REJECTED, match.rewind(oldId), "duplicate rewind cannot refund another stroke");
+        same(GolfMatch.Decision.REJECTED, match.commit(oldId, SHOT), "retired shot cannot be resubmitted");
+        play(match, SETTLE);
+        same(1, match.snapshot().golfers().get(0).total(), "only kept shot counts");
+        same(1, match.snapshot().activePlayer(), "kept shot passes turn normally");
+    }
+
+    public static void rewindAllowances() {
+        var allowance = new RewindAllowance(RewindAllowance.Rules.defaults());
+        var id = new GolfMatch.ShotId(0, 1, 0, 1);
+        require(allowance.spend(id), "first rewind");
+        require(!allowance.spend(id), "duplicate cannot consume quota");
+        require(!allowance.spend(new GolfMatch.ShotId(0, 1, 0, 2)), "retry does not reset turn limit");
+        same(2, allowance.holeRemaining(0, 0), "hole allowance consumed once");
+        require(allowance.spend(new GolfMatch.ShotId(0, 2, 1, 3)), "other golfer independent");
+        require(allowance.spend(new GolfMatch.ShotId(0, 3, 0, 4)), "next turn resets turn limit");
+        require(allowance.spend(new GolfMatch.ShotId(0, 5, 0, 6)), "third hole rewind");
+        require(!allowance.spend(new GolfMatch.ShotId(0, 7, 0, 8)), "fourth hole rewind rejected");
+        require(allowance.spend(new GolfMatch.ShotId(1, 8, 0, 9)), "new hole has fresh allowance");
+        var saved = allowance.snapshot();
+        allowance.spend(new GolfMatch.ShotId(1, 10, 0, 11)); allowance.restore(saved);
+        same(saved, allowance.snapshot(), "debug replay restores allowance exactly");
+        for (int holeLimit : new int[]{0, 3, 5, -1}) for (int turnLimit : new int[]{1, 3, -1}) {
+            var configured = new RewindAllowance(new RewindAllowance.Rules(holeLimit, turnLimit));
+            for (int n = 1; n <= 8; n++) {
+                boolean expected = holeLimit != 0 && (holeLimit < 0 || n <= holeLimit) && (turnLimit < 0 || n <= turnLimit);
+                same(expected, configured.spend(new GolfMatch.ShotId(0, 1, 0, n)), "configured allowance");
+            }
+        }
+    }
+
+    public static void rewindSpeed() {
+        int shortSpeed = RewindAllowance.replaySpeed(30), longSpeed = RewindAllowance.replaySpeed(900);
+        require(longSpeed > shortSpeed, "longer replay rewinds faster");
+        require((900 + longSpeed - 1) / longSpeed <= 90, "long rewind completes within 90 ticks");
+    }
+
     public static void ledgerReplay() {
         var match = GolfMatch.competition(GolfMatch.Character.SONIC, GolfMatch.Character.TAILS);
         var id = match.nextShotId(); match.commit(id, SHOT);

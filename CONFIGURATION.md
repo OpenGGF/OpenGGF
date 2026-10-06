@@ -925,6 +925,15 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 | `TIME_ATTACK_NET_MASTER_TRUST_INSECURE` | `timeAttack.net.masterTrustInsecure` | `false` |  | Development-only trust-all TLS mode for the master server. |
 | `TIME_ATTACK_HUD_MINIMAP` | `timeAttack.hud.minimap` | `true` |  | Show the multiplayer minimap progress strip. |
 
+Controlled mods can consume the configured `LIVE_REWIND_KEY` shortcut and primary
+L1/LB bumper independently of `LIVE_REWIND_ENABLED`. Putt Putt Paradise uses them
+for whole-shot undo with its own setup allowances: rewinds per hole
+`off / 3 / 5 / *`, rewinds per turn `1 / 3 / *` (`*` is unlimited). Defaults are
+three per golfer/hole and one per turn. Unbinding the keyboard shortcut keeps
+the bumper available to controlled mods. Start → Rewind Shot provides an
+A-operated alternative, including for Genesis movie replay; live shortcut input
+is suppressed while a movie owns the controller rows.
+
 ### Debug Navigation
 
 | Key | YAML path | Default | Key Name | Description |

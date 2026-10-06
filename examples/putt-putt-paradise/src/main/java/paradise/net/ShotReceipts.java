@@ -20,7 +20,10 @@ public final class ShotReceipts {
         if (id.equals(open)) return;
         if (open != null && !id.match().equals(open.match())) clear();
         if (current != null && current.committed() == null) throw new IllegalStateException("accepted shot is unresolved");
-        if (open != null && (id.hole() < open.hole() || id.hole() == open.hole() && id.turn() <= open.turn()))
+        boolean retry = open != null && id.hole() == open.hole() && id.turn() == open.turn()
+                && id.owner() == open.owner() && id.shot() > open.shot() && current != null
+                && current.committed() != null && current.committed().outcome() == Outcome.REWOUND;
+        if (open != null && !retry && (id.hole() < open.hole() || id.hole() == open.hole() && id.turn() <= open.turn()))
             throw new IllegalArgumentException("turn must advance");
         if (current != null) last = current;
         current = null; open = id;

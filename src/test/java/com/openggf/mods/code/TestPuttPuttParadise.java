@@ -195,7 +195,10 @@ class TestPuttPuttParadise {
         SessionManager.clear();
         GameModuleRegistry.setCurrent(effective);
         TestEnvironment.activeGameplayMode();
-        return HeadlessTestFixture.builder().withZoneAndAct(0, act).build();
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(0, act).build();
+        // Existing route/parity fixtures deliberately retain automatic turn completion.
+        configureRewinds("PRACTICE", character, "tails", act, aspect, 0, 1);
+        return fixture;
     }
 
     @Test void creatorFinishFlagSurvivesWireWithoutChangingNativeViewOrCourse() throws Exception {
@@ -419,15 +422,150 @@ class TestPuttPuttParadise {
                     registry.captureCourse().get(entry.getKey())), "penalty restores " + entry.getKey());
     }
     private void local(String one, String two) throws Exception {
+        configureRewinds("LOCAL", one, two, 0, "NATIVE_4_3", 0, 1);
+    }
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void configureRewinds(String modeName, String one, String two, int act, String aspect, int perHole, int perTurn) throws Exception {
         var selectionClass = loader.loadClass("paradise.ui.GolfMenu$Selection");
         Class modeClass = loader.loadClass("paradise.ui.GolfMenu$Mode");
         Class charClass = loader.loadClass("paradise.ui.GolfMenu$CharacterChoice");
         Class viewportClass = loader.loadClass("paradise.ui.GolfMenu$Viewport");
+        Class rulesClass = loader.loadClass("paradise.model.RewindAllowance$Rules");
         Object choice = selectionClass.getConstructor(modeClass, charClass, charClass, int.class, String.class,
-                int.class, viewportClass).newInstance(Enum.valueOf(modeClass, "LOCAL"),
+                int.class, viewportClass, rulesClass).newInstance(Enum.valueOf(modeClass, modeName),
                 Enum.valueOf(charClass, one.toUpperCase(Locale.ROOT)), Enum.valueOf(charClass, two.toUpperCase(Locale.ROOT)),
-                0, "127.0.0.1", 20502, Enum.valueOf(viewportClass, "NATIVE_4_3"));
+                act, "127.0.0.1", 20502, Enum.valueOf(viewportClass, aspect), rulesClass.getConstructor(int.class, int.class).newInstance(perHole, perTurn));
         mode().getClass().getMethod("configure", selectionClass).invoke(mode(), choice);
+    }
+
+    @ParameterizedTest @CsvSource({"sonic,0", "sonic,1", "tails,0", "tails,1"})
+    void shotRewindRestoresEveryCourseOwnerAndRefundsStrokeOnce(String character, int act) throws Exception {
+        var f = launch(character, act); configureRewinds("PRACTICE", character, "tails", act, "NATIVE_4_3", 3, 1);
+        f.stepIdleFrames(120); var registry = f.runtime().getRewindRegistry();
+        var before = registry.captureCourse(); var start = checkpointCourse(f).ball();
+        commit(f, 55); f.stepIdleFrames(45);
+        assertNotEquals(start.x(), checkpointCourse(f).ball().x(), "shot really travelled");
+        long retired = (long) value(value(value(matchState(), "pending"), "id"), "shotSequence");
+        var input = new com.openggf.control.InputHandler();
+        input.handleKeyEvent(GameServices.configuration().getInt(SonicConfiguration.LIVE_REWIND_KEY), org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        var loop = new com.openggf.GameLoop(input); loop.setGameplayMode(f.runtime()); loop.setGameMode(GameMode.LEVEL);
+        int rows = 0;
+        do { loop.step(); rows++; } while (value(matchState(), "pending") != null && rows < 100);
+        assertTrue(rows < 100, "rewind completion is bounded");
+        assertEquals("AIM", value(shotState(), "stage").toString());
+        assertEquals(start, checkpointCourse(f).ball());
+        for (var entry : before.entries().entrySet()) assertEquals(List.of(), com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                entry.getKey(), entry.getValue(), registry.captureCourse().get(entry.getKey())), "restored " + entry.getKey());
+        Object saved = ((com.openggf.game.rewind.RewindSnapshottable<?>) mode()).capture();
+        assertEquals(1, ((List<?>) value(value(saved, "allowance"), "usedPerHole")).get(act * 2));
+        assertEquals(0, ((List<?>) value(matchState(), "golfers")).stream().mapToInt(g -> {
+            try { return (int) value(g, "total"); } catch (Exception e) { throw new RuntimeException(e); }
+        }).sum());
+        assertEquals(1L, value(matchState(), "turnSequence"));
+        assertTrue((long) value(matchState(), "nextShotSequence") > retired);
+        loop.step(); assertEquals(value(saved, "allowance"), value(((com.openggf.game.rewind.RewindSnapshottable<?>)mode()).capture(), "allowance"), "held R does not consume twice");
+        input.handleKeyEvent(GameServices.configuration().getInt(SonicConfiguration.LIVE_REWIND_KEY), org.lwjgl.glfw.GLFW.GLFW_RELEASE); loop.step();
+        commit(f, 55); f.stepIdleFrames(40);
+        input.handleKeyEvent(GameServices.configuration().getInt(SonicConfiguration.LIVE_REWIND_KEY), org.lwjgl.glfw.GLFW.GLFW_PRESS); loop.step();
+        assertNotNull(value(matchState(), "pending"), "one rewind per turn survives retry");
+    }
+
+    @Test void reverseViewsStayBoundedAndAdvanceThroughOldFramesWithFreshRevisions() throws Exception {
+        Class<?> replayClass = loader.loadClass("paradise.presentation.ShotReplay"); Object history = replayClass.getConstructor().newInstance();
+        var record = replayClass.getMethod("record", int.class, com.openggf.game.presentation.ScenePresentationFrame.class);
+        var wants = replayClass.getMethod("wantsSample", int.class);
+        com.openggf.game.presentation.ScenePresentationFrame last = null;
+        for (int tick = 0; tick <= 3600; tick++) {
+            last = new com.openggf.game.presentation.ScenePresentationFrame(0, 0, 320, 224, tick, 0, 0,
+                    new int[16], List.of(), List.of());
+            if ((boolean) wants.invoke(history, tick)) record.invoke(history, tick, last);
+        }
+        replayClass.getMethod("begin", int.class, com.openggf.game.presentation.ScenePresentationFrame.class).invoke(history, 3600, last);
+        var saved = replayClass.getMethod("snapshot").invoke(history);
+        var samples = (List<?>) value(saved, "samples"); assertTrue(samples.size() <= 128);
+        assertEquals(0, value(samples.getFirst(), "tick")); assertEquals(3600, value(samples.getLast(), "tick"));
+        long bytes = 0; for (var sample : samples) bytes += ((byte[]) value(sample, "scene")).length;
+        assertTrue(bytes <= 8 * 1024 * 1024);
+        int previous = 3601, rows = 0;
+        boolean done;
+        do {
+            done = (boolean) replayClass.getMethod("step").invoke(history);
+            var frame = (com.openggf.game.presentation.ScenePresentationFrame) replayClass.getMethod("frame", long.class).invoke(history, (long) ++rows);
+            assertTrue(frame.cameraX() <= previous, "source view reverses while revisions advance");
+            assertEquals(rows, frame.revision()); previous = frame.cameraX();
+        } while (!done && rows < 100);
+        assertEquals(0, previous); assertEquals(90, rows);
+        replayClass.getMethod("restore", saved.getClass()).invoke(history, saved);
+        assertEquals(saved, replayClass.getMethod("snapshot").invoke(history), "history restore retains immutable recording and cursor");
+        replayClass.getMethod("clear").invoke(history);
+        var tile = new com.openggf.game.presentation.ScenePresentationFrame.Tile(
+                com.openggf.game.presentation.ScenePresentationFrame.Layer.FOREGROUND,
+                new com.openggf.game.presentation.ScenePresentationFrame.ArtReference("terrain",0),
+                0,false,false,false,0,0,8,8,0,8,0,255);
+        var dense = new com.openggf.game.presentation.ScenePresentationFrame(0,0,800,224,0,0,0,
+                new int[16],Collections.nCopies(8192,tile),List.of());
+        for(int tick=0;tick<300;tick++) if((boolean)wants.invoke(history,tick))record.invoke(history,tick,dense);
+        Object denseSaved=replayClass.getMethod("snapshot").invoke(history);
+        long denseBytes=0;for(var sample:(List<?>)value(denseSaved,"samples"))denseBytes+=((byte[])value(sample,"scene")).length;
+        assertTrue(denseBytes<=8*1024*1024,"dense views exercise actual byte budget");
+        assertTrue((int)value(denseSaved,"stride")>3,"byte pressure coarsens sampling before sample-count cap");
+    }
+
+    @Test void recordedSceneHistoryAndModeAllowanceRestoreForForwardReplay() throws Exception {
+        var f=launch("sonic",0);configureRewinds("PRACTICE","sonic","tails",0,"NATIVE_4_3",3,3);f.stepIdleFrames(120);
+        commit(f,55);f.stepIdleFrames(36);var registry=f.runtime().getRewindRegistry();
+        var saved=registry.capture();f.stepIdleFrames(8);var expected=registry.capture();
+        registry.restore(saved);f.stepIdleFrames(8);var replayed=registry.capture();
+        for(var entry:expected.entries().entrySet())assertEquals(List.of(),com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                entry.getKey(),entry.getValue(),replayed.get(entry.getKey())),"forward history "+entry.getKey());
+    }
+
+    @ParameterizedTest @CsvSource({"0", "1"})
+    void finishingShotCanBeRewoundBeforeResultsAndThenKept(int act) throws Exception {
+        var f=launch("sonic",act); configureRewinds("PRACTICE","sonic","tails",act,"NATIVE_4_3",3,3); f.stepIdleFrames(120);
+        var shots=route(act,"NATIVE_4_3"); com.openggf.game.mode.CourseControl.Ball before=null; int finishingIndex=-1;
+        for(int index=0;index<shots.length;index++) {
+            before=checkpointCourse(f).ball(); reviewShot(f,shots[index]);
+            Object result=value(((com.openggf.game.rewind.RewindSnapshottable<?>)mode()).capture(),"review");
+            assertNotNull(result,"EHZ"+(act+1)+" shot "+index);
+            if((boolean)value(result,"finish")) { finishingIndex=index; break; }
+            pressA(f); f.stepIdleFrames(1);
+        }
+        Object review=value(((com.openggf.game.rewind.RewindSnapshottable<?>)mode()).capture(),"review");
+        assertEquals(true,value(review,"finish")); assertEquals("PLAYING",value(matchState(),"status").toString());
+        long turn=(long)value(matchState(),"turnSequence");
+        tick(f,0,0,true);tick(f,0,0,false);tick(f,2,0,false);tick(f,0,com.openggf.control.InputActionMasks.ACTION_A,false);
+        f.stepIdleFrames(100); assertEquals(before,checkpointCourse(f).ball());
+        assertEquals(turn,value(matchState(),"turnSequence")); assertEquals(act,GameServices.level().getCurrentAct());
+        assertTrue(finishingIndex>=0);reviewShot(f,shots[finishingIndex]);pressA(f);f.stepIdleFrames(1);
+        assertEquals("COMPLETE",value(matchState(),"status").toString());
+    }
+    private void reviewShot(HeadlessTestFixture f,int[] shot) throws Exception {
+        f.stepIdleFrames(1);f.stepFrame(false,false,shot[0]<0,shot[0]>0,false);
+        int old=(int)value(shotState(),"elevationDegrees");
+        for(int i=old;i<shot[1];i++)f.stepFrame(true,false,false,false,false);
+        for(int i=old;i>shot[1];i--)f.stepFrame(false,true,false,false,false);
+        f.stepIdleFrames(1);commit(f,shot[2]);
+        for(int row=0;row<3700 && value(((com.openggf.game.rewind.RewindSnapshottable<?>)mode()).capture(),"review")==null;row++)f.stepIdleFrames(1);
+    }
+
+    @Test void settledAndPenaltyShotsCanBeReviewedAndRewoundBeforeTurnPasses() throws Exception {
+        var f = launch("sonic", 0); configureRewinds("LOCAL", "sonic", "tails", 0, "NATIVE_4_3", 5, 3); f.stepIdleFrames(120);
+        var start = checkpointCourse(f).ball();
+        commit(f, 1); f.stepIdleFrames(100);
+        assertNotNull(value(((com.openggf.game.rewind.RewindSnapshottable<?>) mode()).capture(), "review"));
+        assertEquals(0, value(matchState(), "activePlayer"));
+        // An all-A/arrow/Start command can be recorded in a Genesis movie.
+        tick(f, 0, 0, true); tick(f, 0, 0, false);
+        tick(f, 2, 0, false); tick(f, 0, com.openggf.control.InputActionMasks.ACTION_A, false);
+        f.stepIdleFrames(100); assertEquals(start, checkpointCourse(f).ball());
+        assertEquals(0, value(matchState(), "activePlayer"));
+        commit(f, 55); f.stepIdleFrames(32); GameServices.camera().getFocusedSprite().setHurt(true); f.stepIdleFrames(1);
+        assertNotNull(value(((com.openggf.game.rewind.RewindSnapshottable<?>) mode()).capture(), "review"));
+        pressA(f); f.stepIdleFrames(1);
+        assertEquals(1, value(matchState(), "activePlayer"), "A keeps penalty and passes turn");
+        var golfer = ((List<?>) value(matchState(), "golfers")).getFirst();
+        assertEquals(2, value(golfer, "total"), "kept penalty is one stroke plus one penalty");
     }
     @ParameterizedTest @CsvSource({"sonic,tails", "tails,sonic", "sonic,sonic", "tails,tails"})
     void alternateIndependentGolferWorldsAndRewindRoster(String one, String two) throws Exception {
@@ -688,6 +826,8 @@ class TestPuttPuttParadise {
             titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
             titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
             titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
+            titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
             titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
             titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
             assertTrue(title.isExiting());

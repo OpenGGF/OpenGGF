@@ -351,7 +351,15 @@ admits one native step with neutral player input. `afterTick` receives whether
 that step ran. Keep aim, menus and feedback in the controller; keep physics in
 native gameplay. Stock modules return no controller and retain their normal path.
 Initial setup rows are excluded from movie/history input; subsequent HOLD rows
-are included. `allowsDebugRewind()` can restrict practice-only debugging.
+are included. `allowsDebugRewind()` controls admission of live developer rewind.
+Modes with their own rewind allowance should return false in every mode so the
+developer shortcut cannot bypass it. `CourseControl.rewindHeld()` supplies the
+configured rewind key/primary-pad bumper for the current live row, independent
+of the developer rewind enabled setting; the controller owns its press latch.
+It is false while a logical movie override is active. Supply an A-operated menu
+command for Genesis movie replay, whose controller rows cannot encode that key
+or bumper. This accessor is part of the unpublished 0.7 candidate surface; its
+normalized pin is regenerated without changing the policy/version descriptor.
 
 `CourseControl.capture()` returns an opaque whole-course checkpoint. Restore
 validates session, loaded hole and registry generation before changing character,

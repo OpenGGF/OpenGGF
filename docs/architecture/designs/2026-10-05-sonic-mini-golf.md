@@ -176,6 +176,36 @@ ROM art, animation and sound presentation distinguish them. A later ability
 variant could give Tails a single short flutter or Sonic a single momentum
 burst, but free flight would undermine stroke play and is outside this MVP.
 
+## Rewind a shot
+
+Each golfer has a separate allowance, defaulting to three rewinds per hole and
+one per turn. Setup permits hole limits off/3/5/* and turn limits 1/3/*; `*`
+means unlimited. Retrying keeps the same turn and consumes the allowance; only
+a kept result passes the turn. Budgets are captured with the mode for developer
+replay, but remain outside physical course rollback.
+
+The configured rewind key (default R), primary-pad left bumper, or Start menu's
+A-operated Rewind Shot command undoes a committed shot, including during native
+flight and after settlement. While a rewind remains, a terminal result waits
+for A to keep it, before penalties, finishes, turn changes or act loads become
+final. With either allowance exhausted or rewinds disabled, outcomes resolve
+automatically. A rewind refunds the pending stroke, retires its shot ID, restores
+the entire pre-shot course and opens a fresh attempt for the same golfer.
+
+Playback reverses a bounded ROM scene recording while physics is held, then
+restores one opaque checkpoint. Sampling adapts to a cap of 128 scenes/8 MiB;
+the initial and latest views are retained. Longer shots traverse more source
+ticks per presentation tick, finishing within 90 ticks. Forward physics is
+never simulated in reverse, and online guests receive only authoritative value
+scenes and allowance/score updates. The host validates shot owner and current
+identity; a retired request cannot spend another allowance or revive a stroke.
+
+The mode owns live rewind input in every mode, even with the allowance off.
+Genesis movie replay uses the Start-menu command; raw key/bumper input is not
+part of a BK2 row and is ignored under logical input overrides. Online peers
+must select matching rewind rules, which are part of their rules fingerprint.
+Reconnect republishes the current phase, remaining budgets and retry receipt.
+
 ## A lie, a penalty, and a finished hole
 
 A shot ends when the character has a valid floor support and remains below a
@@ -250,7 +280,9 @@ can already be swapped between arbitrary sessions.
 
 Play order is P1, P2, P1, P2. Reverse the starting player for EHZ2. Reaching the
 finish does not end the opponent's hole; the unfinished golfer continues until
-they finish or concede. Competition has no free rewinds or shot retries.
+they finish or concede. Competition uses the same selectable per-golfer rewind
+allowance; a retry restores that shot without passing ownership or refreshing
+the per-turn budget.
 Conceding a competitive hole concedes the match: record DNF and an opponent win,
 rather than assigning an invented stroke total. Offer continued solo practice
 afterward. If both leave without a result, record no winner.

@@ -38,7 +38,9 @@ public final class ProtocolProbe {
                 new TurnCommitted(shot.id(), Outcome.SETTLED, 100, 200, score, score, 1),
                 new Pause(MATCH, "disconnect"), new Resume(MATCH, 25), new Leave(MATCH, 1, "quit"),
                 new Reconnect(MATCH, 1, UUID.randomUUID(), 1, 4),
-                new SoundCue(shot.id(), 4, 2, "spindash"), new Rejected(shot.id(), "wrong owner"));
+                new SoundCue(shot.id(), 4, 2, "spindash"), new Rejected(shot.id(), "wrong owner"),
+                new ShotControl(shot.id(), ShotAction.REWIND), new ShotControl(shot.id(), ShotAction.KEEP),
+                new ShotStatus(shot.id(), ShotPhase.REVIEW, 3, 1), new ShotStatus(shot.id(), ShotPhase.REWINDING, -1, -1));
         var combined = new ByteArrayOutputStream();
         for (var packet : packets) GolfCodec.write(combined, packet);
         InputStream fragmented = new FilterInputStream(new ByteArrayInputStream(combined.toByteArray())) {
@@ -96,6 +98,15 @@ public final class ProtocolProbe {
         receipts.commit(new TurnCommitted(next.id(), Outcome.SETTLED, 0, 0, score, score, 0));
         receipts.openTurn(id(2, 0));
         check(receipts.accept(shot, 35).status() == ShotReceipts.Status.WRONG_TURN, "old receipt discarded");
+        var retries = new ShotReceipts(); retries.openTurn(shot.id()); retries.accept(shot, 10);
+        var rewound = new TurnCommitted(shot.id(), Outcome.REWOUND, 10, 20, score, score, shot.id().owner());
+        retries.commit(rewound);
+        var retry = new ShotId(MATCH, shot.id().hole(), shot.id().turn(), shot.id().shot() + 1, shot.id().owner());
+        retries.openTurn(retry);
+        check(retries.accept(shot, 20).receipt().committed().equals(rewound), "old accepted shot retains rewind receipt");
+        check(retries.accept(request(retry), 20).newlyAccepted(), "same-turn retry with fresh shot ID");
+        rejects(() -> new ShotStatus(shot.id(), ShotPhase.REVIEW, 6, 1));
+        rejects(() -> new ShotStatus(shot.id(), ShotPhase.REVIEW, 3, -2));
 
         var reconnect = new ReconnectSessions(Duration.ofSeconds(30));
         UUID token = reconnect.register(MATCH, 1);

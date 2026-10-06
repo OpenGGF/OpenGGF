@@ -831,7 +831,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Dream Course-style A-only power timing and chip top/backspin contact points,
   stay rolling until supported settlement, and play
   practice, alternating local matches, or direct IP/port matches. Golfers retain
-  independent course worlds; penalties restore the pre-shot world, and the
+  independent course worlds; optional shot rewind restores the entire pre-shot
+  world and refunds the stroke, with faster playback for longer shots and
+  configurable per-golfer hole/turn allowances (default 3/1). Available results
+  wait for A to keep or rewind before passing the turn. Penalties restore the pre-shot world, and the
   online host owns simulation and scores while guests render ROM-backed views.
   Recorded play uses the same neutral flight input as live play.
   Includes a creator menu themed with the ROM's title landscape, winged emblem,

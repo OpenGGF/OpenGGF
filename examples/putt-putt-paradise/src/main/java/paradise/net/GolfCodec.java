@@ -8,7 +8,7 @@ import static paradise.net.GolfPacket.*;
 
 /** Four-byte big-endian payload length, one-byte schema, one-byte type, bounded typed fields. */
 public final class GolfCodec {
-    public static final int SCHEMA = 2;
+    public static final int SCHEMA = 3;
     public static final int MAX_FRAME_BYTES = 2 * 1024 * 1024;
     public static final int MAX_VIEW_BYTES = MAX_FRAME_BYTES - 128;
     private GolfCodec() { }
@@ -20,8 +20,9 @@ public final class GolfCodec {
         for (Class<?> type : new Class<?>[]{GolfPacket.class, Fingerprints.class, ShotId.class, Score.class,
                 Hello.class, Ready.class, TurnOpened.class, ShotRequest.class, ShotAccepted.class,
                 ViewFrame.class, TurnCommitted.class, Pause.class, Resume.class, Leave.class,
-                Reconnect.class, SoundCue.class, Rejected.class}) Objects.requireNonNull(type);
+                Reconnect.class, SoundCue.class, Rejected.class, ShotControl.class, ShotStatus.class}) Objects.requireNonNull(type);
         Objects.requireNonNull(Outcome.SETTLED);
+        Objects.requireNonNull(ShotAction.REWIND); Objects.requireNonNull(ShotPhase.AIM);
     }
 
     public static byte[] encode(GolfPacket packet) {
@@ -49,6 +50,9 @@ public final class GolfCodec {
                     out.writeLong(p.lastRevision()); out.writeLong(p.lastSoundCue()); }
                 case SoundCue p -> { out.writeByte(12); id(out, p.id()); out.writeLong(p.cueId()); out.writeLong(p.tickOffset()); text(out, p.sound()); }
                 case Rejected p -> { out.writeByte(13); id(out, p.id()); text(out, p.reason()); }
+                case ShotControl p -> { out.writeByte(14); id(out, p.id()); out.writeByte(p.action().ordinal()); }
+                case ShotStatus p -> { out.writeByte(15); id(out, p.id()); out.writeByte(p.phase().ordinal());
+                    out.writeByte(p.holeRemaining()); out.writeByte(p.turnRemaining()); }
             }
             byte[] payload = bytes.toByteArray();
             if (payload.length > MAX_FRAME_BYTES) throw new IllegalArgumentException("frame exceeds bound");
@@ -85,6 +89,8 @@ public final class GolfCodec {
                 case 11 -> new Reconnect(uuid(in), in.readUnsignedByte(), uuid(in), in.readLong(), in.readLong());
                 case 12 -> new SoundCue(id(in), in.readLong(), in.readLong(), text(in));
                 case 13 -> new Rejected(id(in), text(in));
+                case 14 -> new ShotControl(id(in), enumValue(in, ShotAction.values()));
+                case 15 -> new ShotStatus(id(in), enumValue(in, ShotPhase.values()), in.readByte(), in.readByte());
                 default -> throw new IOException("unknown packet type");
             };
             if (in.available() != 0) throw new IOException("trailing packet bytes");
@@ -136,5 +142,10 @@ public final class GolfCodec {
         int value = in.readUnsignedByte();
         if (value >= Outcome.values().length) throw new IOException("invalid outcome");
         return Outcome.values()[value];
+    }
+    private static <T> T enumValue(DataInputStream in, T[] values) throws IOException {
+        int index = in.readUnsignedByte();
+        if (index >= values.length) throw new IOException("invalid enum");
+        return values[index];
     }
 }

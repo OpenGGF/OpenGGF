@@ -25,6 +25,9 @@ class TestGolfTransport {
     @Test void productionRoomHandshakeExactlyOnceReconnectAndHostExit() throws Exception {
         TestGolfProtocol.runProbe(temp, "RoomProbe", "run");
     }
+    @Test void rewindControlAndSpentBudgetsReplayAfterReconnect() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "rewindControlsAndBudgetsSurviveReconnect");
+    }
     @Test void guestResumeRetainsHostPause() throws Exception {
         TestGolfProtocol.runProbe(temp, "RoomProbe", "guestResumeRetainsHostPause");
     }

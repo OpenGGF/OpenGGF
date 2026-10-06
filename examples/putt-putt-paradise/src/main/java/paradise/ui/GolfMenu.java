@@ -4,6 +4,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.graphics.GraphicsManager;
+import paradise.model.RewindAllowance;
 
 import java.util.List;
 import java.util.Objects;
@@ -28,13 +29,18 @@ public final class GolfMenu implements TitleScreenProvider {
         public int pixelWidth() { return width; }
         public String configName() { return name(); }
     }
-    public enum Field { MODE, PLAYER_ONE, PLAYER_TWO, ACT, VIEWPORT, ADDRESS, PORT, START, BACK }
+    public enum Field { MODE, PLAYER_ONE, PLAYER_TWO, ACT, VIEWPORT, REWINDS_HOLE, REWINDS_TURN, ADDRESS, PORT, START, BACK }
 
     public record Selection(Mode mode, CharacterChoice playerOne, CharacterChoice playerTwo,
-                            int actIndex, String address, int port, Viewport viewport) {
+                            int actIndex, String address, int port, Viewport viewport, RewindAllowance.Rules rewinds) {
+        public Selection(Mode mode, CharacterChoice playerOne, CharacterChoice playerTwo,
+                         int actIndex, String address, int port, Viewport viewport) {
+            this(mode, playerOne, playerTwo, actIndex, address, port, viewport, RewindAllowance.Rules.defaults());
+        }
         public Selection {
             Objects.requireNonNull(mode, "mode"); Objects.requireNonNull(playerOne, "playerOne");
             Objects.requireNonNull(playerTwo, "playerTwo"); Objects.requireNonNull(viewport, "viewport");
+            Objects.requireNonNull(rewinds, "rewinds");
             address = Objects.requireNonNull(address, "address").trim();
             if (address.isBlank() || address.length() > 253 || port < 1 || port > 65535 || actIndex < 0 || actIndex > 1
                     || (mode != Mode.PRACTICE && actIndex != 0)) throw new IllegalArgumentException("Invalid golf launch selection");
@@ -55,6 +61,7 @@ public final class GolfMenu implements TitleScreenProvider {
     private CharacterChoice playerTwo = CharacterChoice.TAILS;
     private int practiceAct;
     private Viewport viewport = Viewport.NATIVE_4_3;
+    private RewindAllowance.Rules rewinds = RewindAllowance.Rules.defaults();
     private String address = "127.0.0.1";
     private String portText = "20502";
     private boolean editing;
@@ -118,7 +125,7 @@ public final class GolfMenu implements TitleScreenProvider {
         if (horizontal != 0) change(field, horizontal);
         if (!MenuInput.accept(input)) return;
         switch (field) {
-            case PLAYER_ONE, PLAYER_TWO, ACT, VIEWPORT -> change(field, 1);
+            case PLAYER_ONE, PLAYER_TWO, ACT, VIEWPORT, REWINDS_HOLE, REWINDS_TURN -> change(field, 1);
             case ADDRESS, PORT -> {
                 editing = true; editBuffer = field == Field.ADDRESS ? address : portText;
                 replaceOnType = true; error = "";
@@ -135,8 +142,15 @@ public final class GolfMenu implements TitleScreenProvider {
             case PLAYER_TWO -> playerTwo = playerTwo == CharacterChoice.SONIC ? CharacterChoice.TAILS : CharacterChoice.SONIC;
             case ACT -> practiceAct = 1 - practiceAct;
             case VIEWPORT -> viewport = Viewport.values()[Math.floorMod(viewport.ordinal() + direction, Viewport.values().length)];
+            case REWINDS_HOLE -> rewinds = new RewindAllowance.Rules(cycle(new int[]{0, 3, 5, -1}, rewinds.perHole(), direction), rewinds.perTurn());
+            case REWINDS_TURN -> rewinds = new RewindAllowance.Rules(rewinds.perHole(), cycle(new int[]{1, 3, -1}, rewinds.perTurn(), direction));
             default -> { }
         }
+    }
+
+    private static int cycle(int[] values, int current, int direction) {
+        for (int i = 0; i < values.length; i++) if (values[i] == current) return values[Math.floorMod(i + direction, values.length)];
+        throw new IllegalArgumentException("Unknown rewind setting");
     }
 
     private void updateEditor(InputHandler input, String text) {
@@ -174,17 +188,17 @@ public final class GolfMenu implements TitleScreenProvider {
     private void launch() {
         if (address.isBlank() || !validPort(portText)) { error = "CHECK ADDRESS AND PORT"; return; }
         Selection choice = new Selection(mode, playerOne, playerTwo, mode == Mode.PRACTICE ? practiceAct : 0,
-                address, Integer.parseInt(portText), viewport);
+                address, Integer.parseInt(portText), viewport, rewinds);
         launchConsumer.accept(choice);
         selected = choice; exitAction = TitleScreenAction.ONE_PLAYER; state = State.EXITING;
     }
 
     private List<Field> fields() {
         return switch (mode) {
-            case PRACTICE -> List.of(Field.PLAYER_ONE, Field.ACT, Field.VIEWPORT, Field.START, Field.BACK);
-            case LOCAL -> List.of(Field.PLAYER_ONE, Field.PLAYER_TWO, Field.VIEWPORT, Field.START, Field.BACK);
-            case HOST -> List.of(Field.PLAYER_ONE, Field.VIEWPORT, Field.PORT, Field.START, Field.BACK);
-            case JOIN -> List.of(Field.PLAYER_ONE, Field.VIEWPORT, Field.ADDRESS, Field.PORT, Field.START, Field.BACK);
+            case PRACTICE -> List.of(Field.PLAYER_ONE, Field.ACT, Field.VIEWPORT, Field.REWINDS_HOLE, Field.REWINDS_TURN, Field.START, Field.BACK);
+            case LOCAL -> List.of(Field.PLAYER_ONE, Field.PLAYER_TWO, Field.VIEWPORT, Field.REWINDS_HOLE, Field.REWINDS_TURN, Field.START, Field.BACK);
+            case HOST -> List.of(Field.PLAYER_ONE, Field.VIEWPORT, Field.REWINDS_HOLE, Field.REWINDS_TURN, Field.PORT, Field.START, Field.BACK);
+            case JOIN -> List.of(Field.PLAYER_ONE, Field.VIEWPORT, Field.REWINDS_HOLE, Field.REWINDS_TURN, Field.ADDRESS, Field.PORT, Field.START, Field.BACK);
         };
     }
 
@@ -250,16 +264,18 @@ public final class GolfMenu implements TitleScreenProvider {
         List<Field> fields = fields();
         for (int i = 0; i < fields.size(); i++) {
             Field field = fields.get(i);
-            int y = 126 + i * 12;
-            if (i == row) GolfText.panel(graphics, left + 7, y - 3, panelWidth - 14, 12, 0xAC2638, 1);
+            int y = 124 + i * 9;
+            if (i == row) GolfText.panel(graphics, left + 7, y - 2, panelWidth - 14, 9, 0xAC2638, 1);
             String label = switch (field) {
                 case PLAYER_ONE -> mode == Mode.HOST || mode == Mode.JOIN ? "YOUR CHARACTER" : "PLAYER 1"; case PLAYER_TWO -> "PLAYER 2"; case ACT -> "PRACTICE ACT";
                 case VIEWPORT -> "VIEWPORT"; case ADDRESS -> "HOST ADDRESS"; case PORT -> "PORT";
+                case REWINDS_HOLE -> "REWINDS / HOLE"; case REWINDS_TURN -> "REWINDS / TURN";
                 case START -> "READY - START"; case BACK -> "BACK TO MODES"; default -> "";
             };
             String value = switch (field) {
                 case PLAYER_ONE -> playerOne.name(); case PLAYER_TWO -> playerTwo.name(); case ACT -> "EHZ " + (practiceAct + 1);
                 case VIEWPORT -> viewport.pixelWidth() + " PX"; case ADDRESS -> address; case PORT -> portText; default -> "";
+                case REWINDS_HOLE -> rewinds.holeLabel(); case REWINDS_TURN -> rewinds.turnLabel();
             };
             if (editing && i == row) value = editBuffer + "_";
             value = GolfText.fit(value, panelWidth - 120, 1);
@@ -267,7 +283,8 @@ public final class GolfMenu implements TitleScreenProvider {
             GolfText.draw(graphics, value, left + panelWidth - 12 - GolfText.width(value, 1), y);
         }
         String help = !error.isEmpty() ? error : editing ? "TYPE TO REPLACE  BACKSPACE TO EDIT"
-                : mode == Mode.JOIN || mode == Mode.HOST ? "BOTH PEERS NEED MATCHING ROM + VIEWPORT" : "LEFT/RIGHT CHANGES OPTIONS";
+                : focusedField() == Field.REWINDS_HOLE || focusedField() == Field.REWINDS_TURN ? "* UNLIMITED  BUDGET PER GOLFER"
+                : mode == Mode.JOIN || mode == Mode.HOST ? "MATCH ROM, VIEWPORT + REWIND RULES" : "LEFT/RIGHT CHANGES OPTIONS";
         GolfText.draw(graphics, GolfText.fit(help, panelWidth - 24, 1), left + 12, 198, 1,
                 error.isEmpty() ? 0x90B9E7 : GolfText.GOLD);
     }

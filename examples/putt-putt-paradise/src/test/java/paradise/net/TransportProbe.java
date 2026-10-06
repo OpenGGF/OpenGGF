@@ -89,7 +89,7 @@ public final class TransportProbe {
             listener.close();
             ((URLClassLoader)TransportProbe.class.getClassLoader()).close();
             var input = new ByteArrayInputStream(buffered);
-            for (int type = 1; type <= 13; type++) check(GolfCodec.read(input) != null, "buffered packet remains decodable: " + type);
+            for (int type = 1; type <= 15; type++) check(GolfCodec.read(input) != null, "buffered packet remains decodable: " + type);
             check(GolfCodec.read(input) == null, "buffered packet boundary EOF after loader close");
             try {
                 GolfCodec.read(new ByteArrayInputStream(new byte[]{0, 0, 0, 2, 99, 1}));
@@ -100,7 +100,7 @@ public final class TransportProbe {
     }
     private static byte[] rawPackets() throws IOException {
         var frames = new ByteArrayOutputStream(); var framed = new DataOutputStream(frames);
-        for (int type = 1; type <= 13; type++) {
+        for (int type = 1; type <= 15; type++) {
             var payload = new ByteArrayOutputStream(); var out = new DataOutputStream(payload);
             out.writeByte(GolfCodec.SCHEMA); out.writeByte(type);
             switch (type) {
@@ -117,6 +117,8 @@ public final class TransportProbe {
                 case 11 -> { rawUuid(out); out.writeByte(1); rawUuid(out); out.writeLong(0); out.writeLong(0); }
                 case 12 -> { rawId(out); out.writeLong(1); out.writeLong(0); rawText(out, "charge"); }
                 case 13 -> { rawId(out); rawText(out, "wrong turn"); }
+                case 14 -> { rawId(out); out.writeByte(0); }
+                case 15 -> { rawId(out); out.writeByte(3); out.writeByte(3); out.writeByte(1); }
             }
             framed.writeInt(payload.size()); payload.writeTo(framed);
         }

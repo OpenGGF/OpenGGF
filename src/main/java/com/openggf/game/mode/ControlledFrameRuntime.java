@@ -38,7 +38,7 @@ public final class ControlledFrameRuntime {
             var audio = GameServices.audio();
             audio.beginGameplayAudioFrame(audio.commandTimeline().currentFrame() + 1);
         }
-        var course = new CourseControl(context);
+        var course = new CourseControl(context, input.isRewindHeld());
         boolean advance = controller.beforeTick(course, snapshot);
         if (advance) {
             beforeGameplay.run();

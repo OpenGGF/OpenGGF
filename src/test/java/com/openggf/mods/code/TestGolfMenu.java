@@ -56,4 +56,5 @@ class TestGolfMenu {
     @Test void hostCanEditPortAndTextCancelRestoresTheOldValue() throws Exception { check("hostEditing"); }
     @Test void returnToModePickerDoesNotLaunchOrLeakTypedText() throws Exception { check("backAndReset"); }
     @Test void everyConfigViewportQueuesBoundedMenuAndOverlayGeometry() throws Exception { check("renderWidths"); }
+    @Test void allRequestedRewindLimitsAreSelectableInEveryMode() throws Exception { check("rewindSettings"); }
 }

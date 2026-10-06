@@ -76,6 +76,24 @@ public final class GolfMenuChecks {
         }
     }
 
+    public static void rewindSettings() {
+        for (int mode = 0; mode < 4; mode++) {
+            var defaults = new Fixture(); defaults.mode(mode);
+            same(paradise.model.RewindAllowance.Rules.defaults(), defaults.launch().rewinds(), "default allowance in every mode");
+            for (int hole : new int[]{0, 3, 5, -1}) for (int turn : new int[]{1, 3, -1}) {
+                var f = new Fixture(); f.mode(mode); f.focus(GolfMenu.Field.REWINDS_HOLE);
+                for (int n = 0; n < 4; n++) {
+                    // Navigate each explicit cycle position from the default three.
+                    if (new int[]{3, 5, -1, 0}[n] == hole) break;
+                    f.tap(GLFW_KEY_RIGHT);
+                }
+                f.focus(GolfMenu.Field.REWINDS_TURN);
+                for (int n = 0; new int[]{1, 3, -1}[n] != turn; n++) f.tap(GLFW_KEY_RIGHT);
+                same(new paradise.model.RewindAllowance.Rules(hole, turn), f.launch().rewinds(), "selected rewind rules");
+            }
+        }
+    }
+
     public static void heldAccept() {
         var f = new Fixture();
         f.input.handleKeyEvent(GLFW_KEY_ENTER, GLFW_PRESS); f.tick();

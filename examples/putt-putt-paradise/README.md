@@ -70,7 +70,7 @@ engine settings.
 | A on the power gauge | Stop one rising/falling sweep and commit the stroke; full power turns pink |
 | B before commitment (optional binding) | Cancel freely and return to aiming |
 | C while aiming (optional binding) | Toggle survey; arrows pan, C returns to the golfer |
-| Start | Pause; choose Resume, Concede, or Main Menu with arrows and A |
+| Start | Pause; choose Resume, Rewind Shot, Concede, or Main Menu with arrows and A |
 
 A and the aiming arrows are sufficient for every shot. Default keyboard A is
 Space for P1 and Right Shift for P2; B/C are unbound unless configured. Ground
@@ -111,6 +111,32 @@ Damage, death, a lost ball, or the bounded shot watchdog restores the pre-shot
 course state and adds one penalty while retaining the committed stroke. A finish
 or valid settlement yields one result even when several conditions coincide.
 Successful attacks and pickups alone are not terminal failures.
+
+### Rewind a shot
+
+Each golfer starts with **3 rewinds per hole and 1 per turn**. Press the configured
+rewind key (R by default), the primary controller's left bumper, or choose
+**Rewind Shot** in the Start menu with arrows and A. A rewind plays the shot
+backward and restores the entire course to its pre-shot checkpoint, including
+objects, pickups and timers. It refunds that shot's stroke, keeps the same turn,
+and spends one allowance. A retry does not renew the per-turn allowance.
+Long shots rewind faster, taking at most 90 presentation ticks (about 1.5 seconds
+at 60 Hz). The playback uses bounded recordings of ROM-backed scenes; course
+physics remains held until the checkpoint is restored.
+
+While an allowance remains, a completed shot waits for **A to keep the result**
+or rewind to retry. This includes finishes and penalties, before score changes
+or turn/act transitions are finalized. With rewinds off or either budget spent,
+shots pass the turn automatically. The setup menu offers **off / 3 / 5 / \*** per
+hole and **1 / 3 / \*** per turn; `*` means unlimited. Budgets belong to each
+golfer, and the next hole grants its own fresh allowance. Online peers select
+matching rewind rules; the host validates ownership, restores the world and
+publishes the spent budget and refunded score, including after reconnect.
+
+For BK2/user-recording replay, use the Start-menu command: Genesis movie rows
+cannot encode the keyboard R or controller bumper. Raw rewind input is ignored
+when stepping a logical movie override. The mod owns live rewind input in every
+mode so developer rewind cannot bypass a configured limit.
 
 The online host owns simulation and scoring. The guest sends shot choices and
 renders authoritative course views; it does not run its own gameplay simulation.

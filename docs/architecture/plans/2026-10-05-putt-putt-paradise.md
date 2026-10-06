@@ -1655,3 +1655,134 @@ matched the tested projector exactly. Creator sources and jar are unchanged.
 The launcher remains executable, unchanged and uncommitted; work remains local.
 Consumed JUnit XML/logs, probe classes and native extraction were inspected and
 removed; the verified runtime projector remains in this worktree's build output.
+
+
+### Shot rewind follow-up (2026-10-06)
+
+Base `c9cd7965cfe5c465fe52ff0caf94d22f8d14e1c8`; work remains on the local
+`feature/ai-putt-putt-paradise` worktree. The requested default is three rewinds
+per golfer/hole and one per turn, with off/3/5/* and 1/3/* setup choices. A
+rewind consumes the match allowance, refunds the pending stroke, retires that
+shot ID and restores the complete pre-shot course for the same golfer/turn.
+A bounded view-only recording plays backward while native physics is held;
+longer shots traverse more source ticks, finishing within 90 presentation ticks.
+Memory is capped at 128 samples/8 MiB, preserving both ends through decimation.
+
+The implementation adds terminal review while an allowance remains: A keeps a
+settled, penalty or finishing shot; rewind retries before scoring/turn/act
+finalization. Exhausted/off allowances retain automatic resolution. R/default
+rewind binding or primary bumper works live, with an A-operated Start-menu
+command for all pads and Genesis movie replay. Raw input is suppressed under
+logical overrides; movie rows cannot encode R/bumper. The mode disables live
+developer rewind in every mode so it cannot bypass the quota. Direct diagnostic
+snapshot/forward replay remains covered separately.
+
+`CourseControl.rewindHeld()` supplies an immutable per-row value injected by
+`ControlledFrameRuntime`. `InputHandler.isRewindHeld()` combines the configured
+keyboard shortcut and primary bumper independently, including an unbound keyboard
+key, and suppresses both under logical overrides. Generic unbound key queries
+remain false, preventing phantom B/C input. Stock module stepping is unchanged.
+The normalized 0.7 candidate pin adds these two boolean methods.
+Policy/version stay at unpublished 0.7.0 candidate, consistent with the ordinary
+candidate rewrite policy. The protocol advances to schema 3 with host-validated
+rewind/keep intents, phase/budget publication, rewind receipts and monotonic
+same-turn retry IDs; reconnect republishes phase and spent allowance. Matching
+rewind rules are included in the rules fingerprint.
+
+Rejected approach: static immutable `Rules` default/off objects failed normal
+SDK packaging with `STATIC_STATE_UNSUPPORTED` (both fields and `<clinit>`).
+Factories create the value under creator ownership instead; the validator was
+not weakened. Historical route/parity fixtures select rewinds off explicitly,
+while new regressions exercise default review and undo. Review routes stop at
+the first actual finish rather than consuming unused route alternatives after
+results. The pause-menu concession fixture now steps past the new Rewind row.
+
+Focused verification used Java 21 `javac` for the changed engine/input and
+root test classes, followed by JUnit Platform Console 1.10.3 against the worktree's
+compiled engine and Maven dependency classpath. `TestGolfModel`, `TestGolfMenu`,
+`TestGolfProtocol`, `TestGolfTransport`, `TestPuttPuttParadise`,
+`TestGolfOnlineIntegration`, `TestModApiPinPolicy`, `TestModApiSignatureSurface`
+and `TestInputHandlerLogicalSnapshot` completed **183 tests**, zero failures,
+errors, skips or aborts (80.355 seconds). The existing absolute S2 World REV01
+ROM path was supplied; tests compiled the actual creator sources and exercised
+the normal SDK package validator. Native shot rollback covers Sonic/Tails in
+both acts at width 320; finishing-shot rollback uses real Sonic routes in both
+acts. Full native routes for every rewind-limit combination and other widths
+are not separately certified by the pure allowance/menu matrix.
+
+The independent review found one actionable input edge case: an unbound
+keyboard rewind binding suppressed the controller bumper in the initial
+`isKeyDown(configuredKey)` implementation. The dedicated semantic input query
+fixes it without removing the negative-key guard. Two new input tests cover
+unbound bumper/phantom-action safety and configured-key/override behavior.
+The first broad run was interrupted for this fix; it is incomplete evidence,
+and its diagnostics were removed automatically by the next launch.
+
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base
+c9cd7965cfe5c465fe52ff0caf94d22f8d14e1c8 --preflight` passed. Plain `lua` is 5.5,
+so guard execution uses the existing 5.4 binary explicitly. The combined
+`--run` selection is all 2,976 ordinary classes plus structural guards;
+completed results are recorded below. The existing uncommitted launch script
+is preserved, and no integration or push is performed.
+
+
+The testable creator artifact was refreshed using Java 21 `javac` and the normal
+`GgfModCli package --input target/putt-putt-paradise/classes --out
+ target/putt-putt-paradise/putt-putt-paradise.jar` validator. Maven had already
+compiled the current engine for the combined run; no second Maven command or
+shared build directory was used. The jar contains 97 classes and only
+`META-INF/openggf-mod.yaml` as a non-class entry (166,246 bytes); all art and
+sound remain ROM-backed runtime inputs.
+
+
+The combined category invocation `20261006T052424Z-cd971481` reached its
+40-minute limit during `TestDezIncomingFinalRouteCapture`: 2,772 completed
+ordinary reports, 24,178 cases, three failures, no errors and 38 inspected skips.
+It is an **incomplete category invocation**, not a category pass. The completed
+code, API pin and creator sources stayed unchanged after admission; only
+validation/build evidence prose was added during execution.
+
+To finish without repeating completed cases, the original 2,976-class plan was
+compared with the actual completed report identities before compaction. The
+remaining 244 candidate paths (including helpers/profile-excluded classes and
+the interrupted class) were supplied to queued Maven through
+`-Dsurefire.includesFile=<temporary remaining-includes.txt>`. This continuation
+completed 202 reports / 1,541 cases in 24:16, with 25 failures, no errors and
+three inspected skips. It also explicitly selected the two `@ArchTest`
+network dependency-fence checks; these passed. No category selection policy
+or original runner selection was changed.
+
+A separate fresh JVM then ran the full structural profile:
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+```
+
+The queued commands supplied the existing absolute S1 REV01, S2 REV01 and S3&K
+ROM properties and isolated report/tmp paths under this worktree's `target/`.
+Fresh guards completed **86 reports / 672 checks**, two failures, no errors or
+skips, in 3:33. Both messages exactly match the retained baseline:
+`LrzFlameObjectInstance.getShieldReactionFlags()` lacks its touch profile and
+`Sonic1TitleScreenManager.BACKGROUND_OVERRIDE_PATTERN_BASE` bypasses the atlas
+range. The ordinary failure inventory remains the same **28 cases** recorded
+above: 27 messages match exactly. SSZ Tails replay at frame 4018 matches the
+retained 2,048-character prefix after replacing only `RewindObjectStateBlob`
+hash text; the current assertion is 2,915 characters. This establishes the
+same bounded failure signature, not equality of the unstored suffix. No new
+failure identity or concrete first-error field was observed.
+
+The 41 ordinary skips cover opt-in diagnostics/captures, unavailable native
+GL/EGL paths, 12 Infinite Sonic acts without platforms, the maintained CPZ
+assumption and absent audio-reference/capture requests. None of the golf
+integration, controller-input or API checks skipped. All 107
+`TestPuttPuttParadise` cases and both two-JVM online cases passed in the ordinary
+invocation, in addition to the 183-case focused pass. This is completed
+selected-check coverage through an interrupted broad invocation, its unfinished
+classes and fresh guards; it is **not a green full-suite or category claim**.
+
+The interrupted category diagnostics were inspected and acknowledged. Temporary
+focused/continuation/guard XML, logs and probes are removed after consumption;
+the SDK-validated local mod artifact is retained for testing. `git diff --check`,
+launcher `bash -n`, builder dry-run and relative documentation-link checks passed.
+The final change stays on `feature/ai-putt-putt-paradise`, with main `develop`
+unchanged at `fc4729c375de0273659d262f89cfb6966acc6308`; no merge or push.

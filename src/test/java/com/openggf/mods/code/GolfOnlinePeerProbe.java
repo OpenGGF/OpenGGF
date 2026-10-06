@@ -58,7 +58,7 @@ public final class GolfOnlinePeerProbe {
     }
 
     public static void main(String[] args) throws Exception {
-        require(args.length == 3, "expected host/guest, port, validated jar");
+        require(args.length == 3 || args.length == 4, "expected host/guest, port, validated jar, optional rewinds");
         boolean host = args[0].equals("host");
         require(host || args[0].equals("guest"), "invalid peer role");
         Path jar = Path.of(args[2]).toAbsolutePath();
@@ -84,7 +84,7 @@ public final class GolfOnlinePeerProbe {
                 SessionManager.clear(); GameModuleRegistry.setCurrent(effective); TestEnvironment.activeGameplayMode();
                 var fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
                 peer = new GolfOnlinePeerProbe(host, fixture);
-                peer.configure(loader, Integer.parseInt(args[1])); peer.report();
+                peer.configure(loader, Integer.parseInt(args[1]), args.length == 4 && args[3].equals("rewinds")); peer.report();
                 try (var commands = new BufferedReader(new InputStreamReader(System.in))) {
                     for (String line; (line = commands.readLine()) != null;) {
                         String[] command = line.trim().split("\\s+");
@@ -106,19 +106,26 @@ public final class GolfOnlinePeerProbe {
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private void configure(URLClassLoader loader, int port) throws Exception {
+    private void configure(URLClassLoader loader, int port, boolean rewinds) throws Exception {
         Class selection = loader.loadClass("paradise.ui.GolfMenu$Selection");
         Class mode = loader.loadClass("paradise.ui.GolfMenu$Mode");
         Class character = loader.loadClass("paradise.ui.GolfMenu$CharacterChoice");
         Class viewport = loader.loadClass("paradise.ui.GolfMenu$Viewport");
-        Object choice = selection.getConstructor(mode, character, character, int.class, String.class, int.class, viewport)
+        Class rules = loader.loadClass("paradise.model.RewindAllowance$Rules");
+        Object choice = selection.getConstructor(mode, character, character, int.class, String.class, int.class, viewport, rules)
                 .newInstance(Enum.valueOf(mode, host ? "HOST" : "JOIN"), Enum.valueOf(character, host ? "SONIC" : "TAILS"),
-                        Enum.valueOf(character, host ? "TAILS" : "SONIC"), 0, "127.0.0.1", port, Enum.valueOf(viewport, "NATIVE_4_3"));
+                        Enum.valueOf(character, host ? "TAILS" : "SONIC"), 0, "127.0.0.1", port, Enum.valueOf(viewport, "NATIVE_4_3"), rules.getMethod(rewinds ? "defaults" : "off").invoke(null));
         controller.getClass().getMethod("configure", selection).invoke(controller, choice);
     }
 
     private void step(int held, int actions, boolean start) throws Exception {
         var before = fixture.gameplayMode().getRewindRegistry().captureCourse();
+        Object beforeRoom = value(controller, "roomState");
+        Object beforeTurn = beforeRoom == null ? null : value(beforeRoom, "remoteTurnOpened");
+        Object beforeId = beforeTurn == null ? null : value(beforeTurn, "id");
+        Object beforeOnline = field(controller, "online");
+        Object beforeStatus = beforeOnline == null ? null : declaredValue(beforeOnline, "shotStatus");
+        String beforePhase = beforeStatus == null ? "AIM" : value(beforeStatus, "phase").toString();
         var controls = PlayerInputState.of(held, held & ~previousHeld, actions, actions & ~previousActions, start, start && !previousStart);
         previousHeld = held; previousActions = actions; previousStart = start;
         LevelFrameResult result = ControlledFrameRuntime.step(fixture.gameplayMode(), input,
@@ -128,6 +135,9 @@ public final class GolfOnlinePeerProbe {
         else if (result == LevelFrameResult.SETUP_ONLY) setupRows++;
         else if (result == LevelFrameResult.HELD && opened()) {
             heldRows++;
+            Object afterId = value(value(value(controller, "roomState"), "remoteTurnOpened"), "id");
+            if (host && !java.util.Objects.equals(beforeId, afterId)
+                    && (beforePhase.equals("REVIEW") || beforePhase.equals("REWINDING"))) return; // Explicit restore at keep/rewind boundary.
             var after = fixture.gameplayMode().getRewindRegistry().captureCourse();
             require(before.entries().keySet().equals(after.entries().keySet()), "held row changed course adapter layout");
             for (var entry : before.entries().entrySet()) {
@@ -153,6 +163,7 @@ public final class GolfOnlinePeerProbe {
         values.put("hostCharacter", state == null ? "none" : value(state, "hostCharacter")); values.put("guestCharacter", state == null ? "none" : value(state, "guestCharacter"));
         Object turn = state == null ? null : value(state, "remoteTurnOpened");
         values.put("turn", turn == null ? -1 : value(value(turn, "id"), "turn"));
+        values.put("shot", turn == null ? -1 : value(value(turn, "id"), "shot"));
         values.put("wire0", state == null ? "none" : score(value(state, "player0"))); values.put("wire1", state == null ? "none" : score(value(state, "player1")));
         Object match = value(controller, "matchState"), pending = match == null ? null : value(match, "pending");
         values.put("matchStatus", match == null ? "none" : value(match, "status"));
@@ -165,6 +176,10 @@ public final class GolfOnlinePeerProbe {
             values.put("dnf" + owner, golfer != null && (boolean)value(golfer, "dnf"));
         }
         Object online = field(controller, "online");
+        Object status = online == null ? null : declaredValue(online, "shotStatus");
+        values.put("phase", status == null ? "AIM" : value(status, "phase"));
+        values.put("holeRewinds", status == null ? -2 : value(status, "holeRemaining"));
+        values.put("turnRewinds", status == null ? -2 : value(status, "turnRemaining"));
         Object meter=value(controller,"shotState");
         values.put("spin",value(meter,"spin")); values.put("targetSpin",value(meter,"targetSpin"));
         values.put("power",value(meter,"power"));

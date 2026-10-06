@@ -107,7 +107,8 @@ class TestGolfOnlineIntegration {
                 compareViewAndScores(host,guest);
                 String score0 = guest.state.text("wire0"), score1 = guest.state.text("wire1");
                 guest.step(1, 0, 0, true); guest.step(1, 0, 0, false);
-                guest.step(1, 2, 0, false); guest.step(1, 0, 0, false); guest.step(1, 0, ACTION_A, false); // Menu: Concede.
+                guest.step(1, 2, 0, false); guest.step(1, 0, 0, false); guest.step(1, 2, 0, false);
+                guest.step(1, 0, 0, false); guest.step(1, 0, ACTION_A, false); // Menu: Concede, after Rewind.
                 pump(host, guest, (one, two) -> one.flag("ended") && two.flag("ended"), 80, "explicit guest concession reaches host mode");
                 assertEquals("CONCEDED", host.state.text("matchStatus")); assertTrue(host.state.flag("dnf1"));
                 assertEquals(1, guest.state.number("concededOwner"));
@@ -116,6 +117,49 @@ class TestGolfOnlineIntegration {
             }
         }
         try (var reused = new ServerSocket(port)) { assertEquals(port, reused.getLocalPort(), "closed host port is reusable"); }
+    }
+
+    @Test @Timeout(value = 180, unit = TimeUnit.SECONDS)
+    void bothOnlineGolfersCanRewindWithoutChangingTurnOrDuplicatingScore() throws Exception {
+        Path rom = RomTestUtils.ensureSonic2RomAvailable().toPath().toRealPath(), jar = compileAndPackage();
+        int port; try (var reservation = new ServerSocket(0)) { port = reservation.getLocalPort(); }
+        try (var host = new Peer("host", port, jar, rom, Files.createDirectory(temp.resolve("host")), true)) {
+            host.step(1, 0, 0, false);
+            try (var guest = new Peer("guest", port, jar, rom, Files.createDirectory(temp.resolve("guest")), true)) {
+                pump(host, guest, (a,b) -> a.flag("ready") && b.flag("ready") && a.number("turn") >= 1 && b.number("turn") >= 1,
+                        700, "rewind room opens");
+                long x = host.state.number("ballX"), y = host.state.number("ballY"), turn = host.state.number("turn"), id = host.state.number("shot");
+                shot(host);
+                pump(host, guest, (a,b) -> a.text("phase").equals("REVIEW") && b.text("phase").equals("REVIEW"), 700, "settled host shot remains reviewable");
+                pauseRewind(host);
+                pump(host, guest, (a,b) -> a.text("phase").equals("AIM") && b.text("phase").equals("AIM") && a.number("shot") > id && b.number("shot") == a.number("shot"), 200, "host rewind reaches origin on both peers");
+                assertEquals(turn, host.state.number("turn")); assertEquals(0, host.state.number("strokes0"));
+                assertEquals(x,host.state.number("ballX")); assertEquals(y,host.state.number("ballY"));
+                assertEquals(2,guest.state.number("holeRewinds")); assertEquals(0,guest.state.number("turnRewinds")); compareViewAndScores(host,guest);
+                shot(host);
+                pump(host,guest,(a,b)->a.number("owner")==1 && b.number("owner")==1 && a.number("turn")>turn,700,"kept retry passes to guest");
+                long guestTurn=host.state.number("turn"), guestId=host.state.number("shot"), guestX=host.state.number("ballX"), guestY=host.state.number("ballY");
+                shot(guest);
+                pump(host,guest,(a,b)->a.text("phase").equals("REVIEW") && b.text("phase").equals("REVIEW"),700,"guest shot reviewed by host");
+                pauseRewind(guest);
+                pump(host,guest,(a,b)->a.text("phase").equals("AIM") && b.text("phase").equals("AIM") && a.number("shot")>guestId && b.number("shot")==a.number("shot"),200,"guest rewind is host-owned");
+                assertEquals(guestTurn,host.state.number("turn")); assertEquals(0,host.state.number("strokes1"));
+                assertEquals(guestX,host.state.number("ballX")); assertEquals(guestY,host.state.number("ballY"));
+                assertEquals(2,guest.state.number("holeRewinds")); assertEquals(0,guest.state.number("turnRewinds")); compareViewAndScores(host,guest);
+                assertEquals(0,guest.state.number("gameplayRows"),"guest never simulates reverse or forward physics");
+                shot(guest);
+                pump(host,guest,(a,b)->a.number("owner")==0 && b.number("owner")==0 && a.number("turn")>guestTurn,700,"guest keeps retry");
+                shot(host);
+                pump(host,guest,(a,b)->a.text("phase").equals("REVIEW") && b.text("phase").equals("REVIEW"),700,"new host turn renews per-turn allowance");
+                assertEquals(1,host.state.number("turnRewinds"));
+                host.step(1,0,ACTION_A,false); host.step(1,0,0,false);
+                pump(host,guest,(a,b)->a.number("owner")==1 && b.number("owner")==1,100,"A keeps review and passes turn online");
+                compareViewAndScores(host,guest);
+            }
+        }
+    }
+    private static void pauseRewind(Peer peer) throws Exception {
+        peer.step(1,0,0,true); peer.step(1,0,0,false); peer.step(1,2,0,false); peer.step(1,0,ACTION_A,false);
     }
 
     private Path compileAndPackage() throws Exception {
@@ -177,6 +221,9 @@ class TestGolfOnlineIntegration {
         final AtomicReference<Throwable> readerFailure = new AtomicReference<>();
         State state;
         Peer(String role, int port, Path jar, Path rom, Path directory) throws Exception {
+            this(role, port, jar, rom, directory, false);
+        }
+        Peer(String role, int port, Path jar, Path rom, Path directory, boolean rewinds) throws Exception {
             Path peerTemp = Files.createDirectory(directory.resolve("tmp"));
             String classpath = Arrays.stream(System.getProperty("surefire.test.class.path", System.getProperty("java.class.path")).split(File.pathSeparator))
                     .map(path -> Path.of(path).toAbsolutePath().toString()).collect(java.util.stream.Collectors.joining(File.pathSeparator));
@@ -184,7 +231,7 @@ class TestGolfOnlineIntegration {
                     "-Duser.home=" + directory, "-Dsonic2.rom.path=" + rom,
                     "-Djava.io.tmpdir=" + peerTemp,
                     "-Dorg.lwjgl.system.SharedLibraryExtractPath=" + directory.resolve("native"), "-classpath", classpath,
-                    GolfOnlinePeerProbe.class.getName(), role, Integer.toString(port), jar.toString())
+                    GolfOnlinePeerProbe.class.getName(), role, Integer.toString(port), jar.toString(), rewinds ? "rewinds" : "off")
                     .directory(directory.toFile()).redirectErrorStream(true).start();
             commands = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
             Thread.ofVirtual().name("golf-integration-" + role).start(() -> {

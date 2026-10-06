@@ -13,7 +13,13 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 @ModApi
 public final class CourseControl {
     private final GameplayModeContext context;
-    CourseControl(GameplayModeContext context) { this.context = context; }
+    private final boolean rewindHeld;
+    CourseControl(GameplayModeContext context) { this(context, false); }
+    CourseControl(GameplayModeContext context, boolean rewindHeld) { this.context = context; this.rewindHeld = rewindHeld; }
+
+    /** Current configured rewind key/primary-pad bumper, independent of developer rewind enablement.
+     * Controllers own edge detection. Movie inputs should use their controller menu command instead. */
+    public boolean rewindHeld() { return rewindHeld; }
 
     @ModApi
     public record Ball(String character, int x, int y, int xSpeed, int ySpeed, int groundSpeed,

@@ -20,10 +20,11 @@ final class GolfOnline implements AutoCloseable {
     private boolean completed;
     private int concededOwner = -1;
     private GolfPacket.ShotId accepted;
+    private GolfPacket.ShotStatus shotStatus;
 
     GolfOnline(GolfMenu.Selection selection, CourseControl course) throws IOException {
         var fingerprints = new GolfPacket.Fingerprints(GolfCodec.SCHEMA, course.apiIdentity(),
-                course.engineIdentity(), course.modContentSha256(), GolfRules.fingerprint(),
+                course.engineIdentity(), course.modContentSha256(), GolfRules.fingerprint(selection.rewinds()),
                 course.romSha1(), "competition", course.viewportWidth(), 224);
         room = selection.mode() == GolfMenu.Mode.HOST
                 ? GolfRoom.host(selection.port(), fingerprints, selection.playerOne().code())
@@ -36,10 +37,11 @@ final class GolfOnline implements AutoCloseable {
     boolean complete() { return completed || room.state().ended(); }
     GolfPacket.ShotId turn() { return turn; }
     boolean guestAccepted() { return accepted != null && accepted.equals(turn); }
+    GolfPacket.ShotStatus shotStatus() { return shotStatus; }
     List<GolfRoom.Event> tick() { room.tick(); return room.drainEvents(); }
     void receive(GolfPacket packet) {
         if (packet instanceof GolfPacket.TurnOpened opened) {
-            if (turn == null || !turn.equals(opened.id())) accepted = null;
+            if (turn == null || !turn.equals(opened.id())) { accepted = null; shotStatus = null; }
             turn = opened.id(); lastFrame = null; error = "";
         } else if (packet instanceof GolfPacket.ViewFrame frame) {
             try {
@@ -53,6 +55,11 @@ final class GolfOnline implements AutoCloseable {
             if ("charge".equals(sound.sound()) && sound.id().owner() == 0) GameServices.audio().playSfx(com.openggf.audio.GameSound.SPINDASH_CHARGE);
             else if ("release".equals(sound.sound())) GameServices.audio().playSfx(com.openggf.audio.GameSound.SPINDASH_RELEASE);
         } else if (packet instanceof GolfPacket.ShotAccepted value) { accepted = value.id(); error = ""; }
+        else if (packet instanceof GolfPacket.ShotStatus value) {
+            if (value.phase() == GolfPacket.ShotPhase.REWINDING
+                    && (shotStatus == null || shotStatus.phase() != value.phase())) GameServices.audio().stopAllSfx();
+            shotStatus = value;
+        }
         else if (packet instanceof GolfPacket.Rejected rejected) { accepted = null; error = rejected.reason(); }
         else if (packet instanceof GolfPacket.TurnCommitted committed) completed = committed.nextOwner() < 0;
         else if (packet instanceof GolfPacket.Leave leave && GolfRoom.CONCEDED_REASON.equals(leave.reason())) concededOwner = leave.owner();
@@ -76,6 +83,17 @@ final class GolfOnline implements AutoCloseable {
         return turn != null && room.submitShot(new GolfPacket.ShotRequest(turn, shot.direction(), shot.elevationDegrees(),
                 shot.normalizedPower(), shot.spin()));
     }
+    boolean control(GolfPacket.ShotAction action) {
+        return turn != null && room.submitControl(new GolfPacket.ShotControl(turn, action));
+    }
+    void status(GolfMatch.ShotId id, GolfPacket.ShotPhase phase, RewindAllowance budget) {
+        shotStatus = new GolfPacket.ShotStatus(wire(id), phase, budget.holeRemaining(id.player(), id.actIndex()), budget.turnRemaining(id));
+        room.publishStatus(shotStatus);
+    }
+    void rewound(GolfMatch.State state, GolfMatch.ShotId id, CourseControl.Ball ball) {
+        room.publishCommitted(new GolfPacket.TurnCommitted(wire(id), GolfPacket.Outcome.REWOUND, ball.x(), ball.y(),
+                score(state, 0), score(state, 1), state.activePlayer()));
+    }
     void committed(GolfMatch.State state, GolfMatch.ShotId id, GolfOutcome outcome, CourseControl.Ball ball) {
         var value = outcome == GolfOutcome.FINISH ? GolfPacket.Outcome.FINISHED
                 : outcome.isPenalty() ? GolfPacket.Outcome.PENALTY : GolfPacket.Outcome.SETTLED;
@@ -93,6 +111,13 @@ final class GolfOnline implements AutoCloseable {
         try {
             var frame = paradise.presentation.GolfScene.withFinishFlag(
                     GameServices.level().captureScene(++revision, pose, GameServices.camera().getWidth() / 2, 112), finishX, finishY);
+            room.publishView(new GolfPacket.ViewFrame(turn, revision, tick, SceneFrameCodec.encode(frame)));
+        } catch (IOException oversized) { error = "COURSE VIEW TOO LARGE"; room.close(); }
+    }
+    void publish(long tick, ScenePresentationFrame recorded) {
+        if (turn == null || !room.state().ready() || room.state().ended()) return;
+        try {
+            var frame = paradise.presentation.ShotReplay.revision(recorded, ++revision);
             room.publishView(new GolfPacket.ViewFrame(turn, revision, tick, SceneFrameCodec.encode(frame)));
         } catch (IOException oversized) { error = "COURSE VIEW TOO LARGE"; room.close(); }
     }

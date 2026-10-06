@@ -71,4 +71,7 @@ class TestGolfModel {
     @Test void wrongTurnAndNonterminalObservationsCannotMutateTheLedger() throws Exception { check("invalidTurns"); }
     @Test void practiceActTwoEndsWithoutStartingAnotherHole() throws Exception { check("practice"); }
     @Test void ledgerSnapshotsRemainIndependentAndRestoreThePendingShot() throws Exception { check("ledgerReplay"); }
+    @Test void rewindRefundsOnlyPendingShotAndRetiresItsIdentity() throws Exception { check("shotRewind"); }
+    @Test void rewindLimitsAreIndependentPerGolferHoleAndTurn() throws Exception { check("rewindAllowances"); }
+    @Test void longerShotsRewindFasterWithBoundedPlaybackTime() throws Exception { check("rewindSpeed"); }
 }

@@ -31,7 +31,20 @@ public sealed interface GolfPacket {
     record Score(int strokes, int penalties, boolean finished) {
         public Score { range(strokes, 0, 1_000_000, "strokes"); range(penalties, 0, 1_000_000, "penalties"); }
     }
-    enum Outcome { SETTLED, FINISHED, PENALTY, CONCEDED }
+    enum Outcome { SETTLED, FINISHED, PENALTY, CONCEDED, REWOUND }
+    enum ShotAction { REWIND, KEEP }
+    enum ShotPhase { AIM, CHARGING, WATCH, REVIEW, REWINDING }
+    record ShotControl(ShotId id, ShotAction action) implements GolfPacket {
+        public ShotControl { Objects.requireNonNull(id); Objects.requireNonNull(action); }
+    }
+    record ShotStatus(ShotId id, ShotPhase phase, int holeRemaining, int turnRemaining) implements GolfPacket {
+        public ShotStatus {
+            Objects.requireNonNull(id); Objects.requireNonNull(phase);
+            range(holeRemaining, -1, 5, "hole rewinds"); range(turnRemaining, -1, 3, "turn rewinds");
+        }
+        public boolean canRewind() { return holeRemaining != 0 && turnRemaining != 0
+                && (phase == ShotPhase.CHARGING || phase == ShotPhase.WATCH || phase == ShotPhase.REVIEW); }
+    }
     record Hello(Fingerprints fingerprints, String character) implements GolfPacket {
         public Hello { Objects.requireNonNull(fingerprints); GolfPacket.character(character); }
     }

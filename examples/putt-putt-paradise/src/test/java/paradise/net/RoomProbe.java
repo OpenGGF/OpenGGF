@@ -36,6 +36,41 @@ public final class RoomProbe {
         }
     }
     public static void guestResumeRetainsHostPause() throws Exception { overlappingPauses(true); }
+    public static void rewindControlsAndBudgetsSurviveReconnect() throws Exception {
+        try (var rooms = new Rooms()) {
+            var host = rooms.host; var guest = rooms.guest;
+            pump(host, guest, () -> host.state().ready() && guest.state().ready(), "rewind room ready");
+            var id = new ShotId(host.state().match(), 1, 1, 1, 1); var score = new Score(0, 0, false);
+            host.publishTurn(new TurnOpened(id, 100, 200, 0, 5, score, score));
+            pump(host, guest, () -> guest.state().remoteTurnOpened() != null, "turn for rewind");
+            var request = request(id); guest.submitShot(request);
+            var requests = new ArrayList<GolfPacket>();
+            pump(host, guest, () -> { requests.addAll(packets(host)); return requests.contains(request); }, "shot accepted before control");
+            check(host.acceptShot(request).newlyAccepted(), "one accepted shot");
+            host.publishStatus(new ShotStatus(id, ShotPhase.REVIEW, 3, 1));
+            guest.drainEvents(); host.drainEvents();
+            var control = new ShotControl(id, ShotAction.REWIND);
+            check(guest.submitControl(control) && guest.submitControl(control), "duplicate control retained once");
+            var controls = new ArrayList<GolfPacket>();
+            pump(host, guest, () -> { controls.addAll(packets(host)); return controls.contains(control); }, "rewind intent reaches host");
+            check(controls.stream().filter(control::equals).count() == 1, "duplicate cannot create two control intents");
+            host.publishStatus(new ShotStatus(id, ShotPhase.REWINDING, 2, 0));
+            connection(guest).close();
+            pump(host, guest, () -> host.state().held() && !host.state().connected(), "rewind disconnect holds world");
+            var replay = new ArrayList<GolfPacket>();
+            pump(host, guest, () -> {
+                replay.addAll(packets(guest)); return host.state().ready() && guest.state().ready()
+                        && replay.contains(new ShotStatus(id, ShotPhase.REWINDING, 2, 0));
+            }, "reconnect retains playback phase and spent budgets");
+            host.publishCommitted(new TurnCommitted(id, Outcome.REWOUND, 100, 200, score, score, 1));
+            var retry = new ShotId(id.match(), 1, 1, 2, 1);
+            host.publishTurn(new TurnOpened(retry, 100, 200, 0, 5, score, score));
+            host.publishStatus(new ShotStatus(retry, ShotPhase.AIM, 2, 0));
+            pump(host, guest, () -> retry.equals(guest.state().remoteTurnOpened().id()), "fresh retry identity on same turn");
+            check(guest.state().player1().strokes() == 0 && guest.state().owner() == 1, "refund and ownership remain authoritative");
+            check(!guest.submitControl(control), "stale control cannot alter retry");
+        }
+    }
     public static void hostResumeRetainsGuestPause() throws Exception { overlappingPauses(false); }
     static void overlappingPauses(boolean guestResumesFirst) throws Exception {
         try (var rooms = new Rooms()) {

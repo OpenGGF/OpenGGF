@@ -126,6 +126,18 @@ public final class GolfMatch {
         return Decision.ACCEPTED;
     }
 
+    /** Refunds a pending shot; its sequence stays retired so retries cannot resurrect old requests. */
+    public Decision rewind(ShotId id) {
+        Objects.requireNonNull(id);
+        if (state.status() != Status.PLAYING || state.pending() == null || !state.pending().id().equals(id))
+            return Decision.REJECTED;
+        HoleScore before = activeScore();
+        state = new State(state.mode(), withScore(state.activePlayer(), new HoleScore(before.strokes() - 1,
+                before.penalties(), before.finished(), before.dnf())), state.initialActIndex(), state.actIndex(),
+                state.activePlayer(), state.turnSequence(), state.nextShotSequence(), null, state.lastResolved(), state.status(), state.winner());
+        return Decision.ACCEPTED;
+    }
+
     /** NONE leaves a committed shot in flight; compound terminal candidates are arbitrated exactly once. */
     public Resolution resolve(ShotId id, GolfOutcome.Candidates candidates) {
         Objects.requireNonNull(id, "id"); Objects.requireNonNull(candidates, "candidates");

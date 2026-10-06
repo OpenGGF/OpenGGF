@@ -47,6 +47,13 @@ public final class GolfRules {
     }
 
     private GolfRules() { }
+    public static String fingerprint(RewindAllowance.Rules rewinds) {
+        try {
+            String rules = fingerprint() + ":rewind-v1:review:refund:90ticks:" + rewinds.perHole() + ":" + rewinds.perTurn();
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(rules.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
+    }
 
     public record LaunchVelocity(int x, int y, int ground) { }
 
