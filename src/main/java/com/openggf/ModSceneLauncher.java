@@ -3,9 +3,9 @@ package com.openggf;
 import com.openggf.architecture.CompositionRoot;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.game.GameId;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
+import com.openggf.game.GameModuleRouting;
 import com.openggf.game.GameServices;
 import com.openggf.game.save.SavePaths;
 import com.openggf.graphics.GraphicsManager;
@@ -63,7 +63,7 @@ final class ModSceneLauncher {
     }
 
     private static com.openggf.mods.scene.SceneRomArt romArt(GameModule module) {
-        if (module.getGameId() == GameId.STANDALONE) {
+        if (GameModuleRouting.isStandalone(module)) {
             return null;
         }
         try {
