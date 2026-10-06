@@ -73,9 +73,11 @@ can quit and **Continue** later. The title screen also has the **Compendium** (e
 not; every relic; every monitor), **Records** (runs, wins, best floor per hero) and
 **Settings** (combat speed, screen shake, music and sound effects).
 
-Each act's map runs left to right over a zoomed-out picture of the zone's real level, and
-fights, events, Starposts and capsules play in front of the zone's own parallax background,
-both rendered from your ROM.
+Each act's map runs left to right over a zoomed-out picture of the zone's real level. Fights,
+Starposts, capsules and events are staged in the level itself: each room picks a stretch of
+the act's real floor - near the start for early floors, the far end for the boss - and the
+characters stand on that ground in front of the zone's parallax background, all rendered from
+your ROM.
 
 ## What's in it
 

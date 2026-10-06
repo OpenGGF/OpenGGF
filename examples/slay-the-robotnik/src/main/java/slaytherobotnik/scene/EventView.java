@@ -51,7 +51,7 @@ final class EventView implements RunScreen.RoomView {
     @Override
     public void draw(Shell shell, RunScreen screen, SceneCanvas c) {
         int w = shell.width();
-        Backdrops.zone(shell, c, shell.run.act().zone(), shell.run.act().zoneAct(), shell.ticks / 5);
+        LevelStages.draw(shell, c, 160);
         c.fill(0, 0, w, shell.height(), 0x70000010);
         SmallFont f = shell.font;
         String title = room.def().title().toUpperCase();

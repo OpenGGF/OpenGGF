@@ -3,10 +3,12 @@ package slaytherobotnik.art;
 import com.openggf.mods.scene.SceneBackdrop;
 import com.openggf.mods.scene.SceneContext;
 import com.openggf.mods.scene.SceneImage;
+import com.openggf.mods.scene.SceneLevelStage;
 import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneSprite;
 import com.openggf.mods.scene.SceneSpriteSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -21,6 +23,9 @@ public final class Art {
     private final Map<String, SceneSpriteSet> romSets = new HashMap<>();
     private final Map<String, SceneImage> overviews = new HashMap<>();
     private final Map<String, SceneBackdrop> backdrops = new HashMap<>();
+    private final Map<String, List<SceneLevelStage>> stages = new HashMap<>();
+    /** The last few stage foregrounds (each a screen of pixels), most recent last. */
+    private final Map<String, SceneImage> foregrounds = new java.util.LinkedHashMap<>();
     private SceneImage blank;
 
     private final CardRecipes cards;
@@ -110,6 +115,46 @@ public final class Art {
             overviews.put(key, image);
         }
         return overviews.get(key);
+    }
+
+    /**
+     * Runs of a zone act's floor with room above them ({@link SceneRomArt#levelStages}), or
+     * none when the game cannot find any.
+     */
+    public List<SceneLevelStage> levelStages(int zone, int act, int width, int headroom, int maxRise) {
+        String key = zone + ":" + act + ":" + width + ":" + headroom + ":" + maxRise;
+        if (!stages.containsKey(key)) {
+            List<SceneLevelStage> found = List.of();
+            try {
+                found = hasRom() ? rom().levelStages(zone, act, width, headroom, maxRise) : List.of();
+            } catch (RuntimeException e) {
+                found = List.of();
+            }
+            stages.put(key, found);
+        }
+        return stages.get(key);
+    }
+
+    /**
+     * A rectangle of a zone act's foreground ({@link SceneRomArt#levelForeground}), or null.
+     * Keeps the last eight, so a room's stage is built once.
+     */
+    public SceneImage levelForeground(int zone, int act, int x, int y, int width, int height) {
+        String key = zone + ":" + act + ":" + x + ":" + y + ":" + width + ":" + height;
+        boolean known = foregrounds.containsKey(key);
+        SceneImage image = foregrounds.remove(key);
+        if (!known) {
+            try {
+                image = hasRom() ? rom().levelForeground(zone, act, x, y, width, height) : null;
+            } catch (RuntimeException e) {
+                image = null;
+            }
+        }
+        foregrounds.put(key, image);
+        if (foregrounds.size() > 8) {
+            foregrounds.remove(foregrounds.keySet().iterator().next());
+        }
+        return image;
     }
 
     /** A zone act's parallax background from the ROM ({@link SceneRomArt#zoneBackdrop}), or null. */

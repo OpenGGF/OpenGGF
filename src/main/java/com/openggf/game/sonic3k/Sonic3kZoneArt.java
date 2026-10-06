@@ -9,6 +9,7 @@ import com.openggf.level.Map;
 import com.openggf.level.Pattern;
 import com.openggf.level.animation.AniPlcParser;
 import com.openggf.level.animation.AniPlcScriptState;
+import com.openggf.level.render.LevelFloorScanner;
 import com.openggf.level.render.PlaneRasterizer;
 import com.openggf.level.render.ZonePictureSource;
 import java.io.IOException;
@@ -17,8 +18,8 @@ import java.util.List;
 import java.util.function.IntFunction;
 
 /**
- * S3K zone pictures for mod scenes ({@code SceneRomArt.zoneBackdrop} and
- * {@code levelOverview}). Each supported act is built as a detached level
+ * S3K zone pictures for mod scenes ({@code SceneRomArt.zoneBackdrop}, {@code levelOverview},
+ * {@code levelStages} and {@code levelForeground}). Each supported act is built as a detached level
  * ({@link Sonic3k#buildDetachedLevel}: explicit bootstrap mode and Sonic's palette, nothing
  * published), its animated tiles are put at the state the level shows on load into a private
  * copy of the tile array, and the planes are rasterised on the CPU. Nothing here reads a live
@@ -62,10 +63,12 @@ public final class Sonic3kZoneArt implements ZonePictureSource {
      * layout. {@code backgroundRows} is how far down the background renders cleanly with this
      * art; the overview repeats it vertically from there. Foreground columns from
      * {@code foregroundEndX} on are not playable (staging data), or {@code Integer.MAX_VALUE}.
+     * Stages end by {@code stageEndX}, where the act starts showing art or layout its load does
+     * not have, or {@code Integer.MAX_VALUE}.
      */
     private record Profile(int zone, int act, Sonic3kLoadBootstrap.Mode mode, List<Strip> strips, int layoutX,
             int width, int height, int fixedTop, int fixedBottom, int backgroundRows, int foregroundEndX,
-            IntFunction<List<Band>> bands) {
+            IntFunction<List<Band>> bands, int stageEndX) {
         PlaneRasterizer.BackgroundWrap backgroundWrap() {
             return new PlaneRasterizer.BackgroundWrap(backgroundRows, fixedTop, fixedBottom, PLANE_WIDTH);
         }
@@ -101,15 +104,16 @@ public final class Sonic3kZoneArt implements ZonePictureSource {
             // Rows $380 on hold the intro beach, which this art cannot draw; the main level never
             // shows them (its background Y tops out at $390 / 2 + $E0 = $2A8).
             return new Profile(zone, act, Sonic3kLoadBootstrap.Mode.SKIP_INTRO, List.of(), 0, PLANE_WIDTH, 0x220,
-                    0, 0x380, 0x380, Integer.MAX_VALUE, S3kBackdropBands::aiz1);
+                    0, 0x380, 0x380, Integer.MAX_VALUE, S3kBackdropBands::aiz1, Integer.MAX_VALUE);
         }
         if (zone == Sonic3kZoneIds.ZONE_AIZ && act == 1) {
             // The act's own LevelLoadBlock art and palette, as a fresh act 2 load shows them
             // (the burnt jungle); the AIZ1 fire transition's line-4 writes are not applied.
             // AIZ2_BackgroundInit draws the whole plane from X 0 (Refresh_PlaneFull, d1 = 0);
-            // the layout repeats vertically every $280 rows.
+            // the layout repeats vertically every $280 rows. Stages end at $3C00, where
+            // AIZ2_SonicResize4 queues the battleship art over the level's tiles.
             return new Profile(zone, act, Sonic3kLoadBootstrap.Mode.NORMAL, List.of(), 0, PLANE_WIDTH, 0x280,
-                    0, 0x500, 0x500, Integer.MAX_VALUE, S3kBackdropBands::aiz2);
+                    0, 0x500, 0x500, Integer.MAX_VALUE, S3kBackdropBands::aiz2, 0x3C00);
         }
         if (zone == Sonic3kZoneIds.ZONE_HCZ && act == 0) {
             // The four $2DC-$30B strips Sonic3kPatternAnimator.updateHcz1BackgroundStrips
@@ -120,7 +124,8 @@ public final class Sonic3kZoneArt implements ZonePictureSource {
                             new Strip(Sonic3kConstants.ART_UNC_HCZ1_WATERLINE_BELOW2_ADDR, size, 0x2E8),
                             new Strip(Sonic3kConstants.ART_UNC_FIX_HCZ1_LOWER_BG1_ADDR, size, 0x2F4),
                             new Strip(Sonic3kConstants.ART_UNC_FIX_HCZ1_LOWER_BG2_ADDR, size, 0x300)),
-                    0, PLANE_WIDTH, 0x400, 0, 0x400, 0x400, Integer.MAX_VALUE, S3kBackdropBands::hcz1BelowWaterline);
+                    0, PLANE_WIDTH, 0x400, 0, 0x400, 0x400, Integer.MAX_VALUE, S3kBackdropBands::hcz1BelowWaterline,
+                    Integer.MAX_VALUE);
         }
         if (zone == Sonic3kZoneIds.ZONE_LBZ && act == 0) {
             // AnimateTiles_LBZ1's scroll tiles at phase 0 (updateLbz1ScrollTiles: $140 words
@@ -129,11 +134,13 @@ public final class Sonic3kZoneArt implements ZonePictureSource {
             // (LBZ1_BackgroundInit, sonic3k.asm:111168): the sky follows the 1536-px layout,
             // the water below is drawn from X 0. Foreground columns $80 on are the staging rows
             // the LBZ1_DoModN routines copy into the visible layout (Sonic3kLBZEvents
-            // LBZ1_LAYOUT_MODS), so the playable foreground ends at X $4000.
+            // LBZ1_LAYOUT_MODS), so the playable foreground ends at X $4000. Stages end at $3B60,
+            // where LBZ1_EventVScroll drops the boss-area building and LBZ1_ModEndingLayout
+            // rebuilds it (Sonic3kLBZEvents ENDING_COLLAPSE_START_X).
             return new Profile(zone, act, Sonic3kLoadBootstrap.Mode.NORMAL,
                     List.of(new Strip(Sonic3kConstants.ART_UNC_ANI_LBZ1_1_ADDR, 0x280, 0x350),
                             new Strip(Sonic3kConstants.ART_UNC_ANI_LBZ1_2_ADDR, 0x20, 0x364)),
-                    0, 0x600, 0x180, 0xD0, 0x180, 0x180, 0x4000, S3kBackdropBands::lbz1);
+                    0, 0x600, 0x180, 0xD0, 0x180, 0x180, 0x4000, S3kBackdropBands::lbz1, 0x3B60);
         }
         if (zone == Sonic3kZoneIds.ZONE_SSZ && act == 0) {
             // The cloud sea: sub_57A60 fills plane B from background X $1C00 (layout columns
@@ -142,7 +149,7 @@ public final class Sonic3kZoneArt implements ZonePictureSource {
             // the background is plain: the layout's floating ruins moving with the camera, which
             // is what the overview shows (no fixed rows).
             return new Profile(zone, act, Sonic3kLoadBootstrap.Mode.NORMAL, List.of(), 0x1C00, PLANE_WIDTH,
-                    0x500, 0, 0, 0xB00, Integer.MAX_VALUE, S3kBackdropBands::ssz1Clouds);
+                    0x500, 0, 0, 0xB00, Integer.MAX_VALUE, S3kBackdropBands::ssz1Clouds, Integer.MAX_VALUE);
         }
         return null;
     }
@@ -184,6 +191,55 @@ public final class Sonic3kZoneArt implements ZonePictureSource {
         int[] argb = PlaneRasterizer.compositeOverview(built.level(), built, bounds.x(), bounds.y(),
                 bounds.width(), bounds.height(), divisor, backdropColour(built), profile.backgroundWrap());
         return new Picture(Math.ceilDiv(bounds.width(), divisor), Math.ceilDiv(bounds.height(), divisor), argb);
+    }
+
+    @Override
+    public List<LevelFloorScanner.Stage> stages(int zone, int act, int width, int headroom, int maxRise) {
+        if (width < 1 || headroom < 1 || maxRise < 0) {
+            throw new IllegalArgumentException("Invalid stage size: width " + width + ", headroom " + headroom
+                    + ", maxRise " + maxRise);
+        }
+        Profile profile = profile(zone, act);
+        if (profile == null) {
+            return List.of();
+        }
+        Built built = build(profile);
+        Bounds bounds = playableBounds(built.level(), profile.foregroundEndX());
+        int right = Math.min(bounds.x() + bounds.width(), profile.stageEndX());
+        return LevelFloorScanner.stages(built.level(), bounds.x(), bounds.y(), right, bounds.y() + bounds.height(),
+                width, headroom, maxRise);
+    }
+
+    @Override
+    public Picture foreground(int zone, int act, int x, int y, int width, int height) {
+        if (width < 1 || height < 1 || width > MAX_IMAGE_SIDE || height > MAX_IMAGE_SIDE) {
+            throw new IllegalArgumentException("Foreground size must be 1-" + MAX_IMAGE_SIDE + ": " + width + "x"
+                    + height);
+        }
+        Profile profile = profile(zone, act);
+        if (profile == null) {
+            return null;
+        }
+        Built built = build(profile);
+        Sonic3kLevel level = built.level();
+        int blockSize = level.getBlockPixelSize();
+        int layoutRight = Math.min(level.getLayerWidthBlocks(PlaneRasterizer.FOREGROUND) * blockSize,
+                profile.foregroundEndX());
+        int layoutBottom = level.getLayerHeightBlocks(PlaneRasterizer.FOREGROUND) * blockSize;
+        int[] argb = new int[width * height];
+        // Only the part inside the layout is drawn; the rest stays transparent.
+        int x0 = Math.max(x, 0);
+        int y0 = Math.max(y, 0);
+        int x1 = Math.min(x + width, layoutRight);
+        int y1 = Math.min(y + height, layoutBottom);
+        if (x0 < x1 && y0 < y1) {
+            int[] inside = PlaneRasterizer.rasterize(level, built, PlaneRasterizer.FOREGROUND, x0, y0, x1 - x0,
+                    y1 - y0, 0);
+            for (int row = 0; row < y1 - y0; row++) {
+                System.arraycopy(inside, row * (x1 - x0), argb, (y0 - y + row) * width + (x0 - x), x1 - x0);
+            }
+        }
+        return new Picture(width, height, argb);
     }
 
     /**

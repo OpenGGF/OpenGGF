@@ -37,6 +37,7 @@ import slaytherobotnik.ui.SmallFont;
  * accepted once the replay has caught up.
  */
 final class CombatView implements RunScreen.RoomView {
+    /** The screen row the stage's median floor sits on; creatures stand on the floor under them. */
     private static final int GROUND = 134;
     private static final int PLAYER_X = 84;
     private static final int HAND_Y = 162;
@@ -559,7 +560,7 @@ final class CombatView implements RunScreen.RoomView {
     private void explode(Shell shell, Enemy enemy) {
         EnemyVisuals.Box box = boxes.get(enemy);
         float cx = box != null ? box.centerX() : enemyX(Math.max(0, shown.indexOf(enemy)));
-        float cy = box != null ? box.y() + box.h() / 2f : GROUND - 20;
+        float cy = box != null ? box.y() + box.h() / 2f : feet(Math.round(cx)) - 20;
         boolean boss = combat.roomType().equals("Boss") && enemy.maxHp() >= 250;
         if (boss) {
             shell.sfx(Sounds.SFX_EXPLODE);
@@ -600,12 +601,12 @@ final class CombatView implements RunScreen.RoomView {
     /** Screen point above a creature's head for popups. */
     private float[] anchor(Creature c) {
         if (c.isPlayer()) {
-            return new float[] {PLAYER_X, GROUND - 48};
+            return new float[] {PLAYER_X, feet(PLAYER_X) - 48};
         }
         EnemyVisuals.Box box = boxes.get(c);
         if (box == null) {
             int i = shown.indexOf(c);
-            return new float[] {enemyX(i < 0 ? 0 : i), GROUND - 40};
+            return new float[] {enemyX(i < 0 ? 0 : i), feet(enemyX(i < 0 ? 0 : i)) - 40};
         }
         return new float[] {box.centerX(), box.y() - 4};
     }
@@ -872,9 +873,9 @@ final class CombatView implements RunScreen.RoomView {
         int w = shell.width();
         int h = shell.height();
         int shake = shell.shakeOffset();
-        Backdrops.zone(shell, c, shell.run.act().zone(), shell.run.act().zoneAct(), shell.ticks / 6);
-        c.fill(0, GROUND, w, h - GROUND, 0x90000000);
-        c.fill(0, GROUND, w, 1, 0x60FFFFFF);
+        stage = LevelStages.draw(shell, c, GROUND);
+        // Shade the ground behind the hand so the cards and counters read over the level.
+        Gfx.gradient(c, 0, HAND_Y - 20, w, h - HAND_Y + 20, 0x00000010, 0xA0000010);
         drawPlayer(shell, screen, c, shake);
         boxes.clear();
         for (int i = 0; i < shown.size(); i++) {
@@ -942,33 +943,34 @@ final class CombatView implements RunScreen.RoomView {
             anim = Poses.WAIT;
         }
         int x = PLAYER_X + Math.round(lungeOffset) + shake;
-        c.fill(x - 14, GROUND - 2, 28, 3, 0x50000000);
+        int ground = feet(PLAYER_X);
+        c.fill(x - 14, ground - 2, 28, 3, 0x50000000);
         float f = flash.getOrDefault(player, 0) / 6f;
-        Poses.hero(shell, c, id, anim, animTicks, x, GROUND,
+        Poses.hero(shell, c, id, anim, animTicks, x, ground,
                 SceneDraw.plain().withFlash(f > 0 ? Colors.alpha(Colors.WHITE, f) : 0));
         int[] st = stat(player);
         if (st[2] > 0) {
-            c.draw(shell.art.icon("ui_block"), PLAYER_X - 30, GROUND + 3);
+            c.draw(shell.art.icon("ui_block"), PLAYER_X - 30, ground + 3);
             shell.font.drawOutlined(c, Integer.toString(st[2]), PLAYER_X - 27 - shell.font.width(
-                    Integer.toString(st[2])) / 2 + 3, GROUND + 4, Colors.WHITE, 1);
+                    Integer.toString(st[2])) / 2 + 3, ground + 4, Colors.WHITE, 1);
         }
-        Gfx.hpBar(c, shell.font, PLAYER_X - 22, GROUND + 4, 50, st[0], st[1], st[2]);
-        drawPowers(shell, c, player, PLAYER_X - 22, GROUND + 13);
-        statTips(shell, screen, null, PLAYER_X - 22, st);
+        Gfx.hpBar(c, shell.font, PLAYER_X - 22, ground + 4, 50, st[0], st[1], st[2]);
+        drawPowers(shell, c, player, PLAYER_X - 22, ground + 13);
+        statTips(shell, screen, null, PLAYER_X - 22, ground, st);
     }
 
     /** HP and Block tips while the pointer is over a creature's bar or Block badge ({@code enemy} null for the hero). */
-    private void statTips(Shell shell, RunScreen screen, Enemy enemy, int barX, int[] st) {
+    private void statTips(Shell shell, RunScreen screen, Enemy enemy, int barX, int ground, int[] st) {
         var mouse = shell.in.mouse;
-        if (st[2] > 0 && mouse.over(barX - 8, GROUND + 3, 9, 9)) {
+        if (st[2] > 0 && mouse.over(barX - 8, ground + 3, 9, 9)) {
             screen.tooltip("BLOCK", "Stops the next " + st[2] + " damage. Removed at the start of "
-                    + (enemy == null ? "your" : "its") + " next turn.", barX - 8, GROUND + 24);
-        } else if (mouse.over(barX - 1, GROUND + 3, 52, 7)) {
+                    + (enemy == null ? "your" : "its") + " next turn.", barX - 8, ground + 24);
+        } else if (mouse.over(barX - 1, ground + 3, 52, 7)) {
             String body = enemy == null
                     ? "Your health. The run ends if it reaches 0."
                     : enemy.name() + " is beaten when its HP reaches 0.";
             screen.tooltip("HP " + Math.max(0, st[0]) + "/" + st[1], body + (st[2] > 0 ? " Block is used up first." : ""),
-                    barX, GROUND + 24);
+                    barX, ground + 24);
         }
     }
 
@@ -985,19 +987,20 @@ final class CombatView implements RunScreen.RoomView {
         if (deathTicks != null) {
             f = 1f;
         }
-        EnemyVisuals.Box box = EnemyVisuals.draw(shell, c, enemy, x, GROUND, shell.ticks + index * 17L, f, alpha);
+        int ground = feet(enemyX(index));
+        EnemyVisuals.Box box = EnemyVisuals.draw(shell, c, enemy, x, ground, shell.ticks + index * 17L, f, alpha);
         boxes.put(enemy, box);
         if (deathTicks != null) {
             return;
         }
         int[] st = stat(enemy);
-        Gfx.hpBar(c, shell.font, x - 25, GROUND + 4, 50, st[0], st[1], st[2]);
+        Gfx.hpBar(c, shell.font, x - 25, ground + 4, 50, st[0], st[1], st[2]);
         if (st[2] > 0) {
-            c.draw(shell.art.icon("ui_block"), x - 33, GROUND + 3);
+            c.draw(shell.art.icon("ui_block"), x - 33, ground + 3);
             shell.font.drawOutlined(c, Integer.toString(st[2]), x - 30 - shell.font.width(Integer.toString(st[2])) / 2
-                    + 3, GROUND + 4, Colors.WHITE, 1);
+                    + 3, ground + 4, Colors.WHITE, 1);
         }
-        drawPowers(shell, c, enemy, x - 25, GROUND + 13);
+        drawPowers(shell, c, enemy, x - 25, ground + 13);
         if (!acted.contains(enemy)) {
             drawIntent(shell, c, intents.get(enemy), box.centerX(), Math.max(RunScreen.HUD_HEIGHT + 2, box.y() - 16));
         }
@@ -1010,9 +1013,9 @@ final class CombatView implements RunScreen.RoomView {
             }
         }
         if (shell.in.mouse.over(box.x(), box.y(), box.w(), box.h()) && selected == null) {
-            screen.tooltip(enemy.name().toUpperCase(), intentText(intents.get(enemy)), box.x(), GROUND + 24);
+            screen.tooltip(enemy.name().toUpperCase(), intentText(intents.get(enemy)), box.x(), ground + 24);
         }
-        statTips(shell, screen, enemy, x - 25, st);
+        statTips(shell, screen, enemy, x - 25, ground, st);
     }
 
     private static String intentText(Intent intent) {
@@ -1093,6 +1096,13 @@ final class CombatView implements RunScreen.RoomView {
     }
 
     private RunScreen tooltipScreen;
+    /** Where this fight stands in the act's level, from the last draw; null before it or without ROM art. */
+    private LevelStages.Placement stage;
+
+    /** The screen row a creature at {@code screenX} stands on. */
+    private int feet(int screenX) {
+        return LevelStages.feet(stage, screenX, GROUND);
+    }
 
     private void tooltipPower(Shell shell, Power power, int x, int y) {
         if (tooltipScreen != null) {

@@ -16,6 +16,7 @@ import com.openggf.level.Pattern;
 import com.openggf.level.render.PlaneRasterizer;
 import com.openggf.mods.scene.SceneBackdrop;
 import com.openggf.mods.scene.SceneImage;
+import com.openggf.mods.scene.SceneLevelStage;
 import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneRomArtFactory;
 import com.openggf.tests.TestEnvironment;
@@ -59,7 +60,15 @@ class TestSceneBackdropS3k {
     /** Overview height used by the mod's act map. */
     private static final int MAP_HEIGHT = 196;
 
-    private record Built(Map<String, SceneBackdrop> backdrops, Map<String, SceneImage> overviews) {
+    /** Stage size used by the mod's fights: its screen width and the clear height above its ground row. */
+    private static final int STAGE_WIDTH = 400;
+    private static final int STAGE_HEADROOM = 100;
+    private static final int STAGE_RISE = 24;
+    private static final int STAGE_GROUND_ROW = 134;
+    private static final int STAGE_HEIGHT = 224;
+
+    private record Built(Map<String, SceneBackdrop> backdrops, Map<String, SceneImage> overviews,
+            Map<String, List<SceneLevelStage>> stages, Map<String, List<SceneImage>> foregrounds) {
     }
 
     /**
@@ -84,6 +93,8 @@ class TestSceneBackdropS3k {
                             new Sonic3kZoneArt(rom));
                     Map<String, SceneBackdrop> backdrops = new LinkedHashMap<>();
                     Map<String, SceneImage> overviews = new LinkedHashMap<>();
+                    Map<String, List<SceneLevelStage>> stages = new LinkedHashMap<>();
+                    Map<String, List<SceneImage>> foregrounds = new LinkedHashMap<>();
                     for (Zone zone : SUPPORTED) {
                         SceneBackdrop backdrop = art.zoneBackdrop(zone.zone(), zone.act());
                         assertNotNull(backdrop, zone.name());
@@ -98,8 +109,22 @@ class TestSceneBackdropS3k {
                         assertSame(overview, art.levelOverview(zone.zone(), zone.act(), MAP_HEIGHT),
                                 zone.name() + " overview cached");
                         overviews.put(zone.name(), overview);
+                        start = System.nanoTime();
+                        List<SceneLevelStage> found = art.levelStages(zone.zone(), zone.act(), STAGE_WIDTH,
+                                STAGE_HEADROOM, STAGE_RISE);
+                        System.out.printf("%s: %d stages in %d ms%n", zone.name(), found.size(),
+                                (System.nanoTime() - start) / 1_000_000);
+                        assertSame(found, art.levelStages(zone.zone(), zone.act(), STAGE_WIDTH, STAGE_HEADROOM, STAGE_RISE),
+                                zone.name() + " stages cached");
+                        stages.put(zone.name(), found);
+                        List<SceneImage> fronts = new java.util.ArrayList<>();
+                        for (SceneLevelStage stage : found) {
+                            fronts.add(art.levelForeground(zone.zone(), zone.act(), stage.x(),
+                                    stage.floorY() - STAGE_GROUND_ROW, STAGE_WIDTH, STAGE_HEIGHT));
+                        }
+                        foregrounds.put(zone.name(), fronts);
                     }
-                    return new Built(backdrops, overviews);
+                    return new Built(backdrops, overviews, stages, foregrounds);
                 }
             }).get(300, TimeUnit.SECONDS);
         }
@@ -315,6 +340,86 @@ class TestSceneBackdropS3k {
             tiles[i] = i < level.getPatternCount() ? level.getPattern(i) : new Pattern();
         }
         return tiles;
+    }
+
+    /**
+     * Stages are floor the level's art agrees with: just under each column's floor row the
+     * foreground is mostly solid art. (Headroom is not checked against the art: Angel Island's
+     * cliff walls are opaque foreground art with open space in front of them.) The floor stays
+     * within the rise asked for, and the acts that swap art or layout later keep their stages
+     * before that. Composites (backdrop, foreground, the floor marked) are written for review.
+     */
+    @Test
+    void levelStagesSitOnTheFloorTheArtShows() throws Exception {
+        Built built = buildIsolated(TestEnvironment.currentRom());
+        Path dir = Path.of("target", "scene-backdrops", "stages");
+        Files.createDirectories(dir);
+        for (Zone zone : SUPPORTED) {
+            List<SceneLevelStage> stages = built.stages().get(zone.name());
+            List<SceneImage> fronts = built.foregrounds().get(zone.name());
+            assertTrue(stages.size() >= 4, zone.name() + " has " + stages.size() + " stages");
+            int stageEnd = zone.name().equals("aiz2") ? 0x3C00 : zone.name().equals("lbz1") ? 0x3B60 : Integer.MAX_VALUE;
+            int previousEnd = Integer.MIN_VALUE;
+            for (int i = 0; i < stages.size(); i++) {
+                SceneLevelStage stage = stages.get(i);
+                String where = zone.name() + " stage " + i + " at x " + stage.x() + ", floor " + stage.floorY();
+                assertTrue(stage.x() >= previousEnd, where + ": stages are ordered and apart");
+                previousEnd = stage.x() + stage.width();
+                assertTrue(stage.width() >= STAGE_WIDTH, where + " width " + stage.width());
+                assertTrue(stage.x() + stage.width() <= stageEnd, where + " ends before the act's art changes");
+                int[] floor = stage.floor();
+                int highest = java.util.Arrays.stream(floor).min().orElseThrow();
+                int lowest = java.util.Arrays.stream(floor).max().orElseThrow();
+                assertTrue(lowest - highest <= STAGE_RISE + 16, where + ": floor rows " + highest + "-" + lowest);
+                SceneImage front = fronts.get(i);
+                assertEquals(STAGE_WIDTH, front.width());
+                assertEquals(STAGE_HEIGHT, front.height());
+                int top = stage.floorY() - STAGE_GROUND_ROW;
+                writePng(composite(built.backdrops().get(zone.name()), front, floor, top),
+                        dir.resolve(zone.name() + "-" + i + ".png").toFile());
+                double below = opaqueShare(front, floor, top, 2, 10);
+                assertTrue(below >= 0.6, where + ": art under the floor is " + Math.round(below * 100) + "% solid");
+            }
+        }
+    }
+
+    /** The share of opaque pixels in rows {@code from .. to - 1} relative to each column's floor. */
+    private static double opaqueShare(SceneImage image, int[] floor, int top, int from, int to) {
+        int[] pixels = image.pixels();
+        int opaque = 0;
+        int total = 0;
+        for (int x = 0; x < image.width(); x++) {
+            for (int y = floor[x] - top + from; y < floor[x] - top + to; y++) {
+                if (y < 0 || y >= image.height()) {
+                    continue;
+                }
+                total++;
+                if ((pixels[y * image.width() + x] >>> 24) != 0) {
+                    opaque++;
+                }
+            }
+        }
+        return total == 0 ? 0 : opaque / (double) total;
+    }
+
+    /** The stage's foreground over the top-left of the backdrop, with each column's floor marked. */
+    private static SceneImage composite(SceneBackdrop backdrop, SceneImage front, int[] floor, int top) {
+        int w = front.width();
+        int h = front.height();
+        int[] out = new int[w * h];
+        SceneImage back = backdrop.image();
+        int[] fronts = front.pixels();
+        int[] backs = back.pixels();
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                int pixel = fronts[y * w + x];
+                if ((pixel >>> 24) == 0) {
+                    pixel = backs[Math.min(back.height() - 1, y) * back.width() + x % back.width()];
+                }
+                out[y * w + x] = y == floor[x] - top - 1 && x % 4 < 2 ? 0xFFFF00FF : pixel;
+            }
+        }
+        return new SceneImage(w, h, out);
     }
 
     private static void assertRate(SceneBackdrop backdrop, int row, double speed, double drift) {

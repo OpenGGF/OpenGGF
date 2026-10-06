@@ -42,24 +42,27 @@ final class TreasureView implements RunScreen.RoomView {
     @Override
     public void draw(Shell shell, RunScreen screen, SceneCanvas c) {
         int w = shell.width();
-        Backdrops.zone(shell, c, shell.run.act().zone(), shell.run.act().zoneAct(), shell.ticks / 8);
-        c.fill(0, 0, w, shell.height(), 0x50000020);
-        var f = shell.font;
-        String title = room.size().toUpperCase() + " EGG CAPSULE";
-        f.drawOutlined(c, title, (w - f.width(title) * 2) / 2, 40, Colors.GOLD, 2);
         float scale = switch (room.size()) {
             case TreasureRoom.LARGE -> 2f;
             case TreasureRoom.MEDIUM -> 1.5f;
             default -> 1f;
         };
         boolean open = opening > 0 || room.opened();
-        float jiggle = opening > 15 ? (float) Math.sin(opening * 1.3) * 2 : 0;
-        float cx = w / 2f + jiggle;
-        // Keep the button clear of the title: the capsule spans about -$2A..+$20 around its centre.
-        float cy = 60 + 0x2A * scale;
         // Obj_EggCapsule: the capsule (frame 0, opened 1) with its button (5, pressed $C) at (0,-$24).
         SceneSprite capsule = shell.art.romFrame("egg_capsule", open ? 1 : 0);
         SceneSprite button = shell.art.romFrame("egg_capsule", open ? 0x0C : 5);
+        // The capsule stands on the level's floor; keep its button clear of the title (the capsule
+        // spans about -$2A..+$20 around its centre).
+        float below = capsule != null ? (capsule.height() - capsule.originY()) * scale : 0x20 * scale;
+        int groundRow = Math.round(60 + 0x2A * scale + below);
+        LevelStages.Placement stage = LevelStages.draw(shell, c, groundRow);
+        c.fill(0, 0, w, shell.height(), 0x30000020);
+        var f = shell.font;
+        String title = room.size().toUpperCase() + " EGG CAPSULE";
+        f.drawOutlined(c, title, (w - f.width(title) * 2) / 2, 40, Colors.GOLD, 2);
+        float jiggle = opening > 15 ? (float) Math.sin(opening * 1.3) * 2 : 0;
+        float cx = w / 2f + jiggle;
+        float cy = LevelStages.feet(stage, w / 2, groundRow) - below;
         if (capsule != null) {
             SceneDraw style = SceneDraw.plain().withScale(scale)
                     .withFlash(opening > 20 ? Colors.alpha(Colors.WHITE, (opening - 20) / 10f) : 0);

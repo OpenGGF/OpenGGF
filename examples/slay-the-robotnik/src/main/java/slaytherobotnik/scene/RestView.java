@@ -2,6 +2,7 @@ package slaytherobotnik.scene;
 
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneDraw;
+import com.openggf.mods.scene.SceneSprite;
 import java.util.List;
 import slaytherobotnik.core.RestOption;
 import slaytherobotnik.run.RestRoom;
@@ -14,7 +15,16 @@ import slaytherobotnik.ui.SmallFont;
 final class RestView implements RunScreen.RoomView {
     private final RestRoom room;
     private final Hotspots spots = new Hotspots();
+    /** Ticks left of the Starpost ball's orbit. */
     private int spin;
+    /** The row the stage's floor sits on: the hero and the Starpost stand above the options. */
+    private static final int GROUND = 130;
+    /**
+     * Obj_StarPost (sonic3k.asm loc_2D12E): the touched post's ball orbits for $20 frames, its
+     * angle stepping -$10 a frame from -$40, 12 pixels ($C00 * sine >> 16) around a point $14
+     * above the post; then the post flashes frames 0 and 4 every 4 frames (Ani_Starpost_Spinning).
+     */
+    private static final int ORBIT_FRAMES = 0x20;
 
     RestView(RestRoom room) {
         this.room = room;
@@ -52,33 +62,43 @@ final class RestView implements RunScreen.RoomView {
         }
         RestOption option = room.options().get(Integer.parseInt(picked.substring(1)));
         if (room.choose(option.id())) {
-            spin = 60;
+            spin = ORBIT_FRAMES;
             shell.sfx(Sounds.SFX_STARPOST);
+        }
+    }
+
+    /** The ROM's Starpost standing at {@code x} on {@code ground}: idle, its ball orbiting, then flashing. */
+    private void drawStarpost(Shell shell, SceneCanvas c, int x, int ground) {
+        SceneSprite idle = shell.art.romFrame("starpost", 0);
+        if (idle == null) {
+            var icon = shell.art.icon("node_rest");
+            c.draw(icon, x - icon.width() * 1.5f, ground - icon.height() * 3, SceneDraw.plain().withScale(3));
+            return;
+        }
+        // Every frame shares the object's origin; the idle post's bottom stands on the ground.
+        float originY = ground - (idle.height() - idle.originY());
+        int frame = spin > 0 ? 1 : room.chosen() != null && (shell.ticks / 4) % 2 == 1 ? 4 : 0;
+        c.draw(shell.art.romFrame("starpost", frame), x, originY, SceneDraw.plain());
+        if (spin > 0) {
+            int angle = (-0x10 * (ORBIT_FRAMES - spin) - 0x40) & 0xFF;
+            double radians = angle * Math.PI * 2 / 256;
+            c.draw(shell.art.romFrame("starpost", 2), Math.round(x + Math.cos(radians) * 12),
+                    Math.round(originY - 0x14 + Math.sin(radians) * 12), SceneDraw.plain());
         }
     }
 
     @Override
     public void draw(Shell shell, RunScreen screen, SceneCanvas c) {
         int w = shell.width();
-        Backdrops.zone(shell, c, shell.run.act().zone(), shell.run.act().zoneAct(), shell.ticks / 8);
-        c.fill(0, 0, w, shell.height(), 0x50000020);
+        LevelStages.Placement stage = LevelStages.draw(shell, c, GROUND);
+        c.fill(0, 0, w, shell.height(), 0x30000020);
         SmallFont f = shell.font;
         f.drawOutlined(c, "STARPOST", (w - f.width("STARPOST") * 2) / 2, 36, Colors.GOLD, 2);
-        // The Starpost, spinning when used.
-        var post = shell.art.icon("node_rest");
-        float angle = spin > 0 ? spin * 0.4f : 0;
-        c.draw(post, w / 2f - post.width() * 1.5f, 60, SceneDraw.plain().withScale(3));
-        if (spin > 0) {
-            for (int i = 0; i < 6; i++) {
-                double a = angle + i * Math.PI / 3;
-                int sx = (int) (w / 2 + Math.cos(a) * 26);
-                int sy = (int) (75 + Math.sin(a) * 10);
-                c.fill(sx - 1, sy - 1, 3, 3, i % 2 == 0 ? 0xFFFFDA24 : 0xFF6CDAFF);
-            }
-        }
+        drawStarpost(shell, c, w / 2 + 16, LevelStages.feet(stage, w / 2 + 16, GROUND));
+        int heroX = w / 2 - 40;
         Poses.hero(shell, c, shell.run.state().character().id(),
                 room.chosen() != null && room.chosen().equals("rest") ? Poses.DUCK : Poses.WAIT, shell.ticks,
-                w / 2f - 40, 130, SceneDraw.plain());
+                heroX, LevelStages.feet(stage, heroX, GROUND), SceneDraw.plain());
         layout(shell);
         if (room.chosen() == null) {
             for (int i = 0; i < room.options().size(); i++) {

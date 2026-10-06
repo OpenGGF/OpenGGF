@@ -278,7 +278,8 @@ updated in place.
 Mod scenes add the `com.openggf.mods.scene` package to the candidate surface:
 `ModScene`, `ModSceneFactory`, `SceneContext`, `SceneCanvas`, `SceneDraw`, `SceneImage`,
 `SceneSprite`, `SceneArt`, `SceneRomArt`, `SceneSpriteSet`, `RomSpriteRequest` (with its
-`Compression` and `DplcLayout` enums), `SceneBackdrop` (with its `Band` record), `SceneMouse`,
+`Compression` and `DplcLayout` enums), `SceneBackdrop` (with its `Band` record),
+`SceneLevelStage`, `SceneMouse`,
 `SceneAudio` and `SceneStorage`, plus
 `ModContext.registerStartupScene` (the engine finds the scene as the effective module's
 `getGameService(ModSceneFactory.class)`, so the `game` package never depends on mod types),
@@ -286,9 +287,14 @@ Mod scenes add the `com.openggf.mods.scene` package to the candidate surface:
 `consumeScrollNotches`. The host classes in the same package (`ModSceneHost`,
 `SceneServices`, `OwnedSceneFactory`, `SceneRomArtFactory`) are engine-internal and stay
 unreachable from the pinned surface; `GameLoop`'s scene entry points are package-private
-for that reason. `SceneRomArt.zoneBackdrop(zone, act)` and
-`SceneRomArt.levelOverview(zone, act, maxHeight)` are default methods returning `null`, so
-existing implementors keep compiling. The stock implementation converts values from the
+for that reason. `SceneRomArt.zoneBackdrop(zone, act)`,
+`SceneRomArt.levelOverview(zone, act, maxHeight)` and
+`SceneRomArt.levelForeground(zone, act, x, y, width, height)` are default methods returning
+`null`, and `SceneRomArt.levelStages(zone, act, width, headroom, maxRise)` one returning an
+empty list, so existing implementors keep compiling. Stages come from the engine-internal
+`level.render.LevelFloorScanner`, which reads the act's primary-path collision the way a floor
+sensor does (layout cell, block, chunk descriptor flips and solidity bits, solid tile height)
+and never touches a live level; `SceneLevelStage` copies its per-column floor array in and out. The stock implementation converts values from the
 engine-internal `level.render.ZonePictureSource`; for S3K, `Sonic3kZoneArt` builds a detached
 level from explicit inputs (no session, settings or live graphics), primes animated tiles into a
 private tile array and rasterises on the CPU with `PlaneRasterizer`. Keeping the source in

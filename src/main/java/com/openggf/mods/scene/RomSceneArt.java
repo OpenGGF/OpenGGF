@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.S2SpriteDataLoader;
 import com.openggf.game.sonic3k.S3kSpriteDataLoader;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
+import com.openggf.level.render.LevelFloorScanner;
 import com.openggf.level.render.SpriteDplcFrame;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.ZonePictureSource;
@@ -40,6 +41,8 @@ final class RomSceneArt implements SceneRomArt {
     private final Map<List<Integer>, Optional<SceneBackdrop>> backdropCache = new HashMap<>();
     /** Per zone, act and height limit. */
     private final Map<List<Integer>, Optional<SceneImage>> overviewCache = new HashMap<>();
+    /** Per zone, act, width, headroom and rise. */
+    private final Map<List<Integer>, List<SceneLevelStage>> stageCache = new HashMap<>();
 
     RomSceneArt(Rom rom, GameId game, Supplier<PlayerSpriteArtProvider> players, Supplier<SpriteArtSet> tailsTails,
             ZonePictureSource zones) {
@@ -168,6 +171,36 @@ final class RomSceneArt implements SceneRomArt {
         return overviewCache.computeIfAbsent(List.of(zone, act, rows),
                 key -> Optional.ofNullable(zones.overview(zone, act, rows)).map(RomSceneArt::toSceneImage))
                 .orElse(null);
+    }
+
+    @Override
+    public List<SceneLevelStage> levelStages(int zone, int act, int width, int headroom, int maxRise) {
+        if (width < 1 || headroom < 1 || maxRise < 0) {
+            throw new IllegalArgumentException("Invalid stage size: width " + width + ", headroom " + headroom
+                    + ", maxRise " + maxRise);
+        }
+        if (zones == null || zone < 0 || act < 0) {
+            return List.of();
+        }
+        return stageCache.computeIfAbsent(List.of(zone, act, width, headroom, maxRise), key -> {
+            List<SceneLevelStage> stages = new ArrayList<>();
+            for (LevelFloorScanner.Stage stage : zones.stages(zone, act, width, headroom, maxRise)) {
+                stages.add(new SceneLevelStage(stage.x(), stage.floorY(), stage.width(), stage.floor()));
+            }
+            return List.copyOf(stages);
+        });
+    }
+
+    @Override
+    public SceneImage levelForeground(int zone, int act, int x, int y, int width, int height) {
+        if (width < 1 || height < 1 || width > 4096 || height > 4096) {
+            throw new IllegalArgumentException("Foreground size must be 1-4096: " + width + "x" + height);
+        }
+        if (zones == null || zone < 0 || act < 0) {
+            return null;
+        }
+        ZonePictureSource.Picture picture = zones.foreground(zone, act, x, y, width, height);
+        return picture == null ? null : toSceneImage(picture);
     }
 
     private static SceneImage toSceneImage(ZonePictureSource.Picture picture) {

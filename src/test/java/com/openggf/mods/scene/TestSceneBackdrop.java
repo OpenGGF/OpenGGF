@@ -92,5 +92,24 @@ class TestSceneBackdrop {
             }
         };
         assertNull(plain.zoneBackdrop(0, 0), "the default keeps existing implementors compiling and unsupported");
+        assertNull(plain.levelOverview(0, 0, 100));
+        assertEquals(List.of(), plain.levelStages(0, 0, 400, 100, 24));
+        assertNull(plain.levelForeground(0, 0, 0, 0, 400, 224));
+    }
+
+    @Test
+    void levelStagesKeepTheirOwnFloor() {
+        int[] floor = {100, 101, 102, 103};
+        SceneLevelStage stage = new SceneLevelStage(500, 101, 4, floor);
+        floor[0] = 0;
+        assertEquals(100, stage.floorAt(500), "copied in");
+        stage.floor()[1] = 0;
+        assertEquals(101, stage.floorAt(501), "copied out");
+        assertEquals(103, stage.floorAt(503));
+        assertEquals(100, stage.floorAt(400), "left of the stage: its first column");
+        assertEquals(103, stage.floorAt(900), "right of it: its last");
+        assertThrows(IllegalArgumentException.class, () -> new SceneLevelStage(0, 0, 3, floor), "one row per column");
+        assertThrows(IllegalArgumentException.class, () -> new SceneLevelStage(0, 0, 0, new int[0]), "empty");
+        assertThrows(IllegalArgumentException.class, () -> new SceneLevelStage(0, 0, 1, null), "no floor");
     }
 }

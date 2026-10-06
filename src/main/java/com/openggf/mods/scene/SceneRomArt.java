@@ -89,4 +89,63 @@ public interface SceneRomArt {
     default SceneImage levelOverview(int zone, int act, int maxHeight) {
         return null;
     }
+
+    /**
+     * Where an act's floor runs with room above it: stages at least {@code width} pixels wide
+     * with {@code headroom} pixels clear of solid terrain above every column, whose highest and
+     * lowest floor rows are at most {@code maxRise} apart (0 for dead flat; rolling ground needs
+     * more: Angel Island act 1 has a handful of 400-pixel stages within 24 rows), inside the
+     * area the camera can show, left to right and not overlapping. Floor is read from the act's
+     * collision as a floor sensor sees it (the primary collision path's top-solid shapes),
+     * followed every four columns and then read in each column; objects (platforms, badniks,
+     * monitors) are not part of the layout and are not considered. Use with
+     * {@link #levelForeground} to stage a scene on the real level:
+     *
+     * <pre>{@code
+     * List<SceneLevelStage> stages = rom.levelStages(0, 0, canvas.width(), 100, 24);  // AIZ act 1
+     * SceneLevelStage stage = stages.get(stages.size() / 2);
+     * int groundRow = 134;                         // the screen row the stage's median floor sits on
+     * int top = stage.floorY() - groundRow;        // level row at the top of the screen
+     * SceneImage front = rom.levelForeground(0, 0, stage.x(), top, canvas.width(), canvas.height());
+     * // draw the zone's backdrop, then front at (0, 0); a character at screen x stands on
+     * // screen row stage.floorAt(stage.x() + x) - top
+     * }</pre>
+     *
+     * <p>Same zones and acts as {@link #zoneBackdrop}; empty for others. Found on the first
+     * request for a zone, act and sizes and cached; it never touches a running level.
+     *
+     * @param zone     the game's zone id
+     * @param act      0 for act 1, 1 for act 2
+     * @param width    the narrowest stage wanted, in pixels (1 or more)
+     * @param headroom the clear height wanted above the floor, in pixels (1 or more)
+     * @param maxRise  how far the floor may rise or fall along a stage, in pixels (0 or more)
+     * @return the stages, possibly none
+     * @throws IllegalArgumentException when {@code width} or {@code headroom} is less than 1 or
+     *                                  {@code maxRise} is negative
+     */
+    default java.util.List<SceneLevelStage> levelStages(int zone, int act, int width, int headroom, int maxRise) {
+        return java.util.List.of();
+    }
+
+    /**
+     * An act's foreground plane for a rectangle of level pixels, unscaled: the level art the
+     * act loads with (animated tiles at their first frame, no objects, rings or water tint),
+     * transparent wherever the plane would show the background and outside the playable
+     * layout, so a {@link #zoneBackdrop} drawn first shows through. Both priorities are drawn.
+     * Not cached: build it once per placement and keep it.
+     *
+     * <p>Same zones and acts as {@link #zoneBackdrop}.
+     *
+     * @param zone   the game's zone id
+     * @param act    0 for act 1, 1 for act 2
+     * @param x      the rectangle's left edge in level pixels (may be negative)
+     * @param y      its top edge (may be negative)
+     * @param width  1 to 4096 pixels
+     * @param height 1 to 4096 pixels
+     * @return the picture, or null when this game or zone has none
+     * @throws IllegalArgumentException when a side is outside 1-4096
+     */
+    default SceneImage levelForeground(int zone, int act, int x, int y, int width, int height) {
+        return null;
+    }
 }

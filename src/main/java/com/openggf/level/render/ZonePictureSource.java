@@ -18,7 +18,24 @@ public interface ZonePictureSource {
      */
     Picture overview(int zone, int act, int maxHeight);
 
-    /** Opaque {@code 0xAARRGGBB} pixels, row by row from the top. */
+    /**
+     * Runs of the act's floor at least {@code width} wide with {@code headroom} clear rows above
+     * and at most {@code maxRise} rows between their highest and lowest floor, inside the
+     * playable area, left to right ({@link LevelFloorScanner#stages}); empty when unsupported.
+     */
+    default List<LevelFloorScanner.Stage> stages(int zone, int act, int width, int headroom, int maxRise) {
+        return List.of();
+    }
+
+    /**
+     * The act's foreground plane for a world rectangle, unscaled, transparent where the plane
+     * shows what is behind it (and outside the playable foreground), or null when unsupported.
+     */
+    default Picture foreground(int zone, int act, int x, int y, int width, int height) {
+        return null;
+    }
+
+    /** {@code 0xAARRGGBB} pixels, row by row from the top; opaque except in {@link #foreground}. */
     record Picture(int width, int height, int[] argb) {
     }
 

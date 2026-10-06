@@ -110,7 +110,8 @@ final class RewardView implements RunScreen.RoomView {
     @Override
     public void draw(Shell shell, RunScreen screen, SceneCanvas c) {
         int w = shell.width();
-        Backdrops.zone(shell, c, shell.run.act().zone(), shell.run.act().zoneAct(), shell.ticks / 6);
+        // The fight's stage, dimmed behind the rewards.
+        LevelStages.draw(shell, c, 134);
         c.fill(0, 0, w, shell.height(), 0x80000010);
         SmallFont f = shell.font;
         String title = room.title().toUpperCase();

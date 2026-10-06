@@ -155,10 +155,15 @@ canvas.draw(rhinobot.frame(0), 200, 120, SceneDraw.plain());
 For Sonic 3 & Knuckles, `rom.zoneBackdrop(zone, act)` returns a zone's background as a
 `SceneBackdrop`: one picture cut into horizontal bands with the stock parallax speeds (its
 javadoc shows the drawing loop), and `rom.levelOverview(zone, act, maxHeight)` returns a
-zoomed-out picture of the act's whole level. Both are built from the level data without
-starting a level and return null for zones the engine cannot picture. Slay the Robotnik
-draws fights in front of the backdrop (`scene/Backdrops`) and its act maps over the overview
-(`scene/MapView`).
+zoomed-out picture of the act's whole level. To put characters in the level itself,
+`rom.levelStages(zone, act, width, headroom, maxRise)` lists runs of the act's floor with room
+above them, read from its collision, each with the floor row of every column, and
+`rom.levelForeground(zone, act, x, y, width, height)` renders that part of the level at full
+size with transparent sky, to draw over the backdrop. All of these are built from the level
+data without starting a level and return null (or no stages) for zones the engine cannot
+picture. Slay the Robotnik stages its fights, Starposts and capsules on the level
+(`scene/LevelStages`, standing each character on the floor under it) and draws its act maps
+over the overview (`scene/MapView`).
 
 The engine's test tree has a CPU-only tool to see every frame of a sprite at once:
 
