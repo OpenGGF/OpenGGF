@@ -22,7 +22,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
     private static final int VISIBLE_SCREEN_WIDTH_PX = 320;
     private static final int MAX_BG_PERIOD_WIDTH = 8192;
 
-    private static final int[] LBZ1_BG_DEFORM = {
+    static final int[] LBZ1_BG_DEFORM = {
             0xD0, 0x18, 8, 8, 0x7FFF
     };
 

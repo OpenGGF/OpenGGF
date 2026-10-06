@@ -327,6 +327,19 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
             implements PreparedLevelBuild {
     }
 
+    /**
+     * A level built for presentation only (mod scene backdrops and overviews): the same ROM decode as a
+     * prepared build, but with explicit inputs instead of {@link #captureLevelBuildInputs},
+     * so the result never depends on the user's intro setting, the session team or a live
+     * level, and nothing is published to graphics. Sonic's character palette and PLCs are
+     * used. Never installed; reads only the ROM, on the calling thread.
+     */
+    Sonic3kLevel buildDetachedLevel(int zone, int act, Sonic3kLoadBootstrap.Mode bootstrapMode)
+            throws IOException {
+        return buildLevel(zone * Sonic3kConstants.ACTS_PER_ZONE_STRIDE + act, DeferredLevelResourceTracker.none(),
+                false, new LevelBuildInputs(bootstrapMode, "sonic", false));
+    }
+
     private record LevelBuildInputs(Sonic3kLoadBootstrap.Mode bootstrapMode, String mainCharacter,
                                     boolean omitSecondaryLevelPlc) {
         Sonic3kLoadBootstrap bootstrap() {

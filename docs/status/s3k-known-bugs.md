@@ -71,6 +71,7 @@ Entries should include:
 43. [Sky Sanctuary Boss Defeats Draw No Explosion](#sky-sanctuary-boss-defeats-draw-no-explosion)
 44. [Sky Sanctuary Metropolis Orb Reads After a Freed Parent Slot Remain Unmodelled](#sky-sanctuary-metropolis-orb-reads-after-a-freed-parent-slot-remain-unmodelled)
 45. [S3K Special-Property Sidekick Behaviour: Corrected Diagnosis](#s3k-special-property-sidekick-behaviour-corrected-diagnosis)
+46. [Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)](#object-art-and-clock-reads-found-by-the-slay-the-robotnik-sprite-research-suspected)
 
 ---
 
@@ -6294,3 +6295,42 @@ regressions fail before the repair;166 focused checks and the44-window cold
 Tails replay pass after it. Integrated and pushed as `10b066947`; the stale
 results-family oracle is corrected in `936292c33`, and destination checks pass. See the
 [campaign audit](../architecture/audits/2026-09-22-sk-zone-bring-up.md).
+
+---
+
+## Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)
+
+Building the [Slay the Robotnik example](../../examples/slay-the-robotnik/README.md) meant
+re-deriving many S3K objects' frames, child offsets and animation scripts from the
+disassembly (2026-10-05). The research compared each against the engine class and noted
+these mismatches. None were fixed in that task (it does not change engine gameplay); each
+needs its own ROM check and focused test before changing.
+
+- **Location:** `objects/badniks/CaterkillerJrBodyInstance.java` — spark frames and delays
+  appear swapped (ROM frames 3,3,4,5).
+  `objects/AizMinibossFlameChild` — explode frames drawn from the wrong sheet;
+  `AizMinibossImpactFlameChild` — uses the explosion art instead of the flame art.
+- **Location:** `objects/badniks/EggRoboShotInstance.java:92`,
+  `objects/badniks/EggRoboBadnikInstance.java:291`, `objects/badniks/CluckoidBadnikInstance.java:172`,
+  `objects/AizFlippingBridgeObjectInstance.java:304` — `(vIntRunCount + 3) & mask`. The ROM
+  reads the *byte at* `V_int_run_count+3` (the counter's low byte, e.g. `btst #0,(V_int_run_count+3).w`),
+  so the `+ 3` shifts the phase by three frames (the Egg Robo body flicker at
+  `EggRoboBadnikInstance.java:243` reads it correctly).
+- **Location:** `objects/badniks/EggRoboBadnikInstance.java:145` — the fighter subtype never
+  bobs: ROM `loc_918C4` falls through into `sub_918E2` (y_vel `$100`, `Swing_UpAndDown`
+  max `$100`, accel 8), but the engine leaves the swing at 0 for `Mode.FIGHTER`, so its legs
+  stay on frame 5.
+- **Location:** `objects/bosses/HczEndBossRobotnikShip.java:57,76` — Robotnik's head toggles
+  every 5 frames (`AniRaw_RobotnikHead` delay 5 shows each frame 6), and the escaping ship
+  uses frame 10 where `Obj_RobotnikShip2` keeps frame 5. `HczEndBossInstance.java:1030-1032`
+  draws the lower housing (frame 1) a second time at the body's priority, besides
+  `HczEndBossLowerHousing`.
+- **Location:** `objects/bosses/LbzFinalBoss1Instance.java` — every child reports bucket 4,
+  where the ROM uses `$280` (head, thrusters, sparks), `$180` (laser turrets), `$300` (orb) and
+  `$100` (muzzle); laser turrets flicker every other frame in idle, which the ROM only does
+  once the parent is destroyed.
+- **Symptom:** visual or timing phase differences only; no known trace row depends on them.
+- **Suspected cause:** transcription errors when porting the objects.
+- **Removal condition:** each item is checked against the disassembly, fixed with a focused
+  test (or shown to be correct), and removed from this list.
+

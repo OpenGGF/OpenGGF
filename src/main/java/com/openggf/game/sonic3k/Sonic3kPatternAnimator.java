@@ -2270,7 +2270,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         }
     }
 
-    private static int resolveAniPlcAddr(int zoneIndex, int actIndex) {
+    /** {@code Offs_AniFunc}'s AniPLC list for a zone/act, or -1; also read by {@link Sonic3kZoneArt}. */
+    static int resolveAniPlcAddr(int zoneIndex, int actIndex) {
         return switch (zoneIndex) {
             case 0 -> actIndex == 0
                     ? Sonic3kConstants.ANIPLC_AIZ1_ADDR

@@ -152,6 +152,8 @@ public class GameLoop {
     private final GameLoopContinueCoordinator continueScreen = new GameLoopContinueCoordinator(this);
 
     private final MenuScreenModeController menuScreenModeController = new MenuScreenModeController();
+    /** The open mod scene, if any; {@link ModSceneLauncher} opens, draws and leaves it. */
+    final com.openggf.mods.scene.host.ModSceneHost modSceneHost = new com.openggf.mods.scene.host.ModSceneHost();
     private final BonusStageTransitionCoordinator bonusStageTransitionCoordinator =
             new BonusStageTransitionCoordinator();
     private final PresenceManager presenceManager;
@@ -451,8 +453,8 @@ public class GameLoop {
                 audioManager::fadeOutMusic, callback -> fadeManager.startFadeToBlack(callback));
         this.escapeToMasterTitleController = new EscapeToMasterTitleController(
                 () -> resolveFadeManager().isActive(),
-                this::startEscapeToMasterTitleTransition,
-                this::startEscapeApplicationExitTransition);
+                () -> fadeOutTo(this::returnToMasterTitle),
+                () -> fadeOutTo(applicationExitHandler));
         this.presenceManager = new PresenceManager(
                 configService.getBoolean(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED),
                 configService.getBoolean(SonicConfiguration.DISCORD_RICH_PRESENCE_SHOW_TIMER),
@@ -1325,7 +1327,7 @@ public class GameLoop {
                     inputHandler,
                     this::exitMasterTitleScreen);
             if (!resolveFadeManager().isActive()) {
-                com.openggf.game.TitleInputOwnership.routeQuit(masterScreen, this::startEscapeApplicationExitTransition);
+                com.openggf.game.TitleInputOwnership.routeQuit(masterScreen, () -> fadeOutTo(applicationExitHandler));
             }
             finishTimeAttackMasterTitleFrame(masterScreen);
             return;
@@ -1475,6 +1477,10 @@ public class GameLoop {
             return;
         } else if (currentGameMode == GameMode.DATA_SELECT) {
             updateDataSelectMode();
+            profiler.endSection("input");
+            return;
+        } else if (currentGameMode == GameMode.MOD_SCENE) {
+            menuScreenModeController.updateModScene(modSceneHost::update, inputHandler);
             profiler.endSection("input");
             return;
         } else if (currentGameMode == GameMode.CREDITS_TEXT
@@ -3778,6 +3784,7 @@ public class GameLoop {
      * gameplay state. Called by {@link TraceSessionLauncher#teardown()}.
      */
     void returnToMasterTitle() {
+        modSceneHost.close();
         escapeToMasterTitleController.reset();
         levelIterationAdmission.reset();
         userRecordingSessionLauncher.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
@@ -3792,13 +3799,12 @@ public class GameLoop {
         masterTitleLaunchCoordinator.returnToMasterTitle();
     }
 
-    private void startEscapeToMasterTitleTransition() {
-        FadeManager manager = resolveFadeManager();
-        if (manager.isActive()) {
-            return;
-        }
-        audioManager.fadeOutMusic();
-        manager.startFadeToBlack(this::returnToMasterTitle);
+    /**
+     * Fades the music and picture out, then runs {@code next} (back to the master title, or the
+     * application exit); does nothing while a fade is already running.
+     */
+    void fadeOutTo(Runnable next) {
+        GameLoopMenuTransitions.fadeOutTo(resolveFadeManager(), audioManager, next);
     }
 
     /**
@@ -3810,22 +3816,8 @@ public class GameLoop {
      * the title screen reopens the time attack menu once it becomes active.
      */
     private void startTimeAttackReturnToMenuFade() {
-        FadeManager manager = resolveFadeManager();
-        if (manager.isActive()) {
-            return;
-        }
-        pendingReopenTimeAttackMenu = multiplayerRaceCoordinator == null;
-        audioManager.fadeOutMusic();
-        manager.startFadeToBlack(this::returnToMasterTitle);
-    }
-
-    private void startEscapeApplicationExitTransition() {
-        FadeManager manager = resolveFadeManager();
-        if (manager.isActive()) {
-            return;
-        }
-        audioManager.fadeOutMusic();
-        manager.startFadeToBlack(applicationExitHandler);
+        GameLoopMenuTransitions.fadeOutTo(resolveFadeManager(), audioManager,
+                () -> pendingReopenTimeAttackMenu = multiplayerRaceCoordinator == null, this::returnToMasterTitle);
     }
 
     /**
@@ -3834,22 +3826,7 @@ public class GameLoop {
      * and transitions to the game-specific title screen.
      */
     private void exitMasterTitleScreen(MasterTitleScreen masterScreen) {
-        FadeManager fadeManager = resolveFadeManager();
-        if (fadeManager.isActive()) {
-            return;
-        }
-
-        MasterTitleEntry.Launch launch = masterScreen.getSelectedLaunch();
-        String selectedGameId = masterScreen.getSelectedGameId();
-        boolean programmaticSelection = masterScreen.isProgrammaticSelection();
-
-        fadeManager.startFadeToBlack(() -> {
-            if (launch != null && launch.entry() instanceof MasterTitleEntry.Standalone)
-                masterTitleExitCoordinator.exitStandalone(launch);
-            else masterTitleExitCoordinator.exitStock(selectedGameId, programmaticSelection);
-        });
-
-        LOGGER.info("Starting fade-to-black for master title screen exit (game: " + selectedGameId + ")");
+        GameLoopMenuTransitions.exitMasterTitleScreen(masterScreen, resolveFadeManager(), masterTitleExitCoordinator);
     }
 
     /**

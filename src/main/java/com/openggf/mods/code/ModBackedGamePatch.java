@@ -86,6 +86,9 @@ public final class ModBackedGamePatch implements GamePatch {
         if (!plan.characters().isEmpty() && faultBoundary == null) {
             throw new IllegalArgumentException("Mod characters require an installed fault boundary");
         }
+        if (plan.startupScene() != null && faultBoundary == null) {
+            throw new IllegalArgumentException("Mod startup scenes require an installed fault boundary");
+        }
         if ((!plan.launchTeams().isEmpty() || !plan.inputFilters().isEmpty()
                 || !plan.hudProfiles().isEmpty()) && faultBoundary == null) {
             throw new IllegalArgumentException(
@@ -259,6 +262,27 @@ public final class ModBackedGamePatch implements GamePatch {
                     };
                 }
                 return gameplayPolicies;
+            }
+
+            /**
+             * The mod's startup scene is served as the engine-internal {@link OwnedSceneFactory}
+             * game service (so the game package never depends on mod scene types). Only this
+             * package can build one, and it runs every scene callback inside the fault boundary.
+             */
+            /** The width the mod asked for ({@code ModContext.requireDisplayWidth}), else the base's. */
+            @Override
+            public String requiredDisplayAspect() {
+                return plan.requiredDisplayAspect() != null ? plan.requiredDisplayAspect()
+                        : super.requiredDisplayAspect();
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T> T getGameService(Class<T> type) {
+                if (type == OwnedSceneFactory.class && plan.startupScene() != null) {
+                    return (T) new OwnedSceneFactory(plan.ownerModId(), plan.startupScene(), faultBoundary);
+                }
+                return super.getGameService(type);
             }
 
             @Override

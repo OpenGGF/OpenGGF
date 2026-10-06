@@ -17,16 +17,16 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  */
 public class SwScrlHcz extends AbstractZoneScrollHandler {
 
-    private static final int[] HCZ1_DEFORM_HEIGHTS = {
+    static final int[] HCZ1_DEFORM_HEIGHTS = {
             0x40, 8, 8, 5, 5, 6, 0xF0, 6, 5, 5, 8, 8, 0x30, 0x80C0, 0x7FFF
     };
     private static final int EQUILIBRIUM_Y = 0x610;
     private static final int BG_Y_OFFSET = 0x190;
     private static final int WATERLINE_THRESHOLD = 0x60;
     private static final int HCZ1_HSCROLL_SIZE = 206;
-    private static final int HCZ1_WATERLINE_START = 13;
-    private static final int HCZ1_WATERLINE_MIDPOINT = 109;
-    private static final int HCZ1_WATERLINE_END = 205;
+    static final int HCZ1_WATERLINE_START = 13;
+    static final int HCZ1_WATERLINE_MIDPOINT = 109;
+    static final int HCZ1_WATERLINE_END = 205;
 
     private static final int[] HCZ2_DEFORM_HEIGHTS = {
             8, 8, 0x90, 0x10, 8, 0x30, 0x18, 8, 8, 0xA8, 0x30, 0x18,

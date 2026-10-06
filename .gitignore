@@ -116,7 +116,7 @@ tools/bizhawk/trace_output*/
 tools/bizhawk/NUL
 
 # Runtime mod-load directory: built .jar artifacts, never sources
-mods/
+/mods/
 
 # Debug screenshots and temporary artifacts (keep locally)
 /*.png

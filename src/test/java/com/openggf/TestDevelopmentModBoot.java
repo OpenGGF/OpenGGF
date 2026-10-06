@@ -37,6 +37,8 @@ class TestDevelopmentModBoot {
             assertEquals(1,effective.size());assertEquals("fresh-dev",effective.getFirst().manifest().id());
             assertEquals(java.util.Set.of("fresh-dev"),subsystem.trustedCodeOwners());
             assertFalse(Files.exists(normalRoot.resolve("modstate.json")));
+            // A development run of a patch mod opens its base game directly (Engine startup).
+            assertEquals(java.util.Optional.of("s2"),subsystem.developmentBaseGame());
         } finally {
             if(subsystem!=null)subsystem.close();
             if(previous==null)System.clearProperty(DevelopmentModSource.PROPERTY);

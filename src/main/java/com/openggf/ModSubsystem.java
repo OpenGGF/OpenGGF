@@ -164,6 +164,21 @@ public final class ModSubsystem implements AutoCloseable {
 
     public ModRuntimeFindingStore runtimeFindings() { return runtimeFindings; }
 
+    /**
+     * The base game of the patch mod loaded by {@code ggfmod run}, so a development run can open
+     * that game directly; empty for ordinary runs and for standalone development mods.
+     */
+    public synchronized java.util.Optional<String> developmentBaseGame() {
+        if (!DevelopmentModSource.isConfigured() || processCatalog == null) {
+            return java.util.Optional.empty();
+        }
+        return processCatalog.effective().orderedEnabled().stream()
+                .map(com.openggf.mods.ModDescriptor::manifest)
+                .filter(manifest -> manifest.type() == com.openggf.mods.ModType.PATCH && manifest.baseGame() != null)
+                .map(com.openggf.mods.ModManifest::baseGame)
+                .findFirst();
+    }
+
     /** Transfers the explicit dev snapshot from boot ownership to ModRuntime construction. */
     public synchronized void transferDevelopmentSourceOwnership() {
         if (bootResource instanceof DevelopmentModSource development) {

@@ -355,6 +355,64 @@ Each graphic carries its own source note. The short version: Git is the landing 
 are attribution hints, `ccusage` is mechanically account-wide but project-only from June onward in
 this confirmed history, and cwd-scoped session logs are still a partial bridge to model identity.
 
+## 5–6 October 2026 — a game inside the game
+
+Everything above is about reproducing games that already exist. In October the question flipped:
+could the engine carry a *new* game, built through the Mod API out of nothing but the player's ROM?
+
+At **17:36 BST on 5 October**, Raiscan sent one message describing *Slay the Robotnik*: a *Slay
+the Spire*-style deck-builder with Sonic, Tails and Knuckles as its heroes. Zones would be acts,
+badniks the monsters, the Egg Robo the merchant and Starposts the campfires.
+
+Claude Opus 5.5 took it from there, leading a few subagents in one Claude Code session:
+- the rules core was the first commit, at 18:25
+  ([`975cd17c5`](https://github.com/OpenGGF/OpenGGF/commit/975cd17c5));
+- full-screen mod scenes in the Mod API followed at 19:16
+  ([`8d668c7d8`](https://github.com/OpenGGF/OpenGGF/commit/8d668c7d8));
+- the last change to the mod's own code landed at **05:26 the next morning**
+  ([`8d9f021b8`](https://github.com/OpenGGF/OpenGGF/commit/8d9f021b8)), **11 hours 50 minutes**
+  after the brief;
+- by 07:35, an encapsulation audit of the new API, the docs and the guard fixes were done, and the
+  whole thing stood as [PR #211](https://github.com/OpenGGF/OpenGGF/pull/211) in 70 commits.
+
+What came out is a complete game, not a demo:
+
+- **Content:** three heroes with 139 cards between them, plus 55 relics, 16 item monitors,
+  22 events and 45 encounters. They run across Angel Island, Hydrocity, Launch Base and a Sky
+  Sanctuary finale against Mecha Sonic, who returns as Super Mecha Sonic.
+- **Code:** about 29,000 lines of Java and 126 rules tests, including a bot that plays whole runs.
+- **Assets:** none. The 691 KB jar holds only code and text. Every sprite, background, title card,
+  sound and piece of music is read from the player's own ROM at runtime, by a mod that takes over
+  the whole screen.
+- **For other modders:** a scene API in the Mod API candidate, a two-class `hello-scene` starter,
+  capture and sprite tools, and a creator guide.
+
+The human part was the brief and the playtesting. Raiscan played the builds and fed back one
+round at a time:
+- the map's scroll wheel was broken;
+- card terms and the top bar needed tips;
+- the characters should stand in the real level rather than float in the sky;
+- the slot machine should spin the bonus stage's real reels;
+- the maps had too many branches;
+- finally, a polish pass over every transition and the docs.
+
+Each round came back as commits within the session.
+
+The house rules still held away from the frontier. When the act title card had to move like
+Sonic 3's, its positions and speeds came from `ObjArray_TtlCard`. When review the next day caught
+Knuckles gliding backwards on the title screen, the fix
+([`ea03c8d87`](https://github.com/OpenGGF/OpenGGF/commit/ea03c8d87)) cited
+`Knuckles_Set_Gliding_Animation` for the right mapping frame. What changed is the oracle. A game
+that never existed has no trace to replay, so the judges were a person playing it, the rules
+tests, and headless captures of every screen.
+
+Boundaries:
+- **Time:** "under twelve hours" is wall-clock time from the brief to the last change to the mod's
+  code, taken from the session transcript and Git. It is not a measure of effort, and this page
+  does not record the session's token use or cost.
+- **Status:** when this section was written, PR #211 was still open against `develop`. The Mod API
+  it builds on remains an unpublished candidate.
+
 ## The hall of shame
 
 Every frame of accuracy was paid for in bugs that were, at the time, very funny. A small,
@@ -467,4 +525,6 @@ the "Did you use AI to write this?" section of the [README](../../README.md).*
 dictating the history. This update was directed by Raiscan (`@raiscan`) and fact-checked against `origin/develop` at
 `98f5fe5af`, the local `ccusage` history through 20 September 2026, and recoverable
 project-scoped session logs. Fitting, for a page about exactly this. Or, in the author's own
-words: "You write it up so it's nice, I really can't be arsed writing a novel on this."*
+words: "You write it up so it's nice, I really can't be arsed writing a novel on this."
+The October 2026 section was written by Claude Opus 5.5 at Raiscan's request, and checked against
+the `feature/ai-slay-the-robotnik` history and that session's transcript.*
