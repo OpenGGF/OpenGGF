@@ -18,7 +18,7 @@ package com.openggf.mods.scene;
  *     public void enter(SceneContext ctx) { ctx.audio().playMusic(0x2F); }
  *     public void update(SceneContext ctx) {
  *         ticks++;
- *         if (ctx.input().menuBack()) ctx.exitToGameTitle();
+ *         if (ctx.buttonPressed(SceneButtons.B)) ctx.exitToGameTitle();   // B goes back
  *     }
  *     public void draw(SceneContext ctx, SceneCanvas canvas) {
  *         canvas.clear(0x102040);

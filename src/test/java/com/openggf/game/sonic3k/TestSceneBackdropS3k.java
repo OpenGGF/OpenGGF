@@ -212,6 +212,43 @@ class TestSceneBackdropS3k {
     }
 
     @Test
+    void rawTilesDecodeTheSlotMachineFacesColumnByColumn() throws Exception {
+        Rom rom = TestEnvironment.currentRom();
+        SceneRomArt art = SceneRomArtFactory.create(rom, GameId.S3K, () -> null, () -> null);
+        int faces = 0x158CAE;    // ArtUnc_SlotOptions: eight 4x4-tile faces, $200 bytes each
+        int[] palette = art.palette(0xA9C7C, 16);   // Pal_Slot_Special, line 0
+        byte[] bytes = art.read(faces, 8 * 0x200);
+        for (int face = 0; face < 8; face++) {
+            SceneImage image = art.tiles(faces, com.openggf.mods.scene.RomSpriteRequest.Compression.UNCOMPRESSED,
+                    face * 16, 4, 4, true, palette);
+            assertEquals(32, image.width());
+            assertEquals(32, image.height());
+            // The reel copy's own reading: 64 nibbles a tile, tiles a column of four at a time.
+            for (int i = 0; i < 0x400; i++) {
+                int tile = i / 64;
+                int x = (tile / 4) * 8 + i % 8;
+                int y = (tile % 4) * 8 + (i % 64) / 8;
+                int b = bytes[face * 0x200 + i / 2] & 0xFF;
+                int colour = (i & 1) == 0 ? b >> 4 : b & 15;
+                assertEquals(colour == 0 ? 0 : palette[colour], image.pixel(x, y), "face " + face + " at " + x + "," + y);
+            }
+        }
+        SceneImage rows = art.tiles(faces, com.openggf.mods.scene.RomSpriteRequest.Compression.UNCOMPRESSED, 0, 4, 4,
+                false, palette);
+        SceneImage columns = art.tiles(faces, com.openggf.mods.scene.RomSpriteRequest.Compression.UNCOMPRESSED, 0, 4,
+                4, true, palette);
+        assertEquals(columns.pixel(0, 8), rows.pixel(8, 0), "tile 1 goes right of tile 0 in row order");
+        assertThrows(IllegalArgumentException.class, () -> art.tiles(faces,
+                com.openggf.mods.scene.RomSpriteRequest.Compression.UNCOMPRESSED, 0, 0, 4, true, palette));
+        assertThrows(IllegalArgumentException.class, () -> art.tiles(faces,
+                com.openggf.mods.scene.RomSpriteRequest.Compression.UNCOMPRESSED, 0, 4, 4, true, new int[4]));
+        // Compressed art: the Bloominator's Kosinski Moduled tiles, first two.
+        SceneImage bloom = art.tiles(0x367DCA, com.openggf.mods.scene.RomSpriteRequest.Compression.KOSINSKI_MODULED,
+                0, 2, 1, false, art.palette(0x0A8B7C, 16));
+        assertEquals(16, bloom.width());
+    }
+
+    @Test
     void titleCardsHaveTheirFourElements() throws Exception {
         Rom rom = TestEnvironment.currentRom();
         SceneRomArt art = SceneRomArtFactory.create(rom, GameId.S3K, () -> null, () -> null,

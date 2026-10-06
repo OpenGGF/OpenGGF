@@ -46,6 +46,10 @@ class CardRecipesTest {
         @Override public SceneSpriteSet character(String characterCode) { return EMPTY; }
         @Override public SceneSpriteSet characterAccessory(String characterCode) { return EMPTY; }
         @Override public int[] characterPalette(String characterCode) { return new int[16]; }
+        @Override public SceneImage tiles(int address, RomSpriteRequest.Compression compression, int firstTile,
+                int widthTiles, int heightTiles, boolean columnMajor, int[] palette) {
+            return new SceneImage(widthTiles * 8, heightTiles * 8, new int[widthTiles * heightTiles * 64]);
+        }
         @Override public boolean hasZonePictures(int zone, int act) { return false; }
         @Override public SceneBackdrop zoneBackdrop(int zone, int act) { return null; }
         @Override public SceneImage levelOverview(int zone, int act, int maxHeight) { return null; }

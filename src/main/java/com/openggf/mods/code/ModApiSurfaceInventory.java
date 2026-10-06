@@ -44,7 +44,10 @@ public final class ModApiSurfaceInventory {
             "com.openggf.level.objects.PlayableSheetMaterializer",
             "com.openggf.level.objects.ObjectFactory",
             "com.openggf.level.objects.RewindRecreatable",
-            "com.openggf.level.spawn.SpawnPoint");
+            "com.openggf.level.spawn.SpawnPoint",
+            // Scene constant holders: mods use their constants, which no signature names.
+            "com.openggf.mods.scene.SceneButtons",
+            "com.openggf.mods.scene.SceneKeys");
 
     private ModApiSurfaceInventory() { }
 

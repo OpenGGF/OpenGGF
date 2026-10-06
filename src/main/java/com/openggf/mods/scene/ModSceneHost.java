@@ -1,7 +1,10 @@
 package com.openggf.mods.scene;
 
 import com.openggf.control.InputHandler;
+import com.openggf.control.InputActionMasks;
 import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.MenuRepeat;
+import com.openggf.control.PlayerInputState;
 import com.openggf.mods.code.ModFaultBoundary;
 import com.openggf.mods.code.OwnedSceneFactory;
 import java.io.IOException;
@@ -137,6 +140,10 @@ public final class ModSceneHost {
         private InputHandler input;
         private LogicalInputSnapshot logical = LogicalInputSnapshot.neutral();
         private SceneMouse mouse = SceneMouse.none();
+        private final MenuRepeat repeat = new MenuRepeat();
+        private int heldButtons;
+        private int pressedButtons;
+        private int repeatedButtons;
         private boolean previousLeft;
         private boolean previousRight;
         private int lastX = -1;
@@ -193,8 +200,31 @@ public final class ModSceneHost {
 
         void beginTick(InputHandler handler) {
             input = handler;
-            logical = handler == null ? LogicalInputSnapshot.neutral() : handler.logical();
+            LogicalInputSnapshot raw = handler == null ? LogicalInputSnapshot.neutral() : handler.logical();
+            heldButtons = buttons(raw.player1(), true);
+            pressedButtons = buttons(raw.player1(), false);
+            repeatedButtons = 0;
+            for (int bit = 1; bit <= SceneButtons.START; bit <<= 1) {
+                if (repeat.pulse(bit, ticks, (heldButtons & bit) != 0, (pressedButtons & bit) != 0)) {
+                    repeatedButtons |= bit;
+                }
+            }
+            // Scenes follow the Genesis convention: A, C or Start confirms and B goes back.
+            logical = raw.withMenuPolicy((pressedButtons & (SceneButtons.A | SceneButtons.C | SceneButtons.START)) != 0,
+                    (pressedButtons & SceneButtons.B) != 0);
             mouse = readMouse(handler);
+        }
+
+        /** Player 1's held or pressed state as {@link SceneButtons} bits (the pad's SACBRLDU byte). */
+        private static int buttons(PlayerInputState pad, boolean held) {
+            int directions = (held ? pad.heldMask() : pad.pressedMask()) & SceneButtons.DIRECTIONS;
+            int actions = held ? pad.actionHeldMask() : pad.actionPressedMask();
+            boolean start = held ? pad.startHeld() : pad.startPressed();
+            return directions
+                    | ((actions & InputActionMasks.ACTION_A) != 0 ? SceneButtons.A : 0)
+                    | ((actions & InputActionMasks.ACTION_B) != 0 ? SceneButtons.B : 0)
+                    | ((actions & InputActionMasks.ACTION_C) != 0 ? SceneButtons.C : 0)
+                    | (start ? SceneButtons.START : 0);
         }
 
         private SceneMouse readMouse(InputHandler handler) {
@@ -252,18 +282,33 @@ public final class ModSceneHost {
         }
 
         @Override
+        public boolean buttonDown(int buttons) {
+            return (heldButtons & buttons) != 0;
+        }
+
+        @Override
+        public boolean buttonPressed(int buttons) {
+            return (pressedButtons & buttons) != 0;
+        }
+
+        @Override
+        public boolean buttonRepeated(int buttons) {
+            return (repeatedButtons & buttons) != 0;
+        }
+
+        @Override
         public LogicalInputSnapshot input() {
             return logical;
         }
 
         @Override
-        public boolean keyDown(int glfwKey) {
-            return input != null && input.isKeyDown(glfwKey);
+        public boolean keyDown(int key) {
+            return input != null && input.isKeyDown(key);
         }
 
         @Override
-        public boolean keyPressed(int glfwKey) {
-            return input != null && input.isKeyPressed(glfwKey);
+        public boolean keyPressed(int key) {
+            return input != null && input.isKeyPressed(key);
         }
 
         @Override

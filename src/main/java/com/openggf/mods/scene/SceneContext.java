@@ -25,18 +25,34 @@ public interface SceneContext {
     long ticks();
 
     /**
-     * This tick's keyboard and gamepad state, merged. The {@code menu*} flags are true on the
-     * tick a direction or button went down: {@code menuAccept} is any action button or Start,
-     * {@code menuBack} is action button C. {@code player1()} has the held and pressed masks
-     * for building key repeat or reading individual buttons.
+     * True while any of {@code buttons} ({@link SceneButtons} bits, combined with {@code |}) is
+     * held on player 1's pad or the keyboard keys mapped to it.
+     */
+    boolean buttonDown(int buttons);
+
+    /** True on the tick any of {@code buttons} went down. */
+    boolean buttonPressed(int buttons);
+
+    /**
+     * True on the tick any of {@code buttons} went down, and again every 4 ticks once it has been
+     * held for 24, as the engine's own menus repeat: use it to move a cursor through a menu.
+     */
+    boolean buttonRepeated(int buttons);
+
+    /**
+     * This tick's keyboard and gamepad state for both players, merged; {@link #buttonDown} and
+     * friends cover player 1 more simply. The {@code menu*} flags are true on the tick a
+     * direction or button went down. In a scene {@code menuAccept} is A, C or Start and
+     * {@code menuBack} is B (the Genesis convention; see {@link SceneButtons}), so they never
+     * fire together.
      */
     LogicalInputSnapshot input();
 
-    /** True while a key is held (GLFW key code, e.g. {@code GLFW_KEY_TAB = 258}). */
-    boolean keyDown(int glfwKey);
+    /** True while a key is held ({@link SceneKeys} code, such as {@code SceneKeys.TAB}). */
+    boolean keyDown(int key);
 
-    /** True on the tick a key went down. */
-    boolean keyPressed(int glfwKey);
+    /** True on the tick a key went down ({@link SceneKeys} code). */
+    boolean keyPressed(int key);
 
     /** The mouse, in logical screen pixels. */
     SceneMouse mouse();

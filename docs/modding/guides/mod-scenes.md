@@ -52,11 +52,11 @@ public final class HelloScene implements ModScene {
     }
 
     @Override public void update(SceneContext ctx) {
-        if (ctx.input().menuAccept()) {
+        if (ctx.buttonPressed(SceneButtons.A | SceneButtons.C)) {
             presses++;
             ctx.audio().playSfx(0x33);                // the ring sound
         }
-        if (ctx.input().menuBack()) {
+        if (ctx.buttonPressed(SceneButtons.B)) {      // B goes back, as on the Genesis
             ctx.exitToGameTitle();                    // fade to the stock title screen
         }
     }
@@ -86,12 +86,24 @@ public final class HelloScene implements ModScene {
 `SceneContext` also gives the screen size (`width()`, `height()`): 224 rows, and a width
 the player's display aspect decides (320 for 4:3, 352, 400 for 16:9, 528 or 800) unless your
 mod requires an aspect, so lay out from `width()`;
-`ticks()` since the scene opened, `keyDown`/`keyPressed` for raw GLFW keys, and
-`mouse()` in game pixels (position, left and right button down/pressed/released edges,
+`ticks()` since the scene opened, and `mouse()` in game pixels (position, left and right button down/pressed/released edges,
 `wheel()` notches, `over(x, y, w, h)`, and `lastInputWasMouse()` for showing hover highlights
 only to mouse players).
-`input()` is the merged keyboard and gamepad state with `menu*` flags for single presses;
-its `player1()` masks let you build key repeat (Slay the Robotnik's `ui/Controls`).
+
+Input comes as named buttons and keys, never raw numbers:
+
+- `buttonDown(b)`, `buttonPressed(b)` and `buttonRepeated(b)` read player 1's pad (and the
+  keyboard keys the player mapped to it) with `SceneButtons` (`UP`, `DOWN`, `LEFT`, `RIGHT`,
+  `A`, `B`, `C`, `START`; combine with `|` for "any of these"). `buttonRepeated` is true when a
+  button goes down and then every 4 ticks after it has been held for 24, like the engine's
+  own menus: use it to move cursors.
+- `keyDown(k)` and `keyPressed(k)` read the keyboard with `SceneKeys` (`ENTER`, `ESCAPE`,
+  `A`..`Z`, `DIGIT_0`..`DIGIT_9`, `F1`..`F12`, ...).
+- By Genesis convention **A or C (or Start) confirms and B goes back**; scenes follow it, so
+  `input().menuAccept()` is A, C or Start and `input().menuBack()` is B. `input()` also has
+  both players' raw state.
+
+Slay the Robotnik's `ui/Controls` turns all of this into the few verbs its screens use.
 
 To always play in widescreen, add a game patch whose module returns
 `requiredDisplayAspect() = "WIDE_16_9"`; the player's setting comes back at the master
@@ -155,6 +167,9 @@ canvas.draw(rhinobot.frame(0), 200, 120, SceneDraw.plain());
 - Find addresses by label in the disassembly's listing (`ArtKosM_…`, `ArtNem_…`,
   `ArtUnc_…`, `Map_…`, `DPLC_…`, `Pal_…`) and the palette line from the object's
   `make_art_tile`. Slay the Robotnik's `art/RomSprites.java` lists dozens with their labels.
+- `rom.tiles(address, compression, firstTile, widthTiles, heightTiles, columnMajor, palette)`
+  decodes raw 8x8 tiles that have no mappings (reel faces, HUD digits, menu art) into one
+  image; Slay the Robotnik's `Art.slotFace` reads the Slot Machine's faces this way.
 - `rom.character("sonic")` returns a playable character's frames with the ROM's animation
   scripts (`animationFrames(id)`, `animationDelay(id)`); `characterAccessory("tails")` is
   Tails' tails.
@@ -163,8 +178,9 @@ canvas.draw(rhinobot.frame(0), 200, 120, SceneDraw.plain());
   boss it shows, citing the disassembly tables.
 
 For Sonic 3 & Knuckles, `rom.zoneBackdrop(zone, act)` returns a zone's background as a
-`SceneBackdrop`: one picture cut into horizontal bands with the stock parallax speeds (its
-javadoc shows the drawing loop), and `rom.levelOverview(zone, act, maxHeight)` returns a
+`SceneBackdrop`: one picture cut into horizontal bands with the stock parallax speeds, drawn
+with `canvas.drawBackdrop(backdrop, top, scrollX, ticks)` (or into a window with the
+`x, y, width, height` overload), and `rom.levelOverview(zone, act, maxHeight)` returns a
 zoomed-out picture of the act's whole level. To put characters in the level itself,
 `rom.levelStages(zone, act, width, headroom, maxRise)` lists runs of the act's floor with room
 above them, read from its collision, each with the floor row of every column, and

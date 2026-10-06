@@ -101,6 +101,54 @@ final class RomSceneArt implements SceneRomArt {
     }
 
     @Override
+    public SceneImage tiles(int address, RomSpriteRequest.Compression compression, int firstTile, int widthTiles,
+            int heightTiles, boolean columnMajor, int[] palette) {
+        if (firstTile < 0 || widthTiles < 1 || heightTiles < 1 || widthTiles > 512 || heightTiles > 512) {
+            throw new IllegalArgumentException("Tile block out of range: first " + firstTile + ", " + widthTiles + "x"
+                    + heightTiles + " tiles");
+        }
+        if (compression == null || palette == null || palette.length < 16) {
+            throw new IllegalArgumentException("tiles needs a compression and a 16-colour palette");
+        }
+        int count = widthTiles * heightTiles;
+        Pattern[] art;
+        if (compression == RomSpriteRequest.Compression.UNCOMPRESSED) {
+            long end = address + (long) (firstTile + count) * Pattern.PATTERN_SIZE_IN_ROM;
+            if (address < 0 || end > reader().size()) {
+                throw new IllegalArgumentException("Tiles run past the ROM's end: 0x" + Integer.toHexString(address));
+            }
+            try {
+                art = PatternDecompressor.uncompressed(reader(), address + firstTile * Pattern.PATTERN_SIZE_IN_ROM,
+                        count * Pattern.PATTERN_SIZE_IN_ROM);
+            } catch (IOException e) {
+                throw new IllegalArgumentException("Could not read tiles at 0x" + Integer.toHexString(address), e);
+            }
+            firstTile = 0;
+        } else {
+            art = loadArt(new RomSpriteRequest(address, compression, 0, 0, -1, RomSpriteRequest.DplcLayout.OBJECT, 0,
+                    0));
+        }
+        if (art.length < firstTile + count) {
+            throw new IllegalArgumentException("The art at 0x" + Integer.toHexString(address) + " has " + art.length
+                    + " tiles; asked for " + (firstTile + count));
+        }
+        int width = widthTiles * 8;
+        int[] argb = new int[width * heightTiles * 8];
+        for (int t = 0; t < count; t++) {
+            int column = columnMajor ? t / heightTiles : t % widthTiles;
+            int row = columnMajor ? t % heightTiles : t / widthTiles;
+            Pattern tile = art[firstTile + t];
+            for (int py = 0; py < 8; py++) {
+                for (int px = 0; px < 8; px++) {
+                    int index = tile.getPixel(px, py) & 0x0F;
+                    argb[(row * 8 + py) * width + column * 8 + px] = index == 0 ? 0 : palette[index];
+                }
+            }
+        }
+        return new SceneImage(width, heightTiles * 8, argb);
+    }
+
+    @Override
     public SceneSpriteSet character(String characterCode) {
         return characterCache.computeIfAbsent(characterCode, code -> {
             PlayerSpriteArtProvider provider = players.get();

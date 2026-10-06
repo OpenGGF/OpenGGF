@@ -43,6 +43,31 @@ public interface SceneRomArt {
     SceneSpriteSet sprites(RomSpriteRequest request, int[] palette);
 
     /**
+     * Raw 8x8 tiles as one image, for ROM art that has no sprite mappings (bonus-stage reel
+     * faces, HUD digits, menu and title art): {@code widthTiles} x {@code heightTiles} tiles
+     * starting at tile {@code firstTile} of the art at {@code address}, coloured with the first
+     * 16 colours of {@code palette} (one line; colour 0 is transparent). Tiles fill the image a
+     * row at a time, or a column at a time when {@code columnMajor} (as sprite pieces and the
+     * Slot Machine's reel faces store them). Uncompressed art reads just the tiles it needs;
+     * compressed art is decompressed whole. Not cached.
+     *
+     * <pre>{@code
+     * // ArtUnc_SlotOptions: eight 4x4-tile reel faces stored column by column, $200 bytes each.
+     * SceneImage face = rom.tiles(0x158CAE, RomSpriteRequest.Compression.UNCOMPRESSED, face * 16, 4, 4,
+     *         true, rom.palette(0xA9C7C, 16));                        // Pal_Slot_Special line 0
+     * }</pre>
+     *
+     * @param firstTile   the first tile used, counted from the start of the art (0 or more)
+     * @param widthTiles  1 to 512 tiles across
+     * @param heightTiles 1 to 512 tiles down
+     * @param palette     at least 16 {@code 0xAARRGGBB} colours
+     * @throws IllegalArgumentException for sizes out of range, a short palette, art that cannot
+     *                                  be decoded, or art with fewer tiles than asked for
+     */
+    SceneImage tiles(int address, RomSpriteRequest.Compression compression, int firstTile, int widthTiles,
+            int heightTiles, boolean columnMajor, int[] palette);
+
+    /**
      * A playable character's frames in their own palette, with the ROM's animation scripts;
      * cached per character. Sonic 1 has {@code "sonic"}; Sonic 2 {@code "sonic"} and
      * {@code "tails"}; Sonic 3 &amp; Knuckles {@code "sonic"}, {@code "tails"} and
@@ -91,8 +116,8 @@ public interface SceneRomArt {
 
     /**
      * A zone's background (level art, layout, palette and animated tiles in the state
-     * {@link #hasZonePictures} describes) with its parallax bands; see {@link SceneBackdrop} for
-     * drawing it. Built from the ROM on the first request
+     * {@link #hasZonePictures} describes) with its parallax bands; see {@link SceneBackdrop} and
+     * {@link SceneCanvas#drawBackdrop} for drawing it. Built from the ROM on the first request
      * for a zone and act (tens of milliseconds) and cached; it never touches a running level.
      *
      * @param zone the game's zone id

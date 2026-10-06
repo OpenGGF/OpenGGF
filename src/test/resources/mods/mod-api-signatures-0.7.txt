@@ -899,10 +899,12 @@ CF-ANNOTATION TYPE com.openggf.mods.scene.SceneArt visible @com.openggf.game.Mod
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneAudio visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneBackdrop visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneBackdrop$Band visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneButtons visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneCanvas visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneDraw visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneImage visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneKeys visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneLevelStage visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneMouse visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneRomArt visible @com.openggf.game.ModApi
@@ -2912,6 +2914,97 @@ FIELD com.openggf.mods.scene.RomSpriteRequest$Compression public,static,final co
 FIELD com.openggf.mods.scene.RomSpriteRequest$Compression public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression UNCOMPRESSED
 FIELD com.openggf.mods.scene.RomSpriteRequest$DplcLayout public,static,final com.openggf.mods.scene.RomSpriteRequest$DplcLayout OBJECT
 FIELD com.openggf.mods.scene.RomSpriteRequest$DplcLayout public,static,final com.openggf.mods.scene.RomSpriteRequest$DplcLayout PLAYER
+FIELD com.openggf.mods.scene.SceneButtons public,static,final int A
+FIELD com.openggf.mods.scene.SceneButtons public,static,final int ACTIONS
+FIELD com.openggf.mods.scene.SceneButtons public,static,final int B
+FIELD com.openggf.mods.scene.SceneButtons public,static,final int C
+FIELD com.openggf.mods.scene.SceneButtons public,static,final int DIRECTIONS
+FIELD com.openggf.mods.scene.SceneButtons public,static,final int DOWN
+FIELD com.openggf.mods.scene.SceneButtons public,static,final int LEFT
+FIELD com.openggf.mods.scene.SceneButtons public,static,final int RIGHT
+FIELD com.openggf.mods.scene.SceneButtons public,static,final int START
+FIELD com.openggf.mods.scene.SceneButtons public,static,final int UP
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int A
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int APOSTROPHE
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int B
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int BACKSLASH
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int BACKSPACE
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int C
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int COMMA
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int D
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int DELETE
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int DIGIT_0
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int DIGIT_1
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int DIGIT_2
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int DIGIT_3
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int DIGIT_4
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int DIGIT_5
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int DIGIT_6
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int DIGIT_7
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int DIGIT_8
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int DIGIT_9
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int DOWN
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int E
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int END
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int ENTER
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int EQUAL
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int ESCAPE
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int F
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int F1
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int F10
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int F11
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int F12
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int F2
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int F3
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int F4
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int F5
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int F6
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int F7
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int F8
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int F9
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int G
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int GRAVE_ACCENT
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int H
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int HOME
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int I
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int INSERT
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int J
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int K
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int KP_ENTER
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int L
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int LEFT
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int LEFT_ALT
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int LEFT_BRACKET
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int LEFT_CONTROL
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int LEFT_SHIFT
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int M
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int MINUS
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int N
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int O
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int P
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int PAGE_DOWN
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int PAGE_UP
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int PERIOD
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int Q
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int R
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int RIGHT
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int RIGHT_ALT
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int RIGHT_BRACKET
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int RIGHT_CONTROL
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int RIGHT_SHIFT
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int S
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int SEMICOLON
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int SLASH
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int SPACE
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int T
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int TAB
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int U
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int UP
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int V
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int W
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int X
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int Y
+FIELD com.openggf.mods.scene.SceneKeys public,static,final int Z
 FIELD com.openggf.net.client.ClientRaceSession public,static,final int CHAT_LINES_KEPT
 FIELD com.openggf.net.client.ClientRaceSession public,static,final int CLOCK_SAMPLES_TARGET
 FIELD com.openggf.net.client.ClientRaceSession$Phase public,static,final com.openggf.net.client.ClientRaceSession$Phase COUNTDOWN
@@ -11390,6 +11483,8 @@ METHOD com.openggf.mods.scene.SceneBackdrop$Band public  int top()
 METHOD com.openggf.mods.scene.SceneBackdrop$Band public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.scene.SceneBackdrop$Band public,final  int hashCode()
 METHOD com.openggf.mods.scene.SceneBackdrop$Band public,final  java.lang.String toString()
+METHOD com.openggf.mods.scene.SceneCanvas public  void drawBackdrop(com.openggf.mods.scene.SceneBackdrop,int,double,long)
+METHOD com.openggf.mods.scene.SceneCanvas public  void drawBackdrop(com.openggf.mods.scene.SceneBackdrop,int,int,int,int,int,double,long)
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  int height()
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  int textWidth(java.lang.String)
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  int width()
@@ -11402,6 +11497,9 @@ METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void drawRegion(com.o
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void fill(int,int,int,int,int)
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void text(java.lang.String,int,int,int)
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void unclip()
+METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean buttonDown(int)
+METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean buttonPressed(int)
+METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean buttonRepeated(int)
 METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean keyDown(int)
 METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean keyPressed(int)
 METHOD com.openggf.mods.scene.SceneContext public,abstract  com.openggf.control.LogicalInputSnapshot input()
@@ -11466,6 +11564,7 @@ METHOD com.openggf.mods.scene.SceneRomArt public,abstract  byte[] read(int,int)
 METHOD com.openggf.mods.scene.SceneRomArt public,abstract  com.openggf.mods.scene.SceneBackdrop zoneBackdrop(int,int)
 METHOD com.openggf.mods.scene.SceneRomArt public,abstract  com.openggf.mods.scene.SceneImage levelForeground(int,int,int,int,int,int)
 METHOD com.openggf.mods.scene.SceneRomArt public,abstract  com.openggf.mods.scene.SceneImage levelOverview(int,int,int)
+METHOD com.openggf.mods.scene.SceneRomArt public,abstract  com.openggf.mods.scene.SceneImage tiles(int,com.openggf.mods.scene.RomSpriteRequest$Compression,int,int,int,boolean,int[])
 METHOD com.openggf.mods.scene.SceneRomArt public,abstract  com.openggf.mods.scene.SceneSpriteSet character(java.lang.String)
 METHOD com.openggf.mods.scene.SceneRomArt public,abstract  com.openggf.mods.scene.SceneSpriteSet characterAccessory(java.lang.String)
 METHOD com.openggf.mods.scene.SceneRomArt public,abstract  com.openggf.mods.scene.SceneSpriteSet sprites(com.openggf.mods.scene.RomSpriteRequest,int[])
@@ -17478,8 +17577,10 @@ TYPE class public,final com.openggf.level.rings.SpillAnimationState SUPER java.l
 TYPE class public,final com.openggf.mods.code.ModContext SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.ModLevelDefinition SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.StandaloneLevelLoader SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.scene.SceneButtons SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneDraw SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneImage SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.scene.SceneKeys SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneLevelStage SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneMouse SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.ClientRaceSession SUPER java.lang.Object
@@ -19086,10 +19187,12 @@ TYPE-ANNOTATION com.openggf.mods.scene.SceneArt @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneAudio @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneBackdrop @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneBackdrop$Band @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneButtons @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneCanvas @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneDraw @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneImage @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneKeys @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneLevelStage @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneMouse @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneRomArt @com.openggf.game.ModApi

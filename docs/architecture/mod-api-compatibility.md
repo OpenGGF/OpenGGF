@@ -305,6 +305,20 @@ rejects a null DPLC layout, a DPLC address below `-1` and a size on compressed a
 the `uncompressed` and `compressedWithDplc` factories. Images built from pixels have one
 constructor, `new SceneImage(width, height, argb)`; `SceneArt` keeps `png` and `rom`.
 
+Input and drawing helpers replace the raw numbers and loops scenes used to copy.
+`SceneButtons` (the pad's own `SACBRLDU` bits) and `SceneKeys` (the engine's GLFW key codes
+under stable names) are constant holders; no signature names them, so they are curated roots
+in `ModApiSurfaceInventory`. `SceneContext.buttonDown`, `buttonPressed` and `buttonRepeated`
+read player 1's pad by those bits; `buttonRepeated` uses the engine menus' own repeat
+(`control.MenuRepeat`, now a public engine-internal class: 24 ticks, then every 4). Scenes
+settle the back button on the Genesis convention: in a scene `input().menuAccept()` is A, C or
+Start and `menuBack()` is B (the engine's own menus keep C as back). `SceneCanvas.drawBackdrop`
+(a window and a full-screen overload) draws a `SceneBackdrop` exactly inside its rectangle as
+default methods built on `drawRegion`, so test canvases need not implement them.
+`SceneRomArt.tiles(address, compression, firstTile, widthTiles, heightTiles, columnMajor,
+palette)` decodes raw 8x8 tiles in row or column order. A palette-lines helper was considered
+and left out: it would save one `System.arraycopy` per line.
+
 `SceneContext`, `SceneCanvas`, `SceneArt`, `SceneRomArt`, `SceneSpriteSet`, `SceneStorage` and
 `SceneAudio` are implemented by the engine; creators use them (and may fake them in tests) but
 the candidate may add methods to them. `SceneRomArt`'s zone pictures are abstract methods with

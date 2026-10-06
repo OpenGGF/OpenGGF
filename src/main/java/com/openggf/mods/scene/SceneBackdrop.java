@@ -10,23 +10,13 @@ import java.util.Objects;
  *
  * <p>Every row repeats horizontally at {@code image().width()}, and the bands cover the image
  * from row 0 to the bottom in order, without gaps. A band shows the image column
- * {@link #column} at the screen's left edge, so drawing it twice side by side (or more on
- * wide screens) fills any width:
+ * {@link #column} at the screen's left edge, repeating to fill any width.
+ * {@link SceneCanvas#drawBackdrop} draws it:
  *
  * <pre>{@code
  * SceneBackdrop bg = ctx.art().rom().zoneBackdrop(0, 0);   // Angel Island act 1, or null
  * int top = 0x100;                                         // which image rows the screen shows
- * int w = bg.image().width();
- * for (SceneBackdrop.Band band : bg.bands()) {
- *     int y0 = Math.max(band.top(), top);
- *     int y1 = Math.min(band.top() + band.height(), top + canvas.height());
- *     if (y0 >= y1) {
- *         continue;
- *     }
- *     for (int x = -bg.column(band, scrollX, ctx.ticks()); x < canvas.width(); x += w) {
- *         canvas.drawRegion(bg.image(), 0, y0, w, y1 - y0, x, y0 - top, w, y1 - y0, SceneDraw.plain());
- *     }
- * }
+ * canvas.drawBackdrop(bg, top, scrollX, ctx.ticks());
  * }</pre>
  *
  * <p>Build images once (in {@link ModScene#enter} or lazily) and reuse them; the engine

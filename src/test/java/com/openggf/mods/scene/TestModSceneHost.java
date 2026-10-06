@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.PlayerInputState;
 import com.openggf.game.GameModule;
 import com.openggf.game.patch.PatchContext;
 import com.openggf.level.Pattern;
@@ -226,6 +227,62 @@ class TestModSceneHost {
         assertTrue(seen.get(3).rightReleased() && !seen.get(3).rightDown());
         assertFalse(seen.get(4).lastInputWasMouse(), "a key press hands the last input back to the keyboard");
         host.close();
+    }
+
+    @Test
+    void buttonsRepeatLikeTheEngineMenusAndBGoesBack() {
+        List<String> seen = new ArrayList<>();
+        ModSceneHost host = new ModSceneHost();
+        host.open(owned(() -> new ModScene() {
+            @Override
+            public void enter(SceneContext ctx) {
+            }
+
+            @Override
+            public void update(SceneContext ctx) {
+                String tick = ctx.ticks() + ":";
+                if (ctx.buttonPressed(SceneButtons.DOWN)) tick += "pressed ";
+                if (ctx.buttonRepeated(SceneButtons.DOWN)) tick += "repeat ";
+                if (ctx.buttonDown(SceneButtons.DOWN | SceneButtons.UP)) tick += "held ";
+                if (ctx.input().menuBack()) tick += "back ";
+                if (ctx.input().menuAccept()) tick += "accept ";
+                seen.add(tick.trim());
+            }
+
+            @Override
+            public void draw(SceneContext ctx, SceneCanvas canvas) {
+            }
+        }), services(new ArrayList<>()), 320, 224);
+        InputHandler input = mock(InputHandler.class);
+        int down = com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_DOWN;
+        for (int tick = 0; tick < 30; tick++) {
+            PlayerInputState pad = PlayerInputState.of(down, tick == 0 ? down : 0, 0, 0, false, false);
+            when(input.logical()).thenReturn(LogicalInputSnapshot.ofPlayers(pad, PlayerInputState.neutral()));
+            host.update(input);
+        }
+        assertEquals("0:pressed repeat held", seen.get(0));
+        assertEquals("1:held", seen.get(1));
+        assertEquals("24:repeat held", seen.get(MenuRepeatTimings.DELAY), "repeats after the engine's menu delay");
+        assertEquals("28:repeat held", seen.get(MenuRepeatTimings.DELAY + MenuRepeatTimings.INTERVAL));
+        assertEquals("25:held", seen.get(25));
+
+        PlayerInputState b = PlayerInputState.of(0, 0, com.openggf.control.InputActionMasks.ACTION_B,
+                com.openggf.control.InputActionMasks.ACTION_B, false, false);
+        when(input.logical()).thenReturn(LogicalInputSnapshot.ofPlayers(b, PlayerInputState.neutral()));
+        host.update(input);
+        assertEquals("30:back", seen.get(30), "in a scene B is back and not accept");
+        PlayerInputState c = PlayerInputState.of(0, 0, com.openggf.control.InputActionMasks.ACTION_C,
+                com.openggf.control.InputActionMasks.ACTION_C, false, false);
+        when(input.logical()).thenReturn(LogicalInputSnapshot.ofPlayers(c, PlayerInputState.neutral()));
+        host.update(input);
+        assertEquals("31:accept", seen.get(31), "C confirms");
+        host.close();
+    }
+
+    /** The engine's shared menu repeat timings. */
+    private static final class MenuRepeatTimings {
+        static final int DELAY = com.openggf.control.MenuRepeat.DELAY;
+        static final int INTERVAL = com.openggf.control.MenuRepeat.INTERVAL;
     }
 
     @Test
