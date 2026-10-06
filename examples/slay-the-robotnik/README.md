@@ -94,6 +94,31 @@ your ROM.
 Bosses: Fire Breath and Flame Craft (Angel Island), Big Shaker and Screw Mobile
 (Hydrocity), Big Arm and Beam Rocket (Launch Base), Mecha Sonic (Sky Sanctuary).
 
+## How it was made
+
+Slay the Robotnik was written in under twelve hours by Claude Opus 5.5, Anthropic's model,
+working in Claude Code. The brief arrived at 17:36 BST on 5 October 2026 as a single message
+describing the game. The last change to the mod's own code landed at 05:26 the next morning,
+11 hours 50 minutes later. The engine-side clean-up and docs were pushed by 07:35.
+
+- One lead agent planned and integrated the work, with a few subagents at a time taking
+  self-contained pieces.
+- A human wrote the brief and played the builds. Their feedback shaped each round after the
+  first playable version:
+  - the map's scroll wheel and tips for card terms and the top bar;
+  - staging rooms in the real level;
+  - the slot machine's real reels;
+  - fewer map branches;
+  - the final polish.
+- That time produced the whole game above: about 29,000 lines of Java and 126 tests, including
+  a bot that plays whole runs.
+- It also produced the engine's mod scene API, the capture and sprite tools, the
+  [hello-scene](../hello-scene/README.md) starter and this documentation.
+
+The design record,
+[2026-10-05-slay-the-robotnik.md](../../docs/architecture/designs/2026-10-05-slay-the-robotnik.md),
+logs each step with its commits, including the approaches that were tried and dropped.
+
 ## How it is built (a tour for modders)
 
 New to mod scenes? Read [hello-scene](../hello-scene/README.md) first: it is the same idea in
