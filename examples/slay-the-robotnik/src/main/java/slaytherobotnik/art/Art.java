@@ -94,6 +94,7 @@ public final class Art {
         try {
             set = RomSprites.load(rom(), key);
         } catch (RuntimeException e) {
+            failed("the ROM sprite " + key, e);
             set = null;
         }
         romSets.put(key, set);
@@ -111,6 +112,7 @@ public final class Art {
             try {
                 image = hasRom() ? rom().levelOverview(zone, act, maxHeight) : null;
             } catch (RuntimeException e) {
+                failed("a picture of zone " + zone + " act " + act, e);
                 image = null;
             }
             overviews.put(key, image);
@@ -129,6 +131,7 @@ public final class Art {
             try {
                 found = hasRom() ? rom().levelStages(zone, act, width, headroom, maxRise) : List.of();
             } catch (RuntimeException e) {
+                failed("the level stages of zone " + zone + " act " + act, e);
                 found = List.of();
             }
             stages.put(key, found);
@@ -148,6 +151,7 @@ public final class Art {
             try {
                 image = hasRom() ? rom().levelForeground(zone, act, x, y, width, height) : null;
             } catch (RuntimeException e) {
+                failed("a picture of zone " + zone + " act " + act, e);
                 image = null;
             }
         }
@@ -184,6 +188,7 @@ public final class Art {
                     }
                 }
             } catch (RuntimeException e) {
+                failed("the slot machine faces", e);
                 slotFaces = new SceneImage[8];
             }
         }
@@ -201,6 +206,7 @@ public final class Art {
                 }
                 slotStrips = strips;
             } catch (RuntimeException e) {
+                failed("the slot machine reel strips", e);
                 slotStrips = null;
             }
         }
@@ -215,6 +221,7 @@ public final class Art {
             try {
                 backdrop = hasRom() ? rom().zoneBackdrop(zone, act) : null;
             } catch (RuntimeException e) {
+                failed("the backdrop of zone " + zone + " act " + act, e);
                 backdrop = null;
             }
             backdrops.put(key, backdrop);
@@ -227,6 +234,7 @@ public final class Art {
         try {
             return hasRom() && rom().hasTitleCard(zone, act) ? rom().titleCard(zone, act) : null;
         } catch (RuntimeException e) {
+            failed("the title card of zone " + zone + " act " + act, e);
             return null;
         }
     }
@@ -264,5 +272,14 @@ public final class Art {
     public SceneSprite romFrame(String key, int frame) {
         SceneSpriteSet set = rom(key);
         return set == null || frame < 0 || frame >= set.frameCount() ? null : set.frame(frame);
+    }
+
+    /**
+     * Logs a picture that could not be built. Callers cache the failure (as null or empty), so
+     * it is logged once, and the game draws on without the picture.
+     */
+    private static void failed(String what, RuntimeException e) {
+        java.util.logging.Logger.getLogger(Art.class.getName()).log(java.util.logging.Level.WARNING,
+                "Slay the Robotnik could not build " + what + "; drawing without it", e);
     }
 }
