@@ -30,6 +30,8 @@ public final class GolfMenu implements TitleScreenProvider {
         public String configName() { return name(); }
     }
     public enum Field { MODE, PLAYER_ONE, PLAYER_TWO, ACT, VIEWPORT, REWINDS_HOLE, REWINDS_TURN, ADDRESS, PORT, START, BACK }
+    /** Menu sounds requested from the adapter, which plays them from the ROM. */
+    public enum Cue { MUSIC, MOVE, ENTER, LAUNCH, ERROR }
 
     public record Selection(Mode mode, CharacterChoice playerOne, CharacterChoice playerTwo,
                             int actIndex, String address, int port, Viewport viewport, RewindAllowance.Rules rewinds) {
@@ -51,7 +53,11 @@ public final class GolfMenu implements TitleScreenProvider {
     private final IntSupplier logicalWidth;
     private final Consumer<Selection> launchConsumer;
     private final GolfTitleArt titleArt;
+    private final Consumer<Cue> cues;
     private long animationTick;
+    // Presentation-only easing anchors: when the panel last changed page and the highlight last moved.
+    private long pageTick = -100, rowTick = -100;
+    private int fromRow;
     private State state = State.INACTIVE;
     private Mode mode = Mode.PRACTICE;
     private boolean setup;
@@ -69,6 +75,7 @@ public final class GolfMenu implements TitleScreenProvider {
     private String editBuffer = "";
     private boolean replaceOnType;
     private String error = "";
+    private String controlsHint = "ARROWS / MOUSE  ENTER SELECT  ESC BACK";
     private Selection selected;
     private TitleScreenAction exitAction = TitleScreenAction.OTHER;
 
@@ -77,19 +84,26 @@ public final class GolfMenu implements TitleScreenProvider {
     }
     public GolfMenu(GraphicsManager graphics, IntSupplier logicalWidth, Consumer<Selection> launchConsumer,
                     GolfTitleArt titleArt) {
+        this(graphics, logicalWidth, launchConsumer, titleArt, cue -> { });
+    }
+    public GolfMenu(GraphicsManager graphics, IntSupplier logicalWidth, Consumer<Selection> launchConsumer,
+                    GolfTitleArt titleArt, Consumer<Cue> cues) {
         this.graphics = graphics;
         this.logicalWidth = Objects.requireNonNull(logicalWidth, "logicalWidth");
         this.launchConsumer = Objects.requireNonNull(launchConsumer, "launchConsumer");
         this.titleArt = titleArt;
+        this.cues = Objects.requireNonNull(cues, "cues");
     }
     public GolfMenu(GraphicsManager graphics, Consumer<Selection> launchConsumer) { this(graphics, () -> 320, launchConsumer); }
 
     @Override public void initialize() {
         if (titleArt != null) titleArt.initialize();
-        animationTick = 0;
+        animationTick = 0; pageTick = rowTick = -100; fromRow = 0;
+        cues.accept(Cue.MUSIC);
         state = State.ACTIVE; setup = false; row = 0; editing = false; error = "";
         selected = null; exitAction = TitleScreenAction.OTHER;
         pointerX = pointerY = Integer.MIN_VALUE;
+        controlsHint = "ARROWS / MOUSE  ENTER SELECT  ESC BACK";
     }
     @Override public void reset() { state = State.INACTIVE; editing = false; selected = null; exitAction = TitleScreenAction.OTHER; }
     @Override public State getState() { return state; }
@@ -103,11 +117,33 @@ public final class GolfMenu implements TitleScreenProvider {
     public Selection getSelection() { return selected; }
     public String errorMessage() { return error; }
     public boolean editing() { return editing; }
+    public String controlsHint() { return controlsHint; }
     public Field focusedField() { return setup ? fields().get(row) : Field.MODE; }
 
     @Override public void update(InputHandler input) {
         if (state == State.ACTIVE) animationTick++;
         if (input == null || state != State.ACTIVE) return;
+        boolean wasSetup = setup, wasEditing = editing;
+        int oldRow = setup ? row : selectedMode;
+        String oldValues = values(), oldError = error;
+        handle(input);
+        int newRow = setup ? row : selectedMode;
+        if (setup != wasSetup) { pageTick = animationTick; fromRow = 0; rowTick = -100; }
+        else if (newRow != oldRow) { fromRow = oldRow; rowTick = animationTick; }
+        // Sonic 2's title menu blips on each selection change (s2.asm Obj0F); the adapter maps cues to ROM sounds.
+        if (state == State.EXITING) cues.accept(Cue.LAUNCH);
+        else if (!error.isEmpty() && !error.equals(oldError)) cues.accept(Cue.ERROR);
+        else if (setup && !wasSetup || editing && !wasEditing) cues.accept(Cue.ENTER);
+        else if (setup != wasSetup || newRow != oldRow || !values().equals(oldValues) || wasEditing && !editing) cues.accept(Cue.MOVE);
+    }
+
+    private String values() { return playerOne + "/" + playerTwo + "/" + practiceAct + "/" + viewport + "/" + rewinds + "/" + address + "/" + portText; }
+
+    private void handle(InputHandler input) {
+        controlsHint = MenuInput.controller(input)
+                ? MenuInput.directionLabel(input) + "  " + MenuInput.confirmLabel(input) + " SELECT  "
+                    + MenuInput.backLabel(input) + " BACK"
+                : "ARROWS / MOUSE  ENTER SELECT  ESC BACK";
         String text = MenuInput.consumeText(input); // Discard typing outside the editor; never replay it on later focus.
         if (editing) { updateEditor(input, text); return; }
         if (MenuInput.back(input)) {
@@ -246,21 +282,43 @@ public final class GolfMenu implements TitleScreenProvider {
         int width = Math.clamp(logicalWidth.getAsInt(), 320, 800);
         if (titleArt != null) titleArt.draw(width, animationTick);
         else backdrop(width); // Geometry-only preview and input fixtures need no ROM.
+        var c = new GolfCanvas(graphics, width, 224);
+        // The banner drops in and settles; the menu panel rises after it.
+        float banner = GolfMotion.easeOutBack(GolfMotion.progress(animationTick, 22));
+        var top = c.offset(0, GolfMotion.lerp(-30, 0, banner));
         int bannerLeft = (width - 236) / 2;
-        GolfText.panel(graphics, bannerLeft, 2, 236, 22, 0xAC2638, 1);
-        GolfText.frame(graphics, bannerLeft, 2, 236, 22, GolfText.GOLD);
-        GolfText.centered(graphics, "PUTT PUTT PARADISE", width, 8, 2, 0x641B36);
-        GolfText.centered(graphics, "PUTT PUTT PARADISE", width, 7, 2, GolfText.GOLD);
-        GolfText.panel(graphics, (width - 112) / 2, 24, 112, 10, 0x15254F, 1);
-        GolfText.centered(graphics, "SONIC 2 MINI GOLF", width, 26, 1, GolfText.CREAM);
+        top.rect(bannerLeft + 2, 4, 236, 22, 0x3A0A1A, 0.6f);
+        top.rect(bannerLeft, 2, 236, 22, 0xAC2638);
+        top.rect(bannerLeft, 2, 236, 2, 0xE0505E);
+        top.frame(bannerLeft, 2, 236, 22, GolfText.GOLD);
+        top.centered("PUTT PUTT PARADISE", 8, 2, 0x641B36);
+        top.centered("PUTT PUTT PARADISE", 7, 2, GolfText.GOLD);
+        // A glint sweeps across the title every few seconds.
+        long glint = Math.floorMod(animationTick, 240);
+        if (glint < 30) top.rect(bannerLeft + (int) (glint * 236 / 30) - 6, 3, 4, 20, GolfOverlay.WHITE, 0.35f);
+        var subtitle = c.fade(GolfMotion.progress(animationTick - 10, 14));
+        subtitle.rect((width - 112) / 2, 24, 112, 10, 0x15254F);
+        subtitle.centered("SONIC 2 MINI GOLF", 26, 1, GolfText.CREAM);
         int panelWidth = Math.min(width - 24, 376), left = (width - panelWidth) / 2;
-        GolfText.panel(graphics, left + 2, 109, panelWidth, 101, 0x06112B, 0.8f);
-        GolfText.panel(graphics, left, 107, panelWidth, 101, 0x15254F, 0.96f);
-        GolfText.frame(graphics, left, 107, panelWidth, 101, GolfText.GOLD);
-        if (setup) drawSetup(left, panelWidth);
-        else drawModes(left, panelWidth);
-        GolfText.panel(graphics, (width - 222) / 2, 212, 222, 10, 0x15254F, 0.96f);
-        GolfText.centered(graphics, "ARROWS / MOUSE  ENTER SELECT  ESC BACK", width, 214, 1, GolfText.CREAM);
+        var panel = c.offset(0, GolfMotion.lerp(130, 0, GolfMotion.easeOut(GolfMotion.progress(animationTick - 6, 24))));
+        panel.rect(left + 2, 109, panelWidth, 101, 0x06112B, 0.8f);
+        panel.rect(left, 107, panelWidth, 101, 0x15254F, 0.96f);
+        panel.rect(left, 107, panelWidth, 1, 0x3D5FA8);
+        panel.frame(left, 107, panelWidth, 101, GolfText.GOLD);
+        // Page changes slide the contents in from the side they lead to.
+        float page = GolfMotion.easeOut(GolfMotion.progress(animationTick - pageTick, 12));
+        var content = panel.offset(Math.round((1 - page) * (setup ? 18 : -18)), 0).fade(page);
+        if (setup) drawSetup(content, left, panelWidth);
+        else drawModes(content, left, panelWidth);
+        var footer = c.fade(GolfMotion.progress(animationTick - 20, 12));
+        footer.rect((width - 222) / 2, 212, 222, 10, 0x15254F, 0.96f);
+        footer.centered(controlsHint, 214, 1, GolfText.CREAM);
+    }
+
+    /** Highlight bar eases from the previous row; the selected label's cursor nudges in time. */
+    private int highlightY(int index, int first, int spacing) {
+        float t = GolfMotion.easeOut(GolfMotion.progress(animationTick - rowTick, 6));
+        return GolfMotion.lerp(first + fromRow * spacing, first + index * spacing, t);
     }
 
     private void backdrop(int width) {
@@ -283,24 +341,26 @@ public final class GolfMenu implements TitleScreenProvider {
         return switch (mode) { case PRACTICE -> "PRACTICE"; case LOCAL -> "LOCAL TWO PLAYERS"; case HOST -> "HOST ONLINE MATCH"; case JOIN -> "JOIN ONLINE MATCH"; };
     }
 
-    private void drawModes(int left, int panelWidth) {
-        GolfText.draw(graphics, "FULL EMERALD HILL ACTS 1 + 2", left + 12, 113, 1, GolfText.CREAM);
+    private void drawModes(GolfCanvas c, int left, int panelWidth) {
+        c.text("FULL EMERALD HILL ACTS 1 + 2", left + 12, 113, 1, GolfText.CREAM);
+        c.rect(left + 7, highlightY(selectedMode, 126, 17), panelWidth - 14, 13, 0xAC2638);
+        int nudge = Math.round(GolfMotion.pulse(animationTick, 30));
         for (int i = 0; i < 4; i++) {
             int y = 129 + i * 17;
-            if (i == selectedMode) GolfText.panel(graphics, left + 7, y - 3, panelWidth - 14, 13, 0xAC2638, 1);
-            GolfText.draw(graphics, (i == selectedMode ? "> " : "  ") + modeLabel(Mode.values()[i]), left + 12, y,
-                    1, i == selectedMode ? GolfText.GOLD : GolfText.CREAM);
+            boolean on = i == selectedMode;
+            c.text((on ? ">" : " "), left + 12 + (on ? nudge : 0), y, 1, GolfText.GOLD);
+            c.text(modeLabel(Mode.values()[i]), left + 24, y, 1, on ? GolfText.GOLD : GolfText.CREAM);
         }
-        GolfText.draw(graphics, "PUTT. CHIP. ROLL TO THE FINISH.", left + 12, 197, 1, 0x90B9E7);
+        c.text("PUTT. CHIP. ROLL TO THE FINISH.", left + 12, 197, 1, 0x90B9E7);
     }
 
-    private void drawSetup(int left, int panelWidth) {
-        GolfText.draw(graphics, modeLabel(mode), left + 12, 113, 1, GolfText.GOLD);
+    private void drawSetup(GolfCanvas c, int left, int panelWidth) {
+        c.text(modeLabel(mode), left + 12, 113, 1, GolfText.GOLD);
         List<Field> fields = fields();
+        c.rect(left + 7, highlightY(row, 122, 9), panelWidth - 14, 9, 0xAC2638);
         for (int i = 0; i < fields.size(); i++) {
             Field field = fields.get(i);
             int y = 124 + i * 9;
-            if (i == row) GolfText.panel(graphics, left + 7, y - 2, panelWidth - 14, 9, 0xAC2638, 1);
             String label = switch (field) {
                 case PLAYER_ONE -> mode == Mode.HOST || mode == Mode.JOIN ? "YOUR CHARACTER" : "PLAYER 1"; case PLAYER_TWO -> "PLAYER 2"; case ACT -> "PRACTICE ACT";
                 case VIEWPORT -> "VIEWPORT"; case ADDRESS -> "HOST ADDRESS"; case PORT -> "PORT";
@@ -312,15 +372,20 @@ public final class GolfMenu implements TitleScreenProvider {
                 case VIEWPORT -> viewport.pixelWidth() + " PX"; case ADDRESS -> address; case PORT -> portText; default -> "";
                 case REWINDS_HOLE -> rewinds.holeLabel(); case REWINDS_TURN -> rewinds.turnLabel();
             };
-            if (editing && i == row) value = editBuffer + "_";
+            boolean on = i == row;
+            if (editing && on) value = editBuffer + (GolfMotion.blink(animationTick, 30) ? "_" : " ");
+            else if (on && !value.isEmpty() && field != Field.ADDRESS && field != Field.PORT) value = "< " + value + " >";
             value = GolfText.fit(value, panelWidth - 120, 1);
-            GolfText.draw(graphics, label, left + 12, y, 1, i == row ? GolfText.GOLD : GolfText.CREAM);
-            GolfText.draw(graphics, value, left + panelWidth - 12 - GolfText.width(value, 1), y);
+            c.text(label, left + 12, y, 1, on ? GolfText.GOLD : GolfText.CREAM);
+            int valueColour = field == Field.PLAYER_ONE || field == Field.PLAYER_TWO
+                    ? GolfOverlay.characterColour(field == Field.PLAYER_ONE ? playerOne.name() : playerTwo.name()) : GolfText.CREAM;
+            if (field == Field.PLAYER_ONE || field == Field.PLAYER_TWO)
+                c.rect(left + panelWidth - 16 - GolfText.width(value, 1) - 6, y + 1, 4, 5, valueColour);
+            c.text(value, left + panelWidth - 12 - GolfText.width(value, 1), y, 1, GolfText.CREAM);
         }
         String help = !error.isEmpty() ? error : editing ? "TYPE TO REPLACE  BACKSPACE TO EDIT"
                 : focusedField() == Field.REWINDS_HOLE || focusedField() == Field.REWINDS_TURN ? "* UNLIMITED  BUDGET PER GOLFER"
                 : mode == Mode.JOIN || mode == Mode.HOST ? "MATCH ROM, VIEWPORT + REWIND RULES" : "LEFT/RIGHT CHANGES OPTIONS";
-        GolfText.draw(graphics, GolfText.fit(help, panelWidth - 24, 1), left + 12, 198, 1,
-                error.isEmpty() ? 0x90B9E7 : GolfText.GOLD);
+        c.text(GolfText.fit(help, panelWidth - 24, 1), left + 12, 198, 1, error.isEmpty() ? 0x90B9E7 : GolfText.GOLD);
     }
 }

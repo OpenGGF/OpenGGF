@@ -47,8 +47,22 @@ The title menu offers Practice on either act, local alternating two-player
 competition, Host, and Join. Both golfers can choose Sonic or Tails independently,
 including Sonic/Sonic or Tails/Tails. Competition plays Act 1 then Act 2, reversing
 the starting golfer for Act 2 and skipping a golfer who has already finished.
-The lower total of strokes plus penalties wins; equal totals draw. Concession or
+The lower total of strokes plus penalties wins; equal totals draw. The HUD shows
+the total directly; `(+1 PEN)` means that total already includes one penalty. Concession or
 DNF loses the match. Each golfer has independent course state.
+
+Competition introduces each incoming golfer with a turn card, including their
+player number when both choose the same character. **Press the named action
+button when ready**, release it, then press again to start selecting a shot.
+The prompt follows that player's actual binding: for example, `SPACE` for P1,
+`RIGHT SHIFT` for P2, or the assigned controller's physical button. A held button
+cannot confirm the handoff or accidentally start the next shot. Practice and a
+rewind retry keep their existing shot flow.
+
+Online, both peers see the same handoff. The active player confirms; the other
+sees who they are waiting for. The host accepts readiness before allowing a shot,
+and the course stays held while waiting. Settlement still passes the outgoing
+turn automatically. Reconnecting preserves the current handoff and pause state.
 
 Choose a viewport on the menu: native 320, or 352, 400, 528, and 800 logical
 pixels wide, all 224 pixels high. Online peers must use matching engine, API,
@@ -92,12 +106,20 @@ it clears the wall. It stops retrying at the apex and never moves through a wall
 Tall obstacles still need enough shot power to clear them.
 
 During shot selection, the duck pose plays its native entry once and holds the
-settled crouch, as when holding Down in-game.
+settled crouch, as when holding Down in-game. Unmoving golfers use a ROM-backed
+idle view immediately after a turn switch. Tails' separate appendage swishes
+in idle/duck poses and spins during charge, without stepping the held course.
 After power locks, feedback and a short pause lead to automatic release.
 The gauge rises and falls once; missing it commits a very light shot. Further
 charge/cancel presses cannot undo a committed stroke. The golfer stays rolling
 until settled. Higher power requests more native charge sounds before the same
 brief pause; charge/release sounds retain the game's native spindash pitch behavior.
+
+The HUD slides into place for shot selection, flashes when power locks, and
+leaves the course visible during flight. A short trail marks the current shot;
+penalties, refunds and finishes have their own feedback. Turn cards, menu choices
+and the animated results tally use Sonic 2 sounds from the ROM. These effects
+advance on the mod's presentation clock and stop while play is paused.
 
 The initial guide uses full power, as in Dream Course. The chip panel previews
 the intended hit point; the power panel previews the actual stopped spin and
@@ -124,7 +146,10 @@ objects, pickups and timers. It refunds that shot's stroke, keeps the same turn,
 and spends one allowance. A retry does not renew the per-turn allowance.
 Long shots rewind faster, taking at most 90 presentation ticks (about 1.5 seconds
 at 60 Hz). The playback uses bounded recordings of ROM-backed scenes; course
-physics remains held until the checkpoint is restored.
+physics remains held until the checkpoint is restored. The mod requests the
+engine's existing VHS picture-search effect during local and remote reverse
+playback; `rewind.vhsEffect` and `rewind.vhsTearBands` still control its appearance.
+This works independently of developer rewind enablement and stops while paused.
 
 Rewind is available during WATCH, while the shot is moving. Settlement, finishes
 and penalties resolve automatically and pass the turn; there is no A-to-accept
@@ -156,17 +181,24 @@ streaming are optional layers; a first mod does not need them.
 | [GolfMenu](src/main/java/paradise/ui/GolfMenu.java) | Turn menu choices into one validated `Selection` before gameplay starts | Keep setup separate from frame simulation |
 | [ShotMeter](src/main/java/paradise/model/ShotMeter.java) and [GolfRules](src/main/java/paradise/model/GolfRules.java) | A-only shot state machine and deterministic power/spin math | Test rules without a ROM, renderer or socket |
 | [GolfMatch](src/main/java/paradise/model/GolfMatch.java) and [RewindAllowance](src/main/java/paradise/model/RewindAllowance.java) | Scores, turns, shot identity and undo budgets | Keep the ledger outside world rollback |
+| [TurnReadiness](src/main/java/paradise/model/TurnReadiness.java) | Fresh-press handoff and authoritative ready acceptance | Consume confirmation separately from gameplay input; a retry keeps its ready turn |
 | [GolfMode](src/main/java/paradise/GolfMode.java) and [GolfSwing](src/main/java/paradise/GolfSwing.java) | Coordinate held/native frames, then apply golf's calculated impulse and landing spin | Choose policy in the mod; use bounded native operations for world changes |
+| [GolfHud](src/main/java/paradise/ui/GolfHud.java) and [GolfOverlay](src/main/java/paradise/ui/GolfOverlay.java) | Pure local/remote phase, ownership, hints and score display | Keep friendly UI policy in the mod and render immutable values; hide choices the viewer cannot make |
+| [GolfFeedback](src/main/java/paradise/ui/GolfFeedback.java), [GolfMotion](src/main/java/paradise/ui/GolfMotion.java), [GolfCards](src/main/java/paradise/ui/GolfCards.java) and [GolfSounds](src/main/java/paradise/GolfSounds.java) | Presentation events, easing, cards and ROM sound choices | Return sound cues from a pure timeline; keep rendering and audio adapters separate from rules |
 | [GolfPoseClock](src/main/java/paradise/presentation/GolfPoseClock.java), [GolfScene](src/main/java/paradise/presentation/GolfScene.java) and [ShotReplay](src/main/java/paradise/presentation/ShotReplay.java) | Pose timing, finish decoration and bounded reverse playback | Render immutable values without advancing gameplay |
 | [GolfOnline](src/main/java/paradise/GolfOnline.java) then [GolfRoom](src/main/java/paradise/net/GolfRoom.java) | Adapt the game to a bounded TCP room with host-owned decisions | Keep protocol and transport away from physics rules |
 
 ### Follow one shot
 
 1. `GolfMenu.Selection` configures the controller. The ROM-backed spawn settles
-   before `GolfMode.openTurn` captures a neutral lie.
+   before `GolfMode.openTurn` captures a neutral lie. Competition holds the
+   incoming golfer for readiness. Locally a fresh A confirms; online that owner
+   requests confirmation and waits for the host's authoritative AIM state.
 2. `beforeTick` advances the shot meter from logical A and arrow inputs. It
    returns `false` while aiming, charging or rewinding; native world
-   timers, objects and physics remain held.
+   timers, objects and physics remain held. Pending level-entry music still
+   counts down at its native presentation rate; holding physics does not stop
+   the sound driver.
 3. The meter emits a committed `GolfShot`. `GolfMatch` assigns its identity and
    charges a stroke; `GolfSwing` calculates the same velocity used by the dots,
    calls `CourseControl.launchRolling`, and requests the native release sound.
@@ -180,8 +212,9 @@ streaming are optional layers; a first mod does not need them.
 
 `CourseControl` owns checkpoint compatibility, native rolling-radius/support
 changes, exact registered character replacement and explicit level loading.
-It knows nothing about EHZ, golf power, spin, scoring, turn order or sounds.
-Those decisions belong to the files above. Character replacement is for a
+It knows nothing about EHZ, golf power, spin, scoring, turn order or golf's
+presentation cues. Those decisions belong to the files above; native level
+initialization and music scheduling remain engine-owned. Character replacement is for a
 single controlled main player; this example intentionally has no CPU sidekick.
 Speeds passed to `launchRolling` use signed native 8.8 units: **256 = one pixel
 per physics step**. Positions in `playerState()` are character centres.
@@ -199,6 +232,20 @@ accepts a module-owned destination; this mod's `GolfModule` deliberately admits
 only Emerald Hill. Add a route check for every new act and character before
 claiming it works. For a different object rule, register your own namespaced
 factory and preserve the ROM placement fields when replacing the spawn.
+
+`GolfHud` is a small next step after the rules: change a friendly stage label or
+hint there, then run `TestGolfMenu`. Remote observers use the authoritative phase
+and never show a stale local aiming meter. Presentation requests carry only
+intensity/speed; the host owns shaders and its user settings.
+
+For a presentation exercise, adjust a card's easing in `GolfMotion` or timing in
+`GolfFeedback`, leaving `ShotMeter` and `GolfMatch` unchanged. Its timeline has no
+renderer, ROM or socket dependency and is checked by `TestGolfModel`. Use
+`CourseControl.buttonLabel` for action prompts rather than guessing a key name.
+Networking changes also require `TestGolfTransport` and the actual two-JVM
+`TestGolfOnlineIntegration`; matching text on two screens alone does not prove
+that readiness or scoring is synchronized. Golf protocol 5 includes handoff
+state and explicitly refuses peers built against a different protocol.
 
 Use instance-owned state. Capture every field that affects subsequent frames
 in the controller's `State`; dispose owned presenters and sockets in `close`.

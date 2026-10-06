@@ -5,7 +5,7 @@ import com.openggf.game.ModApi;
 /** A render-only native pose. It never changes a playable object's animation or clocks. */
 @ModApi
 public record PlayerPresentationPose(Kind kind, long tick, int facing) {
-    @ModApi public enum Kind { NATIVE, DUCK, SPINDASH }
+    @ModApi public enum Kind { NATIVE, DUCK, SPINDASH, IDLE }
 
     public PlayerPresentationPose {
         java.util.Objects.requireNonNull(kind, "kind");

@@ -21,6 +21,7 @@ final class GolfOnline implements AutoCloseable {
     private int concededOwner = -1;
     private GolfPacket.ShotId accepted;
     private GolfPacket.ShotStatus shotStatus;
+    private GolfPacket.ShotId resolved;
 
     GolfOnline(GolfMenu.Selection selection, CourseControl course) throws IOException {
         var fingerprints = new GolfPacket.Fingerprints(GolfCodec.SCHEMA, course.apiIdentity(),
@@ -55,21 +56,44 @@ final class GolfOnline implements AutoCloseable {
             if ("charge".equals(sound.sound()) && sound.id().owner() == 0) GameServices.audio().playSfx(com.openggf.audio.GameSound.SPINDASH_CHARGE);
             else if ("release".equals(sound.sound())) GameServices.audio().playSfx(com.openggf.audio.GameSound.SPINDASH_RELEASE);
         } else if (packet instanceof GolfPacket.ShotAccepted value) { accepted = value.id(); error = ""; }
-        else if (packet instanceof GolfPacket.ShotStatus value) {
-            if (value.phase() == GolfPacket.ShotPhase.REWINDING
-                    && (shotStatus == null || shotStatus.phase() != value.phase())) GameServices.audio().stopAllSfx();
-            shotStatus = value;
-        }
+        else if (packet instanceof GolfPacket.ShotStatus value) shotStatus = value;
         else if (packet instanceof GolfPacket.Rejected rejected) { accepted = null; error = rejected.reason(); }
-        else if (packet instanceof GolfPacket.TurnCommitted committed) completed = committed.nextOwner() < 0;
+        else if (packet instanceof GolfPacket.TurnCommitted committed) { completed = committed.nextOwner() < 0; resolved = committed.id(); }
         else if (packet instanceof GolfPacket.Leave leave && GolfRoom.CONCEDED_REASON.equals(leave.reason())) concededOwner = leave.owner();
     }
-    void open(GolfMatch.State state, GolfMatch.ShotId id, CourseControl.PlayerState ball) {
+    void open(GolfMatch.State state, GolfMatch.ShotId id, CourseControl.PlayerState ball, boolean readyRequired) {
         turn = wire(id); cue = 0;
         room.publishTurn(new GolfPacket.TurnOpened(turn, ball.x(), ball.y(), ball.angle() & 255,
                 GameServices.camera().getFocusedSprite().getYRadius() - GameServices.camera().getFocusedSprite().getRollYRadius(),
-                score(state, 0), score(state, 1)));
+                score(state, 0), score(state, 1), readyRequired));
     }
+    /** The authoritative turn opening this peer has adopted, or null before the first one. */
+    GolfPacket.TurnOpened opened() {
+        var opened = room.state().remoteTurnOpened();
+        return opened != null && opened.id().equals(turn) ? opened : null;
+    }
+    /** Guest view: the host is holding the current turn until its owner's READY is accepted. */
+    boolean awaitingReady() {
+        var opened = opened();
+        return opened != null && opened.readyRequired()
+                && (shotStatus == null || shotStatus.phase() == GolfPacket.ShotPhase.HANDOFF);
+    }
+    void rejectShot(GolfPacket.ShotId id, String reason) { room.rejectRemote(id, reason); }
+    /**
+     * Owner whose accepted shot is in play but not yet in the published scores, or -1. Wire scores
+     * arrive at turn boundaries; the host charges the stroke at acceptance, so the spectator adds it
+     * for display until the committed result (or the refund) replaces it.
+     */
+    int unpublishedStroke() {
+        var status = shotStatus;
+        if (status == null || turn == null || !status.id().equals(turn) || turn.equals(resolved)) return -1;
+        return switch (status.phase()) {
+            case CHARGING, WATCH, REWINDING -> turn.owner();
+            default -> -1;
+        };
+    }
+    /** Camera of the latest accepted authoritative view, for overlay anchors; null before the first. */
+    int[] viewCamera() { return lastFrame == null ? null : new int[]{lastFrame.cameraX(), lastFrame.cameraY()}; }
     GolfPacket.ShotId wire(GolfMatch.ShotId id) {
         return new GolfPacket.ShotId(room.state().match(), id.actIndex() + 1, id.turnSequence(), id.shotSequence(), id.player());
     }
@@ -106,11 +130,11 @@ final class GolfOnline implements AutoCloseable {
         return new GolfPacket.Score(golfer.holes().stream().mapToInt(GolfMatch.HoleScore::strokes).sum(),
                 golfer.holes().stream().mapToInt(GolfMatch.HoleScore::penalties).sum(), golfer.holes().get(state.actIndex()).finished());
     }
-    void publish(long tick, PlayerPresentationPose pose, int finishX, int finishY) {
+    void publish(long tick, PlayerPresentationPose pose, int finishX, int finishY, long wave) {
         if (turn == null || !room.state().ready() || room.state().ended()) return;
         try {
             var frame = paradise.presentation.GolfScene.withFinishFlag(
-                    GameServices.level().captureScene(++revision, pose, GameServices.camera().getWidth() / 2, 112), finishX, finishY);
+                    GameServices.level().captureScene(++revision, pose, GameServices.camera().getWidth() / 2, 112), finishX, finishY, wave);
             room.publishView(new GolfPacket.ViewFrame(turn, revision, tick, SceneFrameCodec.encode(frame)));
         } catch (IOException oversized) { error = "COURSE VIEW TOO LARGE"; room.close(); }
     }

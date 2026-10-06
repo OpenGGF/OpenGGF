@@ -40,7 +40,9 @@ public final class ProtocolProbe {
                 new Reconnect(MATCH, 1, UUID.randomUUID(), 1, 4),
                 new SoundCue(shot.id(), 4, 2, "spindash"), new Rejected(shot.id(), "wrong owner"),
                 new ShotControl(shot.id(), ShotAction.REWIND),
-                new ShotStatus(shot.id(), ShotPhase.WATCH, 3, 1), new ShotStatus(shot.id(), ShotPhase.REWINDING, -1, -1));
+                new ShotStatus(shot.id(), ShotPhase.WATCH, 3, 1), new ShotStatus(shot.id(), ShotPhase.REWINDING, -1, -1),
+                new TurnOpened(shot.id(), 10, 20, 224, 5, score, score, true),
+                new ShotControl(shot.id(), ShotAction.READY), new ShotStatus(shot.id(), ShotPhase.HANDOFF, 3, 1));
         var combined = new ByteArrayOutputStream();
         for (var packet : packets) GolfCodec.write(combined, packet);
         InputStream fragmented = new FilterInputStream(new ByteArrayInputStream(combined.toByteArray())) {
@@ -55,6 +57,16 @@ public final class ProtocolProbe {
         rejects(() -> GolfCodec.read(new ByteArrayInputStream(new byte[]{0, 0, 0, 2, 99, 1})));
         rejects(() -> GolfCodec.read(new ByteArrayInputStream(new byte[]{0, 0, 0, 2, 1, 99})));
         rejects(() -> GolfCodec.read(new ByteArrayInputStream(new byte[]{0, 0, 0, 2, 1, 1})));
+        // A peer from another protocol generation is named as such, not reported as a broken socket.
+        byte[] older = GolfCodec.encode(new Hello(prints(), "sonic")); older[4] = (byte) (GolfCodec.SCHEMA - 1);
+        try { GolfCodec.read(new ByteArrayInputStream(older)); throw new AssertionError("old schema accepted"); }
+        catch (GolfCodec.IncompatibleProtocolException mismatch) {
+            check(mismatch.peerSchema() == GolfCodec.SCHEMA - 1 && mismatch.getMessage().startsWith("incompatible"), "named schema mismatch");
+        }
+        byte[] readyFlag = GolfCodec.encode(new TurnOpened(shot.id(), 10, 20, 224, 5, score, score, true));
+        readyFlag[readyFlag.length - 1] = 2;
+        rejects(() -> GolfCodec.read(new ByteArrayInputStream(readyFlag)));
+        check(!new TurnOpened(shot.id(), 10, 20, 224, 5, score, score).readyRequired(), "turns are unheld unless the host says so");
         rejects(() -> new ShotRequest(shot.id(), 1, 45, 1000, -101));
         rejects(() -> new ShotRequest(shot.id(), 1, 0, 1000, 1));
         byte[] encoded = GolfCodec.encode(shot);

@@ -434,6 +434,116 @@ class TestPuttPuttParadise {
     }
 
     private void pressA(HeadlessTestFixture fixture) { fixture.stepFrame(false, false, false, false, true); }
+    /** Incoming-golfer confirmation at a competition handoff, then the release it requires. */
+    private void ready(HeadlessTestFixture fixture) throws Exception {
+        assertEquals("WAITING", value(value(mode(), "readinessState"), "phase").toString(), "turn is held for readiness");
+        pressA(fixture); fixture.stepIdleFrames(1);
+        assertEquals("NONE", value(value(mode(), "readinessState"), "phase").toString(), "fresh A confirms");
+    }
+    private Object readiness(String accessor) throws Exception { return value(value(mode(), "readinessState"), accessor); }
+    private void input(HeadlessTestFixture fixture, int held, int actions, int pressed) {
+        var player = com.openggf.control.PlayerInputState.of(held, 0, actions, pressed, false, false);
+        com.openggf.game.mode.ControlledFrameRuntime.step(fixture.runtime(), new com.openggf.control.InputHandler(),
+                com.openggf.control.LogicalInputSnapshot.ofPlayers(player, com.openggf.control.PlayerInputState.neutral()));
+    }
+    private static void assertCourseUnchanged(com.openggf.game.rewind.CompositeSnapshot before,
+                                              com.openggf.game.rewind.CompositeSnapshot after, String message) {
+        for (var entry : before.entries().entrySet())
+            assertEquals(List.of(), com.openggf.game.rewind.RewindSnapshotDiff.diffKey(entry.getKey(), entry.getValue(),
+                    after.get(entry.getKey())), message + " " + entry.getKey());
+    }
+
+    @ParameterizedTest @CsvSource({"sonic,sonic", "tails,sonic"})
+    void handoffHoldsTheCourseUntilTheIncomingGolfersOwnFreshPress(String one, String two) throws Exception {
+        final int a = com.openggf.control.InputActionMasks.ACTION_A;
+        var f = launch(one, 0); local(one, two); f.stepIdleFrames(120);
+        var registry = f.runtime().getRewindRegistry();
+        assertEquals("WAITING", readiness("phase").toString(), "a match introduces its first golfer");
+        assertEquals(0, readiness("owner"));
+        assertEquals("HANDOFF", value(value(mode(), "hudShotView"), "stage"));
+        assertTrue(value(value(mode(), "hudShotView"), "hint").toString().startsWith("SPACE"), "P1's own A binding");
+        var before = registry.captureCourse();
+        f.stepIdleFrames(30);
+        assertCourseUnchanged(before, registry.captureCourse(), "a waiting golfer holds the course");
+        // Start's menu cannot confirm: its Resume press must be released first.
+        tick(f, 0, 0, true); tick(f, 0, 0, false); input(f, 0, a, a);
+        assertEquals("WAITING", readiness("phase").toString(), "the menu's A is not a ready press");
+        input(f, 0, 0, 0); input(f, 0, a, a);
+        assertEquals("NONE", readiness("phase").toString());
+        input(f, 0, 0, 0);
+        commit(f, 1);
+        int rows = 0;
+        // Hold A through the shot and its automatic settlement into P2's turn.
+        while ((int) value(matchState(), "activePlayer") == 0 && rows++ < 400) input(f, 0, a, 0);
+        assertEquals(1, value(matchState(), "activePlayer"), "settlement still passes the turn automatically");
+        assertEquals("WAITING", readiness("phase").toString());
+        assertEquals(1, readiness("owner"));
+        assertEquals(two, GameServices.camera().getFocusedSprite().getCode());
+        String hint = value(value(mode(), "hudShotView"), "hint").toString();
+        assertTrue(hint.startsWith("RIGHT SHIFT"), "P2's prompt names P2's A binding: " + hint);
+        var waiting = registry.captureCourse();
+        for (int i = 0; i < 10; i++) input(f, 0, a, a);
+        assertEquals("WAITING", readiness("phase").toString(), "an A held across the handoff cannot confirm");
+        assertCourseUnchanged(waiting, registry.captureCourse(), "held handoff");
+        input(f, 0, 0, 0); input(f, 0, a, a);
+        assertEquals("NONE", readiness("phase").toString(), "a released then fresh A confirms");
+        for (int i = 0; i < 10; i++) input(f, 0, a, 0);
+        assertEquals("AIM", value(shotState(), "stage").toString(), "the confirming press cannot also start the shot");
+        assertNull(value(matchState(), "pending"));
+        input(f, 0, 0, 0); input(f, 0, a, a);
+        assertEquals("POWER", value(shotState(), "stage").toString(), "a fresh press after release starts P2's putt");
+    }
+
+    @Test void zoneMusicStartsAtCourseEntryAndNeverRestartsDuringShotsOrRestores() throws Exception {
+        var f = launch("sonic", 0); configureRewinds("PRACTICE", "sonic", "tails", 0, "NATIVE_4_3", 3, 1);
+        var profile = f.runtime().getWorldSession().getGameModule().getLevelInitProfile();
+        var audio = GameServices.audio(); int loaded = audio.commandTimeline().entryCount();
+        assertTrue(profile.isLevelMusicPublicationPending(), "S2 level load arms the Level_PlayBgm countdown");
+        f.stepIdleFrames(120);
+        assertFalse(profile.isLevelMusicPublicationPending(), "course entry completes the ROM-timed level music request");
+        var entryMusic = commandsSince(loaded, com.openggf.audio.rewind.AudioCommand.PlayMusic.class);
+        // The lie-setup restore once requested the music at row 0 and the countdown then restarted
+        // it: an audible burst, a gap, and the intro again. The countdown owns the only request.
+        assertEquals(1, entryMusic.size(), "course entry requests the zone music exactly once: " + entryMusic);
+        int entries = audio.commandTimeline().entryCount();
+        commit(f, 55); f.stepIdleFrames(45);
+        assertEquals("WATCH", value(shotState(), "stage").toString());
+        tick(f, 0, 0, true); tick(f, 0, 0, false);
+        tick(f, 2, 0, false); tick(f, 0, com.openggf.control.InputActionMasks.ACTION_A, false);
+        f.stepIdleFrames(100);
+        assertNull(value(matchState(), "pending"), "whole-shot restore completed");
+        commit(f, 55); f.stepIdleFrames(60);
+        var music = commandsSince(entries, com.openggf.audio.rewind.AudioCommand.PlayMusic.class);
+        assertEquals(List.of(), music, "shots and course restores must not restart the zone music");
+        var stops = commandsSince(entries, com.openggf.audio.rewind.AudioCommand.StopAllSfx.class);
+        // A driver-wide SFX stop after any sound effect gated the S2 presentation output, music
+        // included, until the next SFX: every turn switch and rewind went silent while aiming.
+        assertEquals(List.of(), stops, "course restores and whole-shot rewinds leave the sound driver running");
+    }
+
+    /** Recorded commands of one kind from an absolute timeline index (indices survive pruning). */
+    private static List<com.openggf.audio.rewind.AudioTimelineEntry> commandsSince(int from, Class<?> kind) {
+        var timeline = GameServices.audio().commandTimeline();
+        return java.util.stream.IntStream.range(Math.max(from, timeline.firstRetainedEntryIndex()), timeline.entryCount())
+                .mapToObj(timeline::entryAt).filter(e -> kind.isInstance(e.command())).toList();
+    }
+
+    @Test void rewindRetryKeepsTheConfirmedTurnWithoutAnotherHandoff() throws Exception {
+        var f = launch("sonic", 0); configureRewinds("LOCAL", "sonic", "tails", 0, "NATIVE_4_3", 3, 1);
+        f.stepIdleFrames(120); ready(f);
+        var saved = registry(f).capture();
+        commit(f, 55); f.stepIdleFrames(45);
+        assertEquals("WATCH", value(shotState(), "stage").toString());
+        tick(f, 0, 0, true); tick(f, 0, 0, false);
+        tick(f, 2, 0, false); tick(f, 0, com.openggf.control.InputActionMasks.ACTION_A, false);
+        f.stepIdleFrames(100);
+        assertNull(value(matchState(), "pending"), "rewound shot refunded");
+        assertEquals(0, value(matchState(), "activePlayer"), "the retry keeps the turn");
+        assertEquals("NONE", readiness("phase").toString(), "a retry is not a handoff");
+        registry(f).restore(saved);
+        assertEquals("NONE", readiness("phase").toString(), "readiness is captured with the mode");
+    }
+    private static com.openggf.game.rewind.RewindRegistry registry(HeadlessTestFixture f) { return f.runtime().getRewindRegistry(); }
     private void commit(HeadlessTestFixture fixture, int meterTicks) throws Exception {
         pressA(fixture);
         if (value(shotState(), "stage").toString().equals("SPIN")) {
@@ -522,8 +632,22 @@ class TestPuttPuttParadise {
         input.handleKeyEvent(GameServices.configuration().getInt(SonicConfiguration.LIVE_REWIND_KEY), org.lwjgl.glfw.GLFW.GLFW_PRESS);
         var loop = new com.openggf.GameLoop(input); loop.setGameplayMode(f.runtime()); loop.setGameMode(GameMode.LEVEL);
         int rows = 0;
-        do { loop.step(); rows++; } while (value(matchState(), "pending") != null && rows < 100);
+        do {
+            loop.step(); rows++;
+            if (rows == 1) {
+                assertTrue(loop.liveRewindEffectIntensity() > 0, "creator shot rewind must request the production VHS effect");
+                assertTrue(loop.liveRewindEffectSpeed() > 0, "creator rewind supplies its visual playback speed");
+                var ambient = new com.openggf.GameLoop(new com.openggf.control.InputHandler());
+                ambient.setGameMode(GameMode.LEVEL);
+                assertTrue(ambient.liveRewindEffectIntensity() > 0, "ambient gameplay binding requests the same effect");
+                loop.pause(); assertEquals(0, loop.liveRewindEffectIntensity(), "window pause holds the creator effect");
+                loop.resume(); assertTrue(loop.liveRewindEffectIntensity() > 0);
+                loop.toggleUserPause(); assertEquals(0, loop.liveRewindEffectIntensity(), "host keyboard pause holds the creator effect");
+                loop.toggleUserPause();
+            }
+        } while (value(matchState(), "pending") != null && rows < 100);
         assertTrue(rows < 100, "rewind completion is bounded");
+        assertEquals(0, loop.liveRewindEffectIntensity(), "restored lie must stop the creator effect");
         assertEquals("AIM", value(shotState(), "stage").toString());
         assertEquals(start, checkpointCourse(f).playerState());
         for (var entry : before.entries().entrySet()) assertEquals(List.of(), com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
@@ -606,7 +730,7 @@ class TestPuttPuttParadise {
 
     @Test void settledAndPenaltyShotsPassTurnsAutomaticallyAndRejectLateRewind() throws Exception {
         var f = launch("sonic", 0); configureRewinds("LOCAL", "sonic", "tails", 0, "NATIVE_4_3", 5, 3);
-        f.stepIdleFrames(120); commit(f, 1); f.stepIdleFrames(100);
+        f.stepIdleFrames(120); ready(f); commit(f, 1); f.stepIdleFrames(100);
         assertEquals(1, value(matchState(), "activePlayer"), "settlement automatically opens player two's turn");
         assertNull(value(matchState(), "pending"));
         var before = ((com.openggf.game.rewind.RewindSnapshottable<?>) mode()).capture();
@@ -616,7 +740,7 @@ class TestPuttPuttParadise {
         loop.step();
         assertEquals(1, value(matchState(), "activePlayer"), "late rewind cannot undo the preceding turn");
         assertEquals(value(before, "allowance"), value(((com.openggf.game.rewind.RewindSnapshottable<?>) mode()).capture(), "allowance"));
-        commit(f, 55); f.stepIdleFrames(32); GameServices.camera().getFocusedSprite().setHurt(true); f.stepIdleFrames(1);
+        f.stepIdleFrames(1); ready(f); commit(f, 55); f.stepIdleFrames(32); GameServices.camera().getFocusedSprite().setHurt(true); f.stepIdleFrames(1);
         assertEquals(0, value(matchState(), "activePlayer"), "penalty automatically passes the turn");
         var golfer = ((List<?>) value(matchState(), "golfers")).get(1);
         assertEquals(2, value(golfer, "total"), "one stroke plus one penalty");
@@ -639,13 +763,14 @@ class TestPuttPuttParadise {
         var fixture = launch(one, 0); local(one, two); fixture.stepIdleFrames(120);
         var registry = fixture.runtime().getRewindRegistry();
         var firstNeutral = registry.captureCourse(); var rewind = registry.capture();
-        commit(fixture, 55); fixture.stepIdleFrames(32);
+        ready(fixture); commit(fixture, 55); fixture.stepIdleFrames(32);
         GameServices.camera().getFocusedSprite().setHurt(true); fixture.stepIdleFrames(1);
         assertEquals(1, value(matchState(), "activePlayer"));
         assertEquals(two, GameServices.camera().getFocusedSprite().getCode());
         assertEquals(firstNeutral.get("camera"), GameServices.camera().capture(),
                 "the next golfer keeps the prepared view instead of disappearing under the HUD");
-        fixture.stepIdleFrames(1); commit(fixture, 55); fixture.stepIdleFrames(32);
+        assertHeldGolferVisible(fixture);
+        fixture.stepIdleFrames(1); ready(fixture); commit(fixture, 55); fixture.stepIdleFrames(32);
         GameServices.camera().getFocusedSprite().setHurt(true); fixture.stepIdleFrames(1);
         assertEquals(0, value(matchState(), "activePlayer"));
         assertEquals(one, GameServices.camera().getFocusedSprite().getCode());
@@ -660,6 +785,25 @@ class TestPuttPuttParadise {
         for (var entry : firstNeutral.entries().entrySet())
             assertEquals(List.of(), com.openggf.game.rewind.RewindSnapshotDiff.diffKey(entry.getKey(), entry.getValue(),
                     registry.captureCourse().get(entry.getKey())), "debug rewind " + entry.getKey());
+    }
+
+    private void assertHeldGolferVisible(HeadlessTestFixture fixture) throws Exception {
+        var before = fixture.runtime().getRewindRegistry().captureCourse();
+        var clock = value(value(mode(), "capture"), "poseClock");
+        var pose = new com.openggf.game.presentation.PlayerPresentationPose(
+                (com.openggf.game.presentation.PlayerPresentationPose.Kind) value(clock, "kind"),
+                (long) value(clock, "elapsed"), (int) value(shotState(), "direction"));
+        var frame = GameServices.level().captureScene(12345, pose);
+        assertTrue(frame.tiles().stream().anyMatch(t -> t.layer() ==
+                com.openggf.game.presentation.ScenePresentationFrame.Layer.PLAYER),
+                "A held turn must display the newly selected golfer without advancing physics");
+        if (GameServices.camera().getFocusedSprite().getCode().equals("tails"))
+            assertTrue(frame.tiles().stream().anyMatch(t -> t.art().recipe().equals("tail/tails")),
+                    "Standing Tails must include his independently rendered tails");
+        for (var entry : before.entries().entrySet())
+            assertEquals(List.of(), com.openggf.game.rewind.RewindSnapshotDiff.diffKey(entry.getKey(), entry.getValue(),
+                    fixture.runtime().getRewindRegistry().captureCourse().get(entry.getKey())),
+                    "display does not advance the held world " + entry.getKey());
     }
 
     @Test void exactSweptGateRejectsDiagonalBoundingBoxFalsePositive() throws Exception {
@@ -795,6 +939,7 @@ class TestPuttPuttParadise {
             var route = route(act);
             assertTrue(next[act][owner] < route.length,"fresh route exhausted for P"+(owner+1)+" EHZ"+(act+1));
             var shot = route[next[act][owner]++];
+            if (readiness("phase").toString().equals("WAITING")) ready(f);
             shoot(f,shot[0],shot[1],shot[2]);
             String outcome = value(value(matchState(),"lastResolved"),"outcome").toString();
             assertTrue(outcome.equals("SETTLED") || outcome.equals("FINISH"),one+"/"+two+" P"+(owner+1)+" EHZ"+(act+1)+" "+outcome);

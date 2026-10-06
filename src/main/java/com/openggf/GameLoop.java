@@ -447,11 +447,23 @@ public class GameLoop {
     }
 
     public float liveRewindEffectIntensity() {
-        return liveRewindManager.effectIntensity();
+        return Math.max(liveRewindManager.effectIntensity(), controlledRewindPresentation().intensity());
     }
 
     public float liveRewindEffectSpeed() {
-        return liveRewindManager.effectSpeed();
+        var controlled = controlledRewindPresentation();
+        return controlled.intensity() > liveRewindManager.effectIntensity()
+                ? controlled.speed() : liveRewindManager.effectSpeed();
+    }
+
+    private com.openggf.game.presentation.RewindPresentation controlledRewindPresentation() {
+        if (currentGameMode != GameMode.LEVEL || isPaused()) {
+            return com.openggf.game.presentation.RewindPresentation.NONE;
+        }
+        var controller = com.openggf.game.mode.ControlledFrameRuntime.controller(resolveGameplayModeContext());
+        return controller == null ? com.openggf.game.presentation.RewindPresentation.NONE
+                : java.util.Objects.requireNonNullElse(controller.rewindPresentation(),
+                        com.openggf.game.presentation.RewindPresentation.NONE);
     }
 
     public void renderUserRecordingHud(PixelFontTextRenderer textRenderer) {

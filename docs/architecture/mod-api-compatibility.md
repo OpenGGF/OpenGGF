@@ -68,6 +68,9 @@ is absent, retaining stock admission. Controlled HOLD is a recorded mode row;
 SETUP_ONLY is not. Opaque course rollback excludes the engine-bound controller
 adapter by identity and preserves past debug history; actual act loads reset it.
 Prepared scenes carry value/art identities, never ROM bytes or mutable snapshots.
+The additive `PlayerPresentationPose.Kind.IDLE` selects a ROM-backed held idle
+view immediately after a roster switch; appendage selection remains internal
+and shares native tail scripts with the live renderer.
 Compiler-generated immutable enum constants and switch tables are now accepted
 by the static initializer validator; arbitrary author static objects remain rejected.
 These extend the mutable candidate pin and keep `0.7.0` unpublished.
@@ -302,3 +305,20 @@ scoring remain creator-owned. `MenuInput.Pointer` adds shared logical menu mouse
 coordinates without adding a window handle to the creator signature. Both changes
 are represented by the regenerated `0.7` candidate pin; published pins and the
 release policy descriptor remain unchanged.
+
+The final presentation follow-up adds the bounded `RewindPresentation` record
+and optional controller request to the mutable 0.7 candidate. Default/null
+requests retain stock rendering. This is a view-only value: native admission,
+world checkpoints and undo permission remain unchanged. Candidate pins and
+`ModApiVersion` are refreshed while the release descriptor is retained; API version/status
+and immutable published baselines do not change.
+
+The turn-handoff follow-up adds `ButtonPrompts` (with its `Button` enum) and
+`CourseControl.buttonLabel(player, button)`. A prompt names one local player's own
+binding on that player's last intentional device: the bound key ("Space", "Right
+Shift"), or the physical pad button that produces the action in the assigned pad's
+family ("X", "Square", "West"); `REWIND` names the shared rewind key or the primary
+pad's bumper. Labels are presentation values derived from live bindings and never
+alter input, replay rows or gameplay. The regenerated 0.7 candidate pin adds 17
+signature lines; `ModApiVersion` documents the capability; the release descriptor,
+API version/status and published baselines are unchanged.

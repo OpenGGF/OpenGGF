@@ -90,6 +90,7 @@ public final class GolfOnlinePeerProbe {
                         String[] command = line.trim().split("\\s+");
                         if (command[0].equals("QUIT")) { peer.shutdown(); return; }
                         if (command[0].equals("OVERLAY")) peer.controller.drawOverlay();
+                        else if (command[0].equals("READY_INTENT")) peer.readyIntent(loader, command.length > 1 && command[1].equals("stale"));
                         else {
                             require(command.length == 5 && command[0].equals("STEP"), "invalid peer command");
                             int count = Integer.parseInt(command[1]); require(count >= 1 && count <= 60, "unbounded row request");
@@ -118,8 +119,29 @@ public final class GolfOnlinePeerProbe {
         controller.getClass().getMethod("configure", selection).invoke(controller, choice);
     }
 
+    /**
+     * Sends a READY intent for the current (or previous) guest turn straight through the room,
+     * bypassing GolfMode's one-request-per-press gate: a duplicate/replayed/stale message.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void readyIntent(URLClassLoader loader, boolean stale) throws Exception {
+        require(!host, "READY_INTENT is a guest command");
+        Object room = room(); Object opened = value(value(room, "state"), "remoteTurnOpened");
+        require(opened != null, "no turn to confirm");
+        Object id = value(opened, "id");
+        Class shotId = loader.loadClass("paradise.net.GolfPacket$ShotId");
+        if (stale) id = shotId.getConstructors()[0].newInstance(value(id, "match"), value(id, "hole"),
+                (long) value(id, "turn") - 1, (long) value(id, "shot") - 1, value(id, "owner"));
+        Class action = loader.loadClass("paradise.net.GolfPacket$ShotAction");
+        Object control = loader.loadClass("paradise.net.GolfPacket$ShotControl").getConstructor(shotId, action)
+                .newInstance(id, Enum.valueOf(action, "READY"));
+        var send = room.getClass().getDeclaredMethod("send", loader.loadClass("paradise.net.GolfPacket"));
+        send.setAccessible(true); send.invoke(room, control);
+    }
+
     private void step(int held, int actions, boolean start) throws Exception {
         var before = fixture.gameplayMode().getRewindRegistry().captureCourse();
+        boolean entryMusicPending = GameServices.module().getLevelInitProfile().isLevelMusicPublicationPending();
         Object beforeMatch = value(controller, "matchState");
         Object beforePending = beforeMatch == null ? null : value(beforeMatch, "pending");
         Object beforeId = beforePending == null ? null : value(beforePending, "id");
@@ -145,6 +167,9 @@ public final class GolfOnlinePeerProbe {
             var after = fixture.gameplayMode().getRewindRegistry().captureCourse();
             require(before.entries().keySet().equals(after.entries().keySet()), "held row changed course adapter layout");
             for (var entry : before.entries().entrySet()) {
+                // A held row is still a presented VBlank: only the pending ROM entry-music
+                // countdown keeps running in it. Everything else, once published, stays frozen.
+                if (entryMusicPending && entry.getKey().equals(com.openggf.game.sonic2.timing.Sonic2LevelMusicScheduler.REWIND_KEY)) continue;
                 var changes = RewindSnapshotDiff.diffKey(entry.getKey(), entry.getValue(), after.get(entry.getKey()));
                 require(changes.isEmpty(), "held row " + rows + " changed " + entry.getKey() + ": " + changes.stream().limit(4).toList());
             }
@@ -172,7 +197,18 @@ public final class GolfOnlinePeerProbe {
         Object match = value(controller, "matchState"), pending = match == null ? null : value(match, "pending");
         values.put("matchStatus", match == null ? "none" : value(match, "status"));
         values.put("pending", pending == null ? -1 : value(value(pending, "id"), "shotSequence"));
+        Object hud = value(controller, "hudShotView");
+        values.put("hudStage", value(hud, "stage"));
+        values.put("hudControls", value(hud, "showShotControls"));
+        values.put("hudHint", value(hud, "hint"));
+        values.put("rewindEffect", controller.rewindPresentation().intensity());
+        var shown = (List<?>) declaredValue(controller, "scores");
+        values.put("shownStrokes0", shown.isEmpty() ? -1 : value(shown.get(0), "strokes"));
+        values.put("musicPending", GameServices.module().getLevelInitProfile().isLevelMusicPublicationPending());
+        values.put("poseKind", value(value(value(controller, "capture"), "poseClock"), "kind"));
         values.put("stage", value(value(controller, "shotState"), "stage"));
+        Object readiness = value(controller, "readinessState");
+        values.put("readiness", value(readiness, "phase")); values.put("readinessOwner", value(readiness, "owner"));
         values.put("elevation", value(value(controller, "shotState"), "elevationDegrees"));
         for (int owner = 0; owner < 2; owner++) {
             Object golfer = match == null ? null : ((List<?>)value(match, "golfers")).get(owner);
@@ -200,6 +236,7 @@ public final class GolfOnlinePeerProbe {
         }
         if(host) {
             var p=GameServices.camera().getFocusedSprite();
+            values.put("ballRolling",p.getRolling());
             values.put("ballX",p.getCentreX()); values.put("ballY",p.getCentreY()); values.put("ballAngle",p.getAngle()&255);
             values.put("cameraX",GameServices.camera().getX()); values.put("cameraY",GameServices.camera().getY());
         }

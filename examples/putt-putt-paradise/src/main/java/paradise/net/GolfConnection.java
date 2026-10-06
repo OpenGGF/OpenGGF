@@ -117,7 +117,8 @@ public final class GolfConnection implements AutoCloseable {
                 }
                 if (overflow) { disconnect("incoming queue overflow"); return; }
             }
-        } catch (IOException failure) { disconnect("read failed"); }
+        } catch (GolfCodec.IncompatibleProtocolException mismatch) { disconnect(mismatch.getMessage()); }
+        catch (IOException failure) { disconnect("read failed"); }
     }
     private void writeLoop() {
         long lastViewWrite = 0;

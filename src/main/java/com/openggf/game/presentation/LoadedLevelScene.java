@@ -22,6 +22,8 @@ public final class LoadedLevelScene {
     private final GraphicsManager graphics;
     private final LevelManager level;
     private final Map<String, SpriteArtSet> players = new HashMap<>(), dust = new HashMap<>();
+    private final SpriteArtSet tails;
+    private final boolean separateTailArt;
 
     public LoadedLevelScene(LevelManager level, GraphicsManager graphics) throws IOException {
         this.level = level; this.graphics = graphics;
@@ -46,6 +48,9 @@ public final class LoadedLevelScene {
                 if (set != null) { dust.put(character, set); art.addRecipe("dust/" + character, set.artTiles()); }
             }
         }
+        separateTailArt = level.getGameModule().hasSeparateTailsTailArt();
+        tails = separateTailArt ? level.getGameModule().loadTailsTailArt() : players.get("tails");
+        if (tails != null && !tails.isEmpty()) art.addRecipe("tail/tails", tails.artTiles());
         var objects = level.getObjectRenderManager();
         if (objects != null) {
             if (objects.getArtProvider() instanceof RomSceneArtSource source) {
@@ -62,7 +67,7 @@ public final class LoadedLevelScene {
     }
 
     public SceneViewPresenter presenter(int width, int height) {
-        return new RomSceneViewPresenter(art, graphics, width, height, new ScenePoseProjector(players, dust));
+        return new RomSceneViewPresenter(art, graphics, width, height, new ScenePoseProjector(players, dust, tails, separateTailArt));
     }
 
     public ScenePresentationFrame capture(long revision, PlayerPresentationPose pose, SpritePresentation.Frame sprites,
@@ -191,7 +196,7 @@ public final class LoadedLevelScene {
 
     private void projectPose(List<ScenePresentationFrame.Tile> tiles, AbstractPlayableSprite player,
                              PlayerPresentationPose pose, int cameraX, int cameraY) {
-        new ScenePoseProjector(players, dust).project(tiles,
+        new ScenePoseProjector(players, dust, tails, separateTailArt).project(tiles,
                 new ScenePlayerPose(player.getCode(), player.getRenderCentreX(), player.getRenderCentreY(), pose),
                 cameraX, cameraY, player.isHighPriority());
     }

@@ -38,7 +38,7 @@ public final class ControlledFrameRuntime {
             var audio = GameServices.audio();
             audio.beginGameplayAudioFrame(audio.commandTimeline().currentFrame() + 1);
         }
-        var course = new CourseControl(context, input.isRewindHeld());
+        var course = new CourseControl(context, input);
         boolean advance = controller.beforeTick(course, snapshot);
         if (advance) {
             beforeGameplay.run();
@@ -59,8 +59,20 @@ public final class ControlledFrameRuntime {
                         }
                     });
         }
+        if (!advance) serviceHeldLevelEntry(context);
         controller.afterTick(course, advance);
         return advance ? LevelFrameResult.GAMEPLAY_FRAME : LevelFrameResult.HELD;
+    }
+
+    /**
+     * A held row is still one presented vertical interrupt. Level-entry work the profile counts
+     * in interrupts (Sonic 2's Level_PlayBgm countdown, s2.asm:4767-4911) keeps elapsing in that
+     * time, so the zone music starts on the ROM's schedule instead of on a later advanced row.
+     * Only a pending entry-music publication is serviced; held rows advance no gameplay.
+     */
+    private static void serviceHeldLevelEntry(GameplayModeContext context) {
+        var profile = context.getWorldSession().getGameModule().getLevelInitProfile();
+        if (profile.isLevelMusicPublicationPending()) profile.serviceLevelLoadVBlank();
     }
 
     public static boolean retainRolling(com.openggf.sprites.playable.AbstractPlayableSprite sprite) {

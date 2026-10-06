@@ -211,6 +211,94 @@ public final class RoomProbe {
             TransportProbe.await(() -> host.activeWorkers() == 0 && client.activeWorkers() == 0, 3000, "raw handshake fixture releases workers");
         }
     }
+    /** Ready handoff: owner-bound, turn-scoped, held-safe and idempotent at the room boundary. */
+    public static void readyHandoffIsOwnerBoundAndTurnScoped() throws Exception {
+        var score = new Score(0, 0, false);
+        try (var rooms = new Rooms()) {
+            var host = rooms.host; var guest = rooms.guest;
+            pump(host, guest, () -> host.state().ready() && guest.state().ready(), "ready-handoff handshake");
+            var hostTurn = new ShotId(host.state().match(), 1, 1, 1, 0);
+            host.publishTurn(new TurnOpened(hostTurn, 100, 200, 0, 5, score, score, true));
+            host.publishStatus(new ShotStatus(hostTurn, ShotPhase.HANDOFF, 3, 1));
+            pump(host, guest, () -> guest.state().remoteTurnOpened() != null && guest.state().remoteTurnOpened().readyRequired(),
+                    "guest sees the host's held turn");
+            check(!guest.submitControl(new ShotControl(hostTurn, ShotAction.READY)), "a spectator cannot confirm another owner's turn");
+            var hostPackets = new ArrayList<GolfPacket>();
+            for (int i = 0; i < 20; i++) { host.tick(); guest.tick(); hostPackets.addAll(packets(host)); Thread.sleep(2); }
+            check(hostPackets.stream().noneMatch(p -> p instanceof ShotControl), "no spectator intent reaches the host");
+
+            var turn = new ShotId(host.state().match(), 1, 2, 2, 1);
+            host.publishTurn(new TurnOpened(turn, 300, 200, 0, 5, score, score, true));
+            host.publishStatus(new ShotStatus(turn, ShotPhase.HANDOFF, 3, 1));
+            pump(host, guest, () -> turn.equals(guest.state().remoteTurnOpened().id()), "guest-owned held turn");
+            host.drainEvents(); guest.drainEvents();
+            var ready = new ShotControl(turn, ShotAction.READY);
+            check(guest.submitControl(ready) && guest.submitControl(ready), "a repeated ready is retained once");
+            var controls = new ArrayList<GolfPacket>();
+            pump(host, guest, () -> { controls.addAll(packets(host)); return controls.contains(ready); }, "owner ready reaches host");
+            for (int i = 0; i < 10; i++) { host.tick(); guest.tick(); controls.addAll(packets(host)); Thread.sleep(2); }
+            check(controls.stream().filter(ready::equals).count() == 1, "one ready intent per press");
+
+            // Stale ready for the previous turn: answered with status, never offered to gameplay.
+            var replies = new ArrayList<GolfPacket>();
+            connection(guest).send(new ShotControl(new ShotId(turn.match(), 1, 1, 1, 1), ShotAction.READY));
+            pump(host, guest, () -> { replies.addAll(packets(guest)); return replies.stream().anyMatch(p -> p instanceof ShotStatus s && s.phase() == ShotPhase.HANDOFF); },
+                    "stale ready is answered with the current status");
+            check(packets(host).stream().noneMatch(p -> p instanceof ShotControl), "stale ready offers no intent");
+
+            // While held, a ready waits for the next press instead of passing through.
+            guest.pause("menu");
+            pump(host, guest, () -> host.state().held() && guest.state().held(), "held handoff");
+            connection(guest).send(ready);
+            for (int i = 0; i < 20; i++) { host.tick(); guest.tick(); Thread.sleep(2); }
+            check(packets(host).stream().noneMatch(p -> p instanceof ShotControl), "held room offers no ready");
+            guest.resume();
+            pump(host, guest, () -> !host.state().held() && !guest.state().held(), "handoff resumes");
+
+            // A shot sent before readiness is refused by the host and can be retried later.
+            host.drainEvents(); guest.drainEvents();
+            var early = request(turn);
+            check(guest.submitShot(early), "room forwards the early request for the host to judge");
+            var early2 = new ArrayList<GolfPacket>();
+            pump(host, guest, () -> { early2.addAll(packets(host)); return early2.contains(early); }, "early request reaches host");
+            host.rejectRemote(turn, "not ready");
+            var refused = new ArrayList<GolfPacket>();
+            pump(host, guest, () -> { refused.addAll(packets(guest)); return refused.stream().anyMatch(p -> p instanceof Rejected r && r.reason().equals("not ready")); },
+                    "guest is told the turn is not ready");
+            host.publishStatus(new ShotStatus(turn, ShotPhase.AIM, 3, 1));
+            pump(host, guest, () -> packets(guest).stream().anyMatch(p -> p instanceof ShotStatus s && s.phase() == ShotPhase.AIM),
+                    "authoritative ready transition reaches guest");
+            check(guest.submitShot(early), "a refused request can be submitted after readiness");
+            var accepted = new ArrayList<GolfPacket>();
+            pump(host, guest, () -> { accepted.addAll(packets(host)); return accepted.contains(early); }, "post-ready request offered");
+            check(host.acceptShot(early).newlyAccepted(), "exactly one accepted shot after readiness");
+
+            // A forged ready for the host's own owner slot is a protocol violation.
+            connection(guest).send(new ShotControl(new ShotId(turn.match(), 1, 2, 2, 0), ShotAction.READY));
+            pump(host, guest, () -> !host.state().connected() || host.state().held(), "forged owner ready revokes the socket");
+            check(packets(host).stream().noneMatch(p -> p instanceof ShotControl), "forged ready never reaches gameplay");
+        }
+    }
+
+    /** Different protocol generations fail with a readable reason on both sides. */
+    public static void incompatibleVersionsAreNamed() throws Exception {
+        try (var host = GolfRoom.host(0, prints(), "sonic");
+             var raw = new java.net.Socket("localhost", host.boundPort())) {
+            byte[] older = GolfCodec.encode(new Hello(prints(), "tails")); older[4] = (byte) (GolfCodec.SCHEMA - 1);
+            raw.getOutputStream().write(older); raw.getOutputStream().flush();
+            TransportProbe.await(() -> { host.tick(); return host.state().message().startsWith("incompatible"); }, 3000,
+                    "host names an older peer");
+            check(!host.state().ready() && host.state().held(), "an incompatible peer cannot release the course");
+        }
+        try (var old = new java.net.ServerSocket(0)) {
+            Thread.ofVirtual().start(() -> { try (var accepted = old.accept()) { accepted.getInputStream().read(); } catch (Exception ignored) { } });
+            try (var guest = GolfRoom.join("localhost", old.getLocalPort(), prints(), "tails")) {
+                TransportProbe.await(() -> { guest.tick(); return guest.state().ended(); }, 3000, "older host closes the handshake");
+                check(guest.state().message().contains("matching versions"), "guest is told to match versions: " + guest.state().message());
+            }
+        }
+    }
+
     public static void run() throws Exception {
         var score = new Score(0, 0, false);
         int port;

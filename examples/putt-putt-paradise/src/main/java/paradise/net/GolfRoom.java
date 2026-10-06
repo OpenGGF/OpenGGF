@@ -121,7 +121,12 @@ public final class GolfRoom implements AutoCloseable {
                 for (GolfConnection.Event event : candidate.connection.drain()) {
                     if (event instanceof GolfConnection.Received received) {
                         if (candidate.connection == peer) fromGuest(received.packet()); else handshake(candidate, received.packet());
-                    } else { candidates.remove(candidate); retire(candidate.connection); }
+                    } else {
+                        // Name an install mismatch instead of silently waiting for a peer that can never join.
+                        if (!ready && event instanceof GolfConnection.Disconnected lost && lost.reason().startsWith("incompatible"))
+                            message = lost.reason();
+                        candidates.remove(candidate); retire(candidate.connection);
+                    }
                     if (!candidates.contains(candidate) && candidate.connection != peer) break;
                 }
                 if (candidates.contains(candidate) && seconds() - candidate.startedSeconds >= 5) {
@@ -291,6 +296,12 @@ public final class GolfRoom implements AutoCloseable {
         else if (result.status() == ShotReceipts.Status.DUPLICATE && ready) replayReceipt(result.receipt());
         return result;
     }
+    /** Host refusal of a guest shot its rules cannot accept now (for example before readiness). */
+    public void rejectRemote(ShotId id, String reason) {
+        requireHost(); Objects.requireNonNull(id); GolfPacket.text(reason);
+        if (pendingRemote != null && pendingRemote.id().equals(id)) pendingRemote = null;
+        if (ready) send(new Rejected(id, reason));
+    }
     public void publishCommitted(TurnCommitted committed) {
         requireHost(); receipts.commit(committed); player0 = committed.player0(); player1 = committed.player1(); owner = committed.nextOwner();
         if (ready) send(committed);
@@ -355,7 +366,12 @@ public final class GolfRoom implements AutoCloseable {
         connected = false; ready = false; held = true; message = reason; pendingRemote = null;
         if (disconnectSeconds < 0) disconnectSeconds = seconds();
         if (host && roomToken != null) sessions.disconnected(1, seconds());
-        if (!host && roomToken == null) { end(reason, false); return; }
+        if (!host && roomToken == null) {
+            // An older or newer host cannot parse this build's Hello and simply closes.
+            end(reason.equals("remote closed") || reason.equals("read failed") || reason.equals("write failed")
+                    ? "host closed the connection - check matching versions" : reason, false);
+            return;
+        }
         retryAtNanos = System.nanoTime() + RETRY_NANOS; add(new Disconnected(reason));
     }
     private void end(String reason, boolean notify) {

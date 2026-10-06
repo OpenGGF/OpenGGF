@@ -8,7 +8,18 @@ import static paradise.net.GolfPacket.*;
 
 /** Four-byte big-endian payload length, one-byte schema, one-byte type, bounded typed fields. */
 public final class GolfCodec {
-    public static final int SCHEMA = 4;
+    /** 5 adds the turn-handoff readiness state; peers on another schema are refused by name. */
+    public static final int SCHEMA = 5;
+
+    /** A well-formed frame from a different protocol generation: an install mismatch, not a fault. */
+    public static final class IncompatibleProtocolException extends IOException {
+        private final int peerSchema;
+        IncompatibleProtocolException(int peerSchema) {
+            super("incompatible peer version: golf protocol " + peerSchema + " (this build uses " + SCHEMA + ")");
+            this.peerSchema = peerSchema;
+        }
+        public int peerSchema() { return peerSchema; }
+    }
     public static final int MAX_FRAME_BYTES = 2 * 1024 * 1024;
     public static final int MAX_VIEW_BYTES = MAX_FRAME_BYTES - 128;
     private GolfCodec() { }
@@ -20,7 +31,8 @@ public final class GolfCodec {
         for (Class<?> type : new Class<?>[]{GolfPacket.class, Fingerprints.class, ShotId.class, Score.class,
                 Hello.class, Ready.class, TurnOpened.class, ShotRequest.class, ShotAccepted.class,
                 ViewFrame.class, TurnCommitted.class, Pause.class, Resume.class, Leave.class,
-                Reconnect.class, SoundCue.class, Rejected.class, ShotControl.class, ShotStatus.class}) Objects.requireNonNull(type);
+                Reconnect.class, SoundCue.class, Rejected.class, ShotControl.class, ShotStatus.class,
+                IncompatibleProtocolException.class}) Objects.requireNonNull(type);
         Objects.requireNonNull(Outcome.SETTLED);
         Objects.requireNonNull(ShotAction.REWIND); Objects.requireNonNull(ShotPhase.AIM);
     }
@@ -35,7 +47,7 @@ public final class GolfCodec {
                 case Ready p -> { out.writeByte(2); uuid(out, p.match()); out.writeByte(p.owner()); uuid(out, p.roomToken());
                     fingerprints(out, p.fingerprints()); text(out, p.character()); }
                 case TurnOpened p -> { out.writeByte(3); id(out, p.id()); out.writeInt(p.lieX()); out.writeInt(p.lieY()); out.writeByte(p.surfaceAngle()); out.writeByte(p.rollOffset());
-                    score(out, p.player0()); score(out, p.player1()); }
+                    score(out, p.player0()); score(out, p.player1()); out.writeByte(p.readyRequired() ? 1 : 0); }
                 case ShotRequest p -> { out.writeByte(4); id(out, p.id()); out.writeByte(p.facing());
                     out.writeByte(p.elevationDegrees()); out.writeShort(p.normalizedPower()); out.writeShort(p.spin()); }
                 case ShotAccepted p -> { out.writeByte(5); id(out, p.id()); out.writeLong(p.acceptedTick()); out.writeShort(p.normalizedPower()); }
@@ -73,12 +85,13 @@ public final class GolfCodec {
         if (length < 2 || length > MAX_FRAME_BYTES) throw new IOException("invalid frame length");
         byte[] payload = new byte[length]; header.readFully(payload);
         var in = new DataInputStream(new ByteArrayInputStream(payload));
-        if (in.readUnsignedByte() != SCHEMA) throw new IOException("unsupported schema");
+        int schema = in.readUnsignedByte();
+        if (schema != SCHEMA) throw new IncompatibleProtocolException(schema);
         try {
             GolfPacket packet = switch (in.readUnsignedByte()) {
                 case 1 -> new Hello(fingerprints(in), text(in));
                 case 2 -> new Ready(uuid(in), in.readUnsignedByte(), uuid(in), fingerprints(in), text(in));
-                case 3 -> new TurnOpened(id(in), in.readInt(), in.readInt(), in.readUnsignedByte(), in.readUnsignedByte(), score(in), score(in));
+                case 3 -> new TurnOpened(id(in), in.readInt(), in.readInt(), in.readUnsignedByte(), in.readUnsignedByte(), score(in), score(in), bool(in));
                 case 4 -> new ShotRequest(id(in), in.readByte(), in.readUnsignedByte(), in.readUnsignedShort(), in.readShort());
                 case 5 -> new ShotAccepted(id(in), in.readLong(), in.readUnsignedShort());
                 case 6 -> new ViewFrame(id(in), in.readLong(), in.readLong(), scene(in));
@@ -137,6 +150,11 @@ public final class GolfCodec {
         int strokes = in.readInt(), penalties = in.readInt(), finished = in.readUnsignedByte();
         if (finished > 1) throw new IOException("invalid boolean");
         return new Score(strokes, penalties, finished == 1);
+    }
+    private static boolean bool(DataInputStream in) throws IOException {
+        int value = in.readUnsignedByte();
+        if (value > 1) throw new IOException("invalid boolean");
+        return value == 1;
     }
     private static Outcome outcome(DataInputStream in) throws IOException {
         int value = in.readUnsignedByte();

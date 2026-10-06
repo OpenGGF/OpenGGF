@@ -834,11 +834,18 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   independent course worlds; optional shot rewind restores the entire pre-shot
   world and refunds the stroke, with faster playback for longer shots and
   configurable per-golfer hole/turn allowances (default 3/1). Rewind is available
-  during WATCH; settlement and finishes pass the turn automatically. Penalties restore the pre-shot world, and the
+  during WATCH with the host's configured VHS effect; settlement and finishes
+  pass the turn automatically. Clearer scorecards, guide panels, controller menu
+  prompts and authoritative online turn hints keep presentation policy in the mod.
+  Animated turn handoffs wait for the incoming golfer's fresh ready press and
+  synchronize over netplay; shared engine prompts name each player's actual
+  keyboard or controller binding. ROM sound cues, sliding shot panels and an
+  animated results tally accompany the action. Penalties restore the pre-shot world, and the
   online host owns simulation and scores while guests render ROM-backed views.
   Recorded play uses the same neutral flight input as live play.
   Includes a creator menu themed with the ROM's title landscape, winged emblem,
-  Sonic/Tails portraits and sparkles, scorecards, a held native duck pose during
+  Sonic/Tails portraits and sparkles, scorecards, immediately visible idle golfers
+  after turn switches, Tails' independent tail in held poses, a held native duck pose during
   shot selection, native spindash audio, all existing
   viewport presets, a spin/power departure guide aligned with the rolling launch
   centre and supporting slope (including authoritative online guest coordinates),

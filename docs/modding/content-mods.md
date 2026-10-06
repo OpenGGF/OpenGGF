@@ -10,7 +10,7 @@ standalone games. Mods are discovered from the
 process `mods/` directory at restart; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
 
-The current Mod API is the unpublished, mutable `0.7.0` candidate on `next`; no
+The current Mod API is the unpublished, mutable `0.7.0` candidate on `develop`; no
 creator contract has been published yet. Maintained samples should
 declare `engineApiRange: ">=0.7.0 <0.8.0"`; see the
 [compatibility guide](../architecture/mod-api-compatibility.md). Start with the
@@ -364,6 +364,13 @@ command for Genesis movie replay, whose controller rows cannot encode that key
 or bumper. This accessor is part of the unpublished 0.7 candidate surface; its
 normalized pin is regenerated without changing the policy/version descriptor.
 
+`GameplayFrameController.rewindPresentation()` optionally returns a finite,
+bounded `RewindPresentation` value for creator-owned reverse playback. The host
+uses its existing VHS pass and settings; the value cannot seek history, restore
+world state or grant rewind permission. Stock controllers and null requests have
+no effect. Host pause suppresses the creator request. Keep playback and allowances
+in the mod, as Putt Putt Paradise does, rather than calling developer rewind.
+
 `CourseControl.capture()` returns an opaque whole-course checkpoint. Restore
 validates session, loaded hole and registry generation before changing character,
 world or audio. The controller adapter is excluded by its engine-bound identity,
@@ -389,6 +396,10 @@ palette and procedural primitives. `SceneFrameCodec` provides a bounded value
 encoding; `SceneViewPresenter` resolves art identities from the local ROM and
 composes or draws a read-only view. It never steps the recipient's world, loads
 objects from the sender, or accepts ROM/art bytes as a fallback.
+`PlayerPresentationPose` selects a native displayed frame or a ROM-backed idle,
+duck or spindash view. These held views include native appendages such as Tails'
+tails and use the caller's presentation clock, without changing animation,
+physics or dynamic-art clocks in the playable world.
 [Putt Putt Paradise](../../examples/putt-putt-paradise/README.md) demonstrates
 independent golfer checkpoints and a host-authoritative direct TCP room. Its
 transport is separate from time-attack ghost races.
@@ -402,3 +413,11 @@ window, unseen pointer, headless graphics or logical movie override produces
 `Pointer.none()`. Mouse state is physical presentation input and never replaces
 recorded controller rows. [Putt Putt Paradise's source guide](../../examples/putt-putt-paradise/README.md#learn-from-this-example)
 walks through registration, one controlled shot and safe extension points.
+
+Gameplay prompts should name the player's actual control rather than a fixed key.
+`ButtonPrompts.label(input, player, button)` (or `CourseControl.buttonLabel` inside a
+controlled level) returns the incoming player's own binding: P1's A defaults to
+"Space" and P2's to "Right Shift", remaps are followed, and a player whose last
+intentional input came from their pad sees that pad family's physical button. An
+empty result means neither device can produce the button. `MenuInput.confirmLabel`
+remains the fixed menu-confirm prompt and is not a substitute for a player binding.

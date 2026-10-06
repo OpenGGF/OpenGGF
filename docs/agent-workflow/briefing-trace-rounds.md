@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Nonzero PCM can be constant DC (2026-10-06, Putt Putt Paradise polish): a
+captured Sonic 2 music track measured about −21 dBFS RMS while long windows
+contained an almost constant offset rather than music. Inspect mean and
+AC variance, flat-window duration and actual sequencer requests alongside RMS
+and loudness. One healthy opening window does not certify an entire capture.
+Compare stock and controlled playback through the same presentation/capture
+path, and interleave each service with its corresponding synthesized packet.
+The corrected course-entry path leaves the ROM-timed music publication in
+charge and services its pending countdown on held presentation rows.
+
 Palette publication can survive resource cleanup (2026-10-06): at `c20731b13`,
 S3K presentation followed by the first S2 native-graphics scene produced 24,783
 waterfall pixel differences with identical geometry and a four-color rotation.

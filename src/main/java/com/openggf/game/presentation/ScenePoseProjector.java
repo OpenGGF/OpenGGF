@@ -9,8 +9,12 @@ import java.util.Map;
 /** Locally decoded native mappings selected from immutable pose values, never a playable object. */
 final class ScenePoseProjector {
     private final Map<String, SpriteArtSet> players, dust;
-    ScenePoseProjector(Map<String, SpriteArtSet> players, Map<String, SpriteArtSet> dust) {
+    private final SpriteArtSet tails;
+    private final boolean separateTailArt;
+    ScenePoseProjector(Map<String, SpriteArtSet> players, Map<String, SpriteArtSet> dust,
+                       SpriteArtSet tails, boolean separateTailArt) {
         this.players = Map.copyOf(players); this.dust = Map.copyOf(dust);
+        this.tails = tails; this.separateTailArt = separateTailArt;
     }
 
     void project(List<ScenePresentationFrame.Tile> tiles, ScenePlayerPose player, int cameraX, int cameraY, boolean priority) {
@@ -19,7 +23,12 @@ final class ScenePoseProjector {
         if (set == null || !(set.animationProfile() instanceof ScriptedVelocityAnimationProfile profile)) {
             throw new IllegalStateException("Native pose art unavailable");
         }
-        int animation = pose.kind() == PlayerPresentationPose.Kind.DUCK ? profile.getDuckAnimId() : profile.getSpindashAnimId();
+        int animation = switch (pose.kind()) {
+            case IDLE -> profile.getIdleAnimId();
+            case DUCK -> profile.getDuckAnimId();
+            case SPINDASH -> profile.getSpindashAnimId();
+            case NATIVE -> throw new IllegalArgumentException("Native pose uses the displayed sprite table");
+        };
         var script = set.animationSet().getScript(animation);
         if (script == null || script.frames().isEmpty()) throw new IllegalStateException("Native pose script unavailable");
         long elapsedFrames = pose.tick() / Math.max(1, script.delay() + 1);
@@ -28,7 +37,23 @@ final class ScenePoseProjector {
         int frameIndex = pose.kind() == PlayerPresentationPose.Kind.DUCK
                 ? (int) Math.min(elapsedFrames, script.frames().size() - 1)
                 : (int) (elapsedFrames % script.frames().size());
+        if (pose.kind() == PlayerPresentationPose.Kind.IDLE && elapsedFrames >= script.frames().size()) {
+            if (script.endAction() == com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP_BACK) {
+                int repeat = Math.max(1, Math.min(script.endParam(), script.frames().size()));
+                frameIndex = script.frames().size() - repeat
+                        + (int) ((elapsedFrames - script.frames().size()) % repeat);
+            } else if (script.endAction() == com.openggf.sprites.animation.SpriteAnimationEndAction.HOLD) {
+                frameIndex = script.frames().size() - 1;
+            }
+        }
         int frame = script.frames().get(frameIndex);
+        if ("tails".equals(player.character()) && tails != null && !tails.isEmpty()) {
+            int tailFrame = com.openggf.sprites.managers.TailsTailPose.frame(
+                    separateTailArt, pose.kind() == PlayerPresentationPose.Kind.SPINDASH, pose.tick());
+            // Tails.draw places Obj05 behind the body at the same native centre.
+            projectArtFrame(tiles, "tail/tails", tails, tailFrame, player.centreX() - cameraX,
+                    player.centreY() - cameraY, pose.facing() < 0, priority);
+        }
         projectArtFrame(tiles, "player/" + player.character(), set, frame, player.centreX() - cameraX,
                 player.centreY() - cameraY, pose.facing() < 0, priority);
         if (pose.kind() == PlayerPresentationPose.Kind.SPINDASH) {

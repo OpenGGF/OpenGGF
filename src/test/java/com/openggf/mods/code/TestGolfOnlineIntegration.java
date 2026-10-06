@@ -54,10 +54,37 @@ class TestGolfOnlineIntegration {
                 assertEquals("sonic", guest.state.text("hostCharacter")); assertEquals("tails", guest.state.text("guestCharacter"));
                 compareViewAndScores(host, guest);
 
+                // Each peer's Level_PlayBgm countdown starts at its own level load and keeps running
+                // in held rows: a guest that never advances its course still starts the zone music.
+                pump(host, guest, (one, two) -> !one.flag("musicPending") && !two.flag("musicPending"), 64,
+                        "zone music published on both peers while their courses are held");
+                // The opening turn is held for P1 on both peers; only the owner is prompted.
+                assertEquals("HANDOFF", host.state.text("phase")); assertEquals("HANDOFF", guest.state.text("phase"));
+                assertEquals("HANDOFF", host.state.text("hudStage"), "host owns the first turn");
+                assertTrue(host.state.text("hudHint").startsWith("SPACE"), "owner is prompted with their own A binding");
+                assertEquals("WAITING", guest.state.text("hudStage"));
+                assertTrue(guest.state.text("hudHint").contains("WAITING FOR P1 SONIC") && !guest.state.text("hudHint").contains("SPACE"),
+                        "a spectator is told who the course waits for");
+                long heldGameplay = host.state.number("gameplayRows");
+                guest.step(1, 0, ACTION_A, false); guest.step(1, 0, 0, false); guest.step(1, 0, ACTION_A, false);
+                pump(host, guest, (a, b) -> false, 30, null);
+                assertEquals("HANDOFF", host.state.text("phase"), "a spectator press cannot confirm another golfer");
+                assertEquals(heldGameplay, host.state.number("gameplayRows"), "the course is held while waiting");
+                host.step(1, 0, 0, false); host.step(1, 0, ACTION_A, false);
+                assertEquals("AIM", host.state.text("phase"), "the host's own fresh press is accepted at once");
+                for (int row = 0; row < 8; row++) host.step(1, 0, ACTION_A, false);
+                assertEquals("AIM", host.state.text("stage"), "the confirming press cannot also start the shot");
+                assertEquals(-1, host.state.number("pending"));
+                pump(host, guest, (a, b) -> b.text("phase").equals("AIM"), 200, "guest observes the host's ready transition");
+                host.step(1, 0, 0, false);
+
                 long firstTurn = host.state.number("turn");
                 shot(host);
                 assertEquals(1, host.state.number("pending"), "host's real meter committed the first shot");
                 assertEquals(1, host.state.number("strokes0"));
+                pump(host, guest, (one, two) -> !two.text("phase").equals("AIM"), 80, "guest observes the accepted shot");
+                assertEquals("0,0,false", guest.state.text("wire0"), "published scores change only at the turn boundary");
+                assertEquals(1, guest.state.number("shownStrokes0"), "the spectator counts the accepted stroke immediately");
                 pump(host, guest, (one, two) -> one.number("turn") > firstTurn && one.number("owner") == 1 && two.number("turn") == one.number("turn"),
                         700, "host shot resolves through native physics into guest turn");
                 compareViewAndScores(host, guest);
@@ -69,6 +96,28 @@ class TestGolfOnlineIntegration {
                 assertEquals(host.state.number("cameraX"),guest.state.number("guideCameraX"));
                 assertEquals(host.state.number("cameraY"),guest.state.number("guideCameraY"));
                 long guestTurn = host.state.number("turn"), gameplayBeforeGuest = host.state.number("gameplayRows");
+                assertEquals("HANDOFF", host.state.text("phase")); assertEquals("HANDOFF", guest.state.text("phase"));
+                assertEquals("WAITING", host.state.text("hudStage"), "the host waits for the guest's readiness");
+                assertTrue(guest.state.text("hudHint").startsWith("SPACE"), "guest is prompted with its own local binding");
+                host.step(1, 0, 0, false); host.step(1, 0, ACTION_A, false);
+                assertEquals("HANDOFF", host.state.text("phase"), "the host cannot confirm the guest's turn");
+                // Guest presses and keeps holding: the host accepts once and the held press never charges.
+                guest.step(1, 0, 0, false); guest.step(1, 0, ACTION_A, false);
+                assertEquals("REQUESTED", guest.state.text("readiness"), "a guest press is a request, not an optimistic start");
+                for (int row = 0; row < 60 && !(host.state.text("phase").equals("AIM") && guest.state.text("phase").equals("AIM")); row++) {
+                    host.step(1, 0, 0, false); guest.step(1, 0, ACTION_A, false); Thread.sleep(2);
+                }
+                assertEquals("AIM", host.state.text("phase")); assertEquals("AIM", guest.state.text("phase"));
+                assertEquals("NONE", guest.state.text("readiness"));
+                assertEquals("AIM", guest.state.text("stage"), "the held ready press cannot start the guest's shot");
+                assertEquals(gameplayBeforeGuest, host.state.number("gameplayRows"), "readiness never advanced the course");
+                // Duplicate and stale READY intents are idempotent: no turn change, no shot.
+                long readyTurn = host.state.number("turn");
+                guest.command("READY_INTENT"); guest.command("READY_INTENT stale");
+                pump(host, guest, (a, b) -> false, 20, null);
+                assertEquals(readyTurn, host.state.number("turn")); assertEquals(-1, host.state.number("pending"));
+                assertEquals("AIM", host.state.text("phase")); assertEquals(0, host.state.number("strokes1"));
+                guest.step(1, 0, 0, false);
                 guest.step(60, 1, 0, false); guest.step(30, 1, 0, false);
                 assertEquals(90, guest.state.number("elevation"), "guest can submit the vertical chip through its real meter");
                 shot(guest,-100);
@@ -93,11 +142,15 @@ class TestGolfOnlineIntegration {
                 assertEquals(0, guest.state.number("gameplayRows"), "guest never executes native gameplay");
                 assertTrue(guest.state.number("heldRows") > 20, "every post-TurnOpened held guest row was checked");
 
-                long thirdTurn=host.state.number("turn"); shot(host);
+                long thirdTurn=host.state.number("turn"); ready(host, host, guest); shot(host);
                 assertEquals(1,host.state.number("chargeCues"),"local putt has one startup charge request");
                 pump(host,guest,(one,two)->one.number("turn")>thirdTurn&&one.number("owner")==1
                         &&two.number("turn")==one.number("turn"),700,"second guest turn");
-                long fourthTurn=host.state.number("turn"); shot(guest);
+                compareViewAndScores(host,guest);
+                assertTrue(host.state.flag("ballRolling"), "second guest lie remains a settled rolling ball");
+                assertEquals("NATIVE",guest.state.text("poseKind"),
+                        "guest AIM preserves the authoritative rolling lie instead of replacing it with idle");
+                long fourthTurn=host.state.number("turn"); ready(guest, host, guest); shot(guest);
                 pump(host,guest,(one,two)->one.number("pending")==4&&two.flag("accepted"),80,"remote putt accepted");
                 host.step(3,0,0,false);
                 assertEquals(1,host.state.number("chargeCues"),"remote putt uses the same startup native charge count");
@@ -129,26 +182,39 @@ class TestGolfOnlineIntegration {
                 pump(host, guest, (a,b) -> a.flag("ready") && b.flag("ready") && a.number("turn") >= 1 && b.number("turn") >= 1,
                         700, "rewind room opens");
                 long x = host.state.number("ballX"), y = host.state.number("ballY"), turn = host.state.number("turn"), id = host.state.number("shot");
+                ready(host, host, guest);
                 shot(host);
                 pump(host, guest, (a,b) -> a.text("phase").equals("WATCH") && b.text("phase").equals("WATCH"), 700, "host shot can rewind during motion");
+                assertEquals("WATCH", guest.state.text("hudStage"), "guest HUD follows the host's actual flight");
+                assertFalse(guest.state.flag("hudControls"), "observer must not show stale shot choices");
+                assertTrue(guest.state.text("hudHint").contains("OTHER PLAYER"));
                 pauseRewind(host);
                 pump(host, guest, (a,b) -> a.text("phase").equals("AIM") && b.text("phase").equals("AIM") && a.number("shot") > id && b.number("shot") == a.number("shot"), 200, "host rewind reaches origin on both peers");
                 assertEquals(turn, host.state.number("turn")); assertEquals(0, host.state.number("strokes0"));
                 assertEquals(x,host.state.number("ballX")); assertEquals(y,host.state.number("ballY"));
                 assertEquals(2,guest.state.number("holeRewinds")); assertEquals(0,guest.state.number("turnRewinds")); compareViewAndScores(host,guest);
+                assertEquals("NONE", host.state.text("readiness"), "a retry keeps the confirmed turn without another handoff");
                 shot(host);
                 pump(host,guest,(a,b)->a.number("owner")==1 && b.number("owner")==1 && a.number("turn")>turn,700,"settled retry automatically passes to guest");
+                assertEquals("WAITING", host.state.text("hudStage"), "host waiting for guest sees no local aim prompt");
+                assertFalse(host.state.flag("hudControls"));
                 long guestTurn=host.state.number("turn"), guestId=host.state.number("shot"), guestX=host.state.number("ballX"), guestY=host.state.number("ballY");
+                ready(guest, host, guest);
                 shot(guest);
                 pump(host,guest,(a,b)->a.text("phase").equals("WATCH") && b.text("phase").equals("WATCH"),700,"guest shot is in flight on the host");
+                assertEquals("WATCH", guest.state.text("hudStage"));
+                assertFalse(guest.state.flag("hudControls"));
+                assertTrue(guest.state.text("hudHint").contains("REWIND"));
                 pauseRewind(guest);
                 pump(host,guest,(a,b)->a.text("phase").equals("AIM") && b.text("phase").equals("AIM") && a.number("shot")>guestId && b.number("shot")==a.number("shot"),200,"guest rewind is host-owned");
                 assertEquals(guestTurn,host.state.number("turn")); assertEquals(0,host.state.number("strokes1"));
                 assertEquals(guestX,host.state.number("ballX")); assertEquals(guestY,host.state.number("ballY"));
                 assertEquals(2,guest.state.number("holeRewinds")); assertEquals(0,guest.state.number("turnRewinds")); compareViewAndScores(host,guest);
                 assertEquals(0,guest.state.number("gameplayRows"),"guest never simulates reverse or forward physics");
+                assertEquals("AIM", guest.state.text("phase"), "the guest's retry is not another handoff");
                 shot(guest);
                 pump(host,guest,(a,b)->a.number("owner")==0 && b.number("owner")==0 && a.number("turn")>guestTurn,700,"guest retry automatically passes the turn");
+                ready(host, host, guest);
                 shot(host);
                 pump(host,guest,(a,b)->a.text("phase").equals("WATCH") && b.text("phase").equals("WATCH"),700,"new host turn renews per-turn allowance");
                 assertEquals(1,host.state.number("turnRewinds"));
@@ -156,6 +222,13 @@ class TestGolfOnlineIntegration {
                 compareViewAndScores(host,guest);
             }
         }
+    }
+    /** The owner's fresh A, then both peers must observe the host's authoritative AIM. */
+    private static void ready(Peer owner, Peer host, Peer guest) throws Exception {
+        assertEquals("HANDOFF", host.state.text("phase"), "turn is held for readiness");
+        owner.step(1, 0, 0, false); owner.step(1, 0, ACTION_A, false);
+        pump(host, guest, (a, b) -> a.text("phase").equals("AIM") && b.text("phase").equals("AIM"), 200, "ready transition reaches both peers");
+        owner.step(1, 0, 0, false);
     }
     private static void pauseRewind(Peer peer) throws Exception {
         peer.step(1,0,0,true); peer.step(1,0,0,false); peer.step(1,2,0,false); peer.step(1,0,ACTION_A,false);
@@ -189,7 +262,7 @@ class TestGolfOnlineIntegration {
         for (int row = 0; row < maxRows && !condition.test(host.state, guest.state); row++) {
             host.step(1, 0, 0, false); guest.step(1, 0, 0, false); Thread.sleep(2);
         }
-        assertTrue(condition.test(host.state, guest.state), () -> message + "\nhost=" + host.state + "\nguest=" + guest.state);
+        if (message != null) assertTrue(condition.test(host.state, guest.state), () -> message + "\nhost=" + host.state + "\nguest=" + guest.state);
     }
     private static void compareViewAndScores(Peer host, Peer guest) throws Exception {
         host.step(6, 0, 0, false); long revision = host.state.number("viewRevision");

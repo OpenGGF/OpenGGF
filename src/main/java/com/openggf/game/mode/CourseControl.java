@@ -11,13 +11,23 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 @ModApi
 public final class CourseControl {
     private final GameplayModeContext context;
+    private final com.openggf.control.InputHandler input;
     private final boolean rewindHeld;
-    CourseControl(GameplayModeContext context) { this(context, false); }
-    CourseControl(GameplayModeContext context, boolean rewindHeld) { this.context = context; this.rewindHeld = rewindHeld; }
+    CourseControl(GameplayModeContext context) { this(context, null); }
+    CourseControl(GameplayModeContext context, com.openggf.control.InputHandler input) {
+        this.context = context; this.input = input; this.rewindHeld = input != null && input.isRewindHeld();
+    }
 
     /** Current configured rewind key/primary-pad bumper, independent of developer rewind enablement.
      * Controllers own edge detection. Movie inputs should use their controller menu command instead. */
     public boolean rewindHeld() { return rewindHeld; }
+
+    /** Prompt label for a local player's button (0 = P1, 1 = P2); see {@link com.openggf.control.ButtonPrompts}.
+     * Empty when the button is unbound or this row has no live input handler. */
+    public java.util.Optional<String> buttonLabel(int player, com.openggf.control.ButtonPrompts.Button button) {
+        return input == null ? java.util.Optional.empty()
+                : com.openggf.control.ButtonPrompts.label(input, player, button);
+    }
 
     @ModApi
     public record PlayerState(String character, int x, int y, int xSpeed, int ySpeed, int groundSpeed,
@@ -89,14 +99,23 @@ public final class CourseControl {
             throw new IllegalArgumentException("Course checkpoint registry adapters have changed");
         context.getRewindRegistry().requireCourseLayout(checkpoint.snapshot);
         selectCharacter(checkpoint.character);
+        var profile = context.getWorldSession().getGameModule().getLevelInitProfile();
+        boolean entryMusicPublished = !profile.isLevelMusicPublicationPending();
         context.getRewindRegistry().restoreCourse(checkpoint.snapshot);
+        // A checkpoint taken during level entry still holds its ROM-timed Level_PlayBgm countdown
+        // (Sonic 2). Once that request has been published, restoring the course must not arm it
+        // again: the zone music would restart from its first bar after the countdown.
+        if (entryMusicPublished && profile.isLevelMusicPublicationPending()) profile.cancelPendingLevelLoadWork();
         if (context.getRewindController() != null) context.getRewindController().invalidateCourseFuture();
-        // Course replacement retains mode time; abandoned transients cannot outlive the shot.
-        GameServices.audio().stopAllSfx();
+        // Course replacement retains mode time and the sound driver keeps running, as the Z80 does
+        // across 68000 state changes: sounds in flight finish on their own. A driver-wide SFX stop
+        // here gated the Sonic 2 presentation output (music included) until the next SFX admission.
         int musicId = context.getWorldSession().getGameModule().getZoneRegistry()
                 .getMusicId(level.getCurrentZone(), level.getCurrentAct());
         var currentMusic = GameServices.audio().captureLogicalSnapshot().presentation().activeMusic();
-        if (currentMusic == null || currentMusic.musicId() != musicId) GameServices.audio().playMusic(musicId);
+        // While the entry countdown is still pending, its own publication starts the zone music.
+        if (!profile.isLevelMusicPublicationPending()
+                && (currentMusic == null || currentMusic.musicId() != musicId)) GameServices.audio().playMusic(musicId);
     }
 
     public void selectCharacter(String character) {

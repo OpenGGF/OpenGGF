@@ -106,7 +106,7 @@ public final class TransportProbe {
             switch (type) {
                 case 1 -> { rawFingerprints(out); rawText(out, "tails"); }
                 case 2 -> { rawUuid(out); out.writeByte(1); rawUuid(out); rawFingerprints(out); rawText(out, "sonic"); }
-                case 3 -> { rawId(out); out.writeInt(100); out.writeInt(200); out.writeByte(224); out.writeByte(5); rawScore(out); rawScore(out); }
+                case 3 -> { rawId(out); out.writeInt(100); out.writeInt(200); out.writeByte(224); out.writeByte(5); rawScore(out); rawScore(out); out.writeByte(1); }
                 case 4 -> { rawId(out); out.writeByte(1); out.writeByte(25); out.writeShort(500); out.writeShort(-100); }
                 case 5 -> { rawId(out); out.writeLong(10); out.writeShort(500); }
                 case 6 -> { rawId(out); out.writeLong(1); out.writeLong(10); out.writeInt(0); }

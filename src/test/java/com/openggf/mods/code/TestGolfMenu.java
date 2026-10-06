@@ -49,6 +49,9 @@ class TestGolfMenu {
             throw failure;
         }
     }
+    @Test void remoteHudUsesHostPhaseAndNeverInvitesOffTurnAiming() throws Exception { check("hudShowsAuthoritativePhaseAndAvailableControls"); }
+    @Test void menuHintsMatchTheLastIntentionalPhysicalDevice() throws Exception { check("menuPromptsFollowTheIntentionalInputDevice"); }
+    @Test void scorecardHidesTheCompletedShotMeter() throws Exception { check("scorecardHasNoStaleShotMeter"); }
     @Test void sharedLogicalMouseCanSelectConfigureAndLaunchWithoutLetterboxClicks() throws Exception { check("mouseMenu"); }
     @Test void practiceActTwoReachesConsumerBeforeStandardOnePlayerExit() throws Exception { check("practice"); }
     @Test void twoLocalGolfersCanChooseDifferentOrDuplicateCharacters() throws Exception { check("characters"); }
@@ -58,4 +61,9 @@ class TestGolfMenu {
     @Test void returnToModePickerDoesNotLaunchOrLeakTypedText() throws Exception { check("backAndReset"); }
     @Test void everyConfigViewportQueuesBoundedMenuAndOverlayGeometry() throws Exception { check("renderWidths"); }
     @Test void allRequestedRewindLimitsAreSelectableInEveryMode() throws Exception { check("rewindSettings"); }
+    @Test void handoffPromptsNameTheIncomingPlayersOwnBindingAndSpectatorsWait() throws Exception { check("handoffPromptsNameTheIncomingPlayersBinding"); }
+    @Test void feedbackTimelineIsDeterministicRestorableAndFrozenByPause() throws Exception { check("feedbackTimelineIsDeterministicAndPauseFreezesIt"); }
+    @Test void resultsPlaySignpostJingleCardAndTallyInSonic2Order() throws Exception { check("resultsFollowSonic2Order"); }
+    @Test void menuNavigationRequestsRomMenuSounds() throws Exception { check("menuCuesFollowNavigation"); }
+    @Test void animatedCardsToastsAndPanelsStayInsideEveryViewport() throws Exception { check("cardsAndToastsStayInsideEveryViewport"); }
 }

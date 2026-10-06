@@ -1973,3 +1973,165 @@ template and post-checkout resource links. The feature worktree and uncommitted
 launcher remain for the PR; main stays on updated develop with its unrelated
 changes preserved. PR creation/push is the remaining delivery action from this
 prepared commit. No shared history is rewritten and no develop merge is requested.
+
+
+### Final design and rewind-effect follow-up — 2026-10-06
+
+The repeated final-polish request reviews PR #212 at `b2faa748f` against the same
+updated develop base `dee7a93c`. Slay The Robotnik PR #211 remains at
+`25b57f886`; its window entry point and golf's `LogicalMouse` contract align.
+The main checkout remains develop and fast-forward pull reports already current.
+
+Claude Opus 5.5 reviewed source and the cut contact sheet (not the whole movie).
+Its useful design tips were a discoverable WATCH-only rewind hint, readable guide
+panel, direct score totals, a scorecard without stale power values, a pure small
+HUD example, and explicit hit-point/rewind beats in the reel. Its contact-sheet
+inference that reverse playback was absent was superseded by the user's report:
+the playback existed, but the VHS effect was missing. Raw mouse-driven shot input
+is deferred: the shared menu mapper is unified, while a controller consumes
+recorded logical Genesis input. Widening that contract just for optional mouse
+shots would be disproportionate to this polish.
+
+The focused source review found host/guest off-turn prompts using a stale local
+shot meter. `GolfHud` now resolves authoritative phase and viewer ownership,
+hides unavailable choices, and keeps these decisions external to the engine.
+Menu hints reuse the shared last-intent keyboard/controller labels. The unchanged
+departure calculation names its half-gravity constant and cites S2
+`ObjectMoveAndFall` ($38 in native 8.8); guides still promise only departure.
+
+The rewind regression failed on all four Sonic/Tails EHZ act cases: golf holds
+physics and replays immutable scenes, so it never drives the developer rewind
+effect envelope. The small optional `RewindPresentation` value now requests the
+existing configured VHS pass; it grants no seek/restore/allowance operation.
+Stock/null requests are NONE, host pause holds the effect, and ambient gameplay
+bindings work too. The normal capture renderer uses the same pass, lifecycle and
+settings. Correct semantic rewind scroll direction is used by both render paths.
+Local replay and authoritative remote REWINDING choose the request in the mod.
+Candidate signature pins and `ModApiVersion` are refreshed while the release descriptor is retained;
+version/status stay unpublished mutable 0.7.0 candidate.
+
+Focused verification completed with 158 tests, zero failures/errors/skips:
+`maven_queue.py -Dmse=off -Dtest=TestPuttPuttParadise,TestGolfMenu,TestGolfOnlineIntegration,TestModApiSignatureSurface,TestOwnerBoundGamePatch,TestRewindVhsEffectPass,TestRewindEffectEnvelope,TestCourseControl test`, with absolute S2/S3&K ROM properties. The four-act effect regression also checks ambient binding and both host pauses; two actual peer JVMs check online HUD ownership. Candidate pin has 19,429 signatures. The full ordinary/guards selection remains 2,978 classes; preflight passed with `LUA_BIN=/usr/bin/lua5.4`. A fresh `-Dtest=TestGolfScenePresentation` invocation passed 30 checks with zero skips, avoiding the previously documented reused-fork palette hazard. The ordinary example `build.py` succeeded and SDK-validated the code-only jar. Real-input footage is being recaptured with the actual VHS pass, effect intensity/speed in its state CSV, and same-frame raw/effected images for pixel evidence. The complete change-based command is `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base dee7a93c99f3984fc2d8cd3b425ca4315cc9c19b --workers 2 --max-minutes 90 --run`.
+Earlier inherited baseline failures remain recorded above; CI at `b2faa748f`
+passed ordinary tests and policy but failed the two inherited guards plus an
+unchanged terminology-guard subprocess timeout. No full-green claim is made.
+
+
+The user then identified stationary Tails disappearing in the local-play footage.
+A read-only production capture probe established the owning state: after the
+Sonic-to-Tails turn switch, body mapping 0 is blank, parent animation 0 has not
+run, and Obj05 is uninitialized (`mappingFrame=-1`). AIM holds the world, so it
+cannot repair itself until launch. Custom duck/spindash projection also omitted
+the separate appendage. This is a presentation problem, not a 2P physics gate.
+
+The mod chooses the generic ROM-backed IDLE view only for an unmoving,
+nonrolling AIM golfer, including the first frame of `openTurn`; settled balls
+keep their native pose. The view clock selects native idle/duck/charge mappings
+and Tails' appendage using shared internal tail scripts and the module's existing
+separate-art capability. No player animation, DPLC clock or physics is advanced.
+Pre-shot replay origin scenes also retain a visible idle golfer. Guest AIM preserves the host scene instead of consulting its frozen local
+rolling flag; a two-JVM fourth-turn check covers a settled rolling lie. The candidate
+adds only the IDLE enum value; the shared tail selector is pinned as engine
+internal rather than becoming another creator operation.
+
+The new four-roster regression failed three cases before repair (missing body
+or appendage), with no errors/skips. The broader follow-up invocation was
+interrupted to include this confirmed defect: 2,774 partial reports / 24,188
+cases were available, with four failures, three errors and 38 skips, before
+completion. Those partial diagnostics are consumed and acknowledged; they are
+not validation results, and guards did not run. The combined candidate will
+receive fresh change-based validation after the sprite fix is focused-tested.
+
+The user also asked Claude Opus 5.5 to create a new public-facing promo with
+transitions, information and action-led feature coverage. That separate media
+work is delegated outside the repository, with a reproducible source-root
+option so the repaired native captures replace the draft footage. The older
+80.5-second technical reel remains separately identifiable.
+
+The focused tail review found the guest AIM policy defect before recapture: using
+its frozen local player flag would project a standing body over the host's rolling
+lie. The mod now retains the authoritative scene during guest AIM. The review
+also requested the native Wait loop boundary; a bounded test checks the first
+and later `$FE,$1C` repeat and an interior frame without advancing the world.
+The first wider focus exposed a missing engine-internal registry entry for the
+new shared tail selector (168 passed, one signature-terminal pin failure, no
+skips); the registry and exact pin are now synchronized.
+
+Opus delivered a reproducible 49.97-second public promo draft, with action-first
+Sonic/Tails hooks, putt/chip/spin/rewind chapters, physics montage, alternating
+local shots, a separate online information card, OpenGGF context and a source
+CTA. Iris, stripe, push and flash transitions preserve source cadence. The draft
+is visibly labelled v4 and cannot be rendered as final with v4 inputs; state-range
+hashes reject drift when swapping the corrected v5 captures. All original
+geometric cards and render/verification scripts remain outside the repository.
+
+Final focused verification after the guest correction completed 169 cases with
+zero failures/errors/skips; fresh scene verification completed 37, including
+the idle-loop boundary, also with no failures/errors/skips. Commands were the
+queued `-Dtest=TestPuttPuttParadise,TestGolfMenu,TestGolfOnlineIntegration,TestModApiSignatureSurface,TestOwnerBoundGamePatch,TestRewindVhsEffectPass,TestRewindEffectEnvelope,TestCourseControl,TestSpriteManagerMainTailsTailsDispatch,TestTailsTailsDirectionalAnimation,TestTailsTailsFlightSelection`
+and a separate `-Dtest=TestGolfScenePresentation`, using absolute matching S2
+and S3&K ROM paths. The example build succeeded through its SDK boundary.
+Candidate surface contains 19,430 signatures; public presentation changes and
+the shared internal terminal are synchronized. Fetch confirmed develop is still
+`dee7a93c99f3984fc2d8cd3b425ca4315cc9c19b`.
+
+
+### Opus Extra High presentation and synchronized readiness — 2026-10-06
+
+The completed pre-Opus combined run `20261006T100417Z-70558f13`, against
+`dee7a93c`, selected all 2,978 ordinary classes. It completed 25,745 cases
+with 29 failures, three errors and 41 inspected skips; fresh guards completed
+672 checks with the two inherited failures and no errors/skips. The 29 failure
+identities and first-error fields were unchanged from the recorded prior run;
+this is not another fresh full-assertion baseline comparison. The three new
+errors all rejected a comment in the strictly key=value release descriptor.
+Removing that comment retained the original descriptor; the queued
+`TestModApiPinPolicy,TestModApiReleasePolicy,TestModApiRuntimePolicy,TestModApiSignatureSurface`
+repair passed all 27 checks without skips. The consumed category diagnostics
+were acknowledged and deleted. This records a red broad run followed by a
+bounded metadata repair, not a green full-suite result.
+
+The user then requested a concrete Opus 5.5 Extra High implementation pass on
+the mod, documentation and public promo, with Slay The Robotnik as a reference.
+The presentation remains external: `GolfFeedback` consumes explicit events and
+returns ROM sound cues; `GolfMotion` supplies easing; `GolfCanvas`/`GolfCards`
+render panels, turn cards, toasts and a results tally. The mod owns those sound
+choices and timelines, animated guide brightness, the short shot trail, HUD
+slides and power-lock feedback. Shared engine code gains no golf score or
+transition policy. The example reading path and small extension exercises now
+include these files.
+
+Incoming competitive golfers wait for a fresh action press, separately consumed
+from the next shot. The outgoing shot still settles and passes automatically.
+`TurnReadiness` is captured with the mode, identifies owners even with matching
+characters and keeps a confirmed turn through rewind retries. Online HANDOFF
+and READY are authoritative host state; spectators cannot confirm, guest presses
+wait for acceptance, and duplicate/stale ready intents cannot commit a shot or
+advance a turn. Protocol 5 and its fingerprint explicitly reject other builds.
+The generic `ButtonPrompts` helper derives per-player live keyboard/pad labels;
+`CourseControl.buttonLabel` exposes those values to controlled modes. Menu
+confirm labels retain their separate meaning. The mutable candidate adds 17
+signature lines without changing the API version or release descriptor.
+
+Capture QA rejected the first audio-enabled edit: nonzero RMS hid long constant
+DC sections and weak/missing music. A matched stock capture through the same
+presentation path was healthy. Course lie setup had requested music ahead of
+S2's pending `Level_PlayBgm` countdown and later restarted it; burst flushing
+the countdown was rejected. The retained fix leaves one native-timed entry
+publication in charge, services pending entry music on held presentation rows
+and prevents a later course restore from rearming it. Driver-wide SFX stops
+at course/shot restore boundaries were also gating the presentation music; the
+mod now leaves the sound driver running across its reverse views. Opus's
+mutation checks discriminated both premature publication and missing held-row
+service. Final media requires recapture from this source; earlier audio-enabled
+media remains a superseded draft.
+
+Parent verification on this final source used queued Maven with
+`-Dmse=off -Dtest=TestButtonPrompts,TestMenuInput,TestGamepadInputManager,TestInputHandler,TestGolfModel,TestGolfMenu,TestGolfTransport,TestGolfOnlineIntegration,TestPuttPuttParadise,TestCourseControl,TestModApiPinPolicy,TestModApiSignatureSurface,TestOwnerBoundGamePatch test`
+and the existing absolute S2/S3&K ROM paths. It completed **244 checks, zero
+failures/errors/skips**, including actual independent-JVM host/guest handoff,
+ready-press separation, stale/duplicate intents, native shots, pause and rewind.
+The example's 25 local README links resolve and `git diff --check` passes.
+Develop has since advanced to `eaceceda440328f0fc7864deca4cd4134811d373`
+with independent Infinite Sonic example changes. Final combined validation
+must use that actual destination; no feature merge into develop is requested.

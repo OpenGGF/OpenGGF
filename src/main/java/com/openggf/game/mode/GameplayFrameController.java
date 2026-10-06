@@ -14,6 +14,11 @@ public interface GameplayFrameController {
     default boolean retainRolling() { return false; }
     /** Optional view-only scene, e.g. a read-only remote projection. */
     default boolean drawScene() { return false; }
+    /** View-only rewind effect, including creator-owned reverse playback. The host honors its effect settings.
+     * Returning null is equivalent to no effect; throwing remains an owner-attributed callback failure. */
+    default com.openggf.game.presentation.RewindPresentation rewindPresentation() {
+        return com.openggf.game.presentation.RewindPresentation.NONE;
+    }
     /** Draws a view-only overlay after the level scene. */
     default void drawOverlay() { }
     /** Freezes audio presentation while a mode menu or room hold is open. */

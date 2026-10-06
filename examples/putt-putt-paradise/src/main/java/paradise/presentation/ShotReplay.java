@@ -48,6 +48,7 @@ public final class ShotReplay {
         record(ticks, latest); cursor = ticks; speed = RewindAllowance.replaySpeed(ticks); playing = true;
     }
     public boolean playing() { return playing; }
+    public int speed() { return speed; }
     /** Returns true at the origin. No gameplay manager is restored during visual playback. */
     public boolean step() { cursor = Math.max(0, cursor - speed); return cursor == 0; }
     public ScenePresentationFrame frame(long revision) {

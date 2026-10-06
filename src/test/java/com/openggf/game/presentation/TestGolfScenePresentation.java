@@ -260,6 +260,49 @@ class TestGolfScenePresentation {
     }
 
     @RequiresRom(SonicGame.SONIC_2)
+    @ParameterizedTest @CsvSource({"IDLE,-1", "IDLE,1", "DUCK,-1", "DUCK,1", "SPINDASH,-1", "SPINDASH,1"})
+    void heldTailsPosesKeepBodyAndIndependentAppendageWithoutSteppingTheWorld(String kind, int facing) throws Exception {
+        var fixture = launch(0, 320, "tails"); fixture.stepIdleFrames(20);
+        var level = GameServices.level(); var before = snapshot();
+        var pose = new PlayerPresentationPose(PlayerPresentationPose.Kind.valueOf(kind), 8, facing);
+        var frame = level.captureScene(101, pose);
+        assertTrue(frame.tiles().stream().anyMatch(t -> t.art().recipe().equals("player/tails")), "Tails body");
+        assertTrue(frame.tiles().stream().anyMatch(t -> t.art().recipe().equals("tail/tails")), "Tails appendage");
+        try (var host = level.createScenePresenter(); var guest = level.createScenePresenter()) {
+            host.accept(frame); guest.accept(SceneFrameCodec.decode(SceneFrameCodec.encode(frame)));
+            var player = new ScenePlayerPose("tails", fixture.sprite().getRenderCentreX(),
+                    fixture.sprite().getRenderCentreY(), pose);
+            assertArrayEquals(host.image(0, 0).argb(), guest.image(0, 0, player).argb());
+            var later = level.captureScene(102, new PlayerPresentationPose(pose.kind(), 16, facing));
+            assertNotEquals(frame.tiles().stream().filter(t -> t.art().recipe().equals("tail/tails")).toList(),
+                    later.tiles().stream().filter(t -> t.art().recipe().equals("tail/tails")).toList(),
+                    "Only the view clock animates the held appendage");
+            if (pose.kind() == PlayerPresentationPose.Kind.DUCK)
+                assertEquals(frame.tiles().stream().filter(t -> t.art().recipe().equals("player/tails")).toList(),
+                        later.tiles().stream().filter(t -> t.art().recipe().equals("player/tails")).toList(),
+                        "The duck body holds its native position while the tail swishes");
+        }
+        assertUnchanged(before, snapshot());
+    }
+
+    @RequiresRom(SonicGame.SONIC_2)
+    @Test void heldTailsIdleRepeatsOnlyTheNativeWaitLoopAfterItsIntro() throws Exception {
+        var fixture = launch(0, 320, "tails"); fixture.stepIdleFrames(20);
+        var level = GameServices.level(); var before = snapshot();
+        // s2.asm TailsAni_Wait: 59 mappings, delay 7, $FE,$1C repeats
+        // the final 28 mappings (index 31/$05), never the $01 introduction.
+        java.util.function.LongFunction<List<ScenePresentationFrame.Tile>> body = tick -> level.captureScene(tick + 1,
+                new PlayerPresentationPose(PlayerPresentationPose.Kind.IDLE, tick, 1)).tiles().stream()
+                .filter(tile -> tile.art().recipe().equals("player/tails")).toList();
+        var firstLoopFrame = body.apply(31L * 8);
+        assertNotEquals(body.apply(0), firstLoopFrame, "Wait loop starts at a different ROM mapping from the intro");
+        assertEquals(firstLoopFrame, body.apply(59L * 8), "First $FE,$1C loop");
+        assertEquals(firstLoopFrame, body.apply((59L + 28) * 8), "Later repeat keeps the same native loop");
+        assertEquals(body.apply(47L * 8), body.apply((59L + 16) * 8), "Interior loop frame also advances correctly");
+        assertUnchanged(before, snapshot());
+    }
+
+    @RequiresRom(SonicGame.SONIC_2)
     @ParameterizedTest @ValueSource(ints = {-1, 1})
     void heldDuckMatchesNativeDownWithoutRepeatingTheEntryFrame(int facing) throws Exception {
         var fixture = launch(0, 320, "sonic"); fixture.stepIdleFrames(20);

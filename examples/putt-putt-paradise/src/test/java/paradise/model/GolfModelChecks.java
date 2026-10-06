@@ -356,4 +356,41 @@ public final class GolfModelChecks {
         same(expected, match.resolve(id, FINISH), "pending shot replay decision");
         same(expectedState, match.snapshot(), "pending shot replay entire ledger");
     }
+
+    public static void turnReadiness() {
+        var ready = new TurnReadiness();
+        require(ready.open(0, true, true), "a competition's first golfer is introduced");
+        require(ready.firstOfHole(), "first turn of the hole is marked");
+        // An A held on the handoff row neither confirms nor arms the gate.
+        require(!ready.press(true, true), "held A from the previous turn cannot confirm");
+        require(!ready.press(true, false), "still held");
+        require(!ready.press(false, false), "release arms the gate");
+        require(ready.press(true, true), "fresh press confirms once");
+        require(!ready.press(true, true), "a request cannot be confirmed twice");
+        require(ready.requested(), "the press is a request until accepted");
+        ready.accept(); require(!ready.waiting(), "accepted turn is ready");
+        ready.accept(); require(!ready.waiting(), "acceptance is idempotent");
+        require(!ready.open(0, true, false), "a rewind retry keeps its turn and readiness");
+        require(ready.open(1, true, false), "the other golfer is held at the handoff");
+        require(!ready.firstOfHole(), "mid-hole handoff is not a hole introduction");
+        same(1, ready.owner(), "incoming owner");
+        require(ready.press(true, true), "released at the handoff: the next fresh press confirms");
+        ready.reopen(); require(ready.waiting() && !ready.requested(), "a refused request waits again");
+        require(!ready.press(true, true), "reopened gate needs another release");
+        ready.press(false, false); ready.disarm();
+        require(!ready.press(true, true), "pause disarms an armed gate");
+        var saved = ready.snapshot();
+        ready.press(false, false); require(ready.press(true, true), "confirm after release");
+        ready.restore(saved); require(ready.waiting() && !ready.requested(), "restore returns the exact gate");
+        ready.accept();
+        require(!ready.open(1, true, false), "a golfer whose opponent finished plays on without a handoff");
+        ready.newHole(); require(ready.open(1, true, false), "a new hole always introduces its first golfer");
+        var practice = new TurnReadiness();
+        require(!practice.open(0, false, false) && !practice.open(0, false, false), "practice never waits");
+        var guest = new TurnReadiness();
+        guest.adopt(1, true, true, true); require(guest.waiting() && guest.firstOfHole(), "guest mirrors the host's hold");
+        require(!guest.press(true, true), "guest A held across the handoff cannot request");
+        guest.adopt(0, false, false, false); require(!guest.waiting(), "an unheld host turn needs no press");
+        try { ready.open(2, true, false); throw new AssertionError("owner range"); } catch (IllegalArgumentException correct) { }
+    }
 }

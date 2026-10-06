@@ -46,4 +46,10 @@ class TestGolfTransport {
     @Test void handshakePauseIntentPrecedesReady() throws Exception {
         TestGolfProtocol.runProbe(temp, "RoomProbe", "handshakePauseIntentPrecedesReady");
     }
+    @Test void readyHandoffIsOwnerBoundTurnScopedAndHeldSafe() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "readyHandoffIsOwnerBoundAndTurnScoped");
+    }
+    @Test void incompatibleProtocolGenerationsAreNamedOnBothSides() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "incompatibleVersionsAreNamed");
+    }
 }

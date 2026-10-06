@@ -32,8 +32,10 @@ public sealed interface GolfPacket {
         public Score { range(strokes, 0, 1_000_000, "strokes"); range(penalties, 0, 1_000_000, "penalties"); }
     }
     enum Outcome { SETTLED, FINISHED, PENALTY, CONCEDED, REWOUND }
-    enum ShotAction { REWIND }
-    enum ShotPhase { AIM, CHARGING, WATCH, REWINDING }
+    /** Owner intents for the open turn. READY confirms the incoming golfer at a handoff. */
+    enum ShotAction { REWIND, READY }
+    /** HANDOFF holds a new golfer's turn until its owner confirms readiness; AIM follows. */
+    enum ShotPhase { AIM, CHARGING, WATCH, REWINDING, HANDOFF }
     record ShotControl(ShotId id, ShotAction action) implements GolfPacket {
         public ShotControl { Objects.requireNonNull(id); Objects.requireNonNull(action); }
     }
@@ -52,9 +54,14 @@ public sealed interface GolfPacket {
         public Ready { Objects.requireNonNull(match); player(owner); Objects.requireNonNull(roomToken);
             Objects.requireNonNull(fingerprints); GolfPacket.character(character); }
     }
-    record TurnOpened(ShotId id, int lieX, int lieY, int surfaceAngle, int rollOffset, Score player0, Score player1) implements GolfPacket {
+    /** readyRequired: the host holds this turn in HANDOFF until the owner's READY is accepted. */
+    record TurnOpened(ShotId id, int lieX, int lieY, int surfaceAngle, int rollOffset, Score player0, Score player1,
+                      boolean readyRequired) implements GolfPacket {
         public TurnOpened { Objects.requireNonNull(id); Objects.requireNonNull(player0); Objects.requireNonNull(player1);
             range(surfaceAngle, 0, 255, "surface angle"); range(rollOffset, 0, 64, "roll offset"); }
+        public TurnOpened(ShotId id, int lieX, int lieY, int surfaceAngle, int rollOffset, Score player0, Score player1) {
+            this(id, lieX, lieY, surfaceAngle, rollOffset, player0, player1, false);
+        }
     }
     /** Elevation 0..90, power 0..1000, chip back/topspin -100..100. No client-supplied score. */
     record ShotRequest(ShotId id, int facing, int elevationDegrees, int normalizedPower, int spin) implements GolfPacket {

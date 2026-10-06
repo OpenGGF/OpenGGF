@@ -74,4 +74,5 @@ class TestGolfModel {
     @Test void rewindRefundsOnlyPendingShotAndRetiresItsIdentity() throws Exception { check("shotRewind"); }
     @Test void rewindLimitsAreIndependentPerGolferHoleAndTurn() throws Exception { check("rewindAllowances"); }
     @Test void longerShotsRewindFasterWithBoundedPlaybackTime() throws Exception { check("rewindSpeed"); }
+    @Test void handoffNeedsAReleasedThenFreshPressAndRetriesKeepReadiness() throws Exception { check("turnReadiness"); }
 }

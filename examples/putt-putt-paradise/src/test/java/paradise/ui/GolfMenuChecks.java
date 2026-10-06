@@ -201,6 +201,57 @@ public final class GolfMenuChecks {
         ImageIO.write(image, "png", directory.resolve(name + "-" + width + ".png").toFile());
     }
 
+    public static void hudShowsAuthoritativePhaseAndAvailableControls() {
+        var meter = new paradise.model.ShotMeter();
+        var aim = meter.snapshot();
+        var hostShot = GolfHud.shot(aim, false, true, GolfHud.RemotePhase.WATCH, false, false, "R/LB");
+        same("WATCH", hostShot.stage(), "observer uses authoritative host phase");
+        require(!hostShot.showShotControls() && !hostShot.hint().contains("A SHOT"), "observer must not advertise unavailable controls");
+        var waitingHost = GolfHud.shot(aim, false, false, GolfHud.RemotePhase.AIM, false, false, "R/LB");
+        same("WAITING", waitingHost.stage(), "host waiting for guest must not show its stale aim meter");
+        var guestFlight = GolfHud.shot(aim, true, true, GolfHud.RemotePhase.WATCH, false, true, "T/LB");
+        require(guestFlight.hint().contains("T/LB REWIND") && !guestFlight.showShotControls(), "accepted guest shot uses authoritative flight and remapped rewind hint");
+        var guestCharge = GolfHud.shot(aim, true, true, GolfHud.RemotePhase.CHARGING, false, false, "R/LB");
+        same("CHARGING", guestCharge.stage(), "guest charge is authoritative");
+        var undo = GolfHud.shot(aim, true, true, GolfHud.RemotePhase.REWINDING, false, true, "R/LB");
+        same("REWIND", undo.stage(), "remote replay overrides the local meter");
+        var view = GolfHud.overlay("JOIN", hostShot, aim, 0, 0,
+                List.of(new GolfOverlay.PlayerScore("SONIC", 3, 1, false, false)), 0, hostShot.hint(), false, false);
+        same(0, view.power(), "unknown remote power is neutralized");
+        same("P1 4 (+1 PEN)", GolfHud.scoreLabel(0, view.players().getFirst()), "score names included penalty instead of an arithmetic puzzle");
+        same("P1 3", GolfHud.scoreLabel(0, new GolfOverlay.PlayerScore("SONIC", 3, 0, false, false)), "ordinary score is simple");
+        same("LB", GolfHud.rewindControl(-1), "an unbound key never advertises R");
+        same("SPACE/LB", GolfHud.rewindControl(GLFW_KEY_SPACE), "space binding is named");
+    }
+
+    public static void menuPromptsFollowTheIntentionalInputDevice() {
+        var devices = new java.util.concurrent.atomic.AtomicReference<List<com.openggf.control.GamepadStateSource.DeviceState>>(List.of());
+        var config = com.openggf.configuration.SonicConfigurationService.createStandalone();
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        var input = new InputHandler(com.openggf.InputBindingFactory.supplier(config), devices::get);
+        var menu = new GolfMenu(null, ignored -> { }); menu.initialize();
+        devices.set(List.of(com.openggf.control.GamepadStateSource.DeviceState.connected(0, "Xbox test", new boolean[15], 0, 0)));
+        input.refreshLogicalSnapshot(); menu.update(input); input.update();
+        require(menu.controlsHint().contains("ENTER"), "connection alone does not select controller hints");
+        var buttons = new boolean[15]; buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN] = true;
+        devices.set(List.of(com.openggf.control.GamepadStateSource.DeviceState.connected(0, "Xbox test", buttons, 0, 0)));
+        input.refreshLogicalSnapshot(); menu.update(input); input.update();
+        same("D-Pad  A SELECT  B BACK", menu.controlsHint(), "menu uses shared controller button labels");
+        input.handleKeyEvent(GLFW_KEY_UP, GLFW_PRESS); input.refreshLogicalSnapshot(); menu.update(input); input.update();
+        require(menu.controlsHint().contains("ENTER") && menu.controlsHint().contains("MOUSE"), "intentional keyboard edge restores keyboard/pointer hints");
+    }
+
+    public static void scorecardHasNoStaleShotMeter() {
+        var graphics = new CaptureGraphics();
+        GolfOverlay.draw(graphics, 320, new GolfOverlay.View("PRACTICE", "WATCH", 60, 1, 1000, 0, 0, 1000, 0,
+                List.of(new GolfOverlay.PlayerScore("SONIC", 10, 0, true, false)), 0,
+                "HOLE COMPLETE - START FOR MENU", false, true));
+        require(graphics.queued.stream().map(p -> (GolfText.Rect) p).noneMatch(r -> r.y() >= 180),
+                "scorecard must hide the completed shot's meter and duplicate hint");
+    }
+
     public static void renderWidths() throws Exception {
         for (var viewport : GolfMenu.Viewport.values()) {
             int width = viewport.pixelWidth();
@@ -254,6 +305,153 @@ public final class GolfMenuChecks {
                     List.of(new GolfOverlay.PlayerScore("SONIC", 12, 2, true, false),
                             new GolfOverlay.PlayerScore("TAILS", 13, 1, true, false)), 1, "DRAW - BOTH PLAYERS 14", true, true));
             bounds(graphics, width); preview(graphics, width, "scorecard");
+        }
+    }
+
+    public static void handoffPromptsNameTheIncomingPlayersBinding() {
+        var local = GolfHud.handoff(true, false, "RIGHT SHIFT", 1, "TAILS");
+        same("HANDOFF", local.stage(), "owner sees the ready stage");
+        require(!local.showShotControls() && local.hint().startsWith("RIGHT SHIFT WHEN READY"), "owner prompt uses their binding");
+        var spectator = GolfHud.handoff(false, false, "SPACE", 1, "TAILS");
+        same("WAITING", spectator.stage(), "spectator waits");
+        require(spectator.hint().contains("WAITING FOR P2 TAILS") && !spectator.hint().contains("SPACE"),
+                "a spectator is never told to press their own key");
+        require(GolfHud.handoff(true, true, "SQUARE", 1, "SONIC").hint().contains("WAITING FOR THE HOST"), "a sent request waits for the host");
+        var card = new GolfCards.Handoff(1, "TAILS", true, "RIGHT SHIFT", false, false, 1);
+        same("TAILS' TURN", card.title(), "apostrophe after S");
+        same("SONIC'S TURN", new GolfCards.Handoff(0, "SONIC", true, "SPACE", false, true, 1).title(), "possessive");
+        same("PRESS RIGHT SHIFT WHEN READY", card.prompt(), "incoming player's own key");
+        same("WAITING FOR P2 TAILS", new GolfCards.Handoff(1, "TAILS", false, "SPACE", false, false, 1).prompt(), "spectator prompt");
+        same("PRESS A WHEN READY", new GolfCards.Handoff(0, "SONIC", true, "", false, false, 1).prompt(), "unbound fallback names the logical button");
+        same("R REWIND  START PAUSE", GolfHud.shot(new paradise.model.ShotMeter.State(paradise.model.ShotMeter.Stage.WATCH, 1, 0, 0, 500, 0, 0, 0,
+                false, false, new paradise.model.GolfShot(1, 0, 500, 0), false), true, false, null, false, true, "R").hint(), "derived rewind label");
+        same("START MENU TO REWIND", GolfHud.shot(new paradise.model.ShotMeter.State(paradise.model.ShotMeter.Stage.WATCH, 1, 0, 0, 500, 0, 0, 0,
+                false, false, new paradise.model.GolfShot(1, 0, 500, 0), false), true, false, null, false, true, "").hint(), "unbound rewind keeps the menu path");
+    }
+
+    public static void feedbackTimelineIsDeterministicAndPauseFreezesIt() {
+        var f = new GolfFeedback();
+        f.handoff();
+        same(List.of(GolfFeedback.Cue.HANDOFF), f.tick(true, false, 0), "handoff announces the next golfer");
+        for (int i = 0; i < GolfFeedback.CARD_IN; i++) f.tick(true, false, 0);
+        same(GolfFeedback.Card.HANDOFF, f.card(), "the card waits for readiness");
+        require(Math.abs(f.cardIn() - 1) < 0.01f, "card has landed");
+        long clock = f.clock(); float hud = f.hudShown();
+        for (int i = 0; i < 30; i++) require(f.tick(false, true, 0).isEmpty(), "paused rows raise no cues");
+        same(clock, f.clock(), "pause freezes presentation time");
+        require(f.hudShown() == hud, "pause freezes the panel");
+        var saved = f.snapshot();
+        var first = new ArrayList<GolfFeedback.State>();
+        f.ready();
+        same(List.of(GolfFeedback.Cue.READY), f.tick(true, true, 0), "ready confirms with one cue");
+        require(f.cardLeaving() && f.toast() == GolfFeedback.Toast.TEE_OFF, "card leaves as TEE OFF appears");
+        float previous = -1;
+        for (int i = 0; i < 60; i++) {
+            f.tick(true, true, 0); first.add(f.snapshot());
+            require(f.hudShown() >= previous - 1e-6f, "panel rises monotonically"); previous = f.hudShown();
+        }
+        same(GolfFeedback.Card.NONE, f.card(), "card retired");
+        same(GolfFeedback.Toast.NONE, f.toast(), "toast retired");
+        require(Math.abs(f.hudShown() - 1) < 1e-6f, "panel fully shown");
+        f.restore(saved); f.ready(); f.tick(true, true, 0);
+        for (int i = 0; i < 60; i++) { f.tick(true, true, 0); same(first.get(i), f.snapshot(), "restored timeline replays exactly at row " + i); }
+        f.trail(10, 20); f.tick(true, false, 0); f.trail(11, 21);
+        require(f.trailPoints().size() <= 4 && f.trailPoints().size() % 2 == 0, "trail keeps x/y pairs at its stride");
+        for (int i = 0; i < 200; i++) { f.trail(i, i); f.tick(true, false, 0); }
+        require(f.trailPoints().size() <= GolfFeedback.TRAIL_POINTS * 2, "trail is bounded");
+    }
+
+    public static void resultsFollowSonic2Order() {
+        var f = new GolfFeedback();
+        f.finished(0, 10, true);
+        same(List.of(GolfFeedback.Cue.FINISH), f.tick(true, false, 0), "the signpost sound marks the finish");
+        f.results(true);
+        var cues = new ArrayList<GolfFeedback.Cue>(); long clearAt = -1, endAt = -1, lastTick = -1;
+        for (int row = 1; row <= 400; row++) {
+            for (var cue : f.tick(true, false, 10)) {
+                cues.add(cue);
+                if (cue == GolfFeedback.Cue.CLEAR) clearAt = row;
+                if (cue == GolfFeedback.Cue.TALLY_END) endAt = row;
+                if (cue == GolfFeedback.Cue.TALLY_TICK) lastTick = row;
+            }
+            if (row < GolfFeedback.CARD_DELAY) require(f.scorecardAge() < 0, "the card waits for the celebration");
+        }
+        same(1L, cues.stream().filter(c -> c == GolfFeedback.Cue.CLEAR).count(), "one Stage Clear jingle");
+        same((long) GolfFeedback.CLEAR_DELAY, clearAt, "jingle after the signpost");
+        same(1L, cues.stream().filter(c -> c == GolfFeedback.Cue.TALLY_END).count(), "one tally end");
+        require(lastTick > 0 && lastTick < endAt && endAt > GolfFeedback.CARD_DELAY, "blips precede the tally end, after the card");
+        same(10, f.tally(10), "tally reaches the total");
+        require(f.tallyDone(), "tally completes");
+        var conceded = new GolfFeedback(); conceded.results(false);
+        require(conceded.scorecardAge() == 0, "uncelebrated results show the card at once");
+        for (int i = 0; i < 200; i++) require(!conceded.tick(true, false, 3).contains(GolfFeedback.Cue.CLEAR), "no jingle for a concession");
+    }
+
+    public static void menuCuesFollowNavigation() {
+        var cues = new ArrayList<GolfMenu.Cue>(); var launches = new ArrayList<GolfMenu.Selection>();
+        var menu = new GolfMenu(null, () -> 320, launches::add, null, cues::add);
+        var input = new InputHandler();
+        menu.initialize();
+        same(List.of(GolfMenu.Cue.MUSIC), cues, "menu music starts with the menu"); cues.clear();
+        Runnable tick = () -> { input.refreshLogicalSnapshot(); menu.update(input); input.update(); };
+        java.util.function.IntConsumer tap = key -> {
+            input.handleKeyEvent(key, GLFW_PRESS); tick.run(); input.handleKeyEvent(key, GLFW_RELEASE); tick.run();
+        };
+        tap.accept(GLFW_KEY_DOWN); same(List.of(GolfMenu.Cue.MOVE), cues, "moving the selection blips"); cues.clear();
+        tap.accept(GLFW_KEY_ENTER); same(List.of(GolfMenu.Cue.ENTER), cues, "opening setup confirms"); cues.clear();
+        tap.accept(GLFW_KEY_RIGHT); same(List.of(GolfMenu.Cue.MOVE), cues, "changing an option blips"); cues.clear();
+        tap.accept(GLFW_KEY_ESCAPE); same(List.of(GolfMenu.Cue.MOVE), cues, "returning blips"); cues.clear();
+        for (int i = 0; i < 2; i++) tap.accept(GLFW_KEY_DOWN);
+        tap.accept(GLFW_KEY_ENTER); cues.clear(); // Join setup.
+        while (menu.focusedField() != GolfMenu.Field.PORT) tap.accept(GLFW_KEY_DOWN);
+        cues.clear();
+        tap.accept(GLFW_KEY_ENTER); same(List.of(GolfMenu.Cue.ENTER), cues, "editing a field confirms"); cues.clear();
+        MenuInput.handleCharEvent(input, '0'); tick.run(); tap.accept(GLFW_KEY_ENTER);
+        require(cues.contains(GolfMenu.Cue.ERROR), "a refused value sounds the error cue: " + cues); cues.clear();
+        tap.accept(GLFW_KEY_ESCAPE); cues.clear();
+        while (menu.focusedField() != GolfMenu.Field.START) tap.accept(GLFW_KEY_DOWN);
+        cues.clear(); tap.accept(GLFW_KEY_ENTER);
+        same(1, launches.size(), "launch"); require(cues.contains(GolfMenu.Cue.LAUNCH), "launch sounds the release");
+    }
+
+    public static void cardsAndToastsStayInsideEveryViewport() throws Exception {
+        for (var viewport : GolfMenu.Viewport.values()) {
+            int width = viewport.pixelWidth();
+            var players = List.of(new GolfOverlay.PlayerScore("SONIC", 3, 1, false, false),
+                    new GolfOverlay.PlayerScore("TAILS", 2, 0, false, false));
+            var cases = new ArrayList<java.util.function.Consumer<GolfFeedback>>();
+            cases.add(GolfFeedback::holeIntro);
+            cases.add(GolfFeedback::handoff);
+            cases.add(f -> f.penalty(GolfFeedback.Toast.PENALTY_LOST));
+            cases.add(f -> f.finished(1, 12, false));
+            cases.add(f -> f.finished(0, 9, true));
+            cases.add(f -> f.refunded(2));
+            cases.add(f -> { f.handoff(); f.ready(); });
+            int index = 0;
+            for (var event : cases) {
+                for (int age : new int[]{2, 9, 30, 110}) {
+                    var graphics = new CaptureGraphics(); var canvas = new GolfCanvas(graphics, width, 224);
+                    var f = new GolfFeedback(); event.accept(f);
+                    for (int i = 0; i < age; i++) f.tick(true, false, 0);
+                    for (int i = 0; i < 40; i++) f.trail(i * 20 - 100, 100 + i);
+                    GolfCards.trail(canvas, f.trailPoints(), 0, 0);
+                    GolfCards.tag(canvas, f.clock(), width - 2, 30, 1, "TAILS");
+                    GolfCards.hole(canvas, f, 1, "SONIC PRACTICE");
+                    GolfCards.handoff(canvas, f, new GolfCards.Handoff(1, "TAILS", true, "RIGHT SHIFT", false, true, 2));
+                    GolfCards.toast(canvas, f, players);
+                    bounds(graphics, width);
+                    if (age == 30) preview(graphics, width, "card-" + index);
+                }
+                index++;
+            }
+            var graphics = new CaptureGraphics(); var canvas = new GolfCanvas(graphics, width, 224);
+            var view = new GolfOverlay.View("LOCAL", "WATCH", 30, 1, 1000, 0, 0, 1000, 1, players, 0,
+                    "R REWIND  START PAUSE", false, false);
+            GolfOverlay.draw(canvas, view, new GolfOverlay.Motion(0.4f, 0.5f, 1, 0, 33, 2, 0, false, 0, "(2 LEFT)",
+                    new GolfOverlay.Progress(100, 9000, List.of(4000, 9500)), true));
+            GolfOverlay.pause(canvas, List.of("RESUME", "REWIND UNAVAILABLE", "CONCEDE", "MAIN MENU"),
+                    List.of(true, false, true, true), 1, "REWINDS LEFT  HOLE 2  TURN 1", 4);
+            bounds(graphics, width); preview(graphics, width, "watch-pause");
         }
     }
 }
