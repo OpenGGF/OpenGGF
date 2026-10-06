@@ -310,6 +310,8 @@ CF-ANNOTATION TYPE com.openggf.game.JoypadPressSnapshot visible @com.openggf.gam
 CF-ANNOTATION TYPE com.openggf.game.LegalDisclaimerScreen visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelEventProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelInitProfile visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.LevelInputOverlay visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.LevelInputOverlay visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.game.LevelLoadContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelLoadMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelSelectProvider visible @com.openggf.game.ModApi
@@ -5391,6 +5393,7 @@ METHOD com.openggf.game.LevelInitProfile public,abstract  java.util.List<com.ope
 METHOD com.openggf.game.LevelInitProfile public,abstract  java.util.List<com.openggf.game.InitStep> levelTeardownSteps()
 METHOD com.openggf.game.LevelInitProfile public,abstract  java.util.List<com.openggf.game.InitStep> perTestResetSteps()
 METHOD com.openggf.game.LevelInitProfile public,abstract  java.util.List<com.openggf.game.StaticFixup> postTeardownFixups()
+METHOD com.openggf.game.LevelInputOverlay public,abstract  boolean handleInput(com.openggf.control.InputHandler)
 METHOD com.openggf.game.LevelLoadContext public  boolean hasCheckpoint()
 METHOD com.openggf.game.LevelLoadContext public  boolean hasCheckpointS3kRuntimeState()
 METHOD com.openggf.game.LevelLoadContext public  boolean hasCheckpointSolidBits()
@@ -17499,6 +17502,7 @@ TYPE interface public,abstract com.openggf.game.GameplayPolicyProvider SUPER <no
 TYPE interface public,abstract com.openggf.game.InstaShieldHandle SUPER <none>
 TYPE interface public,abstract com.openggf.game.LevelEventProvider SUPER <none>
 TYPE interface public,abstract com.openggf.game.LevelInitProfile SUPER <none>
+TYPE interface public,abstract com.openggf.game.LevelInputOverlay SUPER <none>
 TYPE interface public,abstract com.openggf.game.LevelSelectProvider SUPER <none>
 TYPE interface public,abstract com.openggf.game.LevelState SUPER <none>
 TYPE interface public,abstract com.openggf.game.MiniGameProvider SUPER <none>
@@ -18276,6 +18280,8 @@ TYPE-ANNOTATION com.openggf.game.JoypadPressSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LegalDisclaimerScreen @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelEventProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelInitProfile @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.LevelInputOverlay @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.LevelInputOverlay @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.game.LevelLoadContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelLoadMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelSelectProvider @com.openggf.game.ModApi

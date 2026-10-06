@@ -134,22 +134,22 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
         int dir = facingLeft ? -1 : 1;
         int next = currentX + dir * ((t.speed() + subX) >> 8);
         subX = (t.speed() + subX) & 0xFF;
-        int floor = floorAt(next, currentY + t.depth());
-        if (floor == Integer.MIN_VALUE || Math.abs(floor - (currentY + t.depth())) > 20) {
+        int floor = floorAt(next, currentY + depth());
+        if (floor == Integer.MIN_VALUE || Math.abs(floor - (currentY + depth())) > 20) {
             facingLeft = !facingLeft;
             return;
         }
         currentX = next;
-        currentY = floor - t.depth();
+        currentY = floor - depth();
     }
 
     /** Falling (spawned from above, or knocked off a ledge) until the floor catches it. */
     private void fall(Species.Traits t) {
         vy = Math.min(vy + GRAVITY, 0x800);
         step();
-        int floor = floorAt(currentX, currentY + t.depth());
-        if (vy >= 0 && floor != Integer.MIN_VALUE && currentY + t.depth() >= floor) {
-            currentY = floor - t.depth();
+        int floor = floorAt(currentX, currentY + depth());
+        if (vy >= 0 && floor != Integer.MIN_VALUE && currentY + depth() >= floor) {
+            currentY = floor - depth();
             vy = 0;
             vx = 0;
             grounded = true;
@@ -225,9 +225,9 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
     }
 
     private void keepAboveFloor(Species.Traits t) {
-        int floor = floorAt(currentX, currentY + t.depth());
-        if (floor != Integer.MIN_VALUE && currentY + t.depth() > floor - 4) {
-            currentY = floor - 4 - t.depth();
+        int floor = floorAt(currentX, currentY + depth());
+        if (floor != Integer.MIN_VALUE && currentY + depth() > floor - 4) {
+            currentY = floor - 4 - depth();
             if (vy > 0) vy = -vy / 2;
         }
     }
@@ -268,7 +268,9 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
         return t.spiked() || t.id() == Species.FLASHER && litTimer > 0;
     }
 
-    @Override protected int getCollisionSizeIndex() { return traits().collision() & 0x3F; }
+    int bodyRadius() { return elite() ? 24 : traits().halfWidth() / 2; }
+    private int depth() { return elite() ? traits().depth() * 3 / 2 : traits().depth(); }
+    @Override protected int getCollisionSizeIndex() { return elite() ? 0x0F : traits().collision() & 0x3F; }
     /** Arena objects are always near the camera; touch them without waiting for a render pass. */
     @Override public boolean requiresRenderFlagForTouch() { return false; }
 
@@ -335,7 +337,7 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
     }
 
     @Override public int getPriorityBucket() { return RenderPriority.bucket(4); }
-    @Override public int getOnScreenHalfWidth() { return traits().halfWidth(); }
+    @Override public int getOnScreenHalfWidth() { return elite() ? traits().halfWidth() * 3 / 2 : traits().halfWidth(); }
 
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) return;
@@ -344,14 +346,15 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
         var renderer = getRenderer(t.artKey());
         if (renderer == null) return;
         boolean flip = t.artFacesRight() == facingLeft;
-        if (elite() && (ticks / 6) % 3 == 0) {
-            renderer.drawFrameIndex(animFrame, currentX, currentY, flip, false, 0);
+        if (elite()) {
+            Draw.scaledSprite(services(), t.artKey(), animFrame, currentX, currentY, flip, 1.5f);
         } else {
             renderer.drawFrameIndex(animFrame, currentX, currentY, flip, false);
         }
         if (elite() || hp < maxHp && maxHp >= 6) {
-            int w = elite() ? 28 : 20;
-            int top = currentY - t.halfWidth() - 10;
+            int w = elite() ? 40 : 20;
+            int top = currentY + (int) (renderer.getFrameBoundsForIndex(animFrame).minY() * (elite() ? 1.5f : 1f)) - 6;
+            if (elite()) Draw.labelWorld(services(), "ELITE", currentX - 14, top - 9, Draw.GOLD);
             Draw.rectWorld(services(), currentX - w / 2 - 1, top - 1, w + 2, 4, Draw.NAVY, 0.9f);
             Draw.rectWorld(services(), currentX - w / 2, top, w * Math.max(0, hp) / maxHp, 2,
                     elite() ? Draw.GOLD : Draw.RED, 1f);

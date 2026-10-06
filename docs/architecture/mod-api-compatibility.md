@@ -61,6 +61,12 @@ The Hidden Palace completion adds `SpecialStageProvider.resultsExitFadesToWhite(
 `GameLoop.debugCompleteSpecialStageWithEmerald()`, the debug completion that capture tools
 request without reading a key binding. Both update the mutable `0.7` pin.
 
+The Survivors v2 follow-up adds `LevelInputOverlay`, an optional module service dispatched
+before host and native ROM pause handling in LEVEL mode. `handleInput(InputHandler)` returns whether a modal
+UI owns Start/Enter for that frame; the UI remains responsible for freezing its gameplay.
+Modules without the service retain normal pause behavior. This replaces no input bindings
+and changes only the mutable `0.7` pin; the descriptor and `ModApiVersion` remain at `0.7.0`.
+
 ## What the 0.7 candidate includes
 
 The candidate exposes the accumulated creator capabilities together:

@@ -70,7 +70,7 @@ class TestGameLoopFreshLevelHandoff {
                     assertTrue(frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE),
                             "closing the fade owner cannot change this iteration's latched phase");
                     set(loop, "activePlcLifecycleFrame", frame);
-                    assertEquals(false, invoke("prepareAdmittedIteration", new Class<?>[]{boolean.class}, false));
+                    assertEquals(false, invoke("prepareAdmittedIteration", new Class<?>[]{boolean.class, boolean.class}, false, false));
                     set(loop, "activePlcLifecycleFrame", null);
                     assertEquals(jobsBefore, timing.capture().jobs().size());
                 }

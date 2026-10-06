@@ -1372,6 +1372,10 @@ public class GameLoop {
             handleTimeAttackRetryInput();
         }
 
+        var levelOverlay = currentGameMode == GameMode.LEVEL
+                ? GameServices.currentOrBootstrapGameModule().getGameService(
+                        com.openggf.game.LevelInputOverlay.class) : null;
+        boolean overlayOwnsPause = levelOverlay != null && levelOverlay.handleInput(inputHandler);
         int pauseKey = configService.getInt(SonicConfiguration.PAUSE_KEY);
         if (!userPauseInputAllowedForCurrentMode() && userPaused) {
             userPaused = false;
@@ -1380,7 +1384,7 @@ public class GameLoop {
         // Gamepad Start toggles this pause (not the silent ROM Game_paused pause
         // below) because this is the one with visible feedback: the "PAUSED" HUD
         // overlay and the audio halt both key off userPaused/isUserPaused().
-        if (!playbackTakeoverConsumedPausePress
+        if (!overlayOwnsPause && !playbackTakeoverConsumedPausePress
                 && userPauseInputAllowedForCurrentMode()
                 && (inputHandler.isKeyPressed(pauseKey)
                 || (!TraceSessionLauncher.isRunFrameDriverActive()
@@ -1403,7 +1407,7 @@ public class GameLoop {
         }
 
         titleCardReleasedIntoLevelThisIteration = false;
-        if (!prepareAdmittedIteration(doFrameStep)) {
+        if (!prepareAdmittedIteration(doFrameStep, overlayOwnsPause)) {
             return;
         }
 
@@ -1534,13 +1538,13 @@ public class GameLoop {
         return context != null && context.isGameplayRuntimeReady();
     }
 
-    private boolean prepareAdmittedIteration(boolean doFrameStep) {
+    private boolean prepareAdmittedIteration(boolean doFrameStep, boolean overlayOwnsPause) {
         syncPlaybackInputBridge();
         LevelFrameResult admission = levelIterationAdmission.admit(
                 currentGameMode, () -> updateTitleCardMode(doFrameStep),
                 () -> titleReleaseResult, levelManager, gameplayMode,
-                inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
-                        || playbackDebugManager.isCurrentForcedStartPress(),
+                !overlayOwnsPause && (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
+                        || playbackDebugManager.isCurrentForcedStartPress()),
                 userRecordingControls,
                 request -> routeTimeAttackSeamlessTransitionBeforeApply(
                         request, doFrameStep),

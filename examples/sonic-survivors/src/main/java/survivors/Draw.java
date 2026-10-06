@@ -115,6 +115,11 @@ final class Draw {
         shadow(s, text, (s.camera().getWidth() - width(text, scale)) / 2, y, scale, rgb, alpha);
     }
 
+    /** Full alphabet labels anchored to world objects (the small font contains digits only). */
+    static void labelWorld(ObjectServices s, String text, int x, int y, int rgb) {
+        shadow(s, text, x - s.camera().getX(), y - s.camera().getY(), 1, rgb, 1f);
+    }
+
     /** 3x5 digits in world coordinates, for floating damage numbers. */
     static void smallWorld(ObjectServices s, String text, int x, int y, int rgb, float alpha) {
         for (int i = 0; i < text.length(); i++) {
@@ -198,6 +203,26 @@ final class Draw {
         for (int i = 0; i <= n; i++) {
             int x = n == 0 ? x0 : x0 + (x1 - x0) * i / n, y = n == 0 ? y0 : y0 + (y1 - y0) * i / n;
             rectWorld(s, x, y, 2, 2, rgb, alpha);
+        }
+    }
+    /** Scales ROM mapping tiles about their native origin without allocating replacement art. */
+    static void scaledSprite(ObjectServices s, String key, int frame, int x, int y,
+                             boolean flip, float scale) {
+        var manager = s.renderManager();
+        var sheet = manager.getSheet(key);
+        var renderer = manager.getRenderer(key);
+        if (sheet == null || renderer == null || !renderer.isReady()
+                || frame < 0 || frame >= sheet.getFrameCount()) return;
+        var desc = new com.openggf.level.PatternDesc();
+        for (var piece : sheet.getFrame(frame).pieces()) {
+            com.openggf.level.render.SpritePieceRenderer.renderPiece(piece, 0, 0,
+                    renderer.getPatternBase(), sheet.getPaletteIndex(), flip, false,
+                    (pattern, h, v, palette, dx, dy) -> {
+                        desc.set((pattern & 0x7FF) | (h ? 0x800 : 0) | (v ? 0x1000 : 0)
+                                | ((palette & 3) << 13) | (piece.priority() ? 0x8000 : 0));
+                        s.graphicsManager().renderPatternWithIdScaled(pattern, desc,
+                                x + dx * scale, y + dy * scale, 8 * scale, 8 * scale);
+                    });
         }
     }
 }

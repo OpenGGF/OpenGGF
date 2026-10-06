@@ -171,7 +171,7 @@ final class Hud {
         // Clock or boss bar, top centre.
         if (stage.phase == Stage.BOSS || stage.phase == Stage.CLEAR_WAIT) {
             Boss boss = stage.boss();
-            Draw.centred(s, stage.arena().stage() == Stages.DEZ && !stage.finale ? "SILVER SONIC" : "EGGMAN", 6, 1, Draw.RED, 1f);
+            Draw.centred(s, stage.finale ? "EGGMAN" : Stages.bossName(stage.arena().stage()), 6, 1, Draw.RED, 1f);
             double fraction = boss == null ? 0 : boss.hp() / (double) Math.max(1, boss.maxHp());
             Draw.bar(s, s.camera().getWidth() / 2 - 64, 16, 128, 6, fraction, Draw.RED, 1f);
         } else {
@@ -264,6 +264,7 @@ final class Hud {
             Draw.shadow(s, lines[0], left + 14, y + 14, 1, Draw.WHITE, 1f);
             Draw.shadow(s, lines[1], left + 14, y + 23, 1, Draw.WHITE, 1f);
         }
+        Draw.centred(s, "UP/DOWN CHOOSE   ENTER / START CONFIRM", 214, 1, Draw.CYAN, 1f);
         if (rows > stage.cardCount) {
             int y = top + 26 + stage.cardCount * (cardH + 4);
             boolean selected = stage.menuIndex == stage.cardCount;
@@ -278,7 +279,7 @@ final class Hud {
         int width = s.camera().getWidth();
         int panelW = 360, left = (width - panelW) / 2, top = 6;
         Draw.panel(s, left, top, panelW, 212, 0.93f);
-        Draw.centred(s, "SONIC SURVIVORS", top + 6, 3, Draw.GOLD, 1f);
+        Draw.centred(s, "SONIC SURVIVORS V2", top + 6, 3, Draw.GOLD, 1f);
         Draw.centred(s, "CAMP - " + Stages.name(stage.arena().stage()), top + 32, 1, Draw.CYAN, 1f);
         String bank = "RING BANK " + profile.bank;
         Draw.shadow(s, bank, left + 10, top + 46, 1, Draw.YELLOW, 1f);
@@ -321,7 +322,7 @@ final class Hud {
             }
             Draw.centred(s, line, top + 187, 1, line.startsWith("ALL") ? Draw.GOLD : Draw.GREEN, 1f);
         }
-        Draw.centred(s, "UP/DOWN CHOOSE   JUMP BUY / START", top + 199, 1, Draw.CYAN, 1f);
+        Draw.centred(s, "UP/DOWN CHOOSE   ENTER BUY / START", top + 199, 1, Draw.CYAN, 1f);
     }
 
     private static void drawEmeralds(ObjectServices s, Profile profile, int x, int y) {

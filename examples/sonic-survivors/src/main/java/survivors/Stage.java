@@ -113,6 +113,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         services().levelGamestate().setRingExtraLifeFlags(0x06);
         services().levelManager().setForceHudSuppressed(true);
         holdArena();
+        holdCeiling(player);
         frameTick++;
         phaseFrames++;
         if (bannerFrames > 0) bannerFrames--;
@@ -128,13 +129,23 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         switch (phase) {
             case CAMP -> campMenu(player);
             case INTRO -> {
-                if (overlay == OVERLAY_NONE && run.pendingLevels > 0) openLevelUp();
+                if (overlay == OVERLAY_NONE && run.pendingLevels > 0) {
+                    openLevelUp();
+                    run.paused = true;
+                    freezePlayer(player, true);
+                    break;
+                }
                 if (overlay != OVERLAY_NONE) { levelUpMenu(player); break; }
                 if (phaseFrames >= INTRO_FRAMES) beginFight();
                 updateEffects();
             }
             case FIGHT, BOSS -> {
-                if (overlay == OVERLAY_NONE && run.pendingLevels > 0) openLevelUp();
+                if (overlay == OVERLAY_NONE && run.pendingLevels > 0) {
+                    openLevelUp();
+                    run.paused = true;
+                    freezePlayer(player, true);
+                    break;
+                }
                 if (overlay != OVERLAY_NONE) { levelUpMenu(player); break; }
                 fight(player);
             }
@@ -189,6 +200,17 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         camera.setMinYTarget(minY);
         camera.setMaxY(maxY);
         camera.setMaxYTarget(maxY);
+    }
+
+    /** The camera's top is a physical ceiling: upgrades must not reach terrain above the arena. */
+    private void holdCeiling(AbstractPlayableSprite player) {
+        if (player.getDead()) return;
+        int ceiling = services().camera().getMinY() + 24;
+        if (player.getCentreY() < ceiling) {
+            com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(player, ceiling);
+            player.setYSpeed((short) Math.max(0, player.getYSpeed()));
+            player.setAir(true);
+        }
     }
 
     private void start(AbstractPlayableSprite player) {
@@ -333,7 +355,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         int y = stage == Stages.DEZ ? arena.floorTop() - 40 : camera.getY() - 48;
         var spawn = Boss.spawnAt(x, y, stage);
         spawnFreeChild(() -> new Boss(spawn, hp));
-        banner(stage == Stages.DEZ ? "SILVER SONIC!" : "WARNING! EGGMAN!", 150, Draw.RED);
+        banner("WARNING! " + Stages.bossName(stage) + "!", 150, Draw.RED);
         services().audioManager().playMusic(stage == Stages.DEZ ? Sonic2Music.FINAL_BOSS.id : Sonic2Music.BOSS.id);
     }
 
@@ -441,7 +463,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         int live = 0;
         Pickup nearest = null;
         for (var object : services().objectManager().getActiveObjects()) {
-            if (object instanceof Pickup p && !p.isDestroyed() && p.kind() == Pickup.RING && !p.collectedAlready()) {
+            if (object instanceof Pickup p && !p.isDestroyed() && p.kind() == Pickup.RING && !p.lostRing() && !p.collectedAlready()) {
                 live++;
                 if (nearest == null || Math.abs(p.getX() - x) < Math.abs(nearest.getX() - x)) nearest = p;
             }
@@ -467,7 +489,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             int vx = (int) (-Math.cos(a) * 0x300), vy = (int) (-Math.sin(a) * 0x400);
             var spawn = Pickup.spawnAt(x, y - 8, Pickup.RING);
             int jitter = run.nextInt(64);
-            spawnFreeChild(() -> new Pickup(spawn, vx + jitter, vy, 1));
+            spawnFreeChild(() -> Pickup.lost(spawn, vx + jitter, vy));
         }
     }
 
@@ -736,7 +758,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
 
     private void pullAllRings(AbstractPlayableSprite player) {
         for (var object : services().objectManager().getActiveObjects()) {
-            if (object instanceof Pickup p && p.kind() == Pickup.RING && !p.collectedAlready()
+            if (object instanceof Pickup p && p.kind() == Pickup.RING && !p.lostRing() && !p.collectedAlready()
                     && Math.abs(p.getX() - player.getCentreX()) < 2000) {
                 p.homeIn();
             }
@@ -747,7 +769,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     private void damageArea(int x, int y, int radius, int damage, boolean popShots) {
         for (Enemy enemy : enemies()) {
             int dx = enemy.getX() - x, dy = enemy.getY() - y;
-            int reach = radius + enemy.traits().halfWidth() / 2;
+            int reach = radius + enemy.bodyRadius();
             if (dx * dx + dy * dy <= reach * reach) enemy.hurt(damage, Integer.signum(dx));
         }
         Boss boss = boss();
@@ -826,7 +848,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             int size = pKind[i] == P_BOOM ? 14 : 8;
             for (Enemy enemy : enemies) {
                 if (!enemy.alive()) continue;
-                int reach = size + enemy.traits().halfWidth() / 2;
+                int reach = size + enemy.bodyRadius();
                 if (enemy.vulnerable() && Math.abs(enemy.getX() - x) < reach && Math.abs(enemy.getY() - y) < reach) {
                     enemy.hurt(pDmg[i], Integer.signum(pVX[i]));
                     if (--pHits[i] <= 0) break;
@@ -899,7 +921,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     // Menus
     // =========================================================================================
 
-    /** Edge-detected up/down (returns -1, 0 or 1) and jump confirm. */
+    /** Edge-detected up/down (returns -1, 0 or 1) and Enter/Start confirm. */
     private int menuMove(AbstractPlayableSprite player) {
         boolean up = player.isUpPressed(), down = player.isDownPressed();
         int move = (up && !upHeld ? -1 : 0) + (down && !downHeld ? 1 : 0);
@@ -1027,11 +1049,10 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
 
     /** Menu confirm that ignores the phase timer (overlays open mid-phase). */
     private boolean menuConfirmAny(AbstractPlayableSprite player) {
-        boolean jump = player.isJumpPressed();
-        // The engine's own edge, or ours (a dead sprite's held bit can stay latched).
-        boolean pressed = player.isJumpJustPressed() || jump && !jumpHeld;
-        jumpHeld = jump;
-        return pressed;
+        var input = services().gameService(com.openggf.control.InputHandler.class);
+        return input != null && (input.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER)
+                || input.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER)
+                || input.logical().menuStart());
     }
 
     // ---- Clear: results and the route ----

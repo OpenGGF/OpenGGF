@@ -77,10 +77,14 @@ class TestSonicSurvivors {
     @AfterEach void closeSession() { if (bootstrap != null) bootstrap.dispose(); }
 
     private HeadlessTestFixture launch(int zone, int act) throws Exception {
+        return launch(zone, act, "sonic", "");
+    }
+
+    private HeadlessTestFixture launch(int zone, int act, String main, String sidekick) throws Exception {
         bootstrap = SharedLevel.load(SonicGame.SONIC_2, 0, 0);
         var config = SonicConfigurationService.getInstance();
-        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, main);
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, sidekick);
         config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, WidescreenAspect.WIDE_16_9.name());
         config.resolveDisplayAspect();
         GameModule base = GameServices.module();
@@ -162,9 +166,14 @@ class TestSonicSurvivors {
         for (var enemy : objects("Enemy")) enemy.setDestroyed(true);
     }
 
-    /** Press jump for one frame then release, so menus see a fresh press. */
-    static void tapJump(HeadlessTestFixture fixture) {
-        fixture.stepFrame(false, false, false, false, true);
+    /** Enter is separate from gameplay jump and is dispatched before host pause handling. */
+    static void tapEnter(HeadlessTestFixture fixture) {
+        var input = new com.openggf.control.InputHandler();
+        var overlay = GameServices.module().getGameService(LevelInputOverlay.class);
+        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        assertTrue(overlay.handleInput(input), "a modal menu owns Enter before the host pause toggle");
+        fixture.stepFrame(false, false, false, false, false);
+        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
         fixture.stepFrame(false, false, false, false, false);
     }
     static void tapDown(HeadlessTestFixture fixture) {
@@ -176,7 +185,7 @@ class TestSonicSurvivors {
     static void startRun(HeadlessTestFixture fixture) throws Exception {
         fixture.stepIdleFrames(30);
         assertEquals(CAMP, phase(), "a new arena opens in camp");
-        tapJump(fixture);
+        tapEnter(fixture);
         assertEquals(INTRO, phase());
         // Later zones grant catch-up level-ups; skip their cards here.
         set(run(), "pendingLevels", 0);
@@ -196,7 +205,7 @@ class TestSonicSurvivors {
         assertEquals(CAMP, phase());
         assertFalse((boolean) get(run(), "active"));
         assertTrue(fixture.sprite().isObjectControlled(), "camp holds Sonic still");
-        tapJump(fixture);
+        tapEnter(fixture);
         assertTrue((boolean) get(run(), "active"));
         assertEquals(30, fixture.sprite().getRingCount(), "runs start with three ring tolls");
         assertEquals(1, getInt(profile(), "runs"));
@@ -228,10 +237,15 @@ class TestSonicSurvivors {
         return Arrays.stream(acts).map(a -> Arguments.of(a[0], a[1]));
     }
 
-    @ParameterizedTest(name = "zone {0} act {1}")
-    @MethodSource("routeActs")
-    void everyRouteActIsAWalledArenaSonicCanCross(int zone, int act) throws Exception {
-        var fixture = launch(zone, act);
+    static Stream<Arguments> routeTeams() {
+        return routeActs().flatMap(args -> Stream.of("sonic", "tails").map(main ->
+                Arguments.of(args.get()[0], args.get()[1], main)));
+    }
+
+    @ParameterizedTest(name = "zone {0} act {1} as {2}")
+    @MethodSource("routeTeams")
+    void everyRouteActIsAWalledArenaSonicCanCross(int zone, int act, String main) throws Exception {
+        var fixture = launch(zone, act, main, "");
         startRun(fixture);
         int left = arenaValue("left"), right = arenaValue("right");
         int floorTop = arenaValue("floorTop"), floorBottom = arenaValue("floorBottom");
@@ -270,7 +284,7 @@ class TestSonicSurvivors {
         assertTrue((boolean) get(run(), "paused"), "play pauses behind them");
         int pending = getInt(run(), "pendingLevels");
         tapDown(fixture);
-        tapJump(fixture);
+        tapEnter(fixture);
         assertEquals(pending - 1, getInt(run(), "pendingLevels"));
         int[] levels = (int[]) get(run(), "levels");
         assertEquals(1, Arrays.stream(levels).sum(), "one upgrade taken");
@@ -315,7 +329,7 @@ class TestSonicSurvivors {
         // Choose act 2 of Chemical Plant.
         fixture.stepIdleFrames(30);
         tapDown(fixture);
-        tapJump(fixture);
+        tapEnter(fixture);
         var levelManager = GameServices.level();
         assertEquals(1, levelManager.getRequestedZone(), "Chemical Plant was requested");
         assertEquals(1, levelManager.getRequestedAct());
@@ -417,7 +431,7 @@ class TestSonicSurvivors {
         assertFalse((boolean) get(run(), "active"));
         assertEquals(100 + 10, getInt(profile(), "bank"), "half the rings collected plus a ring per five badniks");
         fixture.stepIdleFrames(80);
-        tapJump(fixture);
+        tapEnter(fixture);
         var levelManager = GameServices.level();
         assertEquals(0, levelManager.getRequestedZone(), "TRY AGAIN reloads the start zone");
         assertEquals(0, levelManager.getRequestedAct());
@@ -440,18 +454,18 @@ class TestSonicSurvivors {
         fixture.stepIdleFrames(30);
         set(profile(), "bank", 1000);
         tapDown(fixture); // POWER UP
-        tapJump(fixture);
+        tapEnter(fixture);
         int[] shop = (int[]) get(profile(), "shop");
         assertEquals(1, shop[0]);
         assertEquals(940, getInt(profile(), "bank"));
         tapDown(fixture); // RING START
-        tapJump(fixture);
+        tapEnter(fixture);
         assertEquals(1, shop[1]);
         fixture.stepFrame(true, false, false, false, false);
         fixture.stepIdleFrames(1);
         fixture.stepFrame(true, false, false, false, false);
         fixture.stepIdleFrames(1);
-        tapJump(fixture);
+        tapEnter(fixture);
         assertEquals(INTRO, phase());
         assertEquals(40, fixture.sprite().getRingCount(), "Ring Start adds ten");
     }
@@ -461,7 +475,7 @@ class TestSonicSurvivors {
         fixture.stepIdleFrames(30);
         set(profile(), "emeralds", 0x7F);
         assertFalse(GameServices.gameState().hasAllEmeralds());
-        tapJump(fixture);
+        tapEnter(fixture);
         assertTrue(GameServices.gameState().hasAllEmeralds(), "the run carries all seven");
         set(run(), "pendingLevels", 0);
         fixture.stepIdleFrames(160);
@@ -533,5 +547,104 @@ class TestSonicSurvivors {
         assertEquals(y, fixture.sprite().getCentreY());
         assertEquals(kills, getInt(run(), "kills"));
         assertEquals(enemies, objects("Enemy").size());
+    }
+
+    @Test void jumpCannotSelectCardsAndOpeningFrameFreezesImmediately() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        call(run(), "gainXp", 10);
+        fixture.stepFrame(false, false, false, false, true);
+        int pending = getInt(run(), "pendingLevels");
+        assertTrue((boolean) get(run(), "paused"));
+        assertTrue(fixture.sprite().isObjectControlled());
+        int x = fixture.sprite().getCentreX(), y = fixture.sprite().getCentreY();
+        int remaining = getInt(stage(), "stageFrames");
+        for (int i = 0; i < 15; i++) fixture.stepFrame(false, false, false, true, i % 2 == 0);
+        assertEquals(pending, getInt(run(), "pendingLevels"), "jump must never confirm a card");
+        assertEquals(x, fixture.sprite().getCentreX());
+        assertEquals(y, fixture.sprite().getCentreY());
+        assertEquals(remaining, getInt(stage(), "stageFrames"));
+        tapEnter(fixture);
+        assertEquals(pending - 1, getInt(run(), "pendingLevels"));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"sonic", "tails"})
+    void bothLeadersAreSoloAndCannotEscapeTheAquaticRuinCeiling(String main) throws Exception {
+        var patch = (GamePatch) loader.loadClass("survivors.SurvivorsMod$Patch").getConstructor().newInstance();
+        assertTrue(patch.activatesFor(new GameplayLaunchRequest("s2", main, List.of("tails"))));
+        var fixture = launch(2, 0, main, "tails");
+        startRun(fixture);
+        assertTrue(GameServices.sprites().getSidekicks().isEmpty(), "configured followers must not spawn");
+        assertFalse(GameServices.module().supportsSidekick());
+        assertTrue(GameServices.module().isSidekickSuppressedForZone(2));
+        assertEquals(main, fixture.sprite().getCode());
+        var player = fixture.sprite();
+        for (int i = 0; i < 40; i++) {
+            com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(player, -8);
+            player.setYSpeed((short) -0x900);
+            player.setAir(false); // Even a collision with terrain above the arena cannot strand the player there.
+            fixture.stepIdleFrames(1);
+            assertTrue(player.getCentreY() >= GameServices.camera().getMinY() + 24);
+            assertTrue(player.getAir());
+            assertTrue(player.getYSpeed() >= 0);
+        }
+    }
+
+    @Test void lostRingsIgnoreBothMagnetsAndDoNotFarmExperienceAcrossRewind() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var player = fixture.sprite();
+        call(stage(), "spillRings", player.getCentreX() + 100, player.getCentreY(), 1);
+        var ring = objects("Pickup").stream().filter(o -> {
+            try { return (boolean) call(o, "lostRing"); } catch (Exception e) { throw new RuntimeException(e); }
+        }).findFirst().orElseThrow();
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        ((int[]) get(run(), "levels"))[11] = 5; // Magnet
+        call(stage(), "magnetSweep");
+        call(ring, "homeIn");
+        fixture.stepIdleFrames(30);
+        assertFalse((boolean) get(ring, "homing"));
+        registry.restore(snapshot);
+        ring = objects("Pickup").stream().filter(o -> {
+            try { return (boolean) call(o, "lostRing"); } catch (Exception e) { throw new RuntimeException(e); }
+        }).findFirst().orElseThrow();
+        int xp = getInt(run(), "xp"), earned = getInt(run(), "ringsCollected"), rings = player.getRingCount();
+        call(ring, "collect", player);
+        assertEquals(rings + 1, player.getRingCount());
+        assertEquals(xp, getInt(run(), "xp"));
+        assertEquals(earned, getInt(run(), "ringsCollected"));
+    }
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void hostEnterConfirmsCampWithoutPausingThenResumesNormalPauseControl(boolean remappedStart) throws Exception {
+        var fixture = launch(0, 0);
+        fixture.stepIdleFrames(30);
+        var input = new com.openggf.control.InputHandler();
+        var loop = new com.openggf.GameLoop(input);
+        loop.setGameMode(GameMode.LEVEL);
+        var config = SonicConfigurationService.getInstance();
+        int oldPause = config.getInt(SonicConfiguration.PAUSE_KEY), oldStart = config.getInt(SonicConfiguration.START);
+        try {
+            SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.PAUSE_KEY,
+                    org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            if (remappedStart) SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.START,
+                    org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+            loop.step();
+            assertEquals(INTRO, phase());
+            assertFalse(GameServices.gameState().isGamePaused(), "modal Enter must not enter ROM Pause_Loop");
+            assertFalse(loop.isUserPaused());
+            input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+            loop.step();
+            input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+            loop.step();
+            assertTrue(loop.isUserPaused(), "the host still pauses normal play");
+            loop.toggleUserPause();
+        } finally {
+            config.setConfigValue(SonicConfiguration.PAUSE_KEY, oldPause);
+            config.setConfigValue(SonicConfiguration.START, oldStart);
+        }
     }
 }

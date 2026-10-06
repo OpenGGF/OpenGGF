@@ -30,6 +30,7 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
     private int age;
     private boolean resting;
     private boolean homing;
+    private boolean lostRing;
     private int collected = -1;
     private int value;
 
@@ -55,6 +56,14 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         return ring;
     }
 
+    static Pickup lost(ObjectSpawn spawn, int vx, int vy) {
+        var ring = new Pickup(spawn, vx, vy, 1);
+        ring.lostRing = true;
+        return ring;
+    }
+
+    boolean lostRing() { return lostRing; }
+
     static ObjectSpawn spawnAt(int x, int y, int kind) {
         return new ObjectSpawn(x, y, 0, kind & 0xFF, 0, false, y, -1, SurvivorsMod.ID, SurvivorsMod.ID + ":pickup");
     }
@@ -66,6 +75,7 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
     void addValue(int more) { value += more; }
     /** The ring magnet monitor: fly to Sonic from anywhere. */
     void homeIn() {
+        if (lostRing) return;
         homing = true;
         resting = false;
         age = Math.max(age, 21);
@@ -86,10 +96,11 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         var run = services().gameService(RunState.class);
         if (run != null && run.paused) return;
         age++;
+        if (lostRing && age >= 300) { setDestroyed(true); return; }
         if (!(entity instanceof AbstractPlayableSprite player) || player.getDead()) { fall(); return; }
         int dx = player.getCentreX() - x, dy = player.getCentreY() - y;
         int magnet = kind() == RING && run != null ? run.magnetRadius() : 0;
-        if (kind() == RING && age > 20 && (homing || dx * dx + dy * dy < magnet * magnet)) {
+        if (kind() == RING && !lostRing && age > 20 && (homing || dx * dx + dy * dy < magnet * magnet)) {
             homing = true;
             double length = Math.max(1, Math.hypot(dx, dy));
             int speed = 0x500 + Math.min(age, 120) * 8;
@@ -147,7 +158,7 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
             case RING -> {
                 services().audioManager().playSecondarySfx(GameSound.RING);
                 player.addRings(value);
-                if (run != null) {
+                if (run != null && !lostRing) {
                     run.ringsCollected += value;
                     double xp = value * run.xpScale();
                     int whole = (int) xp;
@@ -201,8 +212,8 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
                 rings.drawSparkleAt(x, y, collected / Math.max(1, rings.getSparkleFrameDelay()));
                 return;
             }
-            // Lingering rings blink before they would be lost under the pile cap.
-            rings.drawRingAt(x, y, age);
+            // Lost rings blink before expiry; reward rings persist.
+            if (!lostRing || age < 240 || (age & 4) == 0) rings.drawRingAt(x, y, age);
             if (value > 1) Draw.smallWorld(services(), "x" + value, x + 8, y - 10, Draw.YELLOW, 1f);
             return;
         }

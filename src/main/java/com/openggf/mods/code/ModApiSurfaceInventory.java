@@ -36,6 +36,7 @@ public final class ModApiSurfaceInventory {
             "com.openggf.level.objects.DestructionEffects",
             // Explicitly required transitive creator contracts.
             "com.openggf.game.GameModule",
+            "com.openggf.game.LevelInputOverlay",
             "com.openggf.game.AbstractStandaloneGameModule",
             "com.openggf.game.ModGame",
             "com.openggf.mods.code.StandaloneLevelLoader",

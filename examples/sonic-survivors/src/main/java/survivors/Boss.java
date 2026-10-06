@@ -117,7 +117,9 @@ public final class Boss extends AbstractObjectInstance
     private int hoverY() {
         var arena = arena();
         if (groundY == 0) groundY = arena == null ? y + 88 : arena.floorTop();
-        return groundY - (tank() ? 28 : 88);
+        int target = groundY - (tank() ? 28 : 88);
+        // Keep the whole vehicle clear of the HUD even when the arena camera cannot follow a high ledge.
+        return tank() ? target : Math.max(target, services().camera().getY() + 72);
     }
 
     /** Hill Top's boss is a tank: it rolls along the ground and charges instead of swooping. */
@@ -145,6 +147,7 @@ public final class Boss extends AbstractObjectInstance
                 if (y >= hoverY()) { y = hoverY(); state = SWEEP; timer = 0; vx = facingLeft ? -0x180 : 0x180; }
             }
             case SWEEP -> {
+                vy = 0;
                 step();
                 approachHover(tank() ? 0 : (int) Math.round(Math.sin(ticks * 0.06) * 10));
                 if (arena != null && (x < arena.left() + 48 || x > arena.right() - 48)) {
@@ -160,6 +163,7 @@ public final class Boss extends AbstractObjectInstance
                 }
             }
             case VOLLEY -> {
+                vy = 0;
                 facingLeft = px < x;
                 int count = hp * 2 < maxHp ? 5 : 3;
                 if (timer % 18 == 0 && shots < count) {
@@ -180,6 +184,20 @@ public final class Boss extends AbstractObjectInstance
                         state = SWEEP;
                         timer = 0;
                         vx = facingLeft ? 0x180 : -0x180;
+                    }
+                    break;
+                }
+                // A readable wind-up before a dive; no hidden downward drift from the previous dive.
+                if (timer <= 24) { vx = vy = 0; break; }
+                if (stage() == Stages.WFZ) {
+                    // The ace commits to a straight strafe after the warning, giving the player a dodge window.
+                    if (timer == 25) vx = (px < x ? -1 : 1) * 0x500;
+                    facingLeft = vx < 0;
+                    step();
+                    if (timer > 70 || arena != null && (x < arena.left() + 48 || x > arena.right() - 48)) {
+                        if (arena != null) x = arena.clampX(x, 48);
+                        state = RISE;
+                        timer = 0;
                     }
                     break;
                 }
@@ -212,6 +230,16 @@ public final class Boss extends AbstractObjectInstance
             var arena = arena();
             int rx = (arena == null ? px : arena.clampX(px, 16)) + (shots - 2) * 40;
             spawnFreeChild(() -> Shot.of(rx, y - 120, key, frame, true, 0, 0));
+            return;
+        }
+        if (stage == Stages.ARZ) {
+            // The queen's rotating three-way fan leaves gaps instead of aiming every shot at the player.
+            for (int i = 0; i < 3 && services().objectManager().hasFreeDynamicSlot(); i++) {
+                double angle = Math.PI / 2 + (i - 1) * 0.6 + (shots % 2 == 0 ? 0.2 : -0.2);
+                int fx = (int) (Math.cos(angle) * 0x240), fy = (int) (Math.sin(angle) * 0x240);
+                spawnFreeChild(() -> Shot.of(x, y + 16, key, frame, false, fx, fy));
+            }
+            services().playSfx(0xAE);
             return;
         }
         double dx = px - x, dy = py - y;
@@ -441,6 +469,9 @@ public final class Boss extends AbstractObjectInstance
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) return;
         int stage = stage();
+        if (state == SWOOP && timer <= 24 && !tank()) {
+            Draw.labelWorld(services(), "DIVE!", x - 14, y - 48, Draw.RED);
+        }
         int[] frames = Stages.bossFrames(stage);
         var renderer = getRenderer(Stages.bossKey(stage));
         if (state == DEFEATED) {
@@ -453,8 +484,15 @@ public final class Boss extends AbstractObjectInstance
             }
         }
         if (flash > 0 && (flash & 2) != 0) return;
-        if (renderer == null) {
+        if (renderer == null || stage == Stages.OOZ) {
             drawCore();
+            return;
+        }
+        // Two zone champions break up the Eggman vehicle fights, using complete native badnik frames.
+        if (stage == Stages.ARZ || stage == Stages.WFZ) {
+            var champion = Species.of(stage == Stages.ARZ ? Species.WHISP : Species.BALKIRY);
+            Draw.scaledSprite(services(), champion.artKey(), champion.frame(ticks), x, y,
+                    champion.artFacesRight() == facingLeft, 2f);
             return;
         }
         int frame;
@@ -473,7 +511,37 @@ public final class Boss extends AbstractObjectInstance
         } else {
             frame = state == DEFEATED || flash > 0 ? frames[2] : laugh > 0 ? frames[1] : frames[0];
         }
-        // The vehicle art faces left; mirror it while it travels right.
-        renderer.drawFrameIndex(frame, x, y, !facingLeft, false);
+        // The stock bosses compose vehicle and face mappings separately. A face alone is not a boss.
+        // Component indices/order follow Sonic2*BossInstance.appendRenderCommands and their children.
+        boolean flip = !facingLeft;
+        switch (stage) {
+            case Stages.EHZ -> renderer.drawFrameIndex(15, x, y, flip, false);
+            case Stages.CPZ -> renderer.drawFrameIndex(0, x, y, flip, false);
+            case Stages.CNZ -> {
+                renderer.drawFrameIndex(4 + ticks / 8 % 2, x, y, flip, false);
+                renderer.drawFrameIndex(1, x, y, flip, false);
+                renderer.drawFrameIndex(6 + ticks / 4 % 2, x, y, flip, false);
+                renderer.drawFrameIndex(2 + ticks / 8 % 2, x, y, flip, false);
+                return;
+            }
+            case Stages.MCZ -> {
+                renderer.drawFrameIndex(2 + ticks / 5 % 3, x + (flip ? 40 : -40), y, flip, false);
+                renderer.drawFrameIndex(frame, x, y, flip, false);
+                renderer.drawFrameIndex(ticks / 8 % 2, x, y, flip, false);
+                renderer.drawFrameIndex(2 + ticks / 5 % 3, x, y, flip, false);
+                renderer.drawFrameIndex(5 + ticks / 5 % 2, x, y, flip, false);
+                return;
+            }
+            case Stages.MTZ -> {
+                renderer.drawFrameIndex(0, x, y, flip, false);
+                renderer.drawFrameIndex(2, x, y, flip, false);
+            }
+            default -> { }
+        }
+        renderer.drawFrameIndex(frame, x, y, flip, false,
+                stage == Stages.EHZ || stage == Stages.CPZ ? 0 : -1);
+        if (stage == Stages.HTZ && state != DEFEATED) {
+            renderer.drawFrameIndex(2 + ticks / 6 % 2, x, y, flip, false);
+        }
     }
 }

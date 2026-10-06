@@ -129,6 +129,16 @@ final class Stages {
         return stage + act;
     }
 
+    static String bossName(int stage) {
+        return switch (stage) {
+            case ARZ -> "WHISP QUEEN";
+            case WFZ -> "BALKIRY ACE";
+            case OOZ -> "OIL SENTINEL";
+            case DEZ -> "SILVER SONIC";
+            default -> "EGGMAN";
+        };
+    }
+
     // ---- Boss art. ----
     static String bossKey(int stage) {
         return switch (stage) {

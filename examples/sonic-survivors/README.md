@@ -1,18 +1,19 @@
-# Sonic Survivors — a bounce-driven survivors roguelike for Sonic 2
+# Sonic Survivors v2 — a bounce-driven survivors roguelike for Sonic 2
 
-A code mod for OpenGGF's JVM build. Start Sonic 2 with **Sonic** as the main character (a CPU
-Tails, if your team has one, fights alongside him). Every zone on the route becomes a walled
-**arena** cut from its own act's terrain, and badniks pour in from both sides and from above.
-Sonic starts with nothing but his jump: **bounce on badniks to keep going**. Each rebound off an
+A code mod for OpenGGF's JVM build. Select **Sonic or Tails** as the main character on the
+engine's launch screen, then start Sonic 2. Runs are **solo**: configured sidekicks are disabled.
+Every zone on the route becomes a walled **arena** cut from its own act's terrain, and badniks pour in from both sides and from above.
+Your character starts with nothing but their jump: **bounce on badniks to keep going**. Each rebound off an
 enemy chains a **combo** that multiplies stomp damage and ring drops, every tenth chained bounce
 sets off **Fever** (the stock invincibility), and defeated badniks drop **rings**, which are both
-Sonic's **health** and his **experience**. Level up to pick new weapons, moves and passives,
-survive the two-minute clock, beat the zone's **Eggman**, choose the next act, and push on to
-the Death Egg. Rings and Chaos Emeralds won along the way upgrade Sonic between runs.
+your **health** and **experience**. Level up to pick new weapons, moves and passives,
+survive the two-minute clock, beat the zone's **boss**, choose the next act, and push on to
+the Death Egg. Rings and Chaos Emeralds won along the way upgrade both characters between runs.
 
 The stock act can never be finished: the signpost, capsule, boss triggers and every stock object
 are gone, the camera and Sonic's level boundary are held to the arena, and the arena's only exit
-is the clear screen after its boss.
+is the clear screen after its boss. A physical ceiling at the arena camera's upper limit
+keeps air jumps and powered rebounds away from terrain above the play area.
 
 ## A run
 
@@ -39,13 +40,15 @@ Sky Chase has no ground to fight on and is skipped.
    drop in from above, faster and tougher as the clock runs down and further along the route.
    Every 10 seconds a formation of five floating rings appears somewhere in the arena away
    from Sonic. Red chevrons at the screen edges point at badniks approaching from off-screen. Every 30
-   seconds an **elite** (gold health bar, six times the hitpoints) arrives; it drops a monitor.
-4. **Boss.** At 0:00 Eggman arrives in the zone's own vehicle (ROM boss art), hovering within a
-   jump of the ground Sonic stands on, sweeping the arena, dropping volleys of the zone's
-   projectiles (Mystic Cave drops rocks from the roof) and swooping at Sonic; Hill Top's tank
-   rolls along the ground and charges instead. Metropolis act 3 loads no Eggman art, so there
-   he fights from an armoured core ringed by Asterons. He enrages below half health. Stomps rebound Sonic off him
-   with the stock boss bounce; weapons hit him too. Beating him destroys every badnik still
+   seconds an **elite** (150% size, ELITE label, gold health bar, six times the hitpoints) arrives; it drops a monitor.
+4. **Boss.** At 0:00 the zone champion arrives. Most zones use Eggman's complete vehicle
+   assembled from its ROM mapping components, hovering within a jump of the player's ground, sweeping the arena, dropping volleys of the zone's
+   projectiles (Mystic Cave drops rocks from the roof) and swooping at the player after a
+   **DIVE!** warning; Hill Top's tank rolls along the ground and charges instead. Aquatic Ruin has a giant **Whisp Queen** with
+   spreading volleys, Wing Fortress a **Balkiry Ace** with committed strafing runs, and Oil
+   Ocean an **Oil Sentinel** core with orbiting escorts. Metropolis act 3 uses an armoured
+   core ringed by Asterons. Bosses enrage below half health. Stomps rebound the player
+   with the stock boss bounce; weapons hit them too. Beating a boss destroys every badnik still
    standing (their rings are the prize).
 5. **Clear.** The first time you beat each boss from Emerald Hill to Oil Ocean it drops that
    zone's **Chaos Emerald** (kept forever). The clear screen shows the zone's results and offers
@@ -63,7 +66,9 @@ Press **Escape** (or the gamepad Back button) at any time to bank the run and re
 ## Rings are health
 
 Any badnik, projectile or boss hit costs a **ring toll** of 10 rings (less with Armor), with no
-knockback; half the toll scatters as rings you can grab back. A shield absorbs a hit instead.
+knockback; half the toll scatters as rings you can grab back. These **lost rings** ignore
+all magnets, award no new experience or collected-ring credit, blink after four seconds and
+expire after five seconds; reward rings remain magnetic. A shield absorbs a hit instead.
 A hit with **no rings** is lethal, unless a revive remains (Revival shop item, Oil Ocean's
 emerald), which restores 20 rings. Rings flash red on the HUD while one more hit would empty
 them. As in stock Sonic 2, rings cannot be collected during the first half-second after a hit.
@@ -79,10 +84,12 @@ five or more pays out a shower of rings when it ends, and every tenth bounce tri
 
 ## Level-ups
 
-Rings collected are experience. Each level-up pauses play and deals **three cards** (four with
+Reward rings collected are experience. Each level-up pauses play and deals **three cards** (four with
 the Talent shop item), favouring upgrades you already own. Until you own a weapon, one card is
 always a weapon. **Reroll** deals again (one per zone, plus the shop and Chemical Plant's
-emerald). Up/down chooses and jump confirms.
+emerald). Up/down chooses and **Enter** (keypad Enter also works) or **gamepad Start** confirms.
+Jump never selects a card. Camp, cards and results own Enter/Start, so confirming does not
+also toggle the engine pause. During ordinary play the usual pause controls still work.
 
 | Upgrade | Kind | Max | Effect |
 | --- | --- | --- | --- |
@@ -108,8 +115,7 @@ emerald). Up/down chooses and jump confirms.
 ## Monitors (dropped by elites)
 
 Super Ring (+10 rings), Shield, Invincibility, Speed Shoes, **Eggman** (here a bomb: every
-badnik on screen takes a heavy hit) and the **?** monitor (every ring on the field flies to
-Sonic).
+badnik on screen takes a heavy hit) and the **?** monitor (every reward ring on the field flies to the player; lost rings stay where they fell).
 
 ## Between runs
 
@@ -136,7 +142,7 @@ Sonic).
 | Red | Hill Top | Hits cost 3 fewer rings |
 | Grey | Mystic Cave | A shield at every zone start |
 | Cyan | Oil Ocean | +1 revive per run |
-| All seven | | +25% damage, and Super Sonic: with 50 rings, jump again in mid-air to transform (invincible; rings drain each second) |
+| All seven | | +25% damage, and Super Sonic when playing Sonic: with 50 rings, jump again in mid-air to transform (invincible; rings drain each second) |
 
 Progress is saved in `saves/sonic-survivors/profile.txt` under the engine's save root.
 
@@ -148,7 +154,9 @@ python3 examples/sonic-survivors/build.py --run  # ... then launch the engine wi
 ```
 
 Install the jar through the Mod Manager like any trusted code mod. Native builds cannot load
-code mods. The mod plays at 16:9 and hides the stock level select.
+code mods. The mod plays at 16:9 and hides the stock level select. Version 0.2.0 requires the engine
+build containing `LevelInputOverlay`; rebuild this checkout when updating from v1. Existing
+profile saves remain compatible.
 
 Film it headlessly with the gameplay capture tool's `--mod` option, for example:
 
@@ -182,5 +190,7 @@ seconds and `sonic-survivors.bossHp=N` sets every boss's hitpoints.
 `TestSonicSurvivors` packages the mod through `ggfmod` and drives it headlessly: camp, the
 arena walls, every route act, stomps and the combo, level-ups and all weapons at once, the boss,
 emerald and route choice, the Death Egg finale, death and banking, the shop, ring tolls and a
-rewind round trip. Design notes and rejected approaches are in
+rewind round trip. V2 covers both leaders across all 19 acts, the ARZ ceiling, forced solo
+teams, jump rejection/Enter confirmation through the host game loop, and lost-ring provenance
+through rewind. Design notes and rejected approaches are in
 [the design record](../../docs/architecture/designs/2026-10-06-sonic-survivors.md).

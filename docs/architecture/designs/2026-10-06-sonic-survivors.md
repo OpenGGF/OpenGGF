@@ -99,3 +99,96 @@ code mods).
   120 px from Sonic, above the floor at that point.
 - The mod jar is installed in the local `mods/` folder (trusted, enabled) next to Infinite
   Sonic for an IntelliJ launch; `modstate.json` is local state, not part of the branch.
+
+
+## V2 — solo roster, modal input and readable encounters
+
+Base `be1b3982c271df5803791864c7a7673facf0b137`; isolated worktree
+`.worktrees/sonic-survivors-v2`, branch `feature/ai-sonic-survivors-v2`.
+Mod version 0.2.0 retains the profile format. Sonic and Tails activate the same patch;
+`supportsSidekick=false` and per-zone suppression enforce solo play. The launch screen's
+existing character picker supplies the leader; no mid-run character swap is introduced.
+
+The physical ceiling uses the camera's existing minimum Y plus 24 pixels of player clearance.
+An out-of-bounds player is moved through `NativePositionOps`, upward velocity is stopped,
+and airborne state is restored so terrain above the arena cannot hold them grounded.
+
+`LevelInputOverlay` is the one general host addition: module input is dispatched before the
+host's pause toggle and native Pause_Loop admission. Modal camp/cards/results own Enter and Start; ordinary gameplay releases
+them. Card opening now freezes the player and mod objects immediately and skips selection on
+the opening frame. Jump is exclusively gameplay. The host-pause regression belongs in the
+ROM-backed mod fixture: a bare `TestGameLoop` LEVEL setup lacks both a loaded level and a
+focused camera target, and cannot establish this interaction.
+
+Lost rings carry explicit rewind-captured provenance. Both magnets reject them, reward-pile
+merging excludes them, and collection restores health without creating new XP or ring-bank
+credit. They expire at 300 gameplay frames with a 60-frame blink, bounding lingering spills.
+This closes the repeated-damage XP farming loop without changing reward rings.
+
+Elites use 1.5x ROM mapping tiles through the existing scaled pattern renderer, larger touch
+and weapon hit regions, scaled ground clearance, and a labelled gold bar. No extracted art
+or new runtime asset is introduced. Boss component selection follows the stock Java owners:
+EHZ vehicle bottom + top (top palette 0), CPZ eggpod + Robotnik (face palette 0), CNZ electrode,
+body, propeller and generator, MCZ paired drills/body/face/exhaust, MTZ pod/body/face, and HTZ
+body/eyes. Whisp Queen (ARZ) and Balkiry Ace (WFZ) use complete 2x badnik mappings; Oil Ocean
+uses the existing armoured-core drawing with native escorts. Queen volleys spread, the Ace
+commits to a strafe, and other flying bosses telegraph dives. Flying hover targets keep 72 pixels above the vehicle origin clear for its full silhouette and HUD.
+Patrol clears leftover vertical
+dive velocity; without that reset a previous attack could drag the next patrol downward.
+
+### V2 affected act/character matrix
+
+All rows use native S2 movement, the enforced 400x224 viewport and solo Sonic/Tails. Each act
+runs both-way real-physics traversal in `everyRouteActIsAWalledArenaSonicCanCross`, including
+start/camp, terrain, side walls and survival without falling. This is a mod-arena matrix,
+not certification of the stock acts. Other viewport requests resolve to the mod's 16:9 policy.
+
+| Zone / act | Sonic | Tails | Boss presentation / changed obligations |
+| --- | --- | --- | --- |
+| EHZ 1 | traversal | traversal | vehicle + face; Enter host integration; lost-ring rewind |
+| EHZ 2 | traversal | traversal | vehicle + face |
+| CPZ 1 | traversal | traversal | eggpod + face |
+| CPZ 2 | traversal | traversal | eggpod + face |
+| ARZ 1 | traversal + ceiling | traversal + ceiling | Whisp Queen; configured follower rejected |
+| ARZ 2 | traversal | traversal | Whisp Queen |
+| CNZ 1 | traversal | traversal | electrode/body/propeller/generator |
+| CNZ 2 | traversal | traversal | electrode/body/propeller/generator |
+| HTZ 1 | traversal | traversal | tank eyes |
+| HTZ 2 | traversal | traversal | tank eyes |
+| MCZ 1 | traversal | traversal | complete drill vehicle |
+| MCZ 2 | traversal | traversal | complete drill vehicle |
+| OOZ 1 | traversal | traversal | Oil Sentinel |
+| OOZ 2 | traversal | traversal | Oil Sentinel |
+| MTZ 1 | traversal | traversal | pod/body/face |
+| MTZ 2 | traversal | traversal | pod/body/face |
+| MTZ 3 | traversal | traversal | inherited Asteron core |
+| WFZ 1 | traversal | traversal | Balkiry Ace |
+| DEZ 1 | traversal | traversal | inherited Silver Sonic + fleeing Eggman |
+
+Independent short regressions cover opening-frame menu freeze and jump rejection,
+Enter host pause ownership, ARZ ceiling recovery for both leaders, absence of configured
+followers, and lost-ring magnet/XP semantics through snapshot restore. Existing checks cover
+boss defeat/emerald/next-act handoff, death/camp, the shop, ring tolls, the DEZ finale, and
+fight capture/restore plus identical forward replay. Inherited gaps: donor combinations,
+full-run balance with human input, per-act boss attack/defeat rewind spots, Tails-specific
+full campaign progression, and audio listening. Native captures supplement state tests;
+they do not establish ROM parity for these intentionally custom combat rules.
+
+### V2 validation evidence
+
+- `maven_queue.py -B -Dmse=off -Dtest=TestSonicSurvivors,TestGameLoop test` with the
+  absolute root S2 ROM: 152 checks passed, zero skipped (55 Survivors, 97 host checks).
+  The rendering-only label/bar adjustment followed this focused run and is in the final
+  change-based run. `TestModApiSignatureSurface` separately passed all nine checks after
+  adding the six normalized signature lines for `LevelInputOverlay`.
+- `GameplayCaptureTool --mod target/sonic-survivors/sonic-survivors.jar`, native OpenGL,
+  400x224, seed 123, survival timer shortened to three seconds: all nine ordinary route
+  zones rendered; the changed hover heights were recaptured in MCZ, ARZ and WFZ. ARZ and
+  WFZ use Tails and a configured Tails follower; every CSV row has `sk_present=0`.
+  The task capture directory is `/private/tmp/sonic-survivors-v2-20261006` outside the repo.
+  `preview/capture.mp4` shows 460 frames of the final Tails/WFZ build; frame 540 shows the
+  Balkiry Ace. `elite-final/elite.png` is a controlled comparison of normal and elite
+  Buzzers spawned through the actual mod controller, not traversal evidence.
+- The first broad run was interrupted to finish the remapped-Start and hover-height fixes.
+  It produced no completed suite result; its incomplete diagnostics were inspected and
+  acknowledged. Final broad results follow below.

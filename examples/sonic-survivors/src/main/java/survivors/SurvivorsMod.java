@@ -38,9 +38,9 @@ public final class SurvivorsMod implements GgfMod {
         @Override public String id() { return ID + ":arenas"; }
         @Override public String displayName() { return "Sonic Survivors"; }
         @Override public String baseGameId() { return "s2"; }
-        /** Any Sonic-led team: a CPU Tails, if configured, fights alongside him. */
+        /** Both stock playable characters can lead a solo arena run. */
         @Override public boolean activatesFor(GameplayLaunchRequest request) {
-            return request.gameId().equals("s2") && request.mainCharacter().equals("sonic");
+            return request.gameId().equals("s2") && (request.mainCharacter().equals("sonic") || request.mainCharacter().equals("tails"));
         }
         @Override public Set<LogicalRom> romPrerequisites() { return Set.of(LogicalRom.S2); }
         @Override public List<String> providedMainCharacters() { return List.of(); }
@@ -76,6 +76,14 @@ public final class SurvivorsMod implements GgfMod {
         private ArenaZones zones;
         private SurvivorsTitle title;
         private InitOnlyEvents events;
+        private com.openggf.control.InputHandler liveInput;
+        private final LevelInputOverlay overlayInput = input -> {
+            liveInput = input;
+            return active && (!run.active || run.paused || run.pendingLevels > 0);
+        };
+
+        @Override public boolean supportsSidekick() { return false; }
+        @Override public boolean isSidekickSuppressedForZone(int zoneId) { return true; }
         // The arena's own menus and game over replace the stock card pair; the death routine
         // still holds the corpse, as it does with a game-over provider installed.
         private final GameOverFlowProvider arenaGameOver = (services, timeOver) -> services.fadeOutMusic();
@@ -157,11 +165,12 @@ public final class SurvivorsMod implements GgfMod {
         }
 
         @Override public <T> T getGameService(Class<T> type) {
+            if (type == LevelInputOverlay.class) return type.cast(overlayInput);
             if (type == RunState.class) return type.cast(run);
             if (type == Profile.class) return type.cast(profile());
             if (type == Arena.class) return active ? type.cast(arena) : null;
-            // The live input the title last saw: the arena reads Escape from it.
-            if (type == com.openggf.control.InputHandler.class) return title == null ? null : type.cast(title.input());
+            // Prefer the host-dispatched level input; the title reference covers early handoff.
+            if (type == com.openggf.control.InputHandler.class) return type.cast(liveInput != null ? liveInput : title == null ? null : title.input());
             return super.getGameService(type);
         }
     }
