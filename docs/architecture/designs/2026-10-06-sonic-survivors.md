@@ -84,3 +84,18 @@ zone clear, route transitions through Emerald Hill, Chemical Plant and Aquatic R
 Tails as sidekick and the Death Egg victory. Not covered: live play with a controller,
 difficulty balance beyond scripted-bot runs, audio, and the native build (which cannot load
 code mods).
+
+## Follow-ups after the first commit
+
+- **Boss reach (`63cc5918bd`).** Eggman first hovered 88 px above the first surface found
+  below him; in several arenas that was a high ledge, leaving him at the top of the screen
+  and out of jump range from the floor Sonic stood on. He now hovers relative to the ground
+  Sonic last stood on and eases toward it. Hill Top's tank rolls on the ground and charges.
+  Metropolis act 3 is its own ROM zone and registers no MTZ boss sheet (a headless check of
+  every act's boss key found it the only one), so its boss is a code-drawn armoured core
+  ringed by the zone's Asterons.
+- **Ring formations (`48351f6999`).** Rings came only from kills, so roaming the arena found
+  nothing. Every ten seconds of the survival phase five floating rings now appear at least
+  120 px from Sonic, above the floor at that point.
+- The mod jar is installed in the local `mods/` folder (trusted, enabled) next to Infinite
+  Sonic for an IntelliJ launch; `modstate.json` is local state, not part of the branch.
