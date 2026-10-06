@@ -230,6 +230,15 @@ public final class Art {
         return backdrops.get(key);
     }
 
+    /** The act's title card ({@link SceneRomArt#titleCard}), or null when the game has none for it. */
+    public SceneSpriteSet titleCard(int zone, int act) {
+        try {
+            return hasRom() && rom().hasTitleCard(zone, act) ? rom().titleCard(zone, act) : null;
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
     private SceneSprite emptyTornado;
 
     /**

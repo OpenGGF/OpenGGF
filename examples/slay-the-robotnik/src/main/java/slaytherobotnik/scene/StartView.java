@@ -10,11 +10,18 @@ import slaytherobotnik.ui.Gfx;
 import slaytherobotnik.ui.Hotspots;
 import slaytherobotnik.ui.SmallFont;
 
-/** The Tornado flight over the act's zone, with the cargo-hold bonuses. */
+/**
+ * The Tornado flight over the act's zone, with the cargo-hold bonuses. The act opens with the
+ * zone's title card from the ROM; the cargo hold opens once it has gone.
+ */
 final class StartView implements RunScreen.RoomView {
+    /** Frames before the cargo hold opens when the zone has no title card. */
+    private static final int NO_CARD_DELAY = 30;
     private final StartRoom room;
     private final Hotspots spots = new Hotspots();
     private int age;
+    private TitleCard card;
+    private boolean cardChecked;
 
     StartView(StartRoom room) {
         this.room = room;
@@ -43,7 +50,21 @@ final class StartView implements RunScreen.RoomView {
     @Override
     public void update(Shell shell, RunScreen screen) {
         age++;
-        if (age < 30) {
+        if (!cardChecked) {
+            cardChecked = true;
+            var frames = shell.art.titleCard(shell.run.act().zone(), shell.run.act().zoneAct());
+            card = frames == null ? null : new TitleCard(frames);
+        }
+        if (card != null) {
+            card.update();
+            if (card.showing()) {
+                if (shell.in.accept || shell.in.mouse.leftPressed()) {
+                    card.hurry();
+                }
+                return;
+            }
+        }
+        if (!holdOpen()) {
             return;
         }
         layout(shell);
@@ -62,6 +83,11 @@ final class StartView implements RunScreen.RoomView {
         }
         room.choose(Integer.parseInt(picked.substring(3)));
         shell.sfx(Sounds.SFX_SUPER_EMERALD);
+    }
+
+    /** Whether the cargo hold (or the landing button) is up. */
+    private boolean holdOpen() {
+        return card != null ? !card.showing() : age >= NO_CARD_DELAY;
     }
 
     @Override
@@ -98,11 +124,15 @@ final class StartView implements RunScreen.RoomView {
             Poses.hero(shell, c, who, Poses.WAIT, t, px - 4, py, SceneDraw.plain());
         }
         SmallFont f = shell.font;
-        String zone = shell.run.act().zoneName().toUpperCase() + " ZONE";
-        f.drawOutlined(c, shell.run.act().name().toUpperCase(), w - 20 - f.width(shell.run.act().name()) * 2,
-                RunScreen.HUD_HEIGHT + 8, Colors.WHITE, 2);
-        f.drawOutlined(c, zone, w - 20 - f.width(zone) * 2, RunScreen.HUD_HEIGHT + 22, Colors.GOLD, 2);
-        if (age < 30) {
+        if (card != null) {
+            card.draw(c, w);
+        } else {
+            String zone = shell.run.act().zoneName().toUpperCase() + " ZONE";
+            f.drawOutlined(c, shell.run.act().name().toUpperCase(), w - 20 - f.width(shell.run.act().name()) * 2,
+                    RunScreen.HUD_HEIGHT + 8, Colors.WHITE, 2);
+            f.drawOutlined(c, zone, w - 20 - f.width(zone) * 2, RunScreen.HUD_HEIGHT + 22, Colors.GOLD, 2);
+        }
+        if (!holdOpen()) {
             return;
         }
         Gfx.panel(c, 30, 82, w - 60, room.done() ? 36 : 26 + room.options().size() * 22);

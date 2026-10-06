@@ -115,7 +115,7 @@ final class WaterfallPicture extends StagedPicture {
                             }
                         }
                     }
-                    strip[step] = shell.ctx.art().image(art.width(), art.height(), out);
+                    strip[step] = new SceneImage(art.width(), art.height(), out);
                 }
             }
         }
