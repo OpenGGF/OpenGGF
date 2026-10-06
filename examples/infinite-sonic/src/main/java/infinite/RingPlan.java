@@ -33,6 +33,8 @@ public final class RingPlan {
             if (monitor != null) stones = java.util.Arrays.copyOf(stones, stones.length - 1);
             return aboveStones(stones);
         }
+        var bouncer = PlatformPlan.bouncer(terrain, section);
+        if (bouncer != null) return bounceArc(bouncer);
         int gap = terrain.gapWidth(section);
         if (gap > 0) return arc(terrain, section, gap);
         // Try either approach before the middle, keeping rings away from centred gaps.
@@ -69,6 +71,23 @@ public final class RingPlan {
             x[i] = start - 32 + (long) span * (i + 1) / (COUNT + 1);
             double t = (x[i] - start - gap / 2.0) / (span / 2.0);
             y[i] = bank - ARC_BASE - (int) Math.round(ARC_RISE * (1 - t * t));
+        }
+        return new Row(x, y);
+    }
+
+    /**
+     * Four rings on the rebound from a bounce flyer: a fall met at full jump speed goes back up
+     * at 0x680 (ROM gravity $38) while running on at the course's top speed, 0x540.
+     */
+    private static Row bounceArc(PlatformPlan.Bouncer bouncer) {
+        long[] x = new long[COUNT];
+        int[] y = new int[COUNT];
+        // Sonic's centre meets the flyer about this far above its centre (rolling radius plus its box).
+        int top = bouncer.y() - 24;
+        for (int i = 0; i < COUNT; i++) {
+            int t = 8 * (i + 1);
+            x[i] = bouncer.worldX() + Math.round(t * 0x540 / 256.0);
+            y[i] = top - (int) Math.round(t * 0x680 / 256.0 - t * t * 0x38 / 512.0);
         }
         return new Row(x, y);
     }

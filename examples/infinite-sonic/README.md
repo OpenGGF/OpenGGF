@@ -158,7 +158,10 @@ Four rings arc over each pit, highest in the middle, tracing the jump that clear
 
 From the third corridor on, about a third of corridors become a **platform stretch**:
 a 320 to 448 pixel bottomless pit bridged by one to three of the zone's own stock
-platforms, level with the lower bank, with at most 144 pixels between footholds. These
+platforms, level with the lower bank. They sit flush together as one **raft in the middle
+of the pit** (8 pixels apart, so Sonic runs straight across), with at most 144 pixels of
+open pit either side, so each crossing is two ordinary jumps rather than a run of short,
+timed hops. These
 are the shipped Sonic 1 objects themselves, with their ROM art, solidity, riding and
 sink: Green Hill and Spring Yard use the floating platform (Obj18), half
 the time as the kind that falls 30 frames after Sonic lands; Marble and Scrap Brain use
@@ -167,6 +170,18 @@ the wide moving blocks (Obj52) held stationary; Star Light uses its 80-pixel ele
 act's own stock layout places are used, and only those at least 64 pixels wide, so the
 Labyrinth course (whose only block is 32 pixels) keeps ordinary corridors. Rings sit above each platform. A strong run-up can clear smaller
 stretches in one jump; wider ones need a platform. No enemies patrol platform stretches.
+
+In zones whose sky has a flyer Sonic can break (Buzz Bombers and Batbrains: Green Hill,
+Marble and Spring Yard), the crossing is picked at random for each stretch: half are a raft
+alone, a quarter have **no platforms and a hovering flyer to bounce off** instead, and a
+quarter have the raft **and** a flyer. A bounce flyer holds its place (bobbing, never
+patrolling) 288 pixels into the pit and 24 pixels below the near bank, where a held jump from
+just before the lip at full speed comes down onto it: Sonic breaks it and the stock rebound
+throws him back up a full jump, onto the far bank. Four rings trace that rebound. With a raft,
+the flyer hovers below the middle of the far gap instead, a safety net that bounces a jump
+which overshoots the raft on to the far bank. Spiked Orbinauts cannot be bounced off, so
+Star Light and Scrap Brain keep rafts only. Touching a flyer without jumping hurts as any
+badnik does.
 
 Half of the stretches from the third on split into two paths where the ground
 allows (it varies by at most 64 pixels over the stretch): a **high road** built from those

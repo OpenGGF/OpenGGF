@@ -606,3 +606,17 @@ pattern atlas rule and the release-tooling Python test fail identically at base;
 terminology guard exceeded its 2-minute subprocess limit (base: 117.9 s) and passes when its
 subprocess runs directly (101 s, exit 0). Not covered: the rendered VHS presentation and reverse
 audio (headless) and live play.
+
+## Platform rafts and bounce flyers (0.24.0, 2026-10-06)
+
+Main checkout, `feature/ai-infinite-sonic`, base `29696afd70`; mod, tests and docs only.
+
+| Contract | Evidence | Scope / gaps |
+| --- | --- | --- |
+| Raft and crossing geometry | `platformStretchesBridgeTheirPitWithTheActsStockPlatforms` | All 18 acts, 250 stretches: stones 8 px apart, raft centred, outer spans 16–144 px; bounce flyers 160 px+ into the pit, 48 px clear of the far wall, 24 px below the near bank; safety-net flyers under the far gap; every crossing appears where a bounceable flyer exists, rafts only otherwise |
+| Real raft crossing | `sonicCrossesAPlatformStretchOnSpawnedStockPlatforms` | First non-bounce stretch, acts with stones, 4:3 and 16:9 |
+| Real bounce crossing | `sonicCrossesABounceStretchOffAHoveringFlyer` | First bounce stretch in GHZ, MZ and SYZ acts (8 acts, 4:3 and 16:9): the flyer spawns at its planned place and species, holds still, breaks over the pit, scores, the ROM rebound sends Sonic up and he lands beyond the pit; skipped for acts without platforms or bounceable flyers |
+
+**236 run, 0 failures, 32 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01; skips are the
+two crossing tests in acts without platforms or bounceable flyers). The policy steers in the air;
+an unsteered ballistic sweep is recorded in the design note. Not covered: rendering and live play.

@@ -1254,10 +1254,15 @@ class TestInfiniteSonic {
         return new boolean[]{left, right, jump};
     }
 
-    /** Terrain floor, else the surface of a planned stepping stone, else -1. */
+    /** A live bounce flyer the policy aims for, as {world x, centre y}, or null. */
+    private long[] bounceTarget;
+
+    /** Terrain floor, else the surface of a planned stepping stone (or bounce flyer), else -1. */
     private int surfaceAt(long x) throws Exception {
         int floor = floorAt(x);
         if (floor >= 0) return floor;
+        // Aim Sonic's centre at the height where his box meets the flyer's (surfaceAt - 19).
+        if (bounceTarget != null && Math.abs(x - bounceTarget[0]) <= 12) return (int) bounceTarget[1] - 4;
         long section = Math.floorDiv(x, 512);
         for (long s = section - 1; s <= section + 1; s++) {
             for (Object stone : stones(s)) {
@@ -1357,6 +1362,7 @@ class TestInfiniteSonic {
         Set<Integer> kinds = platformKindIds();
         for (int id : kinds) assertTrue(stock.contains(id), "only platforms the act itself places: " + id);
         int runs = 0;
+        var crossings = new TreeSet<Integer>();
         for (long stretch = 0; stretch < 250; stretch++) {
             long near = stretch * 4 + 2, far = stretch * 4 + 3;
             assertEquals(platformRun(near), platformRun(far), "a platform stretch spans two sections");
@@ -1378,22 +1384,61 @@ class TestInfiniteSonic {
             for (long x = end; x < (far + 1) * 512; x++) assertEquals(farBank, floorAt(x), "flat far bank");
             assertTrue((far + 1) * 512 - end >= 160, "far runway");
             for (long x = start; x < end; x++) assertEquals(-1, floorAt(x), "bottomless pit");
+            int crossing = crossing(stretch);
+            crossings.add(crossing);
             Object[] stones = stones(far);
+            Object bouncer = bouncer(far);
+            assertNull(bouncer(near));
+            if (crossing == BOUNCE) {
+                assertEquals(0, stones.length, "a bounce crossing has no platforms");
+                long x = (long) call(bouncer, "worldX");
+                assertTrue(x > start + 160 && x <= end - 48, "the flyer meets a held jump's fall, clear of the far wall");
+                assertEquals(bank + 24, (int) call(bouncer, "y"), "just below the near bank");
+                continue;
+            }
             assertTrue(stones.length >= 1 && stones.length <= 3);
             long edge = start;
-            for (Object stone : stones) {
-                long centre = (long) call(stone, "worldX");
-                int half = (int) call(stone, "halfWidth");
-                assertTrue(kinds.contains((int) call(stone, "objectId")));
-                assertEquals(Math.max(bank, farBank), (int) call(stone, "surface"), "level with the lower bank");
+            for (int i = 0; i < stones.length; i++) {
+                long centre = (long) call(stones[i], "worldX");
+                int half = (int) call(stones[i], "halfWidth");
+                assertTrue(kinds.contains((int) call(stones[i], "objectId")));
+                assertEquals(Math.max(bank, farBank), (int) call(stones[i], "surface"), "level with the lower bank");
                 long span = centre - half - edge;
-                assertTrue(span >= 16 && span <= 144, "jumpable span " + span);
+                if (i == 0) assertTrue(span >= 16 && span <= 144, "jumpable span " + span);
+                else assertEquals(8, span, "the raft's platforms sit flush together");
                 edge = centre + half;
             }
+            long nearSpan = (long) call(stones[0], "worldX") - (int) call(stones[0], "halfWidth") - start;
+            assertTrue(Math.abs((end - edge) - nearSpan) <= 1, "the raft is centred in the pit");
             assertTrue(end - edge >= 16 && end - edge <= 144, "final span " + (end - edge));
+            if (crossing == RAFT) assertNull(bouncer);
+            else {
+                long x = (long) call(bouncer, "worldX");
+                assertTrue(x > edge && x < end, "the safety-net flyer sits under the far gap");
+            }
         }
         if (kinds.isEmpty()) assertEquals(0, runs, "acts without stock platforms keep ordinary corridors");
         else assertTrue(runs >= 25 && runs <= 120, "a share of corridors becomes a platform stretch: " + runs);
+        if (runs > 0 && bounceSpecies().isEmpty()) assertEquals(Set.of(RAFT), crossings, "spiked or no flyers: rafts only");
+        else if (runs > 0) assertEquals(Set.of(RAFT, BOUNCE, BOTH), crossings, "every crossing appears");
+    }
+
+    private static final int RAFT = 0, BOUNCE = 1, BOTH = 2;
+    private int crossing(long stretch) throws Exception {
+        return (int) loader.loadClass("infinite.PlatformPlan").getMethod("crossing", terrain().getClass(), long.class)
+                .invoke(null, terrain(), stretch);
+    }
+    private Object bouncer(long section) throws Exception {
+        return loader.loadClass("infinite.PlatformPlan").getMethod("bouncer", terrain().getClass(), long.class)
+                .invoke(null, terrain(), section);
+    }
+    /** Flyers Sonic can bounce off: the act's flying, destroyable species without spikes. */
+    private Set<Integer> bounceSpecies() throws Exception {
+        var ids = new TreeSet<Integer>();
+        for (int id : (int[]) terrain().getClass().getMethod("airSpecies").invoke(terrain())) {
+            if ((boolean) trait(id, "bounceable")) ids.add(id);
+        }
+        return ids;
     }
 
     private static int levelIndex(int zone, int act) {
@@ -1416,7 +1461,7 @@ class TestInfiniteSonic {
         var fixture = launch(aspect, zone, act);
         org.junit.jupiter.api.Assumptions.assumeFalse(platformKindIds().isEmpty(), "act places no platforms");
         long stretch = 2;
-        while (!platformRun(stretch * 4 + 3)) stretch++;
+        while (!platformRun(stretch * 4 + 3) || crossing(stretch) == BOUNCE) stretch++;
         long start = pitStart(stretch), end = pitEnd(stretch);
         Object[] planned = stones(stretch * 4 + 3);
         fixture.stepIdleFrames(2);
@@ -1459,6 +1504,69 @@ class TestInfiniteSonic {
         assertTrue(originPixels() + fixture.sprite().getCentreX() >= end, "crossed the pit");
         assertEquals(planned.length, seen.size(), "every planned stone spawned as a stock object");
         assertTrue(rode, "Sonic stood on a stock platform over the pit");
+    }
+
+    /**
+     * Real physics: the input policy jumps from the lip of the act's first bounce crossing,
+     * falls onto the hovering flyer, breaks it and rides the ROM rebound to the far bank.
+     */
+    @ParameterizedTest(name = "zone {0} act {1} {2}")
+    @org.junit.jupiter.params.provider.MethodSource("courseActsAtBothAspects")
+    void sonicCrossesABounceStretchOffAHoveringFlyer(int zone, int act, WidescreenAspect aspect) throws Exception {
+        var fixture = launch(aspect, zone, act);
+        org.junit.jupiter.api.Assumptions.assumeFalse(platformKindIds().isEmpty() || bounceSpecies().isEmpty(),
+                "act has no platform stretches or no flyer to bounce off");
+        long stretch = 2;
+        while (!platformRun(stretch * 4 + 3) || crossing(stretch) != BOUNCE) stretch++;
+        long start = pitStart(stretch), end = pitEnd(stretch);
+        Object planned = bouncer(stretch * 4 + 3);
+        long plannedX = (long) call(planned, "worldX");
+        fixture.stepIdleFrames(2);
+        fixture.sprite().setInvulnerableFrames(20000);
+        var trail = new StringBuilder();
+        boolean spawned = false, bounced = false;
+        int score = 0;
+        try {
+            for (int frame = 0; frame < 30000 && originPixels() + fixture.sprite().getCentreX() < end + 64; frame++) {
+                stepTerrain(fixture, 1);
+                var player = fixture.sprite();
+                long worldX = originPixels() + player.getCentreX();
+                trail.append(String.format(" [%d,%d air=%b vy=%d]", worldX, player.getCentreY(), player.getAir(),
+                        (int) player.getYSpeed()));
+                if (trail.length() > 4000) trail.delete(0, trail.length() - 4000);
+                if (player.getDead()) fail("death at world x=" + worldX + " pit " + start + ".." + end
+                        + " flyer " + planned + "\n" + trail);
+                ObjectInstance flyer = null;
+                for (ObjectInstance enemy : enemies()) {
+                    // Raft crossings' safety-net flyers hover too; take this pit's.
+                    if ((boolean) enemy.getClass().getMethod("hover").invoke(enemy)
+                            && Math.abs(enemy.getSpawn().x() + originPixels() - plannedX) < 512) flyer = enemy;
+                }
+                if (flyer != null && !spawned) {
+                    spawned = true;
+                    assertEquals(plannedX, flyer.getSpawn().x() + originPixels(), "spawned at its planned place");
+                    assertEquals((int) call(planned, "species"), flyer.getClass().getMethod("species").invoke(flyer));
+                    score = GameServices.gameState().getScore();
+                }
+                if (flyer != null) {
+                    int x = flyer.getX(), y = flyer.getY();
+                    bounceTarget = new long[]{x + originPixels(), y};
+                    // A hovering flyer bobs over its anchor and never patrols.
+                    assertEquals(plannedX, x + originPixels(), "holds its place");
+                } else if (spawned && bounceTarget != null) {
+                    bounceTarget = null;
+                    assertTrue(worldX > start && worldX < end, "broken over the pit");
+                    assertTrue(player.getYSpeed() < 0, "the ROM rebound sends Sonic back up");
+                    assertTrue(GameServices.gameState().getScore() > score, "breaking it scores");
+                    bounced = true;
+                }
+                assertFalse(player.isOnObject() && worldX > start && worldX < end, "no platform in a bounce crossing");
+            }
+        } finally {
+            bounceTarget = null;
+        }
+        assertTrue(bounced, "Sonic bounced off the flyer\n" + trail);
+        assertTrue(originPixels() + fixture.sprite().getCentreX() >= end, "crossed the pit");
     }
 
     private boolean isCorridor(long section) throws Exception {
