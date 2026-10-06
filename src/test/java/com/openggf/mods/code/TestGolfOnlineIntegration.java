@@ -188,8 +188,11 @@ class TestGolfOnlineIntegration {
                 assertEquals("WATCH", guest.state.text("hudStage"), "guest HUD follows the host's actual flight");
                 assertFalse(guest.state.flag("hudControls"), "observer must not show stale shot choices");
                 assertTrue(guest.state.text("hudHint").contains("OTHER PLAYER"));
+                host.step(30, 0, 0, false); guest.step(30, 0, 0, false);
                 pauseRewind(host);
+                assertReverseAudioOnBothPeers(host, guest);
                 pump(host, guest, (a,b) -> a.text("phase").equals("AIM") && b.text("phase").equals("AIM") && a.number("shot") > id && b.number("shot") == a.number("shot"), 200, "host rewind reaches origin on both peers");
+                assertFalse(host.state.flag("reverseAudio")); assertFalse(guest.state.flag("reverseAudio"));
                 assertEquals(turn, host.state.number("turn")); assertEquals(0, host.state.number("strokes0"));
                 assertEquals(x,host.state.number("ballX")); assertEquals(y,host.state.number("ballY"));
                 assertEquals(2,guest.state.number("holeRewinds")); assertEquals(0,guest.state.number("turnRewinds")); compareViewAndScores(host,guest);
@@ -205,8 +208,11 @@ class TestGolfOnlineIntegration {
                 assertEquals("WATCH", guest.state.text("hudStage"));
                 assertFalse(guest.state.flag("hudControls"));
                 assertTrue(guest.state.text("hudHint").contains("REWIND"));
+                host.step(30, 0, 0, false); guest.step(30, 0, 0, false);
                 pauseRewind(guest);
+                assertReverseAudioOnBothPeers(host, guest);
                 pump(host,guest,(a,b)->a.text("phase").equals("AIM") && b.text("phase").equals("AIM") && a.number("shot")>guestId && b.number("shot")==a.number("shot"),200,"guest rewind is host-owned");
+                assertFalse(host.state.flag("reverseAudio")); assertFalse(guest.state.flag("reverseAudio"));
                 assertEquals(guestTurn,host.state.number("turn")); assertEquals(0,host.state.number("strokes1"));
                 assertEquals(guestX,host.state.number("ballX")); assertEquals(guestY,host.state.number("ballY"));
                 assertEquals(2,guest.state.number("holeRewinds")); assertEquals(0,guest.state.number("turnRewinds")); compareViewAndScores(host,guest);
@@ -220,6 +226,18 @@ class TestGolfOnlineIntegration {
                 assertEquals(1,host.state.number("turnRewinds"));
                 pump(host,guest,(a,b)->a.number("owner")==1 && b.number("owner")==1,700,"settlement passes the turn online without A");
                 compareViewAndScores(host,guest);
+                ready(guest, host, guest); shot(guest);
+                pump(host, guest, (a,b)->a.text("phase").equals("WATCH") && b.text("phase").equals("WATCH"),
+                        700, "last guest shot is in flight");
+                host.step(30, 0, 0, false); guest.step(30, 0, 0, false);
+                pauseRewind(guest); assertReverseAudioOnBothPeers(host, guest);
+                host.step(1, 0, 0, true); host.step(1, 0, 0, false);
+                host.step(1, 2, 0, false); host.step(1, 0, 0, false); host.step(1, 2, 0, false);
+                host.step(1, 0, ACTION_A, false);
+                pump(host, guest, (a,b)->a.flag("ended") && b.flag("ended"), 80, "concession ends an active replay");
+                assertFalse(host.state.flag("reverseAudio")); assertFalse(guest.state.flag("reverseAudio"));
+                assertEquals(0.0, Double.parseDouble(host.state.text("rewindEffect")));
+                assertEquals(0.0, Double.parseDouble(guest.state.text("rewindEffect")));
             }
         }
     }
@@ -232,6 +250,16 @@ class TestGolfOnlineIntegration {
     }
     private static void pauseRewind(Peer peer) throws Exception {
         peer.step(1,0,0,true); peer.step(1,0,0,false); peer.step(1,2,0,false); peer.step(1,0,ACTION_A,false);
+    }
+
+    private static void assertReverseAudioOnBothPeers(Peer host, Peer guest) throws Exception {
+        pump(host, guest, (a, b) -> a.text("phase").equals("REWINDING") && b.text("phase").equals("REWINDING"),
+                80, "both peers enter the authoritative replay phase");
+        assertTrue(host.state.flag("reverseAudio"), "host reverses its shot recording");
+        assertTrue(guest.state.flag("reverseAudio"), "guest reverses its locally heard shot recording");
+        assertFalse(host.state.flag("logicalReverseAudio"), "shot presentation does not own developer rollback");
+        assertFalse(guest.state.flag("logicalReverseAudio"));
+        assertEquals(host.state.number("replaySpeed"), guest.state.number("replaySpeed"), "host owns the playback rate");
     }
 
     private Path compileAndPackage() throws Exception {

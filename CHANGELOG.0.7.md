@@ -834,7 +834,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   independent course worlds; optional shot rewind restores the entire pre-shot
   world and refunds the stroke, with faster playback for longer shots and
   configurable per-golfer hole/turn allowances (default 3/1). Rewind is available
-  during WATCH with the host's configured VHS effect; settlement and finishes
+  during WATCH with the host's configured VHS effect and backward playback of
+  the shot's recorded audio; online peers follow the host's phase and rate using
+  their own locally heard audio. Settlement and finishes
   pass the turn automatically. Clearer scorecards, guide panels, controller menu
   prompts and authoritative online turn hints keep presentation policy in the mod.
   Animated turn handoffs wait for the incoming golfer's fresh ready press and
@@ -854,7 +856,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   small forward bias for clearing walls, and a
   build/package/launch script. The unpublished
   candidate API now supports held gameplay admission, opaque course checkpoints and
-  read-only value scenes without changing stock modules' frame behavior. The final
+  read-only value scenes without changing stock modules' frame behavior. Bounded
+  `SceneReplay` and session-owned `AudioReplay` make reverse presentation reusable
+  for creators while permission, scoring and checkpoint timing stay in the mod. The final
   example adds a source-reading path and extension walkthrough, shared logical
   menu mouse input, elapsed native-pose clocks, and a golf-owned impulse adapter;
   the controller API keeps character/destination/impulse operations reusable.

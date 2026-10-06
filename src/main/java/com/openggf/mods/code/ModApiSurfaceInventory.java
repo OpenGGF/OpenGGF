@@ -29,6 +29,7 @@ public final class ModApiSurfaceInventory {
             "com.openggf.level.objects.ObjectPlayerQuery",
             "com.openggf.game.PhysicsProfile",
             "com.openggf.game.presentation.SceneFrameCodec",
+            "com.openggf.game.presentation.SceneReplay",
             "com.openggf.control.MenuInput",
             "com.openggf.control.ButtonPrompts",
             "com.openggf.physics.GroundSensor",

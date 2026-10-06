@@ -606,8 +606,11 @@ class TestPuttPuttParadise {
     private void local(String one, String two) throws Exception {
         configureRewinds("LOCAL", one, two, 0, "NATIVE_4_3", 0, 1);
     }
-    @SuppressWarnings({"rawtypes", "unchecked"})
     private void configureRewinds(String modeName, String one, String two, int act, String aspect, int perHole, int perTurn) throws Exception {
+        configureRewinds(modeName, one, two, act, aspect, perHole, perTurn, 20502);
+    }
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void configureRewinds(String modeName, String one, String two, int act, String aspect, int perHole, int perTurn, int port) throws Exception {
         var selectionClass = loader.loadClass("paradise.ui.GolfMenu$Selection");
         Class modeClass = loader.loadClass("paradise.ui.GolfMenu$Mode");
         Class charClass = loader.loadClass("paradise.ui.GolfMenu$CharacterChoice");
@@ -616,7 +619,7 @@ class TestPuttPuttParadise {
         Object choice = selectionClass.getConstructor(modeClass, charClass, charClass, int.class, String.class,
                 int.class, viewportClass, rulesClass).newInstance(Enum.valueOf(modeClass, modeName),
                 Enum.valueOf(charClass, one.toUpperCase(Locale.ROOT)), Enum.valueOf(charClass, two.toUpperCase(Locale.ROOT)),
-                act, "127.0.0.1", 20502, Enum.valueOf(viewportClass, aspect), rulesClass.getConstructor(int.class, int.class).newInstance(perHole, perTurn));
+                act, "127.0.0.1", port, Enum.valueOf(viewportClass, aspect), rulesClass.getConstructor(int.class, int.class).newInstance(perHole, perTurn));
         mode().getClass().getMethod("configure", selectionClass).invoke(mode(), choice);
     }
 
@@ -636,6 +639,8 @@ class TestPuttPuttParadise {
             loop.step(); rows++;
             if (rows == 1) {
                 assertTrue(loop.liveRewindEffectIntensity() > 0, "creator shot rewind must request the production VHS effect");
+                assertTrue(GameServices.audio().isReverseAudioOutputActive(), "shot view must reverse its captured audio too");
+                assertFalse(GameServices.audio().isReverseAudioPresentationActive(), "shot audio must not own developer restores");
                 assertTrue(loop.liveRewindEffectSpeed() > 0, "creator rewind supplies its visual playback speed");
                 var ambient = new com.openggf.GameLoop(new com.openggf.control.InputHandler());
                 ambient.setGameMode(GameMode.LEVEL);
@@ -648,6 +653,7 @@ class TestPuttPuttParadise {
         } while (value(matchState(), "pending") != null && rows < 100);
         assertTrue(rows < 100, "rewind completion is bounded");
         assertEquals(0, loop.liveRewindEffectIntensity(), "restored lie must stop the creator effect");
+        assertFalse(GameServices.audio().isReverseAudioOutputActive(), "restored lie releases its sound recording");
         assertEquals("AIM", value(shotState(), "stage").toString());
         assertEquals(start, checkpointCourse(f).playerState());
         for (var entry : before.entries().entrySet()) assertEquals(List.of(), com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
@@ -664,6 +670,61 @@ class TestPuttPuttParadise {
         commit(f, 55); f.stepIdleFrames(40);
         input.handleKeyEvent(GameServices.configuration().getInt(SonicConfiguration.LIVE_REWIND_KEY), org.lwjgl.glfw.GLFW.GLFW_PRESS); loop.step();
         assertNotNull(value(matchState(), "pending"), "one rewind per turn survives retry");
+    }
+
+    @Test void concedingDuringReverseClosesSoundAndViewBeforeResults() throws Exception {
+        var f = launch("sonic", 0);
+        configureRewinds("PRACTICE", "sonic", "tails", 0, "NATIVE_4_3", 3, 1);
+        f.stepIdleFrames(120); commit(f, 55); f.stepIdleFrames(40);
+        tick(f, 0, 0, true); tick(f, 0, 0, false);
+        tick(f, 2, 0, false); tick(f, 0, com.openggf.control.InputActionMasks.ACTION_A, false);
+        tick(f, 0, 0, false);
+        assertTrue(GameServices.audio().isReverseAudioOutputActive());
+        assertTrue(GameServices.module().gameplayFrameController().rewindPresentation().intensity() > 0);
+        tick(f, 0, 0, true); tick(f, 0, 0, false);
+        tick(f, 2, 0, false); tick(f, 0, 0, false); tick(f, 2, 0, false);
+        tick(f, 0, com.openggf.control.InputActionMasks.ACTION_A, false);
+        assertEquals("CONCEDED", value(matchState(), "status").toString());
+        assertFalse(GameServices.audio().isReverseAudioOutputActive(), "results cannot keep consuming the shot clip");
+        assertEquals(0, GameServices.module().gameplayFrameController().rewindPresentation().intensity());
+        f.stepIdleFrames(10);
+        assertFalse(GameServices.audio().isReverseAudioOutputActive());
+    }
+
+    @Test void closingOnlineModeReleasesRoomEvenWhenAudioSinkFlushFails() throws Exception {
+        var f = launch("sonic", 0);
+        int number;
+        try (var reservation = new java.net.ServerSocket(0)) { number = reservation.getLocalPort(); }
+        configureRewinds("HOST", "sonic", "tails", 0, "NATIVE_4_3", 3, 1, number);
+        f.stepIdleFrames(2);
+        assertNotNull(value(mode(), "roomState"), "the real host listener has opened");
+        var audio = GameServices.audio();
+        var fail = new java.util.concurrent.atomic.AtomicBoolean();
+        audio.setBackend(new com.openggf.audio.NullAudioBackend() {
+            @Override public com.openggf.audio.output.AudioPresentationSink createPresentationSink(
+                    java.util.function.Consumer<Throwable> failures, java.util.function.Consumer<String> warnings) {
+                return new com.openggf.audio.output.AudioPresentationSink() {
+                    @Override public int sampleRate() { return 48_000; }
+                    @Override public void accept(com.openggf.audio.presentation.AudioPresentationFrameView frame) { }
+                    @Override public void onReverseBoundary() {
+                        if (fail.get()) throw new IllegalStateException("failed replay sink flush");
+                    }
+                    @Override public void close() { }
+                };
+            }
+        });
+        var replay = checkpointCourse(f).recordAudioReplay(1);
+        replay.beginReverse(1);
+        var slot = mode().getClass().getDeclaredField("shotAudio"); slot.setAccessible(true); slot.set(mode(), replay);
+        fail.set(true);
+        assertThrows(IllegalStateException.class, () -> GameServices.module().gameplayFrameController().close());
+        assertTrue(replay.isClosed()); assertFalse(audio.isReverseAudioOutputActive());
+        assertNull(value(mode(), "roomState"));
+        try (var port = new java.net.ServerSocket(number)) {
+            assertEquals(number, port.getLocalPort(), "audio failure cannot leak the host listener");
+        }
+        assertDoesNotThrow(() -> GameServices.module().gameplayFrameController().close());
+        fail.set(false);
     }
 
     @Test void reverseViewsStayBoundedAndAdvanceThroughOldFramesWithFreshRevisions() throws Exception {

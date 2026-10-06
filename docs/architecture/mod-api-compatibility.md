@@ -330,3 +330,16 @@ pad's bumper. Labels are presentation values derived from live bindings and neve
 alter input, replay rows or gameplay. The regenerated 0.7 candidate pin adds 17
 signature lines; `ModApiVersion` documents the capability; the release descriptor,
 API version/status and published baselines are unchanged.
+
+
+Shot-audio follow-up promotes bounded reverse presentation into the mutable 0.7
+candidate. `SceneReplay` records immutable value scenes with adaptive interior
+sampling; `CourseControl.recordAudioReplay` returns a session-owned `AudioReplay`
+that records the final heard PCM and reverses it at the caller's view rate.
+The producer retains ownership of PCM buffers, cursors and sink transitions.
+Neither resource supplies gameplay state or changes developer rewind ownership.
+Creator rules still select permission, duration, checkpoint restore and score
+refund. Session teardown closes forgotten audio resources even after a creator
+cleanup failure. The candidate signature pin and `ModApiVersion` commentary are
+updated together; the release descriptor, candidate version and published pins
+remain unchanged. See the [creator replay recipe](../modding/content-mods.md#replay-a-view-and-its-audio).

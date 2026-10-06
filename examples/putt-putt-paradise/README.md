@@ -150,6 +150,11 @@ physics remains held until the checkpoint is restored. The mod requests the
 engine's existing VHS picture-search effect during local and remote reverse
 playback; `rewind.vhsEffect` and `rewind.vhsTearBands` still control its appearance.
 This works independently of developer rewind enablement and stops while paused.
+The actual recorded shot audio also plays backward at the view's speed. Music and
+sound-driver state stay live behind that replay and resume with a short crossfade;
+rewinding never stops the driver or borrows developer history. Online peers use
+the host's reverse phase/rate to replay their own locally heard audio. A peer that
+joins midway cannot replay sounds it did not hear before joining.
 
 Rewind is available during WATCH, while the shot is moving. Settlement, finishes
 and penalties resolve automatically and pass the turn; there is no A-to-accept
@@ -185,7 +190,7 @@ streaming are optional layers; a first mod does not need them.
 | [GolfMode](src/main/java/paradise/GolfMode.java) and [GolfSwing](src/main/java/paradise/GolfSwing.java) | Coordinate held/native frames, then apply golf's calculated impulse and landing spin | Choose policy in the mod; use bounded native operations for world changes |
 | [GolfHud](src/main/java/paradise/ui/GolfHud.java) and [GolfOverlay](src/main/java/paradise/ui/GolfOverlay.java) | Pure local/remote phase, ownership, hints and score display | Keep friendly UI policy in the mod and render immutable values; hide choices the viewer cannot make |
 | [GolfFeedback](src/main/java/paradise/ui/GolfFeedback.java), [GolfMotion](src/main/java/paradise/ui/GolfMotion.java), [GolfCards](src/main/java/paradise/ui/GolfCards.java) and [GolfSounds](src/main/java/paradise/GolfSounds.java) | Presentation events, easing, cards and ROM sound choices | Return sound cues from a pure timeline; keep rendering and audio adapters separate from rules |
-| [GolfPoseClock](src/main/java/paradise/presentation/GolfPoseClock.java), [GolfScene](src/main/java/paradise/presentation/GolfScene.java) and [ShotReplay](src/main/java/paradise/presentation/ShotReplay.java) | Pose timing, finish decoration and bounded reverse playback | Render immutable values without advancing gameplay |
+| [GolfPoseClock](src/main/java/paradise/presentation/GolfPoseClock.java), [GolfScene](src/main/java/paradise/presentation/GolfScene.java) and [ShotReplay](src/main/java/paradise/presentation/ShotReplay.java) | Pose timing, finish decoration and golf's reverse duration policy | Use the engine's bounded `SceneReplay` and session-owned `AudioReplay`; restore one checkpoint afterward |
 | [GolfOnline](src/main/java/paradise/GolfOnline.java) then [GolfRoom](src/main/java/paradise/net/GolfRoom.java) | Adapt the game to a bounded TCP room with host-owned decisions | Keep protocol and transport away from physics rules |
 
 ### Follow one shot
@@ -213,7 +218,8 @@ streaming are optional layers; a first mod does not need them.
    observes support, damage and the finish gate, applies the first landing's
    spin, and records a bounded view sample if an undo is available.
 5. Settlement resolves the result and automatically opens the next turn. Rewinding plays
-   views backward, restores the opaque pre-shot `CourseCheckpoint`, refunds the
+   views and captured audio backward, presents the final origin row, then closes
+   the audio lease and restores the opaque pre-shot `CourseCheckpoint`, refunds the
    stroke and spends the separate allowance. A checkpoint excludes the mode
    adapter, so restoring the world cannot restore a spent allowance.
 
@@ -251,13 +257,25 @@ renderer, ROM or socket dependency and is checked by `TestGolfModel`. Use
 `CourseControl.buttonLabel` for action prompts rather than guessing a key name.
 Networking changes also require `TestGolfTransport` and the actual two-JVM
 `TestGolfOnlineIntegration`; matching text on two screens alone does not prove
-that readiness or scoring is synchronized. Golf protocol 5 includes handoff
-state and explicitly refuses peers built against a different protocol.
+that readiness or scoring is synchronized. Golf protocol 6 includes handoff
+state and the authoritative reverse rate, and explicitly refuses peers built
+against a different protocol. The
+[replay recipe](../../docs/modding/content-mods.md#replay-a-view-and-its-audio)
+shows the minimal engine API pattern without golf's score or turn rules.
 
 Use instance-owned state. Capture every field that affects subsequent frames
 in the controller's `State`; dispose owned presenters and sockets in `close`.
 The SDK rejects mutable static creator state and validates the same jar that
 users install. Do not package ROM bytes or use disassembly assets at runtime.
+The current package also reports ten `NON_API_ENGINE_REFERENCE` warnings.
+Those come from the session service facade, the ROM spring/contact helpers and
+the native Sonic 2 title decoder/mappings. They have no compatibility promise;
+this source-first example must be rebuilt against its matching checkout.
+Use the model, UI timeline, transport and `CourseControl` reading paths as the
+reusable starting points. Keep a native object or title-art bridge isolated when
+your mod needs one, and review these warnings when upgrading the engine rather
+than treating an internal class as a supported API. The
+[SDK troubleshooting guide](../../docs/modding/troubleshooting.md) explains the distinction.
 For a smaller starting point, follow the examples in the
 [creator handbook](../../docs/modding/index.md).
 

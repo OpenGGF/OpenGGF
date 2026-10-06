@@ -110,8 +110,9 @@ final class GolfOnline implements AutoCloseable {
     boolean control(GolfPacket.ShotAction action) {
         return turn != null && room.submitControl(new GolfPacket.ShotControl(turn, action));
     }
-    void status(GolfMatch.ShotId id, GolfPacket.ShotPhase phase, RewindAllowance budget) {
-        shotStatus = new GolfPacket.ShotStatus(wire(id), phase, budget.holeRemaining(id.player(), id.actIndex()), budget.turnRemaining(id));
+    void status(GolfMatch.ShotId id, GolfPacket.ShotPhase phase, RewindAllowance budget, int replaySpeed) {
+        shotStatus = new GolfPacket.ShotStatus(wire(id), phase, budget.holeRemaining(id.player(), id.actIndex()),
+                budget.turnRemaining(id), replaySpeed);
         room.publishStatus(shotStatus);
     }
     void rewound(GolfMatch.State state, GolfMatch.ShotId id, CourseControl.PlayerState ball) {

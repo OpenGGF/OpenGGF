@@ -1,6 +1,7 @@
 package com.openggf.game.mode;
 
 import com.openggf.configuration.SonicConfiguration;
+import com.openggf.audio.AudioReplay;
 import com.openggf.game.*;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.physics.Direction;
@@ -21,6 +22,12 @@ public final class CourseControl {
     /** Current configured rewind key/primary-pad bumper, independent of developer rewind enablement.
      * Controllers own edge detection. Movie inputs should use their controller menu command instead. */
     public boolean rewindHeld() { return rewindHeld; }
+
+    /** Records final presented PCM for a bounded reverse view (1..120 seconds; at most four live
+     * recordings per session). Start immediately before its first forward row and close on
+     * settlement, replay completion or cancellation. Paused/silent rows are not recorded.
+     * The session closes abandoned recordings, including after a creator callback failure. */
+    public AudioReplay recordAudioReplay(int maxSeconds) { return context.recordAudioReplay(maxSeconds); }
 
     /** Prompt label for a local player's button (0 = P1, 1 = P2); see {@link com.openggf.control.ButtonPrompts}.
      * Empty when the button is unbound or this row has no live input handler. */

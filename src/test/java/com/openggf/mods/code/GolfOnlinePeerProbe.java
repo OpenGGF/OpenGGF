@@ -209,6 +209,8 @@ public final class GolfOnlinePeerProbe {
         values.put("hudControls", value(hud, "showShotControls"));
         values.put("hudHint", value(hud, "hint"));
         values.put("rewindEffect", controller.rewindPresentation().intensity());
+        values.put("reverseAudio", GameServices.audio().isReverseAudioOutputActive());
+        values.put("logicalReverseAudio", GameServices.audio().isReverseAudioPresentationActive());
         var shown = (List<?>) declaredValue(controller, "scores");
         values.put("shownStrokes0", shown.isEmpty() ? -1 : value(shown.get(0), "strokes"));
         values.put("musicPending", GameServices.module().getLevelInitProfile().isLevelMusicPublicationPending());
@@ -227,6 +229,7 @@ public final class GolfOnlinePeerProbe {
         values.put("phase", status == null ? "AIM" : value(status, "phase"));
         values.put("holeRewinds", status == null ? -2 : value(status, "holeRemaining"));
         values.put("turnRewinds", status == null ? -2 : value(status, "turnRemaining"));
+        values.put("replaySpeed", status == null ? 1 : value(status, "replaySpeed"));
         Object meter=value(controller,"shotState");
         values.put("spin",value(meter,"spin")); values.put("targetSpin",value(meter,"targetSpin"));
         values.put("power",value(meter,"power"));

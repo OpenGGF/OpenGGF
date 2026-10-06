@@ -2206,3 +2206,92 @@ order. Preflight passed with Java 21, PowerShell and explicit
 `LUA_BIN=/usr/bin/lua5.4`. A fresh fetch confirmed the destination remains
 `eaceceda440328f0fc7864deca4cd4134811d373`; the main workspace's unrelated
 files/submodules and the untracked launch script remain preserved.
+
+
+### Reusable scene and shot-audio rewind (2026-10-06)
+
+The user's final capture audit found forward sound during a reverse shot. The
+old mod only replayed its view; treating the ROM driver as ambient forward audio
+was rejected. The user's follow-up also required an easy creator-facing rewind
+system. Reusing global developer reverse ownership was rejected because it would
+replace its logical restore selection, depend on its history setting and risk
+stopping live voices. The retained design gives the producer a bounded independent
+recording of the final heard forward PCM, and exposes only an opaque `AudioReplay`
+through `CourseControl.recordAudioReplay`. A session owns and closes those leases;
+no PCM or producer cursor appears in creator snapshots or networking.
+
+The old mod's view history is promoted to generic `SceneReplay`, preserving both
+endpoints within 128 samples and 8 MiB through adaptive interior sampling. The
+external `ShotReplay` now contains only the golf-owned duration policy. The
+creator handbook includes a complete capture/hold/reverse/close/restore recipe.
+The published API baselines and release descriptor remain unchanged. The mutable
+0.7 pin is canonically regenerated to 19,508 signatures, including an explicit
+curated root for the standalone scene helper; annotation alone did not include
+that unreachable helper in SDK/Javadoc closure.
+
+Golf records before release, budgets PAL's 72-second watchdog, presents the final
+reverse-origin audio packet, then closes the clip and restores its checkpoint on
+the following row. Protocol 6 sends the host's replay phase and speed. Both peers
+reverse their locally heard PCM; native host collision audio is not streamed and
+coalesced remote views are not an exact shared PCM cursor. This limitation is
+explicit in the handbook/example. Scores, allowance and gameplay ownership remain
+in the external mod; pause holds audio rather than consuming its reverse cursor.
+
+Sol's bounded review identified three exit cases: a failed sink flush could leave
+scoped ownership after session teardown; concession during reverse froze the view
+while continuing the audio; and a first close failure skipped room/presenter
+cleanup. Resource disposal now reports a failed flush while releasing its own
+cursor and slot, without resetting global audio. Explicit stop remains retryable.
+Terminal results clear the replay and audio; mode close independently attempts
+all owned resources and preserves the original failure. Regressions exercise a
+real session teardown, local concession, independent-JVM concession and a real
+host listener's port reuse after injected sink failure. Session creation uses its
+injected audio collaborator rather than a later ambient service scope.
+
+Queued focused verification used the existing absolute S2/S3&K ROM paths:
+
+- `TestAudioPresentationProducerRewind,TestAudioManagerPresentationModes,TestRewindHistoryArming,TestUnifiedAudioPresentationIntegration,TestGameLoopAudioPresentationModes,TestSceneReplay,TestCourseControl,TestGolfProtocol,TestGolfTransport,TestPuttPuttParadise,TestGolfOnlineIntegration`:
+  233 checks, zero failures and three errors in new fixture setup (two invalid
+  scene palettes and one raw schema-6 packet missing its speed byte). The fixtures
+  were corrected; the producer/manager/native audio cases and all 116 then-existing
+  golf course cases passed in that run.
+- Corrected `TestSceneReplay,TestGolfTransport,TestGolfOnlineIntegration`: 19 checks,
+  zero failures/errors/skips, including audible reverse and host-owned rate in
+  two independent processes.
+- Resource-disposal `TestAudioPresentationProducerRewind,TestAudioManagerPresentationModes,TestSceneReplay,TestCourseControl`:
+  58 checks, zero failures/errors/skips.
+- The new local/online concede tests failed before terminal cancellation, with
+  active reverse audio on results. Final pin/course/rewind checks passed 24 of 25;
+  the online test's last numeric diagnostic initially parsed `0.0` as an integer.
+  Its corrected real two-JVM rerun passed, as did the independent failed-sink host
+  listener regression. No production fix was needed for that diagnostic parse.
+
+The previous combined run `20261006T143938Z-52e799e1` at `f3e1945fd` lost its
+wrapper while Maven continued; the exact owned process was accounted for and
+stopped when the new audio work superseded it. Its partial reports contained
+23,315 checks with four failures, no errors and 57 skips; that is incomplete
+validation. Diagnostics were inspected and acknowledged, not archived. The new
+combined run must use this completed replay source and the actual destination
+`eaceceda440328f0fc7864deca4cd4134811d373`, not the superseded title-only source.
+Preflight passed with Java 21, PowerShell and `LUA_BIN=/usr/bin/lua5.4`.
+The selection is 2,980 ordinary classes plus fresh guards. Final media must also
+recapture real menu/fade/title routes and reverse PCM from this source; the
+88.93-second f3 creative edit is retained only as a superseded draft.
+
+
+Focused structural verification passed all 38 audio ownership checks and exposed
+an earlier prompt-layer dependency added by the polish: `ButtonPrompts` shares
+configuration's stateless GLFW key-name codec. Duplicating its name table or
+moving its existing configuration consumers merely to avoid an edge was rejected.
+The consciously audited single `control -> configuration` edge is recorded in
+the dependency ratchet: the codec's package has no runtime-service dependencies.
+The other focused guard failure is the already-attributed stock S1 title's
+hard-coded virtual pattern base, unchanged by this work. No ownership guard is
+relaxed for the audio replay implementation.
+
+The repaired dependency-ratchet invocation completed 29 structural checks with
+one unchanged, already-attributed S1 virtual-pattern-base failure and no new
+failures/errors/skips. The replay-specific ownership guard remains 38/38. The
+final local/online concession checks and failed-sink host port reuse passed.
+All 45 checked local link paths resolve and the candidate generator reproduces
+the full canonical 19,508-line pin; `git diff --check` passes.

@@ -8,8 +8,8 @@ import static paradise.net.GolfPacket.*;
 
 /** Four-byte big-endian payload length, one-byte schema, one-byte type, bounded typed fields. */
 public final class GolfCodec {
-    /** 5 adds the turn-handoff readiness state; peers on another schema are refused by name. */
-    public static final int SCHEMA = 5;
+    /** 6 adds the host-owned audio/view reverse rate; peers on another schema are refused by name. */
+    public static final int SCHEMA = 6;
 
     /** A well-formed frame from a different protocol generation: an install mismatch, not a fault. */
     public static final class IncompatibleProtocolException extends IOException {
@@ -64,7 +64,7 @@ public final class GolfCodec {
                 case Rejected p -> { out.writeByte(13); id(out, p.id()); text(out, p.reason()); }
                 case ShotControl p -> { out.writeByte(14); id(out, p.id()); out.writeByte(p.action().ordinal()); }
                 case ShotStatus p -> { out.writeByte(15); id(out, p.id()); out.writeByte(p.phase().ordinal());
-                    out.writeByte(p.holeRemaining()); out.writeByte(p.turnRemaining()); }
+                    out.writeByte(p.holeRemaining()); out.writeByte(p.turnRemaining()); out.writeByte(p.replaySpeed()); }
             }
             byte[] payload = bytes.toByteArray();
             if (payload.length > MAX_FRAME_BYTES) throw new IllegalArgumentException("frame exceeds bound");
@@ -103,7 +103,7 @@ public final class GolfCodec {
                 case 12 -> new SoundCue(id(in), in.readLong(), in.readLong(), text(in));
                 case 13 -> new Rejected(id(in), text(in));
                 case 14 -> new ShotControl(id(in), enumValue(in, ShotAction.values()));
-                case 15 -> new ShotStatus(id(in), enumValue(in, ShotPhase.values()), in.readByte(), in.readByte());
+                case 15 -> new ShotStatus(id(in), enumValue(in, ShotPhase.values()), in.readByte(), in.readByte(), in.readUnsignedByte());
                 default -> throw new IOException("unknown packet type");
             };
             if (in.available() != 0) throw new IOException("trailing packet bytes");

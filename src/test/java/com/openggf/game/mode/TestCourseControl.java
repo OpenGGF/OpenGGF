@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestCourseControl {
     private SharedLevel bootstrap;
+    private com.openggf.game.session.GameplayModeContext runtime;
 
     @AfterEach void close() {
         if (bootstrap != null) bootstrap.dispose();
@@ -28,7 +29,58 @@ class TestCourseControl {
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
+        runtime = fixture.runtime();
         return new CourseControl(fixture.runtime());
+    }
+
+    @Test void replayAudioHasIndependentOwnershipAndForgottenLeasesCloseWithTheSession() throws Exception {
+        var course = course();
+        var replay = course.recordAudioReplay(1);
+        GameServices.audio().presentFrame(com.openggf.audio.presentation.PresentationMode.FORWARD);
+        assertThrows(IllegalArgumentException.class, () -> replay.beginReverse(Double.NaN));
+        assertThrows(IllegalArgumentException.class, () -> replay.beginReverse(65));
+        assertFalse(GameServices.audio().isReverseAudioOutputActive());
+        replay.beginReverse(2);
+        assertTrue(GameServices.audio().isReverseAudioOutputActive());
+        assertFalse(GameServices.audio().isReverseAudioPresentationActive(), "a view owns no logical restore");
+        runtime.tearDownManagers();
+        assertTrue(replay.isClosed());
+        assertFalse(GameServices.audio().isReverseAudioOutputActive());
+        replay.close();
+        assertThrows(IllegalStateException.class, () -> course.recordAudioReplay(1));
+    }
+
+    @Test void failedSinkFlushCannotStrandReverseAudioAfterSessionTeardown() throws Exception {
+        var course = course();
+        var audio = GameServices.audio();
+        var fail = new java.util.concurrent.atomic.AtomicBoolean();
+        audio.setBackend(new com.openggf.audio.NullAudioBackend() {
+            @Override public com.openggf.audio.output.AudioPresentationSink createPresentationSink(
+                    java.util.function.Consumer<Throwable> failures, java.util.function.Consumer<String> warnings) {
+                return new com.openggf.audio.output.AudioPresentationSink() {
+                    @Override public int sampleRate() { return 48_000; }
+                    @Override public void accept(com.openggf.audio.presentation.AudioPresentationFrameView frame) { }
+                    @Override public void onReverseBoundary() {
+                        if (fail.get()) throw new IllegalStateException("failed replay sink flush");
+                    }
+                    @Override public void close() { }
+                };
+            }
+        });
+        var replay = course.recordAudioReplay(1);
+        replay.beginReverse(1);
+        fail.set(true);
+        var failure = assertThrows(IllegalStateException.class, runtime::tearDownManagers);
+        assertEquals("failed replay sink flush", failure.getMessage());
+        assertTrue(replay.isClosed());
+        assertFalse(audio.isReverseAudioOutputActive(), "a discarded session cannot keep selecting REVERSE");
+        assertFalse(audio.isReverseAudioPresentationActive());
+        assertDoesNotThrow(runtime::tearDownManagers);
+        assertDoesNotThrow(replay::close);
+        fail.set(false);
+        try (var next = audio.recordPresentationAudio(1)) {
+            next.beginReverse(1); // The next session can acquire the same producer.
+        }
     }
 
     @Test void rollingImpulseAcceptsCreatorVelocityWithoutGolfLoftOrPowerLimits() throws Exception {

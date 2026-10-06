@@ -118,7 +118,7 @@ public final class TransportProbe {
                 case 12 -> { rawId(out); out.writeLong(1); out.writeLong(0); rawText(out, "charge"); }
                 case 13 -> { rawId(out); rawText(out, "wrong turn"); }
                 case 14 -> { rawId(out); out.writeByte(0); }
-                case 15 -> { rawId(out); out.writeByte(3); out.writeByte(3); out.writeByte(1); }
+                case 15 -> { rawId(out); out.writeByte(3); out.writeByte(3); out.writeByte(1); out.writeByte(12); }
             }
             framed.writeInt(payload.size()); payload.writeTo(framed);
         }

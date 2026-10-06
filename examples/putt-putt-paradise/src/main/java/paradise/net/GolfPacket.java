@@ -39,10 +39,17 @@ public sealed interface GolfPacket {
     record ShotControl(ShotId id, ShotAction action) implements GolfPacket {
         public ShotControl { Objects.requireNonNull(id); Objects.requireNonNull(action); }
     }
-    record ShotStatus(ShotId id, ShotPhase phase, int holeRemaining, int turnRemaining) implements GolfPacket {
+    record ShotStatus(ShotId id, ShotPhase phase, int holeRemaining, int turnRemaining,
+                      int replaySpeed) implements GolfPacket {
         public ShotStatus {
             Objects.requireNonNull(id); Objects.requireNonNull(phase);
             range(holeRemaining, -1, 5, "hole rewinds"); range(turnRemaining, -1, 3, "turn rewinds");
+            range(replaySpeed, 1, 64, "replay speed");
+            if (phase != ShotPhase.REWINDING && replaySpeed != 1)
+                throw new IllegalArgumentException("Replay speed requires reverse playback");
+        }
+        public ShotStatus(ShotId id, ShotPhase phase, int holeRemaining, int turnRemaining) {
+            this(id, phase, holeRemaining, turnRemaining, 1);
         }
         public boolean canRewind() { return holeRemaining != 0 && turnRemaining != 0
                 && phase == ShotPhase.WATCH; }

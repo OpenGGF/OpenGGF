@@ -100,6 +100,7 @@ CF-ANNOTATION TYPE com.openggf.architecture.CompositionRoot visible @com.openggf
 CF-ANNOTATION TYPE com.openggf.architecture.CompositionRoot visible @java.lang.annotation.Retention(value=java.lang.annotation.RetentionPolicy.RUNTIME)
 CF-ANNOTATION TYPE com.openggf.architecture.CompositionRoot visible @java.lang.annotation.Target(value=[java.lang.annotation.ElementType.TYPE])
 CF-ANNOTATION TYPE com.openggf.audio.AudioManager visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.AudioReplay visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.ChannelType visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.GameAudioProfile visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.GameAudioProfile$MusicDuringOverridePolicy visible @com.openggf.game.ModApi
@@ -487,6 +488,9 @@ CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePresentationFrame$Primitiv
 CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePresentationFrame$Tile visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.presentation.ScenePresentationFrame$Vertex visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.SceneReplay visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.SceneReplay$Sample visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.presentation.SceneReplay$State visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.presentation.SceneViewPresenter visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.profiles.touchresponse.TouchActorContextPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy visible @com.openggf.game.ModApi
@@ -1328,6 +1332,9 @@ CONSTRUCTOR com.openggf.game.presentation.ScenePresentationFrame$ArtReference pu
 CONSTRUCTOR com.openggf.game.presentation.ScenePresentationFrame$Primitive public  <init>(int,com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind,int,java.util.List<com.openggf.game.presentation.ScenePresentationFrame$Vertex>)
 CONSTRUCTOR com.openggf.game.presentation.ScenePresentationFrame$Tile public  <init>(com.openggf.game.presentation.ScenePresentationFrame$Layer,com.openggf.game.presentation.ScenePresentationFrame$ArtReference,int,boolean,boolean,boolean,int,int,int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.game.presentation.ScenePresentationFrame$Vertex public  <init>(int,int,int,int,int)
+CONSTRUCTOR com.openggf.game.presentation.SceneReplay public  <init>()
+CONSTRUCTOR com.openggf.game.presentation.SceneReplay$Sample public  <init>(int,byte[])
+CONSTRUCTOR com.openggf.game.presentation.SceneReplay$State public  <init>(java.util.List<com.openggf.game.presentation.SceneReplay$Sample>,int,int,int,boolean)
 CONSTRUCTOR com.openggf.game.profiles.touchresponse.TouchResponseProfile public  <init>(com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode,boolean,boolean,boolean,com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability,int,boolean,com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy,com.openggf.game.profiles.touchresponse.TouchActorContextPolicy,com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy)
 CONSTRUCTOR com.openggf.game.profiles.touchresponse.TouchResponseProfile public  <init>(com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode,boolean,boolean,boolean,com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability,int,com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy,com.openggf.game.profiles.touchresponse.TouchActorContextPolicy,com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy)
 CONSTRUCTOR com.openggf.game.recording.RecordingDeterminismMetadata public  <init>(java.lang.Integer,java.lang.Long)
@@ -2588,6 +2595,8 @@ FIELD com.openggf.game.presentation.ScenePresentationFrame$Layer public,static,f
 FIELD com.openggf.game.presentation.ScenePresentationFrame$Layer public,static,final com.openggf.game.presentation.ScenePresentationFrame$Layer RINGS
 FIELD com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind public,static,final com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind RECTANGLE
 FIELD com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind public,static,final com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind VERTEX
+FIELD com.openggf.game.presentation.SceneReplay public,static,final int MAX_BYTES
+FIELD com.openggf.game.presentation.SceneReplay public,static,final int MAX_SAMPLES
 FIELD com.openggf.game.profiles.touchresponse.TouchActorContextPolicy public,static,final com.openggf.game.profiles.touchresponse.TouchActorContextPolicy MAIN_FULL_SIDEKICK_HURT_ONLY
 FIELD com.openggf.game.profiles.touchresponse.TouchActorContextPolicy public,static,final com.openggf.game.profiles.touchresponse.TouchActorContextPolicy MAIN_ONLY
 FIELD com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy public,static,final com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy BOSS_REFLECT
@@ -3217,6 +3226,7 @@ FIELD com.openggf.trace.VerificationGroup public,static,final com.openggf.trace.
 INTERFACE com.openggf.GameLoop$GameModeChangeListener com.openggf.GameModeChangeListener
 INTERFACE com.openggf.architecture.CompositionRoot java.lang.annotation.Annotation
 INTERFACE com.openggf.audio.AudioManager com.openggf.audio.MusicRestoreSink
+INTERFACE com.openggf.audio.AudioReplay java.lang.AutoCloseable
 INTERFACE com.openggf.audio.StreamedMusicPort java.lang.AutoCloseable
 INTERFACE com.openggf.audio.StreamedMusicPort$OneShot java.lang.AutoCloseable
 INTERFACE com.openggf.audio.rewind.AudioCommand$ChangeMusicTempo com.openggf.audio.rewind.AudioCommand
@@ -3538,6 +3548,7 @@ METHOD com.openggf.audio.AudioManager public  boolean endDonorMusicOverride(java
 METHOD com.openggf.audio.AudioManager public  boolean endMusicOverride(com.openggf.audio.GameMusic)
 METHOD com.openggf.audio.AudioManager public  boolean endReverseAudioPresentation()
 METHOD com.openggf.audio.AudioManager public  boolean isMuted(com.openggf.audio.ChannelType,int)
+METHOD com.openggf.audio.AudioManager public  boolean isReverseAudioOutputActive()
 METHOD com.openggf.audio.AudioManager public  boolean isReverseAudioPresentationActive()
 METHOD com.openggf.audio.AudioManager public  boolean isRewindReplaySuppressed()
 METHOD com.openggf.audio.AudioManager public  boolean isSoloed(com.openggf.audio.ChannelType,int)
@@ -3549,6 +3560,7 @@ METHOD com.openggf.audio.AudioManager public  boolean playSfx(int)
 METHOD com.openggf.audio.AudioManager public  boolean playSfx(int,float)
 METHOD com.openggf.audio.AudioManager public  boolean preparePostBoundaryReverseRelease()
 METHOD com.openggf.audio.AudioManager public  com.openggf.audio.AudioBackend getBackend()
+METHOD com.openggf.audio.AudioManager public  com.openggf.audio.AudioReplay recordPresentationAudio(int)
 METHOD com.openggf.audio.AudioManager public  com.openggf.audio.GameAudioProfile getAudioProfile()
 METHOD com.openggf.audio.AudioManager public  com.openggf.audio.rewind.AudioCommandTimeline commandTimeline()
 METHOD com.openggf.audio.AudioManager public  com.openggf.audio.rewind.AudioLogicalSnapshot captureLogicalSnapshot()
@@ -3637,6 +3649,11 @@ METHOD com.openggf.audio.AudioManager public,synchronized  void setDriverService
 METHOD com.openggf.audio.AudioManager public,synchronized  void setRequestObserver(com.openggf.audio.AudioRequestObserver)
 METHOD com.openggf.audio.AudioManager public,synchronized  void setRom(com.openggf.data.Rom)
 METHOD com.openggf.audio.AudioManager public,synchronized  void setSfxContentionObserver(com.openggf.audio.driver.SfxContentionObserver)
+METHOD com.openggf.audio.AudioReplay public  boolean isClosed()
+METHOD com.openggf.audio.AudioReplay public  void beginReverse(double)
+METHOD com.openggf.audio.AudioReplay public  void close()
+METHOD com.openggf.audio.AudioReplay public  void setRate(double)
+METHOD com.openggf.audio.AudioReplay public  void stop()
 METHOD com.openggf.audio.ChannelType public,static  com.openggf.audio.ChannelType valueOf(java.lang.String)
 METHOD com.openggf.audio.ChannelType public,static  com.openggf.audio.ChannelType[] values()
 METHOD com.openggf.audio.GameAudioProfile public  boolean blocksSfxDuringMusicRestoreFadeIn()
@@ -6400,6 +6417,7 @@ METHOD com.openggf.game.launch.LaunchProfileStore public  void save(com.openggf.
 METHOD com.openggf.game.mode.CourseControl public  boolean advanceEntryPresentation()
 METHOD com.openggf.game.mode.CourseControl public  boolean presentationReady()
 METHOD com.openggf.game.mode.CourseControl public  boolean rewindHeld()
+METHOD com.openggf.game.mode.CourseControl public  com.openggf.audio.AudioReplay recordAudioReplay(int)
 METHOD com.openggf.game.mode.CourseControl public  com.openggf.game.mode.CourseCheckpoint capture()
 METHOD com.openggf.game.mode.CourseControl public  com.openggf.game.mode.CourseControl$PlayerState playerState()
 METHOD com.openggf.game.mode.CourseControl public  int actIndex()
@@ -6841,6 +6859,31 @@ METHOD com.openggf.game.presentation.ScenePresentationFrame$Vertex public  int y
 METHOD com.openggf.game.presentation.ScenePresentationFrame$Vertex public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.presentation.ScenePresentationFrame$Vertex public,final  int hashCode()
 METHOD com.openggf.game.presentation.ScenePresentationFrame$Vertex public,final  java.lang.String toString()
+METHOD com.openggf.game.presentation.SceneReplay public  boolean atOrigin()
+METHOD com.openggf.game.presentation.SceneReplay public  boolean playing()
+METHOD com.openggf.game.presentation.SceneReplay public  boolean step()
+METHOD com.openggf.game.presentation.SceneReplay public  boolean wantsSample(int)
+METHOD com.openggf.game.presentation.SceneReplay public  com.openggf.game.presentation.ScenePresentationFrame frame(long)
+METHOD com.openggf.game.presentation.SceneReplay public  com.openggf.game.presentation.SceneReplay$State snapshot()
+METHOD com.openggf.game.presentation.SceneReplay public  int speed()
+METHOD com.openggf.game.presentation.SceneReplay public  void begin(int,int,com.openggf.game.presentation.ScenePresentationFrame)
+METHOD com.openggf.game.presentation.SceneReplay public  void clear()
+METHOD com.openggf.game.presentation.SceneReplay public  void record(int,com.openggf.game.presentation.ScenePresentationFrame)
+METHOD com.openggf.game.presentation.SceneReplay public  void restore(com.openggf.game.presentation.SceneReplay$State)
+METHOD com.openggf.game.presentation.SceneReplay public,static  com.openggf.game.presentation.ScenePresentationFrame revision(com.openggf.game.presentation.ScenePresentationFrame,long)
+METHOD com.openggf.game.presentation.SceneReplay$Sample public  boolean equals(java.lang.Object)
+METHOD com.openggf.game.presentation.SceneReplay$Sample public  byte[] scene()
+METHOD com.openggf.game.presentation.SceneReplay$Sample public  int hashCode()
+METHOD com.openggf.game.presentation.SceneReplay$Sample public  int tick()
+METHOD com.openggf.game.presentation.SceneReplay$Sample public,final  java.lang.String toString()
+METHOD com.openggf.game.presentation.SceneReplay$State public  boolean playing()
+METHOD com.openggf.game.presentation.SceneReplay$State public  int cursor()
+METHOD com.openggf.game.presentation.SceneReplay$State public  int speed()
+METHOD com.openggf.game.presentation.SceneReplay$State public  int stride()
+METHOD com.openggf.game.presentation.SceneReplay$State public  java.util.List<com.openggf.game.presentation.SceneReplay$Sample> samples()
+METHOD com.openggf.game.presentation.SceneReplay$State public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.presentation.SceneReplay$State public,final  int hashCode()
+METHOD com.openggf.game.presentation.SceneReplay$State public,final  java.lang.String toString()
 METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  boolean accept(com.openggf.game.presentation.ScenePresentationFrame)
 METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  com.openggf.game.presentation.SceneImage image(int,int)
 METHOD com.openggf.game.presentation.SceneViewPresenter public,abstract  com.openggf.game.presentation.SceneImage image(int,int,com.openggf.game.presentation.ScenePlayerPose)
@@ -7832,6 +7875,7 @@ METHOD com.openggf.game.session.EngineContext public,static  com.openggf.game.se
 METHOD com.openggf.game.session.GameplayModeContext public  boolean consumeRunGapFirstRow()
 METHOD com.openggf.game.session.GameplayModeContext public  boolean hasResumeStash()
 METHOD com.openggf.game.session.GameplayModeContext public  boolean isGameplayRuntimeReady()
+METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.audio.AudioReplay recordAudioReplay(int)
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.camera.Camera getCamera()
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.game.BonusStageProvider getActiveBonusStageProvider()
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.game.GameMode getGameMode()
@@ -14405,6 +14449,8 @@ NESTED com.openggf.game.presentation.ScenePresentationFrame com.openggf.game.pre
 NESTED com.openggf.game.presentation.ScenePresentationFrame com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind
 NESTED com.openggf.game.presentation.ScenePresentationFrame com.openggf.game.presentation.ScenePresentationFrame$Tile
 NESTED com.openggf.game.presentation.ScenePresentationFrame com.openggf.game.presentation.ScenePresentationFrame$Vertex
+NESTED com.openggf.game.presentation.SceneReplay com.openggf.game.presentation.SceneReplay$Sample
+NESTED com.openggf.game.presentation.SceneReplay com.openggf.game.presentation.SceneReplay$State
 NESTED com.openggf.game.recording.menu.UserRecordingMenu com.openggf.game.recording.menu.UserRecordingMenu$PlaybackStarter
 NESTED com.openggf.game.recording.menu.UserRecordingMenuState com.openggf.game.recording.menu.UserRecordingMenuState$PlaybackRequest
 NESTED com.openggf.game.render.AdvancedRenderFrameState com.openggf.game.render.AdvancedRenderFrameState$Builder
@@ -15262,6 +15308,13 @@ RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Vertex x1 
 RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Vertex x2 int
 RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Vertex y1 int
 RECORD-COMPONENT com.openggf.game.presentation.ScenePresentationFrame$Vertex y2 int
+RECORD-COMPONENT com.openggf.game.presentation.SceneReplay$Sample scene byte[]
+RECORD-COMPONENT com.openggf.game.presentation.SceneReplay$Sample tick int
+RECORD-COMPONENT com.openggf.game.presentation.SceneReplay$State cursor int
+RECORD-COMPONENT com.openggf.game.presentation.SceneReplay$State playing boolean
+RECORD-COMPONENT com.openggf.game.presentation.SceneReplay$State samples java.util.List<com.openggf.game.presentation.SceneReplay$Sample>
+RECORD-COMPONENT com.openggf.game.presentation.SceneReplay$State speed int
+RECORD-COMPONENT com.openggf.game.presentation.SceneReplay$State stride int
 RECORD-COMPONENT com.openggf.game.profiles.touchresponse.TouchResponseProfile actorContextPolicy com.openggf.game.profiles.touchresponse.TouchActorContextPolicy
 RECORD-COMPONENT com.openggf.game.profiles.touchresponse.TouchResponseProfile attackBouncePolicy com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy
 RECORD-COMPONENT com.openggf.game.profiles.touchresponse.TouchResponseProfile categoryDecodeMode com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode
@@ -17520,6 +17573,7 @@ TYPE class public,abstract com.openggf.sprites.managers.AbstractSpriteMovementMa
 TYPE class public,abstract com.openggf.sprites.playable.AbstractPlayableSprite SUPER com.openggf.sprites.AbstractSprite
 TYPE class public,abstract com.openggf.sprites.playable.SuperStateController SUPER java.lang.Object
 TYPE class public,final com.openggf.EscapeToMasterTitleController SUPER java.lang.Object
+TYPE class public,final com.openggf.audio.AudioReplay SUPER java.lang.Object
 TYPE class public,final com.openggf.audio.rewind.AudioCommandTimeline SUPER java.lang.Object
 TYPE class public,final com.openggf.audio.smps.DacData SUPER java.lang.Object
 TYPE class public,final com.openggf.audio.smps.SmpsSequencerConfig SUPER java.lang.Object
@@ -17558,6 +17612,7 @@ TYPE class public,final com.openggf.game.patch.PatchContext SUPER java.lang.Obje
 TYPE class public,final com.openggf.game.patch.RegisteredPatch SUPER java.lang.Object
 TYPE class public,final com.openggf.game.patch.ResolutionContext SUPER java.lang.Object
 TYPE class public,final com.openggf.game.presentation.SceneFrameCodec SUPER java.lang.Object
+TYPE class public,final com.openggf.game.presentation.SceneReplay SUPER java.lang.Object
 TYPE class public,final com.openggf.game.recording.menu.UserRecordingMenu SUPER java.lang.Object
 TYPE class public,final com.openggf.game.recording.menu.UserRecordingMenuState SUPER java.lang.Object
 TYPE class public,final com.openggf.game.render.AdvancedRenderFrameState SUPER java.lang.Object
@@ -18213,6 +18268,8 @@ TYPE record public,static,final com.openggf.game.presentation.ScenePresentationF
 TYPE record public,static,final com.openggf.game.presentation.ScenePresentationFrame$Primitive SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.presentation.ScenePresentationFrame$Tile SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.presentation.ScenePresentationFrame$Vertex SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.presentation.SceneReplay$Sample SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.presentation.SceneReplay$State SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.recording.menu.UserRecordingMenuState$PlaybackRequest SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.rewind.KeyframeStore$Entry SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot$ModeState SUPER java.lang.Record
@@ -18418,6 +18475,7 @@ TYPE-ANNOTATION com.openggf.architecture.CompositionRoot @com.openggf.game.ModAp
 TYPE-ANNOTATION com.openggf.architecture.CompositionRoot @java.lang.annotation.Retention(value=java.lang.annotation.RetentionPolicy.RUNTIME)
 TYPE-ANNOTATION com.openggf.architecture.CompositionRoot @java.lang.annotation.Target(value=[java.lang.annotation.ElementType.TYPE])
 TYPE-ANNOTATION com.openggf.audio.AudioManager @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.AudioReplay @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.ChannelType @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.GameAudioProfile @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.GameAudioProfile$MusicDuringOverridePolicy @com.openggf.game.ModApi
@@ -18805,6 +18863,9 @@ TYPE-ANNOTATION com.openggf.game.presentation.ScenePresentationFrame$Primitive @
 TYPE-ANNOTATION com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.presentation.ScenePresentationFrame$Tile @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.presentation.ScenePresentationFrame$Vertex @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.SceneReplay @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.SceneReplay$Sample @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.presentation.SceneReplay$State @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.presentation.SceneViewPresenter @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.profiles.touchresponse.TouchActorContextPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy @com.openggf.game.ModApi

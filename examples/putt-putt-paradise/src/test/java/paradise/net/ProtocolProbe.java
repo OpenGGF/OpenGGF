@@ -40,7 +40,7 @@ public final class ProtocolProbe {
                 new Reconnect(MATCH, 1, UUID.randomUUID(), 1, 4),
                 new SoundCue(shot.id(), 4, 2, "spindash"), new Rejected(shot.id(), "wrong owner"),
                 new ShotControl(shot.id(), ShotAction.REWIND),
-                new ShotStatus(shot.id(), ShotPhase.WATCH, 3, 1), new ShotStatus(shot.id(), ShotPhase.REWINDING, -1, -1),
+                new ShotStatus(shot.id(), ShotPhase.WATCH, 3, 1), new ShotStatus(shot.id(), ShotPhase.REWINDING, -1, -1, 12),
                 new TurnOpened(shot.id(), 10, 20, 224, 5, score, score, true),
                 new ShotControl(shot.id(), ShotAction.READY), new ShotStatus(shot.id(), ShotPhase.HANDOFF, 3, 1));
         var combined = new ByteArrayOutputStream();
@@ -119,6 +119,12 @@ public final class ProtocolProbe {
         check(retries.accept(request(retry), 20).newlyAccepted(), "same-turn retry with fresh shot ID");
         rejects(() -> new ShotStatus(shot.id(), ShotPhase.WATCH, 6, 1));
         rejects(() -> new ShotStatus(shot.id(), ShotPhase.WATCH, 3, -2));
+        rejects(() -> new ShotStatus(shot.id(), ShotPhase.REWINDING, 3, 1, 0));
+        rejects(() -> new ShotStatus(shot.id(), ShotPhase.REWINDING, 3, 1, 65));
+        rejects(() -> new ShotStatus(shot.id(), ShotPhase.WATCH, 3, 1, 2));
+        byte[] invalidReverseRate = GolfCodec.encode(new ShotStatus(shot.id(), ShotPhase.REWINDING, 3, 1, 12));
+        invalidReverseRate[invalidReverseRate.length - 1] = 0;
+        rejects(() -> GolfCodec.read(new ByteArrayInputStream(invalidReverseRate)));
 
         var reconnect = new ReconnectSessions(Duration.ofSeconds(30));
         UUID token = reconnect.register(MATCH, 1);

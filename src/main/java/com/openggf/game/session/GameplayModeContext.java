@@ -85,6 +85,17 @@ import com.openggf.trace.replay.runs.TraceRunFrameDriver;
 @com.openggf.game.ModApi
 public final class GameplayModeContext implements ModeContext {
     private final Object courseCheckpointIdentity = new Object();
+    private final List<com.openggf.audio.AudioReplay> audioReplays = new ArrayList<>();
+
+    /** Engine lifetime owner for controlled-mode PCM recordings; use CourseControl in creator code. */
+    public com.openggf.audio.AudioReplay recordAudioReplay(int maxSeconds) {
+        if (managersTornDown) throw new IllegalStateException("Gameplay session has closed");
+        audioReplays.removeIf(com.openggf.audio.AudioReplay::isClosed);
+        if (audioManager == null) throw new IllegalStateException("Gameplay audio has not been attached");
+        var replay = audioManager.recordPresentationAudio(maxSeconds);
+        audioReplays.add(replay);
+        return replay;
+    }
 
     /** Identity-only course tag; snapshots cannot retain the mutable session graph. */
     public Object courseCheckpointIdentity() { return courseCheckpointIdentity; }
@@ -1157,6 +1168,16 @@ public final class GameplayModeContext implements ModeContext {
             try { frameController.close(); }
             catch (RuntimeException failure) { replayCloseFailure = failure; }
         }
+        // Creator cleanup may fail or omit a resource. The host still releases every PCM lease
+        // before tearing down its audio/session owners.
+        for (var replay : audioReplays) {
+            try { replay.close(); }
+            catch (RuntimeException failure) {
+                if (replayCloseFailure == null) replayCloseFailure = failure;
+                else replayCloseFailure.addSuppressed(failure);
+            }
+        }
+        audioReplays.clear();
         Runnable replayClose = hardwareTimingReplayCloseHook;
         hardwareTimingReplayCloseHook = null;
         if (replayClose != null) {

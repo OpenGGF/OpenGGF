@@ -15,7 +15,9 @@ public final class ModApiVersion {
      * ROM-backed value scenes, held idle poses, controller-owned rewind presentation values
      * and per-player button prompt labels derived from live bindings. Controlled
      * entry fade admission reports whether it advanced; checkpoint readiness includes
-     * the native released title overlay's completion.
+     * the native released title overlay's completion. Bounded scene replay and
+     * session-owned actual-PCM recording support creator rewind without giving
+     * it developer-history or sound-driver restore ownership.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);
