@@ -168,6 +168,9 @@ final class RomSprites {
             case "flicky" -> rom.sprites(RomSpriteRequest.of(
                     0x1931D6, Compression.NEMESIS,       // ArtNem_BlueFlicky
                     0x02CEBA, 0), aiz(rom));             // Map_Animals1 (flap 0-1, released 2)
+            case "game_over" -> rom.sprites(RomSpriteRequest.of(
+                    0x191DE4, Compression.NEMESIS,       // ArtNem_GameOver
+                    0x02EDD0, 0), aiz(rom));             // Map_GameOver (GAME 0, OVER 1, TIME 2, OVER 3)
             case "starpost" -> rom.sprites(RomSpriteRequest.of(
                     0x192D2A, Compression.NEMESIS,       // ArtNem_EnemyPtsStarPost
                     0x02D348, 0).withTileOffset(-8), aiz(rom)); // Map_StarPost (art_tile is ArtTile_StarPost+8)
