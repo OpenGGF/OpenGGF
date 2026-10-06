@@ -39,6 +39,10 @@ final class CharacterSelectScreen implements Screen {
 
     @Override
     public void update(Shell shell) {
+        if (embark >= 0) {
+            playEmbark(shell);
+            return;
+        }
         layout(shell);
         String before = spots.focused();
         String picked = spots.update(shell.in);
@@ -61,7 +65,26 @@ final class CharacterSelectScreen implements Screen {
             spots.focus("embark");
             shell.sfx(Sounds.SFX_STARPOST);
         } else if (picked.equals("embark")) {
+            // The hero revs a spin dash and blasts off before the run begins.
+            embark = 0;
             shell.sfx(Sounds.SFX_SPINDASH);
+        } else {
+            shell.go(new TitleScreen());
+        }
+    }
+
+    /** Frames into the embark: revs at 0, 12 and 24, the release at {@link #RELEASE}, the run at {@link #LEAVE}. */
+    private int embark = -1;
+    private static final int RELEASE = 34;
+    private static final int LEAVE = 52;
+
+    private void playEmbark(Shell shell) {
+        embark++;
+        if (embark == 12 || embark == 24) {
+            shell.sfx(Sounds.SFX_SPINDASH);
+        } else if (embark == RELEASE) {
+            shell.sfx(Sounds.SFX_DASH);
+        } else if (embark == LEAVE) {
             CharacterDef def = shell.catalog.characters().get(selected);
             long seed = System.nanoTime() ^ (shell.ticks * 0x9E3779B97F4A7C15L);
             shell.deleteRun();
@@ -69,8 +92,6 @@ final class CharacterSelectScreen implements Screen {
             shell.profile.add("runs." + def.id(), 1);
             shell.profile.save(shell.ctx.storage());
             shell.go(new RunScreen());
-        } else {
-            shell.go(new TitleScreen());
         }
     }
 
@@ -86,9 +107,13 @@ final class CharacterSelectScreen implements Screen {
             Hotspots.Spot s = spots.spot("char" + i);
             drawPanel(shell, c, chars.get(i), s, i == selected);
         }
-        Hotspots.Spot embark = spots.spot("embark");
-        Gfx.button(c, f, "EMBARK!", embark.x(), embark.y(), embark.w(), embark.h(), spots.isFocused("embark"), true,
-                shell.ticks);
+        if (embark >= RELEASE && selected < chars.size()) {
+            Hotspots.Spot s = spots.spot("char" + selected);
+            Poses.hero(shell, c, chars.get(selected).id(), Poses.ROLL, embark, s.x() + s.w() / 2f
+                    + (embark - RELEASE) * 12f, s.y() + 67, SceneDraw.plain());
+        }
+        Hotspots.Spot go = spots.spot("embark");
+        Gfx.button(c, f, "EMBARK!", go.x(), go.y(), go.w(), go.h(), spots.isFocused("embark"), true, shell.ticks);
         Hotspots.Spot back = spots.spot("back");
         Gfx.button(c, f, "BACK", back.x(), back.y(), back.w(), back.h(), spots.isFocused("back"), true, shell.ticks);
     }
@@ -107,8 +132,12 @@ final class CharacterSelectScreen implements Screen {
         f.drawOutlined(c, name, s.x() + (s.w() - f.width(name) * 2) / 2, s.y() + 6, Colors.WHITE, 2);
         int floor = s.y() + 66;
         c.fill(s.x() + 20, floor, s.w() - 40, 2, Colors.alpha(Colors.BLACK, 0.4f));
-        Poses.hero(shell, c, def.id(), active ? Poses.WALK : Poses.WAIT, shell.ticks, s.x() + s.w() / 2f, floor + 1,
-                SceneDraw.plain().withTint(active ? Colors.WHITE : 0xFFB0B0B0));
+        if (!(active && embark >= RELEASE)) {
+            // Once released, the rolling hero is drawn over every panel (see draw).
+            int pose = !active ? Poses.WAIT : embark < 0 ? Poses.WALK : Poses.SPINDASH;
+            Poses.hero(shell, c, def.id(), pose, active && embark >= 0 ? embark : shell.ticks, s.x() + s.w() / 2f,
+                    floor + 1, SceneDraw.plain().withTint(active ? Colors.WHITE : 0xFFB0B0B0));
+        }
         int y = floor + 6;
         f.drawShadowed(c, "HP " + def.maxHp(), s.x() + 8, y, Colors.TEXT);
         String stat = def.primaryStat().toUpperCase();
