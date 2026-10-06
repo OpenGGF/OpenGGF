@@ -7,7 +7,7 @@
 #   examples/slay-the-robotnik/play.sh --rebuild  # force an engine rebuild
 #
 # Needs Java 21 and Maven, as for the engine, and your Sonic 3 & Knuckles ROM set up for
-# OpenGGF (the same config.yaml and ROM files the engine normally uses from this directory).
+# OpenGGF in the repository root (the config.yaml and ROM the engine normally runs with).
 # On the master title choose Sonic 3 & Knuckles: the mod's title screen opens. Holding Escape
 # returns to the master title; close the window to quit.
 #
@@ -32,9 +32,9 @@ if [ "$fresh" = 1 ]; then
     echo "Cleared saves/mods/slay-the-robotnik"
 fi
 
-# build.py rewrites target/slay-classpath.txt whenever it builds the engine, so anything in the
-# engine's sources or POM newer than that file means the engine needs rebuilding.
-marker=target/slay-classpath.txt
+# The build rewrites target/examples-classpath.txt whenever it builds the engine, so anything in
+# the engine's sources or POM newer than that file means the engine needs rebuilding.
+marker=target/examples-classpath.txt
 if [ "$rebuild" = 0 ] && [ -f "$marker" ] && [ -d target/classes ] \
         && [ -z "$(find src/main pom.xml -newer "$marker" -print 2>/dev/null | head -n 1)" ]; then
     exec python3 examples/slay-the-robotnik/build.py --run --skip-engine
