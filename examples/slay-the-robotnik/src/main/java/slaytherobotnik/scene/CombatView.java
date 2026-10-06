@@ -91,6 +91,8 @@ final class CombatView implements RunScreen.RoomView {
     // named), and only then does the first turn's replay start.
     private static final int HERO_ENTRY = 22;
     private static final int ENEMY_ENTRY = 20;
+    /** A boss falls in more slowly, gathering speed, and lands with a rumble. */
+    private static final int BOSS_ENTRY = 44;
     private static final int ENEMY_STAGGER = 6;
     private static final int BOSS_NAME_TICKS = 56;
     private final boolean bossFight;
@@ -199,7 +201,7 @@ final class CombatView implements RunScreen.RoomView {
 
     /** The frame of the entrance by which every enemy has arrived. */
     private int enemiesInAt() {
-        return Math.max(HERO_ENTRY, ENEMY_STAGGER * (shown.size() - 1) + ENEMY_ENTRY);
+        return Math.max(HERO_ENTRY, ENEMY_STAGGER * (shown.size() - 1) + enemyEntry());
     }
 
     /** How far the hero (index -1) or enemy {@code index} is through arriving, 0 to 1. */
@@ -207,7 +209,11 @@ final class CombatView implements RunScreen.RoomView {
         if (index < 0) {
             return Math.min(1f, entrance / (float) HERO_ENTRY);
         }
-        return Math.max(0f, Math.min(1f, (entrance - index * ENEMY_STAGGER) / (float) ENEMY_ENTRY));
+        return Math.max(0f, Math.min(1f, (entrance - index * ENEMY_STAGGER) / (float) enemyEntry()));
+    }
+
+    private int enemyEntry() {
+        return bossFight ? BOSS_ENTRY : ENEMY_ENTRY;
     }
 
     /** Presented state before any event: full starting values, empty hand. */
@@ -296,6 +302,8 @@ final class CombatView implements RunScreen.RoomView {
             int before = entrance;
             entrance = Math.min(entranceLength, entrance + (fast ? 3 : 1));
             if (bossFight && before < enemiesInAt() && entrance >= enemiesInAt()) {
+                shell.shake(12);
+                shell.sfx(Sounds.SFX_RUMBLE);
                 showBanner(room.encounterName().toUpperCase(), BOSS_NAME_TICKS);
             }
             return;
@@ -1050,11 +1058,13 @@ final class CombatView implements RunScreen.RoomView {
         int ground = feet(enemyX(index));
         float in = arrival(index);
         if (in < 1f) {
-            // Arriving: a boss drops in from above, everything else comes in from the right.
-            float rest = 1f - Ease.outCubic(in);
+            // Arriving: a boss falls in from above, gathering speed until it lands; everything
+            // else slides in from the right, slowing to its place.
             if (bossFight) {
-                EnemyVisuals.draw(shell, c, enemy, x, Math.round(ground - rest * (ground + 40)), shell.ticks, 0f, 1f);
+                float fall = 1f - (0.35f * in + 0.65f * in * in); // moving at once, faster as it lands
+                EnemyVisuals.draw(shell, c, enemy, x, Math.round(ground - fall * (ground + 40)), shell.ticks, 0f, 1f);
             } else {
+                float rest = 1f - Ease.outCubic(in);
                 EnemyVisuals.draw(shell, c, enemy, x + Math.round(rest * (shell.width() + 60 - x)), ground,
                         shell.ticks + index * 17L, 0f, 1f);
             }
