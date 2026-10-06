@@ -71,6 +71,11 @@ Higher power requests more native charge sounds before the same brief pause. The
 charge/release sounds use the game's existing native spindash behavior and pitch
 rise; the mod adds no pitch calculation.
 
+While aiming, the dots use a fixed half-power reference: a surface-tangent putt
+or an initial clear-air chip arc. They start at the released ball's centre and
+reflect loft and facing relative to the supporting slope. The guide is not a
+prediction of terrain contacts, loops, springs, or the final lie.
+
 Damage, death, a lost ball, or the bounded shot watchdog restores the pre-shot
 course state and adds one penalty while retaining the committed stroke. A finish
 or valid settlement yields one result even when several conditions coincide.

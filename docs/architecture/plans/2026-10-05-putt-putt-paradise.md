@@ -1203,3 +1203,53 @@ persistence refusal, deterministic suppression and the existing editable flow.
 This is neither a full-suite pass nor a new native GUI capture. The local launcher
 remains executable and uncommitted; Bash syntax and dry-run checks pass. The main
 workspace, remote history, feature branch and worktree remain preserved.
+
+### Aiming-guide follow-up (2026-10-06)
+
+The user reported that putt/chip dots did not reflect the selected angle. The
+preview read the inactive AIM meter, which remains at zero, and selected power
+100/1000 instead of a reference shot. That speed made even elevated chips fall
+almost immediately. The guide now uses a stable half-power reference (speed
+`0x640`, 6.25 pixels/step), with the same surface-relative facing/loft projection
+as `CourseControl.launch`. It also applies the launch's standing-to-rolling centre
+offset without mutating the sprite. Dots have a dark border for visibility over
+clouds, remain fully within the viewport, and label the reference power. Shot
+physics, the meter, score, sounds, networking and creator API are unchanged.
+
+The initial five literal-coordinate regressions failed on the original preview.
+After correcting power, seven expanded cases reproduced the independent launch
+origin error. Final checks on `847e13ccd` plus this follow-up passed 36 tests,
+zero failures/errors/skips, with `SONIC2_ROM_PATH` identifying the existing
+verified S2 REV01 ROM (the portable variable below represents that absolute path):
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestPuttPuttParadise#aimingGuideMatchesLaunchOriginAtReferencePowerAndSelectedAngle+guideDoesNotQueuePartiallyClippedDots+chargesCommitOnceAndReleaseIntoNativeRolling+aimingHoldsEveryCourseSubsystem,TestGolfMenu,TestGolfModel' "-Dsonic2.rom.path=$SONIC2_ROM_PATH" test
+python3 examples/putt-putt-paradise/build.py
+```
+
+Coverage includes Sonic/Tails, both facings, loft 0/15/45/75, declared surface
+angles 0 and +/-45 degrees, widths 320/400/800, viewport clipping, unchanged
+full-course snapshots across overlay rendering, native putt/chip release,
+held aiming, and the model/menu regressions. The build passed the normal SDK
+packaging boundary. The refreshed jar has 83 classes, only its manifest as a
+non-class resource, size 135,957 bytes, and SHA-256
+`5efe0e64858888ddebf02c795b560446c03a0ad0ff0ba819c118fea98eb4776e`.
+
+Native OpenGL before/after captures are retained outside the checkout under
+`~/scratch/gameplay-captures/putt-putt-paradise-guide-20261006/`: six views per
+version at 320 Sonic and 800 Tails, 24 PNGs total. Their CSV ball/angle/camera states
+match exactly before/after. These are explicit `GolfModule` fixtures wrapping the
+ROM-backed S2 module through `HeadlessGameBoot`, then the real controller scene
+and overlay render path; they are visual evidence, not another production SDK
+boot or traversal claim. The inspected final captures show distinct loft arcs
+and outlined markers against the clouds. The temporary probe is reproducible
+from these inputs and the existing boot/render helpers and is removed.
+
+The change-based plan against `847e13ccd` again fell back to all 2,976 ordinary
+classes for the example/root-launcher paths. Proportionate focused verification
+replaces that run: only creator preview geometry/rendering changed, and its
+inputs, clipping, course non-mutation and native launch consumers were exercised
+directly. No full-suite pass is claimed. The guide remains AIM-only and does not
+predict terrain/object collision or charged power; those limits are recorded in
+the act matrix and example README. All changes remain local; the executable
+launcher stays uncommitted and main `develop` remains preserved.

@@ -169,6 +169,61 @@ class TestPuttPuttParadise {
     }
     private Object shotState() throws Exception { return value(mode(), "shotState"); }
     private Object matchState() throws Exception { return value(mode(), "matchState"); }
+
+    @ParameterizedTest
+    @CsvSource({"sonic,0,1,0,NATIVE_4_3,19,5", "sonic,45,1,0,NATIVE_4_3,13,-7",
+            "tails,75,-1,0,SUPER_32_9,-5,-16", "sonic,0,1,224,NATIVE_4_3,17,-9",
+            "tails,45,-1,224,SUPER_32_9,-18,2", "sonic,0,-1,32,NATIVE_4_3,-17,-9",
+            "tails,15,1,0,WIDE_16_9,18,-3"})
+    void aimingGuideMatchesLaunchOriginAtReferencePowerAndSelectedAngle(String character, int elevation,
+            int facing, int surfaceAngle, String aspect, int firstDx, int firstDy) throws Exception {
+        var fixture = launch(character, 0, aspect); fixture.stepIdleFrames(120);
+        for (int i = 0; i < elevation; i++) fixture.stepFrame(true, false, false, false, false);
+        fixture.stepFrame(false, false, facing < 0, facing > 0, false);
+        fixture.sprite().setAngle((byte) surfaceAngle);
+        int x = fixture.sprite().getCentreX() - fixture.camera().getX();
+        int y = fixture.sprite().getCentreY() - fixture.camera().getY();
+        var before = fixture.runtime().getRewindRegistry().captureCourse();
+        var dots = guideDots();
+        assertFalse(dots.isEmpty());
+        assertEquals(x + firstDx, value(dots.getFirst(), "x"));
+        assertEquals(y + firstDy, value(dots.getFirst(), "y"));
+        for (var dot : dots) {
+            int dx = (int) value(dot, "x"), dy = (int) value(dot, "y");
+            assertTrue(dx >= 0 && dx + 2 <= fixture.camera().getWidth() && dy >= 0 && dy + 2 <= 224);
+        }
+        var after = fixture.runtime().getRewindRegistry().captureCourse();
+        for (String key : before.entries().keySet()) assertEquals(List.of(),
+                com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key, before.get(key), after.get(key)), key);
+    }
+
+    @ParameterizedTest @CsvSource({"NATIVE_4_3,320", "SUPER_32_9,800"})
+    void guideDoesNotQueuePartiallyClippedDots(String aspect, int width) throws Exception {
+        var fixture = launch("sonic", 0, aspect); fixture.stepIdleFrames(120);
+        // The first reference-power dot would start at the viewport's final column.
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(fixture.sprite(),
+                fixture.camera().getX() + width - 20);
+        assertTrue(guideDots().isEmpty(), "a two-pixel dot must fit completely inside the viewport");
+    }
+
+    private List<com.openggf.graphics.GLCommandable> guideDots() {
+        var graphics = new GuideGraphics();
+        try (var services = org.mockito.Mockito.mockStatic(GameServices.class,
+                org.mockito.Mockito.CALLS_REAL_METHODS)) {
+            services.when(GameServices::graphics).thenReturn(graphics);
+            ((com.openggf.game.mode.GameplayFrameController) mode()).drawOverlay();
+        }
+        return graphics.commands.stream().filter(command -> {
+            try { return (int) value(command, "width") == 2 && (int) value(command, "height") == 2
+                    && (float) value(command, "alpha") == 0.8f; }
+            catch (Exception failure) { throw new AssertionError(failure); }
+        }).toList();
+    }
+
+    private static final class GuideGraphics extends com.openggf.graphics.GraphicsManager {
+        final List<com.openggf.graphics.GLCommandable> commands = new ArrayList<>();
+        @Override public void registerCommand(com.openggf.graphics.GLCommandable command) { commands.add(command); }
+    }
     private void pressA(HeadlessTestFixture fixture) { fixture.stepFrame(false, false, false, false, true); }
     private void commit(HeadlessTestFixture fixture, int meterTicks) {
         pressA(fixture);

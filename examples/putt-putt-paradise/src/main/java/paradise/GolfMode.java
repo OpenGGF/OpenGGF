@@ -315,15 +315,24 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
     private void drawPreview() {
         var p = GameServices.camera().getFocusedSprite(); var m = meter.snapshot();
         double angle = (p.getAngle() & 255) * Math.PI / 128, elevation = Math.toRadians(m.elevationDegrees());
-        double speed = GolfRules.speedFixed(Math.max(100, meter.meterValue() * 2)) / 256.0;
+        // AIM has no running power meter: use the reference half-power departure.
+        // Reading meterValue here selected a near-minimum chip whose arc immediately fell.
+        double speed = GolfRules.speedFixed(GolfRules.MAX_POWER / 2) / 256.0;
         double tangent = m.direction() * Math.cos(elevation) * speed, normal = Math.sin(elevation) * speed;
         double vx = tangent * Math.cos(angle) + normal * Math.sin(angle), vy = tangent * Math.sin(angle) - normal * Math.cos(angle);
-        int x = p.getCentreX() - GameServices.camera().getX(), y = p.getCentreY() - GameServices.camera().getY();
+        // Match CourseControl.launch's standing-to-ball offset without changing the player.
+        int radiusDelta = p.getYRadius() - p.getRollYRadius();
+        int x = p.getCentreX() - (int) Math.round(Math.sin(angle) * radiusDelta) - GameServices.camera().getX();
+        int y = p.getCentreY() + (int) Math.round(Math.cos(angle) * radiusDelta) - GameServices.camera().getY();
         for (int t = 3; t <= 24; t += 3) {
             int px = x + (int) Math.round(vx * t), py = y + (int) Math.round(vy * t + (m.elevationDegrees() > 0 ? 0.109375 * t * t : 0));
-            if (px >= 0 && px < viewport && py >= 0 && py < 224) GolfText.panel(GameServices.graphics(), px, py, 2, 2, GolfText.GOLD, 0.8f);
+            if (px >= 1 && px + 3 <= viewport && py >= 1 && py + 3 <= 224) {
+                GolfText.panel(GameServices.graphics(), px - 1, py - 1, 4, 4, GolfText.INK, 0.95f);
+                GolfText.panel(GameServices.graphics(), px, py, 2, 2, GolfText.GOLD, 0.8f);
+            }
         }
-        GolfText.draw(GameServices.graphics(), "GUIDE: CLEAR-AIR ARC", 8, 168, 1, GolfText.CREAM);
+        GolfText.draw(GameServices.graphics(), m.elevationDegrees() == 0 ? "GUIDE: HALF-POWER PUTT"
+                : "GUIDE: HALF-POWER ARC", 8, 168, 1, GolfText.CREAM);
     }
     @Override public void close() {
         if (online != null) { online.close(); online = null; }
