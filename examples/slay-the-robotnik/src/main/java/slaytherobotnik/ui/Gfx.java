@@ -64,9 +64,22 @@ public final class Gfx {
 
     /** A health bar with an optional Block overlay. */
     public static void hpBar(SceneCanvas c, SmallFont font, int x, int y, int w, int hp, int maxHp, int block) {
+        hpBar(c, font, x, y, w, hp, maxHp, block, hp);
+    }
+
+    /**
+     * A health bar whose recent loss lingers: the stretch between {@code hp} and the draining
+     * {@code ghostHp} shows pale, so a hit reads before the bar settles.
+     */
+    public static void hpBar(SceneCanvas c, SmallFont font, int x, int y, int w, int hp, int maxHp, int block,
+            float ghostHp) {
         c.fill(x - 1, y - 1, w + 2, 7, Colors.BLACK);
         c.fill(x, y, w, 5, Colors.HP_DARK);
         int filled = maxHp <= 0 ? 0 : Math.round(w * Math.max(0, hp) / (float) maxHp);
+        int ghost = maxHp <= 0 ? 0 : Math.round(w * Math.max(0, Math.min(maxHp, ghostHp)) / (float) maxHp);
+        if (ghost > filled) {
+            c.fill(x + filled, y, ghost - filled, 5, 0xFFFFE8A0);
+        }
         int barColor = block > 0 ? Colors.BLOCK_BLUE : Colors.HP_RED;
         c.fill(x, y, filled, 5, barColor);
         c.fill(x, y, filled, 1, Colors.alpha(Colors.WHITE, 0.35f));

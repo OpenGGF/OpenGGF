@@ -250,6 +250,7 @@ final class CombatView implements RunScreen.RoomView {
 
     @Override
     public void update(Shell shell, RunScreen screen) {
+        animateReadouts();
         tickEffects();
         easeHand(shell.width());
         boolean fast = shell.ctx.input().player1().actionHeldMask() != 0 || shell.in.mouse.leftDown();
@@ -954,7 +955,7 @@ final class CombatView implements RunScreen.RoomView {
             shell.font.drawOutlined(c, Integer.toString(st[2]), PLAYER_X - 27 - shell.font.width(
                     Integer.toString(st[2])) / 2 + 3, ground + 4, Colors.WHITE, 1);
         }
-        Gfx.hpBar(c, shell.font, PLAYER_X - 22, ground + 4, 50, st[0], st[1], st[2]);
+        Gfx.hpBar(c, shell.font, PLAYER_X - 22, ground + 4, 50, st[0], st[1], st[2], ghostHp(player, st[0]));
         drawPowers(shell, c, player, PLAYER_X - 22, ground + 13);
         statTips(shell, screen, null, PLAYER_X - 22, ground, st);
     }
@@ -994,7 +995,7 @@ final class CombatView implements RunScreen.RoomView {
             return;
         }
         int[] st = stat(enemy);
-        Gfx.hpBar(c, shell.font, x - 25, ground + 4, 50, st[0], st[1], st[2]);
+        Gfx.hpBar(c, shell.font, x - 25, ground + 4, 50, st[0], st[1], st[2], ghostHp(enemy, st[0]));
         if (st[2] > 0) {
             c.draw(shell.art.icon("ui_block"), x - 33, ground + 3);
             shell.font.drawOutlined(c, Integer.toString(st[2]), x - 30 - shell.font.width(Integer.toString(st[2])) / 2
@@ -1099,6 +1100,49 @@ final class CombatView implements RunScreen.RoomView {
     /** Where this fight stands in the act's level, from the last draw; null before it or without ROM art. */
     private LevelStages.Placement stage;
 
+    /** The energy the emerald last showed, and its pulse when that changed (grows on a gain, dips on a spend). */
+    private static final int ENERGY_PULSE = 12;
+    private int shownEnergy = -1;
+    private int energyPulse;
+    private boolean energyGained;
+
+    /** Each creature's draining "ghost" HP and how long it holds before draining. */
+    private final Map<Creature, float[]> ghosts = new java.util.HashMap<>();
+    /** Ghost HP holds this many frames after a hit, then drains a fraction a frame. */
+    private static final int GHOST_HOLD = 16;
+
+    /** The pale stretch behind a creature's HP bar (advanced each frame by {@link #animateReadouts}). */
+    private float ghostHp(Creature creature, int hp) {
+        float[] g = ghosts.get(creature);
+        return g == null ? hp : g[0];
+    }
+
+    /**
+     * One frame of the readouts' own animation: each HP ghost holds after a hit, then drains to
+     * the HP; the energy emerald pulses when the shown energy changes.
+     */
+    private void animateReadouts() {
+        for (Creature creature : creatures()) {
+            int hp = stat(creature)[0];
+            float[] g = ghosts.computeIfAbsent(creature, k -> new float[] {hp, 0});
+            if (hp >= g[0]) {
+                g[0] = hp;
+                g[1] = 0;
+            } else if (g[1] < GHOST_HOLD) {
+                g[1]++;
+            } else {
+                g[0] = Math.max(hp, g[0] - Math.max(0.25f, (g[0] - hp) * 0.12f));
+            }
+        }
+        if (energy != shownEnergy) {
+            energyPulse = shownEnergy < 0 ? 0 : ENERGY_PULSE;
+            energyGained = energy > shownEnergy;
+            shownEnergy = energy;
+        } else if (energyPulse > 0) {
+            energyPulse--;
+        }
+    }
+
     /** The screen row a creature at {@code screenX} stands on. */
     private int feet(int screenX) {
         return LevelStages.feet(stage, screenX, GROUND);
@@ -1114,17 +1158,32 @@ final class CombatView implements RunScreen.RoomView {
         tooltipScreen = screen;
         int w = shell.width();
         SmallFont f = shell.font;
-        // Energy: a Chaos Emerald-green orb.
+        // Energy: the green Chaos Emerald (the AIZ intro's emerald art), pulsing when energy
+        // changes and dull when it runs out.
         int ex = 6;
         int ey = HAND_Y - 2;
         int max = combat.player().energyPerTurn();
-        c.fill(ex + 2, ey, 22, 26, Colors.BLACK);
-        c.fill(ex, ey + 2, 26, 22, Colors.BLACK);
-        int orb = energy > 0 ? 0xFF24DA6C : 0xFF305040;
-        c.fill(ex + 2, ey + 2, 22, 22, orb);
-        c.fill(ex + 4, ey + 4, 8, 4, Colors.alpha(Colors.WHITE, 0.5f));
+        float pulse = energyPulse / (float) ENERGY_PULSE;
+        SceneSprite gem = shell.art.romFrame("intro_emeralds", 0);
+        if (gem != null) {
+            // A dark round backing with a thin gold rim keeps the emerald readable on any zone.
+            for (int dy = -14; dy <= 14; dy++) {
+                int half = (int) Math.round(Math.sqrt(14 * 14 - dy * dy));
+                c.fill(ex + 13 - half, ey + 13 + dy, half * 2 + 1, 1, Math.abs(dy) == 14 ? EventArt.GOLD_DARK : 0xE0081028);
+                c.fill(ex + 13 - half, ey + 13 + dy, 1, 1, EventArt.GOLD_DARK);
+                c.fill(ex + 13 + half, ey + 13 + dy, 1, 1, EventArt.GOLD_DARK);
+            }
+            float scale = 3f + (energyGained ? 0.6f : -0.4f) * pulse;
+            Poses.centre(c, gem, ex + 13, ey + 13, SceneDraw.plain().withScale(scale)
+                    .withTint(energy > 0 ? Colors.WHITE : 0xFF686868)
+                    .withFlash(energyGained && pulse > 0 ? Colors.alpha(Colors.WHITE, pulse * 0.8f) : 0));
+        } else {
+            c.fill(ex + 2, ey, 22, 26, Colors.BLACK);
+            c.fill(ex, ey + 2, 26, 22, Colors.BLACK);
+            c.fill(ex + 2, ey + 2, 22, 22, energy > 0 ? 0xFF24DA6C : 0xFF305040);
+        }
         String en = energy + "/" + max;
-        f.drawOutlined(c, en, ex + 13 - f.width(en) / 2, ey + 10, Colors.WHITE, 1);
+        f.drawOutlined(c, en, ex + 13 - f.width(en) / 2, ey + 11, Colors.WHITE, 1);
         var mouse = shell.in.mouse;
         if (mouse.over(ex, ey, 26, 26)) {
             screen.tooltipAbove("ENERGY", "Playing a card costs its number in Energy. You get " + max
