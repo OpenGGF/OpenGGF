@@ -109,8 +109,61 @@ class EventsTest {
         run.enterEvent("event:emerald_altar");
         EventRoom event = (EventRoom) run.room();
         assertTrue(event.choose(0));
+        assertIllustrating(event, "take");
+        assertFalse(run.state().hasRelic(Relics.EMERALD_IDOL), "the idol is taken once the picture shows it");
+        event.illustrationShown();
         assertTrue(run.state().hasRelic(Relics.EMERALD_IDOL));
+        assertEquals(List.of("[Outrun]", "[Smash]", "[Hide]"), labels(event));
+        int loss = maxHp * 8 / 100;
         assertTrue(event.choose(2)); // Hide: lose 8% Max HP.
-        assertEquals(maxHp - maxHp * 8 / 100, run.state().maxHp());
+        assertIllustrating(event, "hide:" + loss);
+        assertEquals(maxHp, run.state().maxHp());
+        event.illustrationShown();
+        assertEquals(maxHp - loss, run.state().maxHp());
+        assertTrue(event.text().startsWith("The boulder scrapes past"), event.text());
+    }
+
+    @Test
+    void emeraldAltarShowsTheBoulderBeforeEachEscape() {
+        Catalog catalog = Content.build();
+        String[] details = {"outrun", "smash:", "hide:"};
+        for (int choice = 0; choice < 3; choice++) {
+            Run run = Run.start(catalog, Characters.KNUCKLES, 70L + choice);
+            run.enterEvent("event:emerald_altar");
+            EventRoom event = (EventRoom) run.room();
+            event.choose(0);
+            event.illustrationShown();
+            int hp = run.state().hp();
+            int deck = run.state().deck().size();
+            assertTrue(event.choose(choice));
+            assertTrue(event.awaitingIllustration());
+            assertTrue(event.illustration().startsWith(details[choice]), event.illustration());
+            String detail = event.illustration();
+            assertEquals(List.of(), event.options());
+            assertEquals(hp, run.state().hp(), "nothing happens before the picture shows it");
+            assertEquals(deck, run.state().deck().size());
+            event.illustrationShown();
+            assertEquals(List.of("[Leave]"), labels(event));
+            if (choice == 0) {
+                assertEquals(deck + 1, run.state().deck().size(), "outrunning it sprains an ankle");
+            } else if (choice == 1) {
+                int damage = run.state().maxHp() / 4;
+                assertEquals("smash:" + damage, detail, "the picture shows the damage taken");
+                assertEquals(hp - damage, run.state().hp());
+            }
+        }
+    }
+
+    /** The event waits on its picture showing {@code detail}, with nothing to pick meanwhile. */
+    static void assertIllustrating(EventRoom event, String detail) {
+        assertTrue(event.awaitingIllustration(), "waiting for the picture to show " + detail);
+        assertEquals(detail, event.illustration());
+        assertEquals(List.of(), event.options(), "no options while the picture plays");
+    }
+
+    static List<String> labels(EventRoom event) {
+        List<String> labels = new ArrayList<>();
+        event.options().forEach(o -> labels.add(o.label()));
+        return labels;
     }
 }

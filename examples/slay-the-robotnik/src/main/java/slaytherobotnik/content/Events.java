@@ -99,24 +99,8 @@ public final class Events {
                 ctx.page("Deep in the ruins, a green idol rests on a stone pedestal. The floor around it is "
                                 + "suspiciously well worn.",
                         EventOption.of("[Take]", "Obtain <g>Emerald Idol</g>.", () -> {
-                            ctx.obtainRelic(Relics.EMERALD_IDOL);
-                            int damage = ctx.run().maxHp() / 4;
-                            int maxHpLoss = Math.max(1, ctx.run().maxHp() * 8 / 100);
-                            ctx.page("The pedestal sinks with a click. A boulder rumbles down the corridor "
-                                            + "towards you!",
-                                    EventOption.of("[Outrun]", "Become <r>Cursed</r>: Sprained Ankle.", () -> {
-                                        ctx.obtainCard(CommonCards.SPRAINED_ANKLE, false);
-                                        ctx.page("You make it out, limping.", ctx.leave());
-                                    }),
-                                    EventOption.of("[Smash]", "Take " + damage + " damage.", () -> {
-                                        ctx.run().loseHp(damage);
-                                        ctx.page("You punch straight through it. That hurt.", ctx.leave());
-                                    }),
-                                    EventOption.of("[Hide]", "Lose " + maxHpLoss + " Max HP.", () -> {
-                                        ctx.run().setMaxHp(ctx.run().maxHp() - maxHpLoss);
-                                        ctx.page("You squeeze into a gap in the wall. The boulder scrapes past "
-                                                + "and takes some of you with it.", ctx.leave());
-                                    }));
+                            ctx.page("You lift the idol from its pedestal...");
+                            ctx.illustrate("take", () -> emeraldAltarTaken(ctx));
                         }),
                         ctx.leave())));
 
@@ -125,12 +109,13 @@ public final class Events {
                 ctx -> ctx.page("A mural of a golden hedgehog covers the wall. Three emerald sockets glow beneath "
                                 + "it, each beside a carved word.",
                         EventOption.of("[Forget]", "Remove a card from your deck.", () ->
-                                ctx.removeCards(1, () -> ctx.page("The socket dims. You feel lighter.", ctx.leave()))),
+                                ctx.removeCards(1, () -> mural(ctx, "forget", "FORGET",
+                                        "The socket dims. You feel lighter."))),
                         EventOption.of("[Change]", "Transform a card in your deck.", () ->
-                                ctx.transformCards(1, () -> ctx.page("The socket flickers through every colour.",
-                                        ctx.leave()))),
+                                ctx.transformCards(1, () -> mural(ctx, "change", "CHANGE",
+                                        "The socket flickers through every colour."))),
                         EventOption.of("[Grow]", "Upgrade a card in your deck.", () ->
-                                ctx.upgradeCards(1, () -> ctx.page("The socket blazes gold.", ctx.leave()))))));
+                                ctx.upgradeCards(1, () -> mural(ctx, "grow", "GROW", "The socket blazes gold."))))));
 
         // Dead Adventurer.
         c.addEvent(new EventDef("event:badnik_scrapyard", "Badnik Scrapyard", "event:scrapyard", Set.of(1), null,
@@ -224,7 +209,10 @@ public final class Events {
                                 ctx.chooseCards("Choose a card to offer.", ctx.run().removableCards(), 1, 1, chosen -> {
                                     Card card = chosen.get(0);
                                     ctx.run().removeCard(card);
-                                    ctx.page(campfire(ctx, card), ctx.leave());
+                                    ctx.page("You lay the " + card.name() + " on the fire...");
+                                    ctx.illustrate(card.rarity() + "|" + card.id() + "|" + (card.upgraded() ? 1 : 0)
+                                            + "|" + campfireGain(ctx.run(), card), () ->
+                                            ctx.page(campfire(ctx, card), ctx.leave()));
                                 })),
                         ctx.leave())));
 
@@ -351,30 +339,13 @@ public final class Events {
                 run -> !run.hasRelic(Relics.ANCIENT_TABLET), ctx ->
                 ctx.page("A hidden chamber is lined with echidna tablets. The carvings seem to move when you look "
                                 + "at them.",
-                        EventOption.of("[Read]", "Lose 1 HP.", () -> {
-                            ctx.run().loseHp(1);
-                            ctx.page("The first tablet tells of the echidnas who guarded the Master Emerald.",
-                                    EventOption.of("[Continue]", "Lose 2 HP.", () -> {
-                                        ctx.run().loseHp(2);
-                                        ctx.page("The second tells of their greed, and of the Chaos that answered it.",
-                                                EventOption.of("[Continue]", "Lose 3 HP.", () -> {
-                                                    ctx.run().loseHp(3);
-                                                    ctx.page("The last tablet is loose. You could take it, if you "
-                                                                    + "can bear what it shows you.",
-                                                            EventOption.of("[Take]", "Lose 10 HP. Obtain "
-                                                                    + "<g>Ancient Tablet</g>.", () -> {
-                                                                        ctx.run().loseHp(10);
-                                                                        ctx.obtainRelic(Relics.ANCIENT_TABLET);
-                                                                        ctx.page("Your head pounds, but the "
-                                                                                + "knowledge is yours.", ctx.leave());
-                                                                    }),
-                                                            EventOption.of("[Stop]", "Lose 3 HP.", () -> {
-                                                                ctx.run().loseHp(3);
-                                                                ctx.page("You tear your eyes away.", ctx.leave());
-                                                            }));
-                                                }));
-                                    }));
-                        }),
+                        EventOption.of("[Read]", "Lose 1 HP.", () -> readTablet(ctx, 0, 1, () ->
+                                ctx.page("The first tablet tells of the echidnas who guarded the Master Emerald.",
+                                        EventOption.of("[Continue]", "Lose 2 HP.", () -> readTablet(ctx, 1, 2, () ->
+                                                ctx.page("The second tells of their greed, and of the Chaos that "
+                                                                + "answered it.",
+                                                        EventOption.of("[Continue]", "Lose 3 HP.", () ->
+                                                                readTablet(ctx, 2, 3, () -> lastTablet(ctx))))))))),
                         ctx.leave())));
 
         // Vampires(?).
@@ -462,6 +433,69 @@ public final class Events {
         }
     }
 
+    /** Golden Idol: the idol is yours, and the altar's trap is sprung. */
+    private static void emeraldAltarTaken(EventContext ctx) {
+        ctx.obtainRelic(Relics.EMERALD_IDOL);
+        int damage = ctx.run().maxHp() / 4;
+        int maxHpLoss = Math.max(1, ctx.run().maxHp() * 8 / 100);
+        ctx.page("The pedestal sinks with a click. A boulder rumbles down the corridor towards you!",
+                EventOption.of("[Outrun]", "Become <r>Cursed</r>: Sprained Ankle.", () -> {
+                    ctx.page("You run for it!");
+                    ctx.illustrate("outrun", () -> {
+                        ctx.obtainCard(CommonCards.SPRAINED_ANKLE, false);
+                        ctx.page("You make it out, limping.", ctx.leave());
+                    });
+                }),
+                EventOption.of("[Smash]", "Take " + damage + " damage.", () -> {
+                    ctx.page("You charge straight at it!");
+                    ctx.illustrate("smash:" + damage, () -> {
+                        ctx.run().loseHp(damage);
+                        ctx.page("You smash straight through it. That hurt.", ctx.leave());
+                    });
+                }),
+                EventOption.of("[Hide]", "Lose " + maxHpLoss + " Max HP.", () -> {
+                    ctx.page("You squeeze into a gap in the wall...");
+                    ctx.illustrate("hide:" + maxHpLoss, () -> {
+                        ctx.run().setMaxHp(ctx.run().maxHp() - maxHpLoss);
+                        ctx.page("The boulder scrapes past and takes some of you with it.", ctx.leave());
+                    });
+                }));
+    }
+
+    /** Living Wall, after the card pick: the socket by the chosen word shows what it did. */
+    private static void mural(EventContext ctx, String detail, String word, String result) {
+        ctx.page("You press your hand to the socket marked " + word + ".");
+        ctx.illustrate(detail, () -> ctx.page(result, ctx.leave()));
+    }
+
+    /** Cursed Tome: reading tablet {@code tablet} lights its carvings, then takes its toll. */
+    private static void readTablet(EventContext ctx, int tablet, int hp, Runnable then) {
+        ctx.page("You read the carvings...");
+        ctx.illustrate("read:" + tablet + ":" + hp, () -> {
+            ctx.run().loseHp(hp);
+            then.run();
+        });
+    }
+
+    private static void lastTablet(EventContext ctx) {
+        ctx.page("The last tablet is loose. You could take it, if you can bear what it shows you.",
+                EventOption.of("[Take]", "Lose 10 HP. Obtain <g>Ancient Tablet</g>.", () -> {
+                    ctx.page("You lift the tablet from its base...");
+                    ctx.illustrate("take:10", () -> {
+                        ctx.run().loseHp(10);
+                        ctx.obtainRelic(Relics.ANCIENT_TABLET);
+                        ctx.page("Your head pounds, but the knowledge is yours.", ctx.leave());
+                    });
+                }),
+                EventOption.of("[Stop]", "Lose 3 HP.", () -> {
+                    ctx.page("You force yourself to look away...");
+                    ctx.illustrate("stop:3", () -> {
+                        ctx.run().loseHp(3);
+                        ctx.page("You tear your eyes away.", ctx.leave());
+                    });
+                }));
+    }
+
     /** Dead Adventurer: each search risks waking the elite buried in the pile. */
     private static void scrapyard(EventContext ctx) {
         List<Reward> loot = new ArrayList<>();
@@ -487,27 +521,35 @@ public final class Events {
                 EventOption.of("[Search]", "Find loot. <r>" + danger + "%</r> chance the " + (elite == null ? "badnik"
                         : elite.name()) + " wakes up.", () -> {
                             if (elite != null && ctx.rng().nextInt(100) < danger) {
-                                for (Reward r : loot) {
-                                    if (r != null) {
-                                        ctx.addReward(r);
+                                ctx.page("You dig into the pile. Something grabs back!");
+                                ctx.illustrate("elite:" + elite.id(), () -> {
+                                    for (Reward r : loot) {
+                                        if (r != null) {
+                                            ctx.addReward(r);
+                                        }
                                     }
-                                }
-                                ctx.page("The pile bursts apart. " + elite.name() + " rises from the scrap!",
-                                        EventOption.of("[Fight]", "", () -> ctx.fight(elite.id(), null)));
+                                    ctx.page("The pile bursts apart. " + elite.name() + " rises from the scrap!",
+                                            EventOption.of("[Fight]", "", () -> ctx.fight(elite.id(), null)));
+                                });
                                 return;
                             }
                             Reward found = loot.remove(0);
-                            String what;
-                            if (found instanceof Reward.Rings rings) {
-                                ctx.run().gainRings(rings.amount());
-                                what = "You find " + rings.amount() + " rings.";
-                            } else if (found instanceof Reward.RelicReward r) {
-                                ctx.obtainRelic(r.relicId());
-                                what = "You pull out a " + ctx.run().relic(r.relicId()).name() + ".";
-                            } else {
-                                what = "Nothing but bolts.";
-                            }
-                            searchScrap(ctx, loot, elite, danger + 25, what + " The pile shifts ominously.");
+                            String detail = found instanceof Reward.Rings rings ? "rings:" + rings.amount()
+                                    : found instanceof Reward.RelicReward r ? "relic:" + r.relicId() : "bolts";
+                            ctx.page("You dig into the pile...");
+                            ctx.illustrate(detail, () -> {
+                                String what;
+                                if (found instanceof Reward.Rings rings) {
+                                    ctx.run().gainRings(rings.amount());
+                                    what = "You find " + rings.amount() + " rings.";
+                                } else if (found instanceof Reward.RelicReward r) {
+                                    ctx.obtainRelic(r.relicId());
+                                    what = "You pull out a " + ctx.run().relic(r.relicId()).name() + ".";
+                                } else {
+                                    what = "Nothing but bolts.";
+                                }
+                                searchScrap(ctx, loot, elite, danger + 25, what + " The pile shifts ominously.");
+                            });
                         }),
                 ctx.leave());
     }
@@ -515,20 +557,36 @@ public final class Events {
     private static void cloggedPipe(EventContext ctx, int damage, int chance, String text) {
         ctx.page(text,
                 EventOption.of("[Reach In]", "Lose " + damage + " HP. <g>" + chance + "%</g> chance of a relic.", () -> {
-                    ctx.run().loseHp(damage);
-                    if (ctx.run().dead()) {
-                        ctx.finish();
-                        return;
-                    }
-                    if (ctx.rng().nextInt(100) < chance) {
-                        String relic = ctx.obtainRandomRelic();
-                        ctx.page("Your fingers close around something. You pull out "
-                                + (relic == null ? "a soggy ring." : "the " + relic + "!"), ctx.leave());
-                    } else {
-                        cloggedPipe(ctx, damage + 1, chance + 10, "Ow! Just scrap. But it's closer now...");
-                    }
+                    // A reach that would be fatal rolls nothing, as when the roll followed the HP loss.
+                    boolean fatal = ctx.run().hp() <= damage;
+                    boolean prize = !fatal && ctx.rng().nextInt(100) < chance;
+                    ctx.page("You reach deep into the pipe...");
+                    ctx.illustrate((prize ? "prize:" : "cut:") + damage, () -> {
+                        ctx.run().loseHp(damage);
+                        if (ctx.run().dead()) {
+                            ctx.finish();
+                            return;
+                        }
+                        if (prize) {
+                            String relic = ctx.obtainRandomRelic();
+                            ctx.page("Your fingers close around something. You pull out "
+                                    + (relic == null ? "a soggy ring." : "the " + relic + "!"), ctx.leave());
+                        } else {
+                            cloggedPipe(ctx, damage + 1, chance + 10, "Ow! Just scrap. But it's closer now...");
+                        }
+                    });
                 }),
                 ctx.leave());
+    }
+
+    /** What the fire gives back for {@code card}, for its picture: HP healed, or Max HP for a rare card. */
+    private static int campfireGain(RunState run, Card card) {
+        return switch (card.rarity()) {
+            case CardRarity.CURSE, CardRarity.BASIC -> 0;
+            case CardRarity.UNCOMMON -> run.maxHp() - run.hp();
+            case CardRarity.RARE -> 10;
+            default -> Math.min(5, run.maxHp() - run.hp());
+        };
     }
 
     private static String campfire(EventContext ctx, Card card) {
@@ -581,9 +639,12 @@ public final class Events {
 
     private static EventOption trade(EventContext ctx, Relic relic) {
         return EventOption.of("[Trade]", "Lose " + relic.name() + ". Obtain <g>Collector's Badge</g>.", () -> {
-            ctx.run().loseRelic(relic.id());
-            ctx.obtainRelic(Relics.COLLECTORS_BADGE);
-            ctx.page("\"Ooh. Shiny. Here, have this. It's a badge. It means we're friends.\"", ctx.leave());
+            ctx.page("You hold out your " + relic.name() + "...");
+            ctx.illustrate("trade:" + relic.id(), () -> {
+                ctx.run().loseRelic(relic.id());
+                ctx.obtainRelic(Relics.COLLECTORS_BADGE);
+                ctx.page("\"Ooh. Shiny. Here, have this. It's a badge. It means we're friends.\"", ctx.leave());
+            });
         });
     }
 

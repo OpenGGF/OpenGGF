@@ -47,6 +47,24 @@ public final class Sounds {
     public static final int SFX_SLOT_MACHINE = 0xB7;
     public static final int SFX_RING_LOSS = 0xB9;
     public static final int SFX_SPINDASH = 0xAB;
+    /** sfx_SpikeHit: HurtCharacter's sound when spikes (sharp things) do the hurting. */
+    public static final int SFX_SPIKE_HIT = 0x37;
+    /** sfx_FireAttack: the Fire Shield's dash, a burst of flame. */
+    public static final int SFX_FIRE_ATTACK = 0x43;
+    /** sfx_Grab: Knuckles catching hold. */
+    public static final int SFX_GRAB = 0x4A;
+    /** sfx_Collapse: breakable rocks and walls bursting (AIZLRZEMZRock_PlayCollapseSfx). */
+    public static final int SFX_COLLAPSE = 0x59;
+    /** sfx_Rumble2: a short rumble (the continuous sfx_Rumble $CB would need stopping). */
+    public static final int SFX_RUMBLE = 0x6F;
+    /** sfx_SuperTransform: the Super transformation. */
+    public static final int SFX_SUPER_TRANSFORM = 0x9F;
+    /** sfx_Clank: metal knocking on metal. */
+    public static final int SFX_CLANK = 0x9E;
+    /** sfx_Signpost: the end-of-act signpost spinning through its faces. */
+    public static final int SFX_SIGNPOST = 0xB8;
+    /** sfx_RingLeft: Collect_Ring alternates it with sfx_RingRight for each ring. */
+    public static final int SFX_RING_LEFT = 0x34;
 
     private Sounds() {
     }

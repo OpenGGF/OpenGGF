@@ -104,9 +104,19 @@ public final class SlayScene implements ModScene {
             run.state().gainRings(300);
             run.enterRoom(room[0]);
         } else {
-            run.state().setPosition(shell.catalog.event(parts[3]).acts().stream().min(Integer::compare).orElse(1),
+            // "sonic:7:event:event:collector+relic:big_ring+curse:lost_rings" hands the run those relics
+            // (ids starting "relic:") and cards first.
+            String[] extras = parts[3].split("\\+");
+            for (int i = 1; i < extras.length; i++) {
+                if (extras[i].startsWith("relic:")) {
+                    run.state().obtainRelic(extras[i]);
+                } else {
+                    run.state().addCard(new slaytherobotnik.core.Card(shell.catalog.card(extras[i])));
+                }
+            }
+            run.state().setPosition(shell.catalog.event(extras[0]).acts().stream().min(Integer::compare).orElse(1),
                     run.state().floor(), run.state().actFloor(), run.state().nodeX());
-            run.enterEvent(parts[3]);
+            run.enterEvent(extras[0]);
         }
         shell.goNow(new RunScreen());
     }

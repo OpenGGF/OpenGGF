@@ -197,6 +197,24 @@ final class RomSprites {
                     0x18F984, 0x1140, 0x019F82, 0x01A076, DplcLayout.PLAYER, 0), aiz(rom)); // ArtUnc_BubbleShield
             case "shield_insta" -> rom.sprites(RomSpriteRequest.streamed(
                     0x18C084, 0x680, 0x01A0D0, 0x01A154, DplcLayout.PLAYER, 0), aiz(rom)); // ArtUnc_InstaShield
+
+            // ---- Event props: altar, mural, campfire ----
+            case "aiz_rock" -> rom.sprites(RomSpriteRequest.of(
+                    0x38DC90, Compression.NEMESIS,       // ArtNem_AIZMisc1 (ArtTile_AIZMisc1, line 1)
+                    0x21DCDC, 1), aiz(rom));             // Map_AIZRock (rocks 0-2, debris 3-6)
+            case "aiz_bridge_fire" -> rom.sprites(RomSpriteRequest.of(
+                    0x38E760, Compression.NEMESIS,       // ArtNem_AIZMisc2 (ArtTile_AIZMisc2, line 2)
+                    0x02B092, 2), zone(rom, PAL_AIZ_FIRE)); // Map_AIZDrawBridgeFire (logs 0-2, flames 3-7)
+            case "hpz_emerald_0", "hpz_emerald_1", "hpz_emerald_2", "hpz_emerald_3" -> rom.sprites(
+                    RomSpriteRequest.of(0x174B28, Compression.NEMESIS, // ArtNem_HPZEmeraldMisc
+                            0x091006, key.charAt(key.length() - 1) - '0'), hpz(rom)); // Map_HPZEmeraldMisc, line N
+            case "hpz_gray_emerald" -> rom.sprites(RomSpriteRequest.of(
+                    0x1757B4, Compression.NEMESIS,       // ArtNem_HPZGrayEmerald (ArtTile_HPZGrayEmerald, line 0)
+                    0x091006, 0), hpz(rom));             // Map_HPZEmeraldMisc frame $1E
+            case "super_sonic_6", "super_sonic_7", "super_sonic_8" -> rom.sprites(RomSpriteRequest.streamed(
+                    0x100000, 0x40060,                  // ArtUnc_Sonic
+                    0x146816, 0x148378,                 // Map_SuperSonic, PLC_SuperSonic
+                    DplcLayout.PLAYER, 0), superSonic(rom, key.charAt(key.length() - 1) - '0'));
             default -> null;
         };
     }
@@ -245,6 +263,29 @@ final class RomSprites {
     private static int[] lines(SceneRomArt rom, int address, int line, int colors) {
         int[] palette = aiz(rom);
         System.arraycopy(rom.palette(address, colors), 0, palette, line * 16, colors);
+        return palette;
+    }
+
+    /**
+     * Hidden Palace's emerald shrine: player line 0, Pal_HPZ on lines 1-3 (Obj_HPZPaletteControl
+     * past x $460), and line 3's colours 1-2 set to the Master Emerald's greens, as
+     * Obj_HPZMasterEmerald loc_90700 writes them every frame (the immediate of its move.l at
+     * $9070C) until all seven Super Emeralds are won.
+     */
+    private static int[] hpz(SceneRomArt rom) {
+        int[] palette = zone(rom, 0x0669D2);                         // Pal_HPZ
+        System.arraycopy(rom.palette(0x09070E, 2), 0, palette, 48 + 1, 2);
+        return palette;
+    }
+
+    /**
+     * Super Sonic's colours: Pal_SonicTails with colours 2-4 from PalCycle_SuperSonic entry
+     * {@code entry} (6-8 are the steady cycle, Palette_frame $24-$30, a step every 7 frames;
+     * SuperHyper_PalCycle_SuperSonic writes them to Normal_palette+4).
+     */
+    private static int[] superSonic(SceneRomArt rom, int entry) {
+        int[] palette = aiz(rom);
+        System.arraycopy(rom.palette(0x00398E + entry * 6, 3), 0, palette, 2, 3); // PalCycle_SuperSonic
         return palette;
     }
 }

@@ -10,6 +10,13 @@ final class EventPictures {
     static EventPicture create(Shell shell, String art) {
         return switch (art) {
             case "event:slot_machine" -> new SlotMachinePicture(shell);
+            case "event:emerald_altar" -> new EmeraldAltarPicture(shell);
+            case "event:mural" -> new MuralPicture(shell);
+            case "event:scrapyard" -> new ScrapyardPicture(shell);
+            case "event:tablets" -> new TabletsPicture(shell);
+            case "event:collector" -> new CollectorPicture(shell);
+            case "event:campfire" -> new CampfirePicture(shell);
+            case "event:clogged_pipe" -> new PipePicture(shell);
             default -> new StaticPicture(art);
         };
     }

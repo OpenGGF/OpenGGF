@@ -61,40 +61,6 @@ final class EventArt {
                     monitor(shell, c, cx - 36 + i * 36, ground, faces[i], t + i * 7);
                 }
             }
-            case "event:emerald_altar" -> {
-                cave(c, x, y, w, h, ground);
-                pedestal(c, cx, ground, 30, 40);
-                emerald(shell, c, cx, ground - 48 + bob(t, 2), 0, t);
-                // A boulder lurking in the dark at the top of the corridor.
-                c.fill(x + 6, y + 10, 26, 22, 0xFF3C3028);
-                c.fill(x + 8, y + 12, 18, 6, 0xFF5C4C40);
-            }
-            case "event:mural" -> {
-                cave(c, x, y, w, h, ground);
-                c.fill(x + 10, y + 14, w - 20, 82, STONE_DARK);
-                c.fill(x + 12, y + 16, w - 24, 78, STONE);
-                Poses.hero(shell, c, "sonic", Poses.VICTORY, 0, cx, y + 86,
-                        SceneDraw.plain().withScale(1.5f).withFlash(0xE0000000 | (GOLD & 0xFFFFFF)));
-                for (int i = 0; i < 3; i++) {
-                    emerald(shell, c, cx - 32 + i * 32, ground - 4, i * 2, t + i * 10);
-                }
-            }
-            case "event:scrapyard" -> {
-                outdoors(c, x, y, w, h, ground);
-                // A heap of wrecked badniks, upside down and dimmed.
-                SceneDraw wreck = SceneDraw.plain().withTint(0xFF8C8C8C);
-                Poses.stand(c, shell.art.romFrame("rhinobot", 0), cx - 20, ground, wreck.withFlipY(true));
-                Poses.stand(c, shell.art.romFrame("monkey_dude", 0), cx + 18, ground, wreck);
-                Poses.stand(c, shell.art.romFrame("caterkiller_jr", 1), cx - 2, ground - 16, wreck.withFlipX(true));
-                Poses.stand(c, shell.art.romFrame("bloominator", 0), cx + 4, ground - 4, wreck.withFlipY(true));
-                SceneSprite smoke = shell.art.romFrame("explosion", (int) ((t / 6) % 5));
-                if (smoke != null) {
-                    Poses.centre(c, smoke, cx + 6, ground - 40 - (t / 3) % 10, SceneDraw.plain().withAlpha(0.7f));
-                }
-                if ((t / 20) % 6 == 0) {
-                    c.fill(cx - 2, ground - 22, 3, 3, 0xFFFF4848); // something twitches
-                }
-            }
             case "event:mushrooms" -> {
                 outdoors(c, x, y, w, h, ground);
                 mushroom(c, cx - 30, ground, 18, 30, 0xFFDA4890, t);
@@ -161,33 +127,6 @@ final class EventArt {
                         SceneDraw.plain().withFlipX(true).withTint(0xA0B6DAFF));
                 monitor(shell, c, cx, ground, "1UP", t);
             }
-            case "event:clogged_pipe" -> {
-                indoors(c, x, y, w, h, ground, LAB_TOP, LAB_BOTTOM);
-                c.fill(x, y + 50, w, 30, 0xFF485868);
-                c.fill(x, y + 54, w, 22, 0xFF6C7C8C);
-                c.fill(cx - 16, y + 46, 32, 38, 0xFF384858);
-                c.fill(cx - 12, y + 52, 24, 26, Colors.BLACK);
-                if ((t / 15) % 4 != 0) {
-                    c.fill(cx - 2, y + 64, 4, 4, GOLD);
-                    c.fill(cx - 1, y + 63, 2, 1, Colors.WHITE);
-                }
-                for (int i = 0; i < 3; i++) {
-                    int d = (int) ((t + i * 20) % 60);
-                    c.fill(cx - 10 + i * 10, y + 84 + d, 3, 3, 0xFF6C9048);
-                }
-            }
-            case "event:campfire" -> {
-                Gfx.gradient(c, x, y, w, h, 0xFF0A1030, 0xFF241848);
-                stars(c, x, y, w, h, t);
-                c.fill(x, ground, w, h - (ground - y), GRASS_DARK);
-                fire(c, cx, ground, t);
-                for (int i = 0; i < 4; i++) {
-                    double a = Math.PI * (0.15 + i * 0.23);
-                    int fx = cx + (int) (Math.cos(a) * 42) * (i % 2 == 0 ? 1 : -1);
-                    SceneSprite flicky = shell.art.romFrame("flicky", (int) (((t + i * 5) / 8) % 2));
-                    Poses.stand(c, flicky, fx, ground + 4, SceneDraw.plain().withFlipX(fx < cx));
-                }
-            }
             case "event:terminal" -> {
                 indoors(c, x, y, w, h, ground, LAB_TOP, LAB_BOTTOM);
                 c.fill(cx - 46, y + 20, 92, 70, 0xFF6C7C8C);
@@ -228,25 +167,6 @@ final class EventArt {
                 }
                 chao(c, cx, ground - 64 + bob(t, 2), t);
             }
-            case "event:collector" -> {
-                cave(c, x, y, w, h, ground);
-                for (int i = 0; i < 7; i++) {
-                    ring(shell, c, cx - 36 + i * 12, ground - 4 - (i % 3) * 5, t + i);
-                }
-                monitor(shell, c, cx - 34, ground - 6, "5", t);
-                monitor(shell, c, cx + 34, ground - 6, "8", t);
-                // Egg Robo as ChildObjDat_919D0 builds it: gun arm and legs behind the body.
-                int rx = cx;
-                int ry = ground - 40 + bob(t, 3);
-                SceneSprite arm = shell.art.romFrame("egg_robo", 2);
-                SceneSprite legs = shell.art.romFrame("egg_robo", 5);
-                SceneSprite robo = shell.art.romFrame("egg_robo", t % 2 == 0 ? 1 : 3);
-                if (robo != null) {
-                    c.draw(arm, rx - 0x1C, ry - 4, SceneDraw.plain());
-                    c.draw(legs, rx - 0xC, ry + 0x1C, SceneDraw.plain());
-                    c.draw(robo, rx, ry, SceneDraw.plain());
-                }
-            }
             case "event:hyper_remote" -> {
                 indoors(c, x, y, w, h, ground, 0xFF200810, 0xFF481020);
                 c.fill(cx - 18, y + 28, 36, 80, Colors.BLACK);
@@ -262,19 +182,6 @@ final class EventArt {
                 if (head != null) {
                     Poses.centre(c, head, cx, y + 41, SceneDraw.plain().withScale(0.75f));
                 }
-            }
-            case "event:tablets" -> {
-                cave(c, x, y, w, h, ground);
-                for (int i = 0; i < 3; i++) {
-                    int tx = cx - 44 + i * 32;
-                    c.fill(tx, y + 26 + i * 4, 24, 60, STONE_DARK);
-                    c.fill(tx + 2, y + 28 + i * 4, 20, 56, STONE);
-                    for (int k = 0; k < 6; k++) {
-                        int glow = (t / 8 + k + i) % 9 == 0 ? 0xFF24DA48 : STONE_DARK;
-                        c.fill(tx + 5, y + 34 + i * 4 + k * 8, 6 + (k * 5 + i * 3) % 10, 3, glow);
-                    }
-                }
-                emerald(shell, c, cx, ground - 6, 0, t);
             }
             case "event:robotnik_offer" -> {
                 indoors(c, x, y, w, h, ground, LAB_TOP, LAB_BOTTOM);
