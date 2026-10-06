@@ -66,8 +66,10 @@ behave as in *Slay the Spire*.
 
 To play a card, pick it and then pick a target. Card numbers show the damage the card
 would really deal to the highlighted enemy, and its gold terms (Exhaust, Combo,
-Vulnerable, Ring Bomb...) are explained in tips beside whichever card you point at. Runs
-save at every room, so you can quit and **Continue** later. The title screen also has the **Compendium** (every card, upgraded or
+Vulnerable, Ring Bomb...) are explained in tips beside whichever card you point at. The
+top bar (hero, HP, rings, monitors, relics, zone) and a fight's energy, piles, Block and HP
+bars have tips too, and clicking a pile shows its cards. Runs save at every room, so you
+can quit and **Continue** later. The title screen also has the **Compendium** (every card, upgraded or
 not; every relic; every monitor), **Records** (runs, wins, best floor per hero) and
 **Settings** (combat speed, screen shake, music and sound effects).
 

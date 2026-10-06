@@ -53,6 +53,7 @@ final class RunScreen implements Screen {
     private String tooltipBody;
     private int tooltipX;
     private int tooltipY;
+    private boolean tooltipAbove;
 
     @Override
     public void enter(Shell shell) {
@@ -167,6 +168,13 @@ final class RunScreen implements Screen {
         tooltipBody = body;
         tooltipX = x;
         tooltipY = y;
+        tooltipAbove = false;
+    }
+
+    /** Shows a tooltip this frame with its bottom edge just above {@code bottom}, for things low on the screen. */
+    void tooltipAbove(String title, String body, int x, int bottom) {
+        tooltip(title, body, x, bottom);
+        tooltipAbove = true;
     }
 
     @Override
@@ -200,28 +208,52 @@ final class RunScreen implements Screen {
         SmallFont f = shell.font;
         Gfx.gradient(c, 0, 0, w, TOP_BAR, 0xF0182C5C, 0xF00A1430);
         c.fill(0, TOP_BAR - 1, w, 1, Colors.PANEL_EDGE_DARK);
-        f.drawShadowed(c, s.character().name().toUpperCase(), 4, 5, Colors.GOLD);
-        int x = 4 + f.width(s.character().name().toUpperCase()) + 8;
+        var mouse = shell.in.mouse;
+        String hero = s.character().name().toUpperCase();
+        f.drawShadowed(c, hero, 4, 5, Colors.GOLD);
+        if (mouse.over(2, 1, f.width(hero) + 4, 12)) {
+            tooltip(hero, s.character().blurb() + " Key stat: " + s.character().primaryStat() + ".", 4, TOP_BAR + 2);
+        }
+        int x = 4 + f.width(hero) + 8;
         c.draw(shell.art.icon("ui_heart"), x, 3);
         String hp = s.hp() + "/" + s.maxHp();
         boolean low = s.hp() * 3 < s.maxHp();
         f.drawShadowed(c, hp, x + 10, 5, low ? Colors.TEXT_BAD : Colors.TEXT);
+        if (mouse.over(x, 1, 10 + f.width(hp), 12)) {
+            tooltip("HP", "Your health, carried from room to room. The run ends if it reaches 0; rest at a "
+                    + "Starpost to heal.", x, TOP_BAR + 2);
+        }
         x += 10 + f.width(hp) + 10;
         HudIcons.ring(shell, c, x, 2, shell.ticks);
         f.drawShadowed(c, Integer.toString(s.rings()), x + 12, 5, Colors.RING);
+        if (mouse.over(x, 1, 12 + f.width(Integer.toString(s.rings())), 12)) {
+            tooltip("RINGS", "Won in fights and events. Spend them in the Egg Robo's shop on cards, relics and item "
+                    + "monitors.", x, TOP_BAR + 2);
+        }
         // Potions.
         for (int i = 0; i < s.potionSlots(); i++) {
             int px = potionSlotX(shell, i);
             PotionDef potion = s.potionAt(i);
             HudIcons.potion(shell, c, potion, px, 1);
-            if (shell.in.mouse.over(px, 1, 12, 12) && potion != null) {
-                tooltip(potion.name().toUpperCase(), potion.describe(s.potionPotency(potion)), px, TOP_BAR + 2);
+            if (shell.in.mouse.over(px, 1, 12, 12)) {
+                if (potion != null) {
+                    tooltip(potion.name().toUpperCase(), potion.describe(s.potionPotency(potion)), px, TOP_BAR + 2);
+                } else {
+                    tooltip("EMPTY MONITOR SLOT", "Item monitors you win or buy wait here, ready to use in a fight.",
+                            px, TOP_BAR + 2);
+                }
             }
         }
         // Right side: act, floor, deck, map.
         ActDef act = shell.run.act();
         String where = act.zoneName().toUpperCase() + "  FLOOR " + Math.max(0, s.floor());
         f.drawShadowed(c, where, w - 52 - f.width(where), 5, Colors.TEXT);
+        if (mouse.over(w - 54 - f.width(where), 1, f.width(where) + 4, 12)) {
+            int acts = shell.catalog.actCount();
+            tooltip(act.zoneName().toUpperCase(), "Act " + s.act() + " of " + acts + (s.act() >= acts ? ", the last" : "")
+                    + ". The floor counts every room you have reached; the act's boss waits at the far end of its "
+                    + "map (M).", w - 150, TOP_BAR + 2);
+        }
         c.draw(shell.art.icon("ui_deck"), w - 46, 2);
         f.drawOutlined(c, Integer.toString(s.deck().size()), w - 38, 7, Colors.WHITE, 1);
         c.draw(shell.art.icon("ui_map"), w - 22, 3);
@@ -258,7 +290,7 @@ final class RunScreen implements Screen {
         List<String> lines = f.wrap(tooltipBody == null ? "" : tooltipBody, width - 10);
         int h = 14 + lines.size() * SmallFont.LINE;
         int x = Math.max(2, Math.min(shell.width() - width - 2, tooltipX));
-        int y = Math.max(2, Math.min(shell.height() - h - 2, tooltipY));
+        int y = Math.max(2, Math.min(shell.height() - h - 2, tooltipAbove ? tooltipY - h - 2 : tooltipY));
         Gfx.panel(c, x, y, width, h, 0xF0081028, Colors.PANEL_EDGE);
         f.drawShadowed(c, tooltipTitle, x + 5, y + 4, Colors.GOLD);
         int ly = y + 12;

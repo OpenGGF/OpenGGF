@@ -651,6 +651,9 @@ final class CombatView implements RunScreen.RoomView {
         spots.add("end", w - 62, HAND_Y + 2, 56, 16);
         spots.add("draw", 6, HAND_Y + 30, 22, 22);
         spots.add("discard", w - 30, HAND_Y + 30, 22, 22);
+        if (exhaustCount > 0) {
+            spots.add("exhaust", w - 30, HAND_Y + 18, 22, 12);
+        }
         var state = shell.run.state();
         for (int i = 0; i < state.potionSlots(); i++) {
             if (state.potionAt(i) != null) {
@@ -715,6 +718,7 @@ final class CombatView implements RunScreen.RoomView {
             case "end" -> endTurn(shell);
             case "draw" -> screen.openDeck(shell, "DRAW PILE", sortedDrawPile());
             case "discard" -> screen.openDeck(shell, "DISCARD PILE", combat.player().discardPile());
+            case "exhaust" -> screen.openDeck(shell, "EXHAUSTED", combat.player().exhaustPile());
             default -> {
                 if (picked.startsWith("potion")) {
                     potionMenu = Integer.parseInt(picked.substring(6));
@@ -871,7 +875,7 @@ final class CombatView implements RunScreen.RoomView {
         Backdrops.zone(shell, c, shell.run.act().zone(), shell.run.act().zoneAct(), shell.ticks / 6);
         c.fill(0, GROUND, w, h - GROUND, 0x90000000);
         c.fill(0, GROUND, w, 1, 0x60FFFFFF);
-        drawPlayer(shell, c, shake);
+        drawPlayer(shell, screen, c, shake);
         boxes.clear();
         for (int i = 0; i < shown.size(); i++) {
             drawEnemy(shell, screen, c, shown.get(i), i, shake);
@@ -918,7 +922,7 @@ final class CombatView implements RunScreen.RoomView {
         }
     }
 
-    private void drawPlayer(Shell shell, SceneCanvas c, int shake) {
+    private void drawPlayer(Shell shell, RunScreen screen, SceneCanvas c, int shake) {
         var player = combat.player();
         String id = shell.run.state().character().id();
         int lungeTicks = lunge.getOrDefault(player, 0);
@@ -950,6 +954,22 @@ final class CombatView implements RunScreen.RoomView {
         }
         Gfx.hpBar(c, shell.font, PLAYER_X - 22, GROUND + 4, 50, st[0], st[1], st[2]);
         drawPowers(shell, c, player, PLAYER_X - 22, GROUND + 13);
+        statTips(shell, screen, null, PLAYER_X - 22, st);
+    }
+
+    /** HP and Block tips while the pointer is over a creature's bar or Block badge ({@code enemy} null for the hero). */
+    private void statTips(Shell shell, RunScreen screen, Enemy enemy, int barX, int[] st) {
+        var mouse = shell.in.mouse;
+        if (st[2] > 0 && mouse.over(barX - 8, GROUND + 3, 9, 9)) {
+            screen.tooltip("BLOCK", "Stops the next " + st[2] + " damage. Removed at the start of "
+                    + (enemy == null ? "your" : "its") + " next turn.", barX - 8, GROUND + 24);
+        } else if (mouse.over(barX - 1, GROUND + 3, 52, 7)) {
+            String body = enemy == null
+                    ? "Your health. The run ends if it reaches 0."
+                    : enemy.name() + " is beaten when its HP reaches 0.";
+            screen.tooltip("HP " + Math.max(0, st[0]) + "/" + st[1], body + (st[2] > 0 ? " Block is used up first." : ""),
+                    barX, GROUND + 24);
+        }
     }
 
     private void drawEnemy(Shell shell, RunScreen screen, SceneCanvas c, Enemy enemy, int index, int shake) {
@@ -992,6 +1012,7 @@ final class CombatView implements RunScreen.RoomView {
         if (shell.in.mouse.over(box.x(), box.y(), box.w(), box.h()) && selected == null) {
             screen.tooltip(enemy.name().toUpperCase(), intentText(intents.get(enemy)), box.x(), GROUND + 24);
         }
+        statTips(shell, screen, enemy, x - 25, st);
     }
 
     private static String intentText(Intent intent) {
@@ -1094,6 +1115,11 @@ final class CombatView implements RunScreen.RoomView {
         c.fill(ex + 4, ey + 4, 8, 4, Colors.alpha(Colors.WHITE, 0.5f));
         String en = energy + "/" + max;
         f.drawOutlined(c, en, ex + 13 - f.width(en) / 2, ey + 10, Colors.WHITE, 1);
+        var mouse = shell.in.mouse;
+        if (mouse.over(ex, ey, 26, 26)) {
+            screen.tooltipAbove("ENERGY", "Playing a card costs its number in Energy. You get " + max
+                    + " at the start of each turn; Energy left over is lost.", ex, ey);
+        }
         // Draw and discard piles.
         c.draw(shell.art.icon("ui_draw_pile"), 8, HAND_Y + 32);
         f.drawOutlined(c, Integer.toString(drawCount), 20, HAND_Y + 42, Colors.WHITE, 1);
@@ -1102,6 +1128,19 @@ final class CombatView implements RunScreen.RoomView {
         if (exhaustCount > 0) {
             c.draw(shell.art.icon("ui_exhaust_pile"), w - 26, HAND_Y + 18);
             f.drawOutlined(c, Integer.toString(exhaustCount), w - 14, HAND_Y + 26, Colors.WHITE, 1);
+        }
+        if (mouse.over(6, HAND_Y + 30, 22, 22)) {
+            screen.tooltipAbove("DRAW PILE", "Each turn's hand is drawn from here. When it runs out, the discard "
+                    + "pile is shuffled back in. Click to view.", 6, HAND_Y + 30);
+        } else if (mouse.over(w - 30, HAND_Y + 30, 22, 22)) {
+            screen.tooltipAbove("DISCARD PILE", "Cards you play or discard, and your hand at the end of each turn. "
+                    + "Click to view.", w - 150, HAND_Y + 30);
+        } else if (exhaustCount > 0 && mouse.over(w - 30, HAND_Y + 18, 22, 12)) {
+            screen.tooltipAbove("EXHAUSTED", "Cards Exhausted this combat, out of play until it ends. Click to view.",
+                    w - 150, HAND_Y + 18);
+        } else if (mouse.over(w - 62, HAND_Y + 2, 56, 16)) {
+            screen.tooltipAbove("END TURN (E)", "Discard your hand, except cards that Retain, and let the enemies act.",
+                    w - 150, HAND_Y + 2);
         }
         // End turn button.
         boolean myTurn = combat.phase().equals(Combat.PLAYER_TURN) && !replaying() && !combat.isOver();
