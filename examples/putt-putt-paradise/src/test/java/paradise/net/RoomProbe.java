@@ -286,6 +286,11 @@ public final class RoomProbe {
              var raw = new java.net.Socket("localhost", host.boundPort())) {
             byte[] older = GolfCodec.encode(new Hello(prints(), "tails")); older[4] = (byte) (GolfCodec.SCHEMA - 1);
             raw.getOutputStream().write(older); raw.getOutputStream().flush();
+            // Force the fast-failure race: all accepted workers finish before the
+            // presentation thread polls its listener for the first time.
+            raw.setSoTimeout(3000);
+            check(raw.getInputStream().read() == -1, "mismatched peer is closed");
+            TransportProbe.await(() -> host.activeWorkers() == 1, 3000, "mismatched socket workers retire");
             TransportProbe.await(() -> { host.tick(); return host.state().message().startsWith("incompatible"); }, 3000,
                     "host names an older peer");
             check(!host.state().ready() && host.state().held(), "an incompatible peer cannot release the course");

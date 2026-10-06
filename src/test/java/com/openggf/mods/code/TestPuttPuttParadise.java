@@ -975,14 +975,15 @@ class TestPuttPuttParadise {
                     "native driver alone owns innate spindash pitch");
     }
 
-    @Test void normalDevelopmentBootUsesStockProfileAndTitleSelectionBeforeEntryFade() throws Exception {
+    @ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(ints = {0, 1})
+    void normalDevelopmentBootUsesRealTitleRouteAndCompletesOverlayWhileAimHolds(int act) throws Exception {
         // Bootstrap only the user's real S2 ROM/catalogue. Resolve the creator patch
         // independently through the normal validated development loader below.
         bootstrap = SharedLevel.load(SonicGame.SONIC_2, 0, 0);
         var previousServices = com.openggf.game.session.EngineServices.current();
         String previousDev = System.getProperty(com.openggf.mods.DevelopmentModSource.PROPERTY);
         int previousWidth = previousServices.graphics().getProjectionWidth();
-        var config = SonicConfigurationService.createStandalone(temp.resolve("boot-config"));
+        var config = SonicConfigurationService.createStandalone(temp.resolve("boot-config-" + act));
         var entry = MasterTitleScreen.GameEntry.SONIC_2;
         new com.openggf.game.launch.LaunchProfileApplier(config).apply(
                 com.openggf.game.launch.LaunchProfile.stockFor(entry), entry);
@@ -993,7 +994,7 @@ class TestPuttPuttParadise {
         try {
             System.setProperty(com.openggf.mods.DevelopmentModSource.PROPERTY,
                     temp.resolve("classes").toAbsolutePath().toString());
-            Path modRoot = Files.createDirectories(temp.resolve("normal-boot-mods"));
+            Path modRoot = Files.createDirectories(temp.resolve("normal-boot-mods-" + act));
             subsystem = com.openggf.ModSubsystem.normalBootLoader(() -> modRoot,
                     ModInputLimits.production(), (game, id) -> true,
                     new com.openggf.ModSubsystem.SessionAudioBoundary() {
@@ -1029,24 +1030,25 @@ class TestPuttPuttParadise {
             assertTrue(runtime.registrationFailures().isEmpty(), runtime.registrationFailures().toString());
             TitleScreenProvider title = module.getTitleScreenProvider();
             assertNotNull(title);
-            title.initialize();
             var input = new com.openggf.control.InputHandler();
+            var loop = new com.openggf.GameLoop(services, input);
+            loop.setGameplayMode(session);
+            loop.initializeTitleScreenMode();
             // Practice -> Tails -> EHZ2 -> WIDE_16_9 -> Ready: real menu input,
             // never constructing Selection or invoking the consumer directly.
-            titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
-            titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
-            titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
-            titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
-            titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
-            titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
-            titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
-            titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
-            titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
-            titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
-            titleTap(title, input, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            titleTap(loop, input, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            titleTap(loop, input, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
+            titleTap(loop, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            if (act == 1) titleTap(loop, input, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
+            titleTap(loop, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            titleTap(loop, input, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
+            titleTap(loop, input, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
+            titleTap(loop, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            titleTap(loop, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            titleTap(loop, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            titleTap(loop, input, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
             assertTrue(title.isExiting());
-            assertEquals(TitleScreenProvider.TitleScreenAction.ONE_PLAYER, title.consumeExitAction());
-            assertEquals(1, title.startActIndex());
+            assertEquals(act, title.startActIndex());
             assertEquals("WIDE_16_9", module.requiredDisplayAspect());
             assertEquals("tails", config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
             assertEquals("", config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
@@ -1068,16 +1070,19 @@ class TestPuttPuttParadise {
             assertTrue(team.sidekicks().isEmpty());
             GameServices.camera().setFocusedSprite(team.mainSprite());
             GameServices.level().setRewindClassResolver(new ModClassResolver(runtime, getClass().getClassLoader()));
-            GameServices.level().loadZoneAndAct(title.startZoneIndex(), title.startActIndex());
             com.openggf.physics.GroundSensor.setLevelManager(GameServices.level());
-            session.getFadeManager().startFadeFromBlack(null);
             assertTrue(session.getFadeManager().isActive());
-            for (int tick = 0; tick < 240; tick++) {
-                com.openggf.game.mode.ControlledFrameRuntime.step(session, input,
-                        com.openggf.control.LogicalInputSnapshot.neutral());
-                input.update();
+            for (int tick = 0; tick < 600 && loop.getCurrentGameMode() != GameMode.LEVEL; tick++) {
+                loop.step();
             }
+            assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
+            assertEquals(act, GameServices.level().getCurrentAct(), "reset must not erase the title's launch destination");
+            // Headless rendering omits the locked card, retaining its real native exit tail.
+            // The rendered capture additionally exercises the visible TITLE_CARD phase.
+            assertTrue(module.getTitleCardProvider().isOverlayActive(), "native text remains at initial LEVEL release");
+            for (int tick = 0; tick < 240; tick++) loop.step();
             assertFalse(session.getFadeManager().isActive(), "entry fade must not remain behind held aiming");
+            assertFalse(module.getTitleCardProvider().isOverlayActive(), "native title text must finish while the controller holds AIM");
             Object state = module.rewindAdapters().stream()
                     .filter(adapter -> adapter.key().startsWith("mode:"))
                     .findFirst().orElseThrow().capture();
@@ -1085,7 +1090,9 @@ class TestPuttPuttParadise {
             assertEquals("AIM", value(meter, "stage").toString());
             assertNotNull(value(state, "match"), "neutral lie opened");
             assertNotNull(value(state, "neutralLie"), "setup completed before aim holds the world");
-            assertEquals(1, GameServices.level().getCurrentAct());
+            checkpointCourse(session).restore((com.openggf.game.mode.CourseCheckpoint) value(state, "neutralLie"));
+            assertFalse(module.getTitleCardProvider().isOverlayActive(), "shot rollback must not restore a transient entry card");
+            assertEquals(act, GameServices.level().getCurrentAct());
             assertEquals(400, GameServices.camera().getWidth());
             var scene = GameServices.level().captureScene(1, com.openggf.game.presentation.PlayerPresentationPose.nativePose());
             assertEquals(400, scene.width());
@@ -1102,6 +1109,8 @@ class TestPuttPuttParadise {
                     .filter(s -> s.objectId() == 0x41 && ((s.subtype() >> 3) & 0xE) == 0)
                     .findFirst().orElseThrow();
             manager.reset(Math.max(0, springSpawn.x() - 160));
+            // This fixture replaces the placement window without executing its setup pass.
+            manager.publishRepresentedInitialCollisionResponseList();
             var spring = manager.getActiveObjectForRewind(springSpawn);
             assertNotNull(spring);
             assertEquals("paradise.objects.GolfUpSpring", spring.getClass().getName());
@@ -1139,11 +1148,11 @@ class TestPuttPuttParadise {
         assertNull(OwnerCallbackScope.current(), "creator scope does not leak after dispatch");
     }
 
-    private void titleTap(TitleScreenProvider title, com.openggf.control.InputHandler input, int key) {
+    private void titleTap(com.openggf.GameLoop loop, com.openggf.control.InputHandler input, int key) {
         input.handleKeyEvent(key, org.lwjgl.glfw.GLFW.GLFW_PRESS);
-        input.refreshLogicalSnapshot(); title.update(input); input.update();
+        loop.step();
         input.handleKeyEvent(key, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
-        input.refreshLogicalSnapshot(); title.update(input); input.update();
+        loop.step();
     }
 
     private record RewindExpected(com.openggf.game.rewind.CompositeSnapshot course, Object meter,
@@ -1251,10 +1260,15 @@ class TestPuttPuttParadise {
     }
 
     private com.openggf.game.mode.CourseControl checkpointCourse(HeadlessTestFixture fixture) throws Exception {
+        return checkpointCourse(fixture.runtime());
+    }
+
+    private com.openggf.game.mode.CourseControl checkpointCourse(
+            com.openggf.game.session.GameplayModeContext session) throws Exception {
         var constructor = com.openggf.game.mode.CourseControl.class.getDeclaredConstructor(
                 com.openggf.game.session.GameplayModeContext.class);
         constructor.setAccessible(true); // Engine-internal constructor, test only; checkpoint stays opaque.
-        return constructor.newInstance(fixture.runtime());
+        return constructor.newInstance(session);
     }
 
     @Test void checkpointFromDisposedSessionCannotReplaceNewGolferOrCourse() throws Exception {

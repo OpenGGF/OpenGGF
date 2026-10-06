@@ -3978,11 +3978,15 @@ public class GameLoop {
 
     private void doExitTitleScreen(TitleActionRoute route) {
         TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
+        // reset() may discard a creator title's selection. Resolve the complete
+        // destination while the exiting provider still owns that selection.
+        int zone = titleStartZone();
+        int act = titleStartAct(zone);
         if (titleScreen != null) {
             titleScreen.reset();
         }
 
-        executeTitleActionRoute(route);
+        executeTitleActionRoute(route, zone, act);
     }
 
     /**
@@ -4004,26 +4008,25 @@ public class GameLoop {
         return null;
     }
 
-    private void startLevelFromTitleScreenImmediate() {
+    private void startLevelFromTitleScreenImmediate(int zone, int act) {
         setGameMode(GameMode.LEVEL);
         GameServices.gameState().startNewGameFromTitle();
         try {
-            levelManager.loadZoneAndActForFreshRuntime(titleStartZone(),
-                    titleStartAct());
+            levelManager.loadZoneAndActForFreshRuntime(zone, act);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load title screen start level", e);
         }
         GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
     }
 
-    private int titleStartAct() {
+    private int titleStartAct(int zone) {
         var provider = getTitleScreenProviderLazy();
         var module = GameServices.module();
         var registry = module != null ? module.getZoneRegistry() : null;
         if (provider == null || registry == null) {
             return 0;
         }
-        int count = Math.max(1, registry.getActCount(titleStartZone()));
+        int count = Math.max(1, registry.getActCount(zone));
         return Math.clamp(provider.startActIndex(), 0, count - 1);
     }
 
@@ -4120,11 +4123,11 @@ public class GameLoop {
         return route == TitleActionRoute.DATA_SELECT || route == TitleActionRoute.LEVEL;
     }
 
-    private void executeTitleActionRoute(TitleActionRoute route) {
+    private void executeTitleActionRoute(TitleActionRoute route, int zone, int act) {
         switch (route) {
             case DATA_SELECT -> initializeDataSelectMode();
             case LEVEL_SELECT -> doEnterLevelSelect();
-            case LEVEL, TWO_PLAYER, OPTIONS, OTHER -> startLevelFromTitleScreenImmediate();
+            case LEVEL, TWO_PLAYER, OPTIONS, OTHER -> startLevelFromTitleScreenImmediate(zone, act);
         }
     }
 

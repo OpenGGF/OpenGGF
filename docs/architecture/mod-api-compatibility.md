@@ -40,6 +40,14 @@ engineApiRange: ">=0.7.0 <0.8.0"
 Manifest `formatVersion: 1` is a separate wire-format version. It does not mean
 Mod API 1.x and must not be used to infer compiled-code compatibility.
 
+The controlled-entry follow-up changes `CourseControl.advanceEntryPresentation()`
+from `void` to `boolean`: it reports whether the row advanced an active entry
+fade. `presentationReady()` includes completion of the native released title
+overlay. Modes can hold a settled world during that final presentation and capture
+a reusable checkpoint afterward. This is an unpublished candidate signature
+change; rebuild compiled mods. The `0.7` pin and `ModApiVersion` description
+are updated together while the descriptor retains candidate `0.7.0`.
+
 The KiS2 trace-readiness follow-up adds semantic movement and checkpoint-ring
 rules, the saved ring bank in checkpoint/load snapshots, separate boss duck-frame
 selection, and an explicit title-to-level-select action plus post-reset menu

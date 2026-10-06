@@ -2135,3 +2135,74 @@ The example's 25 local README links resolve and `git diff --check` passes.
 Develop has since advanced to `eaceceda440328f0fc7864deca4cd4134811d373`
 with independent Infinite Sonic example changes. Final combined validation
 must use that actual destination; no feature merge into develop is requested.
+
+
+### Real title-route capture audit (2026-10-06)
+
+Opus r5 switched from direct course loading to the production title route at
+`b34da10e4` and exposed two faults that the older physics-matching captures
+could not exercise. The engine reset the external title before reading its act,
+so EHZ2 practice loaded EHZ1. Controlled LEVEL rows also bypassed the native
+released title overlay, leaving its TEXT_WAIT state visible for the whole hole.
+The proposed direct-load capture fallback was rejected: the final reel must
+exercise the menu route, not conceal a production failure.
+
+The retained fix reads the validated zone/act before title-provider reset and
+services the normal released overlay/control-lock owner on controlled rows,
+shared by live, recorded and forward-rewind stepping. The mod keeps its own
+presentation and does not retain a stale launch receipt or reset the native card.
+A further regression proved that an early neutral checkpoint restored entry
+text on rollback. `CourseControl.presentationReady()` now includes completion
+of the native overlay, so the mod captures its first reusable lie afterward.
+The fade operation returns whether the row serviced an active fade, so the mod
+can preserve its initial simulation boundary without reading the engine fade
+manager. The regenerated unpublished pin replaces the void return with boolean;
+the descriptor and candidate version remain 0.7.0. Rebuild compiled mods.
+
+`TestPuttPuttParadise#normalDevelopmentBootUsesRealTitleRouteAndCompletesOverlayWhileAimHolds`
+now drives real GameLoop menu taps and the exit fade for both practice acts.
+Both initially failed with the reported wrong act/frozen overlay; after those
+fixes, both failed the added rollback check. The final queued S2-ROM invocation
+passed **2 checks, zero failures/errors/skips**. Headless rendering deliberately
+omits the locked display while retaining the native exit tail; the rendered
+reel supplies visible title-phase coverage. The spring reconstruction fixture
+also republishes its collision list after manually replacing the placement
+window, rather than snapshotting publishers from its abandoned window.
+
+The combined broad run `20261006T135649Z-ccb4b6eb` on `b34da10e4` was intentionally
+interrupted for these newly proven production regressions. Maven stopped,
+temporary output was cleaned and the diagnostics were acknowledged. This is
+incomplete validation, not a suite result. Final combined validation and the
+four production-route recaptures must use the corrected source.
+
+
+Wider focused validation caught the first readiness fix continuing native world
+steps after the spawn had already settled. That shifted the solved route inputs
+and moving-platform phases. The mod now admits the original fade/settlement
+steps, holds that world while the title exits, and captures only afterward.
+All **116** course tests passed again, including full route/viewport/character
+coverage and alternating two-player rounds. The online world-isolation probe
+now recognizes the released native title, its pending PLC commands and its art
+publication as bounded entry presentation owners; it continues comparing every
+simulation owner on held rows. A failed subprocess now drains its bounded
+terminal output before reporting a broken pipe, preserving the actual failure.
+
+The protocol-generation test also exposed a fast-failure listener race: a bad
+peer could disconnect before the first host poll and remove its undrained socket,
+losing the readable version mismatch. The regression explicitly waits for EOF
+and worker retirement before the first poll and failed before the fix. The
+listener now retains undrained terminal events in its existing bounded peer set;
+only drained, fully retired sockets leave it. The unnecessary disconnect callback
+was removed. This is mod-owned transport behavior, with no engine networking change.
+
+
+Final focused verification used queued Maven with `-Dmse=off` and
+`TestButtonPrompts,TestMenuInput,TestGamepadInputManager,TestInputHandler,TestGolfModel,TestGolfMenu,TestGolfTransport,TestGolfOnlineIntegration,TestPuttPuttParadise,TestCourseControl,TestModApiPinPolicy,TestModApiSignatureSurface,TestOwnerBoundGamePatch,TestStartupRouteResolver,TestTraceSuppressedRowClosure,TestInLevelTitleCardCoordinator,TestModZoneTitleCardPolicy,TestSonic2LevelInitProfile`,
+with the existing absolute S2/S3&K ROM paths. It passed **270 checks with no
+failures, errors or skips**, including the real title/rollback regressions,
+full courses, independent-JVM netplay and the forced early version mismatch.
+The signature generator reproduced all 19,447 candidate signatures in canonical
+order. Preflight passed with Java 21, PowerShell and explicit
+`LUA_BIN=/usr/bin/lua5.4`. A fresh fetch confirmed the destination remains
+`eaceceda440328f0fc7864deca4cd4134811d373`; the main workspace's unrelated
+files/submodules and the untracked launch script remain preserved.

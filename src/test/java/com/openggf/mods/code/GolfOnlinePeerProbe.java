@@ -142,6 +142,9 @@ public final class GolfOnlinePeerProbe {
     private void step(int held, int actions, boolean start) throws Exception {
         var before = fixture.gameplayMode().getRewindRegistry().captureCourse();
         boolean entryMusicPending = GameServices.module().getLevelInitProfile().isLevelMusicPublicationPending();
+        boolean entryTitleActive = GameServices.module().getTitleCardProvider().isOverlayActive();
+        String entryArtKey = GameServices.module().getObjectArtProvider()
+                instanceof com.openggf.game.rewind.RewindSnapshottable<?> art ? art.key() : null;
         Object beforeMatch = value(controller, "matchState");
         Object beforePending = beforeMatch == null ? null : value(beforeMatch, "pending");
         Object beforeId = beforePending == null ? null : value(beforePending, "id");
@@ -167,9 +170,13 @@ public final class GolfOnlinePeerProbe {
             var after = fixture.gameplayMode().getRewindRegistry().captureCourse();
             require(before.entries().keySet().equals(after.entries().keySet()), "held row changed course adapter layout");
             for (var entry : before.entries().entrySet()) {
-                // A held row is still a presented VBlank: only the pending ROM entry-music
-                // countdown keeps running in it. Everything else, once published, stays frozen.
+                // The released native title and pending entry music retain their presentation
+                // lifetime on held rows. The course's simulation owners still stay frozen.
                 if (entryMusicPending && entry.getKey().equals(com.openggf.game.sonic2.timing.Sonic2LevelMusicScheduler.REWIND_KEY)) continue;
+                if (entryTitleActive && entry.getKey().equals(com.openggf.game.sonic2.titlecard.TitleCardManager.REWIND_KEY)) continue;
+                // The title's final dispatch queues its own standard-water/animal art.
+                if (entryTitleActive && entry.getKey().equals(com.openggf.game.sonic2.resources.Sonic2PlcService.REWIND_KEY)) continue;
+                if (entryTitleActive && entry.getKey().equals(entryArtKey)) continue;
                 var changes = RewindSnapshotDiff.diffKey(entry.getKey(), entry.getValue(), after.get(entry.getKey()));
                 require(changes.isEmpty(), "held row " + rows + " changed " + entry.getKey() + ": " + changes.stream().limit(4).toList());
             }

@@ -191,7 +191,14 @@ streaming are optional layers; a first mod does not need them.
 ### Follow one shot
 
 1. `GolfMenu.Selection` configures the controller. The ROM-backed spawn settles
-   before `GolfMode.openTurn` captures a neutral lie. Competition holds the
+   before `GolfMode.openTurn` captures a neutral lie. The real title route keeps
+   the selected practice act through the menu reset and finishes the native entry
+   overlay before capturing that lie, so shot rewind never restores the title text.
+   It holds the settled world while that text exits; waiting for presentation
+   does not advance platforms, enemies or physics. The generic course operation
+   reports whether this row serviced the entry fade, so the mod needs no access
+   to the engine's fade manager.
+   Competition holds the
    incoming golfer for readiness. Locally a fresh A confirms; online that owner
    requests confirmation and waits for the host's authoritative AIM state.
 2. `beforeTick` advances the shot meter from logical A and arrow inputs. It

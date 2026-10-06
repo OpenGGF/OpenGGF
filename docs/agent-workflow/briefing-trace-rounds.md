@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Direct level-load captures can hide title-route faults (2026-10-06, Putt Putt
+Paradise at `b34da10e4`): the footage and course tests matched physics while the
+real menu reset erased the selected act and controlled LEVEL rows froze the
+released native title overlay. Exercise menu input, exit fade, destination load
+and the overlay exit through `GameLoop.step`, then record the actual act and
+overlay lifetime. A headless test intentionally omits the locked title display;
+it still retains the native exit tail. Use a rendered production-route capture
+to cover the visible title-card phase, and restore the initial shot checkpoint
+to verify that completed title text does not return on rollback.
+
 Nonzero PCM can be constant DC (2026-10-06, Putt Putt Paradise polish): a
 captured Sonic 2 music track measured about −21 dBFS RMS while long windows
 contained an almost constant offset rather than music. Inspect mean and

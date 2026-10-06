@@ -54,11 +54,20 @@ public final class CourseControl {
                 p.isHurt() || p.getHurtAtFrameStart(), p.getDead(), p.getRolling(), p.getYRadius(), supportDx, supportDy,
                 context.getCamera().getX(), context.getCamera().getY());
     }
-    /** Native entry art may finish while the initial lie settles, before HOLD begins. */
+    /** Consumes a pending initial card request; an already active native overlay finishes through controlled rows. */
     public void finishInitialPresentation() { context.getLevelManager().skipPendingInitialTitleCardPresentation(); }
-    /** Entry fade is presentation setup, completed before a neutral course checkpoint exists. */
-    public void advanceEntryPresentation() { if (context.getFadeManager().isActive()) context.getFadeManager().update(); }
-    public boolean presentationReady() { return !context.getFadeManager().isActive(); }
+    /** Advances an active entry fade; returns whether this row serviced that fade.
+     * Finish this setup before capturing a reusable course checkpoint. */
+    public boolean advanceEntryPresentation() {
+        boolean active = context.getFadeManager().isActive();
+        if (active) context.getFadeManager().update();
+        return active;
+    }
+    /** Entry fade and native released title text must finish before capturing a reusable lie. */
+    public boolean presentationReady() {
+        var title = context.getWorldSession().getGameModule().getTitleCardProvider();
+        return !context.getFadeManager().isActive() && (title == null || !title.isOverlayActive());
+    }
     public String engineIdentity() { return com.openggf.version.AppVersion.get(); }
     public String apiIdentity() { return com.openggf.ModSubsystem.current().apiIdentity(); }
     /** Engine-frozen content identities of every enabled mod, in deterministic activation order. */

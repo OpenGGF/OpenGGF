@@ -351,7 +351,15 @@ admits one native step with neutral player input. `afterTick` receives whether
 that step ran. Keep aim, menus and feedback in the controller; keep physics in
 native gameplay. Stock modules return no controller and retain their normal path.
 Initial setup rows are excluded from movie/history input; subsequent HOLD rows
-are included. Window focus and configured keyboard pause freeze both native and
+are included. Released native title-card text continues its presentation exit,
+including its normal control-lock ownership, on controlled rows. Pending entry
+music also retains its native presentation countdown. `presentationReady()`
+waits for the entry fade and title overlay to finish; capture the first reusable
+course checkpoint after that boundary so rollback cannot bring an entry card back.
+`advanceEntryPresentation()` returns whether it serviced an active fade on this
+row. A mode can settle its initial ball through those fade rows, then hold the
+settled world while the remaining title text exits.
+Window focus and configured keyboard pause freeze both native and
 creator rows; the configured frame-step key admits one row while paused. Start
 remains available for the creator's own menu. Holding Escape services the host's
 return fade independently of HOLD or pause. `allowsDebugRewind()` controls admission of live developer rewind.

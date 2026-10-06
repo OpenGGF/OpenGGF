@@ -145,7 +145,7 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
 
     private boolean updateBeforeTick(CourseControl course, LogicalInputSnapshot input) {
         tick++; viewport = course.viewportWidth();
-        if (neutralLie == null) course.advanceEntryPresentation();
+        boolean entryFadeActive = neutralLie == null && course.advanceEntryPresentation();
         var playerInput = controls(input);
         actionHeld = playerInput.actionHeldMask() != 0;
         boolean rewindPressed = course.rewindHeld() && !rewindHeld; rewindHeld = course.rewindHeld();
@@ -207,7 +207,13 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
                     character(online == null ? selection.playerTwo().code() : online.state().guestCharacter()));
         }
         if (match.snapshot().status() != GolfMatch.Status.PLAYING) return false;
-        if (neutralLie == null) { course.finishInitialPresentation(); return true; }
+        if (neutralLie == null) {
+            course.finishInitialPresentation();
+            var ball = course.playerState();
+            // Settle the initial lie through the entry fade, then hold its world while
+            // the native text exits. Capturing later must not run extra course physics.
+            return initialSteps == 0 || entryFadeActive || !ball.floorSupport() || Math.abs(ball.groundSpeed()) > 0x40;
+        }
         if (rewindQueued) { beginRewind(course); rewindQueued = false; }
         if (replay.playing()) {
             if (replay.step()) finishRewind(course);
@@ -416,6 +422,7 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
                 if (match != null) lieX[match.snapshot().activePlayer()] = ball.x();
             }
         }
+        else if (neutralLie == null && match != null && !presentationPaused()) observe(course);
         if (online != null && online.state().host() && tick % 3 == 0) {
             if (replay.playing()) online.publish(tick, replay.frame(0));
             else online.publish(tick, pose(), finishX, finishY, feedback.clock());

@@ -13,7 +13,9 @@ public final class ModApiVersion {
      * opt-in whole-game presentation pacing, controlled level admission and opaque
      * course checkpoints, semantic native impulses, logical menu pointers, and read-only
      * ROM-backed value scenes, held idle poses, controller-owned rewind presentation values
-     * and per-player button prompt labels derived from live bindings.
+     * and per-player button prompt labels derived from live bindings. Controlled
+     * entry fade admission reports whether it advanced; checkpoint readiness includes
+     * the native released title overlay's completion.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

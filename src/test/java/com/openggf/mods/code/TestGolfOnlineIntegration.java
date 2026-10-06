@@ -291,6 +291,7 @@ class TestGolfOnlineIntegration {
         final ArrayBlockingQueue<State> responses = new ArrayBlockingQueue<>(16);
         final ArrayDeque<String> diagnostic = new ArrayDeque<>();
         final AtomicReference<Throwable> readerFailure = new AtomicReference<>();
+        final Thread outputReader;
         State state;
         Peer(String role, int port, Path jar, Path rom, Path directory) throws Exception {
             this(role, port, jar, rom, directory, false);
@@ -306,7 +307,7 @@ class TestGolfOnlineIntegration {
                     GolfOnlinePeerProbe.class.getName(), role, Integer.toString(port), jar.toString(), rewinds ? "rewinds" : "off")
                     .directory(directory.toFile()).redirectErrorStream(true).start();
             commands = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
-            Thread.ofVirtual().name("golf-integration-" + role).start(() -> {
+            outputReader = Thread.ofVirtual().name("golf-integration-" + role).start(() -> {
                 try (var lines = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                     for (String line; (line = lines.readLine()) != null;) {
                         if (line.length() > 32_768) throw new IllegalStateException("unbounded peer output");
@@ -324,6 +325,9 @@ class TestGolfOnlineIntegration {
             try {
                 commands.write(command); commands.newLine(); commands.flush(); state = response(Duration.ofSeconds(15));
             } catch (java.io.IOException failure) {
+                // A fatal peer can print its terminal state before the JVM prints the
+                // exception. Drain its bounded output before reporting a broken pipe.
+                if (process.waitFor(1, TimeUnit.SECONDS)) outputReader.join(1000);
                 String output; synchronized (diagnostic) { output = String.join("\n", diagnostic); }
                 throw new java.io.IOException("Peer command failed: " + command + "\n" + output, failure);
             }

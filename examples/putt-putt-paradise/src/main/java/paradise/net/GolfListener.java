@@ -38,7 +38,12 @@ public final class GolfListener implements AutoCloseable {
     }
     // The disconnect callback runs before its worker has returned. Retain ownership until
     // all threads have actually stopped; at most MAX_PEERS connections can be retained.
-    private void discardRetired() { peers.removeIf(connection -> connection.isClosed() && connection.activeWorkers() == 0); }
+    private void discardRetired() {
+        // An undrained terminal socket still owns a disconnect event. Keep it in
+        // the bounded peer set until the presentation thread receives that event.
+        peers.removeIf(connection -> !accepted.contains(connection)
+                && connection.isClosed() && connection.activeWorkers() == 0);
+    }
     private void acceptLoop() {
         try {
             while (!closed.get()) {
@@ -47,11 +52,8 @@ public final class GolfListener implements AutoCloseable {
                 synchronized (peers) {
                     discardRetired();
                     if (closed.get() || peers.size() >= MAX_PEERS) { socket.close(); continue; }
-                    var holder = new GolfConnection[1];
-                    connection = GolfConnection.accepted(socket, () -> {
-                        synchronized (peers) { accepted.remove(holder[0]); }
-                    });
-                    holder[0] = connection; peers.add(connection); accepted.addLast(connection);
+                    connection = GolfConnection.accepted(socket);
+                    peers.add(connection); accepted.addLast(connection);
                 }
                 connection.startIo();
             }

@@ -23,7 +23,6 @@ public final class GolfConnection implements AutoCloseable {
     public record Stats(int incomingCommands, int reliableMessages, int reliableBytes,
                         int pendingFrames, int inFlightFrames, long coalescedFrames) { }
     private final Socket socket;
-    private final Runnable released;
     private final OutboundPackets outbound = new OutboundPackets();
     private final ArrayDeque<Received> incoming = new ArrayDeque<>();
     private final AtomicBoolean closed = new AtomicBoolean();
@@ -34,8 +33,8 @@ public final class GolfConnection implements AutoCloseable {
     private volatile int inFlightFrame;
     private Disconnected disconnected;
 
-    private GolfConnection(Socket socket, Runnable released) {
-        this.socket = socket; this.released = released;
+    private GolfConnection(Socket socket) {
+        this.socket = socket;
         // Terminal delivery can outlive creator-loader close. Resolve worker-created helpers
         // before launch, including the first inbound event and deadline disconnect record.
         Objects.requireNonNull(Received.class); Objects.requireNonNull(Disconnected.class);
@@ -46,7 +45,7 @@ public final class GolfConnection implements AutoCloseable {
         Objects.requireNonNull(hostname);
         if (hostname.isBlank() || hostname.length() > 253 || port < 1 || port > 65535)
             throw new IllegalArgumentException("hostname/port");
-        var connection = new GolfConnection(new Socket(), () -> { });
+        var connection = new GolfConnection(new Socket());
         connection.worker("connect", () -> {
             try {
                 connection.socket.connect(new InetSocketAddress(hostname, port), 3000);
@@ -56,8 +55,8 @@ public final class GolfConnection implements AutoCloseable {
         return connection;
     }
 
-    static GolfConnection accepted(Socket socket, Runnable released) {
-        return new GolfConnection(socket, released);
+    static GolfConnection accepted(Socket socket) {
+        return new GolfConnection(socket);
     }
     void startIo() {
         if (closed.get()) return;
@@ -168,7 +167,6 @@ public final class GolfConnection implements AutoCloseable {
         try { socket.close(); } catch (IOException ignored) { }
         synchronized (deadlineLock) { writeDeadline = 0; deadlineLock.notifyAll(); }
         for (Thread worker : workers) if (worker != Thread.currentThread()) worker.interrupt();
-        released.run();
     }
     /** Local teardown discards queued packets and releases the port without waiting for workers. */
     @Override public void close() { disconnect("local closed"); }
