@@ -47,6 +47,14 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         this.value = value;
     }
 
+    /** A ring hanging in the air, as stock level rings do, until Sonic or his magnet takes it. */
+    static Pickup floating(int x, int y) {
+        var ring = new Pickup(spawnAt(x, y, RING), 0, 0, 1);
+        ring.resting = true;
+        ring.age = 20;
+        return ring;
+    }
+
     static ObjectSpawn spawnAt(int x, int y, int kind) {
         return new ObjectSpawn(x, y, 0, kind & 0xFF, 0, false, y, -1, SurvivorsMod.ID, SurvivorsMod.ID + ":pickup");
     }

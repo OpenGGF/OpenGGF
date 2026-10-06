@@ -24,6 +24,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     static final int ELITE_PERIOD = 60 * 30;
     /** Every this many chained bounces, Sonic goes invincible for the stock duration. */
     static final int FEVER_COMBO = 10;
+    static final int RING_FORMATION_PERIOD = 600;
     // GLFW_KEY_ESCAPE: a tap leaves the arena for the title (banking the run).
     private static final int KEY_ESCAPE = 256;
 
@@ -53,7 +54,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     boolean playerFrozen;
     int savedX, savedY, savedG;
     // Weapons and moves.
-    int boomTimer, flickyTimer, barrierTimer, orbitAngle;
+    int boomTimer, flickyTimer, barrierTimer, orbitAngle, ringTimer;
     int airFrames, airJumpsUsed, dashFrames, comboGrace;
     boolean pounding, downWasHeld, wasGrounded;
     // Banners.
@@ -234,6 +235,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             }
         }
         spawnWaves();
+        scatterRings(player);
         moves(player);
         combo(player);
         autoWeapons(player);
@@ -333,6 +335,35 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         spawnFreeChild(() -> new Boss(spawn, hp));
         banner(stage == Stages.DEZ ? "SILVER SONIC!" : "WARNING! EGGMAN!", 150, Draw.RED);
         services().audioManager().playMusic(stage == Stages.DEZ ? Sonic2Music.FINAL_BOSS.id : Sonic2Music.BOSS.id);
+    }
+
+    /**
+     * Every ten seconds of the fight a formation of five floating rings appears somewhere in
+     * the arena away from Sonic, so roaming the arena pays as well as fighting.
+     */
+    private void scatterRings(AbstractPlayableSprite player) {
+        if (phase != FIGHT || ++ringTimer < RING_FORMATION_PERIOD) return;
+        ringTimer = 0;
+        var run = run();
+        var arena = arena();
+        int x = arena.clampX(arena.left() + 40 + run.nextInt(Math.max(1, arena.width() - 80)), 40);
+        if (Math.abs(x - player.getCentreX()) < 120) x = arena.clampX(player.getCentreX() + (x < player.getCentreX() ? -200 : 200), 40);
+        int y = floorBelow(x, arena) - 48 - run.nextInt(48);
+        boolean arc = run.nextInt(2) == 0;
+        for (int i = 0; i < 5 && services().objectManager().hasFreeDynamicSlot(); i++) {
+            int rx = x + (i - 2) * 20, ry = arc ? y + Math.abs(i - 2) * 10 : y;
+            spawnFreeChild(() -> Pickup.floating(rx, ry));
+        }
+    }
+
+    /** The arena floor at {@code x}: the first surface from the floor's highest point down. */
+    private int floorBelow(int x, Arena arena) {
+        var levelManager = services().levelManager();
+        for (int y = arena.floorTop() - 16; y <= arena.floorBottom() + 48; y += 16) {
+            var r = com.openggf.physics.ObjectTerrainUtils.checkFloorDist(levelManager, x, y);
+            if (r.foundSurface() && r.distance() >= 0 && r.distance() < 16) return y + r.distance();
+        }
+        return arena.floorTop();
     }
 
     // =========================================================================================

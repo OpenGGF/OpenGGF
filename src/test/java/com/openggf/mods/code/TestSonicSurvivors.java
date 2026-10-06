@@ -471,6 +471,29 @@ class TestSonicSurvivors {
         assertEquals(0, level.getElapsedSeconds(), "the timer is held at zero instead");
     }
 
+    @Test void floatingRingFormationsAppearAroundTheArena() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        fixture.sprite().setInvulnerableFrames(100000);
+        int left = arenaValue("left"), right = arenaValue("right");
+        for (int i = 0; i < 605; i++) {
+            fixture.stepIdleFrames(1);
+            clearEnemies();
+            // Only the formation should be left: clear drops from anything defeated earlier.
+            if (i < 560) for (var pickup : objects("Pickup")) pickup.setDestroyed(true);
+            if (getInt(run(), "pendingLevels") > 0) set(run(), "pendingLevels", 0);
+        }
+        var rings = objects("Pickup");
+        assertEquals(5, rings.size(), "ten seconds in, five rings float somewhere in the arena");
+        for (var ring : rings) {
+            assertTrue(ring.getX() > left && ring.getX() < right);
+            assertTrue(Math.abs(ring.getX() - fixture.sprite().getCentreX()) >= 60, "away from Sonic");
+        }
+        int y = rings.get(0).getY();
+        fixture.stepIdleFrames(60);
+        assertEquals(y, rings.get(0).getY(), "they hang in the air until collected");
+    }
+
     @Test void ringsAreHealthAndTheLastHitIsLethal() throws Exception {
         var fixture = launch(0, 0);
         startRun(fixture);

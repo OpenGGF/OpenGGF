@@ -37,7 +37,8 @@ Sky Chase has no ground to fight on and is skipped.
 2. **Camp.** Spend banked rings in the shop, then START RUN. A run begins with **30 rings**.
 3. **Survive.** The clock counts down **2:00**. Badniks spawn just off-screen on both sides and
    drop in from above, faster and tougher as the clock runs down and further along the route.
-   Red chevrons at the screen edges point at badniks approaching from off-screen. Every 30
+   Every 10 seconds a formation of five floating rings appears somewhere in the arena away
+   from Sonic. Red chevrons at the screen edges point at badniks approaching from off-screen. Every 30
    seconds an **elite** (gold health bar, six times the hitpoints) arrives; it drops a monitor.
 4. **Boss.** At 0:00 Eggman arrives in the zone's own vehicle (ROM boss art), hovering within a
    jump of the ground Sonic stands on, sweeping the arena, dropping volleys of the zone's
