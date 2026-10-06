@@ -319,6 +319,16 @@ default methods built on `drawRegion`, so test canvases need not implement them.
 palette)` decodes raw 8x8 tiles in row or column order. A palette-lines helper was considered
 and left out: it would save one `System.arraycopy` per line.
 
+`ModContext.requireDisplayWidth(width)` lets a patch mod fix its session's logical width to a
+`display.aspect` preset width without a `GamePatch`: the frozen `ModRegistrationPlan` carries
+the preset name (a new trailing component with a compatibility constructor for the previous
+shape) and `ModBackedGamePatch`'s module returns it from `requiredDisplayAspect()`, so the
+existing session-override and window-refit path applies it. Registration rejects other widths,
+a second call and standalone manifests. `DebuggableScene` is an optional `@ModApi` interface
+(`boolean debugJump(String)`) a scene implements so tools reach its screens without
+reflection; the engine-internal host's `debugJump(String)` runs it inside the owner's fault
+boundary through `OwnedSceneFactory`.
+
 `SceneContext`, `SceneCanvas`, `SceneArt`, `SceneRomArt`, `SceneSpriteSet`, `SceneStorage` and
 `SceneAudio` are implemented by the engine; creators use them (and may fake them in tests) but
 the candidate may add methods to them. `SceneRomArt`'s zone pictures are abstract methods with

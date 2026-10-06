@@ -48,12 +48,30 @@ public final class OwnedSceneFactory {
         return scene instanceof Owned owned ? owned.scene : scene;
     }
 
+    /**
+     * Sends {@code command} to a scene from {@link #create} that implements
+     * {@link com.openggf.mods.scene.DebuggableScene}, inside the fault boundary; false when the
+     * scene has no debug entry point or did not understand the command.
+     */
+    public static boolean debugJump(ModScene scene, String command) {
+        return scene instanceof Owned owned && owned.scene instanceof com.openggf.mods.scene.DebuggableScene debuggable
+                && owned.boundary().call(owned.owner(), () -> debuggable.debugJump(command));
+    }
+
     /** Runs each lifecycle call on the creator's scene inside the owner's fault boundary. */
     private final class Owned implements ModScene {
         private final ModScene scene;
 
         Owned(ModScene scene) {
             this.scene = scene;
+        }
+
+        ModFaultBoundary boundary() {
+            return boundary;
+        }
+
+        String owner() {
+            return ownerModId;
         }
 
         @Override

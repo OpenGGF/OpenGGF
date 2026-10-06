@@ -105,9 +105,10 @@ Input comes as named buttons and keys, never raw numbers:
 
 Slay the Robotnik's `ui/Controls` turns all of this into the few verbs its screens use.
 
-To always play in widescreen, add a game patch whose module returns
-`requiredDisplayAspect() = "WIDE_16_9"`; the player's setting comes back at the master
-title. See `SlayTheRobotnikMod.WidescreenPatch`.
+To lay out for one width, call `context.requireDisplayWidth(400)` in `register` (320, 352,
+400, 528 or 800): the engine switches the session to that display aspect before the scene
+opens and refits the window, and the player's own setting comes back at the master title.
+Slay the Robotnik asks for 400.
 
 ## 3. Drawing
 
@@ -235,8 +236,9 @@ rendering them. The engine tests `TestModSceneHost`, `TestSlayTheRobotnikExample
   tests;
 - open the scene against a real game session, play ticks, and assert on the recorded frame
   and on the fault boundary's findings;
-- give the scene a debug entry point (Slay the Robotnik's `SlayScene.debugJump`) so tests
-  and screenshot tools can go straight to any screen.
+- implement `DebuggableScene` (`boolean debugJump(String command)`) so tests and screenshot
+  tools can go straight to any screen through the host; return false for commands the scene
+  does not know. Slay the Robotnik's `SlayScene.debugJump` documents its command grammar.
 
 `SlayTheRobotnikCapture` renders headless screenshots of the example with GL; reuse its
 approach for your own scene.

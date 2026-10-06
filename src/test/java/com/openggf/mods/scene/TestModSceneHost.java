@@ -123,6 +123,71 @@ class TestModSceneHost {
     }
 
     @Test
+    void aRequiredDisplayWidthBecomesTheModulesAspect() {
+        GameModule base = mock(GameModule.class);
+        when(base.requiredDisplayAspect()).thenReturn("SUPER_32_9");
+        ModFaultBoundary boundary = boundary(new ModRuntimeFindingStore());
+        GameModule wide = new ModBackedGamePatch(ModContextTestAccess.freezeWithDisplayWidth("cards", "s3k", 400),
+                boundary).apply(base, mock(PatchContext.class));
+        assertEquals("WIDE_16_9", wide.requiredDisplayAspect());
+        GameModule plain = new ModBackedGamePatch(ModContextTestAccess.freezeWithStartupScene("cards", "s3k",
+                ProbeScene::new), boundary).apply(base, mock(PatchContext.class));
+        assertEquals("SUPER_32_9", plain.requiredDisplayAspect(), "without a request the base module decides");
+        assertThrows(ModRegistrationException.class,
+                () -> ModContextTestAccess.freezeWithDisplayWidth("cards", "s3k", 401), "only the presets");
+        assertThrows(ModRegistrationException.class,
+                () -> ModContextTestAccess.freezeStandaloneWithDisplayWidth("solo", 400), "patch mods only");
+    }
+
+    @Test
+    void debugJumpsReachADebuggableSceneInsideItsFaultBoundary() {
+        final class Debuggable extends ProbeSceneBase implements DebuggableScene {
+            final List<String> jumps = new ArrayList<>();
+
+            @Override
+            public boolean debugJump(String command) {
+                if (command.equals("boom")) {
+                    throw new IllegalStateException("bad jump");
+                }
+                jumps.add(command);
+                return command.startsWith("go:");
+            }
+        }
+        Debuggable scene = new Debuggable();
+        ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
+        ModSceneHost host = new ModSceneHost();
+        assertFalse(host.debugJump("go:shop"), "no scene open");
+        host.open(ModContextTestAccess.ownedScene("cards", () -> scene, boundary(findings)),
+                services(new ArrayList<>()), 320, 224);
+        assertTrue(host.debugJump("go:shop"));
+        assertFalse(host.debugJump("nonsense"), "the scene says it did not understand");
+        assertEquals(List.of("go:shop", "nonsense"), scene.jumps);
+        assertThrows(ModFaultBoundary.CallbackAborted.class, () -> host.debugJump("boom"));
+        assertTrue(findings.snapshot().containsKey("cards"), "a throwing jump is a mod fault like any other");
+        host.close();
+
+        ModSceneHost plain = new ModSceneHost();
+        plain.open(owned(ProbeScene::new), services(new ArrayList<>()), 320, 224);
+        assertFalse(plain.debugJump("go:shop"), "a scene without the interface has no debug entry");
+        plain.close();
+    }
+
+    /** A do-nothing scene to extend in tests. */
+    abstract static class ProbeSceneBase implements ModScene {
+        @Override
+        public void enter(SceneContext ctx) {
+        }
+
+        @Override
+        public void update(SceneContext ctx) {
+        }
+
+        @Override
+        public void draw(SceneContext ctx, SceneCanvas canvas) {
+        }
+    }
+
+    @Test
     void standaloneModsCannotRegisterAStartupScene() {
         assertThrows(ModRegistrationException.class,
                 () -> ModContextTestAccess.freezeStandaloneWithStartupScene("solo", () -> new ProbeScene()));

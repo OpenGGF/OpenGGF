@@ -47,7 +47,9 @@ public final class ModApiSurfaceInventory {
             "com.openggf.level.spawn.SpawnPoint",
             // Scene constant holders: mods use their constants, which no signature names.
             "com.openggf.mods.scene.SceneButtons",
-            "com.openggf.mods.scene.SceneKeys");
+            "com.openggf.mods.scene.SceneKeys",
+            // Optional interface a scene implements; the engine finds it with instanceof.
+            "com.openggf.mods.scene.DebuggableScene");
 
     private ModApiSurfaceInventory() { }
 

@@ -19,6 +19,18 @@ public final class ModContextTestAccess {
         return new OwnedSceneFactory(owner, factory, boundary);
     }
 
+    public static ModRegistrationPlan freezeWithDisplayWidth(String owner, String baseGame, int width) {
+        ModContext context = new ModContext(owner, baseGame, ModAssetRoot.forTests(owner));
+        context.requireDisplayWidth(width);
+        return context.freeze();
+    }
+
+    public static ModRegistrationPlan freezeStandaloneWithDisplayWidth(String owner, int width) {
+        ModContext context = new ModContext(owner, null, ModAssetRoot.forTests(owner), null, true);
+        context.requireDisplayWidth(width);
+        return context.freeze();
+    }
+
     public static ModRegistrationPlan freezeStandaloneWithStartupScene(String owner, ModSceneFactory factory) {
         ModContext context = new ModContext(owner, null, ModAssetRoot.forTests(owner), null, true);
         context.registerStartupScene(factory);

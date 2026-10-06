@@ -88,6 +88,15 @@ public final class ModSceneHost {
         }
     }
 
+    /**
+     * Sends a debug command to the open scene if it implements {@link DebuggableScene} (tools
+     * and tests); false when no scene is open, it has no debug entry point, or it did not
+     * understand the command.
+     */
+    public boolean debugJump(String command) {
+        return scene != null && OwnedSceneFactory.debugJump(scene, command);
+    }
+
     /** Draw calls recorded by the last {@link #draw} (for tests and diagnostics). */
     List<SceneDrawOp> lastFrame() {
         return lastFrame;

@@ -889,6 +889,7 @@ CF-ANNOTATION TYPE com.openggf.mods.code.RomArtRequest visible @com.openggf.game
 CF-ANNOTATION TYPE com.openggf.mods.code.StandaloneLevelLoader visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.ZoneEventFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.ZoneEventFactory visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.mods.scene.DebuggableScene visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.ModScene visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.ModSceneFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.ModSceneFactory visible @java.lang.FunctionalInterface
@@ -11314,6 +11315,7 @@ METHOD com.openggf.mods.code.ModContext public  void registerObjectPreview(java.
 METHOD com.openggf.mods.code.ModContext public  void registerRomObjectArt(java.lang.String,com.openggf.mods.code.RomArtRequest)
 METHOD com.openggf.mods.code.ModContext public  void registerStartupScene(com.openggf.mods.scene.ModSceneFactory)
 METHOD com.openggf.mods.code.ModContext public  void registerZone(com.openggf.mods.code.ModZoneContribution)
+METHOD com.openggf.mods.code.ModContext public  void requireDisplayWidth(int)
 METHOD com.openggf.mods.code.ModHudProfileContribution public  com.openggf.game.ZoneKey destination()
 METHOD com.openggf.mods.code.ModHudProfileContribution public  com.openggf.level.objects.HudProfile profile()
 METHOD com.openggf.mods.code.ModHudProfileContribution public,final  boolean equals(java.lang.Object)
@@ -11438,6 +11440,7 @@ METHOD com.openggf.mods.code.RomArtRequest public,final  int hashCode()
 METHOD com.openggf.mods.code.RomArtRequest public,final  java.lang.String toString()
 METHOD com.openggf.mods.code.StandaloneLevelLoader public,static  com.openggf.level.Level load(com.openggf.io.ModAssetRoot,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.level.rings.RingSpriteSheet) THROWS java.io.IOException
 METHOD com.openggf.mods.code.ZoneEventFactory public,abstract  com.openggf.game.LevelEventProvider create()
+METHOD com.openggf.mods.scene.DebuggableScene public,abstract  boolean debugJump(java.lang.String)
 METHOD com.openggf.mods.scene.ModScene public  void exit(com.openggf.mods.scene.SceneContext)
 METHOD com.openggf.mods.scene.ModScene public,abstract  void draw(com.openggf.mods.scene.SceneContext,com.openggf.mods.scene.SceneCanvas)
 METHOD com.openggf.mods.scene.ModScene public,abstract  void enter(com.openggf.mods.scene.SceneContext)
@@ -17884,6 +17887,7 @@ TYPE interface public,abstract com.openggf.level.scroll.ZoneScrollHandler SUPER 
 TYPE interface public,abstract com.openggf.level.spawn.SpawnPoint SUPER <none>
 TYPE interface public,abstract com.openggf.mods.code.GgfMod SUPER <none>
 TYPE interface public,abstract com.openggf.mods.code.ZoneEventFactory SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.DebuggableScene SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.ModScene SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.ModSceneFactory SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneArt SUPER <none>
@@ -19177,6 +19181,7 @@ TYPE-ANNOTATION com.openggf.mods.code.RomArtRequest @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.StandaloneLevelLoader @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.ZoneEventFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.ZoneEventFactory @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.mods.scene.DebuggableScene @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.ModScene @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.ModSceneFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.ModSceneFactory @java.lang.FunctionalInterface

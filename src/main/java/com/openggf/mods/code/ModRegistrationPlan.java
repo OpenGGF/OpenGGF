@@ -30,8 +30,12 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                                           com.openggf.game.GameplayInputFilter> inputFilters,
                                   Map<com.openggf.game.ZoneKey.Mod,
                                           com.openggf.level.objects.HudProfile> hudProfiles,
-                                  com.openggf.mods.scene.ModSceneFactory startupScene) {
+                                  com.openggf.mods.scene.ModSceneFactory startupScene,
+                                  String requiredDisplayAspect) {
     public ModRegistrationPlan {
+        if (requiredDisplayAspect != null && baseGameId == null) {
+            throw new IllegalArgumentException("A required display width is available to patch mods only");
+        }
         if (startupScene != null && baseGameId == null) {
             throw new IllegalArgumentException("Startup scenes are available to patch mods only");
         }
@@ -105,6 +109,30 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 throw new IllegalArgumentException("Null " + policyName + " policy");
             }
         }
+    }
+
+    /** Compatibility constructor for the pre-display-width canonical shape. */
+    public ModRegistrationPlan(String ownerModId, String baseGameId,
+                               Map<String, ObjectFactory> objectFactories,
+                               Map<String, BakedSheetRef> objectArt,
+                               Map<String, BakedSheetReader.BakedSheet> preparedObjectArt,
+                               List<GamePatch> explicitPatches,
+                               List<ModZoneContribution> zones,
+                               List<PreparedModZone> preparedZones,
+                               Map<String, String> objectPreviewArtKeys,
+                               Map<CharacterKey, CharacterDefinition> characters,
+                               com.openggf.game.GameModule standaloneModule,
+                               Map<String, RomArtRequest> romObjectArt,
+                               Map<com.openggf.game.ZoneKey.Mod,
+                                       com.openggf.game.GameplayLaunchTeam> launchTeams,
+                               Map<com.openggf.game.ZoneKey.Mod,
+                                       com.openggf.game.GameplayInputFilter> inputFilters,
+                               Map<com.openggf.game.ZoneKey.Mod,
+                                       com.openggf.level.objects.HudProfile> hudProfiles,
+                               com.openggf.mods.scene.ModSceneFactory startupScene) {
+        this(ownerModId, baseGameId, objectFactories, objectArt, preparedObjectArt, explicitPatches, zones,
+                preparedZones, objectPreviewArtKeys, characters, standaloneModule, romObjectArt, launchTeams,
+                inputFilters, hudProfiles, startupScene, null);
     }
 
     /** Compatibility constructor for the pre-startup-scene canonical shape. */
@@ -223,7 +251,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
         return !objectFactories.isEmpty() || !objectArt.isEmpty() || !zones.isEmpty()
                 || !characters.isEmpty() || !romObjectArt.isEmpty()
                 || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty()
-                || startupScene != null;
+                || startupScene != null || requiredDisplayAspect != null;
     }
 
     /** Resolves and validates all declared sheets before the contribution is published. */
@@ -243,7 +271,8 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
         }
         return new ModRegistrationPlan(ownerModId, baseGameId, objectFactories, objectArt,
                 prepared, explicitPatches, zones, preparedZones,objectPreviewArtKeys,characters,
-                standaloneModule, romObjectArt, launchTeams, inputFilters, hudProfiles, startupScene);
+                standaloneModule, romObjectArt, launchTeams, inputFilters, hudProfiles, startupScene,
+                requiredDisplayAspect);
     }
 
     /** Resolves all level exports while the bounded creator view is still alive. */
