@@ -30,13 +30,22 @@ public final class Events {
     public static void register(Catalog c) {
         // Golden Wing family: a gamble for a relic.
         c.addEvent(new EventDef("event:giant_ring", "Giant Ring", "event:giant_ring", Set.of(1, 2, 3), null, ctx ->
-                ctx.page("A Giant Ring spins slowly above the treetops, humming with the power of the Chaos "
+                ctx.page("A Giant Ring hangs in the air, turning slowly and humming with the power of the Chaos "
                                 + "Emeralds. Something glitters on the other side.",
                         EventOption.of("[Jump In]", "Lose 8 HP. Obtain a random relic.", () -> {
-                            ctx.run().loseHp(8);
-                            String relic = ctx.obtainRandomRelic();
-                            ctx.page("The world spins in blue and white. You tumble back out clutching "
-                                    + (relic == null ? "nothing at all." : "the " + relic + "."), ctx.leave());
+                            // Rolled as obtainRandomRelic rolls it, so the picture can show it coming out.
+                            String relic = ctx.run().takeRelicFromPool(ctx.run().rollRelicTier(ctx.rng()));
+                            ctx.page("You take a run at it and leap into the ring...");
+                            ctx.illustrate(relic == null ? "jump" : "jump:" + relic, () -> {
+                                ctx.run().loseHp(8);
+                                String name = null;
+                                if (relic != null) {
+                                    ctx.obtainRelic(relic);
+                                    name = ctx.run().relic(relic).name();
+                                }
+                                ctx.page("The world spins in blue and white. You tumble back out clutching "
+                                        + (name == null ? "nothing at all." : "the " + name + "."), ctx.leave());
+                            });
                         }),
                         ctx.leave())));
 
@@ -76,19 +85,28 @@ public final class Events {
             ctx.page("Three monitors sit in a neat row on a grassy ledge, as if someone left them out for you. "
                             + "You only have time to break one.",
                     EventOption.of("[Super Ring]", "Heal " + heal + " HP.", () -> {
-                        ctx.run().heal(heal);
-                        ctx.page("Rings burst out and spin around you. You feel refreshed.", ctx.leave());
+                        ctx.page("You spin-jump onto the Super Ring monitor...");
+                        ctx.illustrate("0", () -> {
+                            ctx.run().heal(heal);
+                            ctx.page("Rings burst out and spin around you. You feel refreshed.", ctx.leave());
+                        });
                     }),
                     EventOption.of("[1-Up]", "Max HP +5.", () -> {
-                        ctx.run().gainMaxHp(5);
-                        ctx.page("A little chime plays. You feel sturdier.", ctx.leave());
+                        ctx.page("You spin-jump onto the 1-Up monitor...");
+                        ctx.illustrate("1", () -> {
+                            ctx.run().gainMaxHp(5);
+                            ctx.page("A little chime plays. You feel sturdier.", ctx.leave());
+                        });
                     }),
                     EventOption.of("[? Monitor]", "Obtain a random relic. Become <r>Cursed</r>: Robotnik's Laugh.",
                             () -> {
-                                ctx.obtainRandomRelic();
-                                ctx.obtainCard(CommonCards.ROBOTNIKS_LAUGH, false);
-                                ctx.page("Robotnik's face flickers on the screen. You pocket the prize, but the "
-                                        + "laughter follows you.", ctx.leave());
+                                ctx.page("You spin-jump onto the monitor full of static...");
+                                ctx.illustrate("2", () -> {
+                                    ctx.obtainRandomRelic();
+                                    ctx.obtainCard(CommonCards.ROBOTNIKS_LAUGH, false);
+                                    ctx.page("Robotnik's face flickers on the screen. You pocket the prize, but the "
+                                            + "laughter follows you.", ctx.leave());
+                                });
                             }));
         }));
 
@@ -134,28 +152,40 @@ public final class Events {
                     ctx.page("Giant mushrooms sway in a clearing, far too bouncy to be natural. Something is "
                                     + "rustling underneath the caps.",
                             EventOption.of("[Stomp]", "<r>Anger the badniks.</r> Win a fight for a relic.", () -> {
-                                ctx.addReward(new Reward.RelicReward(Relics.MUSHROOM_CAP));
-                                ctx.fight("aiz:wildlife", null);
+                                ctx.page("You jump onto the biggest cap. Something underneath does not like it.");
+                                ctx.illustrate("stomp", () -> {
+                                    ctx.addReward(new Reward.RelicReward(Relics.MUSHROOM_CAP));
+                                    ctx.fight("aiz:wildlife", null);
+                                });
                             }),
                             EventOption.of("[Eat]", "Heal " + heal + " HP. Become <r>Cursed</r>: Tangled.", () -> {
-                                ctx.run().heal(heal);
-                                ctx.obtainCard(CommonCards.TANGLED, false);
-                                ctx.page("Delicious. Your legs feel strange, though.", ctx.leave());
+                                ctx.page("You break off a piece of cap and take a bite...");
+                                ctx.illustrate("eat", () -> {
+                                    ctx.run().heal(heal);
+                                    ctx.obtainCard(CommonCards.TANGLED, false);
+                                    ctx.page("Delicious. Your legs feel strange, though.", ctx.leave());
+                                });
                             }));
                 }));
 
         // Golden Shrine.
         c.addEvent(new EventDef("event:ring_shrine", "Ring Shrine", "event:ring_shrine", Set.of(1, 2), null, ctx ->
-                ctx.page("A shrine of golden rings stands in a quiet glade. The offering bowl is overflowing.",
+                ctx.page("A shrine of golden rings stands in a quiet corner. The offering bowl is overflowing.",
                         EventOption.of("[Pray]", "Gain 100 rings.", () -> {
-                            ctx.run().gainRings(100);
-                            ctx.page("A handful of rings rolls into your hands.", ctx.leave());
+                            ctx.page("You bow your head before the shrine...");
+                            ctx.illustrate("pray", () -> {
+                                ctx.run().gainRings(100);
+                                ctx.page("A handful of rings rolls into your hands.", ctx.leave());
+                            });
                         }),
                         EventOption.of("[Desecrate]", "Gain 275 rings. Become <r>Cursed</r>: Lost Rings.", () -> {
-                            ctx.run().gainRings(275);
-                            ctx.obtainCard(CommonCards.LOST_RINGS, false);
-                            ctx.page("You scoop out the whole bowl. Somewhere, rings start slipping through "
-                                    + "your fingers.", ctx.leave());
+                            ctx.page("You reach into the bowl and scoop out every last ring...");
+                            ctx.illustrate("desecrate", () -> {
+                                ctx.run().gainRings(275);
+                                ctx.obtainCard(CommonCards.LOST_RINGS, false);
+                                ctx.page("You scoop out the whole bowl. Somewhere, rings start slipping through "
+                                        + "your fingers.", ctx.leave());
+                            });
                         }),
                         ctx.leave())));
 
@@ -184,20 +214,34 @@ public final class Events {
         // Purifier.
         c.addEvent(new EventDef("event:waterfall", "Purifying Waterfall", "event:waterfall", Set.of(1, 2, 3),
                 run -> !run.removableCards().isEmpty(), ctx ->
-                ctx.page("A clear waterfall pours into a pool so clean it sparkles. Standing under it, you feel "
-                                + "you could wash something away for good.",
-                        EventOption.of("[Wash]", "Remove a card from your deck.", () ->
-                                ctx.removeCards(1, () -> ctx.page("The water carries it off downstream.",
-                                        ctx.leave()))),
+                ctx.page("A clear waterfall crashes down beside the path, so clean it sparkles. Standing under "
+                                + "it, you feel you could wash something away for good.",
+                        EventOption.of("[Wash]", "Remove a card from your deck.", () -> {
+                            List<Card> before = new ArrayList<>(ctx.run().deck());
+                            ctx.removeCards(1, () -> {
+                                Card gone = leftDeck(before, ctx.run().deck());
+                                ctx.page("You hold it under the falling water...");
+                                ctx.illustrate("wash:" + cardKey(gone), () -> ctx.page(
+                                        "The water carries it off downstream.", ctx.leave()));
+                            });
+                        }),
                         ctx.leave())));
 
         // Transmogrifier.
         c.addEvent(new EventDef("event:special_stage", "Special Stage Warp", "event:special_stage", Set.of(1, 2, 3),
                 run -> !run.removableCards().isEmpty(), ctx ->
                 ctx.page("A ring of shimmering stars hangs in the air. Through it, a checkered sphere spins.",
-                        EventOption.of("[Enter]", "Transform a card.", () ->
-                                ctx.transformCards(1, () -> ctx.page("Blue sphere, red sphere, blue sphere... you "
-                                        + "come out with something different.", ctx.leave()))),
+                        EventOption.of("[Enter]", "Transform a card.", () -> {
+                            List<Card> before = new ArrayList<>(ctx.run().deck());
+                            ctx.transformCards(1, () -> {
+                                Card gone = leftDeck(before, ctx.run().deck());
+                                Card added = leftDeck(ctx.run().deck(), before);
+                                ctx.page("You toss it through the ring...");
+                                ctx.illustrate("enter:" + cardKey(gone) + ">" + cardKey(added), () -> ctx.page(
+                                        "Blue sphere, red sphere, blue sphere... you come out with something "
+                                                + "different.", ctx.leave()));
+                            });
+                        }),
                         ctx.leave())));
 
         // Duplicator.
@@ -300,21 +344,30 @@ public final class Events {
                 if (ctx.run().rings() >= deal[1]) {
                     options.add(EventOption.of(label, "Pay " + deal[1] + " rings. Obtain " + deal[0]
                             + (deal[0] == 1 ? " potion." : " potions."), () -> {
-                                ctx.run().spendRings(deal[1]);
+                                List<PotionDef> bought = new ArrayList<>();
+                                StringBuilder ids = new StringBuilder("buy:");
                                 for (int i = 0; i < deal[0]; i++) {
                                     PotionDef potion = randomPotion(ctx);
                                     if (potion != null) {
-                                        ctx.addReward(new Reward.Potion(potion));
+                                        bought.add(potion);
+                                        ids.append(bought.size() > 1 ? "," : "").append(potion.id());
                                     }
                                 }
-                                ctx.page("\"Chao!\" It hands over the bottles with a little bow.", ctx.leave());
+                                ctx.page("You count out " + deal[1] + " rings onto the counter.");
+                                ctx.illustrate(ids.toString(), () -> {
+                                    ctx.run().spendRings(deal[1]);
+                                    for (PotionDef potion : bought) {
+                                        ctx.addReward(new Reward.Potion(potion));
+                                    }
+                                    ctx.page("\"Chao!\" It hands over the monitors with a little bow.", ctx.leave());
+                                });
                             }));
                 } else {
                     options.add(EventOption.locked(label, "Requires " + deal[1] + " rings."));
                 }
             }
             options.add(ctx.leave());
-            ctx.page("A Chao in a tiny apron waves you over to a cart full of fizzing bottles.",
+            ctx.page("A Chao in a tiny apron waves you over to a cart stacked with item monitors.",
                     options.toArray(new EventOption[0]));
         }));
 
@@ -546,6 +599,28 @@ public final class Events {
                         ctx.page("You tear your eyes away.", ctx.leave());
                     });
                 }));
+    }
+
+    /** The card in {@code before} that is no longer in {@code after} (the one just removed), or null. */
+    private static Card leftDeck(List<Card> before, List<Card> after) {
+        for (Card card : before) {
+            boolean kept = false;
+            for (Card other : after) {
+                if (other == card) {
+                    kept = true;
+                    break;
+                }
+            }
+            if (!kept) {
+                return card;
+            }
+        }
+        return null;
+    }
+
+    /** A card as event pictures read it: its id, "+" when upgraded; empty for none. */
+    private static String cardKey(Card card) {
+        return card == null ? "" : card.id() + (card.upgraded() ? "+" : "");
     }
 
     /** Dead Adventurer: each search risks waking the elite buried in the pile. */

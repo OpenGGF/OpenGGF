@@ -22,6 +22,7 @@ public final class Sounds {
     // Sound effects.
     public static final int SFX_RING = 0x33;
     public static final int SFX_HURT = 0x35;
+    /** sfx_SpikeHit: HurtCharacter's sound when spikes (sharp things) do the hurting. */
     public static final int SFX_SPIKES = 0x37;
     public static final int SFX_SHIELD = 0x3A;
     public static final int SFX_ROLL = 0x3C;
@@ -47,8 +48,6 @@ public final class Sounds {
     public static final int SFX_SLOT_MACHINE = 0xB7;
     public static final int SFX_RING_LOSS = 0xB9;
     public static final int SFX_SPINDASH = 0xAB;
-    /** sfx_SpikeHit: HurtCharacter's sound when spikes (sharp things) do the hurting. */
-    public static final int SFX_SPIKE_HIT = 0x37;
     /** sfx_FireAttack: the Fire Shield's dash, a burst of flame. */
     public static final int SFX_FIRE_ATTACK = 0x43;
     /** sfx_Grab: Knuckles catching hold. */
@@ -77,6 +76,16 @@ public final class Sounds {
     public static final int SFX_ALARM = 0x86;
     /** sfx_GhostAppear: a Hyudoro ghost fading in (Obj_Hyudoro). */
     public static final int SFX_GHOST_APPEAR = 0x92;
+    /** sfx_BigRing: the swish of touching a Giant Ring (SSEntryRing loc_6170A). */
+    public static final int SFX_BIG_RING = 0xB3;
+    /** sfx_Splash: something landing in water. */
+    public static final int SFX_SPLASH = 0x39;
+    /** sfx_MushroomBounce: a Mushroom Hill cap springing a player (MHZMushroomCap_BounceCharacter). */
+    public static final int SFX_MUSHROOM_BOUNCE = 0x87;
+    /** sfx_BlueSphere: a blue sphere turning red underfoot. */
+    public static final int SFX_BLUE_SPHERE = 0x65;
+    /** mus_ExtraLife: the 1-Up jingle; the driver resumes the previous song after it (Monitor_Give_1up). */
+    public static final int MUSIC_EXTRA_LIFE = 0x2A;
 
     private Sounds() {
     }

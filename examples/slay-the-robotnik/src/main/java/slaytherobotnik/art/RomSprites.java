@@ -33,6 +33,8 @@ final class RomSprites {
     private static final int PAL_MECHA_SUPER2 = 0x07DAFE;
     private static final int PAL_MECHA_SUPER3 = 0x07DB20;
     private static final int PAL_KNUCKLES = 0x0A8AFC;          // Pal_Knuckles (line 0 when playing as Knuckles)
+    private static final int PAL_MHZ = 0x0A943C;              // Pal_MHZ1 (lines 1-3, Mushroom Hill act 1)
+    private static final int PAL_SSTAGE = 0x00896E;           // Pal_SStage_Main (all 4 lines)
 
     private RomSprites() {
     }
@@ -236,6 +238,51 @@ final class RomSprites {
             case "life_icon_knuckles" -> rom.sprites(RomSpriteRequest.of(
                     0x190E4C, Compression.NEMESIS,       // ArtNem_KnucklesLifeIcon (PLC_05), Pal_Knuckles on line 0
                     0x01DBA2, 0).withTileOffset(0x310), lines(rom, PAL_KNUCKLES, 0, 16));
+
+            // ---- Event props: Giant Ring, special stage, monitors, mushrooms ----
+            case "ss_entry_flash" -> rom.sprites(RomSpriteRequest.streamed(
+                    0x0DAE66, 0x5A0,                    // ArtUnc_SSEntryFlash
+                    0x061B28, 0x061BFA,                 // Map_SSEntryFlash, DPLC_SSEntryFlash
+                    DplcLayout.OBJECT, 1), aiz(rom));   // ObjSlot_SSEntryFlash: palette line 1
+            // The 1-Up monitor's icon (Map_Monitor frame 2) is the player's life icon, which the
+            // level PLC loads at ArtTile_PlayerLifeIcon = ArtTile_Monitors + $310; offsetting the
+            // mappings by $310 keeps just that piece. Palette line 0 is the player's.
+            case "monitor_life_sonic" -> rom.sprites(RomSpriteRequest.of(
+                    0x190D34, Compression.NEMESIS,       // ArtNem_SonicLifeIcon (PLC_01)
+                    0x01DBA2, 0).withTileOffset(0x310), aiz(rom));
+            case "monitor_life_tails" -> rom.sprites(RomSpriteRequest.of(
+                    0x35CFFE, Compression.NEMESIS,       // ArtNem_TailsLifeIcon (PLC_07)
+                    0x01DBA2, 0).withTileOffset(0x310), aiz(rom));
+            case "monitor_life_knuckles" -> rom.sprites(RomSpriteRequest.of(
+                    0x190E4C, Compression.NEMESIS,       // ArtNem_KnucklesLifeIcon (PLC_05)
+                    0x01DBA2, 0).withTileOffset(0x310), knuckles(rom));
+            case "mhz_mushroom_cap" -> rom.sprites(RomSpriteRequest.of(
+                    0x14E846, Compression.NEMESIS,       // ArtNem_MHZMisc
+                    0x03E1FE, 2).withTileOffset(-0x22), zone(rom, PAL_MHZ)); // Map_MHZMushroomCap, ArtTile_MHZMisc+$22
+            case "mhz_mushroom_cap_light" -> rom.sprites(RomSpriteRequest.of(
+                    0x14E846, Compression.NEMESIS,
+                    0x03E1FE, 2).withTileOffset(-0x52), zone(rom, PAL_MHZ)); // light-spotted: ArtTile_MHZMisc+$52
+            case "mhz_pollen" -> rom.sprites(RomSpriteRequest.of(
+                    0x14E846, Compression.NEMESIS,
+                    0x03DC5C, 3).withTileOffset(-0x21), zone(rom, PAL_MHZ)); // Map_MHZPollen, ArtTile_MHZMisc+$21
+            case "aiz_log_splash" -> rom.sprites(RomSpriteRequest.of(
+                    0x38E4D8, Compression.NEMESIS,       // ArtNem_AIZFallingLog
+                    0x22AEB0, 2), aiz(rom));             // Map_AIZFallingLogSplash (act 1)
+            // Obj_HCZWaterSplash DMAs ArtUnc_HCZWaterSplash + frame * $300 over one tile set, so
+            // each of its four frames is its own slice of the art under the same mappings.
+            case "hcz_water_splash0", "hcz_water_splash1", "hcz_water_splash2", "hcz_water_splash3" ->
+                    rom.sprites(new RomSpriteRequest(0x392B14 + (key.charAt(key.length() - 1) - '0') * 0x300,
+                            Compression.UNCOMPRESSED, 0x300, // ArtUnc_HCZWaterSplash
+                            0x237C60, -1, DplcLayout.OBJECT, 2, 0), zone(rom, PAL_HCZ)); // Map_HCZWaterSplash
+            case "ss_sphere" -> rom.sprites(RomSpriteRequest.of(
+                    0x0AD904, Compression.NEMESIS,       // ArtNem_SStageSphere
+                    0x00A464, 2), rom.palette(PAL_SSTAGE, 64)); // Map_SStageSphere; blue spheres use line 2
+            case "ss_sphere_red" -> rom.sprites(RomSpriteRequest.of(
+                    0x0AD904, Compression.NEMESIS,
+                    0x00A464, 0), rom.palette(PAL_SSTAGE, 64)); // red spheres use line 0 (MapPtr_A10A)
+            case "ss_ring" -> rom.sprites(RomSpriteRequest.of(
+                    0x0ADF60, Compression.NEMESIS,       // ArtNem_SStageRing
+                    0x00A50A, 2), rom.palette(PAL_SSTAGE, 64)); // Map_SStageRing
             default -> null;
         };
     }
@@ -245,6 +292,13 @@ final class RomSprites {
         int[] palette = new int[64];
         System.arraycopy(rom.palette(PAL_SONIC_TAILS, 16), 0, palette, 0, 16);
         System.arraycopy(rom.palette(PAL_AIZ, 48), 0, palette, 16, 48);
+        return palette;
+    }
+
+    /** Knuckles' line 0 (Pal_Knuckles) with the Angel Island act 1 palette on lines 1-3. */
+    private static int[] knuckles(SceneRomArt rom) {
+        int[] palette = aiz(rom);
+        System.arraycopy(rom.palette(PAL_KNUCKLES, 16), 0, palette, 0, 16);
         return palette;
     }
 

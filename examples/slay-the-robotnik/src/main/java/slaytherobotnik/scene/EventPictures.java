@@ -2,7 +2,10 @@ package slaytherobotnik.scene;
 
 import com.openggf.mods.scene.SceneCanvas;
 
-/** Makes the picture for an event's art key ({@code EventDef.art()}). */
+/**
+ * Makes the picture for an event's art key ({@code EventDef.art()}). To illustrate a new event,
+ * write an {@link EventPicture} subclass and add its key here.
+ */
 final class EventPictures {
     private EventPictures() {
     }
@@ -24,21 +27,22 @@ final class EventPictures {
             case "event:lab" -> new LabPicture(shell);
             case "event:hyper_remote" -> new HyperRemotePicture(shell);
             case "event:robotnik_offer" -> new RobotnikOfferPicture(shell);
-            default -> new StaticPicture(art);
+            case "event:giant_ring" -> new GiantRingPicture(shell);
+            case "event:monitor_row" -> new MonitorRowPicture(shell);
+            case "event:ring_shrine" -> new RingShrinePicture(shell);
+            case "event:mushrooms" -> new MushroomsPicture(shell);
+            case "event:waterfall" -> new WaterfallPicture(shell);
+            case "event:special_stage" -> new SpecialStagePicture(shell);
+            case "event:chao_cart" -> new ChaoCartPicture(shell);
+            default -> new StaticPicture();
         };
     }
 
-    /** An event drawn by {@link EventArt} that animates nothing for its outcomes (yet). */
+    /** The picture for an art key with no picture class: a "?" that animates nothing. */
     private static final class StaticPicture extends EventPicture {
-        private final String art;
-
-        StaticPicture(String art) {
-            this.art = art;
-        }
-
         @Override
         void draw(Shell shell, SceneCanvas c, int x, int y, int w, int h) {
-            EventArt.draw(shell, c, art, x, y, w, h);
+            EventArt.drawPlain(shell, c, x, y, w, h);
         }
     }
 }

@@ -7,17 +7,13 @@ import slaytherobotnik.ui.Colors;
 import slaytherobotnik.ui.Gfx;
 
 /**
- * Event illustrations, keyed by {@link slaytherobotnik.core.EventDef#art()}. Each is a small
- * scene in a 126x146 panel: ROM sprites where the game has the thing (monitors, rings, Giant
- * Rings, Flickies, emeralds, the Egg Mobile) and simple pixel shapes for the rest.
+ * Pieces shared by the event pictures (the act's level as a setting, monitors, rings, sparkles,
+ * emeralds...), and the plain picture for an event that has no picture class of its own. Each
+ * event's own scene lives in its {@code *Picture} class; {@link EventPictures} picks it.
  */
 final class EventArt {
     static final int SKY_TOP = 0xFF246CB6;
     static final int SKY_BOTTOM = 0xFF0A1C48;
-    static final int CAVE_TOP = 0xFF1C1424;
-    static final int CAVE_BOTTOM = 0xFF3C2C24;
-    static final int LAB_TOP = 0xFF102030;
-    static final int LAB_BOTTOM = 0xFF203848;
     static final int GRASS = 0xFF24A048;
     static final int GRASS_DARK = 0xFF146C24;
     static final int STONE = 0xFF8C7C6C;
@@ -28,99 +24,12 @@ final class EventArt {
     private EventArt() {
     }
 
-    /** Draws event art {@code art} (pictures with their own class draw themselves; see {@link EventPictures}). */
-    static void draw(Shell shell, SceneCanvas c, String art, int x, int y, int w, int h) {
-        long t = shell.ticks;
-        int cx = x + w / 2;
-        int ground = y + h - 22;
-        switch (art) {
-            case "event:giant_ring" -> {
-                level(shell, c, x, y, w, h, ground);
-                SceneSprite ring = bigRing(shell, t);
-                if (ring != null) {
-                    Poses.centre(c, ring, cx, y + 56 + bob(t, 3), SceneDraw.plain());
-                } else {
-                    drawnRing(c, cx, y + 56, 30);
-                }
-                sparkles(shell, c, cx, y + 56, 40, t);
-            }
-            case "event:monitor_row" -> {
-                outdoors(c, x, y, w, h, ground);
-                String[] faces = {"4", "1UP", "3"};
-                for (int i = 0; i < 3; i++) {
-                    monitor(shell, c, cx - 36 + i * 36, ground, faces[i], t + i * 7);
-                }
-            }
-            case "event:mushrooms" -> {
-                outdoors(c, x, y, w, h, ground);
-                mushroom(c, cx - 30, ground, 18, 30, 0xFFDA4890, t);
-                mushroom(c, cx + 26, ground, 22, 38, 0xFF9048DA, t + 15);
-                mushroom(c, cx, ground, 14, 20, 0xFFFF9024, t + 30);
-                int eyes = (int) ((t / 30) % 4);
-                if (eyes != 3) {
-                    c.fill(cx - 5, ground - 8, 2, 2, Colors.WHITE);
-                    c.fill(cx + 3, ground - 8, 2, 2, Colors.WHITE);
-                }
-            }
-            case "event:ring_shrine" -> {
-                outdoors(c, x, y, w, h, ground);
-                pedestal(c, cx, ground, 40, 20);
-                for (int i = 0; i < 8; i++) {
-                    double a = t * 0.02 + i * Math.PI / 4;
-                    ring(shell, c, cx + (int) (Math.cos(a) * 34), y + 54 + (int) (Math.sin(a) * 26), t + i * 2);
-                }
-                for (int i = 0; i < 5; i++) {
-                    ring(shell, c, cx - 14 + i * 7, ground - 28 - (i % 2) * 4, t + i * 3);
-                }
-            }
-            case "event:waterfall" -> {
-                outdoors(c, x, y, w, h, ground);
-                c.fill(cx - 20, y, 40, ground - y, 0xFF2448B6);
-                for (int i = 0; i < 6; i++) {
-                    int sy = (int) ((t * 3 + i * 23) % (ground - y));
-                    c.fill(cx - 18 + i * 6, y + sy, 2, 14, 0xFFB6DAFF);
-                }
-                c.fill(x, ground - 4, w, 8, 0xFF4890FF);
-                for (int i = 0; i < 4; i++) {
-                    int px = cx - 30 + (int) ((t + i * 17) % 60);
-                    c.fill(px, ground - 6, 3, 2, Colors.WHITE);
-                }
-            }
-            case "event:special_stage" -> {
-                Gfx.gradient(c, x, y, w, h, 0xFF000024, 0xFF200048);
-                stars(c, x, y, w, h, t);
-                checkerSphere(c, cx, y + 64, 26, t);
-                SceneSprite ring = bigRing(shell, t);
-                if (ring != null) {
-                    Poses.centre(c, ring, cx, y + 64, SceneDraw.plain().withScale(0.9f).withAlpha(0.8f));
-                }
-            }
-            case "event:chao_cart" -> {
-                outdoors(c, x, y, w, h, ground);
-                c.fill(cx - 40, ground - 34, 80, 24, 0xFFB46C24);
-                c.fill(cx - 42, ground - 40, 84, 6, 0xFFDA4848);
-                c.fill(cx - 42, ground - 46, 84, 6, Colors.WHITE);
-                c.fill(cx - 30, ground - 10, 10, 10, Colors.BLACK);
-                c.fill(cx + 20, ground - 10, 10, 10, Colors.BLACK);
-                int[] colours = {0xFFDA2424, 0xFF2490FF, 0xFF24DA48, 0xFFFFDA24};
-                for (int i = 0; i < 4; i++) {
-                    int bx = cx - 30 + i * 16;
-                    c.fill(bx, ground - 54, 8, 12, Colors.BLACK);
-                    c.fill(bx + 1, ground - 52, 6, 9, colours[i]);
-                    c.fill(bx + 2, ground - 57, 4, 4, 0xFFB6B6B6);
-                    if ((t / 10 + i) % 5 == 0) {
-                        c.fill(bx + 3, ground - 62, 2, 2, Colors.WHITE);
-                    }
-                }
-                chao(c, cx, ground - 64 + bob(t, 2), t);
-            }
-            default -> {
-                Gfx.gradient(c, x, y, w, h, SKY_TOP, SKY_BOTTOM);
-                var icon = shell.art.icon("node_event");
-                c.draw(icon, x + w / 2f - icon.width() * 1.5f, y + h / 2f - icon.height() * 1.5f,
-                        SceneDraw.plain().withScale(3));
-            }
-        }
+    /** The picture of an event with no picture class: the map's "?" over a sky. */
+    static void drawPlain(Shell shell, SceneCanvas c, int x, int y, int w, int h) {
+        Gfx.gradient(c, x, y, w, h, SKY_TOP, SKY_BOTTOM);
+        var icon = shell.art.icon("node_event");
+        c.draw(icon, x + w / 2f - icon.width() * 1.5f, y + h / 2f - icon.height() * 1.5f,
+                SceneDraw.plain().withScale(3));
     }
 
     // ------------------------------------------------------------------ backdrops
@@ -145,20 +54,6 @@ final class EventArt {
         c.fill(x, ground + 8, w, y + h - ground - 8, GRASS_DARK);
     }
 
-    static void cave(SceneCanvas c, int x, int y, int w, int h, int ground) {
-        Gfx.gradient(c, x, y, w, h, CAVE_TOP, CAVE_BOTTOM);
-        c.fill(x, ground, w, y + h - ground, STONE_DARK);
-        for (int i = 0; i < w; i += 16) {
-            c.fill(x + i, ground, 15, 7, STONE);
-        }
-    }
-
-    static void indoors(SceneCanvas c, int x, int y, int w, int h, int ground, int top, int bottom) {
-        Gfx.gradient(c, x, y, w, h, top, bottom);
-        c.fill(x, ground, w, y + h - ground, 0xFF242C34);
-        c.fill(x, ground, w, 2, 0xFF6C7C8C);
-    }
-
     // ------------------------------------------------------------------ props
 
     static int bob(long t, int amount) {
@@ -176,24 +71,12 @@ final class EventArt {
         HudIcons.monitor(shell, c, (t / 4) % 12 == 0 ? "static" : face, x, y, 1f, t);
     }
 
-    /** The Giant Ring turning: Map_SSEntryRing frames 8-11 (0-7 are it forming). */
-    static SceneSprite bigRing(Shell shell, long t) {
-        return shell.art.romFrame("big_ring", 8 + (int) ((t / 6) % 4));
-    }
-
     static void ring(Shell shell, SceneCanvas c, int x, int y, long t) {
         SceneSprite ring = shell.art.romFrame("ring", (int) ((t / 8) % 4));
         if (ring != null) {
             c.draw(ring, x, y, SceneDraw.plain());
         } else {
             c.fill(x - 4, y - 4, 8, 8, GOLD);
-        }
-    }
-
-    static void drawnRing(SceneCanvas c, int cx, int cy, int r) {
-        for (int i = 0; i < 48; i++) {
-            double a = i * Math.PI / 24;
-            c.fill(cx + (int) (Math.cos(a) * r) - 2, cy + (int) (Math.sin(a) * r) - 2, 4, 4, GOLD);
         }
     }
 
@@ -235,35 +118,12 @@ final class EventArt {
         }
     }
 
-    static void mushroom(SceneCanvas c, int x, int ground, int r, int stalk, int cap, long t) {
-        int squash = (int) Math.round(Math.abs(Math.sin(t * 0.05)) * 3);
-        c.fill(x - 3, ground - stalk, 6, stalk, 0xFFDAC8A0);
-        int top = ground - stalk - 10 + squash;
-        c.fill(x - r, top, 2 * r, 10 - squash, cap);
-        c.fill(x - r + 3, top - 4 + squash, 2 * r - 6, 4, cap);
-        c.fill(x - r / 2, top + 2, 4, 3, Colors.WHITE);
-        c.fill(x + r / 3, top + 4, 3, 2, Colors.WHITE);
-    }
-
     static void stars(SceneCanvas c, int x, int y, int w, int h, long t) {
         for (int i = 0; i < 24; i++) {
             int sx = x + (i * 53) % w;
             int sy = y + (i * 31) % (h - 30);
             if ((t / 12 + i) % 7 != 0) {
                 c.fill(sx, sy, 1, 1, Colors.WHITE);
-            }
-        }
-    }
-
-    /** The Special Stage globe: a blue and white checkered sphere that scrolls. */
-    static void checkerSphere(SceneCanvas c, int cx, int cy, int r, long t) {
-        for (int dy = -r; dy <= r; dy += 2) {
-            int half = (int) Math.sqrt(r * r - dy * dy);
-            for (int dx = -half; dx <= half; dx += 2) {
-                double u = Math.asin(Math.max(-1, Math.min(1, dx / (double) Math.max(1, half)))) + t * 0.03;
-                double v = Math.asin(dy / (double) r);
-                boolean light = ((int) Math.floor(u * 3) + (int) Math.floor(v * 3)) % 2 == 0;
-                c.fill(cx + dx, cy + dy, 2, 2, light ? 0xFF6CB6FF : 0xFF2448DA);
             }
         }
     }

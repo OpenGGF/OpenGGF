@@ -75,7 +75,7 @@ final class PipePicture extends EventPicture {
             shell.sfx(Sounds.SFX_CLANK);           // fingers among the scrap
         }
         if (age == CUT_AT) {
-            shell.sfx(Sounds.SFX_SPIKE_HIT);       // HurtCharacter: sfx_SpikeHit for spikes
+            shell.sfx(Sounds.SFX_SPIKES);       // HurtCharacter: sfx_SpikeHit for spikes
             knock = new EventActors.Fling(heroX, 0, EventActors.HURT_X_VEL, EventActors.HURT_Y_VEL,
                     EventActors.HURT_GRAVITY);
             invulnerable = EventActors.INVULNERABLE;
