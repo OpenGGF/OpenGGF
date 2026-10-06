@@ -284,4 +284,69 @@ unlocked five-minute, and endless profiles in separate native JVMs. Frame 29 sho
 100 the intro, and 240 the active clock; CSV rows confirm live solo Sonic in LEVEL mode.
 Artifacts: `/private/tmp/sonic-survivors-modes-20261006`. The 300-frame Start input was
 round-tripped by `InputLogAuthorTool`; seeded capture profiles are presentation setup,
-not evidence of earning the unlock. Full route progression remains covered by tests.
+not evidence of earning the unlock. Unlock and next-act handoff behavior are covered by tests.
+
+
+### Combined validation and bounded long-run follow-up
+
+At `1ae1596837`, `JAVA_HOME=<JDK21> LUA_BIN=/opt/homebrew/bin/lua5.4 python3
+ tools/testing/run_categories.py --base 2d91ef756e3289080bf463ad3e33773ebe6b7508 --run`
+selected 2,993 ordinary classes plus guards in the current checkout. Run
+`20261006T212445Z-4f0a25cf` reached its 40-minute timeout during ordinary tests:
+2,316 reports, 18,971 checks, one failure, one error, 149 skips. All 62 Survivors
+cases passed without skips. The two reported failures repeat the previously baseline-
+reproduced macOS GLSL 410 save-select error and sample-character `base64` invocation error
+recorded above. Skips include hardcoded ROM names despite configured absolute paths,
+optional KiS2 dumps, inapplicable platform routes, opt-in diagnostics and unavailable GL
+contexts. This is incomplete validation; guards had not started.
+
+The last class was `TestObjectControlledGravity`. A native sample of its unresponsive JVM
+showed the main thread in an AWT `NSApplication.run` loop entered while GLFW polled events;
+Java attach also timed out. This shared-JVM stall remains unattributed, not evidence of a
+physics failure or an exonerated integration. Diagnostics were inspected and acknowledged.
+
+Review while the source was frozen found two capacity leaks relevant to the new longer
+modes: periodic floating ring formations and monitors never expired, and elite/Whisp buddy
+spawns bypassed the nominal enemy cap. The follow-up bounds every wave spawn at 34 enemies,
+expires uncollected ring/monitor rewards after 3,600 active frames, and blinks them in the
+last second. Emeralds stay permanent and lost rings retain their five-second lifetime.
+A separate reward-age counter resets when fresh value is merged, keeping newly earned
+rewards collectible without restarting movement/animation. Pauses and rewind own that
+counter exactly like the other pickup fields.
+
+The follow-up plan still selects all 2,993 classes because example paths fall back to the
+full suite. Focused validation is proportionate for this mod-only fix: it changes no host
+code or contract, and the full Survivors fixture plus expiry/pause/rewind, population-cap
+and 20,000-frame endless checks directly exercise its consumers and failure modes. The
+unchanged engine suite is not repeated; its incomplete coverage remains explicit.
+
+
+The initial capacity-fix check used queued Maven with
+`-Dtest=TestSonicSurvivors,TestObjectControlledGravity` and absolute S2/S3K ROM properties:
+78 checks passed, zero skipped (66 Survivors and all 12 fresh-JVM capture cases).
+Thus the previously stalled class runs successfully with the merged host, but the long
+shared-JVM AWT interaction remains unattributed. The guards profile then completed with
+`JAVA_HOME=<JDK21> LUA_BIN=/opt/homebrew/bin/lua5.4 maven_queue.py -B -Dmse=off -Pguards test`:
+672 checks, one failure, zero errors/skips, in 10:18. The remaining failure is
+`TestBuildToolingGuard.releaseGateToolsShouldRejectCorruptAndChangedEvidence`, from
+`test_release_trace_collection.CollectTests.test_failure_messages_and_report_payloads_have_checkout_paths_normalized`:
+the emitted `/var/folders/.../checkout/x` path did not become `<CHECKOUT>/x`. This is the
+previously recorded, still-unattributed tooling finding; that code was left unchanged.
+Guard reports were read and deleted. The prior object-clock timeout and other old guard
+findings did not recur on this merged tree.
+
+The final mod-only polish defers a scheduled elite while the arena is full, rather than
+announcing an enemy that failed to spawn. The same cap test checks that its announcement
+appears once a slot opens. Ring grouping also asserts the exact 30-XP result: three earned
+levels and five remaining XP. No unchanged host checks are repeated for this mod-only edit.
+
+
+Final-source verification reran `-Dtest=TestSonicSurvivors` with the absolute S2 ROM:
+65 of 66 checks passed; the stronger audio test initially expected six remaining XP,
+but the unchanged curve's third level costs 12 (not 11), so the correct remainder is five.
+After correcting only that assertion, its single-case queued Maven rerun passed without
+skips. All 66 Survivors cases therefore have passing focused coverage on the final behavior,
+including the 20,000-frame endless route and deferred elite admission. This is not a full
+engine-suite pass. The source build/package script rebuilt mod 0.3.0, and the existing
+trusted/enabled local installation was refreshed with its matching hash. Other mod settings
+and the user's actual save profile were preserved.

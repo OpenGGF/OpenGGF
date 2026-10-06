@@ -17,6 +17,7 @@ import java.util.List;
  * a pile of rings never competes with badniks for the touch pass.
  */
 public final class Pickup extends AbstractObjectInstance implements RewindRecreatable {
+    static final int REWARD_LIFETIME = 60 * 60;
     static final int RING = 0, MONITOR = 1, EMERALD = 2;
     // Monitor contents, by ROM monitor mapping frame.
     static final int MON_RINGS = 5, MON_SHOES = 6, MON_SHIELD = 7, MON_STARS = 8, MON_EGGMAN = 4, MON_MAGNET = 10;
@@ -28,6 +29,7 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
     private int subX;
     private int subY;
     private int age;
+    private int rewardAge;
     private boolean resting;
     private boolean homing;
     private boolean lostRing;
@@ -72,7 +74,7 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
     boolean collectedAlready() { return collected >= 0; }
     int value() { return value; }
     /** Folds extra rings into this pickup, so a big ring pile never exhausts object slots. */
-    void addValue(int more) { value += more; }
+    void addValue(int more) { value += more; rewardAge = 0; }
     /** The ring magnet monitor: fly to Sonic from anywhere. */
     void homeIn() {
         if (lostRing) return;
@@ -96,7 +98,10 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         var run = services().gameService(RunState.class);
         if (run != null && run.paused) return;
         age++;
-        if (lostRing && age >= 300) { setDestroyed(true); return; }
+        // Uncollected rewards must eventually free their slots during long/endless runs.
+        // Merging fresh rings refreshes rewardAge without restarting their movement clock.
+        boolean expired = lostRing ? age >= 300 : kind() != EMERALD && ++rewardAge >= REWARD_LIFETIME;
+        if (expired) { setDestroyed(true); return; }
         if (!(entity instanceof AbstractPlayableSprite player) || player.getDead()) { fall(); return; }
         int dx = player.getCentreX() - x, dy = player.getCentreY() - y;
         int magnet = kind() == RING && run != null ? run.magnetRadius() : 0;
@@ -209,6 +214,8 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
 
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) return;
+        boolean blinking = lostRing ? age >= 240 : rewardAge >= REWARD_LIFETIME - 60;
+        if (collected < 0 && kind() != EMERALD && blinking && (age & 4) != 0) return;
         if (kind() == RING) {
             var rings = services().ringManager();
             if (rings == null) return;
@@ -216,8 +223,7 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
                 rings.drawSparkleAt(x, y, collected / Math.max(1, rings.getSparkleFrameDelay()));
                 return;
             }
-            // Lost rings blink before expiry; reward rings persist.
-            if (!lostRing || age < 240 || (age & 4) == 0) rings.drawRingAt(x, y, age);
+            rings.drawRingAt(x, y, age);
             if (value > 1) Draw.smallWorld(services(), "x" + value, x + 8, y - 10, Draw.YELLOW, 1f);
             return;
         }

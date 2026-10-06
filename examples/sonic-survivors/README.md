@@ -42,7 +42,9 @@ Sky Chase has no ground to fight on and is skipped.
    Five-minute mode stretches the wave difficulty ramp across the longer clock, keeping
    30-second elites and 10-second ring formations. Endless stays in the starting arena,
    shows elapsed time, and keeps spawning waves without a boss or route transition;
-   enemy counts and spawn rates retain their caps. Escape/Back retires and banks held rings
+   enemy counts (including elites and swarms) and spawn rates retain their caps. Uncollected
+   reward rings and monitors blink and expire after one minute to keep object slots available;
+   newly merged ring rewards refresh that pile's lifetime. Emeralds never expire. Escape/Back retires and banks held rings
    too; dying uses the usual game-over payout. Death Egg always stays a direct boss finale.
 3. **Survive.** The clock counts down **2:00** or **5:00** (upwards in endless). Badniks spawn just off-screen on both sides and
    drop in from above, faster and tougher as the clock runs down and further along the route.

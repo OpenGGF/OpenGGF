@@ -21,6 +21,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     static final int CAMP = 0, INTRO = 1, FIGHT = 2, BOSS = 3, CLEAR_WAIT = 4, CLEAR = 5, DEAD = 6, VICTORY = 7;
     static final int OVERLAY_NONE = 0, OVERLAY_LEVEL_UP = 1;
     static final int INTRO_FRAMES = 150;
+    static final int MAX_ENEMIES = 34;
     static final int ELITE_PERIOD = 60 * 30;
     /** Every this many chained bounces, Sonic goes invincible for the stock duration. */
     static final int FEVER_COMBO = 10;
@@ -298,8 +299,9 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         // and existing population/spawn caps rather than growing an unbounded object pool.
         int seconds = (int) (fightFrames / 60.0 * 120 / Math.max(120, survivalSeconds()));
         int alive = enemies().size();
-        int maxAlive = Math.min(34, 7 + 2 * tier + seconds / 10) / (phase == BOSS ? 2 : 1);
-        if (--eliteTimer <= 0 && phase == FIGHT) {
+        int maxAlive = Math.min(MAX_ENEMIES, 7 + 2 * tier + seconds / 10) / (phase == BOSS ? 2 : 1);
+        if (--eliteTimer <= 0 && phase == FIGHT && alive < MAX_ENEMIES
+                && services().objectManager().hasFreeDynamicSlot()) {
             eliteTimer = ELITE_PERIOD;
             spawnEnemy(ground, air, tier, true);
             banner("ELITE " + "INCOMING!", 90, Draw.ORANGE);
@@ -314,7 +316,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
 
     private void spawnEnemy(int[] ground, int[] air, int tier, boolean elite) {
         var objects = services().objectManager();
-        if (!objects.hasFreeDynamicSlot()) return;
+        if (!objects.hasFreeDynamicSlot() || enemies().size() >= MAX_ENEMIES) return;
         var run = run();
         var arena = arena();
         var camera = services().camera();
@@ -342,7 +344,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         int hitpoints = hp;
         spawnFreeChild(() -> new Enemy(spawn, hitpoints));
         if (species == Species.WHISP && !elite) {
-            for (int i = 1; i <= 2 && objects.hasFreeDynamicSlot(); i++) {
+            for (int i = 1; i <= 2 && objects.hasFreeDynamicSlot() && enemies().size() < MAX_ENEMIES; i++) {
                 var buddy = Enemy.spawnAt(x + side * 16 * i, y - 12 * i, species, false);
                 spawnFreeChild(() -> new Enemy(buddy, hitpoints));
             }

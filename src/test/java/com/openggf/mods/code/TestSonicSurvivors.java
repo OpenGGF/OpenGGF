@@ -770,7 +770,9 @@ class TestSonicSurvivors {
             for (var ring : rings) call(ring, "collect", player);
             assertEquals(before + 30, player.getRingCount());
             assertEquals(30, getInt(run(), "ringsCollected"));
-            assertTrue(getInt(run(), "pendingLevels") > 0, "all XP still reaches level-ups");
+            assertEquals(3, getInt(run(), "level"), "30 XP pays the 5, 8 and 12 XP level costs");
+            assertEquals(5, getInt(run(), "xp"));
+            assertEquals(3, getInt(run(), "pendingLevels"));
             assertEquals(1, requests.size(), "a whole shower in one frame chimes only once");
             Object snapshot = call(run(), "capture");
             set(run(), "frames", getInt(run(), "frames") + 11);
@@ -786,6 +788,93 @@ class TestSonicSurvivors {
         } finally {
             audio.setRequestObserver(null);
         }
+    }
+
+
+    private AbstractObjectInstance spawnPickup(int kind, int value, int x, int y) throws Exception {
+        Class<?> type = loader.loadClass("survivors.Pickup");
+        Method spawnAt = type.getDeclaredMethod("spawnAt", int.class, int.class, int.class);
+        spawnAt.setAccessible(true);
+        ObjectSpawn spawn = (ObjectSpawn) spawnAt.invoke(null, x, y, kind);
+        var constructor = type.getConstructor(ObjectSpawn.class, int.class, int.class, int.class);
+        var pickup = (AbstractObjectInstance) call(stage(), "spawnFreeChild",
+                (java.util.function.Supplier<AbstractObjectInstance>) () -> {
+                    try { return (AbstractObjectInstance) constructor.newInstance(spawn, 0, 0, value); }
+                    catch (ReflectiveOperationException failure) { throw new RuntimeException(failure); }
+                });
+        set(pickup, "resting", true);
+        return pickup;
+    }
+
+    @Test void rewardExpiryPausesRewindsAndNeverDeletesTheEmerald() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        for (int kind = 0; kind < 3; kind++) {
+            var pickup = spawnPickup(kind, kind == 1 ? 5 : 1,
+                    fixture.sprite().getCentreX() + 160, fixture.sprite().getCentreY());
+            set(pickup, "rewardAge", 3599);
+        }
+        call(run(), "gainXp", 5);
+        fixture.stepIdleFrames(10);
+        assertEquals(3, objects("Pickup").size(), "the card menu freezes reward expiry");
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        tapEnter(fixture);
+        assertEquals(1, objects("Pickup").size());
+        assertEquals(2, call(objects("Pickup").get(0), "kind"), "emeralds never expire");
+        registry.restore(snapshot);
+        assertEquals(3, objects("Pickup").size(), "rewind recreates the expired rewards");
+        tapEnter(fixture);
+        assertEquals(1, objects("Pickup").size(), "forward replay expires them at the same boundary");
+    }
+
+    @Test void freshMergedRewardsRefreshTheirLifetimeAndLostRingsStillExpireInFiveSeconds() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var reward = spawnPickup(0, 2, fixture.sprite().getCentreX() + 160, fixture.sprite().getCentreY());
+        set(reward, "rewardAge", 3599);
+        call(reward, "addValue", 10);
+        var lost = spawnPickup(0, 1, fixture.sprite().getCentreX() + 160, fixture.sprite().getCentreY());
+        set(lost, "lostRing", true);
+        set(lost, "age", 299);
+        fixture.stepIdleFrames(1);
+        assertFalse(reward.isDestroyed());
+        assertEquals(12, call(reward, "value"));
+        assertEquals(1, getInt(reward, "rewardAge"));
+        assertTrue(lost.isDestroyed());
+    }
+
+    @Test void eliteAndWhispSwarmSpawnsRespectThePopulationCap() throws Exception {
+        var fixture = launch(2, 0);
+        startRun(fixture);
+        int whisp = field(loader.loadClass("survivors.Species"), "WHISP").getInt(null);
+        for (int i = 0; i < 12; i++) call(stage(), "spawnEnemy", new int[0], new int[]{whisp}, 2, false);
+        assertEquals(34, objects("Enemy").size(), "swarm buddies share the population budget");
+        call(stage(), "spawnEnemy", new int[0], new int[]{whisp}, 2, true);
+        assertEquals(34, objects("Enemy").size(), "scheduled elites cannot grow beyond the cap");
+        set(stage(), "eliteTimer", 1);
+        set(stage(), "banner", "");
+        call(stage(), "spawnWaves");
+        assertEquals("", get(stage(), "banner"), "a full arena cannot announce an elite it did not spawn");
+        objects("Enemy").get(0).setDestroyed(true);
+        fixture.stepIdleFrames(1);
+        call(stage(), "spawnEnemy", new int[0], new int[]{whisp}, 2, true);
+        assertEquals(34, objects("Enemy").size(), "vacated slots can admit the next elite");
+        assertEquals("ELITE INCOMING!", get(stage(), "banner"), "the pending elite arrives when space is available");
+    }
+
+    @Test void endlessRunsPastFiveMinutesWithoutFillingTheArenaWithOldPickups() throws Exception {
+        var fixture = launch(0, 0);
+        set(profile(), "unlocked", 1);
+        set(profile(), "mode", 2);
+        startRun(fixture);
+        fixture.sprite().setInvulnerableFrames(100000);
+        fixture.stepIdleFrames(20000);
+        assertEquals(FIGHT, phase());
+        assertTrue(getInt(stage(), "fightFrames") > 18000);
+        assertTrue(objects("Boss").isEmpty());
+        assertTrue(objects("Enemy").size() <= 34);
+        assertTrue(objects("Pickup").size() <= 30, "old formations make room for continuing waves");
     }
 
 }
