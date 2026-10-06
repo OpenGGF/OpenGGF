@@ -74,6 +74,45 @@ class TestSlayTheRobotnikScene {
         }
     }
 
+    @Test
+    void mapWheelScrollHoldsUntilThePlayerMovesOn() throws Exception {
+        level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try (SlayTheRobotnikHarness harness = SlayTheRobotnikHarness.build(work.resolve("build"))) {
+            GameModule effective = harness.apply(GameServices.module());
+            harness.open(effective, work.resolve("saves"), 400, 224);
+            play(harness, 30);
+            Object scene = harness.scene();
+            scene.getClass().getMethod("debugJump", String.class).invoke(scene, "sonic:7:map:1");
+            play(harness, 90);
+            assertEquals("MapRoom", currentRoom(scene));
+            float start = mapScroll(scene);
+            // Two notches towards the player scroll on towards the boss, and the view stays there.
+            harness.input().handleScroll(-2);
+            play(harness, 90);
+            float ahead = mapScroll(scene);
+            assertTrue(ahead > start + 100, "scrolled from " + start + " to " + ahead);
+            play(harness, 60);
+            assertEquals(ahead, mapScroll(scene), 0.5f, "the wheel's position holds");
+            // Notches away from the player come back, stopping at the act's start.
+            harness.input().handleScroll(10);
+            play(harness, 90);
+            assertEquals(0f, mapScroll(scene), 0.5f);
+            assertEquals(Map.of(), harness.findings());
+        }
+    }
+
+    /** The open act map's horizontal scroll. */
+    private static float mapScroll(Object scene) throws Exception {
+        Object shell = scene.getClass().getMethod("shell").invoke(scene);
+        Object screen = shell.getClass().getMethod("screen").invoke(shell);
+        var viewField = screen.getClass().getDeclaredField("view");
+        viewField.setAccessible(true);
+        Object view = viewField.get(screen);
+        var scrollField = view.getClass().getDeclaredField("scroll");
+        scrollField.setAccessible(true);
+        return scrollField.getFloat(view);
+    }
+
     /** The simple class name of the run's current room ("CombatRoom", "RewardRoom"...). */
     private static String currentRoom(Object scene) throws Exception {
         Object shell = scene.getClass().getMethod("shell").invoke(scene);

@@ -62,6 +62,7 @@ behave as in *Slay the Spire*.
 | End turn | E | Start | END TURN button |
 | Deck / map | D / M | — | top-bar buttons |
 | Use a monitor | 1–5 | — | click the slot |
+| Scroll a map or card list | arrows (left / right on the map viewed from a room) | d-pad | wheel |
 
 To play a card, pick it and then pick a target. Card numbers show the damage the card
 would really deal to the highlighted enemy. Runs save at every room, so you can quit and

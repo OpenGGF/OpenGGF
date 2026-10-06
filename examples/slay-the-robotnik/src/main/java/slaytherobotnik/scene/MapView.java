@@ -28,10 +28,14 @@ final class MapView implements RunScreen.RoomView {
     private static final int LANE_STEP = 24;
     private static final int LEFT_PAD = 30;
     private static final int LEGEND_H = 16;
+    /** Distance one wheel notch (or, on the read-only map, one left/right press) scrolls. */
+    private static final int SCROLL_STEP = 80;
     private final boolean peek;
     private final Hotspots spots = new Hotspots();
     private float scroll = Float.NaN;
     private float targetScroll;
+    /** The floor the view last centred on; a change re-centres it. */
+    private int followedFloor = Integer.MIN_VALUE;
 
     MapView(boolean peek) {
         this.peek = peek;
@@ -54,6 +58,10 @@ final class MapView implements RunScreen.RoomView {
 
     private int maxScroll(Shell shell) {
         return Math.max(0, worldWidth() - shell.width());
+    }
+
+    private float clampScroll(Shell shell, float x) {
+        return Math.max(0, Math.min(maxScroll(shell), x));
     }
 
     private int screenX(int worldX) {
@@ -95,14 +103,26 @@ final class MapView implements RunScreen.RoomView {
     public void update(Shell shell, RunScreen screen) {
         Run run = shell.run;
         int focusFloor = Math.max(0, run.state().actFloor());
-        targetScroll = Math.max(0, Math.min(maxScroll(shell), floorX(focusFloor) - 90));
+        // Follow the player when they move on (or steer between nodes with the keys); between
+        // moves the wheel's position stands, so they can look ahead to the boss and back again.
+        boolean steering = !peek && shell.in.anyDirection();
+        if (focusFloor != followedFloor || steering) {
+            followedFloor = focusFloor;
+            targetScroll = clampScroll(shell, floorX(focusFloor) - 90);
+        }
         if (Float.isNaN(scroll)) {
             scroll = peek ? targetScroll : Math.max(0, targetScroll - 40);
         }
-        if (shell.in.mouse.wheel() != 0) {
-            targetScroll = Math.max(0, Math.min(maxScroll(shell), scroll - shell.in.mouse.wheel() * 30));
+        // Wheel down (towards the player) runs on towards the boss. Steps add to the target, not
+        // the eased position, so a quick spin travels as far as its notches say.
+        int step = -shell.in.mouse.wheel();
+        if (peek) {
+            step += (shell.in.right ? 1 : 0) - (shell.in.left ? 1 : 0);
         }
-        scroll = Ease.approach(scroll, targetScroll, 0.15f);
+        if (step != 0) {
+            targetScroll = clampScroll(shell, targetScroll + step * SCROLL_STEP);
+        }
+        scroll = Ease.approach(scroll, targetScroll, 0.2f);
         if (peek) {
             return;
         }
