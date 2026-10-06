@@ -34,7 +34,7 @@ class TestSlayTheRobotnikExample {
     void packagesAndPassesValidation() throws Exception {
         // SlayTheRobotnikHarness.build compiles, packages with GgfModCli (which validates) and registers.
         try (SlayTheRobotnikHarness harness = SlayTheRobotnikHarness.build(work)) {
-            assertFalse(harness.plan().explicitPatches().isEmpty(), "the widescreen patch is registered");
+            assertEquals("WIDE_16_9", harness.plan().requiredDisplayAspect(), "the mod asks for the 400-pixel display");
         }
     }
 

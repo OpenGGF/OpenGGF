@@ -97,7 +97,7 @@ Bosses: Fire Breath and Flame Craft (Angel Island), Big Shaker and Screw Mobile
 
 ```
 src/main/java/slaytherobotnik/
-  SlayTheRobotnikMod.java   registration: reads the text assets, registers the scene and a 16:9 patch
+  SlayTheRobotnikMod.java   registration: reads the text assets, registers the scene, asks for 16:9
   core/                     the rules: cards, powers, combat, enemies, relics, potions, events, run state
   map/  run/                the act map generator and the run's rooms (fight, reward, shop, rest, event...)
   content/                  the game's data: every card, relic, monitor, enemy, encounter, event and act

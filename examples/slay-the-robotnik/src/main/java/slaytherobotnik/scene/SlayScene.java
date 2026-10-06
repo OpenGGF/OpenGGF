@@ -1,5 +1,6 @@
 package slaytherobotnik.scene;
 
+import com.openggf.mods.scene.DebuggableScene;
 import com.openggf.mods.scene.ModScene;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneContext;
@@ -12,7 +13,7 @@ import slaytherobotnik.ui.SmallFont;
  * The startup scene: owns the {@link Shell} and forwards the engine's calls to it. The
  * assets arrive as bytes read during registration (mod files are only open then).
  */
-public final class SlayScene implements ModScene {
+public final class SlayScene implements ModScene, DebuggableScene {
     private final byte[] fontText;
     private final byte[] iconText;
     private final byte[] cardText;
@@ -57,11 +58,16 @@ public final class SlayScene implements ModScene {
      * (character, seed, then {@code fight} or {@code event} and the id, or {@code room} and a
      * room type such as {@code Shop:2} for a shop in act 2), {@code "compendium:2"},
      * {@code "kill"} to defeat every enemy in the current fight, or {@code "die"} to lose it.
+     * Returns false, changing nothing, for a command it cannot read.
      */
-    public void debugJump(String command) {
-        if ((command.equals("kill") || command.equals("die"))
-                && !(shell.run != null && shell.run.room() instanceof slaytherobotnik.run.CombatRoom)) {
-            return; // not in a fight
+    @Override
+    public boolean debugJump(String command) {
+        if (command.equals("kill") || command.equals("die")) {
+            if (!(shell.run != null && shell.run.room() instanceof slaytherobotnik.run.CombatRoom)) {
+                return false; // not in a fight
+            }
+        } else if (!command.matches("compendium(:\\d+)?|[a-z]+:-?\\d+:(fight|event|start|map|room):.*")) {
+            return false;
         }
         if (command.equals("kill") && shell.run != null
                 && shell.run.room() instanceof slaytherobotnik.run.CombatRoom room) {
@@ -70,19 +76,19 @@ public final class SlayScene implements ModScene {
                 room.combat().loseHp(e, e.hp());
             }
             room.combat().checkVictory();
-            return;
+            return true;
         }
         if (command.equals("die") && shell.run != null
                 && shell.run.room() instanceof slaytherobotnik.run.CombatRoom room) {
             // Lose the current fight (to see the game over screen).
             room.combat().loseHp(room.combat().player(), room.combat().player().hp());
-            return;
+            return true;
         }
         if (command.startsWith("compendium")) {
             // "compendium:N" opens the compendium on tab N.
             String[] c = command.split(":");
             shell.goNow(new CompendiumScreen(c.length > 1 ? Integer.parseInt(c[1]) : 0));
-            return;
+            return true;
         }
         String[] parts = command.split(":", 4);
         Run run = Run.start(shell.catalog, parts[0], Long.parseLong(parts[1]));
@@ -119,6 +125,7 @@ public final class SlayScene implements ModScene {
             run.enterEvent(extras[0]);
         }
         shell.goNow(new RunScreen());
+        return true;
     }
 
     /** The shell, for tests that drive the scene directly. */

@@ -2,7 +2,6 @@ package slaytherobotnik.scene;
 
 import com.openggf.mods.scene.SceneBackdrop;
 import com.openggf.mods.scene.SceneCanvas;
-import com.openggf.mods.scene.SceneDraw;
 import slaytherobotnik.ui.Colors;
 import slaytherobotnik.ui.Gfx;
 
@@ -71,19 +70,8 @@ public final class Backdrops {
         if (bg == null) {
             return false;
         }
-        int imageW = bg.image().width();
         int top = Math.max(0, Math.min(windowTop(zone, act), bg.image().height() - h));
-        for (SceneBackdrop.Band band : bg.bands()) {
-            int y0 = Math.max(band.top(), top);
-            int y1 = Math.min(band.top() + band.height(), top + h);
-            if (y0 >= y1) {
-                continue;
-            }
-            for (int bx = -bg.column(band, scroll, shell.ticks); bx < w; bx += imageW) {
-                c.drawRegion(bg.image(), 0, y0, imageW, y1 - y0, x + bx, y + y0 - top, imageW, y1 - y0,
-                        SceneDraw.plain());
-            }
-        }
+        c.drawBackdrop(bg, x, y, w, h, top, scroll, shell.ticks);
         return true;
     }
 
@@ -98,21 +86,11 @@ public final class Backdrops {
         };
     }
 
-    /** Draws each band of {@code bg} that falls on screen, repeated across the width. */
+    /** Draws {@code bg} over the screen from row {@code top}, black below its last row. */
     private static void rom(SceneCanvas c, SceneBackdrop bg, int top, int w, int h, long scroll, long ticks) {
-        int imageW = bg.image().width();
         int imageH = bg.image().height();
         top = Math.max(0, Math.min(top, imageH - h));
-        for (SceneBackdrop.Band band : bg.bands()) {
-            int y0 = Math.max(band.top(), top);
-            int y1 = Math.min(band.top() + band.height(), top + h);
-            if (y0 >= y1) {
-                continue;
-            }
-            for (int x = -bg.column(band, scroll, ticks); x < w; x += imageW) {
-                c.drawRegion(bg.image(), 0, y0, imageW, y1 - y0, x, y0 - top, imageW, y1 - y0, SceneDraw.plain());
-            }
-        }
+        c.drawBackdrop(bg, 0, 0, w, h, top, scroll, ticks);
         if (imageH - top < h) {
             c.fill(0, imageH - top, w, h - (imageH - top), 0xFF000000);
         }

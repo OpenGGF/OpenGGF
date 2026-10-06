@@ -1,5 +1,6 @@
 package slaytherobotnik.art;
 
+import com.openggf.mods.scene.RomSpriteRequest;
 import com.openggf.mods.scene.SceneBackdrop;
 import com.openggf.mods.scene.SceneContext;
 import com.openggf.mods.scene.SceneImage;
@@ -176,19 +177,10 @@ public final class Art {
             slotFaces = new SceneImage[8];
             try {
                 if (hasRom()) {
-                    byte[] art = rom().read(SLOT_FACES, 8 * 0x200);
                     int[] palette = rom().palette(SLOT_PALETTE, 16);
                     for (int f = 0; f < 8; f++) {
-                        int[] pixels = new int[32 * 32];
-                        for (int i = 0; i < 0x200 * 2; i++) {
-                            int tile = i / 64;
-                            int x = (tile / 4) * 8 + i % 8;
-                            int y = (tile % 4) * 8 + (i % 64) / 8;
-                            int b = art[f * 0x200 + i / 2] & 0xFF;
-                            int colour = (i & 1) == 0 ? b >> 4 : b & 15;
-                            pixels[y * 32 + x] = colour == 0 ? 0 : palette[colour];
-                        }
-                        slotFaces[f] = new SceneImage(32, 32, pixels);
+                        slotFaces[f] = rom().tiles(SLOT_FACES, RomSpriteRequest.Compression.UNCOMPRESSED, f * 16, 4, 4,
+                                true, palette);
                     }
                 }
             } catch (RuntimeException e) {
