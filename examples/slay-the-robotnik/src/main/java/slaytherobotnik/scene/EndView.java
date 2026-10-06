@@ -15,7 +15,8 @@ import slaytherobotnik.ui.Gfx;
  * <p>Game over plays out as in the games: the hero is knocked up and falls away (Kill_Character
  * sets y_vel to -$700; ObjectMoveAndFall adds $38 a frame), then Obj_GameOver's two words slide
  * in from either side at $10 pixels a frame until they meet in the middle (they start $D0 either
- * side of it). Victory stands the hero in the victory pose under a shower of rings.
+ * side of it). Victory runs the hero in to strike the victory pose under a shower of rings, with
+ * the summary beside them.
  */
 final class EndView implements RunScreen.RoomView {
     /** The row the stage's floor sits on. */
@@ -30,6 +31,9 @@ final class EndView implements RunScreen.RoomView {
     private static final int WORDS_AT = 44;
     private static final int SUMMARY_AT = WORDS_AT + WORD_TRAVEL / WORD_SPEED + 16;
     private static final int SUMMARY_RISE = 20;
+    /** Victory: frames the hero takes to run in, and when the summary slides in beside them. */
+    private static final int RUN_IN = 28;
+    private static final int VICTORY_SUMMARY_AT = 40;
     private final boolean victory;
     private final String killedBy;
     private final int score;
@@ -71,17 +75,25 @@ final class EndView implements RunScreen.RoomView {
         c.fill(0, 0, w, h, victory ? 0x60000820 : 0xA0100008);
         var f = shell.font;
         String hero = shell.run.state().character().id();
-        int heroX = w / 2;
-        int feet = LevelStages.feet(stage, heroX, GROUND);
+        // Victory leaves the right side for the summary; game over centres everything.
+        int heroX = victory ? w * 27 / 100 : w / 2;
         if (victory) {
             drawRingShower(shell, c, w, h);
-            Poses.hero(shell, c, hero, Poses.VICTORY, age, heroX, feet, SceneDraw.plain());
+            if (age < RUN_IN) {
+                // Running in from the left edge, slowing to a stop on the spot.
+                int x = Math.round(-24 + (heroX + 24) * Ease.outCubic(age / (float) RUN_IN));
+                Poses.hero(shell, c, hero, Poses.RUN, age, x, LevelStages.feet(stage, x, GROUND), SceneDraw.plain());
+            } else {
+                Poses.hero(shell, c, hero, Poses.VICTORY, age - RUN_IN, heroX, LevelStages.feet(stage, heroX, GROUND),
+                        SceneDraw.plain());
+            }
             String title = "ROBOTNIK SLAIN!";
             float drop = Math.min(1f, age / 30f);
             f.drawOutlined(c, title, (w - f.width(title) * 3) / 2, Math.round(-30 + 54 * Ease.outBack(drop)),
                     Colors.GOLD, 3);
         } else {
             // The hero is knocked up and falls away, as when a life is lost.
+            int feet = LevelStages.feet(stage, heroX, GROUND);
             float y = feet + DEATH_LAUNCH * age + GRAVITY * age * (age - 1) / 2f;
             if (y < h + 48) {
                 Poses.hero(shell, c, hero, Poses.DEATH, age, heroX, y, SceneDraw.plain());
@@ -115,17 +127,22 @@ final class EndView implements RunScreen.RoomView {
         c.draw(over, w / 2f + WORD_TRAVEL - travel, y, SceneDraw.plain());
     }
 
-    /** The run's numbers, rising in once the scene has played. */
+    /**
+     * The run's numbers once the scene has played: rising in under GAME OVER, or sliding in from
+     * the right beside the victorious hero.
+     */
     private void drawSummary(Shell shell, SceneCanvas c, int w) {
-        int start = victory ? 40 : SUMMARY_AT;
+        int start = victory ? VICTORY_SUMMARY_AT : SUMMARY_AT;
         float in = Math.min(1f, Math.max(0f, (age - start) / (float) SUMMARY_RISE));
         if (in <= 0f) {
             return;
         }
         var f = shell.font;
-        int top = Math.round(118 + (1f - Ease.outCubic(in)) * 40);
+        float slide = 1f - Ease.outCubic(in);
+        int cx = victory ? w * 68 / 100 + Math.round(slide * (w * 32 / 100 + 90)) : w / 2;
+        int top = victory ? 84 : Math.round(118 + slide * 40);
         RunStats s = shell.run.state().stats();
-        Gfx.panel(c, w / 2 - 90, top, 180, 76);
+        Gfx.panel(c, cx - 90, top, 180, 76);
         String[][] rows = {
                 {"FLOORS CLIMBED", Integer.toString(shell.run.state().floor())},
                 {"ENEMIES DEFEATED", Integer.toString(s.enemiesDefeated)},
@@ -136,14 +153,14 @@ final class EndView implements RunScreen.RoomView {
         };
         int y = top + 6;
         for (String[] row : rows) {
-            f.drawShadowed(c, row[0], w / 2 - 82, y, Colors.TEXT_DIM);
-            f.drawShadowed(c, row[1], w / 2 + 82 - f.width(row[1]), y,
+            f.drawShadowed(c, row[0], cx - 82, y, Colors.TEXT_DIM);
+            f.drawShadowed(c, row[1], cx + 82 - f.width(row[1]), y,
                     row[0].equals("SCORE") ? Colors.GOLD : Colors.TEXT);
             y += 11;
         }
         if (age > start + SUMMARY_RISE && (age / 30) % 2 == 0) {
             String hint = "PRESS ANY BUTTON";
-            f.drawShadowed(c, hint, (w - f.width(hint)) / 2, 206, Colors.TEXT_DIM);
+            f.drawShadowed(c, hint, cx - f.width(hint) / 2, victory ? top + 82 : 206, Colors.TEXT_DIM);
         }
     }
 
