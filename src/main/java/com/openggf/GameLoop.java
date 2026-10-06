@@ -3804,12 +3804,7 @@ public class GameLoop {
      * application exit); does nothing while a fade is already running.
      */
     void fadeOutTo(Runnable next) {
-        FadeManager manager = resolveFadeManager();
-        if (manager.isActive()) {
-            return;
-        }
-        audioManager.fadeOutMusic();
-        manager.startFadeToBlack(next);
+        GameLoopMenuTransitions.fadeOutTo(resolveFadeManager(), audioManager, next);
     }
 
     /**
@@ -3821,13 +3816,8 @@ public class GameLoop {
      * the title screen reopens the time attack menu once it becomes active.
      */
     private void startTimeAttackReturnToMenuFade() {
-        FadeManager manager = resolveFadeManager();
-        if (manager.isActive()) {
-            return;
-        }
-        pendingReopenTimeAttackMenu = multiplayerRaceCoordinator == null;
-        audioManager.fadeOutMusic();
-        manager.startFadeToBlack(this::returnToMasterTitle);
+        GameLoopMenuTransitions.fadeOutTo(resolveFadeManager(), audioManager,
+                () -> pendingReopenTimeAttackMenu = multiplayerRaceCoordinator == null, this::returnToMasterTitle);
     }
 
     /**
@@ -3836,22 +3826,7 @@ public class GameLoop {
      * and transitions to the game-specific title screen.
      */
     private void exitMasterTitleScreen(MasterTitleScreen masterScreen) {
-        FadeManager fadeManager = resolveFadeManager();
-        if (fadeManager.isActive()) {
-            return;
-        }
-
-        MasterTitleEntry.Launch launch = masterScreen.getSelectedLaunch();
-        String selectedGameId = masterScreen.getSelectedGameId();
-        boolean programmaticSelection = masterScreen.isProgrammaticSelection();
-
-        fadeManager.startFadeToBlack(() -> {
-            if (launch != null && launch.entry() instanceof MasterTitleEntry.Standalone)
-                masterTitleExitCoordinator.exitStandalone(launch);
-            else masterTitleExitCoordinator.exitStock(selectedGameId, programmaticSelection);
-        });
-
-        LOGGER.info("Starting fade-to-black for master title screen exit (game: " + selectedGameId + ")");
+        GameLoopMenuTransitions.exitMasterTitleScreen(masterScreen, resolveFadeManager(), masterTitleExitCoordinator);
     }
 
     /**

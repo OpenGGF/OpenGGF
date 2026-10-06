@@ -216,6 +216,62 @@ frames, item monitors, icons and drawn effects). Enemy looks are code
   and capture its scene to PNG, MP4 and WAV (`d9be9a254`, written for the example's highlight reel), and `examples/hello-scene` is a
   two-class starter for newcomers (`3fd553324`).
 
+### CI guard follow-up (2026-10-06)
+
+PR #211's CI at `96a6042f2` passed the ordinary suite and branch policy, but
+failed three structural guards. The title background override computed its
+virtual pattern base through another class instead of naming its owning
+`PatternAtlasRange`. The LRZ flame's fire-shield flag was still declared only
+through a legacy touch hook. `GameLoop` had 3,403 effective source lines against
+its 3,381-line budget.
+
+The repair keeps the title override at the same pattern IDs and gives the flame
+an explicit touch profile with the same single-region, render-gated fire hazard
+semantics. Both `loc_43E4E` and `loc_43F84` write `shield_reaction` bit 4; this is
+fire-shield immunity, not projectile deflection. Menu fade and master-title exit
+handling moves to `GameLoopMenuTransitions`, retaining the active-fade gate,
+the time-attack menu-return flag before fading, the music fade and deferred
+stock/standalone callbacks. The guards, atlas allocations,
+class-size budget and unpublished Mod API surface stay unchanged.
+
+The existing escape/title-exit tests and real LRZ flame collisions against all
+four shield types cover the behavior preserved by these changes. This follow-up
+adds no route, viewport, donor, roster or rewind coverage beyond those tests.
+
+Local reproduction used `-Pguards` with
+`TestObjectPhysicsStandardizationGuard#productionObjectPhysicsStandardizationHasNoUnapprovedViolations`,
+`TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction`
+and `TestArchUnitRules`: 31 tests, the same three failures, no errors or skips.
+The repaired source passes all 31. The initial repaired compile caught a missing
+`PatternAtlasRange` import; it was corrected before the completed passing run.
+
+The change-based plan against develop `eaceceda4` selects all 2,980 ordinary
+classes and guards. Proportionate validation for this follow-up uses direct
+behavior regressions plus the complete guard profile: the pattern IDs and
+collision policy are unchanged, and the menu fade bodies move without changing
+their admission or callback order. The focused command selects
+`TestGameLoop,TestEscapeToMasterTitleController,TestMasterTitleQuitFlow,TestMasterTitleExitCoordinator,TestTimeAttackLevelEndRouting,TestTimeAttackRuntime,TestLrzFlameThrower,TestTouchResponseManager,TestTouchResponseProfileMapping,TestSonic1TitleScreenPaletteFade,TestVirtualPatternIdRanges,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModSceneHost,TestSlayTheRobotnikExample,TestSlayTheRobotnikScene,TestHelloSceneExample`
+through `python3 tools/testing/maven_queue.py -Dmse=off -Dtest=... test -B`.
+All 445 tests pass without skips, using absolute paths to the existing verified
+S1 REV01, S2 REV01 and locked-on S3K ROMs. This is focused ordinary validation,
+not another full ordinary-suite pass. Java 21, Lua 5.4 and PowerShell preflight
+passes. Local Maven runs use the documented serial queue mode because the host
+has less free memory than automatic admission's reservation plus headroom.
+
+The complete guard profile passes all 672 tests with zero failures, errors or
+skips (87 source classes selected; 86 report classes executed). Command in this
+worktree, after the focused fixes and documentation, with `OPENGGF_ROM_ROOT`
+set to the directory containing the existing verified ROMs:
+
+```bash
+OPENGGF_MAVEN_QUEUE=serial LUA_BIN=lua5.4 \
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dopenggf.surefire.reports=target/pr211-ci-validation/guards test -B
+```
+
 ### Rejected approaches and their evidence
 
 - **Enums and static tables in the mod.** The mod validator rejects class initialisers and
