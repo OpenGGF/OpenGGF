@@ -49,6 +49,12 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
 
 ## Experimental projects
 
+- [Robotnik Tower Defence](../../examples/robotnik-tower-defense/README.md) —
+  Industrial Action: defend Robotnik's base door from 15 waves of unionised
+  Flickies with six ROM-drawn badnik defenses, upgrades, repair and an emergency
+  bomb. An S3K mod scene with mouse/pad controls and saved records; not one of the
+  eight maintained gallery samples.
+
 - [Sonic Survivors](../../examples/sonic-survivors/README.md) — a separate Sonic 2 survivors roguelike: walled arenas cut from each route act, ROM-art badniks with hitpoints, a bounce combo, level-up cards, zone bosses, a route with act choice and saved meta-progression, all through the existing code-patch API. Not part of the eight maintained gallery samples.
 
 - [Slay the Robotnik](../../examples/slay-the-robotnik/README.md) — a Slay the Spire-style deck-building roguelike on Sonic 3 & Knuckles, built as a mod scene: three heroes, four acts of zone maps, ROM-drawn badniks and bosses, events, shops and relics.
