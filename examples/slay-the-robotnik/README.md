@@ -103,8 +103,8 @@ describing the game. The last change to the mod's own code landed at 05:26 the n
 
 - One lead agent planned and integrated the work, with a few subagents at a time taking
   self-contained pieces.
-- A human wrote the brief and played the builds. Their feedback shaped each round after the
-  first playable version:
+- Raiscan (`@raiscan`) wrote the brief and played the builds. Their feedback shaped each round
+  after the first playable version:
   - the map's scroll wheel and tips for card terms and the top bar;
   - staging rooms in the real level;
   - the slot machine's real reels;
@@ -117,7 +117,8 @@ describing the game. The last change to the mod's own code landed at 05:26 the n
 
 The design record,
 [2026-10-05-slay-the-robotnik.md](../../docs/architecture/designs/2026-10-05-slay-the-robotnik.md),
-logs each step with its commits, including the approaches that were tried and dropped.
+logs each step with its commits, including the approaches that were tried and dropped. The
+project's [AI journey](../../docs/project/ai-journey.md) tells where this fits in OpenGGF's story.
 
 ## How it is built (a tour for modders)
 
