@@ -23,7 +23,7 @@ The jar holds only code and text files.
 examples/slay-the-robotnik/play.sh             # build what changed and play (opens straight into the mod)
 examples/slay-the-robotnik/play.sh --fresh     # ...after deleting the saved run, records and settings
 examples/slay-the-robotnik/play.sh --rebuild   # ...forcing an engine rebuild
-python3 examples/slay-the-robotnik/build.py    # just compile and package target/slay-the-robotnik/slay-the-robotnik.jar
+python3 examples/slay-the-robotnik/build.py    # just compile and package target/examples/slay-the-robotnik/slay-the-robotnik.jar
 ```
 
 `play.sh` (and `build.py --run`) launches the engine with the mod as a development mod,
@@ -32,7 +32,8 @@ normally instead, copy the jar into `mods/` and enable it in the Mod Manager; th
 **Sonic 3 & Knuckles** on the master title and the mod's title screen opens instead of the
 stock one. *Play Sonic 3 & Knuckles* on that menu returns to the stock game, and
 holding Escape returns to the master title as everywhere else. The mod always plays in
-16:9 (400×224); your aspect setting returns at the master title.
+16:9 (400×224, from `ModContext.requireDisplayWidth(400)`), and the window refits to it; your
+aspect setting returns at the master title.
 
 ## How to play
 
@@ -95,14 +96,18 @@ Bosses: Fire Breath and Flame Craft (Angel Island), Big Shaker and Screw Mobile
 
 ## How it is built (a tour for modders)
 
+New to mod scenes? Read [hello-scene](../hello-scene/README.md) first: it is the same idea in
+two classes. This example is the same scene API used for a whole game.
+
 ```
 src/main/java/slaytherobotnik/
-  SlayTheRobotnikMod.java   registration: reads the text assets, registers the scene, asks for 16:9
+  SlayTheRobotnikMod.java   registration: reads the text assets, registers the scene, asks for 400 wide
   core/                     the rules: cards, powers, combat, enemies, relics, potions, events, run state
-  map/  run/                the act map generator and the run's rooms (fight, reward, shop, rest, event...)
   content/                  the game's data: every card, relic, monitor, enemy, encounter, event and act
-  art/                      ROM sprite addresses (RomSprites), text art, card and relic picture recipes
-  scene/  ui/               the screens: title, character select, map, fights, shop, compendium...
+  map/  run/                the act map generator and the run's rooms (fight, reward, shop, rest, event...)
+  art/                      loading pictures: ROM sprite addresses (RomSprites), text art, picture recipes
+  ui/                       small reusable helpers: font, colours, easing, panels, hotspots, controls
+  scene/                    everything on screen: the scene, its screens, room views and pictures
 src/main/resources/
   META-INF/openggf-mod.yaml the manifest (a patch mod for base game s3k)
   art/font.txt icons.txt    pixel font and icons, drawn in text
@@ -110,22 +115,50 @@ src/main/resources/
 src/test/java/              rules tests, content checks and a bot that plays whole runs
 ```
 
-**The rules know nothing about the engine.** `core/`, `map/`, `run/` and `content/` are
-plain Java: a fight is a `Combat` that produces a list of `CombatEvent`s, which the screen
-then replays as animations. That keeps the rules testable without a ROM and the screens
-free of game logic.
+Each package has a `package-info.java` saying what belongs in it.
 
-**The scene is the only engine-facing part.** `SlayTheRobotnikMod.register` calls
-`ModContext.registerStartupScene(...)`, so the engine opens `SlayScene` instead of the S3K
-title. A scene gets a `SceneContext` each tick — input, the mouse in game pixels, music
-and sound effects, file storage under `saves/mods/slay-the-robotnik/`, and a
-`SceneCanvas` to draw on. Images come from PNGs, from pixels made in code (the text art),
-or from the ROM through `SceneRomArt`: `RomSprites` lists each sprite's art, mappings,
-DPLC and palette by its disassembly label, and `EnemyVisuals` assembles bosses from those
-frames using the offsets of the original child objects. `SceneRomArt.zoneBackdrop` and
-`levelOverview` supply the zone backgrounds (`scene/Backdrops`) and the map's level picture
-(`scene/MapView`). See the
-[mod scene guide](../../docs/modding/guides/mod-scenes.md) for the API itself.
+**The rules know nothing about the engine.** `core/`, `content/`, `map/` and `run/` are
+plain Java with no engine imports. A fight is a `Combat` that applies every rule at once and
+appends what happened to a list of `CombatEvent`s; the fight screen replays that list as
+animations. The rules never wait for a frame, so the tests and the run bot play whole games
+without a ROM or a window.
+
+**One scene, a stack of screens.** The engine runs one `ModScene`; everything else is the
+mod's own code:
+
+```
+engine ──► SlayScene            (ModScene: enter / update / draw / exit; DebuggableScene)
+             └─► Shell          shared state: controls, font, art, music, fades, saving
+                   └─► Screen   one at a time: TitleScreen, CharacterSelectScreen, CompendiumScreen,
+                                RecordsScreen, SettingsScreen, or RunScreen
+                         RunScreen: the HUD and its tips, flying rings/cards/relics, room transitions
+                           └─► RoomView for run.room(): StartView, MapView, CombatView, RewardView,
+                               EventView, ShopView, RestView, TreasureView, EndView
+                                     ▲ reads and drives
+run.Run ── room() ───────────────────┘   (plain Java; each Room is a small state machine)
+```
+
+Read it in that order: `SlayTheRobotnikMod`, `SlayScene`, `Shell` and `Screen`, `TitleScreen`,
+`RunScreen`, then `CombatView` against `core/Combat`.
+
+**Animation lives in `update`.** Views advance their timers in `update` and only read them in
+`draw`, because the engine may skip or repeat `draw` (headless capture draws only some frames).
+
+**The engine surface is 20 types**, all in two packages: `GgfMod` and `ModContext` to
+register, and `ModScene`, `SceneContext`, `SceneCanvas`, `SceneDraw`, `SceneImage`,
+`SceneSprite`, `SceneSpriteSet`, `SceneRomArt`, `RomSpriteRequest`, `SceneBackdrop`,
+`SceneLevelStage`, `SceneButtons`, `SceneKeys`, `SceneMouse`, `SceneStorage` and
+`DebuggableScene` to run. Everything else is plain Java. The pictures come from the ROM
+through `SceneRomArt`:
+- `art/RomSprites` lists each sprite's art, mappings, DPLC and palette by disassembly label;
+- `scene/EnemyVisuals` assembles badniks and bosses from those frames, at the offsets of the
+  original child objects;
+- `scene/LevelStages` stands each room on a stretch of the act's real floor (`levelStages`,
+  `levelForeground`);
+- `scene/Backdrops`, `scene/MapView` and `scene/TitleCard` use the zone backgrounds, the
+  level overview and the act title cards.
+
+See the [mod scene guide](../../docs/modding/guides/mod-scenes.md) for the API itself.
 
 **Mod code has no static state.** The mod validator rejects enums, static collections and
 static initialisers, so kinds such as card types are `String` constants and tables are
@@ -133,7 +166,18 @@ built per instance. `build.py` packages through `ggfmod`, which runs that valida
 
 ## Extending it
 
-Add a card (in `content/SonicCards.java`, say):
+| To add | Touch |
+|---|---|
+| a card | `content/<Hero>Cards.java` (or `CommonCards`) for the rules; `art/cards.txt` for its picture |
+| a relic | `content/Relics.java` (an anonymous `Relic` overriding the hooks it needs); `art/relics.txt` |
+| an item monitor | `content/Potions.java` |
+| an enemy | `content/<Zone>.java`: an `Enemy` subclass and an `EncounterDef` for its pool; `scene/EnemyVisuals.compose` for its look; `art/RomSprites` for any sprite it needs |
+| an event | `content/Events.java`: a script against `EventContext`. To play its choices out, a `scene/<Name>Picture.java` (an `EventPicture`) added to `scene/EventPictures` |
+| an act | `content/<Zone>.java` (`ActDef`: ROM zone and act, music, rooms) and its line in `content/Content` |
+| a screen | a `scene/Screen`, opened with `shell.go(new ...)` |
+| a sound or song | a constant in `scene/Sounds.java` (Sonic 3 & Knuckles' driver ID) |
+
+For example, a card (in `content/SonicCards.java`, say):
 
 ```java
 // Pommel Strike.
@@ -147,32 +191,31 @@ c.add(card("sonic:buzz_saw", "Buzz Saw", CardType.ATTACK, CardRarity.COMMON)
         .build());
 ```
 
-and give it a picture in `art/cards.txt`:
+and its picture in `art/cards.txt`:
 
 ```
 sonic:buzz_saw: fx speed; hero sonic anim=0x2 -6,2; rom explosion anim=0/1/2/3/4@4 18,0 x0.75
 ```
 
 `{D}`, `{B}` and `{M}` show live damage, Block and magic numbers; `<g>…</g>`, `<r>…</r>`
-and `*Keyword*` colour text. Relics are anonymous `Relic` subclasses in
-`content/Relics.java` overriding the hooks they need, with a picture in `art/relics.txt`.
-An enemy is an `Enemy` subclass choosing a `Move` each turn (see `content/AngelIsland.java`),
-an encounter lists enemies for an act's pool, and an event is a short script written
-against `EventContext` (`content/Events.java`). `ContentIntegrityTest` and
-`CardRecipesTest` check new content is wired up.
+and `*Keyword*` colour text, and keywords get tips. `ContentIntegrityTest` and
+`CardRecipesTest` check that new content is wired up.
 
-## Testing
+## Testing and tools
 
 - `src/test/java` holds the rules tests and `RunBot`, which plays complete runs with
   every hero to prove no run can get stuck. The engine suite runs them
   (`TestSlayTheRobotnikExample`) after building and validating the mod, and
   `TestSlayTheRobotnikScene` (needs the S3K ROM) opens every fight and event through the
   real scene and checks nothing faults.
-- `src/test/java/com/openggf/mods/code/SlayTheRobotnikCapture.java` in the engine takes
-  headless screenshots; its script can jump straight into any room
-  (`"10:jump=tails:7:fight:hcz:big_shaker"`, see `SlayScene.debugJump`).
-- `src/test/java/com/openggf/mods/scene/SpriteSheetDump.java` renders every frame of a ROM
-  sprite (or a character) into one numbered PNG, for choosing frames.
+- `SlayScene.debugJump` (the scene's `DebuggableScene` entry) jumps straight into any room,
+  fight, event or compendium tab; its Javadoc has the command grammar.
+- The engine's `ExampleModCapture` records the scene headless to PNGs, an MP4 and a WAV from
+  an input script, using those jumps
+  (`--jump "tails:7:fight:hcz:big_shaker" --script "150:enter +30:enter"`); see the
+  [mod scene guide](../../docs/modding/guides/mod-scenes.md#6-testing-a-scene).
+- `ggfmod sprites` draws every frame of a ROM sprite (or a character) into one numbered PNG,
+  for choosing frames and checking `RomSprites` entries.
 
 ## Known gaps
 

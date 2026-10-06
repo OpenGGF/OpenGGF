@@ -40,7 +40,9 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
   gimmick.
 - [Mod scenes](guides/mod-scenes.md) — full-screen menus and games drawn by the mod: the
   startup-scene registration, lifecycle and fault boundary, the canvas, ROM sprites and
-  characters, audio, storage and headless testing, with Slay the Robotnik as the example.
+  characters, audio, storage and headless testing. Start from
+  [hello-scene](../../examples/hello-scene/README.md), a two-class starter; Slay the Robotnik
+  is the complete example.
 - [AI-generated art](guides/ai-art.md) — prompting, quantizing, and laying out
   original sprite/tile PNGs for `ggfmod convert art`, and swapping generated art into
   either build-along sample.

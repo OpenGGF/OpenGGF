@@ -6,11 +6,22 @@ input, audio, storage and a canvas, and keeps it inside the mod fault boundary. 
 use the player's ROM for art, so a scene looks like the game it runs on without shipping
 any of its assets.
 
-The complete example is [Slay the Robotnik](../../../examples/slay-the-robotnik/README.md),
-a deck-building roguelike on Sonic 3 & Knuckles. Its source is the reference for
-everything below; when this guide and the source differ, the source is authoritative.
+Two examples go with this guide:
 
-Scenes are part of the Mod API 0.7 candidate and need the JVM build.
+- [hello-scene](../../../examples/hello-scene/README.md) is the place to start: two classes
+  and a manifest, in which Sonic runs and jumps over Angel Island's background collecting
+  rings. Copy it to begin your own scene.
+- [Slay the Robotnik](../../../examples/slay-the-robotnik/README.md) is a complete
+  deck-building roguelike on Sonic 3 & Knuckles, and shows how a whole game is organised
+  around one scene.
+
+When this guide and their source differ, the source is authoritative. Build and run either
+from a checkout with `python3 examples/build_example.py <name> --run` (Java 21 and Maven, and
+your ROM set up as for the engine).
+
+Scenes are part of the Mod API 0.7 candidate and need the JVM build. Their types live in two
+packages: `com.openggf.mods.code` (`GgfMod`, `ModContext`) to register, and
+`com.openggf.mods.scene` (`ModScene`, `SceneContext`, `SceneCanvas` and the rest) to run.
 
 ## 1. Register a startup scene
 
@@ -23,14 +34,25 @@ formatVersion: 1
 id: hello-scene
 name: Hello Scene
 version: 0.1.0
+authors:
+  - Your Name
+description: What the mod does, in a sentence or two.
 engineApiRange: ">=0.7.0 <0.8.0"
 type: patch
 baseGame: s3k
-entrypoint: hello.HelloMod
+entrypoint: hello.HelloSceneMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}
 ```
 
 ```java
-public final class HelloMod implements GgfMod {
+package hello;
+
+import com.openggf.mods.code.GgfMod;
+import com.openggf.mods.code.ModContext;
+
+public final class HelloSceneMod implements GgfMod {
     @Override
     public void register(ModContext context) {
         context.registerStartupScene(HelloScene::new);
@@ -43,8 +65,11 @@ enabled mods register one for the same game, the mod applied last in load order 
 
 ## 2. The scene lifecycle
 
+The smallest useful scene counts button presses (hello-scene's `HelloScene` does more with
+the same four calls):
+
 ```java
-public final class HelloScene implements ModScene {
+public final class PressCounter implements ModScene {
     private int presses;
 
     @Override public void enter(SceneContext ctx) {
@@ -258,3 +283,15 @@ java -cp target/test-classes:target/classes:$(cat target/test-classpath.txt) \
 
 The class's Javadoc lists every option and script step. To get the classpath file, run
 `mvn dependency:build-classpath -Dmdep.outputFile=target/test-classpath.txt -Dmdep.includeScope=test`.
+
+## 7. Troubleshooting
+
+| What you see | Why, and what to do |
+|---|---|
+| The stock title screen opens instead of your scene | The mod is not enabled (or not trusted) in the Mod Manager; another enabled mod later in load order also registers a startup scene; you are running a native build, which loads no code mods; or test mode is on (`debug.testMode.enabled`), which skips startup scenes. |
+| `ggfmod package` fails with `STATIC_STATE_UNSUPPORTED` | A mod class has an enum, a static collection or array, or a static initialiser. Move the state onto your scene or an object it owns; use `static final` numbers and strings for kinds. |
+| The mod is disabled and the Mod Manager shows a finding | One of your scene calls threw an exception. The finding and the engine log say which. |
+| Reading a mod file from the scene fails | Mod files can only be read during `register`. Read them there and pass the bytes to the scene. |
+| A ROM sprite has the wrong colours or is scrambled | The palette line, palette address, compression or DPLC layout does not match the object. Check the request with `ggfmod sprites`, which draws every frame with your settings. |
+| Animations stand still in captures, or run fast | State changes in `draw`. The engine may skip or repeat `draw`; advance timers in `update` only. |
+| `zoneBackdrop`, `levelStages` or `titleCard` return null | The game has no such picture for that act yet. Ask `hasZonePictures` and `hasTitleCard` first and draw something of your own otherwise. |
