@@ -1,8 +1,9 @@
-package com.openggf.mods.scene;
+package com.openggf.mods.scene.host;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
+import com.openggf.mods.scene.SceneImage;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;

@@ -153,7 +153,7 @@ public class GameLoop {
 
     private final MenuScreenModeController menuScreenModeController = new MenuScreenModeController();
     /** The open mod scene, if any; {@link ModSceneLauncher} opens, draws and leaves it. */
-    final com.openggf.mods.scene.ModSceneHost modSceneHost = new com.openggf.mods.scene.ModSceneHost();
+    final com.openggf.mods.scene.host.ModSceneHost modSceneHost = new com.openggf.mods.scene.host.ModSceneHost();
     private final BonusStageTransitionCoordinator bonusStageTransitionCoordinator =
             new BonusStageTransitionCoordinator();
     private final PresenceManager presenceManager;

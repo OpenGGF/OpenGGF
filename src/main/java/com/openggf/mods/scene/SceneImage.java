@@ -58,11 +58,6 @@ public final class SceneImage {
         return argb.clone();
     }
 
-    /** The pixels without copying, for the engine's uploader. */
-    int[] rawPixels() {
-        return argb;
-    }
-
     /**
      * A new {@code w} x {@code h} image cut from this one at ({@code x}, {@code y}); parts of the
      * rectangle outside this image come out transparent.

@@ -3,22 +3,16 @@ package com.openggf;
 import com.openggf.architecture.CompositionRoot;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.data.PlayerSpriteArtProvider;
-import com.openggf.data.Rom;
 import com.openggf.game.GameId;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.save.SavePaths;
-import com.openggf.game.session.SessionManager;
-import com.openggf.game.sonic3k.Sonic3kZoneArt;
 import com.openggf.graphics.GraphicsManager;
-import com.openggf.level.render.ZonePictureSource;
 import com.openggf.mods.code.OwnedSceneFactory;
-import com.openggf.mods.scene.SceneRomArtFactory;
-import com.openggf.mods.scene.SceneServices;
+import com.openggf.mods.scene.host.SceneRomArtFactory;
+import com.openggf.mods.scene.host.SceneServices;
 import java.io.IOException;
-import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -69,39 +63,15 @@ final class ModSceneLauncher {
     }
 
     private static com.openggf.mods.scene.SceneRomArt romArt(GameModule module) {
-        GameId id = module.getGameId();
-        if (id == GameId.STANDALONE) {
+        if (module.getGameId() == GameId.STANDALONE) {
             return null;
         }
         try {
-            Rom rom = GameServices.rom().getRom();
-            Supplier<PlayerSpriteArtProvider> players = new Supplier<>() {
-                private PlayerSpriteArtProvider cached;
-
-                @Override
-                public PlayerSpriteArtProvider get() {
-                    if (cached == null) {
-                        var session = SessionManager.getCurrentWorldSession();
-                        Object game = session == null ? null : module.createGame(session.getDataSource());
-                        cached = game instanceof PlayerSpriteArtProvider provider ? provider : null;
-                    }
-                    return cached;
-                }
-            };
-            return SceneRomArtFactory.create(rom, id, players, module::loadTailsTailArt, zoneArt(id, rom));
+            return SceneRomArtFactory.forModule(module, GameServices.rom().getRom());
         } catch (IOException | RuntimeException e) {
             LOG.log(Level.WARNING, "Mod scene opened without ROM art", e);
             return null;
         }
-    }
-
-    /**
-     * The stock game's zone backdrop and overview builder (Sonic 3 &amp; Knuckles only so far),
-     * reading the same ROM; null when the game has none. It builds detached levels and never
-     * touches the running one.
-     */
-    private static ZonePictureSource zoneArt(GameId id, Rom rom) {
-        return id == GameId.S3K ? new Sonic3kZoneArt(rom) : null;
     }
 
     /** Window coordinates (GLFW screen units) to logical scene pixels, through the letterboxed viewport. */

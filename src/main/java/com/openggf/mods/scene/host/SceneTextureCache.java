@@ -1,5 +1,6 @@
-package com.openggf.mods.scene;
+package com.openggf.mods.scene.host;
 
+import com.openggf.mods.scene.SceneImage;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;

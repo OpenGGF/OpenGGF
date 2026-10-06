@@ -1,5 +1,6 @@
-package com.openggf.mods.scene;
+package com.openggf.mods.scene.host;
 
+import com.openggf.mods.scene.SceneStorage;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;

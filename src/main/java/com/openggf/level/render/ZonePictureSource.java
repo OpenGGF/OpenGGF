@@ -10,6 +10,16 @@ import java.util.List;
  * graphics, session or settings. Results are not cached here.
  */
 public interface ZonePictureSource {
+    /**
+     * How a game module offers its zone pictures: {@code getGameService(ZonePictureSource.Factory.class)}
+     * returns one for games that have them (Sonic 3 &amp; Knuckles), null otherwise.
+     */
+    @FunctionalInterface
+    interface Factory {
+        /** A picture source reading {@code rom}. */
+        ZonePictureSource create(com.openggf.data.Rom rom);
+    }
+
     /** Whether {@link #backdrop}, {@link #overview}, {@link #stages} and {@link #foreground} picture the act. */
     boolean supports(int zone, int act);
 

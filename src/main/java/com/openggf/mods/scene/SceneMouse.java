@@ -36,8 +36,8 @@ public final class SceneMouse {
     private final int wheel;
     private final boolean lastInputWasMouse;
 
-    /** Engine-built; scenes receive these from {@link SceneContext#mouse()}. */
-    SceneMouse(int x, int y, boolean inside, boolean moved, boolean leftDown, boolean leftPressed,
+    /** Engine-built (its host reaches this constructor); scenes receive these from {@link SceneContext#mouse()}. */
+    private SceneMouse(int x, int y, boolean inside, boolean moved, boolean leftDown, boolean leftPressed,
             boolean leftReleased, boolean rightDown, boolean rightPressed, boolean rightReleased, int wheel,
             boolean lastInputWasMouse) {
         this.x = x;

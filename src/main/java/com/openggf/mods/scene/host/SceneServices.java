@@ -1,6 +1,7 @@
-package com.openggf.mods.scene;
+package com.openggf.mods.scene.host;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.mods.scene.SceneRomArt;
 import java.nio.file.Path;
 
 /**

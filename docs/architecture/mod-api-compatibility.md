@@ -281,16 +281,20 @@ Mod scenes add the `com.openggf.mods.scene` package to the candidate surface:
 `Compression` and `DplcLayout` enums), `SceneBackdrop` (with its `Band` record),
 `SceneLevelStage`, `SceneMouse`,
 `SceneAudio` and `SceneStorage`, plus
-`ModContext.registerStartupScene`,
-`GameMode.MOD_SCENE`, and `InputHandler.handleScroll` /
-`consumeScrollNotches`. The engine finds the registered scene as the effective module's
+`ModContext.registerStartupScene` and
+`GameMode.MOD_SCENE`. The mouse wheel stays off the pinned `InputHandler`: the engine-internal
+`control.MouseWheel` (one per input handler, `MouseWheel.of(input)`) collects scroll movement
+for whichever screen reads the mouse, the master title or a scene. The engine finds the registered scene as the effective module's
 `getGameService(OwnedSceneFactory.class)`, so the `game` package never depends on mod types.
 `mods.code.OwnedSceneFactory` is engine-internal and only that package can construct it, so a
 patch cannot forge a scene's owner or run one outside the owner's fault boundary; a
-`ModSceneFactory` served under its own type is ignored. The host classes in the scene package
-(`ModSceneHost`, `SceneServices`, `SceneRomArtFactory`) are engine-internal and stay
-unreachable from the pinned surface; `GameLoop`'s scene entry points are package-private
-for that reason. The engine closes an open scene at shutdown (so `ModScene.exit` runs) and
+`ModSceneFactory` served under its own type is ignored. The creator package holds only the API;
+the host (`ModSceneHost`, `SceneServices`, `SceneRomArtFactory`, the renderer, recording canvas,
+texture cache, storage, PNG and sprite rasterisers) lives in the engine-internal
+`com.openggf.mods.scene.host` package, which no signature reaches. It reads image pixels
+through `SceneImage.pixels()` (one copy per upload) and builds `SceneMouse` values through a
+private-constructor lookup, so the API types need no package-private hooks. `GameLoop`'s scene
+entry points are package-private for the same reason. The engine closes an open scene at shutdown (so `ModScene.exit` runs) and
 deletes a scene image's GPU texture once the image goes 120 frames undrawn, uploading it again
 if it is drawn later.
 
@@ -347,7 +351,9 @@ documented so a scene can animate it; Sonic 1 and Sonic 2 have neither yet. Stag
 engine-internal `level.render.LevelFloorScanner`, which reads the act's primary-path collision
 the way a floor sensor does (layout cell, block, chunk descriptor flips and solidity bits, solid
 tile height) and never touches a live level. The stock implementation converts values from the
-engine-internal `level.render.ZonePictureSource`; for S3K, `Sonic3kZoneArt` builds a detached
+engine-internal `level.render.ZonePictureSource`, which a game module offers as
+`getGameService(ZonePictureSource.Factory.class)` (shared engine code has no per-game switch);
+for S3K, `Sonic3kZoneArt` builds a detached
 level from explicit inputs (no session, settings or live graphics), primes animated tiles into a
 private tile array and rasterises on the CPU with `PlaneRasterizer`. Keeping the source in
 `level.render` leaves `game` free of `mods` dependencies (the ArchUnit cycle ratchet). These are

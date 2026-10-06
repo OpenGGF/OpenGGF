@@ -19,7 +19,7 @@ import com.openggf.mods.scene.SceneBackdrop;
 import com.openggf.mods.scene.SceneImage;
 import com.openggf.mods.scene.SceneLevelStage;
 import com.openggf.mods.scene.SceneRomArt;
-import com.openggf.mods.scene.SceneRomArtFactory;
+import com.openggf.mods.scene.host.SceneRomArtFactory;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;

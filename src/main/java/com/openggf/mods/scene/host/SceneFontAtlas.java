@@ -1,5 +1,6 @@
-package com.openggf.mods.scene;
+package com.openggf.mods.scene.host;
 
+import com.openggf.mods.scene.SceneImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;

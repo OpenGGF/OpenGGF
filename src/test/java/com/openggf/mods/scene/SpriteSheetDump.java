@@ -4,6 +4,7 @@ import com.openggf.data.Rom;
 import com.openggf.game.GameId;
 import com.openggf.io.PixelImage;
 import com.openggf.io.PngCodec;
+import com.openggf.mods.scene.host.SceneRomArtFactory;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;

@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
-import com.openggf.mods.scene.ModSceneHost;
+import com.openggf.mods.scene.host.ModSceneHost;
 import com.openggf.tests.SharedLevel;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -88,14 +88,14 @@ class TestSlayTheRobotnikScene {
             assertEquals("MapRoom", currentRoom(scene));
             float start = mapScroll(scene);
             // Two notches towards the player scroll on towards the boss, and the view stays there.
-            harness.input().handleScroll(-2);
+            com.openggf.control.MouseWheel.of(harness.input()).scroll(-2);
             play(harness, 90);
             float ahead = mapScroll(scene);
             assertTrue(ahead > start + 100, "scrolled from " + start + " to " + ahead);
             play(harness, 60);
             assertEquals(ahead, mapScroll(scene), 0.5f, "the wheel's position holds");
             // Notches away from the player come back, stopping at the act's start.
-            harness.input().handleScroll(10);
+            com.openggf.control.MouseWheel.of(harness.input()).scroll(10);
             play(harness, 90);
             assertEquals(0f, mapScroll(scene), 0.5f);
             assertEquals(Map.of(), harness.findings());
@@ -148,6 +148,6 @@ class TestSlayTheRobotnikScene {
             harness.tick();
             host.draw(null, null);
         }
-        assertTrue(com.openggf.mods.scene.SceneHostTestAccess.lastFrameOps(host) > 0, "the scene drew something");
+        assertTrue(com.openggf.mods.scene.host.SceneHostTestAccess.lastFrameOps(host) > 0, "the scene drew something");
     }
 }

@@ -586,7 +586,7 @@ public class Engine {
 		});
 		org.lwjgl.glfw.GLFW.glfwSetScrollCallback(window, (windowHandle, xOffset, yOffset) -> {
 			if (inputHandler != null) {
-				inputHandler.handleScroll(yOffset);
+				com.openggf.control.MouseWheel.of(inputHandler).scroll(yOffset);
 			}
 		});
 

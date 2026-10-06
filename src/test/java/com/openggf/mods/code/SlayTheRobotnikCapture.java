@@ -86,7 +86,7 @@ public final class SlayTheRobotnikCapture {
                             harness.input().handleMouseButton(GLFW.GLFW_MOUSE_BUTTON_LEFT, GLFW.GLFW_PRESS);
                         }
                     } else if (move != null) {
-                        harness.input().handleScroll(Double.parseDouble(move.substring(6)));
+                        com.openggf.control.MouseWheel.of(harness.input()).scroll(Double.parseDouble(move.substring(6)));
                     }
                     String earlier = pointer.get(tick - 2);
                     if (earlier != null && earlier.startsWith("click=")) {
@@ -108,7 +108,7 @@ public final class SlayTheRobotnikCapture {
                         var image = ScreenshotCapture.captureFramebuffer(width * scale, height * scale);
                         ScreenshotCapture.savePNG(image, out.resolve(String.format(Locale.ROOT, "frame-%05d.png", tick)));
                         if (tick == total && System.getenv("SLAY_DUMP_OPS") != null) {
-                            var m = com.openggf.mods.scene.ModSceneHost.class.getDeclaredMethod("lastFrame");
+                            var m = com.openggf.mods.scene.host.ModSceneHost.class.getDeclaredMethod("lastFrame");
                             m.setAccessible(true);
                             for (Object op : (List<?>) m.invoke(harness.host())) {
                                 System.out.println("OP " + op);

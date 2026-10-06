@@ -1,5 +1,10 @@
-package com.openggf.mods.scene;
+package com.openggf.mods.scene.host;
 
+import com.openggf.mods.scene.ModScene;
+import com.openggf.mods.scene.SceneCanvas;
+import com.openggf.mods.scene.SceneDraw;
+import com.openggf.mods.scene.SceneImage;
+import com.openggf.mods.scene.SceneSprite;
 import java.util.ArrayList;
 import java.util.List;
 

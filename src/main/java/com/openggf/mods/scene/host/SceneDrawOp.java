@@ -1,4 +1,6 @@
-package com.openggf.mods.scene;
+package com.openggf.mods.scene.host;
+
+import com.openggf.mods.scene.SceneImage;
 
 /**
  * One recorded canvas call: a textured axis-aligned quad. Source coordinates are image

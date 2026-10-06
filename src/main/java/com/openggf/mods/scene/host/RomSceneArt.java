@@ -1,4 +1,4 @@
-package com.openggf.mods.scene;
+package com.openggf.mods.scene.host;
 
 import com.openggf.data.PlayerSpriteArtProvider;
 import com.openggf.data.Rom;
@@ -13,16 +13,23 @@ import com.openggf.level.render.LevelFloorScanner;
 import com.openggf.level.render.SpriteDplcFrame;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.ZonePictureSource;
+import com.openggf.mods.scene.RomSpriteRequest;
+import com.openggf.mods.scene.SceneBackdrop;
+import com.openggf.mods.scene.SceneImage;
+import com.openggf.mods.scene.SceneLevelStage;
+import com.openggf.mods.scene.SceneRomArt;
+import com.openggf.mods.scene.SceneSprite;
+import com.openggf.mods.scene.SceneSpriteSet;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.util.PatternDecompressor;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.ArrayList;
 import java.util.function.Supplier;
 
 /**

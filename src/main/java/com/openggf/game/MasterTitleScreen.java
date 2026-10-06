@@ -604,7 +604,7 @@ public class MasterTitleScreen {
     }
 
     private MasterTitlePointer readPointer(InputHandler input) {
-        int wheel = input.consumeScrollNotches();
+        int wheel = com.openggf.control.MouseWheel.of(input).takeNotches();
         if (!input.hasMouseInputSeen()) return null;
         int[] p = pointerMapper.apply(input.getMouseX(), input.getMouseY());
         if (p == null || p[2] == 0) return null;

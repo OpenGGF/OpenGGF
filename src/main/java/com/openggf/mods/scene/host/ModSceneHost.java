@@ -1,12 +1,23 @@
-package com.openggf.mods.scene;
+package com.openggf.mods.scene.host;
 
-import com.openggf.control.InputHandler;
 import com.openggf.control.InputActionMasks;
+import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.control.MenuRepeat;
+import com.openggf.control.MouseWheel;
 import com.openggf.control.PlayerInputState;
 import com.openggf.mods.code.ModFaultBoundary;
 import com.openggf.mods.code.OwnedSceneFactory;
+import com.openggf.mods.scene.DebuggableScene;
+import com.openggf.mods.scene.ModScene;
+import com.openggf.mods.scene.SceneArt;
+import com.openggf.mods.scene.SceneAudio;
+import com.openggf.mods.scene.SceneButtons;
+import com.openggf.mods.scene.SceneContext;
+import com.openggf.mods.scene.SceneImage;
+import com.openggf.mods.scene.SceneMouse;
+import com.openggf.mods.scene.SceneRomArt;
+import com.openggf.mods.scene.SceneStorage;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -240,7 +251,7 @@ public final class ModSceneHost {
             if (handler == null || services == null || services.mouse() == null) {
                 return SceneMouse.none();
             }
-            int wheel = handler.consumeScrollNotches();
+            int wheel = MouseWheel.of(handler).takeNotches();
             boolean left = handler.isMouseButtonDown(GLFW.GLFW_MOUSE_BUTTON_LEFT);
             boolean right = handler.isMouseButtonDown(GLFW.GLFW_MOUSE_BUTTON_RIGHT);
             int[] p = handler.hasMouseInputSeen()
@@ -256,7 +267,7 @@ public final class ModSceneHost {
             if (handler.isAnyKeyJustPressed() || padPressed(logical)) {
                 mouseLast = false;
             }
-            SceneMouse m = new SceneMouse(p[0], p[1], p[2] != 0, moved, left, leftPressed, !left && previousLeft,
+            SceneMouse m = SceneMouses.create(p[0], p[1], p[2] != 0, moved, left, leftPressed, !left && previousLeft,
                     right, rightPressed, !right && previousRight, wheel, mouseLast);
             lastX = p[0];
             lastY = p[1];

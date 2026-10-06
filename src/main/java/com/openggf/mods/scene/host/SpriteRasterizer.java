@@ -1,10 +1,12 @@
-package com.openggf.mods.scene;
+package com.openggf.mods.scene.host;
 
 import com.openggf.level.Pattern;
 import com.openggf.level.render.SpriteDplcFrame;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.render.TileLoadRequest;
+import com.openggf.mods.scene.SceneImage;
+import com.openggf.mods.scene.SceneSprite;
 import java.util.ArrayList;
 import java.util.List;
 

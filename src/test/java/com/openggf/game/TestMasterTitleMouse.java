@@ -85,7 +85,7 @@ class TestMasterTitleMouse {
         assertEquals("s1", screen.getSelectedGameId());
         click(screen, 8 + 144 - 4, 166, GLFW_MOUSE_BUTTON_LEFT); // the ">" arrow
         assertEquals("s2", screen.getSelectedGameId());
-        input.handleScroll(-1); // towards the user: next game
+        com.openggf.control.MouseWheel.of(input).scroll(-1); // towards the user: next game
         moveTo(screen, 200, 120);
         assertEquals("s3k", screen.getSelectedGameId());
         click(screen, 80, 166, GLFW_MOUSE_BUTTON_LEFT); // the game's name

@@ -1,4 +1,4 @@
-package com.openggf.mods.scene;
+package com.openggf.mods.scene.host;
 
 import static org.lwjgl.opengl.GL11.GL_BLEND;
 import static org.lwjgl.opengl.GL11.GL_FLOAT;
@@ -44,6 +44,7 @@ import static org.lwjgl.opengl.GL30.glDeleteVertexArrays;
 import static org.lwjgl.opengl.GL30.glGenVertexArrays;
 
 import com.openggf.graphics.ShaderProgram;
+import com.openggf.mods.scene.SceneImage;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -72,7 +73,7 @@ final class SceneRenderer {
     private final SceneTextureCache textures = new SceneTextureCache(new SceneTextureCache.Gpu() {
         @Override
         public int upload(SceneImage image) {
-            return SceneRenderer.upload(image.width(), image.height(), image.rawPixels());
+            return SceneRenderer.upload(image.width(), image.height(), image.pixels());
         }
 
         @Override

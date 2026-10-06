@@ -1,4 +1,4 @@
-package com.openggf.mods.scene;
+package com.openggf.mods.scene.host;
 
 /** Test access to a scene host's last recorded frame, from tests outside this package. */
 public final class SceneHostTestAccess {
