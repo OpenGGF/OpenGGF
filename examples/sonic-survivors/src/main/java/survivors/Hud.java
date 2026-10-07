@@ -188,7 +188,9 @@ final class Hud {
         Draw.bar(s, 40, 25, 70, 4, run.xp / (double) RunState.xpToNext(run.level), Draw.CYAN, 1f);
         int y = 34;
         if (run.revives > 0) { Draw.shadow(s, "REVIVE x" + run.revives, 8, y, 1, Draw.GREEN, 1f); y += 10; }
-        Draw.shadow(s, "HIT -" + run.toll(rings), 8, y, 1, danger ? Draw.RED : Draw.WHITE, 1f);
+        boolean fatal = rings <= run.toll(rings) && player != null && !player.hasShield() && run.revives == 0;
+        if (fatal) Draw.shadow(s, "NEXT HIT FATAL", 8, y, 1, (stage.frameTick / 8) % 2 == 0 ? Draw.RED : Draw.ORANGE, 1f);
+        else Draw.shadow(s, "HIT -" + run.toll(rings), 8, y, 1, danger ? Draw.RED : Draw.WHITE, 1f);
         if (run.rule(Rules.NO_FEVER)) {
             Draw.shadow(s, "FEVER OFF", 8, y + 10, 1, Draw.GREY, 1f);
         } else {
@@ -324,7 +326,7 @@ final class Hud {
             if (selected) Draw.outline(s, left + 6, y, panelW - 12, cardH, (stage.frameTick / 6) % 2 == 0 ? Draw.GOLD : Draw.WHITE, 1f);
             if (card == Stage.CARD_OVERDRIVE) {
                 Draw.shadow(s, "OVERDRIVE", left + 14, y + 5, 1, Draw.RED, 1f);
-                Draw.shadow(s, "BUILD MAXED: ALL DAMAGE +6% (" + run.overdrive + " TAKEN)", left + 14, y + 17, 1, Draw.WHITE, 1f);
+                Draw.shadow(s, "BUILD MAXED: ALL DAMAGE +3% (" + run.overdrive + " TAKEN)", left + 14, y + 17, 1, Draw.WHITE, 1f);
                 continue;
             }
             if (card < 0) {

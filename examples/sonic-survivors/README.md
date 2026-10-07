@@ -37,7 +37,7 @@ Sky Chase has no ground to fight on and is skipped.
    most 24), less than playing through earns. Start opens that zone's first act in **camp**.
 2. **Camp.** START RUN, **RING SHOP**, **MODE**, **EGGMAN'S RULES**, **RECORDS** and back to the
    title; the shop, rules and records open their own pages. The START RUN row names your
-   character's perk. A run begins with **40 rings** plus the shop's Ring Start.
+   character's perk. A run begins with **50 rings** plus the shop's Ring Start.
    MODE cycles **5 MINUTES**, **10 MINUTES** and **UNLIMITED**; ten-minute, unlimited and
    Eggman's Rules unlock permanently after your first boss clear (existing profiles with a
    cleared boss already qualify). The choice is saved and fixed for the run.
@@ -119,13 +119,18 @@ starting further along the route is not safer than playing through to it.
 
 | Lever | Value |
 | --- | --- |
-| Badnik hitpoints | base × (1 + 0.40 × tier + 0.05 × tier²) × (1 + 1.4p + 0.4p²) × (1 + 0.2 × act), p = pressure seconds / 120 |
+| Badnik hitpoints | base × (1 + 0.40 × tier + 0.06 × tier²) × (1 + 1.4p + 0.4p²) × (1 + 0.2 × act), p = pressure seconds / 120 |
 | Spawn interval | max(24, 60 − tier − seconds / 10) frames; surges two thirds of that |
 | Batch | 1 + seconds / 75 + tier / 4; surges +1 |
-| Ring toll threat | 1 + 0.25 per pressure minute + 0.20 per stage + 0.10 per act |
-| Ring value per badnik | 1 + tier / 3 (fractions round by chance) |
+| Ring toll threat | 1 + 0.25 per pressure minute + 0.30 per stage + 0.10 per act |
+| Ring value per badnik | 1 + tier / 4 (fractions round by chance) |
 | Elite spacing | 30 s, less 2 frames per pressure second and 1 s per tier, never under 12 s |
 | Boss hitpoints | 12 × the zone line-up's average badnik at the moment the boss arrives (Death Egg 18 × at five minutes' pressure) |
+
+Enemy fire is rationed so a crowd stays dodgeable: each shooter waits twice its species' period,
+and every badnik shot also draws on one shared fire budget for the whole arena, one shot every
+1.5 seconds on the first zones down to every half second in the last (Asteron bursts and boss attacks
+excepted). Thirty Buzzers on screen fire no faster than one.
 
 Population has a soft ceiling: with **160** badniks alive, ordinary batches stop joining the
 horde and every twelve held-back badniks arrive as one elite instead. Enemies, enemy shots,
@@ -134,22 +139,24 @@ consume the original game's limited object slots.
 
 ## Rings are health
 
-Any badnik, projectile or boss hit costs a **ring toll**: 10 rings or one twelfth of your
+Any badnik, projectile or boss hit costs a **ring toll**: 8 rings or one twelfth of your
 held rings rounded up, whichever is greater, times the threat above. The Armor upgrade reduces that toll by 8%
 per level, the shop's Armor Plating by 2% per level and the red emerald by 15%, together never
 more than 60%, with a five-ring minimum. The HUD shows the
 current cost. Large banks still help, but cannot trivialise an entire run. Hits give one
 second of protection, with no knockback; half the toll scatters as rings you can grab back. These **lost rings** ignore
 all magnets, award no new experience or collected-ring credit, fade smoothly from gold to transparent over **0.75 seconds**, then disappear; reward rings remain magnetic. A shield absorbs a hit instead.
-A hit with **no rings** is lethal, unless a revive remains (Revival shop item, Oil Ocean's
-emerald), which restores 20 rings. Rings flash red on the HUD while one more hit would empty
-them. Ring pickup chimes are grouped: the first pickup after half a second without a chime is
+Runs start with **50 rings** and a base toll of 8, six hits of grace. Rings are a health bar: **a hit whose toll would take your last rings ends the run** (unlike
+stock Sonic, where a single ring survives anything), unless a revive remains (Revival shop item,
+Oil Ocean's emerald), which restores three hits at the base toll (at least 20 rings). Rings and
+the HIT cost flash red on the HUD while the next hit would be fatal. Ring pickup chimes are grouped: the first pickup after half a second without a chime is
 immediately audible, while rapid collections chime roughly every ten rings, at most five
 times per second. Every ring still grants its full health and, for reward rings, experience.
 
-On the ground only a real roll (at least 4 px per frame) attacks: a crouched spin-dash charge or
-a slow roll into a badnik or boss is a hit, not a safe attack. Airborne and fast rolling contact
-still damages as before.
+Rolling attacks: a roll into a badnik or boss deals stomp damage, and if the badnik survives it
+knocks Sonic back off it without costing rings. Only a crouched spin-dash charge (or a roll that
+has all but stopped) is unsafe: the badnik's touch is a hit, so charging in place is not an
+untouchable attack.
 
 Nearby reward rings—including enemy drops—consolidate within **48 pixels**, checked
 every quarter second after the first 12 frames of their spawn. They merge while
@@ -200,7 +207,7 @@ always a weapon. Your build holds **three weapon types and three buff types**.
 Ranks do not consume extra slots. Homing Dash and Ground Pound count as weapons;
 Air Jump and all passives count as buffs. Full categories offer only upgrades to
 owned types, including on rerolls. Once your six equipped types are maxed, each level offers
-**OVERDRIVE** (all damage +6%, stacking without limit) or a ring bonus (three hits at the base
+**OVERDRIVE** (all damage +3%, stacking without limit) or a ring bonus (three hits at the base
 toll). Shop upgrades, emerald relics and temporary monitors use no build slots. The HUD shows both
 slot counts and the owned ranks (an evolved weapon shows `*`). **Reroll** deals again (one per zone,
 plus the shop and Chemical Plant's emerald). Up/down chooses and **Enter** (keypad Enter also works) or **gamepad Start** confirms.
@@ -387,6 +394,6 @@ through rewind.
 `TestSonicSurvivors#balanceProbe` is an opt-in diagnostic: a scripted bot (jumps at the nearest
 badnik, takes weapons until it holds three, then ranks owned upgrades) plays whole runs and writes
 the pressure curve every 30 seconds. Pass `-Dsonic-survivors.balance=<csv>[,fresh|mid|max[,mode[,sonic|tails[,seed]]]]`;
-without it the case is skipped. The bot neither dodges nor plans evolutions, so compare its
+without it the case is skipped. Add `-Dsonic-survivors.balance.hits=true` for a line per hit taken. The bot neither dodges nor plans evolutions, so compare its
 results across changes rather than reading them as a human's difficulty. Design notes and rejected approaches are in
 [the design record](../../docs/architecture/designs/2026-10-06-sonic-survivors.md).

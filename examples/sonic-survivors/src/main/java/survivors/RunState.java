@@ -11,10 +11,10 @@ import com.openggf.game.rewind.RewindSnapshottable;
 final class RunState implements RewindSnapshottable<RunState.Snapshot> {
     static final int STANDARD = 0, LONG = 1, ENDLESS = 2;
     static final int RING_SOUND_BATCH = 10, RING_SOUND_COOLDOWN = 12, RING_SOUND_QUIET = 30;
-    static final int BASE_TOLL = 10;
+    static final int BASE_TOLL = 8;
     static final int BASE_COMBO_CAP = 6;
-    /** Every run starts with these rings (four ring tolls) plus the shop's Ring Start. */
-    static final int START_RINGS = 40;
+    /** Every run starts with these rings (six base tolls) plus the shop's Ring Start. */
+    static final int START_RINGS = 50;
 
     boolean active;
     int startStage, stage, act;
@@ -37,7 +37,7 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
     /** Rings the run handed out for free (start, revives): never bankable by retiring. */
     int freeRings;
     int elitesDefeated, chestsOpened;
-    /** Overdrive cards taken once the build is maxed: +6% damage each, without limit. */
+    /** Overdrive cards taken once the build is maxed: +3% damage each, without limit. */
     int overdrive;
     /** Badniks defeated this run per {@link Species} id, merged into the bestiary when banked. */
     int[] speciesKills = new int[Species.COUNT];
@@ -147,7 +147,7 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
     // ---- Derived stats ----
     double damageMultiplier() {
         return (1 + 0.25 * level(Upgrades.POWER)) * (1 + 0.03 * shopPower) * (allRelics() ? 1.25 : 1.0)
-                * (1 + 0.06 * overdrive);
+                * (1 + 0.03 * overdrive);
     }
 
     int stompDamage() {
@@ -231,6 +231,8 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
     }
 
     int feverCharge() { return tails ? 12 : 10; }
+    /** A revive restores three hits at the base toll (at least 20 rings). */
+    int reviveRings() { return Math.max(20, 3 * toll(0)); }
     int hurtRecovery() { return Guard.INVULNERABLE_FRAMES + 6 * level(Upgrades.RECOVERY); }
 
     /** True when the equipped build has no eligible upgrades left. */

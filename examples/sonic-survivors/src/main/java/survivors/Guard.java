@@ -62,20 +62,25 @@ final class Guard {
             return true;
         }
         int rings = player.getRingCount();
-        if (rings <= 0) {
+        int toll = run == null ? RunState.BASE_TOLL : run.toll(rings);
+        // Rings are a health bar: a hit whose toll would empty them ends the run (unlike stock
+        // Sonic, where any single ring survives). A revive catches it instead.
+        if (rings <= toll) {
             if (run != null && run.revives > 0) {
                 run.revives--;
+                int restored = run.reviveRings();
+                run.freeRings += restored;
                 player.setInvulnerableFrames(REVIVE_INVULNERABLE_FRAMES);
-                player.addRings(20);
-                run.freeRings += 20;
+                player.setRingCount(restored);
                 services.playSfx(0xBF); // S2 sfx_ContinueJingle.
                 if (stage != null) stage.onRevive();
                 return true;
             }
-            return false;
+            player.setRingCount(0);
+            player.applyHurtOrDeath(player.getCentreX(), false, false);
+            return true;
         }
-        int toll = run == null ? RunState.BASE_TOLL : run.toll(rings);
-        int lost = Math.min(toll, rings);
+        int lost = toll;
         player.setInvulnerableFrames(run == null ? INVULNERABLE_FRAMES : run.hurtRecovery());
         player.setRingCount(rings - lost);
         services.audioManager().playSfx(GameSound.RING_SPILL);

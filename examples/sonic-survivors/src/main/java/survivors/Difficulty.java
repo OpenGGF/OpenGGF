@@ -19,7 +19,7 @@ final class Difficulty {
     static double hpScale(int tier, int act, int pressureSeconds) {
         double p = progress(pressureSeconds);
         // Superlinear in the route: the last zones are meant to demand a long-built profile.
-        return (1 + 0.40 * tier + 0.05 * tier * tier) * (1 + 1.4 * p + 0.4 * p * p) * (1 + 0.2 * act);
+        return (1 + 0.40 * tier + 0.06 * tier * tier) * (1 + 1.4 * p + 0.4 * p * p) * (1 + 0.2 * act);
     }
 
     /**
@@ -51,12 +51,12 @@ final class Difficulty {
 
     /** The ring toll's multiplier: route position plus this arena's pressure. */
     static double tollThreat(int stage, int act, int pressureSeconds) {
-        return 1 + 0.25 * pressureSeconds / 60.0 + 0.20 * stage + 0.10 * act;
+        return 1 + 0.25 * pressureSeconds / 60.0 + 0.30 * stage + 0.10 * act;
     }
 
     /** Rings a defeated ordinary badnik is worth before Greed, emeralds, combo and act bonuses. */
     static double dropValue(int tier) {
-        return 1 + tier / 3.0;
+        return 1 + tier / 4.0;
     }
 
     /** Elite spacing: every 30 seconds at first, never closer than twelve. */

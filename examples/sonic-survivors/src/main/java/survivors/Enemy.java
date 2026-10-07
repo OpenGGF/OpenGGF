@@ -240,11 +240,24 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
         }
     }
 
+    /**
+     * Each shooter keeps its own (doubled) period, but every shot also needs the arena's shared
+     * fire budget ({@link Stage#claimEnemyShot}), so a bigger crowd does not mean more bullets.
+     */
     private void shoot(Species.Traits t, int px, int py) {
         if (--shotTimer > 0) return;
-        shotTimer = t.shotPeriod() - (elite() ? t.shotPeriod() / 3 : 0);
         var camera = services().camera();
-        if (currentX < camera.getX() - 16 || currentX > camera.getX() + camera.getWidth() + 16) return;
+        if (currentX < camera.getX() - 16 || currentX > camera.getX() + camera.getWidth() + 16) {
+            shotTimer = 30;
+            return;
+        }
+        Stage stage = Stage.find(services());
+        if (stage != null && !stage.claimEnemyShot()) {
+            // Ready but the budget is spent: try again shortly, staggered so shooters take turns.
+            shotTimer = 20 + Math.floorMod(currentX, 30);
+            return;
+        }
+        shotTimer = t.shotPeriod() * 2;
         double dx = px - currentX, dy = py - currentY;
         double length = Math.max(1, Math.hypot(dx, dy));
         int speed = 0x220;
@@ -294,13 +307,16 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
 
     /** A stomp or roll: stomp damage times the combo, and a guaranteed rebound when from above. */
     /**
-     * The stock touch pass treats a spin-dash charge and any roll as an attack. Against badniks
-     * with hitpoints that made a crouched charge untouchable while it chipped at every badnik in
-     * reach, so on the ground only a real roll (at least 4 px per frame) attacks.
+     * The stock touch pass treats a spin-dash charge as an attack. Against badniks with
+     * hitpoints that made a crouched charge untouchable while it chipped at everything in reach,
+     * so on the ground a charge (or a roll that has all but stopped) is a hit. Any moving roll
+     * attacks: it damages the badnik and, if the badnik survives, knocks Sonic back off it.
      */
     static boolean idleSpin(PlayableEntity entity) {
-        return !entity.getAir() && Math.abs(entity.getGSpeed()) < 0x400;
+        return !entity.getAir() && (entity.getAnimationId() == ANIM_SPINDASH || Math.abs(entity.getGSpeed()) < 0x100);
     }
+
+    private static final int ANIM_SPINDASH = 0x09;
 
     @Override public void onPlayerAttack(PlayableEntity entity, TouchResponseResult result) {
         if (isDestroyed() || hp <= 0) return;

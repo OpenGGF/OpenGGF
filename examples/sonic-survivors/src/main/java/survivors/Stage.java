@@ -81,6 +81,19 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     int hoverFrames;
     /** Unlocks earned by the run just banked or the zone just cleared, for the results screens. */
     int newUnlocks;
+    /** Frames until any badnik may fire again: the horde shares one fire budget. */
+    int enemyShotCooldown;
+
+    /** Spacing between badnik shots across the whole arena: 1.5 s early, half a second at the end. */
+    int enemyShotGap() { return Math.max(30, 90 - 5 * tier()); }
+
+    /** Claims the shared fire budget for one badnik shot; false while it recharges. */
+    boolean claimEnemyShot() {
+        if (enemyShotCooldown > 0) return false;
+        enemyShotCooldown = enemyShotGap();
+        return true;
+    }
+
     // Balance telemetry (hitpoints spawned and damage dealt this arena), read by the balance probe.
     long statHpSpawned, statDamage;
     // Frozen player state while a menu pauses play.
@@ -309,6 +322,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         fightFrames++;
         if (feverFrames > 0) feverFrames--;
         else if (feverCooldown > 0) feverCooldown--;
+        if (enemyShotCooldown > 0) enemyShotCooldown--;
         if (phase == FIGHT && !endless()) {
             int before = stageFrames / 60;
             stageFrames--;

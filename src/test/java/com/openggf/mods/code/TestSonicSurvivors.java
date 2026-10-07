@@ -285,7 +285,7 @@ class TestSonicSurvivors {
         assertTrue(fixture.sprite().isObjectControlled(), "camp holds Sonic still");
         tapEnter(fixture);
         assertTrue((boolean) get(run(), "active"));
-        assertEquals(40, fixture.sprite().getRingCount(), "runs start with four ring tolls");
+        assertEquals(50, fixture.sprite().getRingCount(), "runs start with six base tolls");
         assertEquals(1, getInt(profile(), "runs"));
         fixture.stepIdleFrames(160);
         assertEquals(FIGHT, phase());
@@ -617,7 +617,7 @@ class TestSonicSurvivors {
         fixture.stepIdleFrames(1);
         tapEnter(fixture);
         assertEquals(INTRO, phase());
-        assertEquals(45, fixture.sprite().getRingCount(), "Ring Start adds five");
+        assertEquals(55, fixture.sprite().getRingCount(), "Ring Start adds five");
     }
 
     @Test void allSevenEmeraldsKeepTheirBonusWithoutEnablingSuperSonic() throws Exception {
@@ -674,15 +674,23 @@ class TestSonicSurvivors {
         ObjectServices services = (ObjectServices) call(stage(), "services");
         var player = fixture.sprite();
         assertTrue((boolean) takeHit.invoke(null, services, player));
-        assertEquals(30, player.getRingCount(), "a hit costs the ten-ring toll");
+        assertEquals(42, player.getRingCount(), "a hit costs the eight-ring toll");
         assertTrue(player.getInvulnerableFrames() > 0);
         player.setInvulnerableFrames(0);
-        player.setRingCount(0);
-        assertFalse((boolean) takeHit.invoke(null, services, player), "no rings, no revive: lethal");
+        player.setRingCount(9);
+        takeHit.invoke(null, services, player);
+        assertEquals(1, player.getRingCount(), "a ring more than the toll survives");
+        assertFalse(player.getDead());
+        player.setInvulnerableFrames(0);
         set(run(), "revives", 1);
-        assertTrue((boolean) takeHit.invoke(null, services, player), "a revive saves the lethal hit");
-        assertEquals(20, player.getRingCount());
+        takeHit.invoke(null, services, player);
+        assertFalse(player.getDead(), "a revive saves the hit that would empty the rings");
+        assertEquals(24, player.getRingCount(), "and restores three base tolls");
         assertEquals(0, getInt(run(), "revives"));
+        player.setInvulnerableFrames(0);
+        player.setRingCount(8);
+        takeHit.invoke(null, services, player);
+        assertTrue(player.getDead(), "a hit whose toll empties the rings ends the run");
     }
 
     @Test void fightRewindsAndReplaysIdentically() throws Exception {
@@ -1290,7 +1298,7 @@ class TestSonicSurvivors {
         set(stage(), "overlay", 1);
         tapEnter(fixture);
         assertEquals(1, getInt(run(), "overdrive"));
-        assertEquals(before * 1.06, (double) call(run(), "damageMultiplier"), 1e-9, "Overdrive adds 6% damage");
+        assertEquals(before * 1.03, (double) call(run(), "damageMultiplier"), 1e-9, "Overdrive adds 3% damage");
         var snapshot = call(run(), "capture");
         Arrays.fill(levels, 0);
         call(run(), "restore", snapshot);
@@ -1317,19 +1325,19 @@ class TestSonicSurvivors {
     @Test void damagePressureFollowsTheArenaClockRouteAndActAndSurvivesRewind() throws Exception {
         var fixture = launch(0, 0);
         startRun(fixture);
-        assertEquals(10, call(run(), "toll", 30));
+        assertEquals(8, call(run(), "toll", 30));
         set(run(), "pressure", 120);
-        assertEquals(15, call(run(), "toll", 30), "two pressure minutes add half");
+        assertEquals(12, call(run(), "toll", 30), "two pressure minutes add half");
         set(run(), "stage", 2);
         set(run(), "act", 1);
-        assertEquals(20, call(run(), "toll", 30), "two zones and an act add another half");
+        assertEquals(18, call(run(), "toll", 30), "two zones and an act add 0.7 more");
         set(run(), "frames", 999_999);
-        assertEquals(20, call(run(), "toll", 30), "total run time never feeds the toll");
+        assertEquals(18, call(run(), "toll", 30), "total run time never feeds the toll");
         var snapshot = call(run(), "capture");
         set(run(), "pressure", 300);
-        assertTrue((int) call(run(), "toll", 30) > 20);
+        assertTrue((int) call(run(), "toll", 30) > 18);
         call(run(), "restore", snapshot);
-        assertEquals(20, call(run(), "toll", 30));
+        assertEquals(18, call(run(), "toll", 30));
         // The stage mirrors its own pressure clock, which long mode already runs at 75%.
         set(run(), "mode", 1);
         set(stage(), "fightFrames", 400 * 60);
@@ -1433,11 +1441,11 @@ class TestSonicSurvivors {
     @Test void largeRingBanksAndArmorRetainMeaningfulRisk() throws Exception {
         var fixture = launch(0, 0);
         startRun(fixture);
-        assertEquals(10, call(run(), "toll", 30));
+        assertEquals(8, call(run(), "toll", 30));
         assertEquals(50, call(run(), "toll", 600));
         int[] levels = (int[]) get(run(), "levels");
         levels[12] = 5;
-        assertEquals(6, call(run(), "toll", 30));
+        assertEquals(5, call(run(), "toll", 30));
         assertEquals(30, call(run(), "toll", 600));
         set(run(), "relics", 1 << 4);
         assertEquals(5, call(run(), "toll", 30));
@@ -1490,7 +1498,7 @@ class TestSonicSurvivors {
         fixture = launch(0, 0);
         startRun(fixture);
         int free = getInt(run(), "freeRings");
-        assertEquals(40, free);
+        assertEquals(50, free);
         fixture.sprite().setRingCount(free + 50);
         set(run(), "rules", 1 << 1); // No Fever: +20%.
         set(stage(), "phase", CLEAR);
@@ -1498,7 +1506,7 @@ class TestSonicSurvivors {
         assertEquals(60, getInt(profile(), "bank"), "only earned held rings bank, plus the rules bonus");
     }
 
-    @Test void aCrouchedSpinDashIsAHitButAFastRollAttacks() throws Exception {
+    @Test void aCrouchedSpinDashIsAHitButARollAttacks() throws Exception {
         var fixture = launch(0, 0);
         startRun(fixture);
         clearEnemies();
@@ -1510,9 +1518,12 @@ class TestSonicSurvivors {
         assertEquals(50, (int) call(enemy, "hp"), "a charge deals no damage");
         assertTrue(player.getRingCount() < rings, "and the badnik's touch costs the toll");
         player.setInvulnerableFrames(0);
-        player.setGSpeed((short) 0x600);
+        player.setGSpeed((short) 0x300);
         call(enemy, "onPlayerAttack", player, null);
-        assertTrue((int) call(enemy, "hp") < 50, "a real roll still attacks");
+        int afterSlowRoll = (int) call(enemy, "hp");
+        assertTrue(afterSlowRoll < 50, "even a slowing roll attacks");
+        assertEquals(rings - (int) call(run(), "toll", rings), player.getRingCount(), "without costing rings");
+        assertEquals(-0x300, player.getXSpeed(), "a tough badnik knocks Sonic back off it");
     }
 
     @Test void chestsEvolveReadyWeaponsFirstThenRankOwnedUpgradesAndRewind() throws Exception {
@@ -1619,7 +1630,7 @@ class TestSonicSurvivors {
         set(run(), "pendingLevels", 0);
         fixture.stepIdleFrames(160);
         assertEquals(63, getInt(run(), "rules"));
-        assertEquals(15, call(run(), "toll", 30), "Heavy Toll: hits cost half again");
+        assertEquals(12, call(run(), "toll", 30), "Heavy Toll: hits cost half again");
         assertEquals(0, call(run(), "magnetRadius"), "No Magnets");
         assertFalse((boolean) call(run(), "canUpgrade", upgrade("MAGNET")), "and Magnet leaves the pool");
         var player = fixture.sprite();
@@ -1816,6 +1827,58 @@ class TestSonicSurvivors {
         assertEquals(22, getInt(saved, "bestLevel"));
     }
 
+    @Test void aHitThatEmptiesTheRingsEndsTheRun() throws Exception {
+        for (boolean shot : new boolean[]{false, true}) {
+            if (bootstrap != null) bootstrap.dispose();
+            var fixture = launch(0, 0);
+            startRun(fixture);
+            clearEnemies();
+            var player = fixture.sprite();
+            // Holding exactly one toll: the next hit empties the rings, so it is the last.
+            player.setRingCount((int) call(run(), "toll", 10));
+            player.setInvulnerableFrames(0);
+            if (shot) {
+                Class<?> type = loader.loadClass("survivors.Shot");
+                Method of = type.getDeclaredMethod("of", int.class, int.class, String.class, int.class, boolean.class, int.class, int.class);
+                of.setAccessible(true);
+                var bullet = (AbstractObjectInstance) of.invoke(null, player.getCentreX(), player.getCentreY(), "buzzer", 3, false, 0, 0);
+                GameServices.level().getObjectManager().addDynamicObject(bullet);
+            } else {
+                spawnEnemy(2, player.getCentreX(), player.getCentreY(), false, 500);
+            }
+            boolean died = false;
+            for (int f = 0; f < 60 && !died; f++) {
+                fixture.stepIdleFrames(1);
+                died = player.getDead() || phase() == DEAD;
+            }
+            assertTrue(died, (shot ? "a shot" : "a badnik") + " that empties the rings ends the run");
+            for (int f = 0; f < 200 && phase() != DEAD; f++) fixture.stepIdleFrames(1);
+            assertEquals(DEAD, phase(), "the game over screen follows");
+        }
+    }
+
+    @Test void aCrowdOfShootersSharesOneFireBudget() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        clearEnemies();
+        var player = fixture.sprite();
+        player.setInvulnerableFrames(1_000_000);
+        for (int i = 0; i < 30; i++) spawnEnemy(0, player.getCentreX() - 150 + i * 10, player.getCentreY() - 60, false, 100000);
+        set(stage(), "eliteTimer", 1_000_000);
+        set(stage(), "spawnTimer", 1_000_000);
+        var seen = new java.util.HashSet<Object>();
+        for (int f = 0; f < 600; f++) {
+            fixture.stepIdleFrames(1);
+            set(stage(), "spawnTimer", 1_000_000);
+            seen.addAll(objects("Shot"));
+            if (getInt(run(), "pendingLevels") > 0) set(run(), "pendingLevels", 0);
+        }
+        int gap = (int) call(stage(), "enemyShotGap");
+        assertEquals(90, gap);
+        assertTrue(seen.size() >= 5, "shooters still fire: " + seen.size());
+        assertTrue(seen.size() <= 600 / gap + 1, "thirty Buzzers fire no faster than one: " + seen.size());
+    }
+
     @Test void monitorsScaleWithTheRoute() throws Exception {
         var fixture = launch(0, 0);
         startRun(fixture);
@@ -1969,7 +2032,7 @@ class TestSonicSurvivors {
                 }
                 var player = fixture.sprite();
                 int px = player.getCentreX(), py = player.getCentreY();
-                if (firstStage > 0 && player.getRingCount() < lastRings) {
+                if ((firstStage > 0 || Boolean.getBoolean("sonic-survivors.balance.hits")) && player.getRingCount() < lastRings) {
                     var near = new StringBuilder();
                     for (var o : GameServices.level().getObjectManager().getActiveObjects()) {
                         if (o instanceof AbstractObjectInstance a && !a.isDestroyed() && a.getClass().getName().startsWith("survivors.")

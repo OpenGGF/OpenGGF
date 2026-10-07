@@ -853,3 +853,26 @@ second press closes, restoring the boss track, the zone's music (`getCurrentLeve
 a clear, fading out. The ring renderer draws over panels, which suits the fountain. The chest
 test now checks the fanfare request, skip and music restore; 108 Survivors cases pass, the opt-in
 probe skipped. Inspected in a `GameplayCaptureSession` preview at nine points of the sequence.
+
+### Lethal tolls, rationed fire and rolling (2026-10-07)
+
+James noticed Sonic effectively could not die. The engine's death at zero rings worked (a new
+regression shows a badnik or shot ending a run), but stock Sonic survives any hit while holding a
+ring, and half the toll scatters at his feet to be grabbed back, so the count was almost never zero
+when the next hit landed. Now a hit whose toll would empty the rings ends the run through the
+engine's own death routine, unless a revive (now three base tolls) catches it; the HUD shows NEXT
+HIT FATAL. That made fire the dominant killer: probes died within seconds to unavoidable shots.
+At James's direction badniks fire far less: each shooter waits twice its period, elites no longer
+fire faster, and every badnik shot draws on one shared arena budget (1.5 s early, 0.5 s at tier 9),
+so a crowd fires no faster than one shooter. James also found rolling into badniks hurt Sonic: the
+spin-dash fix treated any roll under 4 px/frame as a hit, and a surviving badnik's knockback
+(3 px/frame) guaranteed the next contact hurt. Now only a crouched charge or an all-but-stopped
+roll (under 1 px/frame) is a hit; a roll damages and, if the badnik survives, knocks Sonic back
+for free. Runs start with 50 rings and an 8-ring base toll (six hits).
+
+With rare shots and safe rolls the bot rarely got hurt and fresh profiles won, largely on stacking
+Overdrive (26 picks at +6%). Overdrive is now +3%, health grows `1 + 0.40t + 0.06t²`, the toll adds
+30% per zone (was 20%) and late badniks pay `1 + t/4` rings (was `t/3`). Final probe (seeds 22,
+33, 44): fresh runs end at Casino Night or Metropolis, mid profiles at Casino Night (the bot never
+rolls under its low ceiling), the veteran dies at the Death Egg or wins. `-Dsonic-survivors.balance.hits=true`
+adds a line per lost toll to the probe output. 110 Survivors cases pass, the probe skipped.
