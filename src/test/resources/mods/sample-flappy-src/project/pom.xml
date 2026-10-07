@@ -6,12 +6,12 @@
   <description>Mod API 0.7 Sonic 3&amp; Knuckles fixed-camera game-start sample.</description>
   <properties><maven.compiler.release>21</maven.compiler.release></properties>
   <profiles>
-    <profile><id>published-openggf</id><activation><activeByDefault>true</activeByDefault></activation><dependencies>
+    <profile><id>published-openggf</id><dependencies>
       <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF</artifactId><version>0.7.prerelease</version><scope>provided</scope></dependency>
       <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF</artifactId><version>0.7.prerelease</version><classifier>openggf-mod-sdk</classifier><scope>provided</scope></dependency>
     </dependencies></profile>
     <!-- CI/golden seam; creators normally use the published profile above. -->
-    <profile><id>local-openggf</id><activation><property><name>openggf.engine.jar</name></property></activation><dependencies>
+    <profile><id>local-openggf</id><activation><activeByDefault>true</activeByDefault></activation><dependencies>
       <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF-local</artifactId><version>0</version><scope>system</scope><systemPath>${openggf.engine.jar}</systemPath></dependency>
       <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF-sdk-local</artifactId><version>0</version><scope>system</scope><systemPath>${openggf.sdk.jar}</systemPath></dependency>
       <dependency><groupId>com.fasterxml.jackson.dataformat</groupId><artifactId>jackson-dataformat-yaml</artifactId><version>2.22.0</version></dependency>
@@ -19,6 +19,7 @@
     </dependencies></profile>
   </profiles>
   <build><plugins>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.0</version></plugin>
     <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-antrun-plugin</artifactId><version>3.1.0</version><executions>
       <execution><id>remove-stale-generated-mod-outputs</id><phase>initialize</phase><goals><goal>run</goal></goals><configuration><target>
         <delete file="${project.build.outputDirectory}/art/pipe.ggfs" quiet="true"/>

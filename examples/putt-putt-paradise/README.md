@@ -299,3 +299,14 @@ and guest JVMs and verifies real shots, scene images, scores, pause ownership,
 concession and teardown. The dated delivery plan records completed verification
 and its limits. Scene parity is a presentation check; it does not certify stock
 ROM timing or every possible shot through every object.
+
+
+## Use matching creator artifacts
+
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+
+```sh
+python3 examples/build_example.py putt-putt-paradise --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s3k /absolute/own-s3k.gen
+```
+
+Use `--s1`, `--s2`, or `--s3k` for the games this example consumes. Explicit paths create isolated development configuration and saves; no ROM is copied or linked. The creator kit exports this example with a portable POM and `tools/build_project.py`; it needs no engine source checkout. Only production sources/resources enter the validated mod jar. Read [recipient installation](../../docs/modding/installing-mods.md) before sharing.

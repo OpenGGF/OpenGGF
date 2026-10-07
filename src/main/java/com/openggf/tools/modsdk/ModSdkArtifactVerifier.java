@@ -25,8 +25,10 @@ public final class ModSdkArtifactVerifier {
     private static void rejectTooling(Path jar) throws IOException {
         try (JarFile archive=new JarFile(jar.toFile())) {
             if (archive.stream().anyMatch(entry -> entry.getName().startsWith("com/openggf/tools/modsdk/")
-                    || entry.getName().startsWith("META-INF/openggf-mod-sdk/")))
-                throw new IllegalStateException("Engine artifact leaks SDK tooling: " + jar);
+                    || entry.getName().startsWith("META-INF/openggf-mod-sdk/")
+                    || entry.getName().startsWith("com/openggf/tools/modtestkit/")
+                    || entry.getName().startsWith("com/openggf/mods/testing/")))
+                throw new IllegalStateException("Engine artifact leaks creator tooling: " + jar);
         }
     }
 
@@ -34,8 +36,20 @@ public final class ModSdkArtifactVerifier {
         try (JarFile archive=new JarFile(jar.toFile())) {
             List<String> files=archive.stream().filter(entry -> !entry.isDirectory()).map(e -> e.getName()).toList();
             if (!files.contains("com/openggf/tools/modsdk/GgfModCli.class")
-                    || !files.contains("META-INF/openggf-mod-sdk/templates/pom.xml.template"))
+                    || !files.contains("META-INF/openggf-mod-sdk/templates/pom.xml.template")
+                    || !files.contains("META-INF/openggf-mod-sdk/starters/index.txt")
+                    || !files.contains("META-INF/openggf-build.properties"))
                 throw new IllegalStateException("SDK artifact is incomplete");
+            String starterRoot = "META-INF/openggf-mod-sdk/starters/";
+            try (var input = archive.getInputStream(archive.getJarEntry(starterRoot + "index.txt"))) {
+                var expected = new java.util.HashSet<String>();
+                expected.add(starterRoot + "index.txt");
+                new String(input.readAllBytes(), StandardCharsets.UTF_8).lines()
+                        .forEach(name -> expected.add(starterRoot + name));
+                var actual = files.stream().filter(name -> name.startsWith(starterRoot))
+                        .collect(java.util.stream.Collectors.toSet());
+                if (!actual.equals(expected)) throw new IllegalStateException("SDK starter inventory is incomplete or contains generated outputs");
+            }
             if (files.stream().anyMatch(name -> name.startsWith("com/openggf/")
                     && !name.startsWith("com/openggf/tools/modsdk/")))
                 throw new IllegalStateException("SDK artifact leaks engine internals");

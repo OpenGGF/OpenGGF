@@ -7,8 +7,8 @@ builds named by the author: the unpublished API can change without a version bum
 
 ## Install
 
-1. Close OpenGGF. Start the engine from its distribution directory so its working
-   directory is predictable. With the JVM jar, use `cd /path/to/OpenGGF` followed by
+1. Close OpenGGF. Use its distribution directory as the **working directory**.
+   After copying mods, launch the JVM jar with `cd /path/to/OpenGGF` followed by
    `java -jar /path/to/OpenGGF/engine.jar` (or the supplied universal jar).
 2. Create `mods/` in that **working directory** and copy the mod jar into it.
    Mods are discovered only at process start. Nested directories and exploded

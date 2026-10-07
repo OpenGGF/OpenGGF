@@ -31,7 +31,8 @@ guide for the contribution you are building:
   combining the 0.7 fresh-game, team, input, and HUD policies with a fixed-camera
   dynamic-object minigame.
 
-A creator build needs both release artifacts:
+A creator build needs matching candidate artifacts from one commit; follow
+[setup](getting-started.md). It needs both jars:
 
 - the engine jar, which contains the public API and runtime dependencies; and
 - the `openggf-mod-sdk` classifier jar, which contains `ggfmod`, converters, and
@@ -61,7 +62,7 @@ package the resulting classes and resources:
 ```text
 ggfmod convert art --image src/main/mod/sample.png --sheet src/main/mod/sample-sheet.yaml --out target/classes/art/sample.ggfs
 ggfmod convert level --from-export src/main/mod/level-source --out target/classes/levels/sample
-mvn package
+mvn package -Dopenggf.engine.jar=/absolute/path/engine.jar -Dopenggf.sdk.jar=/absolute/path/sdk.jar
 ggfmod package --input target/classes --out target/my-mod.jar
 ggfmod validate target/my-mod.jar
 ```
@@ -342,12 +343,22 @@ art key in `artOverrides`:
 
 ```yaml
 artOverrides:
-  EndSign: art/reskin.ggfs
+  signpost: art/reskin.ggfs
 ```
 
 Package the directory and validate the resulting jar with the same commands. With the
 mod disabled, the engine retains the original provider instance and behavior; with it
-enabled, only the named art lookup is decorated.
+enabled, only the named art lookup is decorated. Run `ggfmod art-keys` to list
+known exact stock provider keys; unknown keys produce `UNKNOWN_ART_OVERRIDE_KEY`.
+Availability still depends on the game/zone. Preserve every mapping frame consumed
+by the stock animation. Sonic 2 signpost uses frames 0–5: Sonic, Tails, Eggman and
+three spin transitions. The maintained reskin supplies all six.
+
+Baked palette metadata quantizes source PNG colors to indices; it does not install
+an arbitrary new palette over stock gameplay. Author against the host's active
+palette line. This sample uses line 0/index 6, white in normal S2 Sonic/Tails art.
+Donated/super character palette changes can affect that line; verify those routes
+if your mod claims to support them.
 
 For the complete CLI invocation and launcher details, see [the `ggfmod` guide](ggfmod.md).
 For streamed stock-music replacement metadata, see [Music packs](music-packs.md).

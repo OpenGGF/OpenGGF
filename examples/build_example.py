@@ -21,12 +21,18 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools/modding"))
+import build_project as portable  # noqa: E402
 
 
-def build(name, run=False, skip_engine=False):
+def build(name, run=False, skip_engine=False, engine=None, sdk=None, roms=None):
     project = ROOT / "examples" / name
     if not (project / "src/main/resources/META-INF/openggf-mod.yaml").exists():
         sys.exit(f"{project} is not an example mod (no src/main/resources/META-INF/openggf-mod.yaml)")
+    if engine or sdk:
+        if not engine or not sdk:
+            raise ValueError("Supply both --engine and --sdk from the same candidate commit")
+        return portable.build(project, engine, sdk, run=run, roms=roms)
     output = ROOT / "target" / "examples" / name
     java_home = os.environ.get("JAVA_HOME")
     suffix = ".exe" if os.name == "nt" else ""
@@ -34,8 +40,8 @@ def build(name, run=False, skip_engine=False):
     def java_tool(tool):
         return str(Path(java_home) / "bin" / (tool + suffix)) if java_home else tool
 
-    def call(command):
-        subprocess.run(command, cwd=ROOT, check=True)
+    def call(command, cwd=ROOT):
+        subprocess.run(command, cwd=cwd, check=True)
 
     classpath_file = ROOT / "target" / "examples-classpath.txt"
     if not skip_engine or not classpath_file.exists():
@@ -55,7 +61,8 @@ def build(name, run=False, skip_engine=False):
     call([*cli, "package", "--input", str(classes), "--out", str(jar)])
     print(f"Built {jar}", flush=True)
     if run:
-        call([*cli, "run", str(classes)])
+        call([*cli, "run", str(classes)],
+             cwd=portable.runtime_directory(output, roms) if roms and any(roms.values()) else ROOT)
     return jar
 
 
@@ -64,8 +71,13 @@ def main():
     parser.add_argument("name", help="the example's directory under examples/, e.g. hello-scene")
     parser.add_argument("--run", action="store_true", help="launch the JVM engine with this development mod")
     parser.add_argument("--skip-engine", action="store_true", help="reuse the existing engine build in target/")
+    parser.add_argument("--engine", type=Path, help="matching absolute universal engine jar (artifact-only mode)")
+    parser.add_argument("--sdk", type=Path, help="matching absolute SDK jar (artifact-only mode)")
+    for name in ("s1", "s2", "s3k"):
+        parser.add_argument("--" + name, type=Path, help="explicit ROM path for an isolated development launch")
     args = parser.parse_args()
-    build(args.name, run=args.run, skip_engine=args.skip_engine)
+    build(args.name, run=args.run, skip_engine=args.skip_engine, engine=args.engine, sdk=args.sdk,
+          roms=dict(zip(("sonic1", "sonic2", "sonic3k"), (args.s1, args.s2, args.s3k))))
 
 
 if __name__ == "__main__":

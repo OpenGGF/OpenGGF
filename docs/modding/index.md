@@ -1,5 +1,9 @@
 # OpenGGF mod creator handbook
 
+Start with [setup and your first project](getting-started.md). Recipients use
+[installing, updating and removing mods](installing-mods.md). The API is the
+mutable, unpublished 0.7.0 candidate; use matching artifacts from one commit.
+
 OpenGGF's mod workflow is source-first and reproducible: author files, convert them
 with `ggfmod`, validate/package a jar, then enable it in the Mod Manager and restart.
 Choose the smallest quickstart that matches your goal; they are ordered by typical
@@ -25,6 +29,20 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
 4. [Sonic 2 zone](quickstarts/zone.md)
 5. [Playable character](quickstarts/character.md)
 6. [Standalone game](quickstarts/standalone.md)
+7. [Scene or non-platformer game](guides/mod-scenes.md)
+
+## What you can build
+
+| Scope | Delivered path | Current boundary |
+|---|---|---|
+| Music | Data-only WAV/Ogg stock overrides | No MP3 or base-game streamed SFX overrides |
+| Object reskin | Baked sheet over exact stock provider key | Preserve host palette indices and all consumed mapping frames; no playable-character reskin |
+| Object/character | Owned factories, injected services, saves and rewind | JVM; no arbitrary static gameplay state or mod super form |
+| New zone | Sonic 2 v1 and bounded S3K v2 adapters | S1 adapter planned; S3K does not inherit arbitrary stock zone events |
+| Scene/whole-screen game | Startup scene with input, audio, storage and canvas | JVM; ROM-backed scenes require the relevant supplied ROM |
+| Original standalone game | No-ROM levels, characters, audio and progression | JVM; no standalone patch stacking, bonus/special-stage or roster UI |
+
+See the detailed guides for narrower contracts; roadmap entries do not imply implementation.
 
 ## Follow-along guides
 
@@ -66,6 +84,9 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
 ## Reference
 
 - [`ggfmod` command reference](ggfmod.md)
+- [Production-backed creator tests](testing.md)
+- [Creator helpers for physics, state and modules](guides/creator-helpers.md)
+- [Custom action bindings and remappable input](guides/action-bindings.md)
 - [Manifest v1](formats/manifest.md)
 - [Baked art containers](formats/baked-containers.md)
 - [`ModLevelDefinition` formats v1 and v2](formats/level-definition.md)
@@ -75,6 +96,7 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
 - [Executable-code trust](concepts/trust.md)
 - [Namespaced identity semantics](concepts/id-semantics.md)
 - [`ggfmod validate` findings](troubleshooting.md)
+- [Catalog scalability probe and acceptance](tools/scalability.md)
 - [Maintained sample gallery](samples/index.md)
 - [Deferred-backlog decisions](BACKLOG.md)
 - [GUI tooling evaluation](GUI_TOOLING_EVALUATION.md)
