@@ -6,6 +6,8 @@ import com.openggf.game.*;
 import com.openggf.game.patch.*;
 import com.openggf.level.Level;
 import com.openggf.mods.code.*;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SuperStateController;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -89,6 +91,12 @@ public final class SurvivorsMod implements GgfMod {
         private final GameOverFlowProvider arenaGameOver = (services, timeOver) -> services.fadeOutMusic();
 
         public Module(GameModule base) { super(base, ID + ":arenas"); }
+
+        // Super forms are deferred until they have a Survivors-specific design.
+        // Omit the controller so native jump, monitor and debug activation stay disabled.
+        @Override public SuperStateController createSuperStateController(AbstractPlayableSprite player) {
+            return null;
+        }
 
         private Profile profile() {
             if (profile == null) {

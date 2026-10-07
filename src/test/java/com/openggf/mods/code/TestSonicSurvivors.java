@@ -471,18 +471,21 @@ class TestSonicSurvivors {
         assertEquals(40, fixture.sprite().getRingCount(), "Ring Start adds ten");
     }
 
-    @Test void allSevenEmeraldsLetTheRunGoSuper() throws Exception {
+    @Test void allSevenEmeraldsKeepTheirBonusWithoutEnablingSuperSonic() throws Exception {
         var fixture = launch(0, 0);
         fixture.stepIdleFrames(30);
         set(profile(), "emeralds", 0x7F);
         assertFalse(GameServices.gameState().hasAllEmeralds());
         tapEnter(fixture);
-        assertTrue(GameServices.gameState().hasAllEmeralds(), "the run carries all seven");
+        assertFalse(GameServices.gameState().hasAllEmeralds(), "relics do not unlock the native transformation");
+        assertEquals(0x7F, getInt(run(), "relics"));
+        assertEquals(1.25, (double) call(run(), "damageMultiplier"), 0.0001);
+        assertNull(fixture.sprite().getSuperStateController(), "Survivors disables native and debug transformations");
         set(run(), "pendingLevels", 0);
         fixture.stepIdleFrames(160);
         assertEquals(FIGHT, phase());
         var level = GameServices.level().getLevelGamestate();
-        assertFalse(level.isTimerPaused(), "Sonic 2 refuses to transform while the timer is paused");
+        assertFalse(level.isTimerPaused());
         assertEquals(0, level.getElapsedSeconds(), "the timer is held at zero instead");
     }
 

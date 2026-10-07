@@ -183,7 +183,7 @@ badnik on screen takes a heavy hit) and the **?** monitor (every reward ring on 
 | Red | Hill Top | Hit toll -15% |
 | Grey | Mystic Cave | A shield at every zone start |
 | Cyan | Oil Ocean | +1 revive per run |
-| All seven | | +25% damage, and Super Sonic when playing Sonic: with 50 rings, jump again in mid-air to transform (invincible; rings drain each second) |
+| All seven | | +25% damage. Super Sonic is disabled pending a future Survivors implementation. |
 
 Progress is saved in `saves/sonic-survivors/profile.txt` under the engine's save root.
 

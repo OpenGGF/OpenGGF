@@ -164,10 +164,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         }
     }
 
-    /**
-     * The stock level timer never runs out here. During play it runs but is held at zero rather
-     * than paused, because Sonic 2 refuses the Super Sonic transformation while it is paused.
-     */
+    /** The stock level timer is held at zero during play; arena phases own the countdown. */
     private void holdTimer() {
         var level = services().levelGamestate();
         if (phase == FIGHT || phase == BOSS) {
@@ -176,13 +173,6 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         } else {
             level.pauseTimer();
         }
-    }
-
-    /** All seven Chaos Emeralds: the run carries them, so 50 rings and a double jump go Super. */
-    private void grantEmeralds() {
-        if (!run().allRelics()) return;
-        var state = services().gameState();
-        for (int i = 0; i < Profile.EMERALDS; i++) state.markEmeraldCollected(i);
     }
 
     /** Holds the camera and Sonic's level boundary to the arena (they read the camera bounds). */
@@ -230,7 +220,6 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         run.rerolls = run.rerollsPerStage();
         run.combo = 0;
         if (run.relic(5)) player.giveShield();
-        grantEmeralds();
         phase = INTRO;
         phaseFrames = 0;
     }
@@ -1020,7 +1009,6 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         profile.save();
         player.setRingCount(run.carriedRings);
         if (run.relic(5)) player.giveShield();
-        grantEmeralds();
         bankedThisRun = 0;
         phase = INTRO;
         phaseFrames = 0;

@@ -423,3 +423,24 @@ Final packaging and local delivery: rebuilt after the protection-timer fix, insp
 surge frame 1300 with the HUD backing, and refreshed the existing enabled/trusted
 `mods/sonic-survivors.jar` with its matching SHA-256 in local mod state. Other mod entries and
 the user's actual save profile were preserved.
+
+
+### Super Sonic deferred (2026-10-07)
+
+At James's request, Survivors omits its Super State controller until a dedicated
+implementation is designed. This blocks native and debug transformation entries,
+including when host emerald state was set independently. Permanent relics and the
+all-seven +25% damage bonus remain; arena start no longer grants host emeralds.
+The shared engine implementation is retained.
+
+Validated in the current checkout on `feature/ai-sonic-survivors`, based on
+`ffc99771e67cfbd1198e0717a3d65d4ae907ddc9`. The change-based plan selected 2,993
+classes because example paths (and the pre-existing untracked movie) fall back to
+the full suite. Focused validation is proportionate: only the mod's controller
+registration and emerald grant change, with no host or public-contract changes.
+`JAVA_HOME=<JDK21> python3 tools/testing/maven_queue.py -B -Dmse=off
+-Dtest=TestSonicSurvivors -Dsonic2.rom.path=<absolute S2 REV01 ROM> test` passed
+71 checks with zero failures, errors or skips. The revised seven-emerald test
+checks the retained relics/damage bonus and absent transformation controller.
+`python3 examples/sonic-survivors/build.py` rebuilt the local mod jar successfully.
+This is focused validation; the engine suite and guards were not repeated.
