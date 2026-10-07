@@ -127,13 +127,13 @@ public final class CareerChecks {
                 valid.replace("8,10,8", "11,10,8"), valid.replace("total-score=500", "total-score=9223372036854775808"),
                 valid.replace("attempts=1", "attempts=-1"), valid + "attempts=2\n", valid.replace("attempts=1\n", ""),
                 valid + valid.substring(valid.indexOf("record=")), valid.replace("false,false", "true,false"),
-                valid.replace("8,10,8,false,false", "8,10,8,false,true"), "x".repeat(262_145))) {
+                valid.replace("8,10,8,false,false", "8,10,8,false,true"), "x".repeat(524_289))) {
             p.read(corrupt); eq(valid, p.encode());
         }
         p.read(null); eq(valid, p.encode());
         var extras = new StringBuilder(valid);
-        for (int i = 0; i < 1_020; i++) extras.append("future-").append(i).append("=ignored\n");
-        p.read(extras.toString()); eq(valid, p.encode()); // exactly 1,024 lines including header/counters/record
+        for (int i = 0; i < 4_092; i++) extras.append("future-").append(i).append("=ignored\n");
+        p.read(extras.toString()); eq(valid, p.encode()); // exactly 4,096 lines including header/counters/record
         extras.append("future=too-many\n");
         var empty = new PlayerProfile(); empty.read(extras.toString()); eq(0, empty.clears());
         empty.read(valid + "future=" + "x".repeat(513)); eq(0, empty.clears());
@@ -142,9 +142,9 @@ public final class CareerChecks {
 
     public static void boundedRecordsAndSaturatingTotals() {
         var full = new PlayerProfile();
-        for (int i = 0; i < 192; i++) yes(full.record(clear("song-" + i)));
-        yes(!full.record(clear("song-192"))); eq(192, full.clears()); eq(192L, full.attempts());
-        var restored = new PlayerProfile(); restored.read(full.encode()); eq(192, restored.clears());
+        for (int i = 0; i < 2_048; i++) yes(full.record(clear("song-" + i)));
+        yes(!full.record(clear("song-2048"))); eq(2_048, full.clears()); eq(2_048L, full.attempts());
+        var restored = new PlayerProfile(); restored.read(full.encode()); eq(2_048, restored.clears());
         var huge = new PlayerProfile(); huge.record(result("a", "SITAR", "MEDIUM", Long.MAX_VALUE, 1, 1));
         huge.record(result("b", "SITAR", "MEDIUM", 10, 1, 1)); eq(Long.MAX_VALUE, huge.totalScore());
         var loaded = new PlayerProfile(); loaded.read(huge.encode().replace("attempts=2", "attempts=9223372036854775807"));

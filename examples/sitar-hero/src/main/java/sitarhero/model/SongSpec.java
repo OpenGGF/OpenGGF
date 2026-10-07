@@ -9,16 +9,11 @@ public record SongSpec(String id, String label, String game, int musicId, int du
             throw new IllegalArgumentException("Invalid song source/duration");
     }
 
-    /** Shipped MGZ1 and S&K FBZ1 stop every PSG stream: there is no synth part to invent. */
+    /** Only parts with actual native voices are selectable. */
     public java.util.List<Role> availableRoles() {
-        return switch (id) {
-            case "marble-garden-1", "flying-battery-1" -> java.util.List.of(Role.SITAR, Role.BONGOS, Role.HARP);
-            default -> java.util.List.of(Role.values());
-        };
+        var form = SongCatalog.arrangement(id).orElseThrow();
+        return java.util.Arrays.stream(Role.values()).filter(form::supports).toList();
     }
 
-    /** Presentation can distinguish the nine excerpts from the original complete cycles. */
-    public boolean excerpt() {
-        return !java.util.List.of("green-hill", "chemical-plant", "angel-island-1").contains(id);
-    }
+    public boolean excerpt() { return SongCatalog.arrangement(id).isEmpty(); }
 }

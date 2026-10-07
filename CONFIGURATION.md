@@ -167,10 +167,16 @@ display shader application must be gated off for trace capture.
 ROM-backed `baseGame: any` mod scenes use this configured catalogue to combine
 available games. Sitar Hero's optional launch script creates an isolated config
 for an explicit ROM subset; it packages no ROM data. Its keyboard/gamepad remaps,
-lefty mode and input/display calibration belong to the mod's `settings.txt` in
-owner-scoped scene storage, rather than global gameplay bindings. Raw standard
+lefty mode and input/display calibration belong to owner-scoped mod settings,
+rather than global gameplay bindings. Raw standard
 gamepads remain available to physical-input scenes when the Genesis mapper is
-disabled. See [Sitar Hero controls](examples/sitar-hero/README.md#controls).
+disabled. Sitar Hero keeps separate player control/calibration files
+(`settings.txt`, `settings-p2.txt`), bounded career/record data (`profile.txt`),
+and the explicitly entered peer address (`online-address.txt`) in its owner-scoped
+scene storage. The settings menu selects the player and melodic/bongo profile;
+lefty flip, reduced flashes and highway speed are also player-specific. Network
+host/join is opened only by the Direct-connect menu, using an explicit IP or
+localhost and port. See [Sitar Hero controls](examples/sitar-hero/README.md#controls).
 
 Paths are relative to the working directory (where the JAR is launched).
 

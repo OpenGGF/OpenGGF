@@ -1,35 +1,54 @@
 package sitarhero.model;
 
+import sitarhero.catalogue.Sonic1Catalogue;
+import sitarhero.catalogue.Sonic2Catalogue;
+import sitarhero.catalogue.Sonic3kCatalogue;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-/** Unified song library from any nonempty subset of the three supported ROMs. */
+/** Full musical forms from supplied ROMs; short title/countdown cues are not tour songs. */
 public final class SongCatalog {
     private SongCatalog() { }
+    public record TempoAnchor(double beat, int serviceFrame) { }
+    public record MusicalForm(double introBeats, double loopBeats, double endBeats) { }
 
-    public static List<SongSpec> all() {
-        return List.of(
-                // First complete melodic cycle, measured through the production ROM
-                // sequencer: GHZ intro+loop132beats; CPZ intro+loop144; AIZ loop144.
-                new SongSpec("green-hill", "Green Hill", "s1", 0x81, 3168, 0, 0),
-                // Backdrops use the engine's progression indices, not ROM zone IDs.
-                // New arrangements are explicitly finite 60-second excerpts; they
-                // make no claim that a complete SMPS loop fits this duration.
-                new SongSpec("marble", "Marble", "s1", 0x83, 3600, 1, 0),
-                new SongSpec("spring-yard", "Spring Yard", "s1", 0x85, 3600, 2, 0),
-                new SongSpec("labyrinth", "Labyrinth", "s1", 0x82, 3600, 3, 0),
-                // S2 REV01 driver IDs differ from the disassembly's file names.
-                // Keep CPZ as S2's existing opening selection; EHZ introduces
-                // paired melodic chords before ARZ's fills and CNZ's syncopation.
-                new SongSpec("chemical-plant", "Chemical Plant", "s2", 0x8C, 3717, 1, 0),
-                new SongSpec("emerald-hill", "Emerald Hill", "s2", 0x81, 3600, 0, 0),
-                new SongSpec("aquatic-ruin", "Aquatic Ruin", "s2", 0x86, 3600, 2, 0),
-                new SongSpec("casino-night", "Casino Night", "s2", 0x83, 3600, 3, 0),
-                new SongSpec("angel-island-1", "Angel Island Act 1", "s3k", 0x01, 3932, 0, 0),
-                new SongSpec("hydrocity-1", "Hydrocity Act 1", "s3k", 0x03, 3600, 1, 0),
-                new SongSpec("marble-garden-1", "Marble Garden Act 1", "s3k", 0x05, 3600, 2, 0),
-                new SongSpec("flying-battery-1", "Flying Battery Act 1", "s3k", 0x09, 3600, 4, 0));
+    public static List<SongArrangement> arrangements() {
+        var forms = new ArrayList<SongArrangement>();
+        forms.addAll(Sonic1Catalogue.all().stream()
+                .filter(form -> !List.of("s1-title", "s1-continue").contains(form.id())).toList());
+        forms.addAll(Sonic2Catalogue.all());
+        forms.addAll(Sonic3kCatalogue.all().stream()
+                .filter(form -> !List.of("s3-title", "s3k-title", "s3-knuckles", "s3k-knuckles").contains(form.id())).toList());
+        return List.copyOf(forms);
     }
-
+    public static Optional<SongArrangement> arrangement(String id) {
+        return arrangements().stream().filter(form -> form.id().equals(id)).findFirst();
+    }
+    public static List<TempoAnchor> tempoAnchors(String id) {
+        if ("s1-credits".equals(id)) return Sonic1Catalogue.tempoAnchors(id).stream()
+                .map(anchor -> new TempoAnchor(anchor.beat(), anchor.serviceFrame())).toList();
+        if ("credits-s2".equals(id)) return List.of(new TempoAnchor(0, 0),
+                new TempoAnchor(36, 921), new TempoAnchor(172, 4492),
+                new TempoAnchor(196, 5211), new TempoAnchor(256, 7083),
+                new TempoAnchor(7977.0 / 24, 9526));
+        double divisor = Sonic3kCatalogue.tempoAnchorBeatDivisor(id);
+        return Sonic3kCatalogue.tempoAnchors(id).stream()
+                .map(anchor -> new TempoAnchor(anchor.beat() / divisor, anchor.serviceFrame())).toList();
+    }
+    public static MusicalForm musicalForm(String id) {
+        var form = arrangement(id).orElseThrow(() -> new IllegalArgumentException("No authored form for " + id));
+        if (form.game().equals("s3k")) {
+            var exact = Sonic3kCatalogue.nativeForm(id);
+            double unit = exact.unitsPerBeat();
+            return new MusicalForm(exact.introUnits() / unit, exact.loopUnits() / unit, exact.endUnits() / unit);
+        }
+        return new MusicalForm(form.introBeats(), form.loopFrames() == 0 ? 0 : form.loopBeats(),
+                form.loopFrames() == 0 ? form.loopBeats() : 0);
+    }
+    public static List<SongSpec> all() {
+        return arrangements().stream().map(SongArrangement::song).toList();
+    }
     public static List<SongSpec> available(List<String> installedGames) {
         return all().stream().filter(song -> installedGames.contains(song.game())).toList();
     }

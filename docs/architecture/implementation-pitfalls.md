@@ -521,6 +521,25 @@ Check native saved-duration semantics and the complete medley tail, rather than
 shortening catalogue metadata to the engine's premature stop. This was found
 during the 2026-10-07 Sitar Hero full-song catalogue work.
 
+**A duration-only PSG command can remain a native rest.** S1 `PSGDoNext` and
+S2 `zPSGDoNext` clear the rest flag before decoding a positive duration byte,
+but their note-on routines test the signed saved frequency. A preceding rest
+stores `$FFFF`, so `PSGDoNoteOn`/`zPSGDoNoteOn` restore rest rather than attack.
+Preserve this frequency sentinel under the driver's RESET policy; S3K's KEEP
+policy retains a playable frequency and has different continuation behavior.
+An independent interpreter must model the same distinction: otherwise S1
+Credits gains 96 false attacks and S2 Oil Ocean gains three. Compare the first
+divergent tuple and native track RAM, not only attack totals. Origin: Sitar Hero
+full-song work, `03e0c2ac0`, 2026-10-07.
+
+**S3K track execution uses the loaded bank, not a header-to-header slice.**
+`zGetNextNote` and `cfJumpToGosub` can call phrases before the current song
+header. Sonic 3 Ending calls Title-bank FM phrases; a bounded song slice cut
+its natural tail from 609 to 514 services. Keep header parsing and local voice
+lookup anchored to the raw header while track reads, jumps and returns address
+the loaded 32 KiB bank. Test earlier-header calls and local/shared voices
+together. Origin: full-song work, `64c7b25b6`, 2026-10-07.
+
 **Speaker starvation is a device transition, not generated-sample equality.** A
 stopped OpenAL queue can leave a sub-packet remainder in the software FIFO, so
 the consumed cursor never reaches the producer's count. Detect stopped-after-play

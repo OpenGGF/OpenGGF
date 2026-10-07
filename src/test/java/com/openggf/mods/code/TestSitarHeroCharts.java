@@ -32,7 +32,7 @@ import java.lang.reflect.InvocationTargetException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Actual example charts/metadata; ROM tests establish all 184 supported song/role/difficulty charts and timing invariants. */
+/** Actual example charts/metadata; ROM tests establish every supported full song/role/difficulty chart and timing invariants. */
 class TestSitarHeroCharts {
     @TempDir static Path work;
     private static ExampleModHarness harness;
@@ -63,7 +63,10 @@ class TestSitarHeroCharts {
             if ((subset & 2) != 0) games.add("s2");
             if ((subset & 4) != 0) games.add("s3k");
             List<?> songs = (List<?>) catalog.getMethod("available", List.class).invoke(null, games);
-            assertEquals(Integer.bitCount(subset) * 4, songs.size(), "four authored songs per ROM");
+            assertEquals(songs().stream().filter(song -> {
+                try { return games.contains(songType.getMethod("game").invoke(song)); }
+                catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+            }).count(), songs.size(), "all authored songs from exactly the loaded ROMs");
             for (Object song : songs) assertTrue(games.contains(songType.getMethod("game").invoke(song)));
             int expected = 2 + ((subset & 6) != 0 ? 1 : 0) + ((subset & 2) != 0 ? 1 : 0)
                     + ((subset & 4) != 0 ? 3 : 0);
@@ -103,34 +106,107 @@ class TestSitarHeroCharts {
     }
 
     @Test
-    void catalogueHasExactlyTwelveStableSourcesAndDiscoverableSilentParts() throws Exception {
-        List<String> ids = List.of("green-hill", "marble", "spring-yard", "labyrinth", "chemical-plant",
-                "emerald-hill", "aquatic-ruin", "casino-night", "angel-island-1", "hydrocity-1",
-                "marble-garden-1", "flying-battery-1");
-        int[] music = {0x81, 0x83, 0x85, 0x82, 0x8C, 0x81, 0x86, 0x83, 1, 3, 5, 9};
-        int[] zones = {0, 1, 2, 3, 1, 0, 2, 3, 0, 1, 2, 4};
-        int[] durations = {3168, 3600, 3600, 3600, 3717, 3600, 3600, 3600, 3932, 3600, 3600, 3600};
-        assertEquals(12, songs().size());
-        for (int index = 0; index < ids.size(); index++) {
-            Object song = song(ids.get(index));
-            assertEquals(song, songs().get(index), "authored per-game tour order");
-            assertEquals(music[index], integer(song, "musicId"));
-            assertEquals(zones[index], integer(song, "zone"), "engine progression index for backdrop");
-            assertEquals(0, integer(song, "act"));
-            assertEquals(durations[index], integer(song, "durationFrames"));
-            assertEquals(durations[index] == 3600, flag(song, "excerpt"));
+    void fullCatalogueKeepsStableSourcesNaturalEndingsAndAuthenticPartAbsence() throws Exception {
+        assertEquals(79, songs().size());
+        assertEquals(11, songs().stream().filter(song -> gameOf(song).equals("s1")).count());
+        assertEquals(22, songs().stream().filter(song -> gameOf(song).equals("s2")).count());
+        assertEquals(46, songs().stream().filter(song -> gameOf(song).equals("s3k")).count());
+        assertThrows(IllegalArgumentException.class, () -> song("s1-title"), "short title cue is outside full song library");
+        assertThrows(IllegalArgumentException.class, () -> song("s1-continue"));
+        assertThrows(IllegalArgumentException.class, () -> song("s3-title"));
+        assertThrows(IllegalArgumentException.class, () -> song("s3k-title"));
+        assertThrows(IllegalArgumentException.class, () -> song("s3-knuckles"));
+        assertThrows(IllegalArgumentException.class, () -> song("s3k-knuckles"));
+        assertEquals(7200, integer(song("green-hill"), "durationFrames"));
+        assertEquals(8640, integer(song("scrap-brain"), "durationFrames"), "two complete 72-second loops");
+        assertEquals(7601, integer(song("s1-credits"), "durationFrames"), "native late PSG tail");
+        assertEquals(1081, integer(song("s1-ending"), "durationFrames"), "natural ending is not padded");
+        assertEquals(9527, integer(song("credits-s2"), "durationFrames"));
+        assertEquals(609, integer(song("s3-ending"), "durationFrames"), "earlier bank calls finish naturally");
+        assertEquals(10248, integer(song("s3k-credits"), "durationFrames"));
+        assertEquals(8763, integer(song("s3-credits"), "durationFrames"), "Sonic 3 Credits has a native outer loop");
+        for (Object song : songs()) {
+            String id = (String) songType.getMethod("id").invoke(song);
+            assertFalse(flag(song, "excerpt"), id);
+            assertTrue(integer(song, "durationFrames") <= 36_000);
             List<?> roles = (List<?>) songType.getMethod("availableRoles").invoke(song);
-            assertEquals(index >= 10 ? List.of(role("SITAR"), role("BONGOS"), role("HARP"))
-                    : List.of(roleType.getEnumConstants()), roles);
+            assertTrue(roles.contains(role("SITAR")) && roles.contains(role("HARP")), id);
         }
-        // The public seven-argument constructor stays available for existing callers.
+        assertFalse(((List<?>) songType.getMethod("availableRoles").invoke(song("s1-special-stage"))).contains(role("BONGOS")));
+        assertFalse(((List<?>) songType.getMethod("availableRoles").invoke(song("final-zone"))).contains(role("SYNTH")));
+        assertEquals(1 << 5 | 1, roleType.getMethod("fmMask", songType).invoke(role("SITAR"), song("s1-special-stage")), "pitched FM6 stays melodic");
         assertNotNull(songType.getConstructor(String.class, String.class, String.class, int.class,
-                int.class, int.class, int.class).newInstance("green-hill", "Green Hill", "s1", 0x81, 3168, 0, 0));
-        assertEquals(0b100, roleType.getMethod("psgMask", songType).invoke(role("SYNTH"), song("chemical-plant")), "authentic PSG3 noise");
-        assertEquals(0b001, roleType.getMethod("psgMask", songType).invoke(role("SYNTH"), song("spring-yard")), "stopped PSG2 is not assigned");
-        assertEquals(0b00110, roleType.getMethod("fmMask", songType).invoke(role("SITAR"), song("angel-island-1")), "AIZ FM1 is bass");
-        assertEquals(0b00110, roleType.getMethod("fmMask", songType).invoke(role("SITAR"), song("emerald-hill")), "EHZ melody is FM2/3");
-        assertEquals(0b11110, roleType.getMethod("fmMask", songType).invoke(role("SITAR"), song("marble-garden-1")), "MGZ intro and delayed main melody");
+                int.class, int.class, int.class).newInstance("custom", "Custom", "s1", 0x81, 7200, 0, 0));
+        assertEquals(0b100, roleType.getMethod("psgMask", songType).invoke(role("SYNTH"), song("chemical-plant")));
+        assertEquals(0b001, roleType.getMethod("psgMask", songType).invoke(role("SYNTH"), song("spring-yard")));
+    }
+
+    private static String gameOf(Object song) {
+        try { return (String) songType.getMethod("game").invoke(song); }
+        catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+    }
+
+    @Test
+    void nativeCreditsTempoAnchorsMapExactServiceBoundaries() throws Exception {
+        for (String id : List.of("s1-credits", "credits-s2", "s3k-credits")) {
+            Object song = song(id);
+            ScenePreparedMusic prepared = prepared(List.of(), (long) integer(song, "durationFrames") * 800);
+            Object clock = clock(song, prepared);
+            var catalog = harness.loader().loadClass("sitarhero.model.SongCatalog");
+            for (Object anchor : (List<?>) catalog.getMethod("tempoAnchors", String.class).invoke(null, id)) {
+                double beat = ((Number) anchor.getClass().getMethod("beat").invoke(anchor)).doubleValue();
+                long sample = ((Number) anchor.getClass().getMethod("serviceFrame").invoke(anchor)).longValue() * 800;
+                assertEquals(sample, clockSample(clock, beat), id + " native tempo handoff");
+                assertEquals(beat, clockBeat(clock, sample), 1e-9);
+            }
+        }
+    }
+
+    @Test
+    void fractionalPickupsAndLoopsKeepNativeServiceBoundariesAcrossRepeats() throws Exception {
+        // Expected quarters come from progressed native duration units, not rounded cover counts.
+        Object[][] forms = {
+                {"s3k-data-select", 56, 3584, 1.75, 112.0},
+                {"launch-base-1", 590, 3411, 481.0 / 24, 116.0},
+                {"s3k-final-boss", 964, 2527, 26.5, 69.5},
+                {"desert-palace", 0, 2667, 0.0, 2302.0 / 24}
+        };
+        for (Object[] form : forms) {
+            Object song = song((String) form[0]);
+            Object clock = clock(song, prepared(List.of(), (long) integer(song, "durationFrames") * 800));
+            int introFrames = (int) form[1], loopFrames = (int) form[2];
+            double introBeats = (double) form[3], loopBeats = (double) form[4];
+            assertEquals(introFrames * 800L, clockSample(clock, introBeats), form[0] + " pickup");
+            for (int repeat = 1; repeat <= 3; repeat++) {
+                long sample = (introFrames + repeat * loopFrames) * 800L;
+                double beat = introBeats + repeat * loopBeats;
+                assertEquals(sample, clockSample(clock, beat), form[0] + " loop " + repeat);
+                assertEquals(beat, clockBeat(clock, sample), 1e-9);
+            }
+        }
+        assertEquals(0, drumFamily(song("angel-island-1"), 0xB2), "echoed clap is a pad, not a kick");
+        assertEquals(-1, drumFamily(song("angel-island-1"), 0xB6), "spoken bass hey is not a drum strike");
+    }
+
+    @Test
+    void quarterAnchorsUseTheIntegerConsumedSampleBoundaryAtNonDivisibleRates() throws Exception {
+        Object song = song("s3k-data-select");
+        ScenePreparedMusic prepared = prepared(List.of(), (long) integer(song, "durationFrames") * 8_000 / 60, 8_000);
+        Object clock = clock(song, prepared);
+        for (int repeat = 0; repeat <= 3; repeat++) {
+            long sample = (56L + repeat * 3584) * 8_000 / 60;
+            double beat = 1.75 + repeat * 112;
+            assertEquals(sample, clockSample(clock, beat), "native packet boundary " + repeat);
+            assertEquals(beat, clockBeat(clock, sample), 1e-9);
+        }
+        var credits = harness.loader().loadClass("sitarhero.model.SongCatalog");
+        song = song("s3k-credits");
+        clock = clock(song, prepared(List.of(), (long) integer(song, "durationFrames") * 8_000 / 60, 8_000));
+        for (Object anchor : (List<?>) credits.getMethod("tempoAnchors", String.class).invoke(null, "s3k-credits")) {
+            double beat = ((Number) anchor.getClass().getMethod("beat").invoke(anchor)).doubleValue();
+            long sample = ((Number) anchor.getClass().getMethod("serviceFrame").invoke(anchor)).longValue() * 8_000 / 60;
+            assertEquals(sample, clockSample(clock, beat), "native medley packet boundary");
+        }
     }
 
     @Test
@@ -170,7 +246,7 @@ class TestSitarHeroCharts {
     }
 
     @Test
-    void excerptsMeasureTempoFromTheirOwnDacProgression() throws Exception {
+    void shortenedPreparationsCanMeasureAnIndependentDacClock() throws Exception {
         Object song = song("marble");
         int[] units = {3, 3, 12, 12, 12, 12, 12};
         List<SceneNoteEvent> events = new ArrayList<>();
@@ -214,7 +290,7 @@ class TestSitarHeroCharts {
         assertEquals(0, drumFamily(song("green-hill"), 0x82));
         assertEquals(-1, drumFamily(song("green-hill"), 0x86), "S1 has no S3 kick");
         assertEquals(2, drumFamily(song("emerald-hill"), 0x8C), "S2 mid tom");
-        assertEquals(1, drumFamily(song("emerald-hill"), 0x8E), "S2 floor tom");
+        assertEquals(2, drumFamily(song("emerald-hill"), 0x8E), "S2 floor tom");
         assertEquals(0, drumFamily(song("aquatic-ruin"), 0x83), "S2 clap");
         assertEquals(2, drumFamily(song("emerald-hill"), 0x86), "S2 high tom");
         assertEquals(4, drumFamily(song("angel-island-1"), 0x86), "S3 kick");
@@ -236,7 +312,7 @@ class TestSitarHeroCharts {
         config.setConfigValue(SonicConfiguration.FPS, 60);
         config.setConfigValue(SonicConfiguration.REGION, "NTSC");
         var audio = AudioManager.createStandalonePresentation(game, profile, config,
-                PerformanceProfiler.getInstance(), new NoDeviceAudioSink(48_000),
+                PerformanceProfiler.getInstance(), new NoDeviceAudioSink(8_000),
                 new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()));
         var rom = GameServices.rom().getRom();
         try (var music = SceneMusicFactory.create(audio, ignored -> rom)) {
@@ -244,18 +320,23 @@ class TestSitarHeroCharts {
                 if (!game.equals(songType.getMethod("game").invoke(song))) continue;
                 String id = (String) songType.getMethod("id").invoke(song);
                 ScenePreparedMusic prepared = music.prepare(game, integer(song, "musicId"), integer(song, "durationFrames"));
-                assertEquals((long) integer(song, "durationFrames") * 800, prepared.lengthSamples());
+                assertEquals((long) integer(song, "durationFrames") * prepared.sampleRate() / 60, prepared.lengthSamples());
                 for (SceneNoteEvent event : prepared.notes()) {
-                    if (event.kind() == SceneNoteEvent.Kind.DAC)
-                        assertTrue(drumFamily(song, event.pitch()) >= 0, id + " authored mapping covers its actual DAC bank: " + event.pitch());
+                    if (event.kind() == SceneNoteEvent.Kind.DAC) {
+                        boolean nonPercussion = game.equals("s3k") && List.of(0xA5, 0xA9, 0xAA,
+                                0xB6, 0xBA, 0xBB, 0xBE).contains(event.pitch());
+                        assertEquals(!nonPercussion, drumFamily(song, event.pitch()) >= 0,
+                                id + " native percussion/speech identity: " + event.pitch());
+                    }
                 }
                 Map<Long,List<SceneNoteEvent>> attacks = new TreeMap<>();
                 prepared.notes().forEach(event -> attacks.computeIfAbsent(event.onsetSamples(), ignored -> new ArrayList<>()).add(event));
                 List<?> available = (List<?>) songType.getMethod("availableRoles").invoke(song);
                 for (Object role : roleType.getEnumConstants()) {
                     if (!available.contains(role)) {
-                        assertTrue(prepared.notes().stream().noneMatch(event -> event.kind() == SceneNoteEvent.Kind.PSG),
-                                id + " has truly silent PSG streams");
+                        boolean drums = (boolean) roleType.getMethod("drums").invoke(role);
+                        assertTrue(prepared.notes().stream().noneMatch(event -> event.kind() == (drums ? SceneNoteEvent.Kind.DAC : SceneNoteEvent.Kind.PSG)),
+                                id + " unavailable role has no native attacks");
                         assertEquals(0, roleType.getMethod("psgMask", songType).invoke(role, song));
                         for (Object difficulty : difficultyType.getEnumConstants()) {
                             InvocationTargetException failure = assertThrows(InvocationTargetException.class,
@@ -295,15 +376,12 @@ class TestSitarHeroCharts {
             assertEquals(chart, curate(song, role, prepared, difficulty), context + " deterministic");
             if (difficulty.toString().equals("MEDIUM")) assertEquals(chart, curate(song, role, prepared), "legacy overload defaults to MEDIUM");
             List<?> notes = notes(chart);
-            assertTrue(notes.size() > 15 && notes.size() < 1000, context + " meaningful finite chart: " + notes.size());
+            assertTrue(!notes.isEmpty() && notes.size() <= prepared.lengthSamples() * 12 / prepared.sampleRate() + 1, context + " meaningful finite chart: " + notes.size());
             assertTrue(notes.size() >= previousCount, context + " increasing difficulty cannot reduce density");
             previousCount = notes.size();
             assertEquals(prepared.lengthSamples(), number(chart, "length"));
             long beat = number(chart, "samplesPerBeat");
-            if (List.of("green-hill", "chemical-plant", "angel-island-1").contains(id)) {
-                int totalBeats = id.equals("green-hill") ? 132 : 144;
-                assertEquals(Math.round(prepared.lengthSamples() / (double) totalBeats), beat, "original ROM cycle clock is stable");
-            }
+            Object clock = clock(song, prepared);
             long previous = -beat;
             int lanesUsed = 0;
             Map<Integer,Integer> phrases = new TreeMap<>();
@@ -314,7 +392,7 @@ class TestSitarHeroCharts {
                 SceneMusicPart selected = partAt(parts, onset);
                 List<SceneNoteEvent> realPart = attacks.get(onset).stream().filter(event -> belongs(event, selected)).toList();
                 assertFalse(realPart.isEmpty(), context + " every attack belongs to the selected audible part");
-                assertTrue(onset - previous >= Math.max(beat / division, prepared.sampleRate() / (drums ? 12L : 10L)), context + " ergonomic density cap");
+                assertTrue(onset - previous >= Math.max(clockLength(clock, onset) / division, prepared.sampleRate() / (drums ? 12L : 10L)), context + " ergonomic density cap");
                 assertTrue(end >= onset && end <= prepared.lengthSamples());
                 if (index + 1 < notes.size()) assertTrue(end < number(notes.get(index + 1), "onset"), context + " tails do not overlap the next hit");
                 int lanes = integer(note, "lanes");
@@ -336,17 +414,36 @@ class TestSitarHeroCharts {
                     assertFalse(flag(note, "hopo"));
                 }
                 int phrase = integer(note, "phrase");
-                assertTrue(phrase >= -1 && phrase < 8);
+                assertTrue(phrase >= -1 && phrase <= (int) (clockBeat(clock, prepared.lengthSamples()) / 32));
                 if (phrase >= 0) phrases.merge(phrase, 1, Integer::sum);
                 int ticks = integer(note, "sustainTicks");
-                assertEquals(end > onset ? (int) ((end - onset) * 25 / beat) : 0, ticks);
+                assertEquals(end > onset ? (int) ((clockBeat(clock, end) - clockBeat(clock, onset)) * 25) : 0, ticks);
                 lanesUsed |= lanes;
                 previous = onset;
             }
-            assertFalse(phrases.isEmpty(), context + " authored Star Power phrases");
+            if (clockBeat(clock, prepared.lengthSamples()) > 64)
+                assertFalse(phrases.isEmpty(), context + " authored Star Power phrases continue through full songs");
             if (drums && difficulty.toString().equals("EASY")) assertTrue(Integer.bitCount(lanesUsed) <= 3, "EASY simplifies the native kit to three strike families");
             if (drums && id.equals("angel-island-1") && laneCount == 5) assertEquals(31, lanesUsed, "AIZ native tom and metal families remain available");
         }
+    }
+
+    private static Object clock(Object song, ScenePreparedMusic prepared) throws Exception {
+        var type = harness.loader().loadClass("sitarhero.chart.MusicalClock");
+        var method = type.getDeclaredMethod("of", songType, ScenePreparedMusic.class); method.setAccessible(true);
+        return method.invoke(null, song, prepared);
+    }
+    private static double clockBeat(Object clock, long sample) throws Exception {
+        var method = clock.getClass().getDeclaredMethod("beatAt", long.class); method.setAccessible(true);
+        return (double) method.invoke(clock, sample);
+    }
+    private static long clockSample(Object clock, double beat) throws Exception {
+        var method = clock.getClass().getDeclaredMethod("sampleAt", double.class); method.setAccessible(true);
+        return (long) method.invoke(clock, beat);
+    }
+    private static long clockLength(Object clock, long sample) throws Exception {
+        var method = clock.getClass().getDeclaredMethod("beatLengthAt", long.class); method.setAccessible(true);
+        return (long) method.invoke(clock, sample);
     }
 
     private static boolean belongs(SceneNoteEvent event, SceneMusicPart part) {
@@ -375,8 +472,12 @@ class TestSitarHeroCharts {
     }
 
     private static ScenePreparedMusic prepared(List<SceneNoteEvent> events, long length) {
+        return prepared(events, length, 48_000);
+    }
+
+    private static ScenePreparedMusic prepared(List<SceneNoteEvent> events, long length, int rate) {
         return new ScenePreparedMusic() {
-            public int sampleRate() { return 48_000; }
+            public int sampleRate() { return rate; }
             public long lengthSamples() { return length; }
             public List<SceneNoteEvent> notes() { return List.copyOf(events); }
         };

@@ -20,38 +20,21 @@ public enum Role {
 
     /** Union of authored section ownership. Playback uses ChartCurator.audioParts. */
     public int fmMask(SongSpec song) {
-        if (this == SITAR) return switch (song.id()) {
-            case "green-hill" -> 0b11101;
-            case "marble", "hydrocity-1" -> 0b00101;
-            case "spring-yard", "labyrinth", "chemical-plant" -> 0b00001;
-            case "emerald-hill", "aquatic-ruin", "angel-island-1" -> 0b00110;
-            case "casino-night" -> 0b10010;
-            case "marble-garden-1" -> 0b11110;
-            case "flying-battery-1" -> 0b10001;
-            default -> throw new IllegalArgumentException("No authored musical part for " + song.id());
-        };
-        if (this == HARP) return switch (song.id()) {
-            case "green-hill" -> 0b11111;
-            case "labyrinth" -> 0b10000;
-            case "casino-night", "marble-garden-1", "flying-battery-1" -> 0b01100;
-            case "marble", "spring-yard", "emerald-hill", "chemical-plant", "aquatic-ruin",
-                    "angel-island-1", "hydrocity-1" -> 0b11000;
-            default -> throw new IllegalArgumentException("No authored musical part for " + song.id());
-        };
-        return 0;
+        return mask(SongCatalog.arrangement(song.id()).orElseThrow(), "FM");
     }
 
-    /** CPZ stops PSG1/2: its PSG part is the authentic PSG3 noise hi-hat. */
     public int psgMask(SongSpec song) {
-        if (this != SYNTH) return 0;
-        return switch (song.id()) {
-            case "chemical-plant" -> 0b100;
-            case "spring-yard" -> 0b001;
-            case "marble-garden-1", "flying-battery-1" -> 0;
-            case "green-hill", "marble", "labyrinth", "emerald-hill", "aquatic-ruin",
-                    "casino-night", "angel-island-1", "hydrocity-1" -> 0b011;
-            default -> throw new IllegalArgumentException("No authored musical part for " + song.id());
-        };
+        return mask(SongCatalog.arrangement(song.id()).orElseThrow(), "PSG");
+    }
+
+    private int mask(SongArrangement form, String kind) {
+        int mask = 0;
+        for (SongArrangement.Section section : form.sections(this)) {
+            if (!section.kind().equals(kind)) continue;
+            mask |= 1 << section.channel();
+            if (section.harmony() >= 0) mask |= 1 << section.harmony();
+        }
+        return mask;
     }
 
     /** True when subtraction of DAC forms the performer's part. */

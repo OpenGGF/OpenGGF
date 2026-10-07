@@ -12,9 +12,9 @@ import java.util.TreeMap;
  * A lower score can improve stars without fabricating a result with unrelated totals.
  */
 public final class PlayerProfile {
-    private static final int MAX_RECORDS = 12 * 4 * 4;
-    private static final int MAX_LINES = 1_024;
-    private static final int MAX_TEXT = 262_144;
+    private static final int MAX_RECORDS = 2_048;
+    private static final int MAX_LINES = 4_096;
+    private static final int MAX_TEXT = 524_288;
     private static final int MAX_LINE = 512;
     private static final String HEADER = "sitar-profile=1";
     private final Map<Key, Record> records = new TreeMap<>(Comparator.comparing(Key::songId)
@@ -90,7 +90,7 @@ public final class PlayerProfile {
      * Version 1 schema: header, attempts=N, total-score=N, then one record line per key:
      * record=song|ROLE|DIFFICULTY|score,hits,notes,streak,failed,combo|same fields for star champion.
      * IDs are bounded ASCII tokens; booleans are literal lowercase true/false. Lexical
-     * key order makes encoding deterministic. At most 192 records are stored.
+     * key order makes encoding deterministic. At most 2,048 records are stored.
      */
     public String encode() {
         var text = new StringBuilder(HEADER).append('\n').append("attempts=").append(attempts)
@@ -104,7 +104,7 @@ public final class PlayerProfile {
     /**
      * Atomically replace this profile from a valid V1 save. Null, corrupt, unsupported or
      * oversized input leaves current progress untouched. Unknown key=value extras are
-     * ignored within 1,024 total lines, 512 characters/line and 262,144 characters of text. Known
+     * ignored within 4,096 total lines, 512 characters/line and 524,288 characters of text. Known
      * fields are strict; duplicate keys/records and invalid champion pairs reject the save.
      */
     public void read(String text) {

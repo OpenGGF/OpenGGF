@@ -64,11 +64,11 @@ public final class SitarUi {
         c.fill(0, 34, c.width(), 1, GOLD);
         logo(c, 12, 9);
         if (step > 0) {
-            for (int i = 1; i <= 3; i++) {
-                int x = c.width() - 150 + (i - 1) * 47;
+            for (int i = 1; i <= 4; i++) {
+                int x = c.width() - 196 + (i - 1) * 47;
                 c.fill(x, 10, 41, 16, i == step ? 0xFF173B6C : 0xFF0A1939);
                 frame(c, x, 10, 41, 16, i == step ? CYAN : 0xFF365E95);
-                center(c, i == 1 ? "ACTOR" : i == 2 ? "ROLE" : "SONG", x, 15, 41, i == step ? GOLD : DIM);
+                center(c, i == 1 ? "ACTOR" : i == 2 ? "ROLE" : i == 3 ? "LEVEL" : "SONG", x, 15, 41, i == step ? GOLD : DIM);
             }
         } else text(c, "ARCADE", c.width() - 49, 15, CYAN);
     }

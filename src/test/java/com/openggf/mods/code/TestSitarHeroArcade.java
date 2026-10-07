@@ -25,9 +25,47 @@ class TestSitarHeroArcade {
     }
     @AfterAll static void close() throws Exception { if (harness != null) harness.close(); }
 
+    @Test
+    void judgedHitsAnimateIndependentNativePerformersAndPauseClearsGestures() throws Exception {
+        var f = new Fixture(List.of("s1"));
+        assertTrue(f.debug("local:green-hill:BONGOS:sonic:MEDIUM:coop"));
+        var second = type.getDeclaredField("performer2"); second.setAccessible(true);
+        second.set(f.scene, type.getDeclaredField("performer").getType().getEnumConstants()[0]);
+        for (int step = 0; step < 3; step++) f.step();
+        assertEquals("PLAY", f.screen());
+        f.music.player.position = -50;
+        f.key(SceneKeys.SPACE);
+        var actorsField = type.getDeclaredField("actors"); actorsField.setAccessible(true);
+        var actors = (Map<?, ?>) actorsField.get(f.scene);
+        Object first = actors.get("sonic");
+        assertNotNull(first);
+        assertFalse(actors.containsKey("p2-sonic"), "P1 hit cannot start the other player's gesture");
+        assertTrue(gestureAge(first, f.tick) < 18);
+        f.key(SceneKeys.P);
+        Object other = actors.get("p2-sonic");
+        assertNotNull(other); assertNotSame(first, other);
+        assertTrue(gestureAge(other, f.tick) < 18);
+        assertTrue(f.debug("pause"));
+        var canvas = mock(SceneCanvas.class);
+        when(canvas.width()).thenReturn(400); when(canvas.height()).thenReturn(224);
+        f.scene.draw(f, canvas);
+        assertEquals(18, gestureAge(first, f.tick));
+        assertEquals(18, gestureAge(other, f.tick));
+    }
+
+    private static int gestureAge(Object artist, long tick) throws Exception {
+        var field = artist.getClass().getDeclaredField("motion"); field.setAccessible(true);
+        Object motion = field.get(artist);
+        Class<?> role = harness.loader().loadClass("sitarhero.model.Role");
+        Object drums = java.util.Arrays.stream(role.getEnumConstants()).filter(v -> v.toString().equals("BONGOS")).findFirst().orElseThrow();
+        var age = motion.getClass().getDeclaredMethod("age", role, int.class, long.class); age.setAccessible(true);
+        return (int) age.invoke(motion, drums, 16, tick);
+    }
+
     private static final class Music implements SceneMusic {
         final ScenePreparedMusic song;
         Player player;
+        int lastPreparedId, lastPreparedFrames, rate = 1_000;
         Music() {
             var notes = new ArrayList<SceneNoteEvent>();
             for (int at = 0; at < 20_000; at += 250) {
@@ -41,12 +79,12 @@ class TestSitarHeroArcade {
             }
             List<SceneNoteEvent> events = List.copyOf(notes);
             song = new ScenePreparedMusic() {
-                public int sampleRate() { return 1_000; }
+                public int sampleRate() { return rate; }
                 public long lengthSamples() { return 20_000; }
                 public List<SceneNoteEvent> notes() { return events; }
             };
         }
-        public ScenePreparedMusic prepare(String game, int id, int frames) { return song; }
+        public ScenePreparedMusic prepare(String game, int id, int frames) { lastPreparedId = id; lastPreparedFrames = frames; return song; }
         public SceneMusicPlayer start(ScenePreparedMusic song, int fm, int psg, boolean dac, int lead) { return start(song, List.of(new SceneMusicPart(0, fm, psg, dac)), lead); }
         public SceneMusicPlayer start(ScenePreparedMusic song, List<SceneMusicPart> parts, int lead) { player = new Player(-lead); return player; }
     }
@@ -70,10 +108,12 @@ class TestSitarHeroArcade {
         final Music music = new Music();
         final List<String> games;
         final Map<String, String> saves;
+        final Map<String, SceneRomArt> roms = new HashMap<>();
         final Set<Integer> pressed = new HashSet<>();
         final Set<Integer> held = new HashSet<>();
         PhysicalInput physical = PhysicalInput.neutral();
-        int logicalPress;
+        SceneMouse pointer = SceneMouse.none();
+        int logicalPress, logicalRepeat;
         long tick, sequence;
         Fixture(List<String> games) throws Exception { this(games, new HashMap<>()); }
         Fixture(List<String> games, Map<String, String> saves) throws Exception {
@@ -83,7 +123,7 @@ class TestSitarHeroArcade {
         void step() {
             if (music.player != null && !music.player.paused && !music.player.stopped) music.player.position += 50;
             scene.update(this); tick++;
-            pressed.clear(); logicalPress = 0;
+            pressed.clear(); logicalPress = 0; pointer = SceneMouse.none();
             physical = new PhysicalInput(tick * 50_000_000L, List.copyOf(held), List.of(), List.of(), 0);
         }
         void key(int code) {
@@ -95,12 +135,23 @@ class TestSitarHeroArcade {
                     new PhysicalInputEvent(sequence++, tick * 50_000_000L, PhysicalInputEvent.Kind.KEY, -1, code, 0)), 0);
             step();
         }
-        void pad(int button) {
+        void pad(int button) { pad(button, 0); }
+        void pad(int button, int device) {
             // Mirror the existing Genesis mapper while supplying the same raw pad edge.
             logicalPress = button == PhysicalGamepad.BUTTON_A ? SceneButtons.B
                     : button == PhysicalGamepad.BUTTON_B ? SceneButtons.C : 0;
             physical = new PhysicalInput(tick * 50_000_000L, List.of(), List.of(), List.of(
-                    new PhysicalInputEvent(sequence++, tick * 50_000_000L, PhysicalInputEvent.Kind.BUTTON, 0, button, 1)), 0);
+                    new PhysicalInputEvent(sequence++, tick * 50_000_000L, PhysicalInputEvent.Kind.BUTTON, device, button, 1)), 0);
+            step(); step();
+        }
+        void mouse(int x, int y, boolean click, int wheel) {
+            pointer = mock(SceneMouse.class);
+            when(pointer.leftPressed()).thenReturn(click); when(pointer.moved()).thenReturn(true);
+            when(pointer.wheel()).thenReturn(wheel);
+            when(pointer.over(anyInt(), anyInt(), anyInt(), anyInt())).thenAnswer(call -> {
+                int rx = call.getArgument(0), ry = call.getArgument(1), rw = call.getArgument(2), rh = call.getArgument(3);
+                return x >= rx && y >= ry && x < rx + rw && y < ry + rh;
+            });
             step(); step();
         }
         boolean debug(String command) { return ((DebuggableScene) scene).debugJump(command); }
@@ -114,18 +165,18 @@ class TestSitarHeroArcade {
         public long ticks() { return tick; }
         public boolean buttonDown(int buttons) { return false; }
         public boolean buttonPressed(int buttons) { return (logicalPress & buttons) != 0; }
-        public boolean buttonRepeated(int buttons) { return false; }
+        public boolean buttonRepeated(int buttons) { return (logicalRepeat & buttons) != 0; }
         public LogicalInputSnapshot input() { return LogicalInputSnapshot.neutral(); }
         public PhysicalInput physicalInput() { return physical; }
         public boolean keyDown(int key) { return held.contains(key); }
         public boolean keyPressed(int key) { return pressed.contains(key); }
-        public SceneMouse mouse() { return SceneMouse.none(); }
+        public SceneMouse mouse() { return pointer; }
         public SceneArt art() {
             return new SceneArt() {
                 public SceneImage png(byte[] bytes) { throw new UnsupportedOperationException(); }
                 public List<String> availableGames() { return games; }
                 public SceneRomArt rom() { return rom(games.getFirst()); }
-                public SceneRomArt rom(String game) { return games.contains(game) ? fakeRom(game) : null; }
+                public SceneRomArt rom(String game) { return games.contains(game) ? roms.computeIfAbsent(game, TestSitarHeroArcade.this::fakeRom) : null; }
             };
         }
         public SceneAudio audio() { return mock(SceneAudio.class); }
@@ -148,6 +199,8 @@ class TestSitarHeroArcade {
         when(set.frame(anyInt())).thenReturn(SceneSprite.of(new SceneImage(1, 1, new int[]{0xFFFFFFFF})));
         SceneRomArt rom = mock(SceneRomArt.class);
         when(rom.gameId()).thenReturn(game);
+        when(rom.hasZonePictures(anyInt(), anyInt())).thenAnswer(call ->
+                (int) call.getArgument(0) == (game.equals("s2") ? 1 : 0) && (int) call.getArgument(1) == 0);
         when(rom.character(anyString())).thenReturn(set);
         when(rom.characterAccessory(anyString())).thenReturn(set);
         when(rom.sprites(any(), any())).thenReturn(set);
@@ -157,32 +210,166 @@ class TestSitarHeroArcade {
         return rom;
     }
 
+    @Test void fullVersionTitleOffersCareerAndASeparatePracticeRoute() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        assertEquals("TITLE", f.screen());
+        f.key(SceneKeys.ENTER);
+        assertEquals("CHARACTERS", f.screen());
+        f.key(SceneKeys.ESCAPE);
+        assertEquals("TITLE", f.screen());
+        f.key(SceneKeys.DOWN); f.key(SceneKeys.DOWN); f.key(SceneKeys.ENTER);
+        assertEquals("CHARACTERS", f.screen());
+        assertEquals("PRACTICE", type.getMethod("mode").invoke(f.scene));
+        f.scene.exit(f);
+    }
+
+    @Test void unsupportedSongSceneryUsesSupportedPicturesFromThatSameRom() throws Exception {
+        for (String game : List.of("s2", "s3k")) {
+            Fixture f = new Fixture(List.of(game));
+            SceneRomArt rom = f.roms.get(game); clearInvocations(rom);
+            Class<?> catalog = harness.loader().loadClass("sitarhero.model.SongCatalog");
+            Class<?> songClass = harness.loader().loadClass("sitarhero.model.SongSpec");
+            String id = game.equals("s2") ? "emerald-hill" : "marble-garden-1";
+            Object source = ((List<?>) catalog.getMethod("all").invoke(null)).stream().filter(song -> {
+                try { return songClass.getMethod("id").invoke(song).equals(id); }
+                catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+            }).findFirst().orElseThrow();
+            var selected = type.getDeclaredField("song"); selected.setAccessible(true); selected.set(f.scene, source);
+            var stage = type.getDeclaredMethod("stage", songClass); stage.setAccessible(true); stage.invoke(f.scene, source);
+            int picturedZone = game.equals("s2") ? 1 : 0;
+            verify(rom).zoneBackdrop(picturedZone, 0);
+            verify(rom).levelStages(picturedZone, 0, 400, 90, 24);
+            verify(rom, never()).zoneBackdrop(game.equals("s2") ? 0 : 2, 0);
+            assertSame(source, selected.get(f.scene), "concert scenery cannot change the selected song");
+            assertEquals(Set.of(game), f.roms.keySet(), "no other ROM can supply fallback pictures");
+            f.scene.exit(f);
+        }
+    }
+
+    @Test void practiceRunsPastMissesWithoutSavingPlayerRecords() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        assertTrue(f.debug("practice:green-hill:BONGOS:sonic:MEDIUM"));
+        f.step(); f.step(); f.step();
+        for (int i = 0; i < 500 && !f.screen().equals("RESULTS"); i++) f.step();
+        assertEquals("RESULTS", f.screen());
+        assertEquals(0, f.score());
+        assertFalse(f.saves.containsKey("profile.txt"), "practice cannot produce earned records");
+        f.scene.exit(f);
+    }
+
+    @Test void physicalMenuDirectionsIgnoreConflictingGenesisMappingsAndRepeatHeldArrows() throws Exception {
+        Fixture f = new Fixture(List.of("s1")); f.logicalRepeat = SceneButtons.UP;
+        f.key(SceneKeys.DOWN);
+        var selected = type.getDeclaredField("selected"); selected.setAccessible(true);
+        assertEquals(1, selected.getInt(f.scene), "mapped UP cannot cancel physical DOWN");
+        f.held.add(SceneKeys.DOWN);
+        for (int i = 0; i < 20; i++) f.step();
+        assertTrue(selected.getInt(f.scene) >= 2, "held raw arrows repeat independently of Genesis bindings");
+        f.scene.exit(f);
+    }
+
+    @Test void calibrationFromResultsPreservesCompletedAttemptAndSafeReturn() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        assertTrue(f.debug("practice:green-hill:BONGOS:sonic:MEDIUM")); assertTrue(f.debug("autoplay"));
+        for (int i = 0; i < 500 && !f.screen().equals("RESULTS"); i++) f.step();
+        assertEquals("RESULTS", f.screen());
+        Object original = f.session(); long score = f.score();
+        var resultField = type.getDeclaredField("result"); resultField.setAccessible(true);
+        Object result = resultField.get(f.scene);
+        f.key(SceneKeys.TAB); for (int i = 0; i < 13; i++) f.key(SceneKeys.DOWN);
+        f.key(SceneKeys.ENTER); f.step(); f.step(); assertEquals("CALIBRATION", f.screen());
+        f.key(SceneKeys.ESCAPE); f.key(SceneKeys.ESCAPE); assertEquals("RESULTS", f.screen());
+        assertSame(original, f.session()); assertSame(result, resultField.get(f.scene)); assertEquals(score, f.score());
+        var canvas = mock(SceneCanvas.class); when(canvas.width()).thenReturn(400); when(canvas.height()).thenReturn(224);
+        assertDoesNotThrow(() -> f.scene.draw(f, canvas)); f.scene.exit(f);
+    }
+
+    @Test void guestCanRetryAnOfferedRoundAfterCancellingLoading() throws Exception {
+        Fixture f = new Fixture(List.of("s1")); f.music.rate = 8_000;
+        ScenePeer peer = mock(ScenePeer.class); when(peer.state()).thenReturn(ScenePeer.State.CONNECTED);
+        when(peer.send(anyString())).thenReturn(true);
+        when(peer.poll()).thenReturn(List.of(new ScenePeer.Message("SH1 HELLO s1", 0),
+                new ScenePeer.Message("SH1 OFFER 1 green-hill BONGOS MEDIUM coop", 0))).thenReturn(List.of());
+        Class<?> onlineType = harness.loader().loadClass("sitarhero.net.OnlineMatch");
+        Object match = onlineType.getConstructor(ScenePeer.class, boolean.class, List.class).newInstance(peer, false, List.of("s1"));
+        var field = type.getDeclaredField("online"); field.setAccessible(true); field.set(f.scene, match);
+        f.step(); assertEquals("LOBBY", f.screen());
+        f.key(SceneKeys.ENTER); assertEquals("LOADING", f.screen());
+        f.key(SceneKeys.ESCAPE); assertEquals("LOBBY", f.screen());
+        f.key(SceneKeys.ENTER); f.step(); f.step();
+        assertEquals("LOBBY", f.screen()); assertEquals(true, onlineType.getMethod("ready").invoke(match));
+        verify(peer).send(matches("SH1 READY 1 8000 [0-9a-f]+")); f.scene.exit(f);
+    }
+
+    @Test void mouseActivatesVisibleRowsAndIgnoresOutsideClicks() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        f.mouse(395, 10, true, 0); assertEquals("TITLE", f.screen());
+        f.mouse(35, 81, true, 0); assertEquals("CHARACTERS", f.screen(), "quick-play title row");
+        f.mouse(35, 64, true, 0); assertEquals("ROLES", f.screen());
+        f.mouse(35, 95, true, 0); assertEquals("DIFFICULTY", f.screen(), "Bongos role");
+        f.mouse(35, 95, true, 0); assertEquals("SONGS", f.screen());
+        f.mouse(395, 10, true, 0); assertEquals("SONGS", f.screen());
+        f.mouse(35, 64, false, -6);
+        var selected = type.getDeclaredField("selected"); selected.setAccessible(true);
+        assertTrue(selected.getInt(f.scene) >= 4, "wheel reaches songs beyond first page");
+        f.mouse(35, 64, true, 0); f.step(); f.step(); assertEquals("PLAY", f.screen());
+        f.key(SceneKeys.ESCAPE); assertEquals("PAUSED", f.screen());
+        f.mouse(395, 10, true, 0); assertEquals("PAUSED", f.screen());
+        f.mouse(100, 90, true, 0); assertEquals("PLAY", f.screen(), "visible resume action");
+        f.scene.exit(f);
+    }
+
+    @Test void playerTwoCalibrationUsesItsOwnKeyboardAndPad() throws Exception {
+        Fixture f = new Fixture(List.of("s1")); assertTrue(f.debug("settings"));
+        for (int i = 0; i < 15; i++) f.key(SceneKeys.DOWN);
+        f.key(SceneKeys.ENTER); f.key(SceneKeys.UP); f.key(SceneKeys.UP); f.key(SceneKeys.ENTER);
+        f.step(); f.step(); assertEquals("CALIBRATION", f.screen());
+        var field = type.getDeclaredField("calibration"); field.setAccessible(true);
+        f.music.player.position = 450; f.pad(PhysicalGamepad.BUTTON_A, 0);
+        assertTrue(((List<?>) field.get(f.scene)).isEmpty());
+        f.music.player.position = 450; f.key(SceneKeys.SPACE);
+        assertTrue(((List<?>) field.get(f.scene)).isEmpty());
+        f.music.player.position = 450; f.key(SceneKeys.P);
+        assertEquals(1, ((List<?>) field.get(f.scene)).size());
+        for (int i = 2; i <= 8; i++) {
+            f.music.player.position = i * 500 - 50; f.pad(PhysicalGamepad.BUTTON_A, 1);
+        }
+        f.key(SceneKeys.ENTER); assertEquals("SETTINGS", f.screen());
+        assertTrue(f.saves.containsKey("settings-p2.txt")); assertFalse(f.saves.containsKey("profile.txt"));
+        f.scene.exit(f);
+    }
+
     @Test void allSevenLibrariesReachSelectionWithCorrectRoster() throws Exception {
         for (int subset = 1; subset < 8; subset++) {
             List<String> games = new ArrayList<>(); if ((subset & 1) != 0) games.add("s1"); if ((subset & 2) != 0) games.add("s2"); if ((subset & 4) != 0) games.add("s3k");
             Fixture f = new Fixture(games);
-            assertEquals("CHARACTERS", f.screen());
-            assertEquals(games.size(), ((List<?>) type.getMethod("availableSongs").invoke(f.scene)).size());
+            assertEquals("TITLE", f.screen());
+            assertEquals(((List<?>) harness.loader().loadClass("sitarhero.model.SongCatalog").getMethod("available", List.class).invoke(null, games)).size(), ((List<?>) type.getMethod("availableSongs").invoke(f.scene)).size());
             int expected = 2 + ((subset & 6) != 0 ? 1 : 0) + ((subset & 2) != 0 ? 1 : 0) + ((subset & 4) != 0 ? 3 : 0);
             assertEquals(expected, ((List<?>) type.getMethod("availablePerformers").invoke(f.scene)).size());
+            f.key(SceneKeys.ENTER); assertEquals("CHARACTERS", f.screen());
             f.key(SceneKeys.ENTER); assertEquals("ROLES", f.screen());
             f.step(); f.step(); assertEquals("ROLES", f.screen());
+            f.key(SceneKeys.ENTER); assertEquals("DIFFICULTY", f.screen());
             f.key(SceneKeys.ENTER); assertEquals("SONGS", f.screen());
             f.scene.exit(f);
         }
     }
     @Test void ordinaryPadMenusDoNotDependOnGenesisMappings() throws Exception {
         Fixture f = new Fixture(List.of("s1"));
+        f.pad(PhysicalGamepad.BUTTON_A); assertEquals("CHARACTERS", f.screen());
         f.pad(PhysicalGamepad.BUTTON_A); assertEquals("ROLES", f.screen());
         f.pad(PhysicalGamepad.BUTTON_DPAD_DOWN);
+        f.pad(PhysicalGamepad.BUTTON_A); assertEquals("DIFFICULTY", f.screen());
         f.pad(PhysicalGamepad.BUTTON_A); assertEquals("SONGS", f.screen());
         f.pad(PhysicalGamepad.BUTTON_A); f.step(); f.step(); assertEquals("PLAY", f.screen());
         f.scene.exit(f);
     }
     @Test void rawPadBackAndSettingsAcceptDoNotCollideWithGenesisAliases() throws Exception {
         Fixture f = new Fixture(List.of("s1"));
-        f.pad(PhysicalGamepad.BUTTON_A); f.pad(PhysicalGamepad.BUTTON_A); assertEquals("SONGS", f.screen());
-        f.pad(PhysicalGamepad.BUTTON_B); assertEquals("ROLES", f.screen());
+        for (int i = 0; i < 4; i++) f.pad(PhysicalGamepad.BUTTON_A);
+        assertEquals("SONGS", f.screen());
+        f.pad(PhysicalGamepad.BUTTON_B); assertEquals("DIFFICULTY", f.screen());
         assertTrue(f.debug("settings")); f.key(SceneKeys.TAB);
         f.pad(PhysicalGamepad.BUTTON_A); assertEquals("SETTINGS", f.screen());
         f.pad(PhysicalGamepad.BUTTON_X); assertEquals("SETTINGS", f.screen());
@@ -292,6 +479,53 @@ class TestSitarHeroArcade {
         assertEquals("RESULTS", f.screen());
         assertEquals(notes.size(), f.count("hits") + (int) session.getClass().getMethod("misses").invoke(session));
         assertEquals(1, (int) session.getClass().getMethod("misses").invoke(session));
+        f.scene.exit(f);
+    }
+
+    @Test void localPlayersStrikeIndependentlyOnOneClockAndDoNotSaveSoloRecords() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        assertTrue(f.debug("local:green-hill:BONGOS:sonic:MEDIUM:coop"));
+        f.step(); f.step(); f.step();
+        Object p1 = f.session();
+        var field = type.getDeclaredField("session2"); field.setAccessible(true);
+        Object p2 = field.get(f.scene);
+        f.music.player.position = -50;
+        f.key(SceneKeys.SPACE);
+        assertEquals(1, p1.getClass().getMethod("hits").invoke(p1));
+        assertEquals(0, p2.getClass().getMethod("hits").invoke(p2));
+        f.key(SceneKeys.P);
+        assertEquals(1, p2.getClass().getMethod("hits").invoke(p2));
+        f.key(SceneKeys.ESCAPE); assertEquals("PAUSED", f.screen());
+        f.key(SceneKeys.ENTER); assertEquals("PLAY", f.screen());
+        for (int i = 0; i < 500 && !f.screen().equals("RESULTS"); i++) f.step();
+        assertEquals("RESULTS", f.screen());
+        assertFalse(f.saves.containsKey("profile.txt"));
+        f.scene.exit(f);
+    }
+
+    @Test void calibrationSelectsRealDrumsWhenTheChosenSongHasNone() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        assertTrue(f.debug("practice:s1-special-stage:SITAR:sonic:MEDIUM"));
+        f.key(SceneKeys.ESCAPE); assertEquals("SONGS", f.screen());
+        f.key(SceneKeys.TAB); assertEquals("SETTINGS", f.screen());
+        for (int i = 0; i < 13; i++) f.key(SceneKeys.DOWN);
+        f.key(SceneKeys.ENTER); f.step(); f.step(); f.step();
+        assertEquals("CALIBRATION", f.screen());
+        assertEquals(0x81, f.music.lastPreparedId, "same-game GHZ has real percussion");
+        assertEquals(1800, f.music.lastPreparedFrames, "calibration needs only thirty seconds");
+        var songField = type.getDeclaredField("song"); songField.setAccessible(true);
+        assertEquals("s1-special-stage", songField.get(f.scene).getClass().getMethod("id").invoke(songField.get(f.scene)), "selection is preserved");
+        f.scene.exit(f);
+    }
+
+    @Test void cancelledCalibrationDoesNotLeaveAPracticeAttemptEligibleForRecords() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        assertTrue(f.debug("settings"));
+        for (int i = 0; i < 13; i++) f.key(SceneKeys.DOWN);
+        f.key(SceneKeys.ENTER); f.step(); f.step(); f.step();
+        assertEquals("CALIBRATION", f.screen());
+        f.key(SceneKeys.ESCAPE); assertEquals("SETTINGS", f.screen());
+        assertFalse(f.saves.containsKey("profile.txt"));
         f.scene.exit(f);
     }
 }

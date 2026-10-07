@@ -318,7 +318,16 @@ The eight excluded/aliased S&K slots below plus 43 excluded/duplicate S3 slots a
 for all 101 supported bank entries alongside the 50 research entries. The parent
 additionally excludes both researched title cues from its 48-song playable selection.
 
-### Why retain the two Knuckles themes?
+### Initial Knuckles-theme rationale (superseded at integration)
+
+The integration decision excludes both character cues from the public tour under
+the user's broader short-loop instruction. S&K repeats a short 36-quarter form;
+S3 repeats eight-/four-quarter FM motifs over the repeated clap phrase. Complete
+native forms and character-scene callers alone do not establish substantive song
+development. The initial rationale below is retained as a rejected selection
+approach; all 50 research forms and 101 bank-entry checks remain useful. The
+public provider combination contains 46 S3K songs and 79 total. See the
+[combined design](2026-10-07-sitar-hero-full-version.md).
 
 This is a bounded musical selection judgment, not a general minimum-length rule.
 The owning code selects `mus_Knuckles` for character scenes: S3

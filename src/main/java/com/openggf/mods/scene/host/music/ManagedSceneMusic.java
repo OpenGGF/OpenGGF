@@ -66,6 +66,7 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
     @Override public SceneMusicPreparation prepareAsync(String gameId, int musicId, int durationFrames) {
         requireOpen();
         String game = checkedGame(gameId, durationFrames);
+        discardTerminalJob();
         if (matches(game, musicId, durationFrames)) {
             cancelPending();
             return completed(cached);
@@ -79,6 +80,7 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
 
     @Override public SceneMusicPreparation preparePartAsync(ScenePreparedMusic song, List<SceneMusicPart> parts) {
         requireOpen();
+        discardTerminalJob();
         Prepared prepared = current(song);
         List<SceneMusicPart> selection = selection(prepared, parts, 0);
         if (player != null) player.stop();
@@ -161,6 +163,11 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
         pending = null;
     }
 
+    private void discardTerminalJob() {
+        if (pending != null && (pending.state() == SceneMusicPreparation.State.CANCELLED
+                || pending.state() == SceneMusicPreparation.State.FAILED)) cancelPending();
+    }
+
     private final class Job implements SceneMusicPreparation, Runnable {
         final Prepared song;
         final List<SceneMusicPart> parts;
@@ -214,8 +221,10 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
         @Override public synchronized void cancel() {
             if (published) return;
             if (future != null) { future.cancel(true); if (worker != null) worker.remove(future); }
-            input = null; rendered = null; error = null; state = State.CANCELLED;
+            input = null; rendered = null;
+            if (state != State.FAILED) { error = null; state = State.CANCELLED; }
             if (full) song.retire();
+            if (pending == this) pending = null;
         }
     }
 
@@ -235,6 +244,7 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
     @Override public SceneMusicPlayer start(ScenePreparedMusic song, List<SceneMusicPart> parts,
                                             int leadInSamples) {
         requireOpen();
+        discardTerminalJob();
         Prepared prepared = current(song);
         List<SceneMusicPart> selection = selection(prepared, parts, leadInSamples);
         if (pending != null) throw new IllegalStateException("music preparation must finish before starting");

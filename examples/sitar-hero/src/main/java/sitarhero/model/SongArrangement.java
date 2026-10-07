@@ -21,7 +21,8 @@ public record SongArrangement(String id, String label, String game, int musicId,
         if (introFrames < 0 || loopFrames < 0 || endFrames < 0 || introBeats < 0 || loopBeats <= 0 || unitsPerBeat <= 0
                 || loopFrames == 0 && endFrames == 0 || !firstDacUnits.isEmpty() && (firstDacUnits.size() != 7 || firstDacUnits.stream().anyMatch(n -> n <= 0)))
             throw new IllegalArgumentException("Invalid ROM song form");
-        if (durationFrames() > 36_000) throw new IllegalArgumentException("Song exceeds bounded ten-minute preparation");
+        int duration = loopFrames == 0 ? endFrames : Math.max(7_200, Math.addExact(introFrames, Math.multiplyExact(loopFrames, 2)));
+        if (duration > 36_000) throw new IllegalArgumentException("Song exceeds bounded ten-minute preparation");
     }
     public int durationFrames() { return loopFrames == 0 ? endFrames : Math.max(7_200, Math.addExact(introFrames, Math.multiplyExact(loopFrames, 2))); }
     public SongSpec song() { return new SongSpec(id, label, game, musicId, durationFrames(), zone, act); }
