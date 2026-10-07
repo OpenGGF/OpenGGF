@@ -67,6 +67,7 @@ final class Guard {
                 run.revives--;
                 player.setInvulnerableFrames(REVIVE_INVULNERABLE_FRAMES);
                 player.addRings(20);
+                run.freeRings += 20;
                 services.playSfx(0xBF); // S2 sfx_ContinueJingle.
                 if (stage != null) stage.onRevive();
                 return true;
@@ -79,7 +80,10 @@ final class Guard {
         player.setRingCount(rings - lost);
         services.audioManager().playSfx(GameSound.RING_SPILL);
         if (stage != null) {
-            stage.spillRings(player.getCentreX(), player.getCentreY(), Math.max(1, lost / 2));
+            // Brittle Rings (an Eggman's Rule): nothing scatters to win back.
+            if (run == null || !run.rule(Rules.BRITTLE)) {
+                stage.spillRings(player.getCentreX(), player.getCentreY(), Math.max(1, lost / 2));
+            }
             stage.onPlayerHit(lost);
         }
         return true;

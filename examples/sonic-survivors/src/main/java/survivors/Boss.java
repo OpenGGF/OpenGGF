@@ -399,6 +399,11 @@ public final class Boss extends AbstractObjectInstance
     @Override public void onPlayerAttack(PlayableEntity entity, TouchResponseResult result) {
         if (!alive()) return;
         var run = services().gameService(RunState.class);
+        if (Enemy.idleSpin(entity) && entity instanceof AbstractPlayableSprite player) {
+            // A crouched spin-dash charge or a slow roll is not an attack: the boss hurts.
+            Guard.takeHit(services(), player);
+            return;
+        }
         boolean bounce = entity.getAir() && entity.getCentreY() < y;
         if (bounce && run != null) {
             run.combo++;
@@ -415,7 +420,8 @@ public final class Boss extends AbstractObjectInstance
     /** Weapon damage, with brief i-frames between weapon hits. */
     boolean hurt(int amount) {
         if (!alive() || iframes > 0 || state == ENTER || runner() && flash > 0) return false;
-        iframes = 10;
+        // Short weapon i-frames: several weapons share the window, so it must not swallow them.
+        iframes = 6;
         damage(amount);
         return state == DEFEATED;
     }
@@ -429,6 +435,7 @@ public final class Boss extends AbstractObjectInstance
         hp -= amount;
         services().playSfx(0xAC); // sfx_HitBoss.
         Stage stage = Stage.find(services());
+        if (stage != null) stage.statDamage += dealt;
         if (stage != null) stage.popup(x, y - 24, dealt);
         if (hp <= 0) {
             hp = 0;

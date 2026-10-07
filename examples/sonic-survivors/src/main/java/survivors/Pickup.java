@@ -19,7 +19,9 @@ import java.util.List;
 public final class Pickup extends AbstractObjectInstance implements RewindRecreatable {
     static final int REWARD_LIFETIME = 60 * 60;
     static final int LOST_RING_LIFETIME = 45;
-    static final int RING = 0, MONITOR = 1, EMERALD = 2;
+    static final int RING = 0, MONITOR = 1, EMERALD = 2, CHEST = 3;
+    /** The invincibility monitor matches Fever's scale rather than stock's twenty seconds. */
+    static final int MONITOR_INVINCIBILITY = 10 * 60;
     // Monitor contents, by ROM monitor mapping frame.
     static final int MON_RINGS = 5, MON_SHOES = 6, MON_SHIELD = 7, MON_STARS = 8, MON_EGGMAN = 4, MON_MAGNET = 10;
 
@@ -52,8 +54,8 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
     }
 
     /** A ring hanging in the air, as stock level rings do, until Sonic or his magnet takes it. */
-    static Pickup floating(int x, int y) {
-        var ring = new Pickup(spawnAt(x, y, RING), 0, 0, 1);
+    static Pickup floating(int x, int y, int value) {
+        var ring = new Pickup(spawnAt(x, y, RING), 0, 0, Math.max(1, value));
         ring.resting = true;
         ring.age = 20;
         return ring;
@@ -116,7 +118,8 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         age++;
         // Uncollected rewards must eventually free their slots during long/endless runs.
         // Merging fresh rings refreshes rewardAge without restarting their movement clock.
-        boolean expired = lostRing ? age >= LOST_RING_LIFETIME : kind() != EMERALD && ++rewardAge >= REWARD_LIFETIME;
+        boolean expired = lostRing ? age >= LOST_RING_LIFETIME
+                : kind() != EMERALD && kind() != CHEST && ++rewardAge >= REWARD_LIFETIME;
         if (expired) { setDestroyed(true); return; }
         if (!(entity instanceof AbstractPlayableSprite player) || player.getDead()) { fall(); return; }
         int dx = player.getCentreX() - x, dy = player.getCentreY() - y;
@@ -190,6 +193,9 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
             case EMERALD -> {
                 if (stage != null) stage.onEmeraldCollected();
             }
+            case CHEST -> {
+                if (stage != null) stage.openChest(value);
+            }
             default -> breakMonitor(player, run, stage);
         }
     }
@@ -202,17 +208,29 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         services().playSfx(0xC1);
         switch (value) {
             case MON_RINGS -> {
-                playRingSound(run, 10);
-                player.addRings(10);
-                if (run != null) { run.ringsCollected += 10; run.gainXp(10); }
+                // Two hits' worth: a fixed ten rings would be nothing against a late-route toll.
+                int rings = superRingValue(run, player);
+                playRingSound(run, rings);
+                player.addRings(rings);
+                if (run != null) { run.ringsCollected += rings; run.gainXp((int) Math.round(rings * run.xpScale())); }
+                if (stage != null) stage.banner("SUPER RING +" + rings, 90);
+                return;
             }
             case MON_SHOES -> player.giveSpeedShoes();
             case MON_SHIELD -> player.giveShield();
-            case MON_STARS -> player.giveInvincibility();
+            case MON_STARS -> {
+                player.giveInvincibility();
+                player.setInvincibleFrames(MONITOR_INVINCIBILITY);
+            }
             case MON_EGGMAN -> { if (stage != null) stage.screenNuke(); }
             default -> { if (stage != null) stage.magnetSweep(); }
         }
         if (stage != null) stage.banner(monitorName(value), 90);
+    }
+
+    static int superRingValue(RunState run, AbstractPlayableSprite player) {
+        // The base toll (rings held excluded): reading the held total would let rings compound.
+        return run == null ? 10 : Math.max(10, 2 * run.toll(0));
     }
 
     static String monitorName(int frame) {
@@ -237,6 +255,7 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         if (kind() == RING) {
             var rings = services().ringManager();
             if (rings == null) return;
+            if (ringTier() == 0 && !lostRing && Stage.menuShowing(services())) return;
             if (collected >= 0) {
                 rings.drawSparkleAt(x, y, collected / Math.max(1, rings.getSparkleFrameDelay()));
                 return;
@@ -249,6 +268,11 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
             int tier = ringTier();
             if (tier == 0) rings.drawRingAt(x, y, age);
             else drawCluster(tier);
+            return;
+        }
+        if (kind() == CHEST) {
+            if (collected >= 0) return;
+            drawChest(x, y);
             return;
         }
         if (kind() == EMERALD) {
@@ -273,6 +297,21 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
                     rectangles[p + 2], rectangles[p + 3], colour, 1f);
         }
         Draw.rectWorld(s, x - radius * 3 / 5, y - radius * 4 / 5, 2, 2, Draw.WHITE, 1f);
+    }
+
+    /** A code-drawn treasure chest: gold-trimmed, a five-prize chest glows pink. */
+    private void drawChest(int cx, int cy) {
+        var s = services();
+        int glow = value >= 5 ? Draw.PINK : value >= 3 ? Draw.GOLD : Draw.CYAN;
+        float pulse = 0.35f + 0.25f * (float) Math.sin(age * 0.15);
+        Draw.circleWorld(s, cx, cy - 2, 14, 2, glow, pulse);
+        Draw.rectWorld(s, cx - 10, cy - 8, 20, 15, Draw.NAVY, 1f);
+        Draw.rectWorld(s, cx - 9, cy - 7, 18, 13, 0x8A4A1C, 1f);
+        Draw.rectWorld(s, cx - 9, cy - 7, 18, 4, 0xB0642A, 1f);
+        Draw.rectWorld(s, cx - 9, cy - 3, 18, 2, Draw.GOLD, 1f);
+        Draw.rectWorld(s, cx - 2, cy - 4, 4, 5, Draw.GOLD, 1f);
+        Draw.rectWorld(s, cx - 1, cy - 3, 2, 2, Draw.NAVY, 1f);
+        if (age / 8 % 4 == 0) Draw.rectWorld(s, cx + 6, cy - 9, 2, 2, Draw.WHITE, 1f);
     }
 
     /** A code-drawn cut gem, sparkling: the run's emerald colour from the boss's stage. */

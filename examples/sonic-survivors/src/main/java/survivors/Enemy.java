@@ -293,9 +293,23 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
     }
 
     /** A stomp or roll: stomp damage times the combo, and a guaranteed rebound when from above. */
+    /**
+     * The stock touch pass treats a spin-dash charge and any roll as an attack. Against badniks
+     * with hitpoints that made a crouched charge untouchable while it chipped at every badnik in
+     * reach, so on the ground only a real roll (at least 4 px per frame) attacks.
+     */
+    static boolean idleSpin(PlayableEntity entity) {
+        return !entity.getAir() && Math.abs(entity.getGSpeed()) < 0x400;
+    }
+
     @Override public void onPlayerAttack(PlayableEntity entity, TouchResponseResult result) {
         if (isDestroyed() || hp <= 0) return;
         var run = run();
+        if (idleSpin(entity) && entity instanceof AbstractPlayableSprite player && !player.isCpuControlled()
+                && player.getInvincibleFrames() == 0 && !player.isSuperSonic()) {
+            Guard.takeHit(services(), player);
+            return;
+        }
         Stage stage = Stage.find(services());
         boolean bounce = entity.getAir() && entity.getCentreY() < currentY;
         if (bounce && run != null && !(entity instanceof AbstractPlayableSprite sprite && sprite.isCpuControlled())) {
@@ -325,12 +339,21 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
         return applyDamage(damage, knockDir, services().camera().getFocusedSprite());
     }
 
+    /** A screen-wide blast (the Eggman monitor) lands whatever the weapon i-frames. */
+    boolean hurtIgnoringFrames(int damage) {
+        if (!alive()) return false;
+        return applyDamage(damage, 0, services().camera().getFocusedSprite());
+    }
+
     private boolean applyDamage(int damage, int knockDir, PlayableEntity player) {
         int dealt = Math.min(hp, damage);
         hp -= damage;
         flash = HIT_FLASH;
         Stage stage = Stage.find(services());
-        if (stage != null) stage.popup(currentX, currentY - 12, dealt);
+        if (stage != null) {
+            stage.popup(currentX, currentY - 12, dealt);
+            stage.statDamage += dealt;
+        }
         if (hp > 0) {
             services().playSfx(0xAC); // S2 sfx_HitBoss: a hit that did not destroy.
             if (traits().archetype() != Species.TURRET) {

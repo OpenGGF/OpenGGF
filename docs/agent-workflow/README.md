@@ -96,8 +96,16 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 - `FloorSegmentSurveyProbe` (test scope, opt-in `-Dopenggf.floorsurvey.out=<out file>` plus
   `openggf.floorsurvey.game/acts/top`) lists each act's longest continuous, pit-free floor
   paths (per-column floor surfaces linked within 24px of height), the candidates for an arena
-  or any stretch that must be walkable end to end; confirm them in a capture. Origin: Sonic
-  Survivors arena selection, 2026-10-06.
+  or any stretch that must be walkable end to end; confirm them in a capture. With
+  `openggf.floorsurvey.headroom=true` (and `minRise`, default 80) it also places the player on
+  each path every 16px, jumps, and lists the spans with room to bounce. Origin: Sonic
+  Survivors arena selection, 2026-10-06; headroom added 2026-10-07.
+- `TestSonicSurvivors#balanceProbe` (test scope, opt-in
+  `-Dsonic-survivors.balance=<csv>[,fresh|mid|max[,mode[,sonic|tails[,seed[,firstStage]]]]]`) plays
+  whole Survivors runs with a scripted bouncing bot and writes the pressure curve every 30
+  seconds (rings against toll, live badniks, hitpoints spawned against damage dealt, level,
+  chests, evolutions). Compare across changes; it is not a human difficulty measure. Origin:
+  Survivors balance pass, 2026-10-07.
 - `ObjectArtContactSheetProbe` (test scope, opt-in `-Dopenggf.artsheets.out=<dir>` plus
   `openggf.artsheets.game/acts/keys`) renders every frame of the object art sheets a zone
   registers to labelled PNG contact sheets with the level palette, so mapping frames (walk,

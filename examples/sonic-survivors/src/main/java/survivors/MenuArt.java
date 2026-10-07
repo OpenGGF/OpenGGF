@@ -65,6 +65,18 @@ final class MenuArt {
         return glyphs;
     }
 
+    /** A card's evolution partner, pink on the card ("EVO + AMPLIFIER"); null without one. */
+    final String[] evolutionHints = evolutionHints();
+
+    private static String[] evolutionHints() {
+        String[] hints = new String[Upgrades.COUNT];
+        for (int evo = 0; evo < Upgrades.EVOLUTIONS; evo++) {
+            hints[Upgrades.evoBase(evo)] = "EVO + " + Upgrades.name(Upgrades.evoPartner(evo));
+            hints[Upgrades.evoPartner(evo)] = "EVO + " + Upgrades.name(Upgrades.evoBase(evo));
+        }
+        return hints;
+    }
+
     record CardText(String level, String first, String second) { }
     final CardText[][] cards = cardText();
 

@@ -77,6 +77,11 @@ public final class Shot extends AbstractObjectInstance
                 || y < arena.floorTop() - 400)) {
             setDestroyed(true);
         }
+        // Lobs and falling hazards break on the floor rather than sinking through the terrain.
+        if (gravity && vy > 0 && age > 4) {
+            var r = com.openggf.physics.ObjectTerrainUtils.checkFloorDist(services().levelManager(), x, y + 4);
+            if (r.foundSurface() && r.distance() <= 0 && r.distance() > -16) { setDestroyed(true); return; }
+        }
         updateDynamicSpawn(x, y);
     }
 

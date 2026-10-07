@@ -742,3 +742,105 @@ there is no claim that an entire final engine suite passed.
 The commit policy rejects descriptor edits during ordinary candidate signature
 regeneration. Removed the explanatory descriptor comment; version and publication
 state were never changed. The signature pin and API description carry the addition.
+
+
+## Roguelike depth and one difficulty curve (2026-10-07)
+
+Current checkout `feature/ai-sonic-survivors`, base `0745ca5374`. Mod 0.5.0; profiles stay
+`key=value` and gain keys only. Requested as a content/longevity and balance pass: fix the
+exploits found in review, unify difficulty, then add evolutions and chests, character perks,
+optional handicaps, milestone unlocks, mid-stage events and a records page. James steered two
+points mid-task: keep the unusual arena floors (including low ceilings) and make the late route
+genuinely hard, answered by deep global power-ups; and make shop items small, near-limitless
+increments with rising prices.
+
+Changes:
+
+- **Exploits.** Start-then-Escape banked the free start rings every few seconds; Escape before a
+  fatal hit always beat dying. Leaving mid-fight now banks like a game over; only a clear-screen
+  retirement banks held rings, less the run's free start and revive rings. The stock touch pass
+  treats a spin-dash charge or any roll as an attack, which against hitpoint badniks made a
+  crouched charge untouchable while chipping everything in reach; a grounded contact now attacks
+  only at 4 px/frame or more, otherwise the badnik's (or boss's) touch is a hit.
+- **One curve (`Difficulty`).** Enemy hitpoints used the arena clock while the toll used total run
+  time, so later arenas opened with soft badniks and a crushing toll and skipping zones was safer.
+  Hitpoints, spawn interval/batch, toll, ring value, elite spacing and boss hitpoints now read the
+  route tier and the arena pressure clock only. Hitpoints grow superlinearly with the tier
+  (`1 + 0.40t + 0.05t²`), so Metropolis onward expects a long-built profile. Boss hitpoints are
+  12x the zone's average badnik at arrival (Death Egg 18x at five minutes' pressure); previously an
+  elite at 4:59 out-healthed the Emerald Hill boss. Boss weapon i-frames fell from 10 to 6 frames so
+  several weapons share the window, and boss-phase reinforcements come a third as often.
+- **Population.** At 160 live badniks ordinary batches stop joining; every twelve held back arrive
+  as one elite. Enemy objects remain slotless and otherwise uncapped.
+- **Power-up fixes.** Fever 6 s on, 18 s recovery (was about a third of the time invincible).
+  Super Ring pays two base tolls, chest ring prizes likewise, invincibility monitors last 10 s,
+  the Eggman bomb destroys ordinary on-screen badniks and takes 40% from elites (a fixed 20 did
+  nothing late). The weapon-guarantee card picked only ids 0-6 and could duplicate a dealt card.
+  The red emerald text matched an old flat reduction. Gravity shots break on the floor.
+- **Progression.** XP curve `6 + 8L + 2L²` (was `5 + 3L + L²/3`, which maxed a build inside
+  Emerald Hill). Twelve evolutions (maxed weapon plus owned partner buff) open from chests: boss
+  chests hold 3 (one in five 5) prizes, every fourth elite and each warden squad drop one. A maxed
+  build's cards offer Overdrive (+6% damage, unbounded) or a ring bonus. Twelve upgrades are core;
+  twelve unlock from lifetime milestones, so existing profiles keep what they earned.
+- **Content.** Sonic: Fever in 10 bounces and +30% per combo bounce. Tails: hold-jump hover
+  (75 frames per jump), +24 px pull, Fever in 12. Six Eggman's Rules (bank bonus 15-30% each).
+  Zone events every 150 s from 1:45 (telegraphed rain, swarms, Casino Night's Jackpot) and warden
+  squads from 3:00. Unlimited mode adds a tier every two minutes. Camp became a short menu with
+  shop, rules and records pages (stats, unlock requirements, evolutions, bestiary, best unlimited
+  times). The shop is ten global power-ups, mostly small steps to high caps with geometric prices;
+  older saves convert once to the same totals (`shopVersion=2`).
+- **Rendering.** ROM rings use the ring renderer, which presents after the sprite list and so drew
+  over menu panels; reward, orbit and homing rings now hide while a menu shows. Badnik art was
+  already correctly behind the panels.
+
+Balance evidence comes from the new opt-in `TestSonicSurvivors#balanceProbe`: a bot that jumps at
+the nearest badnik, takes weapons until it owns three and then ranks owned upgrades, playing each
+zone as a fresh launch with the run state carried across. It records rings against toll, live
+badniks, hitpoints spawned against damage dealt per second, level, chests and evolutions every 30
+seconds. Findings that drove changes, in order:
+
+| Run | Finding | Change |
+| --- | --- | --- |
+| Fresh, old curve | Level 22 and three maxed weapons before the Emerald Hill boss | Steeper XP curve |
+| All profiles | 70,000 rings in Aquatic Ruin: ring prizes read the toll at the held total, which reads the held total | Prizes use the base toll |
+| Fresh, steep curve | Died inside a minute: no weapon from the first-card bot, 30 rings | Weapon-first bot picks; 40 start rings |
+| Mid/max | Aquatic Ruin banked 5-9k: Whisps spawn in threes but each paid full | Whisps pay a third |
+| Max | 16 chests at the end of Wing Fortress: the boss sweep counted every fourth elite | Sweeps drop rings only |
+| Mid/max | Casino Night walls weapon-light builds (Crawl base 8 HP, about 3x neighbours) | Crawl 5 HP |
+| Five fresh seeds | Endings from Emerald Hill to a full win; good runs banked the whole old shop at once | Bank a quarter of rings; deep long-tail shop |
+| Unlimited | Damage kept pace with the horde at 18 minutes, fed by tier-scaled rewards | +1 tier per two minutes survived; rewards stay at the zone tier |
+
+Final shape (Sonic, standard mode): fresh runs end between Emerald Hill and Casino Night; a mid
+profile reaches Metropolis to the Death Egg on a good seed; a veteran profile (tens of runs of shop)
+can win, with single-digit rings at the Death Egg. The bot neither dodges nor plans evolutions, so
+these are relative, not human, difficulty. Casino Night 1's low ceiling can pin a bot under a Crawl;
+by James's direction the arena stays.
+
+Rejected:
+
+- **Relocating low-ceiling arenas.** A jump-height survey found Casino Night 1, Hill Top 1/2 and the
+  Death Egg corridor allow 0-30 px of rise in long stretches. James prefers the shapes. The survey
+  remains as `FloorSegmentSurveyProbe`'s `openggf.floorsurvey.headroom` option.
+- **Carrying the probe across zones through the clear screen.** The headless frame driver performs
+  the route request (fade, load, title card), but the next arena's controller never updated under
+  it; a manual load on top of that double-loaded the act. Each zone is a fresh launch with the run
+  state copied by reflection instead. The live game loop's transitions are unaffected.
+- **A flat 80 px headroom threshold** was stricter than the bounce rebound (about 70 px).
+- **A coarse seven-item shop** (+10% steps, about 4,300 rings to buy out) was replaced at James's
+  request; a deep run now banks thousands, so only a long tail keeps the bank meaningful.
+
+Validation: the change-based plan falls back to the full suite for example paths; focused
+validation is proportionate because production changes are mod-local and the only shared-tree
+edit is the opt-in, test-scope `FloorSegmentSurveyProbe`. Java 21 queued Maven
+`-B -Dmse=off -Dtest=TestSonicSurvivors` with the absolute root S2 REV01 ROM: 109 cases, 108
+passed, one skipped (the opt-in `balanceProbe`), 24 s fixture. New cases cover forfeit/retire
+payouts, the spin-dash rule, chest evolution order and rewind, every evolution firing, unlock
+gating and announcement, all six rules, both leaders' perks and hover, zone events with
+telegraphs, warden chests, overflow elites, boss scaling, sweep prizes, shop conversion and
+pricing, camp pages and persisted records. `FloorSegmentSurveyProbe` ran with headroom over nine
+acts. `build.py` packaged 0.5.0 (passes `ggfmod` validation); a temporary
+`GameplayCaptureSession` preview with the packaged mod (EHZ1, 400x224, seed 12345, isolated
+saves) was inspected for camp, shop, rules, all four records pages, cards, chest, HUD, Coconut
+Rain and a warden banner. The final probe batch (seeds 22/33) is the "final shape" above. No
+engine-wide suite or guards were run. The installed `mods/sonic-survivors.jar` and its trusted
+hash were refreshed; other mod entries are unchanged and the user's save converts its shop on load.

@@ -146,7 +146,144 @@ final class Upgrades {
     static int dashRange(int l) { return 80 + 32 * l; }
     static int poundRadius(int l) { return 44 + 16 * l; }
     static int poundDamage(int l) { return 3 + 2 * l; }
-    static int magnetRadius(int l, int shop) { return 28 + 24 * l + 16 * shop; }
+    static int magnetRadius(int l, int shop) { return 28 + 24 * l + 4 * shop; }
     static int comboGrace(int l) { return 20 * l; }
     static int barrierCooldown(int l) { return 1800 - 300 * (l - 1); }
+
+    // ---- Evolutions. A maxed weapon plus its owned partner buff evolves from a chest. ----
+    // Indexes are bits of {@link RunState#evolved} and {@link Profile#evolutionsSeen}: only append.
+    static final int EVOLUTIONS = 12;
+
+    /** The weapon each evolution transforms; its index matches the order below. */
+    static int evoBase(int evo) {
+        return switch (evo) {
+            case 0 -> SHOCKWAVE;
+            case 1 -> SPARKS;
+            case 2 -> CHAIN_ZAP;
+            case 3 -> HOMING_RINGS;
+            case 4 -> ORBIT_RINGS;
+            case 5 -> SONIC_BOOM;
+            case 6 -> FLICKIES;
+            case 7 -> TWIN_LANCE;
+            case 8 -> METEOR;
+            case 9 -> PULSE;
+            case 10 -> HOMING_DASH;
+            default -> GROUND_POUND;
+        };
+    }
+
+    /** The buff that must be owned (any rank) alongside the maxed weapon. */
+    static int evoPartner(int evo) {
+        return switch (evo) {
+            case 0 -> REACH;
+            case 1 -> COMBO_KEEPER;
+            case 2 -> POWER;
+            case 3 -> GREED;
+            case 4 -> MAGNET;
+            case 5 -> HASTE;
+            case 6 -> SCHOLAR;
+            case 7 -> SPRING_HEELS;
+            case 8 -> ARMOR;
+            case 9 -> BARRIER;
+            case 10 -> AIR_JUMP;
+            default -> RECOVERY;
+        };
+    }
+
+    /** The evolution of {@code weapon}, or -1 when it has none. */
+    static int evolutionOf(int weapon) {
+        for (int evo = 0; evo < EVOLUTIONS; evo++) if (evoBase(evo) == weapon) return evo;
+        return -1;
+    }
+
+    /** The other half of {@code id}'s evolution pair, or -1. */
+    static int evoCounterpart(int id) {
+        for (int evo = 0; evo < EVOLUTIONS; evo++) {
+            if (evoBase(evo) == id) return evoPartner(evo);
+            if (evoPartner(evo) == id) return evoBase(evo);
+        }
+        return -1;
+    }
+
+    static String evoName(int evo) {
+        return switch (evo) {
+            case 0 -> "GRAND QUAKE";
+            case 1 -> "STAR NOVA";
+            case 2 -> "THUNDER LATTICE";
+            case 3 -> "RING TEMPEST";
+            case 4 -> "RING SATURN";
+            case 5 -> "SONIC CYCLONE";
+            case 6 -> "FLICKY FLOCK";
+            case 7 -> "CROSS LANCE";
+            case 8 -> "COMET STORM";
+            case 9 -> "GUARDIAN PULSE";
+            case 10 -> "LIGHT SPEED DASH";
+            default -> "IMPACT STAR";
+        };
+    }
+
+    static String evoEffect(int evo) {
+        return switch (evo) {
+            case 0 -> "HUGE BLASTS, 2.5X DAMAGE";
+            case 1 -> "TWICE THE SPARKS, PIERCING";
+            case 2 -> "12 FOES, LONG RANGE, 2.5X";
+            case 3 -> "6 PIERCING SEEKERS, 2X";
+            case 4 -> "8 WIDE RINGS, 2X DAMAGE";
+            case 5 -> "TWIN WAVES TWICE AS OFTEN";
+            case 6 -> "DOUBLE FLOCK, 8 DAMAGE";
+            case 7 -> "LANCES IN FOUR DIRECTIONS";
+            case 8 -> "DOUBLE COMETS EVERY 2S";
+            case 9 -> "WIDE PULSE POPS SHOTS";
+            case 10 -> "LONG DASH ENDS IN A BLAST";
+            default -> "UNTOUCHABLE TRIPLE QUAKE";
+        };
+    }
+
+    // ---- The upgrade pool: twelve core upgrades, the rest unlocked by profile milestones. ----
+
+    static boolean core(int id) {
+        return switch (id) {
+            case SHOCKWAVE, SPARKS, HOMING_RINGS, ORBIT_RINGS, SONIC_BOOM, AIR_JUMP, POWER, MAGNET, ARMOR,
+                 HASTE, GREED, SPRING_HEELS -> true;
+            default -> false;
+        };
+    }
+
+    /** The milestone, abbreviated to fit beside the name on the records page. */
+    static String unlockShort(int id) {
+        return switch (id) {
+            case CHAIN_ZAP -> "300 KOS";
+            case FLICKIES -> "CLEAR EHZ";
+            case HOMING_DASH -> "15 COMBO";
+            case GROUND_POUND -> "CLEAR CPZ";
+            case COMBO_KEEPER -> "25 COMBO";
+            case BARRIER -> "CLEAR ARZ";
+            case TWIN_LANCE -> "1500 KOS";
+            case METEOR -> "CLEAR HTZ";
+            case PULSE -> "CLEAR CNZ";
+            case REACH -> "20 ELITES";
+            case RECOVERY -> "BANK 1500";
+            case SCHOLAR -> "LEVEL 20";
+            default -> "";
+        };
+    }
+
+    /** The milestone that adds {@code id} to the pool (shown in the records). */
+    static String unlockRequirement(int id) {
+        return switch (id) {
+            case CHAIN_ZAP -> "DEFEAT 300 BADNIKS";
+            case FLICKIES -> "CLEAR EMERALD HILL";
+            case HOMING_DASH -> "REACH A 15 BOUNCE COMBO";
+            case GROUND_POUND -> "CLEAR CHEMICAL PLANT";
+            case COMBO_KEEPER -> "REACH A 25 BOUNCE COMBO";
+            case BARRIER -> "CLEAR AQUATIC RUIN";
+            case TWIN_LANCE -> "DEFEAT 1500 BADNIKS";
+            case METEOR -> "CLEAR HILL TOP";
+            case PULSE -> "CLEAR CASINO NIGHT";
+            case REACH -> "DEFEAT 20 ELITES";
+            case RECOVERY -> "BANK 1500 RINGS IN TOTAL";
+            case SCHOLAR -> "REACH LEVEL 20 IN A RUN";
+            default -> "AVAILABLE FROM THE START";
+        };
+    }
 }
