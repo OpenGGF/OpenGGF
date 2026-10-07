@@ -26,6 +26,10 @@ public final class ModApiVersion {
      * Native encounters can opt into controlled player input, bounded fresh-entry
      * centre coordinates and launch-boundary no-save isolation. A query-only
      * native entry-art gate includes deferred submissions and owner consumption.
+     * Full-song and selected-part synthesis expose cancellable host jobs with
+     * progress, a ten-minute duration cap and a 256 MiB stereo PCM budget.
+     * Scene-owned direct peer text messaging is asynchronous and bounded, with
+     * socket/thread ownership and lifetime kept in the engine.
      * Power-up rules expose explicit invincibility-expiry music ownership for modes
      * with continuous music.
      */

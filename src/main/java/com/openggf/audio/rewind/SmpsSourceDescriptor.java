@@ -2,7 +2,6 @@ package com.openggf.audio.rewind;
 
 import com.openggf.audio.smps.AbstractSmpsData;
 
-import java.util.Arrays;
 import java.util.Objects;
 
 public record SmpsSourceDescriptor(
@@ -173,10 +172,17 @@ public record SmpsSourceDescriptor(
             long dependencyGeneration,
             AbstractSmpsData data) {
         Objects.requireNonNull(data, "data");
+        // Preserve the legacy null-data description contract. For non-null
+        // programs the indexed view owns execution; getData may be only the
+        // supplied raw header blob within a larger loaded bank.
         byte[] bytes = data.getData();
+        int length = bytes != null ? data.dataLength() : 0;
+        int hash = bytes != null ? 1 : 0;
+        for (int index = 0; index < length; index++) {
+            hash = 31 * hash + data.dataByteAt(index);
+        }
         return describe(kind, name, donorGameId, dependencyGeneration,
-                data, bytes != null ? bytes.length : 0,
-                Arrays.hashCode(bytes));
+                data, length, hash);
     }
 
     private static SmpsSourceDescriptor describe(
