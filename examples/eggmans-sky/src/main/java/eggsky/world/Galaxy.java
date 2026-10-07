@@ -119,6 +119,9 @@ public final class Galaxy {
                 }
             }
         }
+        if (best != null) {
+            best.home = true;
+        }
         return best;
     }
 

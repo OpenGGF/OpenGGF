@@ -31,6 +31,8 @@ public final class GalaxyMode implements Mode {
     private int age;
     private String message;
     private int messageTicks;
+    private static final int GAL = 384;
+    private static final float GAL_RADIUS = 3800;
 
     public GalaxyMode(Mode back) {
         this.back = back;
@@ -41,8 +43,42 @@ public final class GalaxyMode implements Mode {
         return false;
     }
 
+    /** The galaxy itself as one picture: spiral arms of dust and stars around a bright core. */
+    public static com.openggf.mods.scene.SceneImage galaxyImage(long seed) {
+        Rng rng = new Rng(seed ^ 0x47414C41L);
+        int arms = rng.range(2, 4);
+        double twist = rng.range(2.2f, 3.4f);
+        long n = rng.nextLong();
+        int armColour = Colour.fromHsv(rng.range(190f, 290f), 0.55f, 0.85f, 255);
+        int[] px = new int[GAL * GAL];
+        for (int y = 0; y < GAL; y++) {
+            for (int x = 0; x < GAL; x++) {
+                double wx = (x + 0.5) / GAL * 2 - 1;
+                double wy = (y + 0.5) / GAL * 2 - 1;
+                double r = Math.sqrt(wx * wx + wy * wy);
+                if (r > 1) {
+                    continue;
+                }
+                double theta = Math.atan2(wy, wx);
+                double phase = theta * arms - Math.log(r * 8 + 0.2) * twist * arms;
+                double arm = Math.pow(0.5 + 0.5 * Math.cos(phase), 4);
+                float noise = Rng.noise2(n, (float) (wx * 9), (float) (wy * 9)) * 0.5f + 0.5f;
+                double density = arm * (0.45 + noise) * Math.max(0, 1 - r * 0.75) * 1.4 + noise * 0.12 * (1 - r);
+                double core = Math.exp(-r * 9) * 1.6;
+                int c = Colour.lerp(0xFF000000, armColour, (float) Math.min(0.9, density * 1.5));
+                c = Colour.lerp(c, 0xFFFFE8C0, (float) Math.min(1, core));
+                int a = (int) Math.min(255, (density * 1.3 + core) * 255);
+                px[y * GAL + x] = Colour.alpha(c, a);
+            }
+        }
+        return new com.openggf.mods.scene.SceneImage(GAL, GAL, px);
+    }
+
+    private com.openggf.mods.scene.SceneImage galaxy;
+
     @Override
     public void enter(Game g) {
+        galaxy = g.galaxyImage();
         here = g.system();
         selected = here;
         viewX = here.x;
@@ -194,28 +230,12 @@ public final class GalaxyMode implements Mode {
         Player p = g.player;
         Font f = g.font;
         c.clear(0x04040C);
-        // Dust lanes swirling around the core.
-        for (int i = 0; i < 260; i++) {
-            long h = Rng.mix(i * 7919L + g.galaxy.seed);
-            double r = ((h & 0xFFFF) / 65536.0) * 3600;
-            double ang = ((h >>> 16) & 0xFFFF) / 65536.0 * Math.PI * 2 + r * 0.0012;
-            float x = sx(g, (float) (Math.cos(ang) * r));
-            float y = sy(g, (float) (Math.sin(ang) * r));
-            if (x < 0 || y < 0 || x > g.width || y > g.height) {
-                continue;
-            }
-            int col = Colour.alpha(i % 3 == 0 ? 0xFF6040A0 : 0xFF304080, 60);
-            int s = 2 + (int) ((h >>> 40) & 3) * Math.max(1, (int) (scale * 8));
-            c.fill((int) x - s / 2, (int) y - s / 2, s, s, col);
-        }
-        // The core's glow.
+        // The galaxy's spiral arms and core.
+        float gx = sx(g, -GAL_RADIUS);
+        float gy = sy(g, -GAL_RADIUS);
+        c.draw(galaxy, gx, gy, com.openggf.mods.scene.SceneDraw.plain().withScale(GAL_RADIUS * 2 * scale / GAL));
         float cx = sx(g, 0);
         float cy = sy(g, 0);
-        for (int r = 40; r > 0; r -= 4) {
-            int a = (40 - r) * 3;
-            int rr = (int) (r * Math.max(0.6f, scale * 4));
-            c.fill((int) cx - rr, (int) cy - rr / 2, rr * 2, rr, Colour.alpha(0xFFFFE0C0, Math.min(90, a)));
-        }
         // Warp range.
         float range = p.warpRange() * scale;
         float hx = sx(g, here.x);
@@ -242,13 +262,19 @@ public final class GalaxyMode implements Mode {
                 continue;
             }
             int col = s.colour();
-            int size = s.starClass == StarSystem.CORE ? 5 : s.starClass == StarSystem.BLUE ? 3 : 2;
+            boolean inRange = here.distanceTo(s) <= p.warpRange();
             if (s.starClass == StarSystem.BLACK_HOLE) {
-                c.fill((int) x - 3, (int) y - 3, 6, 6, 0xFF8040C0);
-                c.fill((int) x - 1, (int) y - 1, 2, 2, 0xFF000000);
+                c.fill((int) x - 2, (int) y - 2, 5, 5, 0xFF8040C0);
+                c.fill((int) x - 1, (int) y - 1, 3, 3, 0xFF000000);
+            } else if (s.starClass == StarSystem.CORE) {
+                c.fill((int) x - 4, (int) y - 4, 9, 9, 0x80FFFFFF);
+                c.fill((int) x - 2, (int) y - 2, 5, 5, 0xFFFFFFFF);
+            } else if (inRange) {
+                c.fill((int) x - 2, (int) y - 2, 5, 5, Colour.alpha(col, 70));
+                c.fill((int) x - 1, (int) y - 1, 3, 3, col);
+                c.fill((int) x, (int) y, 1, 1, 0xFFFFFFFF);
             } else {
-                c.fill((int) x - size, (int) y - size, size * 2, size * 2, Colour.alpha(col, 70));
-                c.fill((int) x - size / 2, (int) y - size / 2, Math.max(1, size), Math.max(1, size), col);
+                c.fill((int) x, (int) y, 1, 1, Colour.alpha(col, 150));
             }
             if (p.visitedSystems.contains(s.id)) {
                 c.fill((int) x - 4, (int) y + 4, 8, 1, 0xA0FFFFFF);

@@ -27,7 +27,7 @@ import java.util.List;
  * and materials, take and hand in missions, and repair and refuel before launching.
  */
 public final class StationMode implements Mode {
-    private final String[] tabs = {"SELL", "BUY", "TECH", "MISSIONS", "SERVICES", "LAUNCH"};
+    private final String[] tabs = {"SELL", "BUY", "TECH", "JOBS", "REPAIR", "LEAVE"};
     private int tab;
     private int row;
     private int scroll;
@@ -367,20 +367,38 @@ public final class StationMode implements Mode {
             c.draw(ship, 70, 128 + bob, SceneDraw.plain());
         }
         // The Egg Robo shopkeeper.
-        var robo = g.art.set("egg_robo");
-        if (robo != null && robo.frameCount() > 0) {
-            SceneSprite r = robo.frame(Math.min(robo.frameCount() - 1, (age / 30) % 2));
-            c.draw(r, 150, 132, SceneDraw.plain());
+        // The Egg Robo hovering behind the counter (sub_91988: body frame 1 or 3 with the thruster
+        // lit, arm frame 2 at (-$1C, -4), legs frame 5 at (-$C, $1C)).
+        SceneSprite body2 = g.art.frame("egg_robo", (age / 2) % 2 == 0 ? 1 : 3);
+        SceneSprite arm = g.art.frame("egg_robo", 2);
+        SceneSprite legs = g.art.frame("egg_robo", 5);
+        float rx = 160;
+        float ry = 112 + (float) Math.sin(age * 0.06) * 3;
+        if (body2 != null) {
+            SceneDraw rs = SceneDraw.plain();
+            if (arm != null) {
+                c.draw(arm, rx - 0x1C, ry - 4 + (float) Math.sin(age * 0.2) * 2, rs);
+            }
+            if (legs != null) {
+                c.draw(legs, rx - 0xC, ry + 0x1C, rs);
+            }
+            c.draw(body2, rx, ry, rs);
         }
         c.fill(120, 140, 70, 12, 0xFF505C78);
         c.fill(120, 140, 70, 1, 0xFFA0B0D0);
         if (quipTicks > 0 && quip != null) {
-            int w = Math.min(200, Font.width(quip) + 10);
-            List<String> lines = Ui.wrap(quip, 30);
-            Ui.panel(c, 100, 76, w + 8, 8 + lines.size() * 9, 0xF0FFFFFF);
-            int ly = 80;
+            List<String> lines = Ui.wrap(quip, 22);
+            int w = 0;
             for (String line : lines) {
-                f.draw(c, line, 105, ly, 0xFF202040);
+                w = Math.max(w, Font.width(line));
+            }
+            int bx = 196 - w - 10;
+            int by = 60;
+            Ui.panel(c, bx, by, w + 10, 8 + lines.size() * 9, 0xF0182850);
+            c.fill(bx + w - 6, by + 8 + lines.size() * 9, 6, 4, 0xF0182850);
+            int ly = by + 4;
+            for (String line : lines) {
+                f.draw(c, line, bx + 5, ly, 0xFFFFFFFF);
                 ly += 9;
             }
         }

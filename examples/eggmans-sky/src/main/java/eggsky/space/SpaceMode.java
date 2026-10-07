@@ -116,19 +116,40 @@ public final class SpaceMode implements Mode {
         cam.width = g.width;
         cam.height = g.height;
         renderer = new SpaceRenderer(system.seed, system.colour());
-        renderer.sunSize = system.starClass == StarSystem.BLUE ? 5000 : system.starClass == StarSystem.RED ? 2400 : 3400;
+        renderer.sunSize = system.starClass == StarSystem.BLUE ? 2600 : system.starClass == StarSystem.RED ? 1300 : 1800;
         buildSystem(g);
         Player p = g.player;
         switch (arrive) {
             case ARRIVE_LAUNCH -> {
                 Body from = fromPlanet >= 0 && fromPlanet < planets() ? bodies.get(fromPlanet) : bodies.get(0);
-                cam.x = from.x + from.radius * 0.3;
-                cam.y = from.y + from.radius * 1.45;
-                cam.z = from.z;
-                cam.yaw = Math.atan2(-from.x, -from.z);
-                cam.pitch = -0.32;
-                speed = BOOST;
-                arrivalTicks = 60;
+                // Above the day side, looking along the horizon with the sun behind.
+                double sx = -from.x;
+                double sz = -from.z;
+                double sl = Math.max(1, Math.hypot(sx, sz));
+                double ux = sx / sl * 0.75;
+                double uy = 0.62;
+                double uz = sz / sl * 0.75;
+                double ul = Math.sqrt(ux * ux + uy * uy + uz * uz);
+                ux /= ul;
+                uy /= ul;
+                uz /= ul;
+                cam.x = from.x + ux * from.radius * 2.1;
+                cam.y = from.y + uy * from.radius * 2.1;
+                cam.z = from.z + uz * from.radius * 2.1;
+                // Tangent: perpendicular to "up" in the horizontal plane, then tipped toward the planet.
+                double tx = -uz;
+                double tz = ux;
+                double tl = Math.max(1e-6, Math.hypot(tx, tz));
+                tx /= tl;
+                tz /= tl;
+                double fx = tx * 0.75 - ux * 0.6;
+                double fy = -uy * 0.6;
+                double fz = tz * 0.75 - uz * 0.6;
+                double fl = Math.sqrt(fx * fx + fy * fy + fz * fz);
+                cam.yaw = Math.atan2(fx / fl, fz / fl);
+                cam.pitch = Math.asin(fy / fl);
+                speed = CRUISE;
+                arrivalTicks = 90;
                 g.toast("LEFT " + (from.spec == null ? "ORBIT" : g.displayName(from.spec).toUpperCase()), 0xFF80C0FF);
                 if (p.tutorial == 5) {
                     g.toast("FLY TO THE EGG STATION TO DOCK", 0xFFFFE060);
@@ -324,7 +345,7 @@ public final class SpaceMode implements Mode {
             boostHeld = 0;
         }
         boolean wantPulse = boostHeld > PULSE_HOLD && p.pulse > 1;
-        if (wantPulse && (nearDist < 2500 || hostiles)) {
+        if (wantPulse && (nearDist < 900 || hostiles)) {
             if (boostHeld == PULSE_HOLD + 1) {
                 g.toast(hostiles ? "PULSE JAMMED: HOSTILES NEAR" : "TOO CLOSE TO PULSE", 0xFFFF8060);
                 g.sound.sfx(Sound.ERROR, 30);
@@ -639,6 +660,19 @@ public final class SpaceMode implements Mode {
                 combatMusic = true;
             }
         }
+    }
+
+    /** Debug: a pirate squad (or the Tornado) right now. */
+    public void debugPirates(Game g, boolean tornado) {
+        if (tornado) {
+            spawnEnemy(g, true);
+        } else {
+            for (int i = 0; i < 3; i++) {
+                spawnEnemy(g, false);
+            }
+        }
+        combatMusic = true;
+        g.sound.music(Sound.M_DDZ);
     }
 
     private void spawnEnemy(Game g, boolean tornado) {
@@ -1013,9 +1047,11 @@ public final class SpaceMode implements Mode {
                 int ex = (int) (g.width / 2 + ax / len * (g.width / 2 - 16));
                 int ey = (int) (g.height / 2 - 20 + ay / len * (g.height / 2 - 40));
                 c.fill(ex - 2, ey - 2, 5, 5, col);
-                if (b.station || scanTicks > 0) {
-                    f.centre(c, name, ex, ey + 5, col);
-                }
+                c.fill(ex - 1, ey - 1, 3, 3, 0xFFFFFFFF);
+                String label = name.length() > 12 ? name.substring(0, 12) : name;
+                int lx = Math.max(Font.width(label) / 2 + 2, Math.min(g.width - Font.width(label) / 2 - 2, ex));
+                f.centre(c, label, lx, ey + 5, col);
+                f.centre(c, dist, lx, ey + 13, 0xFFA0B0D0);
             }
         }
         for (Ship3D e : enemies) {
@@ -1092,7 +1128,9 @@ public final class SpaceMode implements Mode {
         SceneSprite face = g.art.frame("ship", head);
         c.clip(sx, top + 5, 44, 29);
         if (face != null) {
-            c.draw(face, sx + 22, top + 22, SceneDraw.plain().withScale(1.2f));
+            float fx = sx + 22 - (face.width() / 2f - face.originX()) * 1.3f;
+            float fy = top + 19 - (face.height() / 2f - face.originY()) * 1.3f;
+            c.draw(face, fx, fy, SceneDraw.plain().withScale(1.3f));
         }
         for (int y = top + 5; y < top + 34; y += 2) {
             c.fill(sx, y, 44, 1, 0x30000000);

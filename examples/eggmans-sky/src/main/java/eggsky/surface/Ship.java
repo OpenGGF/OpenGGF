@@ -94,6 +94,12 @@ public final class Ship {
         if (allowFlight && in.down) {
             vy += 0.22f;
         }
+        if (climbAssist > 0) {
+            climbAssist--;
+            if (dx != 0) {
+                vy = Math.min(vy, -1.6f);
+            }
+        }
         vy = Math.max(-3.4f * speedBoost, Math.min(5.5f, vy));
         moveX(t, vx);
         moveY(t, vy);
@@ -168,10 +174,15 @@ public final class Ship {
                 }
             }
             vx = -vx * 0.2f;
+            // Hover-climb: pushing into a wall lifts the pod over it.
+            climbAssist = 6;
         } else {
             x = nx;
         }
     }
+
+    /** Frames left of the automatic lift after bumping a wall. */
+    public int climbAssist;
 
     private void moveY(Terrain t, float amount) {
         if (amount == 0) {

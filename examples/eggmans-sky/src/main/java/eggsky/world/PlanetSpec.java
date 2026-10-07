@@ -40,10 +40,30 @@ public final class PlanetSpec {
     public final boolean dead;
 
     public PlanetSpec(long systemSeed, int index, int starClass, java.util.List<Biome> biomes) {
+        this(systemSeed, index, starClass, biomes, false);
+    }
+
+    /**
+     * @param home the expedition's first planet: a gentle, temperate world with few heroes and no
+     *             storms, so the crash landing is a tutorial rather than a death sentence
+     */
+    public PlanetSpec(long systemSeed, int index, int starClass, java.util.List<Biome> biomes, boolean home) {
         this.seed = Rng.hash(systemSeed, 0x504C414EL, index);
         this.index = index;
         Rng rng = new Rng(seed);
-        this.biome = pickBiome(rng, starClass, biomes);
+        java.util.List<Biome> pool = biomes;
+        if (home) {
+            pool = new java.util.ArrayList<>();
+            for (Biome b : biomes) {
+                if (!b.hazardous() && (b.climate() == Biome.CLIMATE_LUSH || b.climate() == Biome.CLIMATE_TEMPERATE)) {
+                    pool.add(b);
+                }
+            }
+            if (pool.isEmpty()) {
+                pool = biomes;
+            }
+        }
+        this.biome = pickBiome(rng, starClass, pool);
         this.name = Names.planet(Rng.hash(seed, 1), "", index);
         boolean natural = rng.chance(0.3);
         float hue = natural ? 0 : rng.range(-180f, 180f);
@@ -64,8 +84,10 @@ public final class PlanetSpec {
         if (biome.hazardous()) {
             base++;
         }
-        this.sentinels = Math.min(3, Math.max(0, base + (rng.chance(0.1) ? 1 : 0)));
-        this.storms = paradise ? 0 : Math.min(3, rng.range(0, 2) + (biome.hazardous() ? 1 : 0));
+        int sentinelLevel = Math.min(3, Math.max(0, base + (rng.chance(0.1) ? 1 : 0)));
+        int stormLevel = paradise ? 0 : Math.min(3, rng.range(0, 2) + (biome.hazardous() ? 1 : 0));
+        this.sentinels = home ? 0 : sentinelLevel;
+        this.storms = home ? 0 : stormLevel;
         this.columns = rng.range(44, 72);
         this.dayMinutes = rng.range(6f, 12f);
         int lush = paradise ? 3 : biome.lush();
@@ -129,7 +151,7 @@ public final class PlanetSpec {
     /** One line for scanners and the galaxy map: "Frozen · Aggressive sentinels". */
     public String summary() {
         String climate = paradise ? "Paradise" : dead ? "Dead" : Biome.climateName(biome.climate());
-        return climate + " " + biome.title();
+        return biome.describe(climate);
     }
 
     public String sentinelName() {

@@ -59,6 +59,18 @@ public final class Game {
                     return size() > 24;
                 }
             };
+    private com.openggf.mods.scene.SceneImage galaxyImage;
+    private long galaxyImageSeed;
+
+    /** The galaxy map's backdrop for the current galaxy, built once. */
+    public com.openggf.mods.scene.SceneImage galaxyImage() {
+        if (galaxyImage == null || galaxyImageSeed != galaxy.seed) {
+            galaxyImage = eggsky.space.GalaxyMode.galaxyImage(galaxy.seed);
+            galaxyImageSeed = galaxy.seed;
+        }
+        return galaxyImage;
+    }
+
     /** The wanted level when Eggman last left a surface (heroes may follow him into orbit). */
     public float lastWanted;
     /** Screen shake strength (decays) and full-screen flash. */
@@ -267,8 +279,9 @@ public final class Game {
         player = new Player(catalog);
         player.decode(text.get());
         galaxy = new Galaxy(player.galaxySeed, player.galaxyNumber);
+        StarSystem home = galaxy.start();
         if (galaxy.system(player.systemId) == null) {
-            player.systemId = galaxy.start().id;
+            player.systemId = home.id;
         }
         return true;
     }
@@ -301,7 +314,7 @@ public final class Game {
         player.cargo.resize(player.slots());
         player.refill();
         player.launchFuel = carry != null ? 100 : 0;
-        player.hull = carry != null ? player.maxHull() : player.maxHull() * 0.45f;
+        player.hull = carry != null ? player.maxHull() : player.maxHull() * 0.7f;
         player.planet = 0;
         player.surfaceX = -1;
         save();
@@ -384,6 +397,34 @@ public final class Game {
                     }
                 }
                 return true;
+            }
+            case "wanted" -> {
+                if (mode instanceof SurfaceMode s) {
+                    s.wanted = Float.parseFloat(p[1]);
+                    return true;
+                }
+                return false;
+            }
+            case "storm" -> {
+                if (mode instanceof SurfaceMode s) {
+                    s.weather.forceStorm();
+                    return true;
+                }
+                return false;
+            }
+            case "night" -> {
+                if (mode instanceof SurfaceMode s) {
+                    s.weather.dayPhase = 0.75f;
+                    return true;
+                }
+                return false;
+            }
+            case "pirates" -> {
+                if (mode instanceof SpaceMode s) {
+                    s.debugPirates(this, p.length > 1 && p[1].equals("tornado"));
+                    return true;
+                }
+                return false;
             }
             case "title" -> {
                 setMode(new TitleMode());

@@ -48,8 +48,9 @@ public final class SpaceRenderer {
 
     private void buildSky(long seed, int starColour) {
         Rng rng = new Rng(seed);
-        int nebulaA = Colour.fromHsv(rng.range(0f, 360f), 0.7f, 0.55f, 255);
-        int nebulaB = Colour.fromHsv(rng.range(0f, 360f), 0.6f, 0.45f, 255);
+        float hue = rng.range(0f, 360f);
+        int nebulaA = Colour.fromHsv(hue, 0.75f, 0.75f, 255);
+        int nebulaB = Colour.fromHsv(hue + rng.range(60f, 180f), 0.7f, 0.6f, 255);
         long n1 = rng.nextLong();
         long n2 = rng.nextLong();
         double bandTilt = rng.range(-0.6f, 0.6f);
@@ -77,10 +78,15 @@ public final class SpaceRenderer {
                     f *= 2;
                 }
                 float cloud2 = Rng.noise2Wrapped(n2, u * 6, v * 3, 6);
-                int c = 0xFF02030C;
-                float neb = Math.max(0, cloud * 0.9f - 0.15f + (float) band * 0.25f);
-                c = Colour.lerp(c, cloud2 > 0 ? nebulaA : nebulaB, Math.min(0.55f, neb));
-                c = Colour.lerp(c, 0xFF606888, (float) (band * band) * 0.25f);
+                int c = Colour.lerp(0xFF03040E, 0xFF0A0820, (float) band);
+                float neb = Math.max(0, cloud * 1.3f + (float) band * 0.35f - 0.05f);
+                int tint = Colour.lerp(nebulaA, nebulaB, Math.max(0, Math.min(1, cloud2 * 0.8f + 0.5f)));
+                c = Colour.lerp(c, tint, Math.min(0.75f, neb * neb * 1.4f));
+                // Bright knots inside the densest clouds.
+                if (neb > 0.75f) {
+                    c = Colour.lerp(c, Colour.lerp(tint, 0xFFFFFFFF, 0.5f), Math.min(0.4f, (neb - 0.75f) * 1.5f));
+                }
+                c = Colour.lerp(c, 0xFF8088B0, (float) (band * band * band) * 0.35f);
                 sky[y * SKY_W + x] = c;
             }
         }
@@ -245,7 +251,7 @@ public final class SpaceRenderer {
                                 base = Colour.lerp(base, tex.cloudColour, cloud / 255f * 0.9f);
                             }
                         }
-                        double lit = b.station ? 0.35 + 0.65 * Math.max(0, light) : 0.08 + 0.95 * Math.max(0, light);
+                        double lit = b.station ? 0.35 + 0.65 * Math.max(0, light) : 0.13 + 0.92 * Math.max(0, light);
                         // A warm band along the terminator.
                         colour = Colour.scale(base, (float) lit);
                         if (!b.station && tex != null) {

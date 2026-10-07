@@ -228,6 +228,13 @@ public final class Weather {
         }
     }
 
+    /** Starts a storm now (debug and tests). */
+    public void forceStorm() {
+        stormActive = true;
+        storm = 0.9f;
+        timer = 60 * 60;
+    }
+
     public String timeOfDay() {
         float p = dayPhase;
         if (p < 0.05f || p > 0.95f) {

@@ -17,7 +17,7 @@ public final class Biomes {
         add("s3k", 0, 0, "Jungle", Biome.CLIMATE_LUSH, Biome.WEATHER_RAIN, 0x01, Biome.FLORA_JUNGLE, 3);
         add("s3k", 0, 1, "Scorched Jungle", Biome.CLIMATE_HOT, Biome.WEATHER_EMBERS, 0x02, Biome.FLORA_EMBER, 2);
         add("s3k", 1, 0, "Aquatic", Biome.CLIMATE_TEMPERATE, Biome.WEATHER_RAIN, 0x03, Biome.FLORA_CORAL, 2);
-        add("s3k", 1, 1, "Flooded Ruins", Biome.CLIMATE_TEMPERATE, Biome.WEATHER_RAIN, 0x04, Biome.FLORA_CORAL, 2);
+        // Hydrocity act 2 is left out: a detached build lacks tiles its events load.
         add("s3k", 2, 0, "Ancient Ruins", Biome.CLIMATE_TEMPERATE, Biome.WEATHER_SAND, 0x05, Biome.FLORA_JUNGLE, 2);
         add("s3k", 2, 1, "Ancient Ruins", Biome.CLIMATE_TEMPERATE, Biome.WEATHER_SAND, 0x06, Biome.FLORA_JUNGLE, 2);
         add("s3k", 3, 0, "Neon Carnival", Biome.CLIMATE_EXOTIC, Biome.WEATHER_SPARKS, 0x07, Biome.FLORA_TECH, 1);
@@ -30,8 +30,9 @@ public final class Biomes {
         add("s3k", 6, 1, "Industrial", Biome.CLIMATE_TOXIC, Biome.WEATHER_ACID, 0x0E, Biome.FLORA_TECH, 1);
         add("s3k", 7, 0, "Fungal Forest", Biome.CLIMATE_LUSH, Biome.WEATHER_SPORES, 0x0F, Biome.FLORA_FUNGAL, 3);
         add("s3k", 7, 1, "Autumn Forest", Biome.CLIMATE_LUSH, Biome.WEATHER_SPORES, 0x10, Biome.FLORA_FUNGAL, 3);
-        add("s3k", 8, 0, "Desert", Biome.CLIMATE_HOT, Biome.WEATHER_SAND, 0x11, Biome.FLORA_DESERT, 1);
-        add("s3k", 8, 1, "Tomb World", Biome.CLIMATE_BARREN, Biome.WEATHER_SAND, 0x12, Biome.FLORA_DESERT, 1);
+        // Sandopolis's background art is uploaded by its events, so its skies are procedural.
+        plain("s3k", 8, 0, "Desert", Biome.CLIMATE_HOT, Biome.WEATHER_SAND, 0x11, Biome.FLORA_DESERT, 1);
+        plain("s3k", 8, 1, "Tomb World", Biome.CLIMATE_BARREN, Biome.WEATHER_SAND, 0x12, Biome.FLORA_DESERT, 1);
         add("s3k", 9, 0, "Volcanic", Biome.CLIMATE_HOT, Biome.WEATHER_EMBERS, 0x13, Biome.FLORA_EMBER, 1);
         add("s3k", 9, 1, "Magma Caverns", Biome.CLIMATE_HOT, Biome.WEATHER_ASH, 0x14, Biome.FLORA_EMBER, 1);
         add("s3k", 10, 0, "Sky Islands", Biome.CLIMATE_EXOTIC, Biome.WEATHER_NONE, 0x15, Biome.FLORA_JUNGLE, 2);
@@ -76,7 +77,12 @@ public final class Biomes {
 
     private void add(String game, int zone, int act, String title, int climate, int weather, int music, int flora,
             int lush) {
-        all.add(new Biome(game, zone, act, title, climate, weather, music, flora, lush, 0));
+        all.add(new Biome(game, zone, act, title, climate, weather, music, flora, lush, false));
+    }
+
+    private void plain(String game, int zone, int act, String title, int climate, int weather, int music, int flora,
+            int lush) {
+        all.add(new Biome(game, zone, act, title, climate, weather, music, flora, lush, true));
     }
 
     public List<Biome> all() {

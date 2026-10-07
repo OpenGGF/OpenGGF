@@ -12,10 +12,11 @@ package eggsky.world;
  * @param music    S3K music id played on the surface
  * @param flora    one of the {@code FLORA_} constants (procedural plant style)
  * @param lush     0-3: how much flora and fauna the planet carries
- * @param rows     terrain rows to keep from the top of the act's layout (0 = all)
+ * @param plainSky draw a procedural sky instead of the act's background (whose detached art is
+ *                 incomplete)
  */
 public record Biome(String game, int zone, int act, String title, int climate, int weather, int music, int flora,
-        int lush, int rows) {
+        int lush, boolean plainSky) {
     public static final int CLIMATE_TEMPERATE = 0;
     public static final int CLIMATE_LUSH = 1;
     public static final int CLIMATE_HOT = 2;
@@ -44,6 +45,11 @@ public record Biome(String game, int zone, int act, String title, int climate, i
     public static final int FLORA_TECH = 5;
     public static final int FLORA_CORAL = 6;
     public static final int FLORA_EMBER = 7;
+
+    /** "Frozen Glacial" style summary without repeating a word ("Scorched Scorched Jungle"). */
+    public String describe(String climate) {
+        return title.toLowerCase().contains(climate.toLowerCase()) ? title : climate + " " + title;
+    }
 
     public String key() {
         return game + "-" + zone + "-" + act;

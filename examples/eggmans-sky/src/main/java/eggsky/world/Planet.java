@@ -51,6 +51,10 @@ public final class Planet {
     public final SceneImage backdrop;
     public final List<SceneBackdrop.Band> bands;
     public final int skyTop;
+    /** Rows of the backdrop with content (below them it is one flat colour). */
+    public final int contentHeight;
+    /** The typical height of the top floor, where the backdrop's bottom is anchored. */
+    public final int groundLevel;
     public final int skyBottom;
     public final int[] palette;
     public final List<Species> fauna = new ArrayList<>();
@@ -75,11 +79,22 @@ public final class Planet {
         TerrainGen.Layout layout = TerrainGen.generate(kit, Rng.hash(spec.seed, 0x5445525AL), columns);
         this.terrain = new Terrain(kit, layout, spec.ground);
         // The zone's background in the planet's sky colours, cut into parallax bands.
-        SceneBackdrop source = kit.backdrop();
+        SceneBackdrop source = spec.biome.plainSky() ? proceduralSky(spec) : kit.backdrop();
         this.backdrop = spec.sky.apply(source.image());
         this.bands = parallaxBands(source);
+        this.contentHeight = contentHeight(backdrop);
         this.skyTop = averageRow(backdrop, 0);
-        this.skyBottom = averageRow(backdrop, backdrop.height() - 1);
+        this.skyBottom = averageRow(backdrop, contentHeight - 1);
+        int[] tops = new int[64];
+        int n = 0;
+        for (int i = 0; i < tops.length; i++) {
+            int floor = terrain.topFloor(i * terrain.width() / (float) tops.length);
+            if (floor >= 0) {
+                tops[n++] = floor;
+            }
+        }
+        java.util.Arrays.sort(tops, 0, n);
+        this.groundLevel = n == 0 ? terrain.height() / 2 : tops[n / 2];
         int[] pal = kit.palette();
         this.palette = pal;
         Rng rng = new Rng(Rng.hash(spec.seed, 0x53504543L));
@@ -115,6 +130,39 @@ public final class Planet {
         };
     }
 
+    /** A sky with two ranges of dunes or hills, for zones whose background art is incomplete. */
+    private static SceneBackdrop proceduralSky(PlanetSpec spec) {
+        int w = 512;
+        int h = 256;
+        int[] px = new int[w * h];
+        Rng rng = new Rng(Rng.hash(spec.seed, 0x534B59L));
+        int top = 0xFF3060C0;
+        int horizon = 0xFFF0C080;
+        int far = 0xFFC08850;
+        int near = 0xFF905830;
+        long n1 = rng.nextLong();
+        long n2 = rng.nextLong();
+        for (int x = 0; x < w; x++) {
+            float u = x / (float) w;
+            int h1 = (int) (150 + 30 * Rng.noise2Wrapped(n1, u * 6, 0, 6) + 10 * Rng.noise2Wrapped(n1 + 1, u * 17, 0, 17));
+            int h2 = (int) (190 + 25 * Rng.noise2Wrapped(n2, u * 4, 0, 4));
+            for (int y = 0; y < h; y++) {
+                int c = Colour.lerp(top, horizon, Math.min(1, y / 170f));
+                if (y >= h1) {
+                    c = Colour.lerp(far, Colour.scale(far, 0.8f), (y - h1) / 60f);
+                }
+                if (y >= h2) {
+                    c = Colour.lerp(near, Colour.scale(near, 0.7f), (y - h2) / 60f);
+                }
+                if (((x * 7 + y * 13) % 97 == 0) && y < h1) {
+                    c = Colour.lerp(c, 0xFFFFFFFF, 0.15f);
+                }
+                px[y * w + x] = Colour.genesis(c);
+            }
+        }
+        return new SceneBackdrop(new SceneImage(w, h, px), List.of(new SceneBackdrop.Band(0, h, 0.2, 0)));
+    }
+
     /** Splits a single-band background into rows that scroll faster toward the bottom. */
     private static List<SceneBackdrop.Band> parallaxBands(SceneBackdrop source) {
         if (source.bands().size() > 1) {
@@ -130,6 +178,24 @@ public final class Planet {
             out.add(new SceneBackdrop.Band(top, bh, speed, 0));
         }
         return out;
+    }
+
+    /** The backdrop's height without the flat fill some zones leave below their scenery. */
+    private static int contentHeight(SceneImage image) {
+        int h = image.height();
+        int w = image.width();
+        while (h > 32) {
+            int first = image.pixel(0, h - 1);
+            boolean flat = true;
+            for (int x = 1; x < w && flat; x += 2) {
+                flat = image.pixel(x, h - 1) == first;
+            }
+            if (!flat) {
+                break;
+            }
+            h--;
+        }
+        return h;
     }
 
     private static int averageRow(SceneImage image, int row) {

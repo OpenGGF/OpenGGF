@@ -65,11 +65,14 @@ public final class StarSystem {
         return (int) id;
     }
 
+    /** Set on the expedition's starting system: its first planet is the gentle crash site. */
+    public boolean home;
+
     public List<PlanetSpec> planets(List<Biome> biomes) {
         if (planets == null) {
             planets = new ArrayList<>();
             for (int i = 0; i < planetCount; i++) {
-                planets.add(new PlanetSpec(seed, i, starClass, biomes));
+                planets.add(new PlanetSpec(seed, i, starClass, biomes, home && i == 0));
             }
         }
         return planets;

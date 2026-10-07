@@ -470,7 +470,7 @@ public final class SurfaceMode implements Mode {
             beamTarget = null;
             return;
         }
-        heat += 0.42f * (1 - 0.22f * p.level(Catalog.T_COOLER));
+        heat += 0.3f * (1 - 0.22f * p.level(Catalog.T_COOLER));
         if (heat >= 100) {
             heat = 100;
             overheated = true;
@@ -495,6 +495,7 @@ public final class SurfaceMode implements Mode {
             gx = ship.gunX();
         } else {
             Object target = autoTarget(gx, gy);
+            autoTargetCache = target;
             if (target != null) {
                 float[] c = centreOf(target);
                 dirX = terrain.dx(gx, c[0]);
@@ -517,10 +518,16 @@ public final class SurfaceMode implements Mode {
         float hx = gx;
         float hy = gy;
         boolean terrainHit = false;
+        Object aimed = in.mouseAim ? null : autoTargetCache;
         for (float d = 0; d <= BEAM_RANGE; d += 3) {
             hx = gx + dirX * d;
             hy = gy + dirY * d;
             hit = entityAt(hx, hy);
+            if (hit instanceof Creature c && !c.angered && c.species.temperament < Species.AGGRESSIVE
+                    && hit != aimed && !in.mouseAim) {
+                // The laser passes harmless wildlife by unless it is deliberately aimed at it.
+                hit = null;
+            }
             if (hit != null) {
                 break;
             }
@@ -576,6 +583,7 @@ public final class SurfaceMode implements Mode {
     }
 
     private int terrainYield;
+    private Object autoTargetCache;
 
     private Object autoTarget(float gx, float gy) {
         Object best = null;
@@ -701,8 +709,8 @@ public final class SurfaceMode implements Mode {
         c.hp -= dps;
         c.hit = 4;
         c.angered = true;
-        if (c.species.body.animal()) {
-            addWanted(g, 0.012f);
+        if (c.species.body.animal() && g.ticks % 20 == 0) {
+            addWanted(g, 0.05f);
         }
         if (c.hp > 0) {
             return;
@@ -711,7 +719,7 @@ public final class SurfaceMode implements Mode {
         if (c.species.body.animal()) {
             // Animals are never killed: they flee off the screen in a puff of smoke.
             particles.burst(c.x, c.centreY(), 12, 2, 0xFFFFFFFF, 0xFFC0C0C0, 0, 20, Rng.mix(c.id.hashCode()));
-            addWanted(g, 1.1f);
+            addWanted(g, 0.8f);
             g.toast("YOU HARMED WILDLIFE!", 0xFFFF5050);
             g.sound.sfx(Sound.ALARM, 30);
             return;
@@ -1091,8 +1099,8 @@ public final class SurfaceMode implements Mode {
             return;
         }
         unseenTicks = seen ? 0 : unseenTicks + 1;
-        if (unseenTicks > 60 * 12) {
-            wanted -= 0.006f;
+        if (unseenTicks > 60 * 8) {
+            wanted -= 0.008f;
             if ((int) wanted < level) {
                 if ((int) wanted == 0) {
                     g.toast("WANTED LEVEL CLEARED", 0xFF60FF60);
@@ -1972,18 +1980,16 @@ public final class SurfaceMode implements Mode {
             }
         }
         SceneImage bg = backdropImage;
-        int bgH = bg.height();
-        float ref = Math.max(-0.5f, Math.min(1, cy / Math.max(1, terrain.height() - g.height)));
-        float bgY;
-        if (bgH > g.height) {
-            bgY = (g.height - bgH) * (0.3f + 0.6f * ref);
-        } else {
-            bgY = g.height - bgH - (1 - ref) * 30 + 20;
-        }
-        bgY -= Math.min(0, cy) * 0.35f;
+        int bgH = planet.contentHeight;
+        // The scenery's bottom sits at the screen's bottom when the camera is at the planet's usual
+        // ground level, and drifts slowly with altitude.
+        float bgY = g.height - bgH + (planet.groundLevel - g.height * 0.62f - cy) * 0.12f;
         SceneDraw style = SceneDraw.plain().withTint(tint);
         int w = bg.width();
         for (SceneBackdrop.Band band : planet.bands) {
+            if (band.top() >= bgH) {
+                continue;
+            }
             float y0 = bgY + band.top();
             if (y0 > g.height || y0 + band.height() < 0) {
                 continue;

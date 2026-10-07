@@ -96,8 +96,8 @@ public final class SurfaceHud {
         }
         // Controls reminder for a little while after landing.
         if (p.tutorial <= 1 && s.playing() && (g.ticks / 240) % 3 != 2) {
-            f.centre(c, "ARROWS FLY   SPACE/Z LASER   X SCAN (HOLD: VISOR)   C BOOST   ENTER MENU", g.width / 2,
-                    g.height - 38, 0xC0FFFFFF);
+            f.centre(c, "ARROWS FLY  SPACE LASER  X SCAN/VISOR  C BOOST  ENTER MENU", g.width / 2,
+                    g.height - 36, 0xC0FFFFFF);
         }
     }
 
