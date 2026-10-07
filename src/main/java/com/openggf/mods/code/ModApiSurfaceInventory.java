@@ -62,7 +62,10 @@ public final class ModApiSurfaceInventory {
             "com.openggf.mods.ui.TextLayout",
             "com.openggf.mods.ui.UiPrimitives",
             "com.openggf.mods.ui.FocusRegions",
-            "com.openggf.mods.ui.LevelOverlayCanvas");
+            "com.openggf.mods.ui.LevelOverlayCanvas",
+            "com.openggf.control.ActionReducer",
+            "com.openggf.control.ActionMap",
+            "com.openggf.control.PhysicalBinding");
 
     private ModApiSurfaceInventory() { }
 
