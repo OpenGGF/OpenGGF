@@ -45,7 +45,7 @@ public class Sonic3kSmpsData extends AbstractSmpsData {
     private Map<Integer, byte[]> psgEnvelopes;
     private Map<Integer, byte[]> modEnvelopes;
     private byte[] globalVoiceData;
-    private byte[] bankData;       // Full 32KB bank for shared voice table resolution
+    private byte[] bankData;       // Full 32KB native track/voice address space
     private int bankZ80Base;       // Z80 base address of the bank (0x8000)
 
     public Sonic3kSmpsData(byte[] data) {
@@ -75,11 +75,10 @@ public class Sonic3kSmpsData extends AbstractSmpsData {
     }
 
     /**
-     * Sets the full bank data for shared voice table resolution.
-     * S3K songs within the same bank share a voice table located at the
-     * beginning of the bank. Songs that start later in the bank need
-     * access to this data to resolve voice pointers that precede their
-     * own start address.
+     * Sets the loaded native bank for track execution and shared voices.
+     * zGetNextNote/cfJumpToGosub address the selected bank, including phrases before
+     * a song header. The supplied raw song blob remains the header/voice
+     * lookup contract; selecting this bank neither rewrites nor copies bytes.
      */
     public void setBankData(byte[] bankData, int bankZ80Base) {
         this.bankData = bankData;
@@ -88,6 +87,21 @@ public class Sonic3kSmpsData extends AbstractSmpsData {
 
     public byte[] getBankData() { return bankData; }
     public int getBankZ80Base() { return bankZ80Base; }
+
+    @Override
+    public int getZ80StartAddress() {
+        return bankData != null ? bankZ80Base : z80StartAddress;
+    }
+
+    @Override
+    public int dataLength() {
+        return bankData != null ? bankData.length : data.length;
+    }
+
+    @Override
+    public byte dataByteAt(int index) {
+        return (bankData != null ? bankData : data)[index];
+    }
 
     @Override
     protected void parseHeader() {
@@ -185,8 +199,9 @@ public class Sonic3kSmpsData extends AbstractSmpsData {
 
     @Override
     public int read16(int offset) {
-        if (offset + 1 >= data.length) return 0;
-        return (data[offset] & 0xFF) | ((data[offset + 1] & 0xFF) << 8); // Little Endian
+        byte[] program = bankData != null ? bankData : data;
+        if (offset + 1 >= program.length) return 0;
+        return (program[offset] & 0xFF) | ((program[offset + 1] & 0xFF) << 8); // Little Endian
     }
 
     @Override
