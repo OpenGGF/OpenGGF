@@ -57,10 +57,11 @@ final class ChallengeMenuAudio implements AutoCloseable {
             }
             audio = created;
         } catch (IOException | RuntimeException | Error failure) {
-            if (created != null)
-                created.destroy();
-            rom.close();
-            deleteDirectory();
+            AudioManager partial = created;
+            ChallengeCleanup.closeAll(failure, () -> {
+                if (partial != null)
+                    partial.destroy();
+            }, rom::close, this::deleteDirectory);
             throw failure;
         }
     }
@@ -96,9 +97,15 @@ final class ChallengeMenuAudio implements AutoCloseable {
         if (closed)
             return;
         closed = true;
-        audio.destroy();
-        rom.close();
-        deleteDirectory();
+        Throwable failure = ChallengeCleanup.closeAll(null, audio::destroy, rom::close, this::deleteDirectory);
+        if (failure instanceof IOException io)
+            throw io;
+        if (failure instanceof RuntimeException runtime)
+            throw runtime;
+        if (failure instanceof Error error)
+            throw error;
+        if (failure != null)
+            throw new IOException("Menu sound cleanup failed", failure);
     }
     private void deleteDirectory() throws IOException {
         try (var files = Files.walk(directory)) {

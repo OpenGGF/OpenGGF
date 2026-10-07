@@ -217,3 +217,7 @@ Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven
   compares real solo/shared native RGBA, pre-focus PCM and native state, duplicate
   games, member order and sibling lifecycle using maintained held-input source;
   [run instructions](../../examples/three-openings/README.md#reproducible-authoring-and-evidence).
+- [Three Openings window/device capture](../../tools/challenge/capture_host.py)
+  records the actual host window and a private OpenAL output monitor without
+  changing the desktop's default audio device; the sample walkthrough gives its
+  dependencies and exact invocation.

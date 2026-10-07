@@ -123,6 +123,7 @@ public final class ProcessGameEndpoint implements AutoCloseable {
     public boolean alive() {
         return process.isAlive();
     }
+    void crashForDiagnostic() { process.destroyForcibly(); }
     public long generation() {
         return generation;
     }
@@ -140,12 +141,13 @@ public final class ProcessGameEndpoint implements AutoCloseable {
         }
     }
     @Override
-    public void close() {
+    public synchronized void close() {
         if (!closed.compareAndSet(false, true))
             return;
         if (Thread.currentThread()!=shutdownHook) {
             try { Runtime.getRuntime().removeShutdownHook(shutdownHook); } catch (IllegalStateException shutdownInProgress) { }
         }
+        boolean interrupted = Thread.interrupted();
         try {
             if (inFlight == null || inFlight.isDone()) {
                 ChallengeProtocol.writeCommand(output,
@@ -162,13 +164,28 @@ public final class ProcessGameEndpoint implements AutoCloseable {
             process.destroyForcibly();
         } catch (InterruptedException e) {
             process.destroyForcibly();
-            Thread.currentThread().interrupt();
+            interrupted = true;
         } finally {
+            if (process.isAlive()) {
+                process.destroyForcibly();
+                long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(1500);
+                while (process.isAlive() && System.nanoTime() < deadline) {
+                    try {
+                        process.waitFor(Math.max(1, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+                    } catch (InterruptedException e) {
+                        interrupted = true;
+                    }
+                }
+            }
             io.shutdownNow();
+            if (inFlight != null && !inFlight.isDone())
+                inFlight.completeExceptionally(new IOException("Worker closed"));
             try {
                 input.close();
             } catch (IOException ignored) {
             }
+            if (interrupted)
+                Thread.currentThread().interrupt();
             try {
                 output.close();
             } catch (IOException ignored) {

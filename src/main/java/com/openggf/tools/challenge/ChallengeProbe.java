@@ -115,8 +115,7 @@ public final class ChallengeProbe {
                         sibling = null;
                     }
                     if (t == 110) {
-                        long pid = sibling.pid();
-                        ProcessHandle.of(pid).orElseThrow().destroyForcibly();
+                        sibling.crashForDiagnostic();
                         try {
                             await(sibling.step(0));
                             throw new AssertionError("Killed worker accepted a tick");

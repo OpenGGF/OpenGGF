@@ -128,6 +128,9 @@ public final class ThreeOpeningsTool {
             while (!glfwWindowShouldClose(window)) {
                 glfwPollEvents();
                 update(previous);
+                if (capture != null)
+                    capture.presentation(scene.name(), generation, host == null ? 0 : host.tick(),
+                            focus, pending != null, focused);
                 presentation.draw(new ChallengePresentation.View(
                         scene, elapsed(), focus, fault, lastStepMs, host == null ? 0 : host.tick()));
                 if (capture != null)
@@ -266,9 +269,6 @@ public final class ThreeOpeningsTool {
                         sink.updateDevice();
                     }
                     if (program != null && host.tick() >= program.length()) {
-                        if (capture != null)
-                            capture.screenshot("play-final", presentation.framebufferWidth(),
-                                    presentation.framebufferHeight());
                         glfwSetWindowShouldClose(window, true);
                     }
                 }
@@ -308,7 +308,9 @@ public final class ThreeOpeningsTool {
             ChallengeHost run = host;
             final int sample = held;
             pending = async(() -> run.step(sample));
-            nextTick = System.nanoTime() + 16_666_667;
+            // Keep a stable deadline instead of accumulating a fresh UI-frame
+            // delay after every submission. A slow tuple never triggers catch-up.
+            nextTick = Math.max(nextTick + 16_666_667, System.nanoTime());
         }
         if (sink != null && scene == Scene.PLAY)
             sink.updateDevice();
@@ -376,9 +378,13 @@ public final class ThreeOpeningsTool {
     }
     private void initializeSound() throws IOException {
         if (sink == null) {
-            sink = OpenAlPcmSink.openDefault(e
-                    -> audioFault = "Sound output stopped. Check your audio device and retry.",
-                    System.err::println);
+            try {
+                sink = OpenAlPcmSink.openDefault(e
+                        -> audioFault = "Sound output stopped. Check your audio device and retry.",
+                        System.err::println);
+            } catch (RuntimeException failure) {
+                throw new IOException("Sound output could not open. Check your audio device and retry.", failure);
+            }
             if (sink.sampleRate() != ChallengeProtocol.RATE) {
                 sink.close();
                 sink = null;
@@ -452,6 +458,13 @@ public final class ThreeOpeningsTool {
     private void transition(Scene next) {
         scene = next;
         sceneAt = System.nanoTime();
+        if (capture != null)
+            try {
+                capture.presentation(scene.name(), generation, host == null ? 0 : host.tick(),
+                        focus, pending != null, focused);
+            } catch (IOException failure) {
+                throw new IllegalStateException("Transition capture failed", failure);
+            }
     }
     private double elapsed() {
         return (System.nanoTime() - sceneAt) / 1e9;
@@ -466,7 +479,8 @@ public final class ThreeOpeningsTool {
             case READY -> elapsed() > .3 ? "ready" : null;
             case COUNTDOWN -> elapsed() > .3 ? "countdown" : null;
             case PLAY ->
-                host != null&& host.tick() == 180           ? "play-180"
+                host != null && program != null && host.tick() >= program.length() ? "play-final"
+                        : host != null&& host.tick() == 180           ? "play-180"
                         : host != null&& host.tick() == 600 ? "play-600"
                                                             : null;
             case PAUSE -> elapsed() > .3 ? "pause" : null;

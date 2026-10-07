@@ -10,6 +10,9 @@ import java.util.List;
 final class ChallengeCapture implements AutoCloseable {
     private final Path directory;
     private final PrintWriter state;
+    private final PrintWriter presentation;
+    private final long started = System.nanoTime();
+    private String lastPresentation = "";
     private final RandomAccessFile wav;
     private long pcmBytes;
     private final RandomAccessFile menuWav;
@@ -20,6 +23,8 @@ final class ChallengeCapture implements AutoCloseable {
         state = new PrintWriter(Files.newBufferedWriter(this.directory.resolve("state.csv")));
         state.println(
                 "tick,member,generation,sequence,held,polled,mode,centre_x,centre_y,rings,v_int,level_frame");
+        presentation = new PrintWriter(Files.newBufferedWriter(this.directory.resolve("presentation.csv")));
+        presentation.println("elapsed_ms,scene,generation,tick,focus,pending,window_focused");
         wav = new RandomAccessFile(this.directory.resolve("focused.wav").toFile(), "rw");
         wav.setLength(0);
         wav.write(new byte[44]);
@@ -34,18 +39,34 @@ final class ChallengeCapture implements AutoCloseable {
                     f.sequence(), held, f.polledMask(), f.mode(), f.x(), f.y(), f.rings(), f.vInt(),
                     f.levelFrame());
         }
-        for (short sample : focused) {
-            wav.writeByte(sample & 255);
-            wav.writeByte((sample >>> 8) & 255);
-            pcmBytes += 2;
-        }
+        state.flush();
+        if (state.checkError())
+            throw new IOException("Worker state capture could not be written");
+        writePcm(wav, focused);
+        pcmBytes += focused.length * 2L;
+    }
+    void presentation(String scene, long generation, long tick, int focus, boolean pending,
+            boolean windowFocused) throws IOException {
+        String value = scene + "," + generation + "," + tick + "," + focus + "," + pending + "," + windowFocused;
+        if (value.equals(lastPresentation))
+            return;
+        lastPresentation = value;
+        presentation.printf("%.3f,%s%n", (System.nanoTime() - started) / 1e6, value);
+        presentation.flush();
+        if (presentation.checkError())
+            throw new IOException("Presentation capture could not be written");
     }
     void menuPacket(short[] samples) throws IOException {
-        for (short sample : samples) {
-            menuWav.writeByte(sample & 255);
-            menuWav.writeByte((sample >>> 8) & 255);
-            menuBytes += 2;
+        writePcm(menuWav, samples);
+        menuBytes += samples.length * 2L;
+    }
+    private static void writePcm(RandomAccessFile file, short[] samples) throws IOException {
+        byte[] bytes = new byte[samples.length * 2];
+        for (int i = 0; i < samples.length; i++) {
+            bytes[i * 2] = (byte) samples[i];
+            bytes[i * 2 + 1] = (byte) (samples[i] >>> 8);
         }
+        file.write(bytes);
     }
     void screenshot(String name, int width, int height) throws IOException {
         ScreenshotCapture.savePNG(
@@ -64,23 +85,11 @@ final class ChallengeCapture implements AutoCloseable {
     }
     @Override
     public void close() throws IOException {
-        state.close();
-        writeHeader(menuWav, menuBytes);
-        menuWav.close();
-        wav.seek(0);
-        wav.writeBytes("RIFF");
-        le((int) pcmBytes + 36);
-        wav.writeBytes("WAVEfmt ");
-        le(16);
-        word(1);
-        word(2);
-        le(ChallengeProtocol.RATE);
-        le(ChallengeProtocol.RATE * 4);
-        word(4);
-        word(16);
-        wav.writeBytes("data");
-        le((int) pcmBytes);
-        wav.close();
+        Throwable failure = ChallengeCleanup.closeAll(null, state::close, presentation::close,
+                () -> writeHeader(menuWav, menuBytes), menuWav::close,
+                () -> writeHeader(wav, pcmBytes), wav::close);
+        if (failure != null)
+            throw new IOException("Capture finalization failed", failure);
     }
     private static void writeHeader(RandomAccessFile file, long size) throws IOException {
         file.seek(0);
@@ -96,12 +105,5 @@ final class ChallengeCapture implements AutoCloseable {
         file.writeShort(Short.reverseBytes((short) 16));
         file.writeBytes("data");
         file.writeInt(Integer.reverseBytes((int) size));
-    }
-    private void le(int value) throws IOException {
-        for (int i = 0; i < 4; i++) wav.writeByte(value >>> (8 * i));
-    }
-    private void word(int value) throws IOException {
-        wav.writeByte(value);
-        wav.writeByte(value >>> 8);
     }
 }

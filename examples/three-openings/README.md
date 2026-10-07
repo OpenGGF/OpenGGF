@@ -85,7 +85,8 @@ java -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar \
 
 This follows the same title/loading/countdown and production play path, then
 exits at the end of the supplied common program. `state.csv` names committed
-worker ticks, native centre positions, rings, clocks and last-polled input.
+worker ticks, native centre positions, rings, clocks and the polled held byte
+(`-1` when that iteration did not poll).
 `focused.wav` contains focused output (including menu feedback mixed during
 play), `menu.wav` the separately synthesized UI cues; neither proves device
 output without the observed speaker/loopback check in the validation record.
@@ -107,3 +108,19 @@ See the [human and agent walkthrough](../../docs/modding/guides/three-openings.m
 for the safe adaptation boundary, native polling example, support limits and
 troubleshooting. The [implementation evidence](../../docs/architecture/validation/2026-10-07-multigame-prototype.md)
 records exactly what was observed and what remains unproved.
+
+For Linux X11/compatible PipeWire, `tools/challenge/capture_host.py` records the
+actual host window and a private48k OpenAL output, then closes its recorders and
+unloads only its owned audio module. Supply the same three ROMs and program:
+
+```sh
+python3 tools/challenge/capture_host.py \
+  --classpath "$PWD/target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar" \
+  --s1 /absolute/s1.gen --s2 /absolute/s2.gen --s3k /absolute/s3k.gen \
+  --program examples/three-openings/common.pad \
+  --output /absolute/outside-repository/three-openings-device
+```
+
+The helper requires Python Xlib, `pactl` and ffmpeg. It leaves the desktop default
+sink unchanged. `window.mkv`, `speaker.wav` and `capture.json` provide the actual
+window/device evidence and exact managed-process cleanup outcome.
