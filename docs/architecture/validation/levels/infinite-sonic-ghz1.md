@@ -633,3 +633,44 @@ Main checkout, `feature/ai-infinite-sonic`, base `e142a2ec66`; mod, tests and do
 **237 run, 0 failures, 32 skipped** (`TestInfiniteSonic`, queued Maven, S1 REV01; the skips are the
 two crossing tests in acts without platforms or bounceable flyers). The plan fallout is in the design
 note. Not covered: rendering (art continuity where two columns meet) and live play.
+
+
+## Test runtime (2026-10-07)
+
+Current `develop` checkout, base `4cfb745646d9439cdb9c07d53d0670dd0fb3fe58`,
+Java 21.0.10 on macOS. Sequential fresh Surefire runs, same S1 REV01 ROM
+(CRC32 `AFE05EEE`, SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`):
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestInfiniteSonic' \
+  "-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+| Source state | Total cases | Failures / errors | Skips | Class time |
+| --- | ---: | --- | ---: | ---: |
+| Unmodified base | 237 | 0 / 0 | 32 | 232.6 s |
+| Driver observation caches and cache regression | 238 | 0 / 0 | 32 | 201.4 s |
+| Above plus stopped BGM in five terrain/encounter routes | 238 | 0 / 0 | 32 | 144.1 s |
+| Final: above plus bounded hazard witness search | 238 | 0 / 0 | 32 | 124.2 s |
+
+All four Maven commands completed successfully. The final tree ran 206 applicable
+cases; the same 32 assumptions skip platform/bounce crossings in acts without the
+required stock platforms or bounceable flyers. These are not missing-ROM skips.
+The added case verifies the input driver's cache against direct mod queries,
+including eviction, load invalidation and live bounce-target changes.
+
+The final class time is about 47% lower than the base (1.87× throughput). These are
+single-run local class wall times, including class setup/teardown, not a statistical
+benchmark or a comparison with the screenshot's other host. Maven compilation and
+queue waits are excluded. No allocation reduction is claimed from these timings.
+The final hazard test requires an actual completed crossing and a verified ring-toll
+hit, then checks replay; timeout and pit death no longer satisfy those witnesses.
+The exhaustive coast/jump sweep was intentionally reduced after user authorization.
+
+Focused validation only: the entire changed test class was run, with no engine,
+guard, native trace, rendering or live-play claim. The change-based plan selected
+all 3,007 ordinary classes plus guards because of a pre-existing untracked S2 BK2;
+that unrelated file was preserved. The change is confined to this test's input
+observations and setup/search work, so the proportionate-validation exception
+applies. No runtime implementation or shared fixture changed. Existing gameplay
+coverage gaps above remain. See the [design decision](../../designs/2026-10-01-infinite-sonic.md#test-runtime-2026-10-07).

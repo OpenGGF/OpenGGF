@@ -41,6 +41,7 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 - [Example mod capture](../../src/test/java/com/openggf/mods/code/ExampleModCapture.java) (test scope) with [ExampleModHarness](../../src/test/java/com/openggf/mods/code/ExampleModHarness.java): builds any `examples/` mod with a startup scene from source and records its scene headless with GL to PNGs, an MP4 (ffmpeg) and a WAV of its music and sound effects, from an input script whose `jump=` steps use the scene's `DebuggableScene` entry (2026-10-05 Slay the Robotnik capture, generalised 2026-10-06 for the example's highlight reel).
 - [Maven resource profiler](../../tools/testing/profile_maven.py): sample queued ordinary/guard runs for process-tree memory and CPU admission estimates (2026-09-15 Maven resource task).
 - [Per-test memory profiler](../../tools/testing/profile_test_memory.py): explicit capture/rewind/ROM tests in a repeated diagnostic JVM, with executing-thread allocation, sampled peaks and post-GC pass floors; see [measurement limits](../../tools/testing/README.md#per-test-memory-diagnostics) (2026-10-07 throughput task).
+- [Ordinary-suite memory observer](../../tools/testing/profile_ordinary_memory.py): actual Surefire class/test peaks and post-teardown GC floors, with separate Maven RSS/swap/heap probes and bounded GC/native evidence (2026-10-07 memory-cause investigation).
 
 - [FBZ boundary comparator](../../tools/bizhawk/compare_fbz_boundary_fixture.py) supports `--sprite-publication` to compare the complete native CPU sprite table with the following consecutive frame’s VDP table; duplicate samples and gaps are explicit. The boundary exporter supplies the read-only CPU snapshots.
 
@@ -113,8 +114,16 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 - `FloorSegmentSurveyProbe` (test scope, opt-in `-Dopenggf.floorsurvey.out=<out file>` plus
   `openggf.floorsurvey.game/acts/top`) lists each act's longest continuous, pit-free floor
   paths (per-column floor surfaces linked within 24px of height), the candidates for an arena
-  or any stretch that must be walkable end to end; confirm them in a capture. Origin: Sonic
-  Survivors arena selection, 2026-10-06.
+  or any stretch that must be walkable end to end; confirm them in a capture. With
+  `openggf.floorsurvey.headroom=true` (and `minRise`, default 80) it also places the player on
+  each path every 16px, jumps, and lists the spans with room to bounce. Origin: Sonic
+  Survivors arena selection, 2026-10-06; headroom added 2026-10-07.
+- `TestSonicSurvivors#balanceProbe` (test scope, opt-in
+  `-Dsonic-survivors.balance=<csv>[,fresh|mid|max[,mode[,sonic|tails[,seed[,firstStage]]]]]`) plays
+  whole Survivors runs with a scripted bouncing bot and writes the pressure curve every 30
+  seconds (rings against toll, live badniks, hitpoints spawned against damage dealt, level,
+  chests, evolutions). Compare across changes; it is not a human difficulty measure. Origin:
+  Survivors balance pass, 2026-10-07.
 - `ObjectArtContactSheetProbe` (test scope, opt-in `-Dopenggf.artsheets.out=<dir>` plus
   `openggf.artsheets.game/acts/keys`) renders every frame of the object art sheets a zone
   registers to labelled PNG contact sheets with the level palette, so mapping frames (walk,

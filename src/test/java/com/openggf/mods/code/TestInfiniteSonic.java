@@ -96,9 +96,18 @@ class TestInfiniteSonic {
     }
 
 
+    /** Geometry/encounter routes do not assert PCM. Keep normal audio in challenge,
+     * audio-rate and interactive-rewind tests, but avoid synthesizing looping BGM
+     * for thousands of terrain-only frames. SFX triggered by the route remain live. */
+    private HeadlessTestFixture launchTerrain(WidescreenAspect aspect, int zone, int act) throws Exception {
+        var fixture = launch(aspect, zone, act);
+        GameServices.audio().stopMusic();
+        return fixture;
+    }
+
     @ParameterizedTest @EnumSource(WidescreenAspect.class)
     void protectedTraversalPreservesEncountersAcrossRebaseAndReplay(WidescreenAspect aspect) throws Exception {
-        var fixture = launch(aspect);
+        var fixture = launchTerrain(aspect, 0, 0);
         assertEquals(aspect.pixelWidth(), fixture.camera().getWidth());
         Level level = GameServices.level().getCurrentLevel();
         assertTrue(level.getBlockCount() <= 256, "byte layout block budget");
@@ -159,7 +168,7 @@ class TestInfiniteSonic {
     @ParameterizedTest(name = "zone {0} act {1}")
     @org.junit.jupiter.params.provider.MethodSource("courseActs")
     void everyZoneActBuildsATraversableDryCourse(int zone, int act) throws Exception {
-        var fixture = launch(WidescreenAspect.NATIVE_4_3, zone, act);
+        var fixture = launchTerrain(WidescreenAspect.NATIVE_4_3, zone, act);
         Level level = GameServices.level().getCurrentLevel();
         assertTrue(level.getBlockCount() <= 256, "byte layout block budget");
         assertEquals(1, level.getObjects().size(), "the course controller replaces stock placement");
@@ -1229,6 +1238,7 @@ class TestInfiniteSonic {
 
     /** Left, right and jump for one frame of driving the course in {@code direction}. */
     private boolean[] courseInputs(HeadlessTestFixture fixture, int direction) throws Exception {
+        observeTerrain();
         var player = fixture.sprite();
         long x = originPixels() + player.getCentreX();
         boolean approachingGap = false;
@@ -1238,7 +1248,7 @@ class TestInfiniteSonic {
         // A ledge wall (backtracking over a drop) rises more than any ROM slope in one pixel.
         boolean approachingWall = false;
         for (int ahead = 1; ahead <= 32; ahead++) {
-            int before = floorAt(x + direction * (ahead - 1)), after = floorAt(x + direction * ahead);
+            int before = observedFloorAt(x + direction * (ahead - 1)), after = observedFloorAt(x + direction * ahead);
             if (before >= 0 && after >= 0 && before - after > 16) approachingWall = true;
         }
         boolean left = direction < 0, right = direction > 0;
@@ -1255,18 +1265,89 @@ class TestInfiniteSonic {
         return new boolean[]{left, right, jump};
     }
 
+    // Only the input driver's observations are memoized. Geometry assertions below still
+    // call the mod directly. TerrainLibrary and its seeded plans are immutable for a load;
+    // world coordinates survive rebases/rewinds, while a fresh library invalidates the cache.
+    // Bound both maps so long traversals cannot retain an ever-growing course.
+    private Object observedTerrain;
+    private final Map<Long, Integer> observedFloors = new HashMap<>();
+    private final Map<Long, Object[]> observedPlatforms = new HashMap<>();
+
+    private void observeTerrain() throws Exception {
+        Object current = terrain();
+        if (current != observedTerrain) {
+            observedTerrain = current;
+            observedFloors.clear();
+            observedPlatforms.clear();
+        }
+    }
+
+    private int observedFloorAt(long x) throws Exception {
+        Integer known = observedFloors.get(x);
+        if (known != null) return known;
+        int floor = floorAt(x);
+        if (observedFloors.size() >= 4096) observedFloors.clear();
+        observedFloors.put(x, floor);
+        return floor;
+    }
+
+    private Object[] observedStones(long section) throws Exception {
+        Object[] known = observedPlatforms.get(section);
+        if (known != null) return known;
+        Object[] planned = stones(section);
+        if (observedPlatforms.size() >= 32) observedPlatforms.clear();
+        observedPlatforms.put(section, planned);
+        return planned;
+    }
+
+    @Test void driverObservationsMatchTheCourseAcrossEvictionAndReload() throws Exception {
+        launch(WidescreenAspect.NATIVE_4_3);
+        observeTerrain();
+        // Negative coordinates, more than one cache's worth, and a return to old coordinates.
+        for (long start : new long[]{-64, 4096, 8192, -64}) {
+            for (long x = start; x < start + 4200; x++) {
+                assertEquals(floorAt(x), observedFloorAt(x), "world x=" + x);
+            }
+        }
+        for (long section = -1; section < 40; section++) {
+            assertArrayEquals(stones(section), observedStones(section));
+        }
+        // A flyer is live state, not seeded geometry: moving it must affect the very
+        // next surface observation even when the underlying pit is already cached.
+        long pit = 0;
+        while (pit < 8192 && observedFloorAt(pit) >= 0) pit++;
+        assertTrue(pit < 8192, "opening contains a pit");
+        int withoutFlyer = surfaceAt(pit);
+        bounceTarget = new long[]{pit, 500};
+        assertEquals(496, surfaceAt(pit));
+        bounceTarget[1] = 520;
+        assertEquals(516, surfaceAt(pit));
+        bounceTarget = null;
+        assertEquals(withoutFlyer, surfaceAt(pit));
+        Object first = observedTerrain;
+        GameServices.level().loadZoneAndAct(1, 0);
+        observeTerrain();
+        assertNotSame(first, observedTerrain);
+        assertTrue(observedFloors.isEmpty());
+        assertTrue(observedPlatforms.isEmpty());
+        for (long x = 0; x < 8192; x += 7) assertEquals(floorAt(x), observedFloorAt(x));
+        for (long section = 0; section < 16; section++) {
+            assertArrayEquals(stones(section), observedStones(section));
+        }
+    }
+
     /** A live bounce flyer the policy aims for, as {world x, centre y}, or null. */
     private long[] bounceTarget;
 
     /** Terrain floor, else the surface of a planned stepping stone (or bounce flyer), else -1. */
     private int surfaceAt(long x) throws Exception {
-        int floor = floorAt(x);
+        int floor = observedFloorAt(x);
         if (floor >= 0) return floor;
         // Aim Sonic's centre at the height where his box meets the flyer's (surfaceAt - 19).
         if (bounceTarget != null && Math.abs(x - bounceTarget[0]) <= 12) return (int) bounceTarget[1] - 4;
         long section = Math.floorDiv(x, 512);
         for (long s = section - 1; s <= section + 1; s++) {
-            for (Object stone : stones(s)) {
+            for (Object stone : observedStones(s)) {
                 if (Math.abs(x - (long) call(stone, "worldX")) <= (int) call(stone, "halfWidth") - 4) {
                     return (int) call(stone, "surface");
                 }
@@ -1459,7 +1540,7 @@ class TestInfiniteSonic {
     @ParameterizedTest(name = "zone {0} act {1} {2}")
     @org.junit.jupiter.params.provider.MethodSource("courseActsAtBothAspects")
     void sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int zone, int act, WidescreenAspect aspect) throws Exception {
-        var fixture = launch(aspect, zone, act);
+        var fixture = launchTerrain(aspect, zone, act);
         org.junit.jupiter.api.Assumptions.assumeFalse(platformKindIds().isEmpty(), "act places no platforms");
         long stretch = 2;
         while (!platformRun(stretch * 4 + 3) || crossing(stretch) == BOUNCE) stretch++;
@@ -1514,7 +1595,7 @@ class TestInfiniteSonic {
     @ParameterizedTest(name = "zone {0} act {1} {2}")
     @org.junit.jupiter.params.provider.MethodSource("courseActsAtBothAspects")
     void sonicCrossesABounceStretchOffAHoveringFlyer(int zone, int act, WidescreenAspect aspect) throws Exception {
-        var fixture = launch(aspect, zone, act);
+        var fixture = launchTerrain(aspect, zone, act);
         org.junit.jupiter.api.Assumptions.assumeFalse(platformKindIds().isEmpty() || bounceSpecies().isEmpty(),
                 "act has no platform stretches or no flyer to bounce off");
         long stretch = 2;
@@ -2233,7 +2314,7 @@ class TestInfiniteSonic {
     @ParameterizedTest(name = "zone {0}")
     @ValueSource(ints = {0, 1, 2, 3, 4, 5})
     void eachZoneHazardNeedsTimingAndHitsThroughTheRingToll(int zone) throws Exception {
-        var fixture = launch(WidescreenAspect.WIDE_16_9, zone, 0);
+        var fixture = launchTerrain(WidescreenAspect.WIDE_16_9, zone, 0);
         int wanted = signature(zone) >= 0 ? signature(zone) : FIREBALL;
         long section = 5;
         while (hazard(section) == null || (int) call(hazard(section), "kind") != wanted) section++;
@@ -2265,14 +2346,20 @@ class TestInfiniteSonic {
         // Coasting brakes to a stop just short of the hazard, once it is on screen and running (pit
         // fireballs only launch while visible), and waits there, so arrivals span a whole hazard
         // cycle (the flame's is 126 frames) as a player slowing down would.
+        // This is a search for two witnesses, not an exhaustive timing matrix. Once
+        // both are exercised, further attempts add no assertion coverage.
+        timingTrials:
         for (int coast = 0; coast <= 120; coast += 12) {
             for (int lead = -1; lead <= 200; lead += lead < 0 ? 41 : 20) {
                 registry.restore(start);
-                boolean jumped = false, hit = false;
+                boolean jumped = false, hit = false, crossed = false;
                 int waitFrom = -1;
                 for (int frame = 0; frame < 900; frame++) {
                     long x = originPixels() + player.getCentreX();
-                    if (x > hx + reach + 48 && !player.getAir()) break;
+                    if (x > hx + reach + 48 && !player.getAir()) {
+                        crossed = true;
+                        break;
+                    }
                     boolean jump = lead >= 0 && (player.getAir() ? jumped : x >= hx - reach - lead && !jumped);
                     if (jump) jumped = true;
                     setTicks(0);
@@ -2281,7 +2368,7 @@ class TestInfiniteSonic {
                     boolean waiting = waitFrom >= 0 && frame < waitFrom + coast;
                     boolean brake = waiting && player.getGSpeed() > 0 && !player.getAir();
                     fixture.stepFrame(false, false, brake, !waiting, jump);
-                    if (player.getDead()) { hit = true; break; }
+                    if (player.getDead()) break; // A pit death does not prove the ring toll.
                     if (GameServices.level().getLevelGamestate().getRings() < 50) {
                         hit = true;
                         assertEquals(30, GameServices.level().getLevelGamestate().getRings(), "the 20-ring toll");
@@ -2290,8 +2377,10 @@ class TestInfiniteSonic {
                         break;
                     }
                 }
-                outcomes.append(String.format(" coast%d/lead%d:%s", coast, lead, hit ? "hit" : "pass"));
-                if (hit) hits++; else passes++;
+                outcomes.append(String.format(" coast%d/lead%d:%s", coast, lead,
+                        hit ? "hit" : crossed ? "pass" : player.getDead() ? "death" : "timeout"));
+                if (hit) hits++; else if (crossed) passes++;
+                if (hits > 0 && passes > 0) break timingTrials;
             }
         }
         assertTrue(passes > 0, "timing can beat it:" + outcomes);
