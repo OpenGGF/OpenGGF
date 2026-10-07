@@ -111816,3 +111816,119 @@ both attributed to `aea1bb0206`:
 The prefix pins `TestS3kSonicTailsCompleteEmeraldRunPrefix` and
 `TestS3kTailsFullChainRunPrefix` defend the green returns. Combined ordinary and
 guard validation is still pending.
+
+## 2026-10-07 — S2 semantic player-art owner and remaining touch frontiers
+
+Base `09282b173`; final lane commit `af0307b73a66`, worktree
+`.worktrees/ai-parity-swarm-20261007-s2`. Java 21, verified absolute S2 REV01
+ROM, `-Ptrace-replay`, default single fork; no timing, fixture or comparator
+changes. Final command (`S2_ROM` is the actual absolute root ROM path):
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS2SpecialStage2TraceReplay,TestS2SpecialStage5TraceReplay,TestS2SpecialStage6TraceReplay,TestS2SpecialStage7TraceReplay,TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay,TestS2Arz1CompleteEmeraldsSegmentTraceReplay,TestS2CompleteEmeraldRunChain,TestS2CompleteEmeraldRunPrefix -Dsonic2.rom.path=${S2_ROM} test
+```
+
+Final eight-test run takes 40.370 s: four pass, four assertion failures, zero
+errors/skips. Installing the existing ROM decision owner with the semantic
+character key rather than runtime `tails_p2` closes special stages 2/5/6
+(12,488/13,339/16,370 errors to zero) and standalone EHZ1 segment 2 (10,259 to
+zero). Stage 7 remains 16,993 errors, first row 0
+`dynamic_art.outstanding_transfer_ids`, native `[0]`, engine `[]`. ARZ1 falls
+10,114→3,203, first 1961 `tails_x_speed`, native `-$0146`, engine `$0A00`.
+The omitted horizontal spring push-side gate is independently repaired from
+`Obj41_Horizontal`, but matched trace results are unchanged after that fix;
+its proposed explanation of the ARZ frontier is rejected.
+
+The full/prefix chains now stop at special-stage segment 1 with 15,713 art
+errors, first row 0 opening ledger native `[0]`, engine `[0,1]`. Newly
+registered Tails work makes inherited divergent mapping decisions observable;
+the earlier stop is not declared an improvement or a new physics regression.
+Matched old/current non-art tuples (field,span,first expected/actual) match
+exactly across 299 ARZ1 and 723 EHZ1 spans; exact digests are in the audit.
+The chain's segment 0 report has 42,538 errors, first non-camera physical row 737
+`sidekick_y`, `$01EA`/`$01E9`; standalone EHZ1 first 737 `tails_y_speed`
+`-$03AF`/`-$0400` also matches before/after.
+
+A temporary production-owner probe reproduces EHZ1 and identifies the erroneous
+Tails hurt source as a Coconuts coconut projectile: engine post-step level
+clock 738, slot 17, collision position (1077,474), flags `$8B`, 8×8 hurt radius.
+The projectile retains the parent's spawn descriptor `$9D/$1E`; that label does
+not establish that the parent enemy caused the hurt. Next compare `Obj98_Init`,
+render-on-screen deletion, `Obj98_CoconutFall` and `Obj9D` throw/child allocation.
+The probe identifies the engine damage owner, not the differing ROM condition;
+no Tails physics or input cap was tuned. The temporary source/class/reports were
+removed after extracting evidence.
+
+The [S2 audit](../architecture/audits/2026-10-07-s2-parity-gap-verification.md)
+records exact matched commands, digests, red-before-fix regressions, startup/art/
+spring focused passes (105/14/13, zero skips) and remaining competition scope.
+Historical segments 0–10-green / segment 11-PLC claims are not current-frontier
+claims after this fresh execution.
+
+## 2026-10-07 — stock parity swarm: fresh S1/S3K frontiers
+
+Base `09282b17305cb5794e43a26855cd2b9543b4ff5f`; lane trees
+`.worktrees/ai-parity-swarm-20261007-s1` and `...-s3k`. Java 21, one
+Surefire fork, verified absolute root ROM paths, no comparator/tolerance,
+fixture or hardware-timing authority changes. `${OPENGGF_REPO}` below is the
+main repository root; actual ROM arguments were absolute.
+
+- **S1 title candidate `cf1e3f75c096`:**
+  `DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldRunChain,TestS1CompleteEmeraldRunPrefix -Dsonic1.rom.path=${OPENGGF_REPO}/s1.gen -Dsonic2.rom.path=${OPENGGF_REPO}/s2.gen -Ds3k.rom.path=${OPENGGF_REPO}/s3k.gen test`.
+  Three tests, one assertion failure, zero errors/skips; both prefix methods
+  pass. Full chain stops at segment 12 (`mz2_3`) missing `giant_ring`, before
+  Final Zone. Failed segment 7/8/12 totals are 5,472/6,525/196,213; their
+  physics-group/animation counts are 5,282+190/6,525+0/175,876+20,337.
+  First reported non-camera field in each is row 0 `dynamic_art.edges`,
+  ROM `[]`, engine `[0,1]`, with complete segment comparisons and zero
+  warnings/bootstrap errors. Earlier `ghz2 -> ghz2_2` movie-clock gap is
+  9,715 expected vs 9,530 actual; that is measured disagreement, not a
+  diagnosed readiness-service cause. The new title hook is not invoked by
+  this chained runtime boot. The old Final Zone roll-jump selector mechanism
+  is already corrected in source; the current encounter remains unreached.
+- **S3K untouched production baseline:**
+  `DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain -Ds3k.rom.path=${OPENGGF_REPO}/s3k.gen test`.
+  One assertion-failing test, zero errors/skips. Segments 0/2/4 have zero
+  errors; segment 6 has 189, first 3319 `sidekick_x` `$31C1`/`$31CA`; segment 8
+  has 13,254, first 1583 `sidekick_x` `$366C`/`$3674`. HCZ segment 9 compares
+  all 3,574 rows but has 32,343 errors, first row 0 `y_sub` `$0000`/`$3800`,
+  and misses its giant-ring exit. Complete row coverage does not establish
+  parity. Historical AIZ wait edits already exist and were not reintroduced.
+- **S3K LBZ matched baseline/candidate `3e7e75785c8b`:**
+  `DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments -Dtest=TestS3kLbzZoneSliceTraceReplay -Ds3k.rom.path=${OPENGGF_REPO}/s3k.gen test`.
+  Both compare 46,075 rows and execute one assertion-failing test, zero
+  errors/skips and zero warnings. Baseline 4,585 errors (3,955 physics-group,
+  630 animation), first 23533 `x_speed` `$016F`/`$0200`; candidate 1,665
+  (1,419+246), first 30582 `tails_y` `$013D`/`$012C`. First remaining
+  animation error 30587 `tails_animation_id` 0/2. Ribot's initialization now
+  returns after child creation (`loc_8C396 -> loc_8C594`), before its next
+  dispatch's orbit (`loc_8C41E`); no fitted delay or touch override. Native
+  hurt is 23534, so the old 23533 “unwanted hurt” was an early engine contact.
+
+Full commands, grouping hazards, evidence and rejected hypotheses are in the
+[S1](../architecture/audits/2026-10-07-s1-parity-gap-verification.md) and
+[S3K](../architecture/audits/2026-10-07-s3k-parity-gap-verification.md) audits.
+The [combined audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md)
+records the separately executed ordinary/guard baseline and coverage limits.
+
+## 2026-10-07 — S1 affected late-stage fixtures remain clean
+
+Untouched base `09282b17305c` in `.worktrees/ai-parity-swarm-20261007-base`
+and combined candidate `27ea65395744` in `...-integration` both completed
+this selector. `${OPENGGF_REPO}` denotes the repository root; actual ROM arguments
+were resolved absolute paths:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS1Sbz1CompleteRunTraceReplay,TestS1Sbz2CompleteRunTraceReplay,TestS1Sbz3CompleteRunTraceReplay,TestS1FzCompleteRunTraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay -Dsonic1.rom.path=${OPENGGF_REPO}/s1.gen -Dsonic2.rom.path=${OPENGGF_REPO}/s2.gen -Ds3k.rom.path=${OPENGGF_REPO}/s3k.gen test
+```
+
+Each invocation passes six tests with zero failures/errors/skips. Canonical
+SBZ1/2/3 and FZ reports compare 7,619/9,594/8,354/4,457 rows with zero comparator
+errors/warnings or bootstrap errors/warnings, so there is no first-error field.
+SBZ3 uses native report ID `s1_lz4` and FZ uses `s1_sbz3`, as their fixture
+metadata confirms. The current standalone FZ fixture does not reproduce the historical animation
+mismatch population. The full S1 chain still stops at MZ2 before FZ; general
+boss hit-window and SBZ checkpoint/cache-residency qualification remain open.
+These checks supply bounded affected-fixture regression coverage for the scroll
+correction. Full context is in the
+[combined audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#affected-s1-canonical-fixtures).

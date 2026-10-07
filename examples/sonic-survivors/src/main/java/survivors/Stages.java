@@ -114,14 +114,15 @@ final class Stages {
     }
 
     /** Survival time before the boss arrives, in seconds. Death Egg is a straight boss fight. */
-    static int survivalSeconds(int stage) {
+    static int survivalSeconds(int stage, int mode) {
         if (stage == DEZ) return 0;
+        if (mode == RunState.ENDLESS) return -1;
         // Development: -Dsonic-survivors.survival=N shortens every stage's clock (for filming and tests).
         String override = System.getProperty("sonic-survivors.survival");
         if (override != null) {
             try { return Math.max(1, Integer.parseInt(override.trim())); } catch (NumberFormatException ignored) { }
         }
-        return 120;
+        return mode == RunState.LONG ? 600 : 300;
     }
 
     /** Overall difficulty tier: one per stage, plus the act's extra difficulty. */
@@ -201,13 +202,66 @@ final class Stages {
         };
     }
 
-    /** Boss hitpoints: grows along the route. */
-    static int bossHp(int stage, int act) {
-        // Development: -Dsonic-survivors.bossHp=N sets every boss's hitpoints (for filming).
-        String override = System.getProperty("sonic-survivors.bossHp");
-        if (override != null) {
-            try { return Math.max(1, Integer.parseInt(override.trim())); } catch (NumberFormatException ignored) { }
-        }
-        return stage == DEZ ? 140 : 24 + 10 * tier(stage, act);
+    /** The mean base hitpoints of the stage's line-up (the Death Egg has none: rated 4). */
+    static double averageHp(int stage) {
+        int total = 0, count = 0;
+        for (int id : ground(stage)) { total += Species.of(id).hp(); count++; }
+        for (int id : air(stage)) { total += Species.of(id).hp(); count++; }
+        return count == 0 ? 4 : total / (double) count;
+    }
+
+    /** The zone's mid-stage event: a themed hazard, swarm or bonus (see {@link Stage}). */
+    static final int EVENT_NONE = 0, EVENT_RAIN = 1, EVENT_SWARM = 2, EVENT_JACKPOT = 3;
+
+    static int eventKind(int stage) {
+        return switch (stage) {
+            case ARZ, MTZ -> EVENT_SWARM;
+            case CNZ -> EVENT_JACKPOT;
+            case DEZ -> EVENT_NONE;
+            default -> EVENT_RAIN;
+        };
+    }
+
+    static String eventName(int stage) {
+        return switch (stage) {
+            case EHZ -> "COCONUT RAIN";
+            case CPZ -> "CHEMICAL DOWNPOUR";
+            case ARZ -> "WHISP STORM";
+            case CNZ -> "JACKPOT";
+            case HTZ -> "ERUPTION";
+            case MCZ -> "CAVE-IN";
+            case OOZ -> "OIL FLARE";
+            case MTZ -> "ASTERON FIELD";
+            case WFZ -> "AIR STRIKE";
+            default -> "";
+        };
+    }
+
+    /** Falling hazard art for rain events: {key, frame}. */
+    static String rainKey(int stage) {
+        return switch (stage) {
+            case EHZ -> Species.of(Species.COCONUTS).shotKey();
+            case CPZ -> Species.of(Species.SPINY).shotKey();
+            case HTZ -> Species.of(Species.SOL).shotKey();
+            case MCZ -> "mcz_falling_rocks";
+            case OOZ -> Species.of(Species.AQUIS).shotKey();
+            default -> bossShotKey(WFZ);
+        };
+    }
+
+    static int rainFrame(int stage) {
+        return switch (stage) {
+            case EHZ -> Species.of(Species.COCONUTS).shotFrame();
+            case CPZ -> Species.of(Species.SPINY).shotFrame();
+            case HTZ -> Species.of(Species.SOL).shotFrame();
+            case MCZ -> 0;
+            case OOZ -> Species.of(Species.AQUIS).shotFrame();
+            default -> bossShotFrame(WFZ);
+        };
+    }
+
+    /** The species a swarm event releases. */
+    static int swarmSpecies(int stage) {
+        return stage == MTZ ? Species.ASTERON : Species.WHISP;
     }
 }

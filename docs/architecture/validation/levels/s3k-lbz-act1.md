@@ -1,7 +1,7 @@
 # S3K LBZ act 1 — focused object and transition coverage
 
 Sonic 3 & Knuckles, Launch Base act 1 (zone 6, act 0). These are focused
-corrections from the 2026-10-03 trace campaign. The act as a whole is not
+corrections from the 2026-10-03 trace campaign and 2026-10-07 Ribot follow-up. The act as a whole is not
 certified. The recorded route is Sonic+Tails at native 320px with donor off. The
 Knuckles that appears in it is the NPC cutscene, not a playable Knuckles.
 
@@ -14,7 +14,8 @@ Knuckles that appears in it is the NPC cutscene, not a playable Knuckles.
 | Carried results → title | `TestS3kMgzLbzCarriedResultsTitleOwnership`: twelve real children through carry, rewind, publication, control release and title init; 58/59-ring tally oracle | MGZ ring difference that starts at row 9260 |
 | Retained title counter reset | `TestSonic3kTitleCardKosQueue#retainedResetWaitsForArtAndLastChildMovementAndRestoresThatGate` | Full native `Obj_TitleCardWait2` presentation timing |
 | Act 1→2 camera hold and size workers | `TestS3kLbz1MinibossAndTransitionHeadless#eventsFg5ReloadsLbz2WithRomWorldOffsetAndAdjustedLayout`, `TestSonic3kLbzRewindRoundTrip` | — |
-| Recorded Sonic+Tails route | `TestS3kLbzZoneSliceTraceReplay`, 46,075 rows | Red: 4,585 errors, first an unwanted hurt at row 23533. Other widths, rosters and donors are open. |
+| Ribot initialization and child graph | `TestRibotBadnikInstance` and `TestSonic3kLbzRewindRoundTrip`: initialization returns before orbit, non-four gravity retained, visual children restored | Other character geometry, route/load/death boundaries and presentation |
+| Recorded Sonic+Tails route | `TestS3kLbzZoneSliceTraceReplay`, 46,075 rows | Red: 1,665 errors, first row 30582 `tails_y` native `$013D`, engine `$012C`. Other widths, rosters and donors are open. |
 
 Trace command:
 `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments -Dtest=TestS3kLbzZoneSliceTraceReplay "-Ds3k.rom.path=<rom>" test`.
@@ -82,3 +83,21 @@ from the inherited X bounds and leaves Y alone. Bounds are released only when
 it creates (`CreateChild1_Normal`) run later in the same `Process_Sprites` pass.
 Native row 22331 shows slots 35, 36 and 37 already advanced to `$4000`, `$4000`
 and `$8000`. The first max-X increment is at 22334.
+
+## Ribot initialization return — 2026-10-07
+
+Commit `3e7e75785c8b` adds the return after visual child creation: native
+`loc_8C396` initializes, branches to `loc_8C594`, then returns. Active child
+`loc_8C3BC`/orbit `loc_8C41E` begins on the next dispatch. The base incorrectly
+orbited during creation, leading native contact by one pass. The native hurt
+is row23534; the previous row23533 claim described an early engine hurt, not a
+contact absent from the ROM.
+
+The matched 46,075-row `-Ptrace-segments` replay changed from 4,585 errors
+(3,955 physics-group,630 animation) to1,665 (1,419 physics-group,246 animation),
+with zero warnings. First error advanced from23533 `x_speed` (`$016F`/`$0200`)
+to30582 `tails_y` (`$013D`/`$012C`). Both invocations execute one assertion-failing
+test without errors/skips; the remaining trace is not green. Sixty-eight focused
+object/child-graph and mandatory S3K loading/bootstrap/decoding checks pass,
+without skips. See the [lane audit](../../audits/2026-10-07-s3k-parity-gap-verification.md)
+for exact commands, native creation evidence and unexecuted breadth.

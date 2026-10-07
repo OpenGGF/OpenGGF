@@ -29,6 +29,26 @@ class RunningLeaseTests(unittest.TestCase):
         self.lease(memory=1024**3, cores=1).publish(5 * 1024**3, 4)
         self.assertEqual((4 * 1024**3, 3.5), running.live_credit(self.common, _acquire))
 
+    def test_mixed_live_budgets_and_unknown_holders_keep_their_reservations(self):
+        gib = 1024**3
+        normal = (7 * gib, 8)
+        self.lease(memory=4 * gib, cores=4).publish(2 * gib, 2)
+        self.lease().publish(3 * gib, 3)
+        self.assertEqual(((5 * gib, 5), (11 * gib, 12)),
+                         running.live_load(self.common, _acquire, 2, normal))
+        self.assertEqual(((5 * gib, 5), (18 * gib, 20)),
+                         running.live_load(self.common, _acquire, 3, normal))
+        later = time.time() + running.FRESH_SECONDS + 1
+        self.assertEqual(((0, 0), (14 * gib, 16)),
+                         running.live_load(self.common, _acquire, 2, normal, now=later))
+
+    def test_inconsistent_running_record_count_cannot_reduce_reservations(self):
+        gib = 1024**3
+        self.lease(memory=4 * gib, cores=4).publish(2 * gib, 2)
+        self.lease().publish(3 * gib, 3)
+        self.assertEqual(((0, 0), (7 * gib, 8)),
+                         running.live_load(self.common, _acquire, 1, (7 * gib, 8)))
+
     def test_stale_or_malformed_records_earn_no_credit(self):
         lease = self.lease()
         lease.publish(3 * 1024**3, 2)

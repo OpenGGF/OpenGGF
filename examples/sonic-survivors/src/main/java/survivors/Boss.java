@@ -219,7 +219,6 @@ public final class Boss extends AbstractObjectInstance
     }
 
     private void fire(int px, int py) {
-        if (!services().objectManager().hasFreeDynamicSlot()) return;
         int stage = stage();
         String key = Stages.bossShotKey(stage);
         int frame = Stages.bossShotFrame(stage);
@@ -229,15 +228,15 @@ public final class Boss extends AbstractObjectInstance
             // Mystic Cave: rocks fall from the cave roof above Sonic.
             var arena = arena();
             int rx = (arena == null ? px : arena.clampX(px, 16)) + (shots - 2) * 40;
-            spawnFreeChild(() -> Shot.of(rx, y - 120, key, frame, true, 0, 0));
+            ArenaObjects.spawn(services(), () -> Shot.of(rx, y - 120, key, frame, true, 0, 0));
             return;
         }
         if (stage == Stages.ARZ) {
             // The queen's rotating three-way fan leaves gaps instead of aiming every shot at the player.
-            for (int i = 0; i < 3 && services().objectManager().hasFreeDynamicSlot(); i++) {
+            for (int i = 0; i < 3; i++) {
                 double angle = Math.PI / 2 + (i - 1) * 0.6 + (shots % 2 == 0 ? 0.2 : -0.2);
                 int fx = (int) (Math.cos(angle) * 0x240), fy = (int) (Math.sin(angle) * 0x240);
-                spawnFreeChild(() -> Shot.of(x, y + 16, key, frame, false, fx, fy));
+                ArenaObjects.spawn(services(), () -> Shot.of(x, y + 16, key, frame, false, fx, fy));
             }
             services().playSfx(0xAE);
             return;
@@ -250,7 +249,7 @@ public final class Boss extends AbstractObjectInstance
         if (gravity) { svx = (int) Math.signum(dx) * (0x80 + shots * 0x60); svy = -0x100; }
         int fvx = svx, fvy = svy, sy = y + 16;
         boolean lob = gravity;
-        spawnFreeChild(() -> Shot.of(x, sy, key, frame, lob, fvx, fvy));
+        ArenaObjects.spawn(services(), () -> Shot.of(x, sy, key, frame, lob, fvx, fvy));
         services().playSfx(0xAE); // S2 sfx_ArrowFiring.
     }
 
@@ -311,7 +310,7 @@ public final class Boss extends AbstractObjectInstance
                     services().playSfx(0xBD); // sfx_Hammer: the landing thud.
                     for (int i = -1; i <= 1; i += 2) {
                         int dir = i, sy = y + 12;
-                        spawnFreeChild(() -> Shot.of(x, sy, Stages.bossShotKey(Stages.DEZ), 15, false, dir * 0x300, 0));
+                        ArenaObjects.spawn(services(), () -> Shot.of(x, sy, Stages.bossShotKey(Stages.DEZ), 15, false, dir * 0x300, 0));
                     }
                 }
                 return;
@@ -400,6 +399,11 @@ public final class Boss extends AbstractObjectInstance
     @Override public void onPlayerAttack(PlayableEntity entity, TouchResponseResult result) {
         if (!alive()) return;
         var run = services().gameService(RunState.class);
+        if (Enemy.idleSpin(entity) && entity instanceof AbstractPlayableSprite player) {
+            // A crouched spin-dash charge or a slow roll is not an attack: the boss hurts.
+            Guard.takeHit(services(), player);
+            return;
+        }
         boolean bounce = entity.getAir() && entity.getCentreY() < y;
         if (bounce && run != null) {
             run.combo++;
@@ -416,7 +420,8 @@ public final class Boss extends AbstractObjectInstance
     /** Weapon damage, with brief i-frames between weapon hits. */
     boolean hurt(int amount) {
         if (!alive() || iframes > 0 || state == ENTER || runner() && flash > 0) return false;
-        iframes = 10;
+        // Short weapon i-frames: several weapons share the window, so it must not swallow them.
+        iframes = 6;
         damage(amount);
         return state == DEFEATED;
     }
@@ -426,10 +431,12 @@ public final class Boss extends AbstractObjectInstance
             amount = 1;
             flash = 60;
         }
+        int dealt = Math.min(hp, amount);
         hp -= amount;
         services().playSfx(0xAC); // sfx_HitBoss.
         Stage stage = Stage.find(services());
-        if (stage != null) stage.popup(x, y - 24, amount, true);
+        if (stage != null) stage.statDamage += dealt;
+        if (stage != null) stage.popup(x, y - 24, dealt);
         if (hp <= 0) {
             hp = 0;
             state = DEFEATED;
