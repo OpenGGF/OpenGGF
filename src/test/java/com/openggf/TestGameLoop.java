@@ -2021,7 +2021,7 @@ public class TestGameLoop {
     }
 
     @Test
-    void testDoExitTitleScreenRoutesTwoPlayerAwayFromDataSelect() throws Exception {
+    void testDoExitTitleScreenRejectsUnsupportedTwoPlayerWithoutStartingLevel() throws Exception {
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -2045,9 +2045,15 @@ public class TestGameLoop {
 
         invokePrivateMethod(gameLoop, "doExitTitleScreen");
 
-        assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
+        assertEquals(GameMode.TITLE_SCREEN, gameLoop.getCurrentGameMode());
+        assertEquals(1, titleScreen.initializeCalls);
+
+        titleScreen.triggerExitHandler();
+
+        assertEquals(GameMode.TITLE_SCREEN, gameLoop.getCurrentGameMode());
+        assertEquals(2, titleScreen.initializeCalls);
         assertEquals(0, nativeDelegate.initializeCalls);
-        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
     }
 
     @Test
@@ -2872,6 +2878,7 @@ public class TestGameLoop {
 
     private static final class StubTitleScreenProvider implements TitleScreenProvider {
         private final TitleScreenAction exitAction;
+        private int initializeCalls;
         private boolean supportsLevelSelectOverlay;
         private boolean exiting;
         private Runnable exitHandler = () -> {};
@@ -2900,6 +2907,7 @@ public class TestGameLoop {
 
         @Override
         public void initialize() {
+            initializeCalls++;
         }
 
         @Override

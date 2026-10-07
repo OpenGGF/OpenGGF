@@ -195,3 +195,15 @@ No engine behavior or test assertions were weakened to obtain these results.
 The first report prioritizes churn and throughput investigation; it does not
 certify the ordinary suite, prove all tests fit the lean lane, or rule out leaks
 in unprofiled long routes/native memory.
+
+## Integration reconciliation
+
+The destination advanced to `945b74e999c3584ad45b92a711b7a6dace7dc294`
+while the task was running. Its eleven commits contain separately verified stock
+parity corrections; Maven tooling, POM and profiler dependencies were unchanged.
+The release prose merged automatically. Both independently added measurement
+hazards were retained at the shared heading: test-boundary retention and moving
+live logs across filesystems. The first memory report remains attributed to the
+earlier engine source, not the newer parity code. Updated-base and integrated
+tooling checks are recorded at delivery; this task does not re-certify the
+upstream engine changes.
