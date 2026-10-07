@@ -183,17 +183,17 @@ def prune_runs(base, active=None, max_runs=MAX_COMPLETED_RUNS, max_bytes=MAX_RET
 
 
 def acknowledge_run(root, run_id):
-    """Delete only the named runner-owned result, serialized with Maven execution."""
+    """Delete only the named runner-owned result, excluding local Maven writes."""
     if not RUN_NAME.fullmatch(run_id):
         raise ValueError('Use the exact run ID, not a path, with --acknowledge')
-    from maven_queue import maven_slot
+    from maven_queue import worktree_metadata_slot
 
     target = root / 'target'
     # Metadata deletion needs exclusion, not a JVM resource reservation.
-    with maven_slot(root, exclusive=True, estimate=1, kind='cleanup'):
+    with worktree_metadata_slot(root):
         base = target / 'category-tests'
         directory = base / run_id
-        if base.is_symlink() or directory.is_symlink():
+        if target.is_symlink() or base.is_symlink() or directory.is_symlink():
             raise ValueError('Refusing to acknowledge symlinked diagnostics')
         if not directory.exists():
             return  # A repeated acknowledgment is harmless.
