@@ -170,9 +170,11 @@ Failure identity and concrete first mismatch:
 | `TestSszTailsColdRouteCapture` | `coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int)[2]` | replay 4018: object-manager.usedSlotsBits differs; onlyA slots24,29 |
 | `audio.timeline.TestS1GameplayAudioTimelineCli` | `shellUsesAbsoluteBootstrapToolsAndRejectsInjectedEnvironmentBeforePathLookup` | expected: <0> but was: <4> |
 
-The runner caps retained failure-message prefixes at 2,048 characters. The
-SSZ-Tails rewind assertion exceeds that limit, so the table records its first
-concrete fields, not a claim that its full serialized state matched. The complete
+The runner caps `failed_cases[].message` at 2,048 characters. The SSZ-Tails
+rewind assertion exceeds that limit, so the table records its first concrete
+fields. The later full-assertion comparison below uses the uncapped first line
+of `failed_cases[].detail`; assertion equality does not establish equality of
+all serialized world state. The complete
 wide-MHZ message is about 341 characters; all six named `stateBytes` differences
 were inspected and match the candidate exactly.
 Object-blob hashes and Java identities are not portable between JVMs. Any disputed
@@ -279,8 +281,9 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dtest=TestBootstrapModu
 The corrected guard completed seven tests, zero failures/errors/skips (exit 0),
 including stale-approval detection and negative scanner fixtures. The unchanged
 ordinary lane is not repeated for this audit/Javadoc correction; the required
-post-integration run will execute all guards again. Original candidate diagnostics
-were inspected, then acknowledged through the runner and deleted.
+post-integration guard profile subsequently executed all guards again. Original
+candidate diagnostics were inspected, then acknowledged through the runner and
+deleted.
 
 ## Affected S1 canonical fixtures
 
@@ -294,12 +297,74 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrde
 ```
 
 Each completed six tests, zero failures/errors/skips (exit 0). Canonical SBZ1,
-SBZ2, SBZ3 and FZ reports compare 7,619, 9,594, 4,457 and 8,354 rows respectively,
-with zero errors, warnings or bootstrap errors/warnings on both trees. FZ's
-report retains the fixture's internal `s1_lz4` alias. The isolated FZ replay is
+SBZ2, SBZ3 and FZ reports compare 7,619, 9,594, 8,354 and 4,457 rows respectively,
+with zero errors, warnings or bootstrap errors/warnings on both trees. SBZ3's
+native report ID is `s1_lz4`; FZ's is `s1_sbz3`. Fixture classes and metadata
+confirm these route/native-zone remaps. The isolated FZ replay is
 clean on the current baseline and candidate; the earlier full chain still stops
 at MZ2 before reaching FZ. Neither result proves general hit-window correctness
 of the remaining suppression heuristic or whole-act visual/cache residency.
+
+## Post-integration ordinary validation and concurrent tooling
+
+The reviewed source was merged without conflicts into the main workspace's
+existing `develop` branch at `945b74e999c3584ad45b92a711b7a6dace7dc294`.
+Existing dirty disassemblies and unrelated local files were preserved.
+The main launch environment passed preflight, then executed the same combined
+category command above with the pinned `09282b173` base and 120-minute limit.
+Run `20261007T130421Z-74206bd5` selected all 3,007 ordinary classes and guards;
+its launch fingerprint was
+`9d38495193dac9f0868bb4a5c338e93d4f313b438296aca8d77d11132ad211d4`.
+
+The ordinary lane completed 3,005 XML suites / 26,166 tests, 28 failures,
+zero errors and 61 skips in 4,313.69 seconds (lane exit 1). All 28 failing
+identities and all 61 skip identities/reasons match the executed baseline.
+Twenty-seven failure messages match literally. The initial SSZ-Tails comparison
+used the retained 2,048-character prefix, removing only the verified
+JVM-dependent blob hashes. A subsequent independent comparison by the baseline's
+owning coordinator checked the full concrete assertion: the current
+`failed_cases[].detail` first line contains 2,952 characters; stripping only
+`org.opentest4j.AssertionFailedError: ` and normalizing only
+`RewindObjectStateBlob@hex` to `RewindObjectStateBlob@HASH` produces 2,907
+characters matching the full baseline assertion retained before acknowledgement.
+Thus all 28 failure identities and concrete assertions match, with this single
+verified normalization. This does not claim equality of unreported world state.
+No new or worsened failure or ROM-prerequisite skip was observed. The owning
+coordinator also independently checked all 61 skip identities and first-line
+reasons; no ROM skips or omitted reports were found.
+
+During ordinary execution, an independently authorized task integrated Maven
+throughput/diagnostic tooling at `63fea861e`, followed by its evidence-only
+`5bc5f4fa6` commit. The complete diff was inspected: engine Java, Java tests,
+POM, ROM inputs, hooks, category selection and the category runner are unchanged.
+The already-running ordinary JVM therefore measures the integrated engine
+source above. The tooling coordinator independently verified this complete
+changed-path/source-equivalence check and reused the completed ordinary lane,
+cancelling only its own duplicate baseline. Its candidate and tooling/guard
+qualification remained independently owned. The upstream scheduler, helper and
+documentation changes are preserved; their separate verification is recorded in the
+[tooling research](../research/2026-10-07-maven-focused-throughput.md).
+
+The category runner correctly stopped before its next lane because the workspace
+fingerprint changed (wrapper exit 2). This invocation is completed ordinary
+validation with an unexecuted guard lane, not a completed combined run.
+Current-tooling preflight passed again. The required complete fresh-JVM guard
+profile was submitted independently on current `develop`:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+```
+
+On `9583f244783d4f2a827afe9d0bba1874c43ce37d`, this profile completed at
+2026-10-07 14:52:30 UTC with exit 0 / `BUILD SUCCESS`: 86 suites, 672 tests,
+zero failures, errors or skips, including all seven corrected module/provider
+caching guard cases. Maven execution took 3 minutes 35 seconds after a
+1,862-second queue wait. Fresh XML reports from 14:49:17–14:52:30 UTC were
+inspected separately from stale reports left by earlier invocations. These
+completed separate ordinary and guard profiles satisfy the required engine
+validation; the ordinary lane remains red with the unchanged inherited failures.
+The inspected ordinary diagnostics were acknowledged through the runner and
+deleted (exit 0); no unrelated run was acknowledged or logs archived.
 
 ## Next work from the verified remaining gaps
 

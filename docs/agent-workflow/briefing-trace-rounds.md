@@ -129,6 +129,15 @@ such text. Compare test identity, first-error frame and concrete fields, and
 state when only a bounded baseline prefix is available; do not claim a full
 message or full state match from it.
 
+Follow-up (2026-10-07): `results.json`'s `failed_cases[].detail` retained the
+complete assertion first line even though `message` was capped. Inspect that
+field before declaring the evidence truncated. The SSZ first line was 2,952
+characters; stripping its exception prefix and normalizing only the verified
+`RewindObjectStateBlob@hex` hashes produced 2,907 characters matching the full
+baseline assertion independently retained by its owner. Preserve every concrete
+field during comparison, and distinguish a full assertion match from equality
+of unreported world state.
+
 
 Pitch is not note tempo (2026-10-02): accelerated sample-voice tests passed at
 `5637105e5c` while real SMPS songs retained normal note durations. Their chip
