@@ -943,6 +943,17 @@ A-operated alternative during WATCH, including for Genesis movie replay. Settled
 shots pass the turn automatically; completed turns cannot be rewound. Live shortcut input
 is suppressed while a movie owns the controller rows.
 
+### Post Two Ambush example
+
+The [Post Two Ambush example](examples/hardened-s3k/README.md) launches from an
+isolated configuration with solo Sonic, donor off, native 320px, `P` for host
+pause and Backspace for the ambush Start menu. Its module requires an explicit
+no-save session and rejects stock save-slot attachment before replacing the old
+session. These are example launch constraints, not new global YAML settings.
+Before physical Post Two contact its menu offers a full fresh attempt; afterward
+it offers native checkpoint retry. The ambush menu holds the world while ROM
+music/menu cues continue; host pause retains the engine's silent presentation.
+
 ### Debug Navigation
 
 | Key | YAML path | Default | Key Name | Description |

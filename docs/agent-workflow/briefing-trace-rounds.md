@@ -281,6 +281,16 @@ readback/encoding and CSV writes, after a fixed warmup. Match controller route,
 rewind setting, viewport and sampled state before comparing. Bytes/frame is not
 a frame-time or GC-pause improvement. `GameplayAllocationTool` preserves this probe.
 
+Retained custom-module fixture clock (Post Two Ambush, 2026-10-07): opening a
+`GameplayModeContext` before `HeadlessTestFixture.build()` leaves that mode attached
+to its original engine context, while the fixture's `resetPerTest()` replaces the
+process engine root. An apparently reasonable `EngineTiming.vIntRunCounter()`
+comparison can therefore inspect a different, unbound clock from the snapshot's
+object owner. Retain/rebind the owning engine context across the fixture reset,
+assert that the native object clock is bound, and compare the whole registry over
+two restore/forward cycles. This is a fixture ownership hazard, not evidence that
+production rewind or its polling cadence is wrong.
+
 SOZ controller-route rewind (2026-09-16): a composite gameplay snapshot does
 not own a standalone `HeadlessTestRunner`'s external button history. Before
 replaying an input edge after restoring the snapshot, call `primeInputState`

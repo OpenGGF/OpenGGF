@@ -35,3 +35,9 @@ They contain only original/generated test assets; built jars are not checked in.
 
 Use the linked source rather than a copied jar. Gallery CI exercises the real
 `ggfmod package` validation boundary so manifest/container/API drift fails visibly.
+
+The external [Post Two Ambush](../../../examples/hardened-s3k/README.md) project
+also maintains its source, package script and production behavior tests. It
+demonstrates bounded native encounter placement and physical checkpoint retry;
+it is separate from the eight gallery fixtures. Start with its
+[authoring walkthrough](../quickstarts/hardened-s3k.md).

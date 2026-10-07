@@ -5,6 +5,39 @@ Incoming normal level entry; outgoing seamless MHZ2 (`$701`) with coordinate
 rebase, carried objects/resources and in-level title ownership. Status: integrated
 implementation reviewed historically; current campaign act certification pending.
 
+## Post Two Ambush local prototype — 2026-10-07
+
+This separate [maintained mod](../../../../examples/hardened-s3k/README.md) uses
+the native second post, not a cold whole-act route. Its supported cell is
+locked-on World S3K, solo native Sonic, donor off, 320px and no-save. Other
+characters, teams, widths, donors, bosses and stage detours remain outside this
+prototype. It adds no certification to the stock campaign cells below.
+
+The production sensor survey found floor at `0x1BF..0x1C6` across
+`0x1D00..0x1DB0`, with clear headroom to `0x80`; the shelf drops beyond
+`0x1DC0`. The room is bounded by `(0x1D10,0x100)..(0x1DB8,0x1D0)`. Native post
+`(0x1D60,0x1A8)`, subtype 2, and the spring/mushroom platform beyond the room
+are untouched. No original ring lies on this shelf; the plan adds one native
+ring at `(0x1D70,0x1A8)` with engine-assigned identity. The fresh entrance is
+`(0x1D30,0x1A8)`, the sentry `(0x1DA0,0x1AD)`, and exit `(0x1DB0,0x1AC)`.
+This survey establishes authoring geometry; it does not itself prove combat.
+
+| Obligation | Maintained check / current evidence |
+| --- | --- |
+| Native decode, geometry and preserved protected inventory | Both ROM-backed checks passed with zero skips. Concrete native objects, ring inventory, terrain and PLC are preserved. |
+| Physical post contact and two real death reloads | Passed: real native collision activates index 2, followed by two production death reloads. No checkpoint fixture is counted as combat evidence. |
+| Safe/failure paths, ordinary ring/shield/hurt dispatch | Passed: native safe-ring/danger volleys, ring loss, all three elemental shields, projectile recreation and two whole-registry 60-tick restore/forward cycles. |
+| Projectile recreation and two restore/forward replay cycles | Passed: native safe-ring/danger volleys, ring loss, all three elemental shields, projectile recreation and two whole-registry 60-tick restore/forward cycles. |
+| Packaged title, entry holds, pause, real checkpoint menu retry and owner abort | `TestHardenedPrototype`: five packaged/native cases passed with zero skips at 14:19 UTC; includes two real checkpoint menu retries, two pre-contact fresh attempts and owner-fault return. |
+| Fresh entry/checkpoint/death/stage-return precedence and no-save attachment | 55 focused cases passed with zero skips; the fresh-camera follow-up remains under focused verification. |
+| Actual GPU title/tells/transitions and final ROM PCM | Exploratory production title/lesson/tell/clear/post-retry/exit frames and final PCM inspected. Its initial camera catch-up exposed a blocker; corrected final capture remains pending. |
+
+The [implementation plan](../../plans/2026-10-07-hardened-s3k-prototype.md) and
+[blueprint](../../designs/2026-10-07-hardened-s3k-blueprint.md) preserve the
+original base, contract decisions and later-stage limits. The outside-repository ledger records exact commands and corrected fixture failures.
+Final captures and broad verification remain pending; these focused results are
+not a full-suite or full-act certification.
+
 ## Claims
 
 | Claim | Evidence / state |

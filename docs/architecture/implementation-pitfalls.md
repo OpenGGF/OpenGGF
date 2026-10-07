@@ -417,6 +417,18 @@ Reversed tile planes also retain the VDP order B-low, A-low, B-high, A-high,
 and both planes' opaque high pixels contribute to the sprite-occlusion mask.
 See the [FBZ2 graphics audit](audits/2026-09-14-fbz2-laser-room-graphics.md).
 
+**A retained headless mode can outlive its engine-root reset.**
+`HeadlessTestFixture.build()` calls `TestEnvironment.resetPerTest()`, which replaces
+`EngineServices.current()` while an already attached `GameplayModeContext` retains
+its original engine context and registered object clock. Reading
+`EngineTiming.vIntRunCounter()` afterward can compare an orphaned counter and
+falsely report a rewind failure. Custom-module fixtures that open their mode
+before building the fixture must retain that owning `EngineContext`, restore it
+after the builder reset and assert `isObjectClockBound()` before comparing native
+polling/replay. Use full registry capture/restore for full rewind evidence; do not
+change production timing to repair a test's mismatched service owners. The Post
+Two Ambush native-input and encounter fixtures exposed this on 2026-10-07.
+
 **Route rewind probes need the whole owner state.** A recreated object can match
 its own snapshot while reading a future static counter or a reset helper timer.
 The AIZ1 route continuation found both: `Events_fg_4` needed a registered adapter,

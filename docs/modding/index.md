@@ -49,6 +49,13 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
 
 ## Experimental projects
 
+- [Post Two Ambush](../../examples/hardened-s3k/README.md) — a bounded native
+  Mushroom Hill encounter with a telegraphed ROM-art sentry, one safe recovery
+  ring, the physical checkpoint, retry and title flow. The
+  [authoring walkthrough](quickstarts/hardened-s3k.md) explains transactional
+  placement, session launch and rewind. Supports solo Sonic, donor off, 320px
+  and no-save; later Hardened stages remain future work.
+
 - [Robotnik Tower Defence](../../examples/robotnik-tower-defense/README.md) —
   Industrial Action: defend Robotnik's base door from 15 waves of unionised
   Flickies with six ROM-drawn badnik defenses, upgrades, repair and an emergency

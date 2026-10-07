@@ -832,6 +832,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Development features carried forward
 
+- **Post Two Ambush:** added a maintained JVM mod example on Mushroom Hill's
+  native second-checkpoint shelf. A readable title and lesson lead into a spore
+  sentry with a visible tell, committed aim, two volleys and recovery. One native
+  recovery ring, physical checkpoint retry, pause, results and title return
+  complete the short trial for solo Sonic at 320px, donor off and no-save.
+  Bounded transaction-owned placement plans preserve native level, objects,
+  events and ROM assets; explicit fresh-entry, no-save and native-input opt-ins
+  retain existing stock defaults. Includes human and agent authoring guides.
+
 - **Putt Putt Paradise — Sonic 2 Mini Golf:** added an external source-first mod
   using the player's full Emerald Hill acts. Sonic and Tails putt or chip with
   Dream Course-style A-only power timing and chip top/backspin contact points,

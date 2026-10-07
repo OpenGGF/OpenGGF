@@ -2,6 +2,9 @@ package com.openggf.mods.code;
 
 import com.openggf.game.GameModule;
 import com.openggf.game.patch.GamePatch;
+import com.openggf.mods.ModRuntimeFindingStore;
+import com.openggf.mods.ModStateSaveResult;
+import com.openggf.mods.runtime.OwnerBoundGamePatch;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
 import com.openggf.mods.ModManifest;
@@ -53,9 +56,18 @@ public final class DevelopmentPatchLoader {
             throw new IOException("Could not load entrypoint " + manifest.entrypoint(), e);
         }
         ModRegistrationPlan frozen = plan;
+        var disabled = new java.util.concurrent.atomic.AtomicBoolean();
+        // A trusted one-process developer run has no installed catalogue state
+        // to persist. It still owns callback attribution and pending-disable;
+        // failure terminates the capture and cannot silently reapply this jar.
+        var boundary = new ModFaultBoundary(java.util.Map.of(), new ModRuntimeFindingStore(),
+                owners -> new ModStateSaveResult.Saved(), owners -> disabled.set(true));
         return base -> {
-            GameModule effective = new ModBackedGamePatch(frozen).apply(base, null);
-            for (GamePatch patch : frozen.explicitPatches()) effective = patch.apply(effective, null);
+            if (disabled.get()) throw new IllegalStateException("Development mod is pending-disabled: " + frozen.ownerModId());
+            GameModule effective = new ModBackedGamePatch(frozen, boundary).apply(base, null);
+            for (GamePatch patch : frozen.explicitPatches()) {
+                effective = OwnerBoundGamePatch.wrap(frozen.ownerModId(), patch, boundary).apply(effective, null);
+            }
             return effective;
         };
     }
