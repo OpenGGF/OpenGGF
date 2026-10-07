@@ -85,7 +85,7 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 
 - [`ggfmod` command reference](ggfmod.md)
 - [Production-backed creator tests](testing.md)
-- [Creator helpers for physics, state and modules](guides/creator-helpers.md)
+- [Shared UI, art, animation, physics and state helpers](guides/creator-helpers.md)
 - [Custom action bindings and remappable input](guides/action-bindings.md)
 - [Manifest v1](formats/manifest.md)
 - [Baked art containers](formats/baked-containers.md)

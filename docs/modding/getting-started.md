@@ -14,12 +14,21 @@ Music/reskin projects need no Java authoring. Tiled is optional for map editing;
 Python 3 is used by the checkout's example launcher and creator-kit builder.
 
 A creator kit contains matching `engine.jar`, `sdk.jar`, `mod-testkit.jar`, exact
-API Javadoc, launchers, handbook and source starters. Its `creator-kit.json`
+API Javadoc in `api-docs.jar`, launchers, handbook and source starters. Its `creator-kit.json`
 records engine version, candidate status, originating commit and artifact hashes.
 Read that record when reporting a problem. Kit builds do not publish the API.
 The kit normalizes jar ZIP ordering/timestamps without changing payload bytes, then
 hashes those distributed copies. Rebuild from committed sources; `--allow-dirty`
 explicitly labels a local development kit and is not used by candidate artifact CI.
+
+To browse the API reference, unzip `api-docs.jar` into its own directory and open
+that directory's `index.html` in a browser. The Java 21 JDK's `jar` tool can extract it:
+
+```sh
+mkdir /absolute/path/creator-kit/api-docs
+cd /absolute/path/creator-kit/api-docs
+jar --extract --file /absolute/path/creator-kit/api-docs.jar
+```
 
 Until candidate kits are distributed, build them from an OpenGGF checkout:
 
@@ -37,11 +46,16 @@ object reskins also work on native builds.
 ## First project
 
 Unpack the creator kit outside the engine checkout. Its `ggfmod`/`ggfmod.ps1`
-launcher knows the kit's jars. In a source checkout the launcher takes **absolute**
-engine and SDK paths first:
+launcher knows the kit's jars. Create a scene starter from the unpacked kit:
 
 ```sh
-sh docs/modding/ggfmod /absolute/path/engine.jar /absolute/path/sdk.jar init /absolute/path/my-mod --id my-mod --package example.mymod
+sh /absolute/path/creator-kit/ggfmod init /absolute/path/my-mod --id my-mod --kind scene --package example.mymod
+```
+
+In a source checkout the launcher takes **absolute** engine and SDK paths first:
+
+```sh
+sh docs/modding/ggfmod /absolute/path/engine.jar /absolute/path/sdk.jar init /absolute/path/my-mod --id my-mod --kind scene --package example.mymod
 ```
 
 Choose a purpose using `--kind music|reskin|object|character|zone|scene|standalone`.
@@ -53,13 +67,13 @@ The generated README states the chosen scope and build output. For any starter,
 build with the two matching absolute artifact paths:
 
 ```sh
-mvn -f /absolute/path/my-mod/pom.xml package -Dopenggf.engine.jar=/absolute/path/engine.jar -Dopenggf.sdk.jar=/absolute/path/sdk.jar
+mvn -f /absolute/path/my-mod/pom.xml package -Dopenggf.engine.jar=/absolute/path/creator-kit/engine.jar -Dopenggf.sdk.jar=/absolute/path/creator-kit/sdk.jar
 ```
 
 From an OpenGGF worktree, put the Maven command through its queue instead:
 
 ```sh
-python3 tools/testing/maven_queue.py -Dmse=off -f /absolute/path/my-mod/pom.xml package -Dopenggf.engine.jar=/absolute/path/engine.jar -Dopenggf.sdk.jar=/absolute/path/sdk.jar
+python3 tools/testing/maven_queue.py -Dmse=off -f /absolute/path/my-mod/pom.xml package -Dopenggf.engine.jar=/absolute/path/creator-kit/engine.jar -Dopenggf.sdk.jar=/absolute/path/creator-kit/sdk.jar
 ```
 
 Each build removes only its generated outputs and reconverts current source art.
@@ -73,11 +87,34 @@ portable README and the [two-act campaign guide](guides/two-act-campaign.md).
 Compile/package without a ROM; playing requires your own Sonic 2 World REV01 ROM.
 This maintained example complements the seven starter purposes.
 
-Launch the project's exploded `target/classes` with `ggfmod run`. This snapshots
-and trusts only that development mod for that launch; edit/build/restart to iterate.
-It does not overwrite installed-mod settings. Configure your own ROM paths in the
-launch working directory's `config.yaml`; the portable example launcher accepts
-explicit `--s1`, `--s2` and `--s3k` paths. A standalone starter needs no ROM.
+Launch the project's exploded `target/classes` with `ggfmod run`. Use a separate
+working directory for this project's runtime configuration and saves:
+
+```sh
+mkdir -p /absolute/path/my-mod/target/play
+cd /absolute/path/my-mod/target/play
+```
+
+The scene starter targets Sonic 2. Save the following as `config.yaml` in that
+working directory, replacing the path with your own ROM:
+
+```yaml
+configFormat: 2
+roms:
+  sonic2: "/absolute/path/own-sonic2.gen"
+```
+
+Then launch from that directory with the unpacked kit:
+
+```sh
+sh /absolute/path/creator-kit/ggfmod run /absolute/path/my-mod/target/classes
+```
+
+This snapshots and trusts only that development mod for that launch;
+edit/build/restart to iterate. It does not overwrite installed-mod settings.
+See [ROM file configuration](../../CONFIGURATION.md#rom-files) for other games
+and image identity. The portable example launcher accepts explicit `--s1`, `--s2`
+and `--s3k` paths. A standalone starter needs no ROM.
 
 ## Verify and share
 
