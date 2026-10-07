@@ -130,32 +130,97 @@ public final class Planet {
         };
     }
 
-    /** A sky with two ranges of dunes or hills, for zones whose background art is incomplete. */
+    /**
+     * A procedural sky for zones whose detached background art is incomplete: a gradient with a
+     * far and a near skyline shaped by the climate (dunes, snowy peaks, factory towers, rolling
+     * hills or alien spires), recoloured later with the rest of the sky.
+     */
     private static SceneBackdrop proceduralSky(PlanetSpec spec) {
         int w = 512;
         int h = 256;
         int[] px = new int[w * h];
         Rng rng = new Rng(Rng.hash(spec.seed, 0x534B59L));
-        int top = 0xFF3060C0;
-        int horizon = 0xFFF0C080;
-        int far = 0xFFC08850;
-        int near = 0xFF905830;
+        int climate = spec.biome.climate();
+        int top;
+        int horizon;
+        int far;
+        int near;
+        int style;
+        switch (climate) {
+            case Biome.CLIMATE_HOT, Biome.CLIMATE_BARREN -> {
+                top = 0xFF3060C0; horizon = 0xFFF0C080; far = 0xFFC08850; near = 0xFF905830; style = 0;
+            }
+            case Biome.CLIMATE_COLD -> {
+                top = 0xFF4070C0; horizon = 0xFFD0E8FF; far = 0xFF8098C8; near = 0xFF506890; style = 1;
+            }
+            case Biome.CLIMATE_TOXIC -> {
+                top = 0xFF204020; horizon = 0xFFA8D060; far = 0xFF406848; near = 0xFF283830; style = 2;
+            }
+            case Biome.CLIMATE_RADIOACTIVE, Biome.CLIMATE_DEAD -> {
+                top = 0xFF302040; horizon = 0xFFE0A050; far = 0xFF604858; near = 0xFF302838; style = 2;
+            }
+            case Biome.CLIMATE_EXOTIC -> {
+                top = 0xFF301860; horizon = 0xFFF080C0; far = 0xFF8040A0; near = 0xFF502070; style = 3;
+            }
+            default -> {
+                top = 0xFF2858D0; horizon = 0xFFB0E0FF; far = 0xFF60A070; near = 0xFF307040; style = 4;
+            }
+        }
         long n1 = rng.nextLong();
         long n2 = rng.nextLong();
+        int[] farLine = new int[w];
+        int[] nearLine = new int[w];
         for (int x = 0; x < w; x++) {
             float u = x / (float) w;
-            int h1 = (int) (150 + 30 * Rng.noise2Wrapped(n1, u * 6, 0, 6) + 10 * Rng.noise2Wrapped(n1 + 1, u * 17, 0, 17));
-            int h2 = (int) (190 + 25 * Rng.noise2Wrapped(n2, u * 4, 0, 4));
+            float a = Rng.noise2Wrapped(n1, u * 6, 0, 6);
+            float b = Rng.noise2Wrapped(n1 + 1, u * 17, 0, 17);
+            float c2 = Rng.noise2Wrapped(n2, u * 4, 0, 4);
+            switch (style) {
+                case 1 -> {
+                    // Jagged peaks.
+                    farLine[x] = (int) (130 + 40 * Math.abs(a) * -1 + 30 * b - 20 * Math.abs(Rng.noise2Wrapped(n1 + 2, u * 30, 0, 30)));
+                    nearLine[x] = (int) (190 + 20 * c2);
+                }
+                case 2 -> {
+                    // Towers and chimneys.
+                    int block = (int) (u * 48);
+                    long hsh = Rng.mix(n1 + block);
+                    farLine[x] = 120 + (int) (hsh & 63) - ((hsh >>> 8) % 5 == 0 ? 30 : 0);
+                    int nb = (int) (u * 24);
+                    nearLine[x] = 175 + (int) (Rng.mix(n2 + nb) & 31);
+                }
+                case 3 -> {
+                    // Alien spires.
+                    float spire = (float) Math.pow(Math.abs(Rng.noise2Wrapped(n1 + 3, u * 40, 0, 40)), 3);
+                    farLine[x] = (int) (150 + 20 * a - 90 * spire);
+                    nearLine[x] = (int) (195 + 15 * c2);
+                }
+                default -> {
+                    farLine[x] = (int) (150 + 30 * a + 10 * b);
+                    nearLine[x] = (int) (190 + 25 * c2);
+                }
+            }
+        }
+        for (int x = 0; x < w; x++) {
             for (int y = 0; y < h; y++) {
                 int c = Colour.lerp(top, horizon, Math.min(1, y / 170f));
-                if (y >= h1) {
-                    c = Colour.lerp(far, Colour.scale(far, 0.8f), (y - h1) / 60f);
+                if (y >= farLine[x]) {
+                    c = Colour.lerp(far, Colour.scale(far, 0.8f), (y - farLine[x]) / 60f);
+                    if (style == 1 && y < farLine[x] + 6) {
+                        c = 0xFFF0F8FF;
+                    }
+                    if (style == 2 && (x + y) % 7 == 0 && y > farLine[x] + 4 && Rng.mix(x * 31L + y) % 9 == 0) {
+                        c = 0xFFFFE070;
+                    }
                 }
-                if (y >= h2) {
-                    c = Colour.lerp(near, Colour.scale(near, 0.7f), (y - h2) / 60f);
+                if (y >= nearLine[x]) {
+                    c = Colour.lerp(near, Colour.scale(near, 0.7f), (y - nearLine[x]) / 60f);
                 }
-                if (((x * 7 + y * 13) % 97 == 0) && y < h1) {
-                    c = Colour.lerp(c, 0xFFFFFFFF, 0.15f);
+                if (style == 4 && y < 110 && Rng.noise2Wrapped(n2 + 5, x / 64f, y / 24f, 8) > 0.35f) {
+                    c = Colour.lerp(c, 0xFFFFFFFF, 0.7f);
+                }
+                if (((x * 7 + y * 13) % 97 == 0) && y < farLine[x] && style != 4) {
+                    c = Colour.lerp(c, 0xFFFFFFFF, 0.25f);
                 }
                 px[y * w + x] = Colour.genesis(c);
             }

@@ -25,11 +25,11 @@ public final class Biomes {
         add("s3k", 4, 0, "Derelict Fortress", Biome.CLIMATE_DEAD, Biome.WEATHER_SPARKS, 0x09, Biome.FLORA_TECH, 0);
         add("s3k", 4, 1, "Derelict Fortress", Biome.CLIMATE_DEAD, Biome.WEATHER_SPARKS, 0x0A, Biome.FLORA_TECH, 0);
         add("s3k", 5, 0, "Frozen", Biome.CLIMATE_COLD, Biome.WEATHER_SNOW, 0x0B, Biome.FLORA_FROST, 1);
-        add("s3k", 5, 1, "Glacial", Biome.CLIMATE_COLD, Biome.WEATHER_SNOW, 0x0C, Biome.FLORA_FROST, 1);
+        plain("s3k", 5, 1, "Glacial", Biome.CLIMATE_COLD, Biome.WEATHER_SNOW, 0x0C, Biome.FLORA_FROST, 1);
         add("s3k", 6, 0, "Industrial", Biome.CLIMATE_TOXIC, Biome.WEATHER_ACID, 0x0D, Biome.FLORA_TECH, 1);
         add("s3k", 6, 1, "Industrial", Biome.CLIMATE_TOXIC, Biome.WEATHER_ACID, 0x0E, Biome.FLORA_TECH, 1);
-        add("s3k", 7, 0, "Fungal Forest", Biome.CLIMATE_LUSH, Biome.WEATHER_SPORES, 0x0F, Biome.FLORA_FUNGAL, 3);
-        add("s3k", 7, 1, "Autumn Forest", Biome.CLIMATE_LUSH, Biome.WEATHER_SPORES, 0x10, Biome.FLORA_FUNGAL, 3);
+        plain("s3k", 7, 0, "Fungal Forest", Biome.CLIMATE_LUSH, Biome.WEATHER_SPORES, 0x0F, Biome.FLORA_FUNGAL, 3);
+        plain("s3k", 7, 1, "Autumn Forest", Biome.CLIMATE_LUSH, Biome.WEATHER_SPORES, 0x10, Biome.FLORA_FUNGAL, 3);
         // Sandopolis's background art is uploaded by its events, so its skies are procedural.
         plain("s3k", 8, 0, "Desert", Biome.CLIMATE_HOT, Biome.WEATHER_SAND, 0x11, Biome.FLORA_DESERT, 1);
         plain("s3k", 8, 1, "Tomb World", Biome.CLIMATE_BARREN, Biome.WEATHER_SAND, 0x12, Biome.FLORA_DESERT, 1);
@@ -42,19 +42,19 @@ public final class Biomes {
         // Sonic 2.
         add("s2", 0, 0, "Paradise", Biome.CLIMATE_LUSH, Biome.WEATHER_RAIN, 0x21, Biome.FLORA_JUNGLE, 3);
         add("s2", 0, 1, "Paradise", Biome.CLIMATE_LUSH, Biome.WEATHER_RAIN, 0x21, Biome.FLORA_JUNGLE, 3);
-        add("s2", 1, 0, "Chemical", Biome.CLIMATE_TOXIC, Biome.WEATHER_ACID, 0x23, Biome.FLORA_TECH, 1);
-        add("s2", 1, 1, "Chemical", Biome.CLIMATE_TOXIC, Biome.WEATHER_ACID, 0x23, Biome.FLORA_TECH, 1);
+        plain("s2", 1, 0, "Chemical", Biome.CLIMATE_TOXIC, Biome.WEATHER_ACID, 0x23, Biome.FLORA_TECH, 1);
+        plain("s2", 1, 1, "Chemical", Biome.CLIMATE_TOXIC, Biome.WEATHER_ACID, 0x23, Biome.FLORA_TECH, 1);
         add("s2", 2, 0, "Overgrown Ruins", Biome.CLIMATE_LUSH, Biome.WEATHER_RAIN, 0x05, Biome.FLORA_JUNGLE, 3);
         add("s2", 2, 1, "Overgrown Ruins", Biome.CLIMATE_LUSH, Biome.WEATHER_RAIN, 0x06, Biome.FLORA_JUNGLE, 3);
         add("s2", 3, 0, "Casino", Biome.CLIMATE_EXOTIC, Biome.WEATHER_SPARKS, 0x07, Biome.FLORA_TECH, 1);
         add("s2", 3, 1, "Casino", Biome.CLIMATE_EXOTIC, Biome.WEATHER_SPARKS, 0x08, Biome.FLORA_TECH, 1);
         add("s2", 5, 0, "Crystal Mines", Biome.CLIMATE_COLD, Biome.WEATHER_NONE, 0x24, Biome.FLORA_CRYSTAL, 1);
         add("s2", 5, 1, "Crystal Mines", Biome.CLIMATE_COLD, Biome.WEATHER_NONE, 0x24, Biome.FLORA_CRYSTAL, 1);
-        add("s2", 6, 0, "Oil Sea", Biome.CLIMATE_HOT, Biome.WEATHER_ASH, 0x22, Biome.FLORA_DESERT, 1);
-        add("s2", 6, 1, "Oil Sea", Biome.CLIMATE_HOT, Biome.WEATHER_ASH, 0x22, Biome.FLORA_DESERT, 1);
-        add("s2", 7, 0, "Factory", Biome.CLIMATE_RADIOACTIVE, Biome.WEATHER_SPARKS, 0x09, Biome.FLORA_TECH, 0);
-        add("s2", 7, 1, "Factory", Biome.CLIMATE_RADIOACTIVE, Biome.WEATHER_SPARKS, 0x0A, Biome.FLORA_TECH, 0);
-        add("s2", 7, 2, "Factory", Biome.CLIMATE_RADIOACTIVE, Biome.WEATHER_SPARKS, 0x09, Biome.FLORA_TECH, 0);
+        plain("s2", 6, 0, "Oil Sea", Biome.CLIMATE_HOT, Biome.WEATHER_ASH, 0x22, Biome.FLORA_DESERT, 1);
+        plain("s2", 6, 1, "Oil Sea", Biome.CLIMATE_HOT, Biome.WEATHER_ASH, 0x22, Biome.FLORA_DESERT, 1);
+        plain("s2", 7, 0, "Factory", Biome.CLIMATE_RADIOACTIVE, Biome.WEATHER_SPARKS, 0x09, Biome.FLORA_TECH, 0);
+        plain("s2", 7, 1, "Factory", Biome.CLIMATE_RADIOACTIVE, Biome.WEATHER_SPARKS, 0x0A, Biome.FLORA_TECH, 0);
+        plain("s2", 7, 2, "Factory", Biome.CLIMATE_RADIOACTIVE, Biome.WEATHER_SPARKS, 0x09, Biome.FLORA_TECH, 0);
         // Sonic 1.
         add("s1", 0, 0, "Green Hills", Biome.CLIMATE_LUSH, Biome.WEATHER_RAIN, 0x20, Biome.FLORA_JUNGLE, 3);
         add("s1", 0, 1, "Green Hills", Biome.CLIMATE_LUSH, Biome.WEATHER_RAIN, 0x20, Biome.FLORA_JUNGLE, 3);
