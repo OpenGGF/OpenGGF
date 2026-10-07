@@ -67,6 +67,30 @@ Temporary helper classes, raw XML/events/GC logs and test artifacts are deleted
 after extraction. Consumed reports are removed after their durable findings are
 recorded here.
 
+## Actual Surefire control
+
+The queued control selected `TestCollisionLogic,TestBuildIdentity` at engine base
+`5bc5f4fa6`; the Java observer source was the committed `acfba93f5` implementation.
+The Python driver had been launched before that commit from its earlier working
+snapshot. After a 2,676-second wait, actual Surefire ran one plan, two classes and
+11 successful cases, with no skips/aborts/failures. All three requested GCs were
+observed; the final live-heap floor was **7,713,648 bytes** (about 7.4 MiB).
+
+Cold compilation of the complete production/test trees made the Maven process
+(`1350069`, independently identified by its `jcmd` heap/flags snapshot) peak at
+**2,644,475,904 bytes RSS** (about 2.46 GiB), with no sampled swap. The test JVM
+(`1350938`) lasted about half a second and its final boundary RSS was
+171,343,872 bytes. The one-second external sampler missed that short fork; its
+tree maximum is not a combined parent/fork capacity bound. Maven's initial
+`MaxHeapSize` was again 8,174,698,496 bytes. Compiler memory is a concrete
+non-test contributor even when only eleven cheap cases are selected.
+
+This control also exposed a reporting race: the Maven shell can exec Java with
+the same PID/start time. The initial `other` role must become `maven` while its
+peak is preserved. The fixed observer updates the role on the Java transition;
+a regression checks the transition without losing RSS/swap maxima. Do not read
+the pilot's initial role label as evidence of an unidentified 2.46 GiB process.
+
 Rejected shortcuts:
 
 - A standalone JUnit whole-suite scan: it would not reproduce Surefire's actual
@@ -90,7 +114,7 @@ Rejected shortcuts:
 ## Tool verification
 
 At the pinned base, the Python safety suite passed 109 tests, with no skips.
-With the observer/analysis controls it passed 113, with no skips. The real JUnit
+With the initial observer/analysis controls it passed 113, with no skips. The real JUnit
 service-loading control checks deliberately retained memory, release of a large
 per-class fixture and completion accounting. A cold-compilation control preserves
 reports and rejects linked output paths before deleting anything. A GC-log control distinguishes a

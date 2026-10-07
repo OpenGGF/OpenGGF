@@ -11,6 +11,15 @@ import profile_ordinary_memory as profile
 
 
 class OrdinaryMemoryTests(unittest.TestCase):
+    def test_shell_exec_into_maven_updates_process_role_without_losing_its_peak(self):
+        observer=profile.ProcessObserver()
+        observer.record_process(42,100,'other',300,0)
+        observer.record_process(42,100,'maven',200,10)
+        row=observer.processes['42:100']
+        self.assertEqual('maven',row['kind'])
+        self.assertEqual(300,row['peakRssBytes'])
+        self.assertEqual(10,row['peakSwapBytes'])
+
     def test_cold_compile_preserves_reports_and_rejects_linked_outputs_before_deletion(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);target=root/'target';target.mkdir()

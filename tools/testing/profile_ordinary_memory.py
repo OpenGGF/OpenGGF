@@ -100,6 +100,16 @@ class ProcessObserver(threading.Thread):
         self.peak_tree_swap=0
         self.started=time.monotonic()
 
+    def record_process(self,pid,start,kind,resident,swapped):
+        key=f'{pid}:{start}'
+        row=self.processes.setdefault(key,dict(pid=pid,start=start,kind=kind,peakRssBytes=0,peakSwapBytes=0))
+        # Maven's shell can exec Java without changing PID/start time. Preserve
+        # its peak but update the role once the Java launch becomes observable.
+        if kind != 'other': row['kind']=kind
+        row['peakRssBytes']=max(row['peakRssBytes'],resident)
+        row['peakSwapBytes']=max(row['peakSwapBytes'],swapped)
+        return key
+
     def run(self):
         seen=set()
         next_probe=0
@@ -116,10 +126,7 @@ class ProcessObserver(threading.Thread):
                     swapped=int(match[1])*1024 if match else 0
                 except OSError: continue
                 rss+=resident;swap+=swapped
-                key=f'{pid}:{start}'
-                row=self.processes.setdefault(key,dict(pid=pid,start=start,kind=kind,peakRssBytes=0,peakSwapBytes=0))
-                row['peakRssBytes']=max(row['peakRssBytes'],resident)
-                row['peakSwapBytes']=max(row['peakSwapBytes'],swapped)
+                key=self.record_process(pid,start,kind,resident,swapped)
                 if kind in ('maven','test'): current.append((key,pid,kind,resident,swapped))
             self.peak_tree_rss=max(self.peak_tree_rss,rss)
             self.peak_tree_swap=max(self.peak_tree_swap,swap)
