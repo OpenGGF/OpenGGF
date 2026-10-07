@@ -618,3 +618,18 @@ access remains required for full phrases before a song header; reverting it is
 not a valid repair. The worker owns this repair and its required descriptor,
 identity and direct/frozen native-stream tests. Integration and the final normal
 gate remain pending.
+
+A parent read-only review of the frozen repair rejected byte-only program
+identity. Freshly compiled worker classes deduplicated two sources with the same
+raw `$F2` header, indexed `$12,$34,$56,$78` bytes, base `$4000`, metadata, key and
+configuration, while their `read16(0)` values were 13,330 (little endian) and
+4,660 (big endian). The retained entry therefore represented the wrong word
+semantics for the second source. The worker was directed to add a registration
+conflict regression and compare indexed word behavior, including incomplete
+final-word value versus rejection. The existing descriptor byte-hash contract
+need not change without a demonstrated descriptor-consumer defect. The one-off
+parent probe was consumed and removed; its reproducible case belongs in the
+owned regression. Worker-reported six synthetic checks and all-101 direct/frozen
+native stream comparisons through 36,001 services cover the bank repair, but
+the focused 21-class Maven request and this extra identity correction remain
+pending at this documentation checkpoint.

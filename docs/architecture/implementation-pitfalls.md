@@ -549,7 +549,10 @@ initialized nine tracks directly and zero through the old frozen consumer; AIZ
 began at the bank start and concealed the defect. Snapshot indexed reads with
 their decoding semantics as well as raw bytes and metadata. Program identity
 must distinguish different indexed contents with identical headers and different
-headers sharing one bank. Exercise live, frozen and restored consumers together.
+headers sharing one bank. Indexed bytes alone do not cover custom `read16`
+semantics: equal bytes with little- versus big-endian word reads must not reuse
+one frozen entry, nor may final-word value and rejection become interchangeable.
+Exercise live, frozen and restored consumers together.
 Origin: Sitar Hero full-song integration, 2026-10-07; see the
 [dated S3K catalogue evidence](designs/2026-10-07-sitar-hero-s3k-song-catalogue.md).
 
