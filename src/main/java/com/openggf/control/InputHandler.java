@@ -37,6 +37,7 @@ public class InputHandler {
 	private int droppedSceneEvents;
 	private LogicalInputSnapshot logicalSnapshot = LogicalInputSnapshot.neutral();
 	private LogicalInputSnapshot logicalOverride;
+	ExclusiveHeldInput exclusiveHeldInput;
 	private LogicalInputSnapshot physicalGamepadSnapshot = LogicalInputSnapshot.neutral();
 	private double mouseX;
 	private double mouseY;
@@ -104,6 +105,7 @@ public class InputHandler {
 	 * @param action GLFW_PRESS, GLFW_RELEASE, or GLFW_REPEAT
 	 */
 	public void handleKeyEvent(int key, int action) {
+		if (exclusiveHeldInput != null) return;
 		if (key >= 0 && key < MAX_KEYS) {
 			boolean wasDown = keys[key];
 			if (action == GLFW_PRESS || action == GLFW_REPEAT) {
@@ -128,6 +130,7 @@ public class InputHandler {
 	 * timestamps, so transitions are timestamped when this poll observes them.
 	 */
 	public void pollPhysicalGamepads() {
+		if (exclusiveHeldInput != null) return;
 		List<GamepadStateSource.DeviceState> devices = gamepadInputManager.pollPhysicalDevices();
 		trackSceneGamepads(devices, monotonicClock.getAsLong());
 	}
@@ -139,6 +142,9 @@ public class InputHandler {
 	 * cannot inject actions when a scene subsequently opens.
 	 */
 	public PhysicalInput capturePhysicalInput() {
+		if (exclusiveHeldInput != null) {
+			return new PhysicalInput(monotonicClock.getAsLong(), List.of(), List.of(), List.of(), 0);
+		}
 		List<Integer> heldKeys = new ArrayList<>();
 		for (int key = 0; key < keys.length; key++) {
 			if (keys[key]) heldKeys.add(key);
@@ -193,6 +199,7 @@ public class InputHandler {
 	}
 
 	public void handleMouseMove(double x, double y) {
+		if (exclusiveHeldInput != null) return;
 		mouseX = x;
 		mouseY = y;
 		mouseInputSeen = true;
@@ -200,10 +207,12 @@ public class InputHandler {
 
 	/** The wheel reaches mouse-input tracking through {@link MouseWheel#scroll}. */
 	void noteMouseInput() {
+		if (exclusiveHeldInput != null) return;
 		mouseInputSeen = true;
 	}
 
 	public void handleMouseButton(int button, int action) {
+		if (exclusiveHeldInput != null) return;
 		mouseInputSeen = true;
 		if (button >= 0 && button < MAX_MOUSE_BUTTONS) {
 			if (action == GLFW_PRESS || action == GLFW_REPEAT) {
@@ -222,6 +231,7 @@ public class InputHandler {
 	 * @return Whether the key is pressed or not
 	 */
 	public boolean isKeyDown(int keyCode) {
+		if (exclusiveHeldInput != null) return false;
 		// The twin of the guard in isKeyPressed, and load-bearing for the same
 		// reason. An unbound binding is -1, and so is rewindKey() when live
 		// rewind is unbound, so without this the pad-substitution tail below
@@ -246,13 +256,13 @@ public class InputHandler {
 	 * the caller owns rewind permission, allowances and press-edge detection.
 	 */
 	public boolean isRewindHeld() {
-		return logicalOverride == null && (isPhysicalKeyDown(inputBindings.rewindKey())
+		return exclusiveHeldInput == null && logicalOverride == null && (isPhysicalKeyDown(inputBindings.rewindKey())
 				|| gamepadInputManager.isRewindHeld());
 	}
 
 	/** Returns raw keyboard state, ignoring any trace/replay logical override. */
 	public boolean isPhysicalKeyDown(int keyCode) {
-		return keyCode >= 0 && keyCode < MAX_KEYS && keys[keyCode];
+		return exclusiveHeldInput == null && keyCode >= 0 && keyCode < MAX_KEYS && keys[keyCode];
 	}
 
 	public boolean isPhysicalShiftDown() {
@@ -294,6 +304,7 @@ public class InputHandler {
 	 * @return Whether the key was just pressed
 	 */
 	public boolean isKeyPressed(int keyCode) {
+		if (exclusiveHeldInput != null) return false;
 		// An explicitly empty binding resolves to -1, and so do the unbound
 		// debugModeKey()/frameStepKey() bindings -- so without this an unbound
 		// shortcut matches a pad-substitution branch below and fires from a held
@@ -323,7 +334,7 @@ public class InputHandler {
 	 * entry, art viewer), which are unrelated screens/modes.
 	 */
 	public boolean isGamepadBackButtonPressed() {
-		return logicalOverride == null && gamepadInputManager.isBackButtonPressed();
+		return exclusiveHeldInput == null && logicalOverride == null && gamepadInputManager.isBackButtonPressed();
 	}
 
 	boolean isRawKeyPressed(int keyCode) {
@@ -340,6 +351,7 @@ public class InputHandler {
 	 * accept any input to dismiss.
 	 */
 	public boolean isAnyKeyJustPressed() {
+		if (exclusiveHeldInput != null) return false;
 		for (int i = 0; i < MAX_KEYS; i++) {
 			if (keys[i] && !previousKeys[i]) {
 				return true;
@@ -414,6 +426,7 @@ public class InputHandler {
 	}
 
 	public boolean isMouseButtonDown(int button) {
+		if (exclusiveHeldInput != null) return false;
 		if (button >= 0 && button < MAX_MOUSE_BUTTONS) {
 			return mouseButtons[button];
 		}
@@ -421,6 +434,7 @@ public class InputHandler {
 	}
 
 	public boolean isMouseButtonPressed(int button) {
+		if (exclusiveHeldInput != null) return false;
 		if (button >= 0 && button < MAX_MOUSE_BUTTONS) {
 			return mouseButtons[button] && !previousMouseButtons[button];
 		}
@@ -432,11 +446,13 @@ public class InputHandler {
 	}
 
 	public void setLogicalOverride(LogicalInputSnapshot override) {
+		requireNoExclusiveOwner();
 		logicalOverride = override != null ? override : LogicalInputSnapshot.neutral();
 		logicalSnapshot = logicalOverride;
 	}
 
 	public void clearLogicalOverride() {
+		requireNoExclusiveOwner();
 		logicalOverride = null;
 	}
 
@@ -445,6 +461,7 @@ public class InputHandler {
 	}
 
 	public void refreshLogicalSnapshot() {
+		if (exclusiveHeldInput != null) return;
 		inputBindings = Objects.requireNonNull(inputBindingsSource.get(), "inputBindings");
 		PlayerInputState keyboardP1 = logicalOverride == null
 				? keyboardInputMapper.mapPlayer1(this, inputBindings) : PlayerInputState.neutral();
@@ -469,11 +486,12 @@ public class InputHandler {
 	}
 
 	LogicalInputSnapshot menuWithoutMappedKeyboard() {
+		if (exclusiveHeldInput != null) return logicalSnapshot;
 		// An override already owns logical input; it contains no live keyboard mapping.
 		return logicalOverride != null ? logicalOverride : physicalGamepadSnapshot;
 	}
 
-	boolean menuDetailsPressed() { return gamepadInputManager.isDebugModeTogglePressed(); }
+	boolean menuDetailsPressed() { return exclusiveHeldInput == null && gamepadInputManager.isDebugModeTogglePressed(); }
 
 	ControllerPromptStyle menuControllerStyle() { return gamepadInputManager.presentationStyle(); }
 
@@ -504,6 +522,7 @@ public class InputHandler {
 	boolean playerPadIsPrimary(int player) { return gamepadInputManager.playerPadIsPrimary(player); }
 
 	void appendMenuCodepoint(int codepoint) {
+		if (exclusiveHeldInput != null) return;
 		if (Character.isValidCodePoint(codepoint) && !Character.isISOControl(codepoint)
 				&& menuTypedText.length() < 4096) {
 			menuTypedText.appendCodePoint(codepoint);
@@ -518,7 +537,21 @@ public class InputHandler {
 		return text;
 	}
 
-	LogicalInputSnapshot physicalMenuGamepad() { return physicalGamepadSnapshot; }
+	LogicalInputSnapshot physicalMenuGamepad() {
+		return exclusiveHeldInput != null ? LogicalInputSnapshot.neutral() : physicalGamepadSnapshot;
+	}
+
+	void installExclusiveSnapshot(LogicalInputSnapshot snapshot) {
+		logicalSnapshot = snapshot;
+		physicalGamepadSnapshot = LogicalInputSnapshot.neutral();
+		pendingSceneEvents.clear();
+		menuTypedText.setLength(0);
+		droppedSceneEvents = 0;
+	}
+
+	private void requireNoExclusiveOwner() {
+		if (exclusiveHeldInput != null) throw new IllegalStateException("Input has an exclusive held-pad owner");
+	}
 
 	public LogicalInputSnapshot logical() {
 		return logicalSnapshot;
