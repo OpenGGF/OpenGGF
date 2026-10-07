@@ -102,8 +102,10 @@ def send_key(display, window, host, name):
             root=display.screen().root, window=window, child=X.NONE,
             root_x=0, root_y=0, event_x=0, event_y=0, state=0, same_screen=1)
         errors = []
-        window.send_event(event, event_mask=mask,
-            onerror=lambda failure, request: errors.append(failure))
+        def collect_error(failure, request):
+            errors.append(failure)
+            return True  # Xlib must not dispatch a collected error again.
+        window.send_event(event, event_mask=mask, onerror=collect_error)
         display.sync()
         for failure in errors:
             if kind != X.KeyRelease or not isinstance(failure, error.BadWindow):

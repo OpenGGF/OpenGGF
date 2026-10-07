@@ -235,3 +235,21 @@ scratch; this branch reuses it, without running another baseline. AIZ/AIZslice/H
 first mismatches remain 20302 animation 0/5, 25589 animation 0x13/5 and 9482 air 1/0,
 with totals 57/99/4,699. These are three red trace methods, not ordinary validation
 or a trace pass. Final candidate methods must be compared literally.
+
+## Packaged recovery verification
+
+Normal queued `python3 tools/testing/maven_queue.py -Dmse=off -DskipTests verify`
+completed on `b4dbbf338`: Java 21 compiled 3,715 main sources; execution took
+87 seconds after 4,197 seconds waiting. The engine/fat jars and attached SDK and
+Javadoc jars were built, and `verify-openggf-mod-sdk-artifacts` executed
+successfully. Tests were explicitly skipped; this is packaging evidence.
+The signature snapshot exported from the actual packaged fat jar contains
+20,048 lines and exactly matches the normalized 0.7 candidate pin.
+
+Installed Python Xlib requires a truthy handler return to acknowledge a collected
+protocol error. The maintained helper now returns true before inspecting and
+raising press/other errors; only a destroyed owned window on release is accepted.
+A bounded native C-stack attachment attempt reproduced visible GLFW creation
+stalling, but Linux ptrace policy rejected sibling debugger attachment. It
+produced no C stack, reaped the exact probe, and removed its temporary source.
+The visibility-wait attribution remains explicitly inferred.
