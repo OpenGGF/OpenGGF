@@ -129,7 +129,16 @@ python3 tools/challenge/capture_host.py \
 
 The helper requires Python Xlib, `pactl` and ffmpeg. It leaves the desktop default
 sink unchanged. `window.mkv`, `speaker.wav` and `capture.json` provide the actual
-window/device evidence and exact managed-process cleanup outcome.
+window/device evidence and exact managed-process cleanup outcome. The recorder
+checks the exact host PID/title, viewable mapping and positive geometry immediately
+before capture, then counts actual encoded frames. It focuses only that window.
+
+Two optional flags apply only to spawned diagnostic processes: `--disable-vsync`
+sets driver environment variables while retaining ordered 60 Hz host admission;
+`--keyutils-preload /absolute/existing/libkeyutils.so.1` supplies the existing
+dependency on desktops where OpenAL reports an unresolved `keyctl` symbol. Neither
+changes global display/audio settings. The normal mapped host window is used;
+no window-manager override is required by this helper.
 
 On the same Linux desktop, exercise loading cancellation, pause with a deliberately
 stalled owned worker, audio focus, restart/generation, fault/retry, missing ROM and

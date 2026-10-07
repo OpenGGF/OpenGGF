@@ -83,13 +83,14 @@ class Session:
                         "scene " + scene, seconds)
 
     def key(self, name):
-        from Xlib import X, XK, protocol
+        from Xlib import X, XK
+        from Xlib.protocol import event as xevent
         code = self.display.keysym_to_keycode(XK.string_to_keysym(name))
         if not code:
             raise RuntimeError("Unavailable X11 key: " + name)
         self.window.set_input_focus(X.RevertToParent, X.CurrentTime)
         for kind, mask in ((X.KeyPress, X.KeyPressMask), (X.KeyRelease, X.KeyReleaseMask)):
-            event_class = protocol.event.KeyPress if kind == X.KeyPress else protocol.event.KeyRelease
+            event_class = xevent.KeyPress if kind == X.KeyPress else xevent.KeyRelease
             event = event_class(detail=code,
                 time=int(time.monotonic() * 1000) & 0xffffffff,
                 root=self.display.screen().root, window=self.window, child=X.NONE,
@@ -287,6 +288,8 @@ def main():
             result["module"] = None
         except Exception as failure:
             failures.append(f"audio module {module}: {failure}")
+        if failures:
+            result["state"] = "failed"
         result["cleanup"] = failures or "all owned processes stopped; private module unloaded"
         receipt.write_text(json.dumps(result, indent=2) + "\n")
         if failures:

@@ -222,6 +222,8 @@ def main() -> None:
             try: receipt["actual_window_frames"] = recorded_frames(output / "window.mkv")
             except Exception as failure: cleanup_errors.append(f"recorded frames: {failure}")
         receipt["process_exit_codes"] = {name: p.poll() for name, p in (("host", host), ("video", video), ("device_audio", device_audio)) if p is not None}
+        if cleanup_errors:
+            receipt["state"] = "failed"
         receipt["cleanup"] = cleanup_errors or "all owned processes stopped; private audio module unloaded"
         record()
         display.close()

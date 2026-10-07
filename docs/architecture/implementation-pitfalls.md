@@ -1273,3 +1273,23 @@ Retain the actual published tiles for each handler's destinations and upload
 those same bytes on restore, without ticking an animation or re-priming it.
 Check more than one interval and compare pixels immediately after restore;
 a cycle-aligned green comparison does not establish surface restoration.
+
+
+### Standalone presentation must retain its supplied output owner
+
+A standalone AudioManager's supplied configuration and sink are lifetime owners,
+not ambient bootstrap defaults. Multigame's ROM-loaded menu called `setRom` after
+constructing its standalone producer, which rebuilt presentation and replaced the
+custom UI sink. Cue requests succeeded while the capture remained header-only.
+Load explicit ROM SMPS/DAC data through the profile loader without that unrelated
+reconfiguration; test actual emitted PCM/device packets and focused feedback.
+The standalone factory also retains its configuration for later private tuning
+and history resolution instead of falling back to the active engine root.
+
+### Existing text and pane renderers may use different projections
+
+PixelFont emits bottom-up vertices from a fixed224-pixel origin. A top-left host
+quad projection at1024×700 therefore placed its text offscreen. Match that text
+owner's coordinate convention with a separate projection while preserving pane
+geometry and the normal font API. Inspect the actual desktop/title and GPU image;
+correct quad placement does not establish readable text.

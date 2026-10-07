@@ -68,9 +68,44 @@ separate; this branch has no code dependency on either team.
 
 Tool preflight with Java21.0.12.1 and `LUA_BIN=lua5.4` passed. Default `lua` is5.5,
 so guard runs use the explicit5.4 binary. ROM identities verified against the
-AGENTS table through original absolute files. Fetch checkpoint still matched the
-original destination SHA. The initial runner plan selected3006 ordinary classes
-plus fresh-JVM guards; the final selection is reviewed after integration.
+AGENTS table through original absolute files. Original base remains an ancestor. Recovery merged completed worker
+`ee9913faa` through `7df56f239`, then fetched and merged actual destination
+`2fc65c847` through `81e862140`. The independently added protocol was identical
+after whitespace normalization; both release entries were retained. Upstream
+title-new-game forwarding, unsupported two-player title handling and host-module
+invincibility-music restoration remain intact. The actual destination plan
+selects3,018 ordinary classes plus fresh-JVM guards. Preflight passed on this
+merged source with Java21, explicit Lua5.4 and PowerShell; it executed no tests.
 
-Implementation/build/GPU/device results are pending at this source checkpoint.
-No executed pass, GPU observation, audible output or budget is claimed here yet.
+Initial host focus `21533` passed28 tests with no failures/errors/skips before
+worker/destination integration. The earlier `59115` source/admission race failed
+test compilation and provides no test result. Old compile `35496` has fresh
+compiler outputs but no recoverable console completion; timestamps are not a pass.
+The new actual-destination focus `5251` remains pending at this checkpoint.
+
+Worker focus `25181` passed67 unchanged cases and failed the native pause guard;
+a bounded production probe identified `GameStateManager.isGamePaused` as the
+normal ROM Pause_Loop authority. The corrected native case `26792` passed1 with
+no failures/errors/skips. Its fresh process diagnostic preserved36 exact forward
+and replay RGBA/PCM/owner frames at `captures/worker-replay-final-1` outside the
+repository. This is the worker's observed GHZ1 GPU and pre-device PCM evidence,
+not final integrated triple-host or device certification.
+
+The actual title/missing-ROM diagnostics captured344 and34 desktop frames, but
+failed overall: PixelFont's fixed224-pixel geometry used the host's opposing
+projection, and standalone `setRom` rebuilt the producer and dropped its supplied
+UI sink. Recovery corrects the host-only font projection and uses the explicit
+ROM loader without that reconfiguration. Five real ROM menu cues and two exact
+production-spawn hook-registration failures have regression tests. A shared
+acquisition rollback reaps the child, closes streams/executor and removes only
+its generated directory before constructor failure escapes.
+
+Native capture on this Linux desktop previously diagnosed an OpenAL
+libsystemd/keyutils dependency. Helpers offer a child-only existing-library
+preload, private Pulse null sink and optional child-only driver-vsync settings.
+A final window is required to match exact PID/title/viewability/positive geometry
+immediately before recorder launch; actual frame counts and recorder/process
+status accompany the evidence. `KeyRelease` must use Xlib's release event class;
+changing the `type` argument on `KeyPress` still serialized type2. No peer source
+or artifact is imported as this branch's observation. Final native host/device
+verification and measured budgets are still pending.

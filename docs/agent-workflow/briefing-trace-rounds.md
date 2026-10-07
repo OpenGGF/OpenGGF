@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Native key releases can still serialize presses (2026-10-07, Multigame UI):
+Xlib's `KeyPress(type=KeyRelease)` writes event type2, so the host retains the
+held key and subsequent navigation appears broken. Instantiate the actual
+`KeyRelease` class and inspect serialized type3 before interpreting the UI.
+Focus and record only the exact owned PID/title, recheck IsViewable and positive
+geometry immediately before capture, and inspect actual recorder frames/status.
+A mapped window or zero-exit recorder alone does not prove successful footage.
+
+
 Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
 task): the positioned MHZ capture retained about 22 MiB after its callback while
 three complete capture/rewind/ROM-loading passes settled near 16.8 MiB, with only
