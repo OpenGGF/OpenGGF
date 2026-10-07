@@ -271,6 +271,12 @@ public final class RibotBadnikInstance extends AbstractS3kBadnikInstance impleme
             if (!visualChildrenSpawned) {
                 spawnVisualChildren();
                 visualChildrenSpawned = true;
+                // loc_8C396 initializes the active child and branches to
+                // loc_8C594's child-creation helper, which returns. The active
+                // loc_8C3BC dispatch (including loc_8C41E's orbit) starts on
+                // the following pass, even when this child was created in a
+                // later slot and initializes during its parent's same pass.
+                return;
             }
 
             switch (state) {
