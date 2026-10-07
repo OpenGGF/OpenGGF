@@ -671,3 +671,71 @@ merged API/package/protocol consumers narrowly first. Pin both source trees
 after this checkpoint, use normal queued Maven and separate fresh guards, and
 retain full failure identities/messages and skip reasons. Main integration,
 post-integration comparison, push and accounted-for cleanup remain pending.
+
+### Completed repaired candidate and qualified baseline
+
+The frozen repaired candidate `53a742c58425209b5cce35ea30bcd80c37e8fc43`
+completed run `20261007T195912Z-7068993c` against destination base
+`2fc65c8479570f16ebd9830115485ee369c2b1e6`:
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 2fc65c8479570f16ebd9830115485ee369c2b1e6 \
+  --max-minutes 150 --run
+```
+
+The plan selected all 3,020 ordinary classes, one worker and separate fresh
+guards. Ordinary completed 3,018 XML suites / 26,373 tests / 28 failures / zero
+errors / 62 skips in 4,941.56 seconds. Fresh guards completed 86 suites / 672
+tests / zero failures, errors or skips in 209.63 seconds. Both lanes completed;
+runner exit 1 reflects inherited failures, with no timeout or omitted cases.
+All three actual launch properties used verified absolute original main ROM
+paths; there were no missing-ROM or `RequiresRom` skips. Parent inspected the
+complete ordinary assertions and skip reasons, selected fresh ordinary XML,
+terminal runner status and both lane summaries. Successful guard XML was
+automatically removed after exit; its fresh inventory is worker-reported and
+the terminal counts remain in the consumed runner summary.
+
+The comparison baseline is the completed shared run
+`20261007T180233Z-d9b56478`, actually measured at
+`4cfb745646d9439cdb9c07d53d0670dd0fb3fe58`: 3,007 selected classes / 3,005
+suites / 26,222 tests / 28 failures / zero errors / 62 skips, plus 86 fresh
+guard suites / 672 passing tests without skips. Its complete failure and skip
+table is recorded in the Mod Framework readiness design. Parent independently
+compared all 28 failure identities and complete assertion first lines:
+27 match literally after removing the exception prefix; the full 2,952-character
+SSZ assertion matches after removing that prefix and normalizing only the
+previously verified `RewindObjectStateBlob@hex` text. All concrete fields remain
+in the comparison. All 62 skip identities and first causal reasons match
+literally. No failures were added, resolved, worsened or left unattributed.
+
+Baseline reuse has an explicit source limit: runtime Java, POM, hooks and the
+normal category runner are unchanged from `4cfb74564` through `2fc65c847`, but
+the sole Java test change is `TestInfiniteSonic`. Its exact source has a recorded
+macOS whole-class pass and now an independent Linux check within this candidate:
+238 cases / 206 passed / 32 identical expected skips, including the passing
+`driverObservationsMatchTheCourseAcrossEvictionAndReload` regression. This
+qualifies the changed fixture without claiming a full suite measured at `2fc`.
+The duplicate owned `2fc` baseline run was interrupted deliberately (exit 130,
+incomplete, no results); it contributes no ordinary or guard pass. Its obsolete
+exclusive acknowledgment was cancelled separately, and the current cleanup
+tool deleted only that named incomplete run after the clean baseline tree was
+fast-forwarded to `37a57ebdb`.
+
+All twelve Sitar Hero classes passed their 131 cases without skips, including
+catalogues, full charts, career/story, packaged controls and protocol. Required
+S3K AIZ eight, bootstrap six, decoding three and both level-loading groups
+(36 plus seven) also passed without skips. New immutable indexed-program and
+saved-duration/rest regressions passed eight and twelve cases respectively.
+The preceding actual-tree focused Maven command passed Arcade 29 / Controls
+five / Online 20 / API nine: 63 cases, zero failures, errors or skips. The native
+stream and rendered acceptance limits recorded above still apply; no new native
+capture or live network/hardware-latency claim is inferred from these tests.
+
+After candidate completion, current `develop` at `37a57ebdb` was fetched and
+fast-forward pulled without a branch switch (already current). Its additional
+changes affect Python diagnostic cleanup locking and symlink refusal only;
+runtime Java, Java tests, POM, hooks and selection are unchanged from `2fc`.
+They are reconciled into this tree without conflicts. Main integration, the
+mandatory post-integration normal comparison, push and owned cleanup remain
+pending at this checkpoint.
