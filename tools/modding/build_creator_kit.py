@@ -57,7 +57,45 @@ def export_examples(root):
             if specimen.is_file():
                 entries["examples/hello-scene/src/test/java/hello/HelloSceneIntegrationTest.java"] = specimen.read_bytes()
         readme = project / "README.md"
-        entries[f"examples/{project.name}/README.md"] = (readme.read_bytes() if readme.exists() else b"") + b'\n\nExported creator project: use `python3 ../../tools/build_project.py .` from this directory, or Maven with matching absolute `-Dopenggf.engine.jar` and `-Dopenggf.sdk.jar` paths. The Python launcher accepts `--run --s1 /absolute/rom --s2 /absolute/rom --s3k /absolute/rom`; it uses target/play for isolated configuration and saves. Only src/main is packaged.\n'
+        manifest = (project / "src/main/resources/META-INF/openggf-mod.yaml").read_text()
+        base_game = re.search(r"(?m)^baseGame:\s*(s1|s2|s3k)\s*$", manifest)
+        game = base_game.group(1) if base_game else "s2"
+        instructions = f'''# Build {project.name} from the creator kit
+
+Use a Java **21 JDK** and Python 3, or Maven **3.8 or newer**. Keep `engine.jar`
+and `sdk.jar` from the same creator kit/source commit; this is a mutable candidate.
+
+From this project directory, build with the portable launcher:
+
+```sh
+python3 ../../tools/build_project.py .
+```
+
+The distributable is **`target/{project.name}-mod.jar`**. Only `src/main` classes
+and resources enter that jar. Alternatively, build with Maven and matching absolute
+artifact paths:
+
+```sh
+mvn package -Dopenggf.engine.jar=/absolute/kit/engine.jar -Dopenggf.sdk.jar=/absolute/kit/sdk.jar
+```
+
+Launch with your own ROM paths. This example supplies the {game} path; add the
+required game/donor paths using `--s1`, `--s2` or `--s3k` as needed:
+
+```sh
+python3 ../../tools/build_project.py . --run --{game} /absolute/own-{game}.gen
+```
+
+The launcher keeps generated runtime configuration and saves under `target/play`.
+ROMs are read from your explicit paths and are not included in the exported project.
+
+## Project behavior and source notes
+
+The original project notes follow. Checkout paths and play/build scripts mentioned
+there refer to the pinned source tree; use the creator-kit commands above here.
+
+'''
+        entries[f"examples/{project.name}/README.md"] = instructions.encode() + (readme.read_bytes() if readme.exists() else b"")
         entries[f"examples/{project.name}/pom.xml"] = project_pom(project.name)
     return entries
 
