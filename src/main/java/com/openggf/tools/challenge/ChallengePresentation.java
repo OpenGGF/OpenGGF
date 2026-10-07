@@ -9,7 +9,6 @@ import com.openggf.graphics.TexturedQuadRenderer;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Locale;
 import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryUtil;
 
@@ -167,8 +166,7 @@ final class ChallengePresentation implements AutoCloseable {
                 text(fault, 33, 349, INK, 1);
                 text("ENTER / PAD A  RETRY     ESC  TITLE", 33, 399, MUTED, 1.2f);
             } else {
-                text("TICK " + tick + "   /   " + String.format(Locale.ROOT, "%.1f MS", lastStepMs), 33, 552,
-                        MUTED, 1);
+                text("ONE PAD / THREE WORLDS", 33, 552, MUTED, 1);
                 text("P / BACK  PAUSE   R / LB  RESTART   TAB / RB  SOUND", 33, 585, INK, 1.1f);
                 if (lastStepMs > 16.67)
                     text("Taking it together: presentation is running slower.", 33, 622, ACCENTS[1], 1);

@@ -30,10 +30,7 @@ public final class ProcessGameEndpoint implements AutoCloseable {
             throw new IllegalArgumentException("Invalid endpoint identity");
         this.generation = generation;
         String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
-        String classpath =
-                Arrays.stream(System.getProperty("java.class.path").split(Pattern.quote(File.pathSeparator)))
-                        .map(entry -> Path.of(entry.isEmpty() ? "." : entry).toAbsolutePath().toString())
-                        .collect(Collectors.joining(File.pathSeparator));
+        String classpath = workerClasspath();
         Path parent = Path.of("target", "challenge-workers").toAbsolutePath();
         Files.createDirectories(parent);
         directory = Files.createTempDirectory(parent, "world-");
@@ -61,6 +58,12 @@ public final class ProcessGameEndpoint implements AutoCloseable {
         });
         shutdownHook = new Thread(this::close, "challenge-close-" + process.pid());
         Runtime.getRuntime().addShutdownHook(shutdownHook);
+    }
+
+    static String workerClasspath() {
+        return Arrays.stream(System.getProperty("java.class.path").split(Pattern.quote(File.pathSeparator)))
+                .map(entry -> Path.of(entry.isEmpty() ? "." : entry).toAbsolutePath().toString())
+                .collect(Collectors.joining(File.pathSeparator));
     }
 
     public CompletableFuture<ChallengeProtocol.Frame> prepare() {

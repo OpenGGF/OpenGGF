@@ -87,8 +87,9 @@ This follows the same title/loading/countdown and production play path, then
 exits at the end of the supplied common program. `state.csv` names committed
 worker ticks, native centre positions, rings, clocks and the polled held byte
 (`-1` when that iteration did not poll).
-`focused.wav` contains focused output (including menu feedback mixed during
-play), `menu.wav` the separately synthesized UI cues; neither proves device
+`focused.wav` contains captured focused packets (including a paused in-flight
+tuple suppressed at the device), `menu.wav` the separately synthesized UI cues.
+Neither proves device
 output without the observed speaker/loopback check in the validation record.
 PNG names identify title/loading/ready/countdown and selected committed ticks.
 `presentation.csv` records scene/generation/tick/focus and pending-step changes,
@@ -96,10 +97,11 @@ including a pause before any already-admitted tuple finishes. The maintained
 1,800-tick program leaves 1,440 neutral ticks for native entry before offering
 movement/jump to all games; use the tick1,536 and final images with `state.csv`.
 
-The isolation oracle boots each game alone, the triplet, duplicate Sonic 1 worlds,
+The isolation oracle boots each game alone, a Sonic 1/2 pair, the triplet, duplicate Sonic 1 worlds,
 then reversed member order; it compares every native RGBA frame, pre-focus PCM
 packet and reported native state. It also loads/closes/kills a sibling and checks
-survivor media against an independently booted oracle:
+survivor media against an independently booted oracle. A separately managed S1
+checkpoint/replay diagnostic must also complete while survivor media stays equal:
 
 ```sh
 java -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar \
@@ -144,3 +146,18 @@ The probe sends native UI keys only to its own host window and signals only exac
 worker processes acquired by that host. It resumes stopped workers during cleanup,
 records `lifecycle.json`, synchronized timelines/screenshots/video and device PCM,
 and unloads its private audio module. This diagnostic does not certify any route.
+
+Run the process-local S1 checkpoint diagnostic independently in a fresh JVM:
+
+```sh
+java -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar \
+  com.openggf.tools.challenge.WorkerReplayDiagnostic \
+  --game s1 --rom /absolute/s1.gen \
+  --output /absolute/outside-repository/new-checkpoint-directory
+```
+
+It captures its own normal registry/audio state after native control release,
+then compares36 forward/replayed GPU and PCM packets. A mismatch exits1 and
+names the first owning state difference in `result.txt`; `state.csv`, PNGs and
+48 kHz stereo raw PCM preserve the evidence. This tool exposes no snapshot input
+or linked host rewind. Other diagnostic game cells require separate evidence.

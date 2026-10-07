@@ -42,11 +42,13 @@ public final class ChallengeProbe {
             if (!solo.get(i).equals(reversed.get(2 - i)))
                 throw new AssertionError("Member order changed media");
         isolation(members.getFirst(), program);
+        rewindIsolation(members.getFirst(), program, output.resolve("rewind-isolation"));
         Files.writeString(output.resolve("result.txt"),
                 "PASS: " + program.length()
                         + (" common ticks; solo/shared RGBA+pre-focus PCM+native state agree for s1/s2/s3k; "
                                 + "duplicate S1 and reversed member order agree; sibling close/reload/crash "
-                                + "leaves survivor media unchanged; all managed processes stopped.\n"));
+                                + "and diagnostic checkpoint/replay leave survivor media unchanged; "
+                                + "all managed processes stopped.\n"));
         System.out.println(Files.readString(output.resolve("result.txt")));
     }
     private static List<String> run(List<ChallengeHost.Member> members, ChallengeInputProgram p, long gen,
@@ -146,6 +148,37 @@ public final class ChallengeProbe {
     private static ChallengeProtocol.Frame await(
             java.util.concurrent.CompletableFuture<ChallengeProtocol.Frame> future) throws IOException {
         return ProcessGameEndpoint.await(future, Duration.ofSeconds(45));
+    }
+    private static void rewindIsolation(ChallengeHost.Member member, ChallengeInputProgram program,
+            Path output) throws Exception {
+        Files.createDirectories(output);
+        try (var survivor = new ProcessGameEndpoint(member.game(), member.rom(), 700);
+                var oracle = new ProcessGameEndpoint(member.game(), member.rom(), 701)) {
+            await(survivor.prepare());
+            await(oracle.prepare());
+            await(survivor.start());
+            await(oracle.start());
+            int compared = 0, afterExit = 0;
+            long deadline = System.nanoTime() + Duration.ofSeconds(90).toNanos();
+            try (var diagnostic = new ChallengeDiagnosticProcess(member.rom(), output.resolve("checkpoint"))) {
+                while (diagnostic.alive() || afterExit < 20) {
+                    if (System.nanoTime() > deadline)
+                        throw new IOException("Checkpoint/sibling isolation exceeded90s");
+                    boolean alive = diagnostic.alive();
+                    int held = program.heldAt(compared % program.length());
+                    var actual = survivor.step(held);
+                    var expected = oracle.step(held);
+                    if (!hash(await(actual)).equals(hash(await(expected))))
+                        throw new AssertionError("Diagnostic rewind changed sibling at " + compared);
+                    compared++;
+                    if (!alive) afterExit++;
+                }
+                diagnostic.requireSuccess();
+            }
+            Files.writeString(output.resolve("sibling-result.txt"), "PASS: " + compared
+                    + " complete survivor RGBA/PCM/native tuples agree during sibling checkpoint/replay; "
+                    + afterExit + " post-exit tuples agree.\n");
+        }
     }
     private static String hash(ChallengeProtocol.Frame f) throws Exception {
         MessageDigest d = MessageDigest.getInstance("SHA-256");

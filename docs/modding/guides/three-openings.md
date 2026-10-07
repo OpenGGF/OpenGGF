@@ -85,7 +85,7 @@ Initial support is Java 21 on the observed Linux desktop with OpenGL 3.3 and a
 controller-only Escape and arbitrary rebinding are not implemented. Other OSes,
 headless-only deployment and native-image packaging require separate evidence.
 
-Rewind/checkpoint export, all-act completion, full campaigns, endings, records,
+Linked rewind/checkpoint export, all-act completion, full campaigns, endings, records,
 rankings, replay resume, donor rosters and arbitrary creator worker packages are
 later stages. There is no durable stock-save promise. Assessed play is the native
 opening level/title/continue modes; an unassessed special/bonus/ending branch
@@ -106,3 +106,19 @@ stops with a recoverable worker fault instead of a wrong picture.
 
 The [validation record](../../architecture/validation/2026-10-07-multigame-prototype.md)
 is the authority for measured support, budgets and remaining gaps.
+
+## Diagnostic checkpoint boundary
+
+`WorkerReplayDiagnostic` is a separate engine diagnostic, initially assessed for
+Sonic 1/GHZ1. It waits for native playable control, captures the ordinary session
+registry and audio producer, runs36 held-input iterations, restores its own
+checkpoint and compares complete GPU frames, pre-focus PCM and owner state.
+Its CLI accepts a verified ROM and a new output directory; it accepts no external
+snapshot, trace state or readiness schedule. Native pause, load, fade, death,
+intro control and changed session/level identity reject the checkpoint boundary.
+
+`ChallengeProbe` runs that diagnostic in a managed sibling JVM while comparing
+two independently booted survivor worlds. It requires the diagnostic to finish
+successfully and continues20 paired ticks after its exit. This is a process-local
+restore test, not a player-facing linked rewind or portable checkpoint format.
+The validation record distinguishes authored checks from completed observations.
