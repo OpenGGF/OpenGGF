@@ -193,7 +193,13 @@ class TestPhase2SampleModIntegration {
             GameModule base=new Sonic2GameModule();var baseProvider=base.getObjectArtProvider();
             ModuleResolutionService resolver=resolver(base,fixture);GameModule resolved=resolver.resolveForLaunch(base,
                     new GameplayLaunchRequest("s2","sonic",List.of()),ModuleResolutionService.LaunchPolicy.STANDARD);
-            assertEquals(1,resolved.getObjectArtProvider().getSheet("EndSign").getPatterns()[0].getPixel(0,0));
+            ObjectRenderManager consumer = new ObjectRenderManager(resolved.getObjectArtProvider());
+            ObjectSpriteSheet replacement = consumer.getSignpostSheet();
+            assertEquals(6, replacement.getFrameCount(), "All idle/spin/Sonic/Tails frames must exist");
+            for (int frame = 0; frame < 6; frame++) {
+                assertFalse(replacement.getFrame(frame).pieces().isEmpty());
+            }
+            assertEquals(6, replacement.getPatterns()[0].getPixel(1, 1));
             assertSame(baseProvider,base.getObjectArtProvider());
             GameModule disabled=resolver.resolveForLaunch(base,new GameplayLaunchRequest("s2","sonic",List.of()),
                     ModuleResolutionService.LaunchPolicy.DETERMINISTIC);

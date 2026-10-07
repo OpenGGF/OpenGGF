@@ -1,5 +1,7 @@
 # Quickstart: standalone game
 
+Read [candidate setup and first build](../getting-started.md) first: Java 21, Maven, and matching absolute engine/SDK jars from one commit. Generate a complete starter with `ggfmod init /absolute/my-standalone --id my-standalone --kind standalone --package example.mystandalone`. Build with the jar properties shown there, edit source, and repeat the same package command.
+
 A standalone mod supplies an original no-ROM game and therefore has the broadest
 surface.
 

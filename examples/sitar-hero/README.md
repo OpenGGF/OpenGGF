@@ -121,3 +121,14 @@ The helper expects existing `s1.gen`, `s2.gen`, `s3k.gen` paths and also accepts
 use the ordinary configured-catalog launch for other filenames. Captures include
 tool-labelled autoplay and use an offline PCM sink, so they prove assets and flow
 rather than physical speaker/controller timing.
+
+
+## Use matching creator artifacts
+
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+
+```sh
+python3 examples/build_example.py sitar-hero --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s3k /absolute/own-s3k.gen
+```
+
+Use `--s1`, `--s2`, or `--s3k` for the games this example consumes. Explicit paths create isolated development configuration and saves; no ROM is copied or linked. The creator kit exports this example with a portable POM and `tools/build_project.py`; it needs no engine source checkout. Only production sources/resources enter the validated mod jar. Read [recipient installation](../../docs/modding/installing-mods.md) before sharing.

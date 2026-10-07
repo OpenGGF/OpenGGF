@@ -1,10 +1,12 @@
 # Quickstart: object or badnik
 
+Read [candidate setup and first build](../getting-started.md) first: Java 21, Maven, and matching absolute engine/SDK jars from one commit. Generate a complete starter with `ggfmod init /absolute/my-object --id my-object --kind object --package example.myobject`. Build with the jar properties shown there, edit source, and repeat the same package command.
+
 The object/zone surface is part of the first Mod API 0.7 contract. Build against
 the current API, declare `engineApiRange: ">=0.7.0 <0.8.0"`, then grant explicit
 code trust.
 
-1. Run `ggfmod init <dir> --id <id> --package <java.package>`.
+1. Run `ggfmod init <dir> --id <id> --kind object --package <java.package>`.
 2. Extend the supported object/badnik base in the generated project and use injected
    `ObjectServices`; never fetch manager singletons from object code.
 3. Register an owned local key from the mod entrypoint and reference it as

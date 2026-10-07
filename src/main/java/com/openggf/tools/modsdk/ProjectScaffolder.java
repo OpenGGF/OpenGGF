@@ -25,6 +25,46 @@ public final class ProjectScaffolder {
     private static final Pattern JAVA_PACKAGE = Pattern.compile(
             "[a-z_][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)*");
 
+    public Path scaffold(Path outputDirectory, String modId, String javaPackage, String kind) throws IOException {
+        if (kind == null || !java.util.Set.of("music", "reskin", "object", "character", "zone", "scene", "standalone").contains(kind))
+            throw new IllegalArgumentException("Unknown starter kind: " + kind);
+        if (kind.equals("object") || kind.equals("zone")) {
+            Path project = scaffold(outputDirectory, modId, javaPackage);
+            Path readme = project.resolve("README.md");
+            String purpose = kind.equals("object")
+                    ? "Object starter: edit SampleBadnik; its test zone already places one visible instance."
+                    : "Zone starter: edit src/main/mod/level-source; the sample object demonstrates owned placements.";
+            Files.writeString(readme, purpose + "\n\n" + Files.readString(readme), StandardCharsets.UTF_8);
+            return project;
+        }
+        ModKeySyntax.requireManifestId(modId);
+        if (javaPackage == null || !JAVA_PACKAGE.matcher(javaPackage).matches()
+                || !javax.lang.model.SourceVersion.isName(javaPackage))
+            throw new IllegalArgumentException("Invalid Java package: " + javaPackage);
+        Path output = outputDirectory.toAbsolutePath().normalize();
+        if (output.getParent() == null || Files.exists(output, LinkOption.NOFOLLOW_LINKS))
+            throw new IOException("Project output already exists or has no parent: " + output);
+        Files.createDirectories(output.getParent());
+        Path staging = Files.createTempDirectory(output.getParent(), output.getFileName() + ".tmp-");
+        try {
+            if (kind.equals("character") || kind.equals("standalone")) {
+                StarterProjects.copyMaintained(staging, kind, modId, javaPackage);
+            } else {
+                writeSimpleProject(staging, kind, modId, javaPackage);
+            }
+            writeText(staging.resolve("README.md"), "# " + displayName(modId) + "\n\n"
+                    + "Complete " + kind + " starter for the unpublished Mod API 0.7 candidate.\n\n"
+                    + "Use Java 21 and matching engine/SDK jars from the same commit. Build twice after an edit:\n\n"
+                    + "```sh\nmvn package -Dopenggf.engine.jar=/absolute/path/engine.jar "
+                    + "-Dopenggf.sdk.jar=/absolute/path/sdk.jar\n```\n\n"
+                    + "The validated distributable is target/" + modId + "-mod.jar. "
+                    + "Run target/classes with ggfmod run, then validate the jar before sharing it.\n"
+                    + "See the creator kit handbook's getting-started.md and installing-mods.md.\n");
+            Files.move(staging, output);
+            return output;
+        } catch (IOException | RuntimeException failure) { deleteTree(staging, failure); throw failure; }
+    }
+
     public Path scaffold(Path outputDirectory, String modId, String javaPackage) throws IOException {
         ModKeySyntax.requireManifestId(modId);
         if (javaPackage == null || !JAVA_PACKAGE.matcher(javaPackage).matches()
@@ -71,6 +111,46 @@ public final class ProjectScaffolder {
         }
     }
 
+    private static void writeSimpleProject(Path root, String kind, String id, String pkg) throws IOException {
+        String conversion = "";
+        String manifestExtras = "";
+        if (kind.equals("reskin")) {
+            writeReskinPng(root.resolve("src/main/mod/sample.png"));
+            // The known white cell of normal Sonic/Tails palette is index 6.
+            String[] colours = {"#000000", "#240000", "#490000", "#6D0000", "#920000", "#B60000", "#FFFFFF", "#DBDBDB", "#929292", "#494949", "#B69249", "#6D4924", "#FF0000", "#DB0000", "#FFB600", "#FFDB00"};
+            String palette = java.util.Arrays.stream(colours).map(c -> "\"" + c + "\"").collect(java.util.stream.Collectors.joining(", "));
+            StringBuilder frames = new StringBuilder();
+            for (int frame = 0; frame < 6; frame++) frames.append("  - delay: 2\n    pieces:\n      - { sourceX: ")
+                    .append(frame * 8).append(", sourceY: 0, widthPixels: 8, heightPixels: 8, xOffset: -4, yOffset: -4, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }\n");
+            writeText(root.resolve("src/main/mod/sample-sheet.yaml"), "formatVersion: 1\npaletteLine: 0\npalette: [" + palette + "]\nframes:\n" + frames);
+            conversion = "<execution><id>art</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration><executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument><argument>convert</argument><argument>art</argument><argument>--image</argument><argument>${project.basedir}/src/main/mod/sample.png</argument><argument>--sheet</argument><argument>${project.basedir}/src/main/mod/sample-sheet.yaml</argument><argument>--out</argument><argument>${project.build.outputDirectory}/art/sample.ggfs</argument></arguments></configuration></execution>";
+            manifestExtras = "artOverrides:\n  signpost: art/sample.ggfs\n";
+        } else if (kind.equals("music")) {
+            writeTone(root.resolve("src/main/resources/audio/theme.wav"));
+            writeText(root.resolve("src/main/resources/audio/audio-manifest.yaml"), "formatVersion: 1\ntracks:\n  - id: theme\n    assetPath: audio/theme.wav\n    loop: true\n    loopStartFrame: 0\n    gain: 0.25\n    tempoEffects: true\nsfx: []\n");
+            manifestExtras = "artOverrides: {}\n";
+        } else {
+            String entry = pkg + ".SceneMod";
+            manifestExtras = "entrypoint: " + entry + "\nartOverrides: {}\n";
+            writeText(root.resolve("src/main/java/" + pkg.replace('.', '/') + "/SceneMod.java"), "package " + pkg + ";\nimport com.openggf.mods.code.GgfMod;\nimport com.openggf.mods.code.ModContext;\npublic final class SceneMod implements GgfMod { public void register(ModContext context) { context.registerStartupScene(StarterScene::new); } }\n");
+            writeText(root.resolve("src/main/java/" + pkg.replace('.', '/') + "/StarterScene.java"), "package " + pkg + ";\nimport com.openggf.mods.scene.*;\npublic final class StarterScene implements ModScene { private int ticks; public void enter(SceneContext ctx) { } public void update(SceneContext ctx) { ticks++; if (ctx.buttonPressed(SceneButtons.B)) ctx.exitToGameTitle(); } public void draw(SceneContext ctx, SceneCanvas canvas) { canvas.clear(0x102040); canvas.text(\"MY SCENE \" + ticks, 16, 16, 0xFFFFFFFF); } }\n");
+        }
+        writeText(root.resolve("src/main/resources/META-INF/openggf-mod.yaml"), "formatVersion: 1\nid: " + id + "\nname: " + displayName(id) + "\nversion: 1.0.0\nauthors: [Mod Author]\ndescription: Original " + kind + " starter.\nengineApiRange: \">=0.7.0 <0.8.0\"\ntype: patch\nbaseGame: s2\ndependencies: []\naudioOverrides: " + (kind.equals("music") ? "{129: theme}" : "{}") + "\n" + manifestExtras);
+        String pom = render("simple-pom.xml.template", Map.of("{{MOD_ID}}", id, "{{PACKAGE}}", pkg, "{{CONVERSION}}", conversion));
+        writeText(root.resolve("pom.xml"), pom);
+    }
+
+    private static void writeTone(Path path) throws IOException {
+        Files.createDirectories(path.getParent());
+        int frames = 16000;
+        java.nio.ByteBuffer wav = java.nio.ByteBuffer.allocate(44 + frames * 2).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        wav.put("RIFF".getBytes(StandardCharsets.US_ASCII)).putInt(36 + frames * 2).put("WAVEfmt ".getBytes(StandardCharsets.US_ASCII))
+                .putInt(16).putShort((short) 1).putShort((short) 1).putInt(8000).putInt(16000).putShort((short) 2).putShort((short) 16)
+                .put("data".getBytes(StandardCharsets.US_ASCII)).putInt(frames * 2);
+        for (int i = 0; i < frames; i++) wav.putShort((short) (3000 * Math.sin(2 * Math.PI * 220 * i / 8000)));
+        Files.write(path, wav.array());
+    }
+
     private static String render(String name, Map<String, String> variables) throws IOException {
         try (InputStream input = ProjectScaffolder.class.getClassLoader()
                 .getResourceAsStream(TEMPLATE_ROOT + name)) {
@@ -84,6 +164,18 @@ public final class ProjectScaffolder {
     private static void writeText(Path path, String text) throws IOException {
         Files.createDirectories(path.getParent());
         Files.writeString(path, text, StandardCharsets.UTF_8);
+    }
+
+    private static void writeReskinPng(Path path) throws IOException {
+        Files.createDirectories(path.getParent());
+        PixelImage image = PixelImage.blank(48, 8);
+        for (int frame = 0; frame < 6; frame++) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+            boolean border = (x == 1 || x == 6) && y >= 1 && y <= 6
+                    || (y == 1 || y == 6) && x >= 1 && x <= 6;
+            boolean mark = y == 3 && x >= 2 && x <= 5 && ((frame + 1) & (1 << (x - 2))) != 0;
+            image.setRGB(frame * 8 + x, y, border || mark ? 0xFFFFFFFF : 0x00000000);
+        }
+        PngCodec.write(path, image);
     }
 
     private static void writeSamplePng(Path path) throws IOException {

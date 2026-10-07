@@ -194,3 +194,14 @@ rewind round trip. V2 covers both leaders across all 19 acts, the ARZ ceiling, f
 teams, jump rejection/Enter confirmation through the host game loop, and lost-ring provenance
 through rewind. Design notes and rejected approaches are in
 [the design record](../../docs/architecture/designs/2026-10-06-sonic-survivors.md).
+
+
+## Use matching creator artifacts
+
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+
+```sh
+python3 examples/build_example.py sonic-survivors --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s3k /absolute/own-s3k.gen
+```
+
+Use `--s1`, `--s2`, or `--s3k` for the games this example consumes. Explicit paths create isolated development configuration and saves; no ROM is copied or linked. The creator kit exports this example with a portable POM and `tools/build_project.py`; it needs no engine source checkout. Only production sources/resources enter the validated mod jar. Read [recipient installation](../../docs/modding/installing-mods.md) before sharing.
