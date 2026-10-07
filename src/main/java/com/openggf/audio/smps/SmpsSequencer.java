@@ -3033,6 +3033,24 @@ public class SmpsSequencer implements CoordFlagContext {
             return;
         }
 
+        if (!noteByteRead && t.type == TrackType.PSG
+                && config.getDelayFreq() == SmpsSequencerConfig.DelayFreq.RESET
+                && (t.baseFnum & 0x8000) != 0) {
+            // S1 PSGDoNext clears the rest bit even for a duration-only unit,
+            // but PSGDoNoteOn tests the saved Freq word and branches on its
+            // sign to PSGSetRest (s1.sounddriver.asm:1832-1858, 1883-1885,
+            // 1918-1920). S2 zPSGDoNoteOn checks FreqHigh bit 7 likewise
+            // (s2.sounddriver.asm:1202-1204). A rest's $FFFF sentinel therefore
+            // still suppresses the frequency, volume and attack. S3K's KEEP
+            // policy preserves a playable frequency instead of this sentinel.
+            t.resting = true;
+            if (config.isAdvancePsgEnvelopeOnRest()) {
+                if (preventAttack) processPsgEnvelope(t);
+                else primePsgRestEnvelope(t);
+            }
+            return;
+        }
+
         if (t.forceRefresh) {
             refreshInstrument(t);
             t.forceRefresh = false;

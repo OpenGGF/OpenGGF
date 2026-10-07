@@ -154,11 +154,11 @@ class TestSitarHeroS1SongCatalogue {
                     if (event.path("frame").asInt() < frames)
                         expected.add(new Attack(event.path("frame").asInt(), event.path("offset").asInt(), event.path("pitch").asInt()));
                 }
-                assertEquals(expected.size(), actual.get(i).size(), "0x" + Integer.toHexString(id)
-                        + " " + identity + " native attack count");
-                for (int index = 0; index < expected.size(); index++)
+                for (int index = 0; index < Math.min(expected.size(), actual.get(i).size()); index++)
                     assertEquals(expected.get(index), actual.get(i).get(index), "0x" + Integer.toHexString(id)
                             + " " + identity + " first divergent attack index=" + index);
+                assertEquals(expected.size(), actual.get(i).size(), "0x" + Integer.toHexString(id)
+                        + " " + identity + " native attack count");
                 if (nativeTrack.path("stop_frame").isInt())
                     assertEquals(nativeTrack.path("stop_frame").asInt(), stopped[i], "native stop for " + identity);
             }
