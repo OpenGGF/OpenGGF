@@ -33,7 +33,11 @@ jobs:
       - name: Build matching candidate artifacts
         run: mvn -B -Dmse=off -DskipTests -Puniversal-jar package
       - name: Assemble reproducible creator kit
-        run: python3 tools/modding/build_creator_kit.py --out "$RUNNER_TEMP/OpenGGF-creator-kit.zip"
+        run: |
+          python3 tools/modding/build_creator_kit.py --out "$RUNNER_TEMP/OpenGGF-creator-kit.zip"
+          python3 tools/modding/build_creator_kit.py --out "$RUNNER_TEMP/OpenGGF-creator-kit-repeat.zip"
+          cmp "$RUNNER_TEMP/OpenGGF-creator-kit.zip" "$RUNNER_TEMP/OpenGGF-creator-kit-repeat.zip"
+          rm "$RUNNER_TEMP/OpenGGF-creator-kit-repeat.zip"
       - name: Compile and rebuild using only exported artifacts
         shell: bash
         run: |
@@ -55,6 +59,8 @@ jobs:
           # Local candidate installation supplies test-scope dependencies; no repository publication.
           mvn -B -q org.apache.maven.plugins:maven-install-plugin:3.1.4:install-file -Dfile="$PWD/mod-testkit.jar" -DgroupId=com.openggf -DartifactId=OpenGGF -Dversion="$version" -Dclassifier=mod-testkit -Dpackaging=jar -DgeneratePom=true
           mvn -B -q -f examples/hello-scene/pom.xml package -Pcreator-tests -Dopenggf.testkit.version="$version" -Dopenggf.engine.jar="$PWD/engine.jar" -Dopenggf.sdk.jar="$PWD/sdk.jar"
+          # A later ordinary build must not execute stale compiled integration tests.
+          mvn -B -q -f examples/hello-scene/pom.xml package -Dopenggf.engine.jar="$PWD/engine.jar" -Dopenggf.sdk.jar="$PWD/sdk.jar"
       - uses: actions/upload-artifact@v4
         with:
           name: OpenGGF-unpublished-creator-kit
