@@ -276,6 +276,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
     private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
     private boolean resetCounterPlacementAfterCameraSnap;
+    // Current-state reload guard, restored before the next frame/rewind boundary.
+    private boolean nativeCurrentReloadInProgress;
     private long completedProductionLoadGeneration;
 
     private final FreshLevelTransitionBoundaryController freshLevelTransitionBoundary = new FreshLevelTransitionBoundaryController();
@@ -3028,8 +3030,25 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 }
             }
 
-            player.setCentreX((short) spawnX);
-            player.setCentreY((short) spawnY);
+            if (ctx.getLoadMode() == LevelLoadMode.FULL
+                    && !nativeCurrentReloadInProgress && !transitions.isLevelRoutineReentry()
+                    && !transitions.hasBigRingReturn() && !transitions.isBonusStageReturn()
+                    && transitions.sanctuaryReentryStage().isEmpty()) {
+                var freshPosition = java.util.Objects.requireNonNull(
+                        activeGameModule().freshLevelStartPosition(currentZone, currentAct),
+                        "freshLevelStartPosition must return an Optional");
+                if (freshPosition.isPresent()) {
+                    spawnX = freshPosition.orElseThrow().centreX();
+                    spawnY = freshPosition.orElseThrow().centreY();
+                }
+            }
+            if (player instanceof AbstractPlayableSprite playable) {
+                com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(playable, spawnX);
+                com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(playable, spawnY);
+            } else {
+                player.setCentreX((short) spawnX);
+                player.setCentreY((short) spawnY);
+            }
             LOGGER.info("Set player position from level start: X=" + spawnX +
                     ", Y=" + spawnY + " (center coordinates)" +
                     ", level: " + levelData);
@@ -3583,11 +3602,25 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Loads the current level for death respawn (no title card).
      */
     public void respawnPlayer() {
-        loadCurrentLevel(false);
+        reloadCurrentNativeState(false, LevelLoadMode.FULL);
     }
 
+    /**
+     * Rebuilds the current native state, including special-stage results/returns.
+     * Unlike a deliberate fresh load, this never applies a module's fresh-entry position.
+     */
     public void loadCurrentLevel(LevelLoadMode loadMode, boolean showTitleCard) {
-        loadCurrentLevel(showTitleCard, loadMode, true);
+        reloadCurrentNativeState(showTitleCard, loadMode);
+    }
+
+    private void reloadCurrentNativeState(boolean showTitleCard, LevelLoadMode loadMode) {
+        boolean previousNativeReload = nativeCurrentReloadInProgress;
+        nativeCurrentReloadInProgress = true;
+        try {
+            loadCurrentLevel(showTitleCard, loadMode, true);
+        } finally {
+            nativeCurrentReloadInProgress = previousNativeReload;
+        }
     }
 
     /**

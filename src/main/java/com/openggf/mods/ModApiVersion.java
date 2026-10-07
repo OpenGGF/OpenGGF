@@ -23,6 +23,8 @@ public final class ModApiVersion {
      * Owner-derived bounded native S2/S3K placement plans retain explicit native
      * rings and add local registered objects and bounded native recovery rings without
      * replacing native level owners.
+     * Native encounters can opt into controlled player input, bounded fresh-entry
+     * centre coordinates and launch-boundary no-save isolation.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

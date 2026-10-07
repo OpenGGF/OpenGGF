@@ -325,6 +325,7 @@ CF-ANNOTATION TYPE com.openggf.game.LevelLoadContext visible @com.openggf.game.M
 CF-ANNOTATION TYPE com.openggf.game.LevelLoadMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelSelectProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelSelectProvider$State visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.LevelStartPosition visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.MasterTitleEntry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.MasterTitleEntry$Action visible @com.openggf.game.ModApi
@@ -1294,6 +1295,7 @@ CONSTRUCTOR com.openggf.game.InitStep public  <init>(java.lang.String,java.lang.
 CONSTRUCTOR com.openggf.game.JoypadPressSnapshot public  <init>(int,boolean,int,boolean)
 CONSTRUCTOR com.openggf.game.LegalDisclaimerScreen public  <init>(com.openggf.graphics.FadeManager)
 CONSTRUCTOR com.openggf.game.LevelLoadContext public  <init>()
+CONSTRUCTOR com.openggf.game.LevelStartPosition public  <init>(int,int)
 CONSTRUCTOR com.openggf.game.MasterTitleEntry$Launch public  <init>(com.openggf.game.MasterTitleEntry,com.openggf.game.MasterTitleEntry$Action)
 CONSTRUCTOR com.openggf.game.MasterTitleEntry$Standalone public  <init>(java.lang.String,java.lang.String,boolean)
 CONSTRUCTOR com.openggf.game.MasterTitleEntry$Stock public  <init>(com.openggf.game.MasterTitleScreen$GameEntry)
@@ -5479,6 +5481,7 @@ METHOD com.openggf.game.GameMode public,static  com.openggf.game.GameMode[] valu
 METHOD com.openggf.game.GameModule public  boolean hasSeparateTailsTailArt()
 METHOD com.openggf.game.GameModule public  boolean hasTrailInvincibilityStars()
 METHOD com.openggf.game.GameModule public  boolean isSidekickSuppressedForZone(int)
+METHOD com.openggf.game.GameModule public  boolean requiresNoSaveSession()
 METHOD com.openggf.game.GameModule public  boolean showsTitleCardActNumber(int,int)
 METHOD com.openggf.game.GameModule public  boolean supportsSidekick()
 METHOD com.openggf.game.GameModule public  boolean suppressesLevelSelect()
@@ -5537,6 +5540,7 @@ METHOD com.openggf.game.GameModule public  int[] getBackgroundScrollOverride(int
 METHOD com.openggf.game.GameModule public  java.lang.String getGameCode()
 METHOD com.openggf.game.GameModule public  java.lang.String requiredDisplayAspect()
 METHOD com.openggf.game.GameModule public  java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters()
+METHOD com.openggf.game.GameModule public  java.util.Optional<com.openggf.game.LevelStartPosition> freshLevelStartPosition(int,int)
 METHOD com.openggf.game.GameModule public  java.util.Optional<com.openggf.game.startup.DonatedDataSelectWarmupTask> getDonatedDataSelectWarmupTask()
 METHOD com.openggf.game.GameModule public  java.util.function.BiFunction<com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.game.ShieldType,com.openggf.level.objects.ShieldObjectInstance> getShieldFactory()
 METHOD com.openggf.game.GameModule public  java.util.function.BiFunction<java.lang.Integer,java.lang.Integer,com.openggf.level.objects.AbstractObjectInstance> getWaterSplashFactory()
@@ -5812,6 +5816,11 @@ METHOD com.openggf.game.LevelSelectProvider public,abstract  void setClearColor(
 METHOD com.openggf.game.LevelSelectProvider public,abstract  void update(com.openggf.control.InputHandler)
 METHOD com.openggf.game.LevelSelectProvider$State public,static  com.openggf.game.LevelSelectProvider$State valueOf(java.lang.String)
 METHOD com.openggf.game.LevelSelectProvider$State public,static  com.openggf.game.LevelSelectProvider$State[] values()
+METHOD com.openggf.game.LevelStartPosition public  int centreX()
+METHOD com.openggf.game.LevelStartPosition public  int centreY()
+METHOD com.openggf.game.LevelStartPosition public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.LevelStartPosition public,final  int hashCode()
+METHOD com.openggf.game.LevelStartPosition public,final  java.lang.String toString()
 METHOD com.openggf.game.LevelState public  int getRingExtraLifeFlags()
 METHOD com.openggf.game.LevelState public  void resetRingsForLoss()
 METHOD com.openggf.game.LevelState public  void setRingExtraLifeFlags(int)
@@ -6689,6 +6698,7 @@ METHOD com.openggf.game.mode.CourseControl$PlayerState public,final  java.lang.S
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean allowsDebugRewind()
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean consumeTitleRequest()
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean drawScene()
+METHOD com.openggf.game.mode.GameplayFrameController public  boolean nativePlayerInput()
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean presentationPaused()
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean retainRolling()
 METHOD com.openggf.game.mode.GameplayFrameController public  com.openggf.game.presentation.RewindPresentation rewindPresentation()
@@ -6832,6 +6842,7 @@ METHOD com.openggf.game.palette.PaletteWrite public,static  com.openggf.game.pal
 METHOD com.openggf.game.patch.DelegatingGameModule public  boolean hasSeparateTailsTailArt()
 METHOD com.openggf.game.patch.DelegatingGameModule public  boolean hasTrailInvincibilityStars()
 METHOD com.openggf.game.patch.DelegatingGameModule public  boolean isSidekickSuppressedForZone(int)
+METHOD com.openggf.game.patch.DelegatingGameModule public  boolean requiresNoSaveSession()
 METHOD com.openggf.game.patch.DelegatingGameModule public  boolean showsTitleCardActNumber(int,int)
 METHOD com.openggf.game.patch.DelegatingGameModule public  boolean supportsSidekick()
 METHOD com.openggf.game.patch.DelegatingGameModule public  boolean suppressesLevelSelect()
@@ -6908,6 +6919,7 @@ METHOD com.openggf.game.patch.DelegatingGameModule public  java.lang.String getG
 METHOD com.openggf.game.patch.DelegatingGameModule public  java.lang.String getIdentifier()
 METHOD com.openggf.game.patch.DelegatingGameModule public  java.lang.String requiredDisplayAspect()
 METHOD com.openggf.game.patch.DelegatingGameModule public  java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters()
+METHOD com.openggf.game.patch.DelegatingGameModule public  java.util.Optional<com.openggf.game.LevelStartPosition> freshLevelStartPosition(int,int)
 METHOD com.openggf.game.patch.DelegatingGameModule public  java.util.Optional<com.openggf.game.startup.DonatedDataSelectWarmupTask> getDonatedDataSelectWarmupTask()
 METHOD com.openggf.game.patch.DelegatingGameModule public  java.util.function.BiFunction<com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.game.ShieldType,com.openggf.level.objects.ShieldObjectInstance> getShieldFactory()
 METHOD com.openggf.game.patch.DelegatingGameModule public  java.util.function.BiFunction<java.lang.Integer,java.lang.Integer,com.openggf.level.objects.AbstractObjectInstance> getWaterSplashFactory()
@@ -15582,6 +15594,8 @@ RECORD-COMPONENT com.openggf.game.JoypadPressSnapshot player1ActionPressed int
 RECORD-COMPONENT com.openggf.game.JoypadPressSnapshot player1StartPressed boolean
 RECORD-COMPONENT com.openggf.game.JoypadPressSnapshot player2ActionPressed int
 RECORD-COMPONENT com.openggf.game.JoypadPressSnapshot player2StartPressed boolean
+RECORD-COMPONENT com.openggf.game.LevelStartPosition centreX int
+RECORD-COMPONENT com.openggf.game.LevelStartPosition centreY int
 RECORD-COMPONENT com.openggf.game.MasterTitleEntry$Launch action com.openggf.game.MasterTitleEntry$Action
 RECORD-COMPONENT com.openggf.game.MasterTitleEntry$Launch entry com.openggf.game.MasterTitleEntry
 RECORD-COMPONENT com.openggf.game.MasterTitleEntry$Standalone continueAvailable boolean
@@ -18607,6 +18621,7 @@ TYPE record public,final com.openggf.game.DemoLamppostState SUPER java.lang.Reco
 TYPE record public,final com.openggf.game.GameplayLaunchTeam SUPER java.lang.Record
 TYPE record public,final com.openggf.game.InitStep SUPER java.lang.Record
 TYPE record public,final com.openggf.game.JoypadPressSnapshot SUPER java.lang.Record
+TYPE record public,final com.openggf.game.LevelStartPosition SUPER java.lang.Record
 TYPE record public,final com.openggf.game.PhysicsModifiers SUPER java.lang.Record
 TYPE record public,final com.openggf.game.PhysicsProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.game.SidekickSpawnOffset SUPER java.lang.Record
@@ -19261,6 +19276,7 @@ TYPE-ANNOTATION com.openggf.game.LevelLoadContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelLoadMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelSelectProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelSelectProvider$State @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.LevelStartPosition @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.MasterTitleEntry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.MasterTitleEntry$Action @com.openggf.game.ModApi

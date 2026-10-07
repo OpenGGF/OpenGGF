@@ -92,6 +92,73 @@ public class TestOwnerBoundGamePatch {
         assertTrue(fixture.findings().findingsFor("claimed-other-owner").isEmpty());
     }
 
+    @Test void noSaveAndFreshEntryQueriesRemainOwnedCallbacks() throws Exception {
+        for (String callback : List.of("requiresNoSaveSession", "freshLevelStartPosition")) {
+            Fixture fixture = fixture(); GameModule base = mock(GameModule.class);
+            GameModule patched = new DelegatingGameModule(base, "claimed-other-owner:launch") {
+                @Override public boolean requiresNoSaveSession() {
+                    if (callback.equals("requiresNoSaveSession")) throw new IllegalStateException(callback);
+                    return true;
+                }
+                @Override public Optional<com.openggf.game.LevelStartPosition> freshLevelStartPosition(int zone, int act) {
+                    throw new IllegalStateException(callback);
+                }
+            };
+            GameModule wrapped = wrap(base, patched, fixture);
+            abort(fixture, callback, () -> {
+                if (callback.equals("requiresNoSaveSession")) wrapped.requiresNoSaveSession();
+                else wrapped.freshLevelStartPosition(7, 0);
+            });
+        }
+    }
+
+    @Test void controlledNativeInputAndModalOverlayCallbacksAreOwnerBounded() throws Exception {
+        for (String callback : List.of("nativePlayerInput", "handleInput")) {
+            Fixture fixture = fixture(); GameModule base = mock(GameModule.class);
+            var controller = new com.openggf.game.mode.GameplayFrameController() {
+                @Override public boolean beforeTick(com.openggf.game.mode.CourseControl course,
+                        com.openggf.control.LogicalInputSnapshot input) { return true; }
+                @Override public void afterTick(com.openggf.game.mode.CourseControl course, boolean advanced) { }
+                @Override public boolean nativePlayerInput() { throw new IllegalStateException(callback); }
+            };
+            com.openggf.game.LevelInputOverlay overlay = input -> { throw new IllegalStateException(callback); };
+            GameModule patched = new DelegatingGameModule(base, "claimed-other-owner:controls") {
+                @Override public com.openggf.game.mode.GameplayFrameController gameplayFrameController() { return controller; }
+                @Override public <T> T getGameService(Class<T> type) {
+                    return type == com.openggf.game.LevelInputOverlay.class ? type.cast(overlay) : super.getGameService(type);
+                }
+            };
+            GameModule wrapped = wrap(base, patched, fixture);
+            abort(fixture, callback, () -> {
+                if (callback.equals("nativePlayerInput")) wrapped.gameplayFrameController().nativePlayerInput();
+                else wrapped.getGameService(com.openggf.game.LevelInputOverlay.class).handleInput(new com.openggf.control.InputHandler());
+            });
+        }
+    }
+
+    @Test @SuppressWarnings("unchecked")
+    void poisonedFreshEntryReturnsAbortTheRecordedPatchOrStandaloneOwner() throws Exception {
+        for (Object poison : new Object[] { null, Optional.of("wrong-payload") }) {
+            for (boolean standalone : new boolean[] { false, true }) {
+                Fixture fixture = fixture(); GameModule base = mock(GameModule.class);
+                GameModule patched = new DelegatingGameModule(base, "claimed-other-owner:poisoned-entry") {
+                    @Override public Optional<com.openggf.game.LevelStartPosition> freshLevelStartPosition(int zone, int act) {
+                        return (Optional<com.openggf.game.LevelStartPosition>) poison;
+                    }
+                };
+                GameModule wrapped = standalone
+                        ? OwnerAwareStandaloneModule.wrap("registered-owner", patched, fixture.boundary(), Map.of())
+                        : wrap(base, patched, fixture);
+                var aborted = assertThrows(ModFaultBoundary.CallbackAborted.class,
+                        () -> wrapped.freshLevelStartPosition(7, 0));
+                assertEquals("registered-owner", aborted.owner());
+                assertEquals("freshLevelStartPosition must return Optional<LevelStartPosition>", aborted.getCause().getMessage());
+                assertFalse(fixture.findings().findingsFor("registered-owner").isEmpty());
+                assertTrue(fixture.findings().findingsFor("claimed-other-owner").isEmpty());
+            }
+        }
+    }
+
     @Test void providerAndControllerCallbacksIncludingCloseAreOwnerBoundedAndStable() throws Exception {
         for (String callback : List.of("beforeTick", "afterTick", "drawOverlay", "close")) {
             Fixture fixture = fixture(); var mode = new Mode(callback); GameModule base = mock(GameModule.class);

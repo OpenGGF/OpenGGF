@@ -76,6 +76,10 @@ public class DelegatingGameModule implements GameModule {
     @Override public com.openggf.game.mode.GameplayFrameController gameplayFrameController() {
         return base.gameplayFrameController();
     }
+    @Override public Optional<LevelStartPosition> freshLevelStartPosition(int zone, int act) {
+        return base.freshLevelStartPosition(zone, act);
+    }
+    @Override public boolean requiresNoSaveSession() { return base.requiresNoSaveSession(); }
     @Override public com.openggf.game.rewind.ScriptedRewind scriptedRewind() { return base.scriptedRewind(); }
     @Override public String requiredDisplayAspect() { return base.requiredDisplayAspect(); }
     @Override public boolean suppressesLevelSelect() { return base.suppressesLevelSelect(); }

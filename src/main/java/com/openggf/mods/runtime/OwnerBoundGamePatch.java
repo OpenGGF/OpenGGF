@@ -77,6 +77,11 @@ public final class OwnerBoundGamePatch {
                     && declaring == base.getClass().getMethod(method.getName(), method.getParameterTypes()).getDeclaringClass();
         }
         private Object returned(Method method, Object[] args, Object value, Object inherited, boolean adapters) {
+            if (method.getName().equals("freshLevelStartPosition")
+                    && (!(value instanceof Optional<?> position)
+                    || position.isPresent() && !(position.orElseThrow() instanceof com.openggf.game.LevelStartPosition))) {
+                throw new IllegalArgumentException("freshLevelStartPosition must return Optional<LevelStartPosition>");
+            }
             if (adapters) {
                 if (!(value instanceof List<?> list)) throw new IllegalArgumentException("rewindAdapters must return a list");
                 if (value == inherited) return value;
