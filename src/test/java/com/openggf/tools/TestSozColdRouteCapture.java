@@ -100,7 +100,7 @@ class TestSozColdRouteCapture {
                 var pendingSpots = new HashSet<String>();
                 var input = input(movie, frame);
                 session.step(input);
-                session.render();
+                session.renderFrame();
                 if (bonusRoute && frame >= 3100 && frame < 3800
                         && beforeLevel != GameServices.level().getCurrentLevel()) {
                     assertTrue(beforeHistoryFrame > 10, "outgoing bonus boundary history at " + frame);
@@ -235,7 +235,7 @@ class TestSozColdRouteCapture {
         var saved = registry.capture();
         for (int n = 1; n <= 45; n++) {
             session.step(input(movie, frame + n));
-            session.render();
+            session.renderFrame();
         }
         assertSame(level, GameServices.level().getCurrentLevel(), "replay window crosses a load at " + frame);
         var forward = registry.capture();
@@ -244,7 +244,7 @@ class TestSozColdRouteCapture {
         session.restoreInputHistory(input(movie, frame));
         for (int n = 1; n <= 45; n++) {
             session.step(input(movie, frame + n));
-            session.render();
+            session.renderFrame();
         }
         same(forward, registry.capture(), "replay " + frame);
         registry.restore(saved);

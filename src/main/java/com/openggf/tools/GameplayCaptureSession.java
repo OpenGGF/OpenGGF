@@ -309,12 +309,27 @@ public final class GameplayCaptureSession implements AutoCloseable {
 
     /** Renders with or without the sprite pass; the tiles-only image is a baseline for pixel checks. */
     public RgbaImage render(boolean includeSprites) {
+        drawFrame(includeSprites);
+        return ScreenshotCapture.captureFramebuffer(width, HEIGHT);
+    }
+
+    /**
+     * Draws and completes the same sprite, overlay and effect passes as {@link #render()},
+     * without reading back pixels. Use for route/state checks that discard the image;
+     * pixel comparisons and capture output must still call {@code render}.
+     */
+    public void renderFrame() {
+        drawFrame(true);
+    }
+
+    private void drawFrame(boolean includeSprites) {
         requireBooted();
         GraphicsManager graphics = GameServices.graphics();
         LevelManager level = GameServices.level();
         graphics.runPendingRenderThreadTasks();
         if (loop.getCurrentGameMode() == GameMode.SPECIAL_STAGE_RESULTS) {
-            return renderSpecialStageResults(graphics, level);
+            renderSpecialStageResults(graphics, level);
+            return;
         }
         level.setClearColor();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -348,11 +363,10 @@ public final class GameplayCaptureSession implements AutoCloseable {
                     graphics.getViewportWidth(), graphics.getViewportHeight());
         }
         glFinish();
-        return ScreenshotCapture.captureFramebuffer(width, HEIGHT);
     }
 
     /** Engine.drawSpecialStageResults: optional level backdrop, then the results sprites. */
-    private RgbaImage renderSpecialStageResults(GraphicsManager graphics, LevelManager level) {
+    private void renderSpecialStageResults(GraphicsManager graphics, LevelManager level) {
         org.lwjgl.opengl.GL11.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         ResultsScreen results = loop.getResultsScreen();
@@ -375,7 +389,6 @@ public final class GameplayCaptureSession implements AutoCloseable {
             ui.renderFadePass();
         }
         glFinish();
-        return ScreenshotCapture.captureFramebuffer(width, HEIGHT);
     }
 
     public AbstractPlayableSprite player() {

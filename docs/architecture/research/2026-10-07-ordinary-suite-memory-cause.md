@@ -544,3 +544,127 @@ The three measured diagnostic source hashes matched the integrated files.
 Reviewing the updated-base selection again showed the full fallback, including
 unrelated preserved untracked files; the diagnostic-only scope justification
 above still applies. No extra Maven queue request was submitted.
+
+## Retention and discarded-readback follow-up
+
+The next candidate is scoped to the measured test owners, not engine gameplay.
+It releases the source corpus in `@AfterAll`, makes audio service evidence
+instance-owned and clears it after each case, and constructs complete
+request/decision stress rows without the helper evidence map. The existing
+half-million-request test additionally checks that its input factory retains
+no extra service evidence. Missing evidence no longer eagerly builds a default
+state for every successful map lookup.
+
+`OwnedMocks` records only mocks/spies created by that fixture invocation and
+clears their inline interceptors after assertions and teardown. It is used by
+the measured MHZ, SOZ, LRZ and S2 PLC tests, not installed globally. SOZ keeps
+its verified player mock; only unverified level/debug stubs are non-recording.
+LRZ's unverified player is non-recording and its fixed position is installed
+once before the frame loop instead of adding identical stubbings each tick.
+The stub-count and call-history checks preserve the actual boss-state assertions.
+A focused ownership control checks that cleanup leaves a second fixture's mock
+valid and preserves ordinary mock, spy, custom-answer and stub-only behavior.
+
+The capture helper separates drawing from image readback. `render()` still
+performs the same drawing and screenshot capture. `renderFrame()` keeps render
+thread tasks, sprite ordering, controlled scene/overlays, titles, fades, VHS
+and `glFinish()`, omitting only framebuffer readback and RGBA construction.
+Only discarded images in `TestSozColdRouteCapture` are replaced in this batch;
+all nine routes and their full-world rewind, boss, puzzle, results and
+load-history assertions remain. Existing image consumers retain readback.
+New native controls compare ordinary/title pixels and state at 320/800 widths,
+exercise actual S3K special-stage results, and assert that the draw-only call
+does not invoke screenshot readback.
+
+The independent acknowledgment fix was delivered in `37a57ebdb`, with its
+process-lock evidence in the [focused-throughput research](2026-10-07-maven-focused-throughput.md#independent-diagnostic-cleanup-follow-up).
+The combined change-based plan selected all 3,009 ordinary classes plus guards
+through the shared-path fallback. Proportionate validation is appropriate for
+the unchanged gameplay and original capture contract: the changed fixture
+lifetimes and optional readback are exercised directly, including native
+rendering and complete SOZ routes. POM, selection policy, runtime algorithms,
+timing/physics, CI and release gates are unchanged. The Python cleanup component
+uses the runner exception. These focused checks are not a full-suite pass.
+
+Both memory runs select the same nine classes with the ordinary Surefire
+shape (one reused 3 GiB fork, alphabetical order and verified absolute ROMs).
+They retain between-class requested GC for a matched retained-floor/control
+comparison. Execution is bounded to 12 minutes, excluding queue wait;
+7–9 execution minutes were budgeted. The baseline worktree remains at
+`2fc65c8479570f16ebd9830115485ee369c2b1e6`; the candidate's updated base
+`37a57ebdb` differs only by the independently verified Python cleanup changes.
+Cold build/Maven-parent costs must not be described as test-class time or
+assumed to improve with these Java fixture changes.
+
+The baseline completed at that pinned commit with **281 tests in nine reports,
+zero failures, errors or skips**, and a completed observer plan with no active
+test windows. The command below ran from `.worktrees/ai-test-throughput-fixes`;
+the profiler supplied the verified absolute ROM paths. Its queue wait was
+4,314 seconds (71.9 minutes), separate from the **225.201-second** test-plan
+measurement. The final post-plan requested collection was observed and retained
+**1,270,886,640 bytes (1.184 GiB)** of used heap. This is a passing selected-run
+retention baseline, not proof of a historical OOM or an application leak.
+
+```bash
+python3 tools/testing/profile_ordinary_memory.py \
+  --test TestStaleRewindCodecHelperCleanup,TestSonic2RuntimePlcRendererRefresh,TestMhzBossObjects,TestSozMiniboss,TestLrzMinibossHitPath,TestCompleteRunAudioComparator,TestSozColdRouteCapture,TestGameplayCaptureSmoke,TestGameplayCaptureSkippedTitles \
+  --max-minutes 12 --output target/throughput-memory-baseline.json
+```
+
+The SOZ capture class took **210.731 seconds**, allocating **210.38 GiB** on
+the measured test thread. LRZ took **5.986 seconds**, allocating **20.86 GiB**.
+Audio comparison took **1.490 seconds**, allocating **3.57 GiB**. These are
+allocation totals over execution, not simultaneously live memory. The other
+six classes each took less than two seconds. The sampled process-tree peaks
+were 5.51 GiB RSS and 2.35 GiB swap, measured separately; individual JVM maxima
+must not be added as simultaneous consumption. The Maven parent alone peaked
+at 2.43 GiB RSS and 2.01 GiB swap, which is independent of the proposed test
+fixture retention fixes.
+
+The first candidate attempt stopped at test compilation (Maven exit 1 after
+67 seconds), with zero tests and no observer plan. Two S2 PLC fixture helpers
+still had `static` declarations after moving their mock creation to the
+invocation owner; all six compiler errors referred to those instance-field
+uses. Removing `static` from the two helpers repairs their lifetime access.
+The already queued functional check also stopped on those declarations before
+the correction, after 19.200 seconds, with zero tests. Neither attempt supplies
+a test-memory or performance result; the corrected candidate and functional
+checks use new queued invocations.
+
+The corrected candidate at `37a57ebdb` plus the pending Java diff completed the
+same **281 test identities and outcomes** as the baseline: nine reports,
+zero failures, errors or skips, one completed observer plan and no active
+windows. It ran the same command from `.worktrees/ai-test-throughput-candidate`,
+substituting `target/throughput-memory-candidate.json` for the output. That
+retry waited 362 seconds. Its final post-plan collection was observed and
+retained **23,702,928 bytes (22.605 MiB)**, a **98.1% decrease** from the selected
+baseline. The test plan took **177.574 seconds**, 21.1% less in this single
+matched, instrumented pair. This is not a measured full-suite speedup.
+
+| Changed class | Baseline seconds | Candidate seconds | Baseline thread allocation GiB | Candidate thread allocation GiB |
+|---|---:|---:|---:|---:|
+| `TestLrzMinibossHitPath` | 5.986 | 1.777 | 20.86 | 2.59 |
+| `TestSozColdRouteCapture` | 210.731 | 168.097 | 210.38 | 114.10 |
+| `TestCompleteRunAudioComparator` | 1.490 | 1.138 | 3.57 | 2.26 |
+
+LRZ's fixed stubs/non-recording player cut measured allocation 87.6%; SOZ's
+discarded readback removal cut it 45.8%, retaining all nine routes and assertions.
+Audio's factory/lifetime changes cut it 36.7%. The other six candidate classes
+each remained under two seconds. Source-corpus parsing itself still allocated
+about 249 MiB; releasing that cache changes retention, not its parsing work.
+The paired test-fork sampled peak RSS fell from 3.23 to 1.30 GiB. The candidate
+still had a Maven parent peaking at 2.08 GiB RSS and 1.72 GiB swap; build
+preparation differed after the compilation repair, so its change is not
+attributed to the Java fixture fixes. The queue reservations remain unchanged.
+
+The first executed functional control covered 21 cases, with no skips/errors.
+The existing SOZ background and capture-argument controls passed all 14 cases.
+Five assertions in the two new control classes exposed faulty test assumptions:
+Mockito's scoped cleanup need not make a later method call throw, and a visible
+title/results screen need not contain more than 16 distinct colours. The
+corrected controls check that final-class inline mocks/spies cease to be mocks,
+execute their real method after cleanup, and leave another owner's mock valid.
+Native controls require a non-uniform framebuffer, exact pixel/state equality,
+an active title overlay in title cases, and zero screenshot calls during the
+draw-only path. Production drawing and the measured nine-class inputs were
+unchanged by these control corrections.

@@ -29,6 +29,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntFunction;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.io.TempDir;
 
 // Minutes-long oracle sweep: excluded from the -Psmoke fast lane, still run by
@@ -39,10 +40,15 @@ class TestCompleteRunAudioComparator {
     private static final int FIRST_FRAME = 860;
     private static final OwnerRef NONE = new OwnerRef(OwnerClass.NONE, "none", 0,
             OwnerOrigin.NONE, -1);
-    private static final Map<DriverService, ServiceEvidence> SERVICE_EVIDENCE = new IdentityHashMap<>();
+    private final Map<DriverService, ServiceEvidence> serviceEvidence = new IdentityHashMap<>();
 
     @TempDir
     Path temp;
+
+    @AfterEach
+    void releaseServiceEvidence() {
+        serviceEvidence.clear();
+    }
 
     @Test
     void coverageRequiresCorrelatedMatchBeforeReportingFullParity() throws Exception {
@@ -3532,6 +3538,7 @@ class TestCompleteRunAudioComparator {
         Metadata metadata = metadata(profile, ProducerKind.OPENGGF,
                 profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF));
 
+        int factoryEntries = serviceEvidence.size();
         CompleteRunAudioComparator.ValidationDiagnostics diagnostics =
                 CompleteRunAudioComparator.validateSemanticsForDiagnostics(metadata, profile,
                         CompleteRunAudioReport.Side.ENGINE, stressRecords(frames));
@@ -3541,6 +3548,8 @@ class TestCompleteRunAudioComparator {
         assertEquals(0, diagnostics.peakSavedOwners());
         assertEquals(1, diagnostics.liveRoleOwners());
         assertEquals(500_000, diagnostics.completedRequests());
+        assertEquals(factoryEntries, serviceEvidence.size(),
+                "the streaming input factory must not retain completed services");
     }
 
     @Test
@@ -3986,7 +3995,7 @@ class TestCompleteRunAudioComparator {
                 List.of());
     }
 
-    private static Iterator<CompleteRunAudioTrace.Record> stressRecords(int frames) {
+    private Iterator<CompleteRunAudioTrace.Record> stressRecords(int frames) {
         return new Iterator<>() {
             private int cursor = -1;
             @Override public boolean hasNext() { return cursor <= frames + 1; }
@@ -4113,36 +4122,36 @@ class TestCompleteRunAudioComparator {
         return fullFrame(FIRST_FRAME + row, "test", false, List.of(), List.of());
     }
 
-    private static Frame bufferedFrame(int row, List<DriverService> semanticServices,
+    private Frame bufferedFrame(int row, List<DriverService> semanticServices,
             List<FrontierService> nativeServices, NativeManagedCorrelation... correlations) {
         return fullFrame(FIRST_FRAME + row, "test", false, List.of(), semanticServices, List.of(),
                 new FrameNativeDiagnostics(nativeServices, List.of(), List.of(), List.of(),
                         List.of(correlations)));
     }
 
-    private static Frame requestFrame(int row, Request request) {
+    private Frame requestFrame(int row, Request request) {
         return fullFrame(FIRST_FRAME + row, "test", false, List.of(request), List.of());
     }
 
-    private static Frame requestAndDecisionFrame(int row, Request request, Decision decision,
+    private Frame requestAndDecisionFrame(int row, Request request, Decision decision,
             long serviceOrdinal) {
-        return fullFrame(FIRST_FRAME + row, "test", false, List.of(request),
-                List.of(service(serviceOrdinal, List.of(decision), List.of(), activeState(1))));
+        return requestAndDecisionFrame(row, request, decision, serviceOrdinal, activeState(1));
     }
 
-    private static Frame requestAndDecisionFrame(int row, Request request, Decision decision,
+    private Frame requestAndDecisionFrame(int row, Request request, Decision decision,
             long serviceOrdinal, NormalizedState state) {
-        return fullFrame(FIRST_FRAME + row, "test", false, List.of(request),
-                List.of(service(serviceOrdinal, List.of(decision), List.of(), state)));
+        return fullFrame(FIRST_FRAME + row, "test", false, List.of(request), List.of(decision),
+                List.of(new DriverService(serviceOrdinal, "driver", ServiceCompletion.COMPLETED,
+                        null, null, null, ServiceAncestry.root())), state, List.of(), null);
     }
 
-    private static Frame chipFrame(int row, int serviceOrdinal, int value) {
+    private Frame chipFrame(int row, int serviceOrdinal, int value) {
         return fullFrame(FIRST_FRAME + row, "test", false, List.of(),
                 List.of(service(serviceOrdinal, List.of(),
                         List.of(new YmWrite(0, 0, 0x22, value)), activeState(1))));
     }
 
-    private static Frame frame(DriverService service) {
+    private Frame frame(DriverService service) {
         return fullFrame(FIRST_FRAME, "test", false, List.of(), List.of(service));
     }
 
@@ -4199,12 +4208,12 @@ class TestCompleteRunAudioComparator {
                 OwnerOrigin.REQUEST, requestOrdinal);
     }
 
-    private static Frame fullFrame(int absoluteFrame, String segment, boolean lag, List<Request> requests,
+    private Frame fullFrame(int absoluteFrame, String segment, boolean lag, List<Request> requests,
             List<DriverService> services) {
         return fullFrame(absoluteFrame, segment, lag, requests, services, frameChips(services), null);
     }
 
-    private static Frame fullFrame(int absoluteFrame, String segment, boolean lag, List<Request> requests,
+    private Frame fullFrame(int absoluteFrame, String segment, boolean lag, List<Request> requests,
             List<DriverService> services, List<ChipEvent> chips, FrameNativeDiagnostics diagnostics) {
         List<Decision> decisions = services.stream().flatMap(service -> evidence(service).decisions().stream())
                 .toList();
@@ -4214,63 +4223,64 @@ class TestCompleteRunAudioComparator {
                 diagnostics);
     }
 
-    private static Frame fullFrame(int absoluteFrame, String segment, Boolean lag, List<Request> requests,
+    private Frame fullFrame(int absoluteFrame, String segment, Boolean lag, List<Request> requests,
             List<Decision> decisions, List<DriverService> services, NormalizedState postRowState,
             List<ChipEvent> chips, FrameNativeDiagnostics diagnostics) {
         return new Frame(absoluteFrame, segment, lag, requests, decisions, services, postRowState, chips,
                 diagnostics);
     }
 
-    private static List<ChipEvent> frameChips(List<DriverService> services) {
+    private List<ChipEvent> frameChips(List<DriverService> services) {
         return services.stream().flatMap(service -> evidence(service).chipEvents().stream())
                 .sorted(java.util.Comparator.comparingLong(ChipEvent::ordinal)).toList();
     }
 
-    private static ServiceEvidence evidence(DriverService service) {
-        return SERVICE_EVIDENCE.getOrDefault(service, new ServiceEvidence(List.of(), state(1), List.of()));
+    private ServiceEvidence evidence(DriverService service) {
+        ServiceEvidence evidence = serviceEvidence.get(service);
+        return evidence != null ? evidence : new ServiceEvidence(List.of(), state(1), List.of());
     }
 
-    private static DriverService testService(long ordinal, String kind, ServiceCompletion completion,
+    private DriverService testService(long ordinal, String kind, ServiceCompletion completion,
             List<Decision> decisions, NormalizedState state, List<ChipEvent> chips) {
         return testService(ordinal, kind, completion, decisions, state, chips, null, null, null,
                 ServiceAncestry.root());
     }
 
-    private static DriverService testService(long ordinal, String kind, ServiceCompletion completion,
+    private DriverService testService(long ordinal, String kind, ServiceCompletion completion,
             List<Decision> decisions, NormalizedState state, List<ChipEvent> chips, Long carriedBoundaryOrdinal) {
         return testService(ordinal, kind, completion, decisions, state, chips, carriedBoundaryOrdinal,
                 null, null, ServiceAncestry.root());
     }
 
-    private static DriverService testService(long ordinal, String kind, ServiceCompletion completion,
+    private DriverService testService(long ordinal, String kind, ServiceCompletion completion,
             List<Decision> decisions, NormalizedState state, List<ChipEvent> chips, Long carriedBoundaryOrdinal,
             ServiceAncestry ancestry) {
         return testService(ordinal, kind, completion, decisions, state, chips, carriedBoundaryOrdinal,
                 null, null, ancestry);
     }
 
-    private static DriverService testService(long ordinal, String kind, ServiceCompletion completion,
+    private DriverService testService(long ordinal, String kind, ServiceCompletion completion,
             List<Decision> decisions, NormalizedState state, List<ChipEvent> chips, Long carriedBoundaryOrdinal,
             ServiceCoordinate beginCoordinate, ServiceCoordinate endCoordinate, ServiceAncestry ancestry) {
         DriverService service = new DriverService(ordinal, kind, completion, carriedBoundaryOrdinal,
                 beginCoordinate, endCoordinate, ancestry);
-        SERVICE_EVIDENCE.put(service, new ServiceEvidence(List.copyOf(decisions), state, List.copyOf(chips)));
+        serviceEvidence.put(service, new ServiceEvidence(List.copyOf(decisions), state, List.copyOf(chips)));
         return service;
     }
 
-    private static DriverService testService(long ordinal, String kind, ServiceCompletion completion,
+    private DriverService testService(long ordinal, String kind, ServiceCompletion completion,
             Long carriedBoundaryOrdinal, ServiceCoordinate beginCoordinate, ServiceCoordinate endCoordinate,
             ServiceAncestry ancestry) {
         return new DriverService(ordinal, kind, completion, carriedBoundaryOrdinal,
                 beginCoordinate, endCoordinate, ancestry);
     }
 
-    private static DriverService service(long ordinal, List<Decision> decisions, List<ChipEvent> chipEvents,
+    private DriverService service(long ordinal, List<Decision> decisions, List<ChipEvent> chipEvents,
             NormalizedState state) {
         return service(ordinal, decisions, chipEvents, state, "driver");
     }
 
-    private static DriverService service(long ordinal, List<Decision> decisions, List<ChipEvent> chipEvents,
+    private DriverService service(long ordinal, List<Decision> decisions, List<ChipEvent> chipEvents,
             NormalizedState state, String kind) {
         return testService(ordinal, kind, ServiceCompletion.COMPLETED, decisions, state, chipEvents);
     }

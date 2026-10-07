@@ -2,6 +2,7 @@ package com.openggf.game.rewind;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -167,6 +168,11 @@ class TestStaleRewindCodecHelperCleanup {
     static void loadSourceCorpusOnce() throws IOException {
         sourceCorpus = loadSourceCorpus();
         assertTrue(!sourceCorpus.isEmpty(), "source corpus must not be empty");
+    }
+
+    @AfterAll
+    static void releaseSourceCorpus() {
+        sourceCorpus = null;
     }
 
     private static List<SourceFile> loadSourceCorpus() throws IOException {
