@@ -104,14 +104,19 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
         return 1 + level(Upgrades.SPRING_HEELS);
     }
 
-    /** Combo multiplier on damage and ring drops: +25% per chained bounce, capped. */
+    /** Damage bonus: +25% per chained bounce, capped. Ring rewards use a gentler fraction. */
     double comboMultiplier() {
         int cap = BASE_COMBO_CAP + (relic(2) ? 2 : 0);
         return Math.min(cap, 1 + 0.25 * Math.max(0, combo - 1));
     }
 
-    int toll() {
-        return Math.max(2, BASE_TOLL - 2 * level(Upgrades.ARMOR) - (relic(4) ? 3 : 0));
+    int toll() { return toll(0); }
+
+    /** Large banks remain valuable, but no longer buy hundreds of mistakes. */
+    int toll(int rings) {
+        int base = Math.max(BASE_TOLL, (rings + 11) / 12);
+        int protection = 8 * level(Upgrades.ARMOR) + (relic(4) ? 15 : 0);
+        return Math.max(5, (base * (100 - protection) + 99) / 100);
     }
 
     int magnetRadius() {

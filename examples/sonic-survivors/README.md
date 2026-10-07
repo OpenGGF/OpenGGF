@@ -1,11 +1,10 @@
-# Sonic Survivors v2 — a bounce-driven survivors roguelike for Sonic 2
+# Sonic Survivors — a bounce-driven survivors roguelike for Sonic 2
 
 A code mod for OpenGGF's JVM build. Select **Sonic or Tails** as the main character on the
 engine's launch screen, then start Sonic 2. Runs are **solo**: configured sidekicks are disabled.
 Every zone on the route becomes a walled **arena** cut from its own act's terrain, and badniks pour in from both sides and from above.
 Your character starts with nothing but their jump: **bounce on badniks to keep going**. Each rebound off an
-enemy chains a **combo** that multiplies stomp damage and ring drops, every tenth chained bounce
-sets off **Fever** (the stock invincibility), and defeated badniks drop **rings**, which are both
+enemy chains a **combo** that multiplies stomp damage and ring drops, ten eligible bounces charge an eight-second **Fever** burst, and defeated badniks drop **rings**, which are both
 your **health** and **experience**. Level up to pick new weapons, moves and passives,
 survive the two- or five-minute clock, beat the zone's **boss**, choose the next act, and push on to
 the Death Egg. Rings and Chaos Emeralds won along the way upgrade both characters between runs.
@@ -39,18 +38,20 @@ Sky Chase has no ground to fight on and is skipped.
    The **MODE** row cycles with Enter/Start between **2 MINUTES**, **5 MINUTES** and **ENDLESS**.
    Five-minute and endless modes unlock permanently after your first boss clear; existing
    profiles with a cleared boss already qualify. The choice is saved and fixed for the run.
-   Five-minute mode stretches the wave difficulty ramp across the longer clock, keeping
-   30-second elites and 10-second ring formations. Endless stays in the starting arena,
+   Five-minute mode adds more encounters with a gentler pressure ramp and a tougher boss,
+   keeping 10-second ring formations. Endless stays in the starting arena,
    shows elapsed time, and keeps spawning waves without a boss or route transition;
-   enemy counts (including elites and swarms) and spawn rates retain their caps. Uncollected
+   enemy health, batch sizes and elite frequency keep escalating. Enemies, enemy shots, reward
+   pickups and player projectiles have no fixed population ceiling; arena objects do not consume
+   the original game's limited object slots. Uncollected
    reward rings and monitors blink and expire after one minute to keep object slots available;
-   newly merged ring rewards refresh that pile's lifetime. Emeralds never expire. Escape/Back retires and banks held rings
+   Emeralds never expire. Escape/Back retires and banks held rings
    too; dying uses the usual game-over payout. Death Egg always stays a direct boss finale.
 3. **Survive.** The clock counts down **2:00** or **5:00** (upwards in endless). Badniks spawn just off-screen on both sides and
    drop in from above, faster and tougher as the clock runs down and further along the route.
    Every 10 seconds a formation of five floating rings appears somewhere in the arena away
-   from Sonic. Red chevrons at the screen edges point at badniks approaching from off-screen. Every 30
-   seconds an **elite** (150% size, ELITE label, gold health bar, six times the hitpoints) arrives; it drops a monitor.
+   from Sonic. Red chevrons at the screen edges point at badniks approaching from off-screen. Initially every 30
+   seconds an **elite** (150% size, ELITE label, gold health bar, six times the hitpoints) arrives; this interval shortens with pressure down to eight seconds. It drops a monitor.
 4. **Boss.** At 0:00 the zone champion arrives. Most zones use Eggman's complete vehicle
    assembled from its ROM mapping components, hovering within a jump of the player's ground, sweeping the arena, dropping volleys of the zone's
    projectiles (Mystic Cave drops rocks from the roof) and swooping at the player after a
@@ -73,10 +74,28 @@ Sky Chase has no ground to fight on and is skipped.
 
 Press **Escape** (or the gamepad Back button) at any time to bank the run and return to the title.
 
+## Encounters and pressure
+
+Every 30 seconds brings a new encounter: **Crossfire**, **Air Raid**, then **Stampede**,
+repeating with increasing pressure. Air Raids favour the zone's flyers; Stampedes favour
+its ground badniks (zones without one group use their available enemies). At 15 seconds a
+**SURGE IN 3...** warning announces seven seconds of faster, larger waves starting at 18.
+The last five seconds are **REGROUP**: ordinary reinforcements stop so you can clean up and
+collect rewards. Scheduled elites can still arrive. The HUD shows the wave, phase and progress.
+Boss fights use mixed, slower reinforcements without the surge cycle.
+
+Enemy health continues growing with elapsed combat time, route tier and chosen act. Spawn
+batches grow too, even once spawn intervals reach their minimum. Five-minute mode uses 75%
+of the normal time-pressure ramp and doubles the timed boss's health. Death Egg remains its
+direct finale. Endless keeps escalating instead of reaching a population/health plateau.
+
 ## Rings are health
 
-Any badnik, projectile or boss hit costs a **ring toll** of 10 rings (less with Armor), with no
-knockback; half the toll scatters as rings you can grab back. These **lost rings** ignore
+Any badnik, projectile or boss hit costs a **ring toll**: 10 rings or one twelfth of your
+held rings rounded up, whichever is greater, before Armor. Armor reduces that toll by 8%
+per level; the red emerald adds 15% reduction, with a five-ring minimum. The HUD shows the
+current cost. Large banks still help, but cannot trivialise an entire run. Hits give one
+second of protection, with no knockback; half the toll scatters as rings you can grab back. These **lost rings** ignore
 all magnets, award no new experience or collected-ring credit, blink after four seconds and
 expire after five seconds; reward rings remain magnetic. A shield absorbs a hit instead.
 A hit with **no rings** is lethal, unless a revive remains (Revival shop item, Oil Ocean's
@@ -94,7 +113,15 @@ Power and the shop, times the **combo multiplier**. Every rebound off an enemy w
 adds one to the combo: +25% per bounce after the first, capped at 6x (8x with Aquatic Ruin's
 emerald). Sonic always rebounds upward from a stomp, so a well-aimed chain can stay off the
 ground for a long time. Landing ends the combo (Combo Keeper adds a grace period). A chain of
-five or more pays out a shower of rings when it ends, and every tenth bounce triggers **Fever**.
+five or more pays half its length in bonus rings (rounded down, at most 20) when it ends.
+Combo damage retains its full multiplier; enemy ring rewards gain only 10% of the multiplier's
+extra portion, preventing damage, healing and experience from all snowballing together.
+
+**Fever** charges over ten bounces, across chains. It grants eight seconds of invincibility,
+then needs fifteen seconds of active play to recover before charging again. Bounces while
+invincible, Super, or recharging do not charge or refresh it. The HUD shows charge, remaining
+Fever time and recovery. Card menus freeze these timers; rewind restores them. Invincibility
+monitors keep their own stock duration.
 
 ## Level-ups
 
@@ -119,7 +146,7 @@ also toggle the engine pause. During ordinary play the usual pause controls stil
 | Ground Pound | move | 3 | Press down in the air to slam; the landing quakes the floor |
 | Power | passive | 5 | +25% damage per level |
 | Magnet | passive | 5 | Rings fly to Sonic from further away |
-| Armor | passive | 5 | Hits cost 2 fewer rings per level (never fewer than 2) |
+| Armor | passive | 5 | Hit toll -8% per level (minimum 5 rings) |
 | Haste | passive | 5 | Weapon cooldowns -10% per level |
 | Greed | passive | 5 | Extra ring drops and +20% experience per level |
 | Spring Heels | passive | 5 | Higher rebounds and +1 stomp damage per level |
@@ -153,7 +180,7 @@ badnik on screen takes a heavy hit) and the **?** monitor (every reward ring on 
 | Yellow | Chemical Plant | +1 reroll each zone |
 | Blue | Aquatic Ruin | Combo multiplier cap +2x |
 | Pink | Casino Night | +1 ring from every badnik |
-| Red | Hill Top | Hits cost 3 fewer rings |
+| Red | Hill Top | Hit toll -15% |
 | Grey | Mystic Cave | A shield at every zone start |
 | Cyan | Oil Ocean | +1 revive per run |
 | All seven | | +25% damage, and Super Sonic when playing Sonic: with 50 rings, jump again in mid-air to transform (invincible; rings drain each second) |
@@ -168,8 +195,8 @@ python3 examples/sonic-survivors/build.py --run  # ... then launch the engine wi
 ```
 
 Install the jar through the Mod Manager like any trusted code mod. Native builds cannot load
-code mods. The mod plays at 16:9 and hides the stock level select. Version 0.2.0 requires the engine
-build containing `LevelInputOverlay`; rebuild this checkout when updating from v1. Existing
+code mods. The mod plays at 16:9 and hides the stock level select. Version 0.4.0 requires the engine
+build containing `LevelInputOverlay`; rebuild this checkout when updating an older engine. Existing
 profile saves remain compatible.
 
 Film it headlessly with the gameplay capture tool's `--mod` option, for example:
@@ -194,7 +221,7 @@ seconds and `sonic-survivors.bossHp=N` sets every boss's hitpoints.
 - `Stages` holds the route, each act's arena bounds (found with the
   `FloorSegmentSurveyProbe` and checked in captures), the zone line-ups and the boss art.
 - `Stage` is the arena controller: camera and boundary, phases, waves, weapons and moves (in
-  fixed primitive pools so mod-object rewind capture restores them), the combo, level-up cards
+  growable projectile arrays and a bounded cosmetic-effect pool so mod-object rewind capture restores them), the combo, level-up cards
   and menus. `Hud` draws everything with a code-drawn font.
 - `Enemy` (one class, seven AI archetypes over `Species`), `Boss`, `Shot` and `Pickup` are mod
   objects drawn with the ROM art the zone already loads; frames were picked with the
@@ -204,7 +231,7 @@ seconds and `sonic-survivors.bossHp=N` sets every boss's hitpoints.
 `TestSonicSurvivors` packages the mod through `ggfmod` and drives it headlessly: camp, the
 arena walls, every route act, stomps and the combo, level-ups and all weapons at once, the boss,
 emerald and route choice, the Death Egg finale, death and banking, the shop, ring tolls and a
-rewind round trip. V2 covers both leaders across all 19 acts, the ARZ ceiling, forced solo
+rewind round trip. Coverage includes both leaders across all 19 acts, the ARZ ceiling, forced solo
 teams, jump rejection/Enter confirmation through the host game loop, and lost-ring provenance
 through rewind. Design notes and rejected approaches are in
 [the design record](../../docs/architecture/designs/2026-10-06-sonic-survivors.md).

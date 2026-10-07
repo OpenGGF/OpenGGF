@@ -844,23 +844,138 @@ class TestSonicSurvivors {
         assertTrue(lost.isDestroyed());
     }
 
-    @Test void eliteAndWhispSwarmSpawnsRespectThePopulationCap() throws Exception {
+    @Test void hordesExceedBothOldCapsAndRestoreWithoutConsumingNativeSlots() throws Exception {
         var fixture = launch(2, 0);
         startRun(fixture);
         int whisp = field(loader.loadClass("survivors.Species"), "WHISP").getInt(null);
-        for (int i = 0; i < 12; i++) call(stage(), "spawnEnemy", new int[0], new int[]{whisp}, 2, false);
-        assertEquals(34, objects("Enemy").size(), "swarm buddies share the population budget");
-        call(stage(), "spawnEnemy", new int[0], new int[]{whisp}, 2, true);
-        assertEquals(34, objects("Enemy").size(), "scheduled elites cannot grow beyond the cap");
+        var manager = GameServices.level().getObjectManager();
+        int freeSlot = manager.firstFreeDynamicSlot();
+        for (int i = 0; i < 100; i++) call(stage(), "spawnEnemy", new int[0], new int[]{whisp}, 2, false);
+        assertEquals(300, objects("Enemy").size());
+        assertEquals(freeSlot, manager.firstFreeDynamicSlot(), "hordes cannot starve native power-up visuals");
         set(stage(), "eliteTimer", 1);
-        set(stage(), "banner", "");
         call(stage(), "spawnWaves");
-        assertEquals("", get(stage(), "banner"), "a full arena cannot announce an elite it did not spawn");
-        objects("Enemy").get(0).setDestroyed(true);
+        assertEquals("ELITE INCOMING!", get(stage(), "banner"));
+        int count = objects("Enemy").size();
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        var first = objects("Enemy").get(0);
+        int x = first.getX();
+        fixture.sprite().setInvulnerableFrames(100000);
+        fixture.stepIdleFrames(20);
+        assertNotEquals(x, first.getX(), "slotless enemies participate in gameplay updates");
+        registry.restore(snapshot);
+        assertEquals(count, objects("Enemy").size());
+        assertTrue(objects("Enemy").stream().allMatch(e -> e.getSlotIndex() == -1));
+        assertEquals(freeSlot, manager.firstFreeDynamicSlot());
+    }
+
+    @Test void encountersWarnSurgeRecoverAndKeepEscalating() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        set(stage(), "fightFrames", 900);
+        set(stage(), "spawnTimer", 0);
+        call(stage(), "spawnWaves");
+        assertEquals("SURGE IN 3...", get(stage(), "banner"));
+        int assault = objects("Enemy").size();
+        set(stage(), "fightFrames", 1080);
+        set(stage(), "spawnTimer", 0);
+        call(stage(), "spawnWaves");
+        assertTrue(objects("Enemy").size() - assault >= 3);
+        int surge = objects("Enemy").size();
+        set(stage(), "fightFrames", 1500);
+        set(stage(), "spawnTimer", 0);
+        call(stage(), "spawnWaves");
+        assertEquals(surge, objects("Enemy").size(), "regroup gives a real reinforcement break");
+        assertEquals("REGROUP", call(stage(), "encounterName"));
+        set(stage(), "fightFrames", 36000);
+        set(stage(), "spawnTimer", 0);
+        call(stage(), "spawnWaves");
+        assertTrue(objects("Enemy").size() - surge >= 21, "endless pressure has no old plateau");
+        assertTrue((int) call(objects("Enemy").get(objects("Enemy").size() - 1), "maxHp") >
+                (int) call(objects("Enemy").get(0), "maxHp"));
+    }
+
+    @Test void feverIsEarnedCannotRefreshAndRewindsWithItsRecovery() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var player = fixture.sprite();
+        for (int i = 0; i < 9; i++) call(stage(), "onBounce", player.getCentreX(), player.getCentreY());
+        assertEquals(0, player.getInvincibleFrames());
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        call(stage(), "onBounce", player.getCentreX(), player.getCentreY());
+        assertEquals(480, player.getInvincibleFrames());
+        assertEquals(480, getInt(stage(), "feverFrames"));
+        fixture.stepIdleFrames(30);
+        int left = player.getInvincibleFrames();
+        for (int i = 0; i < 30; i++) call(stage(), "onBounce", player.getCentreX(), player.getCentreY());
+        assertEquals(left, player.getInvincibleFrames(), "bounces during Fever cannot refresh it");
+        assertEquals(0, getInt(stage(), "feverCharge"));
+        registry.restore(snapshot);
+        assertEquals(9, getInt(stage(), "feverCharge"));
+        assertEquals(0, getInt(stage(), "feverFrames"));
+        call(stage(), "onBounce", player.getCentreX(), player.getCentreY());
+        set(stage(), "feverFrames", 1);
+        player.setInvincibleFrames(1);
         fixture.stepIdleFrames(1);
-        call(stage(), "spawnEnemy", new int[0], new int[]{whisp}, 2, true);
-        assertEquals(34, objects("Enemy").size(), "vacated slots can admit the next elite");
-        assertEquals("ELITE INCOMING!", get(stage(), "banner"), "the pending elite arrives when space is available");
+        assertEquals(900, getInt(stage(), "feverCooldown"));
+        call(stage(), "onBounce", player.getCentreX(), player.getCentreY());
+        assertEquals(0, getInt(stage(), "feverCharge"));
+        call(run(), "gainXp", 10);
+        fixture.stepIdleFrames(10);
+        int recovery = getInt(stage(), "feverCooldown");
+        fixture.stepIdleFrames(30);
+        assertEquals(recovery, getInt(stage(), "feverCooldown"), "card menus preserve recovery time");
+    }
+
+    @Test void feverProtectionDoesNotExpireBehindLevelUpCards() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var player = fixture.sprite();
+        for (int i = 0; i < 10; i++) call(stage(), "onBounce", player.getCentreX(), player.getCentreY());
+        call(run(), "gainXp", 5);
+        fixture.stepIdleFrames(2);
+        int protection = player.getInvincibleFrames();
+        int remaining = getInt(stage(), "feverFrames");
+        fixture.stepIdleFrames(120);
+        assertEquals(protection, player.getInvincibleFrames());
+        assertEquals(remaining, getInt(stage(), "feverFrames"));
+        tapEnter(fixture);
+        fixture.stepIdleFrames(5);
+        assertTrue(player.getInvincibleFrames() > protection - 10);
+    }
+
+    @Test void weaponProjectilesGrowAndRewindWithoutDroppingAttacks() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        for (int i = 0; i < 200; i++) {
+            call(stage(), "projectile", 1, 100, 100, 0, 0, 60, 2, 1);
+        }
+        assertEquals(200, Arrays.stream((int[]) get(stage(), "pKind")).filter(k -> k != 0).count());
+        var expanded = registry.capture();
+        registry.restore(before);
+        assertEquals(48, ((int[]) get(stage(), "pKind")).length);
+        registry.restore(expanded);
+        assertEquals(200, Arrays.stream((int[]) get(stage(), "pKind")).filter(k -> k != 0).count());
+        fixture.stepIdleFrames(1);
+        assertEquals(59, ((int[]) get(stage(), "pLife"))[199]);
+    }
+
+    @Test void largeRingBanksAndArmorRetainMeaningfulRisk() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        assertEquals(10, call(run(), "toll", 30));
+        assertEquals(50, call(run(), "toll", 600));
+        int[] levels = (int[]) get(run(), "levels");
+        levels[12] = 5;
+        assertEquals(6, call(run(), "toll", 30));
+        assertEquals(30, call(run(), "toll", 600));
+        set(run(), "relics", 1 << 4);
+        assertEquals(5, call(run(), "toll", 30));
+        assertEquals(23, call(run(), "toll", 600));
     }
 
     @Test void endlessRunsPastFiveMinutesWithoutFillingTheArenaWithOldPickups() throws Exception {
@@ -873,7 +988,7 @@ class TestSonicSurvivors {
         assertEquals(FIGHT, phase());
         assertTrue(getInt(stage(), "fightFrames") > 18000);
         assertTrue(objects("Boss").isEmpty());
-        assertTrue(objects("Enemy").size() <= 34);
+        assertTrue(objects("Enemy").size() > 100, "endless keeps admitting enemies beyond the old caps");
         assertTrue(objects("Pickup").size() <= 30, "old formations make room for continuing waves");
     }
 

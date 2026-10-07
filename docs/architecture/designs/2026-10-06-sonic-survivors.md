@@ -350,3 +350,76 @@ including the 20,000-frame endless route and deferred elite admission. This is n
 engine-suite pass. The source build/package script rebuilt mod 0.3.0, and the existing
 trusted/enabled local installation was refreshed with its matching hash. Other mod settings
 and the user's actual save profile were preserved.
+
+
+## Escalating hordes and Fever (2026-10-07)
+
+User-directed difficulty/polish pass, base `bfc83b6f8abf4f179c4984f9a40b85c2091ea410`,
+current checkout `feature/ai-sonic-survivors`. Mod 0.4.0 keeps the profile format and removes
+unreleased version branding. The user explicitly requested uncapped entities.
+
+- Removed the 34-enemy ceiling and native-slot admission checks. `ArenaObjects` constructs
+  mod-owned enemies, bosses, shots and pickups with injected services and registers them
+  through the existing rewindable auxiliary-object path. Native games and their ROM slot
+  budgets are unchanged. Player projectile arrays grow; only cosmetic damage/effect visuals
+  retain a bounded pool. Pickups still expire, and each reward uses up to three sprites.
+- Thirty-second encounters alternate mixed, aerial and ground compositions, warn three
+  seconds before seven-second surges, then allow five seconds of ordinary-spawn recovery.
+  Health and batch sizes continue increasing; elite spacing falls toward eight seconds.
+  Long mode uses 75% time pressure rather than stretching two minutes over five, with twice
+  the timed boss health. The direct Death Egg finale is unchanged.
+- Ten eligible bounces charge an eight-second Fever with fifteen seconds of subsequent
+  recovery. No charging while invincible or Super. Charge survives a broken combo; attacks
+  retain combo damage. Stage-owned counters pause with menus and restore with rewind.
+- Hit toll is max(10, ceil(rings/12)), reduced by 8% per Armor level and 15% for the red
+  emerald, rounded up with a five-ring floor. One-second hurt recovery replaces two seconds.
+  Combo ring bonuses are gentler and chain-end payouts are linear rather than quadratic.
+  The HUD exposes hit cost, Fever/recovery, encounter phase and progress.
+
+Rejected: merely deleting the enemy-count check still leaves mod gameplay constrained by
+native SST allocation. Raising that shared limit would change stock games. The existing
+rewindable extension path passes the new 300-enemy movement/admission/restore check while
+preserving native slot availability. Keeping fixed player weapon arrays would silently drop
+attacks in the very hordes this change enables, so they grow and have a separate rewind test.
+
+Affected matrix: all existing Sonic/Tails arena rows retain traversal and boss obligations.
+EHZ1 adds phase warning/surge/recovery, continuing pressure, ring risk, Fever pause/rewind and
+projectile growth/restore tests; ARZ1 adds 300-enemy Whisp admission, updates and restore without
+native slot consumption. The existing long endless simulation covers continued admission and
+pickup expiry. Inherited per-act boss rewind, donor breadth and human balance-play gaps remain.
+
+Validation selection: example paths trigger the full 2,993-class fallback. Focused validation
+is proportionate: all production edits are in the isolated mod, with no host contract,
+physics or build-policy changes. Run the entire ROM-backed Survivors fixture, including both
+leaders/all acts, plus build/package and rendered gameplay inspection. This is focused mod
+validation, not a full engine-suite pass; prior unrelated engine/guard findings remain as
+recorded above.
+
+
+Validation results on this base plus the working changes:
+- Queued Maven with Java 21, `-Dmse=off -Dtest=TestSonicSurvivors` and the absolute
+  `Sonic The Hedgehog 2 (W) (REV01) [!].gen` property: 70 tests passed, no skips, 69.3 seconds
+  in the fixture (1:40 total). Includes the 20,000-frame endless simulation.
+- A follow-up `feverProtectionDoesNotExpireBehindLevelUpCards` regression exposed the host
+  player clock continuing to consume invincibility under mod object-control menus (478 to
+  358 over 120 menu frames) while the mod's Fever clock stopped. The mod now captures both
+  protection timers on freeze, holds them above expiry, and restores their exact saved
+  duration on release. A queued five-test selection covering the reproducer, Fever,
+  fight rewind, modal confirmation and lost-ring rewind passed with zero skips (3.049 seconds).
+  The unchanged remainder of the 70-test fixture was not repeated.
+- `python3 examples/sonic-survivors/build.py` compiled and packaged mod 0.4.0 successfully.
+- `GameplayCaptureTool` with seed 12345, isolated save roots and authored controller logs
+  rendered the camp, live HUD and first surge. Opening frame 400 and surge frame 1300 were
+  inspected after their state CSVs. Temporary preview upgrades were written only to the
+  capture's separate profile. The idle upgraded preview died at frame 1626; this is a
+  stationary diagnostic, not a human difficulty assessment. Artifact directory:
+  `/private/tmp/sonic-survivors-hordes-20261007`.
+
+Remaining limits: human balance judgement and long-session performance beyond this fixture
+are not certified. Unlimited admission intentionally allows load to rise with survival time;
+no universal frame-rate guarantee is implied. No engine-wide suite or guards were rerun.
+
+Final packaging and local delivery: rebuilt after the protection-timer fix, inspected final
+surge frame 1300 with the HUD backing, and refreshed the existing enabled/trusted
+`mods/sonic-survivors.jar` with its matching SHA-256 in local mod state. Other mod entries and
+the user's actual save profile were preserved.

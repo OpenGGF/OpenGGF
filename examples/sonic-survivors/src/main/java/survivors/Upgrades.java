@@ -93,7 +93,7 @@ final class Upgrades {
             case GROUND_POUND -> new String[]{"DOWN IN AIR SLAMS", "QUAKE R" + poundRadius(l) + " DMG " + poundDamage(l)};
             case POWER -> new String[]{"ALL DAMAGE", "+" + 25 * l + "%"};
             case MAGNET -> new String[]{"PULL RINGS FROM", magnetRadius(l, 0) + "PX AWAY"};
-            case ARMOR -> new String[]{"HITS COST " + 2 * l + " FEWER", "RINGS"};
+            case ARMOR -> new String[]{"HIT TOLL -" + 8 * l + "%", "MINIMUM 5 RINGS"};
             case HASTE -> new String[]{"WEAPON COOLDOWNS", "-" + 10 * l + "%"};
             case GREED -> new String[]{"MORE RING DROPS", "AND +" + 20 * l + "% XP"};
             case SPRING_HEELS -> new String[]{"HIGHER BOUNCES AND", "+" + l + " STOMP DAMAGE"};

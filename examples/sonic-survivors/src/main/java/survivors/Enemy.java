@@ -246,9 +246,8 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
     }
 
     private void fireShot(String key, int frame, int svx, int svy, boolean gravity) {
-        if (!services().objectManager().hasFreeDynamicSlot()) return;
         int sx = currentX, sy = currentY;
-        spawnFreeChild(() -> Shot.of(sx, sy, key, frame, gravity, svx, svy));
+        ArenaObjects.spawn(services(), () -> Shot.of(sx, sy, key, frame, gravity, svx, svy));
     }
 
     @Override protected void updateAnimation(int vIntRunCount) {

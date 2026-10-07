@@ -7,8 +7,8 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
- * Rings are Sonic's health. An enemy, shot or boss hit costs a ring toll (10, less with
- * Armor) with no knockback, spilling those rings as pickups he can grab back; a shield
+ * Rings are Sonic's health. Hits charge the ring-bank toll after Armor, with no
+ * knockback, spilling half the payment as pickups he can grab back; a shield
  * absorbs the hit instead; a hit with no rings left is lethal unless a revive remains.
  * Called from touch listeners, which the engine runs before its own hurt pass: leaving
  * Sonic flashing makes that pass return without the stock knockback and ring loss.
@@ -16,8 +16,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 final class Guard {
     private Guard() { }
 
-    // The stock post-hit invulnerability ($78), so one contact is never charged twice.
-    static final int INVULNERABLE_FRAMES = 0x78;
+    // One second of readable recovery; dense crowds still charge only one hit per window.
+    static final int INVULNERABLE_FRAMES = 60;
     static final int REVIVE_INVULNERABLE_FRAMES = 180;
     // S2 Sonic anim ids the touch pass counts as an attack: Roll (with rolling status) and Spindash.
     private static final int ANIM_ROLL = 0x02;
@@ -73,7 +73,7 @@ final class Guard {
             }
             return false;
         }
-        int toll = run == null ? RunState.BASE_TOLL : run.toll();
+        int toll = run == null ? RunState.BASE_TOLL : run.toll(rings);
         int lost = Math.min(toll, rings);
         player.setInvulnerableFrames(INVULNERABLE_FRAMES);
         player.setRingCount(rings - lost);

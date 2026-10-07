@@ -31,7 +31,7 @@ final class Hud {
         var render = s.renderManager();
         var sparkle = render == null ? null : render.getRenderer("super_sonic_stars");
         var animal = render == null ? null : render.getRenderer("animal");
-        for (int i = 0; i < Stage.MAX_P; i++) {
+        for (int i = 0; i < stage.pKind.length; i++) {
             int kind = stage.pKind[i];
             if (kind == 0) continue;
             int x = stage.pX[i] >> 8, y = stage.pY[i] >> 8;
@@ -149,14 +149,34 @@ final class Hud {
         int width = s.camera().getWidth() - RIGHT_MARGIN + 8;
         var player = s.camera().getFocusedSprite();
         int rings = player == null ? 0 : player.getRingCount();
+        // Quiet backing keeps small readouts legible through bright terrain and dense hordes.
+        Draw.rect(s, 4, 3, 110, run.revives > 0 ? 66 : 56, 0x080E30, 0.72f);
+        if (stage.phase == Stage.FIGHT) {
+            Draw.rect(s, s.camera().getWidth() / 2 - 54, 32, 108, 19, 0x080E30, 0.72f);
+        }
         // Rings (health) and level.
-        boolean danger = rings < run.toll() && (stage.frameTick / 8) % 2 == 0;
+        boolean danger = rings <= run.toll(rings) && (stage.frameTick / 8) % 2 == 0;
         Draw.shadow(s, "RINGS", 8, 8, 1, Draw.YELLOW, 1f);
         Draw.shadow(s, Integer.toString(rings), 44, 6, 2, danger ? Draw.RED : Draw.WHITE, 1f);
         Draw.shadow(s, "LV " + (run.level + 1), 8, 24, 1, Draw.CYAN, 1f);
         Draw.bar(s, 40, 25, 70, 4, run.xp / (double) RunState.xpToNext(run.level), Draw.CYAN, 1f);
         int y = 34;
         if (run.revives > 0) { Draw.shadow(s, "REVIVE x" + run.revives, 8, y, 1, Draw.GREEN, 1f); y += 10; }
+        Draw.shadow(s, "HIT -" + run.toll(rings), 8, y, 1, danger ? Draw.RED : Draw.WHITE, 1f);
+        String fever = stage.feverFrames > 0 ? "FEVER " + clock(stage.feverFrames)
+                : stage.feverCooldown > 0 ? "RECHARGE " + clock(stage.feverCooldown)
+                : "FEVER " + stage.feverCharge + "/" + Stage.FEVER_COMBO;
+        Draw.shadow(s, fever, 8, y + 10, 1, stage.feverFrames > 0 ? Draw.PINK : Draw.CYAN, 1f);
+        double charge = stage.feverFrames > 0 ? stage.feverFrames / (double) Stage.FEVER_DURATION
+                : stage.feverCooldown > 0 ? 1 - stage.feverCooldown / (double) Stage.FEVER_RECOVERY
+                : stage.feverCharge / (double) Stage.FEVER_COMBO;
+        Draw.bar(s, 8, y + 19, 80, 3, charge, stage.feverFrames > 0 ? Draw.PINK : Draw.CYAN, 1f);
+        if (stage.phase == Stage.FIGHT) {
+            Draw.centred(s, "W" + stage.encounterNumber() + " " + stage.encounterName(), 36, 1,
+                    stage.encounterBeat() >= 18 && stage.encounterBeat() < 25 ? Draw.ORANGE : Draw.CYAN, 1f);
+            Draw.bar(s, s.camera().getWidth() / 2 - 40, 46, 80, 3,
+                    (stage.fightFrames % Stage.ENCOUNTER_FRAMES) / (double) Stage.ENCOUNTER_FRAMES, Draw.GOLD, 1f);
+        }
         // Owned upgrades, compact.
         int x = 8;
         y = 210;
@@ -281,7 +301,7 @@ final class Hud {
         int width = s.camera().getWidth();
         int panelW = 360, left = (width - panelW) / 2, top = 6;
         Draw.panel(s, left, top, panelW, 212, 0.93f);
-        Draw.centred(s, "SONIC SURVIVORS V2", top + 6, 3, Draw.GOLD, 1f);
+        Draw.centred(s, "SONIC SURVIVORS", top + 6, 3, Draw.GOLD, 1f);
         Draw.centred(s, "CAMP - " + Stages.name(stage.arena().stage()), top + 32, 1, Draw.CYAN, 1f);
         String bank = "RING BANK " + profile.bank;
         Draw.shadow(s, bank, left + 10, top + 46, 1, Draw.YELLOW, 1f);
