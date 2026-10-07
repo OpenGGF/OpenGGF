@@ -161,6 +161,53 @@ public final class Sonic3kZoneArt implements ZonePictureSource {
         return profile(zone, act) != null;
     }
 
+    /** Kits keep the few most recent acts; older ones are rebuilt when asked again. */
+    private static final int KIT_CACHE = 3;
+    /** Built kits by zone and act, most recent last; acts that cannot be built map to null. */
+    private final java.util.LinkedHashMap<List<Integer>, com.openggf.level.render.DetachedLevelKit> kits =
+            new java.util.LinkedHashMap<>(8, 0.75f, true);
+
+    /**
+     * Any single-player act's building blocks. Acts with zone pictures use their profile (art
+     * state and backdrop); the others build as a normal load (Angel Island act 1 as its
+     * skip-intro main level) with AniPLC scripts at their first frame and the background plane
+     * as laid out. Zones 0-12 and $16 (Hidden Palace is its act 1); acts this decoder cannot build have no kit.
+     */
+    @Override
+    public com.openggf.level.render.DetachedLevelKit kit(int zone, int act) {
+        boolean stockZone = zone >= 0 && zone <= Sonic3kZoneIds.ZONE_DDZ || zone == Sonic3kZoneIds.ZONE_HPZ;
+        if (!stockZone || act < 0 || act > 1) {
+            return null;
+        }
+        List<Integer> key = List.of(zone, act);
+        if (kits.containsKey(key)) {
+            return kits.get(key);
+        }
+        com.openggf.level.render.DetachedLevelKit kit;
+        try {
+            Profile profile = profile(zone, act);
+            boolean pictured = profile != null;
+            if (!pictured) {
+                Sonic3kLoadBootstrap.Mode mode = zone == Sonic3kZoneIds.ZONE_AIZ && act == 0
+                        ? Sonic3kLoadBootstrap.Mode.SKIP_INTRO : Sonic3kLoadBootstrap.Mode.NORMAL;
+                profile = new Profile(zone, act, mode, List.of(), 0, PLANE_WIDTH, 0x200, 0, 0, 0x200,
+                        Integer.MAX_VALUE, height -> List.of(new Band(0, height, 0.25, 0)), Integer.MAX_VALUE);
+            }
+            Built built = build(profile);
+            Bounds bounds = playableBounds(built.level(), profile.foregroundEndX());
+            kit = new com.openggf.level.render.DetachedLevelKit(built.level(), built,
+                    new int[] {bounds.x(), bounds.y(), bounds.width(), bounds.height()},
+                    pictured ? backdrop(zone, act) : null);
+        } catch (RuntimeException unsupported) {
+            kit = null;
+        }
+        kits.put(key, kit);
+        while (kits.size() > KIT_CACHE) {
+            kits.remove(kits.keySet().iterator().next());
+        }
+        return kit;
+    }
+
     @Override
     public boolean hasTitleCard(int zone, int act) {
         return Sonic3kTitleCardArt.supports(zone, act);

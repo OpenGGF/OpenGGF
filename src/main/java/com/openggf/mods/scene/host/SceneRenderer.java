@@ -24,6 +24,7 @@ import static org.lwjgl.opengl.GL11.glGenTextures;
 import static org.lwjgl.opengl.GL11.glScissor;
 import static org.lwjgl.opengl.GL11.glTexImage2D;
 import static org.lwjgl.opengl.GL11.glTexParameteri;
+import static org.lwjgl.opengl.GL11.glTexSubImage2D;
 import static org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE;
 import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
 import static org.lwjgl.opengl.GL13.glActiveTexture;
@@ -74,6 +75,11 @@ final class SceneRenderer {
         @Override
         public int upload(SceneImage image) {
             return SceneRenderer.upload(image.width(), image.height(), image.pixels());
+        }
+
+        @Override
+        public void reupload(int texture, SceneImage image) {
+            SceneRenderer.reupload(texture, image.width(), image.height(), image.pixels());
         }
 
         @Override
@@ -253,6 +259,21 @@ final class SceneRenderer {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
             glBindTexture(GL_TEXTURE_2D, 0);
             return id;
+        } finally {
+            MemoryUtil.memFree(rgba);
+        }
+    }
+
+    private static void reupload(int texture, int width, int height, int[] argb) {
+        ByteBuffer rgba = MemoryUtil.memAlloc(width * height * 4);
+        try {
+            for (int p : argb) {
+                rgba.put((byte) (p >> 16)).put((byte) (p >> 8)).put((byte) p).put((byte) (p >>> 24));
+            }
+            rgba.flip();
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+            glBindTexture(GL_TEXTURE_2D, 0);
         } finally {
             MemoryUtil.memFree(rgba);
         }

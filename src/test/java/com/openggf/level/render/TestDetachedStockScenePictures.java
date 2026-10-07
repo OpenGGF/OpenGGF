@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import static org.junit.jupiter.api.Assertions.*;
 
-class TestDetachedStockScenePictures {
+public class TestDetachedStockScenePictures {
     @Test
     @RequiresRom(SonicGame.SONIC_1)
     void greenHillPicturesAndCharacterDecodeWithoutAmbientServices() throws Exception {
@@ -84,9 +84,43 @@ class TestDetachedStockScenePictures {
                     assertTrue(overview.height() <= 128);
                     assertTrue(overview.width() <= 4096);
                     assertThrows(IllegalArgumentException.class, () -> art.levelOverview(zone, 0, 0));
+                    checkKit(art, zone, 1);
+                    assertNull(art.levelKit(99, 0));
                     return null;
                 }
             }).get(120, TimeUnit.SECONDS);
         }
+    }
+
+    /** Every act of the registry has a kit, including acts without zone pictures. */
+    public static void checkKit(SceneRomArt art, int zone, int act) {
+        assertTrue(art.hasLevelKit(zone, act));
+        var kit = art.levelKit(zone, act);
+        assertSame(kit, art.levelKit(zone, act), "kits are cached");
+        int[] area = kit.playableArea();
+        assertTrue(area[2] > 1000 && area[3] > 200, "a real act's playable area");
+        int size = kit.blockSize();
+        boolean sawArt = false;
+        boolean sawSolid = false;
+        boolean sawEmpty = false;
+        for (int row = area[1] / size; row <= (area[1] + area[3] - 1) / size; row++) {
+            for (int column = area[0] / size; column <= (area[0] + area[2] - 1) / size; column += 3) {
+                int id = kit.block(column, row);
+                var image = kit.blockImage(id);
+                assertEquals(size, image.width());
+                sawArt |= Arrays.stream(image.pixels()).anyMatch(pixel -> pixel != 0);
+                byte[] solid = kit.blockSolidity(id);
+                assertEquals(size * size, solid.length);
+                for (byte value : solid) {
+                    sawSolid |= value == com.openggf.mods.scene.SceneLevelKit.SOLID;
+                    sawEmpty |= value == com.openggf.mods.scene.SceneLevelKit.EMPTY;
+                }
+            }
+        }
+        assertTrue(sawArt && sawSolid && sawEmpty, "blocks carry art, solid ground and open air");
+        assertEquals(64, kit.palette().length);
+        assertNotNull(kit.backdrop());
+        assertTrue(Arrays.stream(kit.backdrop().image().pixels()).distinct().count() > 4);
+        assertEquals(0, kit.block(-1, 0));
     }
 }

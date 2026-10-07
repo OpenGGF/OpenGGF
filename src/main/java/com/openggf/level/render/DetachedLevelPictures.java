@@ -17,15 +17,36 @@ public final class DetachedLevelPictures implements ZonePictureSource {
         Level load() throws IOException;
     }
 
+    /** Finds the loader for any act's {@link #kit}, or null when the game has no such act. */
+    @FunctionalInterface
+    public interface KitLoaders {
+        Loader loader(int zone, int act);
+    }
+
+    /** Kits keep the few most recent acts; older ones are rebuilt when asked again. */
+    private static final int KIT_CACHE = 3;
+
     private final int zone;
     private final int act;
     private final Loader loader;
     private final int backdropWidth;
     private final int backdropHeight;
+    private final KitLoaders kitLoaders;
     private Level level;
     private PlaneRasterizer.TileSource tiles;
+    /** Built kits by zone and act, most recent last; acts that cannot be built map to null. */
+    private final java.util.LinkedHashMap<List<Integer>, DetachedLevelKit> kits =
+            new java.util.LinkedHashMap<>(8, 0.75f, true);
 
     public DetachedLevelPictures(int zone, int act, Loader loader, int backdropWidth, int backdropHeight) {
+        this(zone, act, loader, backdropWidth, backdropHeight, null);
+    }
+
+    /**
+     * @param kitLoaders how to build any act for {@link #kit}, or null for no kits
+     */
+    public DetachedLevelPictures(int zone, int act, Loader loader, int backdropWidth, int backdropHeight,
+            KitLoaders kitLoaders) {
         if (zone < 0 || act < 0 || backdropWidth < 1 || backdropHeight < 1
                 || backdropWidth > 4096 || backdropHeight > 4096) {
             throw new IllegalArgumentException("Invalid detached picture profile");
@@ -35,6 +56,38 @@ public final class DetachedLevelPictures implements ZonePictureSource {
         this.loader = Objects.requireNonNull(loader, "loader");
         this.backdropWidth = backdropWidth;
         this.backdropHeight = backdropHeight;
+        this.kitLoaders = kitLoaders;
+    }
+
+    @Override
+    public DetachedLevelKit kit(int zone, int act) {
+        if (kitLoaders == null || zone < 0 || act < 0) {
+            return null;
+        }
+        List<Integer> key = List.of(zone, act);
+        if (kits.containsKey(key)) {
+            return kits.get(key);
+        }
+        DetachedLevelKit kit = null;
+        Loader loader = kitLoaders.loader(zone, act);
+        if (loader != null) {
+            try {
+                Level built = loader.load();
+                Pattern[] patterns = new Pattern[built.getPatternCount()];
+                for (int i = 0; i < patterns.length; i++) patterns[i] = built.getPattern(i);
+                int[] edges = bounds(built);
+                kit = new DetachedLevelKit(built, PlaneRasterizer.TileSource.of(patterns),
+                        new int[] {edges[0], edges[1], edges[2] - edges[0], edges[3] - edges[1]}, null);
+            } catch (IOException | IllegalArgumentException | IllegalStateException unsupported) {
+                // Acts this decoder cannot build detached (resource-plan zones) have no kit.
+                kit = null;
+            }
+        }
+        kits.put(key, kit);
+        while (kits.size() > KIT_CACHE) {
+            kits.remove(kits.keySet().iterator().next());
+        }
+        return kit;
     }
 
     @Override
@@ -75,7 +128,11 @@ public final class DetachedLevelPictures implements ZonePictureSource {
     }
 
     private int[] bounds() {
-        Level value = level();
+        return bounds(level());
+    }
+
+    /** Where the camera can show, {@code {left, top, right, bottom}}. */
+    private static int[] bounds(Level value) {
         int left = Math.max(0, value.getMinX());
         int top = Math.max(0, value.getMinY());
         int right = Math.min(value.getLayerWidthBlocks(PlaneRasterizer.FOREGROUND) * value.getBlockPixelSize(),

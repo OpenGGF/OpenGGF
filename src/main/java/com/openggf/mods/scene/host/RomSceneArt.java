@@ -16,6 +16,7 @@ import com.openggf.level.render.ZonePictureSource;
 import com.openggf.mods.scene.RomSpriteRequest;
 import com.openggf.mods.scene.SceneBackdrop;
 import com.openggf.mods.scene.SceneImage;
+import com.openggf.mods.scene.SceneLevelKit;
 import com.openggf.mods.scene.SceneLevelStage;
 import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneSprite;
@@ -52,6 +53,14 @@ final class RomSceneArt implements SceneRomArt {
     private final Map<List<Integer>, List<SceneLevelStage>> stageCache = new HashMap<>();
     /** Per zone and act. */
     private final Map<List<Integer>, SceneSpriteSet> titleCardCache = new HashMap<>();
+    /** The few most recent level kits by zone and act; acts without a kit map to empty. */
+    private final Map<List<Integer>, Optional<SceneLevelKit>> kitCache =
+            new java.util.LinkedHashMap<>(8, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<List<Integer>, Optional<SceneLevelKit>> eldest) {
+                    return size() > 4;
+                }
+            };
 
     RomSceneArt(Rom rom, GameId game, Supplier<PlayerSpriteArtProvider> players, Supplier<SpriteArtSet> tailsTails,
             ZonePictureSource zones) {
@@ -263,6 +272,65 @@ final class RomSceneArt implements SceneRomArt {
         }
         ZonePictureSource.Picture picture = zones.foreground(zone, act, x, y, width, height);
         return picture == null ? null : toSceneImage(picture);
+    }
+
+    @Override
+    public SceneLevelKit levelKit(int zone, int act) {
+        if (zones == null || zone < 0 || act < 0) {
+            return null;
+        }
+        List<Integer> key = List.of(zone, act);
+        Optional<SceneLevelKit> cached = kitCache.get(key);
+        if (cached == null) {
+            com.openggf.level.render.DetachedLevelKit kit = zones.kit(zone, act);
+            cached = Optional.ofNullable(kit == null ? null : new Kit(kit));
+            kitCache.put(key, cached);
+        }
+        return cached.orElse(null);
+    }
+
+    /** {@link SceneLevelKit} over an engine kit, caching block pictures and the backdrop. */
+    private static final class Kit implements SceneLevelKit {
+        private final com.openggf.level.render.DetachedLevelKit kit;
+        private final SceneImage[] images;
+        private SceneBackdrop backdrop;
+
+        Kit(com.openggf.level.render.DetachedLevelKit kit) {
+            this.kit = kit;
+            this.images = new SceneImage[kit.blockCount()];
+        }
+
+        @Override public int blockSize() { return kit.blockSize(); }
+        @Override public int columns() { return kit.columns(); }
+        @Override public int rows() { return kit.rows(); }
+        @Override public int blockCount() { return kit.blockCount(); }
+        @Override public int block(int column, int row) { return kit.blockAt(column, row); }
+        @Override public int[] playableArea() { return kit.playable(); }
+        @Override public int[] palette() { return kit.palette(); }
+
+        @Override
+        public SceneImage blockImage(int block) {
+            if (block < 0 || block >= images.length) {
+                return new SceneImage(kit.blockSize(), kit.blockSize(), new int[kit.blockSize() * kit.blockSize()]);
+            }
+            if (images[block] == null) {
+                images[block] = new SceneImage(kit.blockSize(), kit.blockSize(), kit.blockPixels(block));
+            }
+            return images[block];
+        }
+
+        @Override
+        public byte[] blockSolidity(int block) {
+            return kit.blockSolidity(block);
+        }
+
+        @Override
+        public SceneBackdrop backdrop() {
+            if (backdrop == null) {
+                backdrop = toSceneBackdrop(kit.backdrop());
+            }
+            return backdrop;
+        }
     }
 
     @Override

@@ -312,6 +312,28 @@ games independently of the song or active module. `rom()` retains its original
 active-game meaning. Additional ROM handles belong to the scene and close with
 it; the active session's borrowed ROM remains open. Missing games return null.
 
+### Level kits: build terrain of your own
+
+`rom.levelKit(zone, act)` returns a `SceneLevelKit`: an act's building blocks rather than a
+picture. The foreground layout is a grid of **layout blocks** (128 pixels square, 256 in Sonic 1);
+`block(column, row)` names the block in a cell, `blockImage(id)` draws one block on its own with
+transparent sky (cached), and `blockSolidity(id)` returns its collision as one byte per pixel
+(`EMPTY`, `TOP_SOLID` or `SOLID`, read from the primary path as a floor sensor sees it).
+`playableArea()`, `backdrop()` and `palette()` complete the set. Blocks that sit side by side in
+the stock layout join seamlessly, so a scene can remix an act into new terrain that still looks
+like the zone, and walk or fly over it using the masks. Kits exist for every act of the Sonic 1
+and Sonic 2 zone registries the engine can decode on its own (not Sonic 2's Hill Top or Wing
+Fortress), and for Sonic 3 & Knuckles zones 0-12 and Hidden Palace (`22`, act 1); ask
+`rom.hasLevelKit(zone, act)` first. Building one takes up to a few hundred milliseconds; the
+few most recent are cached.
+
+### Images you render yourself
+
+`SceneImage.streaming(width, height)` makes an image whose pixels you replace every frame with
+`update(int[])` from `update` (never `draw`): software 3D, warp tunnels, a turning planet. The
+renderer refreshes the same GPU texture after each change instead of uploading a new image, so
+keep one streaming image per effect and reuse it.
+
 `rom.titleCard(zone, act)` returns an act's stock title card as four sprites (the red banner,
 the zone's name, "ZONE" and the act number) whose origins are the ROM's object positions; its
 javadoc lists where each slides from and to, at what speed, and when each leaves, so a scene
