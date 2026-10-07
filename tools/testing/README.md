@@ -406,6 +406,51 @@ extracting the compact report, including handled interruption. `--output` can pl
 compact report in an explicit task directory; record durable findings in the existing
 engineering artifact and discard consumed target reports.
 
+To investigate memory accumulation across the **actual ordinary Surefire suite**,
+use the separate suite observer:
+
+```bash
+python3 tools/testing/profile_ordinary_memory.py --cold-compile --max-minutes 180
+# Exact controls/reproductions, with and without requested boundary GC:
+python3 tools/testing/profile_ordinary_memory.py --test TestCollisionLogic,TestBuildIdentity --max-minutes 10
+python3 tools/testing/profile_ordinary_memory.py --gc none --test TestCollisionLogic,TestBuildIdentity --max-minutes 10
+```
+
+This invokes the worktree's real `mvn test` selection with one reused 3 GiB fork,
+verified ROM paths and a temporary JUnit service-listener classpath. The broad run
+does not supply `-Dtest`; it preserves ordinary tags/exclusions. It holds an exclusive
+queue lease. Allow one to two hours on this host; `--max-minutes` defaults to 120
+and caps at 180 execution minutes, excluding queue wait. Preparation, the Maven run
+and its idle timeout share that budget. Class progress and minute heartbeats keep
+long route tests visible. There is no instrumentation on the normal test classpath.
+
+The default `--gc between-class` records requested-GC floors at class boundaries,
+plus a final floor at normal JVM shutdown after all plan callbacks have returned.
+**Within-plan floors can include JUnit-owned `PER_CLASS` fixtures after class
+teardown.** `allPlansFinished` distinguishes the final floor; growth rankings are
+retention candidates, not application-leak proof. A no-GC run has no retained-growth
+ranking. The report preserves per-test
+and class allocation/duration/peaks, explicit skips/aborts/failures, GC evidence,
+metaspace/direct/mapped buffers, RSS/swap and bounded high-watermark histograms/native
+memory summaries. It also samples the **Maven parent separately** without capping
+its existing heap, including cold test compilation in that process.
+`--cold-compile` removes only generated classes/compiler metadata under the held
+worktree lease; it preserves prior reports and rejects linked output directories.
+Without it, Maven may reuse already-compiled classes. Native Memory
+Tracking is enabled only for the diagnostic; it does not account for all driver or
+third-party native allocations. RSS can include shared pages and miss short peaks.
+Histogram entries are a lead, not a reference-chain or leak proof. Compare a suspect
+group in a bounded natural-GC reproduction before attributing an OOM.
+
+`target/ordinary-memory-report.json` distinguishes Maven exit status from listener
+completion and records the source commit/tool hashes. Missing or incomplete listener
+coverage fails the diagnostic even if Maven exits successfully. Forced GC changes
+timing and can mask allocation pressure; this run is not uninstrumented suite
+certification. Inspect Surefire outcomes/skips as well as memory. Raw event files,
+rotating GC/Maven logs, temporary helper classes and test artifacts are removed after
+extracting the report, including handled interruption. Record durable conclusions
+in the research artifact and remove consumed target reports.
+
 ## Complete Surefire outcome inventories
 
 The PowerShell utilities in this directory export, validate, partition, and

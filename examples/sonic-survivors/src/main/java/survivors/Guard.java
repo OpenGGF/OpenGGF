@@ -7,8 +7,8 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
- * Rings are Sonic's health. An enemy, shot or boss hit costs a ring toll (10, less with
- * Armor) with no knockback, spilling those rings as pickups he can grab back; a shield
+ * Rings are Sonic's health. Hits charge the ring-bank toll after Armor, with no
+ * knockback, spilling half the payment as pickups he can grab back; a shield
  * absorbs the hit instead; a hit with no rings left is lethal unless a revive remains.
  * Called from touch listeners, which the engine runs before its own hurt pass: leaving
  * Sonic flashing makes that pass return without the stock knockback and ring loss.
@@ -16,8 +16,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 final class Guard {
     private Guard() { }
 
-    // The stock post-hit invulnerability ($78), so one contact is never charged twice.
-    static final int INVULNERABLE_FRAMES = 0x78;
+    // One second of readable recovery; dense crowds still charge only one hit per window.
+    static final int INVULNERABLE_FRAMES = 60;
     static final int REVIVE_INVULNERABLE_FRAMES = 180;
     // S2 Sonic anim ids the touch pass counts as an attack: Roll (with rolling status) and Spindash.
     private static final int ANIM_ROLL = 0x02;
@@ -55,31 +55,40 @@ final class Guard {
         var run = services.gameService(RunState.class);
         Stage stage = Stage.find(services);
         if (player.hasShield()) {
-            player.setInvulnerableFrames(INVULNERABLE_FRAMES);
+            player.setInvulnerableFrames(run == null ? INVULNERABLE_FRAMES : run.hurtRecovery());
             player.removeShield();
             services.audioManager().playSfx(GameSound.HURT);
             if (stage != null) stage.onPlayerHit(0);
             return true;
         }
         int rings = player.getRingCount();
-        if (rings <= 0) {
+        int toll = run == null ? RunState.BASE_TOLL : run.toll(rings);
+        // Rings are a health bar: a hit whose toll would empty them ends the run (unlike stock
+        // Sonic, where any single ring survives). A revive catches it instead.
+        if (rings <= toll) {
             if (run != null && run.revives > 0) {
                 run.revives--;
+                int restored = run.reviveRings();
+                run.freeRings += restored;
                 player.setInvulnerableFrames(REVIVE_INVULNERABLE_FRAMES);
-                player.addRings(20);
+                player.setRingCount(restored);
                 services.playSfx(0xBF); // S2 sfx_ContinueJingle.
                 if (stage != null) stage.onRevive();
                 return true;
             }
-            return false;
+            player.setRingCount(0);
+            player.applyHurtOrDeath(player.getCentreX(), false, false);
+            return true;
         }
-        int toll = run == null ? RunState.BASE_TOLL : run.toll();
-        int lost = Math.min(toll, rings);
-        player.setInvulnerableFrames(INVULNERABLE_FRAMES);
+        int lost = toll;
+        player.setInvulnerableFrames(run == null ? INVULNERABLE_FRAMES : run.hurtRecovery());
         player.setRingCount(rings - lost);
         services.audioManager().playSfx(GameSound.RING_SPILL);
         if (stage != null) {
-            stage.spillRings(player.getCentreX(), player.getCentreY(), Math.max(1, lost / 2));
+            // Brittle Rings (an Eggman's Rule): nothing scatters to win back.
+            if (run == null || !run.rule(Rules.BRITTLE)) {
+                stage.spillRings(player.getCentreX(), player.getCentreY(), Math.max(1, lost / 2));
+            }
             stage.onPlayerHit(lost);
         }
         return true;

@@ -1039,3 +1039,42 @@ first fair moment fell exactly 60 frames before the death, which meets the docum
 **Not attempted.** Tier changes for the flat zones (a 16 px step is a wall to Sonic's floor
 sensors, so it would need generated slopes) and checks on art continuity where two columns
 meet. Seams below the floor are not visually reviewed.
+
+
+## Test runtime (2026-10-07)
+
+Task: reduce the long `TestInfiniteSonic` class, in the current `develop` checkout
+at base `4cfb745646d9439cdb9c07d53d0670dd0fb3fe58`.
+
+The input driver queried the same world-coordinate floor and regenerated the same
+platform arrays for many adjacent frames. It now memoizes only its observations,
+bounded to 4,096 floor coordinates and 32 platform sections, and clears them when
+the active `TerrainLibrary` identity changes. Rebase and rewind keep world-coordinate
+answers valid. Live bounce targets remain outside the cache; geometry assertions
+still query the mod directly. A regression checks negative coordinates, eviction,
+returning to old positions, moving bounce targets and a different act's library.
+
+Observation caching alone reduced the complete class from 232.6 to 201.4 seconds
+in sequential Java 21/macOS runs. A bounded baseline stack sample also found the
+main thread in `PsgChip.renderStereo` under the headless frame's audio presentation.
+The five terrain/encounter route methods now stop looping BGM at launch through
+`AudioManager.stopMusic`; subsequent route SFX remain enabled. These already isolate
+terrain with clock resets and camera recentering. Normal challenge progression,
+audio-rate checks and interactive CONTINUE rewind retain their normal audio setup.
+No route lengths, input policies, parameter combinations or assertions were removed.
+Production audio behavior was not changed, and PCM output is not an assertion of
+these terrain-only cases. Muting an output backend alone would not avoid upstream
+PCM synthesis, so that was not used as the optimization.
+
+The user also authorized trimming unnecessary work. The hazard-timing test had
+searched all 110 coast/jump combinations per zone even though its final assertions
+only require a successful crossing and a ring-toll hit. It now stops after finding
+both witnesses, then still performs the 90-frame hazard restore/replay comparison.
+A success must actually land beyond the hazard (the old loop counted a 900-frame
+timeout as a pass), and a pit death cannot stand in for a hit that checks the
+20-ring toll, no knockback and post-hit invulnerability. This intentionally drops
+the exhaustive approach sweep; all six zones and both required outcomes remain.
+The long traversal, act/viewport and real collision matrices were retained.
+
+Completed commands, skips and timing limits are recorded in the
+[coverage execution note](../validation/levels/infinite-sonic-ghz1.md#test-runtime-2026-10-07).

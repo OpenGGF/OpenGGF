@@ -2,6 +2,7 @@ package com.openggf.game.rules;
 
 /**
  * Game-wide power-up/effect rules.
+ * Mods that leave music playing during invincibility can disable its expiry music request.
  *
  * <p>{@code waterSplashFixedSlotIndex} is the absolute SST slot the water-entry
  * splash occupies, or {@code -1} when the game allocates it dynamically. Sonic 1
@@ -33,7 +34,8 @@ public record PowerUpRules(
         boolean fixedSkidDustAllocatesAfterDynamicObjectPass,
         boolean waterSplashUsesFixedDustObject,
         int primaryFixedDustSlotIndex,
-        int secondaryFixedDustSlotIndex) {
+        int secondaryFixedDustSlotIndex,
+        boolean restoreLevelMusicAfterInvincibility) {
 
     public int fixedDustSlotIndex(boolean secondaryPlayer) {
         return secondaryPlayer ? secondaryFixedDustSlotIndex : primaryFixedDustSlotIndex;
