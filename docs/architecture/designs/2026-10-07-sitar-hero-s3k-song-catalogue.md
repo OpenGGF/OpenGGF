@@ -479,3 +479,186 @@ of full-duration PCM rendering on this pre-expansion base. Parent combined
 validation owns that expanded-host and frozen full-bank path, matching stage
 pictures, structural guards, broad suite, integration and cleanup. No worker
 push or main-workspace integration occurred.
+
+## Full-candidate frozen-program boundary repair
+
+The resumed worker fast-forwarded its own branch from `64c7b25b` to the clean,
+frozen parent candidate `aa667ae91cb8c94708cf32e853740705cd0dd211`. The matched
+baseline is `5bc5f4fa60728c6c074f9bbf8cf89d6dc6b05f6f`. The parent full run
+`20261007T145648Z-10a6e0f7` reported 20 new S3K audio failure/error identities;
+the 28 inherited failures and 61 skip identities/reasons matched its baseline.
+Those parent results identify a regression frontier, not its cause.
+
+A temporary package-local `BankFreezeProbe` under `target/s3k-audio-repair/`
+compared the native loader and `SmpsAssetCatalog.freezeStandalone` using the
+same production sequencer/configuration. It established the boundary defect:
+
+| Music ID | Raw header blob bytes | Direct indexed bytes | Frozen indexed bytes before repair | Direct/frozen track counts |
+|---|---:|---:|---:|---:|
+| `0x001` AIZ1 | 7021 | 32768 | 7021 | 9 / 9 |
+| `0x01C` Special Stage | 2200 | 32768 | 2200 | 9 / 0 |
+| `0x01F` S&K Title | 747 | 32768 | 747 | 9 / 0 |
+| `0x02A` 1-Up | 298 | 32768 | 298 | 9 / 0 |
+| `0x132` S3 Ending | 1026 | 32768 | 1026 | 9 / 0 |
+
+The helper used Java 21 and the existing absolute main ROM, without copying or
+linking it. Its selected worker `target/classes` were compiled at `64c7b25b`;
+the loader/data/catalog/config/sequencer sources used by this measurement are
+source-equivalent at `aa667ae91`. The completed parent candidate and updated
+baseline supply the independent new-failure attribution; the temporary helper
+isolates the frozen/direct dependency.
+
+`FrozenSmpsData` paired the new bank base with copied `getData()` bytes, which
+intentionally remain the raw song/header blob. Its inherited indexed length
+then rejected relocated track roots before any native frequency or duration
+logic ran. For 1-Up that also removes the track which executes the restoration
+command. This explains why the direct catalogue probe was green while the real
+frozen playback path lost music and ownership. The owning native routines
+`Sound/Z80 Sound Driver.asm:zGetNextNote` and `cfJumpToGosub` execute addresses
+inside the loaded bank, including addresses before a song header. The complete
+bank loader semantics are required; reducing the loader window again would
+restore the demonstrated 514-frame S3 Ending truncation and is rejected.
+
+The authorized repair keeps the raw header/voice contract and snapshots the
+existing indexed program view separately inside the private frozen class.
+Reconstructed identity must compare both the raw header/parsed track metadata
+and the indexed execution window: neither alone identifies the song. Descriptor
+length/hash must describe those same indexed bytes. Immutable ownership and
+little/big-endian `read16` semantics remain source-defined. There is no song-ID
+exception, copied ROM fallback, new public component, or sequencer change;
+S3K `DelayFreq.KEEP` remains intentional. The existing public Mod API signature
+pins contain `SmpsProgramView`'s unchanged indexed methods; the two repaired
+implementation classes add no public signatures and need no candidate-pin edit.
+
+The extra matched tempo-only queue requests were accounted for before editing
+production sources. Sessions `63308` / `7956`, PIDs `1668149` / `1668148`, had
+the exact current/baseline cwd and selector, no child process and no admission.
+After the parent accepted its completed matched inventory and the native causal
+proof, both requests were cancelled: **exit 130, no Maven result**. Their earlier
+normal-lane waiting requests were likewise cancelled before admission. Baseline
+source was never edited.
+
+A fresh Java 21 compilation of `TestFrozenSmpsBankProgram` against the unchanged
+candidate boundary reproduced four assertion failures before repair: frozen
+indexed length 160 versus 512 (call and ownership cases), changed earlier-bank
+bytes accepted under an identical header, and descriptor length 160 versus 512.
+The existing raw-header/metadata rejection case passed as a control. The first
+test-harness attempt used a handler-bearing config under an unregistered test
+game; its two setup errors were corrected by the existing handler-free config
+binding before measuring identity RED. They are not production failure evidence.
+
+After repair, a fresh `javac --release 21` compilation of both modified production
+classes and the new test passed **six synthetic methods**, including little- and
+big-endian word order, source-supported/rejected incomplete final words, an
+earlier-bank phrase/call/return with header-relative voice, immutable inputs and
+public copies, reconstructed equal-program reuse, both identity conflicts, and
+direct/frozen/registered indexed descriptor consistency. This temporary assertion
+runner does not claim Maven or JUnit lifecycle verification.
+
+The temporary Java 21 `RunBankNative` used those freshly repaired classes plus
+the source-equivalent owning loader/probe. It compared **all 101 entries** from
+both native tables through natural stop or 36001 service frames: no differences
+in indexed bytes/words, descriptors, source counts, attacks, note/voice signatures,
+tempo events, outer jumps or ends. S3 Ending retained its **609-frame natural
+end**. The committed ROM-backed regression repeats the recurring comparison
+without a new public tool method, using test-only access to the existing observer.
+No ROM was absent, copied or linked. This is native stream evidence, not PCM or
+playable-duration acceptance inferred from a repeated waveform.
+
+`run_categories.py --base aa667ae91` inspected the unchanged policy selection:
+1030 ordinary classes (`audio`, `common`, `rewind`, `tooling`) plus structural
+guards, from a 3020-class inventory. `LUA_BIN=/usr/bin/lua5.4 ... --preflight`
+passed Java 21, Lua 5.4 and PowerShell; it executes no tests. The user explicitly
+keeps integrated normal/broad repair verification parent-owned and requested one
+coherent focused current command instead of repeating the whole baseline or
+candidate. That focused command and its completed result are recorded below.
+Shared release documentation, integration and cleanup remain parent-owned.
+
+The first identity extension compared indexed bytes only. Read-only parent
+review produced a concrete counterexample using one data subclass with identical
+raw `[F2]`, indexed `[12,34,56,78]`, base `$4000`, metadata, key/config/DAC and
+only a boolean changing `read16` byte order: little-endian word 13330 versus
+big-endian 4660 incorrectly reused the first registration. Byte-only identity
+was therefore rejected, despite valid direct/frozen native stream comparisons.
+
+The new bounded registration test reproduced **four RED conflict assertions**
+against that rejected comparison: different byte order, accepted tail versus
+rejection, distinct accepted tail values, and rejection versus acceptance in the
+opposite registration order. It also retains reconstructed-equal reuse controls.
+The corrected identity compares every complete indexed word and the captured
+incomplete-final-word value versus rejection, in addition to indexed bytes and
+the existing raw/header/metadata/voice/envelope identity. Both freezing and
+identity use the same private final-word snapshot helper. A fresh compilation
+passed all **seven synthetic methods**; the compound word-identity regression
+passed each conflict/control after its four-failure RED reproduction. Descriptor
+hashing remains byte-oriented, explicitly tested across both byte orders: no
+extra public fingerprint or API contract was introduced.
+
+Before this correction, queued session `6700`, PID `1701082`, was verified with
+the exact owned cwd/arguments, no admitted child and only waiting notices. It
+was cancelled **exit 130, no Maven result**. The same 21-class coherent command
+was resubmitted as session `29273`; production/test sources are held unchanged
+for its admission/execution. The preceding all-101 native comparison remains
+valid because this correction changes reconstructed-registration identity only,
+not the captured stream or sequencer.
+
+The final focused command is shown with its existing absolute main ROM directory
+normalized to `SITAR_ROM_ROOT`, as required by the repository's machine-local-path
+resource policy. The executed properties used the existing main `s1.gen`,
+`s2.gen`, and `s3k.gen`, with no copies/links or worktree ROM paths:
+
+```bash
+SITAR_ROM_ROOT='<existing absolute main ROM directory>'
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSonic3kUnifiedAudioPresentationRomIntegration,TestS3kBlueSphereAudioRom,TestS3kFadeOutPsgSilence,TestS3kMusicTempoRuntime,TestS3kOneUpRestoreRom,TestS3kProductionAdmissionObservation,TestFrozenSmpsBankProgram,TestSmpsAssetCatalog,TestFrozenSmpsDataImmutability,TestSmpsDriverSnapshot,TestSmpsDriverSnapshotDescriptorDedupPerformance,TestSitarHeroS3kSongCatalogue,TestSonic3kBankTrackAddressSpace,TestSmpsHeaderConstruction,TestSmpsDataEndianParsing,TestSonic3kCoordFlagParity,TestSonic3kSmpsMetaCommandOperands,TestSonic3kSmpsMetaCommandReachability,TestS3kVoiceResolution,TestSonic3kVoiceData,TestModApiSignatureSurface' \
+  -Dsonic1.rom.path="$SITAR_ROM_ROOT/s1.gen" \
+  -Dsonic2.rom.path="$SITAR_ROM_ROOT/s2.gen" \
+  -Ds3k.rom.path="$SITAR_ROM_ROOT/s3k.gen" test -B
+```
+
+Session `29273` admitted after **2342 seconds queued**, in the normal 7 GiB /
+8-core lane. Production and test sources remained frozen through completion;
+Maven freshly compiled **3700 production and 3584 test sources**, Java release 21.
+It finished at **2026-10-07 18:53:30 +01:00**, **BUILD SUCCESS / exit 0**, total
+execution **1 minute 29 seconds**. All **145 tests in 21 classes passed**, with
+**zero failures, errors or skips**. Every selected Surefire XML was inspected;
+skip identities/reasons are empty, including ROM-backed checks.
+
+| Focused coverage | Classes | Passing tests |
+|---|---:|---:|
+| Six formerly failing production consumers | 6 | 35 |
+| Indexed/frozen immutability, word/byte identity, descriptors and all 101 native streams | 1 | 8 |
+| Complete research forms, actual parts/preparation, natural ends and native bank progression | 1 | 6 |
+| Existing snapshot/cache/dedup, header/endian, native coordination/meta-command and voice regressions | 12 | 87 |
+| Public Mod API signatures | 1 | 9 |
+| **Total** | **21** | **145** |
+
+The six consumer classes contain all 20 reported S3K new failure/error identities,
+now passing without assertion changes: natural 1-Up restoration/suppression,
+mid-jingle and fade snapshot restoration, audible PSG fade entry, Blue Sphere
+music ownership, normal special-stage tempo after shoes, and SFX admission after
+restoration. The native regression preserves S3 Ending **609**, its FM3/FM4
+attack counts **48/72**, and exact full direct/frozen streams for all 101 entries.
+The catalogue regression preserves all 50 research forms and actual role
+absence, including the unchanged 46 full public songs after the parent's four
+short-cue/character-theme exclusions. No song metadata or sequencer was altered.
+
+Pre-admission and completed-source SHA-256 values agree:
+
+- `SmpsAssetCatalog.java`: `e327a96cc315214a06546482d2f6709c774fe6f64ea7910e4bee0ea7cd12ef0e`
+- `SmpsSourceDescriptor.java`: `bf4b96b320a5a34ac74bdc6ec57bd80f3a44a17df3207a544f08dc53b7a54be1`
+- `TestFrozenSmpsBankProgram.java`: `1adc7d7d277e88f34beda6400af81251f40cc5edb552df7ac8264f920f75092d`
+
+The parent independently compiled these source digests and ran the compound
+word-identity regression with JUnit Platform 1.10.3 / Jupiter 5.10.3: one test
+passed, all four conflict branches and descriptor control, zero failures,
+aborts/skips or failed containers, 278 ms. This supplements the worker's coherent
+run; it is not another whole-suite review or rerun.
+
+This is completed **focused validation**, not a post-repair full ordinary or guard
+pass. The parent retains the integrated normal/guard/native matrix comparison,
+shared documentation, main merge, push and worktree cleanup. The worker prepares
+only the four owned files; all seven policy trailers are justified, the exact
+prepared final GPT-6.1 co-author is verified through `git interpret-trailers
+--parse`, and normal hooks are used. Consumed one-off runners/logs and selected
+Surefire outputs are temporary and removed after recording these results.
