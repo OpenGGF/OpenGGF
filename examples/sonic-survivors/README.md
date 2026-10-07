@@ -132,6 +132,11 @@ and every badnik shot also draws on one shared fire budget for the whole arena, 
 1.5 seconds on the first zones down to every half second in the last (Asteron bursts and boss attacks
 excepted). Thirty Buzzers on screen fire no faster than one.
 
+Every enemy projectile (badnik shots, boss volleys and zone-event rain) is drawn at twice its
+ROM size inside a red danger disc with a flashing red/yellow rim, a white-hot core and a fading
+trail, with a yellow muzzle flash where it was fired. Its hit area is unchanged, so the larger
+look is forgiving.
+
 Population has a soft ceiling: with **160** badniks alive, ordinary batches stop joining the
 horde and every twelve held-back badniks arrive as one elite instead. Enemies, enemy shots,
 reward pickups and player projectiles still have no fixed object ceiling; arena objects do not
@@ -171,6 +176,7 @@ pickup; if either ring was magnetized, the combined ring keeps flying toward Son
 | Purple | 25–124 |
 | Red | 125+ |
 
+Coloured rings spin like the ROM ring, turning edge-on and back about twice a second.
 Red piles can keep combining. Consolidation pauses with menus. Hit-spilled rings, monitors, chests and emeralds never join a pile.
 Merged rewards keep the youngest constituent's remaining lifetime, rather than refreshing
 old piles indefinitely.

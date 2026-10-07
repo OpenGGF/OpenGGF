@@ -881,3 +881,10 @@ Follow-up: Super Sonic star sparks (Spark Burst, Meteor Shower, puffs) and Flick
 controller presented over its own menu panels, like the ROM rings. They now hide while a menu
 shows, as the rings do; code-drawn effects keep their order. Checked in a preview with sparks in
 flight behind the level-up cards and the chest; 110 Survivors cases pass.
+
+Follow-up: enemy projectiles read poorly (some ROM shots are a few pixels across). Every `Shot`
+now draws at 2x (`Draw.scaledSprite`; touch size unchanged) inside a translucent red disc with a
+flashing rim, a white core, a five-step trail along its velocity and a muzzle flash, all derived
+from its age. Coloured reward rings were static cached circles; they now spin by squashing the
+cached shape horizontally through a 32-frame turn with an edge-on core line, also derived from
+age. Both inspected in previews; no state or rewind change.

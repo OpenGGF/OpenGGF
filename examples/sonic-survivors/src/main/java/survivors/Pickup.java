@@ -285,18 +285,35 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         renderer.drawFrameIndex(collected >= 0 ? 11 : (age / 4) % 8 == 0 ? 1 : value, x, y, false, false);
     }
 
-    /** Cached, hollow coloured rings, without per-frame value strings or geometry building.
-     * The normal ROM ring remains the small yellow denomination. */
+    /** Frames for one full turn of a coloured ring, close to the ROM ring's spin. */
+    static final int CLUSTER_SPIN = 32;
+
+    /**
+     * Cached, hollow coloured rings that spin like the ROM ring: the cached circle is squashed
+     * horizontally through a turn (round, edge-on, round), with the rim brighter as it turns
+     * edge-on and the highlight sliding across. Derived from the pickup's age, so no state.
+     * The normal ROM ring remains the small yellow denomination.
+     */
     private void drawCluster(int tier) {
         int radius = 7 + tier * 3;
         int colour = tier == 1 ? Draw.CYAN : tier == 2 ? Draw.PURPLE : Draw.RED;
         var s = services();
+        double angle = (age + x) % CLUSTER_SPIN * Math.PI * 2 / CLUSTER_SPIN;
+        double squash = Math.max(0.18, Math.abs(Math.cos(angle)));
         int[] rectangles = s.gameService(MenuArt.class).ringShapes[tier - 1];
         for (int p = 0; p < rectangles.length; p += 4) {
-            Draw.rectWorld(s, x - radius + rectangles[p], y - radius + rectangles[p + 1],
-                    rectangles[p + 2], rectangles[p + 3], colour, 1f);
+            // Columns move toward the centre line; widths shrink, never below a pixel.
+            double left = (rectangles[p] - radius) * squash, right = (rectangles[p] + rectangles[p + 2] - radius) * squash;
+            int x0 = (int) Math.floor(left), w = Math.max(1, (int) Math.ceil(right) - x0);
+            Draw.rectWorld(s, x + x0, y - radius + rectangles[p + 1], w, rectangles[p + 3], colour, 1f);
         }
-        Draw.rectWorld(s, x - radius * 3 / 5, y - radius * 4 / 5, 2, 2, Draw.WHITE, 1f);
+        if (squash < 0.45) {
+            // Edge-on: a bright core line, as the ROM ring's thin frame shows.
+            Draw.rectWorld(s, x - 1, y - radius + 1, 2, radius * 2 - 1, Draw.WHITE, 0.7f);
+        } else {
+            int hx = (int) Math.round(-radius * 3 / 5.0 * squash * Math.signum(Math.sin(angle) + 1e-9));
+            Draw.rectWorld(s, x + hx, y - radius * 4 / 5, 2, 2, Draw.WHITE, 1f);
+        }
     }
 
     /** A code-drawn treasure chest: gold-trimmed, a five-prize chest glows pink. */

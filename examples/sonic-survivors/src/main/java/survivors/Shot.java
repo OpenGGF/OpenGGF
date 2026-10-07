@@ -107,10 +107,32 @@ public final class Shot extends AbstractObjectInstance
 
     @Override public int getPriorityBucket() { return RenderPriority.bucket(3); }
 
+    /** Drawn larger than the ROM art (the hit box is unchanged, so the size is forgiving). */
+    static final float DRAW_SCALE = 2f;
+
+    /**
+     * Readability over ROM fidelity: some projectiles are a few pixels across. Each shot gets a
+     * muzzle flash where it was fired, a fading trail along its path, a red danger disc with a
+     * flashing red/yellow rim and a white-hot core, and 2x art. Hidden while a menu shows, as the
+     * controller's other ROM art is.
+     */
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) return;
-        var renderer = getRenderer(artKey());
-        if (renderer != null) renderer.drawFrameIndex(frame, x, y, vx > 0, false);
-        else Draw.circleWorld(services(), x, y, 3, 3, Draw.RED, 1f);
+        var s = services();
+        if (Stage.menuShowing(s)) return;
+        if (age < 12) {
+            Draw.circleWorld(s, spawn.x(), spawn.y(), 5 + age * 2, 3, Draw.YELLOW, 1f - age / 12f);
+        }
+        for (int k = 1; k <= 5; k++) {
+            int tx = x - vx * k * 3 / 256, ty = y - vy * k * 3 / 256;
+            int r = Math.max(2, 7 - k);
+            Draw.circleWorld(s, tx, ty, r, r, k == 1 ? Draw.ORANGE : Draw.RED, 0.6f - k * 0.1f);
+        }
+        float pulse = 0.75f + 0.25f * (float) Math.sin(age * 0.5);
+        Draw.circleWorld(s, x, y, 10, 10, Draw.RED, 0.35f * pulse);
+        Draw.circleWorld(s, x, y, 12 + (age / 3) % 2, 2, (age / 4) % 2 == 0 ? Draw.RED : Draw.YELLOW, pulse);
+        Draw.circleWorld(s, x, y, 4, 4, Draw.WHITE, 0.7f * pulse);
+        if (getRenderer(artKey()) != null) Draw.scaledSprite(s, artKey(), frame, x, y, vx > 0, DRAW_SCALE);
+        else Draw.circleWorld(s, x, y, 4, 4, Draw.RED, 1f);
     }
 }
