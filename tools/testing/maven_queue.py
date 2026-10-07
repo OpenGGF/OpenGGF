@@ -57,6 +57,36 @@ def _acquire(stream, shared=False):
         return False
 
 
+@contextmanager
+def worktree_metadata_slot(root):
+    """Protect local diagnostics without reserving a JVM execution slot.
+
+    Use the same tree/compatibility lock order as Maven. A shared compatibility
+    lease permits other resource-aware worktrees but excludes legacy/serial
+    clients. Windows retains exclusive compatibility locking.
+    """
+    root = Path(root).resolve()
+    common = Path(subprocess.check_output(
+        ['git', 'rev-parse', '--path-format=absolute', '--git-common-dir'],
+        cwd=root, text=True).strip()).resolve()
+    git_dir = Path(subprocess.check_output(
+        ['git', 'rev-parse', '--absolute-git-dir'], cwd=root, text=True).strip()).resolve()
+    with ExitStack() as stack:
+        started = next_notice = time.monotonic()
+        for path, shared in ((git_dir / 'maven-worktree.lock', False),
+                             (common / 'maven-queue.lock', True)):
+            lease = _open_lock(stack, path)
+            while not _acquire(lease, shared=shared):
+                now = time.monotonic()
+                if now >= next_notice:
+                    print(f'Waiting for diagnostic cleanup lock ({now - started:.0f}s): {root}',
+                          flush=True)
+                    next_notice = now + 30
+                time.sleep(.2)
+            stack.callback(_unlock, lease)
+        yield
+
+
 def _execution_leases(stack, common, request, config):
     """Probe capacity under the admission lock; retain leases in stack on success."""
     from maven_resources import GIB, snapshot, admits
