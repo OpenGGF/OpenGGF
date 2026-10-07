@@ -524,8 +524,11 @@ human P2 can use it in the native competition mode.
 ### Engine Implementation
 
 S2 has no competition session or human-P2 playable slot. The generic
-`TitleActionRoute.TWO_PLAYER` token is not a capability owner and currently
-falls through to the ordinary single-view level start. `GameplayTeamBootstrap`
+`TitleActionRoute.TWO_PLAYER` token is not a capability owner: the shared title
+router rejects that unsupported action, reinitializes the existing title provider
+and remains in `TITLE_SCREEN` without loading an ordinary level. Stock S2's
+title currently emits only `ONE_PLAYER`; S3K and creator providers can emit the
+generic two-player action. `GameplayTeamBootstrap`
 constructs every configured secondary as a CPU sidekick, controller-2 bindings
 feed that sidekick's manual-input path, and
 `ObjectPlayerQuery.nativeP2OrNull()` names the first sidekick rather than a
@@ -544,8 +547,10 @@ EHZ/MCZ/CNZ plus the native special-stage entry, two acts per normal zone,
 independent results/state, two views, and two-camera object lifetime. This is
 not shared-screen co-op or arbitrary character pairing.
 
-The next safe production work is to fail-close the unsupported title token,
-then migrate ordinary live paths to explicit participant roles, slot-indexed
+The unsupported title token is now rejected on both direct host exits and
+provider callbacks, covered by
+`TestGameLoop#testDoExitTitleScreenRejectsUnsupportedTwoPlayerWithoutStartingLevel`.
+The next safe production work is to migrate ordinary live paths to explicit participant roles, slot-indexed
 state, and a one-view semantic registry before the complete S2 product is
 activated atomically. The monitor branch is a final consumer of active
 competition plus the P2/HUMAN role, never the first slice. Existing monitor
@@ -1854,6 +1859,14 @@ determinism measurement of its own.
 ---
 
 ## S2 Whole-Run V-int Clock Cannot Be Made Exact
+
+Current qualification (2026-10-07): standalone special stages 2/5/6 and EHZ1
+segment 2 now pass after restoring the semantic Tails body-art owner. Stage 7
+remains red; the fresh full/prefix chain stops at special-stage segment 1 with
+newly observable Tails art disagreements, following an earlier coconut-damage
+divergence. Historical segment-11 and unreached-stage observations below describe
+their dated runs, not the current frontier. See the
+[S2 audit](../architecture/audits/2026-10-07-s2-parity-gap-verification.md).
 
 `TestS2CompleteEmeraldRunChain`'s final physics axis is blocked on this, after eleven
 rounds of investigation. Recording it so the next attempt starts from the evidence
@@ -3428,4 +3441,3 @@ data.
 `TestKis2PhysicsProvider`, `TestKis2GamePatchResolution`,
 `TestKis2PlacementOracle` (walks `$DF370` against the catalogue counts),
 `TestKis2HeadlessBoot`, `TestLaunchProfileKis2Roster`.
-

@@ -238,6 +238,14 @@ public interface GameModule {
     LevelState createLevelState();
 
     /**
+     * Applies game-owned campaign initialization after the shared title or
+     * level-select new-game reset. Continue and ordinary level reloads do not
+     * invoke this hook. The default preserves existing special-stage progress.
+     */
+    default void onNewGameFromTitle(GameStateManager gameState) {
+    }
+
+    /**
      * Returns the title card provider for this game.
      * Title cards display zone/act information when entering levels.
      *

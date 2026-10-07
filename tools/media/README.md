@@ -35,14 +35,17 @@ After the `ready` JSON response, write one JSON action per line to stdin, or use
 `key` accepts `keys` for simultaneous inputs and a bounded `hold` in seconds.
 Every key uses explicit press and release events. `wait` is bounded to 30 seconds;
 `focus-away`/`focus-back` exercise focus pause. `close` sends WM_DELETE_WINDOW and
-requires normal Engine shutdown within seven seconds. The whole helper expires
+requires Engine exit code zero within seven seconds. An unexpected Engine exit,
+including an unrequested clean exit, fails the walkthrough. The whole helper expires
 after ten minutes. Read the visible result before interpreting a later action.
 The example's [window walkthrough](../../examples/example-mutators/window-walkthrough.jsonl)
 starts from fresh defaults; it supplements the maintained BK2 capture input.
 
 Output includes `window.mkv`, stereo 48 kHz `device-output.wav`, screenshots and
 `window-evidence.json` with child environment, action timestamps, exact window
-PID/title/geometry/visibility and cleanup. The sink is a process-scoped device
+PID/title/geometry/visibility, recorder-start timestamp and actual cleanup outcomes.
+Cleanup attempts every owned resource independently and preserves the primary
+failure if another cleanup action fails. The sink is a process-scoped device
 capture, not proof of physical speaker output. Inspect PCM mean/AC variance around
 music and SFX, not merely a sink-input or nonzero RMS. Raw temporary stderr stays
 in the checkout's `target/`; inspect and remove consumed diagnostic logs.

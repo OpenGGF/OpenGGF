@@ -13,6 +13,7 @@ import uuid
 AGING_SECONDS = 300
 FULL_SECONDS = 900
 REQUEST_NAME = re.compile(r'[0-9a-f]{32}\.request')
+WORKTREE_BUSY = object()
 
 
 def class_estimate(count):
@@ -83,8 +84,18 @@ def choose(requests, now, fits):
     Five minutes is a priority promotion, not a start-time guarantee: running
     Maven jobs are never preempted and external resource pressure may persist.
     """
+    busy_trees = set()
     for request in ordered(requests, now):
-        if fits(request):
+        tree = request.get('tree', request['id'])
+        if tree in busy_trees:
+            continue
+        result = fits(request)
+        if result is WORKTREE_BUSY and request['auto']:
+            # Pausing other trees cannot release this tree's target/. Keep its
+            # oldest request first on the next scan, including a release race.
+            busy_trees.add(tree)
+            continue
+        if result is not WORKTREE_BUSY and result:
             return request
         if aged(request, now):
             return None
@@ -153,6 +164,10 @@ class WaitingRequest:
                 or not all(type(record[k]) in (int, float) and math.isfinite(record[k])
                            for k in ('enqueued', 'estimate')) or record['estimate'] <= 0):
             raise ValueError('Invalid Maven waiting request')
+        reservation = record.get('reservation')
+        if reservation is not None and (not isinstance(reservation, list) or len(reservation) != 2
+                or not all(type(v) in (int, float) and math.isfinite(v) and v > 0 for v in reservation)):
+            raise ValueError('Invalid Maven resource reservation')
 
     def close(self):
         self.stream.close()

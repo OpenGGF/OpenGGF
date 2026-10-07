@@ -305,6 +305,14 @@ one-player exit starts on (act 0; out-of-range values start zone 0), and
 `DelegatingGameModule`) lets a module hide the act number on Sonic 1 and Sonic 2
 title cards. Both are additive to the unpublished 0.7 candidate; the pin is updated in place.
 
+`GameModule.onNewGameFromTitle(GameStateManager)` supplies game-owned initialization
+after the shared title/level-select new-game reset. Its default is inert and
+`DelegatingGameModule` forwards it to the wrapped module. S1 uses it to clear its
+emerald inventory and special-stage cursor, matching `PlayLevel`; Continue and
+ordinary level resets do not invoke it. This is additive to the unpublished 0.7
+candidate: the normalized pin is updated in place, while the descriptor,
+`ModApiVersion` and published pins remain unchanged.
+
 `GameModule.requiredDisplayAspect()` (default `null`) names a `display.aspect` preset
 the session requires; interactive launches apply it as a session override after patch
 resolution, so the master title restores the player's aspect and trace test mode still

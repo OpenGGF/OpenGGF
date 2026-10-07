@@ -16,7 +16,7 @@ python3 examples/example-mutators/build.py --run
 
 The script queues Maven compilation, compiles maintained Java sources and runs
 `ggfmod package`. Output: `target/example-mutators/example-mutators.jar`.
-Choose **Sonic 2**, then the **Mutator Lab** title. Configure the package before
+The development launch opens the **Mutator Lab** title for Sonic 2. Configure before
 Start or choose How to play. For a package without launching:
 
 ```bash

@@ -22,6 +22,49 @@ def stop(process):
         try: process.wait(timeout=3)
         except subprocess.TimeoutExpired: process.kill(); process.wait(timeout=3)
 
+def require_successful_close(host):
+    if host.returncode != 0:
+        raise RuntimeError(f"Engine window close exited {host.returncode}")
+
+
+def finish_engine_run(host, intentional_stop, receipt):
+    if receipt['status'] == 'closed':
+        require_successful_close(host)
+    elif host.poll() is not None:
+        raise RuntimeError(f"Unexpected Engine exit {host.returncode} before normal window close")
+    elif not intentional_stop:
+        raise RuntimeError('Engine walkthrough did not finish intentionally')
+    else:
+        receipt['status'] = 'stopped before normal window close'
+
+
+def cleanup_owned(processes, focus_window, connection, module, log):
+    """Attempt every owned resource, retaining independent errors and actual outcomes."""
+    result = {'processes_stopped': {}, 'errors': []}
+    for name, process in processes.items():
+        try:
+            stop(process)
+        except BaseException as failure:
+            result['errors'].append(f'{name}: {failure!r}')
+        try:
+            result['processes_stopped'][name] = process is None or process.poll() is not None
+        except BaseException as failure:
+            result['processes_stopped'][name] = False
+            result['errors'].append(f'{name} status: {failure!r}')
+    operations = [('focus_window_destroyed', lambda: focus_window.destroy() if focus_window else None),
+                  ('display_closed', connection.close),
+                  ('audio_module_unloaded', lambda: subprocess.run(['pactl', 'unload-module', module], check=True, timeout=5) if module else None),
+                  ('temporary_log_closed', log.close)]
+    for name, action in operations:
+        try:
+            action()
+            result[name] = True
+        except BaseException as failure:
+            result[name] = False
+            result['errors'].append(f'{name}: {failure!r}')
+    return result
+
+
 def owned_window(d,pid,visible=True):
     atom=d.intern_atom("_NET_WM_PID")
     def visit(w,depth=0):
@@ -60,6 +103,7 @@ def main():
     if args.keyutils_preload and not args.keyutils_preload.resolve().is_file():raise ValueError('Preload library unavailable')
     out=args.out.resolve()
     if root==out or root in out.parents:raise ValueError('Evidence must stay outside repository')
+    if out.exists() and any(out.iterdir()):raise ValueError('Capture requires a fresh empty output directory')
     out.mkdir(parents=True,exist_ok=True)
     config=out/'config';config.mkdir();(config/'empty-roms').mkdir()
     roms={key:value.resolve() for key,value in [('sonic1',args.rom_s1),('sonic2',args.rom_s2),('sonic3k',args.rom_s3k)] if value}
@@ -77,7 +121,7 @@ def main():
     def record(): (out/'window-evidence.json').write_text(json.dumps(receipt,indent=2)+'\n')
     def reply(value): print(json.dumps(value),flush=True)
     try:
-        module=subprocess.check_output(['pactl','load-module','module-null-sink','sink_name='+sink,'rate=48000','channels=2'],text=True).strip()
+        module=subprocess.check_output(['pactl','load-module','module-null-sink','sink_name='+sink,'rate=48000','channels=2'],text=True,timeout=5).strip()
         if not module.isdigit():raise RuntimeError('No exact owned audio module ID')
         receipt['owned_audio_module']=module
         env=os.environ.copy();env.update(PULSE_SINK=sink,ALSOFT_DRIVERS='pulse')
@@ -93,9 +137,10 @@ def main():
         receipt['child_environment']={key:env.get(key) for key in ['DISPLAY','WAYLAND_DISPLAY','XDG_SESSION_TYPE','ALSOFT_DRIVERS','PULSE_SINK','LD_PRELOAD','vblank_mode','__GL_SYNC_TO_VBLANK']}
         host=subprocess.Popen(command,cwd=root,env=env,stdout=log,stderr=log)
         receipt['processes']['engine']=host.pid;record()
-        window=None;deadline=time.monotonic()+90;thread_sampled=False
+        window=None;selected_title=None;deadline=time.monotonic()+90;thread_sampled=False
         while window is None and host.poll() is None and time.monotonic()<deadline:
             window=owned_window(d,host.pid,not args.unmanaged_window)
+            if window is not None:selected_title=window.get_wm_name()
             if window is not None and args.unmanaged_window:
                 receipt['host_window_management']='owned override_redirect window'
                 window.change_attributes(override_redirect=True)
@@ -112,7 +157,7 @@ def main():
         geom=window.get_geometry();attributes=window.get_attributes();window_title=window.get_wm_name()
         if host.poll() is not None or pid_property is None or len(pid_property.value)!=1 or int(pid_property.value[0])!=host.pid:
             raise RuntimeError('Owned Engine PID changed before recorder start')
-        if not str(window_title).startswith('OpenGGF') or attributes.map_state!=X.IsViewable or geom.width<=0 or geom.height<=0:
+        if window_title!=selected_title or not str(window_title).startswith('OpenGGF') or attributes.map_state!=X.IsViewable or geom.width<=0 or geom.height<=0:
             raise RuntimeError('Owned Engine title/visibility/geometry invalid before recorder start')
         receipt['window_title']=window_title;receipt['window_id']=window.id;receipt['window_size']=[geom.width,geom.height]
         receipt['window_depth']=geom.depth;receipt['window_map_state']=attributes.map_state
@@ -121,16 +166,18 @@ def main():
         video=subprocess.Popen(grab+['-c:v','libx264','-preset','veryfast','-crf','16',str(out/'window.mkv')],stdout=subprocess.DEVNULL,stderr=log)
         sound=subprocess.Popen(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','pulse','-i',sink+'.monitor',
                                 '-ar','48000','-ac','2','-c:a','pcm_s16le',str(out/'device-output.wav')],stdout=subprocess.DEVNULL,stderr=log)
-        receipt['processes'].update(video=video.pid,audio=sound.pid);receipt['status']='recording';record()
+        receipt['processes'].update(video=video.pid,audio=sound.pid)
+        receipt['recording_started_seconds']=round(time.monotonic()-started,3)
+        receipt['status']='recording';record()
         reply({'ready':True,'engine_pid':host.pid,'window_id':window.id,'log':str(log_path)})
-        pending=args.actions.read_bytes().splitlines() if args.actions else [];buffer=b''
+        pending=args.actions.read_bytes().splitlines() if args.actions else [];buffer=b'';intentional_stop=False
         while host.poll() is None and time.monotonic()-started<600:
             if video.poll() is not None or sound.poll() is not None:raise RuntimeError('Output recorder stopped early')
             if not pending:
-                if args.actions:break
+                if args.actions:intentional_stop=True;break
                 if not select.select([sys.stdin],[],[],1)[0]:continue
                 chunk=os.read(sys.stdin.fileno(),65536)
-                if not chunk:break
+                if not chunk:intentional_stop=True;break
                 buffer+=chunk
                 *lines,buffer=buffer.split(b'\n')
                 pending.extend(line for line in lines if line.strip())
@@ -167,15 +214,27 @@ def main():
                 window.send_event(event,event_mask=X.NoEventMask);d.flush()
                 try:host.wait(timeout=7)
                 except subprocess.TimeoutExpired:raise RuntimeError('Engine did not close its owned window normally')
+                require_successful_close(host)
                 receipt['engine_exit_code']=host.returncode;receipt['status']='closed';record();reply({'closed':host.returncode});break
             else:raise ValueError('Unsupported command')
             reply({'done':op,'elapsed_seconds':round(time.monotonic()-started,3)})
         if host.poll() is None and time.monotonic()-started>=600:raise RuntimeError('Bounded probe expired')
+        finish_engine_run(host,intentional_stop,receipt)
+    except BaseException as failure:
+        receipt['status']='failed';receipt['failure']=repr(failure)
+        raise
     finally:
-        for process in (host,video,sound):stop(process)
-        if focus_window is not None:focus_window.destroy()
-        d.close()
-        if module is not None:subprocess.run(['pactl','unload-module',module],check=True)
-        log.close();receipt['all_owned_processes_stopped']=True;receipt['owned_audio_module_removed']=module
-        receipt['temporary_log']=str(log_path);record();reply({'cleanup':True,'log':str(log_path)})
+        primary_failure=sys.exc_info()[0] is not None
+        cleanup=cleanup_owned({'engine':host,'video':video,'audio':sound},focus_window,d,module,log)
+        receipt['cleanup']=cleanup
+        receipt['all_owned_processes_stopped']=all(cleanup['processes_stopped'].values())
+        receipt['owned_audio_module_removed']=module if cleanup['audio_module_unloaded'] else None
+        receipt['temporary_log']=str(log_path)
+        if cleanup['errors'] and not primary_failure:receipt['status']='cleanup failed'
+        try:
+            record();reply({'cleanup':not cleanup['errors'],'log':str(log_path)})
+        except BaseException:
+            if not primary_failure:raise
+        if cleanup['errors'] and not primary_failure:
+            raise RuntimeError('Owned capture cleanup failed: '+'; '.join(cleanup['errors']))
 if __name__=='__main__':main()

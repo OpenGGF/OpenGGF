@@ -90,6 +90,34 @@ swap waits may also starve animation; if child-only vblank overrides are needed,
 record them and retain the engine's tick limiter. Inspect changing frames and
 AC PCM windows around actions, including title-to-level producer rebuilds.
 
+Queue-holder inventory needs descriptor corroboration (2026-10-07 Mutator Lab
+recovery): this Btrfs checkout reported device `00:23` from `stat`, while
+`/proc/locks` listed the same file as `00:21`. Matching only device and inode
+falsely reported no holder. Confirm the inode together with the exact holder's
+`/proc/<pid>/fd` target and `fdinfo`, plus its live lease and command/CWD. Identify
+Java through `/proc/<pid>/exe` or the Surefire command marker: a `/usr/bin/java`
+substring scan missed a live `/usr/lib/jvm/java-21-openjdk/bin/java` fork.
+These observations establish ownership, not progress, a pass or a stall; never
+delete locks or stop another owner's process to force admission.
+
+Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
+task): the positioned MHZ capture retained about 22 MiB after its callback while
+three complete capture/rewind/ROM-loading passes settled near 16.8 MiB, with only
+15–17 KiB growth on later passes. Class fixtures, JUnit contexts and engine globals
+can still be live at the test callback. Compare requested-GC floors after the
+launcher returns and teardown unwinds; validate the profiler with deliberately
+retained memory. Allocation counters measure churn, sampled JVM-global peaks
+include caches, and high RSS after GC does not establish Java or native leaks.
+Record skips, GC observation, repeated-pass order and the actual source revision.
+
+Moving a live log across filesystems loses its writer (2026-10-07, stock parity
+swarm): moving stdout from `/tmp` on tmpfs into a btrfs worktree copied and
+unlinked the original file while the queued wrapper retained its open inode.
+The visible copy stopped growing although Maven continued. Create output in the
+worktree's `target/` before launching. If recovery is needed, verify the exact
+owned process and follow its `/proc/<pid>/fd/1` descriptor with a bounded
+`tail --pid` follower; record and clean up that follower. Log recovery and queue
+admission are not test completion.
 
 Direct level-load captures can hide title-route faults (2026-10-06, Putt Putt
 Paradise at `b34da10e4`): the footage and course tests matched physics while the
@@ -129,6 +157,15 @@ portable state comparison. Check the owning hash implementation before ignoring
 such text. Compare test identity, first-error frame and concrete fields, and
 state when only a bounded baseline prefix is available; do not claim a full
 message or full state match from it.
+
+Follow-up (2026-10-07): `results.json`'s `failed_cases[].detail` retained the
+complete assertion first line even though `message` was capped. Inspect that
+field before declaring the evidence truncated. The SSZ first line was 2,952
+characters; stripping its exception prefix and normalizing only the verified
+`RewindObjectStateBlob@hex` hashes produced 2,907 characters matching the full
+baseline assertion independently retained by its owner. Preserve every concrete
+field during comparison, and distinguish a full assertion match from equality
+of unreported world state.
 
 
 Pitch is not note tempo (2026-10-02): accelerated sample-voice tests passed at

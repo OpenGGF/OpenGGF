@@ -24,7 +24,7 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider {
     private SwScrlMz mzHandler;
     private SwScrlSlz slzHandler;
     private SwScrlSyz syzHandler;
-    private UniformQuarterSpeedScroll sbzHandler;
+    private SwScrlSbz sbzHandler;
     private UniformQuarterSpeedScroll fzHandler;
 
     private boolean loaded = false;
@@ -43,7 +43,7 @@ public class Sonic1ScrollHandlerProvider implements ScrollHandlerProvider {
         mzHandler = new SwScrlMz();
         slzHandler = new SwScrlSlz();
         syzHandler = new SwScrlSyz();
-        sbzHandler = new UniformQuarterSpeedScroll();
+        sbzHandler = new SwScrlSbz();
         fzHandler = new UniformQuarterSpeedScroll();
 
         loaded = true;

@@ -6,6 +6,9 @@ realised usage against the job's own reservation instead of counting it twice
 (once in MemAvailable/load, once as a full reservation). A record whose lease is
 not held, is stale or cannot be parsed earns no credit, so failure is conservative.
 Records never authorize execution: slot locks do that.
+Fresh records also supply each job's own budget for mixed normal/lean admission;
+unknown holders retain a normal reservation. Lean support: 2026-10-07 focused
+Maven throughput task.
 
 Completed jobs append one line to `.git/maven-queue-log.jsonl` (wait, hold, peak
 RSS, mean CPU; no arguments, results or pass/fail). `maven_queue.py --stats`
@@ -68,17 +71,17 @@ class RunningLease:
         self.path.unlink(missing_ok=True)
 
 
-def live_credit(common, acquire, now=None):
-    """Sum usage already realised by live running jobs, capped per reservation.
+def _live_records(common, acquire, now=None):
+    """Read fresh, valid OS-leased budgets and usage under the admission lock.
 
     Requires the admission lock. Unlocked leases belong to dead holders and are
     pruned; unreadable or stale live records earn no credit.
     """
     now = time.time() if now is None else now
     directory = common / 'maven-running'
-    memory = cores = 0
+    records = []
     if not directory.is_dir():
-        return 0, 0
+        return records
     for path in directory.iterdir():
         if not LEASE_NAME.fullmatch(path.name) or path.is_symlink():
             continue
@@ -94,14 +97,36 @@ def live_credit(common, acquire, now=None):
                         values = [float(record[k]) for k in ('memoryBytes', 'cpuCores', 'rss', 'cores', 'updated')]
                     except (KeyError, TypeError, ValueError):
                         continue  # Torn or malformed write: no credit.
-                    if all(math.isfinite(v) and v >= 0 for v in values) and now - values[4] <= FRESH_SECONDS:
-                        memory += min(values[2], values[0])
-                        cores += min(values[3], values[1])
+                    if (all(math.isfinite(v) and v >= 0 for v in values)
+                            and values[0] > 0 and values[1] > 0
+                            and 0 <= now - values[4] <= FRESH_SECONDS):
+                        records.append(values)
             if stale:
                 path.unlink(missing_ok=True)
         except FileNotFoundError:
             continue
-    return memory, cores
+    return records
+
+
+def live_credit(common, acquire, now=None):
+    """Legacy usage-only API; each job earns at most its own reservation."""
+    records = _live_records(common, acquire, now)
+    return tuple(sum(min(row[i + 2], row[i]) for row in records) for i in (0, 1))
+
+
+def live_load(common, acquire, active, default, now=None):
+    """Return usage credit and reserved resources, including unknown holders.
+
+    Older wrappers publish their normal budgets in the same lease format. Missing
+    or stale records retain a full normal reservation. More records than slots
+    means inconsistent accounting: forfeit credit and use the largest budgets.
+    """
+    records = _live_records(common, acquire, now)
+    if len(records) > active:
+        return (0, 0), tuple(active * max([default[i], *(row[i] for row in records)]) for i in (0, 1))
+    credit = tuple(sum(min(row[i + 2], row[i]) for row in records) for i in (0, 1))
+    reserved = tuple(sum(row[i] for row in records) + (active - len(records)) * default[i] for i in (0, 1))
+    return credit, reserved
 
 
 class UsageSampler(threading.Thread):

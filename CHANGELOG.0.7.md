@@ -12,6 +12,22 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   keeps native movement and sprite admission, with an explicit EHZ1 solo-Sonic
   support cell and maintained package source/build-along guide.
 
+- **Sonic 1 background scrolling:** Scrap Brain Act 1 uses the REV01 cloud
+  interpolation and three building bands, with separate fractional cameras,
+  rewind restoration and tile-cache window coverage at wider viewports. Scrap
+  Brain Act 2 and Final Zone keep their uniform scrolling and use the REV01
+  background-Y entry offset.
+
+- **Sonic 2 playable art and springs:** companion players register their ROM
+  art owner by character identity, restoring Tails DPLC submissions for runtime
+  names such as `tails_p2`. Horizontal springs apply the native unsigned
+  launch-side check for both participants, including the flipped equality case.
+
+- **Stock title starts:** starting a new Sonic 1 game clears emeralds and the
+  special-stage cursor while preserving configured stage counts; Continue keeps
+  existing progress. Unsupported two-player title actions return to the title
+  menu instead of starting an ordinary level.
+
 - **Window and display aspect:** a launch that changes the display aspect (a launch
   profile's aspect, or a module's required aspect such as a mod laid out for 16:9) now
   refits the window instead of letterboxing the new picture inside the old window: a
@@ -24,7 +40,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Live zone handoffs now run the fresh title and terrain-loading lifecycle,
   restoring players before the initial sprite pass without adding a frame.
 
-- **S3K Launch Base:** Cup elevators now resolve each player’s solid contact before checking capture, restoring airborne side collisions and normal landing admission, and preserve native movement and animation control through the NPC Knuckles cutscene. Rolling drums preserve native rider state when unloading, after completing their final player updates. The Act1 miniboss preserves the fatal-hit dispatch before its defeat countdown, including explosion timing through rewind. Carried results now finish their twelve real children before publishing control release, then initialize the next title owner on its following dispatch. Retained title owners reset level counters only after their ROM-backed art and moving children settle, preserving the independent presentation clock. The seamless Act 2 reload holds the inherited camera limits until the title owner releases them, then runs its gradual boundary children in their native creation pass.
+- **S3K Launch Base:** Cup elevators now resolve each player’s solid contact before checking capture, restoring airborne side collisions and normal landing admission, and preserve native movement and animation control through the NPC Knuckles cutscene. Rolling drums preserve native rider state when unloading, after completing their final player updates. The Act1 miniboss preserves the fatal-hit dispatch before its defeat countdown, including explosion timing through rewind. Carried results now finish their twelve real children before publishing control release, then initialize the next title owner on its following dispatch. Retained title owners reset level counters only after their ROM-backed art and moving children settle, preserving the independent presentation clock. Ribot creates its visual children before its first active orbit, matching the ROM initialization return. The seamless Act 2 reload holds the inherited camera limits until the title owner releases them, then runs its gradual boundary children in their native creation pass.
 
 - Automatically mask widescreen pixels beyond current native horizontal camera
   bounds, including asymmetric arena and level edges. During staged boss entry,
@@ -1015,7 +1031,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   callbacks; manager-owned collision, riding and live callbacks are preserved.
   S2 player and dust art share the S2 mapping/DPLC decoder, with the public
   player DPLC entry point retained as a compatibility delegate.
-  SBZ and Final Zone share uniform scroll mechanics with independent camera state.
+  SBZ Act 2 and Final Zone share uniform scroll mechanics with independent camera
+  state; SBZ Act 1 uses its native cloud and building bands.
   Removed an unused radius-transition duplicate; live hurt and death paths retain their owners.
   S1 and S3K rings decode ROM mappings, correcting sparkle flips to the ROM sequence
   while preserving animation timing and the S3K pattern cap.
@@ -1071,8 +1088,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   preserving a serial override. Single-fork trace and audio profiles no longer force
   exclusive runs, and a bounded log (`maven_queue.py --stats`) records queue waits, holds
   and peak memory. Waiting requests favour short checks, with aging and
-  bounded backfilling to protect large runs from starvation. An optional profiler measures process-tree RSS and CPU
-  for ordinary/guard runs. No task registration, validation receipts,
+  bounded backfilling to protect large runs from starvation. An opt-in lean lane
+  bounds both JVM heaps for small focused checks and accounts for their smaller
+  reservations alongside normal runs. A busy worktree's aged request retains its
+  place without blocking unrelated trees. Optional profilers measure process-tree RSS/CPU
+  for ordinary/guard runs and per-test allocation, sampled peaks and repeated post-GC
+  retention for explicitly selected tests. No task registration, validation receipts,
   cumulative budgets or retry gates are needed. Per-invocation category timeouts exclude
   queue waiting. Full CI and release validation remain unchanged.
 
