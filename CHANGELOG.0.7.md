@@ -1087,7 +1087,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   reservations alongside normal runs. A busy worktree's aged request retains its
   place without blocking unrelated trees. Optional profilers measure process-tree RSS/CPU
   for ordinary/guard runs and per-test allocation, sampled peaks and repeated post-GC
-  retention for explicitly selected tests. No task registration, validation receipts,
+  retention for explicitly selected tests. An ordinary-suite observer measures actual
+  Surefire class floors, native evidence and the Maven parent's separate memory cost.
+  No task registration, validation receipts,
   cumulative budgets or retry gates are needed. Per-invocation category timeouts exclude
   queue waiting. Full CI and release validation remain unchanged.
 
