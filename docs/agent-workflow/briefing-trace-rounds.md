@@ -110,6 +110,28 @@ retained memory. Allocation counters measure churn, sampled JVM-global peaks
 include caches, and high RSS after GC does not establish Java or native leaks.
 Record skips, GC observation, repeated-pass order and the actual source revision.
 
+Class completion is not always fixture release (2026-10-07 ordinary-suite memory
+investigation): a JUnit 5.10.3 control retained a 20 MiB `PER_CLASS` fixture at the
+next class boundary and released it only after the entire plan returned. Actual
+Surefire executed its two-class control in one plan. Label within-plan post-GC
+growth as retention candidates; compare the final post-plan floor and inspect
+fixture/static owners before claiming application leaks. An `@AfterAll` callback
+or a closed native handle does not by itself make a fixture's Java graph unreachable.
+
+Immediate post-GC counters can disagree (2026-10-07 compiler-memory experiment):
+the owned Maven parent dropped from about 1.27 GiB used heap to 79.5 MiB after a
+requested collection, while RSS and NMT committed counters had not yet followed
+the logical heap resize. A later reading showed RSS plus swap falling from
+2.54 GiB to 0.78 GiB. Compare settled counters and distinguish a later used-heap
+reading from a post-GC floor before attributing the difference to native retention.
+
+A constant-retention stress assertion can measure the wrong owner (2026-10-07
+audio-comparator investigation): production validation kept bounded semantic
+state, but the test factory's static evidence map held 500,128 input services.
+Clearing that map after the selected plan returned released 309.5 MiB. Compare
+post-plan floors and release explicit owners in sequence; the test's internal
+retention counter does not include its input factory or framework bookkeeping.
+
 Moving a live log across filesystems loses its writer (2026-10-07, stock parity
 swarm): moving stdout from `/tmp` on tmpfs into a btrfs worktree copied and
 unlinked the original file while the queued wrapper retained its open inode.
@@ -118,6 +140,16 @@ worktree's `target/` before launching. If recovery is needed, verify the exact
 owned process and follow its `/proc/<pid>/fd/1` descriptor with a bounded
 `tail --pid` follower; record and clean up that follower. Log recovery and queue
 admission are not test completion.
+
+A macOS native-test stall can be AWT rather than gameplay (2026-10-06,
+`1ae1596837`): the ordinary suite stopped producing output in
+`TestObjectControlledGravity` after earlier rendering/example tests. Java attach timed out;
+a native `sample` showed the main thread inside `AWTStarter` / `NSApplication.run`, nested
+under GLFW event polling. The 40-minute runner deadline terminated the invocation. Record
+that as incomplete, keep attribution open, and check the capture class in a fresh JVM;
+do not infer a physics loop from the name of the last test or repeat the entire stalled suite.
+All 12 cases passed in a fresh JVM after the Survivors fixture; that result does not
+attribute the preceding long-suite AWT interaction.
 
 Direct level-load captures can hide title-route faults (2026-10-06, Putt Putt
 Paradise at `b34da10e4`): the footage and course tests matched physics while the

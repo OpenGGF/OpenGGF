@@ -11,29 +11,41 @@ import java.util.List;
 
 /**
  * The arena's controller, placed as the level's only object. It walls the camera and Sonic into
- * the arena, runs the stage's phases (camp shop before a run, the intro, two minutes of waves,
+ * the arena, runs the stage's phases (camp shop before a run, the intro, timed or unlimited waves,
  * the boss, the clear screen and route choice, game over and victory), spawns the badnik waves,
  * owns Sonic's weapons and moves, the bounce combo and the level-up cards, and draws the HUD.
- * Weapon projectiles and effects live in fixed primitive pools here so the ordinary mod-object
- * rewind capture restores them with the controller.
+ * Weapon projectiles use growable primitive arrays; cosmetic effects use a fixed pool.
+ * The ordinary mod-object rewind capture restores both with the controller.
  */
 public final class Stage extends AbstractObjectInstance implements RewindRecreatable {
     static final int CAMP = 0, INTRO = 1, FIGHT = 2, BOSS = 3, CLEAR_WAIT = 4, CLEAR = 5, DEAD = 6, VICTORY = 7;
-    static final int OVERLAY_NONE = 0, OVERLAY_LEVEL_UP = 1;
+    static final int OVERLAY_NONE = 0, OVERLAY_LEVEL_UP = 1, OVERLAY_CHEST = 2;
     static final int INTRO_FRAMES = 150;
     static final int ELITE_PERIOD = 60 * 30;
-    /** Every this many chained bounces, Sonic goes invincible for the stock duration. */
-    static final int FEVER_COMBO = 10;
-    static final int RING_FORMATION_PERIOD = 600;
+    // Fever: six seconds of invincibility, then eighteen of recovery (a quarter of the time at best).
+    static final int FEVER_DURATION = 6 * 60, FEVER_RECOVERY = 18 * 60;
+    /** Live badniks beyond this stop ordinary spawns; the overflow summons elites instead. */
+    static final int SOFT_CAP = 160;
+    static final int OVERFLOW_PER_ELITE = 12;
+    // Mid-stage beats: a zone event and a warden squad, each every 150 seconds of survival.
+    static final int EVENT_FIRST = 105, WARDEN_FIRST = 180, BEAT_PERIOD = 150, EVENT_FRAMES = 10 * 60;
+    static final int CHEST_ITEMS = 8;
+    // Tails's hover: frames of slowed descent per jump.
+    static final int HOVER_FRAMES = 75;
+    int feverCharge, feverFrames, feverCooldown;
+    int encounter = -1;
+    // One encounter lasts 30 seconds: 18 assault, 7 surge, 5 recovery.
+    static final int ENCOUNTER_FRAMES = 30 * 60;
+    static final int RING_FORMATION_PERIOD = 480;
     // GLFW_KEY_ESCAPE: a tap leaves the arena for the title (banking the run).
     private static final int KEY_ESCAPE = 256;
 
     // Player projectile pool.
-    static final int MAX_P = 48;
-    static final int P_SPARK = 1, P_HOMING = 2, P_BOOM = 3, P_FLICKY = 4;
+    static final int INITIAL_PROJECTILES = 48;
+    static final int P_SPARK = 1, P_HOMING = 2, P_BOOM = 3, P_FLICKY = 4, P_LANCE = 5;
     // Effect pool.
     static final int MAX_E = 64;
-    static final int E_NUMBER = 1, E_SHOCK = 2, E_POUND = 3, E_BOLT = 4, E_PUFF = 5;
+    static final int E_NUMBER = 1, E_SHOCK = 2, E_POUND = 3, E_BOLT = 4, E_PUFF = 5, E_WARN = 6;
 
     int phase;
     int phaseFrames;
@@ -45,14 +57,48 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     int eliteTimer;
     boolean bossSpawned;
     int frameTick;
+    int ringMergeFrames;
     // Menus.
     int menuIndex;
     boolean upHeld, downHeld, jumpHeld;
     int[] cards = new int[4];
     int cardCount;
+    // Camp sub-pages: Eggman's Rules and the records.
+    static final int PAGE_CAMP = 0, PAGE_RULES = 1, PAGE_RECORDS = 2, PAGE_SHOP = 3;
+    static final int RECORD_TABS = 4;
+    int campPage, recordsTab;
+    boolean leftHeld, rightHeld;
+    // An opened chest: what it gave. Item codes: upgrade id, 100 + evolution, -1 rings.
+    final int[] chestItems = new int[CHEST_ITEMS];
+    /** The rank each upgrade prize reached, for the chest screen. */
+    final int[] chestLevels = new int[CHEST_ITEMS];
+    int chestCount, chestRings;
+    /** Chests owed by a warden squad: its first fallen elite drops one. */
+    int chestOwed;
+    // The mid-stage beats.
+    int eventFrames, eventsStarted, wardensStarted, eventTimer;
+    int overflow;
+    int hoverFrames;
+    /** Unlocks earned by the run just banked or the zone just cleared, for the results screens. */
+    int newUnlocks;
+    /** Frames until any badnik may fire again: the horde shares one fire budget. */
+    int enemyShotCooldown;
+
+    /** Spacing between badnik shots across the whole arena: 1.5 s early, half a second at the end. */
+    int enemyShotGap() { return Math.max(30, 90 - 5 * tier()); }
+
+    /** Claims the shared fire budget for one badnik shot; false while it recharges. */
+    boolean claimEnemyShot() {
+        if (enemyShotCooldown > 0) return false;
+        enemyShotCooldown = enemyShotGap();
+        return true;
+    }
+
+    // Balance telemetry (hitpoints spawned and damage dealt this arena), read by the balance probe.
+    long statHpSpawned, statDamage;
     // Frozen player state while a menu pauses play.
     boolean playerFrozen;
-    int savedX, savedY, savedG;
+    int savedX, savedY, savedG, savedInvincible, savedInvulnerable;
     // Weapons and moves.
     int boomTimer, flickyTimer, barrierTimer, orbitAngle, ringTimer;
     int airFrames, airJumpsUsed, dashFrames, comboGrace;
@@ -68,8 +114,8 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     boolean emeraldNew;
     int clearChoices;
 
-    final int[] pX = new int[MAX_P], pY = new int[MAX_P], pVX = new int[MAX_P], pVY = new int[MAX_P],
-            pLife = new int[MAX_P], pKind = new int[MAX_P], pDmg = new int[MAX_P], pHits = new int[MAX_P];
+    int[] pX = new int[INITIAL_PROJECTILES], pY = new int[INITIAL_PROJECTILES], pVX = new int[INITIAL_PROJECTILES], pVY = new int[INITIAL_PROJECTILES],
+            pLife = new int[INITIAL_PROJECTILES], pKind = new int[INITIAL_PROJECTILES], pDmg = new int[INITIAL_PROJECTILES], pHits = new int[INITIAL_PROJECTILES];
     final int[] eX = new int[MAX_E], eY = new int[MAX_E], eKind = new int[MAX_E], eAge = new int[MAX_E],
             eA = new int[MAX_E], eB = new int[MAX_E], eC = new int[MAX_E], eD = new int[MAX_E];
 
@@ -101,6 +147,19 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     Arena arena() { return services().gameService(Arena.class); }
     boolean paused() { return run().paused; }
 
+    /**
+     * A full menu (camp, cards, chest, results) is on screen. ROM rings use the ring renderer,
+     * which draws after the sprite list and so over the menu panels; they hide while it shows.
+     */
+    boolean menuShowing() {
+        return overlay != OVERLAY_NONE || phase == CAMP || phase == CLEAR || phase == DEAD || phase == VICTORY;
+    }
+
+    static boolean menuShowing(ObjectServices services) {
+        Stage stage = find(services);
+        return stage != null && stage.menuShowing();
+    }
+
     // =========================================================================================
     // Frame update
     // =========================================================================================
@@ -120,6 +179,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         if (hitFlash > 0) hitFlash--;
         if (!started) start(player);
         if (escapePressed()) { retire(true); return; }
+        run.pressure = phase == FIGHT || phase == BOSS ? pressureSeconds() : run.pressure;
         if (player.getDead() && phase != DEAD && phase != VICTORY) { die(); }
         if (!player.getDead()) setLives(1);
         boolean wantPause = phase == CAMP || phase == CLEAR || phase == VICTORY || overlay != OVERLAY_NONE
@@ -146,10 +206,12 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
                     freezePlayer(player, true);
                     break;
                 }
+                if (overlay == OVERLAY_CHEST) { chestMenu(player); break; }
                 if (overlay != OVERLAY_NONE) { levelUpMenu(player); break; }
                 fight(player);
             }
             case CLEAR_WAIT -> {
+                if (overlay == OVERLAY_CHEST) { chestMenu(player); break; }
                 updateProjectiles();
                 updateEffects();
                 if (phaseFrames > 330) collectEmeraldNow();
@@ -158,12 +220,13 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             case DEAD -> deadMenu(player);
             default -> victoryMenu(player);
         }
+        if (!run.paused && !player.getDead() && ++ringMergeFrames >= RingClusters.PERIOD) {
+            ringMergeFrames = 0;
+            services().gameService(RingClusters.class).merge(services());
+        }
     }
 
-    /**
-     * The stock level timer never runs out here. During play it runs but is held at zero rather
-     * than paused, because Sonic 2 refuses the Super Sonic transformation while it is paused.
-     */
+    /** The stock level timer is held at zero during play; arena phases own the countdown. */
     private void holdTimer() {
         var level = services().levelGamestate();
         if (phase == FIGHT || phase == BOSS) {
@@ -172,13 +235,6 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         } else {
             level.pauseTimer();
         }
-    }
-
-    /** All seven Chaos Emeralds: the run carries them, so 50 rings and a double jump go Super. */
-    private void grantEmeralds() {
-        if (!run().allRelics()) return;
-        var state = services().gameState();
-        for (int i = 0; i < Profile.EMERALDS; i++) state.markEmeraldCollected(i);
     }
 
     /** Holds the camera and Sonic's level boundary to the arena (they read the camera bounds). */
@@ -225,18 +281,36 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         player.setRingCount(run.carriedRings);
         run.rerolls = run.rerollsPerStage();
         run.combo = 0;
+        run.pressure = 0;
         if (run.relic(5)) player.giveShield();
-        grantEmeralds();
         phase = INTRO;
         phaseFrames = 0;
     }
 
-    private void beginFight() {
+    /** Unlimited mode: every two minutes survived counts as one more zone of the route. */
+    static final int UNLIMITED_TIER_SECONDS = 120;
+
+    /** The difficulty tier now: the zone and act, plus unlimited mode's climb. */
+    int tier() {
         var arena = arena();
-        phase = Stages.survivalSeconds(arena.stage()) > 0 ? FIGHT : BOSS;
+        return Stages.tier(arena.stage(), arena.act()) + (endless() ? fightFrames / (UNLIMITED_TIER_SECONDS * 60) : 0);
+    }
+
+    /** Rewards stay at the zone's own tier: unlimited's climb is pure pressure, so it ends. */
+    int rewardTier() {
+        var arena = arena();
+        return Stages.tier(arena.stage(), arena.act());
+    }
+
+    int survivalSeconds() { return Stages.survivalSeconds(arena().stage(), run().mode); }
+
+    boolean endless() { return survivalSeconds() < 0; }
+
+    private void beginFight() {
+        phase = survivalSeconds() != 0 ? FIGHT : BOSS;
         phaseFrames = 0;
         fightFrames = 0;
-        stageFrames = Stages.survivalSeconds(arena.stage()) * 60;
+        stageFrames = Math.max(0, survivalSeconds()) * 60;
         spawnTimer = 30;
         eliteTimer = ELITE_PERIOD;
         if (phase == BOSS) spawnBoss();
@@ -246,7 +320,10 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         var run = run();
         run.frames++;
         fightFrames++;
-        if (phase == FIGHT) {
+        if (feverFrames > 0) feverFrames--;
+        else if (feverCooldown > 0) feverCooldown--;
+        if (enemyShotCooldown > 0) enemyShotCooldown--;
+        if (phase == FIGHT && !endless()) {
             int before = stageFrames / 60;
             stageFrames--;
             if (stageFrames <= 5 * 60 && stageFrames / 60 < before) services().playSfx(0xBA); // sfx_Ding countdown.
@@ -284,38 +361,155 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         return null;
     }
 
+    /** Pressure keeps rising in endless; long mode adds encounters rather than stretching downtime. */
+    int pressureSeconds() {
+        return (int) (fightFrames / 60L * (run().mode == RunState.LONG ? 3 : 4) / 4);
+    }
+
+    int encounterBeat() { return fightFrames % ENCOUNTER_FRAMES / 60; }
+    int encounterNumber() { return fightFrames / ENCOUNTER_FRAMES + 1; }
+    String encounterName() {
+        if (encounterBeat() >= 25) return "REGROUP";
+        if (encounterBeat() >= 18) return "SURGE";
+        return switch ((encounterNumber() - 1) % 3) {
+            case 0 -> "CROSSFIRE";
+            case 1 -> "AIR RAID";
+            default -> "STAMPEDE";
+        };
+    }
+
     private void spawnWaves() {
         var arena = arena();
         int stage = arena.stage();
         int[] ground = Stages.ground(stage), air = Stages.air(stage);
         if (ground.length + air.length == 0) return;
         var run = run();
-        int tier = Stages.tier(stage, arena.act());
-        int seconds = fightFrames / 60;
+        int tier = tier();
+        int seconds = pressureSeconds();
+        int beat = encounterBeat();
         int alive = enemies().size();
-        int maxAlive = Math.min(34, 7 + 2 * tier + seconds / 10) / (phase == BOSS ? 2 : 1);
-        if (--eliteTimer <= 0 && phase == FIGHT) {
-            eliteTimer = ELITE_PERIOD;
-            spawnEnemy(ground, air, tier, true);
-            banner("ELITE " + "INCOMING!", 90, Draw.ORANGE);
+        if (phase == FIGHT) {
+            int section = fightFrames / ENCOUNTER_FRAMES * 3 + (beat >= 25 ? 2 : beat >= 18 ? 1 : 0);
+            if (section != encounter) {
+                encounter = section;
+                banner(encounterName() + " - WAVE " + encounterNumber(), 100,
+                        beat >= 25 ? Draw.CYAN : beat >= 18 ? Draw.ORANGE : Draw.GOLD);
+            }
+            if (fightFrames % ENCOUNTER_FRAMES == 15 * 60) {
+                banner("SURGE IN 3...", 120, Draw.ORANGE);
+                services().playSfx(0xBA);
+            }
+            if (--eliteTimer <= 0) {
+                eliteTimer = Difficulty.elitePeriod(tier, seconds) / (run.rule(Rules.ELITE_HORDE) ? 2 : 1);
+                spawnEnemy(ground, air, tier, true);
+                banner("ELITE INCOMING!", 90, Draw.ORANGE);
+            }
+            stageBeats(ground, air, tier);
+            if (endless() && fightFrames > 0 && fightFrames % (UNLIMITED_TIER_SECONDS * 60) == 0) {
+                banner("THE HORDE GROWS STRONGER", 150, Draw.RED);
+                services().playSfx(0xBA);
+            }
         }
-        if (--spawnTimer > 0 || alive >= maxAlive) return;
-        spawnTimer = Math.max(12, 66 - 4 * tier - seconds / 4) * (phase == BOSS ? 2 : 1);
-        int batch = 1 + (seconds >= 40 ? 1 : 0) + (seconds >= 90 ? 1 : 0) + (tier >= 5 ? 1 : 0);
-        // Aquatic Ruin's Whisps come in swarms.
-        for (int i = 0; i < batch && alive + i < maxAlive; i++) spawnEnemy(ground, air, tier, false);
-        if (run.chance(0.02 + 0.01 * tier)) spawnEnemy(ground, air, tier, false);
+        // Recovery pauses reinforcements, never removes surviving enemies or rewards.
+        if (phase == FIGHT && beat >= 25) return;
+        if (--spawnTimer > 0) return;
+        boolean surge = phase == FIGHT && beat >= 18;
+        // Boss fights keep thinner reinforcements so weapons can find the boss.
+        spawnTimer = Difficulty.spawnInterval(tier, seconds) * (phase == BOSS ? 3 : 1) * (eventFrames > 0 ? 2 : 1);
+        if (surge) spawnTimer = Math.max(8, spawnTimer * 2 / 3);
+        int batch = Math.max(1, Difficulty.batch(tier, seconds) + (surge ? 1 : 0) - (phase == BOSS ? 1 : 0));
+        if (alive >= SOFT_CAP) {
+            // A horde the build cannot thin no longer grows in bodies: it sends champions.
+            overflow += batch;
+            if (overflow >= OVERFLOW_PER_ELITE) {
+                overflow -= OVERFLOW_PER_ELITE;
+                spawnEnemy(ground, air, tier, true);
+            }
+            return;
+        }
+        int pattern = (encounterNumber() - 1) % 3;
+        if (phase == FIGHT && !surge) {
+            if (pattern == 1 && air.length > 0) ground = new int[0];
+            if (pattern == 2 && ground.length > 0) air = new int[0];
+        }
+        for (int i = 0; i < batch; i++) spawnEnemy(ground, air, tier, false);
+    }
+
+    /** Mid-stage beats on the survival clock: the zone's event, then a warden squad. */
+    private void stageBeats(int[] ground, int[] air, int tier) {
+        int arenaStage = arena().stage();
+        int elapsed = fightFrames / 60;
+        boolean secondTick = fightFrames % 60 == 0;
+        if (secondTick && Stages.eventKind(arenaStage) != Stages.EVENT_NONE
+                && elapsed >= EVENT_FIRST + BEAT_PERIOD * eventsStarted && (endless() || stageFrames > EVENT_FRAMES)) {
+            eventsStarted++;
+            eventFrames = EVENT_FRAMES;
+            eventTimer = 0;
+            banner(Stages.eventName(arenaStage) + "!", 150,
+                    Stages.eventKind(arenaStage) == Stages.EVENT_JACKPOT ? Draw.GOLD : Draw.RED);
+            services().playSfx(Stages.eventKind(arenaStage) == Stages.EVENT_JACKPOT ? 0xC0 : 0xBA);
+        }
+        if (secondTick && elapsed >= WARDEN_FIRST + BEAT_PERIOD * wardensStarted && (endless() || stageFrames > 20 * 60)) {
+            wardensStarted++;
+            for (int i = 0; i < 3; i++) spawnEnemy(ground, air, tier, true);
+            chestOwed++;
+            banner("WARDEN SQUAD! A CHEST AWAITS", 150, Draw.ORANGE);
+            services().playSfx(0xBA);
+        }
+        if (eventFrames > 0) {
+            eventFrames--;
+            zoneEvent(arenaStage, tier);
+        }
+    }
+
+    private void zoneEvent(int arenaStage, int tier) {
+        var run = run();
+        var camera = services().camera();
+        var player = camera.getFocusedSprite();
+        if (player == null) return;
+        var arena = arena();
+        eventTimer++;
+        switch (Stages.eventKind(arenaStage)) {
+            case Stages.EVENT_RAIN -> {
+                // Telegraphed falling hazards: a red marker on the floor shows where each lands.
+                if (eventTimer % Math.max(6, 11 - tier / 2) != 0) return;
+                int x = arena.clampX(player.getCentreX() - 170 + run.nextInt(341), 24);
+                int floor = floorBelow(x, arena);
+                effect(E_WARN, x, floor - 2, 0, Draw.RED, 0);
+                String key = Stages.rainKey(arenaStage);
+                int frame = Stages.rainFrame(arenaStage), top = camera.getY() - 8;
+                ArenaObjects.spawn(services(), () -> Shot.of(x, top, key, frame, true, 0, 0x100));
+            }
+            case Stages.EVENT_SWARM -> {
+                if (eventTimer % 120 != 1) return;
+                int species = Stages.swarmSpecies(arenaStage);
+                int side = run.nextInt(2) == 0 ? -1 : 1;
+                int x = arena.clampX(side < 0 ? camera.getX() - 24 : camera.getX() + camera.getWidth() + 24, 24);
+                int y = arena.floorTop() - 64 - run.nextInt(64);
+                for (int i = 0; i < 6; i++) spawnSpecies(species, x + side * 18 * i, y - (i % 2) * 20, tier, false);
+            }
+            case Stages.EVENT_JACKPOT -> {
+                // Casino Night pays out: ring formations shower around Sonic.
+                if (eventTimer % 45 != 1) return;
+                int x = arena.clampX(player.getCentreX() - 120 + run.nextInt(241), 40);
+                int y = floorBelow(x, arena) - 40 - run.nextInt(40);
+                int value = Math.max(1, (int) Difficulty.dropValue(rewardTier()));
+                for (int i = 0; i < 5; i++) {
+                    int rx = x + (i - 2) * 18, ry = y - Math.abs(i - 2) * 8;
+                    ArenaObjects.spawn(services(), () -> Pickup.floating(rx, ry, value));
+                }
+                services().playSfx(0xC0);
+            }
+            default -> { }
+        }
     }
 
     private void spawnEnemy(int[] ground, int[] air, int tier, boolean elite) {
-        var objects = services().objectManager();
-        if (!objects.hasFreeDynamicSlot()) return;
         var run = run();
-        var arena = arena();
-        var camera = services().camera();
         boolean flying = ground.length == 0 || air.length > 0 && run.nextInt(2) == 0;
         int species = flying ? air[run.nextInt(air.length)] : ground[run.nextInt(ground.length)];
-        var t = Species.of(species);
+        var camera = services().camera();
+        var arena = arena();
         int side = run.nextInt(2) == 0 ? -1 : 1;
         int x = side < 0 ? camera.getX() - 24 : camera.getX() + camera.getWidth() + 24;
         x = arena.clampX(x, 24);
@@ -329,19 +523,25 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             x = arena.clampX(camera.getX() + 24 + run.nextInt(Math.max(1, camera.getWidth() - 48)), 24);
             y = camera.getY() - 24;
         }
-        double progress = fightFrames / (double) Math.max(1, Stages.survivalSeconds(arena.stage()) * 60);
-        double actScale = 1 + 0.2 * arena.act();
-        int hp = (int) Math.round(t.hp() * (1 + 0.25 * tier) * (1 + 0.5 * Math.min(1.2, progress)) * actScale);
+        spawnSpecies(species, x, y, tier, elite);
+        if (species == Species.WHISP && !elite) {
+            // Whisps travel in threes.
+            for (int i = 1; i <= 2; i++) spawnSpecies(species, x + side * 16 * i, y - 12 * i, tier, false);
+        }
+    }
+
+    /** Spawns one badnik with the arena's current hitpoints; returns them. */
+    private int spawnSpecies(int species, int x, int y, int tier, boolean elite) {
+        var t = Species.of(species);
+        double scale = Difficulty.hpScale(tier, arena().act(), pressureSeconds())
+                * (run().rule(Rules.TOUGH_HIDES) ? 1.5 : 1);
+        int hp = (int) Math.max(1, Math.round(t.hp() * scale));
         if (elite) hp = hp * 6 + 10;
         var spawn = Enemy.spawnAt(x, y, species, elite);
         int hitpoints = hp;
-        spawnFreeChild(() -> new Enemy(spawn, hitpoints));
-        if (species == Species.WHISP && !elite) {
-            for (int i = 1; i <= 2 && objects.hasFreeDynamicSlot(); i++) {
-                var buddy = Enemy.spawnAt(x + side * 16 * i, y - 12 * i, species, false);
-                spawnFreeChild(() -> new Enemy(buddy, hitpoints));
-            }
-        }
+        statHpSpawned += hp;
+        ArenaObjects.spawn(services(), () -> new Enemy(spawn, hitpoints));
+        return hp;
     }
 
     private void spawnBoss() {
@@ -350,11 +550,13 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         var arena = arena();
         var camera = services().camera();
         int stage = arena.stage();
-        int hp = (int) Math.round(Stages.bossHp(stage, arena.act()) * (1 + 0.25 * arena.act()));
+        int hp = (int) Math.round(Difficulty.bossHp(stage, arena.act(), pressureSeconds(), run().mode)
+                * (run().rule(Rules.TOUGH_HIDES) ? 1.5 : 1));
         int x = arena.clampX(camera.getX() + camera.getWidth() - 64, 64);
         int y = stage == Stages.DEZ ? arena.floorTop() - 40 : camera.getY() - 48;
         var spawn = Boss.spawnAt(x, y, stage);
-        spawnFreeChild(() -> new Boss(spawn, hp));
+        statHpSpawned += hp;
+        ArenaObjects.spawn(services(), () -> new Boss(spawn, hp));
         banner("WARNING! " + Stages.bossName(stage) + "!", 150, Draw.RED);
         services().audioManager().playMusic(stage == Stages.DEZ ? Sonic2Music.FINAL_BOSS.id : Sonic2Music.BOSS.id);
     }
@@ -372,9 +574,10 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         if (Math.abs(x - player.getCentreX()) < 120) x = arena.clampX(player.getCentreX() + (x < player.getCentreX() ? -200 : 200), 40);
         int y = floorBelow(x, arena) - 48 - run.nextInt(48);
         boolean arc = run.nextInt(2) == 0;
-        for (int i = 0; i < 5 && services().objectManager().hasFreeDynamicSlot(); i++) {
+        int value = Math.max(1, (int) Difficulty.dropValue(rewardTier()));
+        for (int i = 0; i < 5; i++) {
             int rx = x + (i - 2) * 20, ry = arc ? y + Math.abs(i - 2) * 10 : y;
-            spawnFreeChild(() -> Pickup.floating(rx, ry));
+            ArenaObjects.spawn(services(), () -> Pickup.floating(rx, ry, value));
         }
     }
 
@@ -396,100 +599,260 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     void onBounce(int x, int y) {
         var run = run();
         if (run.combo >= 2) services().playSfx(run.combo >= 10 ? 0xC9 : 0xB4); // sfx_Bonus / sfx_Bumper.
-        if (run.combo > 0 && run.combo % FEVER_COMBO == 0) {
-            // Fever: every tenth chained bounce turns Sonic invincible (stock stars and music).
-            var player = services().camera().getFocusedSprite();
-            if (player instanceof AbstractPlayableSprite sprite) {
+        var leader = services().camera().getFocusedSprite();
+        if (feverFrames == 0 && feverCooldown == 0 && !run.rule(Rules.NO_FEVER)
+                && leader instanceof AbstractPlayableSprite sprite
+                && sprite.getInvincibleFrames() == 0 && !sprite.isSuperSonic()) {
+            if (++feverCharge >= run.feverCharge()) {
+                feverCharge = 0;
+                feverFrames = FEVER_DURATION;
+                feverCooldown = FEVER_RECOVERY;
                 sprite.giveInvincibility();
-                banner("FEVER! " + run.combo + " BOUNCES", 120, Draw.PINK);
+                sprite.setInvincibleFrames(FEVER_DURATION);
+                banner("FEVER! 6 SECONDS", 120, Draw.PINK);
             }
+        }
+        double power = run.damageMultiplier() * run.comboMultiplier();
+        if (dashFrames > 0 && run.evolvedWeapon(Upgrades.HOMING_DASH)) {
+            // Light Speed Dash: the dash lands as a blast.
+            effect(E_SHOCK, x, y, areaRadius(56), Draw.CYAN, 0);
+            damageArea(x, y, 56, scaled(10 + 2 * run.level(Upgrades.HOMING_DASH), power), true);
         }
         dashFrames = 0;
         airJumpsUsed = 0;
+        hoverFrames = 0;
         pounding = false;
-        double power = run.damageMultiplier() * run.comboMultiplier();
+        int lance = run.level(Upgrades.TWIN_LANCE);
+        if (lance > 0) {
+            boolean cross = run.evolvedWeapon(Upgrades.TWIN_LANCE);
+            int damage = scaled((4 + 2 * lance) * (cross ? 2 : 1), power), pierce = 2 + lance + (cross ? 4 : 0);
+            for (int dir : new int[]{-1, 1}) {
+                projectile(P_BOOM, x, y, dir * 0x700, 0, 55, damage, pierce);
+                if (cross) projectile(P_LANCE, x, y, 0, dir * 0x700, 40, damage, pierce);
+            }
+        }
         int shock = run.level(Upgrades.SHOCKWAVE);
         if (shock > 0) {
-            int radius = Upgrades.shockRadius(shock);
-            effect(E_SHOCK, x, y, radius, Draw.ORANGE, 0);
-            damageArea(x, y, radius, scaled(Upgrades.shockDamage(shock), power), true);
+            boolean grand = run.evolvedWeapon(Upgrades.SHOCKWAVE);
+            int radius = Upgrades.shockRadius(shock) * (grand ? 3 : 2) / 2;
+            effect(E_SHOCK, x, y, areaRadius(radius), grand ? Draw.GOLD : Draw.ORANGE, 0);
+            damageArea(x, y, radius, scaled(Upgrades.shockDamage(shock) * (grand ? 2.5 : 1), power), true);
         }
         int sparks = run.level(Upgrades.SPARKS);
         if (sparks > 0) {
-            int n = Upgrades.sparkCount(sparks);
+            boolean nova = run.evolvedWeapon(Upgrades.SPARKS);
+            int n = Upgrades.sparkCount(sparks) * (nova ? 2 : 1);
             for (int i = 0; i < n; i++) {
                 double a = Math.PI * 2 * i / n + frameTick * 0.1;
                 projectile(P_SPARK, x, y, (int) (Math.cos(a) * 0x500), (int) (Math.sin(a) * 0x500), 36,
-                        scaled(Upgrades.sparkDamage(sparks), power), 1);
+                        scaled(Upgrades.sparkDamage(sparks) * (nova ? 2 : 1), power), nova ? 3 : 1);
             }
         }
         int zap = run.level(Upgrades.CHAIN_ZAP);
-        if (zap > 0) chainZap(x, y, Upgrades.zapTargets(zap), scaled(Upgrades.zapDamage(zap), power));
+        if (zap > 0) {
+            boolean lattice = run.evolvedWeapon(Upgrades.CHAIN_ZAP);
+            chainZap(x, y, Upgrades.zapTargets(zap) + (lattice ? 6 : 0),
+                    scaled(Upgrades.zapDamage(zap) * (lattice ? 2.5 : 1), power), lattice ? 240 : 170);
+        }
         int homing = run.level(Upgrades.HOMING_RINGS);
         if (homing > 0) {
-            int n = Upgrades.homingCount(homing);
+            boolean tempest = run.evolvedWeapon(Upgrades.HOMING_RINGS);
+            int n = tempest ? 6 : Upgrades.homingCount(homing);
             for (int i = 0; i < n; i++) {
                 projectile(P_HOMING, x, y - 8, (i - (n - 1) / 2) * 0x200, -0x400, 150,
-                        scaled(Upgrades.homingDamage(homing), power), 1);
+                        scaled(Upgrades.homingDamage(homing) * (tempest ? 2 : 1), power), tempest ? 3 : 1);
             }
         }
     }
 
-    private static int scaled(int damage, double power) {
+    private static int scaled(double damage, double power) {
         return Math.max(1, (int) Math.round(damage * power));
     }
+
+    /** Elites drop a monitor; every fourth elite (and a warden squad's first) a chest instead. */
+    static final int ELITES_PER_CHEST = 4;
 
     void onEnemyDefeated(Enemy enemy, int x, int y) {
         var run = run();
         run.kills++;
         stageKills++;
-        int value = 1 + (run.chance(0.2 * run.level(Upgrades.GREED)) ? 1 : 0) + (run.relic(3) ? 1 : 0);
-        value = (int) Math.round(value * (1 + 0.5 * (run.comboMultiplier() - 1)) * (1 + 0.5 * arena().act()));
-        if (enemy.elite()) value += 8;
+        run.speciesKills[Math.floorMod(enemy.traits().id(), Species.COUNT)]++;
+        // Badniks are worth more further along the route, so rewards keep pace with the toll.
+        double base = Difficulty.dropValue(rewardTier());
+        double rings = base + (run.chance(0.2 * run.level(Upgrades.GREED)) ? 1 : 0) + (run.relic(3) ? 1 : 0);
+        rings *= (1 + 0.1 * (run.comboMultiplier() - 1)) * (1 + 0.5 * arena().act());
+        // Whisps come in threes: each is a third of a badnik's reward.
+        if (enemy.traits().id() == Species.WHISP && !enemy.elite()) rings /= 3;
+        int value = (int) rings;
+        if (run.chance(rings - value)) value++;
+        if (enemy.elite()) value += (int) Math.round(8 * base);
         dropRings(x, y, value);
-        if (enemy.elite() && services().objectManager().hasFreeDynamicSlot()) {
+        if (enemy.elite() && !sweeping) {
+            run.elitesDefeated++;
+            if (chestOwed > 0 || run.elitesDefeated % ELITES_PER_CHEST == 0) {
+                if (chestOwed > 0) chestOwed--;
+                dropChest(x, y - 8, 1);
+                return;
+            }
             int[] kinds = {Pickup.MON_RINGS, Pickup.MON_SHIELD, Pickup.MON_STARS, Pickup.MON_SHOES,
                     Pickup.MON_EGGMAN, Pickup.MON_MAGNET};
             var spawn = Pickup.spawnAt(x, y - 8, Pickup.MONITOR);
             int content = kinds[run.nextInt(kinds.length)];
-            spawnFreeChild(() -> new Pickup(spawn, 0, -0x300, content));
+            ArenaObjects.spawn(services(), () -> new Pickup(spawn, 0, -0x300, content));
         }
     }
 
-    /** Drops {@code value} rings' worth of pickups, merging into existing ones past the pile cap. */
+    boolean sweeping;
+
+    void dropChest(int x, int y, int size) {
+        var spawn = Pickup.spawnAt(x, y, Pickup.CHEST);
+        ArenaObjects.spawn(services(), () -> new Pickup(spawn, 0, -0x300, size));
+    }
+
+    // =========================================================================================
+    // Chests
+    // =========================================================================================
+
+    /**
+     * Opens a treasure chest of {@code size} prizes: each evolves a ready weapon first, otherwise
+     * ranks up an owned upgrade (new ones only once no owned upgrade can grow), otherwise pays
+     * rings. Prizes apply at once; the overlay shows what the chest held.
+     */
+    void openChest(int size) {
+        var run = run();
+        var player = services().camera().getFocusedSprite();
+        run.chestsOpened++;
+        chestCount = 0;
+        chestRings = 0;
+        for (int i = 0; i < Math.min(size, CHEST_ITEMS); i++) {
+            int prize = chestPrize();
+            chestItems[chestCount++] = prize;
+            if (prize >= 100) {
+                int evo = prize - 100;
+                run.evolved |= 1 << evo;
+                profile().evolutionsSeen |= 1 << evo;
+            } else if (prize >= 0) {
+                run.levels[prize]++;
+                chestLevels[chestCount - 1] = run.levels[prize];
+                if (prize == Upgrades.BARRIER && run.levels[prize] == 1 && player != null) player.giveShield();
+            } else {
+                // Two hits at the base toll: a toll read at the held total would compound itself.
+                int rings = Math.max(25, 2 * run.toll(0));
+                chestRings += rings;
+                if (player != null) player.addRings(rings);
+            }
+        }
+        overlay = OVERLAY_CHEST;
+        // Pause at once: a chest picked up during the object pass must not leave badniks a frame.
+        run.paused = true;
+        menuIndex = 0;
+        phaseFramesAtOverlay = phaseFrames;
+        services().playSfx(0xBD); // sfx_Hammer: the chest lands.
+    }
+
+    int phaseFramesAtOverlay;
+
+    // The chest opening, in frames from its start: the chest drops in and shakes, the lid bursts
+    // (flash, light rays, a fountain of rings, Super Sonic's theme), then each prize spins in.
+    static final int CHEST_DROP = 18, CHEST_BURST = 64, CHEST_FIRST_PRIZE = 84, CHEST_PRIZE_GAP = 22,
+            CHEST_SPIN = 14;
+
+    int chestFrames() { return phaseFrames - phaseFramesAtOverlay; }
+
+    /** The frame the last prize lands; Enter before it reveals everything at once. */
+    int chestRevealEnd() { return CHEST_FIRST_PRIZE + chestCount * CHEST_PRIZE_GAP + CHEST_SPIN; }
+
+    boolean chestEvolution() {
+        for (int i = 0; i < chestCount; i++) if (chestItems[i] >= 100) return true;
+        return false;
+    }
+
+    private int chestPrize() {
+        var run = run();
+        int ready = 0;
+        for (int evo = 0; evo < Upgrades.EVOLUTIONS; evo++) if (run.evolutionReady(evo)) ready++;
+        if (ready > 0) {
+            int pick = run.nextInt(ready);
+            for (int evo = 0; evo < Upgrades.EVOLUTIONS; evo++) {
+                if (run.evolutionReady(evo) && pick-- == 0) return 100 + evo;
+            }
+        }
+        // Owned upgrades first, so chests deepen the build rather than fill it at random.
+        for (boolean owned : new boolean[]{true, false}) {
+            int count = 0;
+            for (int id = 0; id < Upgrades.COUNT; id++) if (run.canUpgrade(id) && run.has(id) == owned) count++;
+            if (count == 0) continue;
+            int pick = run.nextInt(count);
+            for (int id = 0; id < Upgrades.COUNT; id++) {
+                if (run.canUpgrade(id) && run.has(id) == owned && pick-- == 0) return id;
+            }
+        }
+        return -1;
+    }
+
+    private void chestMenu(AbstractPlayableSprite player) {
+        int t = chestFrames();
+        if (t > CHEST_DROP && t < CHEST_BURST && t % Math.max(3, 12 - (t - CHEST_DROP) / 5) == 0) {
+            services().playSfx(0xCD); // sfx_Blip: the lid rattles, faster and faster.
+        }
+        if (t == CHEST_BURST) {
+            services().playSfx(0xC1); // The lid bursts.
+            services().audioManager().playMusic(Sonic2Music.SUPER_SONIC.id);
+        }
+        if (t > CHEST_BURST && t < CHEST_BURST + 40 && t % 8 == 0) {
+            services().audioManager().playSecondarySfx(GameSound.RING);
+        }
+        for (int i = 0; i < chestCount; i++) {
+            if (t == CHEST_FIRST_PRIZE + i * CHEST_PRIZE_GAP + CHEST_SPIN) {
+                services().playSfx(chestItems[i] >= 100 ? 0xBF : 0xC9); // ContinueJingle / Bonus.
+            }
+        }
+        if (!menuConfirmAny(player)) return;
+        if (t < chestRevealEnd()) {
+            // Skip straight to every prize revealed; a second press continues.
+            if (t < CHEST_BURST) services().audioManager().playMusic(Sonic2Music.SUPER_SONIC.id);
+            phaseFramesAtOverlay = phaseFrames - chestRevealEnd();
+            return;
+        }
+        overlay = OVERLAY_NONE;
+        services().playSfx(0xC9);
+        restoreMusic();
+    }
+
+    /** After a chest's fanfare: the boss track in a boss fight, the zone's own music otherwise. */
+    private void restoreMusic() {
+        var audio = services().audioManager();
+        if (phase == BOSS) {
+            audio.playMusic(arena().stage() == Stages.DEZ ? Sonic2Music.FINAL_BOSS.id : Sonic2Music.BOSS.id);
+        } else if (phase == FIGHT) {
+            int music = services().levelManager().getCurrentLevelMusicId();
+            if (music >= 0) audio.playMusic(music);
+        } else {
+            audio.fadeOutMusic();
+        }
+    }
+
+    /** Drops the full reward in up to three physical pickups, without a population ceiling. */
     void dropRings(int x, int y, int value) {
         var run = run();
         int pieces = Math.min(value, 3);
-        int live = 0;
-        Pickup nearest = null;
-        for (var object : services().objectManager().getActiveObjects()) {
-            if (object instanceof Pickup p && !p.isDestroyed() && p.kind() == Pickup.RING && !p.lostRing() && !p.collectedAlready()) {
-                live++;
-                if (nearest == null || Math.abs(p.getX() - x) < Math.abs(nearest.getX() - x)) nearest = p;
-            }
-        }
         for (int i = 0; i < pieces; i++) {
             int share = value / pieces + (i < value % pieces ? 1 : 0);
-            if (live >= 40 || !services().objectManager().hasFreeDynamicSlot()) {
-                if (nearest != null) nearest.addValue(share);
-                continue;
-            }
             int vx = (run.nextInt(5) - 2) * 0x100, vy = -0x300 - run.nextInt(3) * 0x80;
             var spawn = Pickup.spawnAt(x, y, Pickup.RING);
-            spawnFreeChild(() -> new Pickup(spawn, vx, vy, share));
-            live++;
+            ArenaObjects.spawn(services(), () -> new Pickup(spawn, vx, vy, share));
         }
     }
 
     /** The guard's ring toll: half the lost rings scatter for Sonic to grab back. */
     void spillRings(int x, int y, int count) {
         var run = run();
-        for (int i = 0; i < count && services().objectManager().hasFreeDynamicSlot(); i++) {
+        for (int i = 0; i < count; i++) {
             double a = Math.PI * (0.15 + 0.7 * i / Math.max(1, count - 1));
             int vx = (int) (-Math.cos(a) * 0x300), vy = (int) (-Math.sin(a) * 0x400);
             var spawn = Pickup.spawnAt(x, y - 8, Pickup.RING);
             int jitter = run.nextInt(64);
-            spawnFreeChild(() -> Pickup.lost(spawn, vx + jitter, vy));
+            ArenaObjects.spawn(services(), () -> Pickup.lost(spawn, vx + jitter, vy));
         }
     }
 
@@ -506,7 +869,11 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
 
     void onBossBeaten() {
         // Every badnik still standing is destroyed with the boss; their rings are the prize.
+        // Their rings are the prize; elite monitors and chests are not, or a crowd left to grow
+        // before the boss falls would pay out a chest for every fourth elite in it.
+        sweeping = true;
         for (Enemy enemy : enemies()) enemy.hurt(99999, 0);
+        sweeping = false;
         boolean silverSonic = arena().stage() == Stages.DEZ && !finale;
         if (!silverSonic) services().audioManager().fadeOutMusic();
         banner(silverSonic ? "SILVER SONIC DOWN!" : arena().stage() == Stages.DEZ ? "GOTCHA, EGGMAN!" : "BOSS DEFEATED!",
@@ -520,7 +887,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             // Silver Sonic is scrap: Eggman bolts from the cockpit. Catch him to win.
             finale = true;
             var spawn = Boss.runnerAt(x, y);
-            spawnFreeChild(() -> new Boss(spawn, Boss.RUNNER_HITS));
+            ArenaObjects.spawn(services(), () -> new Boss(spawn, Boss.RUNNER_HITS));
             banner("EGGMAN IS ESCAPING!", 150, Draw.RED);
             services().audioManager().playMusic(Sonic2Music.FINAL_BOSS.id);
             return;
@@ -529,12 +896,17 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         phaseFrames = 0;
         services().audioManager().playMusic(Sonic2Music.ACT_CLEAR.id);
         int stage = arena.stage();
-        if (stage < Profile.EMERALDS && !profile.hasEmerald(stage) && services().objectManager().hasFreeDynamicSlot()) {
-            var spawn = Pickup.spawnAt(x, Math.min(y, arena.floorTop() - 32), Pickup.EMERALD);
-            spawnFreeChild(() -> new Pickup(spawn, 0, -0x200, stage));
+        // Every boss leaves a treasure chest: three prizes, sometimes five.
+        if (stage != Stages.DEZ) {
+            int prizes = Math.min(CHEST_ITEMS, (run().chance(0.2) ? 5 : 3) + run().shopTreasure);
+            dropChest(arena.clampX(x - 24, 32), Math.min(y, arena.floorTop() - 32), prizes);
+        }
+        if (stage < Profile.EMERALDS && !profile.hasEmerald(stage)) {
+            var spawn = Pickup.spawnAt(arena.clampX(x + 24, 32), Math.min(y, arena.floorTop() - 32), Pickup.EMERALD);
+            ArenaObjects.spawn(services(), () -> new Pickup(spawn, 0, -0x200, stage));
         } else {
-            dropRings(x, y, 20);
-            phaseFrames = 240;
+            dropRings(x, y, (int) Math.round(20 * Difficulty.dropValue(Stages.tier(stage, arena.act()))));
+            phaseFrames = 200;
         }
     }
 
@@ -554,6 +926,14 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     }
 
     private void collectEmeraldNow() {
+        // An unopened boss chest opens itself before the results.
+        for (var object : services().objectManager().getActiveObjects()) {
+            if (object instanceof Pickup p && p.kind() == Pickup.CHEST && !p.isDestroyed() && !p.collectedAlready()) {
+                p.setDestroyed(true);
+                openChest(p.value());
+                return;
+            }
+        }
         for (var object : services().objectManager().getActiveObjects()) {
             if (object instanceof Pickup p && p.kind() == Pickup.EMERALD && !p.isDestroyed() && !p.collectedAlready()) {
                 p.setDestroyed(true);
@@ -563,17 +943,20 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         openClear();
     }
 
-    /** The Eggman monitor: every badnik on screen takes a heavy hit. */
+    /**
+     * The Eggman monitor: ordinary badniks on screen are destroyed, elites lose 40% of their
+     * health and a boss 6%. A fixed hit would be meaningless against late-route hitpoints.
+     */
     void screenNuke() {
         var camera = services().camera();
         hitFlash = 20;
         for (Enemy enemy : enemies()) {
             if (enemy.getX() > camera.getX() - 16 && enemy.getX() < camera.getX() + camera.getWidth() + 16) {
-                enemy.hurt(scaled(20, run().damageMultiplier()), 0);
+                enemy.hurtIgnoringFrames(enemy.elite() ? Math.max(1, enemy.maxHp() * 2 / 5) : enemy.hp());
             }
         }
         Boss boss = boss();
-        if (boss != null) boss.hurt(scaled(10, run().damageMultiplier()));
+        if (boss != null && boss.alive()) boss.hurt(Math.max(1, boss.maxHp() * 6 / 100));
     }
 
     /** The magnet monitor: every ring on the field flies to Sonic. */
@@ -593,8 +976,11 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         bannerColour = colour;
     }
 
-    void popup(int x, int y, int amount, boolean big) {
-        effect(E_NUMBER, x, y, amount, big ? Draw.GOLD : Draw.WHITE, 0);
+    void popup(int x, int y, int amount) {
+        if (amount <= 0) return;
+        int scale = amount >= 50 ? 3 : amount >= 10 ? 2 : 1;
+        int colour = amount >= 50 ? Draw.PINK : amount >= 10 ? Draw.ORANGE : Draw.RED;
+        effect(E_NUMBER, x, y, amount, colour, scale);
     }
 
     // =========================================================================================
@@ -613,6 +999,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             airFrames = 0;
             airJumpsUsed = 0;
             dashFrames = 0;
+            hoverFrames = 0;
             return;
         }
         airFrames++;
@@ -620,7 +1007,15 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         if (player.isHurt() || player.getDead()) return;
         if (pounding) {
             if (player.getYSpeed() < 0x900) player.setYSpeed((short) 0x900);
+            // Impact Star: untouchable for the whole slam.
+            if (run.evolvedWeapon(Upgrades.GROUND_POUND)) player.setInvulnerableFrames(Math.max(player.getInvulnerableFrames(), 2));
             return;
+        }
+        // Tails's hover: holding jump while falling slows the descent, a little each jump.
+        if (run.tails && player.isJumpPressed() && player.getYSpeed() > 0x100 && hoverFrames < HOVER_FRAMES
+                && dashFrames == 0) {
+            hoverFrames++;
+            player.setYSpeed((short) 0x100);
         }
         if (airFrames > 3 && player.isJumpJustPressed()) {
             if (run.has(Upgrades.HOMING_DASH) && dashFrames == 0 && homingDash(player)) return;
@@ -650,7 +1045,8 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
 
     /** Dashes at the nearest badnik (or the boss) within range, preferring ones ahead and below. */
     private boolean homingDash(AbstractPlayableSprite player) {
-        int range = Upgrades.dashRange(run().level(Upgrades.HOMING_DASH));
+        int range = Upgrades.dashRange(run().level(Upgrades.HOMING_DASH))
+                * (run().evolvedWeapon(Upgrades.HOMING_DASH) ? 8 : 5) / 5;
         int px = player.getCentreX(), py = player.getCentreY();
         int bestX = 0, bestY = 0;
         double best = Double.MAX_VALUE;
@@ -678,10 +1074,11 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     private void quake(AbstractPlayableSprite player) {
         var run = run();
         int level = run.level(Upgrades.GROUND_POUND);
-        int radius = Upgrades.poundRadius(level);
+        boolean star = run.evolvedWeapon(Upgrades.GROUND_POUND);
+        int radius = Upgrades.poundRadius(level) * (star ? 3 : 2) / 2;
         int x = player.getCentreX(), y = player.getCentreY() + 16;
-        effect(E_POUND, x, y, radius, Draw.YELLOW, 0);
-        damageArea(x, y, radius, scaled(Upgrades.poundDamage(level), run.damageMultiplier()), false);
+        effect(E_POUND, x, y, areaRadius(radius), star ? Draw.GOLD : Draw.YELLOW, 0);
+        damageArea(x, y, radius, scaled(Upgrades.poundDamage(level) * (star ? 3 : 1), run.damageMultiplier()), star);
         services().playSfx(0xBD); // sfx_Hammer.
         hitFlash = 4;
     }
@@ -700,8 +1097,9 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         if (run.combo <= 0) return;
         if (run.combo >= 5) {
             // A finished chain pays out: rings rain on Sonic.
-            int bonus = run.combo * run.combo / 6;
-            dropRings(player.getCentreX(), player.getCentreY() - 48, Math.min(60, bonus));
+            int bonus = (int) Math.round(Math.min(20, run.combo / 2)
+                    * Difficulty.dropValue(rewardTier()));
+            dropRings(player.getCentreX(), player.getCentreY() - 48, bonus);
             banner(run.combo + " BOUNCE COMBO!", 90, Draw.CYAN);
         }
         run.combo = 0;
@@ -718,30 +1116,48 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         int orbit = run.level(Upgrades.ORBIT_RINGS);
         orbitAngle = (orbitAngle + 5 + orbit) & 0x3FF;
         if (orbit > 0) {
-            int n = Upgrades.orbitCount(orbit);
-            int damage = scaled(Upgrades.orbitDamage(orbit), power);
+            boolean saturn = run.evolvedWeapon(Upgrades.ORBIT_RINGS);
+            int n = orbitRings(), distance = orbitDistance();
+            int damage = scaled(Upgrades.orbitDamage(orbit) * (saturn ? 2 : 1), power);
             for (int i = 0; i < n; i++) {
                 double a = (orbitAngle / 1024.0 + i / (double) n) * Math.PI * 2;
-                int ox = px + (int) (Math.cos(a) * 42), oy = py + (int) (Math.sin(a) * 42);
-                damageArea(ox, oy, 12, damage, false);
+                int ox = px + (int) (Math.cos(a) * distance), oy = py + (int) (Math.sin(a) * distance);
+                damageArea(ox, oy, saturn ? 16 : 12, damage, false);
             }
         }
         int boom = run.level(Upgrades.SONIC_BOOM);
-        if (boom > 0 && ++boomTimer >= (int) (Upgrades.boomCooldown(boom) * run.cooldownScale())) {
+        boolean cyclone = run.evolvedWeapon(Upgrades.SONIC_BOOM);
+        if (boom > 0 && ++boomTimer >= (int) (Upgrades.boomCooldown(boom) * run.cooldownScale() * (cyclone ? 0.5 : 1))) {
             boomTimer = 0;
             int dir = player.getRenderHFlip() ? -1 : 1;
-            projectile(P_BOOM, px + dir * 12, py, dir * 0x700, 0, 70, scaled(Upgrades.boomDamage(boom), power), 99);
-            if (boom >= 4) projectile(P_BOOM, px - dir * 12, py, -dir * 0x700, 0, 70,
-                    scaled(Upgrades.boomDamage(boom), power), 99);
+            int damage = scaled(Upgrades.boomDamage(boom) * (cyclone ? 2 : 1), power);
+            projectile(P_BOOM, px + dir * 12, py, dir * 0x700, 0, 70, damage, 99);
+            if (boom >= 4 || cyclone) projectile(P_BOOM, px - dir * 12, py, -dir * 0x700, 0, 70, damage, 99);
             services().playSfx(0xAB); // sfx_Swish.
         }
         int flicky = run.level(Upgrades.FLICKIES);
-        if (flicky > 0 && ++flickyTimer >= (int) (Upgrades.flickyCooldown(flicky) * run.cooldownScale())) {
+        boolean flock = run.evolvedWeapon(Upgrades.FLICKIES);
+        if (flicky > 0 && ++flickyTimer >= (int) (Upgrades.flickyCooldown(flicky) * run.cooldownScale() * (flock ? 0.7 : 1))) {
             flickyTimer = 0;
-            for (int i = 0; i < Upgrades.flickyCount(flicky); i++) {
-                projectile(P_FLICKY, px, py - 8, (i % 2 == 0 ? -1 : 1) * 0x200, -0x300, 160,
-                        scaled(3, power), 1);
+            for (int i = 0; i < Upgrades.flickyCount(flicky) * (flock ? 2 : 1); i++) {
+                projectile(P_FLICKY, px, py - 8, (i % 2 == 0 ? -1 : 1) * (0x200 + i / 2 * 0x80), -0x300, 160,
+                        scaled(flock ? 8 : 3, power), 1);
             }
+        }
+        int meteor = run.level(Upgrades.METEOR);
+        boolean comet = run.evolvedWeapon(Upgrades.METEOR);
+        if (meteor > 0 && fightFrames % Math.max(1, (int) ((comet ? 120 : 180) * run.cooldownScale())) == 0) {
+            int count = (2 + meteor) * (comet ? 2 : 1);
+            for (int i = 0; i < count; i++)
+                projectile(P_SPARK, px + (i * 2 - (count - 1)) * (comet ? 14 : 24), py - 96,
+                        0, 0x500, 60, scaled((3 + meteor) * (comet ? 2.5 : 1), power), 2);
+        }
+        int pulse = run.level(Upgrades.PULSE);
+        if (pulse > 0 && fightFrames % Math.max(1, (int) (120 * run.cooldownScale())) == 0) {
+            boolean guardian = run.evolvedWeapon(Upgrades.PULSE);
+            int radius = (40 + 8 * pulse) * (guardian ? 7 : 5) / 5;
+            effect(E_SHOCK, px, py, areaRadius(radius), guardian ? Draw.GOLD : Draw.PURPLE, 0);
+            damageArea(px, py, radius, scaled((2 + pulse) * (guardian ? 2.5 : 1), power), guardian);
         }
         int barrier = run.level(Upgrades.BARRIER);
         if (barrier > 0 && !player.hasShield()) {
@@ -765,8 +1181,20 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         }
     }
 
-    /** Damages every badnik (and the boss) whose centre lies within {@code radius} of (x, y). */
+    int orbitRings() {
+        int orbit = run().level(Upgrades.ORBIT_RINGS);
+        return orbit <= 0 ? 0 : Upgrades.orbitCount(orbit) + (run().evolvedWeapon(Upgrades.ORBIT_RINGS) ? 2 : 0);
+    }
+
+    int orbitDistance() { return run().evolvedWeapon(Upgrades.ORBIT_RINGS) ? 56 : 42; }
+
+    private int areaRadius(int radius) {
+        return (int) Math.round(radius * (1 + 0.15 * run().level(Upgrades.REACH)));
+    }
+
+    /** Damages nearby enemies and bosses, including the Amplifier radius bonus. */
     private void damageArea(int x, int y, int radius, int damage, boolean popShots) {
+        radius = areaRadius(radius);
         for (Enemy enemy : enemies()) {
             int dx = enemy.getX() - x, dy = enemy.getY() - y;
             int reach = radius + enemy.bodyRadius();
@@ -787,12 +1215,12 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         }
     }
 
-    private void chainZap(int x, int y, int targets, int damage) {
+    private void chainZap(int x, int y, int targets, int damage, int range) {
         var hit = new ArrayList<Enemy>();
         int fromX = x, fromY = y;
         for (int n = 0; n < targets; n++) {
             Enemy next = null;
-            double best = 170;
+            double best = range;
             for (Enemy enemy : enemies()) {
                 if (hit.contains(enemy)) continue;
                 double d = Math.hypot(enemy.getX() - fromX, enemy.getY() - fromY);
@@ -806,7 +1234,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             next.hurt(damage, 0);
         }
         Boss boss = boss();
-        if (hit.size() < targets && boss != null && boss.alive() && Math.hypot(boss.getX() - fromX, boss.getY() - fromY) < 170) {
+        if (hit.size() < targets && boss != null && boss.alive() && Math.hypot(boss.getX() - fromX, boss.getY() - fromY) < range) {
             effect(E_BOLT, fromX, fromY, boss.getX(), Draw.CYAN, boss.getY());
             boss.hurt(damage);
         }
@@ -814,18 +1242,27 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     }
 
     private void projectile(int kind, int x, int y, int vx, int vy, int life, int damage, int hits) {
-        for (int i = 0; i < MAX_P; i++) {
-            if (pKind[i] != 0) continue;
-            pKind[i] = kind;
-            pX[i] = x << 8;
-            pY[i] = y << 8;
-            pVX[i] = vx;
-            pVY[i] = vy;
-            pLife[i] = life;
-            pDmg[i] = damage;
-            pHits[i] = hits;
-            return;
+        int slot = 0;
+        while (slot < pKind.length && pKind[slot] != 0) slot++;
+        if (slot == pKind.length) {
+            int capacity = pKind.length * 2;
+            pX = java.util.Arrays.copyOf(pX, capacity);
+            pY = java.util.Arrays.copyOf(pY, capacity);
+            pVX = java.util.Arrays.copyOf(pVX, capacity);
+            pVY = java.util.Arrays.copyOf(pVY, capacity);
+            pLife = java.util.Arrays.copyOf(pLife, capacity);
+            pKind = java.util.Arrays.copyOf(pKind, capacity);
+            pDmg = java.util.Arrays.copyOf(pDmg, capacity);
+            pHits = java.util.Arrays.copyOf(pHits, capacity);
         }
+        pKind[slot] = kind;
+        pX[slot] = x << 8;
+        pY[slot] = y << 8;
+        pVX[slot] = vx;
+        pVY[slot] = vy;
+        pLife[slot] = life;
+        pDmg[slot] = damage;
+        pHits[slot] = hits;
     }
 
     private void updateProjectiles() {
@@ -833,7 +1270,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         List<Enemy> enemies = null;
         Boss boss = null;
         boolean bossLooked = false;
-        for (int i = 0; i < MAX_P; i++) {
+        for (int i = 0; i < pKind.length; i++) {
             if (pKind[i] == 0) continue;
             if (--pLife[i] <= 0 || pHits[i] <= 0) { pKind[i] = 0; continue; }
             if (enemies == null) enemies = enemies();
@@ -845,7 +1282,8 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             pY[i] += pVY[i];
             x = pX[i] >> 8;
             y = pY[i] >> 8;
-            int size = pKind[i] == P_BOOM ? 14 : 8;
+            boolean wave = pKind[i] == P_BOOM || pKind[i] == P_LANCE;
+            int size = wave ? 14 : 8;
             for (Enemy enemy : enemies) {
                 if (!enemy.alive()) continue;
                 int reach = size + enemy.bodyRadius();
@@ -856,16 +1294,17 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             }
             if (pHits[i] > 0 && boss != null && boss.alive()
                     && Math.abs(boss.getX() - x) < size + 24 && Math.abs(boss.getY() - y) < size + 20) {
-                if (boss.hurt(pDmg[i]) || pKind[i] != P_BOOM) pHits[i]--;
+                if (boss.hurt(pDmg[i]) || !wave) pHits[i]--;
             }
-            if (pKind[i] == P_BOOM) {
+            if (wave) {
                 for (var object : services().objectManager().getActiveObjects()) {
                     if (object instanceof Shot shot && !shot.isDestroyed()
                             && Math.abs(shot.getX() - x) < 16 && Math.abs(shot.getY() - y) < 16) shot.pop();
                 }
             }
             var arena = arena();
-            if (x < arena.left() - 32 || x > arena.right() + 32) pKind[i] = 0;
+            if (x < arena.left() - 32 || x > arena.right() + 32 || y < arena.floorTop() - 400
+                    || y > arena.floorBottom() + 64) pKind[i] = 0;
         }
     }
 
@@ -911,6 +1350,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
                 case E_NUMBER -> 40;
                 case E_BOLT -> 10;
                 case E_PUFF -> 16;
+                case E_WARN -> 45;
                 default -> 16;
             };
             if (++eAge[i] >= life) eKind[i] = 0;
@@ -941,21 +1381,96 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     }
 
     // ---- Camp: shop, then start ----
-    static final int CAMP_START = 0, CAMP_TITLE = Profile.SHOP_COUNT + 1;
+    static final int CAMP_START = 0, CAMP_SHOP = 1, CAMP_MODE = 2, CAMP_RULES = 3, CAMP_RECORDS = 4, CAMP_TITLE = 5,
+            CAMP_ROWS = 6;
+
+    /** Edge-detected left/right (returns -1, 0 or 1). */
+    private int menuSideways(AbstractPlayableSprite player) {
+        boolean left = player.isLeftPressed(), right = player.isRightPressed();
+        int move = (left && !leftHeld ? -1 : 0) + (right && !rightHeld ? 1 : 0);
+        leftHeld = left;
+        rightHeld = right;
+        return move;
+    }
 
     private void campMenu(AbstractPlayableSprite player) {
-        moveCursor(menuMove(player), Profile.SHOP_COUNT + 2);
+        if (campPage == PAGE_RULES) { rulesMenu(player); return; }
+        if (campPage == PAGE_RECORDS) { recordsMenu(player); return; }
+        if (campPage == PAGE_SHOP) { shopMenu(player); return; }
+        moveCursor(menuMove(player), CAMP_ROWS);
+        menuSideways(player);
         if (!menuConfirm(player)) return;
         if (menuIndex == CAMP_START) { beginRun(player); return; }
         if (menuIndex == CAMP_TITLE) { exitToTitle(); return; }
-        int item = menuIndex - 1;
         var profile = profile();
-        if (profile.buy(item)) {
+        if (menuIndex == CAMP_RULES) {
+            if (!profile.extendedModesUnlocked()) {
+                banner("CLEAR A BOSS TO UNLOCK EGGMAN'S RULES", 90, Draw.GOLD);
+                services().playSfx(0xED);
+                return;
+            }
+            openCampPage(PAGE_RULES);
+            return;
+        }
+        if (menuIndex == CAMP_RECORDS) { openCampPage(PAGE_RECORDS); return; }
+        if (menuIndex == CAMP_SHOP) { openCampPage(PAGE_SHOP); return; }
+        if (menuIndex == CAMP_MODE) {
+            if (arena().stage() == Stages.DEZ) {
+                banner("DEATH EGG IS ALWAYS THE BOSS FINALE", 90, Draw.CYAN);
+            } else if (profile.cycleMode()) {
+                services().playSfx(0xCD);
+            } else {
+                banner("CLEAR A BOSS TO UNLOCK LONGER MODES", 90, Draw.GOLD);
+                services().playSfx(0xED);
+            }
+        }
+    }
+
+    /** The ring-bank shop: one row per item, then BACK. */
+    private void shopMenu(AbstractPlayableSprite player) {
+        moveCursor(menuMove(player), Profile.SHOP_COUNT + 1);
+        if (!menuConfirm(player)) return;
+        if (menuIndex == Profile.SHOP_COUNT) { closeCampPage(CAMP_SHOP); return; }
+        var profile = profile();
+        if (profile.buy(menuIndex)) {
             services().playSfx(0xC0); // sfx_CasinoBonus.
-            banner(Profile.shopName(item) + " " + profile.shop[item], 60, Draw.GREEN);
+            banner(Profile.shopName(menuIndex) + " " + profile.shop[menuIndex], 60, Draw.GREEN);
         } else {
             services().playSfx(0xED); // sfx_Error.
         }
+    }
+
+    private void openCampPage(int page) {
+        campPage = page;
+        menuIndex = 0;
+        phaseFrames = 0;
+        services().playSfx(0xCD);
+    }
+
+    private void closeCampPage(int row) {
+        campPage = PAGE_CAMP;
+        menuIndex = row;
+        phaseFrames = 0;
+        services().playSfx(0xCD);
+    }
+
+    /** Eggman's Rules: one row per rule, then BACK. */
+    private void rulesMenu(AbstractPlayableSprite player) {
+        moveCursor(menuMove(player), Rules.COUNT + 1);
+        if (!menuConfirm(player)) return;
+        if (menuIndex == Rules.COUNT) { closeCampPage(CAMP_RULES); return; }
+        profile().toggleRule(menuIndex);
+        services().playSfx((profile().rules & 1 << menuIndex) != 0 ? 0xC0 : 0xCD);
+    }
+
+    /** The records: left/right or up/down turn the page, Enter returns to camp. */
+    private void recordsMenu(AbstractPlayableSprite player) {
+        int move = menuMove(player) + menuSideways(player);
+        if (move != 0) {
+            recordsTab = Math.floorMod(recordsTab + move, RECORD_TABS);
+            services().playSfx(0xCD);
+        }
+        if (menuConfirm(player)) closeCampPage(CAMP_RECORDS);
     }
 
     private void beginRun(AbstractPlayableSprite player) {
@@ -963,11 +1478,11 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         var arena = arena();
         var profile = profile();
         run.begin(arena.stage(), profile, SurvivorsMod.seed());
+        run.tails = player instanceof com.openggf.sprites.playable.Tails;
         profile.runs++;
         profile.save();
         player.setRingCount(run.carriedRings);
         if (run.relic(5)) player.giveShield();
-        grantEmeralds();
         bankedThisRun = 0;
         phase = INTRO;
         phaseFrames = 0;
@@ -988,7 +1503,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         var options = new ArrayList<Integer>();
         var weights = new ArrayList<Integer>();
         for (int id = 0; id < Upgrades.COUNT; id++) {
-            if (run.levels[id] >= Upgrades.maxLevel(id)) continue;
+            if (!run.canUpgrade(id)) continue;
             options.add(id);
             // Owned upgrades come up more often, so builds can deepen.
             weights.add(run.levels[id] > 0 ? 3 : 2);
@@ -1003,15 +1518,30 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             cards[cardCount++] = options.remove(pick);
             weights.remove(pick);
         }
-        // With everything maxed the only card left is a ring bonus (-1).
-        if (cardCount == 0) cards[cardCount++] = -1;
+        // With everything maxed: Overdrive (-2, endless damage growth) or a ring bonus (-1).
+        if (cardCount == 0) {
+            cards[cardCount++] = CARD_OVERDRIVE;
+            cards[cardCount++] = CARD_RINGS;
+        }
         // Until Sonic owns a weapon, the first card is always one: stomps alone do not scale.
         boolean armed = false;
-        for (int id = 0; id <= Upgrades.FLICKIES; id++) armed |= run.levels[id] > 0;
+        for (int id = 0; id < Upgrades.COUNT; id++) armed |= Upgrades.weapon(id) && run.has(id);
         boolean offered = false;
-        for (int i = 0; i < cardCount; i++) offered |= cards[i] >= 0 && cards[i] <= Upgrades.FLICKIES;
-        if (!armed && !offered && cards[0] >= 0) cards[0] = run.nextInt(Upgrades.FLICKIES + 1);
+        for (int i = 0; i < cardCount; i++) offered |= cards[i] >= 0 && Upgrades.weapon(cards[i]);
+        if (!armed && !offered && cards[0] >= 0) {
+            int weapons = 0;
+            for (int id = 0; id < Upgrades.COUNT; id++) if (Upgrades.weapon(id) && run.canUpgrade(id)) weapons++;
+            int pick = run.nextInt(Math.max(1, weapons));
+            for (int id = 0; id < Upgrades.COUNT && weapons > 0; id++) {
+                if (Upgrades.weapon(id) && run.canUpgrade(id) && pick-- == 0) { cards[0] = id; break; }
+            }
+        }
     }
+
+    static final int CARD_RINGS = -1, CARD_OVERDRIVE = -2;
+
+    /** A maxed build's ring card: three hits at the base toll. */
+    int maxedRingBonus() { return Math.max(25, 3 * run().toll(0)); }
 
     /** Level-up menu rows: the cards, then REROLL when rerolls remain. */
     int levelUpRows() { return cardCount + (run().rerolls > 0 && cards[0] >= 0 ? 1 : 0); }
@@ -1029,16 +1559,19 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             return;
         }
         int card = cards[menuIndex];
-        if (card < 0) {
-            player.addRings(25);
+        if (card == CARD_OVERDRIVE) {
+            run.overdrive++;
+        } else if (card < 0) {
+            player.addRings(maxedRingBonus());
         } else {
             run.levels[card]++;
             if (card == Upgrades.BARRIER && run.levels[card] == 1) player.giveShield();
         }
         run.pendingLevels--;
         services().playSfx(0xC9); // sfx_Bonus.
-        banner(card < 0 ? "+25 RINGS" : Upgrades.name(card) + " LV " + run.levels[card], 70,
-                card < 0 ? Draw.GOLD : Upgrades.kindColour(card));
+        banner(card == CARD_OVERDRIVE ? "OVERDRIVE " + run.overdrive : card < 0 ? "RING BONUS"
+                        : Upgrades.name(card) + " LV " + run.levels[card], 70,
+                card == CARD_OVERDRIVE ? Draw.RED : card < 0 ? Draw.GOLD : Upgrades.kindColour(card));
         if (run.pendingLevels > 0) {
             menuIndex = 0;
             dealCards();
@@ -1069,6 +1602,10 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             profile.unlocked = next;
             profile.save();
         }
+        int pool = profile.upgradePool(run.kills, run.bestCombo, run.level + 1, run.elitesDefeated, next, 0);
+        newUnlocks = profile.claimNewUnlocks(pool);
+        // Milestones reached mid-run join this run's pool from the next zone.
+        run.pool |= pool;
         if (arena.stage() == Stages.DEZ) {
             victory();
             return;
@@ -1092,18 +1629,34 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     }
 
     // ---- Run end ----
+    /**
+     * Banks the run. Retiring at a zone clear also banks the rings in hand, less the free rings the
+     * run was given (start rings and revives), so starting and retiring is never a ring farm.
+     * Leaving mid-fight is a forfeit and pays like a game over. Eggman's Rules add their bonus.
+     */
     private int bank(boolean won, boolean retired) {
         var run = run();
         var profile = profile();
         var player = services().camera().getFocusedSprite();
-        int held = retired && player != null ? player.getRingCount() : 0;
-        int banked = run.ringsCollected / 2 + 25 * run.stagesCleared + run.kills / 5 + held + (won ? 300 : 0);
+        int held = retired && player != null ? Math.max(0, player.getRingCount() - run.freeRings) : 0;
+        // Badnik ring values grow along the route, so the bank takes a quarter of them.
+        int earned = run.ringsCollected / 4 + 25 * run.stagesCleared + run.kills / 10 + held + (won ? 300 : 0);
+        int banked = earned * (100 + Rules.totalBonus(run.rules)) / 100;
+        newUnlocks = profile.claimNewUnlocks(profile.upgradePool(run.kills, run.bestCombo, run.level + 1,
+                run.elitesDefeated, 0, banked));
         profile.bank += banked;
         profile.bankedTotal += banked;
         profile.totalKills += run.kills;
+        profile.totalElites += run.elitesDefeated;
+        for (int i = 0; i < Species.COUNT; i++) profile.speciesKills[i] += run.speciesKills[i];
         profile.bestKills = Math.max(profile.bestKills, run.kills);
         profile.bestCombo = Math.max(profile.bestCombo, run.bestCombo);
         profile.bestStages = Math.max(profile.bestStages, run.stagesCleared);
+        profile.bestLevel = Math.max(profile.bestLevel, run.level + 1);
+        if (endless() && run.mode == RunState.ENDLESS) {
+            int stage = arena().stage();
+            profile.bestUnlimited[stage] = Math.max(profile.bestUnlimited[stage], fightFrames / 60);
+        }
         if (won) profile.wins++;
         profile.save();
         bankedThisRun = banked;
@@ -1129,9 +1682,9 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         services().audioManager().playMusic(Sonic2Music.ENDING.id);
     }
 
-    /** Ends the run voluntarily (CLEAR's retire, or Escape), banking held rings too. */
+    /** Ends the run voluntarily: at a zone clear it banks held rings; mid-fight it is a forfeit. */
     private void retire(boolean toTitle) {
-        if (run().active) bank(false, true);
+        if (run().active) bank(false, phase == CLEAR);
         if (toTitle || phase == CAMP) { exitToTitle(); return; }
         phase = DEAD;
         phaseFrames = 0;
@@ -1180,6 +1733,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     private void freezePlayer(AbstractPlayableSprite player, boolean freeze) {
         if (freeze == playerFrozen) {
             if (freeze) {
+                holdProtection(player);
                 player.setXSpeed((short) 0);
                 player.setYSpeed((short) 0);
                 player.setGSpeed((short) 0);
@@ -1191,16 +1745,28 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             savedX = player.getXSpeed();
             savedY = player.getYSpeed();
             savedG = player.getGSpeed();
+            savedInvincible = player.getInvincibleFrames();
+            savedInvulnerable = player.getInvulnerableFrames();
+            holdProtection(player);
             player.setObjectControlled(true);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
             player.setGSpeed((short) 0);
         } else {
+            player.setInvincibleFrames(savedInvincible);
+            player.setInvulnerableFrames(savedInvulnerable);
             player.setObjectControlled(false);
             player.setXSpeed((short) savedX);
             player.setYSpeed((short) savedY);
             player.setGSpeed((short) savedG);
         }
+    }
+
+    /** Player power-up clocks still tick under object control. Keep them above expiry during
+     * menus and restore the exact saved duration on release; the extra tick is never playable. */
+    private void holdProtection(AbstractPlayableSprite player) {
+        player.setInvincibleFrames(savedInvincible > 0 ? savedInvincible + 1 : 0);
+        player.setInvulnerableFrames(savedInvulnerable > 0 ? savedInvulnerable + 1 : 0);
     }
 
     // =========================================================================================

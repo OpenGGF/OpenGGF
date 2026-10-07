@@ -2824,6 +2824,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * than playing music itself.
          */
         private void restoreLevelMusicAfterInvincibility() {
+                // Music belongs to the host mode, not the player's donated physics profile.
+                GameModule module = currentGameModule();
+                GameRules rules = module != null ? module.getRules() : getGameRules();
+                if (rules != null && rules.powerUp() != null
+                        && !rules.powerUp().restoreLevelMusicAfterInvincibility()) {
+                        return;
+                }
                 if (bossOwnsMusic() || drowningCountdownOwnsMusic()) {
                         return;
                 }

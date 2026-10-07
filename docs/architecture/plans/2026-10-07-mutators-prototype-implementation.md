@@ -135,3 +135,29 @@ guards. A 120-minute per-invocation timeout excludes queue waiting; ten minutes
 without output stops the invocation. Timeout is incomplete validation. Affected
 S2 trace segments and SDK verification are separate obligations. Completed
 results and inherited-failure attribution will be appended before PR delivery.
+
+## Later executable destination reconciliation
+
+Destination `2fc65c8479570f16ebd9830115485ee369c2b1e6` adds executable Survivors,
+power-up music ownership, Infinite regression and memory-tool changes. The
+unadmitted 5b3-based combined request 35021 was normally cancelled (exit 130)
+after exact owned PID/CWD/waiter and zero-child confirmation; no Maven or tests
+started. Its 3,015-class plan and older captures remain historical evidence.
+
+The second intent merge retains the upstream `PowerUpRules` constructor and
+`restoreLevelMusicAfterInvincibility` flag, stock `true` factories and the actual
+host-mode music gate in `AbstractPlayableSprite`. Its only conflict was API
+version commentary; both contracts are retained without a version/status bump.
+Normal focused invocation 35517 compiled 3,715 production and 3,579 test sources
+and passed 106 cases across 16 classes, zero failures/errors/skips. This includes
+native S2 revision/recreation replay, Gravity/presentation, admission/preferences,
+host commands, API pin/policy, hybrid rules and stock music restoration. The source
+freeze had zero changes between submission and completion.
+
+The pin was regenerated from those actual compiled merged classes: 20,335 lines,
+287 own additions and no removals against 2fc. Equality with the provisional
+automatic merge was checked rather than treating text union as proof. SDK,
+candidate trace/domain and merged-source audiovisual checks remain delivery
+obligations. Shared baseline runs belong to their original owners; the older
+5b3 failure set is not a 2fc certificate. The final combined selection must use
+2fc, not HEAD, and inspect actual completed failures and skips.

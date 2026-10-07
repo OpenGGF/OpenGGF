@@ -23,6 +23,8 @@ public final class ModApiVersion {
      * Boot-prepared typed mutators declare independent action/option scopes,
      * immutable gravity/Stealth policies, explicit assembly causes and common
      * modal configuration presentation. The unpublished candidate remains 0.7.0.
+     * Power-up rules expose explicit invincibility-expiry music ownership for modes
+     * with continuous music.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

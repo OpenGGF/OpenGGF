@@ -32,14 +32,19 @@ import java.util.TreeSet;
  * skipped when unset), {@code openggf.floorsurvey.game} ({@code s1}, {@code s2}, {@code s3k};
  * default {@code s2}), {@code openggf.floorsurvey.acts} (comma-separated 0-based
  * {@code zone:act} pairs; default {@code 0:0}), {@code openggf.floorsurvey.top} (paths per
- * act, default 8). The usual ROM path properties select the ROM.
+ * act, default 8), {@code openggf.floorsurvey.headroom} (when {@code true}, Sonic is placed on
+ * every 16px of each listed path and jumps: the output adds the spans where the jump rises at
+ * least {@code openggf.floorsurvey.minRise} px, default 80, so arenas built on bouncing avoid
+ * low ceilings). The usual ROM path properties select the ROM.
  *
  * <pre>
  * mvn -Dmse=off -Dsonic2.rom.path=/abs/s2.gen -Dtest=FloorSegmentSurveyProbe \
  *     -Dopenggf.floorsurvey.out=/abs/task-dir/floors.txt -Dopenggf.floorsurvey.acts=0:0,1:1 test
  * </pre>
  *
- * <p>Originating task: Sonic Survivors arena selection (2026-10-06). Comparison-only: it
+ * <p>Originating task: Sonic Survivors arena selection (2026-10-06); headroom spans added by the
+ * Survivors balance pass (2026-10-07) after low ceilings in Casino Night, Hill Top and the Death
+ * Egg left Sonic unable to bounce. Comparison-only: it
  * reads loaded levels and never changes engine state.
  */
 @RequiresRom(SonicGame.SONIC_2)
@@ -62,13 +67,18 @@ class FloorSegmentSurveyProbe {
             int zone = Integer.decode(za[0]), act = Integer.decode(za[1]);
             SharedLevel shared = SharedLevel.load(game, zone, act);
             try {
-                HeadlessTestFixture.builder().withSharedLevel(shared).build();
+                var fixture = HeadlessTestFixture.builder().withSharedLevel(shared).build();
                 var level = GameServices.level().getCurrentLevel();
                 sb.append("== zone ").append(zone).append(" act ").append(act)
                         .append(" x ").append(level.getMinX()).append('-').append(level.getMaxX())
                         .append(" y ").append(level.getMinY()).append('-').append(level.getMaxY()).append('\n');
+                var found = new ArrayList<int[]>();
                 sb.append(paths(GameServices.level(), level.getMinX(), level.getMaxX() + 320,
-                        level.getMinY(), level.getMaxY() + 224, top));
+                        level.getMinY(), level.getMaxY() + 224, top, found));
+                if (Boolean.getBoolean("openggf.floorsurvey.headroom")) {
+                    int minRise = Integer.decode(System.getProperty("openggf.floorsurvey.minRise", "80"));
+                    for (int[] path : found) sb.append(headroom(fixture, path, minRise));
+                }
             } finally {
                 shared.dispose();
             }
@@ -80,7 +90,49 @@ class FloorSegmentSurveyProbe {
 
     /** Links per-column floor surfaces into paths; returns the {@code top} longest. */
     static String paths(LevelManager levelManager, int minX, int maxX, int minY, int maxY, int top) {
-        // Each open path: {startX, lastY, minY, maxY, lastX}.
+        return paths(levelManager, minX, maxX, minY, maxY, top, new ArrayList<>());
+    }
+
+    /**
+     * Places the player on the path every 16px and jumps; returns the spans whose jump rises at
+     * least {@code minRise} px. The path array holds {startX, lastY, minY, maxY, lastX, y...}
+     * with one floor height per 8px column from startX.
+     */
+    static String headroom(HeadlessTestFixture fixture, int[] path, int minRise) {
+        var player = fixture.sprite();
+        player.setInvulnerableFrames(1_000_000);
+        var sb = new StringBuilder("    headroom >= " + minRise + " in x " + path[0] + "-" + path[4] + ":");
+        int spanStart = -1, last = -1;
+        for (int x = path[0] + 16; x <= path[4] - 16; x += 16) {
+            int floor = path[5 + (x - path[0]) / 8];
+            com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player, x);
+            com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(player, floor - 20);
+            player.setXSpeed((short) 0);
+            player.setYSpeed((short) 0);
+            player.setGSpeed((short) 0);
+            player.setAir(true);
+            for (int f = 0; f < 30 && player.getAir(); f++) fixture.stepIdleFrames(1);
+            fixture.stepIdleFrames(3);
+            int start = player.getCentreY(), peak = start;
+            for (int f = 0; f < 40; f++) {
+                fixture.stepFrame(false, false, false, false, true);
+                peak = Math.min(peak, player.getCentreY());
+            }
+            boolean ok = start - peak >= minRise && Math.abs(player.getCentreX() - x) < 48;
+            if (ok && spanStart < 0) spanStart = x;
+            if (!ok && spanStart >= 0) {
+                if (last - spanStart >= 256) sb.append(' ').append(spanStart).append('-').append(last);
+                spanStart = -1;
+            }
+            if (ok) last = x;
+        }
+        if (spanStart >= 0 && last - spanStart >= 256) sb.append(' ').append(spanStart).append('-').append(last);
+        return sb.append('\n').toString();
+    }
+
+    static String paths(LevelManager levelManager, int minX, int maxX, int minY, int maxY, int top, List<int[]> found) {
+        // Each open path: {startX, lastY, minY, maxY, lastX}, with its column heights alongside.
+        java.util.Map<int[], List<Integer>> heights = new java.util.IdentityHashMap<>();
         List<int[]> open = new ArrayList<>();
         List<int[]> done = new ArrayList<>();
         for (int x = minX; x < maxX; x += 8) {
@@ -102,13 +154,19 @@ class FloorSegmentSurveyProbe {
                     continue;
                 }
                 used.add(best);
+                heights.get(path).add(best);
                 path[1] = best;
                 path[2] = Math.min(path[2], best);
                 path[3] = Math.max(path[3], best);
                 path[4] = x;
                 next.add(path);
             }
-            for (int sy : surfaces) if (!used.contains(sy)) next.add(new int[]{x, sy, sy, sy, x});
+            for (int sy : surfaces) {
+                if (used.contains(sy)) continue;
+                int[] path = {x, sy, sy, sy, x};
+                heights.put(path, new ArrayList<>(List.of(sy)));
+                next.add(path);
+            }
             open = next;
         }
         done.addAll(open);
@@ -116,6 +174,10 @@ class FloorSegmentSurveyProbe {
         var sb = new StringBuilder();
         for (int i = 0; i < Math.min(top, done.size()); i++) {
             int[] path = done.get(i);
+            List<Integer> ys = heights.get(path);
+            int[] full = java.util.Arrays.copyOf(path, 5 + ys.size());
+            for (int k = 0; k < ys.size(); k++) full[5 + k] = ys.get(k);
+            found.add(full);
             sb.append("  path x ").append(path[0]).append('-').append(path[4]).append(" (")
                     .append(path[4] - path[0]).append("px) floor y ").append(path[2]).append('-').append(path[3])
                     .append('\n');

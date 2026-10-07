@@ -4,6 +4,11 @@ Original implementation base: `6d817a9d74f135714f3da59ab9aab156cc09473e`.
 This is an opening-play prototype, not certification of the entire stock act.
 The [implementation plan](../../plans/2026-10-07-mutators-prototype-implementation.md)
 and [creator guide](../../../modding/guides/mutators.md) own delivery and authoring.
+The later integration base is `2fc65c8479570f16ebd9830115485ee369c2b1e6`.
+Its intent-merged 16-class focused invocation 35517 passed 106 cases, zero
+failures/errors/skips, including the native revision/recreation replay and
+stock power-up music rules. Captures named below remain attributed to 6bd;
+fresh merged-source captures and combined validation are still required.
 
 ## Supported cell and obligations
 
