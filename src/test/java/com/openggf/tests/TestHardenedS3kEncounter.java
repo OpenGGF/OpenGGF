@@ -175,6 +175,11 @@ class TestHardenedS3kEncounter {
             encounter.until(() -> !encounter.value("phase").toString().equals("WAITING"), 100, true, false);
             encounter.until(() -> (encounter.fixture.sprite().getCentreX() & 0xffff) <= encounter.constant("POST_X"), 60, false, true);
             encounter.frames(12, false, false);
+            encounter.until(() -> encounter.value("phase").toString().equals("LOCKED"), 100, false, false);
+            var committedX = encounter.value("aimX"); var committedY = encounter.value("aimY");
+            encounter.frames(3, false, true);
+            assertEquals(committedX, encounter.value("aimX"), "committed aim no longer follows native movement");
+            assertEquals(committedY, encounter.value("aimY"));
             encounter.until(() -> !encounter.spores().isEmpty(), 100, false, false);
             var objects = GameServices.level().getObjectManager();
             assertFalse(encounter.spores().isEmpty(), "first volley must be live");
@@ -265,13 +270,32 @@ class TestHardenedS3kEncounter {
             encounter.frames(12, false, false);
             encounter.until(() -> encounter.value("volleys").equals(2), 140, false, false);
             assertFalse(encounter.spores().isEmpty(), "second volley must still exist at its emission boundary");
+            int protectedX = encounter.fixture.sprite().getCentreX() & 0xffff;
+            // Declared exit-position stimulus isolates the completion predicate;
+            // the separate safe-route test reaches the marker with native input.
             com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(encounter.fixture.sprite(), encounter.constant("EXIT_X"));
             encounter.call("afterGameplayTick", encounter.fixture.sprite(), true);
             assertEquals("ACTIVE", encounter.value("status").toString(), "exit cannot erase the second volley on emission");
+            com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(encounter.fixture.sprite(), protectedX);
             encounter.frames(20, false, false);
             assertEquals("ACTIVE", encounter.value("status").toString(), "volley travel remains playable before recovery");
-            encounter.until(() -> encounter.value("status").toString().equals("CLEARED"), 140, false, false);
-            assertEquals("RESTING", encounter.value("phase").toString());
+            // Visibility loss cannot shorten recovery or reset the run's volley cap.
+            var sentry = encounter.sentry();
+            int cameraX = encounter.fixture.camera().getX();
+            encounter.fixture.camera().setX((short) (encounter.constant("SENTRY_X") + 200));
+            sentry.update(0, encounter.fixture.sprite());
+            encounter.fixture.camera().setX((short) cameraX);
+            com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(encounter.fixture.sprite(), encounter.constant("EXIT_X"));
+            sentry.update(0, encounter.fixture.sprite());
+            encounter.call("afterGameplayTick", encounter.fixture.sprite(), true);
+            assertEquals("TELL", encounter.value("phase").toString());
+            assertEquals("ACTIVE", encounter.value("status").toString(), "reentry must present tell and recovery again");
+            com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(encounter.fixture.sprite(), protectedX);
+            encounter.until(() -> encounter.value("phase").toString().equals("RESTING"), 160, false, false);
+            assertEquals(2, encounter.value("volleys"), "reentry cannot publish a third volley");
+            com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(encounter.fixture.sprite(), encounter.constant("EXIT_X"));
+            encounter.call("afterGameplayTick", encounter.fixture.sprite(), true);
+            assertEquals("CLEARED", encounter.value("status").toString());
         }
     }
 
