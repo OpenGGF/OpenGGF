@@ -175,11 +175,12 @@ class TestHardenedS3kEncounter {
             encounter.until(() -> !encounter.value("phase").toString().equals("WAITING"), 100, true, false);
             encounter.until(() -> (encounter.fixture.sprite().getCentreX() & 0xffff) <= encounter.constant("POST_X"), 60, false, true);
             encounter.frames(12, false, false);
-            encounter.until(() -> encounter.value("phase").toString().equals("LOCKED"), 100, false, false);
+            encounter.until(() -> !List.of("WAITING", "TELL").contains(encounter.value("phase").toString()), 100, false, false);
             var committedX = encounter.value("aimX"); var committedY = encounter.value("aimY");
             encounter.frames(3, false, true);
             assertEquals(committedX, encounter.value("aimX"), "committed aim no longer follows native movement");
             assertEquals(committedY, encounter.value("aimY"));
+            encounter.frames(1, false, false);
             encounter.until(() -> !encounter.spores().isEmpty(), 100, false, false);
             var objects = GameServices.level().getObjectManager();
             assertFalse(encounter.spores().isEmpty(), "first volley must be live");
@@ -371,12 +372,10 @@ class TestHardenedS3kEncounter {
         try (var encounter = open()) {
             encounter.begin();
             encounter.until(() -> !encounter.value("phase").toString().equals("WAITING"), 100, true, false);
-            encounter.until(() -> (encounter.fixture.sprite().getCentreX() & 0xffff) <= encounter.constant("POST_X"), 60, false, true);
-            encounter.frames(12, false, false);
-            encounter.until(() -> encounter.value("phase").toString().equals("LOCKED"), 100, false, false);
             var objects = GameServices.level().getObjectManager();
             objects.reserveAllButNFreeSlots(1);
-            encounter.frames(14, false, false);
+            encounter.until(() -> (encounter.fixture.sprite().getCentreX() & 0xffff) <= encounter.constant("POST_X"), 60, false, true);
+            encounter.until(() -> encounter.value("status").toString().equals("ABORTED"), 100, false, false);
             assertEquals("ABORTED", encounter.value("status").toString());
             assertTrue(encounter.spores().isEmpty(), "failed pair allocation must leave no harmful partial volley");
         }
@@ -407,17 +406,17 @@ class TestHardenedS3kEncounter {
                 owners -> new ModStateSaveResult.Saved(), owners -> { }));
         var plan = runtime.newRegistrationPlan();
         assertTrue(runtime.registrationFailures().isEmpty(), runtime.registrationFailures()::toString);
-        GameModule root = GameServices.module();
-        // Closing the previous test mode never mutates the ROM or selected stock providers.
-        if (root instanceof com.openggf.game.patch.DelegatingGameModule)
-            root = new com.openggf.game.sonic3k.Sonic3kGameModule();
+        // Each fixture opens a fresh native base, including repeated launches in
+        // one method after the previous world and creator loader were closed.
+        GameModule root = new com.openggf.game.sonic3k.Sonic3kGameModule();
         root.createGame(TestEnvironment.currentRom());
         var resolver = new ModuleResolutionService(List.of(), new EffectiveCatalogPatchEnablement(catalog.effective()),
                 new LogicalRomResolver(() -> null), config, ignored -> plan);
         GameModule resolved = resolver.resolveForLaunch(root, new GameplayLaunchRequest("s3k", "sonic", List.of()),
                 ModuleResolutionService.LaunchPolicy.STANDARD);
+        var owningEngine = EngineServices.current();
         var mode = SessionManager.openGameplaySession(root, resolved, null);
-        GameplaySessionFactory.attachManagers(mode, EngineServices.current());
+        GameplaySessionFactory.attachManagers(mode, owningEngine);
         GameModuleRegistry.setCurrent(resolved);
         Class<?> stateType = runtime.loadOwned(OWNER, "hardened.EncounterState");
         Object state = resolved.getGameService(stateType);
@@ -425,6 +424,10 @@ class TestHardenedS3kEncounter {
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(7, 0)
                 .startPosition((short) 0x1d30, (short) 0x1a8).startPositionIsCentre()
                 .withFreshLevelStartLifecycle().build();
+        // resetPerTest() replaces the process pointer while this already-open
+        // mode's registry owns the earlier V-int carrier. Restore that owner;
+        // never compare an orphaned counter or inject captured gameplay values.
+        EngineServices.configure(owningEngine);
         var encounter = new Encounter(runtime, fixture, state, runtime.loadOwned(OWNER, "hardened.EncounterPlan"));
         var manager = GameServices.level().getObjectManager();
         manager.setRewindClassResolver(new ModClassResolver(runtime, getClass().getClassLoader()));
