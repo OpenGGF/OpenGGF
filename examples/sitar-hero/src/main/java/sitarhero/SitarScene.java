@@ -238,14 +238,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
         if (capturingBinding) {
             if (context.keyPressed(SceneKeys.ESCAPE)) { capturingBinding = false; return; }
             for (PhysicalInputEvent event : context.physicalInput().events()) {
-                PhysicalBinding binding = null;
-                if (!settingsPad && event.kind() == PhysicalInputEvent.Kind.KEY && event.pressed())
-                    binding = new PhysicalBinding('K', -1, event.code(), 1);
-                if (settingsPad && event.kind() == PhysicalInputEvent.Kind.BUTTON && event.pressed())
-                    binding = new PhysicalBinding('B', event.deviceId(), event.code(), 1);
-                if (settingsPad && event.kind() == PhysicalInputEvent.Kind.AXIS && Math.abs(event.value()) > .7f
-                        && !(event.code() >= 4 && event.value() < 0))
-                    binding = new PhysicalBinding('A', event.deviceId(), event.code(), event.value() < 0 ? -1 : 1);
+                PhysicalBinding binding = PhysicalBinding.capture(event, settingsPad);
                 if (binding != null) {
                     settings.bind(settingsDrums, settingsPad, selected, binding); capturingBinding = false;
                     context.storage().write("settings.txt", settings.encode()); return;

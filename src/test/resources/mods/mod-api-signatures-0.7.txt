@@ -194,6 +194,9 @@ CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$VolMode visible @c
 CF-ANNOTATION TYPE com.openggf.camera.Camera visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.configuration.SonicConfiguration visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.configuration.SonicConfigurationService visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.control.ActionFrame visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.control.ActionMap visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.control.ActionReducer visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.ButtonPrompts visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.ButtonPrompts$Button visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.GamepadStateSource visible @com.openggf.game.ModApi
@@ -203,6 +206,7 @@ CF-ANNOTATION TYPE com.openggf.control.InputHandler visible @com.openggf.game.Mo
 CF-ANNOTATION TYPE com.openggf.control.LogicalInputSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.MenuInput visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.MenuInput$Pointer visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.control.PhysicalBinding visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.PhysicalGamepad visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.PhysicalInput visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.PhysicalInputEvent visible @com.openggf.game.ModApi
@@ -1219,6 +1223,9 @@ CONSTRUCTOR com.openggf.audio.smps.DacData$DacEntry public  <init>(int,int)
 CONSTRUCTOR com.openggf.audio.smps.SmpsSequencerConfig$Builder public  <init>()
 CONSTRUCTOR com.openggf.camera.Camera public  <init>()
 CONSTRUCTOR com.openggf.camera.Camera public  <init>(com.openggf.configuration.SonicConfigurationService)
+CONSTRUCTOR com.openggf.control.ActionFrame public  <init>(long,java.util.Map<java.lang.String,java.lang.Float>,java.util.Set<java.lang.String>,int)
+CONSTRUCTOR com.openggf.control.ActionMap public  <init>()
+CONSTRUCTOR com.openggf.control.ActionReducer public  <init>(com.openggf.control.ActionMap)
 CONSTRUCTOR com.openggf.control.GamepadStateSource$DeviceState public  <init>(int,java.lang.String,boolean,boolean[],float,float)
 CONSTRUCTOR com.openggf.control.GamepadStateSource$DeviceState public  <init>(int,java.lang.String,boolean,boolean[],float,float,float,float,float,float)
 CONSTRUCTOR com.openggf.control.InputBindings public  <init>(int,int,int,int,int,int,int,int,int,int,int,int,int,int,int,int,boolean,double,java.lang.String,java.lang.String,int,int,int)
@@ -1228,6 +1235,7 @@ CONSTRUCTOR com.openggf.control.InputHandler public  <init>(java.util.function.S
 CONSTRUCTOR com.openggf.control.InputHandler public  <init>(java.util.function.Supplier<com.openggf.control.InputBindings>,com.openggf.control.GamepadStateSource,java.util.function.LongSupplier)
 CONSTRUCTOR com.openggf.control.LogicalInputSnapshot public  <init>(com.openggf.control.PlayerInputState,com.openggf.control.PlayerInputState,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.control.MenuInput$Pointer public  <init>(int,int,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.control.PhysicalBinding public  <init>(char,int,int,int)
 CONSTRUCTOR com.openggf.control.PhysicalGamepad public  <init>(int,java.lang.String,boolean[],float[])
 CONSTRUCTOR com.openggf.control.PhysicalInput public  <init>(long,java.util.List<java.lang.Integer>,java.util.List<com.openggf.control.PhysicalGamepad>,java.util.List<com.openggf.control.PhysicalInputEvent>,int)
 CONSTRUCTOR com.openggf.control.PhysicalInputEvent public  <init>(long,long,com.openggf.control.PhysicalInputEvent$Kind,int,int,float)
@@ -4507,6 +4515,24 @@ METHOD com.openggf.configuration.SonicConfigurationService public  void setSessi
 METHOD com.openggf.configuration.SonicConfigurationService public,static  com.openggf.configuration.SonicConfigurationService createStandalone()
 METHOD com.openggf.configuration.SonicConfigurationService public,static  com.openggf.configuration.SonicConfigurationService createStandalone(java.nio.file.Path)
 METHOD com.openggf.configuration.SonicConfigurationService public,static,synchronized  com.openggf.configuration.SonicConfigurationService getInstance()
+METHOD com.openggf.control.ActionFrame public  boolean held(java.lang.String)
+METHOD com.openggf.control.ActionFrame public  boolean pressed(java.lang.String)
+METHOD com.openggf.control.ActionFrame public  float amount(java.lang.String)
+METHOD com.openggf.control.ActionFrame public  int droppedEvents()
+METHOD com.openggf.control.ActionFrame public  java.util.Map<java.lang.String,java.lang.Float> amounts()
+METHOD com.openggf.control.ActionFrame public  java.util.Set<java.lang.String> pressedActions()
+METHOD com.openggf.control.ActionFrame public  long timestampNanos()
+METHOD com.openggf.control.ActionFrame public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.control.ActionFrame public,final  int hashCode()
+METHOD com.openggf.control.ActionFrame public,final  java.lang.String toString()
+METHOD com.openggf.control.ActionMap public  java.lang.String encode()
+METHOD com.openggf.control.ActionMap public  java.util.List<com.openggf.control.PhysicalBinding> bindings(java.lang.String)
+METHOD com.openggf.control.ActionMap public  java.util.Map<java.lang.String,java.util.List<com.openggf.control.PhysicalBinding>> bindings()
+METHOD com.openggf.control.ActionMap public  void read(java.lang.String)
+METHOD com.openggf.control.ActionMap public,static  com.openggf.control.ActionMap menu()
+METHOD com.openggf.control.ActionMap public,transient varargs  com.openggf.control.ActionMap bind(java.lang.String,com.openggf.control.PhysicalBinding[])
+METHOD com.openggf.control.ActionReducer public  java.util.List<com.openggf.control.ActionFrame> accept(com.openggf.control.PhysicalInput)
+METHOD com.openggf.control.ActionReducer public  void reset(com.openggf.control.PhysicalInput)
 METHOD com.openggf.control.ButtonPrompts public,static  java.util.Optional<java.lang.String> keyName(int)
 METHOD com.openggf.control.ButtonPrompts public,static  java.util.Optional<java.lang.String> label(com.openggf.control.InputHandler,int,com.openggf.control.ButtonPrompts$Button)
 METHOD com.openggf.control.ButtonPrompts$Button public,static  com.openggf.control.ButtonPrompts$Button valueOf(java.lang.String)
@@ -4650,6 +4676,18 @@ METHOD com.openggf.control.MenuInput$Pointer public,final  boolean equals(java.l
 METHOD com.openggf.control.MenuInput$Pointer public,final  int hashCode()
 METHOD com.openggf.control.MenuInput$Pointer public,final  java.lang.String toString()
 METHOD com.openggf.control.MenuInput$Pointer public,static  com.openggf.control.MenuInput$Pointer none()
+METHOD com.openggf.control.PhysicalBinding public  char kind()
+METHOD com.openggf.control.PhysicalBinding public  float amount(java.util.Set<java.lang.Integer>,java.util.Map<java.lang.String,java.lang.Float>)
+METHOD com.openggf.control.PhysicalBinding public  int code()
+METHOD com.openggf.control.PhysicalBinding public  int device()
+METHOD com.openggf.control.PhysicalBinding public  int direction()
+METHOD com.openggf.control.PhysicalBinding public  java.lang.String encode()
+METHOD com.openggf.control.PhysicalBinding public  java.lang.String label()
+METHOD com.openggf.control.PhysicalBinding public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.control.PhysicalBinding public,final  int hashCode()
+METHOD com.openggf.control.PhysicalBinding public,final  java.lang.String toString()
+METHOD com.openggf.control.PhysicalBinding public,static  com.openggf.control.PhysicalBinding capture(com.openggf.control.PhysicalInputEvent,boolean,float)
+METHOD com.openggf.control.PhysicalBinding public,static  com.openggf.control.PhysicalBinding decode(java.lang.String)
 METHOD com.openggf.control.PhysicalGamepad public  boolean buttonDown(int)
 METHOD com.openggf.control.PhysicalGamepad public  boolean[] buttons()
 METHOD com.openggf.control.PhysicalGamepad public  float axis(int)
@@ -15331,6 +15369,10 @@ RECORD-COMPONENT com.openggf.audio.rewind.AudioLogicalSnapshot$DonorSfxBindingSn
 RECORD-COMPONENT com.openggf.audio.rewind.AudioTimelineEntry command com.openggf.audio.rewind.AudioCommand
 RECORD-COMPONENT com.openggf.audio.rewind.AudioTimelineEntry frame long
 RECORD-COMPONENT com.openggf.audio.rewind.AudioTimelineEntry order int
+RECORD-COMPONENT com.openggf.control.ActionFrame amounts java.util.Map<java.lang.String,java.lang.Float>
+RECORD-COMPONENT com.openggf.control.ActionFrame droppedEvents int
+RECORD-COMPONENT com.openggf.control.ActionFrame pressedActions java.util.Set<java.lang.String>
+RECORD-COMPONENT com.openggf.control.ActionFrame timestampNanos long
 RECORD-COMPONENT com.openggf.control.GamepadStateSource$DeviceState buttons boolean[]
 RECORD-COMPONENT com.openggf.control.GamepadStateSource$DeviceState connected boolean
 RECORD-COMPONENT com.openggf.control.GamepadStateSource$DeviceState joystickId int
@@ -15384,6 +15426,10 @@ RECORD-COMPONENT com.openggf.control.MenuInput$Pointer leftPressed boolean
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer rightPressed boolean
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer x int
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer y int
+RECORD-COMPONENT com.openggf.control.PhysicalBinding code int
+RECORD-COMPONENT com.openggf.control.PhysicalBinding device int
+RECORD-COMPONENT com.openggf.control.PhysicalBinding direction int
+RECORD-COMPONENT com.openggf.control.PhysicalBinding kind char
 RECORD-COMPONENT com.openggf.control.PhysicalGamepad axes float[]
 RECORD-COMPONENT com.openggf.control.PhysicalGamepad buttons boolean[]
 RECORD-COMPONENT com.openggf.control.PhysicalGamepad deviceId int
@@ -18047,6 +18093,8 @@ TYPE class public,final com.openggf.audio.AudioReplay SUPER java.lang.Object
 TYPE class public,final com.openggf.audio.rewind.AudioCommandTimeline SUPER java.lang.Object
 TYPE class public,final com.openggf.audio.smps.DacData SUPER java.lang.Object
 TYPE class public,final com.openggf.audio.smps.SmpsSequencerConfig SUPER java.lang.Object
+TYPE class public,final com.openggf.control.ActionMap SUPER java.lang.Object
+TYPE class public,final com.openggf.control.ActionReducer SUPER java.lang.Object
 TYPE class public,final com.openggf.control.ButtonPrompts SUPER java.lang.Object
 TYPE class public,final com.openggf.control.MenuInput SUPER java.lang.Object
 TYPE class public,final com.openggf.debug.DebugColor SUPER java.lang.Object
@@ -18538,8 +18586,10 @@ TYPE record protected,static,final com.openggf.sprites.playable.SuperStateContro
 TYPE record public,final com.openggf.audio.SegaPcmSpec SUPER java.lang.Record
 TYPE record public,final com.openggf.audio.rewind.AudioLogicalSnapshot SUPER java.lang.Record
 TYPE record public,final com.openggf.audio.rewind.AudioTimelineEntry SUPER java.lang.Record
+TYPE record public,final com.openggf.control.ActionFrame SUPER java.lang.Record
 TYPE record public,final com.openggf.control.InputBindings SUPER java.lang.Record
 TYPE record public,final com.openggf.control.LogicalInputSnapshot SUPER java.lang.Record
+TYPE record public,final com.openggf.control.PhysicalBinding SUPER java.lang.Record
 TYPE record public,final com.openggf.control.PhysicalGamepad SUPER java.lang.Record
 TYPE record public,final com.openggf.control.PhysicalInput SUPER java.lang.Record
 TYPE record public,final com.openggf.control.PhysicalInputEvent SUPER java.lang.Record
@@ -19072,6 +19122,9 @@ TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$VolMode @com.openggf.
 TYPE-ANNOTATION com.openggf.camera.Camera @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.configuration.SonicConfiguration @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.configuration.SonicConfigurationService @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.control.ActionFrame @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.control.ActionMap @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.control.ActionReducer @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.ButtonPrompts @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.ButtonPrompts$Button @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.GamepadStateSource @com.openggf.game.ModApi
@@ -19081,6 +19134,7 @@ TYPE-ANNOTATION com.openggf.control.InputHandler @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.LogicalInputSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.MenuInput @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.MenuInput$Pointer @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.control.PhysicalBinding @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.PhysicalGamepad @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.PhysicalInput @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.PhysicalInputEvent @com.openggf.game.ModApi
