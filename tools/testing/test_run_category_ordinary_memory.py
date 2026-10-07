@@ -103,6 +103,10 @@ class CThird { byte[] fixture = new byte[20 * 1024 * 1024];
             self.assertLess(boundaries[-1]['heapBytes']-boundaries[0]['heapBytes'],5*1024**2,
                             'Final post-plan floor must release fixtures but preserve static retained arrays')
             self.assertTrue(all(b['gcObserved'] for b in boundaries))
+            final_snapshot = report['snapshots'][-1]
+            self.assertTrue(final_snapshot['allPlansFinished'])
+            self.assertTrue(final_snapshot['gcObserved'])
+            self.assertEqual('CThird', final_snapshot['afterClass'])
 
 if __name__ == '__main__':
     unittest.main()

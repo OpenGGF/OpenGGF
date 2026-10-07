@@ -114,9 +114,13 @@ public final class SuiteMemoryListener implements TestExecutionListener {
             row.put("afterClass",previousClass);row.put("beforeClass",next);row.put("gcObserved",observed);
             row.put("allPlansFinished",plans==completedPlans);
             row.put("beforeGcHeapBytes",before.heapBytes);emit(row);
-            if(previousClass!=null && snapshots<12 && (s.heapBytes>highFloor+128L*1024*1024 || s.rssBytes!=null&&s.rssBytes>highRss+512L*1024*1024)) {
+            boolean finalBoundary=next==null;
+            // Reserve the twelfth snapshot for the final post-plan comparison,
+            // even if earlier classes crossed every high-watermark threshold.
+            if(previousClass!=null && snapshots<(finalBoundary?12:11) && (finalBoundary || s.heapBytes>highFloor+128L*1024*1024 || s.rssBytes!=null&&s.rssBytes>highRss+512L*1024*1024)) {
                 Map<String,Object> evidence=new LinkedHashMap<>();evidence.put("type","snapshot");evidence.put("afterClass",previousClass);
                 evidence.put("heapBytes",s.heapBytes);evidence.put("rssBytes",s.rssBytes);
+                evidence.put("allPlansFinished",plans==completedPlans);evidence.put("gcObserved",observed);
                 evidence.put("histogram",diagnostic("gcClassHistogram",new String[]{"-all"},45));
                 evidence.put("nativeMemory",diagnostic("vmNativeMemory",new String[]{"summary","scale=KB"},100));emit(evidence);snapshots++;
             }

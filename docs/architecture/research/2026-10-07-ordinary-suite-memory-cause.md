@@ -59,6 +59,9 @@ Maven parent retains its existing heap configuration and performs cold test
 compilation inside the observed process. Separate process-tree probes preserve
 Maven/test maxima and periodic heap information. Both JVMs have diagnostic-only
 Native Memory Tracking; rotating test GC logs are summarized before deletion.
+A final histogram/native snapshot is always collected after plan return; one of
+the twelve snapshot slots is reserved for it, so early high-watermarks cannot
+consume the final comparison.
 
 The whole diagnostic queues exclusively. Its execution deadline excludes queue
 wait; minute heartbeats expose long routes. Source revision and tool hashes,
