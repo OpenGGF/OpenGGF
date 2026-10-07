@@ -28,9 +28,9 @@ This survey establishes authoring geometry; it does not itself prove combat.
 | Physical post contact and two real death reloads | Passed: real native collision activates index 2, followed by two production death reloads. No checkpoint fixture is counted as combat evidence. |
 | Safe/failure paths, ordinary ring/shield/hurt dispatch | Passed: native safe-ring/danger volleys, ring loss, all three elemental shields, projectile recreation and two whole-registry 60-tick restore/forward cycles. |
 | Projectile recreation and two restore/forward replay cycles | Passed: native safe-ring/danger volleys, ring loss, all three elemental shields, projectile recreation and two whole-registry 60-tick restore/forward cycles. |
-| Packaged title, entry holds, pause, real checkpoint menu retry and owner abort | `TestHardenedPrototype`: five packaged/native cases passed with zero skips at 14:19 UTC; includes two real checkpoint menu retries, two pre-contact fresh attempts and owner-fault return. |
-| Fresh entry/checkpoint/death/stage-return precedence and no-save attachment | 55 focused cases passed with zero skips; the fresh-camera follow-up remains under focused verification. |
-| Actual GPU title/tells/transitions and final ROM PCM | Exploratory production title/lesson/tell/clear/post-retry/exit frames and final PCM inspected. Its initial camera catch-up exposed a blocker; corrected final capture remains pending. |
+| Packaged title, entry holds, pause, real checkpoint menu retry and owner abort | `TestHardenedPrototype`: seven packaged/native cases pass with zero skips after neutral entry and mandatory native-card consumption. Includes two real checkpoint menu retries, pre-contact fresh attempts, entry restore/forward cycles and owner-fault return. |
+| Fresh entry/checkpoint/death/stage-return precedence and no-save attachment | 55 focused cases passed with zero skips; the corrected native fresh-camera/checkpoint method also passes. Stock death camera remains `0x1CC0`. |
+| Actual GPU title/tells/transitions and final ROM PCM | Camera and entry follow-ups have actual pre-2fc GPU/PCM diagnostics: first released PLAY contains foreground and Sonic, safe/fatal paths reach native post retries, initial title controls do not overlap. Final merged-source video/device evidence remains pending. |
 
 The [implementation plan](../../plans/2026-10-07-hardened-s3k-prototype.md) and
 [blueprint](../../designs/2026-10-07-hardened-s3k-blueprint.md) preserve the

@@ -50,3 +50,14 @@ footer is shown after the panel settles. Maintained safe/failure controller
 programs are under `examples/hardened-s3k/walkthroughs`; final capture evidence
 must confirm their milestones after the entry correction. No future full-act or
 campaign gate is complete.
+
+Destination follow-up: exact `2fc65c8479570f16ebd9830115485ee369c2b1e6` adds
+Survivors, stock-default invincibility-expiry music ownership and memory tools.
+It is merged by intent as `259a9a48f`, preserving both version-comment paragraphs
+and the upstream title callback/forwarding/unavailable two-player branch. The
+candidate pin auto-merged; its combined compiled export remains a required check.
+The pre-2fc coherent entry-source trace run at `84e1a9a6f` reproduced all three
+literal 5b3 baseline assertions. One shared clean 2fc baseline and final merged
+candidate check establish new-destination attribution without duplicating a full
+baseline suite. Focused packaging, final merged captures and combined validation
+remain pending.

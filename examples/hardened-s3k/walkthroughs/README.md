@@ -16,6 +16,9 @@ java -cp "$OPENGGF_CAPTURE_CP" com.openggf.tools.InputLogAuthorTool \
 java -cp "$OPENGGF_CAPTURE_CP" com.openggf.tools.InputLogAuthorTool \
   --script examples/hardened-s3k/walkthroughs/failure.script \
   --out examples/hardened-s3k/walkthroughs/failure.bk2 --game s3k
+java -cp "$OPENGGF_CAPTURE_CP" com.openggf.tools.InputLogAuthorTool \
+  --script examples/hardened-s3k/walkthroughs/missing-rom.script \
+  --out examples/hardened-s3k/walkthroughs/missing-rom.bk2 --game s3k
 ```
 
 The author re-parses each movie and verifies its held-button round trip. This is
@@ -68,3 +71,12 @@ its exact caller/environment limits.
 The dated blueprint and affected MHZ1 validation matrix hold the observed frame
 map, source identity, commands, tests and remaining route obligations. Those
 records must be refreshed when the pattern or entry timing changes.
+
+`missing-rom.script` / `missing-rom.bk2` exercise the normal host's recovery UI:
+dismiss the initial error, navigate the preserved master selection, request a
+second unavailable-ROM launch and dismiss again. Use an unavailable path only in
+an isolated launch configuration; do not create a fake ROM or change stock files.
+This movie belongs to native host/window diagnostics. `ModWalkthroughCaptureTool`
+requires a valid ROM and does not render the missing-ROM host screen. The dated
+implementation evidence records the exact native diagnostic caller, owned-window
+recipe and its limits separately from the GPU/PCM tool.

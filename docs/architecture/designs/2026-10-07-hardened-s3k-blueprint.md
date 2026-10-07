@@ -289,3 +289,37 @@ it produced no test result. One reconciled normal replacement supplied the
 actual baseline evidence. The later entry-query source still requires its own
 trace check. The native missing-ROM screenshots/state log show recovery;
 its three-frame desktop video failed X11 GetImage and is rejected as footage.
+
+### Destination reconciliation after entry polish
+
+Coherent entry source `84e1a9a6f` completed the same three trace methods with no
+errors or skips and the literal 57/99/4,699 assertions from the clean 5b3 baseline.
+This covers the new native queue/provider query before the next destination merge.
+Exact destination `2fc65c847` is then merged as `259a9a48f`; its stock power-up rules
+retain `restoreLevelMusicAfterInvincibility=true` for every stock game. Both the
+new upstream power-up description and this prototype's contracts survive the
+single version-comment conflict. The prior title callback, delegated forwarding
+and unavailable two-player branch are preserved. Auto-merged API pins are
+provisional until exported from the actual compiled merged source. The candidate
+stays unpublished 0.7; published baselines are unchanged.
+
+One shared clean 2fc three-method baseline is queued for all prototype teams;
+the earlier 5b3 summary remains historical. Final merged candidate trace,
+packaging, audiovisual and combined validation still require observed results.
+The pre-2fc entry diagnostic confirms title frame 0 has no footer collision and
+first PLAY frame 274 contains native foreground and Sonic. Its safe path reaches
+post 313, both volleys 380/404, clear 675, real-post retry 840 and separate fresh
+launch 1,035. The maintained failure input still produces actual zero-ring death
+352 and real-post retry 531. These diagnostics have real GPU frames and varying
+stereo PCM, but are not the newly merged source certificate.
+
+The missing-ROM recorder fix waits for the first native display to settle the
+owned window geometry before recorder attachment. The bounded pre-2fc probe
+fully decodes 363 desktop frames and observes error/menu/error/menu with 337
+native input rows. The exact owned PID/title is viewable by default, without a
+frameless workaround, at 960×672; native focus/input are observed. Recorders stop
+with codes 0/255 and the engine/sink clean up. Exit 255 alone is not audio success;
+final video extent and actual device samples must be inspected. This caller uses
+unmodified `Engine.display` at a diagnostic 60 Hz and does not certify
+`Engine.loop`, physical HID hardware or speakers. Final merged recapture remains
+required; the earlier three-frame missing-ROM movie remains rejected.
