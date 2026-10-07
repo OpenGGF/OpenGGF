@@ -664,8 +664,8 @@ in the [S1](2026-10-07-s1-parity-gap-verification.md),
 [S3K](2026-10-07-s3k-parity-gap-verification.md) audits. These local commits and
 candidate measurements have not yet been integrated or pushed in this round.
 
-The wider S3K completion gap was rechecked in the updated assembly at
-`08a2446947fa2a70b3a768952a9f0147c248a09c`: `Sonic3kGameModule` still has no
+The wider S3K completion gap was rechecked in the reconciled assembly at
+`ae3399c2b81d724cc5ba650c6ca9ec1499c6eaae`: `Sonic3kGameModule` still has no
 `getEndingProvider()` override, the default in `GameModule` returns null, and
 `GameLoop.doEnterEnding()` returns to title for that value. Closing the local
 trace and rewind defects in this round does not implement the shipped-ROM ending.
@@ -683,7 +683,8 @@ that destination. The completed Sitar candidate supplies an updated baseline:
 with zero failures, errors or skips in 209.63 seconds. Both lanes are terminal;
 ordinary exit one represents inherited failures, without timeout or omissions.
 
-The Sitar owner independently compared all 28 failure identities and complete
+The [Sitar terminal comparison](../designs/2026-10-07-sitar-hero-full-version.md#completed-repaired-candidate-and-qualified-baseline)
+records the owner's independent comparison of all 28 failure identities and complete
 first assertion lines with the durable `4cfb` result: 27 match literally,
 and the full SSZ assertion matches after only exception-prefix removal and
 the already-verified object-blob hash normalization. All 62 skip identities
@@ -699,3 +700,88 @@ main `be3`. This task preserves that freeze, including unrelated dirty
 submodules and untracked files, and does not cancel or acknowledge that request.
 Its parity commits remain private pending reconciliation, the remaining focused
 fixes, combined validation and the normal delivery flow.
+
+
+The updated destination was merged privately as
+`ae3399c2b81d724cc5ba650c6ca9ec1499c6eaae` after evidence-only commit
+`42c5ce4a154694e3197f8cb481700a837c458901`. The normal merge had no conflicts;
+all 25 parity production, Java-test and mirrored-skill paths checked against
+the pre-merge assembly remained byte-for-byte unchanged. The main branch is
+still reserved for its owner's already-running post-integration validation.
+
+The S1 read-only follow-up identifies the recorded release rows behind two
+remaining frontiers. Actual BK2 rows 27,469/27,470 hold Up, then 27,471/27,472
+release it; MZ1 row four records neutral movie input and native Wait `$05`,
+mapping `$01`. Rows 47,119/47,120 hold Right, then 47,121/47,122 release it;
+MZ2 row 87 records neutral movie input. Adjacent lag-state rows are false with
+unchanged counters, and these segments have no recorded pre-level input prefix.
+TraceChaser's recorder derives this CSV input from the BK2 row, with raw input
+only as a fallback. Neither fixture includes the ROM's latched Ctrl_1 held/new
+bytes in auxiliary snapshots. This establishes physical release rows, not the
+native body latch, the engine's actual consumed cursor or its live logical flags;
+those observations remain unavailable in the retained fixtures/diagnostics.
+A subsequent native capture resolves the missing ROM-side observation. The
+existing TraceChaser GPGX host replayed the original movie with its original sync
+settings and inputs against the verified S1 World REV01 ROM, without state loads,
+RAM writes, input substitutions or fixture publication. Its comparison-only
+execute callbacks observe `$13338`, immediately after the ROM copies raw
+`$F604/$F605` to logical `$F602/$F603`, and the dispatched movement entry. Verified
+ROM bytes at `$13332` are `31F8F604F602`; ground and rolling-air movement entries
+are `$134EC` and `$1355A` respectively. All nine surrounding MZ1 frame-end rows
+(movie 27,467–27,475) and all eleven MZ2_3 rows (47,115–47,125) match the
+committed positions, subpositions, velocities, inertia, status, animation and
+mapping exactly. MZ2_3 has offset 47,034; this observation does not concern the
+separate `mz2` capture with offset 42,308.
+
+At movie row 27,471 / MZ1 row four, both raw and logical held/new pairs are
+`$00/$00` at the copy boundary and ground movement entry. At movie row 47,121 /
+MZ2_3 row 87, both pairs are `$00/$00` at the copy boundary and rolling-air entry;
+entry x-speed is `$0495`, and frame-end x remains `$00DD.7E00` with unchanged
+x-speed `$0495` and y-speed `$03A8`, exactly matching the committed row. This
+rules out a stale native body latch at these frontiers. The engine's actual
+consumed cursor, applied offset and live sprite input still require its assigned
+comparison-only publication probe; this native observation alone authorizes no
+movement adjustment.
+
+The native capture completed with exit zero in 115.894 seconds. Original movie
+SHA-256 `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`
+remained unchanged; host SHA-256 is
+`5e455b0cb3fa52d6415ef64677b8079b088204eefe971a37573667bb59efe917` and sampler
+source SHA-256 is
+`5b801b58479513f022e07724449292028604bcc4a56a5b0d798d51b06e0e5f00`.
+Generated observations and provenance reside in the external task directory
+`parity-r2-s1-controller-latch-20261007`; no recorder source or canonical fixture
+changed. The raw CSV heading `vfc` actually denotes the level frame counter at
+`$FE04`, not the vblank counter. The prior GUI approach was rejected: Mesa EGL
+crashed during initialization before producing observations, so its process exit
+supplies no gameplay evidence. The headless approach validated the existing
+BizHawk 2.11 installation and produced actual body and frame-end observations.
+
+The independent S3K native mask observation likewise uses the original full
+movie and verified locked-on ROM through that existing headless host. The movie
+contains no active P2 input; all original P1, Power and Reset inputs and sync
+settings are preserved. Callbacks at `$C4CC` and `$C4D0` bracket the verified ROM
+bytes `42B8FF924E75` (`clr.l ($FF92).w; rts`). At movie row 52,944, AIZ2 level
+counter 6,492, the mask changes from `$0000003A` to `$00000000` while player state
+is unchanged. That player state matches AIZ_5 row 6,512 exactly. Earlier mask
+observations retain bit one across the seamless AIZ1 → AIZ2 transition at movie
+12,060 and retain the growing mask across special-stage returns and level reloads.
+The clear is a full `SaveGame` boundary, not a generic zone or act load.
+
+The mask remains zero at HCZ entry. All eleven HCZ rows 3,527–3,537 (movie
+57,135–57,145, segment offset 53,608) match committed player position,
+subposition, velocities, inertia, status, animation, mapping, level frame counter
+and vblank word. Player object control changes `$00` → `$53` at row 3,531 while
+the mask remains zero; bit one is set when the movie enters special-stage mode
+`$34` at 57,182. This distinguishes the native player-capture phase from the
+later collected-mask write. The queued engine probe still must establish its
+actual retained mask and ring-deletion dispatch before qualifying a correction.
+
+The native observation completed with exit zero in 101.719 seconds, with one
+paired full `SaveGame` callback. Original movie SHA-256
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`
+remained unchanged; sampler source SHA-256 is
+`108fba2b21adfa3a87d5df2750a1d90024867112466ec264477db0cf3822925d`.
+The external task directory `parity-r2-s3k-ring-mask-20261007` retains its native
+observations and provenance. This added no RAM writes, state loads, input
+substitutions, producer-source changes or canonical fixture publication.

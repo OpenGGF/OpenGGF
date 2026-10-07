@@ -71,6 +71,19 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Movie input is not a native movement latch (2026-10-07, stock parity S1
+frontiers): the recorder's input column comes from the BK2 row, with raw RAM
+only as a fallback; it does not observe the game's logical held/new pair at
+movement entry. Replay the original movie with its original sync settings,
+verify the exact ROM callback bytes, and observe the owning read boundary.
+Match surrounding frame-end position, subposition, speed, status and animation
+to the committed rows before interpreting the latch. The S1 capture matched all
+20 surrounding rows and measured neutral raw and logical pairs at both release
+frontiers. Its CSV heading `vfc` read `$FE04`, the level frame counter; label the
+actual address and owner rather than inferring a clock from a probe's heading.
+An emulator startup crash with no observations is rejected evidence, even if a
+host wrapper reports that it launched.
+
 Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
 task): the positioned MHZ capture retained about 22 MiB after its callback while
 three complete capture/rewind/ROM-loading passes settled near 16.8 MiB, with only
