@@ -76,3 +76,62 @@ showed the title Start cue selecting a missing WAV fallback before the gameplay
 audio profile was bound. The example uses the cached native Sonic 2 `$BC` ROM
 SFX instead. The earlier captures are attributed to their completed source;
 repaired-source recapture remains required before delivery.
+
+## Final-source observations
+
+Implementation commit `ea74ed8620` and destination merge `f6e1f7a477` retain the
+original base and merge `5b3a63641033506fc0d89ad5188a0c97fae29089` by intent.
+The merge preserves `onNewGameFromTitle`, delegated forwarding and the unavailable
+two-player title branch. Final repair `6bd7c052a6` resolves nullable commands,
+title Escape ownership, accepted-fade input and the native Start cue. The final
+source-only resolution review found no remaining concrete blocker. Its scope
+does not substitute for runtime or broad verification.
+
+The final compiled candidate export has 20,333 lines: 287 additions and no
+removals against the actual destination, retaining both upstream additions.
+The descriptor and `ModApiVersion.CURRENT` remain unpublished 0.7 candidate.
+The final prepared example contains no ROM, image or sound assets.
+
+Normal-source captures are retained outside Git in the task capture directory,
+under `gpu-verified` and `native-verified`. The maintained `capture.script`
+produces 2,077 synchronized GPU/state rows and 1,661,600 stereo 48 kHz PCM frames.
+Actual frames 180, 600, 704 and 774 establish intro gating, title backing and
+slider/checkbox/enum clearance. Frames 1,130, 1,360 and 1,570 establish airborne
+play, hidden player with world/HUD retained, and restored presentation. Frame
+1,800 is the native restart title card; frame 2,076 is fresh native play.
+Configuration holds 1,218–1,254 and 1,467–1,514 keep position, velocity and camera
+constant. Revision transitions occur at Start 796 and Resume 1,255/1,515.
+
+The maintained 98-action window walkthrough uses normal `Engine.loop`, its tick
+limiter and freshly compiled classes. It exercises help, all option types,
+native play, pause, Stealth, focus return, resume, restart, hub, two fresh
+launches, title Back and window close. The default window manager mapped the
+exact owned PID/title at 960×672, depth 24, without `override_redirect`. Child-only
+Pulse/keyutils preload and driver-vsync settings are recorded by the helper;
+no global window/audio settings changed. Close returned zero, every owned
+process stopped, and the sink, focus window and display were released.
+Native device PCM contains 101.8 seconds of stereo 48 kHz output, with varying
+AC signal around menu actions, gameplay and relaunch. This qualifies the
+recorded device stream, not physical speakers or a hardware controller.
+
+Earlier isolated patched-classpath/no-audio captures, stalled explicit-show
+probes and incomplete input-release walkthroughs remain diagnostic evidence.
+The default-mapping result is specific to the final launch path; it does not
+retroactively qualify those attempts. The maintained helper preserves exact
+ownership, release/focus hazards and independent cleanup rather than shipping
+an Engine-wide window-management workaround.
+
+Focused repair invocation 50600 compiled 3,715 production and 3,579 test sources
+and passed 20 cases with zero failures/errors/skips. After the accepted-title
+edge repair, invocation 83824 passed the two affected cases with zero skips.
+The five Python helper failure-injection checks passed. The original child
+evidence remains separately attributed: contract 45 cases; gameplay 243
+unaffected cases plus seven repaired presentation fixtures, all without skips.
+
+The combined selection uses the actual merged destination SHA above, not HEAD:
+3,015 ordinary classes across all categories plus guards in a fresh JVM.
+The recent destination audit measured about 72 minutes ordinary and 215 seconds
+guards. A 120-minute per-invocation timeout excludes queue waiting; ten minutes
+without output stops the invocation. Timeout is incomplete validation. Affected
+S2 trace segments and SDK verification are separate obligations. Completed
+results and inherited-failure attribution will be appended before PR delivery.
