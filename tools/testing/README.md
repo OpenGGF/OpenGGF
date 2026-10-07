@@ -318,8 +318,10 @@ and acknowledge category diagnostics after consuming them.
 
 ### Automatic storage cleanup
 
-Acknowledgment retains exclusive queue locking but does not require CPU or memory
-headroom: it deletes metadata and never launches Maven.
+Acknowledgment holds the current worktree's lock and a shared compatibility lock.
+It can overlap resource-aware Maven runs in other worktrees, but waits for writes
+in its own tree and for legacy/serial exclusive clients. It does not occupy a JVM
+slot, join the admission queue or require CPU/memory headroom.
 
 Diagnostics are temporary, not a run history. After inspecting `results.json` (including
 skip reasons and failures) and any relevant log tail, acknowledge consumption:
@@ -329,7 +331,7 @@ python3 tools/testing/run_categories.py --acknowledge <run-id>
 ```
 
 This deletes the **entire run directory**, including summaries, plans and commands, without
-running Maven. It waits for the same execution slot as validation before cleanup. Only exact runner IDs are accepted, never paths or symlinked directories.
+running Maven. Only exact runner IDs are accepted, never paths or symlinked directories.
 A repeated acknowledgment is harmless. Agents must acknowledge consumed results before
 delivery; there is no background process that can detect when a human has read a file.
 
