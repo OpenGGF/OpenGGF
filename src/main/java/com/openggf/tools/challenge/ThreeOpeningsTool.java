@@ -482,6 +482,7 @@ public final class ThreeOpeningsTool {
                 host != null && program != null && host.tick() >= program.length() ? "play-final"
                         : host != null&& host.tick() == 180           ? "play-180"
                         : host != null&& host.tick() == 600 ? "play-600"
+                        : host != null&& host.tick() == 1536 ? "play-1536"
                                                             : null;
             case PAUSE -> elapsed() > .3 ? "pause" : null;
             case FAULT -> elapsed() > .3 ? "fault" : null;

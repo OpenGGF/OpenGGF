@@ -10,7 +10,6 @@ import com.openggf.audio.smps.*;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
-import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
 import java.io.IOException;
 import java.nio.file.*;
@@ -43,14 +42,26 @@ final class ChallengeMenuAudio implements AutoCloseable {
             config.setSessionOverride(SonicConfiguration.FPS, 60);
             output = new UiSink(sink, capture);
             created = AudioManager.createStandalonePresentation("s1", profile, config,
-                    PerformanceProfiler.getInstance(), output,
+                    // The retained profiler argument is unused by this standalone
+                    // presentation factory; it accepts null without a service root.
+                    null, output,
                     new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()));
             created.setRom(rom);
             var loader = profile.createSmpsLoader(rom);
             dac = loader.loadDacData();
             for (GameSound sound : List.of(GameSound.RING, GameSound.JUMP, GameSound.CHECKPOINT,
                          GameSound.SPRING, GameSound.ERROR)) {
-                AbstractSmpsData data = loader.loadSfx(profile.getSoundMap().get(sound));
+                // S1 names its ring pan variants and has no ERROR asset. Use its
+                // native ring and wall-smash cues for selection/failure feedback.
+                GameSound nativeSound = switch (sound) {
+                    case RING -> GameSound.RING_RIGHT;
+                    case ERROR -> GameSound.WALL_SMASH;
+                    default -> sound;
+                };
+                Integer id = profile.getSoundMap().get(nativeSound);
+                if (id == null)
+                    throw new IOException("Missing native title sound mapping " + nativeSound);
+                AbstractSmpsData data = loader.loadSfx(id);
                 if (data == null)
                     throw new IOException("Missing title sound " + sound);
                 cues.put(sound, data);
@@ -76,7 +87,8 @@ final class ChallengeMenuAudio implements AutoCloseable {
         long now = System.nanoTime();
         if (now < nextPacket)
             return;
-        nextPacket = now + 16_666_667;
+        long following = nextPacket + 16_666_667;
+        nextPacket = nextPacket == 0 || following <= now ? now + 16_666_667 : following;
         // UI synthesis has its own presentation clock and never catches up game ticks.
         audio.presentFrame(PresentationMode.FORWARD);
     }

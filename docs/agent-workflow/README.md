@@ -221,3 +221,6 @@ Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven
   records the actual host window and a private OpenAL output monitor without
   changing the desktop's default audio device; the sample walkthrough gives its
   dependencies and exact invocation.
+- [Three Openings UI lifecycle probe](../../tools/challenge/check_host_lifecycle.py)
+  drives the real host UI and exact owned-worker fault/stall lifecycle, retaining
+  presentation/input generations, native window video and device PCM outside Git.

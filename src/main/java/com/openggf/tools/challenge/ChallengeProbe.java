@@ -73,7 +73,7 @@ public final class ChallengeProbe {
                 costs[t] = System.nanoTime() - start;
                 for (int i = 0; i < frames.size(); i++) hashes.get(i).add(hash(frames.get(i)));
                 capture.frame(frames, p.heldAt(t), frames.getFirst().pcm());
-                if (t == 179 || t == 599 || t == p.length() - 1)
+                if (t == 179 || t == 599 || t == 1535 || t == p.length() - 1)
                     for (int i = 0; i < frames.size(); i++)
                         ChallengeCapture.saveFrame(
                                 output.resolve("member-" + i + "-tick-" + (t + 1) + ".png"), frames.get(i));

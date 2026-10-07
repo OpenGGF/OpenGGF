@@ -15,6 +15,8 @@ public final class ChallengeInputProgram {
         length = segments.stream().mapToInt(Segment::ticks).sum();
     }
     public static ChallengeInputProgram read(Path path) throws IOException {
+        if (Files.size(path) > 512 * 1024)
+            throw new IOException("Held-input program exceeds 512 KiB");
         List<Segment> segments = new ArrayList<>();
         int total = 0;
         for (String line : Files.readAllLines(path)) {
@@ -30,7 +32,7 @@ public final class ChallengeInputProgram {
                     throw new IllegalArgumentException();
                 int held = 0;
                 if (!fields[1].equals("NEUTRAL"))
-                    for (String button : fields[1].split("\\+"))
+                    for (String button : fields[1].split("\\+", -1))
                         held |= switch (button) {
                             case "UP" -> 1;
                             case "DOWN" -> 2;

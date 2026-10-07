@@ -124,7 +124,7 @@ class TestChallengeProtocol {
         assertEquals(0, p.heldAt(1));
         assertEquals(104, p.heldAt(2));
         assertThrows(IndexOutOfBoundsException.class, () -> p.heldAt(5));
-        for (String invalid : List.of("0 RIGHT", "1 LEFT+RIGHT", "1 JUMP", "36001 C", "1 NEUTRAL 2")) {
+        for (String invalid : List.of("0 RIGHT", "1 LEFT+RIGHT", "1 JUMP", "36001 C", "1 NEUTRAL 2", "1 C+")) {
             Files.writeString(input, invalid);
             assertThrows(IOException.class, () -> ChallengeInputProgram.read(input));
         }

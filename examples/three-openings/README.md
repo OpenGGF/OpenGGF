@@ -91,6 +91,10 @@ worker ticks, native centre positions, rings, clocks and the polled held byte
 play), `menu.wav` the separately synthesized UI cues; neither proves device
 output without the observed speaker/loopback check in the validation record.
 PNG names identify title/loading/ready/countdown and selected committed ticks.
+`presentation.csv` records scene/generation/tick/focus and pending-step changes,
+including a pause before any already-admitted tuple finishes. The maintained
+1,800-tick program leaves 1,440 neutral ticks for native entry before offering
+movement/jump to all games; use the tick1,536 and final images with `state.csv`.
 
 The isolation oracle boots each game alone, the triplet, duplicate Sonic 1 worlds,
 then reversed member order; it compares every native RGBA frame, pre-focus PCM
@@ -124,3 +128,19 @@ python3 tools/challenge/capture_host.py \
 The helper requires Python Xlib, `pactl` and ffmpeg. It leaves the desktop default
 sink unchanged. `window.mkv`, `speaker.wav` and `capture.json` provide the actual
 window/device evidence and exact managed-process cleanup outcome.
+
+On the same Linux desktop, exercise loading cancellation, pause with a deliberately
+stalled owned worker, audio focus, restart/generation, fault/retry, missing ROM and
+repeated exit through actual UI keys:
+
+```sh
+python3 tools/challenge/check_host_lifecycle.py \
+  --classpath "$PWD/target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar" \
+  --s1 /absolute/s1.gen --s2 /absolute/s2.gen --s3k /absolute/s3k.gen \
+  --output /absolute/outside-repository/three-openings-lifecycle
+```
+
+The probe sends native UI keys only to its own host window and signals only exact
+worker processes acquired by that host. It resumes stopped workers during cleanup,
+records `lifecycle.json`, synchronized timelines/screenshots/video and device PCM,
+and unloads its private audio module. This diagnostic does not certify any route.
