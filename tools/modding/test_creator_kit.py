@@ -150,6 +150,22 @@ class CreatorKitTest(unittest.TestCase):
         self.assertIn(b"<classifier>mod-testkit</classifier><scope>test</scope>", pom)
         self.assertIn(b"<artifactId>maven-surefire-plugin</artifactId><version>3.2.5", pom)
 
+    def test_exported_readme_leads_with_artifact_build_and_run_instructions(self):
+        project = self.root / "examples/hello-scene"
+        main = project / "src/main/resources/META-INF/openggf-mod.yaml"
+        main.parent.mkdir(parents=True)
+        main.write_text("id: hello-scene\nbaseGame: s3k\n")
+        original = "# Original scene notes\n\nBuild from source with python3 play.py.\n"
+        (project / "README.md").write_text(original)
+        readme = kit.export_examples(self.root)["examples/hello-scene/README.md"].decode()
+        self.assertTrue(readme.startswith("# Build hello-scene from the creator kit"))
+        self.assertLess(readme.index("python3 ../../tools/build_project.py ."), readme.index("python3 play.py"))
+        for instruction in ("21 JDK", "-Dopenggf.engine.jar=/absolute/kit/engine.jar",
+                            "-Dopenggf.sdk.jar=/absolute/kit/sdk.jar", "target/hello-scene-mod.jar",
+                            "--run --s3k /absolute/own-s3k.gen", "target/play"):
+            self.assertIn(instruction, readme)
+        self.assertTrue(readme.endswith(original))
+
     def test_portable_build_refuses_wrong_testkit_identity_before_compiling(self):
         engine = self.root / "target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar"
         sdk = self.root / "target/OpenGGF-0.7.prerelease-openggf-mod-sdk.jar"
