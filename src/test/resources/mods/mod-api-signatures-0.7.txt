@@ -921,6 +921,21 @@ CF-ANNOTATION TYPE com.openggf.mods.code.RomArtRequest visible @com.openggf.game
 CF-ANNOTATION TYPE com.openggf.mods.code.StandaloneLevelLoader visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.ZoneEventFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.ZoneEventFactory visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorCapability visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorDefinition visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorDefinition$AtomicGroup visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorDefinition$PolicyFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorDefinition$PolicyFactory visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorOption visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorOption$Checkbox visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorOption$Choice visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorOption$IntegerSlider visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorOptions visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$PlayerStealth visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$Target visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorScope visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.DebuggableScene visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.ModScene visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.ModSceneFactory visible @com.openggf.game.ModApi
@@ -1745,6 +1760,15 @@ CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public  <i
 CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$TrackMusic public  <init>(com.openggf.mods.TrackKey)
 CONSTRUCTOR com.openggf.mods.code.ModZoneContribution public  <init>(java.lang.String,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.mods.code.ZoneEventFactory,boolean)
 CONSTRUCTOR com.openggf.mods.code.RomArtRequest public  <init>(int,com.openggf.mods.code.RomArtCompression,int,int,int,int,int)
+CONSTRUCTOR com.openggf.mods.mutators.MutatorDefinition public  <init>(java.lang.String,java.lang.String,java.lang.String,com.openggf.mods.mutators.MutatorScope,com.openggf.mods.mutators.MutatorScope,java.util.List<com.openggf.mods.mutators.MutatorOption>,java.util.Set<com.openggf.mods.mutators.MutatorCapability>,com.openggf.mods.mutators.MutatorDefinition$PolicyFactory)
+CONSTRUCTOR com.openggf.mods.mutators.MutatorDefinition public  <init>(java.lang.String,java.lang.String,java.lang.String,int,com.openggf.mods.mutators.MutatorScope,com.openggf.mods.mutators.MutatorScope,java.util.List<com.openggf.mods.mutators.MutatorOption>,java.util.List<com.openggf.mods.mutators.MutatorDefinition$AtomicGroup>,java.util.Set<java.lang.String>,java.util.Set<java.lang.String>,java.util.Set<com.openggf.mods.mutators.MutatorCapability>,com.openggf.mods.mutators.MutatorDefinition$PolicyFactory)
+CONSTRUCTOR com.openggf.mods.mutators.MutatorDefinition$AtomicGroup public  <init>(java.lang.String,com.openggf.mods.mutators.MutatorScope,java.util.Set<java.lang.String>)
+CONSTRUCTOR com.openggf.mods.mutators.MutatorOption$Checkbox public  <init>(java.lang.String,java.lang.String,java.lang.String,com.openggf.mods.mutators.MutatorScope,java.lang.Boolean)
+CONSTRUCTOR com.openggf.mods.mutators.MutatorOption$Choice public  <init>(java.lang.String,java.lang.String,java.lang.String,com.openggf.mods.mutators.MutatorScope,java.lang.String,java.util.List<java.lang.String>)
+CONSTRUCTOR com.openggf.mods.mutators.MutatorOption$IntegerSlider public  <init>(java.lang.String,java.lang.String,java.lang.String,com.openggf.mods.mutators.MutatorScope,java.lang.Integer,int,int,int,java.lang.String)
+CONSTRUCTOR com.openggf.mods.mutators.MutatorOptions public  <init>(java.util.Map<java.lang.String,java.lang.Object>)
+CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity public  <init>(int)
+CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$PlayerStealth public  <init>(boolean,boolean,com.openggf.mods.mutators.MutatorPolicy$Target,boolean)
 CONSTRUCTOR com.openggf.mods.scene.RomSpriteRequest public  <init>(int,com.openggf.mods.scene.RomSpriteRequest$Compression,int,int,int,com.openggf.mods.scene.RomSpriteRequest$DplcLayout,int,int)
 CONSTRUCTOR com.openggf.mods.scene.SceneBackdrop public  <init>(com.openggf.mods.scene.SceneImage,java.util.List<com.openggf.mods.scene.SceneBackdrop$Band>)
 CONSTRUCTOR com.openggf.mods.scene.SceneBackdrop$Band public  <init>(int,int,double,double)
@@ -3018,6 +3042,13 @@ FIELD com.openggf.level.scroll.BgTilemapUpdateMode public,static,final com.openg
 FIELD com.openggf.mods.code.RomArtCompression public,static,final com.openggf.mods.code.RomArtCompression KOSINSKI
 FIELD com.openggf.mods.code.RomArtCompression public,static,final com.openggf.mods.code.RomArtCompression NEMESIS
 FIELD com.openggf.mods.code.RomArtCompression public,static,final com.openggf.mods.code.RomArtCompression UNCOMPRESSED
+FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability DRY_SONIC_GRAVITY
+FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability PLAYER_STEALTH
+FIELD com.openggf.mods.mutators.MutatorPolicy$Target public,static,final com.openggf.mods.mutators.MutatorPolicy$Target ALL_TEAM
+FIELD com.openggf.mods.mutators.MutatorPolicy$Target public,static,final com.openggf.mods.mutators.MutatorPolicy$Target LEADER
+FIELD com.openggf.mods.mutators.MutatorScope public,static,final com.openggf.mods.mutators.MutatorScope LAUNCH
+FIELD com.openggf.mods.mutators.MutatorScope public,static,final com.openggf.mods.mutators.MutatorScope LIVE
+FIELD com.openggf.mods.mutators.MutatorScope public,static,final com.openggf.mods.mutators.MutatorScope LOAD
 FIELD com.openggf.mods.scene.RomSpriteRequest$Compression public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression KOSINSKI
 FIELD com.openggf.mods.scene.RomSpriteRequest$Compression public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression KOSINSKI_MODULED
 FIELD com.openggf.mods.scene.RomSpriteRequest$Compression public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression NEMESIS
@@ -3510,6 +3541,11 @@ INTERFACE com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn com.openggf.
 INTERFACE com.openggf.mods.code.ModLevelDefinition$StockMusic com.openggf.mods.code.ModLevelDefinition$Music
 INTERFACE com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn com.openggf.mods.code.ModLevelDefinition$ObjectEntry
 INTERFACE com.openggf.mods.code.ModLevelDefinition$TrackMusic com.openggf.mods.code.ModLevelDefinition$Music
+INTERFACE com.openggf.mods.mutators.MutatorOption$Checkbox com.openggf.mods.mutators.MutatorOption
+INTERFACE com.openggf.mods.mutators.MutatorOption$Choice com.openggf.mods.mutators.MutatorOption
+INTERFACE com.openggf.mods.mutators.MutatorOption$IntegerSlider com.openggf.mods.mutators.MutatorOption
+INTERFACE com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity com.openggf.mods.mutators.MutatorPolicy
+INTERFACE com.openggf.mods.mutators.MutatorPolicy$PlayerStealth com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.net.client.MasterClient java.lang.AutoCloseable
 INTERFACE com.openggf.net.client.RaceClient$Control com.openggf.net.client.RaceClient$InboundEvent
 INTERFACE com.openggf.net.client.RaceClient$Disconnected com.openggf.net.client.RaceClient$InboundEvent
@@ -11697,6 +11733,7 @@ METHOD com.openggf.mods.code.ModContext public  void registerGamePatch(com.openg
 METHOD com.openggf.mods.code.ModContext public  void registerHudProfile(com.openggf.mods.code.ModHudProfileContribution)
 METHOD com.openggf.mods.code.ModContext public  void registerInputFilter(com.openggf.mods.code.ModInputFilterContribution)
 METHOD com.openggf.mods.code.ModContext public  void registerLaunchTeam(com.openggf.mods.code.ModLaunchTeamContribution)
+METHOD com.openggf.mods.code.ModContext public  void registerMutator(com.openggf.mods.mutators.MutatorDefinition)
 METHOD com.openggf.mods.code.ModContext public  void registerObject(java.lang.String,com.openggf.level.objects.ObjectFactory)
 METHOD com.openggf.mods.code.ModContext public  void registerObjectArt(java.lang.String,com.openggf.mods.code.BakedSheetRef)
 METHOD com.openggf.mods.code.ModContext public  void registerObjectPreview(java.lang.String,java.lang.String)
@@ -11828,6 +11865,101 @@ METHOD com.openggf.mods.code.RomArtRequest public,final  int hashCode()
 METHOD com.openggf.mods.code.RomArtRequest public,final  java.lang.String toString()
 METHOD com.openggf.mods.code.StandaloneLevelLoader public,static  com.openggf.level.Level load(com.openggf.io.ModAssetRoot,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.level.rings.RingSpriteSheet) THROWS java.io.IOException
 METHOD com.openggf.mods.code.ZoneEventFactory public,abstract  com.openggf.game.LevelEventProvider create()
+METHOD com.openggf.mods.mutators.MutatorCapability public  com.openggf.mods.mutators.MutatorScope minimumScope()
+METHOD com.openggf.mods.mutators.MutatorCapability public,static  com.openggf.mods.mutators.MutatorCapability valueOf(java.lang.String)
+METHOD com.openggf.mods.mutators.MutatorCapability public,static  com.openggf.mods.mutators.MutatorCapability[] values()
+METHOD com.openggf.mods.mutators.MutatorDefinition public  com.openggf.mods.mutators.MutatorDefinition$PolicyFactory factory()
+METHOD com.openggf.mods.mutators.MutatorDefinition public  com.openggf.mods.mutators.MutatorOption option(java.lang.String)
+METHOD com.openggf.mods.mutators.MutatorDefinition public  com.openggf.mods.mutators.MutatorScope disableScope()
+METHOD com.openggf.mods.mutators.MutatorDefinition public  com.openggf.mods.mutators.MutatorScope enableScope()
+METHOD com.openggf.mods.mutators.MutatorDefinition public  com.openggf.mods.mutators.MutatorScope optionScope(java.lang.String)
+METHOD com.openggf.mods.mutators.MutatorDefinition public  int schemaVersion()
+METHOD com.openggf.mods.mutators.MutatorDefinition public  java.lang.String description()
+METHOD com.openggf.mods.mutators.MutatorDefinition public  java.lang.String localId()
+METHOD com.openggf.mods.mutators.MutatorDefinition public  java.lang.String title()
+METHOD com.openggf.mods.mutators.MutatorDefinition public  java.util.List<com.openggf.mods.mutators.MutatorDefinition$AtomicGroup> atomicGroups()
+METHOD com.openggf.mods.mutators.MutatorDefinition public  java.util.List<com.openggf.mods.mutators.MutatorOption> options()
+METHOD com.openggf.mods.mutators.MutatorDefinition public  java.util.Map<java.lang.String,java.lang.Object> defaults()
+METHOD com.openggf.mods.mutators.MutatorDefinition public  java.util.Set<com.openggf.mods.mutators.MutatorCapability> capabilities()
+METHOD com.openggf.mods.mutators.MutatorDefinition public  java.util.Set<java.lang.String> conflicts()
+METHOD com.openggf.mods.mutators.MutatorDefinition public  java.util.Set<java.lang.String> prerequisites()
+METHOD com.openggf.mods.mutators.MutatorDefinition public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.MutatorDefinition public,final  int hashCode()
+METHOD com.openggf.mods.mutators.MutatorDefinition public,final  java.lang.String toString()
+METHOD com.openggf.mods.mutators.MutatorDefinition$AtomicGroup public  com.openggf.mods.mutators.MutatorScope scope()
+METHOD com.openggf.mods.mutators.MutatorDefinition$AtomicGroup public  java.lang.String id()
+METHOD com.openggf.mods.mutators.MutatorDefinition$AtomicGroup public  java.util.Set<java.lang.String> optionIds()
+METHOD com.openggf.mods.mutators.MutatorDefinition$AtomicGroup public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.MutatorDefinition$AtomicGroup public,final  int hashCode()
+METHOD com.openggf.mods.mutators.MutatorDefinition$AtomicGroup public,final  java.lang.String toString()
+METHOD com.openggf.mods.mutators.MutatorDefinition$PolicyFactory public,abstract  java.util.List<com.openggf.mods.mutators.MutatorPolicy> prepare(com.openggf.mods.mutators.MutatorOptions)
+METHOD com.openggf.mods.mutators.MutatorOption public,abstract  com.openggf.mods.mutators.MutatorScope editScope()
+METHOD com.openggf.mods.mutators.MutatorOption public,abstract  java.lang.Object defaultValue()
+METHOD com.openggf.mods.mutators.MutatorOption public,abstract  java.lang.String help()
+METHOD com.openggf.mods.mutators.MutatorOption public,abstract  java.lang.String id()
+METHOD com.openggf.mods.mutators.MutatorOption public,abstract  java.lang.String label()
+METHOD com.openggf.mods.mutators.MutatorOption public,abstract  void validate(java.lang.Object)
+METHOD com.openggf.mods.mutators.MutatorOption$Checkbox public  com.openggf.mods.mutators.MutatorScope editScope()
+METHOD com.openggf.mods.mutators.MutatorOption$Checkbox public  java.lang.Boolean defaultValue()
+METHOD com.openggf.mods.mutators.MutatorOption$Checkbox public  java.lang.String help()
+METHOD com.openggf.mods.mutators.MutatorOption$Checkbox public  java.lang.String id()
+METHOD com.openggf.mods.mutators.MutatorOption$Checkbox public  java.lang.String label()
+METHOD com.openggf.mods.mutators.MutatorOption$Checkbox public  void validate(java.lang.Object)
+METHOD com.openggf.mods.mutators.MutatorOption$Checkbox public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.MutatorOption$Checkbox public,final  int hashCode()
+METHOD com.openggf.mods.mutators.MutatorOption$Checkbox public,final  java.lang.String toString()
+METHOD com.openggf.mods.mutators.MutatorOption$Checkbox public,volatile  java.lang.Object defaultValue()
+METHOD com.openggf.mods.mutators.MutatorOption$Choice public  com.openggf.mods.mutators.MutatorScope editScope()
+METHOD com.openggf.mods.mutators.MutatorOption$Choice public  java.lang.String defaultValue()
+METHOD com.openggf.mods.mutators.MutatorOption$Choice public  java.lang.String help()
+METHOD com.openggf.mods.mutators.MutatorOption$Choice public  java.lang.String id()
+METHOD com.openggf.mods.mutators.MutatorOption$Choice public  java.lang.String label()
+METHOD com.openggf.mods.mutators.MutatorOption$Choice public  java.util.List<java.lang.String> tokens()
+METHOD com.openggf.mods.mutators.MutatorOption$Choice public  void validate(java.lang.Object)
+METHOD com.openggf.mods.mutators.MutatorOption$Choice public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.MutatorOption$Choice public,final  int hashCode()
+METHOD com.openggf.mods.mutators.MutatorOption$Choice public,final  java.lang.String toString()
+METHOD com.openggf.mods.mutators.MutatorOption$Choice public,volatile  java.lang.Object defaultValue()
+METHOD com.openggf.mods.mutators.MutatorOption$IntegerSlider public  com.openggf.mods.mutators.MutatorScope editScope()
+METHOD com.openggf.mods.mutators.MutatorOption$IntegerSlider public  int maximum()
+METHOD com.openggf.mods.mutators.MutatorOption$IntegerSlider public  int minimum()
+METHOD com.openggf.mods.mutators.MutatorOption$IntegerSlider public  int step()
+METHOD com.openggf.mods.mutators.MutatorOption$IntegerSlider public  java.lang.Integer defaultValue()
+METHOD com.openggf.mods.mutators.MutatorOption$IntegerSlider public  java.lang.String help()
+METHOD com.openggf.mods.mutators.MutatorOption$IntegerSlider public  java.lang.String id()
+METHOD com.openggf.mods.mutators.MutatorOption$IntegerSlider public  java.lang.String label()
+METHOD com.openggf.mods.mutators.MutatorOption$IntegerSlider public  java.lang.String unit()
+METHOD com.openggf.mods.mutators.MutatorOption$IntegerSlider public  void validate(java.lang.Object)
+METHOD com.openggf.mods.mutators.MutatorOption$IntegerSlider public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.MutatorOption$IntegerSlider public,final  int hashCode()
+METHOD com.openggf.mods.mutators.MutatorOption$IntegerSlider public,final  java.lang.String toString()
+METHOD com.openggf.mods.mutators.MutatorOption$IntegerSlider public,volatile  java.lang.Object defaultValue()
+METHOD com.openggf.mods.mutators.MutatorOptions public  boolean checkbox(java.lang.String)
+METHOD com.openggf.mods.mutators.MutatorOptions public  int integer(java.lang.String)
+METHOD com.openggf.mods.mutators.MutatorOptions public  java.lang.String choice(java.lang.String)
+METHOD com.openggf.mods.mutators.MutatorOptions public  java.util.Map<java.lang.String,java.lang.Object> values()
+METHOD com.openggf.mods.mutators.MutatorOptions public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.MutatorOptions public,final  int hashCode()
+METHOD com.openggf.mods.mutators.MutatorOptions public,final  java.lang.String toString()
+METHOD com.openggf.mods.mutators.MutatorPolicy public,abstract  com.openggf.mods.mutators.MutatorCapability capability()
+METHOD com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity public  com.openggf.mods.mutators.MutatorCapability capability()
+METHOD com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity public  int percent()
+METHOD com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity public,final  int hashCode()
+METHOD com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity public,final  java.lang.String toString()
+METHOD com.openggf.mods.mutators.MutatorPolicy$PlayerStealth public  boolean hideAppendage()
+METHOD com.openggf.mods.mutators.MutatorPolicy$PlayerStealth public  boolean hideAttachedEffects()
+METHOD com.openggf.mods.mutators.MutatorPolicy$PlayerStealth public  boolean hideBody()
+METHOD com.openggf.mods.mutators.MutatorPolicy$PlayerStealth public  com.openggf.mods.mutators.MutatorCapability capability()
+METHOD com.openggf.mods.mutators.MutatorPolicy$PlayerStealth public  com.openggf.mods.mutators.MutatorPolicy$Target target()
+METHOD com.openggf.mods.mutators.MutatorPolicy$PlayerStealth public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.MutatorPolicy$PlayerStealth public,final  int hashCode()
+METHOD com.openggf.mods.mutators.MutatorPolicy$PlayerStealth public,final  java.lang.String toString()
+METHOD com.openggf.mods.mutators.MutatorPolicy$Target public,static  com.openggf.mods.mutators.MutatorPolicy$Target valueOf(java.lang.String)
+METHOD com.openggf.mods.mutators.MutatorPolicy$Target public,static  com.openggf.mods.mutators.MutatorPolicy$Target[] values()
+METHOD com.openggf.mods.mutators.MutatorScope public  boolean admits(com.openggf.mods.mutators.MutatorScope)
+METHOD com.openggf.mods.mutators.MutatorScope public,static  com.openggf.mods.mutators.MutatorScope valueOf(java.lang.String)
+METHOD com.openggf.mods.mutators.MutatorScope public,static  com.openggf.mods.mutators.MutatorScope[] values()
 METHOD com.openggf.mods.scene.DebuggableScene public,abstract  boolean debugJump(java.lang.String)
 METHOD com.openggf.mods.scene.ModScene public  void exit(com.openggf.mods.scene.SceneContext)
 METHOD com.openggf.mods.scene.ModScene public,abstract  void draw(com.openggf.mods.scene.SceneContext,com.openggf.mods.scene.SceneCanvas)
@@ -14981,6 +15113,14 @@ NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDe
 NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$StockMusic
 NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn
 NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$TrackMusic
+NESTED com.openggf.mods.mutators.MutatorDefinition com.openggf.mods.mutators.MutatorDefinition$AtomicGroup
+NESTED com.openggf.mods.mutators.MutatorDefinition com.openggf.mods.mutators.MutatorDefinition$PolicyFactory
+NESTED com.openggf.mods.mutators.MutatorOption com.openggf.mods.mutators.MutatorOption$Checkbox
+NESTED com.openggf.mods.mutators.MutatorOption com.openggf.mods.mutators.MutatorOption$Choice
+NESTED com.openggf.mods.mutators.MutatorOption com.openggf.mods.mutators.MutatorOption$IntegerSlider
+NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity
+NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$PlayerStealth
+NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$Target
 NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$Compression
 NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$DplcLayout
 NESTED com.openggf.mods.scene.SceneBackdrop com.openggf.mods.scene.SceneBackdrop$Band
@@ -15161,6 +15301,11 @@ PERMITS com.openggf.mods.code.ModLevelDefinition$Music com.openggf.mods.code.Mod
 PERMITS com.openggf.mods.code.ModLevelDefinition$Music com.openggf.mods.code.ModLevelDefinition$TrackMusic
 PERMITS com.openggf.mods.code.ModLevelDefinition$ObjectEntry com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn
 PERMITS com.openggf.mods.code.ModLevelDefinition$ObjectEntry com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn
+PERMITS com.openggf.mods.mutators.MutatorOption com.openggf.mods.mutators.MutatorOption$Checkbox
+PERMITS com.openggf.mods.mutators.MutatorOption com.openggf.mods.mutators.MutatorOption$Choice
+PERMITS com.openggf.mods.mutators.MutatorOption com.openggf.mods.mutators.MutatorOption$IntegerSlider
+PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity
+PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$PlayerStealth
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$Control
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$Disconnected
 PERMITS com.openggf.net.client.RaceClient$InboundEvent com.openggf.net.client.RaceClient$GhostData
@@ -16990,6 +17135,47 @@ RECORD-COMPONENT com.openggf.mods.code.RomArtRequest dplcAddress int
 RECORD-COMPONENT com.openggf.mods.code.RomArtRequest mappingAddress int
 RECORD-COMPONENT com.openggf.mods.code.RomArtRequest paletteLine int
 RECORD-COMPONENT com.openggf.mods.code.RomArtRequest uncompressedByteSize int
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorDefinition atomicGroups java.util.List<com.openggf.mods.mutators.MutatorDefinition$AtomicGroup>
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorDefinition capabilities java.util.Set<com.openggf.mods.mutators.MutatorCapability>
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorDefinition conflicts java.util.Set<java.lang.String>
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorDefinition description java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorDefinition disableScope com.openggf.mods.mutators.MutatorScope
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorDefinition enableScope com.openggf.mods.mutators.MutatorScope
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorDefinition factory com.openggf.mods.mutators.MutatorDefinition$PolicyFactory
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorDefinition localId java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorDefinition options java.util.List<com.openggf.mods.mutators.MutatorOption>
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorDefinition prerequisites java.util.Set<java.lang.String>
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorDefinition schemaVersion int
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorDefinition title java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorDefinition$AtomicGroup id java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorDefinition$AtomicGroup optionIds java.util.Set<java.lang.String>
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorDefinition$AtomicGroup scope com.openggf.mods.mutators.MutatorScope
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$Checkbox defaultValue java.lang.Boolean
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$Checkbox editScope com.openggf.mods.mutators.MutatorScope
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$Checkbox help java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$Checkbox id java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$Checkbox label java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$Choice defaultValue java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$Choice editScope com.openggf.mods.mutators.MutatorScope
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$Choice help java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$Choice id java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$Choice label java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$Choice tokens java.util.List<java.lang.String>
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$IntegerSlider defaultValue java.lang.Integer
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$IntegerSlider editScope com.openggf.mods.mutators.MutatorScope
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$IntegerSlider help java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$IntegerSlider id java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$IntegerSlider label java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$IntegerSlider maximum int
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$IntegerSlider minimum int
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$IntegerSlider step int
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$IntegerSlider unit java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorOptions values java.util.Map<java.lang.String,java.lang.Object>
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity percent int
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$PlayerStealth hideAppendage boolean
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$PlayerStealth hideAttachedEffects boolean
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$PlayerStealth hideBody boolean
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$PlayerStealth target com.openggf.mods.mutators.MutatorPolicy$Target
 RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest artAddress int
 RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest artSize int
 RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest compression com.openggf.mods.scene.RomSpriteRequest$Compression
@@ -18241,6 +18427,8 @@ TYPE enum public,final com.openggf.level.objects.TouchShieldDeflectCapability SU
 TYPE enum public,final com.openggf.level.resources.CompressionType SUPER java.lang.Enum<com.openggf.level.resources.CompressionType>
 TYPE enum public,final com.openggf.level.scroll.BgTilemapUpdateMode SUPER java.lang.Enum<com.openggf.level.scroll.BgTilemapUpdateMode>
 TYPE enum public,final com.openggf.mods.code.RomArtCompression SUPER java.lang.Enum<com.openggf.mods.code.RomArtCompression>
+TYPE enum public,final com.openggf.mods.mutators.MutatorCapability SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorCapability>
+TYPE enum public,final com.openggf.mods.mutators.MutatorScope SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorScope>
 TYPE enum public,final com.openggf.physics.Direction SUPER java.lang.Enum<com.openggf.physics.Direction>
 TYPE enum public,final com.openggf.sprites.animation.SpriteAnimationEndAction SUPER java.lang.Enum<com.openggf.sprites.animation.SpriteAnimationEndAction>
 TYPE enum public,final com.openggf.sprites.playable.ObjectControlState SUPER java.lang.Enum<com.openggf.sprites.playable.ObjectControlState>
@@ -18325,6 +18513,7 @@ TYPE enum public,static,final com.openggf.level.SeamlessLevelTransitionRequest$T
 TYPE enum public,static,final com.openggf.level.objects.ObjectRenderManager$SpringVariant SUPER java.lang.Enum<com.openggf.level.objects.ObjectRenderManager$SpringVariant>
 TYPE enum public,static,final com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind SUPER java.lang.Enum<com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind>
 TYPE enum public,static,final com.openggf.level.resources.KosinskiModuleQueue$Phase SUPER java.lang.Enum<com.openggf.level.resources.KosinskiModuleQueue$Phase>
+TYPE enum public,static,final com.openggf.mods.mutators.MutatorPolicy$Target SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorPolicy$Target>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$Compression>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$DplcLayout SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$DplcLayout>
 TYPE enum public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind SUPER java.lang.Enum<com.openggf.mods.scene.SceneNoteEvent$Kind>
@@ -18485,6 +18674,8 @@ TYPE interface public,abstract,sealed com.openggf.game.patch.PatchOwner SUPER <n
 TYPE interface public,abstract,sealed com.openggf.game.patch.ResolutionResult SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.io.ModAssetRoot SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.io.PackedModAssetRoot SUPER <none>
+TYPE interface public,abstract,sealed com.openggf.mods.mutators.MutatorOption SUPER <none>
+TYPE interface public,abstract,sealed com.openggf.mods.mutators.MutatorPolicy SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.net.protocol.ControlMessage SUPER <none>
 TYPE interface public,abstract,sealed com.openggf.trace.TraceEvent SUPER <none>
 TYPE interface public,abstract,static com.openggf.GameLoop$GameModeChangeListener SUPER <none>
@@ -18521,6 +18712,7 @@ TYPE interface public,abstract,static com.openggf.level.objects.PerObjectRewindS
 TYPE interface public,abstract,static com.openggf.level.objects.PerObjectRewindSnapshot$ObjectSubclassRewindExtra SUPER <none>
 TYPE interface public,abstract,static com.openggf.level.objects.PerObjectRewindSnapshot$PlayableSubclassRewindExtra SUPER <none>
 TYPE interface public,abstract,static com.openggf.level.resources.KosinskiModuleQueue$DmaTarget SUPER <none>
+TYPE interface public,abstract,static com.openggf.mods.mutators.MutatorDefinition$PolicyFactory SUPER <none>
 TYPE interface public,abstract,static com.openggf.net.host.HostMasterLink$MessageSink SUPER <none>
 TYPE interface public,abstract,static com.openggf.net.hub.GhostHub$HubViolationRecorder SUPER <none>
 TYPE interface public,abstract,static com.openggf.net.hub.RoomHostHooks$ChatGate SUPER <none>
@@ -18677,6 +18869,8 @@ TYPE record public,final com.openggf.mods.code.ModInputFilterContribution SUPER 
 TYPE record public,final com.openggf.mods.code.ModLaunchTeamContribution SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.code.ModZoneContribution SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.code.RomArtRequest SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.mutators.MutatorDefinition SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.mutators.MutatorOptions SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.RomSpriteRequest SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.SceneBackdrop SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.SceneMusicPart SUPER java.lang.Record
@@ -18842,6 +19036,12 @@ TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$Start S
 TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$StockMusic SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$TrackMusic SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.mutators.MutatorDefinition$AtomicGroup SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.mutators.MutatorOption$Checkbox SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.mutators.MutatorOption$Choice SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.mutators.MutatorOption$IntegerSlider SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$PlayerStealth SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.scene.SceneBackdrop$Band SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$Control SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$Disconnected SUPER java.lang.Record
@@ -19797,6 +19997,21 @@ TYPE-ANNOTATION com.openggf.mods.code.RomArtRequest @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.StandaloneLevelLoader @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.ZoneEventFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.ZoneEventFactory @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorCapability @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorDefinition @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorDefinition$AtomicGroup @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorDefinition$PolicyFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorDefinition$PolicyFactory @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorOption @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorOption$Checkbox @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorOption$Choice @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorOption$IntegerSlider @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorOptions @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$PlayerStealth @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$Target @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorScope @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.DebuggableScene @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.ModScene @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.ModSceneFactory @com.openggf.game.ModApi

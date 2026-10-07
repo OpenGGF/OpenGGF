@@ -50,6 +50,7 @@ public final class ModContext {
     private com.openggf.game.GameModule gameModule;
     private com.openggf.mods.scene.ModSceneFactory startupScene;
     private String requiredDisplayAspect;
+    private final Map<String, com.openggf.mods.mutators.OwnedMutator> mutators = new LinkedHashMap<>();
 
     ModContext(String owner, String baseGame, ModAssetRoot assets) {
         this(owner, baseGame, assets, null);
@@ -265,6 +266,20 @@ public final class ModContext {
         });
     }
 
+    /** Stages a dormant mutator; ownership comes only from this registration transaction. */
+    public void registerMutator(com.openggf.mods.mutators.MutatorDefinition definition) {
+        mutate(() -> {
+            if (standalone || "any".equals(baseGame)) {
+                throw failure("Mutators require a concrete stock-game patch owner");
+            }
+            com.openggf.mods.mutators.OwnedMutator owned =
+                    new com.openggf.mods.mutators.OwnedMutator(owner, definition);
+            if (mutators.size() >= 32 || mutators.putIfAbsent(owned.key(), owned) != null) {
+                throw failure("Too many mutators or duplicate mutator key: " + owned.key());
+            }
+        });
+    }
+
     public void registerHudProfile(ModHudProfileContribution contribution) {
         mutate(() -> {
             Objects.requireNonNull(contribution, "contribution");
@@ -329,10 +344,15 @@ public final class ModContext {
                 }
                 prepared.add(PreparedModZone.prepared(owner, zone, definition));
             }
+            try {
+                com.openggf.mods.mutators.MutatorSessionState.validateCatalog(mutators);
+            } catch (IllegalArgumentException invalid) {
+                throw failure("Invalid mutator graph: " + safeMessage(invalid));
+            }
             frozen = true;
             return new ModRegistrationPlan(owner, baseGame, objects, art, Map.of(), patches,
                     zones, prepared,objectPreviewArtKeys,characters,gameModule,romArt,
-                    launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect);
+                    launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect, mutators);
         } catch (java.io.IOException | RuntimeException rejected) {
             if (rejected instanceof ModRegistrationException registration) poison = registration;
             else poison = new ModRegistrationException(owner, "MOD_LEVEL_ASSET_INVALID",
