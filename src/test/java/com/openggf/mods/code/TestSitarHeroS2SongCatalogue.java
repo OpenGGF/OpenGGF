@@ -13,6 +13,7 @@ import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.sonic2.Sonic2ZoneRegistry;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
+import com.openggf.game.sonic2.audio.smps.Sonic2SmpsData;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsLoader;
 import com.openggf.mods.scene.SceneNoteEvent;
 import com.openggf.mods.scene.host.music.SceneMusicFactory;
@@ -164,6 +165,89 @@ class TestSitarHeroS2SongCatalogue {
                     }
                 }
             }
+        }
+    }
+
+    @Test
+    void psgRestSentinelSurvivesDurationOnlyLoopAndRecoversOnPitch() {
+        // zPSGSetFreq.restpsg writes FFFF; duration-only zPSGDoNext never
+        // replaces it. A new pitched byte stores a playable frequency again.
+        // The F7 back-edge visits the same silent duration twice before a new
+        // pitch recovers. FM rest stores 0000 and permits those two key-ons.
+        var data = nativeFixture(2, 0x81, 2, 2, 0x80, 2, 2,
+                0xF7, 0, 2, 26, 0, 0x82, 2, 2, 0xF2);
+        var reference = SitarHeroS2NativeProgram.read(data, 100);
+        var psg = reference.tracks().stream().filter(t -> t.kind().equals("PSG")).findFirst().orElseThrow();
+        var fm = reference.tracks().stream().filter(t -> t.kind().equals("FM")).findFirst().orElseThrow();
+        assertEquals(List.of(0, 4, 20, 24), psg.attacks().stream().map(SitarHeroS2NativeProgram.Attack::unit).toList());
+        assertEquals(List.of(0, 4, 12, 16, 20, 24), fm.attacks().stream().map(SitarHeroS2NativeProgram.Attack::unit).toList());
+        assertEquals(28, psg.stopUnit());
+        var sequencer = new SmpsSequencer(data, null, () -> { }, Sonic2SmpsSequencerConfig.CONFIG);
+        var track = sequencer.getTracks().stream().filter(t -> t.type == SmpsSequencer.TrackType.PSG).findFirst().orElseThrow();
+        int[] frames = reference.serviceFrames(100);
+        int[] frame = {0};
+        List<Actual> actual = recordAttacks(sequencer, frame);
+        for (; frame[0] <= frames[28] + 1; frame[0]++) {
+            sequencer.serviceOuterFrame();
+            if (frame[0] == frames[12] || frame[0] == frames[16]) {
+                assertEquals(0xFFFF, track.baseFnum, "Explicit rest's saved frequency survives the F7 loop");
+                assertTrue(track.resting);
+                assertEquals(4, track.scaledDuration);
+            }
+            if (frame[0] == frames[20]) {
+                assertEquals(0x82, track.note);
+                assertFalse(track.resting, "A pitched byte replaces the sentinel");
+                assertEquals(0, track.baseFnum & 0x8000);
+            }
+            if (frame[0] == frames[24]) assertFalse(track.resting, "Duration-only data can reattack the recovered saved pitch");
+        }
+        assertProductionAttacks(reference, frames, actual);
+    }
+
+    @Test
+    void nativeSavedDurationReusesScaledByteAcrossDividerChanges() {
+        // zSetDuration stores 3*2=6; E5 changes only TempoDivider, so 82h
+        // still lasts six ticks. The explicit 02h replaces it with 2*4=8;
+        // the next E5 leaves that saved byte intact until explicit 03h.
+        var data = nativeFixture(2, 0x81, 3, 0xE5, 4, 0x82, 0x83, 2,
+                0xE5, 1, 0x84, 0x85, 3, 0xF2);
+        var reference = SitarHeroS2NativeProgram.read(data, 100);
+        for (var track : reference.tracks()) if (!track.kind().equals("DAC")) {
+            assertEquals(List.of(0, 6, 12, 20, 28), track.attacks().stream().map(SitarHeroS2NativeProgram.Attack::unit).toList());
+            assertEquals(31, track.stopUnit());
+        }
+        var sequencer = new SmpsSequencer(data, null, () -> { }, Sonic2SmpsSequencerConfig.CONFIG);
+        int[] frames = reference.serviceFrames(100);
+        int[] frame = {0};
+        List<Actual> actual = recordAttacks(sequencer, frame);
+        for (; frame[0] <= frames[31] + 1; frame[0]++) sequencer.serviceOuterFrame();
+        assertProductionAttacks(reference, frames, actual);
+        assertTrue(sequencer.getTracks().stream().noneMatch(t -> t.active));
+    }
+
+    private static Sonic2SmpsData nativeFixture(int divider, int... program) {
+        // Native header: DAC immediately stops; FM1 and PSG1 share a stream.
+        byte[] bytes = new byte[21 + program.length];
+        bytes[2] = 2; bytes[3] = 1; bytes[4] = (byte) divider; bytes[5] = (byte) 0xFF;
+        bytes[6] = 20; bytes[10] = 21; bytes[14] = 21; bytes[20] = (byte) 0xF2;
+        for (int i = 0; i < program.length; i++) bytes[21 + i] = (byte) program[i];
+        return new Sonic2SmpsData(bytes);
+    }
+
+    private static List<Actual> recordAttacks(SmpsSequencer sequencer, int[] frame) {
+        List<Actual> actual = new ArrayList<>();
+        sequencer.setNoteListener(new SmpsNoteListener() {
+            public void attack(SmpsSequencer.Track t) { actual.add(new Actual(t.type.name(), t.channelId, frame[0], t.pos)); }
+            public void release(SmpsSequencer.Track t) { }
+        });
+        return actual;
+    }
+
+    private static void assertProductionAttacks(SitarHeroS2NativeProgram.Result reference, int[] frames, List<Actual> actual) {
+        for (var track : reference.tracks()) {
+            var expected = track.attacks().stream().map(a -> new Actual(track.kind(), track.channel(), frames[a.unit()], a.offset())).toList();
+            var observed = actual.stream().filter(a -> a.kind().equals(track.kind()) && a.channel() == track.channel()).toList();
+            assertEquals(expected, observed, track.kind() + track.channel());
         }
     }
 

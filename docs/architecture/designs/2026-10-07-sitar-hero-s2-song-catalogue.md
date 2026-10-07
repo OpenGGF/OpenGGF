@@ -113,7 +113,8 @@ References are labels in `s2.sounddriver.asm` and the corresponding file in
   service and changes the first-note delay; it is not the branch modeled here.
 - `zDACUpdateTrack`, `zFMDoNext`, `zSetDuration`, `zFinishTrackUpdate` and
   `zPSGUpdateTrack` (759–957, 1123 onward) own note/duration reuse and ties.
-  Duration bytes are multiplied by the header divider with native byte semantics.
+  Explicit duration bytes are multiplied once by the current track divider with
+  native byte semantics; implicit duration reuse reads the already-scaled byte.
 - `cfJumpTo`, `cfRepeatAtPos` and `cfJumpToGosub` own unconditional jumps,
   indexed counted loops and calls/returns. A complete form expands these;
   the first reused subroutine or repeated note is not a song boundary.
@@ -284,3 +285,116 @@ Parent delivery still owns unified registration/curation, full-duration PCM
 preparation once its old 5400-frame cap is expanded, integration/push and cleanup.
 This worker does not modify the shared draft, common design or changelog, does
 not push or integrate main, and leaves its accounted worktree for the parent.
+
+## Native saved-frequency and saved-duration reference correction
+
+The initial owned commit `f975bc90300bfe919746ad64ec51e088b192913f` was merged
+by the parent. Its attack comparison passed with the original production path,
+but that agreement missed a native PSG guard in both implementations. The parent
+then supplied production repair `03e0c2ac04f561fc271b097434579e140d74cabb`,
+based on `f71d88a3f`; the clean owned S2 branch fast-forwarded to that repair.
+This follow-up changes only the S2 comparison helper, S2 tests and this evidence
+document. It neither changes the shared sequencer nor fits a song-specific count.
+
+The inspected owning instructions establish two distinct saved-RAM semantics:
+
+- `zPSGDoNext` (1147–1170) clears PlaybackControl's rest bit, but a positive
+  duration byte bypasses `zPSGSetFreq` and therefore does not change Freq.
+  `zPSGSetFreq.restpsg` (1190–1196) stores `$FF` in both frequency bytes for an
+  explicit `$80` rest. `zPSGDoNoteOn` (1202–1204) tests FreqHigh bit 7 and jumps
+  to `zSetRest`. Clearing the rest bit alone does not make `$FFFF` playable.
+  By contrast, `zFMDoRest` (918–923) stores `$0000`, and FM has no corresponding
+  saved-frequency sign guard. `zNoteFillUpdate` (972 onward) cuts off a note
+  without replacing Freq, so a later positive byte can reattack that saved pitch.
+- `zSetDuration` (929–941) multiplies only a newly supplied duration, storing
+  the byte result in SavedDuration and DurationTimeout. `zFinishTrackUpdate`
+  (948–952), and the DAC note-without-duration path (779–783), copy that saved
+  byte into DurationTimeout without another multiplication. `cfSetTempoDivider`
+  (3168–3170) changes TempoDivider only. A divider change therefore affects the
+  next explicit duration, not an implicit reuse of SavedDuration.
+
+The independent ROM probe on the original helper reproduced Oil Ocean's three
+reference-only PSG0 tuples. Decompressed ROM program bytes `$306..$310` are
+`EC 03 80 60 60 F5 00 EC FD F8 41`; the owning source is `OOZ_Jump02` in
+`sound/music/84 - OOZ.asm`, specifically `nRst,$60,$60`. The rest's first `$60`
+stores `$C0` (192 ticks) after divider 2; the second `$60` extends the silence.
+The pointer after that positive duration is `$30B` in each complete loop.
+
+| Native unit | Service frame | Source pointer after duration | Incorrect saved note |
+|---|---|---|---|
+| 498 | 613 | `$30B` | `$80` |
+| 2514 | 3094 | `$30B` | `$80` |
+| 4530 | 5575 | `$30B` | `$80` |
+
+The S1 worker's repaired-production probe reported Freq=`$FFFF`, rest=true,
+SavedDuration=192 and divider=2 at those tuples, with no production-only tuples.
+The S2 helper now retains PSG saved-frequency validity independently of the rest
+bit, initialized from `zInitMusicPlayback`'s zeroed track RAM. Only a new pitched
+byte replaces an explicit rest's sentinel. It also stores the scaled duration
+once rather than rescaling its raw predecessor after E5. Oil Ocean PSG0 has 293
+authentic attacks in the requested window; the previous 296 included those three
+silent units. No catalogue timing, role selector or natural-end metadata changes.
+
+Two new instruction-derived regressions first failed against the unchanged S2
+helper on the repaired production base: **2 tests, 2 failures, zero errors/skips**,
+0.966s test time, 1m14s Maven time (plus 33s queue admission). The sentinel case
+incorrectly admitted units 12 and 16 inside an F7 duration-only loop. The divider
+case produced `[0,6,18,26,28]` instead of native `[0,6,12,20,28]`; its total end
+time coincidentally remained 31, demonstrating why an end/count check alone is
+insufficient. After correction both regressions compare complete source-pointer
+and service-frame attacks with production. The sentinel regression also observes
+`$FFFF` and rest=true across the loop, recovery on a new pitched byte, FM's
+different behavior, and a subsequent duration-only attack reusing that recovered
+PSG pitch.
+
+An intermediate run on the corrected helper passed the complete 22-song method
+and divider regression but failed an extra exploratory note-fill state assertion:
+**3 tests, 1 failure, zero errors/skips**, 1.070s test time, 21.982s Maven time.
+The extra fixture used `E8,1` followed by duration-only data; production's PSG
+`resting` flag remained false before the next stream unit, whereas native
+`zNoteFillUpdate` sets that bit. The S2 continuing-note branch of
+`SmpsSequencer` already explicitly documents its elapsed-comparison note-fill
+implementation as unverified against native semantics and calls `stopNote`
+without setting rest. This is a pre-existing state-parity gap, outside the owned
+reference-omission repair, and was reported to the coordinator. The final sentinel
+fixture omits E8 and tests only explicit-rest sentinel persistence and recovery;
+it does not claim to certify note-fill state or chip-register parity.
+
+The bounded verification command uses Java 21.0.12.1, Lua 5.4.9 and the same
+verified absolute main S2 ROM path; it runs the two new regressions plus all 22
+complete requested streams and their natural stops, through the native service
+clock rather than a waveform:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSitarHeroS2SongCatalogue#psgRestSentinelSurvivesDurationOnlyLoopButNoteFillRetainsPitch+nativeSavedDurationReusesScaledByteAcrossDividerChanges' \
+  -Dsonic2.rom.path="$OPENGGF_ROM_ROOT/s2.gen" test -B
+# The intermediate run added +nativeControlFlowAndServiceProgressionMatchEveryProductionSong
+# to the same then-current method names above. The final fixture/method is below.
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSitarHeroS2SongCatalogue#psgRestSentinelSurvivesDurationOnlyLoopAndRecoversOnPitch+nativeSavedDurationReusesScaledByteAcrossDividerChanges+nativeControlFlowAndServiceProgressionMatchEveryProductionSong' \
+  -Dsonic2.rom.path="$OPENGGF_ROM_ROOT/s2.gen" test -B
+```
+
+Final corrected run on the production repair base plus this owned patch:
+**3 tests, zero failures/errors/skips**, BUILD SUCCESS, 1.144s test time,
+23.053s Maven time after 579s queue admission. Every requested S2 stream agrees
+at each attack's channel, source pointer and native service frame. All 22 form,
+intro, DAC-duration and role-waveform assertions pass; Ending remains 4406
+frames and Credits remains 9527 frames, with every production track naturally
+stopped at the end of each finite comparison. The absolute S2 ROM identity was
+rechecked as 1,048,576 bytes, CRC32 `7B905383` and the SHA-1 above.
+`git diff --check`, evidence fence/path checks and owning-label checks pass.
+
+Unchanged model, transport, S1, cadence, snapshot, catalogue-registration and
+short PCM-preparation checks are deliberately not repeated in this follow-up.
+The change-based plan against `03e0c2ac04f561fc271b097434579e140d74cabb`
+selects 3012 ordinary classes plus guards solely because the test oracle is
+unclassified. This test-only reference repair has bounded S2 consumers; the
+requested focused validation exercises those consumers and both instruction
+semantics directly. No broad engine run is started or claimed. The short
+one-off ROM-byte/tuple probe lives
+under `target/s2-song-research`; its recurring control-flow logic remains the
+committed S2 comparison helper. No ROM is copied or linked, and no waveform or
+playlist rip supplies durations. Integration, push and tree cleanup remain with
+the parent.
