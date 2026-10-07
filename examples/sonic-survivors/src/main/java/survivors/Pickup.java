@@ -18,6 +18,7 @@ import java.util.List;
  */
 public final class Pickup extends AbstractObjectInstance implements RewindRecreatable {
     static final int REWARD_LIFETIME = 60 * 60;
+    static final int LOST_RING_LIFETIME = 45;
     static final int RING = 0, MONITOR = 1, EMERALD = 2;
     // Monitor contents, by ROM monitor mapping frame.
     static final int MON_RINGS = 5, MON_SHOES = 6, MON_SHIELD = 7, MON_STARS = 8, MON_EGGMAN = 4, MON_MAGNET = 10;
@@ -115,7 +116,7 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         age++;
         // Uncollected rewards must eventually free their slots during long/endless runs.
         // Merging fresh rings refreshes rewardAge without restarting their movement clock.
-        boolean expired = lostRing ? age >= 300 : kind() != EMERALD && ++rewardAge >= REWARD_LIFETIME;
+        boolean expired = lostRing ? age >= LOST_RING_LIFETIME : kind() != EMERALD && ++rewardAge >= REWARD_LIFETIME;
         if (expired) { setDestroyed(true); return; }
         if (!(entity instanceof AbstractPlayableSprite player) || player.getDead()) { fall(); return; }
         int dx = player.getCentreX() - x, dy = player.getCentreY() - y;
@@ -225,11 +226,13 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         };
     }
 
+    float lostRingAlpha() { return Math.max(0f, 1f - age / (float) LOST_RING_LIFETIME); }
+
     @Override public int getPriorityBucket() { return RenderPriority.bucket(collected >= 0 ? 1 : 3); }
 
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) return;
-        boolean blinking = lostRing ? age >= 240 : rewardAge >= REWARD_LIFETIME - 60;
+        boolean blinking = !lostRing && rewardAge >= REWARD_LIFETIME - 60;
         if (collected < 0 && kind() != EMERALD && blinking && (age & 4) != 0) return;
         if (kind() == RING) {
             var rings = services().ringManager();
@@ -238,7 +241,12 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
                 rings.drawSparkleAt(x, y, collected / Math.max(1, rings.getSparkleFrameDelay()));
                 return;
             }
-            int tier = lostRing ? 0 : ringTier();
+            if (lostRing) {
+                // A translucent golden loop uses the mod's alpha-capable geometry path.
+                Draw.circleWorld(services(), x, y, 5, 1, Draw.YELLOW, lostRingAlpha());
+                return;
+            }
+            int tier = ringTier();
             if (tier == 0) rings.drawRingAt(x, y, age);
             else drawCluster(tier);
             return;

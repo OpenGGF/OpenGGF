@@ -1490,7 +1490,7 @@ CONSTRUCTOR com.openggf.game.rules.PlayerCapabilityRules public  <init>(boolean,
 CONSTRUCTOR com.openggf.game.rules.PlayerGroundPoseRules public  <init>(short,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerLandingRules public  <init>(boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,com.openggf.game.rules.PlayerGroundPoseRules,com.openggf.game.rules.PlayerAirMovementRules,boolean,boolean,boolean,com.openggf.game.rules.PlayerLandingRules,com.openggf.game.rules.PlayerLevelBoundaryRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
-CONSTRUCTOR com.openggf.game.rules.PowerUpRules public  <init>(int,int,int,int,int,boolean,boolean,int,int)
+CONSTRUCTOR com.openggf.game.rules.PowerUpRules public  <init>(int,int,int,int,int,boolean,boolean,int,int,boolean)
 CONSTRUCTOR com.openggf.game.rules.RingRules public  <init>(int,int,boolean,boolean,int,int,int,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.SidekickCpuRules public  <init>(int,int,int,boolean,boolean,boolean,boolean,int,boolean,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.save.SaveManager public  <init>(java.nio.file.Path)
@@ -7882,6 +7882,7 @@ METHOD com.openggf.game.rules.PlayerMovementRules public,final  boolean equals(j
 METHOD com.openggf.game.rules.PlayerMovementRules public,final  int hashCode()
 METHOD com.openggf.game.rules.PlayerMovementRules public,final  java.lang.String toString()
 METHOD com.openggf.game.rules.PowerUpRules public  boolean fixedSkidDustAllocatesAfterDynamicObjectPass()
+METHOD com.openggf.game.rules.PowerUpRules public  boolean restoreLevelMusicAfterInvincibility()
 METHOD com.openggf.game.rules.PowerUpRules public  boolean waterSplashUsesFixedDustObject()
 METHOD com.openggf.game.rules.PowerUpRules public  int fixedDustSlotIndex(boolean)
 METHOD com.openggf.game.rules.PowerUpRules public  int invincibilityStarsFixedSlotIndex()
@@ -16039,6 +16040,7 @@ RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules waterVelocityChangeG
 RECORD-COMPONENT com.openggf.game.rules.PowerUpRules fixedSkidDustAllocatesAfterDynamicObjectPass boolean
 RECORD-COMPONENT com.openggf.game.rules.PowerUpRules invincibilityStarsFixedSlotIndex int
 RECORD-COMPONENT com.openggf.game.rules.PowerUpRules primaryFixedDustSlotIndex int
+RECORD-COMPONENT com.openggf.game.rules.PowerUpRules restoreLevelMusicAfterInvincibility boolean
 RECORD-COMPONENT com.openggf.game.rules.PowerUpRules secondaryFixedDustSlotIndex int
 RECORD-COMPONENT com.openggf.game.rules.PowerUpRules shieldObjectFixedSlotIndex int
 RECORD-COMPONENT com.openggf.game.rules.PowerUpRules speedShoesTimerDecimation int

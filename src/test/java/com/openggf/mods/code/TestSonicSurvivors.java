@@ -626,7 +626,10 @@ class TestSonicSurvivors {
             if (getInt(run(), "pendingLevels") > 0) set(run(), "pendingLevels", 0);
         }
         var rings = objects("Pickup");
-        assertEquals(5, rings.size(), "ten seconds in, five rings float somewhere in the arena");
+        int value = 0;
+        for (var ring : rings) value += (int) call(ring, "value");
+        assertEquals(5, value, "ten seconds in, the formation keeps five rings of value after consolidation");
+        assertTrue(rings.size() <= 5);
         for (var ring : rings) {
             assertTrue(ring.getX() > left && ring.getX() < right);
             assertTrue(Math.abs(ring.getX() - fixture.sprite().getCentreX()) >= 60, "away from Sonic");
@@ -717,6 +720,77 @@ class TestSonicSurvivors {
             assertTrue(player.getAir());
             assertTrue(player.getYSpeed() >= 0);
         }
+    }
+
+    static Stream<Arguments> musicExpiryCases() {
+        return Stream.of("sonic", "tails").flatMap(main -> Stream.of(false, true)
+                .flatMap(boss -> Stream.of(false, true).map(monitor -> Arguments.of(main, boss, monitor))));
+    }
+
+    @ParameterizedTest
+    @MethodSource("musicExpiryCases")
+    void feverAndMonitorExpiryKeepArenaAndBossMusicPlaying(String main, boolean boss, boolean monitor) throws Exception {
+        var fixture = launch(0, 0, main, "none");
+        startRun(fixture);
+        var player = fixture.sprite();
+        if (boss) call(stage(), "spawnBoss");
+        var audio = com.openggf.audio.AudioManager.getInstance();
+        var requests = new ArrayList<Integer>();
+        audio.setRequestObserver((kind, id) -> {
+            if (kind == com.openggf.audio.AudioRequestObserver.RequestClass.MUSIC) requests.add(id);
+        });
+        try {
+            if (monitor) {
+                var pickup = spawnPickup(1, 8, player.getCentreX(), player.getCentreY());
+                call(pickup, "collect", player);
+            } else {
+                set(stage(), "feverCharge", 9);
+                call(stage(), "onBounce", player.getCentreX(), player.getCentreY());
+            }
+            assertTrue(player.getInvincibleFrames() > 0);
+            assertTrue(requests.isEmpty(), "Survivors never switches to invincibility music");
+            player.setInvincibleFrames(1);
+            var registry = fixture.runtime().getRewindRegistry();
+            var snapshot = registry.capture();
+            fixture.stepIdleFrames(1);
+            assertEquals(0, player.getInvincibleFrames());
+            assertNull(player.getInvincibilityObject(), "stars are cleaned up normally");
+            assertTrue(requests.isEmpty(), "expiry must not restart level music or replace the boss track");
+            registry.restore(snapshot);
+            requests.clear();
+            fixture.stepIdleFrames(1);
+            assertEquals(0, player.getInvincibleFrames());
+            assertTrue(requests.isEmpty(), "expiry stays silent after rewind");
+        } finally {
+            audio.setRequestObserver(null);
+        }
+    }
+
+    @Test void lostRingsFadePauseAndReplayTheirShortExpiry() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var lost = spawnPickup(0, 1, fixture.sprite().getCentreX() + 160, fixture.sprite().getCentreY());
+        set(lost, "lostRing", true);
+        assertEquals(1f, (float) call(lost, "lostRingAlpha"));
+        set(lost, "age", 22);
+        assertEquals(23f / 45, (float) call(lost, "lostRingAlpha"), 0.001f);
+        call(run(), "gainXp", 5);
+        fixture.stepIdleFrames(10);
+        assertEquals(22, getInt(lost, "age"), "menus pause the fade too");
+        tapEnter(fixture);
+        set(lost, "age", 44);
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        assertTrue((float) call(lost, "lostRingAlpha") < 0.03f);
+        fixture.stepIdleFrames(1);
+        assertTrue(lost.isDestroyed());
+        registry.restore(snapshot);
+        var restored = objects("Pickup").stream().filter(o -> {
+            try { return (boolean) call(o, "lostRing"); } catch (Exception e) { throw new RuntimeException(e); }
+        }).findFirst().orElseThrow();
+        assertEquals(44, getInt(restored, "age"));
+        fixture.stepIdleFrames(1);
+        assertTrue(restored.isDestroyed());
     }
 
     @Test void lostRingsIgnoreBothMagnetsAndDoNotFarmExperienceAcrossRewind() throws Exception {
@@ -1121,7 +1195,7 @@ class TestSonicSurvivors {
         assertEquals(1, objects("Pickup").size(), "forward replay expires them at the same boundary");
     }
 
-    @Test void freshMergedRewardsRefreshTheirLifetimeAndLostRingsStillExpireInFiveSeconds() throws Exception {
+    @Test void freshMergedRewardsRefreshTheirLifetimeAndLostRingsExpireInThreeQuarterSecond() throws Exception {
         var fixture = launch(0, 0);
         startRun(fixture);
         var reward = spawnPickup(0, 2, fixture.sprite().getCentreX() + 160, fixture.sprite().getCentreY());
@@ -1129,7 +1203,7 @@ class TestSonicSurvivors {
         call(reward, "addValue", 10);
         var lost = spawnPickup(0, 1, fixture.sprite().getCentreX() + 160, fixture.sprite().getCentreY());
         set(lost, "lostRing", true);
-        set(lost, "age", 299);
+        set(lost, "age", 44);
         fixture.stepIdleFrames(1);
         assertFalse(reward.isDestroyed());
         assertEquals(12, call(reward, "value"));

@@ -657,3 +657,88 @@ the inspected image demonstrates all three centred colour/size tiers. These are
 seeded presentation examples, while actual hit/kill behavior is covered by the
 regression. Artifacts: `/private/tmp/sonic-survivors-damage-20261007/preview`.
 Refreshed the installed jar and matching trusted hash, preserving save data.
+
+### Continuous music and short lost-ring fades (2026-10-07)
+
+Current checkout, base `b17d31930a7a1847ac5c48b5017fa89ed1b620e9`. The native
+playable expiry path reissues the current level music even when a caller grants
+invincibility without starting its theme. Survivors does exactly that for Fever
+and monitor stars, so expiry restarts arena music or replaces the mod-owned boss
+track. `PowerUpRules.restoreLevelMusicAfterInvincibility` now makes that request
+explicit: all stock factories pass true; Survivors passes false. Star cleanup,
+shield visibility, protection duration and legitimate phase music changes remain
+owned by their existing paths. Music reads the host module's rule, not donated
+player physics. The first regression run caught the latter distinction: simply
+reading the sprite's cached physics rules ignored the module override. Do not
+spoof the boss flag or prevent the power-up timer reaching zero to suppress music.
+
+The mutable unpublished 0.7 candidate constructor/pin and runtime API description
+are updated together; the release descriptor remains unchanged. Compiled users of the PowerUpRules
+constructor must rebuild; the API version remains 0.7.0. No released baseline is
+changed. Host launchers compile/package the changed engine; the installed mod is
+rebuilt against it.
+
+Hit-spilled rings now fade linearly over 45 active frames (0.75 seconds), then
+expire. Their small golden loop uses the mod's alpha-capable geometry, because
+the native ring sprite entrypoint has no opacity argument. Rewards retain their
+60-second lifetime; magnets, consolidation and XP still exclude lost rings.
+Fade uses captured age, pauses with cards and replays the same expiry boundary.
+
+The focused run (Java 21 queued Maven, TestSonicSurvivors, TestPowerUpMusicRestore,
+TestModApiSignatureSurface, absolute S2 REV01 ROM) ran 100 cases with no skips:
+97 passed, two new leader expiry cases exposed the physics/host rule mismatch,
+and the inherited formation check expected five sprites despite the preceding
+consolidation change. It now checks five rings of value and at most five sprites.
+Existing stock music restoration and candidate signature checks passed. Focused
+follow-up covers those corrections before normal combined validation.
+
+The change-based plan selects 2,993 ordinary classes plus guards. Shared runtime
+and candidate-contract edits require that normal selection, rather than the
+mod-only proportionate exception. Tool preflight passed; native execution uses
+the known working macOS display/service permissions. The reference cost is about
+24 minutes ordinary plus 10 guards; the runner's 40-minute invocation / 10-minute
+no-output stopping rules apply. Existing macOS full-suite AWT interaction remains
+an inherited risk, not a reason to claim the entire engine was previously green.
+Affected matrix: EHZ1 Sonic/Tails cover Fever/monitor expiry in arena/boss playback
+and restored timer boundaries, plus lost-ring fade pause/expiry rewind. Existing
+donor/per-act boss gaps remain explicit.
+
+The eight-case follow-up passed the corrected formation and five stock restore
+cases. Both leader tests advanced past the corrected Fever expiry and then exposed
+a test setup typo: monitor subtype 7 is not the invincibility monitor (8). Corrected
+that setup and reran only those two cases. The rendered EHZ1 fade preview shows
+lost-ring ages 0, 22 and 40 through the production HUD at frame 220, 400x224,
+seed 12345, isolated saves; state CSV confirms solo Sonic in LEVEL. It is a seeded
+opacity preview, not a claim of three naturally timed hits. Artifact directory:
+`/private/tmp/sonic-survivors-music-20261007/preview`.
+
+Final focused expiry coverage parameterizes eight independent fixtures over both
+leaders, arena/boss and Fever/monitor. Full gameplay steps exercise cleanup before
+capture/replay; the initial tight direct-tick loop reused destroyed fixed-slot stars
+without dispatching their cleanup and was rejected as an invalid repeated-grant test
+setup. All eight final scenarios pass, zero skips (2.622 seconds fixture), with no
+music requests on grant, expiry or replay. The independent fade checks, stock restore
+checks and candidate pin checks also have passing focused coverage across the runs.
+
+At James's explicit request, stopped the broad run and delivered with focused
+validation, overriding the normal shared-contract change-based requirement for
+this change. Run `20261007T115019Z-98c8eedf` was interrupted during ordinary tests;
+its status is incomplete and guards did not start. No completed lane/results.json
+was produced. Inspected both rolling logs before acknowledgement: the run included
+skips (optional KiS2/visual and special-stage prerequisites) and hit
+`TestS3kDataSelectPresentation.visualCapture_selectedSaveSlotShowsRightBodyRail`
+with GLSL `version '410' is not supported`, matching the previously baseline-
+reproduced macOS error recorded above. No new baseline run was attempted for that
+existing signature. Diagnostics were acknowledged and deleted. This is not a full
+suite pass. No unrequested engine/platform repair was added.
+
+Queued `-B -Dmse=off -DskipTests package` passed (tests explicitly skipped),
+refreshing the local engine distribution with the new candidate constructor.
+The validated Survivors jar was copied to the installed mod and its trusted hash
+refreshed, preserving the save and other mod settings. Focused verification is
+spread over the original fixture/API run and corrected cases described above;
+there is no claim that an entire final engine suite passed.
+
+The commit policy rejects descriptor edits during ordinary candidate signature
+regeneration. Removed the explanatory descriptor comment; version and publication
+state were never changed. The signature pin and API description carry the addition.

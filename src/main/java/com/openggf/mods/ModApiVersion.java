@@ -17,7 +17,8 @@ public final class ModApiVersion {
      * entry fade admission reports whether it advanced; checkpoint readiness includes
      * the native released title overlay's completion. Bounded scene replay and
      * session-owned actual-PCM recording support creator rewind without giving
-     * it developer-history or sound-driver restore ownership.
+     * it developer-history or sound-driver restore ownership. Power-up rules expose
+     * explicit invincibility-expiry music ownership for modes with continuous music.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

@@ -101,8 +101,7 @@ ten-minute mode applies 75% of the time bonus. The result rounds up before Armor
 per level; the red emerald adds 15% reduction, with a five-ring minimum. The HUD shows the
 current cost. Large banks still help, but cannot trivialise an entire run. Hits give one
 second of protection, with no knockback; half the toll scatters as rings you can grab back. These **lost rings** ignore
-all magnets, award no new experience or collected-ring credit, blink after four seconds and
-expire after five seconds; reward rings remain magnetic. A shield absorbs a hit instead.
+all magnets, award no new experience or collected-ring credit, fade smoothly from gold to transparent over **0.75 seconds**, then disappear; reward rings remain magnetic. A shield absorbs a hit instead.
 A hit with **no rings** is lethal, unless a revive remains (Revival shop item, Oil Ocean's
 emerald), which restores 20 rings. Rings flash red on the HUD while one more hit would empty
 them. As in stock Sonic 2, rings cannot be collected during the first half-second after a hit.
@@ -151,7 +150,8 @@ extra portion, preventing damage, healing and experience from all snowballing to
 then needs fifteen seconds of active play to recover before charging again. Bounces while
 invincible, Super, or recharging do not charge or refresh it. The HUD shows charge, remaining
 Fever time and recovery. Card menus freeze these timers; rewind restores them. Invincibility
-monitors keep their own stock duration.
+monitors keep their own stock duration. Fever and invincibility monitors leave arena
+and boss music playing continuously, including when their protection expires.
 
 ## Level-ups
 

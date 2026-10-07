@@ -89,6 +89,14 @@ Compiler-generated immutable enum constants and switch tables are now accepted
 by the static initializer validator; arbitrary author static objects remain rejected.
 These extend the mutable candidate pin and keep `0.7.0` unpublished.
 
+The Survivors music follow-up adds `PowerUpRules.restoreLevelMusicAfterInvincibility`.
+Stock rule factories pass `true`, retaining the native expiry request. Modes whose
+invincibility never interrupts music can pass `false`; protection/visual cleanup
+still occurs normally. The canonical record constructor gains this boolean, so
+rebuild compiled mods using that constructor. Candidate `0.7.0` remains unpublished;
+the runtime candidate description and normalized pin are updated together. The
+release descriptor retains its existing candidate version and publication state.
+
 ## What the 0.7 candidate includes
 
 The candidate exposes the accumulated creator capabilities together:

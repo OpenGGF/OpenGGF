@@ -92,7 +92,25 @@ public final class SurvivorsMod implements GgfMod {
         // still holds the corpse, as it does with a game-over provider installed.
         private final GameOverFlowProvider arenaGameOver = (services, timeOver) -> services.fadeOutMusic();
 
-        public Module(GameModule base) { super(base, ID + ":arenas"); }
+        private final com.openggf.game.rules.GameRules arenaRules;
+
+        public Module(GameModule base) {
+            super(base, ID + ":arenas");
+            var rules = base.getRules();
+            var power = rules.powerUp();
+            var quietExpiry = new com.openggf.game.rules.PowerUpRules(
+                    power.shieldObjectFixedSlotIndex(), power.invincibilityStarsFixedSlotIndex(),
+                    power.waterSplashFixedSlotIndex(), power.superStarsFixedSlotIndex(),
+                    power.speedShoesTimerDecimation(), power.fixedSkidDustAllocatesAfterDynamicObjectPass(),
+                    power.waterSplashUsesFixedDustObject(), power.primaryFixedDustSlotIndex(),
+                    power.secondaryFixedDustSlotIndex(), false);
+            arenaRules = new com.openggf.game.rules.GameRules(rules.playerMovement(), rules.playerCapability(),
+                    rules.collision(), rules.playerAnimation(), rules.camera(), rules.ring(),
+                    rules.objectInteraction(), rules.sidekickCpu(), quietExpiry, rules.drowningBubble(),
+                    rules.dynamicArtDmaService());
+        }
+
+        @Override public com.openggf.game.rules.GameRules getRules() { return arenaRules; }
 
         // Super forms are deferred until they have a Survivors-specific design.
         // Omit the controller so native jump, monitor and debug activation stay disabled.
