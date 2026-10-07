@@ -19,6 +19,20 @@ class TestModApiSdkPackager {
     @TempDir Path temp;
 
     @Test
+    void sceneNetworkingIsReachableWithoutExportingSocketOwners() {
+        Set<Class<?>> recursive = com.openggf.mods.code.ModApiSignatureSurface.recursiveTypes();
+        assertTrue(recursive.containsAll(List.of(
+                com.openggf.mods.scene.SceneNetwork.class,
+                com.openggf.mods.scene.ScenePeer.class,
+                com.openggf.mods.scene.ScenePeer.State.class,
+                com.openggf.mods.scene.ScenePeer.Message.class)));
+        assertFalse(recursive.stream().anyMatch(type -> type.getName().startsWith(
+                "com.openggf.mods.scene.host.network.")));
+        assertFalse(recursive.contains(java.net.Socket.class));
+        assertFalse(recursive.contains(java.nio.channels.SocketChannel.class));
+    }
+
+    @Test
     void mergedCreatorContractTypesStayInCreatorApiClosure() {
         Set<Class<?>> recursive = com.openggf.mods.code.ModApiSignatureSurface
                 .recursiveTypes();
