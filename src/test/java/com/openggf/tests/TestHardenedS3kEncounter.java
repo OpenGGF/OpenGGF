@@ -428,9 +428,10 @@ class TestHardenedS3kEncounter {
         var encounter = new Encounter(runtime, fixture, state, runtime.loadOwned(OWNER, "hardened.EncounterPlan"));
         var manager = GameServices.level().getObjectManager();
         manager.setRewindClassResolver(new ModClassResolver(runtime, getClass().getClassLoader()));
+        var sentrySpawn = new ObjectSpawn(encounter.constant("SENTRY_X"), encounter.constant("SENTRY_Y"),
+                0, 0, 0, false, encounter.constant("SENTRY_Y"), -1, OWNER, OWNER + ":spore-sentry");
         assertNotNull(manager.createDynamicObject(() -> resolved.createObjectRegistry().create(
-                new ObjectSpawn(encounter.constant("SENTRY_X"), encounter.constant("SENTRY_Y"), 0, 0, 0, false,
-                        encounter.constant("SENTRY_Y"), -1, OWNER, OWNER + ":spore-sentry"))));
+                sentrySpawn)));
         fixture.stepIdleFrames(1);
         return encounter;
     }
