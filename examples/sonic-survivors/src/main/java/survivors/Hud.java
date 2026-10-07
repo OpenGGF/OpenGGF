@@ -56,7 +56,8 @@ final class Hud {
             int age = stage.eAge[i];
             switch (kind) {
                 case Stage.E_NUMBER -> Draw.smallWorld(s, Integer.toString(stage.eA[i]),
-                        stage.eX[i] - 4, stage.eY[i] - age / 2, stage.eB[i], Math.min(1f, (40 - age) / 12f));
+                        stage.eX[i] - (Integer.toString(stage.eA[i]).length() * 4 - 1) * stage.eC[i] / 2,
+                        stage.eY[i] - age / 2, stage.eC[i], stage.eB[i], Math.min(1f, (40 - age) / 12f));
                 case Stage.E_SHOCK, Stage.E_POUND -> {
                     int radius = stage.eA[i] * Math.min(age + 2, 10) / 10;
                     float alpha = Math.max(0f, 1f - age / 16f);

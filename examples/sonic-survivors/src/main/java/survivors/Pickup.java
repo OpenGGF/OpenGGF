@@ -78,11 +78,12 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
     int ringTier() { return value >= 125 ? 3 : value >= 25 ? 2 : value >= 5 ? 1 : 0; }
 
     boolean mergeable() {
-        return kind() == RING && !lostRing && !homing && !isDestroyed() && collected < 0 && age >= 45;
+        return kind() == RING && !lostRing && !isDestroyed() && collected < 0 && age > 12;
     }
 
     void absorb(Pickup other) {
         value += other.value;
+        if (other.homing) homeIn();
         // Existing rewards are not fresh drops: preserve the younger remaining lifetime,
         // never reset it to a minute on each consolidation.
         rewardAge = Math.min(rewardAge, other.rewardAge);

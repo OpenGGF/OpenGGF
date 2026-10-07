@@ -626,8 +626,11 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         bannerColour = colour;
     }
 
-    void popup(int x, int y, int amount, boolean big) {
-        effect(E_NUMBER, x, y, amount, big ? Draw.GOLD : Draw.WHITE, 0);
+    void popup(int x, int y, int amount) {
+        if (amount <= 0) return;
+        int scale = amount >= 50 ? 3 : amount >= 10 ? 2 : 1;
+        int colour = amount >= 50 ? Draw.PINK : amount >= 10 ? Draw.ORANGE : Draw.RED;
+        effect(E_NUMBER, x, y, amount, colour, scale);
     }
 
     // =========================================================================================

@@ -29,18 +29,16 @@ final class RingClusters {
             for (int i = 0; i < count; i++) {
                 Pickup anchor = rings[i];
                 if (!anchor.mergeable()) continue;
-                int tier = anchor.ringTier();
-                int threshold = switch (tier) { case 0 -> 5; case 1 -> 25; case 2 -> 125; default -> 126; };
                 long total = anchor.value();
                 int cx = Math.floorDiv(anchor.getX(), RADIUS), cy = Math.floorDiv(anchor.getY(), RADIUS);
-                // Two passes: leave sub-threshold clusters untouched, then consume exactly
-                // this neighbourhood. Cell checks disambiguate hash collisions.
+                // Two passes: validate the complete sum before consuming this neighbourhood.
+                // Colour is only a value display, never a merge eligibility rule.
                 for (int pass = 0; pass < 2; pass++) {
                     for (int y = cy - 1; y <= cy + 1; y++) {
                         for (int x = cx - 1; x <= cx + 1; x++) {
                             for (int j = heads[bucket(x, y)]; j >= 0; j = next[j]) {
                                 Pickup other = rings[j];
-                                if (other == anchor || !other.mergeable() || other.ringTier() != tier
+                                if (other == anchor || !other.mergeable()
                                         || Math.floorDiv(other.getX(), RADIUS) != x
                                         || Math.floorDiv(other.getY(), RADIUS) != y) continue;
                                 long dx = other.getX() - anchor.getX(), dy = other.getY() - anchor.getY();
@@ -52,7 +50,7 @@ final class RingClusters {
                     }
                     // Never overflow the stored reward or delete value. Extremely large
                     // piles stay separate instead of saturating their total.
-                    if (total < threshold || total > Integer.MAX_VALUE) break;
+                    if (total > Integer.MAX_VALUE) break;
                 }
             }
         } finally {

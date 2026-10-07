@@ -117,15 +117,15 @@ final class Draw {
     }
 
     /** 3x5 digits in world coordinates, for floating damage numbers. */
-    static void smallWorld(ObjectServices s, String text, int x, int y, int rgb, float alpha) {
+    static void smallWorld(ObjectServices s, String text, int x, int y, int scale, int rgb, float alpha) {
         for (int i = 0; i < text.length(); i++) {
             int index = SMALL_CHARS.indexOf(text.charAt(i));
             if (index < 0) continue;
             for (int p = 0; p < 15; p++) {
                 if (SMALL_GLYPHS.charAt(index * 15 + p) != '1') continue;
-                int px = x + i * 4 + p % 3, py = y + p / 3;
-                rectWorld(s, px + 1, py + 1, 1, 1, NAVY, alpha);
-                rectWorld(s, px, py, 1, 1, rgb, alpha);
+                int px = x + (i * 4 + p % 3) * scale, py = y + p / 3 * scale;
+                rectWorld(s, px + scale, py + scale, scale, scale, NAVY, alpha);
+                rectWorld(s, px, py, scale, scale, rgb, alpha);
             }
         }
     }

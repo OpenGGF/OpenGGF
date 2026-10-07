@@ -14,7 +14,7 @@ import java.util.List;
  * the {@link #ELITE} flag; the starting hitpoints come through the constructor (rewind restores
  * them with the other fields). A stomp from Sonic
  * deals stomp damage times the bounce combo and always rebounds him; weapons call
- * {@link #hurt}. Defeat uses the stock Sonic 2 destruction (explosion, freed animal, points)
+ * {@link #hurt}. Defeat uses the stock Sonic 2 destruction (explosion and freed animal)
  * and drops rings. Movement is one of the species' AI archetypes, all held to the arena.
  */
 public final class Enemy extends AbstractBadnikInstance implements RewindRecreatable, TouchResponseListener {
@@ -45,11 +45,19 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
     }
 
     public Enemy(ObjectSpawn spawn, int hitpoints) {
-        super(spawn, "Survivors " + Species.of(spawn.subtype() & 0x1F).name(), Sonic2BadnikConfig.DESTRUCTION);
+        super(spawn, "Survivors " + Species.of(spawn.subtype() & 0x1F).name(), destructionWithoutPoints());
         hp = maxHp = Math.max(1, hitpoints);
         homeX = spawn.x();
         shotTimer = 60 + Math.floorMod(spawn.x() * 7 + spawn.y(), 90);
         timer = Math.floorMod(spawn.x() * 13, 40);
+    }
+
+    private static DestructionEffects.DestructionConfig destructionWithoutPoints() {
+        var stock = Sonic2BadnikConfig.DESTRUCTION;
+        // Keep the ROM explosion/animal sequence, but the mod displays damage, not score.
+        return new DestructionEffects.DestructionConfig(stock.sfxId(),
+                (spawn, services) -> AnimalObjectInstance.deferredArtVariant(spawn, services, null),
+                stock.useRespawnTracking(), null, stock.explosionFactory(), stock.pointsAllocatedBeforeAnimal());
     }
 
     static ObjectSpawn spawnAt(int x, int y, int species, boolean elite) {
@@ -318,10 +326,11 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
     }
 
     private boolean applyDamage(int damage, int knockDir, PlayableEntity player) {
+        int dealt = Math.min(hp, damage);
         hp -= damage;
         flash = HIT_FLASH;
         Stage stage = Stage.find(services());
-        if (stage != null) stage.popup(currentX, currentY - 12, damage, elite());
+        if (stage != null) stage.popup(currentX, currentY - 12, dealt);
         if (hp > 0) {
             services().playSfx(0xAC); // S2 sfx_HitBoss: a hit that did not destroy.
             if (traits().archetype() != Species.TURRET) {

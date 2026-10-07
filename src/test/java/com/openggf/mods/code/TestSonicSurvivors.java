@@ -420,6 +420,52 @@ class TestSonicSurvivors {
         assertEquals(rings, fixture.sprite().getRingCount(), "rings carry over");
     }
 
+    @Test void damagePopupsScaleAndKillsNeverSpawnStockScore() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        clearEnemies();
+        fixture.sprite().setInvulnerableFrames(100000);
+        Class<?> enemyType = loader.loadClass("survivors.Enemy");
+        Method spawnAt = enemyType.getDeclaredMethod("spawnAt", int.class, int.class, int.class, boolean.class);
+        spawnAt.setAccessible(true);
+        var player = fixture.sprite();
+        var spawn = (ObjectSpawn) spawnAt.invoke(null, player.getCentreX() + 80, player.getCentreY() - 64, 0, true);
+        var ctor = enemyType.getDeclaredConstructor(ObjectSpawn.class, int.class);
+        ctor.setAccessible(true);
+        var enemy = (AbstractObjectInstance) ctor.newInstance(spawn, 100);
+        GameServices.level().getObjectManager().addDynamicObject(enemy);
+        Arrays.fill((int[]) get(stage(), "eKind"), 0);
+        int[] amounts = {9, 10, 50, 1000};
+        int[] dealt = {9, 10, 50, 31};
+        int[] scales = {1, 2, 3, 2};
+        int[] colours = {0xFF4030, 0xFF9020, 0xFF70D0, 0xFF9020};
+        for (int i = 0; i < amounts.length; i++) {
+            set(enemy, "iframes", 0);
+            call(enemy, "hurt", amounts[i], 0);
+            assertEquals(dealt[i], ((int[]) get(stage(), "eA"))[i]);
+            assertEquals(scales[i], ((int[]) get(stage(), "eC"))[i]);
+            assertEquals(colours[i], ((int[]) get(stage(), "eB"))[i]);
+        }
+        assertTrue(enemy.isDestroyed());
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay > 0) registry.restore(snapshot);
+            assertEquals(31, ((int[]) get(stage(), "eA"))[3]);
+            assertEquals(2, ((int[]) get(stage(), "eC"))[3]);
+            boolean animal = false;
+            for (int frame = 0; frame < 45; frame++) {
+                fixture.stepIdleFrames(1);
+                for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
+                    assertFalse(object instanceof com.openggf.game.sonic2.objects.PointsObjectInstance,
+                            "kills must not emit a score popup, including after restoring the explosion");
+                    animal |= object instanceof AnimalObjectInstance;
+                }
+            }
+            assertTrue(animal, "freed animals remain part of the destruction effect");
+        }
+    }
+
     @Test void stompsDamageReboundAndChainTheCombo() throws Exception {
         var fixture = launch(0, 0);
         startRun(fixture);
@@ -940,7 +986,7 @@ class TestSonicSurvivors {
         assertEquals(250, earnedXp, "consolidation preserves the entire base XP reward");
     }
 
-    @Test void consolidationRespectsDistanceEligibilityThresholdsAndOverflow() throws Exception {
+    @Test void consolidationRespectsDistanceEligibilityAndOverflow() throws Exception {
         launch(0, 0);
         // Straddle a cell boundary, including negative coordinates.
         var a = matureReward(2, 0, 0);
@@ -948,28 +994,62 @@ class TestSonicSurvivors {
         var b = matureReward(2, 1, 1);
         mergeRewards();
         assertFalse(a.isDestroyed());
-        assertFalse(b.isDestroyed());
-        var fresh = matureReward(1, 0, 0); set(fresh, "age", 44);
+        assertTrue(b.isDestroyed());
+        assertEquals(4, call(a, "value"));
+        var fresh = matureReward(1, 0, 0); set(fresh, "age", 12);
         var lost = matureReward(1, 0, 0); set(lost, "lostRing", true);
         var homing = matureReward(1, 0, 0); call(homing, "homeIn");
         var collected = matureReward(1, 0, 0); set(collected, "collected", 0);
         var far = matureReward(1, 100, 0);
         var monitor = spawnPickup(1, 5, 0, 0); set(monitor, "age", 60);
         mergeRewards();
-        assertEquals(2, call(a, "value"));
-        assertEquals(2, call(b, "value"));
+        assertEquals(5, call(a, "value"));
+        assertTrue(homing.isDestroyed());
+        assertTrue((boolean) get(a, "homing"), "merged rewards retain magnet attraction");
         var c = matureReward(1, 0, 0);
         mergeRewards();
-        assertEquals(5, call(a, "value"));
+        assertEquals(6, call(a, "value"));
         assertTrue(b.isDestroyed());
         assertTrue(c.isDestroyed());
-        for (var untouched : List.of(fresh, lost, homing, collected, far, monitor)) assertFalse(untouched.isDestroyed());
+        for (var untouched : List.of(fresh, lost, collected, far, monitor)) assertFalse(untouched.isDestroyed());
         var huge = matureReward(Integer.MAX_VALUE, 1000, 1000);
         var extra = matureReward(125, 1000, 1000);
         mergeRewards();
         assertFalse(huge.isDestroyed());
         assertFalse(extra.isDestroyed());
         assertEquals(Integer.MAX_VALUE, call(huge, "value"));
+    }
+
+    @Test void enemyDropsMergeWhileScatteringAndAbsorbDifferentValueTiers() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        clearEnemies();
+        var player = fixture.sprite();
+        player.setInvulnerableFrames(100000);
+        int x = player.getCentreX() + 200, y = player.getCentreY() - 60;
+        Class<?> enemyType = loader.loadClass("survivors.Enemy");
+        Method spawnAt = enemyType.getDeclaredMethod("spawnAt", int.class, int.class, int.class, boolean.class);
+        spawnAt.setAccessible(true);
+        var ctor = enemyType.getConstructor(ObjectSpawn.class, int.class);
+        for (int i = 0; i < 8; i++) {
+            var spawn = (ObjectSpawn) spawnAt.invoke(null, x, y, 0, false);
+            var enemy = (AbstractObjectInstance) ctor.newInstance(spawn, 1);
+            GameServices.level().getObjectManager().addDynamicObject(enemy);
+            call(enemy, "hurt", 1, 0);
+        }
+        assertEquals(8, objects("Pickup").size());
+        // Run actual scatter physics and the Stage's periodic merge: no forced ages/resting.
+        fixture.stepIdleFrames(31);
+        var rewards = objects("Pickup");
+        assertTrue(rewards.size() < 8, "nearby enemy drops consolidate during their scatter");
+        int total = 0;
+        for (var ring : rewards) total += (int) call(ring, "value");
+        assertEquals(8, total);
+        var anchor = rewards.getFirst();
+        var purple = matureReward(25, anchor.getX(), anchor.getY());
+        mergeRewards();
+        assertTrue(purple.isDestroyed(), "a small enemy drop absorbs a nearby different-colour pile");
+        assertTrue((int) call(anchor, "value") >= 26);
     }
 
     @Test void denseRewardDropsUseGrowingScratchAndRewindWithoutLosingValue() throws Exception {

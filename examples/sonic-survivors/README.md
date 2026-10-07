@@ -111,9 +111,11 @@ immediately audible, while rapid collections chime roughly every ten rings, at m
 times per second. This includes lost rings and Super Ring monitors; every ring still grants
 its full health and, for reward rings, experience. A single large pickup makes at most one chime.
 
-Nearby reward rings consolidate after their initial scatter. Rings of the same tier within
-48 pixels combine when their total reaches the next tier; their **full combined value**
-stays in the surviving pickup. Larger piles use larger coloured rings:
+Nearby reward rings—including enemy drops—consolidate within **48 pixels**, checked
+every quarter second after the first 12 frames of their spawn. They merge while
+scattering or flying toward Sonic, across all colour tiers, even when the total
+is too small to change colour. Their **full combined value** stays in the surviving
+pickup; if either ring was magnetized, the combined ring keeps flying toward Sonic. Larger piles use larger coloured rings:
 
 | Colour | Stored ring value |
 | --- | --- |
@@ -122,11 +124,17 @@ stays in the surviving pickup. Larger piles use larger coloured rings:
 | Purple | 25–124 |
 | Red | 125+ |
 
-Red piles can keep combining. Consolidation pauses with menus and leaves rings already
-flying toward you alone. Hit-spilled rings, monitors and emeralds never join a pile.
+Red piles can keep combining. Consolidation pauses with menus. Hit-spilled rings, monitors and emeralds never join a pile.
 Merged rewards keep the youngest constituent's remaining lifetime, rather than refreshing
 old piles indefinitely. Collection still grants the stored ring value and applies the usual
 experience bonuses; one large pickup makes at most one chime.
+
+## Damage feedback
+
+Hits show the actual HP removed, including the finishing hit (overkill is excluded).
+Small hits (1–9) float up in red, 10–49 in larger orange digits, and 50+ in the
+largest pink-red digits. Bosses use the same scale. Stock badnik score popups are
+hidden; explosions, freed animals and ring rewards remain.
 
 ## Bouncing and the combo
 

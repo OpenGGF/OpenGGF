@@ -610,3 +610,50 @@ and the absolute root S2 REV01 ROM passed all seven parameterized cases, zero
 failures/errors/skips (2.313 seconds fixture). `build.py` and mod package validation
 passed; installed jar and its existing trust hash refreshed. No engine-wide tests
 or repeat of unchanged gameplay checks; actual save data preserved.
+
+### Damage feedback and enemy-drop consolidation (2026-10-07)
+
+Current checkout, base `2b2388b0f2f51c3676b600f57920d54f18621fd6`.
+Survivors supplies its own destruction configuration: the stock S2 explosion
+and deferred animal remain, but the animal's points factory is null. Removing
+only the explosion's points factory would do nothing: S2's animal creates the
+score object later. Shared stock-game behavior is untouched. Enemy and boss
+hits display HP actually removed, capped at remaining health; red 1–9 damage
+uses 1x digits, orange 10–49 uses 2x, and pink-red 50+ uses 3x. Magnitude owns
+the style instead of elite/boss identity. Existing captured effect arrays hold
+value, colour and scale; numbers remain centred, rise and fade.
+
+The prior ring consolidation did accept enemy rewards, but its 45-frame delay,
+same-tier requirement, next-tier minimum and homing exclusion prevented many
+visible merges during ordinary scatter/attraction. Reward rings now merge after
+the 12-frame spawn pickup delay, within 48 pixels on the existing 15-frame tick,
+regardless of tier or magnet attraction. Combining two low-value rings reduces
+sprites even before a colour promotion; a magnetized constituent transfers its
+homing state to the survivor. Full value, younger remaining lifetime, overflow
+protection and menu pause remain. Lost rings, monitors and emeralds stay separate.
+
+The combined plan chooses 2,993 classes plus guards due to example-path fallback.
+Focused mod validation is proportionate: no shared host behavior or API changes,
+and the complete mod fixture plus affected reward regressions cover the consumers.
+Before the ring follow-up, Java 21 queued Maven `-B -Dmse=off
+-Dtest=TestSonicSurvivors -Dsonic2.rom.path=<absolute root S2 REV01 ROM> test`
+passed 82 cases with no failures/errors/skips (37.56 seconds fixture). The new
+kill regression verifies damage values/styles, overkill, delayed animal creation,
+absence of PointsObjectInstance, and replay after restoring the explosion.
+The ring follow-up uses actual enemy kills and 31 frames of unmodified scatter
+physics, plus cross-tier and homing merges, thresholds, distance, overflow,
+full reward/XP credit, pause, expiry and rewind regression checks.
+
+Affected matrix: EHZ1 gains destruction/popup rewind and actual enemy-drop merging
+checks; existing act/character obligations and inherited donor/per-act boss gaps
+remain. This is focused validation, not an engine-wide suite or guard pass.
+
+Final results: the queued ten-case reward selection passed with zero failures,
+errors or skips (24.92 seconds fixture), including the 20,000-frame endless test.
+`build.py` compiled and passed mod package validation. The gameplay-capture skill's
+production session rendered seeded 7/25/100 damage examples at frame 220, EHZ1,
+400x224, seed 12345, isolated saves. Its state CSV shows live solo Sonic in LEVEL;
+the inspected image demonstrates all three centred colour/size tiers. These are
+seeded presentation examples, while actual hit/kill behavior is covered by the
+regression. Artifacts: `/private/tmp/sonic-survivors-damage-20261007/preview`.
+Refreshed the installed jar and matching trusted hash, preserving save data.

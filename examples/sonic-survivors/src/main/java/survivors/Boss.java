@@ -425,10 +425,11 @@ public final class Boss extends AbstractObjectInstance
             amount = 1;
             flash = 60;
         }
+        int dealt = Math.min(hp, amount);
         hp -= amount;
         services().playSfx(0xAC); // sfx_HitBoss.
         Stage stage = Stage.find(services());
-        if (stage != null) stage.popup(x, y - 24, amount, true);
+        if (stage != null) stage.popup(x, y - 24, dealt);
         if (hp <= 0) {
             hp = 0;
             state = DEFEATED;
