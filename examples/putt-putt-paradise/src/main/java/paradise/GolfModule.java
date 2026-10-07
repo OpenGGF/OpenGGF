@@ -6,7 +6,7 @@ import com.openggf.data.Game;
 import com.openggf.data.Rom;
 import com.openggf.game.*;
 import com.openggf.level.Level;
-import com.openggf.level.MutableLevel;
+import com.openggf.level.LevelPatch;
 import paradise.ui.GolfMenu;
 
 /** Leaves level geometry, objects, art and collision sourced from the S2 ROM. */
@@ -43,20 +43,12 @@ public final class GolfModule extends DelegatingGameModule {
                 .max(java.util.Comparator.comparingInt(com.openggf.level.objects.ObjectSpawn::x)).orElseThrow(
                         () -> new IllegalStateException("ROM course has no end marker"));
         mode.finishGate(endpoint.x(), endpoint.y());
-        var course = MutableLevel.snapshot(original);
-        course.replaceObjectSpawnsPersisted(original.getObjects().stream()
-                .filter(spawn -> spawn.objectId() != 0x0D && spawn.objectId() != 0x3E)
-                .map(spawn -> {
-                    // Keep every ROM placement field and layout order. The registered
-                    // namespaced key gives the creator callbacks their trusted owner.
-                    if (spawn.objectKey() == null && spawn.objectId() == 0x41
-                            && ((spawn.subtype() >> 3) & 0xE) == 0)
-                        return new com.openggf.level.objects.ObjectSpawn(spawn.x(), spawn.y(), spawn.objectId(),
-                                spawn.subtype(), spawn.renderFlags(), spawn.respawnTracked(), spawn.rawYWord(),
-                                spawn.layoutIndex(), "putt-putt-paradise", "putt-putt-paradise:up-spring");
-                    return spawn;
-                }).toList());
-        return course;
+        return LevelPatch.empty()
+                .select(spawn -> spawn.objectId() == 0x0D || spawn.objectId() == 0x3E).remove()
+                .select(spawn -> spawn.objectKey() == null && spawn.objectId() == 0x41
+                        && ((spawn.subtype() >> 3) & 0xE) == 0)
+                .bind("putt-putt-paradise", "putt-putt-paradise:up-spring")
+                .apply(original);
     }
     private final LevelEventProvider courseEvents = new LevelEventProvider() {
         @Override public void initLevel(int zone, int act) { }

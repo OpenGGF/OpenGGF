@@ -1,6 +1,7 @@
 package survivors;
 
 import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.mods.state.SnapshotRandom;
 
 /**
  * Module-owned state of the run in progress: it outlives each stage's level load. Holds the
@@ -24,7 +25,7 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
     int combo;
     /** Gameplay is frozen behind a menu (level-up, results, camp); badniks and shots hold still. */
     boolean paused;
-    long rng;
+    private final SnapshotRandom random = new SnapshotRandom(0);
     // Copied from the profile at the start of the run.
     int shopPower, shopRings, shopReroll, shopMagnet, shopGrowth, shopRevival, shopTalent, relics;
 
@@ -38,7 +39,7 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
         kills = ringsCollected = bestCombo = frames = stagesCleared = emeraldsWon = 0;
         combo = 0;
         paused = false;
-        rng = seed == 0 ? 0x5EED5EEDL : seed;
+        random.reset(seed == 0 ? 0x5EED5EEDL : seed);
         shopPower = profile.shop[Profile.SHOP_POWER];
         shopRings = profile.shop[Profile.SHOP_RINGS];
         shopReroll = profile.shop[Profile.SHOP_REROLL];
@@ -137,18 +138,9 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
     }
 
     // ---- Deterministic random stream (xorshift64*), captured with the run for rewind. ----
-    long nextLong() {
-        long x = rng;
-        x ^= x >>> 12;
-        x ^= x << 25;
-        x ^= x >>> 27;
-        rng = x;
-        return x * 0x2545F4914F6CDD1DL;
-    }
+    long nextLong() { return random.nextLong(); }
 
-    int nextInt(int bound) {
-        return bound <= 1 ? 0 : (int) Long.remainderUnsigned(nextLong(), bound);
-    }
+    int nextInt(int bound) { return random.nextInt(bound); }
 
     boolean chance(double p) {
         return (nextLong() >>> 11) * 0x1.0p-53 < p;
@@ -158,7 +150,7 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
 
     @Override public Snapshot capture() {
         return new Snapshot(active, startStage, stage, act, levels.clone(), xp, level, pendingLevels, rerolls, revives,
-                kills, ringsCollected, bestCombo, frames, stagesCleared, emeraldsWon, carriedRings, combo, paused, rng,
+                kills, ringsCollected, bestCombo, frames, stagesCleared, emeraldsWon, carriedRings, combo, paused, random.snapshot(),
                 new int[]{shopPower, shopRings, shopReroll, shopMagnet, shopGrowth, shopRevival, shopTalent, relics});
     }
 
@@ -182,7 +174,7 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
         carriedRings = s.carriedRings();
         combo = s.combo();
         paused = s.paused();
-        rng = s.rng();
+        random.restore(s.rng());
         int[] shop = s.shop();
         shopPower = shop[0];
         shopRings = shop[1];
