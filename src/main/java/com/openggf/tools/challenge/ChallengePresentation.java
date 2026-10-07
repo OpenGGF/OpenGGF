@@ -165,7 +165,7 @@ final class ChallengePresentation implements AutoCloseable {
                 text("Native Start remains each game's own button.", 33, 583, MUTED, 1);
             } else if (scene == Scene.FAULT) {
                 rect(0, 170, WIDTH, 350, DebugColor.BLACK, .8f);
-                text("LET'S TRY AGAIN", 33, 295, ACCENTS[1], 2);
+                text("TRY AGAIN", 33, 295, ACCENTS[1], 2);
                 text(fault, 33, 349, INK, 1);
                 text("ENTER / PAD A  RETRY     ESC  TITLE", 33, 399, MUTED, 1.2f);
             } else {

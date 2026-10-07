@@ -17,7 +17,7 @@ import signal
 import subprocess
 import time
 import uuid
-from capture_host import stop, window_for_pid, worker_pids, validate_window, native_environment, add_native_options, recorded_frames
+from capture_host import stop, worker_pids, validate_window, native_environment, add_native_options, recorded_frames, send_key, acquire_window
 
 
 def wait_for(check, description, seconds=30):
@@ -52,11 +52,12 @@ class Session:
         self.command = command
         self.video = None
         try:
-            self.window = wait_for(lambda: window_for_pid(self.display, self.host.pid), "own host window")
+            self.window = acquire_window(self.display, self.host, args.unmanaged_window)
             from Xlib import X
             self.window.set_input_focus(X.RevertToParent, X.CurrentTime)
             self.display.sync()
             self.window_receipt = validate_window(self.display, self.window, self.host)
+            self.window_receipt["host_window_management"] = "owned override_redirect diagnostic" if args.unmanaged_window else "default"
             geometry = self.window.get_geometry()
             self.video = subprocess.Popen(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "x11grab",
                 "-window_id", str(self.window.id), "-video_size", f"{geometry.width}x{geometry.height}",
@@ -83,21 +84,7 @@ class Session:
                         "scene " + scene, seconds)
 
     def key(self, name):
-        from Xlib import X, XK
-        from Xlib.protocol import event as xevent
-        code = self.display.keysym_to_keycode(XK.string_to_keysym(name))
-        if not code:
-            raise RuntimeError("Unavailable X11 key: " + name)
-        self.window.set_input_focus(X.RevertToParent, X.CurrentTime)
-        for kind, mask in ((X.KeyPress, X.KeyPressMask), (X.KeyRelease, X.KeyReleaseMask)):
-            event_class = xevent.KeyPress if kind == X.KeyPress else xevent.KeyRelease
-            event = event_class(detail=code,
-                time=int(time.monotonic() * 1000) & 0xffffffff,
-                root=self.display.screen().root, window=self.window, child=X.NONE,
-                root_x=0, root_y=0, event_x=0, event_y=0, state=0, same_screen=1)
-            self.window.send_event(event, event_mask=mask)
-            self.display.flush()
-            time.sleep(.075)
+        send_key(self.display, self.window, self.host, name)
 
     def workers(self):
         found = worker_pids(self.host.pid)

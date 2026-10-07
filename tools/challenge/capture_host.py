@@ -8,6 +8,7 @@ No gameplay state is supplied; commands/clock ownership stay in the host/worker.
 """
 from __future__ import annotations
 import argparse
+import csv
 import json
 import os
 import re
@@ -29,13 +30,13 @@ def stop(process: subprocess.Popen | None) -> None:
         process.wait(timeout=5)
 
 
-def window_for_pid(display, pid: int):
+def window_for_pid(display, pid: int, visible=True):
     from Xlib import X
     atom = display.intern_atom("_NET_WM_PID")
     def visit(window, depth=0):
         try:
             value = window.get_full_property(atom, 0)
-            if (value is not None and len(value.value) == 1 and int(value.value[0]) == pid and window.get_wm_name() == "Three Openings | OpenGGF" and window.get_attributes().map_state == X.IsViewable
+            if (value is not None and len(value.value) == 1 and int(value.value[0]) == pid and window.get_wm_name() == "Three Openings | OpenGGF" and (not visible or window.get_attributes().map_state == X.IsViewable)
                     and window.get_geometry().width > 0 and window.get_geometry().height > 0):
                 return window
             if depth < 3:
@@ -47,6 +48,26 @@ def window_for_pid(display, pid: int):
             return None
         return None
     return visit(display.screen().root)
+
+
+def acquire_window(display, host, unmanaged=False):
+    """Normal mapping by default; optional diagnostic mapping touches only this PID/title."""
+    from Xlib import X
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline and host.poll() is None:
+        window = window_for_pid(display, host.pid, visible=not unmanaged)
+        if window is not None:
+            if unmanaged:
+                # Default-WM failures are evidence, never silently replaced.
+                # This explicitly requested diagnostic omits WM decorations.
+                window.change_attributes(override_redirect=True)
+                window.map()
+                display.sync()
+                time.sleep(.3)
+            validate_window(display, window, host)
+            return window
+        time.sleep(.1)
+    raise RuntimeError("Host window unavailable; inspect the bounded stderr tail")
 
 
 def validate_window(display, window, host):
@@ -63,6 +84,33 @@ def validate_window(display, window, host):
             "window_size": [geometry.width, geometry.height], "window_depth": geometry.depth}
 
 
+def send_key(display, window, host, name):
+    """Send an owned-window tap; a release after that window's exit is harmless."""
+    from Xlib import X, XK, error
+    from Xlib.protocol import event as xevent
+    validate_window(display, window, host)
+    code = display.keysym_to_keycode(XK.string_to_keysym(name))
+    if not code:
+        raise RuntimeError("Unavailable X11 key: " + name)
+    window.set_input_focus(X.RevertToParent, X.CurrentTime)
+    display.sync()
+    for kind, mask in ((X.KeyPress, X.KeyPressMask), (X.KeyRelease, X.KeyReleaseMask)):
+        if kind == X.KeyRelease and host.poll() is not None:
+            return
+        event_class = xevent.KeyPress if kind == X.KeyPress else xevent.KeyRelease
+        event = event_class(detail=code, time=int(time.monotonic() * 1000) & 0xffffffff,
+            root=display.screen().root, window=window, child=X.NONE,
+            root_x=0, root_y=0, event_x=0, event_y=0, state=0, same_screen=1)
+        errors = []
+        window.send_event(event, event_mask=mask,
+            onerror=lambda failure, request: errors.append(failure))
+        display.sync()
+        for failure in errors:
+            if kind != X.KeyRelease or not isinstance(failure, error.BadWindow):
+                raise RuntimeError("Owned-window key dispatch failed: " + str(failure))
+        time.sleep(.075)
+
+
 def native_environment(args, sink):
     env = os.environ.copy()
     env.update(PULSE_SINK=sink, ALSOFT_DRIVERS="pulse")
@@ -77,6 +125,8 @@ def native_environment(args, sink):
 def add_native_options(parser):
     parser.add_argument("--keyutils-preload", type=Path, help="Child-only existing library for OpenAL keyutils dependency")
     parser.add_argument("--disable-vsync", action="store_true", help="Child-only driver settings; host admission remains 60 Hz")
+    parser.add_argument("--unmanaged-window", action="store_true",
+        help="Explicit diagnostic mapping of only the owned PID/title window without WM decorations")
 
 
 def recorded_frames(path):
@@ -118,6 +168,8 @@ def main() -> None:
         parser.add_argument("--" + game, type=Path, required=True)
     parser.add_argument("--program", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--cycle-sound", action="store_true",
+        help="Tap host audio focus at committed ticks 900 and 1440; requires a longer program")
     add_native_options(parser)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
@@ -157,13 +209,9 @@ def main() -> None:
         host = subprocess.Popen(command, cwd=root, env=env, stdout=log, stderr=log)
         receipt["processes"]["host"] = host.pid
         record()
-        deadline = time.monotonic() + 30
-        window = None
-        while window is None and time.monotonic() < deadline and host.poll() is None:
-            window = window_for_pid(display, host.pid)
-            time.sleep(.1)
-        if window is None:
-            raise RuntimeError("Host window unavailable; inspect the bounded stderr tail")
+        receipt["host_window_management"] = "owned override_redirect diagnostic" if args.unmanaged_window else "default"
+        record()
+        window = acquire_window(display, host, args.unmanaged_window)
         from Xlib import X
         window.set_input_focus(X.RevertToParent, X.CurrentTime)
         display.sync()
@@ -180,8 +228,10 @@ def main() -> None:
         receipt["processes"].update(video=video.pid, device_audio=device_audio.pid)
         receipt["window_id"] = window.id
         receipt["state"] = "recording"
+        receipt["audio_focus_events"] = []
         record()
         deadline = time.monotonic() + 180
+        focus_ticks = [900, 1440] if args.cycle_sound else []
         while host.poll() is None:
             try:
                 for line in Path(f"/proc/{host.pid}/status").read_text().splitlines():
@@ -192,6 +242,18 @@ def main() -> None:
                 pass
             if (video.poll() is not None or device_audio.poll() is not None) and host.poll() is None:
                 raise RuntimeError("A recorder stopped while the host was running")
+            timeline = output / "presentation.csv"
+            if focus_ticks and timeline.exists():
+                with timeline.open() as source:
+                    rows = [row for row in csv.DictReader(source)
+                        if (row.get("tick") or "").isdigit() and row.get("scene") == "PLAY"
+                        and row.get("window_focused") in ("true", "false")]
+                if rows and int(rows[-1]["tick"]) >= focus_ticks[0]:
+                    before = rows[-1]
+                    send_key(display, window, host, "Tab")
+                    receipt["audio_focus_events"].append({"requested_tick": focus_ticks.pop(0),
+                        "observed_tick_before": int(before["tick"]), "focus_before": int(before["focus"])})
+                    record()
             if time.monotonic() >= deadline:
                 raise RuntimeError("Host exceeded the bounded capture duration")
             time.sleep(.2)
@@ -199,6 +261,14 @@ def main() -> None:
         receipt["host_exit_code"] = code
         if code:
             raise RuntimeError("Host returned failure")
+        if focus_ticks:
+            raise RuntimeError("Program ended before all requested audio-focus observations")
+        if args.cycle_sound:
+            with (output / "presentation.csv").open() as source:
+                played_focus = {row.get("focus") for row in csv.DictReader(source)
+                    if row.get("scene") == "PLAY"}
+            if not {"0", "1", "2"}.issubset(played_focus):
+                raise RuntimeError("The host did not publish all three requested audio-focus states")
         receipt["state"] = "captured"
     except BaseException as failure:
         receipt["state"] = "failed"

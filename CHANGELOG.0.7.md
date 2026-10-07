@@ -11,7 +11,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   preserve each game's native clocks, input polling, GPU frame and synthesis;
   the host supplies ROM validation, title/loading/countdown, sound focus, linked
   pause, fresh restart and fault recovery. Full-act common completion remains
-  a later challenge gate.
+  a later challenge gate. Maintained native capture and isolation walkthroughs
+  record the assessed support and desktop window-manager limitation.
 
 - **Sonic 1 background scrolling:** Scrap Brain Act 1 uses the REV01 cloud
   interpolation and three building bands, with separate fractional cameras,

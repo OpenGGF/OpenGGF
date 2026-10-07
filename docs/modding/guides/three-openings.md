@@ -30,8 +30,11 @@ Author a held-input file, then run the native GPU/PCM probe. Inspect selected
 CPU positions alone miss palette publication and synthesis leakage.
 
 The fixed prototype roster is Sonic in S1/S2 and Sonic with CPU Tails in S3K,
-320×224, native movement, NTSC 60 Hz, REALISTIC live loading, native AIZ intro,
-no donor or creator package. `ChallengeHost.Member` is an internal engine record;
+320×224, native movement, NTSC 60 Hz, LIVE readiness, native AIZ intro,
+no donor or creator package. The boot requests the reserved REALISTIC configuration;
+the current production resolver explicitly uses PROFILED loading data for it.
+This does not claim an independent REALISTIC hardware-admission profile.
+`ChallengeHost.Member` is an internal engine record;
 a diagnostic may declare one to three identity-pinned members, including two of
 the same game. Names are unique stable member IDs; duplicate IDs, unsupported
 symbols, wrong ROM revisions and stale media are rejected.

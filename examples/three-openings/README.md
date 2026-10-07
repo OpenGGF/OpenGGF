@@ -127,6 +127,13 @@ python3 tools/challenge/capture_host.py \
   --output /absolute/outside-repository/three-openings-device
 ```
 
+Add `--cycle-sound` with the maintained1,800-tick program to tap host sound focus
+at observed committed ticks900 and1,440. This selects all three native music
+streams after preparation; `presentation.csv` and the receipt record the actual
+focus changes. It changes host sound selection only, retaining the same common
+held-pad samples and independent worker simulation. Shorter programs that cannot
+reach both observations fail this requested check.
+
 The helper requires Python Xlib, `pactl` and ffmpeg. It leaves the desktop default
 sink unchanged. `window.mkv`, `speaker.wav` and `capture.json` provide the actual
 window/device evidence and exact managed-process cleanup outcome. The recorder
@@ -137,8 +144,11 @@ Two optional flags apply only to spawned diagnostic processes: `--disable-vsync`
 sets driver environment variables while retaining ordered 60 Hz host admission;
 `--keyutils-preload /absolute/existing/libkeyutils.so.1` supplies the existing
 dependency on desktops where OpenAL reports an unresolved `keyctl` symbol. Neither
-changes global display/audio settings. The normal mapped host window is used;
-no window-manager override is required by this helper.
+changes global display/audio settings. By default the helper uses the normal mapped host window. If that native mapping
+stalls, `--unmanaged-window` is an explicit diagnostic fallback: it maps only the
+exact owned PID/title surface without window-manager decorations. Its receipt
+labels that changed presentation setup; it does not certify default-WM startup.
+The validation record preserves both normal successes and failed attempts.
 
 On the same Linux desktop, exercise loading cancellation, pause with a deliberately
 stalled owned worker, audio focus, restart/generation, fault/retry, missing ROM and

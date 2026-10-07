@@ -79,6 +79,13 @@ Focus and record only the exact owned PID/title, recheck IsViewable and positive
 geometry immediately before capture, and inspect actual recorder frames/status.
 A mapped window or zero-exit recorder alone does not prove successful footage.
 
+Stereo DC can impersonate sound (2026-10-07, Multigame PCM): constant left/right
+levels of +400/-400 have pooled RMS400 while both channels have zero temporal
+variation. Centre each channel separately and inspect changes over time. After
+focus fades/menu-cue overlap, match selected native pre-focus PCM through the
+host post-focus stream to actual device-loopback anchors. This proves the
+observed output path, not physical-speaker audition.
+
 
 Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
 task): the positioned MHZ capture retained about 22 MiB after its callback while
