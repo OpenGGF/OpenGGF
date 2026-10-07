@@ -6,7 +6,7 @@ import static com.openggf.level.scroll.M68KMath.*;
 
 /**
  * Uniform S1 background scrolling: quarter-speed X and eighth-speed Y.
- * SBZ and FZ currently share this implementation of Deform_SBZ2 and BgScroll_SBZ.
+ * Final Zone uses Deform_SBZ2 and the REV01 BgScroll_SBZ initialization.
  * Each route owns a separate instance, including fractional camera state.
  */
 public final class UniformQuarterSpeedScroll extends AbstractZoneScrollHandler {
@@ -24,13 +24,18 @@ public final class UniformQuarterSpeedScroll extends AbstractZoneScrollHandler {
     public void init(int cameraX, int cameraY) {
         // BgScrollSpeed default: bgscreenposx = screenposx
         bgXPos = (long) cameraX << 16;
-        // BgScroll_SBZ: asl.l #4,d0; asl.l #1,d0; asr.l #8,d0; move.w d0,bgscreenposy
-        // = cameraY * 32 / 256 (12.5% of camera Y)
-        int bgYInit = (cameraY * 32) >> 8;
+        // REV01 BgScroll_SBZ: andi.w #$7F8; asr.w #3; addq.w #1.
+        // Revision 0 instead uses the unoffset one-eighth camera Y formula.
+        int bgYInit = ((cameraY & 0x7F8) >> 3) + 1;
         bgYPos = (long) bgYInit << 16;
         lastCameraX = cameraX;
         lastCameraY = cameraY;
         initialized = true;
+    }
+
+    @Override
+    public void init(int actId, int cameraX, int cameraY) {
+        init(cameraX, cameraY);
     }
 
     @Override

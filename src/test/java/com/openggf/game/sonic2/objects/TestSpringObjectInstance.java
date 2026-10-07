@@ -402,6 +402,33 @@ class TestSpringObjectInstance {
         assertFalse(player.getAir());
     }
 
+    @Test
+    void horizontalPushLaunchRequiresTheFacingSideIncludingEquality() throws Exception {
+        for (int flags : new int[]{0, 1}) {
+            for (int x : new int[]{0x01FF, 0x0200, 0x0201}) {
+                var spring = new SpringObjectInstance(
+                        new ObjectSpawn(0x0200, 0x0100, 0x41, 0x12, flags, false, 0), "HorizontalSpring");
+                spring.setServices(new TestObjectServices().withIsolatedObjectManager());
+                invoke(spring, "ensureInitialized");
+                var player = new TestableSprite("tails");
+                player.setCentreX((short) x);
+                player.setCentreY((short) 0x0100);
+                player.setXSpeed((short) 0x0123);
+                player.setGSpeed((short) 0x0123);
+                var push = new PlayerSolidContactResult(ContactKind.SIDE, false, false, true, false,
+                        PreContactState.ZERO, PostContactState.ZERO, 0);
+
+                invoke(spring, "applyCheckpointContact",
+                        new Class<?>[]{AbstractPlayableSprite.class, PlayerSolidContactResult.class}, player, push);
+
+                boolean shouldLaunch = flags == 0 ? x > 0x0200 : x <= 0x0200;
+                int expected = shouldLaunch ? (flags == 0 ? 0x0A00 : -0x0A00) : 0x0123;
+                assertEquals((short) expected, player.getXSpeed(), "flags=" + flags + ", x=" + x);
+                assertEquals((short) expected, player.getGSpeed(), "flags=" + flags + ", x=" + x);
+            }
+        }
+    }
+
     private static PlayerSolidContactResult standingContact() {
         return new PlayerSolidContactResult(
                 ContactKind.TOP,
