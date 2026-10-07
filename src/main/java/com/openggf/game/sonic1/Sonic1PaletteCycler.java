@@ -13,6 +13,9 @@ import com.openggf.level.animation.AnimatedPaletteManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.nio.ByteBuffer;
+import com.openggf.game.palette.PaletteColorStateAdapter;
+import com.openggf.game.rewind.snapshot.PaletteColorSnapshot;
 
 /**
  * Sonic 1 palette cycling (PalCycle_* routines from _inc/PaletteCycle.asm).
@@ -36,6 +39,9 @@ class Sonic1PaletteCycler implements AnimatedPaletteManager {
     private final List<PaletteCycle> cycles;
     private final Sonic1ConveyorState conveyorState;
     private final CycleData cycleData;
+    private Palette[] ownedUnderwaterPalettes;
+    private final PaletteColorStateAdapter ownedPaletteColors = new PaletteColorStateAdapter(
+            this::levelPalettes, () -> ownedUnderwaterPalettes, GameServices::graphics);
 
     Sonic1PaletteCycler(Level level, int zoneIndex) {
         this(level, zoneIndex, resolveConveyorState());
@@ -98,6 +104,7 @@ class Sonic1PaletteCycler implements AnimatedPaletteManager {
      */
     private List<PaletteCycle> createLzCycles() {
         Palette[] underwaterPalettes = loadLzUnderwaterPalettes();
+        ownedUnderwaterPalettes = underwaterPalettes;
         boolean sbz3Waterfall = isSbz3FeatureState();
 
         List<PaletteCycle> list = new ArrayList<>(2);
@@ -171,6 +178,49 @@ class Sonic1PaletteCycler implements AnimatedPaletteManager {
 
     private interface PaletteCycle {
         void tick(Level level, GraphicsManager gm);
+        CycleCounter captureCounters();
+        void restoreCounters(CycleCounter state);
+    }
+
+    private record CycleCounter(int first, int second) { }
+
+    /** Exact owned counters, plus the private LZ palette surface cached by these cycles. */
+    byte[] captureCyclerState() {
+        byte[] underwater = ownedPaletteColors.capture().underwaterRgb();
+        ByteBuffer bytes = ByteBuffer.allocate(8 + cycles.size() * 8 + underwater.length);
+        bytes.putInt(cycles.size());
+        for (PaletteCycle cycle : cycles) {
+            var state = cycle.captureCounters();
+            bytes.putInt(state.first()).putInt(state.second());
+        }
+        bytes.putInt(underwater.length).put(underwater);
+        return bytes.array();
+    }
+
+    void restoreCyclerState(byte[] data) {
+        if (data == null || data.length < 8) throw new IllegalArgumentException("Incomplete palette clock snapshot");
+        ByteBuffer bytes = ByteBuffer.wrap(data);
+        int count = bytes.getInt();
+        if (count != cycles.size() || bytes.remaining() < count * 8 + 4)
+            throw new IllegalArgumentException("Palette clock snapshot belongs to a different cycle layout");
+        List<CycleCounter> counters = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) counters.add(new CycleCounter(bytes.getInt(), bytes.getInt()));
+        int size = bytes.getInt();
+        int expected = ownedUnderwaterPalettes == null ? 0
+                : ownedUnderwaterPalettes.length * Palette.PALETTE_SIZE * 3;
+        if (size != expected || size != bytes.remaining())
+            throw new IllegalArgumentException("Palette surface snapshot belongs to a different layout");
+        byte[] underwater = new byte[size];
+        bytes.get(underwater);
+        // Validate the complete shape before applying any mutable owner state.
+        for (int i = 0; i < count; i++) cycles.get(i).restoreCounters(counters.get(i));
+        ownedPaletteColors.restore(new PaletteColorSnapshot(new byte[0], underwater));
+    }
+
+    private Palette[] levelPalettes() {
+        Palette[] palettes = new Palette[level.getPaletteCount()];
+        for (int i = 0; i < palettes.length; i++) palettes[i] = level.getPalette(i);
+        return palettes;
     }
 
     static CycleData loadCycleData(RomByteReader reader) {
@@ -256,6 +306,9 @@ class Sonic1PaletteCycler implements AnimatedPaletteManager {
         private int timer;
         private int frame;
 
+        @Override public CycleCounter captureCounters() { return new CycleCounter(timer, frame); }
+        @Override public void restoreCounters(CycleCounter state) { timer = state.first(); frame = state.second(); }
+
         SimpleCycle(byte[] data, int frameCount, int frameSize,
                     int timerReset, int paletteIndex, int[] colorIndices) {
             this.data = data;
@@ -300,6 +353,9 @@ class Sonic1PaletteCycler implements AnimatedPaletteManager {
         private int timer;
         private int frame;
 
+        @Override public CycleCounter captureCounters() { return new CycleCounter(timer, frame); }
+        @Override public void restoreCounters(CycleCounter state) { timer = state.first(); frame = state.second(); }
+
         private LzWaterfallCycle(byte[] data, Palette[] underwaterPalettes) {
             this.data = data;
             this.underwaterPalettes = underwaterPalettes;
@@ -341,6 +397,9 @@ class Sonic1PaletteCycler implements AnimatedPaletteManager {
         private final byte[] underwaterData;
         private int sequenceIndex;
         private int frameState;
+
+        @Override public CycleCounter captureCounters() { return new CycleCounter(sequenceIndex, frameState); }
+        @Override public void restoreCounters(CycleCounter state) { sequenceIndex = state.first(); frameState = state.second(); }
 
         private LzConveyorCycle(Sonic1ConveyorState conveyorState, Palette[] underwaterPalettes,
                                 byte[] normalData, byte[] underwaterData) {
@@ -398,6 +457,9 @@ class Sonic1PaletteCycler implements AnimatedPaletteManager {
         private int timer;
         private int frame;
 
+        @Override public CycleCounter captureCounters() { return new CycleCounter(timer, frame); }
+        @Override public void restoreCounters(CycleCounter state) { timer = state.first(); frame = state.second(); }
+
         SlzCycle(byte[] data) {
             this.data = data;
         }
@@ -445,6 +507,9 @@ class Sonic1PaletteCycler implements AnimatedPaletteManager {
         private final byte[] group2Data;
         private int timer;
         private int frame;
+
+        @Override public CycleCounter captureCounters() { return new CycleCounter(timer, frame); }
+        @Override public void restoreCounters(CycleCounter state) { timer = state.first(); frame = state.second(); }
 
         SyzCycle(byte[] group1Data, byte[] group2Data) {
             this.group1Data = group1Data;
@@ -519,6 +584,9 @@ class Sonic1PaletteCycler implements AnimatedPaletteManager {
         private int timer;  // starts at 0; first subq underflows to -1 → immediate trigger
         private int frame;  // starts at 0; incremented before use so first displayed is 1
 
+        @Override public CycleCounter captureCounters() { return new CycleCounter(timer, frame); }
+        @Override public void restoreCounters(CycleCounter state) { timer = state.first(); frame = state.second(); }
+
         SbzColorCycle(byte[] data, int dataOffset, int frameCount, int timerReset,
                       int paletteIndex, int colorIndex) {
             this.data = data;
@@ -570,6 +638,9 @@ class Sonic1PaletteCycler implements AnimatedPaletteManager {
         private final int timerReset;
         private int timer;  // starts at 0
         private int frame;  // 0-2
+
+        @Override public CycleCounter captureCounters() { return new CycleCounter(timer, frame); }
+        @Override public void restoreCounters(CycleCounter state) { timer = state.first(); frame = state.second(); }
 
         SbzConveyorCycle(byte[] data, int timerReset) {
             this.data = data;

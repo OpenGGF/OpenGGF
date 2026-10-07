@@ -1019,6 +1019,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   draw resources so the renderer can be reused after graphics-context recreation.
   Timing-file loaders share strict field decoding while keeping schemas and
   timing authority in their existing owners.
+  Sonic 1's level animation owner also retains its published animated tiles,
+  palette-cycle counters and private Labyrinth underwater colours through
+  rewind, preserving the same pattern-then-palette update order during play.
 
 ## Build and release
 
