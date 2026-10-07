@@ -34,6 +34,33 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 class TestOpenAlPcmSink {
     @Test
+    void transportedFinalPcmIsCopiedBoundedAndObeysPauseAndFlush() {
+        FakeDevice device = new FakeDevice(48_000);
+        OpenAlPcmSink sink = sink(device);
+        try {
+            short[] packet = new short[1600];
+            java.util.Arrays.fill(packet, (short) 1234);
+            for (int i = 0; i < 4; i++) sink.acceptStereoPcm(packet);
+            java.util.Arrays.fill(packet, (short) 0);
+            sink.updateDevice();
+            assertEquals(3, device.enqueuedSamples.size());
+            for (short[] queued : device.enqueuedSamples) {
+                for (short value : queued) assertEquals(1234, value);
+            }
+            sink.pause();
+            int remaining = sink.queuedStereoFrames();
+            sink.acceptStereoPcm(new short[1600]);
+            assertEquals(remaining, sink.queuedStereoFrames());
+            sink.onReverseBoundary();
+            assertEquals(0, sink.queuedStereoFrames());
+            org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> sink.acceptStereoPcm(new short[3]));
+            org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> sink.acceptStereoPcm(new short[96_002]));
+        } finally { sink.close(); }
+    }
+
+    @Test
     void warmedAudibleCursorQueriesReusePrimitiveLedgerWithoutAllocation() {
         FakeDevice device = new FakeDevice(48_000);
         OpenAlPcmSink sink = sink(device);

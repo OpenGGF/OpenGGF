@@ -6,6 +6,13 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **Three Openings prototype:** play Sonic 1, Sonic 2 and Sonic 3 & Knuckles
+  together with one controller in a standalone JVM triptych. Isolated workers
+  preserve each game's native clocks, input polling, GPU frame and synthesis;
+  the host supplies ROM validation, title/loading/countdown, sound focus, linked
+  pause, fresh restart and fault recovery. Full-act common completion remains
+  a later challenge gate.
+
 - **Window and display aspect:** a launch that changes the display aspect (a launch
   profile's aspect, or a module's required aspect such as a mod laid out for 16:9) now
   refits the window instead of letterboxing the new picture inside the old window: a

@@ -49,6 +49,11 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
 
 ## Experimental projects
 
+- [Three Openings](../../examples/three-openings/README.md) — one held pad controls
+  three real native game worlds in isolated JVM workers, with a triptych host,
+  ROM validation, focused audio and managed restart/teardown. See the
+  [host walkthrough](guides/three-openings.md); opening-act completion is a later gate.
+
 - [Robotnik Tower Defence](../../examples/robotnik-tower-defense/README.md) —
   Industrial Action: defend Robotnik's base door from 15 waves of unionised
   Flickies with six ROM-drawn badnik defenses, upgrades, repair and an emergency

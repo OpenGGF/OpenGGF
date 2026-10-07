@@ -1,0 +1,11 @@
+# Prototype common-control witness. All worlds receive each held Genesis signal.
+# 720 neutral ticks allow their independent native entry/title/intro owners to run.
+# This is movement/jump evidence, not a winning opening-act program.
+720 NEUTRAL
+90 RIGHT
+12 RIGHT+C
+78 RIGHT
+12 RIGHT+C
+78 RIGHT
+12 RIGHT+A
+78 RIGHT

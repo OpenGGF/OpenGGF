@@ -212,3 +212,8 @@ Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven
 - [SSZ arena-static presentation demo](../../tools/visuals/ssz_arena_static_demo.py): composites deterministic side-only noise over verified widescreen boss footage and emits a local comparison page; originating [2026-09-24 design study](../architecture/designs/2026-09-24-widescreen-boss-arena-static.md), not an engine feature.
 
 - `tools/bizhawk/capture_mhz_pillar_reference.lua` samples native MHZ2 pillar scroll words and their collision helpers from ordinary movie playback; use the common native capture host and an explicit movie-state plan.
+
+- [Three Openings process isolation probe](../../src/main/java/com/openggf/tools/challenge/ChallengeProbe.java)
+  compares real solo/shared native RGBA, pre-focus PCM and native state, duplicate
+  games, member order and sibling lifecycle using maintained held-input source;
+  [run instructions](../../examples/three-openings/README.md#reproducible-authoring-and-evidence).
