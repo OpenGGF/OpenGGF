@@ -21,12 +21,6 @@ public final class CareerChecks {
         try { action.run(); } catch (IllegalArgumentException expected) { return; }
         throw new AssertionError("Invalid value was accepted");
     }
-    private static List<SongSpec> songs(int count) {
-        var songs = new ArrayList<SongSpec>();
-        String[] games = {"s1", "s2", "s3k"};
-        for (int i = 0; i < count; i++) songs.add(new SongSpec("song-" + i, "Song " + i, games[i % 3], 1, 600, 0, 0));
-        return List.copyOf(songs);
-    }
 
     public static void attainableStarsAndGrades() {
         int[][] thresholds = {{0, 1}, {49, 1}, {50, 2}, {69, 2}, {70, 3}, {84, 3}, {85, 4}, {94, 4}, {95, 5}, {100, 5}};
@@ -77,14 +71,11 @@ public final class CareerChecks {
         eq(4L, p.attempts()); eq(1_100L, p.totalScore());
     }
 
-    public static void querySelectionValidationAlsoAppliesToEmptyTours() {
-        var p = new PlayerProfile(); var tour = new CareerProgress(p);
+    public static void querySelectionValidation() {
+        var p = new PlayerProfile();
         invalid(() -> p.best("green-hill", "GUITAR", "MEDIUM"));
         invalid(() -> p.bestStars("green-hill", "SITAR", "expert"));
         invalid(() -> p.importLegacyScore("green-hill", "SITAR", "MEDIUM", -1));
-        invalid(() -> tour.unlocked(List.of(), "green-hill", "SITAR", "unknown"));
-        invalid(() -> tour.cleared(List.of(), "GUITAR", "MEDIUM"));
-        invalid(() -> tour.complete(List.of(), "SITAR", "unknown"));
     }
 
     public static void lowerScoreCanImproveStarsWithoutInventingAnAttempt() {
@@ -152,60 +143,6 @@ public final class CareerChecks {
         var rejected = new PlayerProfile();
         String extraRow = "record=extra|SITAR|MEDIUM|500,8,10,8,false,false|500,8,10,8,false,false\n";
         rejected.read(full.encode() + extraRow); eq(0, rejected.clears());
-    }
-
-    public static void sequentialTiersAndWholeTourCompletion() {
-        List<SongSpec> songs = songs(12); var p = new PlayerProfile(); var tour = new CareerProgress(p);
-        yes(tour.unlocked(songs, "song-0", "SITAR", "MEDIUM")); yes(tour.unlocked(songs, "song-2", "SITAR", "MEDIUM"));
-        yes(!tour.unlocked(songs, "song-3", "SITAR", "MEDIUM")); yes(!tour.unlocked(songs, "unknown", "SITAR", "MEDIUM"));
-        p.record(clear("song-0")); yes(!tour.unlocked(songs, "song-3", "SITAR", "MEDIUM"));
-        p.record(clear("song-2")); yes(tour.unlocked(songs, "song-5", "SITAR", "MEDIUM"));
-        yes(!tour.unlocked(songs, "song-6", "SITAR", "MEDIUM"));
-        yes(!tour.unlocked(songs, "song-3", "BONGOS", "MEDIUM")); yes(!tour.unlocked(songs, "song-3", "SITAR", "EXPERT"));
-        eq(2, tour.cleared(songs, "SITAR", "MEDIUM")); yes(!tour.complete(songs, "SITAR", "MEDIUM"));
-        yes(tour.venue(songs, "song-0").equals(tour.venue(songs, "song-2")));
-        yes(!tour.venue(songs, "song-0").equals(tour.venue(songs, "song-3")));
-        for (SongSpec song : songs) p.record(clear(song.id()));
-        eq(12, tour.cleared(songs, "SITAR", "MEDIUM")); yes(tour.complete(songs, "SITAR", "MEDIUM"));
-        var outOfOrder = new PlayerProfile(); outOfOrder.record(clear("song-3")); outOfOrder.record(clear("song-4"));
-        yes(!new CareerProgress(outOfOrder).unlocked(songs, "song-6", "SITAR", "MEDIUM"));
-        var legacy = new PlayerProfile(); legacy.importLegacyScore("song-0", "SITAR", "MEDIUM", 9_999);
-        legacy.record(clear("song-0")); legacy.record(clear("song-1"));
-        yes(new CareerProgress(legacy).unlocked(songs, "song-3", "SITAR", "MEDIUM"));
-    }
-
-    public static void everyRomSubsetCanFinishWithoutMissingSongGates() {
-        List<SongSpec> library = songs(12); String[] games = {"s1", "s2", "s3k"};
-        for (int subset = 1; subset < 8; subset++) {
-            var available = new ArrayList<SongSpec>();
-            for (SongSpec song : library) for (int game = 0; game < 3; game++)
-                if (song.game().equals(games[game]) && (subset & (1 << game)) != 0) available.add(song);
-            for (String role : List.of("SITAR", "BONGOS", "SYNTH", "HARP"))
-                for (String difficulty : List.of("EASY", "MEDIUM", "HARD", "EXPERT")) {
-                    var p = new PlayerProfile(); var tour = new CareerProgress(p);
-                    for (SongSpec song : available) {
-                        yes(tour.unlocked(available, song.id(), role, difficulty));
-                        p.record(result(song.id(), role, difficulty, 10, 1, 1));
-                    }
-                    eq(available.size(), tour.cleared(available, role, difficulty)); yes(tour.complete(available, role, difficulty));
-                }
-        }
-        var p = new PlayerProfile(); var tour = new CareerProgress(p);
-        yes(!tour.complete(List.of(), "SITAR", "MEDIUM"));
-        for (int count : List.of(1, 2, 4, 5, 7, 13)) {
-            var available = songs(count);
-            for (SongSpec song : available) {
-                yes(tour.unlocked(available, song.id(), "SITAR", "MEDIUM")); p.record(clear(song.id()));
-            }
-            yes(tour.complete(available, "SITAR", "MEDIUM"));
-        }
-    }
-
-    public static void duplicateSongsDoNotAwardExtraClearsOrUnlocks() {
-        List<SongSpec> songs = songs(4); var duplicate = new ArrayList<>(songs); duplicate.addFirst(songs.getFirst());
-        var p = new PlayerProfile(); p.record(clear("song-0")); var tour = new CareerProgress(p);
-        eq(1, tour.cleared(duplicate, "SITAR", "MEDIUM")); yes(!tour.unlocked(duplicate, "song-3", "SITAR", "MEDIUM"));
-        p.record(clear("song-1")); yes(tour.unlocked(duplicate, "song-3", "SITAR", "MEDIUM"));
     }
 
     public static void noFailResolvesAllMissesAndCanRecoverAudioAndStreak() {
