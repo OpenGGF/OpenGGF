@@ -245,8 +245,17 @@ public final class PixelArt {
                 float len = w * rng.range(0.34f, 0.5f);
                 float ex = topX + (float) Math.cos(a) * len;
                 float ey = topY + (float) Math.sin(a) * len * 0.35f + len * 0.35f;
-                p.stroke(topX, topY, (topX + ex) / 2, Math.min(ey, topY) - 3 * scale, 2.6f * scale, 2f * scale, leaves);
-                p.stroke((topX + ex) / 2, Math.min(ey, topY) - 3 * scale, ex, ey, 2f * scale, 0.6f, leaves);
+                float midX = (topX + ex) / 2;
+                float midY = Math.min(ey, topY) - 3 * scale;
+                p.stroke(topX, topY, midX, midY, 3.4f * scale, 2.8f * scale, leaves);
+                p.stroke(midX, midY, ex, ey, 2.8f * scale, 0.8f, leaves);
+                // Leaflets hanging from the frond.
+                for (int k = 1; k <= 3; k++) {
+                    float t = k / 4f;
+                    float lx = midX + (ex - midX) * t;
+                    float ly = midY + (ey - midY) * t;
+                    p.stroke(lx, ly, lx + (ex - topX) * 0.08f, ly + 4 * scale, 1.2f * scale, 0.5f, leaves);
+                }
             }
             p.ellipse(topX, topY, 3 * scale + 1, 2.5f * scale + 1, bark);
         }

@@ -2042,22 +2042,29 @@ public final class SurfaceMode implements Mode {
         float hy = beamY - cy;
         float len = (float) Math.hypot(hx - gx, hy - gy);
         int steps = Math.max(1, (int) (len / 2));
-        float flicker = (g.ticks % 4) / 4f;
-        int outer = heat > 75 ? 0x90FF2010 : 0x80FF6020;
+        float pulse = 0.5f + 0.5f * (float) Math.sin(g.ticks * 0.9);
+        int outer = heat > 75 ? 0x70FF2010 : 0x60FF7020;
+        int mid = heat > 75 ? 0xFFFF6030 : 0xFFFFB040;
         for (int i = 0; i <= steps; i++) {
             float t = i / (float) steps;
             int x = Math.round(gx + (hx - gx) * t);
             int y = Math.round(gy + (hy - gy) * t);
-            int wobble = (int) (Math.sin(i * 0.9 + g.ticks * 0.8) * 1.2);
-            c.fill(x - 2, y - 2 + wobble, 4, 4, outer);
-            c.fill(x - 1, y - 1, 2, 2, 0xFFFFB040);
+            int wobble = (int) (Math.sin(i * 0.7 + g.ticks * 0.9) * 1.5);
+            int glow = 3 + Math.round(pulse * 2);
+            c.fill(x - glow, y - glow + wobble, glow * 2, glow * 2, outer);
+            c.fill(x - 2, y - 1, 4, 3, mid);
             if ((i + g.ticks) % 3 != 0) {
-                c.fill(x, y, 1, 1, 0xFFFFFFE0);
+                c.fill(x - 1, y, 2, 1, 0xFFFFFFE0);
             }
         }
-        int glow = 6 + (int) (flicker * 4);
-        c.fill(Math.round(hx) - glow / 2, Math.round(hy) - glow / 2, glow, glow, 0x80FFE080);
-        c.fill(Math.round(hx) - 2, Math.round(hy) - 2, 4, 4, 0xFFFFFFFF);
+        // Impact flare: a burst of rays at the end of the beam.
+        int fx = Math.round(hx);
+        int fy = Math.round(hy);
+        int r = 5 + Math.round(pulse * 4);
+        c.fill(fx - r, fy - 1, r * 2, 3, 0xA0FFE080);
+        c.fill(fx - 1, fy - r, 3, r * 2, 0xA0FFE080);
+        c.fill(fx - r / 2, fy - r / 2, r, r, 0x80FFFFFF);
+        c.fill(fx - 2, fy - 2, 4, 4, 0xFFFFFFFF);
         c.fill(Math.round(gx) - 3, Math.round(gy) - 3, 6, 6, 0xC0FFE0A0);
     }
 
