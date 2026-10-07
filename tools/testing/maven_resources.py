@@ -69,7 +69,7 @@ def snapshot(proc=Path('/proc'), base=Path('/sys/fs/cgroup')):
         return None
 
 
-def admits(resources, config, active, credit=(0, 0)):
+def admits(resources, config, active, credit=(0, 0), *, reservation=None, reserved=None):
     """Reserve full budgets for existing runs too, including startup bursts.
 
     MemAvailable and load already contain what active runs use. ``credit`` is
@@ -81,9 +81,12 @@ def admits(resources, config, active, credit=(0, 0)):
     available, cpus, load = resources
     count = active + 1
     memory, cores = credit
+    budget = (config['memoryGiB'] * GIB, config['cpuCores'])
+    reservation = budget if reservation is None else reservation
+    reserved = (active * budget[0], active * budget[1]) if reserved is None else reserved
     return (count <= config['maxRuns']
-            and available + memory >= (count * config['memoryGiB'] + config['headroomGiB']) * GIB
-            and cpus + cores >= count * config['cpuCores'] + load)
+            and available + memory >= reserved[0] + reservation[0] + config['headroomGiB'] * GIB
+            and cpus + cores >= reserved[1] + reservation[1] + load)
 
 
 def tree_usage(root_pid, proc=Path('/proc')):
