@@ -31,13 +31,29 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                                   Map<com.openggf.game.ZoneKey.Mod,
                                           com.openggf.level.objects.HudProfile> hudProfiles,
                                   com.openggf.mods.scene.ModSceneFactory startupScene,
-                                  String requiredDisplayAspect) {
+                                  String requiredDisplayAspect,
+                                  Map<Integer, com.openggf.level.LevelPlacementPlan> levelPlacements) {
     public ModRegistrationPlan {
         if (requiredDisplayAspect != null && baseGameId == null) {
             throw new IllegalArgumentException("A required display width is available to patch mods only");
         }
         if (startupScene != null && baseGameId == null) {
             throw new IllegalArgumentException("Startup scenes are available to patch mods only");
+        }
+        levelPlacements = Map.copyOf(Objects.requireNonNull(levelPlacements, "levelPlacements"));
+        if (levelPlacements.size() > 8 || !levelPlacements.isEmpty()
+                && !("s2".equals(baseGameId) || "s3k".equals(baseGameId))) {
+            throw new IllegalArgumentException("At most eight stock S2/S3K level placement plans are supported");
+        }
+        for (var entry : levelPlacements.entrySet()) {
+            if (entry.getKey() < 0 || entry.getKey() > 255) {
+                throw new IllegalArgumentException("Invalid stock level placement index");
+            }
+            for (var addition : entry.getValue().additions()) {
+                if (!objectFactories.containsKey(com.openggf.game.ModKeySyntax.requireOwnedKey(ownerModId, addition.localKey()))) {
+                    throw new IllegalArgumentException("Placement names an unregistered owner-local object");
+                }
+            }
         }
         Objects.requireNonNull(ownerModId, "ownerModId");
         if ((standaloneModule == null) == (baseGameId == null)) {
@@ -110,7 +126,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
         return List.of("s1", "s2", "s3k").stream().map(game -> new ModRegistrationPlan(
                 ownerModId, game, objectFactories, objectArt, preparedObjectArt, explicitPatches,
                 zones, preparedZones, objectPreviewArtKeys, characters, null, romObjectArt,
-                launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect)).toList();
+                launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect, levelPlacements)).toList();
     }
 
     private static void validatePolicies(String ownerModId,
@@ -125,6 +141,28 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 throw new IllegalArgumentException("Null " + policyName + " policy");
             }
         }
+    }
+
+    /** Compatibility constructor for the pre-placement canonical shape. */
+    public ModRegistrationPlan(String ownerModId, String baseGameId,
+                               Map<String, ObjectFactory> objectFactories,
+                               Map<String, BakedSheetRef> objectArt,
+                               Map<String, BakedSheetReader.BakedSheet> preparedObjectArt,
+                               List<GamePatch> explicitPatches,
+                               List<ModZoneContribution> zones,
+                               List<PreparedModZone> preparedZones,
+                               Map<String, String> objectPreviewArtKeys,
+                               Map<CharacterKey, CharacterDefinition> characters,
+                               com.openggf.game.GameModule standaloneModule,
+                               Map<String, RomArtRequest> romObjectArt,
+                               Map<com.openggf.game.ZoneKey.Mod, com.openggf.game.GameplayLaunchTeam> launchTeams,
+                               Map<com.openggf.game.ZoneKey.Mod, com.openggf.game.GameplayInputFilter> inputFilters,
+                               Map<com.openggf.game.ZoneKey.Mod, com.openggf.level.objects.HudProfile> hudProfiles,
+                               com.openggf.mods.scene.ModSceneFactory startupScene,
+                               String requiredDisplayAspect) {
+        this(ownerModId, baseGameId, objectFactories, objectArt, preparedObjectArt, explicitPatches,
+                zones, preparedZones, objectPreviewArtKeys, characters, standaloneModule, romObjectArt,
+                launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect, Map.of());
     }
 
     /** Compatibility constructor for the pre-display-width canonical shape. */
@@ -267,7 +305,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
         return !objectFactories.isEmpty() || !objectArt.isEmpty() || !zones.isEmpty()
                 || !characters.isEmpty() || !romObjectArt.isEmpty()
                 || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty()
-                || startupScene != null || requiredDisplayAspect != null;
+                || startupScene != null || requiredDisplayAspect != null || !levelPlacements.isEmpty();
     }
 
     /** Resolves and validates all declared sheets before the contribution is published. */
@@ -288,7 +326,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
         return new ModRegistrationPlan(ownerModId, baseGameId, objectFactories, objectArt,
                 prepared, explicitPatches, zones, preparedZones,objectPreviewArtKeys,characters,
                 standaloneModule, romObjectArt, launchTeams, inputFilters, hudProfiles, startupScene,
-                requiredDisplayAspect);
+                requiredDisplayAspect, levelPlacements);
     }
 
     /** Resolves all level exports while the bounded creator view is still alive. */

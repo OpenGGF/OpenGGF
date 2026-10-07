@@ -732,6 +732,10 @@ CF-ANNOTATION TYPE com.openggf.level.LevelExportStagingValidator visible @java.l
 CF-ANNOTATION TYPE com.openggf.level.LevelGeometry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.LevelManager visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.LevelManager$LevelRenderOptions visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.LevelPlacementPlan visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.LevelPlacementPlan$Bounds visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.LevelPlacementPlan$ObjectAddition visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.LevelPlacementPlan$RingAddition visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.LevelTilemapManager visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.LevelTilemapManager$BlockLookup visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.LevelTilemapManager$BlockLookup visible @java.lang.FunctionalInterface
@@ -1604,6 +1608,11 @@ CONSTRUCTOR com.openggf.level.LevelManager protected  <init>()
 CONSTRUCTOR com.openggf.level.LevelManager protected  <init>()-ANNOTATION @java.lang.Deprecated(forRemoval=true,since="")
 CONSTRUCTOR com.openggf.level.LevelManager public  <init>(com.openggf.camera.Camera,com.openggf.sprites.managers.SpriteManager,com.openggf.level.ParallaxManager,com.openggf.physics.CollisionSystem,com.openggf.level.WaterSystem,com.openggf.game.GameStateManager,com.openggf.game.session.EngineContext,com.openggf.game.session.WorldSession)
 CONSTRUCTOR com.openggf.level.LevelManager$LevelRenderOptions public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.level.LevelPlacementPlan public  <init>(com.openggf.level.LevelPlacementPlan$Bounds,java.util.List<com.openggf.level.rings.RingSpawn>,java.util.List<com.openggf.level.LevelPlacementPlan$ObjectAddition>)
+CONSTRUCTOR com.openggf.level.LevelPlacementPlan public  <init>(com.openggf.level.LevelPlacementPlan$Bounds,java.util.List<com.openggf.level.rings.RingSpawn>,java.util.List<com.openggf.level.LevelPlacementPlan$ObjectAddition>,java.util.List<com.openggf.level.LevelPlacementPlan$RingAddition>)
+CONSTRUCTOR com.openggf.level.LevelPlacementPlan$Bounds public  <init>(int,int,int,int)
+CONSTRUCTOR com.openggf.level.LevelPlacementPlan$ObjectAddition public  <init>(java.lang.String,int,int,int,int)
+CONSTRUCTOR com.openggf.level.LevelPlacementPlan$RingAddition public  <init>(int,int)
 CONSTRUCTOR com.openggf.level.LevelTilemapManager public  <init>(com.openggf.level.LevelGeometry,com.openggf.graphics.GraphicsManager,com.openggf.game.GameStateManager)
 CONSTRUCTOR com.openggf.level.LevelTransitionCoordinator public  <init>()
 CONSTRUCTOR com.openggf.level.Map public  <init>(int,int,int)
@@ -9533,6 +9542,34 @@ METHOD com.openggf.level.LevelManager$LevelRenderOptions public,final  java.lang
 METHOD com.openggf.level.LevelManager$LevelRenderOptions public,static  com.openggf.level.LevelManager$LevelRenderOptions gameplay()
 METHOD com.openggf.level.LevelManager$LevelRenderOptions public,static  com.openggf.level.LevelManager$LevelRenderOptions previewCapture()
 METHOD com.openggf.level.LevelManager$LevelRenderOptions public,static  com.openggf.level.LevelManager$LevelRenderOptions tilesOnly()
+METHOD com.openggf.level.LevelPlacementPlan public  com.openggf.level.LevelPlacementPlan$Bounds bounds()
+METHOD com.openggf.level.LevelPlacementPlan public  java.util.List<com.openggf.level.LevelPlacementPlan$ObjectAddition> additions()
+METHOD com.openggf.level.LevelPlacementPlan public  java.util.List<com.openggf.level.LevelPlacementPlan$RingAddition> ringAdditions()
+METHOD com.openggf.level.LevelPlacementPlan public  java.util.List<com.openggf.level.rings.RingSpawn> retainedRings()
+METHOD com.openggf.level.LevelPlacementPlan public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.LevelPlacementPlan public,final  int hashCode()
+METHOD com.openggf.level.LevelPlacementPlan public,final  java.lang.String toString()
+METHOD com.openggf.level.LevelPlacementPlan$Bounds public  boolean contains(int,int)
+METHOD com.openggf.level.LevelPlacementPlan$Bounds public  int maxX()
+METHOD com.openggf.level.LevelPlacementPlan$Bounds public  int maxY()
+METHOD com.openggf.level.LevelPlacementPlan$Bounds public  int minX()
+METHOD com.openggf.level.LevelPlacementPlan$Bounds public  int minY()
+METHOD com.openggf.level.LevelPlacementPlan$Bounds public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.LevelPlacementPlan$Bounds public,final  int hashCode()
+METHOD com.openggf.level.LevelPlacementPlan$Bounds public,final  java.lang.String toString()
+METHOD com.openggf.level.LevelPlacementPlan$ObjectAddition public  int renderFlags()
+METHOD com.openggf.level.LevelPlacementPlan$ObjectAddition public  int subtype()
+METHOD com.openggf.level.LevelPlacementPlan$ObjectAddition public  int x()
+METHOD com.openggf.level.LevelPlacementPlan$ObjectAddition public  int y()
+METHOD com.openggf.level.LevelPlacementPlan$ObjectAddition public  java.lang.String localKey()
+METHOD com.openggf.level.LevelPlacementPlan$ObjectAddition public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.LevelPlacementPlan$ObjectAddition public,final  int hashCode()
+METHOD com.openggf.level.LevelPlacementPlan$ObjectAddition public,final  java.lang.String toString()
+METHOD com.openggf.level.LevelPlacementPlan$RingAddition public  int x()
+METHOD com.openggf.level.LevelPlacementPlan$RingAddition public  int y()
+METHOD com.openggf.level.LevelPlacementPlan$RingAddition public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.LevelPlacementPlan$RingAddition public,final  int hashCode()
+METHOD com.openggf.level.LevelPlacementPlan$RingAddition public,final  java.lang.String toString()
 METHOD com.openggf.level.LevelTilemapManager public  boolean hasPrebuiltTilemaps()
 METHOD com.openggf.level.LevelTilemapManager public  boolean isBackgroundTilemapDirty()
 METHOD com.openggf.level.LevelTilemapManager public  boolean isForegroundTilemapDirty()
@@ -11697,6 +11734,7 @@ METHOD com.openggf.mods.code.ModContext public  void registerGamePatch(com.openg
 METHOD com.openggf.mods.code.ModContext public  void registerHudProfile(com.openggf.mods.code.ModHudProfileContribution)
 METHOD com.openggf.mods.code.ModContext public  void registerInputFilter(com.openggf.mods.code.ModInputFilterContribution)
 METHOD com.openggf.mods.code.ModContext public  void registerLaunchTeam(com.openggf.mods.code.ModLaunchTeamContribution)
+METHOD com.openggf.mods.code.ModContext public  void registerLevelPlacementPlan(int,com.openggf.level.LevelPlacementPlan)
 METHOD com.openggf.mods.code.ModContext public  void registerObject(java.lang.String,com.openggf.level.objects.ObjectFactory)
 METHOD com.openggf.mods.code.ModContext public  void registerObjectArt(java.lang.String,com.openggf.mods.code.BakedSheetRef)
 METHOD com.openggf.mods.code.ModContext public  void registerObjectPreview(java.lang.String,java.lang.String)
@@ -14918,6 +14956,9 @@ NESTED com.openggf.graphics.TilemapGpuRenderer com.openggf.graphics.TilemapGpuRe
 NESTED com.openggf.graphics.TilemapGpuRenderer com.openggf.graphics.TilemapGpuRenderer$Layer
 NESTED com.openggf.io.ModInputLimits com.openggf.io.ModInputLimits$Builder
 NESTED com.openggf.level.LevelManager com.openggf.level.LevelManager$LevelRenderOptions
+NESTED com.openggf.level.LevelPlacementPlan com.openggf.level.LevelPlacementPlan$Bounds
+NESTED com.openggf.level.LevelPlacementPlan com.openggf.level.LevelPlacementPlan$ObjectAddition
+NESTED com.openggf.level.LevelPlacementPlan com.openggf.level.LevelPlacementPlan$RingAddition
 NESTED com.openggf.level.LevelTilemapManager com.openggf.level.LevelTilemapManager$BlockLookup
 NESTED com.openggf.level.MutableLevel com.openggf.level.MutableLevel$ObjectBackedRingState
 NESTED com.openggf.level.Palette com.openggf.level.Palette$Color
@@ -16399,6 +16440,21 @@ RECORD-COMPONENT com.openggf.level.LevelManager$LevelRenderOptions includeObject
 RECORD-COMPONENT com.openggf.level.LevelManager$LevelRenderOptions includePlayerSprites boolean
 RECORD-COMPONENT com.openggf.level.LevelManager$LevelRenderOptions includeRings boolean
 RECORD-COMPONENT com.openggf.level.LevelManager$LevelRenderOptions includeWaterSurface boolean
+RECORD-COMPONENT com.openggf.level.LevelPlacementPlan additions java.util.List<com.openggf.level.LevelPlacementPlan$ObjectAddition>
+RECORD-COMPONENT com.openggf.level.LevelPlacementPlan bounds com.openggf.level.LevelPlacementPlan$Bounds
+RECORD-COMPONENT com.openggf.level.LevelPlacementPlan retainedRings java.util.List<com.openggf.level.rings.RingSpawn>
+RECORD-COMPONENT com.openggf.level.LevelPlacementPlan ringAdditions java.util.List<com.openggf.level.LevelPlacementPlan$RingAddition>
+RECORD-COMPONENT com.openggf.level.LevelPlacementPlan$Bounds maxX int
+RECORD-COMPONENT com.openggf.level.LevelPlacementPlan$Bounds maxY int
+RECORD-COMPONENT com.openggf.level.LevelPlacementPlan$Bounds minX int
+RECORD-COMPONENT com.openggf.level.LevelPlacementPlan$Bounds minY int
+RECORD-COMPONENT com.openggf.level.LevelPlacementPlan$ObjectAddition localKey java.lang.String
+RECORD-COMPONENT com.openggf.level.LevelPlacementPlan$ObjectAddition renderFlags int
+RECORD-COMPONENT com.openggf.level.LevelPlacementPlan$ObjectAddition subtype int
+RECORD-COMPONENT com.openggf.level.LevelPlacementPlan$ObjectAddition x int
+RECORD-COMPONENT com.openggf.level.LevelPlacementPlan$ObjectAddition y int
+RECORD-COMPONENT com.openggf.level.LevelPlacementPlan$RingAddition x int
+RECORD-COMPONENT com.openggf.level.LevelPlacementPlan$RingAddition y int
 RECORD-COMPONENT com.openggf.level.MutableLevel$ObjectBackedRingState mapping java.util.Map<com.openggf.level.objects.ObjectSpawn,java.util.List<com.openggf.level.rings.RingSpawn>>
 RECORD-COMPONENT com.openggf.level.MutableLevel$ObjectBackedRingState objects java.util.List<com.openggf.level.objects.ObjectSpawn>
 RECORD-COMPONENT com.openggf.level.MutableLevel$ObjectBackedRingState rings java.util.List<com.openggf.level.rings.RingSpawn>
@@ -18643,6 +18699,7 @@ TYPE record public,final com.openggf.graphics.shaderlib.DisplayShaderPass SUPER 
 TYPE record public,final com.openggf.graphics.shaderlib.DisplayShaderPreset SUPER java.lang.Record
 TYPE record public,final com.openggf.level.BigRingReturnState SUPER java.lang.Record
 TYPE record public,final com.openggf.level.LevelGeometry SUPER java.lang.Record
+TYPE record public,final com.openggf.level.LevelPlacementPlan SUPER java.lang.Record
 TYPE record public,final com.openggf.level.PrebuiltTilemaps SUPER java.lang.Record
 TYPE record public,final com.openggf.level.SanctuaryReturnContext SUPER java.lang.Record
 TYPE record public,final com.openggf.level.SeamlessTransitionResourceHandoffId SUPER java.lang.Record
@@ -18801,6 +18858,9 @@ TYPE record public,static,final com.openggf.graphics.PatternAtlas$Entry SUPER ja
 TYPE record public,static,final com.openggf.graphics.PatternAtlas$PatternRange SUPER java.lang.Record
 TYPE record public,static,final com.openggf.graphics.TilemapGpuRenderer$BackgroundRenderState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.LevelManager$LevelRenderOptions SUPER java.lang.Record
+TYPE record public,static,final com.openggf.level.LevelPlacementPlan$Bounds SUPER java.lang.Record
+TYPE record public,static,final com.openggf.level.LevelPlacementPlan$ObjectAddition SUPER java.lang.Record
+TYPE record public,static,final com.openggf.level.LevelPlacementPlan$RingAddition SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.MutableLevel$ObjectBackedRingState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.BakedSheetReader$BakedSheet SUPER java.lang.Record
@@ -19608,6 +19668,10 @@ TYPE-ANNOTATION com.openggf.level.LevelExportStagingValidator @java.lang.Functio
 TYPE-ANNOTATION com.openggf.level.LevelGeometry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.LevelManager @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.LevelManager$LevelRenderOptions @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.LevelPlacementPlan @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.LevelPlacementPlan$Bounds @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.LevelPlacementPlan$ObjectAddition @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.LevelPlacementPlan$RingAddition @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.LevelTilemapManager @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.LevelTilemapManager$BlockLookup @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.LevelTilemapManager$BlockLookup @java.lang.FunctionalInterface

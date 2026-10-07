@@ -20,6 +20,9 @@ public final class ModApiVersion {
      * it developer-history or sound-driver restore ownership. Mixed-ROM startup
      * scenes expose supplied-game art, immutable timestamped physical input and
      * bounded semantic ROM music with consumed-sample playback and section parts.
+     * Owner-derived bounded native S2/S3K placement plans retain explicit native
+     * rings and add local registered objects and bounded native recovery rings without
+     * replacing native level owners.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

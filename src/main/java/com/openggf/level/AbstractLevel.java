@@ -41,6 +41,10 @@ public abstract class AbstractLevel implements Level {
     protected int minY;
     protected int maxY;
 
+    /** Initial placement admission, independent of gameplay snapshot epochs. */
+    @com.openggf.game.rewind.RewindTransient(reason = "Immutable load admission identity; placement lists belong to this decoded level lifetime")
+    RegisteredLevelPlacements initialPlacementAuthority;
+
     // Snapshot epoch counter for copy-on-write tracking.
     // Incremented on each snapshot restore; used by Block/Chunk/Map to
     // detect when to clone internal arrays.

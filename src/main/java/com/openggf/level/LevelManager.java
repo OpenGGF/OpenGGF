@@ -672,10 +672,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 ? activeModZoneRuntimeContribution.runtimeProfile() : null;
         activeCustomZonePaletteBridge = null;
         Level loaded = gameModule != null ? gameModule.loadLevelOverride(levelIndex) : null;
+        boolean stockDecoded = loaded == null;
         discardPreparedLevelLoad();
         if (loaded == null) {
             loaded = game.loadLevel(levelIndex);
         }
+        installRegisteredPlacements(levelIndex, loaded, stockDecoded);
         writeCurrentLevel(loaded);
         installHudProfile();
         rebuildLevelDerivedState();
@@ -767,6 +769,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         DeferredLevelResourceTracker activeDeferredResources = deferredResources != null
                 ? deferredResources : DeferredLevelResourceTracker.none();
         Level loaded = gameModule != null ? gameModule.loadLevelOverride(levelIndex) : null;
+        boolean stockDecoded = loaded == null;
         PreparedLevelBuild prepared = null;
         if (loaded != null || activeDeferredResources.hasExplicitPolicy()) {
             discardPreparedLevelLoad();
@@ -786,11 +789,18 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                         : game.loadLevel(levelIndex);
             }
         }
+        installRegisteredPlacements(levelIndex, loaded, stockDecoded);
         writeCurrentLevel(loaded);
         installHudProfile();
         rebuildLevelDerivedState();
         adoptPreparedTilemaps(prepared);
         return loaded;
+    }
+
+    private void installRegisteredPlacements(int levelIndex, Level loaded, boolean stockDecoded) {
+        RegisteredLevelPlacements placements = gameModule == null ? null
+                : gameModule.getGameService(RegisteredLevelPlacements.class);
+        if (placements != null) placements.install(gameModule.getGameCode(), levelIndex, loaded, stockDecoded);
     }
 
     private void installHudProfile() {
