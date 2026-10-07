@@ -309,6 +309,13 @@ public class Sonic1GameModule implements GameModule {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.level.render.ZonePictureSource.Factory.class) {
+            // Public zone 0 / act 0 is Green Hill 1; its ROM level index is $80.
+            return (T) (com.openggf.level.render.ZonePictureSource.Factory) rom ->
+                    new com.openggf.level.render.DetachedLevelPictures(0, 0,
+                            () -> new Sonic1(rom).buildDetachedLevel(
+                                    com.openggf.level.LevelData.S1_GREEN_HILL_1.levelIndex()), 512, 512);
+        }
         if (type == S1DataSelectImageCacheManager.class) return (T) getDataSelectImageCacheManager();
         if (type == Sonic1LevelEventManager.class) return (T) levelEventManager;
         if (type == Sonic1ZoneRegistry.class) return (T) zoneRegistry;

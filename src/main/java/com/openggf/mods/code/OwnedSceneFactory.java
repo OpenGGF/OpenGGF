@@ -35,8 +35,8 @@ public final class OwnedSceneFactory {
 
     /** A fresh scene from the creator's factory; every call into it runs inside the fault boundary. */
     public ModScene create() {
-        ModScene scene = Objects.requireNonNull(boundary.call(ownerModId, delegate::create),
-                "Scene factory returned null");
+        ModScene scene = boundary.call(ownerModId,
+                () -> Objects.requireNonNull(delegate.create(), "Scene factory returned null"));
         return new Owned(scene);
     }
 

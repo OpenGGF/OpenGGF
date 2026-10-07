@@ -6,7 +6,7 @@ input, audio, storage and a canvas, and keeps it inside the mod fault boundary. 
 use the player's ROM for art, so a scene looks like the game it runs on without shipping
 any of its assets.
 
-Two examples go with this guide:
+Examples go with this guide:
 
 - [hello-scene](../../../examples/hello-scene/README.md) is the place to start: two classes
   and a manifest, in which Sonic runs and jumps over Angel Island's background collecting
@@ -14,6 +14,9 @@ Two examples go with this guide:
 - [Slay the Robotnik](../../../examples/slay-the-robotnik/README.md) is a complete
   deck-building roguelike on Sonic 3 & Knuckles, and shows how a whole game is organised
   around one scene.
+- [Sitar Hero](../../../examples/sitar-hero/README.md) combines supplied Sonic 1,
+  Sonic 2 and S3K content in an arcade rhythm game, with timestamped physical input
+  and bounded ROM-synthesized music.
 
 When this guide and their source differ, the source is authoritative. Build and run either
 from a checkout with `python3 examples/build_example.py <name> --run` (Java 21 and Maven, and
@@ -63,6 +66,13 @@ public final class HelloSceneMod implements GgfMod {
 A mod registers at most one startup scene (a second call fails registration). If several
 enabled mods register one for the same game, the mod applied last in load order wins.
 
+Use `baseGame: any` for a game-independent ROM-backed startup scene. It registers
+the same scene on each installed stock game; `ggfmod run` chooses an available
+configured game. This narrowly permits startup-scene and required-display-width
+registration. Game-specific patches, characters, objects, zones, override tables
+and insertion declarations are rejected. It does not create a no-ROM standalone
+game or imply that a missing ROM is available.
+
 ## 2. The scene lifecycle
 
 The smallest useful scene counts button presses (hello-scene's `HelloScene` does more with
@@ -103,11 +113,11 @@ public final class PressCounter implements ModScene {
   back to the master title), or the engine shut down.
 - Every call runs inside the **fault boundary**. An exception disables the mod and returns
   the player to the master title with a finding in the Mod Manager instead of crashing.
-- **No static state.** The mod validator rejects enums, static collections and static
-  initialisers in mod classes. Keep state on the scene (or objects it owns) and use
-  `String` or `int` constants for kinds. The code javac itself adds for `assert` and for a
-  `switch` over an enum (such as `RomSpriteRequest.Compression`) is allowed. Slay the Robotnik's `CardType`, `Keyword` and
-  friends show the pattern.
+- **No mutable static state.** Keep gameplay state on the scene or its owned
+  objects. Literal constants and verified immutable enums with primitive/String
+  fields are accepted, as are javac assertion flags and enum-switch tables.
+  Authored static collections, arbitrary initializers and mutable enum payloads
+  are rejected. Sitar Hero's `Role` and `Roster` demonstrate immutable enums.
 
 `SceneContext` also gives the screen size (`width()`, `height()`): 224 rows, and a width
 the player's display aspect decides (320 for 4:3, 352, 400 for 16:9, 528 or 800) unless your
@@ -130,6 +140,71 @@ Input comes as named buttons and keys, never raw numbers:
   both players' raw state.
 
 Slay the Robotnik's `ui/Controls` turns all of this into the few verbs its screens use.
+
+For five-button instruments or other device-specific controls, use
+`ctx.physicalInput()`: an immutable snapshot of keys, standard GLFW gamepads and
+ordered `PhysicalInputEvent` transitions. Press/release events include sequence and
+monotonic observation timestamps, so a short tap between updates survives. The
+bounded queue reports `droppedEvents()` instead of silently claiming complete
+input. Keyboard repeat is excluded; gamepad baselines carry held state without
+inventing presses, and disconnect releases held inputs. Raw pads remain available
+when the Genesis gamepad mapper is disabled. Persist your own remaps in scene
+storage, and reset held baselines after pause/retry.
+
+These canonical values are `com.openggf.control.PhysicalInput`,
+`PhysicalInputEvent` and `PhysicalGamepad`, shared by input capture and the scene
+host.
+
+Gamepad timestamps describe polling observation, not hardware delivery. The live
+window polls during its frame wait, but rendering/OS scheduling can still delay
+observations. Choose one menu convention: ordinary raw pad A/B must not also be
+interpreted through their mapped Genesis aliases in the same update.
+
+## Timing-sensitive ROM music
+
+`ctx.music()` prepares finite ROM-synthesized playback with semantic note attacks:
+
+```java
+ScenePreparedMusic song = ctx.music().prepare("s1", 0x81, 3168);
+SceneMusicPlayer player = ctx.music().start(song,
+        List.of(new SceneMusicPart(0, 1, 0, false)), song.sampleRate() * 3);
+long audibleSample = player.samplePosition();
+long inputSample = player.samplePositionAt(event.timestampNanos());
+```
+
+Preparation is bounded to 90 seconds at the native 60 Hz driver cadence and may
+take several seconds. It reads only the requested supplied ROM, with no ambient
+music/SFX restore side effects. `SceneNoteEvent` identifies FM/PSG/DAC attacks,
+channel, pitch/sample id, source offset, onset and duration in samples. Ties and
+rests do not become fabricated attacks; equal-pitch and duration-only retriggers
+remain separate. Events provide timing evidence, rather than automatic playable
+charts: curate musical parts, density, lanes, chords and difficulty in your mod.
+
+One scene retains one prepared song and one selected arrangement. Repeating the
+same request reuses it; preparing a different song retires the old preparation
+and stops its player. Retired metadata remains readable, but call `prepare`
+again before starting that song. Stopped players and retired preparations release
+their old PCM, even when a mod keeps their handles.
+
+The part masks select the channels to subtract when `setPartAudible(false)` is
+called. A sorted `SceneMusicPart` list can change that selection by section; its
+first onset must be zero. FM/PSG indices are zero-based; logical PSG3 includes its
+noise output. DAC remains a separate flag. The host synthesizes full and masked
+mixes separately to preserve chip interactions and backing progression.
+`setWhammy` bends the selected residual; it is a presentation effect rather than
+an emulated guitar-controller DSP contract. Scope it to roles that use it.
+
+The clock follows consumed final PCM on a live device, with optional OpenAL Soft
+backend latency correction; a no-device capture follows PCM actually rendered.
+Negative positions cover the supplied lead-in. Pause/resume and host focus pauses
+freeze the coordinate, and `underrunCount()` exposes interruptions. Stop the
+player on retry/exit; the host also releases playback when the scene closes.
+Speaker failure freezes the scoped player and increments its interruption count.
+That player cannot resume: restore output and start a fresh player. An explicitly
+device-free capture still uses its rendered PCM clock.
+Persist user calibration for device/display/input delays. Queued PCM still
+delays a newly requested mute or whammy, so calibration does not make feedback
+instantaneous. Render ticks and diagnostic/trace rows must not judge rhythm input.
 
 To lay out for one width, call `context.requireDisplayWidth(400)` in `register` (320, 352,
 400, 528 or 800): the engine switches the session to that display aspect before the scene
@@ -225,7 +300,17 @@ five acts (zone ids 0 Angel Island, 1 Hydrocity, 6 Launch Base, 10 Sky Sanctuary
 | 6, 0 (Launch Base 1) | as it loads |
 | 10, 0 (Sky Sanctuary 1) | backdrop: the cloud sea; overview and foreground as it loads |
 
-Elsewhere, and in Sonic 1 and 2, the methods return null (or no stages).
+Sonic 1 provides detached static pictures for Green Hill act 1 (`0, 0`), and
+Sonic 2 for Chemical Plant act 1 (`1, 0`). Those pictures use
+ROM art, palettes, layouts and collision without publishing graphics or changing
+the running level; they do not run level animation/events/parallax. Unsupported
+requests return null or no stages, so query support before composing a scene.
+
+`ctx.art().availableGames()` lists configured, available stock ROMs.
+`ctx.art().rom("s1")`, `rom("s2")` and `rom("s3k")` open art from those supplied
+games independently of the song or active module. `rom()` retains its original
+active-game meaning. Additional ROM handles belong to the scene and close with
+it; the active session's borrowed ROM remains open. Missing games return null.
 
 `rom.titleCard(zone, act)` returns an act's stock title card as four sprites (the red banner,
 the zone's name, "ZONE" and the act number) whose origins are the ROM's object positions; its

@@ -17,6 +17,8 @@ import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.LiveCaptureAudioHandle;
+import com.openggf.audio.AudioBenchmarkMemoryProbe;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -31,6 +33,160 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 class TestOpenAlPcmSink {
+    @Test
+    void warmedAudibleCursorQueriesReusePrimitiveLedgerWithoutAllocation() {
+        FakeDevice device = new FakeDevice(48_000);
+        OpenAlPcmSink sink = sink(device);
+        AudioPresentationProducer producer = producer(sink, 48_000, 60);
+        try {
+            for (int frame = 0; frame < 4; frame++) producer.present(frame, PresentationMode.SILENT);
+            sink.updateDevice();
+            for (int frame = 4; frame < 130; frame++) producer.present(frame, PresentationMode.SILENT);
+            device.consumed = 3_072;
+            long expected = device.consumed + sink.droppedStereoFrames();
+            for (int chunk = 0; chunk < 100; chunk++) assertEquals(expected * 100, queryCursor(sink, 100));
+            AudioBenchmarkMemoryProbe probe = AudioBenchmarkMemoryProbe.create();
+            long[] checksum = new long[1];
+            probe.measureTimedRun(() -> checksum[0] = queryCursor(sink, 1_000));
+            var measured = probe.measureTimedRun(() -> checksum[0] = queryCursor(sink, 10_000));
+            assertEquals(expected * 10_000, checksum[0]);
+            Assumptions.assumeTrue(measured.allocatedBytesSupported(), "JVM cannot report per-thread allocation");
+            assertEquals(0, measured.allocatedBytes(), "an audible cursor query must reuse primitive gap storage");
+        } finally { producer.close(); }
+    }
+
+    private static long queryCursor(OpenAlPcmSink sink, int count) {
+        long checksum = 0;
+        for (int index = 0; index < count; index++) checksum += sink.consumedStereoFrames();
+        return checksum;
+    }
+
+    @Test
+    void deviceUpdatesRetireProlongedDropsWithoutAnAudibleCursorReader() {
+        FakeDevice device = new FakeDevice(48_000);
+        List<Throwable> failures = new ArrayList<>();
+        OpenAlPcmSink sink = new OpenAlPcmSink(device, failures::add, () -> 0L, ignored -> { });
+        AudioPresentationProducer producer = producer(sink, 48_000, 60);
+        long frame = 0;
+        try {
+            for (int cycle = 0; cycle < 256; cycle++) {
+                for (int packet = 0; packet < 121; packet++) producer.present(frame++, PresentationMode.SILENT);
+                device.consumed = (long) device.enqueuedFrames.size() * OpenAlPcmSink.DEVICE_BUFFER_FRAMES;
+                device.queuedBuffers = 0;
+                // Ordinary gameplay updates its device without asking for a scene clock.
+                sink.updateDevice();
+            }
+            assertTrue(failures.isEmpty(), "consumed boundaries must not accumulate while nobody reads the cursor");
+            assertTrue(sink.droppedStereoFrames() > 48_000L * 256);
+            device.consumed = (long) device.enqueuedFrames.size() * OpenAlPcmSink.DEVICE_BUFFER_FRAMES;
+            device.queuedBuffers = 0;
+            sink.updateDevice();
+            assertEquals(device.consumed + sink.droppedStereoFrames(), sink.consumedStereoFrames(),
+                    "the first cursor read includes every already consumed source-time gap exactly once");
+            assertEquals(device.consumed + sink.droppedStereoFrames(), sink.consumedStereoFrames());
+            sink.onReverseBoundary();
+            assertEquals(0, sink.consumedStereoFrames());
+        } finally { producer.close(); }
+    }
+
+    @Test
+    void coalescesAtCapacityAndFailsOnceRatherThanLosingAnotherUnconsumedBoundary() {
+        FakeDevice device = new FakeDevice(48_000);
+        List<Throwable> failures = new ArrayList<>();
+        OpenAlPcmSink sink = new OpenAlPcmSink(device, failures::add, () -> 0L, ignored -> { });
+        AudioPresentationProducer producer = producer(sink, 48_000, 60);
+        long frame = 0;
+        try {
+            for (int packet = 0; packet < 4; packet++) producer.present(frame++, PresentationMode.SILENT);
+            sink.updateDevice();
+            for (int boundary = 0; boundary < 64; boundary++) {
+                for (int packet = 0; packet < 121; packet++) producer.present(frame++, PresentationMode.SILENT);
+                if (boundary < 63) {
+                    device.queuedBuffers = 0;
+                    sink.updateDevice();
+                }
+            }
+            for (int packet = 0; packet < 400; packet++) producer.present(frame++, PresentationMode.SILENT);
+            assertTrue(failures.isEmpty(), "more drops at the last boundary must coalesce even at capacity");
+            assertEquals(0, sink.consumedStereoFrames(), "none of the queued predecessors has been consumed");
+            device.queuedBuffers = 0;
+            sink.updateDevice();
+            for (int packet = 0; packet < 121; packet++) producer.present(frame++, PresentationMode.SILENT);
+            assertEquals(1, failures.size());
+            assertTrue(failures.getFirst() instanceof IllegalStateException);
+            assertTrue(failures.getFirst().getMessage().contains("64 source-time gap boundaries"));
+            assertEquals(1, device.closeCount);
+            assertEquals(-1, sink.consumedStereoFrames(), "failed timing must never return a fabricated cursor");
+            sink.updateDevice();
+            assertEquals(1, failures.size());
+        } finally { producer.close(); }
+    }
+
+    @Test
+    void aDeviceWithoutConsumedCursorSupportNeverInventsOneAfterDropsOrFlush() {
+        OpenAlPcmSink.Device device = new OpenAlPcmSink.Device() {
+            @Override public int initialize() { return 48_000; }
+            @Override public void enqueue(short[] pcm, int frames, int sampleRate) { }
+            @Override public int update() { return 0; }
+            @Override public void flush() { }
+            @Override public void pause() { }
+            @Override public void resume() { }
+            @Override public void close() { }
+        };
+        OpenAlPcmSink sink = new OpenAlPcmSink(device, failure -> { throw new AssertionError(failure); },
+                () -> 0L, ignored -> { });
+        AudioPresentationProducer producer = producer(sink, 48_000, 60);
+        try {
+            for (int frame = 0; frame < 130; frame++) producer.present(frame, PresentationMode.SILENT);
+            sink.updateDevice();
+            assertTrue(sink.droppedStereoFrames() > 0);
+            assertEquals(-1, sink.consumedStereoFrames());
+            sink.onReverseBoundary();
+            assertEquals(-1, sink.consumedStereoFrames());
+        } finally { producer.close(); }
+    }
+
+    @Test
+    void reportsSpeakerStarvationEvenWhenSoftwarePacketRemainderIsPending() {
+        FakeDevice device = new FakeDevice(48_000);
+        OpenAlPcmSink sink = sink(device);
+        AudioPresentationProducer producer = producer(sink, 48_000, 60);
+        try {
+            for (int frame = 0; frame < 4; frame++) producer.present(frame, PresentationMode.SILENT);
+            sink.updateDevice();
+            device.consumed = 3_072;
+            device.underruns = 1;
+            assertEquals(128, sink.queuedStereoFrames());
+            assertEquals(1, sink.underrunCount());
+            assertEquals(1, sink.underrunCount(), "reading a transition must not count it again");
+            sink.onReverseBoundary();
+            assertEquals(0, sink.underrunCount());
+        } finally { producer.close(); }
+    }
+    @Test
+    void audibleClockSubtractsDeviceLatencyAndPreservesFractionalSampleOffset() {
+        long tenAndAHalf = (10L << 32) + (1L << 31);
+        assertEquals(109, OpenAlPcmSink.audibleSampleFrame(100, tenAndAHalf, 1_500_000, 1_000));
+        assertEquals(0, OpenAlPcmSink.audibleSampleFrame(0, tenAndAHalf, 20_000_000, 1_000));
+        assertEquals(110, OpenAlPcmSink.audibleSampleFrame(100, tenAndAHalf, 0, 1_000));
+    }
+    @Test
+    void audibleCursorIncludesDroppedSourceTimeOnlyAfterQueuedPredecessors() {
+        FakeDevice device = new FakeDevice(48_000);
+        OpenAlPcmSink sink = sink(device);
+        AudioPresentationProducer producer = producer(sink, 48_000, 60);
+        try {
+            for (int frame = 0; frame < 4; frame++) producer.present(frame, PresentationMode.SILENT);
+            sink.updateDevice();
+            for (int frame = 4; frame < 130; frame++) producer.present(frame, PresentationMode.SILENT);
+            assertTrue(sink.droppedStereoFrames() > 0);
+            assertEquals(0, sink.consumedStereoFrames());
+            device.consumed = 3_072;
+            assertEquals(3_072 + sink.droppedStereoFrames(), sink.consumedStereoFrames());
+            sink.onReverseBoundary();
+            assertEquals(0, sink.consumedStereoFrames());
+        } finally { producer.close(); }
+    }
     @Test
     void primesThreeDeviceBuffersBeforeStartingPlayback() {
         FakeDevice device = new FakeDevice(57_600);
@@ -328,6 +484,11 @@ class TestOpenAlPcmSink {
     }
 
     private static final class FakeDevice implements OpenAlPcmSink.Device {
+        long consumed;
+        long underruns;
+
+        @Override public long consumedStereoFrames() { return consumed; }
+        @Override public long underrunCount() { return underruns; }
         private final int sampleRate;
         private final List<Integer> enqueuedFrames = new ArrayList<>();
         private final List<short[]> enqueuedSamples = new ArrayList<>();
@@ -371,6 +532,8 @@ class TestOpenAlPcmSink {
 
         @Override
         public void flush() {
+            consumed = 0;
+            underruns = 0;
             flushCount++;
             queuedBuffers = 0;
         }

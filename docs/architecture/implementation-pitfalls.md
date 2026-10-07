@@ -511,6 +511,28 @@ reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it. For
 reference the libvgm cores, for the sequencer the SMPSPlay source, rather than simplified
 versions. Diagnose against a source of truth instead of twiddling knobs.
 
+**Speaker starvation is a device transition, not generated-sample equality.** A
+stopped OpenAL queue can leave a sub-packet remainder in the software FIFO, so
+the consumed cursor never reaches the producer's count. Detect stopped-after-play
+at the sink, reset on flush and expose interruption to the scoped scene player.
+`AL_SAMPLE_OFFSET` describes the source mixer; optional
+`AL_SOFT_source_latency` and calibration address backend arrival. The
+latency-subtracted cursor can remain behind a drained queue's final boundary
+until PCM is refilled; wall-clock sleep alone does not establish consumption.
+Whole-song AC variance and progression must span authentic rests: a short constant/DC packet
+does not establish stalled backing. Origin: Sitar Hero native null-backend hitch
+and Chemical Plant masked-mix probes, 2026-10-06.
+
+**Audio gap accounting must stay bounded and allocation-free.** Boxed map updates
+on FIFO drops broke the warmed presentation allocation budget, even without a
+scene player. Retire primitive gap boundaries during device updates as well as
+cursor reads; otherwise ordinary playback retains entries indefinitely. If the
+ledger fills or output fails, report the failure and freeze scoped rhythm time.
+A silent fallback's generated cursor does not establish audible progress.
+Defer sink replacement requested inside `accept()` until the producer finishes
+its frame's capture/history boundary. Origin: Sitar Hero matched baseline/current
+allocation check and speaker-failure lifecycle, 2026-10-06.
+
 **External audio clocks are not rewind frame numbers.** GameLoop's audio clock
 continues through title/fade intervals while live rewind records gameplay only
 and resets its origin on level loads. `recordExternalStep` must observe the

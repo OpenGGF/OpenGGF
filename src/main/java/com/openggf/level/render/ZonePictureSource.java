@@ -12,7 +12,8 @@ import java.util.List;
 public interface ZonePictureSource {
     /**
      * How a game module offers its zone pictures: {@code getGameService(ZonePictureSource.Factory.class)}
-     * returns one for games that have them (Sonic 3 &amp; Knuckles), null otherwise.
+     * returns one for games that have them, null otherwise. Zone indices follow the
+     * module's public zone registry; a provider may support only selected acts.
      */
     @FunctionalInterface
     interface Factory {

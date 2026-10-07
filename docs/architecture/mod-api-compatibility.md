@@ -434,3 +434,36 @@ private tile array and rasterises on the CPU with `PlaneRasterizer`. Keeping the
 `level.render` leaves `game` free of `mods` dependencies (the ArchUnit cycle ratchet). These are
 in-place changes to the unpublished 0.7 candidate; the descriptor and `ModApiVersion` remain
 0.7.0 and the normalized pin is updated in place.
+
+### Mixed-ROM rhythm scenes
+
+Sitar Hero extends the unpublished 0.7 candidate with `SceneArt.availableGames`
+and `rom(gameId)`, `SceneContext.physicalInput` and `music`, immutable
+`PhysicalInput`/`PhysicalInputEvent`/`PhysicalGamepad`, and the bounded
+`SceneMusic`/`ScenePreparedMusic`/`SceneNoteEvent`/`SceneMusicPart`/`SceneMusicPlayer`
+contracts. Existing scene implementations retain their default legacy behavior;
+the production host supplies the new capabilities. The normalized candidate pin gains 183 additive signature lines and
+is regenerated in place, with descriptor/runtime version still 0.7.0 and no
+published baseline change.
+
+The physical input values live in the canonical `control` package. Input capture
+does not depend on `mods`; the scene host consumes those values through the
+existing `mods -> control` boundary, without introducing a parallel device model
+or expanding the frozen package-cycle baseline.
+
+`baseGame: any` is restricted to startup-scene/display registration and expands
+into separately indexed stock-game decorators. It cannot introduce game-specific
+patches, objects, zones, characters or override declarations. Extra ROMs are
+scene-owned catalog views; active session ROMs are borrowed, and disassembly
+assets are never runtime fallbacks. S1/S2 detached stock pictures use explicit
+ROM inputs, including first-frame animated tiles, without graphics/session
+mutation.
+
+The host's final-PCM override `audio.presentation.ScenePcmSource` is an explicitly
+audited engine-internal terminal reached through the legacy `AudioManager` root.
+Its members remain outside the creator signature surface and SDK, although
+the legacy host method names the type; creators receive bounded song preparation and player operations instead of arbitrary mixer injection. The
+engine-internal pin adds that one type; platform allowlists stay unchanged.
+Music judgments follow consumed samples, input follows monotonic observed events,
+and the example alone owns curated charts, GH III reference rules and calibration.
+No diagnostic/trace rows become gameplay authority.

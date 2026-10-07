@@ -228,6 +228,7 @@ public class AudioManager implements MusicRestoreSink {
     private StreamedMusicPort streamedMusicPort = StreamedMusicPort.EMPTY;
     private SmpsCoordFlagHandlerOwner presentationCoordFlagHandlers;
     private AudioPresentationSink presentationSink;
+    private boolean presentationSpeakerFailed;
     private final Set<String> presentationCoordHandlerGameIds =
             new LinkedHashSet<>();
 
@@ -458,7 +459,26 @@ public class AudioManager implements MusicRestoreSink {
                 : backend.outputSampleRate();
     }
 
+    /** Host-owned finite scene music routed through the existing capture/speaker producer. */
+    public void setScenePcmSource(com.openggf.audio.presentation.ScenePcmSource source) {
+        ensureShadowPresentation();
+        shadowProducer.setScenePcmSource(source);
+        if (source != null && presentationSpeakerFailed) source.onSpeakerFailure();
+    }
+
+    /** Audible device coordinate, or -1 for a device-free presentation. */
+    public long consumedPresentationStereoFrames() {
+        return presentationSink instanceof OpenAlPcmSink sink
+                ? sink.consumedStereoFrames() : -1;
+    }
+
+    /** Speaker starvation transitions in the current flushed source coordinate. */
+    public long presentationUnderrunCount() {
+        return presentationSink instanceof OpenAlPcmSink sink ? sink.underrunCount() : 0;
+    }
+
     public synchronized LiveCaptureAudioHandle beginLiveCaptureAudio(int frameRate) {
+        // Scene music uses the same final packets and therefore requires no second capture lease.
         if (activeLiveCaptureAudioHandle != null) {
             throw new IllegalStateException("A live capture audio handle is already attached");
         }
@@ -654,6 +674,7 @@ public class AudioManager implements MusicRestoreSink {
             installBackendDiagnosticObservers();
             presentationSink =
                     new NoDeviceAudioSink(this.backend.outputSampleRate());
+            presentationSpeakerFailed = true;
         }
     }
 
@@ -679,6 +700,7 @@ public class AudioManager implements MusicRestoreSink {
             this.backend.setAudioProfile(baseAudioSource.profile());
             installBackendDiagnosticObservers();
             installBackendPresentationSink();
+            presentationSpeakerFailed = true;
             throw new IllegalStateException("Audio backend initialization failed", error);
         }
     }
@@ -688,6 +710,7 @@ public class AudioManager implements MusicRestoreSink {
             presentationSink = backend.createPresentationSink(
                     this::handlePresentationSinkFailure,
                     warning -> LOGGER.warning("Speaker output: " + warning));
+            presentationSpeakerFailed = false;
         } catch (Throwable failure) {
             AudioDiagnosticObserverException.rethrowIfPresent(failure);
             LOGGER.log(Level.WARNING,
@@ -695,6 +718,7 @@ public class AudioManager implements MusicRestoreSink {
                     failure);
             presentationSink =
                     new NoDeviceAudioSink(backend.outputSampleRate());
+            presentationSpeakerFailed = true;
         }
     }
 
@@ -711,6 +735,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     private void handlePresentationSinkFailure(Throwable failure) {
+        presentationSpeakerFailed = true;
         LOGGER.log(Level.WARNING,
                 "Speaker output failed; continuing without audio output",
                 failure);
@@ -3967,6 +3992,7 @@ public class AudioManager implements MusicRestoreSink {
         if (presentationSink instanceof OpenAlPcmSink openAlSink) {
             openAlSink.pause();
         }
+        if (shadowProducer != null) shadowProducer.pauseScenePcmSource();
         AudioDiagnosticObserverException.invoke(() ->
                 driverServiceObserver.onLifecycle(
                         SmpsDriverServiceObserver.LifecycleEvent.session(
@@ -3977,7 +4003,8 @@ public class AudioManager implements MusicRestoreSink {
      * Resumes audio playback after being paused.
      */
     public void resume() {
-        if (presentationSink instanceof OpenAlPcmSink openAlSink) {
+        boolean resumeSpeaker = shadowProducer == null || shadowProducer.resumeScenePcmSource();
+        if (resumeSpeaker && presentationSink instanceof OpenAlPcmSink openAlSink) {
             openAlSink.resume();
         }
         AudioDiagnosticObserverException.invoke(() ->

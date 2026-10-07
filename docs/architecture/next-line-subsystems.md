@@ -27,6 +27,11 @@ course rollback while full debug rewind includes it. Prepared value scenes are
 composed from locally ROM-loaded art and can be transmitted to a permanently held
 guest without importing gameplay state. See
 [Putt Putt Paradise](../../examples/putt-putt-paradise/README.md).
+ROM-backed startup scenes can use `baseGame: any`, supplied-ROM art libraries,
+timestamped physical input and bounded consumed-sample music transport. Rhythm
+rules, part ownership and curated charts remain in the
+[Sitar Hero example](../../examples/sitar-hero/README.md); these capabilities do
+not make the engine's normal gameplay depend on scene timing or diagnostic data.
 Code-bearing mods
 stay namespaced, injected-service-only, rewind-recreatable, transactionally registered,
 and owner-fault-bounded. Complete new zones preserve tagged identities, not runtime

@@ -131,6 +131,18 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
 
     @Override
     public Level loadLevel(int levelIdx) throws IOException {
+        return buildLevel(levelIdx, true);
+    }
+
+    /** Detached stock decode with no live graphics or cross-game palette settings. */
+    public Sonic2Level buildDetachedLevel(int levelIdx) throws IOException {
+        Sonic2Level level = buildLevel(levelIdx, false);
+        level.primeDetachedAnimation(Sonic2PatternAnimator.readScriptsForZone(
+                RomByteReader.fromRom(rom), level.getZoneIndex()));
+        return level;
+    }
+
+    private Sonic2Level buildLevel(int levelIdx, boolean publishGraphics) throws IOException {
         ZoneAct zoneAct = getZoneAct(levelIdx);
         ensurePlacementHelpers();
         int characterPaletteAddr = getCharacterPaletteAddr();
@@ -152,6 +164,9 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
         // Check if this zone requires custom resource plan loading (e.g., HTZ overlays)
         LevelResourcePlan resourcePlan = Sonic2LevelResourcePlans.getPlanForZone(zoneAct.zone());
 
+        if (!publishGraphics && (resourcePlan != null || zoneAct.zone() == Sonic2Constants.ZONE_WING_FORTRESS)) {
+            throw new IllegalArgumentException("Detached pictures do not support resource-plan levels");
+        }
         if (resourcePlan != null) {
             // Zone uses custom resource plan with overlay composition
             return new Sonic2Level(rom, zoneAct.zone(), characterPaletteAddr, levelPalettesAddr, levelPalettesSize,
@@ -185,7 +200,7 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
                 chunksAddr,
                 blocksAddr, mapAddr, collisionAddr, altCollisionAddr, solidTileHeightsAddr, solidTileWidthsAddr,
                 solidTileAngleAddr, objectSpawns, ringSpawns, ringSpriteSheet, levelBoundariesAddr,
-                characterPaletteOverride);
+                characterPaletteOverride, publishGraphics);
     }
 
     /**
@@ -326,6 +341,19 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
             return null;
         }
         return playerArt.loadForCharacter(characterCode);
+    }
+
+    @Override
+    public Palette loadCharacterPalette(String characterCode) {
+        if (!"sonic".equalsIgnoreCase(characterCode) && !"tails".equalsIgnoreCase(characterCode)) return null;
+        try {
+            Palette palette = new Palette();
+            // Pal_SonicTails is the shared stock line used by both Obj01 and Obj02.
+            palette.fromSegaFormat(rom.readBytes(getCharacterPaletteAddr(), Palette.PALETTE_SIZE_IN_ROM));
+            return palette;
+        } catch (IOException failure) {
+            throw new IllegalStateException("Sonic/Tails character palette unavailable", failure);
+        }
     }
 
     @Override

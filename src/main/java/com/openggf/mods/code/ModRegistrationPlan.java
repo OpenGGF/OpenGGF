@@ -95,6 +95,22 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 throw new IllegalArgumentException("Prepared zones must exactly match declarations");
             }
         }
+        if ("any".equals(baseGameId) && (startupScene == null || !objectFactories.isEmpty()
+                || !objectArt.isEmpty() || !explicitPatches.isEmpty() || !zones.isEmpty()
+                || !objectPreviewArtKeys.isEmpty() || !characters.isEmpty() || !romObjectArt.isEmpty()
+                || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty())) {
+            throw new IllegalArgumentException(
+                    "baseGame any may register only a startup scene and its display requirement");
+        }
+    }
+
+    /** Expands a validated shared startup scene into ordinary stock-game decorators. */
+    List<ModRegistrationPlan> stockScenePlans() {
+        if (!"any".equals(baseGameId)) return List.of(this);
+        return List.of("s1", "s2", "s3k").stream().map(game -> new ModRegistrationPlan(
+                ownerModId, game, objectFactories, objectArt, preparedObjectArt, explicitPatches,
+                zones, preparedZones, objectPreviewArtKeys, characters, null, romObjectArt,
+                launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect)).toList();
     }
 
     private static void validatePolicies(String ownerModId,

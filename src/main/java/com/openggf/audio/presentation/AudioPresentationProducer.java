@@ -93,6 +93,30 @@ public final class AudioPresentationProducer {
     private boolean reverseFrameOutput;
     private boolean hasLastReverseFrame;
     private boolean closed;
+    private ScenePcmSource scenePcmSource;
+    private AudioPresentationSink pendingSinkReplacement;
+
+    /** Scene lifetime override; publication still uses this producer's sinks and captures. */
+    public void setScenePcmSource(ScenePcmSource source) {
+        assertOwnerThread();
+        assertOpen();
+        if (presenting) throw new IllegalStateException("cannot replace PCM during presentation");
+        scenePcmSource = source;
+        sink.onReverseBoundary();
+    }
+
+    public void pauseScenePcmSource() {
+        if (scenePcmSource != null) {
+            assertOwnerThread();
+            scenePcmSource.onHostPause();
+        }
+    }
+
+    public boolean resumeScenePcmSource() {
+        if (scenePcmSource == null) return true;
+        assertOwnerThread();
+        return scenePcmSource.onHostResume();
+    }
 
     private record PreparedPresentationRestore(
             AudioVoiceRegistry.PreparedSnapshotRestore registry,
@@ -283,6 +307,9 @@ public final class AudioPresentationProducer {
                     return PresentationResult.REQUEST_REJECTED;
                 }
                 applyReleaseCrossfade(pcm, stereoFrames);
+                if (scenePcmSource != null) {
+                    scenePcmSource.render(pcm, stereoFrames);
+                }
                 if (historyArmed) {
                     history.write(pcm, stereoFrames);
                 }
@@ -334,6 +361,11 @@ public final class AudioPresentationProducer {
             return PresentationResult.COMMITTED;
         } finally {
             presenting = false;
+            if (pendingSinkReplacement != null) {
+                AudioPresentationSink replacement = pendingSinkReplacement;
+                pendingSinkReplacement = null;
+                replaceSink(replacement);
+            }
         }
     }
 
@@ -1013,14 +1045,28 @@ public final class AudioPresentationProducer {
     }
 
     public void replaceSink(AudioPresentationSink sink) {
-        assertOwnerBoundary();
+        assertOwnerThread();
+        assertOpen();
         AudioPresentationSink replacement = requireCompatibleSink(sink);
         if (replacement == this.sink) {
             return;
         }
+        // accept() may report a speaker failure while the final frame is being
+        // published. Finish its capture/history boundary before closing the sink.
+        if (presenting) {
+            if (pendingSinkReplacement != null && pendingSinkReplacement != replacement) {
+                pendingSinkReplacement.close();
+            }
+            pendingSinkReplacement = replacement;
+            return;
+        }
         AudioPresentationSink previous = this.sink;
         this.sink = replacement;
-        previous.close();
+        try {
+            previous.close();
+        } finally {
+            if (scenePcmSource != null) scenePcmSource.onSpeakerFailure();
+        }
     }
 
     /**

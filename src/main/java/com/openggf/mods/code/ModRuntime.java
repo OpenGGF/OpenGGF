@@ -140,10 +140,17 @@ public final class ModRuntime implements AutoCloseable {
                     standalone.getPlayableCharacterRegistry();
                     ownerRegistrations = List.of();
                 } else if (plan.hasContent()) {
-                    ModBackedGamePatch backing = new ModBackedGamePatch(plan, faultBoundary, saveFindingSink);
-                    ownerRegistrations = ModPatchPlanAssembler.backingFirst(patchOwner, backing,
-                            plan.explicitPatches().stream()
-                                    .map(patch -> OwnerBoundGamePatch.wrap(owner, patch, faultBoundary)).toList());
+                    ownerRegistrations = new ArrayList<>();
+                    for (ModRegistrationPlan stockPlan : plan.stockScenePlans()) {
+                        ModBackedGamePatch backing = "any".equals(plan.baseGameId())
+                                ? new ModBackedGamePatch(stockPlan, faultBoundary, saveFindingSink,
+                                        "content-" + stockPlan.baseGameId())
+                                : new ModBackedGamePatch(stockPlan, faultBoundary, saveFindingSink);
+                        ownerRegistrations.addAll(ModPatchPlanAssembler.backingFirst(patchOwner, backing,
+                                stockPlan.explicitPatches().stream()
+                                        .map(patch -> OwnerBoundGamePatch.wrap(owner, patch, faultBoundary)).toList(),
+                                ownerRegistrations.size()));
+                    }
                 } else {
                     ownerRegistrations = new ArrayList<>();
                     long index = 0;

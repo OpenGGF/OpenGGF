@@ -3,9 +3,11 @@ package com.openggf.audio.output;
 import com.openggf.audio.presentation.AudioPresentationFrameView;
 import org.lwjgl.openal.AL;
 import org.lwjgl.openal.AL10;
+import org.lwjgl.openal.AL11;
 import org.lwjgl.openal.ALC;
 import org.lwjgl.openal.ALC10;
 import org.lwjgl.openal.ALCCapabilities;
+import org.lwjgl.openal.SOFTSourceLatency;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
@@ -30,6 +32,9 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
     private static final int DEVICE_QUEUE_TARGET = 3;
     private static final int DEVICE_PRIME_FRAMES =
             DEVICE_BUFFER_FRAMES * DEVICE_QUEUE_TARGET;
+    // A bounded ledger for source discontinuities still behind audible PCM.
+    // Unusually delayed/unavailable cursors fail explicitly instead of growing it.
+    private static final int SOURCE_GAP_CAPACITY = 64;
 
     public interface Device {
         int initialize();
@@ -37,6 +42,12 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
         void enqueue(short[] stereoPcm, int stereoFrames, int sampleRate);
 
         int update();
+
+        /** Sample frames actually consumed since the most recent flush, or -1 if unavailable. */
+        default long consumedStereoFrames() { return -1; }
+
+        /** Transitions from playing to an empty stopped source since the most recent flush. */
+        default long underrunCount() { return 0; }
 
         void flush();
 
@@ -62,6 +73,11 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
     private boolean paused;
     private boolean failed;
     private boolean closed;
+    private long deviceEnqueuedStereoFrames;
+    private long consumedSourceGapFrames;
+    private final long[] sourceGapBoundaries = new long[SOURCE_GAP_CAPACITY];
+    private final long[] sourceGapFrames = new long[SOURCE_GAP_CAPACITY];
+    private int sourceGapHead, sourceGapCount;
 
     public OpenAlPcmSink(
             Device device,
@@ -119,6 +135,10 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
         long droppedBefore = fifo.droppedStereoFrames();
         fifo.offer(packetScratch, stereoFrames);
         if (fifo.droppedStereoFrames() != droppedBefore) {
+            // A drop removes the oldest not-yet-device PCM. Attach the source-time
+            // gap after already queued device packets, rather than jumping the
+            // audible cursor while those preceding packets are still sounding.
+            if (!recordSourceGap(fifo.droppedStereoFrames() - droppedBefore)) return;
             warnOverrun();
         }
     }
@@ -129,6 +149,9 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
         }
         try {
             int deviceQueuedBuffers = device.update();
+            // Ordinary playback must retire the ledger even if no scene asks
+            // for its audible cursor. An unavailable cursor retires nothing.
+            if (sourceGapCount > 0) retireSourceGaps(device.consumedStereoFrames());
             int requiredFrames = deviceQueuedBuffers == 0
                     ? DEVICE_PRIME_FRAMES : DEVICE_BUFFER_FRAMES;
             while (deviceQueuedBuffers < DEVICE_QUEUE_TARGET
@@ -136,6 +159,7 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
                 int drained = fifo.drain(
                         deviceScratch, DEVICE_BUFFER_FRAMES);
                 device.enqueue(deviceScratch, drained, sampleRate);
+                deviceEnqueuedStereoFrames += drained;
                 deviceQueuedBuffers++;
                 requiredFrames = DEVICE_BUFFER_FRAMES;
             }
@@ -150,6 +174,8 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
             return;
         }
         fifo.flush();
+        deviceEnqueuedStereoFrames = 0;
+        clearSourceGaps();
         try {
             device.flush();
         } catch (Throwable failure) {
@@ -187,6 +213,71 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
         return fifo.droppedStereoFrames();
     }
 
+    public long consumedStereoFrames() {
+        if (closed || failed) return -1;
+        try {
+            long consumed = device.consumedStereoFrames();
+            if (consumed < 0) return consumed;
+            retireSourceGaps(consumed);
+            return consumed + consumedSourceGapFrames;
+        } catch (Throwable failure) {
+            fail(failure);
+            return -1;
+        }
+    }
+
+    private boolean recordSourceGap(long frames) {
+        if (sourceGapCount > 0) {
+            int last = (sourceGapHead + sourceGapCount - 1) % SOURCE_GAP_CAPACITY;
+            if (sourceGapBoundaries[last] == deviceEnqueuedStereoFrames) {
+                sourceGapFrames[last] += frames;
+                return true;
+            }
+        }
+        if (sourceGapCount == SOURCE_GAP_CAPACITY) {
+            fail(new IllegalStateException("OpenAL cursor left 64 source-time gap boundaries unconsumed"));
+            return false;
+        }
+        int next = (sourceGapHead + sourceGapCount) % SOURCE_GAP_CAPACITY;
+        sourceGapBoundaries[next] = deviceEnqueuedStereoFrames;
+        sourceGapFrames[next] = frames;
+        sourceGapCount++;
+        return true;
+    }
+
+    private void retireSourceGaps(long consumed) {
+        if (consumed < 0) return;
+        while (sourceGapCount > 0 && sourceGapBoundaries[sourceGapHead] <= consumed) {
+            consumedSourceGapFrames += sourceGapFrames[sourceGapHead];
+            sourceGapHead = (sourceGapHead + 1) % SOURCE_GAP_CAPACITY;
+            sourceGapCount--;
+        }
+    }
+
+    private void clearSourceGaps() {
+        sourceGapHead = 0;
+        sourceGapCount = 0;
+        consumedSourceGapFrames = 0;
+    }
+
+    public long underrunCount() {
+        if (closed || failed) return 0;
+        try {
+            return device.underrunCount();
+        } catch (Throwable failure) {
+            fail(failure);
+            return 0;
+        }
+    }
+
+    /** AL's mixer offset minus reported mixer-to-DAC latency, in the flushed source coordinate. */
+    static long audibleSampleFrame(long completedFrames, long offsetFixed32,
+                                   long latencyNanos, int sampleRate) {
+        double offset = offsetFixed32 / 0x1.0p32;
+        double latencyFrames = Math.max(0, latencyNanos) * (sampleRate / 1_000_000_000.0);
+        return Math.max(0, (long) Math.floor(completedFrames + offset - latencyFrames));
+    }
+
     @Override
     public void close() {
         if (closed) {
@@ -194,6 +285,7 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
         }
         closed = true;
         fifo.flush();
+        clearSourceGaps();
         device.close();
     }
 
@@ -238,6 +330,12 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
         private ShortBuffer uploadScratch;
         private boolean initialized;
         private boolean closed;
+        private final int[] bufferStereoFrames = new int[OPENAL_BUFFER_COUNT];
+        private long completedStereoFrames;
+        private boolean sourceLatencySupported;
+        private int outputSampleRate;
+        private long underruns;
+        private boolean started, stoppedAfterPlaying;
 
         @Override
         public int initialize() {
@@ -261,6 +359,7 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
             }
             ALCCapabilities capabilities = ALC.createCapabilities(device);
             AL.createCapabilities(capabilities);
+            sourceLatencySupported = AL.getCapabilities().AL_SOFT_source_latency;
             presentationSource = AL10.alGenSources();
             for (int index = 0; index < buffers.length; index++) {
                 buffers[index] = AL10.alGenBuffers();
@@ -272,7 +371,8 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
             int negotiated = ALC10.alcGetInteger(
                     device, ALC10.ALC_FREQUENCY);
             initialized = true;
-            return negotiated > 0 ? negotiated : 48_000;
+            outputSampleRate = negotiated > 0 ? negotiated : 48_000;
+            return outputSampleRate;
         }
 
         @Override
@@ -284,6 +384,9 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
                         "OpenAL presentation queue exhausted");
             }
             int buffer = freeBuffers[--freeCount];
+            for (int index = 0; index < buffers.length; index++) {
+                if (buffers[index] == buffer) bufferStereoFrames[index] = stereoFrames;
+            }
             uploadScratch.clear();
             uploadScratch.put(stereoPcm, 0, stereoFrames * 2);
             uploadScratch.flip();
@@ -295,6 +398,8 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
             if (state != AL10.AL_PLAYING) {
                 AL10.alSourcePlay(presentationSource);
             }
+            started = true;
+            stoppedAfterPlaying = false;
             checkError("enqueue final PCM");
         }
 
@@ -304,6 +409,33 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
             checkError("update final PCM");
             return AL10.alGetSourcei(
                     presentationSource, AL10.AL_BUFFERS_QUEUED);
+        }
+
+        @Override
+        public long consumedStereoFrames() {
+            reclaimProcessed();
+            if (sourceLatencySupported) {
+                try (MemoryStack stack = MemoryStack.stackPush()) {
+                    long clock = stack.nmalloc(Long.BYTES, Long.BYTES * 2);
+                    SOFTSourceLatency.nalGetSourcei64vSOFT(presentationSource,
+                            SOFTSourceLatency.AL_SAMPLE_OFFSET_LATENCY_SOFT, clock);
+                    checkError("read audible PCM cursor and device latency");
+                    return audibleSampleFrame(completedStereoFrames, MemoryUtil.memGetLong(clock),
+                            MemoryUtil.memGetLong(clock + Long.BYTES), outputSampleRate);
+                }
+            }
+            // OpenAL 1.1 fallback: device latency is then covered by the scene's
+            // user calibration. Queue latency is still measured, never guessed.
+            long offset = AL10.alGetSourcei(presentationSource, AL11.AL_SAMPLE_OFFSET);
+            checkError("read audible PCM cursor");
+            return completedStereoFrames + Math.max(0, offset);
+        }
+
+        @Override
+        public long underrunCount() {
+            reclaimProcessed();
+            checkError("read PCM underrun transitions");
+            return underruns;
         }
 
         @Override
@@ -320,6 +452,11 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
             System.arraycopy(buffers, 0, freeBuffers, 0, buffers.length);
             freeCount = buffers.length;
             checkError("flush final PCM");
+            completedStereoFrames = 0;
+            Arrays.fill(bufferStereoFrames, 0);
+            underruns = 0;
+            started = false;
+            stoppedAfterPlaying = false;
         }
 
         @Override
@@ -379,8 +516,19 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
                     throw new IllegalStateException(
                             "OpenAL free-buffer accounting overflow");
                 }
-                freeBuffers[freeCount++] =
-                        AL10.alSourceUnqueueBuffers(presentationSource);
+                int buffer = AL10.alSourceUnqueueBuffers(presentationSource);
+                for (int index = 0; index < buffers.length; index++) {
+                    if (buffers[index] == buffer) {
+                        completedStereoFrames += bufferStereoFrames[index];
+                        bufferStereoFrames[index] = 0;
+                    }
+                }
+                freeBuffers[freeCount++] = buffer;
+            }
+            int state = AL10.alGetSourcei(presentationSource, AL10.AL_SOURCE_STATE);
+            if (started && state == AL10.AL_STOPPED && !stoppedAfterPlaying) {
+                underruns++;
+                stoppedAfterPlaying = true;
             }
         }
 

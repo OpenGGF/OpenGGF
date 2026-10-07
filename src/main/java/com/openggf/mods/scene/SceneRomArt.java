@@ -1,7 +1,7 @@
 package com.openggf.mods.scene;
 
 /**
- * Decodes art from the running game's ROM into RGBA images. Because each sprite is
+ * Decodes art from one supplied game's ROM into RGBA images. Because each sprite is
  * rasterised with its own palette, sprites from different zones, characters and bosses can
  * share the screen without the palette-line juggling the hardware needs.
  *
@@ -94,7 +94,11 @@ public interface SceneRomArt {
     /**
      * Whether this act has zone pictures: {@link #zoneBackdrop}, {@link #levelOverview},
      * {@link #levelStages} and {@link #levelForeground} return null (or no stages) exactly when
-     * this is false. Sonic 1 and Sonic 2 have none yet.
+     * this is false. Zone ids follow the game's public zone registry, and acts are zero-based.
+     * Sonic 1 supports Green Hill act 1 ({@code 0, 0}); Sonic 2 supports Chemical Plant act 1
+     * ({@code 1, 0}, whose stock level index 2 resolves ROM zone $0D). These two providers
+     * picture the decoded load state with a stationary backdrop band; they do not animate
+     * tiles, cycle palettes or reproduce gameplay parallax.
      *
      * <p>Sonic 3 &amp; Knuckles zone ids: 0 Angel Island, 1 Hydrocity, 6 Launch Base, 10 Sky
      * Sanctuary (act 0 is act 1, act 1 is act 2). Five acts are supported, each pictured in one

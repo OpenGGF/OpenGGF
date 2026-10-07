@@ -195,7 +195,26 @@ public final class ModSubsystem implements AutoCloseable {
                 .map(com.openggf.mods.ModDescriptor::manifest)
                 .filter(manifest -> manifest.type() == com.openggf.mods.ModType.PATCH && manifest.baseGame() != null)
                 .map(com.openggf.mods.ModManifest::baseGame)
+                .map(game -> "any".equals(game) ? availableDevelopmentGame() : game)
+                .filter(java.util.Objects::nonNull)
                 .findFirst();
+    }
+
+    private static String availableDevelopmentGame() {
+        String preferred = com.openggf.game.GameServices.configuration().getString(
+                com.openggf.configuration.SonicConfiguration.DEFAULT_ROM);
+        java.util.LinkedHashSet<String> games = new java.util.LinkedHashSet<>();
+        if (preferred != null && java.util.List.of("s1", "s2", "s3k").contains(preferred)) games.add(preferred);
+        games.addAll(java.util.List.of("s1", "s2", "s3k"));
+        for (String game : games) {
+            com.openggf.data.RomIdentity rom = switch (game) {
+                case "s1" -> com.openggf.data.RomIdentity.S1;
+                case "s2" -> com.openggf.data.RomIdentity.S2;
+                default -> com.openggf.data.RomIdentity.S3K;
+            };
+            if (com.openggf.game.GameServices.rom().isLogicalRomAvailable(rom)) return game;
+        }
+        return null;
     }
 
     /** Transfers the explicit dev snapshot from boot ownership to ModRuntime construction. */

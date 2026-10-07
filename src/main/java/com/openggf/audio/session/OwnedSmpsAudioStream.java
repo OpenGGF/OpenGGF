@@ -65,6 +65,12 @@ public final class OwnedSmpsAudioStream
         return outputSampleRate;
     }
 
+    /** One production outer-frame service followed by the corresponding physical PCM. */
+    public void serviceAndRenderFrame(short[] target, int stereoFrames) {
+        session.serviceForward();
+        session.advanceDacIdleLoop(target, stereoFrames);
+    }
+
     public void setChipWriteObserver(ChipWriteObserver observer) {
         session.setChipWriteObserver(observer);
     }

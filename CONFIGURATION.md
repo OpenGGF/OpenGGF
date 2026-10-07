@@ -164,6 +164,14 @@ display shader application must be gated off for trace capture.
 
 ## ROM Files
 
+ROM-backed `baseGame: any` mod scenes use this configured catalogue to combine
+available games. Sitar Hero's optional launch script creates an isolated config
+for an explicit ROM subset; it packages no ROM data. Its keyboard/gamepad remaps,
+lefty mode and input/display calibration belong to the mod's `settings.txt` in
+owner-scoped scene storage, rather than global gameplay bindings. Raw standard
+gamepads remain available to physical-input scenes when the Genesis mapper is
+disabled. See [Sitar Hero controls](examples/sitar-hero/README.md#controls).
+
 Paths are relative to the working directory (where the JAR is launched).
 
 The engine builds a catalogue of every image it can see: the files named by the

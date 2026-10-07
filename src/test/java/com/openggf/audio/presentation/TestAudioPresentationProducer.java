@@ -30,6 +30,36 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 class TestAudioPresentationProducer {
+    @Test
+    void speakerReplacementRequestedDuringAcceptFinishesTheFrameThenNotifiesTheScene() {
+        var owner = new AtomicReference<AudioPresentationProducer>();
+        var notifications = new java.util.concurrent.atomic.AtomicInteger();
+        RecordingSink replacement = new RecordingSink(8, 4);
+        RecordingSink failing = new RecordingSink(8, 4) {
+            @Override public void accept(AudioPresentationFrameView frame) {
+                super.accept(frame);
+                owner.get().replaceSink(replacement);
+                assertEquals(0, notifications.get(), "notification waits for final packet publication");
+            }
+        };
+        var producer = emptyProducer(8, 2, failing);
+        owner.set(producer);
+        producer.setScenePcmSource(new ScenePcmSource() {
+            public void render(short[] pcm, int frames) { Arrays.fill(pcm, (short) 77); }
+            public void onSpeakerFailure() { notifications.incrementAndGet(); }
+        });
+        try (var capture = producer.attachCapture(2)) {
+            producer.present(1, PresentationMode.FORWARD);
+            assertEquals(1, notifications.get());
+            short[] pcm = new short[8];
+            assertEquals(4, capture.drainPresentationFrame(pcm));
+            assertArrayEquals(new short[] {77, 77, 77, 77, 77, 77, 77, 77}, pcm);
+            producer.present(2, PresentationMode.FORWARD);
+            assertEquals(1, replacement.acceptCount);
+            assertEquals(1, notifications.get());
+        } finally { producer.close(); }
+    }
+
     /** Frames presented before anything is measured. */
     private static final int WARM_FRAMES = 10_000;
     /** Frames measured once the shape is compiled. */
@@ -38,6 +68,31 @@ class TestAudioPresentationProducer {
     private static final int PROBE_WARM_FRAMES = 1_000;
     /** Frames per warm invocation of the measured method. */
     private static final int WARM_CHUNK_FRAMES = 100;
+
+    @Test
+    void finiteSceneMusicUsesTheSameSpeakerCaptureAndReverseHistoryPacket() {
+        Fixture fixture = fixture(8, 2, constantStereo("background", 8, (short) 123, (short) -321));
+        fixture.submitTone();
+        fixture.producer.setHistoryArmed(true);
+        fixture.producer.setScenePcmSource((target, frames) -> {
+            for (int index = 0; index < frames; index++) {
+                target[index * 2] = (short) (index * 101);
+                target[index * 2 + 1] = (short) (-index * 79);
+            }
+        });
+        LiveCaptureAudioHandle capture = fixture.producer.attachCapture(2);
+        fixture.producer.present(1, PresentationMode.FORWARD);
+        short[] expected = {0, 0, 101, -79, 202, -158, 303, -237};
+        short[] actual = new short[8];
+        assertEquals(4, capture.drainPresentationFrame(actual));
+        assertArrayEquals(expected, actual);
+        assertArrayEquals(expected, fixture.sink.lastPacket(4));
+        fixture.producer.beginReverse(1.0);
+        fixture.producer.present(2, PresentationMode.REVERSE);
+        assertArrayEquals(new short[] {303, -237, 202, -158, 101, -79, 0, 0}, fixture.sink.lastPacket(4));
+        capture.close();
+        fixture.producer.close();
+    }
 
     @Test
     void sixtyNtscPacketsAt48000ContainExactly48000StereoFrames() {
