@@ -219,6 +219,7 @@ public class GameLoop {
     private TitleCardProvider titleCardProvider;
 
     private InputHandler inputHandler;
+    private ExclusiveLiveGameDriver exclusiveLiveDriver;
     private EditorInputHandler editorInputHandler;
     private Runnable editorPlaytestToggleHandler;
     private Runnable editorFreshStartHandler;
@@ -340,6 +341,7 @@ public class GameLoop {
                 new LiveUserRecordingRuntime(configService, userRecordingSessionLauncher, playbackDebugManager,
                         () -> currentGameMode,
                         () -> TraceSessionLauncher.active() != null
+                                || ExternalFrameOrInputOwnership.liveOwnerActive(this.engineServices)
                                 || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
                                 || debugShortcutsEnabled() && debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER),
                         () -> { userPaused = true; updateAudioPauseState(); },
@@ -433,6 +435,7 @@ public class GameLoop {
     }
 
     public void setInputHandler(InputHandler inputHandler) {
+        requireNoExclusiveLiveDriver();
         this.inputHandler = inputHandler;
     }
 
@@ -803,6 +806,7 @@ public class GameLoop {
      * Call this method at your target FPS (typically 60fps).
      */
     public void step() {
+        requireNoExclusiveLiveDriver();
         try {
             TraceSessionLauncher traceSession = TraceSessionLauncher.active();
             int traceFastForwardSteps = traceSession == null
@@ -837,6 +841,7 @@ public class GameLoop {
 
     /** Interactive 60/50 Hz presentation entry; canonical {@link #step()} remains one tick. */
     public void stepPresentationFrame() {
+        requireNoExclusiveLiveDriver();
         var modeAtStart = resolveGameplayModeContext();
         var levelAtStart = levelManager == null ? null : levelManager.getCurrentLevel();
         boolean paced = canUseGameplayPacing() && GameServices.module() != null;
@@ -1141,6 +1146,61 @@ public class GameLoop {
         }
     }
 
+    EngineContext exclusiveLiveServices() { return engineServices; }
+
+    void installExclusiveLiveDriver(ExclusiveLiveGameDriver driver) {
+        exclusiveLiveDriver = driver;
+        if (driver != null) releaseGameplayAudioRate();
+    }
+
+    void validateExclusiveLiveAdmission() {
+        requireInputHandler();
+        if (ExternalFrameOrInputOwnership.otherOwnerActive(engineServices)
+                || userRecordingSessionLauncher.hasActiveRecordingSession()
+                || userRecordingControls.shouldPumpFastForward()
+                || liveRewindManager.isRewindingOrReleasing()
+                || configService.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED)
+                || LevelRewindFrameRecorder.activeScriptedRewind() != null
+                || timeAttackRuntime.isActive() || multiplayerRaceCoordinator != null
+                || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
+                || specialStageObservationPacing != null) {
+            throw new IllegalStateException("Exclusive live drive cannot coexist with replay or debug ownership");
+        }
+        GameplayModeContext context = resolveGameplayModeContext();
+        if (context == null || !context.isGameplayRuntimeReady()
+                || com.openggf.game.mode.ControlledFrameRuntime.controller(context) != null) {
+            throw new IllegalStateException("Exclusive live drive requires a ready production gameplay session");
+        }
+        for (var work : com.openggf.game.timing.HardwareWorkKind.values()) {
+            if (context.hardwareTiming().admissionPolicyFor(work)
+                    != com.openggf.game.timing.HardwareReadinessAdmissionPolicy.LIVE) {
+                throw new IllegalStateException("Exclusive live drive requires LIVE hardware readiness");
+            }
+        }
+    }
+
+    private void requireNoExclusiveLiveDriver() {
+        if (ExternalFrameOrInputOwnership.liveOwnerActive(engineServices)) {
+            throw new IllegalStateException("Production stepping belongs to an exclusive live driver");
+        }
+    }
+
+    void runExclusiveLiveIteration(ExclusiveLiveGameDriver driver) {
+        if (exclusiveLiveDriver != driver) throw new IllegalStateException("Wrong production iteration owner");
+        if (isPaused()) {
+            driver.hostPaused();
+            return;
+        }
+        // Exactly one native production iteration. No movie observation pump,
+        // user recording fast-forward, module pacing, or physical event loop.
+        try {
+            stepInternal();
+        } finally {
+            runAfterStepMasterTitleLaunchCallbackIfPresent();
+            presenceManager.tick();
+        }
+    }
+
     private void stepInternal() {
         continueScreen.beginIteration();
         levelIterationAdmission.beginIteration();
@@ -1178,6 +1238,7 @@ public class GameLoop {
                             stepInternalBody();
                             return null;
                         } finally {
+                            if (exclusiveLiveDriver != null) exclusiveLiveDriver.classify(frame);
                             activePlcLifecycleFrame = null;
                         }
                     });
@@ -1193,6 +1254,11 @@ public class GameLoop {
 
     private void stepInternalBody() {
         requireInputHandler();
+        if (exclusiveLiveDriver != null && activePlcLifecycleFrame != null
+                && (activePlcLifecycleFrame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE)
+                    || activePlcLifecycleFrame.isOwnedBy(PlcLifecyclePhase.LAG))) {
+            exclusiveLiveDriver.retainUnpolledState();
+        }
         // VInt_Done bumps V_int_run_count on every V-int (sonic3k.asm:542-543); the
         // carrier counts the iterations no level object clock is bound to service.
         com.openggf.game.session.EngineTiming.vIntRunCounter(engineServices).serviceRepresentedVBlank();
@@ -1311,7 +1377,7 @@ public class GameLoop {
         }
 
         boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler);
-        boolean nextUserPaused = GameLoopPauseInput.nextUserPaused(currentGameMode, inputHandler,
+        boolean nextUserPaused = exclusiveLiveDriver != null ? userPaused : GameLoopPauseInput.nextUserPaused(currentGameMode, inputHandler,
                 configService, userPaused, overlayOwnsPause, playbackTakeoverConsumedPausePress,
                 playbackDebugManager, userRecordingControls::handlePlaybackTakeoverRequest);
         if (nextUserPaused != userPaused) {
@@ -1467,7 +1533,9 @@ public class GameLoop {
         LevelFrameResult admission = levelIterationAdmission.admit(
                 currentGameMode, () -> updateTitleCardMode(doFrameStep),
                 () -> titleReleaseResult, levelManager, gameplayMode,
-                !overlayOwnsPause && (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
+                !overlayOwnsPause && ((exclusiveLiveDriver != null
+                        ? inputHandler.logical().player1().startPressed()
+                        : inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START)))
                         || playbackDebugManager.isCurrentForcedStartPress()),
                 userRecordingControls,
                 request -> routeTimeAttackSeamlessTransitionBeforeApply(
@@ -2176,6 +2244,7 @@ public class GameLoop {
     }
 
     private void syncPlaybackInputBridge() {
+        if (exclusiveLiveDriver != null) return;
         playbackInputBridge.sync(playbackDebugManager, currentGameMode,
                 inputHandler, spriteManager);
     }
@@ -2276,7 +2345,7 @@ public class GameLoop {
     }
 
     private boolean debugShortcutsEnabled() {
-        return configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
+        return exclusiveLiveDriver == null && configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
     }
 
     static BonusStageType resolveBonusStageDebugShortcut(InputHandler inputHandler) {
@@ -3757,6 +3826,7 @@ public class GameLoop {
     }
 
     public void restartFromRecordingLaunchContext(RecordingLaunchContext context) {
+        requireNoExclusiveLiveDriver();
         Objects.requireNonNull(context, "context");
 
         configService.clearSessionOverrides();
@@ -4632,6 +4702,14 @@ public class GameLoop {
     }
 
     private void updateSpecialStageInput() {
+        // executeHardwareTimedObjectScan has claimed the production VBlank
+        // before this callback. S2's startup Vint_CtrlDMA has now latched its
+        // DMA-only declaration, and must retain Ctrl_1 before any input owner
+        // sees the offered sample (s2.asm:6665-6668, 998-1002).
+        if (exclusiveLiveDriver != null && activePlcLifecycleFrame != null
+                && activePlcLifecycleFrame.hasExplicitDmaQueueService()) {
+            exclusiveLiveDriver.retainUnpolledState();
+        }
         int leftKey = configService.getInt(SonicConfiguration.LEFT);
         int rightKey = configService.getInt(SonicConfiguration.RIGHT);
         int upKey = configService.getInt(SonicConfiguration.UP);
