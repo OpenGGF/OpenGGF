@@ -1,6 +1,7 @@
 package survivors;
 
 import java.io.IOException;
+import com.openggf.mods.state.VersionedSettings;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.logging.Level;
@@ -22,6 +23,7 @@ final class Profile {
 
     private final Path file;
     private boolean loaded;
+    private boolean writable = true;
     int bank;
     final int[] shop = new int[SHOP_COUNT];
     int emeralds;
@@ -123,12 +125,11 @@ final class Profile {
         loaded = true;
         if (!Files.isRegularFile(file)) return this;
         try {
-            for (String line : Files.readAllLines(file)) {
-                int eq = line.indexOf('=');
-                if (eq <= 0) continue;
-                String key = line.substring(0, eq).trim();
+            var settings = VersionedSettings.parse(Files.readString(file)).requireVersion(0);
+            for (var entry : settings.entries().entrySet()) {
+                String key = entry.getKey();
                 int value;
-                try { value = Integer.parseInt(line.substring(eq + 1).trim()); }
+                try { value = Integer.parseInt(entry.getValue()); }
                 catch (NumberFormatException bad) { continue; }
                 switch (key) {
                     case "bank" -> bank = Math.max(0, value);
@@ -151,6 +152,9 @@ final class Profile {
                     }
                 }
             }
+        } catch (IllegalArgumentException unsupportedFormat) {
+            writable = false;
+            Logger.getLogger(Profile.class.getName()).log(Level.WARNING, "Unsupported profile format " + file, unsupportedFormat);
         } catch (IOException | RuntimeException e) {
             Logger.getLogger(Profile.class.getName()).log(Level.WARNING, "Could not read " + file, e);
         }
@@ -158,6 +162,7 @@ final class Profile {
     }
 
     void save() {
+        if (!writable) return;
         var out = new StringBuilder();
         out.append("bank=").append(bank).append('\n');
         out.append("emeralds=").append(emeralds).append('\n');
@@ -172,7 +177,7 @@ final class Profile {
         for (int i = 0; i < SHOP_COUNT; i++) out.append("shop.").append(i).append('=').append(shop[i]).append('\n');
         try {
             Files.createDirectories(file.getParent());
-            Files.writeString(file, out.toString());
+            Files.writeString(file, VersionedSettings.parse(out.toString()).serialize());
         } catch (IOException | RuntimeException e) {
             Logger.getLogger(Profile.class.getName()).log(Level.WARNING, "Could not save " + file, e);
         }
