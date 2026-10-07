@@ -62,6 +62,9 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
     private Sonic1PlayerArt playerArt;
     private Sonic1RingPlacement ringPlacement;
     private Sonic1RingArt ringArt;
+    private Sonic1LevelAnimationManager levelAnimationManager;
+    private Level levelAnimationLevel;
+    private int levelAnimationZone = -1;
 
     public Sonic1(Rom rom) {
         this.rom = rom;
@@ -286,8 +289,7 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
     @Override
     public AnimatedPatternManager loadAnimatedPatternManager(Level level, int zoneIndex) throws IOException {
         if (level == null) return null;
-        ensureHelpers();
-        return new Sonic1PatternAnimator(romReader, level, zoneIndex);
+        return getOrCreateLevelAnimationManager(level, zoneIndex);
     }
 
     // ===== AnimatedPaletteProvider =====
@@ -295,7 +297,17 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
     @Override
     public AnimatedPaletteManager loadAnimatedPaletteManager(Level level, int zoneIndex) throws IOException {
         if (level == null) return null;
-        return new Sonic1PaletteCycler(level, zoneIndex);
+        return getOrCreateLevelAnimationManager(level, zoneIndex);
+    }
+
+    private Sonic1LevelAnimationManager getOrCreateLevelAnimationManager(Level level, int zoneIndex) throws IOException {
+        if (levelAnimationManager == null || levelAnimationLevel != level || levelAnimationZone != zoneIndex) {
+            ensureHelpers();
+            levelAnimationManager = new Sonic1LevelAnimationManager(romReader, level, zoneIndex);
+            levelAnimationLevel = level;
+            levelAnimationZone = zoneIndex;
+        }
+        return levelAnimationManager;
     }
 
     // ===== Private helpers =====

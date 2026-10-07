@@ -12,6 +12,8 @@ import com.openggf.level.SolidTile;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.palette.PaletteColorStateAdapter;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
@@ -20,9 +22,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @RequiresRom(SonicGame.SONIC_1)
 public class TestSonic1PaletteCyclerLz {
@@ -111,6 +118,63 @@ public class TestSonic1PaletteCyclerLz {
             assertColorMatches(PAL_LZ_CYC2, 12, level.getPalette(3), 11);
             assertColorMatches(PAL_LZ_CYC2, 14, level.getPalette(3), 12);
             assertColorMatches(PAL_LZ_CYC2, 16, level.getPalette(3), 13);
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
+    @Test
+    public void checkpointRestoresBothClockCountersAndPrivateUnderwaterPaletteSurface() {
+        TestEnvironment.activeGameplayMode();
+        try {
+            TestLevel level = new TestLevel();
+            conveyorState.setReversed(true);
+            Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState, testCycleData());
+            var colors = new PaletteColorStateAdapter(() -> level.palettes, () -> null,
+                    GraphicsManager::getInstance);
+            for (int tick = 0; tick < 5; tick++) cycler.update();
+            var clocks = cycler.captureCyclerState();
+            var paletteCheckpoint = colors.capture();
+            List<byte[]> expectedClocksAndUnderwater = new ArrayList<>();
+            List<byte[]> expectedNormal = new ArrayList<>();
+            // More than one waterfall/conveyor period, beginning inside a period.
+            for (int tick = 0; tick < 40; tick++) {
+                cycler.update();
+                expectedClocksAndUnderwater.add(cycler.captureCyclerState());
+                expectedNormal.add(colors.capture().normalRgb());
+            }
+            cycler.restoreCyclerState(clocks);
+            colors.restore(paletteCheckpoint);
+            assertArrayEquals(clocks, cycler.captureCyclerState());
+            for (int tick = 0; tick < 40; tick++) {
+                cycler.update();
+                assertArrayEquals(expectedClocksAndUnderwater.get(tick), cycler.captureCyclerState(),
+                        "Palette clocks and private underwater surface at replay tick " + tick);
+                assertArrayEquals(expectedNormal.get(tick), colors.capture().normalRgb(),
+                        "Normal palette surface at replay tick " + tick);
+            }
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
+    @Test
+    public void invalidCheckpointShapeCannotPartiallyRestoreCounters() {
+        TestEnvironment.activeGameplayMode();
+        try {
+            TestLevel level = new TestLevel();
+            Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState, testCycleData());
+            for (int tick = 0; tick < 9; tick++) cycler.update();
+            byte[] before = cycler.captureCyclerState();
+            byte[] wrongCount = before.clone();
+            ByteBuffer.wrap(wrongCount).putInt(1);
+            byte[] wrongSurface = before.clone();
+            ByteBuffer.wrap(wrongSurface).putInt(4 + 2 * 8, 0);
+            for (byte[] invalid : List.of(new byte[0], wrongCount, wrongSurface,
+                    Arrays.copyOf(before, before.length - 1))) {
+                assertThrows(IllegalArgumentException.class, () -> cycler.restoreCyclerState(invalid));
+                assertArrayEquals(before, cycler.captureCyclerState(), "Rejected restore must retain all owner state");
+            }
         } finally {
             SessionManager.clear();
         }
@@ -245,5 +309,4 @@ public class TestSonic1PaletteCyclerLz {
         }
     }
 }
-
 

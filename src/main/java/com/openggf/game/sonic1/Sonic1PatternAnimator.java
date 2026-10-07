@@ -13,7 +13,9 @@ import com.openggf.data.compression.KosinskiReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -41,11 +43,13 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
 
     private final Level level;
     private final List<AnimHandler> handlers;
+    private final BitSet publishedDestinations = new BitSet();
 
     Sonic1PatternAnimator(RomByteReader reader, Level level, int zoneIndex) {
         this.level = level;
         this.handlers = createHandlers(reader, zoneIndex);
         ensurePatternCapacity();
+        for (AnimHandler handler : handlers) handler.registerDestinations(publishedDestinations);
         primeAll();
     }
 
@@ -323,6 +327,8 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
         void tick(Level level, GraphicsManager gm);
         void prime(Level level, GraphicsManager gm);
         int requiredPatternCount();
+        /** Exact tile destinations this handler can publish, including secondary writes. */
+        void registerDestinations(BitSet destinations);
         /** Returns opaque counter state for rewind snapshot. */
         com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot.HandlerCounter captureCounters();
         /** Restores counters from a rewind snapshot entry. */
@@ -386,6 +392,11 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
         @Override
         public int requiredPatternCount() {
             return destTileIndex + tilesPerFrame;
+        }
+
+        @Override
+        public void registerDestinations(BitSet destinations) {
+            destinations.set(destTileIndex, destTileIndex + tilesPerFrame);
         }
 
         private void applyFrame(Level level, GraphicsManager gm, int srcTileOffset) {
@@ -514,6 +525,12 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
             return Sonic1Constants.ARTTILE_MZ_ANIMATED_MAGMA + DEST_TILE_COUNT;
         }
 
+        @Override
+        public void registerDestinations(BitSet destinations) {
+            destinations.set(Sonic1Constants.ARTTILE_MZ_ANIMATED_MAGMA,
+                    Sonic1Constants.ARTTILE_MZ_ANIMATED_MAGMA + DEST_TILE_COUNT);
+        }
+
         private void applyFrame(Level level, GraphicsManager gm) {
             int sourceFrame = lavaSurfaceAnim != null ? lavaSurfaceAnim.getCurrentFrame() % 3 : 0;
             int frameBase = sourceFrame * FRAME_BYTES;
@@ -636,6 +653,14 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
         public int requiredPatternCount() {
             return Math.max(
                     Sonic1Constants.ARTTILE_GHZ_BIG_FLOWER_1 + TILES_PER_FRAME,
+                    Sonic1Constants.ARTTILE_GHZ_BIG_FLOWER_2 + TILES_PER_FRAME);
+        }
+
+        @Override
+        public void registerDestinations(BitSet destinations) {
+            destinations.set(Sonic1Constants.ARTTILE_GHZ_BIG_FLOWER_1,
+                    Sonic1Constants.ARTTILE_GHZ_BIG_FLOWER_1 + TILES_PER_FRAME);
+            destinations.set(Sonic1Constants.ARTTILE_GHZ_BIG_FLOWER_2,
                     Sonic1Constants.ARTTILE_GHZ_BIG_FLOWER_2 + TILES_PER_FRAME);
         }
 
@@ -763,6 +788,11 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
             return destTileIndex + tilesPerFrame;
         }
 
+        @Override
+        public void registerDestinations(BitSet destinations) {
+            destinations.set(destTileIndex, destTileIndex + tilesPerFrame);
+        }
+
         private void applyFrame(Level level, GraphicsManager gm, int srcTileOffset) {
             int maxPatterns = level.getPatternCount();
             boolean canUpdateTextures = gm.isGlInitialized();
@@ -835,15 +865,62 @@ class Sonic1PatternAnimator implements AnimatedPatternManager,
         return new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot(
                 new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot.ScriptCounter[0],
                 hc,
-                null);
+                capturePublishedPatterns());
     }
 
     @Override
     public void restore(com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot snap) {
+        ByteBuffer publication = validatePublishedPatterns(snap.extra());
         com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot.HandlerCounter[] hc = snap.handlerCounters();
         int restoreCount = Math.min(hc.length, handlers.size());
         for (int i = 0; i < restoreCount; i++) {
             handlers.get(i).restoreCounters(hc[i]);
         }
+        if (publication != null) {
+            GraphicsManager graphics = GameServices.graphics();
+            boolean upload = graphics.isGlInitialized();
+            while (publication.hasRemaining()) {
+                int tile = publication.getInt();
+                Pattern destination = level.getPattern(tile);
+                for (int y = 0; y < Pattern.PATTERN_HEIGHT; y++)
+                    for (int x = 0; x < Pattern.PATTERN_WIDTH; x++)
+                        destination.setPixel(x, y, publication.get());
+                if (upload) graphics.updatePatternTexture(destination, tile);
+            }
+        }
+    }
+
+    private byte[] capturePublishedPatterns() {
+        ByteBuffer out = ByteBuffer.allocate(Integer.BYTES + publishedDestinations.cardinality()
+                * (Integer.BYTES + Pattern.PATTERN_SIZE_IN_MEM));
+        out.putInt(publishedDestinations.cardinality());
+        for (int tile = publishedDestinations.nextSetBit(0); tile >= 0;
+             tile = publishedDestinations.nextSetBit(tile + 1)) {
+            out.putInt(tile);
+            level.getPattern(tile).copyInto(out.array(), out.position());
+            out.position(out.position() + Pattern.PATTERN_SIZE_IN_MEM);
+        }
+        return out.array();
+    }
+
+    private ByteBuffer validatePublishedPatterns(byte[] bytes) {
+        // AniArt timers can still be positive after restore. Keep the actual last
+        // published tiles, rather than advancing/reconstructing a future frame.
+        if (bytes == null) return null; // Older process-local counter-only snapshot.
+        int expectedLength = Integer.BYTES + publishedDestinations.cardinality()
+                * (Integer.BYTES + Pattern.PATTERN_SIZE_IN_MEM);
+        if (bytes.length != expectedLength)
+            throw new IllegalArgumentException("Invalid S1 animated pattern publication shape");
+        ByteBuffer in = ByteBuffer.wrap(bytes);
+        if (in.getInt() != publishedDestinations.cardinality())
+            throw new IllegalArgumentException("Invalid S1 animated pattern publication count");
+        for (int tile = publishedDestinations.nextSetBit(0); tile >= 0;
+             tile = publishedDestinations.nextSetBit(tile + 1)) {
+            if (in.getInt() != tile)
+                throw new IllegalArgumentException("Invalid S1 animated pattern publication destination");
+            in.position(in.position() + Pattern.PATTERN_SIZE_IN_MEM);
+        }
+        in.position(Integer.BYTES);
+        return in;
     }
 }

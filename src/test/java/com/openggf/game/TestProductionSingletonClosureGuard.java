@@ -224,7 +224,10 @@ public class TestProductionSingletonClosureGuard {
             "com/openggf/tools/TraceBenchmarkTool.java",
             // next's FBZ visual-capture harness is the same kind of headless
             // composition root as the trace CLI tools above.
-            "com/openggf/tools/fbzvisual/HiddenGlCaptureSession.java"
+            "com/openggf/tools/fbzvisual/HiddenGlCaptureSession.java",
+            // A challenge worker is the process composition root for exactly
+            // one world. Each host member runs in its own isolated JVM.
+            "com/openggf/tools/challenge/WorkerGameSession.java"
     );
 
     @Test

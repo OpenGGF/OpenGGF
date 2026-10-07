@@ -1234,3 +1234,26 @@ A seamless reload's current-bound and target-bound overrides are separate. AIZ's
 `AIZ1BGE_Finish` writes a fixed X lock of `$10/$10`, and `Do_ResizeEvents` eases
 only max Y. Pin the engine's X targets too, or the loaded defaults move the lock
 on the next tick (S3K trace campaign, 2026-10-03).
+
+### Palette colours and palette clocks are separate rewind owners
+
+Restoring the live palette surface cannot restore the timer and frame that will
+write its next colour. Sonic 1's pattern-only animation snapshot omitted those
+palette clocks; a normal controlled GHZ checkpoint replay immediately diverged
+in full GPU RGBA while its native positions and pre-focus PCM matched. The
+combined level animation owner now captures the exact cycle counters in the
+existing `pattern-animator` entry, retaining pattern-then-palette forward order.
+Labyrinth's cycler also retains a private underwater palette array separately
+from the water system, so capture that actual surface as well as its counters.
+Use complete GPU, producer PCM and per-owner registry comparisons together;
+position-only or palette-colour-only checks cannot prove visual replay.
+
+Animation counters and published tiles likewise differ. The S1 handler counters
+point to the next update; positive timers leave the previous tiles visible.
+Restoring counters alone retained future GHZ flower pixels for four replay
+frames, even though every registered owner compared equal. A 36-tick interval
+happened to end on matching art, while a 12-tick interval exposed the omission.
+Retain the actual published tiles for each handler's destinations and upload
+those same bytes on restore, without ticking an animation or re-priming it.
+Check more than one interval and compare pixels immediately after restore;
+a cycle-aligned green comparison does not establish surface restoration.
