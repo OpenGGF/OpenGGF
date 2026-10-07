@@ -67,6 +67,12 @@ Edit a source/PNG, run the same build again, and validate the new jar. Do not po
 converter outputs at authored source files: converters intentionally never clobber.
 The authoritative distributable is the `*-mod.jar` produced by `ggfmod package`.
 
+For a worked campaign, the kit's `examples/tide-circuit` contains two hosted acts,
+all original binary assets and their reproducible Python generator. Follow its
+portable README and the [two-act campaign guide](guides/two-act-campaign.md).
+Compile/package without a ROM; playing requires your own Sonic 2 World REV01 ROM.
+This maintained example complements the seven starter purposes.
+
 Launch the project's exploded `target/classes` with `ggfmod run`. This snapshots
 and trusts only that development mod for that launch; edit/build/restart to iterate.
 It does not overwrite installed-mod settings. Configure your own ROM paths in the

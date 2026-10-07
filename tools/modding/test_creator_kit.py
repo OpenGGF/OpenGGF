@@ -24,7 +24,25 @@ class CreatorKitTest(unittest.TestCase):
         (self.root / "tools/modding/build_project.py").write_text("# launcher")
         (self.root / "pom.xml").write_text('<project xmlns="http://maven.apache.org/POM/4.0.0"><version>0.7.prerelease</version></project>')
         (self.root / "mod-api-release-policy.properties").write_text("currentApi=0.7.0\ncurrentStatus=candidate\n")
+        self.campaign()
         self.artifacts()
+
+    def campaign(self):
+        project = self.root / kit.CAMPAIGN_SOURCE
+        for relative, data in {"README.md": "[guide](../../../../../../docs/modding/guides/two-act-campaign.md)\n",
+                               "tools/generate_assets.py": "# original reproducible fixture generator\n",
+                               "src/main/java/example/tide/TideCircuitMod.java": "// original campaign fixture\n",
+                               "src/main/resources/META-INF/openggf-mod.yaml": "id: sample-tide-circuit\nbaseGame: s2\n"}.items():
+            path = project / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(data)
+        for act in (1, 2):
+            folder = project / f"src/main/resources/levels/tide/act{act}"
+            folder.mkdir(parents=True)
+            assets = {name.removesuffix(".bin"): name for name in sorted(kit.CAMPAIGN_ASSETS)}
+            (folder / "level.json").write_text(json.dumps({"assets": assets}))
+            for name in kit.CAMPAIGN_ASSETS:
+                (folder / name).write_bytes((str(act) + name).encode())
 
     def artifacts(self, commit="abcdef123", dirty=False):
         identity = f"app.baseVersion=0.7.prerelease\napp.commit={commit}\napp.dirty={str(dirty).lower()}\n"
@@ -165,6 +183,38 @@ class CreatorKitTest(unittest.TestCase):
                             "--run --s3k /absolute/own-s3k.gen", "target/play"):
             self.assertIn(instruction, readme)
         self.assertTrue(readme.endswith(original))
+
+    def test_campaign_export_contains_all_original_assets_generator_and_local_guide_links(self):
+        guide = self.root / "docs/modding/guides/two-act-campaign.md"
+        guide.parent.mkdir(parents=True)
+        guide.write_text("[complete campaign](../../../src/test/resources/mods/sample-two-act-campaign-src/project/)\n")
+        entries = kit.collect(self.root, "abcdef123456")
+        prefix = "examples/tide-circuit/"
+        assets = [name for name in entries if name.startswith(prefix) and name.endswith(".bin")]
+        self.assertEqual(22, len(assets))
+        for name in assets:
+            source = self.root / kit.CAMPAIGN_SOURCE / name.removeprefix(prefix)
+            self.assertEqual(source.read_bytes(), entries[name])
+        self.assertIn(prefix + "tools/generate_assets.py", entries)
+        pom = entries[prefix + "pom.xml"]
+        self.assertIn(b"<artifactId>tide-circuit</artifactId>", pom)
+        self.assertIn(b"maven-compiler-plugin</artifactId><version>3.14.0", pom)
+        self.assertNotIn(b"published-openggf", pom)
+        self.assertIn(b"--run --s2 /absolute/own-s2.gen", entries[prefix + "README.md"])
+        self.assertIn(b"../../handbook/guides/two-act-campaign.md", entries[prefix + "README.md"])
+        self.assertIn(b"../../examples/tide-circuit/README.md", entries["handbook/guides/two-act-campaign.md"])
+
+    def test_campaign_export_fails_on_missing_generated_source_assets_or_generator(self):
+        project = self.root / kit.CAMPAIGN_SOURCE
+        asset = project / "src/main/resources/levels/tide/act2/patterns.bin"
+        payload = asset.read_bytes()
+        asset.unlink()
+        with self.assertRaisesRegex(ValueError, "Missing maintained campaign asset.*act2/patterns.bin"):
+            kit.export_examples(self.root)
+        asset.write_bytes(payload)
+        (project / "tools/generate_assets.py").unlink()
+        with self.assertRaisesRegex(ValueError, "Missing maintained campaign source input.*generate_assets.py"):
+            kit.export_examples(self.root)
 
     def test_portable_build_refuses_wrong_testkit_identity_before_compiling(self):
         engine = self.root / "target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar"

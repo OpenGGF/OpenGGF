@@ -71,14 +71,14 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
   Industrial Action: defend Robotnik's base door from 15 waves of unionised
   Flickies with six ROM-drawn badnik defenses, upgrades, repair and an emergency
   bomb. An S3K mod scene with mouse/pad controls and saved records; not one of the
-  eight maintained gallery samples.
+  nine maintained gallery samples.
 
-- [Sonic Survivors](../../examples/sonic-survivors/README.md) — a separate Sonic 2 survivors roguelike: walled arenas cut from each route act, ROM-art badniks with hitpoints, a bounce combo, level-up cards, zone bosses, a route with act choice and saved meta-progression, all through the existing code-patch API. Not part of the eight maintained gallery samples.
+- [Sonic Survivors](../../examples/sonic-survivors/README.md) — a separate Sonic 2 survivors roguelike: walled arenas cut from each route act, ROM-art badniks with hitpoints, a bounce combo, level-up cards, zone bosses, a route with act choice and saved meta-progression, all through the existing code-patch API. Not part of the nine maintained gallery samples.
 
 - [Slay the Robotnik](../../examples/slay-the-robotnik/README.md) — a Slay the Spire-style deck-building roguelike on Sonic 3 & Knuckles, built as a mod scene: three heroes, four acts of zone maps, ROM-drawn badniks and bosses, events, shops and relics.
-- [Infinite Sonic](../../examples/infinite-sonic/README.md) — a separate endless Sonic 1 project with terrain-aware ground/flying encounters using ROM-derived sections, seeded world recycling and the existing code-patch API. Not part of the eight maintained gallery samples.
+- [Infinite Sonic](../../examples/infinite-sonic/README.md) — a separate endless Sonic 1 project with terrain-aware ground/flying encounters using ROM-derived sections, seeded world recycling and the existing code-patch API. Not part of the nine maintained gallery samples.
 
-- [Putt Putt Paradise](../../examples/putt-putt-paradise/README.md) — Sonic 2 Mini Golf using ROM-backed Emerald Hill courses, timed charges, independent alternating golfers, and host-authoritative direct TCP play. An external candidate-API project, not one of the eight maintained gallery samples.
+- [Putt Putt Paradise](../../examples/putt-putt-paradise/README.md) — Sonic 2 Mini Golf using ROM-backed Emerald Hill courses, timed charges, independent alternating golfers, and host-authoritative direct TCP play. An external candidate-API project, not one of the nine maintained gallery samples.
 - [Sitar Hero](../../examples/sitar-hero/README.md) — arcade rhythm with three ROM-backed songs, cross-game cosmetic performers, five-fret instruments and direct-hit bongos. Demonstrates mixed-ROM startup scenes, timestamped remappable input and consumed-sample music timing.
 
 ## Reference
@@ -101,7 +101,7 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 - [Deferred-backlog decisions](BACKLOG.md)
 - [GUI tooling evaluation](GUI_TOOLING_EVALUATION.md)
 
-The eight sample sources are built by the default test suite. Treat them as
+The nine sample sources are built by the default test suite. Treat them as
 executable contracts rather than snippets copied out of context.
 
 Custom game modules can opt into faster interactive gameplay with
