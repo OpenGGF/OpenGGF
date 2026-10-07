@@ -21,6 +21,35 @@ This is Sonic-with-CPU-Tails route coverage, not full level certification or tra
 | Arena trigger boundaries | `TestHczMinibossRomParity` | Initial camera window and horizontal admission checked on both sides at all five widths, retaining vertical-gate independence and native world-bound writes. |
 | PRESENT / ORACLE | Separate trace/native lanes | No pixels/audio or trace comparison is claimed. |
 
+## Stock trace handoff verification — 2026-10-07
+
+The [continued stock audit](../../audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
+keeps strict trace parity separate from the ordinary routes above. A temporary
+probe found an ordinary player pass on input 53,607, before the advertised
+HCZ window at input 53,608. Moving comparison attachment earlier was rejected
+because it would bind the wrong input. The candidate uses the existing shared-gap
+owner for that unrepresented row and retains comparison of every advertised row.
+
+The executed candidate's final focused startup/gap selection passes 66 tests with no
+failures, errors or skips. The complete chain compares all 3,574 HCZ rows and
+moves the first mismatch from row zero's fractional Y to row 653's Tails Y,
+reducing 32,343 errors to 563. A standalone HCZ replay independently reports the
+same first mismatch; its one compressed mismatch entry spans 75 rows, rather
+than proving that only one row differs. The giant-ring exit remains missed.
+The final guard forbids suppressed gap stepping at the advertised input
+boundary, with a real-ROM denied-admission regression that leaves the cursor,
+physics and level clock unchanged. Local commit `45c6eed2d6e3` retains the same
+563-error profile after that guard. The subsequent raw-controller bar correction
+(`b3eff6209ed9`) passes 75 focused cases with all mandatory startup controls;
+standalone HCZ has zero compared errors. The chain removes exactly the 75 early
+Tails-Y observations and retains 488 errors (402 physics, 86 animation), with
+the first animation difference at row 3,531 and first physics difference at
+row 3,532 primary X `1457/1452`. The native giant ring captures Sonic while the
+engine lacks that ring; the collected-ring mask's native save boundary is under
+investigation. All 3,574 rows and 55 lag rows remain accounted for. Combined
+delivery qualification remains open. No broader
+viewport, donor, character/team, native-pixel or audio coverage is inferred.
+
 ## Route construction and rejected approaches
 
 Task `route-green-20260914`, pinned integration base `f1843f54a1`; isolated

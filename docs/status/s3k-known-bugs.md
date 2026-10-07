@@ -14,6 +14,27 @@ For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 > for durable bug explanations, but check the frontier log before treating an old AIZ/CNZ frame
 > entry as the next live blocker.
 
+**Current verification, 2026-10-07:** the [continued stock audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
+records executed local candidates, not completed delivery. The HCZ run-chain
+startup correction is confined to admission of an unrepresented input gap;
+production physics is unchanged. Its measured candidate compares all 3,574
+rows, reduces 32,343 errors to 563 and first diverges at row 653 in Tails Y;
+the giant-ring exit is still missed. The final admission-boundary guard passes
+66 focused cases and retains that same complete chain profile. A following
+raw-controller bar correction passes 75 focused/control cases and clears the
+standalone HCZ replay; the chain retains 488 late mismatches, first animation
+at row 3,531 and first physics at row 3,532 primary X. Native giant-ring capture
+is absent in the engine; the native collected-ring mask reset is being checked.
+The FBZ → SOZ
+repair passes 125 focused cases, including twelve pending-shield regressions,
+the full destination restore and both unchanged eight-frame replay cycles.
+A completed probe attributed the earlier one-step dynamic-art mismatch to
+stale fresh-level boundary state after rewind; the existing transition adapter
+now captures that owner and clears stale state at the load floor. Positive
+pending-state restoration and combined integration qualification remain
+pending. These local checks do not certify the whole route or load/rewind
+breadth.
+
 Entries should include:
 - **Location** — the file(s) where the bug lives, if known
 - **Symptom** — what goes wrong and where you can observe it (test name, trace frame, manual repro)

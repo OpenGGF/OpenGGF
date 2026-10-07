@@ -112,6 +112,27 @@ owned process and follow its `/proc/<pid>/fd/1` descriptor with a bounded
 `tail --pid` follower; record and clean up that follower. Log recovery and queue
 admission are not test completion.
 
+A bootstrap module switch is not a live-world fixture switch (2026-10-07,
+pending insta-shield rewind regression): `TestEnvironment.resetAll` had already
+opened an S2 world. Setting `GameModuleRegistry` to S3K changed the default while
+status/controller refresh continued to read the live S2 module. An expected red
+case passed and the registered-shield control failed. Use
+`TestEnvironment.configureGameModuleFixture` for the intended live world, verify
+the positive control, and discard the mixed result before attributing behavior.
+
+A complete registry restore can still omit a scheduling owner (2026-10-07,
+FBZ → SOZ destination floor): pending shield restoration exposed five art clocks
+one step higher after an otherwise matching eight-row replay. A read-only retry
+probe showed no setup-only retry or fade; the original first row published a
+pending fresh-level boundary without claiming a closure, whereas its replay
+ran ordinary work. The deferred boundary was absent from registry capture.
+The load reporter captures floor zero before the controller assigns its pending
+assembly, so restoring that floor must clear stale pending state; explicit later
+captures must retain their complete deferred state and publication phase.
+Inspect the first actual dispatch and its ownership before compensating clocks
+or blaming driver counters. Capture the complete deferred state through its
+existing production owner; keep the floor and full forward comparison intact.
+
 A macOS native-test stall can be AWT rather than gameplay (2026-10-06,
 `1ae1596837`): the ordinary suite stopped producing output in
 `TestObjectControlledGravity` after earlier rendering/example tests. Java attach timed out;

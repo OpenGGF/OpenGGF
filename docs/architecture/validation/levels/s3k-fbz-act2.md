@@ -74,7 +74,7 @@ See [Act 1](s3k-fbz-act1.md) for shared transition and visual-tooling evidence.
 | CHECKPOINT / DEATH | `TestFbzCheckpointRoutes#everyNativeTeamDeathReloadsAtEverySupportedCheckpoint`: Act 2 posts 1–6 × four native teams, saved authored checkpoint followed by production death/respawn; inventory checks exact ROM placements | Physical checkpoint activation, required donor/width lifecycle breadth and repeated restart/timeline spots not established by this saved-state setup |
 | REWIND: bosses | `TestFbzBossGraphRewind#act2LaserSubbossGraphRoundTripsAndReplaysDeterministically`, `bossCloudExitAndCapsuleGraphsRoundTripAndReplayDeterministically`; `TestFbzEndBossRewind#restoredGraphForwardReplayMatchesUninterruptedReplay`; `TestFbz2SubbossRewind#forcedReconstructionAtRawBeamCallbackPreservesOneShotRumbleAndExplosionAllocation` | Map before creation, active attacks, hit/phase, killing hit and cleanup individually, including all relevant player/control and child identities |
 | REWIND: world/events | `TestFbzEventRewindRoundTrip#act2ActiveLayoutAndBackgroundRedrawWordsRoundTripThroughRuntimeOwner`; `TestFbzAct2RomRuntimeLifecycle#activeRedrawRestoresExactRetainedPlaneAndProgressThroughProductionReconcile` | Require before/active/after reversal, camera locks/release and collision-plane reconciliation; field roundtrip alone is not every forward-replay boundary |
-| REWIND: interactions/load | `TestFbzSqueezeOrdinaryRoll#productionRegistryRestoresAndReplaysTheLocalCrossing` now passes before-entry, active-car and after-exit spots with two replay cycles; shared object/environment graph tests and `TestFbzActTransitionHeadless#realLiveRewindCannotCrossResultsReloadButCanSeekInsideAct2Segment` | `TestFbzSandopolisTimelineHeadless#productionExitResetsTimelineAndFreshDestinationRestoresAndReplaysTwice` passes the seeded local EXIT_READY → real boss request → GameLoop fade/load boundary: fresh LEVEL_LOAD resets frame zero, excludes outgoing FBZ history, and fresh SOZ registered state passes two restore/eight-frame replay cycles. This is native-width Sonic solo lifecycle evidence; held/riding/release and donor/width breadth remain open |
+| REWIND: interactions/load | `TestFbzSqueezeOrdinaryRoll#productionRegistryRestoresAndReplaysTheLocalCrossing` now passes before-entry, active-car and after-exit spots with two replay cycles; shared object/environment graph tests and `TestFbzActTransitionHeadless#realLiveRewindCannotCrossResultsReloadButCanSeekInsideAct2Segment` | The 2026-10-07 ordinary recheck reproduced a pending insta-shield registration mismatch at the fresh SOZ floor. The repaired candidate passes 125 focused cases, including all twelve shield regressions and the unchanged `TestFbzSandopolisTimelineHeadless#productionExitResetsTimelineAndFreshDestinationRestoresAndReplaysTwice` with both complete eight-frame forward cycles. The transition adapter clears stale deferred boundary state at frame zero; a separate positive pending-state regression and combined integration qualification remain pending in the [stock audit](../../audits/2026-10-07-stock-parity-gap-verification.md). Native-width Sonic solo does not cover held/riding/release or donor/width breadth |
 | PRESENT | `TestFbzBossPlaneRenderMode`, `TestFbzBossCloudDeform`, `TestFbzEndBossAudioAndPlc`, `TestFbz2SubbossArtHandoff`, `TestFbzPlcArtHandoffs` | Missing accepted native/engine checkpoint pairs and named comparisons: outdoor boundary, subboss, carrier/reversal, end boss, exit/capsule and time series. Compatibility capture remains rejected |
 | ORACLE / ROUTE | `TestS3kFbzCompleteRunTraceReplay`, ROM disassembly-owned branch/clock contracts and complete compatibility route helper | Trace parity remains red; the completion record supersedes the inherited 5,666-error baseline with measured frontier advances. Do not reuse historical July near-green results or call route-controller progress parity |
 
@@ -124,6 +124,22 @@ cannot return. The fresh destination's complete registered snapshots compare
 through two restore/eight-frame forward cycles, excluding only existing
 nonsemantic CoW epoch/render-bucket dirtiness/peak-slot telemetry. No SOZ route,
 visual, donor/width or full FBZ boss/capsule completion claim is added.
+
+Current qualification (2026-10-07): that historical pass is superseded for
+destination restore/replay by the completed ordinary recheck at `945b74e999c`
+(engine source identical to the continued swarm's `5b3a636` pin). The method
+fails `SOZ restore cycle 0` with `sprites.instaShieldRegistered` false → true.
+The first candidate at `2fc65c8` passes the destination restore, then differs
+by one step in five dynamic-art clocks during forward cycle zero. A completed
+dispatch probe attributes that mismatch to stale fresh-level boundary state
+after rewind. Capturing that owner through the existing transition adapter
+clears the stale boundary at the frame-zero floor, which is captured before the
+fresh load assigns its deferred assembly. The repaired candidate completes
+125 focused cases with zero failures, errors or skips, including the unchanged
+full test and both eight-frame replay cycles. This is local lifecycle evidence;
+positive pending-state restoration and combined delivery qualification remain
+pending. The [stock audit](../../audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
+owns the commands, baseline qualification and continuation state.
 
 
 Entry/reload/reset follow-up (2026-09-14, `15976fff2` plus the standalone test):

@@ -392,3 +392,310 @@ deleted (exit 0); no unrelated run was acknowledged or logs archived.
 
 These are evidence-backed follow-ups, not claims that all remaining entries have
 been freshly reproduced or that this swarm certifies whole-game completion.
+
+## Continued swarm from the delivered base
+
+The user requested continued work after the first delivery. The second round
+pins `5b3a63641033506fc0d89ad5188a0c97fae29089` on the unchanged main-workspace
+`develop` branch. Fetch and fast-forward pull completed with no incoming changes.
+Three saved Sol workers are reused in new isolated worktrees for S1 campaign
+art/MZ2 exit, S2 EHZ coconut damage and S3K HCZ startup/handoff. The coordinator
+independently investigates the inherited FBZ → SOZ rewind registration failure.
+Shared runtime owners are assigned explicitly before edits; centralized release,
+frontier and coverage prose remain coordinator-owned.
+
+The complete `945b74e999c` → pinned-base engine Java, Java tests, POM, hooks and
+category-runner diff is empty. The prior completed 26,166-test ordinary lane
+therefore remains the engine baseline; the full guard source also matches the
+completed `9583f2447` profile. Each target still receives a fresh matched replay
+or regression baseline. The actual Java 21 / Lua 5.4 / PowerShell preflight
+passed in the new integration worktree, and all three root ROM identities were
+reverified before their absolute paths were assigned to the workers.
+
+During the queue wait, another authorized delivery advanced main `develop` to
+`4cfb745646d9439cdb9c07d53d0670dd0fb3fe58`, followed by
+`2fc65c8479570f16ebd9830115485ee369c2b1e6`. Its shared changes add an opt-out
+invincibility-expiry music rule, enabled for all three stock games, and update the
+unpublished Mod API signature pin alongside Sonic Survivors. The later change
+optimizes the Infinite Sonic test driver and adds memory-investigation tooling;
+its complete engine Java/POM/hooks/category-selection diff from `4cfb745` is
+empty. The target baselines remain frozen at `5b3a636`; the earlier exact
+source-equivalence qualification applies to that pin, not the updated destination.
+Main and the original integration worktree were fast-forwarded without changing
+their branches. The candidate player change was reconciled with the upstream
+music gate; six other candidate files survived byte-for-byte. A temporary owned
+Git ref protected the transfer and was removed after verification. The actual
+destination still requires qualification before delivery.
+
+A separate authorized owner completed a fresh matched engine baseline at clean
+`4cfb745646d9439cdb9c07d53d0670dd0fb3fe58`, run
+`20261007T180233Z-d9b56478`, with
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 4cfb745646d9439cdb9c07d53d0670dd0fb3fe58 --category all --max-minutes 120 --run`.
+The normal ordinary command used all three verified absolute ROM paths: 3,007
+selected classes, 3,005 XML suites, **26,222 tests / 28 failures / zero errors /
+62 skips**, 5,157.73 seconds. Fresh guards completed 86 XML suites and **672
+passes**, zero failures/errors/skips, 221.57 seconds. Before raw XML cleanup the
+coordinator independently inspected every failure's complete first assertion
+line: 27 match the earlier baseline literally; the full SSZ line matches after
+only the already-verified blob-hash normalization. All 61 earlier skip identities
+and first-line reasons match the owner's retained summary; the additional skip
+is `TestSonicSurvivors#balanceProbe`, an opt-in diagnostic. No ROM skips or omitted
+entries were reported. The owner consumed and acknowledged only its own run;
+no logs were copied or archived by this task.
+
+This baseline is source-qualified for the unchanged engine and failing tests
+through `2fc65c8`; its Infinite Sonic fixture is the older variant. The new
+cache/eviction/reload equivalence request was cancelled before admission to
+consolidate final validation and release the assembly source freeze; it produced
+no test verdict. The final ordinary candidate must execute the complete updated
+fixture, including that regression. A separately owned, still-running Sitar
+candidate at `53a742c58425209b5cce35ea30bcd80c37e8fc43`, run
+`20261007T195912Z-7068993c`, subsequently supplied fresh Linux class evidence:
+238 cases, 206 passes, zero failures/errors and 32 skips. The coordinator
+independently compared the class source byte-for-byte with this assembly
+(SHA-256 `c0d8c7db1a859085e2f874b3ed900258125197447e1135f1cbc996ff7e8a3474`),
+checked the new driver-observation case has no failure/error/skip and matched
+all 32 skip identities/first-line reasons literally against the fresh baseline.
+This closes the separate fixture/platform qualification; it does not certify
+either whole candidate suite. The later main
+`37a57ebdb` changes only diagnostic cleanup locking, its Python tests and prose;
+its full engine Java/Java-test/POM/hooks/selection-policy diff from `2fc65c8` is
+empty. The isolated delivery branch was fast-forwarded to that update, then
+merged local S1 and Coconuts commits as `c4d52d7f1` and `5ab049ec8`, with no
+conflicts and byte-identical production paths compared with the frozen staging
+tree. The final HCZ harness commit was then merged without conflicts as
+`08a2446947fa2a70b3a768952a9f0147c248a09c`. This is worktree assembly;
+the continued round is not integrated into main
+or pushed, and current tooling still receives final fresh guards.
+
+Initial source candidates are bounded and remain hypotheses until executed
+evidence confirms their path: Coconuts selects P1 rather than the ROM's nearest
+player; the production results-transition overload runs a player warm-up that
+its simpler overload explicitly defers; the rewind post-restore power-up callback
+forces a captured pending insta-shield into registered state. HCZ's existing
+fresh-load admission/initial Process_Sprites boundary needs clock and dispatch
+measurement before attributing its row-0 fractional Y mismatch.
+
+Fresh trace and focused regression requests use the shared Maven queue. Waiting
+requests are not measurements, and no heap/profile override or unrelated job
+cancellation is used to accelerate this round. Candidate fixes and completed
+results will be recorded here after inspection.
+
+The duplicate focused FBZ → SOZ baseline request returned exit 130 with
+"Maven request cancelled; validation is incomplete" at 17:40 UTC, before
+execution and without a `target/` directory. The coordinator did not cancel it;
+the signal's source is unknown. The completed ordinary lane already measured
+the exact failure on engine source identical to `5b3a636`, so no duplicate is
+resubmitted. Other owners' requests, processes and diagnostics remain untouched.
+
+### Candidate preparation while measurements wait
+
+An older ordinary memory diagnostic reported another 45–105 minutes of expected
+execution on 2026-10-07. A fifth owned worktree, based on the same pinned commit,
+therefore held candidate source separately from the four frozen test worktrees.
+This preserved the queued baseline and red-regression source while permitting
+implementation and bounded independent review. Once the root regression proof
+completed, the original integration tree was returned to clean updated-base
+production/test source, and the staging tree was frozen for candidate verification.
+
+The S1 candidate removes the early warm-up from the production five-argument
+results entry and arms the existing art hold only after the real release prelude.
+Review exposed `preMainLoopHoldBoundaryRow` as missing from the service's captured
+state; a regression arms a later hold, restores the earlier one, and releases it
+without destination admission. The candidate adds that field to capture/restore.
+The S1 changes are locally committed as `0268a6eef7b69b108d1ddc69170115eb36579ad2`.
+Its 36-case focused regression selection changed from three intended failures to
+zero failures, errors or skips. The canonical full chain still stops at segment
+12, but segment 8's 6,525 errors become zero and the first two native art-gap
+movie rows align exactly. Segment 7 is **MZ1**, not GHZ3; its remaining animation
+frontier is row 4. Segment 12 retains a row-87 X-speed difference. These are
+partial improvements, not a completed campaign. A bounded source check finds
+no independent air-drag or roll-lock defect in the saved MZ2 row: positive
+`y_speed=$03A8` correctly skips native drag, and status `$06` does not set the
+roll-jump lock. The `$18` X-speed and `$1800` subpixel deltas are consistent with
+one extra Right-held acceleration. The verified shared-gap helper is merged into
+the S1 lane at `9b8052b8fe8f24bb38f745298fb5a55551fa5fbe`; its matched campaign
+replay completes three tests with one failure and zero errors/skips in
+41.531 seconds. All compared segment totals and first errors remain unchanged:
+MZ1 segment 7 has 5,466 errors, MZ2 segment 12 has 196,129, and the same three
+art-gap failures remain. The prefix's two tests pass. No movement edit follows
+from that unchanged result alone.
+
+The S2 change, locally committed as `8dba700f3a63379bef95b024194d6e2224d1a390`,
+uses the existing native P1/P2 signed-word nearest query and the literal unsigned
+`$60`/`$C0` window, preserving the supplied-player fallback for direct object
+tests without injected services. Its four-case regression selection changes
+from two intended failures to zero failures, errors or skips. EHZ1 segment 1's
+8,176 errors, the full/prefix opening's 42,538 errors and SS1's 15,713 art errors
+all become zero. The complete-emerald prefix passes; existing EHZ1 segment 2 and
+special stages 2/5/6 remain green. The full chain advances from segment 1 to
+segment 17 and remains red. Newly reachable CPZ/ARZ/SS7 errors are not labelled
+regressions without a matched baseline. A standalone CPZ1 replay independently
+reproduces row 4,394's local tube timing difference, so it is not explained solely
+by the earlier special-stage return gap.
+
+The follow-up reproduces the native two-`DIVS` 8.8 duration word and byte
+countdown, including a legal zero-duration waypoint. The independently decoded
+`word_22B40` path moves from relative `$D4,$6C` to `$DB,$68`: at native speed
+`$800`, its duration word is `$00E0`, whose high byte is zero. Clamping it to one
+adds a movement dispatch, yielding the observed first row-4,394 X `$255C`
+instead of `$255B` and Y speed `-$492` instead of the next segment's `-$600`.
+The completed ten-fixture trace selection reports one chain assertion failure,
+zero errors/skips: standalone CPZ1's 5,318 errors and chain CPZ1/CPZ2's
+26,735/15,553 errors all become zero; both CPZ2 standalone fixtures also pass.
+EHZ, prefix and stages 2/5/6 remain green. ARZ row 1,961 and SS7 art remain
+unchanged, as does the earlier return-gap clock disagreement. The arithmetic
+regressions pass, but a new rewind unit case initially omitted the required
+identity-table capture context. After repairing that fixture, the unchanged
+production candidate passes all seven focused cases with zero failures,
+errors or skips. The qualified correction and mirrored routine pitfall are
+committed as `e87d41553eac5b2844599c5f06c5aa4f9d0c3392`, then merged locally
+into the combined tree as `68193f731a47c40f536394aa4930ce5b54734fc3`.
+
+A temporary HCZ dispatch probe identified the first
+ordinary physics pass at input 53,607, before the advertised destination input
+window at 53,608; comparator attachment then labelled the next pass as row 0.
+Attaching the comparator earlier was rejected because it would compare the wrong
+input. The existing shared-gap owner suppresses destination physics while crossing
+that pre-window input row. A real-ROM regression fails against the old raw-step
+helper and verifies unchanged clocks/physics during the gap, then the native first
+ordinary pass (`Y=$0020`, fractional Y `$0000`, speed `$0038`). The harness
+candidate reduces HCZ's 32,343 errors to 563 and moves its first error from row 0
+to row 653, retaining all 3,574 compared rows, zero warnings and unchanged earlier
+segments. The giant-ring exit remains missed. The final strict admission guard
+rejects denied admission at the advertised offset before a suppressed gap step
+can consume that row. Commit `45c6eed2d6e3a85442cd42e12b2c74c347ec9c8d` passes
+66 focused cases, zero failures/errors/skips, including both real-ROM gap cases
+and all four mandatory S3K controls. Its final matched chain preserves exactly
+the same 563-error profile: 477 physics, 86 animation, first row 653 Tails Y
+`$0585/$0586`, all 3,574 rows, 55 lag rows, zero warnings/bootstrap errors.
+The matched S1 helper replay retains its exact earlier frontiers; S2
+qualification of the shared test helper is still required.
+A bounded read-only investigation independently localizes the first HCZ Tails
+Y difference to a bar-input discrepancy: native vertical/horizontal checks read
+raw `(Ctrl_2)` at `sonic3k.asm:42788/42952`, whereas Java reads synthesized CPU
+directions. At row 653 P2 is neutral and CPU logical Down is set; integer Y alone
+becomes `$0585/$0586`, with matching fractions, speed, status and animation.
+The object-only correction uses the existing raw-controller API. Both new
+axis cases fail against the old object, then the candidate passes 75 focused
+cases with zero failures, errors or skips, including all four mandatory S3K
+startup controls. Standalone HCZ becomes fully green on its compared surface;
+the matched chain removes exactly 75 Y observations and retains 488 errors
+(402 physics, 86 animation). Its first animation difference is row 3,531;
+its first physics difference is row 3,532 primary X `1457/1452`. All 3,574
+rows still complete, with 55 lag rows and zero warnings/bootstrap errors;
+the earlier AIZ profiles remain unchanged and the giant-ring exit remains
+missed. Commit `b3eff6209ed90d42f88b0264b15f4d8d841e852a` is merged locally as
+`efb8713739b72bceabac549cc6daf30277a7c846`. The bar-state restore regression
+does not supply whole-world replay or missing auxiliary-schema coverage.
+A subsequent read-only check shows the native giant ring captures Sonic at
+row 3,531 while the engine has no corresponding nearby ring. AIZ and HCZ reuse
+collected-ring bit one; the native full `SaveGame` clears this mask even in
+No Save mode, whereas Java currently requests persistence alone. The verified
+locked-on ROM bytes at `$C4CC` are `42B8 FF92 4E75` (`CLR.L $FF92; RTS`).
+Runtime mask evidence is still being collected before changing that owner.
+Level reloads, seamless act changes and generic persistence requests are not
+equivalent native clear boundaries.
+
+The initial shield proposal preserved the captured registration flag but only
+invalidated the surviving handle's art. It was rejected during source review:
+ObjectManager intentionally drops abandoned future objects without destroying
+them, leaving a later attack cursor and slot in a still-pending player handle.
+The replacement candidate captures an unregistered handle through the existing
+`ObjectSubclassRewindExtra` value extension; registered handles remain owned by
+ObjectManager. A real-handle/manager regression covers both surviving and destroyed
+future handles, exact pending state, absence from the restored manager and next-tick
+registration. The public immediate rebuild helper and snapshot/handle signatures
+remain unchanged. The existing FBZ → SOZ test must still verify two destination
+restores and two eight-frame forward replays; its seeded EXIT_READY boundary does
+not certify the incoming full boss/capsule route.
+
+The root's first new-test attempt failed compilation, so it measured no behavior.
+The next attempt changed the bootstrap module while leaving an already-open S2
+world active; its mixed red/control results were rejected. Using
+`TestEnvironment.configureGameModuleFixture` supplies the live S3K world. The
+corrected unchanged-production run completed at 2026-10-07 18:05:46 UTC with 12
+tests, four intended failures, zero errors/skips and a passing registered-shield
+control. The updated-base candidate selection includes those tests, the real
+FBZ/SOZ forward replays, persistent visual-rebuild controls and all four mandatory
+S3K startup classes. The completed focused command at updated destination
+`2fc65c8479570f16ebd9830115485ee369c2b1e6` was
+`DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestAbstractPlayableSpriteRewindCapture,TestAuxiliaryDynamicPowerUps,TestFbzActTransitionHeadless,TestFbzSandopolisTimelineHeadless,TestFbzToSandopolisTransition,TestS3kAiz1SkipHeadless,TestShieldAnimationArtLifecycle,TestShieldRewindRestore,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSonic3kLevelLoading test`,
+with all three verified absolute root ROM properties. It finished at
+2026-10-07 18:40:59 UTC with **111 tests, one failure, zero errors/skips**.
+All twelve shield regressions pass and the first complete destination restore
+now matches. The FBZ/SOZ test then reaches its previously hidden forward check:
+cycle zero differs only in five dynamic-art clocks, each replayed value one
+higher (`latestFrame` 47/48, `logicalFrame`, `nextPublicationFrame`,
+`movieLogicalFrame` and `unannouncedRows` 48/49). The exact floor-zero and both
+eight-frame comparisons remain unchanged. Destination forward replay is still
+open. The completed read-only retry probe at 19:59:11 UTC identifies the owning
+boundary: original step zero returns `GAMEPLAY_FRAME` with a pending fresh-level
+boundary and no clock advance (41/41); after restore, it has no pending boundary
+and advances 41/42. Neither trajectory performs a setup-only retry or active
+fade. The controller's deferred player/camera/initial-pass state was absent from
+rewind capture. Source ordering further establishes that `LEVEL_LOAD` resets and
+captures floor zero inside the inner load, before the fresh controller assigns
+its pending boundary. Restoring the new adapter's null floor state therefore
+clears the stale pending boundary, rather than reconstructing an assembly at
+that floor. Explicit later registry captures retain the complete pending state
+and publication flag through the same private adapter; restore only assigns
+values. The unchanged floor test does not prove that positive pending-state
+half, so a separate production publish/complete regression is running against
+the old production code before its fix is merged. The temporary probe was
+removed. The updated focused selection adds sanctuary/continuation adapter
+controls and completes at 2026-10-07 21:30:35 UTC with **125 tests, zero
+failures, errors or skips**; the unchanged destination test passes both complete
+eight-frame replay cycles. Its command is the earlier focused command plus
+`TestLevelTransitionCoordinatorPeeks,TestLevelContinuationCarry`, with the same
+three verified absolute ROM properties and supported profile-free `--lean` lane.
+No comparison fields or clocks were compensated. The commit hook then projected
+the shield payload's private nested record as a detectable Mod API declaration
+change. Moving that value record into its own unannotated package-private file
+passes the normal hook check. The exact shield/signature selection then passes
+21 cases with zero failures, errors or skips and confirms the existing API pin.
+Root commit `3190a0ff8d21cd2e5b4263f616e2182f8ceb21ad` is merged locally as
+`3cc64352a9af8294a5da0e09a96ef97699c17566`. No signature pin, API version or
+hook is edited.
+
+Exact lane commands, complete observed frontiers and rejected approaches remain
+in the [S1](2026-10-07-s1-parity-gap-verification.md),
+[S2](2026-10-07-s2-parity-gap-verification.md) and
+[S3K](2026-10-07-s3k-parity-gap-verification.md) audits. These local commits and
+candidate measurements have not yet been integrated or pushed in this round.
+
+The wider S3K completion gap was rechecked in the updated assembly at
+`08a2446947fa2a70b3a768952a9f0147c248a09c`: `Sonic3kGameModule` still has no
+`getEndingProvider()` override, the default in `GameModule` returns null, and
+`GameLoop.doEnterEnding()` returns to title for that value. Closing the local
+trace and rewind defects in this round does not implement the shipped-ROM ending.
+
+### Updated Sitar destination and baseline qualification
+
+Main subsequently advanced to `be3c3141808c98d4c56a3dfb0fee19e241720154`
+with the Sitar integration. This contains substantive audio and scene/API
+changes, so the earlier `4cfb` source-equivalence claim alone does not qualify
+that destination. The completed Sitar candidate supplies an updated baseline:
+`53a742c58425209b5cce35ea30bcd80c37e8fc43`, run
+`20261007T195912Z-7068993c`, selected 3,020 ordinary classes and completed
+3,018 suites / 26,373 tests / 28 failures / zero errors / 62 skips in
+4,941.56 seconds. Its separate fresh guards completed 86 suites / 672 tests
+with zero failures, errors or skips in 209.63 seconds. Both lanes are terminal;
+ordinary exit one represents inherited failures, without timeout or omissions.
+
+The Sitar owner independently compared all 28 failure identities and complete
+first assertion lines with the durable `4cfb` result: 27 match literally,
+and the full SSZ assertion matches after only exception-prefix removal and
+the already-verified object-blob hash normalization. All 62 skip identities
+and first causal reasons match; no ROM prerequisite was skipped. The parity
+coordinator read that durable comparison and independently verified the complete
+candidate-to-`be3` engine Java, Java-test/resource, POM, hook and API-pin diff
+is empty. Only five previously qualified Python testing-cleanup/prose files
+differ. The completed candidate therefore qualifies the updated engine baseline;
+it is not described as a suite measured at `be3`.
+
+The Sitar owner's mandatory post-integration request is running against frozen
+main `be3`. This task preserves that freeze, including unrelated dirty
+submodules and untracked files, and does not cancel or acknowledge that request.
+Its parity commits remain private pending reconciliation, the remaining focused
+fixes, combined validation and the normal delivery flow.
