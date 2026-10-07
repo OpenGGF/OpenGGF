@@ -372,10 +372,21 @@ class TestHardenedS3kEncounter {
         try (var encounter = open()) {
             encounter.begin();
             encounter.until(() -> !encounter.value("phase").toString().equals("WAITING"), 100, true, false);
+            // Declared allocation-boundary stimulus. Reservations are not a
+            // stable gameplay condition: stock post effects can free slots
+            // during intervening native frames. Drive the actual injected
+            // sentry to its allocation call, then exhaust the real manager.
+            com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(encounter.fixture.sprite(), encounter.constant("POST_X"));
+            var sentry = encounter.sentry();
+            for (int n = 0; n < 60 && !encounter.value("phase").toString().equals("LOCKED"); n++)
+                sentry.update(0, encounter.fixture.sprite());
+            assertEquals("LOCKED", encounter.value("phase").toString());
+            for (int n = 0; n < encounter.constant("LOCK_TICKS") - 1; n++)
+                sentry.update(0, encounter.fixture.sprite());
             var objects = GameServices.level().getObjectManager();
             objects.reserveAllButNFreeSlots(1);
-            encounter.until(() -> (encounter.fixture.sprite().getCentreX() & 0xffff) <= encounter.constant("POST_X"), 60, false, true);
-            encounter.until(() -> encounter.value("status").toString().equals("ABORTED"), 100, false, false);
+            assertEquals(1, objects.getObjectSlotCapacity() - objects.getActiveObjectSlotCount());
+            sentry.update(0, encounter.fixture.sprite());
             assertEquals("ABORTED", encounter.value("status").toString());
             assertTrue(encounter.spores().isEmpty(), "failed pair allocation must leave no harmful partial volley");
         }
