@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
+import xml.etree.ElementTree as ET
 import zipfile
 
 import build_creator_kit as kit
@@ -224,6 +225,45 @@ class CreatorKitTest(unittest.TestCase):
             archive.writestr("META-INF/openggf-build.properties", "app.commit=other")
         with self.assertRaisesRegex(ValueError, "same candidate"):
             build_project.matching_artifacts(engine, sdk, testkit)
+
+    def test_matching_local_artifacts_are_not_default_profiles_suppressed_by_native_or_test_profiles(self):
+        root = Path(__file__).resolve().parents[2]
+        template = root / "src/main/resources/META-INF/openggf-mod-sdk/templates/pom.xml.template"
+        poms = [template, *sorted((root / "src/test/resources/mods").glob("*/project/pom.xml"))]
+        namespace = {"m": "http://maven.apache.org/POM/4.0.0"}
+        checked = set()
+        for path in poms:
+            document = ET.parse(path)
+            profiles = {profile.findtext("m:id", namespaces=namespace): profile
+                        for profile in document.findall("m:profiles/m:profile", namespace)}
+            if "local-openggf" not in profiles:
+                continue
+            with self.subTest(pom=str(path.relative_to(root))):
+                local = profiles["local-openggf"]
+                self.assertEqual("openggf.engine.jar", local.findtext("m:activation/m:property/m:name", namespaces=namespace))
+                self.assertIsNone(local.find("m:activation/m:activeByDefault", namespace))
+                dependencies = local.findall("m:dependencies/m:dependency", namespace)
+                system_paths = {dependency.findtext("m:systemPath", namespaces=namespace)
+                                for dependency in dependencies}
+                self.assertTrue({"${openggf.engine.jar}", "${openggf.sdk.jar}"}.issubset(system_paths))
+                if "published-openggf" in profiles:
+                    self.assertIsNone(profiles["published-openggf"].find("m:activation", namespace))
+                checked.add(path)
+        expected = {template, *(root / f"src/test/resources/mods/{sample}/project/pom.xml"
+                               for sample in ("sample-mod-src", "sample-flappy-src", "sample-rom-art-remix-src",
+                                              "sample-standalone-src", "sample-platformer-src"))}
+        self.assertTrue(expected.issubset(checked), "The maintained projects and embedded generic template must remain covered")
+
+        platformer = ET.parse(root / "src/test/resources/mods/sample-platformer-src/project/pom.xml")
+        profiles = {profile.findtext("m:id", namespaces=namespace): profile
+                    for profile in platformer.findall("m:profiles/m:profile", namespace)}
+        for native in ("linux", "macos", "macos-arm64", "windows"):
+            self.assertIsNotNone(profiles[f"lwjgl-natives-{native}"].find("m:activation/m:os", namespace))
+        dependencies = profiles["local-openggf"].findall("m:dependencies/m:dependency", namespace)
+        native_dependencies = {(dependency.findtext("m:artifactId", namespaces=namespace),
+                                dependency.findtext("m:classifier", namespaces=namespace))
+                               for dependency in dependencies}
+        self.assertTrue({("lwjgl", "${lwjgl.natives}"), ("lwjgl-stb", "${lwjgl.natives}")}.issubset(native_dependencies))
 
 
 if __name__ == "__main__":
