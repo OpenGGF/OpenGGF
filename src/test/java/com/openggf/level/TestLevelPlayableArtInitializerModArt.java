@@ -289,6 +289,41 @@ class TestLevelPlayableArtInitializerModArt {
         assertEquals(sharedPalette, sideContext.getPalette(1));
     }
 
+    @Test
+    void sidekickRuntimeCodeStillSubmitsItsCharacterDplcBank() throws Exception {
+        AbstractPlayableSprite tails = sprite(CharacterKey.TAILS, "tails_p2");
+        Fixture fixture = fixture(PlayableCharacterRegistry.empty(), CharacterKey.SONIC, List.of(tails));
+        GameModule module = mock(GameModule.class);
+        var rules = mock(com.openggf.game.rules.GameRules.class);
+        when(module.getRules()).thenReturn(rules);
+        when(module.getGameId()).thenReturn(GameId.S2);
+        when(rules.dynamicArtDmaService()).thenReturn(com.openggf.game.rules.DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE);
+        fixture.level().gameModule = module;
+        com.openggf.data.Game game = mock(com.openggf.data.Game.class,
+                withSettings().extraInterfaces(com.openggf.data.PlayerSpriteArtProvider.class));
+        fixture.level().game = game;
+        when(((com.openggf.data.PlayerSpriteArtProvider) game).loadPlayerSpriteArt(anyString()))
+                .thenReturn(art(8));
+        var animation = mock(com.openggf.sprites.managers.PlayableSpriteAnimation.class);
+        when(tails.getAnimationManager()).thenReturn(animation);
+        var lifecycle = mock(com.openggf.game.resources.DynamicArtLifecycleService.class);
+        when(lifecycle.isRunActive()).thenReturn(true);
+        when(lifecycle.observePlayerDplc(any(), anyString(), anyInt(), any(), any(), any()))
+                .thenReturn(new com.openggf.game.resources.DynamicArtLifecycleService.ArtUpdate(false, -1, List.of()));
+
+        try (var services = mockStatic(GameServices.class)) {
+            services.when(GameServices::dynamicArtLifecycleOrNull).thenReturn(lifecycle);
+            services.when(GameServices::graphics).thenReturn(mock(GraphicsManager.class));
+            fixture.initializer().initialize();
+        }
+        var owner = ArgumentCaptor.forClass(com.openggf.game.resources.DynamicArtDecisionOwner.class);
+        verify(animation).setDynamicArtDecisionOwner(owner.capture());
+        org.junit.jupiter.api.Assertions.assertNotNull(owner.getValue());
+        owner.getValue().observe(0);
+        verify(lifecycle).observePlayerDplc(eq(GameId.S2), eq("tails"), eq(0), any(),
+                eq(com.openggf.game.resources.DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT), isNull());
+    }
+
     private static Fixture fixture(PlayableCharacterRegistry registry, CharacterKey mainKey,
                                    List<AbstractPlayableSprite> sidekicks) {
         LevelManager level = mock(LevelManager.class);

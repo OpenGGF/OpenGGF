@@ -26,6 +26,54 @@ class ResourceTests(unittest.TestCase):
         self.assertFalse(resources.admits((available - 5 * resources.GIB, 20, 3), self.policy, 1,
                                           (5 * resources.GIB, 3)))
 
+    def test_mixed_budgets_reserve_each_job_and_shared_headroom(self):
+        lean = (4 * resources.GIB, 4)
+        normal = (7 * resources.GIB, 8)
+        self.assertTrue(resources.admits((10 * resources.GIB, 12, 0), self.policy, 1,
+                                        reservation=lean, reserved=lean))
+        self.assertFalse(resources.admits((10 * resources.GIB - 1, 12, 0), self.policy, 1,
+                                         reservation=lean, reserved=lean))
+        self.assertFalse(resources.admits((10 * resources.GIB, 12, 0), self.policy, 1,
+                                         reservation=lean, reserved=normal))
+        self.assertTrue(resources.admits((13 * resources.GIB, 12, 0), self.policy, 1,
+                                        reservation=lean, reserved=normal))
+        self.assertFalse(resources.admits((13 * resources.GIB, 11.9, 0), self.policy, 1,
+                                         reservation=lean, reserved=normal))
+
+    def test_lean_command_bounds_both_heaps_and_rejects_unmeasured_shapes(self):
+        from maven_queue import lean_command
+        with patch.dict(resources.os.environ, {}, clear=True):
+            args, env = lean_command(['-Dmse=off', '-Dtest=One,Two#method', 'test'])
+            self.assertIn('-Xmx1g', env['MAVEN_OPTS'])
+            self.assertIn('-Dsurefire.argLine=', ' '.join(args))
+            self.assertIn('${mockito.agent.argLine}', ' '.join(args))
+            self.assertIn('-Xmx1g', ' '.join(args))
+            self.assertIn('-Dsurefire.forkCount=1', args)
+            self.assertIn('-Dsurefire.reuseForks=true', args)
+            for args in (['test'], ['-Dtest=Test*', 'test'], ['-Dtest=One', 'package'],
+                         ['-Dtest=One', '-Pguards', 'test'], ['-Dtest=One', '-T2', 'test'],
+                         ['-Dtest=One', '-Dsurefire.argLine=-Xmx8g', 'test'],
+                         ['-Dtest=One', '-Dsurefire.reuseForks=false', 'test'],
+                         ['-Dtest=One', '-Dmaven.compiler.fork=true', 'test'],
+                         ['-Dtest=One', '-Dmaven.compiler.maxmem=8g', 'test'],
+                         ['-Dtest=One', '-Dmaven.surefire.debug=true', 'test'],
+                         ['-Dtest=One', '--file=elsewhere.xml', 'test']):
+                with self.subTest(args=args), self.assertRaises(ValueError):
+                    lean_command(args)
+            for key in ('MAVEN_OPTS', 'JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'MAVEN_ARGS'):
+                with patch.dict(resources.os.environ, {key: '-Xmx8g'}), self.assertRaises(ValueError):
+                    lean_command(['-Dtest=One', 'test'])
+
+    def test_lean_preserves_macos_flags_and_rejects_custom_launch_configuration(self):
+        from maven_queue import lean_command
+        with patch.dict(resources.os.environ, {}, clear=True), patch.object(resources.sys, 'platform', 'darwin'):
+            args, _env = lean_command(['-Dtest=One', 'test'])
+            self.assertIn('-XstartOnFirstThread', ' '.join(args))
+            with patch.object(Path, 'exists', return_value=True), \
+                    patch.object(Path, 'read_text', return_value='-Xmx8g'):
+                with self.assertRaisesRegex(ValueError, 'custom .mvn'):
+                    lean_command(['-Dtest=One', 'test'])
+
     def test_unsupported_platform_and_missing_counters_fall_back(self):
         with patch.object(resources.sys, 'platform', 'win32'):
             self.assertIsNone(resources.snapshot())

@@ -15,6 +15,7 @@ import com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenManager;
 import com.openggf.game.DebugOverlayProvider;
 import com.openggf.game.EndingProvider;
 import com.openggf.game.GameModule;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.LevelSelectProvider;
@@ -243,6 +244,13 @@ public class Sonic1GameModule implements GameModule {
     @Override
     public int getChaosEmeraldCount() {
         return 6;
+    }
+
+    @Override
+    public void onNewGameFromTitle(GameStateManager gameState) {
+        // S1 PlayLevel (sonic.asm:2278-2281), also reached by LevSel_Level:
+        // clear v_lastspecial, v_emeralds and both v_emldlist longwords.
+        gameState.configureSpecialStageProgress(gameState.getSpecialStageCount(), gameState.getChaosEmeraldCount());
     }
 
     @Override

@@ -40,7 +40,7 @@ class QueueTests(unittest.TestCase):
             process.communicate(timeout=5)
 
     def launch(self, name, root=None, resource_snapshot=(100 * 1024**3, 128, 0),
-               estimate=900, aging_seconds=300, realised_rss=0):
+               estimate=900, aging_seconds=300, realised_rss=0, reservation=None):
         code = '''
 import sys, time, json
 from pathlib import Path
@@ -54,7 +54,8 @@ if float(sys.argv[7]):
     maven_resources.tree_usage = lambda pid, proc=None: {(1, 1): (float(sys.argv[7]), 0.0)}
 root, marker = map(Path, sys.argv[2:4])
 try:
-    with handle_termination(), maven_slot(root, estimate=float(sys.argv[5])):
+    with handle_termination(), maven_slot(root, estimate=float(sys.argv[5]),
+                                         reservation=json.loads(sys.argv[8])):
         marker.with_suffix('.started').touch()
         while not marker.with_suffix('.release').exists():
             time.sleep(.02)
@@ -64,7 +65,7 @@ except KeyboardInterrupt:
         marker = Path(self.temp.name) / name
         process = subprocess.Popen([sys.executable, '-c', code, str(TOOLS),
                                     str(root or self.root), str(marker), json.dumps(resource_snapshot),
-                                    str(estimate), str(aging_seconds), str(realised_rss)],
+                                    str(estimate), str(aging_seconds), str(realised_rss), json.dumps(reservation)],
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         self.processes.append(process)
         return process, marker
@@ -140,7 +141,7 @@ except KeyboardInterrupt:
         focused.with_suffix('.release').touch()
 
     @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
-    def test_backfill_stops_once_blocked_request_ages(self):
+    def test_aged_busy_worktree_allows_unrelated_backfill(self):
         os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
         other = Path(self.temp.name) / 'other'
         self.git('worktree', 'add', '--detach', '-q', str(other))
@@ -155,9 +156,8 @@ except KeyboardInterrupt:
         second.with_suffix('.release').touch()
         backfill.wait(timeout=5)
         later, third = self.launch('later', other, estimate=30, aging_seconds=.5)
-        self.wait_queued(2)
-        time.sleep(.3)
-        self.assertFalse(third.with_suffix('.started').exists())
+        self.wait_started(later, third)
+        self.assertFalse(waiting.with_suffix('.started').exists())
         self.assertIsNone(holder.poll())  # Aging never preempts running work.
         first.with_suffix('.release').touch()
         holder.wait(timeout=5)
@@ -165,6 +165,51 @@ except KeyboardInterrupt:
         self.wait_started(later, third)
         waiting.with_suffix('.release').touch()
         third.with_suffix('.release').touch()
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
+    def test_two_lean_runs_fit_where_two_normal_runs_cannot(self):
+        os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
+        snapshot = (10 * 1024**3, 32, 0)
+        lean = (4 * 1024**3, 4)
+        holder, first = self.launch('lean-one', resource_snapshot=snapshot, reservation=lean)
+        self.wait_started(holder, first)
+        normal, large = self.launch('normal', self.linked, resource_snapshot=snapshot)
+        self.wait_queued(1)
+        small, second = self.launch('lean-two', self.linked, resource_snapshot=snapshot, reservation=lean)
+        self.wait_started(small, second)
+        self.assertFalse(large.with_suffix('.started').exists())
+        first.with_suffix('.release').touch()
+        second.with_suffix('.release').touch()
+        holder.wait(timeout=5)
+        small.wait(timeout=5)
+        self.wait_started(normal, large)
+        large.with_suffix('.release').touch()
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
+    def test_aged_resource_blocked_normal_run_still_drains_lean_backfill(self):
+        os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
+        snapshot = (10 * 1024**3, 32, 0)
+        lean = (4 * 1024**3, 4)
+        other = Path(self.temp.name) / 'other'
+        self.git('worktree', 'add', '--detach', '-q', str(other))
+        holder, first = self.launch('lean-holder', resource_snapshot=snapshot, reservation=lean)
+        self.wait_started(holder, first)
+        normal, large = self.launch('aged-normal', self.linked, resource_snapshot=snapshot, aging_seconds=.3)
+        self.wait_queued(1)
+        time.sleep(.4)
+        small, second = self.launch('lean-backfill', other, resource_snapshot=snapshot,
+                                    reservation=lean, aging_seconds=.3)
+        self.wait_queued(2)
+        time.sleep(.3)
+        self.assertFalse(second.with_suffix('.started').exists())
+        first.with_suffix('.release').touch()
+        holder.wait(timeout=5)
+        self.wait_started(normal, large)
+        self.assertFalse(second.with_suffix('.started').exists())
+        large.with_suffix('.release').touch()
+        normal.wait(timeout=5)
+        self.wait_started(small, second)
+        second.with_suffix('.release').touch()
 
     def test_linked_worktrees_wait_and_continue_without_task_registration(self):
         holder, first = self.launch('first')
@@ -370,15 +415,16 @@ except KeyboardInterrupt:
             second.with_suffix('.release').touch()
             second_process.wait(timeout=5)
 
-    def launch_command(self, name, category=False, exit_code=0):
+    def launch_command(self, name, category=False, exit_code=0, lean=False):
         """Run the real CLIs/runner, replacing only the Maven executable with a probe."""
         marker = Path(self.temp.name) / name
         self.addCleanup(marker.with_suffix('.release').touch)
         fake_maven = r"""
-import json, sys, time
+import json, os, sys, time
 from pathlib import Path
 marker = Path(sys.argv[1])
-marker.with_suffix('.args').write_text(json.dumps({'cwd': str(Path.cwd()), 'args': sys.argv[3:]}))
+marker.with_suffix('.args').write_text(json.dumps({'cwd': str(Path.cwd()), 'args': sys.argv[3:],
+                                                  'mavenOpts': os.environ.get('MAVEN_OPTS')}))
 marker.with_suffix('.started').touch()
 while not marker.with_suffix('.release').exists():
     time.sleep(.02)
@@ -400,7 +446,7 @@ import maven_resources
 maven_resources.snapshot = lambda: (100 * 1024**3, 128, 0)
 import run_categories as runner
 original = subprocess.Popen
-marker, fake, code, category = sys.argv[2:]
+marker, fake, code, category, lean = sys.argv[2:]
 def probe(command, *args, **kwargs):
     if command[0] == 'mvn':
         command = [sys.executable, '-u', '-c', fake, marker, code, *command[1:]]
@@ -413,17 +459,39 @@ try:
             with patch.object(runner, 'make_plan', return_value=plan), patch.object(runner, 'preflight'):
                 result = runner.main(['--category', 'common', '--run', '--max-minutes', '0.05'])
         else:
-            result = queue.main(['-Dmse=off', '-Dprobe=spaces and $literal', 'test'])
+            args = ['-Dmse=off', '-Dprobe=spaces and $literal', 'test']
+            if lean == 'yes':
+                args = ['--lean', '-Dtest=TestProbe', *args]
+            result = queue.main(args)
     sys.exit(result)
 except KeyboardInterrupt:
     sys.exit(130)
 """
         process = subprocess.Popen([sys.executable, '-c', launcher, str(TOOLS), str(marker),
-                                    fake_maven, str(exit_code), 'yes' if category else 'no'],
+                                    fake_maven, str(exit_code), 'yes' if category else 'no', 'yes' if lean else 'no'],
                                    cwd=self.linked, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, text=True)
         self.processes.append(process)
         return process, marker
+
+    def test_lean_cli_passes_bounded_heaps_and_records_its_own_budget(self):
+        process, marker = self.launch_command('lean-cli', lean=True)
+        self.wait_started(process, marker)
+        invoked = json.loads(marker.with_suffix('.args').read_text())
+        self.assertEqual('-Xmx1g', invoked['mavenOpts'])
+        self.assertIn('-Dprobe=spaces and $literal', invoked['args'])
+        self.assertIn('-Dsurefire.argLine=${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g', invoked['args'])
+        self.assertIn('-Dsurefire.forkCount=1', invoked['args'])
+        self.assertIn('-Dsurefire.reuseForks=true', invoked['args'])
+        records = list((self.root / '.git/maven-running').glob('*.lease'))
+        self.assertEqual(1, len(records))
+        self.assertEqual(4 * 1024**3, json.loads(records[0].read_bytes()[1:])['memoryBytes'])
+        marker.with_suffix('.release').touch()
+        output = process.communicate(timeout=5)[0]
+        self.assertEqual(0, process.returncode, output)
+        self.assertIn('budget 4 GiB/4 cores', output)
+        row = json.loads((self.root / '.git/maven-queue-log.jsonl').read_text())
+        self.assertEqual('focused-lean', row['kind'])
 
     def test_maven_wrapper_waits_for_same_slot_preserves_args_cwd_output_and_failure(self):
         holder, first = self.launch('holder')

@@ -23,7 +23,6 @@ Entries should include:
 2. [Persisted Editor Saves Disabled for S3K Gameplay Loads](#persisted-editor-saves-disabled-for-s3k-gameplay-loads)
 3. [Trace Replay Recorder Coverage Follow-Up](#trace-replay-recorder-coverage-follow-up)
 4. [S3K AIZ Items Carried From The 2026-03-25 Working List](#s3k-aiz-items-carried-from-the-2026-03-25-working-list)
-5. [Sonic 1 SBZ Act 1 Parallax Bands](#sonic-1-sbz-act-1-parallax-bands)
 
 ---
 
@@ -49,6 +48,12 @@ over music, queues the S1/S2 PLC and waits on it, slides the words in, waits 12 
 (S3K also Start; S2/S3K poll both controllers), then either restarts the level with the saved star-post time cleared
 (time over) or ends the level (game over). Zero-life gameplay is no longer pausable (`PauseGame` `Life_count` gate).
 
+S1 title/level-select new-game startup also clears the emerald inventory and
+special-stage cursor through the module lifecycle owner, matching `PlayLevel`
+(`docs/s1disasm/sonic.asm:2278-2282`). Configured progress dimensions survive
+module decoration. Continue and ordinary level reload retain progress; the
+six-case `TestTitleNewGameSpecialStageProgress` covers these boundaries.
+
 Remaining gaps:
 
 - S2's shipped `fixBugs = 0` Continue path does not clear stale HTZ DMA, so the
@@ -60,12 +65,10 @@ Remaining gaps:
   `Sonic3kTitleCardManager` notes), so the S3K card starts sliding on its first frame rather than a few frames later.
 - S3K `loc_2D638` zeroes `Collision_response_list` on every wait frame (`:62065`); the engine's per-frame list is
   rebuilt by later slots anyway and the clear is not modelled.
-- S1 `PlayLevel` also clears the emerald list and special-stage index when a game starts from the title
-  (`docs/s1disasm/sonic.asm:2278-2282`); only lives, continues and score are reset today.
 
 ### Removal Condition
 
-Remove this entry when the remaining art-queue, stale-DMA and lifecycle gaps are
+Remove this entry when the remaining art-queue, stale-DMA and wait-loop gaps are
 resolved or explicitly accepted as intentional discrepancies.
 
 ---
@@ -98,32 +101,33 @@ surface, and persisted S3K editor saves can be applied without disabling AIZ/CNZ
 
 ## Trace Replay Recorder Coverage Follow-Up
 
-**Location:** `src/test/java/com/openggf/tests/trace/*`, `tools/bizhawk/*`
+**Location:** `src/test/java/com/openggf/tests/trace/*`, `tools/tracechaser/*`
 
 ### Symptom
 
 BK2-derived fixture coverage now exists across Sonic 1, Sonic 2, and Sonic 3&K, but the suite is
-mixed between green guard traces, known-red frontier traces, synthetic fixtures, and historical
-pre-v3 trace directories. Older or pre-v3 traces can therefore still reach the legacy heuristic
-path when they are loaded, and the full trace suite still depends on careful documentation of
-known red frontiers.
+mixed between green guard traces, known-red frontier traces and synthetic fixtures.
+The full trace suite still depends on explicit frontier documentation and on
+choosing the correct ordinary/deferred replay profile. Fixture presence alone
+does not demonstrate a passing level slice or continuous campaign.
 
 ### Current State
 
-The shared replay harness understands schema v3 execution counters and uses
-`gameplay_frame_counter` plus `vblank_counter` when those columns are present. The Sonic 1,
-Sonic 2, and Sonic 3&K BizHawk recorders all emit schema v3. S3K also has a committed
-complete-run per-zone trace suite from a Sonic+Tails AIZ-to-Doomsday route, with current
-frontiers tracked in `docs/status/trace-frontier-log.md`.
-
-`TraceData` now logs a one-shot notice when a pre-v3 trace directory is loaded so the fallback is visible during test runs.
+V5 (`trace_schema: 5`) is the sole live contract. `TraceMetadata.load`,
+`TraceFrame` and `TraceRunManifest` validate it; historical schema files are
+not an accepted loading fallback. `TraceExecutionModel` still contains a
+counter-absent heuristic for programmatically constructed rows, which is
+distinct from supporting old on-disk fixtures. TraceChaser owns native
+production. Committed per-zone suites and continuous-run chains measure
+different obligations; their current results belong in
+`docs/status/trace-frontier-log.md`.
 
 ### Removal Condition
 
-Remove this entry once the remaining pre-v3 trace fallback path in `TraceExecutionModel` /
-`TraceData` is deleted or intentionally retained with a documented compatibility reason, and the
-release trace gate distinguishes green guard traces from known-red frontier traces without hidden
-warning-only failures.
+Remove this entry once documented release-required campaigns and route breadth
+have completed replay evidence, and the release trace gate distinguishes green
+guards from open frontiers without hidden warning-only failures. The former
+pre-v3 recorder/loading description was stale at the 2026-10-07 source audit.
 
 ---
 
@@ -163,17 +167,3 @@ Unknown; the items predate the trace-replay suite and no trace exercises them.
 
 Remove each bullet once it is reproduced against the current engine and either fixed with a ROM citation or
 shown to match the ROM. Remove the entry when no bullet remains.
-
-
-## Sonic 1 SBZ Act 1 Parallax Bands
-
-REV01 `Deform_SBZ` checks `v_act` and gives act 1 separate building bands
-with different horizontal speeds (`docs/s1disasm/_inc/DeformLayers (REV01).asm`,
-`Deform_SBZ`, line 551). Nonzero acts use the uniform `Deform_SBZ2` path
-(line 653), including Final Zone.
-
-The current SBZ handler uses that uniform path for both acts. The second Java
-normalisation pass shares the existing implementation with Final Zone but does
-not add the missing act-1 effect. This is a pre-existing rendering parity gap,
-not an intentional discrepancy. Resolve it as separate ROM-backed zone work,
-including all packed scanlines and background-camera initialization.
