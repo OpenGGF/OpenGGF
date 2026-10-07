@@ -149,6 +149,14 @@ public class SpringObjectInstance extends BoxObjectInstance
             if (!contact.pushingNow()) {
                 return;
             }
+            // Obj41_Horizontal subtracts the player's word x_pos from the
+            // spring's, then uses carry and x_flip to admit only the launch
+            // side (s2.asm:33979-33987, 34002-34010). Equality belongs to the
+            // flipped side because SUB has no borrow at equality.
+            boolean playerOnRight = (player.getCentreX() & 0xFFFF) > (spawn.x() & 0xFFFF);
+            if (playerOnRight == isFlippedHorizontal()) {
+                return;
+            }
             applyHorizontalSpring(player);
             return;
         }
