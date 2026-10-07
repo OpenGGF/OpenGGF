@@ -109,6 +109,10 @@ Rejected shortcuts:
   candidate that can include legitimate Jupiter fixture ownership. Compare the
   final post-plan floor before describing application leaks. Surefire's two-class
   control used a single plan, so this distinction matters to the real invocation.
+  The same control gives the normal `PER_METHOD` class a 20 MiB fixture: that
+  fixture is released before the next class. Thus the observed `PER_CLASS`
+  lifetime does not establish a mechanism accumulating every ordinary test
+  instance; most ordinary tests use the default per-method lifecycle.
 - Treating all non-heap RSS as a native leak: committed heap, metaspace, JIT,
   thread stacks, shared pages and allocator high-watermarks all contribute.
   HotSpot NMT does not account for all third-party/driver allocations.
@@ -122,7 +126,9 @@ Rejected shortcuts:
 At the pinned base, the Python safety suite passed 109 tests, with no skips.
 With the role-transition control it passed 114, with no skips. The real JUnit
 service-loading control checks deliberately retained memory, release of a large
-per-class fixture and completion accounting. A cold-compilation control preserves
+per-class fixture after the plan, release of a per-method fixture before the next
+class, and completion accounting. All five observer controls passed after the
+per-method expansion. A cold-compilation control preserves
 reports and rejects linked output paths before deleting anything. A GC-log control distinguishes a
 2,800 MiB pre-collection reading from its 30 MiB post-collection reading. Actual
 Java 21, Lua 5.4 and PowerShell tool preflight passed. Engine source, the POM,
