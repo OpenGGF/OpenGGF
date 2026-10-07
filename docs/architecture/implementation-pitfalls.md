@@ -540,6 +540,19 @@ lookup anchored to the raw header while track reads, jumps and returns address
 the loaded 32 KiB bank. Test earlier-header calls and local/shared voices
 together. Origin: full-song work, `64c7b25b6`, 2026-10-07.
 
+**Freeze the indexed SMPS program separately from its raw header.** A parsed
+source can retain a short `getData()` header/voice slice while `dataLength`,
+`dataByteAt` and `read16` expose a larger address space. Copying the raw slice
+but retaining the indexed address base produces an immutable yet invalid
+program. After S3K bank reads were restored, Blue Sphere, 1-up and Ending each
+initialized nine tracks directly and zero through the old frozen consumer; AIZ
+began at the bank start and concealed the defect. Snapshot indexed reads with
+their decoding semantics as well as raw bytes and metadata. Program identity
+must distinguish different indexed contents with identical headers and different
+headers sharing one bank. Exercise live, frozen and restored consumers together.
+Origin: Sitar Hero full-song integration, 2026-10-07; see the
+[dated S3K catalogue evidence](designs/2026-10-07-sitar-hero-s3k-song-catalogue.md).
+
 **Speaker starvation is a device transition, not generated-sample equality.** A
 stopped OpenAL queue can leave a sub-packet remainder in the software FIFO, so
 the consumed cursor never reaches the producer's count. Detect stopped-after-play
