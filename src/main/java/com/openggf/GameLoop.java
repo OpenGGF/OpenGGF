@@ -313,6 +313,8 @@ public class GameLoop {
 
     private volatile boolean paused = false;      // Window focus pause
     private volatile boolean userPaused = false;  // Keyboard toggle pause
+    private LevelInputOverlay pendingConfigurationOwner;
+    private LevelInputOverlay.Command pendingConfigurationCommand = LevelInputOverlay.Command.NONE;
     private PlcLifecycleFrame activePlcLifecycleFrame;
 
     public GameLoop() {
@@ -340,6 +342,8 @@ public class GameLoop {
                 new LiveUserRecordingRuntime(configService, userRecordingSessionLauncher, playbackDebugManager,
                         () -> currentGameMode,
                         () -> TraceSessionLauncher.active() != null
+                                || com.openggf.game.session.MutatorWorldAccess.state(
+                                        com.openggf.game.session.SessionManager.getCurrentWorldSession()) != null
                                 || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
                                 || debugShortcutsEnabled() && debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER),
                         () -> { userPaused = true; updateAudioPauseState(); },
@@ -384,6 +388,7 @@ public class GameLoop {
     }
 
     public void setGameplayMode(GameplayModeContext gameplayMode) {
+        if (this.gameplayMode != gameplayMode) { pendingConfigurationOwner = null; pendingConfigurationCommand = LevelInputOverlay.Command.NONE; }
         this.gameplayMode = gameplayMode;
         refreshRuntimeBindings();
         installLiveRewindBoundaryReporter();
@@ -398,6 +403,8 @@ public class GameLoop {
             // a destroyed gameplay FadeManager that the UI pipeline no longer
             // ticks — which would otherwise leave fade callbacks orphaned.
             this.gameplayMode = null;
+            pendingConfigurationOwner = null;
+            pendingConfigurationCommand = LevelInputOverlay.Command.NONE;
             this.spriteManager = null;
             this.camera = null;
             this.timerManager = null;
@@ -408,6 +415,10 @@ public class GameLoop {
             this.liveRewindBoundaryReporterContext = null;
             engineServices.graphics().clearRuntimeManagedReferences();
             return;
+        }
+        if (this.gameplayMode != currentGameplayMode) {
+            pendingConfigurationOwner = null;
+            pendingConfigurationCommand = LevelInputOverlay.Command.NONE;
         }
         this.gameplayMode = currentGameplayMode;
         this.spriteManager = currentGameplayMode.getSpriteManager();
@@ -776,14 +787,16 @@ public class GameLoop {
     private boolean isPresentationPaused() {
         var controller = currentGameMode == GameMode.LEVEL
                 ? com.openggf.game.mode.ControlledFrameRuntime.controller(resolveGameplayModeContext()) : null;
-        return isPaused() || controller != null && controller.presentationPaused();
+        // Configuration holds retain their ROM-backed menu soundtrack and feedback.
+        // Window/user pause still silences the complete presentation as before.
+        return paused || userPaused || controller != null && controller.presentationPaused();
     }
 
     /**
      * @return true if the game loop is currently paused (either by window or user)
      */
     public synchronized boolean isPaused() {
-        return paused || userPaused;
+        return paused || userPaused || GameLoopPauseInput.configurationPaused(currentGameMode);
     }
 
     public boolean externalFrameOrInputOwnerActive() {
@@ -1064,7 +1077,8 @@ public class GameLoop {
     private boolean isRewindBlocked() {
         // fadeManager can be null in non-gameplay modes (e.g.
         // MASTER_TITLE_SCREEN with no active session).
-        return isNonRewindableTransitionPending()
+        return GameLoopPauseInput.configurationPaused(currentGameMode)
+                || isNonRewindableTransitionPending()
                 || (fadeManager != null && fadeManager.hasPendingCompletion())
                 || (levelManager != null && levelManager.hasPendingFreshLevelTransitionBoundary());
     }
@@ -1304,13 +1318,18 @@ public class GameLoop {
             return;
         }
 
-        escapeToMasterTitleController.update(currentGameMode, inputHandler);
-        if (currentGameMode == GameMode.LEVEL) {
+        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler);
+        var overlay = GameLoopPauseInput.overlay(currentGameMode);
+        if (overlay != null && handleConfigurationCommand(overlay)) {
+            inputHandler.update();
+            return;
+        }
+        if (!overlayOwnsPause) escapeToMasterTitleController.update(currentGameMode, inputHandler);
+        if (currentGameMode == GameMode.LEVEL && !overlayOwnsPause) {
             userRecordingControls.updateLevelControlInput(inputHandler);
             handleTimeAttackRetryInput();
         }
 
-        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler);
         boolean nextUserPaused = GameLoopPauseInput.nextUserPaused(currentGameMode, inputHandler,
                 configService, userPaused, overlayOwnsPause, playbackTakeoverConsumedPausePress,
                 playbackDebugManager, userRecordingControls::handlePlaybackTakeoverRequest);
@@ -1319,7 +1338,8 @@ public class GameLoop {
             updateAudioPauseState();
         }
 
-        boolean doFrameStep = GameLoopPauseInput.frameStep(inputHandler, configService, isPaused());
+        boolean doFrameStep = !GameLoopPauseInput.configurationPaused(currentGameMode)
+                && GameLoopPauseInput.frameStep(inputHandler, configService, isPaused());
 
         if (isPaused() && !doFrameStep) {
             inputHandler.update();
@@ -1460,6 +1480,42 @@ public class GameLoop {
     public boolean ownsGameplayFadeLifecycle() {
         GameplayModeContext context = resolveGameplayModeContext();
         return context != null && context.isGameplayRuntimeReady();
+    }
+
+    /** Configuration commands use the production fade and assembly owners. */
+    private boolean handleConfigurationCommand(LevelInputOverlay overlay) {
+        if (pendingConfigurationOwner != null && pendingConfigurationOwner != overlay) {
+            pendingConfigurationCommand = LevelInputOverlay.Command.NONE;
+            pendingConfigurationOwner = null;
+        }
+        var requested = overlay.consumeCommand();
+        if (pendingConfigurationCommand == LevelInputOverlay.Command.NONE && requested != LevelInputOverlay.Command.NONE) {
+            pendingConfigurationCommand = requested;
+            pendingConfigurationOwner = overlay;
+        }
+        var command = pendingConfigurationCommand;
+        if (command == LevelInputOverlay.Command.NONE) return false;
+        if (resolveFadeManager().isActive()) {
+            overlay.commandQueued(true);
+            return false;
+        }
+        pendingConfigurationCommand = LevelInputOverlay.Command.NONE;
+        pendingConfigurationOwner = null;
+        overlay.commandQueued(false);
+        userPaused = false;
+        updateAudioPauseState();
+        if (command == LevelInputOverlay.Command.RESUME) {
+            return true;
+        } else if (command == LevelInputOverlay.Command.RETURN_TO_HUB) {
+            fadeOutTo(this::returnToMasterTitle);
+        } else {
+            audioManager.fadeOutMusic();
+            GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), resolveFadeManager(), () -> {
+                levelManager.restartCurrentLevelFromConfiguration();
+                GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), resolveFadeManager(), null);
+            });
+        }
+        return true;
     }
 
     private boolean prepareAdmittedIteration(boolean doFrameStep, boolean overlayOwnsPause) {

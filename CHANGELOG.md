@@ -10,7 +10,7 @@ No 0.8-only release entries yet. Work promoted from `next` is recorded in
 
 ## Release files
 
-- [0.7 prerelease / current development snapshot](CHANGELOG.0.7.md) — including the controller-accessible title hub, engine settings, and shared UI improvements.
+- [0.7 prerelease / current development snapshot](CHANGELOG.0.7.md) — including the controller-accessible title hub, engine settings, shared UI improvements, and the scoped Mutator Lab prototype.
 
 - [0.6.20260911](CHANGELOG.0.6.md)
 - [0.5.20260411](CHANGELOG.0.5.md)

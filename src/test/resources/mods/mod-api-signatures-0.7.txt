@@ -321,6 +321,8 @@ CF-ANNOTATION TYPE com.openggf.game.LevelEventProvider visible @com.openggf.game
 CF-ANNOTATION TYPE com.openggf.game.LevelInitProfile visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelInputOverlay visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelInputOverlay visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.game.LevelInputOverlay$Command visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.LevelLoadCause visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelLoadContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelLoadMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelSelectProvider visible @com.openggf.game.ModApi
@@ -922,6 +924,8 @@ CF-ANNOTATION TYPE com.openggf.mods.code.StandaloneLevelLoader visible @com.open
 CF-ANNOTATION TYPE com.openggf.mods.code.ZoneEventFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.code.ZoneEventFactory visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorCapability visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorConfigurationScreen visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorConfigurationScreen$Cue visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorDefinition visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorDefinition$AtomicGroup visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorDefinition$PolicyFactory visible @com.openggf.game.ModApi
@@ -936,6 +940,7 @@ CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity visib
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$PlayerStealth visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$Target visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorScope visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorSupportProfile visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.DebuggableScene visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.ModScene visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.ModSceneFactory visible @com.openggf.game.ModApi
@@ -1760,6 +1765,7 @@ CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public  <i
 CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$TrackMusic public  <init>(com.openggf.mods.TrackKey)
 CONSTRUCTOR com.openggf.mods.code.ModZoneContribution public  <init>(java.lang.String,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.mods.code.ZoneEventFactory,boolean)
 CONSTRUCTOR com.openggf.mods.code.RomArtRequest public  <init>(int,com.openggf.mods.code.RomArtCompression,int,int,int,int,int)
+CONSTRUCTOR com.openggf.mods.mutators.MutatorConfigurationScreen public  <init>(com.openggf.game.session.WorldSession,java.lang.String,com.openggf.game.TitleScreenProvider,java.util.function.Consumer<com.openggf.mods.mutators.MutatorConfigurationScreen$Cue>)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorDefinition public  <init>(java.lang.String,java.lang.String,java.lang.String,com.openggf.mods.mutators.MutatorScope,com.openggf.mods.mutators.MutatorScope,java.util.List<com.openggf.mods.mutators.MutatorOption>,java.util.Set<com.openggf.mods.mutators.MutatorCapability>,com.openggf.mods.mutators.MutatorDefinition$PolicyFactory)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorDefinition public  <init>(java.lang.String,java.lang.String,java.lang.String,int,com.openggf.mods.mutators.MutatorScope,com.openggf.mods.mutators.MutatorScope,java.util.List<com.openggf.mods.mutators.MutatorOption>,java.util.List<com.openggf.mods.mutators.MutatorDefinition$AtomicGroup>,java.util.Set<java.lang.String>,java.util.Set<java.lang.String>,java.util.Set<com.openggf.mods.mutators.MutatorCapability>,com.openggf.mods.mutators.MutatorDefinition$PolicyFactory)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorDefinition$AtomicGroup public  <init>(java.lang.String,com.openggf.mods.mutators.MutatorScope,java.util.Set<java.lang.String>)
@@ -2566,6 +2572,19 @@ FIELD com.openggf.game.GroundMode public,static,final com.openggf.game.GroundMod
 FIELD com.openggf.game.GroundMode public,static,final com.openggf.game.GroundMode LEFTWALL
 FIELD com.openggf.game.GroundMode public,static,final com.openggf.game.GroundMode RIGHTWALL
 FIELD com.openggf.game.JoypadPressSnapshot public,static,final com.openggf.game.JoypadPressSnapshot NONE
+FIELD com.openggf.game.LevelInputOverlay$Command public,static,final com.openggf.game.LevelInputOverlay$Command FULL_RESTART
+FIELD com.openggf.game.LevelInputOverlay$Command public,static,final com.openggf.game.LevelInputOverlay$Command NONE
+FIELD com.openggf.game.LevelInputOverlay$Command public,static,final com.openggf.game.LevelInputOverlay$Command RESUME
+FIELD com.openggf.game.LevelInputOverlay$Command public,static,final com.openggf.game.LevelInputOverlay$Command RETURN_TO_HUB
+FIELD com.openggf.game.LevelLoadCause public,static,final com.openggf.game.LevelLoadCause CHECKPOINT_RESTORE
+FIELD com.openggf.game.LevelLoadCause public,static,final com.openggf.game.LevelLoadCause DECODE_ONLY
+FIELD com.openggf.game.LevelLoadCause public,static,final com.openggf.game.LevelLoadCause EDITOR_SWAP
+FIELD com.openggf.game.LevelLoadCause public,static,final com.openggf.game.LevelLoadCause FULL_DEATH_RELOAD
+FIELD com.openggf.game.LevelLoadCause public,static,final com.openggf.game.LevelLoadCause FULL_LEVEL_ASSEMBLY
+FIELD com.openggf.game.LevelLoadCause public,static,final com.openggf.game.LevelLoadCause FULL_RESTART
+FIELD com.openggf.game.LevelLoadCause public,static,final com.openggf.game.LevelLoadCause PREVIEW
+FIELD com.openggf.game.LevelLoadCause public,static,final com.openggf.game.LevelLoadCause SEAMLESS_HANDOFF
+FIELD com.openggf.game.LevelLoadCause public,static,final com.openggf.game.LevelLoadCause STAGE_RETURN_FULL_ASSEMBLY
 FIELD com.openggf.game.LevelLoadMode public,static,final com.openggf.game.LevelLoadMode FULL
 FIELD com.openggf.game.LevelLoadMode public,static,final com.openggf.game.LevelLoadMode PREVIEW_CAPTURE
 FIELD com.openggf.game.LevelSelectProvider$State public,static,final com.openggf.game.LevelSelectProvider$State ACTIVE
@@ -3044,6 +3063,10 @@ FIELD com.openggf.mods.code.RomArtCompression public,static,final com.openggf.mo
 FIELD com.openggf.mods.code.RomArtCompression public,static,final com.openggf.mods.code.RomArtCompression UNCOMPRESSED
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability DRY_SONIC_GRAVITY
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability PLAYER_STEALTH
+FIELD com.openggf.mods.mutators.MutatorConfigurationScreen$Cue public,static,final com.openggf.mods.mutators.MutatorConfigurationScreen$Cue CONFIRM
+FIELD com.openggf.mods.mutators.MutatorConfigurationScreen$Cue public,static,final com.openggf.mods.mutators.MutatorConfigurationScreen$Cue ERROR
+FIELD com.openggf.mods.mutators.MutatorConfigurationScreen$Cue public,static,final com.openggf.mods.mutators.MutatorConfigurationScreen$Cue NAVIGATE
+FIELD com.openggf.mods.mutators.MutatorConfigurationScreen$Cue public,static,final com.openggf.mods.mutators.MutatorConfigurationScreen$Cue START
 FIELD com.openggf.mods.mutators.MutatorPolicy$Target public,static,final com.openggf.mods.mutators.MutatorPolicy$Target ALL_TEAM
 FIELD com.openggf.mods.mutators.MutatorPolicy$Target public,static,final com.openggf.mods.mutators.MutatorPolicy$Target LEADER
 FIELD com.openggf.mods.mutators.MutatorScope public,static,final com.openggf.mods.mutators.MutatorScope LAUNCH
@@ -3541,6 +3564,8 @@ INTERFACE com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn com.openggf.
 INTERFACE com.openggf.mods.code.ModLevelDefinition$StockMusic com.openggf.mods.code.ModLevelDefinition$Music
 INTERFACE com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn com.openggf.mods.code.ModLevelDefinition$ObjectEntry
 INTERFACE com.openggf.mods.code.ModLevelDefinition$TrackMusic com.openggf.mods.code.ModLevelDefinition$Music
+INTERFACE com.openggf.mods.mutators.MutatorConfigurationScreen com.openggf.game.LevelInputOverlay
+INTERFACE com.openggf.mods.mutators.MutatorConfigurationScreen com.openggf.game.TitleScreenProvider
 INTERFACE com.openggf.mods.mutators.MutatorOption$Checkbox com.openggf.mods.mutators.MutatorOption
 INTERFACE com.openggf.mods.mutators.MutatorOption$Choice com.openggf.mods.mutators.MutatorOption
 INTERFACE com.openggf.mods.mutators.MutatorOption$IntegerSlider com.openggf.mods.mutators.MutatorOption
@@ -5764,7 +5789,16 @@ METHOD com.openggf.game.LevelInitProfile public,abstract  java.util.List<com.ope
 METHOD com.openggf.game.LevelInitProfile public,abstract  java.util.List<com.openggf.game.InitStep> levelTeardownSteps()
 METHOD com.openggf.game.LevelInitProfile public,abstract  java.util.List<com.openggf.game.InitStep> perTestResetSteps()
 METHOD com.openggf.game.LevelInitProfile public,abstract  java.util.List<com.openggf.game.StaticFixup> postTeardownFixups()
+METHOD com.openggf.game.LevelInputOverlay public  boolean pausesGameplay()
+METHOD com.openggf.game.LevelInputOverlay public  com.openggf.game.LevelInputOverlay$Command consumeCommand()
+METHOD com.openggf.game.LevelInputOverlay public  void close()
+METHOD com.openggf.game.LevelInputOverlay public  void commandQueued(boolean)
+METHOD com.openggf.game.LevelInputOverlay public  void drawOverlay()
 METHOD com.openggf.game.LevelInputOverlay public,abstract  boolean handleInput(com.openggf.control.InputHandler)
+METHOD com.openggf.game.LevelInputOverlay$Command public,static  com.openggf.game.LevelInputOverlay$Command valueOf(java.lang.String)
+METHOD com.openggf.game.LevelInputOverlay$Command public,static  com.openggf.game.LevelInputOverlay$Command[] values()
+METHOD com.openggf.game.LevelLoadCause public,static  com.openggf.game.LevelLoadCause valueOf(java.lang.String)
+METHOD com.openggf.game.LevelLoadCause public,static  com.openggf.game.LevelLoadCause[] values()
 METHOD com.openggf.game.LevelLoadContext public  boolean hasCheckpoint()
 METHOD com.openggf.game.LevelLoadContext public  boolean hasCheckpointS3kRuntimeState()
 METHOD com.openggf.game.LevelLoadContext public  boolean hasCheckpointSolidBits()
@@ -5781,6 +5815,7 @@ METHOD com.openggf.game.LevelLoadContext public  com.openggf.data.Rom getRom()
 METHOD com.openggf.game.LevelLoadContext public  com.openggf.game.GameModule getGameModule()
 METHOD com.openggf.game.LevelLoadContext public  com.openggf.game.InitialProcessSpritesLifecycle requestedInitialProcessSpritesLifecycle()
 METHOD com.openggf.game.LevelLoadContext public  com.openggf.game.LevelAssemblyKind getAssemblyKind()
+METHOD com.openggf.game.LevelLoadContext public  com.openggf.game.LevelLoadCause getLoadCause()
 METHOD com.openggf.game.LevelLoadContext public  com.openggf.game.LevelLoadMode getLoadMode()
 METHOD com.openggf.game.LevelLoadContext public  com.openggf.level.Level getLevel()
 METHOD com.openggf.game.LevelLoadContext public  com.openggf.level.LevelDescriptor getLevelData()
@@ -5809,6 +5844,7 @@ METHOD com.openggf.game.LevelLoadContext public  void setIncludePostLoadAssembly
 METHOD com.openggf.game.LevelLoadContext public  void setLevel(com.openggf.level.Level)
 METHOD com.openggf.game.LevelLoadContext public  void setLevelData(com.openggf.level.LevelDescriptor)
 METHOD com.openggf.game.LevelLoadContext public  void setLevelIndex(int)
+METHOD com.openggf.game.LevelLoadContext public  void setLoadCause(com.openggf.game.LevelLoadCause)
 METHOD com.openggf.game.LevelLoadContext public  void setLoadMode(com.openggf.game.LevelLoadMode)
 METHOD com.openggf.game.LevelLoadContext public  void setQueueFreshLevelRuntimeArt(boolean)
 METHOD com.openggf.game.LevelLoadContext public  void setRom(com.openggf.data.Rom)
@@ -9504,6 +9540,7 @@ METHOD com.openggf.level.LevelManager public  void resetTileOffsetPositionActual
 METHOD com.openggf.level.LevelManager public  void resetTileOffsetPositionEffectiveForFullRefresh()
 METHOD com.openggf.level.LevelManager public  void respawnPlayer()
 METHOD com.openggf.level.LevelManager public  void restartCurrentLevelAfterDeath()
+METHOD com.openggf.level.LevelManager public  void restartCurrentLevelFromConfiguration()
 METHOD com.openggf.level.LevelManager public  void restoreBackgroundVdpPlane(byte[])
 METHOD com.openggf.level.LevelManager public  void restoreCheckpointState(com.openggf.game.LevelLoadContext)
 METHOD com.openggf.level.LevelManager public  void restoreCheckpointStateForRewind(com.openggf.game.CheckpointState$RewindState)
@@ -11868,6 +11905,25 @@ METHOD com.openggf.mods.code.ZoneEventFactory public,abstract  com.openggf.game.
 METHOD com.openggf.mods.mutators.MutatorCapability public  com.openggf.mods.mutators.MutatorScope minimumScope()
 METHOD com.openggf.mods.mutators.MutatorCapability public,static  com.openggf.mods.mutators.MutatorCapability valueOf(java.lang.String)
 METHOD com.openggf.mods.mutators.MutatorCapability public,static  com.openggf.mods.mutators.MutatorCapability[] values()
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  boolean handleInput(com.openggf.control.InputHandler)
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  boolean isActive()
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  boolean isExiting()
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  boolean pausesGameplay()
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  com.openggf.game.LevelInputOverlay$Command consumeCommand()
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  com.openggf.game.TitleScreenProvider$State getState()
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  com.openggf.game.TitleScreenProvider$TitleScreenAction consumeExitAction()
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  int startActIndex()
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  int startZoneIndex()
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  void close()
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  void commandQueued(boolean)
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  void draw()
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  void drawOverlay()
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  void initialize()
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  void reset()
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  void setClearColor()
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  void update(com.openggf.control.InputHandler)
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen$Cue public,static  com.openggf.mods.mutators.MutatorConfigurationScreen$Cue valueOf(java.lang.String)
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen$Cue public,static  com.openggf.mods.mutators.MutatorConfigurationScreen$Cue[] values()
 METHOD com.openggf.mods.mutators.MutatorDefinition public  com.openggf.mods.mutators.MutatorDefinition$PolicyFactory factory()
 METHOD com.openggf.mods.mutators.MutatorDefinition public  com.openggf.mods.mutators.MutatorOption option(java.lang.String)
 METHOD com.openggf.mods.mutators.MutatorDefinition public  com.openggf.mods.mutators.MutatorScope disableScope()
@@ -11960,6 +12016,8 @@ METHOD com.openggf.mods.mutators.MutatorPolicy$Target public,static  com.openggf
 METHOD com.openggf.mods.mutators.MutatorScope public  boolean admits(com.openggf.mods.mutators.MutatorScope)
 METHOD com.openggf.mods.mutators.MutatorScope public,static  com.openggf.mods.mutators.MutatorScope valueOf(java.lang.String)
 METHOD com.openggf.mods.mutators.MutatorScope public,static  com.openggf.mods.mutators.MutatorScope[] values()
+METHOD com.openggf.mods.mutators.MutatorSupportProfile public,abstract  boolean supportsPlayer(java.lang.String,boolean)
+METHOD com.openggf.mods.mutators.MutatorSupportProfile public,abstract  java.util.Set<com.openggf.mods.mutators.MutatorCapability> capabilities(int,int)
 METHOD com.openggf.mods.scene.DebuggableScene public,abstract  boolean debugJump(java.lang.String)
 METHOD com.openggf.mods.scene.ModScene public  void exit(com.openggf.mods.scene.SceneContext)
 METHOD com.openggf.mods.scene.ModScene public,abstract  void draw(com.openggf.mods.scene.SceneContext,com.openggf.mods.scene.SceneCanvas)
@@ -14943,6 +15001,7 @@ NESTED com.openggf.game.DebugOverlayProvider com.openggf.game.DebugOverlayProvid
 NESTED com.openggf.game.DebugOverlayProvider com.openggf.game.DebugOverlayProvider$ObjectDebugLabel
 NESTED com.openggf.game.DebugOverlayProvider com.openggf.game.DebugOverlayProvider$TouchResponseDebugInfo
 NESTED com.openggf.game.GameRng com.openggf.game.GameRng$Flavour
+NESTED com.openggf.game.LevelInputOverlay com.openggf.game.LevelInputOverlay$Command
 NESTED com.openggf.game.LevelSelectProvider com.openggf.game.LevelSelectProvider$State
 NESTED com.openggf.game.MasterTitleEntry com.openggf.game.MasterTitleEntry$Action
 NESTED com.openggf.game.MasterTitleEntry com.openggf.game.MasterTitleEntry$Launch
@@ -15113,6 +15172,7 @@ NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDe
 NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$StockMusic
 NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn
 NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDefinition$TrackMusic
+NESTED com.openggf.mods.mutators.MutatorConfigurationScreen com.openggf.mods.mutators.MutatorConfigurationScreen$Cue
 NESTED com.openggf.mods.mutators.MutatorDefinition com.openggf.mods.mutators.MutatorDefinition$AtomicGroup
 NESTED com.openggf.mods.mutators.MutatorDefinition com.openggf.mods.mutators.MutatorDefinition$PolicyFactory
 NESTED com.openggf.mods.mutators.MutatorOption com.openggf.mods.mutators.MutatorOption$Checkbox
@@ -18320,6 +18380,7 @@ TYPE class public,final com.openggf.level.rings.SpillAnimationState SUPER java.l
 TYPE class public,final com.openggf.mods.code.ModContext SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.ModLevelDefinition SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.StandaloneLevelLoader SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.mutators.MutatorConfigurationScreen SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneButtons SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneDraw SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneImage SUPER java.lang.Object
@@ -18380,6 +18441,7 @@ TYPE enum public,final com.openggf.game.GameId SUPER java.lang.Enum<com.openggf.
 TYPE enum public,final com.openggf.game.GameMode SUPER java.lang.Enum<com.openggf.game.GameMode>
 TYPE enum public,final com.openggf.game.GameOverExit SUPER java.lang.Enum<com.openggf.game.GameOverExit>
 TYPE enum public,final com.openggf.game.GroundMode SUPER java.lang.Enum<com.openggf.game.GroundMode>
+TYPE enum public,final com.openggf.game.LevelLoadCause SUPER java.lang.Enum<com.openggf.game.LevelLoadCause>
 TYPE enum public,final com.openggf.game.LevelLoadMode SUPER java.lang.Enum<com.openggf.game.LevelLoadMode>
 TYPE enum public,final com.openggf.game.PlayerCharacter SUPER java.lang.Enum<com.openggf.game.PlayerCharacter>
 TYPE enum public,final com.openggf.game.ShieldType SUPER java.lang.Enum<com.openggf.game.ShieldType>
@@ -18482,6 +18544,7 @@ TYPE enum public,static,final com.openggf.editor.persistence.EditorSaveManager$A
 TYPE enum public,static,final com.openggf.editor.render.EditorLibraryBrowserPane$Kind SUPER java.lang.Enum<com.openggf.editor.render.EditorLibraryBrowserPane$Kind>
 TYPE enum public,static,final com.openggf.game.DataSelectProvider$State SUPER java.lang.Enum<com.openggf.game.DataSelectProvider$State>
 TYPE enum public,static,final com.openggf.game.GameRng$Flavour SUPER java.lang.Enum<com.openggf.game.GameRng$Flavour>
+TYPE enum public,static,final com.openggf.game.LevelInputOverlay$Command SUPER java.lang.Enum<com.openggf.game.LevelInputOverlay$Command>
 TYPE enum public,static,final com.openggf.game.LevelSelectProvider$State SUPER java.lang.Enum<com.openggf.game.LevelSelectProvider$State>
 TYPE enum public,static,final com.openggf.game.MasterTitleEntry$Action SUPER java.lang.Enum<com.openggf.game.MasterTitleEntry$Action>
 TYPE enum public,static,final com.openggf.game.MasterTitleScreen$GameEntry SUPER java.lang.Enum<com.openggf.game.MasterTitleScreen$GameEntry>
@@ -18513,6 +18576,7 @@ TYPE enum public,static,final com.openggf.level.SeamlessLevelTransitionRequest$T
 TYPE enum public,static,final com.openggf.level.objects.ObjectRenderManager$SpringVariant SUPER java.lang.Enum<com.openggf.level.objects.ObjectRenderManager$SpringVariant>
 TYPE enum public,static,final com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind SUPER java.lang.Enum<com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind>
 TYPE enum public,static,final com.openggf.level.resources.KosinskiModuleQueue$Phase SUPER java.lang.Enum<com.openggf.level.resources.KosinskiModuleQueue$Phase>
+TYPE enum public,static,final com.openggf.mods.mutators.MutatorConfigurationScreen$Cue SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorConfigurationScreen$Cue>
 TYPE enum public,static,final com.openggf.mods.mutators.MutatorPolicy$Target SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorPolicy$Target>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$Compression>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$DplcLayout SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$DplcLayout>
@@ -18639,6 +18703,7 @@ TYPE interface public,abstract com.openggf.level.scroll.ZoneScrollHandler SUPER 
 TYPE interface public,abstract com.openggf.level.spawn.SpawnPoint SUPER <none>
 TYPE interface public,abstract com.openggf.mods.code.GgfMod SUPER <none>
 TYPE interface public,abstract com.openggf.mods.code.ZoneEventFactory SUPER <none>
+TYPE interface public,abstract com.openggf.mods.mutators.MutatorSupportProfile SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.DebuggableScene SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.ModScene SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.ModSceneFactory SUPER <none>
@@ -19397,6 +19462,8 @@ TYPE-ANNOTATION com.openggf.game.LevelEventProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelInitProfile @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelInputOverlay @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelInputOverlay @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.game.LevelInputOverlay$Command @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.LevelLoadCause @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelLoadContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelLoadMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelSelectProvider @com.openggf.game.ModApi
@@ -19998,6 +20065,8 @@ TYPE-ANNOTATION com.openggf.mods.code.StandaloneLevelLoader @com.openggf.game.Mo
 TYPE-ANNOTATION com.openggf.mods.code.ZoneEventFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.code.ZoneEventFactory @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorCapability @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorConfigurationScreen @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorConfigurationScreen$Cue @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorDefinition @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorDefinition$AtomicGroup @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorDefinition$PolicyFactory @com.openggf.game.ModApi
@@ -20012,6 +20081,7 @@ TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity @com.ope
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$PlayerStealth @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$Target @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorScope @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorSupportProfile @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.DebuggableScene @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.ModScene @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.ModSceneFactory @com.openggf.game.ModApi

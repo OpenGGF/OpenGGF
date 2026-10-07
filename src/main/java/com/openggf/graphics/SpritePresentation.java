@@ -13,6 +13,17 @@ public final class SpritePresentation {
         public boolean isHud() { return this == HUD || this == HUD_COUNTERS; }
     }
 
+    /** Semantic display ownership, independent of native sprite admission and gameplay flags. */
+    public enum Part { WORLD, BODY, APPENDAGE, ATTACHED_EFFECT }
+    public record Subject(String id, Part part, boolean suppressed) {
+        public static final Subject WORLD = new Subject("", Part.WORLD, false);
+        public Subject {
+            java.util.Objects.requireNonNull(id, "subject id");
+            java.util.Objects.requireNonNull(part, "subject part");
+            if (part == Part.WORLD && suppressed) throw new IllegalArgumentException("World presentation cannot be suppressed");
+        }
+    }
+
     /**
      * One prepared tile. {@code rowStart}/{@code rowEnd} are the visible pixel rows of an
      * 8x8 tile in screen order ({@code 0}/{@code 8} when whole): a VDP sprite mask can
@@ -21,7 +32,15 @@ public final class SpritePresentation {
     public record Tile(Layer layer, int patternId, int palette, boolean hFlip, boolean vFlip,
                        boolean priority, float x, float y, float width, float height,
                        boolean priorityShader, int occlusionMask, boolean ghost, float ghostAlpha,
-                       int rowStart, int rowEnd) {
+                       int rowStart, int rowEnd, Subject subject) {
+        public Tile { java.util.Objects.requireNonNull(subject, "subject"); }
+        public Tile(Layer layer, int patternId, int palette, boolean hFlip, boolean vFlip,
+                    boolean priority, float x, float y, float width, float height,
+                    boolean priorityShader, int occlusionMask, boolean ghost, float ghostAlpha,
+                    int rowStart, int rowEnd) {
+            this(layer, patternId, palette, hFlip, vFlip, priority, x, y, width, height,
+                    priorityShader, occlusionMask, ghost, ghostAlpha, rowStart, rowEnd, Subject.WORLD);
+        }
         public Tile(Layer layer, int patternId, int palette, boolean hFlip, boolean vFlip,
                     boolean priority, float x, float y, float width, float height,
                     boolean priorityShader, int occlusionMask, boolean ghost, float ghostAlpha) {
@@ -41,7 +60,12 @@ public final class SpritePresentation {
 
     public interface Geometry { GLCommandable command(int cameraX, int cameraY); }
 
-    public record Primitive(int beforeTile, Layer layer, Geometry primitive) { }
+    public record Primitive(int beforeTile, Layer layer, Geometry primitive, Subject subject) {
+        public Primitive { java.util.Objects.requireNonNull(subject, "subject"); }
+        public Primitive(int beforeTile, Layer layer, Geometry primitive) {
+            this(beforeTile, layer, primitive, Subject.WORLD);
+        }
+    }
 
     public record Frame(List<Tile> tiles, List<Primitive> primitives, Map<Integer, PatternVersion> patternVersions) {
         public Frame { tiles = List.copyOf(tiles); primitives = List.copyOf(primitives); patternVersions = Map.copyOf(patternVersions); }
@@ -68,7 +92,8 @@ public final class SpritePresentation {
             tiles.add(new Tile(layer, id, desc.palette(), desc.hFlip(), desc.vFlip(),
                     desc.priority(), x - cameraX, y - cameraY, width, height,
                     graphics.isUseSpritePriorityShader(), graphics.getCurrentSpriteTileOcclusionPaletteMask(),
-                    graphics.isGhostRenderEffectActive(), graphics.getGhostRenderAlpha()));
+                    graphics.isGhostRenderEffectActive(), graphics.getGhostRenderAlpha(), 0, 8,
+                    graphics.spritePresentationSubject));
         }
         void addRows(GraphicsManager graphics, int id, Object descriptor,
                      int x, int y, int rowStart, int rowEnd) {
@@ -76,7 +101,8 @@ public final class SpritePresentation {
             tiles.add(new Tile(layer, id, desc.palette(), desc.hFlip(), desc.vFlip(),
                     desc.priority(), x - cameraX, y - cameraY, 8, 8,
                     graphics.isUseSpritePriorityShader(), graphics.getCurrentSpriteTileOcclusionPaletteMask(),
-                    graphics.isGhostRenderEffectActive(), graphics.getGhostRenderAlpha(), rowStart, rowEnd));
+                    graphics.isGhostRenderEffectActive(), graphics.getGhostRenderAlpha(), rowStart, rowEnd,
+                    graphics.spritePresentationSubject));
         }
     }
 
@@ -146,6 +172,14 @@ public final class SpritePresentation {
             builder.firstPatternVersion = Math.min(builder.firstPatternVersion, id);
             builder.lastPatternVersion = Math.max(builder.lastPatternVersion, id);
         }
+    }
+
+    /** Scope tags at the producer; SAT replay carries the immutable tag through its native post-pass. */
+    public static void withSubject(GraphicsManager graphics, Subject subject, Runnable producer) {
+        Subject previous = graphics.spritePresentationSubject;
+        graphics.spritePresentationSubject = java.util.Objects.requireNonNull(subject, "subject");
+        try { producer.run(); }
+        finally { graphics.spritePresentationSubject = previous; }
     }
 
     public static void layer(GraphicsManager graphics, Layer layer) {

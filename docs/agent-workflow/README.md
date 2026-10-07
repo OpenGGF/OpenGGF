@@ -25,6 +25,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Owned Engine window capture](../../tools/media/engine_window_capture.py): bounded X11 desktop video, Pulse monitor PCM and input-only JSON actions with isolated config, exact PID/title/visibility checks and owned cleanup (2026-10-07 Mutator Lab). See the [capture recipe](../../tools/media/README.md).
+
 - `GameplayAllocationTool`: ordinary BK2-driven loop/render bytes per frame, excluding PNG/readback and CSV allocation. Use `--rom <absolute-path> --input <bk2> --zone <numeric-id> --act <one-based> --out-dir target/alloc`; optional `--frames 6000 --warmup 600 --width 400 --main sonic --sidekick tails --rewind true --jfr true`. `--sidekick none` selects solo play; the console reports the live roster count. Loop allocation includes input-row decoding. Compare route state before interpreting allocation deltas; JFR includes other threads, whereas reported counters measure the gameplay thread. Keep raw diagnostics temporary.
 
 - [Sprite sheet dump](../../src/main/java/com/openggf/tools/modsdk/SpriteSheetDump.java) (`ggfmod sprites`): renders every mapping frame of a ROM sprite (art, mappings, optional DPLC, palettes) or a playable character (`char=sonic`, with its animation scripts) into one numbered PNG grid, for choosing frames without booting a level (2026-10-05 Slay the Robotnik; a ggfmod subcommand since 2026-10-06).
@@ -212,3 +214,9 @@ Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven
 - [SSZ arena-static presentation demo](../../tools/visuals/ssz_arena_static_demo.py): composites deterministic side-only noise over verified widescreen boss footage and emits a local comparison page; originating [2026-09-24 design study](../architecture/designs/2026-09-24-widescreen-boss-arena-static.md), not an engine feature.
 
 - `tools/bizhawk/capture_mhz_pillar_reference.lua` samples native MHZ2 pillar scroll words and their collision helpers from ordinary movie playback; use the common native capture host and an explicit movie-state plan.
+
+- `GameplayCaptureTool --title-screen --audio` (Mutator Lab, 2026-10-07) observes
+  production title-to-play initialization and exactly one final SMPS PCM packet per
+  captured outer frame. InputLogAuthorTool compiles the maintained example script;
+  synchronized CSV adds host pause and effective mutator revision. Captures belong
+  outside Git, and the silent video may be muxed with the generated `audio.wav`.

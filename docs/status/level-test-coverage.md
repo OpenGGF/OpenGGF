@@ -1,5 +1,10 @@
 # Level test coverage backlog
 
+Mutator Lab (2026-10-07): the [S2 EHZ1 prototype matrix](../architecture/validation/levels/mutator-lab-s2-ehz1.md)
+tracks native solo-Sonic opening play, configuration/load boundaries, selective
+presentation and effective-state rewind. Execution and audiovisual evidence are
+pending; this does not certify an act-clear, teams, donors or other viewports.
+
 Sonic Survivors v2 (2026-10-06): the [mod act/character matrix](../architecture/designs/2026-10-06-sonic-survivors.md#v2-affected-actcharacter-matrix) records solo Sonic/Tails arena traversal, ARZ ceiling containment, modal input, lost-ring provenance/rewind and changed boss presentation. Donor and per-act boss rewind gaps remain explicit; this does not certify stock S2 acts.
 
 Putt Putt Paradise (2026-10-05, obstruction follow-up 2026-10-06): the [EHZ1/EHZ2 golf matrix](../architecture/validation/levels/putt-putt-paradise-ehz.md) tracks fresh Sonic/Tails routes across the five actual viewport presets, every local pairing, held-course rollback/rewind, native rendering and two-JVM direct play. Short checks cover rolling side entry into a ROM upward spring and 90° chip clearance against a controlled solid wall, both characters/facings with forward replay. Execution and remaining donor/parity/rewind breadth are recorded in the local delivery plan; this is an intentional mod course, not stock EHZ certification.

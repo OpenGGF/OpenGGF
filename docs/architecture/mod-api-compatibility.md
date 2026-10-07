@@ -75,6 +75,17 @@ UI owns Start/Enter for that frame; the UI remains responsible for freezing its 
 Modules without the service retain normal pause behavior. This replaces no input bindings
 and changes only the mutable `0.7` pin; the descriptor and `ModApiVersion` remain at `0.7.0`.
 
+The Mutator Lab prototype extends that overlay with host-owned configuration
+holds, rendering and explicit Resume/full-restart/game-hub commands. Commands
+wait visibly across an active native fade. Typed mutator definitions declare
+independent enable/disable and option scopes; atomic session publication, safe
+capabilities and requested preferences are separate from effective rewind state.
+`LevelLoadCause` identifies a qualifying full assembly; a cause alone cannot
+promote preview, decode-only or restoration work. The common configuration UI
+and support profile are candidate API roots. The normalized `0.7` pin and
+`ModApiVersion` description change together; the descriptor retains unpublished
+candidate `0.7.0` and no published baseline is edited.
+
 The controlled-level additions expose `GameplayFrameController`, `CourseControl`,
 opaque session/hole/layout-tagged `CourseCheckpoint`, `MenuInput`, title act
 selection, and typed ROM-backed scene values/presenters. The default controller

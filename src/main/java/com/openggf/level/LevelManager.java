@@ -498,7 +498,17 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void loadLevel(int levelIndex, LevelLoadMode loadMode, LevelLoadContext ctx) throws IOException {
         discardInitialProcessSpritesLifecycle();
+        // A cause labels an actual fresh assembly; it cannot turn a decode or
+        // preview into configuration admission. Match the production setup gate.
+        var admissionCause = loadMode == LevelLoadMode.PREVIEW_CAPTURE
+                ? com.openggf.game.LevelLoadCause.PREVIEW
+                : ctx.isIncludePostLoadAssembly() && ctx.getAssemblyKind() == LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY
+                    ? ctx.getLoadCause() : com.openggf.game.LevelLoadCause.DECODE_ONLY;
         try {
+            com.openggf.game.session.MutatorWorldAccess.beforeAssembly(worldSession, admissionCause);
+            // A production replay/bootstrap reset retires structural sprite bindings.
+            // Reinject this world owner before any assembly recreates/dispatches players.
+            com.openggf.game.session.MutatorWorldAccess.bindRoster(worldSession, spriteManager);
             ctx.resetInitialProcessSpritesRequestForLoadAttempt();
             GameModule module = activeGameModule();
             LevelInitProfile profile = module.getLevelInitProfile();
@@ -534,8 +544,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                         completedProductionLoadGeneration);
             }
         } catch (Exception e) {
+            com.openggf.game.session.MutatorWorldAccess.failedAssembly(worldSession, admissionCause);
             discardInitialProcessSpritesLifecycle();
-            activeGameModule().getLevelInitProfile().cancelPendingLevelLoadWork();
+            try { activeGameModule().getLevelInitProfile().cancelPendingLevelLoadWork(); }
+            catch (com.openggf.mods.code.ModFaultBoundary.CallbackAborted quarantined) {
+                if (!(e instanceof com.openggf.mods.code.ModFaultBoundary.CallbackAborted)) e.addSuppressed(quarantined);
+            }
+            if (e instanceof com.openggf.mods.code.ModFaultBoundary.CallbackAborted aborted) throw aborted;
             // Profile steps wrap checked exceptions in RuntimeException; unwrap if cause is IOException
             Throwable cause = e.getCause();
             if (cause instanceof IOException ioe) {
@@ -3563,7 +3578,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void restartCurrentLevelAfterDeath() {
         transitions.setLevelRoutineReentry(true);
         try {
-            loadCurrentLevel(true);
+            loadCurrentLevel(true, LevelLoadMode.FULL, true, false, false,
+                    com.openggf.game.LevelLoadCause.FULL_DEATH_RELOAD);
         } finally {
             transitions.setLevelRoutineReentry(false);
         }
@@ -3573,7 +3589,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Loads the current level for death respawn (no title card).
      */
     public void respawnPlayer() {
-        loadCurrentLevel(false);
+        loadCurrentLevel(false, LevelLoadMode.FULL, true, false, false,
+                com.openggf.game.LevelLoadCause.FULL_DEATH_RELOAD);
+    }
+
+    /** Explicit full restart from configuration: clears checkpoint banking before assembly. */
+    public void restartCurrentLevelFromConfiguration() {
+        checkpointCoordinator.clear();
+        loadCurrentLevel(true, LevelLoadMode.FULL, true, false, false,
+                com.openggf.game.LevelLoadCause.FULL_RESTART);
     }
 
     public void loadCurrentLevel(LevelLoadMode loadMode, boolean showTitleCard) {
@@ -3606,6 +3630,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload,
             boolean titleCardRequiredInHeadlessMode,
             boolean queueFreshLevelRuntimeArt) {
+        loadCurrentLevel(showTitleCard, loadMode, runtimeReload, titleCardRequiredInHeadlessMode,
+                queueFreshLevelRuntimeArt, transitions.isBonusStageReturn() || transitions.hasBigRingReturn()
+                        ? com.openggf.game.LevelLoadCause.STAGE_RETURN_FULL_ASSEMBLY
+                        : com.openggf.game.LevelLoadCause.FULL_LEVEL_ASSEMBLY);
+    }
+
+    private void loadCurrentLevel(
+            boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload,
+            boolean titleCardRequiredInHeadlessMode, boolean queueFreshLevelRuntimeArt,
+            com.openggf.game.LevelLoadCause loadCause) {
         discardPreparedLevelLoad();
         try {
             // V_int_run_count is global work RAM, outside Dynamic_object_RAM.
@@ -3647,6 +3681,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             LevelDescriptor levelData = levels.get(currentZone).get(currentAct);
 
             LevelLoadContext ctx = new LevelLoadContext();
+            ctx.setLoadCause(loadMode == LevelLoadMode.PREVIEW_CAPTURE
+                    ? com.openggf.game.LevelLoadCause.PREVIEW : loadCause);
             ctx.setShowTitleCard(showTitleCard);
             ctx.setTitleCardRequiredInHeadlessMode(titleCardRequiredInHeadlessMode);
             // A results return re-enters Level: too: loc_6310 queues terrain

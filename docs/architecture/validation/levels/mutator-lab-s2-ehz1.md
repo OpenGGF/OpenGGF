@@ -1,0 +1,46 @@
+# Mutator Lab: Sonic 2 Emerald Hill Act 1
+
+Original implementation base: `6d817a9d74f135714f3da59ab9aab156cc09473e`.
+This is an opening-play prototype, not certification of the entire stock act.
+The [implementation plan](../../plans/2026-10-07-mutators-prototype-implementation.md)
+and [creator guide](../../../modding/guides/mutators.md) own delivery and authoring.
+
+## Supported cell and obligations
+
+Sonic 2 World REV01, native 320×224 logical viewport, solo Sonic, donor off,
+Emerald Hill Act 1. Gravity affects dry ordinary airborne acceleration only.
+Jump impulse, hurt, death, water, flight and scripted movement retain native
+behavior. Stealth filters the player's immutable body/appendage presentation;
+attached effects are optional. Objects, collision, targeting, audio and HUD
+remain native. Deposited skid puffs are world effects.
+
+| Boundary or route | Evidence obligation | Current evidence |
+| --- | --- | --- |
+| Native opening run/jump | Stock-off movement identity; 25–200% dry gravity; real ROM terrain and object updates | Source and focused tests prepared; execution pending |
+| Title → configure → play | Actual title/help, slider/checkbox/enum, load transition and native rendered play | Committed input source prepared; GPU/PCM capture pending |
+| Play → configure → Resume | No simulation during hold; explicit LIVE publication; simultaneous host Escape/Start, window/user pause, focus and frame step | Production-loop regression prepared; execution pending |
+| Configuration during fade | Retain command, visible waiting feedback, apply once after the active fade | Production-loop regression prepared; execution pending |
+| Restart and new launch | Qualifying full restart, repeated native assembly, clean hub retirement, requested preferences independent of historical state | Session tests and actual-window walkthrough pending |
+| Rewind across edits | Complete registry restore, recreated roster, forward replay across two effective revisions | ROM-backed registry regression prepared; execution pending |
+| Fault/recovery | Typed preparation abort, quarantine outside history, rejected graph keeps old revision, teardown attempts native owners | Session/core regressions prepared; execution pending |
+| Stock trace/time attack/movie | External-content exclusion and no configuration interception of movie input | Existing owners preserved; focused replay pending |
+
+## Explicit limits
+
+No EHZ act-clear or EHZ1 → EHZ2 route is claimed. Outside EHZ1, the prepared
+settings remain visible but effects suspend, and configuration reports that
+cell. Other characters, teams, donors, water Gravity, wider viewports and
+special/bonus stages are not qualified by this prototype. The schema's
+leader/all-team enum is usable authoring data; both values select the same
+solo leader in the advertised cell.
+
+Native SAT admission, priority and mask behavior happen before selective
+presentation suppression. Headless tests alone do not prove that visual or
+audio output is polished. `GameplayCaptureTool --title-screen --audio`
+drives the real title/level owners, but its headless boot lacks the engine's
+game-hub callback; hub/relaunch evidence must come from the actual engine
+window. Captures belong in the task's outside-repository directory.
+
+Inherited stock-act coverage remains in this backlog. Future breadth must
+add per-character, donor, viewport, event/load and rewind evidence instead of
+promoting this opening sequence into a full route claim.

@@ -1,0 +1,23 @@
+# Production title, how-to-play, independent option widgets, native play and LIVE resume.
+# Input only. No physics or native trace rows are supplied.
+600 -
+# How to play, then back to title.
+1 D; 1 -; 1 D; 1 -; 1 A; 60 -; 1 C; 1 -
+# Configure Gravity ON at 50%.
+1 D; 1 -; 1 A; 1 -; 1 A; 1 -; 1 R; 1 -; 1 D; 1 -
+repeat 10 { 1 L; 1 - }
+40 -; 1 C; 1 -
+# Configure Stealth while inactive: all-team enum and attached-effects checkbox.
+1 D; 1 -; 1 A; 1 -; 1 D; 1 -; 1 R; 1 -; 1 D; 1 -; 1 R; 40 -; 1 C; 1 -
+# Start from configuration.
+1 D; 1 -; 1 D; 1 -; 1 A; 240 -
+60 R; 1 R+A; 30 R; 90 -
+# LIVE-enable Stealth after visible low-gravity play, then Resume.
+1 S; 1 -; 1 D; 1 -; 1 R; 30 -; 1 D; 1 -; 1 A; 30 -
+60 R; 1 R+A; 30 R; 90 -
+# Open configuration, turn both effects off, then explicitly Resume.
+1 S; 1 -; 1 R; 20 -; 1 D; 1 -; 1 R; 20 -; 1 D; 1 -; 1 A; 30 -
+60 R; 1 R+A; 30 R; 90 -
+# Restart from act start, retaining requested defaults/off.
+1 S; 1 -; 1 D; 1 -; 1 D; 1 -; 1 D; 1 -; 1 A; 240 -
+60 R; 1 A; 40 -

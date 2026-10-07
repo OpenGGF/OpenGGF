@@ -53,9 +53,12 @@ public final class DevelopmentPatchLoader {
             throw new IOException("Could not load entrypoint " + manifest.entrypoint(), e);
         }
         ModRegistrationPlan frozen = plan;
+        // An explicitly supplied development jar remains owner-attributed in capture tools.
+        var boundary = new ModFaultBoundary(java.util.Map.of(), new com.openggf.mods.ModRuntimeFindingStore(),
+                disabled -> new com.openggf.mods.ModStateSaveResult.Saved(), disabled -> { });
         return base -> {
-            GameModule effective = new ModBackedGamePatch(frozen).apply(base, null);
-            for (GamePatch patch : frozen.explicitPatches()) effective = patch.apply(effective, null);
+            GameModule effective = new ModBackedGamePatch(frozen, boundary).apply(base, null);
+            for (GamePatch patch : frozen.explicitPatches()) effective = com.openggf.mods.runtime.OwnerBoundGamePatch.wrap(manifest.id(), patch, boundary).apply(effective, null);
             return effective;
         };
     }

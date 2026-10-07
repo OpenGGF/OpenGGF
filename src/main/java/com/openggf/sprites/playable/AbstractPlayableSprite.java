@@ -76,6 +76,11 @@ import com.openggf.timer.timers.SpeedShoesTimer;
 public abstract class AbstractPlayableSprite extends AbstractSprite implements com.openggf.game.PlayableEntity {
         private static final Logger LOGGER = Logger.getLogger(AbstractPlayableSprite.class.getName());
 
+        @RewindTransient(reason = "session policy source is structural; effective revision is captured by its session owner")
+        PlayableMutatorPolicySource mutatorPolicySource;
+
+        com.openggf.graphics.GraphicsManager mutatorGraphics() { return graphicsManager; }
+
         @RewindTransient(reason = "character registry identity is immutable structural state")
         final CharacterKey boundCharacterKey;
 

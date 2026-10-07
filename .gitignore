@@ -44,6 +44,7 @@ stable-retro-*.zip
 
 # Debug tools (uncompiled standalone scripts)
 tools/*
+!tools/media/
 !tools/tracechaser-bootstrap.sh
 !tools/tracechaser-forward.lua
 !tools/tracechaser.ps1

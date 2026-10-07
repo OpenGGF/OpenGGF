@@ -55,6 +55,8 @@ Use a task directory outside the repository for captures the user should keep.
 | `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |
 | `--camera-x-sub <n>` | fresh | Declared inherited `Camera_X_pos` low word; only zones that keep a camera fraction (S3K DDZ) accept it |
 | `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |
+| `--title-screen` | off | Initialize the production title before first assembly; first zone/act only, no positioned/checkpoint/clock/donor seeds |
+| `--audio` | off | Write `audio.wav` from one final SMPS PCM packet per outer frame; every=1, capture-from=0, matching 60-Hz presentation. Video remains silent until muxed |
 | `--title-card` | off | Keep and draw title-card presentations instead of omitting them |
 | `--complete-special-stage` | off | Request the debug special-stage completion while a special stage runs (awards its emerald with 50 rings; no key binding is involved), so the capture continues into the results screen; results frames render as `Engine` draws them, including the S3K Super Emerald sanctuary backdrop |
 | `--frames <n>` | settle + log length | Total frames to step |
@@ -68,10 +70,16 @@ Use a task directory outside the repository for captures the user should keep.
 
 Read `state.csv` before opening any image. Columns: frame, x, y, xvel, yvel, gspeed,
 air, rolling, spindash, hurt, dead, rings, mapping_frame, cam_x, cam_y,
-sk_present, sk_x, sk_y, high_priority, mode, input.
+sk_present, sk_x, sk_y, high_priority, mode, input, host_paused, mutator_revision.
 Find the frame of interest (first `dead=1`, a stall where `x` stops rising, the frame
 `rolling` flips) and view only `frames/<frame>.png` or the matching still. Send the
 user the MP4 plus one or two stills, with the frame numbers and what they show.
+
+For title/configuration captures, use a fresh owned preference root and maintained
+input script. Configuration PCM continues through its modal play hold; window/user
+pause still uses the existing audio pause owner. The capture host does not install
+the interactive Engine hub-return callback; use the real JVM engine to certify
+exit/relaunch. Never label a black end frame as observed hub recovery.
 
 ## Pitfalls
 

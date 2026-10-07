@@ -96,7 +96,7 @@ public final class SpritePresentationRenderer {
                 while (primitiveIndex < frame.primitives().size()
                         && frame.primitives().get(primitiveIndex).beforeTile() == index) {
                     var primitive = frame.primitives().get(primitiveIndex++);
-                    if (visible.test(primitive.layer())) {
+                    if (visible.test(primitive.layer()) && !primitive.subject().suppressed()) {
                         graphics.flushPatternBatch();
                         graphics.enqueueDebugLineState();
                         graphics.registerCommand(primitive.primitive().command(cameraX, cameraY));
@@ -106,7 +106,7 @@ public final class SpritePresentationRenderer {
                 }
                 if (index == frame.tiles().size()) break;
                 Tile tile = frame.tiles().get(index);
-                if (!visible.test(tile.layer())) continue;
+                if (!visible.test(tile.layer()) || tile.subject().suppressed()) continue;
                 if (previous == null || previous.priorityShader() != tile.priorityShader()
                         || previous.occlusionMask() != tile.occlusionMask()
                         || previous.ghost() != tile.ghost() || previous.ghostAlpha() != tile.ghostAlpha()) {

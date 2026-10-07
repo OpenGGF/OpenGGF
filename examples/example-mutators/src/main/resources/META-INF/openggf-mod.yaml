@@ -1,0 +1,14 @@
+formatVersion: 1
+id: example-mutators
+name: Mutator Lab
+version: 0.1.0
+authors:
+  - OpenGGF contributors
+description: A JVM boot-prepared dry Gravity and selective Stealth playground in Sonic 2 Emerald Hill Act 1, with common scoped configuration, native title/art/music, pause/resume/restart and session rewind.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s2
+entrypoint: mutators.MutatorsMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

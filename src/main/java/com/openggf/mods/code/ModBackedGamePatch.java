@@ -88,6 +88,8 @@ public final class ModBackedGamePatch implements GamePatch {
         this.saveFindingSink = Objects.requireNonNull(saveFindingSink, "saveFindingSink");
         this.romArtSource = Objects.requireNonNull(romArtSource, "romArtSource");
         if (!plan.hasContent()) throw new IllegalArgumentException("Backing patch requires content");
+        if (!plan.mutators().isEmpty() && faultBoundary == null)
+            throw new IllegalArgumentException("Mutators require an installed owner fault boundary");
         if (!plan.objectArt().isEmpty()
                 && !plan.preparedObjectArt().keySet().equals(plan.objectArt().keySet())) {
             throw new IllegalArgumentException("Backing patch requires validated object art");
@@ -295,6 +297,13 @@ public final class ModBackedGamePatch implements GamePatch {
             @Override
             @SuppressWarnings("unchecked")
             public <T> T getGameService(Class<T> type) {
+                if (type == com.openggf.mods.mutators.MutatorCatalog.class && !plan.mutators().isEmpty()) {
+                    var inherited = super.getGameService(com.openggf.mods.mutators.MutatorCatalog.class);
+                    var catalog = inherited == null
+                            ? new com.openggf.mods.mutators.MutatorCatalog(List.copyOf(plan.mutators().values()), faultBoundary)
+                            : inherited.append(List.copyOf(plan.mutators().values()), faultBoundary);
+                    return type.cast(catalog);
+                }
                 if (type == OwnedSceneFactory.class && plan.startupScene() != null) {
                     return (T) new OwnedSceneFactory(plan.ownerModId(), plan.startupScene(), faultBoundary);
                 }

@@ -99,6 +99,12 @@ public final class GameplayCaptureSession implements AutoCloseable {
         config.resolveDisplayAspect();
     }
 
+    private boolean startAtTitle;
+    /** Capture production title initialization and its ordinary GameLoop launch transition. */
+    public void startAtTitle() { startAtTitle = true; boot.setBootToTitle(true); }
+    /** Enable the existing ROM-backed SMPS presentation producer before boot. */
+    public void enableAudio() { GameServices.configuration().setSessionOverride(SonicConfiguration.AUDIO_ENABLED, true); }
+
     private boolean showTitleCard;
     private boolean completeSpecialStage;
 
@@ -125,7 +131,8 @@ public final class GameplayCaptureSession implements AutoCloseable {
             level.skipPendingInitialTitleCardPresentation();
         }
         if (loop.getCurrentGameMode() != GameMode.LEVEL
-                && !(showTitleCard && loop.getCurrentGameMode() == GameMode.TITLE_CARD)) {
+                && !(showTitleCard && loop.getCurrentGameMode() == GameMode.TITLE_CARD)
+                && !(startAtTitle && loop.getCurrentGameMode() == GameMode.TITLE_SCREEN)) {
             throw new IllegalStateException("capture did not boot into LEVEL mode: " + loop.getCurrentGameMode());
         }
         if (settings.donorActive()) {
@@ -284,7 +291,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
             GameServices.level().skipPendingInitialTitleCardPresentation();
         }
         UiRenderPipeline ui = GameServices.graphics().getUiRenderPipeline();
-        if (ui != null) {
+        if (ui != null && !loop.ownsGameplayFadeLifecycle()) {
             ui.updateFade();
         }
         // Declared setup: the special-stage debug completion, requested on alternate frames
@@ -299,6 +306,8 @@ public final class GameplayCaptureSession implements AutoCloseable {
         // After the frame, not before it: the sidekick's own registration re-places him at the
         // level's start position on the step after the first seed lands, so a seed applied at
         // the top of step() is visible in that frame's state line and gone from the next one.
+        var focused = GameServices.camera().getFocusedSprite();
+        if (focused != null) player = focused;
         seedSidekickPosition();
     }
 
@@ -315,6 +324,13 @@ public final class GameplayCaptureSession implements AutoCloseable {
         graphics.runPendingRenderThreadTasks();
         if (loop.getCurrentGameMode() == GameMode.SPECIAL_STAGE_RESULTS) {
             return renderSpecialStageResults(graphics, level);
+        }
+        if (loop.getCurrentGameMode() == GameMode.TITLE_SCREEN) {
+            var title = loop.getTitleScreenProvider();
+            title.setClearColor(); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            title.draw(); graphics.flushScreenSpace();
+            if (graphics.getUiRenderPipeline()!=null) graphics.getUiRenderPipeline().renderFadePass();
+            glFinish(); return ScreenshotCapture.captureFramebuffer(width, HEIGHT);
         }
         level.setClearColor();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -336,6 +352,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
             titleCard.draw();
             graphics.flushScreenSpace();
         }
+        var overlay = loop.getCurrentGameMode()==GameMode.LEVEL
+                ? GameServices.module().getGameService(com.openggf.game.LevelInputOverlay.class) : null;
+        if (overlay != null) { graphics.resetForFixedFunction(); overlay.drawOverlay(); graphics.flushScreenSpace(); }
         UiRenderPipeline ui = graphics.getUiRenderPipeline();
         if (ui != null) {
             ui.renderFadePass();
@@ -431,12 +450,18 @@ public final class GameplayCaptureSession implements AutoCloseable {
                 + "," + sidekickState()
                 + "," + (player.isHighPriority() ? 1 : 0)
                 + "," + loop.getCurrentGameMode()
-                + "," + (input == null ? "" : input.rawLine());
+                + "," + (input == null ? "" : input.rawLine())
+                + "," + (loop.isPaused()?1:0)
+                + "," + mutatorRevision();
     }
 
+    private long mutatorRevision() {
+        var state = com.openggf.game.session.MutatorWorldAccess.state(com.openggf.game.session.SessionManager.getCurrentWorldSession());
+        return state == null || state.isClosed() ? 0 : state.effective().revision();
+    }
     public static String stateHeader() {
         return "frame,x,y,xvel,yvel,gspeed,air,rolling,spindash,hurt,dead,rings,mapping_frame,cam_x,cam_y,"
-                + "sk_present,sk_x,sk_y,high_priority,mode,input";
+                + "sk_present,sk_x,sk_y,high_priority,mode,input,host_paused,mutator_revision";
     }
 
     private static Bk2FrameInput neutral(Bk2FrameInput previous) {
@@ -461,6 +486,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
             // The graphics singleton caches shader, atlas and palette GL objects that
             // belong to this window's context. Release them while the context is still
             // current, or a second session in the same process renders black frames.
+            com.openggf.game.session.MutatorWorldAccess.closeScreens(com.openggf.game.session.SessionManager.getCurrentWorldSession());
             GraphicsManager.destroyForReinit();
             boot.close();
         } finally {

@@ -146,6 +146,11 @@ public final class HeadlessGameBoot implements AutoCloseable {
      * Wraps the detected game module before the gameplay session opens, as an enabled patch
      * mod does in the launcher (used by {@code GameplayCaptureTool --mod}).
      */
+    private boolean bootToTitle;
+
+    /** Capture the real title/launch flow before the first level assembly (Mutator Lab, 2026-10-07). */
+    public void setBootToTitle(boolean enabled) { bootToTitle = enabled; }
+
     public void setModuleDecorator(java.util.function.UnaryOperator<GameModule> decorator) {
         this.moduleDecorator = java.util.Objects.requireNonNull(decorator, "decorator");
     }
@@ -461,6 +466,11 @@ public final class HeadlessGameBoot implements AutoCloseable {
                 GameplayTeamBootstrap.registerActiveTeam(
                         module, GameServices.sprites(), configService);
 
+        if (bootToTitle) {
+            GameServices.camera().setFocusedSprite(team.mainSprite());
+            loop.initializeTitleScreenMode();
+            return loop;
+        }
         GameServices.level().loadZoneAndAct(zone, act);
 
         GameServices.camera().setFocusedSprite(team.mainSprite());

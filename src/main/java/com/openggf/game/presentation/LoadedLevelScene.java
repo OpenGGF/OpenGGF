@@ -94,7 +94,7 @@ public final class LoadedLevelScene {
         for (int i = 0; i < sprites.tiles().size(); i++) {
             mappedIndices[i] = tiles.size();
             var tile = sprites.tiles().get(i);
-            if (tile.layer().isHud()) continue;
+            if (tile.layer().isHud() || tile.subject().suppressed()) continue;
             if (pose.kind() != PlayerPresentationPose.Kind.NATIVE && tile.layer() == SpritePresentation.Layer.PLAYER) {
                 if (!insertedPose && player != null) {
                     projectPose(tiles, player, pose, cameraX, cameraY); insertedPose = true;
@@ -124,7 +124,7 @@ public final class LoadedLevelScene {
             projectPose(tiles, player, pose, cameraX, cameraY);
         }
         for (var primitive : sprites.primitives()) {
-            if (primitive.layer().isHud() || (pose.kind() != PlayerPresentationPose.Kind.NATIVE
+            if (primitive.layer().isHud() || primitive.subject().suppressed() || (pose.kind() != PlayerPresentationPose.Kind.NATIVE
                     && primitive.layer() == SpritePresentation.Layer.PLAYER)) continue;
             int before = Math.max(terrainCount, mappedIndices[primitive.beforeTile()]);
             var geometry = SpritePresentation.geometry(primitive);

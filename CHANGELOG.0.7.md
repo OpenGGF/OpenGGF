@@ -6,6 +6,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **Mutator Lab prototype:** JVM boot-prepared Sonic 2 Gravity and Stealth use
+  typed scoped options, atomic admission, owner fault isolation and session rewind
+  separate from saved preferences. The title/configuration/play/restart/hub flow
+  keeps native movement and sprite admission, with an explicit EHZ1 solo-Sonic
+  support cell and maintained package source/build-along guide.
+
 - **Window and display aspect:** a launch that changes the display aspect (a launch
   profile's aspect, or a module's required aspect such as a mod laid out for 16:9) now
   refits the window instead of letterboxing the new picture inside the old window: a

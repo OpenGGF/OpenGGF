@@ -171,6 +171,12 @@ public class InvincibilityStarsObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        com.openggf.sprites.playable.PlayableMutatorPresentation.draw(player,
+                com.openggf.graphics.SpritePresentation.Part.ATTACHED_EFFECT,
+                () -> appendNativeRenderCommands(commands));
+    }
+
+    private void appendNativeRenderCommands(List<GLCommand> commands) {
         if (renderer == null || player == null) {
             return;
         }

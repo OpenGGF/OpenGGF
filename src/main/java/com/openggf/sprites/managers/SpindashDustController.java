@@ -158,6 +158,11 @@ public class SpindashDustController {
     }
 
     public void draw() {
+        com.openggf.sprites.playable.PlayableMutatorPresentation.draw(sprite,
+                com.openggf.graphics.SpritePresentation.Part.ATTACHED_EFFECT, this::drawNative);
+    }
+
+    private void drawNative() {
         drawSurfaceSplash();
         drawSplash();
         if (!isActive() || renderer == null) {

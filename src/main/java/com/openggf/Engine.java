@@ -4200,6 +4200,12 @@ public class Engine {
 			graphicsManager.flushScreenSpace();
 		}
 		drawActiveLevelTitleCardOverlay();
+		var overlay = GameLoopPauseInput.overlay(GameMode.LEVEL);
+		if (overlay != null) {
+			graphicsManager.flush();
+			overlay.drawOverlay();
+			graphicsManager.flushScreenSpace();
+		}
 	}
 
 	private void drawActiveLevelTitleCardOverlay() {

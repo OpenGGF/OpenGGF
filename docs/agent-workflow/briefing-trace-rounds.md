@@ -71,6 +71,26 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Desktop visibility and input need separate proof (2026-10-07 Mutator Lab): an
+X11 window may exist but remain unmapped while `glfwShowWindow` waits. Recheck
+its exact child PID, title, `IsViewable` state and positive geometry immediately
+before recording. Default-visible creation and explicit ShowWindow are distinct
+paths; one successful path does not certify the other. A bounded workaround may
+map only the owned window with `override_redirect`; record that frameless path
+and any child-only driver/audio environment rather than claiming default WM
+support. Never change global display/audio settings or another process's window.
+
+Synthetic X11 releases must use `protocol.event.KeyRelease`: constructing a
+`KeyPress` object with a `type=KeyRelease` argument still serializes a press in
+python-xlib. A first working Enter followed by ignored Enter can be a latched
+helper key, not a menu bug. Explicitly release each key, focus the owned surface,
+and inspect the second action's visible result. A viewable screenshot or Pulse
+sink-input alone proves neither responsive input nor authored SFX. Frameless
+swap waits may also starve animation; if child-only vblank overrides are needed,
+record them and retain the engine's tick limiter. Inspect changing frames and
+AC PCM windows around actions, including title-to-level producer rebuilds.
+
+
 Direct level-load captures can hide title-route faults (2026-10-06, Putt Putt
 Paradise at `b34da10e4`): the footage and course tests matched physics while the
 real menu reset erased the selected act and controlled LEVEL rows froze the

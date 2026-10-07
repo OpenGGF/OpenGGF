@@ -22,6 +22,7 @@ public final class ModFaultBoundary implements com.openggf.level.objects.ObjectC
     private final ModRuntimeFindingStore findings;
     private final ModAudioPreparer.FailureStateSink stateSink;
     private final java.util.function.Consumer<Set<String>> processDisable;
+    private volatile Set<String> quarantinedOwners = Set.of();
 
     public ModFaultBoundary(Map<String, ? extends Set<String>> dependencies,
                             ModRuntimeFindingStore findings,
@@ -40,6 +41,10 @@ public final class ModFaultBoundary implements com.openggf.level.objects.ObjectC
     public <T> T call(String owner, Supplier<T> callback) {
         Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(callback, "callback");
+        if (!isOwnerAvailable(owner)) {
+            throw new CallbackAborted(owner, ownerAndDependents(owner),
+                    new IllegalStateException("Owner is quarantined for this process"));
+        }
         try {
             return OwnerCallbackScope.call(owner, callback);
         } catch (CallbackAborted aborted) {
@@ -47,6 +52,11 @@ public final class ModFaultBoundary implements com.openggf.level.objects.ObjectC
         } catch (Throwable failure) {
             rethrowIfFatal(failure);
             Set<String> disabled = ownerAndDependents(owner);
+            synchronized (this) {
+                var quarantine = new LinkedHashSet<>(quarantinedOwners);
+                quarantine.addAll(disabled);
+                quarantinedOwners = Set.copyOf(quarantine);
+            }
             try {
                 processDisable.accept(disabled);
             } catch (RuntimeException disableFailure) {
@@ -78,6 +88,9 @@ public final class ModFaultBoundary implements com.openggf.level.objects.ObjectC
             throw new CallbackAborted(owner, disabled, failure);
         }
     }
+
+    /** Host authority outside historical snapshots; restored policy cannot revive failed code. */
+    public boolean isOwnerAvailable(String owner) { return !quarantinedOwners.contains(owner); }
 
     /** Owner-derived boundary for a mod-character callback; builtins execute directly. */
     public <T> T callCharacter(com.openggf.game.CharacterKey key, Supplier<T> callback) {

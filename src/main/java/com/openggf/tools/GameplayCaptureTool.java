@@ -80,39 +80,65 @@ public final class GameplayCaptureTool {
         try (GameplayCaptureSession session = new GameplayCaptureSession(settings);
              BufferedWriter state = Files.newBufferedWriter(outDir.resolve("state.csv"), StandardCharsets.UTF_8)) {
             if (arguments.mod() != null) session.applyMod(arguments.mod());
+            if (arguments.titleScreen()) session.startAtTitle();
+            if (arguments.audio()) session.enableAudio();
             session.boot(romPath, zone, act, settings);
-            state.write(GameplayCaptureSession.stateHeader());
-            state.newLine();
-            for (int frame = 0; frame < totalFrames; frame++) {
-                int scriptIndex = frame - arguments.settle();
-                int movieIndex = scriptIndex + arguments.inputStart();
-                Bk2FrameInput input = movie != null && scriptIndex >= 0 && scriptIndex < scriptFrames
-                        ? movie.getFrame(movieIndex) : null;
-                session.step(input);
-                lastFrame = frame;
-                state.write(session.stateLine(frame, input));
+            var audio = GameServices.audio();
+            int sampleRate = arguments.audio() ? audio.outputSampleRate() : 0;
+            if (arguments.audio() && audio.presentationFrameRate()!=arguments.fps())
+                throw new IllegalArgumentException("Audio presentation rate differs from capture fps");
+            // The manager-owned handle carries its lease through ordinary title/level producer rebuilds.
+            try (var capture = arguments.audio() ? audio.beginLiveCaptureAudio(arguments.fps()) : null;
+                 var pcm = arguments.audio() ? Files.newOutputStream(outDir.resolve("audio.pcm")) : java.io.OutputStream.nullOutputStream()) {
+                if (capture!=null && (capture.frameRate()!=arguments.fps() || capture.sampleRate()!=sampleRate))
+                    throw new IllegalArgumentException("Audio clock differs from capture settings");
+                short[] samples = capture==null ? new short[0] : new short[capture.maxStereoFramesPerPacket()*2];
+                state.write(GameplayCaptureSession.stateHeader());
                 state.newLine();
-                boolean wanted = frame >= arguments.captureFrom()
-                        && ((frame - arguments.captureFrom()) % arguments.every() == 0
-                        || arguments.stills().contains(frame));
-                if (wanted) {
-                    RgbaImage image = session.render();
-                    Path png = framesDir.resolve(String.format(Locale.ROOT, "%05d.png", frame));
-                    ScreenshotCapture.savePNG(image, png);
-                    pngs.add(png);
-                    if (arguments.stills().contains(frame)) {
-                        ScreenshotCapture.savePNG(image, outDir.resolve(String.format(Locale.ROOT, "still-%05d.png", frame)));
+                for (int frame = 0; frame < totalFrames; frame++) {
+                    int scriptIndex = frame - arguments.settle();
+                    int movieIndex = scriptIndex + arguments.inputStart();
+                    Bk2FrameInput input = movie != null && scriptIndex >= 0 && scriptIndex < scriptFrames
+                            ? movie.getFrame(movieIndex) : null;
+                    session.step(input);
+                    if (arguments.audio()) {
+                        session.loop().presentOuterFrame(false, false);
+                        int count=capture.drainPresentationFrame(samples)*2;
+                        for(int i=0;i<count;i++) { pcm.write(samples[i]&255); pcm.write((samples[i]>>>8)&255); }
+                    }
+                    lastFrame = frame;
+                    state.write(session.stateLine(frame, input));
+                    state.newLine();
+                    boolean wanted = frame >= arguments.captureFrom()
+                            && ((frame - arguments.captureFrom()) % arguments.every() == 0
+                            || arguments.stills().contains(frame));
+                    if (wanted) {
+                        RgbaImage image = session.render();
+                        Path png = framesDir.resolve(String.format(Locale.ROOT, "%05d.png", frame));
+                        ScreenshotCapture.savePNG(image, png);
+                        pngs.add(png);
+                        if (arguments.stills().contains(frame)) {
+                            ScreenshotCapture.savePNG(image, outDir.resolve(String.format(Locale.ROOT, "still-%05d.png", frame)));
+                        }
+                    }
+                    if (session.player().getDead()) {
+                        if (deathFrame < 0) {
+                            deathFrame = frame;
+                        }
+                        if (arguments.stopOnDeath() && frame >= deathFrame + arguments.deathGrace()) {
+                            stopReason = "leader died at frame " + deathFrame;
+                            break;
+                        }
                     }
                 }
-                if (session.player().getDead()) {
-                    if (deathFrame < 0) {
-                        deathFrame = frame;
-                    }
-                    if (arguments.stopOnDeath() && frame >= deathFrame + arguments.deathGrace()) {
-                        stopReason = "leader died at frame " + deathFrame;
-                        break;
-                    }
+            }
+            if (arguments.audio()) {
+                Path raw=outDir.resolve("audio.pcm");
+                var format=new javax.sound.sampled.AudioFormat(sampleRate,16,2,true,false);
+                try(var input=new javax.sound.sampled.AudioInputStream(Files.newInputStream(raw),format,Files.size(raw)/4)) {
+                    javax.sound.sampled.AudioSystem.write(input,javax.sound.sampled.AudioFileFormat.Type.WAVE,outDir.resolve("audio.wav").toFile());
                 }
+                Files.delete(raw);
             }
         }
         Path video = null;
@@ -174,7 +200,7 @@ public final class GameplayCaptureTool {
                             boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
                             Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
                             Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
-                            Path mod) {
+                            Path mod, boolean titleScreen, boolean audio) {
 
         public static Arguments parse(String[] argv) {
             String game = "s3k";
@@ -210,12 +236,15 @@ public final class GameplayCaptureTool {
             boolean titleCard = false;
             boolean completeSpecialStage = false;
             Path mod = null;
+            boolean titleScreen=false, audio=false;
             for (int i = 0; i < argv.length; i++) {
                 String flag = argv[i];
                 switch (flag) {
                     case "--game" -> game = value(argv, ++i, flag).toLowerCase(Locale.ROOT);
                     case "--rom" -> rom = Path.of(value(argv, ++i, flag));
                     case "--mod" -> mod = Path.of(value(argv, ++i, flag));
+                    case "--title-screen" -> titleScreen=true;
+                    case "--audio" -> audio=true;
                     case "--zone" -> zone = value(argv, ++i, flag);
                     case "--act" -> act = number(value(argv, ++i, flag), flag);
                     case "--x" -> startX = number(value(argv, ++i, flag), flag);
@@ -270,10 +299,15 @@ public final class GameplayCaptureTool {
             if (act < 1) {
                 throw new IllegalArgumentException("--act is one-based (1 or 2)");
             }
+            if (titleScreen && (startX!=null || startY!=null || starPost || rings!=null || emeralds!=null
+                    || reverseGravity || vIntRunCount!=null || cameraXSub!=null || !donor.equals("off")
+                    || ZoneIds.resolve(game,zone)!=0 || act!=1))
+                throw new IllegalArgumentException("--title-screen starts before assembly: use first zone/act and no positioned/donor setup");
+            if (audio && (captureFrom!=0 || every!=1 || fps!=60)) throw new IllegalArgumentException("--audio requires capture-from 0, every 1, fps 60");
             return new Arguments(game, rom, zone, act - 1, startX, startY, width, main, sidekick, donor, donorRom, input,
                     settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
                     video, scale, fps, outDir, emeralds, titleCard, completeSpecialStage,
-                    vIntRunCount, cameraXSub, starPost, rings, reverseGravity, mod);
+                    vIntRunCount, cameraXSub, starPost, rings, reverseGravity, mod, titleScreen, audio);
         }
 
         private static String value(String[] argv, int index, String flag) {
