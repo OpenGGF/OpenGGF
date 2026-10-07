@@ -20,6 +20,8 @@ public final class ModApiVersion {
      * it developer-history or sound-driver restore ownership. Mixed-ROM startup
      * scenes expose supplied-game art, immutable timestamped physical input and
      * bounded semantic ROM music with consumed-sample playback and section parts.
+     * Scene-owned direct peer text messaging is asynchronous and bounded, with
+     * socket/thread ownership and lifetime kept in the engine.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

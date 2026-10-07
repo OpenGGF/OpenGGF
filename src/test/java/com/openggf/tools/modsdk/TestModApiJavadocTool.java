@@ -20,6 +20,22 @@ class TestModApiJavadocTool {
     @TempDir Path temp;
 
     @Test
+    void scenePeerContractsGenerateExactSdkPagesWithTheirBoundedSemantics() throws Exception {
+        Path output = temp.resolve("network-docs");
+        List<Class<?>> exact = List.of(
+                com.openggf.mods.scene.SceneNetwork.class,
+                com.openggf.mods.scene.ScenePeer.class,
+                com.openggf.mods.scene.ScenePeer.State.class,
+                com.openggf.mods.scene.ScenePeer.Message.class);
+        ModApiJavadocTool.generate(Path.of("src/main/java"), output, exact);
+        assertEquals(expectedTypePages(exact), generatedTypePages(output));
+        String peer = Files.readString(output.resolve("com/openggf/mods/scene/ScenePeer.html"));
+        assertTrue(peer.contains("4096"));
+        assertTrue(peer.contains("256"));
+        assertTrue(peer.contains("plaintext"));
+    }
+
+    @Test
     void canonicalInventoryIsExactSortedAndContainsTheMandatedRoots() {
         List<String> names = ModApiJavadocTool.annotatedTypeNames();
 
