@@ -90,6 +90,16 @@ owned process and follow its `/proc/<pid>/fd/1` descriptor with a bounded
 `tail --pid` follower; record and clean up that follower. Log recovery and queue
 admission are not test completion.
 
+A macOS native-test stall can be AWT rather than gameplay (2026-10-06,
+`1ae1596837`): the ordinary suite stopped producing output in
+`TestObjectControlledGravity` after earlier rendering/example tests. Java attach timed out;
+a native `sample` showed the main thread inside `AWTStarter` / `NSApplication.run`, nested
+under GLFW event polling. The 40-minute runner deadline terminated the invocation. Record
+that as incomplete, keep attribution open, and check the capture class in a fresh JVM;
+do not infer a physics loop from the name of the last test or repeat the entire stalled suite.
+All 12 cases passed in a fresh JVM after the Survivors fixture; that result does not
+attribute the preceding long-suite AWT interaction.
+
 Direct level-load captures can hide title-route faults (2026-10-06, Putt Putt
 Paradise at `b34da10e4`): the footage and course tests matched physics while the
 real menu reset erased the selected act and controlled LEVEL rows froze the

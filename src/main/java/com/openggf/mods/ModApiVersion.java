@@ -20,6 +20,8 @@ public final class ModApiVersion {
      * it developer-history or sound-driver restore ownership. Mixed-ROM startup
      * scenes expose supplied-game art, immutable timestamped physical input and
      * bounded semantic ROM music with consumed-sample playback and section parts.
+     * Power-up rules expose explicit invincibility-expiry music ownership for modes
+     * with continuous music.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

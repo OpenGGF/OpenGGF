@@ -6,6 +6,8 @@ import com.openggf.game.*;
 import com.openggf.game.patch.*;
 import com.openggf.level.Level;
 import com.openggf.mods.code.*;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SuperStateController;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -72,6 +74,8 @@ public final class SurvivorsMod implements GgfMod {
         private boolean active;
         private Arena arena;
         private final RunState run = new RunState();
+        private final MenuArt menuArt = new MenuArt();
+        private final RingClusters ringClusters = new RingClusters();
         private Profile profile;
         private ArenaZones zones;
         private SurvivorsTitle title;
@@ -88,7 +92,31 @@ public final class SurvivorsMod implements GgfMod {
         // still holds the corpse, as it does with a game-over provider installed.
         private final GameOverFlowProvider arenaGameOver = (services, timeOver) -> services.fadeOutMusic();
 
-        public Module(GameModule base) { super(base, ID + ":arenas"); }
+        private final com.openggf.game.rules.GameRules arenaRules;
+
+        public Module(GameModule base) {
+            super(base, ID + ":arenas");
+            var rules = base.getRules();
+            var power = rules.powerUp();
+            var quietExpiry = new com.openggf.game.rules.PowerUpRules(
+                    power.shieldObjectFixedSlotIndex(), power.invincibilityStarsFixedSlotIndex(),
+                    power.waterSplashFixedSlotIndex(), power.superStarsFixedSlotIndex(),
+                    power.speedShoesTimerDecimation(), power.fixedSkidDustAllocatesAfterDynamicObjectPass(),
+                    power.waterSplashUsesFixedDustObject(), power.primaryFixedDustSlotIndex(),
+                    power.secondaryFixedDustSlotIndex(), false);
+            arenaRules = new com.openggf.game.rules.GameRules(rules.playerMovement(), rules.playerCapability(),
+                    rules.collision(), rules.playerAnimation(), rules.camera(), rules.ring(),
+                    rules.objectInteraction(), rules.sidekickCpu(), quietExpiry, rules.drowningBubble(),
+                    rules.dynamicArtDmaService());
+        }
+
+        @Override public com.openggf.game.rules.GameRules getRules() { return arenaRules; }
+
+        // Super forms are deferred until they have a Survivors-specific design.
+        // Omit the controller so native jump, monitor and debug activation stay disabled.
+        @Override public SuperStateController createSuperStateController(AbstractPlayableSprite player) {
+            return null;
+        }
 
         private Profile profile() {
             if (profile == null) {
@@ -166,6 +194,8 @@ public final class SurvivorsMod implements GgfMod {
 
         @Override public <T> T getGameService(Class<T> type) {
             if (type == LevelInputOverlay.class) return type.cast(overlayInput);
+            if (type == RingClusters.class) return type.cast(ringClusters);
+            if (type == MenuArt.class) return type.cast(menuArt);
             if (type == RunState.class) return type.cast(run);
             if (type == Profile.class) return type.cast(profile());
             if (type == Arena.class) return active ? type.cast(arena) : null;
