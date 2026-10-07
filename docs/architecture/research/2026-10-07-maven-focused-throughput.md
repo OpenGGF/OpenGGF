@@ -221,3 +221,36 @@ tooling checks do not re-certify the upstream engine changes.
   checked successfully. The combined plan was inspected against the actual
   updated base; focused tooling validation above was used for the isolated tool
   and queue as explained earlier. No full ordinary-suite pass is claimed.
+
+## Independent diagnostic cleanup follow-up
+
+The ordinary-memory task observed acknowledgment waiting about 91 minutes for
+unrelated Maven execution. An aged global exclusive cleanup request can also
+stop new admissions, although acknowledgment only deletes completed local
+metadata. The regression uses two real processes and linked temporary Git
+worktrees: acknowledgment exceeded a three-second deadline while another tree
+held a resource-aware execution lease. This is lock contention, not JVM work.
+
+The fix gives acknowledgment an exclusive current-worktree lease and a shared
+legacy compatibility lease, in the same acquisition order as Maven. It does not
+reserve a JVM slot or publish an admission request. Other resource-aware trees
+can continue, while own-tree writers and legacy/serial exclusive holders still
+exclude deletion. Windows keeps exclusive compatibility locking. Admission
+budgets, ordering, aging, existing requests and running jobs are unchanged.
+Target, category-directory and run-directory symlinks are rejected.
+
+On the `2fc65c8479570f16ebd9830115485ee369c2b1e6` base, the Python safety suite
+passed 119 tests in 22.534 seconds with no skips:
+
+```bash
+python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 2fc65c8479570f16ebd9830115485ee369c2b1e6 --preflight
+```
+
+Actual Java 21, Lua 5.4 and PowerShell preflight passed. The competing-process
+checks cover overlap with another worktree, exclusion in the same worktree,
+legacy exclusive exclusion and OS release of the local lease after cancellation
+of a blocked cleanup process. All process cancellation in these checks is
+confined to temporary test repositories; no real queued job is cancelled.
+The category-runner Python exception applies to this independently delivered
+change: no POM, selection policy, Java, workflow or hook changes are included.
