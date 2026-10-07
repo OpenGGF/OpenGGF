@@ -49,7 +49,8 @@ jobs:
             # Source edits must be reflected by the next normal package invocation.
             sed -i 's/description:/description: Rebuilt/' "$RUNNER_TEMP/creator-project-$kind/src/main/resources/META-INF/openggf-mod.yaml"
             mvn -B -q -f "$RUNNER_TEMP/creator-project-$kind/pom.xml" package -Dopenggf.engine.jar="$PWD/engine.jar" -Dopenggf.sdk.jar="$PWD/sdk.jar"
-            sh ggfmod validate "$RUNNER_TEMP/creator-project-$kind/target/creator-$kind-mod.jar" --format json
+            # Unpublished expert candidates may use internal APIs; retain their reported warnings.
+            sh ggfmod validate "$RUNNER_TEMP/creator-project-$kind/target/creator-$kind-mod.jar" --format json --warnings allow
           done
           for project in examples/*; do
             python3 tools/build_project.py "$project"
