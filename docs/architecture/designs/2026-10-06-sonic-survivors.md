@@ -876,3 +876,8 @@ Overdrive (26 picks at +6%). Overdrive is now +3%, health grows `1 + 0.40t + 0.0
 33, 44): fresh runs end at Casino Night or Metropolis, mid profiles at Casino Night (the bot never
 rolls under its low ceiling), the veteran dies at the Death Egg or wins. `-Dsonic-survivors.balance.hits=true`
 adds a line per lost toll to the probe output. 110 Survivors cases pass, the probe skipped.
+
+Follow-up: Super Sonic star sparks (Spark Burst, Meteor Shower, puffs) and Flicky art drawn by the
+controller presented over its own menu panels, like the ROM rings. They now hide while a menu
+shows, as the rings do; code-drawn effects keep their order. Checked in a preview with sparks in
+flight behind the level-up cards and the chest; 110 Survivors cases pass.

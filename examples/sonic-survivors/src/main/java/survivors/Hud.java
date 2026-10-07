@@ -29,8 +29,10 @@ final class Hud {
             }
         }
         var render = s.renderManager();
-        var sparkle = render == null ? null : render.getRenderer("super_sonic_stars");
-        var animal = render == null ? null : render.getRenderer("animal");
+        // ROM-art effects (stars, Flickies) present over the controller's own menu panels, like
+        // the ROM rings; while a menu shows (play is paused) they hide. Code-drawn effects stay.
+        var sparkle = render == null || menu ? null : render.getRenderer("super_sonic_stars");
+        var animal = render == null || menu ? null : render.getRenderer("animal");
         for (int i = 0; i < stage.pKind.length; i++) {
             int kind = stage.pKind[i];
             if (kind == 0) continue;
@@ -38,14 +40,14 @@ final class Hud {
             switch (kind) {
                 case Stage.P_SPARK -> {
                     if (sparkle != null) sparkle.drawFrameIndex(1 + (stage.frameTick / 3 + i) % 3, x, y, false, false);
-                    else Draw.rectWorld(s, x - 2, y - 2, 4, 4, Draw.WHITE, 1f);
+                    else if (!menu) Draw.rectWorld(s, x - 2, y - 2, 4, 4, Draw.WHITE, 1f);
                 }
                 case Stage.P_HOMING -> {
                     if (rings != null && !menu) rings.drawRingAt(x, y, stage.frameTick * 2 + i);
                 }
                 case Stage.P_FLICKY -> {
                     if (animal != null) animal.drawFrameIndex(3 + (stage.frameTick / 4) % 2, x, y, stage.pVX[i] > 0, false);
-                    else Draw.rectWorld(s, x - 3, y - 3, 6, 6, Draw.BLUE, 1f);
+                    else if (!menu) Draw.rectWorld(s, x - 3, y - 3, 6, 6, Draw.BLUE, 1f);
                 }
                 case Stage.P_LANCE -> drawLance(s, x, y, stage.pVY[i] < 0, stage.frameTick);
                 default -> drawBoom(s, x, y, stage.pVX[i] < 0, stage.frameTick);
