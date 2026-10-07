@@ -7,6 +7,25 @@ final class MenuArt {
     // overlapping rectangles would darken translucent text and its shadow.
     final int[][] font = fontRectangles(Draw.GLYPHS, 5, 7);
 
+    final int[][] ringShapes = ringShapes();
+
+    private static int[][] ringShapes() {
+        int[][] shapes = new int[3][];
+        for (int tier = 1; tier <= 3; tier++) {
+            int radius = 7 + tier * 3, side = radius * 2 + 1, inner = radius - 3;
+            char[] pixels = new char[side * side];
+            for (int y = -radius; y <= radius; y++) {
+                for (int x = -radius; x <= radius; x++) {
+                    int distance = x * x + y * y;
+                    pixels[(y + radius) * side + x + radius] =
+                            distance <= radius * radius && distance >= inner * inner ? '1' : '0';
+                }
+            }
+            shapes[tier - 1] = fontRectangles(new String(pixels), side, side)[0];
+        }
+        return shapes;
+    }
+
     private static int[][] fontRectangles(String pixels, int width, int height) {
         int[][] glyphs = new int[pixels.length() / (width * height)][];
         for (int glyph = 0; glyph < glyphs.length; glyph++) {

@@ -106,6 +106,23 @@ immediately audible, while rapid collections chime roughly every ten rings, at m
 times per second. This includes lost rings and Super Ring monitors; every ring still grants
 its full health and, for reward rings, experience. A single large pickup makes at most one chime.
 
+Nearby reward rings consolidate after their initial scatter. Rings of the same tier within
+48 pixels combine when their total reaches the next tier; their **full combined value**
+stays in the surviving pickup. Larger piles use larger coloured rings:
+
+| Colour | Stored ring value |
+| --- | --- |
+| Yellow (normal ROM ring) | 1–4 |
+| Cyan | 5–24 |
+| Purple | 25–124 |
+| Red | 125+ |
+
+Red piles can keep combining. Consolidation pauses with menus and leaves rings already
+flying toward you alone. Hit-spilled rings, monitors and emeralds never join a pile.
+Merged rewards keep the youngest constituent's remaining lifetime, rather than refreshing
+old piles indefinitely. Collection still grants the stored ring value and applies the usual
+experience bonuses; one large pickup makes at most one chime.
+
 ## Bouncing and the combo
 
 A stomp (jumping or rolling into a badnik) deals **2 x (1 + Spring Heels)** damage, times

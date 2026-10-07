@@ -75,6 +75,20 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
     int value() { return value; }
     /** Folds extra rings into this pickup, so a big ring pile never exhausts object slots. */
     void addValue(int more) { value += more; rewardAge = 0; }
+    int ringTier() { return value >= 125 ? 3 : value >= 25 ? 2 : value >= 5 ? 1 : 0; }
+
+    boolean mergeable() {
+        return kind() == RING && !lostRing && !homing && !isDestroyed() && collected < 0 && age >= 45;
+    }
+
+    void absorb(Pickup other) {
+        value += other.value;
+        // Existing rewards are not fresh drops: preserve the younger remaining lifetime,
+        // never reset it to a minute on each consolidation.
+        rewardAge = Math.min(rewardAge, other.rewardAge);
+        other.setDestroyed(true);
+    }
+
     /** The ring magnet monitor: fly to Sonic from anywhere. */
     void homeIn() {
         if (lostRing) return;
@@ -223,8 +237,9 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
                 rings.drawSparkleAt(x, y, collected / Math.max(1, rings.getSparkleFrameDelay()));
                 return;
             }
-            rings.drawRingAt(x, y, age);
-            if (value > 1) Draw.smallWorld(services(), "x" + value, x + 8, y - 10, Draw.YELLOW, 1f);
+            int tier = lostRing ? 0 : ringTier();
+            if (tier == 0) rings.drawRingAt(x, y, age);
+            else drawCluster(tier);
             return;
         }
         if (kind() == EMERALD) {
@@ -235,6 +250,20 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         var renderer = getRenderer(ObjectArtKeys.MONITOR);
         if (renderer == null) return;
         renderer.drawFrameIndex(collected >= 0 ? 11 : (age / 4) % 8 == 0 ? 1 : value, x, y, false, false);
+    }
+
+    /** Cached, hollow coloured rings, without per-frame value strings or geometry building.
+     * The normal ROM ring remains the small yellow denomination. */
+    private void drawCluster(int tier) {
+        int radius = 7 + tier * 3;
+        int colour = tier == 1 ? Draw.CYAN : tier == 2 ? Draw.PURPLE : Draw.RED;
+        var s = services();
+        int[] rectangles = s.gameService(MenuArt.class).ringShapes[tier - 1];
+        for (int p = 0; p < rectangles.length; p += 4) {
+            Draw.rectWorld(s, x - radius + rectangles[p], y - radius + rectangles[p + 1],
+                    rectangles[p + 2], rectangles[p + 3], colour, 1f);
+        }
+        Draw.rectWorld(s, x - radius * 3 / 5, y - radius * 4 / 5, 2, 2, Draw.WHITE, 1f);
     }
 
     /** A code-drawn cut gem, sparkling: the run's emerald colour from the boss's stage. */

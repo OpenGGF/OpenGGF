@@ -887,6 +887,135 @@ class TestSonicSurvivors {
         return pickup;
     }
 
+    private AbstractObjectInstance matureReward(int value, int x, int y) throws Exception {
+        var ring = spawnPickup(0, value, x, y);
+        set(ring, "age", 45);
+        return ring;
+    }
+
+    private void mergeRewards() throws Exception {
+        call(service("survivors.RingClusters"), "merge", call(stage(), "services"));
+    }
+
+    @Test void nearbyRewardsPromoteThroughFiveTwentyFiveAndOneHundredTwentyFive() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        int x = fixture.sprite().getCentreX() + 200, y = fixture.sprite().getCentreY();
+        // Five spatially separate clusters become five cyan rings, then one purple ring.
+        for (int group = 0; group < 5; group++) {
+            for (int n = 0; n < 5; n++) matureReward(1, x + group * 100 + n, y);
+        }
+        mergeRewards();
+        assertEquals(5, objects("Pickup").size());
+        for (var ring : objects("Pickup")) {
+            assertEquals(5, call(ring, "value"));
+            assertEquals(1, call(ring, "ringTier"));
+            set(ring, "x", x);
+        }
+        mergeRewards();
+        assertEquals(1, objects("Pickup").size());
+        assertEquals(25, call(objects("Pickup").getFirst(), "value"));
+        assertEquals(2, call(objects("Pickup").getFirst(), "ringTier"));
+        for (int i = 0; i < 4; i++) matureReward(25, x, y);
+        mergeRewards();
+        assertEquals(1, objects("Pickup").size());
+        var red = objects("Pickup").getFirst();
+        assertEquals(125, call(red, "value"));
+        assertEquals(3, call(red, "ringTier"));
+        matureReward(125, x, y);
+        mergeRewards();
+        assertEquals(1, objects("Pickup").size(), "top-tier piles continue consolidating");
+        int rings = fixture.sprite().getRingCount();
+        call(red, "collect", fixture.sprite());
+        assertEquals(rings + 250, fixture.sprite().getRingCount());
+        assertEquals(250, getInt(run(), "ringsCollected"));
+        int earnedXp = getInt(run(), "xp");
+        Class<?> state = loader.loadClass("survivors.RunState");
+        Method cost = state.getDeclaredMethod("xpToNext", int.class);
+        cost.setAccessible(true);
+        for (int level = 0; level < getInt(run(), "level"); level++) earnedXp += (int) cost.invoke(null, level);
+        assertEquals(250, earnedXp, "consolidation preserves the entire base XP reward");
+    }
+
+    @Test void consolidationRespectsDistanceEligibilityThresholdsAndOverflow() throws Exception {
+        launch(0, 0);
+        // Straddle a cell boundary, including negative coordinates.
+        var a = matureReward(2, 0, 0);
+        set(a, "x", -1); set(a, "y", -1); // Spawn records normalize to unsigned ROM words.
+        var b = matureReward(2, 1, 1);
+        mergeRewards();
+        assertFalse(a.isDestroyed());
+        assertFalse(b.isDestroyed());
+        var fresh = matureReward(1, 0, 0); set(fresh, "age", 44);
+        var lost = matureReward(1, 0, 0); set(lost, "lostRing", true);
+        var homing = matureReward(1, 0, 0); call(homing, "homeIn");
+        var collected = matureReward(1, 0, 0); set(collected, "collected", 0);
+        var far = matureReward(1, 100, 0);
+        var monitor = spawnPickup(1, 5, 0, 0); set(monitor, "age", 60);
+        mergeRewards();
+        assertEquals(2, call(a, "value"));
+        assertEquals(2, call(b, "value"));
+        var c = matureReward(1, 0, 0);
+        mergeRewards();
+        assertEquals(5, call(a, "value"));
+        assertTrue(b.isDestroyed());
+        assertTrue(c.isDestroyed());
+        for (var untouched : List.of(fresh, lost, homing, collected, far, monitor)) assertFalse(untouched.isDestroyed());
+        var huge = matureReward(Integer.MAX_VALUE, 1000, 1000);
+        var extra = matureReward(125, 1000, 1000);
+        mergeRewards();
+        assertFalse(huge.isDestroyed());
+        assertFalse(extra.isDestroyed());
+        assertEquals(Integer.MAX_VALUE, call(huge, "value"));
+    }
+
+    @Test void denseRewardDropsUseGrowingScratchAndRewindWithoutLosingValue() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        int x = fixture.sprite().getCentreX() + 180, y = fixture.sprite().getCentreY();
+        for (int i = 0; i < 300; i++) call(stage(), "dropRings", x, y, 1);
+        assertEquals(300, objects("Pickup").size());
+        for (var ring : objects("Pickup")) { set(ring, "age", 45); set(ring, "resting", true); }
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        mergeRewards();
+        assertEquals(1, objects("Pickup").size());
+        assertEquals(300, call(objects("Pickup").getFirst(), "value"));
+        registry.restore(snapshot);
+        assertEquals(300, objects("Pickup").size());
+        mergeRewards();
+        assertEquals(1, objects("Pickup").size());
+        assertEquals(300, call(objects("Pickup").getFirst(), "value"));
+    }
+
+    @Test void clusterMergePausesAndReplaysWithExactValuesAndRemainingLifetime() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        int x = fixture.sprite().getCentreX() + 180, y = fixture.sprite().getCentreY();
+        for (int i = 0; i < 5; i++) {
+            var ring = matureReward(1, x + i, y);
+            set(ring, "rewardAge", 3500 + i);
+        }
+        set(stage(), "ringMergeFrames", 14);
+        call(run(), "gainXp", 5);
+        fixture.stepIdleFrames(20);
+        assertEquals(5, objects("Pickup").size(), "menus pause consolidation");
+        assertEquals(14, getInt(stage(), "ringMergeFrames"));
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        tapEnter(fixture);
+        assertEquals(1, objects("Pickup").size());
+        int age = getInt(objects("Pickup").getFirst(), "rewardAge");
+        assertTrue(age >= 3500 && age < 3510, "merging does not refresh old rewards");
+        assertEquals(5, call(objects("Pickup").getFirst(), "value"));
+        registry.restore(snapshot);
+        assertEquals(5, objects("Pickup").size());
+        tapEnter(fixture);
+        assertEquals(1, objects("Pickup").size());
+        assertEquals(age, getInt(objects("Pickup").getFirst(), "rewardAge"));
+        assertEquals(5, call(objects("Pickup").getFirst(), "value"));
+    }
+
     @Test void rewardExpiryPausesRewindsAndNeverDeletesTheEmerald() throws Exception {
         var fixture = launch(0, 0);
         startRun(fixture);

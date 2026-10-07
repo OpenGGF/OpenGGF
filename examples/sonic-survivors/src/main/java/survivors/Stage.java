@@ -49,6 +49,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     int eliteTimer;
     boolean bossSpawned;
     int frameTick;
+    int ringMergeFrames;
     // Menus.
     int menuIndex;
     boolean upHeld, downHeld, jumpHeld;
@@ -161,6 +162,10 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
             case CLEAR -> clearMenu(player);
             case DEAD -> deadMenu(player);
             default -> victoryMenu(player);
+        }
+        if (!run.paused && !player.getDead() && ++ringMergeFrames >= RingClusters.PERIOD) {
+            ringMergeFrames = 0;
+            services().gameService(RingClusters.class).merge(services());
         }
     }
 

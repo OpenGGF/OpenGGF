@@ -488,3 +488,57 @@ Verification on the base plus these changes:
 This is focused mod validation, not a full engine-suite pass. The 44% figure measures
 font primitive count, not total heap traffic or end-to-end frame-rate improvement;
 remaining host work and uncapped arena populations still contribute to frame cost.
+
+
+### Tiered reward-ring consolidation (2026-10-07)
+
+Current checkout `feature/ai-sonic-survivors`, base `c292555cd13458ce3ce75188f4920df2a0b807de`.
+Use thresholds 5 / 25 / 125 instead of 10 / 100: ordinary enemies often drop only
+one ring, so five reduces early clutter while retaining a readable progression.
+Yellow holds 1–4, cyan 5–24, purple 25–124, red 125+. These are thresholds, not
+rounded denominations: every stored ring survives merging. Red pairs keep merging.
+
+`RingClusters` rebuilds a reusable hashed spatial grid every 15 active frames.
+Same-tier rewards at least 45 frames old, within 48 pixels of an existing anchor,
+combine if their total reaches the next threshold. The two-pass check leaves
+sub-threshold groups untouched and rejects integer overflow before deleting anything.
+Lost, homing, collected and destroyed rings are excluded, as are monitors/emeralds.
+The anchor stays in place. No spawning or per-pickup all-arena neighbour scan is needed.
+Grid arrays grow with peak population and release all pickup references after each pass;
+the module owns scratch only, rebuilt from live state after rewind/load. The Stage's
+15-frame clock and each pickup's value/lifetime are ordinary captured object state.
+
+Merging existing rewards uses the minimum reward age, preserving the youngest
+remaining lifetime instead of resetting expiry every time a pile combines. Fresh
+`addValue` retains its existing lifetime refresh behavior. Ring credit and normal
+XP scaling are applied to the full stored value on collection; fractional bonus XP
+retains the existing stochastic rounding per pickup, so grouping may change individual
+rounding/RNG outcomes but not its expected value. Magnets and one-chime-per-pickup
+behavior remain intact. Static circular silhouettes are cached in `MenuArt`; the
+old per-frame numeric value label is removed. The first ten-rectangle outline looked
+square in a native preview, so the final art uses compact decompositions of circular
+masks with a small highlight. No shared engine or ROM rendering path changes.
+
+The change-based plan selects all 2,993 classes by example-path fallback. Focused
+validation is proportionate for this isolated mod behavior. The full Survivors run
+with Java 21, queued Maven `-B -Dmse=off -Dtest=TestSonicSurvivors` and the absolute
+root S2 REV01 ROM ran 76 checks: 75 passed, zero skips; one new negative-coordinate
+case accidentally used an unsigned-normalized ObjectSpawn. The test now explicitly
+sets the signed position. A queued two-case follow-up passed that corrected test
+and a new 300-reward merge/restore/replay stress case without skips (1.769 seconds).
+The 77 distinct cases have passing coverage across these runs. Tier promotion,
+250-ring/XP collection, overflow, exclusions, threshold/distance, menu pause,
+remaining lifetime and rewind/forward replay are covered. This is focused validation,
+not a full engine-suite pass; inherited per-act matrix gaps remain unchanged.
+
+The final `build.py` package passed mod validation. A temporary native preview used
+`GameplayCaptureSession` with the packaged mod, EHZ1, 400x224, seed 12345, authored
+Start-at-frame-30 input and isolated saves. Four actual reward objects (1/5/25/125)
+were seeded only for presentation at frame 200. The state CSV confirms live solo
+Sonic in LEVEL mode; the inspected PNG shows the four increasing circular tiers.
+Artifact: `/private/tmp/sonic-survivors-clusters-20261007/final/tiers.png`.
+This is an art preview, not evidence of earning those drops; the production merge
+and collection paths are exercised by the tests. Frame-rate gains are not measured.
+
+Installed the final jar into `mods/sonic-survivors.jar` and refreshed only its trusted
+SHA-256, preserving the other mod entries and the real save profile.
