@@ -245,7 +245,7 @@ public final class ModSceneHost {
             };
             Path root = services == null || services.storageRoot() == null
                     ? Path.of("saves") : services.storageRoot();
-            this.storage = new FileSceneStorage(root.resolve("mods").resolve(owner));
+            this.storage = ModStorageFactory.forOwner(root, owner);
         }
 
         void beginTick(InputHandler handler) {

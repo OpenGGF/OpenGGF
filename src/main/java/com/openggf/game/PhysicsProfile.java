@@ -39,6 +39,65 @@ public record PhysicsProfile(
         // uses a hard-coded #4; see s1disasm/_incObj/01 Sonic.asm:392).
         short onObjectBalanceShift
 ) {
+    /** Copies this profile while changing only the running speed cap. */
+    public PhysicsProfile withMax(int speed) { return toBuilder().max(speed).build(); }
+
+    /** Starts a grouped, range-checked edit without copying positional record components. */
+    public Builder toBuilder() { return new Builder(this); }
+
+    /** Starts from the standard Sonic 2 shape and tuning. */
+    public static Builder builder() { return SONIC_2_SONIC.toBuilder(); }
+
+    @ModApi
+    public static final class Builder {
+        private short accel, decel, friction, max, jump;
+        private short slope, slopeUp, slopeDown, rollDecel, minStart, minRoll, maxRoll;
+        private short rollHeight, runHeight, standX, standY, rollX, rollY, balanceShift;
+        private boolean singleFacing;
+        private Builder(PhysicsProfile p) {
+            accel=p.runAccel(); decel=p.runDecel(); friction=p.friction(); max=p.max(); jump=p.jump();
+            slope=p.slopeRunning(); slopeUp=p.slopeRollingUp(); slopeDown=p.slopeRollingDown();
+            rollDecel=p.rollDecel(); minStart=p.minStartRollSpeed(); minRoll=p.minRollSpeed(); maxRoll=p.maxRoll();
+            rollHeight=p.rollHeight(); runHeight=p.runHeight(); standX=p.standXRadius(); standY=p.standYRadius();
+            rollX=p.rollXRadius(); rollY=p.rollYRadius(); balanceShift=p.onObjectBalanceShift(); singleFacing=p.singleFacingBalance();
+        }
+        public Builder movement(int acceleration, int deceleration, int friction, int maxSpeed, int jumpSpeed) {
+            short a=value(acceleration), d=value(deceleration), f=value(friction), m=value(maxSpeed), j=value(jumpSpeed);
+            this.accel=a; this.decel=d; this.friction=f; this.max=m; this.jump=j; return this;
+        }
+        public Builder max(int speed) { max=value(speed); return this; }
+        public Builder slopes(int running, int rollingUp, int rollingDown) {
+            short a=value(running), b=value(rollingUp), c=value(rollingDown);
+            slope=a; slopeUp=b; slopeDown=c; return this;
+        }
+        public Builder rolling(int deceleration, int startSpeed, int stopSpeed, int maxSpeed) {
+            short a=value(deceleration), b=value(startSpeed), c=value(stopSpeed), d=value(maxSpeed);
+            rollDecel=a; minStart=b; minRoll=c; maxRoll=d; return this;
+        }
+        public Builder shape(int standingWidthRadius, int standingHeightRadius,
+                             int rollingWidthRadius, int rollingHeightRadius) {
+            short sx=radius(standingWidthRadius), sy=radius(standingHeightRadius);
+            short rx=radius(rollingWidthRadius), ry=radius(rollingHeightRadius);
+            standX=sx; standY=sy; rollX=rx; rollY=ry; runHeight=(short)(2*sy); rollHeight=(short)(2*ry); return this;
+        }
+        public Builder balance(boolean singleFacing, int onObjectShift) {
+            balanceShift=radius(onObjectShift); this.singleFacing=singleFacing; return this;
+        }
+        public PhysicsProfile build() {
+            return new PhysicsProfile(accel,decel,friction,max,jump,slope,slopeUp,slopeDown,
+                    rollDecel,minStart,minRoll,maxRoll,rollHeight,runHeight,standX,standY,rollX,rollY,
+                    singleFacing,balanceShift);
+        }
+        private static short value(int value) {
+            if (value < 0 || value > Short.MAX_VALUE) throw new IllegalArgumentException("Physics value outside 0..32767: " + value);
+            return (short)value;
+        }
+        private static short radius(int value) {
+            if (value < 1 || value > 127) throw new IllegalArgumentException("Radius outside 1..127: " + value);
+            return (short)value;
+        }
+    }
+
     // Sonic 2 Sonic (also identical for S1 Sonic; S3K canonical reset profile)
     // S3K uses this as the "reset" profile after water/shoes events (sonic3k.asm:22253)
     public static final PhysicsProfile SONIC_2_SONIC = new PhysicsProfile(

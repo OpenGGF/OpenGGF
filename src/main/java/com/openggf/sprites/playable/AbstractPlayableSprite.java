@@ -81,6 +81,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         @RewindTransient(reason = "character callback boundary is immutable structural state")
         private final com.openggf.game.CharacterConstructionScope.CallbackInvoker characterCallbackInvoker;
+        @RewindTransient(reason = "character physics and sensor specification is immutable structural state")
+        private final CharacterPhysicsSpec characterPhysicsSpec;
 
         @RewindTransient(reason = "playable controller is structural; mutable controller state is captured explicitly")
         protected final PlayableSpriteController controller;
@@ -795,7 +797,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (this.speedShoes) {
                         this.speedShoes = false;
                         currentTimerManager().removeTimerForCode("SpeedShoes-" + getCode());
-                        defineSpeeds(); // Reset speeds to default
+                        resetBaseSpeeds(); // Reset speeds to default
                 }
                 // Clear Super state
                 this.superSonic = false;
@@ -934,7 +936,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.lrbSolidBit = 0x0D;
                 this.loopLowPlane = false;
                 this.statusTertiary = 0;
-                defineSpeeds(); // Reset speeds to default
+                resetBaseSpeeds(); // Reset speeds to default
                 instaShieldRegistered = false; // Force re-registration with new ObjectManager on level load
                 resolvePhysicsProfile(GameServices.bootstrapGameModule());
                 // ROM: Obj01_Init unconditionally sets y_radius=$13, x_radius=9.
@@ -942,6 +944,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // explicitly restore standing dimensions and sensor offsets here.
                 setHeight(runHeight);
                 applyStandingRadii(false);
+                invokeCharacterCallback(this::onLevelReset);
         }
 
         // -----------------------------------------------------------------------
@@ -1954,6 +1957,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void setAir(boolean air) {
+                boolean changed = air != this.air;
                 boolean landed = !air && this.air;
                 // HurtCharacter/HurtStop do not write art_tile. Preserve any priority bit
                 // owned by a path switcher or scripted sequence (notably AIZ2's waterfall
@@ -2003,6 +2007,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         // Reset badnik chain when landing
                         resetBadnikChain();
                 }
+                publishGroundTransition(changed, landed);
         }
 
         /**
@@ -2015,8 +2020,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * a landing animation transition.
          */
         public void clearAirForNativeControlRestore() {
+                boolean changed = this.air;
                 this.air = false;
                 updatePushSensorYOffset();
+                publishGroundTransition(changed, false);
         }
 
         /**
@@ -2025,6 +2032,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * update and only there clears routine 4 plus velocities.
          */
         public void setAirAfterObjectHurtLanding() {
+                boolean landed = this.air;
                 if (this.air) {
                         rollingJump = false;
                         jumping = false;
@@ -2041,6 +2049,30 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.air = false;
                 updatePushSensorYOffset();
                 resetBadnikChain();
+                publishGroundTransition(landed, landed);
+        }
+
+        /** Called once after a collision changes this character from airborne to grounded. */
+        protected void onLanded() { }
+
+        /** Called after a simulation ground-state transition; rewind hydration does not emit events. */
+        protected void onGroundStateChanged(boolean airborne) { }
+
+        /** Called after level initialization resets native character state, separately from landing. */
+        protected void onLevelReset() { }
+
+        private void publishGroundTransition(boolean changed, boolean landed) {
+                if (!changed) return;
+                boolean airborne = air;
+                invokeCharacterCallback(() -> {
+                        onGroundStateChanged(airborne);
+                        if (landed) onLanded();
+                });
+        }
+
+        private void invokeCharacterCallback(Runnable callback) {
+                com.openggf.game.CharacterConstructionScope.invoke(characterCallbackInvoker,
+                        () -> { callback.run(); return null; });
         }
 
         public void completeHurtLandingRecovery() {
@@ -3918,14 +3950,29 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected boolean debugMode = false;
 
         protected AbstractPlayableSprite(String code, short x, short y) {
-                super(code, x, y);
+                this(code, x, y, null);
+        }
+
+        /** Constructs a character with one authoritative instance physics/sensor specification. */
+        protected AbstractPlayableSprite(String code, short x, short y, CharacterPhysicsSpec specification) {
+                super(code, x, y, specification == null);
+                characterPhysicsSpec = specification;
+                if (specification != null) {
+                        var sensors = specification.sensors().createSensors(this);
+                        groundSensors = sensors[0]; ceilingSensors = sensors[1]; pushSensors = sensors[2];
+                }
                 boundCharacterKey = PlayableCharacterIdentity.bindForConstruction(this);
                 characterCallbackInvoker = com.openggf.game.CharacterConstructionScope
                         .captureCallbackInvoker();
                 // Must define speeds before creating Manager (it will read speeds upon
                 // instantiation).
-                defineSpeeds();
+                resetBaseSpeeds();
                 resolvePhysicsProfile(GameServices.bootstrapGameModule());
+
+                if (specification != null) {
+                        setWidth((standXRadius + 1) * 2);
+                        setHeight(runHeight);
+                }
 
                 applyStandingRadii(false);
 
@@ -3967,7 +4014,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 return;
                         }
                         String charType = boundCharacterKey.persisted();
-                        PhysicsProfile profile = provider.getProfile(charType);
+                        PhysicsProfile profile = characterPhysicsSpec == null
+                                ? provider.getProfile(charType) : characterPhysicsSpec.profile();
                         if (profile != null) {
                                 this.physicsProfile = profile;
                                 applyProfileToFields(profile);
@@ -3988,7 +4036,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         // S3K init override: Character_Speeds table provides different init-time
                         // values that persist until the first water or speed shoes event.
                         // ROM ref: sonic3k.asm:21467-21474 (Character_Speeds loaded at player init)
-                        PhysicsProfile initProfile = provider.getInitProfile(charType);
+                        PhysicsProfile initProfile = characterPhysicsSpec == null
+                                ? provider.getInitProfile(charType) : null;
                         if (initProfile != null && profile != null) {
                                 this.canonicalProfile = profile;
                                 // Overwrite only the fields that Character_Speeds sets (max, accel, decel)
@@ -4688,7 +4737,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 byte xRad = (byte) xRadius;
                 byte yRad = (byte) yRadius;
                 // SPG: Push sensors always use x = +/-10, regardless of rolling state
-                byte push = 10;
+                byte push = characterPhysicsSpec == null ? 10 : characterPhysicsSpec.sensors().pushRadius();
 
                 if (groundSensors != null && groundSensors.length >= 2) {
                         groundSensors[0].setOffset((byte) -xRad, yRad);
@@ -4720,9 +4769,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // This allows the offset on slight slopes, not just strictly flat ground.
                 // See s2.asm:43517-43519 in CalcRoomInFront
                 boolean onFlatGround = !air && runningMode == GroundMode.GROUND && (angle & 0x38) == 0;
-                byte yOffset = onFlatGround ? (byte) 8 : (byte) 0;
+                byte yOffset = onFlatGround
+                        ? (characterPhysicsSpec == null ? (byte) 8 : characterPhysicsSpec.sensors().groundPushYOffset())
+                        : (byte) 0;
                 // SPG: Push sensors always use x = +/-10, regardless of rolling state
-                byte push = 10;
+                byte push = characterPhysicsSpec == null ? 10 : characterPhysicsSpec.sensors().pushRadius();
                 pushSensors[0].setOffset((byte) -push, yOffset);
                 pushSensors[1].setOffset(push, yOffset);
         }
@@ -4740,7 +4791,21 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return controller.getAnimation();
         }
 
-        protected abstract void defineSpeeds();
+        /** Legacy customization seam; specification-based characters need not override it. */
+        protected void defineSpeeds() {
+                throw new IllegalStateException("Provide CharacterPhysicsSpec or override defineSpeeds()");
+        }
+
+        /** Legacy sensor seam; specification-based characters need not override it. */
+        @Override protected void createSensorLines() { }
+
+        private void resetBaseSpeeds() {
+                if (characterPhysicsSpec == null) defineSpeeds();
+                else {
+                        physicsProfile = characterPhysicsSpec.profile();
+                        applyProfileToFields(physicsProfile);
+                }
+        }
 
         public final void move() {
                 move(xSpeed, ySpeed);
