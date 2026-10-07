@@ -63,10 +63,11 @@ public final class SurfaceHud {
         // Planet, time and weather, top right.
         String name = g.displayName(s.planet.spec);
         f.right(c, name.toUpperCase(), g.width - 5, 5, 0xFFFFFFFF);
+        f.right(c, s.planet.spec.summary().toUpperCase(), g.width - 5, 14, 0xFF80C0FF);
         String status = s.weather.timeOfDay() + (s.weather.stormActive ? "  STORM" : "");
-        f.right(c, status, g.width - 5, 14, s.weather.stormActive ? 0xFFFF8060 : 0xFFA0B0D0);
+        f.right(c, status, g.width - 5, 23, s.weather.stormActive ? 0xFFFF8060 : 0xFFA0B0D0);
         if (s.sheltered() && s.hazardDrain() == 0 && s.planet.spec.biome.hazardous()) {
-            f.right(c, "SHELTERED", g.width - 5, 23, 0xFF80FF80);
+            f.right(c, "SHELTERED", g.width - 5, 32, 0xFF80FF80);
         }
         // Objective, bottom left.
         String objective = s.objective();

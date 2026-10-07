@@ -96,6 +96,8 @@ public final class SpaceMode implements Mode {
         int sprite;
         boolean alive = true;
         int orbitDir;
+        double phase;
+        int attackRun;
     }
 
     public SpaceMode(int arrive, int fromPlanet) {
@@ -515,8 +517,9 @@ public final class SpaceMode implements Mode {
             double oy = cam.right[1] * side * 14 - cam.up[1] * 10;
             double oz = cam.right[2] * side * 14 - cam.up[2] * 10;
             double sp = 70 + speed;
-            bolts.add(new double[] {cam.x + ox, cam.y + oy, cam.z + oz, cam.forward[0] * sp, cam.forward[1] * sp,
-                    cam.forward[2] * sp, 60, 0, 8 * (1 + 0.4 * p.level(Catalog.T_CANNON))});
+            double[] aim = aimAssist();
+            bolts.add(new double[] {cam.x + ox, cam.y + oy, cam.z + oz, aim[0] * sp, aim[1] * sp,
+                    aim[2] * sp, 60, 0, 8 * (1 + 0.4 * p.level(Catalog.T_CANNON))});
             g.sound.sfx(Sound.LASER, 6);
         }
         for (int i = bolts.size() - 1; i >= 0; i--) {
@@ -575,6 +578,36 @@ public final class SpaceMode implements Mode {
             }
         }
     }
+
+    /** The firing direction: forward, bent toward an enemy or rock close to the crosshair. */
+    private double[] aimAssist() {
+        double[] best = {cam.forward[0], cam.forward[1], cam.forward[2]};
+        double bestDot = 0.975;
+        for (Ship3D e : enemies) {
+            double dx = e.x - cam.x;
+            double dy = e.y - cam.y;
+            double dz = e.z - cam.z;
+            double l = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (l > 4000) {
+                continue;
+            }
+            double dot = (dx * cam.forward[0] + dy * cam.forward[1] + dz * cam.forward[2]) / l;
+            if (dot > bestDot) {
+                bestDot = dot;
+                // Lead the target a little.
+                double t = l / (70 + speed);
+                double lx = dx + e.vx * t;
+                double ly = dy + e.vy * t;
+                double lz = dz + e.vz * t;
+                double ll = Math.sqrt(lx * lx + ly * ly + lz * lz);
+                best = new double[] {lx / ll, ly / ll, lz / ll};
+            }
+        }
+        lockedOn = bestDot > 0.975;
+        return best;
+    }
+
+    private boolean lockedOn;
 
     private static double sq(double v) {
         return v * v;
@@ -677,11 +710,14 @@ public final class SpaceMode implements Mode {
 
     private void spawnEnemy(Game g, boolean tornado) {
         Ship3D e = new Ship3D();
-        double ang = rng.range(0f, 6.28f);
-        double d = tornado ? 2500 : 5000 + rng.nextInt(2000);
-        e.x = cam.x - cam.forward[0] * d * 0.5 + Math.cos(ang) * d;
-        e.y = cam.y + rng.range(-800f, 800f);
-        e.z = cam.z - cam.forward[2] * d * 0.5 + Math.sin(ang) * d;
+        // Arrive from ahead, spread out, so the fight starts on screen.
+        double d = tornado ? 2600 : 3200 + rng.nextInt(1500);
+        double side = rng.range(-1200f, 1200f);
+        double lift = rng.range(-500f, 500f);
+        e.x = cam.x + cam.forward[0] * d + cam.right[0] * side + cam.up[0] * lift;
+        e.y = cam.y + cam.forward[1] * d + cam.right[1] * side + cam.up[1] * lift;
+        e.z = cam.z + cam.forward[2] * d + cam.right[2] * side + cam.up[2] * lift;
+        e.phase = rng.range(0f, 6.28f);
         e.tornado = tornado;
         e.maxHp = tornado ? 220 : 40 + system.conflict * 15;
         e.hp = e.maxHp;
@@ -700,32 +736,38 @@ public final class SpaceMode implements Mode {
             double dy = cam.y - e.y;
             double dz = cam.z - e.z;
             double d = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            double sp = e.tornado ? 26 : 20;
-            double tx;
-            double ty;
-            double tz;
-            if (d > 1400) {
-                tx = dx / d;
-                ty = dy / d;
-                tz = dz / d;
-            } else {
-                // Circle and strafe.
-                tx = dz / d * e.orbitDir + dx / d * 0.25;
-                ty = dy / d * 0.3;
-                tz = -dx / d * e.orbitDir + dz / d * 0.25;
-            }
-            e.vx += (tx * (sp + speed * 0.8) - e.vx) * 0.04;
-            e.vy += (ty * (sp + speed * 0.8) - e.vy) * 0.04;
-            e.vz += (tz * (sp + speed * 0.8) - e.vz) * 0.04;
+            // Dogfight ahead of the Egg Mobile: each ship jockeys for a spot in front, weaving, and
+            // now and then makes an attack run straight at the cockpit.
+            e.phase += 0.012 + (e.tornado ? 0.01 : 0);
+            double ahead = e.attackRun > 0 ? 120 : 650 + 250 * Math.sin(e.phase * 0.7 + e.orbitDir);
+            double side = Math.sin(e.phase + e.orbitDir * 1.3) * (e.tornado ? 260 : 420);
+            double lift = Math.cos(e.phase * 0.8 + e.orbitDir) * 200;
+            double tx = cam.x + cam.forward[0] * ahead + cam.right[0] * side + cam.up[0] * lift;
+            double ty = cam.y + cam.forward[1] * ahead + cam.right[1] * side + cam.up[1] * lift;
+            double tz = cam.z + cam.forward[2] * ahead + cam.right[2] * side + cam.up[2] * lift;
+            double gx = tx - e.x;
+            double gy = ty - e.y;
+            double gz = tz - e.z;
+            double gl = Math.max(1, Math.sqrt(gx * gx + gy * gy + gz * gz));
+            double sp = speed + (d > 2000 ? 40 : e.tornado ? 16 : 11);
+            double want = Math.min(sp, gl * 0.08 + speed);
+            e.vx += (gx / gl * want - e.vx) * 0.06;
+            e.vy += (gy / gl * want - e.vy) * 0.06;
+            e.vz += (gz / gl * want - e.vz) * 0.06;
             e.x += e.vx;
             e.y += e.vy;
             e.z += e.vz;
+            if (e.attackRun > 0) {
+                e.attackRun--;
+            } else if (rng.chance(e.tornado ? 0.004 : 0.002)) {
+                e.attackRun = 70;
+            }
             if (e.hit > 0) {
                 e.hit--;
             }
             e.cooldown--;
             if (e.cooldown <= 0 && d < 3500) {
-                e.cooldown = e.tornado ? 28 : rng.range(50, 90);
+                e.cooldown = e.tornado ? rng.range(45, 70) : rng.range(90, 150);
                 double lead = d / 80;
                 double ax = cam.x + cam.forward[0] * speed * lead - e.x;
                 double ay = cam.y + cam.forward[1] * speed * lead - e.y;
@@ -733,7 +775,7 @@ public final class SpaceMode implements Mode {
                 double al = Math.sqrt(ax * ax + ay * ay + az * az);
                 double bs = 80;
                 bolts.add(new double[] {e.x, e.y, e.z, ax / al * bs, ay / al * bs, az / al * bs, 70, 1,
-                        e.tornado ? 9 : 5 + system.conflict * 2});
+                        e.tornado ? 6 : 3 + system.conflict});
                 g.sound.sfx(Sound.BOSS_PROJECTILE, 10);
             }
         }
@@ -875,11 +917,11 @@ public final class SpaceMode implements Mode {
             if (p == null || renderer.occluded(p[0], p[1], p[2], g.width, g.height)) {
                 continue;
             }
-            double scale = (e.tornado ? 160 : 110) / p[2] * cam.focal / 48.0;
-            scale = Math.max(0.1, Math.min(6, scale));
+            double scale = (e.tornado ? 220 : 160) / p[2] * cam.focal / 48.0;
+            scale = Math.max(0.1, Math.min(2.6, scale));
             SceneDraw style = SceneDraw.plain().withScale((float) scale).withFlipX(e.vx * cam.right[0] + e.vz * cam.right[2] > 0);
-            if (e.hit > 0) {
-                style = style.withFlash(0xFFFFFFFF);
+            if (e.hit > 0 && (g.ticks / 2) % 2 == 0) {
+                style = style.withTint(0xFFFF9090);
             }
             if (e.tornado) {
                 SceneSprite body = art.frame("tornado", 0);
@@ -1082,6 +1124,28 @@ public final class SpaceMode implements Mode {
         c.fill(cx + 4, cy, 5, 1, 0xC0FFFFFF);
         c.fill(cx, cy - 8, 1, 5, 0xC0FFFFFF);
         c.fill(cx, cy + 4, 1, 5, 0xC0FFFFFF);
+        if (lockedOn && !enemies.isEmpty()) {
+            int lc = (g.ticks / 4) % 2 == 0 ? 0xFFFF4040 : 0xFFFFFFFF;
+            c.fill(cx - 12, cy - 12, 5, 1, lc);
+            c.fill(cx - 12, cy - 12, 1, 5, lc);
+            c.fill(cx + 8, cy - 12, 5, 1, lc);
+            c.fill(cx + 12, cy - 12, 1, 5, lc);
+            c.fill(cx - 12, cy + 12, 5, 1, lc);
+            c.fill(cx - 12, cy + 8, 1, 5, lc);
+            c.fill(cx + 8, cy + 12, 5, 1, lc);
+            c.fill(cx + 12, cy + 8, 1, 5, lc);
+        }
+        if (lockedOn && !enemies.isEmpty()) {
+            int lc = (g.ticks / 4) % 2 == 0 ? 0xFFFF4040 : 0xFFFFFFFF;
+            c.fill(cx - 12, cy - 12, 5, 1, lc);
+            c.fill(cx - 12, cy - 12, 1, 5, lc);
+            c.fill(cx + 8, cy - 12, 5, 1, lc);
+            c.fill(cx + 12, cy - 12, 1, 5, lc);
+            c.fill(cx - 12, cy + 12, 5, 1, lc);
+            c.fill(cx - 12, cy + 8, 1, 5, lc);
+            c.fill(cx + 8, cy + 12, 5, 1, lc);
+            c.fill(cx + 12, cy + 8, 1, 5, lc);
+        }
         if (dockPrompt > 0) {
             f.centre(c, "DOCKING...", cx, cy + 20, 0xFFFFD040);
         }
@@ -1136,6 +1200,7 @@ public final class SpaceMode implements Mode {
             c.fill(sx, y, 44, 1, 0x30000000);
         }
         c.unclip();
+        drawRadar(g, c, 142, top + 4);
         // Speed, rings and the star system.
         String spd = pulsing ? "PULSE" : Integer.toString((int) (speed * 12)) + " U/S";
         f.draw(c, spd, w / 2 + 30, top + 6, pulsing ? 0xFFFFFFFF : 0xFF90F0A0);
@@ -1147,6 +1212,44 @@ public final class SpaceMode implements Mode {
         if (g.player.tutorial <= 6 && arrivalTicks <= 0 && g.ticks % 600 < 300) {
             f.centre(c, "ARROWS STEER  SPACE FIRE  HOLD C BOOST/PULSE  X SCAN  ENTER MENU", w / 2, top - 10, 0xC0FFFFFF);
         }
+    }
+
+    /** A round radar: enemies (red), the Tornado (blue), loot (gold) and the station (yellow). */
+    private void drawRadar(Game g, SceneCanvas c, int x, int y) {
+        int r = 15;
+        int cx = x + r;
+        int cy = y + r;
+        Ui.disc(c, cx, cy, r, 0xFF1A3A2A, 0xFF0A1A12);
+        c.fill(cx - r, cy, r * 2, 1, 0x4040FF80);
+        c.fill(cx, cy - r, 1, r * 2, 0x4040FF80);
+        int sweep = (int) (g.ticks * 3 % 360);
+        double sa = Math.toRadians(sweep);
+        for (int k = 0; k < r; k += 2) {
+            c.fill(cx + (int) (Math.cos(sa) * k), cy + (int) (Math.sin(sa) * k), 1, 1, 0x8060FF90);
+        }
+        for (Ship3D e : enemies) {
+            blip(c, cx, cy, r, e.x, e.z, e.tornado ? 0xFF60A0FF : 0xFFFF4040, 4000);
+        }
+        for (double[] l : loot) {
+            blip(c, cx, cy, r, l[0], l[2], Ui.GOLD, 4000);
+        }
+        blip(c, cx, cy, r, station.x, station.z, 0xFFFFE040, 20000);
+        c.fill(cx - 1, cy - 1, 3, 3, 0xFFFFFFFF);
+    }
+
+    private void blip(SceneCanvas c, int cx, int cy, int r, double wx, double wz, int col, double range) {
+        // Rotate into the cockpit's heading (yaw only): forward is up on the radar.
+        double dx = wx - cam.x;
+        double dz = wz - cam.z;
+        double cy2 = Math.cos(cam.yaw);
+        double sy2 = Math.sin(cam.yaw);
+        double rx = dx * cy2 - dz * sy2;
+        double rz = dx * sy2 + dz * cy2;
+        double k = Math.min(1, Math.sqrt(rx * rx + rz * rz) / range);
+        double ang = Math.atan2(rx, rz);
+        int bx = cx + (int) (Math.sin(ang) * k * (r - 2));
+        int by = cy - (int) (Math.cos(ang) * k * (r - 2));
+        c.fill(bx - 1, by - 1, 2, 2, col);
     }
 
     @Override
