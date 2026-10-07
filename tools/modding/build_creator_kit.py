@@ -18,6 +18,10 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
+CAMPAIGN_SOURCE = Path("src/test/resources/mods/sample-two-act-campaign-src/project")
+CAMPAIGN_ASSETS = frozenset(("patterns.bin", "chunks.bin", "blocks.bin", "fg-map.bin", "bg-map.bin",
+                             "solid-heights.bin", "solid-widths.bin", "solid-angles.bin",
+                             "collision-primary.bin", "collision-secondary.bin", "palettes.bin"))
 
 
 def version(root):
@@ -44,15 +48,42 @@ def project_pom(name):
 </plugins></build></project>'''.encode()
 
 
+def exported_projects(root):
+    """Declare portable examples and the maintained campaign; fail on incomplete sources."""
+    projects = {}
+    for project in sorted((root / "examples").iterdir()):
+        if (project / "src/main/resources/META-INF/openggf-mod.yaml").is_file():
+            projects[project.name] = project
+    campaign = root / CAMPAIGN_SOURCE
+    for relative in ("README.md", "tools/generate_assets.py", "src/main/java/example/tide/TideCircuitMod.java",
+                     "src/main/resources/META-INF/openggf-mod.yaml"):
+        if not (campaign / relative).is_file():
+            raise ValueError("Missing maintained campaign source input: " + str(CAMPAIGN_SOURCE / relative))
+    for act in (1, 2):
+        level = campaign / f"src/main/resources/levels/tide/act{act}/level.json"
+        if not level.is_file():
+            raise ValueError("Missing maintained campaign level: " + str(level.relative_to(root)))
+        assets = json.loads(level.read_text()).get("assets", {})
+        if set(assets.values()) != CAMPAIGN_ASSETS:
+            raise ValueError("Campaign level must declare its complete original asset inventory: " + str(level.relative_to(root)))
+        for name in sorted(CAMPAIGN_ASSETS):
+            if not (level.parent / name).is_file():
+                raise ValueError("Missing maintained campaign asset: " + str((level.parent / name).relative_to(root)))
+    if "tide-circuit" in projects:
+        raise ValueError("Export name tide-circuit is reserved for the maintained campaign")
+    projects["tide-circuit"] = campaign
+    return dict(sorted(projects.items()))
+
+
 def export_examples(root):
     entries = {}
-    for project in sorted((root / "examples").iterdir()):
-        if not (project / "src/main/resources/META-INF/openggf-mod.yaml").is_file():
-            continue
+    for name, project in exported_projects(root).items():
         for file in sorted((project / "src/main").rglob("*")):
             if file.is_file():
-                entries["examples/" + project.name + "/" + file.relative_to(project).as_posix()] = file.read_bytes()
-        if project.name == "hello-scene":
+                entries["examples/" + name + "/" + file.relative_to(project).as_posix()] = file.read_bytes()
+        if name == "tide-circuit":
+            entries["examples/tide-circuit/tools/generate_assets.py"] = (project / "tools/generate_assets.py").read_bytes()
+        if name == "hello-scene":
             specimen = project / "src/test/java/hello/HelloSceneIntegrationTest.java"
             if specimen.is_file():
                 entries["examples/hello-scene/src/test/java/hello/HelloSceneIntegrationTest.java"] = specimen.read_bytes()
@@ -60,7 +91,7 @@ def export_examples(root):
         manifest = (project / "src/main/resources/META-INF/openggf-mod.yaml").read_text()
         base_game = re.search(r"(?m)^baseGame:\s*(s1|s2|s3k)\s*$", manifest)
         game = base_game.group(1) if base_game else "s2"
-        instructions = f'''# Build {project.name} from the creator kit
+        instructions = f'''# Build {name} from the creator kit
 
 Use a Java **21 JDK** and Python 3, or Maven **3.8 or newer**. Keep `engine.jar`
 and `sdk.jar` from the same creator kit/source commit; this is a mutable candidate.
@@ -71,7 +102,7 @@ From this project directory, build with the portable launcher:
 python3 ../../tools/build_project.py .
 ```
 
-The distributable is **`target/{project.name}-mod.jar`**. Only `src/main` classes
+The distributable is **`target/{name}-mod.jar`**. Only `src/main` classes
 and resources enter that jar. Alternatively, build with Maven and matching absolute
 artifact paths:
 
@@ -95,8 +126,8 @@ The original project notes follow. Checkout paths and play/build scripts mention
 there refer to the pinned source tree; use the creator-kit commands above here.
 
 '''
-        entries[f"examples/{project.name}/README.md"] = instructions.encode() + (readme.read_bytes() if readme.exists() else b"")
-        entries[f"examples/{project.name}/pom.xml"] = project_pom(project.name)
+        entries[f"examples/{name}/README.md"] = instructions.encode() + (readme.read_bytes() if readme.exists() else b"")
+        entries[f"examples/{name}/pom.xml"] = project_pom(name)
     return entries
 
 
@@ -145,9 +176,16 @@ def relocate_markdown_links(root, entries, commit):
     for name in entries:
         if name.startswith("handbook/"):
             source_to_export[(root / "docs/modding" / name.removeprefix("handbook/")).resolve()] = name
-        elif name.startswith("examples/"):
-            source_to_export[(root / name).resolve()] = name
-    for source, exported in source_to_export.items():
+    projects = exported_projects(root)
+    for name in entries:
+        if name.startswith("examples/"):
+            _, project, relative = name.split("/", 2)
+            source_to_export[(projects[project] / relative).resolve()] = name
+    documents = tuple(source_to_export.items())
+    # Source guides often link a complete project directory; open its portable README.
+    for name, source in projects.items():
+        source_to_export[source.resolve()] = f"examples/{name}/README.md"
+    for source, exported in documents:
         if not exported.endswith(".md"):
             continue
         def replace(match):
