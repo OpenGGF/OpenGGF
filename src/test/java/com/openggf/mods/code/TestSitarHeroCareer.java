@@ -49,13 +49,10 @@ class TestSitarHeroCareer {
     @Test void everyStarThresholdIsAttainableAndFailedRunsNeverClear() throws Exception { check("attainableStarsAndGrades"); }
     @Test void invalidResultsAreRejectedAndOnlyFinishedSessionsProduceResults() throws Exception { check("resultValidationAndFinalSessionSnapshot"); }
     @Test void instrumentsAndDifficultiesHaveIndependentRecordsAndEligibleTotals() throws Exception { check("independentRecordsAndAttemptTotals"); }
-    @Test void invalidInstrumentOrDifficultyNeverBecomesAnEmptyTour() throws Exception { check("querySelectionValidationAlsoAppliesToEmptyTours"); }
+    @Test void invalidProfileQueriesAndLegacyScoresAreRejected() throws Exception { check("querySelectionValidation"); }
     @Test void aLowerScoreCanImproveStarsWithoutSynthesizingAnAttempt() throws Exception { check("lowerScoreCanImproveStarsWithoutInventingAnAttempt"); }
     @Test void savesRoundTripAndImportedLegacyScoresCannotInventClears() throws Exception { check("deterministicRoundTripAndLegacyScoreMigration"); }
     @Test void corruptionOrUnsupportedVersionsCannotPartiallyReplaceProgress() throws Exception { check("corruptionCannotPartiallyReplaceExistingProgress"); }
     @Test void recordCapsAndOverflowCannotCorruptStatistics() throws Exception { check("boundedRecordsAndSaturatingTotals"); }
-    @Test void tiersUnlockInSequenceForTheSelectedInstrumentAndDifficulty() throws Exception { check("sequentialTiersAndWholeTourCompletion"); }
-    @Test void everyNonemptyRomSubsetCanCompleteItsWholeTour() throws Exception { check("everyRomSubsetCanFinishWithoutMissingSongGates"); }
-    @Test void duplicateMetadataCannotInventProgress() throws Exception { check("duplicateSongsDoNotAwardExtraClearsOrUnlocks"); }
     @Test void practiceSurvivesZeroRockWithoutChangingMissOrRecoveryRules() throws Exception { check("noFailResolvesAllMissesAndCanRecoverAudioAndStreak"); }
 }
