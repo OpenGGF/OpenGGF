@@ -191,6 +191,11 @@ public final class ModManagerScreen {
         }
         if (detailsPage || noticesPage) {
             if (detailsPage) {
+                if (accept && editor.editable() && selectedEnabledCodeNeedsTrust()) {
+                    detailsPage = false;
+                    toggleSelected(false);
+                    return;
+                }
                 if (up || down || left || right) scrollDetails(down ? 1 : up ? -1
                         : right ? MAX_VISIBLE_DETAILS : -MAX_VISIBLE_DETAILS);
             } else {
@@ -280,7 +285,9 @@ public final class ModManagerScreen {
             }
             if (detailsPage) {
                 renderReadingPage("MOD DETAILS", wrapped(detailLines()), detailScrollOffset,
-                        directionLabel + " Read  " + backLabel + " Back", "Left/Right Page  Up/Down Line");
+                        directionLabel + " Read  " + backLabel + " Back",
+                        editor.editable() && selectedEnabledCodeNeedsTrust()
+                                ? confirmLabel + " Disable without trust" : "Left/Right Page  Up/Down Line");
                 return;
             }
             if (noticesPage) {
@@ -473,6 +480,17 @@ public final class ModManagerScreen {
     }
 
     private void toggleSelected() {
+        toggleSelected(true);
+    }
+
+    private boolean selectedEnabledCodeNeedsTrust() {
+        if (rows.isEmpty()) return false;
+        ModDescriptor descriptor = rows.get(selectedIndex).descriptor();
+        return descriptor != null && descriptor.containsCode()
+                && isEnabled(descriptor.manifest().id()) && !isTrusted(descriptor);
+    }
+
+    private void toggleSelected(boolean preferTrustRenewal) {
         if (rows.isEmpty()) return;
         Row row = rows.get(selectedIndex);
         if (row.descriptor() == null) {
@@ -482,10 +500,12 @@ public final class ModManagerScreen {
         }
         String id = row.descriptor().manifest().id();
         boolean enabled = isEnabled(id);
-        LinkedHashSet<String> cascade = enabled
+        boolean requiresTrust = preferTrustRenewal && compiledModsSupported
+                && row.descriptor().containsCode() && !isTrusted(row.descriptor());
+        LinkedHashSet<String> cascade = enabled && !requiresTrust
                 ? enabledDependentClosure(id) : disabledDependencyClosure(id);
         cascade.add(id);
-        if (!enabled) {
+        if (!enabled || requiresTrust) {
             if (!compiledModsSupported) {
                 for (String cascadeId : cascade) {
                     ModDescriptor cascadeDescriptor = descriptorsById.get(cascadeId);
