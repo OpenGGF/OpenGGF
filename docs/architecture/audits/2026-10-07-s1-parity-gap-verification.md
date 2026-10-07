@@ -160,7 +160,7 @@ Final Zone pass. This lane intentionally leaves those shared ledgers untouched.
 The coordinator subsequently ran SBZ1/2/3, FZ and the two SBZ credits fixtures
 under canonical `trace-replay` on both the untouched detached base and combined
 candidate. Each invocation completed six tests, zero failures/errors/skips.
-SBZ1/2/3 and FZ compare 7,619/9,594/4,457/8,354 rows with zero errors, warnings
+SBZ1/2/3 and FZ compare 7,619/9,594/8,354/4,457 rows with zero errors, warnings
 or bootstrap disagreements on both trees. The exact selector and absolute ROM
 arguments are recorded in the [combined audit](2026-10-07-stock-parity-gap-verification.md#affected-s1-canonical-fixtures).
 

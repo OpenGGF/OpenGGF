@@ -294,12 +294,56 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrde
 ```
 
 Each completed six tests, zero failures/errors/skips (exit 0). Canonical SBZ1,
-SBZ2, SBZ3 and FZ reports compare 7,619, 9,594, 4,457 and 8,354 rows respectively,
-with zero errors, warnings or bootstrap errors/warnings on both trees. FZ's
-report retains the fixture's internal `s1_lz4` alias. The isolated FZ replay is
+SBZ2, SBZ3 and FZ reports compare 7,619, 9,594, 8,354 and 4,457 rows respectively,
+with zero errors, warnings or bootstrap errors/warnings on both trees. SBZ3's
+native report ID is `s1_lz4`; FZ's is `s1_sbz3`. Fixture classes and metadata
+confirm these route/native-zone remaps. The isolated FZ replay is
 clean on the current baseline and candidate; the earlier full chain still stops
 at MZ2 before reaching FZ. Neither result proves general hit-window correctness
 of the remaining suppression heuristic or whole-act visual/cache residency.
+
+## Post-integration ordinary validation and concurrent tooling
+
+The reviewed source was merged without conflicts into the main workspace's
+existing `develop` branch at `945b74e999c3584ad45b92a711b7a6dace7dc294`.
+Existing dirty disassemblies and unrelated local files were preserved.
+The main launch environment passed preflight, then executed the same combined
+category command above with the pinned `09282b173` base and 120-minute limit.
+Run `20261007T130421Z-74206bd5` selected all 3,007 ordinary classes and guards;
+its launch fingerprint was
+`9d38495193dac9f0868bb4a5c338e93d4f313b438296aca8d77d11132ad211d4`.
+
+The ordinary lane completed 3,005 XML suites / 26,166 tests, 28 failures,
+zero errors and 61 skips in 4,313.69 seconds (lane exit 1). All 28 failing
+identities and all 61 skip identities/reasons match the executed baseline.
+Twenty-seven failure messages match literally; the remaining SSZ-Tails
+2,048-character prefix matches after removal of only the verified JVM-dependent
+blob hashes, with the same frame and concrete slot differences. No new or
+worsened concrete failure or ROM-prerequisite skip was observed. The original
+baseline diagnostics had since been acknowledged by their owner, so no full
+SSZ assertion equality is claimed beyond the retained baseline prefix.
+
+During ordinary execution, an independently authorized task integrated Maven
+throughput/diagnostic tooling at `63fea861e`, followed by its evidence-only
+`5bc5f4fa6` commit. The complete diff was inspected: engine Java, Java tests,
+POM, ROM inputs, hooks, category selection and the category runner are unchanged.
+The already-running ordinary JVM therefore measures the integrated engine
+source above. The upstream scheduler, helper and documentation changes are
+preserved; their separate verification is recorded in the
+[tooling research](../research/2026-10-07-maven-focused-throughput.md).
+
+The category runner correctly stopped before its next lane because the workspace
+fingerprint changed (wrapper exit 2). This invocation is completed ordinary
+validation with an unexecuted guard lane, not a completed combined run.
+Current-tooling preflight passed again. The required complete fresh-JVM guard
+profile was submitted independently on current `develop`:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+```
+
+Its result and final delivery state remain pending. The inspected ordinary
+diagnostics have been submitted for acknowledgement through the runner.
 
 ## Next work from the verified remaining gaps
 
