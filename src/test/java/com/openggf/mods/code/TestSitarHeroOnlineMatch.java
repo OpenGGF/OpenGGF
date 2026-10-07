@@ -30,7 +30,8 @@ class TestSitarHeroOnlineMatch {
         Path output = Files.createDirectory(temp.resolve("classes"));
         var args = new ArrayList<>(List.of("--release", "21", "-classpath", System.getProperty("java.class.path"),
                 "-d", output.toString()));
-        for (String tree : List.of("src/main/java/sitarhero/model", "src/main/java/sitarhero/net", "src/test/java/sitarhero/net")) {
+        for (String tree : List.of("src/main/java/sitarhero/model", "src/main/java/sitarhero/catalogue",
+                "src/main/java/sitarhero/net", "src/test/java/sitarhero/net")) {
             try (var files = Files.walk(project.resolve(tree))) {
                 files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));
             }

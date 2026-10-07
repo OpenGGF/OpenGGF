@@ -544,3 +544,77 @@ failure inventory remains historical evidence; it cannot alone certify the new
 destination. Reconcile upstream before freezing the candidate and run normal
 updated-base and candidate validation, then integrated validation. No develop
 integration, push or task cleanup is claimed by this source checkpoint.
+
+### Updated-base reuse and first completed combined candidate
+
+All pending new career-focused Maven requests resolved on unchanged sources:
+model `d1998b8d8` passed 28 tests, story `8f7364dc1` passed six, and the actual
+combined tree at `aa667ae91` passed Arcade 29 plus Controls five. All three
+commands exited 0 with zero failures, errors or skips; worker fresh XML evidence
+and the parent combined packaging/direct checks are distinct qualifications.
+
+The stock parity task's completed main ordinary run
+`20261007T130421Z-74206bd5` at `945b74e999c` supplies the updated-base ordinary
+obligation. Parent independently verified the full diff to `5bc5f4fa6`: engine
+Java, Java tests, POM, hooks, category runner/selection and normal launch arguments
+are unchanged; the differences are Maven scheduling/diagnostic tooling and
+prose, with lean heap overrides opt-in only. The run selected 3,007 classes and
+completed 3,005 reports / 26,166 tests, 28 failures, zero errors and 61 skips in
+4,313.69 seconds. Its overall runner exit 2 correctly stopped before guards
+after the concurrent tooling merge changed the workspace fingerprint; the
+ordinary lane itself completed. All 27 short failures match literally. The
+retained `detail` first line recovers the full SSZ assertion despite the compact
+`message` cap: remove the exception prefix and normalize only the previously
+verified JVM-dependent `RewindObjectStateBlob@hex` strings. Its 2,907 characters
+then match the original full baseline assertion. All 61 skip identities and
+first-line reasons match, with no ROM skips. No full stack-trace equality is
+claimed. The owner acknowledged and deleted the consumed shared diagnostics.
+
+The redundant owned baseline run `20261007T142549Z-97be836b` was interrupted
+only through its verified runner PID/cwd/argv; exit 130 and absent descendants
+confirm cleanup. It had no completed ordinary result and is not pass evidence.
+Its own acknowledgment subsequently deleted only that incomplete run. The
+stock task's complete fresh-JVM `-Pguards test -B` at prose-only descendant
+`9583f2447` passed 86 reports / 672 tests, zero failures/errors/skips, in 215
+seconds. Parent independently inspected fresh XML, including all seven module
+provider caching cases. This reuse avoids repeating unchanged engine checks;
+candidate and integrated qualifications remain this task's responsibility.
+
+The actual combined candidate command was:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 5bc5f4fa60728c6c074f9bbf8cf89d6dc6b05f6f --max-minutes 150 --run
+```
+
+Run `20261007T145648Z-10a6e0f7` at clean `aa667ae91` selected all 3,019 ordinary
+classes and completed both lanes, exit 1. Ordinary: 3,017 reports / 26,289 tests,
+47 failures, two errors, 61 skips, 4,865.84 seconds. Guards: 86 reports / 672
+tests, zero failures/errors/skips, 215.29 seconds. No case summaries are omitted;
+all 28 inherited full concrete failures and all skip identities/reasons match.
+The 21 new identities comprise 20 S3K audio failures/errors across six classes
+and one OnlineMatch class-setup compiler failure. Integration is blocked until
+they are attributed and repaired. The OnlineMatch test's explicit compiler
+source list omitted the newly required catalogue package; its source list now
+includes that directory. A freshly compiled bridge then passed all 20 cases in
+JUnit Platform 1.10.3 / Jupiter 5.10.3, including the real two-endpoint transport
+check: zero failures, aborted cases, skips or failed containers; 4.173 seconds.
+The probe compiled the changed bridge and its launcher into a separate temporary
+`target/` directory, placed those classes first on the classpath, and retained
+JUnit lifecycle, temporary-directory and timeout handling. Existing host classes
+came from the completed candidate run. This is direct JUnit evidence, not a
+Maven pass. The still-waiting focused Maven wrapper had no child process; parent
+verified its exact PID/cwd/argv and sent SIGINT only to that wrapper, which exited
+130 before admission. The required integrated normal run will exercise the same
+20 cases through Maven. No production protocol code changed.
+
+The S3K owner has resumed in its isolated tree. Native probing identifies an
+indexed-program snapshot boundary: `FrozenSmpsData` copied the raw header slice
+but retained the new bank-relative address base. Blue Sphere has 32,768 indexed
+bytes and nine direct tracks, yet the 2,200-byte frozen slice initializes none;
+Knuckles, 1-up and S3 Ending similarly lose their tracks. AIZ begins at the bank
+start and retains nine. The shared consumer repair must freeze indexed reads and
+program identity while preserving raw header and voice semantics. Native bank
+access remains required for full phrases before a song header; reverting it is
+not a valid repair. The worker owns this repair and its required descriptor,
+identity and direct/frozen native-stream tests. Integration and the final normal
+gate remain pending.
