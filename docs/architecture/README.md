@@ -28,3 +28,10 @@ directory.
 
 Domain subfolders may group related artifacts within a category, but a topic
 must not replace classification by purpose.
+
+## Mod and challenge blueprints
+
+[Mutators, Multigame and hardened S3&K](designs/2026-10-07-mod-challenges-blueprint.md)
+define researched prototype, MVP and polished-product stages, with detailed
+lifecycle, engine ownership, authoring and validation gates. These are proposed
+implementations, not claims of delivered gameplay or APIs.
