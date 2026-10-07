@@ -157,7 +157,96 @@ freeze had zero changes between submission and completion.
 The pin was regenerated from those actual compiled merged classes: 20,335 lines,
 287 own additions and no removals against 2fc. Equality with the provisional
 automatic merge was checked rather than treating text union as proof. SDK,
-candidate trace/domain and merged-source audiovisual checks remain delivery
-obligations. Shared baseline runs belong to their original owners; the older
-5b3 failure set is not a 2fc certificate. The final combined selection must use
-2fc, not HEAD, and inspect actual completed failures and skips.
+candidate trace/domain and merged-source audiovisual results are recorded below.
+Shared baseline runs belong to their original owners; the older 5b3 failure set
+is not a 2fc certificate. The subsequent tool-only destination merge supplies
+the final combined integration base, never HEAD.
+
+
+## Integrated 2fc audiovisual observation
+
+Merge `157401f252` is the source for the new normal-class captures in the task's
+outside-repository `gpu-integrated-2fc` and `native-integrated-2fc` directories.
+Invocation 35517 compiled these classes; the cached window version caption is
+not used to identify the source. The freshly rebuilt example jar is 8,063 bytes,
+SHA-256 `484ad7c83b7f96940df18e6a7b3f331b616c6cbc0c73bc701b80b878da16b090`.
+
+GPU invocation 66030 completed with 2,077 state/PNG rows and 1,661,600 stereo
+48 kHz PCM frames. CSV was inspected before frames 180, 600, 704, 774, 1,130,
+1,360, 1,570, 1,800 and 2,076. The introduction gates controls, title text has
+backing and option rows leave room for pending captions. Frame 1,360 is real
+airborne LEVEL play at (549,586), two rings, revision 2, with the player hidden
+and native world/HUD retained. Mapping changes from 61 to 65 between frames
+1,130 and 1,135. Configuration holds retain position, velocity and camera;
+Resume publishes revisions 2 and 3. Restart traverses the native title card
+and resumes fresh gameplay. PCM has varying AC signal around native menu cues,
+Start, Resume and gameplay; the former Start WAV fallback is absent.
+
+Normal Engine invocation 93319 completed the maintained 98 actions using its
+normal tick limiter. The exact owned PID/title mapped through the default window
+manager at 960×672, depth 24, map state 2, without an unmanaged-window override.
+Images establish help, slider/checkbox/enum editing, native play, Stealth,
+restored presentation, restart, hub, two fresh launches and title Back. Close
+returned zero, all three owned processes stopped, and the sink/focus window/display
+were released. The 101.8-second stereo 48 kHz Pulse monitor stream has varying
+AC signal around actions and gameplay. Muxed native and GPU videos contain
+3,054 and 2,077 video frames respectively, both with stereo audio. Child-only
+keyutils/Pulse and driver-vsync settings remain recorded; physical speakers
+and hardware controllers were not observed.
+
+The separate missing-ROM default mapping invocation 15517 timed out after
+90 seconds; its own 20-second thread sample was in `glfwShowWindow`. Cleanup
+stopped its owned process and removed its sink. This does not negate the
+completed default mapping above or establish a universal display failure.
+Frameless missing-ROM diagnostics are qualified separately; their action labels
+alone do not establish the visible transition.
+
+The final merged missing-ROM frameless diagnostic 72947 observes ROM NOT FOUND and
+Escape Back to the same Sonic 2 hub selection, then clean close and owned cleanup.
+It does not qualify a second Start attempt; long holds and focus changes can span
+UI states, and action/image names are not evidence of the intended transition.
+The original timed workaround 10169 is likewise not retry proof.
+
+
+## Final validation base and completed package/domain checks
+
+The final destination merge `dc0ab6933129dc330d9c36a95ddcd0e58b27ad7d` incorporates actual
+`37a57ebdbe62864737f39e7b14c72932fbaf3d74` by intent, without conflicts.
+Its six upstream tool/documentation paths change diagnostic acknowledgment
+locking and Python safety checks; no engine Java, API, POM, hooks or category
+selection changed. The 2fc compiled pin, focused tests, SDK and captures above
+remain applicable by that exact source comparison and retain their attribution.
+
+Normal queued invocation 66942 completed `-B -Dmse=off -DskipTests verify`
+with exit zero in 37.568 seconds. Binary, SDK and Javadoc artifacts and the SDK
+artifact verifier passed. Tests were explicitly skipped; this is packaging
+verification, not an ordinary test pass or native-image certification.
+
+Normal trace-replay invocation 30095 selected the two EHZ1 segment classes and
+three S3K AIZ/AIZ-slice/HCZ-slice classes, with all three original absolute ROM
+properties and Lua 5.4. At source `157401f252`, 21 cases completed in 91 seconds:
+18 passed, three assertion failures, zero errors/skips, Maven exit one.
+Both S2 segments and 16 additional S3K cases passed. Each `replayMatchesTrace`
+failure literally equals the clean exact-2fc shared three-method baseline:
+AIZ 57 errors, first 20302 animation `0x0000/0x0005`; AIZ slice 99, first 25589
+animation `0x0013/0x0005`; HCZ slice 4,699, first 9482 air `1/0`.
+This is inherited divergence evidence, not a passing trace claim.
+
+The completed ordinary comparison source is `4cfb745646d9439cdb9c07d53d0670dd0fb3fe58`:
+26,222 cases, 28 assertion failures, zero errors and 62 skips; fresh guards
+672 passed, zero skips. Its full 28 messages and 62 skip identities/reasons are
+in the existing mod-framework readiness plan. Runtime Java, POM, hooks and
+normal category runner are unchanged from 4cf through 2fc. The sole Java test
+delta is `TestInfiniteSonic`; an existing Linux Sitar candidate class report
+exercises that exact 2fc test source (238 cases, 206 pass, 32 literal baseline
+skips, new driver observation pass). That class evidence is neither a clean
+2fc runtime baseline nor a whole-suite result. The clean 2fc full request was
+cancelled with exit 130 and no results. No redundant full baseline is submitted.
+
+Final combined selection and preflight use actual 37a as base. Expected cost
+uses the completed 4cf measurement: 85.96 minutes ordinary plus 221.57 seconds
+fresh guards. A 150-minute per-invocation limit excludes queue waiting; the
+existing ten-minute no-output limit remains. Timeout means incomplete. Final
+candidate identities, full assertions and first causal skip reasons will be
+compared; only the SSZ Tails object-blob hexadecimal identity is normalized.
+The final ordinary/guard outcome is pending at this checkpoint.
