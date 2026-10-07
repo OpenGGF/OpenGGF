@@ -1,0 +1,741 @@
+# Sitar Hero full version
+
+## Outcome and constraints
+
+Expand the merged arcade example into a complete rhythm game, using Slay the
+Robotnik's persistent game loop, accessible navigation, records, settings and ROM
+presentation as the quality reference. The user requested production polish on
+2026-10-07 after identifying career and multiplayer as the arcade prototype's
+remaining full-version requirements. Their repository policy authorizes routine
+design decisions and delivery without repeated approval ceremonies.
+
+The user expanded the scope to every substantive song from the three supplied
+ROMs, with parallel Sol workers researching each game's inventory and arrangement.
+Short power-up loops and jingles are excluded with explicit rationale. Looping
+performances last at least two complete outer arrangement loops (including the
+intro) or 120 seconds, whichever is longer. Every non-looping ending/credits
+track runs from its beginning to the native driver's final stop. Runtime music
+and artwork remain ROM-backed; no copied ROM bytes ship in the mod. The mutable
+candidate API remains 0.7.0.
+
+## Player experience
+
+- Title: career tour, quick play, practice, local co-op, local score duel,
+  direct-connect play, records, how to play, settings, and return to stock title.
+- Seven cosmetic performers, four musical roles, and Easy/Medium/Hard/Expert.
+  Easy uses three melodic lanes, Medium four, Hard/Expert five. Direct drums keep
+  their authentic pad identities and kick; density varies by difficulty.
+- Career follows authored Sonic worlds in native journey order. Clear each
+  world's main-act songs to open the next; instrument and difficulty changes
+  retain tour progress. Optional side gigs expose bonus and alternate songs.
+  Short authored intermissions tell a shared tour story promoted by Robotnik.
+  Each installed ROM supplies its own complete tour. Quick play has no unlock gate.
+- Practice has no failure and cannot change earned records or career progress.
+  The initial practice scope is whole-song rehearsal with honest miss accounting.
+- Results show score, accuracy, stars, full combo, best streak, previous best and
+  retry/next/menu actions. Versioned bounded saves preserve records across visits.
+- Local co-op and versus have independent remaps/calibration and two readable
+  highways on one consumed-audio clock. Both players play the same selected role
+  and difficulty. Co-op shares song survival; versus scores independently.
+  The selected part remains audible while either local player sustains it.
+- Direct-connect uses explicit host/join, shared-ROM eligibility, selection and
+  chart agreement, ready confirmation, synchronized start and visible peer status.
+  Each peer judges its own timestamped input against its local consumed audio.
+  Peer-reported scores are match data and never earned solo records. Disconnect or malformed traffic aborts the match with a recoverable notice.
+- Keyboard/gamepad navigation remains reliable; mouse hover/click/wheel operates
+  visible choices. Lists scroll instead of overflowing the 400x224 viewport.
+  Reduced flashes and independent player settings improve accessibility.
+- Performers use native sprite anatomy layered around their instruments.
+  Successful judged notes drive visible strokes and small sound-wave accents;
+  idle and paused performers do not mime an unrelated constant beat.
+- Finite ROM music preparation has progress and cancellation. Independent
+  synthesis runs in a host worker; the scene thread retains ROM loading and
+  playback ownership. Duration and PCM memory budgets bound long arrangements.
+
+## Owners and boundaries
+
+The example owns charts, progression, controls, match protocol and presentation.
+The engine owns sockets, queues, worker lifetime, bounded messages and ROM PCM.
+Scene calls do not wait for DNS, connections, reads or writes. At most one peer
+is connected; closing or faulting a scene closes its endpoints and workers.
+No raw networking capability is exposed to creator code.
+
+`SceneContext.network()` supplies `SceneNetwork.host(port)` or
+`connect(host,port)`. A `ScenePeer` exposes state/error, nonblocking send/poll,
+monotonic receive timestamps and close. Messages are at most 4096 characters;
+pending queues hold at most 256. Only explicit host/join choices open endpoints.
+ROM identity/content is not transmitted; song/chart metadata detects mismatches.
+This is direct peer play without matchmaking or a server account service.
+
+`PerformanceResult` and `PlayerProfile` are pure Java. Records separate song,
+role and difficulty; incomplete, failed, practice, demo and multiplayer attempts
+cannot become normal single-player clears. A separate bounded career journal
+stores earned Career clears and seen intermissions by stable IDs; Quick Play
+records do not silently advance the authored journey.
+
+Existing chart calls default to Medium. The original three songs retain their
+authored musical ownership; new difficulty calls change density/lane abstraction
+without inventing chip voices or shifting attacks off ROM timestamps.
+
+## Implementation and verification plan
+
+Pinned integration base: `09282b17305cb5794e43a26855cd2b9543b4ff5f` (`develop`).
+Parent tree: `.worktrees/ai-sitar-hero-full`, `feature/ai-sitar-hero-full`.
+
+1. Three game-specific Sol workers own native song inventories, arrangement
+   providers, probes and ROM evidence. The earlier twelve-song draft is preserved
+   as a seed. The integrator owns shared catalogue/curator changes. Verify all
+   seven ROM subsets and every supported song/role/difficulty chart: authentic
+   attacks, selected audio ownership, lane/density bounds and full-song tails.
+2. Career worker owns result/profile/progression/no-fail rules and pure-model
+   tests. Verify corrupt/versioned saves, independent score records, shared
+   main-act unlocks, missing-ROM catalogue changes and finite no-fail sessions.
+   The dialogue worker owns original world intermissions and performer quips;
+   the integrator owns their scene navigation and native-art presentation.
+3. Network worker owns the scene facade, host lifecycle, candidate pin/SDK/docs
+   and loopback tests. Verify cancellation, malformed/oversized framing, bounded
+   queue overflow, refusal, disconnect, ordering and endpoint teardown.
+4. Integrator owns scene/screens, controls, two-player/match consumer, packaging,
+   documentation and acceptance captures. Start with failing scene-route tests;
+   add shared-clock independent input, practice eligibility, pointer navigation,
+   ready/mismatch/start/disconnect/rematch tests and visible end-to-end captures.
+   A separate Sol performer worker owns ROM arm masks, layered instrument poses,
+   hit-driven animation and anatomy/occlusion captures for all seven actors.
+5. Run focused checks before freezing code. Inspect the combined category plan
+   from the pinned base, run Java 21/Lua 5.4/PowerShell preflight, and compare
+   ordinary and guard results with a matched immutable baseline. Shared API/host
+   changes require broad validation. Check skips and complete failure identities.
+6. Reconcile upstream develop by intent, integrate without switching the main
+   workspace branch, verify the integrated tree, push only develop, and remove
+   only fully merged/accounted task trees and branches.
+
+## Evidence and decisions
+
+Initial preflight with the default Lua failed before executing tests because it
+was not Lua 5.4. Repeating with `LUA_BIN=/usr/bin/lua5.4` passed all prerequisites.
+Slay the Robotnik is the presentation/completeness reference; it does not itself
+provide multiplayer transport. The scene networking seam is therefore an actual
+host extension, not a cosmetic online menu.
+
+Physical audio/controller latency remains a calibration boundary. Offline
+captures establish scene flow, art and audio content, not hardware latency or
+exact Guitar Hero III executable parity. No balance certification is inferred
+from automated full-song play.
+
+Career model `f75fba41a` and bounded network host `fc734561e` are integrated in
+the parent tree. The initial catalogue seed `f148434b4` was preserved before
+expanding to game-specific inventories. Host commit `741fdb3c7` adds cancellable
+full/part rendering and repairs implicit saved-duration reuse; the S1/S2 providers
+`e9decec62` and `f975bc903` were merged without conflicts. Main develop remains
+unchanged pending combined verification.
+
+Focused host/sequencer command (parent tree at the host change, all three exact
+main-ROM properties supplied): `maven_queue.py -Dmse=off
+-Dtest=TestSmpsSequencerCadence,TestSmpsSequencerSnapshot,TestSceneMusicRom,TestSitarHeroArcade
+test -B` completed 37 tests with zero failures/errors/skips. The synthetic
+SavedDuration test first failed (8 expected ticks, 4 actual) and passed after
+copying scaled saved track RAM. API signature/SDK/Javadoc and controls checks
+passed. Enlarging the career save exposed a test still asserting the old 1,024
+line cap; correcting that boundary to 4,096 produced a 12-test career pass.
+
+The immutable baseline tree at `09282b173` selected all 3,005 ordinary classes
+plus fresh-JVM guards. Java 21/Lua 5.4/PowerShell preflight passed. Its category
+run started with a 120-minute invocation cap and ten-minute no-output limit;
+The completed ordinary lane ran 26,149 tests: 28 failures, zero errors and
+61 skips in 4,592.39 seconds. The fresh guard JVM ran 672 tests: zero
+failures/errors/skips in 209.12 seconds. All 28 failure identities and messages
+were inspected. The one message longer than the runner's 2,048-character JSON
+limit was recovered completely from the retained Maven summary; comparison
+ignores only nondeterministic Java object identity hashes. Skips are diagnostic,
+graphics/platform or route prerequisites; the ROM-backed catalogue checks did
+not silently skip because of missing ROM paths. Diagnostics were acknowledged and deleted after inspection. Candidate and
+integrated comparisons remain pending.
+
+The performer worker landed `3d576ca2c`, merged as `f71d88a3f`: all seven
+characters and four instruments have independently cut native arm/hand layers.
+Its 44 focused checks passed without skips; 28 actor/role acceptance combinations
+and 48 exact-pixel reconstructions established native anatomy and foreground
+occlusion. Root gestures are wired only to newly successful judgments, including
+chords/HOPOs/autoplay, with separate P2 instances even for identical characters.
+Paused drawing clears transient gestures. Twenty-three direct Java 21 packaged
+scene checks pass, including successful-hit animation, distinct local controls,
+Results calibration, unready guest retry, wheel precedence and same-ROM scenery
+fallback. These used current example sources and the previous compiled host;
+final Maven validation of the combined sources remains required.
+
+A static Sol host review of `741fdb3c7` found one material issue: cancelling a
+full/part job left it in the pending slot, so identical requests returned the
+cancelled job and direct start remained blocked. The root repair releases the
+owner's slot and discards failed/cancelled terminal jobs before reuse. Regression
+cases cover the exact same full/part request and direct start after cancellation.
+The review found no other material networking/synthesis ownership/publication
+blocker and corroborated SavedDuration behavior in native owners. It did not run
+builds or tests; the repair subsequently passed in the combined 72-test run.
+
+The integrated public S1 library retains eleven substantive selections. Native
+surveys retain all thirteen composed entries, but the 541-frame Title and
+561-frame Continue are excluded as short menu cues, consistently with the S2
+short-cue policy. Ending remains the 1,081-frame natural-ending exception. S2
+contributes twenty-two substantive tracks including its 4,406-frame Ending and
+9,527-frame Credits. Scrap Brain uses 8,640 frames (144 seconds). The independent S3K provider contributes 46 public songs after excluding the
+two short title cues and two Knuckles character cues. Its exact duration units preserve fractional-quarter
+pickups and loops; native tempo anchors preserve the final S&K medley.
+
+Shared chart curation now repeats ownership sections with each complete loop,
+uses a native quarter clock without requiring DAC (S1 Special Stage has pitched
+FM6 and no percussion), and maps the S1/S2 credits' tempo/medley anchors. S1
+$88..$8B timpani variants map to real sample$83; S2 tom/timpani/bongo rate aliases
+retain their underlying sample families rather than misleading macro names.
+Difficulty thinning, pitch windows, HOPO intervals and sustain ticks use the
+local musical quarter while every gem retains its exact native attack sample.
+
+A first actual-GL scene capture compiled and validated the current external mod,
+opened all three verified ROMs, and reached title, performer, instrument,
+difficulty, song list, help, records, settings and direct-connect screens. Four
+120-second GHZ roles reached actual playback, pause, and hit-driven native
+animation; local co-op showed separate Sonic/Robotnik performers beside independent
+highways. No scene fault finding was reported. Capture runtime used the last
+compiled host and the current example sources, so this is presentation evidence,
+not validation of the uncompiled host retry repair. Images reside in the explicit
+external task directory `$SITAR_CAPTURE_ROOT/ui-v1`.
+An obsolete three-step breadcrumb was identified for follow-up; geometry and
+native hand/instrument layering were visually inspected at 400x224.
+
+The first capture identified the obsolete three-step breadcrumb; it now includes
+the difficulty step. Calibration chooses an actual percussion song from the
+selected game's library (with a cross-library fallback) and prepares only thirty
+seconds. This allows calibration after choosing S1 Special Stage's drumless FM6
+arrangement while retaining that selected song. A consumer regression covers
+the source music ID, bounded preparation and preserved song choice. Player-two
+calibration ignores player-one's default key/pad and saves its own settings file.
+
+The focused root request was cancelled while still queued, before Maven ran, to
+include those newly identified changes; no pass is inferred from the cancellation.
+The replacement request covers scene, full-song charts, controls/career/model and
+the host retry regression with all three absolute canonical ROM properties.
+
+The S3K native inventory established that Sonic 3 Credits loops, unlike the
+S&K final credits medley. Its native loop form therefore uses the ordinary
+two-loop/two-minute policy. The S3 provider also identified authentic cross-song
+FM calls from Sonic 3 Ending into earlier Title-bank phrases (609-frame true
+end versus 514 in the bounded production slice). The S3 worker is explicitly
+authorized to repair `Sonic3kSmpsData`'s semantic program bank view and test
+earlier-header calls generally, without a music-ID carve-out. No incomplete
+ending is accepted as a delivered remaining discrepancy.
+
+A read-only Sol consumer review identified four concrete edge cases: calibration
+from Results discarded the completed attempt; cancelling guest loading prevented
+reconfirming that same round; pointer hover could undo wheel movement; mapped
+Genesis directions could cancel raw menu arrows. The root preserves completed
+sessions/results during calibration, reopens unready guest confirmation after
+cancellation, gives wheel movement precedence, and owns raw key/pad navigation
+with an 18-tick initial/6-tick held repeat. New consumer cases exercise each
+trigger. It also corrected two test references to the actual `credits-s2` ID.
+The pending focused request was replaced before execution to include the repairs.
+The review was static-only; no additional review ceremony or pass is inferred.
+
+The independent protocol worker landed `cc77aeb49`: Maven verifies 20 protocol
+checks (including actual `ManagedSceneNetwork` loopback endpoints), five
+packaged-controls checks, ten model checks and sixteen transport checks: 51
+unique tests, zero skips. The packaging validator rejected a static collection;
+constructing the supported-ID list inside validation corrected it and the
+packaged rerun passed. Asymmetric latency regression coverage accepts legitimate
+peer controls/telemetry before the receiver-local start estimate while preserving
+local count-in ownership. This is focused validation, not a combined-suite pass. Internal SH1 adds start/control acknowledgments while
+preserving its public consumer methods. Pause is the OR of per-player intents;
+resume releases only the caller's request and completion releases its own intent.
+Both players must release if both paused. Root `started()` usage already follows
+`startDue()`, and unready guest loading cancellation permits a same-round retry.
+
+The updated capture tool `26b2f2af4` is integrated as `2b9a27802`. Direct Java 21
+all-ROM, S1 and S3K visits passed against the temporary 37-song library. The S2
+visit completed performer/menu/settings/calibration checks but correctly rejected
+Emerald Hill's missing scene-art profile. Scenery now selects an available picture
+profile from the same ROM when the selected song's zone is unsupported, without
+changing its music or chart. A consumer regression covers S2 and S3K unsupported
+zones. The tool's unused queued Maven compilation was cancelled before execution;
+the combined candidate build will compile the committed tool. Final provider and
+scenery acceptance refresh is still required.
+
+The parent S1/S2 native run at `59c8be076` completed 21 tests: 20 pass, one fail,
+zero skips. S1 Credits PSG2 expected 503 native attacks but production still
+produced 599 after `741fdb3c7`; this is an unresolved causal driver discrepancy,
+not an accepted short catalogue duration. The original S1 worker resumed with
+shared sequencer ownership to trace and repair it. Its direct probe identified
+96 extras: 32 repetitions of three duration-only commands following a rest with
+saved PSG frequency $FFFF. Native PSGDoNoteOn suppresses these under RESET;
+S3K KEEP differs. The repair passes all 18 S1 checks, ten cadence, two snapshot
+and twelve generated FM/PSG/DAC divider/rest/replay regressions (42 total, zero
+skips). PSG/2 noise and DAC stop at native 6992; PSG/1 reaches native 7600 and
+7,601 total packets. There was no 608-service global tail gap.
+
+The same semantic fix exposed three false Oil Ocean PSG0 attacks in the S2
+independent reference: service 613/3094/5575, offset $30B, note $80. Native
+zPSGDoNoteOn checks the signed saved frequency and suppresses these silent rest
+continuations. S2 reference repair `553dbbad6` passes its two native semantic regressions and
+all 22 complete requested streams/natural endings (three tests, zero skips).
+Production behavior was retained; the oracle now follows the owning routines.
+The pre-existing unverified S2 note-fill rest-bit state gap is recorded in the
+S2 evidence and is outside this attack-stream/timing verification. Earlier root
+requests were cancelled before execution while final source integration continued;
+the combined 72-test run subsequently passed.
+
+### Exact baseline failure identities
+
+Command and immutable commit are recorded above. The longer SSZ failure is
+summarized here by every differing object/slot; its full message was inspected
+and retained in coordinator memory for matched comparison, not archived as a log.
+
+| Class | Test | Failure |
+|---|---|---|
+| tests.TestFbzSandopolisTimelineHeadless | productionExitResetsTimelineAndFreshDestinationRestoresAndReplaysTwice | SOZ restore cycle 0 sprites: [sprites.sprites[0].state.playerExtra.instaShieldRegistered: A=false B=true] ==> expected: <true> but was: <false> |
+| tests.TestS3kMhzAct2AuthoredRoute | incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[2] | late pulley owns Tails ==> expected: <true> but was: <false> |
+| tests.TestS3kMhzAct2AuthoredRoute | incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[3] | late pulley owns Sonic ==> expected: <true> but was: <false> |
+| tools.TestDezIncomingFinalRouteCapture | coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding | expected: <96> but was: <0> |
+| tools.TestDezIncomingFinalRouteCapture | coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding | expected: <96> but was: <0> |
+| tools.TestDezIncomingFinalRouteCapture | incomingFinalFightRestoresAndReplaysEveryPhase(int)[1] | death at 26706 ==> expected: <false> but was: <true> |
+| tools.TestDezIncomingFinalRouteCapture | incomingFinalFightRestoresAndReplaysEveryPhase(int)[2] | death at 26750 ==> expected: <false> but was: <true> |
+| tools.TestDezIncomingFinalRouteCapture | coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding | expected: <96> but was: <0> |
+| tools.TestDezIncomingFinalRouteCapture | coldEmeraldTeamClearsBothActsFinalFightAndDoomsday | death at 53897 ==> expected: <false> but was: <true> |
+| tools.TestDezIncomingFinalRouteCapture | coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding | expected: <96> but was: <0> |
+| tools.TestLrzActTwoColdRouteCapture | coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState | death at input 36526 ==> expected: <false> but was: <true> |
+| tools.TestLrzBossColdRouteCapture | coldTeamCompletesBossActWithEarnedShieldAndRepeatableWorldState | death at input 36526 ==> expected: <false> but was: <true> |
+| tools.TestLrzKnucklesColdRouteCapture | coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace | expected: <1069> but was: <899> |
+| tools.TestLrzTailsColdRouteCapture | coldTailsClearsActOneAndRestoresTraversalFightAndHandoff | death at input 19460 ==> expected: <false> but was: <true> |
+| tools.TestLrzTailsColdRouteCapture | coldTailsRestoresActTwoTraversalToTheMiddleCorridor | death at input 19460 ==> expected: <false> but was: <true> |
+| tools.TestLrzTailsColdRouteCapture | coldTailsCompletesBossActAndReachesPlayableHiddenPalace | death at input 19460 ==> expected: <false> but was: <true> |
+| tools.TestLrzTailsColdRouteCapture | coldTailsCompletesActTwoAndRestoresTheBoulderHandoff | death at input 19460 ==> expected: <false> but was: <true> |
+| tools.TestLrzWideBossColdRouteCapture | coldWideTeamClearsBossAndReleasesHiddenPalaceWithRepeatableWorld | expected: <2796> but was: <524> |
+| tools.TestMhzPairColdRouteCapture | pairedColdCompletionIsolatesTheLiveTimelineAtTheActualFbzLoad | the route must observe the actual history-reset boundary ==> expected: <true> but was: <false> |
+| tools.TestMhzWideColdRouteCapture | wideSonicCompletesBothActsThroughProductionLoopWithWholeWorldReplay | [wide-route-19500] restore 0 zone-runtime: [zone-runtime.stateBytes[2]: A=46 B=26, zone-runtime.stateBytes[3]: A=-104 B=64, zone-runtime.stateBytes[6]: A=38 B=21, zone-runtime.stateBytes[7]: A=-44 B=-32, zone-runtime.stateBytes[10]: A=31 B=17, zone-runtime.stateBytes[11]: A=16 B=-128] ==> expected: <true> but was: <false> |
+| tools.TestSszColdRouteCapture | coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents | death at input 7311 ==> expected: <false> but was: <true> |
+| tools.TestSszColdRouteCapture | coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport | death at input 7311 ==> expected: <false> but was: <true> |
+| tools.TestSszSoloColdRouteCapture | coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches | death at 7671 ==> expected: <false> but was: <true> |
+| tools.TestSszSoloColdRouteCapture | coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory | death at 7671 ==> expected: <false> but was: <true> |
+| tools.TestSszTailsColdRouteCapture | coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[1] | expected: <48> but was: <0> |
+| tools.TestSszTailsColdRouteCapture | coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[2] | expected: <48> but was: <0> |
+| tools.TestSszTailsColdRouteCapture | coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int)[2] | replay at 4018: slots 24/29 only in A; Egg Robo flame/arm objects 125/126 missing in B; objects 128/129 restored to different slots |
+| tools.audio.timeline.TestS1GameplayAudioTimelineCli | shellUsesAbsoluteBootstrapToolsAndRejectsInjectedEnvironmentBeforePathLookup | expected: <0> but was: <4> |
+
+S3K provider/bank execution `64c7b25b6` passed 63 unique focused tests without
+skips, including both complete music tables and earlier-header bank calls.
+The public library has 79 songs (11 S1, 22 S2, 46 S3K). The provider retains
+50 research entries: two title cues and two Knuckles cues are excluded centrally.
+The S&K character form is 36 quarters/922 frames; the S3 form repeats an
+eight-/four-quarter FM motif over a fourfold 16-quarter clap phrase. Native
+cutscene callers and limited musical development support this exclusion under
+the user's short-loop instruction; merely padding them to two minutes was rejected.
+
+Shared curation uses exact fractional intro/loop quarters (Data Select 1.75,
+Final Boss 26.5+69.5, Desert Palace 2302/24). Loop ownership sections use those
+fractions; final S&K Credits maps its quarter-beat pickup from native tempo
+anchors. All named S3K percussion families are mapped; the seven speech, scratch
+and ambient sample IDs are excluded from drum strikes. Echoed claps $B2/$B3
+remain pad hits. Unsupported song zones use a supported same-ROM concert stage.
+
+Nine direct Java 21 packaged non-ROM chart checks passed after combining all
+three providers: seven ROM subset/roster combinations, all 79 forms, real role
+absence, fractional loop boundaries, native credits tempo anchors, DAC identities
+and shortened independent clocks. Final root focused Maven command is
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=TestSceneMusicRom,TestSitarHeroArcade,TestSitarHeroCareer,TestSitarHeroModel,TestSitarHeroControls,TestSitarHeroCharts
+test -B`, with all three absolute main-checkout ROM properties. It was admitted
+after 26 seconds; sources were frozen through completion. Actual tool preflight
+passed Java 21, Lua 5.4 and PowerShell.
+
+The combined parent command completed successfully: 72 tests, zero failures,
+errors or skips, 9:46 Maven time. The all-79-song chart class took 511.2 seconds;
+all supplied-ROM instrument/difficulty matrices passed. The host retry repair
+passed its same-request full/part cancellation and direct-start regressions.
+
+A final packet-clock regression then reproduced one-sample rounding at 8 kHz:
+Data Select's native service56 boundary is sample7466, while the chart anchor
+rounded to7467. Chart anchors now use the same integer frame*rate/60 cursor as
+the host and anchor each repeated loop separately. Direct packaged regressions
+verify fractional pickups, repeated boundaries and credits handoffs. Normal
+48/44.1 kHz boundaries are unchanged. Focused clock verification and the required
+combined broad matrices are recorded below when completed.
+
+The focused packet-clock Maven rerun passed all three selected cases, zero skips,
+22.303 seconds Maven time. Ten direct packaged non-ROM chart checks pass. The
+normal change-based plan selects all 3,015 ordinary candidate classes and fresh
+JVM guards because this delivery changes shared audio and scene API/host contracts.
+The observed baseline cost was 76.5 minutes ordinary plus 3.5 minutes guards;
+full-song chart matrices add several minutes. The candidate run uses a 120-minute
+cap excluding queue wait, with a ten-minute no-output stopping rule. New or
+worsened failures block integration; every inherited failure is compared by
+identity and full message, including the recovered long SSZ message.
+
+
+### Final rendered acceptance
+
+At candidate `081ba67af`, the refreshed `SitarHeroCapture` visits passed in four
+fresh JVMs: all three ROMs together, S1 alone, S2 alone and S3&K alone. The public
+catalogue sizes were 79, 11, 22 and 46 respectively. Source and compiled-host hashes
+are recorded beside captures in `$SITAR_CAPTURE_ROOT/acceptance-v2`. The S2-only
+visit verifies the supported same-ROM scenery fallback with actual native art.
+The combined visit covers all seven performers and four instruments, all four
+difficulty menus, catalogue pagination, full GHZ playback and natural results,
+retry, pause/resume, mixed-ROM concert stages, local co-op and versus with two
+independent highways, settings and player-two calibration. Actual screenshots
+were inspected for readable layout and native hand/instrument layering. There
+were no scene fault findings. Offline synthesis/autoplay demonstrates flow and
+assets; physical speaker/controller latency, real-time throughput and external
+network reachability are not inferred from these captures.
+
+
+## Authored world-tour refinement
+
+The user refined career while final candidate validation was still queued. They
+chose a journey through Sonic worlds, authored performer-specific banter, an
+uneasy shared tour with Robotnik's scheme, and clearing every world's main act
+songs. They explicitly asked for nuanced personalities, rather than surface
+traits or repeated catchphrases. The generic three-song ladder is superseded.
+The waiting candidate request was cancelled before Maven admission (exit 130);
+it produced no test result. The immutable baseline remains applicable.
+
+Robotnik promotes a tour celebrating his musical genius while secretly using
+stages and the final broadcast to claim control. Sonic suspects the scheme from
+the beginning, but willingly stays to make the shows free and fun; Robotnik
+tolerates him because he draws the crowds. The S1 journey establishes that
+mutual advantage. S2's industrial staging gives Tails room to enjoy and improve
+the equipment while challenging Robotnik's obsession with automated perfection.
+S3K brings the tour to Angel Island: one credible security pretext draws
+Knuckles in, then physical evidence lets him discover the Emerald amplifier
+plan and act decisively. The finale separates an excellent concert from the
+takeover failing offstage, including when Robotnik is the player's performer.
+
+Keep the stakes light and characterisation recognisably classic. Sonic's
+confidence coexists with consideration for the audience and his friends; he
+can listen and recognise another player's skill. Tails is capable, curious and
+independent, can disagree with Sonic's improvisation, and need not solve every
+problem alone. Knuckles values his home and responsibilities, can enjoy a good
+show, and changes his mind because of evidence. Robotnik has genuine craft and
+pride, can appreciate a worthy performance or help save a show, and then turn
+that impulse into another grandiose claim. Avoid making him permanently
+incompetent, Tails an exposition machine, Sonic an unbroken string of taunts,
+or Knuckles a recurring fool. Do not invent a tragic backstory or solemn
+redemption arc. Give each world a small relationship beat that carries forward.
+
+Intermissions contain four to eight short exchanges, with varied joke shapes,
+stage business, occasional sincere remarks, and jokes that sometimes land for
+Robotnik. Robot performers express character through bounded diagnostics and
+physical reactions rather than generic human sarcasm. Performer-specific quips
+change the staging without branching the main plot or granting abilities.
+S1-only scenes use Sonic and Robotnik; S2 adds Tails/Silver Sonic, S3K adds
+Knuckles/Mecha Sonic/Egg Robo. No portrait requires an absent ROM.
+
+Astra and Opus supplied brief first-round reviews. Both identified the need for
+a clear mutual advantage, warmth and varied punchlines, and a playable Robotnik
+whose successful performance is respected. Opus proposed a credible Knuckles
+deception; accepted with a decisive evidence-based turn. The suggestion that
+Robotnik already owns every stage and Sonic cannot cancel the tour was rejected:
+it weakens voluntary participation and contradicts the takeover premise.
+Keep the original lines "It would make an excellent Master Emerald" and
+"I'm the venue" when their scene earns them; do not make their joke pattern the
+template for every stop. Reviews are peer advice, not additional user authority.
+
+### Implementation seams and delivery plan
+
+The model worker owns `CareerWorld`, `CareerTour`, `CareerTours`, and
+`CareerJournal` in `sitarhero.model`, plus dedicated packaged tests and its own
+dated model artifact. `CareerWorld` is an immutable record `(id, title,
+requiredSongIds, sideSongIds)`; `CareerTour` is `(id, game, title, subtitle, worlds)`.
+`CareerTours.all()` creates the complete authored route; `available(List<SongSpec>)`
+returns only complete installed tours, never silently deleting required songs.
+Every one of the 79 songs belongs to exactly one required or side-gig assignment.
+S1 worlds: green-hill, marble, spring-yard, labyrinth, star-light, scrap-brain,
+finale, encore. S2 worlds: emerald-hill, chemical-plant, aquatic-ruin, casino-night,
+hill-top, mystic-cave, oil-ocean, metropolis, sky-chase, wing-fortress, death-egg,
+finale, encore. S3K worlds: angel-island, hydrocity, marble-garden, carnival-night,
+icecap, launch-base, mushroom-hill, flying-battery, sandopolis, lava-reef,
+sky-sanctuary, death-egg, finale, encore. Prefix each world ID with its game ID
+and a hyphen. Main zone acts are required; the finale requires its native final
+battle (S3K also Doomsday), and encore requires the native ending and final
+credits. Generic bosses, bonus/competition tracks and earlier-bank variants are
+side gigs placed at sensible milestones; they do not gate the main path. S3K's
+Flying Battery follows Mushroom Hill, rather than its music-header position.
+
+`CareerJournal` exposes `record(PerformanceResult, boolean earnedCareer)`,
+`cleared(String songId)`, `cleared(CareerWorld)`, `cleared(CareerTour)`,
+`complete(CareerWorld)`, `complete(CareerTour)`,
+`unlocked(CareerTour, CareerWorld)`, `seen(String sceneId)`,
+`markSeen(String sceneId)`, `read(String)` and `encode()`. Clear methods count
+only required IDs for world/tour counts. Recording rejects failed, empty,
+unknown or ineligible results. Stable known song/scene IDs, bounded text and
+atomic corrupt-input rejection protect persistence; records remain independent
+in the existing profile. Scene IDs are `world.id() + "-intro"` and
+`tour.id() + "-outro"`. No static object collections are legal in creator code.
+
+The dialogue worker owns `sitarhero.story.CareerStory` only (plus its dedicated
+packaged tests and dated story artifact). Its nested immutable records are
+`Line(Roster speaker, String text, boolean action)` and
+`Scene(String id, String title, List<Line> lines)`. A null speaker is a stage
+direction. `scene(String sceneId, Roster performer, List<String> installedGames)`
+returns authored content for every scene ID above; reject unknown IDs.
+`retryQuip(Roster)` and `successQuip(Roster)` supply short original responses.
+All text uses supported ASCII glyphs; each exchange is at most 150 characters,
+allowing a readable three-line 400x224 dialogue card. Script authoring covers
+every world, with performer variation and coherent self-contained ROM arcs.
+
+The integrator owns scene navigation, native art presentation, journal storage,
+acceptance capture and shared documentation. Flow is performer/instrument/level
+→ tour selection → world board → first-visit intermission → required/side setlist
+→ performance/results → world board. Scene pages advance immediately by accept,
+back skips safely, viewed scenes can be replayed, and retries do not replay an
+intermission. Journal progress persists across role/difficulty/performer changes;
+missing real parts offer a role change without hiding required songs or inventing
+notes. Only naturally completed earned Career play records progression.
+
+Meaningful focused checks cover native world order, complete song assignment,
+ROM subsets, required-act gates, cross-role progress, eligibility, corrupt saves,
+seen/skip/replay behavior, absent-part role recovery, speaker ROM eligibility,
+and every script's text bounds. Inspect actual world-board, setlist and dialogue
+captures. After these pass, freeze sources and run the combined normal category
+selection against pinned base 09282b17305cb5794e43a26855cd2b9543b4ff5f. Shared
+audio/API changes in the whole delivery still require broad candidate and
+integrated validation, followed by develop push and owned-worktree cleanup.
+
+
+The actual authored draft supplies 35 world introductions and three tour outros.
+A second brief Astra/Opus review used three actual scene samples and the user's
+explicit character-depth correction. Accepted local repairs remove Knuckles'
+repeated evidence summary in favour of a terse admission and possessive coupling
+joke, make Tails' switch contribution concrete, and preserve Robotnik's ego
+while respecting his professional playing. The finale no longer stacks warm
+group-nod cues or gives Sonic a speech about audience rights. No general
+rewrite or repeated approval loop followed; the writer's own artifact records
+exact script choices and direct/focused verification.
+
+Parent scene regression first failed with expected TOURS versus the old SONGS
+screen. The revised flow adds tour/world boards, required/optional setlists,
+instant dialogue pages, skip/seen/replay, finale recovery on re-entry, and
+role/difficulty changes returning to the same gig. Mouse and raw gamepad X/Y
+actions accompany keyboard shortcuts. Only naturally finished eligible Career
+play records journal clears; Quick Play still saves personal records without
+advancing the tour. The capture tool previews later locked intermissions as
+labelled previews and explicitly asserts no earned main-act clears were created.
+
+The model checkpoint `d1998b8d8` and story checkpoint `8f7364dc1` are integrated
+at `230ff8c93`. Java 21 compilation and actual creator packaging succeeded on
+the combined sources. Direct invocation of all 29 packaged scene checks passed,
+including six new career consumers: gates/setlists, scene persistence/replay,
+cross-role eligibility, missing-part recovery, mouse/raw-pad controls, and
+pending-outro recovery. Three older navigation tests now explicitly select
+Quick Play or follow the new tour flow; their earlier SONGS-versus-TOURS failures
+encoded the obsolete default navigation. These are direct checks, not Maven
+results. Worker-focused model/story Maven requests remain pending at this
+checkpoint.
+
+Four fresh native `SitarHeroCapture` processes completed with exit 0 and PASS
+acceptance files in `$SITAR_CAPTURE_ROOT/acceptance-v3-career`: all ROMs (213 PNGs,
+79 songs), S1 only (66, 11), S2 only (92, 22), and S3K only (104, 46). The tool
+adds its subset directory beneath each supplied output directory. Each source
+manifest's 35 SHA-256 entries matches the current tree. Inspected world-board,
+Tails dialogue, finale and outro cards are legible and use available native
+speakers. Later locked scenes are previews, not earned progression. Offline
+synthesis does not establish real-time audio latency or hardware-controller
+behaviour. Consumed process logs are removed; reproducible media and provenance
+remain outside the repository.
+
+Develop advanced to `5bc5f4fa6` during career work, including engine/title,
+background-scroll, public API and Maven-tooling changes. The original `09282b173`
+failure inventory remains historical evidence; it cannot alone certify the new
+destination. Reconcile upstream before freezing the candidate and run normal
+updated-base and candidate validation, then integrated validation. No develop
+integration, push or task cleanup is claimed by this source checkpoint.
+
+### Updated-base reuse and first completed combined candidate
+
+All pending new career-focused Maven requests resolved on unchanged sources:
+model `d1998b8d8` passed 28 tests, story `8f7364dc1` passed six, and the actual
+combined tree at `aa667ae91` passed Arcade 29 plus Controls five. All three
+commands exited 0 with zero failures, errors or skips; worker fresh XML evidence
+and the parent combined packaging/direct checks are distinct qualifications.
+
+The stock parity task's completed main ordinary run
+`20261007T130421Z-74206bd5` at `945b74e999c` supplies the updated-base ordinary
+obligation. Parent independently verified the full diff to `5bc5f4fa6`: engine
+Java, Java tests, POM, hooks, category runner/selection and normal launch arguments
+are unchanged; the differences are Maven scheduling/diagnostic tooling and
+prose, with lean heap overrides opt-in only. The run selected 3,007 classes and
+completed 3,005 reports / 26,166 tests, 28 failures, zero errors and 61 skips in
+4,313.69 seconds. Its overall runner exit 2 correctly stopped before guards
+after the concurrent tooling merge changed the workspace fingerprint; the
+ordinary lane itself completed. All 27 short failures match literally. The
+retained `detail` first line recovers the full SSZ assertion despite the compact
+`message` cap: remove the exception prefix and normalize only the previously
+verified JVM-dependent `RewindObjectStateBlob@hex` strings. Its 2,907 characters
+then match the original full baseline assertion. All 61 skip identities and
+first-line reasons match, with no ROM skips. No full stack-trace equality is
+claimed. The owner acknowledged and deleted the consumed shared diagnostics.
+
+The redundant owned baseline run `20261007T142549Z-97be836b` was interrupted
+only through its verified runner PID/cwd/argv; exit 130 and absent descendants
+confirm cleanup. It had no completed ordinary result and is not pass evidence.
+Its own acknowledgment subsequently deleted only that incomplete run. The
+stock task's complete fresh-JVM `-Pguards test -B` at prose-only descendant
+`9583f2447` passed 86 reports / 672 tests, zero failures/errors/skips, in 215
+seconds. Parent independently inspected fresh XML, including all seven module
+provider caching cases. This reuse avoids repeating unchanged engine checks;
+candidate and integrated qualifications remain this task's responsibility.
+
+The actual combined candidate command was:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 5bc5f4fa60728c6c074f9bbf8cf89d6dc6b05f6f --max-minutes 150 --run
+```
+
+Run `20261007T145648Z-10a6e0f7` at clean `aa667ae91` selected all 3,019 ordinary
+classes and completed both lanes, exit 1. Ordinary: 3,017 reports / 26,289 tests,
+47 failures, two errors, 61 skips, 4,865.84 seconds. Guards: 86 reports / 672
+tests, zero failures/errors/skips, 215.29 seconds. No case summaries are omitted;
+all 28 inherited full concrete failures and all skip identities/reasons match.
+The 21 new identities comprise 20 S3K audio failures/errors across six classes
+and one OnlineMatch class-setup compiler failure. Integration is blocked until
+they are attributed and repaired. The OnlineMatch test's explicit compiler
+source list omitted the newly required catalogue package; its source list now
+includes that directory. A freshly compiled bridge then passed all 20 cases in
+JUnit Platform 1.10.3 / Jupiter 5.10.3, including the real two-endpoint transport
+check: zero failures, aborted cases, skips or failed containers; 4.173 seconds.
+The probe compiled the changed bridge and its launcher into a separate temporary
+`target/` directory, placed those classes first on the classpath, and retained
+JUnit lifecycle, temporary-directory and timeout handling. Existing host classes
+came from the completed candidate run. This is direct JUnit evidence, not a
+Maven pass. The still-waiting focused Maven wrapper had no child process; parent
+verified its exact PID/cwd/argv and sent SIGINT only to that wrapper, which exited
+130 before admission. The required integrated normal run will exercise the same
+20 cases through Maven. No production protocol code changed.
+
+The S3K owner has resumed in its isolated tree. Native probing identifies an
+indexed-program snapshot boundary: `FrozenSmpsData` copied the raw header slice
+but retained the new bank-relative address base. Blue Sphere has 32,768 indexed
+bytes and nine direct tracks, yet the 2,200-byte frozen slice initializes none;
+Knuckles, 1-up and S3 Ending similarly lose their tracks. AIZ begins at the bank
+start and retains nine. The shared consumer repair must freeze indexed reads and
+program identity while preserving raw header and voice semantics. Native bank
+access remains required for full phrases before a song header; reverting it is
+not a valid repair. The worker owns this repair and its required descriptor,
+identity and direct/frozen native-stream tests. Integration and the final normal
+gate remain pending.
+
+A parent read-only review of the frozen repair rejected byte-only program
+identity. Freshly compiled worker classes deduplicated two sources with the same
+raw `$F2` header, indexed `$12,$34,$56,$78` bytes, base `$4000`, metadata, key and
+configuration, while their `read16(0)` values were 13,330 (little endian) and
+4,660 (big endian). The retained entry therefore represented the wrong word
+semantics for the second source. The worker was directed to add a registration
+conflict regression and compare indexed word behavior, including incomplete
+final-word value versus rejection. The existing descriptor byte-hash contract
+need not change without a demonstrated descriptor-consumer defect. The one-off
+parent probe was consumed and removed; its reproducible case belongs in the
+owned regression. Worker-reported six synthetic checks and all-101 direct/frozen
+native stream comparisons through 36,001 services cover the bank repair, but
+the focused 21-class Maven request and this extra identity correction remain
+pending at this documentation checkpoint.
+
+### Resolved candidate regressions and updated executable base
+
+Worker repair `d234741a1` completed the coherent queued Maven command recorded
+in the S3K catalogue design: **145 tests / 21 classes, zero failures, errors or
+skips**, fresh Java 21 production/test compilation, 89 seconds execution after
+2,342 seconds queued. All 35 cases in the six formerly failing consumer classes
+pass without assertion changes, covering all 20 new S3K identities. Eight new
+checks preserve indexed bytes/words, immutable raw headers/voices, registration
+identity, descriptors and all 101 complete direct/frozen native streams through
+36,001 services; S3 Ending remains 609 services, FM3/FM4 attacks 48/72. The
+byte-oriented descriptor fingerprint remains distinct from semantic registry
+identity. Parent independently reran the new compound word/tail conflict check
+against fresh repaired classes: one pass, no skips/aborts, unchanged digests.
+The protocol compiler repair independently passes its 20 actual cases. These
+focused results resolve the 21 new candidate identities; they do not claim a
+post-repair full ordinary or guard pass. Consumed candidate diagnostics were
+acknowledged and deleted, independently verified absent.
+
+The destination advanced again to `2fc65c8479570f16ebd9830115485ee369c2b1e6`
+while checks waited. This time the difference is executable: Survivors adds a
+power-up music ownership rule with all stock defaults true, the corresponding
+candidate API pin, mod-local changes and tests; Infinite Sonic tests gain bounded
+terrain observations and retain actual crossing assertions. Memory diagnostics
+remain explicitly opt-in and preserve the normal runtime, POM and selection.
+The parent preserved all upstream changes. The sole merge conflict was adjacent
+`ModApiVersion` explanatory prose; both the full-song/network and power-up rule
+descriptions remain. The signature file merged both additive surfaces. No
+Sitar scene, story, catalogue, animation or protocol behavior was changed during
+this reconciliation.
+
+The earlier `5bc5f4fa6` baseline remains historical evidence. Updated-base and
+combined-candidate normal commands are required against the actual `2fc65c847`
+executable destination; the isolated baseline is fast-forwarded there. Run the
+merged API/package/protocol consumers narrowly first. Pin both source trees
+after this checkpoint, use normal queued Maven and separate fresh guards, and
+retain full failure identities/messages and skip reasons. Main integration,
+post-integration comparison, push and accounted-for cleanup remain pending.
+
+### Completed repaired candidate and qualified baseline
+
+The frozen repaired candidate `53a742c58425209b5cce35ea30bcd80c37e8fc43`
+completed run `20261007T195912Z-7068993c` against destination base
+`2fc65c8479570f16ebd9830115485ee369c2b1e6`:
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 2fc65c8479570f16ebd9830115485ee369c2b1e6 \
+  --max-minutes 150 --run
+```
+
+The plan selected all 3,020 ordinary classes, one worker and separate fresh
+guards. Ordinary completed 3,018 XML suites / 26,373 tests / 28 failures / zero
+errors / 62 skips in 4,941.56 seconds. Fresh guards completed 86 suites / 672
+tests / zero failures, errors or skips in 209.63 seconds. Both lanes completed;
+runner exit 1 reflects inherited failures, with no timeout or omitted cases.
+All three actual launch properties used verified absolute original main ROM
+paths; there were no missing-ROM or `RequiresRom` skips. Parent inspected the
+complete ordinary assertions and skip reasons, selected fresh ordinary XML,
+terminal runner status and both lane summaries. Successful guard XML was
+automatically removed after exit; its fresh inventory is worker-reported and
+the terminal counts remain in the consumed runner summary.
+
+The comparison baseline is the completed shared run
+`20261007T180233Z-d9b56478`, actually measured at
+`4cfb745646d9439cdb9c07d53d0670dd0fb3fe58`: 3,007 selected classes / 3,005
+suites / 26,222 tests / 28 failures / zero errors / 62 skips, plus 86 fresh
+guard suites / 672 passing tests without skips. Its complete failure and skip
+table is recorded in the Mod Framework readiness design. Parent independently
+compared all 28 failure identities and complete assertion first lines:
+27 match literally after removing the exception prefix; the full 2,952-character
+SSZ assertion matches after removing that prefix and normalizing only the
+previously verified `RewindObjectStateBlob@hex` text. All concrete fields remain
+in the comparison. All 62 skip identities and first causal reasons match
+literally. No failures were added, resolved, worsened or left unattributed.
+
+Baseline reuse has an explicit source limit: runtime Java, POM, hooks and the
+normal category runner are unchanged from `4cfb74564` through `2fc65c847`, but
+the sole Java test change is `TestInfiniteSonic`. Its exact source has a recorded
+macOS whole-class pass and now an independent Linux check within this candidate:
+238 cases / 206 passed / 32 identical expected skips, including the passing
+`driverObservationsMatchTheCourseAcrossEvictionAndReload` regression. This
+qualifies the changed fixture without claiming a full suite measured at `2fc`.
+The duplicate owned `2fc` baseline run was interrupted deliberately (exit 130,
+incomplete, no results); it contributes no ordinary or guard pass. Its obsolete
+exclusive acknowledgment was cancelled separately, and the current cleanup
+tool deleted only that named incomplete run after the clean baseline tree was
+fast-forwarded to `37a57ebdb`.
+
+All twelve Sitar Hero classes passed their 131 cases without skips, including
+catalogues, full charts, career/story, packaged controls and protocol. Required
+S3K AIZ eight, bootstrap six, decoding three and both level-loading groups
+(36 plus seven) also passed without skips. New immutable indexed-program and
+saved-duration/rest regressions passed eight and twelve cases respectively.
+The preceding actual-tree focused Maven command passed Arcade 29 / Controls
+five / Online 20 / API nine: 63 cases, zero failures, errors or skips. The native
+stream and rendered acceptance limits recorded above still apply; no new native
+capture or live network/hardware-latency claim is inferred from these tests.
+
+After candidate completion, current `develop` at `37a57ebdb` was fetched and
+fast-forward pulled without a branch switch (already current). Its additional
+changes affect Python diagnostic cleanup locking and symlink refusal only;
+runtime Java, Java tests, POM, hooks and selection are unchanged from `2fc`.
+They are reconciled into this tree without conflicts. Main integration, the
+mandatory post-integration normal comparison, push and owned cleanup remain
+pending at this checkpoint.

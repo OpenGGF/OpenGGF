@@ -172,13 +172,30 @@ long audibleSample = player.samplePosition();
 long inputSample = player.samplePositionAt(event.timestampNanos());
 ```
 
-Preparation is bounded to 90 seconds at the native 60 Hz driver cadence and may
-take several seconds. It reads only the requested supplied ROM, with no ambient
+Preparation is bounded to ten minutes at the native 60 Hz driver cadence. Full
+and selected-part stereo PCM together have a 256 MiB budget; high output rates
+can therefore limit the accepted duration. Note metadata is bounded to 200,000
+completed events. Preparation reads only the requested supplied ROM, with no ambient
 music/SFX restore side effects. `SceneNoteEvent` identifies FM/PSG/DAC attacks,
 channel, pitch/sample id, source offset, onset and duration in samples. Ties and
 rests do not become fabricated attacks; equal-pitch and duration-only retriggers
 remain separate. Events provide timing evidence, rather than automatic playable
 charts: curate musical parts, density, lanes, chords and difficulty in your mod.
+
+Use `prepareAsync(game, id, frames)` for long performances. Keep its
+`SceneMusicPreparation` handle and poll `state()` and `progressPercent()` in
+`update`; call `prepared()` only when READY. FAILED exposes a bounded `error()`.
+ROM loading stays on the scene thread; independent synthesis uses one host worker
+with one queued job. A different request cancels the old job. Call `cancel()`
+when leaving a loading screen; scene exit also cancels and stops the worker.
+Do not spin or wait for completion in your scene.
+
+After authoring the chart's channel sections, call
+`preparePartAsync(song, parts)` and poll that second job. Its READY `prepared()`
+publishes the selected mix without starting audio. A subsequent `start` with the
+same sections reuses it, so rendering does not interrupt the count-in. Legacy
+scene hosts can complete these defaults synchronously and render the part during
+`start`; the production engine supplies background preparation.
 
 One scene retains one prepared song and one selected arrangement. Repeating the
 same request reuses it; preparing a different song retires the old preparation
@@ -210,6 +227,65 @@ To lay out for one width, call `context.requireDisplayWidth(400)` in `register` 
 400, 528 or 800): the engine switches the session to that display aspect before the scene
 opens and refits the window, and the player's own setting comes back at the master title.
 Slay the Robotnik asks for 400.
+
+## Direct peer messaging
+
+`ctx.network()` is a scene-owned text transport for explicit user Host/Connect
+actions. Obtaining it opens no socket. Keep the returned `ScenePeer` on your scene:
+
+```java
+// Choose on the user's Host/Connect action:
+ScenePeer peer = hosting ? ctx.network().host(24807)
+        : ctx.network().connect("192.168.1.20", 24807);
+// In update:
+if (peer.state() == ScenePeer.State.CONNECTED) {
+    for (ScenePeer.Message message : peer.poll()) {
+        // Validate your own protocol and update local state from message.text().
+    }
+}
+// On the user's Ready action, once connected:
+boolean queued = peer.send("READY 1");
+// Show peer.state() and, for FAILED, peer.error(); close before hosting again.
+```
+
+The host listens on all local interfaces for one peer; after that acceptance the
+listener closes. A scene may have only one listening, connecting or connected
+endpoint. Ports must be 1..65535. Connect accepts IPv4/IPv6 literals without
+brackets or scope ids, and `localhost`; DNS names are unsupported. Invalid
+arguments throw `IllegalArgumentException`; an active endpoint or closed scene
+throws `IllegalStateException`. Bind and connection failures are asynchronous:
+check `state()` (`LISTENING`, `CONNECTING`, `CONNECTED`, `CLOSED`, `FAILED`) and
+`error()` (a bounded reason for `FAILED`, otherwise null). `LISTENING` includes
+the asynchronous bind phase, so a connection attempted immediately on another
+thread may need a user retry.
+
+`send` returns true when queued, without guaranteeing delivery. Null, malformed
+UTF-16, more than 4096 Java characters, disconnected peers and full queues return
+false. Empty text is valid. Incoming and outgoing messages share 256 pending
+slots, including a write in progress; incoming overflow fails the connection
+explicitly. `poll` drains an immutable list in receive order. Each
+`Message(text, receivedNanos)` uses the local monotonic observation clock shared
+with physical input. It includes network/scheduling delay, is not the remote
+clock and does not synchronize song clocks or gameplay automatically.
+
+All I/O belongs to one lazy engine worker per scene; tick calls never wait for
+sockets, DNS or worker termination. Listening times out after 60 seconds,
+connecting after five, and an incomplete read or stalled write after five.
+Established idle peers may remain connected. `close` cancels every phase,
+discards pending messages and is idempotent; failed handles retain their error.
+A clean remote EOF becomes `CLOSED` while retaining complete received messages
+until polled or explicitly closed. Scene exit requests, replacement, shutdown
+and callback faults close the transport permanently, including accept/connect
+waits; stale contexts cannot reopen it.
+
+The wire format is a four-byte big-endian UTF-8 byte length followed by strict
+UTF-8 text, with a 16384-byte frame ceiling and the 4096-character limit checked
+after decoding. Truncated/invalid frames fail the connection. This is plaintext,
+unauthenticated direct TCP; it supplies no discovery, relay, NAT traversal or
+automatic reconnect. Validate version, session and every application field.
+Send gameplay/control text only: never encode ROM or content assets into
+messages. Creators receive no sockets, threads or filesystem handles through
+this facade. Existing fixtures may leave `SceneContext.network()` unsupported.
 
 ## 3. Drawing
 
