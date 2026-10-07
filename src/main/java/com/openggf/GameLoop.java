@@ -4076,7 +4076,17 @@ public class GameLoop {
         switch (route) {
             case DATA_SELECT -> initializeDataSelectMode();
             case LEVEL_SELECT -> doEnterLevelSelect();
-            case LEVEL, TWO_PLAYER, OPTIONS, OTHER -> startLevelFromTitleScreenImmediate(zone, act);
+            case TWO_PLAYER -> {
+                // The action token does not provide a competition session owner.
+                // S2 TitleScreen_CheckIfChose2P enters its dedicated 2P level
+                // select with Two_player_mode set, rather than a one-player level.
+                LOGGER.warning("Two-player competition is unavailable; returning to the title screen");
+                TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
+                if (titleScreen != null) {
+                    titleScreen.initialize();
+                }
+            }
+            case LEVEL, OPTIONS, OTHER -> startLevelFromTitleScreenImmediate(zone, act);
         }
     }
 
