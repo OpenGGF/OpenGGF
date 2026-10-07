@@ -951,6 +951,7 @@ CF-ANNOTATION TYPE com.openggf.mods.scene.SceneSprite visible @com.openggf.game.
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneSpriteSet visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneStorage visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.ui.AtlasFont visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.ui.BitmapFont visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.ui.CompactFont visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.ui.CompactFont$RunSink visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.ui.CompactFont$RunSink visible @java.lang.FunctionalInterface
@@ -12054,6 +12055,13 @@ METHOD com.openggf.mods.ui.AtlasFont public  int height()
 METHOD com.openggf.mods.ui.AtlasFont public  int width(java.lang.String)
 METHOD com.openggf.mods.ui.AtlasFont public  void draw(com.openggf.mods.scene.SceneCanvas,java.lang.String,int,int,int,int)
 METHOD com.openggf.mods.ui.AtlasFont public,static  com.openggf.mods.ui.AtlasFont parse(byte[],int)
+METHOD com.openggf.mods.ui.BitmapFont public  int advance()
+METHOD com.openggf.mods.ui.BitmapFont public  int glyphHeight()
+METHOD com.openggf.mods.ui.BitmapFont public  int glyphWidth()
+METHOD com.openggf.mods.ui.BitmapFont public  int width(java.lang.String,int)
+METHOD com.openggf.mods.ui.BitmapFont public  void draw(com.openggf.mods.ui.PixelCanvas,java.lang.String,int,int,int,int)
+METHOD com.openggf.mods.ui.BitmapFont public  void glyphs(java.lang.String,int,int,int,com.openggf.mods.ui.CompactFont$RunSink)
+METHOD com.openggf.mods.ui.BitmapFont public,static  com.openggf.mods.ui.BitmapFont binary(java.lang.String,java.lang.String,int,int,int)
 METHOD com.openggf.mods.ui.CompactFont public,static  int width(java.lang.String,int)
 METHOD com.openggf.mods.ui.CompactFont public,static  java.lang.String fit(java.lang.String,int,int)
 METHOD com.openggf.mods.ui.CompactFont public,static  void draw(com.openggf.mods.ui.PixelCanvas,java.lang.String,int,int,int,int)
@@ -18225,6 +18233,7 @@ TYPE class public,final com.openggf.mods.scene.SceneKeys SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneLevelStage SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneMouse SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.ui.AtlasFont SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.ui.BitmapFont SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.ui.CompactFont SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.ui.FocusRegions SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.ui.LevelOverlayCanvas SUPER java.lang.Object
@@ -19923,6 +19932,7 @@ TYPE-ANNOTATION com.openggf.mods.scene.SceneSprite @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneSpriteSet @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneStorage @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.ui.AtlasFont @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.ui.BitmapFont @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.ui.CompactFont @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.ui.CompactFont$RunSink @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.ui.CompactFont$RunSink @java.lang.FunctionalInterface

@@ -6,6 +6,29 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestCreatorUi {
+    @Test void authoredFacesKeepSmallDigitsAndExactCaseWithoutReplacingTheirDesign() {
+        BitmapFont digits = BitmapFont.binary("0", "111101101101111", 3, 5, 4);
+        List<List<Integer>> runs = new ArrayList<>();
+        digits.glyphs("0?0", 10, 20, 2, (x,y,w,h) -> runs.add(List.of(x,y,w,h)));
+        assertEquals(List.of(10,20,6,2),runs.getFirst());
+        assertTrue(runs.contains(List.of(26,20,6,2)));
+        assertEquals(22,digits.width("0?0",2));
+        assertEquals(0,digits.width("",1));
+        BitmapFont cases = BitmapFont.binary("Xx", "1001" + "0110", 2, 2, 3);
+        List<List<Integer>> lower = new ArrayList<>();
+        cases.glyphs("x",0,0,1,(x,y,w,h)->lower.add(List.of(x,y,w,h)));
+        assertEquals(List.of(List.of(1,0,1,1),List.of(0,1,1,1)),lower);
+    }
+
+    @Test void authoredFaceRejectsMalformedAndUnboundedInputBeforeDrawing() {
+        assertThrows(IllegalArgumentException.class,()->BitmapFont.binary("AA","11",1,1,1));
+        assertThrows(IllegalArgumentException.class,()->BitmapFont.binary("A","2",1,1,1));
+        assertThrows(IllegalArgumentException.class,()->BitmapFont.binary("A","1",33,1,1));
+        assertThrows(IllegalArgumentException.class,()->BitmapFont.binary("A","",1,1,1));
+        var face=BitmapFont.binary("A","1",1,1,1);
+        assertThrows(IllegalArgumentException.class,()->face.width("A",0));
+        assertThrows(ArithmeticException.class,()->face.glyphs("AA",Integer.MAX_VALUE,0,1,(x,y,w,h)->{}));
+    }
     @org.junit.jupiter.api.Test
     void overlayClipsBeforeQueuingAndUsesImmutableScreenCoordinates() throws Exception {
         var graphics = org.mockito.Mockito.mock(com.openggf.graphics.GraphicsManager.class);
