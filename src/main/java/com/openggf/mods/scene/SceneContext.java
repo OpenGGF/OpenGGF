@@ -1,6 +1,7 @@
 package com.openggf.mods.scene;
 
 import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.PhysicalInput;
 
 /**
  * Everything a {@link ModScene} can use: input, the screen size, art loading, audio,
@@ -48,6 +49,9 @@ public interface SceneContext {
      */
     LogicalInputSnapshot input();
 
+    /** Physical keyboard/pad events, timestamped in the host's monotonic clock domain. */
+    default PhysicalInput physicalInput() { return PhysicalInput.neutral(); }
+
     /** True while a key is held ({@link SceneKeys} code, such as {@code SceneKeys.TAB}). */
     boolean keyDown(int key);
 
@@ -62,6 +66,9 @@ public interface SceneContext {
 
     /** Music and sound effects (the base game's sound driver and IDs). */
     SceneAudio audio();
+
+    /** Finite ROM music with an audible sample clock, independent of scene update cadence. */
+    default SceneMusic music() { throw new UnsupportedOperationException("Finite scene music unavailable"); }
 
     /** Small text files kept for this mod across sessions (saves, settings, high scores). */
     SceneStorage storage();

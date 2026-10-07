@@ -81,6 +81,19 @@ class TestModManifestParser {
     }
 
     @Test
+    void anyGameManifestIsConfinedToCompiledScenes() throws Exception {
+        String shared = canonicalPatch().replace("baseGame: s2", "baseGame: any")
+                .replace("audioOverrides:\n  12: boss-remix", "audioOverrides: {}")
+                + "entrypoint: com.example.ArcadeMod\n";
+        assertEquals("any", parser().parse(bytes(shared)).baseGame());
+        rejects(canonicalPatch().replace("baseGame: s2", "baseGame: any"));
+        rejects(shared + "insertAfter: ghz3\n");
+        rejects(shared + "patternWindows: 1\n");
+        rejects(shared.replace("audioOverrides: {}", "audioOverrides: {129: song}"));
+        rejects(shared.replace("artOverrides: {}", "artOverrides: {RINGS: art/rings.png}"));
+    }
+
+    @Test
     void requiredCollectionsAreExplicitMapsAndDependenciesAreObjectsOnly() {
         rejects(canonicalPatch().replace("dependencies:\n  - id: shared-library\n    versionRange: \">=1.2.0 <2.0.0\"",
                 "dependencies: [shared-library]"));

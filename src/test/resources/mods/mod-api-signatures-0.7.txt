@@ -203,6 +203,10 @@ CF-ANNOTATION TYPE com.openggf.control.InputHandler visible @com.openggf.game.Mo
 CF-ANNOTATION TYPE com.openggf.control.LogicalInputSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.MenuInput visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.MenuInput$Pointer visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.control.PhysicalGamepad visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.control.PhysicalInput visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.control.PhysicalInputEvent visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.control.PhysicalInputEvent$Kind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.PlayerInputState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.data.Game visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.data.PlayerSpriteArtProvider visible @com.openggf.game.ModApi
@@ -936,6 +940,12 @@ CF-ANNOTATION TYPE com.openggf.mods.scene.SceneImage visible @com.openggf.game.M
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneKeys visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneLevelStage visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneMouse visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneMusic visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneMusicPart visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneMusicPlayer visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneNoteEvent visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneNoteEvent$Kind visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.ScenePreparedMusic visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneRomArt visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneSprite visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneSpriteSet visible @com.openggf.game.ModApi
@@ -1210,12 +1220,17 @@ CONSTRUCTOR com.openggf.audio.smps.SmpsSequencerConfig$Builder public  <init>()
 CONSTRUCTOR com.openggf.camera.Camera public  <init>()
 CONSTRUCTOR com.openggf.camera.Camera public  <init>(com.openggf.configuration.SonicConfigurationService)
 CONSTRUCTOR com.openggf.control.GamepadStateSource$DeviceState public  <init>(int,java.lang.String,boolean,boolean[],float,float)
+CONSTRUCTOR com.openggf.control.GamepadStateSource$DeviceState public  <init>(int,java.lang.String,boolean,boolean[],float,float,float,float,float,float)
 CONSTRUCTOR com.openggf.control.InputBindings public  <init>(int,int,int,int,int,int,int,int,int,int,int,int,int,int,int,int,boolean,double,java.lang.String,java.lang.String,int,int,int)
 CONSTRUCTOR com.openggf.control.InputHandler public  <init>()
 CONSTRUCTOR com.openggf.control.InputHandler public  <init>(java.util.function.Supplier<com.openggf.control.InputBindings>)
 CONSTRUCTOR com.openggf.control.InputHandler public  <init>(java.util.function.Supplier<com.openggf.control.InputBindings>,com.openggf.control.GamepadStateSource)
+CONSTRUCTOR com.openggf.control.InputHandler public  <init>(java.util.function.Supplier<com.openggf.control.InputBindings>,com.openggf.control.GamepadStateSource,java.util.function.LongSupplier)
 CONSTRUCTOR com.openggf.control.LogicalInputSnapshot public  <init>(com.openggf.control.PlayerInputState,com.openggf.control.PlayerInputState,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.control.MenuInput$Pointer public  <init>(int,int,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.control.PhysicalGamepad public  <init>(int,java.lang.String,boolean[],float[])
+CONSTRUCTOR com.openggf.control.PhysicalInput public  <init>(long,java.util.List<java.lang.Integer>,java.util.List<com.openggf.control.PhysicalGamepad>,java.util.List<com.openggf.control.PhysicalInputEvent>,int)
+CONSTRUCTOR com.openggf.control.PhysicalInputEvent public  <init>(long,long,com.openggf.control.PhysicalInputEvent$Kind,int,int,float)
 CONSTRUCTOR com.openggf.control.PlayerInputState public  <init>(int,int,int,int,boolean,boolean)
 CONSTRUCTOR com.openggf.data.Game public  <init>()
 CONSTRUCTOR com.openggf.data.Rom public  <init>()
@@ -1735,6 +1750,8 @@ CONSTRUCTOR com.openggf.mods.scene.SceneBackdrop public  <init>(com.openggf.mods
 CONSTRUCTOR com.openggf.mods.scene.SceneBackdrop$Band public  <init>(int,int,double,double)
 CONSTRUCTOR com.openggf.mods.scene.SceneImage public  <init>(int,int,int[])
 CONSTRUCTOR com.openggf.mods.scene.SceneLevelStage public  <init>(int,int,int,int[])
+CONSTRUCTOR com.openggf.mods.scene.SceneMusicPart public  <init>(long,int,int,boolean)
+CONSTRUCTOR com.openggf.mods.scene.SceneNoteEvent public  <init>(int,com.openggf.mods.scene.SceneNoteEvent$Kind,int,int,int,long,long)
 CONSTRUCTOR com.openggf.mods.scene.SceneSprite public  <init>(com.openggf.mods.scene.SceneImage,int,int)
 CONSTRUCTOR com.openggf.net.client.ClientRaceSession public  <init>(java.util.function.LongSupplier)
 CONSTRUCTOR com.openggf.net.client.RaceClient$Control public  <init>(com.openggf.net.protocol.ControlMessage)
@@ -2285,6 +2302,31 @@ FIELD com.openggf.control.ButtonPrompts$Button public,static,final com.openggf.c
 FIELD com.openggf.control.ButtonPrompts$Button public,static,final com.openggf.control.ButtonPrompts$Button C
 FIELD com.openggf.control.ButtonPrompts$Button public,static,final com.openggf.control.ButtonPrompts$Button REWIND
 FIELD com.openggf.control.ButtonPrompts$Button public,static,final com.openggf.control.ButtonPrompts$Button START
+FIELD com.openggf.control.PhysicalGamepad public,static,final int AXIS_LEFT_TRIGGER
+FIELD com.openggf.control.PhysicalGamepad public,static,final int AXIS_LEFT_X
+FIELD com.openggf.control.PhysicalGamepad public,static,final int AXIS_LEFT_Y
+FIELD com.openggf.control.PhysicalGamepad public,static,final int AXIS_RIGHT_TRIGGER
+FIELD com.openggf.control.PhysicalGamepad public,static,final int AXIS_RIGHT_X
+FIELD com.openggf.control.PhysicalGamepad public,static,final int AXIS_RIGHT_Y
+FIELD com.openggf.control.PhysicalGamepad public,static,final int BUTTON_A
+FIELD com.openggf.control.PhysicalGamepad public,static,final int BUTTON_B
+FIELD com.openggf.control.PhysicalGamepad public,static,final int BUTTON_BACK
+FIELD com.openggf.control.PhysicalGamepad public,static,final int BUTTON_DPAD_DOWN
+FIELD com.openggf.control.PhysicalGamepad public,static,final int BUTTON_DPAD_LEFT
+FIELD com.openggf.control.PhysicalGamepad public,static,final int BUTTON_DPAD_RIGHT
+FIELD com.openggf.control.PhysicalGamepad public,static,final int BUTTON_DPAD_UP
+FIELD com.openggf.control.PhysicalGamepad public,static,final int BUTTON_GUIDE
+FIELD com.openggf.control.PhysicalGamepad public,static,final int BUTTON_LEFT_BUMPER
+FIELD com.openggf.control.PhysicalGamepad public,static,final int BUTTON_LEFT_THUMB
+FIELD com.openggf.control.PhysicalGamepad public,static,final int BUTTON_RIGHT_BUMPER
+FIELD com.openggf.control.PhysicalGamepad public,static,final int BUTTON_RIGHT_THUMB
+FIELD com.openggf.control.PhysicalGamepad public,static,final int BUTTON_START
+FIELD com.openggf.control.PhysicalGamepad public,static,final int BUTTON_X
+FIELD com.openggf.control.PhysicalGamepad public,static,final int BUTTON_Y
+FIELD com.openggf.control.PhysicalInputEvent public,static,final int KEYBOARD_DEVICE
+FIELD com.openggf.control.PhysicalInputEvent$Kind public,static,final com.openggf.control.PhysicalInputEvent$Kind AXIS
+FIELD com.openggf.control.PhysicalInputEvent$Kind public,static,final com.openggf.control.PhysicalInputEvent$Kind BUTTON
+FIELD com.openggf.control.PhysicalInputEvent$Kind public,static,final com.openggf.control.PhysicalInputEvent$Kind KEY
 FIELD com.openggf.debug.DebugColor public,static,final com.openggf.debug.DebugColor BLACK
 FIELD com.openggf.debug.DebugColor public,static,final com.openggf.debug.DebugColor BLUE
 FIELD com.openggf.debug.DebugColor public,static,final com.openggf.debug.DebugColor CYAN
@@ -3073,6 +3115,9 @@ FIELD com.openggf.mods.scene.SceneKeys public,static,final int W
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int X
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int Y
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int Z
+FIELD com.openggf.mods.scene.SceneNoteEvent$Kind public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind DAC
+FIELD com.openggf.mods.scene.SceneNoteEvent$Kind public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind FM
+FIELD com.openggf.mods.scene.SceneNoteEvent$Kind public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind PSG
 FIELD com.openggf.net.client.ClientRaceSession public,static,final int CHAT_LINES_KEPT
 FIELD com.openggf.net.client.ClientRaceSession public,static,final int CLOCK_SAMPLES_TARGET
 FIELD com.openggf.net.client.ClientRaceSession$Phase public,static,final com.openggf.net.client.ClientRaceSession$Phase COUNTDOWN
@@ -3695,7 +3740,9 @@ METHOD com.openggf.audio.AudioManager public  com.openggf.audio.rewind.AudioComm
 METHOD com.openggf.audio.AudioManager public  com.openggf.audio.rewind.AudioLogicalSnapshot captureLogicalSnapshot()
 METHOD com.openggf.audio.AudioManager public  com.openggf.audio.rewind.AudioReplayScope beginRewindReplay(int,int,com.openggf.audio.rewind.AudioReplayReason)
 METHOD com.openggf.audio.AudioManager public  int outputSampleRate()
+METHOD com.openggf.audio.AudioManager public  long consumedPresentationStereoFrames()
 METHOD com.openggf.audio.AudioManager public  long musicFadeOutCount()
+METHOD com.openggf.audio.AudioManager public  long presentationUnderrunCount()
 METHOD com.openggf.audio.AudioManager public  void beginCommandTimelineFrame(long)
 METHOD com.openggf.audio.AudioManager public  void beginGameplayAudioFrame(long)
 METHOD com.openggf.audio.AudioManager public  void beginReverseAudioPresentation()
@@ -3740,6 +3787,7 @@ METHOD com.openggf.audio.AudioManager public  void setBackendForLaunch(com.openg
 METHOD com.openggf.audio.AudioManager public  void setForwardPlaybackRate(double)
 METHOD com.openggf.audio.AudioManager public  void setReversePlaybackRate(double)
 METHOD com.openggf.audio.AudioManager public  void setRewindHistoryArmed(boolean)
+METHOD com.openggf.audio.AudioManager public  void setScenePcmSource(com.openggf.audio.presentation.ScenePcmSource)
 METHOD com.openggf.audio.AudioManager public  void setSoundMap(java.util.Map<com.openggf.audio.GameSound,java.lang.Integer>)
 METHOD com.openggf.audio.AudioManager public  void setSpeedMultiplier(int)
 METHOD com.openggf.audio.AudioManager public  void setSpeedShoes(boolean)
@@ -4468,14 +4516,20 @@ METHOD com.openggf.control.GamepadStateSource public,static  com.openggf.control
 METHOD com.openggf.control.GamepadStateSource$DeviceState public  boolean buttonDown(int)
 METHOD com.openggf.control.GamepadStateSource$DeviceState public  boolean connected()
 METHOD com.openggf.control.GamepadStateSource$DeviceState public  boolean[] buttons()
+METHOD com.openggf.control.GamepadStateSource$DeviceState public  float leftTrigger()
 METHOD com.openggf.control.GamepadStateSource$DeviceState public  float leftX()
 METHOD com.openggf.control.GamepadStateSource$DeviceState public  float leftY()
+METHOD com.openggf.control.GamepadStateSource$DeviceState public  float rightTrigger()
+METHOD com.openggf.control.GamepadStateSource$DeviceState public  float rightX()
+METHOD com.openggf.control.GamepadStateSource$DeviceState public  float rightY()
+METHOD com.openggf.control.GamepadStateSource$DeviceState public  float[] axes()
 METHOD com.openggf.control.GamepadStateSource$DeviceState public  int joystickId()
 METHOD com.openggf.control.GamepadStateSource$DeviceState public  java.lang.String name()
 METHOD com.openggf.control.GamepadStateSource$DeviceState public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.control.GamepadStateSource$DeviceState public,final  int hashCode()
 METHOD com.openggf.control.GamepadStateSource$DeviceState public,final  java.lang.String toString()
 METHOD com.openggf.control.GamepadStateSource$DeviceState public,static  com.openggf.control.GamepadStateSource$DeviceState connected(int,java.lang.String,boolean[],float,float)
+METHOD com.openggf.control.GamepadStateSource$DeviceState public,static  com.openggf.control.GamepadStateSource$DeviceState connected(int,java.lang.String,boolean[],float[])
 METHOD com.openggf.control.InputBindings public  boolean controllerEnabled()
 METHOD com.openggf.control.InputBindings public  double controllerDeadzone()
 METHOD com.openggf.control.InputBindings public  int debugModeKey()
@@ -4526,6 +4580,7 @@ METHOD com.openggf.control.InputHandler public  boolean isShiftDown()
 METHOD com.openggf.control.InputHandler public  boolean isSuperDown()
 METHOD com.openggf.control.InputHandler public  boolean menuAcceptExcludingBackAction()
 METHOD com.openggf.control.InputHandler public  com.openggf.control.LogicalInputSnapshot logical()
+METHOD com.openggf.control.InputHandler public  com.openggf.control.PhysicalInput capturePhysicalInput()
 METHOD com.openggf.control.InputHandler public  double getMouseX()
 METHOD com.openggf.control.InputHandler public  double getMouseY()
 METHOD com.openggf.control.InputHandler public  void clearKeyState()
@@ -4533,6 +4588,7 @@ METHOD com.openggf.control.InputHandler public  void clearLogicalOverride()
 METHOD com.openggf.control.InputHandler public  void handleKeyEvent(int,int)
 METHOD com.openggf.control.InputHandler public  void handleMouseButton(int,int)
 METHOD com.openggf.control.InputHandler public  void handleMouseMove(double,double)
+METHOD com.openggf.control.InputHandler public  void pollPhysicalGamepads()
 METHOD com.openggf.control.InputHandler public  void refreshLogicalSnapshot()
 METHOD com.openggf.control.InputHandler public  void setLogicalOverride(com.openggf.control.LogicalInputSnapshot)
 METHOD com.openggf.control.InputHandler public  void update()
@@ -4594,6 +4650,42 @@ METHOD com.openggf.control.MenuInput$Pointer public,final  boolean equals(java.l
 METHOD com.openggf.control.MenuInput$Pointer public,final  int hashCode()
 METHOD com.openggf.control.MenuInput$Pointer public,final  java.lang.String toString()
 METHOD com.openggf.control.MenuInput$Pointer public,static  com.openggf.control.MenuInput$Pointer none()
+METHOD com.openggf.control.PhysicalGamepad public  boolean buttonDown(int)
+METHOD com.openggf.control.PhysicalGamepad public  boolean[] buttons()
+METHOD com.openggf.control.PhysicalGamepad public  float axis(int)
+METHOD com.openggf.control.PhysicalGamepad public  float[] axes()
+METHOD com.openggf.control.PhysicalGamepad public  int deviceId()
+METHOD com.openggf.control.PhysicalGamepad public  java.lang.String name()
+METHOD com.openggf.control.PhysicalGamepad public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.control.PhysicalGamepad public,final  int hashCode()
+METHOD com.openggf.control.PhysicalGamepad public,final  java.lang.String toString()
+METHOD com.openggf.control.PhysicalGamepad public,static  float neutralAxis(int)
+METHOD com.openggf.control.PhysicalInput public  boolean buttonDown(int,int)
+METHOD com.openggf.control.PhysicalInput public  boolean keyDown(int)
+METHOD com.openggf.control.PhysicalInput public  com.openggf.control.PhysicalGamepad gamepad(int)
+METHOD com.openggf.control.PhysicalInput public  float axis(int,int)
+METHOD com.openggf.control.PhysicalInput public  int droppedEvents()
+METHOD com.openggf.control.PhysicalInput public  java.util.List<com.openggf.control.PhysicalGamepad> gamepads()
+METHOD com.openggf.control.PhysicalInput public  java.util.List<com.openggf.control.PhysicalInputEvent> events()
+METHOD com.openggf.control.PhysicalInput public  java.util.List<java.lang.Integer> keysDown()
+METHOD com.openggf.control.PhysicalInput public  long timestampNanos()
+METHOD com.openggf.control.PhysicalInput public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.control.PhysicalInput public,final  int hashCode()
+METHOD com.openggf.control.PhysicalInput public,final  java.lang.String toString()
+METHOD com.openggf.control.PhysicalInput public,static  com.openggf.control.PhysicalInput neutral()
+METHOD com.openggf.control.PhysicalInputEvent public  boolean pressed()
+METHOD com.openggf.control.PhysicalInputEvent public  boolean released()
+METHOD com.openggf.control.PhysicalInputEvent public  com.openggf.control.PhysicalInputEvent$Kind kind()
+METHOD com.openggf.control.PhysicalInputEvent public  float value()
+METHOD com.openggf.control.PhysicalInputEvent public  int code()
+METHOD com.openggf.control.PhysicalInputEvent public  int deviceId()
+METHOD com.openggf.control.PhysicalInputEvent public  long sequence()
+METHOD com.openggf.control.PhysicalInputEvent public  long timestampNanos()
+METHOD com.openggf.control.PhysicalInputEvent public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.control.PhysicalInputEvent public,final  int hashCode()
+METHOD com.openggf.control.PhysicalInputEvent public,final  java.lang.String toString()
+METHOD com.openggf.control.PhysicalInputEvent$Kind public,static  com.openggf.control.PhysicalInputEvent$Kind valueOf(java.lang.String)
+METHOD com.openggf.control.PhysicalInputEvent$Kind public,static  com.openggf.control.PhysicalInputEvent$Kind[] values()
 METHOD com.openggf.control.PlayerInputState public  boolean startHeld()
 METHOD com.openggf.control.PlayerInputState public  boolean startPressed()
 METHOD com.openggf.control.PlayerInputState public  com.openggf.control.PlayerInputState merge(com.openggf.control.PlayerInputState)
@@ -11763,6 +11855,8 @@ METHOD com.openggf.mods.scene.RomSpriteRequest$Compression public,static  com.op
 METHOD com.openggf.mods.scene.RomSpriteRequest$Compression public,static  com.openggf.mods.scene.RomSpriteRequest$Compression[] values()
 METHOD com.openggf.mods.scene.RomSpriteRequest$DplcLayout public,static  com.openggf.mods.scene.RomSpriteRequest$DplcLayout valueOf(java.lang.String)
 METHOD com.openggf.mods.scene.RomSpriteRequest$DplcLayout public,static  com.openggf.mods.scene.RomSpriteRequest$DplcLayout[] values()
+METHOD com.openggf.mods.scene.SceneArt public  com.openggf.mods.scene.SceneRomArt rom(java.lang.String)
+METHOD com.openggf.mods.scene.SceneArt public  java.util.List<java.lang.String> availableGames()
 METHOD com.openggf.mods.scene.SceneArt public,abstract  com.openggf.mods.scene.SceneImage png(byte[])
 METHOD com.openggf.mods.scene.SceneArt public,abstract  com.openggf.mods.scene.SceneRomArt rom()
 METHOD com.openggf.mods.scene.SceneAudio public,abstract  void fadeOutMusic()
@@ -11796,6 +11890,8 @@ METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void drawRegion(com.o
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void fill(int,int,int,int,int)
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void text(java.lang.String,int,int,int)
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void unclip()
+METHOD com.openggf.mods.scene.SceneContext public  com.openggf.control.PhysicalInput physicalInput()
+METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneMusic music()
 METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean buttonDown(int)
 METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean buttonPressed(int)
 METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean buttonRepeated(int)
@@ -11857,6 +11953,41 @@ METHOD com.openggf.mods.scene.SceneMouse public  int x()
 METHOD com.openggf.mods.scene.SceneMouse public  int y()
 METHOD com.openggf.mods.scene.SceneMouse public  java.lang.String toString()
 METHOD com.openggf.mods.scene.SceneMouse public,static  com.openggf.mods.scene.SceneMouse none()
+METHOD com.openggf.mods.scene.SceneMusic public  com.openggf.mods.scene.SceneMusicPlayer start(com.openggf.mods.scene.ScenePreparedMusic,java.util.List<com.openggf.mods.scene.SceneMusicPart>,int)
+METHOD com.openggf.mods.scene.SceneMusic public,abstract  com.openggf.mods.scene.SceneMusicPlayer start(com.openggf.mods.scene.ScenePreparedMusic,int,int,boolean,int)
+METHOD com.openggf.mods.scene.SceneMusic public,abstract  com.openggf.mods.scene.ScenePreparedMusic prepare(java.lang.String,int,int)
+METHOD com.openggf.mods.scene.SceneMusicPart public  boolean dacMuted()
+METHOD com.openggf.mods.scene.SceneMusicPart public  int fmMask()
+METHOD com.openggf.mods.scene.SceneMusicPart public  int psgMask()
+METHOD com.openggf.mods.scene.SceneMusicPart public  long onsetSamples()
+METHOD com.openggf.mods.scene.SceneMusicPart public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.scene.SceneMusicPart public,final  int hashCode()
+METHOD com.openggf.mods.scene.SceneMusicPart public,final  java.lang.String toString()
+METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  boolean finished()
+METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  boolean paused()
+METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  long samplePosition()
+METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  long samplePositionAt(long)
+METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  long underrunCount()
+METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  void pause()
+METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  void resume()
+METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  void setPartAudible(boolean)
+METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  void setWhammy(double)
+METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  void stop()
+METHOD com.openggf.mods.scene.SceneNoteEvent public  com.openggf.mods.scene.SceneNoteEvent$Kind kind()
+METHOD com.openggf.mods.scene.SceneNoteEvent public  int channel()
+METHOD com.openggf.mods.scene.SceneNoteEvent public  int pitch()
+METHOD com.openggf.mods.scene.SceneNoteEvent public  int sourceOffset()
+METHOD com.openggf.mods.scene.SceneNoteEvent public  int trackIndex()
+METHOD com.openggf.mods.scene.SceneNoteEvent public  long durationSamples()
+METHOD com.openggf.mods.scene.SceneNoteEvent public  long onsetSamples()
+METHOD com.openggf.mods.scene.SceneNoteEvent public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.scene.SceneNoteEvent public,final  int hashCode()
+METHOD com.openggf.mods.scene.SceneNoteEvent public,final  java.lang.String toString()
+METHOD com.openggf.mods.scene.SceneNoteEvent$Kind public,static  com.openggf.mods.scene.SceneNoteEvent$Kind valueOf(java.lang.String)
+METHOD com.openggf.mods.scene.SceneNoteEvent$Kind public,static  com.openggf.mods.scene.SceneNoteEvent$Kind[] values()
+METHOD com.openggf.mods.scene.ScenePreparedMusic public,abstract  int sampleRate()
+METHOD com.openggf.mods.scene.ScenePreparedMusic public,abstract  java.util.List<com.openggf.mods.scene.SceneNoteEvent> notes()
+METHOD com.openggf.mods.scene.ScenePreparedMusic public,abstract  long lengthSamples()
 METHOD com.openggf.mods.scene.SceneRomArt public,abstract  boolean hasTitleCard(int,int)
 METHOD com.openggf.mods.scene.SceneRomArt public,abstract  boolean hasZonePictures(int,int)
 METHOD com.openggf.mods.scene.SceneRomArt public,abstract  byte[] read(int,int)
@@ -14649,6 +14780,7 @@ NESTED com.openggf.camera.Camera com.openggf.camera.Camera$UpdateObserver
 NESTED com.openggf.control.ButtonPrompts com.openggf.control.ButtonPrompts$Button
 NESTED com.openggf.control.GamepadStateSource com.openggf.control.GamepadStateSource$DeviceState
 NESTED com.openggf.control.MenuInput com.openggf.control.MenuInput$Pointer
+NESTED com.openggf.control.PhysicalInputEvent com.openggf.control.PhysicalInputEvent$Kind
 NESTED com.openggf.debug.DebugRenderContext com.openggf.debug.DebugRenderContext$DebugTextEntry
 NESTED com.openggf.debug.MemoryStats com.openggf.debug.MemoryStats$SectionAllocation
 NESTED com.openggf.debug.MemoryStats com.openggf.debug.MemoryStats$Snapshot
@@ -14852,6 +14984,7 @@ NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDe
 NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$Compression
 NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$DplcLayout
 NESTED com.openggf.mods.scene.SceneBackdrop com.openggf.mods.scene.SceneBackdrop$Band
+NESTED com.openggf.mods.scene.SceneNoteEvent com.openggf.mods.scene.SceneNoteEvent$Kind
 NESTED com.openggf.net.client.ClientRaceSession com.openggf.net.client.ClientRaceSession$Phase
 NESTED com.openggf.net.host.HostMasterLink com.openggf.net.host.HostMasterLink$MessageSink
 NESTED com.openggf.net.hub.GhostHub com.openggf.net.hub.GhostHub$HubViolationRecorder
@@ -15199,9 +15332,13 @@ RECORD-COMPONENT com.openggf.audio.rewind.AudioTimelineEntry order int
 RECORD-COMPONENT com.openggf.control.GamepadStateSource$DeviceState buttons boolean[]
 RECORD-COMPONENT com.openggf.control.GamepadStateSource$DeviceState connected boolean
 RECORD-COMPONENT com.openggf.control.GamepadStateSource$DeviceState joystickId int
+RECORD-COMPONENT com.openggf.control.GamepadStateSource$DeviceState leftTrigger float
 RECORD-COMPONENT com.openggf.control.GamepadStateSource$DeviceState leftX float
 RECORD-COMPONENT com.openggf.control.GamepadStateSource$DeviceState leftY float
 RECORD-COMPONENT com.openggf.control.GamepadStateSource$DeviceState name java.lang.String
+RECORD-COMPONENT com.openggf.control.GamepadStateSource$DeviceState rightTrigger float
+RECORD-COMPONENT com.openggf.control.GamepadStateSource$DeviceState rightX float
+RECORD-COMPONENT com.openggf.control.GamepadStateSource$DeviceState rightY float
 RECORD-COMPONENT com.openggf.control.InputBindings controllerDeadzone double
 RECORD-COMPONENT com.openggf.control.InputBindings controllerEnabled boolean
 RECORD-COMPONENT com.openggf.control.InputBindings controllerPlayer1 java.lang.String
@@ -15245,6 +15382,21 @@ RECORD-COMPONENT com.openggf.control.MenuInput$Pointer leftPressed boolean
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer rightPressed boolean
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer x int
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer y int
+RECORD-COMPONENT com.openggf.control.PhysicalGamepad axes float[]
+RECORD-COMPONENT com.openggf.control.PhysicalGamepad buttons boolean[]
+RECORD-COMPONENT com.openggf.control.PhysicalGamepad deviceId int
+RECORD-COMPONENT com.openggf.control.PhysicalGamepad name java.lang.String
+RECORD-COMPONENT com.openggf.control.PhysicalInput droppedEvents int
+RECORD-COMPONENT com.openggf.control.PhysicalInput events java.util.List<com.openggf.control.PhysicalInputEvent>
+RECORD-COMPONENT com.openggf.control.PhysicalInput gamepads java.util.List<com.openggf.control.PhysicalGamepad>
+RECORD-COMPONENT com.openggf.control.PhysicalInput keysDown java.util.List<java.lang.Integer>
+RECORD-COMPONENT com.openggf.control.PhysicalInput timestampNanos long
+RECORD-COMPONENT com.openggf.control.PhysicalInputEvent code int
+RECORD-COMPONENT com.openggf.control.PhysicalInputEvent deviceId int
+RECORD-COMPONENT com.openggf.control.PhysicalInputEvent kind com.openggf.control.PhysicalInputEvent$Kind
+RECORD-COMPONENT com.openggf.control.PhysicalInputEvent sequence long
+RECORD-COMPONENT com.openggf.control.PhysicalInputEvent timestampNanos long
+RECORD-COMPONENT com.openggf.control.PhysicalInputEvent value float
 RECORD-COMPONENT com.openggf.control.PlayerInputState actionHeldMask int
 RECORD-COMPONENT com.openggf.control.PlayerInputState actionPressedMask int
 RECORD-COMPONENT com.openggf.control.PlayerInputState heldMask int
@@ -16852,6 +17004,17 @@ RECORD-COMPONENT com.openggf.mods.scene.SceneBackdrop$Band drift double
 RECORD-COMPONENT com.openggf.mods.scene.SceneBackdrop$Band height int
 RECORD-COMPONENT com.openggf.mods.scene.SceneBackdrop$Band speed double
 RECORD-COMPONENT com.openggf.mods.scene.SceneBackdrop$Band top int
+RECORD-COMPONENT com.openggf.mods.scene.SceneMusicPart dacMuted boolean
+RECORD-COMPONENT com.openggf.mods.scene.SceneMusicPart fmMask int
+RECORD-COMPONENT com.openggf.mods.scene.SceneMusicPart onsetSamples long
+RECORD-COMPONENT com.openggf.mods.scene.SceneMusicPart psgMask int
+RECORD-COMPONENT com.openggf.mods.scene.SceneNoteEvent channel int
+RECORD-COMPONENT com.openggf.mods.scene.SceneNoteEvent durationSamples long
+RECORD-COMPONENT com.openggf.mods.scene.SceneNoteEvent kind com.openggf.mods.scene.SceneNoteEvent$Kind
+RECORD-COMPONENT com.openggf.mods.scene.SceneNoteEvent onsetSamples long
+RECORD-COMPONENT com.openggf.mods.scene.SceneNoteEvent pitch int
+RECORD-COMPONENT com.openggf.mods.scene.SceneNoteEvent sourceOffset int
+RECORD-COMPONENT com.openggf.mods.scene.SceneNoteEvent trackIndex int
 RECORD-COMPONENT com.openggf.mods.scene.SceneSprite image com.openggf.mods.scene.SceneImage
 RECORD-COMPONENT com.openggf.mods.scene.SceneSprite originX int
 RECORD-COMPONENT com.openggf.mods.scene.SceneSprite originY int
@@ -18124,6 +18287,7 @@ TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$Special
 TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$TempoMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$TempoMode>
 TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$VolMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$VolMode>
 TYPE enum public,static,final com.openggf.control.ButtonPrompts$Button SUPER java.lang.Enum<com.openggf.control.ButtonPrompts$Button>
+TYPE enum public,static,final com.openggf.control.PhysicalInputEvent$Kind SUPER java.lang.Enum<com.openggf.control.PhysicalInputEvent$Kind>
 TYPE enum public,static,final com.openggf.editor.EditorInputHandler$Action SUPER java.lang.Enum<com.openggf.editor.EditorInputHandler$Action>
 TYPE enum public,static,final com.openggf.editor.EditorStockObjectPalette$Navigation SUPER java.lang.Enum<com.openggf.editor.EditorStockObjectPalette$Navigation>
 TYPE enum public,static,final com.openggf.editor.persistence.EditorSaveManager$ApplyResult SUPER java.lang.Enum<com.openggf.editor.persistence.EditorSaveManager$ApplyResult>
@@ -18163,6 +18327,7 @@ TYPE enum public,static,final com.openggf.level.resources.DeferredLevelResourceD
 TYPE enum public,static,final com.openggf.level.resources.KosinskiModuleQueue$Phase SUPER java.lang.Enum<com.openggf.level.resources.KosinskiModuleQueue$Phase>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$Compression>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$DplcLayout SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$DplcLayout>
+TYPE enum public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind SUPER java.lang.Enum<com.openggf.mods.scene.SceneNoteEvent$Kind>
 TYPE enum public,static,final com.openggf.net.client.ClientRaceSession$Phase SUPER java.lang.Enum<com.openggf.net.client.ClientRaceSession$Phase>
 TYPE enum public,static,final com.openggf.net.hub.HostRoundEngine$Phase SUPER java.lang.Enum<com.openggf.net.hub.HostRoundEngine$Phase>
 TYPE enum public,static,final com.openggf.physics.CollisionEvent$EventType SUPER java.lang.Enum<com.openggf.physics.CollisionEvent$EventType>
@@ -18292,6 +18457,9 @@ TYPE interface public,abstract com.openggf.mods.scene.SceneArt SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneAudio SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneCanvas SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneContext SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.SceneMusic SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.SceneMusicPlayer SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.ScenePreparedMusic SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneRomArt SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneSpriteSet SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneStorage SUPER <none>
@@ -18370,6 +18538,9 @@ TYPE record public,final com.openggf.audio.rewind.AudioLogicalSnapshot SUPER jav
 TYPE record public,final com.openggf.audio.rewind.AudioTimelineEntry SUPER java.lang.Record
 TYPE record public,final com.openggf.control.InputBindings SUPER java.lang.Record
 TYPE record public,final com.openggf.control.LogicalInputSnapshot SUPER java.lang.Record
+TYPE record public,final com.openggf.control.PhysicalGamepad SUPER java.lang.Record
+TYPE record public,final com.openggf.control.PhysicalInput SUPER java.lang.Record
+TYPE record public,final com.openggf.control.PhysicalInputEvent SUPER java.lang.Record
 TYPE record public,final com.openggf.control.PlayerInputState SUPER java.lang.Record
 TYPE record public,final com.openggf.debug.SectionStats SUPER java.lang.Record
 TYPE record public,final com.openggf.debug.playback.Bk2FrameInput SUPER java.lang.Record
@@ -18508,6 +18679,8 @@ TYPE record public,final com.openggf.mods.code.ModZoneContribution SUPER java.la
 TYPE record public,final com.openggf.mods.code.RomArtRequest SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.RomSpriteRequest SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.SceneBackdrop SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.scene.SceneMusicPart SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.scene.SceneNoteEvent SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.SceneSprite SUPER java.lang.Record
 TYPE record public,final com.openggf.net.hub.RoomHostConfig SUPER java.lang.Record
 TYPE record public,final com.openggf.net.hub.RoomHostHooks SUPER java.lang.Record
@@ -18906,6 +19079,10 @@ TYPE-ANNOTATION com.openggf.control.InputHandler @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.LogicalInputSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.MenuInput @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.MenuInput$Pointer @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.control.PhysicalGamepad @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.control.PhysicalInput @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.control.PhysicalInputEvent @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.control.PhysicalInputEvent$Kind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.PlayerInputState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.data.Game @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.data.PlayerSpriteArtProvider @com.openggf.game.ModApi
@@ -19639,6 +19816,12 @@ TYPE-ANNOTATION com.openggf.mods.scene.SceneImage @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneKeys @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneLevelStage @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneMouse @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneMusic @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneMusicPart @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneMusicPlayer @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneNoteEvent @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneNoteEvent$Kind @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.ScenePreparedMusic @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneRomArt @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneSprite @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneSpriteSet @com.openggf.game.ModApi

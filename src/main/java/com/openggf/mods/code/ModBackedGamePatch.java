@@ -28,6 +28,7 @@ public final class ModBackedGamePatch implements GamePatch {
     private final java.util.function.BiConsumer<String,
             com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink;
     private final RomArtSheetSource romArtSource;
+    private final String contentId;
 
     /**
      * Source of materialized ROM-art sheets; injectable for tests. Engine-internal — must never
@@ -67,7 +68,22 @@ public final class ModBackedGamePatch implements GamePatch {
                        java.util.function.BiConsumer<String,
                                com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink,
                        RomArtSheetSource romArtSource) {
+        this(plan, faultBoundary, saveFindingSink, romArtSource, "content");
+    }
+
+    ModBackedGamePatch(ModRegistrationPlan plan, ModFaultBoundary faultBoundary,
+                       java.util.function.BiConsumer<String,
+                               com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink,
+                       String contentId) {
+        this(plan, faultBoundary, saveFindingSink, productionRomArtSource(), contentId);
+    }
+
+    private ModBackedGamePatch(ModRegistrationPlan plan, ModFaultBoundary faultBoundary,
+                       java.util.function.BiConsumer<String,
+                               com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink,
+                       RomArtSheetSource romArtSource, String contentId) {
         this.plan = Objects.requireNonNull(plan, "plan");
+        this.contentId = Objects.requireNonNull(contentId, "contentId");
         this.faultBoundary = faultBoundary;
         this.saveFindingSink = Objects.requireNonNull(saveFindingSink, "saveFindingSink");
         this.romArtSource = Objects.requireNonNull(romArtSource, "romArtSource");
@@ -97,7 +113,7 @@ public final class ModBackedGamePatch implements GamePatch {
     }
 
     public ModRegistrationPlan plan() { return plan; }
-    @Override public String id() { return plan.ownerModId() + ":content"; }
+    @Override public String id() { return plan.ownerModId() + ":" + contentId; }
     @Override public String displayName() { return plan.ownerModId() + " content"; }
     @Override public String baseGameId() { return plan.baseGameId(); }
     @Override public boolean activatesFor(GameplayLaunchRequest request) {

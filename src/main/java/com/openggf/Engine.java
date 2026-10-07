@@ -2924,6 +2924,7 @@ public class Engine {
 			}
 
 			glfwPollEvents();
+			inputHandler.pollPhysicalGamepads();
 
 			// Snap window to nearest integer scale once resize drag ends (~200ms debounce)
 			if (resizePendingSnap && System.nanoTime() - lastResizeTimeNanos > 200_000_000L) {
@@ -2949,23 +2950,36 @@ public class Engine {
 				continue;
 			}
 
-			// Hybrid sleep: sleep most of the wait time, then spin-wait for precision
-			long remainingTime = frameTimeNanos - accumulator;
-			if (remainingTime > 2_000_000) {
-				// Sleep for most of the remaining time, leaving ~1ms for spin-wait
-				try {
-					Thread.sleep((remainingTime - 1_000_000) / 1_000_000);
-				} catch (InterruptedException e) {
-					Thread.currentThread().interrupt();
-				}
-			}
-
-			// Spin-wait the final portion for sub-millisecond precision
-			// Calculate target time for next frame check
+			// Preserve the frame deadline while observing physical input between updates.
 			long targetTime = previousTime + (frameTimeNanos - accumulator);
-			while (System.nanoTime() < targetTime) {
+			waitForFrameDeadline(targetTime);
+		}
+	}
+
+	/**
+	 * GLFW gamepads have polling state rather than queued button callbacks. Observe them
+	 * in bounded two-millisecond sleep slices, so a short tap between simulation updates
+	 * can reach a scene. All GLFW calls stay on the window thread. This is an observation
+	 * cadence, not a hardware timestamp guarantee: rendering and OS scheduling can delay
+	 * a poll. Only the final quarter-millisecond retains the existing precision spin.
+	 */
+	private void waitForFrameDeadline(long deadlineNanos) {
+		while (!paused && !glfwWindowShouldClose(window)) {
+			long remainingNanos = deadlineNanos - System.nanoTime();
+			if (remainingNanos <= 0) return;
+			if (remainingNanos <= 250_000) {
 				Thread.onSpinWait();
+				continue;
 			}
+			long sleepNanos = Math.min(2_000_000, remainingNanos - 250_000);
+			try {
+				Thread.sleep(sleepNanos / 1_000_000, (int) (sleepNanos % 1_000_000));
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				return;
+			}
+			glfwPollEvents();
+			inputHandler.pollPhysicalGamepads();
 		}
 	}
 

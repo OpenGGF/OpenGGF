@@ -15,9 +15,13 @@ import com.openggf.mods.scene.SceneAudio;
 import com.openggf.mods.scene.SceneButtons;
 import com.openggf.mods.scene.SceneContext;
 import com.openggf.mods.scene.SceneImage;
+import com.openggf.control.PhysicalInput;
+import com.openggf.mods.scene.SceneMusic;
 import com.openggf.mods.scene.SceneMouse;
 import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneStorage;
+import com.openggf.mods.scene.host.music.ManagedSceneMusic;
+import com.openggf.mods.scene.host.music.SceneMusicFactory;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -60,8 +64,13 @@ public final class ModSceneHost {
         }
         context = new Context(factory.ownerModId(), services);
         exiting = false;
-        scene = factory.create();
-        scene.enter(context);
+        try {
+            scene = factory.create();
+            scene.enter(context);
+        } catch (RuntimeException | Error failure) {
+            close();
+            throw failure;
+        }
     }
 
     /** One 60 Hz tick. The input handler's frame edges are advanced by the caller. */
@@ -125,12 +134,14 @@ public final class ModSceneHost {
         scene = null;
         context = null;
         lastFrame = List.of();
-        if (closing != null) {
-            try {
+        try {
+            if (closing != null) {
                 closing.exit(ctx);
-            } catch (ModFaultBoundary.CallbackAborted aborted) {
-                LOG.log(Level.WARNING, "Mod scene failed while closing", aborted);
             }
+        } catch (ModFaultBoundary.CallbackAborted aborted) {
+            LOG.log(Level.WARNING, "Mod scene failed while closing", aborted);
+        } finally {
+            if (ctx != null) ctx.closeResources();
         }
         if (renderer.initialized()) {
             renderer.releaseTextures();
@@ -165,6 +176,8 @@ public final class ModSceneHost {
         private InputHandler input;
         private LogicalInputSnapshot logical = LogicalInputSnapshot.neutral();
         private SceneMouse mouse = SceneMouse.none();
+        private PhysicalInput physical = PhysicalInput.neutral();
+        private ManagedSceneMusic music;
         private final MenuRepeat repeat = new MenuRepeat();
         private int heldButtons;
         private int pressedButtons;
@@ -187,6 +200,18 @@ public final class ModSceneHost {
                 @Override
                 public SceneRomArt rom() {
                     return services == null ? null : services.romArt();
+                }
+
+                @Override
+                public List<String> availableGames() {
+                    return services != null && services.romLibrary() != null
+                            ? services.romLibrary().availableGames() : SceneArt.super.availableGames();
+                }
+
+                @Override
+                public SceneRomArt rom(String gameId) {
+                    return services != null && services.romLibrary() != null
+                            ? services.romLibrary().rom(gameId) : SceneArt.super.rom(gameId);
                 }
             };
             this.audio = new SceneAudio() {
@@ -225,6 +250,7 @@ public final class ModSceneHost {
 
         void beginTick(InputHandler handler) {
             input = handler;
+            physical = handler == null ? PhysicalInput.neutral() : handler.capturePhysicalInput();
             LogicalInputSnapshot raw = handler == null ? LogicalInputSnapshot.neutral() : handler.logical();
             heldButtons = buttons(raw.player1(), true);
             pressedButtons = buttons(raw.player1(), false);
@@ -238,6 +264,25 @@ public final class ModSceneHost {
             logical = raw.withMenuPolicy((pressedButtons & (SceneButtons.A | SceneButtons.C | SceneButtons.START)) != 0,
                     (pressedButtons & SceneButtons.B) != 0);
             mouse = readMouse(handler);
+        }
+
+        void closeResources() {
+            try {
+                if (music != null) music.close();
+            } finally {
+                if (services != null && services.romLibrary() != null) services.romLibrary().close();
+            }
+        }
+
+        @Override public PhysicalInput physicalInput() { return physical; }
+
+        @Override public SceneMusic music() {
+            if (music == null) {
+                if (services == null || services.audio() == null || services.romLibrary() == null)
+                    throw new UnsupportedOperationException("Finite scene music unavailable");
+                music = SceneMusicFactory.create(services.audio(), services.romLibrary()::sourceRom);
+            }
+            return music;
         }
 
         /** Player 1's held or pressed state as {@link SceneButtons} bits (the pad's SACBRLDU byte). */

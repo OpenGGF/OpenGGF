@@ -67,6 +67,11 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 
 ## Test harness helpers
 
+- `SitarHeroCapture` (`src/test/java/com/openggf/tools/`) packages the real
+  example and captures ROM-backed performers, stages and finite arcade behavior
+  for explicit ROM subsets; its source header records inputs and evidence limits.
+  Origin: Sitar Hero proof of concept, 2026-10-06.
+
 - `src/test/java/com/openggf/tests/route/` — shared route primitives for headless
   route controllers: `InputProgram` (parse, derive from a BK2, and step pad runs),
   `RouteSteering` (steer, walk with a speed cap, brake distance, ordinary crossing

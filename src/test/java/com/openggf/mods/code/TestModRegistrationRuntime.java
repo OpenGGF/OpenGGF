@@ -27,6 +27,24 @@ class TestModRegistrationRuntime {
     @TempDir Path temp;
 
     @Test
+    void anyGameStartupScenePublishesUniqueOrdinaryStockDecorators() throws Exception {
+        ModDescriptor shared = descriptor("shared-scene", SharedSceneEntrypoint.class, List.of(), "any");
+        ModClassLoaderFactory factory = new ModClassLoaderFactory(getClass().getClassLoader(),
+                (descriptor, snapshot) -> new ModValidationReport(List.of()));
+        try (ModRuntime runtime = factory.create(new EffectiveModCatalog(List.of(shared)), Set.of("shared-scene"))) {
+            runtime.installFaultBoundary(new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+                    owners -> new ModStateSaveResult.Saved(), owners -> { }));
+            var registrations = runtime.newRegistrationPlan().registrations();
+            assertEquals(List.of("shared-scene:content-s1", "shared-scene:content-s2", "shared-scene:content-s3k"),
+                    registrations.stream().map(RegisteredPatch::namespacedId).toList());
+            assertEquals(List.of("s1", "s2", "s3k"),
+                    registrations.stream().map(registration -> registration.patch().baseGameId()).toList());
+            assertEquals(List.of(0L, 1L, 2L), registrations.stream().map(RegisteredPatch::registrationIndex).toList());
+            assertTrue(runtime.registrationFailures().isEmpty());
+        }
+    }
+
+    @Test
     void standaloneRegistrationPublishesAtomicallyThroughOwnerBoundary() throws Exception {
         ModDescriptor good = standaloneDescriptor("standalone-good", StandaloneEntrypoint.class);
         ModDescriptor bad = standaloneDescriptor("standalone-bad", ThrowingStandaloneEntrypoint.class);
@@ -203,6 +221,17 @@ class TestModRegistrationRuntime {
         }
     }
 
+    public static final class SharedSceneEntrypoint implements GgfMod {
+        @Override public void register(ModContext context) {
+            context.registerStartupScene(() -> new com.openggf.mods.scene.ModScene() {
+                @Override public void enter(com.openggf.mods.scene.SceneContext context) { }
+                @Override public void update(com.openggf.mods.scene.SceneContext context) { }
+                @Override public void draw(com.openggf.mods.scene.SceneContext context,
+                        com.openggf.mods.scene.SceneCanvas canvas) { }
+            });
+        }
+    }
+
     public static final class HostileCatchingEntrypoint implements GgfMod {
         @Override public void register(ModContext context) {
             context.registerObject("staged", (spawn, registry) -> null);
@@ -289,6 +318,11 @@ class TestModRegistrationRuntime {
 
     private ModDescriptor descriptor(String id, Class<?> entrypoint,
                                      List<ModDependency> dependencies) throws Exception {
+        return descriptor(id, entrypoint, dependencies, "s2");
+    }
+
+    private ModDescriptor descriptor(String id, Class<?> entrypoint,
+                                     List<ModDependency> dependencies, String baseGame) throws Exception {
         Path jar = temp.resolve(id + ".jar");
         try (OutputStream output = Files.newOutputStream(jar); JarOutputStream archive = new JarOutputStream(output)) {
             archive.putNextEntry(new JarEntry("fixture.bin"));
@@ -296,7 +330,7 @@ class TestModRegistrationRuntime {
             archive.closeEntry();
         }
         ModManifest manifest = new ModManifest(1, id, id, SemanticVersion.parse("1.0.0"),
-                List.of("test"), "test", VersionRange.parse("*"), ModType.PATCH, "s2",
+                List.of("test"), "test", VersionRange.parse("*"), ModType.PATCH, baseGame,
                 entrypoint.getName(), dependencies, Map.of(), Map.of(), null, OptionalInt.empty());
         String hash = java.util.HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                 .digest(Files.readAllBytes(jar)));

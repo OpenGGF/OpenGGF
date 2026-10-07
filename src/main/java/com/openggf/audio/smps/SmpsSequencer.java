@@ -19,6 +19,12 @@ import java.util.Objects;
 import java.util.logging.Logger;
 
 public class SmpsSequencer implements CoordFlagContext {
+    // Preparation-only subscription. It is an event sink, never a source of driver state.
+    private SmpsNoteListener noteListener;
+
+    public void setNoteListener(SmpsNoteListener listener) {
+        noteListener = listener;
+    }
     private static final Logger LOGGER = Logger.getLogger(SmpsSequencer.class.getName());
     private static final byte[] ZERO_FM_VOICE = new byte[25];
     private static final SmpsLogicalWriteTarget DETACHED_WRITE_TARGET =
@@ -3030,6 +3036,16 @@ public class SmpsSequencer implements CoordFlagContext {
             t.forceRefresh = false;
         }
 
+        boolean validDacAttack = false;
+        if (t.type == TrackType.DAC && dacData != null) {
+            DacData.DacEntry entry = dacData.mappingForNote(t.note);
+            validDacAttack = entry != null && dacData.hasSample(entry.sampleId())
+                    && dacData.sample(entry.sampleId()) != null && dacData.sample(entry.sampleId()).length() > 0;
+        }
+        if (noteListener != null && (t.type == TrackType.DAC ? validDacAttack : !preventAttack)) {
+            noteListener.attack(t);
+        }
+
         if (t.type == TrackType.DAC) {
             if (config.isDacNoteKeysOffFm6AndRestoresFm3()) {
                 // The S3K Z80 driver's DAC track shares FM6, so starting a
@@ -3337,6 +3353,7 @@ public class SmpsSequencer implements CoordFlagContext {
         }
 
         if (!preventAttack) {
+            if (noteListener != null) noteListener.attack(t);
             resetModEnvelopeState(t);
         }
 
@@ -3447,6 +3464,9 @@ public class SmpsSequencer implements CoordFlagContext {
 
     @Override
     public void stopNote(Track t) {
+        if (noteListener != null) {
+            noteListener.release(t);
+        }
         if (t.type == TrackType.FM) {
             int hwCh = t.channelId;
             int port = (hwCh < 3) ? 0 : 1;
@@ -3480,6 +3500,9 @@ public class SmpsSequencer implements CoordFlagContext {
     public void stopPsgNoteWithDriverSilence(Track t) {
         if (t.type != TrackType.PSG) {
             throw new IllegalArgumentException("driver PSG silence requires a PSG track");
+        }
+        if (noteListener != null) {
+            noteListener.release(t);
         }
         synth.writePsgDriverSilence(this, t.channelId, t.noiseMode);
     }

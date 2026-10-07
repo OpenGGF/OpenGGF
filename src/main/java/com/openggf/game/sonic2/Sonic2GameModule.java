@@ -327,6 +327,13 @@ public class Sonic2GameModule implements GameModule {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.level.render.ZonePictureSource.Factory.class) {
+            // Public ZoneRegistry zone 1 / act 0 is CPZ1. Level index 2 resolves ROM zone $0D.
+            return (T) (com.openggf.level.render.ZonePictureSource.Factory) rom ->
+                    new com.openggf.level.render.DetachedLevelPictures(1, 0,
+                            () -> new Sonic2(rom).buildDetachedLevel(
+                                    com.openggf.level.LevelData.CHEMICAL_PLANT_1.levelIndex()), 512, 512);
+        }
         if (type == CNZPrizeSoundState.class) return (T) cnzPrizeSoundState;
         if (type == S2DataSelectImageCacheManager.class) return (T) getDataSelectImageCacheManager();
         if (type == Sonic2LevelEventManager.class) return (T) levelEventManager;

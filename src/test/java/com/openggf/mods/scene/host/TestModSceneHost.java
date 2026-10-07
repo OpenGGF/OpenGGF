@@ -29,18 +29,21 @@ import com.openggf.mods.code.OwnedSceneFactory;
 import com.openggf.mods.scene.DebuggableScene;
 import com.openggf.mods.scene.ModScene;
 import com.openggf.mods.scene.ModSceneFactory;
+import com.openggf.mods.scene.SceneArt;
 import com.openggf.mods.scene.SceneButtons;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneContext;
 import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneImage;
 import com.openggf.mods.scene.SceneMouse;
+import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneSprite;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -130,6 +133,65 @@ class TestModSceneHost {
         }, boundary(findings));
         assertThrows(ModFaultBoundary.CallbackAborted.class, factory::create);
         assertTrue(findings.snapshot().containsKey("cards"), "the failure is recorded against the owner");
+    }
+
+    @Test
+    void aNullReturningSceneFactoryDisablesItsOwnerAndDependentsAndLeavesHostClosed() {
+        ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
+        List<Set<String>> saved = new ArrayList<>();
+        List<Set<String>> disabled = new ArrayList<>();
+        ModFaultBoundary boundary = new ModFaultBoundary(Map.of("dependent", Set.of("cards")), findings,
+                owners -> {
+                    saved.add(owners);
+                    return new ModStateSaveResult.Saved();
+                }, disabled::add);
+        OwnedSceneFactory factory = ModContextTestAccess.ownedScene("cards", () -> null, boundary);
+        ModSceneHost host = new ModSceneHost();
+
+        ModFaultBoundary.CallbackAborted failure = assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> host.open(factory, services(new ArrayList<>()), 320, 224));
+
+        assertInstanceOf(NullPointerException.class, failure.getCause());
+        assertEquals("cards", failure.owner());
+        assertEquals(Set.of("cards", "dependent"), failure.disabledOwners());
+        assertEquals(List.of(failure.disabledOwners()), disabled);
+        assertEquals(disabled, saved, "the same owners are disabled in process and persisted");
+        assertEquals(List.of("MOD_CALLBACK_FAILED"),
+                findings.findingsFor("cards").stream().map(finding -> finding.code()).toList());
+        assertFalse(host.isOpen());
+        host.close();
+    }
+
+    @Test
+    void legacyServicesKeepRunningRomAvailableThroughNewArtMethods() {
+        SceneRomArt running = mock(SceneRomArt.class);
+        when(running.gameId()).thenReturn("s2");
+        SceneArt[] observed = new SceneArt[1];
+        ModSceneFactory factory = () -> new ProbeSceneBase() {
+            @Override
+            public void enter(SceneContext ctx) {
+                observed[0] = ctx.art();
+            }
+        };
+        ModSceneHost host = new ModSceneHost();
+        try {
+            host.open(owned(factory), new SceneServices(null, running, temp, null, () -> { }, () -> { }),
+                    320, 224);
+            assertSame(running, observed[0].rom());
+            assertEquals(List.of("s2"), observed[0].availableGames());
+            assertSame(running, observed[0].rom("s2"));
+            assertNull(observed[0].rom("s1"));
+            assertThrows(IllegalArgumentException.class, () -> observed[0].rom("bogus"));
+            assertThrows(IllegalArgumentException.class, () -> observed[0].rom(null));
+
+            host.open(owned(factory), services(new ArrayList<>()), 320, 224);
+            assertEquals(List.of(), observed[0].availableGames());
+            assertNull(observed[0].rom("s2"));
+            assertThrows(IllegalArgumentException.class, () -> observed[0].rom("bogus"),
+                    "game-code validation applies even when no ROM art is available");
+        } finally {
+            host.close();
+        }
     }
 
     @Test

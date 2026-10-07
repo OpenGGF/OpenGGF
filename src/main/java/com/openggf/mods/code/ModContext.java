@@ -73,7 +73,7 @@ public final class ModContext {
 
     /** Returns the manifest id that namespaces every local registration. */
     public String ownerModId() { return owner; }
-    /** Returns the stock game id for a patch, or null for a standalone owner. */
+    /** Returns the stock game id (or {@code any} for a shared startup scene), or null for standalone. */
     public String baseGameId() { return baseGame; }
     /** Returns the immutable bounded asset snapshot while registration is open. */
     public ModAssetRoot modAssets() { requireOpen(); return assets; }
@@ -308,6 +308,12 @@ public final class ModContext {
         try {
             if (standalone && gameModule == null) {
                 throw failure("Standalone manifest must register exactly one game module");
+            }
+            if ("any".equals(baseGame) && (startupScene == null || !objects.isEmpty() || !art.isEmpty()
+                    || !patches.isEmpty() || !zones.isEmpty() || !objectPreviewArtKeys.isEmpty()
+                    || !characters.isEmpty() || !romArt.isEmpty() || !launchTeams.isEmpty()
+                    || !inputFilters.isEmpty() || !hudProfiles.isEmpty())) {
+                throw failure("baseGame any may register only a startup scene and its display requirement");
             }
             objectPreviewArtKeys.forEach((objectKey,artKey)-> {
                 if(!objects.containsKey(objectKey))throw failure("Preview maps unknown object key: "+objectKey);

@@ -70,13 +70,36 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
                        List<RingSpawn> ringSpawns,
                        RingSpriteSheet ringSpriteSheet,
                        int[] boundaries) throws IOException {
+        this(rom, zoneIndex, sonicPaletteId, levelPaletteId, patternCues, chunksAddr, blocksAddr,
+                fgLayoutAddr, bgLayoutAddr, collisionIndexAddr, solidTileHeightsAddr, solidTileWidthsAddr,
+                solidTileAnglesAddr, objectSpawns, ringSpawns, ringSpriteSheet, boundaries, true);
+    }
+
+    /** Explicitly disables all live graphics publication for a detached presentation copy. */
+    public Sonic1Level(Rom rom,
+                       int zoneIndex,
+                       int sonicPaletteId,
+                       int levelPaletteId,
+                       List<PlcEntry> patternCues,
+                       int chunksAddr,
+                       int blocksAddr,
+                       int fgLayoutAddr,
+                       int bgLayoutAddr,
+                       int collisionIndexAddr,
+                       int solidTileHeightsAddr,
+                       int solidTileWidthsAddr,
+                       int solidTileAnglesAddr,
+                       List<ObjectSpawn> objectSpawns,
+                       List<RingSpawn> ringSpawns,
+                       RingSpriteSheet ringSpriteSheet,
+                       int[] boundaries, boolean publishGraphics) throws IOException {
         super(zoneIndex);
         this.objects = List.copyOf(objectSpawns);
         this.rings = List.copyOf(ringSpawns);
         this.ringSpriteSheet = ringSpriteSheet;
 
-        loadPalettes(rom, sonicPaletteId, levelPaletteId);
-        loadPatterns(rom, patternCues);
+        loadPalettes(rom, sonicPaletteId, levelPaletteId, publishGraphics);
+        loadPatterns(rom, patternCues, publishGraphics);
         loadSolidTiles(rom, solidTileHeightsAddr, solidTileWidthsAddr, solidTileAnglesAddr);
         loadChunks(rom, chunksAddr, collisionIndexAddr);
         loadBlocks(rom, blocksAddr);
@@ -174,9 +197,9 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
      * 1) PalLoad_Fade(palid_Sonic)
      * 2) PalLoad_Fade(level palette id from LevelDataLoad)
      */
-    private void loadPalettes(Rom rom, int sonicPaletteId, int levelPaletteId) throws IOException {
+    private void loadPalettes(Rom rom, int sonicPaletteId, int levelPaletteId, boolean publishGraphics) throws IOException {
         palettes = new Palette[PALETTE_COUNT];
-        GraphicsManager graphicsMan = GameServices.graphics();
+        GraphicsManager graphicsMan = publishGraphics ? GameServices.graphics() : null;
 
         for (int i = 0; i < PALETTE_COUNT; i++) {
             palettes[i] = new Palette();
@@ -184,7 +207,7 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
         applyPaletteEntry(rom, sonicPaletteId);
         applyPaletteEntry(rom, levelPaletteId);
 
-        if (graphicsMan.isGlInitialized()) {
+        if (graphicsMan != null && graphicsMan.isGlInitialized()) {
             for (int i = 0; i < palettes.length; i++) {
                 graphicsMan.cachePaletteTexture(palettes[i], i);
             }
@@ -240,8 +263,8 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
      *
      * <p>Any gaps between entries are filled with empty patterns.
      */
-    private void loadPatterns(Rom rom, List<PlcEntry> cues) throws IOException {
-        GraphicsManager graphicsMan = GameServices.graphics();
+    private void loadPatterns(Rom rom, List<PlcEntry> cues, boolean publishGraphics) throws IOException {
+        GraphicsManager graphicsMan = publishGraphics ? GameServices.graphics() : null;
 
         // Sort cues by tile offset
         List<PlcEntry> sorted = new ArrayList<>(cues);
@@ -288,7 +311,7 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
                         (t + 1) * Pattern.PATTERN_SIZE_IN_ROM);
                 patterns[patIdx].fromSegaFormat(subArray);
 
-                if (graphicsMan.isGlInitialized()) {
+                if (graphicsMan != null && graphicsMan.isGlInitialized()) {
                     graphicsMan.cachePatternTexture(patterns[patIdx], patIdx);
                 }
             }
@@ -298,7 +321,7 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
         for (int i = 0; i < patternCount; i++) {
             if (patterns[i] == null) {
                 patterns[i] = new Pattern();
-                if (graphicsMan.isGlInitialized()) {
+                if (graphicsMan != null && graphicsMan.isGlInitialized()) {
                     graphicsMan.cachePatternTexture(patterns[i], i);
                 }
             }

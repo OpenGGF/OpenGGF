@@ -21,7 +21,14 @@ public record SceneServices(
         Path storageRoot,
         MouseMapper mouse,
         Runnable toGameTitle,
-        Runnable toMasterTitle) {
+        Runnable toMasterTitle,
+        SceneRomLibrary romLibrary) {
+
+    /** Legacy running-ROM scenes do not need a multi-ROM library. */
+    public SceneServices(AudioManager audio, SceneRomArt romArt, Path storageRoot,
+            MouseMapper mouse, Runnable toGameTitle, Runnable toMasterTitle) {
+        this(audio, romArt, storageRoot, mouse, toGameTitle, toMasterTitle, null);
+    }
 
     /** Window-to-logical mouse transform. Returns {@code {x, y, inside ? 1 : 0}}. */
     @FunctionalInterface

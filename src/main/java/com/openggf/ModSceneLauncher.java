@@ -11,6 +11,7 @@ import com.openggf.game.save.SavePaths;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.mods.code.OwnedSceneFactory;
 import com.openggf.mods.scene.host.SceneRomArtFactory;
+import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.mods.scene.host.SceneServices;
 import java.io.IOException;
 import java.util.logging.Level;
@@ -47,7 +48,8 @@ final class ModSceneLauncher {
                 SavePaths.root(),
                 window == 0 ? null : mouseMapper(window, graphics, logicalWidth, logicalHeight),
                 () -> exitToGameTitle(gameLoop),
-                () -> gameLoop.fadeOutTo(gameLoop::returnToMasterTitle));
+                () -> gameLoop.fadeOutTo(gameLoop::returnToMasterTitle),
+                romLibrary(module));
         gameLoop.setGameMode(GameMode.MOD_SCENE);
         gameLoop.modSceneHost.open(factory, services, logicalWidth, logicalHeight);
         gameLoop.resolveFadeManager().startFadeFromBlack(null);
@@ -70,6 +72,16 @@ final class ModSceneLauncher {
             return SceneRomArtFactory.forModule(module, GameServices.rom().getRom());
         } catch (IOException | RuntimeException e) {
             LOG.log(Level.WARNING, "Mod scene opened without ROM art", e);
+            return null;
+        }
+    }
+
+    private static SceneRomLibrary romLibrary(GameModule module) {
+        if (GameModuleRouting.isStandalone(module)) return null;
+        try {
+            return new SceneRomLibrary(module, GameServices.rom().getRom(), GameServices.rom());
+        } catch (IOException | RuntimeException e) {
+            LOG.log(Level.WARNING, "Mod scene opened without multi-ROM content", e);
             return null;
         }
     }

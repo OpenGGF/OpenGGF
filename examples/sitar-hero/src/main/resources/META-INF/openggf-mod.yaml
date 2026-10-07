@@ -1,0 +1,14 @@
+formatVersion: 1
+id: sitar-hero
+name: Sitar Hero
+version: 0.1.0
+authors:
+  - OpenGGF contributors
+description: A Sonic-styled arcade rhythm game with Green Hill, Chemical Plant and Angel Island Act 1, using your supplied ROMs. Five-fret instruments and direct-hit bongos share a cosmetic seven-character roster.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: any
+entrypoint: sitarhero.SitarHeroMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

@@ -17,7 +17,9 @@ public final class ModApiVersion {
      * entry fade admission reports whether it advanced; checkpoint readiness includes
      * the native released title overlay's completion. Bounded scene replay and
      * session-owned actual-PCM recording support creator rewind without giving
-     * it developer-history or sound-driver restore ownership.
+     * it developer-history or sound-driver restore ownership. Mixed-ROM startup
+     * scenes expose supplied-game art, immutable timestamped physical input and
+     * bounded semantic ROM music with consumed-sample playback and section parts.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

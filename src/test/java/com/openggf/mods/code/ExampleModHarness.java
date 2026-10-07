@@ -143,7 +143,8 @@ public final class ExampleModHarness implements AutoCloseable {
             SceneServices services = new SceneServices(audio ? GameServices.audio() : null,
                     SceneRomArtFactory.forModule(effective, GameServices.rom().getRom()),
                     saves, (x, y) -> new int[] {(int) x, (int) y, 1}, () -> exits.add("game"),
-                    () -> exits.add("master"));
+                    () -> exits.add("master"), new com.openggf.mods.scene.host.SceneRomLibrary(
+                            effective, GameServices.rom().getRom(), GameServices.rom()));
             host.open(factory, services, width, height);
         } catch (IOException e) {
             throw new UncheckedIOException(e);

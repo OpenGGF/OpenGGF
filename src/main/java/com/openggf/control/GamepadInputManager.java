@@ -25,6 +25,8 @@ import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_Y;
 
 public class GamepadInputManager {
     private final GamepadStateSource stateSource;
+    private List<GamepadStateSource.DeviceState> physicalDevices = List.of();
+    private boolean physicalSampleSinceLogicalPoll;
     private PlayerInputState previousP1 = PlayerInputState.neutral();
     private PlayerInputState previousP2 = PlayerInputState.neutral();
     private boolean previousDebugModeButtonHeld;
@@ -65,12 +67,14 @@ public class GamepadInputManager {
     }
 
     public LogicalInputSnapshot poll(InputBindings bindings) {
+        List<GamepadStateSource.DeviceState> connected = physicalSampleSinceLogicalPoll
+                ? physicalDevices : pollPhysicalDevices();
+        physicalSampleSinceLogicalPoll = false;
         if (bindings == null || !bindings.controllerEnabled()) {
             resetPreviousStates();
             return LogicalInputSnapshot.ofPlayers(PlayerInputState.neutral(), PlayerInputState.neutral());
         }
 
-        List<GamepadStateSource.DeviceState> connected = connectedDevices();
         trackPresentation(connected, bindings.controllerDeadzone());
         int nextPad = 0;
         java.util.Arrays.fill(playerStyles, null);
@@ -188,14 +192,26 @@ public class GamepadInputManager {
         playerPrimary[player] = primary;
     }
 
-    private List<GamepadStateSource.DeviceState> connectedDevices() {
+    /**
+     * Samples complete physical devices independently of Genesis assignments. The outer
+     * event loop may call this more often than simulation ticks; the next logical poll
+     * reuses this sample once, then resumes sampling if no new event-loop poll occurred.
+     */
+    public List<GamepadStateSource.DeviceState> pollPhysicalDevices() {
         List<GamepadStateSource.DeviceState> connected = new ArrayList<>();
         for (GamepadStateSource.DeviceState device : stateSource.pollDevices()) {
             if (device != null && device.connected()) {
                 connected.add(device);
             }
         }
-        return connected;
+        physicalDevices = List.copyOf(connected);
+        physicalSampleSinceLogicalPoll = true;
+        return physicalDevices;
+    }
+
+    /** Most recently sampled physical state, including controls unused by Genesis. */
+    public List<GamepadStateSource.DeviceState> physicalDevices() {
+        return physicalDevices;
     }
 
     private PlayerInputState mapDevice(

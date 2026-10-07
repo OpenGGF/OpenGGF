@@ -14,6 +14,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestOwnedSmpsAudioStream {
     @Test
+    void finitePreparationServicesOneOuterFrameWithoutAdvancingDirectReadCadence() {
+        try (OwnedSmpsAudioStream stream = stream(new AtomicInteger())) {
+            SmpsDriverSession session = session(stream);
+            stream.serviceAndRenderFrame(new short[1_470], 735);
+            assertEquals(1, session.serviceInvocationCountForTesting());
+            assertEquals(735, session.renderedStereoFramesForTesting());
+        }
+    }
+    @Test
     void initializesOneStableSessionDeviceAndLogicalDriver() {
         AtomicInteger writes = new AtomicInteger();
         try (OwnedSmpsAudioStream stream = stream(writes)) {

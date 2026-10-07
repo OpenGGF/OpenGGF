@@ -12,6 +12,7 @@ import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.Level;
 import com.openggf.level.LevelData;
+import com.openggf.level.Palette;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -103,6 +104,15 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
 
     @Override
     public Level loadLevel(int levelIdx) throws IOException {
+        return buildLevel(levelIdx, true);
+    }
+
+    /** ROM-only presentation copy: never publishes palettes or patterns to live graphics. */
+    public Sonic1Level buildDetachedLevel(int levelIdx) throws IOException {
+        return buildLevel(levelIdx, false);
+    }
+
+    private Sonic1Level buildLevel(int levelIdx, boolean publishGraphics) throws IOException {
         int zone;
         int act;
         if (levelIdx >= S1_LEVEL_INDEX_BASE) {
@@ -204,7 +214,7 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
                 Sonic1Constants.COLLISION_ARRAY_NORMAL_ADDR,
                 Sonic1Constants.COLLISION_ARRAY_ROTATED_ADDR,
                 Sonic1Constants.ANGLE_MAP_ADDR,
-                allObjects, rings, ringSpriteSheet, boundaries);
+                allObjects, rings, ringSpriteSheet, boundaries, publishGraphics);
         // Pass ring spawn mapping so Sonic1ObjectRegistry can create Sonic1RingInstance
         // with the correct expanded ring positions when InitObjectManager runs.
         level.setRingSpawnMapping(ringResult.ringSpawnMapping());
@@ -297,6 +307,21 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
             return null;
         }
         return playerArt.loadForCharacter(characterCode);
+    }
+
+    @Override
+    public Palette loadCharacterPalette(String characterCode) {
+        if (!"sonic".equalsIgnoreCase(characterCode)) return null;
+        try {
+            Palette palette = new Palette();
+            // PalLoad_Fade(palid_Sonic): resolve the actual PalPointers entry, including
+            // REV01's shifted palette ids, rather than assuming the REV00 absolute address.
+            palette.fromSegaFormat(rom.readBytes(getPaletteDataAddr(findSonicPaletteId()),
+                    Palette.PALETTE_SIZE_IN_ROM));
+            return palette;
+        } catch (IOException failure) {
+            throw new IllegalStateException("Sonic character palette unavailable", failure);
+        }
     }
 
     private void ensureHelpers() throws IOException {

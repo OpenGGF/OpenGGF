@@ -6,8 +6,7 @@ import org.lwjgl.system.MemoryStack;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_AXIS_LEFT_X;
-import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_AXIS_LEFT_Y;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_AXIS_LAST;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LAST;
 import static org.lwjgl.glfw.GLFW.GLFW_JOYSTICK_1;
 import static org.lwjgl.glfw.GLFW.GLFW_JOYSTICK_LAST;
@@ -31,12 +30,15 @@ public class GlfwGamepadStateSource implements GamepadStateSource {
                 for (int button = 0; button <= GLFW_GAMEPAD_BUTTON_LAST; button++) {
                     buttons[button] = state.buttons(button) != 0;
                 }
+                float[] axes = new float[GLFW_GAMEPAD_AXIS_LAST + 1];
+                for (int axis = 0; axis <= GLFW_GAMEPAD_AXIS_LAST; axis++) {
+                    axes[axis] = state.axes(axis);
+                }
                 devices.add(DeviceState.connected(
                         joystickId,
                         glfwGetGamepadName(joystickId),
                         buttons,
-                        state.axes(GLFW_GAMEPAD_AXIS_LEFT_X),
-                        state.axes(GLFW_GAMEPAD_AXIS_LEFT_Y)));
+                        axes));
             }
         }
         return List.copyOf(devices);
