@@ -75,7 +75,7 @@ class TestLevelContinuationCarry {
 
     @Test void rewindRestoresRequestAndConsumedDestinationBank() {
         request(13, 42);
-        var adapter = new LevelTransitionRewindAdapter(transitions);
+        var adapter = new LevelTransitionRewindAdapter(transitions, new FreshLevelTransitionBoundaryController());
         var beforeFade = adapter.capture();
         transitions.consumeZoneActRequest();
         LevelContinuationCarry.beginLoad(transitions, 22, 0);

@@ -4991,7 +4991,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public RewindSnapshottable<?> levelTransitionRewindSnapshottable() {
-        return new LevelTransitionRewindAdapter(transitions);
+        return new LevelTransitionRewindAdapter(transitions, freshLevelTransitionBoundary);
     }
 
     /** Returns the rewind adapter for the history-dependent persistent Plane B nametable. */
