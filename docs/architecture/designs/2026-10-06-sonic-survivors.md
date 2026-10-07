@@ -542,3 +542,71 @@ and collection paths are exercised by the tests. Frame-rate gains are not measur
 
 Installed the final jar into `mods/sonic-survivors.jar` and refreshed only its trusted
 SHA-256, preserving the other mod entries and the real save profile.
+
+### Tougher enemies and six-slot builds (2026-10-07)
+
+Current checkout, base `a815571da28309de68f815a3e2a3c5600dfed40c`. Health time
+scaling is now `1 + 1.4p + 0.4p²` (p = stage pressure seconds / 120), with
+35% per route tier. Ordinary batches gain one enemy per 60 pressure seconds
+instead of 30; intervals bottom out at 20 frames instead of 12. Surges and
+uncapped admission remain. Ring toll scales before Armor by 17.5% per completed
+30 seconds of active run time, plus 15% per route stage and 10% per extra act.
+Long mode reduces the time contribution to 75%. Run time carries across arenas,
+so reaching a boss or choosing the next act cannot reset incoming damage.
+
+Three weapon types and three buff types constrain offers, including rerolls;
+owned ranks remain eligible and a maxed equipped build yields ring-bonus cards.
+Homing Dash/Ground Pound use weapon slots; Air Jump uses a buff slot. Shops,
+relics and temporary monitors remain independent. Appended IDs preserve existing
+upgrade identity. Twin Lance, Meteor Shower and Pulse Field reuse the mod's
+captured projectile/effect paths; Amplifier, Second Wind and Quick Study derive
+stats from captured upgrade ranks. New auto attacks use the active fight clock,
+not the presentation clock that advances under menus. Card labels and HUD counts
+make slot ownership visible. No new persistent profile fields are needed.
+
+Rejected: retaining density as the main difficulty lever would compound existing
+population costs while leaving each hit inexpensive. Raising ring toll only by
+stage would leave endless flat. No ROM parity claim applies to this mod balance.
+
+Validation: the change-based plan selects all 2,993 classes plus guards via the
+unclassified example-path fallback. Focused validation is proportionate: changes
+remain inside the mod, use existing host contracts, and production paths are
+exercised by its complete fixture. Java 21 queued Maven `-B -Dmse=off
+-Dtest=TestSonicSurvivors -Dsonic2.rom.path=<absolute root S2 REV01 ROM> test`
+passed 80 tests, zero failures/errors/skips (36.95 seconds fixture, 1:09 total).
+New checks cover cap filtering over repeated deals, movement classification,
+maxed-build fallback, slot restore, projectile emission, buff stats and escalating
+toll with rewind. Existing encounter/endless tests cover reduced but continuing
+batch growth and growing HP. Final package passes `ggfmod` validation.
+
+The gameplay-capture skill produced a 120-frame CPZ1 card preview with seed 12345,
+the existing authored Start input and isolated saves under
+`/private/tmp/sonic-survivors-builds-20261007`. State CSV confirms live solo Sonic
+in LEVEL mode; frame 100 shows Twin Lance, Ground Pound and Haste cards. Visual
+inspection prompted a dark backing behind the slot counter. This is presentation
+verification, not human difficulty or late-run performance certification.
+Affected matrix: existing solo Sonic/Tails act obligations and inherited donor/
+per-act boss rewind gaps remain; EHZ1 gains build-cap and damage-pressure checks.
+No full engine suite or guards were rerun. Refreshed the local installed jar and
+its existing trusted hash; actual player saves and other mod settings preserved.
+
+### Five-/ten-minute mode durations (2026-10-07)
+
+Follow-up on the same base and checkout: standard stages now last 300 seconds,
+long stages 600 seconds, and the endless option is labelled Unlimited. Mode IDs
+remain 0/1/2, preserving saved selection and the existing first-boss unlock rule.
+The Death Egg remains a direct finale. Pressure rates and long-mode boss scaling
+are unchanged, so the longer survival periods continue the requested difficulty
+ramp rather than stretching the previous encounters over a longer clock.
+
+The combined change-based plan still selects 2,993 classes by example fallback.
+The prior 80-case Survivors run covers the unchanged balance/loadout work; this
+localized follow-up uses the mode regressions, parameterizing the production
+countdown/boss-boundary rewind test over both timed durations. Mode persistence,
+legacy defaults, unlock cycling, endless pause/rewind and Death Egg are included.
+
+Java 21 queued Maven with `-Dmse=off -Dtest=TestSonicSurvivors#<five mode methods>`
+and the absolute root S2 REV01 ROM passed all seven parameterized cases, zero
+failures/errors/skips (2.313 seconds fixture). `build.py` and mod package validation
+passed; installed jar and its existing trust hash refreshed. No engine-wide tests
+or repeat of unchanged gameplay checks; actual save data preserved.

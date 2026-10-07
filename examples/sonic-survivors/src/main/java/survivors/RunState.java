@@ -66,9 +66,9 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
 
     static String modeName(int mode) {
         return switch (mode) {
-            case LONG -> "5 MINUTES";
-            case ENDLESS -> "ENDLESS";
-            default -> "2 MINUTES";
+            case LONG -> "10 MINUTES";
+            case ENDLESS -> "UNLIMITED";
+            default -> "5 MINUTES";
         };
     }
 
@@ -114,7 +114,11 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
 
     /** Large banks remain valuable, but no longer buy hundreds of mistakes. */
     int toll(int rings) {
-        int base = Math.max(BASE_TOLL, (rings + 11) / 12);
+        // Active run time survives zone transitions; menus never advance it. Long mode
+        // shares the gentler 75% clock used by encounters. Damage never resets at a boss.
+        double minutes = (frames / 1800) / 2.0 * (mode == LONG ? 0.75 : 1);
+        double threat = 1 + 0.35 * minutes + 0.15 * stage + 0.10 * act;
+        int base = (int) Math.ceil(Math.max(BASE_TOLL, (rings + 11L) / 12) * threat);
         int protection = 8 * level(Upgrades.ARMOR) + (relic(4) ? 15 : 0);
         return Math.max(5, (base * (100 - protection) + 99) / 100);
     }
@@ -128,7 +132,7 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
     }
 
     double xpScale() {
-        return (1 + 0.20 * level(Upgrades.GREED)) * (1 + 0.10 * shopGrowth);
+        return (1 + 0.20 * level(Upgrades.GREED)) * (1 + 0.25 * level(Upgrades.SCHOLAR)) * (1 + 0.10 * shopGrowth);
     }
 
     int rerollsPerStage() {
@@ -162,9 +166,23 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
         return earned;
     }
 
-    /** True when every upgrade is at its maximum level. */
+    int occupiedSlots(boolean weapons) {
+        int count = 0;
+        for (int id = 0; id < Upgrades.COUNT; id++)
+            if (has(id) && Upgrades.weapon(id) == weapons) count++;
+        return count;
+    }
+
+    boolean canUpgrade(int id) {
+        return level(id) < Upgrades.maxLevel(id)
+                && (has(id) || occupiedSlots(Upgrades.weapon(id)) < Upgrades.SLOT_LIMIT);
+    }
+
+    int hurtRecovery() { return Guard.INVULNERABLE_FRAMES + 6 * level(Upgrades.RECOVERY); }
+
+    /** True when the equipped build has no eligible upgrades left. */
     boolean maxedOut() {
-        for (int i = 0; i < Upgrades.COUNT; i++) if (levels[i] < Upgrades.maxLevel(i)) return false;
+        for (int i = 0; i < Upgrades.COUNT; i++) if (canUpgrade(i)) return false;
         return true;
     }
 

@@ -18,7 +18,14 @@ final class Upgrades {
     // Passives.
     static final int POWER = 10, MAGNET = 11, ARMOR = 12, HASTE = 13, GREED = 14, SPRING_HEELS = 15,
             COMBO_KEEPER = 16, BARRIER = 17;
-    static final int COUNT = 18;
+    static final int TWIN_LANCE = 18, METEOR = 19, PULSE = 20,
+            REACH = 21, RECOVERY = 22, SCHOLAR = 23;
+    static final int COUNT = 24;
+    static final int SLOT_LIMIT = 3;
+
+    static boolean weapon(int id) {
+        return id <= HOMING_DASH || id == GROUND_POUND || id >= TWIN_LANCE && id <= PULSE;
+    }
 
     static final int KIND_BOUNCE = 0, KIND_AUTO = 1, KIND_MOVE = 2, KIND_PASSIVE = 3;
 
@@ -41,11 +48,19 @@ final class Upgrades {
             case GREED -> "GREED";
             case SPRING_HEELS -> "SPRING HEELS";
             case COMBO_KEEPER -> "COMBO KEEPER";
+            case TWIN_LANCE -> "TWIN LANCE";
+            case METEOR -> "METEOR SHOWER";
+            case PULSE -> "PULSE FIELD";
+            case REACH -> "AMPLIFIER";
+            case RECOVERY -> "SECOND WIND";
+            case SCHOLAR -> "QUICK STUDY";
             default -> "BARRIER";
         };
     }
 
     static int kind(int id) {
+        if (id == TWIN_LANCE) return KIND_BOUNCE;
+        if (id == METEOR || id == PULSE) return KIND_AUTO;
         if (id <= HOMING_RINGS) return KIND_BOUNCE;
         if (id <= FLICKIES) return KIND_AUTO;
         if (id <= GROUND_POUND) return KIND_MOVE;
@@ -98,6 +113,12 @@ final class Upgrades {
             case GREED -> new String[]{"MORE RING DROPS", "AND +" + 20 * l + "% XP"};
             case SPRING_HEELS -> new String[]{"HIGHER BOUNCES AND", "+" + l + " STOMP DAMAGE"};
             case COMBO_KEEPER -> new String[]{"COMBO SURVIVES", "LANDING FOR " + secs(comboGrace(l)) + "S"};
+            case TWIN_LANCE -> new String[]{"BOUNCES FIRE 2 LANCES", "PIERCE " + (2 + l) + " DMG " + (4 + 2 * l)};
+            case METEOR -> new String[]{"RAIN " + (2 + l) + " METEORS", "EVERY 3S DMG " + (3 + l)};
+            case PULSE -> new String[]{"PULSE EVERY 2S", "R" + (40 + 8 * l) + " DMG " + (2 + l)};
+            case REACH -> new String[]{"AREA WEAPON RADIUS", "+" + 15 * l + "%"};
+            case RECOVERY -> new String[]{"AFTER HIT PROTECTION", "+" + 10 * l + "% TIME"};
+            case SCHOLAR -> new String[]{"EXPERIENCE GAIN", "+" + 25 * l + "%"};
             default -> new String[]{"A SHIELD RETURNS", "EVERY " + secs(barrierCooldown(l)) + "S"};
         };
     }

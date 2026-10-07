@@ -6,7 +6,7 @@ Every zone on the route becomes a walled **arena** cut from its own act's terrai
 Your character starts with nothing but their jump: **bounce on badniks to keep going**. Each rebound off an
 enemy chains a **combo** that multiplies stomp damage and ring drops, ten eligible bounces charge an eight-second **Fever** burst, and defeated badniks drop **rings**, which are both
 your **health** and **experience**. Level up to pick new weapons, moves and passives,
-survive the two- or five-minute clock, beat the zone's **boss**, choose the next act, and push on to
+survive the five- or ten-minute clock, beat the zone's **boss**, choose the next act, and push on to
 the Death Egg. Rings and Chaos Emeralds won along the way upgrade both characters between runs.
 
 The stock act can never be finished: the signpost, capsule, boss triggers and every stock object
@@ -35,10 +35,10 @@ Sky Chase has no ground to fight on and is skipped.
    run has reached. Starting further along grants two catch-up level-ups per skipped zone (at
    most ten). Start opens that zone's first act in **camp**.
 2. **Camp.** Spend banked rings in the shop, then START RUN. A run begins with **30 rings**.
-   The **MODE** row cycles with Enter/Start between **2 MINUTES**, **5 MINUTES** and **ENDLESS**.
-   Five-minute and endless modes unlock permanently after your first boss clear; existing
+   The **MODE** row cycles with Enter/Start between **5 MINUTES**, **10 MINUTES** and **UNLIMITED**.
+   Ten-minute and unlimited modes unlock permanently after your first boss clear; existing
    profiles with a cleared boss already qualify. The choice is saved and fixed for the run.
-   Five-minute mode adds more encounters with a gentler pressure ramp and a tougher boss,
+   Ten-minute mode adds more encounters with a gentler pressure ramp and a tougher boss,
    keeping 10-second ring formations. Endless stays in the starting arena,
    shows elapsed time, and keeps spawning waves without a boss or route transition;
    enemy health, batch sizes and elite frequency keep escalating. Enemies, enemy shots, reward
@@ -47,7 +47,7 @@ Sky Chase has no ground to fight on and is skipped.
    reward rings and monitors blink and expire after one minute to keep object slots available;
    Emeralds never expire. Escape/Back retires and banks held rings
    too; dying uses the usual game-over payout. Death Egg always stays a direct boss finale.
-3. **Survive.** The clock counts down **2:00** or **5:00** (upwards in endless). Badniks spawn just off-screen on both sides and
+3. **Survive.** The clock counts down **5:00** or **10:00** (upwards in endless). Badniks spawn just off-screen on both sides and
    drop in from above, faster and tougher as the clock runs down and further along the route.
    Every 10 seconds a formation of five floating rings appears somewhere in the arena away
    from Sonic. Red chevrons at the screen edges point at badniks approaching from off-screen. Initially every 30
@@ -84,15 +84,20 @@ The last five seconds are **REGROUP**: ordinary reinforcements stop so you can c
 collect rewards. Scheduled elites can still arrive. The HUD shows the wave, phase and progress.
 Boss fights use mixed, slower reinforcements without the surge cycle.
 
-Enemy health continues growing with elapsed combat time, route tier and chosen act. Spawn
-batches grow too, even once spawn intervals reach their minimum. Five-minute mode uses 75%
+Enemy health grows by a stronger curve: at two minutes the time multiplier is 2.8x
+(previously 1.77x), before route tier (+35% per tier) and act bonuses. Spawn batches
+add one enemy per minute instead of every 30 seconds, and normal spawn intervals
+bottom out at 20 frames instead of 12. Surges still halve the interval and add two enemies. Ten-minute mode uses 75%
 of the normal time-pressure ramp and doubles the timed boss's health. Death Egg remains its
 direct finale. Endless keeps escalating instead of reaching a population/health plateau.
 
 ## Rings are health
 
 Any badnik, projectile or boss hit costs a **ring toll**: 10 rings or one twelfth of your
-held rings rounded up, whichever is greater, before Armor. Armor reduces that toll by 8%
+held rings rounded up, whichever is greater, before progression and Armor. That base
+increases by 17.5% every 30 seconds of active run time, +15% per route stage after
+Emerald Hill and +10% per act after act 1. Time pressure carries across zones;
+ten-minute mode applies 75% of the time bonus. The result rounds up before Armor. Armor reduces that toll by 8%
 per level; the red emerald adds 15% reduction, with a five-ring minimum. The HUD shows the
 current cost. Large banks still help, but cannot trivialise an entire run. Hits give one
 second of protection, with no knockback; half the toll scatters as rings you can grab back. These **lost rings** ignore
@@ -144,13 +149,24 @@ monitors keep their own stock duration.
 
 Reward rings collected are experience. Each level-up pauses play and deals **three cards** (four with
 the Talent shop item), favouring upgrades you already own. Until you own a weapon, one card is
-always a weapon. **Reroll** deals again (one per zone, plus the shop and Chemical Plant's
+always a weapon. Your build holds **three weapon types and three buff types**.
+Ranks do not consume extra slots. Homing Dash and Ground Pound count as weapons;
+Air Jump and all passives count as buffs. Full categories offer only upgrades to
+owned types, including on rerolls. Once your six equipped types are maxed, cards
+award 25 rings instead. Shop upgrades, emerald relics and temporary monitors use
+no build slots. The HUD shows both slot counts. **Reroll** deals again (one per zone, plus the shop and Chemical Plant's
 emerald). Up/down chooses and **Enter** (keypad Enter also works) or **gamepad Start** confirms.
 Jump never selects a card. Camp, cards and results own Enter/Start, so confirming does not
 also toggle the engine pause. During ordinary play the usual pause controls still work.
 
 | Upgrade | Kind | Max | Effect |
 | --- | --- | --- | --- |
+| Twin Lance | on bounce | 5 | Two horizontal piercing lances, damage 6–14, 3–7 hits each |
+| Meteor Shower | auto | 5 | 3–7 falling sparks every 3 s, damage 4–8, two hits each |
+| Pulse Field | auto | 5 | A nearby blast every 2 s, radius 48–80, damage 3–7 |
+| Amplifier | passive | 5 | +15–75% area attack radius (including orbit contact); excludes chain range and projectiles |
+| Second Wind | passive | 5 | +10–50% protection time after a hit or shield break; revive protection unchanged |
+| Quick Study | passive | 5 | +25–125% XP, multiplying Greed and shop growth |
 | Shockwave | on bounce | 5 | A blast around the bounce (radius 48-96, damage 3-7); also pops enemy shots |
 | Spark Burst | on bounce | 5 | 3-8 sparks fly out from the bounce |
 | Chain Zap | on bounce | 5 | Lightning jumps between 2-6 nearby badniks |

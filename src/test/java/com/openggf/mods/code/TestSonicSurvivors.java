@@ -754,7 +754,7 @@ class TestSonicSurvivors {
         assertEquals(0, getInt(reloadProfile(), "mode"));
     }
 
-    @Test void oldAndInvalidProfilesKeepTheTwoMinuteDefaultAndCannotBypassTheUnlock() throws Exception {
+    @Test void oldAndInvalidProfilesKeepTheFiveMinuteDefaultAndCannotBypassTheUnlock() throws Exception {
         launch(0, 0);
         Path file = com.openggf.game.save.SavePaths.root().resolve("sonic-survivors/profile.txt");
         Files.createDirectories(file.getParent());
@@ -768,17 +768,20 @@ class TestSonicSurvivors {
         assertEquals(2, call(reloadProfile(), "selectedMode"));
     }
 
-    @Test void fiveMinuteClockPassesTwoMinutesThenSpawnsBossAndReplaysItsBoundary() throws Exception {
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 1})
+    void timedModesUseFiveAndTenMinutesThenReplayTheirBossBoundary(int mode) throws Exception {
         var fixture = launch(0, 0);
         set(profile(), "unlocked", 1);
-        set(profile(), "mode", 1);
+        set(profile(), "mode", mode);
         startRun(fixture);
-        assertEquals(300, call(stage(), "survivalSeconds"));
-        assertTrue(getInt(stage(), "stageFrames") > 17900);
+        int seconds = mode == 0 ? 300 : 600;
+        assertEquals(seconds, call(stage(), "survivalSeconds"));
+        assertTrue(getInt(stage(), "stageFrames") > seconds * 60 - 100);
         // Changing a saved preference cannot change a run in progress.
         set(profile(), "mode", 2);
         set(stage(), "fightFrames", 7199);
-        set(stage(), "stageFrames", 10801);
+        set(stage(), "stageFrames", seconds * 60 - 7199);
         fixture.stepIdleFrames(2);
         assertEquals(FIGHT, phase());
         assertTrue(objects("Boss").isEmpty());
@@ -789,7 +792,7 @@ class TestSonicSurvivors {
         assertEquals(BOSS, phase());
         assertEquals(1, objects("Boss").size());
         registry.restore(snapshot);
-        assertEquals(1, getInt(run(), "mode"));
+        assertEquals(mode, getInt(run(), "mode"));
         fixture.stepIdleFrames(1);
         assertEquals(BOSS, phase());
         assertEquals(1, objects("Boss").size());
@@ -1080,6 +1083,68 @@ class TestSonicSurvivors {
         assertEquals(freeSlot, manager.firstFreeDynamicSlot());
     }
 
+    @Test void loadoutCapsRerollsAndMaxedBuildRewardsRespectSixSlots() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        int[] levels = (int[]) get(run(), "levels");
+        for (int id : new int[]{0, 7, 9, 8, 21, 22}) levels[id] = 1;
+        assertEquals(3, call(run(), "occupiedSlots", true));
+        assertEquals(3, call(run(), "occupiedSlots", false));
+        assertFalse((boolean) call(run(), "canUpgrade", 18));
+        assertFalse((boolean) call(run(), "canUpgrade", 23));
+        for (int reroll = 0; reroll < 30; reroll++) {
+            call(stage(), "dealCards");
+            int[] cards = (int[]) get(stage(), "cards");
+            for (int i = 0; i < getInt(stage(), "cardCount"); i++)
+                assertTrue(levels[cards[i]] > 0, "full slots only offer owned upgrades");
+        }
+        for (int id : new int[]{0, 21, 22}) levels[id] = 5;
+        for (int id : new int[]{7, 9, 8}) levels[id] = 3;
+        assertTrue((boolean) call(run(), "maxedOut"));
+        call(stage(), "dealCards");
+        assertEquals(1, getInt(stage(), "cardCount"));
+        assertEquals(-1, ((int[]) get(stage(), "cards"))[0]);
+        var snapshot = call(run(), "capture");
+        Arrays.fill(levels, 0);
+        call(run(), "restore", snapshot);
+        assertEquals(3, call(run(), "occupiedSlots", true));
+    }
+
+    @Test void newWeaponsFireAndBuffsAlterTheirProductionStats() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        int[] levels = (int[]) get(run(), "levels");
+        levels[18] = levels[19] = levels[20] = 1;
+        levels[21] = levels[22] = levels[23] = 2;
+        assertEquals(130, call(stage(), "areaRadius", 100));
+        assertEquals(72, call(run(), "hurtRecovery"));
+        assertEquals(1.5, (double) call(run(), "xpScale"), 0.0001);
+        call(stage(), "onBounce", fixture.sprite().getCentreX(), fixture.sprite().getCentreY());
+        assertEquals(2, Arrays.stream((int[]) get(stage(), "pKind")).filter(k -> k != 0).count());
+        set(stage(), "fightFrames", 360);
+        call(stage(), "autoWeapons", fixture.sprite());
+        assertEquals(5, Arrays.stream((int[]) get(stage(), "pKind")).filter(k -> k != 0).count());
+        assertTrue(Arrays.stream((int[]) get(stage(), "eKind")).anyMatch(l -> l > 0), "pulse renders its blast");
+    }
+
+    @Test void damagePressureGrowsWithTimeRouteAndActAndSurvivesRewind() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        assertEquals(10, call(run(), "toll", 30));
+        set(run(), "frames", 7200);
+        assertEquals(17, call(run(), "toll", 30));
+        set(run(), "stage", 2);
+        set(run(), "act", 1);
+        assertEquals(21, call(run(), "toll", 30));
+        var snapshot = call(run(), "capture");
+        set(run(), "frames", 18000);
+        assertTrue((int) call(run(), "toll", 30) > 21);
+        call(run(), "restore", snapshot);
+        assertEquals(21, call(run(), "toll", 30));
+        set(run(), "mode", 1);
+        assertTrue((int) call(run(), "toll", 30) < 21);
+    }
+
     @Test void encountersWarnSurgeRecoverAndKeepEscalating() throws Exception {
         var fixture = launch(0, 0);
         startRun(fixture);
@@ -1101,7 +1166,7 @@ class TestSonicSurvivors {
         set(stage(), "fightFrames", 36000);
         set(stage(), "spawnTimer", 0);
         call(stage(), "spawnWaves");
-        assertTrue(objects("Enemy").size() - surge >= 21, "endless pressure has no old plateau");
+        assertTrue(objects("Enemy").size() - surge >= 11, "endless still grows, at half the old batch ramp");
         assertTrue((int) call(objects("Enemy").get(objects("Enemy").size() - 1), "maxHp") >
                 (int) call(objects("Enemy").get(0), "maxHp"));
     }

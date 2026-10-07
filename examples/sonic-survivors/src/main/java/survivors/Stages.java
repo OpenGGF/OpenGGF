@@ -122,7 +122,7 @@ final class Stages {
         if (override != null) {
             try { return Math.max(1, Integer.parseInt(override.trim())); } catch (NumberFormatException ignored) { }
         }
-        return mode == RunState.LONG ? 300 : 120;
+        return mode == RunState.LONG ? 600 : 300;
     }
 
     /** Overall difficulty tier: one per stage, plus the act's extra difficulty. */

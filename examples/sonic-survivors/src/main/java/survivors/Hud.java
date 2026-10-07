@@ -177,6 +177,9 @@ final class Hud {
             Draw.bar(s, s.camera().getWidth() / 2 - 40, 46, 80, 3,
                     (stage.fightFrames % Stage.ENCOUNTER_FRAMES) / (double) Stage.ENCOUNTER_FRAMES, Draw.GOLD, 1f);
         }
+        Draw.rect(s, 4, 197, 182, 11, 0x080E30, 0.90f);
+        Draw.shadow(s, "WEAPONS " + run.occupiedSlots(true) + "/3  BUFFS " + run.occupiedSlots(false) + "/3",
+                8, 200, 1, Draw.WHITE, 1f);
         // Owned upgrades, compact.
         int x = 8;
         y = 210;
@@ -197,7 +200,7 @@ final class Hud {
         } else {
             String time = stage.endless() ? clock(stage.fightFrames / 60 * 60)
                     : clock(stage.phase == Stage.INTRO ? stage.survivalSeconds() * 60 : stage.stageFrames);
-            if (stage.endless()) Draw.centred(s, "ENDLESS", 25, 1, Draw.CYAN, 1f);
+            if (stage.endless()) Draw.centred(s, "UNLIMITED", 25, 1, Draw.CYAN, 1f);
             boolean hurry = stage.phase == Stage.FIGHT && !stage.endless() && stage.stageFrames < 10 * 60;
             Draw.centred(s, time, 6, 2, hurry && (stage.frameTick / 10) % 2 == 0 ? Draw.RED : Draw.WHITE, 1f);
         }
@@ -236,6 +239,12 @@ final class Hud {
             case Upgrades.GREED -> "GRD";
             case Upgrades.SPRING_HEELS -> "HEEL";
             case Upgrades.COMBO_KEEPER -> "KEEP";
+            case Upgrades.TWIN_LANCE -> "LNC";
+            case Upgrades.METEOR -> "MET";
+            case Upgrades.PULSE -> "PLS";
+            case Upgrades.REACH -> "AMP";
+            case Upgrades.RECOVERY -> "WND";
+            case Upgrades.SCHOLAR -> "STDY";
             default -> "BAR";
         };
     }
@@ -246,7 +255,7 @@ final class Hud {
         var arena = stage.arena();
         Draw.centred(s, Stages.name(arena.stage()), 92, 2, Draw.GOLD, alpha);
         String goal = arena.stage() == Stages.DEZ ? "DEFEAT SILVER SONIC!"
-                : stage.endless() ? "ENDLESS SURVIVAL!" : "SURVIVE " + clock(stage.survivalSeconds() * 60) + "!";
+                : stage.endless() ? "UNLIMITED SURVIVAL!" : "SURVIVE " + clock(stage.survivalSeconds() * 60) + "!";
         Draw.centred(s, goal, 114, 2, Draw.WHITE, alpha);
         Draw.centred(s, stage.endless() ? "ESC / BACK: BANK RINGS AND LEAVE"
                 : "BOUNCE ON BADNIKS TO KEEP YOUR COMBO GOING", 140, 1, Draw.CYAN, alpha);
@@ -273,7 +282,7 @@ final class Hud {
             if (selected) Draw.outline(s, left + 6, y, panelW - 12, cardH, (stage.frameTick / 6) % 2 == 0 ? Draw.GOLD : Draw.WHITE, 1f);
             if (card < 0) {
                 Draw.shadow(s, "RING BONUS", left + 14, y + 5, 1, Draw.GOLD, 1f);
-                Draw.shadow(s, "EVERYTHING IS MAXED: +25 RINGS", left + 14, y + 17, 1, Draw.WHITE, 1f);
+                Draw.shadow(s, "BUILD MAXED: +25 RINGS", left + 14, y + 17, 1, Draw.WHITE, 1f);
                 continue;
             }
             int next = run.level(card) + 1;
@@ -281,7 +290,7 @@ final class Hud {
             MenuArt.CardText text = s.gameService(MenuArt.class).cards[card][next];
             String level = text.level();
             Draw.shadow(s, level, left + panelW - 14 - Draw.width(level, 1), y + 4, 1, next == 1 ? Draw.GREEN : Draw.WHITE, 1f);
-            String kind = Upgrades.kindName(card);
+            String kind = (Upgrades.weapon(card) ? "WEAPON " : "BUFF ") + (run.has(card) ? "+" : "NEW");
             Draw.text(s, kind, left + 22 + Draw.width(Upgrades.name(card), 1), y + 4, 1, Draw.GREY, 1f);
             Draw.shadow(s, text.first(), left + 14, y + 14, 1, Draw.WHITE, 1f);
             Draw.shadow(s, text.second(), left + 14, y + 23, 1, Draw.WHITE, 1f);
@@ -315,7 +324,7 @@ final class Hud {
                 Draw.shadow(s, (selected ? "> " : "  ") + "START RUN", left + 10, y, 1, selected ? Draw.GREEN : Draw.GREEN, 1f);
             } else if (row == Stage.CAMP_MODE) {
                 String label = stage.arena().stage() == Stages.DEZ ? "MODE: BOSS FINALE"
-                        : !profile.extendedModesUnlocked() ? "MODE: 2 MIN (CLEAR A BOSS TO UNLOCK)"
+                        : !profile.extendedModesUnlocked() ? "MODE: 5 MIN (CLEAR A BOSS TO UNLOCK)"
                         : "MODE: " + RunState.modeName(profile.selectedMode()) + " (ENTER TO CHANGE)";
                 Draw.shadow(s, (selected ? "> " : "  ") + label, left + 10, y, 1, colour, 1f);
             } else if (row == Stage.CAMP_TITLE) {

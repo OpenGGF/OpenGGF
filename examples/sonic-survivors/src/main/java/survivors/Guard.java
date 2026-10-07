@@ -55,7 +55,7 @@ final class Guard {
         var run = services.gameService(RunState.class);
         Stage stage = Stage.find(services);
         if (player.hasShield()) {
-            player.setInvulnerableFrames(INVULNERABLE_FRAMES);
+            player.setInvulnerableFrames(run == null ? INVULNERABLE_FRAMES : run.hurtRecovery());
             player.removeShield();
             services.audioManager().playSfx(GameSound.HURT);
             if (stage != null) stage.onPlayerHit(0);
@@ -75,7 +75,7 @@ final class Guard {
         }
         int toll = run == null ? RunState.BASE_TOLL : run.toll(rings);
         int lost = Math.min(toll, rings);
-        player.setInvulnerableFrames(INVULNERABLE_FRAMES);
+        player.setInvulnerableFrames(run == null ? INVULNERABLE_FRAMES : run.hurtRecovery());
         player.setRingCount(rings - lost);
         services.audioManager().playSfx(GameSound.RING_SPILL);
         if (stage != null) {

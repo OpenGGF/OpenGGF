@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * The arena's controller, placed as the level's only object. It walls the camera and Sonic into
- * the arena, runs the stage's phases (camp shop before a run, the intro, two minutes of waves,
+ * the arena, runs the stage's phases (camp shop before a run, the intro, timed or unlimited waves,
  * the boss, the clear screen and route choice, game over and victory), spawns the badnik waves,
  * owns Sonic's weapons and moves, the bounce combo and the level-up cards, and draws the HUD.
  * Weapon projectiles use growable primitive arrays; cosmetic effects use a fixed pool.
@@ -333,9 +333,9 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         if (phase == FIGHT && beat >= 25) return;
         if (--spawnTimer > 0) return;
         boolean surge = phase == FIGHT && beat >= 18;
-        spawnTimer = Math.max(12, 64 - 3 * tier - seconds / 5) * (phase == BOSS ? 2 : 1);
+        spawnTimer = Math.max(20, 64 - 2 * tier - seconds / 8) * (phase == BOSS ? 2 : 1);
         if (surge) spawnTimer = Math.max(6, spawnTimer / 2);
-        int batch = 1 + seconds / 30 + tier / 3 + (surge ? 2 : 0);
+        int batch = 1 + seconds / 60 + tier / 4 + (surge ? 2 : 0);
         int pattern = (encounterNumber() - 1) % 3;
         if (phase == FIGHT && !surge) {
             if (pattern == 1 && air.length > 0) ground = new int[0];
@@ -366,7 +366,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         }
         double progress = pressureSeconds() / 120.0;
         double actScale = 1 + 0.2 * arena.act();
-        int hp = (int) Math.round(t.hp() * (1 + 0.25 * tier) * (1 + 0.65 * progress + 0.12 * progress * progress) * actScale);
+        int hp = (int) Math.round(t.hp() * (1 + 0.35 * tier) * (1 + 1.4 * progress + 0.4 * progress * progress) * actScale);
         if (elite) hp = hp * 6 + 10;
         var spawn = Enemy.spawnAt(x, y, species, elite);
         int hitpoints = hp;
@@ -448,10 +448,16 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         airJumpsUsed = 0;
         pounding = false;
         double power = run.damageMultiplier() * run.comboMultiplier();
+        int lance = run.level(Upgrades.TWIN_LANCE);
+        if (lance > 0) {
+            for (int dir : new int[]{-1, 1})
+                projectile(P_BOOM, x, y, dir * 0x700, 0, 55,
+                        scaled(4 + 2 * lance, power), 2 + lance);
+        }
         int shock = run.level(Upgrades.SHOCKWAVE);
         if (shock > 0) {
             int radius = Upgrades.shockRadius(shock);
-            effect(E_SHOCK, x, y, radius, Draw.ORANGE, 0);
+            effect(E_SHOCK, x, y, areaRadius(radius), Draw.ORANGE, 0);
             damageArea(x, y, radius, scaled(Upgrades.shockDamage(shock), power), true);
         }
         int sparks = run.level(Upgrades.SPARKS);
@@ -707,7 +713,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         int level = run.level(Upgrades.GROUND_POUND);
         int radius = Upgrades.poundRadius(level);
         int x = player.getCentreX(), y = player.getCentreY() + 16;
-        effect(E_POUND, x, y, radius, Draw.YELLOW, 0);
+        effect(E_POUND, x, y, areaRadius(radius), Draw.YELLOW, 0);
         damageArea(x, y, radius, scaled(Upgrades.poundDamage(level), run.damageMultiplier()), false);
         services().playSfx(0xBD); // sfx_Hammer.
         hitFlash = 4;
@@ -770,6 +776,18 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
                         scaled(3, power), 1);
             }
         }
+        int meteor = run.level(Upgrades.METEOR);
+        if (meteor > 0 && fightFrames % Math.max(1, (int) (180 * run.cooldownScale())) == 0) {
+            for (int i = 0; i < 2 + meteor; i++)
+                projectile(P_SPARK, px + (i * 2 - (1 + meteor)) * 24, py - 96,
+                        0, 0x500, 60, scaled(3 + meteor, power), 2);
+        }
+        int pulse = run.level(Upgrades.PULSE);
+        if (pulse > 0 && fightFrames % Math.max(1, (int) (120 * run.cooldownScale())) == 0) {
+            int radius = 40 + 8 * pulse;
+            effect(E_SHOCK, px, py, areaRadius(radius), Draw.PURPLE, 0);
+            damageArea(px, py, radius, scaled(2 + pulse, power), false);
+        }
         int barrier = run.level(Upgrades.BARRIER);
         if (barrier > 0 && !player.hasShield()) {
             if (++barrierTimer >= (int) (Upgrades.barrierCooldown(barrier) * run.cooldownScale())) {
@@ -792,8 +810,13 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         }
     }
 
-    /** Damages every badnik (and the boss) whose centre lies within {@code radius} of (x, y). */
+    private int areaRadius(int radius) {
+        return (int) Math.round(radius * (1 + 0.15 * run().level(Upgrades.REACH)));
+    }
+
+    /** Damages nearby enemies and bosses, including the Amplifier radius bonus. */
     private void damageArea(int x, int y, int radius, int damage, boolean popShots) {
+        radius = areaRadius(radius);
         for (Enemy enemy : enemies()) {
             int dx = enemy.getX() - x, dy = enemy.getY() - y;
             int reach = radius + enemy.bodyRadius();
@@ -1034,7 +1057,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         var options = new ArrayList<Integer>();
         var weights = new ArrayList<Integer>();
         for (int id = 0; id < Upgrades.COUNT; id++) {
-            if (run.levels[id] >= Upgrades.maxLevel(id)) continue;
+            if (!run.canUpgrade(id)) continue;
             options.add(id);
             // Owned upgrades come up more often, so builds can deepen.
             weights.add(run.levels[id] > 0 ? 3 : 2);
@@ -1053,9 +1076,9 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         if (cardCount == 0) cards[cardCount++] = -1;
         // Until Sonic owns a weapon, the first card is always one: stomps alone do not scale.
         boolean armed = false;
-        for (int id = 0; id <= Upgrades.FLICKIES; id++) armed |= run.levels[id] > 0;
+        for (int id = 0; id < Upgrades.COUNT; id++) armed |= Upgrades.weapon(id) && run.has(id);
         boolean offered = false;
-        for (int i = 0; i < cardCount; i++) offered |= cards[i] >= 0 && cards[i] <= Upgrades.FLICKIES;
+        for (int i = 0; i < cardCount; i++) offered |= cards[i] >= 0 && Upgrades.weapon(cards[i]);
         if (!armed && !offered && cards[0] >= 0) cards[0] = run.nextInt(Upgrades.FLICKIES + 1);
     }
 
