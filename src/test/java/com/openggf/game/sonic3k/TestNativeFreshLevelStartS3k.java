@@ -47,29 +47,39 @@ class TestNativeFreshLevelStartS3k {
         TestEnvironment.activeGameplayMode();
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(7, 0).withFreshLevelStartLifecycle().build();
         var level = fixture.gameplayMode().getLevelManager();
+        // The fixture performs a second cold camera initialization after loading.
+        // Observe the actual production load boundary directly, before any such resnap.
+        level.loadCurrentLevel();
         assertInstanceOf(Sonic3kLevel.class, level.getCurrentLevel());
         assertEquals(0x1D30, fixture.sprite().getCentreX());
-        assertEquals(1, queries.get());
+        assertEquals(0x1C90, fixture.camera().getX(), "the first camera already frames the admitted centre");
+        assertEquals(0x148, fixture.camera().getY());
+        assertEquals(2, queries.get());
+        com.openggf.level.LevelCameraInitialization.recenterPositionedEntry(level);
+        assertEquals(0x1C90, fixture.camera().getX(), "positioned recenter does not reapply a cold intro focus");
 
         level.restartCurrentLevelAfterDeath();
-        assertEquals(1, queries.get(), "Level-routine death reentry retains the native start");
+        assertEquals(2, queries.get(), "Level-routine death reentry retains the native start");
         assertNotEquals(0x1D30, fixture.sprite().getCentreX());
+        assertEquals(0xC0, fixture.camera().getX(), "native death keeps the stock MHZ intro focus");
         int nativeStart = fixture.sprite().getCentreX();
         level.respawnPlayer();
-        assertEquals(1, queries.get(), "no-title death respawn also retains the native start");
+        assertEquals(2, queries.get(), "no-title death respawn also retains the native start");
         assertEquals(nativeStart, fixture.sprite().getCentreX());
 
         level.loadCurrentLevel(com.openggf.game.LevelLoadMode.FULL, false);
-        assertEquals(1, queries.get(), "results backdrop/current-state reload is not a fresh launch");
+        assertEquals(2, queries.get(), "results backdrop/current-state reload is not a fresh launch");
         assertEquals(nativeStart, fixture.sprite().getCentreX());
 
         level.loadCurrentLevel();
-        assertEquals(2, queries.get(), "a deliberate full restart can apply fresh-entry selection");
+        assertEquals(3, queries.get(), "a deliberate full restart can apply fresh-entry selection");
         assertEquals(0x1D30, fixture.sprite().getCentreX());
+        assertEquals(0x1C90, fixture.camera().getX(), "an explicit fresh restart retains its first camera focus");
         var checkpoint = assertInstanceOf(com.openggf.game.CheckpointState.class, level.getCheckpointState());
         checkpoint.saveCheckpoint(2, 0x1D60, 0x1A8, false);
         level.restartCurrentLevelAfterDeath();
-        assertEquals(2, queries.get());
+        assertEquals(3, queries.get());
         assertEquals(0x1D60, fixture.sprite().getCentreX(), "physical checkpoint position retains authority");
+        assertEquals(0x1CC0, fixture.camera().getX(), "native checkpoint recomputes camera from its restored centre");
     }
 }

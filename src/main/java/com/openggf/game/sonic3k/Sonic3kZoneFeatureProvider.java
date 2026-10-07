@@ -60,10 +60,10 @@ import java.util.logging.Logger;
 public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.LevelStartCameraPosition, com.openggf.game.internal.ForegroundVerticalScrollSplit, com.openggf.game.internal.ForegroundDescriptorOverride, com.openggf.game.internal.NativeArenaCameraFraming, com.openggf.game.internal.BackgroundColumnRemap, com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
     @Override
     public void initializeLevelStartCamera(Camera camera, AbstractPlayableSprite player,
-                                           int zone, int act, boolean checkpoint) {
+                                           int zone, int act, boolean retainedPlayerStart) {
         Sonic3kLevelStartCamera.initialize(camera, player.getCentreX(), player.getCentreY(),
                 com.openggf.game.CharacterKey.KNUCKLES.equals(player.characterKey()),
-                zone, act, checkpoint);
+                zone, act, retainedPlayerStart);
     }
 
     @Override public java.util.OptionalInt lockedNativeHorizontalCamera() {
