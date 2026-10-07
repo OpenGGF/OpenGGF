@@ -181,3 +181,145 @@ four consumed raw logs were deleted. XML/JSON evidence was inspected and its
 concise outcomes retained above; generated diagnostics will be discarded before
 handoff. No ROM, disassembly, shared harness, timing/comparator, central ledger or
 unknown/user-authored file was modified.
+
+## Continuation round 2: campaign art and MZ2 exit
+
+This round uses base `5b3a63641033506fc0d89ad5188a0c97fae29089` in
+`.worktrees/trace-s1-campaign-20261007-r2`, branch
+`bugfix/ai-trace-s1-campaign-20261007-r2`. Earlier measurements above remain
+attributed to their original tree; they are not a fresh baseline for this round.
+The coordinator owns shared release/frontier prose and combined validation.
+
+The concrete replay selectors are `TestS1CompleteEmeraldRunChain` and
+`TestS1CompleteEmeraldRunPrefix` under the canonical `trace-replay` profile.
+The existing native auxiliary rows distinguish a level-load transfer of Sonic
+mapping frame 1 in the gap from the first gameplay transfer: `ghz2_2` and
+`mz2_3` row 0 have no edges, while row 1 transfers mapping frame 8. These are
+comparison observations, not initialization inputs.
+
+Source investigation located an ordering hypothesis in the production results
+return caller. `GameLoop` invokes the five-argument
+`InLevelTitleCardCoordinator.prepareResultsTransition`, which warms the fresh
+player before initializing the returning title card. Its one-argument overload
+and Javadoc instead defer the prelude to release, whose production owner also
+runs it. Retail `Level_LoadObj` executes the player after the title/PLC wait,
+then `Level_Delay` and `PalFadeIn_Alt` spend 4 + 22 VBlank rows before
+`Level_MainLoop`. The existing dynamic-art pre-main-loop hold has no production
+arming caller. A publication-only backdating change would not by itself repair
+the early prelude's ordering; that shortcut is rejected pending actual edge
+contents from the fresh replay.
+
+A second candidate is the level-load staging reset. Retail `Level_ClrRam`
+clears `v_levelvariables`, including both `v_sonframenum` and
+`f_sonframechg` (`_Variables.asm:230-231`). The engine's
+`LevelManager.initArt` calls `clearPlayerDplcDedupRegistersForLevelLoad`, whose
+current body clears only the last-frame map. An unsubmitted S1 staging is
+therefore distinct from a submitted DMA ledger entry: the flag clear should
+cancel the former, and must not be used to erase the latter. A focused reset
+regression must distinguish those two states and exercise rewind before any
+correction is attributed to the campaign frontier.
+
+### Focused baseline reproduction
+
+The original canonical invocation stopped during test compilation, before any
+test ran. A new rewind regression incorrectly referred to row-edge methods on
+gap edges; correcting its two method references changes no production behavior.
+The identical canonical selector/profile was resubmitted on the same frozen
+production base. The failed compilation supplies no replay verdict.
+
+The focused baseline command was:
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean \
+  -Dmse=off \
+  -Dtest=TestInLevelTitleCardCoordinator,TestGameLoopTitleCardLifecycle,TestDynamicArtLifecycleService \
+  -Dsonic1.rom.path="$S1_ROM" -Dsonic2.rom.path="$S2_ROM" -Ds3k.rom.path="$S3K_ROM" test
+```
+
+The ROM variables denote the verified absolute paths from the swarm brief;
+the actual invocation passed absolute paths. This exact-selector ordinary
+command has no profile; the canonical trace invocation does not use `--lean`.
+Fresh Surefire XML records **36 tests, 3 failures, 0 errors, 0 skips**, with
+Maven exit 1 and 23.747 seconds execution. The three failures are the intended
+production contracts:
+
+- `productionResultsEntryOverloadDefersPlayerPreludeUntilRelease`: the actual
+  five-argument overload calls `SpriteManager.warmUpFreshMainPlayableOnly`.
+- `s1ReleasePreludeTransferBelongsToLoadTailAndSurvivesRewind`: admission finds
+  no gap edges, where the staged release preparation should produce
+  `submitted` / `completed` before the gameplay comparison window.
+- `rewindRestoresUnclaimedPreMainLoopTransferBoundary`: an original hold at
+  row 100 is captured, superseded at row 200, then restored. Releasing the
+  unclaimed transfer produces rows 201 / 201 rather than 101 / 101 because
+  `preMainLoopHoldBoundaryRow` is absent from captured state.
+
+The remaining 33 focused tests pass, including the zero-tail production
+VBlank owner. These results prove bounded defects; they do not establish the
+campaign's first causal art mapping or MZ2 exit improvement. The reviewed
+candidate is prepared separately while the canonical baseline remains queued.
+
+### Verified candidate and surviving frontier
+
+The candidate removes the early warmup from the production five-argument
+results-return overload. The actual release prelude owns the single native
+dispatch; immediately afterward, a positive `preLevelMainLoopDelayFrames`
+arms the existing art hold. Zero-tail owners retain ordinary VBlank servicing.
+The hold boundary row is now captured/restored alongside its tail length, so
+ending a restored run before admission uses its original next VBlank. There
+is no added timing authority, gameplay hydration, comparator change, or
+game-name gate. The service record is internal to this runtime owner, is not
+annotated `@ModApi`, and has no normalized candidate-signature entry; its only
+constructor call is the owner's `capture()` method.
+
+The same focused command passes **36 tests, 0 failures, 0 errors, 0 skips**
+(Maven exit 0, 1 minute 12 seconds). The matched canonical command on both
+production base and candidate is:
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py \
+  -Dmse=off -Ptrace-replay \
+  -Dtest=TestS1CompleteEmeraldRunChain,TestS1CompleteEmeraldRunPrefix \
+  -Dsonic1.rom.path="$S1_ROM" -Dsonic2.rom.path="$S2_ROM" -Ds3k.rom.path="$S3K_ROM" test
+```
+
+Both completed invocations run **3 tests, 1 failure, 0 errors, 0 skips**; both
+prefix cases pass. The base executes in 39.550 seconds; the candidate still
+fails the chain before Final Zone because MZ2 segment 12 never produces the
+giant-ring exit. Fresh XML and session-owned JSON agree with those results.
+The `trace-replay` profile inherits the POM's single-fork default; no CLI fork
+override or queue-policy modification was used.
+
+| Axis | Pinned production base | Candidate |
+|---|---|---|
+| First gap transfer, GHZ2 → GHZ2 return | mapping 1 at 9530, expected 9715 | mapping 1 at 9715, exact |
+| Second gap transfer, GHZ3 → GHZ3 return | mapping 1 at 18509, expected 18693 | mapping 1 at 18693, exact |
+| MZ2 return → MZ2 third segment | no gap edges | mapping 1 submitted/completed at 47008 |
+| Gap comparison failures | 6 | 3; remaining edge ordinal / transfer identity disagreements |
+| Segment 7, MZ1 | 5472 errors: 5282 physics group, 190 animation | 5466: 5276 physics group, 190 animation |
+| Segment 8, MZ1 return | 6525 physics-group errors | 0 |
+| Segment 12, MZ2 third segment | 196213: 175876 physics group, 20337 animation | 196129: 175792 physics group, 20337 animation |
+
+All affected comparator reports are complete with zero warnings/bootstrap
+errors. The earliest base gap differences of −185 / −184 movie rows are
+separate from each segment's row-zero `dynamic_art.edges` error. Those
+row-zero errors clear in the candidate. Aggregate physics-group counts also
+include structural/art comparisons and must not be called player-physics
+counts.
+
+The candidate's existing full first-error diagnostics now expose bounded
+player frontiers. MZ1 first disagrees at row 4: animation 05 / mapping 01 in
+ROM, animation 07 / mapping 05 in engine; positions and speeds match. Its
+first non-camera physics-group disagreement is art edges at row 5. MZ2 first
+disagrees at row 87: `x_sub` 7E00 / 9600 and `x_speed` 0495 / 04AD, while
+the remaining player fields match. Native status 06 does not set the roll-jump
+control-lock bit. The original BK2 and native CSV both release Up at MZ1 row
+4 and Right at MZ2 row 87; an extra held input is a bounded admission hypothesis,
+not permission to copy trace input/gameplay into the engine. Both boundaries
+use plain level admission and are coordinated with the shared-harness owner.
+
+The suspected missing `forceAnimationRestart` is rejected: the existing
+playable `resetState()` already clears animation fields and calls it. The
+separate pending-staging reset hypothesis remains unproved and was not bundled
+into this fix. S2/S3K affected-consumer and combined destination validation
+remain coordinator-owned; this lane records focused validation and partial
+canonical improvement, not a full-suite or whole-campaign pass.
