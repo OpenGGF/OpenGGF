@@ -111,6 +111,84 @@ class TestSonicSurvivors {
         return fixture;
     }
 
+    @Test void menuFontPreservesEveryPixelWithFewerPresentationAllocations() throws Exception {
+        launch(0, 0);
+        ObjectServices services = (ObjectServices) call(stage(), "services");
+        Class<?> draw = loader.loadClass("survivors.Draw");
+        String chars = (String) field(draw, "CHARS").get(null);
+        String pixels = (String) field(draw, "GLYPHS").get(null);
+        Method text = draw.getDeclaredMethod("text", ObjectServices.class, String.class,
+                int.class, int.class, int.class, int.class, float.class);
+        text.setAccessible(true);
+        int oldSpans = 0;
+        for (int glyph = 0; glyph < chars.length(); glyph++) {
+            for (int row = 0; row < 7; row++) {
+                for (int col = 0; col < 5; col++) {
+                    int p = glyph * 35 + row * 5 + col;
+                    if (pixels.charAt(p) == '1' && (col == 0 || pixels.charAt(p - 1) == '0')) oldSpans++;
+                }
+            }
+        }
+        for (int scale = 1; scale <= 3; scale++) {
+            int size = scale;
+            var camera = services.camera();
+            var frame = com.openggf.graphics.SpritePresentation.prepare(services.graphicsManager(),
+                    camera.getX(), camera.getY(), () -> {
+                        try { text.invoke(null, services, chars, 9, 13, size, 0x60E8FF, 0.5f); }
+                        catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+                    }, ignored -> { throw new AssertionError("font must not submit ROM tiles"); });
+            boolean[][] actual = new boolean[7 * size][chars.length() * 6 * size];
+            for (var primitive : frame.primitives()) {
+                var geometry = com.openggf.graphics.SpritePresentation.geometry(primitive);
+                for (var rect : geometry.vertices()) {
+                    assertEquals(0x8060E8FF, rect.argb());
+                    for (int y = rect.y1() - 13; y < rect.y2() - 13; y++) {
+                        for (int x = rect.x1() - 9; x < rect.x2() - 9; x++) {
+                            assertFalse(actual[y][x], "overlap would change translucent text");
+                            actual[y][x] = true;
+                        }
+                    }
+                }
+            }
+            for (int y = 0; y < actual.length; y++) {
+                for (int x = 0; x < actual[y].length; x++) {
+                    int glyph = x / (6 * size), col = x / size % 6;
+                    boolean expected = col < 5 && pixels.charAt(glyph * 35 + y / size * 5 + col) == '1';
+                    assertEquals(expected, actual[y][x], "pixel at " + x + "," + y);
+                }
+            }
+            assertTrue(frame.primitives().size() < oldSpans * 0.7,
+                    "font must remove at least 30% of commands and presentation records");
+            if (size == 1) System.out.println("Survivors font primitives: " + oldSpans
+                    + " -> " + frame.primitives().size() + " per complete alphabet");
+        }
+    }
+
+    @Test void cachedLevelUpDescriptionsCoverEveryUpgradeRank() throws Exception {
+        launch(0, 0);
+        Class<?> hud = loader.loadClass("survivors.Hud");
+        Class<?> upgrades = loader.loadClass("survivors.Upgrades");
+        Object[][] cards = (Object[][]) get(service("survivors.MenuArt"), "cards");
+        Method describe = upgrades.getDeclaredMethod("describe", int.class, int.class);
+        describe.setAccessible(true);
+        for (int id = 0; id < cards.length; id++) {
+            for (int rank = 1; rank < cards[id].length; rank++) {
+                String[] expected = (String[]) describe.invoke(null, id, rank);
+                assertEquals(expected[0], call(cards[id][rank], "first"));
+                assertEquals(expected[1], call(cards[id][rank], "second"));
+                assertEquals(rank == 1 ? "NEW!" : "LV " + (rank - 1) + ">" + rank,
+                        call(cards[id][rank], "level"));
+            }
+        }
+        Method clock = hud.getDeclaredMethod("clock", int.class);
+        clock.setAccessible(true);
+        for (int frames : new int[]{0, 1, 59, 60, 599, 600, 3599, 3600, 3601, 36000}) {
+            int seconds = (frames + 59) / 60;
+            assertEquals(String.format(Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60),
+                    clock.invoke(null, frames));
+        }
+    }
+
     // ---- Reflection helpers ----
     static Field field(Class<?> type, String name) {
         for (Class<?> c = type; c != null; c = c.getSuperclass()) {

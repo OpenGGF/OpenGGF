@@ -136,7 +136,7 @@ final class Hud {
 
     private static String clock(int frames) {
         int seconds = Math.max(0, (frames + 59) / 60);
-        return seconds / 60 + ":" + String.format(Locale.ROOT, "%02d", seconds % 60);
+        return seconds / 60 + (seconds % 60 < 10 ? ":0" : ":") + seconds % 60;
     }
 
     /**
@@ -278,13 +278,13 @@ final class Hud {
             }
             int next = run.level(card) + 1;
             Draw.shadow(s, Upgrades.name(card), left + 14, y + 4, 1, Upgrades.kindColour(card), 1f);
-            String level = next == 1 ? "NEW!" : "LV " + (next - 1) + ">" + next;
+            MenuArt.CardText text = s.gameService(MenuArt.class).cards[card][next];
+            String level = text.level();
             Draw.shadow(s, level, left + panelW - 14 - Draw.width(level, 1), y + 4, 1, next == 1 ? Draw.GREEN : Draw.WHITE, 1f);
             String kind = Upgrades.kindName(card);
             Draw.text(s, kind, left + 22 + Draw.width(Upgrades.name(card), 1), y + 4, 1, Draw.GREY, 1f);
-            String[] lines = Upgrades.describe(card, next);
-            Draw.shadow(s, lines[0], left + 14, y + 14, 1, Draw.WHITE, 1f);
-            Draw.shadow(s, lines[1], left + 14, y + 23, 1, Draw.WHITE, 1f);
+            Draw.shadow(s, text.first(), left + 14, y + 14, 1, Draw.WHITE, 1f);
+            Draw.shadow(s, text.second(), left + 14, y + 23, 1, Draw.WHITE, 1f);
         }
         Draw.centred(s, "UP/DOWN CHOOSE   ENTER / START CONFIRM", 214, 1, Draw.CYAN, 1f);
         if (rows > stage.cardCount) {

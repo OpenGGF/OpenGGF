@@ -74,6 +74,7 @@ public final class SurvivorsMod implements GgfMod {
         private boolean active;
         private Arena arena;
         private final RunState run = new RunState();
+        private final MenuArt menuArt = new MenuArt();
         private Profile profile;
         private ArenaZones zones;
         private SurvivorsTitle title;
@@ -174,6 +175,7 @@ public final class SurvivorsMod implements GgfMod {
 
         @Override public <T> T getGameService(Class<T> type) {
             if (type == LevelInputOverlay.class) return type.cast(overlayInput);
+            if (type == MenuArt.class) return type.cast(menuArt);
             if (type == RunState.class) return type.cast(run);
             if (type == Profile.class) return type.cast(profile());
             if (type == Arena.class) return active ? type.cast(arena) : null;

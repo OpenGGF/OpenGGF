@@ -444,3 +444,47 @@ registration and emerald grant change, with no host or public-contract changes.
 checks the retained relics/damage bonus and absent transformation controller.
 `python3 examples/sonic-survivors/build.py` rebuilt the local mod jar successfully.
 This is focused validation; the engine suite and guards were not repeated.
+
+
+### Menu allocation reduction (2026-10-07)
+
+Current checkout `feature/ai-sonic-survivors`, base `210bda97e4583f3ab33f7ef45e7e050be875bdc6`.
+The level-up menu emitted a new GL rectangle for every horizontal lit glyph span,
+then the host CPU presentation path allocated geometry and primitive records and
+recreated commands for replay. Extra card text amplified both allocation and draw calls.
+The mod now decomposes its fixed font into non-overlapping maximal rectangles once
+per module: 261 primitives per complete alphabet instead of 466 (44% fewer). This
+reduces each downstream per-rectangle allocation too. Every glyph retains exact
+pixel coverage at scales 1, 2 and 3, including fractional alpha without overlaps.
+Card rank labels and descriptions are derived once for the finite upgrade catalogue;
+timer formatting no longer invokes `String.format` each frame.
+
+The first static-array cache was rejected by `ggfmod`'s static-state validator.
+`MenuArt` instead lives in the module's existing game-service registry, contains no
+GL resources or live gameplay values, and is recreated with the module. Its fixed
+font/card data needs no rewind snapshot or invalidation on rerolls, rank changes,
+viewport changes, or camera movement. A shared renderer/API change was unnecessary;
+this deliberately leaves the engine presentation contract intact.
+
+The selection plan chooses 2,993 classes plus guards due to the example-path fallback
+(and an unrelated untracked movie). Focused validation is proportionate: production
+changes are mod-local, with all font pixels and upgrade ranks directly checked plus
+the existing full Survivors fixture. The existing per-act matrix and inherited gaps
+are unchanged; this is presentation work, not new route certification.
+
+Verification on the base plus these changes:
+- Java 21, queued Maven `-B -Dmse=off -Dtest=TestSonicSurvivors` with the absolute
+  root S2 REV01 ROM: 73 checks passed, zero failures/errors/skips (69.47 seconds in
+  the fixture). Includes all glyph pixels, finite card descriptions and timer boundaries.
+- `examples/sonic-survivors/build.py` compiled and passed `ggfmod package` validation.
+- Gameplay capture of the installed baseline and rebuilt jar: CPZ1, 400x224, seed
+  12345, isolated save roots, existing authored Start-at-frame-30 input, 120 frames.
+  All five sampled PNGs and the state CSV are byte-identical. Frame 100 visibly
+  contains three level-up cards, queued-level count and reroll row; inspected both.
+  Captures: `/private/tmp/sonic-survivors-menu-20261007`.
+- Copied the verified jar to the existing `mods/sonic-survivors.jar` installation and
+  refreshed only its trusted SHA-256; other mod entries and the user's save are intact.
+
+This is focused mod validation, not a full engine-suite pass. The 44% figure measures
+font primitive count, not total heap traffic or end-to-end frame-rate improvement;
+remaining host work and uncapped arena populations still contribute to frame cost.
