@@ -2,10 +2,12 @@
 
 This work supplies `sitarhero.catalogue.Sonic1Catalogue.all()` and S1-specific
 reference/production checks on `feature/ai-sitar-hero-full-s1`, based on shared
-contract `cabd66f442af65e62711a52eaad7a1cbbbe4e4a3`. The parent owns combined book
-registration, chart curation, the long preparation host, shared sequencer repairs,
-release prose, integration and cleanup. No common runtime or policy file is changed
-here. Main `develop` at `09282b173` and its dirty disassemblies remain untouched.
+contract `cabd66f442af65e62711a52eaad7a1cbbbe4e4a3`. The later continuation on
+`f71d88a3f` explicitly owns the generic PSG rest-sentinel repair in
+`SmpsSequencer`, its narrow generated regressions and this evidence. The parent
+owns combined book registration, chart curation, the long preparation host,
+other shared repairs, release prose, integration and cleanup. Main `develop`
+and its dirty disassemblies remain untouched by this worker.
 
 ## Inputs and authority
 
@@ -164,9 +166,53 @@ after `$EB01`, rather than reusing scaled `SavedDuration`. On contract commit
 - Production PSG2 stop6832 versus native7600; FM3/4 stop7250, explaining the incorrect
   earlier song-wide end. Other track attacks and stops agree.
 
-The parent reproduced this with generated FM/PSG/DAC control programs and owns the
-shared `reuseDuration` repair. This branch retains a failing real-ROM regression
-until that repair is integrated; it does not alter the catalogue to match the bug.
+The parent reproduced this with generated FM/PSG/DAC control programs and fixed
+`reuseDuration` in `741fdb3c7`: copy the saved scaled duration directly. This S1
+branch was then fast-forwarded to parent `f71d88a3f` (including catalogue commit
+`e9decec628` and that repair) for the explicitly assigned sequencer continuation.
+
+The next bounded divergence is independent of duration scaling. Against compiled
+native-check tree `59c8be076`, native PSG3 (logical PSG/2, the noise part) attack359
+is service5282, song-relative offset3067 (`$BFB`), note198 (`$C6`). Production
+instead emits service4318, offset3040 (`$BE0`), note128 (`$80`, a rest). The preceding
+rest starts service4241 at offset3037 (`$BDD`), with saved frequency `$FFFF`, divider2
+and saved duration72. At4318, `Mus91_Credits_Loop1E`'s positive `$03` duration sets
+saved duration6 and production clears the rest bit, then incorrectly emits an
+attack while the saved frequency is still invalid. Its32 repetitions contain
+three duration-only units each: exactly96 spurious attacks (599 versus native503).
+
+Native `PSGDoNext` clears the rest bit at `s1.sounddriver.asm:1833`, and a positive
+byte goes through `SetDuration`/`FinishTrackUpdate` without replacing the saved
+frequency (:1845..1858). `PSGSetFreq.restpsg` stores `$FFFF` (:1874..1878).
+`PSGDoNoteOn` then loads the saved word and executes `bmi.s PSGSetRest`
+(:1883..1885); `PSGSetRest` sets the rest bit (:1918..1920). The generic repair
+checks that signed saved word before a duration-only PSG attack under the existing
+`DelayFreq.RESET` policy, also advancing the resting envelope where the owning
+driver does. S3K's `DelayFreq.KEEP` preserves its earlier frequency and can
+re-attack a positive duration after a rest, so that branch remains distinct.
+
+After this repair every real attack tuple agrees for all13 included S1 songs,
+including all503 PSG3 noise attacks. Every Credits stop matches the native owner:
+DAC and PSG3 at6992; FM1/2 at7248; FM3/4 at7250; FM5 at6930; PSG1 at6968; final
+PSG2 (logical PSG/1) at7600. The6992 noise stop is not the final PSG2 tail; there
+is no608-service song-wide gap. The complete7601 serviced packets, native pitches,
+form counts, stage bindings and tempo anchors are unchanged.
+
+A cross-game check exposed a separate **S2 reference error**, retained for the
+parent/S2 owner rather than hidden by a production carve-out. S2 ROM`$8F` (Oil
+Ocean), logical PSG/0, has three oracle-only rest attacks at services613,3094,5575,
+all song-relative offset779 (`$30B`), note128. At each, production has saved
+frequency`$FFFF`, resting=true, saved duration192 and divider2. There are no
+production-only tuples for this track. Native `zPSGDoNext` clears the rest bit and
+parses positive durations (`s2.sounddriver.asm:1145..1169`), `.restpsg` writes both
+frequency bytes`$FF` (:1190..1196), and `zPSGDoNoteOn` executes `bit 7,FreqHigh` /
+`jr nz,zSetRest` (:1202..1204). Thus293 actual attacks are authentic; the former296
+reference count includes three silent units. `SitarHeroS2NativeProgram:76` wrongly
+admits duration-only rest continuations for every non-DAC track. Restrict that
+exception to FM, or model the saved PSG frequency validity explicitly. Its
+raw-duration rescaling at:74 also needs the native saved-scaled-byte semantics
+when an omitted duration follows a divider change. S2-owned files are untouched;
+the parent owns correction and combined verification.
 
 ## Authored parts and compatible stage pictures
 
@@ -222,8 +268,8 @@ LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base cabd66f44
 
 - Queued compilation/test compilation passed (1m10s). Python reference safety:
   four tests passed, no skips.
-- Latest focused Java run:18 tests,17 passed, one inherited Credits SavedDuration
-  failure, zero errors, zero skips. Every semantic attack through the requested
+- Initial focused Java run on `cabd66f44`:18 tests,17 passed, one inherited
+  Credits SavedDuration failure, zero errors, zero skips. Every semantic attack through the requested
   duration agrees for the other12 songs; the longest two-loop SBZ run executes8640
   services. Native reference survey spans9001 services, and validates all19 bank IDs.
 - Short actual production preparation verifies every declared source role on all13
@@ -261,5 +307,46 @@ README Tools list (kept out of this branch's file ownership):
 > `--rom` path, optional `--id`, and bounded `--frames` (2026-10-07 Sitar Hero).
 
 The owned branch is committed locally for the parent's merge. No task branch push,
-main integration, shared repair or worktree deletion is performed by this sub-agent.
-The Credits regression must be rerun against the parent's repair before delivery.
+main integration or worktree deletion is performed by this sub-agent.
+The 2026-10-07 sequencer continuation used the following queued focused command
+on `f71d88a3f` plus the owned repair (absolute main-ROM inputs; the shell variable
+below denotes the existing main checkout):
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/s1.gen \
+  -Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/s2.gen \
+  -Ds3k.rom.path=${OPENGGF_ROM_ROOT}/s3k.gen \
+  -Dtest=TestSmpsSavedDurationRest,TestSmpsSequencerCadence,TestSmpsSequencerSnapshot,TestSitarHeroS1SongCatalogue,TestSitarHeroS2SongCatalogue test
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base f71d88a3f --preflight
+python3 tools/testing/run_categories.py --base f71d88a3f
+```
+
+The completed Maven run reports45 tests:44 passed, one S2 oracle failure above,
+zero errors, zero skips. Per-class XML: saved/rest regression12/12; cadence10/10;
+snapshot2/2; S1 catalogue18/18; S2 catalogue2/3. The twelve new generated tests
+exercise FM/PSG/DAC on all three actual driver configurations, explicit and
+omitted durations around rests and divider changes, saved duration/frequency
+snapshot replay, and both tone/noise PSG RESET versus KEEP semantics. S3K uses
+its native`$FF04` divider command rather than S1/S2`$E5`. The four unchanged
+Python reference safety tests also pass. The failed S2 count is not reported as
+a full pass, and later S2 bank entries were not reached by that failed test.
+
+A temporary direct Java21 probe against the existing compiled native-check tree
+established the first post-741 divergence and all track stops before the repair.
+A second direct Java21 probe against this candidate established the three S2
+oracle-only tuples above. These are comparison-only observations, not a JUnit
+suite claim; temporary sources/classes and raw logs are removed after inspection.
+The improved S1 test compares tuple prefixes before counts, so a future count
+failure also exposes the earliest differing service/offset/native pitch.
+
+Tool preflight passed. The change-based plan selects1131 ordinary classes in
+`audio,common,mods,rewind,tooling` plus structural guards out of3012 inventoried
+classes before the evidence-only documentation update. This continuation changes
+a shared sequencer branch and requires the parent's combined normal validation;
+no local broad suite is claimed. Two owned queue requests were cancelled while
+still waiting to prepare the bounded diagnosis and correct the generated S3K
+opcode, without changing parent jobs or lock files. Candidate sources stayed
+frozen during the completed actual Maven build. No already completed unchanged
+engine checks were repeated. Parent integration, S2 oracle reconciliation, combined
+verification, upstream push and accounted-tree cleanup remain parent-owned.
