@@ -31,7 +31,7 @@ jobs:
       - name: Verify portable kit tooling
         run: python3 -m unittest discover -s tools/modding -p 'test_*.py'
       - name: Build matching candidate artifacts
-        run: mvn -B -Dmse=off -DskipTests -Puniversal-jar package
+        run: mvn -B -Dmse=off -DskipTests -Puniversal-jar verify
       - name: Assemble reproducible creator kit
         run: |
           python3 tools/modding/build_creator_kit.py --out "$RUNNER_TEMP/OpenGGF-creator-kit.zip"

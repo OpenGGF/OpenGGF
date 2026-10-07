@@ -31,6 +31,9 @@ class CreatorKitTest(unittest.TestCase):
         for suffix in ("jar-with-dependencies", "openggf-mod-sdk", "openggf-mod-sdk-javadoc", "mod-testkit"):
             with zipfile.ZipFile(self.root / f"target/OpenGGF-0.7.prerelease-{suffix}.jar", "w") as jar:
                 jar.writestr("version.properties" if suffix == "jar-with-dependencies" else "META-INF/openggf-build.properties", identity)
+                if suffix == "mod-testkit":
+                    for name in ("ModTestKit", "DeterministicInput", "CreatorTestLauncher"):
+                        jar.writestr("com/openggf/mods/testing/" + name + ".class", b"class fixture")
 
     def test_reproducible_archive_hash_inventory_and_no_generated_assets(self):
         project = self.root / "examples/demo"
@@ -77,6 +80,26 @@ class CreatorKitTest(unittest.TestCase):
             kit.collect(self.root, "abcdef123456", source_dirty=True)
         report = json.loads(kit.collect(self.root, "abcdef123456", True, source_dirty=True)["creator-kit.json"])
         self.assertTrue(report["sourceDirty"])
+
+    def test_rejects_incomplete_or_mixed_testkit_classifier_contents(self):
+        artifact = self.root / "target/OpenGGF-0.7.prerelease-mod-testkit.jar"
+        with zipfile.ZipFile(artifact) as archive:
+            original = {name: archive.read(name) for name in archive.namelist()}
+        required = "com/openggf/mods/testing/CreatorTestLauncher.class"
+        with zipfile.ZipFile(artifact, "w") as archive:
+            for name, data in original.items():
+                if name != required:
+                    archive.writestr(name, data)
+        with self.assertRaisesRegex(ValueError, "incomplete.*CreatorTestLauncher"):
+            kit.collect(self.root, "abcdef123456")
+        for unrelated in ("com/openggf/Engine.class", "com/openggf/tools/modsdk/GgfModCli.class",
+                          "org/junit/jupiter/api/Test.class", "com/openggf/mods/testing/source.java"):
+            with self.subTest(unrelated=unrelated), zipfile.ZipFile(artifact, "w") as archive:
+                for name, data in original.items():
+                    archive.writestr(name, data)
+                archive.writestr(unrelated, b"unrelated fixture")
+            with self.assertRaisesRegex(ValueError, "unrelated inputs"):
+                kit.collect(self.root, "abcdef123456")
 
     def test_jar_payloads_are_reproducible_across_maven_entry_timestamps_and_order(self):
         archives = []

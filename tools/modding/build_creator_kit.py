@@ -83,6 +83,24 @@ def normalize_jar(data):
     return output.getvalue()
 
 
+def verify_testkit(data):
+    """Reject incomplete or mixed classifier contents before distributing them."""
+    prefix = "com/openggf/mods/testing/"
+    required = {prefix + name + ".class" for name in
+                ("ModTestKit", "DeterministicInput", "CreatorTestLauncher")}
+    metadata = {"META-INF/MANIFEST.MF", "META-INF/openggf-build.properties",
+                "META-INF/maven/com.openggf/OpenGGF/pom.xml",
+                "META-INF/maven/com.openggf/OpenGGF/pom.properties"}
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        files = {name for name in archive.namelist() if not name.endswith("/")}
+        if not required <= files:
+            raise ValueError("Testkit classifier is incomplete: " + ", ".join(sorted(required - files)))
+        unexpected = {name for name in files if name not in metadata
+                      and not (name.startswith(prefix) and name.endswith(".class"))}
+        if unexpected:
+            raise ValueError("Testkit classifier contains unrelated inputs: " + ", ".join(sorted(unexpected)))
+
+
 def relocate_markdown_links(root, entries, commit):
     """Keep exported links local, and pin checkout-only references to source SHA."""
     source_to_export = {}
@@ -121,6 +139,7 @@ def collect(root, commit, allow_dirty=False, source_dirty=False):
     for name in ("sdk.jar", "mod-testkit.jar", "api-docs.jar"):
         if build_identity(entries[name], "META-INF/openggf-build.properties") != identity:
             raise ValueError(f"Creator artifacts do not match: {name}")
+    verify_testkit(entries["mod-testkit.jar"])
     if identity.get("app.baseVersion") != release or not identity.get("app.commit") or not commit.startswith(identity["app.commit"]):
         raise ValueError("Creator artifacts do not match this checkout's version/commit; rebuild them")
     dirty = identity.get("app.dirty") == "true" or source_dirty

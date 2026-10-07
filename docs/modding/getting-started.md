@@ -24,7 +24,7 @@ explicitly labels a local development kit and is not used by candidate artifact 
 Until candidate kits are distributed, build them from an OpenGGF checkout:
 
 ```sh
-python3 tools/testing/maven_queue.py -Dmse=off -DskipTests -Puniversal-jar package
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests -Puniversal-jar verify
 python3 tools/modding/build_creator_kit.py --out /absolute/path/OpenGGF-creator-kit.zip
 ```
 
