@@ -11,6 +11,7 @@ import java.util.Map;
 public final class RhythmSession {
     private final Chart chart;
     private final boolean drums;
+    private final boolean noFail;
     private final long window;
     private final byte[] status;
     private final Map<Integer, Integer> phraseRemaining = new HashMap<>();
@@ -36,8 +37,14 @@ public final class RhythmSession {
     private boolean hopoStrumGrace;
 
     public RhythmSession(Chart chart, boolean drums, int sampleRate) {
+        this(chart, drums, sampleRate, false);
+    }
+
+    /** Practice only suppresses zero-rock failure; judging, scoring and part muting are unchanged. */
+    public RhythmSession(Chart chart, boolean drums, int sampleRate, boolean noFail) {
         this.chart = java.util.Objects.requireNonNull(chart);
         this.drums = drums;
+        this.noFail = noFail;
         if (sampleRate <= 0) throw new IllegalArgumentException("sampleRate");
         window = Math.max(1, sampleRate / 10);
         position = -window; // the first gem retains its early window during lead-in
@@ -180,7 +187,7 @@ public final class RhythmSession {
     private void breakChain() {
         streak = 0; hopoStrumGrace = false; audible = false; sustain = -1;
         rock = Math.max(0, rock - (starActive ? .02 : .04));
-        if (rock == 0) failed = true;
+        if (rock == 0 && !noFail) failed = true;
     }
     private void resolvePhrase(ChartNote note, boolean broken) {
         int phrase = note.phrase();
