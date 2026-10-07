@@ -323,6 +323,44 @@ class TestModManagerScreen {
     }
 
     @Test
+    void replacingAnEnabledCodeJarCanRenewTrustWithoutDisablingIt() {
+        ModDescriptor code = codeDescriptor("code-update", "Updated Mod", "b".repeat(64));
+        ModState startup = new ModState(1, List.of(new ModState.Entry(
+                "code-update", true, 0, true, "a".repeat(64))));
+        ModCatalog catalog = new EffectiveCatalogBuilder().build(List.of(code), startup);
+        ModManagerScreen screen = screen(catalog, startup, new ModRuntimeFindingStore(), null,
+                temp.resolve("update"));
+        press(screen, Action.ACCEPT);
+        assertTrue(enabled(screen, "code-update"));
+        assertTrue(screen.trustArmed());
+        assertFalse(screen.pendingState().entries().getFirst().trusted());
+        press(screen, Action.ACCEPT);
+        assertTrue(enabled(screen, "code-update"));
+        assertTrue(screen.pendingState().entries().getFirst().trustsSha256(code.sha256()));
+        applyFromList(screen);
+        assertTrue(new ModStateStore(temp.resolve("update").toAbsolutePath().normalize())
+                .load().state().entries().getFirst().trustsSha256(code.sha256()));
+    }
+
+    @Test
+    void updatedUntrustedCodeCanBeDisabledWithoutGrantingTrust() {
+        ModDescriptor code = codeDescriptor("code-update", "Updated Mod", "b".repeat(64));
+        ModState startup = new ModState(1, List.of(new ModState.Entry("code-update", true, 0, true, "a".repeat(64))));
+        ModManagerScreen screen = screen(new EffectiveCatalogBuilder().build(List.of(code), startup),
+                startup, new ModRuntimeFindingStore(), null, temp.resolve("decline-update"));
+        press(screen, Action.RIGHT); press(screen, Action.ACCEPT); // Details
+        press(screen, Action.ACCEPT); // explicit disable without trust
+        assertFalse(enabled(screen, "code-update"));
+        assertFalse(screen.pendingState().entries().getFirst().trusted());
+        assertFalse(screen.trustArmed());
+
+        ModManagerScreen nativeScreen = nativeGuardScreen(temp.resolve("native-update"), List.of(code), startup, false);
+        press(nativeScreen, Action.ACCEPT);
+        assertFalse(enabled(nativeScreen, "code-update"));
+        assertFalse(nativeScreen.trustArmed());
+    }
+
+    @Test
     void codeTrustRequiresTwoAcceptsAndOnlyChangesPendingState() {
         ModDescriptor code = codeDescriptor("code-mod", "Code Mod", "c".repeat(64));
         ModCatalog catalog = new ModCatalog(List.of(code), EffectiveModCatalog.EMPTY, Map.of(
