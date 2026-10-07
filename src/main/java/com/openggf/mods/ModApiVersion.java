@@ -26,6 +26,8 @@ public final class ModApiVersion {
      * Native encounters can opt into controlled player input, bounded fresh-entry
      * centre coordinates and launch-boundary no-save isolation. A query-only
      * native entry-art gate includes deferred submissions and owner consumption.
+     * Power-up rules expose explicit invincibility-expiry music ownership for modes
+     * with continuous music.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

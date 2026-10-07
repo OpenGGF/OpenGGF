@@ -24,6 +24,22 @@ changing the target can hide the next golfer under the HUD until physics resumes
 `TestCourseControl.characterReplacementPreservesTheEntireCameraViewAndRebindsItsTarget`
 and the independent-golfer turn tests cover both view and target identity.
 
+**Object-controlled mod menus do not pause player protection clocks.** The playable sprite
+still decrements invincibility and hurt recovery while a mod holds its movement. Freezing a
+mod's Fever HUD alone can therefore consume the actual protection behind upgrade cards.
+Capture the player timers on menu entry, hold positive clocks above expiry during the menu,
+and restore the exact saved durations on release. The Survivors regression
+`feverProtectionDoesNotExpireBehindLevelUpCards` checks the player clock as well as the HUD;
+menu-owned saved fields must participate in rewind too.
+
+**Silent invincibility still has a native music-expiry request.** `giveInvincibility()`
+does not itself start music, but the playable timer reissues the level song on expiry.
+A mode keeping its own arena/boss soundtrack continuous must opt out through
+`PowerUpRules.restoreLevelMusicAfterInvincibility`; do not suppress timer expiry or
+misrepresent the boss flag, which couples music to gameplay state. Stock factories
+retain the ROM behavior. Survivors checks Fever and monitor expiry for both leaders,
+including restored expiry boundaries.
+
 **Creator object ownership follows the registered placement key.** Returning
 creator instances for untagged native placements from a custom registry does
 not assign their callback owner: placed registration clears ownership for a

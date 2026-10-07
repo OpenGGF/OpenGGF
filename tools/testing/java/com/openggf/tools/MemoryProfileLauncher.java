@@ -164,7 +164,7 @@ public final class MemoryProfileLauncher implements TestExecutionListener, AutoC
         try { output.write(json(row)); output.newLine(); output.flush(); }
         catch (Exception e) { throw new IllegalStateException("Cannot write memory observations", e); }
     }
-    private static String json(Object value) {
+    static String json(Object value) {
         if (value == null) return "null";
         if (value instanceof Number || value instanceof Boolean) return value.toString();
         if (value instanceof Map<?, ?> map) {
