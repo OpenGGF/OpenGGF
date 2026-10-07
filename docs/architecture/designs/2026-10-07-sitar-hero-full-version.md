@@ -360,3 +360,20 @@ full-song chart matrices add several minutes. The candidate run uses a 120-minut
 cap excluding queue wait, with a ten-minute no-output stopping rule. New or
 worsened failures block integration; every inherited failure is compared by
 identity and full message, including the recovered long SSZ message.
+
+
+### Final rendered acceptance
+
+At candidate `081ba67af`, the refreshed `SitarHeroCapture` visits passed in four
+fresh JVMs: all three ROMs together, S1 alone, S2 alone and S3&K alone. The public
+catalogue sizes were 79, 11, 22 and 46 respectively. Source and compiled-host hashes
+are recorded beside captures in `$SITAR_CAPTURE_ROOT/acceptance-v2`. The S2-only
+visit verifies the supported same-ROM scenery fallback with actual native art.
+The combined visit covers all seven performers and four instruments, all four
+difficulty menus, catalogue pagination, full GHZ playback and natural results,
+retry, pause/resume, mixed-ROM concert stages, local co-op and versus with two
+independent highways, settings and player-two calibration. Actual screenshots
+were inspected for readable layout and native hand/instrument layering. There
+were no scene fault findings. Offline synthesis/autoplay demonstrates flow and
+assets; physical speaker/controller latency, real-time throughput and external
+network reachability are not inferred from these captures.
