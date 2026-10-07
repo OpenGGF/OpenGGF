@@ -132,4 +132,34 @@ This is cartoon slapstick: defeated birds retreat rather than die.
   were removed. No category `--run` diagnostics were produced by this task.
 - Shell syntax and Markdown links pass. Human difficulty tuning remains open;
   the deterministic purchasing strategy proves a complete reachable win loop.
-  Integration verification and delivery commit references follow below.
+  Integration verification follows below.
+
+## Integration
+
+- Implementation: `fe90b53dae397942dae72280e40d7ec85da7d16e`.
+- Main `develop` was fetched and fast-forward checked again; it remained at
+  the pinned base. Merge `aaf088e4854d62c3078e74ce5d7165e6330e3709` integrated
+  the task without conflicts or changing branches. The mod and its tests are
+  byte-for-byte identical to the verified candidate.
+- The branch policy check
+  `.githooks/run-policy ci-push a54dcf56f8237e18cee69e867af39fef4bf4a7d7 HEAD develop`
+  passes on the integrated tree. Main-workspace dirty disassemblies and unrelated
+  untracked files remain unchanged.
+- A separate full validation in `ai-sitar-hero-baseline` subsequently held the
+  queue under its memory admission limit. The user selected letting it finish;
+  the final focused integration command waited normally and acquired capacity
+  without interrupting that run.
+- On integrated commit `aaf088e4854d62c3078e74ce5d7165e6330e3709`, the same
+  focused selection passed all 224 tests across nine classes, with zero
+  failures/errors/skips. This includes the 141 unchanged baseline checks,
+  60 S3K sentinel checks and 23 mod checks. No baseline failure worsened.
+  The queued command also completed `dependency:build-classpath` with
+  `-Dmdep.outputFile=target/examples-classpath.txt -DincludeScope=test`.
+- Main-workspace `python3 examples/build_example.py robotnik-tower-defense
+  --skip-engine` packages and validates successfully. Its jar is preserved
+  alongside the external captures before task-worktree cleanup.
+- These are focused integration results, not a full ordinary/guards/trace
+  suite pass. The unrelated full validations are not used as delivery evidence.
+  Source, ROM decoding, input, records, combat rules, terminal screens, audio
+  capture and package validation are covered; human difficulty evaluation and
+  broader engine regression coverage remain outside this isolated mod check.
