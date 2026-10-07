@@ -111923,9 +111923,10 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrde
 ```
 
 Each invocation passes six tests with zero failures/errors/skips. Canonical
-SBZ1/2/3 and FZ reports compare 7,619/9,594/4,457/8,354 rows with zero comparator
+SBZ1/2/3 and FZ reports compare 7,619/9,594/8,354/4,457 rows with zero comparator
 errors/warnings or bootstrap errors/warnings, so there is no first-error field.
-The current standalone FZ fixture does not reproduce the historical animation
+SBZ3 uses native report ID `s1_lz4` and FZ uses `s1_sbz3`, as their fixture
+metadata confirms. The current standalone FZ fixture does not reproduce the historical animation
 mismatch population. The full S1 chain still stops at MZ2 before FZ; general
 boss hit-window and SBZ checkpoint/cache-residency qualification remain open.
 These checks supply bounded affected-fixture regression coverage for the scroll
