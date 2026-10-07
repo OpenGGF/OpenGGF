@@ -85,6 +85,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.IntConsumer;
+import java.util.function.IntPredicate;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -1480,15 +1481,16 @@ abstract class AbstractRunChainTest {
                 int rowsConsumed = prepareAcrossLevelBoundary(
                         loop, playback, probe, movie, seg, next, stepCap,
                         levelAtSegmentStart);
-                admitPlainLevelBoundaryWhenReady(
-                        loop, playback, runCoordinator, next, rowsConsumed,
-                        stepCap);
+                rowsConsumed = admitPlainLevelBoundaryWhenReady(
+                        gameplayMode, loop, playback, runCoordinator, next,
+                        rowsConsumed, stepCap);
                 int destinationIndex = i + 1;
+                int admittedRowsConsumed = rowsConsumed;
                 activeComparator = openAndAttachHeadlessPayload(
                         next, destinationIndex,
                         payload -> attachPreparedLevelSegment(
                                 playback, probe, movie, next, fixture,
-                                rowsConsumed, destinationIndex));
+                                admittedRowsConsumed, destinationIndex));
                 activeSegmentInitialCursor = cursorOrZero(activeComparator);
                 dynamicArtSegments.beginSegment();
                 gameplayMode.dynamicArtLifecycle()
@@ -4632,24 +4634,69 @@ abstract class AbstractRunChainTest {
      * admits immediately exits on iteration zero having stepped nothing, and the
      * loop is bounded by the manifest-derived {@code stepCap}.
      */
-    private void admitPlainLevelBoundaryWhenReady(
+    private int admitPlainLevelBoundaryWhenReady(
+            GameplayModeContext gameplayMode,
             GameLoop loop, PlaybackDebugManager playback,
             HeadlessRunCoordinatorAdapter runCoordinator,
             TraceRunSegmentDescriptor next,
             int rowsConsumed, int stepCap) {
-        for (int step = 0; step < stepCap; step++) {
-            if (runCoordinator.tryAdmitLevel(
-                    null, playback.getCursorFrame(),
-                    loop.getCurrentGameMode(), rowsConsumed,
-                    runCoordinator.latestLoadReceipt())) {
-                return;
+        return admitPlainLevelBoundaryWhenReady(
+                gameplayMode, loop, playback, next.segment().bk2FrameOffset(),
+                rowsConsumed, stepCap,
+                consumed -> runCoordinator.tryAdmitLevel(
+                        null, playback.getCursorFrame(), loop.getCurrentGameMode(),
+                        consumed, runCoordinator.latestLoadReceipt()));
+    }
+
+    /** Admission seam shares the real gap dispatch; no comparison values enter it. */
+    final int admitPlainLevelBoundaryWhenReady(
+            GameplayModeContext gameplayMode, GameLoop loop,
+            PlaybackDebugManager playback, int destinationOffset,
+            int preparedRowsConsumed, int stepCap, IntPredicate tryAdmission) {
+        for (int step = 0; step <= stepCap; step++) {
+            int cursor = playback.getCursorFrame();
+            // Preserve a real title-release fall-through observed by preparation.
+            int rowsConsumed = step == 0 ? preparedRowsConsumed
+                    : Math.max(0, cursor - destinationOffset);
+            if (rowsConsumed < 0 || rowsConsumed > 1) {
+                throw new AssertionError("plain destination advanced past its opening row"
+                        + " without admission (cursor " + cursor + ", offset "
+                        + destinationOffset + ", consumed " + rowsConsumed + ")");
             }
-            stepEngineFrame(loop);
+            if (tryAdmission.test(rowsConsumed)) {
+                return rowsConsumed;
+            }
+            // SHARED_GAP may spend only unrepresented input rows. Once row 0's
+            // input is selected, denial cannot consume it and later attach a
+            // comparator past physics that never executed. The existing 0/1
+            // preparation result remains legitimate; newly suppressed rows do not.
+            if (cursor >= destinationOffset) {
+                throw new AssertionError("plain destination denied admission at its"
+                        + " advertised input row (cursor " + cursor + ", offset "
+                        + destinationOffset + ")");
+            }
+            if (step == stepCap) {
+                break;
+            }
+            stepLoadedPlainLevelGap(gameplayMode, loop, playback);
         }
-        runCoordinator.admitLevel(
-                null, playback.getCursorFrame(),
-                loop.getCurrentGameMode(), rowsConsumed, false,
-                runCoordinator.latestLoadReceipt());
+        throw new AssertionError("plain destination never became admissible within "
+                + stepCap + " steps (cursor " + playback.getCursorFrame()
+                + ", offset " + destinationOffset + ")");
+    }
+
+    /** A prepared plain destination has already replaced the source level. */
+    final void stepLoadedPlainLevelGap(
+            GameplayModeContext gameplayMode, GameLoop loop,
+            PlaybackDebugManager playback) {
+        // The source loop has ended: preparation observed the destination load.
+        // The unrecorded arm row belongs to the blocking entry routine, not
+        // destination LevelLoop (S3K loc_64DC -> Wait_VSync -> Process_Sprites).
+        // Use the same production gap owner as transition-record boundaries.
+        gameplayMode.beginRunTransitionGap();
+        gameplayMode.consumeRunGapFirstRow();
+        stepEngineFrameInTransitionGap(
+                gameplayMode, loop, playback, playback.getCursorFrame(), false, false);
     }
 
     private void topUpUnconsumedSegmentRows(
