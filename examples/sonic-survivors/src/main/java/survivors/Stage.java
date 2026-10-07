@@ -733,12 +733,25 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
         run.paused = true;
         menuIndex = 0;
         phaseFramesAtOverlay = phaseFrames;
-        boolean evolution = false;
-        for (int i = 0; i < chestCount; i++) evolution |= chestItems[i] >= 100;
-        services().playSfx(evolution ? 0xBF : 0xC0); // sfx_ContinueJingle / sfx_CasinoBonus.
+        services().playSfx(0xBD); // sfx_Hammer: the chest lands.
     }
 
     int phaseFramesAtOverlay;
+
+    // The chest opening, in frames from its start: the chest drops in and shakes, the lid bursts
+    // (flash, light rays, a fountain of rings, Super Sonic's theme), then each prize spins in.
+    static final int CHEST_DROP = 18, CHEST_BURST = 64, CHEST_FIRST_PRIZE = 84, CHEST_PRIZE_GAP = 22,
+            CHEST_SPIN = 14;
+
+    int chestFrames() { return phaseFrames - phaseFramesAtOverlay; }
+
+    /** The frame the last prize lands; Enter before it reveals everything at once. */
+    int chestRevealEnd() { return CHEST_FIRST_PRIZE + chestCount * CHEST_PRIZE_GAP + CHEST_SPIN; }
+
+    boolean chestEvolution() {
+        for (int i = 0; i < chestCount; i++) if (chestItems[i] >= 100) return true;
+        return false;
+    }
 
     private int chestPrize() {
         var run = run();
@@ -764,9 +777,45 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     }
 
     private void chestMenu(AbstractPlayableSprite player) {
-        if (phaseFrames - phaseFramesAtOverlay < 40 || !menuConfirmAny(player)) return;
+        int t = chestFrames();
+        if (t > CHEST_DROP && t < CHEST_BURST && t % Math.max(3, 12 - (t - CHEST_DROP) / 5) == 0) {
+            services().playSfx(0xCD); // sfx_Blip: the lid rattles, faster and faster.
+        }
+        if (t == CHEST_BURST) {
+            services().playSfx(0xC1); // The lid bursts.
+            services().audioManager().playMusic(Sonic2Music.SUPER_SONIC.id);
+        }
+        if (t > CHEST_BURST && t < CHEST_BURST + 40 && t % 8 == 0) {
+            services().audioManager().playSecondarySfx(GameSound.RING);
+        }
+        for (int i = 0; i < chestCount; i++) {
+            if (t == CHEST_FIRST_PRIZE + i * CHEST_PRIZE_GAP + CHEST_SPIN) {
+                services().playSfx(chestItems[i] >= 100 ? 0xBF : 0xC9); // ContinueJingle / Bonus.
+            }
+        }
+        if (!menuConfirmAny(player)) return;
+        if (t < chestRevealEnd()) {
+            // Skip straight to every prize revealed; a second press continues.
+            if (t < CHEST_BURST) services().audioManager().playMusic(Sonic2Music.SUPER_SONIC.id);
+            phaseFramesAtOverlay = phaseFrames - chestRevealEnd();
+            return;
+        }
         overlay = OVERLAY_NONE;
         services().playSfx(0xC9);
+        restoreMusic();
+    }
+
+    /** After a chest's fanfare: the boss track in a boss fight, the zone's own music otherwise. */
+    private void restoreMusic() {
+        var audio = services().audioManager();
+        if (phase == BOSS) {
+            audio.playMusic(arena().stage() == Stages.DEZ ? Sonic2Music.FINAL_BOSS.id : Sonic2Music.BOSS.id);
+        } else if (phase == FIGHT) {
+            int music = services().levelManager().getCurrentLevelMusicId();
+            if (music >= 0) audio.playMusic(music);
+        } else {
+            audio.fadeOutMusic();
+        }
     }
 
     /** Drops the full reward in up to three physical pickups, without a population ceiling. */

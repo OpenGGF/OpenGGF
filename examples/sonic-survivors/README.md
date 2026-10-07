@@ -244,7 +244,11 @@ every requirement.
 
 ## Treasure chests and evolutions
 
-A chest pauses play and reveals its prizes one by one. Each prize, in order of preference:
+Opening a chest is an event: play pauses and the screen dims, the chest drops in and rattles
+faster and faster, then the lid bursts open in a white flash with turning light rays, a pillar
+of light and a fountain of rings, to Super Sonic's theme. Each prize then spins through the
+catalogue before landing (evolutions in shifting rainbow colours). Enter skips straight to the
+full reveal; closing the chest restores the zone or boss music. Each prize, in order of preference:
 **evolves** a ready weapon; otherwise ranks up an upgrade you own (a new upgrade only when no owned
 one can grow); otherwise pays a ring hoard (two hits at the base toll). Bosses drop three-prize
 chests (one in five has five prizes, glowing pink); every fourth elite and each warden squad drop

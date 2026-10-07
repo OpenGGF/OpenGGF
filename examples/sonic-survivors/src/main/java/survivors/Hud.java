@@ -355,31 +355,170 @@ final class Hud {
     }
 
     // ---- Treasure chest ----
+
+    /** A colour that cycles through the rainbow, for evolutions. */
+    static int rainbow(int tick) {
+        return switch ((tick / 3) % 8) {
+            case 0 -> Draw.RED;
+            case 1 -> Draw.ORANGE;
+            case 2 -> Draw.YELLOW;
+            case 3 -> Draw.GREEN;
+            case 4 -> Draw.CYAN;
+            case 5 -> Draw.BLUE;
+            case 6 -> Draw.PURPLE;
+            default -> Draw.PINK;
+        };
+    }
+
+    /** A small deterministic hash in [0, 1), so the ring fountain needs no state. */
+    private static double hash(int k, int salt) {
+        int h = k * 0x2C1B3C6D + salt * 0x297A2D39;
+        h ^= h >>> 15;
+        h *= 0x85EBCA6B;
+        h ^= h >>> 13;
+        return (h & 0xFFFF) / 65536.0;
+    }
+
+    /**
+     * The chest opening: the screen dims and a big chest drops in, shakes harder and harder, then
+     * bursts open in a white flash with turning light rays and a fountain of rings while each
+     * prize spins through the catalogue before landing. Everything derives from the chest's frame
+     * count, so it pauses, skips and rewinds with no extra state.
+     */
     private static void drawChest(ObjectServices s, Stage stage, RunState run) {
         int width = s.camera().getWidth();
-        int panelW = 300, panelH = 44 + stage.chestCount * 19, left = (width - panelW) / 2, top = Math.max(8, (224 - panelH) / 2);
-        Draw.panel(s, left, top, panelW, panelH, 0.95f);
-        boolean evolution = false;
-        for (int i = 0; i < stage.chestCount; i++) evolution |= stage.chestItems[i] >= 100;
-        Draw.centred(s, evolution ? "EVOLUTION!" : "TREASURE!", top + 6, 2, evolution ? Draw.PINK : Draw.GOLD, 1f);
-        int shown = Math.min(stage.chestCount, 1 + (stage.phaseFrames - stage.phaseFramesAtOverlay) / 8);
-        for (int i = 0; i < shown; i++) {
-            int item = stage.chestItems[i], y = top + 26 + i * 19;
-            if (item >= 100) {
-                int evo = item - 100;
-                Draw.shadow(s, Upgrades.evoName(evo), left + 12, y, 1, Draw.PINK, 1f);
-                Draw.shadow(s, Upgrades.name(Upgrades.evoBase(evo)) + " EVOLVED: " + Upgrades.evoEffect(evo), left + 12, y + 10, 1,
-                        Draw.WHITE, 1f);
-            } else if (item >= 0) {
-                Draw.shadow(s, Upgrades.name(item) + " LV " + stage.chestLevels[i], left + 12, y, 1, Upgrades.kindColour(item), 1f);
-                Draw.shadow(s, Upgrades.kindName(item), left + 12, y + 10, 1, Draw.GREY, 1f);
-            } else {
-                Draw.shadow(s, "RING HOARD", left + 12, y, 1, Draw.GOLD, 1f);
-                Draw.shadow(s, "+" + stage.chestRings / Math.max(1, ringPrizes(stage)) + " RINGS", left + 12, y + 10, 1, Draw.WHITE, 1f);
+        int t = stage.chestFrames();
+        boolean evolution = stage.chestEvolution();
+        int cx = width / 2, rest = 98;
+        Draw.rect(s, 0, 0, width, 224, Draw.BLACK, Math.min(0.78f, t / 18f * 0.78f));
+        int glow = evolution ? rainbow(t) : stage.chestCount >= 5 ? Draw.PINK : stage.chestCount >= 3 ? Draw.GOLD : Draw.CYAN;
+        boolean open = t >= Stage.CHEST_BURST;
+        // Light rays behind the chest, turning once it opens.
+        if (open) {
+            float fade = Math.min(1f, (t - Stage.CHEST_BURST) / 10f);
+            for (int ray = 0; ray < 12; ray++) {
+                double a = ray * Math.PI / 6 + t * 0.02;
+                for (int seg = 1; seg <= 16; seg++) {
+                    int r = 14 + seg * 9, size = 2 + seg / 4;
+                    int x = cx + (int) (Math.cos(a) * r), y = rest - 22 + (int) (Math.sin(a) * r);
+                    Draw.rect(s, x - size / 2, y - size / 2, size, size, ray % 2 == 0 ? glow : Draw.WHITE,
+                            fade * 0.6f * (1 - seg / 17f));
+                }
             }
         }
-        if (stage.phaseFrames - stage.phaseFramesAtOverlay >= 40) {
-            Draw.centred(s, "ENTER / START CONTINUE", top + panelH - 12, 1, Draw.CYAN, 1f);
+        // The chest: drop with a bounce, then a growing shake until the lid bursts.
+        int y = rest, x = cx;
+        if (t < Stage.CHEST_DROP) {
+            double f = t / (double) Stage.CHEST_DROP;
+            y = (int) (-40 + (rest + 40) * f * f);
+        } else if (t < Stage.CHEST_DROP + 8) {
+            y = rest - (int) (Math.sin((t - Stage.CHEST_DROP) / 8.0 * Math.PI) * 8);
+        } else if (!open) {
+            double amount = (t - Stage.CHEST_DROP) / 10.0;
+            x += (int) (Math.sin(t * 2.3) * amount);
+            y -= (int) Math.abs(Math.cos(t * 1.7) * amount * 0.5);
+        }
+        float pulse = 0.35f + 0.3f * (float) Math.sin(t * 0.25) + (open ? 0.2f : (t - Stage.CHEST_DROP) / 150f);
+        Draw.circleWorld(s, s.camera().getX() + x, s.camera().getY() + y - 22, 30 + (t % 20) / 4, 3, glow, Math.max(0f, pulse));
+        drawBigChest(s, x, y, open, glow, t);
+        // A fountain of rings (the ROM ring art) out of the open lid.
+        var rings = s.ringManager();
+        if (open && rings != null) {
+            for (int k = 0; k < 48; k++) {
+                int dt = t - Stage.CHEST_BURST - (k % 12) * 3;
+                if (dt < 0) continue;
+                // Spill out over both sides of the lid and rain down across the screen.
+                double side = k % 2 == 0 ? 1 : -1;
+                double vx = side * (0.8 + hash(k, 1) * 3.6), vy = -(2.6 + hash(k, 2) * 2.8);
+                int rx = cx + (int) (vx * dt), ry = rest - 38 + (int) (vy * dt + 0.09 * dt * dt);
+                if (ry > 240) continue;
+                rings.drawRingAt(s.camera().getX() + rx, s.camera().getY() + ry, t * 2 + k);
+            }
+        }
+        // White flash at the burst.
+        if (open && t < Stage.CHEST_BURST + 14) {
+            Draw.rect(s, 0, 0, width, 224, Draw.WHITE, 1f - (t - Stage.CHEST_BURST) / 14f);
+        }
+        if (!open) {
+            Draw.centred(s, "...", rest + 14, 2, Draw.WHITE, (t / 8) % 2 == 0 ? 1f : 0.4f);
+            return;
+        }
+        // Title, popping in.
+        int titleScale = t < Stage.CHEST_BURST + 6 ? 4 : 3;
+        Draw.centred(s, evolution ? "EVOLUTION!" : "TREASURE!", 10, titleScale, evolution ? rainbow(t) : Draw.GOLD, 1f);
+        // Prizes, each spinning through the catalogue before it lands.
+        int panelW = 330, left = (width - panelW) / 2, top = rest + 12, rowH = 11;
+        int shown = 0;
+        for (int i = 0; i < stage.chestCount; i++) if (t >= Stage.CHEST_FIRST_PRIZE + i * Stage.CHEST_PRIZE_GAP) shown = i + 1;
+        if (shown > 0) Draw.panel(s, left, top, panelW, 6 + shown * rowH, 0.92f);
+        for (int i = 0; i < shown; i++) {
+            int start = Stage.CHEST_FIRST_PRIZE + i * Stage.CHEST_PRIZE_GAP, rowY = top + 4 + i * rowH;
+            int item = stage.chestItems[i];
+            if (t < start + Stage.CHEST_SPIN) {
+                // The slot spin: names flicker past as the prize rises out of the chest.
+                int name = Math.floorMod(t * 7 + i * 13, Upgrades.COUNT);
+                Draw.shadow(s, Upgrades.name(name), left + 10, rowY, 1, (t & 2) == 0 ? Draw.WHITE : Draw.GREY, 1f);
+                continue;
+            }
+            boolean landed = t < start + Stage.CHEST_SPIN + 6;
+            if (landed) Draw.rect(s, left + 2, rowY - 2, panelW - 4, rowH, Draw.WHITE, 0.25f);
+            String name, detail;
+            int colour;
+            if (item >= 100) {
+                int evo = item - 100;
+                name = Upgrades.evoName(evo);
+                detail = Upgrades.evoEffect(evo);
+                colour = rainbow(t + i * 3);
+            } else if (item >= 0) {
+                name = Upgrades.name(item) + " LV " + stage.chestLevels[i];
+                detail = stage.chestLevels[i] == 1 ? "NEW " + Upgrades.kindName(item) : Upgrades.kindName(item);
+                colour = Upgrades.kindColour(item);
+            } else {
+                name = "RING HOARD";
+                detail = "+" + stage.chestRings / Math.max(1, ringPrizes(stage)) + " RINGS";
+                colour = Draw.GOLD;
+            }
+            Draw.shadow(s, name, left + 10, rowY, 1, colour, 1f);
+            Draw.shadow(s, detail, left + panelW - 10 - Draw.width(detail, 1), rowY, 1, Draw.GREY, 1f);
+        }
+        if (t >= stage.chestRevealEnd()) {
+            Draw.centred(s, "ENTER / START CONTINUE", 212, 1, (t / 15) % 2 == 0 ? Draw.CYAN : Draw.WHITE, 1f);
+        } else {
+            Draw.centred(s, "ENTER TO SKIP", 212, 1, Draw.GREY, 1f);
+        }
+    }
+
+    /** The chest at 3x, its lid flung up once open, gold trim and a lock plate. */
+    private static void drawBigChest(ObjectServices s, int cx, int bottom, boolean open, int glow, int t) {
+        int w = 60, h = 34, left = cx - w / 2, top = bottom - h;
+        Draw.rect(s, left - 2, top - 2, w + 4, h + 4, Draw.NAVY, 1f);
+        Draw.rect(s, left, top, w, h, 0x8A4A1C, 1f);
+        Draw.rect(s, left, top, w, 5, 0xB0642A, 1f);
+        Draw.rect(s, left, top + h / 2 - 2, w, 4, Draw.GOLD, 1f);
+        Draw.rect(s, left + 6, top, 4, h, Draw.GOLD, 1f);
+        Draw.rect(s, left + w - 10, top, 4, h, Draw.GOLD, 1f);
+        if (open) {
+            // A pillar of light out of the open chest, and the lid flung back on its hinge.
+            int since = t - Stage.CHEST_BURST;
+            int pillar = Math.min(90, since * 9);
+            for (int band = 0; band < 3; band++) {
+                int bw = w - 12 - band * 14;
+                Draw.rect(s, cx - bw / 2, top - pillar, bw, pillar, band == 2 ? Draw.WHITE : glow, 0.18f + band * 0.12f);
+            }
+            Draw.rect(s, left + 3, top - 4, w - 6, 6, glow, 0.9f);
+            Draw.rect(s, left + 3, top - 2, w - 6, 2, Draw.WHITE, 1f);
+            // Seen from the front, a lid thrown back is a short slab standing behind the hinge.
+            int lidH = 6 + Math.min(10, Math.max(0, 10 - since));
+            Draw.rect(s, left - 4, top - 4 - lidH - 2, w + 8, lidH + 2, Draw.NAVY, 1f);
+            Draw.rect(s, left - 2, top - 4 - lidH, w + 4, lidH - 2, 0x6A3410, 1f);
+            Draw.rect(s, left - 2, top - 6, w + 4, 2, Draw.GOLD, 1f);
+        } else {
+            int lidY = top - 12;
+            Draw.rect(s, left - 4, lidY - 2, w + 8, 16, Draw.NAVY, 1f);
+            Draw.rect(s, left - 2, lidY, w + 4, 12, 0xB0642A, 1f);
+            Draw.rect(s, left - 2, lidY + 9, w + 4, 3, Draw.GOLD, 1f);
+            Draw.rect(s, cx - 6, lidY + 6, 12, 12, Draw.GOLD, 1f);
+            Draw.rect(s, cx - 2, lidY + 10, 4, 5, Draw.NAVY, 1f);
         }
     }
 

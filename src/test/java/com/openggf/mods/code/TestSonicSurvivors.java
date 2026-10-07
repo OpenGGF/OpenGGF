@@ -1533,12 +1533,25 @@ class TestSonicSurvivors {
         assertTrue((boolean) call(run(), "evolvedWeapon", shock));
         assertTrue(items[1] >= 0 && items[2] >= 0 && levels[items[1]] > 0, "then owned upgrades rank up");
         assertEquals(1, getInt(profile(), "evolutionsSeen") & 1, "the collection records the discovery");
-        fixture.stepIdleFrames(10);
-        tapEnter(fixture);
-        assertEquals(2, getInt(stage(), "overlay"), "the chest holds its screen briefly");
-        fixture.stepIdleFrames(40);
-        tapEnter(fixture);
-        assertEquals(0, getInt(stage(), "overlay"));
+        var audio = com.openggf.audio.AudioManager.getInstance();
+        var music = new ArrayList<Integer>();
+        audio.setRequestObserver((kind, id) -> {
+            if (kind == com.openggf.audio.AudioRequestObserver.RequestClass.MUSIC) music.add(id);
+        });
+        try {
+            fixture.stepIdleFrames(70);
+            assertTrue(music.contains(0x93), "the lid bursts to Super Sonic's theme");
+            music.clear();
+            tapEnter(fixture);
+            assertEquals(2, getInt(stage(), "overlay"), "Enter first reveals every prize at once");
+            assertTrue((int) call(stage(), "chestFrames") >= (int) call(stage(), "chestRevealEnd"));
+            fixture.stepIdleFrames(2);
+            tapEnter(fixture);
+            assertEquals(0, getInt(stage(), "overlay"));
+            assertEquals(List.of(0x81), music, "closing restores Emerald Hill's music");
+        } finally {
+            audio.setRequestObserver(null);
+        }
         registry.restore(snapshot);
         assertFalse((boolean) call(run(), "evolvedWeapon", shock), "rewind undoes the evolution");
         // With nothing left to grow, a chest pays two hits' worth of rings.

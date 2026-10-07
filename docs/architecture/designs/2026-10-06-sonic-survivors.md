@@ -844,3 +844,12 @@ saves) was inspected for camp, shop, rules, all four records pages, cards, chest
 Rain and a warden banner. The final probe batch (seeds 22/33) is the "final shape" above. No
 engine-wide suite or guards were run. The installed `mods/sonic-survivors.jar` and its trusted
 hash were refreshed; other mod entries are unchanged and the user's save converts its shop on load.
+
+Follow-up at James's request: the chest opening became a staged sequence (drop and rattle, lid
+burst with white flash, light rays and pillar, a 48-ring fountain in ROM ring art, Super Sonic's
+theme, prizes spinning through the catalogue before landing). It derives entirely from the
+chest's frame count, so pause, skip and rewind need no new state; Enter reveals everything and a
+second press closes, restoring the boss track, the zone's music (`getCurrentLevelMusicId`) or, at
+a clear, fading out. The ring renderer draws over panels, which suits the fountain. The chest
+test now checks the fanfare request, skip and music restore; 108 Survivors cases pass, the opt-in
+probe skipped. Inspected in a `GameplayCaptureSession` preview at nine points of the sequence.
