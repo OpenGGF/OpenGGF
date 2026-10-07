@@ -1025,7 +1025,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   callbacks; manager-owned collision, riding and live callbacks are preserved.
   S2 player and dust art share the S2 mapping/DPLC decoder, with the public
   player DPLC entry point retained as a compatibility delegate.
-  SBZ and Final Zone share uniform scroll mechanics with independent camera state.
+  SBZ Act 2 and Final Zone share uniform scroll mechanics with independent camera
+  state; SBZ Act 1 uses its native cloud and building bands.
   Removed an unused radius-transition duplicate; live hurt and death paths retain their owners.
   S1 and S3K rings decode ROM mappings, correcting sparkle flips to the ROM sequence
   while preserving animation timing and the S3K pattern cap.
