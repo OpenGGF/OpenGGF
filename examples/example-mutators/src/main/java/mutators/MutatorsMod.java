@@ -43,7 +43,9 @@ public final class MutatorsMod implements GgfMod {
                         switch(cue) {
                             case NAVIGATE -> audio.playSfx(0xCD);
                             case CONFIRM -> audio.playSfx(0xB5);
-                            case START -> audio.playSfx(com.openggf.audio.GameSound.SPINDASH_RELEASE);
+                            // Title audio has cached ROM SFX before the gameplay profile is bound.
+                            // Sonic2AudioConstants.SFX_SPINDASH_RELEASE / Sonic2Sfx: $BC.
+                            case START -> audio.playSfx(0xBC);
                             case ERROR -> audio.playSfx(0xED);
                         }
                     });

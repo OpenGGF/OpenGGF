@@ -86,6 +86,12 @@ and support profile are candidate API roots. The normalized `0.7` pin and
 `ModApiVersion` description change together; the descriptor retains unpublished
 candidate `0.7.0` and no published baseline is edited.
 
+Title providers may own Escape/back through the additive, stock-false
+`ownsEscapeInput()` default. Owned modal titles route their saved exit command
+through the same overlay service; the host clears its global prompt and treats
+a null overlay command as `NONE`. Existing title implementations retain their
+host Escape shortcut.
+
 The controlled-level additions expose `GameplayFrameController`, `CourseControl`,
 opaque session/hole/layout-tagged `CourseCheckpoint`, `MenuInput`, title act
 selection, and typed ROM-backed scene values/presenters. The default controller

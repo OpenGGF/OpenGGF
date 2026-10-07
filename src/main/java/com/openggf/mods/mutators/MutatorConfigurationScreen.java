@@ -52,6 +52,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     @Override public State getState() { return state; }
     @Override public boolean isExiting() { return state == State.EXITING; }
     @Override public boolean isActive() { return state != State.INACTIVE; }
+    @Override public boolean ownsEscapeInput() { return usable(); }
     @Override public TitleScreenAction consumeExitAction() { return TitleScreenAction.ONE_PLAYER; }
     @Override public int startZoneIndex() { return 0; }
     @Override public int startActIndex() { return 0; }
@@ -61,7 +62,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         if (state != State.ACTIVE || !usable()) return;
         if (backdrop != null) backdrop.update(neutral);
         animate();
-        if (backdrop == null || backdrop.getState() == State.ACTIVE) handle(input);
+        if (!waitingForFade && (backdrop == null || backdrop.getState() == State.ACTIVE)) handle(input);
     }
 
     @Override public boolean handleInput(InputHandler input) {
@@ -83,9 +84,10 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     @Override public boolean pausesGameplay() { return open; }
     @Override public Command consumeCommand() { Command next = command; command = Command.NONE; return next; }
     @Override public void commandQueued(boolean waiting) {
-        waitingForFade = waiting;
+        // A title-to-hub acceptance starts its exit fade; keep title input held until retirement.
+        waitingForFade = waiting || !inGameplay;
         if (waiting) { open = true; status = "Waiting for the current transition..."; }
-        else { open = false; status = ""; }
+        else { open = false; status = inGameplay ? "" : "Returning to game hub..."; }
     }
 
     private boolean usable() { return !settings.isClosed() && SessionManager.getCurrentWorldSession() == world; }
@@ -122,7 +124,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         if (input == null) return;
         lastInput = input;
         hint = MenuInput.directionLabel(input) + " choose  " + MenuInput.confirmLabel(input) + " select  "
-                + MenuInput.backLabel(input) + " back";
+                + MenuInput.backLabel(input) + (page == Page.HOME && !inGameplay ? " hub" : " back");
         // A simultaneous cancel/confirm never admits changes.
         if (MenuInput.back(input)) { back(); sound(Cue.NAVIGATE); return; }
         var choices = rows();
@@ -143,7 +145,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         }
     }
     private void back() {
-        if (page == Page.OPTIONS) switchPage(Page.LIST);
+        if (page == Page.HOME && !inGameplay) activate(new Row(null,null,"Return to game hub",Action.HUB));
+        else if (page == Page.OPTIONS) switchPage(Page.LIST);
         else if (page == Page.HELP || !inGameplay && page == Page.LIST) switchPage(Page.HOME);
         else if (inGameplay) { status = "Choose Resume to apply. Esc keeps play held."; }
     }

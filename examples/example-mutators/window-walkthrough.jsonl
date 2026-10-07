@@ -84,7 +84,15 @@
 {"op": "key", "key": "Return", "hold": 0.09}
 {"op": "wait", "seconds": 3}
 {"op": "screenshot", "name": "hub"}
+{"op": "key", "key": "Down", "hold": 0.09}
 {"op": "key", "key": "Return", "hold": 0.09}
 {"op": "wait", "seconds": 16}
 {"op": "screenshot", "name": "relaunch-title"}
+{"op": "key", "key": "Escape", "hold": 0.09}
+{"op": "wait", "seconds": 3}
+{"op": "screenshot", "name": "title-back-hub"}
+{"op": "key", "key": "Down", "hold": 0.09}
+{"op": "key", "key": "Return", "hold": 0.09}
+{"op": "wait", "seconds": 16}
+{"op": "screenshot", "name": "second-relaunch-title"}
 {"op": "close"}

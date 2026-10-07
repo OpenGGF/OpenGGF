@@ -65,3 +65,14 @@ controls should appear only when they can accept input. The synchronized CSV
 and actual engine window, rather than an input script alone, establish the
 visited phases. Completed repair, integration and audiovisual results are
 recorded below before delivery.
+
+Final committed review of `f6e1f7a47` found a nullable overlay command falling
+through to restart, and global Escape bypassing title-menu ownership while
+drawing its prompt over the header. Null now means `NONE`; restart has an explicit
+branch. Stock titles retain their Escape default, while the common title owns
+Back, saves before Return to hub, clears the host prompt and keeps input held
+after acceptance until retirement. Actual normal-source GPU/PCM capture also
+showed the title Start cue selecting a missing WAV fallback before the gameplay
+audio profile was bound. The example uses the cached native Sonic 2 `$BC` ROM
+SFX instead. The earlier captures are attributed to their completed source;
+repaired-source recapture remains required before delivery.

@@ -110,6 +110,29 @@ class TestMutatorWorldIntegration {
         press(screen,input,org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER,true);
         assertEquals(LevelInputOverlay.Command.NONE,screen.consumeCommand());
     }
+    @Test void titleBackSaveFailureRetainsDraftAndRetryQueuesHubExactlyOnce() throws Exception {
+        var preparations=new java.util.concurrent.atomic.AtomicInteger();
+        var world=open(List.of(definition("gravity",MutatorScope.LIVE,o->{preparations.incrementAndGet();return List.of(new MutatorPolicy.DrySonicGravity(50));})));
+        var state=MutatorWorldAccess.state(world);assertTrue(MutatorWorldAccess.save(world));
+        var destination=preferenceDestination();Files.delete(destination);Files.createDirectory(destination);
+        state.requestEnabled("test-mutators:gravity",true);
+        var prior=Map.copyOf(state.admitted());long revision=state.effective().revision();
+        var screen=new MutatorConfigurationScreen(world,"Back regression",null,c->{});screen.initialize();
+        var input=new com.openggf.control.InputHandler();
+        assertTrue(screen.ownsEscapeInput());
+        press(screen,input,org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE,false);
+        assertSaveHeld(screen,state,world,prior,revision);assertEquals(TitleScreenProvider.State.ACTIVE,screen.getState());
+        Files.delete(destination);
+        press(screen,input,org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE,false);
+        assertEquals(LevelInputOverlay.Command.RETURN_TO_HUB,screen.consumeCommand());
+        assertEquals(prior,state.admitted());assertEquals(revision,state.effective().revision());assertEquals(0,preparations.get());
+        screen.commandQueued(false);
+        press(screen,input,org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER,false);
+        assertEquals(TitleScreenProvider.State.ACTIVE,screen.getState(),"accepted hub fade cannot be replaced by a Start");
+        assertEquals(0,preparations.get());
+        press(screen,input,org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE,false);
+        assertEquals(LevelInputOverlay.Command.NONE,screen.consumeCommand());
+    }
     private Path preferenceDestination() { return temp.resolve("fresh/player/mutators/mutator-preferences-s2.json"); }
     private static void press(MutatorConfigurationScreen screen,com.openggf.control.InputHandler input,int key,boolean overlay) {
         input.handleKeyEvent(key,org.lwjgl.glfw.GLFW.GLFW_PRESS);

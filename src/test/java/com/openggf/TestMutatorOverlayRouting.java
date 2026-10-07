@@ -26,6 +26,7 @@ class TestMutatorOverlayRouting {
     private GameplayModeContext gameplay;
     private FadeManager fade;
     private com.openggf.audio.AudioManager audio;
+    private final TitleScreenProvider title = mock(TitleScreenProvider.class);
     static final class Overlay implements LevelInputOverlay {
         boolean held = true, waiting; int handled, consumed, accepted; Command command=Command.NONE;
         @Override public boolean handleInput(InputHandler input) { handled++; return held; }
@@ -37,6 +38,7 @@ class TestMutatorOverlayRouting {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         SessionManager.clear(); GameServices.playbackDebug().endSession();
         var module=new DelegatingGameModule(new Sonic2GameModule(),"test:mutator-overlay") {
+            @Override public TitleScreenProvider getTitleScreenProvider() { return title; }
             @Override public <T> T getGameService(Class<T> type) { return type==LevelInputOverlay.class?type.cast(overlay):super.getGameService(type); }
         };
         GameModuleRegistry.setCurrent(module); gameplay=TestEnvironment.activeGameplayMode();
@@ -88,5 +90,40 @@ class TestMutatorOverlayRouting {
         GameServices.playbackDebug().startSession(new Bk2Movie(Path.of("overlay-input.bk2"),"logkey",Map.of(),
                 List.of(new Bk2FrameInput(0,0,0,true,"start")),1),0);
         assertFalse(GameLoopPauseInput.handleOverlay(GameMode.LEVEL,input)); assertEquals(0,overlay.handled);
+    }
+    @Test void nullCommandKeepsNativePlayHeldWithoutAcknowledgmentOrRestart() {
+        overlay.command=null;
+        int nativeFrame=gameplay.getSpriteManager().getFrameCounter();
+        loop.step();
+        assertTrue(overlay.held);assertEquals(0,overlay.accepted);assertFalse(fade.isActive());
+        assertEquals(GameMode.LEVEL,loop.getCurrentGameMode());
+        assertEquals(nativeFrame,gameplay.getSpriteManager().getFrameCounter());
+        verify(audio,never()).fadeOutMusic();
+        overlay.command=LevelInputOverlay.Command.RESUME;loop.step();
+        assertEquals(1,overlay.accepted);assertFalse(overlay.held);
+    }
+    @Test void modalTitleOwnsEscapeAndClearsPriorHostPromptWhileStockDefaultRetainsIt() {
+        loop.setGameMode(GameMode.TITLE_SCREEN);loop.pause();
+        when(input.isKeyPressed(GLFW_KEY_ESCAPE)).thenReturn(true);
+        when(input.isKeyDown(GLFW_KEY_ESCAPE)).thenReturn(true);
+        var controller=loop.getEscapeToMasterTitleController();
+        controller.update(GameMode.TITLE_SCREEN,input);assertTrue(controller.visible());
+        when(title.ownsEscapeInput()).thenReturn(true);
+        for(int i=0;i<125;i++)loop.step();
+        assertFalse(controller.visible());assertEquals(0,controller.progress());
+        assertEquals(GameMode.TITLE_SCREEN,loop.getCurrentGameMode());assertFalse(fade.isActive());
+        when(title.ownsEscapeInput()).thenReturn(false);loop.step();
+        assertTrue(controller.visible(),"stock titles retain the host shortcut");
+    }
+    @Test void modalTitleQueuesHubCommandThroughExistingFadeOwner() {
+        loop.setGameMode(GameMode.TITLE_SCREEN);loop.pause();
+        when(title.ownsEscapeInput()).thenReturn(true);
+        when(input.isKeyPressed(GLFW_KEY_ESCAPE)).thenReturn(true);
+        loop.getEscapeToMasterTitleController().update(GameMode.TITLE_SCREEN,input);
+        overlay.command=LevelInputOverlay.Command.RETURN_TO_HUB;loop.step();
+        assertTrue(fade.isActive());assertEquals(1,overlay.accepted);
+        assertFalse(loop.getEscapeToMasterTitleController().visible(),"accepted modal exits clear the old prompt too");
+        assertEquals(LevelInputOverlay.Command.NONE,overlay.command);
+        loop.step();assertEquals(1,overlay.accepted,"the title command is not replayed");
     }
 }

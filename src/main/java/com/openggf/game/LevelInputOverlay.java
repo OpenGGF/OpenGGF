@@ -21,7 +21,7 @@ public interface LevelInputOverlay {
     /** View-only menu, drawn after the native scene and HUD. */
     default void drawOverlay() { }
 
-    /** One-shot request serviced by the host through its ordinary fade/load owners. */
+    /** One-shot request serviced by the host through its ordinary fade/load owners. Null means NONE. */
     default Command consumeCommand() { return Command.NONE; }
 
     /** Host acknowledgment: a fade retains the command and the menu displays its waiting state. */

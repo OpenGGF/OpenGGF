@@ -1192,3 +1192,7 @@ These preferences are independent of historical rewind state. Resume admits LIVE
 edits; qualifying full rebuilds admit LOAD; a new game session admits LAUNCH.
 The current playable examples only expose LIVE edits. Unsupported or unsafe
 preference I/O reports a visible error and retains the in-memory draft.
+The common title owns Back: Escape backs out of help/options and, from the title,
+saves before Return to the game hub. Failed saves keep that title and error;
+accepted exits hold menu input throughout the fade. Gameplay configuration also
+keeps Start, Resume, Restart and Return behind their persistence boundary.

@@ -84,6 +84,13 @@ public interface TitleScreenProvider {
     boolean isActive();
 
     /**
+     * Whether this title owns Escape/back input instead of the host's hold-to-hub shortcut.
+     * Stock titles retain the host shortcut. A modal title may publish host commands through
+     * its {@link LevelInputOverlay} service after validating its own save/exit boundary.
+     */
+    default boolean ownsEscapeInput() { return false; }
+
+    /**
      * Returns true if this title screen supports rendering as a frozen background
      * behind the level select overlay (like Sonic 1, where the title logo and Sonic
      * sprite remain visible with a brown palette while the level select text overlays).

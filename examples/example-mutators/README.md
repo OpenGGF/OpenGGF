@@ -33,7 +33,7 @@ boot-scoped; editing prepared settings never requires restarting the executable.
 
 | Context | Keyboard defaults | Controller |
 | --- | --- | --- |
-| Title/configuration | Arrows choose; Enter select; Esc back | D-pad; displayed confirm/back buttons |
+| Title/configuration | Arrows choose; Enter select; Esc back; Esc at title returns to hub | D-pad; displayed confirm/back buttons |
 | Normal play | Left/Right move; Space jump | Normal mapped movement and A/B/C |
 | Open configuration | Enter (Pause), or Backspace (Start) | Start |
 | Apply LIVE edits | Choose Resume play | Choose Resume play |

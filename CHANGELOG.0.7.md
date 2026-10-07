@@ -10,7 +10,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   typed scoped options, atomic admission, owner fault isolation and session rewind
   separate from saved preferences. The title/configuration/play/restart/hub flow
   keeps native movement and sprite admission, with an explicit EHZ1 solo-Sonic
-  support cell and maintained package source/build-along guide.
+  support cell and maintained package source/build-along guide. Modal title Back
+  preserves the save boundary and host prompt ownership; title cues use ROM SFX.
 
 - **Sonic 1 background scrolling:** Scrap Brain Act 1 uses the REV01 cloud
   interpolation and three building bands, with separate fractional cameras,

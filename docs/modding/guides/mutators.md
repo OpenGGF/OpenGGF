@@ -166,3 +166,10 @@ For native hub/relaunch and host input evidence, use the maintained
 process/window ownership and cleanup, plus a scoped Pulse monitor WAV. Verify
 the screenshots and action timings; its frameless/vblank/preload options are
 explicit host workarounds, not default window-manager or physical-speaker proof.
+
+The common title owns Escape through `TitleScreenProvider.ownsEscapeInput()`;
+the stock default remains false. Back leaves an option/help page, and Back from
+the title saves the requested draft before queuing Return to hub through the
+same `LevelInputOverlay` host command owner. Failed persistence keeps the title
+and visible error. Accepted title exits hold input throughout the exit fade.
+Null overlay commands are treated as `NONE`, never as a restart request.

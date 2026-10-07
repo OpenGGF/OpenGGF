@@ -1320,11 +1320,17 @@ public class GameLoop {
 
         boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler);
         var overlay = GameLoopPauseInput.overlay(currentGameMode);
+        var titleInputOwner = currentGameMode == GameMode.TITLE_SCREEN ? getTitleScreenProviderLazy() : null;
+        boolean titleOwnsEscape = titleInputOwner != null && titleInputOwner.ownsEscapeInput();
+        if (overlay == null && titleOwnsEscape) {
+            overlay = GameServices.module().getGameService(LevelInputOverlay.class);
+        }
+        if (overlayOwnsPause || titleOwnsEscape) escapeToMasterTitleController.reset();
         if (overlay != null && handleConfigurationCommand(overlay)) {
             inputHandler.update();
             return;
         }
-        if (!overlayOwnsPause) escapeToMasterTitleController.update(currentGameMode, inputHandler);
+        if (!overlayOwnsPause && !titleOwnsEscape) escapeToMasterTitleController.update(currentGameMode, inputHandler);
         if (currentGameMode == GameMode.LEVEL && !overlayOwnsPause) {
             userRecordingControls.updateLevelControlInput(inputHandler);
             handleTimeAttackRetryInput();
@@ -1489,7 +1495,8 @@ public class GameLoop {
             pendingConfigurationOwner = null;
         }
         var requested = overlay.consumeCommand();
-        if (pendingConfigurationCommand == LevelInputOverlay.Command.NONE && requested != LevelInputOverlay.Command.NONE) {
+        if (pendingConfigurationCommand == LevelInputOverlay.Command.NONE && requested != null
+                && requested != LevelInputOverlay.Command.NONE) {
             pendingConfigurationCommand = requested;
             pendingConfigurationOwner = overlay;
         }
@@ -1508,7 +1515,7 @@ public class GameLoop {
             return true;
         } else if (command == LevelInputOverlay.Command.RETURN_TO_HUB) {
             fadeOutTo(this::returnToMasterTitle);
-        } else {
+        } else if (command == LevelInputOverlay.Command.FULL_RESTART) {
             audioManager.fadeOutMusic();
             GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), resolveFadeManager(), () -> {
                 levelManager.restartCurrentLevelFromConfiguration();
