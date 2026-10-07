@@ -111,8 +111,8 @@ runs are inspected.
 
 The first `-Dmse=off -Dtest=TestSwScrlSbz test` candidate run completed nine
 cases, one failure, no errors/skips: the restore-window test incorrectly expected
-sourceX20 at cameraX100. Literal REV01 arithmetic gives quarter=-25,
-DIVS quotient24 and cloud words -25,-24,-22,-21, hence sourceX21. The assertion
+source X 20 at camera X 100. Literal REV01 arithmetic gives quarter=-25,
+DIVS quotient24 and cloud words -25,-24,-22,-21, hence source X 21. The assertion
 was corrected from this owning routine; production was unchanged. The rerun
 passed all nine cases with no errors/skips. The existing uniform-scroll and
 background-ownership selector passed eleven cases with no errors/skips:
@@ -183,3 +183,62 @@ commit updates the architecture index and four October 7 blueprint documents;
 no executable source, tests, POM, hooks or selection policy changed. The exact
 `09282b173` executed baseline remains applicable to engine behavior. These
 upstream documents are preserved in the combined tree.
+
+## Focused corrections and independent review
+
+S1 title progress ownership (`cf1e3f75c096`) passed 64 focused lifecycle,
+state/decorator/API, Javadoc and SDK cases without skips. The additive hook and
+its forwarding signature replace only the unpublished 0.7 candidate pin; the
+exact regenerated 20,046-line surface matches, with no published-pin or version
+change. The maintained samples are covered by the combined ordinary selection.
+The native-specific default hook keeps common runtime code semantic and preserves
+decorated stage/emerald counts, Continue and other games' progress.
+
+S3K Ribot (`3e7e75785c8b`) passed 68 focused object/child-graph and mandated
+loading/bootstrap/decoding cases without skips. Its initialization regression
+fails on untouched production. Matched LBZ trace errors fall 4,585→1,665 and
+first error moves 23,533→30,582; the remaining Tails Y/animation disagreement
+is unattributed. Neither the red LBZ fixture nor the earlier red HCZ full-chain
+boundary is represented as completed parity.
+
+Independent S3K review of the proposed shared art-owner registration confirms
+that `characterKey().persisted()` supplies the semantic Tails bank for runtime
+`tails_p2` and preserves converted Knuckles donor selection. The owner observes
+the existing selected mapping frame and publishes ROM-backed art work; it does
+not write player physics, animation selection or object state. S3K's host policy
+has `supportsPlayerDynamicArtAudit=false`, so this registration correction is
+inert for its existing player-art audit. No timing input, trace-created job,
+comparator tolerance or new rewind field is introduced.
+
+Independent S1 review accepted the S2 horizontal spring side gate: unsigned
+word subtraction and x-flip reject the same contact sides, including equality,
+as both ROM player-slot branches. Both participants reach the shared solid
+checkpoint loop. The separate proximity path is unchanged. The added focused
+regression calls the private contact gate and covers both facings/equality;
+unsigned sign-boundary and live P1/P2 checkpoint-dispatch breadth remain limits.
+
+The final S2 trace comparison retains the same measured outcomes after the
+spring-side correction: special stages 2/5/6 and EHZ segment 2 compare cleanly;
+stage 7, ARZ and the full/prefix chains remain red. Thus the missing spring-side
+branch is independently ROM/regression-confirmed, but does not explain the
+ARZ/stage 7 frontier. That rejected causal inference is preserved in the S2
+lane audit. The shared art registration's non-art disagreement spans were
+matched before/after separately; enabling the previously absent body owner
+exposes an earlier chain art boundary rather than licensing a gameplay tune.
+
+The combined plan selects 3,007 ordinary classes, all categories, plus fresh-JVM
+structural guards. The public module hook and shared playable-art registration
+require this normal broad selection. Tool preflight passed in the coordinator's
+launch environment. The measured baseline cost is 76.5 minutes ordinary plus
+3.5 minutes guards, so the invocation receives 120 minutes excluding queue wait;
+the runner's ten-minute no-output timeout remains. A timeout, missing reports,
+or prerequisite skip is incomplete coverage, never a passing result.
+
+S2 delivered commit `af0307b73a66` passes 105 title/startup, 14 initializer and 13
+spring cases without skips. Its final eight-fixture trace invocation completes
+four passes/four assertion failures, zero errors/skips: stages 2/5/6 and EHZ1
+segment 2 compare cleanly. The first erroneous EHZ1 damage is attributed to the
+engine's Coconuts coconut projectile; the differing ROM lifetime/admission
+condition remains to investigate. Exact old/current non-art tuple digests in the
+lane audit establish unchanged measured gameplay after semantic art registration.
+No stage 7, ARZ, chain, competition or whole-act completion is claimed.

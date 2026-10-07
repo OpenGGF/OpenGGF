@@ -12,6 +12,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Brain Act 2 and Final Zone keep their uniform scrolling and use the REV01
   background-Y entry offset.
 
+- **Sonic 2 playable art and springs:** companion players register their ROM
+  art owner by character identity, restoring Tails DPLC submissions for runtime
+  names such as `tails_p2`. Horizontal springs apply the native unsigned
+  launch-side check for both participants, including the flipped equality case.
+
 - **Stock title starts:** starting a new Sonic 1 game clears emeralds and the
   special-stage cursor while preserving configured stage counts; Continue keeps
   existing progress. Unsupported two-player title actions return to the title
