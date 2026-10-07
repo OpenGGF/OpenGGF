@@ -346,3 +346,146 @@ release, discrepancy, frontier and coverage prose remain coordinator-owned.
 All local Maven sessions completed; no lane process or temporary probe remains.
 Combined broad candidate/post-integration verification, merge, push and worktree
 cleanup remain the coordinator's delivery responsibility.
+
+## Round 2: EHZ1 coconut targeting
+
+This continuation starts from pinned integrated base
+`5b3a63641033506fc0d89ad5188a0c97fae29089` on
+`bugfix/ai-trace-s2-ehz-coconut-20261007-r2`. Its measurements are distinct from
+the preceding round. The coordinator owns combined broad verification,
+central discrepancy/frontier/release prose and integration.
+
+### ROM owner and bounded hypothesis
+
+`Obj9D_Idle` calls `Obj_GetOrientationToPlayer` before its attack and idle-timer
+decisions (`s2.asm:75258-75278`). The helper chooses MainCharacter or Sidekick
+by absolute signed-word X distance, retaining MainCharacter on a tie
+(`s2.asm:72962-72991`). Its selected object-minus-player delta drives both
+orientation and the literal unsigned word window `(d2 + $60) < $C0`.
+Consequently target offsets -$5F through +$60 are admitted; -$60 and +$61 are
+excluded. Equality keeps orientation index zero.
+
+The base Java idle routine instead reads only its supplied main player,
+uses a strict X comparison and an absolute-distance gate. The existing
+`ObjectPlayerQuery.nearestByRomX(NATIVE_P1_P2, ...)` already supplies the
+ROM selection and tie semantics, so this hypothesis needs no shared query,
+player, timing or physics change. Coconuts' throw offsets and velocities
+already match `Obj9D_CreateCoconut`/`Obj9D_ThrowData`
+(`s2.asm:75368-75404`); reversing them is rejected by that literal reference.
+
+Separately, `Obj98_Main` tests the previous render-on-screen bit and deletes
+before dispatching movement (`s2.asm:74794-74802`); the generic Java projectile
+checks screen bounds after movement. That observation alone does not establish
+the row-737 cause and is not grounds for an unmeasured projectile rewrite.
+`Obj98_Init` returns through LoadSubObject, and `Obj98_CoconutFall` adds $20
+gravity before ObjectMove (`s2.asm:74790-74822`).
+
+
+### Fresh pinned baseline and regression red
+
+Both queued original requests executed after a long resource wait; production
+source remained exactly the pinned base throughout compilation and execution.
+These waits are not measurements. Java 21, the same verified S2 ROM and the
+unchanged default single-fork trace profile were used; the POM's shared
+`surefire.forkCount` defaults to 1, with no CLI override.
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS2Ehz1Seg1CompleteEmeraldsSegmentTraceReplay,TestS2CompleteEmeraldRunChain,TestS2CompleteEmeraldRunPrefix -Dsonic2.rom.path=${S2_ROM} test
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestCoconutsInitialization test
+```
+
+The replay command completed with Maven failure: **3 tests, 3 failures, 0
+errors/skips**, 1:31 min. Fresh XML times: chain 7.797 s, prefix 5.494 s,
+standalone EHZ1 seg1 1.515 s. Standalone remains **8176 errors**, first row
+**737 `tails_y_speed`**, ROM `-03AF` versus engine `-0400`. Each chain's
+segment-0 JSON remains **42538 errors**, first row737 `sidekick_y`,
+`01EA` versus `01E9`; each segment-1 art JSON remains **15713 errors**,
+first row0 `dynamic_art.outstanding_transfer_ids`, `[0]` versus `[0, 1]`.
+The walk stops in segment1 and the shared dynamic-art gap also fails.
+
+The regression red completed with Maven failure: **4 tests, 2 failures, 0
+errors/skips**, 24.188 s (fresh XML 0.969 s). The inherited initialization
+and idle-expiry cases pass. The added nearer-sidekick case fails on facing;
+the main-tie/range-window case fails on X equality. No executed red claim
+is made for later assertions in those failing test bodies.
+
+The candidate changes only Coconuts idle targeting, signed-word orientation
+and the unsigned word range gate. It uses optional injected services and
+retains the existing supplied-player path in direct-object contexts without
+services. It adds no state fields; the existing badnik facing and Coconuts
+snapshot already carry the decision. The new regression resumes a captured
+throw decision and compares forward continuation after restoration.
+
+Native comparison-only auxiliary evidence: the relevant parent appears at
+row173, slot23, X0427/Y01D8. Native Obj98 children appear at row233
+X0432/Y01AC and row548 X041C/Y01C3; no new Obj98 appears through row738.
+The parent's observed routine changes include climbing→idle at679,
+idle→climbing at696, and climbing→idle at712. These observations narrow the
+attack-history question; they do not make the target correction a measured
+explanation of the damaging engine shot.
+
+Develop advanced concurrently to `4cfb745646d9439cdb9c07d53d0670dd0fb3fe58`.
+Coconuts is unchanged upstream. This lane retains the pinned baseline inputs;
+actual-destination reconciliation and broad qualification remain coordinator-owned.
+
+
+### Candidate verification and dispositions
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestCoconutsInitialization test
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS2Ehz1Seg1CompleteEmeraldsSegmentTraceReplay,TestS2CompleteEmeraldRunChain,TestS2CompleteEmeraldRunPrefix,TestS2SpecialStage2TraceReplay,TestS2SpecialStage5TraceReplay,TestS2SpecialStage6TraceReplay,TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay -Dsonic2.rom.path=${S2_ROM} test
+python3 tools/testing/run_categories.py --base 5b3a63641033506fc0d89ad5188a0c97fae29089
+```
+
+The focused candidate completes with **4 tests, 0 failures/errors/skips**,
+Maven success, 1:13 min including source/test recompilation, fresh XML 0.640 s.
+All assertions in the range-window loop and the rewind continuation execute.
+
+The seven-fixture candidate completes with **7 tests, 1 failure, 0
+errors/skips**, 49.193 s, Maven failure solely in the full chain. Fresh XML:
+full chain 12.312 s; prefix 7.336 s; EHZ1 seg1 1.410 s; EHZ1 seg2 1.068 s;
+stages2/5/6 0.968/1.047/1.485 s. Source is frozen during both commands.
+
+- **Closed:** standalone EHZ1 seg1 **8176→0** errors; no first mismatch remains.
+  The matched chain segment-0 physics report **42538→0** and segment-1 art
+  report **15713→0** in both full and prefix drives. The erroneous coconut
+  damage is causally removed by the parent targeting/orientation/range fix.
+- **Preserved:** EHZ1 seg2 and standalone stages2/5/6 remain at zero errors,
+  with no ROM skip. The continuous prefix target passes; its gap report has
+  ten compared gaps and zero failures.
+- **Newly exposed full-chain frontier:** walk stop advances from segment1 to
+  segment17 (`ss_7`). Full-chain physical reports are zero through segment11
+  (`seg7_ehz2`); segment12 (`seg8_cpz1`) has **26735** errors, first non-camera
+  mismatch row4394 `x`, ROM255B versus engine255C. Segment13 (`seg9_cpz2`)
+  has **15553**, first row4859 `x`, 04DB/04DC. Segment15 (`seg10_cpz2`) is
+  zero; segment16 (`seg11_arz1`) has **19884**, first row1961
+  `sidekick_x_speed`, -0146/0A00. Segment17 art has **22405**, first row0
+  outstanding-transfer IDs `[0]`/`[]`. These later counts have no matched
+  pre-fix measurement because the baseline stopped at segment1; they are not
+  presented as new regressions or inherited-count equivalence.
+- **Earlier full-chain gap frontier:** its report has seventeen gaps and
+  twelve failures. The first is `ss → seg2_ehz1`, starting with
+  `run_gap.edge[0].movie_logical_frame`, expected10308 versus actual10268.
+  This differs from the passing prefix drive's gap result. Neither aggregate
+  totals nor the passing prefix erase the full chain's clock/ledger failures;
+  timing/admission investigation is separate coordinator-owned work.
+- **Rejected as this damage's explanation:** a generic Obj98 projectile
+  rewrite is unnecessary to close row737. Its independently observed
+  before/after-movement deletion difference remains unimplemented and is not
+  certified by this route's pass.
+
+The category plan selects **2640/3007 ordinary classes plus guards**. It is
+inspected, not executed in this worker. The coordinator owns the combined
+baseline/candidate/post-integration broad validation, actual destination
+reconciliation, merge and push. Focused checks are not a broad-suite pass.
+No comparison tolerance, trace data, timing authority, object allocation,
+player physics or projectile movement changed. No fixture- or frame-based
+behavior, fitted constant or gameplay hydration was added. The registered
+owner is S2-specific; KiS2's shared consumer has not been replay-measured in
+this round. Existing S2 nearest-player and orientation pitfalls already
+cover this lesson, so skills/guidance are unchanged.
+
+Three lane files are delivered: Coconuts owner, its initialization/targeting/
+rewind regression, and this audit. All four local Maven requests have completed;
+no temporary probe or lane process remains. Central documentation and final
+integration/cleanup remain coordinator-owned.
