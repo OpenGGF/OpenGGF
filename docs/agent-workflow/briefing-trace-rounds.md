@@ -89,6 +89,20 @@ growth as retention candidates; compare the final post-plan floor and inspect
 fixture/static owners before claiming application leaks. An `@AfterAll` callback
 or a closed native handle does not by itself make a fixture's Java graph unreachable.
 
+Immediate post-GC counters can disagree (2026-10-07 compiler-memory experiment):
+the owned Maven parent dropped from about 1.27 GiB used heap to 79.5 MiB after a
+requested collection, while RSS and NMT committed counters had not yet followed
+the logical heap resize. A later reading showed RSS plus swap falling from
+2.54 GiB to 0.78 GiB. Compare settled counters and distinguish a later used-heap
+reading from a post-GC floor before attributing the difference to native retention.
+
+A constant-retention stress assertion can measure the wrong owner (2026-10-07
+audio-comparator investigation): production validation kept bounded semantic
+state, but the test factory's static evidence map held 500,128 input services.
+Clearing that map after the selected plan returned released 309.5 MiB. Compare
+post-plan floors and release explicit owners in sequence; the test's internal
+retention counter does not include its input factory or framework bookkeeping.
+
 Moving a live log across filesystems loses its writer (2026-10-07, stock parity
 swarm): moving stdout from `/tmp` on tmpfs into a btrfs worktree copied and
 unlinked the original file while the queued wrapper retained its open inode.
