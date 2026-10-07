@@ -120,6 +120,7 @@ public final class CreatorCatalogProbe {
         int registrations;
         try (ModRuntime runtime = new ModClassLoaderFactory(CreatorCatalogProbe.class.getClassLoader()).create(catalog.effective(), trusted)) {
             runtime.installFaultBoundary(new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(), owners -> new ModStateSaveResult.Saved(), owners -> { }));
+            runtime.installStorageRoot(root.resolve("saves"));
             registrations = runtime.newRegistrationPlan().registrations().size();
             if (registrations != expectedEffective || !runtime.registrationFailures().isEmpty() || !runtime.rejectedOwners().isEmpty())
                 throw new IllegalStateException("Registration/loader failure (expected " + expectedEffective + ", actual " + registrations + "): " + runtime.registrationFailures() + " / " + runtime.rejectedOwners());
