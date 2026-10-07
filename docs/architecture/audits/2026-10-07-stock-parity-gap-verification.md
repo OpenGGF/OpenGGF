@@ -170,9 +170,11 @@ Failure identity and concrete first mismatch:
 | `TestSszTailsColdRouteCapture` | `coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int)[2]` | replay 4018: object-manager.usedSlotsBits differs; onlyA slots24,29 |
 | `audio.timeline.TestS1GameplayAudioTimelineCli` | `shellUsesAbsoluteBootstrapToolsAndRejectsInjectedEnvironmentBeforePathLookup` | expected: <0> but was: <4> |
 
-The runner caps retained failure-message prefixes at 2,048 characters. The wide-MHZ
-and SSZ-Tails rewind assertions exceed that limit, so the table records their
-first concrete fields, not a claim that their full serialized state matched.
+The runner caps retained failure-message prefixes at 2,048 characters. The
+SSZ-Tails rewind assertion exceeds that limit, so the table records its first
+concrete fields, not a claim that its full serialized state matched. The complete
+wide-MHZ message is about 341 characters; all six named `stateBytes` differences
+were inspected and match the candidate exactly.
 Object-blob hashes and Java identities are not portable between JVMs. Any disputed
 new or worsened failure requires a bounded matched base/current check.
 
@@ -242,3 +244,86 @@ engine's Coconuts coconut projectile; the differing ROM lifetime/admission
 condition remains to investigate. Exact old/current non-art tuple digests in the
 lane audit establish unchanged measured gameplay after semantic art registration.
 No stage 7, ARZ, chain, competition or whole-act completion is claimed.
+
+## Completed candidate and guard correction
+
+The combined candidate at `27ea65395744196434444c43093a4f2ba5a5838a` ran:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 09282b17305cb5794e43a26855cd2b9543b4ff5f --max-minutes 120 --run
+```
+
+Run `20261007T112413Z-de8b4b48` completed both lanes. Ordinary: 3,005 XML
+suites, 26,166 tests, 28 failures, zero errors and 61 skips in 4,457.92 seconds
+(exit 1). All failure and skip identities match the executed baseline. Twenty-seven
+failure messages match literally; the remaining SSZ-Tails bounded prefix matches
+after removing only the independently verified JVM-dependent blob hashes. Its
+first mismatch remains replay frame 4,018, `object-manager.usedSlotsBits`, with
+slots 24 and 29 only on A. This comparison does not establish equality beyond
+the retained prefix. No new or worsened concrete ordinary failure was observed,
+and no ROM prerequisite was skipped. This is completed red validation.
+
+The separate fresh-JVM guard lane completed 672 tests, one new failure, zero
+errors/skips in 212.43 seconds (exit 1). The module/provider caching guard rejected
+the unaudited title lifecycle call. Inspection of
+`GameServices.currentOrBootstrapGameModule` confirms active `WorldSession`
+resolution first and bootstrap fallback only before a session; the one-shot
+`onNewGameFromTitle` call retains no module or provider. The correction adds that
+exact source call to the guard's existing audited list and documents the seam.
+It changes no runtime behavior or scanning rule and grants no class-wide exemption.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dtest=TestBootstrapModuleProviderCachingGuard test
+```
+
+The corrected guard completed seven tests, zero failures/errors/skips (exit 0),
+including stale-approval detection and negative scanner fixtures. The unchanged
+ordinary lane is not repeated for this audit/Javadoc correction; the required
+post-integration run will execute all guards again. Original candidate diagnostics
+were inspected, then acknowledged through the runner and deleted.
+
+## Affected S1 canonical fixtures
+
+The clean detached base and combined candidate both ran the same single-fork
+`trace-replay` selector with absolute verified ROM paths. `${OPENGGF_REPO}`
+below denotes the main repository root; actual commands used resolved absolute
+paths:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS1Sbz1CompleteRunTraceReplay,TestS1Sbz2CompleteRunTraceReplay,TestS1Sbz3CompleteRunTraceReplay,TestS1FzCompleteRunTraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay -Dsonic1.rom.path=${OPENGGF_REPO}/s1.gen -Dsonic2.rom.path=${OPENGGF_REPO}/s2.gen -Ds3k.rom.path=${OPENGGF_REPO}/s3k.gen test
+```
+
+Each completed six tests, zero failures/errors/skips (exit 0). Canonical SBZ1,
+SBZ2, SBZ3 and FZ reports compare 7,619, 9,594, 4,457 and 8,354 rows respectively,
+with zero errors, warnings or bootstrap errors/warnings on both trees. FZ's
+report retains the fixture's internal `s1_lz4` alias. The isolated FZ replay is
+clean on the current baseline and candidate; the earlier full chain still stops
+at MZ2 before reaching FZ. Neither result proves general hit-window correctness
+of the remaining suppression heuristic or whole-act visual/cache residency.
+
+## Next work from the verified remaining gaps
+
+1. Keep S3K AIZ → HCZ stable: diagnose the fresh chain's HCZ row 0 fractional Y
+   carry (`$0000` native, `$3800` engine) and missed giant-ring exit through the
+   actual stage-return/load owner. Historical AIZ wait corrections already exist.
+   LBZ's next independent frontier is row 30,582 Tails Y/CPU behavior after the
+   Ribot lead is removed.
+2. Close S2's earlier EHZ1 coconut damage before downstream stage 1 art symptoms:
+   compare Obj9D throw/child allocation, Obj98 initialization, visibility/deletion
+   and coconut fall dispatch. Separately diagnose ARZ1 row 1,961 Tails launch
+   state before the stage 7 inherited ledger. Preserve the now-green stages 2/5/6
+   and EHZ1 segment 2. Native S2 competition remains separate completion work.
+3. Find S1's owning art submission discrepancy and actual MZ2 giant-ring exit
+   boundary. The current full chain stops at segment 12; the standalone FZ
+   fixture passes. Do not repeat the existing roll-jump selector fix or use that
+   isolated pass to certify general boss behavior.
+4. Finish S3K's real ending/credits provider and finale-to-terminal-state flows,
+   alongside bounded repair of the independently red SSZ/LRZ/MHZ/DEZ cold-route
+   and rewind obligations. Source/component presence is not a cold-route pass.
+5. Complete the advertised per-act/character matrices, checkpoint/load/respawn
+   rewind and native presentation, then qualify the separate audio oracle and
+   release campaign gates. Ordinary-suite results do not replace trace/native/audio
+   profiles.
+
+These are evidence-backed follow-ups, not claims that all remaining entries have
+been freshly reproduced or that this swarm certifies whole-game completion.

@@ -969,6 +969,9 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * left behind. S3K takes its counts from the data-select slot instead.
      * The active module then applies its campaign-specific initialization;
      * S1 also clears emeralds and the special-stage cursor in PlayLevel.
+     * This one-shot lifecycle dispatch resolves the active session module when
+     * present; direct pre-session callers use the bootstrap module. It retains
+     * neither a module nor one of its providers.
      */
     public void startNewGameFromTitle() {
         this.lives = 3;

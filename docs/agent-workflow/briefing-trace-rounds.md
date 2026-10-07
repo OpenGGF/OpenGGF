@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Moving a live log across filesystems loses its writer (2026-10-07, stock parity
+swarm): moving stdout from `/tmp` on tmpfs into a btrfs worktree copied and
+unlinked the original file while the queued wrapper retained its open inode.
+The visible copy stopped growing although Maven continued. Create output in the
+worktree's `target/` before launching. If recovery is needed, verify the exact
+owned process and follow its `/proc/<pid>/fd/1` descriptor with a bounded
+`tail --pid` follower; record and clean up that follower. Log recovery and queue
+admission are not test completion.
+
 Direct level-load captures can hide title-route faults (2026-10-06, Putt Putt
 Paradise at `b34da10e4`): the footage and course tests matched physics while the
 real menu reset erased the selected act and controlled LEVEL rows froze the

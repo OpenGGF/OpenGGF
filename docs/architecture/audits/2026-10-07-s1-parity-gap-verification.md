@@ -144,8 +144,8 @@ required broad validation; this lane does not claim a full-suite pass.
 
 The title-new-game emerald reset is closed by a ROM-owned correction and six
 passing lifecycle regressions. The old rolling-jump selector mechanism is stale
-in current source; the historical Final Zone mismatch population itself remains
-unmeasured because this chain stops earlier. Its remaining mapping/push-based
+in current source; this chain does not measure Final Zone because it stops
+earlier. Its remaining mapping/push-based
 boss suppression is a hypothesis to revisit when the encounter is reachable,
 not a diagnosed fix target here. Earlier art/timing and MZ2 boundary failures
 remain unresolved and unattributed to this title-only change.
@@ -154,6 +154,21 @@ The coordinator should remove the S1 title-reset bullet from
 `docs/status/known-bugs.md`, fold the correction into the existing campaign
 lifecycle release prose, and record this measured frontier without claiming a
 Final Zone pass. This lane intentionally leaves those shared ledgers untouched.
+
+### Coordinator's isolated late-stage replay check
+
+The coordinator subsequently ran SBZ1/2/3, FZ and the two SBZ credits fixtures
+under canonical `trace-replay` on both the untouched detached base and combined
+candidate. Each invocation completed six tests, zero failures/errors/skips.
+SBZ1/2/3 and FZ compare 7,619/9,594/4,457/8,354 rows with zero errors, warnings
+or bootstrap disagreements on both trees. The exact selector and absolute ROM
+arguments are recorded in the [combined audit](2026-10-07-stock-parity-gap-verification.md#affected-s1-canonical-fixtures).
+
+Thus the historical FZ mismatch population is not reproduced by this current
+standalone fixture. The full campaign chain's MZ2 blocker and the remaining
+boss suppression heuristic are still separate unresolved questions. This
+bounded pass supplies affected-fixture regression coverage for the SBZ/FZ scroll
+correction; it does not establish whole-route or general boss parity.
 
 All four Maven wrappers and their four temporary stdout followers completed.
 The followers were needed because `/tmp` is tmpfs and the worktree is btrfs:

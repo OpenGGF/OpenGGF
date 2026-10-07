@@ -111910,3 +111910,24 @@ Full commands, grouping hazards, evidence and rejected hypotheses are in the
 [S3K](../architecture/audits/2026-10-07-s3k-parity-gap-verification.md) audits.
 The [combined audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md)
 records the separately executed ordinary/guard baseline and coverage limits.
+
+## 2026-10-07 — S1 affected late-stage fixtures remain clean
+
+Untouched base `09282b17305c` in `.worktrees/ai-parity-swarm-20261007-base`
+and combined candidate `27ea65395744` in `...-integration` both completed
+this selector. `${OPENGGF_REPO}` denotes the repository root; actual ROM arguments
+were resolved absolute paths:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS1Sbz1CompleteRunTraceReplay,TestS1Sbz2CompleteRunTraceReplay,TestS1Sbz3CompleteRunTraceReplay,TestS1FzCompleteRunTraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay -Dsonic1.rom.path=${OPENGGF_REPO}/s1.gen -Dsonic2.rom.path=${OPENGGF_REPO}/s2.gen -Ds3k.rom.path=${OPENGGF_REPO}/s3k.gen test
+```
+
+Each invocation passes six tests with zero failures/errors/skips. Canonical
+SBZ1/2/3 and FZ reports compare 7,619/9,594/4,457/8,354 rows with zero comparator
+errors/warnings or bootstrap errors/warnings, so there is no first-error field.
+The current standalone FZ fixture does not reproduce the historical animation
+mismatch population. The full S1 chain still stops at MZ2 before FZ; general
+boss hit-window and SBZ checkpoint/cache-residency qualification remain open.
+These checks supply bounded affected-fixture regression coverage for the scroll
+correction. Full context is in the
+[combined audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#affected-s1-canonical-fixtures).
