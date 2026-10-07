@@ -14,6 +14,10 @@ final class ChallengeDiagnosticProcess implements AutoCloseable {
     private boolean closed;
 
     ChallengeDiagnosticProcess(Path rom, Path output) throws IOException {
+        this(rom, output, Runtime.getRuntime()::addShutdownHook);
+    }
+    ChallengeDiagnosticProcess(Path rom, Path output,
+            java.util.function.Consumer<Thread> registerHook) throws IOException {
         ChallengeRoms.validate("s1", rom);
         Path parent = Path.of("target", "challenge-workers").toAbsolutePath();
         Files.createDirectories(parent);
@@ -33,7 +37,13 @@ final class ChallengeDiagnosticProcess implements AutoCloseable {
             throw failure;
         }
         shutdownHook = new Thread(this::close, "challenge-rewind-close-" + process.pid());
-        Runtime.getRuntime().addShutdownHook(shutdownHook);
+        try {
+            registerHook.accept(shutdownHook);
+        } catch (RuntimeException | Error failure) {
+            ChallengeProcessAcquisition.unwind(failure, process, directory, shutdownHook, null,
+                    process.getInputStream(), process.getOutputStream(), process.getErrorStream());
+            throw failure;
+        }
     }
 
     boolean alive() { return process.isAlive(); }

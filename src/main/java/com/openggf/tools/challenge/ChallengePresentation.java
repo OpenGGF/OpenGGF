@@ -36,7 +36,10 @@ final class ChallengePresentation implements AutoCloseable {
         quads.init();
         float[] projection = new Matrix4f().ortho2D(0, WIDTH, HEIGHT, 0).get(new float[16]);
         quads.setProjectionMatrix(projection);
-        font.setProjectionMatrix(projection);
+        // PixelFont emits bottom-up geometry with a fixed224-pixel origin.
+        // Give that existing owner its native convention without changing the
+        // host's top-left pane geometry or the public font API.
+        font.setProjectionMatrix(new Matrix4f().ortho2D(0, WIDTH, 224 - HEIGHT, 224).get(new float[16]));
         white = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, white);
         ByteBuffer pixel = MemoryUtil.memAlloc(4);

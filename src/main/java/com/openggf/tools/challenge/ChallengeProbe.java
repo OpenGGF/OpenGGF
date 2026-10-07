@@ -63,7 +63,7 @@ public final class ChallengeProbe {
         List<Long> pids;
         long boot = System.nanoTime();
         long[] costs = new long[p.length()];
-        long maxRss = 0;
+        long maxRss = 0, maxHostRss = 0;
         try (var capture = new ChallengeCapture(output); var host = new ChallengeHost(members, gen)) {
             host.prepare();
             pids = host.pids();
@@ -79,18 +79,21 @@ public final class ChallengeProbe {
                     for (int i = 0; i < frames.size(); i++)
                         ChallengeCapture.saveFrame(
                                 output.resolve("member-" + i + "-tick-" + (t + 1) + ".png"), frames.get(i));
-                if (t % 60 == 0)
+                if (t % 60 == 0) {
                     maxRss = Math.max(maxRss, rss(pids));
+                    maxHostRss = Math.max(maxHostRss, rss(List.of(ProcessHandle.current().pid())));
+                }
             }
             Arrays.sort(costs);
             Files.writeString(output.resolve("budget.txt"),
                     String.format(Locale.ROOT,
-                            "boot_ms=%d ticks=%d p50_ms=%.3f p95_ms=%.3f p99_ms=%.3f peak_worker_rss_kib=%d "
+                            "boot_ms=%d ticks=%d p50_ms=%.3f p95_ms=%.3f p99_ms=%.3f sampled_peak_worker_rss_kib=%d "
+                                    + "sampled_peak_probe_rss_kib=%d rss_sample_interval_ticks=60 worker_xmx_mib=512 "
                                     + "bytes_rgba_per_tuple=%d queue_depth_per_member=1%n",
                             bootMs, p.length(), costs[costs.length / 2] / 1e6,
                             costs[(int) (costs.length * .95)] / 1e6,
                             costs[Math.min(costs.length - 1, (int) (costs.length * .99))] / 1e6, maxRss,
-                            members.size() * ChallengeProtocol.RGBA_BYTES));
+                            maxHostRss, members.size() * ChallengeProtocol.RGBA_BYTES));
         }
         for (long pid : pids)
             if (ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false))

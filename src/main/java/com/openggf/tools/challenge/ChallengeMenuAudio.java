@@ -46,7 +46,6 @@ final class ChallengeMenuAudio implements AutoCloseable {
                     // presentation factory; it accepts null without a service root.
                     null, output,
                     new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()));
-            created.setRom(rom);
             var loader = profile.createSmpsLoader(rom);
             dac = loader.loadDacData();
             for (GameSound sound : List.of(GameSound.RING, GameSound.JUMP, GameSound.CHECKPOINT,
@@ -81,10 +80,11 @@ final class ChallengeMenuAudio implements AutoCloseable {
             audio.playStandaloneSfx(cues.get(sound), dac, 1f);
     }
     void update(boolean menuVisible) {
-        if (closed)
-            return;
+        update(menuVisible, System.nanoTime());
+    }
+    void update(boolean menuVisible, long now) {
+        if (closed) return;
         output.audible = menuVisible;
-        long now = System.nanoTime();
         if (now < nextPacket)
             return;
         long following = nextPacket + 16_666_667;

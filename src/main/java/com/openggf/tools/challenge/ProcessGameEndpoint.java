@@ -26,6 +26,10 @@ public final class ProcessGameEndpoint implements AutoCloseable {
     private boolean started;
 
     public ProcessGameEndpoint(String game, Path rom, long generation) throws IOException {
+        this(game, rom, generation, Runtime.getRuntime()::addShutdownHook);
+    }
+    ProcessGameEndpoint(String game, Path rom, long generation,
+            java.util.function.Consumer<Thread> registerHook) throws IOException {
         if (!List.of("s1", "s2", "s3k").contains(game) || generation <= 0)
             throw new IllegalArgumentException("Invalid endpoint identity");
         this.generation = generation;
@@ -49,15 +53,24 @@ public final class ProcessGameEndpoint implements AutoCloseable {
             Files.deleteIfExists(directory);
             throw failure;
         }
-        input = new DataInputStream(new BufferedInputStream(process.getInputStream(), 1 << 19));
-        output = new DataOutputStream(new BufferedOutputStream(process.getOutputStream()));
-        io = Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "challenge-" + game + "-" + process.pid());
-            t.setDaemon(true);
-            return t;
-        });
-        shutdownHook = new Thread(this::close, "challenge-close-" + process.pid());
-        Runtime.getRuntime().addShutdownHook(shutdownHook);
+        ExecutorService acquiredExecutor = null;
+        Thread acquiredHook = null;
+        try {
+            input = new DataInputStream(new BufferedInputStream(process.getInputStream(), 1 << 19));
+            output = new DataOutputStream(new BufferedOutputStream(process.getOutputStream()));
+            io = acquiredExecutor = Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "challenge-" + game + "-" + process.pid());
+                t.setDaemon(true);
+                return t;
+            });
+            shutdownHook = new Thread(this::close, "challenge-close-" + process.pid());
+            acquiredHook = shutdownHook;
+            registerHook.accept(shutdownHook);
+        } catch (RuntimeException | Error failure) {
+            ChallengeProcessAcquisition.unwind(failure, process, directory, acquiredHook,
+                    acquiredExecutor, process.getInputStream(), process.getOutputStream(), process.getErrorStream());
+            throw failure;
+        }
     }
 
     static String workerClasspath() {

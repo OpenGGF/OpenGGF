@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import signal
 import subprocess
@@ -29,11 +30,13 @@ def stop(process: subprocess.Popen | None) -> None:
 
 
 def window_for_pid(display, pid: int):
+    from Xlib import X
     atom = display.intern_atom("_NET_WM_PID")
     def visit(window, depth=0):
         try:
             value = window.get_full_property(atom, 0)
-            if value is not None and int(value.value[0]) == pid and window.get_wm_name() == "Three Openings | OpenGGF":
+            if (value is not None and len(value.value) == 1 and int(value.value[0]) == pid and window.get_wm_name() == "Three Openings | OpenGGF" and window.get_attributes().map_state == X.IsViewable
+                    and window.get_geometry().width > 0 and window.get_geometry().height > 0):
                 return window
             if depth < 3:
                 for child in window.query_tree().children:
@@ -46,6 +49,68 @@ def window_for_pid(display, pid: int):
     return visit(display.screen().root)
 
 
+def validate_window(display, window, host):
+    from Xlib import X
+    prop = window.get_full_property(display.intern_atom("_NET_WM_PID"), X.AnyPropertyType)
+    geometry = window.get_geometry()
+    attributes = window.get_attributes()
+    title = window.get_wm_name()
+    if (host.poll() is not None or prop is None or len(prop.value) != 1
+            or int(prop.value[0]) != host.pid or title != "Three Openings | OpenGGF"
+            or attributes.map_state != X.IsViewable or geometry.width <= 0 or geometry.height <= 0):
+        raise RuntimeError("Owned host PID/title/visibility/geometry invalid before recorder start")
+    return {"window_id": window.id, "window_title": title, "window_map_state": attributes.map_state,
+            "window_size": [geometry.width, geometry.height], "window_depth": geometry.depth}
+
+
+def native_environment(args, sink):
+    env = os.environ.copy()
+    env.update(PULSE_SINK=sink, ALSOFT_DRIVERS="pulse")
+    if args.keyutils_preload:
+        library = args.keyutils_preload.resolve(strict=True)
+        env["LD_PRELOAD"] = str(library)
+    if args.disable_vsync:
+        env.update(vblank_mode="0", __GL_SYNC_TO_VBLANK="0")
+    return env
+
+
+def add_native_options(parser):
+    parser.add_argument("--keyutils-preload", type=Path, help="Child-only existing library for OpenAL keyutils dependency")
+    parser.add_argument("--disable-vsync", action="store_true", help="Child-only driver settings; host admission remains 60 Hz")
+
+
+def recorded_frames(path):
+    result = subprocess.run(["ffprobe", "-v", "error", "-count_frames", "-select_streams", "v:0",
+        "-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", str(path)],
+        check=True, capture_output=True, text=True, timeout=15)
+    count = int(result.stdout.strip())
+    if count <= 0: raise RuntimeError("Window recorder produced no actual frames")
+    return count
+
+
+def worker_pids(host_pid: int) -> list[int]:
+    """Find fixed worker children across every host thread, including its admission owner."""
+    found = set()
+    try:
+        tasks = list(Path(f"/proc/{host_pid}/task").iterdir())
+    except FileNotFoundError:
+        return []
+    for task in tasks:
+        try:
+            children = (task / "children").read_text().split()
+        except FileNotFoundError:
+            continue
+        for text in children:
+            pid = int(text)
+            try:
+                command = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
+                if b"com.openggf.tools.challenge.ChallengeWorker" in command:
+                    found.add(pid)
+            except FileNotFoundError:
+                pass
+    return sorted(found)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--classpath", required=True)
@@ -53,6 +118,7 @@ def main() -> None:
         parser.add_argument("--" + game, type=Path, required=True)
     parser.add_argument("--program", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    add_native_options(parser)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
     output = args.output.resolve()
@@ -68,7 +134,8 @@ def main() -> None:
     log_path = root / "target" / ("challenge-capture-" + token + ".log")
     log_path.parent.mkdir(exist_ok=True)
     log = log_path.open("wb")
-    receipt = {"sink": sink, "owned_module": None, "processes": {}, "state": "starting"}
+    receipt = {"sink": sink, "owned_module": None, "processes": {}, "state": "starting",
+               "sampled_peak_host_rss_kib": 0, "rss_sample_interval_seconds": .2}
     receipt_path = output / "capture.json"
     def record():
         receipt_path.write_text(json.dumps(receipt, indent=2) + "\n")
@@ -80,9 +147,8 @@ def main() -> None:
         if not module.isdigit():
             raise RuntimeError("Audio module returned no exact management ID")
         receipt["owned_module"] = module
-        env = os.environ.copy()
-        env["PULSE_SINK"] = sink
-        env["ALSOFT_DRIVERS"] = "pulse"
+        env = native_environment(args, sink)
+        receipt["child_environment"] = {k: env[k] for k in ("PULSE_SINK", "ALSOFT_DRIVERS", "LD_PRELOAD", "vblank_mode", "__GL_SYNC_TO_VBLANK") if k in env}
         command = ["java", "-cp", args.classpath, "com.openggf.tools.challenge.ThreeOpeningsTool"]
         for game in ("s1", "s2", "s3k"):
             command += ["--" + game, str(getattr(args, game).resolve())]
@@ -98,6 +164,10 @@ def main() -> None:
             time.sleep(.1)
         if window is None:
             raise RuntimeError("Host window unavailable; inspect the bounded stderr tail")
+        from Xlib import X
+        window.set_input_focus(X.RevertToParent, X.CurrentTime)
+        display.sync()
+        receipt.update(validate_window(display, window, host))
         geometry = window.get_geometry()
         video = subprocess.Popen(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "x11grab",
             "-window_id", str(window.id), "-video_size", f"{geometry.width}x{geometry.height}",
@@ -113,6 +183,13 @@ def main() -> None:
         record()
         deadline = time.monotonic() + 180
         while host.poll() is None:
+            try:
+                for line in Path(f"/proc/{host.pid}/status").read_text().splitlines():
+                    if line.startswith("VmRSS:"):
+                        receipt["sampled_peak_host_rss_kib"] = max(
+                            receipt["sampled_peak_host_rss_kib"], int(line.split()[1]))
+            except (FileNotFoundError, ProcessLookupError):
+                pass
             if (video.poll() is not None or device_audio.poll() is not None) and host.poll() is None:
                 raise RuntimeError("A recorder stopped while the host was running")
             if time.monotonic() >= deadline:
@@ -123,6 +200,10 @@ def main() -> None:
         if code:
             raise RuntimeError("Host returned failure")
         receipt["state"] = "captured"
+    except BaseException as failure:
+        receipt["state"] = "failed"
+        receipt["error"] = repr(failure)[:500]
+        raise
     finally:
         cleanup_errors = []
         for name, process in (("host", host), ("video", video), ("device_audio", device_audio)):
@@ -137,11 +218,20 @@ def main() -> None:
                 receipt["owned_module"] = None
             except Exception as failure:
                 cleanup_errors.append(f"audio module {module}: {failure}")
+        if video is not None:
+            try: receipt["actual_window_frames"] = recorded_frames(output / "window.mkv")
+            except Exception as failure: cleanup_errors.append(f"recorded frames: {failure}")
         receipt["process_exit_codes"] = {name: p.poll() for name, p in (("host", host), ("video", video), ("device_audio", device_audio)) if p is not None}
         receipt["cleanup"] = cleanup_errors or "all owned processes stopped; private audio module unloaded"
         record()
         display.close()
         text = log_path.read_text(errors="replace")
+        budget = re.search(r"Challenge steps=(\d+) p50=([\d.]+)ms p95=([\d.]+)ms p99=([\d.]+)ms", text)
+        if budget:
+            receipt["host_admission_to_publication"] = {
+                "steps": int(budget[1]), "p50_ms": float(budget[2]),
+                "p95_ms": float(budget[3]), "p99_ms": float(budget[4])}
+            record()
         print("\n".join(text.splitlines()[-25:]))
         log_path.unlink()
         if cleanup_errors:
