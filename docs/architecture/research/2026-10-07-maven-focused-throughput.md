@@ -205,5 +205,19 @@ The release prose merged automatically. Both independently added measurement
 hazards were retained at the shared heading: test-boundary retention and moving
 live logs across filesystems. The first memory report remains attributed to the
 earlier engine source, not the newer parity code. Updated-base and integrated
-tooling checks are recorded at delivery; this task does not re-certify the
-upstream engine changes.
+tooling checks do not re-certify the upstream engine changes.
+
+- Updated baseline `945b74e999c3584ad45b92a711b7a6dace7dc294`, full Python
+  safety suite: 92 tests passed, no skips (16.885 seconds).
+- Reconciled candidate `6a696410c`, same command: 109 tests passed, no skips
+  (18.558 seconds).
+- Integrated `develop` at `63fea861e6e225c9073a88e3bc10513ec06d0950`, same
+  command: 109 tests passed, no skips (18.790 seconds).
+- Integrated launch environment: `LUA_BIN=/usr/bin/lua5.4 python3
+  tools/testing/run_categories.py --base
+  945b74e999c3584ad45b92a711b7a6dace7dc294 --preflight` passed Java 21,
+  Lua 5.4 and PowerShell; no engine tests executed by preflight.
+- Agent mirrors, changed Markdown links, diff whitespace and commit-policy hooks
+  checked successfully. The combined plan was inspected against the actual
+  updated base; focused tooling validation above was used for the isolated tool
+  and queue as explained earlier. No full ordinary-suite pass is claimed.
