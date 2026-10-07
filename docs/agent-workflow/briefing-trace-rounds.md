@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
+task): the positioned MHZ capture retained about 22 MiB after its callback while
+three complete capture/rewind/ROM-loading passes settled near 16.8 MiB, with only
+15–17 KiB growth on later passes. Class fixtures, JUnit contexts and engine globals
+can still be live at the test callback. Compare requested-GC floors after the
+launcher returns and teardown unwinds; validate the profiler with deliberately
+retained memory. Allocation counters measure churn, sampled JVM-global peaks
+include caches, and high RSS after GC does not establish Java or native leaks.
+Record skips, GC observation, repeated-pass order and the actual source revision.
+
 Moving a live log across filesystems loses its writer (2026-10-07, stock parity
 swarm): moving stdout from `/tmp` on tmpfs into a btrfs worktree copied and
 unlinked the original file while the queued wrapper retained its open inode.

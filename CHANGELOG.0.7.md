@@ -1081,8 +1081,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   preserving a serial override. Single-fork trace and audio profiles no longer force
   exclusive runs, and a bounded log (`maven_queue.py --stats`) records queue waits, holds
   and peak memory. Waiting requests favour short checks, with aging and
-  bounded backfilling to protect large runs from starvation. An optional profiler measures process-tree RSS and CPU
-  for ordinary/guard runs. No task registration, validation receipts,
+  bounded backfilling to protect large runs from starvation. An opt-in lean lane
+  bounds both JVM heaps for small focused checks and accounts for their smaller
+  reservations alongside normal runs. A busy worktree's aged request retains its
+  place without blocking unrelated trees. Optional profilers measure process-tree RSS/CPU
+  for ordinary/guard runs and per-test allocation, sampled peaks and repeated post-GC
+  retention for explicitly selected tests. No task registration, validation receipts,
   cumulative budgets or retry gates are needed. Per-invocation category timeouts exclude
   queue waiting. Full CI and release validation remain unchanged.
 
