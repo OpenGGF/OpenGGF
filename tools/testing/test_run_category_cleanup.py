@@ -81,6 +81,21 @@ class CleanupTests(unittest.TestCase):
                 artifacts.acknowledge_run(root, alias.name)
             self.assertTrue(run.exists())
 
+    def test_acknowledgment_rejects_linked_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'repo'
+            root.mkdir()
+            subprocess.run(['git', 'init', '-q', str(root)], check=True, capture_output=True)
+            outside = Path(tmp) / 'outside'
+            run = self.make_run(outside)
+            try:
+                (root / 'target').symlink_to(outside / 'target', target_is_directory=True)
+            except OSError:
+                self.skipTest('Symlinks unavailable')
+            with self.assertRaises(ValueError):
+                artifacts.acknowledge_run(root, run.name)
+            self.assertTrue(run.exists())
+
     def test_opt_in_keeps_success_logs_across_startup_until_acknowledged(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
