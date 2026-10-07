@@ -883,7 +883,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   direct-hit pads plus kick. ROM-derived timings feed curated charts, remappable
   keyboard/gamepad controls, calibration, finite results and retry. Reusable
   candidate scene APIs provide mixed-ROM art, timestamped physical events and
-  bounded semantic ROM music on the consumed audio clock. ROM assets stay runtime
+  bounded semantic ROM music on the consumed audio clock. Full-song and selected
+  part synthesis have cancellable background jobs with progress, a ten-minute
+  duration cap and a 256 MiB combined PCM budget. ROM assets stay runtime
   inputs; career and multiplayer remain future requirements.
 - `ggfmod run` of a patch mod now opens the mod's base game directly instead of the master title game picker (holding Escape still returns to it), so a creator's build-and-run loop lands in their mod; test mode keeps its configured startup. Slay the Robotnik's `play.sh` uses it to build and launch the example in one step.
 - The master title takes the mouse: hovering highlights actions and clicking opens them, the carousel's arrows, neighbouring names and the wheel change game, clicking the game's name browses the list, and right-click goes back; the game browser, quit prompt, tools and start choices answer clicks too. Pointer positions map through the letterboxed viewport with the same helper mod scenes use.

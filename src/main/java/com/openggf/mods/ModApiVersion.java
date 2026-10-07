@@ -20,6 +20,8 @@ public final class ModApiVersion {
      * it developer-history or sound-driver restore ownership. Mixed-ROM startup
      * scenes expose supplied-game art, immutable timestamped physical input and
      * bounded semantic ROM music with consumed-sample playback and section parts.
+     * Full-song and selected-part synthesis expose cancellable host jobs with
+     * progress, a ten-minute duration cap and a 256 MiB stereo PCM budget.
      * Scene-owned direct peer text messaging is asynchronous and bounded, with
      * socket/thread ownership and lifetime kept in the engine.
      */

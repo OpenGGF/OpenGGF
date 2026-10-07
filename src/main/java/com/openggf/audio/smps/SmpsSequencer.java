@@ -2801,10 +2801,12 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     private void reuseDuration(Track track) {
-        if (track.rawDuration == 0) {
-            track.rawDuration = 1;
-        }
-        setDuration(track, track.rawDuration);
+        // S1 FinishTrackUpdate/DACUpdateTrack and S2/S3K zFinishTrackUpdate
+        // copy SavedDuration, which SetDuration already multiplied by the
+        // divider. A later divider flag applies only to explicit durations.
+        // Rescaling the raw byte here shortened S1 Credits' medley transitions.
+        if (track.scaledDuration == 0) setDuration(track, 1);
+        else track.duration = track.scaledDuration;
     }
 
     private int scaleDuration(Track track, int rawDuration) {

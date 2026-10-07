@@ -27,6 +27,83 @@ import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestSceneMusicRom {
+    @Test
+    void excessivePcmBudgetIsRejectedBeforeReadingTheRom() {
+        var audio = mock(AudioManager.class);
+        when(audio.outputSampleRate()).thenReturn(192_000);
+        var reads = new java.util.concurrent.atomic.AtomicInteger();
+        try (var music = new ManagedSceneMusic(audio, ignored -> { reads.incrementAndGet(); return null; })) {
+            assertThrows(IllegalArgumentException.class, () -> music.prepareAsync("s1", 0x81, 36_000));
+            assertThrows(IllegalArgumentException.class, () -> music.prepare("s1", 0x81, 36_000));
+            assertEquals(0, reads.get());
+        }
+    }
+
+    @Test @RequiresRom(SonicGame.SONIC_1)
+    void asynchronousFullAndPartJobsPublishWithoutAudioAndCloseCancelsTheWorker()
+            throws Exception {
+        var config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.FPS, 60);
+        config.setConfigValue(SonicConfiguration.REGION, "NTSC");
+        var audio = AudioManager.createStandalonePresentation("s1", new Sonic1AudioProfile(), config,
+                PerformanceProfiler.getInstance(), new NoDeviceAudioSink(8_000),
+                new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()));
+        var rom = GameServices.rom().getRom();
+        try (var music = new ManagedSceneMusic(audio, ignored -> rom)) {
+            var cancelled = music.prepareAsync("s1", 0x81, 36_000);
+            cancelled.cancel();
+            assertEquals(com.openggf.mods.scene.SceneMusicPreparation.State.CANCELLED, cancelled.state());
+            assertThrows(IllegalStateException.class, cancelled::prepared);
+            var full = music.prepareAsync("s1", 0x81, 120);
+            await(full);
+            assertEquals(100, full.progressPercent());
+            var song = full.prepared();
+            assertFalse(song.notes().isEmpty());
+            assertSame(song, music.prepareAsync("s1", 0x81, 120).prepared());
+            var parts = List.of(new SceneMusicPart(0, 1, 0, false), new SceneMusicPart(8_000, 8, 0, false));
+            var part = music.preparePartAsync(song, parts);
+            await(part);
+            assertSame(song, part.prepared());
+            var masked = retainedField(song, "masked");
+            assertNotNull(masked);
+            var player = music.start(song, parts, 0);
+            assertSame(masked, retainedField(player, "masked"), "start reuses the prepared part mix");
+            var unfinished = music.prepareAsync("s1", 0x81, 36_000);
+            music.close();
+            assertEquals(com.openggf.mods.scene.SceneMusicPreparation.State.CANCELLED, unfinished.state());
+            assertTrue(player.finished());
+            assertRetired(song);
+            var worker = (java.util.concurrent.ThreadPoolExecutor) retainedField(music, "worker");
+            assertTrue(worker.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS), "scene close terminates synthesis");
+            assertThrows(IllegalStateException.class, () -> music.prepareAsync("s1", 0x81, 120));
+        } finally { audio.destroy(); }
+    }
+
+    private static void await(com.openggf.mods.scene.SceneMusicPreparation job) throws InterruptedException {
+        long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(20);
+        while (job.state() == com.openggf.mods.scene.SceneMusicPreparation.State.PREPARING && System.nanoTime() < deadline) {
+            assertTrue(job.progressPercent() >= 0 && job.progressPercent() <= 100);
+            Thread.sleep(5);
+        }
+        assertEquals(com.openggf.mods.scene.SceneMusicPreparation.State.READY, job.state(), job.error());
+    }
+    @Test @RequiresRom(SonicGame.SONIC_1)
+    void fullSongsCanExtendBeyondNinetySecondsAndRemainFinite() throws IOException {
+        var config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.FPS, 60);
+        config.setConfigValue(SonicConfiguration.REGION, "NTSC");
+        var audio = AudioManager.createStandalonePresentation("s1", new Sonic1AudioProfile(), config,
+                PerformanceProfiler.getInstance(), new NoDeviceAudioSink(8_000),
+                new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()));
+        var rom = GameServices.rom().getRom();
+        try (var music = new ManagedSceneMusic(audio, ignored -> rom)) {
+            var song = music.prepare("s1", 0x81, 7_200);
+            assertEquals(960_000, song.lengthSamples());
+            assertTrue(song.notes().stream().anyMatch(note -> note.onsetSamples() > 900_000),
+                    "the second minute must contain actual ROM events");
+            assertThrows(IllegalArgumentException.class, () -> music.prepare("s1", 0x81, 36_001));
+        } finally { audio.destroy(); }
+    }
     @Test @RequiresRom(SonicGame.SONIC_1)
     void failedSpeakerFreezesAudibleTimeAndCannotTurnThePerformanceIntoVirtualPlayback() throws IOException {
         AtomicLong now = new AtomicLong();

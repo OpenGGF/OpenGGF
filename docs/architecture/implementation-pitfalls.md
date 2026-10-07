@@ -511,6 +511,16 @@ reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it. For
 reference the libvgm cores, for the sequencer the SMPSPlay source, rather than simplified
 versions. Diagnose against a source of truth instead of twiddling knobs.
 
+**Implicit SMPS durations reuse scaled track RAM.** S1 `SetDuration` multiplies
+the explicit duration by `TempoDivider` before saving it; `FinishTrackUpdate`
+and `DACUpdateTrack` copy `SavedDuration` without applying the current divider.
+S2/S3K `zSetDuration`/`zFinishTrackUpdate` follow the same ownership. Rescaling a
+remembered raw byte after a divider flag shifts later attacks even when early
+audio matches: the S1 Credits survey found a PSG2 attack 768 services early.
+Check native saved-duration semantics and the complete medley tail, rather than
+shortening catalogue metadata to the engine's premature stop. This was found
+during the 2026-10-07 Sitar Hero full-song catalogue work.
+
 **Speaker starvation is a device transition, not generated-sample equality.** A
 stopped OpenAL queue can leave a sub-packet remainder in the software FIFO, so
 the consumed cursor never reaches the producer's count. Detect stopped-after-play

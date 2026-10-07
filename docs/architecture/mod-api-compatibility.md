@@ -129,6 +129,16 @@ their offset-dependent reparsing is a separate construction migration.
 
 ## Reviewing, maintaining, and publishing the recursive surface
 
+Full-song scene preparation adds `SceneMusicPreparation` and its state enum,
+reached through the default `SceneMusic.prepareAsync` and `preparePartAsync`
+methods. The host keeps ROM loading and playback on the scene owner while one
+bounded worker synthesizes independent audio. Jobs expose progress, cancellation,
+bounded errors and READY publication. Ten-minute duration, 256 MiB combined PCM
+and 200,000 completed note-event limits apply before playback. Legacy defaults
+remain synchronous. These are additive changes to the mutable 0.7 candidate;
+the descriptor/runtime version remains unpublished 0.7.0 and the normalized
+signature pin is regenerated in place.
+
 Before changing the candidate surface:
 
 1. Run `TestModApiSignatureSurface` and inspect every added or changed line.

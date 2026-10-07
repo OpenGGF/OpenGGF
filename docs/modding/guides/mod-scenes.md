@@ -172,13 +172,30 @@ long audibleSample = player.samplePosition();
 long inputSample = player.samplePositionAt(event.timestampNanos());
 ```
 
-Preparation is bounded to 90 seconds at the native 60 Hz driver cadence and may
-take several seconds. It reads only the requested supplied ROM, with no ambient
+Preparation is bounded to ten minutes at the native 60 Hz driver cadence. Full
+and selected-part stereo PCM together have a 256 MiB budget; high output rates
+can therefore limit the accepted duration. Note metadata is bounded to 200,000
+completed events. Preparation reads only the requested supplied ROM, with no ambient
 music/SFX restore side effects. `SceneNoteEvent` identifies FM/PSG/DAC attacks,
 channel, pitch/sample id, source offset, onset and duration in samples. Ties and
 rests do not become fabricated attacks; equal-pitch and duration-only retriggers
 remain separate. Events provide timing evidence, rather than automatic playable
 charts: curate musical parts, density, lanes, chords and difficulty in your mod.
+
+Use `prepareAsync(game, id, frames)` for long performances. Keep its
+`SceneMusicPreparation` handle and poll `state()` and `progressPercent()` in
+`update`; call `prepared()` only when READY. FAILED exposes a bounded `error()`.
+ROM loading stays on the scene thread; independent synthesis uses one host worker
+with one queued job. A different request cancels the old job. Call `cancel()`
+when leaving a loading screen; scene exit also cancels and stops the worker.
+Do not spin or wait for completion in your scene.
+
+After authoring the chart's channel sections, call
+`preparePartAsync(song, parts)` and poll that second job. Its READY `prepared()`
+publishes the selected mix without starting audio. A subsequent `start` with the
+same sections reuses it, so rendering does not interrupt the count-in. Legacy
+scene hosts can complete these defaults synchronously and render the part during
+`start`; the production engine supplies background preparation.
 
 One scene retains one prepared song and one selected arrangement. Repeating the
 same request reuses it; preparing a different song retires the old preparation

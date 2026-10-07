@@ -943,6 +943,8 @@ CF-ANNOTATION TYPE com.openggf.mods.scene.SceneMouse visible @com.openggf.game.M
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneMusic visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneMusicPart visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneMusicPlayer visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneMusicPreparation visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneMusicPreparation$State visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneNetwork visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneNoteEvent visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneNoteEvent$Kind visible @com.openggf.game.ModApi
@@ -3120,6 +3122,10 @@ FIELD com.openggf.mods.scene.SceneKeys public,static,final int W
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int X
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int Y
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int Z
+FIELD com.openggf.mods.scene.SceneMusicPreparation$State public,static,final com.openggf.mods.scene.SceneMusicPreparation$State CANCELLED
+FIELD com.openggf.mods.scene.SceneMusicPreparation$State public,static,final com.openggf.mods.scene.SceneMusicPreparation$State FAILED
+FIELD com.openggf.mods.scene.SceneMusicPreparation$State public,static,final com.openggf.mods.scene.SceneMusicPreparation$State PREPARING
+FIELD com.openggf.mods.scene.SceneMusicPreparation$State public,static,final com.openggf.mods.scene.SceneMusicPreparation$State READY
 FIELD com.openggf.mods.scene.SceneNoteEvent$Kind public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind DAC
 FIELD com.openggf.mods.scene.SceneNoteEvent$Kind public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind FM
 FIELD com.openggf.mods.scene.SceneNoteEvent$Kind public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind PSG
@@ -11965,6 +11971,8 @@ METHOD com.openggf.mods.scene.SceneMouse public  int y()
 METHOD com.openggf.mods.scene.SceneMouse public  java.lang.String toString()
 METHOD com.openggf.mods.scene.SceneMouse public,static  com.openggf.mods.scene.SceneMouse none()
 METHOD com.openggf.mods.scene.SceneMusic public  com.openggf.mods.scene.SceneMusicPlayer start(com.openggf.mods.scene.ScenePreparedMusic,java.util.List<com.openggf.mods.scene.SceneMusicPart>,int)
+METHOD com.openggf.mods.scene.SceneMusic public  com.openggf.mods.scene.SceneMusicPreparation prepareAsync(java.lang.String,int,int)
+METHOD com.openggf.mods.scene.SceneMusic public  com.openggf.mods.scene.SceneMusicPreparation preparePartAsync(com.openggf.mods.scene.ScenePreparedMusic,java.util.List<com.openggf.mods.scene.SceneMusicPart>)
 METHOD com.openggf.mods.scene.SceneMusic public,abstract  com.openggf.mods.scene.SceneMusicPlayer start(com.openggf.mods.scene.ScenePreparedMusic,int,int,boolean,int)
 METHOD com.openggf.mods.scene.SceneMusic public,abstract  com.openggf.mods.scene.ScenePreparedMusic prepare(java.lang.String,int,int)
 METHOD com.openggf.mods.scene.SceneMusicPart public  boolean dacMuted()
@@ -11984,6 +11992,13 @@ METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  void resume()
 METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  void setPartAudible(boolean)
 METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  void setWhammy(double)
 METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  void stop()
+METHOD com.openggf.mods.scene.SceneMusicPreparation public,abstract  com.openggf.mods.scene.SceneMusicPreparation$State state()
+METHOD com.openggf.mods.scene.SceneMusicPreparation public,abstract  com.openggf.mods.scene.ScenePreparedMusic prepared()
+METHOD com.openggf.mods.scene.SceneMusicPreparation public,abstract  int progressPercent()
+METHOD com.openggf.mods.scene.SceneMusicPreparation public,abstract  java.lang.String error()
+METHOD com.openggf.mods.scene.SceneMusicPreparation public,abstract  void cancel()
+METHOD com.openggf.mods.scene.SceneMusicPreparation$State public,static  com.openggf.mods.scene.SceneMusicPreparation$State valueOf(java.lang.String)
+METHOD com.openggf.mods.scene.SceneMusicPreparation$State public,static  com.openggf.mods.scene.SceneMusicPreparation$State[] values()
 METHOD com.openggf.mods.scene.SceneNetwork public,abstract  com.openggf.mods.scene.ScenePeer connect(java.lang.String,int)
 METHOD com.openggf.mods.scene.SceneNetwork public,abstract  com.openggf.mods.scene.ScenePeer host(int)
 METHOD com.openggf.mods.scene.SceneNoteEvent public  com.openggf.mods.scene.SceneNoteEvent$Kind kind()
@@ -15009,6 +15024,7 @@ NESTED com.openggf.mods.code.ModLevelDefinition com.openggf.mods.code.ModLevelDe
 NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$Compression
 NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$DplcLayout
 NESTED com.openggf.mods.scene.SceneBackdrop com.openggf.mods.scene.SceneBackdrop$Band
+NESTED com.openggf.mods.scene.SceneMusicPreparation com.openggf.mods.scene.SceneMusicPreparation$State
 NESTED com.openggf.mods.scene.SceneNoteEvent com.openggf.mods.scene.SceneNoteEvent$Kind
 NESTED com.openggf.mods.scene.ScenePeer com.openggf.mods.scene.ScenePeer$Message
 NESTED com.openggf.mods.scene.ScenePeer com.openggf.mods.scene.ScenePeer$State
@@ -18356,6 +18372,7 @@ TYPE enum public,static,final com.openggf.level.resources.DeferredLevelResourceD
 TYPE enum public,static,final com.openggf.level.resources.KosinskiModuleQueue$Phase SUPER java.lang.Enum<com.openggf.level.resources.KosinskiModuleQueue$Phase>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$Compression>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$DplcLayout SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$DplcLayout>
+TYPE enum public,static,final com.openggf.mods.scene.SceneMusicPreparation$State SUPER java.lang.Enum<com.openggf.mods.scene.SceneMusicPreparation$State>
 TYPE enum public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind SUPER java.lang.Enum<com.openggf.mods.scene.SceneNoteEvent$Kind>
 TYPE enum public,static,final com.openggf.mods.scene.ScenePeer$State SUPER java.lang.Enum<com.openggf.mods.scene.ScenePeer$State>
 TYPE enum public,static,final com.openggf.net.client.ClientRaceSession$Phase SUPER java.lang.Enum<com.openggf.net.client.ClientRaceSession$Phase>
@@ -18489,6 +18506,7 @@ TYPE interface public,abstract com.openggf.mods.scene.SceneCanvas SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneContext SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneMusic SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneMusicPlayer SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.SceneMusicPreparation SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneNetwork SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.ScenePeer SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.ScenePreparedMusic SUPER <none>
@@ -19852,6 +19870,8 @@ TYPE-ANNOTATION com.openggf.mods.scene.SceneMouse @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneMusic @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneMusicPart @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneMusicPlayer @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneMusicPreparation @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneMusicPreparation$State @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneNetwork @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneNoteEvent @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneNoteEvent$Kind @com.openggf.game.ModApi

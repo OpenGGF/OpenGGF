@@ -20,6 +20,24 @@ class TestModApiJavadocTool {
     @TempDir Path temp;
 
     @Test
+    void sceneMusicJobsGenerateExactSdkPagesWithTheirBoundedSemantics() throws Exception {
+        Path output = temp.resolve("music-job-docs");
+        List<Class<?>> exact = List.of(
+                com.openggf.mods.scene.SceneMusic.class,
+                com.openggf.mods.scene.SceneMusicPreparation.class,
+                com.openggf.mods.scene.SceneMusicPreparation.State.class,
+                com.openggf.mods.scene.ScenePreparedMusic.class);
+        ModApiJavadocTool.generate(Path.of("src/main/java"), output, exact);
+        assertEquals(expectedTypePages(exact), generatedTypePages(output));
+        String music = Files.readString(output.resolve("com/openggf/mods/scene/SceneMusic.html"));
+        assertTrue(music.contains("256 MiB"));
+        assertTrue(music.contains("preparePartAsync"));
+        String job = Files.readString(output.resolve("com/openggf/mods/scene/SceneMusicPreparation.html"));
+        assertTrue(job.contains("cancel"));
+        assertTrue(job.contains("progressPercent"));
+    }
+
+    @Test
     void scenePeerContractsGenerateExactSdkPagesWithTheirBoundedSemantics() throws Exception {
         Path output = temp.resolve("network-docs");
         List<Class<?>> exact = List.of(
