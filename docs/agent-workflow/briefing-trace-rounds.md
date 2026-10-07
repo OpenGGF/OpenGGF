@@ -81,6 +81,14 @@ retained memory. Allocation counters measure churn, sampled JVM-global peaks
 include caches, and high RSS after GC does not establish Java or native leaks.
 Record skips, GC observation, repeated-pass order and the actual source revision.
 
+Class completion is not always fixture release (2026-10-07 ordinary-suite memory
+investigation): a JUnit 5.10.3 control retained a 20 MiB `PER_CLASS` fixture at the
+next class boundary and released it only after the entire plan returned. Actual
+Surefire executed its two-class control in one plan. Label within-plan post-GC
+growth as retention candidates; compare the final post-plan floor and inspect
+fixture/static owners before claiming application leaks. An `@AfterAll` callback
+or a closed native handle does not by itself make a fixture's Java graph unreachable.
+
 Moving a live log across filesystems loses its writer (2026-10-07, stock parity
 swarm): moving stdout from `/tmp` on tmpfs into a btrfs worktree copied and
 unlinked the original file while the queued wrapper retained its open inode.

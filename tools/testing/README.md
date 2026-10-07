@@ -424,9 +424,12 @@ and caps at 180 execution minutes, excluding queue wait. Preparation, the Maven 
 and its idle timeout share that budget. Class progress and minute heartbeats keep
 long route tests visible. There is no instrumentation on the normal test classpath.
 
-The default `--gc between-class` records requested-GC floors after class teardown
-and the preceding plan callback have unwound, plus a final floor at normal JVM
-shutdown. A no-GC run has no retained-growth ranking. The report preserves per-test
+The default `--gc between-class` records requested-GC floors at class boundaries,
+plus a final floor at normal JVM shutdown after all plan callbacks have returned.
+**Within-plan floors can include JUnit-owned `PER_CLASS` fixtures after class
+teardown.** `allPlansFinished` distinguishes the final floor; growth rankings are
+retention candidates, not application-leak proof. A no-GC run has no retained-growth
+ranking. The report preserves per-test
 and class allocation/duration/peaks, explicit skips/aborts/failures, GC evidence,
 metaspace/direct/mapped buffers, RSS/swap and bounded high-watermark histograms/native
 memory summaries. It also samples the **Maven parent separately** without capping

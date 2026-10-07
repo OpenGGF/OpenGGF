@@ -68,9 +68,10 @@ public final class SuiteMemoryListener implements TestExecutionListener {
             emit(new LinkedHashMap<>(Map.of("type","observer-start","pid",ProcessHandle.current().pid(),"maxHeapBytes",Runtime.getRuntime().maxMemory())));
             Runtime.getRuntime().addShutdownHook(new Thread(()->{
                 sampler.shutdownNow();
-                // Surefire may use one TestPlan per class. Its plan-finished callback
-                // can still hold the just-completed Jupiter context; collect only
-                // after it has unwound (next class, or normal JVM shutdown).
+                // A finished class/plan callback can still own Jupiter fixtures.
+                // This final floor is collected after launcher execution returns.
+                // Within-plan class floors remain retention candidates: PER_CLASS
+                // instances may stay live until the complete plan is released.
                 if (active.isEmpty() && plans == completedPlans && previousClass != null) boundary(null);
                 emit(new LinkedHashMap<>(Map.of("type","observer-end","executed",executed,"skipped",skipped,"failures",failed,
                         "plans",plans,"completedPlans",completedPlans,"activeWindows",active.size())));
@@ -111,6 +112,7 @@ public final class SuiteMemoryListener implements TestExecutionListener {
             }
             Snapshot s=sample();Map<String,Object> row=s.fields(); row.put("type","boundary");
             row.put("afterClass",previousClass);row.put("beforeClass",next);row.put("gcObserved",observed);
+            row.put("allPlansFinished",plans==completedPlans);
             row.put("beforeGcHeapBytes",before.heapBytes);emit(row);
             if(previousClass!=null && snapshots<12 && (s.heapBytes>highFloor+128L*1024*1024 || s.rssBytes!=null&&s.rssBytes>highRss+512L*1024*1024)) {
                 Map<String,Object> evidence=new LinkedHashMap<>();evidence.put("type","snapshot");evidence.put("afterClass",previousClass);

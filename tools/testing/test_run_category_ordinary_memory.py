@@ -64,7 +64,10 @@ class OrdinaryMemoryTests(unittest.TestCase):
 import java.util.*;
 import org.junit.jupiter.api.*;
 class Holder { static List<byte[]> keep = new ArrayList<>(); }
-class AFirst { @Test void retains() { Holder.keep.add(new byte[1024 * 1024]); } }
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class AFirst { byte[] fixture = new byte[20 * 1024 * 1024];
+    @Test void retains() { Holder.keep.add(new byte[1024 * 1024]); }
+}
 class BSecond { @Test void retains() { Holder.keep.add(new byte[1024 * 1024]); } }
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CThird { byte[] fixture = new byte[20 * 1024 * 1024];
@@ -88,8 +91,12 @@ class CThird { byte[] fixture = new byte[20 * 1024 * 1024];
             self.assertEqual(3, len(report['tests']))
             boundaries=report['boundaries']
             self.assertGreater(boundaries[-1]['heapBytes']-boundaries[0]['heapBytes'],800*1024)
-            self.assertLess(boundaries[-1]['heapBytes']-boundaries[-2]['heapBytes'],2*1024**2,
-                            'Completed per-class fixture must not look like a persistent leak')
+            self.assertGreater(boundaries[1]['heapBytes']-boundaries[0]['heapBytes'],20*1024**2,
+                               'JUnit retains PER_CLASS fixtures inside the active plan')
+            self.assertFalse(boundaries[1]['allPlansFinished'])
+            self.assertTrue(boundaries[-1]['allPlansFinished'])
+            self.assertLess(boundaries[-1]['heapBytes']-boundaries[0]['heapBytes'],5*1024**2,
+                            'Final post-plan floor must release fixtures but preserve static retained arrays')
             self.assertTrue(all(b['gcObserved'] for b in boundaries))
 
 if __name__ == '__main__':

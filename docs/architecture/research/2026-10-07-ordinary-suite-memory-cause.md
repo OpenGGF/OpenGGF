@@ -52,8 +52,8 @@ be measured before attributing an OOM to them.
 `profile_ordinary_memory.py` invokes actual `mvn test` with the ordinary POM
 selection, one reused 3 GiB Surefire fork and verified absolute ROM paths. A
 temporary service-loaded `SuiteMemoryListener` measures test/class allocation,
-duration and sampled peaks, class-boundary heap floors after the preceding class
-context unwinds, a final floor at normal JVM shutdown, metaspace/direct/mapped
+duration and sampled peaks, class-boundary heap floors within the active plan,
+a final floor at normal JVM shutdown after plan execution returns, metaspace/direct/mapped
 buffers, RSS/swap and bounded high-watermark histograms/native summaries. The
 Maven parent retains its existing heap configuration and performs cold test
 compilation inside the observed process. Separate process-tree probes preserve
@@ -100,9 +100,15 @@ Rejected shortcuts:
   allocation pressure and timing.
 - Collecting in `testPlanExecutionFinished`: Surefire can execute a separate plan
   per class, and that callback can still retain the completed class context. The
-  listener instead collects at the next class start or normal JVM shutdown. A
-  control with a 20 MiB per-class fixture and deliberately retained arrays checks
-  the distinction.
+  listener instead collects at the next class start or normal JVM shutdown.
+  An expanded control disproved the initial assumption that next-class GC always
+  releases the preceding context: a 20 MiB `PER_CLASS` fixture remained live
+  through the next class in JUnit 5.10.3, then disappeared after plan execution
+  returned. The final floor retained the deliberately pinned arrays. Boundary
+  events now record `allPlansFinished`; within-plan growth is a retention
+  candidate that can include legitimate Jupiter fixture ownership. Compare the
+  final post-plan floor before describing application leaks. Surefire's two-class
+  control used a single plan, so this distinction matters to the real invocation.
 - Treating all non-heap RSS as a native leak: committed heap, metaspace, JIT,
   thread stacks, shared pages and allocator high-watermarks all contribute.
   HotSpot NMT does not account for all third-party/driver allocations.
@@ -114,7 +120,7 @@ Rejected shortcuts:
 ## Tool verification
 
 At the pinned base, the Python safety suite passed 109 tests, with no skips.
-With the initial observer/analysis controls it passed 113, with no skips. The real JUnit
+With the role-transition control it passed 114, with no skips. The real JUnit
 service-loading control checks deliberately retained memory, release of a large
 per-class fixture and completion accounting. A cold-compilation control preserves
 reports and rejects linked output paths before deleting anything. A GC-log control distinguishes a
