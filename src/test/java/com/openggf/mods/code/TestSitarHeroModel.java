@@ -25,7 +25,7 @@ class TestSitarHeroModel {
         Path output = Files.createDirectory(temp.resolve("classes"));
         Path empty = Files.createDirectory(temp.resolve("empty"));
         var args = new ArrayList<>(List.of("--release", "21", "-classpath", empty.toString(), "-d", output.toString()));
-        for (String tree : List.of("src/main/java/sitarhero/model", "src/test/java/sitarhero/model")) {
+        for (String tree : List.of("src/main/java/sitarhero/model", "src/main/java/sitarhero/catalogue", "src/test/java/sitarhero/model")) {
             Path root = project.resolve(tree);
             assertTrue(Files.isDirectory(root), "Missing external rhythm model: " + root);
             try (var files = Files.walk(root)) {

@@ -70,6 +70,9 @@ public interface SceneContext {
     /** Finite ROM music with an audible sample clock, independent of scene update cadence. */
     default SceneMusic music() { throw new UnsupportedOperationException("Finite scene music unavailable"); }
 
+    /** Explicit, bounded direct peer messaging owned by this scene visit. */
+    default SceneNetwork network() { throw new UnsupportedOperationException("Scene networking unavailable"); }
+
     /** Small text files kept for this mod across sessions (saves, settings, high scores). */
     SceneStorage storage();
 

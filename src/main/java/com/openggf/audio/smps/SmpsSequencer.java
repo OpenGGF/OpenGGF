@@ -2801,10 +2801,12 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     private void reuseDuration(Track track) {
-        if (track.rawDuration == 0) {
-            track.rawDuration = 1;
-        }
-        setDuration(track, track.rawDuration);
+        // S1 FinishTrackUpdate/DACUpdateTrack and S2/S3K zFinishTrackUpdate
+        // copy SavedDuration, which SetDuration already multiplied by the
+        // divider. A later divider flag applies only to explicit durations.
+        // Rescaling the raw byte here shortened S1 Credits' medley transitions.
+        if (track.scaledDuration == 0) setDuration(track, 1);
+        else track.duration = track.scaledDuration;
     }
 
     private int scaleDuration(Track track, int rawDuration) {
@@ -3027,6 +3029,24 @@ public class SmpsSequencer implements CoordFlagContext {
                 // advances, but the resting bit suppresses the chip write
                 // (S2 sd:1123-1131, 1276-1312).
                 primePsgRestEnvelope(t);
+            }
+            return;
+        }
+
+        if (!noteByteRead && t.type == TrackType.PSG
+                && config.getDelayFreq() == SmpsSequencerConfig.DelayFreq.RESET
+                && (t.baseFnum & 0x8000) != 0) {
+            // S1 PSGDoNext clears the rest bit even for a duration-only unit,
+            // but PSGDoNoteOn tests the saved Freq word and branches on its
+            // sign to PSGSetRest (s1.sounddriver.asm:1832-1858, 1883-1885,
+            // 1918-1920). S2 zPSGDoNoteOn checks FreqHigh bit 7 likewise
+            // (s2.sounddriver.asm:1202-1204). A rest's $FFFF sentinel therefore
+            // still suppresses the frequency, volume and attack. S3K's KEEP
+            // policy preserves a playable frequency instead of this sentinel.
+            t.resting = true;
+            if (config.isAdvancePsgEnvelopeOnRest()) {
+                if (preventAttack) processPsgEnvelope(t);
+                else primePsgRestEnvelope(t);
             }
             return;
         }
