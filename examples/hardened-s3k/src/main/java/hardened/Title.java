@@ -72,7 +72,7 @@ public final class Title implements TitleScreenProvider {
             }
             canvas.center("ARROWS / D-PAD  CHOOSE   ENTER / A  SELECT", 180 + rise, 0xA4D0BB, .65f);
         }
-        canvas.center("MOVE + JUMP AS USUAL. START OPENS THE RETRY MENU.", 207, 0xA4D0BB, .6f);
+        if (rise == 0) canvas.center("MOVE + JUMP AS USUAL. START OPENS THE RETRY MENU.", 207, 0xA4D0BB, .6f);
         canvas.flush();
     }
     @Override public void setClearColor() { }

@@ -489,3 +489,17 @@ Runtime validation executes in the registration owner's fault boundary and commi
 all active disjoint plans atomically. Added native-ring identities are engine-allocated
 above the original decoded identity range, never supplied by creators. The descriptor and runtime version remain
 candidate `0.7.0`; the mutable `0.7` pin is regenerated without published baselines.
+
+### Native entry-art readiness
+
+`RuntimeArtCoordinator.levelEntryArtReady()` is an additive query with default
+`true`. A controlled entry may advance ordinary neutral rows, then release input
+only after its presentation and game-owned art producers have finished. The S3K
+implementation includes not-yet-submitted terrain, physical and prepared module
+work, direct work, unconsumed fresh handoffs, and deferred title/enemy producers.
+It submits or services no work and consumes no diagnostic or trace state. The
+native coordinator's provider reference is resolved lazily, preserving stock
+initialization. Other controlled modes retain their existing input defaults.
+This refreshes the mutable `0.7` signature pin and runtime description while the
+release descriptor continues to declare candidate `0.7.0`; no published baseline
+or version bump is introduced.

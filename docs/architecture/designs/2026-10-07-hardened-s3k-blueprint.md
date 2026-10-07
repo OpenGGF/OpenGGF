@@ -194,8 +194,9 @@ Launch is a dedicated enabled patch module with a session-owned title and
 ledger. The normal launcher verifies the surveyed logical ROM hash. Explicit
 fresh-centre and no-save opt-ins preserve native defaults and run before stock
 save attachment; the fresh hook never controls native death or stage return.
-The frame controller separately opts into native input on advanced rows while
-holding presentation/menu rows. Existing golf keeps its neutral default.
+The frame controller separately opts into native input in PLAY. Neutral ordinary
+entry rows let the native art/fade owners finish; menus hold the world. Existing
+golf keeps its neutral default.
 Independent review rejected unconditional checkpoint retry before contact:
 the menu now names an explicit fresh attempt until the physical post is active,
 then uses native death re-entry. The choice is captured by rewind. Completion
@@ -231,9 +232,12 @@ entry override through death or stage return. The marker is cleared/consumed at
 load boundaries. The integrated packaged example and four mandatory S3K
 regressions passed 65 cases with zero skips at 14:19 UTC. The camera follow-up
 observed the correct native death camera `0x1CC0`; its initial new fixture
-incorrectly expected the banked value, and the one-line assertion correction is
-under focused rerun. Final merged-source capture and broad validation remain
-pending. An exploratory capture or focused result is not a broad pass.
+incorrectly expected the banked value, and the one-line assertion correction
+passed its corrected matched rerun at 14:52 UTC. The actual merged `d5e6eb613`
+compiled-source focus passed 122 cases without skips; its compiled 20,126-line
+candidate export matched the committed pin. Final polished capture and broad
+validation remain pending. An exploratory capture or focused result is not a
+broad pass.
 
 ## Owning references
 
@@ -243,3 +247,45 @@ pending. An exploratory capture or focused result is not a broad pass.
 - [MHZ checkpoint fixtures](../../../src/test/java/com/openggf/tests/TestMhzCheckpointRoutes.java).
 - [AIZ terrain owner](../../../src/main/java/com/openggf/game/sonic3k/events/Sonic3kAIZEvents.java).
 - [Native special-stage owner](../../../src/main/java/com/openggf/game/sonic3k/specialstage/Sonic3kSpecialStageManager.java).
+
+### Entry-owner follow-up
+
+Merged `d5e6eb613` GPU/PCM and native-window walkthroughs reached physical post
+contact, two volleys, safe clear, native post retry and a separate fresh launch.
+They rejected two presentation details: the title's initial moving controls
+collided with its fixed footer, and the first PLAY rows appeared before native
+terrain finished loading. A queue-handle-only gate would miss
+`deferredFreshLevelRuntimeArt`, and holding ENTRY prevents that producer from
+running. The correction advances neutral ordinary rows, removes the duplicate
+manual fade step and releases only in `afterTick` after a completed neutral row,
+minimum presentation, fade/title readiness and game-owned art readiness.
+
+The additive query-only `RuntimeArtCoordinator.levelEntryArtReady()` defaults to
+true. S3K composes actual deferred terrain, physical/prepared module work, direct
+work, marked fresh handoff consumption and native title/enemy producer state.
+It forces no service and reads no diagnostic/trace rows. Its lazy provider
+reference preserves stock initialization; existing rewind owners capture the
+queried state. The title footer waits for its moving panel to settle. The new focused run completed 144 cases with no skips: 143 passed, while the
+physical checkpoint retry exposed an unconsumed mandatory native title request.
+ENTRY now calls existing `CourseControl.finishInitialPresentation()` before its
+neutral production row; the native omitted-title lease, teardown and enemy-art
+handoff still own that work. Both native retries explicitly check pending-card
+consumption and art readiness. The corrected seven prototype cases and actual
+runtime policy case pass with no skips. Queue/provider and mandatory S3K cases
+passed in the preceding run. The actual compiled candidate export has 20,127
+lines, SHA-256 `5a00245f286003f11aa6e5d6b497c5cf5d95c4131786c5414d0c3332a5fea7d0`,
+and matches the normalized pin. Independent source review of the new query and
+title-consumption boundary found no blocking issues. Final audiovisual observation
+and broad validation remain separate gates.
+
+The D5 trace check completed three methods with no skips but three assertions:
+AIZ 57 errors, first 20,302 (animation `0`/`5`); complete AIZ 99 errors, first
+25,589 (animation `0x13`/`5`); HCZ 4,699 errors, first 9,482 (air `1`/`0`). A
+separate clean 5b3 destination-baseline run completed the same three methods with
+no skips, reproducing each exact assertion message, total and first-error field.
+They are attributable inherited failures for D5, not newly declared route passes.
+Its first waiting invocation ended 130 before admission for an unknown reason;
+it produced no test result. One reconciled normal replacement supplied the
+actual baseline evidence. The later entry-query source still requires its own
+trace check. The native missing-ROM screenshots/state log show recovery;
+its three-frame desktop video failed X11 GetImage and is rejected as footage.

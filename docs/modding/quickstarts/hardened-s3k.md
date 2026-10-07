@@ -76,7 +76,15 @@ route. Use admitted gameplay ticks for authored pattern timing; native objects
 continue reading their own ROM clocks.
 
 The example uses `GameplayFrameController.nativePlayerInput()` to opt into normal
-native movement on advanced rows. Its entry/menu rows HOLD the world. Existing
+native movement in PLAY. ENTRY advances ordinary native rows with neutral input
+so the fade and native terrain/enemy-art owners can finish. Release follows the
+completed row, minimum presentation, `presentationReady()` and the query-only
+`RuntimeArtCoordinator.levelEntryArtReady()` gate. Queue diagnostics alone miss
+deferred work, and HOLD starves its producer. ENTRY first uses
+`CourseControl.finishInitialPresentation()` consumes the pending Level routine
+card through its omitted-presentation owner, including on checkpoint retry; its
+teardown and enemy-art handoff still run. Simply bypassing the ordinary card
+consumer leaves that producer pending indefinitely. Menus HOLD the world. Other
 controlled modes retain their default neutral input. `LevelInputOverlay` owns
 modal Start/Enter before host pause without replacing gameplay bindings.
 `freshLevelStartPosition` applies only to a fresh start. Death, checkpoint and
@@ -101,7 +109,8 @@ all domain-required checks. Use absolute existing ROM paths and inspect skips.
 Shared API/session/input changes require normal broad validation. Keep stock AIZ→HCZ
 and the four mandatory S3K regression classes green.
 
-Drive independent safe and failure input programs through production gameplay,
+Use the [maintained safe and failure input programs](../../../examples/hardened-s3k/walkthroughs/README.md)
+through production gameplay,
 capture synchronized state/frames and actual PCM outside the repository, and
 inspect frames selected from state rather than assuming a successful load is a
 route proof. Record inputs, ROM hash, package/content identity, commit and exact

@@ -35,7 +35,8 @@ arbitrary compiled JVM mods are not native-image compatible.
 
 1. Choose **How to Play**, then begin. The menu explains the warning, real post,
    one safe recovery ring and exit. Its native MHZ music establishes the encounter's setting.
-2. The native entry/title presentation releases into the post approach. Touch
+2. The entry panel advances neutral native loading frames and releases movement
+   after the fade, title and actual terrain/enemy-art owners finish. Touch
    the starpost yourself; the mod never fabricates its saved state.
 3. Read the pointed warning cue. The sentry commits its aim before firing, so
    moving afterward gives a safe solution. A safe retreat remains available;
@@ -63,6 +64,10 @@ and menu actions; UI polling does not inject physical keys into a replay.
 The ambush menu holds gameplay while ambient music and menu cues continue;
 independent host pause silences presentation through the engine's existing owner.
 
+The [maintained controller walkthroughs](walkthroughs/README.md) reproduce the safe
+and fatal paths with production GPU frames, state and PCM. They include source
+programs, BK2 inputs and exact capture commands.
+
 ## Supported cells and isolation
 
 The implemented encounter target is native solo Sonic, donor off, 320×224, no-save,
@@ -86,7 +91,7 @@ difficulty certification are not promised by this prototype.
 | `EncounterState` | Session-owned phase/aim/volley/checkpoint outcome with a rewind adapter |
 | `Sentry` / `Spore` | Resident Mushmeanie ROM mappings; readable tell; native hurt contact; bounded recreatable children |
 | `Title` | Title/lesson navigation and a session-owned fresh launch |
-| `AmbushFlow` | Native-input opt-in, entry and menu holds, real post retry, clear/failure/exit transitions |
+| `AmbushFlow` | Native-input opt-in, neutral native entry, menu holds, real post retry, clear/failure/exit transitions |
 | `Canvas` | Engine UI font and queued screen-space geometry; no separate graphics/audio backend |
 
 Read the [agent authoring walkthrough](../../docs/modding/quickstarts/hardened-s3k.md)

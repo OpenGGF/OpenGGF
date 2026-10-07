@@ -53,11 +53,13 @@ public final class AmbushFlow implements GameplayFrameController, RewindSnapshot
         }
         presentationTicks++;
         if (screen == Screen.ENTRY) {
-            course.advanceEntryPresentation();
-            if (course.presentationReady() && presentationTicks >= 45) {
-                encounter.begin(); change(Screen.PLAY);
-            }
-            return false; // The confirm edge never becomes a jump on the launch row.
+            // Our entry panel owns presentation. A native checkpoint restart
+            // still queues its Level: card, whose omitted owner must complete
+            // its real teardown and enemy-art handoff through this boundary.
+            course.finishInitialPresentation();
+            // Neutral ordinary rows let the native fade, terrain and enemy-art
+            // owners finish. Releasing input happens only after the completed row.
+            return true;
         }
         if (screen == Screen.PLAY) {
             if (input.menuStart()) { change(Screen.PAUSED); return false; }
@@ -102,7 +104,15 @@ public final class AmbushFlow implements GameplayFrameController, RewindSnapshot
         return false;
     }
     @Override public void afterTick(CourseControl course, boolean advanced) {
-        if (!advanced || screen != Screen.PLAY) return;
+        if (!advanced) return;
+        if (screen == Screen.ENTRY) {
+            if (presentationTicks >= 45 && course.presentationReady()
+                    && GameServices.runtimeArtCoordinator().levelEntryArtReady()) {
+                encounter.begin(); change(Screen.PLAY);
+            }
+            return;
+        }
+        if (screen != Screen.PLAY) return;
         encounter.afterGameplayTick(GameServices.sprites().getMainPlayable(),
                 hasPhysicalPost());
         if (encounter.failed()) change(Screen.FAILED);
@@ -111,7 +121,7 @@ public final class AmbushFlow implements GameplayFrameController, RewindSnapshot
             change(Screen.CLEAR);
         }
     }
-    @Override public boolean nativePlayerInput() { return true; }
+    @Override public boolean nativePlayerInput() { return screen == Screen.PLAY; }
     // The world holds in menus; the ambient ROM music and navigation cues continue.
     // Independent host pause still selects native silent presentation.
     @Override public boolean presentationPaused() { return false; }

@@ -30,3 +30,23 @@ child owns the three launch/input opt-ins. The lead owns presentation, integrati
 authoring documentation and delivery. Each child uses a separate copy-on-write
 worktree and queued focused Maven commands. Their commits and exact verification
 are reconciled in the outside-repository task ledger before integration.
+
+Current checkpoint: destination `5b3a63641033506fc0d89ad5188a0c97fae29089`
+was merged by intent as `296ad3090` after the frozen trace invocation finished.
+Its seven upstream changes are documentation only. The prior merged focus passed
+122 cases with zero skips. The three AIZ/HCZ trace assertions matched the clean
+5b3 baseline by exact test identity and message; they remain inherited failures,
+not route passes. The new entry focus completed 144 cases: 143 passed and one
+native checkpoint retry stayed in ENTRY because its mandatory native title
+request was not consumed. The example now uses the existing omitted-presentation
+owner before neutral rows. The corrected seven prototype cases and actual runtime
+policy case pass, with zero skips. Queue/provider, mandatory S3K and API/SDK cases
+passed in the preceding focus. The actual compiled 20,127-line candidate export
+matches the pin. Broad validation and final polished recapture remain required.
+
+The observed entry-art gap is addressed through ordinary neutral native rows and
+a semantic readiness query, preserving each queue/fade owner. The animated title
+footer is shown after the panel settles. Maintained safe/failure controller
+programs are under `examples/hardened-s3k/walkthroughs`; final capture evidence
+must confirm their milestones after the entry correction. No future full-act or
+campaign gate is complete.

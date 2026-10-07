@@ -6153,6 +6153,7 @@ METHOD com.openggf.game.RomOffsetProvider public  int getArtOffset(java.lang.Str
 METHOD com.openggf.game.RomOffsetProvider public  int getLevelOffset(java.lang.String)
 METHOD com.openggf.game.RomOffsetProvider public  int getPaletteOffset(java.lang.String)
 METHOD com.openggf.game.RomOffsetProvider public,abstract  int getOffset(java.lang.String,java.lang.String)
+METHOD com.openggf.game.RuntimeArtCoordinator public  boolean levelEntryArtReady()
 METHOD com.openggf.game.RuntimeArtCoordinator public  boolean ownsHeldLevelCounterHardwareTail()
 METHOD com.openggf.game.RuntimeArtCoordinator public  void afterTimingService(com.openggf.game.timing.HardwareServiceBoundary)
 METHOD com.openggf.game.RuntimeArtCoordinator public  void beforeTimingService(com.openggf.game.timing.HardwareServiceBoundary)

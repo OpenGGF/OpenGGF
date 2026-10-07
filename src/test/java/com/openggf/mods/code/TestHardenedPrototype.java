@@ -137,7 +137,7 @@ class TestHardenedPrototype {
     @Test void titleLessonLaunchAndNoSavePolicyUseThePackagedSource() throws Exception {
         launch();
         assertTrue(effective.requiresNoSaveSession());
-        assertTrue(controller.nativePlayerInput());
+        assertFalse(controller.nativePlayerInput(), "entry is neutral until native art and presentation settle");
         assertNull(effective.getDataSelectProvider());
         var title = effective.getTitleScreenProvider();
         title.initialize();
@@ -161,6 +161,77 @@ class TestHardenedPrototype {
         assertEquals(7, title.startZoneIndex()); assertEquals(0, title.startActIndex());
         title.reset(); assertFalse(title.isActive());
         title.initialize(); assertEquals(TitleScreenProvider.State.ACTIVE, title.getState());
+    }
+
+    @Test void entryUsesNeutralNativeRowsAndReplaysItsArtReleaseTwice() throws Exception {
+        var fixture = launch();
+        var objects = GameServices.level().getObjectManager();
+        // The packaged fixture uses this one real creator loader. Bind recreation
+        // to its exact owner instead of teaching the engine about a test namespace.
+        objects.setRewindClassResolver(new com.openggf.level.objects.RewindClassResolver() {
+            @Override public Optional<Class<?>> resolve(String owner, String binaryName) {
+                if (owner == null) return ENGINE_ONLY.resolve(null, binaryName);
+                if (!owner.equals("hardened-s3k")) return Optional.empty();
+                try { return Optional.of(loader.loadClass(binaryName)); }
+                catch (ClassNotFoundException missing) { return Optional.empty(); }
+            }
+            @Override public Optional<String> ownerOf(Class<?> type) {
+                return type.getClassLoader() == loader ? Optional.of("hardened-s3k") : Optional.empty();
+            }
+        });
+        for (int frame = 0; frame < 1200 && (presentationTicks() == 0 || GameServices.fade().isActive()); frame++) {
+            step(fixture, LogicalInputSnapshot.neutral());
+        }
+        assertEquals("ENTRY", screen());
+        assertFalse(controller.nativePlayerInput());
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var initial = registry.capture();
+        var heldMovementAndJump = action(com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_RIGHT, true, false);
+        var replay = new ArrayList<LogicalInputSnapshot>();
+        for (int frame = 0; frame < 90; frame++) {
+            boolean entering = screen().equals("ENTRY");
+            var row = entering ? heldMovementAndJump : LogicalInputSnapshot.neutral();
+            replay.add(row);
+            step(fixture, row);
+            if (entering) {
+                assertEquals(0x1D30, GameServices.sprites().getMainPlayable().getCentreX(),
+                        "even the release row must retain neutral native movement");
+                assertTrue(GameServices.sprites().getMainPlayable().getYSpeed() >= 0,
+                        "held menu confirmation must not become a native jump");
+            }
+        }
+        assertEquals("PLAY", screen());
+        assertTrue(controller.nativePlayerInput());
+        assertTrue(GameServices.runtimeArtCoordinator().levelEntryArtReady());
+        var expected = registry.capture();
+        for (int cycle = 0; cycle < 2; cycle++) {
+            registry.restore(initial);
+            assertEquals("ENTRY", screen());
+            assertFalse(controller.nativePlayerInput());
+            for (var row : replay) step(fixture, row);
+            var actual = registry.capture();
+            assertEquals(expected.entries().keySet(), actual.entries().keySet());
+            for (String key : expected.entries().keySet()) {
+                var differences = com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key, expected.get(key), actual.get(key));
+                assertTrue(differences.isEmpty(), key + " entry replay " + cycle + ": " + differences.stream().limit(8).toList());
+            }
+            assertTrue(GameServices.runtimeArtCoordinator().levelEntryArtReady());
+        }
+    }
+
+    @Test void ordinaryEntryAdvancesItsFadeOncePerAdmittedRow() throws Exception {
+        var fixture = launch();
+        for (int frame = 0; frame < 1200 && presentationTicks() == 0; frame++) {
+            step(fixture, LogicalInputSnapshot.neutral());
+        }
+        assertEquals("ENTRY", screen());
+        // Presentation-only stimulus; native physics, terrain, queues and input
+        // remain the production owners. This is not a gameplay position seed.
+        GameServices.fade().startFadeFromBlack(null);
+        int before = GameServices.fade().capture().frameCount();
+        step(fixture, LogicalInputSnapshot.neutral());
+        assertEquals(before + 1, GameServices.fade().capture().frameCount());
+        assertEquals("ENTRY", screen());
     }
 
     @Test void developerWalkthroughLoaderPublishesPlacementWithTheSameOwnerBoundary() throws Exception {
@@ -211,7 +282,13 @@ class TestHardenedPrototype {
             assertEquals(1, GameServices.level().getCurrentLevel().getObjects().stream()
                     .filter(spawn -> "hardened-s3k:spore-sentry".equals(spawn.objectKey())).count(),
                     "checkpoint reload installs the placement exactly once");
+            assertTrue(GameServices.level().isTitleCardRequested(),
+                    "native Level re-entry owns a mandatory card even with skipped host presentation");
             releaseEntry(fixture);
+            assertFalse(GameServices.level().isTitleCardRequested(),
+                    "entry consumes the request through its native omitted-presentation owner");
+            assertTrue(GameServices.runtimeArtCoordinator().levelEntryArtReady(),
+                    "real title teardown and enemy-art handoff finish before movement resumes");
             assertFalse(GameServices.sprites().getMainPlayable().getDead());
         }
         step(fixture, LogicalInputSnapshot.neutral());

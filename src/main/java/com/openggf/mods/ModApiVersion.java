@@ -24,7 +24,8 @@ public final class ModApiVersion {
      * rings and add local registered objects and bounded native recovery rings without
      * replacing native level owners.
      * Native encounters can opt into controlled player input, bounded fresh-entry
-     * centre coordinates and launch-boundary no-save isolation.
+     * centre coordinates and launch-boundary no-save isolation. A query-only
+     * native entry-art gate includes deferred submissions and owner consumption.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

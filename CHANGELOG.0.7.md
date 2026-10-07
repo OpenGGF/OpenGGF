@@ -855,7 +855,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   complete the short trial for solo Sonic at 320px, donor off and no-save.
   Bounded transaction-owned placement plans preserve native level, objects,
   events and ROM assets; explicit fresh-entry, no-save and native-input opt-ins
-  retain existing stock defaults. Includes human and agent authoring guides.
+  retain existing stock defaults. Neutral entry frames finish native terrain and
+  enemy-art loading before releasing input. Includes human and agent authoring guides.
 
 - **Putt Putt Paradise — Sonic 2 Mini Golf:** added an external source-first mod
   using the player's full Emerald Hill acts. Sonic and Tails putt or chip with

@@ -47,6 +47,31 @@ public class TestSonic3kObjectArtProvider {
     }
 
     @Test
+    public void entryReadinessIncludesNativeEnemyWorkBeforeSubmission() throws Exception {
+        assertTrue(provider.levelEntryArtReady());
+        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
+                "scheduleEnemyKosArt", int.class, int.class);
+        schedule.setAccessible(true);
+        schedule.invoke(provider, Sonic3kZoneIds.ZONE_MHZ, 0);
+        assertFalse(provider.levelEntryArtReady(),
+                "native LoadEnemyArt retains producer work before queue admission");
+    }
+
+    @Test
+    public void nativeMhzEntryReachesReadinessThroughOrdinaryOwnerPumps() {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)
+                .withSkippedZoneIntro().build();
+        var coordinator = com.openggf.game.GameServices.runtimeArtCoordinator();
+        for (int row = 0; row < 1200 && !coordinator.levelEntryArtReady(); row++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertTrue(coordinator.levelEntryArtReady());
+        var nativeProvider = (Sonic3kObjectArtProvider) GameModuleRegistry.getCurrent().getObjectArtProvider();
+        assertTrue(nativeProvider.levelEntryArtReady());
+        assertNotNull(nativeProvider.getSheet("mhz_mushmeanie"), "the native resident mapping remains ROM-backed");
+    }
+
+    @Test
     public void sandopolisLoadEnemyArtQueuesSkorpSandwormAndRocknForBothActs() throws Exception {
         // Recorded s3k SOZ run segments submit ArtKosM_Skorp at row 34; without a
         // SOZ case the engine submitted nothing and every later job ordinal lagged.
