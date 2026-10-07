@@ -25,9 +25,11 @@ candidate API remains 0.7.0.
 - Seven cosmetic performers, four musical roles, and Easy/Medium/Hard/Expert.
   Easy uses three melodic lanes, Medium four, Hard/Expert five. Direct drums keep
   their authentic pad identities and kick; density varies by difficulty.
-- Career groups the available catalogue into three-song venues. The first is
-  open; two clears in a venue open the next. Progress is scoped by instrument and
-  difficulty and never requires an absent ROM. Quick play has no unlock gate.
+- Career follows authored Sonic worlds in native journey order. Clear each
+  world's main-act songs to open the next; instrument and difficulty changes
+  retain tour progress. Optional side gigs expose bonus and alternate songs.
+  Short authored intermissions tell a shared tour story promoted by Robotnik.
+  Each installed ROM supplies its own complete tour. Quick play has no unlock gate.
 - Practice has no failure and cannot change earned records or career progress.
   The initial practice scope is whole-song rehearsal with honest miss accounting.
 - Results show score, accuracy, stars, full combo, best streak, previous best and
@@ -67,8 +69,9 @@ This is direct peer play without matchmaking or a server account service.
 
 `PerformanceResult` and `PlayerProfile` are pure Java. Records separate song,
 role and difficulty; incomplete, failed, practice, demo and multiplayer attempts
-cannot become normal single-player clears. `CareerProgress` derives unlocks from
-the current supplied catalogue rather than storing fragile array indices.
+cannot become normal single-player clears. A separate bounded career journal
+stores earned Career clears and seen intermissions by stable IDs; Quick Play
+records do not silently advance the authored journey.
 
 Existing chart calls default to Medium. The original three songs retain their
 authored musical ownership; new difficulty calls change density/lane abstraction
@@ -377,3 +380,116 @@ were inspected for readable layout and native hand/instrument layering. There
 were no scene fault findings. Offline synthesis/autoplay demonstrates flow and
 assets; physical speaker/controller latency, real-time throughput and external
 network reachability are not inferred from these captures.
+
+
+## Authored world-tour refinement
+
+The user refined career while final candidate validation was still queued. They
+chose a journey through Sonic worlds, authored performer-specific banter, an
+uneasy shared tour with Robotnik's scheme, and clearing every world's main act
+songs. They explicitly asked for nuanced personalities, rather than surface
+traits or repeated catchphrases. The generic three-song ladder is superseded.
+The waiting candidate request was cancelled before Maven admission (exit 130);
+it produced no test result. The immutable baseline remains applicable.
+
+Robotnik promotes a tour celebrating his musical genius while secretly using
+stages and the final broadcast to claim control. Sonic suspects the scheme from
+the beginning, but willingly stays to make the shows free and fun; Robotnik
+tolerates him because he draws the crowds. The S1 journey establishes that
+mutual advantage. S2's industrial staging gives Tails room to enjoy and improve
+the equipment while challenging Robotnik's obsession with automated perfection.
+S3K brings the tour to Angel Island: one credible security pretext draws
+Knuckles in, then physical evidence lets him discover the Emerald amplifier
+plan and act decisively. The finale separates an excellent concert from the
+takeover failing offstage, including when Robotnik is the player's performer.
+
+Keep the stakes light and characterisation recognisably classic. Sonic's
+confidence coexists with consideration for the audience and his friends; he
+can listen and recognise another player's skill. Tails is capable, curious and
+independent, can disagree with Sonic's improvisation, and need not solve every
+problem alone. Knuckles values his home and responsibilities, can enjoy a good
+show, and changes his mind because of evidence. Robotnik has genuine craft and
+pride, can appreciate a worthy performance or help save a show, and then turn
+that impulse into another grandiose claim. Avoid making him permanently
+incompetent, Tails an exposition machine, Sonic an unbroken string of taunts,
+or Knuckles a recurring fool. Do not invent a tragic backstory or solemn
+redemption arc. Give each world a small relationship beat that carries forward.
+
+Intermissions contain four to eight short exchanges, with varied joke shapes,
+stage business, occasional sincere remarks, and jokes that sometimes land for
+Robotnik. Robot performers express character through bounded diagnostics and
+physical reactions rather than generic human sarcasm. Performer-specific quips
+change the staging without branching the main plot or granting abilities.
+S1-only scenes use Sonic and Robotnik; S2 adds Tails/Silver Sonic, S3K adds
+Knuckles/Mecha Sonic/Egg Robo. No portrait requires an absent ROM.
+
+Astra and Opus supplied brief first-round reviews. Both identified the need for
+a clear mutual advantage, warmth and varied punchlines, and a playable Robotnik
+whose successful performance is respected. Opus proposed a credible Knuckles
+deception; accepted with a decisive evidence-based turn. The suggestion that
+Robotnik already owns every stage and Sonic cannot cancel the tour was rejected:
+it weakens voluntary participation and contradicts the takeover premise.
+Keep the original lines "It would make an excellent Master Emerald" and
+"I'm the venue" when their scene earns them; do not make their joke pattern the
+template for every stop. Reviews are peer advice, not additional user authority.
+
+### Implementation seams and delivery plan
+
+The model worker owns `CareerWorld`, `CareerTour`, `CareerTours`, and
+`CareerJournal` in `sitarhero.model`, plus dedicated packaged tests and its own
+dated model artifact. `CareerWorld` is an immutable record `(id, title,
+requiredSongIds, sideSongIds)`; `CareerTour` is `(id, game, title, subtitle, worlds)`.
+`CareerTours.all()` creates the complete authored route; `available(List<SongSpec>)`
+returns only complete installed tours, never silently deleting required songs.
+Every one of the 79 songs belongs to exactly one required or side-gig assignment.
+S1 worlds: green-hill, marble, spring-yard, labyrinth, star-light, scrap-brain,
+finale, encore. S2 worlds: emerald-hill, chemical-plant, aquatic-ruin, casino-night,
+hill-top, mystic-cave, oil-ocean, metropolis, sky-chase, wing-fortress, death-egg,
+finale, encore. S3K worlds: angel-island, hydrocity, marble-garden, carnival-night,
+icecap, launch-base, mushroom-hill, flying-battery, sandopolis, lava-reef,
+sky-sanctuary, death-egg, finale, encore. Prefix each world ID with its game ID
+and a hyphen. Main zone acts are required; the finale requires its native final
+battle (S3K also Doomsday), and encore requires the native ending and final
+credits. Generic bosses, bonus/competition tracks and earlier-bank variants are
+side gigs placed at sensible milestones; they do not gate the main path. S3K's
+Flying Battery follows Mushroom Hill, rather than its music-header position.
+
+`CareerJournal` exposes `record(PerformanceResult, boolean earnedCareer)`,
+`cleared(String songId)`, `cleared(CareerWorld)`, `cleared(CareerTour)`,
+`complete(CareerWorld)`, `complete(CareerTour)`,
+`unlocked(CareerTour, CareerWorld)`, `seen(String sceneId)`,
+`markSeen(String sceneId)`, `read(String)` and `encode()`. Clear methods count
+only required IDs for world/tour counts. Recording rejects failed, empty,
+unknown or ineligible results. Stable known song/scene IDs, bounded text and
+atomic corrupt-input rejection protect persistence; records remain independent
+in the existing profile. Scene IDs are `world.id() + "-intro"` and
+`tour.id() + "-outro"`. No static object collections are legal in creator code.
+
+The dialogue worker owns `sitarhero.story.CareerStory` only (plus its dedicated
+packaged tests and dated story artifact). Its nested immutable records are
+`Line(Roster speaker, String text, boolean action)` and
+`Scene(String id, String title, List<Line> lines)`. A null speaker is a stage
+direction. `scene(String sceneId, Roster performer, List<String> installedGames)`
+returns authored content for every scene ID above; reject unknown IDs.
+`retryQuip(Roster)` and `successQuip(Roster)` supply short original responses.
+All text uses supported ASCII glyphs; each exchange is at most 150 characters,
+allowing a readable three-line 400x224 dialogue card. Script authoring covers
+every world, with performer variation and coherent self-contained ROM arcs.
+
+The integrator owns scene navigation, native art presentation, journal storage,
+acceptance capture and shared documentation. Flow is performer/instrument/level
+→ tour selection → world board → first-visit intermission → required/side setlist
+→ performance/results → world board. Scene pages advance immediately by accept,
+back skips safely, viewed scenes can be replayed, and retries do not replay an
+intermission. Journal progress persists across role/difficulty/performer changes;
+missing real parts offer a role change without hiding required songs or inventing
+notes. Only naturally completed earned Career play records progression.
+
+Meaningful focused checks cover native world order, complete song assignment,
+ROM subsets, required-act gates, cross-role progress, eligibility, corrupt saves,
+seen/skip/replay behavior, absent-part role recovery, speaker ROM eligibility,
+and every script's text bounds. Inspect actual world-board, setlist and dialogue
+captures. After these pass, freeze sources and run the combined normal category
+selection against pinned base 09282b17305cb5794e43a26855cd2b9543b4ff5f. Shared
+audio/API changes in the whole delivery still require broad candidate and
+integrated validation, followed by develop push and owned-worktree cleanup.
