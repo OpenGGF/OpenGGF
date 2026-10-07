@@ -57,25 +57,34 @@ final class SitarHeroS2NativeProgram {
         Map<Integer, Integer> firstVisit = new HashMap<>();
         ArrayDeque<Integer> returns = new ArrayDeque<>();
         int[] loops = new int[8];
-        int divider = data.getDividingTiming(), duration = 0, note = 0x80, unit = 0;
-        boolean tie = false, noise = false;
+        int divider = data.getDividingTiming(), savedDuration = 0, note = 0x80, unit = 0;
+        boolean tie = false, noise = false, psgFrequencyValid = true;
         // zGetNextNote / zDACUpdateTrack / zSetDuration: durations are bytes;
         // DAC ignores the melodic no-attack flag. Calls/loops retain SavedDuration.
+        // zInitMusicPlayback clears Freq to 0000. Only an explicit PSG rest
+        // installs FFFF; note fill silences without changing that saved word.
         for (int commands = 0; commands < 1_000_000 && unit <= horizon; commands++) {
             firstVisit.putIfAbsent(pc, unit);
             int offset = pc;
             int value = u8(data, pc++);
             if (value < 0xE0) {
                 boolean noteByte = value >= 0x80;
-                if (value >= 0x80) {
+                if (noteByte) {
                     note = value;
-                    if (u8(data, pc) < 0x80) duration = u8(data, pc++);
-                } else duration = value;
-                int scaled = duration * divider & 255;
-                if (scaled == 0) scaled = 256;
-                if ((note != 0x80 || !noteByte && !kind.equals("DAC")) && (!tie || kind.equals("DAC")))
+                    if (kind.equals("PSG")) psgFrequencyValid = note != 0x80;
+                    if (u8(data, pc) < 0x80) savedDuration = u8(data, pc++) * divider & 255;
+                } else savedDuration = value * divider & 255;
+                // zSetDuration scales a supplied byte once. zFinishTrackUpdate
+                // and the DAC note-without-duration branch reuse that saved byte
+                // even when E5 has changed TempoDivider in between.
+                int timeout = savedDuration == 0 ? 256 : savedDuration;
+                // zPSGDoNext clears rest on duration-only data, but its note-on
+                // guard tests FreqHigh bit 7 and restores rest for saved FFFF.
+                // FM's rest stores 0000 and has no equivalent frequency guard.
+                if ((note != 0x80 || !noteByte && !kind.equals("DAC"))
+                        && (!kind.equals("PSG") || psgFrequencyValid) && (!tie || kind.equals("DAC")))
                     attacks.add(new Attack(unit, pc, note, noise)); // pointer after note+duration
-                unit += scaled;
+                unit += timeout;
                 tie = false;
                 continue;
             }
