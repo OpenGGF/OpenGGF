@@ -967,11 +967,14 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * {@code GameModeID_Level} (docs/s2disasm/s2.asm:4513-4525). Without it a
      * game that follows a game over would open with the zero lives the card
      * left behind. S3K takes its counts from the data-select slot instead.
+     * The active module then applies its campaign-specific initialization;
+     * S1 also clears emeralds and the special-stage cursor in PlayLevel.
      */
     public void startNewGameFromTitle() {
         this.lives = 3;
         this.continues = 0;
         this.score = 0;
+        GameServices.currentOrBootstrapGameModule().onNewGameFromTitle(this);
     }
 
     @Override
