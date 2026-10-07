@@ -86,21 +86,17 @@ final class Draw {
 
     static void text(ObjectServices s, String text, int x, int y, int scale, int rgb, float alpha) {
         int cx = s.camera().getX(), cy = s.camera().getY();
+        int[][] font = s.gameService(MenuArt.class).font;
         String upper = text.toUpperCase(java.util.Locale.ROOT);
         for (int i = 0; i < upper.length(); i++) {
             char c = upper.charAt(i);
             int index = c == 'X' && i < text.length() && text.charAt(i) == 'x' ? CHARS.indexOf('x') : CHARS.indexOf(c);
             if (index < 0) continue;
             int left = x + i * 6 * scale;
-            for (int row = 0; row < 7; row++) {
-                int base = index * 35 + row * 5;
-                for (int col = 0; col < 5; col++) {
-                    if (GLYPHS.charAt(base + col) != '1') continue;
-                    int end = col;
-                    while (end < 5 && GLYPHS.charAt(base + end) == '1') end++;
-                    rectWorld(s, cx + left + col * scale, cy + y + row * scale, (end - col) * scale, scale, rgb, alpha);
-                    col = end;
-                }
+            int[] rectangles = font[index];
+            for (int p = 0; p < rectangles.length; p += 4) {
+                rectWorld(s, cx + left + rectangles[p] * scale, cy + y + rectangles[p + 1] * scale,
+                        rectangles[p + 2] * scale, rectangles[p + 3] * scale, rgb, alpha);
             }
         }
     }
@@ -121,15 +117,15 @@ final class Draw {
     }
 
     /** 3x5 digits in world coordinates, for floating damage numbers. */
-    static void smallWorld(ObjectServices s, String text, int x, int y, int rgb, float alpha) {
+    static void smallWorld(ObjectServices s, String text, int x, int y, int scale, int rgb, float alpha) {
         for (int i = 0; i < text.length(); i++) {
             int index = SMALL_CHARS.indexOf(text.charAt(i));
             if (index < 0) continue;
             for (int p = 0; p < 15; p++) {
                 if (SMALL_GLYPHS.charAt(index * 15 + p) != '1') continue;
-                int px = x + i * 4 + p % 3, py = y + p / 3;
-                rectWorld(s, px + 1, py + 1, 1, 1, NAVY, alpha);
-                rectWorld(s, px, py, 1, 1, rgb, alpha);
+                int px = x + (i * 4 + p % 3) * scale, py = y + p / 3 * scale;
+                rectWorld(s, px + scale, py + scale, scale, scale, NAVY, alpha);
+                rectWorld(s, px, py, scale, scale, rgb, alpha);
             }
         }
     }

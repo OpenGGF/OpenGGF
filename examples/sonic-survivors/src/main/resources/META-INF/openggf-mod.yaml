@@ -1,10 +1,10 @@
 formatVersion: 1
 id: sonic-survivors
 name: Sonic Survivors
-version: 0.2.0
+version: 0.5.0
 authors:
   - OpenGGF contributors
-description: A bounce-driven survivors roguelike for Sonic 2. Survive two-minute waves of zone badniks with hitpoints in a walled arena cut from each act, chain bounces for combo multipliers, pick bounce-triggered weapons and passives on every level-up, beat each zone's Eggman, choose your next act, and bank rings and Chaos Emeralds for permanent upgrades between runs.
+description: A bounce-driven survivors roguelike for Sonic 2. Survive escalating hordes of zone badniks with hitpoints in walled arenas cut from each act, chain bounces for combo damage and Fever, level up into bounce-triggered weapons and buffs, evolve maxed weapons from treasure chests, weather zone events and warden squads, beat each zone's boss and push through an increasingly hard route to the Death Egg. Bank rings for long-tail global power-ups, unlock upgrades through milestones, take on Eggman's Rules for bigger payouts, and play five-minute, ten-minute or unlimited runs.
 engineApiRange: ">=0.7.0 <0.8.0"
 type: patch
 baseGame: s2

@@ -69,7 +69,8 @@ final class Species {
             case CHOPCHOP -> new Traits(CHOPCHOP, "CHOP CHOP", "chopchop", new int[]{0, 1}, 8, false, 0x02, 4, 0x300,
                     DIVER, 16, 12, false, null, 0, 0);
             // ObjC8 Crawl: walk frames 0/1. Armoured: double hitpoints.
-            case CRAWL -> new Traits(CRAWL, "CRAWL", "crawl", new int[]{0, 1}, 10, false, 0x0C, 8, 0x80,
+            // Casino Night's only badnik: armoured, but not a wall for weapon-light builds.
+            case CRAWL -> new Traits(CRAWL, "CRAWL", "crawl", new int[]{0, 1}, 10, false, 0x0C, 5, 0x80,
                     WALKER, 20, 16, false, null, 0, 0);
             // Obj92 Spiker: collision $12; walk frames 0/1 with the drill up.
             case SPIKER -> new Traits(SPIKER, "SPIKER", "spiker", new int[]{0, 1}, 6, false, 0x12, 4, 0xA0,

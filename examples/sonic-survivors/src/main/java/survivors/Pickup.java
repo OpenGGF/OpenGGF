@@ -17,7 +17,11 @@ import java.util.List;
  * a pile of rings never competes with badniks for the touch pass.
  */
 public final class Pickup extends AbstractObjectInstance implements RewindRecreatable {
-    static final int RING = 0, MONITOR = 1, EMERALD = 2;
+    static final int REWARD_LIFETIME = 60 * 60;
+    static final int LOST_RING_LIFETIME = 45;
+    static final int RING = 0, MONITOR = 1, EMERALD = 2, CHEST = 3;
+    /** The invincibility monitor matches Fever's scale rather than stock's twenty seconds. */
+    static final int MONITOR_INVINCIBILITY = 10 * 60;
     // Monitor contents, by ROM monitor mapping frame.
     static final int MON_RINGS = 5, MON_SHOES = 6, MON_SHIELD = 7, MON_STARS = 8, MON_EGGMAN = 4, MON_MAGNET = 10;
 
@@ -28,6 +32,7 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
     private int subX;
     private int subY;
     private int age;
+    private int rewardAge;
     private boolean resting;
     private boolean homing;
     private boolean lostRing;
@@ -49,8 +54,8 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
     }
 
     /** A ring hanging in the air, as stock level rings do, until Sonic or his magnet takes it. */
-    static Pickup floating(int x, int y) {
-        var ring = new Pickup(spawnAt(x, y, RING), 0, 0, 1);
+    static Pickup floating(int x, int y, int value) {
+        var ring = new Pickup(spawnAt(x, y, RING), 0, 0, Math.max(1, value));
         ring.resting = true;
         ring.age = 20;
         return ring;
@@ -72,7 +77,22 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
     boolean collectedAlready() { return collected >= 0; }
     int value() { return value; }
     /** Folds extra rings into this pickup, so a big ring pile never exhausts object slots. */
-    void addValue(int more) { value += more; }
+    void addValue(int more) { value += more; rewardAge = 0; }
+    int ringTier() { return value >= 125 ? 3 : value >= 25 ? 2 : value >= 5 ? 1 : 0; }
+
+    boolean mergeable() {
+        return kind() == RING && !lostRing && !isDestroyed() && collected < 0 && age > 12;
+    }
+
+    void absorb(Pickup other) {
+        value += other.value;
+        if (other.homing) homeIn();
+        // Existing rewards are not fresh drops: preserve the younger remaining lifetime,
+        // never reset it to a minute on each consolidation.
+        rewardAge = Math.min(rewardAge, other.rewardAge);
+        other.setDestroyed(true);
+    }
+
     /** The ring magnet monitor: fly to Sonic from anywhere. */
     void homeIn() {
         if (lostRing) return;
@@ -96,7 +116,11 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         var run = services().gameService(RunState.class);
         if (run != null && run.paused) return;
         age++;
-        if (lostRing && age >= 300) { setDestroyed(true); return; }
+        // Uncollected rewards must eventually free their slots during long/endless runs.
+        // Merging fresh rings refreshes rewardAge without restarting their movement clock.
+        boolean expired = lostRing ? age >= LOST_RING_LIFETIME
+                : kind() != EMERALD && kind() != CHEST && ++rewardAge >= REWARD_LIFETIME;
+        if (expired) { setDestroyed(true); return; }
         if (!(entity instanceof AbstractPlayableSprite player) || player.getDead()) { fall(); return; }
         int dx = player.getCentreX() - x, dy = player.getCentreY() - y;
         int magnet = kind() == RING && run != null ? run.magnetRadius() : 0;
@@ -156,7 +180,7 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         Stage stage = Stage.find(services());
         switch (kind()) {
             case RING -> {
-                services().audioManager().playSecondarySfx(GameSound.RING);
+                playRingSound(run, value);
                 player.addRings(value);
                 if (run != null && !lostRing) {
                     run.ringsCollected += value;
@@ -169,25 +193,44 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
             case EMERALD -> {
                 if (stage != null) stage.onEmeraldCollected();
             }
+            case CHEST -> {
+                if (stage != null) stage.openChest(value);
+            }
             default -> breakMonitor(player, run, stage);
         }
+    }
+
+    private void playRingSound(RunState run, int amount) {
+        if (run == null || run.ringSound(amount)) services().audioManager().playSecondarySfx(GameSound.RING);
     }
 
     private void breakMonitor(AbstractPlayableSprite player, RunState run, Stage stage) {
         services().playSfx(0xC1);
         switch (value) {
             case MON_RINGS -> {
-                services().audioManager().playSecondarySfx(GameSound.RING);
-                player.addRings(10);
-                if (run != null) { run.ringsCollected += 10; run.gainXp(10); }
+                // Two hits' worth: a fixed ten rings would be nothing against a late-route toll.
+                int rings = superRingValue(run, player);
+                playRingSound(run, rings);
+                player.addRings(rings);
+                if (run != null) { run.ringsCollected += rings; run.gainXp((int) Math.round(rings * run.xpScale())); }
+                if (stage != null) stage.banner("SUPER RING +" + rings, 90);
+                return;
             }
             case MON_SHOES -> player.giveSpeedShoes();
             case MON_SHIELD -> player.giveShield();
-            case MON_STARS -> player.giveInvincibility();
+            case MON_STARS -> {
+                player.giveInvincibility();
+                player.setInvincibleFrames(MONITOR_INVINCIBILITY);
+            }
             case MON_EGGMAN -> { if (stage != null) stage.screenNuke(); }
             default -> { if (stage != null) stage.magnetSweep(); }
         }
         if (stage != null) stage.banner(monitorName(value), 90);
+    }
+
+    static int superRingValue(RunState run, AbstractPlayableSprite player) {
+        // The base toll (rings held excluded): reading the held total would let rings compound.
+        return run == null ? 10 : Math.max(10, 2 * run.toll(0));
     }
 
     static String monitorName(int frame) {
@@ -201,20 +244,35 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         };
     }
 
+    float lostRingAlpha() { return Math.max(0f, 1f - age / (float) LOST_RING_LIFETIME); }
+
     @Override public int getPriorityBucket() { return RenderPriority.bucket(collected >= 0 ? 1 : 3); }
 
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) return;
+        boolean blinking = !lostRing && rewardAge >= REWARD_LIFETIME - 60;
+        if (collected < 0 && kind() != EMERALD && blinking && (age & 4) != 0) return;
         if (kind() == RING) {
             var rings = services().ringManager();
             if (rings == null) return;
+            if (ringTier() == 0 && !lostRing && Stage.menuShowing(services())) return;
             if (collected >= 0) {
                 rings.drawSparkleAt(x, y, collected / Math.max(1, rings.getSparkleFrameDelay()));
                 return;
             }
-            // Lost rings blink before expiry; reward rings persist.
-            if (!lostRing || age < 240 || (age & 4) == 0) rings.drawRingAt(x, y, age);
-            if (value > 1) Draw.smallWorld(services(), "x" + value, x + 8, y - 10, Draw.YELLOW, 1f);
+            if (lostRing) {
+                // A translucent golden loop uses the mod's alpha-capable geometry path.
+                Draw.circleWorld(services(), x, y, 5, 1, Draw.YELLOW, lostRingAlpha());
+                return;
+            }
+            int tier = ringTier();
+            if (tier == 0) rings.drawRingAt(x, y, age);
+            else drawCluster(tier);
+            return;
+        }
+        if (kind() == CHEST) {
+            if (collected >= 0) return;
+            drawChest(x, y);
             return;
         }
         if (kind() == EMERALD) {
@@ -225,6 +283,52 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
         var renderer = getRenderer(ObjectArtKeys.MONITOR);
         if (renderer == null) return;
         renderer.drawFrameIndex(collected >= 0 ? 11 : (age / 4) % 8 == 0 ? 1 : value, x, y, false, false);
+    }
+
+    /** Frames for one full turn of a coloured ring, close to the ROM ring's spin. */
+    static final int CLUSTER_SPIN = 32;
+
+    /**
+     * Cached, hollow coloured rings that spin like the ROM ring: the cached circle is squashed
+     * horizontally through a turn (round, edge-on, round), with the rim brighter as it turns
+     * edge-on and the highlight sliding across. Derived from the pickup's age, so no state.
+     * The normal ROM ring remains the small yellow denomination.
+     */
+    private void drawCluster(int tier) {
+        int radius = 7 + tier * 3;
+        int colour = tier == 1 ? Draw.CYAN : tier == 2 ? Draw.PURPLE : Draw.RED;
+        var s = services();
+        double angle = (age + x) % CLUSTER_SPIN * Math.PI * 2 / CLUSTER_SPIN;
+        double squash = Math.max(0.18, Math.abs(Math.cos(angle)));
+        int[] rectangles = s.gameService(MenuArt.class).ringShapes[tier - 1];
+        for (int p = 0; p < rectangles.length; p += 4) {
+            // Columns move toward the centre line; widths shrink, never below a pixel.
+            double left = (rectangles[p] - radius) * squash, right = (rectangles[p] + rectangles[p + 2] - radius) * squash;
+            int x0 = (int) Math.floor(left), w = Math.max(1, (int) Math.ceil(right) - x0);
+            Draw.rectWorld(s, x + x0, y - radius + rectangles[p + 1], w, rectangles[p + 3], colour, 1f);
+        }
+        if (squash < 0.45) {
+            // Edge-on: a bright core line, as the ROM ring's thin frame shows.
+            Draw.rectWorld(s, x - 1, y - radius + 1, 2, radius * 2 - 1, Draw.WHITE, 0.7f);
+        } else {
+            int hx = (int) Math.round(-radius * 3 / 5.0 * squash * Math.signum(Math.sin(angle) + 1e-9));
+            Draw.rectWorld(s, x + hx, y - radius * 4 / 5, 2, 2, Draw.WHITE, 1f);
+        }
+    }
+
+    /** A code-drawn treasure chest: gold-trimmed, a five-prize chest glows pink. */
+    private void drawChest(int cx, int cy) {
+        var s = services();
+        int glow = value >= 5 ? Draw.PINK : value >= 3 ? Draw.GOLD : Draw.CYAN;
+        float pulse = 0.35f + 0.25f * (float) Math.sin(age * 0.15);
+        Draw.circleWorld(s, cx, cy - 2, 14, 2, glow, pulse);
+        Draw.rectWorld(s, cx - 10, cy - 8, 20, 15, Draw.NAVY, 1f);
+        Draw.rectWorld(s, cx - 9, cy - 7, 18, 13, 0x8A4A1C, 1f);
+        Draw.rectWorld(s, cx - 9, cy - 7, 18, 4, 0xB0642A, 1f);
+        Draw.rectWorld(s, cx - 9, cy - 3, 18, 2, Draw.GOLD, 1f);
+        Draw.rectWorld(s, cx - 2, cy - 4, 4, 5, Draw.GOLD, 1f);
+        Draw.rectWorld(s, cx - 1, cy - 3, 2, 2, Draw.NAVY, 1f);
+        if (age / 8 % 4 == 0) Draw.rectWorld(s, cx + 6, cy - 9, 2, 2, Draw.WHITE, 1f);
     }
 
     /** A code-drawn cut gem, sparkling: the run's emerald colour from the boss's stage. */

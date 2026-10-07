@@ -14,7 +14,7 @@ import java.util.List;
  * the {@link #ELITE} flag; the starting hitpoints come through the constructor (rewind restores
  * them with the other fields). A stomp from Sonic
  * deals stomp damage times the bounce combo and always rebounds him; weapons call
- * {@link #hurt}. Defeat uses the stock Sonic 2 destruction (explosion, freed animal, points)
+ * {@link #hurt}. Defeat uses the stock Sonic 2 destruction (explosion and freed animal)
  * and drops rings. Movement is one of the species' AI archetypes, all held to the arena.
  */
 public final class Enemy extends AbstractBadnikInstance implements RewindRecreatable, TouchResponseListener {
@@ -45,11 +45,19 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
     }
 
     public Enemy(ObjectSpawn spawn, int hitpoints) {
-        super(spawn, "Survivors " + Species.of(spawn.subtype() & 0x1F).name(), Sonic2BadnikConfig.DESTRUCTION);
+        super(spawn, "Survivors " + Species.of(spawn.subtype() & 0x1F).name(), destructionWithoutPoints());
         hp = maxHp = Math.max(1, hitpoints);
         homeX = spawn.x();
         shotTimer = 60 + Math.floorMod(spawn.x() * 7 + spawn.y(), 90);
         timer = Math.floorMod(spawn.x() * 13, 40);
+    }
+
+    private static DestructionEffects.DestructionConfig destructionWithoutPoints() {
+        var stock = Sonic2BadnikConfig.DESTRUCTION;
+        // Keep the ROM explosion/animal sequence, but the mod displays damage, not score.
+        return new DestructionEffects.DestructionConfig(stock.sfxId(),
+                (spawn, services) -> AnimalObjectInstance.deferredArtVariant(spawn, services, null),
+                stock.useRespawnTracking(), null, stock.explosionFactory(), stock.pointsAllocatedBeforeAnimal());
     }
 
     static ObjectSpawn spawnAt(int x, int y, int species, boolean elite) {
@@ -232,11 +240,24 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
         }
     }
 
+    /**
+     * Each shooter keeps its own (doubled) period, but every shot also needs the arena's shared
+     * fire budget ({@link Stage#claimEnemyShot}), so a bigger crowd does not mean more bullets.
+     */
     private void shoot(Species.Traits t, int px, int py) {
         if (--shotTimer > 0) return;
-        shotTimer = t.shotPeriod() - (elite() ? t.shotPeriod() / 3 : 0);
         var camera = services().camera();
-        if (currentX < camera.getX() - 16 || currentX > camera.getX() + camera.getWidth() + 16) return;
+        if (currentX < camera.getX() - 16 || currentX > camera.getX() + camera.getWidth() + 16) {
+            shotTimer = 30;
+            return;
+        }
+        Stage stage = Stage.find(services());
+        if (stage != null && !stage.claimEnemyShot()) {
+            // Ready but the budget is spent: try again shortly, staggered so shooters take turns.
+            shotTimer = 20 + Math.floorMod(currentX, 30);
+            return;
+        }
+        shotTimer = t.shotPeriod() * 2;
         double dx = px - currentX, dy = py - currentY;
         double length = Math.max(1, Math.hypot(dx, dy));
         int speed = 0x220;
@@ -246,9 +267,8 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
     }
 
     private void fireShot(String key, int frame, int svx, int svy, boolean gravity) {
-        if (!services().objectManager().hasFreeDynamicSlot()) return;
         int sx = currentX, sy = currentY;
-        spawnFreeChild(() -> Shot.of(sx, sy, key, frame, gravity, svx, svy));
+        ArenaObjects.spawn(services(), () -> Shot.of(sx, sy, key, frame, gravity, svx, svy));
     }
 
     @Override protected void updateAnimation(int vIntRunCount) {
@@ -286,9 +306,26 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
     }
 
     /** A stomp or roll: stomp damage times the combo, and a guaranteed rebound when from above. */
+    /**
+     * The stock touch pass treats a spin-dash charge as an attack. Against badniks with
+     * hitpoints that made a crouched charge untouchable while it chipped at everything in reach,
+     * so on the ground a charge (or a roll that has all but stopped) is a hit. Any moving roll
+     * attacks: it damages the badnik and, if the badnik survives, knocks Sonic back off it.
+     */
+    static boolean idleSpin(PlayableEntity entity) {
+        return !entity.getAir() && (entity.getAnimationId() == ANIM_SPINDASH || Math.abs(entity.getGSpeed()) < 0x100);
+    }
+
+    private static final int ANIM_SPINDASH = 0x09;
+
     @Override public void onPlayerAttack(PlayableEntity entity, TouchResponseResult result) {
         if (isDestroyed() || hp <= 0) return;
         var run = run();
+        if (idleSpin(entity) && entity instanceof AbstractPlayableSprite player && !player.isCpuControlled()
+                && player.getInvincibleFrames() == 0 && !player.isSuperSonic()) {
+            Guard.takeHit(services(), player);
+            return;
+        }
         Stage stage = Stage.find(services());
         boolean bounce = entity.getAir() && entity.getCentreY() < currentY;
         if (bounce && run != null && !(entity instanceof AbstractPlayableSprite sprite && sprite.isCpuControlled())) {
@@ -318,11 +355,21 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
         return applyDamage(damage, knockDir, services().camera().getFocusedSprite());
     }
 
+    /** A screen-wide blast (the Eggman monitor) lands whatever the weapon i-frames. */
+    boolean hurtIgnoringFrames(int damage) {
+        if (!alive()) return false;
+        return applyDamage(damage, 0, services().camera().getFocusedSprite());
+    }
+
     private boolean applyDamage(int damage, int knockDir, PlayableEntity player) {
+        int dealt = Math.min(hp, damage);
         hp -= damage;
         flash = HIT_FLASH;
         Stage stage = Stage.find(services());
-        if (stage != null) stage.popup(currentX, currentY - 12, damage, elite());
+        if (stage != null) {
+            stage.popup(currentX, currentY - 12, dealt);
+            stage.statDamage += dealt;
+        }
         if (hp > 0) {
             services().playSfx(0xAC); // S2 sfx_HitBoss: a hit that did not destroy.
             if (traits().archetype() != Species.TURRET) {
