@@ -67,6 +67,10 @@ public class DelegatingGameModule implements GameModule {
 
     @Override public Game createGame(GameDataSource source) { return base.createGame(source); }
 
+    @Override public void onNewGameFromTitle(GameStateManager gameState) {
+        base.onNewGameFromTitle(gameState);
+    }
+
     @Override public RuntimeArtCoordinator createRuntimeArtCoordinator(HardwareTimingService timing) {
         return base.createRuntimeArtCoordinator(timing);
     }

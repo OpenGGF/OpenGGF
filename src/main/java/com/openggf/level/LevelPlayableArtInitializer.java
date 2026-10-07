@@ -458,7 +458,8 @@ final class LevelPlayableArtInitializer {
         // Mod playables can reach art init before an animation manager exists.
         if (playable.getAnimationManager() != null) {
             playable.getAnimationManager().setDynamicArtDecisionOwner(
-                    createDynamicArtOwner(playable.getCode(), renderer));
+                    // Runtime slot IDs (for example tails_p2) are not ROM art-bank names.
+                    createDynamicArtOwner(playable.characterKey().persisted(), renderer));
         }
         playable.setMappingFrame(0);
         playable.setAnimationFrameCount(artSet.mappingFrames().size());
