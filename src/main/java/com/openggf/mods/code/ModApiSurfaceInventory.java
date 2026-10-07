@@ -54,7 +54,14 @@ public final class ModApiSurfaceInventory {
             "com.openggf.mods.scene.SceneButtons",
             "com.openggf.mods.scene.SceneKeys",
             // Optional interface a scene implements; the engine finds it with instanceof.
-            "com.openggf.mods.scene.DebuggableScene");
+            "com.openggf.mods.scene.DebuggableScene",
+            // Optional creator presentation helpers; static utilities need explicit roots.
+            "com.openggf.mods.ui.CompactFont",
+            "com.openggf.mods.ui.AtlasFont",
+            "com.openggf.mods.ui.TextLayout",
+            "com.openggf.mods.ui.UiPrimitives",
+            "com.openggf.mods.ui.FocusRegions",
+            "com.openggf.mods.ui.LevelOverlayCanvas");
 
     private ModApiSurfaceInventory() { }
 

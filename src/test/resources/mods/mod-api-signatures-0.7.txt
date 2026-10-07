@@ -950,6 +950,20 @@ CF-ANNOTATION TYPE com.openggf.mods.scene.SceneRomArt visible @com.openggf.game.
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneSprite visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneSpriteSet visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneStorage visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.ui.AtlasFont visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.ui.CompactFont visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.ui.CompactFont$RunSink visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.ui.CompactFont$RunSink visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.mods.ui.FocusRegions visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.ui.FocusRegions$Direction visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.ui.FocusRegions$Region visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.ui.LevelOverlayCanvas visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.ui.PixelCanvas visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.ui.TextLayout visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.ui.TextLayout$Alignment visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.ui.TextLayout$Metrics visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.ui.TextLayout$Metrics visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.mods.ui.UiPrimitives visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.ClientRaceSession visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.ClientRaceSession$Phase visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.MasterClient visible @com.openggf.game.ModApi
@@ -1753,6 +1767,9 @@ CONSTRUCTOR com.openggf.mods.scene.SceneLevelStage public  <init>(int,int,int,in
 CONSTRUCTOR com.openggf.mods.scene.SceneMusicPart public  <init>(long,int,int,boolean)
 CONSTRUCTOR com.openggf.mods.scene.SceneNoteEvent public  <init>(int,com.openggf.mods.scene.SceneNoteEvent$Kind,int,int,int,long,long)
 CONSTRUCTOR com.openggf.mods.scene.SceneSprite public  <init>(com.openggf.mods.scene.SceneImage,int,int)
+CONSTRUCTOR com.openggf.mods.ui.FocusRegions public  <init>()
+CONSTRUCTOR com.openggf.mods.ui.FocusRegions$Region public  <init>(java.lang.String,int,int,int,int,boolean)
+CONSTRUCTOR com.openggf.mods.ui.LevelOverlayCanvas public  <init>(com.openggf.graphics.GraphicsManager,int,int)
 CONSTRUCTOR com.openggf.net.client.ClientRaceSession public  <init>(java.util.function.LongSupplier)
 CONSTRUCTOR com.openggf.net.client.RaceClient$Control public  <init>(com.openggf.net.protocol.ControlMessage)
 CONSTRUCTOR com.openggf.net.client.RaceClient$Disconnected public  <init>(java.lang.String)
@@ -3118,6 +3135,15 @@ FIELD com.openggf.mods.scene.SceneKeys public,static,final int Z
 FIELD com.openggf.mods.scene.SceneNoteEvent$Kind public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind DAC
 FIELD com.openggf.mods.scene.SceneNoteEvent$Kind public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind FM
 FIELD com.openggf.mods.scene.SceneNoteEvent$Kind public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind PSG
+FIELD com.openggf.mods.ui.FocusRegions$Direction public,static,final com.openggf.mods.ui.FocusRegions$Direction DOWN
+FIELD com.openggf.mods.ui.FocusRegions$Direction public,static,final com.openggf.mods.ui.FocusRegions$Direction LEFT
+FIELD com.openggf.mods.ui.FocusRegions$Direction public,static,final com.openggf.mods.ui.FocusRegions$Direction NEXT
+FIELD com.openggf.mods.ui.FocusRegions$Direction public,static,final com.openggf.mods.ui.FocusRegions$Direction PREVIOUS
+FIELD com.openggf.mods.ui.FocusRegions$Direction public,static,final com.openggf.mods.ui.FocusRegions$Direction RIGHT
+FIELD com.openggf.mods.ui.FocusRegions$Direction public,static,final com.openggf.mods.ui.FocusRegions$Direction UP
+FIELD com.openggf.mods.ui.TextLayout$Alignment public,static,final com.openggf.mods.ui.TextLayout$Alignment CENTER
+FIELD com.openggf.mods.ui.TextLayout$Alignment public,static,final com.openggf.mods.ui.TextLayout$Alignment LEFT
+FIELD com.openggf.mods.ui.TextLayout$Alignment public,static,final com.openggf.mods.ui.TextLayout$Alignment RIGHT
 FIELD com.openggf.net.client.ClientRaceSession public,static,final int CHAT_LINES_KEPT
 FIELD com.openggf.net.client.ClientRaceSession public,static,final int CLOCK_SAMPLES_TARGET
 FIELD com.openggf.net.client.ClientRaceSession$Phase public,static,final com.openggf.net.client.ClientRaceSession$Phase COUNTDOWN
@@ -3510,6 +3536,8 @@ INTERFACE com.openggf.mods.code.ModLevelDefinition$KeyedObjectSpawn com.openggf.
 INTERFACE com.openggf.mods.code.ModLevelDefinition$StockMusic com.openggf.mods.code.ModLevelDefinition$Music
 INTERFACE com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn com.openggf.mods.code.ModLevelDefinition$ObjectEntry
 INTERFACE com.openggf.mods.code.ModLevelDefinition$TrackMusic com.openggf.mods.code.ModLevelDefinition$Music
+INTERFACE com.openggf.mods.scene.SceneCanvas com.openggf.mods.ui.PixelCanvas
+INTERFACE com.openggf.mods.ui.LevelOverlayCanvas com.openggf.mods.ui.PixelCanvas
 INTERFACE com.openggf.net.client.MasterClient java.lang.AutoCloseable
 INTERFACE com.openggf.net.client.RaceClient$Control com.openggf.net.client.RaceClient$InboundEvent
 INTERFACE com.openggf.net.client.RaceClient$Disconnected com.openggf.net.client.RaceClient$InboundEvent
@@ -12022,6 +12050,49 @@ METHOD com.openggf.mods.scene.SceneStorage public,abstract  boolean delete(java.
 METHOD com.openggf.mods.scene.SceneStorage public,abstract  boolean write(java.lang.String,java.lang.String)
 METHOD com.openggf.mods.scene.SceneStorage public,abstract  java.util.List<java.lang.String> list()
 METHOD com.openggf.mods.scene.SceneStorage public,abstract  java.util.Optional<java.lang.String> read(java.lang.String)
+METHOD com.openggf.mods.ui.AtlasFont public  int height()
+METHOD com.openggf.mods.ui.AtlasFont public  int width(java.lang.String)
+METHOD com.openggf.mods.ui.AtlasFont public  void draw(com.openggf.mods.scene.SceneCanvas,java.lang.String,int,int,int,int)
+METHOD com.openggf.mods.ui.AtlasFont public,static  com.openggf.mods.ui.AtlasFont parse(byte[],int)
+METHOD com.openggf.mods.ui.CompactFont public,static  int width(java.lang.String,int)
+METHOD com.openggf.mods.ui.CompactFont public,static  java.lang.String fit(java.lang.String,int,int)
+METHOD com.openggf.mods.ui.CompactFont public,static  void draw(com.openggf.mods.ui.PixelCanvas,java.lang.String,int,int,int,int)
+METHOD com.openggf.mods.ui.CompactFont public,static  void glyphs(java.lang.String,int,int,int,com.openggf.mods.ui.CompactFont$RunSink)
+METHOD com.openggf.mods.ui.CompactFont public,static  void outlined(com.openggf.mods.ui.PixelCanvas,java.lang.String,int,int,int,int,int)
+METHOD com.openggf.mods.ui.CompactFont public,static  void shadowed(com.openggf.mods.ui.PixelCanvas,java.lang.String,int,int,int,int,int)
+METHOD com.openggf.mods.ui.CompactFont$RunSink public,abstract  void run(int,int,int,int)
+METHOD com.openggf.mods.ui.FocusRegions public  boolean focus(java.lang.String)
+METHOD com.openggf.mods.ui.FocusRegions public  java.lang.String focused()
+METHOD com.openggf.mods.ui.FocusRegions public  java.lang.String hit(int,int)
+METHOD com.openggf.mods.ui.FocusRegions public  java.lang.String move(com.openggf.mods.ui.FocusRegions$Direction)
+METHOD com.openggf.mods.ui.FocusRegions public  java.util.List<com.openggf.mods.ui.FocusRegions$Region> regions()
+METHOD com.openggf.mods.ui.FocusRegions public  void replace(java.util.List<com.openggf.mods.ui.FocusRegions$Region>)
+METHOD com.openggf.mods.ui.FocusRegions$Direction public,static  com.openggf.mods.ui.FocusRegions$Direction valueOf(java.lang.String)
+METHOD com.openggf.mods.ui.FocusRegions$Direction public,static  com.openggf.mods.ui.FocusRegions$Direction[] values()
+METHOD com.openggf.mods.ui.FocusRegions$Region public  boolean enabled()
+METHOD com.openggf.mods.ui.FocusRegions$Region public  int height()
+METHOD com.openggf.mods.ui.FocusRegions$Region public  int width()
+METHOD com.openggf.mods.ui.FocusRegions$Region public  int x()
+METHOD com.openggf.mods.ui.FocusRegions$Region public  int y()
+METHOD com.openggf.mods.ui.FocusRegions$Region public  java.lang.String id()
+METHOD com.openggf.mods.ui.FocusRegions$Region public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.ui.FocusRegions$Region public,final  int hashCode()
+METHOD com.openggf.mods.ui.FocusRegions$Region public,final  java.lang.String toString()
+METHOD com.openggf.mods.ui.LevelOverlayCanvas public  int height()
+METHOD com.openggf.mods.ui.LevelOverlayCanvas public  int width()
+METHOD com.openggf.mods.ui.LevelOverlayCanvas public  void fill(int,int,int,int,int)
+METHOD com.openggf.mods.ui.PixelCanvas public,abstract  int height()
+METHOD com.openggf.mods.ui.PixelCanvas public,abstract  int width()
+METHOD com.openggf.mods.ui.PixelCanvas public,abstract  void fill(int,int,int,int,int)
+METHOD com.openggf.mods.ui.TextLayout public,static  int alignedX(int,int,int,com.openggf.mods.ui.TextLayout$Alignment)
+METHOD com.openggf.mods.ui.TextLayout public,static  java.lang.String ellipsis(java.lang.String,int,com.openggf.mods.ui.TextLayout$Metrics)
+METHOD com.openggf.mods.ui.TextLayout public,static  java.util.List<java.lang.String> wrap(java.lang.String,int,com.openggf.mods.ui.TextLayout$Metrics)
+METHOD com.openggf.mods.ui.TextLayout$Alignment public,static  com.openggf.mods.ui.TextLayout$Alignment valueOf(java.lang.String)
+METHOD com.openggf.mods.ui.TextLayout$Alignment public,static  com.openggf.mods.ui.TextLayout$Alignment[] values()
+METHOD com.openggf.mods.ui.TextLayout$Metrics public,abstract  int width(java.lang.String)
+METHOD com.openggf.mods.ui.UiPrimitives public,static  void frame(com.openggf.mods.ui.PixelCanvas,int,int,int,int,int)
+METHOD com.openggf.mods.ui.UiPrimitives public,static  void gradient(com.openggf.mods.ui.PixelCanvas,int,int,int,int,int,int)
+METHOD com.openggf.mods.ui.UiPrimitives public,static  void meter(com.openggf.mods.ui.PixelCanvas,int,int,int,int,int,int,int,int)
 METHOD com.openggf.net.client.ClientRaceSession public  boolean isWindowOpen()
 METHOD com.openggf.net.client.ClientRaceSession public  boolean needsMoreClockSamples()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.client.ClientRaceSession$Phase phase()
@@ -14987,6 +15058,11 @@ NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteR
 NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$DplcLayout
 NESTED com.openggf.mods.scene.SceneBackdrop com.openggf.mods.scene.SceneBackdrop$Band
 NESTED com.openggf.mods.scene.SceneNoteEvent com.openggf.mods.scene.SceneNoteEvent$Kind
+NESTED com.openggf.mods.ui.CompactFont com.openggf.mods.ui.CompactFont$RunSink
+NESTED com.openggf.mods.ui.FocusRegions com.openggf.mods.ui.FocusRegions$Direction
+NESTED com.openggf.mods.ui.FocusRegions com.openggf.mods.ui.FocusRegions$Region
+NESTED com.openggf.mods.ui.TextLayout com.openggf.mods.ui.TextLayout$Alignment
+NESTED com.openggf.mods.ui.TextLayout com.openggf.mods.ui.TextLayout$Metrics
 NESTED com.openggf.net.client.ClientRaceSession com.openggf.net.client.ClientRaceSession$Phase
 NESTED com.openggf.net.host.HostMasterLink com.openggf.net.host.HostMasterLink$MessageSink
 NESTED com.openggf.net.hub.GhostHub com.openggf.net.hub.GhostHub$HubViolationRecorder
@@ -17020,6 +17096,12 @@ RECORD-COMPONENT com.openggf.mods.scene.SceneNoteEvent trackIndex int
 RECORD-COMPONENT com.openggf.mods.scene.SceneSprite image com.openggf.mods.scene.SceneImage
 RECORD-COMPONENT com.openggf.mods.scene.SceneSprite originX int
 RECORD-COMPONENT com.openggf.mods.scene.SceneSprite originY int
+RECORD-COMPONENT com.openggf.mods.ui.FocusRegions$Region enabled boolean
+RECORD-COMPONENT com.openggf.mods.ui.FocusRegions$Region height int
+RECORD-COMPONENT com.openggf.mods.ui.FocusRegions$Region id java.lang.String
+RECORD-COMPONENT com.openggf.mods.ui.FocusRegions$Region width int
+RECORD-COMPONENT com.openggf.mods.ui.FocusRegions$Region x int
+RECORD-COMPONENT com.openggf.mods.ui.FocusRegions$Region y int
 RECORD-COMPONENT com.openggf.net.client.RaceClient$Control message com.openggf.net.protocol.ControlMessage
 RECORD-COMPONENT com.openggf.net.client.RaceClient$Disconnected reason java.lang.String
 RECORD-COMPONENT com.openggf.net.client.RaceClient$GhostData aggregate com.openggf.net.protocol.GhostPackets$Aggregate
@@ -18142,6 +18224,12 @@ TYPE class public,final com.openggf.mods.scene.SceneImage SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneKeys SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneLevelStage SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneMouse SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.ui.AtlasFont SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.ui.CompactFont SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.ui.FocusRegions SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.ui.LevelOverlayCanvas SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.ui.TextLayout SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.ui.UiPrimitives SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.ClientRaceSession SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.MasterClient SUPER java.lang.Object
 TYPE class public,final com.openggf.net.host.HostMasterLink SUPER java.lang.Object
@@ -18330,6 +18418,8 @@ TYPE enum public,static,final com.openggf.level.resources.KosinskiModuleQueue$Ph
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$Compression>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$DplcLayout SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$DplcLayout>
 TYPE enum public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind SUPER java.lang.Enum<com.openggf.mods.scene.SceneNoteEvent$Kind>
+TYPE enum public,static,final com.openggf.mods.ui.FocusRegions$Direction SUPER java.lang.Enum<com.openggf.mods.ui.FocusRegions$Direction>
+TYPE enum public,static,final com.openggf.mods.ui.TextLayout$Alignment SUPER java.lang.Enum<com.openggf.mods.ui.TextLayout$Alignment>
 TYPE enum public,static,final com.openggf.net.client.ClientRaceSession$Phase SUPER java.lang.Enum<com.openggf.net.client.ClientRaceSession$Phase>
 TYPE enum public,static,final com.openggf.net.hub.HostRoundEngine$Phase SUPER java.lang.Enum<com.openggf.net.hub.HostRoundEngine$Phase>
 TYPE enum public,static,final com.openggf.physics.CollisionEvent$EventType SUPER java.lang.Enum<com.openggf.physics.CollisionEvent$EventType>
@@ -18465,6 +18555,7 @@ TYPE interface public,abstract com.openggf.mods.scene.ScenePreparedMusic SUPER <
 TYPE interface public,abstract com.openggf.mods.scene.SceneRomArt SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneSpriteSet SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneStorage SUPER <none>
+TYPE interface public,abstract com.openggf.mods.ui.PixelCanvas SUPER <none>
 TYPE interface public,abstract com.openggf.net.client.RaceConnection SUPER <none>
 TYPE interface public,abstract com.openggf.net.hub.HubConnection SUPER <none>
 TYPE interface public,abstract com.openggf.net.hub.TrackValidationProfileSource SUPER <none>
@@ -18523,6 +18614,8 @@ TYPE interface public,abstract,static com.openggf.level.objects.PerObjectRewindS
 TYPE interface public,abstract,static com.openggf.level.objects.PerObjectRewindSnapshot$ObjectSubclassRewindExtra SUPER <none>
 TYPE interface public,abstract,static com.openggf.level.objects.PerObjectRewindSnapshot$PlayableSubclassRewindExtra SUPER <none>
 TYPE interface public,abstract,static com.openggf.level.resources.KosinskiModuleQueue$DmaTarget SUPER <none>
+TYPE interface public,abstract,static com.openggf.mods.ui.CompactFont$RunSink SUPER <none>
+TYPE interface public,abstract,static com.openggf.mods.ui.TextLayout$Metrics SUPER <none>
 TYPE interface public,abstract,static com.openggf.net.host.HostMasterLink$MessageSink SUPER <none>
 TYPE interface public,abstract,static com.openggf.net.hub.GhostHub$HubViolationRecorder SUPER <none>
 TYPE interface public,abstract,static com.openggf.net.hub.RoomHostHooks$ChatGate SUPER <none>
@@ -18845,6 +18938,7 @@ TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$StockMu
 TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.code.ModLevelDefinition$TrackMusic SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.scene.SceneBackdrop$Band SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.ui.FocusRegions$Region SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$Control SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$Disconnected SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$GhostData SUPER java.lang.Record
@@ -19828,6 +19922,20 @@ TYPE-ANNOTATION com.openggf.mods.scene.SceneRomArt @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneSprite @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneSpriteSet @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneStorage @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.ui.AtlasFont @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.ui.CompactFont @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.ui.CompactFont$RunSink @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.ui.CompactFont$RunSink @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.mods.ui.FocusRegions @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.ui.FocusRegions$Direction @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.ui.FocusRegions$Region @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.ui.LevelOverlayCanvas @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.ui.PixelCanvas @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.ui.TextLayout @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.ui.TextLayout$Alignment @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.ui.TextLayout$Metrics @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.ui.TextLayout$Metrics @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.mods.ui.UiPrimitives @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.ClientRaceSession @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.ClientRaceSession$Phase @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.MasterClient @com.openggf.game.ModApi

@@ -1,22 +1,21 @@
 package sitarhero.ui;
 
 import com.openggf.mods.scene.SceneCanvas;
+import com.openggf.mods.ui.CompactFont;
+import com.openggf.mods.ui.TextLayout;
 import java.util.Locale;
 
 /** Creator-side pixel UI: master-title framing and the example golf mod's 5x7 glyph design. */
 public final class SitarUi {
     public static final int GOLD = 0xFFFFD45B, CREAM = 0xFFFFF3CB, CYAN = 0xFF69DFFF;
     public static final int DIM = 0xFFA6BEDF, INK = 0xFF08132D;
-    private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    private static final String GLYPHS = "0E11111F1111111E11111E11111E0F10101010100F1E11111111111E1F10101E10101F1F10101E1010100F10101311110F1111111F1111111F04040404041F0702020212120C111214181412111010101010101F111B1515111111111915131111110E11111111110E1E11111E1010100E11111115120D1E11111E1412110F10100E01011E1F0404040404041111111111110E11111111110A0411111115151B1111110A040A111111110A040404041F01020408101F0E11131519110E040C040404040E0E11010204081F1E01010E01011E02060A121F02021F10101E01011E0E10101E11110E1F0102040808080E11110E11110E0E11110F01010E";
-    private static final String PUNCTUATION = ".:-_/+=><!?%[]()*,'&;";
-    private static final String PUNCTUATION_GLYPHS = "00000000000004000400000400000000001F0000000000000000001F010102040810100004041F04040000001F001F00001008040204081001020408040201040404040400040E110102040004191A0204080B130E08080808080E0E02020202020E020408080804020804020202040800150E1F0E1500000000000C04080C0408000000000C12140815120D00000400000408";
     private SitarUi() { }
 
-    public static int width(String text, int scale) { return text.isEmpty() ? 0 : text.length() * 6 * scale - scale; }
+    public static int width(String text, int scale) {
+        return CompactFont.width(text, scale);
+    }
     public static String fit(String text, int pixels) {
-        int count = Math.max(0, (pixels + 1) / 6);
-        return text.length() <= count ? text : count <= 3 ? ".".repeat(count) : text.substring(0, count - 3) + "...";
+        return CompactFont.fit(text, pixels, 1);
     }
     public static void text(SceneCanvas c, String text, int x, int y, int color) {
         pixels(c, text, x + 1, y + 1, 1, INK); pixels(c, text, x, y, 1, color);
@@ -30,14 +29,9 @@ public final class SitarUi {
         c.text(text.toUpperCase(Locale.ROOT), x, y, color);
     }
     public static void wrapped(SceneCanvas c, String text, int x, int y, int area, int color) {
-        int count = Math.max(1, (area + 1) / 6); String line = "";
-        for (String word : text.split(" ")) {
-            if (!line.isEmpty() && line.length() + word.length() + 1 > count) {
-                text(c, line, x, y, color); y += 10; line = "";
-            }
-            line += (line.isEmpty() ? "" : " ") + word;
+        for (String line : TextLayout.wrap(text, area, value -> width(value, 1))) {
+            text(c, line, x, y, color); y += 10;
         }
-        if (!line.isEmpty()) text(c, line, x, y, color);
     }
     public static void frame(SceneCanvas c, int x, int y, int w, int h, int color) {
         c.fill(x, y, w, 1, color); c.fill(x, y + h - 1, w, 1, color);
@@ -85,25 +79,6 @@ public final class SitarUi {
         c.clip(x, y, width(text, 2), 7); pixels(c, text, x, y, 2, GOLD); c.unclip();
     }
     private static void pixels(SceneCanvas c, String text, int x, int y, int scale, int color) {
-        for (int letter = 0; letter < text.length(); letter++) {
-            char ch = Character.toUpperCase(text.charAt(letter)); if (ch == ' ') continue;
-            int index = ALPHABET.indexOf(ch);
-            String glyph;
-            if (index >= 0) glyph = GLYPHS.substring(index * 14, index * 14 + 14);
-            else {
-                int punctuation = PUNCTUATION.indexOf(ch);
-                if (punctuation < 0) punctuation = PUNCTUATION.indexOf('?');
-                glyph = PUNCTUATION_GLYPHS.substring(punctuation * 14, punctuation * 14 + 14);
-            }
-            for (int row = 0; row < 7; row++) {
-                int bits = Integer.parseInt(glyph.substring(row * 2, row * 2 + 2), 16);
-                for (int col = 0; col < 5; col++) {
-                    if ((bits & (16 >> col)) == 0) continue;
-                    int start = col;
-                    while (col + 1 < 5 && (bits & (16 >> (col + 1))) != 0) col++;
-                    c.fill(x + letter * 6 * scale + start * scale, y + row * scale, (col - start + 1) * scale, scale, color);
-                }
-            }
-        }
+        CompactFont.draw(c, text, x, y, scale, color);
     }
 }
