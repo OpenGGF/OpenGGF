@@ -6,6 +6,17 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **Sonic 1 background scrolling:** Scrap Brain Act 1 uses the REV01 cloud
+  interpolation and three building bands, with separate fractional cameras,
+  rewind restoration and tile-cache window coverage at wider viewports. Scrap
+  Brain Act 2 and Final Zone keep their uniform scrolling and use the REV01
+  background-Y entry offset.
+
+- **Stock title starts:** starting a new Sonic 1 game clears emeralds and the
+  special-stage cursor while preserving configured stage counts; Continue keeps
+  existing progress. Unsupported two-player title actions return to the title
+  menu instead of starting an ordinary level.
+
 - **Window and display aspect:** a launch that changes the display aspect (a launch
   profile's aspect, or a module's required aspect such as a mod laid out for 16:9) now
   refits the window instead of letterboxing the new picture inside the old window: a
@@ -18,7 +29,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Live zone handoffs now run the fresh title and terrain-loading lifecycle,
   restoring players before the initial sprite pass without adding a frame.
 
-- **S3K Launch Base:** Cup elevators now resolve each player’s solid contact before checking capture, restoring airborne side collisions and normal landing admission, and preserve native movement and animation control through the NPC Knuckles cutscene. Rolling drums preserve native rider state when unloading, after completing their final player updates. The Act1 miniboss preserves the fatal-hit dispatch before its defeat countdown, including explosion timing through rewind. Carried results now finish their twelve real children before publishing control release, then initialize the next title owner on its following dispatch. Retained title owners reset level counters only after their ROM-backed art and moving children settle, preserving the independent presentation clock. The seamless Act 2 reload holds the inherited camera limits until the title owner releases them, then runs its gradual boundary children in their native creation pass.
+- **S3K Launch Base:** Cup elevators now resolve each player’s solid contact before checking capture, restoring airborne side collisions and normal landing admission, and preserve native movement and animation control through the NPC Knuckles cutscene. Rolling drums preserve native rider state when unloading, after completing their final player updates. The Act1 miniboss preserves the fatal-hit dispatch before its defeat countdown, including explosion timing through rewind. Carried results now finish their twelve real children before publishing control release, then initialize the next title owner on its following dispatch. Retained title owners reset level counters only after their ROM-backed art and moving children settle, preserving the independent presentation clock. Ribot creates its visual children before its first active orbit, matching the ROM initialization return. The seamless Act 2 reload holds the inherited camera limits until the title owner releases them, then runs its gradual boundary children in their native creation pass.
 
 - Automatically mask widescreen pixels beyond current native horizontal camera
   bounds, including asymmetric arena and level edges. During staged boss entry,

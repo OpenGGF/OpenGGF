@@ -25,7 +25,7 @@ Entries should include:
 ## Table of Contents
 
 0. [AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)](#aiz1-ledge--ground-sensors-and-checkfloordist-disagree-about-solidity-open--question-not-yet-a-diagnosis)
-0. [Reverse Gravity — Position Integration Inverted, Collision Probes Not Yet (OPEN — blocks the Death Egg gravity objects)](#reverse-gravity--position-integration-inverted-collision-probes-not-yet-open--blocks-the-death-egg-gravity-objects)
+0. [Reverse Gravity — Native Route Qualification Remains Open](#reverse-gravity--native-route-qualification-remains-open)
 1. [Knuckles LBZ Big Arm — ROM Port (IMPLEMENTED; TRACE BOUNDARY OPEN)](#knuckles-lbz-big-arm--rom-port-implemented-trace-boundary-open)
 2. [CNZ1 Miniboss Arena Entry — Music Play-In Missing](#cnz1-miniboss-arena-entry--music-play-in-missing)
 3. [AIZ1 Trace F4679 — Sidekick Despawn Velocity & Position Semantic Gap (FIXED)](#aiz1-trace-f4679--sidekick-despawn-velocity--position-semantic-gap-fixed)
@@ -67,8 +67,8 @@ Entries should include:
 39. [Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position](#sky-sanctuary-act-1-cutscene-death-egg-palette-children-and-knuckles-resting-position)
 40. [Sky Sanctuary Background Mode Switch Completes a Frame Early](#sky-sanctuary-background-mode-switch-completes-a-frame-early)
 41. [Sky Sanctuary Plain-Mode Background Below `Camera_Y $800` Renders Flat Sky](#sky-sanctuary-plain-mode-background-below-camera_y-800-renders-flat-sky)
-42. [Sky Sanctuary Mecha Sonic Is Only Its Entry and Its Attack Loop](#sky-sanctuary-mecha-sonic-is-only-its-entry-and-its-attack-loop)
-43. [Sky Sanctuary Boss Defeats Draw No Explosion](#sky-sanctuary-boss-defeats-draw-no-explosion)
+42. [Sky Sanctuary Mecha Sonic Hit-Window Phase and Slot-Reuse Fidelity](#sky-sanctuary-mecha-sonic-hit-window-phase-and-slot-reuse-fidelity)
+43. [Sky Sanctuary Explosion Controller Replacement-Slot Stop Bit](#sky-sanctuary-explosion-controller-replacement-slot-stop-bit)
 44. [Sky Sanctuary Metropolis Orb Reads After a Freed Parent Slot Remain Unmodelled](#sky-sanctuary-metropolis-orb-reads-after-a-freed-parent-slot-remain-unmodelled)
 45. [S3K Special-Property Sidekick Behaviour: Corrected Diagnosis](#s3k-special-property-sidekick-behaviour-corrected-diagnosis)
 46. [Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)](#object-art-and-clock-reads-found-by-the-slay-the-robotnik-sprite-research-suspected)
@@ -148,13 +148,24 @@ slice 2: the slice uses measured Death Egg act 2 terrain instead
 
 ---
 
-## Reverse Gravity — Position Integration Inverted, Collision Probes Not Yet (OPEN — blocks the Death Egg gravity objects)
+<a id="reverse-gravity--position-integration-inverted-collision-probes-not-yet-open--blocks-the-death-egg-gravity-objects"></a>
+## Reverse Gravity — Native Route Qualification Remains Open
+
+**Current source disposition, 2026-10-07.** Grounded and airborne collision,
+player actions, object contacts and production Death Egg gravity writers are
+implemented. The current [reference inventory](../architecture/research/s3k-zones/s3k-reverse-gravity-references.md)
+records 112 covered and four inapplicable rows, with no missing or partial rows.
+The earlier claims below describe intermediate port stages. Native whole-route,
+roster, lifecycle and presentation qualification, including complete inverted
+Knuckles traversal, remain open. This reconciliation is a source audit, not a
+new emulator or route execution; see the
+[2026-10-07 evidence](../architecture/audits/2026-10-07-s3k-parity-gap-verification.md).
 
 **Location.** `src/main/java/com/openggf/physics/ReverseGravity.java`,
 `PlayableSpriteMovement.moveSpriteTestGravity` / `doLevelBoundary`,
 `CollisionSystem.resolveGroundWallCollision`.
 
-**Symptom.** With `Reverse_gravity_flag` forced set, a player integrates position upward
+**Historical initial symptom, before the September port.** With `Reverse_gravity_flag` forced set, a player integrates position upward
 (`MoveSprite_TestGravity`, sonic3k.asm:36068), dies at the top of the level (`loc_11722`, :23202),
 and the airborne collision wrappers `sub_11FD6`/`sub_11FEE` (:24127-24149) now select the opposite
 sensor array and mirror the angle they return. What is still missing is the grounded path —
@@ -238,19 +249,19 @@ Groups A (bar `ChooseChkFloorEdge`, partial), B, C, D and G are complete.
 the gap was a search for a `GameSound` constant, not a missing sound. `Obj_DEZGravitySwap`
 (`$5B`) has no art in the ROM and is correctly invisible.
 
-**Suspected cause.** A sliced port with individual defects tracked above. 2 of the 116
-`Reverse_gravity_flag` references in the disassembly are still unimplemented (all in
-groups A-I, above). The act 2 boss's three rows were stale inventory entries; their
+**Implementation record.** The sliced port and its intermediate defects are tracked above.
+The former claim of two unimplemented references is superseded by the current
+reference inventory. The act 2 boss's three rows were stale inventory entries; their
 existing implementations and focused tests are now linked from the table. The conveyor pad's
 carry reversal now has native-player and inverted placed-ride/replay checks. No
 Death Egg gravity object owns a missing row any more; the row-by-row inventory is
 [s3k-reverse-gravity-references.md](../architecture/research/s3k-zones/s3k-reverse-gravity-references.md).
 
-**Removal condition.** The six missing group A-I rows and the partial top-solid row above land, each with a test that runs
-it with the flag set, and the reference table reaches zero missing rows for groups A-I. The
-`ChooseChkFloorEdge` partial and the three hurt death-plane partials stay recorded rather than
-credited: see the reference table for why each cannot be told apart from a sibling that already
-passes.
+**Removal condition.** Complete the native whole-route, supported-roster,
+load/death/rewind lifecycle and presentation obligations, including inverted
+Knuckles traversal. The former missing-row condition is already satisfied by
+the reference inventory; its later edge-balance and hurt-boundary evidence
+supersedes the intermediate partial labels above.
 
 ---
 
@@ -6333,4 +6344,3 @@ needs its own ROM check and focused test before changing.
 - **Suspected cause:** transcription errors when porting the objects.
 - **Removal condition:** each item is checked against the disassembly, fixed with a focused
   test (or shown to be correct), and removed from this list.
-
