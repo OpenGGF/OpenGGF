@@ -633,3 +633,41 @@ owned regression. Worker-reported six synthetic checks and all-101 direct/frozen
 native stream comparisons through 36,001 services cover the bank repair, but
 the focused 21-class Maven request and this extra identity correction remain
 pending at this documentation checkpoint.
+
+### Resolved candidate regressions and updated executable base
+
+Worker repair `d234741a1` completed the coherent queued Maven command recorded
+in the S3K catalogue design: **145 tests / 21 classes, zero failures, errors or
+skips**, fresh Java 21 production/test compilation, 89 seconds execution after
+2,342 seconds queued. All 35 cases in the six formerly failing consumer classes
+pass without assertion changes, covering all 20 new S3K identities. Eight new
+checks preserve indexed bytes/words, immutable raw headers/voices, registration
+identity, descriptors and all 101 complete direct/frozen native streams through
+36,001 services; S3 Ending remains 609 services, FM3/FM4 attacks 48/72. The
+byte-oriented descriptor fingerprint remains distinct from semantic registry
+identity. Parent independently reran the new compound word/tail conflict check
+against fresh repaired classes: one pass, no skips/aborts, unchanged digests.
+The protocol compiler repair independently passes its 20 actual cases. These
+focused results resolve the 21 new candidate identities; they do not claim a
+post-repair full ordinary or guard pass. Consumed candidate diagnostics were
+acknowledged and deleted, independently verified absent.
+
+The destination advanced again to `2fc65c8479570f16ebd9830115485ee369c2b1e6`
+while checks waited. This time the difference is executable: Survivors adds a
+power-up music ownership rule with all stock defaults true, the corresponding
+candidate API pin, mod-local changes and tests; Infinite Sonic tests gain bounded
+terrain observations and retain actual crossing assertions. Memory diagnostics
+remain explicitly opt-in and preserve the normal runtime, POM and selection.
+The parent preserved all upstream changes. The sole merge conflict was adjacent
+`ModApiVersion` explanatory prose; both the full-song/network and power-up rule
+descriptions remain. The signature file merged both additive surfaces. No
+Sitar scene, story, catalogue, animation or protocol behavior was changed during
+this reconciliation.
+
+The earlier `5bc5f4fa6` baseline remains historical evidence. Updated-base and
+combined-candidate normal commands are required against the actual `2fc65c847`
+executable destination; the isolated baseline is fast-forwarded there. Run the
+merged API/package/protocol consumers narrowly first. Pin both source trees
+after this checkpoint, use normal queued Maven and separate fresh guards, and
+retain full failure identities/messages and skip reasons. Main integration,
+post-integration comparison, push and accounted-for cleanup remain pending.
