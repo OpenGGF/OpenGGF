@@ -41,12 +41,27 @@ the same ROM; their music and chart keep the selected song's identity.
 
 ## Modes and difficulty
 
-Career records clears for each song, instrument and difficulty. Clear two songs
-in a venue to open the next three-song venue; only songs with the chosen part
-count toward that tour. Completing all its songs earns the tour-complete result.
-Quick play opens the whole library. Both modes save eligible completed attempts,
-with separate highest-score and best-star records. Practice suppresses failure
-and saves no records. Tool autoplay is labelled DEMO and also saves no records.
+Career journeys through each installed game's worlds in their original order.
+Clear every main-act song at a stop to open the next; bonus stages, alternate
+themes and competition tracks are optional side gigs. Instrument, difficulty
+and performer changes retain tour progress. Required songs with an absent part
+offer an instrument change rather than disappearing from the journey.
+
+Robotnik promotes the shared tour with a takeover scheme behind the staging.
+Sonic stays knowingly for the crowds, Tails brings both enthusiasm and his own
+judgment to the equipment, and Knuckles investigates what the tour is doing to
+his island. Short authored intermissions give them room to disagree, cooperate
+and enjoy a show, with performer-specific quips. Enter/A advances each exchange,
+Escape/B skips, and R/gamepad Y or the world-board button replays its scene.
+After a tour is complete, F/gamepad X or its button replays the finale.
+Concert success remains a win when performing
+as Robotnik, even when his offstage scheme fails.
+
+Quick play opens the whole library and saves separate highest-score and
+best-star records for each song, instrument and difficulty, as Career does.
+Only completed earned Career performances advance the story journal; Quick
+Play records do not skip worlds. Practice suppresses failure and saves no
+records. Tool autoplay is labelled DEMO and also saves no earned progress.
 
 Easy uses three melodic frets and sparse single notes; Medium uses four, and Hard
 and Expert use five with progressively denser genuine attacks. Bongos retains its
@@ -66,6 +81,14 @@ attempts do not affect solo records.
 Menus accept arrows/Enter/Escape, ordinary gamepad D-pad/A/B/Start, or the mouse.
 Wheel scrolls long lists; left-click activates a visible action and right-click
 returns. Tab in selection opens settings.
+On a career setlist, I/gamepad X or the Part & level button changes instrument
+and difficulty and returns to the
+same gig; Back returns to the world board. Scores remain independent of the
+shared tour progression.
+The scene stores its bounded story journal in `career.txt` separately from
+`profile.txt` personal records, under its normal mod save root. Old score-only
+records do not manufacture career clears. Skipped or viewed intermissions stay
+replayable, and a pending tour finale is recovered when reopening that tour.
 
 | Action | Player 1 keyboard | Player 2 keyboard | Gamepad |
 |---|---|---|---|
@@ -122,6 +145,11 @@ malformed message stops the match with a recoverable notice.
 
 - [SitarScene](src/main/java/sitarhero/SitarScene.java) owns menus, loading, modes,
   results, records, player settings and lifecycle cleanup.
+- [CareerTours](src/main/java/sitarhero/model/CareerTours.java) authors the native
+  world route; [CareerJournal](src/main/java/sitarhero/model/CareerJournal.java)
+  keeps bounded shared story progress independently of personal scores.
+- [CareerStory](src/main/java/sitarhero/story/CareerStory.java) contains original
+  intermissions and contextual performer quips, built without static shared state.
 - [RhythmSession](src/main/java/sitarhero/model/RhythmSession.java) judges physical
   inputs in sample coordinates independently of drawing and performer choice.
 - [ChartCurator](src/main/java/sitarhero/chart/ChartCurator.java) combines native

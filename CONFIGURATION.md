@@ -171,7 +171,8 @@ lefty mode and input/display calibration belong to owner-scoped mod settings,
 rather than global gameplay bindings. Raw standard
 gamepads remain available to physical-input scenes when the Genesis mapper is
 disabled. Sitar Hero keeps separate player control/calibration files
-(`settings.txt`, `settings-p2.txt`), bounded career/record data (`profile.txt`),
+(`settings.txt`, `settings-p2.txt`), bounded story progress (`career.txt`) and
+independent score records (`profile.txt`),
 and the explicitly entered peer address (`online-address.txt`) in its owner-scoped
 scene storage. The settings menu selects the player and melodic/bongo profile;
 lefty flip, reduced flashes and highway speed are also player-specific. Network

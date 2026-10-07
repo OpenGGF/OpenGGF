@@ -57,6 +57,9 @@ public final class SitarUi {
         label(c, label, x + 21, y + (h - 10) / 2, w - 28, selected ? GOLD : CREAM);
     }
     public static void page(SceneCanvas c, int step) {
+        page(c, step, "ARCADE");
+    }
+    public static void page(SceneCanvas c, int step, String section) {
         c.fill(0, 0, c.width(), c.height(), 0xAD000D28);
         for (int y = 36; y < 198; y += 12) for (int x = c.width() / 2; x < c.width(); x += 12)
             if ((x / 12 + y / 12) % 2 == 0) c.fill(x, y, 12, Math.min(12, 198 - y), 0x143D75AD);
@@ -70,7 +73,7 @@ public final class SitarUi {
                 frame(c, x, 10, 41, 16, i == step ? CYAN : 0xFF365E95);
                 center(c, i == 1 ? "ACTOR" : i == 2 ? "ROLE" : i == 3 ? "LEVEL" : "SONG", x, 15, 41, i == step ? GOLD : DIM);
             }
-        } else text(c, "ARCADE", c.width() - 49, 15, CYAN);
+        } else text(c, section, c.width() - 49, 15, CYAN);
     }
     public static void footer(SceneCanvas c, String first, String second) {
         c.fill(0, 198, c.width(), 26, 0xF5030B22); c.fill(0, 198, c.width(), 1, 0xFF365E95);

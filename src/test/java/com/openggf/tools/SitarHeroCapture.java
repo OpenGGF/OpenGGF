@@ -133,6 +133,7 @@ public final class SitarHeroCapture {
                         requireScreen(harness, "DIFFICULTY");
                     }
                     jump(harness, "title");
+                    careerScenes(harness, visit);
                     titleScenes(harness, visit);
                     if (subset.equals("all")) {
                         performances(harness, visit);
@@ -290,6 +291,68 @@ public final class SitarHeroCapture {
         // Stream predicate cannot propagate reflection exceptions; preserve their cause.
         try { return (String) method(song, "id"); }
         catch (Exception failure) { throw new IllegalStateException("Cannot read public song ID", failure); }
+    }
+
+    /** Reads later authored scenes as previews; does not manufacture earned tour clears. */
+    private static void careerScenes(ExampleModHarness harness, Path visit) throws Exception {
+        jump(harness, "career");
+        press(harness, GLFW.GLFW_KEY_ENTER); press(harness, GLFW.GLFW_KEY_ENTER); press(harness, GLFW.GLFW_KEY_ENTER);
+        requireScreen(harness, "TOURS"); capture(harness, visit, "career-tours");
+        List<?> tours = (List<?>) field(harness.scene(), "tours");
+        Class<?> screenClass = harness.loader().loadClass("sitarhero.SitarScene$Screen");
+        Object board = java.util.Arrays.stream(screenClass.getEnumConstants()).filter(s -> s.toString().equals("WORLDS")).findFirst().orElseThrow();
+        var preview = harness.scene().getClass().getDeclaredMethod("openStory", String.class, screenClass);
+        preview.setAccessible(true);
+        StringBuilder script = new StringBuilder("Preview-only authored scenes; locked scenes do not award progress.\n");
+        for (int tourIndex = 0; tourIndex < tours.size(); tourIndex++) {
+            select(harness, tourIndex); press(harness, GLFW.GLFW_KEY_ENTER); requireScreen(harness, "WORLDS");
+            Object tour = tours.get(tourIndex);
+            String tourId = (String) tour.getClass().getMethod("id").invoke(tour);
+            List<?> worlds = (List<?>) tour.getClass().getMethod("worlds").invoke(tour);
+            for (int worldIndex = 0; worldIndex < worlds.size(); worldIndex++) {
+                select(harness, worldIndex);
+                Object world = worlds.get(worldIndex);
+                String worldId = (String) world.getClass().getMethod("id").invoke(world);
+                capture(harness, visit, "career-board-" + worldId);
+                if (worldIndex == 0) {
+                    press(harness, GLFW.GLFW_KEY_ENTER); requireScreen(harness, "STORY");
+                    capture(harness, visit, "career-introduction-" + tourId);
+                    press(harness, GLFW.GLFW_KEY_ESCAPE); requireScreen(harness, "SONGS");
+                    capture(harness, visit, "career-setlist-" + tourId);
+                    press(harness, GLFW.GLFW_KEY_I); requireScreen(harness, "ROLES");
+                    press(harness, GLFW.GLFW_KEY_ENTER); press(harness, GLFW.GLFW_KEY_ENTER);
+                    requireScreen(harness, "SONGS"); press(harness, GLFW.GLFW_KEY_ESCAPE); requireScreen(harness, "WORLDS");
+                }
+                preview.invoke(harness.scene(), worldId + "-intro", board);
+                Object scene = field(harness.scene(), "story");
+                List<?> lines = (List<?>) scene.getClass().getMethod("lines").invoke(scene);
+                for (int lineIndex = 0; lineIndex < lines.size(); lineIndex++) {
+                    Object line = lines.get(lineIndex);
+                    script.append(worldId).append('\t').append(lineIndex + 1).append('\t')
+                            .append(line.getClass().getMethod("speaker").invoke(line)).append('\t')
+                            .append(line.getClass().getMethod("text").invoke(line)).append('\n');
+                    if (lineIndex == 0 || worldId.endsWith("finale") || worldId.equals("s3k-lava-reef") || worldId.equals("s2-chemical-plant"))
+                        capture(harness, visit, "career-scene-" + worldId + "-" + (lineIndex + 1));
+                    press(harness, GLFW.GLFW_KEY_ENTER);
+                }
+                requireScreen(harness, "WORLDS");
+            }
+            preview.invoke(harness.scene(), tourId + "-outro", board);
+            List<?> lines = (List<?>) field(harness.scene(), "story").getClass().getMethod("lines")
+                    .invoke(field(harness.scene(), "story"));
+            for (int lineIndex = 0; lineIndex < lines.size(); lineIndex++) {
+                capture(harness, visit, "career-outro-" + tourId + "-" + (lineIndex + 1));
+                press(harness, GLFW.GLFW_KEY_ENTER);
+            }
+            requireScreen(harness, "WORLDS"); press(harness, GLFW.GLFW_KEY_ESCAPE); requireScreen(harness, "TOURS");
+        }
+        Object journal = field(harness.scene(), "career");
+        for (Object tour : tours) {
+            require((int) journal.getClass().getMethod("cleared", tour.getClass()).invoke(journal, tour) == 0,
+                    "Story preview must not invent main-act progress");
+        }
+        Files.writeString(visit.resolve("career-story-preview.tsv"), script);
+        jump(harness, "title");
     }
 
     private static void titleScenes(ExampleModHarness harness, Path visit) throws Exception {

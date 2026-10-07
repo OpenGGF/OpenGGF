@@ -88,8 +88,10 @@ Parent tree: `.worktrees/ai-sitar-hero-full`, `feature/ai-sitar-hero-full`.
    seven ROM subsets and every supported song/role/difficulty chart: authentic
    attacks, selected audio ownership, lane/density bounds and full-song tails.
 2. Career worker owns result/profile/progression/no-fail rules and pure-model
-   tests. Verify corrupt/versioned saves, independent records, difficulty/role
-   unlocks, missing-ROM catalogue changes and finite no-fail sessions.
+   tests. Verify corrupt/versioned saves, independent score records, shared
+   main-act unlocks, missing-ROM catalogue changes and finite no-fail sessions.
+   The dialogue worker owns original world intermissions and performer quips;
+   the integrator owns their scene navigation and native-art presentation.
 3. Network worker owns the scene facade, host lifecycle, candidate pin/SDK/docs
    and loopback tests. Verify cancellation, malformed/oversized framing, bounded
    queue overflow, refusal, disconnect, ordering and endpoint teardown.
@@ -493,3 +495,52 @@ captures. After these pass, freeze sources and run the combined normal category
 selection against pinned base 09282b17305cb5794e43a26855cd2b9543b4ff5f. Shared
 audio/API changes in the whole delivery still require broad candidate and
 integrated validation, followed by develop push and owned-worktree cleanup.
+
+
+The actual authored draft supplies 35 world introductions and three tour outros.
+A second brief Astra/Opus review used three actual scene samples and the user's
+explicit character-depth correction. Accepted local repairs remove Knuckles'
+repeated evidence summary in favour of a terse admission and possessive coupling
+joke, make Tails' switch contribution concrete, and preserve Robotnik's ego
+while respecting his professional playing. The finale no longer stacks warm
+group-nod cues or gives Sonic a speech about audience rights. No general
+rewrite or repeated approval loop followed; the writer's own artifact records
+exact script choices and direct/focused verification.
+
+Parent scene regression first failed with expected TOURS versus the old SONGS
+screen. The revised flow adds tour/world boards, required/optional setlists,
+instant dialogue pages, skip/seen/replay, finale recovery on re-entry, and
+role/difficulty changes returning to the same gig. Mouse and raw gamepad X/Y
+actions accompany keyboard shortcuts. Only naturally finished eligible Career
+play records journal clears; Quick Play still saves personal records without
+advancing the tour. The capture tool previews later locked intermissions as
+labelled previews and explicitly asserts no earned main-act clears were created.
+
+The model checkpoint `d1998b8d8` and story checkpoint `8f7364dc1` are integrated
+at `230ff8c93`. Java 21 compilation and actual creator packaging succeeded on
+the combined sources. Direct invocation of all 29 packaged scene checks passed,
+including six new career consumers: gates/setlists, scene persistence/replay,
+cross-role eligibility, missing-part recovery, mouse/raw-pad controls, and
+pending-outro recovery. Three older navigation tests now explicitly select
+Quick Play or follow the new tour flow; their earlier SONGS-versus-TOURS failures
+encoded the obsolete default navigation. These are direct checks, not Maven
+results. Worker-focused model/story Maven requests remain pending at this
+checkpoint.
+
+Four fresh native `SitarHeroCapture` processes completed with exit 0 and PASS
+acceptance files in `$SITAR_CAPTURE_ROOT/acceptance-v3-career`: all ROMs (213 PNGs,
+79 songs), S1 only (66, 11), S2 only (92, 22), and S3K only (104, 46). The tool
+adds its subset directory beneath each supplied output directory. Each source
+manifest's 35 SHA-256 entries matches the current tree. Inspected world-board,
+Tails dialogue, finale and outro cards are legible and use available native
+speakers. Later locked scenes are previews, not earned progression. Offline
+synthesis does not establish real-time audio latency or hardware-controller
+behaviour. Consumed process logs are removed; reproducible media and provenance
+remain outside the repository.
+
+Develop advanced to `5bc5f4fa6` during career work, including engine/title,
+background-scroll, public API and Maven-tooling changes. The original `09282b173`
+failure inventory remains historical evidence; it cannot alone certify the new
+destination. Reconcile upstream before freezing the candidate and run normal
+updated-base and candidate validation, then integrated validation. No develop
+integration, push or task cleanup is claimed by this source checkpoint.

@@ -223,6 +223,182 @@ class TestSitarHeroArcade {
         f.scene.exit(f);
     }
 
+    @Test void careerOpensNativeWorldsAndKeepsLockedMainActsVisible() throws Exception {
+        Fixture f = new Fixture(List.of("s3k"));
+        assertTrue(f.debug("career"));
+        f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER);
+        assertEquals("TOURS", f.screen());
+        f.key(SceneKeys.ENTER);
+        assertEquals("WORLDS", f.screen());
+        f.key(SceneKeys.DOWN); f.key(SceneKeys.ENTER);
+        assertEquals("WORLDS", f.screen(), "Hydrocity waits for both Angel Island acts");
+        f.key(SceneKeys.UP); f.key(SceneKeys.ENTER);
+        assertEquals("STORY", f.screen());
+        f.key(SceneKeys.ESCAPE);
+        assertEquals("SONGS", f.screen());
+        var list = type.getDeclaredMethod("setlistSongs"); list.setAccessible(true);
+        List<?> songs = (List<?>) list.invoke(f.scene);
+        assertEquals(List.of("angel-island-1", "angel-island-2"), songs.subList(0, 2).stream().map(s -> {
+            try { return s.getClass().getMethod("id").invoke(s); }
+            catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+        }).toList());
+        assertTrue(f.saves.containsKey("career.txt"), "skipping acknowledges the introduction");
+        f.scene.exit(f);
+    }
+
+    @Test void seenIntermissionsCanReplayWithoutLosingRoleChangesOrSetlistReturn() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        f.debug("career");
+        f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER);
+        f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER);
+        assertEquals("STORY", f.screen());
+        f.key(SceneKeys.ESCAPE); f.key(SceneKeys.ESCAPE);
+        assertEquals("WORLDS", f.screen());
+        f.key(SceneKeys.ENTER);
+        assertEquals("SONGS", f.screen(), "revisits do not force the whole introduction");
+        f.key(SceneKeys.I);
+        assertEquals("ROLES", f.screen());
+        f.key(SceneKeys.DOWN); f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER);
+        assertEquals("SONGS", f.screen(), "role changes return to the same gig");
+        f.key(SceneKeys.ESCAPE); f.key(SceneKeys.R);
+        assertEquals("STORY", f.screen(), "a seen scene remains replayable");
+        f.key(SceneKeys.ESCAPE);
+        assertEquals("WORLDS", f.screen(), "replay returns to the board");
+        f.scene.exit(f);
+    }
+
+    @Test void earnedCareerClearsUnlockWorldsAcrossRolesButDemosAndQuickPlayDoNot() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        f.debug("career");
+        f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER);
+        f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER); f.key(SceneKeys.ESCAPE);
+        f.key(SceneKeys.ENTER); f.step(); f.step(); f.step();
+        assertEquals("PLAY", f.screen());
+        f.debug("autoplay");
+        for (int i = 0; i < 500 && !f.screen().equals("RESULTS"); i++) f.step();
+        assertEquals("RESULTS", f.screen());
+        assertFalse(careerClear(f, "green-hill"));
+        f.debug("career");
+        f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER);
+        f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER);
+        f.step(); f.step(); f.step();
+        strikeEveryNote(f);
+        assertEquals("RESULTS", f.screen());
+        assertTrue(careerClear(f, "green-hill"));
+        assertTrue(f.saves.containsKey("career.txt"));
+        f.key(SceneKeys.DOWN); f.key(SceneKeys.DOWN); f.key(SceneKeys.ENTER);
+        assertEquals("WORLDS", f.screen());
+        f.key(SceneKeys.ENTER);
+        assertEquals("STORY", f.screen(), "Marble opens after the required Green Hill song, without requiring its optional gig");
+        f.key(SceneKeys.ESCAPE); f.key(SceneKeys.I); f.key(SceneKeys.DOWN);
+        f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER);
+        assertEquals("SONGS", f.screen());
+        assertTrue(careerClear(f, "green-hill"), "instrument changes retain earned tour progress");
+        f.debug("perform:marble:BONGOS:sonic:EXPERT");
+        f.step(); f.step(); f.step(); strikeEveryNote(f);
+        assertEquals("RESULTS", f.screen());
+        assertFalse(careerClear(f, "marble"), "Quick Play records do not skip authored career stops");
+        f.scene.exit(f);
+        Fixture restored = new Fixture(List.of("s1"), f.saves);
+        assertTrue(careerClear(restored, "green-hill"));
+        assertFalse(careerClear(restored, "marble"));
+        restored.scene.exit(restored);
+    }
+
+    private boolean careerClear(Fixture f, String songId) throws Exception {
+        var field = type.getDeclaredField("career"); field.setAccessible(true);
+        Object journal = field.get(f.scene);
+        return (boolean) journal.getClass().getMethod("cleared", String.class).invoke(journal, songId);
+    }
+
+    @Test void requiredSongsWithAbsentNativePartsOfferAnHonestRoleChange() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        Object tour = ((List<?>) harness.loader().loadClass("sitarhero.model.CareerTours").getMethod("all").invoke(null)).getFirst();
+        List<?> worlds = (List<?>) tour.getClass().getMethod("worlds").invoke(tour);
+        var journalField = type.getDeclaredField("career"); journalField.setAccessible(true);
+        Object journal = journalField.get(f.scene);
+        Class<?> result = harness.loader().loadClass("sitarhero.model.PerformanceResult");
+        var constructor = result.getConstructor(String.class, String.class, String.class, long.class, int.class, int.class, int.class, boolean.class, boolean.class);
+        for (int i = 0; i < 6; i++) {
+            List<?> ids = (List<?>) worlds.get(i).getClass().getMethod("requiredSongIds").invoke(worlds.get(i));
+            for (Object id : ids) journal.getClass().getMethod("record", result, boolean.class)
+                    .invoke(journal, constructor.newInstance(id, "BONGOS", "EASY", 100L, 1, 1, 1, false, true), true);
+        }
+        f.debug("career"); f.key(SceneKeys.ENTER);
+        var role = type.getDeclaredField("role"); role.setAccessible(true);
+        Class<?> roleClass = harness.loader().loadClass("sitarhero.model.Role");
+        role.set(f.scene, Arrays.stream(roleClass.getEnumConstants()).filter(v -> v.toString().equals("SYNTH")).findFirst().orElseThrow());
+        var selected = type.getDeclaredField("selected"); selected.setAccessible(true); selected.set(f.scene, 2);
+        f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER); f.key(SceneKeys.ESCAPE);
+        assertEquals("SONGS", f.screen());
+        f.key(SceneKeys.ENTER);
+        assertEquals("ROLES", f.screen(), "Final Zone remains required even though the ROM has no PSG part");
+        f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER);
+        assertEquals("SONGS", f.screen());
+        assertEquals("SITAR", role.get(f.scene).toString());
+        assertTrue(careerClear(f, "green-hill"));
+        f.scene.exit(f);
+    }
+
+    @Test void careerReplayAndPartChangesAcceptMouseAndRawGamepadActions() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        f.debug("career"); f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER);
+        f.key(SceneKeys.ENTER);
+        f.pad(PhysicalGamepad.BUTTON_Y);
+        assertEquals("STORY", f.screen());
+        f.pad(PhysicalGamepad.BUTTON_B); assertEquals("WORLDS", f.screen());
+        f.mouse(275, 176, true, 0); assertEquals("STORY", f.screen());
+        f.key(SceneKeys.ESCAPE); f.key(SceneKeys.ENTER); assertEquals("SONGS", f.screen());
+        f.pad(PhysicalGamepad.BUTTON_X); assertEquals("ROLES", f.screen());
+        f.key(SceneKeys.ESCAPE); assertEquals("SONGS", f.screen());
+        f.mouse(275, 178, true, 0); assertEquals("ROLES", f.screen());
+        f.scene.exit(f);
+    }
+
+    @Test void completedToursRecoverPendingFinalesAndKeepThemReplayable() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        Object tour = ((List<?>) harness.loader().loadClass("sitarhero.model.CareerTours").getMethod("all").invoke(null)).getFirst();
+        var journalField = type.getDeclaredField("career"); journalField.setAccessible(true);
+        Object journal = journalField.get(f.scene);
+        Class<?> result = harness.loader().loadClass("sitarhero.model.PerformanceResult");
+        var constructor = result.getConstructor(String.class, String.class, String.class, long.class, int.class, int.class, int.class, boolean.class, boolean.class);
+        for (Object world : (List<?>) tour.getClass().getMethod("worlds").invoke(tour))
+            for (Object id : (List<?>) world.getClass().getMethod("requiredSongIds").invoke(world))
+                journal.getClass().getMethod("record", result, boolean.class)
+                        .invoke(journal, constructor.newInstance(id, "SITAR", "EASY", 100L, 1, 1, 1, false, true), true);
+        f.debug("career"); f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER); f.key(SceneKeys.ENTER);
+        assertEquals("STORY", f.screen(), "a completed but unseen finale is recovered on tour entry");
+        var storyField = type.getDeclaredField("story"); storyField.setAccessible(true);
+        Object story = storyField.get(f.scene);
+        assertEquals("s1-outro", story.getClass().getMethod("id").invoke(story));
+        f.key(SceneKeys.ESCAPE); assertEquals("WORLDS", f.screen());
+        f.pad(PhysicalGamepad.BUTTON_X); assertEquals("STORY", f.screen());
+        f.key(SceneKeys.ESCAPE); f.mouse(275, 188, true, 0); assertEquals("STORY", f.screen());
+        f.key(SceneKeys.ESCAPE); f.key(SceneKeys.ESCAPE); f.key(SceneKeys.ENTER);
+        assertEquals("WORLDS", f.screen(), "a seen finale is available without being forced again");
+        f.scene.exit(f);
+        Fixture restored = new Fixture(List.of("s1"), f.saves);
+        restored.debug("career"); restored.key(SceneKeys.ENTER); restored.key(SceneKeys.ENTER);
+        restored.key(SceneKeys.ENTER); restored.key(SceneKeys.ENTER);
+        assertEquals("WORLDS", restored.screen());
+        restored.scene.exit(restored);
+    }
+    private void strikeEveryNote(Fixture f) throws Exception {
+        Object session = f.session();
+        Object chart = session.getClass().getMethod("chart").invoke(session);
+        List<?> notes = (List<?>) chart.getClass().getMethod("notes").invoke(chart);
+        var input = session.getClass().getMethod("input", long.class, int.class, int.class, boolean.class, boolean.class, boolean.class);
+        var role = type.getDeclaredField("role"); role.setAccessible(true);
+        boolean drums = (boolean) role.get(f.scene).getClass().getMethod("drums").invoke(role.get(f.scene));
+        for (Object note : notes) {
+            long onset = (long) note.getClass().getMethod("onset").invoke(note);
+            int lanes = (int) note.getClass().getMethod("lanes").invoke(note);
+            input.invoke(session, onset, lanes, drums ? lanes : 0, !drums, false, false);
+        }
+        f.music.player.position = 20_000;
+        for (int i = 0; i < 20 && !f.screen().equals("RESULTS"); i++) f.step();
+    }
+
     @Test void unsupportedSongSceneryUsesSupportedPicturesFromThatSameRom() throws Exception {
         for (String game : List.of("s2", "s3k")) {
             Fixture f = new Fixture(List.of(game));
@@ -347,6 +523,7 @@ class TestSitarHeroArcade {
             assertEquals(((List<?>) harness.loader().loadClass("sitarhero.model.SongCatalog").getMethod("available", List.class).invoke(null, games)).size(), ((List<?>) type.getMethod("availableSongs").invoke(f.scene)).size());
             int expected = 2 + ((subset & 6) != 0 ? 1 : 0) + ((subset & 2) != 0 ? 1 : 0) + ((subset & 4) != 0 ? 3 : 0);
             assertEquals(expected, ((List<?>) type.getMethod("availablePerformers").invoke(f.scene)).size());
+            f.key(SceneKeys.DOWN); // Quick Play keeps the complete public library open.
             f.key(SceneKeys.ENTER); assertEquals("CHARACTERS", f.screen());
             f.key(SceneKeys.ENTER); assertEquals("ROLES", f.screen());
             f.step(); f.step(); assertEquals("ROLES", f.screen());
@@ -361,12 +538,16 @@ class TestSitarHeroArcade {
         f.pad(PhysicalGamepad.BUTTON_A); assertEquals("ROLES", f.screen());
         f.pad(PhysicalGamepad.BUTTON_DPAD_DOWN);
         f.pad(PhysicalGamepad.BUTTON_A); assertEquals("DIFFICULTY", f.screen());
-        f.pad(PhysicalGamepad.BUTTON_A); assertEquals("SONGS", f.screen());
+        f.pad(PhysicalGamepad.BUTTON_A); assertEquals("TOURS", f.screen());
+        f.pad(PhysicalGamepad.BUTTON_A); assertEquals("WORLDS", f.screen());
+        f.pad(PhysicalGamepad.BUTTON_A); assertEquals("STORY", f.screen());
+        f.pad(PhysicalGamepad.BUTTON_B); assertEquals("SONGS", f.screen());
         f.pad(PhysicalGamepad.BUTTON_A); f.step(); f.step(); assertEquals("PLAY", f.screen());
         f.scene.exit(f);
     }
     @Test void rawPadBackAndSettingsAcceptDoNotCollideWithGenesisAliases() throws Exception {
         Fixture f = new Fixture(List.of("s1"));
+        f.pad(PhysicalGamepad.BUTTON_DPAD_DOWN); // Exercise the flat Quick Play return route.
         for (int i = 0; i < 4; i++) f.pad(PhysicalGamepad.BUTTON_A);
         assertEquals("SONGS", f.screen());
         f.pad(PhysicalGamepad.BUTTON_B); assertEquals("DIFFICULTY", f.screen());

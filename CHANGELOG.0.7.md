@@ -879,7 +879,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - **Sitar Hero:** added a source-first full-song rhythm example combining the
   supplied Sonic 1, 2 and 3 & Knuckles ROM libraries into 79 songs. Looping performances last
   two complete loops or two minutes, whichever is longer; non-looping ending/credits
-  tracks play to their natural stops. Career venues, quick play, no-fail practice,
+  tracks play to their natural stops. Career follows Sonic worlds with main-act
+  setlists, shared tour progress, optional side gigs and satirical authored
+  intermissions on Robotnik's shared tour. Quick play, no-fail practice,
   four difficulties, local co-op/score duels and direct-connect peer matches share
   seven cosmetic performers and four real FM/PSG/DAC parts. ROM-pixel arms and
   hands layer over instruments and move on successful judgments with sound waves.

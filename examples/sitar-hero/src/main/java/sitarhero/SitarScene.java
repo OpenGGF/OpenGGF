@@ -10,6 +10,7 @@ import sitarhero.model.*;
 import sitarhero.ui.SitarUi;
 import sitarhero.ui.HighwayView;
 import sitarhero.net.OnlineMatch;
+import sitarhero.story.CareerStory;
 import static sitarhero.ui.SitarUi.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,12 +18,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Arcade character → role → song → finite performance → results/retry.
+ * Character → role → world journey or open setlist → finite performance → results.
  * Debug capture commands: perform:SONG:ROLE:PERFORMER, autoplay, pause, resume,
  * retry, settings, menu. Autoplay is a labelled tool-only performance, never a menu mode.
  */
 public final class SitarScene implements ModScene, DebuggableScene {
-    public enum Screen { TITLE, CHARACTERS, ROLES, DIFFICULTY, SONGS, LOADING, PLAY, PAUSED, RESULTS, SETTINGS, CALIBRATION, RECORDS, HELP, ONLINE, LOBBY, ERROR }
+    public enum Screen { TITLE, CHARACTERS, ROLES, DIFFICULTY, TOURS, WORLDS, STORY, SONGS, LOADING, PLAY, PAUSED, RESULTS, SETTINGS, CALIBRATION, RECORDS, HELP, ONLINE, LOBBY, ERROR }
     public enum Mode { CAREER, QUICK_PLAY, PRACTICE, LOCAL_COOP, LOCAL_VERSUS, ONLINE_COOP, ONLINE_VERSUS }
     private SceneContext context;
     private List<String> games = List.of();
@@ -34,6 +35,14 @@ public final class SitarScene implements ModScene, DebuggableScene {
     private final ControlSettings settings2 = new ControlSettings(1);
     private final MappedControls controls2 = new MappedControls(settings2);
     private final PlayerProfile profile = new PlayerProfile();
+    private final CareerJournal career = new CareerJournal();
+    private List<CareerTour> tours = List.of();
+    private CareerTour careerTour;
+    private CareerWorld careerWorld;
+    private CareerStory.Scene story;
+    private int storyLine;
+    private Screen storyReturn = Screen.SONGS;
+    private boolean careerRoleReturn;
     private final HighwayView highway = new HighwayView(), highway2 = new HighwayView();
     private Screen screen = Screen.TITLE;
     private Screen settingsReturn = Screen.TITLE;
@@ -86,9 +95,11 @@ public final class SitarScene implements ModScene, DebuggableScene {
         games = ctx.art().availableGames();
         roster = Roster.availablePerformers(games);
         songs = SongCatalog.available(games);
+        tours = CareerTours.available(songs);
         settings.read(ctx.storage().read("settings.txt").orElse(""));
         settings2.read(ctx.storage().read("settings-p2.txt").orElse(""));
         profile.read(ctx.storage().read("profile.txt").orElse(""));
+        career.read(ctx.storage().read("career.txt").orElse(""));
         onlineAddress = ctx.storage().read("online-address.txt").filter(t -> t.length() <= 128).orElse(onlineAddress);
         if (roster.isEmpty() || songs.isEmpty()) { error = "Supply a supported Sonic ROM"; screen = Screen.ERROR; return; }
         performer = roster.get(0); song = songs.get(0);
@@ -209,8 +220,8 @@ public final class SitarScene implements ModScene, DebuggableScene {
             if (back()) {
                 stop();
                 if (!calibratePending && online != null && !online.host()) preparedRound = Math.max(0, online.round() - 1);
-                screen = calibratePending ? Screen.SETTINGS : online != null && !online.host() ? Screen.LOBBY : Screen.SONGS;
-                selected = calibratePending ? 13 : Math.max(0, songs.indexOf(song));
+                if (calibratePending) { screen = Screen.SETTINGS; selected = 13; }
+                else returnToSongs();
             } else if (ctx.ticks() > loadingTick + 1) prepare();
             return;
         }
@@ -223,7 +234,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
                 if (selected == 0) resume();
                 else if (selected == 1) retry();
                 else if (online != null && !online.host()) { notice = "The host chooses the next song"; }
-                else { stop(); screen = Screen.SONGS; selected = Math.max(0, songs.indexOf(song)); }
+                else { stop(); returnToSongs(); }
             } else if (context.keyPressed(SceneKeys.ESCAPE)) resume();
             return;
         }
@@ -236,20 +247,26 @@ public final class SitarScene implements ModScene, DebuggableScene {
             return;
         }
         if (context.keyPressed(SceneKeys.TAB)) { settingsReturn = screen; screen = Screen.SETTINGS; selected = 0; return; }
+        if (screen == Screen.TOURS || screen == Screen.WORLDS || screen == Screen.STORY) { careerMenu(); return; }
         if (screen == Screen.RESULTS) {
             menuMove(4); mouseRows(4, 18, 123, context.width() - 168, 16);
             if (accept()) {
                 if (selected == 0) retry();
-                else if (selected == 1) { screen = online != null && !online.host() ? Screen.LOBBY : Screen.SONGS; selected = Math.max(0, songs.indexOf(song)); }
+                else if (selected == 1) returnToSongs();
                 else if (selected == 2) {
-                    if (mode == Mode.CAREER) { screen = Screen.SONGS; selected = Math.min(songs.size() - 1, songs.indexOf(song) + 1); }
+                    if (mode == Mode.CAREER) continueTour();
                     else { screen = Screen.CHARACTERS; selected = roster.indexOf(performer); }
                 } else home();
-            } else if (back()) { screen = online != null && !online.host() ? Screen.LOBBY : Screen.SONGS; selected = Math.max(0, songs.indexOf(song)); }
+            } else if (back()) returnToSongs();
             return;
         }
+        if (screen == Screen.SONGS && mode == Mode.CAREER && (context.keyPressed(SceneKeys.I) || padPressed(PhysicalGamepad.BUTTON_X)
+                || context.mouse().leftPressed() && context.mouse().over(context.width() - 132, 171, 112, 18))) {
+            song = setlistSongs().get(selected); careerRoleReturn = true;
+            screen = Screen.ROLES; selected = role.ordinal(); notice = "Tour progress follows you across instruments"; return;
+        }
         int count = screen == Screen.CHARACTERS ? roster.size() : screen == Screen.ROLES ? Role.values().length
-                : screen == Screen.DIFFICULTY ? Difficulty.values().length : songs.size();
+                : screen == Screen.DIFFICULTY ? Difficulty.values().length : setlistSongs().size();
         menuMove(count);
         mouseChoices(count, screen == Screen.SONGS ? 4 : screen == Screen.CHARACTERS ? 7 : 4);
         if (accept()) {
@@ -261,21 +278,35 @@ public final class SitarScene implements ModScene, DebuggableScene {
                     else if (online != null && !online.host()) { screen = Screen.LOBBY; selected = 0; }
                     else { screen = Screen.ROLES; selected = role.ordinal(); }
                 }
-            } else if (screen == Screen.ROLES) { role = Role.values()[selected]; screen = Screen.DIFFICULTY; selected = difficulty.ordinal(); }
-            else if (screen == Screen.DIFFICULTY) { difficulty = Difficulty.values()[selected]; screen = Screen.SONGS; selected = Math.max(0, songs.indexOf(song)); }
+            } else if (screen == Screen.ROLES) {
+                Role choice = Role.values()[selected];
+                if (careerRoleReturn && !song.availableRoles().contains(choice)) { notice = "This ROM song has no " + choice.label() + " part"; return; }
+                role = choice; screen = Screen.DIFFICULTY; selected = difficulty.ordinal();
+            }
+            else if (screen == Screen.DIFFICULTY) {
+                difficulty = Difficulty.values()[selected];
+                if (mode == Mode.CAREER && !careerRoleReturn) { screen = Screen.TOURS; selected = Math.max(0, tours.indexOf(careerTour)); }
+                else { careerRoleReturn = false; returnToSongs(); }
+            }
             else {
-                SongSpec choice = songs.get(selected);
-                if (!choice.availableRoles().contains(role)) { notice = "This ROM song has no " + shortRole() + " part"; return; }
-                if (mode == Mode.CAREER && !new CareerProgress(profile).unlocked(careerSongs(), choice.id(), role.name(), difficulty.name())) {
-                    notice = "Clear two songs in the previous venue"; return;
+                SongSpec choice = setlistSongs().get(selected);
+                if (!choice.availableRoles().contains(role)) {
+                    notice = "This ROM song has no " + shortRole() + " part";
+                    if (mode == Mode.CAREER) {
+                        song = choice; careerRoleReturn = true; screen = Screen.ROLES;
+                        selected = choice.availableRoles().getFirst().ordinal();
+                    }
+                    return;
                 }
                 song = choice;
                 if (online != null) { online.offer(song, role, difficulty, mode == Mode.ONLINE_COOP); preparedRound = online.round(); }
                 load(false);
             }
         } else if (back()) {
-            if (screen == Screen.SONGS) { screen = Screen.DIFFICULTY; selected = difficulty.ordinal(); }
+            if (screen == Screen.SONGS && mode == Mode.CAREER) openWorldBoard(false);
+            else if (screen == Screen.SONGS) { screen = Screen.DIFFICULTY; selected = difficulty.ordinal(); }
             else if (screen == Screen.DIFFICULTY) { screen = Screen.ROLES; selected = role.ordinal(); }
+            else if (screen == Screen.ROLES && careerRoleReturn) { careerRoleReturn = false; returnToSongs(); }
             else if (screen == Screen.ROLES) { screen = Screen.CHARACTERS; selected = roster.indexOf(performer); }
             else if (choosingSecond) { choosingSecond = false; selected = roster.indexOf(performer); }
             else home();
@@ -289,8 +320,87 @@ public final class SitarScene implements ModScene, DebuggableScene {
     private void home() {
         stop(); if (online != null) online.close(); online = null; songs = SongCatalog.available(games);
         screen = Screen.TITLE; selected = 0; autoplay = false; choosingSecond = false; notice = "";
+        careerRoleReturn = false;
     }
-    private List<SongSpec> careerSongs() { return songs.stream().filter(s -> s.availableRoles().contains(role)).toList(); }
+
+    private List<SongSpec> setlistSongs() {
+        if (mode != Mode.CAREER || careerWorld == null) return songs;
+        var setlist = new ArrayList<SongSpec>();
+        for (String id : careerWorld.requiredSongIds()) setlist.add(songs.stream().filter(candidate -> candidate.id().equals(id)).findFirst().orElseThrow());
+        for (String id : careerWorld.sideSongIds()) songs.stream().filter(candidate -> candidate.id().equals(id)).findFirst().ifPresent(setlist::add);
+        return List.copyOf(setlist);
+    }
+    private void returnToSongs() {
+        screen = online != null && !online.host() ? Screen.LOBBY : Screen.SONGS;
+        selected = Math.max(0, setlistSongs().indexOf(song)); notice = "";
+    }
+    private void openWorldBoard(boolean next) {
+        screen = Screen.WORLDS; notice = "";
+        selected = Math.max(0, careerTour.worlds().indexOf(careerWorld));
+        if (next) selected = firstUnclearedWorld();
+    }
+    private int firstUnclearedWorld() {
+        for (int i = 0; i < careerTour.worlds().size(); i++) if (!career.complete(careerTour.worlds().get(i))) return i;
+        return careerTour.worlds().size() - 1;
+    }
+    private void continueTour() {
+        if (careerTour == null) { screen = Screen.TOURS; selected = 0; return; }
+        openWorldBoard(true);
+        if (career.complete(careerTour) && !career.seen(careerTour.id() + "-outro"))
+            openStory(careerTour.id() + "-outro", Screen.WORLDS);
+    }
+    private void openStory(String id, Screen destination) {
+        story = CareerStory.scene(id, performer, games); storyLine = 0; storyReturn = destination; screen = Screen.STORY;
+        notice = "";
+    }
+    private void closeStory() {
+        career.markSeen(story.id()); saveCareer(); screen = storyReturn;
+        if (screen == Screen.SONGS) selected = 0;
+        else selected = Math.max(0, careerTour.worlds().indexOf(careerWorld));
+    }
+    private void saveCareer() {
+        if (!context.storage().write("career.txt", career.encode())) {
+            saveFailed = true; notice = "Tour progress remains in memory; storage could not save";
+        }
+    }
+    private void careerMenu() {
+        if (screen == Screen.STORY) {
+            mouseAccepted = context.mouse().leftPressed() && context.mouse().over(12, 125, context.width() - 24, 66);
+            if (back()) closeStory();
+            else if (accept() && ++storyLine >= story.lines().size()) closeStory();
+            return;
+        }
+        int count = screen == Screen.TOURS ? tours.size() : careerTour.worlds().size();
+        menuMove(count);
+        mouseRows(count, 18, 60, context.width() - 168, screen == Screen.TOURS ? 40 : 24,
+                screen == Screen.TOURS ? 3 : 5);
+        if (screen == Screen.WORLDS && (context.keyPressed(SceneKeys.R) || padPressed(PhysicalGamepad.BUTTON_Y)
+                || context.mouse().leftPressed() && context.mouse().over(context.width() - 132, 171, 112, 12))) {
+            CareerWorld replay = careerTour.worlds().get(selected);
+            if (!career.unlocked(careerTour, replay)) { notice = "Clear each main act in the previous world"; return; }
+            careerWorld = replay; openStory(replay.id() + "-intro", Screen.WORLDS); return;
+        }
+        if (screen == Screen.WORLDS && career.complete(careerTour) && (context.keyPressed(SceneKeys.F) || padPressed(PhysicalGamepad.BUTTON_X)
+                || context.mouse().leftPressed() && context.mouse().over(context.width() - 132, 184, 112, 12))) {
+            openStory(careerTour.id() + "-outro", Screen.WORLDS); return;
+        }
+        if (accept()) {
+            if (screen == Screen.TOURS) {
+                careerTour = tours.get(selected); careerWorld = careerTour.worlds().get(firstUnclearedWorld()); openWorldBoard(false);
+                song = setlistSongs().getFirst(); stage(song);
+                if (career.complete(careerTour) && !career.seen(careerTour.id() + "-outro")) openStory(careerTour.id() + "-outro", Screen.WORLDS);
+            } else {
+                CareerWorld choice = careerTour.worlds().get(selected);
+                if (!career.unlocked(careerTour, choice)) { notice = "Clear each main act in the previous world"; return; }
+                careerWorld = choice; song = setlistSongs().getFirst(); stage(song);
+                if (!career.seen(choice.id() + "-intro")) openStory(choice.id() + "-intro", Screen.SONGS);
+                else { returnToSongs(); selected = 0; }
+            }
+        } else if (back()) {
+            if (screen == Screen.WORLDS) { screen = Screen.TOURS; selected = tours.indexOf(careerTour); }
+            else { screen = Screen.DIFFICULTY; selected = difficulty.ordinal(); }
+        }
+    }
 
     private void onlineMenu() {
         if (screen == Screen.LOBBY) {
@@ -357,6 +467,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
         if (!accept()) return;
         if (selected < 5) {
             mode = Mode.values()[selected]; screen = Screen.CHARACTERS; selected = roster.indexOf(performer); choosingSecond = false;
+            careerRoleReturn = false;
         } else if (selected == 5) { screen = Screen.ONLINE; selected = 0; }
         else if (selected == 6) { screen = Screen.RECORDS; selected = 0; }
         else if (selected == 7) { screen = Screen.HELP; selected = 0; }
@@ -382,6 +493,15 @@ public final class SitarScene implements ModScene, DebuggableScene {
                 selected = row; mouseAccepted = mouse.leftPressed();
             }
         }
+    }
+    private void mouseRows(int count, int x, int y, int width, int height, int visible) {
+        SceneMouse mouse = context.mouse();
+        if (mouse.wheel() != 0) { selected = Math.floorMod(selected - mouse.wheel(), count); return; }
+        int first = listFirst(count, visible);
+        for (int row = 0; row < Math.min(visible, count); row++)
+            if (mouse.over(x, y + row * height, width, height - 1) && (mouse.moved() || mouse.leftPressed())) {
+                selected = first + row; mouseAccepted = mouse.leftPressed();
+            }
     }
     private int listFirst(int count, int visible) { return Math.max(0, Math.min(count - visible, selected - visible / 2)); }
 
@@ -500,6 +620,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
             best = Math.max(best, session.score());
             if (difficulty == Difficulty.MEDIUM) saveFailed |= !context.storage().write(recordName(), Long.toString(best));
         }
+        if (career.record(result, mode == Mode.CAREER && !autoplay && session.finished())) saveCareer();
         screen = Screen.RESULTS; selected = 0;
     }
     private PerformanceResult snapshotResult(RhythmSession who, boolean teamLost) {
@@ -654,10 +775,12 @@ public final class SitarScene implements ModScene, DebuggableScene {
         if (screen == Screen.PLAY || screen == Screen.PAUSED) { drawPerformance(c); if (screen == Screen.PAUSED) drawPause(c); return; }
         if (screen == Screen.CALIBRATION) { drawCalibration(c); return; }
         int step = screen == Screen.CHARACTERS ? 1 : screen == Screen.ROLES ? 2 : screen == Screen.DIFFICULTY ? 3 : screen == Screen.SONGS ? 4 : 0;
-        SitarUi.page(c, step);
+        SitarUi.page(c, step, mode == Mode.CAREER ? "TOUR" : "ARCADE");
         if (screen == Screen.TITLE) { drawTitle(c); return; }
         if (screen == Screen.RECORDS) { drawRecords(c); return; }
         if (screen == Screen.HELP) { drawHelp(c); return; }
+        if (screen == Screen.TOURS || screen == Screen.WORLDS) { drawCareerBoard(c); return; }
+        if (screen == Screen.STORY) { drawStory(c); return; }
         if (screen == Screen.ONLINE || screen == Screen.LOBBY) { drawOnline(c); return; }
         if (screen == Screen.SETTINGS) { drawSettings(c); return; }
         if (screen == Screen.LOADING) {
@@ -714,7 +837,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
             SitarUi.text(c, profile.bestStars(item.id(), role.name(), difficulty.name()).orElse(record).stars() + " STARS / SCORE " + Math.round(record.accuracy() * 100) + "%", 24, 116, CYAN);
             SitarUi.text(c, "BEST STREAK " + record.bestStreak() + (record.fullCombo() ? " / FULL COMBO" : ""), 24, 138, CREAM);
         }
-        SitarUi.text(c, "TOUR CLEARS " + new CareerProgress(profile).cleared(careerSongs(), role.name(), difficulty.name()) + "/" + careerSongs().size(), 24, 166, GOLD);
+        SitarUi.text(c, "MAIN ACT CLEARS " + tours.stream().mapToInt(career::cleared).sum() + "/" + tours.stream().mapToInt(t -> t.worlds().stream().mapToInt(w -> w.requiredSongIds().size()).sum()).sum(), 24, 166, GOLD);
         SitarUi.footer(c, "UP / DOWN: SONG / LEFT / RIGHT: DIFFICULTY", "TAB: INSTRUMENT / ESC / B: TITLE");
     }
     private void drawHelp(SceneCanvas c) {
@@ -723,7 +846,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
         SitarUi.wrapped(c, role.drums() ? "BONGOS: press each coloured pad when it reaches the line. The gold bar is the kick pedal. New presses strike; holding does not." :
                 "MELODIC: hold the matching frets and strum at the line. Hold long tails. White centres can be hammered on after a successful chain.", 24, 65, c.width() - 48, CREAM);
         SitarUi.wrapped(c, "Complete bright phrases to charge Star Power. Activate at half a meter for double score. Misses lower ROCK and mute your part.", 24, 107, c.width() - 48, GOLD);
-        SitarUi.wrapped(c, "Practice never fails or saves scores. Career clears open venues. Co-op shares survival; score duel compares two independent scores.", 24, 149, c.width() - 48, CYAN);
+        SitarUi.wrapped(c, "Career: clear each world's main acts. Tour progress follows any instrument or level. Practice never saves. Co-op shares survival; duels compare scores.", 24, 149, c.width() - 48, CYAN);
         SitarUi.footer(c, "REMAP CONTROLS AND CALIBRATE BOTH PLAYERS IN SETTINGS", "ESC / B: TITLE");
     }
     private void drawChoices(SceneCanvas c) {
@@ -735,16 +858,18 @@ public final class SitarScene implements ModScene, DebuggableScene {
         else if (screen == Screen.ROLES) drawList(c, java.util.Arrays.stream(Role.values()).map(Role::label).toList(), 4);
         else if (screen == Screen.DIFFICULTY) drawList(c, java.util.Arrays.stream(Difficulty.values()).map(Difficulty::label).toList(), 4);
         else {
-            int first = listFirst(songs.size(), 4);
-            for (int row = 0; row < Math.min(4, songs.size()); row++) {
-                int i = first + row; SongSpec choice = songs.get(i); int y = 60 + row * 31;
+            List<SongSpec> choices = setlistSongs();
+            int first = listFirst(choices.size(), 4);
+            for (int row = 0; row < Math.min(4, choices.size()); row++) {
+                int i = first + row; SongSpec choice = choices.get(i); int y = 60 + row * 31;
                 boolean supported = choice.availableRoles().contains(role);
-                boolean unlocked = mode != Mode.CAREER || new CareerProgress(profile).unlocked(careerSongs(), choice.id(), role.name(), difficulty.name());
-                SitarUi.choice(c, !supported ? "NO PART / " + choice.label() : unlocked ? choice.label() : "LOCKED / " + choice.label(), 18, y, paneWidth - 12, 29, selected == i);
+                SitarUi.choice(c, !supported ? "CHANGE PART / " + choice.label() : choice.label(), 18, y, paneWidth - 12, 29, selected == i);
                 String detail = choice.game().toUpperCase(java.util.Locale.ROOT) + " / " + choice.durationFrames() / 60 + " SEC";
-                if (mode == Mode.CAREER) detail += " / " + new CareerProgress(profile).venue(careerSongs(), choice.id());
+                if (mode == Mode.CAREER) detail = (careerWorld.requiredSongIds().contains(choice.id()) ? "MAIN ACT" : "SIDE GIG")
+                        + (career.cleared(choice.id()) ? " / CLEARED" : "") + " / " + choice.durationFrames() / 60 + " SEC";
                 SitarUi.text(c, SitarUi.fit(detail, paneWidth - 36), 39, y + 21, DIM);
             }
+            if (choices.size() > 4) SitarUi.text(c, (selected + 1) + "/" + choices.size(), 18, 184, CYAN);
         }
         Roster preview = screen == Screen.CHARACTERS ? roster.get(selected) : performer;
         Role previewRole = screen == Screen.ROLES ? Role.values()[selected] : role;
@@ -755,9 +880,70 @@ public final class SitarScene implements ModScene, DebuggableScene {
         c.fill(previewX + 16, 149, 96, 3, GOLD);
         actor(preview).draw(c, previewX + 64, 121, context.ticks(), previewRole.label().split(" / ")[0], false);
         SitarUi.center(c, previewRole.drums() ? "4 PADS + KICK" : difficulty.lanes() + " FRETS + STRUM", previewX, 164, 128, GOLD);
-        SitarUi.center(c, difficulty.label(), previewX, 178, 128, DIM);
+        if (screen == Screen.SONGS && mode == Mode.CAREER) {
+            SitarUi.frame(c, previewX + 8, 171, 112, 18, CYAN);
+            SitarUi.center(c, "PART & LEVEL", previewX, 177, 128, CREAM);
+        } else SitarUi.center(c, difficulty.label(), previewX, 178, 128, DIM);
         SitarUi.footer(c, notice.isEmpty() ? performer.label() + " / " + shortRole() + " / " + difficulty.label() : notice,
-                "ENTER / A: SELECT / TAB: SETTINGS / ESC / B: BACK");
+                screen == Screen.SONGS && mode == Mode.CAREER ? "ENTER / A: PLAY / I / X: PART & LEVEL / ESC / B: WORLD BOARD" : "ENTER / A: SELECT / TAB: SETTINGS / ESC / B: BACK");
+    }
+
+    private void drawCareerBoard(SceneCanvas c) {
+        boolean tourMenu = screen == Screen.TOURS;
+        SitarUi.text(c, tourMenu ? "CHOOSE YOUR JOURNEY" : SitarUi.fit(careerTour.title(), c.width() - 24), 12, 42, GOLD);
+        int pane = c.width() - 156, x = c.width() - 140;
+        SitarUi.panel(c, 12, 55, pane, 136); SitarUi.panel(c, x, 55, 128, 136);
+        if (tourMenu) {
+            for (int i = 0; i < tours.size(); i++) {
+                CareerTour tour = tours.get(i);
+                SitarUi.choice(c, tour.title(), 18, 60 + i * 40, pane - 12, 36, selected == i);
+                SitarUi.text(c, career.cleared(tour) + " MAIN ACTS / " + (career.complete(tour) ? "COMPLETE" : tour.worlds().size() + " WORLDS"), 39, 86 + i * 40, DIM);
+            }
+            CareerTour preview = tours.get(selected);
+            SitarUi.center(c, preview.game().toUpperCase(java.util.Locale.ROOT), x, 65, 128, CYAN);
+            actor(performer).draw(c, x + 64, 118, context.ticks(), shortRole(), false);
+            SitarUi.wrapped(c, preview.subtitle(), x + 10, 148, 108, CREAM);
+        } else {
+            int first = listFirst(careerTour.worlds().size(), 5);
+            for (int row = 0; row < Math.min(5, careerTour.worlds().size()); row++) {
+                int i = first + row; CareerWorld world = careerTour.worlds().get(i); int y = 60 + row * 24;
+                boolean unlocked = career.unlocked(careerTour, world);
+                SitarUi.choice(c, unlocked ? world.title() : "LOCKED / " + world.title(), 18, y, pane - 12, 14, selected == i);
+                SitarUi.text(c, (i + 1) + " / " + career.cleared(world) + "/" + world.requiredSongIds().size() + " MAIN ACTS" + (career.complete(world) ? " / CLEAR" : ""), 39, y + 15, DIM);
+            }
+            SitarUi.text(c, (selected + 1) + "/" + careerTour.worlds().size() + " WORLDS", 18, 184, CYAN);
+            CareerWorld preview = careerTour.worlds().get(selected);
+            SitarUi.center(c, "TOUR ROUTE", x, 65, 128, GOLD);
+            SitarUi.center(c, preview.sideSongIds().size() + " SIDE GIGS", x, 80, 128, DIM);
+            for (int i = 0; i < careerTour.worlds().size(); i++) {
+                int column = i % 3, row = i / 3, nx = x + 20 + column * 34, ny = 91 + row * 15;
+                int color = career.complete(careerTour.worlds().get(i)) ? GOLD : career.unlocked(careerTour, careerTour.worlds().get(i)) ? CYAN : 0xFF365E95;
+                if (column < 2 && i + 1 < careerTour.worlds().size()) c.fill(nx + 10, ny + 4, 25, 1, DIM);
+                if (i + 3 < careerTour.worlds().size()) c.fill(nx + 4, ny + 8, 1, 8, DIM);
+                c.fill(nx, ny, 9, 9, color);
+                if (i == selected) SitarUi.frame(c, nx - 2, ny - 2, 13, 13, CREAM);
+            }
+            SitarUi.frame(c, x + 8, 171, 112, 12, CYAN);
+            SitarUi.center(c, "REPLAY SCENE", x, 174, 128, CREAM);
+            if (career.complete(careerTour)) {
+                SitarUi.frame(c, x + 8, 184, 112, 12, GOLD); SitarUi.center(c, "TOUR FINALE", x, 187, 128, GOLD);
+            }
+        }
+        SitarUi.footer(c, notice.isEmpty() ? performer.label() + " / " + shortRole() + " / " + difficulty.label() : notice,
+                tourMenu ? "ENTER / A: TOUR / ESC / B: LEVEL" : career.complete(careerTour)
+                ? "A: GIG / R Y: SCENE / F X: FINALE / B: TOURS" : "ENTER / A: GIG / R / Y: REPLAY SCENE / ESC / B: TOURS");
+    }
+    private void drawStory(SceneCanvas c) {
+        CareerStory.Line line = story.lines().get(storyLine);
+        SitarUi.text(c, SitarUi.fit(story.title(), c.width() - 80), 12, 42, GOLD);
+        SitarUi.text(c, (storyLine + 1) + "/" + story.lines().size(), c.width() - 48, 42, DIM);
+        Roster speaker = line.speaker();
+        if (speaker != null) actor(speaker).draw(c, c.width() / 2, 90, context.ticks(), shortRole(), false);
+        SitarUi.panel(c, 12, 123, c.width() - 24, 68);
+        SitarUi.text(c, speaker == null ? "BACKSTAGE" : speaker.label() + (line.action() ? " / STAGE BUSINESS" : ""), 24, 130, GOLD);
+        SitarUi.wrapped(c, line.text(), 24, 145, c.width() - 48, line.action() ? CYAN : CREAM);
+        SitarUi.footer(c, "Robotnik's world tour / " + performer.label() + " on " + shortRole(),
+                "ENTER / A / CLICK: NEXT / ESC / B: SKIP / R ON BOARD: REPLAY");
     }
 
     private void drawPerformance(SceneCanvas c) {
@@ -831,7 +1017,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
     private void drawResults(SceneCanvas c) {
         int width = c.width() - 156;
         boolean failed = result.failed();
-        String heading = failed ? "PERFORMANCE FAILED" : mode == Mode.PRACTICE ? "PRACTICE COMPLETE" : mode == Mode.CAREER && new CareerProgress(profile).complete(careerSongs(), role.name(), difficulty.name()) ? "TOUR COMPLETE!" : "STAGE CLEAR!";
+        String heading = failed ? "PERFORMANCE FAILED" : mode == Mode.PRACTICE ? "PRACTICE COMPLETE" : mode == Mode.CAREER && careerTour != null && career.complete(careerTour) ? "TOUR COMPLETE!" : "STAGE CLEAR!";
         if (mode == Mode.LOCAL_VERSUS) heading = session.score() == session2.score() ? "DRAW!" : session.score() > session2.score() ? "PLAYER 1 WINS!" : "PLAYER 2 WINS!";
         if (mode == Mode.ONLINE_VERSUS) heading = !online.remoteFinished() ? "WAITING FOR PEER RESULT" : session.score() == online.remoteScore() ? "DRAW!" : session.score() > online.remoteScore() ? "YOU WIN!" : "PEER WINS!";
         SitarUi.text(c, heading, 12, 42, GOLD);
@@ -852,7 +1038,8 @@ public final class SitarScene implements ModScene, DebuggableScene {
         else SitarUi.center(c, failed ? "TRY AGAIN!" : "GREAT SHOW!", x, 164, 128, GOLD);
         String recordNotice = saveFailed ? "SAVE FAILED / RECORDS REMAIN IN MEMORY" : autoplay ? "DEMO / RECORD NOT SAVED"
                 : saved ? "RECORD SAVED / " + profile.clears() + " CLEARS" : "PRACTICE / MULTIPLAYER / FAILED: NO SOLO RECORD";
-        SitarUi.footer(c, recordNotice, "ENTER / A: SELECT / ESC / B: SONG SELECT");
+        SitarUi.footer(c, recordNotice, mode == Mode.CAREER ? failed ? CareerStory.retryQuip(performer) : CareerStory.successQuip(performer)
+                : "ENTER / A: SELECT / ESC / B: SONG SELECT");
     }
     private void drawSettings(SceneCanvas c) {
         ControlSettings settings = activeSettings();
@@ -902,7 +1089,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
     }
     private static void center(SceneCanvas c, String text, int y, int color) { c.text(text, (c.width() - c.textWidth(text)) / 2, y, color); }
 
-    @Override public void exit(SceneContext ctx) { stop(); if (online != null) online.close(); ctx.storage().write("settings.txt", settings.encode()); ctx.storage().write("settings-p2.txt", settings2.encode()); }
+    @Override public void exit(SceneContext ctx) { stop(); if (online != null) online.close(); ctx.storage().write("settings.txt", settings.encode()); ctx.storage().write("settings-p2.txt", settings2.encode()); ctx.storage().write("career.txt", career.encode()); }
     public String screen() { return screen.name(); }
     public String mode() { return mode.name(); }
     public long score() { return session == null ? 0 : session.score(); }
@@ -937,7 +1124,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
             case "retry" -> { retry(); yield true; }
             case "settings" -> { stop(); settingsReturn = Screen.CHARACTERS; screen = Screen.SETTINGS; selected = 0; yield true; }
             case "menu", "title" -> { home(); yield true; }
-            case "career" -> { stop(); mode = Mode.CAREER; screen = Screen.CHARACTERS; selected = 0; autoplay = false; yield true; }
+            case "career" -> { stop(); mode = Mode.CAREER; careerRoleReturn = false; screen = Screen.CHARACTERS; selected = 0; autoplay = false; yield true; }
             case "quick" -> { stop(); mode = Mode.QUICK_PLAY; screen = Screen.CHARACTERS; selected = 0; autoplay = false; yield true; }
             case "records" -> { stop(); screen = Screen.RECORDS; selected = 0; yield true; }
             case "help" -> { stop(); screen = Screen.HELP; selected = 0; yield true; }
