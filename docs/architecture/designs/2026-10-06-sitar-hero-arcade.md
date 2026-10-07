@@ -496,3 +496,44 @@ gallery failed in the application's HTML viewer. Both galleries now embed their
 PNG data and download links; browser decoding verified all 143 and all 60 images
 with zero broken images. The final 15-second MP4 and original PNGs remain outside
 the repository alongside the self-contained galleries.
+
+### Integrated verification and packaging (2026-10-07)
+
+Source commit `70fd8b978` was merged into develop as `435fc8ec6`, preserving
+the upstream Tower Defence release note and handbook entry. The integrated
+source matches the verified candidate; the merge's only additional differences
+on Sitar Hero paths are those shared documentation entries. No main-workspace
+branch switch occurred, and its pre-existing dirty disassemblies and untracked
+archives/prose remain untouched.
+
+The post-integration run used an immutable detached checkout of the actual
+destination commit `435fc8ec6` to prevent concurrent develop activity from
+changing the tree under test. Its command was
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base
+a54dcf56f --max-minutes 120 --run`, selecting all 3,005 ordinary classes and
+fresh-JVM guards. Java 21, Lua 5.4 and PowerShell preflight passed.
+
+| Integrated lane | Reports | Tests | Failures | Errors | Skips | Minutes |
+|---|---:|---:|---:|---:|---:|---:|
+| Ordinary | 3,003 | 26,149 | 28 | 0 | 61 | 73.60 |
+| Guards | 86 | 672 | 0 | 0 | 0 | 3.42 |
+
+All 28 complete normalized assertion-message hashes match the updated-base
+baseline using the identity-only normalization described above. All 61 skipped
+test identities and first-line reasons match; there are no missing-ROM skips
+or omitted failure/skip records. The run includes the upstream Tower Defence
+tests. It completed with exit 1 because of the inherited failures, with no new
+or worsened failures. Its consumed diagnostics were acknowledged and deleted.
+
+In the main develop checkout at `435fc8ec6`,
+`python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package
+dependency:build-classpath -Dmdep.outputFile=target/examples-classpath.txt -B`
+completed successfully, producing the engine, dependencies and SDK artifacts.
+This packaging command intentionally does not repeat the completed test runs.
+`python3 examples/sitar-hero/build.py --skip-engine` then built
+`target/examples/sitar-hero/sitar-hero.jar`: 57,568 bytes, 23 classes and one
+`META-INF/openggf-mod.yaml`, with no other payload files. Its SHA-256 is
+`c26a2749da3b87b51dc5d72b4e5f410d52ebd5962f38a9b50c89803a2c2f4b28`.
+The subsequent delivery record changes prose only; the tested source is
+unchanged. Physical speaker/controller calibration remains a player setup
+step rather than a claim made by the offline captures.
