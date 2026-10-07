@@ -200,6 +200,34 @@ class TestHardenedS3kEncounter {
         }
     }
 
+    @Test void nativeTouchEnvelopeCannotReachSonicAtRecoveryRing() throws Exception {
+        try (var encounter = open()) {
+            encounter.begin();
+            encounter.until(() -> !encounter.value("phase").toString().equals("WAITING"), 100, true, false);
+            // Declared local collision stimulus: park the real native Sonic at
+            // the authored recovery ring centre. No fixture physics or hazard
+            // values supply gameplay; real volleys and TouchResponse run below.
+            com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(encounter.fixture.sprite(), encounter.constant("SAFE_RING_X"));
+            com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(encounter.fixture.sprite(), encounter.constant("SAFE_RING_Y"));
+            encounter.fixture.sprite().setXSpeed((short) 0); encounter.fixture.sprite().setGSpeed((short) 0);
+            encounter.fixture.sprite().setRingCount(1); // detects native hurt, not a claimed pickup.
+            encounter.until(() -> !encounter.spores().isEmpty(), 100, false, false);
+            assertFalse(encounter.spores().isEmpty());
+            encounter.frames(180, false, false);
+            assertEquals(2, encounter.value("volleys"));
+            assertEquals(1, encounter.fixture.sprite().getRingCount());
+            assertFalse(encounter.fixture.sprite().getInvulnerable(), "safe ring cannot consume a damage boost");
+            assertFalse(encounter.fixture.sprite().getDead());
+            assertEquals(encounter.constant("SAFE_RING_X"), encounter.fixture.sprite().getCentreX() & 0xffff);
+            // Native equality contact is inclusive, so the retirement boundary
+            // itself must already be harmless, including callbacks before update.
+            var boundary = encounter.stationarySpore(encounter.constant("PROJECTILE_RETIRE_X"), 0x1ac);
+            assertEquals(0, ((com.openggf.level.objects.TouchResponseProvider) boundary).getCollisionFlags());
+            boundary.update(0, encounter.fixture.sprite());
+            assertTrue(boundary.isDestroyed());
+        }
+    }
+
     @Test void nativeRingLossAndZeroRingDeathRemainNative() throws Exception {
         try (var encounter = open()) {
             encounter.begin();
@@ -220,6 +248,20 @@ class TestHardenedS3kEncounter {
         }
     }
 
+    @Test void realCommittedVolleyStillHurtsSonicAtTrigger() throws Exception {
+        try (var encounter = open()) {
+            encounter.begin();
+            encounter.until(() -> !encounter.value("phase").toString().equals("WAITING"), 100, true, false);
+            com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(encounter.fixture.sprite(), encounter.constant("TRIGGER_X"));
+            com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(encounter.fixture.sprite(), 0x1ab);
+            encounter.fixture.sprite().setXSpeed((short) 0); encounter.fixture.sprite().setGSpeed((short) 0);
+            encounter.fixture.sprite().setRingCount(0);
+            encounter.until(() -> encounter.value("status").toString().equals("FAILED"), 120, false, false);
+            assertTrue(encounter.fixture.sprite().getDead());
+            assertEquals(1, encounter.value("volleys"), "real first volley must cause the native zero-ring failure");
+        }
+    }
+
     @Test void elementalShieldDeflectsThroughNativeTouchWithoutRingToll() throws Exception {
         for (var shield : List.of(ShieldType.FIRE, ShieldType.LIGHTNING, ShieldType.BUBBLE)) {
             try (var encounter = open()) {
@@ -236,7 +278,7 @@ class TestHardenedS3kEncounter {
         }
     }
 
-    @Test void offscreenReentryRepeatsTellAndAbortDisarmsExistingShots() throws Exception {
+    @Test void offscreenReentryRepeatsTellAndAbortDisarmsLiveShots() throws Exception {
         try (var encounter = open()) {
             encounter.begin();
             encounter.until(() -> !encounter.value("phase").toString().equals("WAITING"), 100, true, false);
@@ -251,6 +293,10 @@ class TestHardenedS3kEncounter {
             sentry.update(0, encounter.fixture.sprite());
             assertEquals("TELL", encounter.read(sentry, "phase").toString());
             assertEquals(0, encounter.read(sentry, "phaseTick"));
+            encounter.until(() -> (encounter.fixture.sprite().getCentreX() & 0xffff) <= encounter.constant("POST_X"), 60, false, true);
+            encounter.frames(12, false, false);
+            encounter.until(() -> !encounter.spores().isEmpty(), 100, false, false);
+            assertFalse(encounter.spores().isEmpty(), "abort cleanup must start with live projectiles");
             encounter.call("abort", "fault-injection");
             for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
                 if (object.getClass().getName().startsWith("hardened.")
@@ -433,7 +479,9 @@ class TestHardenedS3kEncounter {
             com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(fixture.sprite(), constant("TRIGGER_X"));
             com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(fixture.sprite(), 0x1ab);
             fixture.sprite().setXSpeed((short)0); fixture.sprite().setYSpeed((short)0); fixture.sprite().setGSpeed((short)0);
-            return stationarySpore(fixture.sprite().getCentreX() & 0xffff, fixture.sprite().getCentreY() & 0xffff);
+            // First surviving centres remain within the native 16px combined
+            // touch envelope of Sonic at TRIGGER_X: danger is still real there.
+            return stationarySpore(constant("PROJECTILE_RETIRE_X") + 1, fixture.sprite().getCentreY() & 0xffff);
         }
         AbstractObjectInstance stationarySpore(int x, int y) throws Exception {
             Class<?> type = runtime.loadOwned(OWNER, "hardened.Spore");

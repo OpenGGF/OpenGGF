@@ -64,7 +64,7 @@ public final class Spore extends AbstractObjectInstance implements RewindRecreat
             return;
         }
         SubpixelMotion.moveSprite2(motionState);
-        if (!isOnScreen(0) || getX() < EncounterPlan.ATTACK_LEFT || getX() > EncounterPlan.ROOM_RIGHT
+        if (!isOnScreen(0) || getX() <= EncounterPlan.PROJECTILE_RETIRE_X || getX() > EncounterPlan.ROOM_RIGHT
                 || getY() < EncounterPlan.ROOM_TOP || getY() > EncounterPlan.ROOM_BOTTOM) {
             // The post and its recovery ring are a visibly declared safe retreat.
             ObjectLifetimeOps.expireDynamic(this);
@@ -74,6 +74,7 @@ public final class Spore extends AbstractObjectInstance implements RewindRecreat
     @Override public int getCollisionFlags() {
         var state = services().gameService(EncounterState.class);
         return !isDestroyed() && age > 0 && state != null && state.active()
+                && getX() > EncounterPlan.PROJECTILE_RETIRE_X
                 && getRenderer(Sentry.ART_KEY) != null && isOnScreen(0) ? 0x8b : 0;
     }
     @Override public int getCollisionProperty() { return 0; }

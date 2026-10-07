@@ -20,6 +20,9 @@ public final class EncounterPlan {
     public static final int MIN_X = ROOM_LEFT, MAX_X = ROOM_RIGHT;
     public static final int MIN_Y = ROOM_TOP, MAX_Y = ROOM_BOTTOM;
     public static final int ATTACK_LEFT = 0x1d78, TRIGGER_X = 0x1d80;
+    // Shipped Touch_NoInstaShield uses Sonic centre +/-8, and Touch_Sizes
+    // index $0B gives the spore an 8px radius. Right-edge contact is inclusive.
+    public static final int PROJECTILE_RETIRE_X = ATTACK_LEFT + 8 + 8;
     public static final int SENTRY_X = 0x1da0, SENTRY_Y = 0x1ad;
     public static final int EXIT_X = 0x1db0, EXIT_Y = 0x1ac;
     public static final int SAFE_RING_X = 0x1d70, SAFE_RING_Y = 0x1a8;
