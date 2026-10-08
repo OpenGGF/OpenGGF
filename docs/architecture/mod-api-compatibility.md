@@ -561,3 +561,9 @@ normal Sonic source art, and `headPresentationReason(int)` exposes an explicit s
 fallback reason (empty for reviewed/empty poses). Anatomical polygons, frame kinds and
 neck anchors remain engine internals. The candidate remains 0.7.0, and its normalized
 signatures must come from the actual compiled composition.
+
+The unpublished mutator candidate adds a current-world common-screen factory
+with four bounded native ROM SFX IDs. It returns the host-owned settings screen
+without exposing global engine services. This is an ordinary candidate surface
+regeneration; `0.7` remains unpublished, and the final pin is generated from
+compiled classes.

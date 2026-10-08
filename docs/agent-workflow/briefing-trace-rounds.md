@@ -4068,3 +4068,10 @@ What changed answers, every time, was the constraint that said **how to measure*
 **Offering branches is cheap and rarely wrong; it is also rarely useful.** Spend the brief on the
 instrument and the discipline, and let the measurement name the branch. A lane that is told what to
 expect will find it; a lane that is told how to look will find what is there.
+
+A development capture jar can contribute decorators for several stock games.
+Applying every explicit decorator nests replacement titles: an outer ACTIVE
+screen can overlay a still-running native intro and falsely suggest a UI readiness
+bug. Select the frozen concrete stock plan and the actual launch predicate, as
+the runtime resolver does. Inspect native backdrop identity as well as PNGs.
+Origin: Mutator Lab all-game expansion, first `02f194c2` title captures.

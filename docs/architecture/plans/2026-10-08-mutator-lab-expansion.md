@@ -238,6 +238,75 @@ this thread and report the PR/video links with remaining material limits.
 - Canonical input authoring round-tripped 2353-frame S1/S2 and 5353-frame S3K
   title/catalogue recipes. S3K adds a thirty-second native entry/restart input
   margin and longer normal-window waits; no game readiness or physics is forced.
-  Actual scene/control/PCM observations remain pending. No Checkpoints prose now
-  describes death ignoring the native bank while post presentation and independent
-  stage triggers continue to work.
+  Scene/control/PCM observations are now recorded below; none certifies interactive
+  Game Speed. No Checkpoints prose describes death ignoring the native bank while
+  post presentation and independent stage triggers continue to work.
+
+### Native capture decorator and creator boundary follow-up
+
+The first current-package title-first walkthroughs (`02f194c2`, all three native
+ROMs) exposed a tool contract defect: `DevelopmentPatchLoader` applied all three
+explicit game patches. Three nested Lab screens let the outer ACTIVE screen draw
+over Sonic 1's SEGA/intro presentation. Production registration already scopes
+`stockScenePlans()` by game. The capture loader now selects that same concrete
+plan, respects the launch/team predicate and supplies the explicit patch context.
+The original captures are diagnostic, before this repair; they are not accepted
+final title footage. Sonic 1's authored route also contains a native enemy death.
+
+The example package's two `NON_API_ENGINE_REFERENCE` warnings came from global
+`GameServices` access after the framework candidate narrowed its public surface.
+Native support now reads the donor bit through the supported `PatchContext`
+configuration supplied at apply. A host screen factory copies four native SFX IDs
+and binds the current prepared world without returning mutable engine services.
+Its existing world lifetime gate prevents retired screens from admitting changes
+or playing cues into a replacement world. Package validation now treats warnings
+as errors in the maintained compiler/package regression. Request `49527` passed
+10 cases but skipped three native render controls because the launch omitted ROM
+properties; it is not a 13-case pass. The corrected original-ROM request `91760`
+passed all 19 native render/API cases with zero skips. Request `17052` subsequently
+passed the packaged three-game and injected-versus-ambient donor disagreement
+regression with zero skips. All 11983 frozen inputs were unchanged. Strict package
+validation reports zero findings. The genuine compiled candidate export adds
+only the host factory: 17715 lines, SHA256
+`99a29b708a7841737c1bfd5fa5401fa6f8228925795849bf8f867b31d4d6c2fa`.
+These checks do not imply a full candidate, fresh guards or audible menu cues.
+
+### Native scoped capture evidence after creator-boundary repair
+
+The frozen dirty production snapshot compiled by `91760` correctly chooses only
+the selected native game decorator. Canonical GPU/PCM captures for S1, S2 and
+S3K traverse the native title, Help, common settings, reviewed Big Head poses,
+Stealth and restoration. The capture driver advances one canonical native body,
+so this is not interactive Game Speed evidence. Configuration hold intervals
+keep player position, velocity and camera constant. The S1 authored route dies
+natively; it is not a death-free walkthrough.
+
+Matched stock/No Rings opening inputs remove the native ring groups in all three
+games; the EHZ maximum changes from2 to0 and AIZ from9 to0. The GHZ route collects
+no stock rings, so it supports visual placement removal rather than award denial.
+Matched No Powerups frames remove the GHZ ring monitor. A 528-pixel EHZ capture
+shows the shield monitor removed while nearby rings, Sonic and terrain remain.
+The AIZ lower route never shows its upper monitor, so those identical frames are
+not visual evidence of No Powerups; actual all-game assembly tests cover the
+policy and re-enable load.
+
+An input-only EHZ damage comparison at frame1382 carries two rings, then loses
+the full inventory in both runs. The100% Ringfall setting with cap enabled and
+maximum1 changes scattered-ring pixels while native state through the hit is
+identical. The first authored cap attempt entered the wrong option after Back
+reset the catalogue cursor; the corrected input uses eleven Down presses. No
+production behavior was changed for that authoring error.
+
+Neutral700-frame title controls match authored PCM before the first menu input.
+S1 navigation first contributes a difference at600 and S3K at601. S2 navigation
+at600/602 produces no PCM difference; Confirm contributes at604. These are
+observed offline SMPS contributions, not speaker/device or isolated-waveform
+certification. Preserve the S2 navigation issue for the hands-on polish pass.
+
+The first real-window default attempt finds the owned Engine window, then the
+native hub-to-S2 transition crashes at the eager `GameServices.module()` read in
+`GameLoop.stepPresentationFrame`, before recorders begin. This is an owned
+presentation-entry regression, not a successful desktop capture or a diagnosed
+window-manager failure. The stage-pacing owner will add a no-current-world control
+and resolve the module from the existing context only after its frozen request
+drains. All own Engine/helper processes and Pulse modules were cleaned.

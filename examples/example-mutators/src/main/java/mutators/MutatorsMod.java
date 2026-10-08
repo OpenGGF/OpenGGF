@@ -35,18 +35,22 @@ public final class MutatorsMod implements GgfMod {
         }
         @Override public Set<LogicalRom> romPrerequisites() { return Set.of(profile.rom()); }
         @Override public List<String> providedMainCharacters() { return List.of(); }
-        @Override public GameModule apply(GameModule base, PatchContext context) { return new Module(base); }
+        @Override public GameModule apply(GameModule base, PatchContext context) { return new Module(base, context); }
     }
     public static final class Module extends DelegatingGameModule {
         private MutatorConfigurationScreen screen;
         private final NativeLabProfile support;
-        public Module(GameModule base) {
+        public Module(GameModule base, PatchContext context) {
             super(base,new NativeLabProfile(base.getGameId().code()).patchId());
-            support = new NativeLabProfile(base.getGameId().code());
+            var config = java.util.Objects.requireNonNull(context, "Patch context").configService();
+            support = new NativeLabProfile(base.getGameId().code(), () -> config.getBoolean(
+                    com.openggf.configuration.SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
         }
         private MutatorConfigurationScreen screen() {
-            if(screen==null) screen=new MutatorConfigurationScreen(GameServices.worldSession(),"MUTATOR LAB",
-                    super.getTitleScreenProvider(),cue -> GameServices.audio().playSfx(support.cueId(cue)));
+            if(screen==null) screen=MutatorConfigurationScreen.forCurrentWorld("MUTATOR LAB",
+                    super.getTitleScreenProvider(),support.cueId(MutatorConfigurationScreen.Cue.NAVIGATE),
+                    support.cueId(MutatorConfigurationScreen.Cue.CONFIRM),
+                    support.cueId(MutatorConfigurationScreen.Cue.START),support.cueId(MutatorConfigurationScreen.Cue.ERROR));
             return screen;
         }
         @Override public TitleScreenProvider getTitleScreenProvider() { return screen(); }

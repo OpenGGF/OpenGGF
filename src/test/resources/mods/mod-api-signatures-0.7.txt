@@ -10744,6 +10744,7 @@ METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  void initial
 METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  void reset()
 METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  void setClearColor()
 METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public  void update(com.openggf.control.InputHandler)
+METHOD com.openggf.mods.mutators.MutatorConfigurationScreen public,static  com.openggf.mods.mutators.MutatorConfigurationScreen forCurrentWorld(java.lang.String,com.openggf.game.TitleScreenProvider,int,int,int,int)
 METHOD com.openggf.mods.mutators.MutatorConfigurationScreen$Cue public,static  com.openggf.mods.mutators.MutatorConfigurationScreen$Cue valueOf(java.lang.String)
 METHOD com.openggf.mods.mutators.MutatorConfigurationScreen$Cue public,static  com.openggf.mods.mutators.MutatorConfigurationScreen$Cue[] values()
 METHOD com.openggf.mods.mutators.MutatorDefinition public  com.openggf.mods.mutators.MutatorDefinition$PolicyFactory factory()

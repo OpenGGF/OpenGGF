@@ -209,3 +209,11 @@ the title saves the requested draft before queuing Return to hub through the
 same `LevelInputOverlay` host command owner. Failed persistence keeps the title
 and visible error. Accepted title exits hold input throughout the exit fade.
 Null overlay commands are treated as `NONE`, never as a restart request.
+
+The native Lab builds its common title/settings screen with
+`MutatorConfigurationScreen.forCurrentWorld(title, inheritedTitle, navigateId,
+confirmId, startId, errorId)`. The host pins the prepared world and copies the four
+native ROM sound IDs; the example receives no global session or audio manager.
+Game-specific support reads configuration from the `PatchContext` passed to its
+`apply` method. Development capture applies only the concrete game's eligible
+decorators, including the requested team's activation predicate.

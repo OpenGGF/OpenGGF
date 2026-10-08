@@ -58,6 +58,26 @@ class TestMutatorCatalogueScreen {
         assertEquals("Start "+game,label.invoke(first));
     }
 
+    @Test void hostFactoryValidatesNativeCuesAndPinsPreparedWorldLifetime() {
+        assertThrows(IllegalStateException.class, () -> MutatorConfigurationScreen.forCurrentWorld(
+                "Catalogue",null,0xCD,0xB5,0xBC,0xED));
+        var first=open("s1");
+        assertThrows(IllegalArgumentException.class, () -> MutatorConfigurationScreen.forCurrentWorld(
+                "Catalogue",null,0,0xB5,0xCC,0xC1));
+        assertThrows(IllegalArgumentException.class, () -> MutatorConfigurationScreen.forCurrentWorld(
+                "Catalogue",null,0xCD,0xB5,256,0xC1));
+        var old=MutatorConfigurationScreen.forCurrentWorld("Catalogue",null,0xCD,0xB5,0xCC,0xC1);
+        old.initialize();
+        var draft=MutatorWorldAccess.state(first).requested();
+        open("s2");
+        var input=new InputHandler();
+        press(old,input,GLFW_KEY_DOWN,false);
+        press(old,input,GLFW_KEY_ENTER,false);
+        assertEquals(draft,MutatorWorldAccess.state(first).requested());
+        assertEquals(LevelInputOverlay.Command.NONE,old.consumeCommand(),"Retired world never publishes into the new one");
+        assertFalse(old.handleInput(input));
+    }
+
     @Test void resumeKeepsRemovalPendingAndOnlyFullRestartPublishesIt() {
         var world=open("s2");MutatorWorldAccess.beforeAssembly(world,LevelLoadCause.FULL_LEVEL_ASSEMBLY);
         var state=MutatorWorldAccess.state(world);

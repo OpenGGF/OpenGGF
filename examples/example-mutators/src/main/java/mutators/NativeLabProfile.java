@@ -1,6 +1,5 @@
 package mutators;
 
-import com.openggf.game.GameServices;
 import com.openggf.game.patch.LogicalRom;
 import com.openggf.game.mutators.MonitorContent;
 import com.openggf.mods.mutators.*;
@@ -10,9 +9,12 @@ import java.util.Set;
 /** The example owns native-game metadata; shared engine policy consumers use semantic values. */
 public final class NativeLabProfile implements MutatorSupportProfile {
     private final String game;
-    public NativeLabProfile(String game) {
+    private final java.util.function.BooleanSupplier donorActive;
+    public NativeLabProfile(String game) { this(game, () -> false); }
+    public NativeLabProfile(String game, java.util.function.BooleanSupplier donorActive) {
         if (!Set.of("s1", "s2", "s3k").contains(game)) throw new IllegalArgumentException("Native Lab requires a stock game");
         this.game = game;
+        this.donorActive = java.util.Objects.requireNonNull(donorActive);
     }
     public String game() { return game; }
     public String patchId() { return "example-mutators:lab" + (game.equals("s2") ? "" : "-" + game); }
@@ -28,8 +30,7 @@ public final class NativeLabProfile implements MutatorSupportProfile {
         } : "Zone " + (zone + 1)) + " " + (act + 1);
     }
     @Override public Set<MutatorCapability> capabilities(int zone, int act) {
-        if (GameServices.configuration().getBoolean(
-                com.openggf.configuration.SonicConfiguration.CROSS_GAME_FEATURES_ENABLED)) return Set.of();
+        if (donorActive.getAsBoolean()) return Set.of();
         var available = EnumSet.allOf(MutatorCapability.class);
         if (!game.equals("s3k")) available.remove(MutatorCapability.NO_BONUS_STAGES);
         return Set.copyOf(available);

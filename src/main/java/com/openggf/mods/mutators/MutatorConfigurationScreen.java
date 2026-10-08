@@ -41,6 +41,34 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private float highlight;
     private InputHandler lastInput;
 
+    /**
+     * Creates a host-owned screen for the current prepared mutator world.
+     * Native ROM sound IDs are copied once; creators receive no session, audio
+     * manager or global service locator. The old screen becomes unusable when
+     * its owning world retires or another world becomes current.
+     *
+     * @param title screen title
+     * @param backdrop inherited native title, or null for a plain panel
+     * @param navigateSfx native navigation sound ID (1..255)
+     * @param confirmSfx native confirmation sound ID (1..255)
+     * @param startSfx native start sound ID (1..255)
+     * @param errorSfx native refusal sound ID (1..255)
+     * @return screen bound to the current prepared world
+     */
+    public static MutatorConfigurationScreen forCurrentWorld(String title, TitleScreenProvider backdrop,
+            int navigateSfx, int confirmSfx, int startSfx, int errorSfx) {
+        int[] ids = {navigateSfx, confirmSfx, startSfx, errorSfx};
+        for (int id : ids) if (id < 1 || id > 255)
+            throw new IllegalArgumentException("Native menu sound IDs must be 1..255");
+        WorldSession world = SessionManager.getCurrentWorldSession();
+        if (world == null || MutatorWorldAccess.state(world) == null)
+            throw new IllegalStateException("No prepared mutator world for this screen");
+        return new MutatorConfigurationScreen(world, title, backdrop, cue -> {
+            if (SessionManager.getCurrentWorldSession() == world)
+                GameServices.audio().playSfx(ids[cue.ordinal()]);
+        });
+    }
+
     public MutatorConfigurationScreen(WorldSession world, String title, TitleScreenProvider backdrop,
                                       java.util.function.Consumer<Cue> cues) {
         this.world = Objects.requireNonNull(world);
