@@ -1435,3 +1435,114 @@ production frontier, after which whole-run timing qualification must be repeated
 The independently passing gzip transport fix remains in the delivery candidate.
 There is no published S1 timing fixture, closed three-comparison frontier,
 runtime PLC correction or new whole-suite qualification at this checkpoint.
+
+
+### Round 3 composed candidate against the published framework
+
+The three reused Sol workers finish their bounded source lanes independently:
+S1 `1f7e16cab7d0`, S2 `1604e7f7e790`, S3K `fa2ac5e67b91`. Root retains their
+actual commit ancestry in the private integration branch rather than leaving
+cherry-picked worker histories unmerged. Published framework successor
+`d740b7a0fadd97b2e7c104d56481a0235bdffb4c` is fetched and merged without
+conflicts; the main `develop` checkout fast-forwards normally and reports
+already up to date. Main's three dirty disassemblies, four unrelated untracked
+files and every foreign worktree/job remain untouched. Framework source freeze
+is explicitly released by its owner at12:43:48Z. Sitar's separate frozen
+candidate `984cb8e2`, run20261008T123028Z-dbe57c8c/session16502, is preserved;
+there is no implied authority to edit or cancel that lane.
+
+Private composition `84f0c20f11c689a6f7969edfcbd1da349a2fb3e0` contains:
+
+- Cross-game native death floor/radius reset, preserving centres, fractions,
+  reverse-gravity semantics and existing hurt behavior. S1's complete MZ1
+  segment7 closes all192 differences. The inherited segment33 premature-death
+  route changes from3192 to3203 differences and cursor210395 to210396. Matched
+  old/candidate canonical probes account for the exact +9physics/+2animation:
+  one new common-row Y-speed mismatch plus one newly represented end row.
+  This is attributed downstream propagation, not an unchanged or green route.
+- Stock S2 seventh-emerald leave/init/return/hold/display phases, exact-seven
+  and Tails-alone gates, native main-message draw suppression and continued
+  emerald children. The results walk closes, reaching ARZ1/ARZ2. KiS2's existing
+  presentation policy remains separate. Perfect-input support and live results
+  rewind stay open; no stock driver, sequencer, GameLoop or fade changes.
+- Fan-only S3K child movement, water retirement, gameplay clock and allocation
+  before randomness. Native speed/lifecycle observations and independently
+  failing regressions establish each local correction. Returned HCZ and earlier
+  AIZ profiles remain unchanged; fan causation of the conveyor frontier is not
+  established. No shared allocator or unrelated bubbler changes are included.
+- Independently qualified strict compressed timing transport. The fresh whole
+  S1 timing fixture remains withheld for the kill evidence above; the original
+  committed comparison fixture is restored, including removal of the exact
+  28 stale owned compressed resource copies from this worktree's build output.
+
+The updated framework automerge changes no intended parity behavior. The
+`AbstractPlayableSprite` delta against actual `d740` is only the native death
+call. The package-private radius helper adds no exported API. Root focus4920
+finishes at13:04:13Z, Maven exit0: **31 fresh XML suites, 275 cases,
+zero failures/errors/skips**. The original absolute paths for all three verified
+ROMs are supplied. Four mandatory S3K startup selectors, geometry/custom-profile
+consumers and exact API reflection remain green. Command, from
+`.worktrees/ai-parity-swarm-20261008-r3-integration`:
+
+```sh
+OPENGGF_ROM_ROOT=/absolute/path/to/OpenGGF
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestDeathRadiusTransition,TestHurtAnimationPublication,TestDeathRestartRoutineParity,TestAbstractPlayableSpriteRewindCapture,TestHCZCGZFanObjectInstance,TestS3kHczCgzFanGraphRewind,TestHCZConveyorBeltObjectInstance,TestSonic2SpecialStageSuperResults,TestSonic2SpecialStageResultsTallyCadence,TestSonic2SpecialStageResultsPlcReadiness,TestSonic2SpecialStageResultsWidescreenCommands,TestSplitNameResultsMessages,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestHardwareTimingStreamLoader,TestSonic1PlcArmTiming,TestTraceDataHardwareTiming,TestTraceV5LoadingContract,TestTraceRunManifest,TestTraceFixtureCompressionGuard,TestTraceFixtureMovieAlignmentGuard,TestTraceV5PositiveInputGuard,TestHardwareTimingAuthorityGuard,TestHardwareTimingInterstitialStream,TestTraceRunHardwareTimingCoordinator,TestPlayableGroundTransitions,TestPhysicsProfileEditing,TestModApiSignatureSurface' \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+Root submits the three normal-profile canonical chains and controls together
+as session71369, fifteen selectors/seventeen expected cases, alphabetical
+order and the same original ROMs. This is a separate `-Ptrace-replay` lane,
+without lean mode, fork/heap overrides, widened tolerances or injected state.
+It finishes at13:34:11Z, Maven exit1/2:34 execution (1589seconds queue
+waiting excluded): fifteen fresh XML suites, **17 cases, four qualified
+assertion failures, zero errors/skips**. The failures are the three existing
+complete-chain identities plus the matched inherited returned-HCZ standalone.
+All thirteen controls pass. Composed reports exactly retain the worker lane
+profiles: S1 MZ1=0, MZ2_3=3, segment33=3203; S2 ARZ1=119/ARZ2=47450;
+S3K AIZ6=189/AIZ8=13254/HCZ9=0/returnedHCZ11=82067 and standalone3454.
+First mismatch fields/values and incomplete ownership boundaries agree with
+the lane evidence. The runtime/API framework integration introduces no new
+trace frontier in this selection. This is composed domain qualification with
+inherited and attributed failures, not a green complete-run claim. The exact
+union command is recorded in the [frontier log](../../status/trace-frontier-log.md#2026-10-08--stock-parity-swarm-round-3-native-fixes-and-remaining-frontiers).
+
+#### Updated-base evidence and required broad qualification
+
+The framework owner's mandatory actual-main source run at
+`bf7c56e1986fd8ca4a4c5e0cafdf3087e73b545a`, run20261008T103708Z-730bd986,
+is reused as the updated ordinary/guard baseline. It completes 3056 selected
+ordinary classes, 3054 reports, 26514 cases, **27 inherited failures,
+zero errors and62 literal inherited skips**, 4913.15seconds. Separate fresh
+guards complete87 reports/674 cases, all pass without skips, 208.35seconds.
+The owner compares all27 complete concrete first assertions and62 literal
+skip reasons with the previously qualified baseline:26 literal assertions plus
+the full2952-character SSZ first line after only removing its exception prefix
+and normalizing the independently verified `RewindObjectStateBlob@hex` to
+`@HASH`. No new/worsened/unattributed cases, ROM skips, omissions or timeouts.
+This is accepted inherited-failure qualification, not a green whole suite.
+See [framework delivery evidence](../plans/2026-10-07-mod-framework-product-readiness.md).
+
+Root independently checks all eight changed paths from `bf7` to published
+`d740`: release-tree/policy helpers, the exact authored-fixture allowlist,
+Python policy tests and two existing prose files. There is **zero engine Java,
+Java-test, resource, POM or category-runner delta**. The successor's owner
+qualifies32 shell/PowerShell policy cases and137 focused guards and verifies
+the remote develop SHA. Thus this reuse establishes source-equivalent engine
+baseline provenance at actual published `d740`; it is not a freshly rerun
+whole suite at `d740`. No foreign diagnostics are acknowledged by root.
+
+The unmodified runner plan against actual `d740` selects **all3058 ordinary
+classes plus separate fresh guards**. Its launch-environment preflight passes
+Java21, Lua5.4 and PowerShell. Shared death/radius behavior and timing transport
+require that normal combined run; no proportionate scope exception is taken.
+Finish focused/domain fixes and prose before freezing the exact candidate.
+Expected ordinary cost is80–110minutes plus about4minutes guards, based on the
+completed recent full runs. Use150minutes admission-excluded and the unchanged
+ten-minute no-output timeout. A timeout, omitted report, ROM skip or any new,
+worsened or unattributed ordinary failure blocks integration. Compare test
+identity/type/full first assertion and every literal skip reason, not totals.
+Mandatory actual-main qualification, push and owned cleanup remain required.

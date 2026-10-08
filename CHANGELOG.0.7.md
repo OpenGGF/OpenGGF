@@ -12,7 +12,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Brain Act 2 and Final Zone keep their uniform scrolling and use the REV01
   background-Y entry offset.
 
-- **Sonic 2 playable art and springs:** companion players register their ROM
+- **Sonic 2 parity:** companion players register their ROM
   art owner by character identity, restoring Tails DPLC submissions for runtime
   names such as `tails_p2`. Horizontal springs apply the native unsigned
   launch-side check for both participants, including the flipped equality case.
@@ -22,6 +22,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   signed-word range check and main-player tie preference.
   CPZ spin tubes preserve native zero-duration waypoints and the signed
   fixed-point velocity calculation, preventing an extra movement step.
+  Seventh-emerald results use the ROM's leave/return movement, wait and draw
+  suppression, including the exact-seven and Tails-alone gates.
+
+- **Native death reactions:** rolling deaths perform each game's floor/radius
+  reset before the death launch, preserving native centres and subpixels.
+  Rewind retains the restored radius and reverse-gravity behavior.
 
 - **Stock title starts:** starting a new Sonic 1 game clears emeralds and the
   special-stage cursor while preserving configured stage counts; Continue keeps
@@ -359,7 +365,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   fading for the ROM's 22 V-ints, without an earlier exit from the disabled death plane.
   Headless bonus-return replay prepares and advances each physical title/fade row,
   closing source gameplay ownership after its final published row while retaining
-  recorded return-tail comparisons and timing checks.
+  recorded return-tail comparisons and timing checks. HCZ fan bubbles rise at
+  the native speed and remain allocated until reaching the water surface. Fan
+  bubble and sound cadence use the gameplay clock; a full object pool leaves
+  the random-number state unchanged.
 
 - **Boss parts in their own sprite layers:** ICZ miniboss orbs and shards, ICZ end
   boss body parts, LBZ miniboss panels and box pieces, and HCZ end boss children now

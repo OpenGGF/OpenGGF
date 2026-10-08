@@ -14,7 +14,7 @@ submodule changes recorder ownership, not Sonic 3 & Knuckles runtime behaviour.
 No S3K discrepancy was added or reclassified by the cutover.
 
 **Stock parity audit (2026-10-07):** the continued swarm uses shipped-ROM
-initialization and level-load semantics; it adds no accepted deviation.
+initialization, level-load and fan-child semantics; it adds no accepted deviation.
 Executed qualification and remaining campaign/rewind frontiers belong in the
 [dated stock audit](architecture/audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
 and [known-bug record](status/s3k-known-bugs.md), rather than new intentional entries.
