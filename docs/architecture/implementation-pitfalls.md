@@ -5,6 +5,27 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+**A background layout needs its presentation art and event palette.** Starfall
+Frontier's background revision (base `68d1e03482`, 2026-10-08) found numbered
+filler inside otherwise valid S3K background chunks. Append both block/chunk
+banks as `LoadLevelLoadBlock2` does, then prime the appropriate AniPLC frame
+and direct `AnimateTiles_*` uploads into a private picture bank. SOZ's dispatch
+names an LRZ list that its custom routine never executes; blindly priming that
+list loads lava over desert art. ICZ1's outdoor plane also needs
+`ICZ1_SetIntroPal` line-4 writes, otherwise its mountains use the indoor cave
+colours. Check the composed picture, not just successful decompression or a
+non-null image. A static creator picture is not a live zone animation timeline.
+
+**A ROM mapping bank is not an animation sequence.** In the Starfall Frontier
+biome revision (base `e6844866ed`, 2026-10-08), Rhinobot's mapping frames 0/1
+face left, frame 2 is its brake pose, and frame 3 faces right. Cycling all four
+therefore reverses the visible direction even with correct xflip. Follow the
+owning object's pose selection (`Obj_Rhinobot` / `sub_86FF8`), or explicitly
+curate the creator's locomotion frames. Check both orientations through every
+animation phase with decoded images; a UV-only test or one screenshot misses
+an intrinsically reversed pose. Facing should follow AI intent, since damage
+recoil reverses velocity without changing the target.
+
 **Coordinates.** ROM `x_pos` / `y_pos` map to `getCentreX()` / `getCentreY()`. `getX()` /
 `getY()` are top-left render bounds — mixing them produces a ~19px vertical offset and
 wrong collision. When porting disassembly that touches `x_pos` / `y_pos`, default to the
