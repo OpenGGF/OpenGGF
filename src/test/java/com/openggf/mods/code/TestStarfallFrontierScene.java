@@ -63,8 +63,9 @@ class TestStarfallFrontierScene {
             }
             // Exercise the real update/draw path while crossing a surface boundary.
             harness.debugJump("biome-angel_island");
-            type.getField("x").setDouble(world,80*12+6);
-            type.getField("y").setDouble(world,((int)type.getMethod("surface",int.class).invoke(world,80)-2)*12);
+            int garden=(int)type.getMethod("geographyTile",int.class).invoke(world,80);
+            type.getField("x").setDouble(world,garden*12+6);
+            type.getField("y").setDouble(world,((int)type.getMethod("surface",int.class).invoke(world,garden)-2)*12);
             for(int n=0;n<22;n++)harness.tick();
             var gardenBackdrop=(com.openggf.mods.scene.SceneBackdrop)banks[1][0].getClass().getField("backdrop").get(banks[1][0]);
             harness.host().draw(null,null);
@@ -106,6 +107,18 @@ class TestStarfallFrontierScene {
                         }
                     }
                 }
+            }
+            // Every added enemy decodes complete body art and is drawn through the real scene.
+            var enemyBankField=view.getClass().getDeclaredField("enemyArt");enemyBankField.setAccessible(true);
+            Object enemyBank=enemyBankField.get(view);
+            var sets=(com.openggf.mods.scene.SceneSpriteSet[])enemyBank.getClass().getField("sprites").get(enemyBank);
+            for(int kind=4;kind<sets.length;kind++) {
+                assertTrue(sets[kind].frameCount()>0);foes.clear();
+                foes.add(enemy.newInstance(x+35,y,kind));harness.host().draw(null,null);
+                var images=new java.util.HashSet<com.openggf.mods.scene.SceneImage>();
+                for(int n=0;n<sets[kind].frameCount();n++)images.add(sets[kind].frame(n).image());
+                assertTrue(harness.host().recordedFrame().stream().anyMatch(op->images.contains(op.image())),"drawn kind "+kind);
+                assertTrue(java.util.Arrays.stream(sets[kind].frame(kind==11||kind==13?1:0).image().pixels()).anyMatch(pixel->pixel>>>24!=0),"opaque body "+kind);
             }
             assertTrue(harness.findings().isEmpty(),harness.findings()::toString);
         }finally{level.dispose();}

@@ -12,7 +12,7 @@ public final class FrontierScene implements ModScene,DebuggableScene {
     private SceneContext context;
     private World world, saved;
     private String screen="TITLE",returnScreen="PLAY";
-    private int cursor,recipe,inventoryCursor,presentation,saveTimer;
+    private int cursor,recipe,inventoryCursor,presentation,saveTimer,mapX,mapY;
     private boolean dirty,debug,existingSave,mouseAim;
     private int currentMusic=-1;
     private double cameraX,cameraY;
@@ -23,8 +23,8 @@ public final class FrontierScene implements ModScene,DebuggableScene {
     @Override public void enter(SceneContext ctx) {
         context=ctx;view=new FrontierView(font,ctx.art().rom());existingSave=ctx.storage().read("world.sav").isPresent();
         if(ctx.art().rom()!=null)sonic=ctx.art().rom().character("sonic");
-        Optional<World> primary=ctx.storage().read("world.sav").flatMap(SaveCodec::decode);
-        saved=primary.orElseGet(()->ctx.storage().read("world-backup.sav").flatMap(SaveCodec::decode).orElse(null));
+        Optional<World> primary=WorldSaves.read(ctx.storage(),"world.sav").flatMap(SaveCodec::decode);
+        saved=primary.orElseGet(()->WorldSaves.read(ctx.storage(),"world-backup.sav").flatMap(SaveCodec::decode).orElse(null));
         if(primary.isEmpty()&&saved!=null)status="Recovered your backup save.";
         else if(saved==null&&ctx.storage().read("world.sav").isPresent())status="Save unreadable. Original files preserved.";
         world=new World(0x57A2FA11L);snapCamera(ctx);music(ctx,0x2F);
@@ -42,12 +42,12 @@ public final class FrontierScene implements ModScene,DebuggableScene {
         if(ctx.keyPressed(SceneKeys.C)||ctx.buttonPressed(SceneButtons.B)){screen="CRAFT";return;}
         if(ctx.keyPressed(SceneKeys.TAB)||ctx.keyPressed(SceneKeys.I)){screen="INVENTORY";return;}
         if(ctx.keyPressed(SceneKeys.J)){screen="JOURNAL";return;}
-        if(ctx.keyPressed(SceneKeys.M)){screen="MAP";return;}
+        if(ctx.keyPressed(SceneKeys.M)){openMap();return;}
         if(ctx.keyPressed(SceneKeys.F1)){help("PLAY");return;}
         if(ctx.mouse().leftPressed()) {
             if(ctx.mouse().over(ctx.width()-170,7,162,30)){screen="JOURNAL";return;}
             if(ctx.mouse().over(8,210,212,14)) {
-                int mx=ctx.mouse().x();screen=mx<63?"INVENTORY":mx<115?"CRAFT":mx<174?"JOURNAL":"MAP";return;
+                int mx=ctx.mouse().x();screen=mx<63?"INVENTORY":mx<115?"CRAFT":mx<174?"JOURNAL":"MAP";if(screen.equals("MAP"))openMap();return;
             }
         }
         for(int i=0;i<8;i++)if(ctx.keyPressed(SceneKeys.DIGIT_1+i))world.slot=i;
@@ -74,7 +74,7 @@ public final class FrontierScene implements ModScene,DebuggableScene {
         if(mouseAim&&ctx.mouse().inside()&&ctx.mouse().y()>32&&ctx.mouse().y()<180) {
             tx=(int)Math.floor((ctx.mouse().x()+cameraX)/World.T);ty=(int)Math.floor((ctx.mouse().y()+cameraY)/World.T);
         }
-        tx=Math.max(1,Math.min(World.W-2,tx));ty=Math.max(0,Math.min(World.H-3,ty));world.aimX=tx;world.aimY=ty;
+        tx=Math.max(1,Math.min(world.width-2,tx));ty=Math.max(0,Math.min(world.height-3,ty));world.aimX=tx;world.aimY=ty;
         if(ctx.keyPressed(SceneKeys.E)||ctx.buttonPressed(SceneButtons.UP))interact(ctx,tx,ty);
         if(ctx.keyPressed(SceneKeys.H)&&world.heal())ctx.audio().playSfx(0x33);
         boolean mouseWorld=ctx.mouse().inside()&&ctx.mouse().y()>32&&ctx.mouse().y()<180;
@@ -114,6 +114,7 @@ public final class FrontierScene implements ModScene,DebuggableScene {
         world=new World(java.util.concurrent.ThreadLocalRandom.current().nextLong());screen="PLAY";
         saved=null;debug=false;dirty=true;saveTimer=0;snapCamera(ctx);save(ctx);music(ctx,world.musicId());
     }
+    private void openMap(){screen="MAP";mapX=(int)(world.x/World.T);mapY=(int)(world.y/World.T);}
     private void help(String from){returnScreen=from;screen="HELP";}
     private void panelInput(SceneContext ctx) {
         if(screen.equals("PAUSE")) {
@@ -125,7 +126,7 @@ public final class FrontierScene implements ModScene,DebuggableScene {
             }
             switch(picked) {
                 case 0 -> screen="PLAY";case 1 -> screen="INVENTORY";case 2 -> screen="CRAFT";
-                case 3 -> screen="JOURNAL";case 4 -> screen="MAP";
+                case 3 -> screen="JOURNAL";case 4 -> openMap();
                 case 5 -> {world.recall();snapCamera(ctx);music(ctx,world.musicId());screen="PLAY";dirty=true;}
                 case 6 -> help("PAUSE");
                 case 7 -> {if(save(ctx)||!dirty){saved=SaveCodec.decode(SaveCodec.encode(world)).orElse(null);screen="TITLE";cursor=0;music(ctx,0x2F);}}
@@ -137,7 +138,13 @@ public final class FrontierScene implements ModScene,DebuggableScene {
                 ||screen.equals("CRAFT")&&ctx.keyPressed(SceneKeys.C)
                 ||screen.equals("INVENTORY")&&(ctx.keyPressed(SceneKeys.TAB)||ctx.keyPressed(SceneKeys.I))
                 ||screen.equals("MAP")&&ctx.keyPressed(SceneKeys.M)||screen.equals("JOURNAL")&&ctx.keyPressed(SceneKeys.J)) {screen="PLAY";return;}
-        if(screen.equals("CRAFT")) {
+        if(screen.equals("MAP")) {
+            if(left(ctx))mapX-=16;if(right(ctx))mapX+=16;
+            if(up(ctx))mapY-=8;if(down(ctx))mapY+=8;
+            mapX+=ctx.mouse().wheel()*64;
+            if(ctx.mouse().leftPressed()&&ctx.mouse().over(33,34,461,12))mapX=(ctx.mouse().x()-33)*world.width/461;
+            mapX=Math.max(0,Math.min(world.width-1,mapX));mapY=Math.max(0,Math.min(world.height-1,mapY));
+        }else if(screen.equals("CRAFT")) {
             if(up(ctx)||ctx.mouse().wheel()>0)recipe=Math.floorMod(recipe-1,world.content.recipes.size());
             if(down(ctx)||ctx.mouse().wheel()<0)recipe=(recipe+1)%world.content.recipes.size();
             int top=Math.max(0,Math.min(world.content.recipes.size()-10,recipe-4));
@@ -165,17 +172,12 @@ public final class FrontierScene implements ModScene,DebuggableScene {
     private boolean save(SceneContext ctx) {
         if(debug)return true;
         String data=SaveCodec.encode(world);
-        // Back up only a successfully decoded prior document, never a corrupt save.
-        Optional<String> old=ctx.storage().read("world.sav");
-        if(old.flatMap(SaveCodec::decode).isPresent()&&!ctx.storage().write("world-backup.sav",old.get())) {
-            status="Backup failed. Progress is still in memory.";world.say(status);return false;
-        }
-        if(!ctx.storage().write("world.sav",data)){status="SAVE FAILED. Retry from the pause menu.";world.say(status);return false;}
+        if(!WorldSaves.write(ctx.storage(),data)){status="SAVE FAILED. Retry from the pause menu.";world.say(status);return false;}
         dirty=false;existingSave=true;saveTimer=0;status="WORLD SAVED";return true;
     }
     private void music(SceneContext ctx,int id){if(currentMusic!=id){currentMusic=id;ctx.audio().playMusic(id);}}
-    private double targetCameraX(SceneContext ctx){return Math.max(0,Math.min(World.W*World.T-ctx.width(),world.x-ctx.width()*.46));}
-    private double targetCameraY(){return Math.max(0,Math.min(World.H*World.T-224,world.y-109));}
+    private double targetCameraX(SceneContext ctx){return Math.max(0,Math.min(world.width*World.T-ctx.width(),world.x-ctx.width()*.46));}
+    private double targetCameraY(){return Math.max(0,Math.min(world.height*World.T-224,world.y-109));}
     private void snapCamera(SceneContext ctx){cameraX=targetCameraX(ctx);cameraY=targetCameraY();view.snapBackdrop(world);}
     private boolean confirm(SceneContext ctx){return ctx.buttonPressed(SceneButtons.A|SceneButtons.C)||ctx.keyPressed(SceneKeys.ENTER);}
     private boolean back(SceneContext ctx){return ctx.buttonPressed(SceneButtons.B)||ctx.keyPressed(SceneKeys.BACKSPACE)||ctx.mouse().rightPressed();}
@@ -199,7 +201,7 @@ public final class FrontierScene implements ModScene,DebuggableScene {
                 case "CRAFT" -> view.crafting(canvas,world,recipe);
                 case "INVENTORY" -> view.inventory(canvas,world,inventoryCursor);
                 case "JOURNAL" -> view.journal(canvas,world);
-                case "MAP" -> view.map(canvas,world);
+                case "MAP" -> view.map(canvas,world,mapX,mapY);
                 case "PAUSE" -> view.pause(canvas,cursor);
                 case "HELP" -> view.help(canvas);
                 default -> { }
@@ -210,9 +212,10 @@ public final class FrontierScene implements ModScene,DebuggableScene {
     @Override public void exit(SceneContext ctx){if(dirty&&world!=null)save(ctx);}
     @Override public boolean debugJump(String command) {
         boolean priorDebug=debug;debug=true;
+        boolean showEnemy=command.startsWith("enemy-biome-");if(showEnemy)command=command.substring(6);
         if(command.equals("play")){screen="PLAY";snapCamera(context);return true;}
         if(command.equals("craft")||command.equals("inventory")||command.equals("journal")||command.equals("map")) {
-            screen=command.toUpperCase();return true;
+            screen=command.toUpperCase();if(screen.equals("MAP"))openMap();return true;
         }
         if(command.equals("cavern")||command.equals("warden")) {
             world.x=world.shrineX[0]*World.T-24;world.y=(world.shrineY[0]-2)*World.T;world.hp=world.maxHp=160;
@@ -222,20 +225,24 @@ public final class FrontierScene implements ModScene,DebuggableScene {
             screen="PLAY";snapCamera(context);return true;
         }
         for(Biome biome:Biome.values())if(command.equals("biome-"+biome.name().toLowerCase(java.util.Locale.ROOT))) {
-            int tx=switch(biome) {
+            int tx=world.geographyTile(switch(biome) {
                 case ANGEL_ISLAND -> 40;case MARBLE_GARDEN -> 80;case MUSHROOM_HILL -> 112;
                 case CARNIVAL_NIGHT -> 144;case ICECAP -> 176;case SANDOPOLIS -> 208;
                 case LAUNCH_BASE -> 240;case HYDROCITY -> 68;case LAVA_REEF -> 215;
                 case HIDDEN_PALACE -> 140;case SKY_SANCTUARY -> 116;
-            };
-            int ty=biome==Biome.HYDROCITY?world.surface(tx)+14:
-                    biome==Biome.LAVA_REEF?world.surface(tx)+36:
-                    biome==Biome.HIDDEN_PALACE?world.surface(tx)+48:
-                    biome==Biome.SKY_SANCTUARY?world.surface(tx)-19:world.surface(tx)-1;
+            });
+            int ty=biome==Biome.HYDROCITY?world.surface(tx)+world.depthTiles(14):
+                    biome==Biome.LAVA_REEF?world.surface(tx)+world.depthTiles(36):
+                    biome==Biome.HIDDEN_PALACE?world.surface(tx)+world.depthTiles(48):
+                    biome==Biome.SKY_SANCTUARY?world.surface(tx)-world.depthTiles(19):world.surface(tx)-1;
             world.x=tx*World.T+6;world.y=ty*World.T-1;world.vx=world.vy=0;
             world.enemies.clear();world.shots.clear();
-            for(int a=-2;a<=2;a++)for(int b=-3;b<=0;b++)world.set(tx+a,ty+b,World.AIR);
-            for(int a=-2;a<=2;a++)world.set(tx+a,ty+1,World.STONE);
+            for(int a=-8;a<=8;a++)for(int b=-3;b<=0;b++)world.set(tx+a,ty+b,World.AIR);
+            for(int a=-8;a<=8;a++)world.set(tx+a,ty+1,World.STONE);
+            if(showEnemy) {
+                EnemyType type=EnemyType.forBiome(biome,0);
+                world.enemies.add(new World.Enemy(world.x+36,world.y+(type.flying()?-18:7),type.ordinal()));
+            }
             screen="PLAY";snapCamera(context);music(context,world.musicId());return true;
         }
         if(command.equals("victory")){world.wardens=7;world.won=true;world.quest=7;screen="JOURNAL";return true;}

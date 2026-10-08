@@ -26,7 +26,7 @@ class BackdropBlendTest {
         assertEquals(1,blend.weight(0));assertEquals(0,blend.weight(2));assertEquals(0,blend.weight(4));
     }
     @Test void depthAndActChangesSelectDifferentBackgroundsButReadingNeverAdvancesTheFade() {
-        var world=new World(123);world.x=80*World.T+6;
+        var world=new World(123,true,256,96);world.x=80*World.T+6;
         world.y=(world.surface(80)+10)*World.T;
         int shallow=BackdropBlend.key(world);world.y=(world.surface(80)+22)*World.T;
         int deep=BackdropBlend.key(world);assertNotEquals(shallow,deep);

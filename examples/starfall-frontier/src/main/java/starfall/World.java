@@ -6,18 +6,19 @@ import static starfall.Content.Item.*;
 
 /** A creator-owned tile world, independent of stock zone geometry and gameplay clocks. */
 public final class World {
-    public static final int W=256, H=96, T=12;
+    public static final int W=8192, H=384, T=12;
     public static final int AIR=0, DIRT=1, GRASS=2, STONE=3, COPPER=4, IRON=5, CRYSTAL=6,
             LOG=7, LEAVES=8, PLANK=9, PLATFORM=10, TORCH=11, BENCH=12, FURNACE=13,
             ANVIL=14, SHRINE=15, CHEST=16, BUSH=17, BEDROCK=18, SNOW=19, EMBER=20;
     public final Content content=new Content();
-    public final byte[] tiles=new byte[W*H], walls=new byte[W*H], seen=new byte[W*H];
+    public final int width,height;
+    public final byte[] tiles,walls,seen;
     public final int[] inventory=new int[Content.Item.values().length], gathered=new int[inventory.length];
     public final Content.Item[] hotbar={PICK,AXE,SWORD,WOOD,Content.Item.TORCH,Content.Item.PLATFORM,WALL,BERRY};
     public final List<Enemy> enemies=new ArrayList<>();
     public final List<Shot> shots=new ArrayList<>();
     public final List<Particle> particles=new ArrayList<>();
-    public final int[] shrineX={68,140,215}, shrineY={52,62,73};
+    public final int[] shrineX,shrineY;
     public long seed, randomState, ticks;
     public double x,y,vx,vy;
     public int hp=100,maxHp=100,mana=100,slot,quest,wardens,kills,blocksPlaced,woodChopped,
@@ -31,7 +32,8 @@ public final class World {
     public static final class Enemy {
         public double x,y,vx,vy;
         public int kind,hp,maxHp,timer,hit,shrine=-1;
-        public Enemy(double x,double y,int kind) { this.x=x;this.y=y;this.kind=kind; hp=maxHp=kind==3?240:kind==2?45:kind==1?32:24; }
+        public Enemy(double x,double y,int kind) { this.x=x;this.y=y;this.kind=kind; hp=maxHp=type().health; }
+        public EnemyType type(){return EnemyType.values()[kind];}
     }
     public static final class Shot {
         public double x,y,vx,vy;
@@ -51,6 +53,14 @@ public final class World {
     }
     public World(long seed) { this(seed,true); }
     World(long seed,boolean generate) {
+        this(seed,generate,W,H);
+    }
+    World(long seed,boolean generate,int width,int height) {
+        if(!((width==256&&height==96)||(width==W&&height==H)))throw new IllegalArgumentException("Unsupported world dimensions");
+        this.width=width;this.height=height;
+        tiles=new byte[width*height];walls=new byte[tiles.length];seen=new byte[tiles.length];
+        shrineX=new int[]{geographyTile(68),geographyTile(140),geographyTile(215)};
+        shrineY=new int[]{depthTiles(52),depthTiles(62),depthTiles(73)};
         this.seed=seed;randomState=seed==0?1:seed;
         if(generate) {
             generate();x=40*T+6;y=surface(40)*T-12;
@@ -62,15 +72,20 @@ public final class World {
         randomState^=randomState<<13;randomState^=randomState>>>7;randomState^=randomState<<17;
         return (int)Long.remainderUnsigned(randomState,bound);
     }
+    /** Original 256-column geography scaled to the world's persisted dimensions. */
+    public int geographyTile(int original){return original*width/256;}
+    public int geographyX(int tx){return Math.max(0,Math.min(255,tx*256/width));}
+    public int depthTiles(int original){return original*height/96;}
+    public Biome surfaceBiome(int tx){return Biome.surface(geographyX(tx));}
     public int surface(int tx) {
-        if(tx>=32&&tx<=51) return 29;
-        return 29+(int)Math.round(Math.sin(tx*.095)*2+Math.sin(tx*.031)*3);
+        if(tx>=32&&tx<=51) return depthTiles(29);
+        return depthTiles(29)+(int)Math.round(Math.sin(tx*.095)*2+Math.sin(tx*.031)*3);
     }
     private void generate() {
-        for(int tx=0;tx<W;tx++) for(int ty=0;ty<H;ty++) {
+        for(int tx=0;tx<width;tx++) for(int ty=0;ty<height;ty++) {
             int s=surface(tx),v=AIR;
             if(ty>=s) {
-                v=ty==s?(Biome.surface(tx)==Biome.ICECAP?SNOW:Biome.surface(tx)==Biome.SANDOPOLIS?EMBER:GRASS):ty<s+5?DIRT:STONE;
+                v=ty==s?(surfaceBiome(tx)==Biome.ICECAP?SNOW:surfaceBiome(tx)==Biome.SANDOPOLIS?EMBER:GRASS):ty<s+5?DIRT:STONE;
                 if(ty>s+5) {
                     double cave=Math.sin(tx*.18+Math.sin(ty*.12)*3)+Math.cos(ty*.21+Math.sin(tx*.08)*2);
                     if(cave>1.0) v=AIR;
@@ -78,44 +93,44 @@ public final class World {
                         int ore=random(1000);
                         if(ore<60&&ty>s+5) v=COPPER;
                         if(ore<45&&ty>s+15) v=IRON;
-                        if(ore<35&&ty>57) v=CRYSTAL;
-                        walls[ty*W+tx]=2;
+                        if(ore<35&&ty>s+depthTiles(28)) v=CRYSTAL;
+                        walls[ty*width+tx]=2;
                     }
                 }
             }
-            if(tx==0||tx==W-1||ty>=H-2) v=BEDROCK;
+            if(tx==0||tx==width-1||ty>=height-2) v=BEDROCK;
             set(tx,ty,v);
         }
-        for(int tx=6;tx<W-6;tx+=5+random(5)) {
-            if(tx>=36&&tx<=51||Biome.surface(tx)!=Biome.ANGEL_ISLAND&&Biome.surface(tx)!=Biome.MUSHROOM_HILL) continue;
+        for(int tx=6;tx<width-6;tx+=5+random(5)) {
+            if(tx>=36&&tx<=51||surfaceBiome(tx)!=Biome.ANGEL_ISLAND&&surfaceBiome(tx)!=Biome.MUSHROOM_HILL) continue;
             tree(tx,surface(tx)-1,4+random(4));
         }
-        for(int tx=9;tx<W-9;tx+=9+random(7)) if((tx<36||tx>47)&&tile(tx,surface(tx)-1)==AIR) set(tx,surface(tx)-1,BUSH);
+        for(int tx=9;tx<width-9;tx+=9+random(7)) if((tx<36||tx>47)&&tile(tx,surface(tx)-1)==AIR) set(tx,surface(tx)-1,BUSH);
         // A gently lit starter descent; one-way platforms make the surface reachable again.
-        for(int ty=29;ty<=54;ty++) {
+        for(int ty=surface(40);ty<=surface(40)+25;ty++) {
             for(int tx=48;tx<=51;tx++) set(tx,ty,AIR);
             if(ty%4==1) { set(48,ty,PLATFORM);set(49,ty,PLATFORM);set(51,ty-1,TORCH); }
         }
-        for(int tx=43;tx<48;tx++) for(int ty=36;ty<39;ty++) set(tx,ty,COPPER);
-        for(int tx=54;tx<60;tx++) for(int ty=44;ty<48;ty++) set(tx,ty,IRON);
+        for(int tx=43;tx<48;tx++) for(int ty=surface(40)+7;ty<surface(40)+10;ty++) set(tx,ty,COPPER);
+        for(int tx=54;tx<60;tx++) for(int ty=surface(40)+15;ty<surface(40)+19;ty++) set(tx,ty,IRON);
         for(int i=0;i<3;i++) {
             int sx=shrineX[i],sy=shrineY[i];
             for(int tx=sx-8;tx<=sx+8;tx++) for(int ty=sy-5;ty<=sy;ty++) {
-                set(tx,ty,ty==sy?STONE:AIR);walls[ty*W+tx]=2;
+                set(tx,ty,ty==sy?STONE:AIR);walls[ty*width+tx]=2;
             }
             set(sx,sy-1,SHRINE);set(sx-7,sy-2,TORCH);set(sx+7,sy-2,TORCH);
             set(sx-5,sy-1,CHEST);
             for(int tx=sx+10;tx<sx+14;tx++) for(int ty=sy+2;ty<sy+6;ty++) set(tx,ty,i==0?IRON:CRYSTAL);
         }
         // Small mineable cloud ruins make the sky biome reachable with built platforms.
-        for(int tx=76;tx<W-8;tx+=40) {
-            int floor=surface(tx)-18;
+        for(int tx=geographyTile(76);tx<width-8;tx+=Math.max(40,geographyTile(8))) {
+            int floor=surface(tx)-depthTiles(18);
             for(int a=-5;a<=5;a++)for(int b=0;b<3;b++)set(tx+a,floor+b,b==0?GRASS:STONE);
             set(tx,floor-1,CHEST);
         }
         // Bonus treasure rooms and heartstones are fixed to the seed, never player progress.
-        for(int n=0;n<12;n++) {
-            int tx=15+random(W-30),ty=40+random(43);
+        for(int n=0;n<12*width/256;n++) {
+            int tx=15+random(width-30),ty=depthTiles(40)+random(depthTiles(43));
             for(int a=-2;a<=2;a++) for(int b=-2;b<0;b++) set(tx+a,ty+b,AIR);
             for(int a=-2;a<=2;a++) set(tx+a,ty,STONE);
             set(tx,ty-1,CHEST);
@@ -126,9 +141,9 @@ public final class World {
         for(int a=-3;a<=3;a++) for(int b=-2;b<=2;b++)
             if(tile(tx+a,base-height+b)==AIR) set(tx+a,base-height+b,LEAVES);
     }
-    public boolean inside(int tx,int ty) { return tx>0&&tx<W-1&&ty>=0&&ty<H-2; }
-    public int tile(int tx,int ty) { return tx<0||tx>=W||ty>=H?BEDROCK:ty<0?AIR:Byte.toUnsignedInt(tiles[ty*W+tx]); }
-    void set(int tx,int ty,int tile) { if(tx>=0&&tx<W&&ty>=0&&ty<H) tiles[ty*W+tx]=(byte)tile; }
+    public boolean inside(int tx,int ty) { return tx>0&&tx<width-1&&ty>=0&&ty<height-2; }
+    public int tile(int tx,int ty) { return tx<0||tx>=width||ty>=height?BEDROCK:ty<0?AIR:Byte.toUnsignedInt(tiles[ty*width+tx]); }
+    void set(int tx,int ty,int tile) { if(tx>=0&&tx<width&&ty>=0&&ty<height) tiles[ty*width+tx]=(byte)tile; }
     public static boolean solid(int t) {
         return t==DIRT||t==GRASS||t==SNOW||t==EMBER||t==STONE||t==COPPER||t==IRON||t==CRYSTAL||t==PLANK||t==BEDROCK;
     }
@@ -186,12 +201,12 @@ public final class World {
             if(hit) { if(dy!=0){if(sy>0)grounded=true;vy=0;}else vx=0;break; }
             x=nx;y=ny;
         }
-        x=Math.max(T+5,Math.min((W-1)*T-5,x));y=Math.max(10,y);
+        x=Math.max(T+5,Math.min((width-1)*T-5,x));y=Math.max(10,y);
     }
     public boolean sheltered() {
         int tx=(int)x/T,ty=(int)y/T;
-        if(ty<0||ty>=H) return false;
-        int n=0;for(int a=-2;a<=2;a++)for(int b=-2;b<=0;b++) if(inside(tx+a,ty+b)&&walls[(ty+b)*W+tx+a]==1)n++;
+        if(ty<0||ty>=height) return false;
+        int n=0;for(int a=-2;a<=2;a++)for(int b=-2;b<=0;b++) if(inside(tx+a,ty+b)&&walls[(ty+b)*width+tx+a]==1)n++;
         boolean roof=false;for(int b=1;b<=5;b++)if(solid(tile(tx,ty-b)))roof=true;
         return n>=8&&roof&&nearStation(TORCH);
     }
@@ -228,8 +243,8 @@ public final class World {
         if(!reachable(tx,ty)||actionCooldown>0||!tool.tool()||count(tool)==0)return false;
         int tier=tool==IRON_PICK?2:tool==COPPER_PICK?1:0;
         int t=tile(tx,ty);
-        if(t==AIR&&walls[ty*W+tx]==1) {
-            walls[ty*W+tx]=0;add(WALL,1);actionCooldown=8;return true;
+        if(t==AIR&&walls[ty*width+tx]==1) {
+            walls[ty*width+tx]=0;add(WALL,1);actionCooldown=8;return true;
         }
         if(t==AIR||t==BEDROCK||t==SHRINE)return false;
         if(tool==AXE&&t!=LOG&&t!=LEAVES&&t!=BUSH){say("Use a pick to mine terrain.");return false;}
@@ -265,8 +280,8 @@ public final class World {
     public boolean place(int tx,int ty,Content.Item i) {
         if(!reachable(tx,ty)||actionCooldown>0||count(i)==0)return false;
         if(i==WALL) {
-            if(walls[ty*W+tx]==1)return false;
-            walls[ty*W+tx]=1;take(i,1);blocksPlaced++;actionCooldown=8;return true;
+            if(walls[ty*width+tx]==1)return false;
+            walls[ty*width+tx]=1;take(i,1);blocksPlaced++;actionCooldown=8;return true;
         }
         if(i==ACORN) {
             if(tile(tx,ty)!=AIR||!solid(tile(tx,ty+1)))return false;
@@ -275,7 +290,7 @@ public final class World {
         }
         if(i.tile<0||tile(tx,ty)!=AIR)return false;
         // Adjacency prevents unsupported floating blocks; player body cannot be entombed.
-        boolean adjacent=walls[ty*W+tx]==1;
+        boolean adjacent=walls[ty*width+tx]==1;
         for(int[] d:new int[][]{{0,1},{0,-1},{-1,0},{1,0}})if(tile(tx+d[0],ty+d[1])!=AIR)adjacent=true;
         if(!adjacent)return false;
         if(solid(i.tile)&&Math.abs(tx*T+6-x)<10&&Math.abs(ty*T+6-y)<16)return false;
@@ -354,15 +369,27 @@ public final class World {
         if(enemies.stream().anyMatch(e->e.kind==3)){say("Defeat the sentinel or flee first.");return false;}
         respawn();respawns--;say("Returned to the camp beacon.");return true;
     }
-    private void spawnEnemy() {
-        boolean deep=y/T>surface((int)x/T)+7;
+    void spawnEnemy() {
+        boolean deep=y/T>=surface((int)x/T)+depthTiles(8);
+        boolean sky=region()==Biome.SKY_SANCTUARY;
         boolean night=ticks%21600>13500;
-        if(!deep&&!night&&random(3)!=0||sheltered())return;
-        int tx=(int)x/T+(random(2)==0?-1:1)*(12+random(5));if(tx<2||tx>=W-2)return;
-        int ty=deep?(int)y/T:surface(tx)-1;
-        if(tile(tx,ty)!=AIR||nearTorch(tx,ty))return;
-        Enemy e=new Enemy(tx*T+6,ty*T-4,deep?1:0);if(deep&&random(3)==0)e.kind=2;
-        enemies.add(e);
+        if((!deep&&!sky&&!night&&random(3)!=0)||sheltered())return;
+        for(int attempt=0;attempt<6;attempt++) {
+            int tx=(int)x/T+(random(2)==0?-1:1)*(26+random(7));
+            if(tx<2||tx>=width-2)continue;
+            int ty=deep||sky?(int)y/T:surface(tx)-1;
+            EnemyType type=EnemyType.forBiome(Biome.at(this,tx,ty),random(3));
+            if(!type.flying()) {
+                // Locate a real cave/ruin floor near the explorer, never spawn inside rock.
+                int floor=-1;
+                for(int d=-6;d<=8;d++)if(solid(tile(tx,ty+d+1))&&!solid(tile(tx,ty+d))) {floor=ty+d;break;}
+                if(floor<0)continue;ty=floor;
+                type=EnemyType.forBiome(Biome.at(this,tx,ty),random(3));
+            }
+            double ex=tx*T+6,ey=(ty+1)*T-6;
+            if(blocked(ex,ey,6,6)||nearTorch(tx,ty))continue;
+            enemies.add(new Enemy(ex,ey,type.ordinal()));return;
+        }
     }
     private boolean nearTorch(int tx,int ty) {
         for(int a=-4;a<=4;a++)for(int b=-3;b<=3;b++)if(tile(tx+a,ty+b)==TORCH)return true;
@@ -372,9 +399,10 @@ public final class World {
         for(Enemy e:enemies) {
             if(e.hp<=0)continue;e.timer++;if(e.hit>0)e.hit--;
             double dir=x<e.x?-1:1;
-            if(e.kind==1||e.kind==3) {
+            EnemyType type=e.type();
+            if(type.flying()) {
                 double desiredY=e.kind==3?y-30:y-15;
-                e.vx+=(dir*(e.kind==3?1.35:1.1)-e.vx)*.04;e.vy+=(Math.signum(desiredY-e.y)*.75-e.vy)*.04;
+                e.vx+=(dir*type.speed-e.vx)*.04;e.vy+=(Math.signum(desiredY-e.y)*.75-e.vy)*.04;
                 if(e.kind==3) {
                     int period=e.shrine==0?110:e.shrine==1?140:95;
                     if(e.timer%period==period-25)burst(e.x,e.y,0xFFFFDD9B,12);
@@ -394,23 +422,32 @@ public final class World {
                     if(!blocked(e.x,e.y+e.vy,5,5))e.y+=e.vy;
                 }
             }else {
-                e.vx+=(dir*.65-e.vx)*.06;e.vy=Math.min(6,e.vy+.2);
-                if(!blocked(e.x+e.vx,e.y,6,6))e.x+=e.vx;else if(e.timer%30==0)e.vy=-3.5;
+                double speed=type.speed;
+                if(type.motion==EnemyType.CHARGE&&Math.abs(x-e.x)<180)speed*=1.8;
+                e.vx+=(dir*speed-e.vx)*.06;e.vy=Math.min(6,e.vy+.2);
+                if(!blocked(e.x+e.vx,e.y,6,6))e.x+=e.vx;else if(type.motion!=EnemyType.TURRET&&e.timer%30==0)e.vy=-3.5;
                 if(!blocked(e.x,e.y+e.vy,6,6))e.y+=e.vy;
-                else {e.vy=0;if(e.timer%55==0)e.vy=-3.7;}
+                else {e.vy=0;if(type.motion==EnemyType.HOP&&e.timer%55==0)e.vy=-4.8;}
             }
-            e.x=Math.max(12,Math.min((W-1)*T,e.x));e.y=Math.max(8,Math.min((H-1)*T,e.y));
+            if(e.kind!=3&&type.shotPeriod>0&&Math.hypot(x-e.x,y-e.y)<300) {
+                if(e.timer%type.shotPeriod==type.shotPeriod-20)burst(e.x,e.y,0xFFFFDD9B,6);
+                if(e.timer%type.shotPeriod==0) {
+                    double angle=Math.atan2(y-e.y,x-e.x),speed=type==EnemyType.EGG_ROBO?3:2;
+                    shots.add(new Shot(e.x,e.y,Math.cos(angle)*speed,Math.sin(angle)*speed,type.damage,true,true));
+                }
+            }
+            e.x=Math.max(12,Math.min((width-1)*T,e.x));e.y=Math.max(8,Math.min((height-1)*T,e.y));
             if(Math.hypot(e.x-x,e.y-y)<(e.kind==3?22:15)) {
                 if(!grounded&&vy>0&&y<e.y-3&&e.hit==0) {damage(e,25);vy=-4;}
-                else if(e.hit==0)hurt(e.kind==3?20:e.kind==2?14:9,e.x);
+                else if(e.hit==0)hurt(type.damage,e.x);
             }
         }
-        enemies.removeIf(e->e.hp<=0||e.kind!=3&&Math.abs(e.x-x)>480||e.y>H*T);
+        enemies.removeIf(e->e.hp<=0||e.kind!=3&&(Math.abs(e.x-x)>600||Math.abs(e.y-y)>360)||e.y>height*T);
     }
     private void updateShots() {
         for(Shot s:shots) {
             s.life--;s.x+=s.vx;s.y+=s.vy;if(!s.magic)s.vy+=.03;
-            if(s.x<0||s.x>=W*T||s.y<0||s.y>=H*T||solid(tile((int)(s.x/T),(int)(s.y/T))))s.life=0;
+            if(s.x<0||s.x>=width*T||s.y<0||s.y>=height*T||solid(tile((int)(s.x/T),(int)(s.y/T))))s.life=0;
             if(s.life<=0)continue;
             if(s.hostile){if(Math.hypot(s.x-x,s.y-y)<12){hurt(s.damage,s.x);s.life=0;}}
             else for(Enemy e:enemies)if(e.hp>0&&Math.hypot(s.x-e.x,s.y-e.y)<(e.kind==3?20:10)){damage(e,s.damage);s.life=0;break;}
@@ -423,7 +460,7 @@ public final class World {
     }
     private void reveal() {
         int tx=(int)x/T,ty=(int)y/T;
-        for(int a=-15;a<=15;a++)for(int b=-10;b<=10;b++)if(inside(tx+a,ty+b)&&a*a+b*b<230)seen[(ty+b)*W+tx+a]=1;
+        for(int a=-15;a<=15;a++)for(int b=-10;b<=10;b++)if(inside(tx+a,ty+b)&&a*a+b*b<230)seen[(ty+b)*width+tx+a]=1;
     }
     public void advanceQuests() {
         while(quest<7) {
@@ -443,8 +480,8 @@ public final class World {
     public Biome region(){return Biome.at(this,(int)(x/T),(int)(y/T));}
     public String biome() {
         Biome biome=region();int depth=(int)(y/T)-surface((int)(x/T));
-        return biome.label+(biome==Biome.SANDOPOLIS&&depth>=8?" / TOMBS":
-                biome==Biome.LAVA_REEF&&depth>=45?" / CRYSTAL":depth>=8&&biome==Biome.HYDROCITY?" / CAVERNS":"");
+        return biome.label+(biome==Biome.SANDOPOLIS&&depth>=depthTiles(8)?" / TOMBS":
+                biome==Biome.LAVA_REEF&&depth>=depthTiles(45)?" / CRYSTAL":depth>=depthTiles(8)&&biome==Biome.HYDROCITY?" / CAVERNS":"");
     }
     public int musicId() {
         if(enemies.stream().anyMatch(e->e.kind==3&&e.hp>0))return 0x19;

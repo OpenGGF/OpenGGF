@@ -449,3 +449,123 @@ a JVM restart loads the update.
 Implementation and verification landed in `74792c5478` before local fast-forward
 integration into `feature/ai-starfall-frontier`. No remote push or release publication
 was requested.
+
+
+## Expanded frontier and biome enemies (1.3.0)
+
+Task: the user found that all biomes could be visited in about a minute and
+requested much longer exploration plus enemies appropriate to every biome.
+Implementation checkout: `.worktrees/starfall-expansion`, branch
+`feature/ai-starfall-expansion`, integration base
+`df3bb00124a4b79cb99ed1c650db66fe03b1ece0`.
+
+New worlds are 8,192 × 384 twelve-pixel tiles: 32× wider, 4× deeper and
+128× the area. At the existing six-pixel speed limit, uninterrupted horizontal
+travel alone takes approximately 272 seconds from camp to the east border.
+This is a lower bound calculated from distance/speed, not an observed route
+completion time. The seven surface regions keep their relative widths; every
+later surface region is 1,024 tiles wide and Angel Island is 2,048. Depth
+thresholds scale by four, including underground act/music changes and the sky
+boundary. Terrain's local hills, mining distances, player physics, tree sizes
+and combat distances stay at the usable original scale. The camp and its
+starter ore/descent stay close together; shrines are distributed across the
+expanded width/depth. Buried treasure room count scales with horizontal size.
+The atlas shows a surface strip plus a bounded 256 × 82 tile discovery window;
+arrows/pad directions pan, the mouse wheel scrolls, clicking the strip jumps
+horizontally, and reopening centers on the player. It does not render millions
+of cells per draw or reveal unexplored caves.
+
+World dimensions are instance data persisted by save version 2. Version 1
+loading explicitly uses 256 × 96 dimensions, the original biome thresholds,
+camp, shrine positions and collision bounds. It retains terrain and progress
+without stretching player buildings. New Frontier is required for the expanded
+world and the confirmation states its size. Save publication remains within
+SceneStorage's 1 MiB/file contract: compressed base64 data exceeding 750,000
+characters is split into immutable generation parts, then published by atomic
+`world.sav` manifest replacement. `world-backup.sav` points to the last valid
+generation. Partial writes remove unpublished parts; missing/corrupt parts
+fall back to the backup. After successful publication, obsolete generations
+are deleted. A backup must copy the entire mod save directory. No engine
+storage or Mod API changes were needed.
+
+Enemy save IDs 0–3 retain Rhinobot, Monkey Dude, Bloominator and shrine sentinel.
+IDs 4–13 add Spiker (MGZ), Dragonfly (MHZ), Batbot (CNZ), Penguinator (ICZ),
+Skorp (SOZ), Ribot (LBZ), Jawz (HCZ), Toxomister (LRZ), crystal Orbinaut (HPZ)
+and Egg Robo (SSZ). Crystal Orbinaut adapts LBZ art to the creator's palace;
+it is not a claimed native HPZ spawn. Source-zone palettes come from
+LevelLoadBlock and PalPointers, and all sprite bytes come from the ROM.
+EnemyArt cites each Art/Map pair; Penguinator uses its object DPLC. Native
+mapping tables have auxiliary/blank frames: `ObjDat_Toxomister` selects body
+frame 1 and `sub_91988` selects Egg Robo frames 1/3 (0 is blank, 2 is a shot).
+The gallery exposed the wrong Toxomister pose after an opacity-only check;
+selecting the actual object pose resolves it. Orbinaut uses frame 0 for its
+body and frame 1 for the four orbiting spikes.
+
+Creator AI supplies pursuers, hoppers, charging ground foes, hovering cave/sky
+foes and stationary ranged Skorps. Projectile attacks warn 20 ticks before
+firing. Spawn candidates use their actual horizontal/depth biome, fit collision
+bounds and, for ground enemies, search for a real nearby floor. Shelter and
+lantern suppression remain; remote enemies are culled horizontally and
+vertically. Health is assigned from the selected type at construction rather
+than changing a kind after constructing another type.
+
+Rejected approaches: stretching old terrain would corrupt buildings and mined
+layouts, so old worlds retain their dimensions. Raising the engine storage
+limit would enlarge a public capability unnecessarily, so the mod owns save
+chunking. An enum-valued motion field failed the existing immutable-enum
+validator; primitive motion constants preserve the same profiles within the
+current SDK contract. Early iteration checks were red for that packaging
+rejection, a stale test's absolute starter-ore rows, and the blank Egg Robo
+frame. They were corrected locally; no unrelated engine changes were made.
+
+Validation uses the proportionate exception: the combined change-based plan
+selects all 3,059 ordinary classes plus guards solely because creator example
+paths are unclassified. These changes affect only this private mod's world,
+combat, rendering and storage; no engine algorithms, API, selection policy or
+native zone behavior change. A full run (roughly 24 minutes ordinary plus
+10 minutes guards in the documented normalization measurement) does not add
+relevant coverage to the isolated creator tests and ROM-backed scene bridge.
+Actual preflight with Java 21 and IDE Maven on PATH still reports the inherited
+Lua 5.4 mismatch and missing PowerShell; no broad run was launched.
+
+Focused commands from this worktree, Java 21, IDE Maven on PATH and the
+existing absolute verified locked-on ROM property:
+
+```sh
+python3 tools/testing/run_categories.py --base df3bb00124a4b79cb99ed1c650db66fe03b1ece0
+python3 tools/testing/run_categories.py --base df3bb00124a4b79cb99ed1c650db66fe03b1ece0 --preflight
+python3 tools/testing/maven_queue.py --lean -B -q -Dmse=off \
+  '-Dtest=TestStarfallFrontierExample,TestStarfallFrontierScene,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  '-Ds3k.rom.path=<existing absolute locked-on ROM>' test
+python3 tools/testing/maven_queue.py --lean -B -q -Dmse=off \
+  '-Dtest=TestStarfallFrontierExample,TestStarfallFrontierScene' \
+  '-Ds3k.rom.path=<existing absolute locked-on ROM>' test
+python3 examples/starfall-frontier/build.py --skip-engine
+```
+
+The S3K checks passed 60 tests with zero skips in the combined invocation;
+affected creator/scene checks were then rerun after the local fixes. Added
+coverage includes all biome spawn passes, warning/projectile and chase/flying
+collision behavior, far-eastern builds and deep discoveries after save/load,
+90-tick forward replay with all enemy kinds in the expanded world, a real V1
+wire document, malformed dimensions/manifests, dense-world chunk saves,
+failed part/manifest publication, generation collection, missing-part backup
+read, atlas panning and reopening, and production draw records for every new
+ROM enemy. These are focused validation, not a full engine-suite pass or a
+complete unassisted adventure certification. Native level/act route matrices
+are unchanged because this is creator geometry rather than a stock zone port.
+
+Presentation uses the existing `ExampleModCapture`, with `enemy-biome-*`
+debug views and `map`, at 528 × 224, scale 3. Captures live outside the repo in
+`$HOME/OpenGGF-captures/starfall-frontier-expansion/gallery`. The source
+jar contains code/text only. Positioning views are visual evidence, not proof
+of an unassisted route. Debug captures never write the user's actual saves.
+
+Final affected check: 43 creator Jupiter tests, zero failures/errors/skips;
+packaging and ROM-backed scene bridge passed with zero owner findings/skips.
+The separate native regression checks above passed unchanged. Final source
+was inspected with `git diff --check`. Captures were refreshed after correcting
+the Toxomister body pose and adding Orbinaut's ROM spike sprites. A refresh
+attempt hit the SDK's refusal to overwrite an existing output jar before any
+frames were rendered; deleting only that generated capture jar allowed a fresh
+capture from the final source. It did not affect gameplay or player saves.

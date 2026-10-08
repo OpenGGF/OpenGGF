@@ -7,8 +7,8 @@ import static starfall.Content.Item.*;
 
 class WorldTest {
     private World blank() {
-        World w=new World(73,false);w.x=40*12+6;w.y=29*12-10;
-        for(int x=1;x<World.W-1;x++)w.set(x,29,World.STONE);
+        World w=new World(73,false,256,96);w.x=40*12+6;w.y=29*12-10;
+        for(int x=1;x<w.width-1;x++)w.set(x,29,World.STONE);
         w.add(PICK,1);w.add(AXE,1);w.add(SWORD,1);return w;
     }
     private int recipe(World w,Content.Item i) {for(int n=0;n<w.content.recipes.size();n++)if(w.content.recipes.get(n).item()==i)return n;throw new AssertionError();}
@@ -17,10 +17,10 @@ class WorldTest {
         for(long seed:new long[]{0,1,73,Long.MIN_VALUE,Long.MAX_VALUE}) {
             World a=new World(seed),b=new World(seed);assertArrayEquals(a.tiles,b.tiles);
             assertArrayEquals(a.inventory,b.inventory);assertFalse(a.blocked(a.x,a.y,4,10));
-            assertEquals(World.COPPER,a.tile(44,37));assertEquals(World.IRON,a.tile(55,46));
+            assertEquals(World.COPPER,a.tile(44,a.surface(40)+8));assertEquals(World.IRON,a.tile(55,a.surface(40)+17));
             for(int i=0;i<3;i++)assertEquals(World.SHRINE,a.tile(a.shrineX[i],a.shrineY[i]-1));
         }
-        assertFalse(Arrays.equals(new World(1).tiles,new World(2).tiles));
+        assertFalse(Arrays.equals(new World(1,true,256,96).tiles,new World(2,true,256,96).tiles));
     }
     @Test void collisionPreventsWallPenetrationAndJumpReachesItsTop() {
         World w=blank();w.set(42,28,World.STONE);
@@ -54,7 +54,7 @@ class WorldTest {
         int hp=w.hp;w.step(new World.Input(0,false,false));assertEquals(1,w.kills);assertEquals(hp,w.hp);assertEquals(-4,w.vy);
     }
     @Test void newWorldIsAnAngelIslandBiomeAndLegacyTerrainTagsStillDecode() {
-        World w=new World(73);
+        World w=new World(73,true,256,96);
         assertTrue(w.biome().startsWith("ANGEL ISLAND"));
         assertEquals(World.SNOW,w.tile(176,w.surface(176)));
         assertEquals(World.EMBER,w.tile(208,w.surface(208)));
@@ -105,7 +105,7 @@ class WorldTest {
         World w=blank();w.add(WALL,30);w.add(TORCH,1);
         for(int a=-2;a<=2;a++)for(int b=-2;b<=0;b++){w.actionCooldown=0;assertTrue(w.place(40+a,28+b,WALL));}
         w.actionCooldown=0;assertTrue(w.place(42,26,TORCH));w.set(40,24,World.PLANK);assertTrue(w.sheltered());
-        w.actionCooldown=0;assertTrue(w.mine(39,27,PICK));assertEquals(0,w.walls[27*World.W+39]);assertEquals(16,w.count(WALL));
+        w.actionCooldown=0;assertTrue(w.mine(39,27,PICK));assertEquals(0,w.walls[27*w.width+39]);assertEquals(16,w.count(WALL));
     }
     @Test void rangedWeaponsRespectAmmunitionManaAndCooldown() {
         World w=blank();w.add(BOW,1);assertFalse(w.attack(w.x+40,w.y,BOW));assertEquals(0,w.shots.size());
@@ -131,14 +131,14 @@ class WorldTest {
         assertTrue(w.enemies.stream().noneMatch(e->e.kind==3));
     }
     @Test void shrineRequiresSigilCannotDuplicateBossAndAwardsEachFragmentOnce() {
-        World w=new World(73);int sx=w.shrineX[0],sy=w.shrineY[0]-1;w.x=sx*12+6;w.y=sy*12;
+        World w=new World(73,true,256,96);int sx=w.shrineX[0],sy=w.shrineY[0]-1;w.x=sx*12+6;w.y=sy*12;
         assertFalse(w.interact(sx,sy));w.add(SIGIL,2);assertTrue(w.interact(sx,sy));assertFalse(w.interact(sx,sy));
         World.Enemy boss=w.enemies.getFirst();boss.hp=1;w.add(IRON_SWORD,1);w.x=boss.x-15;w.y=boss.y;
         assertTrue(w.attack(boss.x,boss.y,IRON_SWORD));assertEquals(1,w.count(RELIC));assertEquals(1,w.wardens);
         w.x=sx*12+6;w.y=sy*12;assertFalse(w.interact(sx,sy));assertEquals(1,w.count(SIGIL));
     }
     @Test void allQuestStagesAndFinalCoreCanCompleteThroughProductionRules() {
-        World w=new World(73);w.add(WOOD,40);w.advanceQuests();assertEquals(1,w.quest);
+        World w=new World(73,true,256,96);w.add(WOOD,40);w.advanceQuests();assertEquals(1,w.quest);
         assertTrue(w.craft(recipe(w,BENCH)));assertTrue(w.place(43,28,BENCH));assertEquals(2,w.quest);
         w.add(STONE,40);assertTrue(w.craft(recipe(w,FURNACE)));w.actionCooldown=0;assertTrue(w.place(44,28,FURNACE));assertEquals(3,w.quest);
         w.add(COPPER,12);for(int i=0;i<4;i++)assertTrue(w.craft(recipe(w,COPPER_BAR)));
@@ -160,7 +160,7 @@ class WorldTest {
         assertEquals(0,w.count(BEACON));assertEquals(0,w.count(RELIC));
     }
     @Test void saveRestoresTilesInventoryCombatAndDeterministicForwardReplay() {
-        World a=new World(123);a.add(WOOD,30);a.set(43,28,World.BENCH);a.quest=2;
+        World a=new World(123,true,256,96);a.add(WOOD,30);a.set(43,28,World.BENCH);a.quest=2;
         a.enemies.add(new World.Enemy(a.x+70,a.y-10,1));a.shots.add(new World.Shot(a.x,a.y,2,-1,12,false,true));
         for(int i=0;i<40;i++)a.step(new World.Input(i<15?1:0,i==2,false));
         World b=SaveCodec.decode(SaveCodec.encode(a)).orElseThrow();
@@ -171,14 +171,14 @@ class WorldTest {
         }
     }
     @Test void malformedOversizedAndTruncatedSavesAreRejectedWithoutMutatingWorld() {
-        World w=new World(73);String original=SaveCodec.encode(w);
+        World w=new World(73,true,256,96);String original=SaveCodec.encode(w);
         assertTrue(SaveCodec.decode(original).isPresent());assertTrue(SaveCodec.decode("not a save").isEmpty());
         assertTrue(SaveCodec.decode("A".repeat(500001)).isEmpty());
         for(int length:new int[]{0,4,original.length()/2,original.length()-12})assertTrue(SaveCodec.decode(original.substring(0,length)).isEmpty());
         w.x=Double.NaN;assertTrue(SaveCodec.decode(SaveCodec.encode(w)).isEmpty());
     }
     @Test void longSimulationKeepsSavesAndTransientPopulationsBounded() {
-        World w=new World(73);
+        World w=new World(73,true,256,96);
         for(int i=0;i<22000;i++)w.step(new World.Input(i%500<250?1:-1,i%50==0,false));
         assertTrue(w.enemies.size()<=18);assertTrue(w.particles.size()<=300);assertTrue(SaveCodec.encode(w).length()<500000);
         assertTrue(SaveCodec.decode(SaveCodec.encode(w)).isPresent());

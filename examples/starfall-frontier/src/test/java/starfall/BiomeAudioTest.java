@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class BiomeAudioTest {
     @Test void sceneSwitchesOncePerRegionOnContinueCrossingsBossExitAndRecall() throws Exception {
-        World saved=new World(73);saved.x=68*World.T;saved.y=(saved.surface(68)+12)*World.T;
+        World saved=new World(73,true,256,96);saved.x=68*World.T;saved.y=(saved.surface(68)+12)*World.T;
         var songs=new ArrayList<Integer>();var files=new HashMap<String,String>();files.put("world.sav",SaveCodec.encode(saved));
         SceneAudio audio=new SceneAudio() {
             public void playMusic(int id){songs.add(id);}public void playSfx(int id){}

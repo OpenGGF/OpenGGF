@@ -10,8 +10,12 @@ recover three emerald fragments from Eggman's shrine sentinels. Restore the
 beacon, then keep expanding your world. Explore eleven S3K-inspired biomes, from palm jungle and icy cliffs to
 buried waterworks, volcanic caves and floating sanctuary ruins.
 
-The seeded world is 256 × 96 tiles with caves, three shrine chambers, buried
-treasure, surface berries, trees and copper, iron and chaos shard deposits.
+New seeded worlds are **8,192 × 384 tiles**: 32 times wider, four times deeper,
+and 128 times the area of the original frontier. Each later surface biome
+spans 1,024 tiles (Angel Island spans 2,048). An uninterrupted straight run
+across the width takes about 4½ minutes at top speed, before terrain,
+combat, mining, building or exploring the deeper layers. The seeded world comes with caves, three widely separated shrine chambers,
+384 buried treasure rooms, surface berries, trees and copper, iron and chaos shard deposits.
 There are 32 inventory items and 18 recipes: three pick tiers, an axe, two
 swords, a bow and arrows, a regenerating magic staff, armor, potions,
 heartstones, building materials and crafting stations. Seven quest stages
@@ -29,7 +33,7 @@ appearance throughout. The added backgrounds use static first-frame ROM art
 with creator parallax; native palette cycles, animated scenery and level events
 are not reproduced. Palm trunks and
 foliage come from Angel Island, with original mushroom crowns in the woodland. Rhinobots, Monkey Dudes and Bloominators
-represent the foes; monitors hold caches, starposts mark camp and shrines,
+patrol Angel Island, while ten additional badnik types populate the other regions. Monitors hold caches, starposts mark camp and shrines,
 and an Egg Mobile represents each sentinel. Rings and emerald sprites also
 appear in the pack. Crafting equipment, material highlights, lighting and
 menus remain original creator visuals. The jar contains code and a text font,
@@ -49,18 +53,39 @@ sound effects. Startup now attaches ROM audio before entering the mod scene.
 
 ## Biomes
 
-The surface runs west to east through Angel Island (tiles 1–63), Marble
-Garden (64–95), Mushroom Hill (96–127), Carnival Night (128–159), Icecap
-(160–191), Sandopolis (192–223) and Launch Base (224–254). Camp stays in
-Angel Island. The exploration map colors terrain by biome.
+New worlds run west to east through Angel Island (tiles 1–2,047), Marble
+Garden (2,048–3,071), Mushroom Hill (3,072–4,095), Carnival Night
+(4,096–5,119), Icecap (5,120–6,143), Sandopolis (6,144–7,167) and
+Launch Base (7,168–8,190). Camp stays near the western edge of Angel Island.
+The atlas has a world-wide surface strip and a detailed local discovery map.
+Pan with arrows/pad directions, scroll horizontally with the mouse wheel,
+or click the surface strip to inspect another part of the world. Reopening
+centers the map on you. Undiscovered underground terrain stays hidden.
 
-| Region | Where to explore |
-| --- | --- |
-| Hydrocity | At least 8 tiles below the local surface, west of tile 192; Act 2 music below depth 20 |
-| Sandopolis tombs | At least 8 tiles underground beneath the desert and base |
-| Lava Reef | **Underground only**, at depth 30 or more; crystal-cave palette and Act 2 music below depth 45 |
-| Hidden Palace | Deep central crystal pocket: tiles 96–159, depth 43 or more |
-| Sky Sanctuary | More than 14 tiles above the surface, east of tile 64; new worlds have mineable cloud ruins with caches |
+| Region | Where to explore in new worlds | Enemies |
+| --- | --- | --- |
+| Angel Island | Western palm jungle | Rhinobot, Monkey Dude, Bloominator |
+| Marble Garden | Ancient highlands | Spiker |
+| Mushroom Hill | Woodland | Dragonfly |
+| Carnival Night | Carnival terrain | Batbot |
+| Icecap | Snowy highlands | Penguinator |
+| Sandopolis | Desert and tombs beneath desert/base | Skorp |
+| Launch Base | Eastern industrial terrain | Ribot |
+| Hydrocity | Depth 32–119, west of tile 6,144; Act 2 below depth 80 | Jawz |
+| Lava Reef | Underground at depth 120 or more; Act 2 below depth 180 | Toxomister |
+| Hidden Palace | Central crystal region: tiles 3,072–5,119, depth 172 or more | Crystal Orbinaut |
+| Sky Sanctuary | More than 56 tiles above the surface, east of tile 2,048; mineable cloud ruins with caches | Egg Robo |
+
+Depth is measured below the local surface. Hidden Palace takes precedence
+over Lava Reef in its crystal region. Sandopolis tombs begin at depth 32.
+Enemies use their native ROM artwork and source-zone palettes with creator
+combat: Penguinators charge, Ribots hop, Spikers pursue, flying badniks hunt
+through open caves and sky, and Skorps hold ground and fire aimed shots.
+Monkey Dudes, Bloominators, Toxomisters, crystal Orbinauts and Egg Robos also
+fire; ranged attacks warn visibly before firing. Shelter and cave lanterns
+suppress nearby spawns. Enemies spawn near your current location, use its
+biome and despawn when left far behind. Crystal Orbinauts are a creator
+adaptation of Launch Base's native Orbinaut art for Hidden Palace.
 
 Reach the cloud ruins by building platforms. Biomes change scenery and music;
 Hydrocity currently has no water simulation, and Lava Reef has no lava damage.
@@ -160,23 +185,30 @@ available from pause when a warden is not active.
 
 ## Saves and validation
 
-Version 1 worlds remain compatible: existing terrain, resources and quests
-are retained, including snow/ember terrain tags. Biomes are derived from location, so
-existing worlds gain region art and music without replacing mined or built
-terrain. New worlds generate snow in Icecap, sand-colored desert terrain,
-woodland trees and cloud ruins; existing worlds retain their original layout.
+Version 1 worlds remain compatible at their original **256 × 96** size, with
+terrain, builds, resources, discoveries, shrine locations and quests retained.
+They gain the biome enemy roster. **Select New Frontier to get the expanded
+world**; the confirmation displays its size. Existing worlds are not stretched
+or overwritten by loading them. Compact saves retain the earlier biome/depth
+boundaries. Version 2 saves record world dimensions and all enemy types.
 
 One world is saved automatically after every 30 seconds of active simulation,
 on save-and-return, and on scene exit. The engine keeps it under
 `saves/mods/starfall-frontier/world.sav`, with `world-backup.sav` holding the
-previous valid save. A failed write displays a message and keeps progress in
+previous valid save. Larger worlds use `world-part-*.sav` data files with
+atomic primary/backup manifests, respecting the engine's 1 MiB per-file limit.
+Back up the **entire save directory**, including those parts; copying only the
+two manifests will not copy a large world. Obsolete generations are cleaned
+up after successful saves. A failed write displays a message and keeps progress in
 memory. An unreadable primary loads its valid backup; unreadable saves are
 not replaced until you confirm creating a new world. Back up these files
-before starting a new frontier. New World replaces the active world after
+before starting a new frontier. New Frontier replaces the active world after
 confirmation. Mod scenes use their own save state; stock developer rewind
 does not rewind this adventure.
 
-The creator tests cover biome and depth boundaries, music transitions without
+The creator tests cover expanded and compact biome/depth boundaries, actual
+biome spawn selection, enemy attacks and collision, large-world forward replay,
+version 1 loading, chunk publication failures and missing-part backup recovery, music transitions without
 song restarts, boss overrides, saved-region music, recoil-safe enemy facing,
 terrain generation, tile collision, platforms, mining
 tiers, tree harvesting, station/cost rules, placement, shelter, weapons,
@@ -199,6 +231,7 @@ Presentation captures use the existing `ExampleModCapture`. Debug commands
 provide inspection views. `biome-angel_island`, `biome-marble_garden`,
 `biome-mushroom_hill`, `biome-carnival_night`, `biome-icecap`,
 `biome-sandopolis`, `biome-launch_base`, `biome-hydrocity`, `biome-lava_reef`,
-`biome-hidden_palace` and `biome-sky_sanctuary` inspect individual regions; debug visits never write player saves. The architecture
+`biome-hidden_palace` and `biome-sky_sanctuary` inspect individual regions. Prefix one with `enemy-` (for example
+`enemy-biome-icecap`) to inspect its enemy too; debug visits never write player saves. The architecture
 and delivery evidence are recorded in the
 [design](../../docs/architecture/designs/2026-10-08-starfall-frontier.md).

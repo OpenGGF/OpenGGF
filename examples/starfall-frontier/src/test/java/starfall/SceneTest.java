@@ -41,24 +41,40 @@ class SceneTest {
             assertTrue(kit.disabledOwners().isEmpty());assertTrue(kit.findings().isEmpty(),kit.findings()::toString);
         }
     }
+    @Test void atlasPansAcrossTheExpandedWorldWithoutAdvancingGameplay() throws Exception {
+        try(var kit=open(work.resolve("mods"),work.resolve("saves"))) {
+            press(kit,GLFW_KEY_ENTER);press(kit,GLFW_KEY_M);
+            var mapX=scene(kit).getClass().getDeclaredField("mapX");mapX.setAccessible(true);
+            int original=mapX.getInt(scene(kit));long before=ticks(kit);
+            press(kit,GLFW_KEY_RIGHT);assertTrue(mapX.getInt(scene(kit))>original);
+            kit.input().handler().handleMouseMove(492,39);
+            kit.input().handler().handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_PRESS);kit.tick();
+            kit.input().handler().handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_RELEASE);kit.tick();
+            assertTrue(mapX.getInt(scene(kit))>8000);assertFalse(kit.draw().isEmpty());
+            assertEquals(before,ticks(kit));assertTrue(kit.findings().isEmpty(),kit.findings()::toString);
+            press(kit,GLFW_KEY_BACKSPACE);press(kit,GLFW_KEY_M);
+            assertTrue(mapX.getInt(scene(kit))<100,"reopening centers on the player");
+        }
+    }
     @Test void heldMouseChopsAndBuildsWhileLetterboxClicksCannotAct() throws Exception {
         try(var kit=open(work.resolve("mods"),work.resolve("saves"))) {
             press(kit,GLFW_KEY_ENTER);for(int i=0;i<20;i++)kit.tick();
             Object w=call(kit,"world");Class<?> type=w.getClass();
-            byte[] tiles=(byte[])type.getField("tiles").get(w);tiles[27*World.W+43]=World.LOG;tiles[28*World.W+43]=World.LOG;
+            int width=type.getField("width").getInt(w),surface=(int)type.getMethod("surface",int.class).invoke(w,40);
+            byte[] tiles=(byte[])type.getField("tiles").get(w);tiles[(surface-2)*width+43]=World.LOG;tiles[(surface-1)*width+43]=World.LOG;
             press(kit,GLFW_KEY_2); // axe
             java.lang.reflect.Field cx=scene(kit).getClass().getDeclaredField("cameraX"),cy=scene(kit).getClass().getDeclaredField("cameraY");
             cx.setAccessible(true);cy.setAccessible(true);
-            int px=(int)(43*World.T+6-cx.getDouble(scene(kit))),py=(int)(28*World.T+6-cy.getDouble(scene(kit)));
+            int px=(int)(43*World.T+6-cx.getDouble(scene(kit))),py=(int)((surface-1)*World.T+6-cy.getDouble(scene(kit)));
             var input=kit.input().handler();input.handleMouseMove(px,py);input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_PRESS);
             for(int i=0;i<25;i++)kit.tick();input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_RELEASE);kit.tick();
             int[] inventory=(int[])type.getField("inventory").get(w);assertEquals(6,inventory[Content.Item.WOOD.ordinal()]);
-            assertEquals(World.AIR,tiles[27*World.W+43]);assertEquals(World.AIR,tiles[28*World.W+43]);
+            assertEquals(World.AIR,tiles[(surface-2)*width+43]);assertEquals(World.AIR,tiles[(surface-1)*width+43]);
             press(kit,GLFW_KEY_4);input.handleMouseMove(-30,py);input.handleMouseButton(GLFW_MOUSE_BUTTON_RIGHT,GLFW_PRESS);
             kit.tick();input.handleMouseButton(GLFW_MOUSE_BUTTON_RIGHT,GLFW_RELEASE);kit.tick();assertEquals(6,inventory[Content.Item.WOOD.ordinal()]);
             input.handleMouseMove(px,py);input.handleMouseButton(GLFW_MOUSE_BUTTON_RIGHT,GLFW_PRESS);kit.tick();
             input.handleMouseButton(GLFW_MOUSE_BUTTON_RIGHT,GLFW_RELEASE);kit.tick();
-            assertEquals(World.PLANK,tiles[28*World.W+43]);assertEquals(5,inventory[Content.Item.WOOD.ordinal()]);
+            assertEquals(World.PLANK,tiles[(surface-1)*width+43]);assertEquals(5,inventory[Content.Item.WOOD.ordinal()]);
             assertTrue(kit.findings().isEmpty(),kit.findings()::toString);
         }
     }
@@ -72,7 +88,7 @@ class SceneTest {
         }
         Path primary=saves.resolve("starfall-frontier/world.sav");
         if(!Files.exists(primary))primary=saves.resolve("mods/starfall-frontier/world.sav");
-        assertTrue(Files.exists(primary));assertEquals(encoded,Files.readString(primary));
+        assertTrue(Files.exists(primary));assertEquals(encoded,saveText(primary));
         try(var kit=open(work.resolve("mods-b"),saves)) {
             press(kit,GLFW_KEY_ENTER);assertEquals("PLAY",call(kit,"screen"));assertTrue(ticks(kit)>=90);
             press(kit,GLFW_KEY_P);
@@ -84,6 +100,16 @@ class SceneTest {
             assertTrue(ticks(kit)>0);assertTrue(kit.findings().isEmpty());
         }
         assertNotEquals("corrupt",Files.readString(primary));assertEquals(backupText,Files.readString(backup));
+    }
+    private String saveText(Path primary) throws Exception {
+        String text=Files.readString(primary);
+        if(!text.startsWith("STARFALL-CHUNKS-1\n"))return text;
+        String[] lines=text.split("\n");StringBuilder data=new StringBuilder();
+        for(int n=0;n<Integer.parseInt(lines[2]);n++) {
+            Path part=primary.resolveSibling("world-part-"+lines[1]+"-"+n+".sav");
+            assertTrue(Files.size(part)<=1048576);data.append(Files.readString(part));
+        }
+        return data.toString();
     }
     @Test void debugViewsRenderWithoutSavingOrReplacingRealProgress() throws Exception {
         Path saves=work.resolve("saves");

@@ -30,16 +30,17 @@ public enum Biome {
     }
     public static Biome at(World world,int tx,int ty) {
         int depth=ty-world.surface(tx);
-        if(tx>=64&&ty<world.surface(tx)-14)return SKY_SANCTUARY;
-        if(depth>=43&&tx>=96&&tx<160)return HIDDEN_PALACE;
-        if(depth>=30)return LAVA_REEF;
-        if(depth>=8)return tx<192?HYDROCITY:SANDOPOLIS;
-        return surface(tx);
+        int gx=world.geographyX(tx);
+        if(gx>=64&&ty<world.surface(tx)-world.depthTiles(14))return SKY_SANCTUARY;
+        if(depth>=world.depthTiles(43)&&gx>=96&&gx<160)return HIDDEN_PALACE;
+        if(depth>=world.depthTiles(30))return LAVA_REEF;
+        if(depth>=world.depthTiles(8))return gx<192?HYDROCITY:SANDOPOLIS;
+        return surface(gx);
     }
     public int act(World world,int tx,int ty) {
         int depth=ty-world.surface(tx);
-        return this==HIDDEN_PALACE||this==SANDOPOLIS&&depth>=8
-                ||this==LAVA_REEF&&depth>=45||this==HYDROCITY&&depth>=20?1:0;
+        return this==HIDDEN_PALACE||this==SANDOPOLIS&&depth>=world.depthTiles(8)
+                ||this==LAVA_REEF&&depth>=world.depthTiles(45)||this==HYDROCITY&&depth>=world.depthTiles(20)?1:0;
     }
     public int music(World world,int tx,int ty){return act(world,tx,ty)==0?music1:music2;}
 }

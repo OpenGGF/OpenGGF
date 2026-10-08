@@ -10,10 +10,12 @@ public final class FrontierView {
             TEXT=0xFFFFFFFF, MUTED=0xFFA8C8F8, GOLD=0xFFFFDA28, MINT=0xFF80F860;
     private final AtlasFont font;
     private final AngelIslandArt art;
+    private final EnemyArt enemyArt;
     private final BiomeArt[][] biomes;
     private final BackdropBlend background=new BackdropBlend();
     public FrontierView(byte[] bytes,SceneRomArt rom) {
         font=AtlasFont.parse(bytes,5);art=rom==null?null:new AngelIslandArt(rom);
+        enemyArt=rom==null?null:new EnemyArt(rom,art);
         biomes=new BiomeArt[Biome.values().length][2];
         if(rom!=null)for(Biome biome:Biome.values())if(biome!=Biome.ANGEL_ISLAND) {
             biomes[biome.ordinal()][0]=new BiomeArt(rom,biome,0);
@@ -101,12 +103,12 @@ public final class FrontierView {
             backgrounds(c,w,cameraX);
             if(deep>.05)c.fill(0,0,width,224,(int)(deep*140)<<24|backdropSky());
         }
-        int x0=Math.max(0,(int)cameraX/T-1),x1=Math.min(W-1,(int)(cameraX+width)/T+1);
-        int y0=Math.max(0,(int)cameraY/T-1),y1=Math.min(H-1,(int)(cameraY+224)/T+1);
+        int x0=Math.max(0,(int)cameraX/T-1),x1=Math.min(w.width-1,(int)(cameraX+width)/T+1);
+        int y0=Math.max(0,(int)cameraY/T-1),y1=Math.min(w.height-1,(int)(cameraY+224)/T+1);
         for(int ty=y0;ty<=y1;ty++)for(int tx=x0;tx<=x1;tx++) {
             int sx=(int)Math.round(tx*T-cameraX),sy=(int)Math.round(ty*T-cameraY),t=w.tile(tx,ty);
-            if(w.walls[ty*W+tx]!=0) {
-                int wall=w.walls[ty*W+tx]==1?0xFF5B4B43:shade(Biome.at(w,tx,ty).color,.25);
+            if(w.walls[ty*w.width+tx]!=0) {
+                int wall=w.walls[ty*w.width+tx]==1?0xFF5B4B43:shade(Biome.at(w,tx,ty).color,.25);
                 c.fill(sx,sy,T,T,wall);c.fill(sx,sy+10,T,2,shade(wall,.76));c.fill(sx+(ty%2)*6,sy,1,T,shade(wall,.8));
             }
             tile(c,w,tx,ty,sx,sy,t,tick);
@@ -233,11 +235,13 @@ public final class FrontierView {
                 c.draw(art.ship.frame(e.hit>0?2:0),x,y-10,SceneDraw.plain().withScale(.6f).withFlipX(w.enemyFlip(e)));
                 if(e.hit>0)c.fill(x-12,y-18,24,30,0x44FFFFFF);
             }else {
-                SceneSpriteSet set=e.kind==0?art.rhinobot:e.kind==1?art.monkeys:art.blooms;
-                // Obj_Rhinobot locomotion uses frames 0/1 (frame 2 brakes). Frame 3
-                // has the opposite orientation and is not a walking-animation step.
-                int frame=e.kind==0?(Math.abs(e.vx)>.1?(tick/8)%2:0):(tick/12)%2;
+                SceneSpriteSet set=enemyArt.sprites[e.kind];
+                int frame=enemyArt.frame(e,tick);
                 art.sprite(c,set,frame,x,y+6,.6f,w.enemyFlip(e));
+                if(e.type()==EnemyType.ORBINAUT)for(int n=0;n<4;n++) {
+                    double angle=e.timer*.035+n*Math.PI/2;
+                    art.sprite(c,set,1,x+(float)(Math.cos(angle)*11),y+6+(float)(Math.sin(angle)*11),.6f,false);
+                }
             }
             if(e.hp<e.maxHp){c.fill(x-11,y-24,22,2,INK);c.fill(x-11,y-24,22*e.hp/e.maxHp,2,GOLD);}
             return;
@@ -351,18 +355,31 @@ public final class FrontierView {
         text(c,"SENTINELS "+Integer.bitCount(w.wardens)+" / 3   BUILT "+w.blocksPlaced+"   FOES "+w.kills,54,190,MINT);
         if(w.won){c.fill(43,31,442,21,0xFF466558);center(c,"ANGEL ISLAND SHINES AGAIN",264,38,0xFFFFE4AE,1);}
     }
-    public void map(SceneCanvas c,World w) {
+    public void map(SceneCanvas c,World w,int centerX,int centerY) {
         c.fill(0,0,c.width(),224,0xEE132331);text(c,"ATLAS OF THE FRONTIER",12,10,GOLD);text(c,"M / B: CLOSE",430,10,MUTED);
-        double scale=1.8;int left=33,top=30;
-        c.fill(left,top,461,173,0xFF132331);
-        for(int ty=0;ty<H;ty++)for(int tx=0;tx<W;tx++)if(w.seen[ty*W+tx]>0||ty<w.surface(tx)) {
-            int t=w.tile(tx,ty);c.fill(left+(int)(tx*scale),top+(int)(ty*scale),2,2,t==AIR?shade(Biome.at(w,tx,ty).sky,.65):solid(t)&&t!=PLANK?Biome.at(w,tx,ty).color:World.color(t));
+        double scale=1.8;int left=33,top=52,columns=256,rows=82;
+        int startX=Math.max(0,Math.min(w.width-columns,centerX-columns/2));
+        int startY=Math.max(0,Math.min(w.height-rows,centerY-rows/2));
+        text(c,"WORLD "+w.width+" X "+w.height+"   LOCAL DISCOVERIES",33,24,MINT);
+        for(int px=0;px<461;px++)c.fill(left+px,36,1,8,w.surfaceBiome(px*w.width/461).color);
+        c.fill(left+(int)(w.x/T*461/w.width),34,2,12,TEXT);
+        c.fill(left,top,461,148,0xFF132331);
+        for(int dy=0;dy<rows;dy++)for(int dx=0;dx<columns;dx++) {
+            int tx=startX+dx,ty=startY+dy;
+            if(w.seen[ty*w.width+tx]>0||ty<w.surface(tx)) {
+                int t=w.tile(tx,ty);c.fill(left+(int)(dx*scale),top+(int)(dy*scale),2,2,
+                        t==AIR?shade(Biome.at(w,tx,ty).sky,.65):solid(t)&&t!=PLANK?Biome.at(w,tx,ty).color:World.color(t));
+            }
         }
-        for(int i=0;i<3;i++)if(w.seen[(w.shrineY[i]-1)*W+w.shrineX[i]]>0)diamond(c,left+(int)(w.shrineX[i]*scale),top+(int)(w.shrineY[i]*scale),3,(w.wardens&(1<<i))!=0?MINT:GOLD);
-        diamond(c,left+(int)(40*scale),top+(int)(w.surface(40)*scale),3,MINT);
-        c.fill(left+(int)(w.x/T*scale)-1,top+(int)(w.y/T*scale)-2,3,5,0xFFFFFFFF);
-        text(c,"JUNGLE / RUINS / WOODS",38,24,MINT);text(c,"CARNIVAL / ICE / DESERT / BASE",280,24,GOLD);
-        center(c,"WHITE: YOU   GREEN: CAMP   GOLD: DISCOVERED SHRINE",c.width()/2,211,MUTED,1);
+        for(int i=0;i<3;i++)if(w.shrineX[i]>=startX&&w.shrineX[i]<startX+columns
+                &&w.shrineY[i]>=startY&&w.shrineY[i]<startY+rows
+                &&w.seen[(w.shrineY[i]-1)*w.width+w.shrineX[i]]>0)
+            diamond(c,left+(int)((w.shrineX[i]-startX)*scale),top+(int)((w.shrineY[i]-startY)*scale),3,(w.wardens&(1<<i))!=0?MINT:GOLD);
+        if(40>=startX&&40<startX+columns&&w.surface(40)>=startY&&w.surface(40)<startY+rows)
+            diamond(c,left+(int)((40-startX)*scale),top+(int)((w.surface(40)-startY)*scale),3,MINT);
+        if(w.x/T>=startX&&w.x/T<startX+columns&&w.y/T>=startY&&w.y/T<startY+rows)
+            c.fill(left+(int)((w.x/T-startX)*scale)-1,top+(int)((w.y/T-startY)*scale)-2,3,5,TEXT);
+        center(c,"ARROWS: PAN   WHITE: YOU   GREEN: CAMP   GOLD: SHRINE",c.width()/2,211,MUTED,1);
     }
     public void pause(SceneCanvas c,int cursor) {
         c.fill(0,0,c.width(),224,0xAA132331);box(c,c.width()/2-112,25,224,170);center(c,"A MOMENT AT CAMP",c.width()/2,33,GOLD,1);
@@ -393,6 +410,7 @@ public final class FrontierView {
         c.fill(0,0,c.width(),224,0xAA142332);box(c,94,65,340,87);
         center(c,"SET OUT FOR A NEW FRONTIER?",c.width()/2,79,GOLD,1);
         center(c,"THIS REPLACES YOUR ACTIVE WORLD.",c.width()/2,96,TEXT,1);
+        center(c,"NEW WORLD: 8192 X 384 TILES",c.width()/2,109,MINT,1);
         center(c,"ENTER / A: BEGIN   B / BACKSPACE: KEEP WORLD",c.width()/2,123,MUTED,1);
     }
     public void icon(SceneCanvas c,Content.Item i,int x,int y,int scale) {

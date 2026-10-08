@@ -5,10 +5,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class BiomeTest {
     @Test void geographyCoversAllBiomesAndLavaReefNeverAppearsAtTheSurface() {
-        World w=new World(73);boolean[] found=new boolean[Biome.values().length];
-        for(int tx=1;tx<World.W-1;tx++) {
+        World w=new World(73,true,256,96);boolean[] found=new boolean[Biome.values().length];
+        for(int tx=1;tx<w.width-1;tx++) {
             assertEquals(Biome.surface(tx),Biome.at(w,tx,w.surface(tx)-1));
-            for(int ty=0;ty<World.H-2;ty++) {
+            for(int ty=0;ty<w.height-2;ty++) {
                 Biome biome=Biome.at(w,tx,ty);found[biome.ordinal()]=true;
                 if(biome==Biome.LAVA_REEF)assertTrue(ty-w.surface(tx)>=30);
                 if(biome==Biome.HIDDEN_PALACE)assertTrue(ty-w.surface(tx)>=43);
@@ -23,7 +23,7 @@ class BiomeTest {
         assertEquals(Biome.SKY_SANCTUARY,Biome.at(w,116,w.surface(116)-18));
     }
     @Test void musicFollowsHorizontalAndVerticalBordersAndBossesReleaseItAfterDefeat() {
-        World w=new World(73);
+        World w=new World(73,true,256,96);
         int[] tx={40,80,112,144,176,208,240};int[] music={1,5,15,7,11,17,13};
         for(int i=0;i<tx.length;i++){w.x=(tx[i]+.5)*World.T;w.y=(w.surface(tx[i])-1)*World.T;assertEquals(music[i],w.musicId());}
         w.x=68*World.T;w.y=(w.surface(68)+8)*World.T;assertEquals(3,w.musicId());
@@ -37,7 +37,7 @@ class BiomeTest {
         assertTrue(w.recall());assertEquals(1,w.musicId());
     }
     @Test void savesPreserveEditsAndResolveTheSameUndergroundBiomeAndMusic() {
-        World w=new World(73);w.x=140*World.T;w.y=(w.surface(140)+48)*World.T;
+        World w=new World(73,true,256,96);w.x=140*World.T;w.y=(w.surface(140)+48)*World.T;
         w.set(176,w.surface(176),World.PLANK);w.set(215,70,World.AIR);
         World restored=SaveCodec.decode(SaveCodec.encode(w)).orElseThrow();
         assertArrayEquals(w.tiles,restored.tiles);assertArrayEquals(w.walls,restored.walls);
@@ -46,7 +46,7 @@ class BiomeTest {
         assertEquals(SaveCodec.encode(w),SaveCodec.encode(restored));
     }
     @Test void everyEnemyFacesTheExplorerThroughRecoilAndZeroSpeed() {
-        World w=new World(73);w.x=400;
+        World w=new World(73,true,256,96);w.x=400;
         for(int kind=0;kind<4;kind++)for(double speed:new double[]{-2,0,2}) {
             var enemy=new World.Enemy(430,200,kind);enemy.vx=speed;
             assertFalse(w.enemyFlip(enemy),"native left-facing pose needs no flip");
