@@ -453,6 +453,43 @@ rotating GC/Maven logs, temporary helper classes and test artifacts are removed 
 extracting the report, including handled interruption. Record durable conclusions
 in the research artifact and remove consumed target reports.
 
+## Bounded category-result comparison
+
+`compare_category_outcomes.py` compares the ordinary failures and skips in a
+completed category runner's `results.json` with an explicitly supplied light
+baseline. The baseline names its tested `source` (or `tested_sha`) and `run`,
+and supplies `failures` entries with `identity`, `kind`, `type`, `message` plus
+`skips` entries with `identity`, `message`. Failure identity is `class#test`;
+messages contain the complete assertion or causal line, not a capped excerpt.
+
+```bash
+python3 tools/testing/compare_category_outcomes.py \
+  --baseline /absolute/task/baseline-summary.json \
+  --results target/category-tests/<run-id>/results.json \
+  --output /absolute/task/comparison.json
+python3 -m unittest discover -s tools/testing -p 'test_compare_category_outcomes.py'
+```
+
+The tool requires both ordinary and guard lanes, reconciles negative-case
+inventories with their counters, and rejects incomplete exits, omitted or
+duplicate identities, and unavailable full assertions. It recovers a capped
+2 KiB assertion only from matching complete runner detail. Changed or absent
+failures, changed skip causes, and any guard failure/skip require review. Exit
+0 means unchanged negative cases; 1 means differences; 2 means invalid evidence.
+A failed comparison writes an invalid verdict rather than leaving a prior
+successful output at the requested path.
+
+`--normalize-known-ssz-blobs` is an explicit, narrow exception for independently
+verified Java object hashes in the named SSZ Tails cold-route testcase. It also
+recognizes that owner's `@HASH` light-summary projection; other test identities,
+numbers and values remain literal. Record why this normalization is valid.
+
+This is negative-case post-processing, not a complete outcome inventory or suite
+certification. Independently verify selection, source fingerprint, terminal run
+status, and baseline reuse authority. It neither runs tests nor changes runner
+selection or diagnostic cleanup. Inspect the comparison, then acknowledge the
+category run normally. The complete inventory tools below cover all outcomes.
+
 ## Complete Surefire outcome inventories
 
 The PowerShell utilities in this directory export, validate, partition, and

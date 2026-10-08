@@ -397,8 +397,8 @@ composed audio, API/SDK and mandatory S3K controls. All 12,029 frozen inputs wer
 unchanged. SDK/Javadoc/artifact verification completed. Actual compiled export
 is the same 17,717-line candidate SHA `0d03969dba73973ba1f1a574e4961466cbc47673f63dfb520a7f92c38bcc95c8`,
 byte-equal to the pin; the internal stage/history changes add no creator surface.
-Normal-window/PCM, affected trace and full candidate/fresh-guard gates remain
-pending. The compiled build records the pre-commit dirty intent composition; its
+Normal-window/PCM, affected trace and full candidate/fresh-guard gates were
+pending at that checkpoint. The compiled build records the pre-commit dirty intent composition; its
 source fingerprint, rather than cached window title metadata, owns attribution.
 
 
@@ -422,9 +422,41 @@ No Rings proof. S1 also reports its native GHZ Edge Wall mapping 0xE8DF warning;
 the mapping loader and constant are unchanged by this task, and no matched
 runtime attribution or whole-act art qualification is claimed.
 
-The parity owner holds main tracked inputs/HEAD/publication at `863683b092` while
-its mandatory normal 3060-class run `20261008T194559Z-9deb33e8` executes against
-`f5de9524a9`. Root acknowledged that hold through T3 and requested the final
-published SHA and light full-assertion/skip summary. No main or foreign-request
-actions are authorized by this private expansion. Candidate domain/full gates,
-Opus polish, refreshed promo and PR 215 delivery remain outstanding.
+The parity owner's mandatory normal 3060-class run
+`20261008T194559Z-9deb33e8` is terminal at frozen `863683b092` against
+`f5de9524a9`: 3058 reports, 26570 cases, 26 owner-attributed inherited failures,
+zero errors and 62 literal inherited skips; fresh 87 reports/674 guards pass
+without skips. Evidence-only successor `5662ad2c2291` is unpublished. Incoming
+remote `d4993a730724` includes engine/API changes; the owner is composing it
+privately and maintains the main/local and remote-publication hold. Root retained
+the complete light 26-failure/62-skip table attributed to tested 863. Its sole
+absent CLI failure is owner-attributed to inherited `LD_LIBRARY_PATH`, not a
+source fix. This does not establish incoming/final-destination equivalence.
+
+### Completed native domain checks and comparison method
+
+Normal queued profiles `trace-replay` and `trace-replay-r7` completed on clean
+`afb16ca18` at 21:46 UTC. All 12,029 frozen files stayed unchanged; exact wrapper
+PIDs were gone and no owned Python/Java/native/ffmpeg execution remained before
+releasing the freeze. Ten r6 reports contain 26 cases: 23 pass, three assertions,
+zero errors/skips. Three r7 reports contain three passes, zero errors/skips.
+S1 GHZ/special, both S2 EHZ segments/special, S3K Sonic+Tails special and Slots,
+and Knuckles Slots/Gumball/Pachinko pass. The three full AIZ/AIZ-slice/HCZ assertion
+strings literally match historical clean2fc evidence: 57 errors/first20302
+animation0→5, 99/first25589 animation0x13→5, and 4699/first9482 air1→0. Final
+published-destination attribution remains outstanding; this is not a whole trace
+profile pass or an actual-final-base qualification.
+
+The repeated task-local assertion comparator is preserved as
+`tools/testing/compare_category_outcomes.py`, with synthetic controls for exact
+identities, failure kind/type/assertions, skip causes, incomplete/omitted/duplicate
+evidence, capped assertion recovery and the narrowly named SSZ blob exception.
+It consumes existing bounded summaries, requires explicit baseline provenance,
+and changes neither Maven selection nor baseline reuse authority. Complete
+Surefire outcome inventories remain a separate, stronger all-outcome contract.
+The initial task probe's implicit local reference/exclusion was rejected for the
+maintained tool; absent failures always require explicit review.
+
+No main or foreign-request actions are authorized by this private expansion.
+Final published-destination composition/domain attribution and candidate/full
+guards, Opus polish, refreshed promo and PR 215 delivery remain outstanding.
