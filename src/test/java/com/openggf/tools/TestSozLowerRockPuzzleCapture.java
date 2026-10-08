@@ -54,7 +54,7 @@ class TestSozLowerRockPuzzleCapture {
             assertNotNull(session.player().getSpriteRenderer());
             int oldFloor=GameServices.level().getCurrentLevel().getMap().getValue(0,0x8F,0xB);
             for(int frame=0;frame<movie.getFrameCount();frame++) {
-                session.step(movie.getFrame(frame));session.render();
+                session.step(movie.getFrame(frame));session.renderFrame();
                 assertFalse(session.player().getDead(),"death at "+frame);
                 var manager=GameServices.level().getObjectManager();
                 if(frame==240) assertNotEquals(oldFloor,
@@ -77,15 +77,16 @@ class TestSozLowerRockPuzzleCapture {
                 checked.add(frame);
                 var registry=SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 var saved=registry.capture();
-                for(int n=1;n<=45;n++) {session.step(movie.getFrame(frame+n));session.render();}
+                for(int n=1;n<=45;n++) {session.step(movie.getFrame(frame+n));session.renderFrame();}
                 var forward=registry.capture();
                 registry.restore(saved);session.restoreInputHistory(movie.getFrame(frame));
-                for(int n=1;n<=45;n++) {session.step(movie.getFrame(frame+n));session.render();}
+                for(int n=1;n<=45;n++) {session.step(movie.getFrame(frame+n));session.renderFrame();}
                 var replay=registry.capture();
                 assertEquals(forward.entries().keySet(),replay.entries().keySet());
-                for(String key:forward.entries().keySet()) assertTrue(
-                        RewindSnapshotDiff.diffKey(key,forward.get(key),replay.get(key)).isEmpty(),
-                        "input "+frame+" "+key+RewindSnapshotDiff.diffKey(key,forward.get(key),replay.get(key)));
+                for(String key:forward.entries().keySet()) {
+                    var differences=RewindSnapshotDiff.diffKey(key,forward.get(key),replay.get(key));
+                    assertTrue(differences.isEmpty(), "input "+frame+" "+key+differences);
+                }
                 registry.restore(saved);session.restoreInputHistory(movie.getFrame(frame));
             }
             assertEquals(spots,checked);

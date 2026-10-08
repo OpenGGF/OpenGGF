@@ -764,3 +764,108 @@ LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off "-
   "-Dsonic2.rom.path=${OPENGGF_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
   "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
 ```
+
+## SOZ test-only follow-up — 2026-10-08
+
+Task pin: `5d1ff9b8206594ee1c979ae5174328dd9134ffd4`. The matched baseline
+and candidate used separate fresh worktrees, identical production sources/POM,
+the same S3K ROM path, one reused lean fork and the same four-class selector.
+Both builds compiled 3,704 production and 3,593 test files. The observed test-JVM
+arguments included `-Xmx1g`; the lean wrapper also caps Maven at 1 GiB. JFR
+`settings=profile`, `maxsize=32m`, `dumponexit=true` was attached to each owned
+Surefire fork shortly after launch. No queue settings, order or admissions changed.
+
+| Class | Cases | Baseline seconds | Candidate seconds |
+|---|---:|---:|---:|
+| `TestSozColdRouteCapture` (unchanged control) | 9 | 133.095 | 136.102 |
+| `TestSozLowerRockPuzzleCapture` | 10 | 37.125 | 22.099 |
+| `TestSozBackgroundCapture` | 8 | 1.304 | 1.203 |
+| `TestGameplayCaptureFrameRendering` (unchanged control) | 5 | 2.784 | 2.912 |
+
+All **32 fully qualified case identities and outcomes matched**: zero failures,
+errors or skips. Every lower-rock case was faster; the class saved 15.026 seconds,
+**40.5% in this single pair**. Its three discarded `render()` calls now use
+`renderFrame()`, and every registered snapshot key is diffed once rather than
+again while building the assertion message. The background tests retain their
+last exposed-sky image and all shimmer/restored pixel comparisons; preceding
+frames draw without readback. Inputs, frame counts, viewport/character matrix,
+rewind windows and assertions remain intact. No production Java changed.
+
+The four-class test time summed to 174.308 → 162.316 seconds. End-to-end Maven
+remained about four minutes per arm because both compiled all sources; this is
+not a whole-suite or build-throughput benchmark. Sampled process-tree peak RSS
+was 2.303 → 1.802 GiB, including compilation and native allocations. Neither
+value is retained heap or proof of a leak.
+
+The unchanged nine full routes contain **262,091 recorded input frames**, plus
+45-frame forward/replay windows and playable-destination checks. Their baseline
+main-thread samples included 743 Java observations: 438 in `step`, 228 in
+drawing, 63 in rewind capture/restore/comparison, and 14 in boot/other work.
+Of 2,709 native observations, 2,499 were under drawing. Native leaf observations
+included 1,563 `glFinish`, 756 texture-1D uploads and 254 texture-2D uploads.
+Java's notable leaf was `LevelTilemapManager.writeChunkAt` (161 observations).
+These are sampled stacks, **not CPU percentages**: Java/native periods are
+10/20 ms and native events include waiting. The separate Surefire command thread's
+5,369 native read observations explain the misleading aggregate I/O ranking.
+The candidate reproduced the same rendering bottleneck.
+
+Lower-rock baseline readback contributed an estimated 15.41 GB of allocation
+sample weight, 220 Java observations and 104 native pixel-read observations.
+The candidate had no lower-rock screenshot observations; real background and
+rendering-control readback remained visible. We keep full drawing and rewind
+comparisons: skipping frames, rendering less often or hiding routes in another
+profile would change coverage. Further full-route speed work should target the
+renderer/upload path with matched state/pixel controls, separately from this
+test-only change and the frozen gameplay/parity work.
+
+The first analysis expanded all sampled stacks to JSON, producing 9.4 GB and
+9.6 GB analysis-process RSS. It was stopped and its output deleted; this was
+an owned analysis process, not either Maven run. That analysis overlapped
+candidate preparation and early unchanged cold routes, so their small timing
+difference is not attributed to the patch. The lower-rock class ran later.
+The committed `JfrTestSummary` streams counters using a 128 MiB heap. It passed
+both real-recording controls, distinguished sampled/background threads, kept
+unmatched prefixes under `other`, and rejected missing arguments/files. It
+preserves positive screenshot evidence without materializing the expanded data.
+
+```bash
+TESTS=TestSozColdRouteCapture,TestSozLowerRockPuzzleCapture,TestSozBackgroundCapture,TestGameplayCaptureFrameRendering
+python3 tools/testing/maven_queue.py --lean -Dmse=off "-Dtest=${TESTS}" \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+# Against the owned fork only; temporary JFR output stays in that worktree's target/.
+jcmd <owned-surefire-pid> JFR.start name=soz-throughput settings=profile \
+  maxsize=32m dumponexit=true filename=<absolute-worktree-target>/soz-throughput.jfr
+java -Xmx128m --source 21 tools/testing/java/com/openggf/tools/JfrTestSummary.java \
+  target/soz-throughput.jfr
+```
+
+The initial test-only dry-run selected 342 tooling/common classes plus guards.
+Adding the standalone JFR reader produced the 3,027-class unclassified fallback.
+Under proportionate validation, the matched 32 cases exercise every changed
+route and pixel assertion plus the production render/readback contract; the
+reader is separately exercised on actual recordings and invalid inputs. There
+is no POM, selection-policy, hook, workflow, runtime or timing/physics change.
+This bounded validation replaces the disproportionate category fallback; it is
+not a full ordinary-suite or guard pass. Actual preflight passed with Java 21,
+Lua 5.4 (`LUA_BIN=/usr/bin/lua5.4`) and PowerShell; the initial unqualified Lua
+launch failed preflight before executing any tests.
+
+Before integration, develop advanced to `c039c009131be4548c3ab40eb809a0f85c2808f1`.
+Its delta from the task pin is parity evidence/coverage prose only. The candidate
+fast-forwarded to that actual base without source changes or conflicts.
+
+The task commit `cc9565959f284d809490c2dc476b0ab4a8ae2424` integrated as
+`88ec2bad7859d8a6938a603351dbb8b30d4946da`. The final ordinary focused command
+below ran without JFR and passed **23 cases, zero failures/errors/skips**, in
+**52.170 seconds including compilation**. All fully qualified identities/outcomes
+matched the baseline subset, and the three test-source hashes matched the measured
+candidate. Class times were lower-rock 24.664 s, background 1.254 s and render
+contract 2.642 s. Different warmup and instrumentation make these validation
+times separate from the matched benchmark above. The unchanged nine full routes
+were not repeated after their two passing runs. No full-suite/guard pass is claimed.
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozLowerRockPuzzleCapture,TestSozBackgroundCapture,TestGameplayCaptureFrameRendering \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
