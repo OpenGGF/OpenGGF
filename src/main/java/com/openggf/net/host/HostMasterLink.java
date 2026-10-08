@@ -36,7 +36,7 @@ public final class HostMasterLink {
         this.sink = sink;
     }
 
-    public static HostMasterLink forServer(RaceHostServer server, MessageSink sink) {
+    public static HostMasterLink forServer(RaceRoomHost server, MessageSink sink) {
         return new HostMasterLink(
                 connection -> server.execute(() -> server.room().onConnected(connection)),
                 (connection, text) -> server.execute(() ->

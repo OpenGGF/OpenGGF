@@ -29,8 +29,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Direct-connect WebSocket transport for one player-hosted race room. */
-public final class RaceHostServer implements AutoCloseable {
+/**
+ * Netty direct-connect WebSocket transport for one race room; the dedicated-server
+ * implementation of {@link RaceRoomHost}.
+ */
+public final class RaceHostServer implements RaceRoomHost {
     private static final long TICK_MILLIS = 50;
     private static final int MAX_CONNECTIONS_PER_IP = 4;
 
@@ -134,14 +137,17 @@ public final class RaceHostServer implements AutoCloseable {
         }
     }
 
+    @Override
     public int port() {
         return ((InetSocketAddress) serverChannel.localAddress()).getPort();
     }
 
-    String tlsCertificateSha256() {
+    @Override
+    public String tlsCertificateSha256() {
         return tlsCertificateSha256;
     }
 
+    @Override
     public void execute(Runnable task) {
         if (closed.get()) {
             throw new IllegalStateException("race host is closed");
@@ -149,6 +155,7 @@ public final class RaceHostServer implements AutoCloseable {
         group.next().execute(task);
     }
 
+    @Override
     public RoomHost room() {
         return room;
     }
