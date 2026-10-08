@@ -95,6 +95,15 @@ and publication seam; preserve legitimate scripted control rather than clearing
 all forced state or adjusting physics. Native controller latches are a separate
 observation from both physical BK2 rows and engine input publication.
 
+Unpaced mod captures can outrun preparation (2026-10-08, Sitar Hero polish):
+`ExampleModCapture` advances ticks as quickly as it can while ROM song preparation
+runs on a worker. A short capture without video or frequent PNGs can finish before
+the player starts; its simulated loading-tick count is not wall-clock latency.
+Check the actual screen/player state and corresponding PCM before diagnosing silence,
+and cut loading waits from promotional footage without calling them real-time loading
+measurements. Offline audio establishes content and cue timing, not physical speaker
+latency. See the [example's capture notes](../../examples/sitar-hero/README.md#testing-and-captures).
+
 Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
 task): the positioned MHZ capture retained about 22 MiB after its callback while
 three complete capture/rewind/ROM-loading passes settled near 16.8 MiB, with only

@@ -235,7 +235,7 @@ descriptor, signature-pin, sequencer, chart-timing, judgment or protocol change.
 Packaged scene tests directly cover navigation, loading, cancellation, failure,
 pause, retry, results and exit; new checks cover cue priority and audio cleanup.
 The four installed-ROM subsets and native performer placement have fresh rendered
-captures. The remaining destination qualification is the same focused selector on
+captures. The destination qualification uses the same focused selector on
 updated develop and integrated develop, plus fresh structural guards after integration.
 This replaces a new broad ordinary run for this bounded change; it does not claim
 that the engine's full ordinary suite passed.
@@ -255,6 +255,30 @@ errors or skips. The command was
 with all three verified absolute original main ROM filenames as their test properties,
 followed by `test -B`. The parent inspected all 141 testcase identities and statuses;
 this is focused baseline evidence, not a new full-suite baseline.
+
+The integrated destination at `ae2dfd3dd` completed the same focused command at
+2026-10-08 03:34:23 UTC, Maven exit zero: fourteen fresh XML suites, 148 tests,
+zero failures, errors or skips. All 141 baseline testcase identities and passing
+statuses are retained, with exactly seven new passing presentation/audio regressions
+and no removed or worsened case. The parent independently inspected the per-case
+comparison. API signature checks passed all nine cases and packaging exercised the
+actual mod sources.
+
+A separate fresh JVM then ran
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards`
+with the same three verified absolute ROM properties, followed by `test -B`.
+It completed at 2026-10-08 03:40:00 UTC, exit zero: 86 fresh XML suites, 672 tests,
+zero failures, errors or skips. The parent inspected the full fresh report inventory;
+older reports were excluded by invocation start time. Both owning invocations ended,
+and the known three dirty submodules and four unrelated untracked paths remained
+unchanged.
+
+The final follow-up is prose only: this terminal evidence, the unpaced-capture hazard
+in the existing measurement catalogue, and clarification that explicit `build.py`
+ROM selection prefers S1, then S2, then S3K regardless of option order. No captured
+or verified Java/resource byte changed, so these edits do not require another engine
+test invocation. The task's final media and reproducible source/edit archive remain
+under `$SITAR_POLISH_ROOT`; draft takes, consumed logs and build copies can be discarded.
 
 ## Considered and rejected
 
