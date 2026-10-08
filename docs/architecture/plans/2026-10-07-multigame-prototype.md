@@ -23,9 +23,15 @@ Steps 1–4 are implemented and observed. The composed package/audio/API focus
 passed 218 tests with zero skips; native host/device and seven-cell isolation
 checks passed. Nine required trace methods ran: six passed and the three S3K
 assertions literally matched the shared clean 2fc baseline. The final combined
-ordinary run matched all 28 inherited failures and 62 skips. Two fresh structural
-guard failures require a bounded collaborator/import repair and affected checks
-before clean handoff; see the [evidence record](../validation/2026-10-07-multigame-prototype.md).
+ordinary run matched all 28 inherited failures and 62 skips. Its two structural
+guard regressions were repaired by extraction into the existing driver owner
+and an exact JDK import. The repair passed 39 affected tests, package/SDK/compiled
+API verification and all 672 fresh guard tests without skips. Rebuilt-package
+GPU/device/common-input and seven-cell isolation/replay observations passed;
+see the [evidence record](../validation/2026-10-07-multigame-prototype.md).
+Step 5 is complete at the clean implementation handoff; step 6 is root-owned.
+The documented intermittent default-WM startup and pane footer presentation
+remain explicit stability/polish opportunities for the next stage.
 
 No public creator API, campaign completion, linked rewind or portable checkpoint
 promise is added by this prototype. Those remain later blueprint gates.

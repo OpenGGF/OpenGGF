@@ -390,4 +390,84 @@ budget, public API, timing rule or algorithm is changed. Verification of this
 bounded repair uses affected exclusive-input/native-worker tests, a new compiled
 package/API/SDK check and fresh guards; the completed ordinary and domain checks
 remain attributed to their source. Native isolation/media is rechecked from the
-rebuilt package. Repair verification remains pending.
+rebuilt package. The bounded independent `guard-repair-review.md` review found
+no established blocker. It checked admission short-circuiting, pause, callback
+failure precedence and final presence-manager initialization. An unsupported
+internal null-driver call now rejects instead of stepping; the sole production
+caller supplies its acquired driver. No supported API behavior depends on it.
+
+### Completed guard repair and implementation handoff
+
+Repair source `c441ab657e6d5239586e3501629648235346e431` remained clean and
+frozen through both normal queued invocations:
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestExclusiveLiveGameDriver,TestExclusiveHeldInput,TestWorkerGameSessionRom,TestChallengeWorker,TestWorkerReplayDiagnostic,TestChallengeMenuAudioRom,TestChallengeProcessAcquisition,TestSonic1PatternAnimatorRewindSnapshot,TestSonic1PaletteCyclerLz' \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  verify dependency:build-classpath -Dmdep.outputFile=target/challenge-classpath.txt
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -B -Dmse=off -Pguards \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" test
+```
+
+The variables denote the original verified absolute ROM files. Focus `64204`
+compiled 3,720 main / 3,595 test sources with Java 21 and passed **39 tests in nine
+fresh reports, zero failures/errors/skips**; 94 seconds execution after 595
+seconds waiting. The new callback test exercises production failure, after-step
+exception precedence and host-paused callback exclusion. The native worker case
+retains actual GPU/PCM replay and native pause assertions. `verify` built the
+engine/fatjar/SDK/Javadoc and passed artifact verification; the actual fatjar
+export again exactly matches all **20,105** normalized candidate signatures.
+
+Fresh full guards `69811` passed **86 reports / 672 tests, zero failures/errors/
+skips**, 228 seconds after 683 seconds waiting. Both exact previously failing
+methods passed. Guard source and the size budget were unchanged. Fresh reports,
+runtime and ROM properties were inspected and consumed; light class counts and
+the two repaired method identities remain outside Git. The final ordinary run
+above remains attributed to `decfd1a50`; this bounded owner extraction is verified
+by affected production tests and fresh full guards, without repeating unchanged
+ordinary or trace checks. No whole-suite green claim is made.
+
+The rebuilt repair fatjar produced `captures/host-focus-final-5`: **1,800 common
+ticks / 5,400 synchronized rows / 1,067 actual window frames**, exact owned
+PID/title/viewable 1024×700/depth24, explicit override-redirect diagnostic setup.
+Title, tick 1,536 native GPU image and the actual 31-second video image were
+inspected. All three jump on held mask 40 with the same native centres/clocks
+recorded above. Host/video exited 0, device recorder stopped by managed SIGINT
+255; all acquired processes were reaped and the private Pulse module unloaded.
+
+Actual device PCM is 36 seconds / 48 kHz stereo, temporal channel AC RMS
+1036.566/1092.094. Native-solo → host post-focus → device anchors of 1,024 stereo
+frames each match exactly at ticks 600/1200/1680, device offsets
+736544/1216544/1601568. Focus changes were committed at 904 and 1442; preparation
+LOADING→READY took 1.315 seconds. Host publication latency has 1,800 samples,
+p50/p95/p99=4.52/8.36/15.13 ms; sampled host RSS peaked at 498,008 KiB. These are
+this run's observations, not a universal frame deadline, allocation or GPU-memory
+bound. Device loopback is not physical-speaker audition; default-WM startup
+remains the separately documented limitation.
+
+`captures/isolation-final-3` passed all seven 1,800-tick complete RGBA/pre-focus
+PCM/native-state oracle cells, duplicate/reversed membership, sibling load/close/
+reopen/crash and stale-generation rejection. The managed checkpoint matched
+36/36 RGBA/PCM/native-owner frames while **726** survivor tuples matched during
+the diagnostic and **20** more after exit. Selected duplicate/reversed tick
+1,536 rows and checkpoint replay rows 35–36/image were inspected.
+
+| Probe cell | Boot ms | Step p50/p95/p99 ms | Sampled workers RSS KiB | Sampled probe RSS KiB |
+| --- | ---: | --- | ---: | ---: |
+| S1 solo | 746 | 1.070 / 1.975 / 3.032 | 336,300 | 369,828 |
+| S2 solo | 640 | 0.899 / 1.625 / 2.779 | 368,100 | 389,408 |
+| S3K solo | 735 | 1.221 / 2.893 / 4.781 | 348,696 | 389,904 |
+| S1/S2 pair | 587 | 1.031 / 2.014 / 3.358 | 701,304 | 395,208 |
+| Triplet | 749 | 1.794 / 5.405 / 9.124 | 1,050,920 | 412,972 |
+| Duplicate S1 | 624 | 1.095 / 2.251 / 3.744 | 653,592 | 391,032 |
+| Reversed triplet | 841 | 1.345 / 3.412 / 5.540 | 1,011,380 | 391,724 |
+
+Each cell retains 1,800 step samples, RSS sampling every 60 ticks, 512 MiB worker
+heaps and one outstanding request per endpoint. All managed processes stopped;
+the exact three owned worktree-CWD scan and registry showed no remaining native,
+Maven or capture process. These checks qualify the implementation handoff, not
+the later full-act/MVP/product gates. Feature push/PR remains held for the user's
+root-owned Opus polish and separate promo stage. The final observed pane footer
+needs spacing/glyph review during that polish; the native viewport and player
+sprites themselves remain complete.
