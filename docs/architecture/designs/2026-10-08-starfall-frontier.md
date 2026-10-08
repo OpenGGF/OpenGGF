@@ -445,3 +445,7 @@ without failures/errors/skips. Packaging reported zero findings. The validated
 1.2.1 jar SHA-256 is `396f192f3d6dd4492bba083a49528ebe0bc7d4417c6bad2f8b6102b7c3b297f3`. Unchanged S3K loader checks were not repeated
 after these test-only additions. Installation enables and trusts this exact jar;
 a JVM restart loads the update.
+
+Implementation and verification landed in `74792c5478` before local fast-forward
+integration into `feature/ai-starfall-frontier`. No remote push or release publication
+was requested.
