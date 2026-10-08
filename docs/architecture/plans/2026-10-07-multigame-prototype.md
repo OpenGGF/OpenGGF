@@ -13,8 +13,17 @@ Delivery: `feature/ai-multigame-prototype` PR against develop; no main-tree edit
 4. Verify deterministic solo/shared and duplicate-game media, stale generations,
    common-control witness, sibling isolation, teardown, resource budgets and
    observed audiovisual output. Independently review engine ownership boundaries.
-5. Complete walkthrough/examples, focused tests and combined category validation;
-   assess actual destination, commit/push feature only, open and register PR.
+5. Complete walkthrough/examples, focused tests and combined category validation
+   against actual published develop; prepare a clean verified implementation
+   handoff and reconcile owned children/processes.
+6. Hold feature push/PR for the user's root-owned Opus polish integration and
+   separate promo-video task, then retain one feature PR against develop.
+
+Steps 1–4 are implemented and observed. The composed package/audio/API focus
+passed 218 tests with zero skips; native host/device and seven-cell isolation
+checks passed. Nine required trace methods ran: six passed and the three S3K
+assertions literally matched the shared clean 2fc baseline. The final combined
+candidate gate is pending; see the [evidence record](../validation/2026-10-07-multigame-prototype.md).
 
 No public creator API, campaign completion, linked rewind or portable checkpoint
 promise is added by this prototype. Those remain later blueprint gates.

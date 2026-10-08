@@ -44,6 +44,12 @@ release after injected failure, and a collected tuple rejected after closure.
 The final integrated source review found zero concrete blockers in the actual
 `2fc65c847..81e862140` diff. It did not execute tests or certify runtime behavior.
 Its report is retained outside the repository as `final-review-r2.md`.
+The later bounded `composed-audio-review.md` audit inspected the substantive
+develop audio/API integration and `be3c31418..1bef7a8cc`: zero established source
+blockers. It checked indexed S3K bank identity, saved-duration/rest snapshot
+ownership, independent menu presentation and unchanged input/worker boundaries.
+Execution and compiled signature verification remained the implementation lead's
+responsibility; their results are recorded below.
 
 ## Support and honest gates
 
@@ -61,7 +67,9 @@ poll baselines, all independent clocks and a transactional host cursor.
 No new zone/act or route certification is delivered, so existing level matrices
 and AIZ→HCZ obligations remain inherited; a load/movement witness does not close
 their coverage gaps. No trace frontier change or trace hydration is introduced.
-No public ModApi surface/version/pin changes. Cross-team overlap is confined to
+This task adds no public ModApi surface or version change. The composed candidate
+pin includes upstream additions and is checked against actual compiled source.
+Cross-team overlap is confined to
 GameLoop/InputHandler/external ownership and the final-PCM sink intake. Hardened's
 nativePlayerInput/fresh-launch hooks and Mutators' overlay/settings contracts are
 separate; this branch has no code dependency on either team.
@@ -75,7 +83,7 @@ AGENTS table through original absolute files. Original base remains an ancestor.
 `2fc65c847` through `81e862140`. The independently added protocol was identical
 after whitespace normalization; both release entries were retained. Upstream
 title-new-game forwarding, unsupported two-player title handling and host-module
-invincibility-music restoration remain intact. The actual destination plan
+invincibility-music restoration remain intact. That initial `2fc65c847` plan
 selects 3,018 ordinary classes plus fresh-JVM guards. Preflight passed on this
 merged source with Java 21, explicit Lua 5.4 and PowerShell; it executed no tests.
 
@@ -114,8 +122,9 @@ A final window is required to match exact PID/title/viewability/positive geometr
 immediately before recorder launch; actual frame counts and recorder/process
 status accompany the evidence. `KeyRelease` must use Xlib's release event class;
 changing the `type` argument on `KeyPress` still serialized type 2. No peer source
-or artifact is imported as this branch's observation. Observed final host/device behavior and measured budgets follow below; packaging
-and broad/domain validation remain pending.
+or artifact is imported as this branch's observation. The following captures and
+package checks predate the substantive develop audio/API composition; later
+composed-source evidence is recorded separately below.
 
 
 ## Observed integrated presentation
@@ -183,8 +192,7 @@ retains the ordinary host loop, exclusive common input, complete production
 GPU/PCM and 60 Hz admission. This can qualify media under that diagnostic
 presentation setup; it cannot certify the failing default-WM startup. The
 normal first play capture and two lifecycle sessions remain separately observed
-successes. All-focus observations follow below; packaging and broad/domain
-validation remain pending.
+successes. The following all-focus observations also predate the later composition.
 
 
 `host-focus-final-3` explicitly used the owned override-redirect diagnostic
@@ -234,7 +242,7 @@ queue wait. Its light source/identity/assertion summary is in the Hardened task
 scratch; this branch reuses it, without running another baseline. AIZ/AIZslice/HCZ
 first mismatches remain 20302 animation 0/5, 25589 animation 0x13/5 and 9482 air 1/0,
 with totals 57/99/4,699. These are three red trace methods, not ordinary validation
-or a trace pass. Final candidate methods must be compared literally.
+or a trace pass. The composed candidate comparison is recorded below.
 
 ## Packaged recovery verification
 
@@ -253,3 +261,104 @@ A bounded native C-stack attachment attempt reproduced visible GLFW creation
 stalling, but Linux ptrace policy rejected sibling debugger attachment. It
 produced no C stack, reaped the exact probe, and removed its temporary source.
 The visibility-wait attribution remains explicitly inferred.
+
+## Composed published-source verification
+
+Recovery intent-merged the substantive audio/API destination `be3c31418` into
+`1bef7a8cc`. After both frozen requests ended, fetch confirmed published develop
+`02796b4c497c3aa887f77a8d8e9697b7009d2b4c`, merged as `d2213a557`.
+The latter successor adds only the Sitar design document and root launcher;
+Java, resources, POM, API, hooks and category selection are unchanged from be3.
+Original `6d817a9d7`, input `7c9b5cb6a` and worker `ee9913faa` remain ancestors.
+No main checkout operations, peer feature import or rebasing were used.
+
+Normal queued focus `74251` on clean frozen `1bef7a8cc` compiled 3,720 main and
+3,595 test sources with Java 21: 29 fresh reports, **218 passed, zero
+failures/errors/skips**. Execution took 121 seconds after 10,705 seconds waiting.
+Its selectors covered challenge/worker ownership, saved-duration/rest and indexed
+bank semantics, SMPS/audio rewind snapshots, scene music/network lifetime, Mod API
+policy and SDK tooling. `verify dependency:build-classpath` also built the engine,
+fat jar, SDK and Javadoc artifacts and passed the SDK artifact verifier.
+The actual packaged signature export contains **20,105 lines**, exactly matching
+the normalized unpublished 0.7 pin. The release descriptor and published pins
+remain unchanged. Reports and actual Linux/Java/three absolute ROM properties were
+inspected, then consumed; no raw Maven archives are retained.
+
+Normal trace-profile request `21216` on the same source ran exactly nine
+`replayMatchesTrace` methods: five S1 complete-run fixtures (GHZ1, MZ1, LZ1, SBZ1,
+FZ) and S2 EHZ1 passed; S3K AIZ/AIZslice/HCZ failed with **three assertions, zero
+errors/skips**. Execution took 65 seconds after 7,519 seconds waiting. Each full
+assertion and test identity is literally equal to the shared clean `2fc65c847`
+SAME3 baseline above. This is candidate execution after the be3 composition,
+with unchanged concrete inherited divergences; it is not a clean be3 baseline
+execution or a trace pass. No frontier moved and no fixture selected new work.
+
+### Rebuilt-package audiovisual observation
+
+`captures/host-focus-final-4` uses the newly verified fat jar and committed
+`common.pad`, with the explicit owned override-redirect diagnostic setup.
+Exact PID/title/IsViewable/1024×700/depth24 preceded recording. It completed
+1,800 ticks / 5,400 common-input state rows and **1,057 actual window frames**.
+Host/video exited 0; device recorder ended by managed SIGINT 255; all processes
+were reaped and the private Pulse module unloaded. The title, tick 1,536 GPU image
+and actual video frame at 31 seconds were inspected with selected CSV rows.
+All three native players visibly jump on held mask 40, retaining the independent
+native clocks and centre positions recorded above.
+
+The actual device loopback has 35.55 seconds at 48 kHz stereo, per-channel temporal
+AC RMS 1045.934/1101.812; focused packets have 30 seconds and AC 1120.534/1133.168.
+ROM-native menu cues have 34.933 seconds and AC 228.608/463.898. Focus changed at
+committed ticks 909 and 1441. Each 1,024-frame native-solo/post-focus/device anchor
+at 600/1200/1680 is bit-exact, at device offsets 727840/1207840/1591840 stereo frames.
+This proves actual device output under the recorded diagnostic setup, not
+physical-speaker audition or default-WM certification.
+
+Host admission-to-publication uses 1,800 samples: p50/p95/p99=2.59/4.73/7.53 ms.
+Sampled peak host RSS 501,820 KiB at 0.2-second intervals; preparation took about
+1.062 seconds from LOADING to READY. The sampling and latency limits above apply.
+
+`captures/isolation-final-2` uses that same rebuilt package. All seven 1,800-tick
+cells matched complete RGBA/pre-focus PCM/native-state solo oracles. Sibling
+load/close/reopen/crash and stale-generation checks passed. The managed S1
+checkpoint diagnostic matched 36/36 GPU/PCM/native-owner frames while 796 complete
+survivor tuples agreed, including 20 after diagnostic exit. Duplicate/reversed
+tick 1,536 rows and the replay-end image/rows 35–36 were inspected. All processes
+stopped. Fresh resource measurements are:
+
+| Probe cell | Boot ms | Step p50/p95/p99 ms | Sampled workers RSS KiB | Sampled probe RSS KiB |
+| --- | ---: | --- | ---: | ---: |
+| S1 solo | 625 | 1.019 / 1.929 / 3.182 | 332,696 | 371,192 |
+| S2 solo | 658 | 0.981 / 2.056 / 3.724 | 361,112 | 381,844 |
+| S3K solo | 719 | 1.170 / 2.970 / 4.760 | 345,932 | 382,412 |
+| S1/S2 pair | 663 | 1.009 / 2.101 / 3.930 | 690,168 | 394,104 |
+| Triplet | 791 | 1.651 / 3.671 / 6.338 | 1,045,812 | 411,748 |
+| Duplicate S1 | 698 | 1.661 / 3.072 / 5.392 | 665,012 | 381,096 |
+| Reversed triplet | 913 | 1.959 / 4.348 / 7.421 | 1,042,676 | 377,216 |
+
+Each cell has 1,800 samples, RSS every 60 ticks, worker heap 512 MiB and one pending
+request per member. The diagnostic does not widen supported gameplay scope.
+The earlier normal-window lifecycle evidence remains attributed to its source;
+the composition did not change those host/input/lifecycle owners.
+
+### Final category gate and handoff
+
+Final combined change-based validation against the actual published destination
+remains pending. The actual `02796b4c497c3aa887f77a8d8e9697b7009d2b4c` plan selects
+3,031 ordinary classes, all categories, plus separate fresh-JVM guards. Tool
+preflight passed with Java21, explicit Lua5.4 and PowerShell; no tests executed.
+The latest measured baseline cost is about109 minutes ordinary plus3.6 minutes
+guards. The candidate invocation uses a150-minute execution cap and10-minute
+no-output stop; queue waiting is excluded and a timeout means incomplete.
+The qualified published be3 ordinary baseline is red: run
+`20261007T213945Z-2b9d2b4b`, 3,020 selected / 3,018 reports / 26,373 tests,
+28 inherited assertion failures, zero errors, 62 skips, 6,523.21 seconds; separate
+fresh guards 86 reports / 672 passed / zero skips, 214.76 seconds. Its owner compared
+all complete failures/skips to the durable 4cfb baseline: 27 literal assertions
+after stripping the exception prefix and the full SSZ assertion using only the
+independently verified `RewindObjectStateBlob@hex` normalization. The launcher/doc
+successors change no executable contract. This is inherited-failure qualification,
+not green full-suite evidence or a substitute for this branch's candidate run.
+
+After that gate, delivery pauses at a clean implementation handoff. The user
+assigned root-owned Opus polish and a separate promo-video stage before the final
+feature push/one PR. This lead does not create duplicate polish/video workers.
