@@ -511,3 +511,21 @@ solo roster remain required. The other eight movies, Knuckles puzzle/bonus check
 and inherited native/visual parity limits retain their existing scope. Commands,
 timings and final delivery checks are recorded in the
 [memory/throughput research](../../research/2026-10-07-ordinary-suite-memory-cause.md).
+
+## Cold-route drawing checkpoints (2026-10-08)
+
+`TestSozColdRouteCapture` now simulates every movie input and services queued
+render work every tick, while drawing traversal checkpoints and both complete
+45-frame rewind replay branches. It also draws the final playable destination.
+The matched nine-case comparison retains every ready frame, replay-window count
+and semantic event set, passing without skips; class time falls from 138.309 to
+45.423 seconds. Real completion and full-world restore/replay obligations remain.
+
+Four bounded state/pixel controls compare fully drawn and skipped SOZ traversal
+at 320/800 widths for Sonic Act 1 and Knuckles Act 2, with a poisoned framebuffer
+that rejects stale-image success. These controls add checkpoint reconstruction
+evidence and do not close broader character/team/donor or native visual gaps.
+Default traversal no longer certifies presentation on every intermediate frame.
+Use `-Dopenggf.soz.drawEveryFrame=true` with the same focused command for every-frame
+drawing; screenshot/capture tools keep their own rendering behavior. Exact methods,
+commands and coverage limits are in the [memory/throughput research](../../research/2026-10-07-ordinary-suite-memory-cause.md#soz-drawing-gap-follow-up-2026-10-08).

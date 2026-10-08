@@ -1025,3 +1025,89 @@ changed reports preserved. Normal worktree removal succeeded; the fully merged
 Original ROMs, unrelated worktrees, main's three dirty disassemblies and four known
 untracked paths, foreign jobs and the external rendered visualization were preserved.
 No temporary agents were created for this task.
+
+## SOZ drawing-gap follow-up (2026-10-08)
+
+Task base `d2a501ebc9919e6c43412a2eedf02a372eac5309`, isolated branch
+`feature/ai-soz-skip-frame-drawing`. The user explicitly authorized trying skipped
+frame drawing. No production Java, movie input, physics, build or selection policy
+changed. The SOZ-only test policy services queued render-thread work after every
+simulation tick, omits traversal drawing, draws every snapshot checkpoint, draws
+both complete 45-frame replay branches, and draws the final playable destination.
+Prepared loads can depend on the render-thread queue even when no scene is drawn.
+
+The first queued command remained in every-frame mode while the drawing policy was
+introduced before admission, under the worktree metadata lease. Its default was
+initially true. The matched skipped command changes only
+`-Dopenggf.soz.drawEveryFrame=false`; all three Java test-source hashes were identical
+through both runs. Both completed **14 cases, zero failures/errors/skips**, with
+identical fully qualified case identities/outcomes. The five unchanged capture
+rendering controls took 2.661 / 2.664 seconds. The nine SOZ cases took
+**138.309 → 45.423 seconds: 67.2% less, 3.04× faster** in this one matched pair.
+
+| Route | Every-frame drawing (s) | Checkpoint/replay drawing (s) |
+|---|---:|---:|
+| Solo Sonic Act 1 | 15.058 | 4.592 |
+| Solo Sonic Act 2 | 16.113 | 5.787 |
+| Solo Tails Act 1 | 8.409 | 2.141 |
+| Solo Tails Act 2 | 14.916 | 5.125 |
+| Solo Knuckles Act 1 | 9.943 | 2.903 |
+| Sonic + Tails Act 1 | 15.337 | 3.582 |
+| Sonic + Tails Act 2 | 20.121 | 6.341 |
+| Solo Knuckles Act 2, 320 | 17.252 | 6.680 |
+| Solo Knuckles Act 2, 800 | 21.142 | 8.256 |
+
+All nine printed destination-ready frames, traversal/destination replay counts and
+semantic event sets match exactly. Drawing falls from **295,065 to 36,227 calls**,
+while 259,245 traversal drawing calls are omitted. Both modes still execute
+295,065 simulation steps: the skipped mode's drawings include 407 additional
+checkpoint/final draws without simulation ticks, plus 35,820 replay-step draws.
+Every world key/field restore and forward-replay comparison, real boss/results,
+bonus/puzzle/capsule checks, roster/width/death checks and 180 playable destination
+frames remain. This does not compare every intermediate world state or pixel
+between modes, and the default no longer establishes every-frame presentation.
+
+Four independent short controls pass in 4.326 seconds with zero skips: native
+Sonic Act 1 and Knuckles Act 2 at 320/800 widths. Each compares fully drawn and
+skipped 420-frame branches from an engine-owned prefix checkpoint after 600 real
+movie inputs. Every snapshot key/field and all final pixels match. The old
+framebuffer is first cleared to one magenta colour and checked as uniform, so
+stale pixels from the fully drawn branch cannot fake success. These are bounded
+engine-path controls, not new full-route/wider/donor or native-ROM visual certification.
+
+```bash
+# Fully drawn control: the prototype still defaulted to every-frame drawing.
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozColdRouteCapture,TestGameplayCaptureFrameRendering \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+# Same sources and selection; only the SOZ drawing mode changes.
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozColdRouteCapture,TestGameplayCaptureFrameRendering \
+  -Dopenggf.soz.drawEveryFrame=false \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+# Strict checkpoint reconstruction controls, independently executed.
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozColdRouteFrameDrawing \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The actual commands used the original absolute main ROM path. Java 21, lean 1 GiB
+heaps and no JFR were matched. Class time excludes queue wait and compilation;
+Maven totals of 3m45s / 1m11s include different cold compilation costs and are not
+an end-to-end throughput benchmark. The baseline waited roughly 44 minutes for
+admission. No foreign job was cancelled, and no queue priority or reservation changed.
+
+After those controls passed, the normal default became checkpoint/replay drawing;
+`-Dopenggf.soz.drawEveryFrame=true` retains every-frame traversal drawing. Capture
+tools, screenshot tests and other routes keep their existing drawing behavior.
+The [headless guide](../../guide/contributing/headless-testing.md) and both SOZ
+act matrices record the presentation coverage limit and fully drawn invocation.
+
+The change-based plan selects **3,059 ordinary classes plus guards** because the
+new non-test-named helper is unclassified. Its only consumers are the two SOZ
+JUnit classes; its methods delegate to existing drawing/render-task APIs and own
+only per-invocation counters and a boolean. Under proportionate validation, the
+14-case matched route/render pair, four strict state/pixel controls and the required
+60 S3K loading/bootstrap/decoding/AIZ cases directly cover the bounded change.
+No runner selection was edited or narrowed, and no new full-suite/guard pass is
+claimed by this task. Actual tool preflight passed Java 21, Lua 5.4 and PowerShell.
