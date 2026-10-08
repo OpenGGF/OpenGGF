@@ -8,9 +8,9 @@ import java.util.Set;
 public final class Gravity {
     private Gravity() { }
     public static MutatorDefinition definition() {
-        return new MutatorDefinition("gravity", "Dry Gravity", "Change ordinary dry airborne acceleration, retaining native integration and jump impulse.",
+        return new MutatorDefinition("gravity", "Dry Gravity", "Scale ordinary dry air acceleration; jump impulse and integration stay native.",
                 MutatorScope.LIVE, MutatorScope.LIVE,
-                List.of(new MutatorOption.IntegerSlider("percent", "Fall acceleration", "25..200 percent; native at 100. No change to the initial jump impulse.",
+                List.of(new MutatorOption.IntegerSlider("percent", "Fall acceleration", "25 to 200 percent of native fall acceleration (gold mark: 100). Jump impulse stays native.",
                         MutatorScope.LIVE, 100, 25, 200, 5, "%")),
                 Set.of(MutatorCapability.DRY_SONIC_GRAVITY),
                 values -> List.of(new MutatorPolicy.DrySonicGravity(values.integer("percent"))));

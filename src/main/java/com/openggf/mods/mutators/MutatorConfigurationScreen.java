@@ -1,11 +1,16 @@
 package com.openggf.mods.mutators;
 
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.control.ButtonPrompts;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.game.*;
 import com.openggf.game.session.*;
 import com.openggf.graphics.*;
 import java.util.*;
+
+import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL14.*;
 
 /** Shared bounded title/configuration UI. Settings admission stays inside the host, not creator code. */
 @ModApi
@@ -14,6 +19,9 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private enum Page { HOME, HELP, LIST, OPTIONS }
     private enum Action { MUTATOR, ENABLE, OPTION, START, RESUME, RESTART, RESET, HUB, BACK, CONFIGURE, HELP }
     private record Row(String key, String option, String label, Action action) { }
+    /** Native-grid geometry: the title card leaves the backdrop emblem visible above it. */
+    private static final int HOME_TOP = 148, HOME_HEIGHT = 76, HOME_ROW = 13;
+    private static final int DETAIL_TOP = 179, FOOTER_TOP = 198, ENTRANCE_FRAMES = 14;
     private final WorldSession world;
     private final MutatorSessionState settings;
     private final TitleScreenProvider backdrop;
@@ -24,8 +32,9 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private TexturedQuadRenderer renderer;
     private State state = State.INACTIVE;
     private Page page = Page.HOME;
-    private int row, age, pageAge;
-    private String selectedKey, status = "", hint = "Arrows / Enter / Esc";
+    private int row, age, pageAge, entrance, overlayAge;
+    // Errors and transition progress stay in status until the next action; notices are transient.
+    private String selectedKey, status = "", notice = "", hint = "Arrows / Enter / Esc";
     private boolean open, inGameplay, waitingForFade;
     private Command command = Command.NONE;
     private float highlight;
@@ -44,7 +53,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
 
     @Override public void initialize() {
         if (backdrop != null) backdrop.initialize();
-        state = State.ACTIVE; page = Page.HOME; row = age = pageAge = 0;
+        state = State.ACTIVE; page = Page.HOME; row = age = pageAge = entrance = overlayAge = 0;
         highlight = 0; open = false; inGameplay = false; waitingForFade = false; command = Command.NONE;
         status = MutatorWorldAccess.saveError(world);
     }
@@ -62,7 +71,10 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         if (state != State.ACTIVE || !usable()) return;
         if (backdrop != null) backdrop.update(neutral);
         animate();
-        if (!waitingForFade && (backdrop == null || backdrop.getState() == State.ACTIVE)) handle(input);
+        boolean backdropReady = backdrop == null || backdrop.getState() == State.ACTIVE;
+        // The title card enters with the native backdrop, not during its SEGA/intro-text screens.
+        if (backdropReady) entrance++;
+        if (!waitingForFade && backdropReady) handle(input);
     }
 
     @Override public boolean handleInput(InputHandler input) {
@@ -73,8 +85,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         // The configuration menu owns Start and Escape together. Movie/trace sessions never receive its catalog.
         if (!open) {
             if (!pause || GameServices.level().hasPendingFreshLevelTransitionBoundary()) return false;
-            open = true; switchPage(Page.LIST); status = MutatorWorldAccess.admissionError(world).isBlank()
-                    ? "Play held. Edit settings, then choose Resume." : MutatorWorldAccess.admissionError(world);
+            open = true; overlayAge = 0; switchPage(Page.LIST); status = MutatorWorldAccess.admissionError(world);
+            notice = "Play held. Edit settings, then choose Resume.";
             sound(Cue.NAVIGATE); return true;
         }
         animate();
@@ -91,8 +103,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     }
 
     private boolean usable() { return !settings.isClosed() && SessionManager.getCurrentWorldSession() == world; }
-    private void animate() { age++; pageAge++; highlight += (row - highlight) * .45f; }
-    private void switchPage(Page next) { page = next; row = 0; pageAge = 0; highlight = 0; }
+    private void animate() { age++; pageAge++; overlayAge++; highlight += (row - highlight) * .45f; }
+    private void switchPage(Page next) { page = next; row = 0; pageAge = 0; highlight = 0; notice = ""; }
     private List<Row> rows() {
         var rows = new ArrayList<Row>();
         if (page == Page.HOME) {
@@ -123,14 +135,16 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private void handle(InputHandler input) {
         if (input == null) return;
         lastInput = input;
-        hint = MenuInput.directionLabel(input) + " choose  " + MenuInput.confirmLabel(input) + " select  "
+        var choices = rows();
+        Row focused = choices.get(Math.min(row, choices.size() - 1));
+        hint = MenuInput.directionLabel(input) + " choose  " + (adjustable(focused)
+                ? MenuInput.horizontalLabel(input) + " change  " : MenuInput.confirmLabel(input) + " select  ")
                 + MenuInput.backLabel(input) + (page == Page.HOME && !inGameplay ? " hub" : " back");
         // A simultaneous cancel/confirm never admits changes.
         if (MenuInput.back(input)) { back(); sound(Cue.NAVIGATE); return; }
-        var choices = rows();
         int vertical = (MenuInput.down(input) ? 1 : 0) - (MenuInput.up(input) ? 1 : 0);
         int horizontal = (MenuInput.right(input) ? 1 : 0) - (MenuInput.left(input) ? 1 : 0);
-        if (vertical != 0) { row = Math.floorMod(row + vertical, choices.size()); sound(Cue.NAVIGATE); }
+        if (vertical != 0) { row = Math.floorMod(row + vertical, choices.size()); notice = ""; sound(Cue.NAVIGATE); }
         Row selected = choices.get(Math.min(row, choices.size() - 1));
         if (horizontal != 0 && (selected.action() == Action.OPTION || selected.action() == Action.ENABLE
                 || selected.action() == Action.MUTATOR)) edit(selected, horizontal);
@@ -139,7 +153,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         var pointer = MenuInput.pointer(input, width(), 224);
         int top = rowsTop(), height = rowHeight(), first = firstVisibleRow(), count = Math.min(capacity(), choices.size()-first);
         if (pointer.leftPressed()) for (int i=0;i<count;i++) {
-            if (pointer.over(left()+8,top+i*height,panelWidth()-16,height)) {
+            if (pointer.over(rowLeft(),top+i*height,rowWidth(),height)) {
                 row=first+i; activate(choices.get(row)); break;
             }
         }
@@ -148,7 +162,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         if (page == Page.HOME && !inGameplay) activate(new Row(null,null,"Return to game hub",Action.HUB));
         else if (page == Page.OPTIONS) switchPage(Page.LIST);
         else if (page == Page.HELP || !inGameplay && page == Page.LIST) switchPage(Page.HOME);
-        else if (inGameplay) { status = "Choose Resume to apply. Esc keeps play held."; }
+        else if (inGameplay) { notice = "Choose Resume to apply. Esc keeps play held."; }
     }
     private void activate(Row item) {
         switch(item.action()) {
@@ -157,7 +171,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             case MUTATOR -> { selectedKey=item.key(); switchPage(Page.OPTIONS); sound(Cue.CONFIRM); }
             case ENABLE, OPTION -> edit(item,1);
             case BACK -> back();
-            case RESET -> { settings.resetDefaults(); status="Defaults requested. Choose Start or Resume."; save(); }
+            case RESET -> { settings.resetDefaults(); status=""; notice=inGameplay?"Defaults requested. Choose Resume to apply."
+                    :"Defaults requested. Choose Start to play."; save(); }
             case START -> {
                 if (!save()) break;
                 var admission=MutatorWorldAccess.prepareLaunch(world);
@@ -175,7 +190,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
                 if (!save()) break;
                 var admission=settings.previewBoundary(MutatorScope.LOAD, MutatorSessionState.LoadCause.FULL_RESTART);
                 if (!admission.accepted()) { status=admission.message(); sound(Cue.ERROR); }
-                else { command=Command.FULL_RESTART; status="Restart requested..."; waitingForFade=true; }
+                else { command=Command.FULL_RESTART; status="Restarting from the act start..."; waitingForFade=true; }
             }
             case HUB -> {
                 if (!save()) break;
@@ -199,7 +214,11 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             };
             settings.requestOption(item.key(),item.option(),next);
         }
-        status="Requested. Play changes only at the shown boundary.";
+        status=""; notice=switch(scopeOf(item)) {
+            case LIVE -> inGameplay ? "Saved. Applies when you choose Resume." : "Saved. Applies when you choose Start.";
+            case LOAD -> inGameplay ? "Saved. Applies after a full restart." : "Saved. Applies when you choose Start.";
+            case LAUNCH -> inGameplay ? "Saved. Applies to your next new game." : "Saved. Applies when you choose Start.";
+        };
         save(); sound(Cue.NAVIGATE);
     }
     private boolean save() {
@@ -209,6 +228,15 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         return false;
     }
     private void sound(Cue cue) { cues.accept(cue); }
+    /** The boundary that admits this row's requested value; a toggle uses the scope of its new state. */
+    private MutatorScope scopeOf(Row item) {
+        var d=definition(item.key()).definition();
+        if (item.option()!=null) return d.optionScope(item.option());
+        return settings.requested().get(item.key()).enabled()?d.enableScope():d.disableScope();
+    }
+    private boolean adjustable(Row item) {
+        return item.action()==Action.OPTION || item.action()==Action.ENABLE || item.action()==Action.MUTATOR;
+    }
 
     @Override public void draw() {
         if (state==State.INACTIVE) return;
@@ -231,94 +259,215 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private int width() { return Math.max(320,GameServices.graphics().getProjectionWidth()); }
     private int panelWidth() { return Math.min(376,width()-24); }
     private int left() { return (width()-panelWidth())/2; }
-    private int rowsTop() { return page==Page.HOME ? 140 : page==Page.HELP ? 176 : 58; }
-    private int rowHeight() { return page==Page.HOME || page==Page.HELP ? 15 : 24; }
+    private boolean homeCard() { return page==Page.HOME && !open; }
+    private int cardWidth() { return panelWidth(); }
+    private int rowLeft() { return homeCard() ? (width()-cardWidth())/2+6 : left()+5; }
+    private int rowWidth() { return homeCard() ? cardWidth()-12 : panelWidth()-10; }
+    private int rowsTop() { return homeCard() ? HOME_TOP+26 : page==Page.HELP ? 176 : 58; }
+    private int rowHeight() { return homeCard() ? HOME_ROW : page==Page.HELP ? 15 : 24; }
     private int capacity() { return page==Page.HOME?3:5; }
     private int firstVisibleRow() { return Math.max(0,row-capacity()+1); }
+    private static float ease(int frames, int length) {
+        float t=Math.clamp(frames/(float)length,0f,1f); float inverse=1-t;
+        return 1-inverse*inverse*inverse;
+    }
     private void render(boolean overlay) {
         var graphics=GameServices.graphics();
         if (graphics.isHeadlessMode()) return;
         graphics.flushScreenSpace(); graphics.resetForFixedFunction(); ensureFont();
         renderer.setProjectionMatrix(graphics.getProjectionMatrixBuffer());
+        // Panels and the play-hold dim blend over the native frame. Destination alpha stays opaque
+        // so frame readback matches the window; the caller's blend state is restored afterwards.
+        boolean blend=glIsEnabled(GL_BLEND);
+        int srcRgb=glGetInteger(GL_BLEND_SRC_RGB), dstRgb=glGetInteger(GL_BLEND_DST_RGB);
+        int srcAlpha=glGetInteger(GL_BLEND_SRC_ALPHA), dstAlpha=glGetInteger(GL_BLEND_DST_ALPHA);
+        glEnable(GL_BLEND); glBlendFuncSeparate(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA,GL_ZERO,GL_ONE);
+        try {
+            font.beginMegaBatch();
+            if (page==Page.HOME && !overlay) renderHome(); else renderPage(overlay);
+            font.endMegaBatch();
+        } finally {
+            glBlendFuncSeparate(srcRgb,dstRgb,srcAlpha,dstAlpha);
+            if (!blend) glDisable(GL_BLEND);
+        }
+    }
+    /** Title card below the native emblem: it slides up once the backdrop is interactive. */
+    private void renderHome() {
+        int cw=cardWidth(), cx=(width()-cw)/2;
+        int slide=Math.round((1-ease(Math.min(entrance,pageAge*2),ENTRANCE_FRAMES))*(224-HOME_TOP));
+        int y0=HOME_TOP+slide;
+        MenuStyle.fill(font,cx,y0,cw,HOME_HEIGHT,.012f,.035f,.09f,.93f);
+        MenuStyle.fill(font,cx,y0,cw,1,1,.78f,.23f,1);
+        MenuStyle.label(font,title,cx+8,y0+4,cw-16,.55f,1,.9f);
+        boolean error=!status.isBlank();
+        MenuStyle.text(font,error?status:"Gravity and Stealth for solo Sonic",cx+8,y0+15,cw-16,
+                1,error?.62f:.86f,error?.45f:.45f);
+        renderRows(rows(),rowLeft(),rowsTop()+slide,rowWidth(),rowHeight(),false);
+        MenuStyle.text(font,hint,cx+8,y0+HOME_HEIGHT-10,cw-16,.62f,.8f,.95f);
+    }
+    private void renderPage(boolean overlay) {
         int w=width(), x=left(), pw=panelWidth();
-        font.beginMegaBatch();
-        if (page!=Page.HOME || overlay) {
-            MenuStyle.fill(font,0,0,w,224,.015f,.035f,.08f,overlay?.85f:1);
+        if (overlay) {
+            // The held native frame stays readable behind the menu; the dim eases in over six frames.
+            MenuStyle.fill(font,0,0,w,224,.01f,.02f,.05f,.66f*ease(overlayAge,6));
+        } else {
+            MenuStyle.fill(font,0,0,w,224,.015f,.035f,.08f,1);
             MenuStyle.checkerboard(font,w);
         }
-        int inset=Math.max(0,12-pageAge*2);
-        MenuStyle.fill(font,x,8+inset,pw,27,.018f,.075f,.15f,.94f);
-        MenuStyle.label(font,title,x+10,14+inset,pw-20,.55f,1,.9f);
+        int inset=Math.round((1-ease(pageAge,6))*12);
+        MenuStyle.fill(font,x,8-inset,pw,27,.018f,.075f,.15f,.94f);
+        MenuStyle.fill(font,x,8-inset,pw,1,1,.78f,.23f,1);
+        MenuStyle.label(font,title,x+10,14-inset,pw-20,.55f,1,.9f);
         MenuStyle.fill(font,x,37,pw,14,.018f,.075f,.15f,.94f);
         MenuStyle.text(font,inGameplay && !MutatorWorldAccess.supportedCell(world)
-                ? "Outside supported cell / effects suspended" : "Sonic 2 / Emerald Hill 1 / solo Sonic",x+10,40,pw-20,.76f,.86f,1);
-        if (page==Page.HOME) {
-            MenuStyle.fill(font,x,115,pw,22,.015f,.07f,.13f,.94f);
-            MenuStyle.text(font,"Choose your gravity. Stay in control.",x+10,119,pw-20,.55f,1,.9f);
-            MenuStyle.text(font,"Dry Gravity + selective Stealth",x+10,129,pw-20,1,.86f,.45f);
-        } else if (page==Page.HELP) {
-            String[] help={"Left / Right: move. A / B / C: jump.","Start or Pause: configure.","Resume applies live edits.","Restart rebuilds from the act start.","Gravity changes dry air acceleration.","Jump impulse stays native.","Stealth keeps collision, sound and HUD.","Return to hub for a new session."};
-            for(int i=0;i<help.length;i++) MenuStyle.text(font,help[i],x+10,61+i*13,pw-20,.83f,.9f,1);
+                ? "Not supported here; effects are suspended." : "Sonic 2 / Emerald Hill 1 / solo Sonic",x+10,40,pw-20,.76f,.86f,1);
+        if (page==Page.HELP) renderHelp(x,pw);
+        var visible=rows();
+        renderRows(visible,rowLeft(),rowsTop(),rowWidth(),rowHeight(),page!=Page.HELP);
+        if (page!=Page.HELP) {
+            MenuStyle.fill(font,x,DETAIL_TOP,pw,19,.018f,.075f,.15f,.94f);
+            var lines=wrap(detail(visible),(pw-16)/MenuPixelFont.glyphAdvance(MenuStyle.COMPACT),2);
+            for (int i=0;i<lines.size();i++) MenuStyle.text(font,lines.get(i),x+8,DETAIL_TOP+1+i*9,pw-16,1,.83f,.45f);
         }
-        var visible=rows(); int top=rowsTop(), rh=rowHeight();
+        MenuStyle.fill(font,0,FOOTER_TOP,w,224-FOOTER_TOP,.008f,.02f,.04f,1);
+        MenuStyle.text(font,hint,x+8,FOOTER_TOP+3,pw-16,.68f,.89f,1);
+        MenuStyle.text(font,inGameplay?"Live: Resume  Load: Restart  Launch: new game"
+                :"Effects stay off until you switch them on.",x+8,FOOTER_TOP+14,pw-16,.75f,.84f,.96f);
+    }
+    /** Controls quote the live bindings: keyboard names while typing, the pad's own buttons on a pad. */
+    private void renderHelp(int x, int pw) {
+        String[][] sections={
+            {"Controls", move()+": run.  "+jump()+": jump.", settingsKeys()+": settings while playing."},
+            {"Applying edits", "Resume applies live edits.", "Restart rebuilds from the act start.",
+                    "Return to the hub to begin a new game."},
+            {"Mutators", "Gravity scales dry air acceleration only.", "Jump impulse, water and hurt stay native.",
+                    "Stealth hides Sonic; hits, sound, HUD stay."}};
+        int y=56;
+        for (String[] section : sections) {
+            MenuStyle.text(font,section[0],x+10,y,pw-20,1,.78f,.23f); y+=10;
+            for (int i=1;i<section.length;i++) { MenuStyle.text(font,section[i],x+16,y,pw-26,.83f,.9f,1); y+=10; }
+            y+=2;
+        }
+    }
+    private void renderRows(List<Row> visible, int x, int top, int width, int rh, boolean values) {
         // Schema bounds can exceed one page; keep the focused row and its neighbors visible.
         int capacity=capacity(), first=firstVisibleRow();
         int count=Math.min(capacity,visible.size()-first);
+        // Backgrounds, then the moving focus, then every label: the sliding focus never hides text.
+        for(int i=0;i<count;i++) MenuStyle.fill(font,x+stagger(i),top+i*rh,width-stagger(i),rh-1,.025f,.1f,.19f,.94f);
+        int focusShift=stagger(row-first);
+        MenuStyle.focus(font,x+focusShift,top+Math.round((Math.clamp(highlight,(float)first,(float)(first+count-1))-first)*rh),width-focusShift,rh-1);
         for(int i=0;i<count;i++) {
-            Row item=visible.get(first+i); int y=top+i*rh;
-            MenuStyle.fill(font,x+5,y,pw-10,rh-2,.025f,.1f,.19f,.94f);
-            if(first+i==row) MenuStyle.focus(font,x+5,top+Math.round((Math.clamp(highlight,(float)first,(float)(first+count-1))-first)*rh),pw-10,rh-2);
-            MenuStyle.text(font,item.label(),x+12,y+3,pw-100,1,1,1);
-            String val=value(item); MenuStyle.text(font,val,x+pw-90,y+3,78,.5f,1,.82f);
+            Row item=visible.get(first+i); int y=top+i*rh, lx=x+7+stagger(i);
+            boolean focused=first+i==row;
+            int textY=MenuStyle.textY(y,values?13:rh-1,MenuStyle.COMPACT);
+            MenuStyle.text(font,item.label(),lx,textY,width-104,1,1,1);
+            if (!values) continue;
+            String val=value(item);
+            if (focused && adjustable(item) && item.action()!=Action.MUTATOR && !val.isEmpty()) val="< "+val+" >";
+            boolean on=val.contains("[x]");
+            val=MenuStyle.fit(val,92);
+            MenuStyle.text(font,val,x+width-6-MenuPixelFont.glyphAdvance(MenuStyle.COMPACT)*val.length(),textY,92,
+                    on?.45f:.8f,on?1:.86f,on?.6f:.95f);
             var option=item.option()==null?null:definition(item.key()).definition().option(item.option());
-            String scope=scope(item); if(!scope.isEmpty()) MenuStyle.text(font,scope,x+12,y+13,
-                    option instanceof MutatorOption.IntegerSlider?pw-100:pw-24,.74f,.83f,.96f);
+            String scope=scope(item); if(!scope.isEmpty()) MenuStyle.text(font,scope,lx,y+13,
+                    option instanceof MutatorOption.IntegerSlider?width-100:width-14,.74f,.83f,.96f);
             if(option instanceof MutatorOption.IntegerSlider slider) {
                 int number=(Integer)settings.requested().get(item.key()).options().get(item.option());
-                int trackWidth=60;
+                int track=72, tx=x+width-track-8, ty=y+16;
                 long span=Math.max(1L,(long)slider.maximum()-slider.minimum());
-                int fill=(int)(((long)number-slider.minimum())*trackWidth/span);
-                MenuStyle.fill(font,x+pw-83,y+17,trackWidth,2,.15f,.25f,.36f,1);
-                MenuStyle.fill(font,x+pw-83,y+17,Math.max(1,fill),2,.4f,1,.8f,1);
+                int fill=(int)(((long)number-slider.minimum())*track/span);
+                int native_=(int)(((long)slider.defaultValue()-slider.minimum())*track/span);
+                MenuStyle.fill(font,tx,ty,track,3,.15f,.25f,.36f,1);
+                MenuStyle.fill(font,tx,ty,Math.max(1,fill),3,.4f,1,.8f,1);
+                MenuStyle.fill(font,tx+native_,ty-2,1,7,1,.78f,.23f,1);
+                MenuStyle.fill(font,tx+Math.min(track-2,fill)-1,ty-2,3,7,focused?1:.75f,1,focused?1:.9f,1);
             }
         }
-        String detail=status;
-        if(page==Page.OPTIONS && row<visible.size()) {
-            Row current=visible.get(row);
-            if(current.option()!=null && status.isBlank()) detail=definition(current.key()).definition().option(current.option()).help();
+    }
+    /** Rows extend from the right edge in a short cascade after each page change. */
+    private int stagger(int index) { return Math.max(0,10-3*(pageAge-index)); }
+    private String detail(List<Row> visible) {
+        if (!status.isBlank()) return status;
+        if (!notice.isBlank()) return notice;
+        Row current=visible.get(Math.min(row,visible.size()-1));
+        if (current.key()!=null) {
+            var d=definition(current.key()).definition();
+            return current.option()!=null ? d.option(current.option()).help() : d.description();
         }
-        if(detail.isBlank()) detail=settings.pending().isEmpty()?"No pending edits. Stock defaults are off.":settings.pending().size()+" edit(s) waiting for their boundary.";
-        if(page!=Page.HELP) {
-            MenuStyle.fill(font,x,184,pw,14,.018f,.075f,.15f,.94f);
-            MenuStyle.text(font,detail,x+8,185,pw-16,1,.83f,.45f);
+        int pending=settings.pending().size();
+        if (pending>0) return pending==1?"1 edit waits for its boundary.":pending+" edits wait for their boundaries.";
+        var active=settings.definitions().stream().filter(o->settings.admitted().get(o.key()).enabled())
+                .map(o->o.definition().title()).toList();
+        return active.isEmpty()?"No pending edits. Every mutator is off.":"Active: "+String.join(", ",active)+".";
+    }
+    /** Word wrap on the compact grid; an overlong final line keeps the shared ellipsis. */
+    static List<String> wrap(String text, int columns, int maxLines) {
+        var lines=new ArrayList<String>(); var line=new StringBuilder();
+        for (String word : text.trim().split("\\s+")) {
+            if (line.length()>0 && line.length()+1+word.length()>columns) {
+                if (lines.size()==maxLines-1) { line.append(' ').append(word); continue; }
+                lines.add(line.toString()); line.setLength(0);
+            }
+            if (line.length()>0) line.append(' ');
+            line.append(word);
         }
-        MenuStyle.fill(font,0,198,w,26,.008f,.02f,.04f,1);
-        MenuStyle.text(font,hint,x+8,201,pw-16,.68f,.89f,1);
-        MenuStyle.text(font,inGameplay?"LIVE: Resume / LOAD: Restart / LAUNCH: new session":"Prepared package / effects off until enabled",x+8,213,pw-16,.75f,.84f,.96f);
-        font.endMegaBatch();
+        if (line.length()>0 || lines.isEmpty()) lines.add(MenuStyle.fit(line.toString(),columns*MenuPixelFont.glyphAdvance(MenuStyle.COMPACT)));
+        return lines;
+    }
+    private String move() {
+        if (lastInput!=null && MenuInput.controller(lastInput)) return "D-Pad";
+        var config=GameServices.configuration();
+        return ButtonPrompts.keyName(config.getInt(SonicConfiguration.LEFT)).orElse("Left")+" / "
+                +ButtonPrompts.keyName(config.getInt(SonicConfiguration.RIGHT)).orElse("Right");
+    }
+    private String jump() {
+        var labels=new LinkedHashSet<String>();
+        if (lastInput!=null && MenuInput.controller(lastInput)) {
+            for (var button : List.of(ButtonPrompts.Button.A,ButtonPrompts.Button.B,ButtonPrompts.Button.C))
+                ButtonPrompts.label(lastInput,0,button).ifPresent(labels::add);
+        } else {
+            var config=GameServices.configuration();
+            for (var key : List.of(SonicConfiguration.P1_A,SonicConfiguration.P1_B,SonicConfiguration.P1_C))
+                ButtonPrompts.keyName(config.getInt(key)).ifPresent(labels::add);
+        }
+        return labels.isEmpty()?"A / B / C":String.join(" / ",labels);
+    }
+    private String settingsKeys() {
+        if (lastInput!=null && MenuInput.controller(lastInput))
+            return ButtonPrompts.label(lastInput,0,ButtonPrompts.Button.START).orElse("Start");
+        var config=GameServices.configuration(); var keys=new LinkedHashSet<String>();
+        ButtonPrompts.keyName(config.getInt(SonicConfiguration.PAUSE_KEY)).ifPresent(keys::add);
+        ButtonPrompts.keyName(config.getInt(SonicConfiguration.START)).ifPresent(keys::add);
+        return keys.isEmpty()?"Start":String.join(" or ",keys);
     }
     private String value(Row item) {
         if(item.key()==null) return "";
         var requested=settings.requested().get(item.key());
         if(item.option()==null) return requested.enabled()?"[x] On":"[ ] Off";
-        Object value=requested.options().get(item.option());
-        var option=definition(item.key()).definition().option(item.option());
+        return format(definition(item.key()).definition().option(item.option()),requested.options().get(item.option()));
+    }
+    private static String format(MutatorOption option, Object value) {
         return switch(option) {
             case MutatorOption.Checkbox checkbox -> (Boolean)value?"[x] On":"[ ] Off";
             case MutatorOption.IntegerSlider slider -> value+slider.unit();
-            case MutatorOption.Choice choice -> ((String)value).replace('_',' ');
+            case MutatorOption.Choice choice -> {
+                String words=((String)value).replace('_',' ');
+                yield words.isEmpty()?words:Character.toUpperCase(words.charAt(0))+words.substring(1);
+            }
         };
     }
     private String scope(Row item) {
         if(item.key()==null) return "";
         var d=definition(item.key()).definition();
-        var requested=settings.requested().get(item.key()); var admitted=settings.admitted().get(item.key());
-        MutatorScope scope=item.option()==null?(requested.enabled()?d.enableScope():d.disableScope()):d.optionScope(item.option());
+        var admitted=settings.admitted().get(item.key());
+        MutatorScope scope=scopeOf(item);
         var pendingEdit=settings.pending().stream().filter(p->p.key().equals(item.key()) && Objects.equals(p.optionId(),item.option())).findFirst();
         boolean pending=pendingEdit.isPresent();
         if (pending && pendingEdit.get().reason().contains("edit")) return "History differs / edit to apply";
-        String boundary=switch(scope){case LIVE->inGameplay?"Resume":"Start";case LOAD->"full restart / death reload";case LAUNCH->"new session";};
-        if(item.option()!=null && pending) return "Pending " + boundary + " / admitted: " + admitted.options().get(item.option());
+        String boundary=switch(scope){case LIVE->inGameplay?"Resume":"Start";case LOAD->"full restart / death reload";case LAUNCH->"new game";};
+        if(item.option()!=null && pending) return "Pending "+boundary+" / now "
+                +format(d.option(item.option()),admitted.options().get(item.option())).replace("[x] ","").replace("[ ] ","");
         return (pending?"Pending ":"Applies at ")+boundary+(item.action()==Action.MUTATOR?" / Enter: options":"");
     }
     @Override public void close() {

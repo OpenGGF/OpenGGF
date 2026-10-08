@@ -14,6 +14,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   preserves the save boundary and host prompt ownership; title cues use ROM SFX.
   World-held policy services keep core lifecycle independent of creator schemas;
   title-first capture preserves existing direct-level fade and input-last CSV contracts.
+  Its title card sits below the native emblem, How to play names the live key
+  bindings, play-hold configuration dims the held frame, and option help wraps to
+  two lines with plain-language boundary feedback.
 
 - **Sonic 2 title SFX priority:** the flashing star's last twinkle now runs to
   its own stop, as in the ROM, releasing the sound driver's SFX priority. A stop

@@ -444,3 +444,95 @@ received lead boundary/API/presentation/cleanup inspection and root factual
 checks, not a newly delegated generic review. Feature push/PR is deliberately
 held for root-owned Opus hands-on polish and a separate promo-video task.
 The handoff remains the bounded prototype, not completion of future MVP gates.
+
+## Hands-on presentation polish, 2026-10-08
+
+Claude Opus 5.5 played the handed-off source `87d67e9e68` (base `09cfcc0f88`)
+through title, How to play, configuration, native play, play hold, Resume,
+restart and hub, then polished the presentation without widening scope.
+
+Acceptance checklist:
+
+- [x] Title card leaves the native Sonic 2 emblem visible and slides up once the
+  backdrop is interactive; the old header/tagline panels covered the logo.
+- [x] Footer language is player-facing: "Effects stay off until you switch them
+  on." on the title; "Live: Resume  Load: Restart  Launch: new game" in play
+  (45 of 46 columns at 320 px; the previous legend was cut off).
+- [x] How to play names the live bindings: configured P1 A/B/C, Left/Right and
+  Pause/Start keys through `ButtonPrompts.keyName`, or the pad's buttons once a
+  controller is the last input. Defaults read "Space: jump" and "Enter or
+  Backspace: settings while playing" instead of Genesis A/B/C.
+- [x] Option help and mutator descriptions wrap on whole words into two 46-column
+  lines (`MutatorConfigurationScreen.wrap`); example strings were shortened to fit.
+  Informational notices clear when focus moves; errors such as "Save failed"
+  stay visible until the next action, so the save-failure hold is unchanged.
+- [x] The moving focus no longer hides the previous row's label: row backgrounds,
+  then focus, then text. Rows extend from the right in a short cascade after a
+  page change; sliders mark the native default in gold with a knob, and an
+  adjustable focused value shows `< >`.
+- [x] Play-hold configuration dims the held native frame instead of covering it.
+  The screen never enabled `GL_BLEND`, so every sub-1 alpha had been opaque; it
+  now blends with the caller's state restored and destination alpha preserved.
+- [x] Navigation SFX: see below. No requested/admitted/effective, rewind, save,
+  fade or command semantics changed; lifecycle CSV equals the handed-off capture.
+
+**Navigation cue.** A per-frame probe of the Sonic 2 request latch on the real
+capture path showed the title's `Obj0E_FlashingStar_Move` re-triggering
+`SndID_Sparkle` (`$A7`, `zSFXPriority` `$70`) every 19 frames from frame 468 to
+637. `SndID_Blip` (`$CD`, `$6F`) is rejected while one plays. That is native
+arbitration, the same the ROM title menu's (`Obj0F`) blip receives (the engine's
+stock title has no such menu; Start exits it), so frames 600/602
+stay silent and are documented, not "fixed". A separate engine defect was found
+behind it: `TitleScreenManager` called `AudioManager.stopAllSfx()` when the star
+was deleted and in `skipToFinalState`; neither `Obj0E_FlashingStar_Move`
+(`s2.asm:26748-26750`) nor `TitleScreen_SetFinalState` (`:27068-27162`) stops
+sound. The forced stop bypassed `cfStopTrack`'s priority reset, leaving the
+latch at `$70`, so every later blip a mod plays over the stock title was
+rejected until another `$70`+ sound ended. Level music start clears the latch,
+so the stock title-to-level path itself was unaffected. Both calls are removed; `TestTitleScreenAudioRegression` failed
+before the change (latch 112) and passes after it.
+
+Matched PCM controls (outside-repository `opus-polish/captures/cue-*`) wait 700
+frames, then press Down at 700 and 702. After the fix the PCM prefix is identical
+to its neutral control through frame 699, then the blips contribute AC RMS
+712.192 (700–702) and 695.297 (702–704). Before the fix the entire 765-frame run
+is bit-identical to its neutral control. The two neutral controls differ only in
+656–699, the last twinkle's tail. In the maintained walkthrough the fix changes
+PCM only at 656–699. No physical speaker output is claimed.
+
+**Native Help Back.** The earlier Help run's video shows Help about 1.7 seconds
+after its Return key, and the run closed 1.8 seconds after Escape, so no Back
+result could yet be visible. The earlier unmanaged walkthrough's
+`how-to-play.png` and `configuration.png` both show Home, while the next page
+proves every key in between was processed. Neither run establishes a routing
+defect. `Engine.applyWindowActivation` pauses and clears keys on GLFW focus loss,
+so the window helper now records X input focus at each key and can fail closed
+with `require_focus`. The polish run on the unmodified `Engine.loop` (owned
+frameless mapping, child-only Pulse/keyutils/vblank settings as before) sent 38
+keys, all with owned focus, and allowed about three seconds before each
+screenshot: Help at 26.2 s, Escape, then Home at 29.7 s. It also shows the
+configuration, Gravity 50%, held play dimmed under the menu, Stealth hiding
+Sonic after Resume, and Return to game hub reaching game select; close exit 0
+and every owned process and sink were removed. This observes native Back; it is
+not default window-manager, physical controller or speaker certification.
+
+Validation (proportionate focused; the runner's plan falls back to the full
+suite only because example/tool paths are unclassified): one normal queued
+invocation of 35 consumer classes with all three original ROM paths: the
+Mutator, S2 title, S2 request/oracle, S2-title mod (Survivors, Putt Putt),
+public API and documentation-link classes. 478 tests: 475 pass, one opt-in
+`TestSonicSurvivors.balanceProbe` skip, and two failures in
+`TestPuttPuttParadise.normalDevelopmentBootUsesRealTitleRouteAndCompletesOverlayWhileAimHolds`
+(`[1]` and `[2]`, line 1090, `expected: <true> but was: <false>`). Base source
+in the same tree fails identically: this tree has no working-directory `s2.gen`
+link, which the test's default configuration resolves, while the earlier full run
+used a tree with hook ROM links. The failure is environmental and not caused by
+this change. A fresh `-Pguards` JVM ran 86 classes, 672 tests, with no
+failures, errors or skips. `tools/media` unit tests pass. This is not a
+full-suite pass. Commits: title fix `a2b89a071`, helper focus record
+`89e5e3689`, then the presentation polish and this record.
+
+Rejected: delaying menu input until the twinkles end (a fitted title timing in a
+shared screen); a louder navigation cue to beat `$70` (inauthentic and still
+subject to arbitration); a global `stopAllSfx` priority repair (no production
+caller remains, and audio-wide changes are out of scope).

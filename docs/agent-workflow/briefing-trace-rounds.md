@@ -101,6 +101,33 @@ swap waits may also starve animation; if child-only vblank overrides are needed,
 record them and retain the engine's tick limiter. Inspect changing frames and
 AC PCM windows around actions, including title-to-level producer rebuilds.
 
+An unfocused Engine discards synthetic keys (2026-10-08 Mutator Lab polish):
+`Engine.applyWindowActivation` pauses the loop and clears key state when GLFW
+reports focus loss. A key sent while a shared-DISPLAY peer or the compositor owns
+X focus reaches the window, is discarded, and no new frame is presented, so the
+next screenshot repeats the previous page. `tools/media/engine_window_capture.py`
+records `XGetInputFocus` per key (`focus.owned`) and `require_focus` fails closed.
+An unchanged page with `owned: false` is absent input, not a routing defect.
+On the owned frameless path, x11grab screenshots and video also trailed input by
+about 1.7 seconds: a screenshot one second after a key can show the previous
+page while a later page proves the key arrived. Settle about three seconds
+before each screenshot and read the next page before calling input lost.
+
+Restoring sources with preserved timestamps hides them from the compiler
+(2026-10-08 Mutator Lab polish). A matched base control that checked out base
+files, compiled them, and then restored the candidate with `cp -p` left the
+candidate older than its base classes; Maven skipped recompiling it and the
+next run tested base classes against candidate tests. Touch restored files, or
+clean, before the next build, and check the compiled class for a new member.
+
+A submitted menu cue can lose native arbitration (2026-10-08 Mutator Lab polish):
+Sonic 2 `SndID_Blip` (`$CD`) has `zSFXPriority` `$6F`, below the title's
+`SndID_Sparkle` (`$70`), which `Obj0E_FlashingStar_Move` re-triggers every 19
+frames. The driver rejects the blip while a twinkle plays: no `PlaySfx` enters the
+command timeline and PCM equals a neutral control. Sample the request latch
+(`Sonic2SoundRequestService.Snapshot.pipeline().sfxPriorityValue()`) and compare
+PCM against a matched control before calling a cue silent or the mixer broken.
+
 Queue-holder inventory needs descriptor corroboration (2026-10-07 Mutator Lab
 recovery): this Btrfs checkout reported device `00:23` from `stat`, while
 `/proc/locks` listed the same file as `00:21`. Matching only device and inode

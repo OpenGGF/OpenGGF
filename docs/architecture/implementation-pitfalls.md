@@ -32,6 +32,27 @@ and restore the exact saved durations on release. The Survivors regression
 `feverProtectionDoesNotExpireBehindLevelUpCards` checks the player clock as well as the HUD;
 menu-owned saved fields must participate in rewind too.
 
+**Menu fills do not blend on their own.** `MenuPixelFont.fillRect` and
+`TexturedQuadRenderer` submit tinted quads without touching GL blend state. With
+blending disabled, the usual state after level rendering, a 0.66-alpha dim writes
+its own colour and replaces the held frame; panels drawn at 0.94 look opaque only
+by accident. Menus with translucent layers enable `GL_BLEND` around their pass, as
+`MasterTitleScreen` and `SceneRenderer` do. `MutatorConfigurationScreen` restores
+the caller's blend state and keeps destination alpha (`GL_ZERO, GL_ONE`), so
+`GameplayCaptureTool` PNGs match the window; a capture PNG whose alpha is below 1
+shows the same mistake (Mutator Lab polish, 2026-10-08).
+
+**A forced SFX stop skips the driver's priority release.** Sonic 2 clears
+`SFXPriorityVal` when an SFX track reaches its own stop (`cfStopTrack` /
+`zStoppedChannel`, `s2.sounddriver.asm:3514-3535`). `AudioManager.stopAllSfx()`
+kills SFX tracks without passing through that request model. The stock title
+called it when its flashing star was deleted; the ROM does not
+(`s2.asm:26748-26750`, `:27068-27162`). The latch stayed at Sparkle's `$70`, so
+every later `$6F` `SndID_Blip` from a mod menu over the stock title was rejected
+until some `$70`-or-higher SFX finished naturally. No production caller of
+`AudioManager.stopAllSfx()` remains. `TestTitleScreenAudioRegression` checks the
+latch and an admitted blip after the intro.
+
 **Silent invincibility still has a native music-expiry request.** `giveInvincibility()`
 does not itself start music, but the playable timer reissues the level song on expiry.
 A mode keeping its own arena/boss soundtrack continuous must opt out through

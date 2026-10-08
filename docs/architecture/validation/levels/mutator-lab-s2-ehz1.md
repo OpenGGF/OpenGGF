@@ -95,3 +95,16 @@ Back cases pass. Confirmation has measured PCM contribution; navigation has
 none in the neutral control. Physical speakers/controllers, default-WM
 reliability and a complete act route remain unqualified. Root-owned Opus polish
 and promo follow the clean implementation handoff; feature push/PR is held.
+
+## Presentation polish evidence, 2026-10-08
+
+The [polish checklist](../../plans/2026-10-07-mutators-prototype-implementation.md#hands-on-presentation-polish-2026-10-08)
+changes presentation and two non-ROM stock S2 title SFX stops only. The fresh
+2,077-frame GPU walkthrough from the maintained `capture.script` has a state CSV
+equal to the handed-off capture on every row, so hold, revision, restart and
+physics evidence above still applies. Navigation SFX is now measured: blips
+after the title's twinkle sequence add PCM against a matched neutral control,
+and the same input before the title fix is bit-identical to neutral. Blips
+during the twinkles remain rejected by native `zSFXPriority`. Native Help Back
+is now observed on the owned frameless Engine window with focus recorded for
+all 38 keys; the earlier unobserved Back was screenshot latency, not lost input.

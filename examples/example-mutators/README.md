@@ -40,13 +40,29 @@ boot-scoped; editing prepared settings never requires restarting the executable.
 | Rebuild the act | Choose Restart from act start | Same |
 | Leave | Choose Return to game hub | Same |
 
-Your engine bindings override gameplay defaults. Esc in an open configuration
+Your engine bindings override gameplay defaults; How to play names the keys
+actually bound (for example **Space** to jump and **Enter or Backspace** for
+settings), or the pad's own buttons once a controller is the last input. Esc in an open configuration
 keeps play held; it backs out of option pages. A simultaneous cancel and confirm
 backs out. Configuration freezes native ticks and rewind; frame-step and focus
 regain cannot release it. Resume explicitly releases an old user pause, while a
 window-focus pause still holds play. Menu music/SFX continue during configuration
 unless the window or user pause owns an audio pause. A restart/exit requested
 during a fade remains visible and queued until that fade completes.
+
+The title card sits below the native Sonic 2 emblem and slides up once the title
+is interactive. During play the configuration dims the held frame rather than
+hiding it. Rows ease in from the right after a page change; sliders mark the
+native 100% value in gold, and the focused value shows `< >` when Left/Right
+changes it. Option help and status use up to two lines at 320 px.
+
+Menu cues are native Sonic 2 sounds played through the game's own driver:
+`SndID_Blip` (`$CD`) for navigation and edits, `SndID_Ring` (`$B5`) to confirm
+a page, `SndID_SpindashRelease` (`$BC`) to start and `SndID_Error` (`$ED`) for a
+refused action. The driver's own priority table applies: the blip (`$6F`) is
+dropped while a `$70` sound plays, such as the title emblem's twinkles during the
+intro or a ring chime that has just started, exactly as the ROM title menu's
+(`Obj0F`) blip would be.
 
 ## Supported slice
 
@@ -58,7 +74,7 @@ during a fade remains visible and queued until that fade completes.
 The observed acceptance slice is the opening run/jump/configuration/restart path;
 this does not certify the complete EHZ1 route. The package fixes native width and
 suppresses the CPU sidekick. Progression beyond
-EHZ1 uses stock effects and shows **Outside supported cell / effects suspended**.
+EHZ1 uses stock effects and shows **Not supported here; effects are suspended.**
 The two Stealth target choices coincide in this solo cell; they demonstrate the
 bounded enum authoring contract, not qualified team support. Jump impulse and
 release, grounded motion, hurt/water/death/scripted/flight motion are unchanged.

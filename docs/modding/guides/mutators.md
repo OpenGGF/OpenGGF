@@ -37,6 +37,12 @@ range and factory outputs are bounded. Slider maxima/defaults must lie on the
 minimum-plus-step lattice. Checkbox values are booleans; choice values are declared
 stable tokens. No implicit scope inheritance or creator-specific widget is needed.
 
+The common screen draws on the native 320-pixel grid. Row labels fit about 30
+compact characters. The mutator description and each option's help appear in a
+two-line detail box of 46 columns, wrapped on whole words; anything longer ends
+with an ellipsis. Write help as one or two short sentences, as `Gravity.java`
+and `Stealth.java` do, and check them on the options page.
+
 ## Admit settings at a real boundary
 
 Requested preferences, admission targets, admitted values and effective immutable
