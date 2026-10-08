@@ -1,6 +1,7 @@
 package com.openggf.mods.scene.host;
 
 import com.openggf.control.InputActionMasks;
+import com.openggf.audio.StreamedMusicPort;
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.control.MenuRepeat;
@@ -254,6 +255,14 @@ public final class ModSceneHost {
                     if (services != null && services.audio() != null) {
                         services.audio().playSfx(sfxId);
                     }
+                }
+
+                @Override
+                public boolean playSfx(String localName) {
+                    com.openggf.game.ModKeySyntax.requireOwnedKey(owner, localName);
+                    var ref = new StreamedMusicPort.SfxRef(owner, localName);
+                    return context == Context.this && services != null && services.audio() != null
+                            && services.audio().playNamespacedSfx(ref);
                 }
 
                 @Override

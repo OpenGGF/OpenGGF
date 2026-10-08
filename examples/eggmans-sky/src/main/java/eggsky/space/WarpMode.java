@@ -4,6 +4,7 @@ import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneImage;
 import eggsky.Game;
+import eggsky.core.VoiceLine;
 import eggsky.Mode;
 import eggsky.core.Colour;
 import eggsky.core.Rng;
@@ -50,6 +51,8 @@ public final class WarpMode implements Mode {
 
     @Override
     public void enter(Game g) {
+        g.voice.say(viaRing ? VoiceLine.GIANT_RING : target.starClass == StarSystem.BLACK_HOLE
+                ? VoiceLine.BLACK_HOLE : VoiceLine.WARP_ENGAGED);
         g.sound.fadeOut();
         g.sound.sfx(viaRing ? Sound.BIG_RING : Sound.ENTER_SS);
         g.sound.sfx(Sound.GRAVITY_MACHINE, 10);
@@ -95,11 +98,12 @@ public final class WarpMode implements Mode {
     }
 
     private void arrive(Game g) {
+        g.voice.say(VoiceLine.WARP_COMPLETE);
         Player p = g.player;
         StarSystem dest = target;
         if (target.starClass == StarSystem.BLACK_HOLE) {
             dest = beyondBlackHole(g, target);
-            g.banner("THROUGH THE BLACK HOLE", "Flung " + Math.round(target.distanceToCore() - dest.distanceToCore())
+            g.banner(VoiceLine.BLACK_HOLE, "THROUGH THE BLACK HOLE", "Flung " + Math.round(target.distanceToCore() - dest.distanceToCore())
                     + " ly toward the core", 0xFFC080FF);
             p.hull = Math.max(1, p.hull - p.maxHull() * 0.2f);
         }
@@ -111,6 +115,7 @@ public final class WarpMode implements Mode {
         p.statWarps++;
         p.planet = -1;
         if (p.visitedSystems.add(dest.id)) {
+            g.voice.say(VoiceLine.SYSTEM_DISCOVERED);
             int reward = 300 + dest.planetCount * 100;
             p.rings += reward;
             p.statRingsEarned += reward;

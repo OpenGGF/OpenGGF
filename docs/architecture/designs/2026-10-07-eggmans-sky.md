@@ -361,3 +361,122 @@ branch: no shared renderer, physics, timing, public API or save format changed.
 - `python3 examples/build_example.py eggmans-sky --skip-engine`: compilation,
   mod validation and packaging passed. Installed the rebuilt jar into `mods/`
   and refreshed its existing trusted SHA-256 in `mods/modstate.json`.
+
+## Original system voice (2026-10-08)
+
+The voice task started from `c4124257094e` in the existing isolated Eggman's Sky
+checkout, on local `feature/ai-eggmans-sky-voice`. The user approved Alice's
+matter-of-fact performance and the metallic/DAC audition, then requested the
+complete bank in the mod. `4229554eafcf` brings published develop `913c5a3516b1`
+into the private branch: signature conflicts retain both level-kit and current
+scene-music additions, and both measurement notes are preserved. Main integration
+is held for the separately coordinated parity qualification; this section does
+not claim publication.
+
+`c83f87386403` privately imports the frozen parity main source at
+`863683b092f7`. The only merge conflict was the measurement-hazard catalogue:
+both the Eggman's Sky draw-cost note and all upstream parity/environment/input
+hazards are retained. A worktree metadata lease prevented queued compilation
+from observing the temporary merge/stash state. No main inputs or publication
+were changed.
+
+The bank contains 122 literal announcements (274 seconds), covering vitals,
+climates/weather, travel, heroes/security, discoveries, inventory/production,
+station services/missions, saves/recovery and the core/new-galaxy progression.
+Procedural names and quantities remain visual. Capsule salvage and wreck salvage,
+destruction and rebuild, and partial recharge and complete restoration have
+separate lines so speech describes the actual state. Save success is announced
+only after storage succeeds. The shipped WAVs are original ElevenLabs Alice
+performances directed through OpenRouter, not samples/clones of No Man's Sky.
+ROM music, effects and visual assets continue through their existing pipelines.
+No player credential or network is used at runtime.
+
+`voice-bank.json` records the text and performance direction. The promoted
+`tools/audio/eggmans_sky_voice.py` preserves paid-request state, raw MP3 sources,
+clean masters, edits and blind transcription checks in an external task cache.
+The catalogue's synthesis estimate is about $0.77 before transcription and the
+one regenerated stuttering take; provider usage reporting lagged, so this is not
+an exact billed total. The generator checks a $5 reported-key-usage safety ceiling
+and refuses automatic retries of uncertain requests. Source and output hashes,
+whole-utterance edits, final word checks and the recipe are in the shipped
+`audio/voice/provenance.json`. Publishing derives manifest ids and speech queue
+leases from actual 48 kHz mono 16-bit PCM frames.
+
+The accepted processing has 73 Hz metallic modulation and short 7.6/11.3/17.9 ms
+reflections, a 6% 24-band vocoder blend with a 185 Hz harmonic carrier, loudness
+normalization, a strong 7-bit/8 kHz zero-order-hold DAC approximation, and 10%
+upper-band consonant recovery. There is no room reverb. The earlier irritated
+performance was rejected despite accepted effects; six-bit DAC processing lost
+consonants. The final performance is neutral, evenly paced and literal. Eleven v4
+sometimes rehearsed/repeated words, even in one-line requests: whole utterances
+were retained at quiet gaps and rechecked after processing. Direct cuts at ASR word
+timestamps proved unreliable (loose/overlapping times cut consonants or retained
+a previous ending); the final bank passes all 122 literal word checks. This is
+an artistic retro effect, not YM2612 hardware emulation or an official account
+of No Man's Sky's production method.
+
+`SceneAudio.playSfx(String)` provides the missing narrow bridge to existing
+namespaced audio. The host validates the local name and supplies the trusted
+scene owner, then records the existing `PlayNamespacedSfx` command. Unknown clips,
+suppressed playback, closed contexts and absent headless audio return false.
+Patch SFX declarations now use the same bounded owner-atomic validation/decode
+pipeline as standalone SFX. The first focused run exposed remaining
+standalone-only filters in both scanned and packed validation: accepted patch
+manifests still yielded an empty registry. Both registry paths now retain valid
+patch SFX; the eligibility check exercises both paths. The launch factory also
+admits SFX-only stock-game patches: its previous no-track early return would
+silently omit the entire bank. The packaged-bank test traverses this production
+factory to reproduce that failure; no numeric mod IDs, cross-owner requests or
+base-game SFX override map are introduced. The unpublished 0.7 version prose
+and mutable candidate signature pin are updated together; the release descriptor
+retains candidate 0.7.0. The commit hook rejected an unnecessary descriptor
+comment during ordinary pin regeneration, so that comment was removed to retain
+the existing publication/version contract.
+
+The mod's eight-entry queue uses priorities, per-line cooldowns, severity
+replacement, resolved-vital cancellation, 15-second pending expiry and measured
+PCM-duration reservations at the scene's 60 Hz clock. Pulse/hull/shield threshold
+warnings have hysteresis. A separate SYSTEM voice toggle preserves other settings
+and persists in `settings.txt`; an active one-shot finishes when muted. Tests
+exercise the real packaged mod's queue and settings, host ownership/lifetime, and
+all assets through production validation, preparation and stereo PCM cursors.
+This proves content and nominal queue timing, not physical speaker latency.
+
+Validation in progress:
+
+- Final offline publication: all 122 current hashes and blind word checks pass;
+  finite non-silent mono WAVs have no clipped samples. Every catalogue line has
+  an owning runtime hook. Python syntax and `git diff --check` pass.
+- Direct Java 21 example compilation against the current private engine classes
+  passes. The first queued focused Maven attempt reached test compilation and
+  failed on two new scene-test helper calls; those factory lambdas are corrected.
+- Focused request: `python3 tools/testing/maven_queue.py --lean -Dmse=off
+  -Dtest=TestModSceneHost,TestModCatalogValidator,TestEggmansSkyVoice,TestEggmansSkyVoiceAssets,TestModApiSignatureSurface test`.
+  The first completed run had 46 cases: 44 passed, two failed, zero errors/skips.
+  Both failures identify the accepted-but-empty patch SFX registry described
+  above; the eight queue/settings tests, 18 scene-host tests and nine API surface
+  tests passed. After fixing both registry paths, the narrow rerun is
+  `maven_queue.py --lean -Dmse=off
+  -Dtest=TestModCatalogValidator,TestEggmansSkyVoiceAssets test` on the updated
+  private base `c83f87386403`. It completed at 21:15:28Z, exit 0: all 11 cases
+  passed with zero failures/errors/skips, including validation and production
+  PCM playback of all 122 packaged clips.
+- The pre-existing base request selected 3058 ordinary classes at
+  `913c5a3516b1`, with a 40-minute execution cap. Run
+  `20261008T185944Z-d6436e78` terminated at that cap, outer exit 2: 2690 ordinary
+  reports, 23434 cases, two failures, zero errors and 56 skips; no guard lane ran.
+  Its two failures were `TestS3kMhzAct2AuthoredRoute` incoming-route cases [2]/[3],
+  asserting late pulley ownership of Tails/Sonic. Main also changed during this
+  incomplete run for the separately coordinated parity integration. It is not
+  qualifying baseline evidence. All reported skips were inspected (no missing-ROM
+  skip); consumed diagnostics were acknowledged and removed. Existing parity and
+  Windows requests remain untouched. Updated-base acceptance waits for the
+  coordinated completed main qualification.
+
+The combined plan against frozen develop `863683b092f7` selects all 3067 ordinary
+classes plus separate fresh guards. Qualification uses the normal runner with
+`--max-minutes 150`, excluding queue wait, and the unchanged ten-minute no-output
+rule. Estimated cost is 80–110 minutes ordinary plus about four minutes guards.
+Timeout, omitted required reports, missing-ROM skips or new/worsened/unattributed
+assertions block integration. The entire candidate input tree stays frozen
+through both lanes; source/publication in main remains under the parity hold.

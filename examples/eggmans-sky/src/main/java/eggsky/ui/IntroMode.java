@@ -4,6 +4,7 @@ import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneSprite;
 import eggsky.Game;
+import eggsky.core.VoiceLine;
 import eggsky.Mode;
 import eggsky.art.Art;
 import eggsky.core.Colour;
@@ -47,7 +48,7 @@ public final class IntroMode implements Mode {
         }
         if (age >= LENGTH || g.in.confirmPressed && age > 20) {
             g.land(0, true);
-            g.banner("CRASH LANDED", "Repair the Egg Mobile's launch thrusters", 0xFFFF8040);
+            g.banner(VoiceLine.CRASH_LANDING, "CRASH LANDED", "Repair the Egg Mobile's launch thrusters", 0xFFFF8040);
         }
     }
 

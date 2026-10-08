@@ -3,6 +3,7 @@ package eggsky.ui;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneKeys;
 import eggsky.Game;
+import eggsky.core.VoiceLine;
 import eggsky.Mode;
 import eggsky.core.Sound;
 import eggsky.world.Planet;
@@ -87,7 +88,7 @@ public final class NameEntryMode implements Mode {
                 g.player.names.put(key, name.replace(';', ' ').replace('>', ' '));
             }
             g.sound.sfx(Sound.REGISTER);
-            g.toast("PLANET NAMED " + g.displayName(planet.spec).toUpperCase(), Ui.GOLD);
+            g.toast(VoiceLine.PLANET_NAMED, "PLANET NAMED " + g.displayName(planet.spec).toUpperCase(), Ui.GOLD);
             g.save();
             g.setMode(back);
         }
