@@ -1867,5 +1867,18 @@ results retain their exact earlier attribution. No Windows artifact result
 is inferred. Other active gameplay/native owners agree to preserve main
 tracked inputs/HEAD/publication for upcoming parity integration. The SOZ
 owner had already announced a test-only78-case-qualified follow-up before
-this hold; finish its existing delivery and reconcile that source first.
+this hold, then explicitly confirms that no change/check has reached main:
+all private invocations are terminal and integration is deferred until the
+parity hold is released. Its private update is preserved without composition.
+
+Published `f5de9524a943d55191dbf798d405ca8e8e20ca9e` follows913c with only
+three standalone native-feature/build/prose paths. Private merge `8bdf6d4d0`
+is conflict-free. Engine/test/resources/examples/POM/hooks/API/testing and
+workflow input comparisons against qualified163b are empty, so both normal
+ordinary and fresh guard evidence remain applicable without another unchanged
+private invocation. Main local/remote f5de match after fetch/fast-forward pull;
+the original three dirty submodules and four untracked user paths remain.
+Pin f5de as the actual pre-integration base and run normal combined actual-main
+qualification after merging the private parity branch. Hold tracked inputs,
+HEAD/commits and publication through terminal, then evidence/push/cleanup.
 Actual-main parity integration, qualification, push and cleanup remain pending.
