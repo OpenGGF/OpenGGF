@@ -19,7 +19,7 @@ import tempfile
 import time
 
 
-def run(label, command, directory, *, rejected=False):
+def run(label, command, directory, *, rejected=False, expected_failure=None):
     started = time.monotonic()
     log = directory / f"{label}.log"
     with log.open("w") as output:
@@ -45,7 +45,9 @@ def run(label, command, directory, *, rejected=False):
             process.wait()
             raise
     text = log.read_text(errors="replace")
-    if rejected:
+    if expected_failure is not None:
+        valid = process.returncode != 0 and expected_failure in text
+    elif rejected:
         valid = process.returncode != 0 and "ClassNotFoundException: external.Plugin" in text
     else:
         valid = process.returncode == 0
