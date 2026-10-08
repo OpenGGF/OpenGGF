@@ -1,0 +1,14 @@
+formatVersion: 1
+id: hardened-s3k
+name: Post Two Ambush
+version: 0.1.0
+authors:
+  - OpenGGF contributors
+description: A short, telegraphed encounter beside Mushroom Hill's real second checkpoint. Native solo Sonic, 320px, donor off, no save. JVM prototype; not a hardened campaign.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s3k
+entrypoint: hardened.HardenedS3kMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

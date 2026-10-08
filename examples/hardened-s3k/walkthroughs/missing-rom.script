@@ -1,0 +1,14 @@
+# Missing-ROM recovery: dismiss the initial native error, navigate the preserved
+# master selection, request another missing-ROM launch, then dismiss again.
+# Input only; the missing path is a launch stimulus, never a created fake ROM.
+60 -
+1 A
+90 -
+1 D
+1 -
+1 D
+1 -
+1 A
+90 -
+1 A
+90 -

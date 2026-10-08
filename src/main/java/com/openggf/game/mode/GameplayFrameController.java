@@ -10,6 +10,12 @@ public interface GameplayFrameController {
     boolean beforeTick(CourseControl course, LogicalInputSnapshot input);
     /** Observes the completed native step, or a held row, at a stable boundary. */
     void afterTick(CourseControl course, boolean advanced);
+    /**
+     * Passes the supplied logical player snapshot to native movement on advanced rows.
+     * The default retains neutral player input for turn-based modes. This never admits
+     * gameplay on a held row or changes movie-owned sampling and button edges.
+     */
+    default boolean nativePlayerInput() { return false; }
     /** Retains a rolling ball through native landing/zero-speed/object transitions. */
     default boolean retainRolling() { return false; }
     /** Optional view-only scene, e.g. a read-only remote projection. */

@@ -16,8 +16,8 @@ final class ControlledLevelIteration {
     /** Host pause remains independent of a creator's own Start-button menu. */
     record HostPause(int pauseKey, int frameStepKey, BooleanSupplier paused,
             BooleanSupplier consumePlaybackPause, Runnable toggleUserPause) {
-        boolean frameStep(InputHandler input) {
-            if (!consumePlaybackPause.getAsBoolean() && input.isKeyPressed(pauseKey)) {
+        boolean frameStep(InputHandler input, boolean overlayOwnsPause) {
+            if (!overlayOwnsPause && !consumePlaybackPause.getAsBoolean() && input.isKeyPressed(pauseKey)) {
                 toggleUserPause.run();
             }
             return paused.getAsBoolean() && input.isKeyPressed(frameStepKey);
@@ -39,7 +39,8 @@ final class ControlledLevelIteration {
             return;
         }
         recording.updateLevelControlInput(input);
-        boolean frameStep = hostPause.frameStep(input);
+        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(GameMode.LEVEL, input);
+        boolean frameStep = hostPause.frameStep(input, overlayOwnsPause);
         if (hostPause.paused().getAsBoolean() && !frameStep) {
             input.update();
             return;

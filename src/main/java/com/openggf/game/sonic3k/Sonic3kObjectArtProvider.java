@@ -1639,6 +1639,12 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         }
     }
 
+    /** Native title/enemy producers can retain entry work before it reaches a queue. */
+    public boolean levelEntryArtReady() {
+        return titleCardTeardown == null && !enemyKosArmOnNextRuntimePass
+                && pendingEnemyKosEntries.isEmpty() && enemyKosHandles.isEmpty();
+    }
+
     @Override
     public void processRuntimeArtQueue() {
         advanceTitleCardTeardown();

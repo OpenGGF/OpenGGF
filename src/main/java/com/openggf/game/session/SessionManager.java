@@ -56,9 +56,10 @@ public final class SessionManager {
         Objects.requireNonNull(rootModule, "rootModule");
         Objects.requireNonNull(resolvedModule, "resolvedModule");
         Objects.requireNonNull(admissionPolicy, "admissionPolicy");
+        saveSessionContext = admitSaveContext(resolvedModule, saveSessionContext);
         try {
             if (EngineServices.current().roms().isRomAvailable()) {
-                return openGameplaySession(rootModule, resolvedModule,
+                return openAdmittedGameplaySession(rootModule, resolvedModule,
                         StockGameDataSources.pinned(
                                 EngineServices.current().roms().getRom(), rootModule),
                         saveSessionContext, admissionPolicy);
@@ -66,11 +67,8 @@ public final class SessionManager {
         } catch (java.io.IOException sourceFailure) {
             throw new IllegalStateException("Failed to pin active ROM data source", sourceFailure);
         }
-        nextGameplayAdmissionPolicy = HardwareReadinessAdmissionPolicy.LIVE;
-        destroyCurrentMode();
-        currentWorldSession = new WorldSession(rootModule, resolvedModule, saveSessionContext);
-        currentGameplayMode = new GameplayModeContext(currentWorldSession, admissionPolicy);
-        return currentGameplayMode;
+        return openAdmittedGameplaySession(rootModule, resolvedModule, null,
+                saveSessionContext, admissionPolicy);
     }
 
     public static synchronized GameplayModeContext openGameplaySession(GameModule rootModule,
@@ -88,10 +86,19 @@ public final class SessionManager {
         Objects.requireNonNull(resolvedModule, "resolvedModule");
         Objects.requireNonNull(dataSource, "dataSource");
         Objects.requireNonNull(admissionPolicy, "admissionPolicy");
+        saveSessionContext = admitSaveContext(resolvedModule, saveSessionContext);
+        return openAdmittedGameplaySession(rootModule, resolvedModule, dataSource,
+                saveSessionContext, admissionPolicy);
+    }
+
+    private static GameplayModeContext openAdmittedGameplaySession(GameModule rootModule,
+            GameModule resolvedModule, GameDataSource dataSource,
+            SaveSessionContext saveSessionContext, HardwareReadinessAdmissionPolicy admissionPolicy) {
         nextGameplayAdmissionPolicy = HardwareReadinessAdmissionPolicy.LIVE;
         destroyCurrentMode();
-        currentWorldSession =
-                new WorldSession(rootModule, resolvedModule, dataSource, saveSessionContext);
+        currentWorldSession = dataSource == null
+                ? new WorldSession(rootModule, resolvedModule, saveSessionContext)
+                : new WorldSession(rootModule, resolvedModule, dataSource, saveSessionContext);
         currentGameplayMode = new GameplayModeContext(currentWorldSession, admissionPolicy);
         return currentGameplayMode;
     }
@@ -100,6 +107,26 @@ public final class SessionManager {
             HardwareReadinessAdmissionPolicy admissionPolicy) {
         nextGameplayAdmissionPolicy =
                 Objects.requireNonNull(admissionPolicy, "admissionPolicy");
+    }
+
+    /** Validate launch isolation while the existing world is still intact. */
+    private static SaveSessionContext admitSaveContext(GameModule module, SaveSessionContext supplied) {
+        if (!module.requiresNoSaveSession()) return supplied;
+        if (supplied != null) {
+            if (supplied.activeSlot().isPresent()) {
+                throw new IllegalArgumentException("This gameplay module requires a no-save session");
+            }
+            return supplied;
+        }
+        var config = EngineServices.current().configuration();
+        String main = config.getString(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE);
+        if (main == null || main.isBlank()) main = "sonic";
+        // Read the new launch's preferences directly: ActiveGameplayTeamResolver still
+        // describes the previous world until this admission succeeds.
+        var sidekicks = ActiveGameplayTeamResolver.parseConfiguredSidekicks(
+                config.getString(com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+        return SaveSessionContext.noSave(module.getGameCode(),
+                new com.openggf.game.save.SelectedTeam(main, sidekicks), 0, 0);
     }
 
     public static synchronized void clearNextGameplayAdmissionPolicy() {

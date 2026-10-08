@@ -20,6 +20,12 @@ public final class ModApiVersion {
      * it developer-history or sound-driver restore ownership. Mixed-ROM startup
      * scenes expose supplied-game art, immutable timestamped physical input and
      * bounded semantic ROM music with consumed-sample playback and section parts.
+     * Owner-derived bounded native S2/S3K placement plans retain explicit native
+     * rings and add local registered objects and bounded native recovery rings without
+     * replacing native level owners.
+     * Native encounters can opt into controlled player input, bounded fresh-entry
+     * centre coordinates and launch-boundary no-save isolation. A query-only
+     * native entry-art gate includes deferred submissions and owner consumption.
      * Full-song and selected-part synthesis expose cancellable host jobs with
      * progress, a ten-minute duration cap and a 256 MiB stereo PCM budget.
      * Scene-owned direct peer text messaging is asynchronous and bounded, with

@@ -165,6 +165,80 @@ Product decisions to refine before later implementation: choose target audience/
 
 Research checks: `git rev-parse HEAD` matched the base; initial and final `git status --short` were empty. Only read-only source/doc/test/disassembly exploration ran; no tests, build, capture, probe, dependency install or Git mutation. Two delegated investigations covered route inventory and stage APIs; their substantive findings are incorporated above. Both leaf tasks completed; no nested work remains active. All new gameplay/acceptance claims await future execution.
 
+## Prototype implementation decisions — 2026-10-07
+
+Original base remains `6d817a9d74f135714f3da59ab9aab156cc09473e`. The
+[implementation plan](../plans/2026-10-07-hardened-s3k-prototype.md) executes only
+the local prototype; the MVP and campaign/Stage Trials gates above remain future
+work. The maintained JVM authoring values are in `examples/hardened-s3k`; the
+YAML sketch above remains a proposal, not a parser contract.
+
+The production sensor survey rejected extending the encounter to the right:
+the upper shelf ends beyond `0x1DB0`, before the native spring and mushroom
+platform. The final rectangle is `(0x1D10,0x100)..(0x1DB8,0x1D0)`, with the
+unchanged post/approach, sentry `(0x1DA0,0x1AD)` and exit `(0x1DB0,0x1AC)`.
+The shelf contains no original rings. Inventing a retained native identity or
+using a mod-drawn ring would bypass its native owner; a typed coordinate-only
+native ring addition supplies one recovery ring at `(0x1D70,0x1A8)` instead.
+The engine assigns its distinct identity beyond the complete original inventory.
+
+The reusable placement contract preserves the concrete native level and every
+native object. It removes only unretained ambient rings inside explicit bounds
+and appends same-owner registered objects/native rings. Registration is
+transactional and frozen; decoding and prepared/deferred installation retain
+their owners. No enemy taxonomy, global spawn-rate rewrite or blanket event
+removal is introduced. The first integrated gameplay source checkpoint is
+`936d55fe7` (child `3f4992e93`); it carries no test-pass claim.
+
+Launch is a dedicated enabled patch module with a session-owned title and
+ledger. The normal launcher verifies the surveyed logical ROM hash. Explicit
+fresh-centre and no-save opt-ins preserve native defaults and run before stock
+save attachment; the fresh hook never controls native death or stage return.
+The frame controller separately opts into native input in PLAY. Neutral ordinary
+entry rows let the native art/fade owners finish; menus hold the world. Existing
+golf keeps its neutral default.
+Independent review rejected unconditional checkpoint retry before contact:
+the menu now names an explicit fresh attempt until the physical post is active,
+then uses native death re-entry. The choice is captured by rewind. Completion
+waits for both volleys and full recovery, avoiding immediate second-shot disarm.
+
+These contracts do not depend on either peer branch. Integration overlap is
+expected in `ModContext`/`ModRegistrationPlan`/`ModBackedGamePatch` and candidate
+signature pins with Mutators, and module/input/session owners with Multigame.
+Those teams own mutator policy/configuration and exclusive worker driving;
+neither authority is implied by this prototype's native-input opt-in. Final
+PR evidence will identify the exact changed-file overlap. The existing release
+descriptor already declares the unpublished 0.7 candidate; the policy hook
+forbids descriptor edits during ordinary candidate-pin regeneration, so it stays
+semantically unchanged while runtime description and normalized pins change.
+
+The [local MHZ1 matrix](../validation/levels/s3k-mhz-act1.md#post-two-ambush-local-prototype--2026-10-07)
+tracks actual execution/capture obligations. Placement commit `8c89262b9` and
+session commit `84459ddcd` preserve the original base; all temporary imports were
+reversed before their coherent integration. Their combined compiled API export
+matches the normalized 0.7 pin (20,124 lines). Placement's 60 distinct focused
+cases and session's 55 focused cases pass without skips. The encounter geometry
+and all eleven core methods pass across bounded corrected runs; fixture corrections
+changed no production physics or timing.
+
+The first production walkthrough reached physical post contact, both volleys,
+clear, native post retry and title return with actual GPU frames and stereo PCM.
+It rejected a seemingly sufficient headless entry: MHZ1's cold native camera
+owner forces its distant introduction focus, leaving the local entrance invisible
+while follow catches up. The bounded correction marks an actually admitted fresh
+position for that load's native camera initialization; it does not fabricate a
+checkpoint, write camera coordinates from the mod, remove events, or persist an
+entry override through death or stage return. The marker is cleared/consumed at
+load boundaries. The integrated packaged example and four mandatory S3K
+regressions passed 65 cases with zero skips at 14:19 UTC. The camera follow-up
+observed the correct native death camera `0x1CC0`; its initial new fixture
+incorrectly expected the banked value, and the one-line assertion correction
+passed its corrected matched rerun at 14:52 UTC. The actual merged `d5e6eb613`
+compiled-source focus passed 122 cases without skips; its compiled 20,126-line
+candidate export matched the committed pin. Final polished capture and broad
+validation remain pending. An exploratory capture or focused result is not a
+broad pass.
+
 ## Owning references
 
 - [Level test standard](../../guide/contributing/level-test-standard.md).
@@ -173,3 +247,126 @@ Research checks: `git rev-parse HEAD` matched the base; initial and final `git s
 - [MHZ checkpoint fixtures](../../../src/test/java/com/openggf/tests/TestMhzCheckpointRoutes.java).
 - [AIZ terrain owner](../../../src/main/java/com/openggf/game/sonic3k/events/Sonic3kAIZEvents.java).
 - [Native special-stage owner](../../../src/main/java/com/openggf/game/sonic3k/specialstage/Sonic3kSpecialStageManager.java).
+
+### Entry-owner follow-up
+
+Merged `d5e6eb613` GPU/PCM and native-window walkthroughs reached physical post
+contact, two volleys, safe clear, native post retry and a separate fresh launch.
+They rejected two presentation details: the title's initial moving controls
+collided with its fixed footer, and the first PLAY rows appeared before native
+terrain finished loading. A queue-handle-only gate would miss
+`deferredFreshLevelRuntimeArt`, and holding ENTRY prevents that producer from
+running. The correction advances neutral ordinary rows, removes the duplicate
+manual fade step and releases only in `afterTick` after a completed neutral row,
+minimum presentation, fade/title readiness and game-owned art readiness.
+
+The additive query-only `RuntimeArtCoordinator.levelEntryArtReady()` defaults to
+true. S3K composes actual deferred terrain, physical/prepared module work, direct
+work, marked fresh handoff consumption and native title/enemy producer state.
+It forces no service and reads no diagnostic/trace rows. Its lazy provider
+reference preserves stock initialization; existing rewind owners capture the
+queried state. The title footer waits for its moving panel to settle. The new focused run completed 144 cases with no skips: 143 passed, while the
+physical checkpoint retry exposed an unconsumed mandatory native title request.
+ENTRY now calls existing `CourseControl.finishInitialPresentation()` before its
+neutral production row; the native omitted-title lease, teardown and enemy-art
+handoff still own that work. Both native retries explicitly check pending-card
+consumption and art readiness. The corrected seven prototype cases and actual
+runtime policy case pass with no skips. Queue/provider and mandatory S3K cases
+passed in the preceding run. The actual compiled candidate export has 20,127
+lines, SHA-256 `5a00245f286003f11aa6e5d6b497c5cf5d95c4131786c5414d0c3332a5fea7d0`,
+and matches the normalized pin. Independent source review of the new query and
+title-consumption boundary found no blocking issues. Final audiovisual observation
+and broad validation remain separate gates.
+
+The D5 trace check completed three methods with no skips but three assertions:
+AIZ 57 errors, first 20,302 (animation `0`/`5`); complete AIZ 99 errors, first
+25,589 (animation `0x13`/`5`); HCZ 4,699 errors, first 9,482 (air `1`/`0`). A
+separate clean 5b3 destination-baseline run completed the same three methods with
+no skips, reproducing each exact assertion message, total and first-error field.
+They are attributable inherited failures for D5, not newly declared route passes.
+Its first waiting invocation ended 130 before admission for an unknown reason;
+it produced no test result. One reconciled normal replacement supplied the
+actual baseline evidence. The later entry-query source still requires its own
+trace check. The native missing-ROM screenshots/state log show recovery;
+its three-frame desktop video failed X11 GetImage and is rejected as footage.
+
+### Destination reconciliation after entry polish
+
+Coherent entry source `84e1a9a6f` completed the same three trace methods with no
+errors or skips and the literal 57/99/4,699 assertions from the clean 5b3 baseline.
+This covers the new native queue/provider query before the next destination merge.
+Exact destination `2fc65c847` is then merged as `259a9a48f`; its stock power-up rules
+retain `restoreLevelMusicAfterInvincibility=true` for every stock game. Both the
+new upstream power-up description and this prototype's contracts survive the
+single version-comment conflict. The prior title callback, delegated forwarding
+and unavailable two-player branch are preserved. Auto-merged API pins are
+provisional until exported from the actual compiled merged source. The candidate
+stays unpublished 0.7; published baselines are unchanged.
+
+One shared clean 2fc three-method baseline is queued for all prototype teams;
+the earlier 5b3 summary remains historical. Final merged candidate trace,
+packaging, audiovisual and combined validation still require observed results.
+The pre-2fc entry diagnostic confirms title frame 0 has no footer collision and
+first PLAY frame 274 contains native foreground and Sonic. Its safe path reaches
+post 313, both volleys 380/404, clear 675, real-post retry 840 and separate fresh
+launch 1,035. The maintained failure input still produces actual zero-ring death
+352 and real-post retry 531. These diagnostics have real GPU frames and varying
+stereo PCM, but are not the newly merged source certificate.
+
+The missing-ROM recorder fix waits for the first native display to settle the
+owned window geometry before recorder attachment. The bounded pre-2fc probe
+fully decodes 363 desktop frames and observes error/menu/error/menu with 337
+native input rows. The exact owned PID/title is viewable by default, without a
+frameless workaround, at 960×672; native focus/input are observed. Recorders stop
+with codes 0/255 and the engine/sink clean up. Exit 255 alone is not audio success;
+final video extent and actual device samples must be inspected. This caller uses
+unmodified `Engine.display` at a diagnostic 60 Hz and does not certify
+`Engine.loop`, physical HID hardware or speakers. Final merged recapture remains
+required; the earlier three-frame missing-ROM movie remains rejected.
+
+
+### Implementation evidence — 2026-10-08
+
+The earlier implementation checkpoints above retain their stated source and
+pending state. They are superseded for prototype delivery by the
+[implementation plan](../plans/2026-10-07-hardened-s3k-prototype.md) and the
+[local MHZ1 cell](../validation/levels/s3k-mhz-act1.md#post-two-ambush-local-prototype--2026-10-07).
+Final compiled composition `cd38571ab4` includes actual published base
+`33d3976c53304dbbea1c695914ecdd7bfc64cf9d`, preserving original 6d provenance.
+
+The working JVM example now has title/lesson/entry/tells/two volleys/recovery,
+clear/fatal/retry/exit, physical native post contact and respawn, scarce native
+rings, ROM art/music/SFX and two whole-registry restore/forward cycles. The
+clean 2fc SAME3 trace baseline completed; the final composed candidate's full
+57/99/4699 assertions match it literally, with no errors/skips. They are inherited
+failures, not route passes. The combined 3032-class ordinary run produced 28 full
+inherited assertions and 62 exact causal skips, no errors/new/worse/unattributed
+failures. Its owned facade-size guard was fixed by a package-private load-owner
+extraction;158 focused cases and all 678 fresh guards pass without skips. A
+single interrupted guard invocation remains 130/incomplete/causeunknown.
+
+The 33d capture-helper/test-fixture successor was intent-merged without gameplay/
+audio/publicAPI changes, then rebuilt and checked with 74 capture/API/SDK/prototype
+passes, zero failures/errors/skips. Actual compiled candidate signatures match
+the pin and the maintained 18-entry creator jar contains classes/manifest only.
+Final GPU safe 1316/fatal 715 movies and stereo 48k PCM fully decode; actual state
+CSV/WAV bytes match the extraction capture. Native c732 keyboard/window/device
+walkthroughs observe 1376 safe and 337 missing-ROM rows, with successful owned
+process/recorder/sink cleanup. Their explicit frameless/diagnostic 60Hz/HID/speaker
+limits remain; no default-window or Engine.loop certificate is inferred.
+
+The implementation is prepared for a clean outside-repository handoff. The user
+then requested root-owned Claude Opus 5.5 hands-on polish followed by a separate
+promo-video task, so feature push and the one PR are held for that integration.
+Full MHZ act, chapter, campaign, extra characters/widths/donors and Stage Trials
+certification remain later stages; this evidence closes only the scoped local
+prototype implementation gates.
+
+### Hands-on polish — 2026-10-08
+
+The requested Opus polish keeps the encounter pattern, geometry and native owners.
+It makes all copy legible at 320×224, moves the HUD off the native digits, outlines
+the tell/lock sight, crown and spore spikes, adds native lock-on and exit cues, and
+shows the native death arc before the retry panel without reaching the restart row.
+Its gaps, rejected options, acceptance checklist and evidence are in the
+[implementation plan](../plans/2026-10-07-hardened-s3k-prototype.md#hands-on-polish--2026-10-08).

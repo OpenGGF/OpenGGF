@@ -45,6 +45,7 @@ public final class ModContext {
     private final java.util.Set<String> patchIds = new java.util.HashSet<>();
     private final Map<com.openggf.game.CharacterKey, com.openggf.game.CharacterDefinition> characters
             = new LinkedHashMap<>();
+    private final Map<Integer, com.openggf.level.LevelPlacementPlan> levelPlacements = new LinkedHashMap<>();
     private boolean frozen;
     private ModRegistrationException poison;
     private com.openggf.game.GameModule gameModule;
@@ -109,6 +110,25 @@ public final class ModContext {
                 throw failure("Duplicate or reserved patch id: " + id);
             }
             patches.add(new NamespacedPatch(id, patch));
+        });
+    }
+
+    /**
+     * Stages a bounded transform for one native level index of this manifest's base game.
+     * Only stock Sonic 2/Sonic 3 & Knuckles placement lists are supported. Additions
+     * must name factories registered in this same transaction; all validation is atomic.
+     */
+    public void registerLevelPlacementPlan(int levelIndex, com.openggf.level.LevelPlacementPlan plan) {
+        mutate(() -> {
+            if (standalone || !("s2".equals(baseGame) || "s3k".equals(baseGame))) {
+                throw failure("Placement plans require a stock S2/S3K patch base game");
+            }
+            if (levelIndex < 0 || levelIndex > 255 || levelPlacements.size() >= 8) {
+                throw failure("Invalid stock level index or more than eight placement plans");
+            }
+            if (levelPlacements.putIfAbsent(levelIndex, Objects.requireNonNull(plan, "plan")) != null) {
+                throw failure("Duplicate placement plan for stock level " + levelIndex);
+            }
         });
     }
 
@@ -315,6 +335,12 @@ public final class ModContext {
                     || !inputFilters.isEmpty() || !hudProfiles.isEmpty())) {
                 throw failure("baseGame any may register only a startup scene and its display requirement");
             }
+            levelPlacements.values().forEach(placement -> {
+                for (var addition : placement.additions()) {
+                    String key = ModKeySyntax.requireOwnedKey(owner, addition.localKey());
+                    if (!objects.containsKey(key)) throw failure("Placement names unknown local object factory: " + key);
+                }
+            });
             objectPreviewArtKeys.forEach((objectKey,artKey)-> {
                 if(!objects.containsKey(objectKey))throw failure("Preview maps unknown object key: "+objectKey);
                 if(!art.containsKey(artKey))throw failure("Preview maps unknown art key: "+artKey);
@@ -332,7 +358,7 @@ public final class ModContext {
             frozen = true;
             return new ModRegistrationPlan(owner, baseGame, objects, art, Map.of(), patches,
                     zones, prepared,objectPreviewArtKeys,characters,gameModule,romArt,
-                    launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect);
+                    launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect, levelPlacements);
         } catch (java.io.IOException | RuntimeException rejected) {
             if (rejected instanceof ModRegistrationException registration) poison = registration;
             else poison = new ModRegistrationException(owner, "MOD_LEVEL_ASSET_INVALID",

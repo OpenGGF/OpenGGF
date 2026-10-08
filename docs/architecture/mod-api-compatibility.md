@@ -494,6 +494,34 @@ Music judgments follow consumed samples, input follows monotonic observed events
 and the example alone owns curated charts, GH III reference rules and calibration.
 No diagnostic/trace rows become gameplay authority.
 
+### Bounded native placement plans
+
+The unpublished 0.7 candidate adds `ModContext.registerLevelPlacementPlan` and
+immutable `LevelPlacementPlan`/`Bounds`/`ObjectAddition`/`RingAddition` values. The registration
+publisher derives owner and base game from the frozen transaction. Its opaque
+`RegisteredLevelPlacements` service is engine-internal, has no public constructor,
+and is not recursively reachable from a creator signature. The level assembly
+boundary replaces only detached placement lists on the concrete decoded native
+level; it does not wrap native S3K levels or supersede prepared/deferred resources.
+Runtime validation executes in the registration owner's fault boundary and commits
+all active disjoint plans atomically. Added native-ring identities are engine-allocated
+above the original decoded identity range, never supplied by creators. The descriptor and runtime version remain
+candidate `0.7.0`; the mutable `0.7` pin is regenerated without published baselines.
+
+### Native entry-art readiness
+
+`RuntimeArtCoordinator.levelEntryArtReady()` is an additive query with default
+`true`. A controlled entry may advance ordinary neutral rows, then release input
+only after its presentation and game-owned art producers have finished. The S3K
+implementation includes not-yet-submitted terrain, physical and prepared module
+work, direct work, unconsumed fresh handoffs, and deferred title/enemy producers.
+It submits or services no work and consumes no diagnostic or trace state. The
+native coordinator's provider reference is resolved lazily, preserving stock
+initialization. Other controlled modes retain their existing input defaults.
+This refreshes the mutable `0.7` signature pin and runtime description while the
+release descriptor continues to declare candidate `0.7.0`; no published baseline
+or version bump is introduced.
+
 ### Scene-owned direct peer messaging
 
 `SceneContext.network()` reaches `SceneNetwork`, `ScenePeer`, `ScenePeer.State`

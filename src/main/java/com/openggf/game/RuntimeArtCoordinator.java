@@ -76,6 +76,20 @@ public interface RuntimeArtCoordinator extends QueueDiagnosticsProvider {
     default void runHeldIterationLoopTail() {
     }
 
+    /**
+     * Whether this game's native level-entry art owners have finished their
+     * deferred submissions and consumed the completed work for the current load.
+     *
+     * <p>A controlled presentation may query this after an ordinary neutral
+     * gameplay row before releasing player input. The query neither submits nor
+     * services work. Readiness comes from the owning producers and queues, not
+     * diagnostic or trace rows, and does not certify a graphics device or route.
+     * Games without an additional entry-art gate retain the default {@code true}.
+     */
+    default boolean levelEntryArtReady() {
+        return true;
+    }
+
     default void registerRewindAdapters(RewindRegistry registry) {
     }
 

@@ -84,6 +84,11 @@ final class OwnerAwareStandaloneModule {
         }
 
         private Object validateOwnedReturn(Method method, Object value) {
+            if (method.getName().equals("freshLevelStartPosition")
+                    && (!(value instanceof java.util.Optional<?> position)
+                    || position.isPresent() && !(position.orElseThrow() instanceof com.openggf.game.LevelStartPosition))) {
+                throw new IllegalArgumentException("freshLevelStartPosition must return Optional<LevelStartPosition>");
+            }
             if (method.getName().equals("getLevelMusicReference")) {
                 if (!(value instanceof com.openggf.game.MusicReference.Namespaced namespaced)
                         || !owner.equals(namespaced.owner())) {

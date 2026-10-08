@@ -4,6 +4,7 @@ import com.openggf.game.EmeraldRewardKind;
 import com.openggf.game.SpecialStageEntryRequest;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.LevelLoadMode;
 import com.openggf.level.LevelManager;
 import com.openggf.level.LevelTransitionCoordinator;
 import org.junit.jupiter.api.Test;
@@ -135,7 +136,7 @@ class TestGameLoopSpecialStageEntryRequest {
                 "an origin return is not a sanctuary hub return");
 
         verify(levelManager).loadZoneAndAct(0, 1);
-        verify(levelManager, never()).loadCurrentLevel();
+        verify(levelManager, never()).loadCurrentLevel(LevelLoadMode.FULL, true);
         verify(levelManager, never()).markSanctuaryReentry(anyInt(), anyBoolean());
     }
 
@@ -151,7 +152,7 @@ class TestGameLoopSpecialStageEntryRequest {
         // reveal already ran behind the results screen, so the hub never replays it.
         InOrder order = inOrder(levelManager);
         order.verify(levelManager).markSanctuaryReentry(3, false);
-        order.verify(levelManager).loadCurrentLevel();
+        order.verify(levelManager).loadCurrentLevel(LevelLoadMode.FULL, true);
         verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
     }
 
@@ -162,7 +163,7 @@ class TestGameLoopSpecialStageEntryRequest {
         assertFalse(SpecialStageTransitionSupport.loadSpecialStageReturnLevel(
                 levelManager, EmeraldRewardKind.CHAOS_EMERALD, 3));
 
-        verify(levelManager).loadCurrentLevel();
+        verify(levelManager).loadCurrentLevel(LevelLoadMode.FULL, true);
         verify(levelManager, never()).requestSanctuaryExit();
         verify(levelManager, never()).markSanctuaryReentry(anyInt(), anyBoolean());
     }

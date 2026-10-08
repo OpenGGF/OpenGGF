@@ -41,6 +41,61 @@ Use `docs/modding/ggfmod.ps1` on Windows or `docs/modding/ggfmod` on macOS/Linux
 Pass the engine jar and SDK jar first, followed by the command. The examples below
 abbreviate that launcher as `ggfmod`.
 
+## Bounded native placements
+
+A trusted S2 or S3K patch may register a small authored encounter on an existing
+ROM level without replacing the concrete native level or its terrain, events,
+PLCs or art owners. `ModContext.registerLevelPlacementPlan(levelIndex, plan)`
+freezes the plan with this manifest's base game and trusted registration owner.
+The plan is effective only when that content patch is active in the resolved
+session. Registration is restart-loaded; it is not a live-world editing API.
+
+```java
+context.registerObject("sentry", spawn -> new Sentry(spawn));
+context.registerLevelPlacementPlan(nativeLevelIndex, new LevelPlacementPlan(
+        new LevelPlacementPlan.Bounds(0x1D00, 0x0100, 0x1F00, 0x0280),
+        List.of(new RingSpawn(safeX, safeY, nativePlacementId)),
+        List.of(new LevelPlacementPlan.ObjectAddition("sentry", sentryX, sentryY, 0, 0)),
+        List.of(new LevelPlacementPlan.RingAddition(recoveryX, recoveryY))));
+```
+
+Import `com.openggf.level.LevelPlacementPlan` and
+`com.openggf.level.rings.RingSpawn`. The coordinates and placement id in the
+retention list must match an actual decoded native ring inside the bounds;
+obtain them from a ROM survey, then maintain them as authored data. Retention
+keeps every outside ring and only the listed inside rings. An empty retention
+list intentionally removes all rings inside the rectangle. It never rewrites
+ring awards, damage, spill/recollection, shields or checkpoint state. Added rings
+use the native ring art, RingManager collection/spill behavior and rewind. Their
+placement ids are assigned by the engine above every original native identity,
+including removed rings; authors supply only bounded positions. Ring additions
+cannot overlap any original ring or another addition. All native
+objects retain their original identities and order. Added objects name a local
+factory registered in the same transaction; the engine supplies their trusted
+owner and namespaced key and appends distinct layout identities.
+
+Bounds are inclusive native centre coordinates and may span at most 1024 pixels
+on either axis. A plan holds at most 64 retained rings, 32 object additions and eight ring additions; an owner
+may register at most eight native level plans, one per level index (0–255).
+Foreign keys such as `other:sentry`, missing factories, duplicate plans, negative
+coordinates, out-of-bounds additions, duplicate ring identities and anonymous
+rings (`placementId == -1`) reject the entire registration. An absent native ring
+identity, overlapping active plans, an incorrect base game or a level override
+aborts under the registering owner's fault boundary before publishing placements.
+
+Admission runs exactly once on each actual decoded level installation, including
+normal/death/return loads and prepared/deferred seamless installation. Preparation
+itself does not admit the plan. Editor swaps and snapshot restores do not admit it
+again. A fresh decoded death load gets the same immutable authored plan; object
+and ring managers still own runtime activation, collection and rewind. Added
+objects remain responsible for recreation and captured gameplay state.
+
+This seam currently supports stock S2/S3K separately decoded ring lists. S1's
+ring-object coupling, additive/overridden levels, stock object replacement/removal,
+terrain changes and nonresident S3K art intake are outside its support. Survey
+geometry and resident art before authoring an encounter; registration alone does
+not certify that a route is safe or completable.
+
 ## Start a project
 
 ```text

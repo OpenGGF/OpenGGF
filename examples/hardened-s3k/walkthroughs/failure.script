@@ -1,0 +1,22 @@
+# Post Two Ambush: real post -> jump over the recovery ring
+# -> wait at zero rings for the committed volley -> real projectile death
+# -> native checkpoint retry -> title. Native solo Sonic,320,donor off.
+# No health, checkpoint or position seed; retain held-state release rows.
+# Native post contact then jump over the safe ring; remain inside the committed attack.
+60 -
+1 A
+180 -
+39 R
+15 R+A
+18 L+A
+200 -
+1 A
+90 -
+1 S
+15 -
+1 D
+1 -
+1 D
+1 -
+1 A
+90 -

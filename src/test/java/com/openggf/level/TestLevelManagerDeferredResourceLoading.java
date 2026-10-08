@@ -178,6 +178,80 @@ class TestLevelManagerDeferredResourceLoading {
         assertEquals(0, fixture.manager().preparedLevelInstallCount());
     }
 
+    @Test
+    void placementPlansRunAfterNormalPreparedAndDeferredDecodeOnlyOnce() throws Exception {
+        for (String path : java.util.List.of("normal", "prepared", "deferred")) {
+            Game game = mock(Game.class, withSettings().extraInterfaces(
+                    PreparableLevelLoader.class, DeferredLevelResourceLoader.class));
+            PlacementLevel level = new PlacementLevel();
+            LevelManager manager = managerFor(game);
+            GameModule module = mock(GameModule.class);
+            var zones = mock(com.openggf.game.ZoneRegistry.class);
+            when(module.getZoneRegistry()).thenReturn(zones);
+            when(module.getGameplayPolicyProvider()).thenReturn(com.openggf.game.GameplayPolicyProvider.EMPTY);
+            when(zones.zoneKey(0)).thenReturn(com.openggf.game.ZoneKey.stock(0));
+            when(module.getGameCode()).thenReturn("s3k");
+            when(module.getGameService(RegisteredLevelPlacements.class)).thenReturn(placements());
+            manager.gameModule = module;
+            when(game.loadLevel(LEVEL_INDEX)).thenReturn(level);
+            Level installed;
+            if (path.equals("prepared")) {
+                PreparableLevelLoader loader = (PreparableLevelLoader) game;
+                PreparedLevelBuild build = mock(PreparedLevelBuild.class);
+                when(loader.prepareLevelBuildTask(LEVEL_INDEX, "fire")).thenReturn(() -> build);
+                when(loader.installPreparedLevel(build)).thenReturn(level);
+                manager.levels.add(java.util.List.of(LevelData.SKY_CHASE));
+                assertTrue(manager.prepareActTransitionLevelLoad(0, 0, "fire"));
+                assertEquals(1, level.getObjects().size(), "preparation does not admit placements");
+                installed = manager.loadActTransitionLevelData(LEVEL_INDEX, DeferredLevelResourceTracker.none(), "fire");
+                assertEquals(1, manager.preparedLevelInstallCount());
+                verify(game, never()).loadLevel(LEVEL_INDEX);
+            } else if (path.equals("deferred")) {
+                var descriptor = new DeferredLevelResourceDescriptor(DeferredLevelResourceDescriptor.Kind.PATTERNS_8X8,
+                        0x1234, CompressionType.KOSINSKI_MODULED, 0x40);
+                var tracker = new DeferredLevelResourceManifest(java.util.List.of(descriptor)).newTracker();
+                doAnswer(call -> { tracker.omitIfRequested(descriptor); return level; })
+                        .when((DeferredLevelResourceLoader) game).loadLevelWithDeferredResources(LEVEL_INDEX, tracker);
+                installed = manager.loadLevelData(LEVEL_INDEX, tracker);
+                tracker.verifyFullyConsumed();
+                verify(game, never()).loadLevel(LEVEL_INDEX);
+            } else {
+                installed = manager.loadLevelData(LEVEL_INDEX);
+            }
+            assertSame(level, installed, "the concrete level is preserved on " + path);
+            assertSame(level.nativePost, level.getObjects().getFirst());
+            assertEquals(2, level.getObjects().size());
+            assertEquals("owner:sentry", level.getObjects().getLast().objectKey());
+            assertEquals(java.util.List.of(level.safeRing), level.getRings());
+            manager.loadLevelData(LEVEL_INDEX); // returning an already decoded instance must not double-add
+            assertEquals(2, level.getObjects().size());
+        }
+    }
+
+    private static final class PlacementLevel extends AbstractLevel {
+        final com.openggf.level.objects.ObjectSpawn nativePost = new com.openggf.level.objects.ObjectSpawn(
+                120, 150, 0x79, 2, 0, true, 150, 7);
+        final com.openggf.level.rings.RingSpawn safeRing = new com.openggf.level.rings.RingSpawn(100, 150, 0);
+        PlacementLevel() {
+            super(7);
+            objects = java.util.List.of(nativePost);
+            rings = java.util.List.of(safeRing, new com.openggf.level.rings.RingSpawn(110, 150, 1));
+        }
+    }
+
+    private static RegisteredLevelPlacements placements() throws Exception {
+        var constructor = RegisteredLevelPlacements.class.getDeclaredConstructor(String.class, String.class,
+                java.util.Map.class, java.util.function.Consumer.class, RegisteredLevelPlacements.class,
+                com.openggf.level.objects.ObjectPlacementEncoding.class);
+        constructor.setAccessible(true);
+        var plan = new LevelPlacementPlan(new LevelPlacementPlan.Bounds(90, 100, 200, 200),
+                java.util.List.of(new com.openggf.level.rings.RingSpawn(100, 150, 0)),
+                java.util.List.of(new LevelPlacementPlan.ObjectAddition("sentry", 170, 150, 0, 0)));
+        java.util.function.Consumer<Runnable> boundary = Runnable::run;
+        return constructor.newInstance("owner", "s3k", java.util.Map.of(LEVEL_INDEX, plan), boundary, null,
+                new com.openggf.game.common.CommonObjectPlacementEncoding());
+    }
+
     private record PreparedFixture(LevelManager manager, Level ordinary, Level transition) { }
 
     private static PreparedFixture preparedFixture() throws Exception {

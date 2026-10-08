@@ -102,6 +102,9 @@ public final class ModBackedGamePatch implements GamePatch {
         if (!plan.characters().isEmpty() && faultBoundary == null) {
             throw new IllegalArgumentException("Mod characters require an installed fault boundary");
         }
+        if (!plan.levelPlacements().isEmpty() && faultBoundary == null) {
+            throw new IllegalArgumentException("Placement plans require an installed fault boundary");
+        }
         if (plan.startupScene() != null && faultBoundary == null) {
             throw new IllegalArgumentException("Mod startup scenes require an installed fault boundary");
         }
@@ -164,6 +167,11 @@ public final class ModBackedGamePatch implements GamePatch {
                 ? Map.of()
                 : romArtSource.materialize(plan.ownerModId(), plan.romObjectArt());
         return new DelegatingGameModule(base, id()) {
+            private final com.openggf.level.RegisteredLevelPlacements registeredPlacements =
+                    plan.levelPlacements().isEmpty() ? null : publishLevelPlacements(
+                            super.getGameService(com.openggf.level.RegisteredLevelPlacements.class),
+                            super.getObjectPlacementEncoding());
+
             private com.openggf.game.PlayableCharacterRegistry playableCharacters;
             private com.openggf.game.ObjectArtProvider objectArtProvider;
             private com.openggf.game.ZoneRegistry zoneRegistry;
@@ -298,6 +306,9 @@ public final class ModBackedGamePatch implements GamePatch {
                 if (type == OwnedSceneFactory.class && plan.startupScene() != null) {
                     return (T) new OwnedSceneFactory(plan.ownerModId(), plan.startupScene(), faultBoundary);
                 }
+                if (type == com.openggf.level.RegisteredLevelPlacements.class && !plan.levelPlacements().isEmpty()) {
+                    return type.cast(registeredPlacements);
+                }
                 return super.getGameService(type);
             }
 
@@ -426,4 +437,24 @@ public final class ModBackedGamePatch implements GamePatch {
                     "Unable to prepare additive-zone data", null, e);
         }
     }
+    /** Private-constructor lookup preserves level -> mods package direction and opaque authority. */
+    private com.openggf.level.RegisteredLevelPlacements publishLevelPlacements(
+            com.openggf.level.RegisteredLevelPlacements inherited,
+            com.openggf.level.objects.ObjectPlacementEncoding encoding) {
+        try {
+            var type = com.openggf.level.RegisteredLevelPlacements.class;
+            var lookup = java.lang.invoke.MethodHandles.privateLookupIn(type, java.lang.invoke.MethodHandles.lookup());
+            var constructor = lookup.findConstructor(type, java.lang.invoke.MethodType.methodType(void.class,
+                    String.class, String.class, Map.class, java.util.function.Consumer.class, type,
+                    com.openggf.level.objects.ObjectPlacementEncoding.class));
+            java.util.function.Consumer<Runnable> ownerBoundary = callback -> faultBoundary.run(plan.ownerModId(), callback);
+            return (com.openggf.level.RegisteredLevelPlacements) constructor.invoke(
+                    plan.ownerModId(), plan.baseGameId(), plan.levelPlacements(), ownerBoundary, inherited, encoding);
+        } catch (RuntimeException | Error failure) {
+            throw failure;
+        } catch (Throwable failure) {
+            throw new IllegalStateException("Cannot publish registered level placements", failure);
+        }
+    }
+
 }
