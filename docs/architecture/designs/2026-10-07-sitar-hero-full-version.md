@@ -739,3 +739,52 @@ runtime Java, Java tests, POM, hooks and selection are unchanged from `2fc`.
 They are reconciled into this tree without conflicts. Main integration, the
 mandatory post-integration normal comparison, push and owned cleanup remain
 pending at this checkpoint.
+
+### Integrated develop verification
+
+The complete feature was merged without conflicts into unchanged-branch
+`develop` at `be3c3141808c98d4c56a3dfb0fee19e241720154`, based on
+`37a57ebdbe62864737f39e7b14c72932fbaf3d74`. Runtime Java, Java tests, examples,
+resources, POM and API pins match the qualified candidate `53a742c58`.
+The additional Python cleanup tooling was checked with 119 safety tests, zero
+failures or skips. Unrelated main submodule changes and four untracked files
+were preserved throughout integration and verification.
+
+Mandatory post-integration run `20261007T213945Z-2b9d2b4b` completed both lanes:
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 37a57ebdbe62864737f39e7b14c72932fbaf3d74 \
+  --max-minutes 150 --run
+```
+
+The actual plan selected all 3,020 ordinary classes, one worker and separate
+fresh guards. Ordinary: 3,018 XML suites / 26,373 tests / 28 failures / zero
+errors / 62 skips, 6,523.21 seconds. Fresh guards: 86 suites / 672 tests / zero
+failures, errors or skips, 214.76 seconds. Runner exit 1 is the accepted inherited
+failure result, not a green whole-suite claim. Neither lane timed out; every
+failure and skip is present, with no omissions or missing-ROM skips. Actual
+launch properties used the same three verified absolute original main ROMs.
+
+Parent and validator independently compared all 28 complete assertion first
+lines and all 62 skip identities/reasons against the actual `4cfb74564`
+baseline. There are no new, resolved, changed, worsened or unattributed failure
+cases. Twenty-seven assertions match literally after exception-prefix removal;
+the integrated SSZ line is 2,951 characters (one JVM hash character shorter than
+the candidate's 2,952), and its complete concrete assertion matches after only
+the already verified blob-hash normalization. Parent used the previously
+inspected exact baseline table; the validator bounded the readiness skip table
+at its next heading, excluding later unrelated prototype evidence.
+
+Fresh ordinary XML confirms all twelve Sitar classes / 131 cases, all six
+affected S3K audio consumers / 35 cases, indexed snapshot eight, changed SMPS
+groups 12 + 10 + three, API nine, AIZ eight, bootstrap six, decoding three and
+both level-loading groups 36 + seven, all passing without skips. Infinite Sonic
+completed 238 cases / 206 passed / 32 identical expected skips, including the
+driver-observation regression. Parent directly inspected these ordinary XML
+reports and the terminal runner summaries; successful guard XML was removed
+automatically after exit. Main stayed at the exact measured head with only its
+preserved unrelated dirt. The final evidence update changes this design only;
+it does not require another engine invocation. Consumed diagnostics are
+acknowledged before publication; push and owned cleanup follow this verified
+checkpoint.
