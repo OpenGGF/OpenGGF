@@ -2093,3 +2093,45 @@ recorded with their own exact source and command before final publication.
 Foreign private requests and native captures remain untouched; local main
 and publication hold continue while this source-changing reconciliation is
 qualified.
+
+Private composition `d8f7ab7205935a608948ea6813b38e281df0cce8` passes
+its once-submitted queued focus at2026-10-08T21:48:57Z, Maven exit0 /
+BUILD SUCCESS,2:02 execution after normal queue waiting. All20 selectors
+are represented in21 fresh XML suites (level loading matches two packages):
+146 cases,145 passed, zero failures/errors and one explicit GPU skip.
+The skipped identity is
+`com.openggf.mods.scene.host.TestSceneRenderer#changingBatchSizesPreservesEveryPixelAndStreamingUpdates`;
+its literal first causal reason is
+`org.opentest4j.TestAbortedException: Assumption failed: OpenGL 4.1 unavailable`.
+No ROM case skips. This does not certify the skipped GPU pixel behavior.
+API reflection9, SDK10, Javadoc7, both creator mods22, startup audio2,
+detached pictures2, S3K backdrops10, texture cache5, host music/cues18
+and required S3K startup60 all pass. Fresh reports are selected by mtimes
+after the owning invocation, not earlier target output. Before/after source
+fingerprint is identical:
+`2d7b785be8c2eb4dea26ef7564ab07136fa735f7116bc8cfc592fd7ed874f78d`.
+Owning focus supervisor/runner are absent after terminal.
+
+The exact focused command, with only machine-local path spelling normalized,
+is:
+
+```sh
+OPENGGF_ROM_ROOT=/absolute/path/to/OpenGGF
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestEggmansSkyStartupAudio,TestEggmansSkyFauna,TestEggmansSkyQualityOfLife,TestEggmansSkyScene,TestStarfallFrontierExample,TestStarfallFrontierScene,TestModSceneLauncherAudio,TestSceneBackdropS3k,TestDetachedStockScenePictures,TestSceneRenderer,TestSceneTextureCache,TestModApiSignatureSurface,TestModApiSdkPackager,TestModApiJavadocTool,TestSceneMusicRom,TestScenePartCues,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The canonical updated-base normal run admits21:47:48Z as
+`20261008T214748Z-737dcb35`, exactd499/basef5de, all3066 ordinary
+classes plus fresh guards, one worker and150minutes excluding admission.
+The combined candidate's unmodified plan against actual destinationd499
+selects all3068 ordinary classes plus fresh guards. Expected execution cost
+is85–110minutes ordinary plus4–5minutes guards for each invocation; queue
+waiting is additional. A timeout, unexplained omission, ROM skip or new/
+worsened/unattributed failure blocks integration. The incoming GPU skip must
+match the updated canonical baseline by identity and literal reason. Final
+combined private and actual-main qualification, publication and cleanup
+remain pending.

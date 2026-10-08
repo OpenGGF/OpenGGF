@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A frozen local source does not freeze another clone's publication (2026-10-08,
+stock parity delivery): local main's complete ordinary/guard run retained its
+exact HEAD and input fingerprint while remote develop acquired independent
+engine/API merges. The old result remains valid for its tested source; it does
+not qualify the incoming source or a future publication. Verify remote refs
+before pushing, preserve both histories, inspect the complete input delta and
+qualify a changed composition against the actual updated destination. Do not
+force-push over legitimate remote work or substitute local HEAD equality for
+remote source equivalence.
+
 An inherited loader environment can change a shell test without a source change
 (2026-10-08, stock parity delivery): the audio CLI deliberately rejects `LD_*`
 variables. Its first safe `--help` subprocess returned4 from the app's native
