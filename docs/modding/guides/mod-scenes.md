@@ -15,8 +15,9 @@ Examples go with this guide:
   deck-building roguelike on Sonic 3 & Knuckles, and shows how a whole game is organised
   around one scene.
 - [Sitar Hero](../../../examples/sitar-hero/README.md) combines supplied Sonic 1,
-  Sonic 2 and S3K content in an arcade rhythm game, with timestamped physical input
-  and bounded ROM-synthesized music.
+  Sonic 2 and S3K content in a rhythm game, with timestamped physical input, bounded
+  ROM-synthesized music, performers standing on real ROM stages and a README that
+  walks through its source in reading order.
 
 When this guide and their source differ, the source is authoritative. Build and run either
 from a checkout with `python3 examples/build_example.py <name> --run` (Java 21 and Maven, and
@@ -208,8 +209,19 @@ called. A sorted `SceneMusicPart` list can change that selection by section; its
 first onset must be zero. FM/PSG indices are zero-based; logical PSG3 includes its
 noise output. DAC remains a separate flag. The host synthesizes full and masked
 mixes separately to preserve chip interactions and backing progression.
-`setWhammy` bends the selected residual; it is a presentation effect rather than
-an emulated guitar-controller DSP contract. Scope it to roles that use it.
+`setWhammy(amount)` applies a 5 Hz vibrato, up to 24 samples deep at 1.0, to the
+selected part only: the difference between the full and masked mixes. The backing
+stays on its clock. It is a presentation effect, not an emulated guitar-controller
+DSP contract. Scope it to roles that use it.
+
+**One source is audible at a time.** While a `SceneMusicPlayer` exists (playing,
+paused or waiting in its lead-in), its PCM replaces the base game's sound driver
+output. Music and sound effects started with `ctx.audio()` keep running in the
+driver but cannot be heard, and pausing the player pauses all scene audio. When
+the player stops, the driver is audible again from wherever it has reached.
+So stop or fade any `ctx.audio()` music before `start`. Drop menu cues while a
+player exists, and ask for menu music again after `stop`. Sitar Hero's
+`HouseAudio` shows the pattern.
 
 The clock follows consumed final PCM on a live device, with optional OpenAL Soft
 backend latency correction; a no-device capture follows PCM actually rendered.
@@ -408,7 +420,14 @@ ggfmod sprites s3k.gen s3k knuckles.png char=knuckles   # a playable character, 
 ## 5. Audio and storage
 
 `ctx.audio()` plays the base game's music and sound effects by driver ID (`playMusic`,
-`playSfx`, `fadeOutMusic`, `stopMusic`).
+`playSfx`, `fadeOutMusic`, `stopMusic`). "Base game" means the running game: in a
+`baseGame: any` scene, the ROM the player launched with, even when your art or
+`ctx.music()` songs come from another installed ROM. Pick IDs per game
+(`ctx.art().rom().gameId()`). Stock fades take the game's own time (S1 and S2
+about two seconds, S3K about four). Sonic 1's fade also stops sound effects, so play a cue
+before fading or after the fade. Fade or stop your music when the scene leaves, so
+none of it plays on into the next screen. See the note above on `ctx.music()`
+replacing this output while a song player exists.
 
 `ctx.storage()` keeps small text files for your mod under the save root
 (`saves/mods/<mod-id>/`): `read`, `write`, `delete`, `list`. Slay the Robotnik saves the

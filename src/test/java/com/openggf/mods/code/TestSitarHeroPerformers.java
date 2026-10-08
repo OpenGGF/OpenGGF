@@ -16,11 +16,11 @@ class TestSitarHeroPerformers {
             Path tests = java.nio.file.Files.createDirectories(temp.resolve("checks"));
             String cp = temp.resolve("package/classes") + java.io.File.pathSeparator + System.getProperty("java.class.path");
             assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, "--release", "21", "-cp", cp,
-                    "-d", tests.toString(), "examples/sitar-hero/src/test/java/sitarhero/PerformerChecks.java"));
+                    "-d", tests.toString(), "examples/sitar-hero/src/test/java/sitarhero/stage/PerformerChecks.java"));
             // A single loader defines the example and its package-private tests together.
             try (var loader = new URLClassLoader(new java.net.URL[] {tests.toUri().toURL(),
                     temp.resolve("package/classes").toUri().toURL()}, getClass().getClassLoader())) {
-                loader.loadClass("sitarhero.PerformerChecks").getMethod("main", String[].class).invoke(null, (Object) new String[0]);
+                loader.loadClass("sitarhero.stage.PerformerChecks").getMethod("main", String[].class).invoke(null, (Object) new String[0]);
             }
         }
     }
