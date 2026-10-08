@@ -87,6 +87,13 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 
 ## Test harness helpers
 
+- `tools/modding/native-windows/build_inputs.py` rebuilds all friends mods with
+  the real converters and package validator; `build_windows.py` compiles a
+  separately labelled Windows native image, audits retained members, qualifies
+  registration and the actual engine boot path, and assembles the ZIP with
+  per-mod shortcuts and retained licences. Origin: [experimental Windows ZIP,
+  2026-10-08](../../tools/modding/native-windows/README.md).
+
 - `tools/modding/native-feasibility/probe.py` builds closed-world, Crema and optional
   JIT controls around the production mod classloader, then compiles two external
   fixture JARs after the images exist. `registration_probe.py` derives exact-class

@@ -332,6 +332,49 @@ builds with frame pacing and memory measurements before choosing either for user
 
 ## Validation scope
 
+### Experimental Windows friends ZIP follow-up
+
+The 2026-10-08 Windows packaging request has a separate reproducible build under
+[`tools/modding/native-windows`](../../../tools/modding/native-windows/README.md)
+and an additive artifact-only workflow. The compiler is the checksum-pinned CE
+Windows archive, SHA-256
+`2733ea1331f1a98b05dd55a768b07347051dad48f030dbbfa191b11a2ccf4144`.
+It compiles extra sources outside the production Maven source tree. Its hosted
+feature verifies the actual `RuntimeClassLoading` option and unchanged private
+engine capability field before applying an image-local accessor substitution.
+Only `compiledModsSupported` is redirected; native detection and the ordinary
+trust/snapshot/ownership/fault paths remain intact. A no-display control invokes
+the engine's real external-content boot and registration for each code mod.
+
+The Windows image uses proper runtime dependency JARs and SQLite's native-image
+feature. It does not inherit the registration diagnostic's SQLite exclusion.
+All packaged mods are rebuilt from source using the real Java 21 SDK converters
+and validator. The distribution is reconstructed after qualification, so service
+and configuration writes from the probes never enter the ZIP. Five LWJGL DLLs,
+builder-produced support DLLs, per-mod `.bat` shortcuts, the member contract,
+source identity, requested ROM filenames and licence notices accompany the image.
+ROMs remain outside this distribution and outside GitHub Actions inputs.
+
+Local preparation passed Java 21 compilation of the hosted/launcher/check
+sources, bytecode contract regression controls, fresh conversion/packaging of all
+16 mods, the portable ZIP controls and `actionlint` 1.7.12. Archive controls cover
+path spaces, changed JAR hashes, wrong PE architecture, traversal, ROM exclusion,
+licence retention, checksums and crashes wrongly presented as missing-member
+rejections. Windows compiler and actual native results are still pending at this
+preparation checkpoint; no usable Windows ZIP is claimed yet.
+
+The plan at base `d2a501ebc9919e6c43412a2eedf02a372eac5309` selects all 3,058
+ordinary classes plus guards because the new tools/workflow are unclassified.
+The previously completed ordinary engine qualification at frozen `6124a524e`
+is reusable only for the identical ordinary executable inputs: the diff remains
+empty for production/test Java, resources, examples, API, POM, hooks and testing
+tools. Its 26,535 cases retain 27 known failures and 62 literal inherited skips;
+it is not a fresh or green suite claim. The new artifact workflow is a guard input
+and the experimental native image is a new executable contract: fresh normal
+guards and direct Windows member/registration/engine-boot qualification remain
+required before delivery. This bounded additive build leaves the existing
+production build and release selection policy unchanged.
+
 The direct native/JVM experiments above are focused validation of standalone
 diagnostics and unchanged production paths. The final Python runner additionally
 passed exit-status handling, failed-control rejection, timeout cleanup, syntax
