@@ -395,6 +395,17 @@ readback/encoding and CSV writes, after a fixed warmup. Match controller route,
 rewind setting, viewport and sampled state before comparing. Bytes/frame is not
 a frame-time or GC-pause improvement. `GameplayAllocationTool` preserves this probe.
 
+SOZ JFR follow-up (2026-10-08): sampling events identify their observed thread in
+`sampledThread`, while allocation events use `eventThread`. A generic thread scrub
+removed the sampling events in this recording; use the streaming `JfrTestSummary`
+reader instead. Its positive control attributed screenshot allocation/readback to
+the lower-rock tests, and the draw-only candidate removed those samples. Default
+JDK 21 profile periods differ: Java 10 ms, native 20 ms; do not combine counts into
+CPU percentages. Native samples include waiting in `glFinish`. Expanding this
+recording's full stacks as JSON produced 9.4 GB and made the analysis process grow
+to 9.6 GB RSS; that approach was stopped and its output deleted. Stream counters
+under a bounded heap instead of materializing event objects or expanded JSON.
+
 SOZ controller-route rewind (2026-09-16): a composite gameplay snapshot does
 not own a standalone `HeadlessTestRunner`'s external button history. Before
 replaying an input edge after restoring the snapshot, call `primeInputState`
