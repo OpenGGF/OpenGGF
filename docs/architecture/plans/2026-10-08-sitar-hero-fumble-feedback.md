@@ -60,7 +60,7 @@ qualification are recorded below.
 
 All twelve measured ROM/family cue differences have AC RMS 43–292 sample units,
 with no constant-DC-only evidence: S1 96.81/108.54/94.21/291.90, S2
-85.98/53.29/43.05/276.88, S3K 76.45/52.06/47.24/245.44. Captures compare muted
+85.98/53.29/43.05/ 276.88, S3K 76.45/52.06/47.24/245.44. Captures compare muted
 backing followed by the same backing plus a short cue at 8 kHz. This proves
 content and envelope behavior, not subjective listening quality or physical
 speaker latency. Regenerable WAV evidence is outside the repository at
@@ -153,7 +153,7 @@ checkpoint. This is separate from the already passed stop/retry isolation.
 
 The two-case EOF RED request was still unadmitted after more than twelve minutes.
 Its exact owning PID/cwd/argv and absence of a Maven child were verified, then
-only that waiting wrapper was interrupted (exit130, no Maven result). The
+only that waiting wrapper was interrupted (exit 130, no Maven result). The
 identical selectors/ROM input were resubmitted through the supported `--lean`
 focused lane (1 GiB JVM heaps). Candidate and integrated broad runs retain normal
 execution; no queue policy, foreign request or lock file was changed.
@@ -163,7 +163,7 @@ the actual compiled classes: last exhausted-source sample2481 and439 nonzero
 post-taper frames using the real S1 ROM. Fresh compilation of the two repaired
 host classes yields0 and0. The source now fades exhausted fragments, applies the
 finite5ms tail to combined PCM, and retires voices at EOF. The still-unstarted
-lean RED wrapper was verified/cancelled before editing (exit130, no Maven result);
+lean RED wrapper was verified/cancelled before editing (exit 130, no Maven result);
 the direct execution supplies the RED/GREEN evidence. The coherent final focused
 request selects SceneMusicRom13, PartCues5, Arcade38 and Feedback4 (60 expected),
 through the supported lean lane with all three verified original ROM paths.
@@ -174,9 +174,9 @@ remains mandatory.
 ### Final focused source checkpoint
 
 At unchanged implementation/test inputs, the supported lean focused invocation
-completed at2026-10-08T09:12:52Z, exit0 / BUILD SUCCESS, Maven execution1:31.
+completed at 2026-10-08T09:12:52Z, exit 0 / BUILD SUCCESS, Maven execution 1:31.
 Fresh XML independently inspected: SceneMusicRom13, PartCues5, Arcade38,
-Feedback4; total60 cases / zero failures, errors or skips. All three ROM
+Feedback4; total 60 cases / zero failures, errors or skips. All three ROM
 properties name the verified original main files. The real native checks prove
 accepted cues end at finite EOF, in addition to lead-in, pause/resume and
 stop/replacement behavior. The consumed one-off EOF harness and temporary logs
@@ -184,6 +184,57 @@ are removed; the meaningful assertions remain in the host JUnit tests.
 
 The preceding reviewed invocation covers unchanged catalogue, model, story,
 career, multiplayer, creator SDK, API pins, Javadoc and links, with its one bad
-pause fixture resolved by the67-case correction above. These are focused results,
+pause fixture resolved by the 67-case correction above. These are focused results,
 not a broad-suite pass. Combined candidate and mandatory integrated execution
 remain pending.
+
+## Complete first candidate qualification
+
+Source checkpoint 72f1929ca was composed with published develop 098053c4a as
+`3afd818796af04333c37f1467830542b19c5f92f`. Its tracked source stayed clean
+through the terminal run `20261008T091539Z-0dbb4a60`, completed at
+2026-10-08T10:38:49Z. Actual normal command in the task worktree:
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 098053c4a01c2af283ca6797463bb5051442ef0b --max-minutes 150 --run
+```
+
+The actual plan selected 3029/3029 ordinary classes, one worker and fresh guards.
+Ordinary: 3027 reports / 26443 cases / 27 failures / 0 errors / 62 skips, exit 1,
+4774.65 seconds. Fresh guards: 86 reports / 672 cases / zero failures, errors or
+skips, exit 0, 215.70 seconds. Both lanes completed without timeout; failed-case
+and skipped-case omission counts are zero. The runner exits1 for the inherited
+failures; this is qualified baseline parity, not a green whole-suite claim.
+
+The complete identity/assertion comparison against the qualified actual 5d
+baseline has no new, resolved or changed failures: 26 full first lines literally
+match; the complete 2952-character SSZ line matches after ONLY exception-prefix
+removal and the independently verified `RewindObjectStateBlob@hex` normalization
+(2907 characters). All 62 skip identities and first causal reasons match literally;
+there are no missing-ROM or RequiresRom skips. All 13 Sitar XML reports were
+independently read before automatic raw-report cleanup: 151 cases passed without
+skips. The launch auto-discovered the three verified original main ROM filenames;
+SHA1/CRC identities match the documented REV01/locked-on inputs.
+
+Plan fingerprint:
+`c2216285aed4caa797ad6fde491e296ada2e7f89fcd97c8b933666a0e513afbd`.
+After complete consumption, the exact run was acknowledged with exit 0 and its
+diagnostics deleted. Temporary wrapper output is consumed rather than archived.
+
+### New framework composition remains pending
+
+During the first candidate run, the framework owner integrated a new actual-main
+source at `bf7c56e1986fd8ca4a4c5e0cafdf3087e73b545a`. Its main validation freeze
+is preserved. This is a substantial framework/creator-helper change, including
+Sitar input/UI helper migrations and a narrower public API closure; it is not
+source-equivalent to 098. The scene-music player/mixer source files are unchanged.
+The completed first candidate result qualifies the original feature source and
+base, not an unexecuted composition or a completed bf7 baseline.
+
+Next: compose privately, preserve both sets of Sitar changes, regenerate the
+combined candidate signature pin from fresh compiled classes, and exercise real
+packaging/API/input/audio consumers. Use the framework owner's terminal base
+qualification when available. The final actual destination still needs its
+mandatory normal combined ordinary and fresh-guard execution before push; no
+main integration, delivery or cleanup completion is claimed here.
