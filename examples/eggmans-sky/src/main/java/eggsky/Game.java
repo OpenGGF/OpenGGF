@@ -131,7 +131,7 @@ public final class Game {
             }
             mode.enter(this);
         }
-        toasts.update();
+        toasts.update(mode != null && mode.live());
         shake *= 0.86f;
         if (shake < 0.2f) {
             shake = 0;
@@ -147,6 +147,9 @@ public final class Game {
     public void draw(SceneContext ctx, SceneCanvas c) {
         if (mode != null) {
             mode.draw(this, c);
+        }
+        if (player != null && player.pinned != 0 && (mode instanceof SurfaceMode || mode instanceof SpaceMode)) {
+            eggsky.ui.PinnedHud.draw(this, c);
         }
         toasts.draw(this, c);
         if (flashTicks > 0) {
@@ -170,7 +173,11 @@ public final class Game {
     }
 
     public void toast(String text, int colour) {
-        toasts.add(text, colour);
+        if ((colour >> 16 & 255) >= 240 && (colour >> 8 & 255) <= 128 && (colour & 255) <= 128) {
+            toasts.warning(text, colour);
+        } else {
+            toasts.add(text, colour);
+        }
     }
 
     public void banner(String title, String subtitle, int colour) {

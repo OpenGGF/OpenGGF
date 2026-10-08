@@ -63,6 +63,22 @@ public final class Player {
     public long shrineSystem = Long.MIN_VALUE;
     public int shrinePlanet = -1;
     public int tutorial;
+    /** Positive recipe output ID, or negative technology ID minus one. */
+    public int pinned;
+    public final Map<Integer, Integer> reserves = new HashMap<>();
+    // Session-only navigation memory; never carried between expeditions.
+    public int menuTab;
+    public final int[] menuRows = new int[7];
+    public final int[] menuItems = new int[7];
+    public boolean menuOpened;
+    public int stationTab;
+    public final int[] stationRows = new int[6];
+    public final int[] stationItems = new int[6];
+
+    public int available(int item) {
+        return Math.max(0, cargo.count(item) - reserves.getOrDefault(item, 0));
+    }
+
     public String missions = "";
     public boolean coreReached;
 
@@ -203,6 +219,11 @@ public final class Player {
         put(sb, "shrineSystem", shrineSystem);
         put(sb, "shrinePlanet", shrinePlanet);
         put(sb, "tutorial", tutorial);
+        put(sb, "pinned", pinned);
+        StringBuilder reserved = new StringBuilder();
+        reserves.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(e ->
+                reserved.append(e.getKey()).append(':').append(e.getValue()).append(';'));
+        put(sb, "reserves", reserved);
         put(sb, "missions", missions);
         put(sb, "coreReached", coreReached);
         put(sb, "statWarps", statWarps);
@@ -294,6 +315,24 @@ public final class Player {
         shrineSystem = l(m, "shrineSystem", shrineSystem);
         shrinePlanet = i(m, "shrinePlanet", shrinePlanet);
         tutorial = i(m, "tutorial", tutorial);
+        pinned = i(m, "pinned", 0);
+        if (pinned < -Catalog.TECH_COUNT || pinned > 0
+                && catalog.recipes().stream().noneMatch(r -> r.output() == pinned)) {
+            pinned = 0;
+        }
+        reserves.clear();
+        for (String entry : m.getOrDefault("reserves", "").split(";")) {
+            String[] pair = entry.split(":");
+            try {
+                int id = Integer.parseInt(pair[0]);
+                int amount = Integer.parseInt(pair[1]);
+                if (catalog.item(id) != null && amount > 0) {
+                    reserves.put(id, Math.min(100000, amount));
+                }
+            } catch (RuntimeException ignored) {
+                // Old saves have no reserves; malformed entries are ignored.
+            }
+        }
         missions = m.getOrDefault("missions", missions);
         coreReached = Boolean.parseBoolean(m.getOrDefault("coreReached", "false"));
         statWarps = i(m, "statWarps", statWarps);

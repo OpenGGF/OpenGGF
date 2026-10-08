@@ -229,3 +229,61 @@ Validation on the working changes above that commit:
 
 This is focused mod validation, not a full ordinary/guard suite pass. The rebuilt
 mod jar works with the existing engine from this checkout.
+
+## Expedition quality of life and discovery journal (2026-10-08)
+
+Implemented in the current `feature/ai-eggmans-sky` checkout above `86ec1047a88c`.
+All changes are in the example mod and its focused tests; no engine or public API change.
+
+- Recipe/next-tier technology pins persist in the existing expedition save. The HUD expands
+  missing crafting/refining intermediates and scan markers highlight needed materials.
+  Basic refining routes are suggestions, not forced conversions; alternative star metals
+  remain available in the refiner. Existing tutorial objectives remain visible.
+- An explicit batch screen previews 1, 5 or maximum batches. Production simulates ingredient
+  removal before testing output capacity and applies a successful result atomically. The
+  former remove/add/refund approach could round away ingredients for non-unit conversions;
+  regression cases cover full cargo, freed slots, 2:3 refining, failed batches and reserves.
+- Cargo reserves protect a chosen stock quantity from crafting, refining, discard and sales.
+  Recharging and technology installation can still consume those emergency materials.
+- Expedition and station menus remember tabs/rows within the session, tracking material IDs
+  in changing refining/trading lists. Station Backspace handling returns after cancel because
+  the stock mapping also exposes Start; a new input regression caught the previous same-edge
+  leave confirmation. The failing test expected SpaceMode but reached MenuMode on its next
+  Enter; prioritising cancel fixes the actual input conflict rather than altering the test.
+- Resource pickup notices accumulate by item identity on surfaces and in space. Red warnings
+  use a separate panel and defer banners. Native screenshots exposed banners obscuring the
+  batch preview and tutorial hints crossing the pinned checklist: banners now wait during
+  paused menus and the redundant early control hint hides while a pin is displayed.
+- The journal browses visited planets and all three species categories, with completion
+  counts, discovered portraits and descriptions/yields. Undiscovered entries stay anonymous.
+  It reconstructs a selected planet from its existing seed on demand, reuses the currently
+  loaded planet when possible, and retains only the selected survey/portrait. Browsing does
+  not teleport, award discoveries or mutate expedition state. This avoids a second persisted
+  species catalogue and makes existing save discovery IDs usable immediately. Planet opening
+  may incur the existing planet-generation cost; scrolling species does not rebuild terrain.
+
+Validation (Java 21, real S3K ROM at the existing absolute root path; both optional ROMs
+available), all against the working changes above `86ec1047a88c`:
+
+- Inspected `run_categories.py --base 86ec1047a88cf315bd4fd7ac49485af45e63bceb`:
+  fallback selects 3,010 ordinary classes plus guards for unclassified example paths and an
+  unrelated untracked movie. Proportionate validation applies: mod-local menu/inventory/save
+  behavior is exercised directly; there is no shared engine, timing or physics change.
+- `maven_queue.py --lean -Dmse=off
+  -Dtest=TestEggmansSkyQualityOfLife,TestEggmansSkyScene,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+  -Ds3k.rom.path=<absolute S3K ROM> test`: 75 passed, zero failures/errors/skips. This includes
+  60 S3K regression checks, six new non-ROM production/save/notification checks and nine scene
+  checks at that stage. The scene test traverses all 55 supplied biomes.
+- After extending station memory and correcting visual overlaps, the two mod classes ran:
+  six non-ROM tests passed; nine of ten scene tests passed and the station binding regression
+  above failed. After the cancel fix, `-Dtest=TestEggmansSkyScene` completed with all ten
+  passing, zero failures/errors/skips. The unaffected S3K and pure-production checks were
+  not repeated. These are focused checks, not a full ordinary/guard-suite pass.
+- `python3 examples/build_example.py eggmans-sky --skip-engine`: Java compilation, mod
+  validation and packaging passed against the existing engine build.
+- Native `ExampleModCapture` with `java -XstartOnFirstThread`, 400x224 at 2x scale, 850 ticks
+  and PNGs every 50 ticks: inspected batch previews, pinned HUD, planet list, unknown species,
+  and known fauna/flora/mineral portraits. A separate temporary save supplied known discovery
+  IDs for the portrait survey; the user's expedition was not changed. Temporary captures:
+  `/tmp/eggsky-qol-visuals/`. A repeat initially rejected the existing capture-build jar;
+  removing that generated jar allowed the corrected capture to finish.

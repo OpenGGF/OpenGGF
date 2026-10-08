@@ -230,6 +230,108 @@ class TestEggmansSkyScene {
     }
 
     @Test
+    void productionMenusRememberSelectionAndJournalDoesNotChangeExpedition() throws Exception {
+        try (ExampleModHarness harness = open()) {
+            assertTrue(harness.debugJump("new:42"));
+            play(harness, 240);
+            Object game = harness.scene().getClass().getMethod("game").invoke(harness.scene());
+            Object player = game.getClass().getField("player").get(game);
+            Class<?> pt = player.getClass();
+            pt.getField("tutorial").setInt(player, 99);
+            pt.getField("menuOpened").setBoolean(player, true);
+            pt.getField("menuTab").setInt(player, 2);
+            harness.press(GLFW_KEY_ENTER);
+            play(harness, 5);
+            harness.press(GLFW_KEY_ENTER);
+            play(harness, 5);
+            assertEquals("BatchMode", mode(harness));
+            for (int i = 0; i < 3; i++) {
+                harness.press(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+                play(harness, 3);
+            }
+            harness.press(GLFW_KEY_ENTER);
+            play(harness, 5);
+            assertEquals("MenuMode", mode(harness));
+            assertTrue(pt.getField("pinned").getInt(player) > 0, "recipe pinned through actual input");
+            harness.press(GLFW_KEY_BACKSPACE);
+            play(harness, 5);
+            harness.press(GLFW_KEY_ENTER);
+            play(harness, 5);
+            Object menu = game.getClass().getMethod("mode").invoke(game);
+            var tab = menu.getClass().getDeclaredField("tab");
+            tab.setAccessible(true);
+            assertEquals(2, tab.getInt(menu), "reopening restores craft tab");
+            for (int i = 0; i < 3; i++) {
+                harness.press(GLFW_KEY_RIGHT);
+                play(harness, 4);
+            }
+            // Record all species as already discovered to exercise each category's portraits.
+            Object planet = game.getClass().getMethod("planet").invoke(game);
+            @SuppressWarnings("unchecked")
+            var discovered = (java.util.Set<String>) pt.getField("discovered").get(player);
+            for (Object species : (List<?>) planet.getClass().getMethod("allSpecies").invoke(planet)) {
+                discovered.add((String) species.getClass().getField("id").get(species));
+            }
+            String before = (String) pt.getMethod("encode").invoke(player);
+            harness.press(GLFW_KEY_ENTER);
+            play(harness, 5);
+            assertEquals("JournalMode", mode(harness));
+            harness.press(GLFW_KEY_ENTER);
+            play(harness, 5);
+            for (int i = 0; i < 3; i++) {
+                harness.press(GLFW_KEY_RIGHT);
+                play(harness, 5);
+            }
+            assertEquals(before, pt.getMethod("encode").invoke(player), "journal cannot move or reward player");
+            harness.press(GLFW_KEY_BACKSPACE);
+            play(harness, 5);
+            assertEquals("JournalMode", mode(harness), "back first returns to planets");
+            harness.press(GLFW_KEY_BACKSPACE);
+            play(harness, 5);
+            assertEquals("MenuMode", mode(harness));
+            assertEquals(Map.of(), harness.findings());
+        }
+    }
+
+    @Test
+    void stationSalesRespectReservesAndRememberTradingSelection() throws Exception {
+        try (ExampleModHarness harness = open()) {
+            assertTrue(harness.debugJump("new:42"));
+            play(harness, 240);
+            assertTrue(harness.debugJump("rich"));
+            assertTrue(harness.debugJump("station"));
+            play(harness, 10);
+            Object game = harness.scene().getClass().getMethod("game").invoke(harness.scene());
+            Object player = game.getClass().getField("player").get(game);
+            Object cargo = player.getClass().getField("cargo").get(player);
+            int carbon = harness.loader().loadClass("eggsky.game.Catalog").getField("CARBON").getInt(null);
+            @SuppressWarnings("unchecked")
+            Map<Integer, Integer> reserves = (Map<Integer, Integer>) player.getClass().getField("reserves").get(player);
+            reserves.put(carbon, 10);
+            harness.press(GLFW_KEY_ENTER);
+            play(harness, 5);
+            assertEquals(10, cargo.getClass().getMethod("count", int.class).invoke(cargo, carbon));
+            harness.press(GLFW_KEY_RIGHT);
+            play(harness, 5);
+            harness.press(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            play(harness, 5);
+            harness.press(GLFW_KEY_BACKSPACE);
+            play(harness, 5);
+            harness.press(GLFW_KEY_ENTER);
+            play(harness, 5);
+            assertEquals("SpaceMode", mode(harness));
+            assertTrue(harness.debugJump("station"));
+            play(harness, 10);
+            Object station = game.getClass().getMethod("mode").invoke(game);
+            var tab = station.getClass().getDeclaredField("tab"); tab.setAccessible(true);
+            var row = station.getClass().getDeclaredField("row"); row.setAccessible(true);
+            assertEquals(1, tab.getInt(station));
+            assertEquals(1, row.getInt(station));
+            assertEquals(Map.of(), harness.findings());
+        }
+    }
+
+    @Test
     void anExpeditionSavesAndLoadsBackUnchanged() throws Exception {
         try (ExampleModHarness harness = open()) {
             play(harness, 5);

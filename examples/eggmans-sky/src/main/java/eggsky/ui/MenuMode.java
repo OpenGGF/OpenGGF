@@ -25,6 +25,7 @@ public final class MenuMode implements Mode {
     private int scroll;
     private int confirmDiscard = -1;
     private int age;
+    private boolean entered;
 
     public MenuMode(Mode back) {
         this.back = back;
@@ -38,13 +39,48 @@ public final class MenuMode implements Mode {
     @Override
     public void enter(Game g) {
         g.sound.sfx(Sound.SWITCH);
-        if (g.player.tutorial == 2) {
+        if (entered) {
+            restore(g);
+            return;
+        }
+        entered = true;
+        if (g.player.menuOpened) {
+            tab = g.player.menuTab;
+            restore(g);
+        } else if (g.player.tutorial == 2) {
             tab = 1;
         } else if (g.player.tutorial == 3) {
             tab = 2;
         } else if (g.player.tutorial == 4) {
             tab = 3;
         }
+    }
+
+    @Override
+    public void exit(Game g) {
+        remember(g);
+        g.player.menuOpened = true;
+    }
+
+    private void remember(Game g) {
+        g.player.menuTab = tab;
+        g.player.menuRows[tab] = row;
+        g.player.menuItems[tab] = tab == 1 && row < refinable(g).size()
+                ? refinable(g).get(row).input() : 0;
+    }
+
+    private void restore(Game g) {
+        row = g.player.menuRows[tab];
+        if (tab == 1) {
+            List<Catalog.Refine> list = refinable(g);
+            for (int i = 0; i < list.size(); i++) {
+                if (list.get(i).input() == g.player.menuItems[tab]) row = i;
+            }
+        }
+        row = Math.max(0, Math.min(row, rowCount(g) - 1));
+        scroll = Math.max(0, row - 8);
+        confirmDiscard = -1;
+        age = 0;
     }
 
     private boolean inSpace() {
@@ -62,9 +98,9 @@ public final class MenuMode implements Mode {
             return;
         }
         if (in.leftPressed || in.rightPressed) {
+            remember(g);
             tab = Math.floorMod(tab + (in.rightPressed ? 1 : -1), tabs.length);
-            row = 0;
-            scroll = 0;
+            restore(g);
             confirmDiscard = -1;
             g.sound.sfx(Sound.SWITCH, 3);
         }
@@ -84,14 +120,22 @@ public final class MenuMode implements Mode {
                 row = Math.max(0, Math.min(rows - 1, row - in.wheel));
             }
         }
-        int visible = 12;
+        int visible = tab == 2 ? 9 : tab == 1 ? 10 : 12;
         if (row < scroll) {
             scroll = row;
         }
         if (row >= scroll + visible) {
             scroll = row - visible + 1;
         }
-        if (in.confirmPressed && age > 2) {
+        if (tab == 0 && in.boostPressed && age > 2 && row > 0) {
+            int id = g.player.cargo.itemAt(row - 1);
+            if (id != 0) {
+                if (g.player.reserves.containsKey(id)) g.player.reserves.remove(id);
+                else g.player.reserves.put(id, g.player.cargo.count(id));
+                g.toast(g.player.reserves.containsKey(id) ? "CARGO RESERVED" : "RESERVE CLEARED", Ui.CYAN);
+            }
+        } else if (in.confirmPressed && age > 2) {
+            remember(g);
             act(g);
         }
     }
@@ -104,7 +148,7 @@ public final class MenuMode implements Mode {
             case 2 -> g.catalog.recipes().size();
             case 3 -> 5;
             case 4 -> Catalog.TECH_COUNT;
-            case 5 -> 0;
+            case 5 -> 1;
             default -> systemOptions().size();
         };
     }
@@ -146,6 +190,10 @@ public final class MenuMode implements Mode {
                 if (p.cargo.itemAt(slot) == 0) {
                     return;
                 }
+                if (p.reserves.containsKey(p.cargo.itemAt(slot))) {
+                    g.toast("CLEAR RESERVE WITH C BEFORE DISCARDING", Ui.RED);
+                    return;
+                }
                 if (confirmDiscard == slot) {
                     g.toast("DISCARDED " + p.cargo.countAt(slot) + " " + g.catalog.name(p.cargo.itemAt(slot)), 0xFFFF8080);
                     p.cargo.set(slot, 0, 0);
@@ -158,42 +206,20 @@ public final class MenuMode implements Mode {
             }
             case 1 -> {
                 List<Catalog.Refine> list = refinable(g);
-                if (row >= list.size()) {
-                    return;
-                }
+                if (row >= list.size()) return;
                 Catalog.Refine r = list.get(row);
-                int batches = p.cargo.count(r.input()) / r.inCount();
-                // Never refine more than fits.
-                int room = p.cargo.room(r.output()) + 0;
-                batches = Math.min(batches, Math.max(1, room / Math.max(1, r.outCount())));
-                p.cargo.remove(r.input(), batches * r.inCount());
-                int left = p.cargo.add(r.output(), batches * r.outCount());
-                if (left > 0) {
-                    p.cargo.add(r.input(), left * r.inCount() / Math.max(1, r.outCount()));
-                }
-                g.toast("REFINED " + (batches * r.outCount() - left) + " " + g.catalog.name(r.output()), 0xFF80FFC0);
-                g.sound.sfx(Sound.MECHA_SPARK);
+                g.setMode(new BatchMode(this, r.output(), r.outCount(), new int[] {r.input()},
+                        new int[] {r.inCount()}, false));
             }
             case 2 -> {
                 Catalog.Recipe r = g.catalog.recipes().get(row);
-                for (int i = 0; i < r.inputs().length; i++) {
-                    if (!p.cargo.has(r.inputs()[i], r.counts()[i])) {
-                        g.toast("NOT ENOUGH " + g.catalog.name(r.inputs()[i]).toUpperCase(), 0xFFFF6060);
-                        g.sound.sfx(Sound.ERROR, 4);
-                        return;
-                    }
-                }
-                if (p.cargo.room(r.output()) < r.outCount()) {
-                    g.toast("CARGO FULL", 0xFFFF6060);
-                    return;
-                }
-                for (int i = 0; i < r.inputs().length; i++) {
-                    p.cargo.remove(r.inputs()[i], r.counts()[i]);
-                }
-                p.cargo.add(r.output(), r.outCount());
-                g.toast("CRAFTED " + g.catalog.name(r.output()).toUpperCase(), 0xFFFFE060);
-                g.sound.sfx(Sound.CLANK);
+                g.setMode(new BatchMode(this, r.output(), r.outCount(), r.inputs(), r.counts(), true));
             }
+            case 4 -> {
+                p.pinned = p.pinned == -row - 1 ? 0 : -row - 1;
+                g.toast(p.pinned == 0 ? "OBJECTIVE UNPINNED" : "UPGRADE PINNED", Ui.CYAN);
+            }
+            case 5 -> g.setMode(new JournalMode(this));
             case 3 -> {
                 int[] which = {Vitals.LIFE, Vitals.HAZARD, Vitals.LAUNCH, Vitals.HULL, Vitals.SHIP_SHIELD};
                 String msg = Vitals.recharge(p, which[row]);
@@ -265,7 +291,7 @@ public final class MenuMode implements Mode {
             case 5 -> drawLog(g, c, x0, ly, w);
             default -> drawSystem(g, c, x0, ly, w);
         }
-        f.draw(c, "BACK: X/BACKSPACE", x0 + 6, y0 + h - 10, Ui.DIM);
+        f.draw(c, "BACK: B/X", x0 + 6, y0 + h - 10, Ui.DIM);
         f.right(c, Ui.num(p.rings) + " RINGS   " + Ui.num(p.shards) + " SHARDS", x0 + w - 6, y0 + h - 10, Ui.GOLD);
     }
 
@@ -318,6 +344,8 @@ public final class MenuMode implements Mode {
                 ly += 9;
             }
             ly += 6;
+            f.draw(c, "C: " + (p.reserves.containsKey(item.id()) ? "UNRESERVE " + p.reserves.get(item.id()) : "RESERVE STOCK"), dx, ly, Ui.CYAN);
+            ly += 12;
             f.draw(c, confirmDiscard == row - 1 ? "CONFIRM AGAIN TO DISCARD" : "CONFIRM: DISCARD", dx, ly,
                     confirmDiscard == row - 1 ? Ui.RED : Ui.DIM);
         } else {
@@ -350,7 +378,7 @@ public final class MenuMode implements Mode {
             f.draw(c, r.outCount() + " " + out.name(), x0 + 181, ry, out.colour());
             f.right(c, "x" + p.cargo.count(r.input()) / r.inCount(), x0 + w - 12, ry, Ui.GREY);
         }
-        f.draw(c, "CONFIRM: REFINE ALL", x0 + 8, y + 116, Ui.DIM);
+        f.draw(c, "A/ENTER: CHOOSE 1 / 5 / MAX", x0 + 8, y + 116, Ui.DIM);
     }
 
     private void drawCraft(Game g, SceneCanvas c, int x0, int y, int w) {
@@ -359,7 +387,7 @@ public final class MenuMode implements Mode {
         f.draw(c, "FABRICATOR", x0 + 8, y, Ui.GOLD);
         y += 12;
         List<Catalog.Recipe> list = g.catalog.recipes();
-        for (int i = scroll; i < Math.min(list.size(), scroll + 11); i++) {
+        for (int i = scroll; i < Math.min(list.size(), scroll + 9); i++) {
             Catalog.Recipe r = list.get(i);
             int ry = y + (i - scroll) * 13;
             listRow(g, c, i, x0 + 6, ry, w - 12);
@@ -370,17 +398,12 @@ public final class MenuMode implements Mode {
             }
             c.fill(x0 + 10, ry + 1, 5, 5, out.colour());
             f.draw(c, out.name(), x0 + 19, ry, can ? Ui.WHITE : Ui.DIM);
-            int ix = x0 + 140;
-            for (int k = 0; k < r.inputs().length; k++) {
-                boolean has = p.cargo.has(r.inputs()[k], r.counts()[k]);
-                String s = r.counts()[k] + " " + g.catalog.item(r.inputs()[k]).code();
-                f.draw(c, s, ix, ry, has ? 0xFF80FF80 : 0xFFFF7070);
-                ix += Font.width(s) + 10;
-            }
+            f.right(c, (p.pinned == r.output() ? "PINNED  " : "") + (can ? "READY" : "NEEDS MATERIALS"),
+                    x0 + w - 12, ry, can ? Ui.CYAN : Ui.DIM);
         }
         if (row < list.size()) {
             Catalog.Item out = g.catalog.item(list.get(row).output());
-            f.draw(c, out.info(), x0 + 8, y + 150, Ui.GREY);
+            f.draw(c, "A/ENTER: QUANTITY / PIN RECIPE", x0 + 8, y + 140, Ui.CYAN);
         }
     }
 
@@ -408,7 +431,7 @@ public final class MenuMode implements Mode {
     private void drawTech(Game g, SceneCanvas c, int x0, int y, int w) {
         Font f = g.font;
         Player p = g.player;
-        f.draw(c, "INSTALLED TECHNOLOGY (UPGRADE AT AN EGG STATION)", x0 + 8, y, Ui.GOLD);
+        f.draw(c, "TECHNOLOGY - A/ENTER: PIN NEXT UPGRADE", x0 + 8, y, Ui.GOLD);
         y += 12;
         for (int i = scroll; i < Math.min(Catalog.TECH_COUNT, scroll + 12); i++) {
             Catalog.Tech t = g.catalog.tech(i);
@@ -426,7 +449,7 @@ public final class MenuMode implements Mode {
     private void drawLog(Game g, SceneCanvas c, int x0, int y, int w) {
         Font f = g.font;
         Player p = g.player;
-        f.draw(c, "EXPEDITION LOG - GALAXY " + p.galaxyNumber, x0 + 8, y, Ui.GOLD);
+        f.draw(c, "A/ENTER: DISCOVERY JOURNAL - GALAXY " + p.galaxyNumber, x0 + 8, y, Ui.GOLD);
         y += 13;
         // Chaos Emeralds.
         f.draw(c, "CHAOS EMERALDS", x0 + 10, y, Ui.WHITE);

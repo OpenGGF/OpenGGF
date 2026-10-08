@@ -15,7 +15,40 @@ public final class Toasts {
     private static final int TOAST_TICKS = 150;
     private static final int BANNER_TICKS = 240;
 
-    private record Toast(String text, int colour, int[] age) {
+    private static final class Toast {
+        String text;
+        final int colour;
+        final int[] age = {0};
+        int item;
+        int amount;
+        Toast(String text, int colour) { this.text = text; this.colour = colour; }
+    }
+    private Toast warning;
+
+    public void warning(String text, int colour) {
+        warning = new Toast(text, colour);
+    }
+
+    /** Resource identity, rather than display text, owns accumulation. */
+    public void pickup(int item, int amount, String name, int colour) {
+        if (amount <= 0) return;
+        for (Toast t : toasts) {
+            if (t.item == item) {
+                t.amount += amount;
+                t.text = name + " +" + t.amount;
+                t.age[0] = Math.min(t.age[0], 10);
+                return;
+            }
+        }
+        Toast t = new Toast(name + " +" + amount, colour);
+        t.item = item;
+        t.amount = amount;
+        toasts.add(t);
+        trim();
+    }
+
+    private void trim() {
+        while (toasts.size() > 3) toasts.remove(0);
     }
 
     private final List<Toast> toasts = new ArrayList<>();
@@ -26,17 +59,15 @@ public final class Toasts {
     private final List<String[]> queue = new ArrayList<>();
 
     public void add(String text, int colour) {
-        // Merge repeated toasts ("+12 Carbon" then "+8 Carbon" stays two; identical text refreshes).
+        // Identical non-resource messages refresh instead of stacking.
         for (Toast t : toasts) {
             if (t.text.equals(text)) {
                 t.age[0] = 0;
                 return;
             }
         }
-        toasts.add(new Toast(text, colour, new int[] {0}));
-        while (toasts.size() > 6) {
-            toasts.remove(0);
-        }
+        toasts.add(new Toast(text, colour));
+        trim();
     }
 
     public void banner(String title, String sub, int colour) {
@@ -55,12 +86,15 @@ public final class Toasts {
     }
 
     public void clear() {
+        warning = null;
         toasts.clear();
         queue.clear();
         bannerAge = -1;
     }
 
-    public void update() {
+    public void update() { update(true); }
+
+    public void update(boolean showBanners) {
         for (int i = toasts.size() - 1; i >= 0; i--) {
             Toast t = toasts.get(i);
             t.age[0]++;
@@ -68,7 +102,8 @@ public final class Toasts {
                 toasts.remove(i);
             }
         }
-        if (bannerAge >= 0) {
+        if (warning != null && ++warning.age[0] > TOAST_TICKS) warning = null;
+        if (bannerAge >= 0 && warning == null && showBanners) {
             bannerAge++;
             if (bannerAge >= BANNER_TICKS) {
                 bannerAge = -1;
@@ -81,7 +116,16 @@ public final class Toasts {
     }
 
     public void draw(Game g, SceneCanvas c) {
-        int y = 58;
+        if (warning != null) {
+            java.util.List<String> lines = Ui.wrap(warning.text, 56);
+            int wy = 38;
+            Ui.panel(c, 22, wy - 4, g.width - 44, lines.size() * 10 + 6, 0xF0301020);
+            for (String line : lines) {
+                g.font.centre(c, line, g.width / 2, wy, warning.colour);
+                wy += 10;
+            }
+        }
+        int y = 90;
         for (Toast t : toasts) {
             float a = t.age[0] < 10 ? t.age[0] / 10f : t.age[0] > TOAST_TICKS - 20 ? (TOAST_TICKS - t.age[0]) / 20f : 1;
             int w = Font.width(t.text) + 10;
@@ -92,7 +136,7 @@ public final class Toasts {
             g.font.draw(c, t.text, x + 6, y + 2, Colour.fade(t.colour, a));
             y += 13;
         }
-        if (bannerAge >= 0) {
+        if (bannerAge >= 0 && warning == null && g.mode() != null && g.mode().live()) {
             int age = bannerAge;
             float a = age < 12 ? age / 12f : age > BANNER_TICKS - 30 ? (BANNER_TICKS - age) / 30f : 1;
             int alpha = Math.round(255 * a);

@@ -77,8 +77,29 @@ public final class StationMode implements Mode {
             g.toast("SELL CARGO, BUY TECH, THEN WARP FROM THE GALAXY MAP", 0xFFFFE060);
             p.tutorial = 99;
         }
+        tab = g.player.stationTab;
+        restore(g);
         g.save();
     }
+
+    private void remember(Game g) {
+        if (tab == tabs.length - 1) return;
+        g.player.stationTab = tab;
+        g.player.stationRows[tab] = row;
+        List<Integer> items = tab == 0 ? sellable(g) : tab == 1 ? stock : List.of();
+        g.player.stationItems[tab] = row < items.size() ? items.get(row) : 0;
+    }
+
+    private void restore(Game g) {
+        row = g.player.stationRows[tab];
+        List<Integer> items = tab == 0 ? sellable(g) : tab == 1 ? stock : List.of();
+        int index = items.indexOf(g.player.stationItems[tab]);
+        if (index >= 0) row = index;
+        row = Math.max(0, Math.min(row, rows(g) - 1));
+        scroll = Math.max(0, row - 10);
+    }
+
+    @Override public void exit(Game g) { remember(g); }
 
     private static String pickGreeting(Rng rng) {
         String[] lines = {"Welcome back, Doctor! Any loot?", "The Egg Station is at your service, sir!",
@@ -133,9 +154,9 @@ public final class StationMode implements Mode {
             quipTicks--;
         }
         if (in.leftPressed || in.rightPressed) {
+            remember(g);
             tab = Math.floorMod(tab + (in.rightPressed ? 1 : -1), tabs.length);
-            row = 0;
-            scroll = 0;
+            restore(g);
             g.sound.sfx(Sound.SWITCH, 3);
         }
         int rows = rows(g);
@@ -157,11 +178,16 @@ public final class StationMode implements Mode {
             scroll = row - 10;
         }
         if (in.backPressed) {
+            remember(g);
             tab = tabs.length - 1;
             row = 0;
+            // Backspace is also stock Start: cancel must not confirm Leave on the same edge.
+            return;
         }
         if (in.confirmPressed && age > 3) {
+            remember(g);
             act(g, g.ctx.keyDown(com.openggf.mods.scene.SceneKeys.LEFT_SHIFT));
+            restore(g);
         }
     }
 
@@ -174,7 +200,11 @@ public final class StationMode implements Mode {
                     return;
                 }
                 int id = list.get(row);
-                int n = p.cargo.count(id);
+                int n = p.available(id);
+                if (n == 0) {
+                    g.toast("STOCK RESERVED - CLEAR IN CARGO MENU", Ui.RED);
+                    return;
+                }
                 int earned = n * price(g, id, true);
                 p.cargo.remove(id, n);
                 p.rings += earned;
@@ -307,7 +337,7 @@ public final class StationMode implements Mode {
                 for (int id : sellable(g)) {
                     Catalog.Item item = g.catalog.item(id);
                     if (item.kind() == Catalog.KIND_VALUABLE) {
-                        int n = p.cargo.count(id);
+                        int n = p.available(id);
                         total += n * price(g, id, true);
                         p.cargo.remove(id, n);
                     }
@@ -459,9 +489,9 @@ public final class StationMode implements Mode {
             Catalog.Item item = g.catalog.item(id);
             c.fill(px + 8, ry + 1, 5, 5, item.colour());
             f.draw(c, item.name(), px + 16, ry, id == system.demand ? 0xFF80FF80 : Ui.WHITE);
-            f.right(c, g.player.cargo.count(id) + "x" + price(g, id, true), px + pw - 6, ry, Ui.GOLD);
+            f.right(c, g.player.available(id) + "x" + price(g, id, true), px + pw - 6, ry, Ui.GOLD);
         }
-        f.draw(c, "CONFIRM: SELL ALL OF THAT ITEM", px + 8, y + 126, Ui.DIM);
+        f.draw(c, "SELL UNRESERVED STOCK: A/ENTER", px + 8, y + 126, Ui.DIM);
     }
 
     private void drawBuy(Game g, SceneCanvas c, int px, int y, int pw) {

@@ -80,6 +80,33 @@ Knuckles* on its title returns to the stock game; holding Escape returns to the 
    With all seven emeralds, warp to the **galactic core** for the ending — then a new galaxy
    begins with your technology and fortune intact.
 
+### Expedition tools
+
+- **Recipe tracking:** in CRAFT, confirm a recipe and choose **PIN RECIPE**. The
+  surface/cockpit checklist shows owned/required materials; indented steps explain missing
+  crafted or refined ingredients. Scan pulses mark needed deposits with a gold `*`.
+  TECH lets you pin the next upgrade tier, including its Chaos Shard cost. One objective
+  is pinned at a time; select it again to unpin. The tutorial objective remains visible.
+- **Batch production:** confirm a refining or crafting row, then choose **1**, **5**, or
+  **maximum** batches. The preview shows available inputs and output quantity. A batch
+  either fits in full (including slots freed by ingredients) or changes nothing.
+- **Cargo reserves:** highlight a cargo item and press **C / pad C** to reserve the amount
+  currently held across its stacks; press again to clear it. Refining, crafting and station
+  sales leave that quantity untouched. Recharge and installed upgrades can still use it.
+  Reserved items cannot be discarded until their reserve is cleared.
+- **Menu memory:** reopening the expedition menu restores its tab and selection; each tab
+  remembers its row for the session. Refining and station trading track the selected material
+  as their lists change; stations remember the last trading tab when you return.
+- **Discovery journal:** choose **LOG**, then **A / Enter** to browse visited planets.
+  Confirm a planet to inspect fauna, flora and minerals; left/right changes category.
+  Each category shows discovered/total counts. Catalogued species have portraits and
+  descriptions or resource yields; undiscovered entries stay anonymous. **B / X** returns
+  to the planet list, then the menu. Existing saves use their recorded visits and discoveries.
+- **Notifications:** resource pickups accumulate by material. Critical red warnings have
+  their own panel and temporarily defer discovery banners.
+
+Pins and cargo reserves survive saves; menu position is remembered only within the session.
+
 Progress saves to `saves/mods/eggmans-sky/expedition.txt` (plain `key=value` lines) at
 Starposts, landings, launches, docking, warps, every two minutes and on exit.
 

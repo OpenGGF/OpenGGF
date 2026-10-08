@@ -1292,7 +1292,7 @@ public final class SurfaceMode implements Mode {
                 int left = p.cargo.add(pk.item, pk.amount);
                 int got = pk.amount - left;
                 if (got > 0) {
-                    g.toast("+" + got + " " + g.catalog.name(pk.item), g.catalog.item(pk.item).colour());
+                    g.toasts.pickup(pk.item, got, g.catalog.name(pk.item), g.catalog.item(pk.item).colour());
                     g.sound.sfx(Sound.PLINK, 4);
                 }
                 if (left > 0) {
@@ -2160,8 +2160,8 @@ public final class SurfaceMode implements Mode {
                     if (item == null) {
                         continue;
                     }
-                    label = item.code();
-                    colour = item.colour();
+                    label = (eggsky.game.ShoppingList.wanted(g.player, t.yield) ? "* " : "") + item.code();
+                    colour = eggsky.game.ShoppingList.wanted(g.player, t.yield) ? 0xFFFFE060 : item.colour();
                 }
             }
             int w = eggsky.ui.Font.width(label) + 6;

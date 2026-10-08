@@ -838,7 +838,7 @@ public final class SpaceMode implements Mode {
                 } else {
                     int left = p.cargo.add(item, count);
                     if (left < count) {
-                        g.toast("+" + (count - left) + " " + g.catalog.name(item), g.catalog.item(item).colour());
+                        g.toasts.pickup(item, count - left, g.catalog.name(item), g.catalog.item(item).colour());
                         g.sound.sfx(Sound.PLINK, 3);
                     } else {
                         g.toast("CARGO FULL", 0xFFFF5050);
