@@ -28,9 +28,9 @@ This survey establishes authoring geometry; it does not itself prove combat.
 | Physical post contact and two real death reloads | Passed: real native collision activates index 2, followed by two production death reloads. No checkpoint fixture is counted as combat evidence. |
 | Safe/failure paths, ordinary ring/shield/hurt dispatch | Passed: real safe/fatal paths, native ring loss and all three elemental shields use stock hurt dispatch. |
 | Projectile recreation and two restore/forward replay cycles | Passed: native safe-ring/danger volleys, ring loss, all three elemental shields, projectile recreation and two whole-registry 60-tick restore/forward cycles. |
-| Packaged title, entry holds, pause, real checkpoint menu retry and owner abort | `TestHardenedPrototype`: seven packaged/native cases pass with zero skips after neutral entry and mandatory native-card consumption. Includes two real checkpoint menu retries, pre-contact fresh attempts, entry restore/forward cycles and owner-fault return. |
+| Packaged title, entry holds, pause, real checkpoint menu retry and owner abort | `TestHardenedPrototype`: eight packaged/native cases pass with zero skips after neutral entry and mandatory native-card consumption. Includes two real checkpoint menu retries, pre-contact fresh attempts, entry restore/forward cycles, owner-fault return and (2026-10-08 polish) the fatal native death arc ending before S3K's restart row with two restore/forward cycles and a post retry. |
 | Fresh entry/checkpoint/death/stage-return precedence and no-save attachment | 55 focused cases passed with zero skips; the corrected native fresh-camera/checkpoint method also passes. Stock death camera remains `0x1CC0`. |
-| Actual GPU title/tells/transitions and final ROM PCM | Final composition including 33d: safe 1316/fatal 715 GPU frames with stereo 48k PCM, plus source-attributed c732 native1376-row safe walkthrough and 337-row missing-ROM recovery inspected. First PLAY includes Sonic/foreground; both volleys, clear/fatal, post retry and separate fresh entry are observed. Native device capture uses an explicitly owned frameless workaround; caller/HID/speaker limits are in the implementation plan. |
+| Actual GPU title/tells/transitions and final ROM PCM | Final composition including 33d: safe 1316/fatal 715 GPU frames with stereo 48k PCM, plus source-attributed c732 native1376-row safe walkthrough and 337-row missing-ROM recovery inspected. First PLAY includes Sonic/foreground; both volleys, clear/fatal, post retry and separate fresh entry are observed. Native device capture uses an explicitly owned frameless workaround; caller/HID/speaker limits are in the implementation plan. Polish recaptures (2026-10-08, `d31b9c197`): safe 1316/fatal 715 GPU frames, native safe 1376/fatal 715 rows with genuine key edges, and a matched SFX-muted PCM control; safe-path player/camera/checkpoint state is byte-identical to the 33d capture. |
 
 The [implementation plan](../../plans/2026-10-07-hardened-s3k-prototype.md) and
 [blueprint](../../designs/2026-10-07-hardened-s3k-blueprint.md) preserve the
@@ -41,8 +41,10 @@ was resolved by unchanged-algorithm extraction, 158 focused passes and678 fresh
 guard passes, all without skips. Actual33d composition adds 74 focused capture/
 API/SDK/prototype passes, with no errors/skips and byte-identical final CSV/PCM.
 These are source-attributed checks, not a green whole suite, trace pass or stock
-full-act certification. Root-owned Opus polish and separate promo precede PR
-delivery; later campaign cells remain unchanged.
+full-act certification. The 2026-10-08 Opus polish changes presentation, cues and
+the fatal-hit hold only; its focused 56 passes and 678 fresh guard passes are in
+the implementation plan. Separate promo precedes PR delivery; later campaign cells
+remain unchanged.
 
 ## Claims
 

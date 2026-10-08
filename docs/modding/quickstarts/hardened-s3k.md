@@ -104,8 +104,10 @@ glyphs at native size. The example therefore uses 1x copy, 2x headlines and at
 most 31 characters per panel line, and wraps runtime text such as fault reasons.
 Keep HUD additions clear of the native SCORE/TIME/RINGS digits and the lives icon.
 World marks around ROM sprites (`Marks`) draw a dark outline pass before their
-colour so they read on both bright grass and dark canopy; tie each colour to an
-actual rule, such as the crown turning red exactly while the body is harmful.
+colour so they read on both bright grass and dark canopy. The player draws above
+object marks, so keep a sight outside the player's body box. Tie each cue to an
+actual rule and change shape or sound as well as colour, such as the crown growing
+and turning red exactly while the body is harmful.
 A fatal hit may show the native death arc by admitting neutral rows, but end the
 hold before the game's own restart row (S3K `Camera_Y_pos+$100`); otherwise the
 native life loss, restart and game-over owners run underneath your retry menu.

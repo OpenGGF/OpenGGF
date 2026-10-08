@@ -361,3 +361,12 @@ promo-video task, so feature push and the one PR are held for that integration.
 Full MHZ act, chapter, campaign, extra characters/widths/donors and Stage Trials
 certification remain later stages; this evidence closes only the scoped local
 prototype implementation gates.
+
+### Hands-on polish — 2026-10-08
+
+The requested Opus polish keeps the encounter pattern, geometry and native owners.
+It makes all copy legible at 320×224, moves the HUD off the native digits, outlines
+the tell/lock sight, crown and spore spikes, adds native lock-on and exit cues, and
+shows the native death arc before the retry panel without reaching the restart row.
+Its gaps, rejected options, acceptance checklist and evidence are in the
+[implementation plan](../plans/2026-10-07-hardened-s3k-prototype.md#hands-on-polish--2026-10-08).

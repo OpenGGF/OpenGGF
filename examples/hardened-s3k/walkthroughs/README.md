@@ -58,10 +58,15 @@ safe ring, waits for committed aim, retreats from both volleys, reaches the exit
 retries at the physical post, returns to the title, and begins a separate fresh
 attempt. The failure program jumps over the recovery ring, reaches committed aim
 with zero rings, receives an actual harmful projectile, retries at the real post,
-and returns to the title. Movement times are authored input, not engine gates.
+and returns to the title. After the fatal contact the flow's `CAUGHT` hold admits
+neutral rows so Sonic's native death arc is visible (about 80 rows on this input)
+and raises the retry panel once the corpse leaves the view, before S3K's restart
+row. Movement times are authored input, not engine gates.
 
 Check the first animated title frame and the first released PLAY frame as well as
-tell, committed aim, both volleys, recovery, clear/failure, retry and title return.
+tell, committed aim, both volleys, recovery, clear, the `CAUGHT` hold and failure
+panel, retry and title return. Inspect text at the native 320×224 frame size, not
+only the scaled movie: on-screen prompts name the capture configuration's bindings.
 Verify native checkpoint contact and respawn in the CSV, then inspect PCM in those
 event windows. A scheduled sound event alone does not prove output. This GPU/PCM
 tool does not observe a visible desktop window, hardware controller or speakers;

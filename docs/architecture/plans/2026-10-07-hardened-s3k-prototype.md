@@ -187,3 +187,74 @@ separate promo-video task. After these implementation gates, the lead supplies a
 clean exact-source handoff outside Git and holds feature push/PR for polish
 integration. Native semantics and prototype scope remain fixed; full-act,
 chapter/campaign and Stage Trials gates remain future work.
+
+## Hands-on polish — 2026-10-08
+
+Claude Opus 5.5 played the handed-off source `51d5d4724` through GPU and owned
+native-window captures and polished presentation only. Polish commit `bece5e6c9`
+changes the example and its two test classes; `d31b9c197` composes published
+develop `09cfcc0f8` (24 Sitar Hero paths, no ambush overlap). Encounter timing,
+geometry, physics, placement, no-save/launch opt-ins and the Mod API are unchanged:
+the polished safe capture's player/camera/checkpoint columns are byte-identical to
+`final-33d-safe-01`, and the fatal capture differs only in the new death hold.
+
+Observed gaps and fixes:
+
+| Gap in the 33d captures | Change |
+| --- | --- |
+| Copy at 0.6–0.8 font scale smeared to unreadable glyphs at 320×224 | Whole-number scales only (1× copy, 2× headlines), ≤31-character lines, wrapped fault text |
+| PLAY banner hid the native SCORE digits; cue bar covered the lives icon | Volley pips top right; coaching bar starts right of the lives icon |
+| Tell/aim marks were 1px pale ticks; the locked mark sat under Sonic's sprite | Outlined corner sight outside Sonic's body: closes during the tell, adds side ticks and flashes when locked, marks the committed point while volleys fly |
+| Spore read as a second mushroom | Outlined spikes spinning around the ROM shell |
+| No cue when aim commits or the exit opens | Native `sfx_Targeting` (0x9D) on lock, `sfx_Switch` (0x5B) when the exit opens |
+| Fatal hit covered the world on the death frame | `CAUGHT` admits neutral rows for the native death arc, ends when the corpse leaves the 224-row view (≤120 rows) before S3K's `Camera_Y_pos+$100` restart row; lives and game-over owners never run |
+| Static prompts named START although the launcher binds Backspace | Prompts follow live bindings and the last device (`MenuInput`, `ButtonPrompts`) |
+| ENTRY panel vanished; result fades popped bright before black | Entry card slides in/out; RETRY/EXIT fades continue from the panel dim |
+
+The crown is taller and red exactly while the sentry body is harmful and returns to
+its calm pose with no aim marks once a run is caught, cleared or aborted. The lesson
+describes the sight's motion, flash and sound rather than relying on colour.
+Rejected: converting the title into a `ModScene` for ROM sprite art (`SceneRomArt`
+belongs to the scene host and would replace the title→launch contract), and Madmole's
+thrown mushroom as projectile art (the ROM object is a rideable `SolidObjectFull`
+bounce, not a hazard).
+
+Acceptance checklist, all observed on the polished source:
+
+- [x] Every title, lesson, entry, HUD, coaching and result line legible at 320×224 GPU and crisp in the 640×448 native window.
+- [x] HUD additions clear of native SCORE/TIME/RINGS and lives.
+- [x] Tell, lock and volley target readable on MHZ foliage; lock is a shape, flash and sound change.
+- [x] Harm cues honest: red/taller crown only while harmful; no marks after the run ends.
+- [x] Fatal hit visible before the panel; retry still reloads the physical post; no native life loss.
+- [x] Native lock-on, exit, clear and retry cues contribute output against a matched muted control.
+- [x] Repeated retry, pause, title return and separate fresh launch keep the established flow.
+
+Verification (focused under the proportionate-validation rule: the runner's
+`examples/**` fallback selects all 3034 classes, but the creator code's consumers are
+the packaged/encounter tests, SDK packaging and walkthroughs, all exercised directly):
+
+- Queued normal request on `d31b9c197`: `TestHardenedPrototype` (8, including the new
+  fatal-beat test with two restore/forward cycles), `TestHardenedS3kEncounter` (11),
+  `TestSitarHeroArcade` (36) and `TestSitarHeroPerformers` (1): **56 passes, zero
+  failures/errors/skips**. A deliberate mutation moving the hold's end below the
+  restart row failed the new test (the corpse never reached it; the hold hit its
+  120-row cap) and was reverted. The merged Sitar example also compiles against the composed engine.
+- Fresh guard JVM: **87 reports / 678 passes**, zero failures/errors/skips.
+- `build.py` rebuilt and SDK-validated the creator jar (classes and manifest only).
+- No engine, API, timing or physics change: the four mandatory S3K classes, trace
+  profile and ordinary suite qualified at `cd38571ab` were not repeated.
+
+Captures (outside Git, `${OPENGGF_TASK_SCRATCH}/hardened-s3k/opus-polish/captures`):
+
+| Capture | Observed |
+| --- | --- |
+| `polish-safe-02` | 1316 GPU frames, 1,052,800 stereo PCM frames; tell 332, lock 368, volleys 380/404, recovery 428, exit open 518, clear 675, post retry 840, title 951, fresh 1035. 640×448 movie decodes 1316 frames. |
+| `polish-failure-02` | 715 frames; lock 337, volley 349, zero-ring death 352, `CAUGHT` 352–432 (corpse 238px below camera top at release; camera fixed), FAILED 433, post retry 531, title 642. Movie decodes 715 frames. |
+| `control-sfxmuted-*` | Same inputs with the mod's encounter cues muted: PCM byte-identical before the first cue; differences only in cue spans. Lock raises the tell-tail difference from ~700 to ~1870 RMS; volleys ~1500; clear ~1380; exit switch ~800 for three frames; music AC ~1000–1100. |
+| `native-polish-safe-01` | Owned native window, genuine X11 key press/release: 1376 rows / 1428 decoded desktop frames, same milestones as the c732 native run, device PCM AC 1197/1203. |
+| `native-polish-failure-01` | Same path with the fatal input: death 352, `CAUGHT` 81 rows, retry 531; 762 desktop frames, device AC 1214/1226. |
+
+Native limits are unchanged: GLFW show stalled again, so only the exact owned window
+was mapped frameless; `Engine.display` ran at a diagnostic 60 Hz; no normal WM,
+`Engine.loop`, physical controller or speaker certification is claimed. All owned
+GPU/native/recorder processes exited and both private sinks unloaded.
