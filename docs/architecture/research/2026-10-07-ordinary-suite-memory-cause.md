@@ -1111,3 +1111,22 @@ only per-invocation counters and a boolean. Under proportionate validation, the
 60 S3K loading/bootstrap/decoding/AIZ cases directly cover the bounded change.
 No runner selection was edited or narrowed, and no new full-suite/guard pass is
 claimed by this task. Actual tool preflight passed Java 21, Lua 5.4 and PowerShell.
+
+The actual destination advanced to `ad3d6a9965952a38b6a0ac2e9eb0285f721ee895`.
+Its delta from the task pin adds standalone experimental Windows packaging,
+workflow/probe files and prose, with no engine/POM/test-input changes. Task code
+commit `b5cbc5b9c` merged that base as
+`4efa6f59316fa42e9de8e31a0af6fd027f0a5ee7`, without conflicts. The final default-mode
+command passes **78 cases, zero failures/errors/skips**, exit 0, in 1m15s including
+compilation, finishing at18:58:52Z. All original14 case identities/outcomes remain
+passing; default route milestones and draw/skip counts exactly match the measured
+explicit-false mode. The SOZ class took46.407s; that validation time is separate
+from the matched138.309/45.423s benchmark.
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozColdRouteCapture,TestSozColdRouteFrameDrawing,TestGameplayCaptureFrameRendering,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dsonic1.rom.path=${OPENGGF_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+```
