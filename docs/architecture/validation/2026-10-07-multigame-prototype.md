@@ -657,6 +657,22 @@ lifecycle evidence, not normal window-manager certification.
   S3K domain tests (no S3K code). Evidence lives outside Git in the task's
   `multigame/opus-polish/` directory.
 
+### Published destination accounting
+
+Published develop advanced to `09cfcc0f882305d6a0c6a4fc05b600d3ca27a888`: 24 Sitar
+Hero example, presentation/audio, fixture and prose paths after `33d3976c5`, with no
+engine source, Mod API, POM, hook or category-runner change. It was intent-merged
+after the polish commits as `5e7310158`; the only conflict was two independent
+measurement-hazard paragraphs in `briefing-trace-rounds.md`, both kept. The plan
+against the new base is unchanged (full fallback, 3,034 classes plus guards) and
+Java 21 / Lua 5.4 / PowerShell preflight passed. One bounded post-merge check
+recompiled 3,599 test sources (main classes, untouched by the merge, were up to
+date), rebuilt the jars and ran `TestModApiSignatureSurface`,
+`TestModApiHookPolicy`, `TestSitarHeroArcade`, `TestSitarHeroPerformers` and two
+challenge classes: **68 tests, 0 failures/errors/skips**, with the SDK artifact
+verifier passing. The native evidence above used the pre-merge polish jar; the merge
+changes no Multigame owner, so it was not repeated.
+
 ### Remaining limits
 
 The desktop lock prevented a normal KWin-managed map of the polished host; that
