@@ -78,6 +78,29 @@ final class RomSceneArt implements SceneRomArt {
         return game.code();
     }
 
+    private String romSha1;
+
+    @Override
+    public String romSha1() {
+        if (romSha1 == null) {
+            try {
+                java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-1");
+                RomByteReader bytes = reader();
+                byte[] chunk = new byte[8192];
+                for (int offset = 0; offset < bytes.size();) {
+                    int count = Math.min(chunk.length, bytes.size() - offset);
+                    for (int index = 0; index < count; index++) chunk[index] = (byte) bytes.readU8(offset + index);
+                    digest.update(chunk, 0, count);
+                    offset += count;
+                }
+                romSha1 = java.util.HexFormat.of().formatHex(digest.digest());
+            } catch (java.security.NoSuchAlgorithmException impossible) {
+                throw new IllegalStateException("SHA-1 unavailable", impossible);
+            }
+        }
+        return romSha1;
+    }
+
     @Override
     public byte[] read(int address, int length) {
         if (address < 0 || length < 0 || length > (1 << 20) || address + (long) length > reader().size()) {
@@ -102,7 +125,7 @@ final class RomSceneArt implements SceneRomArt {
     public SceneSpriteSet sprites(RomSpriteRequest request, int[] palette) {
         int[] pal = padPalette(palette);
         Pattern[] art = loadArt(request);
-        List<SpriteMappingFrame> frames = loadMappings(request.mappingAddress());
+        List<SpriteMappingFrame> frames = loadMappings(request);
         List<SpriteDplcFrame> dplcs = request.hasDplc() ? loadDplcs(request) : List.of();
         return new LazySpriteSet(frames, dplcs, art, pal, request.paletteLine(), request.tileOffset(), null);
     }
@@ -318,11 +341,20 @@ final class RomSceneArt implements SceneRomArt {
         }
     }
 
-    private List<SpriteMappingFrame> loadMappings(int address) {
+    private List<SpriteMappingFrame> loadMappings(RomSpriteRequest request) {
+        int address = request.mappingAddress();
+        int count = request.mappingFrameCount();
+        if (count == 0) {
+            return switch (game) {
+                case S1 -> S1SpriteDataLoader.loadMappingFrames(reader(), address);
+                case S2 -> S2SpriteDataLoader.loadMappingFrames(reader(), address);
+                default -> S3kSpriteDataLoader.loadMappingFrames(reader(), address);
+            };
+        }
         return switch (game) {
-            case S1 -> S1SpriteDataLoader.loadMappingFrames(reader(), address);
-            case S2 -> S2SpriteDataLoader.loadMappingFrames(reader(), address);
-            default -> S3kSpriteDataLoader.loadMappingFrames(reader(), address);
+            case S1 -> S1SpriteDataLoader.loadMappingFrames(reader(), address, count);
+            case S2 -> S2SpriteDataLoader.loadMappingFrames(reader(), address, count);
+            default -> S3kSpriteDataLoader.loadMappingFrames(reader(), address, count);
         };
     }
 

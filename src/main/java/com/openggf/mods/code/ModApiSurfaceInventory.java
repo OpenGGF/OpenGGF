@@ -28,6 +28,13 @@ public final class ModApiSurfaceInventory {
             "com.openggf.level.objects.ObjectLifetimeOps",
             "com.openggf.level.objects.ObjectPlayerQuery",
             "com.openggf.game.PhysicsProfile",
+            "com.openggf.game.GameServiceBundle",
+            "com.openggf.level.DelegatingLevel",
+            "com.openggf.level.LevelPatch",
+            "com.openggf.mods.state.SnapshotRandom",
+            "com.openggf.mods.state.CapturedPool",
+            "com.openggf.mods.state.VersionedSettings",
+            "com.openggf.game.DelegatingZoneRegistry",
             "com.openggf.game.presentation.SceneFrameCodec",
             "com.openggf.game.presentation.SceneReplay",
             "com.openggf.control.MenuInput",
@@ -49,12 +56,36 @@ public final class ModApiSurfaceInventory {
             "com.openggf.level.objects.PlayableSheetMaterializer",
             "com.openggf.level.objects.ObjectFactory",
             "com.openggf.level.objects.RewindRecreatable",
+            "com.openggf.level.objects.ModRewindRecreatable",
             "com.openggf.level.spawn.SpawnPoint",
+            // Deliberate creator diagnostics, independent of engine orchestration exposure.
+            "com.openggf.trace.TraceEvent$CnzSlotMachineState",
+            "com.openggf.trace.TraceEvent$S2TornadoState",
             // Scene constant holders: mods use their constants, which no signature names.
             "com.openggf.mods.scene.SceneButtons",
             "com.openggf.mods.scene.SceneKeys",
             // Optional interface a scene implements; the engine finds it with instanceof.
-            "com.openggf.mods.scene.DebuggableScene");
+            "com.openggf.mods.scene.DebuggableScene",
+            // Stateful contributed event handlers participate in the owner rewind graph.
+            "com.openggf.mods.code.RewindableZoneEvents",
+            // Optional creator presentation helpers; static utilities need explicit roots.
+            "com.openggf.mods.ui.CompactFont",
+            "com.openggf.mods.ui.BitmapFont",
+            "com.openggf.mods.ui.AtlasFont",
+            "com.openggf.mods.ui.TextLayout",
+            "com.openggf.mods.ui.UiPrimitives",
+            "com.openggf.mods.ui.FocusRegions",
+            "com.openggf.mods.ui.LevelOverlayCanvas",
+            "com.openggf.control.ActionReducer",
+            "com.openggf.control.ActionMap",
+            "com.openggf.control.PhysicalBinding",
+            // ROM-qualified art recipes and optional scene utilities.
+            "com.openggf.mods.scene.art.StockSceneArt",
+            "com.openggf.mods.scene.art.PaletteAssembly",
+            "com.openggf.mods.scene.art.SceneArtCache",
+            "com.openggf.mods.scene.art.SpriteAnchors",
+            "com.openggf.mods.scene.art.AnimationSampling",
+            "com.openggf.mods.scene.art.RomAnimationPlayer");
 
     private ModApiSurfaceInventory() { }
 

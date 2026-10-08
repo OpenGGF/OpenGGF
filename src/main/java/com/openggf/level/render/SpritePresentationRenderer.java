@@ -99,7 +99,7 @@ public final class SpritePresentationRenderer {
                     if (visible.test(primitive.layer())) {
                         graphics.flushPatternBatch();
                         graphics.enqueueDebugLineState();
-                        graphics.registerCommand(primitive.primitive().command(cameraX, cameraY));
+                        graphics.registerCommand(primitive.primitive().command(graphics, cameraX, cameraY));
                         graphics.enqueueDefaultShaderState();
                         previous = null;
                     }

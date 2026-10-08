@@ -157,6 +157,13 @@ public final class ModCatalogValidator {
             findings.add(error("MOD_JAR_CHANGED", "Packed mod digest changed after discovery", null));
             return null;
         }
+        String artGame = descriptor.manifest().baseGame() == null ? "any" : descriptor.manifest().baseGame();
+        descriptor.manifest().artOverrides().keySet().stream().sorted()
+                .filter(key -> !StockArtOverrideCatalog.contains(artGame, key)).forEach(key -> findings.add(
+                        new ModFinding(ModFindingSeverity.WARNING, "UNKNOWN_ART_OVERRIDE_KEY",
+                                "Unknown stock art key '" + key + "' for " + artGame
+                                        + "; override may never be requested. Use ggfmod art-keys --game " + artGame + ".",
+                                "META-INF/openggf-mod.yaml")));
         List<String> names = assets.validatedEntryNames();
         if (!names.contains(AUDIO_MANIFEST_PATH)) {
             if (!descriptor.manifest().audioOverrides().isEmpty()) {

@@ -8,8 +8,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PatrolMovementHelper;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.ObjectReconstructionContext;
+import com.openggf.level.objects.ModRewindRecreatable;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -23,7 +23,7 @@ import java.util.List;
  * counter inline, this uses the published helper the way a real badnik would, and reverses
  * direction at explicit patrol bounds rather than on a frame-count timer.
  */
-public final class ZapBug extends AbstractBadnikInstance implements RewindRecreatable {
+public final class ZapBug extends AbstractBadnikInstance implements ModRewindRecreatable {
     private static final String OWNER = "sample-platformer";
 
     /** Distance in pixels the badnik walks each way from its spawn point before reversing. */
@@ -111,7 +111,7 @@ public final class ZapBug extends AbstractBadnikInstance implements RewindRecrea
         }
     }
 
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new ZapBug(context.spawn());
     }
 }

@@ -141,7 +141,7 @@ class TestSaveManager {
         SaveSessionContext ctx = SaveSessionContext.noSave("s3k",
                 new SelectedTeam("sonic", java.util.List.of()), 0, 0);
         ctx.requestSave(SaveReason.PROGRESSION_SAVE,
-                RuntimeSaveContext.forGameplayMode(null, ctx),
+                com.openggf.game.save.RuntimeSaveCapture.capture(null, ctx),
                 (reason, runtime) -> java.util.Map.of("zone", 0, "act", 1),
                 manager);
         assertTrue(Files.notExists(root.resolve("s3k").resolve("slot1.json")));
@@ -152,20 +152,20 @@ class TestSaveManager {
         SaveManager manager = new SaveManager(root);
         SelectedTeam original = new SelectedTeam("sonic", java.util.List.of("tails"));
         SaveSnapshotProvider teamSnapshot = (reason, runtime) -> java.util.Map.of(
-                "mainCharacter", runtime.saveSessionContext().selectedTeam().mainCharacter(),
-                "sidekicks", runtime.saveSessionContext().selectedTeam().sidekicks());
+                "mainCharacter", runtime.selectedTeam().mainCharacter(),
+                "sidekicks", runtime.selectedTeam().sidekicks());
 
         SaveSessionContext sanitized = SaveSessionContext.forSlot("s2", 1, original, 0, 0)
                 .withSelectedTeam(new SelectedTeam("knuckles", java.util.List.of()));
         sanitized.requestSave(SaveReason.NEW_SLOT_START,
-                RuntimeSaveContext.forGameplayMode(null, sanitized), teamSnapshot, manager);
+                com.openggf.game.save.RuntimeSaveCapture.capture(null, sanitized), teamSnapshot, manager);
 
         SaveSessionContext forcedLaunch = SaveSessionLaunchTeamAccess.withLaunchTeam(
                 SaveSessionContext.forSlot("s2", 2, original, 0, 0),
                 new com.openggf.game.GameplayLaunchTeam(
                         com.openggf.game.CharacterKey.TAILS, java.util.List.of()));
         forcedLaunch.requestSave(SaveReason.NEW_SLOT_START,
-                RuntimeSaveContext.forGameplayMode(null, forcedLaunch), teamSnapshot, manager);
+                com.openggf.game.save.RuntimeSaveCapture.capture(null, forcedLaunch), teamSnapshot, manager);
 
         assertEquals("knuckles", manager.readSlotSummary("s2", 1).payload()
                 .get("mainCharacter"));
@@ -186,11 +186,11 @@ class TestSaveManager {
         launch.markClear();
 
         launch.requestSaveAsync(SaveReason.PROGRESSION_SAVE,
-                RuntimeSaveContext.forGameplayMode(null, launch),
+                com.openggf.game.save.RuntimeSaveCapture.capture(null, launch),
                 (reason, runtime) -> Map.of(
-                        "mainCharacter", runtime.saveSessionContext().selectedTeam().mainCharacter(),
-                        "sidekicks", runtime.saveSessionContext().selectedTeam().sidekicks(),
-                        "clear", runtime.saveSessionContext().isClear()), manager);
+                        "mainCharacter", runtime.selectedTeam().mainCharacter(),
+                        "sidekicks", runtime.selectedTeam().sidekicks(),
+                        "clear", runtime.isClear()), manager);
         manager.flushPendingWrites();
 
         Map<String, Object> payload = new SaveManager(root).readSlotSummary("s3k", 1).payload();

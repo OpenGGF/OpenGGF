@@ -18,7 +18,6 @@ import java.util.List;
  * Metadata for a trace recording directory, parsed from metadata.json.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-@com.openggf.game.ModApi
 public record TraceMetadata(
     @JsonProperty("game") String game,
     @JsonProperty("zone") String zone,

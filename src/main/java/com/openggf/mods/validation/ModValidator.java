@@ -36,8 +36,10 @@ public final class ModValidator {
     private static final String GGF_MOD = "com/openggf/mods/code/GgfMod";
     private static final String OBJECT_BASE = "com/openggf/level/objects/AbstractObjectInstance";
     private static final String RECREATABLE = "com/openggf/level/objects/RewindRecreatable";
+    private static final String MOD_RECREATABLE = "com/openggf/level/objects/ModRewindRecreatable";
     private static final String OBJECT_INSTANCE = "com/openggf/level/objects/ObjectInstance";
     private static final String RECREATE_CONTEXT = "com/openggf/level/objects/RewindRecreateContext";
+    private static final String MOD_RECREATE_CONTEXT = "com/openggf/level/objects/ObjectReconstructionContext";
     private static final String OBJECT_REF_ID = "Lcom/openggf/game/rewind/identity/ObjectRefId;";
     private static final Set<String> BUILTIN_API = Set.of(GGF_MOD, OBJECT_BASE, RECREATABLE,
             OBJECT_INSTANCE, RECREATE_CONTEXT, "com/openggf/level/objects/ObjectServices");
@@ -302,6 +304,11 @@ public final class ModValidator {
                         && (access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_ABSTRACT)) == Opcodes.ACC_PUBLIC) {
                     info.validRecreateMethod = true;
                 }
+                if (name.equals("recreateForRewind")
+                        && descriptor.equals("(L" + MOD_RECREATE_CONTEXT + ";)L" + OBJECT_BASE + ";")
+                        && (access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_ABSTRACT)) == Opcodes.ACC_PUBLIC) {
+                    info.validModRecreateMethod = true;
+                }
                 return new MethodVisitor(Opcodes.ASM9) {
                     final String methodKey = name + descriptor;
                     @Override public AnnotationVisitor visitAnnotation(String annotation, boolean visible) {
@@ -446,6 +453,9 @@ public final class ModValidator {
 
     private static boolean hasRecreateMethod(ClassInfo info, Map<String, ClassInfo> classes) {
         if (info.validRecreateMethod) return true;
+        // The supported projection supplies the native-context default bridge, but its
+        // authored target must still have the exact public, concrete method contract.
+        if (info.validModRecreateMethod && isAssignable(info.name, MOD_RECREATABLE, classes)) return true;
         ClassInfo parent = classes.get(info.superName);
         return parent != null && hasRecreateMethod(parent, classes);
     }
@@ -542,7 +552,7 @@ public final class ModValidator {
     private static final class ClassInfo {
         CompilerConstantStatics.Shape constantShape;
         String name; String superName; int access; boolean publicNoArgConstructor;
-        boolean constructorServices; boolean validRecreateMethod; boolean classInitializer;
+        boolean constructorServices; boolean validRecreateMethod; boolean validModRecreateMethod; boolean classInitializer;
         final List<String> interfaces = new ArrayList<>();
         final List<FieldInfo> fields = new ArrayList<>();
         final Set<String> engineReferences = new HashSet<>();

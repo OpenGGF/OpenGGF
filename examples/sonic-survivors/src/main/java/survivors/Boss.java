@@ -17,7 +17,7 @@ import java.util.List;
  * hitpoints come through the constructor.
  */
 public final class Boss extends AbstractObjectInstance
-        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener, TouchResponseAttackable {
+        implements ModRewindRecreatable, TouchResponseProvider, TouchResponseListener, TouchResponseAttackable {
     static final int ENTER = 0, SWEEP = 1, VOLLEY = 2, SWOOP = 3, RISE = 4, DEFEATED = 5;
     // Silver Sonic.
     static final int WALK = 10, CROUCH = 11, SPIN = 12, LEAP = 13;
@@ -81,7 +81,7 @@ public final class Boss extends AbstractObjectInstance
     @Override public int getY() { return y; }
     @Override public boolean isPersistent() { return !isDestroyed(); }
     @Override public boolean isHighPriority() { return true; }
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new Boss(context.spawn());
     }
 

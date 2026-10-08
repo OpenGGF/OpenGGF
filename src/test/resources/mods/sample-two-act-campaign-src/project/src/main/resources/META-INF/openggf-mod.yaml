@@ -1,0 +1,13 @@
+formatVersion: 1
+id: sample-tide-circuit
+name: Tide Circuit
+version: 1.0.0
+authors: [Mod Author]
+description: Two original hosted acts with owned runtime contributions and native results handoff.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s2
+entrypoint: example.tide.TideCircuitMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

@@ -13,7 +13,6 @@ import com.openggf.graphics.FadeManagerSnapshot;
 import java.util.Objects;
 import java.util.logging.Logger;
 
-@com.openggf.game.ModApi
 public final class RewindController {
 
     private static final Logger LOGGER = Logger.getLogger(RewindController.class.getName());

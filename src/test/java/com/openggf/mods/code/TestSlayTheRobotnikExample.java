@@ -1,11 +1,7 @@
 package com.openggf.mods.code;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,18 +10,27 @@ import java.util.List;
 import java.util.stream.Stream;
 import javax.tools.ToolProvider;
 import org.junit.jupiter.api.DynamicTest;
+import com.openggf.mods.testing.CreatorTestLauncher;
+import java.io.PrintWriter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Builds the Slay the Robotnik example the way a creator would (compile, package, validate)
- * and runs the example's own rules tests (examples/slay-the-robotnik/src/test/java) as
- * dynamic tests, so the engine suite catches API changes that break the example. No ROM is
+ * and runs the example's own rules tests (examples/slay-the-robotnik/src/test/java) through the normal
+ * Jupiter engine, so the engine suite catches API changes that break the example. No ROM is
  * needed: the rules core and its tests are plain Java.
  */
 class TestSlayTheRobotnikExample {
     private static final Path PROJECT = Path.of("examples/slay-the-robotnik");
+
+    private URLClassLoader loader;
+
+    @org.junit.jupiter.api.AfterEach
+    void closeLoader() throws Exception {
+        if (loader != null) loader.close();
+    }
 
     @TempDir
     Path work;
@@ -46,36 +51,11 @@ class TestSlayTheRobotnikExample {
         copyResources(PROJECT.resolve("src/main/resources"), tests);
         compile(PROJECT.resolve("src/test/java"), main + java.io.File.pathSeparator
                 + System.getProperty("java.class.path"), tests);
-        URLClassLoader loader = new URLClassLoader(new java.net.URL[] {tests.toUri().toURL(), main.toUri().toURL()},
+        loader = new URLClassLoader(new java.net.URL[] {tests.toUri().toURL(), main.toUri().toURL()},
                 getClass().getClassLoader());
-        List<DynamicTest> found = new ArrayList<>();
-        try (Stream<Path> files = Files.walk(tests)) {
-            for (Path p : files.filter(f -> f.toString().endsWith(".class") && !f.toString().contains("$")).sorted()
-                    .toList()) {
-                String name = tests.relativize(p).toString().replace('/', '.').replace('\\', '.')
-                        .replaceAll("\\.class$", "");
-                Class<?> type = loader.loadClass(name);
-                for (Method m : type.getDeclaredMethods()) {
-                    if (m.isAnnotationPresent(Test.class) && !Modifier.isStatic(m.getModifiers())) {
-                        found.add(DynamicTest.dynamicTest(type.getSimpleName() + "." + m.getName(), () -> run(type, m)));
-                    }
-                }
-            }
-        }
-        assertFalse(found.isEmpty(), "the example has tests");
-        return found.stream();
-    }
-
-    private static void run(Class<?> type, Method method) throws Throwable {
-        var constructor = type.getDeclaredConstructor();
-        constructor.setAccessible(true);
-        Object instance = constructor.newInstance();
-        method.setAccessible(true);
-        try {
-            method.invoke(instance);
-        } catch (InvocationTargetException e) {
-            throw e.getCause();
-        }
+        return Stream.of(DynamicTest.dynamicTest("creator Jupiter suite", () -> assertEquals(0,
+                CreatorTestLauncher.scan(loader, tests, new PrintWriter(System.out, true),
+                        new PrintWriter(System.err, true)), "the example Jupiter suite passed")));
     }
 
     private static void compile(Path sources, String classpath, Path out) throws Exception {

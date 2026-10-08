@@ -5,6 +5,7 @@ import com.openggf.mods.scene.RomSpriteRequest.Compression;
 import com.openggf.mods.scene.RomSpriteRequest.DplcLayout;
 import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneSpriteSet;
+import com.openggf.mods.scene.art.*;
 
 /**
  * Where the game's sprites live in the Sonic 3 &amp; Knuckles ROM. Every address is a label in
@@ -40,6 +41,10 @@ final class RomSprites {
     }
 
     static SceneSpriteSet load(SceneRomArt rom, String key) {
+        return load(rom, null, key);
+    }
+
+    static SceneSpriteSet load(SceneRomArt rom, SceneArtCache cache, String key) {
         return switch (key) {
             // ---- Angel Island badniks (art_tile palette line 1) ----
             case "rhinobot" -> rom.sprites(RomSpriteRequest.streamed(
@@ -66,9 +71,7 @@ final class RomSprites {
             case "aiz_end_boss" -> rom.sprites(RomSpriteRequest.of(
                     0x365260, Compression.KOSINSKI_MODULED, // ArtKosM_AIZEndBoss
                     0x361FD6, 1), bossPalette(rom, PAL_AIZ_END_BOSS)); // Map_AIZEndBoss
-            case "robotnik_ship" -> rom.sprites(RomSpriteRequest.of(
-                    0x0D771E, Compression.NEMESIS,       // ArtNem_RobotnikShip
-                    0x06820C, 0), aiz(rom));             // Map_RobotnikShip (head 0-3, Egg Mobile 5)
+            case "robotnik_ship" -> named(rom, cache, StockSceneArt.S3K_ROBOTNIK_SHIP, aiz(rom));             // Map_RobotnikShip (head 0-3, Egg Mobile 5)
             case "boss_explosion" -> rom.sprites(RomSpriteRequest.of(
                     0x0D73CE, Compression.NEMESIS,       // ArtNem_BossExplosion
                     0x083FFC, 0), aiz(rom));             // Map_BossExplosion
@@ -135,41 +138,27 @@ final class RomSprites {
             case "lbz_final_boss2_l0" -> rom.sprites(RomSpriteRequest.of(
                     0x376874, Compression.KOSINSKI_MODULED, // the rear hazard sprite uses line 0
                     0x364A96, 0), zoneBoss(rom, PAL_LBZ, PAL_LBZ_FINAL_BOSS2));
-            case "robotnik_ship_lbz" -> rom.sprites(RomSpriteRequest.of(
-                    0x0D771E, Compression.NEMESIS,       // ArtNem_RobotnikShip, over the Launch Base palette
-                    0x06820C, 0), zone(rom, PAL_LBZ));
-            case "robotnik_ship_hcz" -> rom.sprites(RomSpriteRequest.of(
-                    0x0D771E, Compression.NEMESIS,       // ArtNem_RobotnikShip, over the Hydrocity palette
-                    0x06820C, 0), zone(rom, PAL_HCZ));
+            case "robotnik_ship_lbz" -> named(rom, cache, StockSceneArt.S3K_ROBOTNIK_SHIP, zone(rom, PAL_LBZ));
+            case "robotnik_ship_hcz" -> named(rom, cache, StockSceneArt.S3K_ROBOTNIK_SHIP, zone(rom, PAL_HCZ));
 
             // ---- Sky Sanctuary ----
             case "mecha_sonic" -> mecha(rom, PAL_MECHA);
             case "mecha_super1" -> mecha(rom, PAL_MECHA_SUPER1);
             case "mecha_super2" -> mecha(rom, PAL_MECHA_SUPER2);
             case "mecha_super3" -> mecha(rom, PAL_MECHA_SUPER3);
-            case "egg_robo_ssz" -> rom.sprites(RomSpriteRequest.of(
-                    0x17B17E, Compression.KOSINSKI_MODULED, // ArtKosM_EggRoboBadnik; pieces carry line 1
-                    0x184F34, 0), zone(rom, PAL_SSZ));   // Map_EggRobo
+            case "egg_robo_ssz" -> named(rom, cache, StockSceneArt.S3K_EGG_ROBO, zone(rom, PAL_SSZ));   // Map_EggRobo
 
             // ---- Characters and props ----
-            case "egg_robo" -> rom.sprites(RomSpriteRequest.of(
-                    0x17B17E, Compression.KOSINSKI_MODULED, // ArtKosM_EggRoboBadnik
-                    0x184F34, 0), rom.palette(PAL_CONTINUE, 64)); // Map_EggRobo
+            case "egg_robo" -> named(rom, cache, StockSceneArt.S3K_EGG_ROBO, rom.palette(PAL_CONTINUE, 64)); // Map_EggRobo
             case "tornado" -> rom.sprites(RomSpriteRequest.of(
                     0x382624, Compression.KOSINSKI_MODULED, // ArtKosM_AIZIntroPlane
                     0x364470, 0), aiz(rom));             // Map_AIZIntroPlane (body 0, propeller 1-4, flame 5-6)
             case "monitor" -> rom.sprites(RomSpriteRequest.of(
                     0x190F4A, Compression.NEMESIS,       // ArtNem_Monitors
                     0x01DBA2, 0), aiz(rom));             // Map_Monitor (box 0, icons 1-10, broken 11)
-            case "ring" -> rom.sprites(RomSpriteRequest.of(
-                    0x192AEE, Compression.NEMESIS,       // ArtNem_RingHUDText (ring tiles 0-13)
-                    0x01A99A, 1), aiz(rom));             // Map_Ring (spin 0-3, sparkle 4-7)
-            case "explosion" -> rom.sprites(RomSpriteRequest.of(
-                    0x19200A, Compression.NEMESIS,       // ArtNem_Explosion
-                    0x01E758, 0), aiz(rom));             // Map_Explosion
-            case "flicky" -> rom.sprites(RomSpriteRequest.of(
-                    0x1931D6, Compression.NEMESIS,       // ArtNem_BlueFlicky
-                    0x02CEBA, 0), aiz(rom));             // Map_Animals1 (flap 0-1, released 2)
+            case "ring" -> named(rom, cache, StockSceneArt.S3K_RING, aiz(rom));             // Map_Ring (spin 0-3, sparkle 4-7)
+            case "explosion" -> named(rom, cache, StockSceneArt.S3K_EXPLOSION, aiz(rom));             // Map_Explosion
+            case "flicky" -> named(rom, cache, StockSceneArt.S3K_BLUE_FLICKY, aiz(rom));             // Map_Animals1 (flap 0-1, released 2)
             case "game_over" -> rom.sprites(RomSpriteRequest.of(
                     0x191DE4, Compression.NEMESIS,       // ArtNem_GameOver
                     0x02EDD0, 0), aiz(rom));             // Map_GameOver (GAME 0, OVER 1, TIME 2, OVER 3)
@@ -186,9 +175,7 @@ final class RomSprites {
                     0x0D8766, 0x2700,                   // ArtUnc_SSEntryRing
                     0x0619E0, 0x061ABE,                 // Map_SSEntryRing, DPLC_SSEntryRing
                     DplcLayout.OBJECT, 1), aiz(rom));
-            case "egg_capsule" -> rom.sprites(RomSpriteRequest.of(
-                    0x0DD990, Compression.NEMESIS,       // ArtNem_EggCapsule
-                    0x086BFC, 0), aiz(rom));             // Map_EggCapsule
+            case "egg_capsule" -> named(rom, cache, StockSceneArt.S3K_EGG_CAPSULE, aiz(rom));             // Map_EggCapsule
             case "spring" -> rom.sprites(RomSpriteRequest.of(
                     0x1927FE, Compression.NEMESIS,       // ArtNem_SpikesSprings
                     0x02375C, 0).withTileOffset(-0x10), aiz(rom)); // Map_Spring (vertical red)
@@ -287,6 +274,10 @@ final class RomSprites {
         };
     }
 
+    private static SceneSpriteSet named(SceneRomArt rom, SceneArtCache cache, StockSceneArt recipe, int[] palette) {
+        return cache == null ? rom.sprites(recipe.request(rom), palette) : cache.sprites(recipe, palette);
+    }
+
     /** Player line 0 plus the Angel Island act 1 zone palette on lines 1-3. */
     private static int[] aiz(SceneRomArt rom) {
         int[] palette = new int[64];
@@ -312,10 +303,8 @@ final class RomSprites {
 
     /** Player line 0 plus a zone's 48-colour palette on lines 1-3. */
     private static int[] zone(SceneRomArt rom, int zonePalette) {
-        int[] palette = new int[64];
-        System.arraycopy(rom.palette(PAL_SONIC_TAILS, 16), 0, palette, 0, 16);
-        System.arraycopy(rom.palette(zonePalette, 48), 0, palette, 16, 48);
-        return palette;
+        return new PaletteAssembly().rom(rom, PAL_SONIC_TAILS, 0, 16)
+                .rom(rom, zonePalette, 16, 48).build();
     }
 
     /** A zone palette with a boss's own 16 colours loaded over line 1, as the boss's PLC does. */

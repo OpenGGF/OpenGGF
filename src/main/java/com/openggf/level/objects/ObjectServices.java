@@ -63,6 +63,11 @@ import java.util.List;
 public interface ObjectServices {
     // Object management
     ObjectManager objectManager();
+    /** Stable typed object lookup without exposing rewind identity-table mutation. */
+    default ObjectQuery objectQuery() {
+        ObjectManager manager=objectManager();
+        return manager == null ? ObjectQuery.EMPTY : manager.objectQuery();
+    }
     ObjectRenderManager renderManager();
 
     // Level state

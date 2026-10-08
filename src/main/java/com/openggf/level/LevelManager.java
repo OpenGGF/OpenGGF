@@ -318,6 +318,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     AnimatedPatternManager animatedPatternManager;
     AnimatedPaletteManager animatedPaletteManager;
     private ModZoneRuntimeProfile activeModZoneRuntimeProfile;
+    final LevelContributedZoneRuntime contributedZoneRuntime;
     private ModZoneRuntimeContribution activeModZoneRuntimeContribution;
     private CustomZonePaletteBridge activeCustomZonePaletteBridge;
     LevelState levelGamestate;
@@ -383,6 +384,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         this.waterSystem = waterSystem;
         this.gameState = gameState;
         this.worldSession = worldSession;
+        this.contributedZoneRuntime = new LevelContributedZoneRuntime(this, worldSession);
         this.graphicsManager = engineServices.graphics();
         this.audioManager = engineServices.audio();
         this.configService = engineServices.configuration();
@@ -666,6 +668,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public Level loadLevelData(int levelIndex) throws IOException {
         installGameplayInputFilter();
+        contributedZoneRuntime.clear();
         activeModZoneRuntimeContribution = gameModule == null ? null
                 : gameModule.getZoneRegistry().modZoneRuntimeContribution(levelIndex);
         activeModZoneRuntimeProfile = activeModZoneRuntimeContribution != null
@@ -676,6 +679,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (loaded == null) {
             loaded = game.loadLevel(levelIndex);
         }
+        loaded = gameModule == null ? loaded : java.util.Objects.requireNonNull(gameModule.transformDecodedLevel(loaded), "Decoded level transform");
         writeCurrentLevel(loaded);
         installHudProfile();
         rebuildLevelDerivedState();
@@ -759,6 +763,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             DeferredLevelResourceTracker deferredResources,
             String mutationKey) throws IOException {
         installGameplayInputFilter();
+        contributedZoneRuntime.clear();
         activeModZoneRuntimeContribution = gameModule == null ? null
                 : gameModule.getZoneRegistry().modZoneRuntimeContribution(levelIndex);
         activeModZoneRuntimeProfile = activeModZoneRuntimeContribution != null
@@ -786,6 +791,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                         : game.loadLevel(levelIndex);
             }
         }
+        loaded = gameModule == null ? loaded : java.util.Objects.requireNonNull(gameModule.transformDecodedLevel(loaded), "Decoded level transform");
         writeCurrentLevel(loaded);
         installHudProfile();
         rebuildLevelDerivedState();
@@ -1066,24 +1072,26 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Phase H: Initialize zone-specific features (CNZ bumpers, CPZ pylon, water surface, etc.).
      */
     public void initZoneFeatures() throws IOException {
-        zoneFeatureProvider = activeModZoneRuntimeProfile == null
-                ? gameModule.getZoneFeatureProvider() : null;
         resetZoneScopedRegistriesForLevelLoad();
         if (activeModZoneRuntimeProfile != null) {
-            var zoneRuntime = GameServices.zoneRuntimeRegistryOrNull();
-            var animatedTiles = GameServices.animatedTileChannelGraphOrNull();
-            if (zoneRuntime != null) {
-                zoneRuntime.clear();
-            }
-            if (animatedTiles != null) {
-                animatedTiles.clear();
-            }
+            contributedZoneRuntime.initialize(activeModZoneRuntimeContribution);
+        } else {
+            zoneFeatureProvider = gameModule.getZoneFeatureProvider();
         }
         applyLevelLoadPaletteOverrides();
         initializeZoneFeatureProvider(zoneFeatureProvider);
     }
 
+    boolean hasContributedZoneRuntime() { return activeModZoneRuntimeProfile != null; }
+    void updateContributedAnimatedTiles() {
+        contributedZoneRuntime.updateAnimatedTiles();
+    }
+
     void reinitializeZoneFeaturesForActTransition() throws IOException {
+        if (activeModZoneRuntimeProfile != null) {
+            initZoneFeatures();
+            return;
+        }
         if (zoneFeatureProvider == null && activeModZoneRuntimeProfile == null) {
             zoneFeatureProvider = gameModule.getZoneFeatureProvider();
         }
@@ -4592,6 +4600,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         activeHudProfile = HudProfile.stock();
         activeModZoneRuntimeContribution = null;
         activeModZoneRuntimeProfile = null;
+        contributedZoneRuntime.clear();
         activeCustomZonePaletteBridge = null;
         animatedPatternManager = null;
         animatedPaletteManager = null;
@@ -4615,6 +4624,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         cacheLevelDimensions();
         levels.clear();
         activeModZoneRuntimeProfile = null;
+        contributedZoneRuntime.clear();
     }
 
     /**

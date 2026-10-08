@@ -56,7 +56,6 @@ import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT;
  * ROM logos and their aspect ratio; the right pane exposes launch and engine actions.
  * Wider viewports expand the panes without changing the navigation model.
  */
-@com.openggf.game.ModApi
 public class MasterTitleScreen {
 
     private static final Logger LOGGER = Logger.getLogger(MasterTitleScreen.class.getName());
@@ -70,7 +69,6 @@ public class MasterTitleScreen {
     record PreviewLayout(int width, int height, float x, float y) {
     }
 
-    @com.openggf.game.ModApi
     public enum GameEntry {
         SONIC_1("Sonic The Hedgehog", "Sonic 1", "s1", SonicConfiguration.SONIC_1_ROM,
                 "s1.gen"),
@@ -107,7 +105,6 @@ public class MasterTitleScreen {
         }
     }
 
-    @com.openggf.game.ModApi
     public enum State {
         INACTIVE, FADE_IN, ACTIVE, ERROR_DISPLAY, CONFIRMING, EXITING
     }
@@ -1776,19 +1773,16 @@ public class MasterTitleScreen {
     }
 
     @FunctionalInterface
-    @com.openggf.game.ModApi
     public interface UserRecordingMenuFactory {
         UserRecordingMenu create(String gameId, PixelFont font) throws IOException;
     }
 
     @FunctionalInterface
-    @com.openggf.game.ModApi
     public interface TimeAttackMenuFactory {
         TimeAttackMenu create(List<String> availableGameIds, String initialGameId, PixelFont font);
     }
 
     @FunctionalInterface
-    @com.openggf.game.ModApi
     public interface ModManagerScreenFactory {
         ModManagerView create(PixelFont font);
     }
@@ -1802,7 +1796,6 @@ public class MasterTitleScreen {
                 || toolsOpen || helpOpen || gameBrowserOpen || catalogLoad != null || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
     }
 
-    @com.openggf.game.ModApi
     public interface ModManagerView {
         void update(InputHandler input);
         void render();

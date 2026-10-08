@@ -11,7 +11,7 @@ import java.util.Optional;
  * leaves half a save.
  */
 @com.openggf.game.ModApi
-public interface SceneStorage {
+public interface SceneStorage extends com.openggf.mods.ModStorage {
     /** The file's text, or empty when it does not exist, is over 1 MiB, or cannot be read. */
     Optional<String> read(String name);
 

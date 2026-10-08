@@ -92,7 +92,9 @@ class TestSonicSurvivors {
             var context = new ModContext("sonic-survivors", "s2", assets);
             ((GgfMod) loader.loadClass("survivors.SurvivorsMod").getConstructor().newInstance()).register(context);
             var plan = context.freeze();
-            GameModule effective = new ModBackedGamePatch(plan).apply(base, null);
+            var boundary = new ModFaultBoundary(Map.of(), new com.openggf.mods.ModRuntimeFindingStore(),
+                    owners -> new com.openggf.mods.ModStateSaveResult.Saved(), owners -> { });
+            GameModule effective = new ModBackedGamePatch(plan, boundary).apply(base, null);
             for (GamePatch patch : plan.explicitPatches()) effective = patch.apply(effective, null);
             SessionManager.clear();
             GameModuleRegistry.setCurrent(effective);
@@ -129,9 +131,19 @@ class TestSonicSurvivors {
                 }
             }
         }
+        // Compare the complete face at each scale within a viewport wide enough
+        // to contain it; production overlay drawing clips to the logical viewport.
+        var fontViewport = com.openggf.configuration.SonicConfigurationService.createStandalone();
+        // Pixel width is derived from DISPLAY_ASPECT; a persisted value cannot
+        // replace that overlay. This synthetic font viewport needs an explicit session override.
+        int fontWidth = chars.length() * 18 + 20;
+        fontViewport.setSessionOverride(com.openggf.configuration.SonicConfiguration.SCREEN_WIDTH_PIXELS, fontWidth);
+        fontViewport.setConfigValue(com.openggf.configuration.SonicConfiguration.SCREEN_HEIGHT_PIXELS, 224);
+        var camera = services.camera();
+        camera.refreshViewportDimensions(fontViewport);
+        assertEquals(fontWidth, camera.getWidth(), "the complete face must fit at every tested scale");
         for (int scale = 1; scale <= 3; scale++) {
             int size = scale;
-            var camera = services.camera();
             var frame = com.openggf.graphics.SpritePresentation.prepare(services.graphicsManager(),
                     camera.getX(), camera.getY(), () -> {
                         try { text.invoke(null, services, chars, 9, 13, size, 0x60E8FF, 0.5f); }
@@ -164,6 +176,98 @@ class TestSonicSurvivors {
         }
     }
 
+    @Test void titleWordmarkPreservesEveryGradientRowAndFadeAlpha() throws Exception {
+        launch(0, 0);
+        var graphics = GameServices.graphics();
+        Class<?> draw = loader.loadClass("survivors.Draw");
+        String chars = (String) field(draw, "CHARS").get(null);
+        String pixels = (String) field(draw, "GLYPHS").get(null);
+        Class<?> titleClass = loader.loadClass("survivors.SurvivorsTitle");
+        var constructor = titleClass.getDeclaredConstructor(TitleScreenProvider.class, java.util.function.Supplier.class);
+        constructor.setAccessible(true);
+        Object title = constructor.newInstance(org.mockito.Mockito.mock(TitleScreenProvider.class),
+                (java.util.function.Supplier<Object>) () -> null);
+        Method wordmark = titleClass.getDeclaredMethod("drawWordmark", com.openggf.graphics.GraphicsManager.class,
+                int.class, float.class);
+        wordmark.setAccessible(true);
+        String word = "SURVIVORS";
+        int scale = 3, left = (400 - (word.length() * 6 * scale - scale)) / 2, top = 150;
+        int[] rowColours = {0xFFF080, 0xFFF080, 0xFFC020, 0xFFC020, 0xFF7010, 0xFF7010, 0xD02010};
+        for (float alpha : new float[]{0.5f, 1f}) {
+            var frame = com.openggf.graphics.SpritePresentation.prepare(graphics, 0, 0, () -> {
+                try { wordmark.invoke(title, graphics, 400, alpha); }
+                catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+            }, ignored -> { throw new AssertionError("the authored wordmark must not submit ROM tiles"); });
+            int[][] actual = new int[7 * scale][word.length() * 6 * scale];
+            boolean panel = false, shadow = false;
+            for (var primitive : frame.primitives()) {
+                for (var rect : com.openggf.graphics.SpritePresentation.geometry(primitive).vertices()) {
+                    int rgb = rect.argb() & 0xFFFFFF;
+                    if (rgb == 0x101848) {
+                        panel = true; assertEquals(Math.round(alpha * 0.85f * 255), rect.argb() >>> 24); continue;
+                    }
+                    if (rgb == 0) {
+                        shadow = true; assertEquals(Math.round(alpha * 0.6f * 255), rect.argb() >>> 24); continue;
+                    }
+                    assertEquals(Math.round(alpha * 255), rect.argb() >>> 24);
+                    for (int y = rect.y1() - top; y < rect.y2() - top; y++) {
+                        for (int x = rect.x1() - left; x < rect.x2() - left; x++) {
+                            assertEquals(0, actual[y][x], "overlap changes the translucent wordmark");
+                            actual[y][x] = rect.argb();
+                        }
+                    }
+                }
+            }
+            assertTrue(panel); assertTrue(shadow);
+            for (int y = 0; y < actual.length; y++) {
+                for (int x = 0; x < actual[y].length; x++) {
+                    int glyph = chars.indexOf(word.charAt(x / (6 * scale))), column = x / scale % 6;
+                    boolean lit = column < 5 && pixels.charAt(glyph * 35 + y / scale * 5 + column) == '1';
+                    int expected = lit ? Math.round(alpha * 255) << 24 | rowColours[y / scale] : 0;
+                    assertEquals(expected, actual[y][x], "wordmark pixel at " + x + "," + y + " alpha=" + alpha);
+                }
+            }
+
+            // Uniform title labels retain complete cached rectangles rather than
+            // splitting the face back into one command per original row span.
+            Method text = titleClass.getDeclaredMethod("text", com.openggf.graphics.GraphicsManager.class,
+                    String.class, int.class, int.class, int.class, int.class, float.class);
+            text.setAccessible(true);
+            var uniform = com.openggf.graphics.SpritePresentation.prepare(graphics, 0, 0, () -> {
+                try { text.invoke(title, graphics, word, left, top, scale, 0xA0C8FF, alpha); }
+                catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+            }, ignored -> { throw new AssertionError("title labels must not submit ROM tiles"); });
+            int rowSpans = 0;
+            for (char letter : word.toCharArray()) {
+                int glyph = chars.indexOf(letter);
+                for (int row = 0; row < 7; row++) {
+                    for (int column = 0; column < 5; column++) {
+                        int pixel = glyph * 35 + row * 5 + column;
+                        if (pixels.charAt(pixel) == '1' && (column == 0 || pixels.charAt(pixel - 1) == '0')) rowSpans++;
+                    }
+                }
+            }
+            assertTrue(uniform.primitives().size() < rowSpans * 0.7, "uniform title labels retain cached span reduction");
+            boolean[][] seen = new boolean[7 * scale][word.length() * 6 * scale];
+            for (var primitive : uniform.primitives()) {
+                for (var rect : com.openggf.graphics.SpritePresentation.geometry(primitive).vertices()) {
+                    assertEquals(Math.round(alpha * 255) << 24 | 0xA0C8FF, rect.argb());
+                    for (int y = rect.y1() - top; y < rect.y2() - top; y++) {
+                        for (int x = rect.x1() - left; x < rect.x2() - left; x++) {
+                            assertFalse(seen[y][x]); seen[y][x] = true;
+                        }
+                    }
+                }
+            }
+            for (int y = 0; y < seen.length; y++) {
+                for (int x = 0; x < seen[y].length; x++) {
+                    int glyph = chars.indexOf(word.charAt(x / (6 * scale))), column = x / scale % 6;
+                    assertEquals(column < 5 && pixels.charAt(glyph * 35 + y / scale * 5 + column) == '1', seen[y][x]);
+                }
+            }
+        }
+    }
+
     @Test void cachedLevelUpDescriptionsCoverEveryUpgradeRank() throws Exception {
         launch(0, 0);
         Class<?> hud = loader.loadClass("survivors.Hud");
@@ -187,6 +291,31 @@ class TestSonicSurvivors {
             assertEquals(String.format(Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60),
                     clock.invoke(null, frames));
         }
+    }
+
+    @Test void ownerStorageLoadsLegacyProgressWithoutMovingOrOverwritingTheOldSave() throws Exception {
+        Path legacy = temp.resolve("saves/sonic-survivors/profile.txt");
+        Files.createDirectories(legacy.getParent());
+        String old = "bank=42\nshop.0=2\n";
+        Files.writeString(legacy, old);
+        launch(0, 0);
+        assertEquals(42, getInt(profile(), "bank"));
+        assertEquals(7, ((int[])get(profile(), "shop"))[0]);
+        call(profile(), "save");
+        var sceneStorage = com.openggf.mods.scene.host.ModStorageFactory.forOwner(temp.resolve("saves"), "sonic-survivors");
+        assertTrue(sceneStorage.read("profile.txt").orElseThrow().contains("bank=42\n"));
+        assertEquals(old, Files.readString(legacy));
+        assertTrue(Files.isRegularFile(temp.resolve("saves/mods/sonic-survivors/profile.txt")));
+    }
+
+    @Test void aFutureOwnedSettingsVersionIsNotOverwrittenByTheCurrentProfile() throws Exception {
+        Path legacy = temp.resolve("saves/sonic-survivors/profile.txt");
+        Files.createDirectories(legacy.getParent());
+        String future = "formatVersion=2\nbank=999\nnewRule=keep\n";
+        Files.writeString(legacy, future);
+        launch(0, 0); call(profile(), "save");
+        assertEquals(future, Files.readString(legacy));
+        assertFalse(Files.exists(temp.resolve("saves/mods/sonic-survivors/profile.txt")));
     }
 
     // ---- Reflection helpers ----
@@ -578,10 +707,10 @@ class TestSonicSurvivors {
         fixture.stepIdleFrames(2);
         assertEquals(CAMP, phase(), "a new run starts in camp");
         // Profile survives a reload from disk.
-        var constructor = loader.loadClass("survivors.Profile").getDeclaredConstructor(Path.class);
+        var constructor = loader.loadClass("survivors.Profile").getDeclaredConstructor(com.openggf.mods.ModStorage.class);
         constructor.setAccessible(true);
         Object reloaded = constructor.newInstance(
-                com.openggf.game.save.SavePaths.root().resolve("sonic-survivors").resolve("profile.txt"));
+                com.openggf.mods.scene.host.ModStorageFactory.forOwner(com.openggf.game.save.SavePaths.root(), "sonic-survivors"));
         var ctor = reloaded.getClass().getDeclaredMethod("load");
         ctor.setAccessible(true);
         ctor.invoke(reloaded);
@@ -884,10 +1013,10 @@ class TestSonicSurvivors {
     }
 
     private Object reloadProfile() throws Exception {
-        var constructor = loader.loadClass("survivors.Profile").getDeclaredConstructor(Path.class);
+        var constructor = loader.loadClass("survivors.Profile").getDeclaredConstructor(com.openggf.mods.ModStorage.class);
         constructor.setAccessible(true);
-        return call(constructor.newInstance(com.openggf.game.save.SavePaths.root()
-                .resolve("sonic-survivors/profile.txt")), "load");
+        return call(constructor.newInstance(com.openggf.mods.scene.host.ModStorageFactory.forOwner(
+                com.openggf.game.save.SavePaths.root(), "sonic-survivors")), "load");
     }
 
     @Test void campModesUnlockAfterClearPersistAndCycleBackToStandard() throws Exception {
@@ -1765,12 +1894,16 @@ class TestSonicSurvivors {
         var fixture = launch(0, 0);
         Path file = com.openggf.game.save.SavePaths.root().resolve("sonic-survivors/profile.txt");
         Files.createDirectories(file.getParent());
-        Files.writeString(file, "bank=10\nshop.0=5\nshop.1=3\nshop.3=2\nshop.4=1\n");
+        String original = "bank=10\nshop.0=5\nshop.1=3\nshop.3=2\nshop.4=1\n";
+        Files.writeString(file, original);
         Object old = reloadProfile();
         int[] shop = (int[]) get(old, "shop");
         assertArrayEquals(new int[]{17, 6, 0, 8, 4}, Arrays.copyOf(shop, 5), "the same totals on the new scale");
         call(old, "save");
         assertArrayEquals(shop, (int[]) get(reloadProfile(), "shop"), "converted saves do not convert again");
+        assertEquals(original, Files.readString(file), "legacy save remains available and unchanged");
+        assertTrue(Files.isRegularFile(com.openggf.game.save.SavePaths.root()
+                .resolve("mods/sonic-survivors/profile.txt")));
         Method cost = old.getClass().getDeclaredMethod("shopCost", int.class, int.class);
         cost.setAccessible(true);
         assertEquals(50, cost.invoke(null, 0, 0));
