@@ -28,6 +28,30 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TestSmpsSequencerCadence {
 
+    @Test
+    void implicitDurationKeepsTheSavedScaledDurationAcrossDividerChanges() {
+        // S1 SetDuration saves the byte-scaled duration. FinishTrackUpdate and
+        // DACUpdateTrack reuse SavedDuration directly after cfSetTempoDivider.
+        // An explicit duration after that flag does use the new divider.
+        byte[] program = {(byte) 0xE5, 2, (byte) 0x81, 4,
+                (byte) 0xE5, 1, (byte) 0x82, (byte) 0x83, 4, (byte) 0xF2};
+        for (TrackType type : TrackType.values()) {
+            if (type != TrackType.FM && type != TrackType.PSG && type != TrackType.DAC) continue;
+            var sequencer = newSequencer(
+                    com.openggf.game.sonic1.audio.Sonic1SmpsSequencerConfig.CONFIG, 0x7F, program);
+            var track = new Track(0, type, 0);
+            sequencer.addTrack(track);
+            int update = 0;
+            while (track.note != 0x82 && update < 30) runUpdate(sequencer, update++);
+            assertEquals(0x82, track.note, type.toString());
+            assertEquals(1, track.dividingTiming);
+            assertEquals(8, track.duration, type + " implicit duration reuses SavedDuration");
+            while (track.note != 0x83 && update < 50) runUpdate(sequencer, update++);
+            assertEquals(0x83, track.note);
+            assertEquals(4, track.duration, type + " explicit duration uses the changed divider");
+        }
+    }
+
     private static final double ONE_SAMPLE_PER_FRAME = 60.0;
 
     /** Minimal music program: raw SMPS bytes with an explicit header tempo. */

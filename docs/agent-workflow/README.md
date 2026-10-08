@@ -32,6 +32,16 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   catalog/asset shapes. Origin: mod framework readiness, 2026-10-07; see
   [probe limits and acceptance](../modding/tools/scalability.md).
 
+- [Sitar Hero S2 native reference](../../src/test/java/com/openggf/mods/code/SitarHeroS2NativeProgram.java) (test scope): independently interprets supplied S2 ROM control flow, saved duration/frequency and service cadence; `TestSitarHeroS2SongCatalogue` compares complete requested attack streams and natural ends (2026-10-07 full-song catalogue).
+
+- [Sitar Hero S3K song probe](../../src/main/java/com/openggf/tools/SitarHeroS3kSongProbe.java): executes both locked-on ROM music tables through the production S3K driver and reports complete jump candidates, tempo boundaries, real channel/sample attacks and natural stops; input is an absolute ROM path and optional hex music IDs (2026-10-07 full song catalogue).
+
+- [Sonic 1 song-form survey](../../tools/audio/s1_song_forms.py): independently
+  walks a supplied REV01 ROM's SMPS calls, counted loops, native tempo/divider
+  changes and track stops to report complete forms and natural endings. Origin:
+  Sitar Hero full-song catalogue, 2026-10-07; command and limits are in the
+  [catalogue evidence](../architecture/designs/2026-10-07-sitar-hero-s1-song-catalogue.md).
+
 - `GameplayAllocationTool`: ordinary BK2-driven loop/render bytes per frame, excluding PNG/readback and CSV allocation. Use `--rom <absolute-path> --input <bk2> --zone <numeric-id> --act <one-based> --out-dir target/alloc`; optional `--frames 6000 --warmup 600 --width 400 --main sonic --sidekick tails --rewind true --jfr true`. `--sidekick none` selects solo play; the console reports the live roster count. Loop allocation includes input-row decoding. Compare route state before interpreting allocation deltas; JFR includes other threads, whereas reported counters measure the gameplay thread. Keep raw diagnostics temporary.
 
 - [Sprite sheet dump](../../src/main/java/com/openggf/tools/modsdk/SpriteSheetDump.java) (`ggfmod sprites`): renders every mapping frame of a ROM sprite (art, mappings, optional DPLC, palettes) or a playable character (`char=sonic`, with its animation scripts) into one numbered PNG grid, for choosing frames without booting a level (2026-10-05 Slay the Robotnik; a ggfmod subcommand since 2026-10-06).
@@ -77,8 +87,9 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 ## Test harness helpers
 
 - `SitarHeroCapture` (`src/test/java/com/openggf/tools/`) packages the real
-  example and captures ROM-backed performers, stages and finite arcade behavior
-  for explicit ROM subsets; its source header records inputs and evidence limits.
+  example and captures ROM-backed performers, stages, finite arcade behavior,
+  career boards and labelled authored-story previews for explicit ROM subsets;
+  its source header records inputs and evidence limits.
   Origin: Sitar Hero proof of concept, 2026-10-06.
 
 - `src/test/java/com/openggf/tests/route/` — shared route primitives for headless

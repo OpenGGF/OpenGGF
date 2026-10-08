@@ -391,6 +391,7 @@ final class SmpsAssetCatalog {
             AbstractSmpsData frozen,
             AbstractSmpsData candidate) {
         if (!Arrays.equals(frozen.getData(), candidate.getData())
+                || !sameIndexedProgram(frozen, candidate)
                 || frozen.getVoicePtr() != candidate.getVoicePtr()
                 || frozen.getChannels() != candidate.getChannels()
                 || frozen.getPsgChannels() != candidate.getPsgChannels()
@@ -469,6 +470,34 @@ final class SmpsAssetCatalog {
         return true;
     }
 
+    private static boolean sameIndexedProgram(
+            AbstractSmpsData frozen, AbstractSmpsData candidate) {
+        int length = frozen.dataLength();
+        if (length != candidate.dataLength()) {
+            return false;
+        }
+        for (int index = 0; index < length; index++) {
+            if (frozen.dataByteAt(index) != candidate.dataByteAt(index)) {
+                return false;
+            }
+            if (index + 1 < length
+                    && frozen.read16(index) != candidate.read16(index)) {
+                return false;
+            }
+        }
+        int trailingOffset = Math.max(0, length - 1);
+        return Objects.equals(incompleteFinalWord(frozen, trailingOffset),
+                incompleteFinalWord(candidate, trailingOffset));
+    }
+
+    private static Integer incompleteFinalWord(AbstractSmpsData data, int offset) {
+        try {
+            return data.read16(offset);
+        } catch (IndexOutOfBoundsException ignored) {
+            return null;
+        }
+    }
+
     private static SmpsSequencerConfig bindConfig(
             String gameId,
             SmpsSequencerConfig source,
@@ -502,19 +531,22 @@ final class SmpsAssetCatalog {
         private final byte[][] voices = new byte[256][];
         private final byte[][] psgEnvelopes = new byte[256][];
         private final byte[][] modEnvelopes = new byte[256][];
+        private final byte[] programBytes;
         private final int[] words;
+        private final Integer trailingWord;
         private final int baseNoteOffset;
         private final int psgBaseNoteOffset;
         private final int dataHash;
 
         private FrozenSmpsData(AbstractSmpsData source) {
             this(Objects.requireNonNull(source, "source"),
-                    new FrozenBytes(source.getData()));
+                    new FrozenBytes(source));
         }
 
         private FrozenSmpsData(
                 AbstractSmpsData source, FrozenBytes frozenBytes) {
-            super(frozenBytes.bytes, source.getZ80StartAddress());
+            super(frozenBytes.rawBytes, source.getZ80StartAddress());
+            programBytes = frozenBytes.programBytes;
             dataHash = frozenBytes.hash;
             voicePtr = source.getVoicePtr();
             channels = source.getChannels();
@@ -534,10 +566,14 @@ final class SmpsAssetCatalog {
             palSpeedupDisabled = source.isPalSpeedupDisabled();
             baseNoteOffset = source.getBaseNoteOffset();
             psgBaseNoteOffset = source.getPsgBaseNoteOffset();
-            words = new int[Math.max(0, data.length - 1)];
+            words = new int[Math.max(0, programBytes.length - 1)];
             for (int index = 0; index < words.length; index++) {
                 words[index] = source.read16(index);
             }
+            // Shipped formats return zero for an incomplete final word; legacy
+            // extensions may reject it. Snapshot that scalar without retaining
+            // the source or changing its byte order.
+            trailingWord = incompleteFinalWord(source, words.length);
             for (int index = 0; index < 256; index++) {
                 int lookupId = index;
                 voices[index] = copyNullable(
@@ -555,6 +591,8 @@ final class SmpsAssetCatalog {
 
         @Override protected void parseHeader() { }
         @Override public byte[] getData() { return data.clone(); }
+        @Override public int dataLength() { return programBytes.length; }
+        @Override public byte dataByteAt(int index) { return programBytes[index]; }
         @Override public int[] getFmPointers() { return fmPointers.clone(); }
         @Override public int[] getFmKeyOffsets() {
             return fmKeyOffsets.clone();
@@ -624,6 +662,9 @@ final class SmpsAssetCatalog {
             return copyAt(modEnvelopes, id);
         }
         @Override public int read16(int offset) {
+            if (offset == words.length && trailingWord != null) {
+                return trailingWord;
+            }
             if (offset < 0 || offset >= words.length) {
                 throw new IndexOutOfBoundsException(offset);
             }
@@ -679,16 +720,20 @@ final class SmpsAssetCatalog {
     }
 
     private static final class FrozenBytes {
-        private final byte[] bytes;
+        private final byte[] rawBytes;
+        private final byte[] programBytes;
         private final int hash;
 
-        private FrozenBytes(byte[] source) {
-            Objects.requireNonNull(source, "SMPS data");
-            bytes = new byte[source.length];
+        private FrozenBytes(AbstractSmpsData source) {
+            // getData remains the legacy raw header/voice blob. Native track
+            // reads (zGetNextNote/cfJumpToGosub in S3K) can address the complete
+            // loaded bank, so immutable execution owns the indexed view too.
+            rawBytes = Objects.requireNonNull(source.getData(), "SMPS data").clone();
+            programBytes = new byte[source.dataLength()];
             int result = 1;
-            for (int index = 0; index < source.length; index++) {
-                byte value = source[index];
-                bytes[index] = value;
+            for (int index = 0; index < programBytes.length; index++) {
+                byte value = source.dataByteAt(index);
+                programBytes[index] = value;
                 result = 31 * result + value;
             }
             hash = result;

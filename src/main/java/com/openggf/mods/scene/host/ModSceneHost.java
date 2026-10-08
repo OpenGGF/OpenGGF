@@ -17,11 +17,13 @@ import com.openggf.mods.scene.SceneContext;
 import com.openggf.mods.scene.SceneImage;
 import com.openggf.control.PhysicalInput;
 import com.openggf.mods.scene.SceneMusic;
+import com.openggf.mods.scene.SceneNetwork;
 import com.openggf.mods.scene.SceneMouse;
 import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneStorage;
 import com.openggf.mods.scene.host.music.ManagedSceneMusic;
 import com.openggf.mods.scene.host.music.SceneMusicFactory;
+import com.openggf.mods.scene.host.network.ManagedSceneNetwork;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -78,9 +80,14 @@ public final class ModSceneHost {
         if (scene == null || exiting) {
             return;
         }
-        context.beginTick(input);
-        scene.update(context);
-        context.ticks++;
+        try {
+            context.beginTick(input);
+            scene.update(context);
+            context.ticks++;
+        } catch (RuntimeException | Error failure) {
+            close();
+            throw failure;
+        }
     }
 
     /**
@@ -93,7 +100,12 @@ public final class ModSceneHost {
             return;
         }
         RecordingCanvas canvas = new RecordingCanvas(width, height, font);
-        scene.draw(context, canvas);
+        try {
+            scene.draw(context, canvas);
+        } catch (RuntimeException | Error failure) {
+            close();
+            throw failure;
+        }
         lastFrame = canvas.ops();
         if (projection == null || viewport == null) {
             return;
@@ -114,7 +126,12 @@ public final class ModSceneHost {
      * understand the command.
      */
     public boolean debugJump(String command) {
-        return scene != null && OwnedSceneFactory.debugJump(scene, command);
+        try {
+            return scene != null && OwnedSceneFactory.debugJump(scene, command);
+        } catch (RuntimeException | Error failure) {
+            close();
+            throw failure;
+        }
     }
 
     /** The open scene as the host holds it (inside its fault-boundary wrapper), or null; for tests. */
@@ -139,6 +156,9 @@ public final class ModSceneHost {
         scene = null;
         context = null;
         lastFrame = List.of();
+        // Retire networking before creator exit code runs; even an exit callback
+        // that faults or retains its context cannot reopen the departing visit.
+        if (ctx != null) ctx.network.close();
         try {
             if (closing != null) {
                 closing.exit(ctx);
@@ -163,11 +183,12 @@ public final class ModSceneHost {
     }
 
     private void requestExit(Runnable action) {
-        if (exiting || action == null) {
+        if (exiting) {
             return;
         }
         exiting = true;
-        action.run();
+        if (context != null) context.network.close();
+        if (action != null) action.run();
     }
 
     /** The context handed to the scene for one visit. */
@@ -183,6 +204,7 @@ public final class ModSceneHost {
         private SceneMouse mouse = SceneMouse.none();
         private PhysicalInput physical = PhysicalInput.neutral();
         private ManagedSceneMusic music;
+        private final ManagedSceneNetwork network = new ManagedSceneNetwork();
         private final MenuRepeat repeat = new MenuRepeat();
         private int heldButtons;
         private int pressedButtons;
@@ -272,6 +294,7 @@ public final class ModSceneHost {
         }
 
         void closeResources() {
+            network.close();
             try {
                 if (music != null) music.close();
             } finally {
@@ -280,6 +303,8 @@ public final class ModSceneHost {
         }
 
         @Override public PhysicalInput physicalInput() { return physical; }
+
+        @Override public SceneNetwork network() { return network; }
 
         @Override public SceneMusic music() {
             if (music == null) {
