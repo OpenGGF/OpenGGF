@@ -1,7 +1,7 @@
 package com.openggf.net.client;
 
 import com.openggf.net.identity.PlayerIdentity;
-import com.openggf.net.protocol.ControlCodec;
+import com.openggf.net.protocol.ControlJsonCodec;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.ProtocolViolationException;
@@ -65,6 +65,7 @@ public final class RaceClient implements RaceConnection {
     }
 
     private final BoundedInboundQueue<InboundEvent> inbound = new BoundedInboundQueue<>();
+    private final ControlJsonCodec codec = new ControlJsonCodec();
     private final Object sendLock = new Object();
     private volatile WebSocket webSocket;
     private volatile ControlMessage.JoinAccepted joinAccepted;
@@ -174,7 +175,7 @@ public final class RaceClient implements RaceConnection {
             private void handleText(WebSocket ws, String text) {
                 final ControlMessage message;
                 try {
-                    message = ControlCodec.decodeRoom(text).message();
+                    message = client.codec.decodeRoom(text).message();
                 } catch (ProtocolViolationException e) {
                     fail(ws, e);
                     return;
@@ -187,7 +188,7 @@ public final class RaceClient implements RaceConnection {
                     switch (message) {
                         case ControlMessage.Welcome welcome -> {
                             client.serverId = welcome.serverId();
-                            client.enqueueSendText(ControlCodec.encode(
+                            client.enqueueSendText(client.codec.encode(
                                     null, handshake.onWelcome(welcome)));
                         }
                         case ControlMessage.JoinAccepted accepted -> {
@@ -238,7 +239,7 @@ public final class RaceClient implements RaceConnection {
                         ws.abort();
                         return;
                     }
-                    client.enqueueSendText(ControlCodec.encode(null, handshake.hello()));
+                    client.enqueueSendText(client.codec.encode(null, handshake.hello()));
                 });
 
         joined.orTimeout(JOIN_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
@@ -347,7 +348,7 @@ public final class RaceClient implements RaceConnection {
         if (!open) {
             return;
         }
-        enqueueSendText(ControlCodec.encode(sessionToken(), message));
+        enqueueSendText(codec.encode(sessionToken(), message));
     }
 
     public void sendBinary(byte[] data) {

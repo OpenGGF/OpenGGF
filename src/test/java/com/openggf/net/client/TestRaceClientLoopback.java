@@ -2,8 +2,9 @@ package com.openggf.net.client;
 
 import com.openggf.ghost.GhostFrame;
 import com.openggf.ghost.GhostFrameCodec;
-import com.openggf.net.host.RaceHostServer;
 import com.openggf.net.host.ControlledRaceHost;
+import com.openggf.net.host.RaceHostImpl;
+import com.openggf.net.host.RaceRoomHost;
 import com.openggf.net.hub.HostRoundEngine;
 import com.openggf.net.hub.RoomHostConfig;
 import com.openggf.net.hub.TrackValidationProfileSource;
@@ -27,6 +28,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -40,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Timeout(60)
 class TestRaceClientLoopback {
     private static final String FP = "0.6:cafe1234";
-    private RaceHostServer server;
+    private RaceRoomHost server;
     private ControlledRaceHost controlled;
 
     @AfterEach
@@ -50,8 +53,9 @@ class TestRaceClientLoopback {
         }
     }
 
-    private RaceHostServer startServer(Path dir, String policy) throws Exception {
-        controlled = new ControlledRaceHost();
+    private RaceRoomHost startServer(RaceHostImpl impl, Path dir, String policy)
+            throws Exception {
+        controlled = new ControlledRaceHost(impl);
         return controlled.start(0,
                 new RoomHostConfig("LAN", "s3k", 0, 0, policy, null, 8, FP),
                 PlayerIdentity.loadOrCreate(dir.resolve("host")),
@@ -77,9 +81,11 @@ class TestRaceClientLoopback {
         throw new AssertionError("timed out");
     }
 
-    @Test
-    void connectsChatsAndStreamsGhostFrames(@TempDir Path dir) throws Exception {
-        server = startServer(dir, "OPEN");
+    @ParameterizedTest
+    @EnumSource(RaceHostImpl.class)
+    void connectsChatsAndStreamsGhostFrames(RaceHostImpl impl, @TempDir Path dir)
+            throws Exception {
+        server = startServer(impl, dir, "OPEN");
         RaceClient a = connect(dir.resolve("a"), "A");
         RaceClient b = connect(dir.resolve("b"), "B");
         assertEquals(0, a.playerSlot());
@@ -114,9 +120,11 @@ class TestRaceClientLoopback {
         b.close();
     }
 
-    @Test
-    void fingerprintMismatchSurfacesJoinRejected(@TempDir Path dir) throws Exception {
-        server = startServer(dir, "OPEN");
+    @ParameterizedTest
+    @EnumSource(RaceHostImpl.class)
+    void fingerprintMismatchSurfacesJoinRejected(RaceHostImpl impl, @TempDir Path dir)
+            throws Exception {
+        server = startServer(impl, dir, "OPEN");
         ExecutionException failure = assertThrows(ExecutionException.class,
                 () -> RaceClient.connect(
                                 URI.create("ws://127.0.0.1:" + server.port() + "/race"),

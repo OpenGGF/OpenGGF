@@ -3,7 +3,7 @@ package com.openggf.net.client;
 import com.openggf.net.host.HostMasterLink;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.identity.ProofOfWork;
-import com.openggf.net.protocol.ControlCodec;
+import com.openggf.net.protocol.ControlJsonCodec;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.Protocol;
@@ -37,6 +37,7 @@ public final class MasterClient implements AutoCloseable {
             pendingJoins = new ConcurrentLinkedQueue<>();
     private final AtomicReference<RelayRaceConnection> attached = new AtomicReference<>();
     private final Object sendLock = new Object();
+    private final ControlJsonCodec codec = new ControlJsonCodec();
     private final PlayerIdentity identity;
     private final ClientHandshake handshake;
     private volatile WebSocket webSocket;
@@ -73,7 +74,7 @@ public final class MasterClient implements AutoCloseable {
                         socket.abort();
                         return;
                     }
-                    client.sendRawText(ControlCodec.encode(null, client.handshake.hello()));
+                    client.sendRawText(client.codec.encode(null, client.handshake.hello()));
                 });
         admitted.orTimeout(MASTER_REPLY_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
                 .whenComplete((ignored, error) -> {
@@ -271,7 +272,7 @@ public final class MasterClient implements AutoCloseable {
 
     public void sendControl(ControlMessage message) {
         if (open) {
-            sendRawText(ControlCodec.encode(joinAccepted.sessionToken(), message));
+            sendRawText(codec.encode(joinAccepted.sessionToken(), message));
         }
     }
 
@@ -391,7 +392,7 @@ public final class MasterClient implements AutoCloseable {
         }
         final ControlMessage message;
         try {
-            message = ControlCodec.decode(text, Protocol.MAX_MASTER_FRAME_BYTES).message();
+            message = codec.decode(text, Protocol.MAX_MASTER_FRAME_BYTES).message();
         } catch (ProtocolViolationException e) {
             fail(socket, admitted, e);
             return;
@@ -417,7 +418,7 @@ public final class MasterClient implements AutoCloseable {
                                   CompletableFuture<MasterClient> admitted) {
         try {
             switch (message) {
-                case ControlMessage.Welcome welcome -> sendRawText(ControlCodec.encode(
+                case ControlMessage.Welcome welcome -> sendRawText(codec.encode(
                         null, handshake.onWelcome(welcome)));
                 case ControlMessage.PowChallenge challenge ->
                         Thread.ofVirtual().start(() -> solveChallenge(socket, challenge, admitted));
@@ -452,7 +453,7 @@ public final class MasterClient implements AutoCloseable {
                         challenge.difficultyBits());
                 default -> throw new ProtocolViolationException("unknown proof challenge");
             };
-            sendRawText(ControlCodec.encode(null,
+            sendRawText(codec.encode(null,
                     new ControlMessage.PowSolution(challenge.kind(), nonce)));
         } catch (Exception e) {
             fail(socket, admitted, e);
@@ -578,7 +579,7 @@ public final class MasterClient implements AutoCloseable {
 
         void acceptText(String text) {
             try {
-                enqueue(new RaceClient.Control(ControlCodec.decodeRoom(text).message()));
+                enqueue(new RaceClient.Control(parent.codec.decodeRoom(text).message()));
             } catch (ProtocolViolationException e) {
                 signalDisconnected("protocol violation");
                 close();
@@ -621,7 +622,7 @@ public final class MasterClient implements AutoCloseable {
 
         @Override public void sendControl(ControlMessage message) {
             if (open) {
-                parent.sendRawText(ControlCodec.encode(sessionToken(), message));
+                parent.sendRawText(parent.codec.encode(sessionToken(), message));
             }
         }
         @Override public void sendBinary(byte[] data) { parent.sendRawBinary(data); }
