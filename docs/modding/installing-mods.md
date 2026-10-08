@@ -27,6 +27,27 @@ and whether deterministic test/trace/time-attack mode excludes external mods.
 If a mod is blocked, read Details and the [finding catalogue](troubleshooting.md).
 An incompatible or missing dependency is not fixed by changing the load order.
 
+## Mods bundled with OpenGGF
+
+Some first-party mods ship inside the JVM distribution and appear in **MODS** with a
+**BUNDLED** badge. They are enabled and trusted by default, with no trust prompt, because
+the engine build itself pins their exact jar hashes; they are still validated like any
+other code mod (see [trust](concepts/trust.md#first-party-bundled-mods-a-deliberate-narrowing)).
+
+- Disable or re-enable one like any mod, then Apply and restart. Your choice is kept in
+  `mods/modstate.json` and survives engine upgrades. A bundled mod cannot be uninstalled
+  from the manager; disabling it is the supported opt-out.
+- The universal jar carries bundled mods inside itself and extracts them to
+  `saves/bundled-mod-cache/` (re-verified every start; safe to delete). A distribution
+  with a `bundled/` folder beside the engine jar reads them from there instead. That
+  folder is located from the engine jar, not the working directory; set
+  `-Dopenggf.installDir=<dir>` only if you moved the jar away from it.
+- Do not copy a bundled mod into `mods/`: its id is reserved, so the copy is ignored and
+  reported as `BUNDLED_MOD_ID_RESERVED`. A modified or damaged bundled jar is not loaded
+  (`BUNDLED_MOD_*` errors); reinstall OpenGGF to repair it.
+- Native builds contain no bundled mods. Bundled code mods, like other code mods, need
+  the JVM build. Trace, test and other deterministic launches never load them.
+
 ## Update or roll back
 
 Close the engine and replace the previous jar with the new one. **Do not leave both

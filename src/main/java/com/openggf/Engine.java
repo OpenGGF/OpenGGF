@@ -1738,7 +1738,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		ModSubsystem.installAtBoot(policy, ModSubsystem.normalBootLoader(
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
-				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)),
+				ModSubsystem.SessionAudioBoundary.audioManager(audioManager),
+				com.openggf.mods.BundledModSource.Locator.production()),
 				compiledModsSupported);
 		modRuntime = replaceModRuntime(modRuntime, ModRuntime.empty());
 		ModSubsystem.current().installRewindClassResolver(

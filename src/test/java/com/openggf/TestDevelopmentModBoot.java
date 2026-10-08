@@ -32,7 +32,8 @@ class TestDevelopmentModBoot {
         ModSubsystem subsystem=null;
         try {
             subsystem=ModSubsystem.normalBootLoader(()->normalRoot,ModInputLimits.production(),
-                    (game,id)->true,new Boundary()).get();
+                    (game,id)->true,new Boundary(),limits->{
+                        throw new AssertionError("development runs do not offer bundled mods");}).get();
             var effective=subsystem.processCatalog().effective().orderedEnabled();
             assertEquals(1,effective.size());assertEquals("fresh-dev",effective.getFirst().manifest().id());
             assertEquals(java.util.Set.of("fresh-dev"),subsystem.trustedCodeOwners());

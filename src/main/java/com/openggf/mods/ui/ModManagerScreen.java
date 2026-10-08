@@ -56,6 +56,7 @@ public final class ModManagerScreen {
     private final List<RepositoryScanFailure> repositoryFailures;
     private final PatternWindowState patternWindows;
     private final boolean compiledModsSupported;
+    private final Set<Path> bundledSourcePaths;
 
     private List<Row> rows = List.of();
     private int selectedIndex;
@@ -95,6 +96,18 @@ public final class ModManagerScreen {
     public ModManagerScreen(ModCatalog catalog, PendingModStateEditor editor,
                             ModRuntimeFindingStore runtimeFindings, TextSink text,
                             PatternWindowState patternWindows, boolean compiledModsSupported) {
+        this(catalog, editor, runtimeFindings, text, patternWindows, compiledModsSupported, Set.of());
+    }
+
+    /**
+     * {@code bundledSourcePaths} names the catalog entries shipped with this engine build. They
+     * carry a BUNDLED badge and can be enabled or disabled like any mod, but not uninstalled.
+     */
+    public ModManagerScreen(ModCatalog catalog, PendingModStateEditor editor,
+                            ModRuntimeFindingStore runtimeFindings, TextSink text,
+                            PatternWindowState patternWindows, boolean compiledModsSupported,
+                            Set<Path> bundledSourcePaths) {
+        this.bundledSourcePaths = Set.copyOf(Objects.requireNonNull(bundledSourcePaths, "bundledSourcePaths"));
         this.catalog = Objects.requireNonNull(catalog, "catalog");
         this.editor = Objects.requireNonNull(editor, "editor");
         this.runtimeFindings = Objects.requireNonNull(runtimeFindings, "runtimeFindings");
@@ -392,7 +405,8 @@ public final class ModManagerScreen {
     public List<String> detailLines() {
         if (rows.isEmpty()) return List.of("No mods discovered.");
         Row selected = rows.get(selectedIndex);
-        if (selected.invalid() != null) return invalidDetailLines(selected.invalid());
+        if (selected.invalid() != null) return invalidDetailLines(selected.invalid(),
+                isBundled(selected.invalid()));
         return descriptorDetailLines(selected.descriptor());
     }
 
@@ -815,11 +829,12 @@ public final class ModManagerScreen {
     private RowView toView(Row row) {
         if (row.invalid() != null) {
             return new RowView(row.identity(), row.identity(), false, false, false,
-                    List.of("ERROR"));
+                    isBundled(row.invalid()) ? List.of("BUNDLED", "ERROR") : List.of("ERROR"));
         }
         ModDescriptor descriptor = row.descriptor();
         String id = descriptor.manifest().id();
         LinkedHashSet<String> badges = new LinkedHashSet<>();
+        if (isBundled(descriptor)) badges.add("BUNDLED");
         ModEligibility eligibility = catalog.eligibility().get(id);
         if (eligibility != null && eligibility.status() == ModEligibility.Status.BLOCKED) badges.add("BLOCKED");
         if (descriptor.containsCode() && !isTrusted(descriptor)) badges.add("TRUST REQUIRED");
@@ -846,6 +861,10 @@ public final class ModManagerScreen {
         var manifest = descriptor.manifest();
         lines.add(manifest.name() + "  " + manifest.version());
         lines.add("Jar: " + filename(descriptor.jarPath()));
+        if (isBundled(descriptor)) {
+            lines.add("Bundled with OpenGGF: enabled by default and trusted by this build's manifest. "
+                    + "You can disable it here; it cannot be uninstalled.");
+        }
         lines.add("Id: " + manifest.id() + "  Game: " + manifest.baseGame());
         int requestedWindows = manifest.patternWindows().orElse(1);
         String allocation = patternWindows.assignment(manifest.id())
@@ -873,9 +892,12 @@ public final class ModManagerScreen {
         return immutableSafeLines(lines);
     }
 
-    private static List<String> invalidDetailLines(InvalidModEntry invalid) {
+    private static List<String> invalidDetailLines(InvalidModEntry invalid, boolean bundled) {
         List<String> lines = new ArrayList<>();
         lines.add("Invalid jar: " + filename(invalid.jarPath()));
+        if (bundled) {
+            lines.add("Bundled with OpenGGF but not loaded. Reinstall OpenGGF to repair it.");
+        }
         appendFindings(lines, invalid.findings());
         return immutableSafeLines(lines);
     }
@@ -884,6 +906,10 @@ public final class ModManagerScreen {
         for (ModFinding finding : findings) {
             lines.add(finding.severity() + " " + finding.code() + ": " + finding.message());
         }
+    }
+
+    private boolean isBundled(ModCatalogEntry entry) {
+        return bundledSourcePaths.contains(entry.sourcePath());
     }
 
     private boolean isEnabled(String id) {

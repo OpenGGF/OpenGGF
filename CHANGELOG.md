@@ -29,6 +29,14 @@ readable and historical versions can be referenced directly.
   ordinary master replies and final joins stay bound to their request order and
   room context, and a rejected relay attach fails the join immediately.
 
+- **Bundled first-party mods:** an OpenGGF build can ship first-party code mods with
+  its JVM distribution. The engine artifact pins each one's exact jar hash; a bundled
+  mod whose shipped bytes match is enabled and trusted by default, validated like any
+  other code mod, and marked BUNDLED in the Mod Manager, where it can be disabled (the
+  choice survives upgrades) but not uninstalled. Missing, damaged or modified bundled
+  jars are reported and never loaded, and a `mods/` copy with a bundled id is ignored.
+  Deterministic launches and native builds never load bundled mods.
+
 - **Binary mod storage:** code mods can keep binary files of up to 4 MiB, such as
   recorded inputs or ghosts, in their private save directory beside their text
   settings. Each write replaces the whole file atomically and an oversized write
