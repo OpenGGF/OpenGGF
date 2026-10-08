@@ -643,6 +643,13 @@ future "support the bug-fixed revisions" effort tractable, since the sites are
 otherwise invisible once ported. `Camera.java:122-124` and
 `Sonic1BatbrainBadnikInstance.java:394` are existing examples of the shape.
 
+**Startup scenes bypass title and level audio setup.** Install the active ROM and
+module audio profile before calling a startup scene's `enter`; an initialized
+speaker backend alone cannot resolve native music/SFX IDs. A scene test that first
+loads `SharedLevel` masks this omission. `TestModSceneLauncherAudio` opens through
+the production launcher without loading a title or level and checks final PCM for
+music and an isolated effect. Origin: Eggman's Sky bug reports, 2026-10-08.
+
 **Audio accuracy:** the FM core is the Nuked-OPN2 port (`audio.synth.nuked`); its only
 reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it. For the PSG
 reference the libvgm cores, for the sequencer the SMPSPlay source, rather than simplified

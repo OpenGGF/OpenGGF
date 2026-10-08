@@ -214,6 +214,29 @@ public interface SceneRomArt {
     SceneImage levelForeground(int zone, int act, int x, int y, int width, int height);
 
     /**
+     * Whether {@link #levelKit} has this act. Sonic 1 and Sonic 2 offer every act of their zone
+     * registries that the engine can decode on its own (Sonic 2's Hill Top and Wing Fortress,
+     * which compose their art at load, have none); Sonic 3 &amp; Knuckles offers zones 0-12 and
+     * Hidden Palace ({@code 22}, act 1). Answering may build the kit, which is then cached.
+     */
+    default boolean hasLevelKit(int zone, int act) {
+        return levelKit(zone, act) != null;
+    }
+
+    /**
+     * An act's building blocks: its layout, every layout block's picture and collision, its
+     * background and palette (see {@link SceneLevelKit}), for scenes that assemble terrain of
+     * their own. Zone ids follow the game's public zone registry; acts are zero-based. Built from
+     * the ROM on the first request (up to about a second) and cached for the few most recent
+     * acts; it never touches a running level.
+     *
+     * @return the kit, or null when this game has no kit for the act
+     */
+    default SceneLevelKit levelKit(int zone, int act) {
+        return null;
+    }
+
+    /**
      * Whether {@link #titleCard} has this act's card. Sonic 3 &amp; Knuckles has one for zones
      * 0-12 (acts 0 and 1), zone 22 (Lava Reef's boss act 0 and Hidden Palace act 1) and zone 23
      * act 0 (the Death Egg boss act). Sonic 1 and Sonic 2 have none yet.
