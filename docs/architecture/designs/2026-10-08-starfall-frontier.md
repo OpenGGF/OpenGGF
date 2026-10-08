@@ -642,3 +642,9 @@ row and cancellation at 528 × 224, scale 3. Durable captures belong under
 `$HOME/OpenGGF-captures/starfall-frontier-sizes/selection`. Only the local
 Starfall Frontier branch and installed mod are updated; no world is generated
 in the user's save directory by delivery and no remote publication is requested.
+
+Implementation revision: `49f837917e`, including the tested creator and scene
+sources. Actual GL capture confirmed readable labels, the selected highlight,
+Begin and cancellation. Integration retains the main workspace on
+`feature/ai-starfall-frontier`; the packaged 1.4.0 mod is installed, enabled
+and trusted locally. Delivery does not change the user's save files.
