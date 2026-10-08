@@ -348,3 +348,100 @@ progression/biome-balance playthrough, and developer rewind remain outside
 this revision. All regions share the creator resource/quest rules.
 Local mod version **1.2.0** requires a JVM restart. Validated jar SHA-256:
 `8ba02291b85d5125ddb5d29d23b929f94c68ce49a8879a8cbe1489c9c575f394`.
+
+
+## ROM backgrounds and background fades — 2026-10-08
+
+User correction: the requested fade applies to **backgrounds only**. Revision
+base `68d1e034821f6a5670747eb29236d9f68f509c6a`; isolated worktree
+`.worktrees/starfall-backgrounds`, branch `feature/ai-starfall-backgrounds`.
+The mod is version 1.2.1. World generation, terrain samples, save format, music
+selection and enemy facing behavior are unchanged.
+
+### Cause and implementation
+
+`SceneRomArt.hasZonePictures` only offers AIZ1/2, HCZ1, LBZ1 and SSZ1. The
+previous mod intentionally drew authored rectangles when that API returned
+false. AIZ and LBZ therefore showed native backgrounds while MGZ, MHZ, CNZ,
+ICZ and SOZ did not. This revision keeps the shared engine/API unchanged and
+adds bounded background composition inside the creator mod using raw ROM
+reads and typed tile/palette decoders. All eleven regions now have ROM pictures.
+
+`LoadLevelLoadBlock2` appends each distinct primary/secondary 16px mapping
+bank and 128px chunk bank. `LevelPtrs` at `$09D5C0` supplies the background
+layout: dimensions in the eight-byte header, interleaved foreground/background
+row pointers, chunk IDs and flipped block descriptors. Pictures cache at scene
+entry; render calls reuse immutable images. The ICZ outdoor plane starts at
+layout X `$1880`, as selected by `ICZ1_BackgroundInit`. Its line-4 colours are
+read from the immediate ROM writes in `ICZ1_SetIntroPal` / `sub_23DE96`, with
+opcode checks. These colours affect the background picture only.
+
+The first composition attempt decoded the correct layouts but left numbered
+ROM filler in CNZ lights, SOZ pyramids and LRZ caves. GL/full-picture inspection
+rejected that result. `BackdropTiles` now reads the first frame of the selected
+AniPLC list, respecting signed-duration frame tables and even alignment, and
+loads representative phase-zero strips from the owning `AnimateTiles_*` direct
+DMA sources into the private background bank. SOZ does not execute its nominal
+LRZ AniPLC list, so it uses only SOZ direct sources. Runtime art still comes
+entirely from the user's ROM; disassembly assets are never loaded or packaged.
+These added pictures use static art and creator horizontal parallax; native
+animation/palette timelines, heat shimmer and event-driven scenery remain
+outside this presentation change.
+
+A 45-playing-tick smoothstep blends background weights. A new destination
+starts from the current mixture, preserving interrupted transitions and
+turnbacks. Each layer's source-over alpha is its weight divided by cumulative
+weight, so three-way mixtures stay opaque and retain their intended colours.
+Only the update owner advances the fade. Menus freeze it, draws remain pure,
+and loading, recall and debug teleports snap to the destination. Depth/act
+changes use the same mechanism. The background darkness colour blends with
+the picture; foreground tiles retain their region appearance and full opacity.
+
+### Validation and delivery
+
+The unchanged category planner selects 3,059 ordinary classes plus guards
+because creator example paths are unclassified. This work changes isolated
+creator presentation and the native test bridge, with no shared engine,
+physics, public API or live animation writes. Focused packaging, model tests,
+production scene rendering and the required S3K loader/bootstrap checks cover
+the changed paths directly; the broad engine run is disproportionate. These
+results are focused validation, not a full-suite pass or stock-zone certification.
+
+Commands run in this worktree with Java 21 and the IDE Maven directory on PATH:
+
+```sh
+python3 tools/testing/run_categories.py --base 68d1e034821f6a5670747eb29236d9f68f509c6a
+python3 tools/testing/maven_queue.py --lean -B -q -Dmse=off \
+  '-Dtest=TestStarfallFrontierExample,TestStarfallFrontierScene,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  '-Ds3k.rom.path=<absolute existing root S3K ROM>' test
+python3 tools/testing/maven_queue.py --lean -B -q -Dmse=off \
+  '-Dtest=TestStarfallFrontierExample,TestStarfallFrontierScene' \
+  '-Ds3k.rom.path=<absolute existing root S3K ROM>' test
+python3 examples/starfall-frontier/build.py --skip-engine
+```
+
+The combined invocation passed 64 outer tests and 33 nested creator tests
+without failures/errors/skips. Final regression additions verify signed
+AniPLC frame-table alignment, palette/transparent pixels, source offsets,
+VRAM bounds, Icecap's snowy outdoor palette and fully opaque terrain during a
+fade. Fade tests cover completion, interruption by a third region, turnbacks,
+depth/act keys, repeated draws and pause. A native-picture assertion initially
+required nine distinct colours and failed on SSZ's legitimate smaller cloud
+palette; it now rejects single-colour placeholders while also asserting that
+the actual decoded background image is rendered.
+
+Durable GL captures are outside the repository under
+`$HOME/OpenGGF-captures/starfall-frontier-backgrounds`: `gallery/` shows all
+regions at 528 × 224, 2×; `crossing/backgrounds-crossing.mp4` shows real movement
+from MGZ into MHZ. `crossing/frame-00080.png` shows both background layers;
+frame 110 shows the finished forest. The existing `ExampleModCapture` runs
+`biome-*` debug setup then held movement/jumps, without saving player progress.
+The full-picture diagnostic was temporary and removed. An attempted capture
+while Maven rebuilt test classes failed with `ClassNotFoundException`; the
+completed capture ran after that compile, using its own generated build.
+
+The final focused bridge passed three outer tests and **35 nested creator tests**,
+without failures/errors/skips. Packaging reported zero findings. The validated
+1.2.1 jar SHA-256 is `396f192f3d6dd4492bba083a49528ebe0bc7d4417c6bad2f8b6102b7c3b297f3`. Unchanged S3K loader checks were not repeated
+after these test-only additions. Installation enables and trusts this exact jar;
+a JVM restart loads the update.

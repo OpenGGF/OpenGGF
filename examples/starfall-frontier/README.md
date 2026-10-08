@@ -19,9 +19,15 @@ guide the progression. The shrine sentinels warn before attacks: Jungle fires a 
 Ruins sends a ring of shots, and Core fires faster volleys and lunges.
 
 Terrain uses native 16-pixel blocks decoded from each zone's ROM art,
-mappings and palettes, cropped to the adventure's 12-pixel grid. Angel Island,
-Hydrocity, Launch Base and Sky Sanctuary also use ROM parallax backgrounds;
-other regions use original scenery colored for their zone. Palm trunks and
+mappings and palettes, cropped to the adventure's 12-pixel grid. Every region
+uses its ROM background layout, including Icecap's outdoor mountains and
+Sandopolis's desert horizon. Backgrounds crossfade over 45 playing ticks
+(about three quarters of a second) at biome and underground act boundaries;
+turning back blends from the current view. Menus freeze the fade, and loading
+or recalling selects the destination immediately. Tiles keep their own region's
+appearance throughout. The added backgrounds use static first-frame ROM art
+with creator parallax; native palette cycles, animated scenery and level events
+are not reproduced. Palm trunks and
 foliage come from Angel Island, with original mushroom crowns in the woodland. Rhinobots, Monkey Dudes and Bloominators
 represent the foes; monitors hold caches, starposts mark camp and shrines,
 and an Egg Mobile represents each sentinel. Rings and emerald sprites also

@@ -84,7 +84,7 @@ public final class FrontierScene implements ModScene,DebuggableScene {
         if(mouseWorld&&ctx.mouse().rightDown()&&world.place(tx,ty,world.selected()))ctx.audio().playSfx(0x9E);
         if(world.hp<oldHp)ctx.audio().playSfx(0x37);
         if(world.kills>oldKills||world.quest>oldQuest)ctx.audio().playSfx(0x33);
-        music(ctx,world.musicId());
+        music(ctx,world.musicId());view.updateBackdrop(world);
         if(saveTimer>=1800)save(ctx);
     }
     private void interact(SceneContext ctx,int tx,int ty) {
@@ -176,7 +176,7 @@ public final class FrontierScene implements ModScene,DebuggableScene {
     private void music(SceneContext ctx,int id){if(currentMusic!=id){currentMusic=id;ctx.audio().playMusic(id);}}
     private double targetCameraX(SceneContext ctx){return Math.max(0,Math.min(World.W*World.T-ctx.width(),world.x-ctx.width()*.46));}
     private double targetCameraY(){return Math.max(0,Math.min(World.H*World.T-224,world.y-109));}
-    private void snapCamera(SceneContext ctx){cameraX=targetCameraX(ctx);cameraY=targetCameraY();}
+    private void snapCamera(SceneContext ctx){cameraX=targetCameraX(ctx);cameraY=targetCameraY();view.snapBackdrop(world);}
     private boolean confirm(SceneContext ctx){return ctx.buttonPressed(SceneButtons.A|SceneButtons.C)||ctx.keyPressed(SceneKeys.ENTER);}
     private boolean back(SceneContext ctx){return ctx.buttonPressed(SceneButtons.B)||ctx.keyPressed(SceneKeys.BACKSPACE)||ctx.mouse().rightPressed();}
     private boolean up(SceneContext ctx){return ctx.buttonRepeated(SceneButtons.UP);}

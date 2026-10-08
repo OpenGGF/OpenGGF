@@ -11,6 +11,7 @@ public final class FrontierView {
     private final AtlasFont font;
     private final AngelIslandArt art;
     private final BiomeArt[][] biomes;
+    private final BackdropBlend background=new BackdropBlend();
     public FrontierView(byte[] bytes,SceneRomArt rom) {
         font=AtlasFont.parse(bytes,5);art=rom==null?null:new AngelIslandArt(rom);
         biomes=new BiomeArt[Biome.values().length][2];
@@ -18,6 +19,41 @@ public final class FrontierView {
             biomes[biome.ordinal()][0]=new BiomeArt(rom,biome,0);
             biomes[biome.ordinal()][1]=biome==Biome.SANDOPOLIS||biome==Biome.HYDROCITY||biome==Biome.LAVA_REEF?
                     new BiomeArt(rom,biome,1):biomes[biome.ordinal()][0];
+        }
+    }
+    public void snapBackdrop(World world){background.snap(world);}
+    public void updateBackdrop(World world){background.update(world);}
+    private int backdropSky() {
+        double red=0,green=0,blue=0;
+        for(Biome biome:Biome.values())for(int act=0;act<2;act++) {
+            double weight=background.weight(biome.ordinal()*2+act);int sky=biome.sky;
+            red+=(sky>>>16&255)*weight;green+=(sky>>>8&255)*weight;blue+=(sky&255)*weight;
+        }
+        return (int)red<<16|(int)green<<8|(int)blue;
+    }
+    private void backgrounds(SceneCanvas c,World world,double cameraX) {
+        c.clear(backdropSky());
+        double cumulative=0;
+        for(Biome biome:Biome.values())for(int act=0;act<2;act++) {
+            double weight=background.weight(biome.ordinal()*2+act);
+            if(weight<=0)continue;
+            cumulative+=weight;
+            BiomeArt bank=biomes[biome.ordinal()][act];
+            SceneBackdrop backdrop=bank==null?art.backdrop:bank.backdrop;
+            int top=bank==null?Math.max(0,Math.min(256,backdrop.image().height()-224)):bank.backdropTop;
+            // Source-over alpha w / cumulative produces the weighted mix even when a fade
+            // is interrupted by a third biome. The first image always fills the screen.
+            SceneDraw style=SceneDraw.plain().withAlpha((float)(weight/cumulative));
+            for(SceneBackdrop.Band band:backdrop.bands()) {
+                int y0=Math.max(top,band.top()),y1=Math.min(top+224,band.top()+band.height());
+                if(y1<=y0)continue;
+                int column=backdrop.column(band,cameraX,world.ticks),imageWidth=backdrop.image().width();
+                for(int done=0;done<c.width();) {
+                    int source=(column+done)%imageWidth,run=Math.min(imageWidth-source,c.width()-done);
+                    c.drawRegion(backdrop.image(),source,y0,run,y1-y0,done,y0-top,run,y1-y0,style);
+                    done+=run;
+                }
+            }
         }
     }
     private BiomeArt terrain(World w,int tx,int ty) {
@@ -62,17 +98,8 @@ public final class FrontierView {
             }
         }
         }else {
-            Biome biome=w.region();BiomeArt bank=terrain(w,(int)(w.x/T),(int)(w.y/T));
-            SceneBackdrop backdrop=bank==null?art.backdrop:bank.backdrop;
-            c.clear(biome.sky&0xFFFFFF);
-            if(backdrop!=null)c.drawBackdrop(backdrop,Math.max(0,Math.min(256,backdrop.image().height()-224)),cameraX,w.ticks);
-            else for(int n=0;n<3;n++)for(int i=0;i<12;i++) {
-                int px=Math.floorMod(i*71-(int)(cameraX*(.08+n*.08)),width+80)-40;
-                int py=45+n*50+Math.floorMod(hash(i,n),30);
-                c.fill(px,py,36,110,shade(biome.sky,.65+n*.1));
-                c.fill(px,py,36,3,shade(biome.color,.5));
-            }
-            if(deep>.05)c.fill(0,0,width,224,(int)(deep*140)<<24|biome.sky&0xFFFFFF);
+            backgrounds(c,w,cameraX);
+            if(deep>.05)c.fill(0,0,width,224,(int)(deep*140)<<24|backdropSky());
         }
         int x0=Math.max(0,(int)cameraX/T-1),x1=Math.min(W-1,(int)(cameraX+width)/T+1);
         int y0=Math.max(0,(int)cameraY/T-1),y1=Math.min(H-1,(int)(cameraY+224)/T+1);

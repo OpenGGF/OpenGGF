@@ -38,17 +38,51 @@ class TestStarfallFrontierScene {
                 harness.host().draw(null,null);
                 assertFalse(harness.host().recordedFrame().isEmpty());
             }
+            var vf=harness.scene().getClass().getDeclaredField("view");vf.setAccessible(true);
+            Object view=vf.get(harness.scene());var af=view.getClass().getDeclaredField("art");af.setAccessible(true);
+            Object art=af.get(view);
+            var banksField=view.getClass().getDeclaredField("biomes");banksField.setAccessible(true);
+            Object[][] banks=(Object[][])banksField.get(view);
             for(String name:List.of("angel_island","marble_garden","mushroom_hill","carnival_night","icecap",
                     "sandopolis","launch_base","hydrocity","lava_reef","hidden_palace","sky_sanctuary")) {
                 assertTrue(harness.debugJump("biome-"+name));
                 harness.host().draw(null,null);
                 assertEquals(name.toUpperCase(java.util.Locale.ROOT),type.getMethod("region").invoke(world).toString());
                 assertFalse(harness.host().recordedFrame().isEmpty());
+                Object region=type.getMethod("region").invoke(world);
+                int ordinal=((Enum<?>)region).ordinal();
+                Object bank=banks[ordinal][0];
+                var backdrop=(com.openggf.mods.scene.SceneBackdrop)(bank==null?
+                        art.getClass().getField("backdrop").get(art):bank.getClass().getField("backdrop").get(bank));
+                assertNotNull(backdrop,name+" has native scenery");
+                if(name.equals("icecap"))assertTrue(java.util.Arrays.stream(backdrop.image().pixels()).anyMatch(pixel->
+                        (pixel>>>16&255)>200&&(pixel>>>8&255)>200&&(pixel&255)>200),"outdoor snowy mountains use the intro palette");
+                assertTrue(java.util.Arrays.stream(backdrop.image().pixels()).distinct().count()>1,name+" is not a flat placeholder");
+                assertTrue(harness.host().recordedFrame().stream().anyMatch(op->op.image()==backdrop.image()),
+                        name+" renders the decoded ROM background");
             }
+            // Exercise the real update/draw path while crossing a surface boundary.
+            harness.debugJump("biome-angel_island");
+            type.getField("x").setDouble(world,80*12+6);
+            type.getField("y").setDouble(world,((int)type.getMethod("surface",int.class).invoke(world,80)-2)*12);
+            for(int n=0;n<22;n++)harness.tick();
+            var gardenBackdrop=(com.openggf.mods.scene.SceneBackdrop)banks[1][0].getClass().getField("backdrop").get(banks[1][0]);
+            harness.host().draw(null,null);
+            var partial=harness.host().recordedFrame().stream().filter(op->op.image()==gardenBackdrop.image()).toList();
+            assertFalse(partial.isEmpty());
+            assertTrue(harness.host().recordedFrame().stream().filter(op->op.image()!=null&&op.image().width()==16&&op.image().height()==16)
+                    .allMatch(op->op.tint()>>>24==255),"terrain tiles do not inherit the background fade");
+            for(var op:partial)assertTrue((op.tint()>>>24)>100&&(op.tint()>>>24)<150,"mid-fade incoming alpha");
+            var blendField=view.getClass().getDeclaredField("background");blendField.setAccessible(true);
+            Object blend=blendField.get(view);var weight=blend.getClass().getDeclaredMethod("weight",int.class);weight.setAccessible(true);
+            double before=(double)weight.invoke(blend,2);
+            for(int n=0;n<20;n++)harness.host().draw(null,null);
+            assertEquals(before,(double)weight.invoke(blend,2),"draws never advance the fade");
+            harness.press(GLFW_KEY_P);for(int n=0;n<20;n++)harness.tick();
+            assertEquals(before,(double)weight.invoke(blend,2),"pause freezes the transition");
+            harness.press(GLFW_KEY_BACKSPACE);for(int n=0;n<45;n++)harness.tick();
+            assertEquals(1,(double)weight.invoke(blend,2));
             // Check the actual rendered UVs, with velocity deliberately opposing target direction.
-            var vf=harness.scene().getClass().getDeclaredField("view");vf.setAccessible(true);
-            Object view=vf.get(harness.scene());var af=view.getClass().getDeclaredField("art");af.setAccessible(true);
-            Object art=af.get(view);
             x=type.getField("x").getDouble(world);y=type.getField("y").getDouble(world);
             for(int kind=0;kind<4;kind++) {
                 var sprites=(com.openggf.mods.scene.SceneSpriteSet)art.getClass().getField(

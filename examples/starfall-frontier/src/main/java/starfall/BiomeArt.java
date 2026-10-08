@@ -10,6 +10,7 @@ import static com.openggf.mods.scene.RomSpriteRequest.Compression.KOSINSKI_MODUL
 public final class BiomeArt {
     public final SceneImage[] blocks;
     public final SceneBackdrop backdrop;
+    public final int backdropTop;
     public final SceneImage surface,interior;
     public final SceneImage[] variations;
 
@@ -24,29 +25,8 @@ public final class BiomeArt {
         int primary=pointer(entry,0),secondary=pointer(entry,4);
         int count=word(rom.read(primary,2),0)/32;
         int secondCount=primary==secondary?0:word(rom.read(secondary,2),0)/32;
-        SceneImage[][] sheets=new SceneImage[4][];
-        for(int line=0;line<4;line++) {
-            int[] colors=Arrays.copyOfRange(palette,line*16,line*16+16);
-            List<SceneImage> pages=new ArrayList<>();
-            pages.add(sheet(rom,primary,count,colors));
-            if(secondCount>0)pages.add(sheet(rom,secondary,secondCount,colors));
-            sheets[line]=pages.toArray(new SceneImage[0]);
-        }
-        byte[] maps=new BlockArchive(rom.read(pointer(entry,8),65536)).decode();
-        blocks=new SceneImage[maps.length/8];
-        for(int block=0;block<blocks.length;block++) {
-            int[] pixels=new int[256];boolean valid=true;
-            for(int part=0;part<4;part++) {
-                int data=word(maps,block*8+part*2),tile=data&0x7FF,line=data>>>13&3;
-                if(tile>=count+secondCount){valid=false;break;}
-                SceneImage sheet=sheets[line][tile<count?0:1];int local=tile<count?tile:tile-count;
-                for(int y=0;y<8;y++)for(int x=0;x<8;x++) {
-                    int sx=(data&0x0800)==0?x:7-x,sy=(data&0x1000)==0?y:7-y;
-                    pixels[((part/2)*8+y)*16+(part%2)*8+x]=sheet.pixel(local%16*8+sx,local/16*8+sy);
-                }
-            }
-            if(valid)blocks[block]=new SceneImage(16,16,pixels);
-        }
+        byte[] maps=archivePair(rom,entry,8);
+        blocks=blockImages(rom,primary,secondary,count,secondCount,palette,maps,null);
         // Material indices were checked against decoded native block sheets, not raw tile order.
         // Use trim above soil/ice/sand, and coherent native rock or masonry inside it.
         int[] samples=switch(biome) {
@@ -67,7 +47,103 @@ public final class BiomeArt {
             throw new IllegalStateException(biome.label+" ROM material "+samples[n]+" is incomplete");
         surface=blocks[samples[0]];interior=blocks[samples[1]];
         for(int n=1;n<samples.length;n++)variations[n-1]=blocks[samples[n]];
-        backdrop=rom.hasZonePictures(biome.zone,act)?rom.zoneBackdrop(biome.zone,act):null;
+        if(rom.hasZonePictures(biome.zone,act))backdrop=rom.zoneBackdrop(biome.zone,act);
+        else {
+            int[] backgroundPalette=biome==Biome.ICECAP?icecapOutdoorPalette(rom,palette):palette;
+            SceneImage[][] tiles=BackdropTiles.firstFrame(rom,biome,act,backgroundPalette);
+            SceneImage[] backgroundBlocks=blockImages(rom,primary,secondary,count,secondCount,backgroundPalette,maps,tiles);
+            backdrop=background(rom,entry,index,biome,backgroundPalette,backgroundBlocks);
+        }
+        backdropTop=switch(biome) {
+            case MARBLE_GARDEN,ICECAP -> 0;
+            case SANDOPOLIS -> act==0?160:256;
+            case HIDDEN_PALACE -> 448;
+            case MUSHROOM_HILL -> 320;
+            default -> Math.max(0,Math.min(256,backdrop.image().height()-224));
+        };
+    }
+    private static SceneImage[] blockImages(SceneRomArt rom,int primary,int secondary,int count,int secondCount,
+                                            int[] palette,byte[] maps,SceneImage[][] overrides) {
+        SceneImage[][] sheets=new SceneImage[4][];
+        for(int line=0;line<4;line++) {
+            int[] colors=Arrays.copyOfRange(palette,line*16,line*16+16);
+            List<SceneImage> pages=new ArrayList<>();
+            pages.add(sheet(rom,primary,count,colors));
+            if(secondCount>0)pages.add(sheet(rom,secondary,secondCount,colors));
+            sheets[line]=pages.toArray(new SceneImage[0]);
+        }
+        SceneImage[] blocks=new SceneImage[maps.length/8];
+        for(int block=0;block<blocks.length;block++) {
+            int[] pixels=new int[256];boolean valid=true;
+            for(int part=0;part<4;part++) {
+                int data=word(maps,block*8+part*2),tile=data&0x7FF,line=data>>>13&3;
+                SceneImage override=overrides==null?null:overrides[line][tile];
+                if(override==null&&tile>=count+secondCount){valid=false;break;}
+                SceneImage sheet=override!=null?override:sheets[line][tile<count?0:1];
+                int local=override!=null?0:tile<count?tile:tile-count;
+                for(int y=0;y<8;y++)for(int x=0;x<8;x++) {
+                    int sx=(data&0x0800)==0?x:7-x,sy=(data&0x1000)==0?y:7-y;
+                    pixels[((part/2)*8+y)*16+(part%2)*8+x]=sheet.pixel(local%16*8+sx,local/16*8+sy);
+                }
+            }
+            if(valid)blocks[block]=new SceneImage(16,16,pixels);
+        }
+        return blocks;
+    }
+    private static int[] icecapOutdoorPalette(SceneRomArt rom,int[] palette) {
+        int[] outdoor=palette.clone();
+        // Lockon S3 ICZ1_SetIntroPal / sub_23DE96 writes seven immediate longs
+        // and one word to line 4 colours 1..15. Read those colours from ROM code.
+        for(int n=0;n<7;n++) {
+            int address=0x23DE96+n*6;
+            if(word(rom.read(address,2),0)!=0x22FC)throw new IllegalArgumentException("ICZ intro palette opcode");
+            System.arraycopy(rom.palette(address+2,2),0,outdoor,49+n*2,2);
+        }
+        if(word(rom.read(0x23DEC0,2),0)!=0x32BC)throw new IllegalArgumentException("ICZ intro palette tail");
+        outdoor[63]=rom.palette(0x23DEC2,1)[0];return outdoor;
+    }
+    private static byte[] archivePair(SceneRomArt rom,byte[] entry,int offset) {
+        int first=pointer(entry,offset),second=pointer(entry,offset+4);
+        byte[] a=new BlockArchive(rom.read(first,65536)).decode();
+        if(first==second)return a;
+        byte[] b=new BlockArchive(rom.read(second,65536)).decode();
+        byte[] result=Arrays.copyOf(a,a.length+b.length);
+        System.arraycopy(b,0,result,a.length,b.length);return result;
+    }
+    /** LoadLevelLoadBlock2 appends both map/chunk banks; LevelPtrs supplies the BG row pointers.
+     * Uses the outdoor ICZ1 intro plane (ICZ1_BackgroundInit's 0x1880), not its cave plane.
+     * These are cached static ROM pictures; the creator scene owns their scroll presentation.
+     */
+    private SceneBackdrop background(SceneRomArt rom,byte[] entry,int index,Biome biome,int[] palette,SceneImage[] backgroundBlocks) {
+        byte[] chunks=archivePair(rom,entry,16);
+        int address=pointer(rom.read(0x09D5C0+index*4,4),0);
+        byte[] layout=rom.read(address,4096);
+        int columns=word(layout,2),rows=word(layout,6);
+        int originX=biome==Biome.ICECAP?0x1880:0;
+        int width=512,height=Math.min(rows*128,768);
+        if(columns<=0||rows<=0||rows>32||height<224)throw new IllegalArgumentException("Invalid ROM background layout");
+        int[] pixels=new int[width*height];Arrays.fill(pixels,palette[32]|0xFF000000);
+        for(int y=0;y<height;y++)for(int x=0;x<width;x++) {
+            int wx=originX+x,row=word(layout,10+(y/128)*4)&0x7FFF;
+            int column=wx/128%columns;
+            if(row==0)continue;
+            if(row+column>=layout.length)throw new IllegalArgumentException("ROM background row outside layout");
+            int chunk=layout[row+column]&255;
+            int offset=chunk*128+((y%128/16)*8+wx%128/16)*2;
+            if(offset+1>=chunks.length)throw new IllegalArgumentException("ROM background chunk outside bank");
+            int descriptor=word(chunks,offset),block=descriptor&0x3FF;
+            if(block>=backgroundBlocks.length)throw new IllegalArgumentException("ROM background block outside bank");
+            SceneImage image=backgroundBlocks[block];
+            // Slots outside the loaded art remain the native VDP backdrop colour.
+            if(image==null)continue;
+            int bx=(descriptor&0x400)==0?wx%16:15-wx%16;
+            int by=(descriptor&0x800)==0?y%16:15-y%16;
+            int pixel=image.pixel(bx,by);
+            if(pixel>>>24!=0)pixels[y*width+x]=pixel;
+        }
+        SceneImage image=new SceneImage(width,height,pixels);
+        // Creator-world parallax: stock level events and AniPLC timelines do not run here.
+        return new SceneBackdrop(image,List.of(new SceneBackdrop.Band(0,height,.125,0)));
     }
     private static SceneImage sheet(SceneRomArt rom,int address,int count,int[] palette) {
         int rows=count/16,remainder=count%16;int[] pixels=new int[128*((count+15)/16)*8];
@@ -94,7 +170,7 @@ public final class BiomeArt {
         private void refill(){descriptor=next()|next()<<8;bits=16;}
         private int bit(){int value=descriptor&1;descriptor>>>=1;if(--bits==0)refill();return value;}
         byte[] decode() {
-            byte[] output=new byte[16384];int size=0;refill();
+            byte[] output=new byte[65536];int size=0;refill();
             while(size<output.length) {
                 if(bit()!=0){output[size++]=(byte)next();continue;}
                 int distance,length;
