@@ -95,73 +95,6 @@ and publication seam; preserve legitimate scripted control rather than clearing
 all forced state or adjusting physics. Native controller latches are a separate
 observation from both physical BK2 rows and engine input publication.
 
-Capture boot modes own different driver contracts (2026-10-08 Mutator Lab repair):
-title-first capture follows the normal loop fade owner and rebinds its player after
-launch. Applying those choices globally to the existing direct-level driver changed
-cold route handoffs and fade snapshot assertions. Preserve the default driver until
-its consumers are migrated and validated together. Its CSV keeps input last;
-appending host observation columns silently broke a prefix comparator that strips
-the final field. Extended host columns are explicit in the title-first mode.
-
-Desktop visibility and input need separate proof (2026-10-07 Mutator Lab): an
-X11 window may exist but remain unmapped while `glfwShowWindow` waits. Recheck
-its exact child PID, title, `IsViewable` state and positive geometry immediately
-before recording. Default-visible creation and explicit ShowWindow are distinct
-paths; one successful path does not certify the other. A bounded workaround may
-map only the owned window with `override_redirect`; record that frameless path
-and any child-only driver/audio environment rather than claiming default WM
-support. Never change global display/audio settings or another process's window. On
-shared DISPLAY, recheck the exact owned window's focus/readiness at each input
-event and possible overlapping capture before treating an unchanged page as a
-routing defect.
-
-Synthetic X11 releases must use `protocol.event.KeyRelease`: constructing a
-`KeyPress` object with a `type=KeyRelease` argument still serializes a press in
-python-xlib. A first working Enter followed by ignored Enter can be a latched
-helper key, not a menu bug. Explicitly release each key, focus the owned surface,
-and inspect the second action's visible result. A viewable screenshot or Pulse
-sink-input alone proves neither responsive input nor authored SFX. Frameless
-swap waits may also starve animation; if child-only vblank overrides are needed,
-record them and retain the engine's tick limiter. Inspect changing frames and
-AC PCM windows around actions, including title-to-level producer rebuilds.
-
-An unfocused Engine discards synthetic keys (2026-10-08 Mutator Lab polish):
-`Engine.applyWindowActivation` pauses the loop and clears key state when GLFW
-reports focus loss. A key sent while a shared-DISPLAY peer or the compositor owns
-X focus reaches the window, is discarded, and no new frame is presented, so the
-next screenshot repeats the previous page. `tools/media/engine_window_capture.py`
-records `XGetInputFocus` per key (`focus.owned`) and `require_focus` fails closed.
-An unchanged page with `owned: false` is absent input, not a routing defect.
-On the owned frameless path, x11grab screenshots and video also trailed input by
-about 1.7 seconds: a screenshot one second after a key can show the previous
-page while a later page proves the key arrived. Settle about three seconds
-before each screenshot and read the next page before calling input lost.
-
-Restoring sources with preserved timestamps hides them from the compiler
-(2026-10-08 Mutator Lab polish). A matched base control that checked out base
-files, compiled them, and then restored the candidate with `cp -p` left the
-candidate older than its base classes; Maven skipped recompiling it and the
-next run tested base classes against candidate tests. Touch restored files, or
-clean, before the next build, and check the compiled class for a new member.
-
-A submitted menu cue can lose native arbitration (2026-10-08 Mutator Lab polish):
-Sonic 2 `SndID_Blip` (`$CD`) has `zSFXPriority` `$6F`, below the title's
-`SndID_Sparkle` (`$70`), which `Obj0E_FlashingStar_Move` re-triggers every 19
-frames. The driver rejects the blip while a twinkle plays: no `PlaySfx` enters the
-command timeline and PCM equals a neutral control. Sample the request latch
-(`Sonic2SoundRequestService.Snapshot.pipeline().sfxPriorityValue()`) and compare
-PCM against a matched control before calling a cue silent or the mixer broken.
-
-Queue-holder inventory needs descriptor corroboration (2026-10-07 Mutator Lab
-recovery): this Btrfs checkout reported device `00:23` from `stat`, while
-`/proc/locks` listed the same file as `00:21`. Matching only device and inode
-falsely reported no holder. Confirm the inode together with the exact holder's
-`/proc/<pid>/fd` target and `fdinfo`, plus its live lease and command/CWD. Identify
-Java through `/proc/<pid>/exe` or the Surefire command marker: a `/usr/bin/java`
-substring scan missed a live `/usr/lib/jvm/java-21-openjdk/bin/java` fork.
-These observations establish ownership, not progress, a pass or a stall; never
-delete locks or stop another owner's process to force admission.
-
 Unpaced mod captures can outrun preparation (2026-10-08, Sitar Hero polish):
 `ExampleModCapture` advances ticks as quickly as it can while ROM song preparation
 runs on a worker. A short capture without video or frequent PNGs can finish before
@@ -211,6 +144,27 @@ worktree's `target/` before launching. If recovery is needed, verify the exact
 owned process and follow its `/proc/<pid>/fd/1` descriptor with a bounded
 `tail --pid` follower; record and clean up that follower. Log recovery and queue
 admission are not test completion.
+
+A bootstrap module switch is not a live-world fixture switch (2026-10-07,
+pending insta-shield rewind regression): `TestEnvironment.resetAll` had already
+opened an S2 world. Setting `GameModuleRegistry` to S3K changed the default while
+status/controller refresh continued to read the live S2 module. An expected red
+case passed and the registered-shield control failed. Use
+`TestEnvironment.configureGameModuleFixture` for the intended live world, verify
+the positive control, and discard the mixed result before attributing behavior.
+
+A complete registry restore can still omit a scheduling owner (2026-10-07,
+FBZ → SOZ destination floor): pending shield restoration exposed five art clocks
+one step higher after an otherwise matching eight-row replay. A read-only retry
+probe showed no setup-only retry or fade; the original first row published a
+pending fresh-level boundary without claiming a closure, whereas its replay
+ran ordinary work. The deferred boundary was absent from registry capture.
+The load reporter captures floor zero before the controller assigns its pending
+assembly, so restoring that floor must clear stale pending state; explicit later
+captures must retain their complete deferred state and publication phase.
+Inspect the first actual dispatch and its ownership before compensating clocks
+or blaming driver counters. Capture the complete deferred state through its
+existing production owner; keep the floor and full forward comparison intact.
 
 A macOS native-test stall can be AWT rather than gameplay (2026-10-06,
 `1ae1596837`): the ordinary suite stopped producing output in
@@ -441,6 +395,17 @@ readback/encoding and CSV writes, after a fixed warmup. Match controller route,
 rewind setting, viewport and sampled state before comparing. Bytes/frame is not
 a frame-time or GC-pause improvement. `GameplayAllocationTool` preserves this probe.
 
+SOZ JFR follow-up (2026-10-08): sampling events identify their observed thread in
+`sampledThread`, while allocation events use `eventThread`. A generic thread scrub
+removed the sampling events in this recording; use the streaming `JfrTestSummary`
+reader instead. Its positive control attributed screenshot allocation/readback to
+the lower-rock tests, and the draw-only candidate removed those samples. Default
+JDK 21 profile periods differ: Java 10 ms, native 20 ms; do not combine counts into
+CPU percentages. Native samples include waiting in `glFinish`. Expanding this
+recording's full stacks as JSON produced 9.4 GB and made the analysis process grow
+to 9.6 GB RSS; that approach was stopped and its output deleted. Stream counters
+under a bounded heap instead of materializing event objects or expanded JSON.
+
 SOZ controller-route rewind (2026-09-16): a composite gameplay snapshot does
 not own a standalone `HeadlessTestRunner`'s external button history. Before
 replaying an input edge after restoring the snapshot, call `primeInputState`
@@ -646,6 +611,75 @@ repair an unsupported debug combination by changing shared combat rules.
 | 50 | A failing-set diff that drops nested `$` class names | Two different failures collapsing into one row |
 | 43 | Too many concurrent rounds | OOMs, GLFW init failures and contended arms that report *fewer* red |
 | 44 | An axis count across arms of different depth | A count comparison that was never like-for-like |
+
+#### Mutator captures and validation
+
+Capture boot modes own different driver contracts (2026-10-08 Mutator Lab repair):
+title-first capture follows the normal loop fade owner and rebinds its player after
+launch. Applying those choices globally to the existing direct-level driver changed
+cold route handoffs and fade snapshot assertions. Preserve the default driver until
+its consumers are migrated and validated together. Its CSV keeps input last;
+appending host observation columns silently broke a prefix comparator that strips
+the final field. Extended host columns are explicit in the title-first mode.
+
+Desktop visibility and input need separate proof (2026-10-07 Mutator Lab): an
+X11 window may exist but remain unmapped while `glfwShowWindow` waits. Recheck
+its exact child PID, title, `IsViewable` state and positive geometry immediately
+before recording. Default-visible creation and explicit ShowWindow are distinct
+paths; one successful path does not certify the other. A bounded workaround may
+map only the owned window with `override_redirect`; record that frameless path
+and any child-only driver/audio environment rather than claiming default WM
+support. Never change global display/audio settings or another process's window. On
+shared DISPLAY, recheck the exact owned window's focus/readiness at each input
+event and possible overlapping capture before treating an unchanged page as a
+routing defect.
+
+Synthetic X11 releases must use `protocol.event.KeyRelease`: constructing a
+`KeyPress` object with a `type=KeyRelease` argument still serializes a press in
+python-xlib. A first working Enter followed by ignored Enter can be a latched
+helper key, not a menu bug. Explicitly release each key, focus the owned surface,
+and inspect the second action's visible result. A viewable screenshot or Pulse
+sink-input alone proves neither responsive input nor authored SFX. Frameless
+swap waits may also starve animation; if child-only vblank overrides are needed,
+record them and retain the engine's tick limiter. Inspect changing frames and
+AC PCM windows around actions, including title-to-level producer rebuilds.
+
+An unfocused Engine discards synthetic keys (2026-10-08 Mutator Lab polish):
+`Engine.applyWindowActivation` pauses the loop and clears key state when GLFW
+reports focus loss. A key sent while a shared-DISPLAY peer or the compositor owns
+X focus reaches the window, is discarded, and no new frame is presented, so the
+next screenshot repeats the previous page. `tools/media/engine_window_capture.py`
+records `XGetInputFocus` per key (`focus.owned`) and `require_focus` fails closed.
+An unchanged page with `owned: false` is absent input, not a routing defect.
+On the owned frameless path, x11grab screenshots and video also trailed input by
+about 1.7 seconds: a screenshot one second after a key can show the previous
+page while a later page proves the key arrived. Settle about three seconds
+before each screenshot and read the next page before calling input lost.
+
+Restoring sources with preserved timestamps hides them from the compiler
+(2026-10-08 Mutator Lab polish). A matched base control that checked out base
+files, compiled them, and then restored the candidate with `cp -p` left the
+candidate older than its base classes; Maven skipped recompiling it and the
+next run tested base classes against candidate tests. Touch restored files, or
+clean, before the next build, and check the compiled class for a new member.
+
+A submitted menu cue can lose native arbitration (2026-10-08 Mutator Lab polish):
+Sonic 2 `SndID_Blip` (`$CD`) has `zSFXPriority` `$6F`, below the title's
+`SndID_Sparkle` (`$70`), which `Obj0E_FlashingStar_Move` re-triggers every 19
+frames. The driver rejects the blip while a twinkle plays: no `PlaySfx` enters the
+command timeline and PCM equals a neutral control. Sample the request latch
+(`Sonic2SoundRequestService.Snapshot.pipeline().sfxPriorityValue()`) and compare
+PCM against a matched control before calling a cue silent or the mixer broken.
+
+Queue-holder inventory needs descriptor corroboration (2026-10-07 Mutator Lab
+recovery): this Btrfs checkout reported device `00:23` from `stat`, while
+`/proc/locks` listed the same file as `00:21`. Matching only device and inode
+falsely reported no holder. Confirm the inode together with the exact holder's
+`/proc/<pid>/fd` target and `fdinfo`, plus its live lease and command/CWD. Identify
+Java through `/proc/<pid>/exe` or the Surefire command marker: a `/usr/bin/java`
+substring scan missed a live `/usr/lib/jvm/java-21-openjdk/bin/java` fork.
+These observations establish ownership, not progress, a pass or a stall; never
+delete locks or stop another owner's process to force admission.
 
 ### Operational
 
