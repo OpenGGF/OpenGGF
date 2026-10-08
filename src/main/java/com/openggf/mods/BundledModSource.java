@@ -10,7 +10,6 @@ import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.AtomicMoveNotSupportedException;
-import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -86,11 +85,18 @@ public final class BundledModSource implements AutoCloseable {
 
         BundledModSource open(ModInputLimits limits);
 
-        /** The engine's own classpath manifest, embedded jars, install directory and save-root cache. */
+        /**
+         * The engine's own classpath manifest, embedded jars, install directory and save-root
+         * cache. An engine without a manifest (native images, IDE class directories) returns
+         * {@link #EMPTY} before locating anything.
+         */
         static Locator production() {
-            return limits -> BundledModSource.open(BundledModSource.class.getClassLoader(),
-                    installDirectory(), com.openggf.game.save.SavePaths.root()
-                            .resolve(CACHE_DIRECTORY).toAbsolutePath().normalize(), limits);
+            return limits -> {
+                ClassLoader resources = BundledModSource.class.getClassLoader();
+                if (resources.getResource(BundledModManifest.RESOURCE) == null) return EMPTY;
+                return BundledModSource.open(resources, installDirectory(), com.openggf.game.save.SavePaths
+                        .root().resolve(CACHE_DIRECTORY).toAbsolutePath().normalize(), limits);
+            };
         }
     }
 
@@ -109,8 +115,8 @@ public final class BundledModSource implements AutoCloseable {
             if (codeSource == null || codeSource.getLocation() == null) return Optional.empty();
             Path location = Path.of(codeSource.getLocation().toURI()).toAbsolutePath().normalize();
             return Optional.ofNullable(location.getParent());
-        } catch (URISyntaxException | IllegalArgumentException | FileSystemNotFoundException
-                 | SecurityException unavailable) {
+        } catch (URISyntaxException | RuntimeException unavailable) {
+            // Best-effort probe: an unusual code source (custom loader, image) means "unknown".
             return Optional.empty();
         }
     }
