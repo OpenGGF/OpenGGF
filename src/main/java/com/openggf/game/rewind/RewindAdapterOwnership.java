@@ -29,10 +29,7 @@ public final class RewindAdapterOwnership {
     }
 
     private static void requireEngineCaller() {
-        Class<?> caller = StackWalker.getInstance(java.util.Set.of(StackWalker.Option.RETAIN_CLASS_REFERENCE,
-                StackWalker.Option.SHOW_HIDDEN_FRAMES)).walk(frames -> frames.map(StackWalker.StackFrame::getDeclaringClass)
-                .filter(type -> type != RewindAdapterOwnership.class && type.getClassLoader() != null)
-                .findFirst().orElseThrow());
+        Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(RewindAdapterOwnership.class);
         if (caller.getClassLoader() != RewindAdapterOwnership.class.getClassLoader()) {
             throw new SecurityException("Creator rewind identity must come from its engine-owned registration");
         }

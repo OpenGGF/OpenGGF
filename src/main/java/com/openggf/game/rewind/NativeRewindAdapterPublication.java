@@ -20,7 +20,10 @@ public final class NativeRewindAdapterPublication {
             if (selected instanceof com.openggf.game.patch.DelegatingGameModule decorator) {
                 selected = decorator.base();
             } else if (Proxy.isProxyClass(selected.getClass())) {
-                selected = com.openggf.mods.runtime.OwnerBoundGamePatch.inheritedModule(selected);
+                var handler = Proxy.getInvocationHandler(selected);
+                selected = handler.getClass().getClassLoader() == GameModule.class.getClassLoader()
+                        && handler instanceof com.openggf.game.internal.InheritedGameModuleProvider inherited
+                        ? inherited.inheritedModule() : null;
             } else {
                 return selected.getClass().getClassLoader() == GameModule.class.getClassLoader() ? selected : null;
             }
@@ -68,10 +71,7 @@ public final class NativeRewindAdapterPublication {
     }
 
     private static void requireEngineCaller() {
-        Class<?> caller = StackWalker.getInstance(Set.of(StackWalker.Option.RETAIN_CLASS_REFERENCE,
-                StackWalker.Option.SHOW_HIDDEN_FRAMES)).walk(frames -> frames.map(StackWalker.StackFrame::getDeclaringClass)
-                .filter(type -> type != NativeRewindAdapterPublication.class && type.getClassLoader() != null)
-                .findFirst().orElseThrow());
+        Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(NativeRewindAdapterPublication.class);
         if (caller.getClassLoader() != NativeRewindAdapterPublication.class.getClassLoader())
             throw new SecurityException("Native rewind publication belongs to the engine load lifecycle");
     }

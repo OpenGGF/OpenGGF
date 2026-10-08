@@ -59,6 +59,10 @@ matching a reported owner or binary class name is insufficient. Keep regressions
 for direct calls, engine-invoked creator method references and legitimate engine
 method references such as `List.forEach(registry::register)`. Preserve inherited
 owned adapters while validating fresh publication against its verified owner.
+Use the internal `EngineCallerAccess` inspection bridge for new admission gates;
+its immutable JDK walker comes from the `EngineContext` bootstrap factory, without
+locating a live gameplay session. Keep lower-level consumers on the utility bridge
+and inspect a module-lineage provider's actual defining loader before calling it.
 Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md).
 
 **Returned concrete values can contain deferred creator callbacks.** An owned

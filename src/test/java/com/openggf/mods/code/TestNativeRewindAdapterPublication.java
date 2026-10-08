@@ -75,6 +75,18 @@ public class TestNativeRewindAdapterPublication {
     public interface Publication {
         void register(RewindRegistry registry, GameModule root, RewindSnapshottable<?> adapter);
     }
+    public static final class ForeignLineageHandler implements java.lang.reflect.InvocationHandler,
+            com.openggf.game.internal.InheritedGameModuleProvider {
+        private final GameModule inherited;
+        private final java.util.concurrent.atomic.AtomicInteger reads;
+        public ForeignLineageHandler(GameModule inherited, java.util.concurrent.atomic.AtomicInteger reads) {
+            this.inherited=inherited; this.reads=reads;
+        }
+        @Override public GameModule inheritedModule() { reads.incrementAndGet(); return inherited; }
+        @Override public Object invoke(Object proxy, java.lang.reflect.Method method, Object[] args) {
+            throw new AssertionError("A foreign lineage handler must never be dispatched");
+        }
+    }
     public static final class CreatorProbe {
         public static void direct(RewindRegistry registry, GameModule root, RewindSnapshottable<?> adapter) {
             NativeRewindAdapterPublication.register(registry,root,adapter);
@@ -135,7 +147,7 @@ public class TestNativeRewindAdapterPublication {
     }
 
     @Test void childDirectHiddenMethodReferencesAndForgedRootCannotAcquireEngineAuthority() throws Exception {
-        var names=Set.of(CreatorProbe.class.getName(),CreatorRoot.class.getName());
+        var names=Set.of(CreatorProbe.class.getName(),CreatorRoot.class.getName(),ForeignLineageHandler.class.getName());
         Path jar=temp.resolve("native-authority-probe.jar");
         try(var output=new JarOutputStream(Files.newOutputStream(jar))) {
             for(String name:names) {
@@ -169,6 +181,14 @@ public class TestNativeRewindAdapterPublication {
                     .newInstance(root,adapter);
             assertThrows(SecurityException.class,()->NativeRewindAdapterPublication.register(registry,forged,adapter));
             assertSame(root,NativeRewindAdapterPublication.nativeRoot(forged),"An immutable decorator identifies its real base, not its reported publications");
+            var reads=new java.util.concurrent.atomic.AtomicInteger();
+            var handler=(java.lang.reflect.InvocationHandler)loader.loadClass(ForeignLineageHandler.class.getName())
+                    .getConstructor(GameModule.class,java.util.concurrent.atomic.AtomicInteger.class).newInstance(root,reads);
+            GameModule foreignProjection=(GameModule)java.lang.reflect.Proxy.newProxyInstance(GameModule.class.getClassLoader(),
+                    new Class<?>[]{GameModule.class},handler);
+            assertNull(NativeRewindAdapterPublication.nativeRoot(foreignProjection),
+                    "An engine-loaded proxy cannot endorse its creator-loaded lineage handler");
+            assertEquals(0,reads.get(),"Foreign reported lineage must not execute outside its owner boundary");
             Publication hostReference=NativeRewindAdapterPublication::register;
             assertDoesNotThrow(()->hostReference.register(registry,root,adapter));
             assertEquals(7,registry.capture().get(adapter.key()));

@@ -126,11 +126,8 @@ public final class ModuleResolutionService {
                                                    PatchPlanSource source) {
         // This service is also exposed through expert read/query views. Installing
         // a live owner publication source remains engine orchestration authority.
-        ClassLoader caller = StackWalker.getInstance(Set.of(
-                StackWalker.Option.RETAIN_CLASS_REFERENCE, StackWalker.Option.SHOW_HIDDEN_FRAMES))
-                .walk(frames -> frames.map(StackWalker.StackFrame::getDeclaringClass)
-                        .filter(type -> type != ModuleResolutionService.class && type.getClassLoader() != null)
-                        .findFirst().orElseThrow().getClassLoader());
+        ClassLoader caller = com.openggf.util.EngineCallerAccess
+                .callerOutside(ModuleResolutionService.class).getClassLoader();
         if (caller != ModuleResolutionService.class.getClassLoader())
             throw new SecurityException("Only the engine may install the live mod plan source");
         installedEnablement = Objects.requireNonNull(enablement, "enablement");

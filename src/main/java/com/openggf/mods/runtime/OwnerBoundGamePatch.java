@@ -56,10 +56,8 @@ public final class OwnerBoundGamePatch {
     }
 
     private static void requireEngineCaller() {
-        ClassLoader caller = StackWalker.getInstance(Set.of(StackWalker.Option.RETAIN_CLASS_REFERENCE,
-                StackWalker.Option.SHOW_HIDDEN_FRAMES)).walk(frames -> frames.map(StackWalker.StackFrame::getDeclaringClass)
-                .filter(type -> type != OwnerBoundGamePatch.class && type.getClassLoader() != null)
-                .findFirst().orElseThrow().getClassLoader());
+        ClassLoader caller = com.openggf.util.EngineCallerAccess
+                .callerOutside(OwnerBoundGamePatch.class).getClassLoader();
         if (caller != OwnerBoundGamePatch.class.getClassLoader())
             throw new SecurityException("Creator patch ownership belongs to its engine registration");
     }
@@ -70,7 +68,7 @@ public final class OwnerBoundGamePatch {
         return (GameModule)Proxy.newProxyInstance(GameModule.class.getClassLoader(), new Class<?>[]{GameModule.class}, handler);
     }
 
-    private static final class Handler implements InvocationHandler {
+    private static final class Handler implements InvocationHandler, com.openggf.game.internal.InheritedGameModuleProvider {
         final String owner;
         final Object delegate;
         final Object base;
@@ -84,6 +82,11 @@ public final class OwnerBoundGamePatch {
             this.owner = owner; this.delegate = delegate; this.base = base;
             this.boundary = boundary; this.wrappers = wrappers; this.rewindOnly = rewindOnly;
         }
+
+        @Override public GameModule inheritedModule() {
+            return base instanceof GameModule inherited ? inherited : null;
+        }
+
         @Override public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             if (method.getDeclaringClass() == Object.class) return objectMethod(proxy, method, args, owner);
             if (rewindKey != null && method.getName().equals("key") && method.getParameterCount() == 0) return rewindKey;
@@ -130,7 +133,7 @@ public final class OwnerBoundGamePatch {
                 value = Objects.requireNonNull(value,"Owned zone runtime snapshot");
             if (delegate instanceof com.openggf.game.render.SpecialRenderEffect && method.getName().equals("stage"))
                 value = Objects.requireNonNull(value,"Owned render effect stage");
-            if (delegate instanceof com.openggf.game.save.SaveSnapshotProvider && method.getName().equals("captureRuntimeFields"))
+            if (delegate instanceof com.openggf.game.save.SaveSnapshotProvider && method.getName().equals("captureSaveFields"))
                 return com.openggf.game.save.RuntimeSaveCapture.freezeFields(saveFields(value));
             boolean eventAdapters = delegate instanceof com.openggf.game.LevelEventRewindResolver
                     && method.getName().equals("resolveLevelEventRewindAdapters");
