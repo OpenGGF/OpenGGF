@@ -7,6 +7,15 @@ final class PlayableHurtRadiusTransition {
     }
 
     static void apply(AbstractPlayableSprite sprite) {
+        apply(sprite, false);
+    }
+
+    /** KillSonic/KillCharacter use the floor reset, not the sidekick hurt policy. */
+    static void applyDeath(AbstractPlayableSprite sprite) {
+        apply(sprite, true);
+    }
+
+    private static void apply(AbstractPlayableSprite sprite, boolean death) {
         boolean wasRolling = sprite.getRolling();
         int nativeXBeforeRadiusChange = sprite.getCentreX();
         int nativeYBeforeRadiusChange = sprite.getCentreY();
@@ -16,16 +25,18 @@ final class PlayableHurtRadiusTransition {
             sprite.setCentreXPreserveSubpixel((short) nativeXBeforeRadiusChange);
         }
         GameRules rules = sprite.getGameRules();
+        boolean usesCurrentRadiusDelta = rules != null
+                && rules.playerMovement() != null
+                && rules.playerMovement().landing().landingRollClearUsesCurrentYRadiusDelta();
         boolean restoresSplitSidekickRadii = !(sprite instanceof Tails)
                 || rules == null || rules.sidekickCpu() == null
                 || rules.sidekickCpu().sidekickHurtRestoresRadiiWithoutRoll();
-        if (restoresSplitSidekickRadii) {
+        // S1/S2 reset radii only in the ball branch. S3K Player_TouchFloor
+        // restores default radii before that test, including Tails and Knuckles.
+        if (death ? wasRolling || usesCurrentRadiusDelta : restoresSplitSidekickRadii) {
             sprite.applyStandingRadii(false);
         }
         if (wasRolling) {
-            boolean usesCurrentRadiusDelta = rules != null
-                    && rules.playerMovement() != null
-                    && rules.playerMovement().landing().landingRollClearUsesCurrentYRadiusDelta();
             if (usesCurrentRadiusDelta) {
                 int radiusDelta = oldYRadius - sprite.getStandYRadius();
                 var gameState = sprite.currentGameStateOrNull();
