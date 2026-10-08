@@ -22,6 +22,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.OwnedMocks;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -49,9 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.AdditionalAnswers.delegatesTo;
 import static org.mockito.Mockito.clearInvocations;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,6 +60,7 @@ import static org.mockito.Mockito.when;
 @RequiresRom(SonicGame.SONIC_2)
 @ExtendWith(SingletonResetExtension.class)
 class TestSonic2RuntimePlcRendererRefresh {
+    private final OwnedMocks mocks = new OwnedMocks();
     private Sonic2ObjectArtProvider provider;
     private LevelManager levelManager;
     private TestableZoneEvents events;
@@ -75,7 +75,7 @@ class TestSonic2RuntimePlcRendererRefresh {
         provider = (Sonic2ObjectArtProvider) GameServices.module().getObjectArtProvider();
         provider.loadArtForZone(Sonic2ZoneConstants.ROM_ZONE_WFZ);
 
-        levelManager = spy(gameplay.getLevelManager());
+        levelManager = mocks.spy(gameplay.getLevelManager());
         setObjectRenderManager(levelManager, new ObjectRenderManager(provider));
         gameplay.attachLevelManagers(
                 gameplay.getWaterSystem(),
@@ -84,7 +84,7 @@ class TestSonic2RuntimePlcRendererRefresh {
                 gameplay.getCollisionSystem(),
                 gameplay.getSpriteManager(),
                 levelManager);
-        setCurrentLevel(levelManager, gameplay, mock(Level.class));
+        setCurrentLevel(levelManager, gameplay, mocks.mock(Level.class));
         levelManager.refreshObjectArtPatterns();
         preExistingRenderer = provider.getRenderer(ObjectArtKeys.MONITOR);
         preExistingPatternBase = preExistingRenderer.getPatternBase();
@@ -94,7 +94,11 @@ class TestSonic2RuntimePlcRendererRefresh {
 
     @AfterEach
     void tearDown() {
-        SessionManager.clear();
+        try {
+            SessionManager.clear();
+        } finally {
+            mocks.close();
+        }
     }
 
     @Test
@@ -324,7 +328,11 @@ class TestSonic2RuntimePlcRendererRefresh {
 
     @Test
     void requestWithoutGameplayRuntimeReturnsWithoutLoading() {
-        SessionManager.clear();
+        try {
+            SessionManager.clear();
+        } finally {
+            mocks.close();
+        }
 
         assertDoesNotThrow(() -> events.requestForTest(Sonic2Constants.PLC_TORNADO));
         assertNull(provider.getRenderer(Sonic2ObjectArtKeys.TORNADO_THRUSTER));
@@ -355,20 +363,20 @@ class TestSonic2RuntimePlcRendererRefresh {
 
     @Test
     void nonSonic2ObjectArtProviderIsAcceptedWithoutRefresh() throws Exception {
-        ObjectArtProvider otherProvider = mock(ObjectArtProvider.class);
+        ObjectArtProvider otherProvider = mocks.mock(ObjectArtProvider.class);
         RuntimeFixture otherRuntime = installRuntimeWithProvider(otherProvider);
 
         assertDoesNotThrow(() -> new TestableZoneEvents().requestForTest(Sonic2Constants.PLC_TORNADO));
         verify(otherRuntime.levelManager(), never()).refreshObjectArtPatterns();
     }
 
-    private static RuntimeFixture installRuntimeWithProvider(ObjectArtProvider artProvider)
+    private RuntimeFixture installRuntimeWithProvider(ObjectArtProvider artProvider)
             throws Exception {
-        GameModule module = mock(GameModule.class, delegatesTo(GameServices.module()));
+        GameModule module = mocks.mock(GameModule.class, delegatesTo(GameServices.module()));
         when(module.getObjectArtProvider()).thenReturn(artProvider);
         GameplayModeContext gameplay = SessionManager.openGameplaySession(module);
         TestEnvironment.activeGameplayMode();
-        LevelManager manager = spy(gameplay.getLevelManager());
+        LevelManager manager = mocks.spy(gameplay.getLevelManager());
         gameplay.attachLevelManagers(
                 gameplay.getWaterSystem(),
                 gameplay.getParallaxManager(),
@@ -376,19 +384,19 @@ class TestSonic2RuntimePlcRendererRefresh {
                 gameplay.getCollisionSystem(),
                 gameplay.getSpriteManager(),
                 manager);
-        setCurrentLevel(manager, gameplay, mock(Level.class));
+        setCurrentLevel(manager, gameplay, mocks.mock(Level.class));
         clearInvocations(manager);
         return new RuntimeFixture(manager);
     }
 
-    private static Sonic2RuntimeFixture installSonic2RuntimeWithProvider(
+    private Sonic2RuntimeFixture installSonic2RuntimeWithProvider(
             Sonic2ObjectArtProvider artProvider) throws Exception {
-        GameModule module = mock(GameModule.class, delegatesTo(GameServices.module()));
+        GameModule module = mocks.mock(GameModule.class, delegatesTo(GameServices.module()));
         when(module.getObjectArtProvider()).thenReturn(artProvider);
         GameplayModeContext gameplay = SessionManager.openGameplaySession(module);
         TestEnvironment.activeGameplayMode();
         artProvider.loadArtForZone(Sonic2ZoneConstants.ROM_ZONE_WFZ);
-        LevelManager manager = spy(gameplay.getLevelManager());
+        LevelManager manager = mocks.spy(gameplay.getLevelManager());
         setObjectRenderManager(manager, new ObjectRenderManager(artProvider));
         gameplay.attachLevelManagers(
                 gameplay.getWaterSystem(),
@@ -397,7 +405,7 @@ class TestSonic2RuntimePlcRendererRefresh {
                 gameplay.getCollisionSystem(),
                 gameplay.getSpriteManager(),
                 manager);
-        setCurrentLevel(manager, gameplay, mock(Level.class));
+        setCurrentLevel(manager, gameplay, mocks.mock(Level.class));
         manager.refreshObjectArtPatterns();
         clearInvocations(manager);
         gameplay.registerPlcArtAdapter(artProvider);
