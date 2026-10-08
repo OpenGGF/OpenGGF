@@ -245,6 +245,10 @@ Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven
 - [Three Openings UI lifecycle probe](../../tools/challenge/check_host_lifecycle.py)
   drives the real host UI and exact owned-worker fault/stall lifecycle, retaining
   presentation/input generations, native window video and device PCM outside Git.
+- [Three Openings window startup check](../../tools/challenge/check_window_startup.py)
+  maps a plain Xlib control window, then records whether the real host idles,
+  holds its title and closes while the desktop withholds its window; originating
+  2026-10-08 Opus polish startup-stall diagnosis.
 - `WorkerReplayDiagnostic` captures/restores only its own ordinary registry/audio
   checkpoint and compares native GPU/PCM replay; `ChallengeProbe` checks survivor
   media while that diagnostic runs in an isolated sibling JVM. See the sample's

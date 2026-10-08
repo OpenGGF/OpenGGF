@@ -1338,3 +1338,17 @@ quad projection at1024×700 therefore placed its text offscreen. Match that text
 owner's coordinate convention with a separate projection while preserving pane
 geometry and the normal font API. Inspect the actual desktop/title and GPU image;
 correct quad placement does not establish readable text.
+
+### GLFW's X11 show wait can spin forever when the desktop withholds a map
+
+On X11/XWayland, a visible `glfwCreateWindow` and `glfwShowWindow` wait for a
+VisibilityNotify with a 0.1 s timeout that only counts down while the client's
+event queue is empty. When the window manager manages the window but does not
+map it, while delivering ConfigureNotify, the queue is never empty and the wait
+spins at full CPU, ignoring close requests. A locked KDE Plasma Wayland session
+reproduced this on 2026-10-08 for the bundled LWJGL 3.3.3 GLFW, the Three
+Openings host and a plain Xlib window alike, so first map a plain control window
+(`tools/challenge/check_window_startup.py`) before blaming host code. The host
+now creates its window hidden, issues the same `XMapWindow` without that wait,
+and holds its title until the window is viewable. `Engine` still uses
+`glfwShowWindow`. An override_redirect map is a diagnostic only.

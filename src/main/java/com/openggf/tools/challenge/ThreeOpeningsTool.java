@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
 import org.joml.Matrix4f;
+import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryUtil;
 
@@ -31,13 +32,14 @@ public final class ThreeOpeningsTool {
             Executors.newSingleThreadExecutor(r -> new Thread(r, "challenge-host-admission"));
     private final GamepadStateSource pads = new GlfwGamepadStateSource();
     private final boolean[] keys = new boolean[GLFW_KEY_LAST + 1];
-    private long window, generation, nextTick, sceneAt = System.nanoTime();
+    private long window, generation, nextTick, sceneAt = System.nanoTime(), showRequestedAt;
     private Scene scene = Scene.TITLE;
     private ChallengeHost host;
     private CompletableFuture<List<ChallengeProtocol.Frame>> pending;
     private List<ChallengeProtocol.Frame> frames = List.of();
     private int submittedHeld, focus, oldFocus, fadeTicks;
-    private boolean padAcceptBefore, padPauseBefore, padFocusBefore, padRestartBefore, hadPad, focused = true;
+    private boolean padAcceptBefore, padPauseBefore, padFocusBefore, padRestartBefore, hadPad, focused = true,
+            shown, waitingNotice;
     private String fault = "", audioFault;
     private OpenAlPcmSink sink;
     private ChallengeMenuAudio menuAudio;
@@ -94,14 +96,10 @@ public final class ThreeOpeningsTool {
     private void run() throws Exception {
         Throwable terminalFailure = null;
         try {
+            GLFWErrorCallback.createPrint(System.err).set();
             if (!glfwInit())
                 throw new IllegalStateException("The desktop display could not be opened");
-            glfwDefaultWindowHints();
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-            window = glfwCreateWindow(WIDTH, HEIGHT, "Three Openings | OpenGGF", 0, 0);
-            if (window == 0)
-                throw new IllegalStateException("The game window could not be created");
+            window = ChallengeWindow.create(WIDTH, HEIGHT, "Three Openings | OpenGGF");
             glfwMakeContextCurrent(window);
             glfwSwapInterval(1);
             GL.createCapabilities();
@@ -120,12 +118,15 @@ public final class ThreeOpeningsTool {
             presentation = new ChallengePresentation(window);
             try {
                 initializeSound();
-                cue(GameSound.CHECKPOINT);
             } catch (IOException failure) {
                 System.err.println("Title sound unavailable: " + failure.getMessage());
             }
+            ChallengeWindow.requestShow(window);
+            showRequestedAt = System.nanoTime();
             boolean[] previous = new boolean[keys.length];
             while (!glfwWindowShouldClose(window)) {
+                if (!shown && !awaitShown())
+                    continue;
                 glfwPollEvents();
                 update(previous);
                 if (capture != null)
@@ -175,7 +176,13 @@ public final class ThreeOpeningsTool {
                         if (window != 0)
                             glfwDestroyWindow(window);
                     },
-                    () -> glfwTerminate());
+                    () -> glfwTerminate(),
+                    ()
+                            -> {
+                        var errors = glfwSetErrorCallback(null);
+                        if (errors != null)
+                            errors.free();
+                    });
             if (stepCount > 0) {
                 long[] times = Arrays.copyOf(stepTimes, stepCount);
                 Arrays.sort(times);
@@ -186,6 +193,26 @@ public final class ThreeOpeningsTool {
             }
         }
         ChallengeCleanup.rethrow(terminalFailure);
+    }
+    /**
+     * Holds the title (and any scripted program) until the desktop actually
+     * shows the window. Returns true once it is viewable.
+     */
+    private boolean awaitShown() {
+        glfwWaitEventsTimeout(.05);
+        if (!ChallengeWindow.shown(window)) {
+            if (!waitingNotice && System.nanoTime() - showRequestedAt > 3_000_000_000L) {
+                waitingNotice = true;
+                System.err.println("Waiting for the desktop to show the Three Openings window. "
+                        + "A locked or busy session can hold new windows back; it will open once shown.");
+            }
+            return false;
+        }
+        shown = true;
+        glfwFocusWindow(window);
+        cue(GameSound.CHECKPOINT);
+        transition(Scene.TITLE);
+        return true;
     }
     private void update(boolean[] previous) throws IOException {
         var connected = pads.pollDevices()
