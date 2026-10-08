@@ -52,7 +52,8 @@ Mecha Sonic and an Egg Robo.
 
 The game the mod launches with is the **running game**: `default` in `config.yaml` when
 that ROM is available (otherwise the first available of Sonic 1, 2 and 3 & Knuckles), or
-the first ROM you name to `build.py`. Its own sound driver supplies the menu music and
+the first supplied ROM in Sonic 1, Sonic 2, Sonic 3 & Knuckles order with `build.py`.
+Its own sound driver supplies the menu music and
 the menu sound effects, whichever ROM a song or stage comes from:
 
 | Running game | Menu theme | Cursor | Confirm | Start | Results |
