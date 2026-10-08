@@ -251,7 +251,7 @@ fresh guards. A 150-minute per-invocation limit excludes queue waiting; the
 existing ten-minute no-output limit remains. Timeout means incomplete. Final
 candidate identities, full assertions and first causal skip reasons will be
 compared; only the SSZ Tails object-blob hexadecimal identity is normalized.
-The final ordinary/guard outcome is pending at this checkpoint.
+This checkpoint preceded the completed red 37a run and repairs below.
 
 
 ## Broad regression repair before composed handoff
@@ -276,7 +276,7 @@ verify the repair; no pass is inferred from this source diagnosis.
 
 Guard failures identify new game/level dependencies on concrete mod types and
 growth of GameLoop/LevelManager. Pending-command retention is extracted from
-GameLoop; session/resource ownership is being inverted through engine-owned
+GameLoop; session/resource ownership is inverted through engine-owned
 provider/service types, retaining per-world state and rewind ordering. Ratchets,
 allowlists and source budgets remain intact. Published destination composition
 preserves Sitar SMPS/scene APIs and the later launcher-only successor, with final
@@ -347,7 +347,7 @@ Descriptor/runtime remain unpublished 0.7.0 candidate. No published pin changed.
 Invocation 83012 ran 21 explicitly selected trace cases: 18 passed, three exact
 inherited assertions, zero errors/skips. Its invalid `-Ptrace` name did not
 activate a profile; this is recorded as incomplete normal-profile qualification.
-The corrected `trace-replay` profile is required after composition. No shared
+The corrected `trace-replay` profile completed after composition, as recorded below. No shared
 baseline is duplicated. Final combined validation uses the actual destination,
 full change-based selection and fresh guards, 150-minute execution caps and the
 existing ten-minute no-output rule; waiting is excluded. Latest published-base
@@ -355,3 +355,92 @@ cost is about 109 minutes ordinary plus 3.6 minutes guards, not an ETA.
 All full assertion/skip identities must match the qualified baseline before
 handoff. Source remains lead-owned; feature push/PR is held for root-owned Opus
 polish and its separate promo-video stage.
+
+
+## Verified implementation handoff, 2026-10-08
+
+At engine source `0a827ab96ab7db2f475803b8b4e9d50095ea89f5`, the normal
+combined command was:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 33d3976c53304dbbea1c695914ecdd7bfc64cf9d --max-minutes 150 --run
+```
+
+Run `20261008T033426Z-f1428fb2` completed: 3,031 selected ordinary classes,
+3,029 reports, 26,458 tests, 28 assertion failures, zero errors and 62 skips
+in 5,158.69 seconds. The separate fresh guards JVM completed 86 reports and
+672 passes, zero errors/skips, in 216.70 seconds. Overall exit was one.
+All full failure assertions and all skip identities/first causal reasons match
+the qualified baseline: 27 assertions literal after exception-prefix removal,
+and the complete 2,951-character SSZ assertion after only the verified
+`RewindObjectStateBlob@hex` normalization. There are no new, worsened,
+unattributed or omitted failures, changed skips or ROM skips. This is inherited
+failure qualification, not a green full-suite claim. All nine additional
+ordinary failures are resolved, all twelve changed inherited assertions match
+again, and all three structural blockers pass without raised budgets/allowlists.
+The complete ordinary plan includes both level-loading classes and the other
+mandatory S3K classes with no reported failures/errors/skips. Mutator classes
+have none; Infinite retains exactly the same 32 skip identities/reasons.
+
+All 10,185 frozen hashes were unchanged. Automatic raw XML cleanup and capped
+rolling logs were respected; complete results, selected classes and available
+class summaries were inspected. The consumed runner directory was acknowledged
+and deleted. The lightweight full comparison and 21-case repair inventory remain
+outside Git in the task scratch directory; no raw diagnostic archive is retained.
+
+Corrected invocation 60500 used `-Ptrace-replay`, the two EHZ segments and three
+S3K classes with all three original absolute ROM properties and Lua 5.4:
+21 cases, 18 passes, three full assertions literally equal to shared clean
+2fc SAME3, no errors/skips, exit one, 87 seconds. Neither the unchanged inherited
+trace divergence nor the earlier invalid-profile invocation is called trace-green.
+Invocation 34844 completed `-B -Dmse=off -DskipTests verify` in 34.652 seconds;
+it deliberately skipped tests while verifying the current binary/SDK/Javadoc.
+
+The destination advanced to `09cfcc0f882305d6a0c6a4fc05b600d3ca27a888` during
+that run. Its 24 paths add Sitar example presentation, example tests and prose;
+engine Java/resources, API, POM, hooks and runner are byte-unchanged from 33d.
+Intent merge `d4dc7a8e91e5ae55cbebffc7b4ef18e112f4a7d5` retains published ancestry
+and both measurement-catalogue entries. Actual-destination selection still has
+3,031 full ordinary classes plus fresh guards; actual tool preflight passed.
+The completed full shared-engine check is retained at its exact 33d attribution.
+The bounded latest composition command selected `TestSitarHeroArcade`,
+`TestSitarHeroPerformers`, `TestModdingDocumentationLinks`, and the five public
+API/policy classes through queued Maven `verify`. Invocation 91665 passed all
+69 cases in eight fresh classes with zero errors/skips, then verified binary,
+SDK and Javadoc artifacts (44.751 seconds execution). It exercises the changed
+upstream examples against the composed contract without repeating unchanged
+engine/trace/AV checks. The upstream owner separately qualified all seven new
+Sitar cases against 141 passing baseline cases and fresh 672 guards. This is
+focused composition evidence, not a full 09cf suite claim.
+
+Fresh compiled export remains byte-identical to the 20,392-line candidate pin;
+unpublished 0.7.0 status and published pins remain unchanged. Native Engine and
+Mutator presentation bytes are unchanged by the latest example-only merge, so
+previous captures retain their source attribution and applicability.
+
+Final normal-class GPU invocation 92650 contains 2,077 synchronized frames and
+1,661,600 stereo 48 kHz PCM frames. Current frames 620, 704, 1,360 and 2,076
+were inspected; CSV and PCM exactly equal the preceding composed capture.
+A 700-neutral-frame control (20500) has identical PCM through frame 603. Help's
+CONFIRM `0xB5` at 604 produces a nonconstant output contribution (difference
+AC RMS 1,438.005 over frames 604–610). NAVIGATE `0xCD` at 600/602 produces no
+observed PCM difference; audible navigation is a polish opportunity, not a
+completed observation. Native monitor PCM is changing, but no physical speaker
+or physical-controller claim is made. The successful current native path uses
+only the owned window's frameless mapping; default WM viewability timed out.
+Native Help is observed, while a synthetic Escape screenshot remains Help;
+controlled production-menu Enter/Escape Back cases pass separately. Check exact
+owned focus/readiness at the event before diagnosing routing on shared DISPLAY.
+
+Useful footage, commands, input logs, state CSV and PCM live under the task's
+outside-repository `captures/gpu-final-33d`,
+`captures/native-composed-0279-unmanaged`, `captures/native-composed-help-0279`
+and `captures/gpu-title-audio-control-33d`. All owned media processes/sinks closed;
+all child changes are integrated/accounted and child worktrees removed after
+committed-blob proof. Harness history and the feature tree/branch are retained.
+The original independent review resolved its blockers; this composed diff also
+received lead boundary/API/presentation/cleanup inspection and root factual
+checks, not a newly delegated generic review. Feature push/PR is deliberately
+held for root-owned Opus hands-on polish and a separate promo-video task.
+The handoff remains the bounded prototype, not completion of future MVP gates.

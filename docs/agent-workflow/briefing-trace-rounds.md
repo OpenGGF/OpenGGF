@@ -86,7 +86,10 @@ before recording. Default-visible creation and explicit ShowWindow are distinct
 paths; one successful path does not certify the other. A bounded workaround may
 map only the owned window with `override_redirect`; record that frameless path
 and any child-only driver/audio environment rather than claiming default WM
-support. Never change global display/audio settings or another process's window.
+support. Never change global display/audio settings or another process's window. On
+shared DISPLAY, recheck the exact owned window's focus/readiness at each input
+event and possible overlapping capture before treating an unchanged page as a
+routing defect.
 
 Synthetic X11 releases must use `protocol.event.KeyRelease`: constructing a
 `KeyPress` object with a `type=KeyRelease` argument still serializes a press in

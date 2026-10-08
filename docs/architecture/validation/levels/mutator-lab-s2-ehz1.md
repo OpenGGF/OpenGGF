@@ -9,7 +9,7 @@ Its intent-merged 16-class focused invocation 35517 passed 106 cases, zero
 failures/errors/skips, including the native revision/recreation replay and
 stock power-up music rules. Captures below use normal compiled merge source
 `157401f252` against 2fc; the subsequent 37a merge changes tools/docs only.
-SDK verification and affected traces completed; final combined validation is pending.
+Those historical checks are supplemented by the completed composed evidence below.
 
 The composed repair source `0a874c2371` contains published `02796b4` and Sitar's
 SMPS/scene contracts. Its fresh 2,077-frame GPU/state/PCM walkthrough observes
@@ -71,3 +71,27 @@ window. Captures belong in the task's outside-repository directory.
 Inherited stock-act coverage remains in this backlog. Future breadth must
 add per-character, donor, viewport, event/load and rewind evidence instead of
 promoting this opening sequence into a full route claim.
+
+
+## Composed implementation evidence
+
+Engine source `0a827ab96a` at base `33d3976c53` completed the full change-based
+ordinary selection: 26,458 tests, 28 fully matched inherited assertions, zero
+errors and 62 identical baseline skips; fresh guards 672 pass, zero skips.
+All previous nine additional failures/twelve changed assertions/three guards
+are resolved. Normal `trace-replay` has 18 passes and three literally matched
+inherited S3K assertions, no skips; both EHZ segments pass. The complete
+[implementation evidence](../../plans/2026-10-07-mutators-prototype-implementation.md#verified-implementation-handoff-2026-10-08)
+records command, source and comparison limits.
+
+Published 09cf ancestry is retained by `d4dc7a8e91`; its Sitar example-only
+changes leave engine/API/rendering bytes unchanged. Latest bounded composition
+passes 69 affected-example/API/docs cases and SDK verification, zero skips;
+this does not relabel the 33d full run as a 09cf full-suite pass. Current GPU
+frames/CSV/PCM establish the opening title/configuration/Gravity/Stealth/restart
+slice. Native Engine play/hub/relaunch is observed on the owned frameless
+window path. Native Help Back remains unobserved input; controlled fixed-key
+Back cases pass. Confirmation has measured PCM contribution; navigation has
+none in the neutral control. Physical speakers/controllers, default-WM
+reliability and a complete act route remain unqualified. Root-owned Opus polish
+and promo follow the clean implementation handoff; feature push/PR is held.
