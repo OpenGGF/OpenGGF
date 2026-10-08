@@ -5,6 +5,7 @@ import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.scroll.SwScrlMhz;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -195,6 +196,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
     private int endBossArenaScrollDataByte;
     private int endBossArenaScrollDataIndex;
     private boolean endBossPillarArtQueued;
+    private boolean endBossNativeCameraActive;
     private boolean endBossArenaForegroundRefreshActive;
     private boolean endBossArenaHScrollCleared;
     private int endBossArenaPillarControllerCount;
@@ -244,6 +246,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         endBossArenaScrollDataByte = 0;
         endBossArenaScrollDataIndex = 0;
         endBossPillarArtQueued = false;
+        endBossNativeCameraActive = false;
         endBossArenaForegroundRefreshActive = false;
         endBossArenaHScrollCleared = false;
         endBossArenaPillarControllerCount = 0;
@@ -323,8 +326,14 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
 
     private void armAct1MinibossArenaIfReached() {
         Camera camera = camera();
+        // loc_54B4E compares the 320px Camera_X_pos with $4298. In a wider
+        // viewport the visible left edge trails that native origin; at 800px
+        // Sonic reaches his native right boundary before the old test can fire.
+        // Keep the ROM threshold in world space and translate only the view.
+        int nativeCameraX = com.openggf.camera.NativeViewportFraming.nativeLeft(
+                camera.getX(), camera.getWidth()) & 0xFFFF;
         if ((camera.getY() & 0xFFFF) < ACT1_MINIBOSS_CAMERA_Y
-                || (camera.getX() & 0xFFFF) < ACT1_MINIBOSS_CAMERA_X) {
+                || nativeCameraX < ACT1_MINIBOSS_CAMERA_X) {
             return;
         }
 
@@ -352,7 +361,11 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
 
     private void updateAct1MinibossRepeatSpecialEvent() {
         Camera camera = camera();
-        int cameraX = camera.getX() & 0xFFFF;
+        // loc_54CB0 wraps the native camera/players/objects by $200 and copies
+        // that origin to Camera_min_X_pos. Bound words remain native; only the
+        // rendered camera is inset for widescreen, just like arena admission.
+        int cameraX = com.openggf.camera.NativeViewportFraming.nativeLeft(
+                camera.getX(), camera.getWidth()) & 0xFFFF;
         if (cameraX >= ACT1_MINIBOSS_REPEAT_THRESHOLD_X) {
             cameraX = (cameraX - ACT1_MINIBOSS_REPEAT_OFFSET_X) & 0xFFFF;
             levelRepeatOffset = ACT1_MINIBOSS_REPEAT_OFFSET_X;
@@ -362,7 +375,8 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
                 levelManager.getObjectManager().applyLevelRepeatOffsetToActiveObjects(
                         -ACT1_MINIBOSS_REPEAT_OFFSET_X, 0);
             }
-            camera.setX((short) cameraX);
+            camera.setX((short) com.openggf.camera.NativeViewportFraming.visibleLeft(
+                    cameraX, camera.getWidth()));
             camera.setMaxX((short) ACT1_MINIBOSS_CAMERA_X);
         }
         camera.setMinX((short) cameraX);
@@ -383,10 +397,15 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
                 camera.getMinX(), ACT1_TO_ACT2_TRANSITION_OFFSET_X);
         int postTransitionMaxX = offsetCameraBoundWord(
                 camera.getMaxX(), ACT1_TO_ACT2_TRANSITION_OFFSET_X);
+        var scroll = (SwScrlMhz) module().getScrollHandlerProvider().getHandler(Sonic3kZoneIds.ZONE_MHZ);
+        var handoff = seamlessTransitionResourceHandoffs().register(
+                new MhzActTransitionHandoff(levelManager().getCurrentLevel(), this,
+                        scroll.captureForActTransition(ACT1_TO_ACT2_TRANSITION_OFFSET_X)));
         levelManager().requestSeamlessTransition(
                 SeamlessLevelTransitionRequest.builder(
                                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                         .targetZoneAct(Sonic3kZoneIds.ZONE_MHZ, 1)
+                        .resourceHandoff(handoff)
                         .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
                         .deactivateLevelNow(false)
                         .preserveMusic(true)
@@ -444,6 +463,15 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
     }
 
     private void updateAct2ScreenEvent() {
+        if (eventRoutine == 0) {
+            // loc_5545A returns the foreground to loc_54DB0 after arena redraw.
+            // Wait for this capsule's results, then re-enter loc_54DBE so its
+            // Events_fg_4 ship request can be consumed on the next dispatch.
+            if (gameStateOrNull() != null && gameState().isEndOfLevelFlag()) {
+                eventRoutine = ACT2_INITIAL_ROUTINE;
+            }
+            return;
+        }
         if (eventRoutine == ACT2_INITIAL_ROUTINE) {
             if (shipTransitionFlag) {
                 startAct2ShipSequence();
@@ -738,7 +766,10 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
             advanceAct2EndBossArenaBottomUpDraw();
             return;
         }
-        if ((camera().getX() & 0xFFFF) < ACT2_BG_END_BOSS_CAMERA_X) {
+        // loc_55312 compares the ROM camera origin. The visible left edge
+        // trails it by half the added width; waiting for that edge delayed
+        // the chase and then sub_556B8 pulled the player back into its $C0 limit.
+        if (nativeAct2CameraX() < ACT2_BG_END_BOSS_CAMERA_X) {
             return;
         }
 
@@ -746,6 +777,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         endBossArenaDrawPosition = ACT2_BG_END_BOSS_DRAW_POSITION;
         endBossArenaDrawRowCount = ACT2_BG_END_BOSS_DRAW_ROWCOUNT;
         endBossArenaBackgroundActive = true;
+        activateEndBossNativeCamera();
         endBossArenaScrollDataIndex = 0;
         endBossArenaScrollDataByte = currentEndBossScrollData()[endBossArenaScrollDataIndex];
         camera().setFrozen(true);
@@ -854,12 +886,19 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
 
     private void updateAct2EndBossRepeatSpecialEvent() {
         Camera camera = camera();
-        int nextCameraX = ((camera.getX() & 0xFFFF) + 4) & 0xFFFF;
+        int nextCameraX = (nativeAct2CameraX() + 4) & 0xFFFF;
         if (playerCharacter() == com.openggf.game.PlayerCharacter.KNUCKLES) {
             nextCameraX = (nextCameraX + 1) & 0xFFFF;
         }
 
         if (nextCameraX >= ACT2_END_BOSS_REPEAT_THRESHOLD_X) {
+            // loc_55620 tests Events_fg_5, then ST writes its high byte. The
+            // nonzero $55 from loc_768D2 ends looping; its negative acknowledged
+            // form also releases loc_55424's background restoration gate.
+            if (endBossWalkoffPrepEventFlag != 0) {
+                endBossWalkoffPrepEventFlag |= 0xFF00;
+                endBossArenaRestoreRequested = true;
+            }
             if (endBossArenaRestoreRequested && nextCameraX >= ACT2_END_BOSS_ESCAPE_THRESHOLD_X) {
                 nextCameraX = ACT2_END_BOSS_ESCAPE_THRESHOLD_X;
                 camera.setMaxX((short) ACT2_END_BOSS_ESCAPE_MAX_X);
@@ -940,7 +979,9 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         if (mirrorMaxX) {
             camera.setMaxX((short) cameraX);
         }
-        camera.setX((short) cameraX);
+        // loc_5569E writes one native word to Camera_X/min/max. Keep those
+        // boundary words intact and project only the engine display coordinate.
+        camera.setX((short) com.openggf.camera.NativeViewportFraming.visibleLeft(cameraX, camera.getWidth()));
         camera.setMinX((short) cameraX);
     }
 
@@ -987,7 +1028,12 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
 
     private void updateAct2Routine4CameraBounds() {
         Camera camera = camera();
-        int cameraX = camera.getX() & 0xFFFF;
+        // The retained native $98 lock has a negative visible left edge at
+        // 800px. Interpret its native origin before the unsigned ROM compare;
+        // otherwise -$58 is mistaken for the far end of Act 2.
+        int cameraX = hasInheritedActOneCameraLock() || endBossNativeCameraActive
+                ? com.openggf.camera.NativeViewportFraming.nativeLeft(camera.getX(), camera.getWidth()) & 0xFFFF
+                : camera.getX() & 0xFFFF;
         int cameraY = camera.getY() & 0xFFFF;
         if (cameraX >= ACT2_FINAL_GATE_CAMERA_X) {
             if (cameraX == ACT2_FINAL_GATE_CAMERA_X) {
@@ -999,7 +1045,14 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
             return;
         }
 
-        setMinY(computeAct2Routine4MinY(cameraX));
+        // loc_54E00 selects the vertical corridor from the native 320px camera
+        // origin. A wider view's left edge trails that origin; using it leaves
+        // the lower-route Y minimum active while the leaf blower lifts Sonic.
+        // Project this display coordinate back for the ROM thresholds, without
+        // changing the raw X boundary/arena branches below or their native words.
+        int nativeCameraX = com.openggf.camera.NativeViewportFraming.nativeLeft(
+                camera.getX(), camera.getWidth()) & 0xFFFF;
+        setMinY(computeAct2Routine4MinY(nativeCameraX));
         updateAct2Routine4MinX(cameraX);
         updateAct2Routine4MaxY();
     }
@@ -1015,7 +1068,9 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
     }
 
     private void updateAct2Routine4MinX(int cameraX) {
-        if (cameraX >= ACT2_LATE_CAMERA_X) {
+        // loc_54E3C leaves the cutscene-owned minimum alone while Events_bg+$16
+        // is set. Otherwise the level event overwrites loc_63182's lock each pass.
+        if (cameraX >= ACT2_LATE_CAMERA_X || leafBlowerCutsceneFlag) {
             return;
         }
         AbstractPlayableSprite player = focusedPlayer();
@@ -1274,6 +1329,36 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         return camera().getFocusedSprite();
     }
 
+    /** Native bounds retained by MHZ1_BackgroundEvent until Change_Act2Sizes. */
+    public boolean hasInheritedActOneCameraLock() {
+        // The ROM subtracts $4200 from the Act 1 maximum $4298 at Load_Level.
+        // Results and the in-level title still own that $98 maximum after the
+        // Act 2 runtime replaces the Act 1 boss flag. Retain our widescreen
+        // projection until the real boundary expands, rather than dropping it
+        // on resource reload or on the earlier End_of_level_active clear.
+        return (camera().getMaxX() & 0xFFFF)
+                == ACT1_MINIBOSS_CAMERA_X + ACT1_TO_ACT2_TRANSITION_OFFSET_X;
+    }
+
+    /**
+     * The ROM keeps one camera coordinate through weather machine, chase,
+     * capsule and ship departure. Our display origin is inset in widescreen;
+     * retain this semantic projection after the fight's background is restored.
+     * ZoneEventSchemaSidecar captures the flag, and init clears it on fresh load.
+     */
+    public void activateEndBossNativeCamera() {
+        endBossNativeCameraActive = true;
+    }
+
+    public boolean isEndBossNativeCameraActive() {
+        return endBossNativeCameraActive;
+    }
+
+    private int nativeAct2CameraX() {
+        var camera = camera();
+        return com.openggf.camera.NativeViewportFraming.nativeLeft(camera.getX(), camera.getWidth()) & 0xFFFF;
+    }
+
     public boolean isBossFlag() {
         return bossFlag;
     }
@@ -1348,6 +1433,10 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
 
     public boolean isShipScrollLockSet() {
         return shipScrollLockSet;
+    }
+
+    public void setShipControllerSignalFlag(boolean active) {
+        shipControllerSignalFlag = active;
     }
 
     public boolean isShipControllerSignalFlagSet() {

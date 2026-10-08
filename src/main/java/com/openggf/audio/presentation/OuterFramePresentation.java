@@ -44,7 +44,7 @@ public final class OuterFramePresentation {
         if (modalPicker || paused || frameStepRequested) {
             return PresentationMode.SILENT;
         }
-        return audioManager.isReverseAudioPresentationActive()
+        return audioManager.isReverseAudioOutputActive()
                 ? PresentationMode.REVERSE
                 : PresentationMode.FORWARD;
     }

@@ -110,11 +110,44 @@ public class AniPlcScriptState {
         return tilesPerFrame;
     }
 
+    /** Presentation-only residency copies every decoded source tile without advancing the script. */
+    public Pattern[] copySceneArtPatterns() {
+        Pattern[] copies = new Pattern[artPatterns.length];
+        for (int i = 0; i < copies.length; i++) {
+            copies[i] = new Pattern();
+            copies[i].copyFrom(artPatterns[i]);
+        }
+        return copies;
+    }
+
     public void prime(Level level, GraphicsManager graphicsManager) {
         if (frameTileIds.length == 0 || artPatterns.length == 0) {
             return;
         }
         applyFrame(level, graphicsManager, frameTileIds[0]);
+    }
+
+    /**
+     * Copies the first frame into a detached tile array at this script's destination, as
+     * {@link #prime} does for a live level, without touching a level or any graphics owner.
+     * For presentation copies of a level's tiles (mod scene backdrops); destinations outside
+     * {@code patterns} are skipped.
+     */
+    public void primeInto(Pattern[] patterns) {
+        if (frameTileIds.length == 0 || artPatterns.length == 0) {
+            return;
+        }
+        int tileId = frameTileIds[0];
+        for (int i = 0; i < tilesPerFrame; i++) {
+            int srcIndex = tileId + i;
+            int destIndex = destTileIndex + i;
+            if (srcIndex < 0 || srcIndex >= artPatterns.length || destIndex < 0 || destIndex >= patterns.length) {
+                continue;
+            }
+            Pattern copy = new Pattern();
+            copy.copyFrom(artPatterns[srcIndex]);
+            patterns[destIndex] = copy;
+        }
     }
 
     /** Returns the current countdown timer (rewind-restore access). */

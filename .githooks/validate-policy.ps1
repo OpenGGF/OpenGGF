@@ -194,7 +194,7 @@ function Get-CurrentApiValue([string]$Ref) {
 }
 
 function Test-ContainsModApiAnnotation([string]$Text) {
-    return $Text -match '(?m)^\s*@ModApi(?:[.(\s]|$)'
+    return $Text -match '(?m)^\s*@(?:com\.openggf\.game\.)?ModApi(?:[.(\s]|$)'
 }
 
 # Mirrors mod_api_surface_text in validate-policy.sh.
@@ -689,9 +689,19 @@ function Test-RomLikeTrackedPath([string]$Path) {
     return $false
 }
 
-function Validate-FileSizePolicyForFiles([string[]]$Files, [scriptblock]$SizeResolver) {
+function Test-ApprovedAuthoredFixture([string]$Source, [string]$Path) {
+    $python = Get-Command python3, python -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -eq $python) {
+        return $false
+    }
+    & $python.Source (Join-Path $PSScriptRoot "authored_fixture_policy.py") $Source $Path
+    return ($LASTEXITCODE -eq 0)
+}
+
+function Validate-FileSizePolicyForFiles([string[]]$Files, [scriptblock]$SizeResolver,
+        [string]$Source = "INDEX") {
     foreach ($path in $Files) {
-        if (Test-RomLikeTrackedPath $path) {
+        if ((Test-RomLikeTrackedPath $path) -and -not (Test-ApprovedAuthoredFixture $Source $path)) {
             Add-ValidationError "``$path`` looks like a ROM/binary asset. Keep user-supplied ROMs and ROM-derived binary assets untracked."
         }
         $size = & $SizeResolver $path
@@ -1070,7 +1080,7 @@ function Validate-CommitContent([string]$Commit) {
     }
     $files = @(Get-CommitCandidates $Commit)
     Reset-ValidationErrors
-    Validate-FileSizePolicyForFiles $files { param($path) Get-CommitBlobSize $Commit $path }
+    Validate-FileSizePolicyForFiles $files { param($path) Get-CommitBlobSize $Commit $path } $Commit
     Validate-ContentCandidates $files "commit" $Commit
     if ($script:Errors.Count -gt 0) {
         Note "commit $Commit violates the repository resource policy."

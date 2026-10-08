@@ -64,6 +64,18 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     // Names may differ between zone sets; membership means a concrete owner
     // exists in every zone. Zone-gated implementations remain in the sets below.
     public static final Set<Integer> SHARED_IMPLEMENTED_IDS = Set.of(
+            0x57, // MGZTriggerPlatform (S3KL) / DEZTunnelLauncher (SKL)
+            0x4E, // CNZWireCage (S3KL) / DEZLiftPad (SKL)
+            0x53, // MGZSwingingPlatform (S3KL) / DEZConveyorPad (SKL)
+            0x4C, // CNZSpiralTube (S3KL) / DEZHangCarrier (SKL)
+            0x56, // MGZMovingSpikePlatform (S3KL) / DEZEnergyBridgeCurved (SKL)
+            0x4F, // SinkingMud (S3KL) / DEZStaircase (SKL)
+            0x4D, // CNZBarberPoleSprite (S3KL) / DEZTorpedoLauncher (SKL)
+            0x50, // MGZTwistingLoop (S3KL) / DEZConveyorBelt (SKL)
+            0x52, // MGZSmashingPillar (S3KL) / DEZLightning (SKL)
+            0x6D, // HCZWaterSplash (S3KL) / InvisibleShockBlock (SKL)
+            0xAE, // StarPointer / LRZ2CutsceneKnuckles
+            0xB3, // ICZSegmentColumn / StartNewLevel
             0x00, // Ring
             0x01, // Monitor
             0x02, // PathSwap
@@ -81,6 +93,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x2F, // StillSprite
             0x30, // AnimatedStillSprite
             0x31, // LBZRollingDrum / LRZCollapsingBridge
+            0x32, // AIZDrawBridge / LRZTurbineSprites
             0x33, // Button
             0x34, // StarPost
             0x35, // AIZForegroundPlant
@@ -112,9 +125,17 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x3D, // RetractingSpring
             0x51, // FloatingPlatform
             0x54, // Bubbler
+            0x55, // MGZHeadTrigger (S3KL) / DEZEnergyBridge (SKL) -- as $5B below
+            0x58, // MGZSwingingSpikeBall (S3KL) / DEZGravitySwitch (SKL) -- as $5B below
+            0x59, // MGZDashTrigger (S3KL) / DEZTeleporter (SKL) -- concrete in both
+            0x5A, // MGZPulley (S3KL) / DEZGravityTube (SKL) -- concrete in both
+            0x5B, // MGZTopPlatform (S3KL) / DEZGravitySwap (SKL) -- concrete in both object
+                  // tables, so it is shared even though the two are unrelated objects
+            0x5C, // MGZTopLauncher (S3KL) / DEZGravityHub (SKL) -- concrete in both
             0x6A, // InvisibleHurtBlockHorizontal
             0x6B, // InvisibleHurtBlockVertical
             0x6C, // TensionBridge
+            0x6E, // HCZWaterDrop (S3KL) / InvisibleLavaBlock (SKL)
             0x78, // FBZDEZPlayerLauncher
             0x80, // HiddenMonitor
             0x82, // CutsceneKnuckles
@@ -130,6 +151,10 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x8E, // MonkeyDude / Dragonfly
             0x8F, // CaterKillerJr / Butterdroid
             0x90, // AIZMinibossCutscene / Cluckoid
+            0xA4, // Sparkle / Spikebonker
+            0xA5, // Batbot / Chainspike
+            0xA6, // CNZMiniboss / DEZMiniboss
+            0xA7, // CNZEndBoss / DEZEndBoss
             0xA8, // Blaster / MHZ1CutsceneKnuckles
             0xA9, // TechnoSqueek / MHZ1CutsceneButton
             0xEB // GumballItem
@@ -155,28 +180,15 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x2C, // AIZCollapsingLogBridge
             0x2D, // AIZFallingLog
             0x2E, // AIZSpikedLog
-            0x32, // AIZDrawBridge
             0x36, // HCZBreakableBar
             0x37, // HCZWaterRush
-            0x4C, // CNZSpiralTube
-            0x4D, // CNZBarberPoleSprite
-            0x4E, // CNZWireCage
-            0x4F, // SinkingMud
-            0x50, // MGZTwistingLoop
-            0x52, // MGZSmashingPillar
-            0x53, // MGZSwingingPlatform
             0x55, // MGZHeadTrigger
-            0x56, // MGZMovingSpikePlatform
-            0x57, // MGZTriggerPlatform
             0x58, // MGZSwingingSpikeBall
-            0x59, // MGZDashTrigger
-            0x5A, // MGZPulley
             0x5B, // MGZTopPlatform
             0x5C, // MGZTopLauncher
             0x67, // HCZSnakeBlocks
             0x68, // HCZSpinningColumn
             0x69, // HCZTwistingLoop
-            0x6D, // HCZWaterSplash
             0x6E, // WaterDrop
             0x6F, // FBZWireCage
             0x70, // FBZWireCageStationary
@@ -205,17 +217,12 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0xA1, // MGZEndBoss
             0xA2, // MGZEndBossKnux
             0xA3, // Clamer
-            0xA4, // Sparkle
             0xA5, // Batbot
-            0xA6, // CNZMiniboss
-            0xA7, // CNZEndBoss
             0xAD, // Penguinator
-            0xAE, // StarPointer
             0xAF, // ICZCrushingColumn
             0xB0, // ICZPathFollowPlatform
             0xB1, // ICZBreakableWall
             0xB2, // ICZFreezer
-            0xB3, // ICZSegmentColumn
             0xB4, // ICZSwingingPlatform
             0xB5, // ICZStalagtite
             0xB6, // ICZIceCube
@@ -277,7 +284,14 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
 
     // SKL-only implementations (zones 7-13: MHZ through DDZ), on top of SHARED.
     private static final Set<Integer> SKL_ONLY_IDS = Set.of(
+            0x4B, // DEZTiltingBridge -- S3KL is the CNZ triangle bumper
+            0x4A, // DEZFloatingPlatform -- S3KL is the zone-bound Bumper
             0x14, // Updraft
+            0x5D, // DEZRetractingSpring -- S3KL $5D is the competition-only Obj_CGZTriangleBumpers
+            0x5E, // DEZHoverMachine -- S3KL is competition-only CGZBladePlatform
+            0x5F, // DEZGravityRoom -- the S3KL table has no object at this number
+            0x60, // DEZBumperWall -- the S3KL table has no object at this number
+            0x61, // DEZGravityPuzzle -- S3KL $61 is the competition-only Obj_BPZBalloon
             0x8B // SpriteMask
     );
 
@@ -299,11 +313,58 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x93 // MHZEndBoss
     );
 
+    // LRZ-only implementations from SKL ids gated on ZONE_LRZ.
+    private static final Set<Integer> LRZ_ONLY_IDS = Set.of(
+            0x15, // LRZCorkscrew
+            0x16, // LRZWallRide
+            0x18, // LRZFallingSpike
+            0x1B, // LRZFireballLauncher
+            0x1F, // LRZLavaFall
+            0x20, // LRZSwingingSpikeBall
+            0x17, // LRZSinkingRock
+            0x19, // LRZDoor
+            0x1A, // LRZBigDoor
+            0x1C, // LRZButtonHorizontal
+            0x1D, // LRZShootingTrigger
+            0x1E, // LRZDashElevator
+            0x21, // LRZSmashingSpikePlatform
+            0x22, // LRZSpikeBall
+            0x29, // LRZFlameThrower
+            0x2B, // LRZOrbitingSpikeBallHorizontal
+            0x2C, // LRZOrbitingSpikeBallVertical
+            0x2D, // LRZSolidMovingPlatforms
+            0x25, // LRZChainedPlatforms
+            0x37, // LRZSpikeBallLauncher
+            0x99, // Fireworm
+            0x9A, // Iwamodoki
+            0x9B, // Toxomister
+            0x9C, // LRZRockCrusher
+            0x9D // LRZMiniboss
+    );
+
     // DDZ-only implementations from SKL ids gated on ZONE_DDZ.
     private static final Set<Integer> DDZ_ONLY_IDS = Set.of(
             0xB6, // DDZEndBoss
             0xB7, // DDZAsteroid
             0xB8 // DDZMissile
+    );
+
+    /** Sky Sanctuary's own SKL registrations (the S3KL names at these ids are different objects). */
+    private static final Set<Integer> SSZ_ONLY_IDS = Set.of(
+            0x74, // SSZRetractingSpring
+            0x75, // SSZSwingingCarrier
+            0x76, // SSZRotatingPlatform
+            0x77, // SSZCutsceneBridge
+            0x79, // SSZHPZTeleporter's Sky Sanctuary branch (HPZ shares the id and the class)
+            0x7A, // SSZElevatorBar
+            0x7B, // SSZCollapsingBridgeDiagonal
+            0x7C, // SSZCollapsingBridge
+            0x7D, // SSZBouncyCloud
+            0x7E, // SSZCollapsingColumn
+            0x7F, // SSZFloatingPlatform
+            0xA0, // EggRobo
+            0xAF, // SSZCutsceneButton
+            0xB2 // KnuxFinalBossCrane
     );
 
     /** Every id implemented in at least one S3KL zone. */
@@ -316,8 +377,14 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             if (zoneId == Sonic3kZoneIds.ZONE_MHZ) {
                 return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, MHZ_ONLY_IDS);
             }
-            return zoneId == Sonic3kZoneIds.ZONE_DDZ
-                    ? union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, DDZ_ONLY_IDS)
+            if (zoneId == Sonic3kZoneIds.ZONE_DDZ) {
+                return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, DDZ_ONLY_IDS);
+            }
+            if (zoneId == Sonic3kZoneIds.ZONE_SSZ) {
+                return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, SSZ_ONLY_IDS);
+            }
+            return zoneId == Sonic3kZoneIds.ZONE_LRZ
+                    ? union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, LRZ_ONLY_IDS)
                     : union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS);
         }
         if (zoneId == Sonic3kZoneIds.ZONE_CNZ) {

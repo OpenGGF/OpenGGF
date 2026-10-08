@@ -1,6 +1,5 @@
 package com.openggf.graphics;
 
-import com.openggf.Engine;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -166,9 +165,9 @@ public class GraphicsManager {
 	private int verticalWrapCameraY = 0;
 
 	/**
-	 * Reference to the Engine for accessing projection matrix.
+	 * The current render projection, supplied by the rendering host.
 	 */
-	private Engine engine;
+	private RenderProjection projectionSource;
 
 	public void setPerformanceProfiler(com.openggf.debug.PerformanceProfiler profiler) {
 		this.profiler = profiler;
@@ -189,6 +188,17 @@ public class GraphicsManager {
 	 * Headless mode flag. When true, GL operations are skipped.
 	 * This enables testing game logic without requiring an OpenGL context.
 	 */
+    private final ArenaMaskRenderer arenaMaskRenderer = new ArenaMaskRenderer();
+
+    /** Queue a frozen presentation sample so later simulation cannot alter this frame. */
+    void drawArenaMask(ArenaMaskState state) {
+        if (headlessMode || !state.visible(getProjectionWidth())) return;
+        flushPatternBatch();
+        registerCommand((cameraX, cameraY, width, height) -> {
+            arenaMaskRenderer.draw(width, height, state);
+        });
+    }
+
 	private boolean headlessMode = false;
 	SpritePresentation.Builder spritePresentationBuilder;
 
@@ -630,6 +640,7 @@ public class GraphicsManager {
 	}
 
 	public void updatePatternTexture(Pattern pattern, int patternId) {
+		// Native null uploads allocate residency but leave existing GPU bytes intact.
 		ensurePatternAtlas();
 		if (headlessMode || !glInitialized) {
 			patternAtlas.updatePatternHeadless(pattern, patternId);
@@ -1805,6 +1816,7 @@ public class GraphicsManager {
 	 * Cleanup method to delete textures and release resources.
 	 */
 	public void cleanup() {
+        if (!headlessMode) arenaMaskRenderer.cleanup();
 		clearPendingRenderThreadTasks();
 		discardCommands(commands, 0);
 		commands.clear();
@@ -1956,18 +1968,23 @@ public class GraphicsManager {
 		return currentShaderProgram;
 	}
 
-	/**
-	 * Set the Engine reference for accessing projection matrix.
-	 */
-	public void setEngine(Engine engine) {
-		this.engine = engine;
+	/** Immutable local cache sample for ROM-recipe projection; never supplies guest art content. */
+	SpritePresentation.PatternVersion scenePatternSample(int patternId) {
+		return patternAtlas == null ? null : patternAtlas.scenePatternSample(patternId);
 	}
 
 	/**
-	 * Get the Engine reference.
+	 * Installs the rendering host's current projection. Null clears the source.
 	 */
-	public Engine getEngine() {
-		return engine;
+	void setProjectionSource(RenderProjection projection) {
+		this.projectionSource = projection;
+	}
+
+	/**
+	 * Returns the projection source without exposing engine orchestration.
+	 */
+	public RenderProjection getProjectionSource() {
+		return projectionSource;
 	}
 
 	/**
@@ -1981,7 +1998,7 @@ public class GraphicsManager {
 
 	/**
 	 * Get the projection matrix buffer for shader-based rendering.
-	 * First checks if a local buffer has been set, then falls back to Engine.
+	 * First checks a local override, then the rendering host's projection.
 	 * @return the projection matrix as a 16-element float array, or null if not available
 	 */
 	public float[] getProjectionMatrixBuffer() {
@@ -1989,9 +2006,8 @@ public class GraphicsManager {
 		if (projectionMatrixBuffer != null) {
 			return projectionMatrixBuffer;
 		}
-		// Fall back to engine reference
-		if (engine != null) {
-			return engine.getProjectionMatrixBuffer();
+		if (projectionSource != null) {
+			return projectionSource.getProjectionMatrixBuffer();
 		}
 		return null;
 	}

@@ -102,6 +102,15 @@ public final class TraceReplayDriver {
      * caller restores config and routes back to its idle/picker path).
      */
     public void start(int zone, int act) throws Exception {
+        start(zone, act, StartOrigin.DECLARED_POSITION);
+    }
+
+    /** Starts a continuous run, keeping the production load camera (Get_LevelSizeStart). */
+    public void startWithProductionLoadCamera(int zone, int act) throws Exception {
+        start(zone, act, StartOrigin.PRODUCTION_LOAD_CAMERA);
+    }
+
+    private void start(int zone, int act, StartOrigin origin) throws Exception {
         PlaybackDebugManager playback = GameServices.playbackDebug();
 
         // prepareConfiguration already ran inside launch() before
@@ -148,7 +157,7 @@ public final class TraceReplayDriver {
         GameServices.level().skipPendingInitialTitleCardPresentation();
         GameServices.level().consumeInLevelTitleCardRequest();
 
-        startPlayback(playback, false);
+        startPlayback(playback, origin);
     }
 
     /**
@@ -166,11 +175,15 @@ public final class TraceReplayDriver {
                 || trace.hardwareTimingSchedule().hasRecordedInput()) {
             fixture.gameplayMode().activateRecordedHardwareAdmission();
         }
-        startPlayback(playback, true);
+        startPlayback(playback, StartOrigin.PREPARED_LEVEL);
+    }
+
+    private enum StartOrigin {
+        DECLARED_POSITION, PRODUCTION_LOAD_CAMERA, PREPARED_LEVEL
     }
 
     private void startPlayback(
-            PlaybackDebugManager playback, boolean preparedLevel)
+            PlaybackDebugManager playback, StartOrigin origin)
             throws Exception {
         int startIndex = TraceReplayBootstrap
                 .recordingStartFrameForTraceReplay(trace);
@@ -198,7 +211,7 @@ public final class TraceReplayDriver {
         // applyStartPositionAndGroundSnap, not after. A prepared visual
         // session instead adopts the production title-card state that already
         // owns its position and ground attachment.
-        if (!preparedLevel) {
+        if (origin != StartOrigin.PREPARED_LEVEL) {
             if (TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace)
                     && !TraceReplaySessionBootstrap
                             .shouldPreserveFreshGroundedStatusUntilFirstDispatch(trace)) {
@@ -210,9 +223,10 @@ public final class TraceReplayDriver {
                     GameServices.collision().resolveGroundAttachment(preSnapSprite, 14, () -> false);
                 }
             }
-            TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
+            TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(
+                    trace, fixture, origin == StartOrigin.PRODUCTION_LOAD_CAMERA);
         }
-        TraceReplaySessionBootstrap.BootstrapResult boot = preparedLevel
+        TraceReplaySessionBootstrap.BootstrapResult boot = origin == StartOrigin.PREPARED_LEVEL
                 ? TraceReplaySessionBootstrap.applyPreparedLevelBootstrap(
                         trace, fixture, forceHardwareTimingReplay)
                 : TraceReplaySessionBootstrap.applyBootstrap(

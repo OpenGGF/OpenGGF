@@ -215,6 +215,36 @@ class TestPlaneSwitcherStateIsolation {
         assertEquals(-1, objectManager.getPlaneSwitcherSideState(switcher));
     }
 
+    @Test
+    void lrzArenaPriorityRequiresCrossingThePlacedMarkerAndReplaysAfterRestore() {
+        // LRZ/Object Pos/1.bin + $E22: $2BA0,$0750,$02,$22.
+        // Obj_PathSwap / loc_1CE54 sets art_tile bit 15 from subtype bit 5
+        // on a rightward crossing; initialization merely records the side.
+        ObjectSpawn marker = new ObjectSpawn(0x2BA0, 0x750, 2, 0x22, 0, false, 0);
+        ObjectManager manager = objectManager(marker);
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.setCentreX((short) 0x2C00);
+        sonic.setCentreY((short) 0x600);
+        manager.applyInlinePlaneSwitcher(marker, sonic);
+        assertEquals(false, sonic.isHighPriority(), "teleport beyond the marker skips the priority write");
+        manager = objectManager(marker);
+        sonic.setCentreX((short) 0x2B9F);
+        sonic.setCentreY((short) 0x7AD);
+        manager.applyInlinePlaneSwitcher(marker, sonic);
+        var before = manager.rewindSnapshottable().capture();
+        sonic.setCentreX((short) 0x2BA0);
+        manager.applyInlinePlaneSwitcher(marker, sonic);
+        assertEquals(true, sonic.isHighPriority(), "the arena floor is inside the marker's $80 half-span");
+        assertEquals(0x0C, sonic.getTopSolidBit() & 0xFF);
+        manager.rewindSnapshottable().restore(before);
+        sonic.setHighPriority(false);
+        manager.applyInlinePlaneSwitcher(marker, sonic);
+        assertEquals(true, sonic.isHighPriority(), "restored latch replays the priority write");
+        sonic.setCentreX((short) 0x2B9F);
+        manager.applyInlinePlaneSwitcher(marker, sonic);
+        assertEquals(false, sonic.isHighPriority(), "leftward crossing restores low priority");
+    }
+
     private static ObjectManager objectManager(ObjectSpawn switcher) {
         ObjectManager objectManager = new ObjectManager(
                 List.of(switcher),
@@ -233,7 +263,7 @@ class TestPlaneSwitcherStateIsolation {
                         return "Test";
                     }
                 },
-                0x03,
+                switcher.objectId(),
                 new PlaneSwitcherConfig((byte) 0x0C, (byte) 0x0D, (byte) 0x0E, (byte) 0x0F),
                 null,
                 null,

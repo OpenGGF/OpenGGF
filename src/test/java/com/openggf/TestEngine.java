@@ -218,7 +218,7 @@ class TestEngine {
         Map<String, Object> payload =
                 new com.openggf.game.sonic3k.dataselect.S3kSaveSnapshotProvider().capture(
                         SaveReason.PROGRESSION_SAVE,
-                        com.openggf.game.save.RuntimeSaveContext.forGameplayMode(sourceGameplay, save));
+                        com.openggf.game.save.RuntimeSaveCapture.capture(sourceGameplay, save));
 
         GameplayModeContext targetGameplay = mock(GameplayModeContext.class);
         GameStateManager gameState = new GameStateManager();
@@ -422,6 +422,36 @@ class TestEngine {
         assertEquals(448, getPrivateField(engine, "windowHeight"));
         assertEquals(400, graphics.getProjectionWidth());
         assertEquals(25, tilemapRenderer.getVScrollColumnCapacity());
+    }
+
+    @Test
+    void requiredModuleAspectPinsTheSessionUntilOverridesClear() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        config.resolveDisplayAspect();
+        GraphicsManager graphics = new GraphicsManager();
+        setPrivateField(graphics, "tilemapGpuRenderer", new TilemapGpuRenderer(320));
+        Engine engine = newTestEngine(config, graphics);
+        GameModule wide = new com.openggf.game.patch.DelegatingGameModule(new Sonic1GameModule(), "test:wide") {
+            @Override public String requiredDisplayAspect() { return "WIDE_16_9"; }
+        };
+
+        engine.applyRequiredDisplayAspect(new Sonic1GameModule());
+        assertEquals(320, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS), "no requirement keeps the setting");
+
+        engine.applyRequiredDisplayAspect(wide);
+        assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        assertEquals(400.0, (double) getPrivateField(engine, "projectionWidth"));
+
+        config.clearSessionOverrides();
+        config.resolveDisplayAspect();
+        assertEquals("NATIVE_4_3", config.getString(SonicConfiguration.DISPLAY_ASPECT),
+                "only a session override pinned the aspect");
+        assertEquals(320, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS), "the master title restores it");
+
+        config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, true);
+        engine.applyRequiredDisplayAspect(wide);
+        assertEquals(320, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS), "trace test mode stays native");
     }
 
     @Test

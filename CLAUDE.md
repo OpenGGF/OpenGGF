@@ -31,6 +31,7 @@ tools/testing/install-hooks.sh     # once per worktree
 python3 tools/testing/run_categories.py --list
 python3 tools/testing/run_categories.py --base <pre-task-commit> --run  # combined delivery selection unless proportionate validation applies
 python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test  # focused iteration
+python3 tools/testing/maven_queue.py --lean -Dmse=off "-Dtest=TestCollisionLogic" test  # small focused tests, 1 GiB JVM heaps
 python3 tools/testing/maven_queue.py -Dmse=off package              # full ordinary suite plus packaging
 python3 tools/testing/maven_queue.py -Dmse=off -Psmoke test -B         # basic CI on develop/next pushes
 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separate fresh JVM for structural guards
@@ -88,15 +89,31 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separat
   `python3 tools/testing/maven_queue.py <maven arguments>` from the intended worktree.
   Submit the command even if another agent is testing: it waits, reports status and
   starts automatically. Waiting requires no permission or manual lock cleanup.
+  For small focused tests with known bounded memory needs, prefer `--lean`: it caps
+  Maven and the test JVM at 1 GiB each and reserves 4 GiB / 4 cores, so these checks
+  can overlap where normal 7 GiB / 8-core budgets cannot. It requires exact `-Dtest`
+  selectors without profiles or custom JVM/build overrides. A lean OOM is a failed
+  run; report it and rerun in the normal lane. Keep full suites and memory-heavy,
+  trace/native or required domain checks in their existing lanes. Older worktrees
+  can invoke the updated main-workspace wrapper by absolute path while keeping
+  their own cwd and `target/`; update their tooling for the new scheduling rules.
   Linux admission allows different worktrees to overlap when conservative memory/CPU
-  reservations fit (two runs by default); one worktree remains exclusive. Other platforms
-  retain serialization. Waiting requests favour short estimates; after five minutes,
-  aged requests take priority in arrival order. An aged blocked request pauses new
-  admissions so existing jobs can drain. Running jobs are never preempted. Temporary
+  reservations fit (three runs by default, crediting each running job's measured usage);
+  one worktree remains exclusive. Single-fork trace/audio profiles share the queue; see
+  the guide for exclusive shapes. Other platforms retain serialization. Waiting requests favour short estimates; after five minutes,
+  aged requests take priority in arrival order. An aged request needing shared capacity
+  pauses new admissions so existing jobs can drain; an aged resource-aware request
+  waiting only on its own busy worktree permits unrelated trees to proceed while
+  retaining priority in its tree. Running jobs are never preempted. Temporary
   OS-leased waiting records are automatic and pruned after cancellation/death;
   older wrappers retain lock safety but cannot honour priority. See the testing guide.
   Set `OPENGGF_MAVEN_QUEUE=serial` for exclusive execution; shared
-  Git policy settings and profiling are documented in `tools/testing/README.md`.
+  Git policy settings and profiling are documented in `tools/testing/README.md`;
+  `maven_queue.py --stats` summarises recorded queue waits, holds and peak memory.
+  For per-test memory investigation, use `tools/testing/profile_test_memory.py`
+  with exact expensive class selectors; it queues an isolated repeated JVM and
+  records allocation, sampled peaks and post-GC retention candidates. See the
+  testing guide's measurement limits; a diagnostic report is not suite validation.
   The queue holds a slot only during execution; cancellation releases a waiting
   request or stops its running Maven process tree. Keep the command session alive
   while waiting. Direct `mvn` bypasses the queue; use the wrapper for local builds/tests.

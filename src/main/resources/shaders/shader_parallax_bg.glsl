@@ -17,6 +17,10 @@ uniform sampler2D BackgroundTexture;
 uniform sampler1D HScrollTexture;
 uniform sampler1D VScrollTexture;
 uniform sampler1D VScrollColumnTexture;
+uniform sampler1D ColumnRemapX;
+uniform sampler1D ColumnRemapY;
+uniform bool UseColumnRemap;
+uniform float ColumnRemapEndY;
 
 // Screen dimensions (actual viewport pixels)
 uniform float ScreenHeight;
@@ -80,7 +84,12 @@ void main()
     float scanline = clamp(gameY, 0.0, 223.0);  // Clamp to valid scanline range
     float scanlineTexCoord = (scanline + 0.5) / 224.0;
     if (NoHScroll == 0) {
-        hScrollThis = texture(HScrollTexture, scanlineTexCoord).r * 32767.0;
+        // VDP HScroll RAM stores integer pixel words. Restore that integer after
+        // normalized R32F transport, before the modulo below: GPU arithmetic can
+        // leave a tiny residue at an exact wrap. A 512px plane in an 800px FBO
+        // then samples unrendered column 512 instead of column 0 (DDZ clouds).
+        // The ROM has no fractional scroll here; wider allocation must not change it.
+        hScrollThis = round(texture(HScrollTexture, scanlineTexCoord).r * 32767.0);
     }
     if (UsePerLineVScroll != 0) {
         vScrollThis = texture(VScrollTexture, scanlineTexCoord).r * 32767.0;
@@ -120,6 +129,20 @@ void main()
     // Wrap X within the background period rendered into the FBO.
     float fboX = mod(worldX - fboWorldOffsetX, BGTextureWidth);
     if (fboX < 0.0) fboX += BGTextureWidth;
+
+    // Test the ordinary source row first: independent lower bands keep their
+    // own horizontal scroll and retained pixels instead of following the curve.
+    if (UseColumnRemap && fboY < ColumnRemapEndY) {
+        int column = clamp(int(floor(gameX)), 0, textureSize(ColumnRemapX, 0) - 1);
+        float mappedWorldX = round(texelFetch(ColumnRemapX, column, 0).r * 32767.0);
+        fboX = mod(mappedWorldX - fboWorldOffsetX, BGTextureWidth);
+        if (fboX < 0.0) fboX += BGTextureWidth;
+        fboY -= round(texelFetch(ColumnRemapY, column, 0).r * 32767.0);
+        if (fboY < 0.0 || fboY >= BGTextureHeight) {
+            FragColor = vec4(BackdropColor, 1.0);
+            return;
+        }
+    }
 
     // Clamp Y to valid range
     fboY = clamp(fboY, 0.0, BGTextureHeight - 1.0);

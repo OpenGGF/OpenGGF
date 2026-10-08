@@ -65,6 +65,22 @@ public class Sonic2Level extends AbstractLevel {
         return zoneTileArtByteSize;
     }
 
+    /**
+     * AniArt_Load / Dynamic_Normal initially copy each script's first ROM frame to its
+     * native destination. A detached picture needs that art too, but owns no live graph,
+     * DMA job or GPU cache. Leave unrelated unpopulated slots missing so the rasterizer
+     * continues to reject unknown art instead of drawing invented replacement patterns.
+     */
+    void primeDetachedAnimation(List<com.openggf.level.animation.AniPlcScriptState> scripts) {
+        int required = patternCount;
+        for (var script : scripts) required = Math.max(required, script.requiredPatternCount());
+        if (required > patternCount) {
+            patterns = Arrays.copyOf(patterns, required);
+            patternCount = required;
+        }
+        for (var script : scripts) script.primeInto(patterns);
+    }
+
     public Sonic2Level(Rom rom,
             int zoneIndex,
             int characterPaletteAddr,
@@ -113,10 +129,36 @@ public class Sonic2Level extends AbstractLevel {
             RingSpriteSheet ringSpriteSheet,
             int levelBoundariesAddr,
             Palette characterPaletteOverride) throws IOException {
+        this(rom, zoneIndex, characterPaletteAddr, levelPalettesAddr, levelPalettesSize, patternsAddr,
+                chunksAddr, blocksAddr, mapAddr, collisionsAddr, altCollisionsAddr, solidTileHeightsAddr,
+                solidTileWidthsAddr, solidTilesAngleAddr, objectSpawns, ringSpawns, ringSpriteSheet,
+                levelBoundariesAddr, characterPaletteOverride, true);
+    }
+
+    /** Stock ROM construction whose detached path never reads or publishes live presentation state. */
+    public Sonic2Level(Rom rom,
+            int zoneIndex,
+            int characterPaletteAddr,
+            int levelPalettesAddr,
+            int levelPalettesSize,
+            int patternsAddr,
+            int chunksAddr,
+            int blocksAddr,
+            int mapAddr,
+            int collisionsAddr,
+            int altCollisionsAddr,
+            int solidTileHeightsAddr,
+            int solidTileWidthsAddr,
+            int solidTilesAngleAddr,
+            List<ObjectSpawn> objectSpawns,
+            List<RingSpawn> ringSpawns,
+            RingSpriteSheet ringSpriteSheet,
+            int levelBoundariesAddr,
+            Palette characterPaletteOverride, boolean publishGraphics) throws IOException {
         super(zoneIndex);
         this.characterPaletteOverride = characterPaletteOverride;
-        loadPalettes(rom, characterPaletteAddr, levelPalettesAddr, levelPalettesSize);
-        loadPatterns(rom, patternsAddr);
+        loadPalettes(rom, characterPaletteAddr, levelPalettesAddr, levelPalettesSize, publishGraphics);
+        loadPatterns(rom, patternsAddr, publishGraphics);
         loadSolidTiles(rom, solidTileHeightsAddr, solidTileWidthsAddr, solidTilesAngleAddr);
         loadChunks(rom, chunksAddr, collisionsAddr, altCollisionsAddr);
         loadBlocks(rom, blocksAddr);
@@ -296,6 +338,11 @@ public class Sonic2Level extends AbstractLevel {
 
     private void loadPalettes(Rom rom, int characterPaletteAddr, int levelPalettesAddr, int levelPalettesSize)
             throws IOException {
+        loadPalettes(rom, characterPaletteAddr, levelPalettesAddr, levelPalettesSize, true);
+    }
+
+    private void loadPalettes(Rom rom, int characterPaletteAddr, int levelPalettesAddr,
+                              int levelPalettesSize, boolean publishGraphics) throws IOException {
         byte[][] lines = new byte[PALETTE_COUNT][Palette.PALETTE_SIZE_IN_ROM];
         lines[0] = rom.readBytes(characterPaletteAddr, Palette.PALETTE_SIZE_IN_ROM);
         byte[] levelBytes = rom.readBytes(levelPalettesAddr, levelPalettesSize);
@@ -305,7 +352,7 @@ public class Sonic2Level extends AbstractLevel {
             lines[i + 1] = Arrays.copyOfRange(levelBytes,
                     i * Palette.PALETTE_SIZE_IN_ROM, (i + 1) * Palette.PALETTE_SIZE_IN_ROM);
         }
-        decodePaletteLines(lines, true, true);
+        decodePaletteLines(lines, publishGraphics, publishGraphics);
     }
 
     private void decodePaletteLines(byte[][] lines, boolean applyCrossGamePalette,
@@ -343,14 +390,14 @@ public class Sonic2Level extends AbstractLevel {
 
     }
 
-    private void loadPatterns(Rom rom, int patternsAddr) throws IOException {
+    private void loadPatterns(Rom rom, int patternsAddr, boolean publishGraphics) throws IOException {
         byte[] result;
         try (var channel = RomChannel.at(rom, patternsAddr)) {
             result = KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
         }
 
         zoneTileArtByteSize = result.length;
-        decodePatterns(result, false, true);
+        decodePatterns(result, false, publishGraphics);
         LOG.fine("Pattern count: " + patternCount + " (" + result.length + " bytes)");
     }
 

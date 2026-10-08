@@ -2,6 +2,7 @@
 .DS_Store
 *.gen
 /target/*
+/examples/*/target/
 .classpath
 .project
 .settings/
@@ -53,6 +54,8 @@ tools/*
 !tools/audio/lib/
 !tools/testing/
 !tools/testing/**
+!tools/modding/
+!tools/modding/*.py
 /tools/testing/__pycache__/
 /.openggf/test-runs/
 !tools/audio/lib/s1_audio_parity_protocol.sh
@@ -116,7 +119,7 @@ tools/bizhawk/trace_output*/
 tools/bizhawk/NUL
 
 # Runtime mod-load directory: built .jar artifacts, never sources
-mods/
+/mods/
 
 # Debug screenshots and temporary artifacts (keep locally)
 /*.png

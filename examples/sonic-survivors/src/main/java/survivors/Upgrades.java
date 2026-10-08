@@ -1,0 +1,289 @@
+package survivors;
+
+/**
+ * The level-up catalogue. Ids index {@link RunState#levels}, so only append new upgrades.
+ * Bounce weapons fire whenever Sonic rebounds off an enemy; auto weapons run on cooldowns;
+ * moves add new ways to keep a bounce chain alive; passives scale everything else.
+ * (Mod classes may not hold static state, so this is ids and switches rather than an enum.)
+ */
+final class Upgrades {
+    private Upgrades() { }
+
+    // Bounce weapons.
+    static final int SHOCKWAVE = 0, SPARKS = 1, CHAIN_ZAP = 2, HOMING_RINGS = 3;
+    // Auto weapons.
+    static final int ORBIT_RINGS = 4, SONIC_BOOM = 5, FLICKIES = 6;
+    // Moves.
+    static final int HOMING_DASH = 7, AIR_JUMP = 8, GROUND_POUND = 9;
+    // Passives.
+    static final int POWER = 10, MAGNET = 11, ARMOR = 12, HASTE = 13, GREED = 14, SPRING_HEELS = 15,
+            COMBO_KEEPER = 16, BARRIER = 17;
+    static final int TWIN_LANCE = 18, METEOR = 19, PULSE = 20,
+            REACH = 21, RECOVERY = 22, SCHOLAR = 23;
+    static final int COUNT = 24;
+    static final int SLOT_LIMIT = 3;
+
+    static boolean weapon(int id) {
+        return id <= HOMING_DASH || id == GROUND_POUND || id >= TWIN_LANCE && id <= PULSE;
+    }
+
+    static final int KIND_BOUNCE = 0, KIND_AUTO = 1, KIND_MOVE = 2, KIND_PASSIVE = 3;
+
+    static String name(int id) {
+        return switch (id) {
+            case SHOCKWAVE -> "SHOCKWAVE";
+            case SPARKS -> "SPARK BURST";
+            case CHAIN_ZAP -> "CHAIN ZAP";
+            case HOMING_RINGS -> "HOMING RINGS";
+            case ORBIT_RINGS -> "ORBIT RINGS";
+            case SONIC_BOOM -> "SONIC BOOM";
+            case FLICKIES -> "FLICKY SQUAD";
+            case HOMING_DASH -> "HOMING DASH";
+            case AIR_JUMP -> "AIR JUMP";
+            case GROUND_POUND -> "GROUND POUND";
+            case POWER -> "POWER";
+            case MAGNET -> "MAGNET";
+            case ARMOR -> "ARMOR";
+            case HASTE -> "HASTE";
+            case GREED -> "GREED";
+            case SPRING_HEELS -> "SPRING HEELS";
+            case COMBO_KEEPER -> "COMBO KEEPER";
+            case TWIN_LANCE -> "TWIN LANCE";
+            case METEOR -> "METEOR SHOWER";
+            case PULSE -> "PULSE FIELD";
+            case REACH -> "AMPLIFIER";
+            case RECOVERY -> "SECOND WIND";
+            case SCHOLAR -> "QUICK STUDY";
+            default -> "BARRIER";
+        };
+    }
+
+    static int kind(int id) {
+        if (id == TWIN_LANCE) return KIND_BOUNCE;
+        if (id == METEOR || id == PULSE) return KIND_AUTO;
+        if (id <= HOMING_RINGS) return KIND_BOUNCE;
+        if (id <= FLICKIES) return KIND_AUTO;
+        if (id <= GROUND_POUND) return KIND_MOVE;
+        return KIND_PASSIVE;
+    }
+
+    static String kindName(int id) {
+        return switch (kind(id)) {
+            case KIND_BOUNCE -> "ON BOUNCE";
+            case KIND_AUTO -> "AUTO";
+            case KIND_MOVE -> "MOVE";
+            default -> "PASSIVE";
+        };
+    }
+
+    static int kindColour(int id) {
+        return switch (kind(id)) {
+            case KIND_BOUNCE -> Draw.ORANGE;
+            case KIND_AUTO -> Draw.CYAN;
+            case KIND_MOVE -> Draw.GREEN;
+            default -> Draw.PURPLE;
+        };
+    }
+
+    static int maxLevel(int id) {
+        return switch (id) {
+            case HOMING_DASH, AIR_JUMP, GROUND_POUND, COMBO_KEEPER, BARRIER -> 3;
+            default -> 5;
+        };
+    }
+
+    /** Two short description lines for the card offered at {@code nextLevel} (1-based). */
+    static String[] describe(int id, int nextLevel) {
+        int l = nextLevel;
+        return switch (id) {
+            case SHOCKWAVE -> new String[]{"BOUNCES RELEASE A", "BLAST R" + shockRadius(l) + " DMG " + shockDamage(l)};
+            case SPARKS -> new String[]{"BOUNCES FIRE " + sparkCount(l) + " SPARKS", "DMG " + sparkDamage(l)};
+            case CHAIN_ZAP -> new String[]{"BOUNCES ZAP " + zapTargets(l) + " FOES", "DMG " + zapDamage(l)};
+            case HOMING_RINGS -> new String[]{"BOUNCES LAUNCH " + homingCount(l), "SEEKING RINGS DMG " + homingDamage(l)};
+            case ORBIT_RINGS -> new String[]{orbitCount(l) + " RINGS CIRCLE YOU", "DMG " + orbitDamage(l)};
+            case SONIC_BOOM -> new String[]{"FIRES A PIERCING WAVE", "EVERY " + secs(boomCooldown(l)) + "S DMG " + boomDamage(l)};
+            case FLICKIES -> new String[]{"FREED FLICKIES DIVE", flickyCount(l) + " EVERY " + secs(flickyCooldown(l)) + "S DMG 3"};
+            case HOMING_DASH -> new String[]{"JUMP IN AIR TO DASH", "AT A FOE IN " + dashRange(l) + "PX"};
+            case AIR_JUMP -> new String[]{"JUMP AGAIN IN THE", "AIR " + l + (l == 1 ? " TIME" : " TIMES")};
+            case GROUND_POUND -> new String[]{"DOWN IN AIR SLAMS", "QUAKE R" + poundRadius(l) + " DMG " + poundDamage(l)};
+            case POWER -> new String[]{"ALL DAMAGE", "+" + 25 * l + "%"};
+            case MAGNET -> new String[]{"PULL RINGS FROM", magnetRadius(l, 0) + "PX AWAY"};
+            case ARMOR -> new String[]{"HIT TOLL -" + 8 * l + "%", "MINIMUM 5 RINGS"};
+            case HASTE -> new String[]{"WEAPON COOLDOWNS", "-" + 10 * l + "%"};
+            case GREED -> new String[]{"MORE RING DROPS", "AND +" + 20 * l + "% XP"};
+            case SPRING_HEELS -> new String[]{"HIGHER BOUNCES AND", "+" + l + " STOMP DAMAGE"};
+            case COMBO_KEEPER -> new String[]{"COMBO SURVIVES", "LANDING FOR " + secs(comboGrace(l)) + "S"};
+            case TWIN_LANCE -> new String[]{"BOUNCES FIRE 2 LANCES", "PIERCE " + (2 + l) + " DMG " + (4 + 2 * l)};
+            case METEOR -> new String[]{"RAIN " + (2 + l) + " METEORS", "EVERY 3S DMG " + (3 + l)};
+            case PULSE -> new String[]{"PULSE EVERY 2S", "R" + (40 + 8 * l) + " DMG " + (2 + l)};
+            case REACH -> new String[]{"AREA WEAPON RADIUS", "+" + 15 * l + "%"};
+            case RECOVERY -> new String[]{"AFTER HIT PROTECTION", "+" + 10 * l + "% TIME"};
+            case SCHOLAR -> new String[]{"EXPERIENCE GAIN", "+" + 25 * l + "%"};
+            default -> new String[]{"A SHIELD RETURNS", "EVERY " + secs(barrierCooldown(l)) + "S"};
+        };
+    }
+
+    private static String secs(int frames) {
+        int tenths = Math.round(frames / 6f);
+        return tenths % 10 == 0 ? Integer.toString(tenths / 10) : tenths / 10 + "." + tenths % 10;
+    }
+
+    // ---- Weapon numbers. Level 0 means not owned. ----
+    static int shockRadius(int l) { return 36 + 12 * l; }
+    static int shockDamage(int l) { return 2 + l; }
+    static int sparkCount(int l) { return 2 + l + (l >= 5 ? 1 : 0); }
+    static int sparkDamage(int l) { return 2 + l / 2; }
+    static int zapTargets(int l) { return 1 + l; }
+    static int zapDamage(int l) { return 3 + l; }
+    static int homingCount(int l) { return 1 + (l >= 3 ? 1 : 0) + (l >= 5 ? 1 : 0); }
+    static int homingDamage(int l) { return 3 + l; }
+    static int orbitCount(int l) { return 1 + l; }
+    static int orbitDamage(int l) { return 1 + (l + 1) / 2; }
+    static int boomCooldown(int l) { return 150 - 18 * l; }
+    static int boomDamage(int l) { return 4 + l; }
+    static int flickyCount(int l) { return 1 + l / 2; }
+    static int flickyCooldown(int l) { return 210 - 20 * l; }
+    static int dashRange(int l) { return 80 + 32 * l; }
+    static int poundRadius(int l) { return 44 + 16 * l; }
+    static int poundDamage(int l) { return 3 + 2 * l; }
+    static int magnetRadius(int l, int shop) { return 28 + 24 * l + 4 * shop; }
+    static int comboGrace(int l) { return 20 * l; }
+    static int barrierCooldown(int l) { return 1800 - 300 * (l - 1); }
+
+    // ---- Evolutions. A maxed weapon plus its owned partner buff evolves from a chest. ----
+    // Indexes are bits of {@link RunState#evolved} and {@link Profile#evolutionsSeen}: only append.
+    static final int EVOLUTIONS = 12;
+
+    /** The weapon each evolution transforms; its index matches the order below. */
+    static int evoBase(int evo) {
+        return switch (evo) {
+            case 0 -> SHOCKWAVE;
+            case 1 -> SPARKS;
+            case 2 -> CHAIN_ZAP;
+            case 3 -> HOMING_RINGS;
+            case 4 -> ORBIT_RINGS;
+            case 5 -> SONIC_BOOM;
+            case 6 -> FLICKIES;
+            case 7 -> TWIN_LANCE;
+            case 8 -> METEOR;
+            case 9 -> PULSE;
+            case 10 -> HOMING_DASH;
+            default -> GROUND_POUND;
+        };
+    }
+
+    /** The buff that must be owned (any rank) alongside the maxed weapon. */
+    static int evoPartner(int evo) {
+        return switch (evo) {
+            case 0 -> REACH;
+            case 1 -> COMBO_KEEPER;
+            case 2 -> POWER;
+            case 3 -> GREED;
+            case 4 -> MAGNET;
+            case 5 -> HASTE;
+            case 6 -> SCHOLAR;
+            case 7 -> SPRING_HEELS;
+            case 8 -> ARMOR;
+            case 9 -> BARRIER;
+            case 10 -> AIR_JUMP;
+            default -> RECOVERY;
+        };
+    }
+
+    /** The evolution of {@code weapon}, or -1 when it has none. */
+    static int evolutionOf(int weapon) {
+        for (int evo = 0; evo < EVOLUTIONS; evo++) if (evoBase(evo) == weapon) return evo;
+        return -1;
+    }
+
+    /** The other half of {@code id}'s evolution pair, or -1. */
+    static int evoCounterpart(int id) {
+        for (int evo = 0; evo < EVOLUTIONS; evo++) {
+            if (evoBase(evo) == id) return evoPartner(evo);
+            if (evoPartner(evo) == id) return evoBase(evo);
+        }
+        return -1;
+    }
+
+    static String evoName(int evo) {
+        return switch (evo) {
+            case 0 -> "GRAND QUAKE";
+            case 1 -> "STAR NOVA";
+            case 2 -> "THUNDER LATTICE";
+            case 3 -> "RING TEMPEST";
+            case 4 -> "RING SATURN";
+            case 5 -> "SONIC CYCLONE";
+            case 6 -> "FLICKY FLOCK";
+            case 7 -> "CROSS LANCE";
+            case 8 -> "COMET STORM";
+            case 9 -> "GUARDIAN PULSE";
+            case 10 -> "LIGHT SPEED DASH";
+            default -> "IMPACT STAR";
+        };
+    }
+
+    static String evoEffect(int evo) {
+        return switch (evo) {
+            case 0 -> "HUGE BLASTS, 2.5X DAMAGE";
+            case 1 -> "TWICE THE SPARKS, PIERCING";
+            case 2 -> "12 FOES, LONG RANGE, 2.5X";
+            case 3 -> "6 PIERCING SEEKERS, 2X";
+            case 4 -> "8 WIDE RINGS, 2X DAMAGE";
+            case 5 -> "TWIN WAVES TWICE AS OFTEN";
+            case 6 -> "DOUBLE FLOCK, 8 DAMAGE";
+            case 7 -> "LANCES IN FOUR DIRECTIONS";
+            case 8 -> "DOUBLE COMETS EVERY 2S";
+            case 9 -> "WIDE PULSE POPS SHOTS";
+            case 10 -> "LONG DASH ENDS IN A BLAST";
+            default -> "UNTOUCHABLE TRIPLE QUAKE";
+        };
+    }
+
+    // ---- The upgrade pool: twelve core upgrades, the rest unlocked by profile milestones. ----
+
+    static boolean core(int id) {
+        return switch (id) {
+            case SHOCKWAVE, SPARKS, HOMING_RINGS, ORBIT_RINGS, SONIC_BOOM, AIR_JUMP, POWER, MAGNET, ARMOR,
+                 HASTE, GREED, SPRING_HEELS -> true;
+            default -> false;
+        };
+    }
+
+    /** The milestone, abbreviated to fit beside the name on the records page. */
+    static String unlockShort(int id) {
+        return switch (id) {
+            case CHAIN_ZAP -> "300 KOS";
+            case FLICKIES -> "CLEAR EHZ";
+            case HOMING_DASH -> "15 COMBO";
+            case GROUND_POUND -> "CLEAR CPZ";
+            case COMBO_KEEPER -> "25 COMBO";
+            case BARRIER -> "CLEAR ARZ";
+            case TWIN_LANCE -> "1500 KOS";
+            case METEOR -> "CLEAR HTZ";
+            case PULSE -> "CLEAR CNZ";
+            case REACH -> "20 ELITES";
+            case RECOVERY -> "BANK 1500";
+            case SCHOLAR -> "LEVEL 20";
+            default -> "";
+        };
+    }
+
+    /** The milestone that adds {@code id} to the pool (shown in the records). */
+    static String unlockRequirement(int id) {
+        return switch (id) {
+            case CHAIN_ZAP -> "DEFEAT 300 BADNIKS";
+            case FLICKIES -> "CLEAR EMERALD HILL";
+            case HOMING_DASH -> "REACH A 15 BOUNCE COMBO";
+            case GROUND_POUND -> "CLEAR CHEMICAL PLANT";
+            case COMBO_KEEPER -> "REACH A 25 BOUNCE COMBO";
+            case BARRIER -> "CLEAR AQUATIC RUIN";
+            case TWIN_LANCE -> "DEFEAT 1500 BADNIKS";
+            case METEOR -> "CLEAR HILL TOP";
+            case PULSE -> "CLEAR CASINO NIGHT";
+            case REACH -> "DEFEAT 20 ELITES";
+            case RECOVERY -> "BANK 1500 RINGS IN TOTAL";
+            case SCHOLAR -> "REACH LEVEL 20 IN A RUN";
+            default -> "AVAILABLE FROM THE START";
+        };
+    }
+}

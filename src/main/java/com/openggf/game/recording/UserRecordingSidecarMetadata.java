@@ -1,6 +1,5 @@
 package com.openggf.game.recording;
 
-@com.openggf.game.ModApi
 public record UserRecordingSidecarMetadata(
         int desyncLiteSchemaVersion,
         String sampleMode,

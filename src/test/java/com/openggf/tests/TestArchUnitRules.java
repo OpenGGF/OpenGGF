@@ -125,6 +125,9 @@ class TestArchUnitRules {
             "camera -> configuration",
             "camera -> game",
             "camera -> sprites",
+            // Live button labels share the stateless GLFW key-name codec. Control
+            // consumes no configuration service; this leaf has no runtime dependencies.
+            "control -> configuration",
             "capture -> audio",
             "data -> configuration",
             "data -> audio",

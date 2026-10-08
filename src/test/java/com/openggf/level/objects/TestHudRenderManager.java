@@ -35,6 +35,24 @@ import static org.mockito.Mockito.when;
 public class TestHudRenderManager {
 
     @Test
+    void ringDigitsReadThePublishedCounterRatherThanTheSilentGameplayWrite() {
+        HudFixture fixture = hudFixture(0, "0:00", 0, 3, false, false);
+        HudProfileAccess.install(fixture.hud(), singleNumericRow(HudMetric.RINGS, 3));
+        var state = new com.openggf.game.LevelGamestate();
+        com.openggf.game.LevelRingDisplay.publish(state);
+        com.openggf.game.LevelRingDisplay.writeWithoutRefresh(state, 50);
+        fixture.hud().draw(state, null);
+        assertTrue(fixture.draws().contains(new Draw(200, 80, 40)), fixture.draws().toString());
+        assertFalse(fixture.draws().contains(new Draw(210, 72, 40)), "must not draw the live tens digit5");
+        fixture.draws().clear();
+        state.addRings(-1);
+        com.openggf.game.LevelRingDisplay.publish(state);
+        fixture.hud().draw(state, null);
+        assertTrue(fixture.draws().contains(new Draw(208, 72, 40)));
+        assertTrue(fixture.draws().contains(new Draw(218, 80, 40)));
+    }
+
+    @Test
     void vblankCountersShowTheTimerIncrementBeforeTheRetainedSatWithoutUpdatingGameplay() {
         HudFixture fixture = hudFixture(0, "0:00", 0, 3, false, false);
         when(fixture.levelState().getTimerFrames()).thenReturn(59L);

@@ -14,12 +14,12 @@ class TestGumballMachineExitTrigger {
     private static final int TRIGGER_Y = 0x2000;
 
     @Test
-    void inclusiveRomRangeRequestsExitAtEveryBoundary() {
+    void halfOpenRomRangeRequestsExitAtEveryInsideBoundary() {
         int[][] boundaryOffsets = {
                 {-0x100, 0},
-                {0x200, 0},
+                {0xFF, 0},
                 {0, -0x10},
-                {0, 0x40}
+                {0, 0x2F}
         };
 
         for (int[] offset : boundaryOffsets) {
@@ -29,7 +29,7 @@ class TestGumballMachineExitTrigger {
             trigger.update(0, playerAt(offset[0], offset[1]));
 
             assertEquals(1, services.exitRequests,
-                    "expected inclusive exit at dx=" + offset[0] + ", dy=" + offset[1]);
+                    "expected exit inside the half-open range at dx=" + offset[0] + ", dy=" + offset[1]);
         }
     }
 
@@ -37,9 +37,9 @@ class TestGumballMachineExitTrigger {
     void rejectsEveryPositionImmediatelyOutsideRomRange() {
         int[][] outsideOffsets = {
                 {-0x101, 0},
-                {0x201, 0},
+                {0x100, 0},
                 {0, -0x11},
-                {0, 0x41}
+                {0, 0x30}
         };
 
         for (int[] offset : outsideOffsets) {

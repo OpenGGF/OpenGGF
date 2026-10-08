@@ -186,7 +186,7 @@ public class TestS3kSpecialStageResultsVisual {
         gs.markEmeraldCollected(2);
 
         S3kSpecialStageResultsScreen screen = new S3kSpecialStageResultsScreen(
-                75, true, 2, 3, PlayerCharacter.SONIC_AND_TAILS);
+                75, true, 0, 2, 3, PlayerCharacter.SONIC_AND_TAILS);
 
         // Step 400 frames (past the 360-frame pre-tally wait + some tally)
         for (int i = 0; i < 400; i++) {
@@ -230,7 +230,7 @@ public class TestS3kSpecialStageResultsVisual {
         gs.configureSpecialStageProgress(7, 7);
 
         S3kSpecialStageResultsScreen screen = new S3kSpecialStageResultsScreen(
-                30, false, 0, 0, PlayerCharacter.SONIC_AND_TAILS);
+                30, false, 1, 0, 0, PlayerCharacter.SONIC_AND_TAILS);
 
         // Step 400 frames
         for (int i = 0; i < 400; i++) {

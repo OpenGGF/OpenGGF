@@ -60,6 +60,52 @@ class TestModManagerScreen {
     @TempDir Path temp;
 
     @Test
+    void fixedLaunchShowsActiveModDetailsAndNoticesWithoutEditingOrSaving() {
+        ModDescriptor mod = codeDescriptor("dev-code", "Development Mod", "a".repeat(64));
+        ModState startup = new ModState(1, List.of(
+                new ModState.Entry("dev-code", true, 0, true, mod.sha256())));
+        ModCatalog catalog = new EffectiveCatalogBuilder().build(List.of(mod), startup);
+        PendingModStateEditor editor = PendingModStateEditor.readOnly(startup, catalog.scanned());
+        ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
+        findings.replaceOwner("dev-code", List.of(finding(ModFindingSeverity.WARNING,
+                "DEV_WARNING", "Runtime notice")));
+        RecordingFont font = new RecordingFont();
+        ModManagerScreen screen = new ModManagerScreen(catalog, editor, findings, textSink(font));
+
+        screen.suppressInputUntilNeutral();
+        press(screen, Action.ACCEPT);
+        screen.render();
+        assertTrue(screen.rows().getFirst().enabled());
+        assertTrue(font.drawn.stream().anyMatch(line -> line.startsWith("[ON] Development Mod")));
+        assertTrue(font.drawn.contains("Back"));
+        assertFalse(font.drawn.contains("Order"));
+        assertFalse(font.drawn.contains("Apply"));
+
+        font.drawn.clear();
+        press(screen, Action.LEFT);
+        press(screen, Action.ACCEPT);
+        screen.render();
+        assertTrue(font.drawn.contains("MOD DETAILS"));
+        press(screen, Action.BACK);
+        press(screen, Action.RIGHT);
+        press(screen, Action.RIGHT);
+        press(screen, Action.ACCEPT);
+        font.drawn.clear();
+        screen.render();
+        assertTrue(font.drawn.contains("MOD NOTICES"));
+        assertTrue(screen.detailLines().stream().anyMatch(line -> line.contains("Runtime notice")));
+        press(screen, Action.BACK);
+        press(screen, Action.RIGHT);
+        press(screen, Action.ACCEPT);
+
+        assertTrue(screen.consumeCloseRequested());
+        assertEquals(startup, editor.pendingState());
+        assertFalse(editor.dirty());
+        assertFalse(editor.restartRequired());
+        assertFalse(Files.exists(temp.resolve("modstate.json")));
+    }
+
+    @Test
     void rowsAndDetailsExposeValidInvalidRepositoryEligibilityAndRuntimeFindings() {
         ModDescriptor core = descriptor("pack-core", "Core Pack", List.of(), List.of(
                 finding(ModFindingSeverity.WARNING, "OVERRIDE_CONFLICT", "Later pack wins")));
@@ -274,6 +320,44 @@ class TestModManagerScreen {
         press(screen, Action.DOWN); press(screen, Action.ACCEPT);
         assertFalse(enabled(screen, "pack-blocked"));
         assertTrue(screen.statusMessage().contains("Missing pack-core"));
+    }
+
+    @Test
+    void replacingAnEnabledCodeJarCanRenewTrustWithoutDisablingIt() {
+        ModDescriptor code = codeDescriptor("code-update", "Updated Mod", "b".repeat(64));
+        ModState startup = new ModState(1, List.of(new ModState.Entry(
+                "code-update", true, 0, true, "a".repeat(64))));
+        ModCatalog catalog = new EffectiveCatalogBuilder().build(List.of(code), startup);
+        ModManagerScreen screen = screen(catalog, startup, new ModRuntimeFindingStore(), null,
+                temp.resolve("update"));
+        press(screen, Action.ACCEPT);
+        assertTrue(enabled(screen, "code-update"));
+        assertTrue(screen.trustArmed());
+        assertFalse(screen.pendingState().entries().getFirst().trusted());
+        press(screen, Action.ACCEPT);
+        assertTrue(enabled(screen, "code-update"));
+        assertTrue(screen.pendingState().entries().getFirst().trustsSha256(code.sha256()));
+        applyFromList(screen);
+        assertTrue(new ModStateStore(temp.resolve("update").toAbsolutePath().normalize())
+                .load().state().entries().getFirst().trustsSha256(code.sha256()));
+    }
+
+    @Test
+    void updatedUntrustedCodeCanBeDisabledWithoutGrantingTrust() {
+        ModDescriptor code = codeDescriptor("code-update", "Updated Mod", "b".repeat(64));
+        ModState startup = new ModState(1, List.of(new ModState.Entry("code-update", true, 0, true, "a".repeat(64))));
+        ModManagerScreen screen = screen(new EffectiveCatalogBuilder().build(List.of(code), startup),
+                startup, new ModRuntimeFindingStore(), null, temp.resolve("decline-update"));
+        press(screen, Action.RIGHT); press(screen, Action.ACCEPT); // Details
+        press(screen, Action.ACCEPT); // explicit disable without trust
+        assertFalse(enabled(screen, "code-update"));
+        assertFalse(screen.pendingState().entries().getFirst().trusted());
+        assertFalse(screen.trustArmed());
+
+        ModManagerScreen nativeScreen = nativeGuardScreen(temp.resolve("native-update"), List.of(code), startup, false);
+        press(nativeScreen, Action.ACCEPT);
+        assertFalse(enabled(nativeScreen, "code-update"));
+        assertFalse(nativeScreen.trustArmed());
     }
 
     @Test

@@ -65,6 +65,60 @@ class TestSpringObjectInstance {
     }
 
     @Test
+    void horizontalInitializationReturnsBeforeFirstContactAndRestoresDispatchPhase() {
+        SpringObjectInstance spring = new SpringObjectInstance(
+                new ObjectSpawn(0x0988, 0x0360, 0x41, 0x12, 0, false, 0), "InitSpring");
+        var camera = new com.openggf.camera.Camera();
+        camera.setX((short) 0x0800);
+        camera.setY((short) 0x0300);
+        var services = new TestObjectServices().withCamera(camera).withSolidExecutionRegistry(
+                new com.openggf.game.solid.DefaultSolidExecutionRegistry());
+        ObjectManager manager = buildManager(spring, services);
+        services.withDirectObjectManager(manager);
+        TestableSprite player = new TestableSprite("tails");
+        player.setWidth(18);
+        player.setHeight(30);
+        player.setAir(false);
+        player.setCentreX((short) 0x0993);
+        player.setCentreY((short) 0x0361);
+        player.setXSpeed((short) -0x0146);
+        player.setGSpeed((short) -0x0148);
+        var context = com.openggf.game.rewind.schema.RewindCaptureContext.none();
+        var beforeInit = spring.captureRewindState(context);
+
+        manager.update(0x0800, player, List.of(), 0, false, true, true);
+        assertEquals(-0x0146, player.getXSpeed(), "Obj41_Init returns before SolidObject or launch");
+        assertEquals(0x0993, player.getCentreX() & 0xFFFF);
+        assertTrue(manager.getActiveObjects().contains(spring), "the initialized spring remains admitted");
+        var afterInit = spring.captureRewindState(context);
+
+        manager.update(0x0800, player, List.of(), 1, false, true, true);
+        assertEquals(0x0A00, player.getXSpeed(), "Obj41_Horizontal runs on the next object pass");
+
+        spring.restoreRewindState(beforeInit, context);
+        player.setCentreX((short) 0x0993);
+        player.setCentreY((short) 0x0361);
+        player.setXSpeed((short) -0x0146);
+        player.setGSpeed((short) -0x0148);
+        manager.update(0x0800, player, List.of(), 2, false, true, true);
+        assertEquals(-0x0146, player.getXSpeed(), "rewind before init restores the init-only pass");
+        spring.restoreRewindState(afterInit, context);
+        manager.update(0x0800, player, List.of(), 3, false, true, true);
+        assertEquals(0x0A00, player.getXSpeed(), "rewind after init preserves active dispatch");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0x00, 0x10, 0x20, 0x30, 0x40})
+    void everyNativeTypeReturnsBeforeActiveContactOnInitialization(int subtype) {
+        var registry = org.mockito.Mockito.mock(com.openggf.game.solid.SolidExecutionRegistry.class);
+        var spring = new SpringObjectInstance(
+                new ObjectSpawn(0x100, 0x100, 0x41, subtype, 0, false, 0), "InitType");
+        spring.setServices(new TestObjectServices().withSolidExecutionRegistry(registry));
+        spring.update(0, null);
+        org.mockito.Mockito.verifyNoInteractions(registry);
+    }
+
+    @Test
     void exposesFullSolidRoutineProfileForVerticalAndHorizontalSprings() {
         SpringObjectInstance vertical = new SpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, 0x41, 0x00, 0, false, 0),
@@ -107,6 +161,21 @@ class TestSpringObjectInstance {
 
         assertTrue(player.getPushing(),
                 "Obj41_Up uses SolidObject_cont's bhi right-edge gate, so relX == 2*d1 still pushes");
+    }
+
+    @Test
+    void stockUpSpringDoesNotFireOnRollingSideEntry() throws Exception {
+        var spring = new SpringObjectInstance(new ObjectSpawn(0x100, 0x100, 0x41, 0, 0, false, 0), "StockSpring");
+        spring.setServices(new TestObjectServices().withIsolatedObjectManager());
+        invoke(spring, "ensureInitialized");
+        var player = new TestableSprite("sonic");
+        player.setRolling(true); player.setAir(false);
+        var side = new PlayerSolidContactResult(ContactKind.SIDE, false, false, true, false,
+                new PreContactState((short) 0x400, (short) 0, true, false, 0), PostContactState.ZERO, 0);
+        invoke(spring, "applyCheckpointContact",
+                new Class<?>[]{AbstractPlayableSprite.class, PlayerSolidContactResult.class}, player, side);
+        assertEquals(0, player.getYSpeed());
+        assertFalse(player.getAir()); assertFalse(player.getSpringing());
     }
 
     @Test
@@ -281,11 +350,12 @@ class TestSpringObjectInstance {
     }
 
     @Test
-    void diagonalSpringManualCheckpointUsesTopLandingWidthForNewStanding() {
+    void diagonalSpringManualCheckpointUsesTopLandingWidthForNewStanding() throws Exception {
         SpringObjectInstance spring = new SpringObjectInstance(
                 new ObjectSpawn(0x0200, 0x0100, 0x41, 0x30, 0x01, false, 0),
                 "DiagSpringFlipped");
         spring.setServices(new TestObjectServices().withIsolatedObjectManager());
+        invoke(spring, "ensureInitialized"); // This test starts at the active diagonal routine.
 
         ObjectManager manager = buildManager(spring);
 
@@ -387,6 +457,33 @@ class TestSpringObjectInstance {
         assertFalse(player.getAir());
     }
 
+    @Test
+    void horizontalPushLaunchRequiresTheFacingSideIncludingEquality() throws Exception {
+        for (int flags : new int[]{0, 1}) {
+            for (int x : new int[]{0x01FF, 0x0200, 0x0201}) {
+                var spring = new SpringObjectInstance(
+                        new ObjectSpawn(0x0200, 0x0100, 0x41, 0x12, flags, false, 0), "HorizontalSpring");
+                spring.setServices(new TestObjectServices().withIsolatedObjectManager());
+                invoke(spring, "ensureInitialized");
+                var player = new TestableSprite("tails");
+                player.setCentreX((short) x);
+                player.setCentreY((short) 0x0100);
+                player.setXSpeed((short) 0x0123);
+                player.setGSpeed((short) 0x0123);
+                var push = new PlayerSolidContactResult(ContactKind.SIDE, false, false, true, false,
+                        PreContactState.ZERO, PostContactState.ZERO, 0);
+
+                invoke(spring, "applyCheckpointContact",
+                        new Class<?>[]{AbstractPlayableSprite.class, PlayerSolidContactResult.class}, player, push);
+
+                boolean shouldLaunch = flags == 0 ? x > 0x0200 : x <= 0x0200;
+                int expected = shouldLaunch ? (flags == 0 ? 0x0A00 : -0x0A00) : 0x0123;
+                assertEquals((short) expected, player.getXSpeed(), "flags=" + flags + ", x=" + x);
+                assertEquals((short) expected, player.getGSpeed(), "flags=" + flags + ", x=" + x);
+            }
+        }
+    }
+
     private static PlayerSolidContactResult standingContact() {
         return new PlayerSolidContactResult(
                 ContactKind.TOP,
@@ -453,6 +550,10 @@ class TestSpringObjectInstance {
     }
 
     private static ObjectManager buildManager(ObjectInstance instance) {
+        return buildManager(instance, null);
+    }
+
+    private static ObjectManager buildManager(ObjectInstance instance, TestObjectServices services) {
         ObjectRegistry registry = new ObjectRegistry() {
             @Override
             public ObjectInstance create(ObjectSpawn spawn) {
@@ -470,7 +571,9 @@ class TestSpringObjectInstance {
             }
         };
 
-        ObjectManager objectManager = new ObjectManager(List.of(), registry, 0, null, null);
+        ObjectManager objectManager = services == null
+                ? new ObjectManager(List.of(), registry, 0, null, null)
+                : new ObjectManager(List.of(), registry, 0, null, null, null, services.camera(), services);
         objectManager.reset(0);
         objectManager.addDynamicObject(instance);
         return objectManager;

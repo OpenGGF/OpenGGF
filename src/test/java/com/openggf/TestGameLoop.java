@@ -113,6 +113,119 @@ public class TestGameLoop {
     }
 
     @Test
+    void customPresentationPacingPumpsWholeStepsAndStopsAtModeBoundaries() throws Exception {
+        SessionManager.clear();
+        var module = new com.openggf.game.patch.DelegatingGameModule(new Sonic2GameModule(), "test:pace") {
+            @Override public int gameplayStepsPerFrame() { return 3; }
+        };
+        GameModuleRegistry.setCurrent(module);
+        TestEnvironment.activeGameplayMode();
+        int[] count = {0};
+        GameLoop loop = new GameLoop(mockInputHandler) {
+            @Override public void step() { count[0]++; }
+        };
+        loop.setGameMode(GameMode.LEVEL);
+        loop.stepPresentationFrame();
+        assertEquals(3, count[0]);
+        loop.step();
+        assertEquals(4, count[0], "canonical tooling/trace entry stays one simulation tick");
+        loop.setGameMode(GameMode.TITLE_SCREEN);
+        loop.stepPresentationFrame();
+        assertEquals(5, count[0]);
+        GameLoop changing = new GameLoop(mockInputHandler) {
+            @Override public void step() { count[0]++; setGameMode(GameMode.TITLE_SCREEN); }
+        };
+        changing.setGameMode(GameMode.LEVEL);
+        changing.stepPresentationFrame();
+        assertEquals(6, count[0], "do not pump across a mode boundary");
+        var levels = mock(com.openggf.level.LevelManager.class);
+        var first = mock(com.openggf.level.Level.class);
+        var second = mock(com.openggf.level.Level.class);
+        when(levels.getCurrentLevel()).thenReturn(first);
+        GameLoop loading = new GameLoop(mockInputHandler) {
+            @Override public void step() { count[0]++; when(levels.getCurrentLevel()).thenReturn(second); }
+        };
+        loading.setGameMode(GameMode.LEVEL);
+        setPrivateField(loading, "levelManager", levels);
+        loading.stepPresentationFrame();
+        assertEquals(7, count[0], "do not pump into a newly loaded level in the same session");
+    }
+
+    @Test
+    void customPacingUsesContinuousAudioRateAndReleasesItAtPauseAndModeExit() throws Exception {
+        SessionManager.clear();
+        GameModuleRegistry.setCurrent(new com.openggf.game.patch.DelegatingGameModule(new Sonic2GameModule(), "test:pace") {
+            @Override public int gameplayStepsPerFrame() { return 2; }
+            @Override public double gameplayAudioPlaybackRate() { return 1.5; }
+        });
+        TestEnvironment.activeGameplayMode();
+        GameLoop loop = new GameLoop(mockInputHandler) {
+            @Override public void step() { }
+        };
+        var audio = mock(com.openggf.audio.AudioManager.class);
+        setPrivateField(loop, "audioManager", audio);
+        loop.setGameMode(GameMode.LEVEL);
+        loop.stepPresentationFrame();
+        verify(audio).setForwardPlaybackRate(1.5);
+        loop.toggleUserPause();
+        loop.stepPresentationFrame();
+        verify(audio).setForwardPlaybackRate(1.0);
+        loop.toggleUserPause();
+        loop.stepPresentationFrame();
+        verify(audio, times(2)).setForwardPlaybackRate(1.5);
+        loop.setGameMode(GameMode.TITLE_SCREEN);
+        loop.stepPresentationFrame();
+        verify(audio, times(2)).setForwardPlaybackRate(1.0);
+        clearInvocations(audio);
+        loop.stepPresentationFrame();
+        verifyNoInteractions(audio); // no rate write over an unrelated owner
+
+        GameLoop changing = new GameLoop(mockInputHandler) {
+            @Override public void step() { setGameMode(GameMode.TITLE_SCREEN); }
+        };
+        setPrivateField(changing, "audioManager", audio);
+        changing.setGameMode(GameMode.LEVEL);
+        changing.stepPresentationFrame();
+        var ordered = inOrder(audio);
+        ordered.verify(audio).setForwardPlaybackRate(1.5);
+        ordered.verify(audio).setForwardPlaybackRate(1.0);
+
+        clearInvocations(audio);
+        loop.setGameMode(GameMode.LEVEL);
+        loop.stepPresentationFrame();
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        when(mockInputHandler.isKeyDown(config.getInt(SonicConfiguration.LIVE_REWIND_KEY))).thenReturn(true);
+        loop.stepPresentationFrame();
+        verify(audio).setForwardPlaybackRate(1.0);
+    }
+
+    @Test
+    void customPresentationPacingDoesNotMultiplyPauseOrRewindInput() {
+        SessionManager.clear();
+        GameModuleRegistry.setCurrent(new com.openggf.game.patch.DelegatingGameModule(new Sonic2GameModule(), "test:pace") {
+            @Override public int gameplayStepsPerFrame() { return 1000; }
+        });
+        TestEnvironment.activeGameplayMode();
+        int[] count = {0};
+        GameLoop loop = new GameLoop(mockInputHandler) {
+            @Override public void step() { count[0]++; }
+        };
+        loop.setGameMode(GameMode.LEVEL);
+        loop.stepPresentationFrame();
+        assertEquals(32, count[0], "host ceiling bounds creator work per presentation");
+        loop.toggleUserPause();
+        loop.stepPresentationFrame();
+        assertEquals(33, count[0]);
+        loop.toggleUserPause();
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        when(mockInputHandler.isKeyDown(config.getInt(SonicConfiguration.LIVE_REWIND_KEY))).thenReturn(true);
+        loop.stepPresentationFrame();
+        assertEquals(34, count[0]);
+    }
+
+    @Test
     void liveDebugCompletionKeepsProviderRewardOwnershipAndDefersResultsUntilFade() throws Exception {
         AtomicBoolean enteredResults = new AtomicBoolean();
         GameLoop loop = new GameLoop(mockInputHandler) {
@@ -493,7 +606,7 @@ public class TestGameLoop {
     public void returnToMasterTitleTearsDownUserRecordingSessionsBeforeLeavingLevel() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int methodStart = source.indexOf("void returnToMasterTitle()");
-        int methodEnd = source.indexOf("private void startEscapeToMasterTitleTransition()", methodStart);
+        int methodEnd = source.indexOf("void fadeOutTo(Runnable next)", methodStart);
         assertTrue(methodStart >= 0 && methodEnd > methodStart, "returnToMasterTitle method must exist");
         String methodBody = source.substring(methodStart, methodEnd);
 
@@ -1180,6 +1293,69 @@ public class TestGameLoop {
     }
 
     @Test
+    void resultsReturnInstallsFreshLevelTitleOwner() throws Exception {
+        TitleCardProvider titleCard = installBonusStageReturnMocks(mock(FadeManager.class));
+        Method method = GameLoop.class.getDeclaredMethod("enterTitleCardFromResults", int.class, int.class);
+        method.setAccessible(true);
+        method.invoke(gameLoop, 0, 0);
+        verify(titleCard).initializeFreshLevelTransition(0, 0);
+        verify(titleCard, never()).initialize(anyInt(), anyInt());
+    }
+
+    @Test
+    void stageOwnedExitFadeEntersResultsWithoutAnotherBlockingFade() throws Exception {
+        FadeManager fade = mock(FadeManager.class);
+        installBonusStageReturnMocks(fade);
+        var provider = mock(com.openggf.game.SpecialStageProvider.class, withSettings().extraInterfaces(
+                com.openggf.game.internal.SpecialStageResultsEntry.class));
+        when(((com.openggf.game.internal.SpecialStageResultsEntry) provider)
+                .hasCompletedResultsEntryFade()).thenReturn(true);
+        when(provider.getResultsMusicId()).thenReturn(-1);
+        setPrivateField(gameLoop, "activeSpecialStageProvider", provider);
+        setPrivateField(gameLoop, "currentGameMode", GameMode.SPECIAL_STAGE);
+        Method method = GameLoop.class.getDeclaredMethod("enterResultsScreen", boolean.class);
+        method.setAccessible(true);
+        method.invoke(gameLoop, false);
+        assertEquals(GameMode.SPECIAL_STAGE_RESULTS, gameLoop.getCurrentGameMode());
+        verify(fade, never()).startFadeToWhite(any());
+    }
+
+    @Test
+    void immediateFreshTitlePaletteDoesNotClaimBlockingFadeVblanks() throws Exception {
+        FadeManager fade = mock(FadeManager.class);
+        installBonusStageReturnMocks(fade);
+        TitleCardProvider title = mock(TitleCardProvider.class, withSettings().extraInterfaces(
+                com.openggf.game.internal.FreshLevelTitleBoundaryPublication.class));
+        when(((com.openggf.game.internal.FreshLevelTitleBoundaryPublication) title)
+                .hasImmediateFreshLevelPalette()).thenReturn(true);
+        setPrivateField(gameLoop, "titleCardProvider", title);
+        invokePrivateMethod(gameLoop, "startResultsReturnFadeIn");
+        verify(fade).clearOverlayForImmediatePaletteLoad();
+        verify(fade, never()).startFadeFromBlack(any());
+        verify(fade, never()).startFadeFromWhite(any());
+    }
+
+    @Test
+    void titleResourceBoundaryReleasesGameplayBeforeOverlayExit() {
+        TitleCardProvider titleCard = mock(TitleCardProvider.class);
+        when(titleCard.shouldReleaseControl()).thenReturn(false);
+        when(titleCard.shouldCompleteFreshLevelTransitionBoundary()).thenReturn(true);
+        var level = mock(com.openggf.level.LevelManager.class);
+        var sprites = mock(com.openggf.sprites.managers.SpriteManager.class);
+        var frame = mock(com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame.class);
+        Runnable exit = mock(Runnable.class);
+        boolean released = GameLoopTitleCardLifecycle.update(
+                true, titleCard, frame, TestEnvironment.activeGameplayMode(), level, sprites,
+                mock(com.openggf.camera.Camera.class), mockInputHandler, () -> {},
+                PostTitleCardDestination.LEVEL, exit, result -> assertEquals(LevelFrameResult.SETUP_ONLY, result),
+                () -> {}, () -> {}, phase -> {}, (name, step) -> step.run());
+        assertTrue(released, "loc_64DC enters LevelLoop while the title pieces remain visible");
+        InOrder order = inOrder(titleCard, exit);
+        order.verify(titleCard).completeFreshLevelRuntimeArtHandoff();
+        order.verify(exit).run();
+    }
+
+    @Test
     public void testExitTitleCardAppliesDeferredBonusStageSetupWithoutSavedState() throws Exception {
         BonusStageProvider provider = mock(BonusStageProvider.class);
 
@@ -1703,7 +1879,7 @@ public class TestGameLoop {
         GameModule module = neutralGameModule();
         when(module.getEndingProvider()).thenReturn(endingProvider);
         when(module.getSaveSnapshotProvider()).thenReturn(
-                (reason, ctx) -> Map.of("clear", ctx.saveSessionContext().isClear(), "marker", "ending"));
+                (reason, ctx) -> Map.of("clear", ctx.isClear(), "marker", "ending"));
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
 
         SaveSessionContext saveContext = SaveSessionContext.forSlot(
@@ -1845,7 +2021,7 @@ public class TestGameLoop {
     }
 
     @Test
-    void testDoExitTitleScreenRoutesTwoPlayerAwayFromDataSelect() throws Exception {
+    void testDoExitTitleScreenRejectsUnsupportedTwoPlayerWithoutStartingLevel() throws Exception {
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -1869,9 +2045,15 @@ public class TestGameLoop {
 
         invokePrivateMethod(gameLoop, "doExitTitleScreen");
 
-        assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
+        assertEquals(GameMode.TITLE_SCREEN, gameLoop.getCurrentGameMode());
+        assertEquals(1, titleScreen.initializeCalls);
+
+        titleScreen.triggerExitHandler();
+
+        assertEquals(GameMode.TITLE_SCREEN, gameLoop.getCurrentGameMode());
+        assertEquals(2, titleScreen.initializeCalls);
         assertEquals(0, nativeDelegate.initializeCalls);
-        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
+        verify(levelManager, never()).loadZoneAndActForFreshRuntime(anyInt(), anyInt());
     }
 
     @Test
@@ -2472,6 +2654,40 @@ public class TestGameLoop {
         verify((FadeManager) getPrivateField(gameLoop, "fadeManager"), never()).startFadeToBlack(any());
     }
 
+    @Test
+    void testTitleScreenExitStartsLevelWhenModuleSuppressesLevelSelect() throws Exception {
+        SessionManager.clear();
+        com.openggf.configuration.SonicConfigurationService.getInstance()
+                .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, true);
+
+        StubTitleScreenProvider titleScreen = new StubTitleScreenProvider(TitleScreenAction.LEVEL_SELECT);
+        titleScreen.supportsLevelSelectOverlay = true;
+        GameModule module = neutralGameModule();
+        com.openggf.game.LevelSelectProvider levelSelect = mock(com.openggf.game.LevelSelectProvider.class);
+        when(module.suppressesLevelSelect()).thenReturn(true);
+        when(module.getTitleScreenProvider()).thenReturn(titleScreen);
+        when(module.getLevelSelectProvider()).thenReturn(levelSelect);
+        when(module.getDataSelectProvider()).thenReturn(new StubDataSelectProvider(DataSelectAction.none()));
+        when(module.getGameId()).thenReturn(com.openggf.game.GameId.S1);
+        when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
+
+        com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
+        setPrivateField(gameLoop, "levelManager", levelManager);
+        setPrivateField(gameLoop, "currentGameMode", GameMode.TITLE_SCREEN);
+
+        GameModuleRegistry.setCurrent(module);
+        invokePrivateMethod(gameLoop, "doExitTitleScreen");
+
+        assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
+        verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
+        verify(levelSelect, never()).initializeFromTitleScreen();
+        verify(levelSelect, never()).initialize();
+        com.openggf.configuration.SonicConfigurationService.getInstance()
+                .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
+    }
+
     private MasterTitleLaunchCoordinator installLaunchCoordinator(SonicConfigurationService config,
                                                                   TrackingLaunchProfileStore store)
             throws Exception {
@@ -2662,6 +2878,7 @@ public class TestGameLoop {
 
     private static final class StubTitleScreenProvider implements TitleScreenProvider {
         private final TitleScreenAction exitAction;
+        private int initializeCalls;
         private boolean supportsLevelSelectOverlay;
         private boolean exiting;
         private Runnable exitHandler = () -> {};
@@ -2690,6 +2907,7 @@ public class TestGameLoop {
 
         @Override
         public void initialize() {
+            initializeCalls++;
         }
 
         @Override

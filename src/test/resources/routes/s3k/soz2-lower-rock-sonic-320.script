@@ -1,0 +1,21 @@
+# Positioned Sonic solo, no donor; X=$4940 Y=$430, 37 rings, no shield/emeralds.
+# Break the real cork, return past the switch/rock, defeat the scorpion by
+# spindash, push the rock to hold the switch, jump over and pass the raised door.
+100 -
+30 A
+70 -
+150 L
+150 R
+180 L
+60 L+A
+50 L
+60 L+A
+60 L
+60 L+A
+40 L
+70 R
+1 D
+repeat 3 { 1 D+A; 1 D }
+1200 R
+45 R+A
+180 R

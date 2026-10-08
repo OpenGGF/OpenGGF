@@ -114,7 +114,14 @@ final class LevelActTransitionExecutor {
         GameStateManager gameState = GameServices.gameState();
         boolean endOfLevelActive = gameState.isEndOfLevelActive();
         boolean endOfLevelFlag = gameState.isEndOfLevelFlag();
+        // An in-place act change runs no RAM wipe in the ROM: the Death Egg
+        // act 1 -> act 2 handover loc_593EC (sonic3k.asm:118724) calls Load_Level
+        // and LoadSolids only, so Reverse_gravity_flag ($FFFFF7C6) carries into the
+        // next act. resetForLevel() models Level_ClrRam's `clearRAM
+        // Tails_CPU_interact,$100` (:7621) and must not fire here.
+        boolean reverseGravityActive = gameState.isReverseGravityActive();
         gameState.resetForLevel();
+        gameState.setReverseGravityActive(reverseGravityActive);
         if (request.preserveEndOfLevelActive()) {
             gameState.setEndOfLevelActive(endOfLevelActive);
         }

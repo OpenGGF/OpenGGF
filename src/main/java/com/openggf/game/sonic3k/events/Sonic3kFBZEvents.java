@@ -888,11 +888,15 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     /** Reinstalls the exact event-owned Plane-B image captured by the FBZ runtime codec. */
     public void reconcileRetainedPlaneState() {
         if (!canAccessRetainedPlaneRuntime()) return;
+        // Rebuild only the retained name table. LevelSnapshot and the palette
+        // ownership adapter have already restored Normal/Target colours and
+        // the captured frame's writers. Reissuing the original BG-change write
+        // here invents palette ownership (or overwrites a later flash) on rewind;
+        // the ROM writes that patch only at init/background-change events.
         if (retainedPlaneSnapshot.length != 0) {
             levelManager().restoreBackgroundVdpPlane(retainedPlaneSnapshot);
             retainedPlaneSnapshot = new byte[0];
             retainedPlaneOwned = true;
-            if (act == 0) submitAct1PaletteOwnership();
             return;
         }
         // Act 1 predates exact retained-plane snapshotting and retains its
@@ -916,7 +920,6 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             planeBRedraw.replay(direction, backgroundRedrawProgress, targetOffset, replayY);
             finishPlaneBFrame();
         }
-        submitAct1PaletteOwnership();
     }
 
     /** Compatibility entry point retained for Act 1 callers and focused tests. */

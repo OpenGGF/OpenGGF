@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.debug.playback.Bk2FrameInput;
+import com.openggf.configuration.WidescreenAspect;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.CrossGameFeatureProvider;
@@ -33,9 +34,6 @@ class TestSozConnectedMechanismsProduction {
         config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
-        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
-        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, 400);
-        config.resolveDisplayAspect();
         config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
         CrossGameFeatureProvider.getInstance().resetState();
         SessionManager.clear();
@@ -51,15 +49,15 @@ class TestSozConnectedMechanismsProduction {
     static Stream<Arguments> configurations() {
         var rows=new java.util.ArrayList<Arguments>();
         for(var scene:SozConnectedMechanismRoute.Scene.values())
-            for(int width:new int[]{320,400,512,640,800})for(String donor:new String[]{"off","s1","s2"})
-                rows.add(Arguments.of(scene,width,donor));
+            for(var aspect:WidescreenAspect.values())for(String donor:new String[]{"off","s1","s2"})
+                rows.add(Arguments.of(scene,aspect,donor));
         return rows.stream();
     }
     @ParameterizedTest
     @MethodSource("configurations")
-    void corkCarryWrapAndPlacedSwitchUseTheProductionGraph(SozConnectedMechanismRoute.Scene scene,int width,String donor) {
+    void corkCarryWrapAndPlacedSwitchUseTheProductionGraph(SozConnectedMechanismRoute.Scene scene,WidescreenAspect aspect,String donor) {
         var config=SonicConfigurationService.getInstance();
-        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS,width);
+        SozAcceptanceConfigurations.selectDisplay(aspect);
         config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,!donor.equals("off"));
         config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE,donor);
         if(!donor.equals("off")) {
@@ -76,7 +74,7 @@ class TestSozConnectedMechanismsProduction {
         if(!donor.equals("off"))builder.withCrossGameDonation(donor);
         var fixture=builder.build();
         SozAcceptanceConfigurations.assertUsableTeam(donor);
-        assertEquals(width,fixture.camera().getWidth()&65535);
+        SozAcceptanceConfigurations.assertDisplay(aspect);
         assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
         if(!donor.equals("off"))assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
         assertEquals(!donor.equals("s1"),fixture.sprite().getGameRules().playerCapability().spindashEnabled());

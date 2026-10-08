@@ -80,7 +80,7 @@ class TestS3kSpecialStageResultsReveal {
 
     private S3kSpecialStageResultsScreen screen(boolean superEmeraldStage, boolean skSideOrigin,
                                                 PlayerCharacter character) {
-        return new S3kSpecialStageResultsScreen(50, true, 0, gameState.getEmeraldCount(),
+        return new S3kSpecialStageResultsScreen(50, true, 0, 0, gameState.getEmeraldCount(),
                 character, superEmeraldStage, skSideOrigin);
     }
 
@@ -124,7 +124,7 @@ class TestS3kSpecialStageResultsReveal {
     @Test
     void failedSuperEmeraldStageSkipsTheSanctuaryReveal() {
         collectAllChaosEmeralds();
-        var screen = new S3kSpecialStageResultsScreen(30, false, 0, gameState.getEmeraldCount(),
+        var screen = new S3kSpecialStageResultsScreen(30, false, 1, 0, gameState.getEmeraldCount(),
                 PlayerCharacter.SONIC_ALONE, true, true);
 
         for (int frame = 1; frame <= FRAMES_TO_REVEAL && !screen.isComplete(); frame++) {
@@ -168,7 +168,7 @@ class TestS3kSpecialStageResultsReveal {
     @Test
     void sanctuaryPanWaitsSixtyFramesThenMovesTheCameraOnePixelPerFrameToThePedestals() {
         collectAllChaosEmeraldsAndSuperEmeraldsExcept(6);
-        var screen = new S3kSpecialStageResultsScreen(30, true, 0, gameState.getEmeraldCount(),
+        var screen = new S3kSpecialStageResultsScreen(30, true, 0, 0, gameState.getEmeraldCount(),
                 PlayerCharacter.SONIC_ALONE, true, true);
         int e = TALLY_END_UNDER_50_RINGS;
 
@@ -208,7 +208,7 @@ class TestS3kSpecialStageResultsReveal {
     @Test
     void sixSuperEmeraldsExitSixtyFramesAfterTheStarsCloseWithoutAHyperMessage() {
         collectAllChaosEmeraldsAndSuperEmeraldsExcept(6);
-        var screen = new S3kSpecialStageResultsScreen(30, true, 2, gameState.getEmeraldCount(),
+        var screen = new S3kSpecialStageResultsScreen(30, true, 0, 2, gameState.getEmeraldCount(),
                 PlayerCharacter.SONIC_ALONE, true, true);
         int e = TALLY_END_UNDER_50_RINGS;
 
@@ -232,7 +232,7 @@ class TestS3kSpecialStageResultsReveal {
         collectAllChaosEmeraldsAndSuperEmeraldsExcept(6);
         gameState.markSuperEmeraldCollected(6);
         // Stage 3 starts the camera at $1500, $A0 left of the Hyper pan target.
-        var screen = new S3kSpecialStageResultsScreen(30, true, 3, gameState.getEmeraldCount(),
+        var screen = new S3kSpecialStageResultsScreen(30, true, 0, 3, gameState.getEmeraldCount(),
                 PlayerCharacter.SONIC_ALONE, true, true);
         int e = TALLY_END_UNDER_50_RINGS;
 
@@ -278,7 +278,7 @@ class TestS3kSpecialStageResultsReveal {
     void timelineMatchesTheNativeSeventhSuperEmeraldStage() {
         collectAllChaosEmeraldsAndSuperEmeraldsExcept(5);
         gameState.markSuperEmeraldCollected(5);
-        var screen = new S3kSpecialStageResultsScreen(50, true, 5, gameState.getEmeraldCount(),
+        var screen = new S3kSpecialStageResultsScreen(50, true, 0, 5, gameState.getEmeraldCount(),
                 PlayerCharacter.SONIC_AND_TAILS, true, true);
 
         runTo(screen, 1, 1041);
@@ -306,7 +306,7 @@ class TestS3kSpecialStageResultsReveal {
     void knucklesHyperMessageUsesHisNameFrame() {
         collectAllChaosEmeraldsAndSuperEmeraldsExcept(6);
         gameState.markSuperEmeraldCollected(6);
-        var screen = new S3kSpecialStageResultsScreen(30, true, 0, gameState.getEmeraldCount(),
+        var screen = new S3kSpecialStageResultsScreen(30, true, 0, 0, gameState.getEmeraldCount(),
                 PlayerCharacter.KNUCKLES, true, true);
         int s = TALLY_END_UNDER_50_RINGS + 539;
 
@@ -318,7 +318,7 @@ class TestS3kSpecialStageResultsReveal {
     @Test
     void fiftyRingsHoldTheContinueWaitBeforeRoutineE() {
         collectAllChaosEmeraldsAndSuperEmeraldsExcept(6);
-        var screen = new S3kSpecialStageResultsScreen(50, true, 0, gameState.getEmeraldCount(),
+        var screen = new S3kSpecialStageResultsScreen(50, true, 0, 0, gameState.getEmeraldCount(),
                 PlayerCharacter.KNUCKLES, true, true);
         int r = TALLY_END_UNDER_50_RINGS;
 

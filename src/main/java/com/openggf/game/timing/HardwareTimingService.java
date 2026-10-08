@@ -677,6 +677,7 @@ public final class HardwareTimingService
                                 .map(HardwareTimingJob::describe)
                                 .toList());
             }
+            Map<HardwareWorkKind, Long> advances = new EnumMap<>(HardwareWorkKind.class);
             for (Map.Entry<HardwareWorkKind, RecordedOrdinalSpan> entry : spans.entrySet()) {
                 HardwareWorkKind kind = Objects.requireNonNull(entry.getKey(), "hardware work kind");
                 RecordedOrdinalSpan span = Objects.requireNonNull(entry.getValue(), "recorded ordinal span");
@@ -685,6 +686,20 @@ public final class HardwareTimingService
                             "recorded ordinal spans only apply to recorded-admission kinds: " + kind);
                 }
                 long cursor = nextOrdinals.getOrDefault(kind, 0L);
+                if (cursor == span.nextOrdinal() && !span.submissionFingerprints().isEmpty()) {
+                    // Comparison only: production already claimed this whole span.
+                    for (int index = 0; index < span.submissionFingerprints().size(); index++) {
+                        HardwareWorkHandle expected = new HardwareWorkHandle(kind,
+                                span.firstOrdinal() + index, span.submissionFingerprints().get(index));
+                        HardwareTimingJob job = find(expected);
+                        if (job == null || !job.isClaimed()) {
+                            throw new IllegalStateException(
+                                    "recorded interstitial work has no matching claimed production job: "
+                                            + HardwareTimingJob.describe(expected));
+                        }
+                    }
+                    continue;
+                }
                 if (cursor != span.firstOrdinal()) {
                     throw new IllegalStateException(
                             "recorded ordinal span does not begin at the production cursor for "
@@ -692,8 +707,10 @@ public final class HardwareTimingService
                                     + ", recorded span=" + span.firstOrdinal()
                                     + ".." + span.lastOrdinal());
                 }
-                nextOrdinals.put(kind, span.nextOrdinal());
+                advances.put(kind, span.nextOrdinal());
             }
+            // A later kind's failed proof must not partially move another kind.
+            nextOrdinals.putAll(advances);
         }
 
         @Override

@@ -11,6 +11,7 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.debug.playback.PlaybackDebugManager;
+import com.openggf.debug.playback.PlaybackSessionScope;
 import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
@@ -84,6 +85,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.IntConsumer;
+import java.util.function.IntPredicate;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -696,6 +698,17 @@ abstract class AbstractRunChainTest {
                             >= descriptors.get(source).levelLoopRowCount();
         }
 
+        private boolean ownsRepresentedLevelTail(LiveTraceComparator comparator) {
+            int source = coordinator.currentSegmentIndex();
+            if (comparator == null || source < 0) {
+                return false;
+            }
+            TraceRunSegmentDescriptor descriptor = descriptors.get(source);
+            return "level".equals(descriptor.segment().kind())
+                    && comparator.cursor() >= descriptor.levelLoopRowCount()
+                    && comparator.cursor() < descriptor.rowCount();
+        }
+
         private void closeCurrent(GameMode mode, boolean publicationComplete) {
             int source = coordinator.currentSegmentIndex();
             if (!publicationComplete) {
@@ -1105,7 +1118,7 @@ abstract class AbstractRunChainTest {
             throw new IllegalArgumentException(
                     "start segment must be nonnegative: " + startSegmentIndex);
         }
-        return assertChainReplay(runDir, null, startSegmentIndex);
+        return assertChainReplay(runDir, null, startSegmentIndex, false);
     }
 
 
@@ -1170,12 +1183,12 @@ abstract class AbstractRunChainTest {
 
     private DynamicArtGapJournalEvidence assertChainReplay(
             Path runDir, ReplayPrefixTarget prefixTarget) throws Exception {
-        return assertChainReplay(runDir, prefixTarget, 0);
+        return assertChainReplay(runDir, prefixTarget, 0, true);
     }
 
     private DynamicArtGapJournalEvidence assertChainReplay(
-            Path runDir, ReplayPrefixTarget prefixTarget, int startSegmentIndex)
-            throws Exception {
+            Path runDir, ReplayPrefixTarget prefixTarget, int startSegmentIndex,
+            boolean preserveProductionLoadCamera) throws Exception {
         chainAxisFailures.clear();
         // --- Step 1: load + validate manifest, plan segments (manifest-driven) --
         TraceRunManifest run;
@@ -1227,11 +1240,14 @@ abstract class AbstractRunChainTest {
         } catch (IOException e) {
             throw new AssertionError("Failed to open initial run segment", e);
         }
+        PlaybackSessionScope playbackScope = null;
         try {
             afterInitialHeadlessPayloadOpen.run();
         TraceData trace0 = initialPayload.trace();
         Path bk2Path = resolveRunBk2(runDir, run.sourceBk2());
         Bk2Movie movie = new Bk2MovieLoader().load(bk2Path);
+        playbackScope = new PlaybackSessionScope(
+                PlaybackDebugManager.getInstance(), movie);
 
         // Must run before the FIRST HeadlessTestFixture build below (recorded
         // team, cross-game off, S3K intro-skip derived from trace metadata) --
@@ -1274,7 +1290,13 @@ abstract class AbstractRunChainTest {
         TraceReplayDriver driver = new TraceReplayDriver(
                 trace0, movie, fixture, loop, fixture::sprite, () -> { },
                 recordedHardwareTiming);
-        driver.start(bootZone, bootAct);
+        if (preserveProductionLoadCamera) {
+            driver.startWithProductionLoadCamera(bootZone, bootAct);
+        } else {
+            // The explicit start-at-segment diagnostic has no predecessor
+            // production state; retain its declared-position bootstrap.
+            driver.start(bootZone, bootAct);
+        }
         int initialComparisonCursor = driver.initialCursor();
 
         HardwareTimingCoordinator hardwareTiming =
@@ -1459,15 +1481,16 @@ abstract class AbstractRunChainTest {
                 int rowsConsumed = prepareAcrossLevelBoundary(
                         loop, playback, probe, movie, seg, next, stepCap,
                         levelAtSegmentStart);
-                admitPlainLevelBoundaryWhenReady(
-                        loop, playback, runCoordinator, next, rowsConsumed,
-                        stepCap);
+                rowsConsumed = admitPlainLevelBoundaryWhenReady(
+                        gameplayMode, loop, playback, runCoordinator, next,
+                        rowsConsumed, stepCap);
                 int destinationIndex = i + 1;
+                int admittedRowsConsumed = rowsConsumed;
                 activeComparator = openAndAttachHeadlessPayload(
                         next, destinationIndex,
                         payload -> attachPreparedLevelSegment(
                                 playback, probe, movie, next, fixture,
-                                rowsConsumed, destinationIndex));
+                                admittedRowsConsumed, destinationIndex));
                 activeSegmentInitialCursor = cursorOrZero(activeComparator);
                 dynamicArtSegments.beginSegment();
                 gameplayMode.dynamicArtLifecycle()
@@ -1531,6 +1554,7 @@ abstract class AbstractRunChainTest {
                 boolean uncomparedInterior = TraceRunReplayWalker.isUncomparedInterior(seg.segment());
                 Runnable stepOneFrame;
                 UncomparedInteriorBoundaryDrive uncomparedDrive = null;
+                ComparedInteriorRowDrive comparedDrive = null;
                 if (uncomparedInterior) {
                     uncomparedDrive = new UncomparedInteriorBoundaryDrive(
                             run.runId(), i, seg, loop, inputHandler, movie,
@@ -1540,7 +1564,13 @@ abstract class AbstractRunChainTest {
                             returnSegment.segment().bk2FrameOffset());
                     stepOneFrame = uncomparedDrive;
                 } else {
-                    stepOneFrame = () -> stepEngineFrame(loop);
+                    comparedDrive = new ComparedInteriorRowDrive(
+                            playback, () -> stepEngineFrame(loop),
+                            () -> runCoordinator.sourceComparatorExhausted(
+                                    productionComparator),
+                            () -> runCoordinator.closeCurrent(
+                                    loop.getCurrentGameMode(), true));
+                    stepOneFrame = comparedDrive;
                 }
                 int returnOffset = descriptors.get(i + 1)
                         .segment().bk2FrameOffset();
@@ -1573,9 +1603,10 @@ abstract class AbstractRunChainTest {
                 //    (returnOffset == modeChangeBk2Frame for every stage_exit in this run),
                 //    so the first driven bonus frame pushes the cursor PAST the edge and
                 //    awaitBoundary returns NOT_OBSERVED before the stage ever completes.
-                //    Leaving it live lets the fade/title-card freeze (no onLevelFrameAdvanced)
-                //    and the fall-through frame supply the +1, landing the cursor exactly on
-                //    returnOffset (framesConsumed == 0).
+                //    The compared row drive also advances presentation iterations,
+                //    which do not call onLevelFrameAdvanced themselves. Each physical
+                //    return row must prepare its own timing boundary; a frozen input
+                //    cursor would apply successive VINTs to the last bonus row.
                 //
                 // Comparison-only either way: this only positions the INPUT cursor, exactly
                 // as handoffIntoInterior/attachLevelSegment already do -- no trace FIELD is
@@ -1588,8 +1619,9 @@ abstract class AbstractRunChainTest {
                 }
                 boolean dynamicArtGapOpened = uncomparedDrive != null
                         && uncomparedDrive.gapOpened();
-                boolean interiorCoordinatorSourceClosed = uncomparedDrive != null
-                        && uncomparedDrive.sourceClosed();
+                boolean interiorCoordinatorSourceClosed = comparedDrive != null
+                        && comparedDrive.sourceClosed()
+                        || uncomparedDrive != null && uncomparedDrive.sourceClosed();
                 if (uncomparedDrive != null) {
                     uncomparedDrive.releasePayloadBackedLocals();
                     uncomparedDrive = null;
@@ -2076,6 +2108,11 @@ abstract class AbstractRunChainTest {
                 throw error;
             }
             throw (Exception) failure;
+        } finally {
+            // A prefix/error can finish while its movie still owns process-wide input.
+            if (playbackScope != null) {
+                playbackScope.close();
+            }
         }
     }
 
@@ -2627,7 +2664,9 @@ abstract class AbstractRunChainTest {
             if (physicalRowIndex >= physicalRows.size()) {
                 throw new AssertionError(
                         "uncompared-interior physical walk exceeded destination "
-                                + destinationOffset);
+                                + destinationOffset + "; segment=" + segment.segment().dir()
+                                + "; mode=" + loop.getCurrentGameMode()
+                                + "; movieCursor=" + playback.getCursorFrame());
             }
             UncomparedInteriorPhysicalRow row =
                     physicalRows.get(physicalRowIndex++);
@@ -3399,7 +3438,7 @@ abstract class AbstractRunChainTest {
      * special stage -- see {@link #attachInteriorComparator}).
      *
      * <p>The comparator's initial cursor for each interior kind (compared-bonus
-     * ENTRY = 1, special = uncompared) follows the COMPARATOR FRAME BASE contract
+     * ENTRY = 0, special = uncompared) follows the COMPARATOR FRAME BASE contract
      * on {@link #attachReturnedLevelSegment}.
      */
     private int prepareIntoInterior(
@@ -3411,40 +3450,13 @@ abstract class AbstractRunChainTest {
         int offset = interior.segment().bk2FrameOffset();
         GameMode target = TraceRunReplayWalker.expectedMode(interior.segment());
         if (!TraceRunReplayWalker.isUncomparedInterior(interior.segment())) {
-            // COMPARED interior (bonus stage). The interior's FIRST gameplay tick is
-            // the single title-card-exit fall-through frame: GameLoop.exitTitleCard
-            // releases control and flips into BONUS_STAGE in the SAME loop.step(),
-            // then that step's LevelFrameStep ticks the player. That fall-through
-            // frame IS the recorded interior's frame 0, and for the S3K bonus
-            // machines it is load-bearing: the player enters air-forced-false for
-            // exactly one frame and, if the recorded frame-0 direction is pressed,
-            // does a single grounded ground-move (e.g. the gumball's g_speed -0x0C
-            // left nudge) before the ground probe finds no floor and flips it
-            // airborne. If that tick reads a neutral/stale input the grounded nudge
-            // is lost, the player free-falls with air-accel from frame 0, and the
-            // interior trajectory diverges enough to push the stage exit past the
-            // boundary window.
-            //
-            // Seek to the interior's recorded offset BEFORE waiting out the fade +
-            // title card. The shared cursor is frozen across the fade/title-card
-            // (those non-LEVEL/BONUS frames never call onLevelFrameAdvanced), so it
-            // stays parked at this offset until the fall-through frame -- unlike
-            // seeking AFTER waitForMode, which left the fall-through reading the
-            // stale pre-entry row. GameLoop.exitTitleCard's bonus branch re-arms the
-            // playback forced-input bridge right after flipping to BONUS_STAGE (the
-            // step-top syncPlaybackInputBridge ran while still TITLE_CARD, which
-            // PlaybackDebugManager.isDriving does not drive), so the fall-through
-            // player tick then samples this parked offset = recorded frame 0. Input
-            // alignment via the same forced-input bridge the interior already uses,
-            // never trace-field hydration.
+            // Title-card release is setup-only. Park input at the first interior
+            // row before releasing control; the next loop step owns its first
+            // gameplay tick, so neither input nor comparison may skip row zero.
             playback.startSession(movie, offset);
             waitForMode(loop, target, stepCap);
             primeInteriorEntryRngFromMetadata(interior);
-            // The fall-through frame already reproduced recorded frame 0 (the grounded
-            // entry tick) and advanced the cursor to offset+1, so compare from frame 1
-            // (the compared-bonus-ENTRY case of the COMPARATOR FRAME BASE contract on
-            // attachReturnedLevelSegment: initialCursor == cursorFrame - offset == 1).
-            return 1;
+            return 0;
         }
         // UNCOMPARED interior (special stage): the SS is driven separately by
         // uncomparedInteriorStep; the shared cursor is not read for its physics, so
@@ -3467,9 +3479,9 @@ abstract class AbstractRunChainTest {
             }
             comparator = attachInteriorComparator(interior, fixture);
         } else {
-            if (rowsConsumed != 1) {
+            if (rowsConsumed != 0) {
                 throw new AssertionError(
-                        "compared interior admission expected one published row but saw "
+                        "compared interior admission expected no published rows but saw "
                                 + rowsConsumed);
             }
             comparator = new LiveTraceComparator(
@@ -3580,10 +3592,9 @@ abstract class AbstractRunChainTest {
      *       {@link #attachLevelSegment}: the comparator attaches before the
      *       segment's frame 0 and the cursor is (re-)seeked to
      *       {@code segmentOffset}.</li>
-     *   <li><b>1</b> — a compared bonus interior ENTRY
-     *       ({@link #handoffIntoInterior}'s bonus/Option-B branch): the single
-     *       title-card-exit fall-through frame already reproduced the interior's
-     *       recorded frame 0, so comparison starts at frame 1.</li>
+     *   <li><b>0</b> — a compared bonus interior ENTRY: title-card release
+     *       completes setup only. The first gameplay tick and its input are
+     *       still pending when the comparator attaches.</li>
      *   <li><b>1</b> — a level RETURN after a special-stage (uncompared) interior
      *       (this method): the pre-seeked frozen cursor's one fall-through frame
      *       consumed the return segment's frame 0.</li>
@@ -4623,24 +4634,69 @@ abstract class AbstractRunChainTest {
      * admits immediately exits on iteration zero having stepped nothing, and the
      * loop is bounded by the manifest-derived {@code stepCap}.
      */
-    private void admitPlainLevelBoundaryWhenReady(
+    private int admitPlainLevelBoundaryWhenReady(
+            GameplayModeContext gameplayMode,
             GameLoop loop, PlaybackDebugManager playback,
             HeadlessRunCoordinatorAdapter runCoordinator,
             TraceRunSegmentDescriptor next,
             int rowsConsumed, int stepCap) {
-        for (int step = 0; step < stepCap; step++) {
-            if (runCoordinator.tryAdmitLevel(
-                    null, playback.getCursorFrame(),
-                    loop.getCurrentGameMode(), rowsConsumed,
-                    runCoordinator.latestLoadReceipt())) {
-                return;
+        return admitPlainLevelBoundaryWhenReady(
+                gameplayMode, loop, playback, next.segment().bk2FrameOffset(),
+                rowsConsumed, stepCap,
+                consumed -> runCoordinator.tryAdmitLevel(
+                        null, playback.getCursorFrame(), loop.getCurrentGameMode(),
+                        consumed, runCoordinator.latestLoadReceipt()));
+    }
+
+    /** Admission seam shares the real gap dispatch; no comparison values enter it. */
+    final int admitPlainLevelBoundaryWhenReady(
+            GameplayModeContext gameplayMode, GameLoop loop,
+            PlaybackDebugManager playback, int destinationOffset,
+            int preparedRowsConsumed, int stepCap, IntPredicate tryAdmission) {
+        for (int step = 0; step <= stepCap; step++) {
+            int cursor = playback.getCursorFrame();
+            // Preserve a real title-release fall-through observed by preparation.
+            int rowsConsumed = step == 0 ? preparedRowsConsumed
+                    : Math.max(0, cursor - destinationOffset);
+            if (rowsConsumed < 0 || rowsConsumed > 1) {
+                throw new AssertionError("plain destination advanced past its opening row"
+                        + " without admission (cursor " + cursor + ", offset "
+                        + destinationOffset + ", consumed " + rowsConsumed + ")");
             }
-            stepEngineFrame(loop);
+            if (tryAdmission.test(rowsConsumed)) {
+                return rowsConsumed;
+            }
+            // SHARED_GAP may spend only unrepresented input rows. Once row 0's
+            // input is selected, denial cannot consume it and later attach a
+            // comparator past physics that never executed. The existing 0/1
+            // preparation result remains legitimate; newly suppressed rows do not.
+            if (cursor >= destinationOffset) {
+                throw new AssertionError("plain destination denied admission at its"
+                        + " advertised input row (cursor " + cursor + ", offset "
+                        + destinationOffset + ")");
+            }
+            if (step == stepCap) {
+                break;
+            }
+            stepLoadedPlainLevelGap(gameplayMode, loop, playback);
         }
-        runCoordinator.admitLevel(
-                null, playback.getCursorFrame(),
-                loop.getCurrentGameMode(), rowsConsumed, false,
-                runCoordinator.latestLoadReceipt());
+        throw new AssertionError("plain destination never became admissible within "
+                + stepCap + " steps (cursor " + playback.getCursorFrame()
+                + ", offset " + destinationOffset + ")");
+    }
+
+    /** A prepared plain destination has already replaced the source level. */
+    final void stepLoadedPlainLevelGap(
+            GameplayModeContext gameplayMode, GameLoop loop,
+            PlaybackDebugManager playback) {
+        // The source loop has ended: preparation observed the destination load.
+        // The unrecorded arm row belongs to the blocking entry routine, not
+        // destination LevelLoop (S3K loc_64DC -> Wait_VSync -> Process_Sprites).
+        // Use the same production gap owner as transition-record boundaries.
+        gameplayMode.beginRunTransitionGap();
+        gameplayMode.consumeRunGapFirstRow();
+        stepEngineFrameInTransitionGap(
+                gameplayMode, loop, playback, playback.getCursorFrame(), false, false);
     }
 
     private void topUpUnconsumedSegmentRows(
@@ -5205,7 +5261,14 @@ abstract class AbstractRunChainTest {
         int slotProbeRowIndex = slotOccupancyProbe != null && preStepComparator != null
                 ? preStepComparator.cursor()
                 : -1;
-        loop.step();
+        if (coordinator != null && coordinator.ownsRepresentedLevelTail(preStepComparator)) {
+            // The source still owns its recorded physical load/title tail.
+            // Retain comparison/timing and publish exactly one movie row;
+            // this does not close the coordinator or create a VInt.
+            PhysicalMovieRowDrive.run(PlaybackDebugManager.getInstance(), loop::step);
+        } else {
+            loop.step();
+        }
         afterProductionStep.run();
         if (slotProbeRowIndex >= 0) {
             var slotProbeLevel = GameServices.levelOrNull();

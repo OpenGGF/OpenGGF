@@ -45,6 +45,7 @@ the remaining rows can be produced while validating one packed jar.
 
 | Code | What to fix |
 |---|---|
+| `UNKNOWN_ART_OVERRIDE_KEY` | Check the exact case-sensitive stock key with `ggfmod art-keys --game <baseGame>`; an unrequested key has no visible effect. |
 | `ASSET_MISSING` / `ASSET_FORMAT_INVALID` | Include the declared baked asset and regenerate it with the matching converter. |
 | `LEVEL_FORMAT_INVALID` | Re-export/reconvert the exact `ModLevelDefinition` v1 inventory and remove trailing/mismatched bytes. |
 | `LEVEL_OWNER_MISMATCH` | Use object/track keys owned by the declaring manifest id. |
@@ -64,7 +65,7 @@ the remaining rows can be produced while validating one packed jar.
 | `DUPLICATE_CLASS` / `CLASS_ENTRY_NAME_MISMATCH` / `MALFORMED_CLASSFILE` | Rebuild unique valid class entries at paths matching their binary names. |
 | `RESERVED_ENGINE_PACKAGE` | Move creator classes out of `com.openggf.*`. |
 | `OBJECT_BASE_CONTRACT` | Extend a supported public mod object base rather than implementing internals directly. |
-| `STATIC_STATE_UNSUPPORTED` | Keep gameplay state on instances/session services; only compile-time primitive/String constants may be static. |
+| `STATIC_STATE_UNSUPPORTED` | Keep gameplay state on instances/session services. Literal compile-time primitive/String constants, verified simple immutable Java enums, and javac's synthetic assertion flags/enum switch tables are supported; arbitrary class initialization, mutable enums and other static arrays/objects are not. See [executable-mod trust](concepts/trust.md). |
 | `OBJECT_RECREATE_PATH_MISSING` | Implement the supported rewind recreation contract for every concrete mod object. |
 | `FINAL_SCALAR_REWIND_GAP` | Make changing scalar state capturable/restorable instead of uncaptured final instance state. |
 | `OBJECT_REFERENCE_REWIND_ID_MISSING` | Capture referenced objects by rewind identity and restore through the supported context. |
@@ -88,6 +89,10 @@ single-jar `ggfmod validate` command:
 | `MOD_REGISTRATION_DISABLE_SAVE_FAILED` / `TRUST_REVOCATION_SAVE_FAILED` | Check mod-state storage after a failed registration or trust revocation; the requested persisted disable/revocation did not save. |
 | `MOD_PATCH_METADATA_FAILED` / `MOD_PATCH_APPLY_FAILED` | Fix the patch owner's metadata/callback failure; the engine leaves that patch unapplied. |
 | `MOD_CHARACTER_DISABLED_FALLBACK` / `MOD_CHARACTER_UNKNOWN_FALLBACK` | Re-enable/install the saved character owner or select an available character; launch used a stock fallback. |
+
+Successful packaging prints warnings too. `--format json` emits versioned structured
+findings. `--warnings allow` is the default; `--warnings error` makes warnings fail
+CI and prevents publication when used with `package`. Errors always fail.
 
 Run validation again after every change. A zero-finding result prints
 `Validation passed: 0 findings`; packaging invokes the same validator automatically.

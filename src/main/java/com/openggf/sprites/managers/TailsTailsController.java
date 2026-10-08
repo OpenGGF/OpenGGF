@@ -139,28 +139,28 @@ public class TailsTailsController {
     private static final int BLANK_DELAY = 0x20;
 
     // --- S2 frame data (mapping frame indices from MapUnc_Tails) ---
-    private static final int[] SWISH_FRAMES_S2 = { 0x09, 0x0A, 0x0B, 0x0C, 0x0D };
+    private static final int[] SWISH_FRAMES_S2 = TailsTailPose.SWISH_S2;
     private static final int[] FLICK_FRAMES_S2 = { 0x09, 0x0A, 0x0B, 0x0C, 0x0D };
     private static final int[] DIRECTIONAL_FRAMES_S2 = { 0x49, 0x4A, 0x4B, 0x4C };
-    private static final int[] SPINDASH_FRAMES_S2 = { 0x81, 0x82, 0x83, 0x84 };
+    private static final int[] SPINDASH_FRAMES_S2 = TailsTailPose.SPINDASH_S2;
     private static final int[] SKID_PUSH_FRAMES_S2 = { 0x87, 0x88, 0x89, 0x8A };
 
     // --- S3K frame data (mapping frame indices from Map_Tails_Tail) ---
     // Verified against Anim - Tails Tail.asm (AniTails_Tail01..0C)
-    private static final int[] SWISH_FRAMES_S3K = { 0x22, 0x23, 0x24, 0x25, 0x26 };
+    private static final int[] SWISH_FRAMES_S3K = TailsTailPose.SWISH_SEPARATE;
     private static final int[] FLICK_FRAMES_S3K = { 0x22, 0x23, 0x24, 0x25, 0x26 };
     private static final int[] DIRECTIONAL_FRAMES_S3K = { 5, 6, 7, 8 };  // AniTails_Tail03
-    private static final int[] SPINDASH_FRAMES_S3K = { 1, 2, 3, 4 };     // AniTails_Tail07
+    private static final int[] SPINDASH_FRAMES_S3K = TailsTailPose.SPINDASH_SEPARATE; // AniTails_Tail07
     private static final int[] SKID_FRAMES_S3K = { 0x1A, 0x1B, 0x1C, 0x1D };  // AniTails_Tail08
     private static final int[] PUSH_FRAMES_S3K = { 0x1E, 0x1F, 0x20, 0x21 };  // AniTails_Tail09
     private static final int[] HANG_FRAMES_S3K = { 0x29, 0x2A, 0x2B, 0x2C };  // AniTails_Tail0A
     private static final int[] FLY_FRAMES_S3K = { 0x27, 0x28 };                // AniTails_Tail0B/0C
 
     // Animation delays (frame duration)
-    private static final int SWISH_DELAY = 7;
+    private static final int SWISH_DELAY = TailsTailPose.SWISH_DELAY;
     private static final int FLICK_DELAY = 3;
     private static final int DIRECTIONAL_DELAY = 3;
-    private static final int SPINDASH_DELAY = 2;
+    private static final int SPINDASH_DELAY = TailsTailPose.SPINDASH_DELAY;
     private static final int SKID_DELAY = 2;
     private static final int PUSH_DELAY = 9;
     private static final int HANG_DELAY = 9;
@@ -360,7 +360,12 @@ public class TailsTailsController {
         } else {
             // Standard animations: flip matches parent's facing direction
             hFlip = Direction.LEFT.equals(sprite.getDirection());
-            vFlip = false;
+            // S3K loc_1613C XORs render bit 1 after animation, except for
+            // directional animation 3 (whose angle already supplies both flips).
+            // Compose at draw time because our animation flags persist between
+            // updates; writing the XOR back would toggle on repeated renders.
+            var gameState = sprite.currentGameStateOrNull();
+            vFlip = gameState != null && gameState.isReverseGravityActive();
         }
 
         int originX = sprite.getRenderCentreX();

@@ -17,7 +17,16 @@ public final class MenuScreenModeController {
         return mode == GameMode.CONTINUE_SCREEN
                 || mode == GameMode.TITLE_SCREEN
                 || mode == GameMode.LEVEL_SELECT
-                || mode == GameMode.DATA_SELECT;
+                || mode == GameMode.DATA_SELECT
+                || mode == GameMode.MOD_SCENE;
+    }
+
+    /** One tick of the open mod scene; it reads this frame's input before the edges advance. */
+    public void updateModScene(java.util.function.Consumer<InputHandler> scene, InputHandler inputHandler) {
+        if (scene != null) {
+            scene.accept(inputHandler);
+        }
+        inputHandler.update();
     }
 
     /** Consume input during fades without advancing the ROM object loop. */

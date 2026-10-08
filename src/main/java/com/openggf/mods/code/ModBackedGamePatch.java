@@ -28,6 +28,7 @@ public final class ModBackedGamePatch implements GamePatch {
     private final java.util.function.BiConsumer<String,
             com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink;
     private final RomArtSheetSource romArtSource;
+    private final String contentId;
 
     /**
      * Source of materialized ROM-art sheets; injectable for tests. Engine-internal — must never
@@ -67,7 +68,22 @@ public final class ModBackedGamePatch implements GamePatch {
                        java.util.function.BiConsumer<String,
                                com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink,
                        RomArtSheetSource romArtSource) {
+        this(plan, faultBoundary, saveFindingSink, romArtSource, "content");
+    }
+
+    ModBackedGamePatch(ModRegistrationPlan plan, ModFaultBoundary faultBoundary,
+                       java.util.function.BiConsumer<String,
+                               com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink,
+                       String contentId) {
+        this(plan, faultBoundary, saveFindingSink, productionRomArtSource(), contentId);
+    }
+
+    private ModBackedGamePatch(ModRegistrationPlan plan, ModFaultBoundary faultBoundary,
+                       java.util.function.BiConsumer<String,
+                               com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink,
+                       RomArtSheetSource romArtSource, String contentId) {
         this.plan = Objects.requireNonNull(plan, "plan");
+        this.contentId = Objects.requireNonNull(contentId, "contentId");
         this.faultBoundary = faultBoundary;
         this.saveFindingSink = Objects.requireNonNull(saveFindingSink, "saveFindingSink");
         this.romArtSource = Objects.requireNonNull(romArtSource, "romArtSource");
@@ -76,15 +92,18 @@ public final class ModBackedGamePatch implements GamePatch {
                 && !plan.preparedObjectArt().keySet().equals(plan.objectArt().keySet())) {
             throw new IllegalArgumentException("Backing patch requires validated object art");
         }
-        if (!plan.preparedZones().isEmpty() && plan.preparedZones().size() != plan.zones().size()) {
+        if (!plan.preparedZones().isEmpty() && plan.preparedZones().size() != plan.zones().stream().mapToInt(zone -> zone.acts().size()).sum()) {
             throw new IllegalArgumentException("Backing patch requires validated mod zones");
         }
-        if (plan.preparedZones().stream().anyMatch(zone -> zone.eventFactory() != null)
+        if (plan.preparedZones().stream().anyMatch(zone -> zone.eventFactory() != null || zone.runtimeFactory() != null)
                 && faultBoundary == null) {
             throw new IllegalArgumentException("Mod zone events require an installed fault boundary");
         }
         if (!plan.characters().isEmpty() && faultBoundary == null) {
             throw new IllegalArgumentException("Mod characters require an installed fault boundary");
+        }
+        if (plan.startupScene() != null && faultBoundary == null) {
+            throw new IllegalArgumentException("Mod startup scenes require an installed fault boundary");
         }
         if ((!plan.launchTeams().isEmpty() || !plan.inputFilters().isEmpty()
                 || !plan.hudProfiles().isEmpty()) && faultBoundary == null) {
@@ -94,7 +113,7 @@ public final class ModBackedGamePatch implements GamePatch {
     }
 
     public ModRegistrationPlan plan() { return plan; }
-    @Override public String id() { return plan.ownerModId() + ":content"; }
+    @Override public String id() { return plan.ownerModId() + ":" + contentId; }
     @Override public String displayName() { return plan.ownerModId() + " content"; }
     @Override public String baseGameId() { return plan.baseGameId(); }
     @Override public boolean activatesFor(GameplayLaunchRequest request) {
@@ -130,7 +149,9 @@ public final class ModBackedGamePatch implements GamePatch {
                             "Host adapter requested unsupported additive-zone runtime features",
                             null, null);
                 }
-                return zone.withRuntimeProfile(profile, hostData);
+                PreparedModZone prepared = zone.withRuntimeProfile(profile, hostData);
+                return zone.runtimeFactory() == null ? prepared : prepared.withRuntimeFactory(
+                        new OwnedModZoneRuntimeFactory(zone.ownerModId(), zone.localKey(), zone.runtimeFactory(), faultBoundary, plan.contributionLimit()));
             }).toList();
         }
         List<PreparedModZone> publishedZones = resolvedZones;
@@ -144,7 +165,7 @@ public final class ModBackedGamePatch implements GamePatch {
         Map<String, ObjectSpriteSheet> romSheets = plan.romObjectArt().isEmpty()
                 ? Map.of()
                 : romArtSource.materialize(plan.ownerModId(), plan.romObjectArt());
-        return new DelegatingGameModule(base, id()) {
+        GameModule decorated = new DelegatingGameModule(base, id()) {
             private com.openggf.game.PlayableCharacterRegistry playableCharacters;
             private com.openggf.game.ObjectArtProvider objectArtProvider;
             private com.openggf.game.ZoneRegistry zoneRegistry;
@@ -261,6 +282,27 @@ public final class ModBackedGamePatch implements GamePatch {
                 return gameplayPolicies;
             }
 
+            /**
+             * The mod's startup scene is served as the engine-internal {@link OwnedSceneFactory}
+             * game service (so the game package never depends on mod scene types). Only this
+             * package can build one, and it runs every scene callback inside the fault boundary.
+             */
+            /** The width the mod asked for ({@code ModContext.requireDisplayWidth}), else the base's. */
+            @Override
+            public String requiredDisplayAspect() {
+                return plan.requiredDisplayAspect() != null ? plan.requiredDisplayAspect()
+                        : super.requiredDisplayAspect();
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T> T getGameService(Class<T> type) {
+                if (type == OwnedSceneFactory.class && plan.startupScene() != null) {
+                    return (T) new OwnedSceneFactory(plan.ownerModId(), plan.startupScene(), faultBoundary);
+                }
+                return super.getGameService(type);
+            }
+
             @Override
             public ObjectRegistry createObjectRegistry() {
                 ObjectRegistry stockOrDecorated = super.createObjectRegistry();
@@ -314,6 +356,10 @@ public final class ModBackedGamePatch implements GamePatch {
                 if (registry instanceof ModZoneRegistry mods) {
                     PreparedModZone contribution = mods.levelContribution(levelIndex);
                     if (contribution != null) {
+                        if (contribution.runtimeFactory() != null) {
+                            var parallax = com.openggf.game.GameServices.parallaxOrNull();
+                            return new int[]{cameraX, parallax == null ? cameraY : parallax.getVscrollFactorBG()};
+                        }
                         return switch (contribution.runtimeProfile().scroll()) {
                             case FLAT -> new int[]{cameraX, cameraY};
                         };
@@ -376,6 +422,7 @@ public final class ModBackedGamePatch implements GamePatch {
                 return getDataSelectPresentationProvider();
             }
         };
+        return OwnedModServices.decorate(decorated, plan, faultBoundary);
     }
 
     private static ModZoneLevelData prepareHostData(PreparedModZone zone) {

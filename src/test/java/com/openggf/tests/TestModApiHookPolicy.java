@@ -60,6 +60,20 @@ class TestModApiHookPolicy {
         assertStagedPasses(repo);
     }
 
+    @Test void qualifiedAnnotationSurfaceEditsRequireAndAcceptThePin() throws Exception {
+        Path repo = fixture();
+        write(repo, CLASS_API, "/** Example. */\n@com.openggf.game.ModApi\npublic class ExampleClass {\n    public int value(int input) {\n        return input;\n    }\n    public int removed() {\n        return 0;\n    }\n}\n");
+        write(repo, PIN, "baseline with qualified class\n");
+        git(repo, "add", ".");
+        commit(repo);
+        write(repo, CLASS_API, "/** Example. */\n@com.openggf.game.ModApi\npublic class ExampleClass {\n    public int value(int input) {\n        return input;\n    }\n}\n");
+        git(repo, "add", CLASS_API);
+        assertStagedFails(repo);
+        write(repo, PIN, "changed for the removed method\n");
+        git(repo, "add", PIN);
+        assertStagedPasses(repo);
+    }
+
     @Test void annotatedClassNewProtectedMemberRequiresThePin() throws Exception {
         Path repo = fixtureWithAnnotatedClass();
         write(repo, CLASS_API, "import com.openggf.game.ModApi;\n/** Example. */\n@ModApi\npublic class ExampleClass {\n    public int value(int input) {\n        return input;\n    }\n    protected void added() { }\n}\n");

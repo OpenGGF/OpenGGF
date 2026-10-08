@@ -37,6 +37,8 @@ public final class GgfModCli {
                 case "init" -> init(args, output);
                 case "package" -> packageMod(args, output);
                 case "run" -> runEngine(args, output);
+                case "art-keys" -> artKeys(args, output);
+                case "sprites" -> SpriteSheetDump.run(java.util.Arrays.copyOfRange(args, 1, args.length), output);
                 default -> usage(output);
             };
         } catch (InvalidPathException error) {
@@ -52,7 +54,11 @@ public final class GgfModCli {
 
     private static int validate(String[] args, PrintStream output,
                                 Function<Path, ModJarValidator.Report> validator) {
-        if (args.length != 2) return usage(output);
+        if (args.length < 2) return usage(output);
+        Map<String, String> options = flags(args, 2);
+        requireExactFlags(options, Set.of("--format", "--warnings"));
+        boolean strictWarnings = warningPolicy(options);
+        String format = reportFormat(options);
         ModJarValidator.Report report;
         try {
             report = Objects.requireNonNull(validator.apply(Path.of(args[1])), "validator report");
@@ -65,11 +71,8 @@ public final class GgfModCli {
                     + (message == null || message.isBlank() ? error.getClass().getSimpleName() : message));
             return 1;
         }
-        report.numberedLines().forEach(output::println);
-        if (report.findings().isEmpty()) {
-            output.println("Validation passed: 0 findings");
-        }
-        return report.valid() ? 0 : 1;
+        printReport(report, format, strictWarnings, output);
+        return report.valid() && (!strictWarnings || report.findings().isEmpty()) ? 0 : 1;
     }
 
     private static int convert(String[] args, PrintStream output) throws IOException {
@@ -156,8 +159,11 @@ public final class GgfModCli {
     private static int init(String[] args, PrintStream output) throws IOException {
         if (args.length < 2) return usage(output);
         Map<String,String> flags = flags(args, 2);
-        Path result = new ProjectScaffolder().scaffold(Path.of(args[1]),
-                required(flags, "--id"), required(flags, "--package"));
+        requireExactFlags(flags, Set.of("--id", "--package", "--kind"));
+        String pkg = flags.getOrDefault("--package", "example.mod");
+        Path result = flags.containsKey("--kind")
+                ? new ProjectScaffolder().scaffold(Path.of(args[1]), required(flags, "--id"), pkg, flags.get("--kind"))
+                : new ProjectScaffolder().scaffold(Path.of(args[1]), required(flags, "--id"), pkg);
         output.println("Created " + result);
         return 0;
     }
@@ -165,8 +171,57 @@ public final class GgfModCli {
     private static int packageMod(String[] args, PrintStream output) throws IOException {
         Map<String,String> flags = flags(args, 1);
         Path out = path(flags, "--out");
-        JarPackager.packageDirectory(path(flags, "--input"), out);
-        output.println("Packaged " + out.toAbsolutePath().normalize());
+        requireExactFlags(flags, Set.of("--input", "--out", "--format", "--warnings"));
+        boolean strictWarnings = warningPolicy(flags);
+        String format = reportFormat(flags);
+        ModJarValidator.Report report;
+        try {
+            report = JarPackager.packageDirectoryWithReport(path(flags, "--input"), out, strictWarnings);
+        } catch (JarPackager.ValidationFailure failure) {
+            printReport(failure.report(), format, strictWarnings, output);
+            return 1;
+        }
+        printReport(report, format, strictWarnings, output);
+        if ("text".equals(format)) output.println("Packaged " + out.toAbsolutePath().normalize());
+        return 0;
+    }
+
+    private static boolean warningPolicy(Map<String, String> flags) {
+        String policy = flags.getOrDefault("--warnings", "allow");
+        if (!Set.of("allow", "error").contains(policy))
+            throw new IllegalArgumentException("--warnings must be allow or error");
+        return policy.equals("error");
+    }
+
+    private static String reportFormat(Map<String, String> flags) {
+        String format = flags.getOrDefault("--format", "text");
+        if (!Set.of("text", "json").contains(format))
+            throw new IllegalArgumentException("--format must be text or json");
+        return format;
+    }
+
+    private static void printReport(ModJarValidator.Report report, String format, boolean strict,
+                                    PrintStream output) {
+        long warnings = report.findings().stream()
+                .filter(f -> f.severity() == ModJarValidator.Severity.WARNING).count();
+        if (format.equals("json")) {
+            try {
+                output.println(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(Map.of(
+                        "formatVersion", 1, "valid", report.valid(), "warnings", warnings,
+                        "warningPolicy", strict ? "error" : "allow", "findings", report.findings())));
+            } catch (IOException failure) { throw new IllegalStateException(failure); }
+        } else {
+            report.numberedLines().forEach(output::println);
+            output.println("Validation " + (report.valid() ? "passed" : "failed") + ": "
+                    + report.findings().size() + " findings" + (warnings == 0 ? "" : " (" + warnings + " warnings)"));
+        }
+    }
+
+    private static int artKeys(String[] args, PrintStream output) {
+        String game = "any";
+        if (args.length == 3 && args[1].equals("--game") && java.util.Set.of("s1", "s2", "s3k", "any").contains(args[2])) game = args[2];
+        else if (args.length != 1) return usage(output);
+        com.openggf.mods.StockArtOverrideCatalog.keys(game).forEach(output::println);
         return 0;
     }
 
@@ -182,13 +237,21 @@ public final class GgfModCli {
     static int normalizeProcessExit(int exit){return exit==0?0:1;}
 
     static List<String> engineCommand(Path buildOutput) {
+        return engineCommand(buildOutput, System.getProperty("os.name", ""));
+    }
+
+    static List<String> engineCommand(Path buildOutput, String operatingSystem) {
         Path root = Objects.requireNonNull(buildOutput, "buildOutput").toAbsolutePath().normalize();
         if (!java.nio.file.Files.isDirectory(root))
             throw new IllegalArgumentException("Run input must be an exploded build directory: " + root);
         String executable = Path.of(System.getProperty("java.home"), "bin",
-                System.getProperty("os.name", "").startsWith("Windows") ? "java.exe" : "java").toString();
-        return List.of(executable, "-Dggfmod.dev.modDir=" + root,
-                "-cp", System.getProperty("java.class.path"), "com.openggf.Engine");
+                operatingSystem.startsWith("Windows") ? "java.exe" : "java").toString();
+        List<String> command = new ArrayList<>();
+        command.add(executable);
+        if (operatingSystem.startsWith("Mac")) command.add("-XstartOnFirstThread");
+        command.addAll(List.of("-Dggfmod.dev.modDir=" + root,
+                "-cp", System.getProperty("java.class.path"), "com.openggf.Engine"));
+        return List.copyOf(command);
     }
 
     private static Map<String,String> flags(String[] args, int start) {
@@ -210,13 +273,16 @@ public final class GgfModCli {
     private static Path path(Map<String,String> flags, String name) { return Path.of(required(flags, name)); }
 
     private static int usage(PrintStream output) {
-        output.println("Usage: ggfmod validate <mod.jar> | init <dir> --id <id> --package <java.pkg>");
+        output.println("Usage: ggfmod validate <mod.jar> [--format text|json] [--warnings allow|error] | init <dir> --id <id> --package <java.pkg> [--kind music|reskin|object|character|zone|scene|standalone]");
         output.println("       ggfmod convert art [--playable] --image <png> --sheet <yaml> --out <ggfs|ggfp>");
         output.println("       ggfmod convert level --from-export <dir> --out <dir>");
         output.println("       ggfmod convert level --from-tmx <map.tmx> --palette <GPAL>"
                 + " [--solid-tiles <profile-dir>] [--music <owner:localName>] --out <dir>");
         output.println("       ggfmod convert audio --owner <id> --manifest <yaml> --root <dir> --out <dir>");
-        output.println("       ggfmod package --input <classes/resources> --out <jar> | run <build-output>");
+        output.println("       ggfmod package --input <classes/resources> --out <jar> [--format text|json] [--warnings allow|error] | run <build-output>");
+        output.println("       ggfmod sprites <rom> <s1|s2|s3k> <out.png> art=<addr> map=<addr> [comp= dplc= layout="
+                + " size= line= offset= pal=<addr>:<colours>:<line>] | char=<sonic|tails|knuckles>");
+        output.println("       ggfmod art-keys [--game s1|s2|s3k|any]");
         return 1;
     }
 }

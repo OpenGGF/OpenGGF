@@ -206,6 +206,43 @@ class TestSonic3kModZoneObjectSet {
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
 
         assertEquals(Set.of(
+                // LRZ/SSZ stock overrides coexist with the other ROM pointer table.
+                0x25,
+                Sonic3kObjectIds.LBZ_CUP_ELEVATOR_POLE,
+                Sonic3kObjectIds.LRZ_BIG_DOOR,
+                Sonic3kObjectIds.LRZ_BUTTON_HORIZONTAL,
+                Sonic3kObjectIds.LRZ_SHOOTING_TRIGGER,
+                Sonic3kObjectIds.LBZ_PLAYER_LAUNCHER,
+                Sonic3kObjectIds.LBZ_RIDE_GRAPPLE,
+                Sonic3kObjectIds.LBZ_FLAME_THROWER,
+                Sonic3kObjectIds.LBZ_CUP_ELEVATOR,
+                Sonic3kObjectIds.MGZLBZ_SMASHING_PILLAR_ALT,
+                Sonic3kObjectIds.HCZ_MINIBOSS,
+                Sonic3kObjectIds.HCZ_END_BOSS,
+                Sonic3kObjectIds.BUBBLES_BADNIK,
+                Sonic3kObjectIds.SPIKER,
+                Sonic3kObjectIds.MANTIS,
+                Sonic3kObjectIds.AIZ_FLIPPING_BRIDGE,
+                Sonic3kObjectIds.AIZ_COLLAPSING_LOG_BRIDGE,
+                Sonic3kObjectIds.AIZ_DISAPPEARING_FLOOR,
+                Sonic3kObjectIds.AIZ_FALLING_LOG,
+                Sonic3kObjectIds.HCZ_WATER_RUSH,
+                Sonic3kObjectIds.LBZ_ALARM,
+                0xAD,
+                0x9E,
+                0xB2,
+                Sonic3kObjectIds.FBZ_ROTATING_PLATFORM,
+                Sonic3kObjectIds.ICZ_CRUSHING_COLUMN,
+                Sonic3kObjectIds.SSZ_FLOATING_PLATFORM,
+                Sonic3kObjectIds.SSZ_COLLAPSING_COLUMN,
+                Sonic3kObjectIds.SSZ_COLLAPSING_BRIDGE,
+                Sonic3kObjectIds.SSZ_COLLAPSING_BRIDGE_DIAGONAL,
+                Sonic3kObjectIds.SSZ_BOUNCY_CLOUD,
+                Sonic3kObjectIds.SSZ_ELEVATOR_BAR,
+                Sonic3kObjectIds.SSZ_ROTATING_PLATFORM,
+                Sonic3kObjectIds.SSZ_SWINGING_CARRIER,
+                Sonic3kObjectIds.SSZ_EGG_ROBO,
+
                 Sonic3kObjectIds.AIZ_END_BOSS,
                 Sonic3kObjectIds.AIZ_GIANT_RIDE_VINE,
                 Sonic3kObjectIds.AIZ_HOLLOW_TREE,
@@ -260,28 +297,23 @@ class TestSonic3kModZoneObjectSet {
     @Test
     void stockZoneDependencyInventoryRemainsExplicitFactoryMetadata() {
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
-        Set<Integer> pointerTableCollisionIds = Set.of(
-                Sonic3kObjectIds.HPZ_MASTER_EMERALD,
-                Sonic3kObjectIds.HPZ_SUPER_EMERALD,
-                Sonic3kObjectIds.HPZ_SS_ENTRY_CONTROL,
-                // S3KL's ICZ ice cube, spikes and harmful ice share $B6-$B8.
-                Sonic3kObjectIds.DDZ_END_BOSS,
-                Sonic3kObjectIds.DDZ_ASTEROID,
-                Sonic3kObjectIds.DDZ_MISSILE);
-
+        // Base factories for these slots are set-only (including SKL placeholders).
+        // A stock-zone override does not remove their custom-compatible base.
+        Set<Integer> setOnlyBaseIds = Set.of(
+                0x15, 0x16, 0x17, 0x18, 0x19, 0x20, 0x22,
+                0x29, 0x2B, 0x2C, 0x2D, 0x37,
+                0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0xAD, 0xAF, 0xB2);
+        // FBZ/ICZ base factories are explicitly restricted to the S3KL table.
+        Set<Integer> s3klBaseIds = Set.of(
+                0x75, 0x76, 0x77, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F,
+                0xB0, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8);
         for (int objectId : registry.stockZoneBoundFactoryIds()) {
-            if (pointerTableCollisionIds.contains(objectId)) {
-                assertTrue(registry.canCreateInCustomZone(S3kZoneSet.S3KL, objectId),
-                        () -> "S3KL must retain its ICZ pointer-table object at slot $"
-                                + Integer.toHexString(objectId));
-            } else {
-                assertFalse(registry.canCreateInCustomZone(S3kZoneSet.S3KL, objectId),
-                        () -> "S3KL custom-compatible collision at object $"
-                                + Integer.toHexString(objectId));
-            }
-            assertFalse(registry.canCreateInCustomZone(S3kZoneSet.SKL, objectId),
-                    () -> "SKL custom-compatible collision at object $"
-                            + Integer.toHexString(objectId));
+            assertEquals(setOnlyBaseIds.contains(objectId) || s3klBaseIds.contains(objectId),
+                    registry.canCreateInCustomZone(S3kZoneSet.S3KL, objectId),
+                    () -> "S3KL base compatibility at $" + Integer.toHexString(objectId));
+            assertEquals(setOnlyBaseIds.contains(objectId),
+                    registry.canCreateInCustomZone(S3kZoneSet.SKL, objectId),
+                    () -> "SKL base compatibility at $" + Integer.toHexString(objectId));
         }
     }
 
@@ -322,30 +354,42 @@ class TestSonic3kModZoneObjectSet {
         assertEquals(Set.of(Sonic3kObjectIds.FBZ_WIRE_CAGE), violations);
     }
 
+    @Test
+    void sourceAuditRecognizesLiteralSlotRegistrations() throws Exception {
+        var lines = List.of(
+                "factories.put(Sonic3kObjectIds.AIZ_DISAPPEARING_FLOOR, factory);",
+                "registerStockZoneBound(0x25, (spawn, registry) -> currentRomZoneId());",
+                "factories.put(0x26, (spawn, registry) -> currentRomZoneId());",
+                "factories.forEach(this::registerSetOnly);");
+        assertEquals(Set.of(0x26), customCompatibleStockZoneReadIds(lines),
+                "a literal stock registration ends the previous factory's audit scope");
+    }
+
     private static Set<Integer> customCompatibleStockZoneReadIds(List<String> sourceLines) throws Exception {
         Set<String> stockZoneReadingHelpers = stockZoneReadingHelpers(sourceLines);
         Pattern registration = Pattern.compile(
                 "(factories\\.put|registerStockZoneBound|registerStockRomZoneBound|registerZoneSetBound)"
-                        + "\\(Sonic3kObjectIds\\.([A-Z0-9_]+),");
+                        + "\\((?:Sonic3kObjectIds\\.([A-Z0-9_]+)|(0x[0-9A-Fa-f]+|[0-9]+)),");
         Set<Integer> violations = new HashSet<>();
-        String activeConstant = null;
+        Integer activeId = null;
         boolean activeCustomCompatible = false;
         for (String line : sourceLines) {
             var matcher = registration.matcher(line);
             if (matcher.find()) {
                 activeCustomCompatible = matcher.group(1).equals("factories.put")
                         || matcher.group(1).equals("registerZoneSetBound");
-                activeConstant = matcher.group(2);
+                activeId = matcher.group(2) != null
+                        ? Sonic3kObjectIds.class.getField(matcher.group(2)).getInt(null)
+                        : Integer.decode(matcher.group(3));
             } else if (line.contains("factories.forEach")) {
-                activeConstant = null;
+                activeId = null;
             }
             boolean readsStockZone = line.contains("currentRomZoneId()")
                     || stockZoneReadingHelpers.stream().anyMatch(helper ->
                             Pattern.compile("\\b" + Pattern.quote(helper) + "\\s*\\(")
                                     .matcher(line).find());
-            if (activeCustomCompatible && activeConstant != null && readsStockZone) {
-                violations.add(Sonic3kObjectIds.class
-                        .getField(activeConstant).getInt(null));
+            if (activeCustomCompatible && activeId != null && readsStockZone) {
+                violations.add(activeId);
             }
         }
         return violations;

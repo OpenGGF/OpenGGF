@@ -10,7 +10,11 @@ public record ModZoneRuntimeContribution(
         String ownerModId,
         String localKey,
         ModZoneLevelData levelData,
-        ModZoneRuntimeProfile runtimeProfile) {
+        ModZoneRuntimeProfile runtimeProfile, ModZoneRuntimeFactory runtimeFactory) {
+    public ModZoneRuntimeContribution(String ownerModId, String localKey,
+            ModZoneLevelData levelData, ModZoneRuntimeProfile runtimeProfile) {
+        this(ownerModId, localKey, levelData, runtimeProfile, null);
+    }
     public ModZoneRuntimeContribution {
         Objects.requireNonNull(ownerModId, "ownerModId");
         Objects.requireNonNull(localKey, "localKey");

@@ -36,7 +36,7 @@ class TestS3kSaveSnapshotProvider {
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
         Map<String, Object> payload = provider.capture(
                 SaveReason.NEW_SLOT_START,
-                RuntimeSaveContext.forGameplayMode(null, ctx));
+                com.openggf.game.save.RuntimeSaveCapture.capture(null, ctx));
         assertEquals("sonic", payload.get("mainCharacter"));
         assertEquals(0, payload.get("zone"));
         assertEquals(0, payload.get("act"));
@@ -49,7 +49,7 @@ class TestS3kSaveSnapshotProvider {
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
         Map<String, Object> payload = provider.capture(
                 SaveReason.NEW_SLOT_START,
-                RuntimeSaveContext.forGameplayMode(null, ctx));
+                com.openggf.game.save.RuntimeSaveCapture.capture(null, ctx));
         assertEquals(List.of("tails"), payload.get("sidekicks"));
     }
 
@@ -61,7 +61,7 @@ class TestS3kSaveSnapshotProvider {
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
         Map<String, Object> payload = provider.capture(
                 SaveReason.NEW_SLOT_START,
-                RuntimeSaveContext.forGameplayMode(null, ctx));
+                com.openggf.game.save.RuntimeSaveCapture.capture(null, ctx));
         assertEquals("knuckles", payload.get("mainCharacter"));
         assertEquals(3, payload.get("zone"));
         assertEquals(1, payload.get("act"));
@@ -94,7 +94,7 @@ class TestS3kSaveSnapshotProvider {
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
         Map<String, Object> payload = provider.capture(
                 SaveReason.PROGRESSION_SAVE,
-                RuntimeSaveContext.forGameplayMode(gameplayMode, ctx));
+                com.openggf.game.save.RuntimeSaveCapture.capture(gameplayMode, ctx));
 
         assertEquals(4, payload.get("zone"));
         assertEquals(1, payload.get("act"));
@@ -128,7 +128,7 @@ class TestS3kSaveSnapshotProvider {
 
         Map<String, Object> payload = new S3kSaveSnapshotProvider().capture(
                 SaveReason.PROGRESSION_SAVE,
-                RuntimeSaveContext.forGameplayMode(gameplayMode, ctx));
+                com.openggf.game.save.RuntimeSaveCapture.capture(gameplayMode, ctx));
 
         assertFalse(payload.containsKey("zone"));
         assertEquals(ZoneKey.mod("flappy", "sky"), S3kSavedZone.read(payload).zoneKey());
@@ -155,7 +155,7 @@ class TestS3kSaveSnapshotProvider {
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
         Map<String, Object> payload = provider.capture(
                 SaveReason.PROGRESSION_SAVE,
-                RuntimeSaveContext.forGameplayMode(gameplayMode, ctx));
+                com.openggf.game.save.RuntimeSaveCapture.capture(gameplayMode, ctx));
 
         assertEquals(true, payload.get("clear"));
         assertEquals(14, payload.get("progressCode"));
@@ -169,7 +169,7 @@ class TestS3kSaveSnapshotProvider {
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> provider.capture(SaveReason.EXISTING_SLOT_LOAD, RuntimeSaveContext.forGameplayMode(null, ctx)));
+                () -> provider.capture(SaveReason.EXISTING_SLOT_LOAD, com.openggf.game.save.RuntimeSaveCapture.capture(null, ctx)));
 
         assertTrue(ex.getMessage().contains("runtime"));
     }
@@ -194,7 +194,7 @@ class TestS3kSaveSnapshotProvider {
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
         Map<String, Object> payload = provider.capture(
                 SaveReason.SPECIAL_STAGE_SAVE,
-                RuntimeSaveContext.forGameplayMode(gameplayMode, ctx));
+                com.openggf.game.save.RuntimeSaveCapture.capture(gameplayMode, ctx));
 
         assertEquals(7, payload.get("zone"));
         assertEquals(0, payload.get("act"));
@@ -204,9 +204,40 @@ class TestS3kSaveSnapshotProvider {
         assertEquals(List.of(1, 4), payload.get("superEmeralds"));
     }
 
+    @Test void sszClearTracksCapturedEndingStateWithoutLatchingAcrossRewind() {
+        var save = SaveSessionContext.forSlot("s3k", 1, new SelectedTeam("knuckles", List.of()), 10, 1);
+        var mode = mock(GameplayModeContext.class);
+        var level = mock(com.openggf.level.LevelManager.class);
+        var game = new com.openggf.game.GameStateManager();
+        var registry = mock(com.openggf.game.zone.ZoneRuntimeRegistry.class);
+        var state = new com.openggf.game.sonic3k.runtime.SszZoneRuntimeState(1, com.openggf.game.PlayerCharacter.KNUCKLES);
+        when(mode.getLevelManager()).thenReturn(level);
+        when(mode.getGameStateManager()).thenReturn(game);
+        when(mode.getZoneRuntimeRegistry()).thenReturn(registry);
+        when(registry.currentAs(com.openggf.game.sonic3k.runtime.SszZoneRuntimeState.class))
+                .thenReturn(java.util.Optional.of(state));
+        when(registry.current()).thenReturn(state);
+        when(level.getCurrentZone()).thenReturn(10); when(level.getCurrentAct()).thenReturn(1);
+        stubStockZones(level);
+        var provider = new S3kSaveSnapshotProvider();
+        var context = com.openggf.game.save.RuntimeSaveCapture.capture(mode, save);
+        var before = state.captureBytes();
+        assertEquals(false, provider.capture(SaveReason.PROGRESSION_SAVE, context).get("clear"));
+        state.setAct2EndingActive(true);
+        assertEquals(false, provider.capture(SaveReason.PROGRESSION_SAVE, context).get("clear"),
+                "Earlier capture must stay immutable after the ending state changes");
+        assertEquals(true, provider.capture(SaveReason.PROGRESSION_SAVE,
+                com.openggf.game.save.RuntimeSaveCapture.capture(mode, save)).get("clear"));
+        assertFalse(save.isClear(), "live clear must not latch outside captured state");
+        state.restoreBytes(before);
+        assertEquals(false, provider.capture(SaveReason.PROGRESSION_SAVE,
+                com.openggf.game.save.RuntimeSaveCapture.capture(mode, save)).get("clear"));
+    }
+
     private static void stubStockZones(com.openggf.level.LevelManager levelManager) {
         GameModule module = mock(GameModule.class);
         when(levelManager.getGameModule()).thenReturn(module);
         when(module.getZoneRegistry()).thenReturn(new com.openggf.game.sonic3k.Sonic3kZoneRegistry());
+        when(module.getSaveSnapshotProvider()).thenReturn(new S3kSaveSnapshotProvider());
     }
 }

@@ -1,0 +1,2224 @@
+package com.openggf.mods.code;
+
+import com.openggf.configuration.*;
+import com.openggf.game.*;
+import com.openggf.game.patch.*;
+import com.openggf.game.session.SessionManager;
+import com.openggf.io.ModAssetRoot;
+import com.openggf.io.ModInputLimits;
+import com.openggf.level.objects.*;
+import com.openggf.tests.*;
+import com.openggf.tests.rules.*;
+import com.openggf.tools.modsdk.GgfModCli;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import javax.tools.ToolProvider;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.net.URLClassLoader;
+import java.nio.file.*;
+import java.util.*;
+import java.util.stream.Stream;
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * Sonic Survivors (examples/sonic-survivors): packages the mod through {@code ggfmod}, then
+ * drives its arenas headlessly. The mod's classes live in their own loader, so its state is
+ * read and nudged through reflection.
+ */
+@RequiresRom(SonicGame.SONIC_2)
+class TestSonicSurvivors {
+    @TempDir static Path temp;
+    static final String SEED_PROPERTY = "sonic-survivors.seed";
+    static URLClassLoader loader;
+    static Path jar;
+    SharedLevel bootstrap;
+
+    static final int CAMP = 0, INTRO = 1, FIGHT = 2, BOSS = 3, CLEAR_WAIT = 4, CLEAR = 5, DEAD = 6;
+
+    @BeforeAll static void compileAndPackage() throws Exception {
+        System.setProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY, temp.resolve("saves").toString());
+        System.setProperty(SEED_PROPERTY, "0x534F4E4943");
+        Path project = Path.of("examples/sonic-survivors");
+        Path classes = Files.createDirectory(temp.resolve("classes"));
+        var args = new ArrayList<>(List.of("--release", "21", "-cp", System.getProperty("java.class.path"),
+                "-d", classes.toString()));
+        try (var files = Files.walk(project.resolve("src/main/java"))) {
+            files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));
+        }
+        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, args.toArray(String[]::new)));
+        Files.createDirectories(classes.resolve("META-INF"));
+        Files.copy(project.resolve("src/main/resources/META-INF/openggf-mod.yaml"),
+                classes.resolve("META-INF/openggf-mod.yaml"));
+        jar = temp.resolve("sonic-survivors.jar");
+        assertEquals(0, GgfModCli.run(new String[]{"package", "--input", classes.toString(),
+                "--out", jar.toString()}, System.out), "ggfmod package validates the mod");
+        loader = new URLClassLoader(new java.net.URL[]{jar.toUri().toURL()}, TestSonicSurvivors.class.getClassLoader());
+    }
+
+    @AfterAll static void closeLoader() throws Exception {
+        System.clearProperty(com.openggf.game.save.SavePaths.ROOT_PROPERTY);
+        System.clearProperty(SEED_PROPERTY);
+        if (loader != null) loader.close();
+    }
+
+    @BeforeEach void freshProfile() throws Exception {
+        Path saves = temp.resolve("saves");
+        if (Files.exists(saves)) {
+            try (var walk = Files.walk(saves)) {
+                walk.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+            }
+        }
+    }
+
+    @AfterEach void closeSession() { if (bootstrap != null) bootstrap.dispose(); }
+
+    private HeadlessTestFixture launch(int zone, int act) throws Exception {
+        return launch(zone, act, "sonic", "");
+    }
+
+    private HeadlessTestFixture launch(int zone, int act, String main, String sidekick) throws Exception {
+        bootstrap = SharedLevel.load(SonicGame.SONIC_2, 0, 0);
+        var config = SonicConfigurationService.getInstance();
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, main);
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, sidekick);
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, WidescreenAspect.WIDE_16_9.name());
+        config.resolveDisplayAspect();
+        GameModule base = GameServices.module();
+        try (var assets = ModAssetRoot.jar(temp, jar, ModInputLimits.production())) {
+            var context = new ModContext("sonic-survivors", "s2", assets);
+            ((GgfMod) loader.loadClass("survivors.SurvivorsMod").getConstructor().newInstance()).register(context);
+            var plan = context.freeze();
+            var boundary = new ModFaultBoundary(Map.of(), new com.openggf.mods.ModRuntimeFindingStore(),
+                    owners -> new com.openggf.mods.ModStateSaveResult.Saved(), owners -> { });
+            GameModule effective = new ModBackedGamePatch(plan, boundary).apply(base, null);
+            for (GamePatch patch : plan.explicitPatches()) effective = patch.apply(effective, null);
+            SessionManager.clear();
+            GameModuleRegistry.setCurrent(effective);
+            TestEnvironment.activeGameplayMode();
+        }
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(zone, act).build();
+        GameServices.level().getObjectManager().setRewindClassResolver(new RewindClassResolver() {
+            @Override public Optional<Class<?>> resolve(String owner, String name) {
+                try { return Optional.of(name.startsWith("survivors.") ? loader.loadClass(name) : Class.forName(name)); }
+                catch (ClassNotFoundException missing) { return Optional.empty(); }
+            }
+            @Override public Optional<String> ownerOf(Class<?> type) {
+                return type.getName().startsWith("survivors.") ? Optional.of("sonic-survivors") : Optional.empty();
+            }
+        });
+        return fixture;
+    }
+
+    @Test void menuFontPreservesEveryPixelWithFewerPresentationAllocations() throws Exception {
+        launch(0, 0);
+        ObjectServices services = (ObjectServices) call(stage(), "services");
+        Class<?> draw = loader.loadClass("survivors.Draw");
+        String chars = (String) field(draw, "CHARS").get(null);
+        String pixels = (String) field(draw, "GLYPHS").get(null);
+        Method text = draw.getDeclaredMethod("text", ObjectServices.class, String.class,
+                int.class, int.class, int.class, int.class, float.class);
+        text.setAccessible(true);
+        int oldSpans = 0;
+        for (int glyph = 0; glyph < chars.length(); glyph++) {
+            for (int row = 0; row < 7; row++) {
+                for (int col = 0; col < 5; col++) {
+                    int p = glyph * 35 + row * 5 + col;
+                    if (pixels.charAt(p) == '1' && (col == 0 || pixels.charAt(p - 1) == '0')) oldSpans++;
+                }
+            }
+        }
+        // Compare the complete face at each scale within a viewport wide enough
+        // to contain it; production overlay drawing clips to the logical viewport.
+        var fontViewport = com.openggf.configuration.SonicConfigurationService.createStandalone();
+        // Pixel width is derived from DISPLAY_ASPECT; a persisted value cannot
+        // replace that overlay. This synthetic font viewport needs an explicit session override.
+        int fontWidth = chars.length() * 18 + 20;
+        fontViewport.setSessionOverride(com.openggf.configuration.SonicConfiguration.SCREEN_WIDTH_PIXELS, fontWidth);
+        fontViewport.setConfigValue(com.openggf.configuration.SonicConfiguration.SCREEN_HEIGHT_PIXELS, 224);
+        var camera = services.camera();
+        camera.refreshViewportDimensions(fontViewport);
+        assertEquals(fontWidth, camera.getWidth(), "the complete face must fit at every tested scale");
+        for (int scale = 1; scale <= 3; scale++) {
+            int size = scale;
+            var frame = com.openggf.graphics.SpritePresentation.prepare(services.graphicsManager(),
+                    camera.getX(), camera.getY(), () -> {
+                        try { text.invoke(null, services, chars, 9, 13, size, 0x60E8FF, 0.5f); }
+                        catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+                    }, ignored -> { throw new AssertionError("font must not submit ROM tiles"); });
+            boolean[][] actual = new boolean[7 * size][chars.length() * 6 * size];
+            for (var primitive : frame.primitives()) {
+                var geometry = com.openggf.graphics.SpritePresentation.geometry(primitive);
+                for (var rect : geometry.vertices()) {
+                    assertEquals(0x8060E8FF, rect.argb());
+                    for (int y = rect.y1() - 13; y < rect.y2() - 13; y++) {
+                        for (int x = rect.x1() - 9; x < rect.x2() - 9; x++) {
+                            assertFalse(actual[y][x], "overlap would change translucent text");
+                            actual[y][x] = true;
+                        }
+                    }
+                }
+            }
+            for (int y = 0; y < actual.length; y++) {
+                for (int x = 0; x < actual[y].length; x++) {
+                    int glyph = x / (6 * size), col = x / size % 6;
+                    boolean expected = col < 5 && pixels.charAt(glyph * 35 + y / size * 5 + col) == '1';
+                    assertEquals(expected, actual[y][x], "pixel at " + x + "," + y);
+                }
+            }
+            assertTrue(frame.primitives().size() < oldSpans * 0.7,
+                    "font must remove at least 30% of commands and presentation records");
+            if (size == 1) System.out.println("Survivors font primitives: " + oldSpans
+                    + " -> " + frame.primitives().size() + " per complete alphabet");
+        }
+    }
+
+    @Test void titleWordmarkPreservesEveryGradientRowAndFadeAlpha() throws Exception {
+        launch(0, 0);
+        var graphics = GameServices.graphics();
+        Class<?> draw = loader.loadClass("survivors.Draw");
+        String chars = (String) field(draw, "CHARS").get(null);
+        String pixels = (String) field(draw, "GLYPHS").get(null);
+        Class<?> titleClass = loader.loadClass("survivors.SurvivorsTitle");
+        var constructor = titleClass.getDeclaredConstructor(TitleScreenProvider.class, java.util.function.Supplier.class);
+        constructor.setAccessible(true);
+        Object title = constructor.newInstance(org.mockito.Mockito.mock(TitleScreenProvider.class),
+                (java.util.function.Supplier<Object>) () -> null);
+        Method wordmark = titleClass.getDeclaredMethod("drawWordmark", com.openggf.graphics.GraphicsManager.class,
+                int.class, float.class);
+        wordmark.setAccessible(true);
+        String word = "SURVIVORS";
+        int scale = 3, left = (400 - (word.length() * 6 * scale - scale)) / 2, top = 150;
+        int[] rowColours = {0xFFF080, 0xFFF080, 0xFFC020, 0xFFC020, 0xFF7010, 0xFF7010, 0xD02010};
+        for (float alpha : new float[]{0.5f, 1f}) {
+            var frame = com.openggf.graphics.SpritePresentation.prepare(graphics, 0, 0, () -> {
+                try { wordmark.invoke(title, graphics, 400, alpha); }
+                catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+            }, ignored -> { throw new AssertionError("the authored wordmark must not submit ROM tiles"); });
+            int[][] actual = new int[7 * scale][word.length() * 6 * scale];
+            boolean panel = false, shadow = false;
+            for (var primitive : frame.primitives()) {
+                for (var rect : com.openggf.graphics.SpritePresentation.geometry(primitive).vertices()) {
+                    int rgb = rect.argb() & 0xFFFFFF;
+                    if (rgb == 0x101848) {
+                        panel = true; assertEquals(Math.round(alpha * 0.85f * 255), rect.argb() >>> 24); continue;
+                    }
+                    if (rgb == 0) {
+                        shadow = true; assertEquals(Math.round(alpha * 0.6f * 255), rect.argb() >>> 24); continue;
+                    }
+                    assertEquals(Math.round(alpha * 255), rect.argb() >>> 24);
+                    for (int y = rect.y1() - top; y < rect.y2() - top; y++) {
+                        for (int x = rect.x1() - left; x < rect.x2() - left; x++) {
+                            assertEquals(0, actual[y][x], "overlap changes the translucent wordmark");
+                            actual[y][x] = rect.argb();
+                        }
+                    }
+                }
+            }
+            assertTrue(panel); assertTrue(shadow);
+            for (int y = 0; y < actual.length; y++) {
+                for (int x = 0; x < actual[y].length; x++) {
+                    int glyph = chars.indexOf(word.charAt(x / (6 * scale))), column = x / scale % 6;
+                    boolean lit = column < 5 && pixels.charAt(glyph * 35 + y / scale * 5 + column) == '1';
+                    int expected = lit ? Math.round(alpha * 255) << 24 | rowColours[y / scale] : 0;
+                    assertEquals(expected, actual[y][x], "wordmark pixel at " + x + "," + y + " alpha=" + alpha);
+                }
+            }
+
+            // Uniform title labels retain complete cached rectangles rather than
+            // splitting the face back into one command per original row span.
+            Method text = titleClass.getDeclaredMethod("text", com.openggf.graphics.GraphicsManager.class,
+                    String.class, int.class, int.class, int.class, int.class, float.class);
+            text.setAccessible(true);
+            var uniform = com.openggf.graphics.SpritePresentation.prepare(graphics, 0, 0, () -> {
+                try { text.invoke(title, graphics, word, left, top, scale, 0xA0C8FF, alpha); }
+                catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+            }, ignored -> { throw new AssertionError("title labels must not submit ROM tiles"); });
+            int rowSpans = 0;
+            for (char letter : word.toCharArray()) {
+                int glyph = chars.indexOf(letter);
+                for (int row = 0; row < 7; row++) {
+                    for (int column = 0; column < 5; column++) {
+                        int pixel = glyph * 35 + row * 5 + column;
+                        if (pixels.charAt(pixel) == '1' && (column == 0 || pixels.charAt(pixel - 1) == '0')) rowSpans++;
+                    }
+                }
+            }
+            assertTrue(uniform.primitives().size() < rowSpans * 0.7, "uniform title labels retain cached span reduction");
+            boolean[][] seen = new boolean[7 * scale][word.length() * 6 * scale];
+            for (var primitive : uniform.primitives()) {
+                for (var rect : com.openggf.graphics.SpritePresentation.geometry(primitive).vertices()) {
+                    assertEquals(Math.round(alpha * 255) << 24 | 0xA0C8FF, rect.argb());
+                    for (int y = rect.y1() - top; y < rect.y2() - top; y++) {
+                        for (int x = rect.x1() - left; x < rect.x2() - left; x++) {
+                            assertFalse(seen[y][x]); seen[y][x] = true;
+                        }
+                    }
+                }
+            }
+            for (int y = 0; y < seen.length; y++) {
+                for (int x = 0; x < seen[y].length; x++) {
+                    int glyph = chars.indexOf(word.charAt(x / (6 * scale))), column = x / scale % 6;
+                    assertEquals(column < 5 && pixels.charAt(glyph * 35 + y / scale * 5 + column) == '1', seen[y][x]);
+                }
+            }
+        }
+    }
+
+    @Test void cachedLevelUpDescriptionsCoverEveryUpgradeRank() throws Exception {
+        launch(0, 0);
+        Class<?> hud = loader.loadClass("survivors.Hud");
+        Class<?> upgrades = loader.loadClass("survivors.Upgrades");
+        Object[][] cards = (Object[][]) get(service("survivors.MenuArt"), "cards");
+        Method describe = upgrades.getDeclaredMethod("describe", int.class, int.class);
+        describe.setAccessible(true);
+        for (int id = 0; id < cards.length; id++) {
+            for (int rank = 1; rank < cards[id].length; rank++) {
+                String[] expected = (String[]) describe.invoke(null, id, rank);
+                assertEquals(expected[0], call(cards[id][rank], "first"));
+                assertEquals(expected[1], call(cards[id][rank], "second"));
+                assertEquals(rank == 1 ? "NEW!" : "LV " + (rank - 1) + ">" + rank,
+                        call(cards[id][rank], "level"));
+            }
+        }
+        Method clock = hud.getDeclaredMethod("clock", int.class);
+        clock.setAccessible(true);
+        for (int frames : new int[]{0, 1, 59, 60, 599, 600, 3599, 3600, 3601, 36000}) {
+            int seconds = (frames + 59) / 60;
+            assertEquals(String.format(Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60),
+                    clock.invoke(null, frames));
+        }
+    }
+
+    @Test void ownerStorageLoadsLegacyProgressWithoutMovingOrOverwritingTheOldSave() throws Exception {
+        Path legacy = temp.resolve("saves/sonic-survivors/profile.txt");
+        Files.createDirectories(legacy.getParent());
+        String old = "bank=42\nshop.0=2\n";
+        Files.writeString(legacy, old);
+        launch(0, 0);
+        assertEquals(42, getInt(profile(), "bank"));
+        assertEquals(7, ((int[])get(profile(), "shop"))[0]);
+        call(profile(), "save");
+        var sceneStorage = com.openggf.mods.scene.host.ModStorageFactory.forOwner(temp.resolve("saves"), "sonic-survivors");
+        assertTrue(sceneStorage.read("profile.txt").orElseThrow().contains("bank=42\n"));
+        assertEquals(old, Files.readString(legacy));
+        assertTrue(Files.isRegularFile(temp.resolve("saves/mods/sonic-survivors/profile.txt")));
+    }
+
+    @Test void aFutureOwnedSettingsVersionIsNotOverwrittenByTheCurrentProfile() throws Exception {
+        Path legacy = temp.resolve("saves/sonic-survivors/profile.txt");
+        Files.createDirectories(legacy.getParent());
+        String future = "formatVersion=2\nbank=999\nnewRule=keep\n";
+        Files.writeString(legacy, future);
+        launch(0, 0); call(profile(), "save");
+        assertEquals(future, Files.readString(legacy));
+        assertFalse(Files.exists(temp.resolve("saves/mods/sonic-survivors/profile.txt")));
+    }
+
+    // ---- Reflection helpers ----
+    static Field field(Class<?> type, String name) {
+        for (Class<?> c = type; c != null; c = c.getSuperclass()) {
+            try {
+                Field f = c.getDeclaredField(name);
+                f.setAccessible(true);
+                return f;
+            } catch (NoSuchFieldException ignored) { }
+        }
+        throw new AssertionError("No field " + name + " on " + type);
+    }
+    static Object get(Object target, String name) throws Exception { return field(target.getClass(), name).get(target); }
+    static int getInt(Object target, String name) throws Exception { return field(target.getClass(), name).getInt(target); }
+    static void set(Object target, String name, Object value) throws Exception { field(target.getClass(), name).set(target, value); }
+    static Object call(Object target, String name, Object... args) throws Exception {
+        for (Class<?> c = target.getClass(); c != null; c = c.getSuperclass()) {
+            for (Method m : c.getDeclaredMethods()) {
+                if (m.getName().equals(name) && m.getParameterCount() == args.length) {
+                    m.setAccessible(true);
+                    return m.invoke(target, args);
+                }
+            }
+        }
+        throw new AssertionError("No method " + name + "/" + args.length + " on " + target.getClass());
+    }
+    static Object service(String className) throws Exception {
+        return GameServices.module().getGameService(loader.loadClass(className));
+    }
+    static Object run() throws Exception { return service("survivors.RunState"); }
+    static Object profile() throws Exception { return service("survivors.Profile"); }
+    static Object arena() throws Exception { return service("survivors.Arena"); }
+    static int arenaValue(String accessor) throws Exception { return (int) call(arena(), accessor); }
+
+    static List<AbstractObjectInstance> objects(String simpleName) {
+        var found = new ArrayList<AbstractObjectInstance>();
+        for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
+            if (object.getClass().getName().equals("survivors." + simpleName)
+                    && object instanceof AbstractObjectInstance instance && !instance.isDestroyed()) {
+                found.add(instance);
+            }
+        }
+        return found;
+    }
+    static Object stage() {
+        var stages = objects("Stage");
+        assertEquals(1, stages.size(), "one arena controller");
+        return stages.get(0);
+    }
+    static int phase() throws Exception { return getInt(stage(), "phase"); }
+
+    /** Traversal checks are about terrain and walls: tough badniks in the way would block Sonic. */
+    static void clearEnemies() {
+        for (var enemy : objects("Enemy")) enemy.setDestroyed(true);
+    }
+
+    /** Enter is separate from gameplay jump and is dispatched before host pause handling. */
+    static void tapEnter(HeadlessTestFixture fixture) {
+        var input = new com.openggf.control.InputHandler();
+        var overlay = GameServices.module().getGameService(LevelInputOverlay.class);
+        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        assertTrue(overlay.handleInput(input), "a modal menu owns Enter before the host pause toggle");
+        fixture.stepFrame(false, false, false, false, false);
+        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+        fixture.stepFrame(false, false, false, false, false);
+    }
+    static void tapDown(HeadlessTestFixture fixture) {
+        fixture.stepFrame(false, true, false, false, false);
+        fixture.stepFrame(false, false, false, false, false);
+    }
+
+    /** From a fresh load: wait out camp's input delay, start the run, and skip the intro. */
+    static void startRun(HeadlessTestFixture fixture) throws Exception {
+        fixture.stepIdleFrames(30);
+        assertEquals(CAMP, phase(), "a new arena opens in camp");
+        tapEnter(fixture);
+        assertEquals(INTRO, phase());
+        // Later zones grant catch-up level-ups; skip their cards here.
+        set(run(), "pendingLevels", 0);
+        fixture.stepIdleFrames(160);
+        // The Death Egg is a straight boss fight.
+        assertEquals(arenaValue("stage") == 9 ? BOSS : FIGHT, phase());
+    }
+
+    // =========================================================================================
+
+    @Test void campStartsARunAndTheArenaHoldsSonic() throws Exception {
+        var fixture = launch(0, 0);
+        var level = GameServices.level().getCurrentLevel();
+        assertEquals(1, level.getObjects().size(), "the controller replaces the stock layout");
+        assertTrue(level.getRings().isEmpty());
+        fixture.stepIdleFrames(30);
+        assertEquals(CAMP, phase());
+        assertFalse((boolean) get(run(), "active"));
+        assertTrue(fixture.sprite().isObjectControlled(), "camp holds Sonic still");
+        tapEnter(fixture);
+        assertTrue((boolean) get(run(), "active"));
+        assertEquals(50, fixture.sprite().getRingCount(), "runs start with six base tolls");
+        assertEquals(1, getInt(profile(), "runs"));
+        fixture.stepIdleFrames(160);
+        assertEquals(FIGHT, phase());
+        assertFalse(fixture.sprite().isObjectControlled());
+        int left = arenaValue("left"), right = arenaValue("right");
+        fixture.sprite().setInvulnerableFrames(100000);
+        int maxX = Integer.MIN_VALUE, minX = Integer.MAX_VALUE, enemiesSeen = 0;
+        for (int frame = 0; frame < 1200; frame++) {
+            boolean goRight = frame / 300 % 2 == 0;
+            fixture.stepFrame(false, false, !goRight, goRight, frame % 40 == 0);
+            enemiesSeen += objects("Enemy").size();
+            clearEnemies();
+            maxX = Math.max(maxX, fixture.sprite().getCentreX());
+            minX = Math.min(minX, fixture.sprite().getCentreX());
+            assertFalse(fixture.sprite().getDead(), "frame " + frame);
+            if (getInt(run(), "pendingLevels") > 0) set(run(), "pendingLevels", 0);
+        }
+        assertTrue(maxX <= right + 48 && maxX >= right - 64, "the right wall holds Sonic: maxX=" + maxX + " right=" + right);
+        assertTrue(minX >= left && minX <= left + 48, "the left wall holds Sonic: minX=" + minX + " left=" + left);
+        assertTrue(enemiesSeen >= 3, "waves spawn badniks: " + enemiesSeen);
+        assertTrue(fixture.camera().getX() >= left && fixture.camera().getX() <= right - 320);
+    }
+
+    static Stream<Arguments> routeActs() {
+        int[][] acts = {{0, 0}, {0, 1}, {1, 0}, {1, 1}, {2, 0}, {2, 1}, {3, 0}, {3, 1}, {4, 0}, {4, 1}, {5, 0}, {5, 1},
+                {6, 0}, {6, 1}, {7, 0}, {7, 1}, {7, 2}, {9, 0}, {10, 0}};
+        return Arrays.stream(acts).map(a -> Arguments.of(a[0], a[1]));
+    }
+
+    static Stream<Arguments> routeTeams() {
+        return routeActs().flatMap(args -> Stream.of("sonic", "tails").map(main ->
+                Arguments.of(args.get()[0], args.get()[1], main)));
+    }
+
+    @ParameterizedTest(name = "zone {0} act {1} as {2}")
+    @MethodSource("routeTeams")
+    void everyRouteActIsAWalledArenaSonicCanCross(int zone, int act, String main) throws Exception {
+        var fixture = launch(zone, act, main, "");
+        startRun(fixture);
+        int left = arenaValue("left"), right = arenaValue("right");
+        int floorTop = arenaValue("floorTop"), floorBottom = arenaValue("floorBottom");
+        assertFalse(fixture.sprite().getAir(), "Sonic lands on the arena floor");
+        int x = fixture.sprite().getCentreX();
+        assertTrue(x > left && x < right, "starts inside: " + x);
+        fixture.sprite().setInvulnerableFrames(100000);
+        int maxX = x, minX = x;
+        for (int frame = 0; frame < 900; frame++) {
+            boolean goRight = frame < 450;
+            fixture.stepFrame(false, false, !goRight, goRight, frame % 50 == 25);
+            clearEnemies();
+            int px = fixture.sprite().getCentreX(), py = fixture.sprite().getCentreY();
+            maxX = Math.max(maxX, px);
+            minX = Math.min(minX, px);
+            assertFalse(fixture.sprite().getDead(), "death at frame " + frame + " x=" + px + " y=" + py);
+            assertTrue(py < floorBottom + 64, "fell below the arena floor at x=" + px + " y=" + py);
+            if (getInt(run(), "pendingLevels") > 0) set(run(), "pendingLevels", 0);
+        }
+        // On the Death Egg Silver Sonic is already fighting, and his rebound blocks the way.
+        if (zone != 10) {
+            assertTrue(maxX >= right - 120, "reaches the right side: maxX=" + maxX + " right=" + right);
+            assertTrue(minX <= left + 120, "reaches the left side: minX=" + minX + " left=" + left);
+        }
+        assertTrue(maxX <= right + 48 && minX >= left, "stays walled in: " + minX + ".." + maxX);
+        assertTrue(floorTop - 400 < fixture.sprite().getCentreY());
+    }
+
+    @Test void levelUpsOfferCardsAndEveryWeaponFires() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        call(run(), "gainXp", 1000);
+        assertTrue(getInt(run(), "pendingLevels") > 1);
+        fixture.stepIdleFrames(2);
+        assertEquals(1, getInt(stage(), "overlay"), "the level-up cards open");
+        assertTrue((boolean) get(run(), "paused"), "play pauses behind them");
+        int pending = getInt(run(), "pendingLevels");
+        tapDown(fixture);
+        tapEnter(fixture);
+        assertEquals(pending - 1, getInt(run(), "pendingLevels"));
+        int[] levels = (int[]) get(run(), "levels");
+        assertEquals(1, Arrays.stream(levels).sum(), "one upgrade taken");
+        // Max every upgrade, clear the queue, and fight: nothing may throw, and things must die.
+        for (int i = 0; i < levels.length; i++) levels[i] = i == 7 || i == 8 || i == 9 || i == 16 || i == 17 ? 3 : 5;
+        set(run(), "pendingLevels", 0);
+        fixture.stepIdleFrames(2);
+        assertEquals(0, getInt(stage(), "overlay"));
+        fixture.sprite().setInvulnerableFrames(100000);
+        int pickupsSeen = 0;
+        for (int frame = 0; frame < 1800; frame++) {
+            boolean goRight = frame / 200 % 2 == 0;
+            fixture.stepFrame(false, frame % 60 == 30, !goRight, goRight, frame % 20 == 0 || frame % 20 == 8);
+            pickupsSeen = Math.max(pickupsSeen, objects("Pickup").size());
+            if (getInt(run(), "pendingLevels") > 0) set(run(), "pendingLevels", 0);
+        }
+        assertTrue(getInt(run(), "kills") >= 10, "the arsenal clears badniks: " + getInt(run(), "kills"));
+        assertTrue(pickupsSeen > 0, "defeated badniks drop rings");
+    }
+
+    @Test void bossClearAwardsTheEmeraldAndTheRouteCarriesTheRun() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        set(stage(), "stageFrames", 1);
+        fixture.stepIdleFrames(2);
+        assertEquals(BOSS, phase());
+        var bosses = objects("Boss");
+        assertEquals(1, bosses.size(), "the boss arrives when the clock runs out");
+        fixture.stepIdleFrames(120);
+        fixture.sprite().setInvulnerableFrames(100000);
+        Object boss = bosses.get(0);
+        for (int i = 0; i < 40 && (boolean) call(boss, "alive"); i++) {
+            call(boss, "hurt", 1000);
+            fixture.stepIdleFrames(12);
+        }
+        assertFalse((boolean) call(boss, "alive"));
+        boolean chestShown = false, chestDropped = false;
+        for (int i = 0; i < 700 && phase() != CLEAR; i++) {
+            fixture.stepIdleFrames(1);
+            for (var pickup : objects("Pickup")) chestDropped |= (int) call(pickup, "kind") == 3;
+            if (getInt(stage(), "overlay") == 2) {
+                chestShown = true;
+                assertTrue((boolean) get(run(), "paused"), "the chest pauses play");
+                fixture.stepIdleFrames(45);
+                tapEnter(fixture);
+            }
+        }
+        assertTrue(chestDropped, "every boss leaves a treasure chest");
+        assertTrue(chestShown, "an unopened boss chest opens itself before the results");
+        assertEquals(1, getInt(run(), "chestsOpened"));
+        assertTrue(Arrays.stream((int[]) get(run(), "levels")).sum() >= 3, "three prizes, each a rank");
+        assertEquals(CLEAR, phase(), "the clear screen follows the boss");
+        assertTrue((boolean) call(profile(), "hasEmerald", 0), "Emerald Hill's emerald is kept");
+        assertEquals(1, getInt(profile(), "unlocked"), "Chemical Plant can now start a run");
+        assertTrue((boolean) call(profile(), "extendedModesUnlocked"), "the first clear unlocks longer modes");
+        int rings = fixture.sprite().getRingCount();
+        // Choose act 2 of Chemical Plant.
+        fixture.stepIdleFrames(30);
+        tapDown(fixture);
+        tapEnter(fixture);
+        var levelManager = GameServices.level();
+        assertEquals(1, levelManager.getRequestedZone(), "Chemical Plant was requested");
+        assertEquals(1, levelManager.getRequestedAct());
+        levelManager.loadZoneAndAct(1, 1);
+        fixture.stepIdleFrames(2);
+        assertEquals(INTRO, phase(), "the run carries on with no camp");
+        assertEquals(1, getInt(run(), "stage"));
+        assertEquals(1, getInt(run(), "stagesCleared"));
+        assertEquals(rings, fixture.sprite().getRingCount(), "rings carry over");
+    }
+
+    @Test void damagePopupsScaleAndKillsNeverSpawnStockScore() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        clearEnemies();
+        fixture.sprite().setInvulnerableFrames(100000);
+        Class<?> enemyType = loader.loadClass("survivors.Enemy");
+        Method spawnAt = enemyType.getDeclaredMethod("spawnAt", int.class, int.class, int.class, boolean.class);
+        spawnAt.setAccessible(true);
+        var player = fixture.sprite();
+        var spawn = (ObjectSpawn) spawnAt.invoke(null, player.getCentreX() + 80, player.getCentreY() - 64, 0, true);
+        var ctor = enemyType.getDeclaredConstructor(ObjectSpawn.class, int.class);
+        ctor.setAccessible(true);
+        var enemy = (AbstractObjectInstance) ctor.newInstance(spawn, 100);
+        GameServices.level().getObjectManager().addDynamicObject(enemy);
+        Arrays.fill((int[]) get(stage(), "eKind"), 0);
+        int[] amounts = {9, 10, 50, 1000};
+        int[] dealt = {9, 10, 50, 31};
+        int[] scales = {1, 2, 3, 2};
+        int[] colours = {0xFF4030, 0xFF9020, 0xFF70D0, 0xFF9020};
+        for (int i = 0; i < amounts.length; i++) {
+            set(enemy, "iframes", 0);
+            call(enemy, "hurt", amounts[i], 0);
+            assertEquals(dealt[i], ((int[]) get(stage(), "eA"))[i]);
+            assertEquals(scales[i], ((int[]) get(stage(), "eC"))[i]);
+            assertEquals(colours[i], ((int[]) get(stage(), "eB"))[i]);
+        }
+        assertTrue(enemy.isDestroyed());
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay > 0) registry.restore(snapshot);
+            assertEquals(31, ((int[]) get(stage(), "eA"))[3]);
+            assertEquals(2, ((int[]) get(stage(), "eC"))[3]);
+            boolean animal = false;
+            for (int frame = 0; frame < 45; frame++) {
+                fixture.stepIdleFrames(1);
+                for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
+                    assertFalse(object instanceof com.openggf.game.sonic2.objects.PointsObjectInstance,
+                            "kills must not emit a score popup, including after restoring the explosion");
+                    animal |= object instanceof AnimalObjectInstance;
+                }
+            }
+            assertTrue(animal, "freed animals remain part of the destruction effect");
+        }
+    }
+
+    @Test void stompsDamageReboundAndChainTheCombo() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        clearEnemies();
+        int[] levels = (int[]) get(run(), "levels");
+        levels[0] = 1; // Shockwave: a bounce weapon fires from each rebound.
+        var player = fixture.sprite();
+        player.setInvulnerableFrames(100000);
+        // A tough Crawl hovering in mid-air is not a Crawl's habitat, so use an elite Buzzer.
+        Class<?> enemyType = loader.loadClass("survivors.Enemy");
+        Method spawnAt = enemyType.getDeclaredMethod("spawnAt", int.class, int.class, int.class, boolean.class);
+        spawnAt.setAccessible(true);
+        int ex = player.getCentreX() + 40, ey = player.getCentreY() - 64;
+        var spawn = (ObjectSpawn) spawnAt.invoke(null, ex, ey, 0, true);
+        var ctor = enemyType.getDeclaredConstructor(ObjectSpawn.class, int.class);
+        ctor.setAccessible(true);
+        var enemy = (AbstractObjectInstance) ctor.newInstance(spawn, 40);
+        GameServices.level().getObjectManager().addDynamicObject(enemy);
+        int before = (int) call(enemy, "hp");
+        for (int bounce = 0; bounce < 3; bounce++) {
+            com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player, enemy.getX());
+            com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(player, enemy.getY() - 28);
+            player.setAir(true);
+            player.setRolling(true);
+            player.setAnimationId(2);
+            player.setXSpeed((short) 0);
+            player.setYSpeed((short) 0x300);
+            int hp = (int) call(enemy, "hp");
+            for (int i = 0; i < 12 && (int) call(enemy, "hp") == hp; i++) fixture.stepIdleFrames(1);
+            assertTrue((int) call(enemy, "hp") < hp, "bounce " + bounce + " damages the badnik");
+            assertTrue(player.getYSpeed() < 0, "Sonic rebounds upward");
+            fixture.stepIdleFrames(10);
+        }
+        assertEquals(3, getInt(run(), "combo"), "three airborne stomps chain a combo");
+        assertTrue(before - (int) call(enemy, "hp") > 6, "the combo multiplier grows the damage");
+        var stage = stage();
+        assertTrue(Arrays.stream((int[]) get(stage, "eKind")).anyMatch(k -> k == 2), "the shockwave fired");
+    }
+
+    @Test void deathEggFinaleIsSilverSonicThenAFleeingEggman() throws Exception {
+        var fixture = launch(10, 0);
+        startRun(fixture);
+        assertEquals(BOSS, phase(), "the Death Egg opens with its boss");
+        fixture.sprite().setInvulnerableFrames(100000);
+        Object silver = objects("Boss").get(0);
+        for (int i = 0; i < 60 && (boolean) call(silver, "alive"); i++) {
+            call(silver, "hurt", 1000);
+            fixture.stepIdleFrames(12);
+        }
+        for (int i = 0; i < 300 && objects("Boss").stream().noneMatch(b -> runner(b)); i++) fixture.stepIdleFrames(1);
+        Object eggman = objects("Boss").stream().filter(b -> runner(b)).findFirst().orElseThrow();
+        assertEquals(BOSS, phase(), "the run is not won until Eggman is caught");
+        var player = fixture.sprite();
+        for (int hit = 0; hit < 3; hit++) {
+            fixture.stepIdleFrames(70);
+            var e = (AbstractObjectInstance) eggman;
+            // Drop Sonic onto him in a ball.
+            // Just right of him, so he flees left, and keeping pace.
+            com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player, e.getX() + 12);
+            com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(player, e.getY() - 40);
+            player.setAir(true);
+            player.setRolling(true);
+            player.setAnimationId(2);
+            player.setXSpeed((short) ((int) call(eggman, "hp") == 1 ? -0x500 : -0x440));
+            player.setYSpeed((short) 0x400);
+            int before = (int) call(eggman, "hp");
+            for (int i = 0; i < 20 && (int) call(eggman, "hp") == before; i++) fixture.stepIdleFrames(1);
+            assertEquals(before - 1, (int) call(eggman, "hp"), "a stomp lands on Eggman");
+        }
+        for (int i = 0; i < 700 && phase() != 7; i++) fixture.stepIdleFrames(1);
+        assertEquals(7, phase(), "catching Eggman wins the run");
+        assertEquals(1, getInt(profile(), "wins"));
+    }
+
+    static boolean runner(Object boss) {
+        try { return (boolean) call(boss, "runner"); } catch (Exception e) { throw new AssertionError(e); }
+    }
+
+    @Test void deathEndsTheRunBanksRingsAndReturnsToCamp() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        set(run(), "ringsCollected", 200);
+        set(run(), "kills", 50);
+        fixture.sprite().setRingCount(0);
+        fixture.sprite().applyCrushDeath();
+        for (int i = 0; i < 200 && phase() != DEAD; i++) fixture.stepIdleFrames(1);
+        assertEquals(DEAD, phase());
+        assertFalse((boolean) get(run(), "active"));
+        assertEquals(50 + 5, getInt(profile(), "bank"), "a quarter of the rings collected plus a ring per ten badniks");
+        fixture.stepIdleFrames(80);
+        tapEnter(fixture);
+        var levelManager = GameServices.level();
+        assertEquals(0, levelManager.getRequestedZone(), "TRY AGAIN reloads the start zone");
+        assertEquals(0, levelManager.getRequestedAct());
+        levelManager.loadZoneAndAct(0, 0);
+        fixture.stepIdleFrames(2);
+        assertEquals(CAMP, phase(), "a new run starts in camp");
+        // Profile survives a reload from disk.
+        var constructor = loader.loadClass("survivors.Profile").getDeclaredConstructor(com.openggf.mods.ModStorage.class);
+        constructor.setAccessible(true);
+        Object reloaded = constructor.newInstance(
+                com.openggf.mods.scene.host.ModStorageFactory.forOwner(com.openggf.game.save.SavePaths.root(), "sonic-survivors"));
+        var ctor = reloaded.getClass().getDeclaredMethod("load");
+        ctor.setAccessible(true);
+        ctor.invoke(reloaded);
+        assertEquals(55, getInt(reloaded, "bank"));
+    }
+
+    @Test void campShopSpendsTheBank() throws Exception {
+        var fixture = launch(0, 0);
+        fixture.stepIdleFrames(30);
+        set(profile(), "bank", 1000);
+        tapDown(fixture); // RING SHOP
+        tapEnter(fixture);
+        assertEquals(3, getInt(stage(), "campPage"), "the shop has its own page");
+        fixture.stepIdleFrames(22);
+        tapEnter(fixture); // POWER UP
+        int[] shop = (int[]) get(profile(), "shop");
+        assertEquals(1, shop[0]);
+        assertEquals(950, getInt(profile(), "bank"));
+        tapEnter(fixture);
+        assertEquals(2, shop[0], "levels are bought one at a time");
+        assertEquals(950 - 55, getInt(profile(), "bank"), "each level costs 15% more, in fives");
+        tapDown(fixture); // RING START
+        tapEnter(fixture);
+        assertEquals(1, shop[1]);
+        fixture.stepFrame(true, false, false, false, false);
+        fixture.stepIdleFrames(1);
+        fixture.stepFrame(true, false, false, false, false);
+        fixture.stepIdleFrames(1);
+        tapEnter(fixture); // BACK TO CAMP
+        assertEquals(0, getInt(stage(), "campPage"));
+        fixture.stepIdleFrames(22);
+        fixture.stepFrame(true, false, false, false, false);
+        fixture.stepIdleFrames(1);
+        tapEnter(fixture);
+        assertEquals(INTRO, phase());
+        assertEquals(55, fixture.sprite().getRingCount(), "Ring Start adds five");
+    }
+
+    @Test void allSevenEmeraldsKeepTheirBonusWithoutEnablingSuperSonic() throws Exception {
+        var fixture = launch(0, 0);
+        fixture.stepIdleFrames(30);
+        set(profile(), "emeralds", 0x7F);
+        assertFalse(GameServices.gameState().hasAllEmeralds());
+        tapEnter(fixture);
+        assertFalse(GameServices.gameState().hasAllEmeralds(), "relics do not unlock the native transformation");
+        assertEquals(0x7F, getInt(run(), "relics"));
+        assertEquals(1.25, (double) call(run(), "damageMultiplier"), 0.0001);
+        assertNull(fixture.sprite().getSuperStateController(), "Survivors disables native and debug transformations");
+        set(run(), "pendingLevels", 0);
+        fixture.stepIdleFrames(160);
+        assertEquals(FIGHT, phase());
+        var level = GameServices.level().getLevelGamestate();
+        assertFalse(level.isTimerPaused());
+        assertEquals(0, level.getElapsedSeconds(), "the timer is held at zero instead");
+    }
+
+    @Test void floatingRingFormationsAppearAroundTheArena() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        fixture.sprite().setInvulnerableFrames(100000);
+        int left = arenaValue("left"), right = arenaValue("right");
+        for (int i = 0; i < 485; i++) {
+            fixture.stepIdleFrames(1);
+            clearEnemies();
+            // Only the formation should be left: clear drops from anything defeated earlier.
+            if (i < 440) for (var pickup : objects("Pickup")) pickup.setDestroyed(true);
+            if (getInt(run(), "pendingLevels") > 0) set(run(), "pendingLevels", 0);
+        }
+        var rings = objects("Pickup");
+        int value = 0;
+        for (var ring : rings) value += (int) call(ring, "value");
+        assertEquals(5, value, "eight seconds in, the formation keeps five rings of value after consolidation");
+        assertTrue(rings.size() <= 5);
+        for (var ring : rings) {
+            assertTrue(ring.getX() > left && ring.getX() < right);
+            assertTrue(Math.abs(ring.getX() - fixture.sprite().getCentreX()) >= 60, "away from Sonic");
+        }
+        int y = rings.get(0).getY();
+        fixture.stepIdleFrames(60);
+        assertEquals(y, rings.get(0).getY(), "they hang in the air until collected");
+    }
+
+    @Test void ringsAreHealthAndTheLastHitIsLethal() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        Class<?> guard = loader.loadClass("survivors.Guard");
+        Method takeHit = guard.getDeclaredMethod("takeHit", ObjectServices.class,
+                com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        takeHit.setAccessible(true);
+        ObjectServices services = (ObjectServices) call(stage(), "services");
+        var player = fixture.sprite();
+        assertTrue((boolean) takeHit.invoke(null, services, player));
+        assertEquals(42, player.getRingCount(), "a hit costs the eight-ring toll");
+        assertTrue(player.getInvulnerableFrames() > 0);
+        player.setInvulnerableFrames(0);
+        player.setRingCount(9);
+        takeHit.invoke(null, services, player);
+        assertEquals(1, player.getRingCount(), "a ring more than the toll survives");
+        assertFalse(player.getDead());
+        player.setInvulnerableFrames(0);
+        set(run(), "revives", 1);
+        takeHit.invoke(null, services, player);
+        assertFalse(player.getDead(), "a revive saves the hit that would empty the rings");
+        assertEquals(24, player.getRingCount(), "and restores three base tolls");
+        assertEquals(0, getInt(run(), "revives"));
+        player.setInvulnerableFrames(0);
+        player.setRingCount(8);
+        takeHit.invoke(null, services, player);
+        assertTrue(player.getDead(), "a hit whose toll empties the rings ends the run");
+    }
+
+    @Test void fightRewindsAndReplaysIdentically() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        int[] levels = (int[]) get(run(), "levels");
+        levels[0] = 3; levels[1] = 3; levels[4] = 3; levels[5] = 2;
+        fixture.sprite().setInvulnerableFrames(100000);
+        for (int frame = 0; frame < 400; frame++) fixture.stepFrame(false, false, false, frame % 200 < 100, frame % 30 == 0);
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        for (int frame = 0; frame < 300; frame++) fixture.stepFrame(false, false, frame % 100 < 50, false, frame % 25 == 0);
+        int x = fixture.sprite().getCentreX(), y = fixture.sprite().getCentreY();
+        int kills = getInt(run(), "kills"), enemies = objects("Enemy").size();
+        registry.restore(before);
+        for (int frame = 0; frame < 300; frame++) fixture.stepFrame(false, false, frame % 100 < 50, false, frame % 25 == 0);
+        assertEquals(x, fixture.sprite().getCentreX());
+        assertEquals(y, fixture.sprite().getCentreY());
+        assertEquals(kills, getInt(run(), "kills"));
+        assertEquals(enemies, objects("Enemy").size());
+    }
+
+    @Test void jumpCannotSelectCardsAndOpeningFrameFreezesImmediately() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        call(run(), "gainXp", 10);
+        fixture.stepFrame(false, false, false, false, true);
+        int pending = getInt(run(), "pendingLevels");
+        assertTrue((boolean) get(run(), "paused"));
+        assertTrue(fixture.sprite().isObjectControlled());
+        int x = fixture.sprite().getCentreX(), y = fixture.sprite().getCentreY();
+        int remaining = getInt(stage(), "stageFrames");
+        for (int i = 0; i < 15; i++) fixture.stepFrame(false, false, false, true, i % 2 == 0);
+        assertEquals(pending, getInt(run(), "pendingLevels"), "jump must never confirm a card");
+        assertEquals(x, fixture.sprite().getCentreX());
+        assertEquals(y, fixture.sprite().getCentreY());
+        assertEquals(remaining, getInt(stage(), "stageFrames"));
+        tapEnter(fixture);
+        assertEquals(pending - 1, getInt(run(), "pendingLevels"));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"sonic", "tails"})
+    void bothLeadersAreSoloAndCannotEscapeTheAquaticRuinCeiling(String main) throws Exception {
+        var patch = (GamePatch) loader.loadClass("survivors.SurvivorsMod$Patch").getConstructor().newInstance();
+        assertTrue(patch.activatesFor(new GameplayLaunchRequest("s2", main, List.of("tails"))));
+        var fixture = launch(2, 0, main, "tails");
+        startRun(fixture);
+        assertTrue(GameServices.sprites().getSidekicks().isEmpty(), "configured followers must not spawn");
+        assertFalse(GameServices.module().supportsSidekick());
+        assertTrue(GameServices.module().isSidekickSuppressedForZone(2));
+        assertEquals(main, fixture.sprite().getCode());
+        var player = fixture.sprite();
+        for (int i = 0; i < 40; i++) {
+            com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(player, -8);
+            player.setYSpeed((short) -0x900);
+            player.setAir(false); // Even a collision with terrain above the arena cannot strand the player there.
+            fixture.stepIdleFrames(1);
+            assertTrue(player.getCentreY() >= GameServices.camera().getMinY() + 24);
+            assertTrue(player.getAir());
+            assertTrue(player.getYSpeed() >= 0);
+        }
+    }
+
+    static Stream<Arguments> musicExpiryCases() {
+        return Stream.of("sonic", "tails").flatMap(main -> Stream.of(false, true)
+                .flatMap(boss -> Stream.of(false, true).map(monitor -> Arguments.of(main, boss, monitor))));
+    }
+
+    @ParameterizedTest
+    @MethodSource("musicExpiryCases")
+    void feverAndMonitorExpiryKeepArenaAndBossMusicPlaying(String main, boolean boss, boolean monitor) throws Exception {
+        var fixture = launch(0, 0, main, "none");
+        startRun(fixture);
+        var player = fixture.sprite();
+        if (boss) call(stage(), "spawnBoss");
+        var audio = com.openggf.audio.AudioManager.getInstance();
+        var requests = new ArrayList<Integer>();
+        audio.setRequestObserver((kind, id) -> {
+            if (kind == com.openggf.audio.AudioRequestObserver.RequestClass.MUSIC) requests.add(id);
+        });
+        try {
+            if (monitor) {
+                var pickup = spawnPickup(1, 8, player.getCentreX(), player.getCentreY());
+                call(pickup, "collect", player);
+            } else {
+                set(stage(), "feverCharge", (int) call(run(), "feverCharge") - 1);
+                call(stage(), "onBounce", player.getCentreX(), player.getCentreY());
+            }
+            assertTrue(player.getInvincibleFrames() > 0);
+            assertTrue(requests.isEmpty(), "Survivors never switches to invincibility music");
+            player.setInvincibleFrames(1);
+            var registry = fixture.runtime().getRewindRegistry();
+            var snapshot = registry.capture();
+            fixture.stepIdleFrames(1);
+            assertEquals(0, player.getInvincibleFrames());
+            assertNull(player.getInvincibilityObject(), "stars are cleaned up normally");
+            assertTrue(requests.isEmpty(), "expiry must not restart level music or replace the boss track");
+            registry.restore(snapshot);
+            requests.clear();
+            fixture.stepIdleFrames(1);
+            assertEquals(0, player.getInvincibleFrames());
+            assertTrue(requests.isEmpty(), "expiry stays silent after rewind");
+        } finally {
+            audio.setRequestObserver(null);
+        }
+    }
+
+    @Test void lostRingsFadePauseAndReplayTheirShortExpiry() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var lost = spawnPickup(0, 1, fixture.sprite().getCentreX() + 160, fixture.sprite().getCentreY());
+        set(lost, "lostRing", true);
+        assertEquals(1f, (float) call(lost, "lostRingAlpha"));
+        set(lost, "age", 22);
+        assertEquals(23f / 45, (float) call(lost, "lostRingAlpha"), 0.001f);
+        call(run(), "gainXp", 6);
+        fixture.stepIdleFrames(10);
+        assertEquals(22, getInt(lost, "age"), "menus pause the fade too");
+        tapEnter(fixture);
+        set(lost, "age", 44);
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        assertTrue((float) call(lost, "lostRingAlpha") < 0.03f);
+        fixture.stepIdleFrames(1);
+        assertTrue(lost.isDestroyed());
+        registry.restore(snapshot);
+        var restored = objects("Pickup").stream().filter(o -> {
+            try { return (boolean) call(o, "lostRing"); } catch (Exception e) { throw new RuntimeException(e); }
+        }).findFirst().orElseThrow();
+        assertEquals(44, getInt(restored, "age"));
+        fixture.stepIdleFrames(1);
+        assertTrue(restored.isDestroyed());
+    }
+
+    @Test void lostRingsIgnoreBothMagnetsAndDoNotFarmExperienceAcrossRewind() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var player = fixture.sprite();
+        call(stage(), "spillRings", player.getCentreX() + 100, player.getCentreY(), 1);
+        var ring = objects("Pickup").stream().filter(o -> {
+            try { return (boolean) call(o, "lostRing"); } catch (Exception e) { throw new RuntimeException(e); }
+        }).findFirst().orElseThrow();
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        ((int[]) get(run(), "levels"))[11] = 5; // Magnet
+        call(stage(), "magnetSweep");
+        call(ring, "homeIn");
+        fixture.stepIdleFrames(30);
+        assertFalse((boolean) get(ring, "homing"));
+        registry.restore(snapshot);
+        ring = objects("Pickup").stream().filter(o -> {
+            try { return (boolean) call(o, "lostRing"); } catch (Exception e) { throw new RuntimeException(e); }
+        }).findFirst().orElseThrow();
+        int xp = getInt(run(), "xp"), earned = getInt(run(), "ringsCollected"), rings = player.getRingCount();
+        call(ring, "collect", player);
+        assertEquals(rings + 1, player.getRingCount());
+        assertEquals(xp, getInt(run(), "xp"));
+        assertEquals(earned, getInt(run(), "ringsCollected"));
+    }
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void hostEnterConfirmsCampWithoutPausingThenResumesNormalPauseControl(boolean remappedStart) throws Exception {
+        var fixture = launch(0, 0);
+        fixture.stepIdleFrames(30);
+        var input = new com.openggf.control.InputHandler();
+        var loop = new com.openggf.GameLoop(input);
+        loop.setGameMode(GameMode.LEVEL);
+        var config = SonicConfigurationService.getInstance();
+        int oldPause = config.getInt(SonicConfiguration.PAUSE_KEY), oldStart = config.getInt(SonicConfiguration.START);
+        try {
+            SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.PAUSE_KEY,
+                    org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            if (remappedStart) SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.START,
+                    org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+            loop.step();
+            assertEquals(INTRO, phase());
+            assertFalse(GameServices.gameState().isGamePaused(), "modal Enter must not enter ROM Pause_Loop");
+            assertFalse(loop.isUserPaused());
+            input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+            loop.step();
+            input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+            loop.step();
+            assertTrue(loop.isUserPaused(), "the host still pauses normal play");
+            loop.toggleUserPause();
+        } finally {
+            config.setConfigValue(SonicConfiguration.PAUSE_KEY, oldPause);
+            config.setConfigValue(SonicConfiguration.START, oldStart);
+        }
+    }
+
+    private Object reloadProfile() throws Exception {
+        var constructor = loader.loadClass("survivors.Profile").getDeclaredConstructor(com.openggf.mods.ModStorage.class);
+        constructor.setAccessible(true);
+        return call(constructor.newInstance(com.openggf.mods.scene.host.ModStorageFactory.forOwner(
+                com.openggf.game.save.SavePaths.root(), "sonic-survivors")), "load");
+    }
+
+    @Test void campModesUnlockAfterClearPersistAndCycleBackToStandard() throws Exception {
+        var fixture = launch(0, 0);
+        fixture.stepIdleFrames(30);
+        for (int i = 0; i < 2; i++) tapDown(fixture); // MODE
+        tapEnter(fixture);
+        assertEquals(0, getInt(profile(), "mode"));
+        assertFalse((boolean) call(profile(), "extendedModesUnlocked"));
+        // Existing profiles with a completed boss must unlock without replaying that boss.
+        set(profile(), "unlocked", 1);
+        tapEnter(fixture);
+        assertEquals(1, getInt(reloadProfile(), "mode"));
+        tapEnter(fixture);
+        assertEquals(2, getInt(reloadProfile(), "mode"));
+        tapEnter(fixture);
+        assertEquals(0, getInt(reloadProfile(), "mode"));
+    }
+
+    @Test void oldAndInvalidProfilesKeepTheFiveMinuteDefaultAndCannotBypassTheUnlock() throws Exception {
+        launch(0, 0);
+        Path file = com.openggf.game.save.SavePaths.root().resolve("sonic-survivors/profile.txt");
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, "unlocked=1\nbank=123\n");
+        assertEquals(0, call(reloadProfile(), "selectedMode"));
+        Files.writeString(file, "unlocked=1\nmode=99\n");
+        assertEquals(0, call(reloadProfile(), "selectedMode"));
+        Files.writeString(file, "mode=2\n");
+        assertEquals(0, call(reloadProfile(), "selectedMode"));
+        Files.writeString(file, "emeralds=1\nmode=2\n");
+        assertEquals(2, call(reloadProfile(), "selectedMode"));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 1})
+    void timedModesUseFiveAndTenMinutesThenReplayTheirBossBoundary(int mode) throws Exception {
+        var fixture = launch(0, 0);
+        set(profile(), "unlocked", 1);
+        set(profile(), "mode", mode);
+        startRun(fixture);
+        int seconds = mode == 0 ? 300 : 600;
+        assertEquals(seconds, call(stage(), "survivalSeconds"));
+        assertTrue(getInt(stage(), "stageFrames") > seconds * 60 - 100);
+        // Changing a saved preference cannot change a run in progress.
+        set(profile(), "mode", 2);
+        set(stage(), "fightFrames", 7199);
+        set(stage(), "stageFrames", seconds * 60 - 7199);
+        fixture.stepIdleFrames(2);
+        assertEquals(FIGHT, phase());
+        assertTrue(objects("Boss").isEmpty());
+        set(stage(), "stageFrames", 1);
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        fixture.stepIdleFrames(1);
+        assertEquals(BOSS, phase());
+        assertEquals(1, objects("Boss").size());
+        registry.restore(snapshot);
+        assertEquals(mode, getInt(run(), "mode"));
+        fixture.stepIdleFrames(1);
+        assertEquals(BOSS, phase());
+        assertEquals(1, objects("Boss").size());
+    }
+
+    @Test void endlessHasNoBossDeadlinePausesRewindsAndLeavingBanksLikeAGameOver() throws Exception {
+        var fixture = launch(0, 0);
+        set(profile(), "unlocked", 1);
+        set(profile(), "mode", 2);
+        startRun(fixture);
+        assertTrue((boolean) call(stage(), "endless"));
+        set(stage(), "fightFrames", 18000);
+        fixture.stepIdleFrames(2);
+        assertEquals(FIGHT, phase());
+        assertTrue(objects("Boss").isEmpty());
+        assertEquals(0, getInt(stage(), "stageFrames"));
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        int elapsed = getInt(stage(), "fightFrames");
+        fixture.stepIdleFrames(3);
+        registry.restore(snapshot);
+        assertEquals(elapsed, getInt(stage(), "fightFrames"));
+        assertEquals(2, getInt(run(), "mode"));
+        call(run(), "gainXp", 6);
+        fixture.stepIdleFrames(10);
+        assertEquals(elapsed, getInt(stage(), "fightFrames"), "the card menu freezes elapsed time");
+        set(run(), "ringsCollected", 100);
+        fixture.sprite().setRingCount(40);
+        call(stage(), "retire", true);
+        assertEquals(25, getInt(profile(), "bank"), "leaving mid-fight banks like a game over, never the rings in hand");
+        assertFalse((boolean) get(run(), "active"));
+        assertTrue((boolean) get(stage(), "exiting"));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {1, 2})
+    void deathEggKeepsItsBossFinaleInLongAndEndlessModes(int mode) throws Exception {
+        var fixture = launch(10, 0);
+        set(profile(), "unlocked", 9);
+        set(profile(), "mode", mode);
+        startRun(fixture);
+        assertEquals(BOSS, phase());
+        assertFalse((boolean) call(stage(), "endless"));
+        assertEquals(1, objects("Boss").size());
+    }
+
+    @Test void ringShowersBatchSoundWithoutLosingRewardsAndRestoreTheirCooldown() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var player = fixture.sprite();
+        call(stage(), "dropRings", player.getCentreX(), player.getCentreY(), 30);
+        var rings = objects("Pickup");
+        assertEquals(3, rings.size());
+        var audio = com.openggf.audio.AudioManager.getInstance();
+        var requests = new ArrayList<Integer>();
+        audio.setRequestObserver((kind, id) -> requests.add(id));
+        try {
+            int before = player.getRingCount();
+            for (var ring : rings) call(ring, "collect", player);
+            assertEquals(before + 30, player.getRingCount());
+            assertEquals(30, getInt(run(), "ringsCollected"));
+            assertEquals(2, getInt(run(), "level"), "30 XP pays the 6 and 16 XP level costs");
+            assertEquals(8, getInt(run(), "xp"));
+            assertEquals(2, getInt(run(), "pendingLevels"));
+            assertEquals(1, requests.size(), "a whole shower in one frame chimes only once");
+            Object snapshot = call(run(), "capture");
+            set(run(), "frames", getInt(run(), "frames") + 11);
+            assertFalse((boolean) call(run(), "ringSound", 10));
+            set(run(), "frames", getInt(run(), "frames") + 1);
+            assertTrue((boolean) call(run(), "ringSound", 1));
+            call(run(), "restore", snapshot);
+            assertFalse((boolean) call(run(), "ringSound", 1), "rewind restores the cooldown");
+            set(run(), "frames", getInt(run(), "frames") + 30);
+            assertTrue((boolean) call(run(), "ringSound", 1), "an isolated pickup remains audible");
+            call(run(), "begin", 0, profile(), 123L);
+            assertTrue((boolean) call(run(), "ringSound", 1), "a new run resets audio grouping");
+        } finally {
+            audio.setRequestObserver(null);
+        }
+    }
+
+
+    private AbstractObjectInstance spawnPickup(int kind, int value, int x, int y) throws Exception {
+        Class<?> type = loader.loadClass("survivors.Pickup");
+        Method spawnAt = type.getDeclaredMethod("spawnAt", int.class, int.class, int.class);
+        spawnAt.setAccessible(true);
+        ObjectSpawn spawn = (ObjectSpawn) spawnAt.invoke(null, x, y, kind);
+        var constructor = type.getConstructor(ObjectSpawn.class, int.class, int.class, int.class);
+        var pickup = (AbstractObjectInstance) call(stage(), "spawnFreeChild",
+                (java.util.function.Supplier<AbstractObjectInstance>) () -> {
+                    try { return (AbstractObjectInstance) constructor.newInstance(spawn, 0, 0, value); }
+                    catch (ReflectiveOperationException failure) { throw new RuntimeException(failure); }
+                });
+        set(pickup, "resting", true);
+        return pickup;
+    }
+
+    private AbstractObjectInstance matureReward(int value, int x, int y) throws Exception {
+        var ring = spawnPickup(0, value, x, y);
+        set(ring, "age", 45);
+        return ring;
+    }
+
+    private void mergeRewards() throws Exception {
+        call(service("survivors.RingClusters"), "merge", call(stage(), "services"));
+    }
+
+    @Test void nearbyRewardsPromoteThroughFiveTwentyFiveAndOneHundredTwentyFive() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        int x = fixture.sprite().getCentreX() + 200, y = fixture.sprite().getCentreY();
+        // Five spatially separate clusters become five cyan rings, then one purple ring.
+        for (int group = 0; group < 5; group++) {
+            for (int n = 0; n < 5; n++) matureReward(1, x + group * 100 + n, y);
+        }
+        mergeRewards();
+        assertEquals(5, objects("Pickup").size());
+        for (var ring : objects("Pickup")) {
+            assertEquals(5, call(ring, "value"));
+            assertEquals(1, call(ring, "ringTier"));
+            set(ring, "x", x);
+        }
+        mergeRewards();
+        assertEquals(1, objects("Pickup").size());
+        assertEquals(25, call(objects("Pickup").getFirst(), "value"));
+        assertEquals(2, call(objects("Pickup").getFirst(), "ringTier"));
+        for (int i = 0; i < 4; i++) matureReward(25, x, y);
+        mergeRewards();
+        assertEquals(1, objects("Pickup").size());
+        var red = objects("Pickup").getFirst();
+        assertEquals(125, call(red, "value"));
+        assertEquals(3, call(red, "ringTier"));
+        matureReward(125, x, y);
+        mergeRewards();
+        assertEquals(1, objects("Pickup").size(), "top-tier piles continue consolidating");
+        int rings = fixture.sprite().getRingCount();
+        call(red, "collect", fixture.sprite());
+        assertEquals(rings + 250, fixture.sprite().getRingCount());
+        assertEquals(250, getInt(run(), "ringsCollected"));
+        int earnedXp = getInt(run(), "xp");
+        Class<?> state = loader.loadClass("survivors.RunState");
+        Method cost = state.getDeclaredMethod("xpToNext", int.class);
+        cost.setAccessible(true);
+        for (int level = 0; level < getInt(run(), "level"); level++) earnedXp += (int) cost.invoke(null, level);
+        assertEquals(250, earnedXp, "consolidation preserves the entire base XP reward");
+    }
+
+    @Test void consolidationRespectsDistanceEligibilityAndOverflow() throws Exception {
+        launch(0, 0);
+        // Straddle a cell boundary, including negative coordinates.
+        var a = matureReward(2, 0, 0);
+        set(a, "x", -1); set(a, "y", -1); // Spawn records normalize to unsigned ROM words.
+        var b = matureReward(2, 1, 1);
+        mergeRewards();
+        assertFalse(a.isDestroyed());
+        assertTrue(b.isDestroyed());
+        assertEquals(4, call(a, "value"));
+        var fresh = matureReward(1, 0, 0); set(fresh, "age", 12);
+        var lost = matureReward(1, 0, 0); set(lost, "lostRing", true);
+        var homing = matureReward(1, 0, 0); call(homing, "homeIn");
+        var collected = matureReward(1, 0, 0); set(collected, "collected", 0);
+        var far = matureReward(1, 100, 0);
+        var monitor = spawnPickup(1, 5, 0, 0); set(monitor, "age", 60);
+        mergeRewards();
+        assertEquals(5, call(a, "value"));
+        assertTrue(homing.isDestroyed());
+        assertTrue((boolean) get(a, "homing"), "merged rewards retain magnet attraction");
+        var c = matureReward(1, 0, 0);
+        mergeRewards();
+        assertEquals(6, call(a, "value"));
+        assertTrue(b.isDestroyed());
+        assertTrue(c.isDestroyed());
+        for (var untouched : List.of(fresh, lost, collected, far, monitor)) assertFalse(untouched.isDestroyed());
+        var huge = matureReward(Integer.MAX_VALUE, 1000, 1000);
+        var extra = matureReward(125, 1000, 1000);
+        mergeRewards();
+        assertFalse(huge.isDestroyed());
+        assertFalse(extra.isDestroyed());
+        assertEquals(Integer.MAX_VALUE, call(huge, "value"));
+    }
+
+    @Test void enemyDropsMergeWhileScatteringAndAbsorbDifferentValueTiers() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        clearEnemies();
+        var player = fixture.sprite();
+        player.setInvulnerableFrames(100000);
+        int x = player.getCentreX() + 200, y = player.getCentreY() - 60;
+        Class<?> enemyType = loader.loadClass("survivors.Enemy");
+        Method spawnAt = enemyType.getDeclaredMethod("spawnAt", int.class, int.class, int.class, boolean.class);
+        spawnAt.setAccessible(true);
+        var ctor = enemyType.getConstructor(ObjectSpawn.class, int.class);
+        for (int i = 0; i < 8; i++) {
+            var spawn = (ObjectSpawn) spawnAt.invoke(null, x, y, 0, false);
+            var enemy = (AbstractObjectInstance) ctor.newInstance(spawn, 1);
+            GameServices.level().getObjectManager().addDynamicObject(enemy);
+            call(enemy, "hurt", 1, 0);
+        }
+        assertEquals(8, objects("Pickup").size());
+        // Run actual scatter physics and the Stage's periodic merge: no forced ages/resting.
+        fixture.stepIdleFrames(31);
+        var rewards = objects("Pickup");
+        assertTrue(rewards.size() < 8, "nearby enemy drops consolidate during their scatter");
+        int total = 0;
+        for (var ring : rewards) total += (int) call(ring, "value");
+        assertEquals(8, total);
+        var anchor = rewards.getFirst();
+        var purple = matureReward(25, anchor.getX(), anchor.getY());
+        mergeRewards();
+        assertTrue(purple.isDestroyed(), "a small enemy drop absorbs a nearby different-colour pile");
+        assertTrue((int) call(anchor, "value") >= 26);
+    }
+
+    @Test void denseRewardDropsUseGrowingScratchAndRewindWithoutLosingValue() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        int x = fixture.sprite().getCentreX() + 180, y = fixture.sprite().getCentreY();
+        for (int i = 0; i < 300; i++) call(stage(), "dropRings", x, y, 1);
+        assertEquals(300, objects("Pickup").size());
+        for (var ring : objects("Pickup")) { set(ring, "age", 45); set(ring, "resting", true); }
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        mergeRewards();
+        assertEquals(1, objects("Pickup").size());
+        assertEquals(300, call(objects("Pickup").getFirst(), "value"));
+        registry.restore(snapshot);
+        assertEquals(300, objects("Pickup").size());
+        mergeRewards();
+        assertEquals(1, objects("Pickup").size());
+        assertEquals(300, call(objects("Pickup").getFirst(), "value"));
+    }
+
+    @Test void clusterMergePausesAndReplaysWithExactValuesAndRemainingLifetime() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        int x = fixture.sprite().getCentreX() + 180, y = fixture.sprite().getCentreY();
+        for (int i = 0; i < 5; i++) {
+            var ring = matureReward(1, x + i, y);
+            set(ring, "rewardAge", 3500 + i);
+        }
+        set(stage(), "ringMergeFrames", 14);
+        call(run(), "gainXp", 6);
+        fixture.stepIdleFrames(20);
+        assertEquals(5, objects("Pickup").size(), "menus pause consolidation");
+        assertEquals(14, getInt(stage(), "ringMergeFrames"));
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        tapEnter(fixture);
+        assertEquals(1, objects("Pickup").size());
+        int age = getInt(objects("Pickup").getFirst(), "rewardAge");
+        assertTrue(age >= 3500 && age < 3510, "merging does not refresh old rewards");
+        assertEquals(5, call(objects("Pickup").getFirst(), "value"));
+        registry.restore(snapshot);
+        assertEquals(5, objects("Pickup").size());
+        tapEnter(fixture);
+        assertEquals(1, objects("Pickup").size());
+        assertEquals(age, getInt(objects("Pickup").getFirst(), "rewardAge"));
+        assertEquals(5, call(objects("Pickup").getFirst(), "value"));
+    }
+
+    @Test void rewardExpiryPausesRewindsAndNeverDeletesTheEmerald() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        for (int kind = 0; kind < 3; kind++) {
+            var pickup = spawnPickup(kind, kind == 1 ? 5 : 1,
+                    fixture.sprite().getCentreX() + 160, fixture.sprite().getCentreY());
+            set(pickup, "rewardAge", 3599);
+        }
+        call(run(), "gainXp", 6);
+        fixture.stepIdleFrames(10);
+        assertEquals(3, objects("Pickup").size(), "the card menu freezes reward expiry");
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        tapEnter(fixture);
+        assertEquals(1, objects("Pickup").size());
+        assertEquals(2, call(objects("Pickup").get(0), "kind"), "emeralds never expire");
+        registry.restore(snapshot);
+        assertEquals(3, objects("Pickup").size(), "rewind recreates the expired rewards");
+        tapEnter(fixture);
+        assertEquals(1, objects("Pickup").size(), "forward replay expires them at the same boundary");
+    }
+
+    @Test void freshMergedRewardsRefreshTheirLifetimeAndLostRingsExpireInThreeQuarterSecond() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var reward = spawnPickup(0, 2, fixture.sprite().getCentreX() + 160, fixture.sprite().getCentreY());
+        set(reward, "rewardAge", 3599);
+        call(reward, "addValue", 10);
+        var lost = spawnPickup(0, 1, fixture.sprite().getCentreX() + 160, fixture.sprite().getCentreY());
+        set(lost, "lostRing", true);
+        set(lost, "age", 44);
+        fixture.stepIdleFrames(1);
+        assertFalse(reward.isDestroyed());
+        assertEquals(12, call(reward, "value"));
+        assertEquals(1, getInt(reward, "rewardAge"));
+        assertTrue(lost.isDestroyed());
+    }
+
+    @Test void hordesExceedBothOldCapsAndRestoreWithoutConsumingNativeSlots() throws Exception {
+        var fixture = launch(2, 0);
+        startRun(fixture);
+        int whisp = field(loader.loadClass("survivors.Species"), "WHISP").getInt(null);
+        var manager = GameServices.level().getObjectManager();
+        int freeSlot = manager.firstFreeDynamicSlot();
+        for (int i = 0; i < 100; i++) call(stage(), "spawnEnemy", new int[0], new int[]{whisp}, 2, false);
+        assertEquals(300, objects("Enemy").size());
+        assertEquals(freeSlot, manager.firstFreeDynamicSlot(), "hordes cannot starve native power-up visuals");
+        set(stage(), "eliteTimer", 1);
+        call(stage(), "spawnWaves");
+        assertEquals("ELITE INCOMING!", get(stage(), "banner"));
+        int count = objects("Enemy").size();
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        var first = objects("Enemy").get(0);
+        int x = first.getX();
+        fixture.sprite().setInvulnerableFrames(100000);
+        fixture.stepIdleFrames(20);
+        assertNotEquals(x, first.getX(), "slotless enemies participate in gameplay updates");
+        registry.restore(snapshot);
+        assertEquals(count, objects("Enemy").size());
+        assertTrue(objects("Enemy").stream().allMatch(e -> e.getSlotIndex() == -1));
+        assertEquals(freeSlot, manager.firstFreeDynamicSlot());
+    }
+
+    @Test void loadoutCapsRerollsAndMaxedBuildRewardsRespectSixSlots() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        int[] levels = (int[]) get(run(), "levels");
+        for (int id : new int[]{0, 7, 9, 8, 21, 22}) levels[id] = 1;
+        assertEquals(3, call(run(), "occupiedSlots", true));
+        assertEquals(3, call(run(), "occupiedSlots", false));
+        assertFalse((boolean) call(run(), "canUpgrade", 18));
+        assertFalse((boolean) call(run(), "canUpgrade", 23));
+        for (int reroll = 0; reroll < 30; reroll++) {
+            call(stage(), "dealCards");
+            int[] cards = (int[]) get(stage(), "cards");
+            for (int i = 0; i < getInt(stage(), "cardCount"); i++)
+                assertTrue(levels[cards[i]] > 0, "full slots only offer owned upgrades");
+        }
+        for (int id : new int[]{0, 21, 22}) levels[id] = 5;
+        for (int id : new int[]{7, 9, 8}) levels[id] = 3;
+        assertTrue((boolean) call(run(), "maxedOut"));
+        call(stage(), "dealCards");
+        assertEquals(2, getInt(stage(), "cardCount"), "a maxed build chooses Overdrive or rings");
+        assertEquals(-2, ((int[]) get(stage(), "cards"))[0]);
+        assertEquals(-1, ((int[]) get(stage(), "cards"))[1]);
+        double before = (double) call(run(), "damageMultiplier");
+        set(run(), "pendingLevels", 1);
+        set(stage(), "menuIndex", 0);
+        set(stage(), "overlay", 1);
+        tapEnter(fixture);
+        assertEquals(1, getInt(run(), "overdrive"));
+        assertEquals(before * 1.03, (double) call(run(), "damageMultiplier"), 1e-9, "Overdrive adds 3% damage");
+        var snapshot = call(run(), "capture");
+        Arrays.fill(levels, 0);
+        call(run(), "restore", snapshot);
+        assertEquals(3, call(run(), "occupiedSlots", true));
+    }
+
+    @Test void newWeaponsFireAndBuffsAlterTheirProductionStats() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        int[] levels = (int[]) get(run(), "levels");
+        levels[18] = levels[19] = levels[20] = 1;
+        levels[21] = levels[22] = levels[23] = 2;
+        assertEquals(130, call(stage(), "areaRadius", 100));
+        assertEquals(72, call(run(), "hurtRecovery"));
+        assertEquals(1.5, (double) call(run(), "xpScale"), 0.0001);
+        call(stage(), "onBounce", fixture.sprite().getCentreX(), fixture.sprite().getCentreY());
+        assertEquals(2, Arrays.stream((int[]) get(stage(), "pKind")).filter(k -> k != 0).count());
+        set(stage(), "fightFrames", 360);
+        call(stage(), "autoWeapons", fixture.sprite());
+        assertEquals(5, Arrays.stream((int[]) get(stage(), "pKind")).filter(k -> k != 0).count());
+        assertTrue(Arrays.stream((int[]) get(stage(), "eKind")).anyMatch(l -> l > 0), "pulse renders its blast");
+    }
+
+    @Test void damagePressureFollowsTheArenaClockRouteAndActAndSurvivesRewind() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        assertEquals(8, call(run(), "toll", 30));
+        set(run(), "pressure", 120);
+        assertEquals(12, call(run(), "toll", 30), "two pressure minutes add half");
+        set(run(), "stage", 2);
+        set(run(), "act", 1);
+        assertEquals(18, call(run(), "toll", 30), "two zones and an act add 0.7 more");
+        set(run(), "frames", 999_999);
+        assertEquals(18, call(run(), "toll", 30), "total run time never feeds the toll");
+        var snapshot = call(run(), "capture");
+        set(run(), "pressure", 300);
+        assertTrue((int) call(run(), "toll", 30) > 18);
+        call(run(), "restore", snapshot);
+        assertEquals(18, call(run(), "toll", 30));
+        // The stage mirrors its own pressure clock, which long mode already runs at 75%.
+        set(run(), "mode", 1);
+        set(stage(), "fightFrames", 400 * 60);
+        assertEquals(300, call(stage(), "pressureSeconds"));
+    }
+
+    @Test void encountersWarnSurgeRecoverAndKeepEscalating() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        set(stage(), "fightFrames", 900);
+        set(stage(), "spawnTimer", 0);
+        call(stage(), "spawnWaves");
+        assertEquals("SURGE IN 3...", get(stage(), "banner"));
+        int assault = objects("Enemy").size();
+        set(stage(), "fightFrames", 1080);
+        set(stage(), "spawnTimer", 0);
+        call(stage(), "spawnWaves");
+        assertTrue(objects("Enemy").size() - assault >= 2, "a surge batch is one larger");
+        int surge = objects("Enemy").size();
+        set(stage(), "fightFrames", 1500);
+        set(stage(), "spawnTimer", 0);
+        call(stage(), "spawnWaves");
+        assertEquals(surge, objects("Enemy").size(), "regroup gives a real reinforcement break");
+        assertEquals("REGROUP", call(stage(), "encounterName"));
+        set(stage(), "fightFrames", 36000);
+        set(stage(), "spawnTimer", 0);
+        call(stage(), "spawnWaves");
+        assertTrue(objects("Enemy").size() - surge >= 9, "batches keep growing by one every 75 pressure seconds");
+        assertTrue((int) call(objects("Enemy").get(objects("Enemy").size() - 1), "maxHp") >
+                (int) call(objects("Enemy").get(0), "maxHp"));
+    }
+
+    @Test void feverIsEarnedCannotRefreshAndRewindsWithItsRecovery() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var player = fixture.sprite();
+        for (int i = 0; i < 9; i++) call(stage(), "onBounce", player.getCentreX(), player.getCentreY());
+        assertEquals(0, player.getInvincibleFrames());
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        call(stage(), "onBounce", player.getCentreX(), player.getCentreY());
+        assertEquals(360, player.getInvincibleFrames());
+        assertEquals(360, getInt(stage(), "feverFrames"));
+        fixture.stepIdleFrames(30);
+        int left = player.getInvincibleFrames();
+        for (int i = 0; i < 30; i++) call(stage(), "onBounce", player.getCentreX(), player.getCentreY());
+        assertEquals(left, player.getInvincibleFrames(), "bounces during Fever cannot refresh it");
+        assertEquals(0, getInt(stage(), "feverCharge"));
+        registry.restore(snapshot);
+        assertEquals(9, getInt(stage(), "feverCharge"));
+        assertEquals(0, getInt(stage(), "feverFrames"));
+        call(stage(), "onBounce", player.getCentreX(), player.getCentreY());
+        set(stage(), "feverFrames", 1);
+        player.setInvincibleFrames(1);
+        fixture.stepIdleFrames(1);
+        assertEquals(1080, getInt(stage(), "feverCooldown"));
+        call(stage(), "onBounce", player.getCentreX(), player.getCentreY());
+        assertEquals(0, getInt(stage(), "feverCharge"));
+        call(run(), "gainXp", 10);
+        fixture.stepIdleFrames(10);
+        int recovery = getInt(stage(), "feverCooldown");
+        fixture.stepIdleFrames(30);
+        assertEquals(recovery, getInt(stage(), "feverCooldown"), "card menus preserve recovery time");
+    }
+
+    @Test void feverProtectionDoesNotExpireBehindLevelUpCards() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var player = fixture.sprite();
+        for (int i = 0; i < 10; i++) call(stage(), "onBounce", player.getCentreX(), player.getCentreY());
+        call(run(), "gainXp", 6);
+        fixture.stepIdleFrames(2);
+        int protection = player.getInvincibleFrames();
+        int remaining = getInt(stage(), "feverFrames");
+        fixture.stepIdleFrames(120);
+        assertEquals(protection, player.getInvincibleFrames());
+        assertEquals(remaining, getInt(stage(), "feverFrames"));
+        tapEnter(fixture);
+        fixture.stepIdleFrames(5);
+        assertTrue(player.getInvincibleFrames() > protection - 10);
+    }
+
+    @Test void weaponProjectilesGrowAndRewindWithoutDroppingAttacks() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        for (int i = 0; i < 200; i++) {
+            call(stage(), "projectile", 1, 100, 100, 0, 0, 60, 2, 1);
+        }
+        assertEquals(200, Arrays.stream((int[]) get(stage(), "pKind")).filter(k -> k != 0).count());
+        var expanded = registry.capture();
+        registry.restore(before);
+        assertEquals(48, ((int[]) get(stage(), "pKind")).length);
+        registry.restore(expanded);
+        assertEquals(200, Arrays.stream((int[]) get(stage(), "pKind")).filter(k -> k != 0).count());
+        fixture.stepIdleFrames(1);
+        assertEquals(59, ((int[]) get(stage(), "pLife"))[199]);
+    }
+
+    @Test void largeRingBanksAndArmorRetainMeaningfulRisk() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        assertEquals(8, call(run(), "toll", 30));
+        assertEquals(50, call(run(), "toll", 600));
+        int[] levels = (int[]) get(run(), "levels");
+        levels[12] = 5;
+        assertEquals(5, call(run(), "toll", 30));
+        assertEquals(30, call(run(), "toll", 600));
+        set(run(), "relics", 1 << 4);
+        assertEquals(5, call(run(), "toll", 30));
+        assertEquals(23, call(run(), "toll", 600));
+    }
+
+    @Test void endlessRunsPastFiveMinutesWithoutFillingTheArenaWithOldPickups() throws Exception {
+        var fixture = launch(0, 0);
+        set(profile(), "unlocked", 1);
+        set(profile(), "mode", 2);
+        startRun(fixture);
+        fixture.sprite().setInvulnerableFrames(100000);
+        fixture.stepIdleFrames(20000);
+        assertEquals(FIGHT, phase());
+        assertTrue(getInt(stage(), "fightFrames") > 18000);
+        assertTrue(objects("Boss").isEmpty());
+        assertTrue(objects("Enemy").size() > 100, "endless keeps admitting enemies beyond the old caps");
+        assertTrue(objects("Pickup").size() <= 30, "old formations make room for continuing waves");
+    }
+
+    // =========================================================================================
+    // Progression, chests, rules, characters and events
+    // =========================================================================================
+
+    private AbstractObjectInstance spawnEnemy(int species, int x, int y, boolean elite, int hp) throws Exception {
+        Class<?> type = loader.loadClass("survivors.Enemy");
+        Method spawnAt = type.getDeclaredMethod("spawnAt", int.class, int.class, int.class, boolean.class);
+        spawnAt.setAccessible(true);
+        var spawn = (ObjectSpawn) spawnAt.invoke(null, x, y, species, elite);
+        var ctor = type.getDeclaredConstructor(ObjectSpawn.class, int.class);
+        ctor.setAccessible(true);
+        var enemy = (AbstractObjectInstance) ctor.newInstance(spawn, hp);
+        GameServices.level().getObjectManager().addDynamicObject(enemy);
+        return enemy;
+    }
+
+    private static int upgrade(String name) throws Exception {
+        return field(loader.loadClass("survivors.Upgrades"), name).getInt(null);
+    }
+
+    @Test void startingAndLeavingNeverFarmsTheBankButRetiringAtAClearKeepsEarnedRings() throws Exception {
+        var fixture = launch(0, 0);
+        fixture.stepIdleFrames(30);
+        tapEnter(fixture);
+        assertEquals(INTRO, phase());
+        call(stage(), "retire", true);
+        assertEquals(0, getInt(profile(), "bank"), "start rings are never bankable by leaving at once");
+        // A second run reaches a clear screen holding its free rings plus fifty it earned.
+        bootstrap.dispose();
+        fixture = launch(0, 0);
+        startRun(fixture);
+        int free = getInt(run(), "freeRings");
+        assertEquals(50, free);
+        fixture.sprite().setRingCount(free + 50);
+        set(run(), "rules", 1 << 1); // No Fever: +20%.
+        set(stage(), "phase", CLEAR);
+        call(stage(), "retire", false);
+        assertEquals(60, getInt(profile(), "bank"), "only earned held rings bank, plus the rules bonus");
+    }
+
+    @Test void aCrouchedSpinDashIsAHitButARollAttacks() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        clearEnemies();
+        var player = fixture.sprite();
+        var enemy = spawnEnemy(0, player.getCentreX() + 4, player.getCentreY(), false, 50);
+        int rings = player.getRingCount();
+        player.setGSpeed((short) 0);
+        call(enemy, "onPlayerAttack", player, null);
+        assertEquals(50, (int) call(enemy, "hp"), "a charge deals no damage");
+        assertTrue(player.getRingCount() < rings, "and the badnik's touch costs the toll");
+        player.setInvulnerableFrames(0);
+        player.setGSpeed((short) 0x300);
+        call(enemy, "onPlayerAttack", player, null);
+        int afterSlowRoll = (int) call(enemy, "hp");
+        assertTrue(afterSlowRoll < 50, "even a slowing roll attacks");
+        assertEquals(rings - (int) call(run(), "toll", rings), player.getRingCount(), "without costing rings");
+        assertEquals(-0x300, player.getXSpeed(), "a tough badnik knocks Sonic back off it");
+    }
+
+    @Test void chestsEvolveReadyWeaponsFirstThenRankOwnedUpgradesAndRewind() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        int[] levels = (int[]) get(run(), "levels");
+        int shock = upgrade("SHOCKWAVE"), reach = upgrade("REACH"), sparks = upgrade("SPARKS");
+        levels[shock] = 5;
+        levels[reach] = 1;
+        levels[sparks] = 2;
+        assertTrue((boolean) call(run(), "evolutionReady", 0));
+        var registry = fixture.runtime().getRewindRegistry();
+        var snapshot = registry.capture();
+        call(stage(), "openChest", 3);
+        assertEquals(2, getInt(stage(), "overlay"));
+        int[] items = (int[]) get(stage(), "chestItems");
+        assertEquals(100, items[0], "the ready evolution comes first");
+        assertTrue((boolean) call(run(), "evolvedWeapon", shock));
+        assertTrue(items[1] >= 0 && items[2] >= 0 && levels[items[1]] > 0, "then owned upgrades rank up");
+        assertEquals(1, getInt(profile(), "evolutionsSeen") & 1, "the collection records the discovery");
+        var audio = com.openggf.audio.AudioManager.getInstance();
+        var music = new ArrayList<Integer>();
+        audio.setRequestObserver((kind, id) -> {
+            if (kind == com.openggf.audio.AudioRequestObserver.RequestClass.MUSIC) music.add(id);
+        });
+        try {
+            fixture.stepIdleFrames(70);
+            assertTrue(music.contains(0x93), "the lid bursts to Super Sonic's theme");
+            music.clear();
+            tapEnter(fixture);
+            assertEquals(2, getInt(stage(), "overlay"), "Enter first reveals every prize at once");
+            assertTrue((int) call(stage(), "chestFrames") >= (int) call(stage(), "chestRevealEnd"));
+            fixture.stepIdleFrames(2);
+            tapEnter(fixture);
+            assertEquals(0, getInt(stage(), "overlay"));
+            assertEquals(List.of(0x81), music, "closing restores Emerald Hill's music");
+        } finally {
+            audio.setRequestObserver(null);
+        }
+        registry.restore(snapshot);
+        assertFalse((boolean) call(run(), "evolvedWeapon", shock), "rewind undoes the evolution");
+        // With nothing left to grow, a chest pays two hits' worth of rings.
+        Arrays.fill((int[]) get(run(), "levels"), 0);
+        set(run(), "pool", 0);
+        int[] maxed = (int[]) get(run(), "levels");
+        for (int id : new int[]{0, 1, 3}) maxed[id] = 5;
+        for (int id : new int[]{10, 11, 12}) maxed[id] = 5;
+        int rings = fixture.sprite().getRingCount();
+        call(stage(), "openChest", 1);
+        assertEquals(Math.max(25, 2 * (int) call(run(), "toll", 0)), fixture.sprite().getRingCount() - rings);
+    }
+
+    @Test void everyEvolutionFiresInAFight() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        int[] levels = (int[]) get(run(), "levels");
+        Class<?> upgrades = loader.loadClass("survivors.Upgrades");
+        Method max = upgrades.getDeclaredMethod("maxLevel", int.class);
+        max.setAccessible(true);
+        for (int i = 0; i < levels.length; i++) levels[i] = (int) max.invoke(null, i);
+        set(run(), "evolved", (1 << 12) - 1);
+        set(run(), "pendingLevels", 0);
+        fixture.sprite().setInvulnerableFrames(100000);
+        for (int frame = 0; frame < 1200; frame++) {
+            boolean goRight = frame / 200 % 2 == 0;
+            fixture.stepFrame(false, frame % 60 == 30, !goRight, goRight, frame % 20 == 0 || frame % 20 == 8);
+            if (getInt(run(), "pendingLevels") > 0) set(run(), "pendingLevels", 0);
+            if (getInt(stage(), "overlay") == 2) set(stage(), "overlay", 0);
+        }
+        call(stage(), "onBounce", fixture.sprite().getCentreX(), fixture.sprite().getCentreY());
+        assertTrue(Arrays.stream((int[]) get(stage(), "pKind")).anyMatch(k -> k == 5), "Cross Lance fires vertically");
+        assertTrue(getInt(run(), "kills") >= 10, "the evolved arsenal clears badniks");
+        assertEquals(8, (int) call(stage(), "orbitRings"), "Ring Saturn adds two rings");
+    }
+
+    @Test void lockedUpgradesStayOutOfTheDealUntilTheirMilestone() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        int zap = upgrade("CHAIN_ZAP");
+        assertFalse((boolean) call(run(), "canUpgrade", zap), "a fresh profile has the twelve core upgrades");
+        for (int deal = 0; deal < 40; deal++) {
+            call(stage(), "dealCards");
+            int[] cards = (int[]) get(stage(), "cards");
+            for (int i = 0; i < getInt(stage(), "cardCount"); i++) assertNotEquals(zap, cards[i]);
+        }
+        set(profile(), "totalKills", 300);
+        int pool = (int) call(profile(), "upgradePool");
+        assertTrue((pool & 1 << zap) != 0, "300 badniks unlock Chain Zap");
+        assertEquals(1 << zap, call(profile(), "claimNewUnlocks", pool));
+        assertEquals(0, call(profile(), "claimNewUnlocks", pool), "each unlock is announced once");
+        // Milestones count the run in hand: reaching a combo of 15 joins Homing Dash at the next zone.
+        int dash = upgrade("HOMING_DASH");
+        int withRun = (int) call(profile(), "upgradePool", 0, 15, 0, 0, 0, 0);
+        assertTrue((withRun & 1 << dash) != 0);
+    }
+
+    @Test void eggmansRulesShapeTheRunAndRaiseTheBank() throws Exception {
+        var fixture = launch(0, 0);
+        fixture.stepIdleFrames(30);
+        assertFalse((boolean) call(profile(), "toggleRule", 0), "rules unlock with the first boss clear");
+        set(profile(), "unlocked", 1);
+        for (int rule = 0; rule < 6; rule++) assertTrue((boolean) call(profile(), "toggleRule", rule));
+        tapEnter(fixture);
+        set(run(), "pendingLevels", 0);
+        fixture.stepIdleFrames(160);
+        assertEquals(63, getInt(run(), "rules"));
+        assertEquals(12, call(run(), "toll", 30), "Heavy Toll: hits cost half again");
+        assertEquals(0, call(run(), "magnetRadius"), "No Magnets");
+        assertFalse((boolean) call(run(), "canUpgrade", upgrade("MAGNET")), "and Magnet leaves the pool");
+        var player = fixture.sprite();
+        for (int i = 0; i < 20; i++) call(stage(), "onBounce", player.getCentreX(), player.getCentreY());
+        assertEquals(0, getInt(stage(), "feverFrames"), "No Fever");
+        int pickups = objects("Pickup").size();
+        Class<?> guard = loader.loadClass("survivors.Guard");
+        Method takeHit = guard.getDeclaredMethod("takeHit", ObjectServices.class,
+                com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        takeHit.setAccessible(true);
+        player.setInvulnerableFrames(0);
+        takeHit.invoke(null, (ObjectServices) call(stage(), "services"), player);
+        assertEquals(pickups, objects("Pickup").size(), "Brittle Rings: nothing scatters");
+        clearEnemies();
+        call(stage(), "spawnSpecies", 0, player.getCentreX() + 200, player.getCentreY() - 40, 0, false);
+        assertEquals(3, (int) call(objects("Enemy").get(0), "maxHp"), "Tough Hides: a two-hitpoint Buzzer has three");
+        Method bonus = loader.loadClass("survivors.Rules").getDeclaredMethod("totalBonus", int.class);
+        bonus.setAccessible(true);
+        assertEquals(125, (int) bonus.invoke(null, 63));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"sonic", "tails"})
+    void leadersHaveTheirOwnPerks(String main) throws Exception {
+        var fixture = launch(0, 0, main, "");
+        startRun(fixture);
+        boolean tails = main.equals("tails");
+        assertEquals(tails, get(run(), "tails"));
+        assertEquals(tails ? 12 : 10, call(run(), "feverCharge"));
+        assertEquals(tails ? 52 : 28, call(run(), "magnetRadius"));
+        set(run(), "combo", 5);
+        assertEquals(tails ? 2.0 : 2.2, (double) call(run(), "comboMultiplier"), 1e-9);
+        // Hover: hold jump while falling.
+        clearEnemies();
+        var player = fixture.sprite();
+        player.setInvulnerableFrames(100000);
+        fixture.stepFrame(false, false, false, false, true);
+        int slowest = Integer.MAX_VALUE;
+        for (int f = 0; f < 70; f++) {
+            fixture.stepFrame(false, false, false, false, true);
+            clearEnemies();
+            if (player.getAir() && player.getYSpeed() > 0) slowest = Math.min(slowest, player.getYSpeed());
+        }
+        if (tails) assertTrue(getInt(stage(), "hoverFrames") > 0 && slowest <= 0x100, "Tails hovers on held jump");
+        else assertEquals(0, getInt(stage(), "hoverFrames"), "Sonic falls normally");
+    }
+
+    @Test void zoneEventsTelegraphTheirHazardsAndWardensOweAChest() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        fixture.sprite().setInvulnerableFrames(100000);
+        set(stage(), "fightFrames", 105 * 60 - 1);
+        fixture.stepIdleFrames(1);
+        assertTrue(getInt(stage(), "eventFrames") > 0, "Coconut Rain starts at 1:45");
+        assertEquals("COCONUT RAIN!", get(stage(), "banner"));
+        boolean warned = false;
+        int shots = 0;
+        for (int f = 0; f < 120; f++) {
+            fixture.stepIdleFrames(1);
+            for (int kind : (int[]) get(stage(), "eKind")) warned |= kind == 6;
+            shots = Math.max(shots, objects("Shot").size());
+            if (getInt(run(), "pendingLevels") > 0) set(run(), "pendingLevels", 0);
+        }
+        assertTrue(warned, "each landing spot is marked");
+        assertTrue(shots > 0, "the zone's projectiles fall");
+        clearEnemies();
+        set(stage(), "fightFrames", 180 * 60 - 1);
+        fixture.stepIdleFrames(1);
+        long elites = objects("Enemy").stream().filter(e -> {
+            try { return (boolean) call(e, "elite"); } catch (Exception x) { throw new AssertionError(x); }
+        }).count();
+        assertEquals(3, elites, "a warden squad is three elites");
+        assertEquals(1, getInt(stage(), "chestOwed"));
+        var warden = objects("Enemy").stream().filter(e -> {
+            try { return (boolean) call(e, "elite"); } catch (Exception x) { throw new AssertionError(x); }
+        }).findFirst().orElseThrow();
+        call(warden, "hurt", 99999, 0);
+        assertEquals(0, getInt(stage(), "chestOwed"));
+        assertTrue(objects("Pickup").stream().anyMatch(p -> {
+            try { return (int) call(p, "kind") == 3; } catch (Exception x) { throw new AssertionError(x); }
+        }), "the first warden down drops a chest");
+    }
+
+    @Test void aFullArenaTurnsItsOverflowIntoElites() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        fixture.sprite().setInvulnerableFrames(100000);
+        for (int i = 0; i < 160; i++) call(stage(), "spawnEnemy", new int[0], new int[]{0}, 0, false);
+        int count = objects("Enemy").size();
+        set(stage(), "eliteTimer", 100000);
+        boolean elite = false;
+        for (int round = 0; round < 12 && !elite; round++) {
+            set(stage(), "spawnTimer", 0);
+            set(stage(), "fightFrames", 60 * 60);
+            call(stage(), "spawnWaves");
+            for (var enemy : objects("Enemy")) elite |= (boolean) call(enemy, "elite");
+        }
+        assertTrue(elite, "held-back badniks arrive as an elite");
+        assertEquals(count + 1, objects("Enemy").size(), "and no ordinary batch joins a full arena");
+    }
+
+    @Test void bossHealthKeepsPaceWithTheWaves() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        Class<?> difficulty = loader.loadClass("survivors.Difficulty");
+        Method bossHp = difficulty.getDeclaredMethod("bossHp", int.class, int.class, int.class, int.class);
+        Method hpScale = difficulty.getDeclaredMethod("hpScale", int.class, int.class, int.class);
+        bossHp.setAccessible(true);
+        hpScale.setAccessible(true);
+        int early = (int) bossHp.invoke(null, 0, 0, 0, 0), late = (int) bossHp.invoke(null, 0, 0, 300, 0);
+        double buzzerAtFive = 2 * (double) hpScale.invoke(null, 0, 0, 300);
+        assertTrue(late > 6 * buzzerAtFive + 10, "the boss outlasts an elite of its own time: " + late);
+        assertTrue(late > early);
+        assertTrue((int) bossHp.invoke(null, 9, 0, 0, 0) > (int) bossHp.invoke(null, 7, 0, 300, 0),
+                "the Death Egg is rated at five minutes' pressure on the last tier");
+        assertTrue((int) bossHp.invoke(null, 0, 0, 450, 1) > late, "ten-minute bosses are tougher");
+    }
+
+    @Test void aBossSweepPaysRingsButNoElitePrizes() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        clearEnemies();
+        var player = fixture.sprite();
+        for (int i = 0; i < 8; i++) spawnEnemy(0, player.getCentreX() + 120 + i * 10, player.getCentreY() - 40, true, 30);
+        for (var pickup : objects("Pickup")) pickup.setDestroyed(true);
+        call(stage(), "onBossBeaten");
+        assertEquals(0, getInt(run(), "elitesDefeated"), "the sweep is not eight elite kills");
+        for (var pickup : objects("Pickup")) assertEquals(0, (int) call(pickup, "kind"), "only rings drop");
+    }
+
+    @Test void shopLevelsAreSmallAndOldSavesConvertOnce() throws Exception {
+        var fixture = launch(0, 0);
+        Path file = com.openggf.game.save.SavePaths.root().resolve("sonic-survivors/profile.txt");
+        Files.createDirectories(file.getParent());
+        String original = "bank=10\nshop.0=5\nshop.1=3\nshop.3=2\nshop.4=1\n";
+        Files.writeString(file, original);
+        Object old = reloadProfile();
+        int[] shop = (int[]) get(old, "shop");
+        assertArrayEquals(new int[]{17, 6, 0, 8, 4}, Arrays.copyOf(shop, 5), "the same totals on the new scale");
+        call(old, "save");
+        assertArrayEquals(shop, (int[]) get(reloadProfile(), "shop"), "converted saves do not convert again");
+        assertEquals(original, Files.readString(file), "legacy save remains available and unchanged");
+        assertTrue(Files.isRegularFile(com.openggf.game.save.SavePaths.root()
+                .resolve("mods/sonic-survivors/profile.txt")));
+        Method cost = old.getClass().getDeclaredMethod("shopCost", int.class, int.class);
+        cost.setAccessible(true);
+        assertEquals(50, cost.invoke(null, 0, 0));
+        assertTrue((int) cost.invoke(null, 0, 30) > 3000, "Power Up has a long, expensive tail");
+        Method shopMax = old.getClass().getDeclaredMethod("shopMax", int.class);
+        shopMax.setAccessible(true);
+        assertEquals(99, shopMax.invoke(null, 0));
+    }
+
+    @Test void campPagesOpenTheShopRulesAndRecords() throws Exception {
+        var fixture = launch(0, 0);
+        fixture.stepIdleFrames(30);
+        for (int i = 0; i < 3; i++) tapDown(fixture); // EGGMAN'S RULES
+        tapEnter(fixture);
+        assertEquals(0, getInt(stage(), "campPage"), "rules are locked before a boss clear");
+        set(profile(), "unlocked", 1);
+        fixture.stepIdleFrames(22);
+        tapEnter(fixture);
+        assertEquals(1, getInt(stage(), "campPage"));
+        fixture.stepIdleFrames(22);
+        tapEnter(fixture);
+        assertEquals(1, getInt(profile(), "rules"), "Enter toggles the highlighted rule");
+        for (int i = 0; i < 6; i++) tapDown(fixture);
+        tapEnter(fixture); // BACK
+        assertEquals(0, getInt(stage(), "campPage"));
+        assertEquals(3, getInt(stage(), "menuIndex"), "back returns to the rules row");
+        fixture.stepIdleFrames(22);
+        tapDown(fixture); // RECORDS
+        tapEnter(fixture);
+        assertEquals(2, getInt(stage(), "campPage"));
+        fixture.stepFrame(false, false, false, true, false);
+        fixture.stepIdleFrames(1);
+        assertEquals(1, getInt(stage(), "recordsTab"), "right turns the page");
+        fixture.stepIdleFrames(22);
+        tapEnter(fixture);
+        assertEquals(0, getInt(stage(), "campPage"));
+    }
+
+    @Test void theBestiaryAndRecordsPersist() throws Exception {
+        var fixture = launch(0, 0);
+        set(profile(), "unlocked", 1);
+        set(profile(), "mode", 2);
+        startRun(fixture);
+        clearEnemies();
+        var player = fixture.sprite();
+        var buzzer = spawnEnemy(0, player.getCentreX() + 120, player.getCentreY() - 40, false, 1);
+        call(buzzer, "hurt", 5, 0);
+        set(stage(), "fightFrames", 3600);
+        set(run(), "level", 21);
+        call(stage(), "retire", true);
+        Object saved = reloadProfile();
+        assertEquals(1, ((int[]) get(saved, "speciesKills"))[0]);
+        assertEquals(60, ((int[]) get(saved, "bestUnlimited"))[0], "unlimited survival is timed per zone");
+        assertEquals(22, getInt(saved, "bestLevel"));
+    }
+
+    @Test void aHitThatEmptiesTheRingsEndsTheRun() throws Exception {
+        for (boolean shot : new boolean[]{false, true}) {
+            if (bootstrap != null) bootstrap.dispose();
+            var fixture = launch(0, 0);
+            startRun(fixture);
+            clearEnemies();
+            var player = fixture.sprite();
+            // Holding exactly one toll: the next hit empties the rings, so it is the last.
+            player.setRingCount((int) call(run(), "toll", 10));
+            player.setInvulnerableFrames(0);
+            if (shot) {
+                Class<?> type = loader.loadClass("survivors.Shot");
+                Method of = type.getDeclaredMethod("of", int.class, int.class, String.class, int.class, boolean.class, int.class, int.class);
+                of.setAccessible(true);
+                var bullet = (AbstractObjectInstance) of.invoke(null, player.getCentreX(), player.getCentreY(), "buzzer", 3, false, 0, 0);
+                GameServices.level().getObjectManager().addDynamicObject(bullet);
+            } else {
+                spawnEnemy(2, player.getCentreX(), player.getCentreY(), false, 500);
+            }
+            boolean died = false;
+            for (int f = 0; f < 60 && !died; f++) {
+                fixture.stepIdleFrames(1);
+                died = player.getDead() || phase() == DEAD;
+            }
+            assertTrue(died, (shot ? "a shot" : "a badnik") + " that empties the rings ends the run");
+            for (int f = 0; f < 200 && phase() != DEAD; f++) fixture.stepIdleFrames(1);
+            assertEquals(DEAD, phase(), "the game over screen follows");
+        }
+    }
+
+    @Test void aCrowdOfShootersSharesOneFireBudget() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        clearEnemies();
+        var player = fixture.sprite();
+        player.setInvulnerableFrames(1_000_000);
+        for (int i = 0; i < 30; i++) spawnEnemy(0, player.getCentreX() - 150 + i * 10, player.getCentreY() - 60, false, 100000);
+        set(stage(), "eliteTimer", 1_000_000);
+        set(stage(), "spawnTimer", 1_000_000);
+        var seen = new java.util.HashSet<Object>();
+        for (int f = 0; f < 600; f++) {
+            fixture.stepIdleFrames(1);
+            set(stage(), "spawnTimer", 1_000_000);
+            seen.addAll(objects("Shot"));
+            if (getInt(run(), "pendingLevels") > 0) set(run(), "pendingLevels", 0);
+        }
+        int gap = (int) call(stage(), "enemyShotGap");
+        assertEquals(90, gap);
+        assertTrue(seen.size() >= 5, "shooters still fire: " + seen.size());
+        assertTrue(seen.size() <= 600 / gap + 1, "thirty Buzzers fire no faster than one: " + seen.size());
+    }
+
+    @Test void monitorsScaleWithTheRoute() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var player = fixture.sprite();
+        set(run(), "pressure", 240);
+        int rings = player.getRingCount();
+        var monitor = spawnPickup(1, 5, player.getCentreX(), player.getCentreY());
+        call(monitor, "collect", player);
+        assertEquals(2 * (int) call(run(), "toll", 0), player.getRingCount() - rings, "Super Ring: two base tolls");
+        call(spawnPickup(1, 8, player.getCentreX(), player.getCentreY()), "collect", player);
+        assertEquals(600, player.getInvincibleFrames(), "invincibility lasts ten seconds");
+        clearEnemies();
+        var tough = spawnEnemy(0, player.getCentreX() + 60, player.getCentreY() - 30, false, 500);
+        var elite = spawnEnemy(0, player.getCentreX() - 60, player.getCentreY() - 30, true, 500);
+        call(stage(), "screenNuke");
+        assertTrue(tough.isDestroyed() || !(boolean) call(tough, "alive"), "the Eggman bomb clears ordinary badniks");
+        assertEquals(300, (int) call(elite, "hp"), "and takes 40% from elites");
+    }
+
+    // =========================================================================================
+    // Balance probe (opt-in): -Dsonic-survivors.balance=<csv path>[,profile[,mode[,leader]]]
+    // =========================================================================================
+
+    /**
+     * Plays whole runs with a scripted bouncing bot and writes the pressure curve every 30 seconds:
+     * held rings against the toll, live badniks, hitpoints spawned per second against damage dealt
+     * per second, level, chests and evolutions. Profiles: fresh, mid (some shop and milestones) and
+     * max (full shop, all emeralds and unlocks). The bot is a crude player (jumps at the nearest
+     * badnik, takes the first card), so outcomes are a lower bound on a human's, compared across
+     * changes rather than read as absolute difficulty. Origin: the Survivors balance pass, 2026-10-07.
+     */
+    private static com.openggf.sprites.playable.AbstractPlayableSprite player0(HeadlessTestFixture fixture) {
+        return fixture.sprite();
+    }
+
+    @Test void balanceProbe() throws Exception {
+        String spec = System.getProperty("sonic-survivors.balance");
+        Assumptions.assumeTrue(spec != null && !spec.isBlank(), "opt-in diagnostic");
+        String[] parts = spec.split(",");
+        Path out = Path.of(parts[0]);
+        String preset = parts.length > 1 ? parts[1] : "fresh";
+        int mode = parts.length > 2 ? Integer.parseInt(parts[2]) : 0;
+        String leader = parts.length > 3 ? parts[3] : "sonic";
+        if (parts.length > 4) System.setProperty(SEED_PROPERTY, parts[4]);
+        int firstStage = parts.length > 5 ? Integer.parseInt(parts[5]) : 0;
+        var lines = new ArrayList<String>();
+        lines.add("preset,mode,leader,stage,act,second,phase,rings,toll,level,alive,kills,hpSpawnedPerS,damagePerS,"
+                + "bestCombo,chests,evolved,elites,weapons");
+        // Carried between zones: the clear screen's route request is the live game loop's job, so each
+        // zone is a fresh launch and the run's state is copied across, as the module would keep it.
+        String[] carried = {"levels", "xp", "level", "evolved", "pool", "kills", "bestCombo", "stagesCleared",
+                "elitesDefeated", "chestsOpened", "revives", "ringsCollected", "speciesKills", "frames"};
+        Map<String, Object> carry = null;
+        int carriedRings = 0;
+        String outcome = "timeout";
+        int lastStage = 0;
+        for (int routeStage = firstStage; routeStage < 10; routeStage++) {
+            if (bootstrap != null) bootstrap.dispose();
+            var fixture = launch(routeStage >= 8 ? routeStage + 1 : routeStage, 0, leader, "");
+            var profile = profile();
+            if (routeStage == firstStage && !preset.equals("fresh")) {
+                boolean max = preset.equals("max");
+                int[] shop = (int[]) get(profile, "shop");
+                // Shop order: power, rings, reroll, magnet, growth, revival, talent, armor, treasure, head start.
+                // "max" is a veteran profile (tens of runs), not every item at its cap.
+                int[] mid = {15, 10, 1, 8, 10, 1, 0, 5, 1, 3};
+                int[] veteran = {40, 40, 3, 25, 40, 2, 1, 15, 3, 10};
+                for (int i = 0; i < shop.length; i++) shop[i] = max ? veteran[i] : mid[i];
+                set(profile, "emeralds", max ? 0x7F : 0x0F);
+                set(profile, "totalKills", max ? 5000 : 800);
+                set(profile, "bestCombo", max ? 40 : 18);
+                set(profile, "totalElites", max ? 60 : 10);
+                set(profile, "bankedTotal", max ? 9000 : 1000);
+                set(profile, "bestLevel", max ? 30 : 12);
+            }
+            set(profile, "unlocked", Math.max(routeStage, preset.equals("max") ? 9 : preset.equals("mid") ? 4 : 0));
+            if (routeStage == 0 && mode != 0) set(profile, "unlocked", Math.max(1, getInt(profile, "unlocked")));
+            set(profile, "mode", mode);
+            call(profile, "save");
+            fixture.stepIdleFrames(30);
+            tapEnter(fixture);
+            if (carry != null) {
+                for (var entry : carry.entrySet()) set(run(), entry.getKey(), entry.getValue());
+                set(run(), "pendingLevels", 0);
+                fixture.sprite().setRingCount(carriedRings);
+            }
+            long hpMark = 0, damageMark = 0;
+            boolean jumpWas = false;
+            int lastRings = Integer.MAX_VALUE;
+            int frames = 0, limit = mode == 2 ? 20 * 60 * 60 : mode == 1 ? 44_000 : 26_000;
+            int phase = -1;
+            while (frames++ < limit) {
+                phase = phase();
+                Object stage = stage();
+                if (phase == DEAD || phase == 7 || phase == CLEAR) break;
+                if (getInt(stage, "overlay") == 1) {
+                    // A plain player's picks: weapons until three are owned, then owned upgrades, then anything.
+                    int[] cards = (int[]) get(stage, "cards");
+                    int count = getInt(stage, "cardCount"), choice = 0, bestScore = -1;
+                    int[] levels = (int[]) get(run(), "levels");
+                    int weapons = (int) call(run(), "occupiedSlots", true);
+                    Class<?> upgrades = loader.loadClass("survivors.Upgrades");
+                    Method isWeapon = upgrades.getDeclaredMethod("weapon", int.class);
+                    isWeapon.setAccessible(true);
+                    for (int i = 0; i < count; i++) {
+                        if (cards[i] < 0) continue;
+                        boolean weapon = (boolean) isWeapon.invoke(null, cards[i]);
+                        int score = (weapon && weapons < 3 ? 4 : 0) + (levels[cards[i]] > 0 ? 2 : 0) + (weapon ? 1 : 0);
+                        if (score > bestScore) { bestScore = score; choice = i; }
+                    }
+                    for (int i = 0; i < choice; i++) tapDown(fixture);
+                }
+                if (getInt(stage, "overlay") != 0) {
+                    fixture.stepIdleFrames(45);
+                    var overlay = GameServices.module().getGameService(LevelInputOverlay.class);
+                    var input = new com.openggf.control.InputHandler();
+                    input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+                    if (!overlay.handleInput(input)) {
+                        lines.add("# overlay without input: overlay " + getInt(stage(), "overlay") + " phase " + phase()
+                                + " paused " + get(run(), "paused") + " active " + get(run(), "active")
+                                + " pending " + getInt(run(), "pendingLevels") + " dead " + fixture.sprite().getDead());
+                    }
+                    fixture.stepFrame(false, false, false, false, false);
+                    input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+                    fixture.stepFrame(false, false, false, false, false);
+                    continue;
+                }
+                int fight = getInt(stage, "fightFrames");
+                if ((phase == FIGHT || phase == BOSS) && fight > 0 && fight % 1800 == 0) {
+                    long hp = (long) get(stage, "statHpSpawned"), damage = (long) get(stage, "statDamage");
+                    int rings = fixture.sprite().getRingCount();
+                    var weapons = new StringBuilder();
+                    int[] levels = (int[]) get(run(), "levels");
+                    for (int id = 0; id < levels.length; id++) if (levels[id] > 0) weapons.append(id).append(':').append(levels[id]).append(' ');
+                    lines.add(String.join(",", preset, Integer.toString(mode), leader, Integer.toString(routeStage), "0",
+                            Integer.toString(fight / 60), phase == BOSS ? "boss" : "fight",
+                            Integer.toString(rings), Integer.toString((int) call(run(), "toll", rings)),
+                            Integer.toString(getInt(run(), "level") + 1), Integer.toString(objects("Enemy").size()),
+                            Integer.toString(getInt(run(), "kills")), Long.toString((hp - hpMark) / 30),
+                            Long.toString((damage - damageMark) / 30), Integer.toString(getInt(run(), "bestCombo")),
+                            Integer.toString(getInt(run(), "chestsOpened")), Integer.toString(Integer.bitCount(getInt(run(), "evolved"))),
+                            Integer.toString(getInt(run(), "elitesDefeated")), weapons.toString().trim()));
+                    if (firstStage > 0) {
+                        var spots = new StringBuilder("# enemies dx/dy:");
+                        for (var enemy : objects("Enemy")) spots.append(' ').append(enemy.getX() - player0(fixture).getCentreX())
+                                .append('/').append(enemy.getY() - player0(fixture).getCentreY());
+                        lines.add(spots.toString());
+                    }
+                    hpMark = hp;
+                    damageMark = damage;
+                }
+                var player = fixture.sprite();
+                int px = player.getCentreX(), py = player.getCentreY();
+                if ((firstStage > 0 || Boolean.getBoolean("sonic-survivors.balance.hits")) && player.getRingCount() < lastRings) {
+                    var near = new StringBuilder();
+                    for (var o : GameServices.level().getObjectManager().getActiveObjects()) {
+                        if (o instanceof AbstractObjectInstance a && !a.isDestroyed() && a.getClass().getName().startsWith("survivors.")
+                                && Math.abs(a.getX() - px) < 40 && Math.abs(a.getY() - py) < 40 && !a.getClass().getSimpleName().equals("Pickup"))
+                            near.append(' ').append(a.getClass().getSimpleName()).append('@').append(a.getX() - px).append('/').append(a.getY() - py);
+                    }
+                    lines.add("# hit f" + frames + " at " + px + "," + py + " lost " + (lastRings - player.getRingCount()) + " air " + player.getAir()
+                            + " roll " + player.getRolling() + " anim " + player.getAnimationId() + " ys " + player.getYSpeed()
+                            + " gs " + player.getGSpeed() + " near" + near);
+                }
+                lastRings = player.getRingCount();
+                int targetX = px, best = Integer.MAX_VALUE;
+                for (var enemy : objects("Enemy")) {
+                    int d = Math.abs(enemy.getX() - px) + Math.abs(enemy.getY() - py) / 2;
+                    if (d < best) { best = d; targetX = enemy.getX(); }
+                }
+                for (var boss : objects("Boss")) {
+                    int d = Math.abs(boss.getX() - px);
+                    if (d < best) { best = d; targetX = boss.getX(); }
+                }
+                for (var pickup : objects("Pickup")) {
+                    // Chests and emeralds are worth walking to.
+                    if ((int) call(pickup, "kind") >= 2 && Math.abs(pickup.getX() - px) < best) {
+                        best = Math.abs(pickup.getX() - px);
+                        targetX = pickup.getX();
+                    }
+                }
+                int dx = targetX - px;
+                boolean jump = !player.getAir() ? !jumpWas && Math.abs(dx) < 56 : player.getYSpeed() < 0;
+                fixture.stepFrame(false, false, dx < -6, dx > 6, jump);
+                jumpWas = jump;
+            }
+            lastStage = routeStage;
+            if (phase == DEAD) { outcome = "dead"; break; }
+            if (phase == 7) { outcome = "won"; break; }
+            if (phase != CLEAR) break;
+            lines.add("# clear stage " + routeStage + " level " + (getInt(run(), "level") + 1) + " rings "
+                    + fixture.sprite().getRingCount() + " kills " + getInt(run(), "kills"));
+            carry = new LinkedHashMap<>();
+            for (String name : carried) {
+                Object value = get(run(), name);
+                carry.put(name, value instanceof int[] array ? array.clone() : value);
+            }
+            carry.put("stage", routeStage + 1);
+            carriedRings = fixture.sprite().getRingCount();
+        }
+        lines.add("# bank estimate " + (getInt(run(), "ringsCollected") / 4 + 25 * getInt(run(), "stagesCleared")
+                + getInt(run(), "kills") / 10) + " ringsCollected " + getInt(run(), "ringsCollected"));
+        lines.add("# outcome " + outcome + " stage " + lastStage + " cleared " + getInt(run(), "stagesCleared")
+                + " kills " + getInt(run(), "kills") + " level " + (getInt(run(), "level") + 1));
+        Files.createDirectories(out.toAbsolutePath().getParent());
+        Files.write(out, lines);
+        System.setProperty(SEED_PROPERTY, "0x534F4E4943");
+    }
+
+}

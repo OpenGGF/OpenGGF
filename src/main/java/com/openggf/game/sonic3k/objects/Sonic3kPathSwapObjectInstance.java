@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RomWorldPositionedObject;
 
 import java.util.List;
 
@@ -22,7 +23,7 @@ import java.util.List;
  * 39699-39720, 39740-39776).
  */
 public final class Sonic3kPathSwapObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, InlinePlaneSwitcher {
+        implements RewindRecreatable, InlinePlaneSwitcher, RomWorldPositionedObject {
 
     public Sonic3kPathSwapObjectInstance(ObjectSpawn spawn) {
         super(spawn, "PathSwap");
@@ -44,6 +45,20 @@ public final class Sonic3kPathSwapObjectInstance extends AbstractObjectInstance
         if (playerTwo != null && playerTwo != playerEntity) {
             services().objectManager().applyInlinePlaneSwitcher(getSpawn(), playerTwo);
         }
+    }
+
+    /**
+     * {@code Offset_ObjectsDuringTransition} (sonic3k.asm:104166-104181) walks every SST slot
+     * from {@code Dynamic_object_RAM+object_size} to {@code Breathing_bubbles} and subtracts
+     * {@code d0}/{@code d1} from the {@code x_pos}/{@code y_pos} of each one whose
+     * {@code render_flags} bit 2 is set. {@code Obj_PathSwap} holds a normal slot with that bit
+     * set, so a seamless act change moves it like any other placed object; the switcher reads
+     * this position, so it has to be the moved one and not the placement it loaded at.
+     */
+    @Override
+    public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+        updateDynamicSpawn((getCollisionX() + offsetX) & 0xFFFF,
+                (getCollisionY() + offsetY) & 0xFFFF);
     }
 
     @Override

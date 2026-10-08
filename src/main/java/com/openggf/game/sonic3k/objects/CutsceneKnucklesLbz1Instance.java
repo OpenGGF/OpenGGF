@@ -356,6 +356,8 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
 
     private static void releasePlayer(AbstractPlayableSprite player) {
         ObjectControlState.none().applyTo(player);
+        // loc_6278A clears the whole object_control byte, including bit 1.
+        player.setObjectMappingFrameControl(false);
         player.setControlLocked(false);
         player.clearForcedInputMask();
         player.clearLogicalInputState();

@@ -335,6 +335,19 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         prepareAct2SizeChange(level.getMaxX(), level.getMinY(), level.getMaxY());
     }
 
+    /**
+     * Change_Act2Sizes from a retained Obj_EndSignControlDoStart: its three
+     * AllocateObjectAfterCurrent workers run in this same object pass.
+     */
+    public void prepareRetainedTitleAct2SizeChange() {
+        boolean alreadyActive = postTitleAct2SizeChangeActive;
+        preparePostTitleAct2SizeChange();
+        if (!alreadyActive && postTitleAct2SizeChangeActive) {
+            // The upcoming object pass runs the workers' first entries.
+            postTitleAct2WorkersCreatedThisPass = false;
+        }
+    }
+
     /** Native Big Arm {@code loc_74DA4}: literal stored targets, not current bounds. */
     public void prepareBigArmFloorTransition() {
         if (activeAct == 1) {
@@ -846,6 +859,11 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                 .postTransitionMaxX(postTransitionMaxX)
                 .postTransitionMinY(postTransitionMinY)
                 .postTransitionMaxY(postTransitionMaxY)
+                // LBZ1BGE_DoTransition keeps the inherited (offset) bounds
+                // until Change_Act2Sizes runs; hold easing targets until then.
+                .postTransitionMinXTarget(postTransitionMinX)
+                .postTransitionMaxXTarget(postTransitionMaxX)
+                .postTransitionMinYTarget(postTransitionMinY)
                 .postTransitionMaxYTarget(postTransitionMaxY)
                 .playerOffset(LBZ2_TRANSITION_OFFSET_X, 0)
                 .cameraOffset(LBZ2_TRANSITION_OFFSET_X, 0)

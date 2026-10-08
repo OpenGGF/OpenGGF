@@ -1,13 +1,84 @@
 # S3K Sandopolis Act 2 coverage matrix
 
 Canonical slot: `S3K_SANDOPOLIS_2`; ROM zone `$08`, act index 1, SKL pointer set.
-Status: native-movement Sonic + Tails cold completion at width 320 verified;
-full methodology acceptance, broader routes and native/visual parity remain open.
+Status: current-base native-movement solo Sonic, solo Tails, solo Knuckles and Sonic + Tails cold completion at width320,
+with rendered whole-world rewind checks and actual LRZ timeline isolation.
+Knuckles also has a separate 800px cold completion with the same replay obligations.
+Full methodology acceptance, broader routes and native/visual parity remain open.
 “Native” configuration here means the engine movement profile, not emulator
 parity. Dated evidence retains its original scope; the final
 [Cold controller completion](#cold-controller-completion) closes only that route.
 Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 [placed inventory](../../research/s3k-zones/soz-object-inventory.md).
+
+
+## Cold-route revalidation (2026-09-27)
+
+At base `7a00b2915`, the original paired Act2 recording dies at input11512.
+Fresh captures rendered every input and every fourth input agree on all11,513
+rows of position, velocity, grounded/airborne state and rings. The new full-world
+replay test reaches the same failure; rewind and capture cadence are not its cause.
+The unchanged recording still completes on its original `de765d83d` base.
+
+The first motion difference is input1230 at a push switch: current Y is three
+pixels lower, with matching velocities. The later `2d9a6cfb5` correction models
+`Obj_SOZPushSwitch`'s `$30` landing width and `loc_1E154`'s native landing path.
+This source-backed behavior must not be reverted to fit an older recording.
+The paths reconverge before later contacts accumulate enough drift to miss the
+swing-to-rappel-wire transfer. Reauthored ordinary controller inputs now complete
+the upper/lower rising-sand rooms, later wrap and pillar/vine traversal, upper
+cork foreground mutation, recharged final doors, eight-hit boss, capsule, results
+and playable LRZ. No runtime movement, collision, event or object logic changed.
+The31417-input canonical BK2 was round-tripped by `InputLogAuthorTool`.
+
+`TestSozColdRouteCapture` runs the frozen route from cold native320 Sonic + Tails,
+donor off, with the intro enabled and no gameplay seeds. LRZ loads at input31236;
+33 periodic/destination45-input whole-registry restore/replay windows pass.
+Additional semantic checks cover20 named observations: all nine observed
+background modes, boss entry, each of eight hits, capsule opening and results
+start. Live history is enabled on capsule opening rather than at an old recorded
+frame; nonempty outgoing history is observed before the actual LRZ load resets it.
+Both destination control owners release, and the configured roster is retained.
+This adds current cold reachability/replay evidence; native/emulator trajectory
+and pixel parity, other widths/donors/characters and full per-placement breadth
+remain open. Positioned mechanism, boss and lifecycle results retain their scope.
+
+## Production display lifecycle refresh (2026-09-27)
+
+The earlier five-width matrices used 320/400/512/640/800, including two custom
+widths rather than the current menu's 352/528 presets. The checkpoint, repeated
+team reload and connected-mechanism tests now enumerate `WidescreenAspect.values()`
+and select `DISPLAY_ASPECT` through `resolveDisplayAspect()`, without overriding
+the derived pixel width. They assert the selected preset, resolved width and live
+camera width after boot and each tested reload. Historical 512/640 results below
+retain their original scope; other unchanged suites' “five widths” still refer
+to those historical rows, not newly executed 352/528 coverage.
+
+At base `9c0360625`, worktree `feature/ai-soz-display-lifecycle`, the queued Java21
+explicit-S3K/S1/S2-ROM command selecting `TestSozCheckpointReloadProduction`,
+`TestSozTeamCheckpointResetProduction`, `TestSozConnectedMechanismsProduction`
+and the four required S3K gates passes 509 tests, zero failures/errors/skips,
+2m 04s. The eight completed XML classes include both level-loading classes.
+Both acts together contribute 300 physical post contact/recreation/replay/death
+cases (all ten posts × six supported character/donor combinations × five
+presets), 90 one-/two-/six-follower cases with two consecutive real deaths each,
+and 60 connected Act2 mechanism cases. That is 480 real death/reloads, with
+ROM-backed roster/art checks; team reloads additionally check control release,
+owner replacement and outgoing rewind-history isolation.
+
+The optional connected-room capture companion also passes four scenes at each
+of352/528, rendered every frame at60fps. Both upper-room vertical wraps and
+lower-room exits are present; eight movies decode successfully under external
+`soz-bring-up/campaign-20260927-production-preset-WIDTH/SCENE/capture.mp4`.
+These positioned engine captures are not native pixel matching.
+
+This is focused validation of test configuration and its direct production
+consumers, not a full-suite pass or new cold-route/native-parity certification.
+The change-based planner's 2,929-class fallback is caused by the SOZ test helper;
+no runtime code, shared timing/physics, save contract or build policy changed.
+Complete solo/Tails/Knuckles routes, broader incoming transitions and matched
+native presentation remain open. The positioned controller starts and existing
+ring setup are unchanged; they do not establish cold reachability.
 
 ## Supported donor roster (corrected 2026-09-16)
 
@@ -31,11 +102,11 @@ S2 replaces Knuckles with Sonic. The native/off rosters are unchanged.
 
 | Route/dimension | Obligation | Current evidence / gap |
 | --- | --- | --- |
-| Sonic solo / Sonic + Tails | Cold entry, ordinary traversal, checkpoint/death, boss and exit | Sonic + Tails at native 320 completes cold entry through eight natural boss hits and the Lava Reef transition using fixed controller input. Sonic solo full completion remains open; checkpoint and positioned boundaries supplement the route |
-| Tails solo | Same, including native character branches and flight interactions | Every authored post activates/reloads; positioned solo victory covers off/S2 donors at all five widths. Full flight-sensitive cold route remains open; S1-donor Tails is outside the production roster |
-| Knuckles solo | Verify distinct start/capsule/boss/progression branches from ROM | Every authored post activates/reloads; positioned solo victory covers all five widths with donation off. Full distinct cold route/progression remains open |
+| Sonic solo / Sonic + Tails | Cold entry, ordinary traversal, checkpoint/death, boss and exit | Sonic solo and Sonic + Tails at native 320 complete cold entry through eight natural boss hits, capsule/results and playable Lava Reef using fixed controller input with whole-world replay; broader products remain open |
+| Tails solo | Same, including native character branches and flight interactions | Native 320 solo cold completion reaches playable Lava Reef with eight hits and whole-world replay. Every authored post activates/reloads; positioned solo victory covers off/S2 donors at all five widths. Wider/donor cold routes remain open; S1-donor Tails is outside the production roster |
+| Knuckles solo | Verify distinct start/capsule/boss/progression branches from ROM | Separate native-profile 320/800 fixed-input cold completions cover cork/rock and upper-switch puzzles, all eight boss hits, capsule/results and playable LRZ, each with 48 traversal/destination replay windows plus semantic events. Every authored post activates/reloads; positioned solo victory covers all five widths. The original 320 input fails at 800; the separately authored wide route closes that traversal gap below |
 | Mixed / maximum / duplicate followers | Independent held state, authority, release, death and leader chain | Selected mechanisms and three-player terrain restore/replay covered; repeated checkpoint team reset evidence below. No finite follower maximum is declared by the production team contract; full multi-owner interaction breadth remains open |
-| Widths 320/400/512/640/800 | Actual camera/render widths; entry/reset × every supported donor; sensitive interactions and rewind | Every authored checkpoint covers all five actual widths × the six supported character/donor combinations in this act. Selected sensitive interactions also cover widths; this is not full traversal/render coverage at every width |
+| Production presets 320/352/400/528/800 | Actual selected preset and camera width; entry/reset × every supported donor; sensitive interactions and rewind | Checkpoint and team lifecycle matrices now select `WidescreenAspect.values()` through the production resolver, including previously omitted352/528. See current execution below; historical512/640 checks remain historical custom-width evidence, not menu coverage |
 | Donors off/S1/S2 | Confirm production support, actual movement profile, mandatory mechanics and rewind | Every authored checkpoint covers the six supported character/donor combinations × five widths, asserting movement capability and reload state. Thirty positioned boss-to-LRZ cases cover all six supported character/donor combinations at each width; full traversal/interaction breadth remains open |
 
 Decoded checkpoint placements: `$02` at `($0860,$05C8)`, `$03` at `($13F0,$0428)`, `$04` at `($1F00,$0108)`, `$05` at `($3280,$01A8)`, `$06` at `($4EC0,$04A8)`.
@@ -52,7 +123,7 @@ for Sonic, Tails and Knuckles. All five posts have native-character activation/r
 | ENTRY / LOAD / RESET | ROM loading and event/scroll owners implemented; cold sand intro in Act1 and title-owned ghosts in Act2 | Fresh/seamless entry and title-owned ghosts tested; cold Act 1 Sonic + Tails route reaches playable Act 2; broader incoming routes open | Act1→Act2 destination replay, all checkpoints and selected repeated team reloads covered; repeated seamless-transition cycles open | Unmatched | Unmatched |
 | Quicksand entry/held/release | `TestSozQuicksand`: four variant branches, unsigned bounds, input and clock tests | Act 1 short cold route: `TestSozAct1QuicksandRoute`; Act 2 binding/traversal open | Local slide cooldown reconstruction; full registered-state before/contact/release spots open | Native Act 1 acquisition/held force observations corroborate source; no full engine sequence match | Invisible owner; terrain/palette presentation unverified |
 | Sand-rock rolling landing / breakup / removal | `SozBreakableSandRockObjectInstance`; saved animation and owner standing latch | `TestSozSandRockProduction`: positioned first-rock spot; cold reachability open | All registered state restored and replayed twice at break, phase 6 and phase 24 removal | Source-derived; mixed-rider and offscreen retained-latch unit checks; native trajectory unmatched | ROM mapping/art checks pass; Act 1 shares the inspected mapping; Act 2 visual comparison open |
-| Pushable rock / edge fall / track ride / stop | `SozPushableRockObjectInstance`; ROM track and native push priority | `TestSozPushableRockProduction`: first-rock positioned push, board/brake and complete ride at 320; cold reachability open | All registered state restored/replayed twice at push, initial fall, horizontal start and terminal; boarding also covered | Source-reviewed and real rider carry tested; native trajectory open; subtype `$87` coupling has local contact checks, but full lower-puzzle passage remains unverified | ROM mapping/art checks pass; shared Act 1 display inspected; Act 2 pixel comparison open |
+| Pushable rock / edge fall / track ride / stop | `SozPushableRockObjectInstance`; ROM track and native push priority | `TestSozPushableRockProduction`: first-rock positioned push, board/brake and complete ride at 320; cold reachability open | All registered state restored/replayed twice at push, initial fall, horizontal start and terminal; boarding also covered | Source-reviewed and real rider carry tested; native trajectory open; subtype `$87` connected cork/rock/switch/door passage now passes a2512-input positioned ordinary Sonic route with15 full-world replay spots; other route products remain open | ROM mapping/art checks pass; shared Act 1 display inspected; Act 2 pixel comparison open |
 | Other traversal objects / badniks | All 599 Act1/490 Act2 placed records bind to concrete factories; family production tests listed below | Positioned family reachability plus the recorded cold Sonic + Tails route; per-family cold milestone coverage and other routes remain open | Short graph/contact/creation/deletion restore/replay, including forced recreation; complete per-placement/participant product open | Source-backed branches; matched native sequences remain open | Local ROM-art captures; full pixel comparison open |
 | CHECKPOINT / DEATH | `TestSozCheckpointReloadProduction`: all five authored posts × six supported character/donor combinations × five widths | Physical activation from positioned approaches; cold route between posts open | Activation recreated/replayed, production death/reload; selected repeated mixed/duplicate-team reset checks below | Source checkpoint placement/respawn assertions; matched native death movie open | Native pixel comparison open |
 | WORLD / CAMERA / EVENTS | Captured `SozEventState`/lighting/wall owners and mutation pipeline | Positioned cork/room/wall and boss stimuli exercised | `TestSozScreenEvents` covers cork layout, fractional sand collision and eight-solid wall graph; connected full-route sequence open | ROM tables and native event thresholds checked; matched sequence open | Local captures; whole-route comparison open |
@@ -388,3 +459,324 @@ early-room event state. The shortcut now uses the production checkpoint reload.
 `TestSozLastCheckpointShortcutProduction` covers native Sonic+Tails at 320/400/800px,
 unchanged lives, isolated rewind history, destination events, wall solids and art
 submission. Broader donor/leader products for the shortcut remain untested.
+
+
+## Lower rock puzzle prerequisite reproduced (2026-09-25)
+
+On campaign commit `f631b1832`, the old fresh rock-side reproduction still takes
+the falling-track path. The missing prerequisite is now identified in production:
+breaking the subtype `$9C` cork at `($4940,$450)` publishes `Events_fg_4` and
+`openAct2ForegroundPassage` copies layout columns `$AB..$B3`, rows10..13, into
+`$8C..$94`. This changes the floor throughout the lower rock/switch corridor,
+including the spot where the fresh rock previously fell. The same event also
+copies four chunks on row7. It is a terrain transition, not a different track
+pointer or a switch eligibility exception.
+
+A positioned Knuckles run at320, no donor/follower, starts at `$4940/$430` with
+37 declared rings. `100 -;30 A;70 -` falls to the ledge and jumps into the actual
+cork in rolling animation. By input120 the cork is broken and its real falling
+columns exist; by240 the lower column has reached `$580`. Subsequent ordinary
+movement reaches the lower corridor at player Y=`$5AC`, whereas the reproduction
+without breaking the cork falls to `$66C/$6AC`. No gameplay state was hydrated
+from the native trace, no terrain was injected, and no engine behavior changed.
+Native comparison-only observations remain the earlier Knuckles segment:
+rows29870 onward show the same falling-column routine `loc_41E6A`, and the later
+rock remains in `loc_405D6` while it crosses this corridor.
+
+External attempts live under `$VIDEO_ROOT/soz-bring-up/`:
+`campaign-20260925-cork-jump-return-320/` contains the1400-plus-frame positioned
+presentation attempt and state CSV; `cork-rock-door-v2.bk2` through
+`cork-rock-door-v6.bk2` preserve the subsequent input variations. They are
+exploration, not completed puzzle evidence. The latest route breaks the cork,
+returns over the switch, and reaches the rock's right side. The scorpion beside
+the rock hits the return jump (inspected inputs930/945); knockback prevents landing
+on its left. Pushing the switch alone reaches full charge, but it decays before
+Knuckles reaches the door. That negative control is expected and does not prove
+rock coupling. Full connected rock-held switch/door passage and its replay checks
+remain open. Next author the safe return to the rock's left, then hold the switch
+with the rock and cross the raised door; do not retune the ROM track to compensate
+for the missing cork event.
+
+
+## Connected lower rock puzzle passage (2026-09-25)
+
+On `fc68cbcb7`, an ordinary Sonic-solo positioned route completes the previously
+unverified lower puzzle. It starts at `$4940/$430`, native320, donation off,
+37 declared rings, no shield or emeralds. The preserved2512 controller inputs
+are `src/test/resources/routes/s3k/soz2-lower-rock-sonic-320.script` and `.bk2`.
+After breaking the real cork and returning west, Sonic uses a spindash to kill
+the scorpion rather than trying to push the rock while being shot from behind.
+He pushes the rock to `$4834/$5B4`, which holds the switch at `$4850/$5B0`, then
+jumps over and crosses the door at `$4A0D`. At input2400 the player is more than
+80px beyond the switch, the charge remains `$80` and the door is at Y=`$500`.
+The route uses ordinary inputs throughout and includes damage/ring recovery;
+it is not a no-hurt or cold-full-act claim.
+
+The committed native Knuckles segment corroborates the mechanism independently:
+auxiliary object rows31240/31300 show `loc_405D6` rock at `$4834/$5B4` and
+`loc_418E4` switch at `$4850/$5B0`; row31420 shows `loc_41BE0` door at `$4A0D/$514`
+as it starts closing after the rock leaves the camera's lifetime window. These
+are comparison-only observations. The native run is Hyper Knuckles (its trail
+owner is `Obj_HyperSonicKnux_Trail_Main`), whereas this engine route is ordinary
+Sonic, so this proves the shared puzzle mechanism and passage, not synchronized
+character movement, slot timing or pixel parity. Ordinary Knuckles and broader
+route products remain open.
+
+`TestSozLowerRockPuzzleCapture` checks the actual floor replacement, terminal
+rock/switch coordinates, held charge with the player away, raised door, no death
+and passage. Fifteen45-input full-registry replay windows surround the cork
+break/falling columns, return, scorpion encounter, first pushes, switch coupling,
+charge saturation, jump-off, held door and passage. Queued focused command
+`-Dmse=off -Dtest=TestSozLowerRockPuzzleCapture -Ds3k.rom.path=$REPO_ROOT/s3k.gen test`
+passes1 test, zero failures/errors/skips, on `fc68cbcb7` plus the new fixture.
+All15 replay windows pass. No production engine behavior was modified.
+
+The full2512-frame capture has zero death rows, ends at `$4A75/$5AC` with one
+ring and control, and fully decodes with ffmpeg. Inputs2400 (rock-held switch
+behind Sonic) and2490 (past the raised door) were inspected:
+`$VIDEO_ROOT/soz-bring-up/campaign-20260925-lower-puzzle-complete-320/capture.mp4`.
+This continuous native320 video is positioned-route evidence, not full-act or
+native framebuffer acceptance.
+
+The change-based plan selects all2914 ordinary classes plus guards because the
+new route/test resources fall under broad fallback rules. Focused validation is
+proportionate for this addition: no production, build, shared algorithm or test
+selection policy changes; the new test directly runs every input and all15
+registry replay windows. The combined campaign's required broad verification
+remains separate and pending.
+
+
+## Ordinary Knuckles lower puzzle and current viewport breadth (2026-09-27)
+
+The positioned native Knuckles route starts at`($4940,$430)`, no follower/donor,
+37 declared rings and no emeralds. Its2839 ordinary inputs are committed as
+`soz2-lower-rock-knuckles-320.script`/`.bk2`. It breaks the real cork, returns west
+rolling, jumps over the rock/scorpion, gets behind the rock, pushes it onto the
+switch and crosses the raised door. The fresh320/800 movies retain37 rings and
+finish at`($4A75,$5AC)`. This is ordinary Knuckles, unlike the comparison-only
+Hyper Knuckles native segment discussed above; it remains a positioned route,
+not a cold full-act completion or synchronized native parity claim.
+
+The existing Sonic inputs reach the corridor with Knuckles but leave him on the
+rock's right; pressing the switch with the player alone does not hold the door.
+The accepted route replaces that approach with a roll and a later left jump from
+the rock's right edge. A longer delay also passes but loses rings; a spindash
+before that jump dies to the scorpion. No puzzle, collision or character physics
+were changed to make a controller sequence succeed.
+
+`TestSozLowerRockPuzzleCapture` now covers Sonic and Knuckles at all five current
+`WidescreenAspect` presets (320/352/400/528/800), with actual character identity,
+solo roster, viewport and ROM-backed player renderer assertions. Both routes
+assert the real floor replacement; terminal rock`($4834,$5B4)`; switch`($4850,$5B0)`
+at full`$80`charge while the player is away; doorY`$500`; and live passage beyond
+`$4A40`. The320/352/400 Sonic rows retain15 whole-registry45-input replay spots; the two
+wider Sonic variants and every Knuckles row have16, totaling157 windows. These
+surround cork, westward return/scorpion, first push, coupling/charge, jump-off and
+door passage.528px uses independently authored variants for each character, and
+800px Sonic has its own route. All other widths reuse the corresponding320 input.
+
+The width variants address observable controller outcomes rather than changing
+engine rules: at528 the scorpion phase changes the jump approach; at800 Sonic
+avoids an earlier hit, so the old spindash sequence instead jumps over the rock
+while still moving. Walking into it from the left works without damage. The528
+Knuckles route takes damage and recovers three rings; the320/800 movies remain
+unharmed with37. These distinctions are asserted/recorded rather than hidden by
+seeded collision, invulnerability or a retuned rock track.
+
+Execution and delivery evidence is in the campaign audit. Donor, team, Tails and
+cold-route breadth remain separate obligations; this does not certify all SOZ.
+
+
+## Solo Sonic cold route (2026-09-27)
+
+`src/test/resources/routes/s3k/soz2-cold-sonic.bk2` contains31,797 ordinary
+controller inputs from a native320 solo Sonic cold start, donor off and intro
+enabled. No position, rings, collision, boss or event state is seeded. The route
+charges the actual switches, breaks the rising-sand cork, uses the moving
+carriers/swing and lights, then lands eight natural boss hits and opens the
+capsule itself. Solo-specific controller timing replaces paired inputs that
+depend on different contact/ghost phases or Tails opening the capsule. No
+runtime behavior was retuned to preserve a recording.
+
+A fresh `TestSozColdAct2Capture` replay records hits at28653/28845/29325/29773/
+30064/30108/30286/30331, capsule30743, results finished31331 and LRZ load31576.
+All31,797 inputs complete without death;221 destination inputs are retained.
+The capture and authored branch match all31,577 shared state rows through load
+on position, velocity, inertia, air/roll/hurt/death/rings, mapping, camera and mode.
+The3797-frame60fps movie covers input28000 onward; final-hit, capsule and
+destination stills were inspected and full video decode passed.
+
+`TestSozColdRouteCapture` now includes both solo acts, with the existing periodic
+45-input whole-registry restore/replay checks and Act2 semantic boss/background/
+capsule/results windows plus real outgoing-history isolation at LRZ. Execution
+and integration results are recorded in the campaign audit. This native320 solo
+route does not close Tails/Knuckles, other widths/donors, or matched native
+presentation obligations. Video: `$VIDEO_ROOT/soz-bring-up/`
+`campaign-20260927-solo-cold-act2-clear-320/capture.mp4`.
+
+
+## Solo Tails cold route (2026-09-27)
+
+`src/test/resources/routes/s3k/soz2-cold-tails.bk2` contains28,782 ordinary
+controller inputs from native320 solo Tails, donor off and intro enabled.
+No position, rings, boss, collision or event state is seeded. Authored jumps,
+flight, light-switch pauses, side pushes and carrier/rope transfers replace
+Sonic timings that did not suit Tails. The fight reaches eight natural hits
+at26025/26212/26251/26401/26458/27030/27457/27519, followed by capsule/results
+and playable LRZ at28601 in the authoring run. The existing positioned99-ring
+boss controller alone did not survive this route's21-ring arrival; the frozen
+inputs combine immediate ground jumps, a flight interval and ground jumps
+for the final two hits. No runtime behavior was retuned.
+
+The permanent cold test covers30 periodic/destination45-input full-registry
+restore/replay windows, semantic background/boss-hit/capsule/results windows,
+and actual outgoing-history isolation on LRZ load. Fresh frozen-input replay,
+media verification and integration outcomes are recorded in the campaign
+audit; test definitions alone are not proof of execution. Knuckles, additional
+width/donor products and matched native presentation remain separate gaps.
+Video destination: `$VIDEO_ROOT/soz-bring-up/`
+`campaign-20260927-tails-cold-act2-clear-320/capture.mp4`.
+
+Fresh capture confirms the same28,782-frame route without death, capsule27750,
+results27781..28350 and LRZ28601. All19 selected state fields match the authored
+run. Candidate execution passes68 focused checks (including all six cold
+products), zero failures/errors/skips;30 periodic/destination and20 semantic
+observations run for this route. The53.033333-second60fps video covers input
+25600 onward; final-hit/capsule/destination stills and full decode are checked.
+This is focused validation, not a full ordinary-suite or guard pass.
+
+
+## Knuckles cold-route investigation and grab-state repair (2026-09-27)
+
+At base58001b58e in feature/ai-soz-knuckles-act2, controller-only cold traversal
+reaches the upper light-switch/door passage with2 rings. Native
+`Knuckles_Control/loc_165AE` clears `double_jump_flag` when object-control bit0
+suppresses movement. The engine previously skipped that write, retaining the
+glide pose while hanging and replacing `sub_40F52`'s release speed on the next
+player pass. The candidate shared movement-gate correction restores the hanging
+mapping145 and normal release acceleration/gravity; the live cold probe now
+passes the doorway. The preceding13173 input rows remain identical.
+
+The focused regression covers all five glide/climb states, preserved native
+property/radii semantics, hanging animation and release velocity. The shared
+raw-frame flag also needed an ownership split: an ability relinquishes its
+mapping when object-control cancels glide, while a capturing object's bit1 gate
+continues to suppress scripted animation. `TestKnucklesObjectControlAnimation`
+covers the placed SOZ wire and FBZ pole with real Knuckles at320/800, including
+whole-world restore and forward replay. The first queued owner-focused run
+passes34 checks with0skips; its two SSZ-route failures are tracked separately
+in the campaign audit. Broader checks and integration remain pending.
+
+The cold authoring prefix now passes switches7/8/9/12, the subsequent vertical
+wrap/spike corridor and checkpoint ledge, then reaches the eastern pyramid.
+After actually grabbing the light at(17904,1232), the selected input reaches
+(18293,1140),36rings,no deaths: prefix25752 of
+`target/knuckles2-lit-pyramid-entry/variant-0.bk2`. The later pillar room still
+blocks continuation; attempts that drop to its lower floor are rejected after
+crushing deaths. This supersedes earlier authoring frontiers, not the act's
+acceptance rows. This was the authoring frontier before the cold completion recorded below;
+retain it as investigation history. Other viewport/donor and native-presentation
+breadth remain open.
+
+## Knuckles cold Act 2 completion (2026-09-27)
+
+This supersedes the preceding pyramid authoring frontier. The fixed ordinary
+Knuckles solo route now completes cold SOZ Act 2 at native 320px, with donation
+off, no position/ring/emerald seed, intro enabled and the initial production
+Process_Sprites pass consumed. Its 35,315 inputs release the cork, pull the
+lights, hold the lower door with the rock, cross the upper switch/spike passage,
+open the last door, defeat the boss, open the capsule, finish results and load
+LRZ1. Lava Reef becomes playable at input 35,392 under neutral continuation.
+
+The failed lower-rock attempts had skipped the cork's floor replacement; its
+fall was correct. The later spike passage requires moving the upper push switch
+before jumping from its edge. Native powered Knuckles footage helped navigate,
+but was not an ordinary-character movement oracle. Neither puzzle geometry nor
+boss/player physics was changed to make these inputs succeed. The shared grab
+state correction described above remains the runtime repair.
+
+`TestSozColdRouteCapture` now includes this character/act row. Its 48 selected
+45-input whole-world restore/forward-replay windows include eleven explicit
+points around the cork, light pull, rock/door, upper switch, spike/wall crossing,
+last switch and arena drop. Separate semantic checks cover boss entry, all eight
+hits, capsule/results and seven background modes. The actual LRZ load resets
+outgoing rewind history; destination control and rendered continuation are
+verified. Short object/puzzle tests remain independent of this long route.
+
+The fresh fixed-input capture had no deaths in 35,494 observed frames. Hits were
+at 31,955 / 32,307 / 32,659 / 33,011 / 33,363 / 33,683 / 34,035 / 34,086;
+capsule at 34,603; results finished at 35,179; LRZ loaded at 35,314. Its final
+state is playable LRZ1 at (331,1969), with three naturally collected rings.
+The 60fps video is the final 9,394 frames, starting at input 26,100, not a
+video of the entire cold prefix. All prefix inputs were nevertheless rendered
+and recorded in the complete CSV. The MP4 decoded completely; representative
+cork/light, spike clearance, boss-hit, capsule and LRZ frames were inspected.
+
+Media: `$HOME/Videos/OGGF/soz-bring-up/campaign-20260927-knuckles-cold-act2-clear-320/`
+contains the MP4, fixed script/BK2, complete state CSV, milestones, stills and
+provenance. Candidate base is `58001b58e`; final integration evidence belongs in
+the campaign audit.
+
+**Width limit:** the same fixed inputs fail the fresh 800px probe at input 3,441.
+The first player-state difference is damage while hanging at the early light
+switch on input 1,645, at (1616,912), losing four rings. The exact damaging owner
+has not been independently corroborated. This establishes a wide-route input
+frontier, not a physics defect or widescreen completion. Other viewport/donor
+products, native presentation comparison and the remaining act obligations stay
+open. The accepted strict-trace deferral is unchanged.
+
+
+## Knuckles 800px cold completion (2026-09-27)
+
+A separate 35,440-input ordinary controller recording now completes cold SOZ2 at
+800px. Runtime is unchanged from `49586cd86`: no physics, enemy, puzzle or boss
+parameters were adjusted for the recording. The original 320 recording's failure
+above remains reproducible; it is superseded as a wide-route frontier, not repaired
+by weakening gameplay. Knuckles solo, donor off, intro enabled, no position,
+ring or emerald seed; actual roster, renderer and camera width are asserted.
+
+The revised input leaves the early light before the Sandworm contact, adjusts
+ledge/wall grabs and vertical wraps, passes below the unwanted wire grab, waits
+for grounded spindash admission, and crosses the upper spikes after dodging the
+Skorp shot and stopping without leftward drift. The cork, light, lower rock/door,
+upper switch, breakable walls and final switch are reached through their real
+entry paths. Six collected rings reach the boss. A controller-only 16/4/-48 rhythm
+is frozen into the final asset; the engine does not consume those authoring
+parameters. Hits occur at 30988/31323/31675/32379/32731/33435/33771/34123;
+capsule 34720, results finish 35304, LRZ load 35439, playable LRZ 35517.
+
+An independent fixed-input candidate of `TestSozColdRouteCapture` passes one test
+with no failures/errors/skips (37.431 seconds): 48 selected 45-input whole-world
+restore/replay windows, including eleven puzzle spots, plus 18 semantic events.
+The real LRZ load clears nonempty outgoing history and retains the 800px solo
+roster through 180 playable destination frames. The permanent method is
+`knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef`. The
+permanent native/wide selection subsequently passed both tests with no failures,
+errors or skips (61.87 seconds), retaining 48 replay windows and 18 semantic
+events per width. Command and integrated runtime evidence are in the audit.
+
+Fresh `TestSozColdAct2Capture` also passes: 35,619 observed frames, no death,
+final LRZ (331,1969), 3 rings. The 60fps 1600x448 movie covers inputs 26000–35618
+(9,619 frames, 160.316667 seconds). The prefix omitted from the movie was also rendered
+and recorded. Full decode and sampled moving sequences at the spike crossing,
+final hit and destination passed inspection. Media, full CSV, inputs, milestones,
+stills and provenance are under
+`$HOME/Videos/OGGF/soz-bring-up/campaign-20260927-knuckles-cold-act2-clear-800/`.
+This closes the 800px Knuckles cold traversal/replay product; other widths,
+supported donors and native-emulator presentation certification remain open.
+
+
+### Seamless sprite-publication follow-up (2026-09-27, candidate)
+
+`TestLevelSpritePresentationLifecycle` independently exercises FBZ/MHZ/SOZ/LRZ/
+DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
+still clear them. Shared validation and exact route limitations are recorded in
+[the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
+This adds transition coverage, not another whole-act or native-pixel certification.
+
+The fresh native320 Sonic handoff uses `S3K_SKIP_INTROS=false` and one ordinary
+neutral setup frame before the unchanged `soz1-cold-sonic.bk2`. It reaches Act2
+at31392 with zero deaths; all31492 baseline/candidate state rows match. The
+initial default-tool failure was an intro-configuration mismatch, not a failure
+of this native-start route. Video:
+`$HOME/Videos/OGGF/seamless-presentation/campaign-20260927-soz-handoff-320/capture.mp4`.

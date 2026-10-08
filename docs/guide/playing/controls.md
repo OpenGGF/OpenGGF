@@ -56,6 +56,12 @@ The startup disclaimer, master title, and S3K-style data select accept
 controller input. On data select screens, east/C is Back; A, B, and Start
 confirm.
 
+The master title also takes the mouse: point at an action to highlight it and click to
+open it, click the carousel's arrows (or roll the wheel) to change game, click the game's
+name to browse the list, and right-click to go back. The game browser, quit prompt, tools
+and start choices answer clicks the same way. Settings, Launch Options and the Mod Manager
+remain keyboard and controller screens.
+
 Additional gamepad bindings are hardcoded (not configurable) on the primary
 connected pad:
 

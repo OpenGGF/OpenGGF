@@ -18,6 +18,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -137,8 +139,10 @@ class TestS3kMhzSwingBarLiveRewind {
                 "jump release after rewind must free the player cleanly (not leave it frozen)");
     }
 
-    @Test
-    void horizontalSwingBarHangStateSurvivesRewindRestore() {
+    @ParameterizedTest
+    @CsvSource({"768,8,true", "-1280,23,false", "1280,20,false"})
+    void horizontalSwingBarHangStateSurvivesRewindRestore(
+            int incomingYSpeed, int releaseFrame, boolean jumpRelease) {
         ObjectManager objectManager = GameServices.level().getObjectManager();
         int barX = sprite.getCentreX();
         int barY = sprite.getCentreY() - 0x20;
@@ -147,8 +151,9 @@ class TestS3kMhzSwingBarLiveRewind {
                 () -> new MhzSwingBarHorizontalObjectInstance(new ObjectSpawn(
                         barX, barY, 0x0B, 0, 0, false, 0)));
 
-        // Fall into the grab window below the bar.
-        sprite.setYSpeed((short) 0x0300);
+        // Slow arrival releases on jump; fast upward/downward arrivals reach
+        // ROM phase $28/$05 and auto-release after their respective full swing.
+        sprite.setYSpeed((short) incomingYSpeed);
         sprite.setRolling(false);
         sprite.setAir(true);
         bar.update(0, sprite);
@@ -160,9 +165,10 @@ class TestS3kMhzSwingBarLiveRewind {
         assertNotNull(registry, "GameplayModeContext rewind registry must exist");
         CompositeSnapshot midHang = registry.capture();
 
-        for (int frame = 1; frame <= 6; frame++) {
-            bar.update(frame, sprite);
-        }
+        advanceHorizontalRelease(bar, releaseFrame, jumpRelease);
+        assertTrue(sprite.getAir() && !sprite.isObjectControlled(), "original path must release");
+        CompositeSnapshot expectedRelease = registry.capture();
+
         objectManager.createDynamicObject(() -> new MhzSwingBarHorizontalObjectInstance(new ObjectSpawn(
                 barX + 0x400, barY + 0x400, 0x0B, 0, 0, false, 1)));
 
@@ -175,12 +181,22 @@ class TestS3kMhzSwingBarLiveRewind {
         assertTrue(restored.isPlayerHanging(sprite),
                 "restored horizontal swing bar must still hold the player's hang state across rewind");
 
-        restored.update(7, sprite);
-        assertTrue(sprite.isObjectControlled(), "recreated bar must keep the player hanging on resume");
-        sprite.setLogicalInputState(false, false, false, false, true, true);
-        restored.update(8, sprite);
+        advanceHorizontalRelease(restored, releaseFrame, jumpRelease);
         assertTrue(sprite.getAir() && !sprite.isObjectControlled(),
-                "jump release after rewind must free the player cleanly (not leave it frozen)");
+                "release after rewind must free the player cleanly (not leave it frozen)");
+        var differences = RewindSnapshotDiff.diffKey("object-manager",
+                expectedRelease.get("object-manager"), registry.capture().get("object-manager"));
+        assertTrue(differences.isEmpty(), () -> "release must preserve the cooldown state: " + differences);
+    }
+
+    private void advanceHorizontalRelease(MhzSwingBarHorizontalObjectInstance bar,
+                                          int releaseFrame, boolean jumpRelease) {
+        for (int frame = 1; frame <= releaseFrame; frame++) {
+            if (jumpRelease && frame == releaseFrame) {
+                sprite.setLogicalInputState(false, false, false, false, true, true);
+            }
+            bar.update(frame, sprite);
+        }
     }
 
     private static MhzSwingBarVerticalObjectInstance liveVerticalBar(ObjectManager objectManager) {

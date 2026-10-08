@@ -67,10 +67,22 @@ public class DelegatingGameModule implements GameModule {
 
     @Override public Game createGame(GameDataSource source) { return base.createGame(source); }
 
+    @Override public void onNewGameFromTitle(GameStateManager gameState) {
+        base.onNewGameFromTitle(gameState);
+    }
+
     @Override public RuntimeArtCoordinator createRuntimeArtCoordinator(HardwareTimingService timing) {
         return base.createRuntimeArtCoordinator(timing);
     }
 
+    @Override public double gameplayAudioPlaybackRate() { return base.gameplayAudioPlaybackRate(); }
+    @Override public int gameplayStepsPerFrame() { return base.gameplayStepsPerFrame(); }
+    @Override public com.openggf.game.mode.GameplayFrameController gameplayFrameController() {
+        return base.gameplayFrameController();
+    }
+    @Override public com.openggf.game.rewind.ScriptedRewind scriptedRewind() { return base.scriptedRewind(); }
+    @Override public String requiredDisplayAspect() { return base.requiredDisplayAspect(); }
+    @Override public boolean suppressesLevelSelect() { return base.suppressesLevelSelect(); }
     @Override public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
         return base.rewindAdapters();
     }
@@ -180,6 +192,11 @@ public class DelegatingGameModule implements GameModule {
     }
 
     @Override
+    public boolean showsTitleCardActNumber(int zoneIndex, int actIndex) {
+        return base.showsTitleCardActNumber(zoneIndex, actIndex);
+    }
+
+    @Override
     public ZoneRegistry getZoneRegistry() {
         return base.getZoneRegistry();
     }
@@ -192,6 +209,11 @@ public class DelegatingGameModule implements GameModule {
     @Override
     public com.openggf.level.Level loadLevelOverride(int levelIndex) throws java.io.IOException {
         return base.loadLevelOverride(levelIndex);
+    }
+
+    @Override
+    public com.openggf.level.Level transformDecodedLevel(com.openggf.level.Level source) {
+        return base.transformDecodedLevel(source);
     }
 
     @Override

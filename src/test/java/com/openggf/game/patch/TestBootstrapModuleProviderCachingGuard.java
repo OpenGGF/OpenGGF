@@ -55,6 +55,10 @@ class TestBootstrapModuleProviderCachingGuard {
             approved("com.openggf.game.GameServices", "currentOrBootstrapGameModule", "bootstrapGameModule(",
                     "return bootstrapGameModule();",
                     "pre-session fallback after the active WorldSession check"),
+            approved("com.openggf.game.GameStateManager", "startNewGameFromTitle", "currentOrBootstrapGameModule(",
+                    "GameServices.currentOrBootstrapGameModule().onNewGameFromTitle(this);",
+                    "transient title/new-game lifecycle dispatch; active sessions use their resolved module, "
+                            + "direct pre-session calls use bootstrap; no module or provider is retained"),
             approved("com.openggf.game.CrossGameFeatureProvider", "resolveHostGameId", "currentOrBootstrapGameModule(",
                     "return GameServices.currentOrBootstrapGameModule().getGameId();",
                     "transient game-id read; no provider or module is cached"),

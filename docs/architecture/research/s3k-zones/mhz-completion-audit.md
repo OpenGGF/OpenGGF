@@ -1,5 +1,13 @@
 # Mushroom Hill completion audit
 
+The subsequent [2026-09-22 campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md)
+supersedes this historical completion judgment. Cold gameplay revealed Act2
+entrance-controller lifetime, endboss admission, shared fatal-hit handoff,
+results-camera ownership and ship-lifetime gaps that isolated terminal-state
+tests missed. The2026-09-23 candidate reaches actual FBZ1, but ship presentation,
+complete-registry rewind and breadth validation remain open. The accepted route
+and trace exclusions below still apply.
+
 ## Scope and outcome
 
 Direct implementation review of both MHZ acts for Sonic, Tails and Sonic with

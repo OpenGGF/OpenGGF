@@ -928,6 +928,13 @@ public class Sonic3kObjectArt {
             List<SpriteDplcFrame> dplcFrames = entry.dplcLayout() == Sonic3kPlcArtRegistry.DplcLayout.PLAYER
                     ? S3kSpriteDataLoader.loadDplcFrames(reader, entry.dplcAddr())
                     : loadObjectDplcFrames(reader, entry.dplcAddr());
+            if (Sonic3kObjectArtKeys.MECHA_SONIC_PIECES.equals(entry.key())) {
+                // loc_7B916 switches to loc_7BC32 on landing. That code draws but
+                // never animates or runs Perform_DPLC, so the installed raw animation
+                // never reaches frame$F. All16 pieces read the last frame$E VRAM bank.
+                // Reusing each piece index as a DPLC index would select unrelated art.
+                dplcFrames = java.util.Collections.nCopies(mappings.size(), dplcFrames.get(0xE));
+            }
             mappings = DplcStaticFlattener.applyDplcRemap(mappings, dplcFrames);
         } else {
             if (entry.mappingTileOffset() != 0) {
@@ -1296,6 +1303,20 @@ public class Sonic3kObjectArt {
             LOG.warning("Failed to load results mappings: " + e.getMessage());
             return List.of();
         }
+    }
+
+    /** SpecialStage_Results queues these four archives in this exact ROM order. */
+    public List<HardwareWorkHandle> queueSpecialStageResultsArt(
+            Rom rom, PlayerCharacter character, S3kKosModuleQueue queue) throws IOException {
+        return List.of(
+                queue.queue(rom, Sonic3kConstants.ART_KOSM_RESULTS_GENERAL_ADDR,
+                        Sonic3kConstants.VRAM_SS_RESULTS_GENERAL),
+                queue.queue(rom, getSsResultsFormWordArtAddr(character),
+                        Sonic3kConstants.VRAM_SS_RESULTS_SUPER),
+                queue.queue(rom, getCharacterNameArtAddr(character),
+                        Sonic3kConstants.VRAM_SS_RESULTS_CHAR_NAME),
+                queue.queue(rom, Sonic3kConstants.ART_KOSM_SS_RESULTS_ADDR,
+                        Sonic3kConstants.VRAM_SS_RESULTS_TEXT));
     }
 
     /**

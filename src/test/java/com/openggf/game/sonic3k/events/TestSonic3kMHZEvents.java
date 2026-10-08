@@ -309,6 +309,49 @@ class TestSonic3kMHZEvents {
     }
 
     @Test
+    void seamlessReloadRetainsTheDirectBackgroundDmaUntilTheNextAnimationPass() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)
+                .startPosition((short) 0x43C0, (short) 0x07AC)
+                .startPositionIsCentre().build();
+        fixture.stepFrame(false, false, false, false, false);
+        var levelManager = GameServices.level();
+        var previous = levelManager.getCurrentLevel();
+        var oldState = com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentMhz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        int retainedBgX = oldState.publishedBgCameraX();
+        int retainedMiddleX = oldState.middleBgCameraX();
+        int retainedNearX = oldState.nearBgCameraX();
+        // AnimateTiles_MHZ transfers $80 words at tile $1B8 and $200 words at
+        // tile $1D5. MHZ1_BackgroundEvent calls Load_Level, never a VRAM clear.
+        int[] starts = {0x1B8, 0x1D5};
+        int[] counts = {8, 32};
+        byte[][] expected = new byte[2][];
+        for (int range = 0; range < starts.length; range++) {
+            expected[range] = new byte[counts[range] * Pattern.PATTERN_SIZE_IN_MEM];
+            for (int tile = 0; tile < counts[range]; tile++)
+                previous.getPattern(starts[range] + tile).copyInto(expected[range], tile * Pattern.PATTERN_SIZE_IN_MEM);
+        }
+        ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).signalActTransition();
+        getMhzEvents().update(0, 1);
+        var request = levelManager.consumeSeamlessTransitionRequest();
+        assertNotNull(request);
+        levelManager.applySeamlessTransition(request);
+        assertEquals(1, levelManager.getCurrentAct());
+        var newState = com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentMhz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        assertEquals(retainedBgX, newState.publishedBgCameraX(), "MHZ1_BackgroundEvent retains Events_fg_1 across camera rebase");
+        assertEquals(retainedMiddleX, newState.middleBgCameraX());
+        assertEquals(retainedNearX, newState.nearBgCameraX());
+        for (int range = 0; range < starts.length; range++) {
+            byte[] actual = new byte[expected[range].length];
+            for (int tile = 0; tile < counts[range]; tile++)
+                levelManager.getCurrentLevel().getPattern(starts[range] + tile)
+                        .copyInto(actual, tile * Pattern.PATTERN_SIZE_IN_MEM);
+            assertArrayEquals(expected[range], actual,
+                    "Load_Level retains the displayed background DMA, without advancing its animation clock");
+        }
+    }
+
+    @Test
     void act2ScreenInitLoadsGreenSeasonForLowerEarlyStart() throws IOException {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 1)
@@ -981,6 +1024,35 @@ class TestSonic3kMHZEvents {
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, oldMainCharacter);
             config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, oldSidekickCharacter);
         }
+    }
+
+    @Test
+    void act2FatalHitWrapAcknowledgesSharedSignalThenGroundedWalkoffEndsRepeat() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 1)
+                .startPosition((short) 0x4300, (short) 0x0280).startPositionIsCentre().build();
+        Sonic3kMHZEvents events = getMhzEvents();
+        Camera camera = fixture.camera();
+        events.setEventRoutine(0x10);
+        events.setAct2BackgroundRoutineForTest(0x10);
+        camera.setX((short) 0x3F00);
+        events.update(1, 1);
+        events.setShipControllerSignalFlag(true); // loc_7683E, fatal hit
+        camera.setX((short) 0x427C);
+        events.updateSpecialEvents(1);
+        assertEquals(0x4080, camera.getX() & 0xFFFF);
+        assertFalse(events.isShipControllerSignalFlagSet(), "loc_55686 acknowledges the fatal hit");
+        assertFalse(events.isEndBossArenaRestoreRequested());
+        events.signalEndBossWalkoffPrep(); // loc_768D2, after landing
+        camera.setX((short) 0x427C);
+        events.updateSpecialEvents(1);
+        assertEquals(0x4280, camera.getX() & 0xFFFF, "walkoff stops the next wrap");
+        assertEquals(0xFF55, events.getEndBossWalkoffPrepEventFlag(), "ST writes the high byte of Events_fg_5");
+        assertTrue(events.isEndBossArenaRestoreRequested(), "negative event word releases background redraw");
+        camera.setX((short) 0x441C);
+        events.updateSpecialEvents(1);
+        assertEquals(0x4420, camera.getX() & 0xFFFF);
+        assertEquals(0x45A0, camera.getMaxX() & 0xFFFF);
     }
 
     @Test
@@ -1740,6 +1812,19 @@ class TestSonic3kMHZEvents {
                 "lines below the H-int region should keep PlainDeformation's foreground camera scroll");
         assertEquals(unpackBG(hScroll[128]), unpackBG(hScroll[0]),
                 "sub_5550C only replaces the first H-scroll word; BG keeps MHZ_Deform's normal value");
+        var provider = new com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider();
+        var split = provider.foregroundVerticalScrollSplit();
+        assertNotNull(split, "The live ship must publish its VSRAM split to rendering");
+        assertEquals(128, split.scanline());
+        assertEquals(runtimeState.shipEffectiveBgY(), split.upperScrollY());
+        var modes = new com.openggf.game.render.AdvancedRenderModeController();
+        provider.registerAdvancedRenderModes(modes, Sonic3kZoneIds.ZONE_MHZ, 1);
+        assertTrue(modes.resolve(new com.openggf.game.render.AdvancedRenderModeContext(
+                fixture.camera(), 2, GameServices.level(), Sonic3kZoneIds.ZONE_MHZ, 1, 0x3C90))
+                .enablePerLineForegroundScroll(), "The renderer must consume the ship HScroll words");
+        events.init(1);
+        org.junit.jupiter.api.Assertions.assertNull(provider.foregroundVerticalScrollSplit(),
+                "A reload must clear the ship render mode");
     }
 
     @Test
@@ -1887,6 +1972,10 @@ class TestSonic3kMHZEvents {
                 "loc_55814 should start Ani_MHZEndPropellers on mapping frame 5");
         assertEquals(5, propellers.get(1).getMappingFrame(),
                 "both propellers run the same Ani_MHZEndPropellers script");
+        fixture.stepIdleFrames(3);
+        assertFalse(controller.isDestroyed(), "loc_5583E survives real object-manager range checks");
+        assertTrue(propellers.stream().noneMatch(MhzShipPropellerInstance::isDestroyed),
+                "hardware screen-space propellers are not culled against world X");
     }
 
     private static Sonic3kMHZEvents getMhzEvents() {
@@ -2064,9 +2153,10 @@ class TestSonic3kMHZEvents {
         if (negative) {
             magnitude = -magnitude;
         }
-        int highQuotient = ((magnitude >>> 16) & 0xFFFF) / 0x30;
-        int lowQuotient = (magnitude & 0xFFFF) / 0x30;
-        int step = (highQuotient << 16) | lowQuotient;
+        // The two DIVU operations in loc_55586 carry the first remainder.
+        // Use a single unsigned division as an independent arithmetic oracle;
+        // the old test duplicated the port's lost-remainder defect.
+        int step = (int) (Integer.toUnsignedLong(magnitude) / 0x30);
         return negative ? -step : step;
     }
 

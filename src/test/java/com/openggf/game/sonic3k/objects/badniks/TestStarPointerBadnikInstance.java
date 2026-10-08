@@ -63,7 +63,7 @@ class TestStarPointerBadnikInstance {
     }
 
     @Test
-    void profileMarksStarPointerImplementedForS3klLevelsOnly() {
+    void profileMarksBothStarPointerAndLrzBoulderSlotImplemented() {
         Sonic3kObjectProfile profile = new Sonic3kObjectProfile();
         LevelConfig icz1 = profile.getLevels().stream()
                 .filter(level -> level.levelData() == LevelData.S3K_ICECAP_1)
@@ -75,7 +75,8 @@ class TestStarPointerBadnikInstance {
                 .orElseThrow();
 
         assertTrue(profile.getImplementedIds(icz1).contains(Sonic3kObjectIds.STAR_POINTER));
-        assertFalse(profile.getImplementedIds(mhz1).contains(Sonic3kObjectIds.STAR_POINTER));
+        // SKL reuses this numeric slot for the implemented LRZ boulder cutscene.
+        assertTrue(profile.getImplementedIds(mhz1).contains(Sonic3kObjectIds.STAR_POINTER));
     }
 
     @Test

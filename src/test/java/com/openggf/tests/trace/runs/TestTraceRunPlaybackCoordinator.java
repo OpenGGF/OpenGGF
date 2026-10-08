@@ -695,6 +695,63 @@ class TestTraceRunPlaybackCoordinator {
                 TracePlaybackProfile.DISABLED, movieFrameCount);
     }
 
+    @Test
+    void titleModeCannotOwnUnexhaustedRecordedLevelLoop() {
+        var coordinator = freshLoadTailCoordinator();
+        assertInstanceOf(FailRun.class,
+                coordinator.afterStep(freshTailObservation(GameMode.TITLE_CARD, 1, false)).getFirst());
+        var sameIdentity = new RunPlaybackObservation(GameMode.TITLE_CARD, 1, 1,
+                new RunPlaybackObservation.LevelIdentity(1, 0, 0, 0),
+                true, null, null, false, false, 0, false, 10, 20);
+        assertInstanceOf(FailRun.class, freshLoadTailCoordinator().afterStep(sameIdentity).getFirst());
+    }
+
+    @Test
+    void representedTitleLoadTailRetainsSourceUntilPhysicalPublicationCompletes() {
+        var coordinator = freshLoadTailCoordinator();
+        assertTrue(coordinator.afterStep(freshTailObservation(GameMode.TITLE_CARD, 2, false)).isEmpty());
+        assertEquals(TraceRunPlaybackCoordinator.Phase.CURRENT_SEGMENT, coordinator.phase());
+        assertTrue(coordinator.beforeAdmission(freshTailObservation(GameMode.TITLE_CARD, 4, false)).isEmpty());
+        assertTrue(coordinator.afterProduction(freshTailObservation(GameMode.TITLE_CARD, 4, false)).isEmpty());
+        var destination = freshTailObservation(GameMode.TITLE_CARD, 5, true);
+        coordinator.beforeLoadedLevelActivation(new RunBoundarySignal.LevelLoaded(
+                5, RunLevelLoadCause.ORDINARY, destination.level()), destination);
+        assertInstanceOf(CloseSegment.class, coordinator.afterProduction(destination).getFirst());
+        assertTrue(coordinator.beforeAdmission(freshTailObservation(GameMode.TITLE_CARD, 6, false)).isEmpty());
+        assertInstanceOf(AdmitDestination.class,
+                coordinator.beforeAdmission(levelObservationAt(6, 2, 1, 0, 7, false, 0)).getFirst());
+    }
+
+    @Test
+    void representedLoadTailStillRejectsOtherModesAndMissingLevelIdentity() {
+        assertInstanceOf(FailRun.class, freshLoadTailCoordinator().afterStep(
+                freshTailObservation(GameMode.SPECIAL_STAGE, 2, false)).getFirst());
+        var missingLevel = new RunPlaybackObservation(GameMode.TITLE_CARD, 2, 2,
+                null, true, null, null, false, false, 0, false, 10, 20);
+        assertInstanceOf(FailRun.class, freshLoadTailCoordinator().afterStep(missingLevel).getFirst());
+    }
+
+    private static TraceRunPlaybackCoordinator freshLoadTailCoordinator() {
+        var source = level("source", 0, 1, 0, 5);
+        var destination = level("destination", 1, 1, 6, 3);
+        var coordinator = TraceRunPlaybackCoordinator.fromDescriptors(
+                run(List.of(source, destination), List.of(),
+                        TraceRunManifest.ExpectedMovieEndMode.UNSPECIFIED),
+                TracePlaybackProfile.DISABLED, 20, List.of(
+                        syntheticDescriptor(source, null, null, 5, 2,
+                                TraceRunReplayWalker.SegmentExecutionPolicy.GAMEPLAY),
+                        syntheticDescriptor(destination, null, null, 3, 3,
+                                TraceRunReplayWalker.SegmentExecutionPolicy.GAMEPLAY)));
+        coordinator.activateInitialLevel(levelObservation(1, 0, 0, 0, false, 0));
+        return coordinator;
+    }
+
+    private static RunPlaybackObservation freshTailObservation(GameMode mode, int cursor, boolean exhausted) {
+        return new RunPlaybackObservation(mode, cursor, cursor,
+                new RunPlaybackObservation.LevelIdentity(2, 1, 1, 0),
+                mode == GameMode.TITLE_CARD, null, null, false, exhausted, 0, false, 10, 20);
+    }
+
     private static List<TraceRunSegmentDescriptor> descriptors(
             List<TraceRunReplayWalker.SegmentPlan> plans) {
         return plans.stream().map(plan -> {

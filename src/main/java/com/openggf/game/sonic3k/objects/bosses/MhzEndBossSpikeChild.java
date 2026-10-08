@@ -68,7 +68,11 @@ public final class MhzEndBossSpikeChild extends AbstractObjectInstance
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         MhzEndBossInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
                 ctx, MhzEndBossInstance.class);
-        return liveParent != null ? new MhzEndBossSpikeChild(liveParent, 0, 0, 0) : null;
+        // Captured fields restore motion offsets, but the immutable spawn also
+        // owns the native spike subtype. Recreating every spike as subtype0
+        // changed the next snapshot even when its live collision fields matched.
+        return liveParent != null
+                ? new MhzEndBossSpikeChild(liveParent, ctx.spawn().subtype(), 0, 0) : null;
     }
 
     private static MhzEndBossInstance placeholderParentForRewindProbe() {
@@ -80,6 +84,13 @@ public final class MhzEndBossSpikeChild extends AbstractObjectInstance
                 0,
                 false,
                 0));
+    }
+
+    @Override
+    public boolean isPersistent() {
+        // loc_76674 tests the parent status and ends in Draw_Sprite.
+        // Those routines have no range cull; update owns native retirement.
+        return true;
     }
 
     @Override

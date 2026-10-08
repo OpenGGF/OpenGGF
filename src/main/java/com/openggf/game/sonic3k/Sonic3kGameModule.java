@@ -307,6 +307,10 @@ public class Sonic3kGameModule implements GameModule {
             SpriteManager sprites,
             ObjectManager objects,
             ZoneFeatureProvider zoneFeatures) {
+        // Finish deferred ScreenInit before the coordinator captures its camera/load
+        // window and walks the initial player slots. Ordinary pre-physics is too late:
+        // Knuckles_Control would already run once before the SSZ arrival owns him.
+        levelEventManager.prepareInitialScreenObjects();
         InitialWaveSplashSstOwner waveOwner =
                 zoneFeatures instanceof Sonic3kZoneFeatureProvider provider
                         ? provider.initialWaveSplashSstOwner()
@@ -484,6 +488,10 @@ public class Sonic3kGameModule implements GameModule {
     public <T> T getGameService(Class<T> type) {
         if (type == Sonic3kCheatFlags.class) {
             return (T) cheatFlags;
+        }
+        if (type == com.openggf.level.render.ZonePictureSource.Factory.class) {
+            // Mod scenes' zone pictures and title cards: detached builds that read only the ROM.
+            return (T) (com.openggf.level.render.ZonePictureSource.Factory) Sonic3kZoneArt::new;
         }
         if (type == com.openggf.game.internal.SidekickCpuInitializationPolicy.class) {
             return (T) com.openggf.game.sonic3k.sidekick.Sonic3kSidekickCpuInitializationPolicy.INSTANCE;

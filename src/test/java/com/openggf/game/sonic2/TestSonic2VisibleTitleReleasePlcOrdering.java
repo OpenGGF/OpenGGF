@@ -34,6 +34,7 @@ class TestSonic2VisibleTitleReleasePlcOrdering {
         }).when(levelManager).completeInitialTitleCardPresentation();
         TitleCardProvider titleCard = mock(TitleCardProvider.class);
         when(titleCard.shouldReleaseControl()).thenReturn(true);
+        when(titleCard.shouldCompleteFreshLevelTransitionBoundary()).thenCallRealMethod();
 
         GameLoop loop = new GameLoop(new InputHandler());
         set(loop, "titleCardProvider", titleCard);

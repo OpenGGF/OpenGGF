@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.GameLoop;
+import com.openggf.configuration.WidescreenAspect;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
@@ -24,14 +25,14 @@ class TestSozTeamCheckpointResetProduction {
 
     static Stream<Arguments> configurations() {
         var rows=new java.util.ArrayList<Arguments>();
-        for(int act:new int[]{0,1})for(int width:new int[]{320,400,512,640,800})
+        for(int act:new int[]{0,1})for(var aspect:WidescreenAspect.values())
             for(String donor:new String[]{"off","s1","s2"})
                 for(String followers:new String[]{"tails","tails,knuckles","tails,tails,knuckles,sonic,knuckles,sonic"})
-                    rows.add(Arguments.of(act,SozAcceptanceConfigurations.supportedFollowers(donor,followers),width,donor));
+                    rows.add(Arguments.of(act,SozAcceptanceConfigurations.supportedFollowers(donor,followers),aspect,donor));
         return rows.stream();
     }
     @ParameterizedTest @MethodSource("configurations")
-    void mixedAndDuplicateTeamsSurviveTwoConsecutiveCheckpointReloads(int act,String followers,int width,String donor) {
+    void mixedAndDuplicateTeamsSurviveTwoConsecutiveCheckpointReloads(int act,String followers,WidescreenAspect aspect,String donor) {
         var config=SonicConfigurationService.getInstance();config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,"sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,followers);
@@ -43,9 +44,7 @@ class TestSozTeamCheckpointResetProduction {
             config.setSessionOverride(donor.equals("s1")?SonicConfiguration.SONIC_1_ROM:SonicConfiguration.SONIC_2_ROM,rom.getAbsolutePath());
         }
         com.openggf.game.CrossGameFeatureProvider.getInstance().resetState();
-        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,"NATIVE_4_3");
-        config.resolveDisplayAspect();
-        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS,width);
+        SozAcceptanceConfigurations.selectDisplay(aspect);
         config.setSessionOverride(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED,false);
         SessionManager.clear();TestEnvironment.activeGameplayMode();
         int index=act==0?1:2,x=act==0?0x1A30:0x860,y=act==0?0x428:0x5C8;
@@ -53,7 +52,7 @@ class TestSozTeamCheckpointResetProduction {
                 .startPosition((short)(x-24),(short)(y+4)).startPositionIsCentre().withFreshLevelStartLifecycle();
         if(!donor.equals("off"))builder.withCrossGameDonation(donor);
         var f=builder.build();
-        assertTeam(followers,width,donor);
+        assertTeam(followers,aspect,donor);
         for(int i=0;i<60&&!GameServices.level().getCheckpointState().isActive();i++)
             f.stepFrame(false,false,false,true,false);
         assertEquals(index,GameServices.level().getCheckpointState().getLastCheckpointIndex(),
@@ -85,7 +84,7 @@ class TestSozTeamCheckpointResetProduction {
                         assertNotSame(runtime,next);assertEquals(-1,next.pushableRockSlot());
                         assertTrue(largestOldFrame>10,"each death cycle must have its own outgoing history");
                         assertTrue(rewind==null||rewind.currentFrame()<largestOldFrame,"each load must reset the outgoing timeline");
-                        assertTeam(followers,width,donor);break;
+                        assertTeam(followers,aspect,donor);break;
                     }
                     if(rewind!=null)largestOldFrame=Math.max(largestOldFrame,rewind.currentFrame());
                 }
@@ -99,14 +98,14 @@ class TestSozTeamCheckpointResetProduction {
                             && !GameServices.sprites().getMainPlayable().isControlLocked()) {ready=true;break;}
                 }
                 assertTrue(ready,"native title/fade must release controls after cycle "+cycle);
-                assertTeam(followers,width,donor);assertFalse(GameServices.sprites().getMainPlayable().getDead());
+                assertTeam(followers,aspect,donor);assertFalse(GameServices.sprites().getMainPlayable().getDead());
             }
         } finally {loop.closePresence();}
     }
 
-    private static void assertTeam(String names,int width,String donor) {
+    private static void assertTeam(String names,WidescreenAspect aspect,String donor) {
         SozAcceptanceConfigurations.assertUsableTeam(donor);
-        assertEquals(width,GameServices.camera().getWidth()&65535);
+        SozAcceptanceConfigurations.assertDisplay(aspect);
         assertEquals(!donor.equals("off"),com.openggf.game.CrossGameFeatureProvider.isActive());
         if(!donor.equals("off"))assertEquals(donor,com.openggf.game.CrossGameFeatureProvider.getInstance().getDonorGameId());
         assertEquals(!donor.equals("s1"),GameServices.sprites().getMainPlayable().getGameRules().playerCapability().spindashEnabled());

@@ -42,17 +42,27 @@ public final class S3kSharedBossCameraGate
     }
 
     public void begin(Camera camera, LockBounds lockBounds, int musicWaitFrames) {
+        begin(camera, lockBounds, musicWaitFrames, camera == null ? 0 : unsigned(camera.getX()));
+    }
+
+    /** Optional native framing for callers whose render camera centres a wider viewport. */
+    public void begin(Camera camera, LockBounds lockBounds, int musicWaitFrames, int gateCameraX) {
         this.lockBounds = lockBounds;
         approachFromBelow = camera != null && unsigned(camera.getY()) > lockBounds.minY();
-        approachFromRight = camera != null && unsigned(camera.getX()) > lockBounds.minX();
+        approachFromRight = camera != null && gateCameraX > lockBounds.minX();
         yLocked = false;
         xLocked = false;
         musicStarted = false;
         complete = false;
         musicWaitTimer = musicWaitFrames;
+        publishDestination(camera);
     }
 
     public boolean update(Camera camera, Runnable onMusicStart) {
+        return update(camera, onMusicStart, camera == null ? 0 : unsigned(camera.getX()));
+    }
+
+    public boolean update(Camera camera, Runnable onMusicStart, int gateCameraX) {
         if (complete) {
             return true;
         }
@@ -69,9 +79,20 @@ public final class S3kSharedBossCameraGate
         }
 
         updateY(camera);
-        updateX(camera);
+        updateX(camera, gateCameraX);
+        if (!xLocked) publishDestination(camera);
         complete = musicStarted && yLocked && xLocked;
         return complete;
+    }
+
+    private void publishDestination(Camera camera) {
+        // sub_85D6A stores the intended rectangle in _unkFAB0..6. loc_85CA4
+        // advances the current ROM bounds separately. Widescreen presentation
+        // follows that destination immediately; physics retains the native ramp.
+        if (camera != null) {
+            com.openggf.camera.CameraBoundaryPresentation.approach(
+                    camera, lockBounds.minX(), lockBounds.maxX());
+        }
     }
 
     public boolean isComplete() {
@@ -103,11 +124,10 @@ public final class S3kSharedBossCameraGate
         camera.setMaxYTarget((short) lockBounds.maxY());
     }
 
-    private void updateX(Camera camera) {
+    private void updateX(Camera camera, int cameraX) {
         if (xLocked) {
             return;
         }
-        int cameraX = unsigned(camera.getX());
         if (!approachFromRight) {
             if (cameraX >= lockBounds.minX()) {
                 lockX(camera);

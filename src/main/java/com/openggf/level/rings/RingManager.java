@@ -1264,7 +1264,16 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 snap.spillAnimCounter(), snap.spillAnimAccum(), snap.spillAnimFrame() });
 
         // --- AttractedRings ---
-        releaseAttractedRingSlots();
+        // ObjectManager restores its owned SST reservations before this adapter;
+        // attracted-ring reservations are excluded from that snapshot and rebuilt
+        // below. Clear future ring records without releasing their old numeric slots:
+        // those SSTs may now belong to restored objects. Normal deletion/reset still
+        // releases live reservations (ROM Obj_Attracted_Ring / Delete_Current_Sprite).
+        // Rewind has no ROM counterpart; its bookkeeping must preserve the restored
+        // AllocateObject first-free scan rather than freeing slots from the future.
+        for (AttractedRing ring : attractedRings) {
+            clearAttractedRing(ring);
+        }
         RingSnapshot.AttractedRingEntry[] snapAt = snap.attractedRings();
         for (int i = 0; i < snapAt.length; i++) {
             RingSnapshot.AttractedRingEntry entry = snapAt[i];

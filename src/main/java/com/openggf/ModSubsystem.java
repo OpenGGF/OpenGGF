@@ -150,6 +150,25 @@ public final class ModSubsystem implements AutoCloseable {
 
     public ModCatalog processCatalog() { return processCatalog; }
 
+    /** Primitive identity bridge for game/session consumers; catalog types remain in the mod owner. */
+    public String apiIdentity() { return com.openggf.mods.ModApiVersion.CURRENT.toString(); }
+
+    /** Hashes the frozen enabled catalog in activation order, without creator-reported identities. */
+    public String modContentSha256() {
+        try {
+            var digest = java.security.MessageDigest.getInstance("SHA-256");
+            for (var descriptor : processCatalog.effective().orderedEnabled()) {
+                digest.update(descriptor.manifest().id().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                digest.update((byte) 0);
+                digest.update(descriptor.sha256().getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+                digest.update((byte) '\n');
+            }
+            return java.util.HexFormat.of().formatHex(digest.digest());
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException(impossible);
+        }
+    }
+
     public ModState startupModState() { return startupModState; }
 
     public boolean compiledModsSupported() { return compiledModsSupported; }
@@ -163,6 +182,40 @@ public final class ModSubsystem implements AutoCloseable {
     }
 
     public ModRuntimeFindingStore runtimeFindings() { return runtimeFindings; }
+
+    /**
+     * The base game of the patch mod loaded by {@code ggfmod run}, so a development run can open
+     * that game directly; empty for ordinary runs and for standalone development mods.
+     */
+    public synchronized java.util.Optional<String> developmentBaseGame() {
+        if (!DevelopmentModSource.isConfigured() || processCatalog == null) {
+            return java.util.Optional.empty();
+        }
+        return processCatalog.effective().orderedEnabled().stream()
+                .map(com.openggf.mods.ModDescriptor::manifest)
+                .filter(manifest -> manifest.type() == com.openggf.mods.ModType.PATCH && manifest.baseGame() != null)
+                .map(com.openggf.mods.ModManifest::baseGame)
+                .map(game -> "any".equals(game) ? availableDevelopmentGame() : game)
+                .filter(java.util.Objects::nonNull)
+                .findFirst();
+    }
+
+    private static String availableDevelopmentGame() {
+        String preferred = com.openggf.game.GameServices.configuration().getString(
+                com.openggf.configuration.SonicConfiguration.DEFAULT_ROM);
+        java.util.LinkedHashSet<String> games = new java.util.LinkedHashSet<>();
+        if (preferred != null && java.util.List.of("s1", "s2", "s3k").contains(preferred)) games.add(preferred);
+        games.addAll(java.util.List.of("s1", "s2", "s3k"));
+        for (String game : games) {
+            com.openggf.data.RomIdentity rom = switch (game) {
+                case "s1" -> com.openggf.data.RomIdentity.S1;
+                case "s2" -> com.openggf.data.RomIdentity.S2;
+                default -> com.openggf.data.RomIdentity.S3K;
+            };
+            if (com.openggf.game.GameServices.rom().isLogicalRomAvailable(rom)) return game;
+        }
+        return null;
+    }
 
     /** Transfers the explicit dev snapshot from boot ownership to ModRuntime construction. */
     public synchronized void transferDevelopmentSourceOwnership() {
@@ -238,12 +291,14 @@ public final class ModSubsystem implements AutoCloseable {
     }
 
     public ModManagerScreenHost createManager(PixelFont font) {
-        if (pendingEditor == null) {
+        if (pendingEditor == null && !policy().mayScanAtBoot()) {
             throw new IllegalStateException("The disabled subsystem has no pending-state editor");
         }
+        PendingModStateEditor managerEditor = pendingEditor != null ? pendingEditor
+                : PendingModStateEditor.readOnly(startupModState, processCatalog.scanned());
         ModManagerScreen.TextSink text = font == null ? null : ModManagerScreenHost.textSink(font);
         return new ModManagerScreenHost(new ModManagerScreen(
-                processCatalog, pendingEditor, runtimeFindings, text, patternWindowAllocator,
+                processCatalog, managerEditor, runtimeFindings, text, patternWindowAllocator,
                 compiledModsSupported));
     }
 

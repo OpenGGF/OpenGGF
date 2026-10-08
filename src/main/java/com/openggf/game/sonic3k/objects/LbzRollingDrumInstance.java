@@ -87,6 +87,13 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean checksOutOfRangeAfterRoutine() {
+        // loc_2C3CA calls both sub_2C3E8 participant updates before its
+        // Delete_Sprite_If_Not_In_Range tail, including on the deletion tick.
+        return true;
+    }
+
+    @Override
     public int getOnScreenHalfWidth() {
         // ROM init writes width_pixels=$80 before Delete_Sprite_If_Not_In_Range.
         return 0x80;
@@ -161,10 +168,19 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
 
     @Override
     public void onUnload() {
-        releaseOwner(player1Owner, p1Riding, 0);
-        releaseOwner(player2Owner, p2Riding, 1);
+        // Delete_Current_Sprite clears only the drum SST; live native riders
+        // keep their state (no loc_2C48A release). Dead and extension
+        // participants are released here.
+        releaseDeadNativeOwner(player1Owner, p1Riding, 0);
+        releaseDeadNativeOwner(player2Owner, p2Riding, 1);
         extensionStates.forEach((owner, state) -> releaseOwner(owner, state.riding, 1));
         extensionStates.clear(); p1Riding = p2Riding = false;
+    }
+
+    private void releaseDeadNativeOwner(PlayableEntity owner, boolean riding, int slot) {
+        if (owner instanceof AbstractPlayableSprite player && player.getDead()) {
+            releaseOwner(owner, riding, slot);
+        }
     }
 
     private void releaseOwner(PlayableEntity owner, boolean riding, int slot) {

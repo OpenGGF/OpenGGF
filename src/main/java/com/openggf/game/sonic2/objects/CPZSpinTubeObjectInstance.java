@@ -553,7 +553,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
      * Mode 2: Following the entry path.
      */
     private void updateEntryPath(AbstractPlayableSprite player, CharacterState cs) {
-        cs.duration--;
+        cs.duration = (byte) (cs.duration - 1);
         if (cs.duration >= 0) {
             if (shouldSkipMoveAfterPriorOwnerExit(player, cs)) {
                 cs.skipNextEntryMoveForOwnerOverwrite = false;
@@ -710,7 +710,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
      */
     private void updateMainPath(AbstractPlayableSprite player, CharacterState cs) {
 
-        cs.duration--;
+        cs.duration = (byte) (cs.duration - 1);
         if (cs.duration >= 0) {
             if (shouldSkipMoveAfterPriorOwnerExit(player, cs)) {
                 return;
@@ -892,73 +892,28 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         player.move(player.getXSpeed(), player.getYSpeed());
     }
 
-    /**
-     * Calculate velocity to move from current position to target.
-     * Based on loc_22902 from disassembly.
-     *
-     * The ROM uses 16.16 fixed point and calculates:
-     * - duration = (dominant_distance << 16) / speed, stored as word, read as high byte
-     * - So effective frames = (dominant_distance * 256) / speed
-     * - cross_axis_vel = (cross_distance * speed) / dominant_distance
-     *
-     * Our engine uses 8.8 fixed point velocities (256 = 1 pixel/frame).
-     * Speed of 0x800 = 2048 means 8 pixels per frame.
-     *
-     * @param player The player sprite
-     * @param targetX Target X coordinate
-     * @param targetY Target Y coordinate
-     * @param speed Fixed movement speed (0x800 = 8 pixels/frame in 8.8 format)
-     */
+    /** Calculate the two sequential signed divisions in ROM loc_22902. */
     private void calculateVelocity(AbstractPlayableSprite player, CharacterState cs, int targetX, int targetY, int speed) {
-        // Use center coordinates to match ROM behavior
-        int currentX = player.getCentreX();
-        int currentY = player.getCentreY();
-
-        int dx = targetX - currentX;
-        int dy = targetY - currentY;
-
-        int absDx = Math.abs(dx);
-        int absDy = Math.abs(dy);
-
-        int xVel, yVel, frames;
-
-        if (absDy >= absDx) {
-            // Y distance is dominant - move at fixed Y speed
-            yVel = (dy >= 0) ? speed : -speed;
-
-            // Calculate X velocity proportionally: xVel = (dx * speed) / abs(dy)
-            if (absDy != 0) {
-                xVel = (dx * speed) / absDy;
-            } else {
-                xVel = 0;
-            }
-
-            // Frame count = (distance * 256) / speed
-            // This matches ROM: duration = (distance << 16) / speed, read high byte
-            frames = (absDy * 256) / speed;
+        int dx = (short) (targetX - player.getCentreX());
+        int dy = (short) (targetY - player.getCentreY());
+        int xVel;
+        int yVel;
+        int durationWord;
+        if (Math.abs(dy) >= Math.abs(dx)) {
+            yVel = dy >= 0 ? speed : -speed;
+            durationWord = (short) ((dy << 16) / yVel);
+            xVel = dx == 0 ? 0 : (dx << 16) / durationWord;
         } else {
-            // X distance is dominant - move at fixed X speed
-            xVel = (dx >= 0) ? speed : -speed;
-
-            // Calculate Y velocity proportionally: yVel = (dy * speed) / abs(dx)
-            if (absDx != 0) {
-                yVel = (dy * speed) / absDx;
-            } else {
-                yVel = 0;
-            }
-
-            // Frame count = (distance * 256) / speed
-            frames = (absDx * 256) / speed;
+            xVel = dx >= 0 ? speed : -speed;
+            durationWord = (short) ((dx << 16) / xVel);
+            yVel = dy == 0 ? 0 : (dy << 16) / durationWord;
         }
-
-        // Ensure at least 1 frame to prevent getting stuck
-        if (frames < 1) {
-            frames = 1;
-        }
-
         player.setXSpeed((short) xVel);
         player.setYSpeed((short) yVel);
-        cs.duration = frames;
+        // loc_22902/loc_22952 store ABS.W of the first DIVS quotient at 2(a4).
+        // loc_2271A/loc_227FE read its high byte with SUBQ.B/BPL. A zero
+        // duration advances the waypoint on the next dispatch, without movement.
+        cs.duration = (byte) (Math.abs(durationWord) >>> 8);
     }
 
     /**

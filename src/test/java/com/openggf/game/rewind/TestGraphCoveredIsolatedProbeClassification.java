@@ -109,6 +109,14 @@ class TestGraphCoveredIsolatedProbeClassification {
     private static final String SHIELD_PENDING_RESTORE_TEST =
             "com.openggf.level.objects.TestShieldRewindPendingRestore";
 
+    @Test
+    void lrzMinibossChildrenHaveProductionGraphCoverage() {
+        for (String child : new String[] {"ArmSegment", "Debris", "Hand", "HitSpark", "Orbiter"}) {
+            assertGraphCovered("com.openggf.game.sonic3k.objects.bosses.LrzMiniboss" + child + "Child",
+                    "com.openggf.game.sonic3k.objects.bosses.TestS3kLrzBossRewindHeadless");
+        }
+    }
+
     @BeforeEach
     void initHeadless() {
         GraphicsManager.getInstance().initHeadless();

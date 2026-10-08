@@ -251,7 +251,14 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager != null
                 && renderManager.getArtProvider() instanceof Sonic3kObjectArtProvider provider) {
-            provider.queueBadnikExplosionArt();
+            if (!provider.tryQueueRingExplosionRestoration()) {
+                // loc_6196A restores explosion art then deletes the ring. A wide
+                // viewport can reach this during the startup enemy-art batch.
+                // Keep one invisible, rewindable owner until its request fits;
+                // it must neither collide again nor respawn and submit twice.
+                state = State.MARKED_DELETE;
+                return;
+            }
         }
         setDestroyedByOffscreen();
     }
@@ -812,8 +819,8 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
 
     @Override
     public boolean isPersistent() {
-        // Ring must persist while flash animation is playing
-        return state == State.ENTERED;
+        // Flash ownership and a capacity-held restoration have explicit retirement.
+        return state == State.ENTERED || state == State.MARKED_DELETE;
     }
 
     @Override

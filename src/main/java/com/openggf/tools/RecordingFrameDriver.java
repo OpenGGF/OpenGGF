@@ -194,6 +194,16 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             LogicalInputSnapshot snapshot, Runnable beforeGameplay,
             boolean deferRecordedPauseEntry) {
         var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (com.openggf.game.mode.ControlledFrameRuntime.controller(gameplayMode) != null) {
+            lastFrameResult = com.openggf.game.mode.ControlledFrameRuntime.step(gameplayMode, inputHandler, snapshot, false, beforeGameplay);
+            lastFrameRanGameplay = lastFrameResult == LevelFrameResult.GAMEPLAY_FRAME;
+            if (lastFrameResult != LevelFrameResult.SETUP_ONLY) {
+                frameCounter++;
+                inputHandler.update();
+                previousDriverSnapshot = snapshot;
+            }
+            return lastFrameResult;
+        }
         return gameplayMode.plcFrameLifecycle().runLogicalIteration(
                 frame -> {
                     if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE)) {
@@ -218,6 +228,20 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             // represented row of its own. Its title-card owner starts on the
             // following row, so do not admit normal gameplay or a VBlank
             // service for this boundary.
+            lastFrameResult = LevelFrameResult.GAMEPLAY_FRAME;
+            lastFrameRanGameplay = false;
+            inputHandler.update();
+            previousDriverSnapshot = snapshot;
+            return lastFrameResult;
+        }
+        if (levelManager.isLevelInactiveForTransition()) {
+            // Match GameLoop's pending-zone/act freeze. Native StartNewLevel
+            // leaves LevelLoop: Pal_FadeToBlack services VBlank/palette work,
+            // but does not run the source player, objects, camera or timers.
+            // The outer lifecycle has already serviced the fade for this row.
+            // Consult the semantic request flag, not fade visibility: other
+            // palette effects intentionally permit the level to keep running.
+            frameCounter++;
             lastFrameResult = LevelFrameResult.GAMEPLAY_FRAME;
             lastFrameRanGameplay = false;
             inputHandler.update();
@@ -389,11 +413,20 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         }
         int zone = levelManager.getRequestedZone();
         int act = levelManager.getRequestedAct();
+        // Only a title owner that models the native fresh title/terrain loop
+        // (S3K Level/loc_6310-loc_64DC) holds players behind the title card.
+        // Other games load, place players and reset counters immediately.
+        boolean freshBoundary = GameServices.module().getTitleCardProvider()
+                instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication;
         var blockingFade = gameplayMode.plcFrameLifecycle().beginNativeBlockingFade();
         gameplayMode.getFadeManager().startFadeToBlack(
                 blockingFade.wrapCompletion(() -> {
                     try {
-                        levelManager.loadZoneAndActAtFreshTitleCardBoundary(zone, act);
+                        if (freshBoundary) {
+                            levelManager.loadZoneAndActAtFreshTitleCardBoundary(zone, act);
+                        } else {
+                            levelManager.loadZoneAndActWithTitleCard(zone, act);
+                        }
                         freshLevelLoadedThisIteration = true;
                     } catch (IOException exception) {
                         throw new IllegalStateException(
@@ -577,6 +610,11 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
     }
 
     private void applyP1ActionPressEdge(int bk2Index) {
+        // A session controller receives the original logical row and owns native
+        // input suppression. Do not bypass its neutral course input with a forced jump.
+        if (com.openggf.game.mode.ControlledFrameRuntime.controller(SessionManager.getCurrentGameplayMode()) != null) {
+            return;
+        }
         if (hasNewP1ActionPressForLogicalInput(bk2Movie, bk2Index, sprite.isControlLocked())) {
             sprite.setForcedJumpPress(true);
         }

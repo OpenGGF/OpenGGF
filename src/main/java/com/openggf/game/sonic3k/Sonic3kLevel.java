@@ -59,6 +59,15 @@ public class Sonic3kLevel extends AbstractLevel {
     private int bgLayoutWidthBlocks = Sonic3kConstants.MAP_WIDTH;
     private int bgLayoutHeightBlocks = Sonic3kConstants.MAP_HEIGHT;
     private final List<Integer> patternLoadCueSchedule;
+    private final TerrainArtSources terrainArtSources;
+
+    /** ROM LoadLevelLoadBlock selection retained with the loaded level, including rewind. */
+    record TerrainArtSources(int primary, int secondary) { }
+
+    TerrainArtSources terrainArtSources() {
+        return java.util.Objects.requireNonNull(terrainArtSources,
+                "Loaded S3K level has no ROM terrain art selection");
+    }
 
     /**
      * Creates an S3K level using a LevelResourcePlan for resource loading.
@@ -120,7 +129,20 @@ public class Sonic3kLevel extends AbstractLevel {
                         List<RingSpawn> rings,
                         RingSpriteSheet ringSpriteSheet,
                         boolean publishGraphicsOnLoad) throws IOException {
+        this(rom, zoneIndex, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
+                interleavedCollision, layoutAddr, levelBoundariesAddr,
+                characterPaletteAddr, levelPaletteAddr, minXOverride, objects, rings,
+                ringSpriteSheet, publishGraphicsOnLoad, null);
+    }
+
+    Sonic3kLevel(Rom rom, int zoneIndex, LevelResourcePlan resourcePlan,
+            int primaryCollisionAddr, int secondaryCollisionAddr, boolean interleavedCollision,
+            int layoutAddr, int levelBoundariesAddr, int characterPaletteAddr,
+            int levelPaletteAddr, Integer minXOverride, List<ObjectSpawn> objects,
+            List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet,
+            boolean publishGraphicsOnLoad, TerrainArtSources terrainArtSources) throws IOException {
         super(zoneIndex);
+        this.terrainArtSources = terrainArtSources;
         this.publishGraphicsOnLoad = publishGraphicsOnLoad;
         this.objects = objects != null ? objects : Collections.emptyList();
         this.rings = rings != null ? rings : Collections.emptyList();
@@ -158,6 +180,7 @@ public class Sonic3kLevel extends AbstractLevel {
         stockRomZoneIdentity = false;
         publishGraphicsOnLoad = false;
         patternLoadCueSchedule = List.of();
+        terrainArtSources = null;
 
         decodePatterns(source.patternBytes, null);
         decodeSolidProfiles(source.solidHeights, source.solidWidths, source.solidAngles);

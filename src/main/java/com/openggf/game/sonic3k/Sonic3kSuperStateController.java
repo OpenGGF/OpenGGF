@@ -177,14 +177,23 @@ public class Sonic3kSuperStateController extends SuperStateController {
      * starts no music. The form is always Super here: {@code loc_8167C} upgrades it to Hyper after the
      * palette fade releases {@code object_control}, when all seven Super Emeralds are held.
      *
-     * <p>The shared debug entry is the engine's only public path into the common transformation
-     * start; it performs exactly the ring award and state writes this routine needs, and
-     * {@link #onTransformationStarted()} applies the Doomsday differences.
+     * <p>The internal script entry starts the common transformation without a ring award.
+     * This owner preserves the ROM's silent ring write; {@link #onTransformationStarted()}
+     * applies the Doomsday palette and control differences.
      */
     public void startDoomsdayTransformation() {
         doomsdayActivation = true;
         try {
-            super.debugActivate();
+            if (com.openggf.sprites.playable.PlayableSpriteInternalAccess.activateScriptedSuperForm(this)) {
+                // loc_8160A adds 50 directly to Ring_count, without GiveRing's
+                // life thresholds or Update_HUD_ring_count. UpdateHUD retains
+                // its digits until another producer requests a redraw.
+                var levelState = player.currentLevelState();
+                if (levelState != null) {
+                    com.openggf.game.LevelRingDisplay.writeWithoutRefresh(levelState,
+                            (levelState.getRings() + 50) & 0xFFFF);
+                }
+            }
         } finally {
             doomsdayActivation = false;
         }

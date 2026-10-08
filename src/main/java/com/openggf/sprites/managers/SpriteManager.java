@@ -1706,7 +1706,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 		for (Sprite sprite : sprites.values()) {
 			if (sprite instanceof AbstractPlayableSprite playable) {
 				int objectId = playable.getLatchedSolidObjectId() & 0xFF;
-				if (objectId == 0) {
+				// A placed-object ID is not an identity: event-created S3K solids
+				// legitimately use zero. The captured binding distinguishes them
+				// from a cleared contact whose ROM interact slot remains sticky.
+				if (objectId == 0 && !playable.hasLatchedSolidObjectBinding()) {
 					playable.setLatchedSolidObjectInstance(null);
 					continue;
 				}
@@ -2134,6 +2137,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 
 			@Override
 			public void restore(com.openggf.game.rewind.snapshot.SpriteManagerSnapshot s) {
+				com.openggf.game.mode.ControlledFrameRuntime.prepareRoster(
+						com.openggf.game.session.SessionManager.getCurrentGameplayMode(), s);
 				frameCounter = s.frameCounter();
 				java.util.Set<String> snapshotCodes = new java.util.HashSet<>();
 				for (com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry entry : s.sprites()) {

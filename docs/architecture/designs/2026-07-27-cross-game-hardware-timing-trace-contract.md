@@ -272,6 +272,19 @@ this: `anIdentityIsNeverReturnedWhileRowAuthorityRepresentsARow` and
 on `releaseUnrepresentedIdentity`, so they are worth clearing before anyone
 builds on that method.
 
+#### 2026-10-03: fully submitted return spans are comparison-only receipts
+
+Production now submits the results and return-terrain work itself. On the first
+Sonic+Tails return, it submits and claims all 26 interstitial jobs (direct
+`27..42` and module `14..23`). Every fingerprint matches the recorded stream.
+The interstitial index therefore keeps per-ordinal fingerprints. A span whose
+cursor is already `lastOrdinal + 1` passes only if every kind, ordinal and
+fingerprint names an existing **claimed** production job. This check changes no
+cursor, job, readiness or gameplay state, and recorded data never chooses
+numbering. Partial, extra, unclaimed and mismatched work fails. All kinds are
+validated before any untouched span's cursor moves. Successful receipts join the
+port's rewindable consumed-identity set (`8bf6486f60`).
+
 ### Historical pre-v5 wire format (not live)
 
 The schema-1/schema-2 grammar, selectors, and recorder stamps described later

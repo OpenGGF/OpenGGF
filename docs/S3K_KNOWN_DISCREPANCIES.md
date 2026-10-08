@@ -13,6 +13,12 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 submodule changes recorder ownership, not Sonic 3 & Knuckles runtime behaviour.
 No S3K discrepancy was added or reclassified by the cutover.
 
+**Stock parity audit (2026-10-07):** the continued swarm uses shipped-ROM
+initialization and level-load semantics; it adds no accepted deviation.
+Executed qualification and remaining campaign/rewind frontiers belong in the
+[dated stock audit](architecture/audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
+and [known-bug record](status/s3k-known-bugs.md), rather than new intentional entries.
+
 ## Table of Contents
 
 1. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)
@@ -32,6 +38,7 @@ No S3K discrepancy was added or reclassified by the cutover.
 15. [SEGA Screen: an engine addition the ROM does not have](#sega-screen-an-engine-addition-the-rom-does-not-have)
 16. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation)
 17. [SOZ Background Event Modes and Torch Animation](#soz-background-event-modes-and-torch-animation)
+18. [SSZ Act 2 Widescreen Background Columns](#ssz-act-2-widescreen-background-columns)
 
 ---
 
@@ -243,6 +250,16 @@ rewind across the recorded completion boundary.
 
 
 
+Wider visibility can release a giant ring while the startup enemy-art batch is
+still pending. `SSEntryRing_Display` normally restores badnik-explosion art and
+immediately deletes the ring; native `Queue_Kos_Module` has no full-queue guard
+and would scan past its four slots. The engine retains one invisible,
+noncollidable, rewindable ring owner until the existing enemy admission finishes
+and a physical slot is available. It then queues the restoration once and
+retires. It does not enlarge the FIFO or force the title-owned enemy batch early.
+Native available-capacity retirement is unchanged. MHZ2 admission tests cover
+both positioned and checkpoint reloads at all five supported presets.
+
 ## Knuckles DPLC Pre-Loading
 
 **Location:** `CutsceneKnucklesAiz1Instance.java`  
@@ -307,11 +324,22 @@ OpenGGF now keeps the native S3K save-screen flow but stores saves as JSON envel
 - **Per-slot JSON files** stored at `saves/s3k/slotN.json` wrapped in a `SaveEnvelope` with version, game code, slot number, payload, and hash.
 - **SHA-256 integrity** rather than the ROM checksum routine. Hash mismatches log warnings during Data Select scan but do not block otherwise valid saves.
 - **Corrupt quarantine** - malformed, unreadable, wrong-game, or structurally invalid save files are renamed to `.corrupt` and treated as empty slots.
-- **No-op unsaved sessions** - save requests route through `SaveSessionContext`; when no slot is active, they silently no-op.
+- **Unsaved persistence requests** - disk persistence routes through `SaveSessionContext`; when no slot is active, persistence requests and disk writes no-op. Native full SaveGame runtime completion still clears the collected-ring mask.
 - **Snapshot providers** - game-specific payload capture is handled by `SaveSnapshotProvider` implementations rather than direct SRAM-style writes.
 - **Session-owned launch metadata** - active slot ownership, selected team, and launch zone/act are carried by `WorldSession` and `SaveSessionContext` rather than being inferred from config during gameplay.
 - **Restricted clear restart modeling** - clear slots use Java-side restart tables reconstructed from the disassembly, including Knuckles-specific restrictions, rather than exposing unrestricted level selection.
 - **Native S3K save-screen parity** - the native `S3K` `1 PLAYER` route now renders from the authored object layout and mapping frames; the old RECTI/text-placeholder selector path is gone on that production path.
+
+Native full SaveGame gameplay semantics are retained independently of this JSON
+storage deviation. `828bc94d8` routes exactly seven existing native caller gates
+through `S3kFullSaveGame`: Results, both HPZ exits, SSZ defeat, DEZ escape, DDZ
+ending and Knuckles LRZ StartNewLevel. The common ROM return `loc_C4CC` clears
+all 32 bits of `Collected_special_ring_array`, including zero Save_pointer and
+SK-alone branches; generic progression persistence, seamless loads, death/reload,
+and special-stage/lives saves preserve their distinct semantics. The mask already
+belongs to captured game state. Native clears after SRAM writing; Java clears
+before its asynchronous persistence request because that payload omits the mask.
+This does not claim identical SRAM ordering.
 
 ### Rationale
 
@@ -323,6 +351,17 @@ OpenGGF now keeps the native S3K save-screen flow but stores saves as JSON envel
 ### Verification
 
 `TestSaveManager` verifies round-trip write/read, hash validation, corrupt quarantine, wrong-game detection, replacement of stale `.corrupt` artifacts, and no-op unsaved sessions. `TestS3kSaveSnapshotProvider` verifies payload capture includes team, zone, act, lives, emerald count, and clear-restart metadata. `TestS3kDataSelectPresentation` verifies the native save-screen renderer uses authored layout objects and mapping frames instead of the old RECTI overlay path. `TestGameLoop` verifies active-slot saves are written on bonus-stage and special-stage returns, that `S3K` `ONE_PLAYER` routes into native Data Select, and that `TWO_PLAYER`/overlay bypasses do not.
+
+The [S3K lane audit](architecture/audits/2026-10-07-s3k-parity-gap-verification.md)
+records 138 focused passes with zero skips, including actual Results completion,
+all-bit mask restore and repeated completion, act-1 preservation, and missing/No
+Save contexts. Standalone HCZ is clean and the matched chain giant-ring handoff
+succeeds. The other six non-tally live callers are not directly newly route-qualified;
+persistence-only preservation uses an absent session rather than a successful
+disk write. SK-alone is a disassembly/direct-ROM branch contract, not live engine
+execution evidence. See the [stock audit](architecture/audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
+for combined results and remaining frontiers; whole-route certification and
+composition delivery remain separate.
 
 ### Manual Validation
 
@@ -752,3 +791,245 @@ rewind and compatibility evidence lives in the
 [SOZ plan](architecture/plans/2026-09-15-soz-methodology-v2.md) and per-act matrices.
 
 ---
+
+## Death Egg widescreen backgrounds
+
+Both cartridge acts use a fixed 320-pixel view (`PlainDeformation` and
+`DEZ1_BackgroundInit` / `DEZ2_BackgroundInit`). Wider views intentionally keep
+one centred native image. Act 1 reflects 32-pixel strips of its outer wall
+tiles. Act 2 has no complete planet sides in the ROM: the renderer reflects
+64-pixel surface strips outside the native crop, vertically remapped onto a
+circle inferred from the indexed-art horizon. No generated bitmap or terrain
+mutation is involved. The original 320 centre pixels and native viewport are
+unchanged; the additional scenery is an engine presentation choice, not native
+pixel parity. Surface repetition can be visible at the widest aspect.
+
+See the [bring-up audit](architecture/audits/2026-09-22-sk-zone-bring-up.md)
+and `TestS3kDezWidescreenBackground` for width, fade and load-boundary checks.
+
+
+## LRZ1 and DEZ2 widescreen arena framing
+
+The cartridge renders 320 pixels: LRZ1 `word_784E8` fixes camera X at `$2C00`,
+and DEZ2 `word_7F0C6` permits `$3400..$34E0`. On wider displays, the engine
+centers that original camera window by subtracting half the extra width from
+its visible limits (240 pixels at 800). This is an intentional presentation
+difference; surrounding level art that the cartridge never displayed at those
+locks becomes visible. Native min/max words still define player walls.
+`NativeViewportFraming` provides the calculation; the internal zone policy
+`NativeArenaCameraFraming` opts in through captured runtime state. It does not
+apply indiscriminately to other zones or rewrite their camera behavior.
+
+LRZ arm placement, projectile/debris lifetimes and release thresholds use the
+native-framed camera, preserving their world positions. The choice survives
+LRZ's seamless act rebase and DEZ's escape, then resets with fresh zone state.
+The native 320px LRZ arrival matches all 600 pre-change CSV rows; the 800px
+arrival matches the same gameplay rows with camera X exactly 240 pixels left.
+This is engine regression evidence, not a new native parity certification.
+
+## SSZ Act 2 Widescreen Background Columns
+
+The encounter's `loc_58F46` / `loc_5904A` supplies twenty VSRAM column words for
+320 pixels. `SszAct2Deformation.columns` preserves those words, including the
+native forward-copy overlap at the right edge. Wider viewports continue the last
+native column's offset through their additional columns. There are no native
+words for that extra view; repeating the boundary keeps the extended clouds
+coherent without treating adjacent work RAM as scroll data. The native window
+and its horizontal wave are unchanged. This extension is engine presentation,
+not a claim of a native widescreen reference.
+
+
+The seeded island presentation also extends its last native visible Plane B
+tile column into the extra width. The ROM draws a512px plane but shows320px;
+reading the wider authored layout exposed unrelated cloud strips. This separate
+projection preserves native columns, priority and vertical sampling. Its native
+viewport remains byte-identical in the inspected checkpoint, while the extra
+width is an engine-authored presentation extension.
+
+
+SSZ2's crane and transformation pans project the original320px camera window
+into the selected width. Native min/max words, pan completion and player limits
+remain separate. The crane holds the visible left edge at zero until enough
+world space is available; the transformation pans six native pixels per pass.
+At800px its displayed endpoint is336, so the view ends at1136 inside the nine
+foreground blocks, instead of extending to1376. The Master Emerald has a
+ROM-backed static visual precursor in wide views until `loc_7C818` starts drawing;
+this intentionally differs from the ROM's invisible-until-dash allocation, with
+no early object slot, collision, palette or PLC activity. Mecha's high hardware
+priority is original ROM behaviour, not a widescreen exception.
+
+
+Presentation correction (2026-09-27): the cold Knuckles final-fight movie
+at800px shows black pixels beneath the floating island and missing cloud bands
+(e.g. input4658). The unchanged develop58001b58e reproduces the gap with every
+frame rendered; the concurrent glide-reset candidate is not its origin. The
+native320 capture shows clouds in that region. Existing ending-plane extension
+checks did not certify this earlier encounter mode. The shared finite-world
+clip now tests camera/world coordinates rather than deformed texture samples,
+preserving native cloud wrapping inside the visible level. The focused GPU
+regression reproduces the old missing interior pixels and covers both physical
+edges, drift directions and sprite-priority masks. See the SSZ2 matrix and
+campaign audit for execution and delivery status.
+
+## Sprite_OnScreen_Test lifetime audit
+
+LRZ Fireworm defeat correction (2026-09-29): body retirement previously cleared
+collision but froze the segments indefinitely. `loc_8F8F0` sets d0 to zero before
+`Child_DrawTouch_Sprite_FlickerMove`; `Set_IndexedVelocity` therefore selects the
+first four velocity pairs, reflected by render flip. Segments now execute
+`Obj_FlickerMove` gravity, alternating visibility and unsigned offscreen deletion,
+including after orphan recreation. Visible head/body/flame palette 1 already
+matches `ObjSlot_Fireworm` / `ObjDat3_8F9FC`; palette 3 is the invisible spawner.
+Both acts' loaded-art checks protect that distinction. See the LRZ act matrices
+for verification scope; this is not whole-scene native visual certification.
+
+LRZ1 sinking-rock art correction (2026-09-29): `Obj_LRZSinkingRock` uses
+tile `$0D3`, palette 2, rather than `ArtTile_LRZMisc` (`$3A1`). The registry
+now binds the rock to its terrain tiles; Act 2 retains its separate `$090`
+base. The loaded-sheet regression checks both acts' ROM mappings and tile
+bindings. See the LRZ1 coverage matrix for validation and visual evidence.
+
+The LRZ cold-route audit based on `bc4e3285d` disproved the old guide claim
+that `Sprite_OnScreen_Test` only draws. Its out-of-range branch clears the
+respawn entry and deletes through `loc_1B5A0` (sonic3k.asm:37262–37278).
+LRZ sinking rocks, landed spikes, smashing platforms and intact collapsing
+bridges incorrectly suppressed this unload, retaining slots that change later
+button/door execution order. The LRZ1 matrix records the correction and checks.
+
+A sibling source audit found the same incorrect rationale in
+`HCZWaterWallObjectInstance`. Its per-phase range contract still needs a
+separate ROM audit: the actual cleanup countdown must remain persistent, but
+phases reaching `Sprite_OnScreen_Test` cannot be dismissed as drawing only.
+HCZ runtime behavior is unchanged by the LRZ correction; existing trace success
+is not evidence that every offscreen phase is faithful. The DEZ energy-bridge
+and LBZ cup providers checked during this audit already implement range tests.
+
+
+## LRZ boss lava-plane presentation
+
+The boss pool now uses its ROM high-priority background tiles over the
+low-priority foreground lava wall, including the per-column slope and matching
+sprite mask. The background source window follows the arena instead of retaining
+the initial Death Egg image. Native-width fight footage confirms the visible
+pool; synchronized native pixel comparison and widescreen route coverage remain
+open in the [boss-act matrix](architecture/validation/levels/s3k-lrz-boss.md).
+The ordinary cold Sonic+Tails route reaches HPZ with deterministic rewind at
+62 boss-act/exit spots; this does not certify the remaining width, donor and
+lifecycle combinations.
+
+LRZ horizontal-button orientation correction (2026-09-29): both act skins now
+preserve placement flips, matching `Obj_LRZButtonHorizontal`
+(`ori.b #4,render_flags(a0)`). The draw call previously forced both flips off.
+Press/release and recreation checks cover both acts and all four orientations;
+inherited route and whole-scene presentation gaps remain in the act matrices.
+
+
+LRZ Toxomister correction (2026-09-29): the stalk uses its native sub-sprite
+centre, and only the seven animated puff children draw the cloud. ROM growth
+and shrink/delete scripts replace the static tiny puffs; the native brief
+upward dispersal remains. No intentional discrepancy is introduced. See the
+[LRZ1 evidence and capture limitation](architecture/validation/levels/s3k-lrz-act1.md#toxomister-presentation-and-dispersal-2026-09-29).
+
+Toxomister facing follow-up (2026-09-29): the mapping flip now matches
+`Find_SonicTails` / `Change_FlipX` (set bit0 when the nearest player is right),
+including the side of the next breath. Facing away was an implementation error,
+not shipped-ROM behavior.
+
+LRZ lava-fall art correction (2026-09-29): `loc_436EE` uses literal tile `$0D3`,
+not `ArtTile_LRZMisc` (`$3A1`). The drop sheet now binds its four 4x4 pieces
+to terrain tiles `$11B–$13A`; the mappings normalize `$48/$58` to sheet offsets
+`0/$10`. This resolves the garbled drops without changing their timing.
+
+LRZ swinging spikeball chain correction (2026-09-29): chain rendering no longer
+subtracts the ball radius from `sub_43604`'s centre coordinates. Its own mapping
+already supplies the piece offsets, so the links and ball share their anchor.
+
+LRZ rock-crusher visibility correction (2026-09-29): initialization now submits
+`ArtKosM_LRZRockCrusher` and the boss-explosion PLC at `loc_90188`, uploading
+and refreshing the registered level sheet. Previously only palette/children
+were initialized, leaving the crusher's tile bank unloaded. The pre-existing
+`loc_90368` enemy-art requeue omission remains outside this visibility fix.
+
+LRZ fireball-launcher flip correction (2026-09-29): launcher rendering retains
+both placement flips, and `loc_42C1A`'s copied render flags now survive shot
+creation, movement and rewind recreation. Previously leftward shots retained
+rightward artwork, and both parent/child draw calls discarded vertical flips.
+
+LRZ1 miniboss arm explosions (2026-09-29): `loc_78B86` now creates the
+subtype6 explosion controller instead of one visual explosion. Each of the12
+retiring ring parts emits three randomized bursts at three-frame intervals.
+The hand-to-anchor retirement delays and surviving opposite arm are unchanged.
+A follow-up to `1f620513a7` registers the missing LRZ1 boss-explosion renderer
+against PLC tile `$500`: the earlier sequence-only fix still left every burst
+invisible. This also supplies the main defeat and crusher explosion drawing path.
+
+LRZ1 miniboss main defeat explosions (2026-09-29): `loc_78C60` now allocates
+the subtype0 controller, preserving its31 randomized bursts across the
+drill/body’s defeat. Previously that controller was reduced to one visual
+explosion. The firing hands’ three-burst sequences are covered by the arm fix.
+
+LRZ1 ending signpost pole (2026-09-29): `Obj_SignpostStubMain` calls
+`Child_GetPriority`, copying both the sign face’s sprite bucket and art priority
+bit. The pole now does the same, preventing high-priority foreground tiles from
+hiding it below an otherwise visible sign. This shared child behavior also
+applies to the other S3K signposts without a zone-specific rendering exception.
+
+### SSZ arrival presentation correction (2026-09-30)
+
+The arrival beam no longer draws a floating teleporter pad: the ROM multi-sprite
+renderer skips the main image when its mapping frame is zero. Title-card entry
+also preserves an already-locked arrival camera instead of forcibly snapping it
+to the player and clamping it to the floor bound. The small rise to camera
+`$BA8` followed by settling at `$BC0` remains intentional ROM behavior.
+See the [Act1 matrix](architecture/validation/levels/s3k-ssz-act1.md#arrival-camera-and-beam-presentation-2026-09-30)
+for focused contracts and inherited visual gaps.
+
+### SSZ opening Death Egg mask (2026-09-30)
+
+The opening also restores `loc_65794`'s separately allocated camera tracker
+(`loc_66072` / `loc_6607E`). It publishes the signed, word-wrapped half-camera
+delta before the Death Egg, its mask and its cloud update. Without that owner,
+`_unkFA84` stayed zero and running right pulled the rising Egg too far left.
+The helper's previous-camera word and initialization state are captured for
+rewind and recreated with the cutscene graph.
+
+Resolved the rising Death Egg drawing through the skyline: `loc_65B24` sets
+`Spritemask_flag`, and SSZ now enables the SAT post-pass used by its frame `$C`
+mask. The low art priority and bucket `$380` remain ROM values. See the
+[Act1 matrix](architecture/validation/levels/s3k-ssz-act1.md#ssz-presentation-fixes-2026-09-30)
+for focused evidence and remaining coverage.
+
+SSZ opening bridge (2026-09-30): resolved the invisible outer sections.
+`sub_45026` supplies three frame-zero subsprites spaced `$40` apart. The
+renderer now draws the full `$C0` span and preserves the ROM art priority.
+
+SSZ elevator facing (2026-09-30): `loc_45400` now clears both render flips
+when grabbing a player. The native `$E5`/`$E9` mapping selection keeps logical
+facing intact and avoids reversing the left hang pose.
+
+SSZ EggRobo attachment (2026-09-30): the body now renders from its live native
+position rather than inherited spawn coordinates. Gun, flame and muzzle flash
+use the body's render-flip convention, including mirrored child offsets.
+`sub_91930` retains delayed hover Y, falls back to live Y while `$32` is zero,
+and latches gun position/flags during firing. The flame uses live Y from
+`Refresh_ChildPositionAdjusted`. Scaled fly-by art and specialized animal
+launch differences remain inherited gaps.
+
+- SSZ EggRobo rewind restores its live x/y spawn metadata after the base badnik
+  restore; recreated moving bodies and attachments retain the captured position.
+
+SSZ diagonal collapse (2026-09-30): the intact bridge stops drawing after
+fragment allocation. Debris inherits the native flip and art priority, and
+retains the full6..48 word delays instead of truncating them through the
+two-bit `ObjectSpawn.renderFlags`. The shared flat-bridge fragment owner uses
+the same corrected delay/flip contract and stops drawing its intact image.
+
+- SSZ rotating post/carrier player poses use the ROM table's direct render flips
+  and retain incoming facing, keeping the displayed pose aligned to the rotation.
+
+SSZ EggRobo position restoration uses standard generic/badnik capture: inherited
+position state stays synchronized to native x/y, without a custom restore hook.
+
+- SSZ1 cloud-mode transitions keep the background source window aligned to the
+  displayed vertical scroll, eliminating the blank entering frame. Rewind
+  re-render restores the displayed mode and intermediate HScroll words.

@@ -111,6 +111,22 @@ public class TestSonic3kSSEntryRingFormation {
     // ---------------------------------------------------------------
 
     @Test
+    void flashMarksParentOnThirdAnimationAdvance() {
+        Sonic3kSSEntryRingObjectInstance parent = mock(Sonic3kSSEntryRingObjectInstance.class);
+        Sonic3kSSEntryFlashObjectInstance flash =
+                new Sonic3kSSEntryFlashObjectInstance(parent, RING_X, RING_Y);
+        flash.setServices(services);
+        flash.update(0, null); // SSEntryFlash_Init
+        flash.update(1, null); // mapping 0, anim_frame 1
+        flash.update(2, null); // mapping 1, anim_frame 2
+        verify(parent, never()).markForDeletion();
+        flash.update(3, null); // mapping 2, anim_frame 3
+        verify(parent).markForDeletion();
+        flash.update(4, null);
+        verify(parent, times(1)).markForDeletion();
+    }
+
+    @Test
     public void ringStartsInFormingState() {
         Sonic3kSSEntryRingObjectInstance ring = createRing(0);
         assertTrue(ring.isForming(), "Ring should start in forming state");

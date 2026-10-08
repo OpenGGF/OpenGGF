@@ -9,13 +9,70 @@ import maven_resources as resources
 
 class ResourceTests(unittest.TestCase):
     def setUp(self):
-        self.policy = dict(maxRuns=2, memoryGiB=7, cpuCores=8, headroomGiB=2)
+        self.policy = dict(maxRuns=3, memoryGiB=7, cpuCores=8, headroomGiB=2)
 
     def test_budgets_include_waiting_job_existing_reservations_and_headroom(self):
         self.assertTrue(resources.admits((16 * resources.GIB, 20, 4), self.policy, 1))
         self.assertFalse(resources.admits((16 * resources.GIB - 1, 20, 4), self.policy, 1))
         self.assertFalse(resources.admits((16 * resources.GIB, 20, 4.01), self.policy, 1))
-        self.assertFalse(resources.admits((100 * resources.GIB, 100, 0), self.policy, 2))
+        self.assertFalse(resources.admits((100 * resources.GIB, 100, 0), self.policy, 3))
+
+    def test_realised_usage_of_active_runs_is_not_counted_twice(self):
+        # One active run already using 5 GiB and 3 cores: without credit the
+        # 15 GiB left looks too small for a second 7 GiB reservation plus headroom.
+        available = 15 * resources.GIB
+        self.assertFalse(resources.admits((available, 20, 3), self.policy, 1))
+        self.assertTrue(resources.admits((available, 20, 3), self.policy, 1, (5 * resources.GIB, 3)))
+        self.assertFalse(resources.admits((available - 5 * resources.GIB, 20, 3), self.policy, 1,
+                                          (5 * resources.GIB, 3)))
+
+    def test_mixed_budgets_reserve_each_job_and_shared_headroom(self):
+        lean = (4 * resources.GIB, 4)
+        normal = (7 * resources.GIB, 8)
+        self.assertTrue(resources.admits((10 * resources.GIB, 12, 0), self.policy, 1,
+                                        reservation=lean, reserved=lean))
+        self.assertFalse(resources.admits((10 * resources.GIB - 1, 12, 0), self.policy, 1,
+                                         reservation=lean, reserved=lean))
+        self.assertFalse(resources.admits((10 * resources.GIB, 12, 0), self.policy, 1,
+                                         reservation=lean, reserved=normal))
+        self.assertTrue(resources.admits((13 * resources.GIB, 12, 0), self.policy, 1,
+                                        reservation=lean, reserved=normal))
+        self.assertFalse(resources.admits((13 * resources.GIB, 11.9, 0), self.policy, 1,
+                                         reservation=lean, reserved=normal))
+
+    def test_lean_command_bounds_both_heaps_and_rejects_unmeasured_shapes(self):
+        from maven_queue import lean_command
+        with patch.dict(resources.os.environ, {}, clear=True):
+            args, env = lean_command(['-Dmse=off', '-Dtest=One,Two#method', 'test'])
+            self.assertIn('-Xmx1g', env['MAVEN_OPTS'])
+            self.assertIn('-Dsurefire.argLine=', ' '.join(args))
+            self.assertIn('${mockito.agent.argLine}', ' '.join(args))
+            self.assertIn('-Xmx1g', ' '.join(args))
+            self.assertIn('-Dsurefire.forkCount=1', args)
+            self.assertIn('-Dsurefire.reuseForks=true', args)
+            for args in (['test'], ['-Dtest=Test*', 'test'], ['-Dtest=One', 'package'],
+                         ['-Dtest=One', '-Pguards', 'test'], ['-Dtest=One', '-T2', 'test'],
+                         ['-Dtest=One', '-Dsurefire.argLine=-Xmx8g', 'test'],
+                         ['-Dtest=One', '-Dsurefire.reuseForks=false', 'test'],
+                         ['-Dtest=One', '-Dmaven.compiler.fork=true', 'test'],
+                         ['-Dtest=One', '-Dmaven.compiler.maxmem=8g', 'test'],
+                         ['-Dtest=One', '-Dmaven.surefire.debug=true', 'test'],
+                         ['-Dtest=One', '--file=elsewhere.xml', 'test']):
+                with self.subTest(args=args), self.assertRaises(ValueError):
+                    lean_command(args)
+            for key in ('MAVEN_OPTS', 'JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'MAVEN_ARGS'):
+                with patch.dict(resources.os.environ, {key: '-Xmx8g'}), self.assertRaises(ValueError):
+                    lean_command(['-Dtest=One', 'test'])
+
+    def test_lean_preserves_macos_flags_and_rejects_custom_launch_configuration(self):
+        from maven_queue import lean_command
+        with patch.dict(resources.os.environ, {}, clear=True), patch.object(resources.sys, 'platform', 'darwin'):
+            args, _env = lean_command(['-Dtest=One', 'test'])
+            self.assertIn('-XstartOnFirstThread', ' '.join(args))
+            with patch.object(Path, 'exists', return_value=True), \
+                    patch.object(Path, 'read_text', return_value='-Xmx8g'):
+                with self.assertRaisesRegex(ValueError, 'custom .mvn'):
+                    lean_command(['-Dtest=One', 'test'])
 
     def test_unsupported_platform_and_missing_counters_fall_back(self):
         with patch.object(resources.sys, 'platform', 'win32'):
@@ -58,13 +115,52 @@ class ResourceTests(unittest.TestCase):
     def test_unmeasured_maven_shapes_are_exclusive(self):
         from maven_queue import needs_exclusive
         with patch.dict(resources.os.environ, {}, clear=True):
-            for args in (['-Dmse=off', 'test'], ['-Psmoke', 'test'], ['-P', 'guards', 'test']):
+            for args in (['-Dmse=off', 'test'], ['-Psmoke', 'test'], ['-P', 'guards', 'test'],
+                         ['-Ptrace-replay', 'test'], ['--activate-profiles=trace-segments,guards']):
                 self.assertFalse(needs_exclusive(args), args)
-            for args in (['-Ptest-concurrent'], ['-P', 'trace-replay'], ['--activate-profiles=guards,custom'],
+            for args in (['-Ptest-concurrent'], ['-P', 'benchmarks'], ['-Paudio-stress'],
+                         ['-Ptracechaser-integration'], ['-P'], ['--activate-profiles=guards,custom'],
                          ['-Dsurefire.forkCount=2'], ['-DargLine=-Xmx8g'], ['-T2'], ['--threads', '2']):
                 self.assertTrue(needs_exclusive(args), args)
             with patch.dict(resources.os.environ, {'MAVEN_OPTS': '-Xmx8g'}):
                 self.assertTrue(needs_exclusive(['test']))
+
+    def test_shared_profiles_keep_the_measured_single_fork_shape(self):
+        """Admitting a profile under the default reservation needs one <=3 GiB fork."""
+        import re
+        from maven_queue import SHARED_PROFILES
+        pom = (Path(__file__).resolve().parents[2] / 'pom.xml').read_text()
+        root_properties = pom[pom.index('<properties>'):pom.index('</properties>')]
+        self.assertIn('<surefire.forkCount>1</surefire.forkCount>', root_properties)
+        self.assertRegex(root_properties, r'<surefire.argLine>[^<]*-Xmx3g</surefire.argLine>')
+        bodies = {re.search(r'<id>(.*?)</id>', body).group(1): body
+                  for body in re.findall(r'<profile>(.*?)</profile>', pom, re.S)}
+        for profile in SHARED_PROFILES:
+            with self.subTest(profile=profile):
+                body = bodies[profile]
+                self.assertNotRegex(body, r'<(parallel|threadCount|forkedProcessExitTimeoutInSeconds)>')
+                for value in re.findall(r'<(?:surefire\.)?forkCount>([^<]*)</', body):
+                    self.assertIn(value, ('1', '${surefire.forkCount}'))
+                for amount, unit in re.findall(r'-Xmx(\d+)([gGmM])', body):
+                    self.assertLessEqual(int(amount) * (1024 if unit in 'gG' else 1), 3 * 1024)
+                self.assertNotIn('exec-maven-plugin', body)
+
+    @unittest.skipUnless(resources.sys.platform == 'linux', 'Linux /proc')
+    def test_tree_usage_sums_descendants_only(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            proc = Path(temporary)
+            def stat(pid, ppid, comm, utime, rss_pages, start=100):
+                fields = ['S', str(ppid)] + ['0'] * 9 + [str(utime), '0'] + ['0'] * 6 + [str(start), '0', str(rss_pages)]
+                (proc / str(pid)).mkdir()
+                (proc / str(pid) / 'stat').write_text(f'{pid} ({comm}) ' + ' '.join(fields) + '\n')
+            stat(10, 1, 'python3', 5, 1)
+            stat(11, 10, 'java (mvn) x', 200, 1000)
+            stat(12, 11, 'java', 300, 2000, start=150)
+            stat(13, 1, 'unrelated', 999, 9999)
+            (proc / 'self').mkdir()
+            usage = resources.tree_usage(10, proc)
+            page, ticks = resources.os.sysconf('SC_PAGE_SIZE'), resources.os.sysconf('SC_CLK_TCK')
+            self.assertEqual({(11, 100): (1000 * page, 200 / ticks), (12, 150): (2000 * page, 300 / ticks)}, usage)
 
     def test_policy_defaults_and_git_errors(self):
         with patch.object(resources.subprocess, 'run') as run:

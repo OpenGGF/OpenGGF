@@ -1,5 +1,8 @@
 package com.openggf.tests;
 
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.configuration.WidescreenAspect;
 import com.openggf.game.GameServices;
 import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.launch.LaunchProfile;
@@ -11,6 +14,20 @@ import static org.junit.jupiter.api.Assertions.*;
 /** SOZ acceptance uses the production launch roster, not raw debug configuration strings. */
 public final class SozAcceptanceConfigurations {
     private SozAcceptanceConfigurations() { }
+
+    /** Exercise menu presets through their owner; raw width overrides can hide reload errors. */
+    public static void selectDisplay(WidescreenAspect aspect) {
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, aspect.name());
+        config.resolveDisplayAspect();
+    }
+
+    public static void assertDisplay(WidescreenAspect aspect) {
+        var config = SonicConfigurationService.getInstance();
+        assertEquals(aspect.name(), config.getString(SonicConfiguration.DISPLAY_ASPECT));
+        assertEquals(aspect.pixelWidth(), config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        assertEquals(aspect.pixelWidth(), GameServices.camera().getWidth() & 0xFFFF);
+    }
 
     public static boolean supportsCharacter(String donor, String character) {
         return profile(donor, character, "none").sanitizedFor(MasterTitleScreen.GameEntry.SONIC_3K)

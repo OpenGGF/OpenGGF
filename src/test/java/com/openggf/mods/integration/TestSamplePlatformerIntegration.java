@@ -214,7 +214,13 @@ class TestSamplePlatformerIntegration {
         Path jar = buildSample();
         try (Fixture fixture = load(jar)) {
             GameModule module = fixture.runtime.prepareStandaloneModule(OWNER).orElseThrow();
-            Object boundaryHandler = java.lang.reflect.Proxy.getInvocationHandler(module);
+            Object rewindHandler = java.lang.reflect.Proxy.getInvocationHandler(module);
+            assertEquals("com.openggf.mods.runtime.OwnerBoundGamePatch$Handler",
+                    rewindHandler.getClass().getName(), "standalone rewind callbacks retain their owner boundary");
+            Object providerModule = getField(rewindHandler, "delegate");
+            Object boundaryHandler = java.lang.reflect.Proxy.getInvocationHandler(providerModule);
+            assertEquals("com.openggf.mods.code.OwnerAwareStandaloneModule$BoundaryHandler",
+                    boundaryHandler.getClass().getName(), "standalone providers retain their owner boundary");
             Object delegate = getField(boundaryHandler, "delegate");
             assertEquals("example.platformer.PlatformerModule", delegate.getClass().getName());
             assertThrows(NoSuchMethodException.class,
@@ -392,31 +398,10 @@ class TestSamplePlatformerIntegration {
         return field.getInt(springPad) > 0;
     }
 
-    /**
-     * Exercises {@code BoltCharacter}'s double-jump secondary ability in isolation, without a
-     * live gameplay session: {@code onAbilityActivate} fires once per airborne stretch, is
-     * latched against a second mid-air press, and re-arms after the {@code draw()}-based
-     * landing-reset seam runs. Air-state transitions use direct field reflection (mirroring
-     * the engine's own {@code TestablePlayableSprite#setAirForTest}) rather than the public
-     * {@code setAir(boolean)} setter, because the landing branch of {@code setAir} calls
-     * {@code currentGameState().resetItemBonus()}, which requires an active
-     * {@code GameplayModeContext} that this construction-only slice of the test does not set up.
-     *
-     * <p>The rewind assertion now drives the real production round-trip -- {@code BoltCharacter}
-     * uses Mod API 0.7's {@code captureSubclassRewindState()} /
-     * {@code restoreSubclassRewindState(...)} hooks (see {@code BoltCharacter}), so
-     * {@link AbstractPlayableSprite#captureRewindState()} now packs the armed latch into a
-     * mod-declared {@link PerObjectRewindSnapshot.PlayableSubclassRewindExtra} payload, and
-     * {@link AbstractPlayableSprite#restoreRewindState(PerObjectRewindSnapshot)} unpacks it back
-     * onto the live field just like any other engine-owned scalar -- no test-level
-     * {@code GenericFieldCapturer} scaffold is needed any more. The live latch is cleared through
-     * the real landing-reset seam ({@code draw()}) between capture and restore so the restore
-     * assertion can only pass if the value actually round-tripped through the snapshot, and a
-     * final behavioral assertion confirms the restored latch still gates a fresh mid-air press
-     * rather than merely matching on the reflected field.
-     */
+    /** Exercises collision-owned rearming and the actual subclass rewind round trip, without drawing. */
     private void exerciseDoubleJumpAndRewindLatch(AbstractPlayableSprite player) throws Exception {
-        setAirField(player, true);
+        TestEnvironment.activeGameplayMode();
+        player.setAir(true);
         assertTrue(invokeAbilityActivate(player), "First mid-air press must fire the double jump");
         assertEquals((short) -0x600, player.getYSpeed(), "Double jump must apply the ROM impulse");
 
@@ -442,8 +427,7 @@ class TestSamplePlatformerIntegration {
         // Clear the live latch through the real landing-reset seam so the restore assertion
         // below can only pass if the value actually round-tripped through the snapshot rather
         // than observing incidental unchanged live state.
-        setAirField(player, false);
-        player.draw();
+        player.setAir(false);
         assertEquals(false, doubleJumpUsedField.get(player),
                 "Sanity: the landing-reset seam must have cleared the live latch before restore");
 
@@ -453,15 +437,12 @@ class TestSamplePlatformerIntegration {
 
         // Behavioral assertion: the restored latch must actually gate gameplay, not just the
         // reflected field -- a fresh mid-air press right after restore must still be denied.
-        setAirField(player, true);
+        player.draw();
+        player.draw();
+        assertTrue(player.getAir());
+        assertEquals(true, doubleJumpUsedField.get(player), "Repeated drawing must preserve restored simulation state");
         assertFalse(invokeAbilityActivate(player),
                 "After restore the ability must remain latched, matching the captured mid-jump state");
-    }
-
-    private static void setAirField(AbstractPlayableSprite player, boolean value) throws Exception {
-        Field field = AbstractPlayableSprite.class.getDeclaredField("air");
-        field.setAccessible(true);
-        field.setBoolean(player, value);
     }
 
     private static boolean invokeAbilityActivate(AbstractPlayableSprite player) throws Exception {

@@ -110,6 +110,37 @@ class TestS3kSsEntryFlashGraphRewind {
     }
 
     @Test
+    void parentDeletionEdgeRepeatsAfterGraphRestore() {
+        Harness harness = Harness.create(List.of(CAPTURED_RING_SPAWN));
+        ObjectManager manager = harness.objectManager();
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        Sonic3kSSEntryRingObjectInstance ring =
+                liveObjects(manager, Sonic3kSSEntryRingObjectInstance.class).getFirst();
+        Sonic3kSSEntryFlashObjectInstance flash = manager.createDynamicObject(
+                () -> new Sonic3kSSEntryFlashObjectInstance(
+                        ring, CAPTURED_RING_SPAWN.x(), CAPTURED_RING_SPAWN.y()));
+        ObjectRefId ringId = objectId(manager, ring);
+        ObjectRefId flashId = objectId(manager, flash);
+        flash.update(0, null);
+        flash.update(1, null);
+        flash.update(2, null);
+        RewindRegistry registry = registryFor(manager);
+        CompositeSnapshot beforeDeletion = registry.capture();
+        flash.update(3, null);
+        assertEquals("MARKED_DELETE", readObjectField(ring, "state").toString());
+
+        registry.restore(beforeDeletion);
+        Sonic3kSSEntryRingObjectInstance restoredRing =
+                objectById(manager, Sonic3kSSEntryRingObjectInstance.class, ringId);
+        Sonic3kSSEntryFlashObjectInstance restoredFlash =
+                objectById(manager, Sonic3kSSEntryFlashObjectInstance.class, flashId);
+        assertEquals("MAIN", readObjectField(restoredRing, "state").toString());
+        restoredFlash.update(3, null);
+        assertEquals("MARKED_DELETE", readObjectField(restoredRing, "state").toString(),
+                "the third animation advance must mark the recreated parent on replay");
+    }
+
+    @Test
     void flashUsesRewindRecreatableWithoutExplicitS3kDynamicCodec() {
         assertTrue(RewindRecreatable.class.isAssignableFrom(Sonic3kSSEntryFlashObjectInstance.class),
                 "S3K SS-entry flash must restore through RewindRecreatable generic recreate");

@@ -1,0 +1,22 @@
+# Positioned ordinary Knuckles solo, no donor; X=$4940 Y=$430, 37 rings.
+# Break the real cork, return west rolling, jump over the rock/scorpion,
+# push the rock onto the switch, then jump over and pass the raised door.
+100 -
+30 A
+70 -
+150 L
+150 R
+110 L
+1 D+L
+120 L
+30 L+A
+55 L
+1 -
+50 L+A
+100 L
+40 R
+1 D
+repeat 3 { 1 D+A; 1 D }
+1600 R
+45 R+A
+180 R

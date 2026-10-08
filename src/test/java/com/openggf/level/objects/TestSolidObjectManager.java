@@ -2619,6 +2619,48 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    void directSlopedTopHelperKeepsItsUprightEntryUnderReverseGravity() {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        for (boolean reverse : new boolean[] {false, true}) {
+            com.openggf.game.GameServices.gameState().setReverseGravityActive(reverse);
+            for (boolean flip : new boolean[] {false, true}) {
+                for (int radius : new int[] {10, 19}) {
+                    for (int overlap : new int[] {0, 1, 16, 17}) {
+                        class DirectSlope extends TestSolidObject implements SlopedSolidProvider {
+                            DirectSlope() { super(200, 300, new SolidObjectParams(48, 0, 0), true, null, true); }
+                            @Override public byte[] getSlopeData() {
+                                byte[] data = new byte[96];
+                                for (int i = 0; i < data.length; i++) data[i] = (byte) i;
+                                return data;
+                            }
+                            @Override public boolean isSlopeFlipped() { return flip; }
+                            @Override public int getSlopeSampleShift() { return 0; }
+                            @Override public int getSlopeBaseline() { return 0; }
+                            @Override public Integer getDirectTopLandingOverlapLimit() { return 17; }
+                            @Override public boolean usesPlatformObjectLandingSnap() { return false; }
+                        }
+                        var object = new DirectSlope();
+                        var manager = buildManager(object);
+                        var player = new TestPlayableSprite((short) 0, (short) 0);
+                        player.useGameRules(GameRules.SONIC_3K);
+                        player.applyCustomRadii(7, radius);
+                        player.setAir(true);
+                        player.setYSpeed((short) 0x100);
+                        player.setCentreX((short) (200 - 48 + 37));
+                        int surface = 300 - (flip ? 58 : 37);
+                        player.setCentreY((short) (surface - radius - 4 + overlap));
+                        manager.processImmediateInlineSolidCheckpoint(object, player, List.of());
+                        boolean lands = overlap > 0 && overlap <= 16;
+                        String context = "reverse=" + reverse + " flip=" + flip + " radius=" + radius + " overlap=" + overlap;
+                        assertEquals(lands, player.isOnObject(), context);
+                        if (lands) assertEquals(surface - radius - 1, player.getCentreY(), context);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     void sozVineLandingRequiresPositiveOverlapThroughSixteenPixels() {
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         for (boolean airborne : new boolean[]{false, true})

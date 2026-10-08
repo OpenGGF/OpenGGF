@@ -45,6 +45,8 @@ import java.util.logging.Logger;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_M;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
+import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
+import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT;
 
 /**
  * Master title screen shown on startup for game selection.
@@ -54,7 +56,6 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
  * ROM logos and their aspect ratio; the right pane exposes launch and engine actions.
  * Wider viewports expand the panes without changing the navigation model.
  */
-@com.openggf.game.ModApi
 public class MasterTitleScreen {
 
     private static final Logger LOGGER = Logger.getLogger(MasterTitleScreen.class.getName());
@@ -68,7 +69,6 @@ public class MasterTitleScreen {
     record PreviewLayout(int width, int height, float x, float y) {
     }
 
-    @com.openggf.game.ModApi
     public enum GameEntry {
         SONIC_1("Sonic The Hedgehog", "Sonic 1", "s1", SonicConfiguration.SONIC_1_ROM,
                 "s1.gen"),
@@ -105,7 +105,6 @@ public class MasterTitleScreen {
         }
     }
 
-    @com.openggf.game.ModApi
     public enum State {
         INACTIVE, FADE_IN, ACTIVE, ERROR_DISPLAY, CONFIRMING, EXITING
     }
@@ -365,6 +364,7 @@ public class MasterTitleScreen {
     private void updateMenu(InputHandler inputHandler) {
         menuInput = inputHandler;
         navigation.capture(inputHandler);
+        pointer = readPointer(inputHandler);
         frameCounter++;
         advancePreviewAnimationFrame();
 
@@ -382,7 +382,7 @@ public class MasterTitleScreen {
         }
 
         if (state == State.ERROR_DISPLAY) {
-            if (navigation.back() || navigation.accept()) {
+            if (navigation.back() || navigation.accept() || clicked() || backClicked()) {
                 state = State.ACTIVE;
                 playCancelSound();
             }
@@ -412,7 +412,7 @@ public class MasterTitleScreen {
             return;
         }
         if (helpOpen) {
-            if (navigation.back()) { helpOpen = false; playCancelSound(); }
+            if (navigation.back() || backClicked() || clicked()) { helpOpen = false; playCancelSound(); }
             return;
         }
         if (toolsOpen) {
@@ -542,6 +542,7 @@ public class MasterTitleScreen {
             return;
         }
 
+        if (updateHubPointer()) return;
         if (navigation.left() && cycleSelectedEntry(-1)) { playNavigateSound(); return; }
         if (navigation.right() && cycleSelectedEntry(1)) { playNavigateSound(); return; }
         if (!navigation.actions()) {
@@ -562,7 +563,11 @@ public class MasterTitleScreen {
         if (navigation.up() && navigation.move(-1)) { playNavigateSound(); return; }
         if (navigation.down() && navigation.move(1)) { playNavigateSound(); return; }
         if (!navigation.accept()) return;
-        switch (navigation.action()) {
+        runHubAction(navigation.action());
+    }
+
+    private void runHubAction(TitleHubNavigation.Action action) {
+        switch (action) {
             case START -> startSelectedEntry();
             case LAUNCH -> { if (!openLaunchOptions()) showActionError("Launch options"); }
             case TIME_ATTACK -> { if (!isEntryAvailable(selectedEntry()) || !tryOpenTimeAttackMenu()) showActionError("Time attack"); }
@@ -574,10 +579,118 @@ public class MasterTitleScreen {
         }
     }
 
+    /** This tick's mouse in menu pixels; null without a window or before the mouse is used. */
+    private MasterTitlePointer pointer;
+    private int pointerX = Integer.MIN_VALUE;
+    private int pointerY = Integer.MIN_VALUE;
+    /** Window point to {@code {x, y, inside}} menu pixels, or null; tests substitute their own. */
+    private java.util.function.BiFunction<Double, Double, int[]> pointerMapper = (wx, wy) ->
+            com.openggf.graphics.LogicalMouse.map(org.lwjgl.glfw.GLFW.glfwGetCurrentContext(),
+                    GameServices.graphics(), wx, wy, viewportWidth, SCREEN_H);
+
+    void setPointerMapperForTest(java.util.function.BiFunction<Double, Double, int[]> mapper) {
+        pointerMapper = mapper;
+    }
+
+    boolean isGameBrowserOpenForTest() {
+        return gameBrowserOpen;
+    }
+
+    boolean isQuitPromptOpenForTest() {
+        return quitPrompt;
+    }
+
+    private MasterTitlePointer readPointer(InputHandler input) {
+        int wheel = com.openggf.control.MouseWheel.of(input).takeNotches();
+        if (!input.hasMouseInputSeen()) return null;
+        int[] p = pointerMapper.apply(input.getMouseX(), input.getMouseY());
+        if (p == null || p[2] == 0) return null;
+        boolean moved = p[0] != pointerX || p[1] != pointerY;
+        pointerX = p[0];
+        pointerY = p[1];
+        return new MasterTitlePointer(p[0], p[1], moved, input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT),
+                input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT), wheel);
+    }
+
+    private boolean clicked() {
+        return pointer != null && pointer.click();
+    }
+
+    private boolean backClicked() {
+        return pointer != null && pointer.backClick();
+    }
+
+    /**
+     * Mouse on the hub: hovering an action focuses it and clicking runs it, the carousel's
+     * arrows and neighbours change game and its name opens the browser, the wheel changes
+     * game, and the right button goes back. Rectangles match drawHub and drawGameCarousel.
+     */
+    private boolean updateHubPointer() {
+        if (pointer == null) return false;
+        if (pointer.backClick()) {
+            if (navigation.actions()) { navigation.leave(); playCancelSound(); } else openQuitPrompt();
+            return true;
+        }
+        if (pointer.wheel() != 0) {
+            if (cycleSelectedEntry(pointer.wheel() > 0 ? -1 : 1)) playNavigateSound();
+            return true;
+        }
+        int actionX = viewportWidth / 2;
+        int actionWidth = viewportWidth - actionX - 9;
+        TitleHubNavigation.Action[] actions = TitleHubNavigation.Action.values();
+        for (int i = 0; i < actions.length; i++) {
+            if (!pointer.over(actionX, 39 + i * 20, actionWidth, 18) || !(pointer.moved() || pointer.click())) continue;
+            if (!navigation.actions()) navigation.enter();
+            if (navigation.move(i - navigation.selected())) playNavigateSound();
+            if (pointer.click()) runHubAction(actions[i]);
+            return pointer.click();
+        }
+        int x = 8;
+        int width = viewportWidth / 2 - 16;
+        if (pointer.over(x, 158, width, 20)) {
+            if (pointer.moved() && navigation.actions()) navigation.leave();
+            if (!pointer.click()) return false;
+            if (entries.size() > 1 && pointer.x() < x + 16) {
+                if (cycleSelectedEntry(-1)) playNavigateSound();
+            } else if (entries.size() > 1 && pointer.x() >= x + width - 16) {
+                if (cycleSelectedEntry(1)) playNavigateSound();
+            } else {
+                gameBrowserOpen = true;
+                gameBrowserIndex = selectedIndex;
+                playConfirmSound();
+            }
+            return true;
+        }
+        if (pointer.click() && entries.size() > 1 && pointer.over(x, 179, width, 12)) {
+            // The neighbouring games' names under the carousel.
+            if (cycleSelectedEntry(pointer.x() < x + width / 2 ? -1 : 1)) playNavigateSound();
+            return true;
+        }
+        return false;
+    }
+
     private void updateGameBrowser() {
-        if (navigation.back()) { gameBrowserOpen = false; playCancelSound(); return; }
+        if (navigation.back() || backClicked()) { gameBrowserOpen = false; playCancelSound(); return; }
         if (entries.isEmpty()) return;
         int previous = gameBrowserIndex;
+        if (pointer != null) {
+            // Rows as drawGameBrowser lays them out: six per page, 24 pixels apart from y 51.
+            int first = gameBrowserIndex / 6 * 6;
+            for (int i = first; i < Math.min(entries.size(), first + 6); i++) {
+                if (pointer.over(7, 51 + (i - first) * 24, viewportWidth - 14, 23)) {
+                    if (pointer.moved() || pointer.click()) gameBrowserIndex = i;
+                    if (pointer.click()) {
+                        setSelectedIndex(gameBrowserIndex);
+                        gameBrowserOpen = false;
+                        playConfirmSound();
+                        return;
+                    }
+                }
+            }
+            if (pointer.wheel() != 0) {
+                gameBrowserIndex = Math.clamp(gameBrowserIndex - pointer.wheel(), 0, entries.size() - 1);
+            }
+        }
         if (navigation.up()) gameBrowserIndex = Math.floorMod(gameBrowserIndex - 1, entries.size());
         if (navigation.down()) gameBrowserIndex = (gameBrowserIndex + 1) % entries.size();
         if (navigation.left()) gameBrowserIndex = Math.max(0, gameBrowserIndex - 6);
@@ -671,18 +784,31 @@ public class MasterTitleScreen {
     }
 
     private void updateQuitPrompt() {
-        if (navigation.back()) { quitPrompt = false; playCancelSound(); return; }
+        if (navigation.back() || backClicked()) { quitPrompt = false; playCancelSound(); return; }
+        if (pointer != null) {
+            // "Return to menu" at y 82, "Quit" at y 112 (drawContent's quit page).
+            for (int option = 0; option < 2; option++) {
+                if (!pointer.over(14, 82 + option * 30, viewportWidth - 28, 23)) continue;
+                boolean quit = option == 1;
+                if (pointer.moved() && quitSelected != quit) { quitSelected = quit; playNavigateSound(); }
+                if (pointer.click()) { quitSelected = quit; confirmQuitPrompt(); return; }
+            }
+        }
         if (navigation.left() || navigation.right() || navigation.up() || navigation.down()) {
             quitSelected = !quitSelected;
             playNavigateSound();
         } else if (navigation.accept()) {
-            quitPrompt = false;
-            if (quitSelected) {
-                quitRequested = true;
-                state = State.EXITING;
-                playConfirmSound();
-            } else playCancelSound();
+            confirmQuitPrompt();
         }
+    }
+
+    private void confirmQuitPrompt() {
+        quitPrompt = false;
+        if (quitSelected) {
+            quitRequested = true;
+            state = State.EXITING;
+            playConfirmSound();
+        } else playCancelSound();
     }
 
     boolean consumeQuitRequest() {
@@ -710,12 +836,19 @@ public class MasterTitleScreen {
     }
 
     private void updateTools() {
-        if (navigation.back()) { toolsOpen = false; playCancelSound(); return; }
+        if (navigation.back() || backClicked()) { toolsOpen = false; playCancelSound(); return; }
         int previous = toolIndex;
         if (navigation.up()) toolIndex = Math.max(0, toolIndex - 1);
         if (navigation.down()) toolIndex = Math.min(1, toolIndex + 1);
+        boolean clickedTool = false;
+        for (int i = 0; pointer != null && i < 2; i++) {
+            if (pointer.over(10, 49 + i * 27, viewportWidth - 20, 22) && (pointer.moved() || pointer.click())) {
+                toolIndex = i;
+                clickedTool |= pointer.click();
+            }
+        }
         if (toolIndex != previous) playNavigateSound();
-        if (!navigation.accept()) return;
+        if (!navigation.accept() && !clickedTool) return;
         toolsOpen = false;
         if (toolIndex == 0) {
             Path root = Path.of(System.getProperty("user.dir"))
@@ -787,12 +920,19 @@ public class MasterTitleScreen {
 
     private void updateStandaloneActionChooser(InputHandler input) {
         List<MasterTitleEntry.Action> actions = standaloneActionsForTest();
-        if (navigation.back()) { standaloneActionOpen = false; playCancelSound(); return; }
+        if (navigation.back() || backClicked()) { standaloneActionOpen = false; playCancelSound(); return; }
         int previous = standaloneActionIndex;
         if (navigation.up()) standaloneActionIndex = Math.max(0, standaloneActionIndex - 1);
         if (navigation.down()) standaloneActionIndex = Math.min(actions.size() - 1, standaloneActionIndex + 1);
+        boolean clickedAction = false;
+        for (int i = 0; pointer != null && i < actions.size(); i++) {
+            if (pointer.over(viewportWidth / 2 - 90, 76 + i * 28, 180, 23) && (pointer.moved() || pointer.click())) {
+                standaloneActionIndex = i;
+                clickedAction |= pointer.click();
+            }
+        }
         if (standaloneActionIndex != previous) playNavigateSound();
-        if (navigation.accept()) {
+        if (navigation.accept() || clickedAction) {
             confirmLaunch(new MasterTitleEntry.Launch(selectedEntry(), actions.get(standaloneActionIndex)), false);
             standaloneActionOpen = false;
         }
@@ -1639,19 +1779,16 @@ public class MasterTitleScreen {
     }
 
     @FunctionalInterface
-    @com.openggf.game.ModApi
     public interface UserRecordingMenuFactory {
         UserRecordingMenu create(String gameId, PixelFont font) throws IOException;
     }
 
     @FunctionalInterface
-    @com.openggf.game.ModApi
     public interface TimeAttackMenuFactory {
         TimeAttackMenu create(List<String> availableGameIds, String initialGameId, PixelFont font);
     }
 
     @FunctionalInterface
-    @com.openggf.game.ModApi
     public interface ModManagerScreenFactory {
         ModManagerView create(PixelFont font);
     }
@@ -1665,7 +1802,6 @@ public class MasterTitleScreen {
                 || toolsOpen || helpOpen || gameBrowserOpen || catalogLoad != null || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
     }
 
-    @com.openggf.game.ModApi
     public interface ModManagerView {
         void update(InputHandler input);
         void render();

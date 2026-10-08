@@ -536,7 +536,11 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             GroundSensor.setLevelManager(GameServices.level());
 
             // 9. Initialize camera via production path
-            GameServices.level().initCameraForLevel();
+            if (customStartPositionProvided) {
+                com.openggf.level.LevelCameraInitialization.recenterPositionedEntry(GameServices.level());
+            } else {
+                GameServices.level().initCameraForLevel();
+            }
 
             // 10. Initialize level events via production path
             GameServices.level().initLevelEventsForLevel();

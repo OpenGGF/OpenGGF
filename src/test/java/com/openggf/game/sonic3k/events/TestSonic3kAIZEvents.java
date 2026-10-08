@@ -809,6 +809,13 @@ public class TestSonic3kAIZEvents {
         assertEquals(1, GameServices.level().getCurrentAct());
         assertTrue(GameServices.level().getCurrentLevel() instanceof Sonic3kLevel);
         assertNull(GameServices.level().consumeSeamlessTransitionRequest());
+        // AIZ1BGE_Finish installs a fixed X lock. Ordinary camera ticks must
+        // not ease that lock back toward the target level's default bounds.
+        for (int frame = 0; frame < 4; frame++) {
+            camera.updateBoundaryEasing();
+            assertEquals(0x10, camera.getMinX());
+            assertEquals(0x10, camera.getMaxX());
+        }
     }
 
     @Test

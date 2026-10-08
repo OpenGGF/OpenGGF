@@ -2,7 +2,12 @@ package com.openggf.control;
 
 import com.openggf.InputBindingFactory;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -16,6 +21,7 @@ public class InputHandler {
 	// GLFW key codes can range from 0 to GLFW_KEY_LAST (348)
 	private static final int MAX_KEYS = 512;
 	private static final int MAX_MOUSE_BUTTONS = 16;
+	private static final int MAX_SCENE_INPUT_EVENTS = 4096;
 	boolean[] keys = new boolean[MAX_KEYS];
 	boolean[] previousKeys = new boolean[MAX_KEYS];
 	boolean[] mouseButtons = new boolean[MAX_MOUSE_BUTTONS];
@@ -24,14 +30,23 @@ public class InputHandler {
 	private InputBindings inputBindings;
 	private final KeyboardInputMapper keyboardInputMapper;
 	private final GamepadInputManager gamepadInputManager;
+	private final LongSupplier monotonicClock;
+	private final List<PhysicalInputEvent> pendingSceneEvents = new ArrayList<>();
+	private final Map<Integer, PhysicalGamepad> sceneGamepads = new LinkedHashMap<>();
+	private long sceneEventSequence;
+	private int droppedSceneEvents;
 	private LogicalInputSnapshot logicalSnapshot = LogicalInputSnapshot.neutral();
 	private LogicalInputSnapshot logicalOverride;
 	private LogicalInputSnapshot physicalGamepadSnapshot = LogicalInputSnapshot.neutral();
 	private double mouseX;
 	private double mouseY;
 	private boolean mouseInputSeen;
+	/** Engine-internal ({@link MouseWheel#of}); not part of the creator API. */
+	final MouseWheel wheel = new MouseWheel(this);
 	private boolean controllerPresentation;
 	private boolean keyboardPresentationPending;
+	// Per logical player: null until that player's first intentional press, then whether it was a pad.
+	private final Boolean[] playerControllerPresentation = new Boolean[2];
 	final MenuRepeat menuRepeat = new MenuRepeat();
 	long menuFrame;
 	private final StringBuilder menuTypedText = new StringBuilder();
@@ -56,13 +71,28 @@ public class InputHandler {
 		this(inputBindingsSource, new GamepadInputManager(gamepadStateSource));
 	}
 
+	/**
+	 * Caller-supplied physical devices and monotonic nanosecond clock, for deterministic
+	 * timing-sensitive input tests. Live input uses {@link System#nanoTime()}.
+	 */
+	public InputHandler(Supplier<InputBindings> inputBindingsSource, GamepadStateSource gamepadStateSource,
+			LongSupplier monotonicClock) {
+		this(inputBindingsSource, new GamepadInputManager(gamepadStateSource), monotonicClock);
+	}
+
 	public static InputHandler live(Supplier<InputBindings> inputBindingsSource) {
 		return new InputHandler(inputBindingsSource, new GamepadInputManager(new GlfwGamepadStateSource()));
 	}
 
 	InputHandler(Supplier<InputBindings> inputBindingsSource, GamepadInputManager gamepadInputManager) {
+		this(inputBindingsSource, gamepadInputManager, System::nanoTime);
+	}
+
+	private InputHandler(Supplier<InputBindings> inputBindingsSource, GamepadInputManager gamepadInputManager,
+			LongSupplier monotonicClock) {
 		this.inputBindingsSource = Objects.requireNonNull(inputBindingsSource, "inputBindingsSource");
 		this.gamepadInputManager = Objects.requireNonNull(gamepadInputManager, "gamepadInputManager");
+		this.monotonicClock = Objects.requireNonNull(monotonicClock, "monotonicClock");
 		this.inputBindings = Objects.requireNonNull(inputBindingsSource.get(), "inputBindings");
 		this.keyboardInputMapper = new KeyboardInputMapper();
 	}
@@ -75,6 +105,7 @@ public class InputHandler {
 	 */
 	public void handleKeyEvent(int key, int action) {
 		if (key >= 0 && key < MAX_KEYS) {
+			boolean wasDown = keys[key];
 			if (action == GLFW_PRESS || action == GLFW_REPEAT) {
 				if (action == GLFW_PRESS && !keys[key]) {
 					controllerPresentation = false;
@@ -84,12 +115,91 @@ public class InputHandler {
 			} else if (action == GLFW_RELEASE) {
 				keys[key] = false;
 			}
+			if (keys[key] != wasDown && action != GLFW_REPEAT) {
+				appendSceneEvent(monotonicClock.getAsLong(), PhysicalInputEvent.Kind.KEY,
+						PhysicalInputEvent.KEYBOARD_DEVICE, key, keys[key] ? 1 : 0);
+			}
+		}
+	}
+
+	/**
+	 * Samples full gamepad state at the outer event-loop rate, independently of simulation
+	 * ticks and Genesis mappings. GLFW supplies state polling rather than hardware event
+	 * timestamps, so transitions are timestamped when this poll observes them.
+	 */
+	public void pollPhysicalGamepads() {
+		List<GamepadStateSource.DeviceState> devices = gamepadInputManager.pollPhysicalDevices();
+		trackSceneGamepads(devices, monotonicClock.getAsLong());
+	}
+
+	/**
+	 * Captures physical held state and drains pending transitions once for the scene host.
+	 * Logical replay overrides do not hide this independent physical channel. Unconsumed
+	 * transitions are discarded by {@link #update()} at tick end, so old menus or sessions
+	 * cannot inject actions when a scene subsequently opens.
+	 */
+	public PhysicalInput capturePhysicalInput() {
+		List<Integer> heldKeys = new ArrayList<>();
+		for (int key = 0; key < keys.length; key++) {
+			if (keys[key]) heldKeys.add(key);
+		}
+		PhysicalInput captured = new PhysicalInput(monotonicClock.getAsLong(), heldKeys,
+				List.copyOf(sceneGamepads.values()), pendingSceneEvents, droppedSceneEvents);
+		pendingSceneEvents.clear();
+		droppedSceneEvents = 0;
+		return captured;
+	}
+
+	private void appendSceneEvent(long timestamp, PhysicalInputEvent.Kind kind, int deviceId, int code, float value) {
+		long sequence = ++sceneEventSequence;
+		if (pendingSceneEvents.size() < MAX_SCENE_INPUT_EVENTS) {
+			pendingSceneEvents.add(new PhysicalInputEvent(sequence, timestamp, kind, deviceId, code, value));
+		} else if (droppedSceneEvents < Integer.MAX_VALUE) {
+			droppedSceneEvents++;
+		}
+	}
+
+	private void trackSceneGamepads(List<GamepadStateSource.DeviceState> devices, long timestamp) {
+		Map<Integer, PhysicalGamepad> current = new LinkedHashMap<>();
+		for (GamepadStateSource.DeviceState device : devices) {
+			PhysicalGamepad next = new PhysicalGamepad(device.joystickId(), device.name(), device.buttons(), device.axes());
+			PhysicalGamepad previous = sceneGamepads.get(next.deviceId());
+			// A newly connected held device establishes a baseline, not an attack.
+			if (previous != null) appendGamepadChanges(previous, next, timestamp);
+			current.put(next.deviceId(), next);
+		}
+		for (PhysicalGamepad previous : sceneGamepads.values()) {
+			if (!current.containsKey(previous.deviceId())) {
+				appendGamepadChanges(previous, null, timestamp);
+			}
+		}
+		sceneGamepads.clear();
+		sceneGamepads.putAll(current);
+	}
+
+	private void appendGamepadChanges(PhysicalGamepad previous, PhysicalGamepad next, long timestamp) {
+		for (int button = 0; button <= PhysicalGamepad.BUTTON_DPAD_LEFT; button++) {
+			boolean down = next != null && next.buttonDown(button);
+			if (down != previous.buttonDown(button)) {
+				appendSceneEvent(timestamp, PhysicalInputEvent.Kind.BUTTON, previous.deviceId(), button, down ? 1 : 0);
+			}
+		}
+		for (int axis = 0; axis <= PhysicalGamepad.AXIS_RIGHT_TRIGGER; axis++) {
+			float value = next != null ? next.axis(axis) : PhysicalGamepad.neutralAxis(axis);
+			if (Float.compare(value, previous.axis(axis)) != 0) {
+				appendSceneEvent(timestamp, PhysicalInputEvent.Kind.AXIS, previous.deviceId(), axis, value);
+			}
 		}
 	}
 
 	public void handleMouseMove(double x, double y) {
 		mouseX = x;
 		mouseY = y;
+		mouseInputSeen = true;
+	}
+
+	/** The wheel reaches mouse-input tracking through {@link MouseWheel#scroll}. */
+	void noteMouseInput() {
 		mouseInputSeen = true;
 	}
 
@@ -127,6 +237,17 @@ public class InputHandler {
 			return true;
 		}
 		return keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld();
+	}
+
+	/**
+	 * Returns the configured keyboard rewind key or the primary pad's rewind bumper,
+	 * independently of whether developer live rewind is enabled. Unbinding the key
+	 * leaves the bumper available. Movie/trace-owned frames suppress this live input;
+	 * the caller owns rewind permission, allowances and press-edge detection.
+	 */
+	public boolean isRewindHeld() {
+		return logicalOverride == null && (isPhysicalKeyDown(inputBindings.rewindKey())
+				|| gamepadInputManager.isRewindHeld());
 	}
 
 	/** Returns raw keyboard state, ignoring any trace/replay logical override. */
@@ -274,6 +395,12 @@ public class InputHandler {
 	 * does not strand a mouse button the way it strands a modifier.
 	 */
 	public void clearKeyState() {
+		long timestamp = monotonicClock.getAsLong();
+		for (int key = 0; key < keys.length; key++) {
+			if (keys[key]) {
+				appendSceneEvent(timestamp, PhysicalInputEvent.Kind.KEY, PhysicalInputEvent.KEYBOARD_DEVICE, key, 0);
+			}
+		}
 		java.util.Arrays.fill(keys, false);
 		java.util.Arrays.fill(previousKeys, false);
 	}
@@ -324,11 +451,14 @@ public class InputHandler {
 		PlayerInputState keyboardP2 = logicalOverride == null
 				? keyboardInputMapper.mapPlayer2(this, inputBindings) : PlayerInputState.neutral();
 		LogicalInputSnapshot gamepadSnapshot = gamepadInputManager.poll(inputBindings);
+		trackSceneGamepads(gamepadInputManager.physicalDevices(), monotonicClock.getAsLong());
 		physicalGamepadSnapshot = gamepadSnapshot;
 		if (gamepadInputManager.hasPresentationPress() && !keyboardPresentationPending) {
 			controllerPresentation = true;
 		}
 		keyboardPresentationPending = false;
+		notePlayerDevice(0, keyboardP1, gamepadSnapshot.player1());
+		notePlayerDevice(1, keyboardP2, gamepadSnapshot.player2());
 		if (logicalOverride != null) {
 			logicalSnapshot = logicalOverride;
 			return;
@@ -350,6 +480,28 @@ public class InputHandler {
 	boolean usesControllerPresentation() {
 		return controllerPresentation;
 	}
+
+	private void notePlayerDevice(int player, PlayerInputState keyboard, PlayerInputState pad) {
+		// Keyboard edges win a same-frame tie, matching the session-wide presentation rule.
+		if (intentional(keyboard)) playerControllerPresentation[player] = false;
+		else if (intentional(pad)) playerControllerPresentation[player] = true;
+	}
+
+	private static boolean intentional(PlayerInputState state) {
+		return state.pressedMask() != 0 || state.actionPressedMask() != 0 || state.startPressed();
+	}
+
+	/** Last intentional device of one logical player, or the session-wide choice before their first press. */
+	boolean playerUsesControllerPresentation(int player) {
+		Boolean known = playerControllerPresentation[player];
+		return known != null ? known : controllerPresentation;
+	}
+
+	InputBindings currentBindings() { return inputBindings; }
+
+	ControllerPromptStyle playerControllerStyle(int player) { return gamepadInputManager.playerStyle(player); }
+
+	boolean playerPadIsPrimary(int player) { return gamepadInputManager.playerPadIsPrimary(player); }
 
 	void appendMenuCodepoint(int codepoint) {
 		if (Character.isValidCodePoint(codepoint) && !Character.isISOControl(codepoint)
@@ -383,6 +535,8 @@ public class InputHandler {
 	 */
 	public void update() {
 		menuFrame++;
+		pendingSceneEvents.clear();
+		droppedSceneEvents = 0;
 		menuTypedText.setLength(0);
 		System.arraycopy(keys, 0, previousKeys, 0, MAX_KEYS);
 		System.arraycopy(mouseButtons, 0, previousMouseButtons, 0, MAX_MOUSE_BUTTONS);

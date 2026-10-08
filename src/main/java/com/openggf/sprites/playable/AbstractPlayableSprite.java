@@ -43,10 +43,12 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PerObjectRewindSnapshot.PlayableSubclassRewindExtra;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
+import com.openggf.physics.PlayerSensorActivation;
 import com.openggf.physics.Sensor;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.managers.SpriteMovementManager;
@@ -80,6 +82,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         @RewindTransient(reason = "character callback boundary is immutable structural state")
         private final com.openggf.game.CharacterConstructionScope.CallbackInvoker characterCallbackInvoker;
+        @RewindTransient(reason = "character physics and sensor specification is immutable structural state")
+        private final CharacterPhysicsSpec characterPhysicsSpec;
 
         @RewindTransient(reason = "playable controller is structural; mutable controller state is captured explicitly")
         protected final PlayableSpriteController controller;
@@ -338,6 +342,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected int latchedSolidObjectId = 0;
         /** Released-contact provenance survives rewind even after the SST slot is reused. */
         private boolean latchedSolidObjectReleased;
+        /** Contact identity exists independently of the spawn ID (dynamic S3K objects use zero). */
+        private boolean latchedSolidObjectBound;
 
         /**
          * ROM SST {@code interact(a0)} (s2.constants.asm:69 "last object stood
@@ -543,6 +549,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * overwrite mapping_frame.
          */
         private boolean objectMappingFrameControl = false;
+        /** Movement-owned raw frames; separate from an object's native bit-1 gate. */
+        private boolean abilityMappingFrameControl = false;
         private int animationFrameIndex = 0;
         private int animationTick = 0;
         private boolean renderHFlip = false;
@@ -790,7 +798,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (this.speedShoes) {
                         this.speedShoes = false;
                         currentTimerManager().removeTimerForCode("SpeedShoes-" + getCode());
-                        defineSpeeds(); // Reset speeds to default
+                        resetBaseSpeeds(); // Reset speeds to default
                 }
                 // Clear Super state
                 this.superSonic = false;
@@ -827,6 +835,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.doubleJumpFlag = 0;
                 this.doubleJumpProperty = 0;
                 this.objectMappingFrameControl = false;
+                this.abilityMappingFrameControl = false;
                 // Level clears Object_RAM before Obj01_Main creates Sonic. In
                 // particular obAnim, obFrame, obAniFrame and obTimeFrame all
                 // begin at zero before the pre-fade BuildSprites pass
@@ -928,7 +937,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.lrbSolidBit = 0x0D;
                 this.loopLowPlane = false;
                 this.statusTertiary = 0;
-                defineSpeeds(); // Reset speeds to default
+                resetBaseSpeeds(); // Reset speeds to default
                 instaShieldRegistered = false; // Force re-registration with new ObjectManager on level load
                 resolvePhysicsProfile(GameServices.bootstrapGameModule());
                 // ROM: Obj01_Init unconditionally sets y_radius=$13, x_radius=9.
@@ -936,6 +945,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // explicitly restore standing dimensions and sensor offsets here.
                 setHeight(runHeight);
                 applyStandingRadii(false);
+                invokeCharacterCallback(this::onLevelReset);
         }
 
         // -----------------------------------------------------------------------
@@ -956,7 +966,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         xPixel, yPixel,
                         xSubpixel, ySubpixel,
                         width, height,
-                        direction, layer,
+                        direction, layer, highPriority, priorityBucket,
                         runningMode, xRadius, yRadius,
                         // Movement / physics
                         gSpeed, xSpeed, ySpeed, jump,
@@ -973,7 +983,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         onObject, controller.isOnObjectAtFrameStart(), controller.isOnObjectAtPreviousFrameStart(),
                         controller.isPushingAtFrameStart(), controller.isHurtAtFrameStart(),
                         controller.isHurtRecoveryCompletedThisFrame(),
-                        latchedSolidObjectId, interactSlotIndex, isLatchedSolidObjectReleased(),
+                        latchedSolidObjectId, interactSlotIndex, isLatchedSolidObjectReleased(), latchedSolidObjectBound,
                         slopeRepelJustSlipped,
                         stickToConvex, sliding, pushing,
                         skidding, skidDustTimer, fixedSkidDustActive,
@@ -1022,6 +1032,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         bubbleAnimId,
                         initPhysicsActive,
                         objectMappingFrameControl,
+                        abilityMappingFrameControl,
                         mappingFrame,
                         animationId,
                         forcedAnimationId,
@@ -1043,7 +1054,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         includeFollowHistory ? statusHistory : null,
                         includeFollowHistory ? artTileAttributeHistory : null,
                         captureSubclassRewindState());
-                // Player snapshots use a stub PerObjectRewindSnapshot (no badnikExtra; playerExtra holds everything).
+                // The base object fields are a stub; playerExtra owns the player
+                // surface, while an unregistered shield is still owned by this sprite.
                 return new PerObjectRewindSnapshot(
                         false, false,       // destroyed, destroyedRespawnable
                         false, 0, 0,         // hasDynamicSpawn, dynamicSpawnX, dynamicSpawnY
@@ -1053,7 +1065,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         null,                // badnikExtra
                         null,                // badnikSubclassExtra
                         extra                // playerExtra
-                );
+                ).withObjectSubclassExtra(PendingInstaShieldRewindExtra.capture(
+                        instaShieldRegistered, instaShieldObject));
         }
 
         /**
@@ -1077,6 +1090,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.height = extra.height();
                 this.direction = extra.direction();
                 this.layer = extra.layer();
+                // Native art_tile priority and the DisplaySprite queue are separate state.
+                // Restoring only collision layer leaves future priority in the player and
+                // its follower history (observed across SSZ's final transport ascent).
+                this.highPriority = extra.highPriority();
+                this.priorityBucket = extra.priorityBucket();
                 this.runningMode = extra.runningMode();
                 setCollisionRadii(extra.xRadius(), extra.yRadius(), false);
                 // Movement / physics
@@ -1115,6 +1133,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 extra.hurtAtFrameStart(), extra.hurtRecoveryCompletedThisFrame());
                 this.latchedSolidObjectId = extra.latchedSolidObjectId();
                 this.latchedSolidObjectReleased = extra.latchedSolidObjectReleased();
+                this.latchedSolidObjectBound = extra.latchedSolidObjectBound();
                 // ObjectManager restores the live set later. Never reuse a contact
                 // pointer from the future timeline; SpriteManager relinks by slot.
                 this.latchedSolidObjectInstance = null;
@@ -1215,6 +1234,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.bubbleAnimId = extra.bubbleAnimId();
                 this.initPhysicsActive = extra.initPhysicsActive();
                 this.objectMappingFrameControl = extra.objectMappingFrameControl();
+                this.abilityMappingFrameControl = extra.abilityMappingFrameControl();
                 this.mappingFrame = extra.mappingFrame();
                 this.animationId = extra.animationId();
                 this.forcedAnimationId = extra.forcedAnimationId();
@@ -1232,6 +1252,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // subclasses without a captured payload): see restoreSubclassRewindState()
                 // Javadoc for the null contract subclasses must honor.
                 restoreSubclassRewindState(extra.subclassExtra());
+                instaShieldObject = PendingInstaShieldRewindExtra.restore(s.objectSubclassExtra(),
+                        instaShieldObject, powerUpSpawner != null
+                                ? () -> instaShieldObject = powerUpSpawner.createInstaShield(this) : null);
         }
 
         /**
@@ -1307,7 +1330,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
-         * Recreates power-up visuals after all rewind adapters have restored. The
+         * Rebinds power-up visuals after all rewind adapters have restored. The
          * object manager restores after sprites, so visual rebinding must be
          * deferred until the registry's post-restore phase.
          */
@@ -1344,8 +1367,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         }
                 }
 
+                refreshPersistentInstaShieldRegistration(instaShieldRegistered);
                 refreshInvincibilityStarsAfterRewindRestore();
-                refreshPersistentInstaShieldRegistration();
         }
 
         private void refreshInvincibilityStarsAfterRewindRestore() {
@@ -1382,8 +1405,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
         }
 
-        /** Restores the persistent insta-shield graph after a manager rebuild or rewind. */
+        /** Restores the persistent insta-shield graph immediately after a manager rebuild. */
         public void refreshPersistentInstaShieldRegistration() {
+                refreshPersistentInstaShieldRegistration(true);
+        }
+
+        private void refreshPersistentInstaShieldRegistration(boolean registerNow) {
                 if (!hasPersistentInstaShieldAbility() || powerUpSpawner == null) {
                         return;
                 }
@@ -1391,6 +1418,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         instaShieldObject = powerUpSpawner.createInstaShield(this);
                 }
                 if (instaShieldObject == null) {
+                        return;
+                }
+
+                // A fresh-load snapshot can precede tickStatus's first registration.
+                // Preserve that pending graph: post-restore visual refresh must not
+                // add an object that was absent from the captured object manager.
+                if (!registerNow) {
+                        instaShieldObject.invalidateDplcCache();
                         return;
                 }
 
@@ -1695,6 +1730,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return false;
         }
 
+        final boolean hasConstructionCallbackInvoker(com.openggf.game.CharacterConstructionScope.CallbackInvoker invoker) {
+                return characterCallbackInvoker == invoker;
+        }
+
         final boolean dispatchAbilityActivate(boolean up, boolean down, boolean left, boolean right) {
                 return com.openggf.game.CharacterConstructionScope.invoke(characterCallbackInvoker,
                         () -> onAbilityActivate(up, down, left, right));
@@ -1820,11 +1859,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void publishRunAsPreviousAnimation() { controller.publishRunAsPreviousAnimation(); }
 
         public void setAnimationId(int animationId) {
+                if (com.openggf.game.mode.ControlledFrameRuntime.retainRolling(this)) {
+                        int roll = resolveAnimationId(CanonicalAnimation.ROLL);
+                        if (roll >= 0) animationId = roll;
+                }
                 this.animationId = Math.max(0, animationId);
         }
 
         public void setAnimationId(AnimationId animationId) {
-                this.animationId = Math.max(0, animationId.id());
+                setAnimationId(animationId.id());
         }
 
         public int getForcedAnimationId() {
@@ -1839,12 +1882,27 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.forcedAnimationId = animationId.id();
         }
 
+        /** Legacy raw-frame query: either owner suppresses ordinary scripted mappings. */
         public boolean isObjectMappingFrameControl() {
-                return objectMappingFrameControl;
+                return objectMappingFrameControl || abilityMappingFrameControl;
         }
 
         public void setObjectMappingFrameControl(boolean objectMappingFrameControl) {
                 this.objectMappingFrameControl = objectMappingFrameControl;
+                // An object claiming (or releasing) the native bit-1 mapping gate
+                // supersedes the movement routine's previous raw mapping owner.
+                this.abilityMappingFrameControl = false;
+        }
+
+        /**
+         * Raw frames written by a player ability, rather than object_control bit 1.
+         * Knuckles_Control loc_165AE cancels glide under bit 0, but loc_16614
+         * still honours bit 1. Keeping these owners distinct lets a grabbing
+         * object retain its pose when the old glide state is cleared.
+         */
+        public void setAbilityMappingFrameControl(boolean controlled) {
+                this.abilityMappingFrameControl = controlled;
+                if (controlled) this.objectMappingFrameControl = false;
         }
 
         public int getAnimationFrameIndex() {
@@ -1921,6 +1979,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void setAir(boolean air) {
+                boolean changed = air != this.air;
                 boolean landed = !air && this.air;
                 // HurtCharacter/HurtStop do not write art_tile. Preserve any priority bit
                 // owned by a path switcher or scripted sequence (notably AIZ2's waterfall
@@ -1947,6 +2006,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         if (doubleJumpFlag > 0 && !rolling) {
                                 applyStandingRadii(false);
                                 objectMappingFrameControl = false;
+                                abilityMappingFrameControl = false;
                                 forcedAnimationId = -1;
                         }
                         doubleJumpFlag = 0;
@@ -1969,6 +2029,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         // Reset badnik chain when landing
                         resetBadnikChain();
                 }
+                publishGroundTransition(changed, landed);
         }
 
         /**
@@ -1981,8 +2042,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * a landing animation transition.
          */
         public void clearAirForNativeControlRestore() {
+                boolean changed = this.air;
                 this.air = false;
                 updatePushSensorYOffset();
+                publishGroundTransition(changed, false);
         }
 
         /**
@@ -1991,12 +2054,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * update and only there clears routine 4 plus velocities.
          */
         public void setAirAfterObjectHurtLanding() {
+                boolean landed = this.air;
                 if (this.air) {
                         rollingJump = false;
                         jumping = false;
                         if (doubleJumpFlag > 0 && !rolling) {
                                 applyStandingRadii(false);
                                 objectMappingFrameControl = false;
+                                abilityMappingFrameControl = false;
                                 forcedAnimationId = -1;
                         }
                         doubleJumpFlag = 0;
@@ -2006,6 +2071,30 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.air = false;
                 updatePushSensorYOffset();
                 resetBadnikChain();
+                publishGroundTransition(landed, landed);
+        }
+
+        /** Called once after a collision changes this character from airborne to grounded. */
+        protected void onLanded() { }
+
+        /** Called after a simulation ground-state transition; rewind hydration does not emit events. */
+        protected void onGroundStateChanged(boolean airborne) { }
+
+        /** Called after level initialization resets native character state, separately from landing. */
+        protected void onLevelReset() { }
+
+        private void publishGroundTransition(boolean changed, boolean landed) {
+                if (!changed) return;
+                boolean airborne = air;
+                invokeCharacterCallback(() -> {
+                        onGroundStateChanged(airborne);
+                        if (landed) onLanded();
+                });
+        }
+
+        private void invokeCharacterCallback(Runnable callback) {
+                com.openggf.game.CharacterConstructionScope.invoke(characterCallbackInvoker,
+                        () -> { callback.run(); return null; });
         }
 
         public void completeHurtLandingRecovery() {
@@ -2152,6 +2241,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /** Whether the last solid contact was released, including a restored deleted owner. */
         public boolean isLatchedSolidObjectReleased() {
                 return LatchedSolidContactSupport.isReleased(this, latchedSolidObjectReleased);
+        }
+
+        /** Whether rewind must relink an actual contact, including a zero-ID dynamic object. */
+        public boolean hasLatchedSolidObjectBinding() {
+                return latchedSolidObjectBound;
+        }
+
+        void setLatchedSolidObjectBinding(boolean bound) {
+                latchedSolidObjectBound = bound;
         }
 
         void clearLatchedSolidObjectRelease() {
@@ -2775,6 +2873,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * than playing music itself.
          */
         private void restoreLevelMusicAfterInvincibility() {
+                // Music belongs to the host mode, not the player's donated physics profile.
+                GameModule module = currentGameModule();
+                GameRules rules = module != null ? module.getRules() : getGameRules();
+                if (rules != null && rules.powerUp() != null
+                        && !rules.powerUp().restoreLevelMusicAfterInvincibility()) {
+                        return;
+                }
                 if (bossOwnsMusic() || drowningCountdownOwnsMusic()) {
                         return;
                 }
@@ -2861,6 +2966,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 doubleJumpFlag = 0;
                 doubleJumpProperty = 0;
                 objectMappingFrameControl = false;
+                abilityMappingFrameControl = false;
                 forcedAnimationId = -1;
                 setInvulnerableFrames(0x78); // Set invulnerability immediately (ROM: s2.asm line 84954)
                 setSpringing(0);
@@ -3873,14 +3979,29 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected boolean debugMode = false;
 
         protected AbstractPlayableSprite(String code, short x, short y) {
-                super(code, x, y);
+                this(code, x, y, null);
+        }
+
+        /** Constructs a character with one authoritative instance physics/sensor specification. */
+        protected AbstractPlayableSprite(String code, short x, short y, CharacterPhysicsSpec specification) {
+                super(code, x, y, specification == null);
+                characterPhysicsSpec = specification;
+                if (specification != null) {
+                        var sensors = specification.sensors().createSensors(this);
+                        groundSensors = sensors[0]; ceilingSensors = sensors[1]; pushSensors = sensors[2];
+                }
                 boundCharacterKey = PlayableCharacterIdentity.bindForConstruction(this);
                 characterCallbackInvoker = com.openggf.game.CharacterConstructionScope
                         .captureCallbackInvoker();
                 // Must define speeds before creating Manager (it will read speeds upon
                 // instantiation).
-                defineSpeeds();
+                resetBaseSpeeds();
                 resolvePhysicsProfile(GameServices.bootstrapGameModule());
+
+                if (specification != null) {
+                        setWidth((standXRadius + 1) * 2);
+                        setHeight(runHeight);
+                }
 
                 applyStandingRadii(false);
 
@@ -3922,7 +4043,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 return;
                         }
                         String charType = boundCharacterKey.persisted();
-                        PhysicsProfile profile = provider.getProfile(charType);
+                        PhysicsProfile profile = characterPhysicsSpec == null
+                                ? provider.getProfile(charType) : characterPhysicsSpec.profile();
                         if (profile != null) {
                                 this.physicsProfile = profile;
                                 applyProfileToFields(profile);
@@ -3943,7 +4065,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         // S3K init override: Character_Speeds table provides different init-time
                         // values that persist until the first water or speed shoes event.
                         // ROM ref: sonic3k.asm:21467-21474 (Character_Speeds loaded at player init)
-                        PhysicsProfile initProfile = provider.getInitProfile(charType);
+                        PhysicsProfile initProfile = characterPhysicsSpec == null
+                                ? provider.getInitProfile(charType) : null;
                         if (initProfile != null && profile != null) {
                                 this.canonicalProfile = profile;
                                 // Overwrite only the fields that Character_Speeds sets (max, accel, decel)
@@ -4387,6 +4510,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * @param rolling true to enter rolling state, false to exit
          */
         public void setRolling(boolean rolling) {
+                if (!rolling && com.openggf.game.mode.ControlledFrameRuntime.retainRolling(this)) return;
                 if (this.rolling == rolling) {
                         if (rolling) {
                                 applyRollAnimationFromProfile(); setSkidding(false);
@@ -4635,31 +4759,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private void updateSensorOffsetsFromRadii() {
-                if (groundSensors == null || ceilingSensors == null || pushSensors == null) {
-                        return;
-                }
-
-                byte xRad = (byte) xRadius;
-                byte yRad = (byte) yRadius;
-                // SPG: Push sensors always use x = +/-10, regardless of rolling state
-                byte push = 10;
-
-                if (groundSensors != null && groundSensors.length >= 2) {
-                        groundSensors[0].setOffset((byte) -xRad, yRad);
-                        groundSensors[1].setOffset(xRad, yRad);
-                }
-
-                if (ceilingSensors != null && ceilingSensors.length >= 2) {
-                        ceilingSensors[0].setOffset((byte) -xRad, (byte) -yRad);
-                        ceilingSensors[1].setOffset(xRad, (byte) -yRad);
-                }
-
-                if (pushSensors != null && pushSensors.length >= 2) {
-                        pushSensors[0].setOffset((byte) -push, (byte) 0);
-                        pushSensors[1].setOffset(push, (byte) 0);
-                }
-                // Update push sensor Y offset based on current ground state
-                updatePushSensorYOffset();
+                PlayableSpriteGeometry.updateSensorOffsets(this, groundSensors, ceilingSensors,
+                        pushSensors, characterPhysicsSpec);
         }
 
         /**
@@ -4667,18 +4768,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * against instead of being stepped onto. In air or on slopes, Y offset is 0.
          */
         public void updatePushSensorYOffset() {
-                if (pushSensors == null || pushSensors.length < 2) {
-                        return;
-                }
-                // ROM: Y offset = +8 when (angle & 0x38) == 0, i.e., near-flat angles (0-7, 248-255)
-                // This allows the offset on slight slopes, not just strictly flat ground.
-                // See s2.asm:43517-43519 in CalcRoomInFront
-                boolean onFlatGround = !air && runningMode == GroundMode.GROUND && (angle & 0x38) == 0;
-                byte yOffset = onFlatGround ? (byte) 8 : (byte) 0;
-                // SPG: Push sensors always use x = +/-10, regardless of rolling state
-                byte push = 10;
-                pushSensors[0].setOffset((byte) -push, yOffset);
-                pushSensors[1].setOffset(push, yOffset);
+                PlayableSpriteGeometry.updatePushSensorYOffset(this, pushSensors, characterPhysicsSpec);
         }
 
         public SpriteMovementManager getMovementManager() {
@@ -4694,7 +4784,21 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return controller.getAnimation();
         }
 
-        protected abstract void defineSpeeds();
+        /** Legacy customization seam; specification-based characters need not override it. */
+        protected void defineSpeeds() {
+                throw new IllegalStateException("Provide CharacterPhysicsSpec or override defineSpeeds()");
+        }
+
+        /** Legacy sensor seam; specification-based characters need not override it. */
+        @Override protected void createSensorLines() { }
+
+        private void resetBaseSpeeds() {
+                if (characterPhysicsSpec == null) defineSpeeds();
+                else {
+                        physicsProfile = characterPhysicsSpec.profile();
+                        applyProfileToFields(physicsProfile);
+                }
+        }
 
         public final void move() {
                 move(xSpeed, ySpeed);
@@ -4714,27 +4818,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         protected void updateSpriteShapeForRunningMode(GroundMode newRunningMode, GroundMode oldRunningMode) {
-                // Best if statement ever...
-                if (((GroundMode.CEILING.equals(newRunningMode) || GroundMode.GROUND.equals(newRunningMode)) &&
-                                (GroundMode.LEFTWALL.equals(oldRunningMode)
-                                                || GroundMode.RIGHTWALL.equals(oldRunningMode)))
-                                ||
-                                ((GroundMode.RIGHTWALL.equals(newRunningMode)
-                                                || GroundMode.LEFTWALL.equals(newRunningMode)) &&
-                                                ((GroundMode.CEILING.equals(oldRunningMode)
-                                                                || GroundMode.GROUND.equals(oldRunningMode))))) {
-                        int oldHeight = getHeight();
-                        int oldWidth = getWidth();
-
-                        short oldCentreX = getCentreX();
-                        short oldCentreY = getCentreY();
-
-                        setHeight(oldWidth);
-                        setWidth(oldHeight);
-
-                        setX((short) (oldCentreX - (getWidth() / 2)));
-                        setY((short) (oldCentreY - (getHeight() / 2)));
-                }
+                PlayableSpriteGeometry.updateShapeForRunningMode(this, newRunningMode, oldRunningMode);
         }
 
         public final short getCentreX(int framesBehind) {
@@ -4975,86 +5059,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Refactored to avoid per-frame array allocations by directly setting sensor states.
          */
         public void updateSensors(short originalX, short originalY) {
-                Sensor groundA = groundSensors[0];
-                Sensor groundB = groundSensors[1];
-                Sensor ceilingC = ceilingSensors[0];
-                Sensor ceilingD = ceilingSensors[1];
-                Sensor pushE = pushSensors[0];
-                Sensor pushF = pushSensors[1];
-
-                if (getAir()) {
-                        // Use ROM-accurate angle calculation via TrigLookupTable.calcAngle
-                        // ROM: Sonic_DoLevelCollision (s2.asm:37547-37557)
-                        int motionAngle = TrigLookupTable.calcAngle(xSpeed, ySpeed);
-
-                        // ROM quadrant calculation: subi.b #$20,d0 / andi.b #$C0,d0
-                        // This creates quadrants offset by 32 degrees:
-                        // - 0xC0: Angles 0-31 or 224-255 (mostly right)
-                        // - 0x00: Angles 32-95 (mostly down)
-                        // - 0x40: Angles 96-159 (mostly left)
-                        // - 0x80: Angles 160-223 (mostly up)
-                        int quadrant = ((motionAngle - 0x20) & 0xC0) & 0xFF;
-
-                        switch (quadrant) {
-                                case 0xC0 -> {
-                                        // Mostly Right (angles 0-31, 224-255): A, B, C, D, F active; E inactive
-                                        groundA.setActive(true);
-                                        groundB.setActive(true);
-                                        ceilingC.setActive(true);
-                                        ceilingD.setActive(true);
-                                        pushE.setActive(false);
-                                        pushF.setActive(true);
-                                }
-                                case 0x40 -> {
-                                        // Mostly Left (angles 96-159): A, B, C, D, E active; F inactive
-                                        groundA.setActive(true);
-                                        groundB.setActive(true);
-                                        ceilingC.setActive(true);
-                                        ceilingD.setActive(true);
-                                        pushE.setActive(true);
-                                        pushF.setActive(false);
-                                }
-                                case 0x80 -> {
-                                        // Mostly Up (angles 160-223): C, D, E, F active; A, B inactive
-                                        groundA.setActive(false);
-                                        groundB.setActive(false);
-                                        ceilingC.setActive(true);
-                                        ceilingD.setActive(true);
-                                        pushE.setActive(true);
-                                        pushF.setActive(true);
-                                }
-                                default -> {
-                                        // 0x00: Mostly Down (angles 32-95): A, B, E, F active; C, D inactive
-                                        groundA.setActive(true);
-                                        groundB.setActive(true);
-                                        ceilingC.setActive(false);
-                                        ceilingD.setActive(false);
-                                        pushE.setActive(true);
-                                        pushF.setActive(true);
-                                }
-                        }
-                } else {
-                        // Ground sensors always active when grounded
-                        groundA.setActive(true);
-                        groundB.setActive(true);
-                        // Ceiling sensors always inactive when grounded
-                        ceilingC.setActive(false);
-                        ceilingD.setActive(false);
-
-                        // Push sensors active on floor/ceiling, disabled on walls
-                        boolean pushActive = (runningMode == GroundMode.GROUND || runningMode == GroundMode.CEILING);
-                        // Use gSpeed (speed along surface) instead of xSpeed for direction
-                        if (gSpeed > 0) {
-                                pushE.setActive(false);
-                                pushF.setActive(pushActive);
-                        } else if (gSpeed < 0) {
-                                pushE.setActive(pushActive);
-                                pushF.setActive(false);
-                        } else {
-                                pushE.setActive(false);
-                                pushF.setActive(false);
-                        }
-                }
+                PlayerSensorActivation.update(this, groundSensors, ceilingSensors, pushSensors);
         }
 
         public Sensor[] getAllSensors() {

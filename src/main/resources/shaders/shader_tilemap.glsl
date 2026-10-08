@@ -22,6 +22,7 @@ uniform float ViewportOffsetX;       // GL viewport X offset
 uniform float ViewportOffsetY;       // GL viewport Y offset
 uniform float WorldOffsetX;          // World X at left edge
 uniform float WorldOffsetY;          // World Y at top edge
+uniform int ClipHorizontal;         // Finite world-layout foreground; no opposite-edge samples
 uniform int WrapY;                   // 1 to wrap vertically, 0 to clamp
 uniform int PriorityPass;            // -1 = all, 0 = low, 1 = high
 uniform int MaskOutput;              // 1 = output white mask, 0 = output actual color
@@ -142,6 +143,16 @@ void main()
         localBandY = mod(localBandY, wrapHeightPx);
         if (localBandY < 0.0) localBandY += wrapHeightPx;
     }
+
+    // Native VDP planes wrap; the 320px camera hides finite layout edges.
+    // Widescreen clipping is our presentation extension, measured in camera/world
+    // space. HScroll is a texture coordinate, not a physical level boundary:
+    // SSZ2's Plane A clouds drift indefinitely through ApplyFGDeformation. Testing
+    // tileXf here erased those clouds when their samples passed the layout width.
+    // Keep that native texture wrap inside the finite visible world, including
+    // the identical sampling used by the sprite-priority mask.
+    float finiteWorldX = WorldOffsetX + pixelX;
+    if (ClipHorizontal == 1 && (finiteWorldX < 0.0 || finiteWorldX >= TilemapWidth * 8.0)) discard;
 
     if (UpperBandWrapWidthTiles > 0.0 && UpperBandWrapHeightPx > 0.0 && localBandY < UpperBandWrapHeightPx) {
         tileXf = mod(tileXf, UpperBandWrapWidthTiles);

@@ -111,7 +111,8 @@ final class HczBgHighPriorityTileRenderer {
                 hScrollData, bgScrollBias, planePeriodWrapTiles, bgWorldOffsetY,
                 graphicsManager.getPatternAtlasWidth(),
                 graphicsManager.getPatternAtlasHeight(), atlasId, paletteId, uwPalId,
-                useUnderwaterPalette, waterlineScreenY).withVerticalWrap(wrapY).withPriorityMask(priorityMask));
+                useUnderwaterPalette, waterlineScreenY).withVerticalWrap(wrapY).withPriorityMask(priorityMask)
+                .withColumns(parallaxManager.getVScrollPerColumnBGForShader()));
     }
 
     /**
@@ -136,6 +137,7 @@ final class HczBgHighPriorityTileRenderer {
     static final class OverlayCommand implements GLCommandable {
         private final int[] viewport = new int[4];
         private final int[] hScroll = new int[224];
+        private short[] columns;
         private TilemapGpuRenderer renderer;
         private BackgroundRenderer backgroundRenderer;
         private int screenW, screenH, atlasWidth, atlasHeight, atlasId, paletteId, underwaterPaletteId;
@@ -181,6 +183,7 @@ final class HczBgHighPriorityTileRenderer {
             }
             Arrays.fill(this.hScroll, copyLength, this.hScroll.length, 0);
             this.underwater = underwater; this.waterlineY = waterlineY; leased = true; wrapY = false; priorityMask = false;
+            columns = null;
             return this;
         }
 
@@ -194,12 +197,21 @@ final class HczBgHighPriorityTileRenderer {
             return this;
         }
 
+        OverlayCommand withColumns(short[] values) {
+            // The main background compositor consumes screen-column VSRAM deltas.
+            // This replay bypasses that compositor, so it must snapshot and apply
+            // the same deltas itself (SSZ2's island otherwise has a different Y).
+            columns = values == null ? null : values.clone();
+            return this;
+        }
+
         @Override public void execute(int cx, int cy, int cw, int ch) {
             try {
                 if (renderer == null || backgroundRenderer == null) return;
                 backgroundRenderer.uploadHScroll(hScroll);
                 renderer.enablePerLineScroll(backgroundRenderer.getHScrollTextureId(),
                         hScroll.length, planePeriodWrapTiles, 0.0f, 0.0f);
+                renderer.enablePerColumnVScroll(columns);
                 renderer.render(TilemapGpuRenderer.Layer.BACKGROUND, screenW, screenH,
                         viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, offsetY,
                         atlasWidth, atlasHeight, atlasId,
@@ -210,7 +222,7 @@ final class HczBgHighPriorityTileRenderer {
         @Override public void discard() { release(); }
         private void release() {
             if (!leased) return;
-            leased = false; renderer = null; backgroundRenderer = null; COMMAND_POOL.addFirst(this);
+            leased = false; renderer = null; backgroundRenderer = null; columns = null; COMMAND_POOL.addFirst(this);
         }
     }
 }

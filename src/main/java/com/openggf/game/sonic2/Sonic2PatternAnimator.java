@@ -21,7 +21,8 @@ import java.util.logging.Logger;
 /**
  * Updates Sonic 2 zone animated tiles using the Dynamic_Normal scripts.
  */
-class Sonic2PatternAnimator implements AnimatedPatternManager, RewindSnapshottable<PatternAnimatorSnapshot> {
+class Sonic2PatternAnimator implements AnimatedPatternManager, RewindSnapshottable<PatternAnimatorSnapshot>,
+        com.openggf.game.presentation.RomSceneArtSource {
     private static final Logger LOGGER = Logger.getLogger(Sonic2PatternAnimator.class.getName());
     // Disassembly: loc_3FF94 (Animated_EHZ)
     private static final int ANIMATED_EHZ_ADDR = 0x3FF94;
@@ -80,7 +81,6 @@ class Sonic2PatternAnimator implements AnimatedPatternManager, RewindSnapshottab
     private final AnimatedTileChannelGraph graph;
     private final List<AniPlcScriptState> scripts;
     private final int zoneIndex;
-    private int tableAddr = -1;
     private int frameCounter;
 
     public Sonic2PatternAnimator(Rom rom, Level level, int zoneIndex) throws IOException {
@@ -88,12 +88,15 @@ class Sonic2PatternAnimator implements AnimatedPatternManager, RewindSnapshottab
         this.graph = GameServices.animatedTileChannelGraph();
         this.zoneIndex = zoneIndex;
         RomByteReader reader = RomByteReader.fromRom(rom);
-        this.tableAddr = scanForTable(reader);
-        this.scripts = loadScriptsForZone(reader, zoneIndex);
+        this.scripts = readScriptsForZone(reader, zoneIndex);
+        if (!scripts.isEmpty()) {
+            AniPlcParser.ensurePatternCapacity(scripts, level);
+            AniPlcParser.primeScripts(scripts, level, GameServices.graphics());
+        }
         this.graph.install(Sonic2AnimatedTileChannels.fromScripts(this.scripts));
     }
 
-    private int scanForTable(RomByteReader reader) {
+    private static int scanForTable(RomByteReader reader) {
         // We know EHZ data is at 0x3FF94.
         // PLC_DYNANM has 2 entries per zone: routine pointer + data pointer (4 bytes/zone).
         // EHZ data pointer is at Word[1] (offset 2), not Word[0].
@@ -129,8 +132,10 @@ class Sonic2PatternAnimator implements AnimatedPatternManager, RewindSnapshottab
         graph.update(new ChannelContext(graph, null, level, runtimeState, zoneIndex, actIndex, frameCounter++));
     }
 
-    private List<AniPlcScriptState> loadScriptsForZone(RomByteReader reader, int zoneIndex) {
+    /** ROM-only script decode shared by live animation and detached stock pictures. */
+    static List<AniPlcScriptState> readScriptsForZone(RomByteReader reader, int zoneIndex) {
         AnimatedListId listId = resolveListId(zoneIndex);
+        int tableAddr = scanForTable(reader);
         if (AnimatedListId.NULL_LIST.equals(listId) || tableAddr == -1) {
             return List.of();
         }
@@ -142,13 +147,10 @@ class Sonic2PatternAnimator implements AnimatedPatternManager, RewindSnapshottab
         int offset = (short) reader.readU16BE(pointerAddr);
         int scriptAddr = tableAddr + offset;
 
-        List<AniPlcScriptState> scripts = AniPlcParser.parseScripts(reader, scriptAddr);
-        AniPlcParser.ensurePatternCapacity(scripts, level);
-        AniPlcParser.primeScripts(scripts, level, GameServices.graphics());
-        return scripts;
+        return AniPlcParser.parseScripts(reader, scriptAddr);
     }
 
-    private AnimatedListId resolveListId(int zoneIndex) {
+    private static AnimatedListId resolveListId(int zoneIndex) {
         if (zoneIndex < 0 || zoneIndex >= ZONE_LISTS.length) {
             return AnimatedListId.NULL_LIST;
         }
@@ -158,6 +160,15 @@ class Sonic2PatternAnimator implements AnimatedPatternManager, RewindSnapshottab
     @Override
     public String key() {
         return "pattern-animator";
+    }
+
+    @Override
+    public java.util.Map<String, com.openggf.level.Pattern[]> sceneArtRecipes() {
+        var recipes = new java.util.LinkedHashMap<String, com.openggf.level.Pattern[]>();
+        for (int i = 0; i < scripts.size(); i++) {
+            recipes.put("animation/" + i, scripts.get(i).copySceneArtPatterns());
+        }
+        return java.util.Map.copyOf(recipes);
     }
 
     @Override

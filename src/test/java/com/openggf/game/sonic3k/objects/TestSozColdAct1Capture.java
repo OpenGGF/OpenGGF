@@ -36,10 +36,14 @@ class TestSozColdAct1Capture {
         Path output = Path.of(System.getProperty("soz.cold.act1.capture"));
         Files.createDirectories(output.resolve("frames"));
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(
-                Path.of("src/test/resources/routes/s3k/soz1-cold-sonic-tails.bk2"));
+                Path.of(System.getProperty("soz.cold.act1.input",
+                        "src/test/resources/routes/s3k/soz1-cold-sonic-tails.bk2")));
         int stride = Integer.getInteger("soz.cold.act1.stride", 4);
         assertTrue(stride > 0);
-        var settings = new GameplayCaptureSession.Settings(Integer.getInteger("soz.cold.width", 320), "sonic",
+        int captureFrom = Integer.getInteger("soz.cold.act1.capture-from", 0);
+        assertTrue(captureFrom >= 0);
+        var settings = new GameplayCaptureSession.Settings(Integer.getInteger("soz.cold.width", 320),
+                System.getProperty("soz.cold.main", "sonic"),
                 System.getProperty("soz.cold.followers", "tails"), "off", null, null, null);
         var inputs = new ArrayList<RecordedFrameInput>();
         boolean bossSeen = false;
@@ -51,7 +55,7 @@ class TestSozColdAct1Capture {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 8, 0, settings);
             assertEquals(8, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
-            assertEquals("sonic", session.player().getCode());
+            assertEquals(settings.mainCharacter(), session.player().getCode());
             var followers = GameServices.level().getObjectManager().getObjectServices().playerQuery().sidekicks();
             assertEquals(settings.width(), GameServices.camera().getWidth());
             String[] expectedFollowers = settings.sidekickCharacter().isBlank() ? new String[0]
@@ -78,16 +82,20 @@ class TestSozColdAct1Capture {
                 var boss = SozAct1VictoryRoute.boss();
                 bossSeen |= boss != null;
                 sinkingSeen |= boss != null && boss.phase() == 3;
-                var events = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow().events();
                 csv.write(session.stateLine(frame, input) + "," + GameServices.level().getCurrentZone()
                         + "," + GameServices.level().getCurrentAct() + "," + (boss == null ? -1 : boss.routine())
                         + "," + (boss == null ? -1 : boss.phase()) + "," + input.p1InputMask() + "," + input.p2InputMask());
                 csv.newLine();
-                if (frame % stride == 0) {
-                    ScreenshotCapture.savePNG(session.render(), output.resolve("frames/%05d.png".formatted(frame)));
+                var rendered = session.render();
+                if (frame >= captureFrom && frame % stride == 0) {
+                    ScreenshotCapture.savePNG(rendered, output.resolve("frames/%05d.png".formatted(frame)));
                 }
                 assertFalse(session.player().getDead(), "player died at frame " + frame);
-                if (GameServices.level().getCurrentAct() == 1 && !events.seamlessEntry()
+                // A real bonus visit replaces the zone runtime. Query SOZ events
+                // only after the route has actually reached its Act2 destination.
+                if (GameServices.level().getCurrentZone() == 8 && GameServices.level().getCurrentAct() == 1
+                        && !S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry())
+                                .orElseThrow().events().seamlessEntry()
                         && !session.player().isControlLocked() && readyFrame < 0) {
                     readyFrame = frame;
                 }
@@ -117,7 +125,7 @@ class TestSozColdAct1Capture {
             assertTrue(visible > 1000, "destination world must be visible outside the HUD");
             ScreenshotCapture.savePNG(image, output.resolve("destination.png"));
             Files.writeString(output.resolve("milestones.txt"), "Act2 ready frame: " + readyFrame
-                    + "\nController frames: " + movie.getFrameCount() + "\nCold Sonic; followers=" + settings.sidekickCharacter()
+                    + "\nController frames: " + movie.getFrameCount() + "\nCold " + settings.mainCharacter() + "; followers=" + settings.sidekickCharacter()
                     + "; width=" + settings.width() + "; donor=off; intro enabled.\n");
         }
     }

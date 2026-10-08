@@ -201,10 +201,15 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
         // See s2.asm Obj08_SkidDust: move.w y_pos(a2),y_pos(a1) / addi.w #$10,y_pos(a1).
         // Tails then subtracts 4 because his sprite is shorter.
         int dustX = player.getCentreX();
-        int dustY = player.getCentreY() + 16;
-        if (player instanceof Tails) {
-            dustY -= 4;
+        int dustOffset = player instanceof Tails ? 12 : 16;
+        // S3K loc_18D14 negates the complete foot offset after Tails's
+        // four-pixel adjustment. The spawned puff stays at that world position;
+        // later gravity changes must not move an already detached effect.
+        var gameState = aps.currentGameStateOrNull();
+        if (gameState != null && gameState.isReverseGravityActive()) {
+            dustOffset = -dustOffset;
         }
+        int dustY = player.getCentreY() + dustOffset;
         boolean facingLeft = player.getDirection() == Direction.LEFT;
 
         return new SkidDustObjectInstance(dustX, dustY, renderer, facingLeft);

@@ -1,5 +1,6 @@
 """Fast snapshot audit and integration regressions for release history admission."""
 import importlib.util
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -12,12 +13,14 @@ ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('release_tree_audit', ROOT / '.githooks/audit-release-tree.py')
 audit = importlib.util.module_from_spec(spec)
 # Keep imported test helpers from creating binary files in the LF-only hook tree.
-with patch.object(sys, 'dont_write_bytecode', True):
+with patch.object(sys, 'dont_write_bytecode', True), patch.object(sys, 'path', [str(ROOT / '.githooks'), *sys.path]):
     spec.loader.exec_module(audit)
 BASELINE = '45cecf566825aa50612f5e687b2682fc9681aed1'
 NEXT_BASELINE = '218b8fff1a829c7a509331c453d2f3be7e51533b'
 PUBLISHED_BASELINE = '37aeb6b84d6634457616c942187cdd40dd93c24f'
 OID = 'a' * 40
+AUTHORED_ROOT = 'src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide'
+AUTHORED_PATH = AUTHORED_ROOT + '/act1/patterns.bin'
 
 
 class TreeAuditTests(unittest.TestCase):
@@ -39,6 +42,34 @@ class TreeAuditTests(unittest.TestCase):
         for extension in ['GEN', 'smd', 'bin', 'sms', 'gg', '32x']:
             with self.subTest(extension=extension), self.assertRaisesRegex(ValueError, 'ROM/binary'):
                 self.check_entry('nested/game.' + extension)
+
+    def test_exact_authored_fixture_blobs_are_admitted(self):
+        fixtures = sorted((ROOT / AUTHORED_ROOT).glob('act*/*.bin'))
+        self.assertEqual(22, len(fixtures))
+        for fixture in fixtures:
+            with self.subTest(path=fixture):
+                payload = fixture.read_bytes()
+                self.check_entry(fixture.relative_to(ROOT).as_posix(),
+                                 size=str(len(payload)), target=payload)
+
+    def test_authored_fixture_admission_rejects_changed_bytes_and_size(self):
+        payload = (ROOT / AUTHORED_PATH).read_bytes()
+        for content, size in ((bytes([payload[0] ^ 1]) + payload[1:], len(payload)),
+                              (payload, len(payload) + 1)):
+            with self.subTest(size=size), self.assertRaisesRegex(ValueError, 'ROM/binary'):
+                self.check_entry(AUTHORED_PATH, size=str(size), target=content)
+
+    def test_authored_fixture_admission_is_exact_path_and_regular_mode(self):
+        payload = (ROOT / AUTHORED_PATH).read_bytes()
+        paths = [AUTHORED_PATH.upper(), AUTHORED_PATH.replace('/act1/', '/act3/'),
+                 AUTHORED_ROOT + '/act1/copied-patterns.bin', 'elsewhere/patterns.bin']
+        for path in paths:
+            with self.subTest(path=path), self.assertRaisesRegex(ValueError, 'ROM/binary'):
+                self.check_entry(path, size=str(len(payload)), target=payload)
+        for mode in ('100755', '120000'):
+            with self.subTest(mode=mode), self.assertRaisesRegex(ValueError, 'ROM/binary'):
+                self.check_entry(AUTHORED_PATH, mode=mode,
+                                 size=str(len(payload)), target=payload)
 
     def test_github_size_boundary(self):
         self.check_entry(size='99999999')
@@ -103,6 +134,7 @@ class SnapshotPolicyTests(unittest.TestCase):
     def policies(self, baseline):
         directory = self.root / 'policy'; directory.mkdir(exist_ok=True)
         for name in ['validate-policy.sh', 'validate-policy.ps1', 'audit-release-tree.py',
+                     'authored_fixture_policy.py', 'authored-fixtures.json',
                      'machine-local-path-grandfather.sha256']:
             text = (ROOT / '.githooks' / name).read_text().replace(BASELINE, baseline)
             text = text.replace(NEXT_BASELINE, getattr(self, 'next_baseline', NEXT_BASELINE))
@@ -123,6 +155,107 @@ class SnapshotPolicyTests(unittest.TestCase):
                 else:
                     self.assertNotEqual(0, result.returncode, result.stdout)
                     self.assertIn(expected, result.stdout)
+
+    def write_fixture(self, path=AUTHORED_PATH, content=None, mode='100644'):
+        target = self.repo / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if mode == '120000':
+            target.symlink_to('relative-target')
+        else:
+            target.write_bytes((ROOT / AUTHORED_PATH).read_bytes() if content is None else content)
+        self.git('add', '--', path)
+        if mode == '100755':
+            self.git('update-index', '--chmod=+x', '--', path)
+        return target
+
+    def assert_staged_policy(self, expected):
+        for command in self.policies(self.base):
+            with self.subTest(implementation=command[0]):
+                result = subprocess.run(command + ['pre-commit'], cwd=self.repo, text=True,
+                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                if expected is None:
+                    self.assertEqual(0, result.returncode, result.stdout)
+                else:
+                    self.assertNotEqual(0, result.returncode, result.stdout)
+                    self.assertIn(expected, result.stdout)
+
+    def test_exact_authored_fixtures_pass_both_staged_and_commit_policy(self):
+        for source in sorted((ROOT / AUTHORED_ROOT).glob('act*/*.bin')):
+            self.write_fixture(source.relative_to(ROOT).as_posix(), source.read_bytes())
+        self.assert_staged_policy(None)
+        head = self.commit('reviewed original authored fixtures')
+        self.assert_policy(self.base, self.base, head, 'feature/release', None)
+
+    def test_authored_bytes_are_read_from_index_not_working_tree(self):
+        payload = (ROOT / AUTHORED_PATH).read_bytes()
+        target = self.write_fixture()
+        target.write_bytes(b'bad local replacement')
+        self.assert_staged_policy(None)
+        self.git('add', '--', AUTHORED_PATH)
+        target.write_bytes(payload)
+        self.assert_staged_policy('ROM/binary')
+
+    def test_staged_authored_paths_modes_and_bytes_fail_closed(self):
+        payload = (ROOT / AUTHORED_PATH).read_bytes()
+        cases = [(AUTHORED_PATH, bytes([payload[0] ^ 1]) + payload[1:], '100644'),
+                 (AUTHORED_PATH, payload + b'\0', '100644'),
+                 (AUTHORED_PATH.upper(), payload, '100644'),
+                 ('moved/patterns.bin', payload, '100644'),
+                 (AUTHORED_ROOT + '/act1/extra.bin', payload, '100644'),
+                 (AUTHORED_PATH, payload, '100755'),
+                 (AUTHORED_PATH, payload, '120000'),
+                 (AUTHORED_ROOT + '/act1/game.gen', payload, '100644')]
+        for path, content, mode in cases:
+            with self.subTest(path=path, mode=mode, size=len(content)):
+                self.git('reset', '--hard', self.base)
+                self.write_fixture(path, content, mode)
+                self.assert_staged_policy('ROM/binary')
+                head = self.commit('invalid authored fixture declaration')
+                self.assert_policy(self.base, self.base, head, 'feature/release', 'ROM/binary')
+
+    def test_commit_fixture_check_ignores_unstaged_bad_local_bytes(self):
+        target = self.write_fixture()
+        head = self.commit('reviewed original authored fixture')
+        target.write_bytes(b'bad local replacement')
+        self.assert_policy(self.base, self.base, head, 'feature/release', None)
+
+    def test_bad_authored_bytes_cannot_be_hidden_by_later_restore(self):
+        self.write_fixture(content=b'bad authored fixture')
+        self.commit('invalid authored fixture')
+        self.write_fixture()
+        head = self.commit('restore reviewed bytes')
+        self.assert_policy(self.base, self.base, head, 'feature/release', 'ROM/binary')
+
+    def test_bad_authored_bytes_cannot_be_hidden_by_later_removal(self):
+        self.write_fixture(content=b'bad authored fixture')
+        self.commit('invalid authored fixture')
+        self.git('rm', '--', AUTHORED_PATH)
+        head = self.commit('remove invalid authored fixture')
+        self.assert_policy(self.base, self.base, head, 'feature/release', 'ROM/binary')
+
+    def test_all_rom_extensions_reject_staged_and_removed_history(self):
+        for extension in ('GEN', 'sMd', 'BIN', 'sMs', 'gG', '32X'):
+            with self.subTest(extension=extension):
+                self.git('reset', '--hard', self.base)
+                path = 'nested/user-asset.' + extension
+                self.write_fixture(path)
+                self.assert_staged_policy('ROM/binary')
+                self.commit('invalid generic ROM-like path')
+                self.git('rm', '--', path)
+                head = self.commit('remove generic ROM-like path')
+                self.assert_policy(self.base, self.base, head, 'feature/release', 'ROM/binary')
+
+    def test_snapshot_cli_does_not_emit_hook_bytecode(self):
+        self.write_fixture()
+        head = self.commit('reviewed original authored fixture')
+        policy_directory = Path(next(self.policies(self.base))[1]).parent
+        environment = dict(os.environ)
+        environment.pop('PYTHONDONTWRITEBYTECODE', None)
+        result = subprocess.run([sys.executable, str(policy_directory / 'audit-release-tree.py'), head],
+                                cwd=self.repo, env=environment, text=True,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        self.assertEqual(0, result.returncode, result.stdout)
+        self.assertFalse(list(policy_directory.rglob('__pycache__')))
 
     def test_old_removed_violation_is_not_replayed_after_reviewed_snapshot(self):
         self.write('traces/physics.csv', 'x' * 1048576); self.commit('old oversized trace')

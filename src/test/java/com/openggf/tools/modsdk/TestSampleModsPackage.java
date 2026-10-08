@@ -38,6 +38,8 @@ class TestSampleModsPackage {
     private static final Path PLATFORMER = Path.of("src/test/resources/mods/sample-platformer-src/project");
     private static final Path ROM_ART_REMIX = Path.of(
             "src/test/resources/mods/sample-rom-art-remix-src/project");
+    private static final Path CAMPAIGN = Path.of(
+            "src/test/resources/mods/sample-two-act-campaign-src/project");
     private static final Path ROM_ART_GUIDE = Path.of(
             "docs/modding/guides/rom-art-remix.md");
     private static final Path FLAPPY_GUIDE = Path.of(
@@ -50,7 +52,7 @@ class TestSampleModsPackage {
     private static final Set<String> EXPECTED_IDS = Set.of(
             "openggf-gallery-music-sample", "phase2-reskin", "phase2-sample",
             "phase3-character", "phase3-standalone", "sample-flappy", "sample-platformer",
-            "sample-rom-art-remix");
+            "sample-rom-art-remix", "sample-tide-circuit");
     private static final Map<String, String> EXPECTED_API_RANGES = Map.of(
             "openggf-gallery-music-sample", ">=0.7.0 <0.8.0",
             "phase2-reskin", ">=0.7.0 <0.8.0",
@@ -59,23 +61,25 @@ class TestSampleModsPackage {
             "phase3-standalone", ">=0.7.0 <0.8.0",
             "sample-flappy", ">=0.7.0 <0.8.0",
             "sample-platformer", ">=0.7.0 <0.8.0",
-            "sample-rom-art-remix", ">=0.7.0 <0.8.0");
+            "sample-rom-art-remix", ">=0.7.0 <0.8.0",
+            "sample-tide-circuit", ">=0.7.0 <0.8.0");
     private static final Map<String, String> EXPECTED_PATCH_BASE_GAMES = Map.of(
             "openggf-gallery-music-sample", "s2",
             "phase2-reskin", "s2",
             "phase2-sample", "s2",
             "phase3-character", "s2",
             "sample-flappy", "s3k",
-            "sample-rom-art-remix", "s2");
+            "sample-rom-art-remix", "s2",
+            "sample-tide-circuit", "s2");
     private static final Set<String> TRUSTED_CODE_SAMPLES = Set.of(
             "phase2-sample", "phase3-character", "phase3-standalone", "sample-flappy",
-            "sample-platformer", "sample-rom-art-remix");
+            "sample-platformer", "sample-rom-art-remix", "sample-tide-circuit");
     private static final Set<String> STANDALONE_IDS = Set.of("phase3-standalone", "sample-platformer");
 
     @TempDir Path temp;
 
     @Test
-    void exactlyEightMaintainedSourcesBuildThroughRealPackageAndValidateAsOneRepository() throws Exception {
+    void exactlyNineMaintainedSourcesBuildThroughRealPackageAndValidateAsOneRepository() throws Exception {
         List<Sample> samples = List.of(
                 new Sample("music", this::materializeMusic),
                 new Sample("reskin", this::materializeReskin),
@@ -84,8 +88,9 @@ class TestSampleModsPackage {
                 new Sample("standalone", this::materializeStandalone),
                 new Sample("flappy", this::materializeFlappy),
                 new Sample("platformer", this::materializePlatformer),
-                new Sample("rom-art-remix", this::materializeRomArtRemix));
-        assertEquals(8, samples.size(), "The maintained gallery contract is exactly eight source mods");
+                new Sample("rom-art-remix", this::materializeRomArtRemix),
+                new Sample("two-act-campaign", this::materializeCampaign));
+        assertEquals(9, samples.size(), "The maintained gallery contract is exactly nine source mods");
 
         Path repository = temp.resolve("repository");
         Files.createDirectory(repository);
@@ -100,10 +105,10 @@ class TestSampleModsPackage {
         }
 
         var scanned = new DefaultModRepositoryScanner().scan(repository.toAbsolutePath().normalize());
-        assertEquals(8, scanned.size());
+        assertEquals(9, scanned.size());
         var validated = new ModCatalogValidator(repository.toAbsolutePath().normalize(),
                 ModInputLimits.production(), (game, stockId) -> true).validate(scanned);
-        assertEquals(8, validated.entries().size());
+        assertEquals(9, validated.entries().size());
         Set<String> ids = new java.util.LinkedHashSet<>();
         for (var entry : validated.entries()) {
             ModDescriptor descriptor = assertInstanceOf(ModDescriptor.class, entry);
@@ -279,6 +284,15 @@ class TestSampleModsPackage {
                 ROM_ART_REMIX.resolve("src/main/mod/level-source"), "rom-art-remix-level");
         assertCli("convert", "level", "--from-export", level.toString(),
                 "--out", output.resolve("levels/rom-art-gallery").toString());
+    }
+
+    private void materializeCampaign(Path output) throws Exception {
+        copyTree(CAMPAIGN.resolve("src/main/resources"), output);
+        compileJava(CAMPAIGN.resolve("src/main/java"), output);
+        try (var files = Files.walk(output.resolve("levels/tide"))) {
+            assertEquals(22, files.filter(path -> path.toString().endsWith(".bin")).count(),
+                    "Both original acts must retain all eleven bounded binary assets");
+        }
     }
 
     private Path materializeLevel(Path source, String name) throws Exception {

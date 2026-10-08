@@ -38,6 +38,7 @@ class TestRewindRoundTripHarnessConstruction {
             "com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild",
             "com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance$LinkedBodyChild",
             "com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance$SpikerTopSpikeChild",
+            "com.openggf.game.sonic3k.objects.badniks.ChainspikeBadnikInstance$ChainspikeChild",
             "com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance$TurboSpikerShellChild",
             "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild",
             "com.openggf.game.sonic3k.objects.Mhz1CutsceneDoorInstance",

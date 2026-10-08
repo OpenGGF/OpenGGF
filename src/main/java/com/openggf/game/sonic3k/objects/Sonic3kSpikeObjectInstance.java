@@ -45,10 +45,12 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance
     private int pushRateTimer;              // $3A: frames until next push allowed
     private int pushDistanceRemaining = PUSH_MAX_DISTANCE; // $3C: remaining 1px pushes
     private boolean mainRoutineReached;
+    private boolean hurtFromBottom;
     private boolean suppressSolidThisFrame = true;
 
     public Sonic3kSpikeObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Spikes");
+        hurtFromBottom = (spawn.renderFlags() & 2) != 0;
     }
 
     @Override
@@ -75,13 +77,24 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance
             pushParticipants.flag(pushParticipants.slot(player), PUSH_CONTACT, true);
         }
         super.onSolidContact(player, contact, frameCounter);
-        if (isSideways() && !isUpsideDown() && contact.touchSide()) {
+        if (isSideways() && !hurtFromBottom && contact.touchSide()) {
             // loc_240E2 clears this participant's object-side push bit after
             // sub_24280, even when invulnerability prevents damage. Leaving it
             // live lets a later SolidObject miss publish a spurious Walk word
             // over the hurt animation (sonic3k.asm:49064,49071).
             services().objectManager().solidContacts().releaseObjectPushLatch(player, this);
         }
+    }
+
+    @Override
+    protected boolean shouldHurt(SolidContact contact) {
+        // Obj_Spikes chooses loc_2413E after choosing loc_24090/loc_240E2.
+        // Keep the native precedence: Y-flipped relative to initial gravity wins
+        // even for sideways mappings. Movement remains subtype-controlled.
+        if (hurtFromBottom) {
+            return contact.touchBottom();
+        }
+        return isSideways() ? contact.touchSide() : contact.standing();
     }
 
     @Override
@@ -102,6 +115,12 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance
             // and returns before the movement + SolidObjectFull body can run
             // (sonic3k.asm:48925-49012).  The first main-routine frame starts
             // on the next object execution.
+            // loc_23FE8 XORs the placement status Y-flip with Reverse_gravity_flag
+            // to select loc_2413E. That routine tests SolidObjectFull's gravity-
+            // relative underside result; it overrides the sideways routine too.
+            // This is a one-time code-pointer choice, not a live gravity toggle.
+            var state = services().gameState();
+            hurtFromBottom = isUpsideDown() ^ (state != null && state.isReverseGravityActive());
             mainRoutineReached = true;
             suppressSolidThisFrame = true;
             currentX = baseX;

@@ -25,10 +25,10 @@ class TestSozCheckpointReloadProduction {
     static Stream<Arguments> scenarios() {
         var rows = new java.util.ArrayList<Arguments>();
         for (int act : new int[]{0, 1}) for (String character : new String[]{"sonic", "tails", "knuckles"})
-            for (int width : new int[]{320, 400, 512, 640, 800}) for (String donor : new String[]{"off", "s1", "s2"})
+            for (var aspect : WidescreenAspect.values()) for (String donor : new String[]{"off", "s1", "s2"})
                 if(SozAcceptanceConfigurations.supportsCharacter(donor,character))
                     rows.add(Arguments.of(act, act == 0 ? 1 : 2, act == 0 ? 0x1A30 : 0x860,
-                        act == 0 ? 0x428 : 0x5C8, character, width, donor));
+                        act == 0 ? 0x428 : 0x5C8, character, aspect, donor));
         return rows.stream();
     }
     static Stream<Arguments> remainingPosts() {
@@ -36,24 +36,23 @@ class TestSozCheckpointReloadProduction {
                 {1,3,0x13F0,0x428},{1,4,0x1F00,0x108},{1,5,0x3280,0x1A8},{1,6,0x4EC0,0x4A8}};
         var rows=new java.util.ArrayList<Arguments>();
         for(var post:posts)for(String character:new String[]{"sonic","tails","knuckles"})
-            for(int width:new int[]{320,400,512,640,800})for(String donor:new String[]{"off","s1","s2"})
+            for(var aspect:WidescreenAspect.values())for(String donor:new String[]{"off","s1","s2"})
                 if(SozAcceptanceConfigurations.supportsCharacter(donor,character))
-                    rows.add(Arguments.of(post[0],post[1],post[2],post[3],character,width,donor));
+                    rows.add(Arguments.of(post[0],post[1],post[2],post[3],character,aspect,donor));
         return rows.stream();
     }
     @ParameterizedTest @MethodSource("remainingPosts")
-    void otherPlacedPostsActivateAndReload(int act,int index,int x,int y,String character,int width,String donor) {
-        assertAll(() -> touchCheckpointThenDeathReloadsItsNativePosition(act,index,x,y,character,width,donor));
+    void otherPlacedPostsActivateAndReload(int act,int index,int x,int y,String character,WidescreenAspect aspect,String donor) {
+        assertAll(() -> touchCheckpointThenDeathReloadsItsNativePosition(act,index,x,y,character,aspect,donor));
     }
     @ParameterizedTest @MethodSource("scenarios")
     void touchCheckpointThenDeathReloadsItsNativePosition(int act,int index,int x,int y,String character,
-            int width,String donor){
+            WidescreenAspect aspect,String donor){
         var config=SonicConfigurationService.getInstance();config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,character);
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,"");
         config.setSessionOverride(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED,false);
-        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,WidescreenAspect.NATIVE_4_3.name());
-        config.resolveDisplayAspect();config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS,width);
+        SozAcceptanceConfigurations.selectDisplay(aspect);
         config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,!donor.equals("off"));
         config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE,donor);
         if (!donor.equals("off")) {
@@ -68,7 +67,7 @@ class TestSozCheckpointReloadProduction {
         if(!donor.equals("off"))builder.withCrossGameDonation(donor);
         var f=builder.build();
         SozAcceptanceConfigurations.assertUsableTeam(donor);
-        assertEquals(width,f.camera().getWidth()&65535);
+        SozAcceptanceConfigurations.assertDisplay(aspect);
         assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
         if(!donor.equals("off"))assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
         assertEquals(!donor.equals("s1"),f.sprite().getGameRules().playerCapability().spindashEnabled());
@@ -98,7 +97,7 @@ class TestSozCheckpointReloadProduction {
                     assertEquals(x,GameServices.camera().getFocusedSprite().getCentreX()&65535);
                     assertEquals(y,GameServices.camera().getFocusedSprite().getCentreY()&65535);
                     assertFalse(GameServices.camera().getFocusedSprite().getDead());
-                    assertEquals(width,GameServices.camera().getWidth()&65535);
+                    SozAcceptanceConfigurations.assertDisplay(aspect);
                     assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
                     if(!donor.equals("off"))assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
                     SozAcceptanceConfigurations.assertUsableTeam(donor);
@@ -113,6 +112,7 @@ class TestSozCheckpointReloadProduction {
     }
     private static void same(com.openggf.game.rewind.CompositeSnapshot expected,
             com.openggf.game.rewind.CompositeSnapshot actual) {
+        assertEquals(expected.entries().keySet(), actual.entries().keySet());
         for(var key:expected.entries().keySet()) {
             var diff=com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key,expected.get(key),actual.get(key));
             assertTrue(diff.isEmpty(),key+": "+diff);

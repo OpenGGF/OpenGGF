@@ -10,28 +10,10 @@ public record CarriedTitlePublicationTiming(
         boolean lockPlayerControl,
         int exitAdditionalDispatches,
         int exitPhaseOneDispatchOverlap,
-        int preloadedActCameraReleaseDispatches,
-        int carriedResultsRetireDispatches) {
+        int preloadedActCameraReleaseDispatches) {
 
     public static final CarriedTitlePublicationTiming NONE =
-            new CarriedTitlePublicationTiming(false, false, false, 0, 0, false, 0, 0, -1, -1);
-
-    public CarriedTitlePublicationTiming(
-            boolean explicitTiming,
-            boolean titlePublicationOwnedByCarriedObject,
-            boolean resetLevelGamestateAtDisplay,
-            int resetAdditionalDispatches,
-            int resetPhaseOneDispatchOverlap,
-            boolean lockPlayerControl,
-            int exitAdditionalDispatches,
-            int exitPhaseOneDispatchOverlap,
-            int preloadedActCameraReleaseDispatches) {
-        this(explicitTiming, titlePublicationOwnedByCarriedObject,
-                resetLevelGamestateAtDisplay, resetAdditionalDispatches,
-                resetPhaseOneDispatchOverlap, lockPlayerControl,
-                exitAdditionalDispatches, exitPhaseOneDispatchOverlap,
-                preloadedActCameraReleaseDispatches, -1);
-    }
+            new CarriedTitlePublicationTiming(false, false, false, 0, 0, false, 0, 0, -1);
 
     public CarriedTitlePublicationTiming {
         resetAdditionalDispatches = Math.max(0, resetAdditionalDispatches);
@@ -40,8 +22,6 @@ public record CarriedTitlePublicationTiming(
         exitPhaseOneDispatchOverlap = Math.max(0, exitPhaseOneDispatchOverlap);
         preloadedActCameraReleaseDispatches = preloadedActCameraReleaseDispatches < 0
                 ? -1 : preloadedActCameraReleaseDispatches;
-        carriedResultsRetireDispatches = carriedResultsRetireDispatches < 0
-                ? -1 : carriedResultsRetireDispatches;
     }
 
     /**
@@ -54,14 +34,12 @@ public record CarriedTitlePublicationTiming(
         }
         int preloadedActCameraReleaseDispatches =
                 request.inLevelTitleCardPreloadedActCameraReleaseDispatches();
-        int carriedResultsRetireDispatches = request.carriedResultsRetireDispatches();
         boolean explicitTiming = request.resetLevelGamestateAtInLevelTitleCardDisplay()
                 || request.inLevelTitleCardResetAdditionalDispatches() != 0
                 || request.inLevelTitleCardResetPhaseOneDispatchOverlap() != 0
                 || request.lockPlayerControlForInLevelTitleCard()
                 || request.inLevelTitleCardExitAdditionalDispatches() != 0
-                || request.inLevelTitleCardExitPhaseOneDispatchOverlap() != 0
-                || carriedResultsRetireDispatches >= 0;
+                || request.inLevelTitleCardExitPhaseOneDispatchOverlap() != 0;
         boolean titlePublicationOwnedByCarriedObject = !request.showInLevelTitleCard();
         if (!explicitTiming && preloadedActCameraReleaseDispatches < 0
                 && !titlePublicationOwnedByCarriedObject) {
@@ -76,7 +54,6 @@ public record CarriedTitlePublicationTiming(
                 request.lockPlayerControlForInLevelTitleCard(),
                 request.inLevelTitleCardExitAdditionalDispatches(),
                 request.inLevelTitleCardExitPhaseOneDispatchOverlap(),
-                preloadedActCameraReleaseDispatches,
-                carriedResultsRetireDispatches);
+                preloadedActCameraReleaseDispatches);
     }
 }

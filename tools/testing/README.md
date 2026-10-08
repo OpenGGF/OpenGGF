@@ -136,14 +136,53 @@ python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test
 python3 tools/testing/maven_queue.py -Dmse=off package
 ```
 
+For small focused tests with known bounded memory needs, use the **lean lane**:
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off "-Dtest=TestCollisionLogic" test
+```
+
+It caps both Maven and the reused test JVM at **1 GiB heap each**, preserving the
+Mockito agent, CDS setting and macOS first-thread flag, and reserves **4 GiB RAM / 4
+cores** rather than the normal 7 GiB / 8 cores. The same headroom, three-run ceiling,
+worktree exclusion and waiting order apply. An out-of-memory result is a failed run;
+rerun that test in the normal lane and report the lean failure. Full suites, wildcard
+selectors, explicit profiles, custom build/JVM overrides and custom `.mvn` launch
+settings are rejected by `--lean`. This is an opt-in development lane, not a substitute
+for required broad, trace, native or release validation. It does not certify every
+exact test selector as fitting in 1 GiB.
+
+An older worktree can use the updated wrapper by its absolute path while remaining
+in the intended worktree: the caller's working directory selects the build tree.
+For example, invoke `/path/to/main/tools/testing/maven_queue.py --lean ...` with
+Python. Update worktree tooling for the new admission and aging rules throughout
+the queue; older wrappers remain lock-compatible but reserve normal budgets.
+
 Submit checks when ready, even while another agent is testing. Leave the command session
 running: it prints a waiting notice every 30 seconds and starts automatically when it
-acquires a slot. On Linux, the queue admits up to two invocations in different
+acquires a slot. On Linux, the queue admits up to three invocations in different
 worktrees when memory and CPU budgets fit; category ordinary/guard lanes stay together.
 The same worktree always remains exclusive. Unsupported resource probes/platforms
 and CPU allocations smaller than two per-run reservations retain serial execution.
 There is no background service, task owner or approval step. Participating waiters
 use short-run priority with aging; different clones have separate queues. Each command still uses its own worktree and `target/` directory.
+
+#### Queue telemetry
+
+Each admitted or cancelled request appends one line to `.git/maven-queue-log.jsonl`:
+kind (`focused`, `focused-lean`, `full`, `category`, `category-full`, `profile:<names>`, `exclusive`,
+`cleanup`), worktree name, wait and hold seconds, sampled peak RSS and mean CPU. It
+records no Maven arguments and no test results, so it is not a validation receipt.
+The log is trimmed to its newest half above 512 KiB. Summarise it with:
+
+```bash
+python3 tools/testing/maven_queue.py --stats
+```
+
+Peak RSS sums shared pages and two-second sampling misses short peaks; see the
+[2026-09-15 profiling](../../docs/architecture/research/2026-09-15-maven-resource-admission.md).
+The [2026-10-07 focused-throughput investigation](../../docs/architecture/research/2026-10-07-maven-focused-throughput.md)
+records the lean lane's design, evidence and coverage limits.
 
 #### Waiting order
 
@@ -154,10 +193,13 @@ is a priority threshold, not a start-time guarantee: running Maven commands are 
 preempted, and external resource pressure can still delay admission.
 
 An unaged request blocked by its worktree, an exclusive run or resource limits can be
-bypassed by another request that fits (backfilling). Once the oldest aged request is
-blocked, **new admissions pause** until it can start or is cancelled; existing runs
-finish normally. This deliberately leaves some capacity idle to avoid repeatedly
-postponing the older request. Already-running backfill can still delay it.
+bypassed by another request that fits (backfilling). Once the oldest aged request
+needs shared capacity, **new admissions pause** until it can start or is cancelled;
+existing runs finish normally. An aged resource-aware request waiting only for its
+own busy worktree allows unrelated trees to proceed: pausing them cannot release its
+`target/`. Later requests for that same tree cannot overtake it, even if the holder
+exits during a scheduler scan. Aged serial requests still drain the shared queue.
+Already-running backfill can still delay an older request.
 
 Estimates are coarse ordering hints, independent of the RAM/CPU reservation:
 
@@ -186,14 +228,27 @@ selection is recomputed after waiting so it describes the tree actually being te
 Avoid editing that worktree during execution; the category runner rejects changed trees.
 
 Admission uses available memory, CPU affinity, visible cgroup v2 limits and one-minute
-system load. Each prospective run reserves **7 GiB RAM and 8 CPU cores**, with **2 GiB
-memory headroom**. Existing runs also count as full reservations, in addition to their
-usage already reflected in OS counters. This deliberate overestimate covers startup
-bursts; it may queue work even when a less conservative estimate would fit. These are
-admission estimates, not hard limits or a guarantee against unrelated host load.
-No running command is preempted when resources later fall. The estimate covers the
-single-worker default suite and `smoke`/`guards`. Category `--workers 2`, other explicit
-Maven profiles, Maven thread/fork/heap overrides, and nonempty `MAVEN_OPTS`,
+system load. Each normal run reserves **7 GiB RAM and 8 CPU cores**, with **2 GiB
+memory headroom**; the opt-in lean lane reserves **4 GiB and 4 cores**. Existing runs
+retain their own full reservations. While a run holds a
+slot, its wrapper samples the run's process tree every two seconds and publishes RSS and
+recent CPU in an OS-leased `.git/maven-running/*.lease` record. Admission credits that
+realised usage, capped at the run's own reservation, because OS counters already
+contain it: without the credit, one grown full suite made a second run look unaffordable
+on a 30 GiB host. A young run is uncredited until measured; a stale, malformed or
+unlocked record (older wrapper, killed parent) earns no credit and keeps the full
+normal reservation. This safely accounts for mixed normal/lean runs, with missing
+usage or budget records making admission more conservative. These are admission
+estimates, not hard limits or a guarantee against
+unrelated host load. No running command is preempted when resources later fall.
+
+The estimate covers one reused test fork with the shared 3 GiB heap. That is the
+single-worker default suite and the profiles that keep it: `smoke`, `guards`, `ci`,
+`trace-replay`, `trace-segments`, `trace-replay-r7`, `trace-diagnostics`, `fbz-routes`,
+`audio-reference` and `audio-local-wave`. A Python test pins that shape against `pom.xml`.
+`benchmarks` (wall-clock sensitive), `test-concurrent` (two forks), `audio-stress`,
+`tracechaser-integration`, packaging and other profiles, category `--workers 2`,
+Maven thread/fork/heap overrides, and nonempty `MAVEN_OPTS`,
 `JAVA_TOOL_OPTIONS` or `JDK_JAVA_OPTIONS` retain exclusive execution. Implicit profiles
 or heap settings in custom project/user Maven configuration are not detected; use the
 serial override for those unmeasured shapes.
@@ -204,7 +259,7 @@ previous single-lock wrapper exclude resource-aware callers in both directions.
 Shared Git settings tune the policy across linked worktrees:
 
 ```bash
-git config openggf.mavenMaxRuns 2
+git config openggf.mavenMaxRuns 3
 git config openggf.mavenMemoryGiB 7
 git config openggf.mavenCpuCores 8
 git config openggf.mavenHeadroomGiB 2
@@ -222,7 +277,7 @@ presence is **not** evidence of an active run. Never delete these files to force
 that could create two independent locks. Normal exits and handled cancellation release
 them automatically. While waiting, the scheduler creates a unique leased
 `maven-waiters/*.request` file under the shared Git directory containing only worktree
-lock location, arrival time, estimated duration and execution mode. No Maven arguments,
+lock location, arrival time, estimated duration, execution mode and resource budget. No Maven arguments,
 PIDs or gameplay data are stored. The OS lease determines liveness; dispatch/cancellation
 removes the request, and later scheduler scans prune unlocked records from killed waiters.
 These temporary request records are not validation receipts or manual task registration. On POSIX the Maven child
@@ -263,8 +318,10 @@ and acknowledge category diagnostics after consuming them.
 
 ### Automatic storage cleanup
 
-Acknowledgment retains exclusive queue locking but does not require CPU or memory
-headroom: it deletes metadata and never launches Maven.
+Acknowledgment holds the current worktree's lock and a shared compatibility lock.
+It can overlap resource-aware Maven runs in other worktrees, but waits for writes
+in its own tree and for legacy/serial exclusive clients. It does not occupy a JVM
+slot, join the admission queue or require CPU/memory headroom.
 
 Diagnostics are temporary, not a run history. After inspecting `results.json` (including
 skip reasons and failures) and any relevant log tail, acknowledge consumption:
@@ -274,7 +331,7 @@ python3 tools/testing/run_categories.py --acknowledge <run-id>
 ```
 
 This deletes the **entire run directory**, including summaries, plans and commands, without
-running Maven. It waits for the same execution slot as validation before cleanup. Only exact runner IDs are accepted, never paths or symlinked directories.
+running Maven. Only exact runner IDs are accepted, never paths or symlinked directories.
 A repeated acknowledgment is harmless. Agents must acknowledge consumed results before
 delivery; there is no background process that can detect when a human has read a file.
 
@@ -304,6 +361,97 @@ The selector, queue and retention tests run in the CI smoke and full test jobs. 
 ```bash
 python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'
 ```
+
+## Per-test memory diagnostics
+
+Start with exact likely-expensive tests rather than a full-suite memory census:
+
+```bash
+python3 tools/testing/profile_test_memory.py --gc test --repeat 3 \
+  TestGameplayCaptureSmoke TestAiz2ShipLoopRewindRoundTrip \
+  com.openggf.tests.TestSonic3kLevelLoading TestRomReadAllBytes
+```
+
+Use fully qualified names for ambiguous classes; `Class#method` selects one method.
+Wildcards are rejected. The tool builds this worktree's test classes through Maven,
+then compiles a standalone JUnit Platform listener outside the ordinary test classpath.
+It preserves the Mockito agent and uses one 3 GiB diagnostic JVM with serial Jupiter
+execution, existing test extensions and verified root ROM paths. It resolves the launcher
+version from the project's actual platform dependency; no project dependency is added.
+The entire build/profile holds an exclusive shared-queue lease. Normal tests incur no
+profiling overhead. This diagnostic does not reproduce Surefire's profile/tag selection
+or certify the ordinary suite.
+
+`target/test-memory-report.json` records each test's executing-thread allocated bytes,
+elapsed time, heap deltas, GC counters and sampled JVM-wide heap/RSS/direct/mapped-buffer
+peaks. Dynamic and parameterized cases keep their JUnit identities and display names;
+skips, aborts and container failures remain explicit. RSS is available on Linux only.
+Native LWJGL malloc is outside the direct-buffer metric, worker allocation is outside the
+thread counter, and short peaks may fall between samples. Peaks include fixtures, caches
+and profiler overhead; elapsed time includes optional boundary GC overhead.
+
+Three passes reuse the same JVM. Each pass also measures heap after a requested GC once
+launcher execution and class teardown have returned. Compare the later pass floors for
+persistent retention; the first pass includes initialization and caches. `--gc test`
+adds GC at test boundaries, `--gc class` adds it at class boundaries, and the default
+`--gc none` leaves boundaries alone. A missing observed GC produces no post-GC test delta.
+Test-boundary deltas can still include live fixtures and are **retention candidates, not
+proof of leaks**. GC profiling changes timing; use a second run with fewer boundary GCs
+when investigating throughput. Stable Java heap does not prove native memory is stable.
+
+`--sample-ms` defaults to 100; `--max-minutes` defaults to 20 execution minutes, with a
+10-minute no-output limit. Queue wait is excluded. Failed or interrupted reports are
+marked incomplete unless the launcher finished, and command exit status is separate
+from completeness. Inspect skipped/aborted cases before interpreting coverage. Raw
+events, rolling logs, compiled helper and temporary test artifacts are deleted after
+extracting the compact report, including handled interruption. `--output` can place the
+compact report in an explicit task directory; record durable findings in the existing
+engineering artifact and discard consumed target reports.
+
+To investigate memory accumulation across the **actual ordinary Surefire suite**,
+use the separate suite observer:
+
+```bash
+python3 tools/testing/profile_ordinary_memory.py --cold-compile --max-minutes 180
+# Exact controls/reproductions, with and without requested boundary GC:
+python3 tools/testing/profile_ordinary_memory.py --test TestCollisionLogic,TestBuildIdentity --max-minutes 10
+python3 tools/testing/profile_ordinary_memory.py --gc none --test TestCollisionLogic,TestBuildIdentity --max-minutes 10
+```
+
+This invokes the worktree's real `mvn test` selection with one reused 3 GiB fork,
+verified ROM paths and a temporary JUnit service-listener classpath. The broad run
+does not supply `-Dtest`; it preserves ordinary tags/exclusions. It holds an exclusive
+queue lease. Allow one to two hours on this host; `--max-minutes` defaults to 120
+and caps at 180 execution minutes, excluding queue wait. Preparation, the Maven run
+and its idle timeout share that budget. Class progress and minute heartbeats keep
+long route tests visible. There is no instrumentation on the normal test classpath.
+
+The default `--gc between-class` records requested-GC floors at class boundaries,
+plus a final floor at normal JVM shutdown after all plan callbacks have returned.
+**Within-plan floors can include JUnit-owned `PER_CLASS` fixtures after class
+teardown.** `allPlansFinished` distinguishes the final floor; growth rankings are
+retention candidates, not application-leak proof. A no-GC run has no retained-growth
+ranking. The report preserves per-test
+and class allocation/duration/peaks, explicit skips/aborts/failures, GC evidence,
+metaspace/direct/mapped buffers, RSS/swap and bounded high-watermark histograms/native
+memory summaries. It also samples the **Maven parent separately** without capping
+its existing heap, including cold test compilation in that process.
+`--cold-compile` removes only generated classes/compiler metadata under the held
+worktree lease; it preserves prior reports and rejects linked output directories.
+Without it, Maven may reuse already-compiled classes. Native Memory
+Tracking is enabled only for the diagnostic; it does not account for all driver or
+third-party native allocations. RSS can include shared pages and miss short peaks.
+Histogram entries are a lead, not a reference-chain or leak proof. Compare a suspect
+group in a bounded natural-GC reproduction before attributing an OOM.
+
+`target/ordinary-memory-report.json` distinguishes Maven exit status from listener
+completion and records the source commit/tool hashes. Missing or incomplete listener
+coverage fails the diagnostic even if Maven exits successfully. Forced GC changes
+timing and can mask allocation pressure; this run is not uninstrumented suite
+certification. Inspect Surefire outcomes/skips as well as memory. Raw event files,
+rotating GC/Maven logs, temporary helper classes and test artifacts are removed after
+extracting the report, including handled interruption. Record durable conclusions
+in the research artifact and remove consumed target reports.
 
 ## Complete Surefire outcome inventories
 

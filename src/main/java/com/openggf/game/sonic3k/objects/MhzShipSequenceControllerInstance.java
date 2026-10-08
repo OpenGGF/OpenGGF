@@ -74,7 +74,10 @@ public class MhzShipSequenceControllerInstance extends AbstractObjectInstance im
             int swingOffsetPixels = updateSwingOffset(state.isShipControllerSignalFlagSet());
             state.applyShipControllerFrame(motionAccumulator, swingOffsetPixels);
         });
-        if (((vIntRunCount - 1) & 0x0F) == 0) {
+        // loc_558AC gates sound on Level_frame_counter, not V_int_run_count.
+        int levelFrameCounter = services().levelManager() != null
+                ? services().levelManager().getFrameCounter() : vIntRunCount;
+        if (((levelFrameCounter - 1) & 0x0F) == 0) {
             services().playSfx(Sonic3kSfx.LARGE_SHIP.id);
         }
     }
@@ -110,6 +113,17 @@ public class MhzShipSequenceControllerInstance extends AbstractObjectInstance im
         }
         return (short) (swingOffset >> 16);
     }
+
+    @Override
+    public boolean isPersistent() {
+        // loc_5583E returns directly; loc_5582E uses Draw_Sprite, neither
+        // applies world-range deletion. These ship controllers/screenspace
+        // sprites live until the level transition replaces the object table.
+        return true;
+    }
+
+    @Override
+    public boolean participatesInRomWorldTransitionOffset() { return false; }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

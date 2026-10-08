@@ -44,7 +44,7 @@ class TestLbzLoweringGrappleObjectInstance {
         assertEquals("LBZLoweringGrapple", lbzObject.getName());
         assertInstanceOf(PlaceholderObjectInstance.class, aizObject);
         assertEquals("LBZLoweringGrapple", aizObject.getName());
-        assertInstanceOf(PlaceholderObjectInstance.class, lrzObject);
+        assertInstanceOf(LrzLavaFallObjectInstance.class, lrzObject);
         assertEquals("LRZLavaFall", lrzObject.getName());
     }
 

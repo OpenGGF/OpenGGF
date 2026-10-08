@@ -23,6 +23,8 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Arrays;
 
@@ -145,6 +147,10 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
         assertTrue(miniboss.isDefeatedForTest(), "Six hits defeat Obj_LBZMiniboss.");
         assertEquals(0, miniboss.getCollisionFlags());
 
+        // loc_7289A installs the replacement routine in this boss dispatch;
+        // its first Wait_NewDelay decrement belongs to the next dispatch.
+        miniboss.update(0, player);
+
         // ROM: BossDefeated sets $2E=$3F; Wait_NewDelay hands off to loc_72562
         // (song fade + Obj_EndSignControl) only after those frames elapse.
         for (int frame = 0; frame < 0x3F; frame++) {
@@ -156,6 +162,94 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
         assertTrue(miniboss.isDefeatFlowSpawnedForTest());
         assertNotNull(findActive(S3kBossDefeatSignpostFlow.class),
                 "loc_72562 jumps into Obj_EndSignControl after the delay.");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void fatalHitInstallsWaitBeforeFirstDecrementForNativePlayersAndRewinds(boolean tailsAttacks)
+            throws Exception {
+        SonicConfigurationService.getInstance()
+                .setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite main = fixture.sprite();
+        AbstractPlayableSprite attacker = tailsAttacks
+                ? GameServices.sprites().getSidekicks().getFirst() : main;
+        LbzMinibossInstance boss = spawnMiniboss();
+        boss.forceOpenForTest(ARENA_X, ARENA_Y);
+        main.setCentreX((short) ARENA_X);
+        main.setCentreY((short) (ARENA_Y + 0x38));
+        for (int hit = 0; hit < 5; hit++) {
+            boss.onPlayerAttack(attacker, enemyTouch());
+            for (int frame = 0; frame <= 0x20; frame++) {
+                boss.update(frame, main);
+            }
+        }
+        assertEquals(1, boss.getCollisionProperty());
+        boss.onPlayerAttack(attacker, enemyTouch());
+        assertTrue(boss.isDefeatedForTest());
+        assertEquals(0x3F, defeatTimer(boss));
+        assertEquals(0, explosionCount(), "Creation emission is still pending publication.");
+
+        var objects = GameServices.level().getObjectManager();
+        objects.setRewindInPlaceRestoreEnabledForTest(false);
+        var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var installed = registry.capture();
+        verifyFirstDefeatDispatches(boss, main);
+        var firstExplosions = explosionPositions();
+        registry.restore(installed);
+        LbzMinibossInstance restored = findActive(LbzMinibossInstance.class);
+        assertNotNull(restored);
+        org.junit.jupiter.api.Assertions.assertNotSame(boss, restored);
+        verifyFirstDefeatDispatches(restored, fixture.sprite());
+        assertEquals(firstExplosions, explosionPositions(),
+                "Restored pending emissions and the shared RNG must replay identical child positions.");
+    }
+
+    private void verifyFirstDefeatDispatches(LbzMinibossInstance boss, AbstractPlayableSprite main)
+            throws Exception {
+        // loc_7289A installs Wait_NewDelay; BossDefeated writes $3F and returns.
+        // This dispatch still runs the newly allocated explosion child, but
+        // cannot execute the parent's replacement routine too.
+        boss.update(100, main);
+        assertEquals(0x3F, defeatTimer(boss),
+                "The fatal-hit dispatch installs Wait_NewDelay without decrementing it.");
+        assertEquals(1, explosionCount(), "Creation-time child emission must not be delayed.");
+        boss.update(101, main);
+        assertEquals(0x3E, defeatTimer(boss));
+        assertEquals(1, explosionCount());
+        boss.update(102, main);
+        assertEquals(0x3D, defeatTimer(boss));
+        assertEquals(1, explosionCount());
+        boss.update(103, main);
+        assertEquals(0x3C, defeatTimer(boss));
+        assertEquals(2, explosionCount(), "The child keeps its independent three-dispatch interval.");
+        for (int frame = 104; frame <= 163; frame++) {
+            boss.update(frame, main);
+        }
+        assertEquals(0, defeatTimer(boss));
+        assertFalse(boss.isDefeatFlowSpawnedForTest(), "Wait_NewDelay does not expire at zero.");
+        boss.update(164, main);
+        assertTrue(boss.isDefeatFlowSpawnedForTest());
+        assertNotNull(findActive(S3kBossDefeatSignpostFlow.class));
+    }
+
+    private int defeatTimer(LbzMinibossInstance boss) throws Exception {
+        var field = LbzMinibossInstance.class.getDeclaredField("defeatWaitTimer");
+        field.setAccessible(true);
+        return field.getInt(boss);
+    }
+
+    private long explosionCount() {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(com.openggf.game.sonic3k.objects.S3kBossExplosionChild.class::isInstance)
+                .count();
+    }
+
+    private java.util.List<String> explosionPositions() {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(com.openggf.game.sonic3k.objects.S3kBossExplosionChild.class::isInstance)
+                .map(child -> child.getX() + ":" + child.getY())
+                .toList();
     }
 
     @Test
@@ -364,6 +458,29 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
                 "Camera_min_X_pos is shifted by the same delta.");
         assertEquals((0x3EA0 - 0x3A00) & 0xFFFF, camera.getMaxX() & 0xFFFF,
                 "Camera_max_X_pos is shifted by the same delta.");
+
+        assertEquals(camera.getMinX(), camera.getMinXTarget());
+        assertEquals(camera.getMaxX(), camera.getMaxXTarget());
+        assertEquals(camera.getMinY(), camera.getMinYTarget());
+        assertEquals(camera.getMaxY(), camera.getMaxYTarget());
+        camera.setFocusedSprite(player);
+        int heldPlayerX = player.getCentreX();
+        player.setCentreX((short) 0x0580);
+        for (int poll = 0; poll < 8; poll++) {
+            camera.updateBoundaryEasing();
+            camera.updatePosition(true);
+            assertEquals(0x04A0, camera.getMaxX() & 0xFFFF,
+                    "inherited maximum stays held until Change_Act2Sizes");
+            assertEquals(0x03A0, camera.getMinX() & 0xFFFF);
+            assertEquals(0x04A0, camera.getX() & 0xFFFF,
+                    "actual player follow clamps at the inherited right boundary");
+        }
+        player.setCentreX((short) 0x03A0);
+        camera.updateBoundaryEasing();
+        camera.updatePosition(true);
+        assertEquals(0x03A0, camera.getX() & 0xFFFF,
+                "actual player follow clamps at the inherited left boundary");
+        player.setCentreX((short) heldPlayerX);
 
         var map = GameServices.level().getCurrentLevel().getMap();
         assertEquals(0xDB, map.getValue(0, 5, 18) & 0xFF,

@@ -26,7 +26,10 @@ public final class MhzEndBossPaletteFadeController extends AbstractObjectInstanc
     private static final int DEFAULT_DELAY = 3;
     private static final int FADE_STEPS = 8;
 
-    private final byte[][] targetLines;
+    // loc_76574 copies the live target palette before loc_85E64 runs. Rewind
+    // recreates this controller with an empty placeholder, so restore must replace
+    // its array shape as well as its bytes; a final array only permits in-place copy.
+    private byte[][] targetLines;
     private int delay;
     private boolean fadeBackToTarget;
     private int[][] currentWords;

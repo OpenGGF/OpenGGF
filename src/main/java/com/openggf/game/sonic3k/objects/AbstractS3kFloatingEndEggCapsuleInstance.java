@@ -77,6 +77,17 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     private boolean parentMotionEligibilityDeferred;
     private boolean routeInitPending;
     private S3kBossExplosionController explosionController;
+    // Match the upright capsule: restore the optional emitter and rebind the shared RNG owner.
+    private final com.openggf.game.rewind.RewindStateful<S3kBossExplosionController.Snapshot> explosionRewind =
+            new com.openggf.game.rewind.RewindStateful<>() {
+                @Override public S3kBossExplosionController.Snapshot captureRewindStateValue() {
+                    return explosionController == null ? null : explosionController.captureSnapshot();
+                }
+                @Override public void restoreRewindStateValue(S3kBossExplosionController.Snapshot snapshot) {
+                    explosionController = snapshot == null ? null
+                            : S3kBossExplosionController.fromSnapshot(snapshot, services().rng());
+                }
+            };
 
     protected AbstractS3kFloatingEndEggCapsuleInstance(int initialX, int initialY, String debugName) {
         this(initialX, initialY, debugName, false);
@@ -246,8 +257,13 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         // Route-specific pre-dispatch state.
     }
 
+    /** Camera origin for the native capsule patrol, independent of presentation framing. */
+    protected int patrolCameraX() {
+        return services().camera().getX();
+    }
+
     private void initializeRoute8FromCamera() {
-        int cameraX = services().camera().getX();
+        int cameraX = patrolCameraX();
         int cameraY = services().camera().getY();
 
         currentX = (cameraX + X_OFFSET) & 0xFFFF;
@@ -259,7 +275,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     }
 
     private void updateRoute8BeforeTrigger() {
-        int cameraX = services().camera().getX();
+        int cameraX = patrolCameraX();
         int cameraY = services().camera().getY();
 
         // ROM loc_8662A compares the current x_pos against the current

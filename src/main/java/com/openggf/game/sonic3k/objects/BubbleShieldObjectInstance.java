@@ -58,7 +58,7 @@ public class BubbleShieldObjectInstance extends ShieldObjectInstance {
             if (player == null) return;
             int cx = player.getCentreX();
             int cy = player.getCentreY();
-            dplcRenderer.drawFrame(animationLifecycle.mappingFrame(), cx, cy, false, false);
+            dplcRenderer.drawFrame(animationLifecycle.mappingFrame(), cx, cy, false, shieldRenderVFlip());
             return;
         }
         if (hasRenderer()) {
@@ -104,5 +104,14 @@ public class BubbleShieldObjectInstance extends ShieldObjectInstance {
         if (module == null) return null;
         ObjectArtProvider provider = module.getObjectArtProvider();
         return (provider instanceof Sonic3kObjectArtProvider s3k) ? s3k : null;
+    }
+
+    /**
+     * ROM: {@code Obj_BubbleShield_Main} sonic3k.asm:34907-34914 sets the shield's Y-flip bit from
+     * {@code Reverse_gravity_flag} after masking the inherited status down to the
+     * orientation bit. See {@link ShieldAnimationArtLifecycle#reverseGravityMirror}.
+     */
+    boolean shieldRenderVFlip() {
+        return ShieldAnimationArtLifecycle.reverseGravityMirror(services());
     }
 }

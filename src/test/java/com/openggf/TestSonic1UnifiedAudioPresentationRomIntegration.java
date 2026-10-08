@@ -76,6 +76,9 @@ class TestSonic1UnifiedAudioPresentationRomIntegration {
     void setUp() {
         audio = AudioManager.getInstance();
         audio.resetState();
+        // resetState retains the device. Earlier host tests install a 6 Hz
+        // backend; PCM waveform assertions need a normal, known sample rate.
+        audio.setBackend(new com.openggf.audio.NullAudioBackend());
         SonicConfigurationService config =
                 SonicConfigurationService.getInstance();
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
@@ -97,6 +100,35 @@ class TestSonic1UnifiedAudioPresentationRomIntegration {
         // the next class in this fork a clean baseline rather than its
         // predecessor's team/intro settings.
         SonicConfigurationService.getInstance().resetToDefaults();
+    }
+
+    @Test
+    void coldGameplayAndTitleHaveAudibleDacPercussionWithoutSegaChant() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(ZONE, ACT).build();
+        speaker = AudioManagerTestDiagnostics.attachPresentationCapture(audio, audio.presentationFrameRate());
+        // Solo the physical DAC/FM6 channel: melody and PSG must not mask a
+        // missing drum bank, DAC enable, or stereo routing during a cold load.
+        audio.toggleSolo(com.openggf.audio.ChannelType.DAC, 5);
+        short[] packet = new short[speaker.maxStereoFramesPerPacket() * 2];
+        for (int music : new int[] {Sonic1Music.GHZ.id, Sonic1Music.TITLE.id}) {
+            audio.playMusic(music);
+            boolean percussion = false;
+            for (int frame = 0; frame < 120; frame++) {
+                fixture.stepFrame(false, false, false, false, false);
+                int count = speaker.drainPresentationFrame(packet);
+                // Ignore initial register settling and reject a constant DAC
+                // level: require a substantial varying waveform in both ears.
+                if (frame < 10) continue;
+                int leftMin = 32767, leftMax = -32768, rightMin = 32767, rightMax = -32768;
+                for (int i = 0; i < count * 2; i += 2) {
+                    leftMin = Math.min(leftMin, packet[i]); leftMax = Math.max(leftMax, packet[i]);
+                    rightMin = Math.min(rightMin, packet[i + 1]); rightMax = Math.max(rightMax, packet[i + 1]);
+                }
+                percussion |= leftMax - leftMin > 256 && rightMax - rightMin > 256;
+            }
+            assertTrue(percussion, "ROM drum waveform must reach both output channels for music " + music);
+        }
     }
 
     @Test

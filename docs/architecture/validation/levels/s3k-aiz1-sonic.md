@@ -8,6 +8,27 @@ Continuation base: `35488abb6` on `feature/ai-gameplay-capture`.
 The reviewed input helpers and pilot come from `435ec2e68`; unrelated develop
 engine changes were not imported. This is a partial matrix, not level certification.
 
+## Level-entry camera (2026-10-02)
+
+`Get_LevelSizeStart/loc_1BF74` subtracts `$A0` from the X focus and `$60` from
+the Y focus. It clamps underflow to zero, then clamps to the maximum bound; it
+never reads the minimum bound. The engine's forced snap also clamped to the
+minimum, which put AIZ1 at `$1308` instead of `$1300`.
+
+`TestSonic3kLevelStartCamera` covers:
+- the zero and maximum edges
+- MHZ1's separate `$160` focus, which checkpoints bypass
+- stable character identity
+- signed words
+
+Positioned captures and replays resnap through
+`LevelCameraInitialization.recenterPositionedEntry`. Continuous runs keep the
+production load camera.
+
+Results: Knuckles opening 12,600→12,566 errors, Mega opening 18→1 and Tails
+opening 17→0. Matched S1/S2 report projections are unchanged. ICZ1 Tails bounds
+and the CNZ/LRZ/DEZ/HPZ cold intro offsets are outside this fix.
+
 ## Configuration inventory
 
 The representative row is native/off, 320px, Sonic with CPU Tails. Width axes
@@ -440,3 +461,37 @@ and `test` passed **32 cases, zero failures/errors/skips**, in 58.696 seconds.
 This includes native recording preservation, 15 entry configurations, seven
 independent rewind windows, reload timeline isolation, three opposing-spring
 negative-control/replay cases and both input helpers.
+
+### Trace-campaign object coverage (2026-10-02/03)
+
+These are local object regressions with restore/replay. They do not certify the
+viewport, donor or team products for the whole act. Per-fix trace numbers are in
+the [frontier log](../../../status/trace-frontier-log.md#2026-10-03--s3k-trace-green-campaign-summary).
+
+| Object/owner | Regression | ROM owner |
+|---|---|---|
+| Monkey Dude body continuation and timer | `TestMonkeyDudeBadnikInstance#releasedBodyKeepsAnimationCadenceOffscreenAndAcrossRewind` | `Obj_WaitOffscreen/loc_85B02`, `loc_871C2`, `loc_87218` |
+| Monkey Dude linked hand | `#handLaunchesOnceFromItsPreviousFractionalChainPositionAcrossRewind`, `#armDoesNotStartAttackAtTheHorizontalRangeBoundary` | `sub_87524`, `sub_8756A`, `sub_87592`, `sub_875B4` |
+| Entry-flash ring deletion | `TestSonic3kSSEntryRingFormation`, `TestS3kSsEntryFlashGraphRewind` | `SSEntryFlash_Main` |
+| Tails tree release radii | `TestAizHollowTreeTailsRelease` (native aux: radius 15→19→15 at rows 2040, 2053, 2058) | `AIZTree_FallOff`, `Tails_TouchFloor` |
+
+The old Monkey Dude throw repeated every 120 updates and was driven by body
+animation. That is wrong: `sub_875B4` sets a once-only bit 0. Native Tails places
+the first projectile at `(0x1E64, 0x46A)` after its first movement (physical
+frame 6401).
+
+Route prefix pins:
+- `TestS3kKnucklesSuperEmeraldRunChain#aiz1ThroughGiantRingIntoFirstSpecialStageRow`
+- `TestS3kTailsFullChainRunPrefix`, both the first entry and the full first
+  return through segment 3 row 1
+- `TestS3kSonicTailsCompleteEmeraldRunPrefix`, through two returns to
+  segment 5 row 1
+
+### Fixed fire-reload camera lock — 2026-10-03
+
+`AIZ1BGE_Finish` writes min/max X `$10/$10`, and `Do_ResizeEvents` eases only
+max Y. The AIZ request now pins the engine's X smoothing targets as well, so the
+loaded defaults cannot move the lock. Without the fix,
+`TestSonic3kAIZEvents#eventsFg5StartsFireTransitionAndAppliesSeamlessFlow` fails
+after one ordinary boundary tick (expected 16, got 14). The native lock/release
+assertions and `TestS3kAiz1ReloadRewind` pass.

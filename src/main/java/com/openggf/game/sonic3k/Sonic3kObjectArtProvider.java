@@ -1597,6 +1597,26 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * FIFO stays the owner and this session-owned provider retains and claims
      * the handle.
      */
+    /**
+     * Retain an offscreen ring's restoration request until the physical FIFO can
+     * accept it. Wider visibility can release Obj_WaitOffscreen during startup,
+     * before the title-owned four-entry enemy batch has been admitted. The ROM's
+     * Queue_Kos_Module scans beyond its four slots if overfilled; the native
+     * viewport avoids this ordering here. Do not force the enemy admission owner
+     * or enlarge the physical FIFO for the wider presentation.
+     */
+    public boolean tryQueueRingExplosionRestoration() {
+        if (!pendingEnemyKosEntries.isEmpty()) {
+            return false;
+        }
+        var queue = S3kRuntimeArtCoordinator.current().moduleQueue();
+        if (!queue.hasCapacityFor(1)) {
+            return false;
+        }
+        queueBadnikExplosionArt();
+        return true;
+    }
+
     public void queueBadnikExplosionArt() {
         try {
             Rom rom = GameServices.rom().getRom();

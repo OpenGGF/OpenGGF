@@ -95,6 +95,23 @@ public final class RewindRoundTripHarness {
             new ObjectSpawn(0x100, 0x100, 1, 0, 0, false, 0);
 
     private static final Map<String, String> GRAPH_COVERED_ISOLATED_PROBE_CLASSES = Map.ofEntries(
+            Map.entry("com.openggf.game.sonic3k.objects.SszCraneClaw",
+                    "com.openggf.tests.TestS3kSszCraneRouteHeadless"),
+            Map.entry("com.openggf.game.sonic3k.objects.SszCraneClawPart",
+                    "com.openggf.tests.TestS3kSszCraneRouteHeadless"),
+            Map.entry("com.openggf.game.sonic3k.objects.SszCraneShipDecoration",
+                    "com.openggf.tests.TestS3kSszCraneRouteHeadless"),
+            Map.entry("com.openggf.game.sonic3k.objects.bosses.LrzMinibossArmSegmentChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestS3kLrzBossRewindHeadless"),
+            Map.entry("com.openggf.game.sonic3k.objects.bosses.LrzMinibossDebrisChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestS3kLrzBossRewindHeadless"),
+            Map.entry("com.openggf.game.sonic3k.objects.bosses.LrzMinibossHandChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestS3kLrzBossRewindHeadless"),
+            Map.entry("com.openggf.game.sonic3k.objects.bosses.LrzMinibossHitSparkChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestS3kLrzBossRewindHeadless"),
+            Map.entry("com.openggf.game.sonic3k.objects.bosses.LrzMinibossOrbiterChild",
+                    "com.openggf.game.sonic3k.objects.bosses.TestS3kLrzBossRewindHeadless"),
+
             Map.entry("com.openggf.game.sonic3k.objects.badniks.RocknBadnikInstance$Shell",
                     "com.openggf.tests.TestSozBadnikProduction"),
             Map.entry("com.openggf.game.sonic3k.objects.badniks.RocknBadnikInstance$Legs",
@@ -1198,12 +1215,14 @@ public final class RewindRoundTripHarness {
             snap = rr.capture();
         } catch (Throwable t) {
             String description = describeThrowable(t);
-            if (isUnregisteredObjectReferenceCapture(description)) {
-                RoundTripSweepResult retried =
-                        tryRoundTripWithSeededParent(fqn, cls, gameId, beforeFields);
-                if (retried != null) {
-                    return retried;
-                }
+            // A constructed child can refer to an unregistered stub parent.
+            // Custom snapshots reject that just as generic reference codecs do;
+            // do not make the registered-parent retry depend on exception wording.
+            // The retry still captures/restores the complete declared parent graph.
+            RoundTripSweepResult retried =
+                    tryRoundTripWithSeededParent(fqn, cls, gameId, beforeFields);
+            if (retried != null) {
+                return retried;
             }
             return new RoundTripSweepResult.Unprobed("capture threw: " + description);
         }
@@ -1808,6 +1827,10 @@ public final class RewindRoundTripHarness {
                 "com.openggf.game.sonic3k.objects.badniks.SnaleBlasterBadnikInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance$TunnelbotArm",
                 "com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.SpikebonkerBadnikInstance$SpikebonkerMace",
+                "com.openggf.game.sonic3k.objects.badniks.SpikebonkerBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.badniks.ChainspikeBadnikInstance$ChainspikeChild",
+                "com.openggf.game.sonic3k.objects.badniks.ChainspikeBadnikInstance");
         // S3K MHZ cutscene/miniboss children. The parent object IDs are zone-set
         // dependent, so registryForSeededParent supplies exact parent factories.
         m.put("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild",
@@ -2567,11 +2590,6 @@ public final class RewindRoundTripHarness {
         }
         String msg = root.getMessage();
         return root.getClass().getSimpleName() + (msg != null ? ": " + msg : "");
-    }
-
-    private static boolean isUnregisteredObjectReferenceCapture(String description) {
-        return description != null
-                && description.contains("RewindIdentityTable has no registered id for object reference");
     }
 
     /**

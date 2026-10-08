@@ -149,12 +149,12 @@ actual_pins() {
 
 current_api_value() {
     blob_text "$1" "$MOD_API_VERSION" |
-        sed -n '/^[[:space:]]*\(public[[:space:]]*\)\?static[[:space:]]*final.*CURRENT[[:space:]]*=/s/.*CURRENT[^=]*=[^(]*(\?"\([0-9][0-9.]*\)".*/\1/p' |
+        sed -E -n 's/^[[:space:]]*(public[[:space:]]+)?static[[:space:]]+final[^=]*CURRENT[[:space:]]*=[^"]*"([0-9][0-9.]*)".*/\2/p' |
         head -n 1
 }
 
 contains_mod_api_annotation() {
-    printf '%s\n' "$1" | grep -Eq '^[[:space:]]*@ModApi([.([:space:]]|$)'
+    printf '%s\n' "$1" | grep -Eq '^[[:space:]]*@(com\.openggf\.game\.)?ModApi([.([:space:]]|$)'
 }
 
 # Declaration text of a Java source that can change the normalized signature pin.
@@ -560,14 +560,30 @@ commit_introduced_lines_have_machine_local_home() {
 
 is_rom_like_path() {
     lower=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+    # Candidate lists use newline IFS; the extension list is space-separated.
+    rom_like_ifs=$IFS
+    IFS=' '
     for extension in $ROM_LIKE_DENYLIST_EXTENSIONS; do
         case "$lower" in
             *"$extension")
+                IFS=$rom_like_ifs
                 return 0
                 ;;
         esac
     done
+    IFS=$rom_like_ifs
     return 1
+}
+
+is_approved_authored_fixture() {
+    if command -v python3 >/dev/null 2>&1; then
+        fixture_python=python3
+    elif command -v python >/dev/null 2>&1; then
+        fixture_python=python
+    else
+        return 1
+    fi
+    "$fixture_python" "$POLICY_DIR/authored_fixture_policy.py" "$1" "$2"
 }
 
 effective_base_for_ci_pr() {
@@ -796,7 +812,9 @@ validate_file_size_policy() {
     IFS='
 '
     for path in $files; do
-        if is_rom_like_path "$path"; then
+        fixture_ref=INDEX
+        [ "$mode" != "commit" ] || fixture_ref=$commit
+        if is_rom_like_path "$path" && ! is_approved_authored_fixture "$fixture_ref" "$path"; then
             append_error "\`$path\` looks like a ROM/binary asset. Keep user-supplied ROMs and ROM-derived binary assets untracked."
         fi
         if [ "$mode" = "commit" ]; then

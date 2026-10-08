@@ -1,0 +1,14 @@
+formatVersion: 1
+id: robotnik-tower-defense
+name: Robotnik Tower Defence
+version: 0.1.0
+authors:
+  - OpenGGF contributors
+description: Industrial Action! Protect Robotnik's base from unionised Flickies with six badnik defenses.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s3k
+entrypoint: towerdefense.TowerDefenseMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

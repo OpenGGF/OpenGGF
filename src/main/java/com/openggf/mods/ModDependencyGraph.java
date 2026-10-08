@@ -16,10 +16,21 @@ final class ModDependencyGraph {
     private final Map<String, List<String>> dependencies;
 
     ModDependencyGraph(Map<String, ModDescriptor> descriptors) {
+        this(descriptors, Set.of());
+    }
+
+    ModDependencyGraph(Map<String, ModDescriptor> descriptors, Set<String> compositionOwners) {
         dependencies = new LinkedHashMap<>();
         descriptors.forEach((id, descriptor) -> dependencies.put(id,
                 descriptor.manifest().dependencies().stream().map(ModDependency::id)
-                        .filter(descriptors::containsKey).toList()));
+                        .filter(descriptors::containsKey).collect(java.util.stream.Collectors.toCollection(ArrayList::new))));
+        for (String owner : compositionOwners) {
+            ModCompositionMetadata metadata = descriptors.get(owner).manifest().composition();
+            for (String predecessor : metadata.after())
+                if (compositionOwners.contains(predecessor) && !dependencies.get(owner).contains(predecessor)) dependencies.get(owner).add(predecessor);
+            for (String successor : metadata.before())
+                if (compositionOwners.contains(successor) && !dependencies.get(successor).contains(owner)) dependencies.get(successor).add(owner);
+        }
     }
 
     Map<String, List<String>> cycleParticipants() {

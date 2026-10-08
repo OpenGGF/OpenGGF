@@ -202,17 +202,23 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         if (collected) {
             return false;
         }
-        // ROM: S3K Reverse_gravity_flag negates the gravity accumulation and swaps the floor probe
-        // for a ceiling probe. The flag is only ever set by S3K runtime state, so this is ROM-state
-        // driven, not a game-id branch.
+        // ROM: S3K Reverse_gravity_flag routes Obj37 to Obj_Bouncing_Ring_Reverse_Gravity and
+        // swaps the floor probe for a ceiling probe. The flag is only ever set by S3K runtime
+        // state, so this is ROM-state driven, not a game-id branch.
         boolean reverseGravity = isReverseGravityActive();
-        int effectiveGravity = reverseGravity ? -gravity : gravity;
 
         // ROM (LostRingPool.updatePhysics, RingManager.java:1276-1278 / s2.asm RLoss_Move):
         //   xSubpixel += xVel;  ySubpixel += yVel;  yVel += gravity.
+        // Under the flag loc_1A7E8 (sonic3k.asm:35675-35678) swaps MoveSprite2 for
+        // MoveSprite_TestGravity2, which integrates -y_vel (:36089-36096), and leaves the
+        // `addi.w #$18,y_vel` gravity step POSITIVE. Velocity is never inverted, only the
+        // position integration is. Negating the gravity instead and integrating +y_vel is the
+        // sign conjugate of that and agrees on position only if the launch velocity is also
+        // negated — and the spill loop (:35592-35613) has no flag branch, so it is not. That
+        // mirrored the whole spill arc the wrong way; the ROM form below does not.
         xSubpixel += xVel;
-        ySubpixel += yVel;
-        yVel += effectiveGravity;
+        ySubpixel += reverseGravity ? -yVel : yVel;
+        yVel += gravity;
 
         if (!floorCheck) {
             return false;
@@ -224,7 +230,10 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         int vblaCounter = resolveVblaCounter() + resolveFloorCheckCounterPhase();
         boolean boundaryChecksOnlyOnCadence =
                 lostRingBoundaryChecksOnlyOnProbeCadence();
-        boolean movingTowardSurface = reverseGravity ? yVel <= 0 : yVel >= 0;
+        // ROM: both bodies test the same sign. loc_1A75C `bmi.s loc_1A7B0` (:35767) and
+        // loc_1A7E8 `bmi.s loc_1A83C` (:35679) both skip the probe while y_vel is negative,
+        // because positive y_vel always means "falling", toward whichever surface is the floor.
+        boolean movingTowardSurface = yVel >= 0;
         if (!movingTowardSurface) {
             return !boundaryChecksOnlyOnCadence;
         }

@@ -25,9 +25,31 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Creator kit builder](../../tools/modding/build_creator_kit.py) exports matching
+  engine/SDK/API-doc/testkit artifacts, pinned portable examples and launchers;
+  [catalog probe](../../src/main/java/com/openggf/tools/modsdk/CreatorCatalogProbe.java)
+  measures production discovery, validation and registration at explicit bounded
+  catalog/asset shapes. Origin: mod framework readiness, 2026-10-07; see
+  [probe limits and acceptance](../modding/tools/scalability.md).
+
+- [Sitar Hero S2 native reference](../../src/test/java/com/openggf/mods/code/SitarHeroS2NativeProgram.java) (test scope): independently interprets supplied S2 ROM control flow, saved duration/frequency and service cadence; `TestSitarHeroS2SongCatalogue` compares complete requested attack streams and natural ends (2026-10-07 full-song catalogue).
+
+- [Sitar Hero S3K song probe](../../src/main/java/com/openggf/tools/SitarHeroS3kSongProbe.java): executes both locked-on ROM music tables through the production S3K driver and reports complete jump candidates, tempo boundaries, real channel/sample attacks and natural stops; input is an absolute ROM path and optional hex music IDs (2026-10-07 full song catalogue).
+
+- [Sonic 1 song-form survey](../../tools/audio/s1_song_forms.py): independently
+  walks a supplied REV01 ROM's SMPS calls, counted loops, native tempo/divider
+  changes and track stops to report complete forms and natural endings. Origin:
+  Sitar Hero full-song catalogue, 2026-10-07; command and limits are in the
+  [catalogue evidence](../architecture/designs/2026-10-07-sitar-hero-s1-song-catalogue.md).
+
 - `GameplayAllocationTool`: ordinary BK2-driven loop/render bytes per frame, excluding PNG/readback and CSV allocation. Use `--rom <absolute-path> --input <bk2> --zone <numeric-id> --act <one-based> --out-dir target/alloc`; optional `--frames 6000 --warmup 600 --width 400 --main sonic --sidekick tails --rewind true --jfr true`. `--sidekick none` selects solo play; the console reports the live roster count. Loop allocation includes input-row decoding. Compare route state before interpreting allocation deltas; JFR includes other threads, whereas reported counters measure the gameplay thread. Keep raw diagnostics temporary.
 
+- [Sprite sheet dump](../../src/main/java/com/openggf/tools/modsdk/SpriteSheetDump.java) (`ggfmod sprites`): renders every mapping frame of a ROM sprite (art, mappings, optional DPLC, palettes) or a playable character (`char=sonic`, with its animation scripts) into one numbered PNG grid, for choosing frames without booting a level (2026-10-05 Slay the Robotnik; a ggfmod subcommand since 2026-10-06).
+- [Example mod capture](../../src/test/java/com/openggf/mods/code/ExampleModCapture.java) (test scope) with [ExampleModHarness](../../src/test/java/com/openggf/mods/code/ExampleModHarness.java): builds any `examples/` mod with a startup scene from source and records its scene headless with GL to PNGs, an MP4 (ffmpeg) and a WAV of its music and sound effects, from an input script whose `jump=` steps use the scene's `DebuggableScene` entry (2026-10-05 Slay the Robotnik capture, generalised 2026-10-06 for the example's highlight reel).
 - [Maven resource profiler](../../tools/testing/profile_maven.py): sample queued ordinary/guard runs for process-tree memory and CPU admission estimates (2026-09-15 Maven resource task).
+- [Per-test memory profiler](../../tools/testing/profile_test_memory.py): explicit capture/rewind/ROM tests in a repeated diagnostic JVM, with executing-thread allocation, sampled peaks and post-GC pass floors; see [measurement limits](../../tools/testing/README.md#per-test-memory-diagnostics) (2026-10-07 throughput task).
+- [Ordinary-suite memory observer](../../tools/testing/profile_ordinary_memory.py): actual Surefire class/test peaks and post-teardown GC floors, with separate Maven RSS/swap/heap probes and bounded GC/native evidence (2026-10-07 memory-cause investigation).
+- [Streaming JFR test summary](../../tools/testing/java/com/openggf/tools/JfrTestSummary.java): `java -Xmx128m --source 21 tools/testing/java/com/openggf/tools/JfrTestSummary.java target/recording.jfr [test-class-prefix ...]` separates sampled threads, test owners and capture phases without expanding event JSON; weights estimate churn, native samples include waiting (2026-10-08 SOZ test-throughput follow-up).
 
 - [FBZ boundary comparator](../../tools/bizhawk/compare_fbz_boundary_fixture.py) supports `--sprite-publication` to compare the complete native CPU sprite table with the following consecutive frame’s VDP table; duplicate samples and gaps are explicit. The boundary exporter supplies the read-only CPU snapshots.
 
@@ -53,12 +75,32 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 | `TraceBenchmarkTool` | Replays a trace headlessly with no pacing and reports per-subsystem frame-time percentiles, for comparing JVMs or catching a performance regression. Writes a JSON report. Never quote its numbers without checking the trajectory digest matched. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceBenchmarkTool" "-Dexec.args=--trace aiz1 --json target/bench/temurin21-g1.json"` |
 | `BenchmarkCompareTool` | Renders a Markdown comparison from two or more benchmark reports; the first is the baseline. Pure post-processing, so it can run under any JVM. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.BenchmarkCompareTool" "-Dexec.args=--out target/bench/comparison.md target/bench/a.json target/bench/b.json"` |
 | `InputLogAuthorTool` | Compiles a short controller script (`60 R; 1 D+R; repeat 3 { 1 A ; 1 - }`) into a BizHawk `Input Log.txt` or minimal `.bk2`, then re-parses it with `Bk2MovieLoader` so the file is proven loadable. Skill: `bk2-input-authoring`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.InputLogAuthorTool" "-Dexec.args=--inline '60 R; 1 A' --out target/capture/run.txt"` |
-| `GameplayCaptureTool` | Pictures or films any gameplay section: boots a zone/act on the production path (`HeadlessGameBoot` + `GameLoop.step()`), teleports the leader, drives it from an input log or `.bk2`, and writes PNG frames, `state.csv`, and an MP4. Widths, donors and teams are flags. Skill: `gameplay-capture`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" "-Dexec.args=--game s3k --zone fbz --act 2 --x 0x1CF0 --y 0x76C --input target/capture/run.txt --out-dir target/capture/fbz2"` |
+| `DezFinalRouteAuthorTool` | Observes the final DEZ encounter and authors controller-only input through hands, core and escape. Declared solo Sonic boot: 200 rings, seven Super Emeralds. Optional DEZ2 input starts at ($34B0,$300), traverses its boss/real final-arena load and continues without reseeding. A fifth argument (`cold-solo`, `cold-team`, `cold-team-emeralds`) instead plays an input prefix from the real DEZ1 start without position/ring seeds. Writes input script/state CSV; no post-boot gameplay-state injection or parity claim. | `DezFinalRouteAuthorTool <ROM> <width> <output-prefix> [input [cold-solo\|cold-team\|cold-team-emeralds]]` (same Java classpath as gameplay capture) |
+| `DdzIncomingRouteAuthorTool` | Replays an actual DEZ incoming movie, then authors controller-only DDZ ring collection and both boss phases. The complete native movie supplies input buttons only; no state hydration. Declared positioned or cold-team boot; complete input script and observed state CSV. | `DdzIncomingRouteAuthorTool <ROM> <width> <incoming.bk2> <reference.bk2> <output-prefix> [cold-team]` |
+| `GameplayInputBranchTool` | Cold-replays one input prefix, then tries controller-only scripts from its engine-owned rewind state. Writes full-prefix BK2/scripts/state CSVs, nearby object inventory, per-input riding/standing contact owners and sampled PNGs. Preserves both controllers and input-edge history; refuses existing outputs and cross-load restores. Chosen routes require fresh uninterrupted verification. Origin: LRZ2 bring-up, 2026-09-24. | `GameplayInputBranchTool <ROM> s3k lrz 1 320 sonic tails <input.bk2> <prefix> <output-dir> '30 R+A;60 R' '12 R;30 R+A;60 R'` (gameplay-capture Java classpath) |
+| `SszBossInputAuthorTool` | Cold-replays an SSZ input prefix, then tries controller policies from whole-registry rewind snapshots with held-input restoration. Supports GHZ/MTZ/Mecha, selectable width and roster; writes complete script/BK2/state CSV and an explicit defeat/death/limit result. Refuses existing outputs and cross-load restore; selected inputs require fresh uninterrupted replay. Origin: solo Tails S&K campaign,75c9caf16. | `SszBossInputAuthorTool <ROM> <width> <main> <sidekick-or-none> <input.bk2> <prefix> ghz\|mtz\|mecha <new-output-dir> [max-new-inputs]` (gameplay-capture Java classpath) |
+| `DezMinibossInputAuthorTool` | Cold-prefix controller search for both native eight-hit DEZ1 phases. Reads the eye and native hit counter, restores held input with whole-world snapshots, and records complete script/BK2/state CSV. Includes jump release/repress policies; no position/ring/health seeds. A result requires independent uninterrupted replay. Origin: 2026-09-28 widescreen campaign. | `DezMinibossInputAuthorTool <ROM> <width> <main> <sidekick-or-none> <input.bk2> <prefix> <new-output-dir> [max-new-inputs]` (gameplay-capture Java classpath) |
+| `GameplayCaptureTool` | Pictures or films any gameplay section: boots a zone/act on the production path (`HeadlessGameBoot` + `GameLoop.step()`), teleports the leader, drives it from an input log or `.bk2`, and writes PNG frames, `state.csv`, and an MP4. Widths, donors and teams are flags; `--mod <jar>` applies a packaged patch mod (via `DevelopmentPatchLoader`) to film mod gameplay. Skill: `gameplay-capture`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" "-Dexec.args=--game s3k --zone fbz --act 2 --x 0x1CF0 --y 0x76C --input target/capture/run.txt --out-dir target/capture/fbz2"` |
 | `LevelTileUsageLocatorTool` | Lists the 128px layout cells (foreground and background) that place given 8x8 tiles or palette-line colours, so a capture can be aimed at AniPLC destination tiles or an AnPal-cycled colour that is off screen from the level start. Origin: HPZ bring-up demo captures. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.LevelTileUsageLocatorTool" "-Dexec.args=--game s3k --zone hpz --act 2 --tiles 0x2D0-0x2DB --colors 3:1,2"` |
 | `tools/bizhawk/capture_hpz_route_reference.lua` | Native BizHawk exporter for Hidden Palace questions: records RAM (camera, players, event words, palette line 4, emerald state) and framebuffer images for plan-declared movie windows, and saves native states at planned frames so later probes load a state instead of replaying a complete-run movie. Origin: HPZ bring-up. | `python3 tools/bizhawk/capture_native_references.py ... --exporter tools/bizhawk/capture_hpz_route_reference.lua --plan plan.lua --fixture-state <state> --require-output observations.csv --require-output done.txt` |
 | `tools/bizhawk/capture_ddz_route_reference.lua` | Native BizHawk exporter for Doomsday questions: records the DDZ controller/boss/body SST fields, autoscroll words (`_unkFA82..FAB8`), foreground-plane scroll and palette per frame; `plan.slots` logs every SST slot-occupancy change (load and allocation order) and `plan.boss_code` retargets the boss columns. Origin: DDZ bring-up (slot histories found the `Camera_X_pos_coarse_back` latch). | `python3 tools/bizhawk/capture_native_references.py ... --exporter tools/bizhawk/capture_ddz_route_reference.lua --plan plan.lua --fixture-state <state> --require-output observations.csv --require-output done.txt` |
 
 ## Test harness helpers
+
+- `tools/modding/native-feasibility/probe.py` builds closed-world, Crema and optional
+  JIT controls around the production mod classloader, then compiles two external
+  fixture JARs after the images exist. `registration_probe.py` derives exact-class
+  preservation from the canonical API and all packaged mod bytecode, audits
+  types/fields/methods before creator execution, and checks real validation and
+  owner transactions on JVM/native. The companion `NativeModMemberContractTest`
+  covers dormant callbacks and missing linkage. Origin: [GraalVM native mod
+  feasibility, 2026-10-08](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md).
+
+- `SitarHeroCapture` (`src/test/java/com/openggf/tools/`) packages the real
+  example and captures ROM-backed performers, stages, finite arcade behavior,
+  career boards and labelled authored-story previews for explicit ROM subsets;
+  its source header records inputs and evidence limits.
+  Origin: Sitar Hero proof of concept, 2026-10-06.
 
 - `src/test/java/com/openggf/tests/route/` — shared route primitives for headless
   route controllers: `InputProgram` (parse, derive from a BK2, and step pad runs),
@@ -77,6 +119,33 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
   Pair it with `tools/traces/assemble_bk2_from_input_log.py`, which packages an
   `InputLogAuthorTool` log as the BizHawk-keyed `.bk2` the TraceChaser headless harness
   accepts. Both come from the first Knuckles in Sonic 2 fixture (2026-09-14).
+- `PlaneOpacityProbe` (`com.openggf.tools`, library not CLI) answers "can the plane behind
+  this one show through here?" from the decoded layout / blocks / chunks / patterns alone --
+  no renderer, no camera, no frame. `coverage(level, map, layer, x, y, w, h)` counts the
+  see-through pixels of a rectangle and `pixelAt` resolves one, applying both flip levels.
+  Use it whenever a background change produces byte-identical captures: a capture cannot
+  separate "wrong pixels drawn" from "no pixels reachable", and this can. Always pair it with
+  a control viewport that must report see-through pixels. Origin: LRZ slice 5 follow-up,
+  2026-09-18, where it showed Lava Reef act 1's foreground is opaque across the whole dome
+  (`TestS3kLrzForegroundOpacity`).
+- `FloorSegmentSurveyProbe` (test scope, opt-in `-Dopenggf.floorsurvey.out=<out file>` plus
+  `openggf.floorsurvey.game/acts/top`) lists each act's longest continuous, pit-free floor
+  paths (per-column floor surfaces linked within 24px of height), the candidates for an arena
+  or any stretch that must be walkable end to end; confirm them in a capture. With
+  `openggf.floorsurvey.headroom=true` (and `minRise`, default 80) it also places the player on
+  each path every 16px, jumps, and lists the spans with room to bounce. Origin: Sonic
+  Survivors arena selection, 2026-10-06; headroom added 2026-10-07.
+- `TestSonicSurvivors#balanceProbe` (test scope, opt-in
+  `-Dsonic-survivors.balance=<csv>[,fresh|mid|max[,mode[,sonic|tails[,seed[,firstStage]]]]]`) plays
+  whole Survivors runs with a scripted bouncing bot and writes the pressure curve every 30
+  seconds (rings against toll, live badniks, hitpoints spawned against damage dealt, level,
+  chests, evolutions). Compare across changes; it is not a human difficulty measure. Origin:
+  Survivors balance pass, 2026-10-07.
+- `ObjectArtContactSheetProbe` (test scope, opt-in `-Dopenggf.artsheets.out=<dir>` plus
+  `openggf.artsheets.game/acts/keys`) renders every frame of the object art sheets a zone
+  registers to labelled PNG contact sheets with the level palette, so mapping frames (walk,
+  hurt face, projectile) are picked by eye. Origin: Sonic Survivors badnik and boss frames,
+  2026-10-06.
 - `FbzRouteEvidenceProbe` (test scope, opt-in `-Dmse=off -Dopenggf.fbz.evidence=true`)
   prints the `RouteCompletionEvidence` line of each of the eleven FBZ2 complete-route
   matrix rows without asserting; diff the output before and after a route-controller
@@ -113,8 +182,18 @@ Do not stage generated-resource entries. The policy rejects symlinks at
 `config.yaml`, any path ending in `.gen`, and `docs/s1disasm`,
 `docs/s2disasm`, `docs/kis2disasm`, `docs/scddisasm`, or `docs/skdisasm`.
 Separately, the repository-wide ROM-like asset rule rejects added or modified
-paths ending in `.gen`, `.smd`, `.bin`, `.sms`, `.gg`, or `.32x`. It also
-rejects absolute symlink targets anywhere in the repository. If a broad
+paths ending in `.gen`, `.smd`, `.bin`, `.sms`, `.gg`, or `.32x`. The sole
+reviewed authored-content exception is the two-act Tide fixture's 22 original
+assets, pinned by exact canonical path, mode `100644`, byte length and SHA-256 in
+[the authored-fixture manifest](../../.githooks/authored-fixtures.json).
+[The shared verifier](../../.githooks/authored_fixture_policy.py) checks Git blobs
+in staged, historical-commit and delivered-snapshot admission; it never runs a
+candidate generator. Changed bytes, moved/case-varied paths, other binaries,
+executable files and symlinks receive no exception. Prefer the existing
+`binary-assets.properties` text-source convention for future authored fixtures;
+this manifest is not a directory or filename-pattern exemption.
+
+The policy also rejects absolute symlink targets anywhere in the repository. If a broad
 `git add` includes one, unstage it, keep or recreate the local link only in the
 filesystem, and inspect `git diff --cached` before committing. The ignore rules
 cover both a real reference directory and a hook-created link; use `git add -f`
@@ -152,7 +231,7 @@ Run `AgentWorkflowTool` for a preflight, read the matching runbook, scaffold wit
 [`runbooks/runbook-jvm-benchmark.md`](runbooks/runbook-jvm-benchmark.md) rather
 than the benchmark CLIs directly — the numbers are easy to misread.
 
-Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven_queue.py) waits automatically for a shared execution slot across linked worktrees; category runs use it too.
+Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven_queue.py) waits automatically for a shared execution slot across linked worktrees; category runs use it too; `--stats` summarises its wait/hold/memory telemetry.
 
 ## Test harness helpers
 
@@ -168,3 +247,21 @@ Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven
 - `FbzBoundaryFixtureCaptureTool` and [boundary comparator](../../tools/bizhawk/compare_fbz_boundary_fixture.py) reproduce declared native fixture setup through production frames and compare actual retained Plane-B descriptors, uploaded palettes and framebuffers; acceptance remains independently reviewed.
 
 - [Fresh native FBZ entry](../../tools/bizhawk/capture_fbz_fresh_entry.lua), launched by the visual host with `--fresh-entry-act 1|2`, uses the complete BK2 reset opening, AIZ vine cheat and ordinary title/level-select inputs; it never writes RAM. This removes retained cloud-history residue from complete-run FBZ states.
+
+- [`capture_lrz_boulder_reference.lua`](../../tools/bizhawk/capture_lrz_boulder_reference.lua)
+  records read-only native LRZ2 cutscene, rider and fresh-load carry observations from an original movie save.
+- [`capture_lrz_traversal_reference.lua`](../../tools/bizhawk/capture_lrz_traversal_reference.lua)
+  observes LRZ turbine and chained-platform slots during unchanged native BK2 playback;
+  use the common native capture host with explicit frame windows and its own movie save.
+
+- `tools/bizhawk/capture_lrz_boss_reference.lua`: read-only original-movie LRZ3
+  camera/event and object-graph observer, with optional lava/VScroll/HScroll export;
+  `palette=true` also observes the shared LRZ post-boss script cursor, timer and colors;
+  `background=true` observes the LRZ2 Death Egg slot, screen coordinates, priority and art-load flag;
+  native save and frame-window plan inputs
+  (September 22 S&K completion campaign).
+
+- `tools/bizhawk/capture_ssz_arrival_reference.lua`: read-only original-movie SSZ1 cutscene, Death Egg child timers/animation, palette and Knuckles landing observer; explicit native save and frame-window plan (September 24 S&K completion campaign).
+- [SSZ arena-static presentation demo](../../tools/visuals/ssz_arena_static_demo.py): composites deterministic side-only noise over verified widescreen boss footage and emits a local comparison page; originating [2026-09-24 design study](../architecture/designs/2026-09-24-widescreen-boss-arena-static.md), not an engine feature.
+
+- `tools/bizhawk/capture_mhz_pillar_reference.lua` samples native MHZ2 pillar scroll words and their collision helpers from ordinary movie playback; use the common native capture host and an explicit movie-state plan.

@@ -28,19 +28,24 @@ final class DdzEndBossExplosionAnchorObjectInstance extends AbstractDdzObjectIns
 
 
     DdzEndBossExplosionAnchorObjectInstance(DdzEndBossObjectInstance boss, int kind) {
-        super(new ObjectSpawn(boss == null ? 0 : boss.getX(), boss == null ? 0 : boss.getY(), 0, kind, 0, false, 0),
-                "DDZEndBossExplosionAnchor", boss);
+        this(new ObjectSpawn(boss == null ? 0 : boss.getX(), boss == null ? 0 : boss.getY(), 0, kind, 0, false, 0), boss, kind);
+    }
+
+    private DdzEndBossExplosionAnchorObjectInstance(ObjectSpawn spawn, DdzEndBossObjectInstance boss, int kind) {
+        super(spawn, "DDZEndBossExplosionAnchor", boss);
         this.kind = kind;
     }
 
     /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
     private DdzEndBossExplosionAnchorObjectInstance(ObjectSpawn spawn) {
-        this(null, spawn.subtype());
+        this(spawn, null, spawn.subtype());
     }
 
     @Override
     public DdzEndBossExplosionAnchorObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new DdzEndBossExplosionAnchorObjectInstance(null, ctx.spawn().subtype());
+        // The parent link is restored later; retain the captured spawn instead of
+        // deriving a new origin from the temporarily absent parent.
+        return new DdzEndBossExplosionAnchorObjectInstance(ctx.spawn());
     }
 
     @Override

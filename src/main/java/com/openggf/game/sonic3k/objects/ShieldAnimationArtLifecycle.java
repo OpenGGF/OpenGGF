@@ -41,6 +41,24 @@ final class ShieldAnimationArtLifecycle
         animationId = initialAnimationId;
     }
 
+    /**
+     * The Y flip every shield's draw uses, under {@code Reverse_gravity_flag}.
+     *
+     * <p>{@code Obj_InstaShield_Main} (sonic3k.asm:34590-34597),
+     * {@code Obj_FireShield_Main} (:34662-34669), {@code Obj_LightningShield_Main}
+     * (:34743-34750) and {@code Obj_BubbleShield_Main} (:34907-34914) each inherit the
+     * player's {@code status}, mask it down to the orientation bit with
+     * {@code andi.b #1,status(a0)}, and then {@code ori.b #2,status(a0)} while the flag is
+     * set. Bit 1 has already been cleared by the mask, so — despite the ROM's own comment
+     * — this is a <em>set</em>: the shield's Y-flip equals the flag every frame. Porting it
+     * as the XOR the comment describes would alternate the sprite, the same mistake the
+     * player's own render mirror had to avoid.
+     */
+    static boolean reverseGravityMirror(com.openggf.level.objects.ObjectServices services) {
+        return services != null && services.gameState() != null
+                && services.gameState().isReverseGravityActive();
+    }
+
     void ensureArtLoaded(Supplier<Art> artSupplier) {
         Objects.requireNonNull(artSupplier, "artSupplier");
         if (artRefreshPending) {

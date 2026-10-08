@@ -99,7 +99,22 @@ public final class BonusStageTransitionCoordinator {
      * the return level is loaded. The checkpoint coordinator consumes it during
      * the new object manager's reset, before initial placement materialization.
      */
-    public void prepareReturnLoad(LevelManager levelManager) {
+    public void prepareReturnLoad(LevelManager levelManager, BonusStageState savedState) {
+        // Get_LevelSizeStart restores the saved player before ScreenInit selects
+        // the return arena. Restoring only after load makes setup see the fresh
+        // start position (notably LRZ3_ScreenInit's $480 branch).
+        RespawnState checkpoint = levelManager.getCheckpointState();
+        if (checkpoint != null) {
+            checkpoint.clear();
+            if (savedState.savedLastStarPostHit() >= 0) {
+                checkpoint.restoreFromSaved(savedState.playerX(), savedState.playerY(),
+                        savedState.cameraX(), savedState.cameraY(), savedState.savedLastStarPostHit());
+                if (checkpoint instanceof CheckpointState state) {
+                    state.saveSolidBits(savedState.topSolidBit(), savedState.lrbSolidBit());
+                    state.saveS3kRuntimeState(savedState.cameraMaxY(), savedState.dynamicResizeRoutineFg());
+                }
+            }
+        }
         levelManager.restorePersistentRespawnOnNextObjectReset(pendingRespawnState);
         pendingRespawnState = null;
     }
@@ -133,8 +148,6 @@ public final class BonusStageTransitionCoordinator {
         }
 
         if (playable != null) {
-            playable.setCentreX((short) savedState.playerX());
-            playable.setCentreY((short) savedState.playerY());
             playable.setTopSolidBit(savedState.topSolidBit());
             playable.setLrbSolidBit(savedState.lrbSolidBit());
             playable.setXSpeed((short) 0);
@@ -147,10 +160,8 @@ public final class BonusStageTransitionCoordinator {
             playable.setPriorityBucket(2);
         }
 
-        camera.setX((short) savedState.cameraX());
-        camera.setY((short) savedState.cameraY());
-        camera.setMaxY((short) savedState.cameraMaxY());
-        camera.updatePosition(true);
+        // Position and camera bounds were restored by the load profile before
+        // ScreenInit. Do not overwrite any arena bounds selected by that setup.
         restoreWaterLevel(levelManager, waterSystem, savedState.meanWaterLevel());
 
         LevelState levelState = levelManager.getLevelGamestate();

@@ -82,6 +82,14 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  * {@link #close()} this boot to release the GL context and GLFW.
  */
 public final class HeadlessGameBoot implements AutoCloseable {
+    /**
+     * macOS answers a 2.1 context request with a legacy context that cannot compile the
+     * engine's {@code #version 410} shaders, so there the boot requests the 4.1 core
+     * profile {@code Engine} uses and skips the fixed-function matrix calls.
+     */
+    private final boolean coreProfile =
+            System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("mac");
+
 
     @FunctionalInterface
     interface BackendFactory {
@@ -132,6 +140,15 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
     private Rom rom;
     private boolean closed;
+    private java.util.function.UnaryOperator<GameModule> moduleDecorator = java.util.function.UnaryOperator.identity();
+
+    /**
+     * Wraps the detected game module before the gameplay session opens, as an enabled patch
+     * mod does in the launcher (used by {@code GameplayCaptureTool --mod}).
+     */
+    public void setModuleDecorator(java.util.function.UnaryOperator<GameModule> decorator) {
+        this.moduleDecorator = java.util.Objects.requireNonNull(decorator, "decorator");
+    }
 
     /**
      * Creates the hidden GLFW window and initialises the GL context /
@@ -257,8 +274,15 @@ public final class HeadlessGameBoot implements AutoCloseable {
         glfwDefaultWindowHints();
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+        if (coreProfile) {
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+            glfwWindowHint(org.lwjgl.glfw.GLFW.GLFW_OPENGL_PROFILE, org.lwjgl.glfw.GLFW.GLFW_OPENGL_CORE_PROFILE);
+            glfwWindowHint(org.lwjgl.glfw.GLFW.GLFW_OPENGL_FORWARD_COMPAT, org.lwjgl.glfw.GLFW.GLFW_TRUE);
+        } else {
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+        }
 
         window = glfwCreateWindow(width, height, "Headless Game Boot", NULL, NULL);
         if (window == NULL) {
@@ -284,19 +308,23 @@ public final class HeadlessGameBoot implements AutoCloseable {
         graphicsManager.setProjectionWidth(logicalWidth);
         graphicsManager.applyResolvedDisplayWidth(logicalWidth);
 
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
         projectionMatrix.identity().ortho2D(0, logicalWidth, 0, logicalHeight);
         projectionMatrix.get(matrixBuffer);
-        glLoadMatrixf(matrixBuffer);
+        if (!coreProfile) {
+            glMatrixMode(GL_PROJECTION);
+            glLoadIdentity();
+            glLoadMatrixf(matrixBuffer);
+        }
 
         // There is no live Engine instance in this CLI context, so the
         // projection matrix must be supplied to the GraphicsManager directly
         // for shader-based rendering.
         graphicsManager.setProjectionMatrixBuffer(matrixBuffer.clone());
 
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
+        if (!coreProfile) {
+            glMatrixMode(GL_MODELVIEW);
+            glLoadIdentity();
+        }
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -368,8 +396,8 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
         Optional<GameModule> detected =
                 services.romDetection().detectAndCreateModule(rom);
-        GameModule rootModule = detected.orElseThrow(() ->
-                new IOException("No game module detected for ROM: " + description));
+        GameModule rootModule = moduleDecorator.apply(detected.orElseThrow(() ->
+                new IOException("No game module detected for ROM: " + description)));
         // --- gameplay session + managers --------------------------------
         SessionManager.armNextGameplayAdmissionPolicy(admissionPolicy);
         GameplayModeContext mode = openResolvedSessionForBoot(services, rootModule);

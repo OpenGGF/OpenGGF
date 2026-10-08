@@ -8,6 +8,15 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestLevelSpritePresentation {
+    @Test void registrationBeforeRendererAttachmentRemovesStalePresentationAdapters() {
+        var registry = new com.openggf.game.rewind.RewindRegistry();
+        registry.register(new LevelBoundsMaskTransition());
+        registry.register(new LevelSpritePresentation.Tables());
+        LevelSpritePresentation.register(org.mockito.Mockito.mock(LevelManager.class), registry);
+        assertFalse(registry.capture().containsKey("level-bounds-mask"));
+        assertFalse(registry.capture().containsKey("level-sprite-presentation"));
+    }
+
     @Test void preparationDoesNotPublishAndRewindRestoresBothTables() {
         var tables = new LevelSpritePresentation.Tables();
         var first = frame(1);
@@ -87,7 +96,8 @@ class TestLevelSpritePresentation {
         short[] columns = {-3, 12};
         var registers = new LevelScrollPresentation.Registers(-8, 2047, -11,
                 (short) 2045, (short) -3, -16, 1024, true, true, true,
-                true, (short) 99, true, (short) -17);
+                true, (short) 99, true, (short) -17,
+                new com.openggf.graphics.ArenaMaskState(8, 328, 17));
         var snapshot = new LevelScrollPresentation(registers, horizontal, columns, columns, columns, columns);
         var equal = new LevelScrollPresentation(registers, horizontal, columns, columns, columns, columns);
         horizontal[0] = 99;
@@ -111,7 +121,8 @@ class TestLevelSpritePresentation {
     private static LevelScrollPresentation scroll(int x, short y) {
         return new LevelScrollPresentation(new LevelScrollPresentation.Registers(x, y, x - 3,
                 y, (short) -5, x / 2, 512, false, false, false,
-                false, (short) 0, false, (short) 0), new int[] {-x << 16}, null, null, null, null);
+                false, (short) 0, false, (short) 0,
+                new com.openggf.graphics.ArenaMaskState(0, 320, 0)), new int[] {-x << 16}, null, null, null, null);
     }
 
     private static SpritePresentation.Frame frame(int pattern) {

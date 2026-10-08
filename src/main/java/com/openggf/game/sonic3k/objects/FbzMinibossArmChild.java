@@ -77,6 +77,13 @@ final class FbzMinibossArmChild extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        // loc_6F3C4 replaces the object routine with Obj_FlickerMove.
+        // Converted debris never reads its old parent again. After rewind an
+        // already-retired arm/root is absent, so dispatch this captured phase first.
+        if (defeatInitialized) {
+            updateDefeatFlicker();
+            return;
+        }
         if (boss == null) return;
         if (boss.isDefeated()) {
             updateDefeatFlicker();
@@ -229,19 +236,24 @@ final class FbzMinibossArmChild extends AbstractObjectInstance
     }
 
     private void updateDefeatFlicker() {
-        if (!boss.rootBit(FbzMinibossInstance.ROOT_DEFEAT_RELEASE)) return;
         if (!defeatInitialized) {
+            if (boss == null || !boss.rootBit(FbzMinibossInstance.ROOT_DEFEAT_RELEASE)) return;
             defeatInitialized = true;
             xVelocity = -0x100;
             yVelocity = -0x100;
         }
         xFixed += xVelocity;
         yFixed += yVelocity;
-        yVelocity += 0x38;
+        yVelocity = (short) (yVelocity + 0x38);
         x = xFixed >> 8;
         y = yFixed >> 8;
         flickerVisible = !flickerVisible;
-        if (!isInRange()) ObjectLifetimeOps.expireDynamic(this);
+        // Obj_FlickerMove also applies an unsigned vertical window. Omitting
+        // it kept fallen links alive thousands of pixels below the arena.
+        var objectServices = tryServices();
+        var camera = objectServices == null ? null : objectServices.camera();
+        boolean outsideY = camera != null && ((y - camera.getY() + 0x80) & 0xFFFF) > 0x200;
+        if (!isInRange() || outsideY) ObjectLifetimeOps.expireDynamic(this);
     }
 
     private void createLinkPrefix() {

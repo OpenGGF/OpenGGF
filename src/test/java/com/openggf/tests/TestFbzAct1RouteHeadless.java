@@ -987,10 +987,13 @@ class TestFbzAct1RouteHeadless {
                     }
                 }
             }
+            // Obj_FlickerMove retires converted arms/links outside its native
+            // vertical window before this sign/results boundary. Their former
+            // presence here depended on the port's missing defeat-time cull.
+            assertTrue(act2Objects.activeObjectsOfType(FbzMinibossArmChild.class).isEmpty());
+            assertTrue(act2Objects.activeObjectsOfType(FbzMinibossChainLink.class).isEmpty());
             assertEquals(Set.of(
                     FbzMinibossInstance.class,
-                    FbzMinibossArmChild.class,
-                    FbzMinibossChainLink.class,
                     FbzMinibossPlungerChild.class,
                     FbzMinibossPrisonChild.class,
                     S3kHiddenMonitorInstance.class,

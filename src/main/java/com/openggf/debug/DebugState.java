@@ -1,6 +1,4 @@
 package com.openggf.debug;
-
-@com.openggf.game.ModApi
 public enum DebugState {
     NONE,
     PATTERNS_VIEW,

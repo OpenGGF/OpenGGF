@@ -32,6 +32,7 @@ public class TilemapShaderProgram extends ShaderProgram {
     private int worldOffsetXLocation = -1;
     private int worldOffsetYLocation = -1;
     private int wrapYLocation = -1;
+    private int clipHorizontalLocation = -1;
     private int priorityPassLocation = -1;
     private int maskOutputLocation = -1;
     private int useUnderwaterPaletteLocation = -1;
@@ -80,6 +81,7 @@ public class TilemapShaderProgram extends ShaderProgram {
         worldOffsetXLocation = glGetUniformLocation(programId, "WorldOffsetX");
         worldOffsetYLocation = glGetUniformLocation(programId, "WorldOffsetY");
         wrapYLocation = glGetUniformLocation(programId, "WrapY");
+        clipHorizontalLocation = glGetUniformLocation(programId, "ClipHorizontal");
         priorityPassLocation = glGetUniformLocation(programId, "PriorityPass");
         maskOutputLocation = glGetUniformLocation(programId, "MaskOutput");
         useUnderwaterPaletteLocation = glGetUniformLocation(programId, "UseUnderwaterPalette");
@@ -193,6 +195,10 @@ public class TilemapShaderProgram extends ShaderProgram {
         if (worldOffsetYLocation >= 0) {
             glUniform1f(worldOffsetYLocation, y);
         }
+    }
+
+    public void setClipHorizontal(boolean clip) {
+        if (clipHorizontalLocation >= 0) glUniform1i(clipHorizontalLocation, clip ? 1 : 0);
     }
 
     public void setWrapY(boolean wrap) {

@@ -82,7 +82,7 @@ public final class TailsCarryController {
         NativePositionOps.writeXPosPreserveSubpixel(main, carrier.getCentreX());
         int yOffset = isReverseGravity() ? -0x1C : 0x1C;
         NativePositionOps.writeYPosPreserveSubpixel(main, carrier.getCentreY() + yOffset);
-        main.setDirection(carrier.getDirection());
+        publishCarriedOrientation(main);
         int carriedAnimationId = main.resolveAnimationId(CanonicalAnimation.TAILS_CARRIED);
         // Tails_Carry_Sonic writes the carried id to both anim and prev_anim,
         // then clears anim_frame_timer and anim_frame in the carrier's slot.
@@ -159,11 +159,21 @@ public final class TailsCarryController {
         followAndCollide(main);
     }
 
+    private void publishCarriedOrientation(AbstractPlayableSprite main) {
+        // S3K loc_14492 / sub_1459E rebuild render_flags from Tails' facing,
+        // then XOR bit 1 for reverse gravity. The carried player's ordinary
+        // animator is skipped by object_control=$03, so the carry owner must
+        // publish the complete orientation, rather than relying on a draw XOR.
+        main.setDirection(carrier.getDirection());
+        main.setRenderFlips(carrier.getDirection() == com.openggf.physics.Direction.LEFT,
+                isReverseGravity());
+    }
+
     private void followAndCollide(AbstractPlayableSprite main) {
         NativePositionOps.writeXPosPreserveSubpixel(main, carrier.getCentreX());
         int yOffset = isReverseGravity() ? -0x1C : 0x1C;
         NativePositionOps.writeYPosPreserveSubpixel(main, carrier.getCentreY() + yOffset);
-        main.setDirection(carrier.getDirection());
+        publishCarriedOrientation(main);
         updateCarriedMapping(main);
         main.setXSpeed(carrier.getXSpeed());
         main.setYSpeed(carrier.getYSpeed());

@@ -126,6 +126,14 @@ public class S3kSignpostStubChild extends AbstractObjectInstance
 
     @Override
     public int getPriorityBucket() {
-        return RenderPriority.clamp(4);
+        // Obj_SignpostStubMain -> Child_GetPriority copies the parent's display bucket.
+        return parent != null ? parent.getPriorityBucket() : RenderPriority.fromS3kWord(0x300);
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // Child_GetPriority also copies art_tile bit 15 every frame. Without it the post
+        // falls behind high-priority foreground tiles while its sign face stays visible.
+        return parent != null && parent.isHighPriority();
     }
 }

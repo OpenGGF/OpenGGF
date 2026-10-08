@@ -134,7 +134,7 @@ class TestEngineDataSelectPatchResolution {
 
         SaveManager saves = new SaveManager(saveRoot);
         launch.requestSave(SaveReason.NEW_SLOT_START,
-                RuntimeSaveContext.forGameplayMode(null, launch),
+                com.openggf.game.save.RuntimeSaveCapture.capture(null, launch),
                 gameplay.getWorldSession().getGameModule().getSaveSnapshotProvider(), saves);
         var payload = saves.readSlotSummary("s2", 2).payload();
         assertEquals("sonic", payload.get("mainCharacter"));

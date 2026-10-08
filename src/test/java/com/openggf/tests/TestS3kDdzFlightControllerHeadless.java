@@ -51,6 +51,35 @@ class TestS3kDdzFlightControllerHeadless {
         TestEnvironment.activeGameplayMode();
     }
 
+    @Test
+    void entryRingAwardRetainsHudDigitsAndReplaysTheLaterDrainRefresh() {
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DDZ, 0).build();
+        GameServices.gameState().restoreS3kEmeraldProgress(java.util.Collections.nCopies(7, 3), true);
+        fixture.stepIdleFrames(25);
+        var state = GameServices.level().getLevelGamestate();
+        assertEquals(50, state.getRings());
+        assertEquals(0, com.openggf.game.LevelRingDisplay.value(state),
+                "loc_8160A does not request an UpdateHUD ring redraw");
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var saved = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) registry.restore(saved);
+            assertEquals(50, state.getRings());
+            assertEquals(0, com.openggf.game.LevelRingDisplay.value(state));
+            // Native unchanged entry save: Ring_count=50/redraw=0 at24,
+            // Ring_count=49/redraw=1 at85, redraw consumed at86.
+            fixture.stepIdleFrames(59);
+            assertEquals(50, state.getRings(), "native pass84");
+            assertEquals(0, com.openggf.game.LevelRingDisplay.value(state));
+            fixture.stepIdleFrames(1);
+            assertEquals(49, state.getRings(), "native first powered-form drain at85");
+            assertEquals(0, com.openggf.game.LevelRingDisplay.value(state));
+            fixture.stepIdleFrames(1);
+            assertEquals(49, com.openggf.game.LevelRingDisplay.value(state), "native HUD refresh at86");
+        }
+    }
+
     /**
      * The fixture's level load runs {@code loc_81554} in the initial object pass, so after
      * {@code n} {@code fixture.stepIdleFrames} calls the state is ROM frame {@code n} of the native

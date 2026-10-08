@@ -308,7 +308,11 @@ deferred-death-fall (S2-specific), but the rule is universal.
 
 **What to check.** `blocksSolidContacts(player, candidate)` (or whatever
 the engine's SolidObject pre-filter is named) needs BOTH gates:
-1. `player.isObjectControlled()` — mirrors `obj_control` bit 7.
+1. `player.isTouchResponseSuppressedByObjectControl()` — the engine’s bit-7
+   predicate. `isObjectControlled()` also includes positive native control
+   values and is too broad: DEZ turbine `$01` must still trigger `Obj_Door`
+   (`sub_30F58` uses `TST.B` / `BMI`). Apply the same signed-byte distinction
+   when porting a trigger independently of solid-contact filtering.
 2. CPU sidekick state `DEAD_FALLING` (engine equivalent of ROM Tails
    routine = 6) — must short-circuit even though `obj_control` is still
    0 during S2 deferred-despawn.
@@ -3076,7 +3080,17 @@ that was fully implemented and simply killed early.
 **What to check / fix.**
 1. Audit the object's ENTIRE body for `out_of_range`, `MarkObjGone`,
    `Delete_Sprite_If_Not_In_Range` and `Go_Delete_SpriteSlotted`. Count the deletes and
-   name each one. `Sprite_OnScreen_Test` is a DRAW, not an unload -- do not read it as one.
+   name each one, including helper bodies. `Sprite_OnScreen_Test` **does unload**:
+   it masks object X with `$FF80`, compares the unsigned distance from
+   `Camera_X_pos_coarse_back` with `$280`, then clears respawn bit7 and deletes
+   at `loc_1B5A0` when outside (sonic3k.asm:37262–37278). `Sprite_OnScreen_Test2`
+   uses caller-provided X and has the same release path. Only its in-range
+   branch draws. The former claim that this helper only draws was disproved
+   during the LRZ cold-route campaign based on `bc4e3285d`: retained rocks,
+   spikes and bridges changed native slot order, delaying a button-driven door.
+   Do not suppress shared unload for those tails. Audit routine-specific
+   exceptions separately; a collapsed bridge or geyser cleanup countdown that
+   genuinely returns without this helper may still require persistence.
 2. If none of the deletes is the shared camera macro, set
    `usesCustomOutOfRangeCheck() = true` and have `isCustomOutOfRange()` return the ROM's
    answer (often just `false`; the object already owns its own delete tests).
@@ -3137,6 +3151,15 @@ rider's `x_pos` explicitly. Its return-to-home routine `loc_3BA4A` instead does
 `move.w x_pos(a0),-(sp)` before stepping and `move.w (sp)+,d4` after
 (`:79475`, `:79486`) -- full carry. `Obj_FBZRotatingPlatform`'s `loc_3B86A`
 (`:79328`) is another pre-move stacker.
+
+**DEZ final arena (2026-09-23).** `loc_5A860` and `loc_5A8C4` also
+load the current X after repositioning the invisible support/falling block.
+The default carry moved a grounded player by $20 at camera-column crossings.
+A native/wide replay first exposed this as different X at frame 443, because
+the intentional proportional camera deadzone crossed that column at different
+times. Fix the solid's zero-carry contract, not the camera setting or input.
+`TestDezFinalArenaFloor.movingSupportRepositionsItsCollisionWindowWithoutDraggingTheRider`
+reproduces the extra $20 with a real rider before the fix.
 
 **What to check.** For every top-solid port, find the instruction that loads
 `d4` and ask whether the platform has already moved at that point. Then set
@@ -4746,3 +4769,325 @@ apply the X gate once before `loc_849D8` replaces their routine with
 through rewind. Applying the parent's dynamic getter to every child causes
 layer changes the native child routines never perform. Audit the routine after
 a generic debris dispatch, not only the originating object's setup table.
+
+## Adjacent mapping pointer tables can share frame data
+
+Do not infer a mapping frame count from its first offset when multiple pointer
+tables precede shared frame data. LRZ turbine `Map_445A6` has five pointers and
+`Map_445B0` has four, both followed by data starting at `$445B8`. Register explicit
+counts; the automatic inference otherwise decodes pointer/data words as frames.
+`TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits`
+caught a bogus frame with 16428 pieces in the September 22 LRZ bring-up audit.
+This applies to all games using offset-table mappings.
+
+## MOVEM.W between native player calls truncates long arguments
+
+Trace the register save width between P1 and P2 calls, not only the common routine.
+LRZ3 `loc_59F3C` preserves `d0/d2` with `movem.w` before `sub_59F82`; P1 sees the
+full 16:16 camera velocity in `d2`, but the restore sign-extends its low word for
+P2. On a left clamp, `asr.l #8` therefore writes `$16A` ground speed to P1 and
+`$6A` to P2 during an upward diagonal (and `$1D9` versus `-$27` on the downward
+diagonal). Keep the shipped behavior; do not normalize both players to the same
+argument. Origin: September 22 LRZ3 camera bring-up; focused regression
+`TestLrzBossAutoscroll.nativeMovemWordRestoreTruncatesSecondaryVelocityAndPushingCrushes`.
+
+## Multisprite aliases and failed child pointers need address-space checks
+
+DEZ lift `sub_4748E` reads `$24/$26` after its joint loop. The constants table
+identifies these as `sub4_x_pos/sub4_y_pos`, so this is sprite ordering, not a
+previous-frame lag buffer. Resolve raw offsets before assigning semantic names.
+Its failed `AllocateObjectAfterCurrent` leaves `$3E` zero: `movea.w` then points
+at ROM, not an absent abstract child. The count read at `$16` is a ROM vector
+word; child writes are ignored but the parent's computed position still changes.
+For FixBugs=0, trace reads and writes through their actual address space before
+replacing failed allocation with an early return. Cross-game applicable.
+Origin: September 23 DEZ lift bring-up; `TestS3kDezLiftPadHeadless`.
+
+## Invisible transition owners do not carry world-coordinate render flags
+
+An AbstractObjectInstance defaults to world-positioned participation. Invisible
+S3K SST routines such as DEZ `loc_7E25C` never set render_flags bit 2, so explicitly
+exclude them from `Offset_ObjectsDuringTransition`. Giving them a coordinate
+interface just to satisfy reload would incorrectly rebase scratch words. Verify
+the actual surviving graph through the reload, not only its isolated restore.
+Origin: September 23 DEZ miniboss; `TestDezMinibossEncounter`.
+
+## Locked scripted walks need an explicit logical-input owner
+
+S3K `Ctrl_1_locked` suppresses the hardware-to-logical copy, while transport
+routines can still write `Ctrl_1_logical` and move normally. Use the existing
+forced-input mask to admit that scripted input; a plain logical setter while
+locked intentionally preserves the old latch. Clear the mask at arrival. Test
+finishes on both sides of the target: a centre-only check never executes the
+walk and can conceal a permanent stall. Origin: DEZ `loc_7E2C0/7E2DE`, September
+23; `TestDezMinibossEncounter` left/centre/right connected regressions.
+
+
+## Raw `$2B` writes belong to shield response, not projectile lifetime
+
+Resolve raw offsets through `sonic3k.constants.asm` before assigning semantics.
+`$2B` is `shield_reaction`; `bset #3,$2B(a0)` enables projectile deflection by
+`Touch_ChkHurt_HaveShield` / `Touch_ChkHurt_Bounce_Projectile`. It does not enable
+`Sprite_CheckDeleteTouchXY` or any other offscreen lifetime behavior. The latter
+routine operates independently. Preserve the native radial velocity calculation
+and permanent clearing of `collision_flags`, including through recreation.
+
+The LRZ miniboss shot at `loc_78A02` had the wrong comment and no deflection
+capability. A real-controller shield test left its damage byte at `$98` instead
+of clearing it; isolated movement/culling tests could not expose this. Similar
+raw bit3 writes exist on the LRZ shooting trigger and Iwamodoki fragments. Use
+actual contact dispatch as well as callback tests. Origin: September24 cold LRZ
+miniboss route; `TestLrzMinibossHitPath#shieldContactDeflectsAHandShotAndRewindsItsHarmlessFlight`.
+
+
+## A transition position-contract error can expose missing child retirement
+
+Before adding a world-offset contract to an unexpectedly carried object, trace
+its native lifetime. LRZ crusher pieces tail-call
+`Child_DrawTouch_Sprite_FlickerMove` from `loc_903BA`: parent status bit7 sends
+`loc_849D8` through collision clear and Set_IndexedVelocity, then Obj_FlickerMove
+moves, applies gravity, flickers and schedules deletion outside native bounds.
+Ignoring that tail kept pieces alive for the whole act; the ordinary cold
+miniboss clear then failed the Act2 rebase on a stale crusher piece. Positioned
+boss tests never contained it. Model the lifecycle, not a transition exclusion.
+Detached pieces no longer need parent3; latch copied drawing priority and test
+recreation without retaining a dead parent. Origin: September24 LRZ cold clear,
+`TestLrzRockCrusher` and `TestLrzColdRouteCapture`.
+
+
+## Unused native parent words must not retain deleted Java owners
+
+LRZ3 missiles stop reading `parent3` after the final `loc_791FE` impact write,
+after `loc_7931E` detaches them from `Refresh_ChildPosition`, and after
+`Go_Delete_Sprite` installs the retirement callback. The cartridge can leave
+that unused RAM word behind; a rewind identity table cannot resolve a deleted
+Java object. Release the Java reference at the last native use, preserving the
+callback timer and one-frame deletion semantics. Test snapshot/replay after the
+former owner is removed, not just while the allocation graph is intact.
+Origin: September25 cold LRZ boss completion.
+
+
+## Gravity flags that select a native routine are initialization state
+
+`Obj_Spikes` at `loc_23FE8` (sonic3k.asm:48956–48968) XORs a copy of status
+Y-flip with Reverse_gravity_flag and installs `loc_2413E`. It does not toggle
+the art, change movement, or reevaluate the flag on every contact. The selection
+overrides the sideways routine installed earlier. Preserve that precedence and
+capture the selected routine semantics for rewind; test a gravity change while
+the same object remains loaded. `SolidObjectFull` reports gravity-relative
+standing/underside contacts, so applying a second world-face mirror to its result
+would undo the native choice. Origin: September25 DEZ gravity-reference audit.
+
+
+## Direct sloped entries bypass the flat platform gravity branch
+
+S3K `SolidObjCheckSloped2`/`SolidObjCheckSloped` (sonic3k.asm:42076–42120)
+compute an absolute sampled top and branch directly to `loc_1E45A`, bypassing
+`loc_1E44C`'s Reverse_gravity_flag test. Mirroring every top-solid position
+correction therefore invents behavior for these direct entries. The existing
+direct-top-helper contract identifies them: keep their upright correction even
+under reverse gravity, while flat `SolidObjectTop` selects `loc_1E4D6` and its
+different snap constant. Test entry labels and exact unsigned 1..16 windows,
+not just geometrically mirrored-looking surfaces. Origin: September25 DEZ audit.
+
+
+## Hyper sparkle size can be an art-admission phase mismatch
+
+`Obj_HyperSonic_Stars_Init` (S3K :34473-34495) waits for global
+`Kos_modules_left` before decrementing each child's startup timer. A decoded
+standalone sheet does not prove this gate is clear. Submit the native archive
+through the runtime module scheduler and retain its ordinal across rewind.
+`Main.child` (:34511 onward) does not poll the queue again: later uploads hold
+only children still in Init. A DDZ native probe found the correct frames and
+orbital arithmetic running two gameplay ticks early before this distinction
+was restored; changing sprite scale would have hidden the actual defect.
+
+
+## Direct Ring_count writes need not redraw the HUD
+
+`loc_8160A` (S3K :173296-173312) adds50 directly and leaves
+`Update_HUD_ring_count` unchanged; `UpdateHUD/loc_DD36` (:17687-17700)
+only rewrites digits when that flag is set. The DDZ entry retains zero until
+the first drain requests a redraw. Do not route this through GiveRing or a
+debug ring award (those also have life-threshold semantics), and do not make
+a zone-specific HUD exception. `LevelRingDisplay` separates retained digits
+and the dirty request from live rings at the existing counter-publication
+phase. A silent write preserves any already-pending redraw. Capture both
+states; rendering or rewind restore must not manufacture a redraw request.
+
+
+### Native camera words versus widescreen boss coordinates (MHZ)
+
+`loc_54B4E` gates MHZ1 at native Camera_X_pos `$4298`; `loc_75220`
+spawns the miniboss at that origin + `$110`, and `loc_54CB0` wraps the
+native origin/player/object world by `$200`. Using a wide visible-left edge
+for any one of these can block admission or move the encounter. Preserve native
+bound words and convert through `NativeViewportFraming` at the display boundary.
+`MHZ1_BackgroundEvent` then subtracts `$4200` while retaining the results owner:
+Act 2 replaces the boss flag before the `$98` maximum releases. Scope the
+projection to that retained boundary through `Change_Act2Sizes`; neither a new
+act runtime nor the earlier results-active clear proves the lock has ended.
+The 800px visible origin is negative during this handoff, so an unsigned raw
+visible-X comparison can incorrectly select a late-level event branch.
+
+
+### MHZ pillar ramp division carries the first DIVU remainder
+
+`loc_55586` divides the high word by `$30`, then replaces only the low word of
+the DIVU result before dividing again. The first remainder remains in the high
+word and is part of the second dividend. Dividing the original words separately
+loses the fractional ramp: at native camera `$4180`, line 47 must be `-$4118`,
+not `-$4100`. `loc_555D2` derives solid/spike helper positions from these scroll
+words, so this is collision math as well as presentation. Widescreen projects
+only displayed scroll words; helpers consume unprojected native words. The
+read-only MHZ pillar exporter corroborates both against the original emulator.
+
+### Converted FBZ defeat debris has no live parent dependency
+
+`loc_6F3C4` replaces an arm/link's routine with `Obj_FlickerMove` (`$85102`).
+Dispatch the captured converted phase before looking up its old root/arm: those
+parents can already be deleted when a rewind snapshot is restored. The generic
+routine calls `MoveSprite` (`$1AB32`), which moves using the old velocity and then
+adds `$38` gravity; `MoveSprite2` is the no-gravity alternative. It also deletes
+when unsigned `(y - Camera_Y_pos + $80) > $200`. Missing this vertical test kept
+fallen links alive far below the arena and exposed a parentless replay freeze.
+Check short conversion/cull cases and whole-world replay during results; merely
+replaying the boss while all parents are alive misses this lifetime boundary.
+
+
+## Twisted-vine standing bits cannot be reconstructed from contact
+
+`Obj_MHZTwistedVine` (`sub_3DCD0`, `sub_3DE80`) stores independent P1/P2
+standing bits until release. An engine identity set carrying those bits is
+persistent state, even though it resembles a contact cache. After recreation,
+a player in the middle of the curve is outside the entry window and cannot
+reacquire the object. Capture stable player references; test both curve halves,
+replacement participant instances and one rider releasing while the other stays.
+The2026-09-27 cold800px MHZ route exposed the missing rider collection.
+
+## Multi-sprite mapping frame zero suppresses the main image
+
+ROM `Render_Sprites` (`sonic3k.asm`, `loc_1AEE4` → `loc_1AF1C`) tests
+`mapping_frame` before resolving the main image: zero skips it and goes straight
+to `mainspr_childsprites`. This differs from ordinary sprites, where frame0 is
+a real mapping. `Obj_TeleporterBeamExpand` keeps its main frame0, so only its
+beam columns draw; blindly rendering mapping0 creates a floating teleporter pad.
+Regression: `TestTeleporterBeamRendering` (SSZ arrival presentation,2026-09-30).
+
+## Badnik rendering must use the live native position owner
+
+**Symptom.** A body remains at its spawn while attached parts follow movement,
+or a child appears on the opposite side and points the wrong way.
+
+**What to check.** A subclass with its own x/y fields must override the base body
+anchors used by drawing, touch and destruction, not just `getX/getY`. Child
+position offsets and child mapping flips must copy the parent's render bits;
+logical `facingLeft` may be their inverse. Preserve each child's independent
+anchor/history and firing-latch rules rather than rigidly attaching everything.
+
+**ROM citation.** SSZ EggRobo `loc_9159A` records `$30/$32` hover Y; `sub_91930`
+uses `$32` or live Y when zero and copies render bit0 while mirroring `child_dx`.
+The flame uses live Y through `Refresh_ChildPositionAdjusted`. `loc_9173A`
+draws the gun's latched position/flags without refreshing them.
+
+When the native position is held outside base currentX/Y, also synchronize the
+base badnik position before standard capture. Its restore resyncs dynamicSpawn
+from BadnikRewindExtra; stale base coordinates corrupt immediate capture after
+recreation even when drawing uses the correct native anchors. Prefer the
+existing generic/badnik restore over a new per-object override, which requires
+explicit architecture triage. The SSZ moving-graph test checks both surfaces.
+
+**Origin.** SSZ issue4 follow-up on develop, 2026-09-30, based on `012acaaee8`.
+
+## Synthetic child spawn metadata still obeys normalized field widths
+
+SSZ `loc_44E52`/`loc_44CDE` give fragments word delays6..48 in `$2E`. Encoding
+those delays in `ObjectSpawn.renderFlags` truncates them to two bits before the
+child constructor reads them, and also loses the parent's actual flips. Keep
+flip bits in renderFlags and document the child's separate delay metadata.
+`SszBridgeDebrisObjectInstance` uses the synthetic spawn's16-bit rawYWord so
+spawn-based recreation retains both. Regress the complete delay range, mirrored
+ROM tile composition and deleted-child forward replay. Origin: SSZ issue5
+on develop, 2026-09-30, based on `39645745aa`.
+
+`loc_44E80` also tests the long sign of d6 but advances only its low word.
+Preserve the upper word through zero; testing a Java int after an unrestricted
+addition instead reverses the slope. Exact intact-to-fragment ROM tile-set
+comparison across both collapse sides and flips exposes this width error.
+
+
+## Raw animation callbacks observe the advanced counter
+
+`SSEntryFlash_Main` calls `Animate_RawAdjustFlipX` first, then tests the changed
+mapping and `anim_frame == 3`. Testing the counter before the animator advances
+it marks the parent ring one dispatch late. Because the ring then restores
+explosion art (`loc_6196A`), the first visible symptom is a Kosinski queue
+mismatch, not a motion error. (Knuckles AIZ, row 1615.)
+
+## Manual solid mode must dispatch the native collision helper
+
+`MANUAL_CHECKPOINT` installs a resolver but does not run it. LBZ cup
+`loc_26EEA` calls `SolidObjectFull2_1P` inside each player's control routine,
+after the cooldown and angle gates and before the capture test. Use a
+per-participant checkpoint in that position. Test through real ObjectManager
+dispatch, because seeding the standing state hides a missing collision call.
+
+## Object deletion is not rider release
+
+LBZ rolling drum `loc_2C3CA` runs both participant routines before
+`Delete_Sprite_If_Not_In_Range`. `Delete_Current_Sprite` clears only the drum's
+own SST, without `loc_2C48A`'s rider writes. Do not release live native riders
+in `onUnload`. Use the post-routine range check. Keep explicit cleanup for
+extension participants and dead players.
+
+## Death suppression does not request a bonus-stage exit
+
+`Disable_death_plane` makes `Player_Boundary_CheckBottom` return before the kill.
+It does not set `Restart_level_flag`; the gumball exit child (`loc_61076`) owns
+that write. `word_610AE` is left/width/top/height (`-$100,$200,-$10,$40`), giving
+X `[-$100,+$100)` and Y `[-$10,+$30)`. The upper bound is exclusive (`bhs`; see
+P39).
+
+## Capture-time control writes are not held-state writes
+
+Cup capture `loc_26F26` writes `object_control=$03` once. The held routine
+`loc_26FF4` publishes only position, priority and mapping. Reasserting control on
+every held tick overrides later writers: `sub_62800` writes `$81`, which clears
+bit 1 (animation), and `loc_6278A` writes `$00`. Track the animation bit with the
+same byte ownership; a raw mapping write is not an animation claim.
+
+## A fatal-hit dispatch installs the wait; it does not decrement it
+
+LBZ miniboss `loc_7289A` installs `Wait_NewDelay`, and `BossDefeated` writes
+`$3F` and returns. The first decrement is on the next dispatch. A DEFERRED helper
+field does not restore the explosion controller's timer or pending emissions.
+Snapshot the helper and rebind it to the shared RNG.
+
+## Results child retirement is a real object-graph boundary
+
+`Obj_LevelResultsWait2` counts the twelve live child SSTs (`$30`). `loc_2DD06`
+clears `_unkFAA8`, swaps in `Obj_TitleCard` and returns. Title init runs on the
+next owner dispatch, and `Obj_EndSignControlAwaitStart` restores P1/P2 when it
+next observes the latch. Do not add a render-retirement counter, an early control
+shortcut or same-pass title init. Keep ICZ2's folded `loc_71DE2` hook.
+
+## Linked child positions and attack flags own the projectile
+
+Monkey Dude's five arm children keep 16.16 positions through four
+`MoveSprite_CircularSimple` additions. `sub_875B4` throws once (bit 0) from the
+hand's previous position, before that child updates. `sub_87524` gates on
+absolute horizontal distance only. Followers propagate attack bit 1 and halve or
+double their delay (`sub_8756A`/`sub_87592`).
+
+## Literal player radii may differ from character defaults
+
+`AIZTree_FallOff` writes x/y radii 9/`$13` for every character, and
+`Tails_TouchFloor` restores the defaults on landing. Restoring Tails' standing
+`$0F` at release shortens the falling sensors.
+
+## Global title resets do not restart the owner clock
+
+`Obj_TitleCardWait/loc_2D810` resets Timer, Ring_count, air and music after the
+child movement latch clears. It does not rewrite the owner's `$2E`. Retained
+owners must wait for the real ROM art and the final stationary child poll, and
+keep their presentation clock running.

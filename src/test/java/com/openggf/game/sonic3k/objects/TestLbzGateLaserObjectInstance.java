@@ -50,7 +50,7 @@ class TestLbzGateLaserObjectInstance {
         ObjectInstance lrzObject = lrzRegistry.create(new ObjectSpawn(
                 0x1800, 0x0600, Sonic3kObjectIds.LBZ_GATE_LASER, 0, 0, false, 0));
 
-        assertInstanceOf(PlaceholderObjectInstance.class, lrzObject,
+        assertInstanceOf(LrzSmashingSpikePlatformObjectInstance.class, lrzObject,
                 "SKL slot $21 is Obj_LRZSmashingSpikePlatform, not the LBZ gate laser");
         assertEquals("LRZSmashingSpikePlatform", lrzObject.getName());
     }

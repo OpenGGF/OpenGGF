@@ -71,6 +71,322 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Committed fixtures are live validation inputs (2026-10-08, Sitar Hero delivery):
+freeze test sources, BK2 files and scripts alongside runtime code. A fixture merge
+during an ordinary run makes the invocation incomplete even if already compiled
+Java bytes remain unchanged: a later test can read the changed movie. Compare the
+complete input delta before reusing evidence. A HEAD change confined to prose and
+standalone probes can preserve completed ordinary execution, but the runner's
+fingerprint still correctly suppresses later lanes; qualify those lanes separately
+against the actual source and label the interrupted combined invocation accurately.
+
+A dead command session does not prove Maven stopped (2026-10-08, Sitar Hero
+delivery): an unexpected native exit 143 left the exact Maven/test children alive
+after their output reader and deadline supervisor disappeared. Verify owning PIDs,
+working directories and arguments before stopping only those orphans. No terminal
+results means incomplete validation. Retain a bounded supervisor, explicit exit
+status and the normal runner limits for recovery; do not infer the signal's cause
+from elapsed time or treat partial XML as a completed run.
+
+Movie input is not a native movement latch (2026-10-07, stock parity S1
+frontiers): the recorder's input column comes from the BK2 row, with raw RAM
+only as a fallback; it does not observe the game's logical held/new pair at
+movement entry. Replay the original movie with its original sync settings,
+verify the exact ROM callback bytes, and observe the owning read boundary.
+Match surrounding frame-end position, subposition, speed, status and animation
+to the committed rows before interpreting the latch. The S1 capture matched all
+20 surrounding rows and measured neutral raw and logical pairs at both release
+frontiers. Its CSV heading `vfc` read `$FE04`, the level frame counter; label the
+actual address and owner rather than inferring a clock from a probe's heading.
+An emulator startup crash with no observations is rejected evidence, even if a
+host wrapper reports that it launched.
+
+Correct logical input can coexist with stale effective sprite input (2026-10-08,
+stock parity S1 frontiers): the actual BK2, prepared/applied cursor, zero offset
+and InputHandler snapshot all agreed on neutral input, while movement consumed
+Up or Right from persistent sprite forced masks seeded at the load seam. Inspect
+incoming movement flags, effective directions, forced masks, legacy forced
+direction flags and control locks at the same body entry. A neutral logical
+snapshot alone does not prove neutral gameplay input. Correct the owning writer
+and publication seam; preserve legitimate scripted control rather than clearing
+all forced state or adjusting physics. Native controller latches are a separate
+observation from both physical BK2 rows and engine input publication.
+
+Unpaced mod captures can outrun preparation (2026-10-08, Sitar Hero polish):
+`ExampleModCapture` advances ticks as quickly as it can while ROM song preparation
+runs on a worker. A short capture without video or frequent PNGs can finish before
+the player starts; its simulated loading-tick count is not wall-clock latency.
+Check the actual screen/player state and corresponding PCM before diagnosing silence,
+and cut loading waits from promotional footage without calling them real-time loading
+measurements. Offline audio establishes content and cue timing, not physical speaker
+latency. See the [example's capture notes](../../examples/sitar-hero/README.md#testing-and-captures).
+
+Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
+task): the positioned MHZ capture retained about 22 MiB after its callback while
+three complete capture/rewind/ROM-loading passes settled near 16.8 MiB, with only
+15–17 KiB growth on later passes. Class fixtures, JUnit contexts and engine globals
+can still be live at the test callback. Compare requested-GC floors after the
+launcher returns and teardown unwinds; validate the profiler with deliberately
+retained memory. Allocation counters measure churn, sampled JVM-global peaks
+include caches, and high RSS after GC does not establish Java or native leaks.
+Record skips, GC observation, repeated-pass order and the actual source revision.
+
+Class completion is not always fixture release (2026-10-07 ordinary-suite memory
+investigation): a JUnit 5.10.3 control retained a 20 MiB `PER_CLASS` fixture at the
+next class boundary and released it only after the entire plan returned. Actual
+Surefire executed its two-class control in one plan. Label within-plan post-GC
+growth as retention candidates; compare the final post-plan floor and inspect
+fixture/static owners before claiming application leaks. An `@AfterAll` callback
+or a closed native handle does not by itself make a fixture's Java graph unreachable.
+
+Immediate post-GC counters can disagree (2026-10-07 compiler-memory experiment):
+the owned Maven parent dropped from about 1.27 GiB used heap to 79.5 MiB after a
+requested collection, while RSS and NMT committed counters had not yet followed
+the logical heap resize. A later reading showed RSS plus swap falling from
+2.54 GiB to 0.78 GiB. Compare settled counters and distinguish a later used-heap
+reading from a post-GC floor before attributing the difference to native retention.
+
+A constant-retention stress assertion can measure the wrong owner (2026-10-07
+audio-comparator investigation): production validation kept bounded semantic
+state, but the test factory's static evidence map held 500,128 input services.
+Clearing that map after the selected plan returned released 309.5 MiB. Compare
+post-plan floors and release explicit owners in sequence; the test's internal
+retention counter does not include its input factory or framework bookkeeping.
+
+Moving a live log across filesystems loses its writer (2026-10-07, stock parity
+swarm): moving stdout from `/tmp` on tmpfs into a btrfs worktree copied and
+unlinked the original file while the queued wrapper retained its open inode.
+The visible copy stopped growing although Maven continued. Create output in the
+worktree's `target/` before launching. If recovery is needed, verify the exact
+owned process and follow its `/proc/<pid>/fd/1` descriptor with a bounded
+`tail --pid` follower; record and clean up that follower. Log recovery and queue
+admission are not test completion.
+
+A bootstrap module switch is not a live-world fixture switch (2026-10-07,
+pending insta-shield rewind regression): `TestEnvironment.resetAll` had already
+opened an S2 world. Setting `GameModuleRegistry` to S3K changed the default while
+status/controller refresh continued to read the live S2 module. An expected red
+case passed and the registered-shield control failed. Use
+`TestEnvironment.configureGameModuleFixture` for the intended live world, verify
+the positive control, and discard the mixed result before attributing behavior.
+
+A complete registry restore can still omit a scheduling owner (2026-10-07,
+FBZ → SOZ destination floor): pending shield restoration exposed five art clocks
+one step higher after an otherwise matching eight-row replay. A read-only retry
+probe showed no setup-only retry or fade; the original first row published a
+pending fresh-level boundary without claiming a closure, whereas its replay
+ran ordinary work. The deferred boundary was absent from registry capture.
+The load reporter captures floor zero before the controller assigns its pending
+assembly, so restoring that floor must clear stale pending state; explicit later
+captures must retain their complete deferred state and publication phase.
+Inspect the first actual dispatch and its ownership before compensating clocks
+or blaming driver counters. Capture the complete deferred state through its
+existing production owner; keep the floor and full forward comparison intact.
+
+A macOS native-test stall can be AWT rather than gameplay (2026-10-06,
+`1ae1596837`): the ordinary suite stopped producing output in
+`TestObjectControlledGravity` after earlier rendering/example tests. Java attach timed out;
+a native `sample` showed the main thread inside `AWTStarter` / `NSApplication.run`, nested
+under GLFW event polling. The 40-minute runner deadline terminated the invocation. Record
+that as incomplete, keep attribution open, and check the capture class in a fresh JVM;
+do not infer a physics loop from the name of the last test or repeat the entire stalled suite.
+All 12 cases passed in a fresh JVM after the Survivors fixture; that result does not
+attribute the preceding long-suite AWT interaction.
+
+Direct level-load captures can hide title-route faults (2026-10-06, Putt Putt
+Paradise at `b34da10e4`): the footage and course tests matched physics while the
+real menu reset erased the selected act and controlled LEVEL rows froze the
+released native title overlay. Exercise menu input, exit fade, destination load
+and the overlay exit through `GameLoop.step`, then record the actual act and
+overlay lifetime. A headless test intentionally omits the locked title display;
+it still retains the native exit tail. Use a rendered production-route capture
+to cover the visible title-card phase, and restore the initial shot checkpoint
+to verify that completed title text does not return on rollback.
+
+Nonzero PCM can be constant DC (2026-10-06, Putt Putt Paradise polish): a
+captured Sonic 2 music track measured about −21 dBFS RMS while long windows
+contained an almost constant offset rather than music. Inspect mean and
+AC variance, flat-window duration and actual sequencer requests alongside RMS
+and loudness. One healthy opening window does not certify an entire capture.
+Compare stock and controlled playback through the same presentation/capture
+path, and interleave each service with its corresponding synthesized packet.
+The corrected course-entry path leaves the ROM-timed music publication in
+charge and services its pending countdown on held presentation rows.
+
+Palette publication can survive resource cleanup (2026-10-06): at `c20731b13`,
+S3K presentation followed by the first S2 native-graphics scene produced 24,783
+waterfall pixel differences with identical geometry and a four-color rotation.
+`TestSonic3kUnifiedAudioPresentationRomIntegration,TestGolfScenePresentation`
+reproduced the same failure in one reused fork on base and candidate, with no
+ROM skips; the scene class passed in a fresh invocation. Source inspection
+points to preserved palette-upload latch/pending state across graphics resource
+cleanup, with S2 lacking the publication profile that releases it. CPU palette
+bytes alone do not prove the native GPU view has published the same phase.
+
+Compact failure messages can be prefixes (2026-10-06): the retained category
+summary capped an SSZ rewind assertion at 2,048 characters, while its fresh XML
+message contained 2,915. Its `RewindObjectStateBlob@hex` text also varied across
+JVMs: that class's hash includes a `Class<?>` reference, so the hash is not a
+portable state comparison. Check the owning hash implementation before ignoring
+such text. Compare test identity, first-error frame and concrete fields, and
+state when only a bounded baseline prefix is available; do not claim a full
+message or full state match from it.
+
+Follow-up (2026-10-07): `results.json`'s `failed_cases[].detail` retained the
+complete assertion first line even though `message` was capped. Inspect that
+field before declaring the evidence truncated. The SSZ first line was 2,952
+characters; stripping its exception prefix and normalizing only the verified
+`RewindObjectStateBlob@hex` hashes produced 2,907 characters matching the full
+baseline assertion independently retained by its owner. Preserve every concrete
+field during comparison, and distinguish a full assertion match from equality
+of unreported world state.
+
+
+Pitch is not note tempo (2026-10-02): accelerated sample-voice tests passed at
+`5637105e5c` while real SMPS songs retained normal note durations. Their chip
+render clock advanced faster, but the driver still received one service per
+output frame. Compare both sequencer state and final PCM against a normal-speed
+ROM recording played faster; neither a higher pitch nor more rendered samples
+proves that note timing advanced. Interleave services with synthesis, rather
+than issuing all fast-forward updates before rendering the packet.
+
+Waveform tests need an explicit output rate (2026-10-02): `AudioManager.resetState`
+retains its backend. `TestGameLoopAudioPresentationModes` uses a six-Hz dummy;
+a later DAC-only regression received zero or one sample per frame and failed a
+within-packet waveform assertion despite passing alone. Own a normal-rate backend
+before loading the ROM, then run the predecessor and regression together. A
+nonzero packet alone is insufficient: chip resting DC can also pass that check.
+
+Matched baselines and relative ROM paths (2026-10-02): a temporary source export
+changes the test fork's working directory. Infinite Sonic's first baseline check
+skipped 29 audio cases while the candidate had null-ROM errors. Matching the fork
+working directory and absolute ROM properties, while keeping separate compiled
+classes/build output, reproduced all 43 failure/error case keys and messages.
+`@RequiresRom` can retain an available `RomCache` handle while a later
+`RomTestUtils` lookup rereads reset configuration and returns null. A skipped
+baseline is not exonerating evidence. Match launch context before attributing
+failures; never rename or link ROMs to make the comparison pass. Failed direct Maven
+invocations can retain older XML: compare selected class reports and their
+modification times, rather than summing the entire report directory.
+
+Playback surviving a prefix (2026-10-03): a run-chain prefix that closes only its
+comparator and timing owners leaves the process-wide `PlaybackDebugManager` movie
+active. A later capture in the same JVM then plays the old movie's input. Each
+of the five SOZ rewind checks failed in a shared fork yet passed in a fresh JVM.
+Close the playback session on every exit path, and test the predecessor and the
+capture in one invocation.
+
+Mixed report shapes (2026-10-03): chain summaries use `errorCount`, while
+standalone reports use `error_count`. A collector that reads only one spelling
+gives plausible but partial totals. Removing an earlier mismatch can also change
+the derived `cascading` flag on later, unchanged mismatches.
+
+Edits during compilation (2026-10-02): editing a source while an older Maven run
+is compiling it can leave stale bytecode with a newer timestamp. The next build
+then reports "Nothing to compile". Freeze sources during builds, and check with
+`javap` when the test results contradict the source.
+
+Legacy diagnostic RAM aliases (2026-10-02): `V69_AIZ.ADDR_KOS_MODULES_LEFT =
+0xFF04` is stale. On the locked-on ROM, `Kos_modules_left` is `$FF60` and
+`Kos_module_queue` is `$FF64`. Check diagnostic aliases against the RAM layout
+before reading zeros as "drained".
+
+
+Authored controller export (2026-09-28): `Bk2FrameInput.p1InputMask` can include
+jump as well as direction. A temporary LRZ author compared the whole mask to
+Left/Right, dropping held directions on498 jump rows; its live run cleared but
+the exported movie died. Serialize individual direction/action bits or preserve
+the original BK2 rows, then round-trip and independently replay the exact export.
+A successful live authoring session is not proof that its movie reproduces it.
+
+Re-decoded art in rewind comparisons (2026-09-28): a title-card load replay can
+create new `Pattern` instances from identical ROM bytes. The LRZ800 Act2 title
+window at24750 reported256 different Java identities but zero pixel differences.
+Compare all64 pixels per tile, preserving null/length and surrounding-state
+checks; do not suppress the title-card key or change the loader to retain object
+identity. `RewindSnapshotDiff` owns this content rule and its mutation regression.
+
+
+SOZ cold capture entry mode (2026-09-27): GameplayCaptureSession defaults to
+S3K_SKIP_INTROS=true, but the committed SOZ1 cold route starts with the native
+falling intro. Default capture died at1796; adding a neutral setup frame alone
+shifted that to1797. Setting the existing intro configuration false after session
+construction and before boot, then stepping one ordinary neutral setup frame,
+reproduced the route and Act2 handoff at31392. All31492 base/candidate state rows
+matched. `consumePendingInitialProcessSpritesPass()` executes the pending pass;
+it is not a discard API. Check entry configuration and input origin before
+blaming physics, rendering cadence, or the controller recording.
+
+
+SOZ cold-route reauthoring (2026-09-27): a source-backed solid landing correction
+can invalidate a long fixed-input movie after several later contacts, even when
+its first movement difference reconverges. Match the unchanged recording against
+its original commit, identify the actual riding/standing owner, and preserve ROM
+behavior while repairing controller inputs. Positioned99-ring boss victories do
+not establish that the same controller survives a13-ring cold arrival. Compare
+recorded button streams before treating small aim-offset edits as new strategies:
+three offsets here produced byte-identical failed inputs. See the campaign audit
+and `GameplayInputBranchTool`'s contact CSV. Filter standing-latch candidates to
+`SolidObjectProvider`: a non-solid display sibling can share its parent's
+spawn-derived latch key, so querying every active object falsely labels the
+chain display as a second physical support. The separate riding owner is the
+actual carrier; shared latch-key observations alone do not establish contact.
+
+Live rewind recording versus route-driver snapshots (2026-09-27): enabling
+LIVE_REWIND_ENABLED in a RecordingFrameDriver/HeadlessTestFixture route does not
+exercise GameLoop's history recorder. A new MHZ paired load-boundary test had
+zero outgoing history despite valid full-registry restore/replay. Use production
+GameLoop steps (e.g. GameplayCaptureSession), prove outgoing history exists, then
+observe its reset at the actual destination load; do not weaken the nonempty
+history assertion or infer it from successful registry snapshots.
+
+MHZ final physical checkpoint (2026-09-26): a local post-height teleport can
+leave the camera in MHZ2's entry Y band and skip admission of the upper-route
+post. A farther-left flat setup instead falls into the lower passage. Use the
+declared (15008,704) upper-passage Right/jump approach, admitting one neutral
+production frame before the first jump edge; boot-time and live-frame inputs
+are not interchangeable. All 343 physical-post/reload cases then passed without
+a runtime change. This local approach is not cold-route reachability evidence.
+
+FBZ checkpoint width setup (2026-09-25): setting an aspect after a helper has
+already created the gameplay session leaves the existing camera at its original
+width. A post-death assertion then looks like a reload width regression. Apply
+the real display preset before opening the session and assert the initial camera
+width as well as the reloaded width. This changed 176 false width failures into
+220 passing two-death cases without any runtime modification.
+
+FBZ local checkpoint replay (2026-09-25): a freshly built fixture can still be
+before the first admitted gameplay frame. Capturing there and replaying90 inputs
+produced24 object-allocation/runtime differences across44 physical starpost
+approaches, although every contact saved successfully. Admit a neutral production
+frame before taking a live-history snapshot. All89 placement/contact/restart checks
+then passed with no runtime change. This does not waive checking actual live-frame
+restore mismatches or intentional load-boundary history resets.
+
+
+DEZ boss probe versus capture (2026-09-23): `GameplayCaptureTool` normalizes CLI
+`--sidekick none` to an empty character string; direct `GameplayCaptureSession.Settings`
+callers must supply that empty string themselves. Passing the literal `"none"`
+to the session API produced a fallback follower. The probe and solo capture
+then took different boss hits despite identical P1 input masks. Compare the
+recorded `sk_present`/team as well as positions before diagnosing nondeterminism.
+The corrected solo input replay completed both viewport runs.
+
+LRZ cold-route comparison against a fixture (2026-09-18): a `GameplayCaptureTool`
+capture compared frame for frame against a trace fixture manufactures divergences
+that read exactly like engine defects unless three alignments are right. The tool
+writes its state row after `loop.step()`, but `boot()` leaves one pre-gameplay
+frame for the first step to consume, so capture frame `n+1` is native row `n`;
+the input log has to start one capture frame late as well (`--settle 1`), or the
+engine receives each row's input one gameplay frame early; and the capture needs
+the fixture's own team (`--sidekick tails` for a Sonic + Tails run), because
+shared objects such as `$31 Obj_LRZCollapsingBridge` arm on either player's
+standing bit and the sidekick often reaches them first. Two "divergences" - a
+falling intro one frame late and a collapsing bridge eight frames late - were
+both these, and the strict replay of the same fixture had been matching Player 1
+`y` through those frames all along. Before believing a cold-route divergence,
+check what the fixture's own replay test reports as its first error frame.
+
 SOZ pyramid capture (2026-09-16): a positioned start at `$43B0,$9D4` skips
 `Obj_PathSwap` at `$4308,$918`, leaving Sonic at fresh-load low sprite priority.
 A follower can later cross a switch independently, producing a misleading
@@ -79,6 +395,15 @@ and falling through it sets both priorities via production logic. Record live
 priority flags; do not force high priority or weaken background priority to repair
 a capture that omitted the entry interaction.
 
+LRZ miniboss capture (2026-09-23): the arrival movie positioned at
+`$2C00,$600` skipped the placed `$02/$22` path switch at `$2BA0,$750`
+(`Levels/LRZ/Object Pos/1.bin + $E22`). `loc_1CE54` sets high priority from
+subtype bit 5 on a rightward crossing inside Y `[$6D0,$7D0)`; loading on
+the far side merely initializes the side latch. Start at `$2B70,$750` and
+walk across it. The resulting Sonic-in-front-of-lava image is a corrected
+capture setup, not an engine priority fix. Capture CSV now exposes
+`high_priority` so this missing state is inspectable without guessing from pixels.
+
 SOZ allocation profiling (2026-09-16): aggregate JFR allocation samples include
 recorder/control threads, which can dominate with `HashMap$KeySet` allocations.
 Attribute stacks before calling them gameplay churn. Measure the gameplay thread
@@ -86,6 +411,17 @@ with `ThreadMXBean` around loop and rendering separately, excluding screenshot
 readback/encoding and CSV writes, after a fixed warmup. Match controller route,
 rewind setting, viewport and sampled state before comparing. Bytes/frame is not
 a frame-time or GC-pause improvement. `GameplayAllocationTool` preserves this probe.
+
+SOZ JFR follow-up (2026-10-08): sampling events identify their observed thread in
+`sampledThread`, while allocation events use `eventThread`. A generic thread scrub
+removed the sampling events in this recording; use the streaming `JfrTestSummary`
+reader instead. Its positive control attributed screenshot allocation/readback to
+the lower-rock tests, and the draw-only candidate removed those samples. Default
+JDK 21 profile periods differ: Java 10 ms, native 20 ms; do not combine counts into
+CPU percentages. Native samples include waiting in `glFinish`. Expanding this
+recording's full stacks as JSON produced 9.4 GB and made the analysis process grow
+to 9.6 GB RSS; that approach was stopped and its output deleted. Stream counters
+under a bounded heap instead of materializing event objects or expanded JSON.
 
 SOZ controller-route rewind (2026-09-16): a composite gameplay snapshot does
 not own a standalone `HeadlessTestRunner`'s external button history. Before
@@ -130,6 +466,15 @@ pass to execute before comparison starts. Sample the release, subsequent gap
 rows and first compared row together; an extra pass can remain invisible until
 a later moving-platform ride. Retire source-loop admission inside the title
 loop's own admission path. See the [KiS2 frontier investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md).
+
+SSZ seeded presentation comparison (2026-09-23): skipping an out-of-scope
+ending actor also skips its camera lock and fade-from-white worker. Setting only
+the negative camera signal produces a plausible but stationary engine/native
+comparison; restoring the lock alone produces a white reference. Declare the
+omitted owner's prerequisites from disassembly, including palette completion,
+and stop before its next excluded dispatch. Compare a documented non-HUD region
+in native 3-bit RGB without fitted offsets; a seeded checkpoint does not certify
+the cold route or widescreen margins.
 
 FBZ miniboss capture (2026-09-15): `GameplayCaptureTool --x/--y` reinitializes
 level events and executes a setup object update. That can select a different

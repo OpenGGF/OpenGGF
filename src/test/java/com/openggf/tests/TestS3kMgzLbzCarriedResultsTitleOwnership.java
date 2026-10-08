@@ -69,7 +69,7 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
                                 Sonic3kConstants.ARTTILE_MGZ_MANTIS)),
                 30,
                 3,
-                true);
+                false);
 
         verifyCarriedResultsLifecycle(route);
     }
@@ -88,12 +88,77 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
                                 Sonic3kConstants.ARTTILE_RIBOT),
                         new KosParent(Sonic3kConstants.ART_KOSM_CORKEY_ADDR,
                                 Sonic3kConstants.ARTTILE_CORKEY)),
-                38,
+                com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE,
                 11,
                 false);
 
         verifyCarriedResultsLifecycle(route);
     }
+
+    @Test
+    void ringBonusOwnsTheCarriedChildLifetimeWithoutACompensatingRetirementTail()
+            throws Exception {
+        TallyLifetime fewerRings = observeCarriedTallyLifetime(58);
+        SessionManager.clear();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+        TallyLifetime moreRings = observeCarriedTallyLifetime(59);
+
+        // loc_2DBA8 multiplies Ring_count by 10; loc_2DC6E removes 10
+        // per dispatch. A separate zero-increment pass enters Wait2.
+        assertEquals(59, fewerRings.tallyDispatches());
+        assertEquals(60, moreRings.tallyDispatches());
+        assertEquals(1, moreRings.lastChildDispatch() - fewerRings.lastChildDispatch(),
+                "one additional ring keeps the real child graph alive for one extra tally dispatch");
+        assertEquals(1, moreRings.publicationDispatch() - fewerRings.publicationDispatch());
+        assertEquals(fewerRings.lastChildDispatch() + 1, fewerRings.publicationDispatch());
+        assertEquals(moreRings.lastChildDispatch() + 1, moreRings.publicationDispatch());
+    }
+
+    private TallyLifetime observeCarriedTallyLifetime(int rings) throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MGZ, 0).build();
+        GameServices.camera().setFocusedSprite(fixture.sprite());
+        GameServices.level().getLevelGamestate().setTimerFrames(210 * 60);
+        GameServices.level().getLevelGamestate().setRings(rings);
+        GameServices.gameState().setEndOfLevelActive(true);
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                TestEnvironment.objectServices(),
+                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+        GameServices.level().getObjectManager().addDynamicObject(results);
+        armProductionTransition(Sonic3kZoneIds.ZONE_MGZ);
+        int tallyDispatches = 0;
+        int lastChildDispatch = -1;
+        boolean observedCarriedGraph = false;
+        for (int dispatch = 0; dispatch < 2_100; dispatch++) {
+            if (results.getState() == 2) {
+                tallyDispatches++;
+            }
+            long childrenBefore = liveResultChildren();
+            fixture.stepFrame(false, false, false, false, false);
+            long childrenAfter = liveResultChildren();
+            if (GameServices.level().getCurrentAct() == 1 && childrenAfter == 12) {
+                observedCarriedGraph = true;
+                assertSame(results, reacquireResultsOwner());
+            }
+            if (childrenBefore > 0 && childrenAfter == 0) {
+                lastChildDispatch = dispatch;
+            }
+            if (GameServices.level().getApparentAct() == 1) {
+                assertTrue(observedCarriedGraph, "the production reload must retain all twelve actual children");
+                assertTrue(lastChildDispatch >= 0);
+                return new TallyLifetime(tallyDispatches, lastChildDispatch, dispatch);
+            }
+        }
+        throw new AssertionError("production results never published");
+    }
+
+    private static long liveResultChildren() {
+        return GameServices.level().getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.objects.S3kResultsElementObjectInstance.class)
+                .stream().filter(child -> !child.isDestroyed()).count();
+    }
+
+    private record TallyLifetime(int tallyDispatches, int lastChildDispatch, int publicationDispatch) {}
 
     @Test
     void stalePreReloadTitleOwnerCannotConsumeTheNewMgzLease() throws Exception {
@@ -126,6 +191,13 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
         assertTrue(sourceObjects.snapshotPersistentTransitionOccupants().stream()
                         .anyMatch(occupant -> occupant.identity() == results),
                 "the live results owner must be eligible for seamless carry");
+        if (route.zone() == Sonic3kZoneIds.ZONE_LBZ) {
+            fixture.sprite().setCentreX((short) 0x3EC0);
+            fixture.sprite().setCentreY((short) 0x0160);
+            GameServices.camera().setX((short) 0x3DA0);
+            GameServices.camera().setMinX((short) 0x3DA0);
+            GameServices.camera().setMaxX((short) 0x3EA0);
+        }
         armProductionTransition(route.zone());
         int transitionFrames = 0;
         while (GameServices.level().getCurrentAct() == 0 && transitionFrames++ < 100_000) {
@@ -160,6 +232,9 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
         assertExactParentOccurrences(timing, route.enemyParents(), 0,
                 "target enemy admission must remain held by the carried title owner");
 
+        assertEquals(12, targetObjects.activeObjectsOfType(
+                        com.openggf.game.sonic3k.objects.S3kResultsElementObjectInstance.class).size(),
+                "carry retains all twelve production child SSTs; no synthetic retirement proxy is used");
         CompositeSnapshot afterRecreation = rewind.capture();
         String afterRecreationState = carried.traceDebugDetails();
         fixture.stepFrame(false, false, false, false, false);
@@ -172,7 +247,14 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
         CompositeSnapshot beforePublication = null;
         while (GameServices.level().getApparentAct() == 0 && resultsFrames++ < 2_100) {
             beforePublication = rewind.capture();
+            long childrenBefore = GameServices.level().getObjectManager().activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.S3kResultsElementObjectInstance.class)
+                    .stream().filter(child -> !child.isDestroyed()).count();
             fixture.stepFrame(false, false, false, false, false);
+            if (childrenBefore == 0) {
+                assertEquals(1, GameServices.level().getApparentAct(),
+                        "Obj_LevelResultsWait2 publishes on its first dispatch after the last real child retires");
+            }
         }
         assertEquals(1, GameServices.level().getApparentAct(),
                 "child retirement publishes apparent Act 2 on its native dispatch");
@@ -215,6 +297,14 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
         assertExactParentOccurrences(timing, titleParents(route.zone()), 1,
                 "replayed following dispatch publishes the four title parents once");
 
+        var lbz = route.zone() == Sonic3kZoneIds.ZONE_LBZ
+                ? ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getLbzEvents()
+                : null;
+        if (lbz != null) {
+            assertEquals(0x04A0, GameServices.camera().getMaxX() & 0xFFFF);
+            assertEquals(0x04A0, GameServices.camera().getMaxXTarget() & 0xFFFF);
+            assertFalse(lbz.isPostTitleAct2SizeChangeActiveForTest());
+        }
         int titleFrames = 0;
         int observedResetDispatches = 0;
         int observedExitDelayDispatches = 0;
@@ -222,8 +312,18 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
         var previousLevelGamestate = GameServices.level().getLevelGamestate();
         var previousTitleState = title.capture();
         while (!title.isComplete() && titleFrames++ < 2_000) {
+            boolean sizeWorkersActive = lbz != null && lbz.isPostTitleAct2SizeChangeActiveForTest();
             fixture.stepFrame(false, false, false, false, false);
             var currentTitleState = title.capture();
+            if (lbz != null && !sizeWorkersActive && lbz.isPostTitleAct2SizeChangeActiveForTest()) {
+                assertArrayEquals(new int[]{0x4000, 0x4000, 0x8000},
+                        lbz.postTitleAct2WorkerAccumulatorsForTest(),
+                        "AllocateObjectAfterCurrent children execute in the retained owner's creation pass");
+            }
+            if (lbz != null && !lbz.isPostTitleAct2SizeChangeActiveForTest()) {
+                assertEquals(0x04A0, GameServices.camera().getMaxX() & 0xFFFF,
+                        "real carried title must retain the inherited boundary until its release owner");
+            }
             observedResetDispatches += Math.max(0,
                     previousTitleState.resetLevelGamestateCountdown()
                             - currentTitleState.resetLevelGamestateCountdown());
@@ -232,6 +332,13 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
                             - currentTitleState.inLevelExitDelayFrames());
             var currentLevelGamestate = GameServices.level().getLevelGamestate();
             if (currentLevelGamestate != previousLevelGamestate) {
+                if (route.expectedResetDispatches() == com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE) {
+                    assertEquals(com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardState.DISPLAY,
+                            previousTitleState.state());
+                    assertTrue(previousTitleState.stateTimer() >= 1,
+                            "native reset follows the stationary child poll, never the last movement");
+                    assertFalse(previousTitleState.artLoading());
+                }
                 levelGamestateResets++;
                 previousLevelGamestate = currentLevelGamestate;
             }
@@ -243,8 +350,8 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
             }
         }
         assertTrue(title.isComplete());
-        assertEquals(route.expectedResetDispatches(), observedResetDispatches,
-                "the title owner must execute every requested reset countdown dispatch");
+        assertEquals(Math.max(0, route.expectedResetDispatches()), observedResetDispatches,
+                "explicit policies count dispatches; the native gate never ages a reset countdown");
         assertEquals(1, levelGamestateResets,
                 "the carried title owner must publish exactly one display-time gamestate reset");
         assertEquals(route.expectedExitDispatches(), observedExitDelayDispatches,
@@ -254,6 +361,23 @@ class TestS3kMgzLbzCarriedResultsTitleOwnership {
         assertExactParentOccurrences(timing, route.enemyParents(), 1,
                 "the provider pump after COMPLETE admits the exact target enemy batch once");
 
+        if (lbz != null) {
+            assertTrue(lbz.isPostTitleAct2SizeChangeActiveForTest(),
+                    "actual title completion creates the gradual boundary workers");
+            int before = GameServices.camera().getMaxX() & 0xFFFF;
+            CompositeSnapshot release = rewind.capture();
+            for (int poll = 0; poll < 8; poll++) fixture.stepFrame(false, false, false, false, false);
+            int after = GameServices.camera().getMaxX() & 0xFFFF;
+            int[] workerState = lbz.postTitleAct2WorkerAccumulatorsForTest();
+            assertTrue(after > before && after < GameServices.level().getCurrentLevel().getMaxX(),
+                    "native workers expand gradually after the real title release");
+            rewind.restore(release);
+            assertEquals(before, GameServices.camera().getMaxX() & 0xFFFF);
+            for (int poll = 0; poll < 8; poll++) fixture.stepFrame(false, false, false, false, false);
+            assertEquals(after, GameServices.camera().getMaxX() & 0xFFFF);
+            assertArrayEquals(workerState, lbz.postTitleAct2WorkerAccumulatorsForTest(),
+                    "whole-world restore replays the retained gradual workers");
+        }
         CompositeSnapshot afterCompletion = rewind.capture();
         fixture.stepFrame(false, false, false, false, false);
         rewind.restore(afterCompletion);

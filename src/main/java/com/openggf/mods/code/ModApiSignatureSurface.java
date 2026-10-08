@@ -142,6 +142,9 @@ public final class ModApiSignatureSurface {
             "com.openggf.configuration.KeyChord$Modifier",
             "com.openggf.debug.FrameSampleSink",
             "com.openggf.audio.AudioPresentationTuning",
+            // Engine-owned final-PCM override. Creators use bounded SceneMusic,
+            // never inject an arbitrary mixer or take speaker/capture ownership.
+            "com.openggf.audio.presentation.ScenePcmSource",
             "com.openggf.game.timing.HardwareTimingBoundaryObserver",
             // The hardware-timing trace input port. Hard rule 4 confines this
             // contract to the timing port itself; it is never creator API.
@@ -179,6 +182,7 @@ public final class ModApiSignatureSurface {
             "com.openggf.game.timing.LoadTimeSimulationMode",
             "com.openggf.level.CarriedTitlePublicationTiming",
             "com.openggf.level.objects.FixedSstSlotSink",
+            "com.openggf.sprites.managers.TailsTailPose",
             "com.openggf.sprites.managers.TailsTailsController$RewindState",
             "com.openggf.trace.BootstrapDivergence",
             "com.openggf.trace.DynamicArtTransfer",

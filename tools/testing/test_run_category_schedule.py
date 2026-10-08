@@ -27,6 +27,20 @@ class SchedulingTests(unittest.TestCase):
         self.assertEqual('fits', schedule.choose(requests, 20, fits)['id'])
         self.assertIsNone(schedule.choose(requests, 300, fits))
 
+    def test_aged_busy_worktree_does_not_block_other_trees_or_lose_its_priority(self):
+        requests = [dict(self.request('older', 900), tree='busy', auto=True),
+                    dict(self.request('same-tree', 30, 10), tree='busy', auto=True),
+                    dict(self.request('other', 30, 20), tree='free', auto=True)]
+        visited = []
+        def fits(request):
+            visited.append(request['id'])
+            return schedule.WORKTREE_BUSY if request['id'] == 'older' else True
+        self.assertEqual('other', schedule.choose(requests, 350, fits)['id'])
+        self.assertEqual(['older', 'other'], visited)
+        self.assertEqual('older', schedule.choose(requests, 350, lambda r: True)['id'])
+        requests[0]['auto'] = False
+        self.assertIsNone(schedule.choose(requests, 350, fits))
+
     def test_maven_estimates_distinguish_exact_tests_patterns_and_suites(self):
         self.assertEqual(30, schedule.maven_estimate(['-Dtest=TestCollisionLogic', 'test']))
         self.assertEqual(30.3, schedule.maven_estimate(['-Dtest=One,Two', 'test']))
@@ -84,6 +98,26 @@ class SchedulingTests(unittest.TestCase):
             with self.subTest(estimate=estimate), self.assertRaises(ValueError):
                 with maven_slot(Path('/does-not-exist'), estimate=estimate):
                     self.fail('invalid request admitted')
+
+    def test_invalid_reservations_fail_before_any_git_or_lock_access(self):
+        from maven_queue import maven_slot
+        for reservation in ((0, 4), (1, float('nan')), (True, 4), (1,), 'small'):
+            with self.subTest(reservation=reservation), self.assertRaises(ValueError):
+                with maven_slot(Path('/does-not-exist'), reservation=reservation):
+                    self.fail('invalid budget admitted')
+        with tempfile.TemporaryDirectory() as tmp:
+            common = Path(tmp)
+            request = schedule.WaitingRequest(common, dict(
+                tree=str(common / 'maven-worktree.lock'), auto=True,
+                estimate=30, enqueued=123), lambda stream: True)
+            try:
+                # A live legacy request lacks a reservation and remains valid.
+                request.validate(request.record, request.path)
+                for reservation in ([0, 4], [1, float('inf')], [True, 4], [1], 'small'):
+                    with self.subTest(reservation=reservation), self.assertRaises(ValueError):
+                        request.validate(dict(request.record, reservation=reservation), request.path)
+            finally:
+                request.remove()
 
 
 if __name__ == '__main__':

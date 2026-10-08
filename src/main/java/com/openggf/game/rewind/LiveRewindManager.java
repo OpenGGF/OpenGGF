@@ -33,6 +33,7 @@ public final class LiveRewindManager {
     private final Supplier<GameMode> modeSupplier;
     private final Supplier<SpecialStageProvider> specialStageProviderSupplier;
     private final boolean useModeSupplierForPublicEntries;
+    private final Supplier<ScriptedRewind> scriptedRewindSupplier;
     private final LiveRewindHudOverlay hudOverlay;
 
     private GameplayModeContext installedGameplayMode;
@@ -42,30 +43,45 @@ public final class LiveRewindManager {
     private RewindSpeedController speedController = RewindSpeedController.disabled();
     private InputHandler activeInputHandler;
     private boolean rewinding;
+    // The current rewind is a module's ScriptedRewind rather than the held key.
+    private boolean scriptedRewinding;
     private boolean releasePending;
     private AudioPresentationPolicy pendingReleasePolicy;
     private RewindBoundary pendingReleaseBoundary;
     private final RewindEffectEnvelope effectEnvelope = new RewindEffectEnvelope();
 
     public LiveRewindManager(SonicConfigurationService config) {
-        this(config, () -> GameMode.LEVEL, () -> NoOpSpecialStageProvider.INSTANCE, false);
+        this(config, () -> GameMode.LEVEL, () -> NoOpSpecialStageProvider.INSTANCE, false, () -> null);
     }
 
     public LiveRewindManager(SonicConfigurationService config,
                              Supplier<GameMode> modeSupplier,
                              Supplier<SpecialStageProvider> specialStageProviderSupplier) {
-        this(config, modeSupplier, specialStageProviderSupplier, true);
+        this(config, modeSupplier, specialStageProviderSupplier, true, () -> null);
+    }
+
+    /**
+     * @param scriptedRewindSupplier the active module's {@link ScriptedRewind}, or null;
+     *     consulted only in level play
+     */
+    public LiveRewindManager(SonicConfigurationService config,
+                             Supplier<GameMode> modeSupplier,
+                             Supplier<SpecialStageProvider> specialStageProviderSupplier,
+                             Supplier<ScriptedRewind> scriptedRewindSupplier) {
+        this(config, modeSupplier, specialStageProviderSupplier, true, scriptedRewindSupplier);
     }
 
     private LiveRewindManager(SonicConfigurationService config,
                               Supplier<GameMode> modeSupplier,
                               Supplier<SpecialStageProvider> specialStageProviderSupplier,
-                              boolean useModeSupplierForPublicEntries) {
+                              boolean useModeSupplierForPublicEntries,
+                              Supplier<ScriptedRewind> scriptedRewindSupplier) {
         this.config = Objects.requireNonNull(config, "config");
         this.modeSupplier = Objects.requireNonNull(modeSupplier, "modeSupplier");
         this.specialStageProviderSupplier = Objects.requireNonNull(
                 specialStageProviderSupplier, "specialStageProviderSupplier");
         this.useModeSupplierForPublicEntries = useModeSupplierForPublicEntries;
+        this.scriptedRewindSupplier = Objects.requireNonNull(scriptedRewindSupplier, "scriptedRewindSupplier");
         this.hudOverlay = new LiveRewindHudOverlay(this::statusLabel);
     }
 
@@ -96,7 +112,8 @@ public final class LiveRewindManager {
      */
     public boolean handleRealtimeRewindInput(GameMode mode, boolean rewindBlocked, InputHandler input) {
         RewindContext context = rewindContextForPublicEntry(mode);
-        if (!context.supported() || rewindBlocked || input == null || !enabled()) {
+        ScriptedRewind script = scriptedRewind(context);
+        if (!context.supported() || rewindBlocked || input == null || !enabled(script)) {
             return !clear();
         }
         activeInputHandler = input;
@@ -107,18 +124,31 @@ public final class LiveRewindManager {
         if (releasePending) {
             return retryPendingRelease();
         }
+        // A module's scripted rewind runs the held-key presentation at its own pace.
+        boolean scripted = script != null && script.requested();
         int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
-        if (input.isKeyDown(rewindKey)) {
+        if (scripted || (keyEnabled() && input.isKeyDown(rewindKey))) {
             if (!rewinding) {
                 GameServices.audio().beginReverseAudioPresentation();
                 beginReverseFadePresentation();
             }
             rewinding = true;
-            speedController.setHeldSpeedMultiplier(resolveHeldSpeedMultiplier(input));
-            int steps = speedController.stepsWhileHeld();
-            GameServices.audio().setReversePlaybackRate(speedController.currentSpeed());
+            scriptedRewinding = scripted;
+            int steps;
+            if (scripted) {
+                speedController.reset();
+                steps = Math.max(0, script.stepsThisFrame());
+            } else {
+                speedController.setHeldSpeedMultiplier(resolveHeldSpeedMultiplier(input));
+                steps = speedController.stepsWhileHeld();
+            }
+            double speed = scripted ? Math.max(1, steps) : speedController.currentSpeed();
+            GameServices.audio().setReversePlaybackRate(speed);
+            if (scripted) {
+                return stepScripted(script, steps, speed);
+            }
             stepBackward(steps);
-            effectEnvelope.frameActive(speedController.currentSpeed());
+            effectEnvelope.frameActive(speed);
             return true;
         }
         int coastSteps = speedController.stepsAfterRelease();
@@ -219,7 +249,8 @@ public final class LiveRewindManager {
             InputHandler input,
             boolean seamlessTransitionCompleted) {
         RewindContext context = rewindContextForPublicEntry(mode);
-        if (!context.supported() || nonRewindableTransitionPending || input == null || !enabled()) {
+        if (!context.supported() || nonRewindableTransitionPending || input == null
+                || !enabled(scriptedRewind(context))) {
             activeInputHandler = null;
             clear();
             return;
@@ -286,6 +317,9 @@ public final class LiveRewindManager {
                 || mode == GameMode.SPECIAL_STAGE;
     }
 
+    /** Host pacing must not multiply rewind or release-reconciliation steps. */
+    public boolean isRewindingOrReleasing() { return rewinding || releasePending; }
+
     /** Current VHS rewind presentation intensity, 0..1. */
     public float effectIntensity() {
         return effectEnvelope.intensity();
@@ -297,7 +331,8 @@ public final class LiveRewindManager {
     }
 
     private String statusLabel() {
-        if (!enabled() || !rewinding || rewindController == null) {
+        // A scripted rewind is the game's own presentation, without the debug frame counter.
+        if (!enabled() || !rewinding || scriptedRewinding || rewindController == null) {
             return null;
         }
         return "REWIND " + rewindController.currentFrame();
@@ -440,7 +475,54 @@ public final class LiveRewindManager {
         return completed;
     }
 
+    /**
+     * Takes one presentation frame's backward steps of a module's scripted rewind,
+     * stopping at the first restored state that reaches its target or at the history
+     * floor; then tells the script and runs the ordinary release.
+     */
+    private boolean stepScripted(ScriptedRewind script, int steps, double speed) {
+        boolean reached = false;
+        boolean floor = false;
+        for (int i = 0; i < steps && !reached; i++) {
+            if (!rewindController.stepBackward()) {
+                floor = true;
+                break;
+            }
+            reached = script.reachedTarget();
+        }
+        if (!reached && !floor) {
+            effectEnvelope.frameActive(speed);
+            return true;
+        }
+        script.ended(reached);
+        scriptedRewinding = false;
+        if (!cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX)) {
+            return true;
+        }
+        rewinding = false;
+        effectEnvelope.frameInactive();
+        return true;
+    }
+
+    /** The module's scripted rewind in level play; never in bonus or special stages. */
+    private ScriptedRewind scriptedRewind(RewindContext context) {
+        if (!context.supported() || context.stepperKind() != StepperKind.LEVEL_FRAME
+                || modeSupplier.get() != GameMode.LEVEL) {
+            return null;
+        }
+        return scriptedRewindSupplier.get();
+    }
+
     private boolean enabled() {
+        return keyEnabled() || scriptedRewind(rewindContextFromSupplier()) != null;
+    }
+
+    private boolean enabled(ScriptedRewind script) {
+        return keyEnabled() || script != null;
+    }
+
+    /** The player's live rewind setting, which alone arms the held key. */
+    private boolean keyEnabled() {
         return config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED);
     }
 
@@ -562,6 +644,7 @@ public final class LiveRewindManager {
         speedController.reset();
         speedController = RewindSpeedController.disabled();
         rewinding = false;
+        scriptedRewinding = false;
         releasePending = false;
         pendingReleasePolicy = null;
         pendingReleaseBoundary = null;

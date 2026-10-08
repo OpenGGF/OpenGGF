@@ -14,14 +14,14 @@ import java.util.List;
 /**
  * Shared base class for monitor (item box) objects across all games.
  * <p>
- * Encapsulates the icon-rise physics state machine that is identical across
- * S1, S2, and S3K: the icon rises with initial velocity {@code -0x300},
+ * Encapsulates the monitor icon physics shared by S1, S2, and S3K.
+ * Normally the icon rises with initial velocity {@code -0x300},
  * decelerates at {@code +0x18} per frame, waits {@code 0x1D} frames at
  * the apex (applying the power-up effect), then self-destructs.
  * <p>
  * Subclasses provide game-specific power-up logic via {@link #applyPowerup}.
  * <p>
- * ROM references: Pow_Move / Pow_ChkX (all three games share this code).
+ * ROM references: Pow_Move / Pow_ChkX; S3K loc_1D83C supplies the inverted branch.
  */
 public abstract class AbstractMonitorObjectInstance extends AbstractObjectInstance {
 
@@ -80,7 +80,7 @@ public abstract class AbstractMonitorObjectInstance extends AbstractObjectInstan
     protected void startIconRise(int originY, PlayableEntity player) {
         iconActive = true;
         iconSubY = originY << 8;
-        iconVelY = ICON_INITIAL_VELOCITY;
+        iconVelY = isIconRiseInverted() ? -ICON_INITIAL_VELOCITY : ICON_INITIAL_VELOCITY;
         iconWaitFrames = 0;
         effectApplied = false;
         effectTarget = player;
@@ -88,6 +88,11 @@ public abstract class AbstractMonitorObjectInstance extends AbstractObjectInstan
         // monitor-content object's first execution. Embedded monitor shells can
         // opt into skipping the parent shell's same-frame post-break update.
         iconPendingInit = delayFirstIconUpdateAfterBreak();
+    }
+
+    /** Whether the contents use the native upside-down rise routine. */
+    protected boolean isIconRiseInverted() {
+        return false;
     }
 
     protected boolean delayFirstIconUpdateAfterBreak() {
@@ -99,7 +104,7 @@ public abstract class AbstractMonitorObjectInstance extends AbstractObjectInstan
      * <p>
      * State machine: rise (velocity &lt; 0) -> apply effect -> wait -> deactivate.
      * <p>
-     * ROM: Pow_Move, Pow_ChkX — identical across S1, S2, and S3K.
+     * ROM: Pow_Move, Pow_ChkX; the inverted S3K branch retains its zero-speed tick.
      */
     protected void updateIcon() {
         if (!iconActive) {
@@ -109,10 +114,13 @@ public abstract class AbstractMonitorObjectInstance extends AbstractObjectInstan
             iconPendingInit = false;
             return;
         }
-        if (iconVelY < 0) {
-            // Rising phase: apply velocity and deceleration
+        boolean inverted = isIconRiseInverted();
+        // S3K loc_1D83C branches on BMI, not BLE: the inverted path moves
+        // once at zero velocity and awards its effect one tick later. After
+        // the award, the native routine changes; do not re-enter motion at zero.
+        if (!effectApplied && (inverted ? iconVelY >= 0 : iconVelY < 0)) {
             iconSubY += iconVelY;
-            iconVelY += ICON_RISE_ACCEL;
+            iconVelY += inverted ? -ICON_RISE_ACCEL : ICON_RISE_ACCEL;
             return;
         }
         if (!effectApplied && effectTarget != null) {

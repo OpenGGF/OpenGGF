@@ -6,6 +6,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.EmeraldRewardKind;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.ResultsScreen;
+import com.openggf.game.internal.SpecialStageResultsEntry;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugCapabilities;
 import com.openggf.game.SpecialStageDebugProvider;
@@ -13,6 +14,8 @@ import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageViewport;
 import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 
 import java.io.IOException;
@@ -26,9 +29,14 @@ import java.util.Optional;
  * S3K special stages are accessed via giant rings hidden in levels.
  * Each stage awards one of seven Chaos Emeralds upon successful completion.
  */
-public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
+public class Sonic3kSpecialStageProvider implements SpecialStageProvider, SpecialStageResultsEntry {
     private final Sonic3kSpecialStageManager manager;
     private SpecialStageViewport viewport = SpecialStageViewport.nativeViewport();
+
+    // Results entry clears the stage manager before constructing its screen. The
+    // ROM retains Special_stage_rings_left across that boundary. This latch lives
+    // only through the non-rewindable results entry and is cleared on ordinary reset.
+    private int resultsRingsRemaining = -1;
 
     public Sonic3kSpecialStageProvider() {
         this(new Sonic3kSpecialStageManager());
@@ -48,6 +56,12 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
     @Override
     public SpecialStageViewport getSpecialStageViewport() {
         return viewport;
+    }
+
+    @Override
+    public boolean hasCompletedResultsEntryFade() {
+        // loc_853E already calls Pal_ToWhite throughout its sixty-frame exit.
+        return manager.isFinished();
     }
 
     /**
@@ -130,6 +144,7 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
     public void initializeStage(int stageIndex, SpecialStageStartupPolicy policy)
             throws IOException {
         java.util.Objects.requireNonNull(policy, "policy");
+        resultsRingsRemaining = -1;
         manager.reset();
         manager.initialize(stageIndex);
     }
@@ -150,6 +165,7 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
                                 EmeraldRewardKind rewardKind) throws IOException {
         java.util.Objects.requireNonNull(policy, "policy");
         java.util.Objects.requireNonNull(rewardKind, "rewardKind");
+        resultsRingsRemaining = -1;
         manager.reset();
         manager.initialize(stageIndex, rewardKind);
     }
@@ -267,9 +283,20 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
         // Big Ring was collected in — still the loaded level at this point.
         boolean skSideOrigin = GameServices.hasRuntime()
                 && Sonic3kZoneIds.isSkSideZone(GameServices.level().getCurrentZone());
-        return new S3kSpecialStageResultsScreen(
-                ringsCollected, gotEmerald, stageIndex, totalEmeraldCount,
-                manager.getPlayerCharacter(), manager.isSuperEmeraldMode(), skSideOrigin);
+        var character = manager.getPlayerCharacter();
+        boolean superEmeraldMode = manager.isSuperEmeraldMode();
+        int ringsRemaining = resultsRingsRemaining;
+        try {
+            return new S3kSpecialStageResultsPreparation(GameServices.rom().getRom(), character,
+                    S3kRuntimeArtCoordinator.current().moduleQueue(),
+                    GameServices.module().getGameService(
+                            Sonic3kLevelTitlePlcService.class),
+                    () -> new S3kSpecialStageResultsScreen(
+                            ringsCollected, gotEmerald, ringsRemaining, stageIndex, totalEmeraldCount,
+                            character, superEmeraldMode, skSideOrigin));
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to prepare special-stage results resources", exception);
+        }
     }
 
     // ==================== MiniGameProvider Methods ====================
@@ -306,7 +333,15 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public void reset() {
+        resultsRingsRemaining = -1;
         manager.reset();
+    }
+
+    @Override
+    public void resetForResults() {
+        resultsRingsRemaining = manager.getRingsLeft();
+        manager.reset();
+        onEnterResults();
     }
 
     @Override

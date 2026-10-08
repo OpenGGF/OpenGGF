@@ -66,6 +66,7 @@ public final class RuntimePresenceSnapshotProvider implements PresenceSnapshotPr
             case TITLE_SCREEN -> "Title Screen";
             case LEVEL_SELECT -> "Level Select";
             case DATA_SELECT -> "Data Select";
+            case MOD_SCENE -> "Playing a Mod";
             case LEGAL_DISCLAIMER -> "Legal Disclaimer";
             case EDITOR -> "Level Editor";
             case CREDITS_TEXT -> "Credits";

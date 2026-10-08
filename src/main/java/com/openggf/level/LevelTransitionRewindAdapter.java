@@ -2,15 +2,18 @@ package com.openggf.level;
 
 import com.openggf.game.rewind.RewindSnapshottable;
 
-/** Rewind owner for transition state that crosses HPZ and special-stage modes. */
+/** Rewind owner for sanctuary state and deferred fresh-level publication. */
 final class LevelTransitionRewindAdapter
-        implements RewindSnapshottable<LevelTransitionCoordinator.SanctuaryRewindState> {
+        implements RewindSnapshottable<LevelTransitionRewindAdapter.Snapshot> {
     static final String KEY = "level-transition";
 
     private final LevelTransitionCoordinator transitions;
+    private final FreshLevelTransitionBoundaryController freshBoundary;
 
-    LevelTransitionRewindAdapter(LevelTransitionCoordinator transitions) {
+    LevelTransitionRewindAdapter(LevelTransitionCoordinator transitions,
+                                 FreshLevelTransitionBoundaryController freshBoundary) {
         this.transitions = transitions;
+        this.freshBoundary = freshBoundary;
     }
 
     @Override
@@ -19,12 +22,17 @@ final class LevelTransitionRewindAdapter
     }
 
     @Override
-    public LevelTransitionCoordinator.SanctuaryRewindState capture() {
-        return transitions.captureSanctuaryRewindState();
+    public Snapshot capture() {
+        return new Snapshot(transitions.captureSanctuaryRewindState(),
+                freshBoundary.captureForRewind());
     }
 
     @Override
-    public void restore(LevelTransitionCoordinator.SanctuaryRewindState snapshot) {
-        transitions.restoreSanctuaryRewindState(snapshot);
+    public void restore(Snapshot snapshot) {
+        transitions.restoreSanctuaryRewindState(snapshot.sanctuary());
+        freshBoundary.restoreForRewind(snapshot.freshBoundary());
     }
+
+    record Snapshot(LevelTransitionCoordinator.SanctuaryRewindState sanctuary,
+                    FreshLevelTransitionBoundaryController.RewindState freshBoundary) {}
 }

@@ -26,6 +26,7 @@ com.openggf.audio.presentation.PcmPresentationVoice
 com.openggf.audio.presentation.PresentationMode
 com.openggf.audio.presentation.PresentationVoice
 com.openggf.audio.presentation.PresentationVoiceSnapshot
+com.openggf.audio.presentation.ScenePcmSource
 com.openggf.audio.rewind.AudioCommandTimeline$PreparedAppend
 com.openggf.audio.rewind.AudioSourceDescriptor
 com.openggf.audio.rewind.SmpsDriverSnapshot
@@ -102,6 +103,7 @@ com.openggf.level.objects.ObjectSolidContactController
 com.openggf.sprites.managers.InitialPlayableInput
 com.openggf.sprites.managers.PlayableSstDispatcher
 com.openggf.sprites.managers.ProcessSpritesEpoch
+com.openggf.sprites.managers.TailsTailPose
 com.openggf.sprites.managers.TailsTailsController$RewindState
 com.openggf.trace.BootstrapDivergence
 com.openggf.trace.DynamicArtTransfer

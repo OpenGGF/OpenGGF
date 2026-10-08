@@ -47,8 +47,11 @@ final class DdzEndBossTurretObjectInstance extends AbstractDdzObjectInstance {
 
 
     DdzEndBossTurretObjectInstance(DdzEndBossObjectInstance boss, int subtype) {
-        super(new ObjectSpawn(boss == null ? 0 : boss.getX(), boss == null ? 0 : boss.getY(), 0, subtype, 0, false, 0),
-                "DDZEndBossTurret", boss);
+        this(new ObjectSpawn(boss == null ? 0 : boss.getX(), boss == null ? 0 : boss.getY(), 0, subtype, 0, false, 0), boss, subtype);
+    }
+
+    private DdzEndBossTurretObjectInstance(ObjectSpawn spawn, DdzEndBossObjectInstance boss, int subtype) {
+        super(spawn, "DDZEndBossTurret", boss);
         this.subtype = subtype;
         this.timer = subtype << 3;
         if (boss != null) {
@@ -59,12 +62,14 @@ final class DdzEndBossTurretObjectInstance extends AbstractDdzObjectInstance {
 
     /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
     private DdzEndBossTurretObjectInstance(ObjectSpawn spawn) {
-        this(null, spawn.subtype());
+        this(spawn, null, spawn.subtype());
     }
 
     @Override
     public DdzEndBossTurretObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new DdzEndBossTurretObjectInstance(null, ctx.spawn().subtype());
+        // The parent link is restored later; retain the captured spawn instead of
+        // deriving a new origin from the temporarily absent parent.
+        return new DdzEndBossTurretObjectInstance(ctx.spawn());
     }
 
     @Override

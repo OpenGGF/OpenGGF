@@ -1,11 +1,27 @@
 # Sandopolis Zone: methodology v2 application plan
 
-Date: 2026-09-15; status reconciled 2026-09-16. Implementation and two cold
+Date: 2026-09-15; current summary reconciled 2026-09-27. Implementation and two cold
 native-movement Sonic + Tails routes at width 320 are delivered on `develop`
-(`358679affa`, delivery record `1e3626aca`). Both bosses and outgoing transitions
-are verified in those routes. Full methodology acceptance remains incomplete:
-the lower Act 2 subtype-$87 puzzle, strict native behavior/pixel parity, broader
-character/donor/viewport routes and remaining lifecycle/rewind products are open.
+(initial delivery`358679affa`, record`1e3626aca`; current cold-route repair and
+revalidation`d08120593`, integrated record`057fb498e`). Both bosses and outgoing
+transitions are verified in those routes. The ordinary paired acceptance now
+checks61 periodic/destination full-world replay windows, additional semantic
+background/boss/capsule/results spots and live-history isolation at the LRZ load. The lower Act2 subtype-$87 puzzle now has connected
+positioned Sonic and ordinary Knuckles passage evidence; see the current Act2
+matrix for viewport/rewind verification and the independent native mechanism
+corroboration. The checkpoint, repeated-team-reload and connected-room matrices
+now use all five production display presets through the actual configuration
+resolver (509 focused checks; see the per-act lifecycle refresh). Historical
+512/640-width evidence is distinguished from the current352/528 menu modes.
+Solo Sonic, Tails and Knuckles now also complete both acts at native width320;
+Knuckles Act2 is integrated in `49586cd86`, with 48 selected whole-world replay
+windows plus 18 semantic events and playable LRZ after the real load. See the
+act matrices for each route's exact inputs, configuration and validation scope.
+A separate Knuckles Act2 recording now also completes 800px with 48 replay windows;
+see the dated matrix and audit for promotion/integration evidence.
+Full methodology acceptance remains incomplete: strict native
+behavior/pixel parity, broader complete character/donor/viewport routes and
+remaining lifecycle/rewind products are open.
 See [remaining acceptance](#2026-09-16-retrospective-and-remaining-acceptance).
 Dated execution sections retain the evidence and status at the time of each run.
 
@@ -126,9 +142,12 @@ Boss, sand-rise and transition presentation stays attached to its owning slice.
 
 ## Execution record and next action
 
-Implementation and the two bounded cold routes are delivered. Next establish
-independent passage evidence for the lower Act 2 rock/switch puzzle, then resolve
-the strict trace failure and expand the remaining matrix obligations.
+Implementation, paired and solo Sonic/Tails/Knuckles cold routes through both
+acts at width320, and independent passage through the lower Act2 rock/switch
+puzzle are integrated. Next expand the wider complete routes, supported donors
+and remaining native-presentation/lifecycle obligations. The Knuckles 800px route now has separate completed input and full-world replay
+evidence; the original 320 input still fails at 800 and is retained unchanged. Strict trace work remains explicitly deferred by the campaign scope;
+its unresolved parity evidence is not silently certified or made the next task.
 The [retrospective](#2026-09-16-retrospective-and-remaining-acceptance) is the current
 action list; subsequent dated sections preserve the execution history. Reuse the
 SOZ analysis for ROM findings and act matrices for acceptance evidence.
@@ -2104,6 +2123,20 @@ claims no new runtime result, route coverage or native parity.
 
 ### Remaining acceptance, in recommended order
 
+Current route update (2026-09-27): the act matrices now record fixed-input cold
+completions at native 320px for Sonic, Tails and Knuckles through both acts, plus
+Sonic + Tails. Knuckles Act 2 includes the lower cork/rock puzzle and actual LRZ
+handoff with whole-world replay. This closes those character routes, not the
+remaining viewport/donor, per-mechanic and native-presentation obligations. The
+800px Knuckles input frontier and the accepted strict-trace deferral remain
+explicit in [the Act 2 matrix](../validation/levels/s3k-soz-act2.md#knuckles-cold-act-2-completion-2026-09-27).
+
+Historical ordering below. Item1's connected engine passage is now recorded in
+[the Act2 matrix](../validation/levels/s3k-soz-act2.md#ordinary-knuckles-lower-puzzle-and-current-viewport-breadth-2026-09-27),
+with independent native Knuckles rock/switch/door observations. Synchronized native
+ordinary-character timing/pixels remain separate. The initial failure came from
+skipping the cork's floor replacement, not an incorrect rock track.
+
 1. Establish native and engine passage evidence for the lower Act 2 subtype-$87
    rock/switch puzzle. The successful upper route and failed lower attempts prove
    neither lower passage nor its optionality. Do not alter geometry without evidence.
@@ -2459,7 +2492,7 @@ Focused verification before broad validation:
 
 - Queued Maven `-Dmse=off -Dtest=TestLevelRendererBucketInvalidation,TestGraphicsManagerSpriteSatReplay,TestSatReplayBatching,TestSpriteSatMaskPostProcessor,TestLevelSpritePresentation,TestLevelSpritePresentationLifecycle,TestSozSpriteMaskPresentation,TestSozMiniboss,TestGumball* test -B`, with the explicit S3K ROM property: 69 passed, no failures/errors/skips.
 - Expanded ordering/mapping-piece regression, arena-mask widths320/400/512/640/800,
-  positioned Act1 victory at800 and four Act2 mechanism captures: 25 passed,
+  positioned Act1 victory at 800 and four Act2 mechanism captures: 25 passed,
   no failures/errors/skips. The five capture scenarios use the real GameLoop.
 - Act1's5325 state rows exactly match the previous wide victory capture. Inspected
   opening-door and golem-sinking frames show the sand-surface clipping; Act2

@@ -57,6 +57,21 @@ class TestAbstractPlayableSpriteRewindCapture {
     // -------------------------------------------------------------------------
 
     @Test
+    void rewindRestoresBothTilePriorityAndSpriteBucketInBothDirections() {
+        Sonic sonic = new Sonic("sonic", (short) 100, (short) 200);
+        for (boolean high : new boolean[] {false, true}) {
+            sonic.setHighPriority(high);
+            sonic.setPriorityBucket(2);
+            var saved = sonic.captureRewindState();
+            sonic.setHighPriority(!high);
+            sonic.setPriorityBucket(6);
+            sonic.restoreRewindState(saved);
+            assertEquals(high, sonic.isHighPriority(), "tile priority must not leak from the future");
+            assertEquals(2, sonic.getPriorityBucket(), "sprite ordering is independent of tile priority");
+        }
+    }
+
+    @Test
     void roundTripCoversFullPlayerSurface() {
         Sonic sonic = new Sonic("sonic", (short) 100, (short) 200);
 

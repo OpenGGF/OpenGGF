@@ -23,16 +23,19 @@ import com.openggf.audio.rewind.AudioCommandTimeline;
 public final class AudioPresentationProducer {
     private static final int CHANNELS = 2;
     private static final int MAX_CAPTURE_HANDLES = 32;
+    private static final int MAX_RECORDED_REPLAYS = 4;
+    private static final int MAX_REPLAY_SECONDS = 120;
 
     /**
      * Ceiling on {@link #setForwardRate}. Each whole multiple costs another
      * full mixer pass inside the one outer frame, so this bounds the worst-case
      * cost of a runaway rate rather than expressing a musical limit.
      */
-    private static final double MAX_FORWARD_RATE = 8.0;
+    private static final double MAX_FORWARD_RATE = 32.0;
 
     private final Thread ownerThread;
     private final int sampleRate;
+    private final int frameRate;
     private final int maxStereoFrames;
     private final int crossfadeFrames;
     private final AudioVoiceRegistry registry;
@@ -47,6 +50,8 @@ public final class AudioPresentationProducer {
     private final AudioPresentationFrameView frameView;
     private final CaptureHandle[] captures =
             new CaptureHandle[MAX_CAPTURE_HANDLES];
+    private final RecordedReplay[] recordedReplays =
+            new RecordedReplay[MAX_RECORDED_REPLAYS];
     private final Consumer<AudioPresentationCommand> commandApplier;
     private final IdentityTokenRegistry diagnosticIdentityTokens =
             new IdentityTokenRegistry();
@@ -63,7 +68,13 @@ public final class AudioPresentationProducer {
     private AudioPresentationDependencyResolver selectedRestoreResolver;
     private PreparedPresentationRestore preparedSelectedRestore;
     private double forwardRate = 1.0;
+    private double sourceFramePhase;
+    private int sourceFrameSamples;
+    private int sourceSampleRemainder;
+    private boolean forwardSfxTrackStopped;
     private int captureCount;
+    private int recordedReplayCount;
+    private RecordedReplay activeReplay;
     private int releaseCrossfadeRemaining;
     private short lastReverseLeft;
     private short lastReverseRight;
@@ -82,10 +93,35 @@ public final class AudioPresentationProducer {
     private boolean reverseFrameOutput;
     private boolean hasLastReverseFrame;
     private boolean closed;
+    private ScenePcmSource scenePcmSource;
+    private AudioPresentationSink pendingSinkReplacement;
+
+    /** Scene lifetime override; publication still uses this producer's sinks and captures. */
+    public void setScenePcmSource(ScenePcmSource source) {
+        assertOwnerThread();
+        assertOpen();
+        if (presenting) throw new IllegalStateException("cannot replace PCM during presentation");
+        scenePcmSource = source;
+        sink.onReverseBoundary();
+    }
+
+    public void pauseScenePcmSource() {
+        if (scenePcmSource != null) {
+            assertOwnerThread();
+            scenePcmSource.onHostPause();
+        }
+    }
+
+    public boolean resumeScenePcmSource() {
+        if (scenePcmSource == null) return true;
+        assertOwnerThread();
+        return scenePcmSource.onHostResume();
+    }
 
     private record PreparedPresentationRestore(
             AudioVoiceRegistry.PreparedSnapshotRestore registry,
-            SmpsDriverSession.PreparedRestore session) {
+            SmpsDriverSession.PreparedRestore session,
+            AudioPresentationSnapshot.ForwardTiming timing) {
         private PreparedPresentationRestore {
             Objects.requireNonNull(registry, "registry");
         }
@@ -198,6 +234,7 @@ public final class AudioPresentationProducer {
         }
         ownerThread = Thread.currentThread();
         this.sampleRate = sampleRate;
+        this.frameRate = frameRate;
         maxStereoFrames = (sampleRate + frameRate - 1) / frameRate;
         this.crossfadeFrames = crossfadeFrames;
         this.registry = Objects.requireNonNull(registry, "registry");
@@ -270,8 +307,17 @@ public final class AudioPresentationProducer {
                     return PresentationResult.REQUEST_REJECTED;
                 }
                 applyReleaseCrossfade(pcm, stereoFrames);
+                if (scenePcmSource != null) {
+                    scenePcmSource.render(pcm, stereoFrames);
+                }
                 if (historyArmed) {
                     history.write(pcm, stereoFrames);
+                }
+                for (int index = 0; index < recordedReplayCount; index++) {
+                    RecordedReplay replay = recordedReplays[index];
+                    if (replay.recording) {
+                        replay.recordedHistory.write(pcm, stereoFrames);
+                    }
                 }
             } else if (mode == PresentationMode.SILENT) {
                 if (smpsSession != null) {
@@ -293,10 +339,12 @@ public final class AudioPresentationProducer {
                 pcm = silence;
             } else {
                 Arrays.fill(reversePcm, 0, stereoFrames * CHANNELS, (short) 0);
-                if (reverseCursor != null) {
+                if (activeReplay != null) {
+                    activeReplay.cursor.readPrevious(reversePcm, stereoFrames);
+                } else if (reverseCursor != null) {
                     reverseCursor.readPrevious(reversePcm, stereoFrames);
                 }
-                if (reverseActive && stereoFrames > 0) {
+                if ((reverseActive || activeReplay != null) && stereoFrames > 0) {
                     rememberLastReverseFrame(reversePcm, stereoFrames);
                 }
                 pcm = reversePcm;
@@ -313,6 +361,11 @@ public final class AudioPresentationProducer {
             return PresentationResult.COMMITTED;
         } finally {
             presenting = false;
+            if (pendingSinkReplacement != null) {
+                AudioPresentationSink replacement = pendingSinkReplacement;
+                pendingSinkReplacement = null;
+                replaceSink(replacement);
+            }
         }
     }
 
@@ -345,6 +398,9 @@ public final class AudioPresentationProducer {
 
     public void beginReverse(double rate) {
         assertOwnerBoundary();
+        if (activeReplay != null) {
+            throw new IllegalStateException("a recorded replay owns reverse audio presentation");
+        }
         discardPreparedRestore(preparedSelectedRestore);
         preparedSelectedRestore = null;
         selectedRestore = null;
@@ -360,6 +416,149 @@ public final class AudioPresentationProducer {
         assertOwnerBoundary();
         if (reverseCursor != null) {
             reverseCursor.setRate(rate);
+        }
+    }
+
+    /**
+     * Records final forward presentation packets into a separate bounded PCM
+     * history. The recording never arms or changes developer rewind history;
+     * pauses and reverse output do not append samples. Reaching the duration
+     * bound drops the oldest samples, and reverse exhaustion yields silence.
+     */
+    public RecordedReplay recordReplay(int maxSeconds) {
+        assertOwnerBoundary();
+        if (maxSeconds < 1 || maxSeconds > MAX_REPLAY_SECONDS) {
+            throw new IllegalArgumentException("replay duration must be between 1 and 120 seconds");
+        }
+        if (recordedReplayCount == recordedReplays.length) {
+            throw new IllegalStateException("recorded audio replay capacity exhausted");
+        }
+        int capacityFrames = Math.multiplyExact(sampleRate, maxSeconds);
+        Math.multiplyExact(capacityFrames, CHANNELS);
+        RecordedReplay replay = new RecordedReplay(capacityFrames);
+        recordedReplays[recordedReplayCount++] = replay;
+        return replay;
+    }
+
+    /** Presentation-only reverse ownership, independent of logical rewind. */
+    public boolean isReplayReverseActive() {
+        return activeReplay != null;
+    }
+
+    /**
+     * Internal owner-thread handle for a captured presentation. Beginning
+     * reverse seals the recording; stopping keeps the sealed clip available
+     * for another playback. Closing releases its history and recording slot.
+     * None of these operations restore or stop sound-driver or voice state.
+     */
+    public final class RecordedReplay implements AutoCloseable {
+        private PcmHistoryRing recordedHistory;
+        private PcmHistoryRing.ReverseCursor cursor;
+        private boolean recording = true;
+        private boolean replayClosed;
+
+        private RecordedReplay(int capacityFrames) {
+            recordedHistory = new PcmHistoryRing(capacityFrames);
+        }
+
+        public void beginReverse(double rate) {
+            assertUsable();
+            if (reverseActive || activeReplay != null) {
+                throw new IllegalStateException("another owner already presents reverse audio");
+            }
+            PcmHistoryRing.ReverseCursor preparedCursor = recordedHistory.createReverseCursor();
+            preparedCursor.setRate(rate);
+            // A sink failure must leave this recording and the existing
+            // presentation state usable for a retry.
+            sink.onReverseBoundary();
+            cancelReleaseCrossfade();
+            cursor = preparedCursor;
+            recording = false;
+            activeReplay = this;
+        }
+
+        public void setRate(double rate) {
+            assertUsable();
+            if (cursor != null) {
+                cursor.setRate(rate);
+            }
+        }
+
+        /** Stops only this clip's reverse presentation; live audio resumes in place. */
+        public void stop() {
+            assertUsable();
+            if (activeReplay != this) {
+                return;
+            }
+            // Flush queued reverse packets before releasing ownership. A
+            // failure leaves the same cursor selected for a retry.
+            sink.onReverseBoundary();
+            cursor = null;
+            activeReplay = null;
+            armReleaseCrossfade();
+        }
+
+        public boolean isClosed() {
+            return replayClosed;
+        }
+
+        @Override
+        public void close() {
+            if (replayClosed) {
+                return;
+            }
+            stop();
+            release();
+            removeRecording();
+        }
+
+        /**
+         * Releases a creator resource even if its sink cannot flush. The boundary
+         * failure is still reported, but cannot strand audible reverse ownership
+         * after a session has discarded its resources. Explicit stop remains retryable.
+         */
+        public void dispose() {
+            if (replayClosed) return;
+            assertOwnerBoundary();
+            try { close(); }
+            finally {
+                if (!replayClosed) {
+                    if (activeReplay == this) {
+                        activeReplay = null;
+                        armReleaseCrossfade();
+                    }
+                    release();
+                    removeRecording();
+                }
+            }
+        }
+
+        private void removeRecording() {
+            for (int index = 0; index < recordedReplayCount; index++) {
+                if (recordedReplays[index] == this) {
+                    int remaining = recordedReplayCount - index - 1;
+                    if (remaining > 0) {
+                        System.arraycopy(recordedReplays, index + 1,
+                                recordedReplays, index, remaining);
+                    }
+                    recordedReplays[--recordedReplayCount] = null;
+                    break;
+                }
+            }
+        }
+
+        private void assertUsable() {
+            assertOwnerBoundary();
+            if (replayClosed) {
+                throw new IllegalStateException("recorded audio replay is closed");
+            }
+        }
+
+        private void release() {
+            replayClosed = true;
+            recording = false;
+            cursor = null;
+            recordedHistory = null;
         }
     }
 
@@ -409,11 +608,7 @@ public final class AudioPresentationProducer {
         selectedRestore = null;
         selectedRestoreResolver = null;
         preparedSelectedRestore = null;
-        if (hasLastReverseFrame && reverseFrameOutput
-                && crossfadeFrames > 0) {
-            releaseCrossfadeRemaining = crossfadeFrames;
-        }
-        reverseFrameOutput = false;
+        armReleaseCrossfade();
         sink.onReverseBoundary();
     }
 
@@ -424,7 +619,9 @@ public final class AudioPresentationProducer {
         selectedRestoreResolver = null;
         discardPreparedRestore(preparedSelectedRestore);
         preparedSelectedRestore = null;
-        cancelReleaseCrossfade();
+        if (activeReplay == null) {
+            cancelReleaseCrossfade();
+        }
     }
 
     public void setHistoryArmed(boolean armed) {
@@ -434,7 +631,7 @@ public final class AudioPresentationProducer {
 
     public AudioPresentationSnapshot snapshot() {
         assertOwnerBoundary();
-        return registry.snapshot();
+        return registry.snapshot(forwardTiming());
     }
 
     public boolean areSfxRequestsBlocked() {
@@ -472,7 +669,18 @@ public final class AudioPresentationProducer {
                 reverseActive,
                 reverseFrameOutput,
                 hasLastReverseFrame,
-                captureCount);
+                captureCount, forwardTiming());
+    }
+
+    private AudioPresentationSnapshot.ForwardTiming forwardTiming() {
+        return new AudioPresentationSnapshot.ForwardTiming(
+                sourceFramePhase, sourceFrameSamples, sourceSampleRemainder);
+    }
+
+    private void restoreForwardTiming(AudioPresentationSnapshot.ForwardTiming timing) {
+        sourceFramePhase = timing.phase();
+        sourceFrameSamples = timing.frameSamples();
+        sourceSampleRemainder = timing.sampleRemainder();
     }
 
     /**
@@ -497,7 +705,8 @@ public final class AudioPresentationProducer {
             boolean reverseActive,
             boolean reverseFrameOutput,
             boolean hasLastReverseFrame,
-            int captureCount) {
+            int captureCount,
+            AudioPresentationSnapshot.ForwardTiming forwardTiming) {
         public TransactionFingerprint {
             voiceIdentities = List.copyOf(voiceIdentities);
         }
@@ -620,6 +829,10 @@ public final class AudioPresentationProducer {
     private PreparedPresentationRestore preparePresentationRestore(
             AudioPresentationSnapshot snapshot,
             AudioPresentationDependencyResolver resolver) {
+        if (snapshot.forwardTiming().frameSamples() > maxStereoFrames
+                || snapshot.forwardTiming().sampleRemainder() >= frameRate) {
+            throw new IllegalArgumentException("forward audio timing does not match producer clock");
+        }
         SmpsDriverSession.PreparedRestore preparedSession = null;
         if (smpsSession != null) {
             if (snapshot.smpsSession() == null
@@ -648,7 +861,7 @@ public final class AudioPresentationProducer {
         AudioVoiceRegistry.PreparedSnapshotRestore preparedRegistry =
                 registry.prepareSnapshotRestore(snapshot, resolver);
         return new PreparedPresentationRestore(
-                preparedRegistry, preparedSession);
+                preparedRegistry, preparedSession, snapshot.forwardTiming());
     }
 
     private void commitPreparedRestore(
@@ -656,6 +869,7 @@ public final class AudioPresentationProducer {
         Objects.requireNonNull(restore, "restore");
         if (smpsSession == null) {
             registry.commitPreparedRestore(restore.registry());
+            restoreForwardTiming(restore.timing());
             return;
         }
         if (restore.session() == null) {
@@ -695,6 +909,7 @@ public final class AudioPresentationProducer {
             }
             throw failure;
         }
+        restoreForwardTiming(restore.timing());
         try {
             registry.publishPreparedRestoreDiagnostics(restore.registry());
         } catch (RuntimeException ignored) {
@@ -830,14 +1045,28 @@ public final class AudioPresentationProducer {
     }
 
     public void replaceSink(AudioPresentationSink sink) {
-        assertOwnerBoundary();
+        assertOwnerThread();
+        assertOpen();
         AudioPresentationSink replacement = requireCompatibleSink(sink);
         if (replacement == this.sink) {
             return;
         }
+        // accept() may report a speaker failure while the final frame is being
+        // published. Finish its capture/history boundary before closing the sink.
+        if (presenting) {
+            if (pendingSinkReplacement != null && pendingSinkReplacement != replacement) {
+                pendingSinkReplacement.close();
+            }
+            pendingSinkReplacement = replacement;
+            return;
+        }
         AudioPresentationSink previous = this.sink;
         this.sink = replacement;
-        previous.close();
+        try {
+            previous.close();
+        } finally {
+            if (scenePcmSource != null) scenePcmSource.onSpeakerFailure();
+        }
     }
 
     /**
@@ -864,6 +1093,12 @@ public final class AudioPresentationProducer {
             }
         }
         captureCount = 0;
+        for (int index = 0; index < recordedReplayCount; index++) {
+            recordedReplays[index].release();
+            recordedReplays[index] = null;
+        }
+        recordedReplayCount = 0;
+        activeReplay = null;
         PreparedPresentationRestore prepared =
                 preparedSelectedRestore;
         preparedSelectedRestore = null;
@@ -904,6 +1139,9 @@ public final class AudioPresentationProducer {
     }
 
     private short[] presentSessionForward(int stereoFrames) {
+        double phaseBefore = sourceFramePhase;
+        int samplesBefore = sourceFrameSamples;
+        int remainderBefore = sourceSampleRemainder;
         SmpsDriverSession.LiveMutationToken sessionMutation = null;
         AudioVoiceRegistry.LiveMutationToken registryMutation = null;
         AudioPresentationCommandQueue.PendingBatch commandBatch = null;
@@ -980,15 +1218,10 @@ public final class AudioPresentationProducer {
                 forwardBoundary.applyOutcome(requestOutcome);
             }
             registry.beginRendering();
-            SmpsServiceOutcome outcome = smpsSession.serviceForward();
-            if (outcome == SmpsServiceOutcome.GLOBAL_STOP_CONSUMED) {
-                registry.clearForGlobalStopWithoutWrites();
-            }
-            short[] pcm = forwardRate > 1.0
-                    ? mixSessionForwardResampled(stereoFrames)
-                    : mixSessionForward(stereoFrames);
+            forwardSfxTrackStopped = false;
+            short[] pcm = mixSessionForwardAtRate(stereoFrames);
             registry.endRendering();
-            if (forwardBoundary != null && smpsSession.sfxTrackStoppedDuringService()) {
+            if (forwardBoundary != null && forwardSfxTrackStopped) {
                 forwardBoundary.onSfxTrackStop();
             }
             if (commandBatch != null) {
@@ -1035,6 +1268,11 @@ public final class AudioPresentationProducer {
             }
             return pcm;
         } catch (RuntimeException failure) {
+            if (!sessionCommitted) {
+                sourceFramePhase = phaseBefore;
+                sourceFrameSamples = samplesBefore;
+                sourceSampleRemainder = remainderBefore;
+            }
             if (registryMutation != null && !registryCommitted) {
                 try {
                     registry.rollbackLiveMutation(registryMutation);
@@ -1157,44 +1395,50 @@ public final class AudioPresentationProducer {
                 smpsSession, registry, command);
     }
 
-    private short[] mixSessionForward(int stereoFrames) {
-        smpsSession.renderFrames(
-                smpsSourcePcm, 0, stereoFrames);
-        return mixer.mixPcmVoices(
-                registry, stereoFrames, smpsSourcePcm, 0);
-    }
-
-    private short[] mixSessionForwardResampled(int stereoFrames) {
-        if (stereoFrames <= 0) {
-            return forwardPcm;
-        }
-        int sourceFramesNeeded = Math.toIntExact(
-                (long) Math.floor(
-                        (stereoFrames - 1) * forwardRate + 0.5) + 1);
-        smpsSession.renderFrames(
-                smpsSourcePcm, 0, sourceFramesNeeded);
-        int consumedSourceFrames = 0;
-        int outputFrame = 0;
-        while (consumedSourceFrames < sourceFramesNeeded) {
-            int chunkFrames = Math.min(maxStereoFrames,
-                    sourceFramesNeeded - consumedSourceFrames);
-            short[] chunk = mixer.mixPcmVoices(
-                    registry, chunkFrames, smpsSourcePcm,
-                    consumedSourceFrames * CHANNELS);
-            while (outputFrame < stereoFrames) {
-                long picked = (long) Math.floor(
-                        outputFrame * forwardRate + 0.5);
-                if (picked >= consumedSourceFrames + chunkFrames) {
-                    break;
+    /**
+     * Service the driver at each source V-blank, rendering the intervening PCM
+     * before the next service. Rendering extra chip samples alone raises pitch
+     * but leaves note durations at wall-clock speed. Fractional source frames
+     * carry across output packets (and snapshot/rollback), keeping both clocks
+     * at the same rate without bursting all note updates before synthesis.
+     */
+    private short[] mixSessionForwardAtRate(int stereoFrames) {
+        double remaining = Math.max(1.0, forwardRate);
+        int sourceFrames = 0;
+        while (remaining > 1e-10) {
+            if (sourceFramePhase == 0) {
+                int numerator = sampleRate + sourceSampleRemainder;
+                sourceFrameSamples = numerator / frameRate;
+                sourceSampleRemainder = numerator % frameRate;
+                SmpsServiceOutcome outcome = smpsSession.serviceForward();
+                forwardSfxTrackStopped |= smpsSession.sfxTrackStoppedDuringService();
+                if (outcome == SmpsServiceOutcome.GLOBAL_STOP_CONSUMED) {
+                    registry.clearForGlobalStopWithoutWrites();
                 }
-                int sourceIndex =
-                        (int) (picked - consumedSourceFrames) * CHANNELS;
-                int targetIndex = outputFrame * CHANNELS;
-                forwardPcm[targetIndex] = chunk[sourceIndex];
-                forwardPcm[targetIndex + 1] = chunk[sourceIndex + 1];
-                outputFrame++;
             }
-            consumedSourceFrames += chunkFrames;
+            double span = Math.min(remaining, 1.0 - sourceFramePhase);
+            double end = sourceFramePhase + span;
+            boolean boundary = end >= 1.0 - 1e-10;
+            int endSample = boundary ? sourceFrameSamples : (int) (end * sourceFrameSamples);
+            int frames = endSample - (int) (sourceFramePhase * sourceFrameSamples);
+            if (frames > 0) {
+                smpsSession.renderFrames(smpsSourcePcm, sourceFrames * CHANNELS, frames);
+                short[] chunk = mixer.mixPcmVoices(registry, frames,
+                        smpsSourcePcm, sourceFrames * CHANNELS);
+                System.arraycopy(chunk, 0, smpsSourcePcm, sourceFrames * CHANNELS, frames * CHANNELS);
+                sourceFrames += frames;
+            }
+            sourceFramePhase = boundary ? 0 : end;
+            remaining -= span;
+        }
+        // The final packet is always one wall-clock frame long. Consume the
+        // entire source interval, including the tail after the last picked
+        // sample, so accelerated playback cannot lose time at every packet.
+        for (int output = 0; output < stereoFrames; output++) {
+            int source = sourceFrames == 0 ? 0
+                    : (int) ((long) output * sourceFrames / stereoFrames) * CHANNELS;
+            forwardPcm[output * CHANNELS] = sourceFrames == 0 ? 0 : smpsSourcePcm[source];
+            forwardPcm[output * CHANNELS + 1] = sourceFrames == 0 ? 0 : smpsSourcePcm[source + 1];
         }
         return forwardPcm;
     }
@@ -1282,6 +1526,13 @@ public final class AudioPresentationProducer {
         hasLastReverseFrame = false;
         reverseFrameOutput = false;
         releaseCrossfadeRemaining = 0;
+    }
+
+    private void armReleaseCrossfade() {
+        if (hasLastReverseFrame && reverseFrameOutput && crossfadeFrames > 0) {
+            releaseCrossfadeRemaining = crossfadeFrames;
+        }
+        reverseFrameOutput = false;
     }
 
     private static short crossfade(

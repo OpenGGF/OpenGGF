@@ -149,6 +149,14 @@ public class SpringObjectInstance extends BoxObjectInstance
             if (!contact.pushingNow()) {
                 return;
             }
+            // Obj41_Horizontal subtracts the player's word x_pos from the
+            // spring's, then uses carry and x_flip to admit only the launch
+            // side (s2.asm:33979-33987, 34002-34010). Equality belongs to the
+            // flipped side because SUB has no borrow at equality.
+            boolean playerOnRight = (player.getCentreX() & 0xFFFF) > (spawn.x() & 0xFFFF);
+            if (playerOnRight == isFlippedHorizontal()) {
+                return;
+            }
             applyHorizontalSpring(player);
             return;
         }
@@ -181,7 +189,7 @@ public class SpringObjectInstance extends BoxObjectInstance
      * - In our engine, Y increases upward, so we SUBTRACT to push down (away from
      * spring face)
      */
-    private void applyUpSpring(AbstractPlayableSprite player) {
+    protected void applyUpSpring(AbstractPlayableSprite player) {
         // ROM: addq.w #8,y_pos(a1) — push player down 8px (away from spring face)
         // before launching. y_pos is center coordinate.
         player.setCentreYPreserveSubpixel((short) (player.getCentreY() + 8));
@@ -635,7 +643,12 @@ public class SpringObjectInstance extends BoxObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        ensureInitialized();
+        if (!initialized) {
+            // Obj41_Init and every subtype branch end at Obj41_Init_Common's
+            // RTS. Active collision and animation dispatch begin next pass.
+            ensureInitialized();
+            return;
+        }
         animationState.update();
         mappingFrame = animationState.getMappingFrame();
 

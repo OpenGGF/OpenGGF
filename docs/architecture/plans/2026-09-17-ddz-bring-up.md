@@ -316,3 +316,132 @@ credits (ending campaign, which also owns the mislabelled `ddz` segments); level
   flash faded back to the darkened target. `DdzPalette.loadDdzLine3` now resolves pending writes.
 - Each fix has a `TestS3kDdzColdRoutes` check shown red without its change (palette, bursts; the plane check pins
   the displayed words). Tools: every-frame native probes `native/probe-vis-*` and `cmp.sh`-style side-by-sides.
+
+
+### 2026-09-23 campaign: Super-form star owner
+
+The obsolete “stars unimplemented” inventory mixed two owners. Hyper stars
+already exist in `HyperSonicStarsObjectInstance`; the missing branch is
+`loc_8167C -> loc_8242A/82452`. `DdzSuperStarsObjectInstance` now occupies
+`Super_stars` via the semantic fixed-slot rule, never the dynamic object pool.
+It initializes without drawing, preserves hardware art priority independently
+of queue$80, returns without deleting/advancing when the Super flag is zero,
+subtracts the wrap word and8px each pass, and resets to P1 every12passes while
+frames0..5 last two passes each. Its scalar state and fixed slot survive rewind.
+Formless donors get no effect; the Hyper branch retains its existing owner.
+
+The dedicated sheet reads `ArtUnc_SuperSonic_Stars` at$18BD44 and six frames at
+$192DE. Rejected initial length: $1A0 **bytes** gave13tiles and the mapping guard
+reported tile$10 outside the sheet. `Add_To_DMA_Queue` takes $1A0 **words**, so
+the corrected $340bytes contain26tiles; adjacent Stars2 mappings are excluded.
+The explicit art-length/frame-count test and registry mapping guard pass.
+
+A native probe resumes the existing movie514214 save, changes only
+`Super_emerald_count` to0, stops movie input and observes100neutral passes.
+It records `Super_stars`=$CBC0: init at50, frame0 anchor at51, two-pass frames,
+next anchor at63, art$879C and queue$80. No native values drive engine gameplay.
+The external `campaign-20260923-super-stars` directory holds exporter, native
+host provenance, CSV and an800px300-frame ordinary-entry movie. Its frame57
+star crop [90,76,139,125] matches all2401 native pixels after 3-bit RGB
+quantization. Full video decode passes and all300 state rows have no death or
+follower. Full-scene pixel parity and the other HUD/Hyper issues remain open.
+
+Focused verification at development `b6c1147a2` plus campaign edits uses Java21,
+queued Maven and the absolute locked-on ROM. Initial10-case selection passed
+nine including the two complete Hyper routes and failed only the short art
+length. Corrected art/star selection passes5cases; native-cadence test then
+passes4cases. The every-object rewind sweep passes1313cases. Four wide component
+rows initially retained the headless fixture's320px width despite DISPLAY_ASPECT;
+explicit SCREEN_WIDTH_PIXELS and session reset now accompany asserted live width.
+Super completion and five-preset star replay are being rechecked with that setup.
+
+
+Full Super-route result: the seeded320px controller route reaches the exit with
+fight/wrap/fade restore checks. Actual800px reuse of those same native-width
+inputs dies at6340; it is not a completed wide route. An intermediate run first
+hit a native-width-only orphan-burst assertion at5495; gating that native oracle
+to the matching Hyper reference allowed the independent wide run to expose its
+real death frontier. The committed completion test covers320 only. Wide route
+authoring/diagnosis stays open; no gameplay was tuned to make those inputs pass.
+The final five-preset star selection passes8cases, zero skips.
+
+Final combined focused replay selection (Java21/absolute S3K ROM,18:50 BST) passes15 cases without failures/errors/skips: DDZ native Hyper routes and320Super completion, eight star checks, SSZ crane route and both320/800full final fights. This includes the crane managed-reference correction. It is not the campaign broad suite.
+
+
+The isolated800px controller probe confirms ring exhaustion: first boss fight
+routine4 begins3957 with39rings versus native-width3806 with77rings; the wide
+route lands one body hit at4296, drains its last ring at6307 and dies6340.
+The320px route lands seven body hits3919..5133 and completes. These are observed
+route differences, not proof of a runtime bug: viewport-dependent loading and
+object lifetime need matched inspection before revising gameplay. Adaptive
+wide input authoring and the actual final-DEZ incoming route remain open.
+
+
+### 2026-09-23 — fresh DDZ controller completion
+
+At `b6c1147a2` plus campaign edits, independently authored Super Sonic inputs
+now complete fresh level-select entry at both actual320/800 widths. The only
+declared gameplay setup is seven Chaos Emeralds; there is no inherited V-int,
+camera fraction, position, health or ring seed. The scripts and reproducible BK2s
+are `routes/s3k/ddz-super-fresh-{320,800}`. Native320 reaches the ending request
+after10396 capture passes with12rings; wide800 after9923 with20rings. Three
+rings during the wide exit explain the earlier17ring observation at fade entry.
+No production gameplay was changed to make these inputs complete.
+
+`TestS3kDdzAuthoredRoutes` checks no death, the `$D01` request, and restore plus
+45-input forward replay at first body damage, first chase wrap and exit. It
+compares player/camera/object summaries, palette words and all DDZ runtime bytes.
+Queued Java21 Maven `-Dmse=off -Dtest=TestS3kDdzAuthoredRoutes test`, with the
+absolute S3K ROM, passes2cases with zero failures/errors/skips at19:08 BST. The
+first diagnostic failure was a null-spawn fixed-object summary; the next was
+the stale17ring endpoint expectation. Neither required a gameplay change.
+
+This closes fresh native/wide controller completion, independently of the
+seeded Hyper movie parity result. It does not close strict trace bootstrap,
+full incoming DEZ2 continuity, Hyper/HUD presentation, or load-history isolation.
+The wide `campaign-20260923-fresh-completion-800` recording has9923 state rows,
+zero deaths/followers and1673 images (8250..9922); full video decode passes.
+Visual inspection exposed intermittent background wrap seams; diagnosis and
+corrected presentation evidence are recorded separately.
+
+
+### DDZ widescreen background wrap seam (2026-09-23)
+
+The fresh800 movie exposed intermittent one-column black lines in cloud bands.
+A no-gameplay-step render isolation removed the foreground plane through the
+mutation surface: the line remained at x654, y144 onward. The source FBO had
+valid cloud pixels in columns0/511 and transparent, unrendered column512; its
+allocation was800 while the rendered period was512. The live HScroll word for
+that band was1166. Rounding the decoded normalized R32F word before modulo
+removes the seam. The shader now documents that the VDP supplies integer pixels;
+widescreen allocation does not authorize fractional wrapping. No DDZ scroll
+speeds, camera, gameplay bounds or ROM art were changed.
+
+An isolated GL4.1 all-word texture test did **not** reproduce the original seam
+(with224 or272 source rows and opaque or transparent unused columns). It is
+retained as complementary wrap coverage, not claimed as the reproducer. The
+actual DDZ session regression does reproduce it: at fresh route8400, a second
+render compares cloud x142 with x654 and fails at y160 (cloud vs black). The
+rounded shader passes the same check. This distinction avoids claiming that a
+synthetic passing test explained the live render state.
+
+The existing pixel-centre test failed on both rounded and original shaders:
+background=true,320x224,pixel0,0 expected128/actual0. Its newly available column
+remap samplers were left on the 2D background unit even while disabled. Binding
+all 1D samplers to the test's 1D unit matches the production renderer. This is a
+test-setup correction, not a second rendering workaround.
+
+
+Corrected presentation verification: queued Java21 Maven with the absolute S3K
+ROM, `DISPLAY=:0`, `-Dopenggf.test.gl.native=true` and
+`-Dtest=TestDdzBackgroundWrapCapture,TestBackgroundScrollWrapPixels,TestShaderPixelCentreSampling`
+passes3cases with zero failures/errors/skips at19:18 BST. The background tests
+include all normalized scroll words -32767..32767 and the actual route render;
+pixel-centre coverage includes native, integer and fractional scaling. These
+are focused checks; the campaign's combined category/guard run is still owed.
+
+`campaign-20260923-fresh-completion-800-wrap-fixed` supersedes the earlier
+wide fresh-route movie. All9923 CSV rows are byte-identical to the original,
+including zero deaths/followers and20 final rings. The1673-frame movie fully
+decodes; stills8400/9000/9681/9922 were inspected. Controller source and provenance
+are alongside the external video. No native whole-scene parity claim is made.

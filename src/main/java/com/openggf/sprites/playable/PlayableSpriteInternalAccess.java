@@ -7,6 +7,10 @@ public final class PlayableSpriteInternalAccess {
     private PlayableSpriteInternalAccess() {
     }
 
+    public static boolean activateScriptedSuperForm(SuperStateController controller) {
+        return controller.activateFromScript();
+    }
+
     public static Short projectedObjectControlledSolidContactXSpeed(
             AbstractPlayableSprite sprite, ObjectInstance candidate) {
         return sprite.getObjectControlledSolidContactProjectedXSpeed(candidate);

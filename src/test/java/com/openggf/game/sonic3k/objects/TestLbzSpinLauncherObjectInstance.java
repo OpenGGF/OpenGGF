@@ -40,7 +40,7 @@ class TestLbzSpinLauncherObjectInstance {
 
         assertInstanceOf(LbzSpinLauncherObjectInstance.class, lbzObject);
         assertEquals("LBZSpinLauncher", lbzObject.getName());
-        assertInstanceOf(PlaceholderObjectInstance.class, lrzObject);
+        assertInstanceOf(LrzDashElevatorObjectInstance.class, lrzObject);
         assertEquals("LRZDashElevator", lrzObject.getName());
     }
 

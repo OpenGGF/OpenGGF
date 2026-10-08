@@ -72,7 +72,8 @@ public abstract class AbstractBossChild extends AbstractObjectInstance implement
     }
 
     protected void updateDynamicSpawn() {
-        if (dynamicSpawn.x() == currentX && dynamicSpawn.y() == currentY) {
+        if (dynamicSpawn.x() == currentX && dynamicSpawn.y() == currentY
+                && dynamicSpawn.subtype() == childOrdinal) {
             return;
         }
         dynamicSpawn = buildDynamicSpawn();
@@ -147,6 +148,14 @@ public abstract class AbstractBossChild extends AbstractObjectInstance implement
         if (tracksViaChildComponents() && parent != null && !parent.childComponents.contains(this)) {
             parent.childComponents.add(this);
         }
+    }
+
+    @Override
+    protected void afterRewindRestoreSettled() {
+        super.afterRewindRestoreSettled();
+        // Construction used placeholder coordinates and consumed a fresh child ordinal.
+        // Publish restored position/ordinal before capture, even for stationary children.
+        updateDynamicSpawn();
     }
 
     @Override

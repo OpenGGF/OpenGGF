@@ -1,6 +1,7 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.game.CanonicalAnimation;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.SidekickCpuRules;
 import com.openggf.physics.Direction;
@@ -49,7 +50,16 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         diagnosticTargetX = leader.getCentreX() & 0xFFFF;
         diagnosticTargetY = leader.getCentreY() & 0xFFFF;
         sidekick.setCentreXPreserveSubpixel(leader.getCentreX());
-        sidekick.setCentreYPreserveSubpixel((short) (leader.getCentreY() - RESPAWN_Y_OFFSET));
+        // ROM Tails_Catch_Up_Flying loc_13B50 (sonic3k.asm:26493-26499): the spawn Y is
+        // `subi.w #$C0,d0` and then, under Reverse_gravity_flag, `addi.w #2*$C0,d0` — a net
+        // +$C0. The sidekick always flies in from the level's "sky" side, which is below the
+        // leader when gravity is inverted. Tails_CPU_target_Y above is deliberately NOT
+        // mirrored: the ROM writes it from the leader's raw y_pos before this branch.
+        // Gated on the flag alone, so S1 and S2 (which never set it) are unchanged.
+        GameStateManager gameState = sidekick.currentGameStateOrNull();
+        boolean reverseGravity = gameState != null && gameState.isReverseGravityActive();
+        int respawnYOffset = reverseGravity ? RESPAWN_Y_OFFSET : -RESPAWN_Y_OFFSET;
+        sidekick.setCentreYPreserveSubpixel((short) (leader.getCentreY() + respawnYOffset));
         SidekickCpuRules rules = sidekickCpuRulesOrNull(sidekick);
         boolean catchUpMarker = rules != null && rules.sidekickRespawnEntersCatchUpFlight();
         // Obj02 continues through its normal movement dispatcher after

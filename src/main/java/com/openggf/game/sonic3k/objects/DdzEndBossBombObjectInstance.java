@@ -37,8 +37,11 @@ final class DdzEndBossBombObjectInstance extends AbstractDdzObjectInstance {
 
 
     DdzEndBossBombObjectInstance(DdzEndBossObjectInstance boss, int subtype) {
-        super(new ObjectSpawn(boss == null ? 0 : boss.getX(), boss == null ? 0 : boss.getY(), 0, subtype, 0, false, 0),
-                "DDZEndBossBomb", boss);
+        this(new ObjectSpawn(boss == null ? 0 : boss.getX(), boss == null ? 0 : boss.getY(), 0, subtype, 0, false, 0), boss, subtype);
+    }
+
+    private DdzEndBossBombObjectInstance(ObjectSpawn spawn, DdzEndBossObjectInstance boss, int subtype) {
+        super(spawn, "DDZEndBossBomb", boss);
         this.subtype = subtype;
         if (boss != null) {
             xPos = ((boss.getX() + 0x52) & 0xFFFF) << 16;
@@ -48,12 +51,14 @@ final class DdzEndBossBombObjectInstance extends AbstractDdzObjectInstance {
 
     /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
     private DdzEndBossBombObjectInstance(ObjectSpawn spawn) {
-        this(null, spawn.subtype());
+        this(spawn, null, spawn.subtype());
     }
 
     @Override
     public DdzEndBossBombObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new DdzEndBossBombObjectInstance(null, ctx.spawn().subtype());
+        // The parent link is restored later; retain the captured spawn instead of
+        // deriving a new origin from the temporarily absent parent.
+        return new DdzEndBossBombObjectInstance(ctx.spawn());
     }
 
     @Override

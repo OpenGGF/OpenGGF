@@ -123,6 +123,25 @@ class TestS3kMhzEndBossGraphRewind {
         assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(PLAYER_TWO_CARRY_CLASS)));
     }
 
+    @Test
+    void recreatedSpikeRetainsImmutableSpawnSubtype() {
+        var manager = Harness.create().objectManager();
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        var boss = manager.createDynamicObject(() -> new MhzEndBossInstance(BOSS_SPAWN));
+        var spike = manager.createDynamicObject(() ->
+                new com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild(boss, 1, -16, 8));
+        var id = objectId(manager, spike);
+        var registry = registryFor(manager);
+        var saved = registry.capture();
+        manager.removeDynamicObject(spike);
+        registry.restore(saved);
+        var restored = objectById(manager,
+                com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild.class, id);
+        assertNotSame(spike, restored);
+        assertEquals(spike.getSpawn().subtype(), restored.getSpawn().subtype(),
+                "Restoring the live subtype field must also preserve spawn reconstruction metadata");
+    }
+
     private record Harness(ObjectManager objectManager, ObjectServices services) {
         static Harness create() {
             ObjectManager[] holder = new ObjectManager[1];

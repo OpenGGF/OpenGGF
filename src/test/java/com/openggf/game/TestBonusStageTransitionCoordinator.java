@@ -12,6 +12,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.anyShort;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -117,8 +120,8 @@ class TestBonusStageTransitionCoordinator {
         verify(checkpoint).restoreFromSaved(0x3456, 0x789, 0x111, 0x222, 0);
         verify(checkpoint).restoreStarPostActivationMark(7);
         verify(events).restoreEventRoutineState(8, 12);
-        verify(playable).setCentreX((short) 0x3456);
-        verify(playable).setCentreY((short) 0x789);
+        verify(playable, never()).setCentreX(anyShort());
+        verify(playable, never()).setCentreY(anyShort());
         verify(playable).setTopSolidBit((byte) 0x0C);
         verify(playable).setLrbSolidBit((byte) 0x0D);
         verify(playable).setXSpeed((short) 0);
@@ -127,10 +130,10 @@ class TestBonusStageTransitionCoordinator {
         verify(playable).giveShield(ShieldType.LIGHTNING);
         verify(playable).setHighPriority(false);
         verify(playable).setPriorityBucket(2);
-        verify(camera).setX((short) 0x111);
-        verify(camera).setY((short) 0x222);
-        verify(camera).setMaxY((short) 0x333);
-        verify(camera).updatePosition(true);
+        verify(camera, never()).setX(anyShort());
+        verify(camera, never()).setY(anyShort());
+        verify(camera, never()).setMaxY(anyShort());
+        verify(camera, never()).updatePosition(anyBoolean());
         verify(water).setWaterLevelDirect(1, 0, 0x6A0);
         verify(water).setWaterLevelTarget(1, 0, 0x6A0);
         verify(levelState).setRings(69);
@@ -149,7 +152,14 @@ class TestBonusStageTransitionCoordinator {
         when(entryObjects.capturePersistentRespawn()).thenReturn(respawnState);
 
         coordinator.captureEntry(level, mock(Camera.class), null, null, null, 0);
-        coordinator.prepareReturnLoad(level);
+        var checkpoint = new CheckpointState();
+        when(level.getCheckpointState()).thenReturn(checkpoint);
+        var saved = new BonusStageState(0x1600, 0x1600, 47, 0, 0, 0, 12, 0,
+                0x9C0, 0x368, 0x920, 0x2F0, (byte) 0x0C, (byte) 0x0D, 0x2F0, 100);
+        coordinator.prepareReturnLoad(level, saved);
+        assertEquals(0x9C0, checkpoint.getSavedX());
+        assertEquals(0x368, checkpoint.getSavedY());
+        assertEquals(0, checkpoint.getLastCheckpointIndex());
 
         verify(level).restorePersistentRespawnOnNextObjectReset(respawnState);
     }

@@ -91,10 +91,27 @@ public class MhzShipPropellerInstance extends AbstractObjectInstance implements 
     }
 
     @Override
+    public boolean isPersistent() {
+        // loc_5583E returns directly; loc_5582E uses Draw_Sprite, neither
+        // applies world-range deletion. These ship controllers/screenspace
+        // sprites live until the level transition replaces the object table.
+        return true;
+    }
+
+    @Override
+    public boolean participatesInRomWorldTransitionOffset() { return false; }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MHZ_SHIP_PROPELLER);
         if (renderer != null) {
-            renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
+            // loc_55814 leaves render_flags bit 2 clear. These are hardware
+            // screen coordinates with the Genesis $80 bias, not level positions.
+            // Convert only for the engine renderer's world-coordinate interface.
+            var camera = services().camera();
+            renderer.drawFrameIndex(mappingFrame,
+                    camera.getX() + getX() - 0x80,
+                    camera.getY() + getY() - 0x80, false, false);
         }
     }
 }

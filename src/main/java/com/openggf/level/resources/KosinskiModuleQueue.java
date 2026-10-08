@@ -27,7 +27,10 @@ import java.util.TreeMap;
  * implementation must resolve the currently installed pattern-memory owner on
  * every read and apply; it must not retain a level that can be replaced during
  * an act transition. The queue journals the first byte observed at every
- * touched address plus the deterministic current byte image. Restore first
+ * touched address plus the current byte image sampled at capture. Other ROM
+ * owners (Nemesis PLCs, animation DMA and target-level loading) can replace
+ * these addresses after this queue's last write; its historical payload is
+ * therefore not the current VRAM image. Restore first
  * writes the complete pre-journal baseline, then overlays the captured image,
  * so overlapping writes and repeated writes of different lengths round-trip
  * exactly. If the target is temporarily unavailable, a completed DMA retains
@@ -369,7 +372,28 @@ public final class KosinskiModuleQueue
     @Override
     public Snapshot capture() {
         return new Snapshot(new ArrayList<>(archives), phase, pendingModuleData,
-                writeStates(baselineBytes), writeStates(appliedBytes));
+                writeStates(baselineBytes), capturePatternImage());
+    }
+
+    private List<DmaWriteState> capturePatternImage() {
+        List<DmaWriteState> logicalImage = writeStates(appliedBytes);
+        if (pendingRestoreBaseline != null || dmaTarget == null || !dmaTarget.isAvailable()) {
+            // An unflushed restore describes the requested logical image, not the
+            // stale physical target that may just have become available again.
+            return logicalImage;
+        }
+        List<DmaWriteState> currentImage = new ArrayList<>(logicalImage.size());
+        for (DmaWriteState range : logicalImage) {
+            int length = range.data.length;
+            byte[] current = dmaTarget.read(range.destinationVramBytes(), length);
+            if (current == null || current.length != length) {
+                throw new IllegalStateException("DMA target returned "
+                        + (current == null ? "null" : current.length + " bytes")
+                        + " for a " + length + "-byte snapshot read");
+            }
+            currentImage.add(new DmaWriteState(range.destinationVramBytes(), current));
+        }
+        return currentImage;
     }
 
     @Override

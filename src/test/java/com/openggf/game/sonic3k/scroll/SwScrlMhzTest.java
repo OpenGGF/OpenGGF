@@ -18,6 +18,24 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class SwScrlMhzTest {
 
     @Test
+    void actChangeRetainsLogicalBackgroundAfterRebasingThePhysicalCamera() {
+        var handler = new SwScrlMhz();
+        int[] output = new int[M68KMath.VISIBLE_LINES];
+        handler.init(0, 0x43FC, 0x710);
+        handler.update(output, 0x4200, 0x710, 0, 0); // native $200 arena repeat
+        int bg = handler.getBgCameraX();
+        Object carry = handler.captureForActTransition(-0x4200);
+        handler.init(1, 0, 0x710);
+        handler.restoreRewindState(carry);
+        handler.update(output, 0, 0x710, 1, 1);
+        assertEquals(bg, handler.getBgCameraX(), "Load_Level retains Events_fg_1");
+        assertEquals(packScrollWords(negWord(0), negWord(bg)), output[0]);
+        handler.update(output, 16, 0x710, 2, 1);
+        assertEquals((bg + 6) & 0xFFFF, handler.getBgCameraX() & 0xFFFF,
+                "ordinary movement resumes at 3/8 speed from the retained background origin");
+    }
+
+    @Test
     void providerUsesMhzDeformForMushroomHill() throws Exception {
         Sonic3kScrollHandlerProvider provider = new Sonic3kScrollHandlerProvider();
         provider.load(new Rom());
@@ -140,4 +158,20 @@ class SwScrlMhzTest {
         manager.initLevel(Sonic3kZoneIds.ZONE_MHZ, 1);
         manager.getMhzEvents().setAct2BackgroundRoutineForTest(routineBg);
     }
+    @org.junit.jupiter.api.Test
+    void rewindRestoresLoopAccumulatorBeforeRebuildingAtAnEarlierCamera() {
+        var handler = new SwScrlMhz();
+        handler.init(1, 0x4100, 0x280);
+        int[] before = new int[224];
+        handler.update(before, 0x4180, 0x280, 1, 1);
+        Object saved = handler.captureRewindState();
+        handler.update(new int[224], 0x4080, 0x280, 2, 1);
+        handler.update(new int[224], 0x41C0, 0x280, 3, 1);
+        handler.restoreRewindState(saved);
+        int[] restored = new int[224];
+        handler.update(restored, 0x4180, 0x280, 1, 1);
+        org.junit.jupiter.api.Assertions.assertArrayEquals(before, restored);
+        org.junit.jupiter.api.Assertions.assertEquals(saved, handler.captureRewindState());
+    }
+
 }

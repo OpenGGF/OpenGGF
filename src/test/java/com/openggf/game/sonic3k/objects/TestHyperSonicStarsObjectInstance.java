@@ -49,6 +49,24 @@ class TestHyperSonicStarsObjectInstance {
     }
 
     @Test
+    void starsKeepNativeDisplayListWhileFollowingThePlayersPlanePriority() {
+        AbstractPlayableSprite owner = hyperOwner();
+        HyperSonicStarsObjectInstance stars = new HyperSonicStarsObjectInstance(owner);
+
+        // Obj_HyperSonic_Stars_Init assigns priority $80 once. loc_19458
+        // subsequently inherits only the art word's high-priority bit.
+        for (int playerBucket : new int[] {0, 2, 5, 7}) {
+            when(owner.getPriorityBucket()).thenReturn(playerBucket);
+            for (boolean high : new boolean[] {false, true}) {
+                when(owner.isHighPriority()).thenReturn(high);
+                assertEquals(1, stars.getPriorityBucket(),
+                        "Hyper stars must stay in ROM display list $80");
+                assertEquals(high, stars.isHighPriority());
+            }
+        }
+    }
+
+    @Test
     void lifecycleEndsAsSoonAsTheHyperTierEnds() {
         AbstractPlayableSprite owner = mock(AbstractPlayableSprite.class);
         SuperStateController form = mock(SuperStateController.class);
@@ -79,6 +97,23 @@ class TestHyperSonicStarsObjectInstance {
         assertEquals(6, field(stars, "frame1"));
         assertEquals(3, field(stars, "delay2"));
         assertEquals(4, field(stars, "delay3"));
+    }
+
+    @Test
+    void unrelatedArtLoadsOnlyHoldChildrenStillInTheirInitRoutine() throws Exception {
+        HyperSonicStarsObjectInstance stars = new HyperSonicStarsObjectInstance(hyperOwner());
+        Method updateChild = HyperSonicStarsObjectInstance.class
+                .getDeclaredMethod("updateChild", int.class, boolean.class);
+        updateChild.setAccessible(true);
+        updateChild.invoke(stars, 0, false);
+        assertEquals(1, field(stars, "delay0"), "Kos_modules_left holds init countdown");
+        updateChild.invoke(stars, 0, true);
+        assertEquals(240, field(stars, "angle0"));
+        // Obj_HyperSonic_Stars_Main.child no longer polls Kos_modules_left.
+        updateChild.invoke(stars, 0, false);
+        updateChild.invoke(stars, 1, false);
+        assertEquals(224, field(stars, "angle0"), "running orbit must not freeze for unrelated art");
+        assertEquals(2, field(stars, "delay1"), "uninitialized child still waits");
     }
 
     @Test

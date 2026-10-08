@@ -299,12 +299,18 @@ Same band formula as `MHZ_Deform` but subtracts `Screen_shake_offset` from the a
 
 ### Act 2 Boss Ship Rendering (`sub_5550C`, line 113153)
 
-When boss arena is active (Events_routine_fg == $10):
-- Fills entire `H_scroll_buffer` (64 scanline pairs) with negated ship BG X position
-- Overrides standard BG rendering with the ship parallax
+When the post-boss ship is active (`Events_routine_fg == $10`):
+- Writes only the **foreground** word of the first128 scanlines (64 pairs)
+  of `H_scroll_buffer`, using negated `HScroll_table` ship X. The lower96
+  foreground lines and all background words retain `PlainDeformation`.
+- `loc_55486` supplies `_unkEE9C` as initial Plane A VScroll; `HInt6` restores
+  `Camera_Y_pos_copy` at the$80 split. This is a foreground tile ship, separate
+  from its two propeller sprites. The earlier description of a whole-buffer
+  background override was incorrect (corrected during2026-09-23 cold completion).
 
 When `Events_bg+$00` is set but not in ship mode:
-- Fills first $18 (24) entries of `H_scroll_buffer` with `Camera_X_pos_BG_copy`
+- Writes negated `Camera_X_pos_BG_copy` to the foreground word of the first48
+  scanlines (24 pairs), retaining the background words.
 
 When `Events_bg+$01` is set (pillar visible):
 - Complex per-line deformation for pillar rotation effect

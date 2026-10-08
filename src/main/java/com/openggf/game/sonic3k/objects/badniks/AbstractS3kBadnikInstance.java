@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractBadnikInstance;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.DestructionEffects;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
@@ -67,18 +68,43 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
 
     @Override
     public void onPoweredScreenAttack(PlayableEntity playerEntity) {
-        if (isDestroyed()) {
-            return;
-        }
-        int mySlot = ObjectLifetimeOps.detachSlotForTransfer(this);
-        setDestroyed(true);
-        DestructionEffects.destroyBadnikPowered(
-                getBodyAnchorX(), getBodyAnchorY(), spawn, mySlot, playerEntity, services(),
-                S3K_DESTRUCTION_CONFIG);
+        destroyAsS3kBadnik(this, getBodyAnchorX(), getBodyAnchorY(), spawn, playerEntity,
+                services(), true);
     }
 
-    /** S3K destruction config: spawn animal + points popup, no respawn tracking, S3K break SFX. */
-    private static final DestructionConfig S3K_DESTRUCTION_CONFIG = new DestructionConfig(
+    /**
+     * The one place an S3K badnik's SST slot is rewritten to {@code Obj_Explosion}.
+     *
+     * <p>{@code Touch_EnemyNormal} (sonic3k.asm:20945-20990) sets {@code status} bit 7 and writes
+     * {@code Obj_Explosion} over the badnik in place, so the explosion inherits the slot. Shared
+     * with {@code Obj_Toxomister}'s body, which is a {@code Touch_Enemy}-type badnik that does not
+     * extend this class: keeping one raw lifetime write for the whole family is also what the
+     * object-lifecycle guard's budget counts.
+     */
+    static void destroyAsS3kBadnik(AbstractObjectInstance instance, int x, int y,
+            ObjectSpawn spawn, PlayableEntity player, ObjectServices services, boolean powered) {
+        if (instance.isDestroyed()) {
+            return;
+        }
+        int mySlot = ObjectLifetimeOps.detachSlotForTransfer(instance);
+        instance.setDestroyed(true);
+        if (powered) {
+            DestructionEffects.destroyBadnikPowered(x, y, spawn, mySlot, player, services,
+                    S3K_DESTRUCTION_CONFIG);
+        } else {
+            DestructionEffects.destroyBadnik(x, y, spawn, mySlot, player, services,
+                    S3K_DESTRUCTION_CONFIG);
+        }
+    }
+
+    /**
+     * S3K destruction config: spawn animal + points popup, no respawn tracking, S3K break SFX.
+     *
+     * <p>Package-visible because {@code Obj_Toxomister}'s body is an ordinary
+     * {@code Touch_Enemy}-type badnik ({@code collision_flags $18}) that does not share this
+     * class's shape, and {@code Touch_EnemyNormal} gives it the same destruction.
+     */
+    static final DestructionConfig S3K_DESTRUCTION_CONFIG = new DestructionConfig(
             Sonic3kSfx.BREAK.id,
             (spawn, services) -> AnimalObjectInstance.deferredArtVariant(spawn, services, null),
             false,  // useRespawnTracking (S3K always removeFromActiveSpawns)
@@ -93,17 +119,8 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
 
     @Override
     protected void destroyBadnik(PlayableEntity player) {
-        if (isDestroyed()) {
-            return;
-        }
-        // ROM parity: badnik destruction rewrites the current SST slot to
-        // Obj_Explosion; child animal/points objects are allocated after it.
-        int mySlot = ObjectLifetimeOps.detachSlotForTransfer(this);
-        setDestroyed(true);
-
-        DestructionEffects.destroyBadnik(
-                getBodyAnchorX(), getBodyAnchorY(), spawn, mySlot, player, services(),
-                S3K_DESTRUCTION_CONFIG);
+        destroyAsS3kBadnik(this, getBodyAnchorX(), getBodyAnchorY(), spawn, player, services(),
+                false);
     }
 
     protected final void spawnProjectile(S3kBadnikProjectileInstance projectile) {

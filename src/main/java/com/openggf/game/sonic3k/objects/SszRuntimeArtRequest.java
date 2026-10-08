@@ -1,0 +1,70 @@
+package com.openggf.game.sonic3k.objects;
+
+import com.openggf.game.rewind.RewindStateful;
+import com.openggf.game.sonic3k.Sonic3kLevel;
+import com.openggf.game.sonic3k.Sonic3kPlcLoader;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.game.timing.HardwareWorkKind;
+import com.openggf.level.objects.ObjectServices;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
+/** SSZ2 encounter Queue_Kos_Module requests; ordinals rewind with their owning SST. */
+public final class SszRuntimeArtRequest implements RewindStateful<SszRuntimeArtRequest.Value> {
+    public record Value(long ordinal) { }
+    private long ordinal = -1;
+
+    public void submit(ObjectServices services, int address, int tile) {
+        try {
+            var rom = services.rom();
+            var physical = services.kosinskiModuleQueue();
+            if (physical != null) {
+                Sonic3kPlcLoader.bindRuntimePatternDmaTarget(physical, services);
+                physical.enqueue(rom, address,
+                        tile * 32);
+            }
+            try {
+                ordinal = S3kRuntimeArtCoordinator.from(services).moduleQueue().queue(rom,
+                        address,
+                        tile).ordinal();
+            } catch (IllegalStateException unavailable) {
+                // Bare object fixtures have no timing coordinator. Production does.
+                if (!"runtime-art coordination is unavailable in these object services"
+                        .equals(unavailable.getMessage())) throw unavailable;
+            }
+        } catch (IOException failure) {
+            throw new UncheckedIOException(failure);
+        }
+    }
+
+    /** PLC_KnuxFinalBossCrane at $7CA32: one ROM Nemesis entry. */
+    static void loadShipPlc(ObjectServices services) {
+        try {
+            var rom = services.rom();
+            int address = rom.read32BitAddr(0x7CA34) & 0xFFFFFF;
+            int tile = (rom.read16BitAddr(0x7CA38) & 0xFFFF) / 32;
+            var entry = new com.openggf.level.resources.PlcParser.PlcEntry(address, tile);
+            var plc = new com.openggf.level.resources.PlcParser.PlcDefinition(-1, java.util.List.of(entry));
+            if (services.currentLevel() instanceof Sonic3kLevel level) {
+                var changed = Sonic3kPlcLoader.applyToLevel(plc, level, rom);
+                Sonic3kPlcLoader.refreshAffectedRenderers(changed, services.levelManager());
+            }
+        } catch (IOException failure) {
+            throw new UncheckedIOException(failure);
+        }
+    }
+
+    public void service(ObjectServices services) {
+        if (ordinal < 0) return;
+        var queue = S3kRuntimeArtCoordinator.from(services).moduleQueue();
+        var handle = services.hardwareTiming().pendingHandle(HardwareWorkKind.KOS_MODULE_QUEUE, ordinal)
+                .orElseThrow();
+        if (queue.isReady(handle)) {
+            queue.claim(handle);
+            ordinal = -1;
+        }
+    }
+
+    @Override public Value captureRewindStateValue() { return new Value(ordinal); }
+    @Override public void restoreRewindStateValue(Value value) { ordinal = value.ordinal(); }
+}

@@ -36,8 +36,11 @@ final class DdzEndBossRocketFlameObjectInstance extends AbstractDdzObjectInstanc
 
 
     DdzEndBossRocketFlameObjectInstance(DdzEndBossRocketObjectInstance rocket, int kind) {
-        super(new ObjectSpawn(rocket == null ? 0 : rocket.getX(), rocket == null ? 0 : rocket.getY(), 0, kind, 0, false, 0),
-                "DDZEndBossRocketFlame", rocket);
+        this(new ObjectSpawn(rocket == null ? 0 : rocket.getX(), rocket == null ? 0 : rocket.getY(), 0, kind, 0, false, 0), rocket, kind);
+    }
+
+    private DdzEndBossRocketFlameObjectInstance(ObjectSpawn spawn, DdzEndBossRocketObjectInstance rocket, int kind) {
+        super(spawn, "DDZEndBossRocketFlame", rocket);
         this.kind = kind;
         if (rocket != null) {
             x = (rocket.getX() + offsetX()) & 0xFFFF;
@@ -49,12 +52,14 @@ final class DdzEndBossRocketFlameObjectInstance extends AbstractDdzObjectInstanc
 
     /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
     private DdzEndBossRocketFlameObjectInstance(ObjectSpawn spawn) {
-        this(null, spawn.subtype());
+        this(spawn, null, spawn.subtype());
     }
 
     @Override
     public DdzEndBossRocketFlameObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new DdzEndBossRocketFlameObjectInstance(null, ctx.spawn().subtype());
+        // The parent link is restored later; retain the captured spawn instead of
+        // deriving a new origin from the temporarily absent parent.
+        return new DdzEndBossRocketFlameObjectInstance(ctx.spawn());
     }
 
     private int offsetX() {

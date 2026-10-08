@@ -36,21 +36,26 @@ final class DdzEndBossPartObjectInstance extends AbstractDdzObjectInstance {
 
 
     DdzEndBossPartObjectInstance(DdzEndBossObjectInstance boss, int kind, int subtype) {
-        super(new ObjectSpawn(boss == null ? 0 : boss.getX(), boss == null ? 0 : boss.getY(), 0,
-                (kind << 4) | subtype, 0, false, 0), "DDZEndBossPart", boss);
+        this(new ObjectSpawn(boss == null ? 0 : boss.getX(), boss == null ? 0 : boss.getY(), 0,
+                (kind << 4) | subtype, 0, false, 0), boss, kind, subtype);
+    }
+
+    private DdzEndBossPartObjectInstance(ObjectSpawn spawn, DdzEndBossObjectInstance boss, int kind, int subtype) {
+        super(spawn, "DDZEndBossPart", boss);
         this.kind = kind;
         this.subtype = subtype;
     }
 
     /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
     private DdzEndBossPartObjectInstance(ObjectSpawn spawn) {
-        this(null, spawn.subtype() >> 4, spawn.subtype() & 0xF);
+        this(spawn, null, spawn.subtype() >> 4, spawn.subtype() & 0xF);
     }
 
     @Override
     public DdzEndBossPartObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        int packed = ctx.spawn().subtype();
-        return new DdzEndBossPartObjectInstance(null, packed >> 4, packed & 0xF);
+        // The parent link is restored later; retain the captured spawn instead of
+        // deriving a new origin from the temporarily absent parent.
+        return new DdzEndBossPartObjectInstance(ctx.spawn());
     }
 
     @Override

@@ -123,6 +123,13 @@ class TestRibotBadnikInstance {
 
         headSphere.update(1, playerAt(0, 0));
 
+        assertEquals(0x0200, headSphere.getX(),
+                "loc_8C396 initializes the child and returns without running loc_8C41E");
+        assertEquals(0x00F0, headSphere.getY(),
+                "the initialization dispatch retains the CreateChild1_Normal position");
+
+        headSphere.update(2, playerAt(0, 0));
+
         assertTrue(Math.abs(headSphere.getY() - 0x00F0) >= 0x30,
                 "loc_8C41E calls MoveSprite_CircularSimpleOffset with d2=2, a roughly 64px orbit radius");
     }
@@ -151,6 +158,10 @@ class TestRibotBadnikInstance {
         assertTrue(rightSphere.usesCurrentTouchResponseState(),
                 "Ribot publishes its hurt sphere after movement, so touch uses the post-move coordinates");
         installObjectManager((AbstractObjectInstance) rightSphere);
+        // CreateChild1_Normal allocates after the parent, so loc_8C396
+        // initializes this child during the same creation pass.
+        rightSphere.update(0, playerAt(0, 0));
+        assertEquals(0x010C, rightSphere.getY());
 
         ribot.update(1, playerAt(0, 0));
         rightSphere.update(1, playerAt(0, 0));

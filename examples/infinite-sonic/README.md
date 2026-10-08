@@ -1,0 +1,280 @@
+# Infinite Sonic — endless Sonic 1 challenge
+
+A code mod for OpenGGF's JVM build. Start Sonic 1 as **Sonic, solo**. The title
+screen's zone picker chooses **Green Hill, Marble, Spring Yard, Labyrinth, Star Light
+or Scrap Brain**, and that zone becomes one endless course built from its first act's
+ROM terrain, art, background and music. Each zone is a single level: the stock level
+select is unavailable while the mod is active (the `LEVEL_SELECT_ON_STARTUP` setting
+and the debug level-select key are ignored). Final Zone and the ending stay stock.
+
+The mod always plays in **16:9** (the 400-pixel `WIDE_16_9` view), whatever the
+global aspect setting: the wider screen shows more of the course ahead at scroll
+speed. The player's own aspect returns at the master title. Trace test mode still
+forces native 4:3. On the course Sonic's top running speed is **7/8 of stock** (0x540
+instead of 0x600; acceleration, jumps and rolling are unchanged), and he starts running at
+that speed. He still shows the stock full-speed running frames (and the faster rolling frames),
+from 0x500 instead of the stock 0x600 he can no longer reach. The whole game speeds up **every 30 seconds of active play**, each time by a quarter of its current speed (rounded to 0.05×), so every step feels about as big as the last: 1× → 1.25× → 1.55× → 1.95× → 2.45× → 3.05× and so on. Each step glides in over about a second
+(as the rewind tape coast ramps its speed) rather than snapping. Pausing stops the countdown.
+The camera scrolls at a minimum of **two thirds of Sonic’s stock maximum run speed** (4 pixels per tick),
+letting Sonic gain ground until his centre reaches **45% of the screen width**, just left of centre, so
+more of the screen shows the course ahead than behind. There the camera follows his position, keeping him on screen
+while preserving his native running and jumping physics. Leaving the left edge
+completely loses a life, regardless of rings or invulnerability. Pits and lethal
+enemy hits also cost a life.
+
+Enemy hits are gentler than stock. A **shield** absorbs one hit: Sonic loses the shield,
+keeps every ring and keeps running with no knockback. Without a shield, carrying **20 or
+more rings** pays a 20-ring toll instead: 20 rings burst out of Sonic as the stock bouncing
+rings (with the ring-spill sound), he keeps the rest, and again there is no knockback. Either
+way Sonic starts blinking on the contact frame for the stock two seconds, so one contact cannot
+be charged twice; as after a stock hit, the spilled rings can be grabbed back once the first
+half-second of blinking has passed. With no shield and fewer than 20
+rings the stock hit applies: Sonic is knocked back and drops every ring, and with no rings
+at all the hit is lethal. Pits and the left edge are unaffected by shields and rings.
+
+Monitors stand on level ground (or at the end of a high road, below) in about one in eight
+open sections from the seventh section on (roughly one every 20 seconds at 1×): three in
+five are **shields** and two in five **Super Rings** (ten rings, which count toward ring
+lives). They use the ROM monitor art and its flickering icons, but
+unlike the solid stock box any touch breaks them, so running into one never stalls Sonic
+against the scrolling edge. Breaking a shield box plays the stock break and shield sounds
+and puts the stock shield on Sonic; one broken while already shielded only plays the sound.
+Death and RESTART clear the shield; CONTINUE's rewind gives back a shield Sonic had at the
+moment it rewinds to (its no-history fallback does not).
+
+A session starts with **no spare lives**. The only way to earn one is rings: every time
+the ring counter reaches 100, 200, 300 and so on, you gain a life (reaching 100 again
+after losing your rings counts too). Points never award lives. Spare lives are shown on
+the HUD. When Sonic dies with a spare life, the stock card is replaced by a menu:
+**CONTINUE** spends the life and **rewinds the run** with the engine's own rewind (the VHS
+picture and reversed sound of held live rewind, which the course uses even with live rewind
+switched off), with no level reload. The tape runs quickly back through the death and the menu,
+then at three times speed through play, and stops at the first moment at least a second before
+the death that makes a fair restart: Sonic alive, on the ground and unhurt, keeping up with the
+scroll, on solid floor with **448 pixels of floor and no pit ahead**, so a run never restarts on
+the lip of a hole. Everything is as it was at that moment: the score, rings, enemies, terrain, and
+the speed stage and countdown. Only the spent life stays spent, and ring lives already paid are
+not paid again for the same hundreds. **READY** then holds Sonic there until you press right or
+jump (or two seconds pass); he sets off with a running start, **GO!** flashes, and the game speed
+eases back up from 1× to its speed stage over a second and a half. The clock, score and scrolling
+wait through READY, and Sonic blinks for two seconds. If no fair moment is left in the rewind
+history, Sonic is instead revived on the last safe spot (or the nearest one behind it with that
+runway), keeping the run as it was when he died. RESTART, EXIT and GAME OVER clear the rings. **RESTART** reloads a fresh session at 1× with no
+spare lives and a zero score. **EXIT** fades out to the Sonic 1 title screen, where the zone
+picker can start another course. Press up/down to choose and **SPACE** (player 1 button A)
+to confirm. Dying with no spare lives shows the mod's own GAME OVER text over a
+**RESTART**/**EXIT** menu. During a run, a tap of **Escape** (or the gamepad Back button)
+also leaves for the Sonic 1 title; holding Escape for two seconds still reaches the
+engine's own title as everywhere else.
+
+Every zone keeps a **top-10 leaderboard**, saved in `saves/infinite-sonic/leaderboard.txt`
+(under the engine's save root) so it survives restarts. Each entry is a run's score and the
+speed it reached. A run is recorded when Sonic dies and when you leave with Escape; a run
+that continues and dies again replaces its own entry, so one run never fills two places.
+The zone's top 10 shows at the top right for the first five seconds of every run. Passing the
+zone's previous top score mid-run flashes **NEW TOP SCORE!** with a chime, and the death
+screen repeats it (or shows **RANK n OF 10**) for a run that places. Leave the title screen
+idle for ten seconds and it flicks to an arcade-style board: **ZONE LEADERS** (each zone's
+top score), then the top 10 of every zone with scores, five seconds a page, then back to the
+title. Any key or button returns to the title at once without starting a game.
+
+The Sonic 1 title screen gains an **INFINITE** wordmark above the emblem: once
+Sonic has risen it streaks in from the right, then glints every few seconds. Below the
+emblem, a zone picker rises in: press **left/right** to choose Green Hill, Marble,
+Spring Yard, Labyrinth, Star Light or Scrap Brain, then Start to begin that zone's
+course. The choice wraps around and is remembered when you return to the title. Behind the
+emblem the title shows the chosen zone's own background, scrolling with that zone's stock
+parallax and fading in when picked (Green Hill keeps the stock title background); its art,
+palette and layout come from the zone's act 1 in your ROM. Both
+are drawn in code over the stock ROM title, which otherwise behaves normally. Course
+title cards show only the zone name (no "ACT n"), because each zone is a single endless run.
+
+The HUD shows the zone's top score (TOP, which becomes your own once you pass it), your score,
+current speed, time until the next speedup, rings and lives. While Sonic is **in danger** (no
+shield and fewer than 20 rings, so the next hit knocks him back and takes every ring, or kills
+him with none) he sweats: little drops fly off the back of his head (twice as often with no
+rings), and the ring count flashes red.
+The last five seconds also show a large centered countdown with a chime each
+second. When the speed-up lands, the screen flashes, speed lines rush past along the top and
+bottom edges, and the new speed (for example **SPEED 1.25X**) takes the countdown's place for a
+second. Music and sound effects speed up and rise in pitch with the challenge;
+pause, rewind, game over and leaving the level release the playback rate.
+Survival earns one point per minimum-scroll pixel: **240 points/second at 1×**,
+**300 at 1.25×**, and **360 at 1.5×**, plus normal enemy points.
+All movement, enemies, animation and gameplay clocks accelerate together; native
+per-tick jump and collision rules remain unchanged. The host caps pacing at 32×
+(the HUD then says MAX SPEED). There is no finish line or stock time limit. Disable the mod to restore the stock acts.
+Other character/team selections retain their stock behavior.
+
+The mod reads your Sonic 1 ROM through the normal level loader. It selects continuous
+floor sections with at least 112 pixels of open space above them (so mazes, tunnels and
+overhangs are skipped) and aligns them vertically. Each 512-pixel section is the left half
+of one ROM column joined to the mirrored right half of another wherever their floors meet
+at the same height in the middle, so a section is seldom one column and its reflection. Every run lays a **new random course**: a fresh seed is drawn each
+time a course loads (starting from the title, RESTART), while CONTINUE keeps the course it revives
+on. The seed chooses sections as you move. Leaderboards are per zone, whatever the course. Art, palettes,
+music and collision tiles come from the ROM; the jar contains only code and a manifest.
+It never reads the disassembly or includes exported Sega assets.
+
+Each zone keeps its own look: Marble's grass ledges and brick blocks, Labyrinth's
+stone slabs, Star Light's girders and Scrap Brain's machinery. Floors that the stock
+level marks with Marble Zone lava hazards are never used as ground. The course is dry:
+Labyrinth (and Scrap Brain Act 3, which reuses its layout) has no water, currents,
+water slides or drowning, because underwater top speed is slower than the scrolling
+edge.
+
+The course logic still accepts any stock act, which keeps the table below and the tests
+covering acts 2 and 3, but only act 1 of each zone is reachable in play. Each act uses the badniks its own stock level places, read from the ROM's object
+layout for that act and picked as often as the act places them (so Marble's sky is
+mostly Batbrains, and Green Hill Act 3 is heavy on Buzz Bombers). They are drawn with
+the ROM art the zone loads:
+
+| Zone | Ground | Air |
+| --- | --- | --- |
+| Green Hill | Motobug, Crabmeat | Buzz Bomber |
+| Marble | Yadrin | Batbrain, Buzz Bomber |
+| Spring Yard | Crabmeat, Yadrin, Roller (acts 1–2) | Buzz Bomber |
+| Labyrinth (and Scrap Brain 3) | Burrobot | Orbinaut |
+| Star Light | Walking Bomb | Orbinaut |
+| Scrap Brain 1–2 | Ball Hog, Walking Bomb | Orbinaut |
+
+Rolling Rollers and Walking Bombs cannot be destroyed, as in the original game, so jump
+over them. Orbinauts keep their four circling spikes, which hurt on contact. Jaws are
+left out because the dry course has no water, and Caterkillers (Marble's most common
+ground badnik) are not included.
+
+Seeded encounters mix ground patrols, flying patrols and empty sections. Ground enemies require a gentle stretch across their whole patrol; flyers
+stay clear of the highest terrain beneath their patrol and bob. The first 1,536 pixels
+are enemy-free and have no pits. Jump or roll into enemies to defeat them and earn points. These use
+ROM sprites with custom bounded patrols. Ball Hogs hop in place instead of patrolling.
+None of them fire projectiles; bombs never light their fuses; Yadrin's spiked back is not modeled.
+
+Every fourth section after the opening is a jump corridor: a 64 to 192 pixel pit
+between flat banks, with at least 160 pixels of approach on either side. Corridors
+also change elevation. The course moves between four ground levels 32 pixels apart,
+climbing or dropping up to 64 pixels per corridor. Climbs use pits of at most 128
+pixels, and 192 pixel pits stay level. From the third stretch on, the ground between
+corridors can also climb or drop a level on the zone's own slopes and come back before
+the next corridor, where a ROM column's slope meets another level's floor (Green Hill's
+64-pixel hills and Scrap Brain's 32-pixel ramps; Marble's bumps vary the floor within a level,
+and the flat floors of Spring Yard, Labyrinth and Star Light vary only in look). Some drops are a plain ledge with no pit. Hold Jump while moving to clear a pit;
+releasing Jump early shortens the arc. Enemy patrols never occupy these corridors.
+Four rings arc over each pit, highest in the middle, tracing the jump that clears it.
+
+From the third corridor on, about a third of corridors become a **platform stretch**:
+a 320 to 448 pixel bottomless pit bridged by one to three of the zone's own stock
+platforms, level with the lower bank. They sit flush together as one **raft in the middle
+of the pit** (8 pixels apart, so Sonic runs straight across), with at most 144 pixels of
+open pit either side, so each crossing is two ordinary jumps rather than a run of short,
+timed hops. These
+are the shipped Sonic 1 objects themselves, with their ROM art, solidity, riding and
+sink: Green Hill and Spring Yard use the floating platform (Obj18), half
+the time as the kind that falls 30 frames after Sonic lands; Marble and Scrap Brain use
+the wide moving blocks (Obj52) held stationary; Star Light uses its 80-pixel elevators
+(Obj59), which rise a short way once stood on, as the stock ones do. Only platforms the
+act's own stock layout places are used, and only those at least 64 pixels wide, so the
+Labyrinth course (whose only block is 32 pixels) keeps ordinary corridors. Rings sit above each platform. A strong run-up can clear smaller
+stretches in one jump; wider ones need a platform. No enemies patrol platform stretches.
+
+In zones whose sky has a flyer Sonic can break (Buzz Bombers and Batbrains: Green Hill,
+Marble and Spring Yard), the crossing is picked at random for each stretch: half are a raft
+alone, a quarter have **no platforms and a hovering flyer to bounce off** instead, and a
+quarter have the raft **and** a flyer. A bounce flyer holds its place (bobbing, never
+patrolling) 288 pixels into the pit and 24 pixels below the near bank, where a held jump from
+just before the lip at full speed comes down onto it: Sonic breaks it and the stock rebound
+throws him back up a full jump, onto the far bank. Four rings trace that rebound. With a raft,
+the flyer hovers below the middle of the far gap instead, a safety net that bounces a jump
+which overshoots the raft on to the far bank. Spiked Orbinauts cannot be bounced off, so
+Star Light and Scrap Brain keep rafts only. Touching a flyer without jumping hurts as any
+badnik does.
+
+Half of the stretches from the third on split into two paths where the ground
+allows (it varies by at most 64 pixels over the stretch): a **high road** built from those
+same stationary stock platforms runs above the ground path. Steps climb from the ground, two
+platforms wide (one for Marble's widest blocks), each at most 48 pixels above the last with a
+120-pixel gap, so a held jump from the back of one lands on the next. The road itself runs
+level, 128 pixels above the highest floor beneath it, with 8-pixel gaps Sonic runs straight
+across, until the middle of the stretch's third section; then he drops back to the ground
+well before the next jump corridor. The road carries the rings and, half the time, a monitor
+on its last platform, while ground badniks patrol the low path and no hazards stand under
+it. Missing a step just leaves Sonic on the low path. Labyrinth (whose only block is 32
+pixels wide) has no high roads.
+
+**Zone hazards** use each zone's own ROM art and the shipped hit boxes, and need timing:
+
+| Zone | Hazard |
+| --- | --- |
+| Green Hill | A checkered wrecking ball swinging on a chain across the path |
+| Marble, Star Light | Fireballs leaping out of jump-corridor pits (alternately 133 and 192 pixels high) |
+| Spring Yard | A giant spiked ball rolling back and forth along the ground |
+| Labyrinth | A spiked ball and chain circling over the path |
+| Scrap Brain | A floor pipe that bursts into a column of flame |
+
+Every zone also has **spike beds** (the stock three-spike art) to jump. Ground hazards take
+about one in three open sections from the sixth on, three in four of them the zone's
+signature, with a spike bed wherever the signature does not fit (spikes only, in Marble and
+Star Light); the rolling ball follows the ground. Fireballs take half of the pits from the third
+corridor on that are at least 96 pixels wide. None is solid, so none can stall Sonic, and a
+hazard section has no badnik or monitor. A hazard hit is treated like a badnik hit: a shield
+or the 20-ring toll absorbs it without knockback; otherwise the stock hit applies.
+
+
+The other sections retain the ROM-derived hills and dips, raised or lowered to the
+current level; raised and lowered levels use fewer hill shapes because the layout
+has 256 block slots. Rows of rings appear periodically along the terrain; a third of them
+are hop arcs whose middle rings need a short jump.
+
+At local X=8,192 the engine shifts Sonic and the camera left by 4,096 pixels and
+advances the terrain window. Logical distance continues increasing, selecting new
+seeded sections. Individual motifs recur, but the complete window does not loop.
+The camera never scrolls back, so the window only ever moves forward. The stock background
+routines are fed the logical camera X (window origin plus local camera X), so every
+parallax band keeps its stock speed straight through a shift with no jump; only the
+foreground scroll is put back on the local camera.
+
+From the repository root, with Java 21 and Maven on PATH:
+
+```sh
+python3 examples/infinite-sonic/build.py
+python3 examples/infinite-sonic/build.py --run
+```
+
+`--run` uses the SDK's explicit development-mod launch. Select/configure your Sonic 1
+ROM in the engine as usual. For normal launches, copy
+`target/infinite-sonic/infinite-sonic.jar` into the root `mods/` directory, enable
+**Infinite Sonic** in Mod Manager, grant code trust, and restart the JVM engine.
+Native-image builds cannot load code mods.
+
+The project is source-first and builds against this checkout's unpublished Mod API
+0.7 candidate. `build.py` queues the engine compilation, compiles this separate mod,
+and packages it through `ggfmod` validation. It does not run tests. Regression:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestInfiniteSonic \
+  "-Dsonic1.rom.path=/absolute/path/to/your/Sonic 1 ROM.gen" test
+```
+
+The finite 64-column window recycles in 16-column steps while preserving Sonic's
+fractional position and speed. Within a run the same logical coordinates always generate the
+same terrain. To replay one course every time, start the JVM with
+`-Dinfinite-sonic.seed=<number>` (decimal or `0x` hex; the original fixed course was
+`0x534F4E4943`); the tests pin that seed.
+Enemy positions and patrol phases shift with the world and participate in rewind.
+Cleared encounters stay cleared within the retained window; revisiting terrain discarded
+from that window can regenerate its encounters. Stock platforms keep their own
+coordinates, so the window waits to shift until none are loaded (forcing the shift at
+local X=12,288 if necessary). There are no loops, moving platforms (other than the elevator's short rise), breakable floors or checkpoints. Section reflections can mirror scenery. Over a long run Green Hill's water lines, which
+the stock routine interpolates towards the camera, drift into a busier pattern, as they would
+in an extremely long stock level. The coverage matrix and current evidence are
+in [the project design](../../docs/architecture/designs/2026-10-01-infinite-sonic.md).
+
+
+## Use matching creator artifacts
+
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+
+```sh
+python3 examples/build_example.py infinite-sonic --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s1 /absolute/own-s1.gen
+```
+
+Use `--s1`, `--s2`, or `--s3k` for the games this example consumes. Explicit paths create isolated development configuration and saves; no ROM is copied or linked. The creator kit exports this example with a portable POM and `tools/build_project.py`; it needs no engine source checkout. Only production sources/resources enter the validated mod jar. Read [recipient installation](../../docs/modding/installing-mods.md) before sharing.

@@ -15,6 +15,7 @@ import com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenManager;
 import com.openggf.game.DebugOverlayProvider;
 import com.openggf.game.EndingProvider;
 import com.openggf.game.GameModule;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.LevelSelectProvider;
@@ -246,6 +247,13 @@ public class Sonic1GameModule implements GameModule {
     }
 
     @Override
+    public void onNewGameFromTitle(GameStateManager gameState) {
+        // S1 PlayLevel (sonic.asm:2278-2281), also reached by LevSel_Level:
+        // clear v_lastspecial, v_emeralds and both v_emldlist longwords.
+        gameState.configureSpecialStageProgress(gameState.getSpecialStageCount(), gameState.getChaosEmeraldCount());
+    }
+
+    @Override
     public ScrollHandlerProvider getScrollHandlerProvider() {
         return new Sonic1ScrollHandlerProvider();
     }
@@ -309,6 +317,13 @@ public class Sonic1GameModule implements GameModule {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.level.render.ZonePictureSource.Factory.class) {
+            // Public zone 0 / act 0 is Green Hill 1; its ROM level index is $80.
+            return (T) (com.openggf.level.render.ZonePictureSource.Factory) rom ->
+                    new com.openggf.level.render.DetachedLevelPictures(0, 0,
+                            () -> new Sonic1(rom).buildDetachedLevel(
+                                    com.openggf.level.LevelData.S1_GREEN_HILL_1.levelIndex()), 512, 512);
+        }
         if (type == S1DataSelectImageCacheManager.class) return (T) getDataSelectImageCacheManager();
         if (type == Sonic1LevelEventManager.class) return (T) levelEventManager;
         if (type == Sonic1ZoneRegistry.class) return (T) zoneRegistry;

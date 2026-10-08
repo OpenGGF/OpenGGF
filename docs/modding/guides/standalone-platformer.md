@@ -1,6 +1,6 @@
 # Build-along: a no-ROM platformer with a double-jumping robot
 
-This guide walks through the seventh gallery sample, `sample-platformer`, start to
+This guide walks through the maintained gallery sample `sample-platformer`, start to
 finish: a complete, original, no-ROM game — one Tiled-authored act called Bolt
 Plains, a round robot character ("Bolt") with a distinct physics feel and a double
 jump, a patrolling badnik ("ZapBug"), a spring gimmick ("SpringPad"), looping OGG
@@ -12,9 +12,9 @@ playable character with custom physics and an original ability.
 
 The finished source lives at
 [`src/test/resources/mods/sample-platformer-src`](../../../src/test/resources/mods/sample-platformer-src/README.md).
-Every code excerpt below is copied verbatim from that checked-in project; the sample
-is the executable contract and this guide is a tour of it, not an independent
-implementation. If a snippet here and the file on disk ever disagree, the file on
+The excerpts below follow that checked-in project, with some surrounding declarations
+and comments omitted. The sample is the executable contract and this guide is a tour
+of it. If a snippet here and the file on disk ever disagree, the file on
 disk is right — `TestSamplePlatformerIntegration` and `TestSampleModsPackage` build
 and run the real source on every CI run, not this document.
 
@@ -44,15 +44,15 @@ stock games.
 Scaffold a project the same way any other mod starts:
 
 ```text
-ggfmod.ps1 OpenGGF-0.8.prerelease-jar-with-dependencies.jar OpenGGF-0.8.prerelease-openggf-mod-sdk.jar init sample-platformer --id sample-platformer --package example.platformer
+ggfmod.ps1 OpenGGF-0.8.prerelease-jar-with-dependencies.jar OpenGGF-0.8.prerelease-openggf-mod-sdk.jar init sample-platformer --id sample-platformer --package example.platformer --kind standalone
 ```
 
 (POSIX shells use `docs/modding/ggfmod` instead of `ggfmod.ps1`; every `ggfmod`
 command below drops the two leading jar arguments for readability, same as the
-flappy guide.) The checked-in sample's `project/` directory is that scaffold
-hand-adapted for a standalone game instead of a Sonic 2 patch: no `baseGame`, four
-object/character art sources instead of one badnik, and a TMX-authored level instead
-of an editor export.
+flappy guide.) `--kind standalone` starts from the maintained no-ROM sample. This
+platformer adds Bolt's character art, a second object, and a TMX-authored level.
+The finished `project/` has no `baseGame`; all four art sources and the level are
+packaged in the mod.
 
 The manifest
 ([`openggf-mod.yaml`](../../../src/test/resources/mods/sample-platformer-src/project/src/main/resources/META-INF/openggf-mod.yaml))
@@ -86,26 +86,34 @@ The entrypoint
 ([`PlatformerMod.java`](../../../src/test/resources/mods/sample-platformer-src/project/src/main/java/example/platformer/PlatformerMod.java))
 registers everything in one pass:
 
+The snippet uses `java.io.IOException` and `java.io.UncheckedIOException`, as in
+the maintained entrypoint; `GgfMod.register` declares no checked exception.
+
 ```java
 public void register(ModContext context) {
-    ModAssetRoot assets = context.modAssets();
-    var materialized = PlayableSheetMaterializer.read(
-            assets.readBounded("art/bolt.ggfp", assets.limits().maxAssetBytes()));
-    Level level = StandaloneLevelLoader.load(assets,
-            new BakedLevelRef("levels/act1/level.json"), context.ownerModId(),
-            buildRingSheet(assets));
-    context.registerObject("zapbug", (spawn, registry) -> new ZapBug(spawn));
-    context.registerObjectArt("zapbug", new BakedSheetRef("art/zapbug.ggfs"));
-    context.registerObject("springpad", (spawn, registry) -> new SpringPad(spawn));
-    context.registerObjectArt("springpad", new BakedSheetRef("art/springpad.ggfs"));
-    context.registerCharacter("bolt", BoltCharacter.definition(
-            context.ownerModId(), materialized));
-    context.registerGameModule(new PlatformerModule(context.ownerModId(), level));
+    try {
+        ModAssetRoot assets = context.modAssets();
+        var materialized = PlayableSheetMaterializer.read(
+                assets.readBounded("art/bolt.ggfp", assets.limits().maxAssetBytes()));
+        Level level = StandaloneLevelLoader.load(assets,
+                new BakedLevelRef("levels/act1/level.json"), context.ownerModId(),
+                buildRingSheet(assets));
+        context.registerObject("zapbug", (spawn, registry) -> new ZapBug(spawn));
+        context.registerObjectArt("zapbug", new BakedSheetRef("art/zapbug.ggfs"));
+        context.registerObject("springpad", (spawn, registry) -> new SpringPad(spawn));
+        context.registerObjectArt("springpad", new BakedSheetRef("art/springpad.ggfs"));
+        context.registerCharacter("bolt", BoltCharacter.definition(
+                context.ownerModId(), materialized));
+        context.registerGameModule(new PlatformerModule(context.ownerModId(), level));
+    } catch (IOException e) {
+        throw new UncheckedIOException(e);
+    }
 }
 ```
 
-Read bounded assets and register characters/objects first, then register exactly one
-module last — `registerGameModule` closes the transaction. The `registerObjectArt`
+Read bounded assets and register characters/objects, then register exactly one module.
+`registerGameModule` stages the module; the engine freezes the transaction after
+`register` returns and publishes it after validation. The `registerObjectArt`
 calls here are the *only* object-art source this sample needs — as Chapter 8 covers
 in detail, the engine decorates `PlatformerModule`'s own (in this case absent)
 `getObjectArtProvider()` result with these registered sheets, so `ZapBug`/`SpringPad`
@@ -293,18 +301,52 @@ value (`FLY`, `GLIDE`, `INSTA_SHIELD`); a wholly custom ability still declares `
 and implements its own logic in `onAbilityActivate` directly, per
 [`characters.md`'s ability rules](../characters.md#ability-and-super-form-rules).
 
-**`PhysicsProfile` knobs, and what each did to Bolt's feel.** `PlatformerModule`'s
-`PhysicsProvider` and `BoltCharacter.defineSpeeds()` duplicate the same literal
-profile (mod author classes may not hold non-primitive static state, so the values
-are simply written twice, mirroring `sample-standalone-src`):
+**Typed module defaults.** `PlatformerModule` declares its level, music, rules,
+physics, touch table and object factories through `StandaloneGameSpec`:
 
 ```java
-runAccel = 0x20; runDecel = 0x80; friction = 0x20; max = 0x480; jump = 0x780;
-slopeRunning = 0x20; slopeRollingUp = 0x14; slopeRollingDown = 0x50;
-rollDecel = 0x20; minStartRollSpeed = 0x80; minRollSpeed = 0x80; maxRoll = 0x1000;
-rollHeight = 28; runHeight = 38; standXRadius = 9; standYRadius = 19;
-rollXRadius = 7; rollYRadius = 14;
+public PlatformerModule(String owner, Level level) {
+    super(StandaloneGameSpec.builder(owner)
+            .zone("BOLT PLAINS", new StandaloneGameSpec.Act(0x400, level, 64, 160,
+                    MusicReference.namespaced(owner, "zone-theme")))
+            .supportsSidekick(false)
+            .physics(PhysicsProvider.fixed(BoltCharacter.physicsSpec().profile(),
+                    PhysicsModifiers.STANDARD, GameRules.SONIC_2))
+            .touchResponses((byte) 0, (byte) 0, (byte) 8, (byte) 8)
+            .objects(PlatformerRegistry::new).build());
+}
 ```
+
+The spec supplies the zone registry, no-ROM game loader, level initialization,
+silent native audio profile and common slot-save provider. Streamed music still
+comes from the mod's audio manifest. A module can override a provider or supply
+`.saveSnapshotProvider(...)` when its game needs additional progression payloads; those save inputs
+are immutable captures rather than live session managers.
+
+**`PhysicsProfile` knobs, and what each did to Bolt's feel.** Bolt defines its tuning
+once, using grouped edits over the standard Sonic 2 shape:
+
+```java
+public static CharacterPhysicsSpec physicsSpec() {
+    return new CharacterPhysicsSpec(PhysicsProfile.builder()
+            .movement(0x20, 0x80, 0x20, 0x480, 0x780).build());
+}
+```
+
+Its constructor passes that spec to the playable base:
+
+```java
+public BoltCharacter(String code, int x, int y) {
+    super(code, (short) x, (short) y, physicsSpec());
+    key = CharacterKey.parsePersisted(code.replaceFirst("_p\\d+$", ""));
+}
+```
+
+The instance spec owns the active speeds, dimensions and terrain sensors. The
+module uses the same authored tuning for profile queries and supplies game-wide
+rules and modifiers. Bolt needs no duplicated `defineSpeeds()`, sensor creation or
+width/height overrides. `CharacterPhysicsSpec` defaults to `PlayableSensorSpec.standard()`;
+a different paired floor/ceiling and side-probe reach can be supplied explicitly.
 
 Compared against `PhysicsProfile.SONIC_2_SONIC` (`runAccel` `0x0C`, `max` `0x600`,
 `jump` `0x680`):
@@ -349,15 +391,19 @@ Returning `true` on the first mid-air press consumes the button (applying the RO
 `false` on a second press before landing leaves the player's existing velocity
 untouched — no infinite-jump exploit.
 
-**The landing reset.** `AbstractPlayableSprite` has no dedicated landing callback, so
-Bolt reuses the per-frame `draw()` override — already required for rendering — as
-the reset seam:
+**The landing reset.** The simulation invokes `onLanded()` when Bolt changes
+from airborne to grounded, including terrain and object landings. Level
+initialization invokes `onLevelReset()`:
+
+```java
+@Override protected void onLanded() { doubleJumpUsed = false; }
+@Override protected void onLevelReset() { doubleJumpUsed = false; }
+```
+
+Drawing only submits the current pose:
 
 ```java
 @Override public void draw() {
-    if (!getAir()) {
-        doubleJumpUsed = false;
-    }
     if (!isHidden() && getSpriteRenderer() != null) {
         getSpriteRenderer().drawFrame(getMappingFrame(), getRenderCentreX(), getRenderCentreY(),
                 getRenderHFlip(), getRenderVFlip());
@@ -365,8 +411,10 @@ the reset seam:
 }
 ```
 
-Every frame Bolt is grounded, the latch clears, re-arming the ability for the next
-airborne stretch.
+The next airborne stretch therefore starts with an unused double jump even when
+rendering is absent. Repeated draws cannot clear a restored latch. The broader
+`onGroundStateChanged(boolean airborne)` hook is available when an ability needs
+both takeoff and landing transitions.
 
 **The rewind checklist step, and why it matters here specifically.** `doubleJumpUsed`
 is a plain non-final `boolean` instance field — the shape a mod *object*'s rewind
@@ -376,8 +424,7 @@ scalar state; a mutable field like this one is exactly what it expects). But
 object, so it is governed by a different, closed pipeline —
 `AbstractPlayableSprite.captureRewindState()` / `PlayerRewindExtra` — and that
 Mod API 0.7 pipeline publishes an overridable subclass extension point exactly
-for fields like this one. `BoltCharacter` implements both hook halves, copied
-verbatim from
+for fields like this one. `BoltCharacter` implements both hook halves in
 [`BoltCharacter.java`](../../../src/test/resources/mods/sample-platformer-src/project/src/main/java/example/platformer/BoltCharacter.java):
 
 ```java
@@ -405,9 +452,9 @@ protected void restoreSubclassRewindState(PerObjectRewindSnapshot.PlayableSubcla
 `restoreSubclassRewindState(...)` runs on every restore — both including
 keyframe-exact seeks and cached-segment scrubs, not just re-simulated seeks — so
 `doubleJumpUsed` now round-trips byte-for-byte across any rewind seek, mid-air or
-not. The landing reset in `draw()` (Chapter 5, above) is no longer load-bearing for
-this correctness — it still clears the latch every grounded frame, which is simply
-the right ability-reset behavior independent of rewind. See
+not. Rewind restores captured ground and ability state without emitting a new
+landing or level-reset callback. A fresh simulated landing clears the latch;
+restoring a keyframe preserves it. See
 [`characters.md`'s rewind section](../characters.md#failure-rewind-and-acceptance-checklist)
 for the hooks' full contract (call cadence, ordering guarantee, immutability and
 null contracts). Engine-side rewind coverage tests exercise this exact restore path
@@ -421,7 +468,7 @@ mod-character subclass fields" row.
 `PatrolMovementHelper` instead of hand-rolling a subpixel counter:
 
 ```java
-public final class ZapBug extends AbstractBadnikInstance implements RewindRecreatable {
+public final class ZapBug extends AbstractBadnikInstance implements ModRewindRecreatable {
     @Override protected void updateMovement(int frameCounter, PlayableEntity player) {
         int leftBound = spawn.x() - PATROL_RANGE;
         int rightBound = spawn.x() + PATROL_RANGE;
@@ -454,7 +501,19 @@ config with no animal/points/explosion factories (a bare hit-and-vanish), and
 `onPlayerAttack` fires a namespaced `hit` SFX exactly once (only if not already
 destroyed) before delegating to the base class's standard explosion/score/slot
 sequence — and `recreateForRewind` simply rebuilds itself from the spawn, the same
-minimal pattern every rewind-safe object in this gallery uses.
+minimal constructor pattern. Both objects implement `ModRewindRecreatable` and
+receive a creator-facing `ObjectReconstructionContext`:
+
+```java
+@Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
+    return new ZapBug(context.spawn());
+}
+```
+
+The engine adapts this to the existing two-phase restore path. The context also
+provides captured payloads, object queries and injected services when reconstruction
+needs them; simple objects need only the spawn. The older `RewindRecreatable` expert
+contract remains available.
 
 **`SpringPad`** cannot use the stock spring pipeline at all. Mod API 0.7 does not
 publish a solid-object marker interface (`SolidObjectProvider` and friends are
@@ -627,14 +686,15 @@ is a headless, real-build-and-load test requiring no ROM at all. Its first test
 packages this exact project from source, loads it through a real owner class
 loader, and exercises the module identity, terminal-progression sentinel, level
 loading (confirming both gimmick spawns are present), character registry (physics
-profile, art, palette), the double-jump ability hook and its rewind-restore path,
+profile, art, palette), the double-jump ability hook and its rewind-restore path
+(including absent and repeated rendering),
 all four packaged audio assets decoding non-zero PCM through the bounded pool, and
 the full master-title New Game → save → complete → credits → title →
 Continue-restoration flow (plus three corrupt-slot Continue-hiding cases). Its
 second test drives `ZapBug` and `SpringPad` directly against a hand-built
 `ObjectManager`, proving patrol reversal, the 2-frame walk-animation cadence, spring
 launch physics and SFX, the extended-pose frame count, and `recreateForRewind` for
-both objects. `TestSampleModsPackage` builds this project alongside the other six
+both objects. `TestSampleModsPackage` builds this project alongside the other maintained
 gallery sources as one repository and confirms it validates with zero findings. Run
 all three locally with:
 

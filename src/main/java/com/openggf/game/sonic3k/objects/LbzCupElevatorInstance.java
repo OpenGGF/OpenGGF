@@ -229,9 +229,8 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
     @Override
     public SolidExecutionMode solidExecutionMode() {
-        // Obj18 calls SolidObjectFull before LBZCupElevator_PlayerControl, so a
-        // player who lands in this SST dispatch is immediately eligible for
-        // capture by the same object routine.
+        // loc_26EEA calls SolidObjectFull2_1P inside each player's control
+        // routine, before testing the freshly published standing bit for capture.
         return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
@@ -639,6 +638,13 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
                 state.cooldown--;
                 return;
             }
+            if (!isSolidAngle()) {
+                return;
+            }
+            // LBZCupElevator_PlayerControl/loc_26EEA: collision belongs after
+            // this player's cooldown/angle gates and before its capture test.
+            // Keep P1 contact/reaction before P2, matching the two native calls.
+            services().solidExecution().resolveSolidNowOnly(player);
             if (canCapture(player)) {
                 capturePlayer(player, state);
             }
@@ -683,6 +689,9 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         state.inside = true;
         state.cutsceneReleased = false;
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        // loc_26F26's $03 also sets animation-suppression bit 1. Held mapping
+        // writes at loc_26FF4 must not reclaim it from a later control writer.
+        player.setObjectMappingFrameControl(true);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
@@ -696,7 +705,9 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     }
 
     private void holdPlayer(AbstractPlayableSprite player) {
-        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        // loc_26FF4 only publishes position/presentation. object_control=$03
+        // belongs to capture (loc_26F26), so later writers such as the
+        // loc_6278A cutscene release remain authoritative on following ticks.
         holdPlayerPosition(player);
     }
 
@@ -810,7 +821,6 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         if (index >= PLAYER_TWIST_FRAMES.length) {
             index = 0;
         }
-        player.setObjectMappingFrameControl(true);
         player.setMappingFrame(PLAYER_TWIST_FRAMES[index]);
         boolean hFlip = PLAYER_TWIST_H_FLIPS[index];
         // loc_32610 masks and replaces only render_flags bits 0-1. It does not

@@ -19,6 +19,12 @@ import java.util.Objects;
 import java.util.logging.Logger;
 
 public class SmpsSequencer implements CoordFlagContext {
+    // Preparation-only subscription. It is an event sink, never a source of driver state.
+    private SmpsNoteListener noteListener;
+
+    public void setNoteListener(SmpsNoteListener listener) {
+        noteListener = listener;
+    }
     private static final Logger LOGGER = Logger.getLogger(SmpsSequencer.class.getName());
     private static final byte[] ZERO_FM_VOICE = new byte[25];
     private static final SmpsLogicalWriteTarget DETACHED_WRITE_TARGET =
@@ -2795,10 +2801,12 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     private void reuseDuration(Track track) {
-        if (track.rawDuration == 0) {
-            track.rawDuration = 1;
-        }
-        setDuration(track, track.rawDuration);
+        // S1 FinishTrackUpdate/DACUpdateTrack and S2/S3K zFinishTrackUpdate
+        // copy SavedDuration, which SetDuration already multiplied by the
+        // divider. A later divider flag applies only to explicit durations.
+        // Rescaling the raw byte here shortened S1 Credits' medley transitions.
+        if (track.scaledDuration == 0) setDuration(track, 1);
+        else track.duration = track.scaledDuration;
     }
 
     private int scaleDuration(Track track, int rawDuration) {
@@ -3025,9 +3033,37 @@ public class SmpsSequencer implements CoordFlagContext {
             return;
         }
 
+        if (!noteByteRead && t.type == TrackType.PSG
+                && config.getDelayFreq() == SmpsSequencerConfig.DelayFreq.RESET
+                && (t.baseFnum & 0x8000) != 0) {
+            // S1 PSGDoNext clears the rest bit even for a duration-only unit,
+            // but PSGDoNoteOn tests the saved Freq word and branches on its
+            // sign to PSGSetRest (s1.sounddriver.asm:1832-1858, 1883-1885,
+            // 1918-1920). S2 zPSGDoNoteOn checks FreqHigh bit 7 likewise
+            // (s2.sounddriver.asm:1202-1204). A rest's $FFFF sentinel therefore
+            // still suppresses the frequency, volume and attack. S3K's KEEP
+            // policy preserves a playable frequency instead of this sentinel.
+            t.resting = true;
+            if (config.isAdvancePsgEnvelopeOnRest()) {
+                if (preventAttack) processPsgEnvelope(t);
+                else primePsgRestEnvelope(t);
+            }
+            return;
+        }
+
         if (t.forceRefresh) {
             refreshInstrument(t);
             t.forceRefresh = false;
+        }
+
+        boolean validDacAttack = false;
+        if (t.type == TrackType.DAC && dacData != null) {
+            DacData.DacEntry entry = dacData.mappingForNote(t.note);
+            validDacAttack = entry != null && dacData.hasSample(entry.sampleId())
+                    && dacData.sample(entry.sampleId()) != null && dacData.sample(entry.sampleId()).length() > 0;
+        }
+        if (noteListener != null && (t.type == TrackType.DAC ? validDacAttack : !preventAttack)) {
+            noteListener.attack(t);
         }
 
         if (t.type == TrackType.DAC) {
@@ -3337,6 +3373,7 @@ public class SmpsSequencer implements CoordFlagContext {
         }
 
         if (!preventAttack) {
+            if (noteListener != null) noteListener.attack(t);
             resetModEnvelopeState(t);
         }
 
@@ -3447,6 +3484,9 @@ public class SmpsSequencer implements CoordFlagContext {
 
     @Override
     public void stopNote(Track t) {
+        if (noteListener != null) {
+            noteListener.release(t);
+        }
         if (t.type == TrackType.FM) {
             int hwCh = t.channelId;
             int port = (hwCh < 3) ? 0 : 1;
@@ -3480,6 +3520,9 @@ public class SmpsSequencer implements CoordFlagContext {
     public void stopPsgNoteWithDriverSilence(Track t) {
         if (t.type != TrackType.PSG) {
             throw new IllegalArgumentException("driver PSG silence requires a PSG track");
+        }
+        if (noteListener != null) {
+            noteListener.release(t);
         }
         synth.writePsgDriverSilence(this, t.channelId, t.noiseMode);
     }

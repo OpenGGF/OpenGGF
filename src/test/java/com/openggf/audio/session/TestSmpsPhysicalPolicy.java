@@ -54,9 +54,24 @@ class TestSmpsPhysicalPolicy {
         expected.add(new SmpsChipWrite.Psg(0xDF));
         expected.add(new SmpsChipWrite.Psg(0xFF));
 
+        expected.add(new SmpsChipWrite.Ym2612(0, 0x28, 6));
+        for (int register : new int[] {0x42, 0x4A, 0x46, 0x4E}) {
+            expected.add(new SmpsChipWrite.Ym2612(1, register, 0x7F));
+        }
+        expected.add(new SmpsChipWrite.Ym2612(1, 0xB6, 0xC0));
         assertEquals(expected, Sonic1SmpsCompatibilityPolicy.INSTANCE
                 .activateMusic(new SmpsMusicActivation(source, 6, 0))
                 .writes());
+    }
+
+    @Test
+    void s1SevenTrackMusicDisablesDacForFm6() {
+        var source = SmpsSourceDescriptor.baseMusic(new AudioTestFixtures.StubSmpsData("fm6"));
+        var writes = Sonic1SmpsCompatibilityPolicy.INSTANCE
+                .activateMusic(new SmpsMusicActivation(source, 7, 0)).writes();
+        assertEquals(35, writes.size());
+        assertEquals(new SmpsChipWrite.Ym2612(0, 0x2B, 0), writes.getLast());
+        assertFalse(writes.contains(new SmpsChipWrite.Ym2612(1, 0xB6, 0xC0)));
     }
 
     @Test
@@ -147,17 +162,18 @@ class TestSmpsPhysicalPolicy {
     }
 
     @Test
-    void compatibilityPoliciesRetainExactLegacy202Writes() {
+    void hostStopPoliciesKeepSonic1DacInitializationAndSonic2Compatibility() {
         SmpsWriteProgram legacy =
                 LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE.stopAll();
 
         assertEquals(202, legacy.writes().size());
-        assertEquals(legacy,
-                Sonic1SmpsCompatibilityPolicy.INSTANCE.stopAll());
+        var s1Stop = Sonic1SmpsCompatibilityPolicy.INSTANCE.stopAll();
+        assertEquals(36, s1Stop.writes().size());
+        assertEquals(List.of(new SmpsChipWrite.Ym2612(0, 0x2B, 0x80),
+                new SmpsChipWrite.Ym2612(0, 0x27, 0)), s1Stop.writes().subList(0, 2));
         assertEquals(legacy,
                 Sonic2SmpsCompatibilityPolicy.INSTANCE.stopAll());
-        assertEquals(legacy,
-                Sonic1SmpsCompatibilityPolicy.INSTANCE.boot());
+        assertEquals(s1Stop, Sonic1SmpsCompatibilityPolicy.INSTANCE.boot());
         assertEquals(legacy,
                 Sonic2SmpsCompatibilityPolicy.INSTANCE.boot());
         // S1 and S2 have no zPlayDigitalAudio-style entry block modelled here,
@@ -239,7 +255,7 @@ class TestSmpsPhysicalPolicy {
                         + " must not replace the host stateful-command policy");
         assertEquals(host.identity().equals(
                         Sonic3kSmpsPhysicalPolicy.INSTANCE.identity())
-                        ? 84 : 202,
+                        ? 84 : host.identity().equals(Sonic1SmpsCompatibilityPolicy.INSTANCE.identity()) ? 36 : 202,
                 observer.events().size());
         assertSame(physical, session.physicalIdentityForTesting(),
                 "donor selection must not replace the host device");

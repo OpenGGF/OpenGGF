@@ -61,7 +61,7 @@ and carried owners; it is part of this act's completion contract.
 | --- | --- | --- |
 | Sonic solo / Sonic + Tails | `TestFbzAct1ColdRoute#sonicAndTailsReachAct2FromColdAct1ThroughRealBossAndResults` passed the ordinary cold Sonic + Tails route on the integrated runtime (six-impact boss → sign/results → Act 2 title teardown/control release); see exact source and limits below. `TestFbzNativeCharacterRoutes#everyNativeTeamCanEnterBothActsFromLevelSelectAtTheRomStart`: production level-select selection, ROM start, concrete sprite types, two idle frames | Sonic solo candidate now passes below; representative full-route configuration breadth remains open |
 | Tails solo | Same entry method with Tails radius/character assertions; checkpoint method below | Tails solo candidate now passes below; additional flight-specific and configuration coverage remains open |
-| Knuckles solo | `TestFbzAct1ColdRoute#nativeSoloColdRouteReachesReleasedAct2`: actual Knuckles, ordinary jumps/glides, real boss/results/title release; 22,162 frames in the combined nine-case pass below | Additional character-specific geometry and rewind breadth remain open |
+| Knuckles solo | `TestFbzAct1ColdRoute#nativeSoloColdRouteReachesReleasedAct2`: actual Knuckles, ordinary jumps/glides, real boss/results/title release; 22,055 inputs after the 2026-09-27 controller repair; the independent frozen route adds 50 whole-world replay windows | Additional character-specific geometry and rewind breadth remain open |
 | 400/512/640/800-pixel Sonic + Tails | `TestFbzAct1ColdRoute#fourHundredPixelColdRouteReachesReleasedAct2` and `#widerNativeColdRoutesReachReleasedAct2`: actual camera/viewport width and physical boss/results/title/control-release assertions | All four pass in the combined nine-case run below; other width/donor/team combinations remain open |
 | S1 Sonic solo, 320px | `TestFbzAct1ColdRoute#sonic1DonorColdRouteReachesReleasedAct2`: real donor ROM and no-spindash assertions; ordinary run/jump controller | FAIL at the lower curved-wall transfer; exact matched baseline/current failure below. Full S1 traversal remains open |
 | Width/donor/team lifecycle | `TestFbzAct1RouteHeadless#resultsOwnedReloadAndTitleLifecycleSupportsWidthsDonationsAndEveryTeamShape`: seeded boss-boundary fixture, real results/reload/title lifecycle; widths 320/352/400/512/528/640/800 × off/S1/S2 × five team shapes (105 cases), then native reset | 105-case product plus final native reset PASS in focused validation below. Not full traversal or rendered-width evidence |
@@ -436,3 +436,189 @@ excludes the results renderer's rebuildable cache flag while retaining its
 gameplay readiness/timing state. The existing full-registry oracle passes in
 the final 158-case focused run, with no skips; the full strict FBZ replay also
 passes. All 36 fresh B2 capture PNGs match the reviewed v2 inputs exactly.
+
+
+Incoming MHZ2 campaign follow-up (2026-09-23): the cold MHZ1→MHZ2→FBZ1 route
+now restores and forward-replays45 neutral inputs in released FBZ1. It exposed
+retained-plane reconciliation resubmitting the historical background palette
+write after both palette adapters had restored their captured state. The
+reconcile path now rebuilds only the tile plane. The independent
+`TestFbzAct1RomRuntimeLifecycle.restoredPlaneDoesNotRepublishItsHistoricalPaletteWrite`
+and retained-plane/native-row/event regressions pass in the24-case focused
+selection at22:20 BST on b6c1147a2 plus campaign edits; exact command and
+limitations are in the [campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md).
+This is native320 Sonic incoming/replay evidence, not broader act certification.
+
+## Physical starpost activation and replay (2026-09-25)
+
+`TestFbzCheckpointRoutes#walkingIntoEveryPlacedPostActivatesAndReplaysItsSave`
+starts48px left of each decoded ROM post, at its authored Y, then uses90 ordinary
+Right inputs. No saved checkpoint is injected and no activation routine is called.
+The11 posts across both acts are exercised with Sonic, Sonic+Tails, Tails and
+Knuckles (44 cases). This is a declared local approach, not cold reachability to
+every post. The existing44 saved-post death reloads and placement inventory remain
+separate evidence. Width/donor products and integrated contact-to-death remain open.
+
+The first trial took its snapshot before any admitted frame and produced24 replay
+differences, despite all44 contacts activating successfully. That pre-gameplay
+setup is not a live history point. Taking the snapshot after the initial neutral
+gameplay frame makes all89 cases pass without runtime changes. The final test
+also verifies immediate restore and repeats the90-input replay twice, comparing
+every registered snapshot key (no field exclusions).
+
+Final focused command on `9bc91e469` plus this test, Java21/DISPLAY=:0:
+`python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestFbzCheckpointRoutes
+-Ds3k.rom.path=/absolute/path/to/s3k.gen test`:89 passed,0 failures/errors/skips,
+36.042s Maven. All44 physical activations pass immediate restore and two forward
+replays. This test-only addition uses focused validation; campaign broad checks
+and other act obligations remain outstanding.
+
+## Physical checkpoint through repeated death (2026-09-25)
+
+`TestFbzCheckpointRoutes#physicalCheckpointSurvivesTwoRealDeathReloads` composes
+ordinary contact with each of the eleven ROM-placed posts and two full production
+death/reload cycles. Cases cover Sonic, Tails, Sonic+Tails and Knuckles at all
+selectable presets: 320, 352, 400, 528 and 800 pixels (220 cases, 440 reloads).
+The local approach starts 48px left of the post at its authored Y. No saved
+checkpoint is injected. A declared `applyPitDeath()` stimulus initiates normal
+GameLoop death, fade, reload and title/control release; this is not a test of
+hazard contact or cold traversal to every post.
+
+Each reload verifies saved coordinates/index, main character, follower identity,
+viewport width, replacement object/runtime owners, event binding and player
+branch, plus outgoing live history and its reset at the full load. Repeating the
+cycle checks that the rebuilt world remains usable and retains the checkpoint.
+The independent activation/replay and saved-post intake tests remain intact.
+
+On `17c191094` plus this test, Java 21 and DISPLAY=:0:
+`python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=$PROJECT_ROOT/s3k.gen
+-Dtest=TestFbzCheckpointRoutes test`: 309 tests, 0 failures/errors/skips,
+49.002s Maven (28.30s class). Initial width failures were fixture setup: the
+team helper created its camera before the display configuration. Applying the
+real preset before opening the final gameplay session, and checking the width
+before contact as well as after reload, verifies the intended product. No runtime
+change was needed. Donor products, cold post reachability and other act-specific
+mechanism/presentation obligations remain open.
+
+## Supported donor checkpoint lifecycle (2026-09-25)
+
+The physical checkpoint/death test now also covers the production launch roster
+for S1 and S2 donors. `LaunchProfile.sanitizedFor(SONIC_3K)` selects supported
+standard teams: S1 Sonic alone; S2 Sonic alone, Tails alone and Sonic+Tails.
+Each visits all eleven posts at 320/352/400/528/800 and runs two real death loads
+(220 additional cases, 440 additional reloads). The donor is initialized through
+the fixture's production donation path using the verified root ROMs. Before
+contact, at each load and after control release, assertions check donor identity,
+spindash capability, participant renderer, animation set/profile and mappings.
+S1 Sonic remains unable to spindash. Native lifecycle assertions remain intact.
+
+Java 21, DISPLAY=:0, `30a3537d0` plus test changes:
+`python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestFbzCheckpointRoutes
+-Ds3k.rom.path=$PROJECT_ROOT/s3k.gen -Dsonic1.rom.path=$PROJECT_ROOT/s1.gen
+-Dsonic2.rom.path=$PROJECT_ROOT/s2.gen test`: 529 tests, 0 failures/errors/skips,
+1:07 Maven (46.73s class). This totals 880 actual reloads across the native and
+supported donor standard-team products. It does not certify donor cold traversal,
+hazard-contact deaths, arbitrary duplicate follower chains or pixel presentation.
+
+## Knuckles pole animation ownership follow-up (2026-09-27)
+
+Candidate based on58001b58e: `TestKnucklesObjectControlAnimation` enters the
+placed$7B pole at$A08,$1E8 while gliding, at320/800. Native loc_3C0DC/sub_3C010
+owns the raw pole pose while Knuckles_Control clears double_jump_flag. The
+shared ownership split preserves that pose instead of clearing the object's
+bit1 gate together with the old ability. Incoming ability state, capture,
+held state and forced object recreation/forward replay are covered. These two
+cases pass in the queued focused run; broader verification and integration
+remain pending. Existing full-act/native/presentation gaps are unchanged.
+
+
+### Seamless sprite-publication follow-up (2026-09-27, candidate)
+
+`TestLevelSpritePresentationLifecycle` independently exercises FBZ/MHZ/SOZ/LRZ/
+DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
+still clear them. Shared validation and exact route limitations are recorded in
+[the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
+This adds transition coverage, not another whole-act or native-pixel certification.
+
+## Solo Tails cold completion repair (2026-09-27 candidate)
+
+The inherited2835 death is repaired through controller input only on runtime
+`6088735c8`: earlier outdoor takeover and ordinary flight reach the moving
+platforms and upper lift. The22,448-button frozen route reaches actual Act2 at
+21836 and released Tails at(343,1520), no deaths or gameplay seeds. Independent
+fresh capture matches every author row on all12 common state fields; boss/results
+and incoming stills were inspected. The new `TestFbzTailsColdRouteCapture` owns
+whole-world replay checks; final execution/integration are pending in the
+[campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md). The seven-step
+pre-reload results window and independent post-reload checks are not live-history
+isolation evidence. Native320 solo Tails completion does not close wider/donor
+products, Knuckles' inherited Act1 failure or native pixel acceptance.
+
+
+The new results replay exposed an additional inherited runtime gap: converted
+chain links stopped after rewind when their old arm no longer existed, and the
+missing vertical cull kept fallen links alive. The candidate also corrects
+capsule-fragment MoveSprite gravity against the ROM. Three independent short
+baseline regressions fail as expected. These boss-family changes and the full
+frozen-route replay await candidate execution; the earlier base-runtime video
+is not final corrected-debris evidence.
+
+
+Candidate execution now passes the frozen route with44 whole-world restore/two-
+cycle replay windows, including the bounded results window and two incoming
+Act2 spots. Ordinary movement after release is asserted. The separate166-case
+children/rewind/S3K focused selection passes with zero skips. Sonic and320/400
+team controls still complete at their original frame counts; Knuckles retains
+the identical13839 failure. These are focused results, with integration and
+final candidate video verification still pending.
+
+Final candidate footage is verified at
+`$HOME/Videos/OGGF/fbz-bring-up/campaign-20260927-tails-cold-act1-320-fixed/capture.mp4`.
+All22,448 input-driven state rows match the author, zero deaths;78 corrected
+defeat-debris frames distinguish it from the base-runtime movie. Integration
+remains pending.
+
+
+## 2026-09-27 — Knuckles cold Act1 route recovery (candidate)
+
+Base `760a22892`, isolated `feature/ai-fbz-knuckles-route`. The inherited
+13,839-input Knuckles failure was an input-controller frontier. Knockback could
+return him to the prior upper hub while the controller retained the next hub's
+stage; explicitly retrying that transfer reaches the later carousel. Early
+jumps/glides there hit the moving member's side, and accepting any rotor as a
+successful landing could leave the controller waiting on the lower rotor.
+
+The accepted input waits on the floating platform for the upper outer member
+to approach the bottom of its arc from the left, uses an ordinary jump, and
+requires an upper-family landing before advancing. No production physics,
+collision, object phase, health or position changes. The controller's temporary
+frame logging is not part of the candidate.
+
+`fbz1-knuckles-cold-320.script/.bk2` freezes22,055 ordinary inputs, Knuckles
+solo/native320/donor off, with one neutral production setup step before the
+recording. Actual Act2 reload is authored input21,436; the final released
+position is(343,1516). The fresh production capture matches all22,055 authored
+rows on twelve gameplay fields with zero deaths or sidekick rows.
+`$HOME/Videos/OGGF/fbz-bring-up/campaign-20260927-knuckles-cold-act1-320/capture.mp4`
+contains6,056 frames,60fps,640x448,100.933 seconds from input16,000. Full decode
+passes; upper-carousel, boss and incoming Act2 stills inspected. Runtime is
+integrated760a22892. This is engine route/presentation evidence, not emulator
+pixel parity.
+
+`TestFbzKnucklesColdRouteCapture` independently replays the frozen buttons with
+whole-registry restore and two forward cycles at traversal, rotating members,
+upper carousel, checkpoints, boss impacts, sign/results and incoming Act2.
+Intervals stay on one side of the measured reload; live-history isolation is
+not claimed. That test and all five existing native/400px controller products
+are queued for candidate Maven verification. Wider/donor/native-presentation
+obligations remain open; this candidate is not integrated or pushed yet.
+
+
+Candidate normal Maven verification now passes all6 cases with0 failures/errors/
+skips in2m55, Java21/DISPLAY=:0/absolute S3K ROM/serial queue:
+`-Pfbz-routes -Dtest=TestFbzAct1ColdRoute#sonicAndTailsReachAct2FromColdAct1ThroughRealBossAndResults+fourHundredPixelColdRouteReachesReleasedAct2+nativeSoloColdRouteReachesReleasedAct2,TestFbzKnucklesColdRouteCapture test`.
+The existing five controller products complete at20,909(Sonic),22,448(Tails),
+22,055(Knuckles),27,563(native pair) and26,188(400px pair). The independent
+frozen Knuckles route passes50 whole-world windows, each replayed twice,
+77.55s test body. These are focused route checks, not a new full-suite pass.
+Integration and destination verification follow.

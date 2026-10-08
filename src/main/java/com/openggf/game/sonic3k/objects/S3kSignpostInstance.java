@@ -106,16 +106,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     private static final int SPARKLE_INTERVAL = 4;
     private static final int POST_LAND_TIMER = 0x40;
     private static final int BUMP_COOLDOWN = 0x20;
-    private static final int RESULTS_CARRIED_RETIRE_DISPATCHES = 3;
-    // Results children are embedded in the engine owner rather than allocated
-    // as twelve later SSTs. The embedded render-flag retire pass already
-    // represents the native child-slot deletes, so a post-object signpost must
-    // not add another synthetic parent pass before Obj_TitleCardInit
-    // (docs/skdisasm/sonic3k.asm:62600, 62691-62734).
-    private static final int RESULTS_POST_OBJECT_RETIRE_DISPATCHES = 0;
-    // A signpost that waits for the player to land still has one native parent
-    // pass after its embedded child retirement.
-    private static final int RESULTS_WAITED_LANDING_RETIRE_DISPATCHES = 1;
 
     // Bump detection box relative to signpost center
     private static final int BUMP_LEFT = -0x20;
@@ -144,7 +134,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     private int resultsTimerCatchUpEntries;
     private int resultsWaitDurationAdjustment;
     private int resultsPostControlHandoffDelayEntries;
-    private int resultsRetireDispatches = RESULTS_CARRIED_RETIRE_DISPATCHES;
     private boolean resultsWaitedForPlayerLanding;
     private boolean mainEndingPosePending;
     private boolean sidekickEndingPoseApplied;
@@ -666,9 +655,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance
                                 getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
                                 resultsPostControlHandoffDelayEntries
                                         + (preservesPostObjectResultDispatchBoundary ? 1 : 0),
-                                resultsChildRetireDispatches(resultsWaitedForPlayerLanding,
-                                        preservesPostObjectResultDispatchBoundary,
-                                        usesShortResultsChildRetireTail),
                                 resultsChildTimingAdjustment,
                                 usesShortResultsChildRetireTail));
         // Obj_EndSignResults calls AllocateObject.  Its lower free slot has
@@ -712,17 +698,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         }
         return preservesGroundedBoundary
                 || (!waitedForPlayerLanding && !usesShortRetireTail);
-    }
-
-    static int resultsChildRetireDispatches(boolean waitedForPlayerLanding,
-            boolean preservesPostObjectResultDispatchBoundary,
-            boolean usesShortResultsChildRetireTail) {
-        if (preservesPostObjectResultDispatchBoundary) {
-            return RESULTS_POST_OBJECT_RETIRE_DISPATCHES;
-        }
-        return waitedForPlayerLanding || usesShortResultsChildRetireTail
-                ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
-                : RESULTS_CARRIED_RETIRE_DISPATCHES;
     }
 
     static ResultsChildTimingAdjustment resultsChildTimingAdjustment(boolean waitedForPlayerLanding,

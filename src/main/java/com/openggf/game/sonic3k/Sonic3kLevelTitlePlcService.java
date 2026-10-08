@@ -8,13 +8,15 @@ import com.openggf.game.rewind.snapshot.NemesisPlcQueueSnapshot;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.level.resources.NemesisPlcPatternCounts;
 import com.openggf.level.resources.NemesisPlcServiceQueue;
+import com.openggf.level.resources.PlcParser.PlcDefinition;
+import com.openggf.level.resources.PlcParser.PlcEntry;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * The Nemesis FIFO drained by a fresh zone's Level/loc_62CC title wait.
+ * The Nemesis FIFO drained by fresh-zone Level/loc_62CC and results loc_2E0C4 waits.
  * Assets are decoded by the ROM resource plan; this owner preserves the
  * independent readiness gate. It does not model later event-owned PLCs.
  */
@@ -40,6 +42,16 @@ public final class Sonic3kLevelTitlePlcService
                 : "tails".equalsIgnoreCase(mainCharacter) ? 7 : 1);
     }
 
+    /** SpecialStage_Results: Load_PLC_Raw PLC_SpecialResultsText before loc_2E0C4. */
+    public void beginSpecialStageResults() throws IOException {
+        resetForMissingSnapshot();
+        var definition = new PlcDefinition(-1,
+                List.of(new PlcEntry(
+                        Sonic3kConstants.ART_NEM_RING_HUD_TEXT_ADDR,
+                        Sonic3kConstants.VRAM_SS_RESULTS_HUD_TEXT)));
+        queue.append(definition, NemesisPlcPatternCounts.derive(rom, definition));
+    }
+
     private void append(int plcId) throws IOException {
         var definition = Sonic3kPlcLoader.parsePlc(rom, plcId);
         // FixBugs=0 leaves the sixteenth descriptor retained after shifting.
@@ -60,18 +72,22 @@ public final class Sonic3kLevelTitlePlcService
             // VInt_A_C -> Process_Nem_Queue: six patterns from the prepared
             // head. A VInt_0 lag closure services none and cannot arm a head.
             queue.servicePatterns(6);
+        } else if (phase == PlcLifecyclePhase.SPECIAL_STAGE_RESULTS) {
+            // VInt_1E -> Process_Nem_Queue_2: three patterns per prepared head.
+            queue.servicePatterns(3);
         }
     }
 
     @Override
     public boolean hasPreparationBoundary(PlcLifecyclePhase phase) {
-        return phase == PlcLifecyclePhase.LEVEL_TITLE_CARD;
+        return phase == PlcLifecyclePhase.LEVEL_TITLE_CARD
+                || phase == PlcLifecyclePhase.SPECIAL_STAGE_RESULTS;
     }
 
     @Override
     public void prepareAfterLoop(PlcLifecyclePhase phase) {
         if (hasPreparationBoundary(phase)) {
-            // loc_62CC calls Process_Nem_Queue_Init after Process_Sprites.
+            // loc_62CC and loc_2E0C4 call Process_Nem_Queue_Init after VBlank.
             queue.prepareHead();
         }
     }

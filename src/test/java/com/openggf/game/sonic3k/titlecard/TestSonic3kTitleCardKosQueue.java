@@ -67,6 +67,43 @@ class TestSonic3kTitleCardKosQueue {
     }
 
     @Test
+    void retainedResetWaitsForArtAndLastChildMovementAndRestoresThatGate() throws Exception {
+        GameServices.level().resetLevelGamestate(GameServices.module().createLevelState());
+        manager.initializeInLevel(0, 1);
+        manager.requestLevelGamestateResetAfterCreateDispatches(
+                com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE);
+        var original = GameServices.level().getLevelGamestate();
+        original.setRings(37);
+        for (int poll = 0; poll < 50; poll++) manager.update();
+        assertEquals(37, original.getRings());
+        org.junit.jupiter.api.Assertions.assertSame(original, GameServices.level().getLevelGamestate(),
+                "owner polls cannot reset counters while its ROM archives are still pending");
+        drainThroughPostObjects(moduleHandles());
+        for (int poll = 0; poll < 100 && manager.getStateName().equals("SLIDE_IN"); poll++) {
+            manager.update();
+        }
+        assertEquals("DISPLAY", manager.getStateName());
+        var lastMovement = manager.capture();
+        assertEquals(0, lastMovement.stateTimer());
+        assertTrue(lastMovement.heldLevelCounterDispatchOwned());
+        assertTrue(lastMovement.retainedResultsHeldLevelCounterOwned());
+        manager.update();
+        org.junit.jupiter.api.Assertions.assertSame(original, GameServices.level().getLevelGamestate(),
+                "the first parent poll clears the last movement latch and returns");
+        manager.restore(lastMovement);
+        manager.update();
+        org.junit.jupiter.api.Assertions.assertSame(original, GameServices.level().getLevelGamestate(),
+                "rewind restores the unconsumed movement latch");
+        manager.update();
+        org.junit.jupiter.api.Assertions.assertNotSame(original, GameServices.level().getLevelGamestate());
+        assertEquals(0, GameServices.level().getLevelGamestate().getRings());
+        assertEquals(2, manager.capture().stateTimer(),
+                "global counter reset must not restart the retained presentation clock");
+        assertTrue(manager.capture().heldLevelCounterDispatchOwned());
+        assertTrue(manager.capture().retainedResultsHeldLevelCounterOwned());
+    }
+
+    @Test
     void normalCardQueuesFourArchivesInOrderAndRewindsInFlightBoundary() throws Exception {
         List<HardwareWorkHandle> expected =
                 expectedHandles(NORMAL_SOURCES, NORMAL_DESTINATIONS);
@@ -145,7 +182,11 @@ class TestSonic3kTitleCardKosQueue {
     void repeatedSameZoneCachedCardPublishesExactlyOneFreshTerrainBatch()
             throws Exception {
         Object previousGame = getLevelManagerGame();
-        setLevelManagerGame(new Sonic3k(rom));
+        var previousLevel = GameServices.level().getCurrentLevel();
+        var game = new Sonic3k(rom);
+        setLevelManagerGame(game);
+        setField(GameServices.level(), "level",
+                game.loadLevel(LevelData.S3K_ANGEL_ISLAND_1.getLevelIndex()));
         try {
             installCachedTitleArt();
             manager.requestFreshLevelRuntimeArtHandoff(
@@ -168,13 +209,18 @@ class TestSonic3kTitleCardKosQueue {
                     "the armed handoff is consumed exactly once");
         } finally {
             setLevelManagerGame(previousGame);
+            setField(GameServices.level(), "level", previousLevel);
         }
     }
 
     @Test
     void freshLevelTerrainWaitsForTitleAndNemesisButNotChildExit() throws Exception {
         Object previousGame = getLevelManagerGame();
-        setLevelManagerGame(new Sonic3k(rom));
+        var previousLevel = GameServices.level().getCurrentLevel();
+        var game = new Sonic3k(rom);
+        setLevelManagerGame(game);
+        setField(GameServices.level(), "level",
+                game.loadLevel(LevelData.S3K_ANGEL_ISLAND_1.getLevelIndex()));
         var previousPlc = GameServices.module().getGameService(
                 com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService.class);
         var plc = new com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService(rom);
@@ -185,6 +231,10 @@ class TestSonic3kTitleCardKosQueue {
             manager.requestFreshLevelRuntimeArtHandoff(
                     LevelData.S3K_ANGEL_ISLAND_1.getLevelIndex());
             manager.initializeFreshLevelTransition(0, 0);
+            assertTrue(manager.hasImmediateFreshLevelPalette());
+            assertEquals(4, moduleHandles().size(),
+                    "a same-act return must still submit Obj_TitleCardInit's archives");
+            drainThroughPostObjects(moduleHandles());
             setField(manager, "state", Sonic3kTitleCardState.DISPLAY);
             setField(manager, "freshLevelChildMovementObserved", true);
             var movementBoundary = manager.capture();
@@ -212,7 +262,10 @@ class TestSonic3kTitleCardKosQueue {
             assertFalse(manager.shouldCompleteFreshLevelTransitionBoundary(),
                     "LoadLevelLoadBlock must drain before ordinary gameplay begins");
             assertEquals(2, moduleHandles().size());
+            var terrainWait = manager.capture();
             manager.update();
+            assertEquals(terrainWait.stateTimer(), manager.capture().stateTimer(),
+                    "loc_7870 does not dispatch the surviving title owner");
             assertEquals(2, moduleHandles().size(), "terrain submission is one-shot");
             service(HardwareServiceBoundary.POST_OBJECTS);
             service(HardwareServiceBoundary.PRE_MAIN_LOOP);
@@ -223,6 +276,7 @@ class TestSonic3kTitleCardKosQueue {
             setField(GameServices.module(), "levelTitlePlcService", previousPlc);
             setPendingFreshLevelTransitionBoundary(false);
             setLevelManagerGame(previousGame);
+            setField(GameServices.level(), "level", previousLevel);
         }
     }
 
@@ -523,10 +577,12 @@ class TestSonic3kTitleCardKosQueue {
             return;
         }
         var constructor = field.getType().getDeclaredConstructor(
-                short.class, short.class, List.class);
+                short.class, short.class, List.class,
+                com.openggf.game.InitialProcessSpritesLifecycle.class);
         constructor.setAccessible(true);
         field.set(controller, constructor.newInstance(
-                (short) 0, (short) 0, List.of()));
+                (short) 0, (short) 0, List.of(),
+                com.openggf.game.InitialProcessSpritesLifecycle.NONE));
     }
 
     private static final class CountingObjectArtProvider extends Sonic3kObjectArtProvider {

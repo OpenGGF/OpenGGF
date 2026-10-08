@@ -9,8 +9,28 @@ public final class ModApiVersion {
     /**
      * Current unpublished compiled-mod API candidate, including the 0.7
      * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,
-     * deferred SMPS header construction, and broker-pinned direct-room TLS
-     * wire fields.
+     * deferred SMPS header construction, explicit dynamic solid-contact rewind binding,
+     * opt-in whole-game presentation pacing, modal level input ownership, controlled level admission and opaque
+     * course checkpoints, semantic native impulses, logical menu pointers, and read-only
+     * ROM-backed value scenes, held idle poses, controller-owned rewind presentation values
+     * and per-player button prompt labels derived from live bindings. Controlled
+     * entry fade admission reports whether it advanced; checkpoint readiness includes
+     * the native released title overlay's completion. Bounded scene replay and
+     * session-owned actual-PCM recording support creator rewind without giving
+     * it developer-history or sound-driver restore ownership. Mixed-ROM startup
+     * scenes expose supplied-game art, immutable timestamped physical input and
+     * bounded semantic ROM music with consumed-sample playback, section parts,
+     * and bounded pitch-gliding ROM-part cues that preserve the song clock.
+     * Full-song and selected-part synthesis expose cancellable host jobs with
+     * progress, a ten-minute duration cap and a 256 MiB stereo PCM budget.
+     * Scene-owned direct peer text messaging is asynchronous and bounded, with
+     * socket/thread ownership and lifetime kept in the engine.
+     * Power-up rules expose explicit invincibility-expiry music ownership for modes
+     * with continuous music.
+     * Broker-pinned direct-room TLS wire fields are part of the race protocol.
+     * Creator helpers include character specifications and lifecycle hooks, decoded
+     * placement transforms, owner storage and service bundles, named single-act and
+     * multi-act zone factories, shared UI/input and ROM-qualified scene art.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

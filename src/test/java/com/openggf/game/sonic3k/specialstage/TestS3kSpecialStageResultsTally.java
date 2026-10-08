@@ -37,7 +37,7 @@ class TestS3kSpecialStageResultsTally {
     @Test
     void mappingTilesReuseOneMutableDescriptor() {
         S3kSpecialStageResultsScreen screen = new S3kSpecialStageResultsScreen(
-                0, false, 0, 0, PlayerCharacter.SONIC_AND_TAILS);
+                0, false, 1, 0, 0, PlayerCharacter.SONIC_AND_TAILS);
 
         var first = screen.configureReusablePatternDesc(0xA123);
         var second = screen.configureReusablePatternDesc(0x4ABC);
@@ -67,7 +67,7 @@ class TestS3kSpecialStageResultsTally {
     private static S3kSpecialStageResultsScreen screen(int rings, boolean gotEmerald,
                                                        int totalEmeraldCount) {
         return new S3kSpecialStageResultsScreen(
-                rings, gotEmerald, 0, totalEmeraldCount, PlayerCharacter.SONIC_AND_TAILS);
+                rings, gotEmerald, 1, 0, totalEmeraldCount, PlayerCharacter.SONIC_AND_TAILS);
     }
 
     // ---- Ring bonus: rings x 10 (ROM line 63321) ----
@@ -92,11 +92,12 @@ class TestS3kSpecialStageResultsTally {
         assertEquals(2550, screen(255, true, 1).ringBonusForTest());
     }
 
-    // ---- Time bonus: 5000 if perfect (emerald earned), else 0 (ROM 63323-63326) ----
+    // ---- Perfect bonus: 5000 only when Special_stage_rings_left is zero. ----
 
     @Test
     void timeBonus_perfect_returns5000() {
-        assertEquals(5000, screen(50, true, 1).timeBonusForTest());
+        assertEquals(5000, new S3kSpecialStageResultsScreen(50, true, 0, 0, 1,
+                PlayerCharacter.SONIC_AND_TAILS).timeBonusForTest());
     }
 
     @Test
@@ -166,7 +167,8 @@ class TestS3kSpecialStageResultsTally {
 
     @Test
     void tallyDecrement_perfectStage_drainsBothBonusesToZero() {
-        S3kSpecialStageResultsScreen screen = screen(50, true, 1);
+        S3kSpecialStageResultsScreen screen = new S3kSpecialStageResultsScreen(
+                50, true, 0, 0, 1, PlayerCharacter.SONIC_AND_TAILS);
         assertEquals(500, screen.ringBonusForTest());
         assertEquals(5000, screen.timeBonusForTest());
 
@@ -195,4 +197,51 @@ class TestS3kSpecialStageResultsTally {
         assertEquals(490, screen.ringBonusForTest(),
                 "First tally frame removes 10 from the 500 ring bonus");
     }
+    @Test
+    void chaosContinueTimersFallThroughOnTheTallyAndIconCreationPasses() {
+        S3kSpecialStageResultsScreen screen = screen(50, false, 0);
+        // 1 initialization + 360 pre-tally + 50 tally updates. On update 412,
+        // loc_2E4C4 stores 120 and falls through to loc_2E4D6, leaving 119.
+        for (int frame = 1; frame <= 531; frame++) screen.update(frame, null);
+        assertFalse(screen.continueIconShownForTest());
+        screen.update(532, null); // timer was zero: create icon, store 270, decrement to 269
+        assertTrue(screen.continueIconShownForTest());
+        for (int frame = 533; frame <= 801; frame++) screen.update(frame, null);
+        assertFalse(screen.isComplete(), "the update reaching timer zero still returns");
+        screen.update(802, null);
+        assertTrue(screen.isComplete());
+    }
+
+    @Test
+    void belowContinueThresholdCarriesThePostTallyTimerIntoRoutineSix() {
+        S3kSpecialStageResultsScreen screen = screen(0, false, 0);
+        // Zero bonuses: update 362 takes loc_2E4C4 -> loc_2E50E -> loc_2E534,
+        // retaining the 120 timer and consuming its first tick on the same pass.
+        for (int frame = 1; frame <= 481; frame++) screen.update(frame, null);
+        assertFalse(screen.isComplete());
+        assertFalse(screen.continueIconShownForTest());
+        screen.update(482, null);
+        assertTrue(screen.isComplete());
+    }
+
+    @Test
+    void emeraldWithUncollectedRingsHasNoPerfectBonusAndUsesShortTally() {
+        var screen = new S3kSpecialStageResultsScreen(
+                12, true, 52, 0, 1, PlayerCharacter.TAILS_ALONE);
+        assertEquals(0, screen.timeBonusForTest());
+        // Native loc_2E3DA through loc_2E5B8: initialization, 360 waits,
+        // twelve ring tally passes, then the carried 120-pass timer and expiry.
+        for (int frame = 1; frame <= 493; frame++) screen.update(frame, null);
+        assertFalse(screen.isComplete());
+        screen.update(494, null);
+        assertTrue(screen.isComplete());
+    }
+
+    @Test
+    void perfectBonusDoesNotRequireAnEmerald() {
+        var screen = new S3kSpecialStageResultsScreen(
+                64, false, 0, 0, 0, PlayerCharacter.TAILS_ALONE);
+        assertEquals(5000, screen.timeBonusForTest());
+    }
+
 }

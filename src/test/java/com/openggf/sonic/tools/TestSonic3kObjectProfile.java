@@ -62,7 +62,7 @@ public class TestSonic3kObjectProfile {
     }
 
     @Test
-    public void iczSegmentColumnIsMarkedImplementedForS3klLevelsOnly() {
+    public void iczSegmentColumnAndSklStartNewLevelHaveDistinctImplementedOwners() {
         Sonic3kObjectProfile profile = new Sonic3kObjectProfile();
         List<LevelConfig> levels = profile.getLevels();
 
@@ -77,7 +77,10 @@ public class TestSonic3kObjectProfile {
 
         assertTrue(profile.getImplementedIds().contains(0xB3));
         assertTrue(profile.getImplementedIds(icz1).contains(0xB3));
-        assertFalse(profile.getImplementedIds(mhz1).contains(0xB3));
+        assertTrue(profile.getImplementedIds(mhz1).contains(0xB3));
+        var registry = new Sonic3kObjectRegistry();
+        assertEquals("ICZSegmentColumn", registry.getPrimaryName(0xB3, S3kZoneSet.S3KL));
+        assertEquals("StartNewLevel", registry.getPrimaryName(0xB3, S3kZoneSet.SKL));
     }
 
     @Test
@@ -101,8 +104,24 @@ public class TestSonic3kObjectProfile {
                 0xA3, 0xA4, 0xA5, 0xA6, 0xA7
         };
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
-        var sklOwners = java.util.Map.of(0x41, "SOZLightSwitch", 0x43, "SOZSwingingPlatform",
-                0x47, "SOZSandCork", 0x48, "SOZRapelWire");
+        // Numeric slots whose SKL owner is implemented too, so the id is legitimately in both
+        // sets under two different names. $A4 joined them when Obj_Spikebonker landed for the
+        // Death Egg and $A5 when Obj_Chainspike did; CNZ's own $A4 and $A5 are Obj_Sparkle
+        // and Obj_Batbot. The $A6/$A7 pair now also has concrete DEZ bosses.
+        var sklOwners = java.util.Map.ofEntries(
+                java.util.Map.entry(0x41, "SOZLightSwitch"),
+                java.util.Map.entry(0x43, "SOZSwingingPlatform"),
+                java.util.Map.entry(0x47, "SOZSandCork"),
+                java.util.Map.entry(0x48, "SOZRapelWire"),
+                java.util.Map.entry(0x4A, "DEZFloatingPlatform"),
+                java.util.Map.entry(0x4B, "DEZTiltingBridge"),
+                java.util.Map.entry(0x4C, "DEZHangCarrier"),
+                java.util.Map.entry(0x4D, "DEZTorpedoLauncher"),
+                java.util.Map.entry(0x4E, "DEZLiftPad"),
+                java.util.Map.entry(0xA4, "Spikebonker"),
+                java.util.Map.entry(0xA5, "Chainspike"),
+                java.util.Map.entry(0xA6, "DEZMiniboss"),
+                java.util.Map.entry(0xA7, "DEZEndBoss"));
         for (int objectId : implementedCnzIds) {
             assertTrue(profile.getImplementedIds(cnz2).contains(objectId),
                     "CNZ object $" + Integer.toHexString(objectId) + " should be reported as implemented");

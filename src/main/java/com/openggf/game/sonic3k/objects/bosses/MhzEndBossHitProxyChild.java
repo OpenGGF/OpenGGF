@@ -74,6 +74,13 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
     }
 
     @Override
+    public boolean isPersistent() {
+        // loc_764C4 uses Child_AddToTouchList.
+        // Those routines have no range cull; update owns native retirement.
+        return true;
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (parent.isDestroyed()) {
             setDestroyed(true);

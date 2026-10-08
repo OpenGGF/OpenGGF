@@ -134,7 +134,9 @@ final class ModAssetSnapshot implements AutoCloseable {
         } catch (UnsupportedOperationException ignored) {
             // Windows temp ACLs are inherited from the user's private temp directory.
         }
-        return root;
+        // Containment checks compare entries' real paths against this root, so it must be
+        // real too: macOS temp directories sit under the /var -> /private/var symlink.
+        return root.toRealPath();
     }
 
     private static void copyDirectoryVerified(Path source, Path destination, ModInputLimits limits,

@@ -96,6 +96,8 @@ class TestS3kSignpostStubGraphRewind {
                 "restored stub must not retain the pre-restore signpost reference");
         assertEquals(restoredSignpost.getWorldX(), readIntField(restoredStub, "currentX"),
                 "restored stub X must match the restored signpost");
+        assertEquals(restoredSignpost.isHighPriority(), restoredStub.isHighPriority());
+        assertEquals(restoredSignpost.getPriorityBucket(), restoredStub.getPriorityBucket());
         assertEquals(restoredSignpost.getWorldY() + 0x18, readIntField(restoredStub, "currentY"),
                 "restored stub Y must match the restored signpost plus the post offset");
     }

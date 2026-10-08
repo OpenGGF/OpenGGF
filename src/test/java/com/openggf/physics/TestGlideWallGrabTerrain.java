@@ -7,6 +7,25 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestGlideWallGrabTerrain {
     @Test
+    void verticalClimbProbesUseTheNativeOffsetsAndSolidityBits() {
+        var player = org.mockito.Mockito.mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        org.mockito.Mockito.when(player.getLrbSolidBit()).thenReturn((byte) 13);
+        org.mockito.Mockito.when(player.getTopSolidBit()).thenReturn((byte) 12);
+        for (boolean reversed : List.of(false, true)) {
+            for (boolean ledge : List.of(false, true)) {
+                try (var sensors = org.mockito.Mockito.mockConstruction(GroundSensor.class)) {
+                    GlideWallGrabTerrain.climbVerticalDistance(player, ledge, reversed);
+                    boolean up = ledge != reversed;
+                    int offset = (ledge ? 8 : 9) * (up ? -1 : 1);
+                    org.mockito.Mockito.verify(sensors.constructed().getFirst()).scanWorld(
+                            up ? Direction.UP : Direction.DOWN, (short) 0, (short) offset,
+                            (short) 0, (short) 0, (byte) (ledge ? 13 : 12));
+                }
+            }
+        }
+    }
+
+    @Test
     void bothWallEndsMustFitExactlyAndOnlyLeftAddsOnePixel() {
         for (boolean right : List.of(false, true)) {
             var probes = new ArrayList<String>();

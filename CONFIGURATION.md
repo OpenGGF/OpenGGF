@@ -93,8 +93,8 @@ The `config.yaml` is organized into the following top-level sections:
 | `CONFIG_PRESERVE_EXPLICIT_DEFAULTS` | `config.preserveExplicitDefaults` | bool | `false` | Developer override: retain explicitly listed recognized settings, including values equal to defaults, when converting an older full configuration to sparse format. |
 | `DISPLAY_COLOR_PROFILE` | `display.colorProfile` | string | `"RAW_RGB"` | Palette presentation profile. `"RAW_RGB"` keeps the current direct 8-bit expansion, `"MD_ANALOG"` applies a darker Mega Drive-style analog ramp, and `"NTSC_SOFT"` applies the analog ramp plus mild desaturation. |
 | `DISPLAY_COLOR_PROFILE_TOGGLE_KEY` | `display.colorProfileToggleKey` | key | `V` | Runtime key used to cycle display color profiles. The selected profile is saved to `config.yaml` and shown briefly in the bottom-left corner. |
-| `DISPLAY_ASPECT` | `display.aspect` | string | `"NATIVE_4_3"` | Display aspect preset. Controls the logical pixel width used by the renderer. Accepted values: `"NATIVE_4_3"` (320 px, exact native behavior), `"WIDE_16_10"` (352 px, supported), `"WIDE_16_9"` (400 px, primary supported widescreen target), `"ULTRA_21_9"` (528 px, best-effort smoke tier), and `"SUPER_32_9"` (800 px, exploratory). Wider presentation does not widen ROM world boundaries or trace-comparison authority. |
-| `DISPLAY_WINDOW_AUTOSIZE` | `display.windowAutosize` | bool | `true` | When `true` and a widescreen preset is active, the OS window is derived from the preset at 2x baseline (e.g. `WIDE_16_9` → 800×448). When `false`, `SCREEN_WIDTH`/`SCREEN_HEIGHT` are used verbatim so a custom window size is preserved. Has no effect when `DISPLAY_ASPECT` is `"NATIVE_4_3"`. |
+| `DISPLAY_ASPECT` | `display.aspect` | string | `"NATIVE_4_3"` | Display aspect preset. Controls the logical pixel width used by the renderer. Accepted values: `"NATIVE_4_3"` (320 px, exact native behavior), `"WIDE_16_10"` (352 px, supported), `"WIDE_16_9"` (400 px, primary supported widescreen target), `"ULTRA_21_9"` (528 px, best-effort smoke tier), and `"SUPER_32_9"` (800 px, exploratory). Wider presentation does not widen ROM world boundaries or trace-comparison authority. A game module (such as a mod) may pin a preset for its session; the setting itself is unchanged and returns at the master title. |
+| `DISPLAY_WINDOW_AUTOSIZE` | `display.windowAutosize` | bool | `true` | When `true` and a widescreen preset is active, the OS window is derived from the preset at 2x baseline (e.g. `WIDE_16_9` → 800×448). When a launch changes the aspect (a launch profile, or a module's required aspect such as a mod laid out for 16:9), a windowed, non-maximised window is refitted: it keeps its whole-number height scale and takes the new aspect's width, within the monitor, rather than letterboxing. When `false`, `SCREEN_WIDTH`/`SCREEN_HEIGHT` are used verbatim so a custom window size is preserved, and launches never resize the window. At startup it has no effect when `DISPLAY_ASPECT` is `"NATIVE_4_3"`. |
 | `DISPLAY_SHADER_LIBRARY_ROOT` | `display.shaderLibraryRoot` | string | `"shaders"` | Root directory scanned for user display shaders, resolved relative to the working directory. |
 | `DISPLAY_SHADER_SELECTION` | `display.shaderSelection` | string | `"OFF"` | Last selected display shader. Use `"OFF"` or a root-relative forward-slash path under `DISPLAY_SHADER_LIBRARY_ROOT`. |
 | `DISPLAY_SHADER_NEXT_KEY` | `display.shaderNextKey` | key | `RIGHT_BRACKET` | Runtime key used to advance to the next display shader. |
@@ -165,6 +165,21 @@ display shader application must be gated off for trace capture.
 
 ## ROM Files
 
+ROM-backed `baseGame: any` mod scenes use this configured catalogue to combine
+available games. Sitar Hero's optional launch script creates an isolated config
+for an explicit ROM subset; it packages no ROM data. Its keyboard/gamepad remaps,
+lefty mode and input/display calibration belong to owner-scoped mod settings,
+rather than global gameplay bindings. Raw standard
+gamepads remain available to physical-input scenes when the Genesis mapper is
+disabled. Sitar Hero keeps separate player control/calibration files
+(`settings.txt`, `settings-p2.txt`), bounded story progress (`career.txt`) and
+independent score records (`profile.txt`),
+and the explicitly entered peer address (`online-address.txt`) in its owner-scoped
+scene storage. The settings menu selects the player and melodic/bongo profile;
+lefty flip, reduced flashes and highway speed are also player-specific. Network
+host/join is opened only by the Direct-connect menu, using an explicit IP or
+localhost and port. See [Sitar Hero controls](examples/sitar-hero/README.md#controls).
+
 Paths are relative to the working directory (where the JAR is launched).
 
 The engine builds a catalogue of every image it can see: the files named by the
@@ -229,7 +244,7 @@ playability is tracked by the KiS2 patch design, not by this table.
 | `MASTER_TITLE_SCREEN_ON_STARTUP` | `startup.masterTitleScreen` | bool | `true` | Show the master title / game-selection screen on launch. When `false`, boots directly into the game set by `DEFAULT_ROM`. |
 | `TITLE_SCREEN_ON_STARTUP` | `startup.titleScreen` | bool | `true` | Show the game-specific title screen (e.g. Sonic 2 title screen) before gameplay. Ignored when `MASTER_TITLE_SCREEN_ON_STARTUP` is true and game selection is pending. |
 | `SKIP_MOD_ZONE_TITLE_CARDS` | `mods.skipModZoneTitleCards` | bool | `true` | Skip Sonic 2 title cards for additive mod zones until mod-supplied title-card art is supported. Stock cards still use the active zone registry name. |
-| `LEVEL_SELECT_ON_STARTUP` | `debug.startup.levelSelectOnStartup` | bool | `false` | Jump straight to the level select screen instead of the title screen. Useful for development. |
+| `LEVEL_SELECT_ON_STARTUP` | `debug.startup.levelSelectOnStartup` | bool | `false` | Jump straight to the level select screen instead of the title screen. Useful for development. Ignored (with the level-select key) when the active game module hides the level select. |
 | `S3K_SKIP_INTROS` | `debug.startup.s3kSkipIntros` | bool | `false` | (S3K only) Skip zone intro sequences such as the AIZ biplane cutscene and boot straight into playable gameplay. |
 
 ---
@@ -687,7 +702,7 @@ before BK2 playback can be controlled from the keyboard.
 | `LIVE_REWIND_TAPE_COAST_ACCELERATION` | `rewind.tapeCoastAcceleration` | number | `0.25` | Optional tape-coast acceleration in rewind steps per held frame. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_DECELERATION` | `rewind.tapeCoastDeceleration` | number | `0.5` | Optional tape-coast deceleration in rewind steps per released frame. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_MAX_STEPS` | `rewind.tapeCoastMaxSteps` | number | `4.0` | Maximum rewind steps per visual frame for optional tape-coast rewind. Values below 1.0 cap the rewind in slow-motion. Used only when tape coast is enabled. |
-| `LIVE_REWIND_VHS_EFFECT` | `rewind.vhsEffect` | bool | `true` | Render an authentic VHS picture-search effect (scrolling noise bars, scanline jitter, chroma bleed, tape dropouts, head-switch strip) while live rewind is active, fading out over ~10 frames after release. Applied after the fade pass and before any user display shader. Only meaningful when `LIVE_REWIND_ENABLED` is true. |
+| `LIVE_REWIND_VHS_EFFECT` | `rewind.vhsEffect` | bool | `true` | Render an authentic VHS picture-search effect (scrolling noise bars, scanline jitter, chroma bleed, tape dropouts, head-switch strip) during live rewind or a controller-owned reverse-playback request. Native live rewind fades out over ~10 frames after release. Applied after the fade pass and before any user display shader. Controller requests work independently of `LIVE_REWIND_ENABLED` and are suppressed by host pause. |
 | `LIVE_REWIND_VHS_TEAR_BANDS` | `rewind.vhsTearBands` | bool | `true` | Include the scrolling tear bands in the VHS rewind effect. Set `false` to keep the rest of the effect (scanline jitter, chroma bleed, tape dropouts, head-switch strip, wobble) without the bands. Only meaningful when the VHS effect is enabled. |
 | `REWIND_HISTORY_SECONDS` | `rewind.historySeconds` | int | `60` | Seconds of live rewind keyframe and input history to retain. The effective retained window may be up to one keyframe interval longer so replay always has a complete keyframe-to-target input segment. |
 | `REWIND_AUDIO_HISTORY_LIMIT_TYPE` | `rewind.audioHistoryLimitType` | string | `"time"` | How the rewind audio PCM history ring is capped. `"time"` caps by `REWIND_AUDIO_HISTORY_SECONDS`; `"size"` caps by `REWIND_AUDIO_HISTORY_SIZE_MB`. Held rewind beyond the cap plays silence on develop (the audio-rewind feature branch engages the reverse resynthesizer instead). |
@@ -933,6 +948,16 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 | `TIME_ATTACK_NET_MASTER_URL` | `timeAttack.net.masterUrl` | `""` |  | Master-server WebSocket URL for internet race browsing. |
 | `TIME_ATTACK_NET_MASTER_TRUST_INSECURE` | `timeAttack.net.masterTrustInsecure` | `false` |  | Development-only trust-all TLS mode for the master server. |
 | `TIME_ATTACK_HUD_MINIMAP` | `timeAttack.hud.minimap` | `true` |  | Show the multiplayer minimap progress strip. |
+
+Controlled mods can consume the configured `LIVE_REWIND_KEY` shortcut and primary
+L1/LB bumper independently of `LIVE_REWIND_ENABLED`. Putt Putt Paradise uses them
+for whole-shot undo with its own setup allowances: rewinds per hole
+`off / 3 / 5 / *`, rewinds per turn `1 / 3 / *` (`*` is unlimited). Defaults are
+three per golfer/hole and one per turn. Unbinding the keyboard shortcut keeps
+the bumper available to controlled mods. Start → Rewind Shot provides an
+A-operated alternative during WATCH, including for Genesis movie replay. Settled
+shots pass the turn automatically; completed turns cannot be rewound. Live shortcut input
+is suppressed while a movie owns the controller rows.
 
 ### Debug Navigation
 

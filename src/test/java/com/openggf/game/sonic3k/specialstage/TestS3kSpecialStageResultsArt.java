@@ -66,7 +66,7 @@ public class TestS3kSpecialStageResultsArt {
         GameServices.gameState().addScore(2200);
 
         S3kSpecialStageResultsScreen screen = new S3kSpecialStageResultsScreen(
-                0, false, 0, 0, PlayerCharacter.SONIC_AND_TAILS);
+                0, false, 1, 0, 0, PlayerCharacter.SONIC_AND_TAILS);
         Method updateScorePatterns = S3kSpecialStageResultsScreen.class
                 .getDeclaredMethod("updateDynamicScorePatterns");
         updateScorePatterns.setAccessible(true);

@@ -8,7 +8,7 @@ import com.openggf.data.Rom;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
-import com.openggf.game.save.SaveReason;
+import com.openggf.game.sonic3k.S3kFullSaveGame;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -72,7 +72,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private static final int S3K_PRE_TALLY_DELAY = 360;  // 6*60 frames (ROM line 62580)
     private static final int S3K_WAIT_DURATION = 90;      // ROM line 62676
     private static final int MUSIC_TRIGGER_FRAME = 71;    // 360 - 289 = 71 (ROM line 62626)
-    private static final int CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES = 3;
     private static final int MUTATED_TITLE_CARD_RESET_DISPATCHES = 38;
 
     // Time bonus table (ROM lines 62910-62918)
@@ -98,7 +97,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private int act;  // 0-indexed: 0=Act 1, 1=Act 2
     private int waitDurationAdjustment;
     private int postControlHandoffDelayEntries;
-    private int carriedResultsRetireDispatches = CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES;
     private S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment =
             S3kSignpostInstance.ResultsChildTimingAdjustment.NONE;
     private boolean usesShortResultsChildRetireTail;
@@ -166,7 +164,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private boolean postResultsEventHandoffPending;
 
     public S3kResultsScreenObjectInstance(PlayerCharacter character, int act) {
-        this(character, act, 0, 0, CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES,
+        this(character, act, 0, 0,
                 S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, false, true);
     }
 
@@ -178,7 +176,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     /** Side-effect-free shell used only by generic rewind recreation. */
     protected S3kResultsScreenObjectInstance(boolean rewindShell) {
         this(PlayerCharacter.SONIC_AND_TAILS, 0, 0, 0,
-                CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES,
                 S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, false, !rewindShell);
     }
 
@@ -196,40 +193,29 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
             int postControlHandoffDelayEntries) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
-                CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES,
                 S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, false, true);
     }
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
-            int postControlHandoffDelayEntries, int carriedResultsRetireDispatches) {
-        this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
-                carriedResultsRetireDispatches,
-                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, false, false);
-    }
-
-    S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
-            int postControlHandoffDelayEntries, int carriedResultsRetireDispatches,
+            int postControlHandoffDelayEntries,
             S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
-                carriedResultsRetireDispatches, resultsChildTimingAdjustment, false, true);
+                resultsChildTimingAdjustment, false, true);
     }
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
-            int postControlHandoffDelayEntries, int carriedResultsRetireDispatches,
-            boolean usesShortResultsChildRetireTail) {
+            int postControlHandoffDelayEntries, boolean usesShortResultsChildRetireTail) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
-                carriedResultsRetireDispatches,
                 S3kSignpostInstance.ResultsChildTimingAdjustment.NONE,
                 usesShortResultsChildRetireTail, true);
     }
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
-            int postControlHandoffDelayEntries, int carriedResultsRetireDispatches,
+            int postControlHandoffDelayEntries,
             S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment,
             boolean usesShortResultsChildRetireTail) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
-                carriedResultsRetireDispatches, resultsChildTimingAdjustment,
-                usesShortResultsChildRetireTail, true);
+                resultsChildTimingAdjustment, usesShortResultsChildRetireTail, true);
     }
 
     /**
@@ -239,7 +225,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      */
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act,
             int waitDurationAdjustment, int postControlHandoffDelayEntries,
-            int carriedResultsRetireDispatches,
             S3kSignpostInstance.ResultsChildTimingAdjustment timingAdjustment,
             boolean usesShortResultsChildRetireTail,
             boolean initializeRuntimeState) {
@@ -249,7 +234,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         this.act = act;
         this.waitDurationAdjustment = Math.max(0, waitDurationAdjustment);
         this.postControlHandoffDelayEntries = Math.max(0, postControlHandoffDelayEntries);
-        this.carriedResultsRetireDispatches = Math.max(0, carriedResultsRetireDispatches);
         this.resultsChildTimingAdjustment = timingAdjustment;
         this.usesShortResultsChildRetireTail = usesShortResultsChildRetireTail;
 
@@ -620,29 +604,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         return artLoaded;
     }
 
-    /**
-     * Reports the retained-owner boundary at which Obj_EndSignControl can
-     * restore the players, before Obj_LevelResults publishes the next owner.
-     * The result children and the carried SST retirement tail are both gone,
-     * but the publication flag is still clear, so the next result dispatch is
-     * the one that clears End_of_level_active.
-     */
-    boolean isEndSignControlRestoreBoundaryReady() {
-        if (postControlHandoffDelayEntries > 0 || postControlHandoffPending) {
-            return false;
-        }
-        boolean deferredGeneralOwnerControlBoundary = resultsArtLoadDispatchDeferred
-                && state == STATE_EXIT
-                && childrenRemaining <= 0
-                && !exitPublicationComplete;
-        boolean ready = deferredGeneralOwnerControlBoundary || (state == STATE_EXIT
-                && childrenRemaining <= 0
-                && exitRetireDispatchesInitialized
-                && carriedResultsRenderRetireDispatches <= 0
-                && !exitPublicationComplete);
-        return ready;
-    }
-
     /** Additional owner dispatches after the dynamic result children retire. */
     protected int additionalChildRetireDispatches() {
         return 0;
@@ -665,7 +626,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     }
 
     /**
-     * Called when the final embedded results child retires.  Route owners can
+     * Called when the final dynamic results child retires.  Route owners can
      * publish the ROM's child-count handoff before their parent performs its
      * final exit callback on the next object pass.
      */
@@ -675,11 +636,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     @Override
     public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
-        // HCZ/MGZ-style Load_Level paths retain Obj_LevelResults and its ROM
-        // child SSTs. The engine carries the parent but renders its twelve
-        // children as embedded elements, so preserve the final three child
-        // retirement dispatches that occur after the embedded set is gone.
-        carriedResultsRenderRetireDispatches = carriedResultsRetireDispatches;
+        // Load_Level retains this owner and its twelve real child SSTs;
+        // Obj_LevelResultsWait2 counts them on the next parent pass.
         carriedAcrossSeamlessTransition = true;
     }
 
@@ -701,9 +659,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         carriedTitleExitPhaseOneDispatchOverlap = titleTiming.exitPhaseOneDispatchOverlap();
         carriedPreloadedActCameraReleaseDispatches =
                 titleTiming.preloadedActCameraReleaseDispatches();
-        if (titleTiming.carriedResultsRetireDispatches() >= 0) {
-            carriedResultsRenderRetireDispatches = titleTiming.carriedResultsRetireDispatches();
-        }
     }
 
     // ---- Pre-tally delay with music trigger ----
@@ -775,7 +730,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         playTallyEndSound();
         int zone = services().romZoneId();
         if ((act != 0) || (zone == 0x0A)) {
-            services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
+            S3kFullSaveGame.complete(services());
         }
         state = STATE_WAIT;
         // Native falls through from tally completion into Wait2 and
@@ -838,11 +793,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     protected void onExitReady() {
         if (exitPublicationComplete) {
             if (titleInitializationPending) {
-                // ROM Obj_LevelResultsWait2 mutates this SST into
-                // Obj_TitleCard and returns. A retained generic title owner
-                // may have submitted Obj_TitleCardInit's art on the
-                // publication dispatch; its following owner pass only retires
-                // the old results shell.
+                // loc_2DD06 only replaces the routine pointer and returns.
+                // Obj_TitleCardInit submits art on this next owner dispatch,
+                // after the separate EndSignControl slot can observe _unkFAA8.
                 if (!titleCardInitialized) {
                     initializePublishedTitleCard();
                     titleCardInitialized = true;
@@ -1027,19 +980,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         } else {
             restoreNativeEndSignControlAtPublication();
         }
-        if (titleInitializationPending && initializeTitleCardOnPublication()) {
-            // The native carried title owner submits Obj_TitleCardInit's
-            // ROM-backed jobs on the same dispatch that mutates the results
-            // parent. Keep the generic retained shell for its following
-            // object pass; the short-tail owner retains its existing immediate
-            // retirement contract.
-            initializePublishedTitleCard();
-            titleCardInitialized = true;
-            if (usesShortResultsChildRetireTail) {
-                titleInitializationPending = false;
-                complete = true;
-            }
-        }
         if (!titleInitializationPending && !fbzCarriedTitleOwner) {
             ObjectLifetimeOps.deleteNoRespawn(this);
         }
@@ -1047,7 +987,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 zone, act, isAct2OrSpecial));
     }
 
-    private boolean initializeTitleCardOnPublication() {
+    private boolean usesCarriedTitleResetDispatchOverlap() {
+        // Short-tail/explicit carried owners share one create dispatch with
+        // the title manager, shortening the display-reset count by one. This
+        // is unrelated to title art submission, which follows loc_2DD06.
         return carriedAcrossSeamlessTransition
                 && titlePublicationOwnedByCarriedObject
                 && (usesShortResultsChildRetireTail || carriedTitleTimingExplicit);
@@ -1102,10 +1045,14 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                             carriedTitleExitPhaseOneDispatchOverlap);
                 } else {
                     s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
-                            mutatedTitleCardResetDispatches(
-                                    usesShortResultsChildRetireTail,
-                                    carriedPreloadedActCameraReleaseDispatches,
-                                    initializeTitleCardOnPublication()));
+                            // Ordinary retained owners poll Obj_TitleCardWait's $34
+                            // child-movement latch (sonic3k.asm:62255-62278);
+                            // short-tail owners use a dispatch count.
+                            usesShortResultsChildRetireTail
+                                    ? mutatedTitleCardResetDispatches(true,
+                                            carriedPreloadedActCameraReleaseDispatches,
+                                            usesCarriedTitleResetDispatchOverlap())
+                                    : com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE);
                     if (carriedPreloadedActCameraReleaseDispatches == 0) {
                         s3kTitleCard.requestInLevelExitAdditionalDispatches(1);
                     }
@@ -1189,15 +1136,14 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     static int mutatedTitleCardResetDispatches(
             boolean usesShortResultsChildRetireTail,
             int preloadedActCameraReleaseDispatches,
-            boolean initializesOnPublication) {
+            boolean retainedCreateDispatchOverlap) {
         // A short child-retirement tail hands ownership to the mutated title
         // card one frame earlier, before the native child/create phase has
         // exposed its final two dispatches.
         int dispatches = MUTATED_TITLE_CARD_RESET_DISPATCHES
                 + (usesShortResultsChildRetireTail ? 2 : 0);
-        if (initializesOnPublication) {
-            // Sharing the publication dispatch removes one owner pass from the
-            // absolute display-reset schedule.
+        if (retainedCreateDispatchOverlap) {
+            // Shared create dispatch with the title manager.
             dispatches--;
         }
         // When the retained transition explicitly has no preloaded-camera

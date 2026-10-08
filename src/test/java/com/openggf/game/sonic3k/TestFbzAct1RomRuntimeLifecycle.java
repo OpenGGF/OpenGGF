@@ -24,6 +24,20 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestFbzAct1RomRuntimeLifecycle {
     @Test
+    void restoredPlaneDoesNotRepublishItsHistoricalPaletteWrite() {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 0).build();
+        fixture.stepIdleFrames(5);
+        var registry = com.openggf.game.session.SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var saved = registry.capture();
+        fixture.stepIdleFrames(8);
+        registry.restore(saved);
+        var differences = com.openggf.game.rewind.RewindSnapshotDiff.diffKey("palette-ownership",
+                saved.get("palette-ownership"), registry.capture().get("palette-ownership"));
+        assertTrue(differences.isEmpty(), () -> "Plane reconciliation changed palette writers: " + differences);
+    }
+
+    @Test
     void authoredMagneticPlatformStartsExactlyOnItsNativeFloorSeam() throws Exception {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);

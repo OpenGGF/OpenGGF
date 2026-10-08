@@ -1,6 +1,7 @@
 package com.openggf.level;
 
 import com.openggf.game.render.AdvancedRenderFrameState;
+import com.openggf.graphics.ArenaMaskState;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -11,7 +12,7 @@ final class LevelScrollPresentation {
                      short foregroundY, short backgroundY, int backgroundX, int backgroundPeriod,
                      boolean heatHaze, boolean perLineForeground, boolean reversePlanes,
                      boolean overrideForegroundY, short overriddenForegroundY,
-                     boolean overrideBackgroundY, short overriddenBackgroundY) { }
+                     boolean overrideBackgroundY, short overriddenBackgroundY, ArenaMaskState arenaMask) { }
 
     private final Registers registers;
     private final int[] horizontal;
@@ -34,10 +35,34 @@ final class LevelScrollPresentation {
                 scroll.getVscrollFactorFG(), scroll.getVscrollFactorBG(), scroll.getBgCameraX(),
                 scroll.getBgPeriodWidth(), mode.enableForegroundHeatHaze(), mode.enablePerLineForegroundScroll(),
                 mode.reversePlaneAssignment(), mode.hasForegroundVScrollOverride(), mode.foregroundVScrollOverride(),
-                mode.hasBackgroundVScrollOverride(), mode.backgroundVScrollOverride()),
+                mode.hasBackgroundVScrollOverride(), mode.backgroundVScrollOverride(), level.spritePresentationRenderer().boundsMask.sample()),
                 scroll.getHScrollForShader(), scroll.getVScrollPerLineBGForShader(),
                 scroll.getVScrollPerColumnBGForShader(), scroll.getVScrollPerColumnFGForShader(),
                 mode.foregroundPerColumnVScrollOverride());
+    }
+
+    /** Capture the bounds in the same generation as the displayed camera and sprite table.
+     * ROM camera bounds remain gameplay-owned; this only hides newly exposed wide pixels.
+     * No zone ID, boss flag or explicit mask activation decides whether an edge is visible.
+     */
+    static ArenaMaskState captureArenaMask(LevelManager level) {
+        var camera = level.camera;
+        int currentMaxX = camera.getMaxX();
+        var rules = level.gameModule == null ? null : level.gameModule.getRules().playerMovement();
+        if (rules != null && !rules.levelBoundaryRightStrict()) {
+            var state = com.openggf.game.GameServices.gameState();
+            boolean locked = rules.levelBoundaryLockUsesScreenLockFlag()
+                    ? state.isScreenLocked() : state.isBossFightActive();
+            // S1/S2 permit another $40 pixels in ordinary play. Do not conceal
+            // playable space merely because the camera itself stops earlier.
+            if (!locked && !state.isEndOfLevelActive()) {
+                currentMaxX += 64;
+            }
+        }
+        var bounds = LevelBoundsMaskGeometry.select(level, currentMaxX);
+        return ArenaMaskState.fromBounds(bounds.minX(), bounds.maxX(), camera.getXWithShake(),
+                camera.getWidth(), level.objectManager == null ? level.frameCounter : level.objectManager.getFrameCounter(),
+                level.zoneFeatureProvider != null && level.zoneFeatureProvider.foregroundWrapsHorizontally());
     }
 
     Registers registers() { return registers; }
