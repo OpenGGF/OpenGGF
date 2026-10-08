@@ -43,6 +43,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PerObjectRewindSnapshot.PlayableSubclassRewindExtra;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.physics.CollisionSystem;
@@ -1055,7 +1056,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         includeFollowHistory ? statusHistory : null,
                         includeFollowHistory ? artTileAttributeHistory : null,
                         captureSubclassRewindState());
-                // Player snapshots use a stub PerObjectRewindSnapshot (no badnikExtra; playerExtra holds everything).
+                // The base object fields are a stub; playerExtra owns the player
+                // surface, while an unregistered shield is still owned by this sprite.
                 return new PerObjectRewindSnapshot(
                         false, false,       // destroyed, destroyedRespawnable
                         false, 0, 0,         // hasDynamicSpawn, dynamicSpawnX, dynamicSpawnY
@@ -1065,7 +1067,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         null,                // badnikExtra
                         null,                // badnikSubclassExtra
                         extra                // playerExtra
-                );
+                ).withObjectSubclassExtra(PendingInstaShieldRewindExtra.capture(
+                        instaShieldRegistered, instaShieldObject));
         }
 
         /**
@@ -1251,6 +1254,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // subclasses without a captured payload): see restoreSubclassRewindState()
                 // Javadoc for the null contract subclasses must honor.
                 restoreSubclassRewindState(extra.subclassExtra());
+                instaShieldObject = PendingInstaShieldRewindExtra.restore(s.objectSubclassExtra(),
+                        instaShieldObject, powerUpSpawner != null
+                                ? () -> instaShieldObject = powerUpSpawner.createInstaShield(this) : null);
         }
 
         /**
@@ -1326,7 +1332,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
-         * Recreates power-up visuals after all rewind adapters have restored. The
+         * Rebinds power-up visuals after all rewind adapters have restored. The
          * object manager restores after sprites, so visual rebinding must be
          * deferred until the registry's post-restore phase.
          */
@@ -1363,7 +1369,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         }
                 }
 
-                refreshPersistentInstaShieldRegistration();
+                refreshPersistentInstaShieldRegistration(instaShieldRegistered);
                 refreshInvincibilityStarsAfterRewindRestore();
         }
 
@@ -1401,8 +1407,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
         }
 
-        /** Restores the persistent insta-shield graph after a manager rebuild or rewind. */
+        /** Restores the persistent insta-shield graph immediately after a manager rebuild. */
         public void refreshPersistentInstaShieldRegistration() {
+                refreshPersistentInstaShieldRegistration(true);
+        }
+
+        private void refreshPersistentInstaShieldRegistration(boolean registerNow) {
                 if (!hasPersistentInstaShieldAbility() || powerUpSpawner == null) {
                         return;
                 }
@@ -1410,6 +1420,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         instaShieldObject = powerUpSpawner.createInstaShield(this);
                 }
                 if (instaShieldObject == null) {
+                        return;
+                }
+
+                // A fresh-load snapshot can precede tickStatus's first registration.
+                // Preserve that pending graph: post-restore visual refresh must not
+                // add an object that was absent from the captured object manager.
+                if (!registerNow) {
+                        instaShieldObject.invalidateDplcCache();
                         return;
                 }
 

@@ -14,6 +14,43 @@ For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 > for durable bug explanations, but check the frontier log before treating an old AIZ/CNZ frame
 > entry as the next live blocker.
 
+**Current stock verification, 2026-10-08:** the [continued stock audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
+and [S3K lane audit](../architecture/audits/2026-10-07-s3k-parity-gap-verification.md)
+record executed candidates and [actual-main qualification](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#actual-main-delivery-qualification).
+Integrated `5d1ff9b` retains 27 concrete inherited ordinary failures, zero errors
+and 62 literal inherited skips; all 672 fresh guards pass. FBZ→SOZ is repaired.
+Admission (`45c6eed2`) preserved every advertised opening row, and raw-controller
+bar handling (`b3eff620`) cleared the early Tails-Y span. Full SaveGame completion
+(`828bc94d8`) now clears the existing captured 32-bit collected-ring mask at exactly
+seven unchanged native caller gates. The 138-case focused selection passed with
+zero failures/errors/skips; this is bounded consumer/API/startup evidence, not
+whole-act or route-product certification. Other six non-tally live callers were
+not directly newly qualified; successful disk persistence and live SK-alone
+execution are not certified by these checks.
+
+Final combined request 71207 at `45a941` plus the frozen shared-input candidate
+completed 16 tests, three chain assertion failures, zero errors/skips. Standalone
+HCZ compares 3519 executed samples of 3574 rows (55 lag), with zero physics,
+animation, bootstrap and warnings. Chain HCZ segment9 is complete with zero
+errors and 55 lag; the giant-ring handoff succeeds and reaches segment11.
+That segment remains incomplete: 82067 errors (69393 physics/12674 animation),
+first non-camera physics row1510 primary Y native `07D6`/engine `07DF`, then
+ownership loss in LEVEL at BK2 cursor68801, load generation9, zone1 act0.
+AIZ segment6 retains 189 errors, first row3319 sidekick X `31C1/31CA`;
+segment8 retains 13254 (13113 physics/141 animation), first row1583
+sidekick X `366C/3674`. These earlier frontiers are unchanged.
+
+The root's 82-case focused selection passed without skips, including five
+FullSave cases, nine exact API cases, 60 startup keepers and eight shared-input
+cases. FBZ→SOZ positive pending-state coverage (`a33`) passes 16 cases against
+two matched old-owner failures: both actual publication phases restore correctly.
+The load-floor zero is a null state captured before deferred assignment, not
+positive pending-state evidence. These checks certify neither whole levels nor
+all load/rewind products. Published baseline `a872` retains 28 inherited ordinary
+failures and 62 literal skips, with no ROM skips; 672 guards pass. It is not a
+wholly green baseline. The completed composition qualification above removes
+the FBZ→SOZ failure while retaining all other concrete failures and skip reasons.
+
 Entries should include:
 - **Location** — the file(s) where the bug lives, if known
 - **Symptom** — what goes wrong and where you can observe it (test name, trace frame, manual repro)

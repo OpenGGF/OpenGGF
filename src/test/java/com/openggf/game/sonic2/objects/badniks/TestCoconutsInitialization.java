@@ -54,4 +54,51 @@ class TestCoconutsInitialization {
         assertEquals(0, state(object).climbTableIndex());
         assertEquals(0x200, object.getY());
     }
+    private void wirePlayers(CoconutsBadnikInstance object, AbstractPlayableSprite main,
+                             AbstractPlayableSprite sidekick) {
+        var camera = mock(com.openggf.camera.Camera.class);
+        when(camera.getFocusedSprite()).thenReturn(main);
+        object.setServices(new com.openggf.level.objects.TestObjectServices()
+                .withCamera(camera).withSidekicks(java.util.List.of(sidekick)));
+    }
+
+    @Test
+    void idleFacesNearerSidekickAndRewindRetainsTheDecision() {
+        var object = create();
+        var main = mock(AbstractPlayableSprite.class);
+        var tails = mock(AbstractPlayableSprite.class);
+        when(main.getCentreX()).thenReturn((short) 0x280);
+        when(tails.getCentreX()).thenReturn((short) 0x310);
+        wirePlayers(object, main, tails);
+        object.update(0, main);
+        object.update(1, main);
+        org.junit.jupiter.api.Assertions.assertFalse(object.captureRewindState().badnikExtra().facingLeft());
+        assertEquals(0x20, state(object).attackTimer());
+        var snapshot = object.captureRewindState();
+        var restored = create();
+        wirePlayers(restored, main, tails);
+        restored.restoreRewindState(snapshot);
+        object.update(2, main);
+        restored.update(2, main);
+        assertEquals(object.captureRewindState(), restored.captureRewindState());
+    }
+
+    @Test
+    void orientationTieKeepsMainPlayerAndRangeUsesTheRomWordWindow() {
+        for (int offset : new int[]{-0x60, -0x5F, 0, 0x60, 0x61}) {
+            var object = create();
+            var main = mock(AbstractPlayableSprite.class);
+            var tails = mock(AbstractPlayableSprite.class);
+            when(main.getCentreX()).thenReturn((short) (0x300 + offset));
+            when(tails.getCentreX()).thenReturn((short) (0x300 - offset));
+            wirePlayers(object, main, tails);
+            object.update(0, main);
+            object.update(1, main);
+            assertEquals(offset >= -0x5F && offset <= 0x60 ? 0x20 : 0,
+                    state(object).attackTimer(), "main offset=" + offset);
+            assertEquals(offset <= 0, object.captureRewindState().badnikExtra().facingLeft(),
+                    "tie and equality select MainCharacter");
+        }
+    }
+
 }

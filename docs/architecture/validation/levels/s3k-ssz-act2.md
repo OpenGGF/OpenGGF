@@ -449,3 +449,19 @@ decode. Inspected4658/8156 now retain the clouds and remove the black island gap
 Its entire state CSV matches the prior800 recording, confirming unchanged
 recorded gameplay. This is engine visual/regression evidence, not native whole-
 scene pixel parity. Full delivery verification remains separate.
+
+## Full SaveGame consumer boundary — 2026-10-08
+
+The existing final-defeat full SaveGame gate at `loc_7BCB0` (sonic3k.asm:165014), after fade/control handling, now dispatches through the semantic helper; defeat and stop-line gates are unchanged.
+
+`828bc94d8` clears the native32-bit collected-ring mask at exactly seven existing
+full-SaveGame gates; existing game-state rewind owns the mask. Focused138 cases
+pass without failures/errors/skips, including direct Results tally/helper and
+mask-restoration checks. The other six non-tally live routes, successful disk
+persistence, live SK-alone, and this matrix's remaining route/rewind/breadth
+products are not newly certified. Generic persistence and special-stage/lives/
+death/reload/seamless semantics remain distinct. See the [lane audit](../../audits/2026-10-07-s3k-parity-gap-verification.md)
+for native ordering and scope, and [combined qualification](../../audits/2026-10-07-stock-parity-gap-verification.md#final-composed-canonical-replay-2026-10-08)
+for exact commands/frontiers. [Actual-main qualification](../../audits/2026-10-07-stock-parity-gap-verification.md#actual-main-delivery-qualification)
+retains 27 concrete inherited ordinary failures and 62 literal skips with zero
+errors; all 672 fresh guards pass. This preserves the route/breadth limits above.

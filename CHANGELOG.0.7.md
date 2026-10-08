@@ -34,11 +34,21 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   art owner by character identity, restoring Tails DPLC submissions for runtime
   names such as `tails_p2`. Horizontal springs apply the native unsigned
   launch-side check for both participants, including the flipped equality case.
+  All five native spring types finish initialization before checking players on
+  the following update, preventing early launches when a spring reloads.
+  Coconuts faces and targets the nearer native player, preserving the ROM's
+  signed-word range check and main-player tie preference.
+  CPZ spin tubes preserve native zero-duration waypoints and the signed
+  fixed-point velocity calculation, preventing an extra movement step.
 
 - **Stock title starts:** starting a new Sonic 1 game clears emeralds and the
   special-stage cursor while preserving configured stage counts; Continue keeps
   existing progress. Unsupported two-player title actions return to the title
-  menu instead of starting an ordinary level.
+  menu instead of starting an ordinary level. Sonic 1 results transitions defer
+  returned player art until the native release prelude and palette tail have
+  completed; rewind preserves the pending tail's boundary. Movie-driven level
+  starts apply the first recorded input immediately; later neutral rows release
+  held directions and jump instead of leaving Up or Right stuck.
 
 - **Window and display aspect:** a launch that changes the display aspect (a launch
   profile's aspect, or a module's required aspect such as a mod laid out for 16:9) now
@@ -51,6 +61,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   camera offset while preserving MHZ1’s separate locked-on camera focus.
   Live zone handoffs now run the fresh title and terrain-loading lifecycle,
   restoring players before the initial sprite pass without adding a frame.
+  Rewind preserves a fresh-load insta-shield's pending attack and slot state,
+  leaving its registration to the next ordinary status tick. Fresh title
+  boundaries retain their deferred assembly and publication state on rewind.
+  HCZ hanging bars read the native raw companion-controller directions,
+  preserving neutral input while the follower CPU steers. Full native saves
+  clear collected giant rings at their seven existing save points, including in
+  No Save games, restoring giant-ring availability in later levels. Ordinary
+  persistence requests, special-stage and lives saves, and death reloads preserve
+  collected rings.
 
 - **S3K Launch Base:** Cup elevators now resolve each player’s solid contact before checking capture, restoring airborne side collisions and normal landing admission, and preserve native movement and animation control through the NPC Knuckles cutscene. Rolling drums preserve native rider state when unloading, after completing their final player updates. The Act1 miniboss preserves the fatal-hit dispatch before its defeat countdown, including explosion timing through rewind. Carried results now finish their twelve real children before publishing control release, then initialize the next title owner on its following dispatch. Retained title owners reset level counters only after their ROM-backed art and moving children settle, preserving the independent presentation clock. Ribot creates its visual children before its first active orbit, matching the ROM initialization return. The seamless Act 2 reload holds the inherited camera limits until the title owner releases them, then runs its gradual boundary children in their native creation pass.
 
@@ -1097,6 +1116,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Measured fixtures release source/evidence caches and owned mock history, with
   fixed frame-driving stubs installed once. SOZ route checks draw every frame
   without reading back discarded pixels; screenshot checks keep pixel readback.
+  Lower-rock puzzle checks compute each whole-world rewind diff once, and
+  background checks read pixels only from frames used by their assertions.
   Strict byte validation, digest pins, ROM configurations, stress sizes, and real
   socket exchanges remain covered. An opt-in two-JVM test profile retains serial
   execution inside each worker. Public audio tests retain synthetic chip vectors;

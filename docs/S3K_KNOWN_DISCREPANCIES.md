@@ -13,6 +13,12 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 submodule changes recorder ownership, not Sonic 3 & Knuckles runtime behaviour.
 No S3K discrepancy was added or reclassified by the cutover.
 
+**Stock parity audit (2026-10-07):** the continued swarm uses shipped-ROM
+initialization and level-load semantics; it adds no accepted deviation.
+Executed qualification and remaining campaign/rewind frontiers belong in the
+[dated stock audit](architecture/audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
+and [known-bug record](status/s3k-known-bugs.md), rather than new intentional entries.
+
 ## Table of Contents
 
 1. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)
@@ -318,11 +324,22 @@ OpenGGF now keeps the native S3K save-screen flow but stores saves as JSON envel
 - **Per-slot JSON files** stored at `saves/s3k/slotN.json` wrapped in a `SaveEnvelope` with version, game code, slot number, payload, and hash.
 - **SHA-256 integrity** rather than the ROM checksum routine. Hash mismatches log warnings during Data Select scan but do not block otherwise valid saves.
 - **Corrupt quarantine** - malformed, unreadable, wrong-game, or structurally invalid save files are renamed to `.corrupt` and treated as empty slots.
-- **No-op unsaved sessions** - save requests route through `SaveSessionContext`; when no slot is active, they silently no-op.
+- **Unsaved persistence requests** - disk persistence routes through `SaveSessionContext`; when no slot is active, persistence requests and disk writes no-op. Native full SaveGame runtime completion still clears the collected-ring mask.
 - **Snapshot providers** - game-specific payload capture is handled by `SaveSnapshotProvider` implementations rather than direct SRAM-style writes.
 - **Session-owned launch metadata** - active slot ownership, selected team, and launch zone/act are carried by `WorldSession` and `SaveSessionContext` rather than being inferred from config during gameplay.
 - **Restricted clear restart modeling** - clear slots use Java-side restart tables reconstructed from the disassembly, including Knuckles-specific restrictions, rather than exposing unrestricted level selection.
 - **Native S3K save-screen parity** - the native `S3K` `1 PLAYER` route now renders from the authored object layout and mapping frames; the old RECTI/text-placeholder selector path is gone on that production path.
+
+Native full SaveGame gameplay semantics are retained independently of this JSON
+storage deviation. `828bc94d8` routes exactly seven existing native caller gates
+through `S3kFullSaveGame`: Results, both HPZ exits, SSZ defeat, DEZ escape, DDZ
+ending and Knuckles LRZ StartNewLevel. The common ROM return `loc_C4CC` clears
+all 32 bits of `Collected_special_ring_array`, including zero Save_pointer and
+SK-alone branches; generic progression persistence, seamless loads, death/reload,
+and special-stage/lives saves preserve their distinct semantics. The mask already
+belongs to captured game state. Native clears after SRAM writing; Java clears
+before its asynchronous persistence request because that payload omits the mask.
+This does not claim identical SRAM ordering.
 
 ### Rationale
 
@@ -334,6 +351,17 @@ OpenGGF now keeps the native S3K save-screen flow but stores saves as JSON envel
 ### Verification
 
 `TestSaveManager` verifies round-trip write/read, hash validation, corrupt quarantine, wrong-game detection, replacement of stale `.corrupt` artifacts, and no-op unsaved sessions. `TestS3kSaveSnapshotProvider` verifies payload capture includes team, zone, act, lives, emerald count, and clear-restart metadata. `TestS3kDataSelectPresentation` verifies the native save-screen renderer uses authored layout objects and mapping frames instead of the old RECTI overlay path. `TestGameLoop` verifies active-slot saves are written on bonus-stage and special-stage returns, that `S3K` `ONE_PLAYER` routes into native Data Select, and that `TWO_PLAYER`/overlay bypasses do not.
+
+The [S3K lane audit](architecture/audits/2026-10-07-s3k-parity-gap-verification.md)
+records 138 focused passes with zero skips, including actual Results completion,
+all-bit mask restore and repeated completion, act-1 preservation, and missing/No
+Save contexts. Standalone HCZ is clean and the matched chain giant-ring handoff
+succeeds. The other six non-tally live callers are not directly newly route-qualified;
+persistence-only preservation uses an absent session rather than a successful
+disk write. SK-alone is a disassembly/direct-ROM branch contract, not live engine
+execution evidence. See the [stock audit](architecture/audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
+for combined results and remaining frontiers; whole-route certification and
+composition delivery remain separate.
 
 ### Manual Validation
 

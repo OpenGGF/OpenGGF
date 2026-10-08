@@ -643,7 +643,12 @@ public class SpringObjectInstance extends BoxObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        ensureInitialized();
+        if (!initialized) {
+            // Obj41_Init and every subtype branch end at Obj41_Init_Common's
+            // RTS. Active collision and animation dispatch begin next pass.
+            ensureInitialized();
+            return;
+        }
         animationState.update();
         mappingFrame = animationState.getMappingFrame();
 
