@@ -186,9 +186,9 @@ never start inside a short capture. The README records this.
 
 ## Verification at the source freeze (`676a433c4`)
 
-These are focused checks, not a combined-suite pass. The change-based plan for this
-diff selects the full ordinary suite and guards, because `examples/` maps to shared
-categories. That broad run belongs to the parent's integration.
+These are focused checks, not a combined-suite pass. At child handoff the change-based
+plan selected the full ordinary suite and guards because `examples/` falls back to
+shared categories. The parent owns the final scope decision and destination checks.
 
 - **Focused Maven run.** Command:
   `maven_queue.py -Dmse=off "-Dtest=TestSitarHero*,TestModdingDocumentationLinks"`,
@@ -219,6 +219,42 @@ categories. That broad run belongs to the parent's integration.
   captured mod source files hashed. It passes a full decode at -16.0 LUFS, LRA 4.7 LU
   and true peak -1.5 dBFS. Media, edit list and chapter map are in
   `$SITAR_POLISH_ROOT/promo/edit-v2`.
+
+## Parent delivery scope
+
+The parent fetched and fast-forward checked `develop` at `33d3976c5`. The final
+candidate is `98c5eef50`; its only changes after the captured code freeze are prose.
+An independently inspected plan for that candidate against the updated destination
+selects 3,022 ordinary classes and guards. The full selection comes from the example
+paths and the capture helper's fallback classification.
+
+The repository's proportionate-validation exception applies to this presentation
+pass. Production changes are entirely inside the mod: stage composition, drawing,
+menu-audio ownership and cue choices. There is no engine Java, POM, hook, API
+descriptor, signature-pin, sequencer, chart-timing, judgment or protocol change.
+Packaged scene tests directly cover navigation, loading, cancellation, failure,
+pause, retry, results and exit; new checks cover cue priority and audio cleanup.
+The four installed-ROM subsets and native performer placement have fresh rendered
+captures. The remaining destination qualification is the same focused selector on
+updated develop and integrated develop, plus fresh structural guards after integration.
+This replaces a new broad ordinary run for this bounded change; it does not claim
+that the engine's full ordinary suite passed.
+
+The parent also checked all 40 recorded source/resource hashes against both the
+captured commit and final candidate, inspected the subset title tableaux and decoded
+promo scenes, and observed browser playback reach the final frame without a media
+error. Independent `ffprobe` confirms 71.2 seconds, 1920×1080 at 60 fps, stereo AAC
+at 48 kHz and twelve chapters. A complete `ffmpeg -xerror` video/audio decode exited
+zero. The final MP4 SHA-256 is
+`54903ea2ac7d360e24c903b5f21d8dea8eb4cbfabcf4a2d2789f4d98603f875a`.
+
+Updated-base focused comparison at exact `33d3976c5` completed with Maven exit zero
+at 2026-10-08 03:22:41 UTC: fourteen fresh XML suites, 141 tests, zero failures,
+errors or skips. The command was
+`python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestSitarHero*,TestModdingDocumentationLinks,TestModApiSignatureSurface"`
+with all three verified absolute original main ROM filenames as their test properties,
+followed by `test -B`. The parent inspected all 141 testcase identities and statuses;
+this is focused baseline evidence, not a new full-suite baseline.
 
 ## Considered and rejected
 
