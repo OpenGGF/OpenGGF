@@ -342,12 +342,12 @@ the composition did not change those host/input/lifecycle owners.
 
 ### Final category gate and handoff
 
-Final combined change-based validation against the actual published destination
-remains pending. The actual `02796b4c497c3aa887f77a8d8e9697b7009d2b4c` plan selects
+Final combined change-based validation used the actual published destination.
+The `02796b4c497c3aa887f77a8d8e9697b7009d2b4c` plan selects
 3,031 ordinary classes, all categories, plus separate fresh-JVM guards. Tool
-preflight passed with Java21, explicit Lua5.4 and PowerShell; no tests executed.
-The latest measured baseline cost is about109 minutes ordinary plus3.6 minutes
-guards. The candidate invocation uses a150-minute execution cap and10-minute
+preflight passed with Java 21, explicit Lua 5.4 and PowerShell; no tests executed.
+The latest measured baseline cost is about 109 minutes ordinary plus 3.6 minutes
+guards. The candidate invocation used a 150-minute execution cap and 10-minute
 no-output stop; queue waiting is excluded and a timeout means incomplete.
 The qualified published be3 ordinary baseline is red: run
 `20261007T213945Z-2b9d2b4b`, 3,020 selected / 3,018 reports / 26,373 tests,
@@ -362,3 +362,32 @@ not green full-suite evidence or a substitute for this branch's candidate run.
 After that gate, delivery pauses at a clean implementation handoff. The user
 assigned root-owned Opus polish and a separate promo-video stage before the final
 feature push/one PR. This lead does not create duplicate polish/video workers.
+
+Run `20261008T010238Z-67cefaaa` on frozen `decfd1a50` completed: ordinary
+**3,029 reports / 26,416 tests / 28 assertion failures / zero errors / 62 skips**,
+5,205.16 seconds after 446 seconds queue waiting. All 28 complete assertions and
+62 complete first causal skip reasons matched the qualified baseline, with zero
+missing/unmatched/omitted cases or ROM skips. Twenty-seven assertions matched
+literally after exception-prefix stripping; only the known full SSZ assertion
+used the verified blob-identity normalization. Required S3K bootstrap, decoding,
+AIZ-skip and both level-loading classes passed 60 cases without skips. Linux
+Infinite passed 206 of 238 with 32 expected skips; its driver observation passed.
+This is completed ordinary validation with inherited failures, not green evidence.
+
+Separate fresh guards ran 86 reports / 672 tests in 218.78 seconds: two **new task
+guard failures**, zero errors/skips. The singleton closure guard found the probe's
+JDK digest factory imported by wildcard, which its existing owner-scoped exact
+import recognition cannot resolve. The size ratchet found GameLoop at 3,400
+effective lines against its unchanged 3,381 budget. These blocked clean handoff.
+The inspected run diagnostics were acknowledged and deleted; light identity/full
+comparison summaries remain in task scratch, without raw log/XML archives.
+
+Repair uses an exact `MessageDigest` import and extracts exclusive-driver
+readiness checks, no-owner rejection and iteration pause/callback handling into
+the existing `ExclusiveLiveGameDriver`. Conditions, exceptions, callback order,
+try/finally behavior and native iteration/input owners are preserved. No guard,
+budget, public API, timing rule or algorithm is changed. Verification of this
+bounded repair uses affected exclusive-input/native-worker tests, a new compiled
+package/API/SDK check and fresh guards; the completed ordinary and domain checks
+remain attributed to their source. Native isolation/media is rechecked from the
+rebuilt package. Repair verification remains pending.

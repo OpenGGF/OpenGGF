@@ -23,7 +23,9 @@ Steps 1–4 are implemented and observed. The composed package/audio/API focus
 passed 218 tests with zero skips; native host/device and seven-cell isolation
 checks passed. Nine required trace methods ran: six passed and the three S3K
 assertions literally matched the shared clean 2fc baseline. The final combined
-candidate gate is pending; see the [evidence record](../validation/2026-10-07-multigame-prototype.md).
+ordinary run matched all 28 inherited failures and 62 skips. Two fresh structural
+guard failures require a bounded collaborator/import repair and affected checks
+before clean handoff; see the [evidence record](../validation/2026-10-07-multigame-prototype.md).
 
 No public creator API, campaign completion, linked rewind or portable checkpoint
 promise is added by this prototype. Those remain later blueprint gates.

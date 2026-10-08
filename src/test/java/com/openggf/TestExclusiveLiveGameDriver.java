@@ -116,6 +116,35 @@ class TestExclusiveLiveGameDriver {
     }
 
     @Test
+    void iterationCallbacksPreserveFailureAndPausedBoundaries() {
+        var calls = new java.util.ArrayList<String>();
+        var productionFailure = new IllegalStateException("production failure");
+        var afterFailure = new IllegalStateException("after-step failure");
+        try (var driver = ExclusiveLiveGameDriver.acquire(loop)) {
+            Runnable production = () -> {
+                calls.add("production");
+                throw productionFailure;
+            };
+            assertSame(productionFailure, assertThrows(IllegalStateException.class,
+                    () -> driver.runIteration(production, () -> calls.add("after"),
+                            () -> calls.add("presence"))));
+            assertEquals(List.of("production", "after", "presence"), calls);
+            calls.clear();
+            assertSame(afterFailure, assertThrows(IllegalStateException.class,
+                    () -> driver.runIteration(production, () -> {
+                        calls.add("after");
+                        throw afterFailure;
+                    }, () -> calls.add("presence"))));
+            assertEquals(List.of("production", "after"), calls);
+            calls.clear();
+            loop.pause();
+            driver.runIteration(production, () -> calls.add("after"), () -> calls.add("presence"));
+            assertTrue(calls.isEmpty(), "host pause admits no production or completion callbacks");
+            loop.resume();
+        }
+    }
+
+    @Test
     void failedAdapterAdmissionReleasesInputAndIterationOwnership() {
         var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
         registry.register(new com.openggf.game.rewind.RewindSnapshottable<Integer>() {

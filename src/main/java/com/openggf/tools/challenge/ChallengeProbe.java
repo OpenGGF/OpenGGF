@@ -2,7 +2,7 @@ package com.openggf.tools.challenge;
 
 import java.io.*;
 import java.nio.file.*;
-import java.security.*;
+import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.*;
 

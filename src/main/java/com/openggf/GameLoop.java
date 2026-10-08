@@ -435,7 +435,7 @@ public class GameLoop {
     }
 
     public void setInputHandler(InputHandler inputHandler) {
-        requireNoExclusiveLiveDriver();
+        ExclusiveLiveGameDriver.requireNoLiveOwner(engineServices);
         this.inputHandler = inputHandler;
     }
 
@@ -806,7 +806,7 @@ public class GameLoop {
      * Call this method at your target FPS (typically 60fps).
      */
     public void step() {
-        requireNoExclusiveLiveDriver();
+        ExclusiveLiveGameDriver.requireNoLiveOwner(engineServices);
         try {
             TraceSessionLauncher traceSession = TraceSessionLauncher.active();
             int traceFastForwardSteps = traceSession == null
@@ -841,7 +841,7 @@ public class GameLoop {
 
     /** Interactive 60/50 Hz presentation entry; canonical {@link #step()} remains one tick. */
     public void stepPresentationFrame() {
-        requireNoExclusiveLiveDriver();
+        ExclusiveLiveGameDriver.requireNoLiveOwner(engineServices);
         var modeAtStart = resolveGameplayModeContext();
         var levelAtStart = levelManager == null ? null : levelManager.getCurrentLevel();
         boolean paced = canUseGameplayPacing() && GameServices.module() != null;
@@ -1166,39 +1166,13 @@ public class GameLoop {
                 || specialStageObservationPacing != null) {
             throw new IllegalStateException("Exclusive live drive cannot coexist with replay or debug ownership");
         }
-        GameplayModeContext context = resolveGameplayModeContext();
-        if (context == null || !context.isGameplayRuntimeReady()
-                || com.openggf.game.mode.ControlledFrameRuntime.controller(context) != null) {
-            throw new IllegalStateException("Exclusive live drive requires a ready production gameplay session");
-        }
-        for (var work : com.openggf.game.timing.HardwareWorkKind.values()) {
-            if (context.hardwareTiming().admissionPolicyFor(work)
-                    != com.openggf.game.timing.HardwareReadinessAdmissionPolicy.LIVE) {
-                throw new IllegalStateException("Exclusive live drive requires LIVE hardware readiness");
-            }
-        }
-    }
-
-    private void requireNoExclusiveLiveDriver() {
-        if (ExternalFrameOrInputOwnership.liveOwnerActive(engineServices)) {
-            throw new IllegalStateException("Production stepping belongs to an exclusive live driver");
-        }
+        ExclusiveLiveGameDriver.validateGameplayContext(resolveGameplayModeContext());
     }
 
     void runExclusiveLiveIteration(ExclusiveLiveGameDriver driver) {
         if (exclusiveLiveDriver != driver) throw new IllegalStateException("Wrong production iteration owner");
-        if (isPaused()) {
-            driver.hostPaused();
-            return;
-        }
-        // Exactly one native production iteration. No movie observation pump,
-        // user recording fast-forward, module pacing, or physical event loop.
-        try {
-            stepInternal();
-        } finally {
-            runAfterStepMasterTitleLaunchCallbackIfPresent();
-            presenceManager.tick();
-        }
+        driver.runIteration(this::stepInternal, this::runAfterStepMasterTitleLaunchCallbackIfPresent,
+                presenceManager::tick);
     }
 
     private void stepInternal() {
@@ -3826,7 +3800,7 @@ public class GameLoop {
     }
 
     public void restartFromRecordingLaunchContext(RecordingLaunchContext context) {
-        requireNoExclusiveLiveDriver();
+        ExclusiveLiveGameDriver.requireNoLiveOwner(engineServices);
         Objects.requireNonNull(context, "context");
 
         configService.clearSessionOverrides();

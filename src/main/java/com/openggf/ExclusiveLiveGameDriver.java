@@ -7,6 +7,7 @@ import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.GameplayModeContext;
 
 import java.util.Objects;
 
@@ -68,6 +69,39 @@ public final class ExclusiveLiveGameDriver implements AutoCloseable {
                 input.close();
                 throw failure;
             }
+        }
+    }
+
+    static void requireNoLiveOwner(EngineContext services) {
+        if (ExternalFrameOrInputOwnership.liveOwnerActive(services)) {
+            throw new IllegalStateException("Production stepping belongs to an exclusive live driver");
+        }
+    }
+
+    static void validateGameplayContext(GameplayModeContext context) {
+        if (context == null || !context.isGameplayRuntimeReady()
+                || com.openggf.game.mode.ControlledFrameRuntime.controller(context) != null) {
+            throw new IllegalStateException("Exclusive live drive requires a ready production gameplay session");
+        }
+        for (var work : com.openggf.game.timing.HardwareWorkKind.values()) {
+            if (context.hardwareTiming().admissionPolicyFor(work)
+                    != com.openggf.game.timing.HardwareReadinessAdmissionPolicy.LIVE) {
+                throw new IllegalStateException("Exclusive live drive requires LIVE hardware readiness");
+            }
+        }
+    }
+
+    void runIteration(Runnable productionStep, Runnable afterStep, Runnable presenceTick) {
+        if (loop.isPaused()) {
+            hostPaused();
+            return;
+        }
+        // One native iteration; preserve callback order and the production failure boundary.
+        try {
+            productionStep.run();
+        } finally {
+            afterStep.run();
+            presenceTick.run();
         }
     }
 
