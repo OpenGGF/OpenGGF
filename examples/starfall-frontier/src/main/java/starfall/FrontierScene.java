@@ -21,7 +21,7 @@ public final class FrontierScene implements ModScene,DebuggableScene {
     public World world(){return world;}
     public String screen(){return screen;}
     @Override public void enter(SceneContext ctx) {
-        context=ctx;view=new FrontierView(font);existingSave=ctx.storage().read("world.sav").isPresent();
+        context=ctx;view=new FrontierView(font,ctx.art().rom());existingSave=ctx.storage().read("world.sav").isPresent();
         if(ctx.art().rom()!=null)sonic=ctx.art().rom().character("sonic");
         Optional<World> primary=ctx.storage().read("world.sav").flatMap(SaveCodec::decode);
         saved=primary.orElseGet(()->ctx.storage().read("world-backup.sav").flatMap(SaveCodec::decode).orElse(null));
@@ -61,9 +61,12 @@ public final class FrontierScene implements ModScene,DebuggableScene {
         boolean jump=ctx.buttonPressed(SceneButtons.A)||ctx.keyPressed(SceneKeys.W)||ctx.keyPressed(SceneKeys.SPACE);
         boolean drop=ctx.buttonDown(SceneButtons.DOWN)||ctx.keyDown(SceneKeys.S);
         int oldHp=world.hp,oldKills=world.kills,oldQuest=world.quest;
-        world.step(new World.Input(move,jump,drop));dirty=true;saveTimer++;
+        boolean held=ctx.buttonDown(SceneButtons.A)||ctx.keyDown(SceneKeys.W)||ctx.keyDown(SceneKeys.SPACE);
+        boolean takeoff=jump&&world.grounded;
+        world.step(new World.Input(move,jump,drop,held));dirty=true;saveTimer++;
+        if(takeoff)ctx.audio().playSfx(0x62);
         music(ctx,world.enemies.stream().anyMatch(e->e.kind==3)?0x19:world.won?0x15:
-                world.y/World.T>58?0x14:world.x/World.T<88?0x0F:world.x/World.T<170?0x0B:0x13);
+                world.y/World.T>58?0x02:0x01);
         cameraX+=(targetCameraX(ctx)-cameraX)*.12;cameraY+=(targetCameraY()-cameraY)*.12;
         int tx=(int)(world.x/World.T)+(world.facingLeft?-2:2),ty=(int)(world.y/World.T);
         if(drop){tx=(int)(world.x/World.T);ty=(int)((world.y+14)/World.T);}
@@ -78,10 +81,10 @@ public final class FrontierScene implements ModScene,DebuggableScene {
         if(ctx.keyPressed(SceneKeys.H)&&world.heal())ctx.audio().playSfx(0x33);
         boolean mouseWorld=ctx.mouse().inside()&&ctx.mouse().y()>32&&ctx.mouse().y()<180;
         if(ctx.buttonDown(SceneButtons.C)||ctx.keyDown(SceneKeys.F)||mouseWorld&&ctx.mouse().leftDown()) {
-            if(world.use(tx,ty)){ctx.audio().playSfx(world.selected().weapon()?0x62:0x33);}
+            if(world.use(tx,ty)){ctx.audio().playSfx(world.selected().weapon()?0x42:0x3D);}
         }else {world.mining=0;}
         if(mouseWorld&&ctx.mouse().rightDown()&&world.place(tx,ty,world.selected()))ctx.audio().playSfx(0x9E);
-        if(world.hp<oldHp)ctx.audio().playSfx(0x9E);
+        if(world.hp<oldHp)ctx.audio().playSfx(0x37);
         if(world.kills>oldKills||world.quest>oldQuest)ctx.audio().playSfx(0x33);
         if(saveTimer>=1800)save(ctx);
     }
@@ -103,14 +106,14 @@ public final class FrontierScene implements ModScene,DebuggableScene {
             if(ctx.mouse().lastInputWasMouse())cursor=i;if(ctx.mouse().leftPressed())picked=i;
         }
         switch(picked) {
-            case 0 -> {if(saved!=null){world=saved;saved=null;debug=false;screen="PLAY";dirty=false;snapCamera(ctx);music(ctx,0x0F);}else if(existingSave)screen="NEW";else newWorld(ctx);}
+            case 0 -> {if(saved!=null){world=saved;saved=null;debug=false;screen="PLAY";dirty=false;snapCamera(ctx);music(ctx,0x01);}else if(existingSave)screen="NEW";else newWorld(ctx);}
             case 1 -> {if(saved!=null||existingSave)screen="NEW";else newWorld(ctx);}
             case 2 -> help("TITLE");case 3 -> ctx.exitToMasterTitle();default -> { }
         }
     }
     private void newWorld(SceneContext ctx) {
         world=new World(java.util.concurrent.ThreadLocalRandom.current().nextLong());screen="PLAY";
-        saved=null;debug=false;dirty=true;saveTimer=0;snapCamera(ctx);save(ctx);music(ctx,0x0F);
+        saved=null;debug=false;dirty=true;saveTimer=0;snapCamera(ctx);save(ctx);music(ctx,0x01);
     }
     private void help(String from){returnScreen=from;screen="HELP";}
     private void panelInput(SceneContext ctx) {
@@ -184,8 +187,8 @@ public final class FrontierScene implements ModScene,DebuggableScene {
     @Override public void draw(SceneContext ctx,SceneCanvas canvas) {
         view.world(canvas,world,cameraX,cameraY,presentation);
         if(sonic!=null&&(!screen.equals("PLAY")||world.invulnerable%8<5)) {
-            int anim=screen.equals("TITLE")?5:!world.grounded?2:Math.abs(world.vx)>.2?0:5;
-            SceneSprite pose=AnimationSampling.frame(sonic,anim,world.ticks,new AnimationSampling.Timing(0,30,4,1));
+            int anim=screen.equals("TITLE")?5:!world.grounded?2:Math.abs(world.vx)>4?1:Math.abs(world.vx)>.2?0:5;
+            SceneSprite pose=AnimationSampling.frame(sonic,anim,world.ticks,new AnimationSampling.Timing(0,30,Math.max(1,8-(int)Math.abs(world.vx)),1));
             if(pose!=null)canvas.draw(pose,(float)(world.x-cameraX),(float)(world.y+10-cameraY-(pose.height()-pose.originY())*.65),
                     SceneDraw.plain().withScale(.65f).withFlipX(world.facingLeft));
         }

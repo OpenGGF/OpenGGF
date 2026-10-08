@@ -1,7 +1,7 @@
 formatVersion: 1
 id: starfall-frontier
 name: Starfall Frontier
-version: 1.0.0
+version: 1.1.0
 authors:
   - OpenGGF contributors
 description: A Terraria inspired mining and building adventure. Explore three biomes, craft equipment, awaken ancient wardens and restore the Starfall beacon. Original procedural scenery with Sonic and music from your S3K ROM.

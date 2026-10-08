@@ -6,7 +6,9 @@ Integration base: `d740b7a0fadd97b2e7c104d56481a0235bdffb4c` (`develop`).
 Working branch: `feature/ai-starfall-frontier`. The user explicitly requested
 the main checkout instead of a worktree for this task.
 
-## Ownership and implementation
+## Initial delivery (`d9989e68`)
+
+### Ownership and implementation
 
 The adventure registers one S3K startup scene through `ModContext`. Its
 528-pixel display request is part of the registration transaction. There are
@@ -130,3 +132,111 @@ directories and capture saves are temporary and are removed after review.
 The installed jar is the same validator-checked build. Installation enables
 and trusts that exact hash while preserving other local mod entries. It is
 ignored local runtime state; neither the jar nor mod trust state is committed.
+
+
+## Angel Island revision
+
+Revision base: `d9989e68e62dba5fa69b81b37b216badee9940f3`, on the same
+feature branch and checkout. The user's follow-up requests Sonic movement,
+firmer friction, audible sound, and S3K ROM scenery starting with AIZ.
+
+`AngelIslandArt` loads AIZ1 background and foreground through `SceneRomArt`,
+with the native zone palette. The sample bank selects fully opaque grassy
+and brown 16-pixel cells from decoded native flat stages, then caches crops
+for the creator's 12-pixel terrain. It uses no disassembly file as a runtime
+asset. `Obj_AIZ1Tree` supplies trunks from primary level art (VRAM base 1),
+and `Map_AIZForegroundPlant` supplies fronds. `ArtNem_AIZMisc1` / `Map_AIZRock`
+supply cave stone. Runtime requests also load Rhinobot (object DPLC), Monkey
+Dude, Bloominator, monitor, starpost, intro emeralds, rings and RobotnikShip.
+The first three retain the creator enemy AI; the ship represents shrine
+sentinels. Workshop items and material overlays remain authored graphics.
+All ROM images and mapped sets are cached at scene entry, not decoded during
+drawing. Other level biomes are deferred; new worlds generate AIZ grass across
+the surface. Existing snow/ember tags remain readable and render as AIZ.
+
+The flat tile controller now uses `Sonic_Move`, `Sonic_Jump` and
+`Sonic_JumpHeight` as references: $600 running limit, $680 jump impulse,
+$400 released-jump cap, $38 gravity and twice $0C acceleration for air control.
+Ground acceleration is deliberately $18 and neutral friction $40, rather than
+native $0C, to make construction precise. Reverse braking remains $80.
+Air momentum has no artificial drag. A descending spin contact damages and
+bounces off badniks. Run animation pacing follows speed. This does not claim
+native movement parity: slopes, rolling and spindash remain outside this flat
+controller. Held jump is input, not new persistent state, so the version-1
+save contract and item ordinals remain unchanged. Save restoration still
+receives identical forward inputs and reproduces the same model state.
+
+### Audio cause and fix
+
+The original scene called the audio facade, but normal launch enters its
+startup scene before `initializeTitleScreenMode` or level initialization.
+Those stock entry paths attach the base audio profile and ROM; the mod scene
+path omitted that step. A capture harness that first loads a stock level can
+mask the omission. `ModSceneLauncher` now attaches the resolved module's
+profile and ROM before opening a ROM-backed scene. Standalone modules retain
+their creator audio path. This is a bounded startup-registration fix; there
+are no changes to audio synthesis, timing, presentation policy or public API.
+
+`TestModSceneLauncherAudio` deliberately resets audio after loading the ROM,
+then enters the actual production startup launcher. It checks ROM profile
+attachment and nonzero PCM for music, followed by the isolated jump SFX after
+stopping music. The mod now plays AIZ1 at the surface, AIZ2 deep below, boss
+music for sentinels, and cues for jumps, mining, building, weapons and damage.
+
+### Rejected presentation choices
+
+The first flat native floor sample was a solid canopy: it turned soil green.
+The next 128-pixel strip included diagonal cutouts: it made block collision
+look inconsistent. Both were rejected after actual GL captures. Selecting
+fully opaque native material cells preserves the creator's rectangular
+collision silhouette. The initial truncated plant crop also clipped fronds;
+the finished crown uses all native plant rows. Raw trial captures are
+regenerable and replaced by the final capture set.
+
+### Revision validation
+
+The plan against `d9989e68` selects 3,059 ordinary classes and guards because
+external example files and the launcher are unclassified. Proportionate
+focused validation covers the creator rules, production mod host/registration,
+ROM art, the exact cold startup path and the existing outer audio boundary.
+A full engine suite is disproportionate to the isolated scene and startup
+attachment; no engine physics, zone geometry or audio algorithm changed.
+Category preflight with the IDE Maven on PATH still reports Lua version and
+missing PowerShell prerequisites. No broad suite was started or claimed.
+
+Commands (Java 21, IDE Maven directory added to PATH):
+
+```sh
+python3 tools/testing/run_categories.py --base d9989e68e62dba5fa69b81b37b216badee9940f3
+python3 tools/testing/run_categories.py --base d9989e68e62dba5fa69b81b37b216badee9940f3 --preflight
+python3 tools/testing/maven_queue.py --lean -B -q -Dmse=off \
+  '-Dtest=TestStarfallFrontierExample,TestStarfallFrontierScene,TestModSceneLauncherAudio,TestGameLoopAudioPresentationModes' \
+  '-Ds3k.rom.path=<absolute existing root S3K ROM path>' test
+python3 tools/testing/maven_queue.py --lean -B -q -Dmse=off \
+  '-Dtest=TestStarfallFrontierExample,TestStarfallFrontierScene,TestModSceneLauncherAudio,TestModSceneHost,TestModRegistrationRuntime' \
+  '-Ds3k.rom.path=<absolute existing root S3K ROM path>' test
+```
+
+The two initial revision focused invocations each completed 31 outer Jupiter checks with zero
+failures/errors/skips. The creator suite nested inside the example bridge has
+24 passing tests, including acceleration/friction, momentum/air steering,
+high versus short jumps, bounce damage and legacy terrain tags. The final
+ROM scene exercise explicitly draws all three badnik types as well as panels,
+caves and the Egg Mobile. The unchanged outer-audio mode checks ran once.
+The final narrow follow-up reruns the two example bridges after the last
+presentation and badnik coverage edits (3 outer checks plus the nested 24).
+These are focused checks, not a full-suite result.
+
+Final GL footage uses the same detected ROM SHA-1 recorded above, 528 × 224
+at 3×. PNGs, PCM WAV and a short MP4 are in
+`$HOME/OpenGGF-captures/starfall-frontier-aiz`. Surface movement, jumping,
+workshop, pack and sentinel chambers were inspected. The captured WAV peaks
+at 6,674 / 32,767. PCM capture proves synthesized content and cue timing, not
+physical speaker latency or a complete encounter-balance playthrough.
+The local jar is rebuilt, enabled and trusted by exact hash; users must restart
+the JVM to load both the jar and the engine startup audio fix.
+
+The delivery also queued `maven_queue.py -B -q -Dmse=off -DskipTests package`
+to refresh the local development engine jars with the startup fix. Packaging
+completed; tests were intentionally skipped in that packaging command. The
+installed mod SHA-256 is `25bfcfcbaab5af137f677ce387fdfd619405cfe38eaf4c4a4c0fdf3f84303344`.

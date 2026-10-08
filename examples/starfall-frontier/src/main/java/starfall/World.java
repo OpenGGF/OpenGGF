@@ -25,7 +25,9 @@ public final class World {
     public boolean grounded, facingLeft, won;
     public String notice="Welcome to the frontier. Chop a tree to begin.";
     public int noticeTicks=300;
-    public record Input(int move,boolean jump,boolean drop) { }
+    public record Input(int move,boolean jump,boolean drop,boolean jumpHeld) {
+        public Input(int move,boolean jump,boolean drop){this(move,jump,drop,jump);}
+    }
     public static final class Enemy {
         public double x,y,vx,vy;
         public int kind,hp,maxHp,timer,hit,shrine=-1;
@@ -68,7 +70,7 @@ public final class World {
         for(int tx=0;tx<W;tx++) for(int ty=0;ty<H;ty++) {
             int s=surface(tx),v=AIR;
             if(ty>=s) {
-                v=ty==s?(tx<88?GRASS:tx<170?SNOW:EMBER):ty<s+5?DIRT:STONE;
+                v=ty==s?GRASS:ty<s+5?DIRT:STONE;
                 if(ty>s+5) {
                     double cave=Math.sin(tx*.18+Math.sin(ty*.12)*3)+Math.cos(ty*.21+Math.sin(tx*.08)*2);
                     if(cave>1.0) v=AIR;
@@ -116,7 +118,7 @@ public final class World {
     private void tree(int tx,int base,int height) {
         for(int ty=base-height;ty<=base;ty++) set(tx,ty,LOG);
         for(int a=-3;a<=3;a++) for(int b=-2;b<=2;b++)
-            if(a*a+b*b<12&&tile(tx+a,base-height+b)==AIR) set(tx+a,base-height+b,LEAVES);
+            if(tile(tx+a,base-height+b)==AIR) set(tx+a,base-height+b,LEAVES);
     }
     public boolean inside(int tx,int ty) { return tx>0&&tx<W-1&&ty>=0&&ty<H-2; }
     public int tile(int tx,int ty) { return tx<0||tx>=W||ty>=H?BEDROCK:ty<0?AIR:Byte.toUnsignedInt(tiles[ty*W+tx]); }
@@ -147,15 +149,24 @@ public final class World {
         ticks++;if(noticeTicks>0)noticeTicks--;if(invulnerable>0)invulnerable--;
         if(actionCooldown>0)actionCooldown--;if(healCooldown>0)healCooldown--;
         if(ticks%12==0) mana=Math.min(100,mana+1);
-        double target=input.move*2.1;
-        vx+=(target-vx)*.3;if(input.move!=0)facingLeft=input.move<0;
-        if(input.jump&&grounded) {vy=-5.4;grounded=false;}
-        vy=Math.min(7,vy+.24);
+        // S3K Sonic_Move / Sonic_Jump / Sonic_JumpHeight: $600 cap, $680 jump,
+        // $400 released-jump cap, $38 gravity. Creator terrain has no native slopes.
+        // Ground acceleration ($18) and friction ($40) deliberately exceed native $0C
+        // for precise mining/building; air control retains twice native acceleration.
+        if(input.move!=0) {
+            facingLeft=input.move<0;
+            double acceleration=grounded?(Math.signum(vx)==-input.move?.5:24/256.0):24/256.0;
+            if(Math.abs(vx)<6||Math.signum(vx)!=input.move)vx=Math.max(-6,Math.min(6,vx+input.move*acceleration));
+        }else if(grounded)vx=approachZero(vx,64/256.0);
+        if(input.jump&&grounded) {vy=-6.5;grounded=false;}
+        if(!input.jumpHeld&&vy<-4)vy=-4;
+        vy=Math.min(16,vy+56/256.0);
         movePlayer(vx,0,input.drop);grounded=false;movePlayer(0,vy,input.drop);
         if(ticks%45==0&&hp<maxHp&&(sheltered()||enemies.isEmpty())) hp=Math.min(maxHp,hp+1);
         if(ticks%210==0&&enemies.size()<18) spawnEnemy();
         updateEnemies();updateShots();if(hp<=0)respawn();updateParticles();reveal();if(ticks%30==0)advanceQuests();
     }
+    private double approachZero(double value,double amount){return Math.copySign(Math.max(0,Math.abs(value)-amount),value);}
     private void movePlayer(double dx,double dy,boolean drop) {
         int steps=(int)Math.ceil(Math.max(Math.abs(dx),Math.abs(dy)));if(steps==0)return;
         double sx=dx/steps,sy=dy/steps;
@@ -219,7 +230,7 @@ public final class World {
         if(t==LOG||t==LEAVES) {
             if(tool!=AXE){say("Use the axe to fell trees.");return false;}
         }else if(t==IRON&&tier<1){say("Iron needs a copper pick.");return false;}
-        else if(t==CRYSTAL&&tier<2){say("Moon crystal needs an iron pick.");return false;}
+        else if(t==CRYSTAL&&tier<2){say("Chaos shards need an iron pick.");return false;}
         if(t==CHEST||t==BUSH){interact(tx,ty);return true;}
         if(miningX!=tx||miningY!=ty){miningX=tx;miningY=ty;mining=0;}
         mining++;
@@ -276,15 +287,15 @@ public final class World {
         if(t==SHRINE) {
             int which=-1;for(int n=0;n<3;n++)if(tx==shrineX[n]&&ty==shrineY[n]-1)which=n;
             if(which<0)return false;
-            if((wardens&(1<<which))!=0){say("This warden's star fragment is already yours.");return false;}
-            if(enemies.stream().anyMatch(e->e.kind==3)){say("A warden is already awake.");return false;}
-            if(!take(SIGIL,1)){say("Craft a warden sigil at an anvil first.");return false;}
+            if((wardens&(1<<which))!=0){say("This sentinel's emerald fragment is already yours.");return false;}
+            if(enemies.stream().anyMatch(e->e.kind==3)){say("A sentinel is already awake.");return false;}
+            if(!take(SIGIL,1)){say("Craft a sentinel sigil at an anvil first.");return false;}
             Enemy boss=new Enemy(tx*T+6,(ty-3)*T,3);boss.shrine=which;enemies.add(boss);
-            say("THE "+new String[]{"MOSS","FROST","EMBER"}[which]+" WARDEN AWAKENS!");return true;
+            say("THE "+new String[]{"JUNGLE","RUINS","CORE"}[which]+" SENTINEL AWAKENS!");return true;
         }
         if(Math.abs(tx-40)<3&&Math.abs(ty-27)<4) {
             if(Integer.bitCount(wardens)==3&&take(BEACON,1)){won=true;quest=7;say("The beacon shines. The frontier is yours.");burst(x,y,0xFFEBD7A0,70);return true;}
-            say("The beacon needs a starlight core. Seek three shrine wardens.");return false;
+            say("The beacon needs a starlight core. Seek three shrine sentinels.");return false;
         }
         return false;
     }
@@ -303,7 +314,7 @@ public final class World {
         facingLeft=dx<0;
         if(weapon==BOW||weapon==STAFF) {
             if(weapon==BOW&&!take(ARROW,1)){say("Craft arrows at the workbench.");return false;}
-            if(weapon==STAFF&&mana<12){say("Moonfire is recharging.");return false;}
+            if(weapon==STAFF&&mana<12){say("Chaos energy is recharging.");return false;}
             if(weapon==STAFF)mana-=12;
             shots.add(new Shot(x,y,dx/len*5,dy/len*5,weapon==STAFF?26:17,false,weapon==STAFF));actionCooldown=weapon==STAFF?18:24;
         }else {
@@ -317,7 +328,7 @@ public final class World {
     private void damage(Enemy e,int amount) {
         e.hp-=amount;e.hit=8;e.vx=(e.x<x?-1:1)*2.8;popup(e.x,e.y-12,""+amount,0xFFFFD395);
         if(e.hp<=0){burst(e.x,e.y,0xFF9FDFBC,18);add(GEL,e.kind==3?12:2);kills++;
-            if(e.kind==3){wardens|=1<<e.shrine;add(RELIC,1);add(Content.Item.CRYSTAL,6);add(HEART,1);say("Warden defeated! A star fragment and heartstone are yours.");}
+            if(e.kind==3){wardens|=1<<e.shrine;add(RELIC,1);add(Content.Item.CRYSTAL,6);add(HEART,1);say("Sentinel defeated! An emerald fragment and heartstone are yours.");}
             else if(random(4)==0)add(BERRY,1);
         }
     }
@@ -334,7 +345,7 @@ public final class World {
         enemies.removeIf(e->e.kind==3);shots.clear();say("Rescued at camp. Your backpack and world are safe.");
     }
     public boolean recall() {
-        if(enemies.stream().anyMatch(e->e.kind==3)){say("Defeat the warden or flee first.");return false;}
+        if(enemies.stream().anyMatch(e->e.kind==3)){say("Defeat the sentinel or flee first.");return false;}
         respawn();respawns--;say("Returned to the camp beacon.");return true;
     }
     private void spawnEnemy() {
@@ -383,7 +394,10 @@ public final class World {
                 else {e.vy=0;if(e.timer%55==0)e.vy=-3.7;}
             }
             e.x=Math.max(12,Math.min((W-1)*T,e.x));e.y=Math.max(8,Math.min((H-1)*T,e.y));
-            if(Math.hypot(e.x-x,e.y-y)<(e.kind==3?22:15))hurt(e.kind==3?20:e.kind==2?14:9,e.x);
+            if(Math.hypot(e.x-x,e.y-y)<(e.kind==3?22:15)) {
+                if(!grounded&&vy>0&&y<e.y-3&&e.hit==0) {damage(e,25);vy=-4;}
+                else if(e.hit==0)hurt(e.kind==3?20:e.kind==2?14:9,e.x);
+            }
         }
         enemies.removeIf(e->e.hp<=0||e.kind!=3&&Math.abs(e.x-x)>480||e.y>H*T);
     }
@@ -420,7 +434,7 @@ public final class World {
         }
     }
     private boolean hasTile(int tile) {for(byte t:tiles)if(t==tile)return true;return false;}
-    public String biome() {return y/T>58?"MOONGLASS DEPTHS":y/T>surface((int)x/T)+7?"THE HOLLOW":x/T<88?"VERDANT REACH":x/T<170?"FROSTVEIL":"EMBER WILDS";}
+    public String biome() {return y/T>58?"ANGEL ISLAND / RUINS":y/T>surface((int)x/T)+7?"ANGEL ISLAND / CAVERNS":"ANGEL ISLAND / JUNGLE";}
     public static int color(int tile) {return 0xFF000000|switch(tile) {
         case DIRT -> 0x89674E;case GRASS -> 0x709C61;case STONE -> 0x697789;case COPPER -> 0xC48766;
         case IRON -> 0xA5B9C3;case CRYSTAL -> 0x74CED7;case LOG -> 0x967044;case LEAVES -> 0x528465;

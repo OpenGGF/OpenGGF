@@ -25,6 +25,14 @@ class TestStarfallFrontierScene {
             harness.input().handleKeyEvent(GLFW_KEY_RIGHT,GLFW_PRESS);
             for(int i=0;i<90;i++)harness.tick();
             harness.input().handleKeyEvent(GLFW_KEY_RIGHT,GLFW_RELEASE);harness.tick();
+            Object world=harness.scene().getClass().getMethod("world").invoke(harness.scene());
+            var type=world.getClass();
+            @SuppressWarnings("unchecked") var foes=(java.util.List<Object>)type.getField("enemies").get(world);
+            var enemy=type.getClassLoader().loadClass("starfall.World$Enemy").getConstructor(double.class,double.class,int.class);
+            double x=type.getField("x").getDouble(world),y=type.getField("y").getDouble(world);
+            for(int kind=0;kind<3;kind++)foes.add(enemy.newInstance(x+35+kind*22,y,kind));
+            for(int i=0;i<30;i++){harness.tick();harness.host().draw(null,null);}
+
             for(String command:List.of("craft","inventory","journal","map","cavern","warden","victory")) {
                 assertTrue(harness.debugJump(command));for(int i=0;i<15;i++)harness.tick();
                 harness.host().draw(null,null);

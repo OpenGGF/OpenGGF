@@ -4,26 +4,36 @@ A Terraria inspired mining, crafting and building adventure for OpenGGF's
 unpublished **Mod API 0.7 candidate**, played as Sonic using your Sonic 3 &
 Knuckles ROM. Java 21 and the matching development JVM build are required.
 
-An ancient beacon has fallen silent. Settle in the Verdant Reach, explore
-Frostveil and the Ember Wilds, descend into the Moonglass Depths, and recover
-three star fragments from the Moss, Frost and Ember Wardens. Restore the
-beacon, then keep expanding your world.
+An ancient beacon on **Angel Island** has fallen silent. Run through the palm
+jungle, mine beneath the island, gather power rings and chaos shards, and
+recover three emerald fragments from Eggman's shrine sentinels. Restore the
+beacon, then keep expanding your world. Angel Island is the first biome;
+other Sonic zones are reserved for future biome work.
 
 The seeded world is 256 × 96 tiles with caves, three shrine chambers, buried
-treasure, surface berries, trees and copper, iron and moon crystal deposits.
+treasure, surface berries, trees and copper, iron and chaos shard deposits.
 There are 32 inventory items and 18 recipes: three pick tiers, an axe, two
 swords, a bow and arrows, a regenerating magic staff, armor, potions,
 heartstones, building materials and crafting stations. Seven quest stages
-guide the progression. The wardens warn before attacks: Moss fires a fan,
-Frost sends a ring of shots, and Ember fires faster volleys and lunges.
+guide the progression. The shrine sentinels warn before attacks: Jungle fires a fan,
+Ruins sends a ring of shots, and Core fires faster volleys and lunges.
 
-Original pixel scenery includes layered mountains, drifting clouds, biome
-colors, lantern halos, crystal sparkles, a day/night sky, hit flashes and
-floating resource/damage messages. Sonic's art, animations, music and effects
-are decoded from your ROM at runtime. The jar contains original code and a
-text font shared with the other creator examples; it contains no Terraria or
-Sega artwork, music or ROM bytes. Terraria inspires the game loop; this is an
-independent, finite solo adventure rather than a Terraria content port.
+Angel Island's parallax background, grassy earth, rocks, palm trunks and
+foliage are decoded from your ROM. Rhinobots, Monkey Dudes and Bloominators
+represent the foes; monitors hold caches, starposts mark camp and shrines,
+and an Egg Mobile represents each sentinel. Rings and emerald sprites also
+appear in the pack. Crafting equipment, material highlights, lighting and
+menus remain original creator visuals. The jar contains code and a text font,
+with no bundled Sega or Terraria assets.
+
+Movement uses Sonic's six-pixel running limit, 6.5-pixel jump impulse,
+variable jump height, air control and momentum. Ground acceleration and
+friction are intentionally stronger for mining and building. Descending onto
+a badnik deals spin damage and bounces Sonic upward. This is a flat tile-world
+controller; native slope physics, rolling and spindash are not implemented.
+Angel Island Act 1 music plays at the surface, Act 2 in the deep ruins, and
+boss music during encounters. Jumping, mining, attacks and damage have ROM
+sound effects. Startup now attaches ROM audio before entering the mod scene.
 
 ## Build, install and launch
 
@@ -56,8 +66,8 @@ python3 examples/build_example.py starfall-frontier --skip-engine --run --s3k /a
 
 | Input | Action |
 | --- | --- |
-| Arrows or A / D | Move |
-| Space, W or pad A | Jump |
+| Arrows or A / D | Accelerate, run and brake |
+| Space, W or pad A | Jump; hold for height, release for a short hop |
 | Mouse | Aim at a tile or enemy |
 | Hold left mouse, F or pad C | Mine, chop, attack, build or consume the selected item |
 | Hold right mouse | Place the selected building material |
@@ -94,9 +104,9 @@ Menus freeze the simulation.
 5. Mine iron below the copper. Smelt ingots, build an anvil, and forge the iron
    pick. Pick upgrades replace slot 1 automatically; the iron sword replaces
    slot 3. Other crafted items are assigned through the backpack.
-6. Collect moon crystals in the deeper caves. Forge sigils at your anvil and
-   offer one at each shrine. Seek the shrines beneath the forest, the snow
-   biome and the eastern ember biome. Your map records discoveries.
+6. Collect chaos shards in the deeper caves. Forge sigils at your anvil and
+   offer one at each shrine. Seek the shrines beneath the western jungle, ancient
+   groves and eastern highlands. Your map records discoveries.
 7. Forge a starlight core from all three fragments, 12 crystals and 6 iron
    ingots. Return to the camp beacon and interact to restore it.
 
@@ -117,6 +127,10 @@ available from pause when a warden is not active.
 
 ## Saves and validation
 
+Version 1 worlds remain compatible: existing terrain, resources and quests
+are retained, including former snow/ember terrain tags, now drawn as AIZ.
+New worlds generate Angel Island grass throughout.
+
 One world is saved automatically after every 30 seconds of active simulation,
 on save-and-return, and on scene exit. The engine keeps it under
 `saves/mods/starfall-frontier/world.sav`, with `world-backup.sav` holding the
@@ -132,11 +146,12 @@ tiers, tree harvesting, station/cost rules, placement, shelter, weapons,
 healing, death, shrine rewards, quest progression, bounded saves and forward
 replay after save restoration. Production scene tests cover packaged loading,
 panels, pause, draw purity, save recovery and debug isolation. The engine bridge
-also checks actual ROM-backed character rendering and every major screen:
+also checks ROM terrain/characters and every major screen; a cold production
+startup regression verifies both music and the isolated jump effect in PCM:
 
 ```sh
 python3 tools/testing/maven_queue.py --lean -Dmse=off \
-  '-Dtest=TestStarfallFrontierExample,TestStarfallFrontierScene' \
+  '-Dtest=TestStarfallFrontierExample,TestStarfallFrontierScene,TestModSceneLauncherAudio' \
   '-Ds3k.rom.path=/absolute/path/to/sonic3k.gen' test
 ```
 

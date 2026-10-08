@@ -30,6 +30,37 @@ class WorldTest {
         for(int i=0;i<24;i++)w.step(new World.Input(1,false,false));
         assertTrue(w.x>43*12);assertTrue(w.y<29*12-10);
     }
+    @Test void sonicMomentumHasFirmFrictionAndAirControlWithoutAirDrag() {
+        World w=blank();w.grounded=true;
+        w.step(new World.Input(1,false,false));assertEquals(24/256.0,w.vx,1e-9);
+        for(int i=0;i<70;i++)w.step(new World.Input(1,false,false));assertEquals(6,w.vx,1e-9);
+        w.step(new World.Input(-1,false,false));assertEquals(5.5,w.vx,1e-9);
+        for(int i=0;i<24;i++)w.step(new World.Input(0,false,false));assertEquals(0,w.vx,1e-9);
+        w.step(new World.Input(1,true,false,true));double momentum=w.vx;
+        w.step(new World.Input(0,false,false,true));assertEquals(momentum,w.vx,1e-9);
+        w.step(new World.Input(-1,false,false,true));assertEquals(momentum-24/256.0,w.vx,1e-9);
+    }
+    @Test void holdingJumpGoesHigherAndDescendingSpinAttackBouncesOffBadnik() {
+        World shortJump=blank(),highJump=blank();shortJump.grounded=highJump.grounded=true;
+        shortJump.step(new World.Input(0,true,false,true));highJump.step(new World.Input(0,true,false,true));
+        assertEquals(-6.5+56/256.0,highJump.vy,1e-9);
+        double shortTop=shortJump.y,highTop=highJump.y;
+        for(int i=0;i<32;i++) {
+            shortJump.step(new World.Input(0,false,false,false));highJump.step(new World.Input(0,false,false,true));
+            shortTop=Math.min(shortTop,shortJump.y);highTop=Math.min(highTop,highJump.y);
+        }
+        assertTrue(highTop<shortTop-30);
+        World w=blank();w.y-=20;w.vy=2;World.Enemy e=new World.Enemy(w.x,w.y+12,0);w.enemies.add(e);
+        int hp=w.hp;w.step(new World.Input(0,false,false));assertEquals(1,w.kills);assertEquals(hp,w.hp);assertEquals(-4,w.vy);
+    }
+    @Test void newWorldIsAnAngelIslandBiomeAndLegacyTerrainTagsStillDecode() {
+        World w=new World(73);
+        assertTrue(w.biome().startsWith("ANGEL ISLAND"));
+        for(byte tile:w.tiles){assertNotEquals(World.SNOW,tile);assertNotEquals(World.EMBER,tile);}
+        w.set(100,30,World.SNOW);w.set(180,30,World.EMBER);
+        World restored=SaveCodec.decode(SaveCodec.encode(w)).orElseThrow();
+        assertEquals(World.SNOW,restored.tile(100,30));assertEquals(World.EMBER,restored.tile(180,30));
+    }
     @Test void oneWayPlatformsCatchFallingPlayerAndAllowDownwardDrop() {
         World w=blank();w.set(40,27,World.PLATFORM);w.x=40*12+6;w.y=25*12;w.vy=3;
         for(int i=0;i<20;i++)w.step(new World.Input(0,false,false));

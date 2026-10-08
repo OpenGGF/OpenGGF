@@ -1,15 +1,16 @@
 package starfall;
 
-import com.openggf.mods.scene.SceneCanvas;
+import com.openggf.mods.scene.*;
 import com.openggf.mods.ui.AtlasFont;
 import static starfall.World.*;
 
-/** Original pixel scenery, deterministic tile detailing and compact, mouse-readable panels. */
+/** Angel Island ROM scenery over a mutable creator world, with compact workshop panels. */
 public final class FrontierView {
-    private static final int INK=0xFF142332, PANEL=0xF21B2C3C, EDGE=0xFF506673,
-            TEXT=0xFFE2E6D6, MUTED=0xFF9BACB0, GOLD=0xFFEBC78C, MINT=0xFFA7DBC2;
+    private static final int INK=0xFF10184C, PANEL=0xF2182860, EDGE=0xFF4080B0,
+            TEXT=0xFFFFFFFF, MUTED=0xFFA8C8F8, GOLD=0xFFFFDA28, MINT=0xFF80F860;
     private final AtlasFont font;
-    public FrontierView(byte[] bytes){font=AtlasFont.parse(bytes,5);}
+    private final AngelIslandArt art;
+    public FrontierView(byte[] bytes,SceneRomArt rom){font=AtlasFont.parse(bytes,5);art=rom==null?null:new AngelIslandArt(rom);}
     private void text(SceneCanvas c,String s,int x,int y,int color){font.draw(c,s,x,y,color,1);}
     private void center(SceneCanvas c,String s,int x,int y,int color,int scale){font.draw(c,s,x-font.width(s)*scale/2,y,color,scale);}
     private void box(SceneCanvas c,int x,int y,int w,int h){c.fill(x+2,y+3,w,h,0x50000000);c.fill(x,y,w,h,EDGE);c.fill(x+1,y+1,w-2,h-2,PANEL);c.fill(x+2,y+2,w-4,1,0xFF677C80);}
@@ -20,6 +21,7 @@ public final class FrontierView {
         int width=c.width();
         double day=(Math.sin(w.ticks/21600.0*Math.PI*2)+1)*.5;
         double deep=Math.max(0,Math.min(1,(cameraY-300)/150));
+        if(art==null) {
         int sky=mix(0x20344C,w.x/T<88?0x92BFC2:w.x/T<170?0xA9C6D9:0xCB9D9E,day*.85);
         for(int y=0;y<224;y+=4)c.fill(0,y,width,4,mix(mix(sky,0x182838,deep),mix(0xE2C9A2,0x263B49,deep),y/224.0));
         if(deep<.7) {
@@ -47,6 +49,11 @@ public final class FrontierView {
                 c.fill(px+8,py-2,26,4,0x36FFF0CB);c.fill(px,py,48,4,0x36FFF0CB);
             }
         }
+        }else {
+            c.clear(0x243868);
+            if(deep<.95)c.drawBackdrop(art.backdrop,Math.min(256,art.backdrop.image().height()-224),cameraX,w.ticks);
+            if(deep>.05)c.fill(0,0,width,224,(int)(deep*220)<<24|0x081830);
+        }
         int x0=Math.max(0,(int)cameraX/T-1),x1=Math.min(W-1,(int)(cameraX+width)/T+1);
         int y0=Math.max(0,(int)cameraY/T-1),y1=Math.min(H-1,(int)(cameraY+224)/T+1);
         for(int ty=y0;ty<=y1;ty++)for(int tx=x0;tx<=x1;tx++) {
@@ -59,9 +66,12 @@ public final class FrontierView {
         }
         // The camp's beacon is independent of breakable terrain.
         int bx=(int)(40*T+6-cameraX),by=(int)(w.surface(40)*T-cameraY);
+        if(art!=null)art.sprite(c,art.starpost,w.won?2:0,bx,by,.75f,false);
+        else {
         c.fill(bx-9,by-3,18,3,0xFF6C7C87);c.fill(bx-6,by-6,12,3,0xFF9AA7A4);
         c.fill(bx-3,by-27,6,21,0xFF89998F);c.fill(bx-6,by-28,12,3,0xFFCAD0B8);
         diamond(c,bx,by-34,7,w.won?0xFFD8F5C5:0xFF95BEB8);c.fill(bx-2,by-38,2,4,0xFFDEEBDD);
+        }
         if(w.won) {glow(c,bx,by-34,0x18FFE7A2);c.fill(bx-1,0,2,Math.max(0,by-38),0x45FFE2A6);}
         for(World.Enemy e:w.enemies)enemy(c,e,(int)(e.x-cameraX),(int)(e.y-cameraY),tick);
         for(World.Shot s:w.shots) {
@@ -93,6 +103,32 @@ public final class FrontierView {
     }
     private void tile(SceneCanvas c,World w,int tx,int ty,int sx,int sy,int t,int tick) {
         if(t==AIR)return;
+        if(art!=null) {
+            if(solid(t)&&t!=PLANK) {
+                c.fill(sx,sy,T,T,t==STONE||t==BEDROCK?0xFF704838:0xFF985020);
+                art.ground(c,tx,ty,sx,sy,!solid(w.tile(tx,ty-1)),t==STONE||t==BEDROCK);
+                if(t==COPPER||t==IRON||t==CRYSTAL) {
+                    // Resources are creator materials, over the original AIZ rock faces.
+                    diamond(c,sx+6,sy+6,3,t==COPPER?0xFFFFB840:t==IRON?0xFFD8E8FF:0xFF40FFE0);
+                    c.fill(sx+5,sy+3,1,3,0xFFFFFFFF);
+                }
+                return;
+            }
+            if(t==LOG){c.drawRegion(art.trunk,0,0,16,16,sx+2,sy,8,T,SceneDraw.plain());return;}
+            if(t==LEAVES) {
+                // Map each surviving foliage cell to the palm crown; mining edits remain visible.
+                int root=tx;
+                for(int a=-3;a<=3;a++)for(int b=-2;b<=2;b++)if(w.tile(tx+a,ty+b)==LOG&&w.tile(tx+a,ty+b-1)!=LOG)root=tx+a;
+                int top=ty;
+                for(int b=-2;b<=2;b++)if(w.tile(root,ty+b)==LOG&&w.tile(root,ty+b-1)!=LOG)top=ty+b;
+                int col=Math.max(0,Math.min(6,tx-root+3)),row=Math.max(0,Math.min(4,ty-top+2));
+                c.drawRegion(art.canopy,col*9,row*18,9,18,sx,sy,T,T,SceneDraw.plain());return;
+            }
+            if(t==CHEST){art.sprite(c,art.monitor,0,sx+6,sy+12,.6f,false);return;}
+            if(t==SHRINE){art.sprite(c,art.starpost,0,sx+6,sy+12,.65f,false);art.sprite(c,art.emerald,(tx/20)%7,sx+6,sy-10,1.2f,false);return;}
+            if(t==BUSH){c.draw(art.canopy,sx-1,sy-2,SceneDraw.plain().withScale(.24f));return;}
+        }
+
         int color=World.color(t),h=hash(tx,ty);
         if(solid(t)) {
             c.fill(sx,sy,T,T,color);c.fill(sx,sy+T-2,T,2,shade(color,.73));c.fill(sx+T-1,sy,1,T,shade(color,.8));
@@ -132,6 +168,18 @@ public final class FrontierView {
         }
     }
     private void enemy(SceneCanvas c,World.Enemy e,int x,int y,int tick) {
+        if(art!=null) {
+            if(e.kind==3) {
+                c.draw(art.ship.frame(5),x,y,SceneDraw.plain().withScale(.6f));
+                c.draw(art.ship.frame(e.hit>0?2:0),x,y-10,SceneDraw.plain().withScale(.6f));
+                if(e.hit>0)c.fill(x-12,y-18,24,30,0x44FFFFFF);
+            }else {
+                SceneSpriteSet set=e.kind==0?art.rhinobot:e.kind==1?art.monkeys:art.blooms;
+                art.sprite(c,set,e.kind==0?(tick/6)%4:(tick/12)%2,x,y+6,.6f,e.vx<0);
+            }
+            if(e.hp<e.maxHp){c.fill(x-11,y-24,22,2,INK);c.fill(x-11,y-24,22*e.hp/e.maxHp,2,GOLD);}
+            return;
+        }
         int color=e.hit>0?0xFFFFF7D8:e.kind==3?new int[]{0xFF92B693,0xFFA5CCD7,0xFFD79177}[Math.max(0,e.shrine)]:e.kind==1?0xFFB1ACD0:e.kind==2?0xFFA5C5C8:0xFF8EB9A3;
         if(e.kind==3) {
             glow(c,x,y,0x188CDDCF);diamond(c,x,y,19,shade(color,.62));diamond(c,x,y,13,color);
@@ -155,7 +203,7 @@ public final class FrontierView {
     private void glow(SceneCanvas c,int x,int y,int color) {disk(c,x,y,24,color);disk(c,x,y,15,color);disk(c,x,y,8,color);}
     public void title(SceneCanvas c,int cursor,boolean saved,int tick,String status) {
         c.fill(0,0,c.width(),224,0x45202B38);
-        center(c,"A WORLD WAITING TO BE UNEARTHED",c.width()/2,25,0xFFDFE8CC,1);
+        center(c,"ANGEL ISLAND EXPLORATION & CRAFTING",c.width()/2,25,0xFFDFE8CC,1);
         center(c,"STARFALL",c.width()/2+2,44,0xFF213F48,4);
         center(c,"STARFALL",c.width()/2,42,0xFFF1D6A3,4);
         center(c,"F R O N T I E R",c.width()/2,77,0xFFBAE0CA,2);
@@ -171,7 +219,7 @@ public final class FrontierView {
         box(c,8,7,126,26);text(c,"VITALITY",15,12,MUTED);text(c,w.hp+" / "+w.maxHp,69,12,TEXT);
         c.fill(15,23,110,4,0xFF34434C);c.fill(15,23,110*w.hp/w.maxHp,4,0xFFDBA39D);
         c.fill(15,29,110,1,0xFF34434C);c.fill(15,29,110*w.mana/100,1,0xFF9ACDDA);
-        text(c,w.biome(),145,10,TEXT);text(c,(w.sheltered()?"SHELTERED":"DAY "+(1+w.ticks/21600))+"  |  DEPTH "+Math.max(0,(int)w.y/T-w.surface((int)w.x/T)),145,21,MUTED);
+        box(c,142,7,208,26);text(c,w.biome(),148,12,TEXT);text(c,(w.sheltered()?"SHELTERED":"DAY "+(1+w.ticks/21600))+"  |  DEPTH "+Math.max(0,(int)w.y/T-w.surface((int)w.x/T)),148,23,MUTED);
         box(c,c.width()-170,7,162,30);
         text(c,w.quest<7?"QUEST "+(w.quest+1)+" / 7":"STARLIGHT RESTORED",c.width()-162,12,GOLD);
         text(c,w.quest<7?w.content.questNames.get(w.quest).toUpperCase():"KEEP EXPLORING AND BUILDING",c.width()-162,23,TEXT);
@@ -194,7 +242,7 @@ public final class FrontierView {
             if(w.mining>0){c.fill(tx,ty+14,12,2,INK);c.fill(tx,ty+14,Math.min(12,w.mining/2),2,GOLD);}
         }
         for(World.Enemy e:w.enemies)if(e.kind==3) {
-            box(c,c.width()/2-110,42,220,22);center(c,new String[]{"MOSS WARDEN","FROST WARDEN","EMBER WARDEN"}[e.shrine],c.width()/2,46,GOLD,1);
+            box(c,c.width()/2-110,42,220,22);center(c,new String[]{"EGGMAN / JUNGLE SENTINEL","EGGMAN / RUINS SENTINEL","EGGMAN / CORE SENTINEL"}[e.shrine],c.width()/2,46,GOLD,1);
             c.fill(c.width()/2-102,57,204,3,INK);c.fill(c.width()/2-102,57,204*e.hp/e.maxHp,3,0xFFDBA39D);
         }
     }
@@ -238,8 +286,8 @@ public final class FrontierView {
             text(c,(i+1)+". "+w.content.questNames.get(i).toUpperCase(),67,y,i<=w.quest?GOLD:MUTED);
             text(c,w.content.questText.get(i).toUpperCase(),67,y+9,i==w.quest?TEXT:MUTED);
         }
-        text(c,"WARDENS "+Integer.bitCount(w.wardens)+" / 3   BUILT "+w.blocksPlaced+"   FOES "+w.kills,54,190,MINT);
-        if(w.won){c.fill(43,31,442,21,0xFF466558);center(c,"THE STARS HAVE COME HOME",264,38,0xFFFFE4AE,1);}
+        text(c,"SENTINELS "+Integer.bitCount(w.wardens)+" / 3   BUILT "+w.blocksPlaced+"   FOES "+w.kills,54,190,MINT);
+        if(w.won){c.fill(43,31,442,21,0xFF466558);center(c,"ANGEL ISLAND SHINES AGAIN",264,38,0xFFFFE4AE,1);}
     }
     public void map(SceneCanvas c,World w) {
         c.fill(0,0,c.width(),224,0xEE132331);text(c,"ATLAS OF THE FRONTIER",12,10,GOLD);text(c,"M / B: CLOSE",430,10,MUTED);
@@ -251,7 +299,7 @@ public final class FrontierView {
         for(int i=0;i<3;i++)if(w.seen[(w.shrineY[i]-1)*W+w.shrineX[i]]>0)diamond(c,left+(int)(w.shrineX[i]*scale),top+(int)(w.shrineY[i]*scale),3,(w.wardens&(1<<i))!=0?MINT:GOLD);
         diamond(c,left+(int)(40*scale),top+(int)(w.surface(40)*scale),3,MINT);
         c.fill(left+(int)(w.x/T*scale)-1,top+(int)(w.y/T*scale)-2,3,5,0xFFFFFFFF);
-        text(c,"VERDANT REACH",60,24,MINT);text(c,"FROSTVEIL",223,24,TEXT);text(c,"EMBER WILDS",366,24,GOLD);
+        text(c,"PALM JUNGLE",60,24,MINT);text(c,"ANCIENT GROVES",223,24,TEXT);text(c,"ISLAND HIGHLANDS",366,24,GOLD);
         center(c,"WHITE: YOU   GREEN: CAMP   GOLD: DISCOVERED SHRINE",c.width()/2,211,MUTED,1);
     }
     public void pause(SceneCanvas c,int cursor) {
@@ -264,17 +312,17 @@ public final class FrontierView {
     }
     public void help(SceneCanvas c) {
         overlay(c,"FIELD GUIDE");
-        String[] lines={"ARROWS / A,D: MOVE   SPACE / W / PAD A: JUMP",
+        String[] lines={"ARROWS / A,D: RUN   HOLD SPACE / W / PAD A: HIGH JUMP",
             "MOUSE: AIM   HOLD LEFT / F / PAD C: USE SELECTED ITEM",
             "RIGHT CLICK: BUILD   E / PAD UP: OPEN CACHE OR SHRINE",
             "1-8 / WHEEL / Q,R: HOTBAR   TAB: BACKPACK   C: CRAFT",
             "J: QUEST JOURNAL   M: MAP   H: HEAL   START / P: PAUSE",
-            "DOWN + USE: DIG BELOW   DOWN: DROP THROUGH PLATFORMS",
+            "LAND ON BADNIKS TO SPIN ATTACK. DOWN: DROP THROUGH.",
             "PACK: SELECT AN ITEM, Q/R/PAD C: SLOT, ENTER/A: ASSIGN",
             "PACK H: CONSUME HEARTSTONES (+20 MAX HP) OR FOOD",
             "PLACE STATIONS THEN STAND NEAR THEM TO CRAFT",
             "BUILD A ROOF, 8 WALLS AND A LANTERN FOR A SAFE SHELTER",
-            "SIGILS AWAKEN SHRINE WARDENS. FIND SHRINES UNDERGROUND.",
+            "SIGILS AWAKEN SHRINE SENTINELS. FIND SHRINES UNDERGROUND.",
             "PAUSE TO RECALL. DEATH KEEPS YOUR WORLD AND ITEMS."};
         for(int i=0;i<lines.length;i++)text(c,lines[i],54,55+i*11,i<6?TEXT:MUTED);
         text(c,"AUTOSAVES EVERY 30 SECONDS. SAVE FROM PAUSE TO LEAVE.",54,191,MINT);
@@ -287,6 +335,12 @@ public final class FrontierView {
     }
     public void icon(SceneCanvas c,Content.Item i,int x,int y,int scale) {
         int color=i.color;
+        if(art!=null&&(i==Content.Item.GEL||i==Content.Item.CRYSTAL||i==Content.Item.RELIC||i==Content.Item.SIGIL)) {
+            SceneSpriteSet set=i==Content.Item.GEL?art.ring:art.emerald;
+            SceneSprite sprite=set.frame(i==Content.Item.GEL?0:i==Content.Item.RELIC?0:i==Content.Item.SIGIL?1:4);
+            float size=10f*scale/Math.max(sprite.width(),sprite.height());
+            art.sprite(c,set,i==Content.Item.GEL?0:i==Content.Item.RELIC?0:i==Content.Item.SIGIL?1:4,x,y+5*scale,size,false);return;
+        }
         if(i.tool()||i.weapon()) {
             for(int n=-4;n<=4;n++)c.fill(x+n*scale,y-n*scale,scale,scale,0xFFB29164);
             if(i==Content.Item.BOW){for(int n=-4;n<=4;n++)c.fill(x+(Math.abs(n)/2)*scale,y+n*scale,scale,scale,color);c.fill(x,y-4*scale,scale,8*scale,TEXT);}
