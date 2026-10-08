@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+An inherited loader environment can change a shell test without a source change
+(2026-10-08, stock parity delivery): the audio CLI deliberately rejects `LD_*`
+variables. Its first safe `--help` subprocess returned4 from the app's native
+session with `LD_LIBRARY_PATH`, but0 from a retained user service without it.
+The base and candidate script/test blobs were identical; a matched four-way
+base/current command check reproduced both outcomes by changing only that
+variable's presence. Attribute the absent failure to launch environment, inspect
+the complete remaining assertions and skips, and retain normal validation.
+Do not report this as a source fix or recreate an unrelated failure deliberately.
+
 Committed fixtures are live validation inputs (2026-10-08, Sitar Hero delivery):
 freeze test sources, BK2 files and scripts alongside runtime code. A fixture merge
 during an ordinary run makes the invocation incomplete even if already compiled

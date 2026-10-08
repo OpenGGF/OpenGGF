@@ -1753,3 +1753,94 @@ Freeze the entire exact candidate tree through both lanes. Any timeout, missing
 required suite, ROM skip or new/worsened/unattributed assertion blocks
 integration. Baseline acceptance waits for the owner's completed updated-main
 qualification; no result is inferred from its still-executing request.
+
+#### Round 3 normal private qualification and published-source reconciliation
+
+The original frozen candidate `1f3bf97d5c67bdade2f54429e9e00d4740e76cf7`,
+base `d740b7a0`, completes normal run `20261008T135710Z-ec467d13` at
+15:29:31Z:3058 selected classes,3056 ordinary reports,26549 cases,27 inherited
+failures, zero errors and62 inherited skips; ordinary5306.89seconds, exit1.
+Separate fresh guards produce87 reports/674 passing cases, zero skips,
+234.28seconds. Every failure identity/type/full first assertion and every skip
+identity/first causal reason match the qualified baseline:26 literal assertions
+and the complete SSZ2952-character line after only exception-prefix removal
+and verified `RewindObjectStateBlob@hex` normalization to2907 characters.
+The whole-tree fingerprint stays
+`5c455596c4f6f63ad8560cc60b921234cbf17b27b94d93c3a357d7ab0eb97a53`.
+The source inventory/report difference is accounted for: one abstract base,
+seven helpers and23 explicitly excluded tagged classes, plus29 nested XML
+suites, give3058−1−7−23+29=3056; eleven package/path aliases map to present
+suites. No unexplained ordinary omission, timeout or ROM skip exists.
+Exact consumed diagnostics are acknowledged exit0 and removed.
+
+The updated main baseline is qualified by its owner using completed ordinary
+run `20261008T153213Z-5cd93bac` at `6124a524`/base `d740`:3058 selected,
+3056 reports,26535 cases,27 failures/zero errors/62 literal inherited skips,
+5115.06seconds, Maven exit1. Earlier incomplete invocations are not evidence.
+The research-only `17ae561a` HEAD change preserves all ordinary executable,
+test and build bytes and the known dirty-input fingerprint, but correctly
+makes the outer runner exit2 before guards. A separate fresh normal guard
+profile at17ae completes17:15:24Z, exit0:87 reports/674 cases, zero failures,
+errors or skips. These are qualified separate lanes, not a completed combined
+run. The owner publishes evidence-only `378c1d715`, independently confirms
+remote develop and completes owned cleanup/releasing the main hold. See the
+[Sitar actual-main qualification](../plans/2026-10-08-sitar-hero-fumble-feedback.md).
+
+The final private normal command at exact
+`53d63fb5c68cc4ea272964befde84ffc19568613`, base
+`6124a524eef9b42efb800d5bcb95376147507c9e`, is:
+
+```sh
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 6124a524eef9b42efb800d5bcb95376147507c9e --max-minutes 150 --run
+```
+
+The native request loses its session before admission (exit143, no run or
+surviving owned request). Only that absent request is replaced once under a
+retained bounded user-service supervisor with explicit exit metadata, Java21,
+Lua5.4 and the same normal runner limits. Run `20261008T165747Z-3db0a1c5`
+admits16:57:47Z and completes18:28:09Z, outer/Maven exit1: **3060 selected,
+3058 ordinary reports,26570 cases,26 inherited failures, zero errors and62
+inherited skips**, ordinary5159.09seconds. Fresh guards: **87 reports/674
+passing cases, zero failures/errors/skips**,262.94seconds. Whole-tree
+fingerprint remains
+`564e503d6191ba51e8732c0e2dc6319de6beb977ff27add0464cef06edc3995c`.
+The actual command uses the three original absolute main ROM files; fresh
+SHA-1/CRC32 identities match before and after execution. Both lanes complete
+without timeout, diagnostic omission or ROM skip. Exact diagnostics are
+consumed/acknowledged exit0 and deleted; owning supervisor/runner are absent.
+
+All26 remaining failure identities/types/full first assertions match:
+25 literally plus the complete SSZ2951-character line, which becomes the
+same2907 characters after only verified blob-hash and exception-prefix
+normalization. All62 skip identities/first causal reasons match literally.
+The absent failure is
+`TestS1GameplayAudioTimelineCli#shellUsesAbsoluteBootstrapToolsAndRejectsInjectedEnvironmentBeforePathLookup`;
+its complete class passes7 cases in fresh ordinary Maven output. This is
+**an attributed launch-environment resolution, not a source fix**. The script
+and Java test are identical on published base and candidate (SHA-256
+`729d951e6d1342d4351046b107297314449b0ea50b820d46f6a22eadcfe0e540` and
+`91ab13c9675a5d4db8932aea4d0c369c416ae2a6ae2a6559d4d8f3dcc882cfc9`).
+Its first failed production command, the absolute Bash launcher `--help`, is
+checked on both trees with fake PATH tools: each returns4/rejects the native
+app's `LD_LIBRARY_PATH`, and each returns0/help with that variable absent;
+fake tools never execute. Only that variable's presence changes. This matched
+first-assertion branch check explains the baseline's expected0/actual4 without
+another full suite or source edit. Zero new, worsened or unattributed cases
+remain. This qualification accepts inherited failures; it is not a green
+ordinary-suite claim.
+
+After terminal inspection, published `ad3d6a996` and native alias successor
+`913c5a351` are merged privately, conflict-free, at `f1d05e7b7` and
+`e78b2092f`. Shared changelog and hazard/pitfall prose retain both owners'
+changes. The complete imported delta is documentation, standalone native
+feasibility/Windows packaging tools and one experimental Windows workflow.
+Index comparisons against tested53d prove no engine Java, tests/resources,
+examples, POM, `.mvn`, hooks, API-policy or category-runner difference.
+The normal change-based plan against actual published913c still selects all
+3060 ordinary classes plus fresh guards. Completed ordinary and domain
+evidence therefore remains applicable, but the new/changed workflow is a
+guard input: run one fresh normal private guard profile before integration.
+Actual-main normal combined qualification, push and owned cleanup remain
+pending. Native Windows artifacts retain their separate owner's qualification
+limits; this stock-parity work makes no Windows delivery claim.
