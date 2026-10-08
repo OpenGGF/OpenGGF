@@ -494,9 +494,12 @@ does not depend on `mods`; the scene host consumes those values through the
 existing `mods -> control` boundary, without introducing a parallel device model
 or expanding the frozen package-cycle baseline.
 
-`baseGame: any` is restricted to startup-scene/display registration and expands
-into separately indexed stock-game decorators. It cannot introduce game-specific
-patches, objects, zones, characters or override declarations. Extra ROMs are
+`baseGame: any` expands shared startup scenes or typed mutator catalogues into
+separately indexed stock-game plans. A mutator catalogue may register concrete
+stock-game decorators; each expanded plan receives only its own game's decorators.
+Objects, zones, characters, art overrides and zone-specific gameplay policies
+remain forbidden in an `any` transaction. Scene-only registration cannot add
+ordinary game patches. Extra ROMs are
 scene-owned catalog views; active session ROMs are borrowed, and disassembly
 assets are never runtime fallbacks. S1/S2 detached stock pictures use explicit
 ROM inputs, including first-frame animated tiles, without graphics/session

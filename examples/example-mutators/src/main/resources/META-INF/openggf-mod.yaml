@@ -1,13 +1,13 @@
 formatVersion: 1
 id: example-mutators
 name: Mutator Lab
-version: 0.1.0
+version: 0.2.0
 authors:
   - OpenGGF contributors
-description: A JVM boot-prepared dry Gravity and selective Stealth playground in Sonic 2 Emerald Hill Act 1, with common scoped configuration, native title/art/music, pause/resume/restart and session rewind.
+description: The original Mutator Lab catalogue for Sonic 1, Sonic 2 and Sonic 3 & Knuckles, with common per-option lifecycle settings, native ROM title/art/sound, pause/resume/restart and session rewind.
 engineApiRange: ">=0.7.0 <0.8.0"
 type: patch
-baseGame: s2
+baseGame: any
 entrypoint: mutators.MutatorsMod
 dependencies: []
 audioOverrides: {}

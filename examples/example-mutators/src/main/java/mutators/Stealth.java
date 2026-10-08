@@ -10,7 +10,7 @@ public final class Stealth {
     public static MutatorDefinition definition() {
         return new MutatorDefinition("stealth", "Stealth", "Hide the player sprite; attached effects are a separate option. Hits, HUD and sound remain.",
                 MutatorScope.LIVE, MutatorScope.LIVE,
-                List.of(new MutatorOption.Choice("target", "Target", "Leader or whole team. In this solo-Sonic slice both choices hide Sonic.",
+                List.of(new MutatorOption.Choice("target", "Target", "Hide the leader or all supported native members of your team.",
                                 MutatorScope.LIVE, "leader", List.of("leader", "all_team")),
                         new MutatorOption.Checkbox("effects", "Hide attached effects", "Also hide shield, spindash dust and invincibility stars; skid puffs stay.",
                                 MutatorScope.LIVE, false)),

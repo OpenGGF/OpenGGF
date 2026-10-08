@@ -1,5 +1,6 @@
 {"op": "wait", "seconds": 5}
 {"op": "screenshot", "name": "startup-hub"}
+{"op": "key", "key": "Right", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Return", "hold": 0.25, "require_focus": true}
 {"op": "wait", "seconds": 16}

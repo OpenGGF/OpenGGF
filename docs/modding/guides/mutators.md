@@ -1,10 +1,12 @@
 # Build a scoped mutator package
 
 [Mutator Lab](../../../examples/example-mutators/README.md) is a runnable JVM
-Sonic 2 patch. Use its source and host UI to build a small configuration-driven
-policy package. This guide describes the implemented prototype; the remaining
-[blueprint](../../architecture/designs/2026-10-07-mutators-blueprint.md) stages
-are future work.
+catalogue for Sonic 1, Sonic 2 and Sonic 3 & Knuckles. Use its source and host UI
+to build a small configuration-driven policy package. The
+[expansion plan](../../architecture/plans/2026-10-08-mutator-lab-expansion.md)
+records current verification; installation refresh and universal art coverage from
+the [blueprint](../../architecture/designs/2026-10-07-mutators-blueprint.md)
+remain separate work.
 
 ## Prepare the package
 
@@ -12,12 +14,20 @@ are future work.
 `ModContext.registerMutator`. The engine derives owner keys from that context,
 validates the catalog and pins it for a WorldSession. Creator callbacks return
 immutable typed policies; they never mutate the world or publish trusted owners.
-A semantic support provider advertises the qualified zone/act/player cell. The
+A semantic support provider advertises native capabilities and per-option/player
+availability; unavailable native features remain visible with a reason. The
 common screen implements the existing title provider and level input overlay.
 The normal native level loop still owns movement, collision, camera, art and audio.
 The host creates one policy owner per world through its engine module service.
 Shared catalogs/providers contain no session settings; two worlds have independent
 requested, admitted and effective graphs.
+
+A shared compiled package may use `baseGame: any` for a typed mutator catalogue.
+Register one concrete `GamePatch` per stock game to provide native title/support
+metadata. The host expands the catalogue into three owned plans, filtering each
+plan's decorators to its concrete game. Such an `any` transaction cannot register
+objects, zones, characters, art overrides or zone-specific gameplay policies.
+Pure shared startup scenes keep their existing bounded registration shape.
 
 ```java
 context.registerMutator(new MutatorDefinition(
@@ -62,8 +72,10 @@ quarantine survives rewind and cannot be undone by a historical snapshot.
 
 Valid independent-scope regression: ENABLE LIVE, DISABLE LOAD, one option LAUNCH.
 Request that option, disable/re-enable and Resume: the LAUNCH choice remains
-pending. A new session admits it. This is tested as synthetic data; the two
-playable examples deliberately need only LIVE.
+pending. A new session admits it. This is tested as synthetic data. The expanded
+examples use LIVE for scalar,
+presentation and new stage-entry decisions, and LOAD for placement/inventory
+removals that must not invalidate an existing world.
 
 Invalid examples (constructor/catalog/preparation rejects them):
 
@@ -99,6 +111,15 @@ invincibility stars are selectable; deposited skid puffs are world presentation.
 The roster injection and structural source binding are outside sprite snapshot
 values; admitted/effective state is registered before sprite recreation.
 
+The remaining policies use their native owners: Ringfall latches a bounded scatter
+plan before slot allocation; the monitor/ring/checkpoint filters decide admission
+without reindexing native placements; stage-entry permits retain an already
+captured transition; Game Speed schedules complete presentation-loop ticks; and
+Violent Explosions amplifies only the resolved native badnik rebound. Big Head
+composes reviewed anatomical masks after native SAT admission, with native
+fallbacks for ball, powered, donor/custom and unreviewed poses. Do not scale the
+entire player quad or use `setHidden` to fake an appearance-only effect.
+
 Saved requested preferences are bounded, schema-versioned, profile-namespaced
 JSON. The host selects the root; creators cannot supply paths. Secure directory
 streams, directory/file identity checks and atomic replacement protect byte
@@ -116,14 +137,14 @@ unavailable.
 
 ## Human and agent walkthrough
 
-1. Read the example README and source `Gravity.java`, `Stealth.java`,
-   `MutatorsMod.java`, and the format-1 manifest. Verify Java 21 and the supplied
-   S2 World REV01 ROM. Keep commercial bytes outside Git.
+1. Read the example README, one class per effect, `NativeLabProfile.java`,
+   `MutatorsMod.java` and the format-1 manifest. Verify Java 21 and the original
+   ROMs for the games you will launch. Keep commercial bytes outside Git.
 2. Run `python3 examples/example-mutators/build.py` from this checkout. It queues
    the actual Maven build and `ggfmod package`; inspect the result and jar contents.
 3. Run the builder with `--run`, or install/enable/trust the jar in the JVM Mod
-   Manager and restart. Select Sonic 2 with native solo Sonic. Open How to play,
-   configure Gravity at 50%, enable it, then Start Emerald Hill.
+   Manager and restart. Select a native game with Sonic as leader. Open How to
+   play, configure Gravity at 50%, enable it, then start that game's opening act.
 4. Jump/run through real terrain; Pause, enable Stealth, and Resume. Collision,
    rings, targeting and sound remain. Pause, turn effects off, Resume; restart
    clears the checkpoint and uses a full assembly. Return to the hub and relaunch.
@@ -166,7 +187,9 @@ video remains silent unless muxed with that WAV. Audio requires every frame,
 capture-from zero and matching 60-Hz presentation. Title-first captures reject
 positioned/donor/clock seeds and use the first act. The capture host does not
 install the interactive engine's hub callback; verify exit/relaunch with the JVM
-engine separately instead of calling a black final frame a hub. See the dated implementation
+engine separately instead of calling a black final frame a hub. This canonical-tick
+capture does not demonstrate Game Speed: record the real `Engine.loop` presentation
+path for slow/fast play and compare its native tick/input behavior separately. See the dated implementation
 plan/design evidence for the completed commands, observed output and limitations.
 
 For native hub/relaunch and host input evidence, use the maintained
@@ -174,7 +197,11 @@ For native hub/relaunch and host input evidence, use the maintained
 `examples/example-mutators/window-walkthrough.jsonl`. It records exact
 process/window ownership and cleanup, plus a scoped Pulse monitor WAV. Verify
 the screenshots and action timings; its frameless/vblank/preload options are
-explicit host workarounds, not default window-manager or physical-speaker proof.
+explicit host workarounds, not default window-manager or physical-speaker proof. The S1/S3K
+variants are `window-walkthrough-s1.jsonl` and `window-walkthrough-s3k.jsonl`;
+all supply real key edges, enter the shared catalogue from the hub and demonstrate
+slow/fast native presentation. Recipe labels are intended actions, not observed
+acceptance; inspect actual pages, state and PCM before reporting a successful run.
 
 The common title owns Escape through `TitleScreenProvider.ownsEscapeInput()`;
 the stock default remains false. Back leaves an option/help page, and Back from

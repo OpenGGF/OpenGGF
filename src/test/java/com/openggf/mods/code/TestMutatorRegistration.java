@@ -5,6 +5,11 @@ import com.openggf.mods.mutators.MutatorCapability;
 import com.openggf.mods.mutators.MutatorDefinition;
 import com.openggf.mods.mutators.MutatorPolicy;
 import com.openggf.mods.mutators.MutatorScope;
+import com.openggf.game.GameModule;
+import com.openggf.game.patch.GamePatch;
+import com.openggf.game.patch.GameplayLaunchRequest;
+import com.openggf.game.patch.LogicalRom;
+import com.openggf.game.patch.PatchContext;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -43,11 +48,49 @@ class TestMutatorRegistration {
     }
 
     @Test
-    void sharedScenesAndStandaloneCannotStageGameplayMutators() {
-        assertThrows(ModRegistrationException.class,
-                () -> context("owner", "any").registerMutator(definition("gravity")));
+    void sharedCatalogueExpandsOwnedPoliciesWhileStandaloneStillRejectsGameplayMutators() {
+        var shared = context("owner", "any");
+        shared.registerMutator(definition("gravity"));
+        var expanded = shared.freeze().stockScenePlans();
+        assertEquals(List.of("s1", "s2", "s3k"), expanded.stream().map(ModRegistrationPlan::baseGameId).toList());
+        assertTrue(expanded.stream().allMatch(plan -> plan.mutators().get("owner:gravity").ownerModId().equals("owner")));
         ModContext standalone = new ModContext("owner", null, ModAssetRoot.forTests("owner"), null, true);
         assertThrows(ModRegistrationException.class, () -> standalone.registerMutator(definition("gravity")));
+    }
+
+    @Test
+    void sharedCatalogueRoutesEachDecoratorOnlyToItsNativeGame() {
+        var shared = context("owner", "any");
+        shared.registerMutator(definition("gravity"));
+        shared.registerGamePatch(patch("s3k"));
+        shared.registerGamePatch(patch("s1"));
+        shared.registerGamePatch(patch("s2"));
+        for (var plan : shared.freeze().stockScenePlans()) {
+            assertEquals(1, plan.explicitPatches().size());
+            assertEquals(plan.baseGameId(), plan.explicitPatches().getFirst().baseGameId());
+            assertEquals("owner:lab-" + plan.baseGameId(), plan.explicitPatches().getFirst().id());
+            assertEquals(Set.of("owner:gravity"), plan.mutators().keySet());
+        }
+    }
+
+    @Test
+    void sharedDecoratorsRequireTypedContentAndCannotSmuggleGameSpecificRegistrations() {
+        var noCatalogue = context("owner", "any");
+        noCatalogue.registerGamePatch(patch("s2"));
+        var failure = assertThrows(ModRegistrationException.class, noCatalogue::freeze);
+        assertSame(failure, assertThrows(ModRegistrationException.class, noCatalogue::freeze));
+
+        var foreign = context("owner", "any");
+        foreign.registerMutator(definition("gravity"));
+        failure = assertThrows(ModRegistrationException.class, () -> foreign.registerGamePatch(patch("custom")));
+        assertSame(failure, assertThrows(ModRegistrationException.class, foreign::freeze));
+
+        var gameSpecific = context("owner", "any");
+        gameSpecific.registerMutator(definition("gravity"));
+        gameSpecific.registerGamePatch(patch("s1"));
+        gameSpecific.registerObject("object", (spawn, registry) -> null);
+        failure = assertThrows(ModRegistrationException.class, gameSpecific::freeze);
+        assertSame(failure, assertThrows(ModRegistrationException.class, gameSpecific::freeze));
     }
 
     @Test
@@ -61,6 +104,17 @@ class TestMutatorRegistration {
 
     private static ModContext context(String owner, String game) {
         return new ModContext(owner, game, ModAssetRoot.forTests(owner));
+    }
+    private static GamePatch patch(String game) {
+        return new GamePatch() {
+            @Override public String id() { return "lab-" + game; }
+            @Override public String displayName() { return "Lab " + game; }
+            @Override public String baseGameId() { return game; }
+            @Override public boolean activatesFor(GameplayLaunchRequest request) { return true; }
+            @Override public Set<LogicalRom> romPrerequisites() { return Set.of(); }
+            @Override public List<String> providedMainCharacters() { return List.of(); }
+            @Override public GameModule apply(GameModule base, PatchContext context) { return base; }
+        };
     }
     private static MutatorDefinition definition(String id) {
         return new MutatorDefinition(id, "Gravity", "", MutatorScope.LIVE, MutatorScope.LIVE,

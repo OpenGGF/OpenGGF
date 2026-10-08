@@ -24,6 +24,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private static final int DETAIL_TOP = 179, FOOTER_TOP = 198, ENTRANCE_FRAMES = 14;
     private final WorldSession world;
     private final MutatorSessionState settings;
+    private final MutatorSupportProfile support;
     private final TitleScreenProvider backdrop;
     private final String title;
     private final java.util.function.Consumer<Cue> cues;
@@ -48,6 +49,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         this.backdrop = backdrop;
         this.cues = Objects.requireNonNull(cues);
         settings = Objects.requireNonNull(MutatorWorldAccess.state(world), "No prepared mutator catalog in this world");
+        support = world.resolvedGameModule().getGameService(MutatorSupportProfile.class);
         MutatorWorldAccess.ownScreen(world, this);
     }
 
@@ -108,7 +110,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private List<Row> rows() {
         var rows = new ArrayList<Row>();
         if (page == Page.HOME) {
-            rows.add(new Row(null,null,"Start Emerald Hill",Action.START));
+            rows.add(new Row(null,null,startLabel(),Action.START));
             rows.add(new Row(null,null,"Configure mutators",Action.CONFIGURE));
             rows.add(new Row(null,null,"How to play",Action.HELP));
             return rows;
@@ -122,7 +124,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             return rows;
         }
         for (var owned : settings.definitions()) rows.add(new Row(owned.key(),null,owned.definition().title(),Action.MUTATOR));
-        rows.add(new Row(null,null,inGameplay ? "Resume play" : "Start Emerald Hill",inGameplay ? Action.RESUME : Action.START));
+        rows.add(new Row(null,null,inGameplay ? "Resume play" : startLabel(),inGameplay ? Action.RESUME : Action.START));
         if (inGameplay) rows.add(new Row(null,null,"Restart from act start",Action.RESTART));
         rows.add(new Row(null,null,"Reset to defaults",Action.RESET));
         rows.add(new Row(null,null,inGameplay ? "Return to game hub" : "Back to title",inGameplay ? Action.HUB : Action.BACK));
@@ -178,7 +180,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
                 var admission=MutatorWorldAccess.prepareLaunch(world);
                 if (!admission.accepted()) { status=admission.message(); sound(Cue.ERROR); break; }
                 state=State.EXITING; open=false;
-                status="Loading Emerald Hill..."; sound(Cue.START);
+                status="Loading your native level..."; sound(Cue.START);
             }
             case RESUME -> {
                 if (!save()) break;
@@ -201,6 +203,11 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private void edit(Row item, int direction) {
         var d=definition(item.key()).definition();
         var value=settings.requested().get(item.key());
+        String unavailable=unavailable(item);
+        // A saved unavailable toggle can always be turned off; unavailable options never edit.
+        if (!unavailable.isBlank() && (item.option()!=null || !value.enabled())) {
+            notice=unavailable; sound(Cue.ERROR); return;
+        }
         if (item.option()==null) settings.requestEnabled(item.key(),!value.enabled());
         else {
             var option=d.option(item.option()); Object old=value.options().get(item.option());
@@ -236,6 +243,16 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     }
     private boolean adjustable(Row item) {
         return item.action()==Action.OPTION || item.action()==Action.ENABLE || item.action()==Action.MUTATOR;
+    }
+    private String startLabel() { return support == null ? "Start game" : support.startLabel(); }
+    private String unavailable(Row item) {
+        if (item.key()==null || support==null) return "";
+        var definition=definition(item.key()).definition();
+        if (!support.capabilities(world.getCurrentZone(),world.getCurrentAct()).containsAll(definition.capabilities())) {
+            String reason=support.optionUnavailableReason(definition.localId(),item.option()==null?"":item.option());
+            return reason.isBlank()?"This effect is unavailable for the current game or art profile.":reason;
+        }
+        return item.option()==null ? "" : support.optionUnavailableReason(definition.localId(),item.option());
     }
 
     @Override public void draw() {
@@ -300,7 +317,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         MenuStyle.fill(font,cx,y0,cw,1,1,.78f,.23f,1);
         MenuStyle.label(font,title,cx+8,y0+4,cw-16,.55f,1,.9f);
         boolean error=!status.isBlank();
-        MenuStyle.text(font,error?status:"Gravity and Stealth for solo Sonic",cx+8,y0+15,cw-16,
+        MenuStyle.text(font,error?status:settings.definitions().size()+" mutators / native ROM play",cx+8,y0+15,cw-16,
                 1,error?.62f:.86f,error?.45f:.45f);
         renderRows(rows(),rowLeft(),rowsTop()+slide,rowWidth(),rowHeight(),false);
         MenuStyle.text(font,hint,cx+8,y0+HOME_HEIGHT-10,cw-16,.62f,.8f,.95f);
@@ -317,10 +334,15 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         int inset=Math.round((1-ease(pageAge,6))*12);
         MenuStyle.fill(font,x,8-inset,pw,27,.018f,.075f,.15f,.94f);
         MenuStyle.fill(font,x,8-inset,pw,1,1,.78f,.23f,1);
-        MenuStyle.label(font,title,x+10,14-inset,pw-20,.55f,1,.9f);
+        MenuStyle.label(font,title,x+10,14-inset,pw-86,.55f,1,.9f);
+        if (page==Page.LIST || page==Page.OPTIONS) {
+            String position=(row+1)+" / "+rows().size();
+            MenuStyle.text(font,position,x+pw-68,17-inset,58,.76f,.86f,1);
+        }
         MenuStyle.fill(font,x,37,pw,14,.018f,.075f,.15f,.94f);
         MenuStyle.text(font,inGameplay && !MutatorWorldAccess.supportedCell(world)
-                ? "Not supported here; effects are suspended." : "Sonic 2 / Emerald Hill 1 / solo Sonic",x+10,40,pw-20,.76f,.86f,1);
+                ? "Not supported here; effects are suspended." : support==null ? "Native gameplay"
+                : support.locationLabel(world.getCurrentZone(),world.getCurrentAct()),x+10,40,pw-20,.76f,.86f,1);
         if (page==Page.HELP) renderHelp(x,pw);
         var visible=rows();
         renderRows(visible,rowLeft(),rowsTop(),rowWidth(),rowHeight(),page!=Page.HELP);
@@ -340,8 +362,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             {"Controls", move()+": run.  "+jump()+": jump.", settingsKeys()+": settings while playing."},
             {"Applying edits", "Resume applies live edits.", "Restart rebuilds from the act start.",
                     "Return to the hub to begin a new game."},
-            {"Mutators", "Gravity scales dry air acceleration only.", "Jump impulse, water and hurt stay native.",
-                    "Stealth hides Sonic; hits, sound, HUD stay."}};
+            {"Mutators", "Choose an effect, then adjust its options.", "Every effect starts off. Mix your own rules.",
+                    "Stage puzzles keep their native ring rules."}};
         int y=56;
         for (String[] section : sections) {
             MenuStyle.text(font,section[0],x+10,y,pw-20,1,.78f,.23f); y+=10;
@@ -361,7 +383,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             Row item=visible.get(first+i); int y=top+i*rh, lx=x+7+stagger(i);
             boolean focused=first+i==row;
             int textY=MenuStyle.textY(y,values?13:rh-1,MenuStyle.COMPACT);
-            MenuStyle.text(font,item.label(),lx,textY,width-104,1,1,1);
+            boolean available=unavailable(item).isBlank();
+            MenuStyle.text(font,item.label(),lx,textY,width-104,available?1:.57f,available?1:.65f,available?1:.75f);
             if (!values) continue;
             String val=value(item);
             if (focused && adjustable(item) && item.action()!=Action.MUTATOR && !val.isEmpty()) val="< "+val+" >";
@@ -392,7 +415,15 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         if (!notice.isBlank()) return notice;
         Row current=visible.get(Math.min(row,visible.size()-1));
         if (current.key()!=null) {
+            String unavailable=unavailable(current);
+            if (!unavailable.isBlank()) return unavailable;
             var d=definition(current.key()).definition();
+            Set<MutatorCapability> available=support==null?Set.of():support.capabilities(world.getCurrentZone(),world.getCurrentAct());
+            if (d.capabilities().contains(MutatorCapability.RINGFALL) && settings.effective().levelPolicy(available).noRings())
+                return "No Rings prevents main-level spills. Ringfall stays ready for when it is disabled.";
+            if (d.capabilities().contains(MutatorCapability.BIG_HEAD)
+                    && settings.effective().stealthPolicies().stream().anyMatch(MutatorPolicy.PlayerStealth::hideBody))
+                return "Stealth hides selected bodies. Their head size returns when Stealth is disabled.";
             return current.option()!=null ? d.option(current.option()).help() : d.description();
         }
         int pending=settings.pending().size();
@@ -444,6 +475,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private String value(Row item) {
         if(item.key()==null) return "";
         var requested=settings.requested().get(item.key());
+        if (!unavailable(item).isBlank()) return "Unavailable";
         if(item.option()==null) return requested.enabled()?"[x] On":"[ ] Off";
         return format(definition(item.key()).definition().option(item.option()),requested.options().get(item.option()));
     }

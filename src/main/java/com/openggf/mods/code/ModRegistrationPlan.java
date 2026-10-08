@@ -71,8 +71,8 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 Objects.requireNonNull(hudProfiles, "hudProfiles")));
         mutators = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
                 Objects.requireNonNull(mutators, "mutators")));
-        if (!mutators.isEmpty() && (baseGameId == null || "any".equals(baseGameId))) {
-            throw new IllegalArgumentException("Mutators require a concrete stock-game patch owner");
+        if (!mutators.isEmpty() && baseGameId == null) {
+            throw new IllegalArgumentException("Mutators require a stock-game patch owner");
         }
         if (mutators.size() > 32) throw new IllegalArgumentException("Too many owner mutators");
         mutators.forEach((key, owned) -> {
@@ -108,20 +108,24 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 throw new IllegalArgumentException("Prepared zones must exactly match declarations");
             }
         }
-        if ("any".equals(baseGameId) && (startupScene == null || !objectFactories.isEmpty()
-                || !objectArt.isEmpty() || !explicitPatches.isEmpty() || !zones.isEmpty()
+        if ("any".equals(baseGameId) && ((startupScene == null && mutators.isEmpty()) || !objectFactories.isEmpty()
+                || !objectArt.isEmpty() || (!explicitPatches.isEmpty() && mutators.isEmpty()) || !zones.isEmpty()
                 || !objectPreviewArtKeys.isEmpty() || !characters.isEmpty() || !romObjectArt.isEmpty()
                 || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty())) {
             throw new IllegalArgumentException(
-                    "baseGame any may register only a startup scene and its display requirement");
+                    "baseGame any permits a shared startup scene or typed mutator catalogue with stock-game decorators; game-specific content is forbidden");
         }
+        if ("any".equals(baseGameId) && explicitPatches.stream()
+                .anyMatch(patch -> !List.of("s1", "s2", "s3k").contains(patch.baseGameId())))
+            throw new IllegalArgumentException("Shared mutator decorators must target a concrete stock game");
     }
 
-    /** Expands a validated shared startup scene into ordinary stock-game decorators. */
+    /** Expands a validated shared scene/catalogue without leaking another game's decorators. */
     List<ModRegistrationPlan> stockScenePlans() {
         if (!"any".equals(baseGameId)) return List.of(this);
         return List.of("s1", "s2", "s3k").stream().map(game -> new ModRegistrationPlan(
-                ownerModId, game, objectFactories, objectArt, preparedObjectArt, explicitPatches,
+                ownerModId, game, objectFactories, objectArt, preparedObjectArt,
+                explicitPatches.stream().filter(patch -> game.equals(patch.baseGameId())).toList(),
                 zones, preparedZones, objectPreviewArtKeys, characters, null, romObjectArt,
                 launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect, mutators)).toList();
     }

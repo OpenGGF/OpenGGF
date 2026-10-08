@@ -49,9 +49,10 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
 
 ## Experimental projects
 
-- [Mutator Lab](../../examples/example-mutators/README.md) — boot-prepared Sonic 2
-  Gravity/Stealth with shared slider/checkbox/enum configuration, explicit admission
-  scopes and rewind-separated preferences. See the [guide](guides/mutators.md).
+- [Mutator Lab](../../examples/example-mutators/README.md) — an eleven-effect
+  catalogue for Sonic 1, Sonic 2 and Sonic 3 & Knuckles, with common widgets,
+  explicit live/load scopes and rewind-separated preferences. See the
+  [guide](guides/mutators.md) and current verification in the expansion plan.
 
 - [Robotnik Tower Defence](../../examples/robotnik-tower-defense/README.md) —
   Industrial Action: defend Robotnik's base door from 15 waves of unionised

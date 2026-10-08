@@ -6,11 +6,13 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
-- **Mutator Lab prototype and expansion contracts:** JVM boot-prepared Sonic 2 Gravity and Stealth use
+- **Mutator Lab catalogue:** one JVM boot-prepared package exposes eleven effects
+  in Sonic 1, Sonic 2 and Sonic 3 & Knuckles, with native game labels, monitor-type
+  availability, scrolling settings and explicit unavailable-feature reasons. Effects use
   typed scoped options, atomic admission, owner fault isolation and session rewind
   separate from saved preferences. The title/configuration/play/restart/hub flow
-  keeps native movement and sprite admission, with an explicit EHZ1 solo-Sonic
-  support cell and maintained package source/build-along guide. Modal title Back
+  keeps native movement and sprite admission, with declared character/art support
+  and maintained package source/build-along guide. Modal title Back
   preserves the save boundary and host prompt ownership; title cues use ROM SFX.
   World-held policy services keep core lifecycle independent of creator schemas;
   title-first capture preserves existing direct-level fade and input-last CSV contracts.

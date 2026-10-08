@@ -1,131 +1,168 @@
 # Mutator Lab
 
-A small, boot-prepared JVM code mod: configure dry Sonic Gravity and selective
-Stealth, start real Sonic 2, pause to edit, Resume, restart the act or return to
-the game hub. The engine renders native ROM art and synthesizes native music/SFX.
-Both effects default off. No ROM bytes or disassembly assets are packaged.
+A maintained JVM mod with one common settings screen and eleven independently
+configurable effects for Sonic 1, Sonic 2 and Sonic 3 & Knuckles. Play uses native
+ROM levels, sprites, music and sound effects. Every mutator starts off; the jar
+contains creator code and declarations, never commercial assets.
+
+The expanded catalogue is being verified against all three games. The
+[expansion plan](../../docs/architecture/plans/2026-10-08-mutator-lab-expansion.md)
+records current evidence and remaining gates; registration or a successful load
+alone does not certify every route, pose or character.
 
 ## Build and play
 
-From the repository root, with Java 21 and the user's configured Sonic 2 World
-REV01 ROM available:
+Use Java 21 and configure your original ROM images in the game hub:
 
 ```bash
 python3 examples/example-mutators/build.py --run
 ```
 
-The script queues Maven compilation, compiles maintained Java sources and runs
-`ggfmod package`. Output: `target/example-mutators/example-mutators.jar`.
-The development launch opens the **Mutator Lab** title for Sonic 2. Configure before
-Start or choose How to play. For a package without launching:
+The builder queues Maven compilation, compiles the maintained example source and
+runs `ggfmod package`. Its jar is
+`target/example-mutators/example-mutators.jar`. The shared `baseGame: any`
+catalogue installs once; choose **Sonic 1**, **Sonic 2** or **Sonic 3 & Knuckles**
+from the hub with native Sonic as leader. Configure the Lab title, then start
+Green Hill, Emerald Hill or Angel Island respectively. Lab Start opens a fresh
+challenge rather than the Sonic 3 & Knuckles stock save-slot screen. Native
+progression and supported native teammates remain available. For packaging only, omit `--run`.
 
-```bash
-python3 examples/example-mutators/build.py
-```
+Ordinary JVM launches can install that jar in the Mod Manager: enable it, trust
+its exact hash and restart the executable. Code installation/replacement remains
+boot-scoped. Prepared settings can be changed without restarting the executable.
+Compiled creator code is unavailable in the engine's native image; see the
+[trust guide](../../docs/modding/concepts/trust.md).
 
-The ordinary JVM Mod Manager can install that jar: enable and trust its exact
-hash, restart the engine, then choose Sonic 2 with Sonic as leader. The package
-is executable creator code; the engine's native image cannot load it. See the
-[trust guide](../../docs/modding/concepts/trust.md). Installing/changing code is
-boot-scoped; editing prepared settings never requires restarting the executable.
+## Catalogue and boundaries
 
-## Controls and flow
+| Mutator | Options | Applies on |
+| --- | --- | --- |
+| Gravity | Ordinary dry Sonic fall acceleration, 25–200%, 5% steps | Resume |
+| Ringfall Manipulator | 10–100% of the native spill; optional 1–32 ring ceiling | Resume |
+| Big Head | 100–200% head size; leader or supported team members | Resume |
+| Stealth | Leader/all supported team; hide attached effects checkbox | Resume |
+| No Powerups | Separate checkbox for every semantic monitor type | Full load/restart |
+| No Checkpoints | Remove checkpoint activation and restart from the native act start | Full load/restart |
+| No Rings | Deny main-level ring placement, collection and rewards | Full load/restart |
+| Game Speed | 25–400%; optional audio follows speed | Resume |
+| No Special Stages | Refuse new emerald-stage entry | Resume |
+| No Bonus Stages | Refuse new Sonic 3 & Knuckles bonus-stage entry | Resume |
+| Violent Explosions | Native badnik rebound at 150–300%; vertical speed cap | Resume |
+
+Each toggle and option declares its own lifecycle. The screen displays requested
+values, admitted values and pending boundaries separately. Resume applies LIVE
+edits; a full restart, death reload or qualifying full stage return applies LOAD
+edits. Loading a preview, restoring a checkpoint or a seamless handoff does not.
+The host also supports LAUNCH-scoped authoring, which requires a new game session;
+these eleven examples do not invent a launch-only setting.
+
+No Powerups, No Checkpoints and No Rings leave the existing world intact while an
+edit is pending. Native placement order, stable layout indices and object slots
+remain owners. Removing a monitor is decided before creation, rather than deleting
+it while someone stands on it. Ringfall changes only how many lost rings are
+created: hurt still loses the entire carried inventory, and the native ceiling is
+32. No Rings dominates spills and main-level monitor/checkpoint/stage-return grants.
+Special and bonus interiors retain their native puzzle ring rules; a No Rings
+main-level return restores zero rings.
+
+Stage switches govern new entry. A player already captured by a native flash or
+results transition retains an engine-owned, rewindable entry permit. Turning a
+switch on during that transition cannot abandon the player. Sonic 1 and Sonic 2
+have no bonus stages, so that row is unavailable there; unsupported monitor types
+are labelled per game instead of pretending every subtype exists everywhere.
+
+Game Speed schedules complete native ticks with a captured fractional remainder.
+At 25%, three presentation frames have no native tick and the fourth has one;
+at 150%, frames alternate one and two ticks. Inputs remain held across skipped
+frames, and a press is consumed once. Pause, settings and focus still respond
+without advancing native timers, art queues or rewind. The separate canonical
+movie/trace tick remains unchanged. Audio can retain its presentation rate or
+follow the selected speed; following speed can change pitch.
+
+Violent Explosions amplifies the badnik defeat's resolved native vertical rebound,
+then applies the selected cap. Horizontal velocity, ground/air flags and ordinary
+hazard damage remain native. This example does not create a new radial blast,
+modify bosses or apply the rebound twice.
+
+## Presentation and support limits
+
+The Lab decorates each native game. Effects are unavailable while cross-game
+features are enabled; use native ROM art with donors off. Gravity changes ordinary
+dry Sonic air acceleration only: jump impulse/release, hurt, water, death, flight,
+glide and scripted movement retain their native owners. The identity value is
+100%; enabling the default therefore changes no acceleration.
+
+Big Head enlarges reviewed anatomical head masks from the actual admitted ROM
+sprite pieces. Feet, torso, collision bounds and camera stay native. Mask identity
+is tied to the actual art, mappings and DPLC structure. Curled ball poses,
+unreviewed poses, powered forms, donor/custom art and unreviewed characters retain
+their native presentation. A checkbox never implies every pose or character has
+been reviewed. Stealth takes precedence over a hidden head.
+
+Stealth filters body, appendage and optional attached effects after native sprite
+admission. It preserves targeting, collision, rings, audio and the world/HUD.
+Native team members remain independent. Deposited skid puffs and water splashes
+are world effects; hiding an attached shield or spindash effect must not remove
+those world effects. Turning Stealth off restores presentation without rewriting
+movement state.
+
+The title card and rows animate on the native 320×224 grid. Long catalogues and
+monitor options scroll while keeping the focused row visible. Unsupported rows
+are dimmed with an explanation; an already saved unavailable toggle can still be
+turned off. Menus use each game's native sound IDs and priority arbitration.
+Actual graphics and PCM verification are recorded in the expansion plan; a queued
+cue, synthetic screenshot or nonzero audio amplitude alone is not audible proof.
+
+## Controls and persistence
 
 | Context | Keyboard defaults | Controller |
 | --- | --- | --- |
-| Title/configuration | Arrows choose; Enter select; Esc back; Esc at title returns to hub | D-pad; displayed confirm/back buttons |
-| Normal play | Left/Right move; Space jump | Normal mapped movement and A/B/C |
+| Title/configuration | Arrows choose/change; Enter select; Esc back/hub | D-pad; displayed confirm/back buttons |
+| Native play | Left/Right move; Space jump | Native mapped movement and A/B/C |
 | Open configuration | Enter (Pause), or Backspace (Start) | Start |
-| Apply LIVE edits | Choose Resume play | Choose Resume play |
-| Rebuild the act | Choose Restart from act start | Same |
+| Apply live edits | Choose Resume play | Same |
+| Apply load edits | Choose Restart from act start | Same |
 | Leave | Choose Return to game hub | Same |
 
-Your engine bindings override gameplay defaults; How to play names the keys
-actually bound (for example **Space** to jump and **Enter or Backspace** for
-settings), or the pad's own buttons once a controller is the last input. Esc in an open configuration
-keeps play held; it backs out of option pages. A simultaneous cancel and confirm
-backs out. Configuration freezes native ticks and rewind; frame-step and focus
-regain cannot release it. Resume explicitly releases an old user pause, while a
-window-focus pause still holds play. Menu music/SFX continue during configuration
-unless the window or user pause owns an audio pause. A restart/exit requested
-during a fade remains visible and queued until that fade completes.
+How to play quotes your actual bindings. Esc inside gameplay configuration backs
+out of options and keeps play held. Simultaneous cancel/confirm cancels. Native
+fade commands stay visibly queued until the fade completes. Resume releases user
+pause, while a window-focus pause remains an independent owner.
 
-The title card sits below the native Sonic 2 emblem and slides up once the title
-is interactive. During play the configuration dims the held frame rather than
-hiding it. Rows ease in from the right after a page change; sliders mark the
-native 100% value in gold, and the focused value shows `< >` when Left/Right
-changes it. Option help and status use up to two lines at 320 px.
+Requested settings are saved per game under
+`<openggf.saveRoot>/mutators/mutator-preferences-{s1,s2,s3k}.json`. The development
+builder defaults to `target/example-mutators/player-settings`; `--save-root`
+selects another owned writable root. Existing schema-1 Gravity/Stealth choices
+remain valid; newly added mutators default off. Rewind captures admitted policies,
+entry permits and pacing, and never rewrites player preferences. Historical values
+that differ from the saved choice require an explicit edit to branch future events.
 
-Menu cues are native Sonic 2 sounds played through the game's own driver:
-`SndID_Blip` (`$CD`) for navigation and edits, `SndID_Ring` (`$B5`) to confirm
-a page, `SndID_SpindashRelease` (`$BC`) to start and `SndID_Error` (`$ED`) for a
-refused action. The driver's own priority table applies: the blip (`$6F`) is
-dropped while a `$70` sound plays, such as the title emblem's twinkles during the
-intro or a ring chime that has just started, exactly as the ROM title menu's
-(`Obj0F`) blip would be.
+Start, Resume, Restart and Return save before admitting or leaving. A failed save
+holds the draft and visible error for retry. Secure directory I/O and atomic
+replacement are required; unsafe or unsupported paths report an error rather than
+publishing bytes. Preparation faults cross the creator fault boundary, quarantine
+the owner and recover through the host's session fault path.
 
-## Supported slice
-
-| Cell | Gravity | Stealth |
-| --- | --- | --- |
-| S2 World REV01, Emerald Hill Act 1, solo native Sonic, donor off, 320×224 | Dry ordinary air integration, 25–200%, 5% steps | Body and appendage; optional attached effects |
-| Other acts, characters, donors or widths | Not qualified | Not qualified |
-
-The observed acceptance slice is the opening run/jump/configuration/restart path;
-this does not certify the complete EHZ1 route. The package fixes native width and
-suppresses the CPU sidekick. Progression beyond
-EHZ1 uses stock effects and shows **Not supported here; effects are suspended.**
-The two Stealth target choices coincide in this solo cell; they demonstrate the
-bounded enum authoring contract, not qualified team support. Jump impulse and
-release, grounded motion, hurt/water/death/scripted/flight motion are unchanged.
-Stealth preserves targeting, collision, sound, HUD and native sprite admission.
-Attached effects means shield, invincibility stars and attached spindash dust;
-deposited skid puffs remain world effects. Turning Stealth off restores visible
-presentation without changing gameplay state.
-
-## Settings and history
-
-The UI shows requested values and pending boundaries separately from admitted
-values. Enable, disable and every option have independent scopes. **LIVE** admits
-on explicit Resume; **LOAD** requires qualifying full assembly/restart/death/full
-stage return; **LAUNCH** requires a new game session. The actual examples use
-LIVE only; mixed-scope behavior is covered by synthetic regression tests rather
-than invented gameplay options.
-
-Requested preferences are stored in
-`<openggf.saveRoot>/mutators/mutator-preferences-s2.json`. The developer script
-uses `target/example-mutators/player-settings`; `--save-root /absolute/owned/path`
-selects another player root. Ordinary JVM launches default to `saves/`.
-Rewind captures admitted/effective policies and recreates bindings. It never
-rewrites saved preferences. A restored historical value that differs from the
-saved choice says **edit to apply**: Resume alone cannot launder it into history.
-Explicit new edits branch future configuration events. A failed automatic LOAD
-admission keeps the previous valid graph and reports the refusal when configuration
-opens; a rejected menu restart stays in configuration. Owner preparation faults
-quarantine the owner, retire the session and recover through the host fault path.
+Ordinary user recordings remain unavailable in prepared modified sessions. Stock
+recording replay disables external content. The capture recipe is an input-only
+external driver; it is not a new modified recording format.
 
 ## Troubleshooting and authoring
 
-- Missing/wrong ROM: configure a supplied S2 World REV01 image in the game hub;
-  no fallback art or physics is supplied. Retry from the hub after correcting it.
-- Package missing: check the builder's successful package result, or the Mod Manager
-  diagnostics, enabled state, JVM mode and exact-hash trust. Rebuild after API drift.
-- Save failed: the requested draft and visible error remain in configuration.
-  Start, Resume, Restart and Return retry persistence before admitting or leaving.
-  An unavailable settings directory keeps those actions held; repair the path
-  and retry, or close the Engine window to leave the process. Use an
-  owned writable directory without symlink ancestors. Secure directory I/O and
-  atomic replacement are required; unsupported filesystems/platforms report an
-  error instead of unsafe writes. A corrupt/schema-mismatched entry uses defaults
-  with a visible error; no automatic migration is claimed.
-- No effect: enable the checkbox, choose Resume, and verify the supported cell.
-  100% gravity is the identity value. Stealth can hide Sonic while collision remains.
-- Recordings: prepared modified sessions cannot create ordinary user recordings.
-  The existing recording playback path disables external content for stock replay.
-  The input-log capture recipe is an external driver, not a modified recording format.
+- Configure the game's original recognized ROM in the hub. No fallback art,
+  sound or physics is supplied; do not create ROM links just to satisfy a recipe.
+- Check JVM mode, enabled state and exact-hash trust if the Lab is absent. Rebuild
+  the package after API drift.
+- Enable the effect and choose its displayed boundary. A pending LOAD edit is not
+  applied by Resume; a 100% slider can deliberately be an identity setting.
+- No Rings can make ring-dependent paths, including the final Sonic 3 & Knuckles
+  flight route, unsatisfiable. Disable it and perform the displayed full restart
+  before entering a route that requires a ring budget.
+- Repair a failed settings path and retry the same action. Closing the Engine
+  window remains available if persistence cannot succeed.
 
-Continue with the [build-along guide](../../docs/modding/guides/mutators.md) for
-schema examples, fault boundaries, verification and the capture recipe. This is
-an experimental maintained-source prototype, separate from the eight gallery
-samples. It adds no placement filters, reward denial, native-image recipe,
-hot reload or additional portfolio mutators.
+Read the [build-along guide](../../docs/modding/guides/mutators.md) and one class per
+configurable example under `src/main/java/mutators`. The shared typed catalogue
+uses concrete native-game decorators, with game-specific registrations kept out
+of the `any` transaction. Installation refresh, hot code replacement, modified
+recordings and universal character/pose coverage remain separate work.

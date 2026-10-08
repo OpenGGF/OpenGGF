@@ -74,7 +74,7 @@ public final class ModContext {
 
     /** Returns the manifest id that namespaces every local registration. */
     public String ownerModId() { return owner; }
-    /** Returns the stock game id (or {@code any} for a shared startup scene), or null for standalone. */
+    /** Returns the stock game id (or {@code any} for a shared scene/mutator catalogue), or null for standalone. */
     public String baseGameId() { return baseGame; }
     /** Returns the immutable bounded asset snapshot while registration is open. */
     public ModAssetRoot modAssets() { requireOpen(); return assets; }
@@ -102,7 +102,8 @@ public final class ModContext {
         mutate(() -> {
             if (standalone) throw failure("Standalone manifests cannot register game patches");
             Objects.requireNonNull(patch, "patch");
-            if (!baseGame.equals(patch.baseGameId())) {
+            if ("any".equals(baseGame) ? !List.of("s1", "s2", "s3k").contains(patch.baseGameId())
+                    : !baseGame.equals(patch.baseGameId())) {
                 throw failure("Patch targets " + patch.baseGameId() + " instead of " + baseGame);
             }
             String id = ownedPatchId(patch.id());
@@ -269,8 +270,8 @@ public final class ModContext {
     /** Stages a dormant mutator; ownership comes only from this registration transaction. */
     public void registerMutator(com.openggf.mods.mutators.MutatorDefinition definition) {
         mutate(() -> {
-            if (standalone || "any".equals(baseGame)) {
-                throw failure("Mutators require a concrete stock-game patch owner");
+            if (standalone) {
+                throw failure("Mutators require a stock-game patch owner");
             }
             com.openggf.mods.mutators.OwnedMutator owned =
                     new com.openggf.mods.mutators.OwnedMutator(owner, definition);
@@ -324,11 +325,12 @@ public final class ModContext {
             if (standalone && gameModule == null) {
                 throw failure("Standalone manifest must register exactly one game module");
             }
-            if ("any".equals(baseGame) && (startupScene == null || !objects.isEmpty() || !art.isEmpty()
-                    || !patches.isEmpty() || !zones.isEmpty() || !objectPreviewArtKeys.isEmpty()
+            if ("any".equals(baseGame) && ((startupScene == null && mutators.isEmpty())
+                    || !objects.isEmpty() || !art.isEmpty() || (!patches.isEmpty() && mutators.isEmpty())
+                    || !zones.isEmpty() || !objectPreviewArtKeys.isEmpty()
                     || !characters.isEmpty() || !romArt.isEmpty() || !launchTeams.isEmpty()
                     || !inputFilters.isEmpty() || !hudProfiles.isEmpty())) {
-                throw failure("baseGame any may register only a startup scene and its display requirement");
+                throw failure("baseGame any permits a shared startup scene or typed mutator catalogue with stock-game decorators; game-specific content is forbidden");
             }
             objectPreviewArtKeys.forEach((objectKey,artKey)-> {
                 if(!objects.containsKey(objectKey))throw failure("Preview maps unknown object key: "+objectKey);
