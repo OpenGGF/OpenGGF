@@ -244,6 +244,11 @@ public class MasterTitleScreen {
     private boolean gameSelected = false;
     private MasterTitleEntry.Launch selectedLaunch;
     private boolean standaloneActionOpen;
+    private List<com.openggf.mods.code.OwnedTitleEntry> titleEntries = List.of();
+    private java.util.function.BiConsumer<com.openggf.mods.code.OwnedTitleEntry, List<String>> titleEntryOpener =
+            (entry, games) -> { };
+    private boolean extrasOpen;
+    private int extrasIndex;
     private int standaloneActionIndex;
 
     private static final class RomPreviewState {
@@ -520,6 +525,10 @@ public class MasterTitleScreen {
             updateStandaloneActionChooser(inputHandler);
             return;
         }
+        if (extrasOpen) {
+            updateExtrasChooser();
+            return;
+        }
 
         // Shortcuts remain optional; every action is also in the visible menu.
         boolean modsShortcut = inputHandler.isKeyPressedWithoutModifiers(GLFW_KEY_M);
@@ -576,7 +585,66 @@ public class MasterTitleScreen {
             case SETTINGS -> openSettings();
             case TOOLS -> { toolsOpen = true; toolIndex = 0; playConfirmSound(); }
             case QUIT -> openQuitPrompt();
+            case EXTRAS -> openExtras();
         }
+    }
+
+    /**
+     * Mod-contributed master-title entries (from enabled mods' latest registration pass) and
+     * how to open one; the opener receives the games whose ROMs are present.
+     */
+    public void setTitleEntries(List<com.openggf.mods.code.OwnedTitleEntry> entries,
+            java.util.function.BiConsumer<com.openggf.mods.code.OwnedTitleEntry, List<String>> opener) {
+        titleEntries = List.copyOf(entries);
+        titleEntryOpener = Objects.requireNonNull(opener, "opener");
+        navigation.setExtrasVisible(!titleEntries.isEmpty());
+    }
+
+    private void openExtras() {
+        if (titleEntries.isEmpty()) {
+            showActionError("Extras");
+        } else if (titleEntries.size() == 1) {
+            openTitleEntry(titleEntries.get(0));
+        } else {
+            extrasOpen = true;
+            extrasIndex = 0;
+            playConfirmSound();
+        }
+    }
+
+    private void openTitleEntry(com.openggf.mods.code.OwnedTitleEntry entry) {
+        List<String> games = entries.stream()
+                .filter(MasterTitleEntry.Stock.class::isInstance)
+                .map(MasterTitleEntry.Stock.class::cast)
+                .filter(this::isEntryAvailable)
+                .map(stock -> stock.game().gameId)
+                .toList();
+        playConfirmSound();
+        titleEntryOpener.accept(entry, games);
+    }
+
+    private void updateExtrasChooser() {
+        if (navigation.back() || backClicked()) { extrasOpen = false; playCancelSound(); return; }
+        int previous = extrasIndex;
+        if (navigation.up()) extrasIndex = Math.max(0, extrasIndex - 1);
+        if (navigation.down()) extrasIndex = Math.min(titleEntries.size() - 1, extrasIndex + 1);
+        boolean clicked = false;
+        for (int i = 0; pointer != null && i < titleEntries.size(); i++) {
+            if (pointer.over(viewportWidth / 2 - 90, 76 + i * 28, 180, 23) && (pointer.moved() || pointer.click())) {
+                extrasIndex = i;
+                clicked |= pointer.click();
+            }
+        }
+        if (extrasIndex != previous) playNavigateSound();
+        if (navigation.accept() || clicked) {
+            extrasOpen = false;
+            openTitleEntry(titleEntries.get(extrasIndex));
+        }
+    }
+
+    private String hubLabel(TitleHubNavigation.Action action) {
+        return action == TitleHubNavigation.Action.EXTRAS && titleEntries.size() == 1
+                ? titleEntries.get(0).label().toUpperCase(java.util.Locale.ROOT) : action.label;
     }
 
     /** This tick's mouse in menu pixels; null without a window or before the mouse is used. */
@@ -638,7 +706,7 @@ public class MasterTitleScreen {
         int actionX = viewportWidth / 2;
         int actionWidth = viewportWidth - actionX - 9;
         TitleHubNavigation.Action[] actions = TitleHubNavigation.Action.values();
-        for (int i = 0; i < actions.length; i++) {
+        for (int i = 0; i < navigation.count(); i++) {
             if (!pointer.over(actionX, 39 + i * 20, actionWidth, 18) || !(pointer.moved() || pointer.click())) continue;
             if (!navigation.actions()) navigation.enter();
             if (navigation.move(i - navigation.selected())) playNavigateSound();
@@ -1100,6 +1168,21 @@ public class MasterTitleScreen {
             drawToolsAndHelp();
             return;
         }
+        if (extrasOpen) {
+            font.beginMegaBatch();
+            MenuStyle.page(font, viewportWidth, "EXTRAS", "Added by mods");
+            for (int i = 0; i < titleEntries.size(); i++) {
+                String label = (i == extrasIndex ? "> " : "  ")
+                        + titleEntries.get(i).label().toUpperCase(java.util.Locale.ROOT);
+                MenuStyle.panel(font, viewportWidth / 2 - 90, 76 + i * 28, 180, 23);
+                if (i == extrasIndex) MenuStyle.focus(font, viewportWidth / 2 - 90, 76 + i * 28, 180, 23);
+                font.drawTextCentered(label, viewportWidth, 82 + i * 28, 1f, 1f, 1f, 1f);
+            }
+            textFitted(directionHint() + " Choose  " + confirmHint() + " Open  " + backHint() + " Back",
+                    9, 211, viewportWidth - 18, 1f, 0.5f, 0.91f, 1f);
+            font.endMegaBatch();
+            return;
+        }
         if (standaloneActionOpen) {
             font.beginMegaBatch();
             MenuStyle.page(font, viewportWidth, "START GAME", selectedEntry().menuLabel());
@@ -1125,7 +1208,7 @@ public class MasterTitleScreen {
         int leftWidth = viewportWidth / 2 - 18;
         int actionX = viewportWidth / 2;
         int actionWidth = viewportWidth - actionX - 9;
-        for (int i = 0; i < TitleHubNavigation.Action.values().length; i++) {
+        for (int i = 0; i < navigation.count(); i++) {
             int y = 39 + i * 20;
             box(actionX, y, actionWidth, 18, 0.05f, 0.16f, 0.38f, 1f);
             if (navigation.actions() && navigation.selected() == i) focusBox(actionX, y, actionWidth, 18);
@@ -1147,12 +1230,13 @@ public class MasterTitleScreen {
         }
         drawGameCarousel();
         for (TitleHubNavigation.Action action : TitleHubNavigation.Action.values()) {
-            boolean available = action == TitleHubNavigation.Action.MODS || action == TitleHubNavigation.Action.SETTINGS
+            if (action.ordinal() >= navigation.count()) continue;
+            boolean available = action == TitleHubNavigation.Action.EXTRAS || action == TitleHubNavigation.Action.MODS || action == TitleHubNavigation.Action.SETTINGS
                     || action == TitleHubNavigation.Action.TOOLS || action == TitleHubNavigation.Action.QUIT || action == TitleHubNavigation.Action.START
                     && isEntryAvailable(selectedEntry()) || selectedEntry() instanceof MasterTitleEntry.Stock
                     && isEntryAvailable(selectedEntry());
             float brightness = available && navigation.actions() ? 1f : 0.68f;
-            textFitted(action.label, actionX + 5, 43 + action.ordinal() * 20, actionWidth - 10,
+            textFitted(hubLabel(action), actionX + 5, 43 + action.ordinal() * 20, actionWidth - 10,
                     1f, brightness, brightness, brightness);
         }
         if (selectedEntry() instanceof MasterTitleEntry.Stock stock && isEntryAvailable(stock)) {
@@ -1798,7 +1882,7 @@ public class MasterTitleScreen {
         return state != State.ACTIVE || navigation.actions() || quitPrompt || childInputPending
                 || settingsScreen != null || launchConfigPanel != null || modManagerScreen != null
                 || timeAttackMenu != null || userRecordingMenu != null || raceLobbyScreen != null
-                || serverBrowserScreen != null || tracePicker != null || standaloneActionOpen
+                || serverBrowserScreen != null || tracePicker != null || standaloneActionOpen || extrasOpen
                 || toolsOpen || helpOpen || gameBrowserOpen || catalogLoad != null || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
     }
 

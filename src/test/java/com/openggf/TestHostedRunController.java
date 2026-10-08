@@ -33,8 +33,8 @@ class TestHostedRunController {
         handle.leave();
         assertTrue(controller.consumeRetry());
         assertFalse(controller.consumeRetry());
-        assertTrue(controller.consumeLeave());
-        assertFalse(controller.consumeLeave());
+        assertEquals(RunEndReason.LEFT, controller.consumeLeave());
+        assertEquals(null, controller.consumeLeave());
     }
 
     @Test
@@ -50,6 +50,17 @@ class TestHostedRunController {
         assertFalse(controller.isActive());
         handle.retry();
         assertFalse(controller.consumeRetry(), "a stale handle cannot command a later run");
+    }
+
+    @Test
+    void aFailingHostAbortsTheRunInsteadOfTheEngine() {
+        controller.begin(SPEC, new RunHost() {
+            @Override public void drawOverlay(com.openggf.mods.ui.LevelOverlayCanvas canvas) {
+                throw new IllegalStateException("creator bug");
+            }
+        });
+        controller.drawOverlay(null);
+        assertEquals(RunEndReason.ABORTED, controller.consumeLeave());
     }
 
     @Test

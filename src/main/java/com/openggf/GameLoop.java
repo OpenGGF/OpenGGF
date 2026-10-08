@@ -241,7 +241,7 @@ public class GameLoop {
     private final UserRecordingRuntimeControls userRecordingControls;
     private final TimeAttackRuntime timeAttackRuntime;
     final HostedRunController hostedRuns;
-    private Runnable hostedRunReturn = () -> { };
+    private Consumer<RunEndReason> hostedRunReturn = reason -> { };
     private final TimeAttackHudOverlay timeAttackHudOverlay;
     private final MultiplayerHudRenderer multiplayerHudRenderer;
     private MultiplayerRaceCoordinator multiplayerRaceCoordinator;
@@ -1138,6 +1138,11 @@ public class GameLoop {
     }
 
     private void finishTimeAttackMasterTitleFrame(MasterTitleScreen masterScreen) {
+        if (pendingTitleEntryOpen != null && !resolveFadeManager().isActive()) {
+            Runnable open = pendingTitleEntryOpen;
+            pendingTitleEntryOpen = null;
+            fadeOutTo(open);
+        }
         if (pendingTimeAttackLaunch != null) {
             TimeAttackLaunchRequest deferredLaunch = pendingTimeAttackLaunch;
             pendingTimeAttackLaunch = null;
@@ -1425,6 +1430,7 @@ public class GameLoop {
             return;
         } else if (currentGameMode == GameMode.MOD_SCENE) {
             menuScreenModeController.updateModScene(modSceneHost::update, inputHandler);
+            startPendingHostedRunLaunch();
             profiler.endSection("input");
             return;
         } else if (currentGameMode == GameMode.CREDITS_TEXT
@@ -1805,9 +1811,10 @@ public class GameLoop {
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
-            if (hostedRuns.consumeLeave()) {
+            RunEndReason leaveReason = hostedRuns.consumeLeave();
+            if (leaveReason != null) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                endHostedRun(RunEndReason.LEFT);
+                endHostedRun(leaveReason);
                 levelIterationAdmission.finishPlaybackBoundary(
                         false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
@@ -2010,10 +2017,41 @@ public class GameLoop {
 
     /** Ends the session's hosted run and hands control back to its host. */
     private void endHostedRun(RunEndReason reason) {
-        Runnable back = hostedRunReturn;
-        hostedRunReturn = () -> { };
+        Consumer<RunEndReason> back = hostedRunReturn;
+        hostedRunReturn = ignored -> { };
         hostedRuns.end(reason);
-        back.run();
+        back.accept(reason);
+    }
+
+    private Runnable pendingHostedRunLaunch;
+    private Runnable pendingTitleEntryOpen;
+
+    /** Opens a mod title entry once the master title's update has returned, behind a fade. */
+    void requestTitleEntryOpen(Runnable open) {
+        pendingTitleEntryOpen = Objects.requireNonNull(open, "open");
+    }
+
+    /** Starts a scene-launched run's session once the scene callback has unwound, behind a fade. */
+    void requestHostedRunLaunch(Runnable launch) {
+        pendingHostedRunLaunch = Objects.requireNonNull(launch, "launch");
+    }
+
+    private void startPendingHostedRunLaunch() {
+        if (pendingHostedRunLaunch != null && !resolveFadeManager().isActive()) {
+            Runnable launch = pendingHostedRunLaunch;
+            pendingHostedRunLaunch = null;
+            fadeOutTo(launch);
+        }
+    }
+
+    /** Ends a hosted run whose session failed to load; optionally hands control back to its host. */
+    void endHostedRunAfterFailedLaunch(boolean returnToHost) {
+        if (returnToHost) {
+            endHostedRun(RunEndReason.LOAD_FAILED);
+        } else {
+            hostedRunReturn = ignored -> { };
+            hostedRuns.end(RunEndReason.LOAD_FAILED);
+        }
     }
 
     /** Tells the hosted run its level is ready when a launch bypassed {@code doZoneAct}. */
@@ -2022,7 +2060,7 @@ public class GameLoop {
     }
 
     /** Hosts {@code host}'s run of {@code spec}; {@code returnToHost} runs once when it ends. */
-    RunHandle beginHostedRun(RunSpec spec, RunHost host, Runnable returnToHost) {
+    RunHandle beginHostedRun(RunSpec spec, RunHost host, Consumer<RunEndReason> returnToHost) {
         RunHandle handle = hostedRuns.begin(spec, host);
         hostedRunReturn = Objects.requireNonNull(returnToHost, "returnToHost");
         return handle;
@@ -3735,17 +3773,23 @@ public class GameLoop {
      */
     void returnToMasterTitle() {
         modSceneHost.close();
+        tearDownGameplayForReturn();
+        masterTitleLaunchCoordinator.returnToMasterTitle();
+    }
+
+    /** Gameplay teardown shared by the master-title return and a hosted run's scene return. */
+    void tearDownGameplayForReturn() {
         escapeToMasterTitleController.reset();
         levelIterationAdmission.reset();
         userRecordingSessionLauncher.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
         userRecordingSessionLauncher.endPlaybackSession();
         levelIterationAdmission.resetLastAppliedPlaybackFrame();
+        pendingHostedRunLaunch = null;
         // Every route out of a hosted run that was not already ended funnels through
-        // this method (escape-to-master-title hold and TraceSessionLauncher teardown),
-        // so the run must end here or its frame hooks would fire in the next session.
-        hostedRunReturn = () -> { };
+        // here (escape-to-master-title hold and TraceSessionLauncher teardown), so the
+        // run must end or its frame hooks would fire in the next session.
+        hostedRunReturn = ignored -> { };
         hostedRuns.end(RunEndReason.ABORTED);
-        masterTitleLaunchCoordinator.returnToMasterTitle();
     }
 
     /**

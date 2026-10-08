@@ -7,7 +7,9 @@ import com.openggf.control.MenuInput;
 final class TitleHubNavigation {
     enum Action {
         START("START GAME"), LAUNCH("LAUNCH OPTIONS"), TIME_ATTACK("TIME ATTACK"),
-        RECORDINGS("RECORDINGS"), MODS("MODS"), SETTINGS("SETTINGS"), TOOLS("ADVANCED"), QUIT("QUIT");
+        RECORDINGS("RECORDINGS"), MODS("MODS"), SETTINGS("SETTINGS"), TOOLS("ADVANCED"), QUIT("QUIT"),
+        /** Mod-contributed title entries; shown only when at least one is registered. */
+        EXTRAS("EXTRAS");
         final String label;
         Action(String label) { this.label = label; }
     }
@@ -16,6 +18,7 @@ final class TitleHubNavigation {
     private final boolean[] pressed = new boolean[6];
     private boolean actions;
     private int selected;
+    private int count = Action.values().length - 1;
 
     void capture(InputHandler input) {
         boolean[] current = { MenuInput.left(input), MenuInput.right(input), MenuInput.up(input),
@@ -36,9 +39,15 @@ final class TitleHubNavigation {
     int selected() { return selected; }
     Action action() { return Action.values()[selected]; }
     void enter() { actions = true; selected = 0; }
+    /** Number of visible actions; {@link Action#EXTRAS} is last and hidden without entries. */
+    int count() { return count; }
+    void setExtrasVisible(boolean visible) {
+        count = Action.values().length - (visible ? 0 : 1);
+        selected = Math.min(selected, count - 1);
+    }
     void leave() { actions = false; }
     boolean move(int delta) {
-        int next = Math.clamp(selected + delta, 0, Action.values().length - 1);
+        int next = Math.clamp(selected + delta, 0, count - 1);
         boolean moved = next != selected;
         selected = next;
         return moved;

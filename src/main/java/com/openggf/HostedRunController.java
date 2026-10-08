@@ -52,7 +52,7 @@ final class HostedRunController {
     private boolean pendingStartHeld;
     private boolean debugAssistThisStep;
     private boolean retryRequested;
-    private boolean leaveRequested;
+    private RunEndReason leaveReason;
 
     HostedRunController(SonicConfigurationService configuration) {
         this.configuration = Objects.requireNonNull(configuration, "configuration");
@@ -75,7 +75,7 @@ final class HostedRunController {
         this.host = Objects.requireNonNull(host, "host");
         this.handle = new Handle();
         retryRequested = false;
-        leaveRequested = false;
+        leaveReason = null;
         return handle;
     }
 
@@ -92,7 +92,8 @@ final class HostedRunController {
         // bases; clear them before the new level's first render.
         ghostRenderer.clearSlots();
         attachRenderer(GameServices.ghostRenderRegistryOrNull());
-        host.onLevelReady(new RunLevelStart(spec, determinismFingerprint, debugAssisted));
+        RunLevelStart start = new RunLevelStart(spec, determinismFingerprint, debugAssisted);
+        guarded(() -> host.onLevelReady(start));
     }
 
     private static int romChecksumOrZero() {
@@ -106,10 +107,15 @@ final class HostedRunController {
 
     /** Asks the host whether this frame's step may run; false holds the run. */
     boolean admitStep(InputHandler input) {
-        if (host == null) {
+        if (host == null || leaveReason != null) {
             return true;
         }
-        return host.admitStep(new FrameInput(input));
+        try {
+            return host.admitStep(new FrameInput(input));
+        } catch (RuntimeException failure) {
+            abort(failure);
+            return true;
+        }
     }
 
     /** Captures player 1's admitted input for the step about to execute. */
@@ -150,7 +156,7 @@ final class HostedRunController {
         RunStep step = new RunStep(stepOrdinal++, pendingHeldMask, pendingStartHeld, poseOf(player),
                 actComplete, checkpointIndex, debugAssistThisStep);
         debugAssistThisStep = false;
-        host.afterStep(step);
+        guarded(() -> host.afterStep(step));
     }
 
     static PlayerPose poseOf(AbstractPlayableSprite sprite) {
@@ -165,16 +171,17 @@ final class HostedRunController {
         return requested && host != null;
     }
 
-    boolean consumeLeave() {
-        boolean requested = leaveRequested;
-        leaveRequested = false;
-        return requested && host != null;
+    /** The reason the run must end at the next boundary (host leave or host failure), or null. */
+    RunEndReason consumeLeave() {
+        RunEndReason reason = leaveReason;
+        leaveReason = null;
+        return host != null ? reason : null;
     }
 
     /** Draws the host's screen-space overlay. */
     void drawOverlay(LevelOverlayCanvas canvas) {
-        if (host != null) {
-            host.drawOverlay(canvas);
+        if (host != null && leaveReason == null) {
+            guarded(() -> host.drawOverlay(canvas));
         }
     }
 
@@ -191,7 +198,7 @@ final class HostedRunController {
         spec = null;
         handle = null;
         retryRequested = false;
-        leaveRequested = false;
+        leaveReason = null;
         try {
             ended.onRunEnded(reason);
         } catch (RuntimeException e) {
@@ -228,7 +235,13 @@ final class HostedRunController {
         } catch (IllegalStateException e) {
             return;
         }
-        List<GhostPose> poses = host.ghosts();
+        List<GhostPose> poses;
+        try {
+            poses = leaveReason == null ? host.ghosts() : null;
+        } catch (RuntimeException failure) {
+            abort(failure);
+            return;
+        }
         if (poses == null || poses.isEmpty()) {
             return;
         }
@@ -251,6 +264,20 @@ final class HostedRunController {
         return new ActiveGhost(pose.slotId(), pose.characterCode(), frame, pose.nameplate(), pose.opacity());
     }
 
+    /** Runs a host callback; a failure aborts the run at the next boundary instead of the engine. */
+    private void guarded(Runnable callback) {
+        try {
+            callback.run();
+        } catch (RuntimeException failure) {
+            abort(failure);
+        }
+    }
+
+    private void abort(RuntimeException failure) {
+        LOGGER.log(Level.WARNING, "Run host failed; ending the run", failure);
+        leaveReason = RunEndReason.ABORTED;
+    }
+
     private final class Handle implements RunHandle {
         private boolean active = true;
 
@@ -263,8 +290,8 @@ final class HostedRunController {
 
         @Override
         public void leave() {
-            if (active) {
-                leaveRequested = true;
+            if (active && leaveReason == null) {
+                leaveReason = RunEndReason.LEFT;
             }
         }
 

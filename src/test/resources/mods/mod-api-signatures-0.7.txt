@@ -10548,6 +10548,7 @@ METHOD com.openggf.mods.code.ModContext public  void registerRewindAdapter(java.
 METHOD com.openggf.mods.code.ModContext public  void registerRomObjectArt(java.lang.String,com.openggf.mods.code.RomArtRequest)
 METHOD com.openggf.mods.code.ModContext public  void registerServiceBundle(java.lang.String,java.util.function.Supplier<com.openggf.game.GameServiceBundle>)
 METHOD com.openggf.mods.code.ModContext public  void registerStartupScene(com.openggf.mods.scene.ModSceneFactory)
+METHOD com.openggf.mods.code.ModContext public  void registerTitleEntry(java.lang.String,com.openggf.mods.scene.ModSceneFactory)
 METHOD com.openggf.mods.code.ModContext public  void registerZone(com.openggf.mods.code.ModZoneContribution)
 METHOD com.openggf.mods.code.ModContext public  void requireDisplayWidth(int)
 METHOD com.openggf.mods.code.ModContext public <T> void registerService(java.lang.String,java.lang.Class<T>,T)

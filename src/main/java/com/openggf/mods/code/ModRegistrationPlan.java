@@ -112,12 +112,12 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 }
             }
         }
-        if ("any".equals(baseGameId) && (startupScene == null || !objectFactories.isEmpty()
+        if ("any".equals(baseGameId) && (!objectFactories.isEmpty()
                 || !objectArt.isEmpty() || !explicitPatches.isEmpty() || !zones.isEmpty()
                 || !objectPreviewArtKeys.isEmpty() || !characters.isEmpty() || !romObjectArt.isEmpty()
                 || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty() || !serviceBundles.isEmpty() || !decodedLevelPatches.isEmpty())) {
             throw new IllegalArgumentException(
-                    "baseGame any may register only a startup scene and its display requirement");
+                    "baseGame any may register only a startup scene, its display requirement and a title entry");
         }
     }
 

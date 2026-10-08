@@ -90,8 +90,54 @@ public final class OwnedSceneFactory {
         }
 
         @Override
+        public void resumed(SceneContext ctx, com.openggf.game.run.RunEndReason reason) {
+            boundary.run(ownerModId, () -> scene.resumed(ctx, reason));
+        }
+
+        @Override
         public void exit(SceneContext ctx) {
             boundary.run(ownerModId, () -> scene.exit(ctx));
         }
+    }
+
+    /**
+     * {@code host} with every callback routed through this scene owner's fault boundary, for a
+     * run the owner's scene launched. A creator failure disables the owner and surfaces as the
+     * boundary's abort, which the engine treats as an aborted run.
+     */
+    public com.openggf.game.run.RunHost guard(com.openggf.game.run.RunHost host) {
+        Objects.requireNonNull(host, "host");
+        return new com.openggf.game.run.RunHost() {
+            @Override
+            public void onLevelReady(com.openggf.game.run.RunLevelStart start) {
+                boundary.run(ownerModId, () -> host.onLevelReady(start));
+            }
+
+            @Override
+            public boolean admitStep(com.openggf.game.run.RunInput input) {
+                return boundary.call(ownerModId, () -> host.admitStep(input));
+            }
+
+            @Override
+            public void afterStep(com.openggf.game.run.RunStep step) {
+                boundary.run(ownerModId, () -> host.afterStep(step));
+            }
+
+            @Override
+            public java.util.List<com.openggf.game.run.GhostPose> ghosts() {
+                java.util.List<com.openggf.game.run.GhostPose> poses = boundary.call(ownerModId, host::ghosts);
+                return poses == null ? java.util.List.of() : java.util.List.copyOf(poses);
+            }
+
+            @Override
+            public void drawOverlay(com.openggf.mods.ui.LevelOverlayCanvas canvas) {
+                boundary.run(ownerModId, () -> host.drawOverlay(canvas));
+            }
+
+            @Override
+            public void onRunEnded(com.openggf.game.run.RunEndReason reason) {
+                boundary.run(ownerModId, () -> host.onRunEnded(reason));
+            }
+        };
     }
 }

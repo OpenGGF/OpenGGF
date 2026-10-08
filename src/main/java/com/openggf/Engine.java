@@ -1791,6 +1791,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		com.openggf.game.MasterTitleCatalog.bind(screen, this::masterTitleEntries);
 		if (ModSubsystem.current().policy().mayScanAtBoot()) {
 			screen.setModManagerScreenFactory(font -> ModSubsystem.current().createManager(font));
+			screen.setTitleEntries(modRuntime.titleEntries(), (entry, games) ->
+					gameLoop.requestTitleEntryOpen(() -> openTitleEntryScene(entry, games)));
 		}
 		return screen;
 	}
@@ -2020,10 +2022,38 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 */
 	private void launchTimeAttack(TimeAttackLaunchRequest request) {
 		Objects.requireNonNull(request, "request");
+		TimeAttackRuntime timeAttackRuntime = gameLoop.getTimeAttackRuntime();
+		timeAttackRuntime.armForLaunch(request);
+		if (!timeAttackRuntime.isActive()) {
+			return; // refused: trace, test or playback-debug mode is active
+		}
+		com.openggf.game.run.RunSpec spec = timeAttackRuntime.runSpec();
+		timeAttackRuntime.attachHandle(gameLoop.beginHostedRun(spec, timeAttackRuntime,
+				reason -> gameLoop.startTimeAttackReturnToMenuFade()));
+		if (!launchHostedRunSession(spec, this::showStartupRomError)) {
+			gameLoop.endHostedRunAfterFailedLaunch(false);
+		}
+	}
 
+	/** Starts a run a mod scene launched; a load failure returns to the scene. */
+	void startSceneHostedRun(com.openggf.game.run.RunSpec spec) {
+		if (!launchHostedRunSession(spec, message -> LOGGER.warning("Scene run failed to load: " + message))) {
+			gameLoop.endHostedRunAfterFailedLaunch(true);
+		}
+	}
+
+	/**
+	 * Opens a stock, non-saving gameplay session for the hosted run of {@code spec} and loads
+	 * its starting act. The session admits no mod gameplay content, so its simulation is the
+	 * shipped game's; the run's host participates only through its {@code RunHost} callbacks.
+	 * Starting from the master title or a mod scene with no ROM loaded, this performs the
+	 * ROM-load / module-detection bootstrap that {@link #initializeGame()} performs.
+	 */
+	private boolean launchHostedRunSession(com.openggf.game.run.RunSpec spec,
+			java.util.function.Consumer<String> romError) {
 		refreshLaunchSessionCachedConfig();
 		applyResolvedDisplayDimensions();
-		configService.setConfigValue(SonicConfiguration.DEFAULT_ROM, request.gameId());
+		configService.setConfigValue(SonicConfiguration.DEFAULT_ROM, spec.gameId());
 
 		if (masterTitleScreen != null) {
 			masterTitleScreen.cleanup();
@@ -2037,51 +2067,93 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			Rom rom = romManager.getRom();
 			var detectedModule = romDetectionService.detectAndCreateModule(rom);
 			if (detectedModule.isEmpty()) {
-				showStartupRomError("ROM not recognized or corrupt for time attack: " + request.gameId());
-				return;
+				romError.accept("ROM not recognized or corrupt for run: " + spec.gameId());
+				return false;
 			}
 			rootModule = detectedModule.orElseThrow();
 			dataSource = StockGameDataSources.pinned(rom, rootModule);
 		} catch (IOException e) {
-			showStartupRomError("Failed to load ROM for time attack launch: " + e.getMessage());
-			return;
+			romError.accept("Failed to load ROM for run launch: " + e.getMessage());
+			return false;
 		}
 
-		SelectedTeam team = new SelectedTeam(request.character(), List.of());
+		SelectedTeam team = new SelectedTeam(spec.character(), List.of());
 		com.openggf.game.save.SaveSessionContext saveContext = com.openggf.game.save.SaveSessionContext.noSave(
-				request.gameId(), team, request.zone(), request.act());
+				spec.gameId(), team, spec.zone(), spec.act());
 
-		GameModule module = resolveTimeAttackModuleForLaunch(rootModule, request);
+		GameModule module = resolveHostedRunModule(rootModule, spec);
 		ModSubsystem.disableCurrentSessionForDeterminism();
 		if (!preparePresentationForLaunch(module)) {
-			return;
+			return false;
 		}
 		GameplayModeContext gameplay = SessionManager.openGameplaySession(
 				rootModule, module, dataSource, saveContext);
 		initializeGameplayRuntime(gameplay, false);
-		TimeAttackRuntime timeAttackRuntime = gameLoop.getTimeAttackRuntime();
-		timeAttackRuntime.armForLaunch(request);
-		if (timeAttackRuntime.isActive()) {
-			// The run policy is fixed before the level loads so every object sees it.
-			com.openggf.game.run.RunSpec spec = timeAttackRuntime.runSpec();
-			gameplay.beginGameplayRun(spec.policy(), spec.zone(), spec.act());
-			timeAttackRuntime.attachHandle(gameLoop.beginHostedRun(spec, timeAttackRuntime,
-					gameLoop::startTimeAttackReturnToMenuFade));
-		}
-		loadLevelFromDataSelect(request.zone(), request.act());
+		// The run policy is fixed before the level loads so every object sees it.
+		gameplay.beginGameplayRun(spec.policy(), spec.zone(), spec.act());
+		loadLevelFromDataSelect(spec.zone(), spec.act());
 		gameLoop.setGameMode(GameMode.LEVEL);
 
 		// loadLevelFromDataSelect -> levelManager.loadZoneAndAct(...) bypasses
 		// GameLoop.doZoneAct (the mid-game zone-transition path that announces the
 		// level for a retry), so announce it explicitly for this fresh launch.
 		gameLoop.announceHostedRunLevelReady();
+		return true;
+	}
+
+	/** A hosted run's module: the stock game with built-in patches only (no mod content). */
+	GameModule resolveHostedRunModule(GameModule rootModule, com.openggf.game.run.RunSpec spec) {
+		return moduleResolutionService.resolveForLaunch(rootModule,
+				new GameplayLaunchRequest(spec.gameId(), spec.character(), List.of()),
+				ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
+	}
+
+	/**
+	 * Shows the mod scene that launched the run which just ended. The gameplay session is torn
+	 * down as for a return to the master title, but the suspended scene is resumed instead.
+	 */
+	void returnToHostScene(com.openggf.game.run.RunEndReason reason) {
+		gameLoop.tearDownGameplayForReturn();
+		resetForGameplayFromMasterTitle();
+		gameLoop.setGameplayMode(null);
+		this.gameplayMode = null;
+		refreshLaunchSessionCachedConfig();
+		applyResolvedDisplayDimensions();
+		if (!gameLoop.modSceneHost.isOpen()) {
+			returnToMasterTitleScreen();
+			return;
+		}
+		gameLoop.setGameMode(GameMode.MOD_SCENE);
+		try {
+			gameLoop.modSceneHost.resume(reason);
+		} catch (RuntimeException | Error failure) {
+			LOGGER.log(java.util.logging.Level.WARNING, "Mod scene failed to resume; returning to the master title", failure);
+			returnToMasterTitleScreen();
+			return;
+		}
+		FadeManager fadeManager = graphicsManager.getFadeManager();
+		if (fadeManager != null) {
+			fadeManager.startFadeFromBlack(null);
+		}
+	}
+
+	/** Opens a mod's master-title entry; the scene may launch runs and is resumed after each. */
+	void openTitleEntryScene(com.openggf.mods.code.OwnedTitleEntry entry, List<String> availableGames) {
+		if (masterTitleScreen != null) {
+			masterTitleScreen.cleanup();
+			masterTitleScreen = null;
+		}
+		ModSceneLauncher.openTitleEntryScene(gameLoop, window, graphicsManager,
+				(int) projectionWidth, (int) realHeight, entry,
+				new SceneRunLauncher(gameLoop, entry.scene()::guard, availableGames,
+						this::startSceneHostedRun, this::returnToHostScene));
 	}
 
 	GameModule resolveTimeAttackModuleForLaunch(
 			GameModule rootModule, TimeAttackLaunchRequest request) {
-		return moduleResolutionService.resolveForLaunch(rootModule,
-				new GameplayLaunchRequest(request.gameId(), request.character(), List.of()),
-				ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
+		return resolveHostedRunModule(rootModule, new com.openggf.game.run.RunSpec(request.gameId(),
+				request.zone(), request.act(), request.character(),
+				com.openggf.game.session.GameplayRunPolicy.isolatedAct()));
 	}
 
 	private static List<String> stockCharacters(String gameId) {

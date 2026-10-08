@@ -151,17 +151,21 @@ class TestModEngineWiringSeams {
     }
 
     @Test
-    void freshTimeAttackDisablesModsBeforePresentationAndSessionOpen() throws IOException {
+    void freshHostedRunDisablesModsBeforePresentationAndSessionOpen() throws IOException {
         String source = source("Engine.java");
-        assertMethodOrder(source, "private void launchTimeAttack(TimeAttackLaunchRequest request)",
-                "resolveTimeAttackModuleForLaunch(rootModule, request)",
+        String method = "private boolean launchHostedRunSession(com.openggf.game.run.RunSpec spec,";
+        assertMethodOrder(source, method,
+                "resolveHostedRunModule(rootModule, spec)",
                 "ModSubsystem.disableCurrentSessionForDeterminism()");
-        assertMethodOrder(source, "private void launchTimeAttack(TimeAttackLaunchRequest request)",
+        assertMethodOrder(source, method,
                 "ModSubsystem.disableCurrentSessionForDeterminism()",
                 "preparePresentationForLaunch(module)");
-        assertMethodOrder(source, "private void launchTimeAttack(TimeAttackLaunchRequest request)",
+        assertMethodOrder(source, method,
                 "preparePresentationForLaunch(module)",
                 "SessionManager.openGameplaySession(");
+        assertMethodOrder(source, method,
+                "gameplay.beginGameplayRun(spec.policy(), spec.zone(), spec.act())",
+                "loadLevelFromDataSelect(spec.zone(), spec.act())");
     }
 
     @Test

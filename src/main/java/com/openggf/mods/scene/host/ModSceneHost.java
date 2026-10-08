@@ -121,6 +121,22 @@ public final class ModSceneHost {
     }
 
     /**
+     * Shows the scene again after a run it launched has ended. The scene was suspended (neither
+     * updated nor drawn) while the run played; a creator failure closes it.
+     */
+    public void resume(com.openggf.game.run.RunEndReason reason) {
+        if (scene == null || exiting) {
+            return;
+        }
+        try {
+            scene.resumed(context, reason);
+        } catch (RuntimeException | Error failure) {
+            close();
+            throw failure;
+        }
+    }
+
+    /**
      * Sends a debug command to the open scene if it implements {@link DebuggableScene} (tools
      * and tests); false when no scene is open, it has no debug entry point, or it did not
      * understand the command.
@@ -424,6 +440,14 @@ public final class ModSceneHost {
         @Override
         public SceneAudio audio() {
             return audio;
+        }
+
+        @Override
+        public com.openggf.mods.scene.SceneGameplay gameplay() {
+            if (services.gameplay() == null) {
+                throw new UnsupportedOperationException("This scene cannot launch gameplay runs");
+            }
+            return services.gameplay();
         }
 
         @Override
