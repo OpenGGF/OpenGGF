@@ -23,7 +23,6 @@ final class StarterProjects {
             if (!entry.startsWith(prefix)) continue;
             String relative = entry.substring(prefix.length()).replace(oldPackage.replace('.', '/'), javaPackage.replace('.', '/'));
             Path path = output.resolve(relative);
-            Files.createDirectories(path.getParent());
             byte[] bytes = read(ROOT + entry);
             if (relative.endsWith(".java") || relative.endsWith(".xml") || relative.endsWith(".yaml")
                     || relative.endsWith(".json") || relative.endsWith(".md")) {
@@ -32,9 +31,13 @@ final class StarterProjects {
                         .getBytes(StandardCharsets.UTF_8);
             }
             if (relative.endsWith(".base64")) {
-                path = output.resolve(relative.substring(0, relative.length() - ".base64".length()));
+                String decoded = relative.substring(0, relative.length() - ".base64".length());
+                // The maintained standalone scripts publish this encoded converter input as runtime audio.
+                if (decoded.equals("src/main/mod/sample-tone.wav")) decoded = "src/main/resources/audio/sample-tone.wav";
+                path = output.resolve(decoded);
                 bytes = Base64.getMimeDecoder().decode(bytes);
             }
+            Files.createDirectories(path.getParent());
             Files.write(path, bytes);
         }
         try (var files = Files.walk(output)) {

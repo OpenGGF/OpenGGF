@@ -945,6 +945,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   authored fonts and overlays, remappable actions and ROM-qualified scene art.
   Generated character starters draw their installed baked art; walkthroughs use
   repeatable Maven outputs and the examples' actual required ROMs.
+  Generated standalone starters materialize authored audio as runtime resources
+  before packaging.
   The maintained examples adopt these helpers while retaining their game rules,
   visuals, input formats, random sequences and saved profiles. Creator tests use
   production validation/loading/resolution and record real scene input and draws;
