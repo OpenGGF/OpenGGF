@@ -444,7 +444,7 @@ exercise the real packaged mod's queue and settings, host ownership/lifetime, an
 all assets through production validation, preparation and stereo PCM cursors.
 This proves content and nominal queue timing, not physical speaker latency.
 
-Validation in progress:
+Validation and qualification:
 
 - Final offline publication: all 122 current hashes and blind word checks pass;
   finite non-silent mono WAVs have no clipped samples. Every catalogue line has
@@ -491,9 +491,54 @@ registry and launch-factory code are unchanged by these imports. Main local and
 remote publication holds remain in effect pending the coordinated successor.
 
 The combined plan against actual held main `5662ad2c2291` selects all 3070 ordinary
-classes plus separate fresh guards. Qualification uses the normal runner with
+classes plus separate fresh guards. Qualification used the normal runner with
 `--max-minutes 150`, excluding queue wait, and the unchanged ten-minute no-output
-rule. Estimated cost is 80–110 minutes ordinary plus about four minutes guards.
+rule. The announced estimate was 80–110 minutes ordinary plus about four minutes guards.
 Timeout, omitted required reports, missing-ROM skips or new/worsened/unattributed
-assertions block integration. The entire candidate input tree stays frozen
+assertions block integration. The entire candidate input tree remained frozen
 through both lanes; source/publication in main remains under the parity hold.
+
+Private qualification of `d2899a86d75f` completed at 2026-10-08T23:20:45Z,
+after admission at 21:49:35Z, as `20261008T214935Z-95b99174`. Both
+`python3 tools/testing/run_categories.py --base 5662ad2c2291 --max-minutes 150 --preflight`
+and the same command with `--run` used Java 21 and the normal launch environment
+without inherited `LD_LIBRARY_PATH`, with all three verified original ROM paths.
+The retained six-hour supervisor excluded queue wait from the runner's 150-minute
+execution cap. No timeout occurred, and the recorded input fingerprint remained
+`286a3184ee22a24b50fbef883158a2d3a400974d110f5c90c0dafa5e6bd54b55`
+through both lanes and the terminal inspection.
+
+- Ordinary: all 3070 selected classes, 3068 reports, 26609 cases, 26 failures,
+  zero errors and 63 skips, in 5224.24 seconds. Exit 1 is the inherited-failure
+  outcome, not a green full-suite result. No negative cases were omitted.
+- Fresh guards: 87 reports, 674 cases, all passing, zero skips,
+  in 245.57 seconds; exit 0.
+- Every failure identity, kind/type and complete first assertion matches
+  actual-main `863683b092f7` / run `20261008T194559Z-9deb33e8` in the
+  [owning parity table](../audits/2026-10-07-stock-parity-gap-verification.md#actual-main-full-assertion-and-skip-summary).
+  Twenty-five assertions match literally. The complete SSZ assertion matches
+  at 2907 characters after only that table's exception-prefix removal and
+  replacement of two verified `RewindObjectStateBlob@hex` values with `@HASH`.
+  There are no added, removed or worsened failure assertions.
+- All 62 inherited skip identities and literal first reasons match. The sole
+  addition is
+  `com.openggf.mods.scene.host.TestSceneRenderer#changingBatchSizesPreservesEveryPixelAndStreamingUpdates`:
+  `org.opentest4j.TestAbortedException: Assumption failed: OpenGL 4.1 unavailable`.
+  This test's source is byte-identical to incoming develop `d4993a730724`;
+  GPU rendering remains explicitly unverified by this run. There are no
+  missing-ROM skips. The absent CLI failure remains an inherited loader-environment
+  effect, not a source fix.
+
+`python3 examples/build_example.py eggmans-sky` also completed with zero
+validation findings. Its 17285297-byte JAR contains all 122 WAVs and provenance
+byte-identical to the committed resources, excludes private request/credential
+files, and has SHA-256
+`75d30e818a41eef5a942bf57028b586154aa4f013e1df9ed6e4e5a5b6600a8cb`.
+A copy is preserved in the external voice-bank task directory while temporary
+Maven output remains under this worktree's `target/`.
+
+Consumed qualification diagnostics are acknowledged and deleted. This completed
+private result does not release the main/publication hold: the parity owner is
+qualifying the updated remote baseline and combined successor. Reconcile that
+published successor before main integration, then complete destination validation,
+push and accounted-for cleanup. No main inputs, commits or publication changed.
