@@ -1352,3 +1352,17 @@ for precise evidence, rejected trials and current verification status. The prior
 Integrated`8cebbd847`: the complete destination route passes all177 two-cycle
 windows, phase-hit and full-load history checks. See the final-arena matrix for
 candidate/destination commands and remaining certification limits.
+
+## Full SaveGame consumer boundary — 2026-10-08
+
+The existing final escape full SaveGame boundary at `loc_803D6` (sonic3k.asm:171521) now dispatches through the semantic helper; escape/ending gates and live-cache state are unchanged.
+
+`828bc94d8` clears the native32-bit collected-ring mask at exactly seven existing
+full-SaveGame gates; existing game-state rewind owns the mask. Focused138 cases
+pass without failures/errors/skips, including direct Results tally/helper and
+mask-restoration checks. The other six non-tally live routes, successful disk
+persistence, live SK-alone, and this matrix's remaining route/rewind/breadth
+products are not newly certified. Generic persistence and special-stage/lives/
+death/reload/seamless semantics remain distinct. See the [lane audit](../../audits/2026-10-07-s3k-parity-gap-verification.md)
+for native ordering and scope, and [combined qualification](../../audits/2026-10-07-stock-parity-gap-verification.md#final-composed-canonical-replay-2026-10-08)
+for exact commands/frontiers. Broad validation and delivery remain pending.

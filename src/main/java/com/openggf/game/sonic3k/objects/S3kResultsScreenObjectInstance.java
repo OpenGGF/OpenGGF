@@ -8,7 +8,7 @@ import com.openggf.data.Rom;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
-import com.openggf.game.save.SaveReason;
+import com.openggf.game.sonic3k.S3kFullSaveGame;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -730,7 +730,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         playTallyEndSound();
         int zone = services().romZoneId();
         if ((act != 0) || (zone == 0x0A)) {
-            services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
+            S3kFullSaveGame.complete(services());
         }
         state = STATE_WAIT;
         // Native falls through from tally completion into Wait2 and

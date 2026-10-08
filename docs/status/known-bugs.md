@@ -122,6 +122,20 @@ production. Committed per-zone suites and continuous-run chains measure
 different obligations; their current results belong in
 `docs/status/trace-frontier-log.md`.
 
+Current stock verification (2026-10-07 continued swarm, local composition at
+`45a9414233553b0fed9dd0b764c06e3dadafd44f` plus the shared-input correction):
+canonical request 71207 completes 16 cases with three continuous-chain assertion
+failures, zero errors/skips and all thirteen other cases passing. S1 now reaches
+segment 33 instead of stopping at the MZ2 segment-12 giant ring; its earliest
+remaining movement difference is MZ1 segment 7 row 3261. S2 ARZ and following
+SS7 art differences close, but gap clocks and the SS7 results walk remain red.
+S3K HCZ closes its remaining 488 differences and reaches the giant-ring handoff
+at segment 11; AIZ differences remain unchanged. The shared-input focus passes
+82 cases with zero failures/errors/skips. These are local focused/canonical
+results, not a passing full campaign or pushed delivery; combined broad
+verification remains pending. See the [stock audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md)
+and current [coverage follow-ups](level-test-coverage.md).
+
 ### Removal Condition
 
 Remove this entry once documented release-required campaigns and route breadth

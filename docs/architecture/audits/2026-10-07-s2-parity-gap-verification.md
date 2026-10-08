@@ -346,3 +346,472 @@ release, discrepancy, frontier and coverage prose remain coordinator-owned.
 All local Maven sessions completed; no lane process or temporary probe remains.
 Combined broad candidate/post-integration verification, merge, push and worktree
 cleanup remain the coordinator's delivery responsibility.
+
+## Round 2: EHZ1 coconut targeting
+
+This continuation starts from pinned integrated base
+`5b3a63641033506fc0d89ad5188a0c97fae29089` on
+`bugfix/ai-trace-s2-ehz-coconut-20261007-r2`. Its measurements are distinct from
+the preceding round. The coordinator owns combined broad verification,
+central discrepancy/frontier/release prose and integration.
+
+### ROM owner and bounded hypothesis
+
+`Obj9D_Idle` calls `Obj_GetOrientationToPlayer` before its attack and idle-timer
+decisions (`s2.asm:75258-75278`). The helper chooses MainCharacter or Sidekick
+by absolute signed-word X distance, retaining MainCharacter on a tie
+(`s2.asm:72962-72991`). Its selected object-minus-player delta drives both
+orientation and the literal unsigned word window `(d2 + $60) < $C0`.
+Consequently target offsets -$5F through +$60 are admitted; -$60 and +$61 are
+excluded. Equality keeps orientation index zero.
+
+The base Java idle routine instead reads only its supplied main player,
+uses a strict X comparison and an absolute-distance gate. The existing
+`ObjectPlayerQuery.nearestByRomX(NATIVE_P1_P2, ...)` already supplies the
+ROM selection and tie semantics, so this hypothesis needs no shared query,
+player, timing or physics change. Coconuts' throw offsets and velocities
+already match `Obj9D_CreateCoconut`/`Obj9D_ThrowData`
+(`s2.asm:75368-75404`); reversing them is rejected by that literal reference.
+
+Separately, `Obj98_Main` tests the previous render-on-screen bit and deletes
+before dispatching movement (`s2.asm:74794-74802`); the generic Java projectile
+checks screen bounds after movement. That observation alone does not establish
+the row-737 cause and is not grounds for an unmeasured projectile rewrite.
+`Obj98_Init` returns through LoadSubObject, and `Obj98_CoconutFall` adds $20
+gravity before ObjectMove (`s2.asm:74790-74822`).
+
+
+### Fresh pinned baseline and regression red
+
+Both queued original requests executed after a long resource wait; production
+source remained exactly the pinned base throughout compilation and execution.
+These waits are not measurements. Java 21, the same verified S2 ROM and the
+unchanged default single-fork trace profile were used; the POM's shared
+`surefire.forkCount` defaults to 1, with no CLI override.
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS2Ehz1Seg1CompleteEmeraldsSegmentTraceReplay,TestS2CompleteEmeraldRunChain,TestS2CompleteEmeraldRunPrefix -Dsonic2.rom.path=${S2_ROM} test
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestCoconutsInitialization test
+```
+
+The replay command completed with Maven failure: **3 tests, 3 failures, 0
+errors/skips**, 1:31 min. Fresh XML times: chain 7.797 s, prefix 5.494 s,
+standalone EHZ1 seg1 1.515 s. Standalone remains **8176 errors**, first row
+**737 `tails_y_speed`**, ROM `-03AF` versus engine `-0400`. Each chain's
+segment-0 JSON remains **42538 errors**, first row737 `sidekick_y`,
+`01EA` versus `01E9`; each segment-1 art JSON remains **15713 errors**,
+first row0 `dynamic_art.outstanding_transfer_ids`, `[0]` versus `[0, 1]`.
+The walk stops in segment1 and the shared dynamic-art gap also fails.
+
+The regression red completed with Maven failure: **4 tests, 2 failures, 0
+errors/skips**, 24.188 s (fresh XML 0.969 s). The inherited initialization
+and idle-expiry cases pass. The added nearer-sidekick case fails on facing;
+the main-tie/range-window case fails on X equality. No executed red claim
+is made for later assertions in those failing test bodies.
+
+The candidate changes only Coconuts idle targeting, signed-word orientation
+and the unsigned word range gate. It uses optional injected services and
+retains the existing supplied-player path in direct-object contexts without
+services. It adds no state fields; the existing badnik facing and Coconuts
+snapshot already carry the decision. The new regression resumes a captured
+throw decision and compares forward continuation after restoration.
+
+Native comparison-only auxiliary evidence: the relevant parent appears at
+row173, slot23, X0427/Y01D8. Native Obj98 children appear at row233
+X0432/Y01AC and row548 X041C/Y01C3; no new Obj98 appears through row738.
+The parent's observed routine changes include climbing→idle at679,
+idle→climbing at696, and climbing→idle at712. These observations narrow the
+attack-history question; they do not make the target correction a measured
+explanation of the damaging engine shot.
+
+Develop advanced concurrently to `4cfb745646d9439cdb9c07d53d0670dd0fb3fe58`.
+Coconuts is unchanged upstream. This lane retains the pinned baseline inputs;
+actual-destination reconciliation and broad qualification remain coordinator-owned.
+
+
+### Candidate verification and dispositions
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestCoconutsInitialization test
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS2Ehz1Seg1CompleteEmeraldsSegmentTraceReplay,TestS2CompleteEmeraldRunChain,TestS2CompleteEmeraldRunPrefix,TestS2SpecialStage2TraceReplay,TestS2SpecialStage5TraceReplay,TestS2SpecialStage6TraceReplay,TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay -Dsonic2.rom.path=${S2_ROM} test
+python3 tools/testing/run_categories.py --base 5b3a63641033506fc0d89ad5188a0c97fae29089
+```
+
+The focused candidate completes with **4 tests, 0 failures/errors/skips**,
+Maven success, 1:13 min including source/test recompilation, fresh XML 0.640 s.
+All assertions in the range-window loop and the rewind continuation execute.
+
+The seven-fixture candidate completes with **7 tests, 1 failure, 0
+errors/skips**, 49.193 s, Maven failure solely in the full chain. Fresh XML:
+full chain 12.312 s; prefix 7.336 s; EHZ1 seg1 1.410 s; EHZ1 seg2 1.068 s;
+stages2/5/6 0.968/1.047/1.485 s. Source is frozen during both commands.
+
+- **Closed:** standalone EHZ1 seg1 **8176→0** errors; no first mismatch remains.
+  The matched chain segment-0 physics report **42538→0** and segment-1 art
+  report **15713→0** in both full and prefix drives. The erroneous coconut
+  damage is causally removed by the parent targeting/orientation/range fix.
+- **Preserved:** EHZ1 seg2 and standalone stages2/5/6 remain at zero errors,
+  with no ROM skip. The continuous prefix target passes; its gap report has
+  ten compared gaps and zero failures.
+- **Newly exposed full-chain frontier:** walk stop advances from segment1 to
+  segment17 (`ss_7`). Full-chain physical reports are zero through segment11
+  (`seg7_ehz2`); segment12 (`seg8_cpz1`) has **26735** errors, first non-camera
+  mismatch row4394 `x`, ROM255B versus engine255C. Segment13 (`seg9_cpz2`)
+  has **15553**, first row4859 `x`, 04DB/04DC. Segment15 (`seg10_cpz2`) is
+  zero; segment16 (`seg11_arz1`) has **19884**, first row1961
+  `sidekick_x_speed`, -0146/0A00. Segment17 art has **22405**, first row0
+  outstanding-transfer IDs `[0]`/`[]`. These later counts have no matched
+  pre-fix measurement because the baseline stopped at segment1; they are not
+  presented as new regressions or inherited-count equivalence.
+- **Earlier full-chain gap frontier:** its report has seventeen gaps and
+  twelve failures. The first is `ss → seg2_ehz1`, starting with
+  `run_gap.edge[0].movie_logical_frame`, expected10308 versus actual10268.
+  This differs from the passing prefix drive's gap result. Neither aggregate
+  totals nor the passing prefix erase the full chain's clock/ledger failures;
+  timing/admission investigation is separate coordinator-owned work.
+- **Rejected as this damage's explanation:** a generic Obj98 projectile
+  rewrite is unnecessary to close row737. Its independently observed
+  before/after-movement deletion difference remains unimplemented and is not
+  certified by this route's pass.
+
+The category plan selects **2640/3007 ordinary classes plus guards**. It is
+inspected, not executed in this worker. The coordinator owns the combined
+baseline/candidate/post-integration broad validation, actual destination
+reconciliation, merge and push. Focused checks are not a broad-suite pass.
+No comparison tolerance, trace data, timing authority, object allocation,
+player physics or projectile movement changed. No fixture- or frame-based
+behavior, fitted constant or gameplay hydration was added. The registered
+owner is S2-specific; KiS2's shared consumer has not been replay-measured in
+this round. Existing S2 nearest-player and orientation pitfalls already
+cover this lesson, so skills/guidance are unchanged.
+
+Three lane files are delivered: Coconuts owner, its initialization/targeting/
+rewind regression, and this audit. All four local Maven requests have completed;
+no temporary probe or lane process remains. Central documentation and final
+integration/cleanup remain coordinator-owned.
+
+### Round 2 follow-up: CPZ1 controlled-path frontier
+
+This follow-up starts from the separately delivered EHZ owner commit
+`8dba700f3a63379bef95b024194d6e2224d1a390` in the same lane worktree.
+The earlier chain CPZ1 segment 12 frontier was row 4394, x `$255B` versus
+`$255C`. A standalone replay, with no preceding special-stage gaps,
+reproduced the same row and x values and first reported y speed `-$0600`
+versus `-$0492`. Therefore the earlier `ss -> seg2_ehz1` clock gap
+(expected 10308, actual 10268) is not necessary to reproduce this local
+physical divergence. That timing gap remains a separate unresolved claim.
+
+Executed baseline command:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS2Cpz1Seg8CompleteEmeraldsSegmentTraceReplay -Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/s2.gen test
+```
+
+Session 9853 completed with Maven exit 1: one test, one failure, zero errors
+and skips, 30.462 seconds. Fresh comparison JSON reported 5318 errors:
+5134 physics and 184 animation, zero bootstrap errors/warnings, 6613 rows.
+Physics first diverged at row 4394; animation first diverged at row 4834,
+ID `$0010` versus `$0002`. Alternating transport movement and waypoint
+writes implicate Object1E rather than ordinary free movement.
+
+ROM owner `loc_22902` / `loc_22952` (`docs/s2disasm/s2.asm`:48820-48874)
+performs two sequential signed divisions: dominant-axis distance shifted
+by 16 divided by signed speed, then cross-axis distance shifted by 16
+divided by the first quotient's signed word. It stores `ABS.W` of that
+quotient at `2(a4)`. Entry/main traversal `loc_2271A` / `loc_227FE`
+(48636-48640, 48714-48718) decrements the stored word's high byte with
+`SUBQ.B` and tests `BPL`. Zero is legal and advances the waypoint on the
+following dispatch without an extra movement step. The old Java owner
+collapsed the divisions algebraically and clamped the frame counter to
+one. The neighboring MTZ tube independently models the sequential
+divisions and zero high-byte duration (`loc_27374`).
+
+Executed red command:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestCPZSpinTubeObjectInstance test
+```
+
+Session 97949 waited 1852 seconds before admission and completed with exit
+1, seven tests, one failure, zero errors/skips, 27.695 seconds Maven and
+0.331 seconds XML. The executed failure was the legal tiny-segment counter:
+expected zero, actual one. The later expanded `$9/-$8` at speed `$700`
+quantization assertion and rewind assertion were added after this red;
+they are not claimed as executed red evidence.
+
+The candidate preserves the existing per-player duration field/map.
+`DefaultObjectRewindPolicies` already captures `characterStates`; no state
+or shared physics/harness owner was added. The bounded path arithmetic does
+not emulate Motorola `DIVS` overflow outside the ROM waypoint domain.
+Candidate focused and matched replay outcomes are pending below.
+
+Direct table attribution: `word_22B40` in `docs/s2disasm/misc/obj1E_a.asm`
+lines 131-138 contains `$C0/$70`, `$CA/$6F`, `$D4/$6C`, `$DB/$68`,
+`$E3/$62`. With tube origin `$2480/$0500`, these are the native observed
+waypoints `$2540/$0570`, `$254A/$056F`, `$2554/$056C`, `$255B/$0568`,
+`$2563/$0562`. The `$D4/$6C -> $DB/$68` segment is seven pixels across
+and four up: duration word `$00E0`, high byte zero. The old clamp inserts
+an eight-pixel movement to `$255C` at y speed `-$0492`; the native dispatch
+snaps to `$255B` and computes the next eight-across/six-up segment's
+`-$0600` velocity. This accounts for both row-4394 fields without fitted
+values or timing hydration. At production speed `$800`, the first division
+is exact for these distances, so algebraic cross-velocity collapse is
+not independently blamed for this replay. The non-`$800` assertion tests
+the literal routine semantics; the zero-duration clamp is the causal defect.
+
+Candidate replay command (unchanged production throughout execution):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS2Cpz1Seg8CompleteEmeraldsSegmentTraceReplay,TestS2Cpz2Seg9CompleteEmeraldsSegmentTraceReplay,TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay,TestS2Ehz1Seg1CompleteEmeraldsSegmentTraceReplay,TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay,TestS2SpecialStage2TraceReplay,TestS2SpecialStage5TraceReplay,TestS2SpecialStage6TraceReplay,TestS2CompleteEmeraldRunPrefix,TestS2CompleteEmeraldRunChain -Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/s2.gen test
+```
+
+Session 8053 waited 4590 seconds, completed with Maven exit 1, 10 tests,
+one failure, zero errors/skips, 50.336 seconds. Fresh per-class XML and
+comparison JSON were inspected. Standalone CPZ1 changed **5318 -> 0**;
+both CPZ2 slices report zero errors, warnings and bootstrap errors. EHZ1
+segments 1/2, special stages 2/5/6 and the prefix stayed green. Per-class
+XML seconds: chain 11.866, prefix 7.267, CPZ1 2.037, CPZ2 segments 9/10
+1.674/2.057, EHZ1 segments 1/2 1.058/0.971, stages 2/5/6
+0.927/0.989/1.382. The CPZ2 standalone outcomes are candidate controls,
+not measured before/after standalone claims.
+
+Matched chain segment 12 (CPZ1) changed **26735 -> 0** and segment 13
+(CPZ2) **15553 -> 0**. Reports remain zero through segment 15. The full
+chain stays red with 13 axes, stopping in special-stage segment 17. Its
+first remaining physical frontier is segment 16 `seg11_arz1`, row 1961,
+`sidekick_x_speed` native `-$0146`, engine `$0A00`, 19884 errors, unchanged
+from the `8dba700f3` run. Segment 17 special-stage art remains 22405 errors,
+first row zero outstanding IDs `[0]` versus `[]`, also unchanged. Earliest
+shared gap still reports `ss -> seg2_ehz1`, `movie_logical_frame` expected
+10308, actual 10268. Closing CPZ1 while leaving that earlier gap unchanged,
+together with the standalone reproduction and ROM waypoint arithmetic,
+separates this physical defect from the gap. The chain is not green;
+aggregate axis reduction is not used as a pass claim.
+
+The first candidate focused request, session 1303, waited 4569 seconds and
+completed with seven tests, zero failures, one error, zero skips, 1:11 Maven
+and 0.217 seconds XML. Arithmetic assertions passed; the newly added rewind
+fixture incorrectly called capture without a player identity table. The
+production contract requires one for player-keyed maps. After replay 8053
+completed, the test alone was corrected to register the main player in
+`RewindIdentityTable` and use its capture/restore context. Production did
+not change; the corrected focused request is recorded below when complete.
+
+Rejected alternatives: attributing CPZ1 to the special-stage gap, changing
+shared player movement or admission, fitting a curve velocity to a trace,
+and retaining a minimum-one duration. The first two are unnecessary for
+the independently reproduced ROM-backed owner defect; the latter two
+contradict `loc_22902` and the actual waypoint table. No comparison tolerance,
+trace payload, timing authority, fixture gate or hydration changed. This
+follow-up adds a reusable P87 lesson to both S2 object-skill mirrors; the
+coordinator owns central release/frontier/coverage prose and broad checks.
+
+Change-based plan inspected, without launching a worker broad run:
+
+```bash
+python3 tools/testing/run_categories.py --base 8dba700f3a63379bef95b024194d6e2224d1a390
+```
+
+It selected 2640 of 3007 ordinary classes plus guards. The coordinator owns
+combined broad validation against the actual updated destination; these
+focused and trace results are not a broad-suite pass. No diagnostics run
+was created by this dry plan. KiS2 is an unmeasured shared S2-object consumer
+in this follow-up. The unit exercise uses a direct private arithmetic call
+and captured counter restoration; live CPZ1/CPZ2 replays provide traversal
+coverage. No out-of-ROM-path quotient-overflow behavior is certified.
+
+Direct binary corroboration used the verified absolute `s2.gen` path:
+a 30-byte big-endian word read at ROM offset `$22B40` returned
+`0070 0010 0010 0010 0070 00C0 0070 00CA 006F 00D4 006C 00DB 0068 00E3 0062`.
+Thus the referenced short curve is present in the shipped ROM, not merely
+in the read-only dirty disassembly checkout. This bounded read creates no
+probe artifact and is reproducible from the committed owner offset.
+
+A bounded scan of the existing entry/main arrays found maximum adjacent
+waypoint dominant distances of 208/928 pixels, respectively. At `$800`,
+these yield duration words `$1A00`/`$7400`, within signed `DIVS.W` quotient
+range. Thus ordinary adjacent paths do not require overflow emulation;
+unusual external/corrupted path inputs remain outside the verified domain.
+The inline scan is regenerable in minutes and creates no saved probe.
+
+The corrected normal-shape unit request 14575 remained waiting and was not
+a measurement. At the coordinator's request, a read-only process check
+confirmed wrapper PID 2023210 had the owned worktree cwd and no children;
+only that owned waiting request was cancelled (exit 130, validation
+incomplete). Exact selector and source inputs were preserved and resubmitted
+as the supported profile-free focused shape:
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestCPZSpinTubeObjectInstance test
+```
+
+Session 31346 is the replacement; no unrelated request, lock, profile,
+selector or queue policy was changed. Its completed result follows below.
+
+Session 31346 admitted after 2437 seconds and completed successfully on the
+unchanged production candidate with the repaired identity-table fixture:
+7 tests, 0 failures, 0 errors, 0 skips (fresh XML 0.272 seconds; Maven
+24.008 seconds). This closes the focused arithmetic/zero-counter/rewind
+check; the earlier seven-case setup error is not a production failure.
+
+A bounded read-only ARZ review also confirms that the remaining row 1961
+sidekick speed mismatch occurs in the independent standalone replay recorded
+in the prior campaign (3203 errors), not only in the chain. Native spring
+slot 18 at $0988/$0360 changes Obj41 routine 00 to 04 at row 1961 without
+launching; native launch follows at 1962. Obj41_Init returns after preparing
+the horizontal routine, whereas the current S2 SpringObjectInstance.update
+initializes and executes contact work in the same call. This is an actionable
+owner hypothesis; engine allocation and first-execution timing must be
+measured before a causal fix. No spring source or extra test was changed
+for this review. The next investigation is separately authorized.
+
+
+### ARZ spring reload: Obj41 init-only dispatch follow-up
+
+This follow-up starts from qualified CPZ commit `e87d41553`. A comparison-only,
+temporary Spring logging probe (session 7873) ran the independent ARZ selector:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS2Arz1CompleteEmeraldsSegmentTraceReplay -Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/s2.gen test
+```
+
+It waited 316 seconds, then reproduced 1 test / 1 failure / 0 errors / 0 skips
+(XML 2.715 seconds): 3203 comparison errors, zero warnings, first row 1961
+Tails x speed native `-0146`, engine `0A00`. All probe code was removed after
+extracting the owning boundary. The first incarnation initialized at V-int
+24756 with both players distant; the reloaded incarnation initialized at
+25704 with Tails centre `0993/0361`, velocity `-0146`. Its next logged launch
+read `099B/0361`, velocity zero, after the solid correction. Native aux slot
+18 at `0988/0360` was routine 00 at row 1960, routine 04 at row 1961, and
+launched only at row 1962. This establishes a local reload/first-dispatch
+frontier independently of the chain bootstrap and its earlier gaps.
+
+The owner is `Obj41_Init` / `Obj41_Init_Subtypes` / `Obj41_Init_Common`
+(`s2.asm` 33824–33888, native labels `loc_188A8` through `loc_18954`). All
+five native type branches prepare the active routine and end at the common
+`rts`; none runs animation, SolidObject or the launch path during that pass.
+The S2 owner previously initialized and ran its active routine in one Java
+update. The bounded correction returns immediately after first initialization.
+S1 and S3K use separate spring owners. No shared physics, manager, comparator,
+input, timing or bootstrap state changes are involved. The existing init-return
+lesson in S2 pitfall P69 already covers this dispatch rule; no duplicate skill
+entry was required.
+
+The regression uses real ObjectManager solid dispatch at the recorded native
+contact coordinates, requiring unchanged player velocity/position on the init
+pass and the `0A00` launch on the following active pass. It captures/restores
+before and after initialization, verifying the existing captured initialized
+phase rather than adding rewind state. Five additional subtype cases verify
+that init makes no solid-registry calls. The existing diagonal contact-only
+fixture explicitly starts at the active routine; its native contact assertions
+are unchanged.
+
+The exact focused red command was:
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestSpringObjectInstance#horizontalInitializationReturnsBeforeFirstContactAndRestoresDispatchPhase test
+```
+
+Session 61489 waited 10677 seconds and ended 1/0/1/0: fixture manager injection
+was overwritten by the legacy constructor, producing a missing-object-manager
+NPE in trigger. Session 89600 waited 392 seconds and ended 1/0/1/0 after that
+repair: the explicit full manager constructor also required a camera. These
+are setup errors, not intended assertion reds. Session 4748 admitted immediately
+and reproduced the intended 1/1/0/0 red (XML 0.291 seconds, Maven 26.482 seconds):
+first-pass velocity expected -326, actual 2560, on unchanged production.
+
+Candidate focused session 31715 used:
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestSpringObjectInstance,TestCPZSpinTubeObjectInstance,TestCoconutsInitialization test
+```
+
+It waited 178 seconds, then returned 25/1/0/0: the first-pass assertions passed,
+CPZ seven cases and Coconuts four cases passed, and all 13 prior Spring cases
+passed. The new next-pass assertion retained -326 because its manager update
+camera argument was still zero despite a camera object at `0800`. The manager's
+normal MarkObjGone retirement unloaded the spring at `0988` after init; old
+same-pass launch had hidden that fixture mistake. After the frozen trace run
+completed, only that new fixture's camera argument was aligned to `0800` and an
+admitted-object assertion added. Native motion/contact expectations remain
+unchanged. Production stayed frozen.
+
+Matched candidate trace session 96278 ran:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS2Arz1CompleteEmeraldsSegmentTraceReplay,TestS2Cpz1Seg8CompleteEmeraldsSegmentTraceReplay,TestS2Cpz2Seg9CompleteEmeraldsSegmentTraceReplay,TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay,TestS2Ehz1Seg1CompleteEmeraldsSegmentTraceReplay,TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay,TestS2SpecialStage2TraceReplay,TestS2SpecialStage5TraceReplay,TestS2SpecialStage6TraceReplay,TestS2CompleteEmeraldRunPrefix,TestS2CompleteEmeraldRunChain -Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/s2.gen test
+```
+
+It waited 538 seconds and ended 11 tests / 1 failure / 0 errors / 0 skips,
+Maven 53.239 seconds. Fresh XML and JSON confirm standalone ARZ 3203 → 0
+across all 3420 rows, bootstrap errors/warnings zero. Chain ARZ 19884 → 0;
+downstream SS7 dynamic-art errors 22405 → 0 (8498 comparisons). Every physical
+and dynamic-art segment report through segment 17 is zero. CPZ1/2, EHZ1
+segments 1/2, special stages 2/5/6 and the prefix remain green. This closes the
+local ARZ physical mismatch and its inherited SS7 art symptom.
+
+The full chain still fails on 11 axes: the earliest shared gap retains movie
+clock native 10308 versus engine 10268 (`ss` → `seg2_ehz1`), and the SS7
+results walk exceeds destination 101691. Removing the two local comparison
+axes does not certify the chain or explain the remaining gap clocks. No trace
+rows create work or supply gameplay state. The prior proximity-tuning hypothesis
+remains rejected; the measured cause is init dispatch after reload.
+
+Final focused session 93357 uses the unchanged three-class command above with
+the repaired camera fixture and added native subtype cases; its completed
+result follows below. Coordinator owns actual-destination broad validation,
+central frontier/release prose and integration. This lane remains local.
+
+
+The consumed candidate JSON identities under `target/trace-reports/` were:
+`trace/s2_arz1-single-21a00e9f0f325d9b.json`;
+`run-chain/s2-sonic-tails-complete-emeralds_seg16-segment-16-b4a287e72ed8a6a7.json`;
+`run-chain/s2-sonic-tails-complete-emeralds_seg17_dynamic_art-segment-17-dynamic-art-c23f0fc6118bf835.json`;
+and the full-chain gap report
+`run-chain/s2-sonic-tails-complete-emeralds_dynamic_art_gap-dynamic-art-gap-63186ce890be658f.json`
+(17 gaps, 10 gap failures). The prefix gap report suffix `e1ed80868c3bec14`
+is a different identity (10 gaps, zero failures); its success is not full-chain
+success. Raw outputs stay temporary under target.
+
+The remaining 11-axis frontier consists of the SS7 results walk failure plus
+these ten gap clock axes (first error within each gap, native/engine):
+
+| Boundary | First edge | Movie logical frame native/engine |
+| --- | --- | --- |
+| ss → seg2_ehz1 | 0 | 10308/10268 |
+| ss_2 → seg3_ehz1 | 0 | 20220/20180 |
+| ss_3 → seg4_ehz1 | 0 | 31446/31406 |
+| seg4_ehz1 → seg5_ehz2 | 8 | 32921/32920 |
+| ss_4 → seg6_ehz2 | 0 | 46347/46309 |
+| ss_5 → seg7_ehz2 | 0 | 57004/56966 |
+| seg7_ehz2 → seg8_cpz1 | 6 | 61196/61195 |
+| seg8_cpz1 → seg9_cpz2 | 5 | 67986/67985 |
+| ss_6 → seg10_cpz2 | 0 | 82295/82259 |
+| seg10_cpz2 → seg11_arz1 | 7 | 89590/89589 |
+
+Each field is `run_gap.edge[N].movie_logical_frame`. The walk failure is
+`uncompared-interior physical walk exceeded destination 101691`, segment
+`ss_7`, mode `SPECIAL_STAGE_RESULTS`, movie cursor 101691. Later windows
+remain unmeasured in this invocation. This lane will not change the shared
+driver/results authority to chase that remaining frontier.
+
+
+Session 93357 waited 5263 seconds and passed 30 tests / 0 failures / 0 errors /
+0 skips (Maven 24.585 seconds). Fresh XML: Spring 19 cases, 0.372 seconds;
+CPZ seven, 0.255 seconds; Coconuts four, 0.235 seconds. The native first-pass,
+next active pass, admitted-object and before/after-init rewind assertions all
+pass. The expanded subtype cases were candidate coverage, not executed red
+claims. Initialization already belongs to the existing object rewind schema;
+no new snapshot policy was required.
+
+Dry selection inspection:
+`python3 tools/testing/run_categories.py --base e87d41553eac5b2844599c5f06c5aa4f9d0c3392`
+selected 2640/3007 ordinary classes plus guards. This worker did not execute
+that broad plan: root owns the combined actual-destination baseline/candidate/
+integrated validation. Focused and domain trace results above are not a broad
+suite pass. KiS2 is unmeasured. The direct rewind regression covers object
+initialization phase; the real standalone/full-chain ARZ trace covers the
+actual CPU Tails launch, but this follow-up adds no live timeline rewind route.
+Registry expiry was checked at completion, 2026-10-08 02:31:51 UTC, before
+its authoritative 15:39:46 UTC expiry. No owned Maven request remains pending;
+all temporary Spring probe changes and commit-message files are removed.

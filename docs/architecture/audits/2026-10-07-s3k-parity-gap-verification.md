@@ -162,3 +162,228 @@ owned by the coordinator.
 Machine-local paths above are normalized to `${OPENGGF_REPO}` (the main
 repository root) and `${OPENGGF_WORKTREE_ROOT}` (the sibling worktree root).
 Executed ROM arguments were absolute paths under the main repository root.
+
+## Second swarm: HCZ fresh-load boundary at `5b3a63641`
+
+Workspace `.worktrees/trace-s3k-hcz-handoff-20261007-r2`, branch
+`bugfix/ai-trace-s3k-hcz-handoff-20261007-r2`; this round is independent of
+all earlier numbers above. The coordinator owns combined validation and ledgers.
+
+The run manifest has no transition record for segment 8 `aiz_5` to segment 9
+`hcz`: this is a fresh zone load, not a giant-ring Saved2 return. Native
+`aiz_5`'s last row has HCZ players at `$0280/$0020` and `$0260/$0024`, routine
+0, zero velocity and fractions. HCZ row 0 has routine 2, airborne, Y velocity
+`$0038` and Y fraction zero for both. This comparison evidence supplies no
+runtime state.
+
+The owning ROM path is `SpawnLevelMainSprites` / `loc_6834` (airborne falling
+state), `Sonic_Init` (routine 0 returns), `loc_6468` (initial `Process_Sprites`
+without a V-int), then `LevelLoop`. `MoveSprite` loads the old `y_vel`, adds
+`$38` to stored velocity, and integrates the old value. Retail `FixBugs=0`
+remains selected; the nearby HCZ Knuckles initialization timer bug is unrelated
+and must not be silently corrected.
+
+Rejected as unsupported by current source: clearing a stale fractional word,
+changing gravity integration, or treating this seam as Saved2 restoration.
+`setCentreY` already clears the fraction; `doObjectMoveAndFall` integrates old
+velocity; the initial playable setup slot explicitly bypasses physics. The
+remaining disagreement needs execution evidence at the actual load boundary.
+
+The historical 2026-08-21 frontier entries ("engine's HCZ player exists 120
+rows early" and subsequent stage-boundary census) measured four gravity passes
+spread across the load. Their rejected two-plus-one lag arithmetic is not a
+current causal explanation. Current `FreshLevelTransitionBoundaryController`
+retains destination state behind the title and performs setup before ordinary
+admission; its direct test lacked fixed-point assertions. This round adds
+those assertions to the live pause/repeated-load scenario, preserving the
+existing dispatch-count checks.
+
+A temporary coordinator-approved read-only probe observes HCZ velocity changes
+immediately around `GameLoop.step` in `AbstractRunChainTest.stepEngineFrame`:
+pre/post shared playback cursor, Y/fraction/velocity, mode, fresh-load pending
+flag, native V-int and level clocks, and comparator cursor. Its bounded window
+is diagnostic only, does not change inputs or production decisions, and must
+be removed after extracting evidence. The baseline wrapper was still waiting
+(no Maven execution) when this instrumentation was added; production remains
+exactly the pinned base.
+
+This round independently rehashed all three main-repository ROMs without
+creating aliases: S1 CRC32 `AFE05EEE`, SHA1
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`; S2 CRC32 `7B905383`, SHA1
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`; S3K CRC32 `63522553`, SHA1
+`CFBF98C36C776677290A872547AC47C53D2761D6`. These match the required retail
+identities. Queue admission and execution results are separate evidence.
+
+### R2 fresh HCZ boundary measurement and rejected early comparison
+
+Pinned production base `5b3a63641033506fc0d89ad5188a0c97fae29089`, worktree
+`.worktrees/trace-s3k-hcz-handoff-20261007-r2`. The baseline harness carried a
+temporary read-only pre/post production sampler; gameplay, input and comparison
+behavior remained unchanged. Both original queued requests completed:
+
+- `DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain -Ds3k.rom.path=${OPENGGF_ROM_ROOT}/s3k.gen test`: exit 1; 1 test, 1 failure, 0 errors/skips; 24.90 s class time. Segments 0/2/4 complete with zero errors/warnings; segment 6 has 189 physics errors, first row 3319 `sidekick_x` native `31C1`, engine `31CA`; segment 8 has 13,254 errors (13,113 physics, 141 animation), first row 1583 `sidekick_x` native `366C`, engine `3674`. HCZ segment 9 compares all 3,574 rows with 32,343 errors (30,131 physics, 2,212 animation), 0 warnings, 55 lagged rows, first row 0 `y_sub` native `0000`, engine `3800`; its giant-ring exit is not observed.
+- `DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestGameLoopFreshLevelHandoff -Ds3k.rom.path=${OPENGGF_ROM_ROOT}/s3k.gen test`: exit 0; XML 4 tests, 0 failures/errors/skips, 1.046 s. The new direct HCZ first-ordinary assertions passed (`y=0020`, fraction `0000`, velocity `0038`).
+
+The sampler executed at the real `GameLoop.step` boundary. Its cursor is the
+next zero-based BK2 input index, not the native CSV frame or either ROM clock:
+
+| Pre/post input cursor | Boundary | Y fraction / velocity after | `ObjectManager.vblaCounter` | `SpriteManager.frameCounter` |
+|---|---|---|---:|---:|
+| 53486 / 53487 | AIZ replacement load, fresh boundary raised | `0000 / 0000` | 53445 | 0 |
+| 53589 / 53590 | Fresh boundary completed | `0000 / 0000` | 53545 | 0 |
+| 53607 / 53608 | First ordinary HCZ move, no comparator attached | `0000 / 0038` | 53563 | 1 |
+| 53608 / 53609 | Destination comparator compares row 0 | `3800 / 0070` | 53564 | 2 |
+
+The proposed early-comparison attachment is **rejected**. V5 uses BK2 input
+index `bk2_frame_offset + row` and native sample frame `offset + row + 1`:
+`S3KCompleteRunCaptureRunner.cs:137–150` and measurement hazard 32 document the
+two quantities. HCZ's offset is 53608, so the first move above consumed input
+53607, the unrecorded arm/gap row. Reassigning that state to destination row 0
+would hide early input admission. There was no reseek at this boundary: after
+the gap step, cursor 53608 equalled the offset even though the helper retained
+zero rows consumed. The concrete defect is the plain admission helper's raw
+`stepEngineFrame` while admission is denied, unlike its sibling's existing
+`SHARED_GAP` frame-driver path.
+
+Native first-move arithmetic already matches: `SpawnLevelMainSprites` /
+`loc_6834` establishes the HCZ airborne spawn, `Sonic_Init` returns without
+movement, and `MoveSprite` integrates old Y velocity before adding `$38`.
+`loc_64DC -> LevelLoop -> Wait_VSync -> Process_Sprites` does not permit a
+new destination ordinary pass in the blocking entry gap. No velocity/fraction
+reset, comparator tolerance change, physics-row hydration or fitted hold is
+justified. The bounded candidate routes the plain pre-window rows through the
+existing production gap owner, with source-ended state because preparation
+already observed the destination load; comparator row 0 remains attached at
+its correct input index. The temporary sampler source is removed after this
+measurement. Candidate execution remains pending at this checkpoint.
+
+### R2 candidate and independent remaining frontier
+
+The matched continuous candidate used the same baseline command, ROM and input
+movie, with the temporary sampler removed. It completed exit 1 (1 test, 1 failure,
+0 errors/skips, 25.30 s class time): segments 0/2/4 remain zero, AIZ segments 6/8
+retain their exact 189/13,254 profiles. HCZ compares all 3,574 rows with **563
+errors**, 477 physics and 86 animation, 0 warnings, 55 lagged rows, bootstrap 0.
+Its first mismatch moves to row **653**, `sidekick_y` native `0585`, engine `0586`.
+The giant-ring exit remains missed. This is a verified opening-admission repair,
+not a green continuous HCZ route. The final advertised-offset safety guard is a
+later review refinement and requires its own completed checks.
+
+The focused old-behavior reproduction used
+`DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestHeadlessPlainLevelGap -Ds3k.rom.path=${OPENGGF_ROM_ROOT}/s3k.gen test`:
+1 test, 1 failure, 0 errors/skips, 0.704 s, because the raw gap step advanced
+`SpriteManager.frameCounter` from 0 to 1 before the advertised input window.
+Two earlier invocations stopped at test compilation (missing required observer
+method, then package-private mode-entry access); neither executed the regression.
+The corrected test uses the public mode-entry method and real production dispatch.
+
+Candidate focused command:
+`DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestHeadlessPlainLevelGap,TestGameLoopFreshLevelHandoff,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils -Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/s1.gen -Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/s2.gen -Ds3k.rom.path=${OPENGGF_ROM_ROOT}/s3k.gen test`:
+exit 0, **65 tests, 0 failures/errors/skips**. Both classes named
+`TestSonic3kLevelLoading` were selected (36 and 7 tests); bootstrap 6, decoding 3,
+AIZ skip 8, startup 4 and the gap regression 1 all passed.
+
+The standalone command
+`DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dtest=TestS3kSonicTailsHczSegmentTraceReplay -Ds3k.rom.path=${OPENGGF_ROM_ROOT}/s3k.gen test`
+completed exit 1: 1 test, 1 failure, 0 errors/skips, 3.230 s. Its report has one
+physics mismatch **span** (rows 653–727, 75 rows), `tails_y` native `0585`, engine
+`0586`; no animation/bootstrap errors or warnings. `total_frames=3519` accounts
+for 3,574 advertised rows less 55 lagged rows. Standalone reports group mismatch
+spans, while the chain counts mismatched field observations; the two error totals
+must not be treated as equivalent counting units. The report also advertises
+missing cage, velocity/position-write, Sonic-history, Tails-normal-step and CNZ
+cylinder aux schemas. It does not certify those comparison channels. It proves
+the earliest remaining HCZ one-pixel frontier independently of the chain handoff;
+chain camera/animation and giant-ring behavior need further causal work.
+
+Native HCZ `interact_state` first publishes Sonic `object_control=53` at row 3531,
+leaving 43 represented rows through 3573, consistent with the existing entry
+flash's 43 object-dispatch sequence. The boundary waiter continues production
+after comparator exhaustion. Neither observation proves the cause of the missed
+exit; no ring/flash timer, sidekick controller or physics owner was changed.
+
+Review added a stronger plain-admission bound: preserve preparation's legitimate
+0/1 title-release fall-through, reject counts beyond the first opening row, try
+admission at the destination offset, and fail **before** a denied suppressed step
+can consume an advertised destination input. A real ROM-backed denied-at-offset
+regression checks unchanged cursor, sprite clock and player fractions/velocity.
+This protects full row-0 physics/animation/art comparison rather than advancing a
+comparator past unexecuted gameplay.
+
+`python3 tools/testing/run_categories.py --base 5b3a63641033506fc0d89ad5188a0c97fae29089`
+was inspected without `--run`: full ordinary selection, 3,007 classes, all
+categories plus guards because these are shared test infrastructure changes.
+The swarm coordinator owns updated-base, combined candidate, cross-game canonical
+replays and post-integration broad verification. No local broad pass is claimed.
+The lane is deliberately still pinned despite concurrent `develop` advances;
+those destination changes are not covered by these pinned measurements.
+
+Final reviewed-bound verification (pinned base `5b3a63641033506fc0d89ad5188a0c97fae29089`, same lane): the exact focused command above completed exit 0, **66 tests, 0 failures/errors/skips**, Maven 25.971 s. The two gap regressions passed alongside the four startup tests and all mandatory S3K controls. The exact chain command above completed exit 1, **1 test, 1 failure, 0 errors/skips**, class 24.08 s (Maven 45.434 s). Its HCZ report remains complete with 563 errors (477 physics, 86 animation), 0 warnings, 55 lagged rows, bootstrap 0, first row 653 `sidekick_y` `0585/0586`; AIZ segment 6/8 retain 189/13,254 and the giant-ring exit remains missed. Both final requests executed after queue admission on unchanged source; no waiting request was cancelled.
+
+The S3K `supportsPlayerDynamicArtAudit=false` gate remains unchanged. Preserving the existing comparator/publication attachment does not establish an S3K player dynamic-art audit pass. Cross-game canonical chains and combined updated-base validation remain coordinator-owned. This lane closes the causal pre-window ordinary-physics admission defect, not the remaining HCZ route or later LBZ frontier. The temporary comparison-only sampler, generated probe classes and raw probe output were removed after extracting the evidence above; no probe is part of the change.
+
+For the commands in this section, `OPENGGF_ROM_ROOT` denotes the verified absolute primary checkout containing the existing root ROMs; each recorded invocation expanded these properties to absolute paths. The neutral spelling preserves reproducibility without committing a machine-local home path.
+
+## R2 bounded HCZ breakable-bar follow-up
+
+On ancestor `45c6eed2d6e3a85442cd42e12b2c74c347ec9c8d`, standalone HCZ independently reproduced the row 653–727 Tails Y span. At the first reported difference, native Tails has Y `0585`, engine `0586`, with matching subpixels `E100/DA00`, zero X/Y velocity, ground speed `FFA6`, status `46`, routine `02`, vertical-hang animation `11` and mapping `9D`; native object control is `01`. The native integer Y remains fixed while Sonic descends. BK2 inputs 54260–54262 hold P1 Down and leave P2 neutral. This is independent of inherited AIZ segment 6/8 discrepancies.
+
+The owning routines establish the missing semantic: `HCZBreakableBar_VerticalCheckPlayers` reads raw `(Ctrl_2).w` (`sonic3k.asm:42788`); `HCZBreakableBar_CheckVerticalGrab` tests held Up/Down in that word's high byte. The horizontal loop reads the same raw word at line 42952 and tests held Left/Right. The former Java object used logical playable directions, allowing CPU-generated steering to move a captured sidekick. The bounded correction uses existing `SidekickCpuController.isRawController2InputHeld(mask)` for CPU-controlled playables and retains ordinary human direction reads. The pressed-byte jump release behavior is unchanged. No shared controller, API, fixture, animation or timing owner changed.
+
+Two new tests in the existing bar test class cover both orientations: raw-neutral P2 plus logical Down/Right must retain position; ordinary main-player held input must move by one; manual P2 held input with no pressed edge must move by one. The bar's own snapshot is restored and the object dispatch is repeated after explicitly resetting the player's position. This proves bar-state capture/restore and repeated dispatch, **not whole-world registry rewind/replay**. Existing capture, subpixel, release, native-slot, extension and unload checks remain selected.
+
+Exact commands use the same verified absolute ROM expansion described above:
+
+- Red: `DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestHCZBreakableBarObjectInstance test`: exit 1, 15 tests, 2 failures, 0 errors/skips, 0.212 s class time. Both new tests failed expected coordinate 512, actual 513 with raw P2 neutral. An earlier identical non-lean request was cancelled while waiting, exit 130, before Maven/test execution; it supplies no test evidence.
+- Green: `DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestHCZBreakableBarObjectInstance,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils -Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/s1.gen -Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/s2.gen -Ds3k.rom.path=${OPENGGF_ROM_ROOT}/s3k.gen test`: exit 0, **75 tests, 0 failures/errors/skips**, Maven 23.725 s. Both level-loading classes and all four mandatory S3K controls execute.
+- Standalone: the previously recorded `-Ptrace-replay -Dtest=TestS3kSonicTailsHczSegmentTraceReplay` command, unchanged: exit 0, **1 test, 0 failures/errors/skips**, 3.412 s class time. Report physics/animation/bootstrap/warnings all zero; 3,519 non-lag frames represent all 3,574 rows less 55 lag rows. The previously listed missing auxiliary channels remain unverified.
+- Matched chain: the previously recorded `-Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain` command, unchanged: exit 1, **1 test, 1 failure, 0 errors/skips**, 24.42 s class time (Maven 44.658 s). HCZ **563 → 488** errors (402 physics, 86 animation), first non-camera mismatch **row 3532 primary `x` native `1457`, engine `1452`**. All 3,574 rows complete, warnings 0, lag 55, bootstrap 0. The giant-ring exit is still missed. AIZ 6/8 retain exact 189/13,254 profiles. The bar correction removes exactly the 75 local Y observations; it does not close the remaining 488 late boundary observations.
+
+Each invocation used frozen source and normal queue admission; canonical replays did not use lean mode or fork/heap overrides. The S3K player dynamic-art audit-disabled gate remains unchanged. Updated-base broad validation, combined cross-game checks, central frontier/matrix reconciliation and delivery remain coordinator-owned. No additional physics or giant-ring correction is inferred from these results.
+
+## R2 collected-ring mask causal verification
+
+A comparison-only probe on ancestor `b3eff6209ed90d42f88b0264b15f4d8d841e852a` logged the existing captured mask after production and at entry-ring initialization. It changed no RAM, input, admission or comparator state. The same recorded chain command completed exit 1, 1 test, 1 failure, 0 errors/skips, 24.07 s class time; the probe executed. Observed engine mask events (movie cursors are post-production where sampled):
+
+| Boundary | Movie cursor | Engine mask |
+|---|---:|---:|
+| First AIZ special-stage entry | 2868 | `00000002` |
+| Seamless AIZ act 1→2 | 12061 | `00000002` |
+| Subsequent entries / returns | 12842 / 28011 / 39830 | `0A` / `1A` / `3A` |
+| AIZ post-results end flag | 53053 | `0000003A` |
+| HCZ loaded / title / release | 53487 / 53488 / 53588 | `0000003A` |
+
+The actual HCZ ring initialization reports zone 1, center `(1440,05C0)`, bit index 1, mask `0000003A`, **delete=true**. Thus ring absence is established, not inferred solely from a nearby-object list. The probe did not sample inside `updateTally`; the specific native SaveGame gate remains source-inferred from its existing Java implementation and completed results path.
+
+The coordinator's independent native GPGX original-movie observation completed exit 0 in 101.719 s with unchanged movie SHA-256 and no RAM writes, state loads, input substitutions or recorder-source edits. Its observations were inspected directly: at BK2 52944 / AIZ_5 row 6512, zone 0 act 1, level counter 6492, PC `$C4CC` sees mask `0000003A`; PC `$C4D0` sees `00000000` with identical player state/clocks. Native HCZ load/release retains zero. Eleven native HCZ rows 3527–3537 align to the committed fixture; Sonic object control changes `00→53` at row 3531, while the ring mask remains zero until SS entry at movie 57182. This contrasts with the measured engine HCZ delete decision. Durable native observations remain in the coordinator-owned task capture directory outside the repository.
+
+Direct locked-on ROM bytes corroborate `$C4CC: 42B8 FF92 4E75` (`CLR.L $FF92; RTS`). `$C434: 4A78 FFAE 6600 0092` branches SK-alone to the same clear; `$C43C: 2038 E660 6700 008A` branches a zero Save_pointer there. The native capture did not include those two branch inputs, so it is **not** a measured No Save/SK-alone execution; source and ROM bytes independently establish their contract.
+
+`Collected_special_ring_array` is at `$FF92`, outside normal Level_ClrRam's listed clear ranges. Same-zone seamless changes, SS/bonus return loads and death/reload preserve the collection mask; the observed native seamless/SS returns corroborate those two paths, while death/reload remains a source-backed obligation. `SaveGame_SpecialStage` and `SaveGame_LivesContinues` use separate returns and do not clear it. A blanket level-load or generic `PROGRESSION_SAVE` clear is rejected: Java AIZ seamless and late AIZ2 post-boss persistence requests have no native full SaveGame call.
+
+Exact native full SaveGame callers already represented in Java: results tally's act-2/Sky-Sanctuary gate (`62678`); HPZ exit branches (`91524`, `91718`); SSZ final defeat (`165014`); DEZ escape (`171521`); DDZ ending (`173818`); StartNewLevel object's Knuckles/LRZ gate (`181385`). Native AIZEndBoss_CheckLevelTransitionY calls StartNewLevel only (`138340`); StartNewLevel (`180642`) itself does not clear the mask. The appropriate owner is the explicit full SaveGame semantic boundary, preserving every existing caller gate and persistence-only request. Native clears after the SRAM write; Java persistence is asynchronous and its payload omits this mask, so a clear before requesting persistence must not be described as exact SRAM ordering. Existing GameStateSnapshot already captures the mask. No new public Mod API or rewind storage is needed.
+
+The temporary probe source, compiled probe classes, probe report/log and backups were removed after this evidence extraction. Production mask correction was not yet applied when these measurements were recorded.
+
+### Full SaveGame correction and final qualification
+
+The stateless `S3kFullSaveGame.complete(services)` clears the existing 32-bit collection mask through an unannotated `NativeGameStateOps` engine bridge and package-private `GameStateManager` writer, then makes the existing asynchronous persistence request. Native `loc_C4CC` clears after SRAM writing; Java's persistence payload omits this mask, so this implements the gameplay completion contract rather than claiming identical SRAM ordering. No new state or rewind adapter, public Mod API signature/version/pin, singleton lookup, generic persistence semantics, or caller gate changed.
+
+Exactly seven verified full SaveGame sites dispatch through this helper: Results zero-increment completion (62678; act != 0 or SSZ act 0), both HPZ route exits (91524/91718), SSZ defeat completion (165014), DEZ escape (171521), DDZ ending (173818), and Knuckles LRZ StartNewLevel (181385). Generic progression requests, AIZ seamless handoff and late boss persistence, special-stage/lives endpoints, death and reload remain unchanged. The direct locked-on bytes at C434/C43C establish SK-alone and zero Save_pointer branches to C4CC, and C4CC bytes `42B8FF924E75` establish CLR.L/RTS. Neither the native observation nor Java test is a live SK-alone execution.
+
+Withdraw preliminary Results RED claims: sessions 72543 (3/0/3/0) and 37945 (3/2/1/0) had fixture errors; 25051 (3/2/0/0) and preliminary candidate 60985 (138/2/0/0) used a public constructor which calculated nonzero bonuses and therefore did not reach the actual zero-increment full SaveGame gate. Waiting 42286 was cancelled before execution to correct an invalid record-array equality assertion. The corrected fixture uses the canonical constructor with runtime initialization disabled and zero bonuses, injected services, and the identity capture context. Its old-code request 22226 never executed as RED: while holding the normal `worktree_metadata_slot`, the log showed no Maven execution; at 2026-10-08T02:20:32.530322Z it was safely reclassified to the exact candidate without touching queue metadata or priority. Results SHA-256 changed from `3dcd67a3e9ff293e49f488d8886ac0d0a1373ce0e750af0707653c4b90fd875d` to `f0916c5ba711b8a61c27151a8ce75df17ce60685196da36a88986f028bdabc50`; helper comment changed word to mask. Completed engine probe 75265 and native pre/post C4CC observations remain the causal baseline.
+
+Actual commands from this worktree (ROM root denotes the verified absolute primary checkout; DISPLAY=:0 and LUA_BIN=/usr/bin/lua5.4):
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestS3kFullSaveGameBoundary test
+python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestS3kFullSaveGameBoundary,TestS3kResultsScreenObjectInstance,TestS3kStartNewLevel,TestS3kHpzTeleporterHeadless,TestDezFinalEscapeShip,TestSszMechaDefeatRunner,TestGameStateRewindSnapshot,TestSessionSaveRequests,TestS3kSaveSnapshotProvider,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils -Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/s1.gen -Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/s2.gen -Ds3k.rom.path=${OPENGGF_ROM_ROOT}/s3k.gen test
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dtest=TestS3kSonicTailsHczSegmentTraceReplay -Ds3k.rom.path=${OPENGGF_ROM_ROOT}/s3k.gen test
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain -Ds3k.rom.path=${OPENGGF_ROM_ROOT}/s3k.gen test
+```
+
+Candidate 22226: exit 0, 5/0/0/0, class 0.572s, Maven 1:17 including compile. Final focus 72937: exit 0, 138/0/0/0, 29.349s, including exact API signature pins and all four mandatory startup keepers. The new regression directly exercises actual Results act-2/SSZ tally completion, act-1 preservation, all 32 bits, existing captured mask plus Results restore and repeated completion, and missing-session/missing-context/No Save helper completion. Persistence-only preservation uses an absent session, not a successful disk write. Other focused consumers exercise existing bounded gates; they do not certify the other six full live routes. Independent read-only S2 review found no material defect. DDZ real-services seeded ending coverage remains for the coordinator's combined ordinary suite; inherited late cold-route gaps remain open.
+
+Standalone HCZ 48273: exit 0, 1/0/0/0, 23.469s; all 3519 executed samples (3574 rows minus 55 lag) match, zero physics, animation, bootstrap and warnings. Matched chain 14539: exit 1, 1/1/0/0, class 27.27s / Maven 52.227s. HCZ segment 9 is complete with zero errors, warnings and bootstrap, 55 lag: previous 488 errors (402 physics/86 animation) and row3531 animation/row3532 X frontier are closed. Production giant-ring handoff now advances through the special stage to segment 11. AIZ segments6/8 remain 189/13254, first sidekick-X rows3319/1583 unchanged. Segment11 is the newly reachable incomplete frontier: 82067 errors (69393 physics/12674 animation), zero bootstrap/warnings, first non-camera physics row1510 primary Y native07D6/engine07DF; production ownership lost before closure at BK2 cursor68801. This downstream frontier was measured, not investigated or repaired in this round.
+
+All invocations used their normal POM single-fork shape, no timing/heap/fork/profile overrides beyond supported lean for the small focus, and source remained frozen during execution. The temporary comparison-only mask probe and its exact compiled artifacts/reports/backups were removed after evidence extraction; final Results backup was removed at reclassification. Remaining Maven outputs are ordinary ignored target artifacts. Coordinator owns seven affected act-matrix obligations, central status/release prose, actual-main composition and broad validation; these focused/canonical measurements are not a full-suite or delivery claim.

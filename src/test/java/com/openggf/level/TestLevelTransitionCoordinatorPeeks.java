@@ -79,8 +79,8 @@ class TestLevelTransitionCoordinatorPeeks {
         c.saveBigRingReturn(saved, respawn);
         c.clearLastStarPostHit();
         c.markSanctuaryReentry(2, true);
-        LevelTransitionRewindAdapter adapter = new LevelTransitionRewindAdapter(c);
-        LevelTransitionCoordinator.SanctuaryRewindState snapshot = adapter.capture();
+        LevelTransitionRewindAdapter adapter = new LevelTransitionRewindAdapter(c, new FreshLevelTransitionBoundaryController());
+        var snapshot = adapter.capture();
 
         c.requestSanctuaryExit();
         c.completeSanctuaryOriginRestore();
@@ -124,8 +124,8 @@ class TestLevelTransitionCoordinatorPeeks {
         c.saveBigRingReturn(saved);
         c.markSanctuaryReentry(4);
         assertTrue(c.requestSanctuaryExit());
-        LevelTransitionRewindAdapter adapter = new LevelTransitionRewindAdapter(c);
-        LevelTransitionCoordinator.SanctuaryRewindState snapshot = adapter.capture();
+        LevelTransitionRewindAdapter adapter = new LevelTransitionRewindAdapter(c, new FreshLevelTransitionBoundaryController());
+        var snapshot = adapter.capture();
 
         assertTrue(c.consumeZoneActRequest());
         c.completeSanctuaryOriginRestore();

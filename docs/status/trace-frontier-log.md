@@ -111932,3 +111932,134 @@ boss hit-window and SBZ checkpoint/cache-residency qualification remain open.
 These checks supply bounded affected-fixture regression coverage for the scroll
 correction. Full context is in the
 [combined audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#affected-s1-canonical-fixtures).
+
+
+## 2026-10-07 continued stock parity swarm — local qualification
+
+The continuation pins develop `5b3a63641033506fc0d89ad5188a0c97fae29089`;
+updated delivery assembly is `5ab049ec8` on destination `37a57ebdb`. These
+measurements are local branch evidence, not a pushed continuation. All commands
+use the shared queue, the normal single-fork `trace-replay` profile and verified
+absolute root `s1.gen`, `s2.gen`, `s3k.gen` ROM properties where applicable.
+The [stock audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
+and three linked lane audits retain the owning routines and rejected approaches.
+
+- **S1**, `.worktrees/trace-s1-campaign-20261007-r2`, local `0268a6eef7`:
+  `DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldRunChain,TestS1CompleteEmeraldRunPrefix -Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/s1.gen -Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/s2.gen -Ds3k.rom.path=${OPENGGF_ROM_ROOT}/s3k.gen test`
+  completes three cases: two prefixes pass, the complete chain fails at segment
+  12's missed giant ring; zero errors/skips. Segment 7 (MZ1) errors 5,472 →
+  5,466, first remaining animation row 4 (native `$05` / engine `$07`,
+  mapping `$01` / `$05`); segment 8 errors 6,525 → zero;
+  segment 12 errors 196,213 → 196,129, first remaining physics row 87
+  `x_speed` native `$0495`, engine `$04AD` (fractional X `$7E00`/`$9600`).
+  The first two native art-gap movie rows now match exactly: 9,715 and 18,693.
+  No full-campaign completion claim.
+- **S2**, `.worktrees/trace-s2-ehz-coconut-20261007-r2`, local `8dba700f3a`:
+  `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS2Ehz1Seg1CompleteEmeraldsSegmentTraceReplay,TestS2CompleteEmeraldRunChain,TestS2CompleteEmeraldRunPrefix,TestS2SpecialStage2TraceReplay,TestS2SpecialStage5TraceReplay,TestS2SpecialStage6TraceReplay,TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay -Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/s2.gen test`
+  completes seven cases with one complete-chain failure, zero errors/skips.
+  EHZ1 segment 1's 8,176 errors, full/prefix segment 0's 42,538 errors and
+  SS1's 15,713 art errors become zero; prefix, EHZ1 segment 2 and SS2/5/6
+  pass. The complete chain reaches segment 17 rather than segment 1.
+  Newly reachable CPZ1 has 26,735 errors, first row 4,394
+  (`x` `$255B`/`$255C`); CPZ2 has 15,553, first row 4,859; ARZ1 has
+  19,884, first row 1,961 (`sidekick_x_speed` `-$0146`/`$0A00`); and
+  SS7 has 22,405 art errors, first row zero (`[0]`/`[]`). Return-gap
+  differences remain.
+  The standalone CPZ1 reproducer has 5,318 errors, first row 4,394
+  `y_speed` `-$0600`/`-$0492`; the zero-duration waypoint candidate remains
+  queued. Later previously unreachable errors are not classified as regressions.
+- **S3K**, `.worktrees/trace-s3k-hcz-handoff-20261007-r2`, pinned `5b3a636`
+  plus the measured uncommitted plain-level gap helper:
+  `DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain -Ds3k.rom.path=${OPENGGF_ROM_ROOT}/s3k.gen test`
+  completes one failing chain, zero errors/skips. HCZ compares every one of
+  3,574 rows: 32,343 → 563 errors (477 physics, 86 animation), first row
+  zero's fractional Y mismatch replaced by row 653 `sidekick_y` native
+  `$0585`, engine `$0586`; zero warnings/bootstrap errors and 55 lag rows.
+  Earlier segment errors stay unchanged (segments 0/2/4 zero, 6:189, 8:13,254).
+  The giant-ring exit remains missed. Standalone HCZ independently reproduces
+  row 653, with one compressed physics mismatch entry spanning rows 653–727
+  and no animation mismatch; missing advertised auxiliary schemas limit that
+  comparison. The final guard against consuming advertised rows while admission
+  is denied is queued; this earlier candidate is not its execution verdict.
+
+Final cross-game qualification must repeat affected campaigns with the completed
+shared helper before claiming the continuation delivered. Full ordinary/guards
+remain separate from these trace measurements.
+
+
+### Completed local follow-ups before combined qualification
+
+- S1 shared-helper qualification at `9b8052b8fe8f24bb38f745298fb5a55551fa5fbe`
+  repeats the preceding S1 selector: three tests / one chain failure / zero
+  errors or skips, 41.531 seconds. All compared segment totals and frontiers
+  remain unchanged; the prefix passes.
+- S2 CPZ correction `e87d41553eac5b2844599c5f06c5aa4f9d0c3392`, merged privately
+  as `68193f731a47c40f536394aa4930ce5b54734fc3`, passes seven focused tube
+  arithmetic/rewind tests. The normal `trace-replay` selector adds
+  `TestS2Cpz1Seg8CompleteEmeraldsSegmentTraceReplay`,
+  `TestS2Cpz2Seg9CompleteEmeraldsSegmentTraceReplay` and
+  `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` to the preceding seven
+  S2 controls: ten tests / one full-chain failure / zero errors or skips,
+  50.336 seconds. Standalone CPZ1 5,318 errors and chain CPZ1/CPZ2
+  26,735/15,553 become zero; both CPZ2 standalone checks pass. ARZ remains
+  19,884 errors, first row 1,961 Tails X speed `-$0146/$0A00`; SS7 remains
+  22,405 art errors, first row zero. The earlier return-gap disagreement remains.
+- S3K HCZ raw-controller bar correction
+  `b3eff6209ed90d42f88b0264b15f4d8d841e852a`, merged privately as
+  `efb8713739b72bceabac549cc6daf30277a7c846`, passes 75 focused cases,
+  including mandatory startup controls. From that frozen lane,
+  `DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dtest=TestS3kSonicTailsHczSegmentTraceReplay -Ds3k.rom.path=${OPENGGF_ROM_ROOT}/s3k.gen test`
+  passes its compared standalone surface (3.412 seconds). Repeating the
+  preceding full-chain command completes one assertion failure / zero errors
+  or skips in 24.420 seconds: HCZ 563 becomes 488 errors (402 physics,
+  86 animation), removing exactly 75 Tails Y observations. Its first error
+  is row 3,531 animation `$1C/$02`, mapping `$00/$96`; first physics is
+  row 3,532 primary X `1457/1452`. All 3,574 rows complete with 55 lag rows,
+  zero warnings/bootstrap errors and unchanged earlier AIZ totals. The giant
+  ring is still missed; missing auxiliary schemas remain a standalone limit.
+- Shared rewind correction `3190a0ff8d21cd2e5b4263f616e2182f8ceb21ad`, merged
+  privately as `3cc64352a9af8294a5da0e09a96ef97699c17566`, passes 125 focused
+  cases, including the unchanged FBZ-to-SOZ two-restore/two-eight-frame replay.
+  This closes that ordinary rewind assertion without certifying the complete
+  incoming boss/capsule route. The relocated private shield value then passes
+  twelve shield and nine exact API-surface cases with unchanged signature pin.
+
+Commands and owning routine evidence are retained in the linked lane and stock
+audits. New ARZ initialization, HCZ collected-ring and positive pending-boundary
+checks remain in progress. These results do not constitute combined ordinary,
+guard or cross-game trace qualification, integration into main, or a push.
+
+
+## 2026-10-08 — Stock parity swarm, composed canonical frontier
+
+Request `71207`, private composition `45a9414233553b0fed9dd0b764c06e3dadafd44f`
+plus the frozen shared-input correction, finishes at03:14:26 UTC: sixteen cases,
+three full-chain assertion failures, zero errors/skips, 108 seconds Maven.
+Thirteen other cases pass, including S1's two prefixes and every selected S2
+standalone/prefix and S3K standalone HCZ case. Source fingerprints are unchanged.
+Actual original ROMs were passed by absolute path; the root variable below is
+portable notation for that launch, not a created link or substitute ROM.
+
+```sh
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical \
+  "-Dtest=TestS1CompleteEmeraldRunChain,TestS1CompleteEmeraldRunPrefix,TestS2Arz1CompleteEmeraldsSegmentTraceReplay,TestS2Cpz1Seg8CompleteEmeraldsSegmentTraceReplay,TestS2Cpz2Seg9CompleteEmeraldsSegmentTraceReplay,TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay,TestS2Ehz1Seg1CompleteEmeraldsSegmentTraceReplay,TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay,TestS2SpecialStage2TraceReplay,TestS2SpecialStage5TraceReplay,TestS2SpecialStage6TraceReplay,TestS2CompleteEmeraldRunPrefix,TestS2CompleteEmeraldRunChain,TestS3kSonicTailsHczSegmentTraceReplay,TestS3kSonicTailsCompleteEmeraldRunChain" \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+| Game | Closed frontier | Current first errors and stop |
+| --- | --- | --- |
+| S1 | Common-load persistent sprite input removed; chain stop12→33, segment8 remains0; segment12 196,129→3 queue-state comparisons; three early art gaps close. | Segment7 192 physics-group errors, first row3261 Y03CB/03D5. Segment12 first row101 `queue.s1_nemesis_plc.prepared` true/false (allthree errors are queue auxiliary state). Seven later art gaps, earliest LZ3→SLZ1 edge ordinal78,614/78,616. Segment33 incomplete3,192 (2,615physics/577animation), first row356 `dynamic_art.edges`; walk loses ownership in TITLE_CARD at BK2cursor210395. |
+| S2 | ARZ standalone3,203→0, chain19,884→0; following SS7 art22,405→0; every reached compared segment physics/art remainszero through17. | Ten gap-clock axes, earliest `ss→seg2_ehz1` edge0 movie clock10,308/10,268; walk remains SPECIAL_STAGE_RESULTS at cursor101691. Eleven failed axes total; post-SS7 route unreached. |
+| S3K | HCZ complete3,574rows/55lag: zero physics/animation/bootstrap/warnings. Native full-SaveGame clear restores giant-ring handoff and reaches11; standalone3,519 executed rows also pass. | AIZ6 189 first3319 `sidekick_x`31C1/31CA; AIZ8 13,254 first1583 `sidekick_x`366C/3674, unchanged. Segment11 incomplete82,067 (69,393physics/12,674animation), first1510 Y07D6/07DF; ownership loss LEVEL/cursor68801. Three failed axes total; incomplete hardware closure remains unqualified. |
+
+Newly reached downstream mismatches are measured frontiers, not regressions
+against formerly unexecuted route coverage. S1's eighteenth-axis failure has
+one walk, ten completed segment and seven art-gap assertions; its partial
+segment33 report is not a completed segment assertion. The full chain and gap
+inventories, source references, focused results and rejected prototypes are in
+[the stock audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#final-composed-canonical-replay-2026-10-08).
+This canonical trace profile is separate from the pending ordinary/guard
+qualification against publisheda872 and actual-main delivery. It certifies no
+full campaign, route-product breadth, pixel or audio parity.

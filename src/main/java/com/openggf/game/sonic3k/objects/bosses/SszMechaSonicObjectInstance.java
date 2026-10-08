@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.game.sonic3k.S3kFullSaveGame;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -1113,7 +1114,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
                     p1.setObjectMappingFrameControl(true);
                     p1.setMappingFrame(0); p1.setOnObject(false); p1.setRollingJump(false); p1.setSpindash(false);
                 }
-                services().requestSessionSave(com.openggf.game.save.SaveReason.PROGRESSION_SAVE);
+                S3kFullSaveGame.complete(services());
             }
             case 4 -> {
                 updateFinalDefeatSound();

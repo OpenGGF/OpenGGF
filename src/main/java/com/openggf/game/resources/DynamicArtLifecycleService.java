@@ -297,6 +297,7 @@ public final class DynamicArtLifecycleService
             int nextPublicationFrame,
             int movieLogicalFrame,
             int preMainLoopTailRows,
+            int preMainLoopHoldBoundaryRow,
             int nextGapEdgeIndex,
             int gapOpeningTransitionCount,
             int gapOpeningMovieLogicalFrame,
@@ -1472,7 +1473,7 @@ public final class DynamicArtLifecycleService
                 comparisonSegmentReserved,
                 nextTransferId, nextEdgeOrdinal,
                 logicalFrame, nextLogicalEdgeIndex, nextPublicationFrame,
-                movieLogicalFrame, preMainLoopTailRows,
+                movieLogicalFrame, preMainLoopTailRows, preMainLoopHoldBoundaryRow,
                 nextGapEdgeIndexByFrame.getOrDefault(movieLogicalFrame, 0),
                 gapOpeningTransitionCount, gapOpeningMovieLogicalFrame,
                 gapEdgesBeforeLastIteration, gapEdgesBeforeCurrentIteration,
@@ -1530,6 +1531,7 @@ public final class DynamicArtLifecycleService
         ledgerBeforeBufferedBatch =
                 List.copyOf(snapshot.ledgerBeforeBufferedBatch());
         preMainLoopTailRows = snapshot.preMainLoopTailRows();
+        preMainLoopHoldBoundaryRow = snapshot.preMainLoopHoldBoundaryRow();
         // The snapshot carries the counter for the frame it was taken on,
         // which is the only one a restore inside a gap can continue.
         nextGapEdgeIndexByFrame.clear();
