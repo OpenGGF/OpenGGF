@@ -1,7 +1,7 @@
 package com.openggf.net.hub;
 
 import com.openggf.net.identity.PlayerIdentity;
-import com.openggf.net.protocol.ControlCodec;
+import com.openggf.net.protocol.ControlJsonCodec;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.ProtocolViolationException;
@@ -57,6 +57,7 @@ public final class RoomHost {
     private final GhostHub hub;
     private final HostRoundEngine round;
     private final RoomHostHooks hooks;
+    private final ControlJsonCodec codec;
     private final Map<HubConnection, Member> members = new LinkedHashMap<>();
     private final Map<HubConnection, String> expectedFingerprints = new LinkedHashMap<>();
     private String roomGameId;
@@ -73,6 +74,15 @@ public final class RoomHost {
                     LongSupplier wallClockMillis,
                     TrackValidationProfileSource profiles,
                     RoomHostHooks hooks) {
+        this(config, hostIdentity, wallClockMillis, profiles, hooks, new ControlJsonCodec());
+    }
+
+    /** Lets a process hosting many rooms share one thread-safe control codec. */
+    public RoomHost(RoomHostConfig config, PlayerIdentity hostIdentity,
+                    LongSupplier wallClockMillis,
+                    TrackValidationProfileSource profiles,
+                    RoomHostHooks hooks, ControlJsonCodec codec) {
+        this.codec = java.util.Objects.requireNonNull(codec, "codec");
         this.config = config;
         this.hostIdentity = hostIdentity;
         this.wallClockMillis = wallClockMillis;
@@ -120,9 +130,9 @@ public final class RoomHost {
             connection.close("not connected");
             return;
         }
-        final ControlCodec.DecodedControl decoded;
+        final ControlJsonCodec.Decoded decoded;
         try {
-            decoded = ControlCodec.decode(text);
+            decoded = codec.decode(text);
         } catch (ProtocolViolationException e) {
             drop(member, "protocol violation: " + e.getMessage());
             return;
@@ -293,9 +303,9 @@ public final class RoomHost {
         };
         switch (step) {
             case HostHandshake.SendWelcome welcome -> member.connection.sendText(
-                    ControlCodec.encode(null, welcome.welcome()));
+                    codec.encode(null, welcome.welcome()));
             case HostHandshake.Reject reject -> {
-                member.connection.sendText(ControlCodec.encode(null,
+                member.connection.sendText(codec.encode(null,
                         new ControlMessage.JoinRejected(reject.reason())));
                 drop(member, reject.reason());
             }
@@ -306,21 +316,21 @@ public final class RoomHost {
     private void admitMember(Member member, HostHandshake.Admit admit) {
         String expected = expectedFingerprints.remove(member.connection);
         if (expected != null && !expected.equals(admit.fingerprint())) {
-            member.connection.sendText(ControlCodec.encode(null,
+            member.connection.sendText(codec.encode(null,
                     new ControlMessage.JoinRejected("identity mismatch")));
             drop(member, "identity mismatch");
             return;
         }
         if (members.values().stream().anyMatch(existing -> existing.admitted
                 && existing.fingerprint.equals(admit.fingerprint()))) {
-            member.connection.sendText(ControlCodec.encode(null,
+            member.connection.sendText(codec.encode(null,
                     new ControlMessage.JoinRejected("identity already connected")));
             drop(member, "duplicate identity");
             return;
         }
         int slot = lowestFreeSlot();
         if (slot < 0) {
-            member.connection.sendText(ControlCodec.encode(null,
+            member.connection.sendText(codec.encode(null,
                     new ControlMessage.JoinRejected("room full")));
             drop(member, "room full");
             return;
@@ -336,7 +346,7 @@ public final class RoomHost {
                 || !boundedLabel(member.character, MAX_CHARACTER_BYTES)
                 || !roomStateFits()) {
             member.admitted = false;
-            member.connection.sendText(ControlCodec.encode(null,
+            member.connection.sendText(codec.encode(null,
                     new ControlMessage.JoinRejected("room state limit exceeded")));
             drop(member, "room state limit exceeded");
             return;
@@ -345,7 +355,7 @@ public final class RoomHost {
         member.token = tokens.issue();
         member.participantId = UUID.randomUUID().toString();
         hub.addPlayer(slot, member.fingerprint, member.connection);
-        member.connection.sendText(ControlCodec.encode(null,
+        member.connection.sendText(codec.encode(null,
                 new ControlMessage.JoinAccepted(member.token, slot, descriptor(),
                         round.snapshot())));
         broadcast(new ControlMessage.RoomState(players()));
@@ -355,7 +365,7 @@ public final class RoomHost {
         long now = wallClockMillis.getAsLong();
         switch (message) {
             case ControlMessage.Chat chat -> handleChat(member, chat, now);
-            case ControlMessage.Ping ping -> member.connection.sendText(ControlCodec.encode(
+            case ControlMessage.Ping ping -> member.connection.sendText(codec.encode(
                     null, new ControlMessage.Pong(ping.t0ClientMillis(), now)));
             case ControlMessage.SelectCharacter select -> {
                 if (round.phase() == HostRoundEngine.Phase.LOBBY
@@ -480,7 +490,7 @@ public final class RoomHost {
     }
 
     private void broadcast(ControlMessage message) {
-        String encoded = ControlCodec.encode(null, message);
+        String encoded = codec.encode(null, message);
         for (Member member : members.values()) {
             if (member.admitted) {
                 member.connection.sendText(encoded);
@@ -489,7 +499,7 @@ public final class RoomHost {
     }
 
     private boolean roomStateFits() {
-        return ControlCodec.encode(null, new ControlMessage.RoomState(players()))
+        return codec.encode(null, new ControlMessage.RoomState(players()))
                 .getBytes(StandardCharsets.UTF_8).length <= Protocol.MAX_CONTROL_BYTES;
     }
 
@@ -500,8 +510,8 @@ public final class RoomHost {
                 || codePoint == '"' || codePoint == '\\');
     }
 
-    private static void send(Member member, ControlMessage message) {
-        member.connection.sendText(ControlCodec.encode(null, message));
+    private void send(Member member, ControlMessage message) {
+        member.connection.sendText(codec.encode(null, message));
     }
 
     private int lowestFreeSlot() {

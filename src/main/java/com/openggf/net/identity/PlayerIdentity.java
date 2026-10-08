@@ -41,8 +41,7 @@ public final class PlayerIdentity {
     private static final String KEY_FILE = "player-identity.key";
     private static final String PUB_FILE = "player-identity.pub";
     private static final String POW_FILE = "player-identity.pow";
-    private static final Set<PosixFilePermission> PRIVATE_KEY_PERMISSIONS =
-            PosixFilePermissions.fromString("rw-------");
+    private static final String PRIVATE_KEY_PERMISSIONS = "rw-------";
 
     private final Path identityDir;
     private final PrivateKey privateKey;
@@ -125,7 +124,7 @@ public final class PlayerIdentity {
         Path dir = keyPath.getParent();
         FileAttribute<?> initialPermissions =
                 Files.getFileStore(dir).supportsFileAttributeView("posix")
-                        ? PosixFilePermissions.asFileAttribute(PRIVATE_KEY_PERMISSIONS)
+                        ? PosixFilePermissions.asFileAttribute(privateKeyPermissions())
                         : ownerOnlyAclAttribute(dir);
         List<Path> created = new ArrayList<>(2);
         try {
@@ -224,7 +223,7 @@ public final class PlayerIdentity {
         var fileStore = Files.getFileStore(keyPath.getParent());
         if (fileStore.supportsFileAttributeView("posix")) {
             Files.getFileAttributeView(keyPath, PosixFileAttributeView.class,
-                    LinkOption.NOFOLLOW_LINKS).setPermissions(PRIVATE_KEY_PERMISSIONS);
+                    LinkOption.NOFOLLOW_LINKS).setPermissions(privateKeyPermissions());
             verifyPrivateKeyPermissions(keyPath, true);
         } else if (fileStore.supportsFileAttributeView("acl")) {
             Files.getFileAttributeView(keyPath, AclFileAttributeView.class,
@@ -261,7 +260,7 @@ public final class PlayerIdentity {
             throws IOException {
         if (posix) {
             if (!Files.getPosixFilePermissions(keyPath, LinkOption.NOFOLLOW_LINKS)
-                    .equals(PRIVATE_KEY_PERMISSIONS)) {
+                    .equals(privateKeyPermissions())) {
                 throw new IOException("identity key has unsafe POSIX permissions");
             }
             return;
@@ -282,5 +281,10 @@ public final class PlayerIdentity {
         if (!ownerCanRead) {
             throw new IOException("identity key ACL denies owner read access");
         }
+    }
+
+    /** Owner read/write only; a fresh set each call because a mod may hold no static collections. */
+    private static Set<PosixFilePermission> privateKeyPermissions() {
+        return PosixFilePermissions.fromString(PRIVATE_KEY_PERMISSIONS);
     }
 }

@@ -50,6 +50,36 @@ public class TestNetIsolationRules {
                                             "com.openggf.ghost.GhostFrameCodec")))
                     .because("the standalone master and room transports must stay engine-free");
 
+    private static final String[] MOD_BOUND_RACING_PACKAGES = {
+            "com.openggf.net.protocol..", "com.openggf.net.hub..", "com.openggf.net.client..",
+            "com.openggf.net.identity..", "com.openggf.net.host.jdk.."};
+
+    @ArchTest
+    static final ArchRule MOD_BOUND_RACING_CLASSES_ARE_JDK_ONLY =
+            noClasses().that().resideInAnyPackage(MOD_BOUND_RACING_PACKAGES)
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "io.netty..", "org.bouncycastle..", "org.sqlite..",
+                            "com.openggf.net.master..")
+                    .because("the racing library and in-process JDK host ship inside a "
+                            + "validated mod, which cannot carry Netty, Bouncy Castle or SQLite");
+
+    @ArchTest
+    static final ArchRule MOD_BOUND_RACING_CLASSES_AVOID_THE_NETTY_HOST =
+            noClasses().that().resideInAnyPackage(MOD_BOUND_RACING_PACKAGES)
+                    .should().dependOnClassesThat(
+                            com.tngtech.archunit.base.DescribedPredicate.describe(
+                                    "are Netty room-host adapters",
+                                    javaClass -> javaClass.getPackageName()
+                                            .equals("com.openggf.net.host")
+                                            && !javaClass.getName().startsWith(
+                                            "com.openggf.net.host.RaceRoomHost")
+                                            && !javaClass.getName().startsWith(
+                                            "com.openggf.net.host.HostMasterLink")
+                                            && !javaClass.getName().startsWith(
+                                            "com.openggf.net.host.ConnectionHygiene")))
+                    .because("callers swap transports through RaceRoomHost; only the "
+                            + "dedicated server constructs the Netty host");
+
     @ArchTest
     static final ArchRule NET_LOAD_TOOLS_ARE_HEADLESS =
             noClasses().that().resideInAnyPackage("com.openggf.tools.net..")
