@@ -40,14 +40,14 @@ and relevant verification. Status changes record evidence rather than intent.
 | 16 | Contributed zone events participate in reset, capture/restore and reconciliation | Runtime safety | Seven event-lifecycle and two S3K mod-zone lifecycle cases pass in 38496; campaign consumers also pass |
 | 17 | Inspectable deterministic contribution arbitration and explicit conflicts/exclusive claims | Runtime safety, second wave | Effective catalog 21 and module resolution 21 cases pass in 38496, with ordered chains and conflict/exclusive transaction coverage |
 | 18 | Bounded catalog/asset performance acceptance, with measured limits | Creator, after combined changes | Production shape probe passed; 1024 discovered/128 effective cap documented; combined-boundary repeat pending |
-| 19 | Simulation-owned character landing hook and one authoritative character specification | Gameplay helpers | Initial 66 focused passes and integration consumers pass; fresh walkthrough found empty starter drawing, now corrected with an isolated red/green renderer probe; normal regression pending |
+| 19 | Simulation-owned character landing hook and one authoritative character specification | Gameplay helpers | Initial 66 focused passes and integration consumers pass; both actual packaged character integration cases pass in 49042, including baked pixels and hidden/null-renderer behavior |
 | 20 | Declarative standalone setup and safe level/registry delegation; migrate both fixtures and Survivors | Gameplay helpers | Standalone spec three, owner-aware module 22 and both phase-three fixture cases pass in 38496; exported starter proof pending |
 | 21 | Typed immutable physics/profile edits with scoped transforms; migrate Infinite | Gameplay helpers | Updated Infinite fixture passes 206 of 238 cases in 38496, with 32 expected inapplicable-route skips; withMax preserves the other profile fields |
 | 22 | Typed placement operations preserve identity, ownership and stock loading; migrate Golf | Gameplay helpers | Five level-patch cases pass in 38496; all 119 Golf cases pass in 59678 after test-local fault assertion/cleanup correction |
-| 23 | Owner-scoped service/rewind bundle; migrate Golf and Survivors | Gameplay helpers, after safety | Context 19 and owner patch 21 cases pass in 38496; Golf 119 pass in 59678; Survivors service/state cases pass, with one separate font-pixel case under diagnosis |
-| 24 | Shared compact font/atlas/UI and screen-space overlay canvas; migrate multiple examples | Presentation helpers, second wave | UI 14 and 25 selected graphics cases pass in 59678; Survivors title-gradient case passes; complete-font pixel check remains red at the viewport edge |
-| 25 | ROM-qualified art recipes, palette assembly, lifetime cache, anchors and explicit animation policies | Presentation helpers, second wave | Six helper, one actual-ROM recipe and two S2 explicit-mapping cases pass in 38496; Tower's verified Flicky recipe adoption and pixel regression await normal focus |
-| 26 | Timestamped action maps, capture/labels/settings and transition edge consumption; migrate Sitar | Presentation helpers, second wave | Ten input and 35 earlier API/model/chart/arcade follow-up cases pass; complete upstream Sitar union prepared at d5251269; postmerge verification pending |
+| 23 | Owner-scoped service/rewind bundle; migrate Golf and Survivors | Gameplay helpers, after safety | Context 19 and owner patch 21 cases pass in 38496; Golf 119 pass in 59678; all 113 enabled Survivors cases pass in 49042, with only the expected opt-in diagnostic skipped |
+| 24 | Shared compact font/atlas/UI and screen-space overlay canvas; migrate multiple examples | Presentation helpers, second wave | UI 14 and 25 selected graphics cases pass in 59678; UI 14 and all 113 enabled Survivors cases pass in 49042 after correcting the test viewport override, including complete font pixels and title-gradient behavior |
+| 25 | ROM-qualified art recipes, palette assembly, lifetime cache, anchors and explicit animation policies | Presentation helpers, second wave | Six helper, one actual-ROM recipe and two S2 explicit-mapping cases pass in 38496; all six Tower scene cases pass in 49042, including the verified Flicky recipe and loaded-scene pixel comparison |
+| 26 | Timestamped action maps, capture/labels/settings and transition edge consumption; migrate Sitar | Presentation helpers, second wave | Ten input and 35 earlier follow-up cases pass; complete upstream Sitar union is integrated at 886ce707d; all twelve Sitar classes and 131 cases pass in 49042 with no skips |
 | 27 | Owner storage across modules/scenes, versioned settings and compatible deterministic-state helpers | Gameplay helpers, second wave | Seven storage, 19 context and 13 testkit cases pass in 38496; Survivors owns its compatible profile/settings migration; Infinite retains its legacy leaderboard path |
 
 ## Boundaries and dependencies
@@ -659,7 +659,7 @@ verifying its source, the coordinator applied three separately hashed patches:
   generated character invisible. An isolated Java 21/Console 1.10.3 probe failed
   with zero tiles before correction and passed one case after correction, including
   actual packaged loading, owned construction, baked pixels and hidden/null-renderer
-  behavior. Normal focused verification of the exact integrated test is pending.
+  behavior. Both packaged character cases now pass in the normal coherent focused run 49042.
 
 Each patch's before/after file hashes and whitespace checks passed. Changed-only
 documentation checks covered fences, syntax, new paths and actual CLI/POM contracts;
@@ -693,3 +693,97 @@ prose and a root launcher only; its runtime/test/build source is unchanged from
 the measured `be3c31418`. Reuse this qualified updated-base evidence rather than
 launching another duplicate full baseline. It does not validate the framework
 candidate: its combined development and post-integration runs remain required.
+
+
+### Coherent post-Sitar focused verification: 2026-10-08
+
+The clean candidate `4f3d2c27dac0f46449a19ec420806afa7ea905f9` completed direct
+queued Maven session `49042` with exit zero. Maven reported completion at
+`2026-10-08T02:43:47Z`, after 5,067 seconds waiting and 10 minutes 44 seconds
+execution. This direct invocation has no category-run ID. HEAD and clean tracked
+source were independently checked after completion, and every selected report
+was fresh relative to the pre-launch source-state cutoff; no unselected or stale
+XML was included.
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -B \
+  "-Dtest=TestModApiSignatureSurface,TestModApiSdkPackager,TestModApiJavadocTool,TestModSceneHost,TestSceneNetworkLifetime,TestManagedSceneNetwork,TestSceneMusicRom,TestModStorage,TestModTestKit,TestModTestKitPackager,TestSampleModsPackage,TestSitarHeroArcade,TestSitarHeroControls,TestSitarHeroCareer,TestSitarHeroWorldTour,TestSitarHeroOnlineMatch,TestSitarHeroStory,TestSitarHeroPerformers,TestSitarHeroModel,TestSitarHeroCharts,TestSitarHeroS1SongCatalogue,TestSitarHeroS2SongCatalogue,TestSitarHeroS3kSongCatalogue,TestActionReducer,TestCreatorUi,TestPhase3SampleCharacterIntegration,TestPurposeStarters,TestRobotnikTowerDefenseScene,TestSonicSurvivors" \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+Result: **29 fresh XML suites / 369 tests / zero failures / zero errors / one
+skip**. All 368 enabled cases passed. The sole skip remains
+`com.openggf.mods.code.TestSonicSurvivors#balanceProbe`, with full causal first
+line `org.opentest4j.TestAbortedException: Assumption failed: opt-in diagnostic`.
+There were no missing-ROM skips. The nine actual compiled signature tests passed
+against the final 880-type / 17,272-line normalized candidate. Sitar retained
+all 131 cases across twelve classes, including actual charts for all 79 songs,
+career, local/P2/network behavior, story, performers and all three ROM catalogues.
+The character rendering, Tower Flicky pixels, complete Survivors font pixels and
+UI projection/trust regressions passed in the integrated normal test harness.
+These are focused results; full candidate and post-integration validation remain
+required.
+
+| Class | Tests / failures / errors / skips |
+|---|---|
+| `com.openggf.control.TestActionReducer` | 5 / 0 / 0 / 0 |
+| `com.openggf.mods.TestModApiSignatureSurface` | 9 / 0 / 0 / 0 |
+| `com.openggf.mods.code.TestRobotnikTowerDefenseScene` | 6 / 0 / 0 / 0 |
+| `com.openggf.mods.code.TestSitarHeroArcade` | 29 / 0 / 0 / 0 |
+| `com.openggf.mods.code.TestSitarHeroCareer` | 9 / 0 / 0 / 0 |
+| `com.openggf.mods.code.TestSitarHeroCharts` | 13 / 0 / 0 / 0 |
+| `com.openggf.mods.code.TestSitarHeroControls` | 5 / 0 / 0 / 0 |
+| `com.openggf.mods.code.TestSitarHeroModel` | 10 / 0 / 0 / 0 |
+| `com.openggf.mods.code.TestSitarHeroOnlineMatch` | 20 / 0 / 0 / 0 |
+| `com.openggf.mods.code.TestSitarHeroPerformers` | 1 / 0 / 0 / 0 |
+| `com.openggf.mods.code.TestSitarHeroS1SongCatalogue` | 18 / 0 / 0 / 0 |
+| `com.openggf.mods.code.TestSitarHeroS2SongCatalogue` | 5 / 0 / 0 / 0 |
+| `com.openggf.mods.code.TestSitarHeroS3kSongCatalogue` | 6 / 0 / 0 / 0 |
+| `com.openggf.mods.code.TestSitarHeroStory` | 6 / 0 / 0 / 0 |
+| `com.openggf.mods.code.TestSitarHeroWorldTour` | 9 / 0 / 0 / 0 |
+| `com.openggf.mods.code.TestSonicSurvivors` | 114 / 0 / 0 / 1 |
+| `com.openggf.mods.integration.TestPhase3SampleCharacterIntegration` | 2 / 0 / 0 / 0 |
+| `com.openggf.mods.scene.host.TestModSceneHost` | 16 / 0 / 0 / 0 |
+| `com.openggf.mods.scene.host.TestModStorage` | 7 / 0 / 0 / 0 |
+| `com.openggf.mods.scene.host.TestSceneNetworkLifetime` | 3 / 0 / 0 / 0 |
+| `com.openggf.mods.scene.host.music.TestSceneMusicRom` | 10 / 0 / 0 / 0 |
+| `com.openggf.mods.scene.host.network.TestManagedSceneNetwork` | 16 / 0 / 0 / 0 |
+| `com.openggf.mods.testing.TestModTestKit` | 13 / 0 / 0 / 0 |
+| `com.openggf.mods.ui.TestCreatorUi` | 14 / 0 / 0 / 0 |
+| `com.openggf.tools.modsdk.TestModApiJavadocTool` | 7 / 0 / 0 / 0 |
+| `com.openggf.tools.modsdk.TestModApiSdkPackager` | 10 / 0 / 0 / 0 |
+| `com.openggf.tools.modsdk.TestPurposeStarters` | 2 / 0 / 0 / 0 |
+| `com.openggf.tools.modsdk.TestSampleModsPackage` | 2 / 0 / 0 / 0 |
+| `com.openggf.tools.modtestkit.TestModTestKitPackager` | 2 / 0 / 0 / 0 |
+
+### Reviewed upstream capture and fixture integration
+
+Main advanced to `33d3976c53304dbbea1c695914ecdd7bfc64cf9d`. Its 15-path change
+was independently reviewed from API/baseline and example/runtime angles, and
+merged without conflict into the framework candidate as
+`722559f92a1d7c1d2bbaf31ca92b31072b83cfed`. The only production change factors
+`GameplayCaptureSession` drawing into a shared body and adds `renderFrame()`
+without framebuffer readback. Existing `render()` retains drawing, `glFinish()`
+and readback; boot, session, reload, rewind ownership and creator contracts are
+unchanged. None of the eight existing Java paths overlapped this task's edits.
+
+The measured upstream `d5f9767a609223a7a4a284026ad324cc7785a2c5` integrated
+control passed 364 cases in 19 fresh reports, with zero failures, errors or skips,
+and compiled all 3,700 production and 3,587 test sources under the existing lean
+lane. It includes native pixel/state comparisons at 320/800 widths, active title
+and special-stage results, readback omission, ownership cleanup and all nine SOZ
+routes with their registry/replay checks. See the exact command and coverage limits
+in [integrated natural-collection control](../research/2026-10-07-ordinary-suite-memory-cause.md#integrated-natural-collection-control).
+
+The later `33d3976c5` changes evidence prose only. Independent blob comparisons
+confirmed all fourteen failing-test classes and all thirty skipped-test classes
+are identical to measured `be3c31418`; all eleven failing capture classes retain
+the unchanged `render()` path. POM, hooks, selection policy and queue implementation
+are unchanged. This qualifies reuse of the **be3 full baseline through d5f focused
+controls**; it is not a measured full 33d baseline or a full-suite pass. Compare
+delivery results with all 28 complete assertions and all 62 skip identities/reasons
+recorded above. Any changed result requires bounded matched attribution. External
+creator acceptance remains pinned to clean `4f3d2c27`; this upstream change does
+not alter its mod/API/packaging inputs.
