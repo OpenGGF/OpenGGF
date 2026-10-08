@@ -8,12 +8,16 @@ level export, and a Phase 3 character stub. The stub demonstrates character iden
 and is deliberately not registered: add playable art and terrain sensors
 before registering it in gameplay.
 
-1. Convert ordinary object art with `ggfmod convert art`; `.ggfs` is an object sheet.
-2. Convert playable art with `ggfmod convert art --playable`; `.ggfp` includes the
-   playable animation and generated DPLC sections.
-3. Convert `src/main/mod/level-source` with `ggfmod convert level`.
-4. Compile classes and package the build output with `ggfmod package`.
-5. Launch an exploded build explicitly with `ggfmod run`.
+1. Edit `SampleBadnik`, `src/main/mod/sample.png`, or the level source under
+   `src/main/mod/level-source` in this generated object/zone project.
+2. Run the Maven package command below; it converts art/levels, compiles Java, and
+   packages the validated mod automatically.
+3. Validate the resulting `target/phase2-sample-mod.jar` and review its findings.
+4. Follow the handbook's ROM configuration and isolated runtime-directory setup,
+   then launch the exploded `target/classes` with the kit's `ggfmod` launcher.
+
+Manual converter commands require fresh output paths. The normal Maven lifecycle
+removes its own generated outputs before conversion, so it can be repeated after edits.
 
 See `docs/modding/content-mods.md`, `docs/modding/characters.md`, and
 `docs/modding/standalone-games.md` in the OpenGGF source tree for the complete
