@@ -45,7 +45,8 @@ public final class ExperimentalNativeEngine {
 final class TargetEngineCapability {
     @Alias
     @InjectAccessors(ExperimentalCapabilityAccess.class)
-    private final boolean compiledModsSupported = false;
+    // GraalVM aliases must omit final; the target Engine field remains final.
+    private boolean compiledModsSupported;
 }
 
 final class ExperimentalCapabilityAccess {

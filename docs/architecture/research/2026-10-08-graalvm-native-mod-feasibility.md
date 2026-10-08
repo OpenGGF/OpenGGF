@@ -363,6 +363,20 @@ licence retention, checksums and crashes wrongly presented as missing-member
 rejections. Windows compiler and actual native results are still pending at this
 preparation checkpoint; no usable Windows ZIP is claimed yet.
 
+At integrated `ad3d6a9965952a38b6a0ac2e9eb0285f721ee895`, hosted run
+`37823876863` attempt 1 completed all 674 guards with 673 passes and one existing
+source-scanner infrastructure error: `TestObjectUpdateClockTerminologyGuard`
+exceeded its unchanged two-minute child-process deadline, then its terminated
+stream raised `IOException: Stream closed`. Attempt 2 reran the unchanged normal
+profile and passed all 674 cases without failures/errors/skips (7:40 Maven time,
+finished 18:45:47Z). No engine or test edit was needed. Windows then rebuilt all
+16 mods and generated/audited the 14,992-entry contract, but the pinned compiler
+rejected `final` on the alias stub. Graal aliases must omit that modifier; the
+actual target Engine field remains final and the hosted check still requires it.
+The corrected build runs Windows compilation alongside guards, with both required
+before delivery. The packaged README also points to Microsoft's official x64
+runtime installer if a recipient lacks the platform's C++ runtime DLLs.
+
 The plan at base `d2a501ebc9919e6c43412a2eedf02a372eac5309` selects all 3,058
 ordinary classes plus guards because the new tools/workflow are unclassified.
 The previously completed ordinary engine qualification at frozen `6124a524e`
