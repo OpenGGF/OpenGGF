@@ -129,6 +129,70 @@ class TestEggmansSkyScene {
     }
 
     @Test
+    void enterOpensTheGalaxyMapAndConfirmsExactlyOneWarp() throws Exception {
+        try (ExampleModHarness harness = open()) {
+            assertTrue(harness.debugJump("space:0"));
+            play(harness, 200);
+            Object game = harness.scene().getClass().getMethod("game").invoke(harness.scene());
+            Object player = game.getClass().getField("player").get(game);
+            Class<?> catalog = harness.loader().loadClass("eggsky.game.Catalog");
+            int[] tech = (int[]) player.getClass().getField("tech").get(player);
+            for (String drive : List.of("T_HYPERDRIVE", "T_RED_DRIVE", "T_GREEN_DRIVE", "T_BLUE_DRIVE")) {
+                tech[catalog.getField(drive).getInt(null)] = drive.equals("T_HYPERDRIVE") ? 5 : 1;
+            }
+            Object cargo = player.getClass().getField("cargo").get(player);
+            int cell = catalog.getField("WARP_CELL").getInt(null);
+            int cells = (int) cargo.getClass().getMethod("count", int.class).invoke(cargo, cell);
+            cargo.getClass().getMethod("remove", int.class, int.class).invoke(cargo, cell, cells);
+
+            harness.press(GLFW_KEY_ENTER);
+            play(harness, 4);
+            assertEquals("MenuMode", mode(harness));
+            harness.press(org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT); // Cargo -> System.
+            harness.press(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // Galaxy map.
+            harness.press(GLFW_KEY_ENTER);
+            play(harness, 4);
+            assertEquals("GalaxyMode", mode(harness), "Enter selects the menu item instead of closing");
+            harness.press(GLFW_KEY_ENTER);
+            assertEquals("GalaxyMode", mode(harness), "confirming the current system stays on the map");
+            harness.press(GLFW_KEY_RIGHT);
+            play(harness, 4);
+            Object map = game.getClass().getMethod("mode").invoke(game);
+            var selected = map.getClass().getDeclaredField("selected");
+            selected.setAccessible(true);
+            Object destination = selected.get(map);
+            long destinationId = destination.getClass().getField("id").getLong(destination);
+            long origin = player.getClass().getField("systemId").getLong(player);
+            assertTrue(destinationId != origin, "selected a different system");
+            harness.press(GLFW_KEY_ENTER);
+            assertEquals("GalaxyMode", mode(harness), "no fuel refuses the warp without closing the map");
+            cargo.getClass().getMethod("add", int.class, int.class).invoke(cargo, cell, 2);
+            int warps = player.getClass().getField("statWarps").getInt(player);
+            harness.press(org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER);
+            assertEquals("WarpMode", mode(harness), "keypad Enter starts the warp");
+            assertEquals(1, cargo.getClass().getMethod("count", int.class).invoke(cargo, cell));
+            play(harness, 220);
+            assertEquals("SpaceMode", mode(harness));
+            assertEquals(destinationId, player.getClass().getField("systemId").getLong(player));
+            assertEquals(warps + 1, player.getClass().getField("statWarps").getInt(player));
+            // Dedicated menu/back controls still dismiss menus and the map.
+            for (int close : new int[] {org.lwjgl.glfw.GLFW.GLFW_KEY_TAB,
+                    org.lwjgl.glfw.GLFW.GLFW_KEY_I, GLFW_KEY_BACKSPACE, GLFW_KEY_X}) {
+                harness.press(GLFW_KEY_ENTER);
+                play(harness, 4);
+                assertEquals("MenuMode", mode(harness));
+                harness.press(close);
+                assertEquals("SpaceMode", mode(harness));
+                assertTrue(harness.debugJump("galaxy"));
+                play(harness, 4);
+                harness.press(close);
+                assertEquals("SpaceMode", mode(harness));
+            }
+            assertEquals(Map.of(), harness.findings());
+        }
+    }
+
+    @Test
     void everySuppliedBiomeRemixesIntoALandablePlanet() throws Exception {
         try (ExampleModHarness harness = open()) {
             play(harness, 10);

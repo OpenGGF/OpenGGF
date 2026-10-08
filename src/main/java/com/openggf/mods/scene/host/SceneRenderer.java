@@ -32,7 +32,6 @@ import static org.lwjgl.opengl.GL15.GL_ARRAY_BUFFER;
 import static org.lwjgl.opengl.GL15.GL_DYNAMIC_DRAW;
 import static org.lwjgl.opengl.GL15.glBindBuffer;
 import static org.lwjgl.opengl.GL15.glBufferData;
-import static org.lwjgl.opengl.GL15.glBufferSubData;
 import static org.lwjgl.opengl.GL15.glDeleteBuffers;
 import static org.lwjgl.opengl.GL15.glGenBuffers;
 import static org.lwjgl.opengl.GL20.glEnableVertexAttribArray;
@@ -180,7 +179,11 @@ final class SceneRenderer {
 
     private void flush(int quads) {
         vertices.flip();
-        glBufferSubData(GL_ARRAY_BUFFER, 0, vertices);
+        // Replace the storage instead of overwriting offset zero of the previous draw.
+        // That draw may still be reading the buffer: glBufferSubData serialises each
+        // texture/clip batch with the GPU (particularly costly on macOS). All vertices
+        // are replaced here, so the driver can retire the old storage asynchronously.
+        glBufferData(GL_ARRAY_BUFFER, vertices, GL_DYNAMIC_DRAW);
         glDrawArrays(GL_TRIANGLES, 0, quads * 6);
     }
 

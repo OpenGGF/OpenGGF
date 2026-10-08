@@ -37,7 +37,9 @@ Knuckles* on its title returns to the stock game; holding Escape returns to the 
 | Mining laser / fire | Space or Z | A | left button (aims at the pointer) |
 | Scan pulse (tap) / analysis visor (hold) | X | B | right button |
 | Boost; hold Up + boost to **launch**; hold boost in space for the **pulse drive** | C or Shift | C | — |
-| Menu | Enter, Tab or I | Start | — |
+| Open menu | Enter, Tab or I | Start | — |
+| Confirm a menu selection / warp | Enter, Space, Z or C | A, C or Start | select a star, then click it again to warp |
+| Close menu / galaxy map | Tab or I | B | right button |
 | Recharge life support / hazard / launch fuel / hull | 1 / 2 / 3 / 4 | menu | — |
 | Back | Backspace or X | B | right button |
 

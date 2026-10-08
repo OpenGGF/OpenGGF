@@ -88,3 +88,91 @@ passed by absolute `-Ds3k.rom.path`; all three supplied ROMs available to the sc
 The audio fix is in the engine launcher, so the rebuilt mod needs the updated engine;
 `python3 examples/build_example.py eggmans-sky --run` uses both from this checkout.
 Speaker-device listening and a full ordinary/guard run were not performed.
+
+
+## Space rendering performance (2026-10-08)
+
+Investigated from `69cbe6b836` in the current checkout after a report of 20–30 fps.
+The earlier ≈0.5 ms scene-host figure excluded native draw submission. The
+software planet renderer was not the measured bottleneck, so reducing its
+resolution or approximation accuracy was rejected.
+
+`SceneRenderer.flush` repeatedly uploaded each texture/clip batch at offset zero
+with `glBufferSubData`, forcing the driver to wait for the preceding draw to stop
+reading that storage. Replace the complete store with `glBufferData` for each
+batch; the driver can retain the previous storage until its draw completes.
+Vertex contents, draw ordering, batch limits, shaders, texture updates and the
+public Mod API are unchanged. No Eggman's Sky assets or gameplay need alteration.
+
+Matched native macOS/Java 21 probe: `HeadlessGameBoot(800,448,400,224)`, real S3K
+ROM, `ExampleModHarness` built from source, `new:42`, 330 update ticks, `space:0`,
+then 600 frames. Every frame ticks the scene, clears, calls `ModSceneHost.draw`
+and `glFinish`; exclude the first 120 frames from timings. Audio, swap/vsync and
+capture encoding are outside the measured interval. Baseline engine classes
+versus only the changed renderer compiled into a temporary override directory:
+
+| Mean ms/frame (480 frames) | Baseline | Replacement storage |
+|---|---:|---:|
+| Update | 0.483 | 0.486 |
+| Native draw submission | 5.318 | 0.167 |
+| GPU completion wait | 0.479 | 0.390 |
+| Total | 6.280 | 1.043 |
+
+Both runs caught no mod faults; final 800×448 PNGs are byte-for-byte identical.
+This identifies a substantial driver stall, not a claim that the user's live
+20–30 fps session or every GPU has been reproduced. It requires an updated
+engine; rebuilding only the mod jar does not replace `SceneRenderer`.
+
+Validation scope: the change-based plan selected 3,010 ordinary classes plus
+guards, including an unrelated untracked BK2. Proportionate validation uses
+scene-host, canvas, texture-cache and expedition tests, plus a new native
+pixel test of small→full→small batches, the 2,048-quad boundary, texture/clip
+switches and repeated streaming updates. This is a local buffer upload fix;
+no batching algorithm, public contract, gameplay timing or physics changed.
+
+Completed on the working changes above `69cbe6b836`:
+
+- `python3 tools/testing/run_categories.py --base 69cbe6b836 --preflight`: Java 21,
+  Lua 5.4 and PowerShell prerequisites passed.
+- `python3 tools/testing/maven_queue.py --lean -Dmse=off
+  -Dopenggf.test.gl.native=true
+  -Dtest=TestSceneRenderer,TestSceneTextureCache,TestRecordingCanvas,TestModSceneHost,TestEggmansSkyScene
+  "-Ds3k.rom.path=${PWD}/Sonic 3 & Knuckles (W) [!].gen"
+  test`: 28 passed, zero failures/errors/skips, including the native GL regression.
+- Matched native probe above and exact final PNG comparison passed.
+- `python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package`: succeeded;
+  rebuilt the engine and executable dependency jar without repeating tests.
+
+No full ordinary/guard suite or live-session FPS claim is made.
+
+
+## Menu and warp confirmation (2026-10-08)
+
+Follow-up on the same checkout above `69cbe6b836`: `Controls` intentionally maps
+Enter/keypad Enter and pad Start to both opening a menu and confirming a selection.
+`MenuMode` and `GalaxyMode` checked menu-close first, so these inputs dismissed the
+screen before its confirm branch. Close on a menu action only when it is not also
+a confirm; explicit back retains priority. Tab/I still close, and Backspace/X/pad B
+still go back. Flight's menu-opening controls are unchanged.
+
+The existing expedition test accepted either SpaceMode or GalaxyMode after pressing
+Enter on the map, masking a return without a warp. The new independent regression
+opens System → Galaxy Map through Enter, checks current-system and missing-fuel
+refusals remain on the map, then confirms with keypad Enter and requires WarpMode,
+one cell consumed, the selected destination reached and exactly one recorded warp.
+It also verifies Tab/I/Backspace/X dismissal in both menus. Drive upgrades and fuel
+are explicit test setup; UI navigation and the warp use the production input path.
+
+The combined selection remains the full ordinary suite because of the example and
+unrelated untracked movie paths. This bounded mod-only input-priority correction
+uses focused expedition coverage; the preceding 28-test renderer validation remains
+applicable because the engine renderer has not changed again.
+
+Completed checks for the control follow-up:
+
+- `python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestEggmansSkyScene
+  "-Ds3k.rom.path=${PWD}/Sonic 3 & Knuckles (W) [!].gen"
+  test`: six tests passed, zero failures/errors/skips, including the new warp regression.
+- `python3 examples/build_example.py eggmans-sky --skip-engine`: compiled, validated
+  and packaged `target/examples/eggmans-sky/eggmans-sky.jar` against the engine
+  already built and tested above. This follow-up needs the rebuilt mod jar.

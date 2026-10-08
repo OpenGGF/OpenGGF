@@ -104,7 +104,8 @@ public final class GalaxyMode implements Mode {
         if (messageTicks > 0) {
             messageTicks--;
         }
-        if (in.backPressed || in.menuPressed && age > 2) {
+        // Enter and pad Start also open menus during flight; here they confirm.
+        if (in.backPressed || (in.menuPressed && !in.confirmPressed && age > 2)) {
             g.sound.music(Sound.M_DATA_SELECT);
             g.setMode(back);
             return;

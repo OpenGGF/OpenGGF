@@ -55,7 +55,8 @@ public final class MenuMode implements Mode {
     public void update(Game g) {
         age++;
         Controls in = g.in;
-        if (in.backPressed || in.menuPressed && age > 2) {
+        // Enter and pad Start also open menus during flight; here they confirm.
+        if (in.backPressed || (in.menuPressed && !in.confirmPressed && age > 2)) {
             g.sound.sfx(Sound.SWITCH);
             g.setMode(back);
             return;
