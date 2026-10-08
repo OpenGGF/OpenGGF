@@ -79,7 +79,8 @@ import com.openggf.game.timeattack.GhostStore;
 import com.openggf.game.timeattack.TimeAttackHudOverlay;
 import com.openggf.game.timeattack.TimeAttackDebugInput;
 import com.openggf.game.timeattack.TimeAttackLaunchRequest;
-import com.openggf.game.timeattack.TimeAttackLevelEndRouting;
+import com.openggf.game.session.GameplayRunPolicy;
+import com.openggf.game.session.GameplayRunRouting;
 import com.openggf.game.timeattack.TimeAttackMenu;
 import com.openggf.game.timeattack.TimeAttackRuntime;
 import com.openggf.game.timeattack.mp.MultiplayerRaceCoordinator;
@@ -1234,7 +1235,7 @@ public class GameLoop {
         }
         if ((currentGameMode == GameMode.LEVEL || isBonusStageRewindable() || isSpecialStageRewindable())
                 && TraceSessionLauncher.active() == null
-                && !timeAttackRuntime.isActive()
+                && runPolicy().liveRewind()
                 && liveRewindManager.handleRealtimeRewindInput(
                         currentGameMode, rewindBlocked, inputHandler)) {
             inputHandler.update();
@@ -1286,7 +1287,7 @@ public class GameLoop {
         finishTimeAttackMasterTitleExit();
 
         if (!isPaused()
-                && !timeAttackRuntime.isActive()
+                && runPolicy().editorEntry()
                 && (currentGameMode == GameMode.EDITOR
                 || (currentGameMode == GameMode.LEVEL
                 && configService.getBoolean(SonicConfiguration.EDITOR_ENABLED)))
@@ -1485,7 +1486,7 @@ public class GameLoop {
                 !overlayOwnsPause && (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
                         || playbackDebugManager.isCurrentForcedStartPress()),
                 userRecordingControls,
-                request -> routeTimeAttackSeamlessTransitionBeforeApply(
+                request -> routeHostedRunSeamlessTransitionBeforeApply(
                         request, doFrameStep),
                 this::startPendingInLevelTitleCard,
                 () -> LevelIterationAdmissionController
@@ -1744,10 +1745,9 @@ public class GameLoop {
             // sites below remain for seamless/next-act/next-zone/credits transitions
             // that are NOT time-attack-gated at their source (debug keys, S1/S2 boss
             // defeat -> credits, and the S3K seamless cross-act reload).
-            if (levelManager.consumeTimeAttackMenuReturnRequest()) {
+            if (levelManager.consumeHostReturnRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                timeAttackRuntime.deactivate();
-                startTimeAttackReturnToMenuFade();
+                endHostedRun();
                 levelIterationAdmission.finishPlaybackBoundary(
                         false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
@@ -1755,11 +1755,9 @@ public class GameLoop {
             }
             if (levelManager.consumeNextActRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                // A finished/abandoned time attack returns to the time attack menu
-                // instead of bleeding into the auto-advanced next act.
-                if (TimeAttackLevelEndRouting.returnsToMenuOnLevelEnd(timeAttackRuntime.isActive())) {
-                    timeAttackRuntime.deactivate();
-                    startTimeAttackReturnToMenuFade();
+                // A host-returning run ends instead of bleeding into the next act.
+                if (runPolicy().returnsToHostOnActCompletion()) {
+                    endHostedRun();
                 } else {
                     startNextActFade();
                 }
@@ -1770,11 +1768,9 @@ public class GameLoop {
             }
             if (levelManager.consumeNextZoneRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                // A finished/abandoned time attack returns to the time attack menu
-                // instead of bleeding into the auto-advanced next zone.
-                if (TimeAttackLevelEndRouting.returnsToMenuOnLevelEnd(timeAttackRuntime.isActive())) {
-                    timeAttackRuntime.deactivate();
-                    startTimeAttackReturnToMenuFade();
+                // A host-returning run ends instead of bleeding into the next zone.
+                if (runPolicy().returnsToHostOnActCompletion()) {
+                    endHostedRun();
                 } else {
                     startNextZoneFade();
                 }
@@ -1794,11 +1790,9 @@ public class GameLoop {
             }
             if (levelManager.consumeCreditsRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                // A finished/abandoned time attack returns to the time attack menu
-                // instead of bleeding into the auto-advanced credits sequence.
-                if (TimeAttackLevelEndRouting.returnsToMenuOnLevelEnd(timeAttackRuntime.isActive())) {
-                    timeAttackRuntime.deactivate();
-                    startTimeAttackReturnToMenuFade();
+                // A host-returning run ends instead of bleeding into the credits.
+                if (runPolicy().returnsToHostOnActCompletion()) {
+                    endHostedRun();
                 } else if (GameServices.module().getGameId() == GameId.STANDALONE) {
                     masterTitleExitCoordinator.startStandaloneCompletion();
                 } else {
@@ -1993,21 +1987,31 @@ public class GameLoop {
     }
 
     /**
-     * Routes a cross-act time-attack request before the admission owner applies
-     * its destination. Mid-act seamless requests remain owned by the ordinary
+     * Ends a host-returning run on a cross-act seamless request before the admission owner
+     * applies its destination. Mid-act seamless requests remain owned by the ordinary
      * transition path.
      */
-    private boolean routeTimeAttackSeamlessTransitionBeforeApply(
+    private boolean routeHostedRunSeamlessTransitionBeforeApply(
             SeamlessLevelTransitionRequest request, boolean doFrameStep) {
-        if (!TimeAttackLevelEndRouting.shouldSuppressSeamlessTransitionForTimeAttack(
-                timeAttackRuntime.isActive(), request.type(), timeAttackRuntime.launch(),
-                request.targetZone(), request.targetAct())) {
+        GameplayModeContext run = resolveGameplayModeContext();
+        if (run == null || !GameplayRunRouting.endsRunOnSeamlessTransition(run.getRunPolicy(),
+                run.getRunZone(), run.getRunAct(), request.type(), request.targetZone(), request.targetAct())) {
             return false;
         }
-        timeAttackRuntime.deactivate();
-        startTimeAttackReturnToMenuFade();
+        endHostedRun();
         updateNonGameplayAudio(doFrameStep);
         return true;
+    }
+
+    /** Ends the session's hosted run and hands control back to its host. */
+    private void endHostedRun() {
+        timeAttackRuntime.deactivate();
+        startTimeAttackReturnToMenuFade();
+    }
+
+    private GameplayRunPolicy runPolicy() {
+        GameplayModeContext run = resolveGameplayModeContext();
+        return run != null ? run.getRunPolicy() : GameplayRunPolicy.stock();
     }
 
     private void runInputNeutralTitleCardPlayerPrelude() {
@@ -2380,7 +2384,7 @@ public class GameLoop {
             return;
         }
 
-        if (TimeAttackLevelEndRouting.suppressesStageEntry(timeAttackRuntime.isActive())) {
+        if (!runPolicy().specialStageEntry()) {
             return;
         }
 
@@ -2549,7 +2553,7 @@ public class GameLoop {
      * Captures current state, fades to black, loads the bonus zone.
      */
     private void enterBonusStage(BonusStageType type) {
-        if (currentGameMode != GameMode.LEVEL || timeAttackRuntime.isActive()) {
+        if (currentGameMode != GameMode.LEVEL || !runPolicy().bonusStageEntry()) {
             return;
         }
 

@@ -1,6 +1,5 @@
 package com.openggf.game.timeattack;
 
-import com.openggf.game.GameStateManager;
 import com.openggf.ghost.GhostFrame;
 import com.openggf.game.ghost.GhostRenderRegistry;
 import org.junit.jupiter.api.Test;
@@ -144,26 +143,30 @@ class TestTimeAttackRuntime {
     }
 
     @Test
-    void applyTimeAttackActiveFlagSetsAndClearsGameState(@TempDir Path root) {
-        // Engine-free seam for onLevelReady()/deactivate(): GameServices isn't
-        // reachable headless, so exercise the flag lifecycle directly against
-        // a plain GameStateManager instead of faking a GameplayModeContext.
+    void applyRunPolicyStartsAndEndsTheIsolatedActRun(@TempDir Path root) {
+        // Engine-free seam for onLevelReady()/deactivate(): the session is a plain
+        // GameplayModeContext rather than one resolved through SessionManager.
         TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root),
                 root.resolve("identity"), () -> false);
-        GameStateManager gameState = new GameStateManager();
-        assertFalse(gameState.isTimeAttackActive());
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 1, 1, "sonic", java.util.List.of()));
+        var session = new com.openggf.game.session.GameplayModeContext(
+                new com.openggf.game.session.WorldSession(new com.openggf.game.sonic3k.Sonic3kGameModule()));
+        assertEquals(com.openggf.game.session.GameplayRunPolicy.stock(), session.getRunPolicy());
 
-        runtime.applyTimeAttackActiveFlag(gameState, true); // mirrors onLevelReady()
-        assertTrue(gameState.isTimeAttackActive());
+        runtime.applyRunPolicy(session, true); // mirrors onLevelReady()
+        assertEquals(com.openggf.game.session.GameplayRunPolicy.isolatedAct(), session.getRunPolicy());
+        assertEquals(1, session.getRunZone());
+        assertEquals(1, session.getRunAct());
 
-        runtime.applyTimeAttackActiveFlag(gameState, false); // mirrors deactivate()
-        assertFalse(gameState.isTimeAttackActive());
+        runtime.applyRunPolicy(session, false); // mirrors deactivate()
+        assertEquals(com.openggf.game.session.GameplayRunPolicy.stock(), session.getRunPolicy());
+        assertEquals(-1, session.getRunZone());
     }
 
     @Test
-    void applyTimeAttackActiveFlagToleratesNullGameState(@TempDir Path root) {
+    void applyRunPolicyToleratesNullSession(@TempDir Path root) {
         TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root),
                 root.resolve("identity"), () -> false);
-        assertDoesNotThrow(() -> runtime.applyTimeAttackActiveFlag(null, true));
+        assertDoesNotThrow(() -> runtime.applyRunPolicy(null, true));
     }
 }

@@ -1,4 +1,4 @@
-package com.openggf.game.timeattack;
+package com.openggf.sprites.ghost;
 
 import com.openggf.data.PlayerSpriteArtProvider;
 import com.openggf.game.GameServices;
@@ -8,9 +8,6 @@ import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.debug.DebugColor;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.art.SpriteArtSet;
-import com.openggf.sprites.ghost.ActiveGhost;
-import com.openggf.sprites.ghost.GhostArtBankAllocator;
-import com.openggf.sprites.ghost.GhostOpacityCalculator;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.io.IOException;

@@ -150,6 +150,9 @@ public final class GameplayModeContext implements ModeContext {
     private AdvancedRenderModeController advancedRenderModeController;
     private ZoneLayoutMutationPipeline zoneLayoutMutationPipeline;
     private final GhostRenderRegistry ghostRenderRegistry = new GhostRenderRegistry();
+    private GameplayRunPolicy runPolicy = GameplayRunPolicy.stock();
+    private int runZone = -1;
+    private int runAct = -1;
     private final KosinskiModuleQueue kosinskiModuleQueue = new KosinskiModuleQueue();
 
     private BonusStageProvider activeBonusStageProvider = NoOpBonusStageProvider.INSTANCE;
@@ -611,6 +614,38 @@ public final class GameplayModeContext implements ModeContext {
 
     public GhostRenderRegistry getGhostRenderRegistry() {
         return ghostRenderRegistry;
+    }
+
+    /** The policy of the run this session is playing; {@link GameplayRunPolicy#stock()} for the campaign. */
+    public GameplayRunPolicy getRunPolicy() {
+        return runPolicy;
+    }
+
+    /** Zone the current run started in, or -1 for an ordinary campaign session. */
+    public int getRunZone() {
+        return runZone;
+    }
+
+    /** Act the current run started in, or -1 for an ordinary campaign session. */
+    public int getRunAct() {
+        return runAct;
+    }
+
+    /**
+     * Fixes the policy for a run starting at {@code zone}/{@code act}. It lasts for the session,
+     * so a retry's level reload keeps it; {@link #endGameplayRun()} restores the campaign policy.
+     */
+    public void beginGameplayRun(GameplayRunPolicy policy, int zone, int act) {
+        this.runPolicy = java.util.Objects.requireNonNull(policy, "policy");
+        this.runZone = zone;
+        this.runAct = act;
+    }
+
+    /** Restores the stock campaign policy. */
+    public void endGameplayRun() {
+        this.runPolicy = GameplayRunPolicy.stock();
+        this.runZone = -1;
+        this.runAct = -1;
     }
 
     public AdvancedRenderModeController getAdvancedRenderModeController() {

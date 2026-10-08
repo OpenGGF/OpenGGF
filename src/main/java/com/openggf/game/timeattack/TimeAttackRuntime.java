@@ -2,7 +2,6 @@ package com.openggf.game.timeattack;
 
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameServices;
-import com.openggf.game.GameStateManager;
 import com.openggf.game.ghost.GhostCaptureBuffer;
 import com.openggf.ghost.GhostFrame;
 import com.openggf.game.ghost.GhostFrameSampler;
@@ -13,6 +12,7 @@ import com.openggf.game.ghost.GhostRecording;
 import com.openggf.game.ghost.GhostRenderRegistry;
 import com.openggf.game.recording.RecordingMainPlayerResolver;
 import com.openggf.sprites.ghost.ActiveGhost;
+import com.openggf.sprites.ghost.GhostRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.version.AppVersion;
 
@@ -259,18 +259,25 @@ public final class TimeAttackRuntime {
         // bases — clear them before the new level's first render.
         ghostRenderer.clearSlots();
         attachRenderer(GameServices.ghostRenderRegistryOrNull());
-        applyTimeAttackActiveFlag(GameServices.gameStateOrNull(), true);
+        applyRunPolicy(com.openggf.game.session.SessionManager.getCurrentGameplayMode(), true);
     }
 
     /**
-     * Sets/clears {@link GameStateManager#setTimeAttackActive(boolean)}, tolerating a
-     * null {@code gameState} (mirrors the other GameServices-resolved wrappers in this
-     * class). Package-visible seam so the flag lifecycle is testable without
-     * GameServices/a live GameplayModeContext.
+     * Starts or ends the isolated-act run policy on the session, tolerating a null session
+     * (mirrors the other GameServices-resolved wrappers in this class). The policy suppresses
+     * special/bonus stages, rewind and the editor, and returns to the menu at act completion;
+     * it lasts across a retry's level reload. Package-visible seam so the lifecycle is testable
+     * without a live engine.
      */
-    void applyTimeAttackActiveFlag(GameStateManager gameState, boolean active) {
-        if (gameState != null) {
-            gameState.setTimeAttackActive(active);
+    void applyRunPolicy(com.openggf.game.session.GameplayModeContext session, boolean active) {
+        if (session == null) {
+            return;
+        }
+        if (active && launch != null) {
+            session.beginGameplayRun(com.openggf.game.session.GameplayRunPolicy.isolatedAct(),
+                    launch.zone(), launch.act());
+        } else {
+            session.endGameplayRun();
         }
     }
 
@@ -393,6 +400,6 @@ public final class TimeAttackRuntime {
         attempt = null;
         attemptListener = null;
         extraGhostSupplier = null;
-        applyTimeAttackActiveFlag(GameServices.gameStateOrNull(), false);
+        applyRunPolicy(com.openggf.game.session.SessionManager.getCurrentGameplayMode(), false);
     }
 }

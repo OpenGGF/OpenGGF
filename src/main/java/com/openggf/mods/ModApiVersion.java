@@ -28,6 +28,8 @@ public final class ModApiVersion {
      * Power-up rules expose explicit invincibility-expiry music ownership for modes
      * with continuous music.
      * Broker-pinned direct-room TLS wire fields are part of the race protocol.
+     * A session-scoped gameplay run policy governs special/bonus stage entry, act
+     * completion handing control back to the run's host, live rewind and editor entry.
      * Creator helpers include character specifications and lifecycle hooks, decoded
      * placement transforms, owner storage and service bundles, named single-act and
      * multi-act zone factories, shared UI/input and ROM-qualified scene art.

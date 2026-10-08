@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
  * object), then the results-screen sequence advances the zone/act — all well
  * before GameLoop's special-stage chokepoint is ever reached. {@link
  * Sonic1GiantRingObjectInstance#onTouchResponse} must check
- * {@code GameStateManager.isTimeAttackActive()} and skip the reaction
+ * {@code ObjectServices.runPolicy()} (a run without special stages) and skip the reaction
  * entirely — the ring stays inert and the player passes through untouched.
  */
 class TestSonic1GiantRingTimeAttackGate {
@@ -53,7 +53,7 @@ class TestSonic1GiantRingTimeAttackGate {
 
     @Test
     void ringStaysInertWhenTimeAttackActive() {
-        gameState.setTimeAttackActive(true);
+        services.withRunPolicy(com.openggf.game.session.GameplayRunPolicy.isolatedAct());
 
         Sonic1GiantRingObjectInstance ring = createRing();
         AbstractPlayableSprite player = createMockPlayer();

@@ -485,6 +485,8 @@ CF-ANNOTATION TYPE com.openggf.game.save.SaveSnapshotProvider visible @com.openg
 CF-ANNOTATION TYPE com.openggf.game.save.SaveSnapshotProvider visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.game.save.SelectedTeam visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.session.EngineContext visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.session.GameplayRunPolicy visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.session.GameplayRunPolicy$ActCompletion visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.session.WorldSession visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.solid.ContactKind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.solid.ObjectSolidExecutionContext visible @com.openggf.game.ModApi
@@ -1234,6 +1236,7 @@ CONSTRUCTOR com.openggf.game.save.SaveSlotSummary public  <init>(int,com.openggf
 CONSTRUCTOR com.openggf.game.save.SelectedTeam public  <init>(java.lang.String,java.util.List<java.lang.String>)
 CONSTRUCTOR com.openggf.game.session.EngineContext public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.graphics.GraphicsManager,com.openggf.audio.AudioManager,com.openggf.data.RomManager,com.openggf.debug.PerformanceProfiler,com.openggf.debug.DebugOverlayManager,com.openggf.debug.playback.PlaybackDebugManager,com.openggf.game.RomDetectionService,com.openggf.game.CrossGameFeatureProvider)
 CONSTRUCTOR com.openggf.game.session.EngineContext public  <init>(com.openggf.configuration.SonicConfigurationService,com.openggf.graphics.GraphicsManager,com.openggf.audio.AudioManager,com.openggf.data.RomManager,com.openggf.debug.PerformanceProfiler,com.openggf.debug.DebugOverlayManager,com.openggf.debug.playback.PlaybackDebugManager,com.openggf.game.RomDetectionService,com.openggf.game.CrossGameFeatureProvider,com.openggf.game.patch.ModuleResolutionService)
+CONSTRUCTOR com.openggf.game.session.GameplayRunPolicy public  <init>(boolean,boolean,com.openggf.game.session.GameplayRunPolicy$ActCompletion,boolean,boolean)
 CONSTRUCTOR com.openggf.game.session.WorldSession public  <init>(com.openggf.game.GameModule)
 CONSTRUCTOR com.openggf.game.session.WorldSession public  <init>(com.openggf.game.GameModule,com.openggf.game.GameModule,com.openggf.game.GameDataSource,com.openggf.game.save.SaveSessionContext)
 CONSTRUCTOR com.openggf.game.session.WorldSession public  <init>(com.openggf.game.GameModule,com.openggf.game.GameModule,com.openggf.game.save.SaveSessionContext)
@@ -2229,6 +2232,8 @@ FIELD com.openggf.game.save.SaveSlotState public,static,final com.openggf.game.s
 FIELD com.openggf.game.save.SaveSlotState public,static,final com.openggf.game.save.SaveSlotState HASH_WARNING
 FIELD com.openggf.game.save.SaveSlotState public,static,final com.openggf.game.save.SaveSlotState UNAVAILABLE
 FIELD com.openggf.game.save.SaveSlotState public,static,final com.openggf.game.save.SaveSlotState VALID
+FIELD com.openggf.game.session.GameplayRunPolicy$ActCompletion public,static,final com.openggf.game.session.GameplayRunPolicy$ActCompletion CONTINUE
+FIELD com.openggf.game.session.GameplayRunPolicy$ActCompletion public,static,final com.openggf.game.session.GameplayRunPolicy$ActCompletion RETURN_TO_HOST
 FIELD com.openggf.game.solid.ContactKind public,static,final com.openggf.game.solid.ContactKind BOTTOM
 FIELD com.openggf.game.solid.ContactKind public,static,final com.openggf.game.solid.ContactKind CRUSH
 FIELD com.openggf.game.solid.ContactKind public,static,final com.openggf.game.solid.ContactKind NONE
@@ -4798,7 +4803,6 @@ METHOD com.openggf.game.GameStateManager public  boolean isReverseGravityActive(
 METHOD com.openggf.game.GameStateManager public  boolean isScreenLocked()
 METHOD com.openggf.game.GameStateManager public  boolean isScreenShakeActive()
 METHOD com.openggf.game.GameStateManager public  boolean isSpecialRingCollected(int)
-METHOD com.openggf.game.GameStateManager public  boolean isTimeAttackActive()
 METHOD com.openggf.game.GameStateManager public  boolean isWfzFireToggle()
 METHOD com.openggf.game.GameStateManager public  com.openggf.game.rewind.snapshot.GameStateSnapshot capture()
 METHOD com.openggf.game.GameStateManager public  int consumeCurrentSpecialStageIndexAndAdvance()
@@ -4841,7 +4845,6 @@ METHOD com.openggf.game.GameStateManager public  void setItemBonus(int)
 METHOD com.openggf.game.GameStateManager public  void setReverseGravityActive(boolean)
 METHOD com.openggf.game.GameStateManager public  void setScreenLocked(boolean)
 METHOD com.openggf.game.GameStateManager public  void setScreenShakeActive(boolean)
-METHOD com.openggf.game.GameStateManager public  void setTimeAttackActive(boolean)
 METHOD com.openggf.game.GameStateManager public  void setWfzFireToggle(boolean)
 METHOD com.openggf.game.GameStateManager public  void startNewGameFromTitle()
 METHOD com.openggf.game.GameStateManager public,synchronized  void configureSpecialStageProgress(int,int)
@@ -7097,6 +7100,19 @@ METHOD com.openggf.game.session.EngineContext public  com.openggf.game.RomDetect
 METHOD com.openggf.game.session.EngineContext public  com.openggf.game.patch.ModuleResolutionService moduleResolutionService()
 METHOD com.openggf.game.session.EngineContext public  com.openggf.graphics.GraphicsManager graphics()
 METHOD com.openggf.game.session.EngineContext public,static  com.openggf.game.session.EngineContext fromLegacySingletonsForBootstrap()
+METHOD com.openggf.game.session.GameplayRunPolicy public  boolean bonusStageEntry()
+METHOD com.openggf.game.session.GameplayRunPolicy public  boolean editorEntry()
+METHOD com.openggf.game.session.GameplayRunPolicy public  boolean liveRewind()
+METHOD com.openggf.game.session.GameplayRunPolicy public  boolean returnsToHostOnActCompletion()
+METHOD com.openggf.game.session.GameplayRunPolicy public  boolean specialStageEntry()
+METHOD com.openggf.game.session.GameplayRunPolicy public  com.openggf.game.session.GameplayRunPolicy$ActCompletion actCompletion()
+METHOD com.openggf.game.session.GameplayRunPolicy public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.session.GameplayRunPolicy public,final  int hashCode()
+METHOD com.openggf.game.session.GameplayRunPolicy public,final  java.lang.String toString()
+METHOD com.openggf.game.session.GameplayRunPolicy public,static  com.openggf.game.session.GameplayRunPolicy isolatedAct()
+METHOD com.openggf.game.session.GameplayRunPolicy public,static  com.openggf.game.session.GameplayRunPolicy stock()
+METHOD com.openggf.game.session.GameplayRunPolicy$ActCompletion public,static  com.openggf.game.session.GameplayRunPolicy$ActCompletion valueOf(java.lang.String)
+METHOD com.openggf.game.session.GameplayRunPolicy$ActCompletion public,static  com.openggf.game.session.GameplayRunPolicy$ActCompletion[] values()
 METHOD com.openggf.game.session.WorldSession public  com.openggf.game.GameDataSource getDataSource()
 METHOD com.openggf.game.session.WorldSession public  com.openggf.game.GameModule getGameModule()
 METHOD com.openggf.game.session.WorldSession public  com.openggf.game.GameModule resolvedGameModule()
@@ -7982,6 +7998,7 @@ METHOD com.openggf.level.LevelManager public  boolean consumeActTransitionExecut
 METHOD com.openggf.level.LevelManager public  boolean consumeActTransitionOscillationAdvancedDuringFrame()
 METHOD com.openggf.level.LevelManager public  boolean consumeActTransitionRewindBoundaryDuringFrame()
 METHOD com.openggf.level.LevelManager public  boolean consumeCreditsRequest()
+METHOD com.openggf.level.LevelManager public  boolean consumeHostReturnRequest()
 METHOD com.openggf.level.LevelManager public  boolean consumeInLevelTitleCardLevelGamestateResetRequest()
 METHOD com.openggf.level.LevelManager public  boolean consumeInLevelTitleCardPlayerControlLockRequest()
 METHOD com.openggf.level.LevelManager public  boolean consumeInLevelTitleCardRequest()
@@ -7990,7 +8007,6 @@ METHOD com.openggf.level.LevelManager public  boolean consumeNextZoneRequest()
 METHOD com.openggf.level.LevelManager public  boolean consumeRespawnRequest()
 METHOD com.openggf.level.LevelManager public  boolean consumeSpecialStageRequest()
 METHOD com.openggf.level.LevelManager public  boolean consumeSpecialStageReturnLevelReloadRequest()
-METHOD com.openggf.level.LevelManager public  boolean consumeTimeAttackMenuReturnRequest()
 METHOD com.openggf.level.LevelManager public  boolean consumeTitleCardRequest()
 METHOD com.openggf.level.LevelManager public  boolean consumeZoneActRequest()
 METHOD com.openggf.level.LevelManager public  boolean copyBackgroundTileColumnsFromWorldToVdpPlane(int,int,int,int,int)
@@ -8183,6 +8199,7 @@ METHOD com.openggf.level.LevelManager public  void renderSpriteObjectPass(com.op
 METHOD com.openggf.level.LevelManager public  void requestBonusStageEntry(com.openggf.game.BonusStageType)
 METHOD com.openggf.level.LevelManager public  void requestCreditsTransition()
 METHOD com.openggf.level.LevelManager public  void requestGameOverExit(com.openggf.game.GameOverExit)
+METHOD com.openggf.level.LevelManager public  void requestHostReturn()
 METHOD com.openggf.level.LevelManager public  void requestInLevelTitleCard(int,int)
 METHOD com.openggf.level.LevelManager public  void requestInLevelTitleCard(int,int,boolean)
 METHOD com.openggf.level.LevelManager public  void requestInLevelTitleCard(int,int,boolean,int)
@@ -8197,7 +8214,6 @@ METHOD com.openggf.level.LevelManager public  void requestSeamlessTransition(com
 METHOD com.openggf.level.LevelManager public  void requestSpecialStageEntry()
 METHOD com.openggf.level.LevelManager public  void requestSpecialStageEntry(com.openggf.game.SpecialStageEntryRequest)
 METHOD com.openggf.level.LevelManager public  void requestSpecialStageFromCheckpoint()
-METHOD com.openggf.level.LevelManager public  void requestTimeAttackMenuReturn()
 METHOD com.openggf.level.LevelManager public  void requestTitleCard(int,int)
 METHOD com.openggf.level.LevelManager public  void requestTitleCardIfNeeded(com.openggf.game.LevelLoadContext)
 METHOD com.openggf.level.LevelManager public  void requestZoneAndAct(int,int)
@@ -8341,6 +8357,7 @@ METHOD com.openggf.level.LevelTilemapManager public  void uploadBackgroundTilema
 METHOD com.openggf.level.LevelTilemapManager public  void uploadForegroundTilemap()
 METHOD com.openggf.level.LevelTilemapManager$BlockLookup public,abstract  com.openggf.level.Block lookup(byte,int,int)
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeCreditsRequest()
+METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeHostReturnRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeInLevelTitleCardLevelGamestateResetRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeInLevelTitleCardPlayerControlLockRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeInLevelTitleCardRequest()
@@ -8351,7 +8368,6 @@ METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeSpeci
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeSpecialStageRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeSpecialStageReturnLevelReloadRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeSuppressNextMusicChange()
-METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeTimeAttackMenuReturnRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeTitleCardRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeZoneActRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean hasBigRingReturn()
@@ -8402,6 +8418,7 @@ METHOD com.openggf.level.LevelTransitionCoordinator public  void markSanctuaryRe
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestBonusStageEntry(com.openggf.game.BonusStageType)
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestCreditsTransition()
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestGameOverExit(com.openggf.game.GameOverExit)
+METHOD com.openggf.level.LevelTransitionCoordinator public  void requestHostReturn()
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestInLevelTitleCard(int,int)
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestInLevelTitleCard(int,int,boolean)
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestInLevelTitleCard(int,int,boolean,int)
@@ -8416,7 +8433,6 @@ METHOD com.openggf.level.LevelTransitionCoordinator public  void requestSeamless
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestSpecialStageEntry()
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestSpecialStageEntry(com.openggf.game.SpecialStageEntryRequest)
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestSpecialStageFromCheckpoint()
-METHOD com.openggf.level.LevelTransitionCoordinator public  void requestTimeAttackMenuReturn()
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestTitleCard(int,int)
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestZoneAndAct(int,int)
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestZoneAndAct(int,int,boolean)
@@ -9333,6 +9349,7 @@ METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.LevelEv
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.RuntimeArtCoordinator runtimeArtCoordinator()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.TitleCardProvider titleCardProvider()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.resources.NativeFadeLifecycle nativeFadeLifecycle()
+METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.session.GameplayRunPolicy runPolicy()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.solid.ObjectSolidExecutionContext solidExecution()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.timing.HardwareTimingService hardwareTiming()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.level.objects.ObjectPlayerQuery playerQuery()
@@ -9406,9 +9423,9 @@ METHOD com.openggf.level.objects.ObjectServices public,abstract  void playSfx(in
 METHOD com.openggf.level.objects.ObjectServices public,abstract  void requestBonusStageEntry(com.openggf.game.BonusStageType)
 METHOD com.openggf.level.objects.ObjectServices public,abstract  void requestBonusStageExit()
 METHOD com.openggf.level.objects.ObjectServices public,abstract  void requestCreditsTransition()
+METHOD com.openggf.level.objects.ObjectServices public,abstract  void requestHostReturn()
 METHOD com.openggf.level.objects.ObjectServices public,abstract  void requestSessionSave(com.openggf.game.save.SaveReason)
 METHOD com.openggf.level.objects.ObjectServices public,abstract  void requestSpecialStageEntry()
-METHOD com.openggf.level.objects.ObjectServices public,abstract  void requestTimeAttackMenuReturn()
 METHOD com.openggf.level.objects.ObjectServices public,abstract  void requestZoneAndAct(int,int)
 METHOD com.openggf.level.objects.ObjectServices public,abstract  void requestZoneAndAct(int,int,boolean)
 METHOD com.openggf.level.objects.ObjectServices public,abstract  void saveBigRingReturn(com.openggf.level.BigRingReturnState)
@@ -12926,6 +12943,7 @@ NESTED com.openggf.game.rewind.snapshot.SpecialRenderEffectSnapshot com.openggf.
 NESTED com.openggf.game.rewind.snapshot.SpriteManagerSnapshot com.openggf.game.rewind.snapshot.SpriteManagerSnapshot$SpriteEntry
 NESTED com.openggf.game.rewind.snapshot.TimerManagerSnapshot com.openggf.game.rewind.snapshot.TimerManagerSnapshot$TimerState
 NESTED com.openggf.game.rewind.snapshot.WaterSystemSnapshot com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry
+NESTED com.openggf.game.session.GameplayRunPolicy com.openggf.game.session.GameplayRunPolicy$ActCompletion
 NESTED com.openggf.game.solid.ObjectSolidExecutionContext com.openggf.game.solid.ObjectSolidExecutionContext$Resolver
 NESTED com.openggf.graphics.FadeManager com.openggf.graphics.FadeManager$FadeState
 NESTED com.openggf.graphics.FadeManager com.openggf.graphics.FadeManager$FadeType
@@ -14096,6 +14114,11 @@ RECORD-COMPONENT com.openggf.game.save.SaveSlotSummary slot int
 RECORD-COMPONENT com.openggf.game.save.SaveSlotSummary state com.openggf.game.save.SaveSlotState
 RECORD-COMPONENT com.openggf.game.save.SelectedTeam mainCharacter java.lang.String
 RECORD-COMPONENT com.openggf.game.save.SelectedTeam sidekicks java.util.List<java.lang.String>
+RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy actCompletion com.openggf.game.session.GameplayRunPolicy$ActCompletion
+RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy bonusStageEntry boolean
+RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy editorEntry boolean
+RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy liveRewind boolean
+RECORD-COMPONENT com.openggf.game.session.GameplayRunPolicy specialStageEntry boolean
 RECORD-COMPONENT com.openggf.game.solid.PlayerSolidContactResult kind com.openggf.game.solid.ContactKind
 RECORD-COMPONENT com.openggf.game.solid.PlayerSolidContactResult postContact com.openggf.game.solid.PostContactState
 RECORD-COMPONENT com.openggf.game.solid.PlayerSolidContactResult preContact com.openggf.game.solid.PreContactState
@@ -15814,6 +15837,7 @@ TYPE enum public,static,final com.openggf.game.patch.ModuleResolutionService$Lau
 TYPE enum public,static,final com.openggf.game.presentation.PlayerPresentationPose$Kind SUPER java.lang.Enum<com.openggf.game.presentation.PlayerPresentationPose$Kind>
 TYPE enum public,static,final com.openggf.game.presentation.ScenePresentationFrame$Layer SUPER java.lang.Enum<com.openggf.game.presentation.ScenePresentationFrame$Layer>
 TYPE enum public,static,final com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind SUPER java.lang.Enum<com.openggf.game.presentation.ScenePresentationFrame$PrimitiveKind>
+TYPE enum public,static,final com.openggf.game.session.GameplayRunPolicy$ActCompletion SUPER java.lang.Enum<com.openggf.game.session.GameplayRunPolicy$ActCompletion>
 TYPE enum public,static,final com.openggf.graphics.FadeManager$FadeState SUPER java.lang.Enum<com.openggf.graphics.FadeManager$FadeState>
 TYPE enum public,static,final com.openggf.graphics.FadeManager$FadeType SUPER java.lang.Enum<com.openggf.graphics.FadeManager$FadeType>
 TYPE enum public,static,final com.openggf.graphics.GLCommand$BlendType SUPER java.lang.Enum<com.openggf.graphics.GLCommand$BlendType>
@@ -16099,6 +16123,7 @@ TYPE record public,final com.openggf.game.rules.RingRules SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rules.SidekickCpuRules SUPER java.lang.Record
 TYPE record public,final com.openggf.game.save.SaveSlotSummary SUPER java.lang.Record
 TYPE record public,final com.openggf.game.save.SelectedTeam SUPER java.lang.Record
+TYPE record public,final com.openggf.game.session.GameplayRunPolicy SUPER java.lang.Record
 TYPE record public,final com.openggf.game.solid.PlayerSolidContactResult SUPER java.lang.Record
 TYPE record public,final com.openggf.game.solid.PlayerStandingState SUPER java.lang.Record
 TYPE record public,final com.openggf.game.solid.PostContactState SUPER java.lang.Record
@@ -16827,6 +16852,8 @@ TYPE-ANNOTATION com.openggf.game.save.SaveSnapshotProvider @com.openggf.game.Mod
 TYPE-ANNOTATION com.openggf.game.save.SaveSnapshotProvider @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.game.save.SelectedTeam @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.session.EngineContext @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.session.GameplayRunPolicy @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.session.GameplayRunPolicy$ActCompletion @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.session.WorldSession @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.solid.ContactKind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.solid.ObjectSolidExecutionContext @com.openggf.game.ModApi

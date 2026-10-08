@@ -42,18 +42,19 @@ class TestLevelAdvanceLoadReceipt {
     }
 
     @Test
-    void timeAttackMenuReturnDoesNotClassifyAnUnrelatedLaterLoad() throws Exception {
+    void hostReturnDoesNotClassifyAnUnrelatedLaterLoad() throws Exception {
         HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
         var level = GameServices.level();
-        var tracker = SessionManager.getCurrentGameplayMode().runLevelLoads();
+        var session = SessionManager.getCurrentGameplayMode();
+        var tracker = session.runLevelLoads();
         tracker.prime(level);
-        GameServices.gameState().setTimeAttackActive(true);
+        session.beginGameplayRun(com.openggf.game.session.GameplayRunPolicy.isolatedAct(), 0, 0);
         try {
             level.advanceToNextLevel();
-            assertTrue(level.consumeTimeAttackMenuReturnRequest());
+            assertTrue(level.consumeHostReturnRequest());
             assertTrue(tracker.latest().isEmpty());
         } finally {
-            GameServices.gameState().setTimeAttackActive(false);
+            session.endGameplayRun();
         }
         level.loadCurrentLevel();
         assertEquals(RunLevelLoadCause.ORDINARY, tracker.latest().orElseThrow().cause());

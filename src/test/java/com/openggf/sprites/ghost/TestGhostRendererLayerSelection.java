@@ -1,6 +1,5 @@
 package com.openggf.sprites.ghost;
 
-import com.openggf.game.timeattack.GhostRenderer;
 import com.openggf.ghost.GhostFrame;
 import org.junit.jupiter.api.Test;
 

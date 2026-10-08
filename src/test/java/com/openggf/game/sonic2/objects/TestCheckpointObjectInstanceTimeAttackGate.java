@@ -74,7 +74,7 @@ class TestCheckpointObjectInstanceTimeAttackGate {
 
     @Test
     void starCircleSuppressedButCheckpointStillRecordedDuringTimeAttack() {
-        gameState.setTimeAttackActive(true);
+        runPolicy = com.openggf.game.session.GameplayRunPolicy.isolatedAct();
 
         CheckpointObjectInstance checkpoint = new CheckpointObjectInstance(CHECKPOINT_SPAWN, "Checkpoint");
         checkpoint.setServices(newServices());
@@ -110,8 +110,12 @@ class TestCheckpointObjectInstanceTimeAttackGate {
             @Override public ObjectManager objectManager() { return objectManager; }
             @Override public GameStateManager gameState() { return gameState; }
             @Override public RespawnState checkpointState() { return checkpointState; }
+            @Override public com.openggf.game.session.GameplayRunPolicy runPolicy() { return runPolicy; }
         };
     }
+
+    private com.openggf.game.session.GameplayRunPolicy runPolicy =
+            com.openggf.game.session.GameplayRunPolicy.stock();
 
     private <T extends ObjectInstance> List<T> liveObjects(Class<T> type) {
         return objectManager.getActiveObjects().stream()
