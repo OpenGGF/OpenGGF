@@ -708,12 +708,59 @@ scoped cleanup released final-class inline mocks/spies while preserving another
 fixture's mock. The command recompiled 3,700 production and 3,587 test source
 files under the normal JVM settings, taking **75 seconds** including tests.
 Its last waiting heartbeat was 10,758 seconds (about 179 minutes), separate
-from execution. Final integrated validation is still pending.
+from execution. Final integrated validation is recorded below.
 The command below uses `OPENGGF_CHECKOUT` for the verified absolute main
 checkout path, keeping the recorded command portable.
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off \
   -Dtest=TestOwnedMocks,TestGameplayCaptureFrameRendering \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+## Integrated natural-collection control
+
+The task merged cleanly into updated `develop` destination `02796b4c4` as
+`d5f9767a6`. The intervening destination change added only the Sitar launcher;
+Java inputs were unchanged from the Sitar integration already exercised by the
+native controls. All eleven changed/control Java fingerprints matched the
+candidate after integration, and the tested integration commit stayed unchanged
+through execution. Both the actual-destination and original-task-pin dry-run
+plans selected 3,022 ordinary classes plus guards; the documented proportionate
+scope was used without editing either selection.
+
+The integrated focused control passed **364 cases in 19 fresh reports, with
+zero failures, errors or skips**, on 2026-10-08. It includes both packages'
+`TestSonic3kLevelLoading`, all nine measured classes, the new ownership/native
+controls, SOZ background/capture arguments, and the teardown extension. CRC32
+and SHA-1 checks confirmed all three supplied ROM identities. The nine measured
+classes still accounted for the same 281 successful cases. This is focused
+validation; no passing full ordinary suite is claimed, and the inherited
+28-failure broad baseline remains outside this bounded change.
+
+The existing `--lean` lane capped **both Maven and Surefire at 1 GiB**, verified
+in their actual Java command lines. It recompiled **all 3,700 production and
+3,587 test sources** and used one reused test fork with natural collection,
+without the profiler's between-class collection requests. Maven completed in
+**263 seconds (4 minutes 23 seconds)**. Queue telemetry recorded **311.3 seconds
+waiting**, **264.7 seconds holding the slot**, and **2.153 GiB sampled peak
+process-tree RSS**, fitting the lane's existing 4 GiB reservation. The full SOZ
+class passed its nine routes in 170.145 seconds; LRZ passed in 1.881 seconds and
+the audio comparator's 104 cases passed in 1.049 seconds. These natural-GC
+times are a separate functional/capacity control, not another matched benchmark.
+
+This supplies the previously missing all-sources compilation evidence under
+1 GiB for this revision, plus selected-test capacity evidence. It does not
+certify the whole ordinary suite under 1 GiB, change global JVM limits, or
+identify the historical OOM without its error/kill evidence. The cleanup
+component's already completed 119-case Python safety verification and actual
+tool preflight were not repeated on unchanged Python code. Documentation-only
+recording after this run does not require another engine invocation.
+
+```bash
+TESTS=TestStaleRewindCodecHelperCleanup,TestSonic2RuntimePlcRendererRefresh,TestMhzBossObjects,TestSozMiniboss,TestLrzMinibossHitPath,TestCompleteRunAudioComparator,TestSozColdRouteCapture,TestGameplayCaptureSmoke,TestGameplayCaptureSkippedTitles,TestOwnedMocks,TestGameplayCaptureFrameRendering,TestSozBackgroundCapture,TestGameplayCaptureToolArgs,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestHeadlessStateTeardownExtension
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off "-Dtest=${TESTS}" \
+  "-Dsonic1.rom.path=${OPENGGF_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
   "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
 ```
