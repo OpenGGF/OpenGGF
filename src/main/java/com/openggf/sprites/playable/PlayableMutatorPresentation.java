@@ -1,6 +1,7 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.sprites.SpriteGraphicsAccess;
 import com.openggf.graphics.SpritePresentation;
 import com.openggf.level.render.SpritePresentationRenderer;
 
@@ -24,7 +25,7 @@ public final class PlayableMutatorPresentation {
         draw(owner, part, () -> {
             var fallback = new java.util.ArrayList<com.openggf.graphics.GLCommand>();
             producer.accept(fallback);
-            for (var command : fallback) sprite.mutatorGraphics().registerCommand(command);
+            for (var command : fallback) SpriteGraphicsAccess.graphics(sprite).registerCommand(command);
         });
     }
 
@@ -52,7 +53,7 @@ public final class PlayableMutatorPresentation {
             case ATTACHED_EFFECT -> policy.suppressAttachedEffects();
             case WORLD -> false;
         };
-        var graphics = sprite.mutatorGraphics();
+        var graphics = SpriteGraphicsAccess.graphics(sprite);
         var subject = new SpritePresentation.Subject(sprite.getCode(), part, suppressed, headScale);
         if (SpritePresentation.isPreparing(graphics) || graphics.isSpriteSatCollectionActive()) {
             SpritePresentation.withSubject(graphics, subject, producer);

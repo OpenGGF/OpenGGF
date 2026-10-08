@@ -15,6 +15,9 @@ public interface SceneRomArt {
     /** "s1", "s2" or "s3k". */
     String gameId();
 
+    /** SHA-1 of the exact supplied ROM bytes, lowercase; empty when identity is unavailable. */
+    default String romSha1() { return ""; }
+
     /**
      * Raw ROM bytes, for reading tables a mod understands itself.
      *

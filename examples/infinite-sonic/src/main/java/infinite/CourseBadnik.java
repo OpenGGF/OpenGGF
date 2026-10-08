@@ -13,7 +13,7 @@ import java.util.List;
  * {@link #HOVER} for a flyer that holds its place over a pit for Sonic to bounce off.
  */
 public final class CourseBadnik extends AbstractBadnikInstance
-        implements RewindRecreatable, TouchResponseListener {
+        implements ModRewindRecreatable, TouchResponseListener {
     /** Subtype flag: bob in place instead of patrolling ({@link PlatformPlan.Bouncer}). */
     public static final int HOVER = 0x40;
     private long worldAnchor;
@@ -51,7 +51,7 @@ public final class CourseBadnik extends AbstractBadnikInstance
         currentY += dy;
         updateDynamicSpawn(currentX, currentY);
     }
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new CourseBadnik(context.spawn(), 0);
     }
     @Override protected void updateMovement(int vIntRunCount, PlayableEntity player) {

@@ -12,6 +12,7 @@
       { "pattern": "net/.*\\.json" },
       { "pattern": "presentation/heads/.*\\.txt" },
       { "pattern": "\\QMETA-INF/openggf-mod-sdk/templates/\\E.*" },
+      { "pattern": "\\QMETA-INF/openggf-mod-sdk/starters/\\E.*" },
       { "pattern": "shaders/.*\\.(glsl|vert|frag)" },
       { "pattern": "\\Qorg/lwjgl/\\E.*" }
     ]

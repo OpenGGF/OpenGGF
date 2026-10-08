@@ -6,19 +6,32 @@ import com.openggf.mods.mutators.MutatorDefinition;
 import com.openggf.mods.mutators.MutatorPolicy;
 import com.openggf.mods.mutators.MutatorScope;
 import com.openggf.game.GameModule;
+import com.openggf.game.GameServiceBundle;
+import com.openggf.game.session.WorldSessionPolicyProvider;
+import com.openggf.level.LevelPatch;
+import com.openggf.mods.ModRuntimeFindingStore;
+import com.openggf.mods.ModStateSaveResult;
+import com.openggf.mods.mutators.MutatorCatalog;
 import com.openggf.game.patch.GamePatch;
 import com.openggf.game.patch.GameplayLaunchRequest;
 import com.openggf.game.patch.LogicalRom;
 import com.openggf.game.patch.PatchContext;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.parallel.Isolated;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Isolated
 class TestMutatorRegistration {
+    @AfterEach void resetNativeServices() { com.openggf.tests.TestEnvironment.resetAll(); }
     @Test
     void ownerIsDerivedAndPlanIsImmutableContentWithoutOrdinaryPatch() {
         ModContext context = context("owner", "s2");
@@ -100,6 +113,61 @@ class TestMutatorRegistration {
                 Map.of(), Map.of(), Map.of(), null, null);
         assertTrue(old.mutators().isEmpty());
         assertFalse(old.hasContent());
+    }
+
+    @Test
+    void sharedCatalogueCannotPublishGameSpecificServiceOrDecodedPatch() {
+        var services = context("owner", "any");
+        services.registerMutator(definition("gravity"));
+        services.registerServiceBundle("session", () -> {
+            fail("A forbidden shared service factory must never execute");
+            return GameServiceBundle.builder().build();
+        });
+        var failure = assertThrows(ModRegistrationException.class, services::freeze);
+        assertSame(failure, assertThrows(ModRegistrationException.class, services::freeze));
+
+        var placements = context("owner", "any");
+        placements.registerMutator(definition("gravity"));
+        placements.decodedLevelPatch("placements", LevelPatch.empty());
+        failure = assertThrows(ModRegistrationException.class, placements::freeze);
+        assertSame(failure, assertThrows(ModRegistrationException.class, placements::freeze));
+    }
+
+    public interface ProbeService { String callbackOwner(); }
+
+    @ParameterizedTest @ValueSource(strings={"s1", "s2", "s3k"})
+    void nativeServiceWrapperRetainsCatalogueAndWorldProvider(String game) {
+        var context = context("owner", game);
+        context.registerMutator(definition("gravity"));
+        var factories = new AtomicInteger();
+        context.registerServiceBundle("session", () -> {
+            factories.incrementAndGet();
+            return GameServiceBundle.builder().service(ProbeService.class, OwnerCallbackScope::current).build();
+        });
+        var patch = LevelPatch.empty();
+        context.decodedLevelPatch("placements", patch);
+        var plan = context.freeze();
+        assertEquals(0, factories.get(), "Freeze must not execute creator service factories");
+        assertSame(patch, plan.decodedLevelPatches().get("placements"));
+        assertThrows(UnsupportedOperationException.class, () -> plan.serviceBundles().clear());
+        var boundary = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+                ignored -> new ModStateSaveResult.Saved(), ignored -> { });
+        GameModule nativeModule = switch (game) {
+            case "s1" -> new com.openggf.game.sonic1.Sonic1GameModule();
+            case "s2" -> new com.openggf.game.sonic2.Sonic2GameModule();
+            case "s3k" -> new com.openggf.game.sonic3k.Sonic3kGameModule();
+            default -> throw new AssertionError(game);
+        };
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(nativeModule);
+        GameModule decorated = new ModBackedGamePatch(plan, boundary).apply(nativeModule, null);
+        assertEquals(1, factories.get());
+        assertEquals("owner", decorated.getGameService(ProbeService.class).callbackOwner());
+        var catalogue = decorated.getGameService(MutatorCatalog.class);
+        assertSame(boundary, catalogue.faults());
+        assertEquals(List.of("owner:gravity"), catalogue.definitions().stream().map(owned -> owned.key()).toList());
+        var provider = decorated.getGameService(WorldSessionPolicyProvider.class);
+        assertNotNull(provider, "The outer service decorator must retain the native mutator world provider");
+        assertSame(provider, decorated.getGameService(WorldSessionPolicyProvider.class));
     }
 
     private static ModContext context(String owner, String game) {

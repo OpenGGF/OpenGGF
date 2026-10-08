@@ -205,3 +205,39 @@ this thread and report the PR/video links with remaining material limits.
   published destination and verify its real compiled surface and runtime seams
   before final capture/domain/full-candidate qualification. No new full
   baseline is needed; comparison uses complete identities and assertions.
+
+- Framework composition main-source compile completed normally at 13:54:22 UTC:
+  3817 production files, no source deltas across 11980 frozen inputs. Actual
+  compiled candidate export is 17714 lines, SHA256
+  `57fadd857339b253bd5fa9e5c42c57a09e53d92b57f58453d5cea15c87bdee6e`,
+  +442/-0 against published `d740b7a0f`; descriptor remains candidate 0.7.
+  This compile did not execute JUnit or artifact verification.
+- The expanded sprite access exceeded its structural budget by one effective
+  line after the framework merge. A named engine-only `SpriteGraphicsAccess`
+  bridge preserves each sprite's bound graphics context without a playable
+  class getter. Direct and hidden creator calls and context rebinding have
+  focused regression coverage; unchanged structural budgets still require a
+  fresh guard invocation.
+- Source audit established a material Game Speed gap: native special/bonus
+  interiors silently remained at stock speed. Completing interactive stage
+  pacing requires native activity queries, exact mode/provider/load boundaries,
+  retained controller-sample admission (including S2 live lag) and special
+  journal/rewind advancement. A mode-only OR is rejected. Implementation and
+  real-provider verification remain outstanding; no stage-speed support is
+  claimed by the preceding level-pacing results.
+
+- Current framework-focused request `42401` completed 2026-10-08
+  14:51:31 UTC: 31 selected simple class names, 32 fresh reports, 331 passes,
+  no failures/errors/skips. All 11982 frozen inputs were unchanged. The native
+  wrapper retains catalogue/world-provider services in all three games; forbidden
+  shared service/decoded-patch transactions remain poisoned. Bound sprite graphics
+  survive context rebinding and direct/hidden creator calls are rejected.
+  SDK/Javadoc/package artifact verification completed normally. Re-export after
+  the bound-graphics bridge remains the exact 17714-line pin above. This is
+  focused composition, not a full candidate or fresh structural-guard pass.
+- Canonical input authoring round-tripped 2353-frame S1/S2 and 5353-frame S3K
+  title/catalogue recipes. S3K adds a thirty-second native entry/restart input
+  margin and longer normal-window waits; no game readiness or physics is forced.
+  Actual scene/control/PCM observations remain pending. No Checkpoints prose now
+  describes death ignoring the native bank while post presentation and independent
+  stage triggers continue to work.

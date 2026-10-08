@@ -31,7 +31,8 @@ guide for the contribution you are building:
   combining the 0.7 fresh-game, team, input, and HUD policies with a fixed-camera
   dynamic-object minigame.
 
-A creator build needs both release artifacts:
+A creator build needs matching candidate artifacts from one commit; follow
+[setup](getting-started.md). It needs both jars:
 
 - the engine jar, which contains the public API and runtime dependencies; and
 - the `openggf-mod-sdk` classifier jar, which contains `ggfmod`, converters, and
@@ -55,22 +56,24 @@ stub deliberately has no playable art or terrain sensors; use the
 for gameplay. The entrypoint also registers the object, its baked art and preview,
 and a zone inserted after `mtz3`.
 
-Build the generated Java code against the engine jar, convert its source assets, and
-package the resulting classes and resources:
+From the generated project directory, build and validate its distributable:
 
 ```text
-ggfmod convert art --image src/main/mod/sample.png --sheet src/main/mod/sample-sheet.yaml --out target/classes/art/sample.ggfs
-ggfmod convert level --from-export src/main/mod/level-source --out target/classes/levels/sample
-mvn package
-ggfmod package --input target/classes --out target/my-mod.jar
-ggfmod validate target/my-mod.jar
+mvn package -Dopenggf.engine.jar=/absolute/path/engine.jar -Dopenggf.sdk.jar=/absolute/path/sdk.jar
+ggfmod validate target/my-mod-mod.jar --format json --warnings allow
 ```
 
-`package` creates a deterministic jar and validates it before publishing the output.
-It does not overwrite an existing output path. The separate `validate` command shown
-above is useful for printing the sorted findings for an existing jar. Copy the jar
-into `mods/`, start the engine, enable it in the Mod Manager, confirm the code-trust
-warning, and restart.
+The Maven lifecycle compiles Java, converts the source art/level, and runs the SDK's
+validated package step. For `--id my-mod`, the distributable is
+`target/my-mod-mod.jar`. Run the same Maven command after source edits; it removes
+only the generated outputs before rebuilding. Review the sorted validation findings,
+including warnings permitted by this prototype's explicit policy.
+
+Manual `convert` and `package` commands are an expert alternative. Choose fresh
+output paths: converters and the packager intentionally refuse to overwrite an
+existing destination. The generated project does that cleanup in its Maven lifecycle.
+Copy the validated `*-mod.jar` into `mods/`, start the engine, enable it in the Mod
+Manager, confirm the code-trust warning, and restart.
 
 Code-bearing mods require the JVM jar because GraalVM native-image builds cannot
 load new classes under closed-world AOT. On native builds they remain disabled for
@@ -89,6 +92,11 @@ Register object keys through `ModContext.registerObject`. Keys are owner-local a
 registration and become namespaced as `<mod-id>:<local-key>` in level exports and
 saves. Never assign a stock byte object id to a mod object.
 
+An owner's transaction is bounded by its asset root's collection budget (10,000
+successful registrations in production). The same budget bounds total authored
+acts across its zones before any assets decode, and returned service/runtime
+graphs before publication. Exceeding it rejects the whole transaction.
+
 The generated badnik demonstrates the minimum runtime contracts:
 
 - extend an appropriate public object base such as `AbstractBadnikInstance`;
@@ -96,8 +104,8 @@ The generated badnik demonstrates the minimum runtime contracts:
   constructor-time service lookup;
 - use public shared helpers such as `PatrolMovementHelper` and the standard
   `DestructionEffects.DestructionConfig` path instead of copying engine behavior;
-- implement `RewindRecreatable` and recreate from `RewindRecreateContext.spawn()`;
-  and
+- implement `ModRewindRecreatable` and recreate from `ObjectReconstructionContext.spawn()`
+  (the older `RewindRecreatable` expert contract remains available); and
 - keep mutable gameplay state in instance fields that the rewind schema can capture.
 
 Do not add mutable static gameplay state, uncaptured object references, or immutable
@@ -212,9 +220,13 @@ collision, and palette data needed to load without a ROM-address fallback.
 `ggfmod convert level` validates this exact inventory and copies a retained snapshot
 to the baked output.
 
-Register the result with `registerZone(new ModZoneContribution(...))`. Mod zones use
-synthetic ROM-facing zone ids from `0x40` upward and synthetic level ids from `0x400`
-upward; creators must not use those reserved bands for stock content. Runtime list
+Register a single act with `registerZone(ModZoneContribution.singleAct(...))`,
+or an ordered campaign with `ModZoneContribution.multiAct(...)`. Mod zones use
+owner-local authored metadata (`zoneIndex` from `0x40`, `levelIndex` from `0x400`).
+Independent mods can both start with `64` and `1024`, including mods for different
+host games. The engine allocates distinct effective zone and level IDs after
+composition; never persist those IDs or use them to identify another owner's
+content. Creators must not use those reserved bands for stock content. Runtime list
 indices are append-only after Sonic 2's 11 stock zones, while `insertAfter` creates a
 results-boundary progression redirect without renumbering stock zones. Use a valid
 results-driven stock anchor such as `mtz3`.
@@ -229,6 +241,32 @@ Saved mod-zone locations use a tagged zone key rather than the allocated runtime
 index. If the mod is later disabled or missing, the slot remains intact, loading
 reports the missing zone, and play restarts at zone 0. Re-enabling the mod makes the
 tagged destination resolvable again.
+
+Stateful zone events implement `RewindableZoneEvents<Snapshot>` and return an
+immutable snapshot from `capture()`. `restore()` hydrates that state without
+creating gameplay objects; `reconcileAfterRewindRestore()` runs after object and
+world restoration and may re-adopt restored object references. Implement
+`resetForMissingSnapshot()` to establish a complete initial state when an older
+snapshot lacks this contribution. Supply a factory in `ModZoneContribution` so
+loads and respawns create fresh handlers. Ordinary stateless `LevelEventProvider`
+handlers remain supported; expert handlers implementing `RewindSnapshottable`
+retain their explicit state contract.
+
+The engine registers event and module adapters under its own trusted owner and
+stable local identity. A creator key such as `gamerng`, `rings`, `level`, or `mode`
+cannot replace host state or another owner's state. Returning the same object as
+a service, controller and rewind adapter keeps one proxy identity. Returned
+functional factories, event callbacks, and state callbacks all run through the
+contributing owner's fault boundary, including dependent disable on failure.
+
+Expert patches may return a fresh `PlayableCharacterRegistry`, including semantic
+builtin replacements. The engine binds its definition factories, returned respawn
+strategies, art and later sprite callbacks to the verified patch owner; repeated
+queries reuse the mapped registry. Definitions forwarded unchanged from the base
+retain their original identity and owner. Fresh mod keys or previously owned
+callback templates from another owner reject publication. Character definitions
+retained from `GamePatch.providedCharacterDefinitions()` for launch metadata use
+the same boundaries before any patch module is applied.
 
 Full exports may contain material derived from a user-supplied ROM. Mod authors are
 responsible for ensuring they have the right to distribute every exported asset;
@@ -254,8 +292,10 @@ this includes the life-count digits within the name piece. The creator owns ever
 other declared sparse cell.
 Claims that overlap host-owned line 0 or a live HUD cell fail registration instead
 of creating a frame-order-dependent palette conflict. The custom-zone runtime is
-otherwise deliberately empty: flat scroll and no stock animated tiles, PLC loads,
-zone features/events, special passes, or advanced render modes.
+empty by default: flat scroll and no inherited stock animated tiles, PLC loads,
+zone features/events, special passes, or advanced render modes. Explicit per-act
+runtime contributions below supply supported water, scroll, animation, palette,
+feature, state and render consumers; they do not inherit arbitrary stock zone events.
 
 Registration remains additive and tagged. Runtime zone indices may change with the
 enabled mod set, so saves store `savedZone.mod.owner/local` identity rather than that
@@ -270,13 +310,13 @@ this complete policy set against a real S3K launch and shows how the policies st
 destination-scoped while the gameplay controller remains ordinary mod object code.
 
 Mod API 0.7 lets a complete-zone patch mark one owned zone as a fresh-game start and
-attach launch-only policies to that tagged destination. Set the trailing
-`ModZoneContribution` component to `true`; pass `false` for an ordinary contributed
-zone. A mod using these contracts should declare `>=0.7.0 <0.8.0`:
+attach launch-only policies to that tagged destination. Set the `gameStart`
+argument of `ModZoneContribution.singleAct(...)` or `multiAct(...)` to `true`;
+pass `false` for an ordinary contributed zone. A mod using these contracts should declare `>=0.7.0 <0.8.0`:
 
 ```java
 var destination = ZoneKey.mod("my-mod", "flappy");
-context.registerZone(new ModZoneContribution(
+context.registerZone(ModZoneContribution.singleAct(
         "flappy", new BakedLevelRef("levels/flappy/level.json"), null, null, true));
 context.registerLaunchTeam(new ModLaunchTeamContribution(
         destination, CharacterKey.TAILS, List.of()));
@@ -342,12 +382,22 @@ art key in `artOverrides`:
 
 ```yaml
 artOverrides:
-  EndSign: art/reskin.ggfs
+  signpost: art/reskin.ggfs
 ```
 
 Package the directory and validate the resulting jar with the same commands. With the
 mod disabled, the engine retains the original provider instance and behavior; with it
-enabled, only the named art lookup is decorated.
+enabled, only the named art lookup is decorated. Run `ggfmod art-keys` to list
+known exact stock provider keys; unknown keys produce `UNKNOWN_ART_OVERRIDE_KEY`.
+Availability still depends on the game/zone. Preserve every mapping frame consumed
+by the stock animation. Sonic 2 signpost uses frames 0–5: Sonic, Tails, Eggman and
+three spin transitions. The maintained reskin supplies all six.
+
+Baked palette metadata quantizes source PNG colors to indices; it does not install
+an arbitrary new palette over stock gameplay. Author against the host's active
+palette line. This sample uses line 0/index 6, white in normal S2 Sonic/Tails art.
+Donated/super character palette changes can affect that line; verify those routes
+if your mod claims to support them.
 
 For the complete CLI invocation and launcher details, see [the `ggfmod` guide](ggfmod.md).
 For streamed stock-music replacement metadata, see [Music packs](music-packs.md).
@@ -505,3 +555,165 @@ controlled level) returns the incoming player's own binding: P1's A defaults to
 intentional input came from their pad sees that pad family's physical button. An
 empty result means neither device can produce the button. `MenuInput.confirmLabel`
 remains the fixed menu-confirm prompt and is not a substitute for a player binding.
+
+Session rewind registration and removal belong to the engine. Contribute adapters
+through your module or owner transaction; a creator may still construct and use
+a private `RewindRegistry` for isolated calculations.
+
+## Compose a campaign from authored acts
+
+`ModZoneContribution.multiAct(localKey, orderedActs, insertAfter, events, gameStart)`
+registers one tagged zone with contiguous zero-based acts. Each `BakedLevelRef`
+points at an independently validated export. Act 1 and Act 2 may both contain
+`zoneIndex: 64` and `levelIndex: 1024`: those numbers are owner-local metadata.
+The engine allocates one host zone slot and separate runtime level slots, and the
+results progression plan advances through the ordered acts before the stock
+successor. Only Act 1 supplies a fresh-game destination. Saves persist the verified
+owner/local zone tag and act, so reordering other mods does not change the saved
+identity; a missing or disabled owner falls back through the host save profile.
+
+Attach `withRuntime(context -> ModZoneRuntimeServices.builder()...build())` to the
+zone contribution for act-local behavior. The engine creates the factory result
+on each load/respawn and supplies the tagged destination, receiving game, logical
+zone/act and decoded level. `Level.getZoneIndex()` is the separately allocated
+host ROM slot; do not use it as the persisted identity. The builder accepts
+features, an explicit `WaterDataProvider`, scroll handler, `ZoneRuntimeState`,
+animated tile channels, palette animation, staged render effects, render modes
+and local rewind adapters. An absent contribution leaves that facility empty.
+An absent water provider means a dry custom act; it cannot retain a previous
+act's water or invoke a stock ROM zone lookup.
+
+Every factory and returned callback remains inside the verified owner's fault
+boundary, including dynamic-water handlers and animation functions. The engine
+qualifies channel and adapter identities, captures the live runtime state, and
+removes old act adapters on replacement. Runtime state must report the supplied
+receiving game and logical zone/act. Restore hydrates state; event reconciliation
+runs after all restored world owners. Full act loads create a new rewind timeline.
+The supported host profile is currently `flatEmpty()` plus these explicit runtime
+contributions. Other expert profile kinds are rejected instead of silently ignored.
+
+Keep scroll recomputation idempotent for the restored frame: hydration recomputes
+camera-derived output without advancing the simulation. Capture any mutable scroll
+accumulators separately. The animated-channel graph captures its phase cache;
+creator-mutated pixel bytes remain derived art. Restore or regenerate those bytes
+from captured state, as Tide Circuit does, and upload through the injected render
+context. A cached phase alone cannot undo future pixel writes.
+
+[Tide Circuit](guides/two-act-campaign.md) supplies two original acts and exercises
+water, animated tiles/palettes, scrolling, staged rendering, state capture and the
+normal results completion path. Its [route matrix](../architecture/validation/levels/tide-circuit.md)
+records observed checks and open breadth separately.
+
+## Publish a shared service and rewind graph
+
+Use `registerServiceBundle("run", () -> GameServiceBundle.builder()...build())`
+for state whose lifetime is one module application. Factories are evaluated
+before publication, duplicate contracts within one owner are rejected, and the
+complete graph shares one bounded callback cache. `frameController("mode", mode)`
+registers the same instance as `GameplayFrameController` and its rewind adapter.
+The session registry recognizes that shared identity: course checkpoints exclude
+the controller ledger, while full debug rewind captures it. Concrete creator
+classes retain their exact class identity for `getGameService(MyState.class)`;
+public interface callbacks receive owner wrappers. Deferred `LevelInitProfile`
+`InitStep` and `StaticFixup` actions also retain the provider's verified owner when
+the loader or teardown runs them later; forwarding an earlier owned action retains
+its original attribution. Captured concrete state keeps
+its verified owner/local provenance even when queried through its original class;
+a new bundle cannot recapture another owner's state. Two mods defining identically
+named private classes remain independent. A shared engine/interface service
+contract uses the later applied owner, and inherited owned proxies retain their
+original owner. `dynamicService` supports nullable, temporary services; the
+provider and returned interface callbacks are fault-bound. Frame controllers use
+a stable captured instance rather than a dynamic provider.
+
+`registerService(localKey, contract, instance)` and
+`registerRewindAdapter(localKey, adapter)` are fixed-instance conveniences.
+`storage()` returns the handle rooted by the host at `mods/<verified-owner>`;
+retain it in a closure instead of supplying paths or another owner's id.
+Owner registration and returned graph entries share the asset root's collection
+budget (10,000 by default, lowerable by the host). Exceeding a budget or duplicating
+a key aborts publication.
+
+For native placement changes, use
+`decodedLevelPatch("placements", LevelPatch.empty().select(...).bind("spring"))`
+after registering the local `spring` object. The engine binds the owner and checks
+the registered factory. Each immutable template runs exactly once after the final
+native, prepared or expert override level has been decoded, in composition order.
+Use `GameModule.transformDecodedLevel(source)` to observe native placements before
+forwarding to `super`; Golf uses this to retain its finish gate before the registered
+template removes the native marker. The helper cannot rebind another owner's
+placement. Existing expert `loadLevelOverride` remains available.
+
+## Declare composition intent
+
+Manifest v1 accepts an optional `composition` mapping:
+
+```yaml
+composition:
+  after: [shared-art]
+  before: [presentation-pack]
+  conflictsWith: [alternative-rules]
+  exclusiveContributions: [startup-scene, game-start, "art:signpost"]
+```
+
+`before`/`after` order both data and code application. They create no required
+dependency, ignore absent/disabled neighbours, and do not disable optional
+neighbours when a callback fails. Actual dependencies still determine eligibility
+and dependent fault closure. Self references, duplicates, unknown fields and
+unbounded declarations are rejected. Ordering cycles block their participants;
+explicit conflicts block both enabled participants. Diagnostics sort participants
+so scan order does not change the reason.
+
+The default singular policies use the later application for a startup scene,
+required display width, stock art key, stock music id or fresh-game destination,
+scoped to the receiving game. Tagged zones, objects, characters and destination
+launch/input/HUD policies compose under their verified identity. Service contracts
+use exact `Class` identity; owner-defined types do not collide by binary name.
+Zone runtime facilities replace only that owner's selected act lifetime.
+
+An exclusive claim is accepted only when that owner's successful transaction
+actually publishes the named target. Unused claims fail the transaction. When a
+successfully contributed singular target has multiple owners and any claims
+exclusivity, all conflicting participants and their required dependents are
+rejected, instead of choosing a winner. Exclusive keys currently cover
+`startup-scene`, `display-width`, `game-start`, `art:<stock-key>` and
+`audio:<nonnegative-stock-id>`; unknown kinds are rejected. The engine's immutable
+registration report lists scoped winners, shadowed owners, additive targets and
+failure policy from the latest successful pass; it never re-runs registration to
+inspect metadata. Bundle targets are reported as additive owner-scoped registrations
+until their lifetime factories run, rather than inventing service contracts.
+Audio is reported separately by `PreparedModMusic.overrideReport()` after actual
+decoding and publication, with winner and shadowed track identities. Failed audio
+preparation excludes that owner's tracks and retains the previous healthy override.
+Exclusive stock data collisions are rejected in catalog eligibility before audio
+preparation; compiled claims are checked before registration publication.
+
+## Advanced module session controls
+
+Custom game modules can opt into faster interactive gameplay with
+`GameModule.gameplayStepsPerFrame()` (default 1, host range 1–32). Return alternating
+counts for fractional rates and capture the accumulator through `rewindAdapters()`.
+Return the continuous matching rate from `gameplayAudioPlaybackRate()` (default
+1.0, bounded to 1–32) to accelerate music and effects without alternating their
+pitch with the integer step budget. The host releases its audio rate at pause,
+rewind, death, scene changes and teardown; external trace/movie owners retain
+control of their own playback.
+
+A module can also drive the engine's live rewind itself by returning a
+`ScriptedRewind` from `GameModule.scriptedRewind()` (default `null`). While one is
+returned, level play records rewind history even with live rewind switched off. When
+its `requested()` is true the host rewinds with the ordinary presentation, taking
+`stepsThisFrame()` steps per frame and checking `reachedTarget()` on the restored
+state after each, then calls `ended(boolean)` once. Keep the implementation's own
+state out of `rewindAdapters()`: it decides where the restore stops. Infinite Sonic's
+CONTINUE is the worked example.
+The host advances complete simulation ticks, preserving per-tick collision and
+movement. Pause, rewind, external movie/trace ownership, transitions and non-level
+scenes retain their normal pacing. `GameLoop.step()` remains one deterministic tick;
+interactive hosts use `stepPresentationFrame()`. The
+[Infinite Sonic example](../../examples/infinite-sonic/README.md) demonstrates a
+rewindable clock that compounds speed every 30 seconds of active play.
+A module can also pin a display aspect for its session with
+`GameModule.requiredDisplayAspect()` (a `display.aspect` preset name; the master title
+restores the player's setting) and hide the level select with
+`GameModule.suppressesLevelSelect()`. Infinite Sonic uses both.

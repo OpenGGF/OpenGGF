@@ -42,13 +42,10 @@ final class OwnerAwareStandaloneModule {
                 com.openggf.game.CharacterDefinition> characters;
         private final java.util.Map<String, BakedSheetReader.BakedSheet> preparedObjectArt;
         private final IdentityHashMap<Object, Object> wrapped = new IdentityHashMap<>();
+        private final IdentityHashMap<com.openggf.game.PlayableCharacterRegistry,
+                com.openggf.game.PlayableCharacterRegistry> characterRegistries = new IdentityHashMap<>();
+        private final com.openggf.mods.runtime.OwnerBoundCallbacks callbacks;
         private volatile ObjectArtProvider decoratedObjectArtProvider;
-
-        private BoundaryHandler(String owner, Object delegate, ModFaultBoundary boundary,
-                java.util.Map<com.openggf.game.CharacterKey,
-                        com.openggf.game.CharacterDefinition> characters) {
-            this(owner, delegate, boundary, characters, java.util.Map.of());
-        }
 
         private BoundaryHandler(String owner, Object delegate, ModFaultBoundary boundary,
                 java.util.Map<com.openggf.game.CharacterKey,
@@ -57,6 +54,8 @@ final class OwnerAwareStandaloneModule {
             this.owner = com.openggf.game.ModKeySyntax.requireManifestId(owner);
             this.delegate = Objects.requireNonNull(delegate, "delegate");
             this.boundary = Objects.requireNonNull(boundary, "boundary");
+            this.callbacks = new com.openggf.mods.runtime.OwnerBoundCallbacks(this.owner,this.boundary,
+                    com.openggf.io.ModInputLimits.production().maxCollectionEntries(),java.util.Map.of());
             this.characters = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
                     Objects.requireNonNull(characters, "characters")));
             this.preparedObjectArt = java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(
@@ -85,10 +84,13 @@ final class OwnerAwareStandaloneModule {
 
         private Object validateOwnedReturn(Method method, Object value) {
             if (method.getName().equals("getLevelMusicReference")) {
-                if (!(value instanceof com.openggf.game.MusicReference.Namespaced namespaced)
-                        || !owner.equals(namespaced.owner())) {
+                boolean silent = value instanceof com.openggf.game.MusicReference.Stock stock
+                        && stock.musicId() == -1;
+                boolean ownedTrack = value instanceof com.openggf.game.MusicReference.Namespaced namespaced
+                        && owner.equals(namespaced.owner());
+                if (!silent && !ownedTrack) {
                     throw new IllegalArgumentException(
-                            "Standalone level music must be a namespaced track owned by " + owner);
+                            "Standalone level music must be silent (-1) or a namespaced track owned by " + owner);
                 }
             }
             return value;
@@ -97,14 +99,21 @@ final class OwnerAwareStandaloneModule {
         private Object wrapReturnedValue(Method method, Object[] args, Object value) {
             Class<?> declaredType = method.getReturnType();
             if (declaredType == com.openggf.game.PlayableCharacterRegistry.class) {
-                com.openggf.game.PlayableCharacterRegistry registry = value == null
-                        ? com.openggf.game.PlayableCharacterRegistry.empty()
-                        : (com.openggf.game.PlayableCharacterRegistry) value;
-                for (var entry : characters.entrySet()) {
-                    registry = registry.register(entry.getKey(), OwnerAwareCharacterDefinition.wrap(
-                            entry.getKey(), entry.getValue(), boundary));
-                }
-                return registry;
+                return boundary.callStandalone(owner,()-> {
+                    var registry = value == null ? com.openggf.game.PlayableCharacterRegistry.empty()
+                            : (com.openggf.game.PlayableCharacterRegistry)value;
+                    synchronized (characterRegistries) {
+                        var cached=characterRegistries.get(registry);
+                        if (cached!=null) return cached;
+                        if (characterRegistries.size()>=com.openggf.io.ModInputLimits.production().maxCollectionEntries())
+                            throw new IllegalArgumentException("Standalone character registry identity limit exceeded");
+                        var result=OwnedCharacterRegistry.bind(owner,registry,null,boundary);
+                        for (var entry:characters.entrySet()) result=result.register(entry.getKey(),
+                                OwnerAwareCharacterDefinition.wrap(entry.getKey(),entry.getValue(),boundary));
+                        characterRegistries.put(registry,result);
+                        return result;
+                    }
+                });
             }
             if (method.getName().equals("getObjectArtProvider")) {
                 if (preparedObjectArt.isEmpty()) return value;
@@ -117,19 +126,26 @@ final class OwnerAwareStandaloneModule {
                     return decoratedObjectArtProvider;
                 }
             }
-            if (value == null) return null;
-            if (value instanceof java.util.function.Function<?, ?> function) {
-                @SuppressWarnings("unchecked")
-                java.util.function.Function<Object, Object> callback =
-                        (java.util.function.Function<Object, Object>) function;
-                return (java.util.function.Function<Object, Object>) argument ->
-                        boundary.callStandalone(owner, () -> callback.apply(argument));
+            if (method.getName().equals("rewindAdapters")) {
+                return boundary.callStandalone(owner,()-> {
+                    if (!(value instanceof java.util.List<?> list)) throw new IllegalArgumentException("rewindAdapters must return a list");
+                    if (list.size()>com.openggf.io.ModInputLimits.production().maxCollectionEntries())
+                        throw new IllegalArgumentException("Too many standalone rewind adapters");
+                    var result=new java.util.ArrayList<com.openggf.game.rewind.RewindSnapshottable<?>>(list.size());
+                    for (Object entry:list) {
+                        if (!(entry instanceof com.openggf.game.rewind.RewindSnapshottable<?> adapter))
+                            throw new IllegalArgumentException("Invalid standalone rewind adapter");
+                        result.add(callbacks.adapter(adapter));
+                    }
+                    return java.util.List.copyOf(result);
+                });
             }
+            if (value == null) return null;
+            if (value instanceof java.util.function.Function<?, ?> && declaredType.isInterface())
+                return bindCallback(declaredType,value);
             if (method.getName().equals("getGameService") && args != null && args.length == 1
                     && args[0] instanceof Class<?> requested && requested.isInterface()) {
-                return wrapped.computeIfAbsent(value, ignored -> Proxy.newProxyInstance(
-                        requested.getClassLoader(), new Class<?>[] { requested },
-                        new BoundaryHandler(owner, value, boundary, java.util.Map.of())));
+                return bindCallback(requested,value);
             }
             if (value instanceof Game game) {
                 return wrapped.computeIfAbsent(value,
@@ -149,10 +165,11 @@ final class OwnerAwareStandaloneModule {
                     || !declaredType.getPackageName().startsWith("com.openggf")) {
                 return value;
             }
-            return wrapped.computeIfAbsent(value, ignored -> Proxy.newProxyInstance(
-                    declaredType.getClassLoader(), new Class<?>[] { declaredType },
-                    new BoundaryHandler(owner, value, boundary, java.util.Map.of())));
+            return bindCallback(declaredType,value);
         }
+
+        @SuppressWarnings({"rawtypes","unchecked"})
+        private Object bindCallback(Class<?> contract,Object value) { return callbacks.bind((Class)contract,value); }
     }
 
     private static final class OwnerAwareStandaloneObjectRegistry

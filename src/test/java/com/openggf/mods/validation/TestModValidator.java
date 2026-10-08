@@ -34,6 +34,8 @@ class TestModValidator {
     private static final String OBJECT_INSTANCE = "com/openggf/level/objects/ObjectInstance";
     private static final String OBJECT_REF_ID = "com/openggf/game/rewind/identity/ObjectRefId";
     private static final String RECREATE_CONTEXT = "com/openggf/level/objects/RewindRecreateContext";
+    private static final String MOD_RECREATABLE = "com/openggf/level/objects/ModRewindRecreatable";
+    private static final String MOD_RECREATE_CONTEXT = "com/openggf/level/objects/ObjectReconstructionContext";
     private static final String BADNIK_BASE = "com/openggf/level/objects/AbstractBadnikInstance";
     private static final String DELEGATING_GAME_MODULE =
             "com/openggf/game/patch/DelegatingGameModule";
@@ -112,6 +114,52 @@ class TestModValidator {
                 ENTRY, entrypoint(true, true), "example/Unsupported", unsupported.toByteArray())),
                 "example.Entry");
         assertCode(wrongBase, "OBJECT_BASE_CONTRACT", ModValidationFinding.Severity.ERROR);
+    }
+
+    @Test
+    void acceptsProjectedReconstructionDirectlyAndThroughAnAuthoredSuperclass() throws Exception {
+        byte[] projected = projectedObject(OBJECT, MOD_RECREATABLE, Opcodes.ACC_PUBLIC);
+        var direct = new ModValidator().validate(jar(Map.of(
+                ENTRY, entrypoint(true, true), OBJECT, projected)), "example.Entry");
+        assertTrue(direct.eligible(), direct.findings().toString());
+
+        String parent = "example/ProjectedParent";
+        var inherited = new ModValidator().validate(jar(Map.of(
+                ENTRY, entrypoint(true, true), parent, projectedObject(parent, MOD_RECREATABLE, Opcodes.ACC_PUBLIC),
+                OBJECT, objectClassNamed(OBJECT, parent, false, ignored -> {}, false, false, null))),
+                "example.Entry");
+        assertTrue(inherited.eligible(), inherited.findings().toString());
+    }
+
+    @Test
+    void rejectsMissingProjectedBridgeAndNonPublicStaticOrAbstractTargets() throws Exception {
+        for (int access : new int[]{Opcodes.ACC_PRIVATE, Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
+                Opcodes.ACC_PUBLIC | Opcodes.ACC_ABSTRACT}) {
+            var report = new ModValidator().validate(jar(Map.of(
+                    ENTRY, entrypoint(true, true), OBJECT, projectedObject(OBJECT, MOD_RECREATABLE, access))),
+                    "example.Entry");
+            assertCode(report, "OBJECT_RECREATE_PATH_MISSING", ModValidationFinding.Severity.ERROR);
+        }
+        // A similarly named overload does not implement the native-context contract
+        // unless the supported interface actually supplies its default bridge.
+        var noBridge = new ModValidator().validate(jar(Map.of(
+                ENTRY, entrypoint(true, true), OBJECT, projectedObject(OBJECT, RECREATABLE, Opcodes.ACC_PUBLIC))),
+                "example.Entry");
+        assertCode(noBridge, "OBJECT_RECREATE_PATH_MISSING", ModValidationFinding.Severity.ERROR);
+    }
+
+    private static byte[] projectedObject(String owner, String contract, int access) {
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, owner, null, OBJECT_BASE, new String[]{contract});
+        constructor(writer, Opcodes.ACC_PUBLIC, false, owner);
+        MethodVisitor method = writer.visitMethod(access, "recreateForRewind",
+                "(L" + MOD_RECREATE_CONTEXT + ";)L" + OBJECT_BASE + ";", null, null);
+        if ((access & Opcodes.ACC_ABSTRACT) == 0) {
+            method.visitCode(); method.visitInsn(Opcodes.ACONST_NULL); method.visitInsn(Opcodes.ARETURN);
+            method.visitMaxs(1, (access & Opcodes.ACC_STATIC) == 0 ? 2 : 1);
+        }
+        method.visitEnd(); writer.visitEnd();
+        return writer.toByteArray();
     }
 
     @Test

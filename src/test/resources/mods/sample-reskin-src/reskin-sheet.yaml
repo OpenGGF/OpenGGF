@@ -1,7 +1,24 @@
 formatVersion: 1
 paletteLine: 0
-palette: ["#000000", "#FFFFFF", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000"]
+# Quantization palette: index 6 maps to white in Sonic 2's normal Sonic/Tails palette.
+# This metadata does not overwrite the host palette; indices are the runtime contract.
+palette: ["#000000", "#240000", "#490000", "#6D0000", "#920000", "#B60000", "#FFFFFF", "#DBDBDB", "#929292", "#494949", "#B69249", "#6D4924", "#FF0000", "#DB0000", "#FFB600", "#FFDB00"]
 frames:
-  - delay: 8
+  - delay: 2
     pieces:
       - { sourceX: 0, sourceY: 0, widthPixels: 8, heightPixels: 8, xOffset: -4, yOffset: -4, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }
+  - delay: 2
+    pieces:
+      - { sourceX: 8, sourceY: 0, widthPixels: 8, heightPixels: 8, xOffset: -4, yOffset: -4, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }
+  - delay: 2
+    pieces:
+      - { sourceX: 16, sourceY: 0, widthPixels: 8, heightPixels: 8, xOffset: -4, yOffset: -4, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }
+  - delay: 2
+    pieces:
+      - { sourceX: 24, sourceY: 0, widthPixels: 8, heightPixels: 8, xOffset: -4, yOffset: -4, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }
+  - delay: 2
+    pieces:
+      - { sourceX: 32, sourceY: 0, widthPixels: 8, heightPixels: 8, xOffset: -4, yOffset: -4, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }
+  - delay: 2
+    pieces:
+      - { sourceX: 40, sourceY: 0, widthPixels: 8, heightPixels: 8, xOffset: -4, yOffset: -4, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }

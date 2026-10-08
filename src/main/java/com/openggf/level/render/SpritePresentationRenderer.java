@@ -137,7 +137,7 @@ public final class SpritePresentationRenderer {
                     if (visible.test(primitive.layer()) && !primitive.subject().suppressed()) {
                         graphics.flushPatternBatch();
                         graphics.enqueueDebugLineState();
-                        graphics.registerCommand(primitive.primitive().command(cameraX, cameraY));
+                        graphics.registerCommand(primitive.primitive().command(graphics, cameraX, cameraY));
                         graphics.enqueueDefaultShaderState();
                         previous = null;
                     }

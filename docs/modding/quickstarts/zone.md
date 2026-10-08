@@ -1,6 +1,9 @@
 # Quickstart: Sonic 2 zone
 
-The current additive new-zone adapter targets Sonic 2.
+Read [candidate setup and first build](../getting-started.md) first: Java 21, Maven, and matching absolute engine/SDK jars from one commit. Generate a complete starter with `ggfmod init /absolute/my-zone --id my-zone --kind zone --package example.myzone`. Build with the jar properties shown there, edit source, and repeat the same package command.
+
+This quickstart uses the Sonic 2 format-v1 adapter. S3K has a delivered bounded
+format-v2 adapter; see [S3K zones](../content-mods.md#add-a-sonic-3k-zone).
 
 1. Start with the generated project or
    [`sample-mod-src`](../../../src/test/resources/mods/sample-mod-src/README.md).
@@ -16,5 +19,5 @@ The current additive new-zone adapter targets Sonic 2.
 
 Tiled covers bulk layout and point spawns. Custom collision-profile shaping remains a
 binary/editor concern. See [`ModLevelDefinition` v1](../formats/level-definition.md)
-and the [content-mod guide](../content-mods.md). S1/S3K adapters are separately
-scheduled follow-ons rather than part of the current S2 authoring path.
+and the [content-mod guide](../content-mods.md). The Sonic 1 adapter remains planned. S3K format v2 is a separate authoring
+contract with sparse palette ownership and no inherited stock zone events.

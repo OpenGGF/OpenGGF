@@ -1,6 +1,6 @@
 # Maintained sample gallery
 
-The default test suite builds and validates exactly these eight checked-in sources.
+The default test suite builds and validates exactly these nine checked-in sources.
 They contain only original/generated test assets; built jars are not checked in.
 
 1. [Music pack](phase4-gallery-music-pack/README.md) — a data-only Mod API 0.7
@@ -32,6 +32,13 @@ They contain only original/generated test assets; built jars are not checked in.
    materialized at launch from bounded art, mapping, and DPLC requests against the
    player's ROM. See the [source-first guide](../guides/rom-art-remix.md) for the
    request, decoded-pattern, rewind, and no-ROM-package checks.
+9. [Two-act Tide Circuit](../../../src/test/resources/mods/sample-two-act-campaign-src/project/README.md) —
+   Mod API 0.7 hosted Sonic 2 campaign with two original acts, native checkpoints
+   and results handoff, owned runtime consumers, tagged saves and rewind. The
+   [worked guide](../guides/two-act-campaign.md) and route matrix record its coverage.
+   The creator kit exports its full source, all 22 original binary assets and their
+   reproducible generator as `examples/tide-circuit`; compile/package without a ROM,
+   then launch with your own Sonic 2 World REV01 ROM.
 
 Use the linked source rather than a copied jar. Gallery CI exercises the real
 `ggfmod package` validation boundary so manifest/container/API drift fails visibly.

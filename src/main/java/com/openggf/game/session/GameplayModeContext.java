@@ -82,7 +82,6 @@ import java.util.logging.Logger;
 import com.openggf.trace.replay.runs.RunLevelLoadTracker;
 import com.openggf.trace.replay.runs.TraceRunFrameDriver;
 
-@com.openggf.game.ModApi
 public final class GameplayModeContext implements ModeContext {
     private final Object courseCheckpointIdentity = new Object();
     private final List<com.openggf.audio.AudioReplay> audioReplays = new ArrayList<>();
@@ -164,6 +163,7 @@ public final class GameplayModeContext implements ModeContext {
     private RewindBoundaryReporter rewindBoundaryReporter = RewindBoundaryReporter.NO_OP;
     private Runnable scheduledPlaybackInputPublisher;
     private final Set<String> levelEventExtraRewindKeys = new LinkedHashSet<>();
+    private final Set<String> contributedZoneRewindKeys = new LinkedHashSet<>();
     private HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver =
             HardwareTimingBoundaryObserver.NO_OP;
     private Runnable hardwareTimingReplayCloseHook;
@@ -344,6 +344,7 @@ public final class GameplayModeContext implements ModeContext {
 
         this.rewindRegistry = new RewindRegistry(profiler, worldSession.getGameModule().gameplayFrameController());
         this.levelEventExtraRewindKeys.clear();
+        this.contributedZoneRewindKeys.clear();
         this.rewindRegistry.register(hardwareTiming);
         this.rewindRegistry.register(dynamicArtLifecycle);
         runtimeArtCoordinator.registerRewindAdapters(this.rewindRegistry);
@@ -897,14 +898,13 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.register(dser);
         }
         // Register level-event manager adapter (available after gameModule is set).
-        AbstractLevelEventManager levelEventManager = null;
+        LevelEventProvider levelEvents = null;
+        List<RewindSnapshottable<?>> eventAdapters = List.of();
+        int eventZone = levelManager.getCurrentZone();
         if (levelManager.getGameModule() != null) {
-            LevelEventProvider lep = levelManager.getGameModule().getLevelEventProvider();
-            levelEventManager = LevelEventRewindResolver.resolve(
-                    lep, levelManager.getCurrentZone());
-            if (levelEventManager != null) {
-                rewindRegistry.register(levelEventManager);
-            }
+            levelEvents = levelManager.getGameModule().getLevelEventProvider();
+            eventAdapters = LevelEventRewindResolver.adapters(levelEvents, eventZone);
+            if (!eventAdapters.isEmpty()) registerLevelEventAdapter(eventAdapters.getFirst());
             rewindRegistry.deregister(
                     com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager.REWIND_KEY);
             rewindRegistry.deregister(
@@ -915,15 +915,8 @@ public final class GameplayModeContext implements ModeContext {
                 rewindRegistry.register(titleCard);
             }
         }
-        // Register game-specific extra adapters contributed by the level-event manager
-        // (e.g. S3K AIZ2 boss-endgame static latches). Deregister first for idempotency.
-        if (levelEventManager != null) {
-            for (com.openggf.game.rewind.RewindSnapshottable<?> extra : levelEventManager.extraRewindAdapters()) {
-                rewindRegistry.deregister(extra.key());
-                rewindRegistry.register(extra);
-                levelEventExtraRewindKeys.add(extra.key());
-            }
-        }
+        // Preserve stock restore ordering: primary events, title cards, then event extras.
+        for (int i = 1; i < eventAdapters.size(); i++) registerLevelEventAdapter(eventAdapters.get(i));
         // Post-restore reconciliation (runs after all entry restores, i.e. after
         // object-manager recreate): let level-event handlers reconcile one-shot
         // sequence state against the restored object set (e.g. S3K AIZ2
@@ -933,16 +926,33 @@ public final class GameplayModeContext implements ModeContext {
         // bidirectional window reconcile; flat FG tilemaps are layout-pure).
         // Held rewind fires this on every backward step, so it must stay cheap.
         // No-ops outside the zones that need them.
-        final AbstractLevelEventManager reconcileTarget = levelEventManager;
+        final LevelEventProvider reconcileTarget = levelEvents;
         rewindRegistry.registerPostRestoreCallback("level-tilemap-event-reconcile", () -> {
             if (reconcileTarget != null) {
-                reconcileTarget.reconcileAfterRewindRestore();
+                LevelEventRewindResolver.reconcile(reconcileTarget, eventZone);
             }
             var tilemapManager = levelManager.getTilemapManager();
             if (tilemapManager != null) {
                 tilemapManager.resetTilemapsForRewindRestore();
             }
         });
+    }
+
+    void installContributedZoneAdapters(List<RewindSnapshottable<?>> adapters) {
+        if (rewindRegistry == null) return;
+        for (String key : contributedZoneRewindKeys) rewindRegistry.deregister(key);
+        contributedZoneRewindKeys.clear();
+        for (RewindSnapshottable<?> adapter : adapters) {
+            if (!com.openggf.game.rewind.RewindAdapterOwnership.isBound(adapter))
+                throw new IllegalArgumentException("Contributed zone adapters require engine-owned provenance");
+            rewindRegistry.registerOrRefresh(adapter);
+            contributedZoneRewindKeys.add(adapter.key());
+        }
+    }
+
+    private void registerLevelEventAdapter(RewindSnapshottable<?> adapter) {
+        rewindRegistry.registerOrRefresh(adapter);
+        levelEventExtraRewindKeys.add(adapter.key());
     }
 
     /**
@@ -954,10 +964,13 @@ public final class GameplayModeContext implements ModeContext {
         if (rewindRegistry == null) {
             return;
         }
-        for (com.openggf.game.rewind.RewindSnapshottable<?> adapter
-                : worldSession.getGameModule().rewindAdapters()) {
-            rewindRegistry.deregister(adapter.key());
-            rewindRegistry.register(adapter);
+        var root = com.openggf.game.rewind.NativeRewindAdapterPublication.nativeRoot(worldSession.rootGameModule());
+        Set<RewindSnapshottable<?>> nativePublications = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        if (root != null) nativePublications.addAll(root.rewindAdapters());
+        for (RewindSnapshottable<?> adapter : worldSession.getGameModule().rewindAdapters()) {
+            if (nativePublications.contains(adapter))
+                com.openggf.game.rewind.NativeRewindAdapterPublication.register(rewindRegistry, root, adapter);
+            else rewindRegistry.registerOrRefresh(adapter);
         }
     }
 
@@ -1321,6 +1334,7 @@ public final class GameplayModeContext implements ModeContext {
         playbackController = null;
         rewindBoundaryReporter = RewindBoundaryReporter.NO_OP;
         levelEventExtraRewindKeys.clear();
+        contributedZoneRewindKeys.clear();
         rewindRegistry = null;
         if (replayCloseFailure != null) {
             throw replayCloseFailure;

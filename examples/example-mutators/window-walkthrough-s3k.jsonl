@@ -3,7 +3,7 @@
 {"op": "key", "key": "Right", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Return", "hold": 0.25, "require_focus": true}
-{"op": "wait", "seconds": 16}
+{"op": "wait", "seconds": 30}
 {"op": "wait", "seconds": 3}
 {"op": "screenshot", "name": "title"}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
@@ -64,7 +64,7 @@
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Return", "hold": 0.25, "require_focus": true}
-{"op": "wait", "seconds": 10}
+{"op": "wait", "seconds": 30}
 {"op": "key", "key": "Right", "hold": 1, "require_focus": true}
 {"op": "key", "keys": ["Right", "space"], "hold": 0.5, "require_focus": true}
 {"op": "wait", "seconds": 3}
@@ -225,7 +225,7 @@
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Return", "hold": 0.25, "require_focus": true}
-{"op": "wait", "seconds": 10}
+{"op": "wait", "seconds": 30}
 {"op": "wait", "seconds": 3}
 {"op": "screenshot", "name": "full-restart-no-rings"}
 {"op": "key", "key": "Return", "hold": 0.25, "require_focus": true}
@@ -248,7 +248,7 @@
 {"op": "screenshot", "name": "hub"}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Return", "hold": 0.25, "require_focus": true}
-{"op": "wait", "seconds": 16}
+{"op": "wait", "seconds": 30}
 {"op": "wait", "seconds": 3}
 {"op": "screenshot", "name": "relaunch-title"}
 {"op": "key", "key": "Escape", "hold": 0.25, "require_focus": true}

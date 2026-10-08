@@ -1,6 +1,5 @@
 package com.openggf.graphics;
 
-import com.openggf.Engine;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -170,9 +169,9 @@ public class GraphicsManager {
 	private int verticalWrapCameraY = 0;
 
 	/**
-	 * Reference to the Engine for accessing projection matrix.
+	 * The current render projection, supplied by the rendering host.
 	 */
-	private Engine engine;
+	private RenderProjection projectionSource;
 
 	public void setPerformanceProfiler(com.openggf.debug.PerformanceProfiler profiler) {
 		this.profiler = profiler;
@@ -1981,17 +1980,17 @@ public class GraphicsManager {
 	}
 
 	/**
-	 * Set the Engine reference for accessing projection matrix.
+	 * Installs the rendering host's current projection. Null clears the source.
 	 */
-	public void setEngine(Engine engine) {
-		this.engine = engine;
+	void setProjectionSource(RenderProjection projection) {
+		this.projectionSource = projection;
 	}
 
 	/**
-	 * Get the Engine reference.
+	 * Returns the projection source without exposing engine orchestration.
 	 */
-	public Engine getEngine() {
-		return engine;
+	public RenderProjection getProjectionSource() {
+		return projectionSource;
 	}
 
 	/**
@@ -2005,7 +2004,7 @@ public class GraphicsManager {
 
 	/**
 	 * Get the projection matrix buffer for shader-based rendering.
-	 * First checks if a local buffer has been set, then falls back to Engine.
+	 * First checks a local override, then the rendering host's projection.
 	 * @return the projection matrix as a 16-element float array, or null if not available
 	 */
 	public float[] getProjectionMatrixBuffer() {
@@ -2013,9 +2012,8 @@ public class GraphicsManager {
 		if (projectionMatrixBuffer != null) {
 			return projectionMatrixBuffer;
 		}
-		// Fall back to engine reference
-		if (engine != null) {
-			return engine.getProjectionMatrixBuffer();
+		if (projectionSource != null) {
+			return projectionSource.getProjectionMatrixBuffer();
 		}
 		return null;
 	}

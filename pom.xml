@@ -1125,6 +1125,15 @@
         <testSourceDirectory>src/test/java</testSourceDirectory>
         <resources>
             <resource>
+                <directory>src/test/resources</directory>
+                <targetPath>META-INF/openggf-mod-sdk/starters</targetPath>
+                <includes>
+                    <include>mods/sample-character-src/project/**</include>
+                    <include>mods/sample-standalone-src/project/**</include>
+                </includes>
+                <excludes><exclude>mods/*/project/target/**</exclude></excludes>
+            </resource>
+            <resource>
                 <directory>src/main/resources</directory>
                 <filtering>false</filtering>
             </resource>
@@ -1316,6 +1325,20 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                 <version>3.1.0</version>
                 <executions>
                     <execution>
+                        <id>prepare-mod-testkit</id>
+                        <phase>prepare-package</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <executable>java</executable>
+                            <arguments>
+                                <argument>-cp</argument><classpath/>
+                                <argument>com.openggf.tools.modtestkit.ModTestKitPackager</argument>
+                                <argument>${project.build.outputDirectory}</argument>
+                                <argument>${project.build.directory}/mod-testkit/classes</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>prepare-openggf-mod-sdk</id>
                         <phase>prepare-package</phase>
                         <goals><goal>exec</goal></goals>
@@ -1360,8 +1383,19 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                         <configuration>
                             <excludes>
                                 <exclude>com/openggf/tools/modsdk/**</exclude>
+                                <exclude>com/openggf/tools/modtestkit/**</exclude>
+                                <exclude>com/openggf/mods/testing/**</exclude>
                                 <exclude>META-INF/openggf-mod-sdk/**</exclude>
                             </excludes>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>attach-mod-testkit</id>
+                        <phase>package</phase>
+                        <goals><goal>jar</goal></goals>
+                        <configuration>
+                            <classesDirectory>${project.build.directory}/mod-testkit/classes</classesDirectory>
+                            <classifier>mod-testkit</classifier>
                         </configuration>
                     </execution>
                     <execution>
@@ -1551,6 +1585,12 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>5.10.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-console-standalone</artifactId>
+            <version>1.10.3</version>
             <scope>test</scope>
         </dependency>
         <dependency>

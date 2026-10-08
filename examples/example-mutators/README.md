@@ -42,7 +42,7 @@ Compiled creator code is unavailable in the engine's native image; see the
 | Big Head | 100–200% head size; leader or supported team members | Resume |
 | Stealth | Leader/all supported team; hide attached effects checkbox | Resume |
 | No Powerups | Separate checkbox for every semantic monitor type | Full load/restart |
-| No Checkpoints | Remove checkpoint activation and restart from the native act start | Full load/restart |
+| No Checkpoints | Death ignores the checkpoint bank and restarts from the native act start | Full load/restart |
 | No Rings | Deny main-level ring placement, collection and rewards | Full load/restart |
 | Game Speed | 25–400%; optional audio follows speed | Resume |
 | No Special Stages | Refuse new emerald-stage entry | Resume |
@@ -166,3 +166,12 @@ configurable example under `src/main/java/mutators`. The shared typed catalogue
 uses concrete native-game decorators, with game-specific registrations kept out
 of the `any` transaction. Installation refresh, hot code replacement, modified
 recordings and universal character/pose coverage remain separate work.
+
+## Maintained capture inputs
+
+Use `capture.script` for Sonic 1/2 and `capture-s3k.script` for Sonic 3 &
+Knuckles. The S3K input script and its window walkthrough wait thirty seconds
+after entry/restart for the native intro; this is an input margin, not an engine
+readiness gate. Inspect actual control release before using the following play
+frames. The canonical recipes remain one native tick per frame and cannot
+certify the interactive Game Speed setting.

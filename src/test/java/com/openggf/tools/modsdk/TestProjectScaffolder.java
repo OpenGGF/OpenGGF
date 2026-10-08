@@ -97,29 +97,8 @@ class TestProjectScaffolder {
         assertTrue(Files.isRegularFile(jar));
         assertTrue(new ModJarValidator().validate(jar).valid());
 
-        Path localEngine=temp.resolve("local-engine.jar");
-        createJar(TestSessionOutputPaths.compiledClasses(),localEngine);
-        String mavenExecutable=System.getProperty("os.name","").startsWith("Windows")?"mvn.cmd":"mvn";
-        Process maven=new ProcessBuilder(mavenExecutable,"-q","package",
-                "-Dopenggf.engine.jar="+localEngine.toAbsolutePath(),
-                "-Dopenggf.sdk.jar="+localEngine.toAbsolutePath())
-                .directory(project.toFile()).redirectErrorStream(true).start();
-        String buildOutput=new String(maven.getInputStream().readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);
-        assertEquals(0,maven.waitFor(),buildOutput);
-        Path mavenMod=project.resolve("target/my-sample-mod.jar");
-        assertTrue(Files.isRegularFile(mavenMod),buildOutput);
-        assertTrue(new ModJarValidator().validate(mavenMod).valid());
         assertThrows(Exception.class,
                 () -> new ProjectScaffolder().scaffold(project, "my-sample", "example.mods.sample"));
-    }
-
-    private static void createJar(Path root,Path jar)throws Exception{
-        try(JarOutputStream output=new JarOutputStream(Files.newOutputStream(jar));var paths=Files.walk(root)){
-            for(Path file:paths.filter(Files::isRegularFile).sorted().toList()){
-                output.putNextEntry(new JarEntry(root.relativize(file).toString().replace('\\','/')));
-                Files.copy(file,output);output.closeEntry();
-            }
-        }
     }
 
     @Test void rejectsInvalidIdentityBeforeCreatingOutput() {

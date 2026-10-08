@@ -3,7 +3,6 @@ package com.openggf.game;
 import java.util.Objects;
 
 /** Immutable master-title selection model for stock and standalone games. */
-@ModApi
 public sealed interface MasterTitleEntry permits MasterTitleEntry.Stock, MasterTitleEntry.Standalone {
     String displayName();
     String menuLabel();
@@ -11,7 +10,6 @@ public sealed interface MasterTitleEntry permits MasterTitleEntry.Stock, MasterT
 
     default boolean standalone() { return this instanceof Standalone; }
 
-    @ModApi
     record Stock(MasterTitleScreen.GameEntry game) implements MasterTitleEntry {
         public Stock { Objects.requireNonNull(game, "game"); }
         @Override public String displayName() { return game.displayName; }
@@ -19,7 +17,6 @@ public sealed interface MasterTitleEntry permits MasterTitleEntry.Stock, MasterT
         @Override public String gameId() { return game.gameId; }
     }
 
-    @ModApi
     record Standalone(String owner, String displayName, boolean continueAvailable)
             implements MasterTitleEntry {
         public Standalone {
@@ -32,10 +29,8 @@ public sealed interface MasterTitleEntry permits MasterTitleEntry.Stock, MasterT
         @Override public String gameId() { return owner; }
     }
 
-    @ModApi
     enum Action { NEW_GAME, CONTINUE }
 
-    @ModApi
     record Launch(MasterTitleEntry entry, Action action) {
         public Launch {
             Objects.requireNonNull(entry, "entry");
