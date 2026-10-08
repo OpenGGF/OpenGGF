@@ -65,7 +65,7 @@ public final class LevelContinuationCarry {
         LevelState level = manager.getLevelGamestate();
         if (level == null) return;
         // loc_59B1C and DEZ3's counterpart leave zero banks untouched.
-        if (state.rings != 0) level.setRings(state.rings);
+        if (state.rings != 0) level.setRings(com.openggf.game.mutators.LevelMutatorPolicyAccess.mainLevelRingRestore(manager, state.rings));
         if (state.timerFrames != 0) {
             level.setTimerFrames(state.timerFrames);
             level.resumeTimer();

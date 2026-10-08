@@ -583,6 +583,8 @@ final class ObjectTouchResponseController {
             if (!overlap) {
                 continue;
             }
+            if (instance instanceof LostRingObjectInstance
+                    && !com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(objectManager.services())) continue;
             buildingSet.add(instance);
             if (category == TouchCategory.HURT) {
                 // S3K TouchResponse temporarily sets Status_Invincible during
@@ -1227,7 +1229,7 @@ final class ObjectTouchResponseController {
         // preserves rolling through enemy bounces (ground roll into badnik).
         // Shared with the objects that call EnemyDefeated themselves off the
         // Touch_Special route — see EnemyDefeatBounce for the ROM listing.
-        EnemyDefeatBounce.apply(player, enemyY);
+        EnemyDefeatBounce.apply(player, enemyY, objectManager.services().worldSession());
     }
 
     /**

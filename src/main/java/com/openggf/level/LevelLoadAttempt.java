@@ -22,8 +22,15 @@ final class LevelLoadAttempt {
     private final LevelLoadMode mode;
     private final LevelLoadContext context;
     private final LevelLoadCause admissionCause;
+    private final java.util.function.Consumer<LevelLoadCause> afterAdmission;
 
     LevelLoadAttempt(WorldSession world, SpriteManager sprites, LevelLoadMode mode, LevelLoadContext context) {
+        this(world, sprites, mode, context, ignored -> { });
+    }
+
+    LevelLoadAttempt(WorldSession world, SpriteManager sprites, LevelLoadMode mode, LevelLoadContext context,
+                     java.util.function.Consumer<LevelLoadCause> afterAdmission) {
+        this.afterAdmission = afterAdmission;
         this.world = world;
         this.sprites = sprites;
         this.mode = mode;
@@ -36,6 +43,7 @@ final class LevelLoadAttempt {
 
     void execute(Supplier<GameModule> moduleSource, int levelIndex) {
         WorldSessionPolicyAccess.beforeAssembly(world, admissionCause);
+        afterAdmission.accept(admissionCause);
         // Replay/bootstrap resets retire structural sprite bindings. Reinject the world
         // owner before any assembly recreates or dispatches players.
         WorldSessionPolicyAccess.bindRoster(world, sprites);

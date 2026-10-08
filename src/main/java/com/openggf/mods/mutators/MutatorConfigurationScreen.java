@@ -424,6 +424,10 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             if (d.capabilities().contains(MutatorCapability.BIG_HEAD)
                     && settings.effective().stealthPolicies().stream().anyMatch(MutatorPolicy.PlayerStealth::hideBody))
                 return "Stealth hides selected bodies. Their head size returns when Stealth is disabled.";
+            if (d.capabilities().contains(MutatorCapability.BIG_HEAD)) {
+                String reason=leaderHeadPresentationReason();
+                if (!reason.isBlank()) return reason;
+            }
             return current.option()!=null ? d.option(current.option()).help() : d.description();
         }
         int pending=settings.pending().size();
@@ -432,6 +436,22 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
                 .map(o->o.definition().title()).toList();
         return active.isEmpty()?"No pending edits. Every mutator is off.":"Active: "+String.join(", ",active)+".";
     }
+    /** Current-pose guidance never changes editing eligibility or native gameplay. */
+    private String leaderHeadPresentationReason() {
+        if (!inGameplay || support==null) return "";
+        var sprites=GameServices.spritesOrNull();
+        var player=sprites==null?null:sprites.getMainPlayable();
+        if (player==null) return "";
+        if (!support.supportsPlayer(MutatorCapability.BIG_HEAD,player.characterKey().persisted(),true))
+            return "The leader uses native head size. Reviewed Sonic art can be enlarged.";
+        if (player.isSuperSonic()) return "Powered leader art keeps native head size. Ordinary Sonic uses the chosen scale.";
+        var renderer=player.getSpriteRenderer();
+        if (renderer==null) return "";
+        if (renderer.headProfileId().isBlank())
+            return "The leader's current art has no reviewed head mask. Native size is kept.";
+        return renderer.headPresentationReason(player.getMappingFrame());
+    }
+
     /** Word wrap on the compact grid; an overlong final line keeps the shared ellipsis. */
     static List<String> wrap(String text, int columns, int maxLines) {
         var lines=new ArrayList<String>(); var line=new StringBuilder();

@@ -81,6 +81,38 @@ class TestMutatorCatalogueScreen {
         assertTrue(state.pending().isEmpty());
     }
 
+    @Test void currentLeaderHeadGuidanceExplainsNativeFallbackWithoutChangingDraftOrEligibility() throws Exception {
+        var world=open("s2");
+        var screen=new MutatorConfigurationScreen(world,"Catalogue",null,c->{});screen.initialize();
+        var input=new InputHandler();
+        press(screen,input,GameServices.configuration().getInt(com.openggf.configuration.SonicConfiguration.PAUSE_KEY),true);
+        var reason=MutatorConfigurationScreen.class.getDeclaredMethod("leaderHeadPresentationReason");reason.setAccessible(true);
+        var draft=MutatorWorldAccess.state(world).requested();
+        var sprites=GameServices.sprites();
+        var sonic=new com.openggf.sprites.playable.Sonic("leader",(short)32,(short)48);
+        sprites.addSprite(sonic);
+        sonic.setSuperSonic(true);
+        assertTrue(((String)reason.invoke(screen)).contains("Powered leader art"));
+        sonic.setSuperSonic(false);
+        var art=new com.openggf.sprites.art.SpriteArtSet(new com.openggf.level.Pattern[0],List.of(),List.of(),
+                0,com.openggf.graphics.PatternAtlasRange.SIDEKICK_BANKS.base(),0,1,null,null);
+        sonic.setSpriteRenderer(new com.openggf.sprites.render.PlayerSpriteRenderer(art,GameServices.graphics()));
+        assertTrue(((String)reason.invoke(screen)).contains("no reviewed head mask"));
+        sprites.addSprite(new com.openggf.sprites.playable.Tails("leader",(short)32,(short)48));
+        assertTrue(((String)reason.invoke(screen)).contains("Reviewed Sonic art"));
+        assertEquals(draft,MutatorWorldAccess.state(world).requested());
+        assertTrue(world.resolvedGameModule().getGameService(MutatorSupportProfile.class)
+                .capabilities(0,0).contains(MutatorCapability.BIG_HEAD));
+    }
+
+    @Test void titleHeadGuidanceDoesNotBorrowAnExistingGameplayRoster() throws Exception {
+        var world=open("s2");
+        GameServices.sprites().addSprite(new com.openggf.sprites.playable.Tails("leader",(short)32,(short)48));
+        var screen=new MutatorConfigurationScreen(world,"Catalogue",null,c->{});screen.initialize();
+        var reason=MutatorConfigurationScreen.class.getDeclaredMethod("leaderHeadPresentationReason");reason.setAccessible(true);
+        assertEquals("",reason.invoke(screen));
+    }
+
     private WorldSession open(String game) {
         GameModule root=switch(game){case "s1"->new Sonic1GameModule();case "s2"->new Sonic2GameModule();default->new Sonic3kGameModule();};
         var definitions=new ArrayList<OwnedMutator>();
@@ -100,6 +132,9 @@ class TestMutatorCatalogueScreen {
                         var all=EnumSet.allOf(MutatorCapability.class);if(!game.equals("s3k")) all.remove(MutatorCapability.NO_BONUS_STAGES);return Set.copyOf(all);
                     }
                     public boolean supportsPlayer(String key,boolean leader){return true;}
+                    public boolean supportsPlayer(MutatorCapability capability,String key,boolean leader) {
+                        return capability!=MutatorCapability.BIG_HEAD || key.equals("sonic");
+                    }
                     public String startLabel(){return "Start "+game;}
                 });
                 return super.getGameService(type);

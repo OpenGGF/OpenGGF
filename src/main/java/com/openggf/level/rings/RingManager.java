@@ -58,6 +58,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private final RingRenderer renderer;
     private final LostRingPool lostRings;
     private final LevelManager levelManager;
+    private final com.openggf.game.session.WorldSession mutatorWorld;
+    private final com.openggf.game.mutators.RingAcquisitionDomain acquisitionDomain;
     private final BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider;
     private final AudioManager audioManager;
     private final boolean stageRingsUseObjectTouchCollection;
@@ -87,6 +89,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 ? new RingRenderer(spriteSheet)
                 : null;
         this.levelManager = levelManager;
+        var objectServices = levelManager != null && levelManager.getObjectManager() != null
+                ? levelManager.getObjectManager().getObjectServices() : null;
+        this.mutatorWorld = objectServices != null ? objectServices.worldSession() : null;
+        this.acquisitionDomain = com.openggf.game.mutators.LevelMutatorPolicyAccess.domain(objectServices);
         BackgroundPlaneCollisionProvider collisionProvider = GameServices.backgroundPlaneCollisionOrNull();
         this.backgroundPlaneCollisionProvider = collisionProvider != null
                 ? collisionProvider : BackgroundPlaneCollisionProvider.FOREGROUND_ONLY;
@@ -99,6 +105,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         for (int i = 0; i < MAX_ATTRACTED_RINGS; i++) {
             attractedRings[i] = new AttractedRing();
         }
+    }
+
+    private boolean ringsAllowed() {
+        return com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(mutatorWorld, acquisitionDomain);
     }
 
     public void reset(int cameraX) {
@@ -167,6 +177,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     private void attractStageRings(AbstractPlayableSprite player, int frameCounter) {
+        if (!ringsAllowed()) return;
         if (player != null && !player.isCpuControlled()) {
             // Obj_Attracted_Ring can execute before later platform slots carry
             // Player 1. Capture the post-physics player-slot coordinates here
@@ -231,7 +242,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * receive at most one attracted ring per object tick.
      */
     public void collectAttractedRing(AbstractPlayableSprite player, int frameCounter) {
-        if (player == null || player.getDead() || cannotCollectRings(player)) {
+        if (!ringsAllowed() || player == null || player.getDead() || cannotCollectRings(player)) {
             return;
         }
         for (AttractedRing ring : activeAttractedRingsInSlotOrder()) {
@@ -386,7 +397,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     public boolean collectPlacedRing(RingSpawn ring, AbstractPlayableSprite player, int frameCounter) {
-        if (ring == null || cannotCollectRings(player)) {
+        if (!ringsAllowed() || ring == null || cannotCollectRings(player)) {
             return false;
         }
         if (player.getInvulnerableFrames() >= RING_INVULNERABLE_BLOCK_THRESHOLD) {
@@ -405,6 +416,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     private void collectPlacedRingAtIndex(int index, AbstractPlayableSprite player, int frameCounter) {
+        if (!ringsAllowed()) return;
         placement.markCollected(index);
         if (renderer != null && renderer.getSparkleFrameCount() > 0) {
             placement.setSparkleStartFrame(index, frameCounter);
@@ -519,7 +531,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     public void draw(int frameCounter) {
-        if (renderer == null) {
+        if (!ringsAllowed() || renderer == null) {
             return;
         }
 
@@ -588,7 +600,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * @param frameCounter Current frame counter for animation
      */
     public void drawRingAt(int x, int y, int frameCounter) {
-        if (renderer == null) {
+        if (!ringsAllowed() || renderer == null) {
             return;
         }
         int spinFrameIndex = stageRingFrame(frameCounter);
@@ -601,7 +613,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * decelerating Ring_spill_anim_* state rather than a constant frame timer.
      */
     public void drawRingFrameAt(int x, int y, int spinFrameIndex) {
-        if (renderer == null) {
+        if (!ringsAllowed() || renderer == null) {
             return;
         }
         int spinCount = renderer.getSpinFrameCount();
@@ -843,7 +855,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     public Collection<RingSpawn> getActiveSpawns() {
-        return placement.getActiveSpawns();
+        return ringsAllowed() ? placement.getActiveSpawns() : List.of();
     }
 
     /**

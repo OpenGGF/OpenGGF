@@ -89,6 +89,31 @@ forward replay. Supported native character/art and stage cells are stated in the
 matrix; unavailable options are explained in the menu. No green claim follows
 merely from registration, rendering one screenshot or collecting aggregate counts.
 
+## Consumer coverage obligations
+
+These are delivery obligations, not claims that queued checks have passed. Native
+assembly uses the existing World REV01 S1/S2 and locked-on S3K ROMs. Their CRC32
+and SHA-1 were independently rechecked in this task; no ROM copies or links were
+created for the examples. A canonical capture-tool step remains one native tick
+and therefore cannot certify the interactive Game Speed setting.
+
+| Boundary | Required evidence |
+|---|---|
+| Per-game catalogue | Eleven definitions, game-specific labels/cues, preserved old preferences, long-list/monitor-option scrolling, unsupported cells explained, successful and failed-save ownership. |
+| Placement and rewards | Native S1/S2/S3K assembly, unchanged placement identities/slots/order, selected monitor filtering through a decorated registry, ordinary ring touch/attraction/prizes/direct grants blocked before consumption, active stage interiors retained. |
+| Death and stage entry | No checkpoint death restore; independent post art and stage triggers; denial before player capture; captured entry completes once despite a later toggle; restore replays within the same owner; retired worlds reject held permits. |
+| Scatter and defeat | Native stock control; bounded scatter count before deferred allocation/rewind; actual badnik rebound at 150–300% and cap; horizontal/native collision ownership preserved. |
+| Slow and fast presentation | 25–400% whole native bodies, zero-body input retention, pause/configuration/fade/rewind interruption, canonical tools unaffected, optional SMPS service and PCM rates at 50/60 Hz, actual normal-loop footage. |
+| Head and Stealth | Reviewed ROM masks at 100/150/200%, native bank/SAT admission and priorities retained, ball/unreviewed art fallback explained, attached effects hidden without removing world effects, actual all-game scene frames inspected. |
+| World history | Policies, pending stage permits, fractional pacing and unconsumed player edges restored together; upcoming historical speed affects only scheduling before its tick; preferences and host quarantine remain outside history. |
+| Composed delivery | Current compiled candidate pin, SDK/Javadoc/artifact verification, mandatory S3K bootstrap/loading/decoding/AIZ cases, affected trace domain, full actual-base categories and fresh unchanged-budget guards, explicit inherited assertion/skip comparison. |
+
+The native-tick configuration journal does not promise replay of the original
+wall-clock duration of settings menus or several edits made before one native
+tick. Modified interactive recordings remain a separate contract; no trace or
+movie row is used to supply gameplay state. Native game mechanics and assets
+remain authoritative when every mutator is disabled.
+
 ## Verification and delivery
 
 Run meaningful focused producer/consumer tests and real-ROM assembly/play/rewind
@@ -129,9 +154,54 @@ this thread and report the PR/video links with remaining material limits.
 - Fresh compiled candidate surface: 20543 lines, SHA256
   `9b08d6a092ab0b6f25044fc5fe8fcf50e045de206f037c848f24313136a6afd1`,
   151 additions and no removals; unpublished candidate descriptor unchanged.
-- Three isolated owners are implementing native admission, physics/pacing and
-  anatomical rendering/attachments. Their focused requests remain pending.
-  The root-owned all-game catalogue, registration and common UI also await their
-  focused request. Native consumer, composed rewind, SDK, domain, capture and
-  broad verification are not yet claimed. Fresh Opus polish and promo follow
-  verified implementation.
+- Catalogue/UI commit `fdf5d4bd2` passed 51 focused cases, zero skips,
+  including all three catalogue registrations and the existing real S2 world
+  revision/recreation replay. Compiled core pin remained byte-identical.
+- Physics owner `dcbc5ea45` has passing observations for 355 selected cases
+  across the initial run and repaired fixtures, zero skips. This is not one
+  green 355-case invocation. The rejected ringfall oracle removed surviving
+  Obj37 slots on a later spill; the native pool intentionally retains them.
+  The correction asserts old identities plus the new capped scatter, without
+  changing production behavior to fit the fixture.
+- Admission owns 64 exact source/test paths and has passing observations for
+  265 unique focused cases, zero skips, including all three actual ROM assembly
+  and death/re-enable cells. Its compiled API has zero delta. The pre-commit
+  source heuristic incorrectly includes a record method body and treats an
+  explicit formerly implicit no-arg constructor as a signature change. No
+  hook bypass or synthetic pin change was used. Root applies the exact patch
+  within the coherent composition with the genuine presentation API addition.
+- Presentation owner `340595d81` passed 77 final affected cases, zero skips;
+  43 unchanged singleton/resource guard cases passed in its earlier run.
+  Native art has 223 reviewed head masks across 553 frames, with explicit ball,
+  empty and unreviewed fallbacks. Final 112-pixel review cells include uncropped
+  150/200% output. The rejected S3K A1 polygon included a raised glove; reviewed
+  native pixels narrowed the mask and a body/glove preservation assertion now
+  guards that edge. No guessed pose inference or replacement artwork landed.
+- Presentation introduces four genuine candidate signatures: its permanent
+  native atlas reserve, scalar fragment-bank lookup and two scalar renderer
+  status methods. Its own 20547-line export matches the candidate pin, +4/-0
+  against the core. The candidate descriptor remains unpublished 0.7.
+- Root is composing policies, stage permits, fractional pacing and pending
+  native inputs into one world rewind adapter before player/object recreation.
+  Twelve new all-game service cases and current-leader fallback guidance await
+  the composed compilation. SDK, domain, final captures and combined ordinary
+  plus fresh guards remain outstanding. Fresh Opus polish and promo follow the
+  verified implementation, not the isolated child results.
+- First coherent root request `62794` completed 2026-10-08 13:02:37 UTC:
+  25 fresh class reports / 268 passes, no failures/errors/skips. This includes
+  the twelve all-game composite service cases, six long-catalogue/leader-guidance
+  cases, actual native assembly, existing S2 world recreation, pacing/audio,
+  presentation and required S3K bootstrap/load/decoding/AIZ checks. Normal
+  verify completed SDK/Javadoc/artifact verification. All 11835 frozen files
+  were unchanged. Actual composed export remains 20547 lines, SHA256
+  `ad9a9f3b9314bcbd40efe6a2b3d01b50a2451ead3b1139854e1207aae0131ffc`.
+  This is focused pre-framework composition, not a whole-suite claim.
+- Published `d740b7a0f` incorporates substantial creator framework/API/caller
+  changes. Its actual-main `bf7c56e` run selected 3056 ordinary classes,
+  produced 3054 reports / 26514 cases, 27 completely matched inherited
+  assertions, zero errors and 62 identical causal skips; 87 fresh guard
+  reports / 674 cases passed. The content-admission successor has separate
+  32 Python and 137 Java policy checks. Root will intent-compose this actual
+  published destination and verify its real compiled surface and runtime seams
+  before final capture/domain/full-candidate qualification. No new full
+  baseline is needed; comparison uses complete identities and assertions.

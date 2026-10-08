@@ -326,7 +326,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     LevelTilemapManager tilemapManager;
 
     // All transition request/consume state lives in the coordinator
-    private final LevelTransitionCoordinator transitions = new LevelTransitionCoordinator();
+    private final LevelTransitionCoordinator transitions;
     private boolean initialPresentationPlcsCompleted;
     /**
      * Whether the current load's initial title-card presentation is omitted
@@ -383,6 +383,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         this.waterSystem = waterSystem;
         this.gameState = gameState;
         this.worldSession = worldSession;
+        this.transitions = new LevelTransitionCoordinator(worldSession);
         this.graphicsManager = engineServices.graphics();
         this.audioManager = engineServices.audio();
         this.configService = engineServices.configuration();
@@ -498,7 +499,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void loadLevel(int levelIndex, LevelLoadMode loadMode, LevelLoadContext ctx) throws IOException {
         discardInitialProcessSpritesLifecycle();
-        var attempt = new LevelLoadAttempt(worldSession, spriteManager, loadMode, ctx);
+        var attempt = new LevelLoadAttempt(worldSession, spriteManager, loadMode, ctx,
+                cause -> checkpointCoordinator.admitLoadPolicies(worldSession, cause, ctx, transitions));
         try {
             attempt.execute(this::activeGameModule, levelIndex);
             // The LoadLevelData step stores the result in ctx

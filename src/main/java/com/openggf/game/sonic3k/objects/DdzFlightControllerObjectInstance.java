@@ -200,7 +200,9 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
             // here with Sonic, whose SuperHyper_PalCycle clears object_control after Palette_timer $F
             // and five 2-frame fade steps (26 frames). Keep that schedule so loc_8167C still releases.
             // $38 bit 7 stays clear so checkFormEnded does not send a formless leader to loc_8179E.
-            player.addRings(50);
+            if (com.openggf.game.mutators.LevelMutatorPolicyAccess.mainLevelRingRestore(services(), 50) != 0) {
+                player.addRings(50);
+            }
             formlessReleaseTimer = FORMLESS_RELEASE_FRAMES;
         } else {
             flags |= 1 << 7;

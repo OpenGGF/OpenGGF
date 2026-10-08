@@ -15,8 +15,17 @@ public final class SpritePresentation {
 
     /** Semantic display ownership, independent of native sprite admission and gameplay flags. */
     public enum Part { WORLD, BODY, APPENDAGE, ATTACHED_EFFECT }
-    public record Subject(String id, Part part, boolean suppressed) {
+    public record HeadTransform(com.openggf.sprites.render.PlayerHeadProfile.FrameHead mask,
+                                int piece, int originX, int originY, boolean hFlip, boolean vFlip,
+                                int percent, int fragmentBase, Map<Integer, PatternVersion> patterns) {
+        public HeadTransform { patterns = Map.copyOf(patterns); }
+    }
+    public record Subject(String id, Part part, boolean suppressed, int headScalePercent, HeadTransform head) {
         public static final Subject WORLD = new Subject("", Part.WORLD, false);
+        public Subject(String id, Part part, boolean suppressed) { this(id, part, suppressed, 100, null); }
+        public Subject(String id, Part part, boolean suppressed, int headScalePercent) {
+            this(id, part, suppressed, headScalePercent, null);
+        }
         public Subject {
             java.util.Objects.requireNonNull(id, "subject id");
             java.util.Objects.requireNonNull(part, "subject part");
@@ -151,6 +160,15 @@ public final class SpritePresentation {
 
     public static boolean isPreparing(GraphicsManager graphics) {
         return graphics.spritePresentationBuilder != null;
+    }
+
+    public static Subject subject(GraphicsManager graphics) { return graphics.spritePresentationSubject; }
+
+    /** Records source coordinates before SAT clipping; preparation rebases them with the native tiles. */
+    public static void withHead(GraphicsManager graphics, HeadTransform head, Runnable producer) {
+        Subject subject = graphics.spritePresentationSubject;
+        withSubject(graphics, new Subject(subject.id(), subject.part(), subject.suppressed(),
+                subject.headScalePercent(), head), producer);
     }
 
     public static void bindPatternVersions(GraphicsManager graphics, Map<Integer, PatternVersion> versions) {

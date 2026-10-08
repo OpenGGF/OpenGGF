@@ -57,7 +57,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
-public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
+public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier {
     @Override public java.util.Optional<String> editorPreviewArtKey(int objectId) {
         return switch(objectId) {
             case Sonic2ObjectIds.MONITOR -> java.util.Optional.of(com.openggf.level.objects.ObjectArtKeys.MONITOR);
@@ -666,5 +666,29 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
         registerFactory(Sonic2ObjectIds.GRAB,
                 (spawn, registry) -> new GrabObjectInstance(spawn,
                         registry.getPrimaryName(spawn.objectId())));
+    }
+
+    @Override
+    public com.openggf.game.mutators.MonitorContent monitorContent(ObjectSpawn spawn) {
+        if (spawn.objectId() != Sonic2ObjectIds.MONITOR) return null;
+        return switch (spawn.subtype() & 0xF) {
+            case 0 -> com.openggf.game.mutators.MonitorContent.STATIC;
+            case 1 -> com.openggf.game.mutators.MonitorContent.LIFE;
+            case 2 -> com.openggf.game.mutators.MonitorContent.LIFE;
+            case 3 -> com.openggf.game.mutators.MonitorContent.EGGMAN;
+            case 4 -> com.openggf.game.mutators.MonitorContent.RINGS;
+            case 5 -> com.openggf.game.mutators.MonitorContent.SPEED_SHOES;
+            case 6 -> com.openggf.game.mutators.MonitorContent.BASIC_SHIELD;
+            case 7 -> com.openggf.game.mutators.MonitorContent.INVINCIBILITY;
+            case 8 -> com.openggf.game.mutators.MonitorContent.TELEPORT;
+            case 9 -> com.openggf.game.mutators.MonitorContent.RANDOM;
+            case 10 -> com.openggf.game.mutators.MonitorContent.BROKEN_SHELL;
+            default -> com.openggf.game.mutators.MonitorContent.STATIC;
+        };
+    }
+
+    @Override
+    public boolean isRingPlacement(ObjectSpawn spawn) {
+        return false;
     }
 }

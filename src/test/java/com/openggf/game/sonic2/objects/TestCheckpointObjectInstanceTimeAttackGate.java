@@ -37,6 +37,7 @@ class TestCheckpointObjectInstanceTimeAttackGate {
     private static final ObjectSpawn CHECKPOINT_SPAWN =
             new ObjectSpawn(0x0140, 0x0180, Sonic2ObjectIds.CHECKPOINT, 0, 0, false, 0);
 
+    private com.openggf.tests.LevelMutatorTestWorld policies;
     private GameStateManager gameState;
     private RecordingCheckpointState checkpointState;
     private ObjectManager objectManager;
@@ -44,6 +45,7 @@ class TestCheckpointObjectInstanceTimeAttackGate {
     @BeforeEach
     void setUp() {
         GraphicsManager.getInstance().initHeadless();
+        policies = new com.openggf.tests.LevelMutatorTestWorld(new com.openggf.game.sonic2.Sonic2GameModule());
         gameState = new GameStateManager();
         gameState.resetSession();
         checkpointState = new RecordingCheckpointState();
@@ -51,6 +53,7 @@ class TestCheckpointObjectInstanceTimeAttackGate {
         Camera camera = mockCameraAtOrigin();
         ObjectManager[] holder = new ObjectManager[1];
         ObjectServices services = new StubObjectServices() {
+            @Override public com.openggf.game.session.WorldSession worldSession() { return policies.worldSession(); }
             @Override public ObjectManager objectManager() { return holder[0]; }
             @Override public Camera camera() { return camera; }
             @Override public GameStateManager gameState() { return gameState; }
@@ -105,8 +108,20 @@ class TestCheckpointObjectInstanceTimeAttackGate {
                 "precondition: normal touch (no time attack) still spawns the 4-star circle");
     }
 
+    @Test
+    void mutatorDeniesSpecialStarsButKeepsCheckpointBankAndDongle() {
+        policies.policy(new com.openggf.game.mutators.LevelMutatorPolicy(java.util.Set.of(), false, true, true, false));
+        CheckpointObjectInstance checkpoint = new CheckpointObjectInstance(CHECKPOINT_SPAWN, "Checkpoint");
+        checkpoint.setServices(newServices());
+        checkpoint.update(1, mockPlayerAt(CHECKPOINT_SPAWN.x(), CHECKPOINT_SPAWN.y(), 50));
+        assertTrue(checkpointState.saveCalled);
+        assertEquals(0, liveObjects(CheckpointStarInstance.class).size());
+        assertEquals(1, liveObjects(CheckpointDongleInstance.class).size());
+    }
+
     private ObjectServices newServices() {
         return new StubObjectServices() {
+            @Override public com.openggf.game.session.WorldSession worldSession() { return policies.worldSession(); }
             @Override public ObjectManager objectManager() { return objectManager; }
             @Override public GameStateManager gameState() { return gameState; }
             @Override public RespawnState checkpointState() { return checkpointState; }

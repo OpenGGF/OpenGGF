@@ -170,12 +170,14 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
 
     /** When true, transition to special stage after tally instead of next level. */
     private boolean specialStageAfter = false;
+    private long stageEntryPermit = -1;
 
     /** Tracks whether SBZ2 slide-out elements have reached their exit positions. */
     private final boolean[] elemExited = new boolean[ELEMENT_COUNT];
 
     public void setSpecialStageAfter(boolean specialStageAfter) {
         this.specialStageAfter = specialStageAfter;
+        if (specialStageAfter) stageEntryPermit = com.openggf.game.mutators.LevelMutatorPolicyAccess.resultsPermit(tryServices());
     }
 
     public Sonic1ResultsScreenObjectInstance(int elapsedTimeSeconds, int ringCount, int actNumber) {
@@ -425,7 +427,9 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     private void advanceToSpecialStage() {
         LOGGER.info("S1 Results screen complete, entering special stage");
         setDestroyed(true);
-        services().advanceToSpecialStageEntryRoutine();
+        com.openggf.game.mutators.LevelMutatorPolicyAccess.publish(services(),
+                com.openggf.game.mutators.StageEntryKind.SPECIAL, stageEntryPermit,
+                () -> services().advanceToSpecialStageEntryRoutine());
     }
 
     private void triggerFadeToBlack() {

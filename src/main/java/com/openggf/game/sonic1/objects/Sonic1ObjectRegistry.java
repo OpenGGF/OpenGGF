@@ -39,7 +39,7 @@ import java.util.Map;
  * Object registry for Sonic the Hedgehog 1.
  * Uses factory-based registration following the Sonic 2 pattern.
  */
-public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
+public class Sonic1ObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier {
     @Override public java.util.Optional<String> editorPreviewArtKey(int objectId) {
         return switch(objectId) {
             case com.openggf.game.sonic1.constants.Sonic1ObjectIds.MONITOR -> java.util.Optional.of(com.openggf.level.objects.ObjectArtKeys.MONITOR);
@@ -397,5 +397,28 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry {
             case Sonic1ObjectIds.FALSE_FLOOR -> "FalseFloor";
             default -> String.format("S1_Obj_%02X", objectId & 0xFF);
         };
+    }
+
+    @Override
+    public com.openggf.game.mutators.MonitorContent monitorContent(ObjectSpawn spawn) {
+        if (spawn.objectId() != Sonic1ObjectIds.MONITOR) return null;
+        return switch (spawn.subtype() & 0xF) {
+            case 0 -> com.openggf.game.mutators.MonitorContent.STATIC;
+            case 1 -> com.openggf.game.mutators.MonitorContent.EGGMAN;
+            case 2 -> com.openggf.game.mutators.MonitorContent.LIFE;
+            case 3 -> com.openggf.game.mutators.MonitorContent.SPEED_SHOES;
+            case 4 -> com.openggf.game.mutators.MonitorContent.BASIC_SHIELD;
+            case 5 -> com.openggf.game.mutators.MonitorContent.INVINCIBILITY;
+            case 6 -> com.openggf.game.mutators.MonitorContent.RINGS;
+            case 7 -> com.openggf.game.mutators.MonitorContent.S_MONITOR;
+            case 8 -> com.openggf.game.mutators.MonitorContent.GOGGLES;
+            case 9 -> com.openggf.game.mutators.MonitorContent.BROKEN_SHELL;
+            default -> com.openggf.game.mutators.MonitorContent.STATIC;
+        };
+    }
+
+    @Override
+    public boolean isRingPlacement(ObjectSpawn spawn) {
+        return spawn.objectId() == Sonic1ObjectIds.RING;
     }
 }

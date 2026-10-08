@@ -324,6 +324,7 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
      * S3K requires 20 rings (not 50 like S2).
      */
     private boolean shouldSpawnBonusStars(AbstractPlayableSprite player) {
+        if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.entryAllowed(services(), com.openggf.game.mutators.StageEntryKind.BONUS)) return false;
         // Time attack: bonus stars request bonus-stage entry, which is already
         // swallowed at GameLoop's chokepoint (see GameLoop.enterSpecialStage()).
         // Suppress the spawn itself so the player never sees stars circling with

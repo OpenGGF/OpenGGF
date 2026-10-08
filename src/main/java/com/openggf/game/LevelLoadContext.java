@@ -85,6 +85,7 @@ public class LevelLoadContext {
     // Checkpoint snapshot accessors
 
     public boolean hasCheckpoint() { return hasCheckpoint; }
+    void denyCheckpointRingRestore() { checkpointRings = checkpointRingExtraLifeFlags = 0; }
     public int getCheckpointX() { return checkpointX; }
     public int getCheckpointY() { return checkpointY; }
     public int getCheckpointCameraX() { return checkpointCameraX; }

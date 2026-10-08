@@ -12,10 +12,10 @@ public final class SpritePresentationRenderer {
     private SpritePresentationRenderer() { }
 
     public static Frame prepare(GraphicsManager graphics, int cameraX, int cameraY, Runnable producer) {
-        return SpritePresentation.prepare(graphics, cameraX, cameraY, producer, descriptor -> {
+        return PlayerHeadPresentation.compose(SpritePresentation.prepare(graphics, cameraX, cameraY, producer, descriptor -> {
             PatternDesc desc = (PatternDesc) descriptor;
             return new Attributes(desc.getPaletteIndex(), desc.getHFlip(), desc.getVFlip(), desc.getPriority());
-        });
+        }), cameraX, cameraY);
     }
 
     public static void bindPatternBank(GraphicsManager graphics, int base, Pattern[] patterns) {
@@ -37,9 +37,47 @@ public final class SpritePresentationRenderer {
         }
     }
 
-    private static PatternVersion version(Pattern pattern) {
+    public static PatternVersion version(Pattern pattern) {
         return new PatternVersion(packWord(pattern, 0), packWord(pattern, 16),
                 packWord(pattern, 32), packWord(pattern, 48));
+    }
+
+    /** Exact mapping-owned slots, frozen before later draws can reuse their virtual addresses. */
+    public static java.util.Map<Integer, PatternVersion> patternVersions(int base, Pattern[] patterns, SpriteMappingFrame frame) {
+        var versions = new java.util.HashMap<Integer, PatternVersion>();
+        for (var piece : frame.pieces()) {
+            int end = Math.min(patterns.length, piece.tileIndex() + piece.widthTiles() * piece.heightTiles());
+            for (int index = Math.max(0, piece.tileIndex()); index < end; index++) versions.put(base + index, version(patterns[index]));
+        }
+        return java.util.Map.copyOf(versions);
+    }
+
+    /** Live SAT path: native admission is already finished; freeze and compose its replay only. */
+    public static void replayHeadSat(GraphicsManager graphics, java.util.List<com.openggf.graphics.SpriteSatEntry> entries,
+                                     java.util.function.Consumer<com.openggf.graphics.SpriteSatEntry> emitter) {
+        boolean priorityShader = graphics.isUseSpritePriorityShader();
+        graphics.flushPatternBatch();
+        // Stock live SAT replay uses the plain shader; priority remains in the admitted descriptors.
+        graphics.setUseSpritePriorityShader(false);
+        try {
+        Frame frame = prepare(graphics, 0, 0, () -> {
+            for (int bucket = com.openggf.graphics.RenderPriority.MAX; bucket >= com.openggf.graphics.RenderPriority.MIN; bucket--) {
+                for (int i = entries.size() - 1; i >= 0; i--) {
+                    var entry = entries.get(i); if (entry.priorityBucket() != bucket) continue;
+                    SpritePresentation.layer(graphics, entry.presentationSubject().part() == SpritePresentation.Part.WORLD ? Layer.OBJECT : Layer.PLAYER);
+                    if (entry.presentationSubject().head() != null)
+                        SpritePresentation.bindPatternVersions(graphics, entry.presentationSubject().head().patterns());
+                    graphics.setCurrentSpriteHighPriority(entry.globalHighPriority());
+                    SpritePresentation.withSubject(graphics, entry.presentationSubject(), () -> emitter.accept(entry));
+                }
+            }
+        });
+        graphics.setCurrentSpriteHighPriority(false);
+        draw(graphics, frame, 0, 0, layer -> true);
+        } finally {
+            graphics.setCurrentSpriteHighPriority(false);
+            graphics.setUseSpritePriorityShader(priorityShader);
+        }
     }
 
     private static long packWord(Pattern pattern, int start) {

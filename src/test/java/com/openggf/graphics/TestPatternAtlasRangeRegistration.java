@@ -9,7 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestPatternAtlasRangeRegistration {
-    private static final int SYNTHETIC_BASE = PatternAtlasRange.CONTINUE_SCREEN.endExclusive();
+    // Synthetic owner claims must stay above all permanently reserved runtime banks.
+    private static final int SYNTHETIC_BASE = java.util.Arrays.stream(PatternAtlasRange.values())
+            .mapToInt(PatternAtlasRange::endExclusive).max().orElseThrow();
 
     @Test
     public void adjacentHalfOpenRangesAreValid() {

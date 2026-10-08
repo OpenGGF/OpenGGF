@@ -135,13 +135,12 @@ public class CheckpointStarInstance extends AbstractObjectInstance
         int touched = collisionProperty;
         collisionProperty = 0;
         if ((touched & 1) != 0) {
-            LOGGER.info("Player touched special stage star - requesting special stage entry");
-            // Mark the parent checkpoint as used for special stage entry
-            // This prevents stars from respawning when returning from special stage
-            if (parentCheckpoint != null) {
-                parentCheckpoint.markUsedForSpecialStage();
-            }
-            services().requestSpecialStageEntry();
+            long permit = com.openggf.game.mutators.LevelMutatorPolicyAccess.admit(services(), com.openggf.game.mutators.StageEntryKind.SPECIAL);
+            if (permit != 0) com.openggf.game.mutators.LevelMutatorPolicyAccess.publish(services(),
+                    com.openggf.game.mutators.StageEntryKind.SPECIAL, permit, () -> {
+                if (parentCheckpoint != null) parentCheckpoint.markUsedForSpecialStage();
+                services().requestSpecialStageEntry();
+            });
         }
 
         // Line 44411: addi.w #$A, objoff_34(a0)

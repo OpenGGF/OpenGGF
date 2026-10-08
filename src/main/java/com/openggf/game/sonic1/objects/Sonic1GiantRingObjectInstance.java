@@ -76,6 +76,9 @@ public class Sonic1GiantRingObjectInstance extends AbstractObjectInstance
     private int animTimer = ANIM_FRAME_DURATION - 1;
     private int animFrame = 0;
 
+    private long stageEntryPermit = -1;
+    long stageEntryPermit() { return stageEntryPermit; }
+
     public Sonic1GiantRingObjectInstance(ObjectSpawn spawn) {
         super(spawn, "GiantRing");
     }
@@ -191,6 +194,8 @@ public class Sonic1GiantRingObjectInstance extends AbstractObjectInstance
         // when ExecuteObjects reaches the giant ring's own SST slot. Deferring
         // the body preserves FindFreeObj ordering: a flash allocated into an
         // already-visited lower slot begins on the following frame.
+        stageEntryPermit = com.openggf.game.mutators.LevelMutatorPolicyAccess.admit(services(), com.openggf.game.mutators.StageEntryKind.SPECIAL);
+        if (stageEntryPermit == 0) return;
         state = State.COLLECT_PENDING;
     }
 

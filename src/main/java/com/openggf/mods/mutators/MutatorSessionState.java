@@ -234,6 +234,17 @@ public final class MutatorSessionState implements AutoCloseable {
         requireAvailable(effective);
     }
 
+    /** Pure scheduling preview: historical policies precede their next native tick.
+     * Zero-tick presentations may inspect this repeatedly without moving the journal
+     * cursor, running creators, admitting saved preferences or publishing policies. */
+    Effective effectiveBeforeNextForwardTick() {
+        requireOpen();
+        RecordedRevision event = events.get(tick + 1);
+        Effective next = event == null ? effective : event.effective();
+        requireAvailable(next);
+        return next;
+    }
+
     public Effective effective() {
         requireOpen();
         requireAvailable(effective);

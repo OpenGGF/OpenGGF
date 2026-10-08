@@ -1,5 +1,7 @@
 # Level test coverage backlog
 
+Mutator Lab expansion (2026-10-08): the [all-game affected-mechanic matrix](../architecture/validation/levels/mutator-lab-native-games.md) records native S1/S2/S3K focused cells and remaining composed capture/domain/broad obligations. Complete act, team, donor and viewport breadth remains unqualified.
+
 Mutator Lab (2026-10-07): the [S2 EHZ1 prototype matrix](../architecture/validation/levels/mutator-lab-s2-ehz1.md)
 tracks native solo-Sonic opening play, configuration/load boundaries, selective
 presentation and effective-state rewind. Execution and audiovisual evidence are

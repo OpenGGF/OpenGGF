@@ -16,6 +16,7 @@ public final class Sonic3kRingAwardService {
     private Sonic3kRingAwardService() { }
 
     public static void giveOne(ObjectServices services, AbstractPlayableSprite collector) {
+        if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services)) return;
         LevelState level = services.levelGamestate();
         int current = level != null ? level.getRings() : collector.getRingCount();
         int next = Math.min(MAX_RINGS, current + 1);

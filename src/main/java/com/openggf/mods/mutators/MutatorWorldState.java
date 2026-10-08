@@ -13,13 +13,15 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 /** World-owned policy/preferences lifetime, independent of disposable gameplay contexts. */
-final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshottable<MutatorSessionState.Snapshot> {
+final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshottable<MutatorWorldState.Snapshot> {
     // Identity allocation only. No configuration or gameplay values live in process statics.
     private static final AtomicLong GENERATIONS = new AtomicLong();
     final MutatorSessionState state;
     private final WorldSession world;
     private final MutatorSupportProfile support;
     private final MutatorPreferenceStore store;
+    private final com.openggf.game.mutators.LevelMutatorRuntime entryRuntime;
+    private final com.openggf.game.mutators.GameplayMutatorPacing pacing;
     private MutatorPreferences preferences;
     private boolean launched;
     private final java.util.Set<com.openggf.mods.mutators.MutatorConfigurationScreen> screens =
@@ -44,11 +46,19 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         state = new MutatorSessionState(GENERATIONS.incrementAndGet(), catalog.definitions(),
                 support == null ? Set.of() : Set.copyOf(support.capabilities(0, 0)),
                 catalog.faults(), catalog.faults()::isOwnerAvailable, requested);
+        entryRuntime = new com.openggf.game.mutators.LevelMutatorRuntime(world);
+        pacing = new com.openggf.game.mutators.GameplayMutatorPacing(() ->
+                state.isClosed() ? com.openggf.game.mutators.GameplayMutatorPolicy.STOCK
+                        : state.effectiveBeforeNextForwardTick().gameplayPolicy(availableCapabilities()));
     }
 
     @Override public void beforeAssembly(LevelLoadCause cause) {
         MutatorSessionState.LoadCause mapped = mapped(cause);
         if (mapped == null || !mapped.qualifies()) return;
+        // A fresh native assembly cannot inherit fractional time or input edges.
+        // Entry reservations are cleared by the native load admission owner, which
+        // preserves synchronous stage publication and stage-result ownership.
+        pacing.reset();
         if (!launched) {
             var admission = prepareLaunch();
             if (!admission.accepted()) {
@@ -145,6 +155,8 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
     }
     @Override public <T> T getService(Class<T> type) {
         if (type == MutatorWorldState.class) return type.cast(this);
+        if (type == com.openggf.game.mutators.LevelMutatorRuntime.class) return type.cast(entryRuntime);
+        if (type == com.openggf.game.mutators.GameplayMutatorPacing.class) return type.cast(pacing);
         if (type == com.openggf.game.mutators.LevelMutatorPolicySource.class) {
             return type.cast((com.openggf.game.mutators.LevelMutatorPolicySource)
                     () -> state.isClosed() ? com.openggf.game.mutators.LevelMutatorPolicy.STOCK
@@ -163,10 +175,27 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
     }
     @Override public RewindSnapshottable<?> rewindAdapter() { return this; }
     @Override public void failedAssembly(LevelLoadCause cause) {
-        if (cause != LevelLoadCause.DECODE_ONLY && cause != LevelLoadCause.PREVIEW) state.close();
+        if (cause != LevelLoadCause.DECODE_ONLY && cause != LevelLoadCause.PREVIEW) {
+            entryRuntime.retire(); pacing.reset(); state.close();
+        }
     }
-    @Override public void retire() { closeScreens(); state.close(); }
+    @Override public void retire() { closeScreens(); entryRuntime.retire(); pacing.reset(); state.close(); }
     @Override public String key() { return "mutators"; }
-    @Override public MutatorSessionState.Snapshot capture() { return state.snapshot(); }
-    @Override public void restore(MutatorSessionState.Snapshot snapshot) { state.restore(snapshot); }
+    @Override public Snapshot capture() { return new Snapshot(state.snapshot(), entryRuntime.capture(), pacing.capture()); }
+    @Override public void restore(Snapshot snapshot) {
+        // The registered world adapter precedes player/object reconstruction. Saved
+        // preferences and host owner quarantine remain outside this historical state.
+        state.restore(snapshot.policies());
+        entryRuntime.restore(snapshot.entries());
+        pacing.restore(snapshot.pacing());
+    }
+    record Snapshot(MutatorSessionState.Snapshot policies,
+                    com.openggf.game.mutators.LevelMutatorRuntime.Snapshot entries,
+                    com.openggf.game.mutators.GameplayMutatorPacing.Snapshot pacing) {
+        Snapshot {
+            java.util.Objects.requireNonNull(policies);
+            java.util.Objects.requireNonNull(entries);
+            java.util.Objects.requireNonNull(pacing);
+        }
+    }
 }

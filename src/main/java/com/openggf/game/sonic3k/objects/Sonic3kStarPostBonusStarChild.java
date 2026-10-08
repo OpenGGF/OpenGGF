@@ -148,12 +148,16 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implem
             if (player.getRingCount() >= RING_THRESHOLD) {
                 LOGGER.info("Requesting bonus stage entry: " + variant.bonusStageType
                         + " (variant=" + variant + ", rings=" + player.getRingCount() + ")");
-                services().requestBonusStageEntry(variant.bonusStageType);
-                if (parentStarPost != null) {
-                    parentStarPost.markUsedForSpecialStage();
+                long permit = com.openggf.game.mutators.LevelMutatorPolicyAccess.admit(services(), com.openggf.game.mutators.StageEntryKind.BONUS);
+                if (permit != 0) {
+                    com.openggf.game.mutators.LevelMutatorPolicyAccess.publish(services(),
+                            com.openggf.game.mutators.StageEntryKind.BONUS, permit, () -> {
+                        services().requestBonusStageEntry(variant.bonusStageType);
+                        if (parentStarPost != null) parentStarPost.markUsedForSpecialStage();
+                        setDestroyed(true);
+                    });
+                    return;
                 }
-                setDestroyed(true);
-                return;
             }
         }
 
