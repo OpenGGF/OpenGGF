@@ -4759,31 +4759,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private void updateSensorOffsetsFromRadii() {
-                if (groundSensors == null || ceilingSensors == null || pushSensors == null) {
-                        return;
-                }
-
-                byte xRad = (byte) xRadius;
-                byte yRad = (byte) yRadius;
-                // SPG: Push sensors always use x = +/-10, regardless of rolling state
-                byte push = characterPhysicsSpec == null ? 10 : characterPhysicsSpec.sensors().pushRadius();
-
-                if (groundSensors != null && groundSensors.length >= 2) {
-                        groundSensors[0].setOffset((byte) -xRad, yRad);
-                        groundSensors[1].setOffset(xRad, yRad);
-                }
-
-                if (ceilingSensors != null && ceilingSensors.length >= 2) {
-                        ceilingSensors[0].setOffset((byte) -xRad, (byte) -yRad);
-                        ceilingSensors[1].setOffset(xRad, (byte) -yRad);
-                }
-
-                if (pushSensors != null && pushSensors.length >= 2) {
-                        pushSensors[0].setOffset((byte) -push, (byte) 0);
-                        pushSensors[1].setOffset(push, (byte) 0);
-                }
-                // Update push sensor Y offset based on current ground state
-                updatePushSensorYOffset();
+                PlayableSpriteGeometry.updateSensorOffsets(this, groundSensors, ceilingSensors,
+                        pushSensors, characterPhysicsSpec);
         }
 
         /**
@@ -4791,20 +4768,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * against instead of being stepped onto. In air or on slopes, Y offset is 0.
          */
         public void updatePushSensorYOffset() {
-                if (pushSensors == null || pushSensors.length < 2) {
-                        return;
-                }
-                // ROM: Y offset = +8 when (angle & 0x38) == 0, i.e., near-flat angles (0-7, 248-255)
-                // This allows the offset on slight slopes, not just strictly flat ground.
-                // See s2.asm:43517-43519 in CalcRoomInFront
-                boolean onFlatGround = !air && runningMode == GroundMode.GROUND && (angle & 0x38) == 0;
-                byte yOffset = onFlatGround
-                        ? (characterPhysicsSpec == null ? (byte) 8 : characterPhysicsSpec.sensors().groundPushYOffset())
-                        : (byte) 0;
-                // SPG: Push sensors always use x = +/-10, regardless of rolling state
-                byte push = characterPhysicsSpec == null ? 10 : characterPhysicsSpec.sensors().pushRadius();
-                pushSensors[0].setOffset((byte) -push, yOffset);
-                pushSensors[1].setOffset(push, yOffset);
+                PlayableSpriteGeometry.updatePushSensorYOffset(this, pushSensors, characterPhysicsSpec);
         }
 
         public SpriteMovementManager getMovementManager() {
@@ -4854,27 +4818,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         protected void updateSpriteShapeForRunningMode(GroundMode newRunningMode, GroundMode oldRunningMode) {
-                // Best if statement ever...
-                if (((GroundMode.CEILING.equals(newRunningMode) || GroundMode.GROUND.equals(newRunningMode)) &&
-                                (GroundMode.LEFTWALL.equals(oldRunningMode)
-                                                || GroundMode.RIGHTWALL.equals(oldRunningMode)))
-                                ||
-                                ((GroundMode.RIGHTWALL.equals(newRunningMode)
-                                                || GroundMode.LEFTWALL.equals(newRunningMode)) &&
-                                                ((GroundMode.CEILING.equals(oldRunningMode)
-                                                                || GroundMode.GROUND.equals(oldRunningMode))))) {
-                        int oldHeight = getHeight();
-                        int oldWidth = getWidth();
-
-                        short oldCentreX = getCentreX();
-                        short oldCentreY = getCentreY();
-
-                        setHeight(oldWidth);
-                        setWidth(oldHeight);
-
-                        setX((short) (oldCentreX - (getWidth() / 2)));
-                        setY((short) (oldCentreY - (getHeight() / 2)));
-                }
+                PlayableSpriteGeometry.updateShapeForRunningMode(this, newRunningMode, oldRunningMode);
         }
 
         public final short getCentreX(int framesBehind) {
