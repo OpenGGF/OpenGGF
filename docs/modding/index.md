@@ -83,6 +83,11 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
   crafting stations, equipment, seven quests, three wardens and persistent saves.
   An original mod scene using the player's S3K character art and audio.
 
+- [Three Islands](../../examples/three-islands/README.md) — a story-driven JRPG with fully
+  turn-based battles across South Island, West Side Island and Angel Island: ten stock acts
+  walked through `SceneRomArt.levelKit`, heroes in each game's own art, Dual and Triple
+  Techs, multi-part ROM bosses and Sonic 1/2 zone themes through `ctx.music()`.
+
 - [Robotnik Tower Defence](../../examples/robotnik-tower-defense/README.md) —
   Industrial Action: defend Robotnik's base door from 15 waves of unionised
   Flickies with six ROM-drawn badnik defenses, upgrades, repair and an emergency

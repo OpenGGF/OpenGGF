@@ -1,0 +1,262 @@
+# Three Islands story script. Original text for this mod.
+# "@name" starts a scene. "Speaker: words" is dialogue; "> words" is narration.
+# Scene names the game looks for:
+#   prologue, <island>-arrive, village-<island>, <zone>-enter, <zone>-mid, <zone>-boss,
+#   <zone>-clear, ending. Islands: south, west, angel, death_egg. Zones: ghz slz syz ehz cpz
+#   mcz aiz hcz lbz dez. A missing scene is simply skipped.
+
+@prologue
+> Three islands. Three skies. Three adventures that were never meant to meet.
+> South Island, where the Chaos Emeralds were first found.
+> West Side Island, where a two-tailed fox builds aeroplanes in a workshop by the sea.
+> And Angel Island, floating high above them all on the power of the Master Emerald.
+> One night the stars went out of place, and rings of light tore open in every sky.
+> Something was pulling the three islands together...
+
+@south-arrive
+> South Island. Dawn.
+Sonic: Whoa... since when does the sky have cracks in it?
+Flicky: Sonic! Sonic! You've got to help us!
+Sonic: Easy, little guy. What's up?
+Flicky: Badniks came out of those glowing rings! They're not like the old ones. They hit harder, and they glow!
+Flicky: They took the Chaos Emeralds from the shrine by the sea. Everyone's hiding in the village.
+Sonic: Badniks, stolen emeralds and a broken sky. Sounds like a certain doctor's back in business.
+Sonic: Tell everyone to sit tight. I'll handle this.
+> Use the island map to travel. Visit the village to rest, shop and save.
+
+@village-south
+Flicky: Welcome to Flicky Village! Resting here heals everyone and saves your journey.
+Pocky: The badniks drop rings when you bust 'em. Spend them at our stall!
+Rocky: Shields are worth every ring. A shield blocks a whole hit, and it charges your attacks with its element!
+Flicky: Hit a foe with the element it's weak to and it takes half again as much damage.
+
+@ghz-enter
+> Green Hill. The grass still smells like summer, but the badniks are restless.
+Sonic: Alright, Green Hill. Let's see what's got everyone so spooked.
+> Walk into a badnik to start a battle. Monitors hold items. Starposts heal you and save.
+
+@ghz-boss
+Sonic: Huh? That Motobug's the size of a house!
+Flicky: That's the glow, Sonic! The rings make them grow!
+Sonic: Bigger just means easier to hit.
+
+@ghz-clear
+Sonic: Too easy. But that glow... it came from the sky.
+Flicky: The rings showed up right after Dr. Eggman's ship flew over the city of Star Light!
+Sonic: Star Light it is.
+
+@slz-enter
+> Star Light Zone. Highways of light hang over the night city.
+Sonic: Quiet up here. Too quiet.
+Sonic: Those Bombs blow up into fire. A Bubble Shield ought to put them out.
+
+@slz-boss
+> A fuse hisses in the dark. Something enormous waddles out from under the highway...
+Sonic: A Bomb? The size of a house? And it's carrying a Chaos Emerald!
+
+@slz-clear
+> Sonic recovered the green Chaos Emerald!
+Sonic: One down. And look at this... a little machine wrapped around it. "Rift Anchor".
+Sonic: Eggman's using the emeralds to hold those rings open. I'm shutting this down.
+
+@syz-enter
+> Spring Yard. Neon lights flicker on and off with the rhythm of the rifts.
+Sonic: Bumpers, springs and badniks. My kind of town.
+
+@syz-boss
+Eggman: Ho ho ho! I wondered when that blue pest would turn up.
+Sonic: Eggman! What are you doing to the sky?
+Eggman: Doing? Improving it! My Convergence Engine will pull every island in this world into one sky...
+Eggman: ...and one sky deserves one ruler. Me!
+Sonic: Not a chance, Egghead!
+
+@syz-clear
+> Sonic recovered the second Chaos Emerald!
+Eggman: Blast it! This is only one island, Sonic. The engine is already pulling on the next!
+> Eggman dives into a shimmering Warp Ring, and it begins to close.
+Sonic: Oh no you don't!
+> Sonic leaps through the ring after him...
+
+@west-arrive
+> West Side Island. The air smells of sea salt and engine oil.
+Sonic: Where... am I? This isn't South Island.
+Tails: Hey! Are you okay? You fell right out of that glowing ring!
+Sonic: I've had softer landings. Name's Sonic.
+Tails: I'm Miles, but everyone calls me Tails. I've been tracking those rings with my Rift Compass!
+Tails: They appeared the same night the badniks went wild. They're draining something from the island.
+Sonic: Chaos Emeralds. Eggman's using them to drag the islands together. I'm here to stop him.
+Tails: Then I'm coming too! I can fix you up, scan the badniks, and I've got a few tricks of my own.
+Sonic: Can you keep up?
+Tails: Watch me!
+> Tails joins the party!
+> When Sonic and Tails both still have a turn this round, they can use a Dual Tech together.
+
+@village-west
+Tails: Welcome to my workshop! You can rest here, and I keep spare monitors in stock.
+Tails: My Analyze scanner shows a badnik's HP and its weakness. Chemical Plant bots hate Lightning!
+Ricky: The Tornado's nearly ready. Tails says it can fly through a Warp Ring!
+Tails: Remember: a Dual Tech uses both of our turns, but it's worth it.
+
+@ehz-enter
+> Emerald Hill. Waterfalls glitter under a sky that's too bright, too close.
+Tails: My compass is going crazy. The nearest Rift Anchor is past these hills!
+Sonic: Then let's not keep it waiting.
+
+@ehz-boss
+Tails: Uh, Sonic? That Coconuts is wearing a crown.
+Sonic: And holding a coconut the size of me. Try to keep up, Tails!
+
+@ehz-clear
+Tails: That was amazing! Hey, look, a chemical trail... it leads to the plant across the bay.
+Sonic: Chemical Plant. Lovely.
+
+@cpz-enter
+> Chemical Plant. Pipes rattle, and the Mega Mack is rising.
+Tails: Careful! That pink stuff's no swimming pool.
+Sonic: Noted. Let's find that anchor and get out of here.
+
+@cpz-boss
+> A mechanical shadow drops from the pipes overhead...
+Tails: A Grabber! A huge one! It's got an emerald in its claws!
+Sonic: Then it's about to drop it.
+
+@cpz-clear
+> Sonic and Tails recovered the third Chaos Emerald!
+Tails: The anchor's readings point down... deep underground. Mystic Cave!
+Sonic: Caves, huh. Stick close, buddy.
+
+@mcz-enter
+> Mystic Cave. Lanterns swing in a wind that comes from nowhere.
+Tails: I don't like it down here. Something's watching us.
+Sonic: Nah. Probably.
+
+@mcz-boss
+> Metal footsteps echo through the cavern. A silver figure steps into the lantern light.
+Tails: Is that... you?
+Sonic: A robot copy? Eggman, you really need a new hobby.
+> The machine's eyes glow red. It curls into a ball, and its spines turn to blades.
+
+@mcz-clear
+> Sonic and Tails recovered the fourth Chaos Emerald!
+Tails: Sonic, look at the compass! The biggest rift of all is up there, above the clouds.
+Tails: There's an island floating up there. The engine's pulling it down!
+Sonic: Then it's time to fly. Is the Tornado ready?
+Tails: I thought you'd never ask!
+> The Tornado roars into the sky and through a Warp Ring...
+
+@angel-arrive
+> Angel Island. An island that floats on the power of the Master Emerald.
+Tails: Whoa... the whole island is floating! And it's sinking, Sonic. Look at the edges!
+Sonic: The engine's dragging it into the other skies. We'd better hurry.
+> Somewhere in the jungle, someone is watching them land.
+
+@village-angel
+Tails: This old shrine must be where the Master Emerald sits. But the altar is empty...
+Flicky: A red guardian lives here. He's been searching for someone who stole his emerald.
+Pocky: He was very angry. You'd better not let him catch you!
+
+@aiz-enter
+> Angel Island Zone. The jungle shakes with distant explosions.
+Sonic: I smell smoke.
+Tails: That's Eggman's flamethrower ship! He's burning the jungle!
+
+@aiz-mid
+Eggman: You again? You're like a weed, Sonic. But weeds burn!
+Sonic: Not today!
+
+@aiz-boss
+> A red blur bursts from the trees and lands between Sonic and the path ahead.
+Knuckles: So YOU'RE the thieves the doctor warned me about.
+Sonic: Thieves? Pal, we're the good guys here.
+Knuckles: That's what a thief would say. Give back the Master Emerald, or I'll take it back!
+Tails: Sonic, he's not listening!
+Sonic: Then I guess we do this the hard way.
+
+@aiz-clear
+Knuckles: Ugh... you're strong. Stronger than a thief should be.
+Sonic: Because we're not thieves. Eggman lied to you.
+Tails: He's using the Chaos Emeralds to pull the islands together. We've been taking them back!
+Knuckles: Then where's the Master Emerald?
+Tails: My compass says there's a huge machine siphoning power somewhere above Launch Base...
+Knuckles: That two-faced egg! He used me. Again.
+Knuckles: Fine. I'm coming with you. But only to get the Master Emerald back. Don't get the wrong idea.
+Sonic: Wouldn't dream of it.
+Knuckles: Here. The doctor gave me this as a "reward". It's yours.
+> Knuckles joins the party! Sonic received the fifth Chaos Emerald!
+> Knuckles can now use Dual Techs with Sonic and Tails, and the Trinity Rush when all three have a turn.
+
+@hcz-enter
+> Hydrocity. Ancient waterways flooded with stolen power.
+Knuckles: The old waterworks. The anchor will be at the bottom.
+Tails: Watch the water bots. Lightning should short them out!
+
+@hcz-boss
+> The water churns. A drill-nosed machine rises out of the depths.
+Eggman: Did you think I'd let a mere echidna stop my engine? Ha!
+Knuckles: You're going to regret lying to me, Eggman!
+
+@hcz-clear
+> The party recovered the sixth Chaos Emerald!
+Eggman: Curses! No matter. The Death Egg is almost ready to launch!
+Knuckles: Launch Base. He built his launch pad on MY island.
+
+@lbz-enter
+> Launch Base. The Death Egg sits on its tower, humming with stolen light.
+Tails: The engine's on board the Death Egg! If it launches, the islands will collide!
+Sonic: Then we don't let it launch.
+
+@lbz-boss
+Eggman: Too late, you meddlers! Behold the Beam Rocket!
+Sonic: Is it too late to just say "no"?
+
+@lbz-clear
+> The party recovered the seventh Chaos Emerald!
+> The ground shakes. With a roar, the Death Egg tears free of its tower and climbs into the merged sky.
+Tails: It's launching! The Tornado can still catch it!
+Knuckles: Then what are we waiting for?
+
+@death_egg-arrive
+> The Death Egg. High above three islands drawn into one sky.
+Sonic: All seven Chaos Emeralds. With these, I can stop the engine for good.
+Knuckles: And the Master Emerald is in there somewhere.
+Tails: Let's end this. Together!
+> With all seven Chaos Emeralds, Sonic can become Super Sonic in battle for 50 rings. It drains 10 rings every turn.
+
+@village-death_egg
+Tails: The Tornado's docked. We can rest and restock here before we go in.
+Knuckles: No more running. The doctor ends this today.
+
+@dez-enter
+> Inside the Death Egg. Lights pulse in time with the Convergence Engine.
+Tails: The engine core is at the very end. And it's guarded by everything Eggman's got.
+Sonic: Good. I hate to be bored.
+
+@dez-mid
+> A chrome figure lands without a sound.
+Knuckles: Another robot copy of you, Sonic?
+Sonic: This one looks like it means business. Let's go!
+
+@dez-boss
+> The engine core: a colossal arm of steel, pulling three skies together.
+Eggman: Behold! The Convergence Engine! Fed by the Master Emerald, it will remake the world!
+Knuckles: Give back the Master Emerald, Eggman!
+Eggman: Come and take it, you red-quilled fool!
+Sonic: Everyone, together. This is it!
+
+@dez-clear
+> The engine sputters. The Master Emerald's light floods the core.
+Eggman: No... NO! My beautiful engine!
+Knuckles: The Master Emerald! It's free!
+Tails: The rings are closing! The islands are drifting back to their own skies!
+Eggman: This isn't over, Sonic! I'll be back! I always come back!
+Sonic: And we'll always be waiting.
+
+@ending
+> South Island's sky was blue again. The Flickies sang in Green Hill.
+> On West Side Island, Tails began work on a brand new aeroplane. Something even faster.
+> On Angel Island, the Master Emerald returned to its altar, and its guardian kept watch once more.
+Knuckles: Next time you're in trouble... I might help. Maybe.
+Tails: Hey Sonic, where are you going?
+Sonic: Wherever the wind takes me. See you around, buddy!
+> Three islands. Three skies. One adventure.
+> THE END. Thank you for playing!

@@ -1,0 +1,14 @@
+formatVersion: 1
+id: three-islands
+name: Three Islands
+version: 0.1.0
+authors:
+  - OpenGGF contributors
+description: A story-driven, fully turn-based JRPG across three skies. Explore South Island, West Side Island and Angel Island through their real acts, recruit Tails and Knuckles, combine Dual and Triple Techs, collect the Chaos Emeralds and stop Dr. Eggman's Convergence Engine aboard the Death Egg. Uses art and music from your Sonic 1, Sonic 2 and Sonic 3 & Knuckles ROMs; requires Sonic 3 & Knuckles, and chapters for missing ROMs are skipped.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s3k
+entrypoint: threeislands.ThreeIslandsMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}
