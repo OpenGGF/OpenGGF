@@ -319,6 +319,7 @@ class TestModZoneRuntimeProfile {
         when(base.getModZoneAdapter()).thenReturn(adapter);
         when(base.getZoneRegistry()).thenReturn(registry);
         when(base.createGame(any(GameDataSource.class))).thenReturn(game);
+        when(base.transformDecodedLevel(any(Level.class))).thenCallRealMethod();
         when(base.getObjectArtProvider()).thenReturn(objectArt);
         when(base.getLevelEventProvider()).thenReturn(mock(LevelEventProvider.class));
         when(base.getGameplayPolicyProvider()).thenReturn(

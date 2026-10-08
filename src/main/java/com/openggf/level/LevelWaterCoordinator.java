@@ -42,7 +42,7 @@ final class LevelWaterCoordinator {
     void initialize(boolean seamlessTransition) throws IOException {
         GameModule gameModule = levelManager.gameModule;
         WaterDataProvider waterProvider = levelManager.hasContributedZoneRuntime()
-                ? java.util.Objects.requireNonNullElse(levelManager.contributedWaterProviderOrNull(), DRY_CONTRIBUTION)
+                ? java.util.Objects.requireNonNullElse(levelManager.contributedZoneRuntime.waterProviderOrNull(), DRY_CONTRIBUTION)
                 : gameModule != null ? gameModule.getWaterDataProvider() : null;
         int featureZone = levelManager.getFeatureZoneId();
         int featureAct = levelManager.getFeatureActId();

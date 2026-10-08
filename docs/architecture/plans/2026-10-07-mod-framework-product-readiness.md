@@ -1052,3 +1052,69 @@ plus about four minutes guards, excluding queue wait. The invocation limit is
 150 minutes with the unchanged ten-minute no-output limit; either timeout means
 incomplete verification. Full development and actual-main delivery checks,
 failure/skip comparison, push and cleanup remain required.
+
+### Early structural controls before broad admission
+
+The first final broad request, direct session 56676 at f05, remained queued.
+Before Maven admission, a fresh direct JUnit Console 1.10.3 diagnostic exercised
+the two complete architectural/singleton guard classes using the actual focused
+JVM classpath: 80 tests, 77 passes, three failures, zero skips/aborts and all six
+containers successful. Its 7,410 Java-source fingerprint remained unchanged.
+The singleton class had no failures. The architectural failures were:
+
+- `releaseCriticalLargeClassesDoNotGrowWithoutExtraction`: playable sprite
+  3,298 > 3,258 and level manager 3,177 > 3,145 effective lines.
+- `objectManagerFacadeStaysWithinExtractedCollaboratorBudget`: object manager
+  3,113 > 3,086 effective lines.
+- `levelManagerDelegatesWaterLifecycleToNamedCollaborator`: the new contributed
+  water-provider accessor put water vocabulary back in the manager facade.
+
+An earlier minimal-classpath Console attempt had an additional missing-Jackson
+teardown error; it is rejected as qualification. The full-classpath repetition
+and the subsequent two-class diagnostic had no container errors. Neither is
+the complete Maven guards profile.
+
+Only this task's positively identified waiting development runner was interrupted;
+it exited 130 before Maven execution, and its temporary output was cleaned
+normally. The owned e600 artifact request also remained unadmitted and was
+cancelled by its owner: 735.5 seconds waiting, zero execution hold, wrapper 130
+and outer driver 1. No e600 kit or ZIP was produced. No other queue request,
+process, slot or lock was altered. These are cancelled requests, not test results.
+
+The correction extracts focused collaborators rather than raising any guard
+budget. `LevelContributedZoneRuntime` retains the act's service bundle and the
+existing installation, removal and animation order. `LevelWaterCoordinator`
+reads its optional water provider directly, preserving dry contributed defaults
+and the stock-only fallback. The same final world/session references and
+engine-owned rewind installer remain authoritative. Independent creator review
+found no new lifetime, factory-failure or public-declaration differences.
+
+The first level extraction command selected
+`TestTwoActModCampaign,TestModZoneRuntimeProfile,TestS3kModZoneLifecycle,TestWaterSystemRewindSnapshot,TestS3kSpecialStageReturnWaterRestore,TestSonic3kWaterDataProvider,TestModApiSignatureSurface`
+through profile-free queued `--lean -Dmse=off -B -q`, with all three absolute
+verified ROM properties. Its seven fresh reports contain 95 tests, zero failures,
+one error and zero skips; all three extracted-file hashes stayed frozen. The error
+is `TestModZoneRuntimeProfile#customS3kZoneInstallsExplicitEmptyRuntimeContracts`,
+`java.lang.NullPointerException: Decoded level transform`, before zone services
+are initialized. An independent fresh one-case Console probe using the exact
+previous d49 engine artifact (hash recorded above) and the identical test fixture
+reproduces the same error with no container failures. This rejects attribution
+to the extraction; it is an unadapted mock at the new decoded-level contract.
+
+The fixture now invokes the real default `GameModule.transformDecodedLevel`,
+which returns its input, rather than Mockito's unstubbed null result. Production
+null rejection and all assertions are unchanged. Direct focused session 79585,
+`python3 tools/testing/maven_queue.py --lean -Dmse=off -B -q -Dtest=TestModZoneRuntimeProfile test`,
+passes all nine fresh cases with zero failures/errors/skips, exit zero, after
+six seconds waiting. This mock-only selection needs no ROM. Its fixture hash and
+all three production extraction hashes remain unchanged through completion.
+
+The character worker's separate `47e137a54060b4fd708bb4bae23d5077495090f6`
+extracts sensor offsets and shape rotation into package-private
+`PlayableSpriteGeometry`, preserving byte arithmetic, virtual push-offset dispatch,
+centre adjustment, callbacks and captured state. Its source count becomes 3,256.
+With the three unchanged borrowed level files, direct queued session 5251 passes
+nine fresh suites / 73 tests with zero failures/errors/skips. The actual combined
+release-size guard method passes alongside character, sensor and rewind controls;
+the level count is now 3,143. The object-query extraction and complete fresh
+guards must still be composed and verified before resubmitting the broad run.

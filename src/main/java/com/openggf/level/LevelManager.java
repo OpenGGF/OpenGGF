@@ -318,7 +318,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     AnimatedPatternManager animatedPatternManager;
     AnimatedPaletteManager animatedPaletteManager;
     private ModZoneRuntimeProfile activeModZoneRuntimeProfile;
-    private com.openggf.game.modzone.ModZoneRuntimeServices activeModZoneRuntimeServices;
+    final LevelContributedZoneRuntime contributedZoneRuntime;
     private ModZoneRuntimeContribution activeModZoneRuntimeContribution;
     private CustomZonePaletteBridge activeCustomZonePaletteBridge;
     LevelState levelGamestate;
@@ -384,6 +384,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         this.waterSystem = waterSystem;
         this.gameState = gameState;
         this.worldSession = worldSession;
+        this.contributedZoneRuntime = new LevelContributedZoneRuntime(this, worldSession);
         this.graphicsManager = engineServices.graphics();
         this.audioManager = engineServices.audio();
         this.configService = engineServices.configuration();
@@ -667,7 +668,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public Level loadLevelData(int levelIndex) throws IOException {
         installGameplayInputFilter();
-        clearContributedZoneRuntime();
+        contributedZoneRuntime.clear();
         activeModZoneRuntimeContribution = gameModule == null ? null
                 : gameModule.getZoneRegistry().modZoneRuntimeContribution(levelIndex);
         activeModZoneRuntimeProfile = activeModZoneRuntimeContribution != null
@@ -762,7 +763,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             DeferredLevelResourceTracker deferredResources,
             String mutationKey) throws IOException {
         installGameplayInputFilter();
-        clearContributedZoneRuntime();
+        contributedZoneRuntime.clear();
         activeModZoneRuntimeContribution = gameModule == null ? null
                 : gameModule.getZoneRegistry().modZoneRuntimeContribution(levelIndex);
         activeModZoneRuntimeProfile = activeModZoneRuntimeContribution != null
@@ -1072,32 +1073,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void initZoneFeatures() throws IOException {
         resetZoneScopedRegistriesForLevelLoad();
-        var zoneRuntime = GameServices.zoneRuntimeRegistryOrNull();
-        var animatedTiles = GameServices.animatedTileChannelGraphOrNull();
         if (activeModZoneRuntimeProfile != null) {
-            if (zoneRuntime != null) zoneRuntime.clear();
-            if (animatedTiles != null) animatedTiles.clear();
-            var factory = activeModZoneRuntimeContribution.runtimeFactory();
-            activeModZoneRuntimeServices = factory == null ? null : factory.create(
-                    new com.openggf.game.modzone.ModZoneRuntimeContext(
-                            new com.openggf.game.ZoneKey.Mod(activeModZoneRuntimeContribution.ownerModId(),
-                                    activeModZoneRuntimeContribution.localKey()),
-                            gameModule.getGameCode(), currentZone, currentAct, level));
-            zoneFeatureProvider = activeModZoneRuntimeServices == null ? null : activeModZoneRuntimeServices.features();
-            if (parallaxManager != null) parallaxManager.installContributedHandler(currentZone,
-                    activeModZoneRuntimeServices == null ? null : activeModZoneRuntimeServices.scroll());
-            if (activeModZoneRuntimeServices != null) {
-                var runtime = activeModZoneRuntimeServices;
-                if (zoneRuntime != null && runtime.state() != null) zoneRuntime.install(runtime.state());
-                if (animatedTiles != null) animatedTiles.install(runtime.animatedTiles());
-                animatedPaletteManager = runtime.paletteAnimation();
-                var effects = GameServices.specialRenderEffectRegistryOrNull();
-                if (effects != null) runtime.renderEffects().forEach(effects::register);
-                var modes = GameServices.advancedRenderModeControllerOrNull();
-                if (modes != null) runtime.renderModes().forEach(modes::register);
-                com.openggf.game.session.ModZoneRuntimeInstaller.install(worldSession,
-                        List.copyOf(runtime.rewindAdapters().values()));
-            }
+            contributedZoneRuntime.initialize(activeModZoneRuntimeContribution);
         } else {
             zoneFeatureProvider = gameModule.getZoneFeatureProvider();
         }
@@ -1105,21 +1082,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         initializeZoneFeatureProvider(zoneFeatureProvider);
     }
 
-    private void clearContributedZoneRuntime() {
-        activeModZoneRuntimeServices = null;
-        if (parallaxManager != null) parallaxManager.installContributedHandler(-1, null);
-        com.openggf.game.session.ModZoneRuntimeInstaller.install(worldSession, List.of());
-    }
-
     boolean hasContributedZoneRuntime() { return activeModZoneRuntimeProfile != null; }
     void updateContributedAnimatedTiles() {
-        if (activeModZoneRuntimeServices == null) return;
-        var graph = GameServices.animatedTileChannelGraphOrNull();
-        if (graph != null) graph.update(new com.openggf.game.animation.ChannelContext(graph, null,
-                level, activeModZoneRuntimeServices.state(), currentZone, currentAct, frameCounter));
-    }
-    com.openggf.game.WaterDataProvider contributedWaterProviderOrNull() {
-        return activeModZoneRuntimeServices == null ? null : activeModZoneRuntimeServices.water();
+        contributedZoneRuntime.updateAnimatedTiles();
     }
 
     void reinitializeZoneFeaturesForActTransition() throws IOException {
@@ -4635,7 +4600,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         activeHudProfile = HudProfile.stock();
         activeModZoneRuntimeContribution = null;
         activeModZoneRuntimeProfile = null;
-        clearContributedZoneRuntime();
+        contributedZoneRuntime.clear();
         activeCustomZonePaletteBridge = null;
         animatedPatternManager = null;
         animatedPaletteManager = null;
@@ -4659,7 +4624,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         cacheLevelDimensions();
         levels.clear();
         activeModZoneRuntimeProfile = null;
-        clearContributedZoneRuntime();
+        contributedZoneRuntime.clear();
     }
 
     /**
