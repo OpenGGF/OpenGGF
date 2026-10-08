@@ -185,7 +185,11 @@ public final class Creature {
     public void draw(SurfaceMode s, SceneCanvas c, float sx, float sy, long ticks, int tint) {
         SceneSprite sprite = frame(s);
         boolean right = facing > 0;
-        SceneDraw style = SceneDraw.plain().withScale(species.scale).withFlipX(right).withTint(tint);
+        // Freed animals face right in their unflipped ROM mappings. S1 Anml_FromEnemy,
+        // S2 Obj28_InitRandom and S3K loc_2C940 set x-flip for negative X velocity.
+        // The catalogue's badnik art uses the opposite facing convention.
+        boolean flipX = species.body.animal() ? !right : right;
+        SceneDraw style = SceneDraw.plain().withScale(species.scale).withFlipX(flipX).withTint(tint);
         if (hit > 0 && (ticks / 2) % 2 == 0) {
             style = style.withFlash(0xFFFFFFFF);
         }

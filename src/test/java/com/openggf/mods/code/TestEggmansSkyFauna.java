@@ -74,6 +74,7 @@ class TestEggmansSkyFauna {
                 checkedAnimals++;
             }
             var set = art.sprites(request, palette);
+            checkDrawFacing(def, key, set, animals.containsKey(key));
             for (int frame : (int[]) type.getMethod("frames").invoke(def)) {
                 assertTrue(frame >= 0 && frame < set.frameCount(), key + " frame " + frame);
                 var sprite = set.frame(frame);
@@ -88,5 +89,40 @@ class TestEggmansSkyFauna {
         }
         assertEquals(animals.size(), checkedAnimals);
         assertEquals(expectedBodies, bodies);
+    }
+
+    /** Exercise Creature.draw, including its frame selection, rather than testing a flip formula alone. */
+    private void checkDrawFacing(Object def, String key, com.openggf.mods.scene.SceneSpriteSet set,
+            boolean rightFacingArt) throws Exception {
+        Class<?> speciesType = harness.loader().loadClass("eggsky.world.Species");
+        Class<?> creatureType = harness.loader().loadClass("eggsky.surface.Creature");
+        Class<?> surfaceType = harness.loader().loadClass("eggsky.surface.SurfaceMode");
+        Object species = speciesType.getConstructor(String.class, int.class, String.class, long.class)
+                .newInstance(key, 0, key, 42L);
+        speciesType.getField("body").set(species, def);
+        Object creature = creatureType.getConstructor(speciesType, String.class, float.class, float.class, long.class)
+                .newInstance(species, key, 100f, 100f, 42L);
+        Object surface = org.mockito.Mockito.mock(surfaceType, invocation -> switch (invocation.getMethod().getName()) {
+            case "creatureArt" -> set;
+            case "creatureFrame" -> set.frame((int) invocation.getArgument(1));
+            default -> org.mockito.Answers.RETURNS_DEFAULTS.answer(invocation);
+        });
+        var canvas = org.mockito.Mockito.mock(com.openggf.mods.scene.SceneCanvas.class);
+        var draw = creatureType.getMethod("draw", surfaceType, com.openggf.mods.scene.SceneCanvas.class,
+                float.class, float.class, long.class, int.class);
+        for (int facing : new int[] {-1, 1}) {
+            creatureType.getField("facing").setInt(creature, facing);
+            for (float speed : new float[] {0, 1}) {
+                creatureType.getField("vx").setFloat(creature, facing * speed);
+                org.mockito.Mockito.clearInvocations(canvas);
+                draw.invoke(creature, surface, canvas, 100f, 100f, 0L, -1);
+                var style = org.mockito.ArgumentCaptor.forClass(com.openggf.mods.scene.SceneDraw.class);
+                org.mockito.Mockito.verify(canvas).draw(
+                        org.mockito.ArgumentMatchers.any(com.openggf.mods.scene.SceneSprite.class),
+                        org.mockito.ArgumentMatchers.anyFloat(), org.mockito.ArgumentMatchers.anyFloat(), style.capture());
+                assertEquals(rightFacingArt ? facing < 0 : facing > 0, style.getValue().flipX(),
+                        key + " facing " + facing + " speed " + speed);
+            }
+        }
     }
 }

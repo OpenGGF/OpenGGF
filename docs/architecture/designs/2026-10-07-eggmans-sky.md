@@ -327,3 +327,37 @@ Validation against these working changes, Java 21:
   Focused validation only, not a full ordinary/guard suite pass.
 - `python3 examples/build_example.py eggmans-sky --skip-engine`: compiled,
   validated and rebuilt `target/examples/eggmans-sky/eggmans-sky.jar`.
+
+## Animal travel direction (2026-10-08)
+
+Working changes above `9a546f64d7f9c52042865b467cd43c6f6ae7ad34` correct
+`Creature.draw`'s assumption that every body faces left before mirroring. All
+17 freed-animal bodies face right in their ROM mappings, as also visible in the
+previous task's contact sheets. S1 `Anml_FromEnemy`, S2 `Obj28_InitRandom`, and
+S3K `loc_2C940` set render X-flip for the negative horizontal velocities from
+the animal tables. Their later reversal routines negate velocity and toggle
+that same bit. Animals therefore need the opposite flip rule to the catalogue's
+badniks. Changing movement or reversing every creature would be incorrect.
+
+The fix chooses the flip convention using the existing animal classification.
+It leaves movement, steering, frame selection, IDs and saves intact. The fauna
+regression now exercises actual `Creature.draw` calls for all 83 bodies, checking
+both left/right directions while moving and at rest (332 draw checks). It uses
+real ROM sprites with a mocked surface art lookup and recording canvas; this
+checks draw submission, not GPU output.
+
+Validation selection: `run_categories.py --base
+9a546f64d7f9c52042865b467cd43c6f6ae7ad34` selected 3,012 ordinary classes plus
+guards because of unclassified example paths and the unrelated untracked movie.
+Proportionate focused validation is appropriate for this local presentation
+branch: no shared renderer, physics, timing, public API or save format changed.
+
+- Java 21 `maven_queue.py --lean -Dmse=off
+  -Dtest=TestEggmansSkyFauna,TestEggmansSkyScene,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+  with `test` and all three absolute root ROM properties: 73 passed, zero
+  failures/errors/skips against these working changes. This includes the 332
+  facing assertions and all-biome scene traversal; it is focused validation,
+  not a full ordinary/guard suite pass.
+- `python3 examples/build_example.py eggmans-sky --skip-engine`: compilation,
+  mod validation and packaging passed. Installed the rebuilt jar into `mods/`
+  and refreshed its existing trusted SHA-256 in `mods/modstate.json`.
