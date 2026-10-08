@@ -18,6 +18,28 @@ class TestDynamicArtLifecycleService {
     private static final int SONIC_VRAM = 0xF000;
 
     @Test
+    void rewindRestoresUnclaimedPreMainLoopTransferBoundary() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        service.beginRun();
+        service.setMovieLogicalFrame(100);
+        service.observePlayerDplc(GameId.S1, "sonic", 1,
+                new SpriteDplcFrame(List.of(new TileLoadRequest(0, 3))));
+        service.holdPendingPlayerPreparationForPreMainLoopTail(26);
+        var original = service.capture();
+
+        service.setMovieLogicalFrame(200);
+        service.holdPendingPlayerPreparationForPreMainLoopTail(26);
+        service.restore(original);
+        service.releaseUnclaimedPreMainLoopPlayerTransfer();
+
+        assertEquals(List.of("submitted", "completed"), service.gapEdges().stream()
+                .map(edge -> edge.phase()).toList());
+        assertEquals(List.of(101, 101), service.gapEdges().stream()
+                .map(edge -> edge.movieLogicalFrame()).toList(),
+                "an unclaimed transfer belongs to the restored boundary's next VBlank");
+    }
+
+    @Test
     void convertedBankAggregatesDisjointRunsAndRewindsPendingDma() {
         DynamicArtLifecycleService service = new DynamicArtLifecycleService();
         startOpen(service);

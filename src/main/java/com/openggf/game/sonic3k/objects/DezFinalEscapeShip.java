@@ -5,7 +5,7 @@ import com.openggf.game.sonic3k.runtime.DezFinalCamera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.GameOverExit;
-import com.openggf.game.save.SaveReason;
+import com.openggf.game.sonic3k.S3kFullSaveGame;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -179,7 +179,7 @@ final class DezFinalEscapeShip extends DezFinalBossSprite
         if(exitFade==null) throw new IllegalStateException("Native forced DEZ fade slot unavailable");
     }
     private void finishLevel() {
-        services().requestSessionSave(SaveReason.PROGRESSION_SAVE); pendingDelete=true; status|=0x80; exitFade=null;
+        S3kFullSaveGame.complete(services()); pendingDelete=true; status|=0x80; exitFade=null;
         var character=state().playerCharacter();
         if((character==PlayerCharacter.SONIC_ALONE || character==PlayerCharacter.SONIC_AND_TAILS)
                 && services().gameState().getEmeraldCount()==7) services().requestZoneAndAct(0xC,0,true);

@@ -136,6 +136,19 @@ final class FreshLevelTransitionBoundaryController {
         return pending != null;
     }
 
+    RewindState captureForRewind() {
+        return new RewindState(pending, initialPublished);
+    }
+
+    void restoreForRewind(RewindState state) {
+        java.util.Objects.requireNonNull(state, "state");
+        pending = state.pending();
+        initialPublished = state.initialPublished();
+    }
+
+    /** Retain the deferred native player assembly and its publication boundary. */
+    record RewindState(Boundary pending, boolean initialPublished) {}
+
     private void restorePlayables(LevelManager level) {
         for (PlayableState playableState : pending.playableStates()) {
             Sprite sprite = level.spriteManager.getSprite(playableState.code());

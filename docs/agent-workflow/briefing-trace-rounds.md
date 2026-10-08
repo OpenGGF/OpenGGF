@@ -71,6 +71,30 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Movie input is not a native movement latch (2026-10-07, stock parity S1
+frontiers): the recorder's input column comes from the BK2 row, with raw RAM
+only as a fallback; it does not observe the game's logical held/new pair at
+movement entry. Replay the original movie with its original sync settings,
+verify the exact ROM callback bytes, and observe the owning read boundary.
+Match surrounding frame-end position, subposition, speed, status and animation
+to the committed rows before interpreting the latch. The S1 capture matched all
+20 surrounding rows and measured neutral raw and logical pairs at both release
+frontiers. Its CSV heading `vfc` read `$FE04`, the level frame counter; label the
+actual address and owner rather than inferring a clock from a probe's heading.
+An emulator startup crash with no observations is rejected evidence, even if a
+host wrapper reports that it launched.
+
+Correct logical input can coexist with stale effective sprite input (2026-10-08,
+stock parity S1 frontiers): the actual BK2, prepared/applied cursor, zero offset
+and InputHandler snapshot all agreed on neutral input, while movement consumed
+Up or Right from persistent sprite forced masks seeded at the load seam. Inspect
+incoming movement flags, effective directions, forced masks, legacy forced
+direction flags and control locks at the same body entry. A neutral logical
+snapshot alone does not prove neutral gameplay input. Correct the owning writer
+and publication seam; preserve legitimate scripted control rather than clearing
+all forced state or adjusting physics. Native controller latches are a separate
+observation from both physical BK2 rows and engine input publication.
+
 Unpaced mod captures can outrun preparation (2026-10-08, Sitar Hero polish):
 `ExampleModCapture` advances ticks as quickly as it can while ROM song preparation
 runs on a worker. A short capture without video or frequent PNGs can finish before
@@ -120,6 +144,27 @@ worktree's `target/` before launching. If recovery is needed, verify the exact
 owned process and follow its `/proc/<pid>/fd/1` descriptor with a bounded
 `tail --pid` follower; record and clean up that follower. Log recovery and queue
 admission are not test completion.
+
+A bootstrap module switch is not a live-world fixture switch (2026-10-07,
+pending insta-shield rewind regression): `TestEnvironment.resetAll` had already
+opened an S2 world. Setting `GameModuleRegistry` to S3K changed the default while
+status/controller refresh continued to read the live S2 module. An expected red
+case passed and the registered-shield control failed. Use
+`TestEnvironment.configureGameModuleFixture` for the intended live world, verify
+the positive control, and discard the mixed result before attributing behavior.
+
+A complete registry restore can still omit a scheduling owner (2026-10-07,
+FBZ → SOZ destination floor): pending shield restoration exposed five art clocks
+one step higher after an otherwise matching eight-row replay. A read-only retry
+probe showed no setup-only retry or fade; the original first row published a
+pending fresh-level boundary without claiming a closure, whereas its replay
+ran ordinary work. The deferred boundary was absent from registry capture.
+The load reporter captures floor zero before the controller assigns its pending
+assembly, so restoring that floor must clear stale pending state; explicit later
+captures must retain their complete deferred state and publication phase.
+Inspect the first actual dispatch and its ownership before compensating clocks
+or blaming driver counters. Capture the complete deferred state through its
+existing production owner; keep the floor and full forward comparison intact.
 
 A macOS native-test stall can be AWT rather than gameplay (2026-10-06,
 `1ae1596837`): the ordinary suite stopped producing output in

@@ -1177,3 +1177,17 @@ four-shield collision regression and flame lifecycle checks above apply.
 There is no new act-route, rewind, viewport, donor or roster coverage; the
 inherited gaps remain. Combined validation is recorded in the
 [PR task design](../../designs/2026-10-05-slay-the-robotnik.md#ci-guard-follow-up-2026-10-06).
+
+## Full SaveGame consumer boundary — 2026-10-08
+
+The existing Knuckles LRZ StartNewLevel full SaveGame gate (sonic3k.asm:181385) now dispatches through the semantic helper; character/zone and packed destination gates are unchanged.
+
+`828bc94d8` clears the native32-bit collected-ring mask at exactly seven existing
+full-SaveGame gates; existing game-state rewind owns the mask. Focused138 cases
+pass without failures/errors/skips, including direct Results tally/helper and
+mask-restoration checks. The other six non-tally live routes, successful disk
+persistence, live SK-alone, and this matrix's remaining route/rewind/breadth
+products are not newly certified. Generic persistence and special-stage/lives/
+death/reload/seamless semantics remain distinct. See the [lane audit](../../audits/2026-10-07-s3k-parity-gap-verification.md)
+for native ordering and scope, and [combined qualification](../../audits/2026-10-07-stock-parity-gap-verification.md#final-composed-canonical-replay-2026-10-08)
+for exact commands/frontiers. Broad validation and delivery remain pending.

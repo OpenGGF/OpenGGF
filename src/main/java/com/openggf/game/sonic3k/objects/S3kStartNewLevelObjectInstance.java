@@ -2,7 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
-import com.openggf.game.save.SaveReason;
+import com.openggf.game.sonic3k.S3kFullSaveGame;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
@@ -27,7 +27,7 @@ public final class S3kStartNewLevelObjectInstance extends AbstractObjectInstance
         // Sonic/Tails reaching this placement still take the same transition.
         if (services().currentZone() == Sonic3kZoneIds.ZONE_LRZ
                 && ActiveGameplayTeamResolver.resolvePlayerCharacter(services().configuration()) == PlayerCharacter.KNUCKLES) {
-            services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
+            S3kFullSaveGame.complete(services());
         }
         // loc_86418 reads a WORD at subtype: fresh SST byte $2D is zero. LSR.W #1
         // then ROL.B #1 decode the high byte's low bit into the destination act.

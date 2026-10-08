@@ -1861,11 +1861,16 @@ determinism measurement of its own.
 ## S2 Whole-Run V-int Clock Cannot Be Made Exact
 
 Current qualification (2026-10-07): standalone special stages 2/5/6 and EHZ1
-segment 2 now pass after restoring the semantic Tails body-art owner. Stage 7
-remains red; the fresh full/prefix chain stops at special-stage segment 1 with
-newly observable Tails art disagreements, following an earlier coconut-damage
-divergence. Historical segment-11 and unreached-stage observations below describe
-their dated runs, not the current frontier. See the
+segment 2 pass after restoring the semantic Tails body-art owner. The continued
+swarm's locally committed native Coconuts targeting correction closes EHZ1
+segment 1 and the opening chain's coconut damage and SS1 art disagreements.
+The continuous complete-emerald prefix passes; the full chain advances from
+special-stage segment 1 to segment 17 (SS7). A further native zero-duration
+CPZ tube correction clears CPZ1/CPZ2 in the chain and all three standalone
+fixtures. ARZ1, stage 7 art and earlier gap-clock differences remain measured.
+These candidates are awaiting combined integration qualification. Stage 7 remains red. Historical segment-11 and
+unreached-stage observations below describe their dated runs, not the current
+frontier. See the
 [S2 audit](../architecture/audits/2026-10-07-s2-parity-gap-verification.md).
 
 `TestS2CompleteEmeraldRunChain`'s final physics axis is blocked on this, after eleven

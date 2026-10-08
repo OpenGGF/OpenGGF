@@ -3697,11 +3697,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
         spriteManager.setPlaybackInputSuppressed(true);
-        Sprite main = spriteManager.getSprite(resolveMainCharacterCode());
-        if (main instanceof AbstractPlayableSprite playable) {
-            playable.setForcedInputMask(playback.getCurrentForcedInputMask());
-            playable.setForcedJumpPress(playback.isCurrentForcedJumpPress());
-        }
     }
 
     private void applyPersistedEditorEdits() {
@@ -4991,7 +4986,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public RewindSnapshottable<?> levelTransitionRewindSnapshottable() {
-        return new LevelTransitionRewindAdapter(transitions);
+        return new LevelTransitionRewindAdapter(transitions, freshLevelTransitionBoundary);
     }
 
     /** Returns the rewind adapter for the history-dependent persistent Plane B nametable. */
