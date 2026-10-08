@@ -19,7 +19,9 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -36,6 +38,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestObjectUpdateClockTerminologyGuard {
     private static final String EXPECTED_NAME = "vIntRunCount";
     private static final String PLAYABLE_ENTITY = "com.openggf.game.PlayableEntity";
+    /**
+     * Whole-tree attribution retains ~0.9 GiB, so a 1 GiB child thrashed in marking cycles and took
+     * 94-120 s on CI against the old 2-minute bound. The bound now only catches a hung child.
+     */
+    private static final String GUARD_HEAP = "-Xmx2g";
+    private static final long GUARD_TIMEOUT_MINUTES = 6;
     private static final List<Path> SOURCE_ROOTS = List.of(
             Path.of("src", "main", "java"),
             Path.of("src", "test", "java"));
@@ -107,18 +115,37 @@ class TestObjectUpdateClockTerminologyGuard {
     void objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks() throws Exception {
         Process process = new ProcessBuilder(
                 Path.of(System.getProperty("java.home"), "bin", "java").toString(),
-                "-Xmx1g",
+                GUARD_HEAP,
                 "-cp", System.getProperty("java.class.path"),
                 GuardProcess.class.getName())
                 .redirectErrorStream(true)
                 .start();
-        boolean finished = process.waitFor(2, TimeUnit.MINUTES);
+        // Drain while the child runs: a full pipe would stall it, and destroyForcibly() closes the stream.
+        ByteArrayOutputStream captured = new ByteArrayOutputStream();
+        Thread drain = new Thread(() -> copyUntilClosed(process.getInputStream(), captured),
+                "terminology-guard-output");
+        drain.setDaemon(true);
+        drain.start();
+        boolean finished = process.waitFor(GUARD_TIMEOUT_MINUTES, TimeUnit.MINUTES);
         if (!finished) {
-            process.destroyForcibly();
+            process.destroyForcibly().waitFor();
         }
-        String output = new String(process.getInputStream().readAllBytes());
-        assertTrue(finished, "terminology guard subprocess timed out:\n" + output);
+        drain.join(TimeUnit.SECONDS.toMillis(30));
+        String output = captured.toString();
+        assertTrue(finished, () -> "terminology guard subprocess timed out after "
+                + GUARD_TIMEOUT_MINUTES + " minutes:\n" + output);
         assertTrue(process.exitValue() == 0, () -> "terminology guard subprocess failed:\n" + output);
+    }
+
+    private static void copyUntilClosed(InputStream input, ByteArrayOutputStream output) {
+        byte[] buffer = new byte[8192];
+        try (input) {
+            for (int read; (read = input.read(buffer)) >= 0; ) {
+                output.write(buffer, 0, read);
+            }
+        } catch (IOException closedByDestroy) {
+            // Keep whatever the child printed before it was killed.
+        }
     }
 
     private static void runGuard() throws Exception {
