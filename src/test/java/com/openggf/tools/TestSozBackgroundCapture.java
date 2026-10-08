@@ -50,7 +50,8 @@ class TestSozBackgroundCapture {
                 boolean jump = frame < 20;
                 session.step(new Bk2FrameInput(frame,
                         INPUT_RIGHT | (jump ? INPUT_JUMP : 0), jump ? 1 : 0, false, ""));
-                image = session.render();
+                if (frame == 60) image = session.render();
+                else session.renderFrame();
             }
             assertEquals(96, GameServices.camera().getX(), "exposed-sky camera boundary");
             for (int y = 50; y < 160; y++) {
@@ -74,7 +75,7 @@ class TestSozBackgroundCapture {
                 boolean jump = frame % 80 < 20;
                 session.step(new Bk2FrameInput(frame,
                         INPUT_RIGHT | (jump ? INPUT_JUMP : 0), jump ? 1 : 0, false, ""));
-                session.render();
+                session.renderFrame();
             }
             var level = GameServices.level();
             var modes = GameServices.advancedRenderModeControllerOrNull();
