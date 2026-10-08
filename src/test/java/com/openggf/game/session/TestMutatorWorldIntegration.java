@@ -39,6 +39,7 @@ class TestMutatorWorldIntegration {
         return new DelegatingGameModule(new Sonic2GameModule(),"test-mutators:fixture") {
             @Override public boolean supportsSidekick() { return false; }
             @Override public <T> T getGameService(Class<T> type) {
+                if(type==WorldSessionPolicyProvider.class) return type.cast(new MutatorWorldProvider(catalog));
                 if(type==MutatorCatalog.class) return type.cast(catalog);
                 if(type==MutatorSupportProfile.class) return type.cast(new MutatorSupportProfile(){
                     public Set<MutatorCapability> capabilities(int z,int a){ return Set.of(MutatorCapability.DRY_SONIC_GRAVITY); }
@@ -51,6 +52,53 @@ class TestMutatorWorldIntegration {
     WorldSession open(List<MutatorDefinition> definitions) {
         var m=module(definitions); GameModuleRegistry.setCurrent(m); SessionManager.openGameplaySession(new Sonic2GameModule(),m,null);
         TestEnvironment.activeGameplayMode(); return SessionManager.getCurrentWorldSession();
+    }
+    @Test void stockAndUnsupportedWorldsKeepNoPolicyStateOrPreferenceStore() {
+        var stock = new WorldSession(new Sonic2GameModule());
+        assertFalse(WorldSessionPolicyAccess.hasPolicies(stock));
+        assertNull(MutatorWorldAccess.state(stock));
+        assertFalse(Files.exists(temp.resolve("fresh/player/mutators")));
+        var catalog = new MutatorCatalog(List.of(new OwnedMutator("test-mutators",
+                definition("gravity", MutatorScope.LIVE,
+                        options -> List.of(new MutatorPolicy.DrySonicGravity(50))))), faults);
+        var unsupported = new DelegatingGameModule(new Sonic2GameModule(), "test-mutators:unsupported") {
+            @Override public <T> T getGameService(Class<T> type) {
+                if (type == WorldSessionPolicyProvider.class) return type.cast(new MutatorWorldProvider(catalog));
+                return super.getGameService(type);
+            }
+        };
+        assertNull(MutatorWorldAccess.state(new WorldSession(unsupported)));
+        assertFalse(Files.exists(temp.resolve("fresh/player/mutators")));
+    }
+    @Test void backingProviderCombinesOwnersAndOpensIndependentWorldsWithOuterSupport() {
+        GameModule backing = new Sonic2GameModule();
+        for (String owner : List.of("first-owner", "second-owner")) {
+            var plan = ModContextTestAccess.freezeWithMutator(owner, "s2",
+                    definition("gravity", MutatorScope.LIVE,
+                            options -> List.of(new MutatorPolicy.DrySonicGravity(50))));
+            backing = new ModBackedGamePatch(plan, faults).apply(backing, null);
+        }
+        var provider = backing.getGameService(WorldSessionPolicyProvider.class);
+        assertSame(provider, backing.getGameService(WorldSessionPolicyProvider.class));
+        var resolved = new DelegatingGameModule(backing, "test-mutators:outer-support") {
+            @Override public <T> T getGameService(Class<T> type) {
+                if (type == MutatorSupportProfile.class) return type.cast(new MutatorSupportProfile() {
+                    public Set<MutatorCapability> capabilities(int zone, int act) {
+                        return Set.of(MutatorCapability.DRY_SONIC_GRAVITY);
+                    }
+                    public boolean supportsPlayer(String key, boolean leader) { return leader; }
+                });
+                return super.getGameService(type);
+            }
+        };
+        var first = MutatorWorldAccess.state(new WorldSession(new Sonic2GameModule(), resolved, null));
+        var second = MutatorWorldAccess.state(new WorldSession(new Sonic2GameModule(), resolved, null));
+        assertEquals(List.of("first-owner:gravity", "second-owner:gravity"),
+                first.definitions().stream().map(OwnedMutator::key).toList());
+        assertNotSame(first, second);
+        assertNotEquals(first.generation(), second.generation());
+        first.requestEnabled("first-owner:gravity", true);
+        assertFalse(second.requested().get("first-owner:gravity").enabled());
     }
     @Test void firstLaunchCreatesRequestedStoreAndWorldRetirementRejectsHistoricalState() {
         var world=open(List.of(definition("gravity",MutatorScope.LIVE,o->List.of(new MutatorPolicy.DrySonicGravity(50)))));

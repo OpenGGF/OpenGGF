@@ -1,8 +1,9 @@
-package com.openggf.game.session;
+package com.openggf.mods.mutators;
 
 import com.openggf.game.LevelLoadCause;
 import com.openggf.game.rewind.RewindSnapshottable;
-import com.openggf.mods.mutators.*;
+import com.openggf.game.session.WorldSession;
+import com.openggf.game.session.WorldSessionPolicyState;
 import com.openggf.mods.ModStateSaveResult;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.managers.SpriteManagerInternalAccess;
@@ -12,7 +13,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 /** World-owned policy/preferences lifetime, independent of disposable gameplay contexts. */
-final class MutatorWorldState implements RewindSnapshottable<MutatorSessionState.Snapshot> {
+final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshottable<MutatorSessionState.Snapshot> {
     // Identity allocation only. No configuration or gameplay values live in process statics.
     private static final AtomicLong GENERATIONS = new AtomicLong();
     final MutatorSessionState state;
@@ -45,7 +46,7 @@ final class MutatorWorldState implements RewindSnapshottable<MutatorSessionState
                 catalog.faults(), catalog.faults()::isOwnerAvailable, requested);
     }
 
-    void beforeAssembly(LevelLoadCause cause) {
+    @Override public void beforeAssembly(LevelLoadCause cause) {
         MutatorSessionState.LoadCause mapped = mapped(cause);
         if (mapped == null || !mapped.qualifies()) return;
         if (!launched) {
@@ -60,7 +61,7 @@ final class MutatorWorldState implements RewindSnapshottable<MutatorSessionState
         admissionError = admission.accepted() ? "" : "Reload kept prior settings: " + admission.message();
     }
 
-    void bind(SpriteManager sprites) {
+    @Override public void bindRoster(SpriteManager sprites) {
         SpriteManagerInternalAccess.bindMutatorPolicies(sprites, new PlayableMutatorPolicySource() {
             @Override public void beforeForwardTick() { state.onForwardTick(); }
             @Override public PlayableMutatorPolicy policyFor(AbstractPlayableSprite sprite) {
@@ -96,7 +97,7 @@ final class MutatorWorldState implements RewindSnapshottable<MutatorSessionState
         return support != null && !support.capabilities(world.getCurrentZone(), world.getCurrentAct()).isEmpty();
     }
     void ownScreen(com.openggf.mods.mutators.MutatorConfigurationScreen screen) { screens.add(screen); }
-    void closeScreens() { screens.forEach(com.openggf.mods.mutators.MutatorConfigurationScreen::close); }
+    @Override public void closeScreens() { screens.forEach(com.openggf.mods.mutators.MutatorConfigurationScreen::close); }
 
     /** Host-selected settings directory, created without following existing ancestor symlinks.
      * Publication separately pins directory identity and uses SecureDirectoryStream.
@@ -137,6 +138,14 @@ final class MutatorWorldState implements RewindSnapshottable<MutatorSessionState
             case SEAMLESS_HANDOFF -> MutatorSessionState.LoadCause.SEAMLESS_HANDOFF;
         };
     }
+    @Override public <T> T getService(Class<T> type) {
+        return type == MutatorWorldState.class ? type.cast(this) : null;
+    }
+    @Override public RewindSnapshottable<?> rewindAdapter() { return this; }
+    @Override public void failedAssembly(LevelLoadCause cause) {
+        if (cause != LevelLoadCause.DECODE_ONLY && cause != LevelLoadCause.PREVIEW) state.close();
+    }
+    @Override public void retire() { closeScreens(); state.close(); }
     @Override public String key() { return "mutators"; }
     @Override public MutatorSessionState.Snapshot capture() { return state.snapshot(); }
     @Override public void restore(MutatorSessionState.Snapshot snapshot) { state.restore(snapshot); }

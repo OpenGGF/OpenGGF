@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Capture boot modes own different driver contracts (2026-10-08 Mutator Lab repair):
+title-first capture follows the normal loop fade owner and rebinds its player after
+launch. Applying those choices globally to the existing direct-level driver changed
+cold route handoffs and fade snapshot assertions. Preserve the default driver until
+its consumers are migrated and validated together. Its CSV keeps input last;
+appending host observation columns silently broke a prefix comparator that strips
+the final field. Extended host columns are explicit in the title-first mode.
+
 Desktop visibility and input need separate proof (2026-10-07 Mutator Lab): an
 X11 window may exist but remain unmapped while `glfwShowWindow` waits. Recheck
 its exact child PID, title, `IsViewable` state and positive geometry immediately

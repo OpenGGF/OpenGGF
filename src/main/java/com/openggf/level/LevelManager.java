@@ -498,36 +498,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void loadLevel(int levelIndex, LevelLoadMode loadMode, LevelLoadContext ctx) throws IOException {
         discardInitialProcessSpritesLifecycle();
-        // A cause labels an actual fresh assembly; it cannot turn a decode or
-        // preview into configuration admission. Match the production setup gate.
-        var admissionCause = loadMode == LevelLoadMode.PREVIEW_CAPTURE
-                ? com.openggf.game.LevelLoadCause.PREVIEW
-                : ctx.isIncludePostLoadAssembly() && ctx.getAssemblyKind() == LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY
-                    ? ctx.getLoadCause() : com.openggf.game.LevelLoadCause.DECODE_ONLY;
+        var attempt = new LevelLoadAttempt(worldSession, spriteManager, loadMode, ctx);
         try {
-            com.openggf.game.session.MutatorWorldAccess.beforeAssembly(worldSession, admissionCause);
-            // A production replay/bootstrap reset retires structural sprite bindings.
-            // Reinject this world owner before any assembly recreates/dispatches players.
-            com.openggf.game.session.MutatorWorldAccess.bindRoster(worldSession, spriteManager);
-            ctx.resetInitialProcessSpritesRequestForLoadAttempt();
-            GameModule module = activeGameModule();
-            LevelInitProfile profile = module.getLevelInitProfile();
-            ctx.setLevelIndex(levelIndex);
-            ctx.setLoadMode(loadMode);
-
-            List<InitStep> steps = profile.levelLoadSteps(ctx);
-            if (steps.isEmpty()) {
-                throw new IllegalStateException(
-                    "No level load steps defined for " +
-                    module.getClass().getSimpleName() +
-                    ". All game modules must implement levelLoadSteps().");
-            }
-            for (InitStep step : steps) {
-                long start = System.nanoTime();
-                step.execute();
-                long elapsed = (System.nanoTime() - start) / 1_000_000;
-                LOGGER.fine(() -> String.format("  [%s] %dms — %s", step.name(), elapsed, step.romRoutine()));
-            }
+            attempt.execute(this::activeGameModule, levelIndex);
             // The LoadLevelData step stores the result in ctx
             if (ctx.getLevel() != null) {
                 writeCurrentLevel(ctx.getLevel());
@@ -544,21 +517,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                         completedProductionLoadGeneration);
             }
         } catch (Exception e) {
-            com.openggf.game.session.MutatorWorldAccess.failedAssembly(worldSession, admissionCause);
-            discardInitialProcessSpritesLifecycle();
-            try { activeGameModule().getLevelInitProfile().cancelPendingLevelLoadWork(); }
-            catch (com.openggf.mods.code.ModFaultBoundary.CallbackAborted quarantined) {
-                if (!(e instanceof com.openggf.mods.code.ModFaultBoundary.CallbackAborted)) e.addSuppressed(quarantined);
-            }
-            if (e instanceof com.openggf.mods.code.ModFaultBoundary.CallbackAborted aborted) throw aborted;
-            // Profile steps wrap checked exceptions in RuntimeException; unwrap if cause is IOException
-            Throwable cause = e.getCause();
-            if (cause instanceof IOException ioe) {
-                LOGGER.log(SEVERE, "Failed to load level " + levelIndex, ioe);
-                throw ioe;
-            }
-            LOGGER.log(SEVERE, "Unexpected error while loading level " + levelIndex, e);
-            throw new IOException("Failed to load level due to unexpected error.", e);
+            throw attempt.failure(e, this::activeGameModule, this::discardInitialProcessSpritesLifecycle, levelIndex);
         } finally {
             // The suppress flag belongs to this load only. A load that fails before
             // ScheduleLevelMusic — or a preview capture, which has no music step — must not

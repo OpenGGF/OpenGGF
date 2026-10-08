@@ -14,10 +14,13 @@ import com.openggf.game.GameId;
 import com.openggf.mods.scene.*;
 
 import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntConsumer;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 
-/** Host-owned finite music. ROM preparation and playback stay on the host's audio owner thread. */
+/** Host-owned finite music; only independent ROM synthesis leaves the scene/audio owner. */
 public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
     private final AudioManager audio;
     private final Function<String, Rom> roms;
@@ -25,6 +28,12 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
     private Prepared cached;
     private Player player;
     private boolean closed;
+    private Job pending;
+    private ThreadPoolExecutor worker;
+    private static final AtomicInteger WORKER_IDS = new AtomicInteger();
+    private static final int MAX_FRAMES = 36_000;
+    private static final long MAX_PCM_BYTES = 256L * 1024 * 1024;
+    private static final int MAX_NOTE_EVENTS = 200_000;
 
     public ManagedSceneMusic(AudioManager audio, Function<String, Rom> roms) {
         this(audio, roms, System::nanoTime);
@@ -38,22 +47,14 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
 
     @Override public ScenePreparedMusic prepare(String gameId, int musicId, int durationFrames) {
         requireOpen();
-        if (durationFrames < 1 || durationFrames > 90 * 60) {
-            throw new IllegalArgumentException("finite music duration must be 1..5400 NTSC frames");
-        }
-        String game = Objects.requireNonNull(gameId, "gameId").toLowerCase(Locale.ROOT);
-        if (cached != null && cached.game.equals(game) && cached.id == musicId
-                && cached.durationFrames == durationFrames) return cached;
-        GameAudioProfile profile = profile(game);
-        Rom rom = Objects.requireNonNull(roms.apply(game), "requested game ROM is unavailable");
+        String game = checkedGame(gameId, durationFrames);
+        cancelPending();
+        if (matches(game, musicId, durationFrames)) return cached;
+        Prepared next = load(game, musicId, durationFrames);
         retireCached();
-        SmpsLoader loader = profile.createSmpsLoader(rom);
-        AbstractSmpsData data = Objects.requireNonNull(loader.loadMusic(musicId), "ROM music ID unavailable");
-        DacData dac = Objects.requireNonNull(loader.loadDacData(), "ROM DAC bank unavailable");
-        int sampleRate = audio.outputSampleRate();
-        Prepared next = new Prepared(this, game, musicId, durationFrames, sampleRate, profile, data, dac);
         try {
-            next.full = render(next, List.of(new SceneMusicPart(0, 0, 0, false)), true);
+            Rendered rendered = render(RenderInput.of(next), List.of(new SceneMusicPart(0, 0, 0, false)), true, ignored -> { });
+            next.full = rendered.pcm(); next.notes = rendered.notes();
         } catch (RuntimeException | Error failure) {
             next.retire();
             throw failure;
@@ -61,6 +62,179 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
         cached = next;
         return next;
     }
+
+    @Override public SceneMusicPreparation prepareAsync(String gameId, int musicId, int durationFrames) {
+        requireOpen();
+        String game = checkedGame(gameId, durationFrames);
+        discardTerminalJob();
+        if (matches(game, musicId, durationFrames)) {
+            cancelPending();
+            return completed(cached);
+        }
+        if (pending != null && pending.full && pending.song.game.equals(game)
+                && pending.song.id == musicId && pending.song.durationFrames == durationFrames) return pending;
+        Prepared next = load(game, musicId, durationFrames);
+        cancelPending(); retireCached();
+        return submit(new Job(next, List.of(new SceneMusicPart(0, 0, 0, false)), true));
+    }
+
+    @Override public SceneMusicPreparation preparePartAsync(ScenePreparedMusic song, List<SceneMusicPart> parts) {
+        requireOpen();
+        discardTerminalJob();
+        Prepared prepared = current(song);
+        List<SceneMusicPart> selection = selection(prepared, parts, 0);
+        if (player != null) player.stop();
+        if (pending != null && !pending.full && pending.song == prepared && pending.parts.equals(selection)) return pending;
+        cancelPending();
+        if (prepared.masked != null && selection.equals(prepared.parts)) return completed(prepared);
+        prepared.masked = null; prepared.parts = null;
+        return submit(new Job(prepared, selection, false));
+    }
+
+    private String checkedGame(String gameId, int durationFrames) {
+        if (durationFrames < 1 || durationFrames > MAX_FRAMES)
+            throw new IllegalArgumentException("finite music duration must be 1..36000 NTSC frames");
+        int rate = audio.outputSampleRate();
+        long samples = (long) durationFrames * rate / 60;
+        if (rate <= 0 || samples * 2 * Short.BYTES * 2 > MAX_PCM_BYTES)
+            throw new IllegalArgumentException("finite music exceeds the 256 MiB PCM budget at this output rate");
+        return Objects.requireNonNull(gameId, "gameId").toLowerCase(Locale.ROOT);
+    }
+
+    private boolean matches(String game, int id, int frames) {
+        return cached != null && cached.game.equals(game) && cached.id == id && cached.durationFrames == frames;
+    }
+
+    private Prepared load(String game, int musicId, int durationFrames) {
+        GameAudioProfile profile = profile(game);
+        Rom rom = Objects.requireNonNull(roms.apply(game), "requested game ROM is unavailable");
+        SmpsLoader loader = profile.createSmpsLoader(rom);
+        AbstractSmpsData data = Objects.requireNonNull(loader.loadMusic(musicId), "ROM music ID unavailable");
+        DacData dac = Objects.requireNonNull(loader.loadDacData(), "ROM DAC bank unavailable");
+        return new Prepared(this, game, musicId, durationFrames, audio.outputSampleRate(), profile, data, dac);
+    }
+
+    private Prepared current(ScenePreparedMusic song) {
+        if (!(song instanceof Prepared prepared) || prepared.owner != this || prepared != cached)
+            throw new IllegalArgumentException("music must be this scene host's current preparation");
+        return prepared;
+    }
+
+    private static List<SceneMusicPart> selection(Prepared prepared, List<SceneMusicPart> parts, int leadInSamples) {
+        List<SceneMusicPart> selection = List.copyOf(parts);
+        if (selection.isEmpty() || selection.size() > 128 || selection.getFirst().onsetSamples() != 0
+                || leadInSamples < 0 || leadInSamples > prepared.sampleRate * 10)
+            throw new IllegalArgumentException("invalid part or lead-in");
+        long previous = -1;
+        for (SceneMusicPart part : selection) {
+            if (part.onsetSamples() <= previous || part.onsetSamples() >= prepared.lengthSamples())
+                throw new IllegalArgumentException("part sections must increase within the finite song");
+            previous = part.onsetSamples();
+        }
+        return selection;
+    }
+
+    private SceneMusicPreparation completed(Prepared song) {
+        return new SceneMusicPreparation() {
+            @Override public State state() { return State.READY; }
+            @Override public int progressPercent() { return 100; }
+            @Override public String error() { return null; }
+            @Override public ScenePreparedMusic prepared() { return song; }
+            @Override public void cancel() { }
+        };
+    }
+
+    private Job submit(Job job) {
+        if (worker == null) {
+            worker = new ThreadPoolExecutor(1, 1, 5, TimeUnit.SECONDS, new ArrayBlockingQueue<>(1), task -> {
+                Thread thread = new Thread(task, "openggf-scene-music-" + WORKER_IDS.incrementAndGet());
+                thread.setDaemon(true); return thread;
+            });
+            worker.allowCoreThreadTimeOut(true);
+        }
+        pending = job;
+        job.future = new FutureTask<>(job, null);
+        worker.execute(job.future);
+        return job;
+    }
+
+    private void cancelPending() {
+        if (pending != null) pending.cancel();
+        pending = null;
+    }
+
+    private void discardTerminalJob() {
+        if (pending != null && (pending.state() == SceneMusicPreparation.State.CANCELLED
+                || pending.state() == SceneMusicPreparation.State.FAILED)) cancelPending();
+    }
+
+    private final class Job implements SceneMusicPreparation, Runnable {
+        final Prepared song;
+        final List<SceneMusicPart> parts;
+        final boolean full;
+        private RenderInput input;
+        private FutureTask<Void> future;
+        private volatile State state = State.PREPARING;
+        private volatile int progress;
+        private volatile String error;
+        private Rendered rendered;
+        private boolean published;
+        Job(Prepared song, List<SceneMusicPart> parts, boolean full) {
+            this.song = song; this.parts = parts; this.full = full; input = RenderInput.of(song);
+        }
+        @Override public State state() { return state; }
+        @Override public int progressPercent() { return state == State.READY ? 100 : progress; }
+        @Override public String error() { return error; }
+        @Override public void run() {
+            RenderInput source;
+            synchronized (this) {
+                if (state != State.PREPARING) return;
+                source = input; input = null;
+            }
+            try {
+                Rendered result = render(source, parts, full, value -> progress = value);
+                synchronized (this) {
+                    if (state == State.PREPARING) { rendered = result; state = State.READY; }
+                }
+            } catch (CancellationException cancelled) {
+                synchronized (this) { if (state == State.PREPARING) state = State.CANCELLED; }
+            } catch (RuntimeException | Error failure) {
+                synchronized (this) {
+                    if (state == State.PREPARING) {
+                        String message = Objects.toString(failure.getMessage(), failure.getClass().getSimpleName());
+                        error = message.substring(0, Math.min(256, message.length())); state = State.FAILED;
+                    }
+                }
+            }
+        }
+        @Override public synchronized ScenePreparedMusic prepared() {
+            if (state != State.READY) throw new IllegalStateException("music preparation is " + state);
+            if (!published) {
+                requireOpen();
+                if (pending != this) throw new IllegalStateException("music preparation was superseded");
+                if (full) { song.full = rendered.pcm(); song.notes = rendered.notes(); cached = song; }
+                else { current(song); song.masked = rendered.pcm(); song.parts = parts; }
+                rendered = null; published = true; pending = null;
+            }
+            return song;
+        }
+        @Override public synchronized void cancel() {
+            if (published) return;
+            if (future != null) { future.cancel(true); if (worker != null) worker.remove(future); }
+            input = null; rendered = null;
+            if (state != State.FAILED) { error = null; state = State.CANCELLED; }
+            if (full) song.retire();
+            if (pending == this) pending = null;
+        }
+    }
+
+    private record RenderInput(String game, int durationFrames, int sampleRate,
+                               GameAudioProfile profile, AbstractSmpsData data, DacData dac) {
+        static RenderInput of(Prepared song) {
+            return new RenderInput(song.game, song.durationFrames, song.sampleRate, song.profile, song.data, song.dac);
+        }
+    }
+    private record Rendered(short[] pcm, List<SceneNoteEvent> notes) { }
 
     @Override public SceneMusicPlayer start(ScenePreparedMusic song, int fmMask, int psgMask,
                                             boolean dacMuted, int leadInSamples) {
@@ -70,25 +244,14 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
     @Override public SceneMusicPlayer start(ScenePreparedMusic song, List<SceneMusicPart> parts,
                                             int leadInSamples) {
         requireOpen();
-        if (!(song instanceof Prepared prepared) || prepared.owner != this || prepared != cached) {
-            throw new IllegalArgumentException("music must be this scene host's current preparation");
-        }
-        List<SceneMusicPart> selection = List.copyOf(parts);
-        if (selection.isEmpty() || selection.size() > 128 || selection.getFirst().onsetSamples() != 0
-                || leadInSamples < 0 || leadInSamples > prepared.sampleRate * 10) {
-            throw new IllegalArgumentException("invalid part or lead-in");
-        }
-        long previous = -1;
-        for (SceneMusicPart part : selection) {
-            if (part.onsetSamples() <= previous || part.onsetSamples() >= prepared.lengthSamples()) {
-                throw new IllegalArgumentException("part sections must increase within the finite song");
-            }
-            previous = part.onsetSamples();
-        }
+        discardTerminalJob();
+        Prepared prepared = current(song);
+        List<SceneMusicPart> selection = selection(prepared, parts, leadInSamples);
+        if (pending != null) throw new IllegalStateException("music preparation must finish before starting");
         if (player != null) player.stop();
         if (prepared.masked == null || !selection.equals(prepared.parts)) {
             prepared.masked = null;
-            prepared.masked = render(prepared, selection, false);
+            prepared.masked = render(RenderInput.of(prepared), selection, false, ignored -> { }).pcm();
             prepared.parts = selection;
         }
         short[] masked = prepared.masked;
@@ -100,9 +263,10 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
     @Override public void close() {
         if (closed) return;
         try {
-            retireCached();
+            cancelPending(); retireCached();
         } finally {
             closed = true;
+            if (worker != null) worker.shutdownNow();
         }
     }
 
@@ -123,7 +287,7 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
         return BuiltInRomDetectors.forGame(GameId.fromCode(game)).createModule().getAudioProfile();
     }
 
-    private short[] render(Prepared prepared, List<SceneMusicPart> parts, boolean notes) {
+    private static Rendered render(RenderInput prepared, List<SceneMusicPart> parts, boolean notes, IntConsumer progress) {
         long framesLong = (long) prepared.durationFrames * prepared.sampleRate / 60;
         short[] pcm = new short[Math.toIntExact(framesLong * 2)];
         GameAudioProfile profile = prepared.profile;
@@ -150,6 +314,8 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
             int outputFrame = 0;
             int partIndex = -1;
             for (int index = 0; index < prepared.durationFrames; index++) {
+                if (Thread.currentThread().isInterrupted()) throw new CancellationException("music preparation cancelled");
+                progress.accept(index * 100 / prepared.durationFrames);
                 int nextPart = partIndex;
                 while (nextPart + 1 < parts.size() && parts.get(nextPart + 1).onsetSamples() <= outputFrame) nextPart++;
                 if (nextPart != partIndex) {
@@ -171,9 +337,8 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
                 System.arraycopy(frame, 0, pcm, outputFrame * 2, count * 2);
                 outputFrame = end;
             }
-            if (builder != null) prepared.notes = builder.finish(framesLong);
+            return new Rendered(pcm, builder == null ? List.of() : builder.finish(framesLong));
         }
-        return pcm;
     }
 
     private static final class Prepared implements ScenePreparedMusic {
@@ -233,7 +398,10 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
         }
         @Override public void release(SmpsSequencer.Track track) {
             Pending note = sounding.remove(track);
-            if (note != null) events.add(note.finish(sample));
+            if (note != null) {
+                if (events.size() >= MAX_NOTE_EVENTS) throw new IllegalArgumentException("ROM music exceeds the note event budget");
+                events.add(note.finish(sample));
+            }
         }
         List<SceneNoteEvent> finish(long length) {
             for (Pending note : sounding.values()) events.add(note.finish(length));

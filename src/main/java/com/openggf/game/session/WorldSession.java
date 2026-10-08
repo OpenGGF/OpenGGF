@@ -36,7 +36,7 @@ public final class WorldSession {
     // construction.
     private Level currentLevel;
     PatternWindowState patternWindowState = PatternWindowState.EMPTY;
-    final MutatorWorldState mutators;
+    final WorldSessionPolicyState policies;
 
     public WorldSession(GameModule gameModule) {
         this(gameModule, null);
@@ -63,10 +63,8 @@ public final class WorldSession {
                 ? PlayableCharacterRegistry.empty()
                 : registry;
         this.saveSessionContext = saveSessionContext;
-        var catalog = resolvedGameModule.getGameService(com.openggf.mods.mutators.MutatorCatalog.class);
-        var support = catalog == null ? null : resolvedGameModule.getGameService(com.openggf.mods.mutators.MutatorSupportProfile.class);
-        mutators = catalog == null || catalog.definitions().isEmpty() || support == null
-                ? null : new MutatorWorldState(this, catalog, support);
+        var policyProvider = resolvedGameModule.getGameService(WorldSessionPolicyProvider.class);
+        policies = policyProvider == null ? null : policyProvider.open(this);
     }
 
     public GameModule rootGameModule() {

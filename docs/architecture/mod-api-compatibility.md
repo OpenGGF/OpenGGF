@@ -154,6 +154,16 @@ their offset-dependent reparsing is a separate construction migration.
 
 ## Reviewing, maintaining, and publishing the recursive surface
 
+Full-song scene preparation adds `SceneMusicPreparation` and its state enum,
+reached through the default `SceneMusic.prepareAsync` and `preparePartAsync`
+methods. The host keeps ROM loading and playback on the scene owner while one
+bounded worker synthesizes independent audio. Jobs expose progress, cancellation,
+bounded errors and READY publication. Ten-minute duration, 256 MiB combined PCM
+and 200,000 completed note-event limits apply before playback. Legacy defaults
+remain synchronous. These are additive changes to the mutable 0.7 candidate;
+the descriptor/runtime version remains unpublished 0.7.0 and the normalized
+signature pin is regenerated in place.
+
 Before changing the candidate surface:
 
 1. Run `TestModApiSignatureSurface` and inspect every added or changed line.
@@ -500,3 +510,25 @@ engine-internal pin adds that one type; platform allowlists stay unchanged.
 Music judgments follow consumed samples, input follows monotonic observed events,
 and the example alone owns curated charts, GH III reference rules and calibration.
 No diagnostic/trace rows become gameplay authority.
+
+### Scene-owned direct peer messaging
+
+`SceneContext.network()` reaches `SceneNetwork`, `ScenePeer`, `ScenePeer.State`
+and `ScenePeer.Message` through the recursive creator surface. The default
+context method remains unsupported for existing fixtures. These four annotated
+types enter the normalized 0.7 candidate pin and exact-inventory SDK Javadoc;
+`mods.scene.host.network.ManagedSceneNetwork` and its sockets/selector worker
+remain outside that surface. No platform allowlist expansion is required.
+`ModApiVersion` remains 0.7.0, matching the unchanged candidate descriptor;
+there is no publication or new version baseline.
+
+The transport is explicitly admitted by user host/connect actions, with one
+active endpoint, bounded strict UTF-8 messages/queues and one lazy selector
+worker per scene. Numeric addresses and `localhost` avoid a resolver whose
+native blocking could outlive cancellation. Selector I/O was chosen over
+blocking read/write threads because write deadlines and cancellation must
+remain enforceable even when a peer stops reading. Scene callbacks only
+exchange bounded queues and state. The scene host closes networking on exit
+requests and every callback fault, rather than depending on a later caller
+cleanup. The [scene handbook](../modding/guides/mod-scenes.md#direct-peer-messaging)
+owns framing, deadlines, clock meaning and direct-connect limitations.

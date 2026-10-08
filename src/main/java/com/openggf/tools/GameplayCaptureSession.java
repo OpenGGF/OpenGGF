@@ -291,7 +291,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
             GameServices.level().skipPendingInitialTitleCardPresentation();
         }
         UiRenderPipeline ui = GameServices.graphics().getUiRenderPipeline();
-        if (ui != null && !loop.ownsGameplayFadeLifecycle()) {
+        // Preserve the established direct-level capture driver. Title-first capture
+        // follows the normal loop's fade owner and must not advance it twice.
+        if (ui != null && (!startAtTitle || !loop.ownsGameplayFadeLifecycle())) {
             ui.updateFade();
         }
         // Declared setup: the special-stage debug completion, requested on alternate frames
@@ -306,8 +308,10 @@ public final class GameplayCaptureSession implements AutoCloseable {
         // After the frame, not before it: the sidekick's own registration re-places him at the
         // level's start position on the step after the first seed lands, so a seed applied at
         // the top of step() is visible in that frame's state line and gone from the next one.
-        var focused = GameServices.camera().getFocusedSprite();
-        if (focused != null) player = focused;
+        if (startAtTitle) {
+            var focused = GameServices.camera().getFocusedSprite();
+            if (focused != null) player = focused;
+        }
         seedSidekickPosition();
     }
 
@@ -450,18 +454,25 @@ public final class GameplayCaptureSession implements AutoCloseable {
                 + "," + sidekickState()
                 + "," + (player.isHighPriority() ? 1 : 0)
                 + "," + loop.getCurrentGameMode()
-                + "," + (input == null ? "" : input.rawLine())
-                + "," + (loop.isPaused()?1:0)
-                + "," + mutatorRevision();
+                + "," + (input == null ? "" : input.rawLine());
+    }
+
+    /** Explicit title-first host observation; legacy route rows keep their input-last schema. */
+    public String stateLineWithHostState(int frame, Bk2FrameInput input) {
+        return stateLine(frame, input) + "," + (loop.isPaused() ? 1 : 0) + "," + mutatorRevision();
     }
 
     private long mutatorRevision() {
-        var state = com.openggf.game.session.MutatorWorldAccess.state(com.openggf.game.session.SessionManager.getCurrentWorldSession());
+        var state = com.openggf.mods.mutators.MutatorWorldAccess.state(com.openggf.game.session.SessionManager.getCurrentWorldSession());
         return state == null || state.isClosed() ? 0 : state.effective().revision();
     }
     public static String stateHeader() {
         return "frame,x,y,xvel,yvel,gspeed,air,rolling,spindash,hurt,dead,rings,mapping_frame,cam_x,cam_y,"
-                + "sk_present,sk_x,sk_y,high_priority,mode,input,host_paused,mutator_revision";
+                + "sk_present,sk_x,sk_y,high_priority,mode,input";
+    }
+
+    public static String stateHeaderWithHostState() {
+        return stateHeader() + ",host_paused,mutator_revision";
     }
 
     private static Bk2FrameInput neutral(Bk2FrameInput previous) {
@@ -486,7 +497,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
             // The graphics singleton caches shader, atlas and palette GL objects that
             // belong to this window's context. Release them while the context is still
             // current, or a second session in the same process renders black frames.
-            com.openggf.game.session.MutatorWorldAccess.closeScreens(com.openggf.game.session.SessionManager.getCurrentWorldSession());
+            com.openggf.game.session.WorldSessionPolicyAccess.closeScreens(com.openggf.game.session.SessionManager.getCurrentWorldSession());
             GraphicsManager.destroyForReinit();
             boot.close();
         } finally {

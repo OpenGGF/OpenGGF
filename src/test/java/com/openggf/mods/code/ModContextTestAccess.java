@@ -25,6 +25,13 @@ public final class ModContextTestAccess {
         return context.freeze();
     }
 
+    public static ModRegistrationPlan freezeWithMutator(String owner, String baseGame,
+            com.openggf.mods.mutators.MutatorDefinition definition) {
+        ModContext context = new ModContext(owner, baseGame, ModAssetRoot.forTests(owner));
+        context.registerMutator(definition);
+        return context.freeze();
+    }
+
     public static ModRegistrationPlan freezeStandaloneWithDisplayWidth(String owner, int width) {
         ModContext context = new ModContext(owner, null, ModAssetRoot.forTests(owner), null, true);
         context.requireDisplayWidth(width);

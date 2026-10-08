@@ -41,10 +41,6 @@ public final class ModFaultBoundary implements com.openggf.level.objects.ObjectC
     public <T> T call(String owner, Supplier<T> callback) {
         Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(callback, "callback");
-        if (!isOwnerAvailable(owner)) {
-            throw new CallbackAborted(owner, ownerAndDependents(owner),
-                    new IllegalStateException("Owner is quarantined for this process"));
-        }
         try {
             return OwnerCallbackScope.call(owner, callback);
         } catch (CallbackAborted aborted) {

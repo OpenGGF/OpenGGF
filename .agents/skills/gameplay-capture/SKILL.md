@@ -70,7 +70,10 @@ Use a task directory outside the repository for captures the user should keep.
 
 Read `state.csv` before opening any image. Columns: frame, x, y, xvel, yvel, gspeed,
 air, rolling, spindash, hurt, dead, rings, mapping_frame, cam_x, cam_y,
-sk_present, sk_x, sk_y, high_priority, mode, input, host_paused, mutator_revision.
+sk_present, sk_x, sk_y, high_priority, mode, input. Title-first capture appends
+host_paused and mutator_revision; direct-level route callers retain the input-last
+schema. Do not extend their rows silently: authoring comparators remove only the
+final input column.
 Find the frame of interest (first `dead=1`, a stall where `x` stops rising, the frame
 `rolling` flips) and view only `frames/<frame>.png` or the matching still. Send the
 user the MP4 plus one or two stills, with the frame numbers and what they show.

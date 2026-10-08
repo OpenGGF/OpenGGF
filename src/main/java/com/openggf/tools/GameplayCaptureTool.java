@@ -93,7 +93,7 @@ public final class GameplayCaptureTool {
                 if (capture!=null && (capture.frameRate()!=arguments.fps() || capture.sampleRate()!=sampleRate))
                     throw new IllegalArgumentException("Audio clock differs from capture settings");
                 short[] samples = capture==null ? new short[0] : new short[capture.maxStereoFramesPerPacket()*2];
-                state.write(GameplayCaptureSession.stateHeader());
+                state.write(arguments.titleScreen() ? GameplayCaptureSession.stateHeaderWithHostState() : GameplayCaptureSession.stateHeader());
                 state.newLine();
                 for (int frame = 0; frame < totalFrames; frame++) {
                     int scriptIndex = frame - arguments.settle();
@@ -107,7 +107,7 @@ public final class GameplayCaptureTool {
                         for(int i=0;i<count;i++) { pcm.write(samples[i]&255); pcm.write((samples[i]>>>8)&255); }
                     }
                     lastFrame = frame;
-                    state.write(session.stateLine(frame, input));
+                    state.write(arguments.titleScreen() ? session.stateLineWithHostState(frame, input) : session.stateLine(frame, input));
                     state.newLine();
                     boolean wanted = frame >= arguments.captureFrom()
                             && ((frame - arguments.captureFrom()) % arguments.every() == 0

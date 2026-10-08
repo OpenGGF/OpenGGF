@@ -12,6 +12,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   keeps native movement and sprite admission, with an explicit EHZ1 solo-Sonic
   support cell and maintained package source/build-along guide. Modal title Back
   preserves the save boundary and host prompt ownership; title cues use ROM SFX.
+  World-held policy services keep core lifecycle independent of creator schemas;
+  title-first capture preserves existing direct-level fade and input-last CSV contracts.
 
 - **Sonic 1 background scrolling:** Scrap Brain Act 1 uses the REV01 cloud
   interpolation and three building bands, with separate fractional cameras,
@@ -899,15 +901,23 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - Added the [Slay the Robotnik example mod](examples/slay-the-robotnik/README.md), a Slay the Spire-style deck-building roguelike played on Sonic 3 & Knuckles as a full-screen mod scene. Sonic (Focus and Combo multi-hits), Tails (Dexterity, discards and Ring Bombs) and Knuckles (Strength) each have a starter deck, a starting relic and 42–43 more cards; 55 relics, 16 item monitors and 22 events round out four acts — Angel Island, Hydrocity and Launch Base as branching 15-floor zone maps with badnik fights, three elites and two bosses each, then a short Sky Sanctuary finale against Mecha Sonic, who returns as Super Mecha Sonic. Every character, badnik, boss, monitor, ring, the Tornado, explosions, music and sounds come from the player's ROM: bosses are assembled from their mapping frames at the original child-object offsets, defeated badniks explode and free a Flicky, and card and relic pictures are one-line text recipes of ROM sprites and drawn effects. Fights, Starposts and capsules are staged on stretches of each act's real level, moving through it as the map climbs, with every character standing on the ground under it. Runs save at every room; the title adds a Compendium and per-hero records. The title screen flies through four zones' real levels behind a Tornado chase, each act opens with its zone's ROM title card, and every event plays out the chosen option with the game's own objects (the slot machine spins the bonus stage's own reels). Fights open with an entrance that names each boss, claimed rings, cards and relics fly to the HUD, and every highlighted card term and HUD readout has a tip. The engine suite builds, validates and runs the example's tests and opens every fight and event through the scene against S3K.
 - Added [Robotnik Tower Defence](examples/robotnik-tower-defense/README.md), an S3K mod scene in which Robotnik defends his base door from 15 waves of unionised Flickies. Six badnik defenses provide direct fire, ground splash, anti-air, armor piercing, slowing and chain attacks; towers can be upgraded or sold, the door repaired between waves, and an emergency bomb repels breaches. Couriers, shield carriers, flyers, organisers and saboteurs introduce coordinated wave tactics. ROM-backed Launch Base art and audio, mouse/pad controls, pause, help and saved records complete the game without changing stock gameplay.
 - Added [hello-scene](examples/hello-scene/README.md), a two-class starter for mod scenes (Sonic collecting rings over Angel Island's background), and `examples/build_example.py`, which builds and runs any example. `ggfmod sprites` draws every frame of a ROM sprite request, or a playable character, into one numbered PNG. In the engine's tests, `ExampleModHarness` and `ExampleModCapture` build any example scene from source and record it headless to PNG, MP4 and WAV.
-- **Sitar Hero:** added a source-first arcade rhythm example with Green Hill,
-  Chemical Plant and Angel Island Act 1, filtered by any supplied ROM subset.
-  Seven cosmetic performers share the library; Sitar, Harp and Synth use five
-  frets/strum, chords, sustains, HOPO and Star Power, while Bongos uses four
-  direct-hit pads plus kick. ROM-derived timings feed curated charts, remappable
-  keyboard/gamepad controls, calibration, finite results and retry. Reusable
-  candidate scene APIs provide mixed-ROM art, timestamped physical events and
-  bounded semantic ROM music on the consumed audio clock. ROM assets stay runtime
-  inputs; career and multiplayer remain future requirements.
+- **Sitar Hero:** added a source-first full-song rhythm example combining the
+  supplied Sonic 1, 2 and 3 & Knuckles ROM libraries into 79 songs. Looping performances last
+  two complete loops or two minutes, whichever is longer; non-looping ending/credits
+  tracks play to their natural stops. Career follows Sonic worlds with main-act
+  setlists, shared tour progress, optional side gigs and satirical authored
+  intermissions on Robotnik's shared tour. Quick play, no-fail practice,
+  four difficulties, local co-op/score duels and direct-connect peer matches share
+  seven cosmetic performers and four real FM/PSG/DAC parts. ROM-pixel arms and
+  hands layer over instruments and move on successful judgments with sound waves.
+  Charts preserve native attacks, voice handoffs and medley tempo changes while
+  curating density, chords, sustains, HOPO and Star Power. Independent player
+  controls/calibration, records, help, mouse menus, lefty mode, reduced flashes
+  and highway speed complete the arcade flow. Candidate scene APIs provide
+  timestamped physical input, owner-scoped peer transport and consumed-audio-clock
+  ROM playback. Full and selected-part synthesis have cancellable background jobs
+  with progress, a ten-minute cap and a 256 MiB combined PCM budget. Runtime
+  character, stage and music assets come from the user's ROMs.
 - `ggfmod run` of a patch mod now opens the mod's base game directly instead of the master title game picker (holding Escape still returns to it), so a creator's build-and-run loop lands in their mod; test mode keeps its configured startup. Slay the Robotnik's `play.sh` uses it to build and launch the example in one step.
 - The master title takes the mouse: hovering highlights actions and clicking opens them, the carousel's arrows, neighbouring names and the wheel change game, clicking the game's name browses the list, and right-click goes back; the game browser, quit prompt, tools and start choices answer clicks too. Pointer positions map through the letterboxed viewport with the same helper mod scenes use.
 - The Sonic 1 title screen accepts an optional background override (`Sonic1TitleScreenManager.setBackgroundOverride`) that replaces its scrolling Green Hill plane and backdrop while keeping the emblem, sprites and fades.

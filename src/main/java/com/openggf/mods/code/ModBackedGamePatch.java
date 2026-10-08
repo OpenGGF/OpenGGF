@@ -173,6 +173,7 @@ public final class ModBackedGamePatch implements GamePatch {
             private com.openggf.game.dataselect.DataSelectHostProfile dataSelectHost;
             private com.openggf.game.dataselect.DataSelectPresentationProvider dataSelectPresentation;
             private com.openggf.game.GameplayPolicyProvider gameplayPolicies;
+            private com.openggf.game.session.WorldSessionPolicyProvider worldPolicies;
 
             @Override
             public synchronized com.openggf.game.PlayableCharacterRegistry getPlayableCharacterRegistry() {
@@ -297,6 +298,13 @@ public final class ModBackedGamePatch implements GamePatch {
             @Override
             @SuppressWarnings("unchecked")
             public <T> T getGameService(Class<T> type) {
+                if (type == com.openggf.game.session.WorldSessionPolicyProvider.class && !plan.mutators().isEmpty()) {
+                    if (worldPolicies == null) {
+                        worldPolicies = new com.openggf.mods.mutators.MutatorWorldProvider(
+                                getGameService(com.openggf.mods.mutators.MutatorCatalog.class));
+                    }
+                    return type.cast(worldPolicies);
+                }
                 if (type == com.openggf.mods.mutators.MutatorCatalog.class && !plan.mutators().isEmpty()) {
                     var inherited = super.getGameService(com.openggf.mods.mutators.MutatorCatalog.class);
                     var catalog = inherited == null

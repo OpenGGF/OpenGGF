@@ -23,6 +23,10 @@ public final class ModApiVersion {
      * Boot-prepared typed mutators declare independent action/option scopes,
      * immutable gravity/Stealth policies, explicit assembly causes and common
      * modal configuration presentation. The unpublished candidate remains 0.7.0.
+     * Full-song and selected-part synthesis expose cancellable host jobs with
+     * progress, a ten-minute duration cap and a 256 MiB stereo PCM budget.
+     * Scene-owned direct peer text messaging is asynchronous and bounded, with
+     * socket/thread ownership and lifetime kept in the engine.
      * Power-up rules expose explicit invincibility-expiry music ownership for modes
      * with continuous music.
      */

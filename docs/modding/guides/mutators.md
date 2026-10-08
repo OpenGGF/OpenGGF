@@ -15,6 +15,9 @@ immutable typed policies; they never mutate the world or publish trusted owners.
 A semantic support provider advertises the qualified zone/act/player cell. The
 common screen implements the existing title provider and level input overlay.
 The normal native level loop still owns movement, collision, camera, art and audio.
+The host creates one policy owner per world through its engine module service.
+Shared catalogs/providers contain no session settings; two worlds have independent
+requested, admitted and effective graphs.
 
 ```java
 context.registerMutator(new MutatorDefinition(

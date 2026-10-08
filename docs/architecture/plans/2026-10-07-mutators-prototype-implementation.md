@@ -26,8 +26,10 @@ hot installation, native creator bytecode or modified-game recording support.
    exercises repeated launch/exit and recovery, and runs combined change-based
    validation plus affected domain tests. Independent review checks high-risk
    boundaries and final original-base-to-head diff.
-5. Fetch destination, assess overlap, commit/push only feature branch, raise and
-   register PR. Account for child edits/worktrees/processes; retain PR tree.
+5. Fetch destination, assess overlap and prepare a clean verified implementation
+   handoff. The user's final phase holds feature push/PR for root-owned Opus polish
+   and a separate promo-video task. Account for child edits/worktrees/processes;
+   retain the lead branch/tree for that integration and the eventual single PR.
 
 No prototype gate is marked complete until executed evidence is recorded in the
 existing design and example guide. Later MVP/product stages remain future work.
@@ -250,3 +252,61 @@ existing ten-minute no-output limit remains. Timeout means incomplete. Final
 candidate identities, full assertions and first causal skip reasons will be
 compared; only the SSZ Tails object-blob hexadecimal identity is normalized.
 The final ordinary/guard outcome is pending at this checkpoint.
+
+
+## Broad regression repair before composed handoff
+
+The preserved 37a run at `6e9af21ec5` completed, not cancelled: 3,015 selected,
+3,013 ordinary reports, 26,294 tests, 36 failures, one error and 62 skips in
+4,084.35 seconds. Fresh guards ran 672 cases, three failures, zero skips in
+221.51 seconds. Full comparisons found nine additional failed identities
+(including the error), twelve changed inherited assertions and identical skip
+identities/reasons. This was not a verified handoff. Consumed diagnostics were
+acknowledged after the complete bounded comparison was retained outside Git.
+
+Three direct-level capture contracts had changed globally: fade advancement,
+player reference rebinding and the input-last CSV schema. Those changes now apply
+only to the explicitly new title-first path. Existing stock capture/authoring
+callers retain their driver and CSV semantics; no physics or trace data is altered.
+The preemptive global fault callback gate also broke existing direct module and
+VM-fatal semantics. Persistent owner availability remains authoritative for
+mutator admission/restoration, while the established callback boundary retains
+its fatal/error behavior. Focused failing identities and final broad results will
+verify the repair; no pass is inferred from this source diagnosis.
+
+Guard failures identify new game/level dependencies on concrete mod types and
+growth of GameLoop/LevelManager. Pending-command retention is extracted from
+GameLoop; session/resource ownership is being inverted through engine-owned
+provider/service types, retaining per-world state and rewind ordering. Ratchets,
+allowlists and source budgets remain intact. Published destination composition
+preserves Sitar SMPS/scene APIs and the later launcher-only successor, with final
+compiled pin, SDK, audio/rewind and audiovisual checks still required.
+
+Root now owns the requested subsequent Opus polish implementation and separate
+promo-video stages. Feature push/PR is held for their integration. This lead must
+first produce a clean verified implementation handoff; no Opus worker is launched
+by the lead, and the scope remains the prototype rather than the future product.
+
+
+Composed repair check `72221` completed on 2026-10-08 at 02:36 UTC against the
+uncommitted `02796b4` intent merge and recorded repairs: 217 tests, 216 passes,
+one inherited DEZ assertion (`expected: <96> but was: <0>`), no errors/skips.
+The full assertion matches the qualified baseline after removing only the
+exception prefix. New callback/sample, representative DEZ/LRZ capture routes,
+SSZ input author, world/modal, composed SMPS/audio rewind and API/Javadoc/SDK unit
+checks pass. All 10,041 frozen source hashes are unchanged. Maven exited 1 before
+its artifact verify phase; no artifact pass is claimed from that invocation.
+The compiled 20,392-line export equals the composed candidate pin: destination
+20,105 lines plus 287 prototype additions, zero removals. Boundary services stay
+engine-internal and do not add a creator API root. Descriptor/runtime stay 0.7.0
+candidate. The three blocking structural assertions, composed artifact verification,
+final AV/domain and actual-destination combined comparison remain pending.
+
+
+The bounded guard/artifact request `22933` completed 2026-10-08 at 02:47 UTC:
+101 structural tests passed with zero failures/errors/skips, including all three
+previously failing cycle/size assertions. Architecture allowlists and large-class
+budgets are unchanged. SDK preparation, Javadoc packaging and artifact verification
+completed successfully (44.192 seconds execution after 485 seconds queue wait).
+Current jars contain no obsolete moved policy classes. Composed-source audiovisual,
+trace/domain and final full ordinary/fresh-guards comparison are still pending.

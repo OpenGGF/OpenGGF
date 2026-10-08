@@ -101,8 +101,8 @@ public final class UserRecordingSessionLauncher {
         if (traceModeGuard.isTraceOrTestModeActive()) {
             throw new IllegalStateException("User recording is disabled while Trace Test playback is active.");
         }
-        if (com.openggf.game.session.MutatorWorldAccess.state(
-                com.openggf.game.session.SessionManager.getCurrentWorldSession()) != null) {
+        if (com.openggf.game.session.WorldSessionPolicyAccess.hasPolicies(
+                com.openggf.game.session.SessionManager.getCurrentWorldSession())) {
             throw new IllegalStateException("Prepared mutator sessions do not support user recordings yet.");
         }
 
