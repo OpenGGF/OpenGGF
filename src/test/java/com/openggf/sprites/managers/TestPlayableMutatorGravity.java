@@ -199,4 +199,27 @@ class TestPlayableMutatorGravity {
         assertThrows(IllegalArgumentException.class, () -> new PlayableMutatorPolicy(24, false, false, false));
         assertThrows(IllegalArgumentException.class, () -> new PlayableMutatorPolicy(201, false, false, false));
     }
+
+    @ParameterizedTest
+    @CsvSource({"S1,25,14", "S1,100,56", "S1,200,112", "S2,25,14", "S2,100,56", "S2,200,112",
+            "S3K,25,14", "S3K,100,56", "S3K,200,112"})
+    void qualifiesOrdinaryDryGravityForEveryNativeGame(String game, int percent, int acceleration) throws Exception {
+        com.openggf.game.GameModule module = switch (game) {
+            case "S1" -> new com.openggf.game.sonic1.Sonic1GameModule();
+            case "S3K" -> new com.openggf.game.sonic3k.Sonic3kGameModule();
+            default -> new Sonic2GameModule();
+        };
+        TestEnvironment.configureGameModuleFixture(module);
+        var stock = airborne();
+        var modified = airborne();
+        var rules = AbstractPlayableSprite.class.getDeclaredField("gameRules");
+        rules.setAccessible(true);
+        rules.set(stock, module.getRules()); rules.set(modified, module.getRules());
+        bind(modified, percent);
+        move(stock); move(modified);
+        assertEquals(-0x101 + acceleration, modified.getYSpeed());
+        assertEquals(stock.getCentreY(), modified.getCentreY());
+        assertEquals(stock.getYSubpixelRaw(), modified.getYSubpixelRaw());
+        if (percent == 100) assertNativeStateEquals(stock.captureRewindState(), modified.captureRewindState());
+    }
 }

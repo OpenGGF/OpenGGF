@@ -865,32 +865,20 @@ public class GameLoop {
 
     /** Interactive 60/50 Hz presentation entry; canonical {@link #step()} remains one tick. */
     public void stepPresentationFrame() {
-        var modeAtStart = resolveGameplayModeContext();
-        var levelAtStart = levelManager == null ? null : levelManager.getCurrentLevel();
-        boolean paced = canUseGameplayPacing() && GameServices.module() != null;
-        if (paced) {
-            double rate = GameServices.module().gameplayAudioPlaybackRate();
-            rate = Double.isFinite(rate) ? Math.clamp(rate, 1.0, 32.0) : 1.0;
-            if (rate != 1.0 || gameplayAudioRateOwned) {
-                audioManager.setForwardPlaybackRate(rate);
-            }
-            gameplayAudioRateOwned = rate != 1.0;
-        } else {
-            releaseGameplayAudioRate();
-        }
-        int steps = paced
-                ? Math.clamp(GameServices.module().gameplayStepsPerFrame(), 1, 32) : 1;
-        step();
-        for (int i = 1; i < steps && resolveGameplayModeContext() == modeAtStart
-                && (levelManager == null ? null : levelManager.getCurrentLevel()) == levelAtStart
-                && canUseGameplayPacing(); i++) {
-            step();
-        }
-        if (gameplayAudioRateOwned && (!canUseGameplayPacing()
-                || resolveGameplayModeContext() != modeAtStart
-                || (levelManager == null ? null : levelManager.getCurrentLevel()) != levelAtStart)) {
-            releaseGameplayAudioRate();
-        }
+        gameplayAudioRateOwned = GameLoopGameplayPacing.step(this, resolveGameplayModeContext(),
+                () -> levelManager == null ? null : levelManager.getCurrentLevel(), GameServices.module(),
+                inputHandler, audioManager, this::canUseGameplayPacing, pacing -> {
+                    try {
+                        GameLoopZeroStepPresentation.run(currentGameMode, inputHandler, configService,
+                                playbackDebugManager, userPaused, escapeToMasterTitleController,
+                                this::handleConfigurationCommand, userRecordingControls::handlePlaybackTakeoverRequest,
+                                paused -> { userPaused = paused; updateAudioPauseState(); },
+                                () -> { userRecordingControls.updateLevelControlInput(inputHandler); handleTimeAttackRetryInput(); },
+                                this::canUseGameplayPacing, pacing);
+                    } finally {
+                        runAfterStepMasterTitleLaunchCallbackIfPresent(); presenceManager.tick();
+                    }
+                }, gameplayAudioRateOwned);
     }
 
     private void releaseGameplayAudioRate() {
@@ -904,6 +892,7 @@ public class GameLoop {
         return currentGameMode == GameMode.LEVEL
                 && !isPaused() && !isNonRewindableTransitionPending()
                 && !ExternalFrameOrInputOwnership.active(engineServices)
+                && (inputHandler == null || !inputHandler.hasLogicalOverride())
                 && !userRecordingControls.shouldPumpFastForward()
                 && !liveRewindManager.isRewindingOrReleasing()
                 && !(configService.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED)
