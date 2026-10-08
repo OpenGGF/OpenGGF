@@ -25,7 +25,9 @@ import java.util.List;
  * </pre>
  * {@code pal=address:colours:firstLine} may repeat; {@code char=sonic} (or tails, knuckles,
  * tails_tails) boots the game headless, dumps a playable character's sheet and prints its
- * animation scripts. Origin: Slay the Robotnik, 2026-10-05; a ggfmod subcommand since 2026-10-06.
+ * animation scripts. Add {@code heads=true first=0 count=32 scale=150} to review the native
+ * Big Head masks as stock/head/body/composite panels and print every pose's classification.
+ * Origin: Slay the Robotnik, 2026-10-05; a ggfmod subcommand since 2026-10-06.
  */
 public final class SpriteSheetDump {
     private SpriteSheetDump() {
@@ -56,6 +58,9 @@ public final class SpriteSheetDump {
         RomSpriteRequest.DplcLayout layout = RomSpriteRequest.DplcLayout.OBJECT;
         List<int[]> palettes = new ArrayList<>();
         String character = null;
+        boolean headReview = false;
+        int firstFrame = 0, reviewCount = Integer.MAX_VALUE, headScale = 150;
+        com.openggf.data.PlayerSpriteArtProvider characterProvider = null;
         for (int i = 3; i < args.length; i++) {
             String[] kv = args[i].split("=", 2);
             switch (kv[0]) {
@@ -67,6 +72,10 @@ public final class SpriteSheetDump {
                 case "offset" -> offset = Integer.decode(kv[1]);
                 case "comp" -> comp = RomSpriteRequest.Compression.valueOf(kv[1]);
                 case "char" -> character = kv[1];
+                case "heads" -> headReview = Boolean.parseBoolean(kv[1]);
+                case "first" -> firstFrame = Integer.decode(kv[1]);
+                case "count" -> reviewCount = Integer.decode(kv[1]);
+                case "scale" -> headScale = Integer.decode(kv[1]);
                 case "layout" -> layout = RomSpriteRequest.DplcLayout.valueOf(kv[1]);
                 case "pal" -> {
                     String[] p = kv[1].split(":");
@@ -77,6 +86,7 @@ public final class SpriteSheetDump {
         }
         com.openggf.tools.HeadlessGameBoot boot = null;
         SceneRomArt romArt;
+        try {
         if (character != null) {
             // Character sheets come from the game module, which needs a booted session.
             boot = new com.openggf.tools.HeadlessGameBoot(320, 224, 320, 224);
@@ -84,6 +94,7 @@ public final class SpriteSheetDump {
             var module = com.openggf.game.GameServices.module();
             Object live = module.createGame(com.openggf.game.session.SessionManager.getCurrentWorldSession()
                     .getDataSource());
+            characterProvider = (com.openggf.data.PlayerSpriteArtProvider) live;
             romArt = SceneRomArtFactory.create(com.openggf.game.GameServices.rom().getRom(), game,
                     () -> (com.openggf.data.PlayerSpriteArtProvider) live, module::loadTailsTailArt);
         } else {
@@ -113,6 +124,19 @@ public final class SpriteSheetDump {
         } else {
             var request = new RomSpriteRequest(art, comp, size, map, dplc, layout, line, offset);
             set = romArt.sprites(request, palette);
+        }
+        if (headReview) {
+            if (!"sonic".equals(character) || characterProvider == null)
+                throw new IllegalArgumentException("heads=true requires char=sonic");
+            var nativePalette = characterProvider.loadCharacterPalette(character);
+            int[] colours = new int[64];
+            for (int index=0;index<16;index++) {
+                var color=nativePalette.getColor(index);
+                colours[index]=0xFF000000 | (color.r&255)<<16 | (color.g&255)<<8 | color.b&255;
+            }
+            PlayerHeadMaskReview.write(characterProvider.loadPlayerSpriteArt(character), colours, out,
+                    firstFrame, reviewCount, headScale, output);
+            return 0;
         }
         int cell = 0;
         for (int f = 0; f < set.frameCount(); f++) {
@@ -150,13 +174,11 @@ public final class SpriteSheetDump {
         }
         PngCodec.write(out, sheet);
         output.println(set.frameCount() + " frames -> " + out);
-        if (boot != null) {
-            boot.close();
-        }
         return 0;
+        } finally { if (boot != null) boot.close(); }
     }
 
-    private static void digits(PixelImage sheet, int value, int x, int y) {
+    static void digits(PixelImage sheet, int value, int x, int y) {
         String[] font = {"111101101101111", "010110010010111", "111001111100111", "111001111001111",
                 "101101111001001", "111100111001111", "111100111101111", "111001001010010",
                 "111101111101111", "111101111001111"};

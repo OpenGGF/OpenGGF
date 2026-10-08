@@ -546,3 +546,13 @@ LOAD. Engine consumers use world-owned semantic ports rather than concrete mod
 state. The mutable `0.7` signature pin is regenerated from compiled source;
 `0.7.0` remains unpublished and no published baseline changes. Consumer behavior
 and the three-game example are tracked in the dated expansion plan.
+
+The unpublished 0.7 native head presentation reserves `PatternAtlasRange.PLAYER_PRESENTATION`
+for ROM-derived body/head fragment tiles. Dynamic mod windows continue to start above the
+maximum declared native range. `GraphicsManager.playerHeadFragmentBase(int)` assigns a
+companion fragment bank to an existing native player bank; it does not change the mod
+window budget or authority. `PlayerSpriteRenderer.headProfileId()` identifies reviewed
+normal Sonic source art, and `headPresentationReason(int)` exposes an explicit stock-pose
+fallback reason (empty for reviewed/empty poses). Anatomical polygons, frame kinds and
+neck anchors remain engine internals. The candidate remains 0.7.0, and its normalized
+signatures must come from the actual compiled composition.

@@ -40,6 +40,10 @@ import java.util.logging.Logger;
 
 @com.openggf.game.ModApi
 public class GraphicsManager {
+    private final PlayerHeadFragmentBanks playerHeadFragmentBanks = new PlayerHeadFragmentBanks();
+    /** Companion art namespace follows the original virtual player bank, independently of pose or game. */
+    public int playerHeadFragmentBase(int sourceBank) { return playerHeadFragmentBanks.baseFor(sourceBank); }
+
 	private static final Logger LOGGER = Logger.getLogger(GraphicsManager.class.getName());
 
 	private static final UnderwaterPaletteUploadOps OPEN_GL_UNDERWATER_PALETTE_UPLOAD_OPS =
@@ -2184,6 +2188,12 @@ public class GraphicsManager {
 				}
 				return;
 			}
+
+            if (processedEntries.stream().anyMatch(entry -> entry.presentationSubject().head() != null)) {
+                com.openggf.level.render.SpritePresentationRenderer.replayHeadSat(this, processedEntries,
+                        entry -> appendBatchedReplayCommands(entry, -1));
+                return;
+            }
 
 			// The SAT replay must not re-enter renderPatternWithId(): that could merge the
 			// carefully ordered SAT sequence into a still-open batch owned by another layer,

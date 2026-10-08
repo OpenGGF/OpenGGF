@@ -36,7 +36,8 @@ public enum PatternAtlasRange {
     SONIC2_ENDING_VRAM(0xF8000, 0x08000, "Sonic 2 ending VRAM-relative art"),
     SEGA_BOOT_LOGOS(0x100000, 0x08000, "SEGA boot logos"),
     MGZ_ZOOM_CUES(0x108000, 0x80000, "MGZ zoom-cue instance banks"),
-    CONTINUE_SCREEN(0x188000, 0x10000, "Continue screen");
+    CONTINUE_SCREEN(0x188000, 0x10000, "Continue screen"),
+    PLAYER_PRESENTATION(0x198000, 0x10000, "ROM-derived player presentation fragments");
 
     private static final PatternAtlasRange[] LOOKUP_VALUES = values();
 

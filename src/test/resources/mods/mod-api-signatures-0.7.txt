@@ -2867,6 +2867,7 @@ FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.gra
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange MENU_AND_DATA_SELECT
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange MGZ_ZOOM_CUES
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange OBJECTS
+FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange PLAYER_PRESENTATION
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange RESULTS_SCREENS
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange S3K_TITLE_SCREEN_ANIMATION
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange S3K_TITLE_SCREEN_SPRITES
@@ -8719,6 +8720,7 @@ METHOD com.openggf.graphics.GraphicsManager public  int getViewportHeight()
 METHOD com.openggf.graphics.GraphicsManager public  int getViewportWidth()
 METHOD com.openggf.graphics.GraphicsManager public  int getViewportX()
 METHOD com.openggf.graphics.GraphicsManager public  int getViewportY()
+METHOD com.openggf.graphics.GraphicsManager public  int playerHeadFragmentBase(int)
 METHOD com.openggf.graphics.GraphicsManager public  java.lang.Integer cacheUnderwaterPaletteTexture(com.openggf.level.Palette[],com.openggf.level.Palette)
 METHOD com.openggf.graphics.GraphicsManager public  java.lang.Integer getCombinedPaletteTextureId()
 METHOD com.openggf.graphics.GraphicsManager public  java.lang.Integer getPatternAtlasTextureId()
@@ -14009,6 +14011,8 @@ METHOD com.openggf.sprites.render.PlayerSpriteRenderer public  com.openggf.level
 METHOD com.openggf.sprites.render.PlayerSpriteRenderer public  com.openggf.level.render.SpritePieceRenderer$FrameBounds getFrameBounds(int,boolean,boolean)
 METHOD com.openggf.sprites.render.PlayerSpriteRenderer public  int patternBankBase()
 METHOD com.openggf.sprites.render.PlayerSpriteRenderer public  int patternBankCapacity()
+METHOD com.openggf.sprites.render.PlayerSpriteRenderer public  java.lang.String headPresentationReason(int)
+METHOD com.openggf.sprites.render.PlayerSpriteRenderer public  java.lang.String headProfileId()
 METHOD com.openggf.sprites.render.PlayerSpriteRenderer public  void applyRuntimeArtUpdate(int,com.openggf.game.resources.DynamicArtLifecycleService$ArtUpdate)
 METHOD com.openggf.sprites.render.PlayerSpriteRenderer public  void drawFrame(int,int,int,boolean,boolean)
 METHOD com.openggf.sprites.render.PlayerSpriteRenderer public  void ensureCached(com.openggf.graphics.GraphicsManager)

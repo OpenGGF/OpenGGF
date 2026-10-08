@@ -1316,3 +1316,33 @@ A seamless reload's current-bound and target-bound overrides are separate. AIZ's
 `AIZ1BGE_Finish` writes a fixed X lock of `$10/$10`, and `Do_ResizeEvents` eases
 only max Y. Pin the engine's X targets too, or the loaded defaults move the lock
 on the next tick (S3K trace campaign, 2026-10-03).
+
+**Head-only presentation follows native admission and indexed art identity.** A Sonic head
+crosses mapping-piece and tile boundaries, and slope, crouch and balance poses put it below
+or beside the body. Use reviewed per-frame anatomy metadata, the original mapping-piece
+index and source pixel centres; retain explicit stock ball/special-pose classifications.
+Scale only admitted ROM head pixels about an unflipped neck anchor after the native SAT
+mask pass. Flip pixel indices with `-coordinate-1`, and geometric anchors with
+`-coordinate`. Freeze the indexed DPLC generation before later draws reuse its slots.
+Each native virtual player bank also needs a separate companion fragment bank: resetting
+fragment IDs for every local S1/S2 preparation lets a second Sonic slot overwrite the
+first slot's queued pixels. The production `ggfmod sprites ... char=sonic heads=true`
+review panels and `TestPlayerHeadPresentation` cover the three native inventories,
+source identity, flips, admission and simultaneous duplicate banks. Native-image packaging
+explicitly includes the text metadata. Review panels use 112px cells and reject opaque-pixel
+cropping through the maximum 200% scale; a smaller plausible-looking sheet clipped pushing
+Sonic at the edge (Mutator Lab, 2026-10-08).
+
+**ROM palette constants can describe another revision.** Sonic 1 REV01 moves the Sonic
+palette relative to REV00. A raw sheet read through the old absolute palette constant
+can still look plausible while turning Sonic green/yellow. Character contact sheets use
+`loadCharacterPalette`, which resolves the native `PalPointers` entry, and retain the
+original ROM identity; reference-tree art and guessed palette addresses are not runtime
+fallbacks (Mutator Lab native mask research, 2026-10-08).
+
+Raised hands can share a native mapping piece with Sonic's head. A broad right edge
+on S3K balance frame A1 selected part of its raised glove; the actual ROM detail and
+production head/body panels exposed it. Trace the explicit eye/muzzle boundary instead
+of selecting the whole piece, and verify an opaque glove pixel remains at its stock
+body coordinate. Distinct geometry is required even when piece IDs appear convenient
+(Mutator Lab mask refinement, 2026-10-08).

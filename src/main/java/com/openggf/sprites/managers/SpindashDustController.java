@@ -158,13 +158,14 @@ public class SpindashDustController {
     }
 
     public void draw() {
+        // Both water animations retain their captured world coordinates after the player leaves.
+        drawSurfaceSplash();
+        drawSplash();
         com.openggf.sprites.playable.PlayableMutatorPresentation.draw(sprite,
                 com.openggf.graphics.SpritePresentation.Part.ATTACHED_EFFECT, this::drawNative);
     }
 
     private void drawNative() {
-        drawSurfaceSplash();
-        drawSplash();
         if (!isActive() || renderer == null) {
             return;
         }

@@ -19,11 +19,13 @@ import java.util.Objects;
 @com.openggf.game.ModApi
 public class PlayerSpriteRenderer {
     private final SpriteArtSet artSet;
+    private final PlayerHeadProfile headProfile;
     private final DynamicPatternBank patternBank;
     private final GraphicsManager graphicsManager;
     private final PatternDesc reusableDesc = new PatternDesc();
     private RenderContext renderContext;
     private int lastFrame = -1;
+    private int headFragmentBase = -1;
 
     public PlayerSpriteRenderer(SpriteArtSet artSet) {
         this(artSet, GameServices.graphics());
@@ -31,6 +33,7 @@ public class PlayerSpriteRenderer {
 
     public PlayerSpriteRenderer(SpriteArtSet artSet, GraphicsManager graphicsManager) {
         this.artSet = artSet;
+        this.headProfile = PlayerHeadProfile.resolve(artSet);
         this.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
         int capacity = Math.max(0, artSet.bankSize());
         this.patternBank = new DynamicPatternBank(artSet.basePatternIndex(), capacity);
@@ -91,51 +94,57 @@ public class PlayerSpriteRenderer {
         SpriteMappingFrame frame = artSet.mappingFrames().get(frameIndex);
         com.openggf.level.render.SpritePresentationRenderer.bindPatternBank(graphicsManager,
                 patternBank.getBasePatternIndex(), patternBank.getPatterns(), frame);
-        if (graphicsManager.isSpriteSatCollectionActive()) {
-            int satPaletteIndex = resolveRenderPaletteIndex(artSet.paletteIndex());
-            for (int i = 0; i < frame.pieces().size(); i++) {
-                SpritePieceRenderer.preparePiece(
-                        frame.pieces().get(i),
-                        originX,
-                        originY,
-                        patternBank.getBasePatternIndex(),
-                        satPaletteIndex,
-                        hFlip,
-                        vFlip,
-                        graphicsManager.getCurrentSpriteHighPriority(),
-                        graphicsManager::submitSpriteSatPiece);
-            }
-            return;
-        }
-        SpritePieceRenderer.renderPieces(
-                frame.pieces(),
-                originX,
-                originY,
-                patternBank.getBasePatternIndex(),
-                artSet.paletteIndex(),
-                hFlip,
-                vFlip,
-                (patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
-                    // Build a PatternDesc for flip/palette, but use renderPatternWithId()
-                    // to pass the full pattern index — bypassing PatternDesc's 11-bit
-                    // VDP limit so sidekick banks above 0x800 resolve correctly.
-                    int descIndex = patternIndex & 0x7FF;
-                    if (pieceHFlip) {
-                        descIndex |= 0x800;
-                    }
-                    if (pieceVFlip) {
-                        descIndex |= 0x1000;
-                    }
-                    descIndex |= (paletteIndex & 0x3) << 13;
-
-                    reusableDesc.set(descIndex);
-                    if (renderContext != null) {
-                        reusableDesc.setPaletteIndex(
-                                renderContext.getEffectivePaletteLine(paletteIndex));
-                    }
-                    graphicsManager.renderPatternWithId(patternIndex, reusableDesc, drawX, drawY);
+        var subject = com.openggf.graphics.SpritePresentation.subject(graphicsManager);
+        PlayerHeadProfile.FrameHead mask = headPresentationStatus(frameIndex);
+        boolean head = subject.part() == com.openggf.graphics.SpritePresentation.Part.BODY
+                && subject.headScalePercent() != 100 && mask.kind() == PlayerHeadProfile.Kind.MASKED;
+        if (head && headFragmentBase < 0)
+            headFragmentBase = graphicsManager.playerHeadFragmentBase(patternBank.getBasePatternIndex());
+        var versions = head ? com.openggf.level.render.SpritePresentationRenderer.patternVersions(
+                patternBank.getBasePatternIndex(), patternBank.getPatterns(), frame) : java.util.Map.<Integer,
+                com.openggf.graphics.SpritePresentation.PatternVersion>of();
+        for (int i = 0; i < frame.pieces().size(); i++) {
+            var piece = frame.pieces().get(i);
+            Runnable nativeDraw = () -> {
+                if (graphicsManager.isSpriteSatCollectionActive()) {
+                    SpritePieceRenderer.preparePiece(piece, originX, originY, patternBank.getBasePatternIndex(),
+                            resolveRenderPaletteIndex(artSet.paletteIndex()), hFlip, vFlip,
+                            graphicsManager.getCurrentSpriteHighPriority(), graphicsManager::submitSpriteSatPiece);
+                } else {
+                    SpritePieceRenderer.renderPiece(piece, originX, originY, patternBank.getBasePatternIndex(),
+                            artSet.paletteIndex(), hFlip, vFlip, this::drawPattern);
                 }
-        );
+            };
+            if (head) {
+                com.openggf.graphics.SpritePresentation.withHead(graphicsManager,
+                        new com.openggf.graphics.SpritePresentation.HeadTransform(mask, i, originX, originY,
+                                hFlip, vFlip, subject.headScalePercent(), headFragmentBase, versions), nativeDraw);
+            } else nativeDraw.run();
+        }
+    }
+
+    /** Useful current-pose fallback status; configuring a size never invents masks for unknown art. */
+    private PlayerHeadProfile.FrameHead headPresentationStatus(int frameIndex) {
+        return headProfile == null ? PlayerHeadProfile.unsupported() : headProfile.frame(frameIndex);
+    }
+
+    /** Empty for reviewed/empty frames; explicit stock-pose qualification otherwise. */
+    public String headPresentationReason(int frameIndex) {
+        var status=headPresentationStatus(frameIndex);
+        return status.kind()==PlayerHeadProfile.Kind.MASKED || status.kind()==PlayerHeadProfile.Kind.EMPTY
+                ? "" : status.reason();
+    }
+
+    public String headProfileId() { return headProfile == null ? "" : headProfile.id(); }
+
+    private void drawPattern(int patternIndex, boolean hFlip, boolean vFlip, int paletteIndex, int drawX, int drawY) {
+        int descIndex = patternIndex & 0x7FF;
+        if (hFlip) descIndex |= 0x800;
+        if (vFlip) descIndex |= 0x1000;
+        descIndex |= (paletteIndex & 0x3) << 13;
+        reusableDesc.set(descIndex);
+        if (renderContext != null) reusableDesc.setPaletteIndex(renderContext.getEffectivePaletteLine(paletteIndex));
+        graphicsManager.renderPatternWithId(patternIndex, reusableDesc, drawX, drawY);
     }
 
     public SpriteDplcFrame dplcFrame(int frameIndex) {

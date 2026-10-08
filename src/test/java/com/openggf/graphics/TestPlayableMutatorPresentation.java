@@ -165,9 +165,9 @@ class TestPlayableMutatorPresentation {
             }, true);
             assertEquals(5, frame.tiles().size(), "all native producers run");
             var effect = frame.tiles().stream().filter(t -> t.patternId() == DUST).findFirst().orElseThrow();
-            assertEquals(SpritePresentation.Part.ATTACHED_EFFECT, effect.subject().part());
-            assertEquals(hideEffects, effect.subject().suppressed());
-            assertEquals(hideEffects ? 3 : 4, replay(frame).tiles().size());
+            assertEquals(SpritePresentation.Part.WORLD, effect.subject().part());
+            assertFalse(effect.subject().suppressed(), "fixed world splash survives attached-effect suppression");
+            assertEquals(4, replay(frame).tiles().size());
         }
     }
 
@@ -225,6 +225,26 @@ class TestPlayableMutatorPresentation {
         assertEquals(hidden, nativeEntries.getFirst().presentationSubject());
         assertEquals(hidden, armer.withVisibleScanlines(1, 7).presentationSubject());
         assertEquals(hidden, armer.clipRows(0, 1).presentationSubject());
+    }
+
+    @Test void activeSpindashDustIsAttachedWhileBothFixedWorldSplashesSurvive() {
+        var sonic=sonic("sonic",SONIC_BODY);
+        sonic.setSpindash(true);sonic.setAir(false);
+        var dust=new SpindashDustController(sonic,renderer(DUST));
+        dust.triggerSplash(32,60,false);
+        dust.triggerSurfaceSplash(renderer(DUST+1),40,60);
+        dust.update();
+        var state=sonic.captureRewindState();
+        for(boolean hidden:new boolean[]{false,true}) {
+            PlayableSpriteInternalAccess.bindMutatorPolicies(sonic,p->new PlayableMutatorPolicy(100,true,true,hidden));
+            var frame=prepare(dust::draw,true);
+            assertEquals(3,frame.tiles().size());
+            assertEquals(2,frame.tiles().stream().filter(t->t.subject().part()==SpritePresentation.Part.WORLD).count());
+            var attached=frame.tiles().stream().filter(t->t.subject().part()==SpritePresentation.Part.ATTACHED_EFFECT).findFirst().orElseThrow();
+            assertEquals(hidden,attached.subject().suppressed());
+            assertEquals(hidden?2:3,replay(frame).tiles().size());
+            assertNativeStateEquals(state,sonic.captureRewindState(),"dust display does not change spindash state");
+        }
     }
 
     @Test void liveSuppressionRunsProducerAndRestoresGraphicsStateAcrossFramesAndFaults() {
