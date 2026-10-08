@@ -784,9 +784,9 @@ the unchanged `render()` path. POM, hooks, selection policy and queue implementa
 are unchanged. This qualifies reuse of the **be3 full baseline through d5f focused
 controls**; it is not a measured full 33d baseline or a full-suite pass. Compare
 delivery results with all 28 complete assertions and all 62 skip identities/reasons
-recorded above. Any changed result requires bounded matched attribution. External
-creator acceptance remains pinned to clean `4f3d2c27`; this upstream change does
-not alter its mod/API/packaging inputs.
+recorded above. Any changed result requires bounded matched attribution. The first
+external creator attempt used clean `4f3d2c27`; corrected acceptance and the later
+Sitar refresh are recorded below.
 
 ### Compact-font count-in integration correction: 2026-10-08
 
@@ -831,3 +831,144 @@ clock. Its music player and ROM boundary are controlled fixture doubles; passing
 the three ROM properties does not turn it into a live venue or speaker capture.
 This is focused verification. Combined development and postintegration checks
 remain the coordinator's delivery obligations.
+
+### Corrected external creator acceptance: 2026-10-08
+
+The first `4f3d2c27` attempt exposed two distinct problems. Its temporary reactor
+driver wrote absolute module paths that Maven prefixed with the reactor directory;
+all seven modules were missing before any child compilation. Changing the driver
+to relative module paths resolved that harness error. Six starters then packaged
+with zero findings, but the standalone starter reported two `AUDIO_ASSET_INVALID`
+findings and one `AUDIO_ASSET_MISSING`: `audio/sample-tone.wav` was absent.
+
+The maintained standalone fixture stores encoded audio under `src/main/mod` and
+its shell build relocates the decoded file to `src/main/resources/audio`. SDK
+initialization had omitted that relocation. Source correction
+`64da7de5452c6d59f7a42137af3609d1fa9c440f`, merged as
+`7318d6db4d1f3865f5cfbaa8ee84ea012c45b3e7`, makes the same narrow relocation
+when copying the trusted maintained fixture. A classifier-only loader regression
+checks exact audio bytes and strict packaged validation. Its JavaCompiler uses
+the full session engine classpath; SDK-only compilation is established by the
+external generated-project builds, not that regression alone.
+
+The normal focused command
+`python3 tools/testing/maven_queue.py --lean -Dmse=off -B -q -Dtest=TestPurposeStarters,TestModApiSdkPackager test`
+completed with 13 tests, zero failures, errors or skips (3 purpose-starter cases
+and 10 SDK-packager cases). No API declaration, candidate version or pin changed.
+
+All ten external acceptance stages then passed on clean `7318d6db4d1f3865f5cfbaa8ee84ea012c45b3e7`.
+The temporary external driver received the source tree, extracted kit, work
+directory and expected SHA explicitly, and ran these stages in order:
+`artifacts scaffold first edit second examples jupiter ordinary platformer catalog`.
+The artifact stage used normal queued Maven, without `--lean`:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -B -q -DskipTests -Puniversal-jar verify
+python3 tools/modding/build_creator_kit.py --out "$CREATOR_ACCEPTANCE_ROOT/kit-first.zip"
+python3 tools/modding/build_creator_kit.py --out "$CREATOR_ACCEPTANCE_ROOT/kit-repeat.zip"
+```
+
+Both ZIPs had SHA-256
+`688be20f443b2d1c23c814d3d7822e96fdee8ed089aaaa98f90b4cbd83a1f93d`.
+All four artifacts reported candidate API `0.7.0`, engine `0.7.prerelease`, the
+same expected source commit and a clean build. The complete hash inventory and
+exported launcher were checked.
+
+| External acceptance | Observed result |
+|---|---|
+| Seven generated purpose starters | Normal Maven package twice without cleaning after manifest, Java, art and audio edits; changed outputs reached every jar; zero validation findings |
+| Eight exported examples | Both portable launcher and normal Maven package passed; Infinite 26, Golf 10 and Survivors 28 documented internal-API warnings accepted under explicit `allow`; the other five had zero warnings; no errors |
+| Tide authored outputs | All 22 regenerated binaries matched byte-for-byte |
+| Exported Hello Jupiter profile | One fresh `hello.HelloSceneIntegrationTest`, zero failures/errors/skips |
+| Hello ordinary package after profile | Existing test-report timestamps unchanged; production jar excluded tests and testkit classes |
+| Maintained Platformer | Two normal Maven packages after source/art edits, no clean or forced local profile; all five converters reran, edited outputs verified, zero findings/warnings; waits 5,190 and 565 seconds |
+| Catalog | Three fresh Java 21.0.12.1 JVMs with 512 MiB heaps; repeat ordering/diagnostics and both oversized-asset and 1,025-jar rejection passed |
+
+DPLC bank-cost notices from conversion were separate from validation findings.
+The catalog used the production scan, validate, load/register and close pipeline:
+
+| Shape | Discovery / effective / registration | Total pipeline time |
+|---|---|---|
+| 1 / 32 / 128 owners × 1 MiB | All admitted and registered | 130 / 121 / 323 ms |
+| 1 / 8 owners × 32 MiB | All admitted and registered | 182 / 353 ms |
+| 1,024 owners × 64 KiB | 1,024 / 128 / 128; 896 `PATTERN_WINDOW_BUDGET_EXCEEDED` | 647 ms |
+
+Oversized assets produced `MOD_JAR_INVALID`; 1,025 jars produced
+`REPOSITORY_JAR_LIMIT_EXCEEDED` before activation. Process peak RSS was
+545,910,784 / 648,396,800 / 582,569,984 bytes. Summed historical heap-pool peaks
+were 360,232,176 / 501,870,696 / 329,315,512 bytes: these are neither simultaneous
+heap usage nor allocation measurements, and timings are not latency guarantees.
+Probe directories were removed. The acceptance driver created no ROM copies or
+links. These are creator-build/catalog results, not ROM gameplay certification.
+
+### Final merged Sitar and artifact refresh
+
+Main's Sitar presentation polish at `09cfcc0f882305d6a0c6a4fc05b600d3ca27a888`
+was reconciled as `d85d2b63f55660283690e4e533d318fa842a8034`. Java merged cleanly;
+two documentation conflicts retained the new venues/audio/reading order, the
+nine-sample catalogue and portable artifact instructions. All 66 local link
+targets and seven shell fences in the resolved documents passed. Independent
+review confirmed shared control/font/layout adoption survived; it also identified
+the count-in incompatibility corrected and verified above.
+
+The latest full baseline remains **be3**, qualified through the d5f capture/fixture
+controls and matched ae2 Sitar verification. The integrated polish record reports
+141 passing baseline cases at `33d3976c5`, then all 141 plus seven new passing cases
+at `ae2dfd3dd`: 14 fresh suites / 148 tests / zero failures/errors/skips. Separate
+fresh guards passed 86 suites / 672 tests with zero failures/errors/skips.
+Independent blob comparison found all fourteen failing-test classes and thirty
+skipped-test classes unchanged from be3. No engine Java, POM, hook, selection
+policy, API descriptor or pin changed in that upstream polish. See the exact
+commands and coverage limits in the
+[integrated polish record](../designs/2026-10-08-sitar-hero-presentation-polish.md).
+This qualifies the existing full baseline; it is not a full ae2/09cf pass.
+
+Normal artifact refresh on clean `d49a741a249bf63508115930a2c5f306c878577d`
+completed direct session 37357 after 1,150 seconds waiting. Two more ZIPs were
+byte-identical, with SHA-256
+`912a2f0d5b7434c6c732737c3ed0cc6da93e8bea29de38513d618014d8d15848`.
+All four clean-source metadata records, complete inventory and launcher matched.
+
+| Final artifact | SHA-256 |
+|---|---|
+| `engine.jar` | `c29c0aed46017a327debe21c158afec757945c57dac45d44c92e1587073f3bd2` |
+| `sdk.jar` | `6fa030644fbe980e648923fe530962c76f34bf78628c785bcdf99b3f3540024b` |
+| `mod-testkit.jar` | `31aa828d5d481b058b05aa9ac3fb0f2cc7748404d9b2c1dfb8b5fddbaf6b4115` |
+| `api-docs.jar` | `3497d0907a7d57a557b529c78d6facb0ec04d2ef8d26fa277bda88b84efe14d3` |
+
+Independent readback found 13,368 engine classes with no SDK tools or testkit
+classes, 61 SDK tool classes, three testkit support classes, and the API-docs
+`index.html`. Only Sitar's export changed after the ten-stage acceptance; the seven
+other exports and starter inputs are unchanged. CompactFont's compatible scale
+extension changes no signatures and preserves scales 1–4.
+
+Sitar alone was rebuilt with the final matched artifacts, through its portable
+launcher and normal queued Maven package (session 22908, 140 seconds waiting,
+no `--lean`). Both strict `validate --warnings error` runs returned zero findings
+and warnings. Both production jars have 78 entries / 77 classes, including 15
+stage classes and all eight required new scene/audio/stage top-level classes;
+tests, testkit and JUnit classes are absent. The export has 39 production Java
+files. Portable jar SHA-256 is
+`e77b8fe513b267584a845bc8b1686a532f447bbe2b5f1a4623b1789ca413a916`;
+normal Maven jar SHA-256 is
+`8ff3e99fa90ff61f6a3c1e96ee571a419feaa48553b75f55fe0e755d27107777`.
+Jar byte equality is not required across those two packaging tools. Runtime
+verification is the separate 54-case focused run above. Full development and
+post-integration validation, push and owned cleanup remain required.
+
+With `KIT` set to that extracted matching bundle, the targeted export commands
+were:
+
+```bash
+python3 "$KIT/tools/build_project.py" "$KIT/examples/sitar-hero"
+python3 tools/testing/maven_queue.py -Dmse=off -B -q \
+  -f "$KIT/examples/sitar-hero/pom.xml" package \
+  "-Dopenggf.engine.jar=$KIT/engine.jar" \
+  "-Dopenggf.sdk.jar=$KIT/sdk.jar"
+java -cp "$KIT/engine.jar:$KIT/sdk.jar" \
+  com.openggf.tools.modsdk.GgfModCli validate \
+  "$KIT/examples/sitar-hero/target/sitar-hero-mod.jar" \
+  --format json --warnings error
+```
+
+The strict validation command ran after each packaging path.
