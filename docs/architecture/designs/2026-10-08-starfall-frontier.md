@@ -244,6 +244,7 @@ installed mod SHA-256 is `25bfcfcbaab5af137f677ce387fdfd619405cfe38eaf4c4a4c0fdf
 
 ## Biome revision
 
+Implementation: `ca947bb1d3` (version 1.2.0).
 Revision base: `e6844866ed12c0a812b9dba0d646c987347b93d4`.
 Worktree: `.worktrees/starfall-biomes`, branch `feature/ai-starfall-biomes`,
 based on the existing Starfall Frontier feature. This revision implements
