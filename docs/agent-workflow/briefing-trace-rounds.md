@@ -78,6 +78,17 @@ alone cost 5.3 ms due to repeated writes to an in-flight vertex buffer. Measure
 `ExampleModCapture --every 0` with no video never submits a frame; it cannot
 measure rendering throughput. Separate warm-up, update, submission and finish
 costs, and compare deterministic framebuffer output when changing uploads.
+
+An inherited loader environment can change a shell test without a source change
+(2026-10-08, stock parity delivery): the audio CLI deliberately rejects `LD_*`
+variables. Its first safe `--help` subprocess returned4 from the app's native
+session with `LD_LIBRARY_PATH`, but0 from a retained user service without it.
+The base and candidate script/test blobs were identical; a matched four-way
+base/current command check reproduced both outcomes by changing only that
+variable's presence. Attribute the absent failure to launch environment, inspect
+the complete remaining assertions and skips, and retain normal validation.
+Do not report this as a source fix or recreate an unrelated failure deliberately.
+
 Committed fixtures are live validation inputs (2026-10-08, Sitar Hero delivery):
 freeze test sources, BK2 files and scripts alongside runtime code. A fixture merge
 during an ordinary run makes the invocation incomplete even if already compiled
@@ -116,6 +127,30 @@ snapshot alone does not prove neutral gameplay input. Correct the owning writer
 and publication seam; preserve legitimate scripted control rather than clearing
 all forced state or adjusting physics. Native controller latches are a separate
 observation from both physical BK2 rows and engine input publication.
+
+
+A held gameplay counter does not prove that `RunPLC` has not armed (2026-10-08,
+stock parity S1 MZ2 return): native `FixBugs=0` writes `v_plc_patternsleft`
+before `NemDec_BuildCodeTable`. An observed call armed eighteen patterns in
+row101 and returned in row102 after the intervening lag VBlank, with the
+gameplay counter held. All thirteen surrounding player and clock observations
+matched the committed fixture. Counter lookahead alone therefore cannot choose
+which side of the arm the interrupt sampled. Observe entry, the write and return;
+do not use queue comparison rows as readiness input or fit a lag exception.
+The existing S1 hardware-timing kind can carry the matching native arm, but an
+implementation without a fixture stream is not measured timing coverage.
+
+An unchanged engine does not freeze validation inputs (2026-10-08, shared
+main qualification): a Java test read its controller BK2 directly from the
+source tree after compilation. Another owner's test/fixture merge after
+admission changed the live input despite unchanged engine/API/POM/hooks.
+Preserve the legitimate merge, mark that exact owned invocation incomplete
+and qualify the updated fixture before replacing the invalid run. Hold
+tracked tests and fixtures through both lanes as well as production source.
+Separate worktrees with independent regular/reflink files retain their own
+input versions; verify the actual file blob rather than inferring it from an
+engine-only diff or branch label.
+
 Unpaced mod captures can outrun preparation (2026-10-08, Sitar Hero polish):
 `ExampleModCapture` advances ticks as quickly as it can while ROM song preparation
 runs on a worker. A short capture without video or frequent PNGs can finish before
@@ -173,6 +208,12 @@ status/controller refresh continued to read the live S2 module. An expected red
 case passed and the registered-shield control failed. Use
 `TestEnvironment.configureGameModuleFixture` for the intended live world, verify
 the positive control, and discard the mixed result before attributing behavior.
+The October8 death-radius fixture reproduced this hazard across a restore:
+initial S3K rules produced the expected kill, but animation publication refreshed
+the retained S2 world and the next kill used S2 landing rules. Correct the live
+fixture rather than the native expectation. Conversely, clearing a ROM-backed
+fixture's session without reopening it made the S2 results tests fail during
+setup; those errors were not evidence that the intended regression reproduced.
 
 A complete registry restore can still omit a scheduling owner (2026-10-07,
 FBZ → SOZ destination floor): pending shield restoration exposed five art clocks

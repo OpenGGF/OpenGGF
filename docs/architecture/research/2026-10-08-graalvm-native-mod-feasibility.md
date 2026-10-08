@@ -377,6 +377,21 @@ The corrected build runs Windows compilation alongside guards, with both require
 before delivery. The packaged README also points to Microsoft's official x64
 runtime installer if a recipient lacks the platform's C++ runtime DLLs.
 
+The next Windows run, `37827958311` at integrated `913c5a3516b1eafd4fb63cc0111d16dfeb7ac3c5`,
+accepted the alias and activated the real SQLite native feature. It then stopped
+at the hosted fail-closed option check: the key class was requested from the old
+`core.option` package. Inspection of the checksum-pinned Windows `svm-shared.jar`
+and `javap` of the real `RuntimeClassLoading.Options` confirms its declared field
+type is `com.oracle.svm.shared.option.HostedOptionKey`, whose public `getValue()`
+method is present. The private correction derives the key type from the actual
+option field and exports its actual module package. This avoids reflecting the
+private anonymous subclass and preserves the requirement that class loading is
+really enabled. Windows requalification and publication await coordination with
+the main integration hold; no usable ZIP is claimed at this checkpoint.
+`jar --describe-module` additionally identifies the key's owning module as
+`org.graalvm.nativeimage.shared`, rather than `org.graalvm.nativeimage.builder`;
+the export flag follows that shipped module descriptor.
+
 The plan at base `d2a501ebc9919e6c43412a2eedf02a372eac5309` selects all 3,058
 ordinary classes plus guards because the new tools/workflow are unclassified.
 The previously completed ordinary engine qualification at frozen `6124a524e`

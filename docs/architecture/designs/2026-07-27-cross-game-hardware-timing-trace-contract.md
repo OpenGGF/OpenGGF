@@ -17,7 +17,10 @@ this document remains the cross-game authority boundary.
 The trace-v5 consolidation supersedes the schema-selection mechanics below,
 without changing this document's authority boundary. Current metadata declares
 only `trace_schema: 5`; `hardware_timing_schema` is removed. Presence of
-`hardware_timing.jsonl` enables the one current registry. Every event still
+`hardware_timing.jsonl` or `hardware_timing.jsonl.gz` enables the one current
+registry; gzip is a storage encoding and keeps the same strict decoded grammar.
+The ordinary trace-file resolver prefers a plain sibling when both exist.
+Every event still
 admits only matching, prepared, production-submitted ROM work after kind,
 ordinal, stable submission fingerprint, and service-boundary checks succeed.
 
