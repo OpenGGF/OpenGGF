@@ -1,4 +1,4 @@
-package sitarhero;
+package sitarhero.stage;
 
 import com.openggf.mods.scene.SceneImage;
 import com.openggf.mods.scene.SceneSprite;
