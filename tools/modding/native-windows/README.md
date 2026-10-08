@@ -24,7 +24,8 @@ python tools/modding/native-windows/build_windows.py --engine-jar $engine --inpu
 
 Output directories must be new; remove only a previous build's owned outputs
 before rerunning. The GitHub workflow performs the same build on Windows,
-following fresh normal structural guards. It runs on targeted tool changes to
+alongside fresh normal structural guards; both jobs must pass before delivery.
+It runs on targeted tool changes to
 develop or manual dispatch, uploads the ZIP/checksum for three days and never
 publishes a release or tag.
 
