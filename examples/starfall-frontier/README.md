@@ -7,8 +7,8 @@ Knuckles ROM. Java 21 and the matching development JVM build are required.
 An ancient beacon on **Angel Island** has fallen silent. Run through the palm
 jungle, mine beneath the island, gather power rings and chaos shards, and
 recover three emerald fragments from Eggman's shrine sentinels. Restore the
-beacon, then keep expanding your world. Angel Island is the first biome;
-other Sonic zones are reserved for future biome work.
+beacon, then keep expanding your world. Explore eleven S3K-inspired biomes, from palm jungle and icy cliffs to
+buried waterworks, volcanic caves and floating sanctuary ruins.
 
 The seeded world is 256 × 96 tiles with caves, three shrine chambers, buried
 treasure, surface berries, trees and copper, iron and chaos shard deposits.
@@ -18,8 +18,11 @@ heartstones, building materials and crafting stations. Seven quest stages
 guide the progression. The shrine sentinels warn before attacks: Jungle fires a fan,
 Ruins sends a ring of shots, and Core fires faster volleys and lunges.
 
-Angel Island's parallax background, grassy earth, rocks, palm trunks and
-foliage are decoded from your ROM. Rhinobots, Monkey Dudes and Bloominators
+Terrain uses native 16-pixel blocks decoded from each zone's ROM art,
+mappings and palettes, cropped to the adventure's 12-pixel grid. Angel Island,
+Hydrocity, Launch Base and Sky Sanctuary also use ROM parallax backgrounds;
+other regions use original scenery colored for their zone. Palm trunks and
+foliage come from Angel Island, with original mushroom crowns in the woodland. Rhinobots, Monkey Dudes and Bloominators
 represent the foes; monitors hold caches, starposts mark camp and shrines,
 and an Egg Mobile represents each sentinel. Rings and emerald sprites also
 appear in the pack. Crafting equipment, material highlights, lighting and
@@ -31,9 +34,33 @@ variable jump height, air control and momentum. Ground acceleration and
 friction are intentionally stronger for mining and building. Descending onto
 a badnik deals spin damage and bounces Sonic upward. This is a flat tile-world
 controller; native slope physics, rolling and spindash are not implemented.
-Angel Island Act 1 music plays at the surface, Act 2 in the deep ruins, and
-boss music during encounters. Jumping, mining, attacks and damage have ROM
+Each biome selects its own ROM music as you cross horizontal and depth
+boundaries. Hydrocity, Sandopolis tombs and deep Lava Reef use their Act 2
+tracks; boss music overrides the biome until the encounter ends. Continuing
+a save and recalling to camp select the correct track immediately. The
+restored beacon keeps location music active. Jumping, mining, attacks and damage have ROM
 sound effects. Startup now attaches ROM audio before entering the mod scene.
+
+## Biomes
+
+The surface runs west to east through Angel Island (tiles 1–63), Marble
+Garden (64–95), Mushroom Hill (96–127), Carnival Night (128–159), Icecap
+(160–191), Sandopolis (192–223) and Launch Base (224–254). Camp stays in
+Angel Island. The exploration map colors terrain by biome.
+
+| Region | Where to explore |
+| --- | --- |
+| Hydrocity | At least 8 tiles below the local surface, west of tile 192; Act 2 music below depth 20 |
+| Sandopolis tombs | At least 8 tiles underground beneath the desert and base |
+| Lava Reef | **Underground only**, at depth 30 or more; crystal-cave palette and Act 2 music below depth 45 |
+| Hidden Palace | Deep central crystal pocket: tiles 96–159, depth 43 or more |
+| Sky Sanctuary | More than 14 tiles above the surface, east of tile 64; new worlds have mineable cloud ruins with caches |
+
+Reach the cloud ruins by building platforms. Biomes change scenery and music;
+Hydrocity currently has no water simulation, and Lava Reef has no lava damage.
+Mining tiers, shrine rewards and the equipment/quest progression stay shared
+across the regions. The native terrain samples preserve solid rectangular
+blocks, with original resource highlights marking copper, iron and shards.
 
 ## Build, install and launch
 
@@ -128,8 +155,10 @@ available from pause when a warden is not active.
 ## Saves and validation
 
 Version 1 worlds remain compatible: existing terrain, resources and quests
-are retained, including former snow/ember terrain tags, now drawn as AIZ.
-New worlds generate Angel Island grass throughout.
+are retained, including snow/ember terrain tags. Biomes are derived from location, so
+existing worlds gain region art and music without replacing mined or built
+terrain. New worlds generate snow in Icecap, sand-colored desert terrain,
+woodland trees and cloud ruins; existing worlds retain their original layout.
 
 One world is saved automatically after every 30 seconds of active simulation,
 on save-and-return, and on scene exit. The engine keeps it under
@@ -141,7 +170,9 @@ before starting a new frontier. New World replaces the active world after
 confirmation. Mod scenes use their own save state; stock developer rewind
 does not rewind this adventure.
 
-The creator tests cover terrain generation, tile collision, platforms, mining
+The creator tests cover biome and depth boundaries, music transitions without
+song restarts, boss overrides, saved-region music, recoil-safe enemy facing,
+terrain generation, tile collision, platforms, mining
 tiers, tree harvesting, station/cost rules, placement, shelter, weapons,
 healing, death, shrine rewards, quest progression, bounded saves and forward
 replay after save restoration. Production scene tests cover packaged loading,
@@ -159,6 +190,9 @@ The progression test exercises each production rule with prepared resources
 and positions; it is not evidence of a complete unassisted playthrough.
 Presentation captures use the existing `ExampleModCapture`. Debug commands
 `play`, `craft`, `inventory`, `journal`, `map`, `cavern`, `warden` and `victory`
-provide inspection views; debug visits never write player saves. The architecture
+provide inspection views. `biome-angel_island`, `biome-marble_garden`,
+`biome-mushroom_hill`, `biome-carnival_night`, `biome-icecap`,
+`biome-sandopolis`, `biome-launch_base`, `biome-hydrocity`, `biome-lava_reef`,
+`biome-hidden_palace` and `biome-sky_sanctuary` inspect individual regions; debug visits never write player saves. The architecture
 and delivery evidence are recorded in the
 [design](../../docs/architecture/designs/2026-10-08-starfall-frontier.md).

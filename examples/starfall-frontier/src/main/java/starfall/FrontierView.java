@@ -4,13 +4,25 @@ import com.openggf.mods.scene.*;
 import com.openggf.mods.ui.AtlasFont;
 import static starfall.World.*;
 
-/** Angel Island ROM scenery over a mutable creator world, with compact workshop panels. */
+/** S3K biome scenery over a mutable creator world, with compact workshop panels. */
 public final class FrontierView {
     private static final int INK=0xFF10184C, PANEL=0xF2182860, EDGE=0xFF4080B0,
             TEXT=0xFFFFFFFF, MUTED=0xFFA8C8F8, GOLD=0xFFFFDA28, MINT=0xFF80F860;
     private final AtlasFont font;
     private final AngelIslandArt art;
-    public FrontierView(byte[] bytes,SceneRomArt rom){font=AtlasFont.parse(bytes,5);art=rom==null?null:new AngelIslandArt(rom);}
+    private final BiomeArt[][] biomes;
+    public FrontierView(byte[] bytes,SceneRomArt rom) {
+        font=AtlasFont.parse(bytes,5);art=rom==null?null:new AngelIslandArt(rom);
+        biomes=new BiomeArt[Biome.values().length][2];
+        if(rom!=null)for(Biome biome:Biome.values())if(biome!=Biome.ANGEL_ISLAND) {
+            biomes[biome.ordinal()][0]=new BiomeArt(rom,biome,0);
+            biomes[biome.ordinal()][1]=biome==Biome.SANDOPOLIS||biome==Biome.HYDROCITY||biome==Biome.LAVA_REEF?
+                    new BiomeArt(rom,biome,1):biomes[biome.ordinal()][0];
+        }
+    }
+    private BiomeArt terrain(World w,int tx,int ty) {
+        Biome biome=Biome.at(w,tx,ty);return biomes[biome.ordinal()][biome.act(w,tx,ty)];
+    }
     private void text(SceneCanvas c,String s,int x,int y,int color){font.draw(c,s,x,y,color,1);}
     private void center(SceneCanvas c,String s,int x,int y,int color,int scale){font.draw(c,s,x-font.width(s)*scale/2,y,color,scale);}
     private void box(SceneCanvas c,int x,int y,int w,int h){c.fill(x+2,y+3,w,h,0x50000000);c.fill(x,y,w,h,EDGE);c.fill(x+1,y+1,w-2,h-2,PANEL);c.fill(x+2,y+2,w-4,1,0xFF677C80);}
@@ -22,7 +34,7 @@ public final class FrontierView {
         double day=(Math.sin(w.ticks/21600.0*Math.PI*2)+1)*.5;
         double deep=Math.max(0,Math.min(1,(cameraY-300)/150));
         if(art==null) {
-        int sky=mix(0x20344C,w.x/T<88?0x92BFC2:w.x/T<170?0xA9C6D9:0xCB9D9E,day*.85);
+        int sky=mix(0x20344C,w.region().sky,day*.85);
         for(int y=0;y<224;y+=4)c.fill(0,y,width,4,mix(mix(sky,0x182838,deep),mix(0xE2C9A2,0x263B49,deep),y/224.0));
         if(deep<.7) {
             for(int i=0;i<34;i++) {
@@ -50,16 +62,24 @@ public final class FrontierView {
             }
         }
         }else {
-            c.clear(0x243868);
-            if(deep<.95)c.drawBackdrop(art.backdrop,Math.min(256,art.backdrop.image().height()-224),cameraX,w.ticks);
-            if(deep>.05)c.fill(0,0,width,224,(int)(deep*220)<<24|0x081830);
+            Biome biome=w.region();BiomeArt bank=terrain(w,(int)(w.x/T),(int)(w.y/T));
+            SceneBackdrop backdrop=bank==null?art.backdrop:bank.backdrop;
+            c.clear(biome.sky&0xFFFFFF);
+            if(backdrop!=null)c.drawBackdrop(backdrop,Math.max(0,Math.min(256,backdrop.image().height()-224)),cameraX,w.ticks);
+            else for(int n=0;n<3;n++)for(int i=0;i<12;i++) {
+                int px=Math.floorMod(i*71-(int)(cameraX*(.08+n*.08)),width+80)-40;
+                int py=45+n*50+Math.floorMod(hash(i,n),30);
+                c.fill(px,py,36,110,shade(biome.sky,.65+n*.1));
+                c.fill(px,py,36,3,shade(biome.color,.5));
+            }
+            if(deep>.05)c.fill(0,0,width,224,(int)(deep*140)<<24|biome.sky&0xFFFFFF);
         }
         int x0=Math.max(0,(int)cameraX/T-1),x1=Math.min(W-1,(int)(cameraX+width)/T+1);
         int y0=Math.max(0,(int)cameraY/T-1),y1=Math.min(H-1,(int)(cameraY+224)/T+1);
         for(int ty=y0;ty<=y1;ty++)for(int tx=x0;tx<=x1;tx++) {
             int sx=(int)Math.round(tx*T-cameraX),sy=(int)Math.round(ty*T-cameraY),t=w.tile(tx,ty);
             if(w.walls[ty*W+tx]!=0) {
-                int wall=w.walls[ty*W+tx]==1?0xFF5B4B43:0xFF263441;
+                int wall=w.walls[ty*W+tx]==1?0xFF5B4B43:shade(Biome.at(w,tx,ty).color,.25);
                 c.fill(sx,sy,T,T,wall);c.fill(sx,sy+10,T,2,shade(wall,.76));c.fill(sx+(ty%2)*6,sy,1,T,shade(wall,.8));
             }
             tile(c,w,tx,ty,sx,sy,t,tick);
@@ -73,7 +93,7 @@ public final class FrontierView {
         diamond(c,bx,by-34,7,w.won?0xFFD8F5C5:0xFF95BEB8);c.fill(bx-2,by-38,2,4,0xFFDEEBDD);
         }
         if(w.won) {glow(c,bx,by-34,0x18FFE7A2);c.fill(bx-1,0,2,Math.max(0,by-38),0x45FFE2A6);}
-        for(World.Enemy e:w.enemies)enemy(c,e,(int)(e.x-cameraX),(int)(e.y-cameraY),tick);
+        for(World.Enemy e:w.enemies)enemy(c,w,e,(int)(e.x-cameraX),(int)(e.y-cameraY),tick);
         for(World.Shot s:w.shots) {
             int sx=(int)(s.x-cameraX),sy=(int)(s.y-cameraY),color=s.hostile?0xFFFF9E99:s.magic?0xFFAFF1DF:0xFFE1CFAA;
             if(s.magic){c.fill(sx-3,sy-3,6,6,0x44A7DCCD);diamond(c,sx,sy,3,color);}else c.fill(sx-3,sy,7,1,color);
@@ -106,7 +126,10 @@ public final class FrontierView {
         if(art!=null) {
             if(solid(t)&&t!=PLANK) {
                 c.fill(sx,sy,T,T,t==STONE||t==BEDROCK?0xFF704838:0xFF985020);
-                art.ground(c,tx,ty,sx,sy,!solid(w.tile(tx,ty-1)),t==STONE||t==BEDROCK);
+                BiomeArt bank=terrain(w,tx,ty);
+                if(bank==null)art.ground(c,tx,ty,sx,sy,t==GRASS||t==SNOW||t==EMBER,t==STONE||t==BEDROCK||t==COPPER||t==IRON||t==CRYSTAL);
+                else c.drawRegion(t==GRASS||t==SNOW||t==EMBER?bank.surface:bank.variations[Math.floorMod(hash(tx,ty),bank.variations.length)],
+                        0,0,16,16,sx,sy,T,T,SceneDraw.plain());
                 if(t==COPPER||t==IRON||t==CRYSTAL) {
                     // Resources are creator materials, over the original AIZ rock faces.
                     diamond(c,sx+6,sy+6,3,t==COPPER?0xFFFFB840:t==IRON?0xFFD8E8FF:0xFF40FFE0);
@@ -115,6 +138,15 @@ public final class FrontierView {
                 return;
             }
             if(t==LOG){c.drawRegion(art.trunk,0,0,16,16,sx+2,sy,8,T,SceneDraw.plain());return;}
+            if(t==LEAVES&&Biome.at(w,tx,ty)!=Biome.ANGEL_ISLAND) {
+                int color=Biome.at(w,tx,ty).color;
+                c.fill(sx,sy,T,T,shade(color,.75));
+                if(w.tile(tx,ty-1)!=LEAVES) {
+                    c.fill(sx,sy,T,4,0xFFDA6028);c.fill(sx+2,sy+1,2,2,0xFFFFD888);
+                    c.fill(sx+8,sy+2,2,2,0xFFFFD888);
+                }
+                c.fill(sx+3,sy+7,4,2,shade(color,.95));return;
+            }
             if(t==LEAVES) {
                 // Map each surviving foliage cell to the palm crown; mining edits remain visible.
                 int root=tx;
@@ -167,15 +199,18 @@ public final class FrontierView {
             default -> { }
         }
     }
-    private void enemy(SceneCanvas c,World.Enemy e,int x,int y,int tick) {
+    private void enemy(SceneCanvas c,World w,World.Enemy e,int x,int y,int tick) {
         if(art!=null) {
             if(e.kind==3) {
-                c.draw(art.ship.frame(5),x,y,SceneDraw.plain().withScale(.6f));
-                c.draw(art.ship.frame(e.hit>0?2:0),x,y-10,SceneDraw.plain().withScale(.6f));
+                c.draw(art.ship.frame(5),x,y,SceneDraw.plain().withScale(.6f).withFlipX(w.enemyFlip(e)));
+                c.draw(art.ship.frame(e.hit>0?2:0),x,y-10,SceneDraw.plain().withScale(.6f).withFlipX(w.enemyFlip(e)));
                 if(e.hit>0)c.fill(x-12,y-18,24,30,0x44FFFFFF);
             }else {
                 SceneSpriteSet set=e.kind==0?art.rhinobot:e.kind==1?art.monkeys:art.blooms;
-                art.sprite(c,set,e.kind==0?(tick/6)%4:(tick/12)%2,x,y+6,.6f,e.vx<0);
+                // Obj_Rhinobot locomotion uses frames 0/1 (frame 2 brakes). Frame 3
+                // has the opposite orientation and is not a walking-animation step.
+                int frame=e.kind==0?(Math.abs(e.vx)>.1?(tick/8)%2:0):(tick/12)%2;
+                art.sprite(c,set,frame,x,y+6,.6f,w.enemyFlip(e));
             }
             if(e.hp<e.maxHp){c.fill(x-11,y-24,22,2,INK);c.fill(x-11,y-24,22*e.hp/e.maxHp,2,GOLD);}
             return;
@@ -203,7 +238,7 @@ public final class FrontierView {
     private void glow(SceneCanvas c,int x,int y,int color) {disk(c,x,y,24,color);disk(c,x,y,15,color);disk(c,x,y,8,color);}
     public void title(SceneCanvas c,int cursor,boolean saved,int tick,String status) {
         c.fill(0,0,c.width(),224,0x45202B38);
-        center(c,"ANGEL ISLAND EXPLORATION & CRAFTING",c.width()/2,25,0xFFDFE8CC,1);
+        center(c,"S3K EXPLORATION & CRAFTING",c.width()/2,25,0xFFDFE8CC,1);
         center(c,"STARFALL",c.width()/2+2,44,0xFF213F48,4);
         center(c,"STARFALL",c.width()/2,42,0xFFF1D6A3,4);
         center(c,"F R O N T I E R",c.width()/2,77,0xFFBAE0CA,2);
@@ -294,12 +329,12 @@ public final class FrontierView {
         double scale=1.8;int left=33,top=30;
         c.fill(left,top,461,173,0xFF132331);
         for(int ty=0;ty<H;ty++)for(int tx=0;tx<W;tx++)if(w.seen[ty*W+tx]>0||ty<w.surface(tx)) {
-            int t=w.tile(tx,ty);c.fill(left+(int)(tx*scale),top+(int)(ty*scale),2,2,t==AIR?0xFF233C4B:World.color(t));
+            int t=w.tile(tx,ty);c.fill(left+(int)(tx*scale),top+(int)(ty*scale),2,2,t==AIR?shade(Biome.at(w,tx,ty).sky,.65):solid(t)&&t!=PLANK?Biome.at(w,tx,ty).color:World.color(t));
         }
         for(int i=0;i<3;i++)if(w.seen[(w.shrineY[i]-1)*W+w.shrineX[i]]>0)diamond(c,left+(int)(w.shrineX[i]*scale),top+(int)(w.shrineY[i]*scale),3,(w.wardens&(1<<i))!=0?MINT:GOLD);
         diamond(c,left+(int)(40*scale),top+(int)(w.surface(40)*scale),3,MINT);
         c.fill(left+(int)(w.x/T*scale)-1,top+(int)(w.y/T*scale)-2,3,5,0xFFFFFFFF);
-        text(c,"PALM JUNGLE",60,24,MINT);text(c,"ANCIENT GROVES",223,24,TEXT);text(c,"ISLAND HIGHLANDS",366,24,GOLD);
+        text(c,"JUNGLE / RUINS / WOODS",38,24,MINT);text(c,"CARNIVAL / ICE / DESERT / BASE",280,24,GOLD);
         center(c,"WHITE: YOU   GREEN: CAMP   GOLD: DISCOVERED SHRINE",c.width()/2,211,MUTED,1);
     }
     public void pause(SceneCanvas c,int cursor) {

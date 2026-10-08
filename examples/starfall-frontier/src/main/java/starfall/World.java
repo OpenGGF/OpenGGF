@@ -70,7 +70,7 @@ public final class World {
         for(int tx=0;tx<W;tx++) for(int ty=0;ty<H;ty++) {
             int s=surface(tx),v=AIR;
             if(ty>=s) {
-                v=ty==s?GRASS:ty<s+5?DIRT:STONE;
+                v=ty==s?(Biome.surface(tx)==Biome.ICECAP?SNOW:Biome.surface(tx)==Biome.SANDOPOLIS?EMBER:GRASS):ty<s+5?DIRT:STONE;
                 if(ty>s+5) {
                     double cave=Math.sin(tx*.18+Math.sin(ty*.12)*3)+Math.cos(ty*.21+Math.sin(tx*.08)*2);
                     if(cave>1.0) v=AIR;
@@ -87,7 +87,7 @@ public final class World {
             set(tx,ty,v);
         }
         for(int tx=6;tx<W-6;tx+=5+random(5)) {
-            if(tx>=36&&tx<=51) continue;
+            if(tx>=36&&tx<=51||Biome.surface(tx)!=Biome.ANGEL_ISLAND&&Biome.surface(tx)!=Biome.MUSHROOM_HILL) continue;
             tree(tx,surface(tx)-1,4+random(4));
         }
         for(int tx=9;tx<W-9;tx+=9+random(7)) if((tx<36||tx>47)&&tile(tx,surface(tx)-1)==AIR) set(tx,surface(tx)-1,BUSH);
@@ -106,6 +106,12 @@ public final class World {
             set(sx,sy-1,SHRINE);set(sx-7,sy-2,TORCH);set(sx+7,sy-2,TORCH);
             set(sx-5,sy-1,CHEST);
             for(int tx=sx+10;tx<sx+14;tx++) for(int ty=sy+2;ty<sy+6;ty++) set(tx,ty,i==0?IRON:CRYSTAL);
+        }
+        // Small mineable cloud ruins make the sky biome reachable with built platforms.
+        for(int tx=76;tx<W-8;tx+=40) {
+            int floor=surface(tx)-18;
+            for(int a=-5;a<=5;a++)for(int b=0;b<3;b++)set(tx+a,floor+b,b==0?GRASS:STONE);
+            set(tx,floor-1,CHEST);
         }
         // Bonus treasure rooms and heartstones are fixed to the seed, never player progress.
         for(int n=0;n<12;n++) {
@@ -434,7 +440,23 @@ public final class World {
         }
     }
     private boolean hasTile(int tile) {for(byte t:tiles)if(t==tile)return true;return false;}
-    public String biome() {return y/T>58?"ANGEL ISLAND / RUINS":y/T>surface((int)x/T)+7?"ANGEL ISLAND / CAVERNS":"ANGEL ISLAND / JUNGLE";}
+    public Biome region(){return Biome.at(this,(int)(x/T),(int)(y/T));}
+    public String biome() {
+        Biome biome=region();int depth=(int)(y/T)-surface((int)(x/T));
+        return biome.label+(biome==Biome.SANDOPOLIS&&depth>=8?" / TOMBS":
+                biome==Biome.LAVA_REEF&&depth>=45?" / CRYSTAL":depth>=8&&biome==Biome.HYDROCITY?" / CAVERNS":"");
+    }
+    public int musicId() {
+        if(enemies.stream().anyMatch(e->e.kind==3&&e.hp>0))return 0x19;
+        return region().music(this,(int)(x/T),(int)(y/T));
+    }
+    /** AI aims at the explorer; recoil velocity is not a facing direction. */
+    public boolean enemyFlip(Enemy enemy) {
+        boolean facingLeft=enemy.x>x;
+        // Obj_Rhinobot loc_86E7E: clear render bit 0 accelerates left ($FFF0).
+        // Inspected Monkey Dude and Egg Mobile poses also face left; Bloominator is symmetric.
+        return !facingLeft;
+    }
     public static int color(int tile) {return 0xFF000000|switch(tile) {
         case DIRT -> 0x89674E;case GRASS -> 0x709C61;case STONE -> 0x697789;case COPPER -> 0xC48766;
         case IRON -> 0xA5B9C3;case CRYSTAL -> 0x74CED7;case LOG -> 0x967044;case LEAVES -> 0x528465;

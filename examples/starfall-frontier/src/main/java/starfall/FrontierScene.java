@@ -65,8 +65,6 @@ public final class FrontierScene implements ModScene,DebuggableScene {
         boolean takeoff=jump&&world.grounded;
         world.step(new World.Input(move,jump,drop,held));dirty=true;saveTimer++;
         if(takeoff)ctx.audio().playSfx(0x62);
-        music(ctx,world.enemies.stream().anyMatch(e->e.kind==3)?0x19:world.won?0x15:
-                world.y/World.T>58?0x02:0x01);
         cameraX+=(targetCameraX(ctx)-cameraX)*.12;cameraY+=(targetCameraY()-cameraY)*.12;
         int tx=(int)(world.x/World.T)+(world.facingLeft?-2:2),ty=(int)(world.y/World.T);
         if(drop){tx=(int)(world.x/World.T);ty=(int)((world.y+14)/World.T);}
@@ -86,6 +84,7 @@ public final class FrontierScene implements ModScene,DebuggableScene {
         if(mouseWorld&&ctx.mouse().rightDown()&&world.place(tx,ty,world.selected()))ctx.audio().playSfx(0x9E);
         if(world.hp<oldHp)ctx.audio().playSfx(0x37);
         if(world.kills>oldKills||world.quest>oldQuest)ctx.audio().playSfx(0x33);
+        music(ctx,world.musicId());
         if(saveTimer>=1800)save(ctx);
     }
     private void interact(SceneContext ctx,int tx,int ty) {
@@ -106,14 +105,14 @@ public final class FrontierScene implements ModScene,DebuggableScene {
             if(ctx.mouse().lastInputWasMouse())cursor=i;if(ctx.mouse().leftPressed())picked=i;
         }
         switch(picked) {
-            case 0 -> {if(saved!=null){world=saved;saved=null;debug=false;screen="PLAY";dirty=false;snapCamera(ctx);music(ctx,0x01);}else if(existingSave)screen="NEW";else newWorld(ctx);}
+            case 0 -> {if(saved!=null){world=saved;saved=null;debug=false;screen="PLAY";dirty=false;snapCamera(ctx);music(ctx,world.musicId());}else if(existingSave)screen="NEW";else newWorld(ctx);}
             case 1 -> {if(saved!=null||existingSave)screen="NEW";else newWorld(ctx);}
             case 2 -> help("TITLE");case 3 -> ctx.exitToMasterTitle();default -> { }
         }
     }
     private void newWorld(SceneContext ctx) {
         world=new World(java.util.concurrent.ThreadLocalRandom.current().nextLong());screen="PLAY";
-        saved=null;debug=false;dirty=true;saveTimer=0;snapCamera(ctx);save(ctx);music(ctx,0x01);
+        saved=null;debug=false;dirty=true;saveTimer=0;snapCamera(ctx);save(ctx);music(ctx,world.musicId());
     }
     private void help(String from){returnScreen=from;screen="HELP";}
     private void panelInput(SceneContext ctx) {
@@ -127,7 +126,7 @@ public final class FrontierScene implements ModScene,DebuggableScene {
             switch(picked) {
                 case 0 -> screen="PLAY";case 1 -> screen="INVENTORY";case 2 -> screen="CRAFT";
                 case 3 -> screen="JOURNAL";case 4 -> screen="MAP";
-                case 5 -> {world.recall();snapCamera(ctx);screen="PLAY";dirty=true;}
+                case 5 -> {world.recall();snapCamera(ctx);music(ctx,world.musicId());screen="PLAY";dirty=true;}
                 case 6 -> help("PAUSE");
                 case 7 -> {if(save(ctx)||!dirty){saved=SaveCodec.decode(SaveCodec.encode(world)).orElse(null);screen="TITLE";cursor=0;music(ctx,0x2F);}}
                 default -> { }
@@ -221,6 +220,23 @@ public final class FrontierScene implements ModScene,DebuggableScene {
             world.hotbar[0]=Content.Item.IRON_PICK;world.hotbar[2]=Content.Item.STAFF;
             if(command.equals("warden"))world.interact(world.shrineX[0],world.shrineY[0]-1);
             screen="PLAY";snapCamera(context);return true;
+        }
+        for(Biome biome:Biome.values())if(command.equals("biome-"+biome.name().toLowerCase(java.util.Locale.ROOT))) {
+            int tx=switch(biome) {
+                case ANGEL_ISLAND -> 40;case MARBLE_GARDEN -> 80;case MUSHROOM_HILL -> 112;
+                case CARNIVAL_NIGHT -> 144;case ICECAP -> 176;case SANDOPOLIS -> 208;
+                case LAUNCH_BASE -> 240;case HYDROCITY -> 68;case LAVA_REEF -> 215;
+                case HIDDEN_PALACE -> 140;case SKY_SANCTUARY -> 116;
+            };
+            int ty=biome==Biome.HYDROCITY?world.surface(tx)+14:
+                    biome==Biome.LAVA_REEF?world.surface(tx)+36:
+                    biome==Biome.HIDDEN_PALACE?world.surface(tx)+48:
+                    biome==Biome.SKY_SANCTUARY?world.surface(tx)-19:world.surface(tx)-1;
+            world.x=tx*World.T+6;world.y=ty*World.T-1;world.vx=world.vy=0;
+            world.enemies.clear();world.shots.clear();
+            for(int a=-2;a<=2;a++)for(int b=-3;b<=0;b++)world.set(tx+a,ty+b,World.AIR);
+            for(int a=-2;a<=2;a++)world.set(tx+a,ty+1,World.STONE);
+            screen="PLAY";snapCamera(context);music(context,world.musicId());return true;
         }
         if(command.equals("victory")){world.wardens=7;world.won=true;world.quest=7;screen="JOURNAL";return true;}
         debug=priorDebug;return false;

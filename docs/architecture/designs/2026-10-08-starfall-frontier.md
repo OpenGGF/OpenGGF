@@ -240,3 +240,110 @@ The delivery also queued `maven_queue.py -B -q -Dmse=off -DskipTests package`
 to refresh the local development engine jars with the startup fix. Packaging
 completed; tests were intentionally skipped in that packaging command. The
 installed mod SHA-256 is `25bfcfcbaab5af137f677ce387fdfd619405cfe38eaf4c4a4c0fdf3f84303344`.
+
+
+## Biome revision
+
+Revision base: `e6844866ed12c0a812b9dba0d646c987347b93d4`.
+Worktree: `.worktrees/starfall-biomes`, branch `feature/ai-starfall-biomes`,
+based on the existing Starfall Frontier feature. This revision implements
+biomes, location music, native terrain, and enemy-facing corrections.
+No engine implementation, API signature, stock zone or save-format changes.
+
+### Geography and presentation
+
+`Biome.at` owns one position/depth rule used by the HUD, map, terrain and
+music. The surface is Angel Island, Marble Garden, Mushroom Hill, Carnival
+Night, Icecap, Sandopolis and Launch Base. Underground regions become
+Hydrocity or Sandopolis tombs; Lava Reef starts 30 tiles below the local
+surface and switches to its cooler Act 2 palette/song at depth 45. A central
+Hidden Palace pocket takes precedence below depth 43. Sky Sanctuary starts
+more than 14 tiles above ground east of tile 64. New worlds gain cloud ruins
+with caches, snow/desert surface tags, and trees concentrated in jungle and
+woodland. Existing worlds keep all arrays, edits, resources and progression;
+location-derived geography requires no migration or new persisted state.
+
+`BiomeArt` reads the ROM's 24-byte `LevelLoadBlock` entries at `$091F0C`,
+resolves palettes through `PalPoint` at `$0A872C`, uses `SceneRomArt.tiles`
+for KosM art, and composes native blocks with their four tile words, palette
+lines and X/Y flags. Its bounded standard Kosinski reader handles only the
+creator's ROM block table. This does not change production PLC queues or
+introduce disassembly assets as runtime fallbacks. Hidden Palace uses entry
+47, the locked-on sanctuary record. Inspected block IDs select fully opaque
+cells, keeping collision rectangular. Art is cached on scene entry. Supported
+stock backdrops are reused; other regions have original parallax scenery
+colored for their zone. Mushroom crowns and resource highlights are creator art.
+
+Music IDs follow `sonic3k.constants.asm`'s `mus_*` table. Music updates after
+simulation/player actions, deduplicates identical song requests, overrides
+live encounters with `$19`, selects saved-location music on continue and
+camp music on recall. Beacon completion keeps region music. Hydrocity below
+depth 20 and buried Sandopolis use Act 2. Hidden Palace shares Lava Reef Act 2.
+
+### Enemy facing and rejected approaches
+
+The original drawing used velocity sign with the player-facing convention.
+`Obj_Rhinobot` / `loc_86E7E` has clear render bit 0 accelerating left.
+Decoded Monkey Dude and Egg Mobile poses also face left; Bloominator is
+symmetric. Drawing now flips left-native poses toward an explorer on the
+right and uses target position, not recoil velocity. The ship's two layers
+receive the same flip.
+
+Correcting xflip alone was insufficient: the Launch Base capture still
+showed a backwards Rhinobot. A decoded mapping sheet proved frame 3 faces
+right, unlike frames 0/1. The existing `(tick/6)%4` loop treated mappings
+as a walking animation. Final creator locomotion uses only 0/1, with frame 0
+at rest; native frame 2 brakes. The production regression checks both target
+sides with opposing velocities at all 48 presentation phases, including
+texture identity and mirrored UVs. The reusable lesson is in implementation
+pitfalls. Arbitrary opaque samples were replaced with inspected ice faces,
+temple masonry, woodland rock, carnival panels, desert sand, industrial brick
+and volcanic/crystal rock. Transparent cutouts and animated symbols were
+rejected. ROM sheets were temporary research output and removed after inspection.
+
+### Verification and coverage limits
+
+The plan against the revision base selects **3,059 ordinary classes plus
+guards**, solely because creator example paths are unclassified. This bounded
+mod scene and its test bridge are exercised directly through packaging,
+model replay, native rendering and S3K bootstrap/decoding checks. A full engine
+run is disproportionate. This is focused validation, not a full-suite or
+stock-zone certification.
+
+Commands from the worktree, Java 21 and the IDE Maven directory on PATH:
+
+```sh
+python3 tools/testing/run_categories.py --base e6844866ed12c0a812b9dba0d646c987347b93d4
+python3 tools/testing/maven_queue.py --lean -B -q -Dmse=off \
+  '-Dtest=TestStarfallFrontierExample,TestStarfallFrontierScene,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  '-Ds3k.rom.path=<absolute existing root S3K ROM>' test
+python3 tools/testing/maven_queue.py --lean -B -q -Dmse=off \
+  '-Dtest=TestStarfallFrontierExample,TestStarfallFrontierScene' \
+  '-Ds3k.rom.path=<absolute existing root S3K ROM>' test
+python3 examples/starfall-frontier/build.py --skip-engine
+```
+
+The combined focused invocation completed **64 outer Jupiter tests** with
+zero failures/errors/skips and **30 nested creator tests**. The final
+three-check bridge invocation reran the creator suite and production ROM
+rendering after the animation correction; all passed without skips.
+Unchanged S3K loader/bootstrap/decoder checks were not repeated. Packaging
+validates with zero findings. New tests cover all eleven regions and depth
+boundaries, boss/music release, continued underground music, no song restart
+in one biome or a paused menu, recoil-facing intent, saved edits, restored
+forward simulation and malformed archives, alongside inherited gameplay checks.
+
+Final GL PNGs show all eleven regions and the map at 528 × 224, 3×, under
+`$HOME/OpenGGF-captures/starfall-frontier-biomes`. The existing detected ROM
+SHA-1 is `b711a909cce238ca4af3e517a2edca306228efa5`, not a canonical revision
+claim. The synthesized WAV changes songs every 30 ticks and establishes
+content/cue changes, not speaker latency or complete arrangements. Captures
+use existing `ExampleModCapture` with `biome-*` debug jumps described in the
+example README. Debug pockets never save over player progress. Regeneration
+must remove the previous capture build jar before packaging again.
+
+Water/lava simulation, zone-native hazards and enemy AI, a full unassisted
+progression/biome-balance playthrough, and developer rewind remain outside
+this revision. All regions share the creator resource/quest rules.
+Local mod version **1.2.0** requires a JVM restart. Validated jar SHA-256:
+`8ba02291b85d5125ddb5d29d23b929f94c68ce49a8879a8cbe1489c9c575f394`.

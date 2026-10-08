@@ -56,7 +56,8 @@ class WorldTest {
     @Test void newWorldIsAnAngelIslandBiomeAndLegacyTerrainTagsStillDecode() {
         World w=new World(73);
         assertTrue(w.biome().startsWith("ANGEL ISLAND"));
-        for(byte tile:w.tiles){assertNotEquals(World.SNOW,tile);assertNotEquals(World.EMBER,tile);}
+        assertEquals(World.SNOW,w.tile(176,w.surface(176)));
+        assertEquals(World.EMBER,w.tile(208,w.surface(208)));
         w.set(100,30,World.SNOW);w.set(180,30,World.EMBER);
         World restored=SaveCodec.decode(SaveCodec.encode(w)).orElseThrow();
         assertEquals(World.SNOW,restored.tile(100,30));assertEquals(World.EMBER,restored.tile(180,30));
