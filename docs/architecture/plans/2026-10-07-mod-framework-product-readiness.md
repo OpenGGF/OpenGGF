@@ -22,15 +22,15 @@ and relevant verification. Status changes record evidence rather than intent.
 
 | ID | Outcome | Initial owner / sequence | Status |
 |---|---|---|---|
-| 01 | Visible stock signpost reskin, complete frames, art-key diagnostics/catalogue | Creator | Integrated from 6691b0277; included in 33 focused passes; artifact proof pending |
-| 02 | Every maintained starter supports repeated builds after edits | Creator | Integrated from 6691b0277; included in 33 focused passes; seven exported repeat-build proof pending |
-| 03 | Java 21, matching candidate artifacts, pinned tooling, purpose-specific scaffolds | Creator | Integrated from 6691b0277; focused checks pass; distributed artifact proof pending |
-| 04 | Reproducible creator download with SDK, API docs, launchers, starters and artifact-only CI proof | Creator | Integrated through a242f28b8; twelve Python checks pass; real packaging/ZIP/CI-equivalent acceptance pending |
+| 01 | Visible stock signpost reskin, complete frames, art-key diagnostics/catalogue | Creator | Focused reskin cases and both exported packaging paths pass; zero validation findings |
+| 02 | Every maintained starter supports repeated builds after edits | Creator | All seven exported starters packaged twice without cleaning after edits, with changed outputs and zero findings |
+| 03 | Java 21, matching candidate artifacts, pinned tooling, purpose-specific scaffolds | Creator | Clean matched artifacts and all seven purpose starters verified externally at 7318; final source refresh is recorded separately |
+| 04 | Reproducible creator download with SDK, API docs, launchers, starters and artifact-only CI proof | Creator | Twelve Python checks and ten external acceptance stages pass; duplicate ZIPs match at 7318 and d49 |
 | 05 | Recipient install/update/retrust/dependency/order/rollback/uninstall journey | Creator | Integrated from d4b7d1641; 31 focused tests pass, zero skips |
 | 06 | Consistent beginner paths and delivered/limited/planned capability matrix | Creator, finalized after capabilities | Capability/navigation reconciliation composed; direct kit commands and explicit CI warning policy integrated from a242f28b8; handbook links/syntax pass |
 | 07 | Packaging reports sorted warnings and machine-readable findings with explicit CI policy | Creator | Integrated from 6691b0277; included in 33 focused passes, zero skips |
-| 08 | Portable exported examples and one shared build launcher with explicit ROM inputs | Creator, example migrations later | Launcher/export integrated through f47c577dd; eight portable projects including Tide Circuit; actual exported builds pending |
-| 09 | Distributed test support uses production validation, loading, ownership and Jupiter lifecycle | Coordinator, after runtime fixes | Testkit 13, launcher two and packager two cases pass in 38496; nested Jupiter Slay 126 / Tower 17 pass; distributed artifact proof pending |
+| 08 | Portable exported examples and one shared build launcher with explicit ROM inputs | Creator, example migrations later | All eight exports pass portable and normal Maven packaging at 7318; Sitar's final changed export passes both again at d49 |
+| 09 | Distributed test support uses production validation, loading, ownership and Jupiter lifecycle | Coordinator, after runtime fixes | Testkit 13, launcher two and packager two cases pass in 38496; nested Jupiter Slay 126 / Tower 17 pass; external Hello Jupiter and ordinary-package isolation pass |
 | 10 | Authored numeric zone/level metadata is owner-local; namespaced saves survive composition | Runtime safety | Owner-local metadata/remapping and tagged-save cases pass in 38496: zone loader 29, runtime save context 16 and existing save consumers |
 | 11 | Owned rewind adapters cannot overwrite host or another owner | Runtime safety | Owner patch 21, registry 16 and native publication nine cases pass in 38496, including cold, host and delegated-root lifetimes |
 | 12 | Returned functional callbacks retain owner fault attribution | Runtime safety | Returned factories/providers and required-dependent disable cases pass in 38496 across owner patch 21, standalone 22, context 19 and save context 16 |
@@ -39,9 +39,9 @@ and relevant verification. Status changes record evidence rather than intent.
 | 15 | Multi-act hosted campaign and typed owner-scoped runtime contributions | Runtime safety, second wave | All 35 Tide Circuit campaign cases pass in 38496, including real load/handoff/save/rewind/replay and supported route breadth |
 | 16 | Contributed zone events participate in reset, capture/restore and reconciliation | Runtime safety | Seven event-lifecycle and two S3K mod-zone lifecycle cases pass in 38496; campaign consumers also pass |
 | 17 | Inspectable deterministic contribution arbitration and explicit conflicts/exclusive claims | Runtime safety, second wave | Effective catalog 21 and module resolution 21 cases pass in 38496, with ordered chains and conflict/exclusive transaction coverage |
-| 18 | Bounded catalog/asset performance acceptance, with measured limits | Creator, after combined changes | Production shape probe passed; 1024 discovered/128 effective cap documented; combined-boundary repeat pending |
+| 18 | Bounded catalog/asset performance acceptance, with measured limits | Creator, after combined changes | Three fresh 512 MiB JVMs pass production shape/rejection/repeat-order checks at 7318; measured limits and coverage qualifications are recorded below |
 | 19 | Simulation-owned character landing hook and one authoritative character specification | Gameplay helpers | Initial 66 focused passes and integration consumers pass; both actual packaged character integration cases pass in 49042, including baked pixels and hidden/null-renderer behavior |
-| 20 | Declarative standalone setup and safe level/registry delegation; migrate both fixtures and Survivors | Gameplay helpers | Standalone spec three, owner-aware module 22 and both phase-three fixture cases pass in 38496; exported starter proof pending |
+| 20 | Declarative standalone setup and safe level/registry delegation; migrate both fixtures and Survivors | Gameplay helpers | Standalone spec three, owner-aware module 22 and both phase-three fixture cases pass in 38496; corrected standalone starter and maintained Platformer repeat builds pass externally |
 | 21 | Typed immutable physics/profile edits with scoped transforms; migrate Infinite | Gameplay helpers | Updated Infinite fixture passes 206 of 238 cases in 38496, with 32 expected inapplicable-route skips; withMax preserves the other profile fields |
 | 22 | Typed placement operations preserve identity, ownership and stock loading; migrate Golf | Gameplay helpers | Five level-patch cases pass in 38496; all 119 Golf cases pass in 59678 after test-local fault assertion/cleanup correction |
 | 23 | Owner-scoped service/rewind bundle; migrate Golf and Survivors | Gameplay helpers, after safety | Context 19 and owner patch 21 cases pass in 38496; Golf 119 pass in 59678; all 113 enabled Survivors cases pass in 49042, with only the expected opt-in diagnostic skipped |
@@ -911,7 +911,7 @@ targets and seven shell fences in the resolved documents passed. Independent
 review confirmed shared control/font/layout adoption survived; it also identified
 the count-in incompatibility corrected and verified above.
 
-The latest full baseline remains **be3**, qualified through the d5f capture/fixture
+At the Sitar-polish checkpoint, the full baseline was **be3**, qualified through the d5f capture/fixture
 controls and matched ae2 Sitar verification. The integrated polish record reports
 141 passing baseline cases at `33d3976c5`, then all 141 plus seven new passing cases
 at `ae2dfd3dd`: 14 fresh suites / 148 tests / zero failures/errors/skips. Separate
@@ -972,3 +972,83 @@ java -cp "$KIT/engine.jar:$KIT/sdk.jar" \
 ```
 
 The strict validation command ran after each packaging path.
+
+### Parity destination reconciliation and merged runtime verification
+
+Main advanced to `5d1ff9b8206594ee1c979ae5174328dd9134ffd4` with the stock parity
+swarm. The framework tree merged it as
+`e600e7674e6167f6730a74f93424a3fc29fc3300` without conflicts. Independent source
+reviews and the coordinator's resolved diff confirm both sides survive in
+`GameLoop`, `GameplayModeContext`, `LevelManager` and `AbstractPlayableSprite`:
+live movie-input publication and deferred fresh-boundary/shield state coexist
+with native adapter identity, owner-scoped contributions, decoded-level transforms
+and character callback/subclass state. No parity process or diagnostic is owned
+or modified by this task.
+
+The updated qualified ordinary expectation is **27 inherited failures, zero
+errors and 62 skips**. The parity candidate
+`7d87e02a1c75b80c8f5969ab6654ee1cf3976b7a`, run
+`20261008T034810Z-47c3194d`, selected 3,027 source classes and completed
+3,025 reports / 26,422 tests in 5,221.08 seconds. The FBZ/SOZ full-registry
+restore/replay failure alone resolves; all other full first assertion lines and
+all 62 skip identities/reasons match the qualified earlier baseline. The SSZ
+comparison retains only its previously established exception-prefix/object-hash
+normalization. The spin-tube assumption remains a recorded skip, not a pass.
+
+That invocation's fresh guards exposed two caused failures. The bounded
+`98137d8516a06e546185aa070bf0bf574473c04a` repair is qualified by 56 focused cases
+with no failures/errors/skips (request 52813) and fresh 86-suite / 672-case guards
+with no failures/errors/skips (request 40077). Independent comparison found no
+engine Java, Java-test/resource, POM, hook, pin, release-policy or selection-tool
+changes from 981 to main 5d; only Sitar README prose differs. This qualifies the
+candidate plus its repair as the updated inherited expectation. No completed
+full run measured at main 5d was present in the inspected record. See the
+[parity candidate and repair evidence](../audits/2026-10-07-stock-parity-gap-verification.md#completed-candidate-ordinary-lane-and-guard-repairs).
+
+The upstream range changes no starter, export, SDK/testkit, mod catalog or creator
+tooling contract. Prior external acceptance retains its actual 7318/d49 source
+attribution. Engine artifacts must be refreshed for the new native source;
+unchanged creator builds are not relabeled as fresh engine-runtime verification.
+
+Direct focused session 89974 measured clean merged source e600 with zero queue
+wait, using the supported profile-free `--lean` lane. All tracked source,
+resource, example, POM and release-policy hashes remained unchanged through its
+terminal exit zero. The command was:
+
+```bash
+ROM_ROOT="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py \
+  --lean -Dmse=off -B -q \
+  "-Dtest=TestNativeRewindAdapterPublication,TestGameplayModeContextRewindRegistry,TestTwoActModCampaign,TestPhase3SampleCharacterIntegration,TestShieldRewindRestore,TestShieldRewindPendingRestore,TestAbstractPlayableSpriteRewindCapture,TestFreshLevelBoundaryRewindHeadless,TestFbzSandopolisTimelineHeadless,TestGameLoopFreshLevelHandoff,TestScheduledLevelPlaybackInput,TestScheduledPlaybackInputPublisher,TestModApiSignatureSurface" \
+  "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+All 13 fresh XML reports carry the three absolute ROM properties. They contain
+**128 tests, zero failures, errors or skips**:
+
+| Class | Tests |
+|---|---:|
+| `TestGameLoopFreshLevelHandoff` | 4 |
+| `TestScheduledLevelPlaybackInput` | 6 |
+| `TestGameplayModeContextRewindRegistry` | 28 |
+| `TestScheduledPlaybackInputPublisher` | 2 |
+| `TestShieldRewindPendingRestore` | 4 |
+| `TestModApiSignatureSurface` | 9 |
+| `TestNativeRewindAdapterPublication` | 9 |
+| `TestTwoActModCampaign` | 35 |
+| `TestPhase3SampleCharacterIntegration` | 2 |
+| `TestAbstractPlayableSpriteRewindCapture` | 14 |
+| `TestShieldRewindRestore` | 12 |
+| `TestFbzSandopolisTimelineHeadless` | 1 |
+| `TestFreshLevelBoundaryRewindHeadless` | 2 |
+
+Compiled signature verification confirms the unchanged 880-type / 17,272-line
+candidate surface. This is focused merged-runtime evidence. The actual-base
+plan now selects all **3,055 ordinary source classes** and separate fresh guards;
+Java 21, Lua 5.4 and PowerShell preflight passes. Allow 110–125 minutes ordinary
+plus about four minutes guards, excluding queue wait. The invocation limit is
+150 minutes with the unchanged ten-minute no-output limit; either timeout means
+incomplete verification. Full development and actual-main delivery checks,
+failure/skip comparison, push and cleanup remain required.
