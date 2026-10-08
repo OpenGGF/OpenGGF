@@ -176,3 +176,56 @@ Completed checks for the control follow-up:
 - `python3 examples/build_example.py eggmans-sky --skip-engine`: compiled, validated
   and packaged `target/examples/eggmans-sky/eggmans-sky.jar` against the engine
   already built and tested above. This follow-up needs the rebuilt mod jar.
+
+## Background continuity and flora variety (2026-10-08)
+
+Investigated above `b14cdb9454c3274a96e343f87ac690f5ce403cb5` in the current
+`feature/ai-eggmans-sky` checkout. The mod split every single-band kit backdrop,
+including its generated skies, into eight-pixel strips with different horizontal
+speeds. That invented depth boundaries through connected scenery. Retain the
+source bands verbatim; an intact single plane still has parallax relative to the
+foreground. Deriving band cuts from arbitrary row heights was rejected because
+neither the ROM art nor the generated skyline has those boundaries.
+
+The camera also wraps X at the planet width, which jumps any background whose
+fractional scroll period does not divide that width. Accumulate unwrapped camera
+travel for the sky, including the small draw-time shake offset. Align background Y
+to pixels and clip the last band to the content height before the lower fill.
+No shared engine renderer, ROM scroll handler or public API changed.
+
+Six additional seeded flora silhouettes: fern fronds, succulent rosettes, reed
+clumps, pleated fans, nodding bell flowers and tiered shelf fungi. Biomes select
+from appropriate shape pools, rotated deterministically by planet seed, with six
+specimens per species instead of three. Shape selection does not consume the
+species RNG; existing species IDs, seed sequence, resource types, yields and
+placement sequence are preserved. Only visual geometry and its existing sprite
+hit bounds change. No materials, recipes or inventory entries were added.
+
+Validation on the working changes above that commit:
+
+- The unchanged category planner selected 3,010 ordinary classes plus guards due
+  to unclassified example paths and the pre-existing untracked S2 movie. Focused
+  validation is proportionate for mod-local drawing and procedural sprites; no
+  shared physics, timing, asset loading or API behavior changed.
+- `python3 tools/testing/maven_queue.py --lean -Dmse=off
+  -Dtest=TestEggmansSkyScene
+  "-Ds3k.rom.path=${PWD}/Sonic 3 & Knuckles (W) [!].gen" test`:
+  eight passed, zero failures/errors/skips, Java 21. The first attempt failed to
+  compile an ambiguous JUnit assertion; the corrected invocation completed.
+  Coverage includes all 55 supplied biomes retaining source bands, six specimens
+  per species, both seam directions through camera update and sky draw, and 72
+  repeatable distinct new silhouettes across six shapes and twelve seeds.
+- `python3 examples/build_example.py eggmans-sky --skip-engine`: compiled,
+  validated and packaged `target/examples/eggmans-sky/eggmans-sky.jar`.
+- Native `ExampleModCapture` with `java -XstartOnFirstThread`, real S3K ROM,
+  400×224 at 2× scale, 1,200 ticks and PNGs every 200 ticks. Started with
+  `biome:s3k:2:0:7`; scripted rightward flight, then jumped to
+  `biome:s3k:0:0:42` at tick 400 and `biome:s3k:7:0:7` at tick 800, flying right
+  for 180 ticks after each 200-tick settling interval. Inspected native frames
+  for intact ruins, source jungle bands and generated hills, plus a separate
+  six-by-six flora contact sheet. Visual artifacts: `/tmp/eggmans-sky-visuals/`.
+  The initial native launch omitted the required first-thread option and failed
+  before capturing; the corrected launch completed.
+
+This is focused mod validation, not a full ordinary/guard suite pass. The rebuilt
+mod jar works with the existing engine from this checkout.

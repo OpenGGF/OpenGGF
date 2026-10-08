@@ -78,10 +78,10 @@ public final class Planet {
         int columns = Math.max(16, spec.columns * 128 / size);
         TerrainGen.Layout layout = TerrainGen.generate(kit, Rng.hash(spec.seed, 0x5445525AL), columns);
         this.terrain = new Terrain(kit, layout, spec.ground);
-        // The zone's background in the planet's sky colours, cut into parallax bands.
+        // Keep the source artwork's band boundaries: arbitrary cuts shear connected scenery.
         SceneBackdrop source = spec.biome.plainSky() ? proceduralSky(spec) : kit.backdrop();
         this.backdrop = spec.sky.apply(source.image());
-        this.bands = parallaxBands(source);
+        this.bands = source.bands();
         this.contentHeight = contentHeight(backdrop);
         this.skyTop = averageRow(backdrop, 0);
         this.skyBottom = averageRow(backdrop, contentHeight - 1);
@@ -228,23 +228,6 @@ public final class Planet {
         return new SceneBackdrop(new SceneImage(w, h, px), List.of(new SceneBackdrop.Band(0, h, 0.2, 0)));
     }
 
-    /** Splits a single-band background into rows that scroll faster toward the bottom. */
-    private static List<SceneBackdrop.Band> parallaxBands(SceneBackdrop source) {
-        if (source.bands().size() > 1) {
-            return source.bands();
-        }
-        List<SceneBackdrop.Band> out = new ArrayList<>();
-        int h = source.image().height();
-        int step = 8;
-        for (int top = 0; top < h; top += step) {
-            int bh = Math.min(step, h - top);
-            float t = (top + bh / 2f) / h;
-            double speed = 0.06 + 0.42 * t * t;
-            out.add(new SceneBackdrop.Band(top, bh, speed, 0));
-        }
-        return out;
-    }
-
     /** The backdrop's height without the flat fill some zones leave below their scenery. */
     private static int contentHeight(SceneImage image) {
         int h = image.height();
@@ -344,14 +327,14 @@ public final class Planet {
     private void buildFlora(Rng rng) {
         int[] shapes = switch (spec.biome.flora()) {
             case Biome.FLORA_FUNGAL -> new int[] {PixelArt.SHAPE_MUSHROOM, PixelArt.SHAPE_BULB, PixelArt.SHAPE_BUSH,
-                    PixelArt.SHAPE_MUSHROOM};
-            case Biome.FLORA_CRYSTAL -> new int[] {PixelArt.SHAPE_CRYSTAL, PixelArt.SHAPE_STALK, PixelArt.SHAPE_BULB};
-            case Biome.FLORA_DESERT -> new int[] {PixelArt.SHAPE_CACTUS, PixelArt.SHAPE_BUSH, PixelArt.SHAPE_CACTUS};
-            case Biome.FLORA_FROST -> new int[] {PixelArt.SHAPE_PINE, PixelArt.SHAPE_CRYSTAL, PixelArt.SHAPE_BUSH};
-            case Biome.FLORA_TECH -> new int[] {PixelArt.SHAPE_STALK, PixelArt.SHAPE_BULB, PixelArt.SHAPE_CRYSTAL};
-            case Biome.FLORA_CORAL -> new int[] {PixelArt.SHAPE_CORAL, PixelArt.SHAPE_FLOWER, PixelArt.SHAPE_BUSH};
-            case Biome.FLORA_EMBER -> new int[] {PixelArt.SHAPE_TREE, PixelArt.SHAPE_BULB, PixelArt.SHAPE_CRYSTAL};
-            default -> new int[] {PixelArt.SHAPE_TREE, PixelArt.SHAPE_BUSH, PixelArt.SHAPE_FLOWER, PixelArt.SHAPE_TREE};
+                    PixelArt.SHAPE_SHELF, PixelArt.SHAPE_BELL};
+            case Biome.FLORA_CRYSTAL -> new int[] {PixelArt.SHAPE_CRYSTAL, PixelArt.SHAPE_STALK, PixelArt.SHAPE_BULB, PixelArt.SHAPE_ROSETTE};
+            case Biome.FLORA_DESERT -> new int[] {PixelArt.SHAPE_CACTUS, PixelArt.SHAPE_BUSH, PixelArt.SHAPE_ROSETTE, PixelArt.SHAPE_REEDS};
+            case Biome.FLORA_FROST -> new int[] {PixelArt.SHAPE_PINE, PixelArt.SHAPE_CRYSTAL, PixelArt.SHAPE_BUSH, PixelArt.SHAPE_FERN};
+            case Biome.FLORA_TECH -> new int[] {PixelArt.SHAPE_STALK, PixelArt.SHAPE_BULB, PixelArt.SHAPE_CRYSTAL, PixelArt.SHAPE_REEDS};
+            case Biome.FLORA_CORAL -> new int[] {PixelArt.SHAPE_CORAL, PixelArt.SHAPE_FLOWER, PixelArt.SHAPE_BUSH, PixelArt.SHAPE_FAN, PixelArt.SHAPE_BELL};
+            case Biome.FLORA_EMBER -> new int[] {PixelArt.SHAPE_TREE, PixelArt.SHAPE_BULB, PixelArt.SHAPE_CRYSTAL, PixelArt.SHAPE_FAN};
+            default -> new int[] {PixelArt.SHAPE_TREE, PixelArt.SHAPE_BUSH, PixelArt.SHAPE_FLOWER, PixelArt.SHAPE_FERN, PixelArt.SHAPE_REEDS, PixelArt.SHAPE_BELL, PixelArt.SHAPE_ROSETTE};
         };
         float baseHue = switch (spec.biome.flora()) {
             case Biome.FLORA_EMBER -> 15;
@@ -364,7 +347,8 @@ public final class Planet {
         } + spec.ground.hueShift();
         for (int i = 0; i < spec.floraSpecies; i++) {
             long seed = rng.nextLong();
-            int shape = shapes[i % shapes.length];
+            // Visual choices have their own seed; discovery IDs, loot and placements keep their sequence.
+            int shape = shapes[(i + (int) Math.floorMod(Rng.mix(spec.seed), shapes.length)) % shapes.length];
             Species s = new Species(key + ":P" + i, Species.FLORA, Names.plant(seed), seed);
             int leaf = Colour.fromHsv(baseHue + rng.range(-35f, 35f), rng.range(0.55f, 0.85f), rng.range(0.6f, 0.85f), 255);
             int accent = Colour.fromHsv(rng.range(0f, 360f), 0.8f, 0.95f, 255);
@@ -372,9 +356,9 @@ public final class Planet {
                     : Colour.fromHsv(25 + rng.range(-10f, 10f), 0.55f, 0.45f, 255);
             float scale = shape == PixelArt.SHAPE_TREE || shape == PixelArt.SHAPE_PINE ? rng.range(0.9f, 1.3f)
                     : rng.range(0.8f, 1.15f);
-            s.sprites = new SceneSprite[3];
-            for (int v = 0; v < 3; v++) {
-                s.sprites[v] = PixelArt.plant(shape, seed + v * 101, leaf, accent, trunk, scale * (0.85f + 0.15f * v));
+            s.sprites = new SceneSprite[6];
+            for (int v = 0; v < s.sprites.length; v++) {
+                s.sprites[v] = PixelArt.plant(shape, seed + v * 101, leaf, accent, trunk, scale * (0.75f + 0.1f * v));
             }
             s.colour = leaf;
             s.yield = rng.chance(0.25) ? spec.special : Catalog.CARBON;

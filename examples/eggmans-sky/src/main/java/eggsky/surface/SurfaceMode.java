@@ -62,6 +62,8 @@ public final class SurfaceMode implements Mode {
     /** Camera: world x at the screen centre, world y at the screen top. */
     public float camX;
     public float camY;
+    /** Unwrapped camera travel keeps fractional parallax continuous around the planet. */
+    private double skyScrollX;
     private float lastCamX;
     private float lastCamY;
     private final Rng rng;
@@ -146,6 +148,7 @@ public final class SurfaceMode implements Mode {
             phaseTicks = 0;
         }
         camX = ship.x;
+        skyScrollX = camX;
         camY = ship.y - g.height * 0.5f;
         lastCamX = camX;
         lastCamY = camY;
@@ -225,11 +228,11 @@ public final class SurfaceMode implements Mode {
                     switch (pl.kind()) {
                         case Planet.P_FLORA -> {
                             species = planet.flora.get(pl.variant());
-                            sprite = species.sprites[(int) Math.floorMod(Rng.mix(pl.id().hashCode()), 3L)];
+                            sprite = species.sprites[(int) Math.floorMod(Rng.mix(pl.id().hashCode()), (long) species.sprites.length)];
                         }
                         case Planet.P_MINERAL -> {
                             species = planet.minerals.get(pl.variant());
-                            sprite = species.sprites[(int) Math.floorMod(Rng.mix(pl.id().hashCode()), 3L)];
+                            sprite = species.sprites[(int) Math.floorMod(Rng.mix(pl.id().hashCode()), (long) species.sprites.length)];
                         }
                         case Planet.P_CRYSTAL -> sprite = planet.crystals[pl.variant()];
                         case Planet.P_COBALT -> sprite = planet.crystals[2];
@@ -1791,7 +1794,9 @@ public final class SurfaceMode implements Mode {
         float lead = ship.vx * 22;
         float targetX = ship.x + lead;
         float dx = terrain.dx(camX, targetX);
-        camX = terrain.wrapX(camX + dx * 0.12f);
+        float travel = dx * 0.12f;
+        skyScrollX += travel;
+        camX = terrain.wrapX(camX + travel);
         float targetY = ship.y - g.height * 0.52f + ship.vy * 6;
         camY += (targetY - camY) * (phase == LAUNCH || phase == DESCEND ? 0.3f : 0.1f);
         camY = Math.max(-420, Math.min(terrain.height() - g.height + 40, camY));
@@ -1983,23 +1988,24 @@ public final class SurfaceMode implements Mode {
         int bgH = planet.contentHeight;
         // The scenery's bottom sits at the screen's bottom when the camera is at the planet's usual
         // ground level, and drifts slowly with altitude.
-        float bgY = g.height - bgH + (planet.groundLevel - g.height * 0.62f - cy) * 0.12f;
+        int bgY = Math.round(g.height - bgH + (planet.groundLevel - g.height * 0.62f - cy) * 0.12f);
         SceneDraw style = SceneDraw.plain().withTint(tint);
         int w = bg.width();
         for (SceneBackdrop.Band band : planet.bands) {
             if (band.top() >= bgH) {
                 continue;
             }
-            float y0 = bgY + band.top();
-            if (y0 > g.height || y0 + band.height() < 0) {
+            int y0 = bgY + band.top();
+            int bandHeight = Math.min(band.height(), bgH - band.top());
+            if (y0 > g.height || y0 + bandHeight < 0) {
                 continue;
             }
-            double scroll = cx * band.speed() + band.drift() * g.ticks;
+            double scroll = (skyScrollX + terrain.dx(camX, cx)) * band.speed() + band.drift() * g.ticks;
             int col = (int) Math.floorMod((long) Math.floor(scroll), (long) w);
             int done = 0;
             while (done < g.width) {
                 int run = Math.min(w - col, g.width - done);
-                c.drawRegion(bg, col, band.top(), run, band.height(), done, y0, run, band.height(), style);
+                c.drawRegion(bg, col, band.top(), run, bandHeight, done, y0, run, bandHeight, style);
                 done += run;
                 col = 0;
             }

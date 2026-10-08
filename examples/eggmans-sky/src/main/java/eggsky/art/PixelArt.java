@@ -201,6 +201,13 @@ public final class PixelArt {
     public static final int SHAPE_STALK = 8;
     public static final int SHAPE_BULB = 9;
 
+    public static final int SHAPE_FERN = 10;
+    public static final int SHAPE_ROSETTE = 11;
+    public static final int SHAPE_REEDS = 12;
+    public static final int SHAPE_FAN = 13;
+    public static final int SHAPE_BELL = 14;
+    public static final int SHAPE_SHELF = 15;
+
     /** A plant of {@code shape} grown from {@code seed} in {@code primary}/{@code secondary} colours. */
     public static SceneSprite plant(int shape, long seed, int primary, int secondary, int trunk, float scale) {
         Rng rng = new Rng(seed);
@@ -214,6 +221,12 @@ public final class PixelArt {
             case SHAPE_CORAL -> coral(rng, primary, secondary, scale);
             case SHAPE_PINE -> pine(rng, primary, secondary, trunk, scale);
             case SHAPE_STALK -> stalk(rng, primary, secondary, scale);
+            case SHAPE_FERN -> fern(rng, primary, secondary, scale);
+            case SHAPE_ROSETTE -> rosette(rng, primary, secondary, scale);
+            case SHAPE_REEDS -> reeds(rng, primary, secondary, scale);
+            case SHAPE_FAN -> fan(rng, primary, secondary, scale);
+            case SHAPE_BELL -> bell(rng, primary, secondary, scale);
+            case SHAPE_SHELF -> shelf(rng, primary, secondary, trunk, scale);
             default -> bulb(rng, primary, secondary, scale);
         };
     }
@@ -446,6 +459,139 @@ public final class PixelArt {
         p.stroke(w / 2f, h - 1, w / 2f + w * 0.32f, h * 0.6f, 1.6f * scale, 0.5f, leaf);
         p.stroke(w / 2f, h - 1, w / 2f, h * 0.5f, 1.2f * scale, 1 * scale, leaf);
         p.ellipse(w / 2f, h * 0.38f, w * 0.3f, h * 0.3f, b);
+        return p.finish(true);
+    }
+
+    /** Arching fronds with paired leaflets, all growing from one rooted crown. */
+    private static SceneSprite fern(Rng rng, int colour, int accent, float scale) {
+        int w = dim(rng.range(38, 58), scale);
+        int h = dim(rng.range(28, 46), scale);
+        PixelArt p = new PixelArt(w, h);
+        int leaf = p.material(colour);
+        int vein = p.material(accent);
+        int fronds = rng.range(5, 8);
+        for (int i = 0; i < fronds; i++) {
+            float spread = -1 + 2f * i / (fronds - 1);
+            float ex = w / 2f + spread * w * 0.4f;
+            float ey = h * (0.16f + 0.33f * Math.abs(spread));
+            float bend = rng.range(-0.06f, 0.06f) * w;
+            float px = w / 2f, py = h - 2;
+            for (int k = 1; k <= 8; k++) {
+                float t = k / 8f;
+                float x = w / 2f + (ex - w / 2f) * t + bend * (float) Math.sin(t * Math.PI);
+                float y = h - 2 + (ey - h + 2) * t;
+                p.stroke(px, py, x, y, scale, 0.5f, vein);
+                float len = w * 0.13f * (1 - t) + scale;
+                p.stroke(x, y, x - len, y - h * 0.08f, 1.7f * scale, 0.4f, leaf);
+                p.stroke(x, y, x + len, y - h * 0.08f, 1.7f * scale, 0.4f, leaf);
+                px = x; py = y;
+            }
+        }
+        return p.finish(true);
+    }
+
+    /** Succulent leaves form a pointed, asymmetric rosette instead of a round bush. */
+    private static SceneSprite rosette(Rng rng, int colour, int accent, float scale) {
+        int w = dim(rng.range(28, 46), scale);
+        int h = dim(rng.range(22, 34), scale);
+        PixelArt p = new PixelArt(w, h);
+        int leaf = p.material(colour);
+        int tip = p.material(accent);
+        int leaves = rng.range(7, 11);
+        for (int i = 0; i < leaves; i++) {
+            double a = Math.PI + (i + 0.5) * Math.PI / leaves;
+            float ex = w / 2f + (float) Math.cos(a) * w * rng.range(0.32f, 0.45f);
+            float ey = h - 2 + (float) Math.sin(a) * h * rng.range(0.65f, 0.9f);
+            float mx = (w / 2f + ex) / 2;
+            float my = (h - 2 + ey) / 2;
+            float half = w * rng.range(0.06f, 0.1f);
+            p.polygon(new float[] {w / 2f, mx - half, ex, mx + half},
+                    new float[] {h - 2, my, ey, my}, leaf, 0);
+            p.stroke(mx, my, ex, ey, 0.7f * scale, 0.4f, tip);
+        }
+        return p.finish(true);
+    }
+
+    /** A clump of jointed stems with seed heads at staggered heights. */
+    private static SceneSprite reeds(Rng rng, int colour, int accent, float scale) {
+        int w = dim(rng.range(26, 40), scale);
+        int h = dim(rng.range(38, 64), scale);
+        PixelArt p = new PixelArt(w, h);
+        int stem = p.material(colour), head = p.material(accent);
+        int count = rng.range(4, 7);
+        for (int i = 0; i < count; i++) {
+            float x = w * (0.2f + 0.6f * i / (count - 1));
+            float y = h * rng.range(0.15f, 0.45f);
+            p.stroke(w / 2f, h - 2, x, y, 1.2f * scale, 0.7f * scale, stem);
+            for (int j = 1; j <= 3; j++) {
+                float t = j / 4f;
+                float nx = x + (w / 2f - x) * t, ny = y + (h - 2 - y) * t;
+                int side = (i + j) % 2 == 0 ? 1 : -1;
+                p.stroke(nx, ny, nx + side * w * 0.14f, ny - h * 0.1f, 1.6f * scale, 0.4f, stem);
+            }
+            p.ellipse(x, y, 1.8f * scale, h * rng.range(0.06f, 0.1f), head);
+        }
+        return p.finish(true);
+    }
+
+    /** Pleated fan leaves with contrasting ribs. */
+    private static SceneSprite fan(Rng rng, int colour, int accent, float scale) {
+        int w = dim(rng.range(36, 56), scale);
+        int h = dim(rng.range(34, 52), scale);
+        PixelArt p = new PixelArt(w, h);
+        int leaf = p.material(colour), rib = p.material(accent);
+        float cx = w / 2f, cy = h * 0.7f;
+        p.stroke(cx, h - 2, cx, cy, 2 * scale, scale, rib);
+        int folds = rng.range(7, 11);
+        float lastX = cx - w * 0.43f, lastY = cy - h * 0.1f;
+        for (int i = 1; i <= folds; i++) {
+            double a = Math.PI + i * Math.PI / folds;
+            float x = cx + (float) Math.cos(a) * w * 0.43f;
+            float y = cy + (float) Math.sin(a) * h * rng.range(0.5f, 0.62f) - h * 0.1f;
+            p.polygon(new float[] {cx, lastX, x}, new float[] {cy, lastY, y}, leaf, i % 2 * 0.3f);
+            p.stroke(cx, cy, x, y, 0.7f * scale, 0.4f, rib);
+            lastX = x; lastY = y;
+        }
+        return p.finish(true);
+    }
+
+    /** Several nodding trumpet flowers hang from a curved branching stem. */
+    private static SceneSprite bell(Rng rng, int colour, int accent, float scale) {
+        int w = dim(rng.range(30, 44), scale);
+        int h = dim(rng.range(38, 62), scale);
+        PixelArt p = new PixelArt(w, h);
+        int petal = p.material(colour), stem = p.material(accent);
+        float cx = w / 2f + rng.range(-0.06f, 0.06f) * w;
+        p.stroke(w / 2f, h - 2, cx, h * 0.12f, 1.7f * scale, 0.7f, stem);
+        int count = rng.range(3, 5);
+        for (int i = 0; i < count; i++) {
+            int side = i % 2 == 0 ? -1 : 1;
+            float y = h * (0.18f + i * 0.5f / count);
+            float x = cx + side * w * rng.range(0.2f, 0.3f);
+            p.stroke(cx, y + h * 0.08f, x, y, scale, 0.6f, stem);
+            float r = w * rng.range(0.1f, 0.15f);
+            p.polygon(new float[] {x - r * 0.3f, x + r * 0.3f, x + r, x - r},
+                    new float[] {y, y, y + h * 0.17f, y + h * 0.17f}, petal, 0.1f);
+            p.ellipse(x, y + h * 0.17f, r, 1.5f * scale, stem);
+        }
+        return p.finish(true);
+    }
+
+    /** Overlapping bracket fungi form tiered shelves around a short woody stalk. */
+    private static SceneSprite shelf(Rng rng, int colour, int accent, int trunk, float scale) {
+        int w = dim(rng.range(32, 48), scale);
+        int h = dim(rng.range(32, 54), scale);
+        PixelArt p = new PixelArt(w, h);
+        int bark = p.material(trunk), cap = p.material(colour), rim = p.material(accent);
+        p.stroke(w / 2f, h - 2, w / 2f, h * 0.18f, 3 * scale, 2 * scale, bark);
+        int tiers = rng.range(3, 5);
+        for (int i = tiers - 1; i >= 0; i--) {
+            float y = h * (0.22f + i * 0.58f / tiers);
+            float x = w / 2f + (i % 2 == 0 ? -1 : 1) * w * 0.1f;
+            float rx = w * rng.range(0.22f, 0.34f);
+            p.ellipse(x, y + 2 * scale, rx, h * 0.08f, rim);
+            p.ellipse(x, y, rx, h * 0.08f, cap);
+        }
         return p.finish(true);
     }
 

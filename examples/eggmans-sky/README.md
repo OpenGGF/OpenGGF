@@ -97,6 +97,12 @@ Starposts, landings, launches, docking, warps, every two minutes and on exit.
   left out for the same reason in its foreground.
 - `art/FaunaCatalog` lists 83 creature bodies (badniks and animals from all three games) by ROM
   label; `art/PixelArt` grows outlined, lit, Genesis-quantised flora, crystals and boulders.
+  Flora includes ferns, succulent rosettes, reeds, fan leaves, bell flowers and shelf fungi,
+  with six seeded specimens per species and climate-specific shape pools. These are visual
+  variations of the existing resources; material types, yields and discovery IDs are unchanged.
+- Backgrounds retain their source artwork's parallax boundaries. Single-layer ROM planes and
+  generated skies scroll as intact pictures, and background motion stays continuous when the
+  camera crosses the planet's looping seam.
 - `space/SpaceRenderer` ray traces the sky, sun, planets, rings and the station into one
   half-resolution streaming image each frame and keeps a depth buffer so sprites hide behind
   planets; `space/PlanetTexture` builds each planet's orbital map from shrunken layout blocks.

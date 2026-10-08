@@ -211,6 +211,18 @@ class TestEggmansSkyScene {
                 assertTrue(columns >= 16, key + " has " + columns + " columns");
                 List<?> placements = (List<?>) planet.getClass().getField("placements").get(planet);
                 assertFalse(placements.isEmpty(), key + " has deposits and points of interest");
+                var kit = (com.openggf.mods.scene.SceneLevelKit) planet.getClass().getField("kit").get(planet);
+                List<?> bands = (List<?>) planet.getClass().getField("bands").get(planet);
+                boolean plain = (boolean) biome.getClass().getMethod("plainSky").invoke(biome);
+                if (plain) {
+                    assertEquals(1, bands.size(), key + " keeps its generated skyline intact");
+                } else {
+                    assertEquals(kit.backdrop().bands(), bands, key + " preserves source band boundaries and rates");
+                }
+                for (Object species : (List<?>) planet.getClass().getField("flora").get(planet)) {
+                    var sprites = (com.openggf.mods.scene.SceneSprite[]) species.getClass().getField("sprites").get(species);
+                    assertEquals(6, sprites.length, key + " has six specimens per species");
+                }
                 assertEquals(Map.of(), harness.findings(), "faults after " + key);
                 System.out.println("biome " + key + ": " + columns + " columns, " + placements.size() + " placements");
             }
@@ -319,6 +331,94 @@ class TestEggmansSkyScene {
                         org.mockito.ArgumentMatchers.anyFloat(), org.mockito.ArgumentMatchers.anyFloat(),
                         org.mockito.ArgumentMatchers.argThat(style -> style.flipX()));
             }
+        }
+    }
+
+    @Test
+    void skyScrollStaysContinuousAcrossBothPlanetSeams() throws Exception {
+        try (ExampleModHarness harness = open()) {
+            assertTrue(harness.debugJump("biome:s3k:2:0:7"));
+            play(harness, 200);
+            Object game = harness.scene().getClass().getMethod("game").invoke(harness.scene());
+            Object surface = game.getClass().getMethod("mode").invoke(game);
+            Class<?> type = surface.getClass();
+            Object ship = type.getField("ship").get(surface);
+            Object terrain = type.getField("terrain").get(surface);
+            int width = (int) terrain.getClass().getMethod("width").invoke(terrain);
+            var scroll = type.getDeclaredField("skyScrollX");
+            scroll.setAccessible(true);
+            var update = type.getDeclaredMethod("updateCamera", game.getClass());
+            update.setAccessible(true);
+            var draw = type.getDeclaredMethod("drawSky", game.getClass(), com.openggf.mods.scene.SceneCanvas.class,
+                    int.class, float.class, float.class);
+            draw.setAccessible(true);
+            var canvas = org.mockito.Mockito.mock(com.openggf.mods.scene.SceneCanvas.class);
+            Object planet = game.getClass().getMethod("planet").invoke(game);
+            var bg = (com.openggf.mods.scene.SceneImage) planet.getClass().getField("backdrop").get(planet);
+            @SuppressWarnings("unchecked")
+            var bands = (List<com.openggf.mods.scene.SceneBackdrop.Band>) planet.getClass().getField("bands").get(planet);
+            assertEquals(1, bands.size()); // This act has a single connected background plane.
+            for (int direction : new int[] {-1, 1}) {
+                float start = direction > 0 ? width - 1 : 1;
+                type.getField("camX").setFloat(surface, start);
+                scroll.setDouble(surface, start);
+                ship.getClass().getField("x").setFloat(ship, direction > 0 ? 15 : width - 15);
+                ship.getClass().getField("vx").setFloat(ship, 0);
+                update.invoke(surface, game);
+                float camera = type.getField("camX").getFloat(surface);
+                assertTrue(direction > 0 ? camera < 2 : camera > width - 2, "crossed the seam");
+                assertEquals(direction * 16 * 0.12, scroll.getDouble(surface) - start, 0.00001);
+                org.mockito.Mockito.clearInvocations(canvas);
+                draw.invoke(surface, game, canvas, -1, camera, 100f);
+                var regions = org.mockito.Mockito.mockingDetails(canvas).getInvocations().stream()
+                        .filter(call -> call.getMethod().getName().equals("drawRegion")).toList();
+                assertFalse(regions.isEmpty());
+                int expected = (int) Math.floorMod((long) Math.floor(scroll.getDouble(surface) * bands.getFirst().speed()),
+                        (long) bg.width());
+                assertEquals(expected, regions.getFirst().<Integer>getArgument(1).intValue(), "draw uses continuous travel, not wrapped X");
+                for (var call : regions) {
+                    float y = call.getArgument(6);
+                    assertEquals(Math.round(y), y, "pixel-aligned background rows");
+                    assertEquals(call.<Integer>getArgument(4).floatValue(), call.<Float>getArgument(8), "no vertical stretch");
+                }
+            }
+        }
+    }
+
+    @Test
+    void newFloraSilhouettesAreRepeatableAndVaryBySeed() throws Exception {
+        try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("flora-build"))) {
+            var plant = harness.loader().loadClass("eggsky.art.PixelArt").getMethod("plant",
+                    int.class, long.class, int.class, int.class, int.class, float.class);
+            java.util.Set<Integer> silhouettes = new java.util.HashSet<>();
+            for (int shape = 10; shape <= 15; shape++) {
+                java.util.Set<Integer> specimens = new java.util.HashSet<>();
+                for (long seed = 0; seed < 12; seed++) {
+                    var a = (com.openggf.mods.scene.SceneSprite) plant.invoke(null, shape, seed,
+                            0xFF44AA66, 0xFFDD88AA, 0xFF886644, 1f);
+                    var b = (com.openggf.mods.scene.SceneSprite) plant.invoke(null, shape, seed,
+                            0xFF44AA66, 0xFFDD88AA, 0xFF886644, 1f);
+                    assertEquals(a.width(), b.width());
+                    assertEquals(a.height(), b.height());
+                    int hash = 1, occupied = 0;
+                    for (int y = 0; y < a.height(); y++) {
+                        for (int x = 0; x < a.width(); x++) {
+                            int pixel = a.image().pixel(x, y);
+                            assertEquals(pixel, b.image().pixel(x, y));
+                            boolean filled = (pixel >>> 24) != 0;
+                            if (filled) occupied++;
+                            hash = 31 * hash + (filled ? 1 : 0);
+                        }
+                    }
+                    assertTrue(occupied > 30, "nonempty silhouette");
+                    assertTrue(occupied < a.width() * a.height() * 0.85, "transparent negative space");
+                    assertEquals(a.height() - 1, a.originY(), "rooted at the ground");
+                    specimens.add(hash);
+                    silhouettes.add(hash);
+                }
+                assertEquals(12, specimens.size(), "each seed changes the shape, not just the colour");
+            }
+            assertEquals(72, silhouettes.size(), "six distinct families of silhouettes");
         }
     }
 
