@@ -1,6 +1,5 @@
 package com.openggf.tools.challenge;
 
-import com.openggf.audio.GameSound;
 import com.openggf.audio.output.OpenAlPcmSink;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
@@ -26,8 +25,7 @@ class TestChallengeMenuAudioRom {
              var capture = new ChallengeCapture(directory);
              var menu = new ChallengeMenuAudio(RomTestUtils.ensureSonic1RomAvailable().toPath(), sink, capture)) {
             long now = 1_000_000_000L;
-            for (GameSound cue : List.of(GameSound.CHECKPOINT, GameSound.RING, GameSound.JUMP,
-                    GameSound.SPRING, GameSound.ERROR)) {
+            for (ChallengeMenuAudio.Cue cue : ChallengeMenuAudio.Cue.values()) {
                 int firstPacket = device.packets.size();
                 menu.cue(cue);
                 for (int tick = 0; tick < 90; tick++) menu.update(true, now += 16_666_667L);
@@ -35,7 +33,7 @@ class TestChallengeMenuAudioRom {
                         "Native cue must reach the retained device sink: " + cue);
             }
             int audiblePackets = device.packets.size();
-            menu.cue(GameSound.JUMP);
+            menu.cue(ChallengeMenuAudio.Cue.SELECT);
             for (int tick = 0; tick < 4; tick++) menu.update(false, now += 16_666_667L);
             assertEquals(audiblePackets, device.packets.size(), "gameplay mixes UI feedback at its focus owner");
             short[] game = new short[1600];

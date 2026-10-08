@@ -22,8 +22,10 @@ future MVP/product roadmap. This record concerns the process-host prototype.
 - Protocol v1 bounds commands, identities, frame/text/PCM sizes and one outstanding
   request. Host cancellation checks health under the same monitor as tuple commit;
   GPU publication checks generation again on the UI thread.
-- Worker directories are owned temporary paths under this tree's target. Cwd/class
-  path and environment whitelist exclude linked config and injected JVM switches.
+- Worker directories are owned `openggf-challenge-world-*` paths in the system
+  temporary directory (moved out of the launch directory's `target/` during the
+  Opus polish). Cwd/class path and environment whitelist exclude linked config and
+  injected JVM switches.
   Normal/forced process close is bounded; remaining owner releases continue after
   any cleanup failure and preserve the failure for honest reporting.
 
@@ -516,3 +518,150 @@ workflow outputs and hook-created resource links were discarded, preserving
 their original targets. Child results and harness-owned histories remain.
 The unmerged lead branch/worktree is retained for root-owned Opus polish;
 no feature push or PR occurred during this implementation handoff.
+
+## Opus polish (2026-10-08)
+
+Branch `feature/ai-multigame-opus-polish` from implementation HEAD
+`d864ca616d5ca106da615392cc3fa52ab29ceac9` (integration base published develop
+`33d3976c53304dbbea1c695914ecdd7bfc64cf9d`). Presentation, host navigation,
+startup and temporary-directory ownership only: worker gameplay, input admission,
+protocol, synthesis and the Mod API surface are unchanged.
+
+### Findings from the handed-off captures
+
+- Pane footers drew `RINGS n / LEVEL` at a 0.8 font scale: clipped glyphs, an
+  internal engine mode name and a ring count the native HUD already shows.
+- READY/COUNTDOWN panes showed the workers' preparation snapshot. That is not a
+  frame the console presents: Sonic 1/2 appeared at full brightness without their
+  title cards and Angel Island showed half-built blue tiles.
+- Fractional font scales (0.8–1.8) gave uneven glyph pixels; the play layout left
+  a 230-pixel empty band; every scene change, including resume, blacked out the
+  whole window; the slow notice flickered on single slow tuples.
+- Escape during play discarded the run without confirmation; pad users had no way
+  back from host screens; the pause cue was Sonic's jump.
+- Worker and menu-sound temporary directories were created under `./target/` of
+  whatever directory the player launched from.
+
+### Changes
+
+- `ChallengePresentation`: whole-number font scales only; one centred pane grid
+  shared by loading, ready, countdown, play and pause; per-zone standby cards
+  until the first stepped tuple (sequence > 0) arrives, then a 0.3 s hand-over to
+  native frames; pane footers say **SOUND ON** or **MUTED / PRESS n TO LISTEN**
+  with a speaker mark on the heard pane and an eased focus glow; countdown digits
+  pop in whole-number steps per pane; GO! fades below the grid; keycap control
+  bars; pause and fault cards with reasons and their exact keys; content-only
+  entry fades (header and grid stay put); aspect-preserving letterbox on resize.
+- `ThreeOpeningsTool`: Escape pauses during play and leaves from the pause,
+  loading, ready, countdown and fault screens; pad B does the same on host screens
+  only; pause states why (window focus or controller loss); the slow notice needs
+  two seconds of play and a one-second average above one 60 Hz frame.
+- `ChallengeMenuAudio.Cue`: semantic host cues voiced by native Sonic 1 effects
+  (lamppost ready, ring tick/focus, spring go, switch pause/resume/back, wall smash
+  fault), loaded by their ROM ids rather than gameplay sound roles.
+- `ChallengeWindow`: hidden creation, then a non-waiting X11 map (below); GLFW
+  errors print to stderr; the window icon uses the existing owner.
+- Worker, diagnostic and menu-sound directories use the system temporary
+  directory (`openggf-challenge-world-*`, `openggf-challenge-menu-*`).
+
+Rejected: ROM sprites in the host UI. The host owns no game art pipeline; adding
+one would duplicate worker-owned decoding in a second process for decoration,
+and the panes already present every native sprite from the first stepped tick.
+A focus-enlarged pane layout was rejected because the challenge is to watch all
+three at once; the equal grid stays.
+
+### Startup stall: established cause and scoped fix
+
+Measured with bounded owned probes while the KDE Plasma Wayland session was
+locked (`loginctl` `LockedHint=yes`, screensaver active), GLFW platform X11 over
+XWayland, LWJGL 3.3.3:
+
+- Six of six GLFW create/show attempts stalled. A gdb-parented native stack showed
+  `glfwCreateWindow` → (unsymbolized GLFW frames) → `XCheckTypedWindowEvent` →
+  `_XEventsQueued` → `xcb_poll_for_event`, with the main thread runnable at one
+  full core. The window was in KWin's `_NET_CLIENT_LIST`, unmapped, without
+  `WM_STATE`.
+- A plain Python Xlib toplevel (no GLFW, no GL) was also left unmapped for five
+  seconds, receiving only ConfigureNotify. The desktop session was withholding
+  managed maps; the host code was not the cause.
+- GLFW's VisibilityNotify wait decrements its 0.1 s timeout only while the X queue
+  is empty, so queued ConfigureNotify turns "not mapped yet" into a permanent spin
+  that also ignores close requests. The unsymbolized frames make the exact static
+  function an inference from GLFW source; the spin and its location are measured.
+- Normal managed runs passed at 20:52–20:54 BST on 2026-10-07; the recorded managed
+  attempts at 20:58, 21:01 and the 21:05 GLFW probe failed, and the session was
+  locked throughout this diagnosis. The lock is a strong correlation, not a proven
+  cause: unlocking was not available to test.
+
+The host now creates its window hidden, issues the same `XMapWindow` without the
+wait, keeps the title clock and any scripted program held until the window is
+viewable, and prints one waiting notice after three seconds. Other platforms keep
+`glfwShowWindow`; `Engine` is unchanged. `check_window_startup.py` compares both
+sources in a normal managed window on that locked session:
+
+| Source | Plain control | Busiest host thread | Title held | Close while withheld | After diagnostic map |
+| --- | --- | --- | --- | --- | --- |
+| `d864ca616` (before) | unmapped | 1.00 core | no scenes | ignored, SIGKILL | TITLE, exit 0 |
+| polished (after) | unmapped | 0.00 core | no scenes, notice printed | exit 0 | TITLE + title.png, exit 0 |
+
+This removes the hang and the CPU spin; it does not make a locked desktop show
+windows. A KWin-managed map of the polished host after unlock was not observed in
+this session, and override_redirect maps remain diagnostics, not normal-window
+evidence.
+
+### Acceptance checklist
+
+Observed on the packaged polish jar (sha256 `5b3113c41ab5…7c4f897`) unless noted.
+The session stayed locked, so window/device captures used the explicit owned
+override_redirect diagnostic with `--disable-vsync`; they are presentation and
+lifecycle evidence, not normal window-manager certification.
+
+| Check | Result |
+| --- | --- |
+| Title, help copy, controls and footer readable at whole-number scales | pass: `title.png` |
+| Loading/ready/countdown keep one grid; no pre-start snapshot is shown | pass: `loading/ready/countdown.png`, video |
+| Countdown beats, GO!, standby-to-native hand-over | pass: video frames |
+| Pane footers show heard/muted state and the selecting key | pass: `play-*.png` |
+| Sound focus follows Tab; native→host→device PCM anchors exact | pass: ticks 600/1200/1680, offsets 734496/1214496/1598496 |
+| Gameplay unchanged | pass: `state.csv` byte-identical to `host-focus-final-5` |
+| Loading cancel, in-flight pause 9→10, focus, restart, fault/retry | pass: `lifecycle.json` |
+| Escape in play pauses; Escape on pause returns to title, workers reaped | pass: scenes `PLAY,PAUSE,TITLE` |
+| Missing ROM recovers to title and exits cleanly | pass |
+| Withheld window: idle, notice, held title, clean close | pass: `startup-*` (normal managed window) |
+| No `openggf-challenge-*` or `./target/challenge-*` left behind | pass after every run |
+
+### Verification
+
+- Focused: all nine `com.openggf.tools.challenge` test classes plus
+  `verify dependency:build-classpath` with the three ROM properties, normal queue,
+  Java 21: **27 tests, 0 failures/errors/skips**, 3,721 main / 3,599 test sources
+  compiled; engine, fat jar, SDK and SDK Javadoc built and the SDK artifact verifier
+  passed (84 s after about 4,900 s queue wait).
+- Fresh structural guards, `LUA_BIN=/usr/bin/lua5.4 … -Pguards test -B`:
+  **86 reports / 672 tests, 0 failures/errors/skips** (3 min 31 s).
+- Category plan against `d864ca616` selects the full ordinary suite (3,034 classes)
+  only because `tools/challenge` is unclassified. The change is confined to this
+  tool's host presentation, navigation, window startup and owned temporary paths,
+  with no consumer outside the package, no shared algorithm, timing, physics or
+  public contract change, and no `@ModApi` type; proportionate validation replaced
+  the broad run. This is focused validation, not a full-suite result.
+- Native, packaged jar: `final/host-capture` 1,800 common ticks, 5,400 state rows,
+  1,059 window frames, publication p50/p95/p99 2.19/3.80/6.11 ms, sampled host
+  RSS 522,048 KiB; speaker AC RMS 1,047/1,103; `final/lifecycle` 6/6 checks,
+  422 frames; `final/startup-map-after` and `final/startup-withheld-close` as above.
+- Isolation oracle on the same source compiled as a class overlay over `d864ca616`
+  (`iter/isolation-1`, contended by two foreign category runs): all seven cells,
+  duplicate/reversed order, sibling close/reload/crash and checkpoint replay
+  36/36 pass; triple p50/p95/p99 1.544/3.369/5.471 ms.
+- Not repeated: ordinary/trace suites (no gameplay, synthesis or engine change),
+  S3K domain tests (no S3K code). Evidence lives outside Git in the task's
+  `multigame/opus-polish/` directory.
+
+### Remaining limits
+
+The desktop lock prevented a normal KWin-managed map of the polished host; that
+observation is still owed when the session is unlocked. `Engine` keeps
+`glfwShowWindow` and so retains the same exposure; that is outside this tool's
+startup owner. Physical speaker audition, physical HID certification, ROM sprites
+in host screens, full-act common completion and every later blueprint gate remain
+open as recorded above.

@@ -54,8 +54,11 @@ class TestChallengeProcessAcquisition {
                 "unregistered process must be reaped before failure escapes");
     }
     private static Set<Path> directories() throws Exception {
-        Path parent = Path.of("target", "challenge-workers").toAbsolutePath();
-        if (!Files.exists(parent)) return Set.of();
-        try (var paths = Files.list(parent)) { return paths.collect(Collectors.toSet()); }
+        Path parent = Path.of(System.getProperty("java.io.tmpdir")).toAbsolutePath();
+        try (var paths = Files.list(parent)) {
+            return paths.filter(path -> path.getFileName().toString()
+                            .startsWith(ProcessGameEndpoint.WORKER_DIRECTORY_PREFIX))
+                    .collect(Collectors.toSet());
+        }
     }
 }

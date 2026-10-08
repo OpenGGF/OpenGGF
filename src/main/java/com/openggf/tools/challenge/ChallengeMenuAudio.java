@@ -1,7 +1,6 @@
 package com.openggf.tools.challenge;
 
 import com.openggf.audio.AudioManager;
-import com.openggf.audio.GameSound;
 import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.output.OpenAlPcmSink;
 import com.openggf.audio.presentation.AudioPresentationFrameView;
@@ -11,15 +10,34 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
+import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
 
 /** Separate ROM-backed UI synthesis. Menu presentation never advances any worker clock. */
 final class ChallengeMenuAudio implements AutoCloseable {
+    /** Host feedback, each voiced by a native Sonic 1 sound effect from the supplied ROM. */
+    enum Cue {
+        /** Lamppost: the title and the all-ready barrier. */
+        READY(Sonic1Sfx.LAMPPOST),
+        /** Ring: countdown beats and a new sound focus. */
+        TICK(Sonic1Sfx.RING),
+        /** Spring: all three games start together. */
+        GO(Sonic1Sfx.SPRING),
+        /** Switch: host pause, resume and leaving a run. */
+        SELECT(Sonic1Sfx.SWITCH),
+        /** Wall smash: a run stopped and needs a retry. */
+        FAULT(Sonic1Sfx.WALL_SMASH);
+
+        private final Sonic1Sfx sound;
+        Cue(Sonic1Sfx sound) {
+            this.sound = sound;
+        }
+    }
     private final Rom rom = new Rom();
     private final AudioManager audio;
-    private final Map<GameSound, AbstractSmpsData> cues = new EnumMap<>(GameSound.class);
+    private final Map<Cue, AbstractSmpsData> cues = new EnumMap<>(Cue.class);
     private final DacData dac;
     private final Path directory;
     private final UiSink output;
@@ -28,9 +46,8 @@ final class ChallengeMenuAudio implements AutoCloseable {
 
     ChallengeMenuAudio(Path s1Rom, OpenAlPcmSink sink, ChallengeCapture capture) throws IOException {
         ChallengeRoms.validate("s1", s1Rom);
-        Path parent = Path.of("target", "challenge-menu").toAbsolutePath();
-        Files.createDirectories(parent);
-        directory = Files.createTempDirectory(parent, "audio-");
+        // Private standalone configuration, never the player's working directory.
+        directory = Files.createTempDirectory("openggf-challenge-menu-");
         var profile = new Sonic1AudioProfile();
         AudioManager created = null;
         try {
@@ -48,22 +65,11 @@ final class ChallengeMenuAudio implements AutoCloseable {
                     new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()));
             var loader = profile.createSmpsLoader(rom);
             dac = loader.loadDacData();
-            for (GameSound sound : List.of(GameSound.RING, GameSound.JUMP, GameSound.CHECKPOINT,
-                         GameSound.SPRING, GameSound.ERROR)) {
-                // S1 names its ring pan variants and has no ERROR asset. Use its
-                // native ring and wall-smash cues for selection/failure feedback.
-                GameSound nativeSound = switch (sound) {
-                    case RING -> GameSound.RING_RIGHT;
-                    case ERROR -> GameSound.WALL_SMASH;
-                    default -> sound;
-                };
-                Integer id = profile.getSoundMap().get(nativeSound);
-                if (id == null)
-                    throw new IOException("Missing native title sound mapping " + nativeSound);
-                AbstractSmpsData data = loader.loadSfx(id);
+            for (Cue cue : Cue.values()) {
+                AbstractSmpsData data = loader.loadSfx(cue.sound.id);
                 if (data == null)
-                    throw new IOException("Missing title sound " + sound);
-                cues.put(sound, data);
+                    throw new IOException("Missing title sound " + cue.sound);
+                cues.put(cue, data);
             }
             audio = created;
         } catch (IOException | RuntimeException | Error failure) {
@@ -75,9 +81,9 @@ final class ChallengeMenuAudio implements AutoCloseable {
             throw failure;
         }
     }
-    void cue(GameSound sound) {
+    void cue(Cue cue) {
         if (!closed)
-            audio.playStandaloneSfx(cues.get(sound), dac, 1f);
+            audio.playStandaloneSfx(cues.get(cue), dac, 1f);
     }
     void update(boolean menuVisible) {
         update(menuVisible, System.nanoTime());

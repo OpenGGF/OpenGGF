@@ -25,6 +25,7 @@ public final class ProcessGameEndpoint implements AutoCloseable {
     private long sequence;
     private boolean started;
 
+    static final String WORKER_DIRECTORY_PREFIX = "openggf-challenge-world-";
     public ProcessGameEndpoint(String game, Path rom, long generation) throws IOException {
         this(game, rom, generation, Runtime.getRuntime()::addShutdownHook);
     }
@@ -35,9 +36,8 @@ public final class ProcessGameEndpoint implements AutoCloseable {
         this.generation = generation;
         String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
         String classpath = workerClasspath();
-        Path parent = Path.of("target", "challenge-workers").toAbsolutePath();
-        Files.createDirectories(parent);
-        directory = Files.createTempDirectory(parent, "world-");
+        // Each worker's private working directory, never the player's own.
+        directory = Files.createTempDirectory(WORKER_DIRECTORY_PREFIX);
         ProcessBuilder builder = new ProcessBuilder(java, "-Xmx512m", "-cp", classpath,
                 "com.openggf.tools.challenge.ChallengeWorker", "--game", game, "--rom",
                 rom.toAbsolutePath().toString(), "--generation", Long.toString(generation));

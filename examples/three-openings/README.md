@@ -3,8 +3,11 @@
 Three real Sonic games in one window, driven by one held pad. This engine-owned
 JVM tool launches isolated workers for Green Hill Act 1, Emerald Hill Act 1 and
 Angel Island Act 1. All assets and game music/SFX come from your ROMs. The host's
-own menu cues are decoded from the Sonic 1 ROM through standalone production
-presentation; they never advance a worker.
+own menu cues are native Sonic 1 sound effects decoded from that ROM through
+standalone production presentation; they never advance a worker. The lamppost
+marks the title and the all-ready barrier, rings count down and confirm a new
+sound focus, the spring starts the run, the switch pauses, resumes and leaves a
+run, and the wall smash marks a stopped run.
 
 Build from the repository root with Java 21:
 
@@ -30,24 +33,40 @@ sound; missing it leaves the title silent until fixed.
 
 Enter or pad A prepares all games. Enter/pad A again begins a three-count
 transition, then offers the same held signal to all three. Native title cards and
-Angel Island's opening intro run independently after the start barrier.
+Angel Island's opening intro run independently after the start barrier. Until
+then each pane shows a standby card for its zone: the workers' pre-start
+snapshot is not a frame the console would present, so the host never shows it.
 
 | Action | Keyboard | Standard GLFW gamepad |
 | --- | --- | --- |
 | Move | Arrows | D-pad / left stick |
 | Genesis A / B / C | Z / X / C (Space also C) | X / B / A |
 | Native game Start | Enter | Start |
-| Host pause/resume | P | Back |
+| Host pause/resume | P; Escape also pauses during play | Back |
 | Restart all three | R | Left bumper |
 | Sound focus | Tab; 1/2/3 select directly | Right bumper |
-| Return to title; exit from title | Escape | Keyboard Escape |
+| Return to title (loading, ready, countdown, pause or fault screen) | Escape | B |
+| Quit from the title | Escape | Keyboard Escape or close the window |
 
-The first connected standard pad is used. Controller disconnect or window focus
+Escape during play opens the pause screen rather than discarding the run; a
+second Escape returns to the title. Pad B is the game's own B button during
+play and only means "back" on host screens. The first connected standard pad is
+used. Controller disconnect or window focus
 loss pauses all three; resume explicitly. Input is neutral while unfocused.
 Start is native game input, separate from host pause. No per-pane steering exists.
 The focused game supplies sound; unfocused games still synthesize and simulate.
 A step already admitted before host pause finishes once; its complete tuple is
 published, its gameplay PCM is discarded, and no further step is admitted.
+
+Each pane names its game and shows whether it is heard: **SOUND ON** for the
+focused game, **MUTED** with the number key that selects it for the others. A
+sustained slow host shows a notice after two seconds of play; all three always
+wait for the slowest game rather than skipping or catching up.
+
+The window opens on the title once the desktop actually shows it. If the desktop
+holds new windows back (a locked KDE Plasma session did), the host waits idle,
+prints a one-line notice on the terminal and stays closable; it no longer spins
+inside window creation. See [troubleshooting](../../docs/modding/guides/three-openings.md#supported-prototype-and-troubleshooting).
 
 A worker fault stops all gameplay and offers whole-run restart. Restart creates
 fresh processes/generations. Escape during loading cancels and closes every
@@ -151,8 +170,8 @@ labels that changed presentation setup; it does not certify default-WM startup.
 The validation record preserves both normal successes and failed attempts.
 
 On the same Linux desktop, exercise loading cancellation, pause with a deliberately
-stalled owned worker, audio focus, restart/generation, fault/retry, missing ROM and
-repeated exit through actual UI keys:
+stalled owned worker, audio focus, restart/generation, fault/retry, Escape from
+play to pause to title, missing ROM and repeated exit through actual UI keys:
 
 ```sh
 python3 tools/challenge/check_host_lifecycle.py \
@@ -165,6 +184,23 @@ The probe sends native UI keys only to its own host window and signals only exac
 worker processes acquired by that host. It resumes stopped workers during cleanup,
 records `lifecycle.json`, synchronized timelines/screenshots/video and device PCM,
 and unloads its private audio module. This diagnostic does not certify any route.
+
+When the window does not appear, separate the desktop from the host before
+changing anything:
+
+```sh
+python3 tools/challenge/check_window_startup.py \
+  --classpath "$PWD/target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar" \
+  --s1 /absolute/s1.gen --s2 /absolute/s2.gen --s3k /absolute/s3k.gen \
+  --output /absolute/outside-repository/three-openings-startup
+```
+
+It first maps a plain Xlib control window. An unmapped control means the desktop
+session is withholding new windows. It then launches the host on its title,
+records the busiest host thread's CPU share, the held scenes and the waiting
+notice, and closes the window through `WM_DELETE_WINDOW`. `--map-after` adds the
+explicit override_redirect diagnostic map; it is not normal window-manager
+evidence. Title cues go to a private null sink and gameplay never starts.
 
 Run the process-local S1 checkpoint diagnostic independently in a fresh JVM:
 

@@ -5,23 +5,17 @@ import static com.openggf.tools.challenge.ChallengePresentation.WIDTH;
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
 
-import com.openggf.audio.GameSound;
 import com.openggf.audio.output.OpenAlPcmSink;
 import com.openggf.control.GamepadStateSource;
 import com.openggf.control.GlfwGamepadStateSource;
-import com.openggf.debug.DebugColor;
-import com.openggf.graphics.PixelFontTextRenderer;
-import com.openggf.graphics.TexturedQuadRenderer;
+import com.openggf.tools.challenge.ChallengeMenuAudio.Cue;
 import com.openggf.tools.challenge.ChallengePresentation.Scene;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
-import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
-import org.lwjgl.system.MemoryUtil;
 
 /** Polished JVM-first process-host prototype: three production games, one held pad. */
 public final class ThreeOpeningsTool {
@@ -32,22 +26,23 @@ public final class ThreeOpeningsTool {
             Executors.newSingleThreadExecutor(r -> new Thread(r, "challenge-host-admission"));
     private final GamepadStateSource pads = new GlfwGamepadStateSource();
     private final boolean[] keys = new boolean[GLFW_KEY_LAST + 1];
-    private long window, generation, nextTick, sceneAt = System.nanoTime(), showRequestedAt;
+    private long window, generation, nextTick, sceneAt = System.nanoTime(), startedAt, showRequestedAt;
     private Scene scene = Scene.TITLE;
     private ChallengeHost host;
     private CompletableFuture<List<ChallengeProtocol.Frame>> pending;
     private List<ChallengeProtocol.Frame> frames = List.of();
     private int submittedHeld, focus, oldFocus, fadeTicks;
-    private boolean padAcceptBefore, padPauseBefore, padFocusBefore, padRestartBefore, hadPad, focused = true,
-            shown, waitingNotice;
-    private String fault = "", audioFault;
+    private boolean padAcceptBefore, padPauseBefore, padFocusBefore, padRestartBefore, padBackBefore, hadPad,
+            focused = true, shown, waitingNotice;
+    private String fault = "", pauseReason = "", audioFault;
     private OpenAlPcmSink sink;
     private ChallengeMenuAudio menuAudio;
     private int countdownCue;
     private ChallengePresentation presentation;
     private final Set<String> captured = new HashSet<>();
     private long stepStarted;
-    private double lastStepMs;
+    private double stepAverageMs;
+    private int runSteps;
     private final long[] stepTimes = new long[36000];
     private int stepCount;
 
@@ -63,8 +58,8 @@ public final class ThreeOpeningsTool {
             System.out.println("Three Openings — one pad, three worlds\njava -cp <OpenGGF jar> "
                     + "com.openggf.tools.challenge.ThreeOpeningsTool --s1 <rom> --s2 <rom> --s3k "
                     + "<rom>\nOptional: --program <common.pad> --capture-dir <outside-repo "
-                    + "directory>\nArrows move; Z=A X=B C=C; Enter=game Start; P=host pause; "
-                    + "R=restart; Tab=audio focus; Esc=title/exit.");
+                    + "directory>\nArrows move; Z=A X=B C=C; Enter=game Start; P or Esc=pause; "
+                    + "R=restart; Tab or 1/2/3=sound; Esc on the pause screen=title; Esc on the title=quit.");
             return;
         }
         List<ChallengeHost.Member> members = new ArrayList<>();
@@ -112,7 +107,7 @@ public final class ThreeOpeningsTool {
                 if (!value) {
                     Arrays.fill(keys, false);
                     if (scene == Scene.PLAY)
-                        pause();
+                        pause("Paused because the window lost focus.");
                 }
             });
             presentation = new ChallengePresentation(window);
@@ -132,8 +127,9 @@ public final class ThreeOpeningsTool {
                 if (capture != null)
                     capture.presentation(scene.name(), generation, host == null ? 0 : host.tick(),
                             focus, pending != null, focused);
-                presentation.draw(new ChallengePresentation.View(
-                        scene, elapsed(), focus, fault, lastStepMs, host == null ? 0 : host.tick()));
+                presentation.draw(new ChallengePresentation.View(scene, elapsed(),
+                        startedAt == 0 ? -1 : (System.nanoTime() - startedAt) / 1e9, focus, fault, pauseReason,
+                        slow()));
                 if (capture != null)
                     capturePresentation();
                 glfwSwapBuffers(window);
@@ -210,7 +206,7 @@ public final class ThreeOpeningsTool {
         }
         shown = true;
         glfwFocusWindow(window);
-        cue(GameSound.CHECKPOINT);
+        cue(Cue.READY);
         transition(Scene.TITLE);
         return true;
     }
@@ -226,16 +222,20 @@ public final class ThreeOpeningsTool {
                 focused && connected != null && connected.buttonDown(GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER);
         boolean padRestart =
                 focused && connected != null && connected.buttonDown(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER);
+        // Pad B leaves only host screens; during play it is each game's own B.
+        boolean padBack = focused && connected != null && connected.buttonDown(GLFW_GAMEPAD_BUTTON_B);
         if (hadPad && connected == null && scene == Scene.PLAY)
-            pause();
+            pause("Paused because the controller disconnected.");
         hadPad = connected != null;
-        if (edge(GLFW_KEY_ESCAPE, previous)) {
-            if (scene == Scene.TITLE)
-                glfwSetWindowShouldClose(window, true);
-            else {
-                closeRun();
-                transition(Scene.TITLE);
-            }
+        boolean escape = edge(GLFW_KEY_ESCAPE, previous);
+        if (escape && scene == Scene.TITLE)
+            glfwSetWindowShouldClose(window, true);
+        else if (escape && scene == Scene.PLAY)
+            pause("");
+        else if ((escape || padBack && !padBackBefore) && scene != Scene.TITLE && scene != Scene.PLAY) {
+            closeRun();
+            cue(Cue.SELECT);
+            transition(Scene.TITLE);
         }
         if ((edge(GLFW_KEY_ENTER, previous) || (accept && !padAcceptBefore))
                 && (scene == Scene.TITLE || scene == Scene.FAULT))
@@ -244,8 +244,9 @@ public final class ThreeOpeningsTool {
             countdown();
         if (edge(GLFW_KEY_P, previous) || (padPause && !padPauseBefore)) {
             if (scene == Scene.PLAY)
-                pause();
+                pause("");
             else if (scene == Scene.PAUSE) {
+                cue(Cue.SELECT);
                 if (sink != null)
                     sink.resume();
                 transition(Scene.PLAY);
@@ -264,26 +265,29 @@ public final class ThreeOpeningsTool {
         padPauseBefore = padPause;
         padFocusBefore = padFocus;
         padRestartBefore = padRestart;
+        padBackBefore = padBack;
         if (pending != null && pending.isDone()) {
             try {
                 frames = pending.join();
                 pending = null;
                 presentation.upload(frames);
                 if (scene == Scene.LOADING) {
-                    cue(GameSound.CHECKPOINT);
+                    cue(Cue.READY);
                     transition(Scene.READY);
                 } else if (scene == Scene.COUNTDOWN) {
                     if (sink != null) {
                         sink.onReverseBoundary();
                         sink.resume();
                     }
-                    cue(GameSound.SPRING);
+                    cue(Cue.GO);
                     transition(Scene.PLAY);
-                    nextTick = System.nanoTime();
+                    startedAt = System.nanoTime();
+                    nextTick = startedAt;
                     if (!focused && program == null)
-                        pause();
+                        pause("Paused because the window lost focus.");
                 } else {
-                    lastStepMs = (System.nanoTime() - stepStarted) / 1e6;
+                    double stepMs = (System.nanoTime() - stepStarted) / 1e6;
+                    stepAverageMs = runSteps++ == 0 ? stepMs : stepAverageMs * .95 + stepMs * .05;
                     if (stepCount < stepTimes.length)
                         stepTimes[stepCount++] = System.nanoTime() - stepStarted;
                     short[] pcm = focusedPcm();
@@ -314,7 +318,7 @@ public final class ThreeOpeningsTool {
             int count = (int) elapsed();
             if (count > countdownCue && count < 3) {
                 countdownCue = count;
-                cue(GameSound.RING);
+                cue(Cue.TICK);
             }
         }
         if (menuAudio != null)
@@ -345,6 +349,10 @@ public final class ThreeOpeningsTool {
     private void launch() {
         closeRun();
         fault = "";
+        pauseReason = "";
+        startedAt = 0;
+        stepAverageMs = 0;
+        runSteps = 0;
         frames = List.of();
         generation++;
         presentation.reset(generation);
@@ -352,7 +360,7 @@ public final class ThreeOpeningsTool {
             initializeSound();
             sink.onReverseBoundary();
             sink.resume();
-            cue(GameSound.CHECKPOINT);
+            cue(Cue.READY);
             host = new ChallengeHost(members, generation);
             transition(Scene.LOADING);
             ChallengeHost run = host;
@@ -363,15 +371,16 @@ public final class ThreeOpeningsTool {
     }
     private void countdown() {
         countdownCue = 0;
-        cue(GameSound.RING);
+        cue(Cue.TICK);
         transition(Scene.COUNTDOWN);
     }
-    private void pause() {
+    private void pause(String reason) {
         if (sink != null) {
             sink.onReverseBoundary();
             sink.resume();
         }
-        cue(GameSound.JUMP);
+        pauseReason = reason;
+        cue(Cue.SELECT);
         transition(Scene.PAUSE);
     }
     private void changeFocus(int selected) {
@@ -380,7 +389,7 @@ public final class ThreeOpeningsTool {
         oldFocus = focus;
         focus = selected;
         fadeTicks = 4;
-        cue(GameSound.RING);
+        cue(Cue.TICK);
     }
     private short[] focusedPcm() {
         short[] next = frames.get(focus).pcm();
@@ -434,7 +443,7 @@ public final class ThreeOpeningsTool {
                 oldSink.close();
         }
     }
-    private void cue(GameSound sound) {
+    private void cue(Cue sound) {
         if (menuAudio != null)
             menuAudio.cue(sound);
     }
@@ -443,7 +452,7 @@ public final class ThreeOpeningsTool {
         fault = message(failure);
         closeRun();
         transition(Scene.FAULT);
-        cue(GameSound.ERROR);
+        cue(Cue.FAULT);
     }
     private String message(Throwable failure) {
         String text = failure.getMessage();
@@ -493,6 +502,13 @@ public final class ThreeOpeningsTool {
                 throw new IllegalStateException("Transition capture failed", failure);
             }
     }
+    /**
+     * Sustained publication latency above one 60 Hz frame, averaged over about a
+     * second and ignoring the first two seconds' start-up tuples.
+     */
+    private boolean slow() {
+        return runSteps > 120 && stepAverageMs > 16.7;
+    }
     private double elapsed() {
         return (System.nanoTime() - sceneAt) / 1e9;
     }
@@ -501,7 +517,8 @@ public final class ThreeOpeningsTool {
     }
     private void capturePresentation() throws IOException {
         String name = switch (scene) {
-            case TITLE -> elapsed() > .3 ? "title" : null;
+            // After the title cards' staggered entrance has settled.
+            case TITLE -> elapsed() > .6 ? "title" : null;
             case LOADING -> elapsed() > .25 ? "loading" : null;
             case READY -> elapsed() > .3 ? "ready" : null;
             case COUNTDOWN -> elapsed() > .3 ? "countdown" : null;

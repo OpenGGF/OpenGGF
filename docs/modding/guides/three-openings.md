@@ -12,14 +12,17 @@ sink. No active singleton root is swapped between games.
 1. Supply the three exact ROM revisions and open the title.
 2. Read the input legend; prepare all three. Validation precedes worker launch.
 3. At **All Three Ready**, begin the countdown. Worker gameplay/audio clocks
-   remain at preparation state until the group starts.
+   remain at preparation state until the group starts. The panes show standby
+   cards until then; the first native frames replace them as play begins.
 4. Move and jump. The same held directions and distinct A/B/C/Start reach every
    game; each native poll derives its own edges. Watch independent movement,
    title cards, intro, rings, damage and respawns.
 5. Select audio focus with Tab or 1/2/3. All worlds continue; focus crossfades
-   only device output, with ROM-backed menu feedback.
-6. Pause with P, restart with R, and exit to title with Escape. Repeat launch and
-   exit; every restart has a new generation and a fresh production boot.
+   only device output, with ROM-backed menu feedback. Each pane footer says
+   whether it is heard and which number selects it.
+6. Pause with P or Escape and restart with R. On the pause screen, Escape (or
+   pad B) returns to the title. Repeat launch and exit; every restart has a new
+   generation and a fresh production boot.
 
 ## Agent walkthrough and valid adaptation
 
@@ -57,8 +60,10 @@ the later MVP; this prototype publishes movement evidence only.
 
 The worker launch command is an engine whitelist, never a shell or mod-supplied
 executable. Each worker receives only a validated game/ROM identity and generation.
-Its owned temporary directory is below the current tree's `target/`; linked user
-configuration and stock saves are outside its launch surface. Classpath entries
+Its owned temporary directory is a fresh `openggf-challenge-world-*` directory in
+the system temporary directory, never the player's working directory; linked user
+configuration and stock saves are outside its launch surface. The host's menu
+sound configuration uses its own `openggf-challenge-menu-*` directory the same way. Classpath entries
 are absolute before changing cwd. JVM environment injection variables are removed.
 
 Protocol v1 carries START/STEP/CLOSE, generation, ordinal, one held Genesis byte,
@@ -84,8 +89,9 @@ rejected; three SessionManager opens destroy predecessors.
 ## Supported prototype and troubleshooting
 
 Initial support is Java 21 on the observed Linux desktop with OpenGL 3.3 and a
-48 kHz OpenAL output device. Standard GLFW pads and keyboard are supported;
-controller-only Escape and arbitrary rebinding are not implemented. Other OSes,
+48 kHz OpenAL output device. Standard GLFW pads and keyboard are supported. Pad B
+leaves host screens for the title; quitting from the title still needs keyboard
+Escape or closing the window, and arbitrary rebinding is not implemented. Other OSes,
 headless-only deployment and native-image packaging require separate evidence.
 
 Linked rewind/checkpoint export, all-act completion, full campaigns, endings, records,
@@ -98,10 +104,18 @@ stops with a recoverable worker fault instead of a wrong picture.
   from AGENTS. The tool does not rename/copy/link ROMs for you.
 - **Display failure:** launch in the same desktop display environment used by the
   main engine. Tool preflight checks Java/Lua/PowerShell, not GPU access.
+- **Window never appears:** the terminal prints "Waiting for the desktop to show
+  the Three Openings window" after three seconds. The host is idle and closable;
+  it opens on the title as soon as the desktop maps the window. Run
+  `tools/challenge/check_window_startup.py` (see the example README): an unmapped
+  plain Xlib control window means the desktop session itself is withholding new
+  windows, as a locked KDE Plasma Wayland session did on 2026-10-08. Before that
+  fix, GLFW's X11 show wait spun at full CPU in this state and ignored close.
 - **48 kHz notice:** select a 48 kHz output device. This prototype refuses a
   mismatched device rate instead of silently resampling the worker contract.
-- **Slow presentation:** observe per-tuple timings and worker RSS in probe
-  `budget.txt`. The host keeps ordered input; it does not fabricate catch-up.
+- **Slow presentation:** the play screen says so after two seconds of sustained
+  publication above one 60 Hz frame. Observe per-tuple timings and worker RSS in
+  probe `budget.txt`. The host keeps ordered input; it does not fabricate catch-up.
 - **One world stops:** the entire run freezes and offers fresh restart. Developer
   stderr records the real error; the player notice stays short.
 - **Silent title:** title cues require a valid Sonic 1 ROM; gameplay still requires

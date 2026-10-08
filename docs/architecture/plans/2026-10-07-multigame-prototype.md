@@ -30,8 +30,13 @@ API verification and all 672 fresh guard tests without skips. Rebuilt-package
 GPU/device/common-input and seven-cell isolation/replay observations passed;
 see the [evidence record](../validation/2026-10-07-multigame-prototype.md).
 Step 5 is complete at the clean implementation handoff; step 6 is root-owned.
-The documented intermittent default-WM startup and pane footer presentation
-remain explicit stability/polish opportunities for the next stage.
+The Opus polish stage (`feature/ai-multigame-opus-polish`, 2026-10-08) rebuilt
+the host screens on whole-number font scales with standby panes, sound-status
+footers, pause/fault cards and native Sonic 1 cues, made Escape pause before it
+leaves a run, and traced the default-WM startup stall to a desktop that withholds
+new maps plus GLFW's unbounded X11 show wait; the host now waits idle and closable.
+A normal managed map after unlock remains to be observed; see the
+[evidence record](../validation/2026-10-07-multigame-prototype.md#opus-polish-2026-10-08).
 
 No public creator API, campaign completion, linked rewind or portable checkpoint
 promise is added by this prototype. Those remain later blueprint gates.

@@ -19,9 +19,7 @@ final class ChallengeDiagnosticProcess implements AutoCloseable {
     ChallengeDiagnosticProcess(Path rom, Path output,
             java.util.function.Consumer<Thread> registerHook) throws IOException {
         ChallengeRoms.validate("s1", rom);
-        Path parent = Path.of("target", "challenge-workers").toAbsolutePath();
-        Files.createDirectories(parent);
-        directory = Files.createTempDirectory(parent, "rewind-");
+        directory = Files.createTempDirectory(ProcessGameEndpoint.WORKER_DIRECTORY_PREFIX + "rewind-");
         ProcessBuilder builder = new ProcessBuilder(
                 Path.of(System.getProperty("java.home"), "bin", "java").toString(), "-Xmx512m",
                 "-cp", ProcessGameEndpoint.workerClasspath(),

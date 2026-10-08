@@ -3,7 +3,8 @@
 
 Inputs: built classpath, original ROM paths, outside-repository evidence folder.
 Checks: loading cancellation, pause with an in-flight stopped worker, focus,
-restart, worker fault/retry, missing ROM and repeated clean exit. No gameplay
+restart, worker fault/retry, Escape pause-then-title, missing ROM and repeated
+clean exit. No gameplay
 values or per-world input are injected. Origin: 2026-10-07 multigame prototype.
 Linux X11, Python Xlib, ffmpeg and PulseAudio-compatible PipeWire are required.
 """
@@ -230,8 +231,12 @@ def main():
             time.sleep(.4)
             result["checks"].append({"restart_fault": "pass"})
             session.start()
+            # Escape during play pauses first; the pause screen's Escape leaves.
+            session.key("Escape")
+            session.scene("PAUSE")
             session.key("Escape")
             session.scene("TITLE")
+            wait_for(lambda: not session.workers(), "pause-to-title worker teardown", 10)
             session.key("Escape")
             session.require_clean_exit()
             session.close()
