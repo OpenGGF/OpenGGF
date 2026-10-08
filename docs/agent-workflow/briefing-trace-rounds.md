@@ -71,6 +71,30 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Movie input is not a native movement latch (2026-10-07, stock parity S1
+frontiers): the recorder's input column comes from the BK2 row, with raw RAM
+only as a fallback; it does not observe the game's logical held/new pair at
+movement entry. Replay the original movie with its original sync settings,
+verify the exact ROM callback bytes, and observe the owning read boundary.
+Match surrounding frame-end position, subposition, speed, status and animation
+to the committed rows before interpreting the latch. The S1 capture matched all
+20 surrounding rows and measured neutral raw and logical pairs at both release
+frontiers. Its CSV heading `vfc` read `$FE04`, the level frame counter; label the
+actual address and owner rather than inferring a clock from a probe's heading.
+An emulator startup crash with no observations is rejected evidence, even if a
+host wrapper reports that it launched.
+
+Correct logical input can coexist with stale effective sprite input (2026-10-08,
+stock parity S1 frontiers): the actual BK2, prepared/applied cursor, zero offset
+and InputHandler snapshot all agreed on neutral input, while movement consumed
+Up or Right from persistent sprite forced masks seeded at the load seam. Inspect
+incoming movement flags, effective directions, forced masks, legacy forced
+direction flags and control locks at the same body entry. A neutral logical
+snapshot alone does not prove neutral gameplay input. Correct the owning writer
+and publication seam; preserve legitimate scripted control rather than clearing
+all forced state or adjusting physics. Native controller latches are a separate
+observation from both physical BK2 rows and engine input publication.
+
 Capture boot modes own different driver contracts (2026-10-08 Mutator Lab repair):
 title-first capture follows the normal loop fade owner and rebinds its player after
 launch. Applying those choices globally to the existing direct-level driver changed

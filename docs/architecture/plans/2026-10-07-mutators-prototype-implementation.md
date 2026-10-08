@@ -536,3 +536,32 @@ Rejected: delaying menu input until the twinkles end (a fitted title timing in a
 shared screen); a louder navigation cue to beat `$70` (inauthentic and still
 subject to arbitration); a global `stopAllSfx` priority repair (no production
 caller remains, and audio-wide changes are out of scope).
+
+
+### Final promo and PR handoff (2026-10-08)
+
+The separately delegated Claude Opus 5.5 media task produced a 32.950-second,
+1920×1080, 60 fps promo from the exact polished `cb6eb6e5d` source. The durable
+`mutators/opus-promo/` task folder preserves the MP4, complete 2,077-frame source,
+input log, state CSV, native PCM, hashes, chapter/edit map and assembly script.
+The final MP4 SHA-256 is
+`d12dcf1fc187b9d614250924e7275af9c79979ee7724796bd10b445b6fffc102`.
+Root inspected every caption, both standing-time cuts and the title/scope cards;
+whole-file decode passed. All 36 checked moving frames match their source cadence,
+and three independent audio anchors have zero-sample lag. Audio uses a uniform
++6 dB gain; no individual cue, soundtrack or gameplay was synthesized.
+
+This is the supported S2 EHZ1 solo Sonic opening demonstration, showing Gravity
+at 50%, Stealth with native collisions retained, both effects disabled and a
+fresh act restart. It is offscreen GPU footage, with no default window-manager,
+physical controller or speaker certification. The jump comparison uses the same
+initial position/speed; later horizontal input differs. The two editorial cuts
+trim standing time, so the edit is not a continuous-reachability proof.
+
+The PR preserves the tested source and its qualified baseline evidence above.
+Develop advanced from `09cfcc0f` to `098053c4` with new stock-parity production
+changes while the promo was being made. A read-only merge preview found only a
+measurement-catalogue prose conflict; both sets of hazards are retained here.
+This documentation reconciliation does not claim a compiled or runtime-qualified
+composition with the newer parity changes. No unchanged engine tests were repeated
+for the media or prose follow-up. Feature integration remains a PR review step.
