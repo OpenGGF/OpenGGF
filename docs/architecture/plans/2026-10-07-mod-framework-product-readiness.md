@@ -1726,6 +1726,120 @@ sample POM edit is a comment only; its XML model is identical. All seven repaire
 test identities additionally pass in the actual-main full run.
 
 All 27 inventory outcomes are implemented and locally qualified with the
-explicit inherited engine failures and skips above. The final delivery successor
-changes only this evidence prose; normal push and accounted owned-worktree
-cleanup follow without another engine run on unchanged executable inputs.
+explicit inherited engine failures and skips above. The initial evidence-only
+successor was `50f2656cb5e91921e96bb3bff8828e7b0667da90`. Its normal push
+exposed the Git asset-policy mismatch described below. That attempt left
+publication pending the bounded repair, normal push and accounted cleanup.
+
+## Authored Tide fixture admission
+
+The normal `git push origin develop` at `50f2656cb5e91921e96bb3bff8828e7b0667da90`
+failed before updating the remote. The release-tree audit rejected all 22
+`levels/tide/act1/*.bin` and `act2/*.bin` files in the two-act campaign fixture.
+Remote `develop` remained `098053c4a01c2af283ca6797463bb5051442ef0b`.
+No hook bypass, queue override, history rewrite or parity-worktree change was
+performed.
+
+Independent architecture and example audits established the mismatch: these
+are 1,844 bytes of original authored geometry and art, not user ROMs or
+ROM-derived assets. Both acts contain the same eleven payloads (922 bytes per
+act). The fixture's `tools/generate_assets.py` constructs every byte from small
+authored constants without reading a ROM or disassembly. All 22 files were
+introduced by `294a6ac09`; they have no subsequent binary-content edits.
+The root independently ran:
+
+```bash
+python3 src/test/resources/mods/sample-two-act-campaign-src/project/tools/generate_assets.py --check
+```
+
+It exited zero with `Verified 22 original bounded assets` at the unchanged
+`50f2656cb` source.
+
+The rejected alternative was migration to text-only asset sources in this
+follow-up. The existing `binary-assets.properties` pattern is suitable for
+future authored fixtures, but deleting or renaming these files at the tip would
+not resolve this delivery: historical content admission still checks their
+introduction commit. `test_new_violation_removed_from_tip_still_fails` explicitly
+protects that rule. Rewriting already-integrated unpublished history would also
+invalidate task-branch ancestry and the measured commit identities. A generic
+`.bin` directory exemption would admit unreviewed bytes and was rejected.
+
+The bounded repair admits only the 22 reviewed canonical paths with mode
+`100644`, exact byte lengths and SHA-256 payload pins, through one shared
+[fixture manifest](../../../.githooks/authored-fixtures.json) and
+[verifier](../../../.githooks/authored_fixture_policy.py). Snapshot, staged and
+historical-commit admission consume the same evidence. The verifier compares Git blobs; it never executes
+a generator from the audited revision. Changed bytes, moved or case-varied
+paths, executable files, symlinks and unrelated ROM-like assets remain rejected.
+The general denylist and newly introduced violations removed from a later tip
+remain enforced.
+
+The added negative scenarios exposed an existing POSIX shell enforcement bug:
+`validate_file_size_policy` sets `IFS` to newline while iterating paths, but
+`is_rom_like_path` inherited it while splitting the space-separated six-extension
+denylist. Eleven shell negative checks unexpectedly admitted invalid content;
+PowerShell and snapshot checks rejected it. The repair scopes and restores the
+separator in that predicate, strengthening the intended denylist rather than
+changing its extensions. Regression scenarios exercise every extension with
+case variations in staged content and newly introduced bad history subsequently
+removed from the tip.
+
+This changes Git content admission only. Production engine code/resources, Java
+test sources, mod fixture assets, root POM, API descriptor/signatures,
+category-selection policy and Maven launch configuration remain identical to the
+qualified `bf7c56e` source.
+The original 9,831-file fingerprint includes hooks and is therefore evidence
+for the completed bf run, not a claimed identical fingerprint for the policy
+successor. Git-policy behavior receives separate focused verification; unchanged
+engine suites and creator-kit production are not repeated solely for this
+admission repair.
+
+Focused policy verification used the six reviewed worker files at base
+`50f2656cb5e91921e96bb3bff8828e7b0667da90`; the root independently checked
+that every staged file matched its working bytes and recorded source hashes,
+and that all 22 manifest pins matched the original introduction's bytes.
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tools.testing.test_release_snapshot_policy
+sh .githooks/validate-policy.sh ci-push 098053c4a01c2af283ca6797463bb5051442ef0b 50f2656cb5e91921e96bb3bff8828e7b0667da90 develop
+pwsh -NoLogo -NoProfile -File .githooks/validate-policy.ps1 ci-push 098053c4a01c2af283ca6797463bb5051442ef0b 50f2656cb5e91921e96bb3bff8828e7b0667da90 develop
+```
+
+The final Python suite passed all **32 tests**, zero failures, errors or skips,
+in 19.019 seconds, exercising both native implementations. The initial 30-case
+version had eleven failing shell subcases from the separator bug; the correction
+made all 30 pass, then the all-extension and cache-free CLI scenarios expanded
+coverage to 32. Both complete outgoing-range checks passed and audited all
+11,871 snapshot entries. Both native staged checks, shell/PowerShell syntax,
+`git diff --check` and the 22-asset generator comparison passed.
+
+The unchanged change-based planner selects 3,056 ordinary source classes plus
+fresh guards because it treats unclassified hook changes conservatively. Direct
+staged/history/snapshot scenarios and the complete actual Git range exercise
+this bounded content-admission behavior; the two existing Java hook consumers
+receive a focused fresh-JVM run. This is proportionate policy verification,
+not another full engine-suite pass. No category selection was edited or narrowed
+and no queue or parity job was cancelled or overridden.
+
+The policy repair was committed as
+`81af75a39682e750ffb7ba95fa8a1ac44169cc3c` after the root verified all six
+staged/working file hashes remained identical to the tested candidate. Normal
+hooks passed. The existing Java consumers ran in a separate fresh guard JVM:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards "-Dtest=TestBuildToolingGuard,TestModApiHookPolicy" test -B
+```
+
+Queue session `97899` admitted normally after 60 seconds and exited zero at
+`2026-10-08T12:35:16Z`. Fresh XML records **118 `TestBuildToolingGuard` cases**
+and **19 `TestModApiHookPolicy` cases**: **137 tests**, zero failures, errors or
+skips. Their XML modification times are `12:35:06Z` and `12:35:16Z`; the root
+independently inspected both complete count/skip summaries before committing.
+No Java test assertion or source was changed for the repair.
+
+The final evidence successor adds only the existing readiness record and
+workflow-guide prose to that verified policy commit. Its engine and creator
+fixture inputs are byte-identical to the actual-main `bf7c56e` qualification and
+retained clean creator kit. Final branch publication and accounted cleanup are
+reported separately after the normal hook-protected push; API `0.7.0` remains an
+unpublished candidate.
