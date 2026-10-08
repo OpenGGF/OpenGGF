@@ -56,6 +56,19 @@ class TestStandaloneGameSpec {
                         new StandaloneGameSpec.Act(0x400,level(),0,0,MusicReference.stock(-1))).build());
     }
 
+    @Test void expertAudioOverridesRetainTheirLoaderAndRomInputs() {
+        var audio=org.mockito.Mockito.mock(com.openggf.audio.GameAudioProfile.class);
+        var rom=org.mockito.Mockito.mock(com.openggf.data.Rom.class);
+        var loader=org.mockito.Mockito.mock(com.openggf.audio.smps.SmpsLoader.class);
+        org.mockito.Mockito.when(audio.createSmpsLoader(rom)).thenReturn(loader);
+        var module=StandaloneGameSpec.builder("sample")
+                .zone("FIRST",new StandaloneGameSpec.Act(0x400,level(),0,0,MusicReference.stock(-1)))
+                .audio(audio).build().module();
+        assertSame(audio,module.getAudioProfile());
+        assertSame(loader,module.getAudioProfile().createSmpsLoader(rom));
+        org.mockito.Mockito.verify(audio).createSmpsLoader(rom);
+    }
+
     @Test void customProgressSurvivesNewGameContinueAndCompletionSaveBoundaries() throws Exception {
         var score=new java.util.concurrent.atomic.AtomicInteger(12);
         var reasons=new java.util.ArrayList<com.openggf.game.save.SaveReason>();

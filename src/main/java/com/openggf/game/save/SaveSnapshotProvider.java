@@ -15,7 +15,7 @@ public interface SaveSnapshotProvider {
      * maps; the host deeply freezes them before invoking {@link #capture}.
      * The current zone state may be null when the host has no installed zone runtime.
      */
-    default Map<String,Object> captureRuntimeFields(com.openggf.game.zone.ZoneRuntimeState zoneState) {
+    default Map<String,Object> captureSaveFields(com.openggf.game.zone.ZoneRuntimeState zoneState) {
         return Map.of();
     }
 

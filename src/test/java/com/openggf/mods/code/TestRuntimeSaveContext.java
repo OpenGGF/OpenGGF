@@ -65,7 +65,7 @@ class TestRuntimeSaveContext {
         int[] captures={0};
         when(module.getSaveSnapshotProvider()).thenReturn(new SaveSnapshotProvider() {
             public Map<String,Object> capture(SaveReason reason,RuntimeSaveContext context) { return context.capturedFields(); }
-            public Map<String,Object> captureRuntimeFields(com.openggf.game.zone.ZoneRuntimeState zone) {
+            public Map<String,Object> captureSaveFields(com.openggf.game.zone.ZoneRuntimeState zone) {
                 captures[0]++; return fields;
             }
         });
@@ -134,7 +134,7 @@ class TestRuntimeSaveContext {
         when(level.getGameModule()).thenReturn(module); when(level.getCurrentZone()).thenReturn(2);
         when(module.getSaveSnapshotProvider()).thenReturn(new SaveSnapshotProvider() {
             public Map<String,Object> capture(SaveReason reason,RuntimeSaveContext context) { return Map.of(); }
-            public Map<String,Object> captureRuntimeFields(com.openggf.game.zone.ZoneRuntimeState zone) {
+            public Map<String,Object> captureSaveFields(com.openggf.game.zone.ZoneRuntimeState zone) {
                 state.restoreSaveProgress(9,2,List.of(),List.of(),false);
                 when(level.getCurrentZone()).thenReturn(4); save.markClear();
                 return Map.of("questFlag",true);
@@ -153,7 +153,7 @@ class TestRuntimeSaveContext {
         when(level.getGameModule()).thenReturn(module);
         when(module.getSaveSnapshotProvider()).thenReturn(new SaveSnapshotProvider() {
             public Map<String,Object> capture(SaveReason reason,RuntimeSaveContext context) { return Map.of(); }
-            public Map<String,Object> captureRuntimeFields(com.openggf.game.zone.ZoneRuntimeState zone) { return Map.of("mutable",new int[]{1}); }
+            public Map<String,Object> captureSaveFields(com.openggf.game.zone.ZoneRuntimeState zone) { return Map.of("mutable",new int[]{1}); }
         });
         var save=SaveSessionContext.noSave("sample",new SelectedTeam("sample:hero",List.of()),0,0);
         assertThrows(IllegalArgumentException.class,()->RuntimeSaveCapture.capture(mode,save));
@@ -167,7 +167,7 @@ class TestRuntimeSaveContext {
         var delegate=mock(GameModule.class);
         when(delegate.getSaveSnapshotProvider()).thenReturn(new SaveSnapshotProvider() {
             public Map<String,Object> capture(SaveReason reason,RuntimeSaveContext context) { return Map.of(); }
-            public Map<String,Object> captureRuntimeFields(com.openggf.game.zone.ZoneRuntimeState zone) {
+            public Map<String,Object> captureSaveFields(com.openggf.game.zone.ZoneRuntimeState zone) {
                 throw new IllegalStateException("capture fields");
             }
         });
@@ -202,7 +202,7 @@ class TestRuntimeSaveContext {
         int[] calls={0};
         SaveSnapshotProvider provider=new SaveSnapshotProvider() {
             public Map<String,Object> capture(SaveReason reason,RuntimeSaveContext context) { return Map.of(); }
-            public Map<String,Object> captureRuntimeFields(com.openggf.game.zone.ZoneRuntimeState zone) {
+            public Map<String,Object> captureSaveFields(com.openggf.game.zone.ZoneRuntimeState zone) {
                 calls[0]++; return fields;
             }
         };
