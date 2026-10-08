@@ -49,8 +49,41 @@ the polished game and is the session goal. So:
 
 ## Validation
 
-Recorded at delivery (see below).
+Proportionate validation, recorded against feature commit `1cfc99346` on base `d740b7a0f`.
+The change-based runner classifies every `examples/` path as unclassified and selects the full
+ordinary suite. That is disproportionate here: no engine runtime, API, POM, workflow or
+selection-policy file changed. The change is a new standalone mod compiled by its own tests,
+three new engine test classes, documentation, a launcher script, and one line of
+`examples/build_example.py` (the jar name for nested projects). Run instead:
+
+- `run_categories.py --category mods --guards --run` (run `20261008T183203Z-ca2f493d`, Java
+  21, Lua 5.4): common + mods, 304 selected classes, 303 reports, 2,692 tests, 0 failures, 0
+  errors, 33 skips (32 known inapplicable-route cases in `TestInfiniteSonic`, one opt-in
+  `TestSonicSurvivors` diagnostic; none ROM-missing). Fresh guards: 87 reports, 674 tests, no
+  failures, errors or skips. Diagnostics acknowledged.
+- Lean focused rerun of `TestFlappyTailsExample`, `TestFlappyTailsScene` and
+  `TestFlappyTailsTutorial` with the S3K ROM: 15 tests, 0 failures, 0 skips. The first focused
+  run failed one assertion (a fixed draw-op threshold at title tick 2, before the menu exists);
+  fixed in `1cfc99346`.
+- The tutorial's shared-class guard was broken on purpose (one appended line in a checkpoint
+  copy of `Flight.java`) and failed with "stale copy"; restored, it passes.
+- Creator-kit Python tests: 12 pass; the export includes the new example, and checkout-only
+  tutorial links become pinned source links.
+- Not run: the full ordinary suite and the trace/native profiles. CI's PR gates remain the
+  full-suite check.
 
 ## Promo
 
-Recorded at delivery (see below).
+A 74.3 s, 1920x1080, 60 fps H.264 film with AAC 48 kHz stereo, -14.0 LUFS integrated and
+-1.6 dBTP. It decodes cleanly, with 4,454 video frames and audio and video both 74.3 s long.
+It is cut from four `ExampleModCapture` recordings at `--scale 5`: the title, a seed `0x5eed`
+autopilot tour into Super Tails, a SONIC RULES ring scatter and a crash into the results. ROM
+title cards are drawn by a card renderer that uses the mod's classes. Stingers and music beds
+come from a throwaway soundboard scene. Every capture's moments were planned headlessly from
+the deterministic run first.
+
+Media and kit live outside the checkout in `<task-root>/flappy-tails-20261008/promo/out/`:
+`flappy-tails-promo.mp4` (SHA-256 `c5bfe6abfec3e2cf9b08c7c88edc0a25a80550632d3acc1aca946d52b1b7eafe`),
+`flappy-tails-promo-kit.zip` (12 files: capture, card, soundboard and edit scripts) and a stills
+sheet. Two promo defects caught in review were fixed before the final cut: an end card that
+read NO FLAPPING (the card lettering has no W), and a silent second where a music bed ran out.
