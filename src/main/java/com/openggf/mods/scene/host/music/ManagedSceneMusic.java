@@ -420,8 +420,11 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
         private int clockCount, clockWrite;
         private boolean stopped, paused, manualPaused, hostPaused, speakerUnavailable, audible = true;
         private double whammy;
+        private double partGain = 1;
+        private final PartCueMixer cues;
         Player(Prepared song, short[] masked, int leadIn) {
             this.song = song; this.masked = masked; this.leadIn = leadIn;
+            cues = new PartCueMixer(song.full, masked, song.sampleRate);
             observedNanos = nanoTime.getAsLong();
             recordClock(observedNanos, 0);
         }
@@ -432,12 +435,15 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
             }
             for (int index = 0; index < frames; index++) {
                 long position = produced + index - leadIn;
+                double goal = audible ? 1 : 0;
+                double step = 1.0 / Math.max(1, song.sampleRate / 250);
+                partGain += Math.max(-step, Math.min(step, goal - partGain));
                 for (int channel = 0; channel < 2; channel++) {
                     int value = 0;
                     if (position >= 0 && position < song.lengthSamples()) {
                         int offset = (int) position * 2 + channel;
-                        value = audible ? song.full[offset] : masked[offset];
-                        if (audible && whammy != 0) {
+                        value = masked[offset] + (int) Math.round((song.full[offset] - masked[offset]) * partGain);
+                        if (partGain != 0 && whammy != 0) {
                             // Controlled pitch modulation of the selected residual only. Full and
                             // masked stock mixes are separately synthesized, never assumed additive.
                             double shifted = position + Math.sin(position * 2 * Math.PI * 5 / song.sampleRate) * 24 * whammy;
@@ -448,18 +454,26 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
                             double fraction = shifted - shiftedFrame;
                             double first = song.full[shiftedOffset] - masked[shiftedOffset];
                             double next = song.full[nextOffset] - masked[nextOffset];
-                            value = masked[offset] + (int) Math.round(first + (next - first) * fraction);
+                            value = masked[offset] + (int) Math.round((first + (next - first) * fraction) * partGain);
                         }
-                    }
-                    if (position >= 0 && position < song.lengthSamples()) {
-                        int taper = Math.max(1, song.sampleRate / 200);
-                        long remaining = song.lengthSamples() - position - 1;
-                        if (remaining < taper) value = (int) (value * remaining / taper);
                     }
                     target[index * 2 + channel] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, value));
                 }
             }
+            cues.mix(target, frames);
+            // The finite tail owns the complete presentation, including accepted cues.
+            int taper = Math.max(1, song.sampleRate / 200);
+            for (int index = 0; index < frames; index++) {
+                long position = produced + index - leadIn;
+                long remaining = song.lengthSamples() - position - 1;
+                if (position >= 0 && remaining < taper) {
+                    long tail = Math.max(0,remaining);
+                    target[index*2] = (short)(target[index*2]*tail/taper);
+                    target[index*2+1] = (short)(target[index*2+1]*tail/taper);
+                }
+            }
             produced += frames;
+            if (produced >= leadIn + song.lengthSamples()) cues.close();
         }
         @Override public long samplePosition() {
             long now = nanoTime.getAsLong();
@@ -544,6 +558,17 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
             // not proof that produced-ahead PCM was heard by the player.
             recordClock(nanoTime.getAsLong(), observed);
         }
+        @Override public boolean cuePart(long source, int length, double from, double to, double gain, double pan) {
+            // Validate even when inactive; a rejected playback state never legitimizes malformed parameters.
+            if (length < 1 || length > song.sampleRate / 4 || !PartCueMixer.bounded(from,.5,2)
+                    || !PartCueMixer.bounded(to,.5,2) || !PartCueMixer.bounded(gain,0,1) || !PartCueMixer.bounded(pan,-1,1)
+                    || source != PLAYHEAD && (source < 0 || source >= song.lengthSamples()))
+                throw new IllegalArgumentException("invalid part cue");
+            if (stopped || paused || produced >= leadIn + song.lengthSamples()) return false;
+            long onset = source == PLAYHEAD ? produced - leadIn : source;
+            if (onset < 0 || onset >= song.lengthSamples()) return false;
+            return cues.play(onset,length,from,to,gain,pan);
+        }
         @Override public void setPartAudible(boolean value) { audible = value; }
         @Override public void setWhammy(double amount) {
             if (!Double.isFinite(amount) || amount < 0 || amount > 1) throw new IllegalArgumentException("whammy must be 0..1");
@@ -554,7 +579,7 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
         @Override public long underrunCount() { samplePosition(); return underruns; }
         @Override public void stop() {
             if (stopped) return;
-            samplePosition(); stopped = true; masked = null;
+            samplePosition(); stopped = true; cues.close(); masked = null;
             if (player == this) { audio.resume(); audio.setScenePcmSource(null); player = null; }
         }
     }

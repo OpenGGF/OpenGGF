@@ -31,7 +31,7 @@ class TestSitarHeroOnlineMatch {
         var args = new ArrayList<>(List.of("--release", "21", "-classpath", System.getProperty("java.class.path"),
                 "-d", output.toString()));
         for (String tree : List.of("src/main/java/sitarhero/model", "src/main/java/sitarhero/catalogue",
-                "src/main/java/sitarhero/net", "src/test/java/sitarhero/net")) {
+                "src/main/java/sitarhero/net", "src/main/java/sitarhero/audio", "src/test/java/sitarhero/net")) {
             try (var files = Files.walk(project.resolve(tree))) {
                 files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));
             }
@@ -54,6 +54,11 @@ class TestSitarHeroOnlineMatch {
         }
     }
 
+    @Test void onlineAudioPreservesCoopOwnershipAndDuelIsolation() throws Exception { check("presentationMixPolicy"); }
+    @Test void oldRoundFeedbackAndPauseDoNotReplaySounds() throws Exception { check("oldFeedbackAndPause"); }
+    @Test void feedbackBurstsAreBoundedAndDuplicateSafe() throws Exception { check("feedbackBurstsAndDuplicates"); }
+    @Test void malformedPresentationCannotEnterThePeerMix() throws Exception { check("feedbackValidation"); }
+    @Test void sequencedFeedbackChangesOnlyPeerPresentation() throws Exception { check("presentationFeedback"); }
     @Test void pairedMatchingChartsAndIndependentJudgments() throws Exception { check("pairedJudgments"); }
     @Test void tenMinuteNaturalEndAndBoundedTail() throws Exception { check("longSong"); }
     @Test void rematchRejectsGuestAuthorityAndIgnoresOldRoundTraffic() throws Exception { check("rematch"); }

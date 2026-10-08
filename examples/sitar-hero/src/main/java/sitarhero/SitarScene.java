@@ -89,6 +89,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
     List<SceneMusicPart> selectedParts = List.of();
     Chart preparedChart;
     SceneMusicPlayer player;
+    sitarhero.audio.PerformanceAudio performanceAudio;
     RhythmSession session;
     long loadingTick;
     long underruns;
@@ -201,6 +202,8 @@ public final class SitarScene implements ModScene, DebuggableScene {
             // The song's PCM replaces the driver's output, so silence the driver first.
             house.beforePlayback();
             player = context.music().start(prepared, selectedParts, prepared.sampleRate() * 3);
+            if (!calibratePending) performanceAudio = new sitarhero.audio.PerformanceAudio(player,prepared,chart,selectedParts,role,
+                    local(),mode==Mode.LOCAL_COOP || mode==Mode.ONLINE_COOP);
             controls.reset(context.physicalInput(), role.drums());
             controls2.reset(context.physicalInput(), role.drums());
             underruns = player.underrunCount();
@@ -670,7 +673,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
         }
         performanceAdvance(session, now - (long) settings.inputOffsetMs() * prepared.sampleRate() / 1000);
         highway.observe(session, context.ticks());
-        player.setPartAudible(session.partAudible() || session2 != null && session2.partAudible());
+        performanceAudio.update(session,session2,online,now);
         boolean ended = session2 == null ? session.failed() : mode == Mode.LOCAL_COOP ? session.rock() + session2.rock() == 0 : session.failed() && session2.failed();
         if (online != null) {
             long timestamp = input.timestampNanos();
@@ -709,11 +712,17 @@ public final class SitarScene implements ModScene, DebuggableScene {
     }
 
     private void pause() {
-        if (online != null) { online.requestPause(); notice = "Pause requested for both players"; return; }
+        if (online != null) {
+            if (performanceAudio != null) performanceAudio.update(session,session2,online,player.samplePosition());
+            online.requestPause(); notice = "Pause requested for both players"; return;
+        }
         pauseLocal();
     }
     private void pauseLocal() {
         pauseNanos = context.physicalInput().timestampNanos();
+        // Apply earlier judgments from this input batch before audio can resume.
+        if (performanceAudio != null) performanceAudio.update(session,session2,online,player.samplePosition());
+        if(online!=null)online.discardCues();
         player.pause(); screen = Screen.PAUSED; selected = 0;
     }
     private void resume() {
@@ -757,6 +766,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
     private void stop() {
         if (preparation != null) { preparation.cancel(); preparation = null; }
         if (player != null) { player.stop(); player = null; }
+        performanceAudio = null;
     }
     private void retry() {
         if (online != null) {

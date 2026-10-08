@@ -88,6 +88,101 @@ class TestSceneMusicRom {
         } finally { audio.destroy(); }
     }
 
+
+    @Test @RequiresRom(SonicGame.SONIC_1)
+    void sonic1PartCuesRetainRealInstrumentAudioAndPauseOwnership() throws Exception { partCues("s1",new Sonic1AudioProfile(),0x81); }
+    @Test @RequiresRom(SonicGame.SONIC_2)
+    void sonic2PartCuesRetainRealInstrumentAudioAndPauseOwnership() throws Exception { partCues("s2",new Sonic2AudioProfile(),0x81); }
+    @Test @RequiresRom(SonicGame.SONIC_3K)
+    void sonic3kPartCuesRetainRealInstrumentAudioAndPauseOwnership() throws Exception { partCues("s3k",new Sonic3kAudioProfile(),1); }
+    private void partCues(String game,GameAudioProfile profile,int id) throws Exception {
+        var config=SonicConfigurationService.createStandalone();config.setConfigValue(SonicConfiguration.FPS,60);config.setConfigValue(SonicConfiguration.REGION,"NTSC");
+        var audio=AudioManager.createStandalonePresentation(game,profile,config,PerformanceProfiler.getInstance(),new NoDeviceAudioSink(8000),
+                new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()));
+        var rom=GameServices.rom().getRom();
+        try(var music=new ManagedSceneMusic(audio,ignored->rom)) {
+            var song=music.prepare(game,id,180);
+            var selections=List.of(new SceneMusicPart(0,1,0,false),new SceneMusicPart(0,2,0,false),
+                    new SceneMusicPart(0,0,1 << song.notes().stream().filter(n->n.kind()==com.openggf.mods.scene.SceneNoteEvent.Kind.PSG).findFirst().orElseThrow().channel(),false),new SceneMusicPart(0,0,0,true));
+            for(int role=0;role<selections.size();role++) {
+                var part=selections.get(role);
+                var attack=song.notes().stream().filter(n->switch(n.kind()) {
+                    case FM -> (part.fmMask()&(1<<n.channel()))!=0;
+                    case PSG -> (part.psgMask()&(1<<n.channel()))!=0;
+                    case DAC -> part.dacMuted();
+                }).findFirst().orElseThrow();
+                long source=Math.min(song.lengthSamples()-1,attack.onsetSamples()+Math.min(64,attack.durationSamples()/4));
+                var control=music.start(song,List.of(part),0);control.setPartAudible(false);
+                short[] baseline=new short[1600];((com.openggf.audio.presentation.ScenePcmSource)control).render(baseline,800);control.stop();
+                var player=music.start(song,List.of(part),0);player.setPartAudible(false);
+                assertTrue(player.cuePart(source,480,1,.85,.6,0));
+                short[] result=new short[1600];((com.openggf.audio.presentation.ScenePcmSource)player).render(result,800);
+                assertFalse(Arrays.equals(baseline,result),game+" role "+role+" must use sounding ROM residual");
+                double energy=0;for(int i=0;i<result.length;i++){double d=result[i]-baseline[i];energy+=d*d;}
+                double rms=Math.sqrt(energy/result.length);assertTrue(rms>1,game+" role "+role+" cue RMS "+rms);
+                System.out.println("Part cue ROM evidence: "+game+" role="+role+" RMS="+rms);
+
+                // Pausing in the middle of an accepted cue must freeze its envelope and source.
+                player.stop();
+                player=music.start(song,List.of(part),0);player.setPartAudible(false);
+                assertTrue(player.cuePart(source,480,1,.85,.6,0));
+                short[] resumed=new short[1600], opening=new short[240];
+                ((com.openggf.audio.presentation.ScenePcmSource)player).render(opening,120);
+                System.arraycopy(opening,0,resumed,0,opening.length);
+                player.pause();assertFalse(player.cuePart(source,480,1,1,.5,0));
+                short[] silence=new short[80];((com.openggf.audio.presentation.ScenePcmSource)player).render(silence,40);assertArrayEquals(new short[80],silence);
+                assertEquals(120,player.samplePosition());
+                player.resume();
+                short[] tail=new short[1360];((com.openggf.audio.presentation.ScenePcmSource)player).render(tail,680);
+                System.arraycopy(tail,0,resumed,opening.length,tail.length);
+                assertArrayEquals(result,resumed,"pause cannot advance the song, fade or cue pitch cursor");
+                assertEquals(800,player.samplePosition());
+                player.stop();assertFalse(player.cuePart(source,480,1,1,.5,0));
+                var stopped=player;
+                assertThrows(IllegalArgumentException.class,()->stopped.cuePart(-1,480,1,1,.5,0));
+
+                var head=music.start(song,List.of(part),80);head.setPartAudible(false);
+                assertFalse(head.cuePart(SceneMusicPlayer.PLAYHEAD,480,1,.85,.6,0),"lead-in has no playing note to choke");
+                short[] prefix=new short[1760];((com.openggf.audio.presentation.ScenePcmSource)head).render(prefix,880);
+                assertTrue(head.cuePart(SceneMusicPlayer.PLAYHEAD,480,1,.85,.6,0));
+                short[] fromHead=new short[1600];((com.openggf.audio.presentation.ScenePcmSource)head).render(fromHead,800);head.stop();
+                var exact=music.start(song,List.of(part),80);exact.setPartAudible(false);
+                ((com.openggf.audio.presentation.ScenePcmSource)exact).render(prefix,880);
+                assertTrue(exact.cuePart(800,480,1,.85,.6,0));
+                short[] fromSample=new short[1600];((com.openggf.audio.presentation.ScenePcmSource)exact).render(fromSample,800);
+                assertArrayEquals(fromSample,fromHead,"PLAYHEAD resolves the next buffer in song coordinates, excluding lead-in");
+                exact.cuePart(800,480,1,.85,.6,0);exact.stop();
+                var retry=music.start(song,List.of(part),0);retry.setPartAudible(false);
+                short[] clean=new short[1600];((com.openggf.audio.presentation.ScenePcmSource)retry).render(clean,800);
+                assertArrayEquals(baseline,clean,"stopped cue cannot escape into a replacement player");retry.stop();
+
+                var ending=music.start(song,List.of(part),0);ending.setPartAudible(false);
+                int beforeEnd=(int)song.lengthSamples()-40;
+                ((com.openggf.audio.presentation.ScenePcmSource)ending).render(new short[beforeEnd*2],beforeEnd);
+                assertTrue(ending.cuePart(source,480,1,.85,.6,0));
+                short[] end=new short[1600];((com.openggf.audio.presentation.ScenePcmSource)ending).render(end,800);
+                for(int i=39;i<800;i++) {
+                    assertEquals(0,end[i*2],"cue must finish inside the finite song taper");
+                    assertEquals(0,end[i*2+1],"right cue channel must also finish inside the taper");
+                }
+                assertTrue(ending.finished());ending.stop();
+                writeCueEvidence(game,role,baseline,result);
+            }
+        } finally {audio.destroy();}
+    }
+    private void writeCueEvidence(String game,int role,short[] backing,short[] withCue) throws Exception {
+        String requested=System.getProperty("openggf.sitar.fumble.capture.dir");if(requested==null)return;
+        var directory=java.nio.file.Path.of(requested).toAbsolutePath().normalize();
+        if(directory.startsWith(java.nio.file.Path.of("").toAbsolutePath().normalize()))throw new IllegalArgumentException("durable audio evidence must be outside repo");
+        java.nio.file.Files.createDirectories(directory);
+        short[] demonstration=new short[backing.length+withCue.length];System.arraycopy(backing,0,demonstration,0,backing.length);System.arraycopy(withCue,0,demonstration,backing.length,withCue.length);
+        byte[] bytes=new byte[demonstration.length*2];for(int i=0;i<demonstration.length;i++){bytes[i*2]=(byte)demonstration[i];bytes[i*2+1]=(byte)(demonstration[i]>>>8);}
+        var format=new javax.sound.sampled.AudioFormat(8000,16,2,true,false);
+        try(var stream=new javax.sound.sampled.AudioInputStream(new java.io.ByteArrayInputStream(bytes),format,demonstration.length/2)) {
+            javax.sound.sampled.AudioSystem.write(stream,javax.sound.sampled.AudioFileFormat.Type.WAVE,directory.resolve(game+"-role-"+role+"-backing-then-fumble.wav").toFile());
+        }
+    }
+
     private static void await(com.openggf.mods.scene.SceneMusicPreparation job) throws InterruptedException {
         long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(20);
         while (job.state() == com.openggf.mods.scene.SceneMusicPreparation.State.PREPARING && System.nanoTime() < deadline) {

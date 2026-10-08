@@ -1295,3 +1295,11 @@ A seamless reload's current-bound and target-bound overrides are separate. AIZ's
 `AIZ1BGE_Finish` writes a fixed X lock of `$10/$10`, and `Do_ResizeEvents` eases
 only max Y. Pin the engine's X targets too, or the loaded defaults move the lock
 on the next tick (S3K trace campaign, 2026-10-03).
+
+**Finite audio tails own the complete presentation.** A cue mixed after a song's
+end taper can remain audible beyond finite EOF even though the song clock has
+stopped. Fade the combined output and retire remaining cue voices at the finite
+boundary; also fade a cue that exhausts its selected source window. Sitar Hero's
+2026-10-08 fumble regression measured 439 nonzero post-taper frames before this
+ordering repair and zero afterward. Keep calibrated judgment coordinates separate
+from the audible song clock when testing cue freshness or sending peer timestamps.
