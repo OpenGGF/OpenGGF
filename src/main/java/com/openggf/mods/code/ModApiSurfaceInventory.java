@@ -56,12 +56,18 @@ public final class ModApiSurfaceInventory {
             "com.openggf.level.objects.PlayableSheetMaterializer",
             "com.openggf.level.objects.ObjectFactory",
             "com.openggf.level.objects.RewindRecreatable",
+            "com.openggf.level.objects.ModRewindRecreatable",
             "com.openggf.level.spawn.SpawnPoint",
+            // Deliberate creator diagnostics, independent of engine orchestration exposure.
+            "com.openggf.trace.TraceEvent$CnzSlotMachineState",
+            "com.openggf.trace.TraceEvent$S2TornadoState",
             // Scene constant holders: mods use their constants, which no signature names.
             "com.openggf.mods.scene.SceneButtons",
             "com.openggf.mods.scene.SceneKeys",
             // Optional interface a scene implements; the engine finds it with instanceof.
             "com.openggf.mods.scene.DebuggableScene",
+            // Stateful contributed event handlers participate in the owner rewind graph.
+            "com.openggf.mods.code.RewindableZoneEvents",
             // Optional creator presentation helpers; static utilities need explicit roots.
             "com.openggf.mods.ui.CompactFont",
             "com.openggf.mods.ui.BitmapFont",
@@ -72,7 +78,14 @@ public final class ModApiSurfaceInventory {
             "com.openggf.mods.ui.LevelOverlayCanvas",
             "com.openggf.control.ActionReducer",
             "com.openggf.control.ActionMap",
-            "com.openggf.control.PhysicalBinding");
+            "com.openggf.control.PhysicalBinding",
+            // ROM-qualified art recipes and optional scene utilities.
+            "com.openggf.mods.scene.art.StockSceneArt",
+            "com.openggf.mods.scene.art.PaletteAssembly",
+            "com.openggf.mods.scene.art.SceneArtCache",
+            "com.openggf.mods.scene.art.SpriteAnchors",
+            "com.openggf.mods.scene.art.AnimationSampling",
+            "com.openggf.mods.scene.art.RomAnimationPlayer");
 
     private ModApiSurfaceInventory() { }
 

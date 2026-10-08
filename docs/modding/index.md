@@ -15,7 +15,7 @@ contracts.
 
 ## Native builds vs. the JVM jar
 
-Code-bearing mods (objects, characters, zones, and standalone games) require the
+Code-bearing mods (objects, characters, zones, scenes, and standalone games) require the
 **JVM jar**. They are loaded at runtime by the engine's mod classloader, which a
 GraalVM native-image binary cannot use under closed-world AOT. Native builds do
 not load these mods: the Mod Manager marks them `UNSUPPORTED` and refuses to
@@ -37,10 +37,13 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
 |---|---|---|
 | Music | Data-only WAV/Ogg stock overrides | No MP3 or base-game streamed SFX overrides |
 | Object reskin | Baked sheet over exact stock provider key | Preserve host palette indices and all consumed mapping frames; no playable-character reskin |
-| Object/character | Owned factories, injected services, saves and rewind | JVM; no arbitrary static gameplay state or mod super form |
-| New zone | Sonic 2 v1 and bounded S3K v2 adapters | S1 adapter planned; S3K does not inherit arbitrary stock zone events |
+| Object/character | Owned factories, injected services, character specifications, landing/reset hooks, saves and rewind | JVM; no arbitrary static gameplay state or mod super form |
+| Stock-level edits | Immutable decoded placement operations, including owned object bindings | JVM; preserves the stock load pipeline; live editor application is separate |
+| New zone or campaign | Sonic 2 v1 and bounded S3K v2 adapters, ordered acts and owned runtime providers | S1 adapter planned; S3K does not inherit arbitrary stock zone events |
 | Scene/whole-screen game | Startup scene with input, audio, storage and canvas | JVM; ROM-backed scenes require the relevant supplied ROM |
 | Original standalone game | No-ROM levels, characters, audio and progression | JVM; no standalone patch stacking, bonus/special-stage or roster UI |
+| Shared UI and input | [Fonts, layout/focus and overlays](guides/creator-helpers.md); [named remappable actions](guides/action-bindings.md) | Logical pixels and explicit input edges; game rules and visual styling stay in the mod |
+| State and testing | [Storage, captured state and service bundles](guides/creator-helpers.md); [production-backed Jupiter tests](testing.md) | Use complete session tests for gameplay rewind and renderer/capture checks for appearance |
 
 See the detailed guides for narrower contracts; roadmap entries do not imply implementation.
 
@@ -56,6 +59,9 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
   `sample-platformer` gallery sample: a no-ROM standalone game with a Tiled-authored
   level, an original character with a double jump, a patrolling badnik, and a spring
   gimmick.
+- [Two-act Tide Circuit](guides/two-act-campaign.md) — an original hosted Sonic 2
+  campaign with per-act runtime providers, checkpoints, progression, tagged saves
+  and a route/rewind coverage matrix.
 - [Mod scenes](guides/mod-scenes.md) — full-screen menus and games drawn by the mod: the
   startup-scene registration, lifecycle and fault boundary, the canvas, ROM sprites and
   characters, audio, storage and headless testing. Start from
@@ -104,30 +110,5 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 The nine sample sources are built by the default test suite. Treat them as
 executable contracts rather than snippets copied out of context.
 
-Custom game modules can opt into faster interactive gameplay with
-`GameModule.gameplayStepsPerFrame()` (default 1, host range 1–32). Return alternating
-counts for fractional rates and capture the accumulator through `rewindAdapters()`.
-Return the continuous matching rate from `gameplayAudioPlaybackRate()` (default
-1.0, bounded to 1–32) to accelerate music and effects without alternating their
-pitch with the integer step budget. The host releases its audio rate at pause,
-rewind, death, scene changes and teardown; external trace/movie owners retain
-control of their own playback.
-
-A module can also drive the engine's live rewind itself by returning a
-`ScriptedRewind` from `GameModule.scriptedRewind()` (default `null`). While one is
-returned, level play records rewind history even with live rewind switched off. When
-its `requested()` is true the host rewinds with the ordinary presentation, taking
-`stepsThisFrame()` steps per frame and checking `reachedTarget()` on the restored
-state after each, then calls `ended(boolean)` once. Keep the implementation's own
-state out of `rewindAdapters()`: it decides where the restore stops. Infinite Sonic's
-CONTINUE is the worked example.
-The host advances complete simulation ticks, preserving per-tick collision and
-movement. Pause, rewind, external movie/trace ownership, transitions and non-level
-scenes retain their normal pacing. `GameLoop.step()` remains one deterministic tick;
-interactive hosts use `stepPresentationFrame()`. The
-[Infinite Sonic example](../../examples/infinite-sonic/README.md) demonstrates a
-rewindable clock that compounds speed every 30 seconds of active play.
-A module can also pin a display aspect for its session with
-`GameModule.requiredDisplayAspect()` (a `display.aspect` preset name; the master title
-restores the player's setting) and hide the level select with
-`GameModule.suppressesLevelSelect()`. Infinite Sonic uses both.
+Advanced module authors can configure [session pacing, scripted rewind and display
+controls](content-mods.md#advanced-module-session-controls).

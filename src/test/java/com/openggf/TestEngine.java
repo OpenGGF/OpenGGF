@@ -218,7 +218,7 @@ class TestEngine {
         Map<String, Object> payload =
                 new com.openggf.game.sonic3k.dataselect.S3kSaveSnapshotProvider().capture(
                         SaveReason.PROGRESSION_SAVE,
-                        com.openggf.game.save.RuntimeSaveContext.forGameplayMode(sourceGameplay, save));
+                        com.openggf.game.save.RuntimeSaveCapture.capture(sourceGameplay, save));
 
         GameplayModeContext targetGameplay = mock(GameplayModeContext.class);
         GameStateManager gameState = new GameStateManager();

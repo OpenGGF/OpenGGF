@@ -8,6 +8,8 @@ public final class CharacterConstructionScope {
     private static final ThreadLocal<CharacterKey> EXPECTED_KEY = new ThreadLocal<>();
     private static final ThreadLocal<CallbackInvoker> CALLBACK_INVOKER = new ThreadLocal<>();
     private static final CallbackInvoker DIRECT = callback -> callback.get();
+    private static final StackWalker CALLER = StackWalker.getInstance(java.util.Set.of(
+            StackWalker.Option.RETAIN_CLASS_REFERENCE, StackWalker.Option.SHOW_HIDDEN_FRAMES));
 
     private CharacterConstructionScope() { }
 
@@ -19,6 +21,12 @@ public final class CharacterConstructionScope {
     /** Runs a character factory and binds its later runtime callbacks to the same owner boundary. */
     public static <T> T call(CharacterKey expectedKey, CallbackInvoker callbackInvoker,
                              Supplier<T> factory) {
+        ClassLoader caller = CALLER.walk(frames -> frames.map(StackWalker.StackFrame::getDeclaringClass)
+                .filter(type -> type != CharacterConstructionScope.class && type.getClassLoader() != null)
+                .findFirst().orElseThrow().getClassLoader());
+        if (caller != CharacterConstructionScope.class.getClassLoader()) {
+            throw new SecurityException("Character construction ownership belongs to engine factories");
+        }
         CharacterKey expected = Objects.requireNonNull(expectedKey, "expectedKey");
         CallbackInvoker invoker = Objects.requireNonNull(callbackInvoker, "callbackInvoker");
         Supplier<T> callback = Objects.requireNonNull(factory, "factory");
@@ -81,6 +89,7 @@ public final class CharacterConstructionScope {
         // A stable declaration must survive repeated observation after construction.
         validateDeclared(expectedKey, sprite.characterKey());
         validateDeclared(expectedKey, sprite.characterKey());
+        com.openggf.sprites.playable.CharacterRuntimeHooks.requireConstructionBoundary(sprite,captureCallbackInvoker());
         return result;
     }
 

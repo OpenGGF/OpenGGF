@@ -7,7 +7,6 @@ import java.util.Map;
  * Comparison result for a single frame: all fields compared,
  * plus optional diagnostic context from ROM trace and engine.
  */
-@com.openggf.game.ModApi
 public record FrameComparison(
     int frame,
     Map<String, FieldComparison> fields,

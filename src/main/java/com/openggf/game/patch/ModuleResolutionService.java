@@ -36,7 +36,8 @@ public final class ModuleResolutionService {
 
     @com.openggf.game.ModApi
     public record PatchPlan(List<RegisteredPatch> registrations,
-            Map<PatchOwner, ? extends Set<PatchOwner>> ownerDependencies) {
+            Map<PatchOwner, ? extends Set<PatchOwner>> ownerDependencies,
+            Map<PatchOwner, ? extends Set<PatchOwner>> orderingDependencies) {
         public PatchPlan {
             registrations = List.copyOf(Objects.requireNonNull(registrations, "registrations"));
             Map<PatchOwner, Set<PatchOwner>> frozenDependencies = new java.util.LinkedHashMap<>();
@@ -45,8 +46,15 @@ public final class ModuleResolutionService {
                             Objects.requireNonNull(owner, "dependency owner"),
                             Set.copyOf(Objects.requireNonNull(dependencies, "owner dependencies"))));
             ownerDependencies = Map.copyOf(frozenDependencies);
+            Map<PatchOwner, Set<PatchOwner>> frozenOrder = new java.util.LinkedHashMap<>();
+            Objects.requireNonNull(orderingDependencies, "orderingDependencies").forEach((owner, predecessors) ->
+                    frozenOrder.put(Objects.requireNonNull(owner), Set.copyOf(Objects.requireNonNull(predecessors))));
+            orderingDependencies = Map.copyOf(frozenOrder);
         }
 
+        public PatchPlan(List<RegisteredPatch> registrations, Map<PatchOwner, ? extends Set<PatchOwner>> ownerDependencies) {
+            this(registrations, ownerDependencies, Map.of());
+        }
         public static PatchPlan empty() {
             return new PatchPlan(List.of(), Map.of());
         }
@@ -116,6 +124,15 @@ public final class ModuleResolutionService {
     /** Installs the boot-frozen mod policy and fresh-per-launch registration source. */
     public synchronized void installModPlanSource(PatchEnablement enablement,
                                                    PatchPlanSource source) {
+        // This service is also exposed through expert read/query views. Installing
+        // a live owner publication source remains engine orchestration authority.
+        ClassLoader caller = StackWalker.getInstance(Set.of(
+                StackWalker.Option.RETAIN_CLASS_REFERENCE, StackWalker.Option.SHOW_HIDDEN_FRAMES))
+                .walk(frames -> frames.map(StackWalker.StackFrame::getDeclaringClass)
+                        .filter(type -> type != ModuleResolutionService.class && type.getClassLoader() != null)
+                        .findFirst().orElseThrow().getClassLoader());
+        if (caller != ModuleResolutionService.class.getClassLoader())
+            throw new SecurityException("Only the engine may install the live mod plan source");
         installedEnablement = Objects.requireNonNull(enablement, "enablement");
         installedPatchPlanSource = Objects.requireNonNull(source, "source");
     }
@@ -157,6 +174,13 @@ public final class ModuleResolutionService {
     private ResolutionContext newContext(PatchEnablement launchEnablement,
             List<RegisteredPatch> frozenModPlan,
             Map<PatchOwner, ? extends Set<PatchOwner>> ownerDependencies) {
+        return newContext(launchEnablement, frozenModPlan, ownerDependencies, Map.of());
+    }
+
+    private ResolutionContext newContext(PatchEnablement launchEnablement,
+            List<RegisteredPatch> frozenModPlan,
+            Map<PatchOwner, ? extends Set<PatchOwner>> ownerDependencies,
+            Map<PatchOwner, ? extends Set<PatchOwner>> orderingDependencies) {
         Objects.requireNonNull(frozenModPlan, "frozenModPlan");
         List<RegisteredPatch> combined = new ArrayList<>(builtIns.size() + frozenModPlan.size());
         combined.addAll(builtIns);
@@ -167,7 +191,7 @@ public final class ModuleResolutionService {
             }
             combined.add(registration);
         }
-        return ResolutionContext.create(launchEnablement, combined, ownerDependencies);
+        return ResolutionContext.create(launchEnablement, combined, ownerDependencies, orderingDependencies);
     }
 
     /** Resolves one launch from the undecorated root module. */
@@ -187,7 +211,7 @@ public final class ModuleResolutionService {
                 ? PatchPlan.empty()
                 : Objects.requireNonNull(configuredSource.scan(launchEnablement), "patch plan");
         return new PreparedLaunch(this, newContext(launchEnablement,
-                plan.registrations(), plan.ownerDependencies()));
+                plan.registrations(), plan.ownerDependencies(), plan.orderingDependencies()));
     }
 
     public GameModule resolveForLaunch(PreparedLaunch launch, GameModule root,

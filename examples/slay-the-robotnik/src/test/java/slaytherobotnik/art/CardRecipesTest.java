@@ -40,6 +40,7 @@ class CardRecipesTest {
     /** A ROM stand-in that answers every request, so RomSprites.load returns null only for unknown keys. */
     private static final SceneRomArt ANY_ROM = new SceneRomArt() {
         @Override public String gameId() { return "s3k"; }
+        @Override public String romSha1() { return "cfbf98c36c776677290a872547ac47c53d2761d6"; }
         @Override public byte[] read(int address, int length) { return new byte[length]; }
         @Override public int[] palette(int address, int colors) { return new int[colors]; }
         @Override public SceneSpriteSet sprites(RomSpriteRequest request, int[] palette) { return EMPTY; }

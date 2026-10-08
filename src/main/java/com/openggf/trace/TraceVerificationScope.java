@@ -3,7 +3,6 @@ package com.openggf.trace;
 import java.util.Locale;
 
 /** Selects which independently classified trace fields block a replay gate. */
-@com.openggf.game.ModApi
 public enum TraceVerificationScope {
     ALL,
     PHYSICS,

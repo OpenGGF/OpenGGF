@@ -85,7 +85,7 @@ class TestS3kModZoneLifecycle {
                     "s3k", 1, new SelectedTeam("tails", List.of()), modZoneIndex, 0);
             Map<String, Object> payload = new S3kSaveSnapshotProvider().capture(
                     SaveReason.PROGRESSION_SAVE,
-                    RuntimeSaveContext.forGameplayMode(initial, saveSession));
+                    com.openggf.game.save.RuntimeSaveCapture.capture(initial, saveSession));
             assertFalse(payload.containsKey("zone"));
             assertEquals(MOD_ZONE, S3kSavedZone.read(payload).zoneKey());
 

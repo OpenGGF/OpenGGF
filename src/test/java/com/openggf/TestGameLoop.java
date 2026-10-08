@@ -1879,7 +1879,7 @@ public class TestGameLoop {
         GameModule module = neutralGameModule();
         when(module.getEndingProvider()).thenReturn(endingProvider);
         when(module.getSaveSnapshotProvider()).thenReturn(
-                (reason, ctx) -> Map.of("clear", ctx.saveSessionContext().isClear(), "marker", "ending"));
+                (reason, ctx) -> Map.of("clear", ctx.isClear(), "marker", "ending"));
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
 
         SaveSessionContext saveContext = SaveSessionContext.forSlot(

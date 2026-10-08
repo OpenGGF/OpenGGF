@@ -13,11 +13,15 @@ class TestModStorage {
     @TempDir Path root;
     public static final class CreatorProbe {
         public static void claim(Path root) { ModStorageFactory.forOwner(root, "other-owner"); }
+        public static java.util.function.BiFunction<Path,String,com.openggf.mods.scene.SceneStorage> factory() {
+            return ModStorageFactory::forOwner;
+        }
     }
     @Test void oldOwnerSaveLoadsWithoutMovingAndNewWritesAreSharedWithScenes() throws Exception {
         Path legacy=root.resolve("survivors/profile.txt");
         Files.createDirectories(legacy.getParent()); Files.writeString(legacy,"bank=42\nshop.0=2\n");
-        var module=ModStorageFactory.forOwner(root,"survivors");
+        java.util.function.BiFunction<Path,String,com.openggf.mods.scene.SceneStorage> engineFactory=ModStorageFactory::forOwner;
+        var module=engineFactory.apply(root,"survivors");
         var scene=ModStorageFactory.forOwner(root,"survivors");
         assertEquals("bank=42\nshop.0=2\n",module.read("profile.txt").orElseThrow());
         assertTrue(Files.exists(legacy));
@@ -75,6 +79,11 @@ class TestModStorage {
             var method=loader.loadClass(name).getMethod("claim",Path.class);
             var failure=assertThrows(java.lang.reflect.InvocationTargetException.class,()->method.invoke(null,root));
             assertInstanceOf(SecurityException.class,failure.getCause());
+            @SuppressWarnings("unchecked")
+            var factory=(java.util.function.BiFunction<Path,String,com.openggf.mods.scene.SceneStorage>)
+                    loader.loadClass(name).getMethod("factory").invoke(null);
+            assertThrows(SecurityException.class,()->factory.apply(root,"other-owner"),
+                    "A creator-defined method reference keeps its defining loader when the engine calls it");
         }
     }
 }

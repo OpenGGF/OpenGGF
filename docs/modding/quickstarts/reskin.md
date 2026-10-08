@@ -4,11 +4,17 @@ Read [candidate setup and first build](../getting-started.md) first: Java 21, Ma
 
 An art reskin needs no Java or trust prompt.
 
-1. Start from [`sample-reskin-src`](../../../src/test/resources/mods/sample-reskin-src/META-INF/openggf-mod.yaml).
-2. Draw an original PNG and describe its frames/pieces in the object-sheet YAML.
-3. Convert it with `ggfmod convert art --image <png> --sheet <yaml> --out <sheet.ggfs>`.
-4. Map an exact key from `ggfmod art-keys --game s2` to the baked path in `artOverrides`.
-5. Package the exploded directory, validate the resulting jar, then enable/restart.
+1. Open the generated `my-reskin` project; its Sonic 2 signpost source has all six frames.
+2. Edit `src/main/mod/sample.png` and describe its frames/pieces in
+   `src/main/mod/sample-sheet.yaml`.
+3. Repeat the Maven package command; it converts the sheet to `art/sample.ggfs`.
+4. Keep an exact key from `ggfmod art-keys --game s2` mapped to that baked path in
+   `artOverrides`.
+5. Validate `target/my-reskin-mod.jar`, then enable, Apply and restart.
+
+The [`sample-reskin-src` manifest](../../../src/test/resources/mods/sample-reskin-src/META-INF/openggf-mod.yaml)
+is a reference, not another project to copy over the generated starter. For manual
+conversion syntax, see the [CLI reference](../ggfmod.md); choose a fresh output path.
 
 Palette-line, alignment, mapping, and pattern-span errors are build failures. See the
 [baked-container reference](../formats/baked-containers.md) and

@@ -83,12 +83,11 @@ public final class StandaloneGameSpec {
     }
     private SaveSnapshotProvider defaultSaves() {
         return (reason, context) -> {
-            var save=context.saveSessionContext();
-            int zone=context.hasLiveGameplayState() ? context.levelManager().getCurrentZone() : save.startZone();
-            int act=context.hasLiveGameplayState() ? context.levelManager().getCurrentAct() : save.startAct();
+            int zone=context.currentZone();
+            int act=context.currentAct();
             if (zone < 0 || zone >= zones.size() || act < 0 || act >= zones.get(zone).acts().size()) { zone=0; act=0; }
-            return Map.of("zone",zone,"act",act,"mainCharacter",save.selectedTeam().mainCharacter(),
-                    "sidekicks",save.selectedTeam().sidekicks(),"clear",false);
+            return Map.of("zone",zone,"act",act,"mainCharacter",context.selectedTeam().mainCharacter(),
+                    "sidekicks",context.selectedTeam().sidekicks(),"clear",false);
         };
     }
     @ModApi

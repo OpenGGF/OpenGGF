@@ -18,6 +18,12 @@ import java.io.IOException;
  * Owns level water lifecycle and playable underwater state updates.
  */
 final class LevelWaterCoordinator {
+    private static final WaterDataProvider DRY_CONTRIBUTION = new WaterDataProvider() {
+        public boolean hasWater(int zone, int act, PlayerCharacter character) { return false; }
+        public int getStartingWaterLevel(int zone, int act) { return 0; }
+        public Palette[] getUnderwaterPalette(Rom rom, int zone, int act, PlayerCharacter character) { return null; }
+        public com.openggf.game.DynamicWaterHandler getDynamicHandler(int zone, int act, PlayerCharacter character) { return null; }
+    };
     private final LevelManager levelManager;
 
     LevelWaterCoordinator(LevelManager levelManager) {
@@ -35,7 +41,9 @@ final class LevelWaterCoordinator {
      */
     void initialize(boolean seamlessTransition) throws IOException {
         GameModule gameModule = levelManager.gameModule;
-        WaterDataProvider waterProvider = gameModule != null ? gameModule.getWaterDataProvider() : null;
+        WaterDataProvider waterProvider = levelManager.hasContributedZoneRuntime()
+                ? java.util.Objects.requireNonNullElse(levelManager.contributedWaterProviderOrNull(), DRY_CONTRIBUTION)
+                : gameModule != null ? gameModule.getWaterDataProvider() : null;
         int featureZone = levelManager.getFeatureZoneId();
         int featureAct = levelManager.getFeatureActId();
         if (waterProvider != null) {
@@ -47,7 +55,7 @@ final class LevelWaterCoordinator {
             }
             levelManager.waterSystem.loadForLevelFromProvider(waterProvider, rom,
                     featureZone, featureAct, character, seamlessTransition);
-        } else if (levelManager.zoneFeatureProvider != null
+        } else if (!levelManager.hasContributedZoneRuntime() && levelManager.zoneFeatureProvider != null
                 && levelManager.zoneFeatureProvider.hasWater(featureZone)) {
             Rom rom = levelManager.worldDataSource().rom().orElse(null);
             @SuppressWarnings("deprecation")

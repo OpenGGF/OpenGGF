@@ -92,10 +92,10 @@ public final class ModBackedGamePatch implements GamePatch {
                 && !plan.preparedObjectArt().keySet().equals(plan.objectArt().keySet())) {
             throw new IllegalArgumentException("Backing patch requires validated object art");
         }
-        if (!plan.preparedZones().isEmpty() && plan.preparedZones().size() != plan.zones().size()) {
+        if (!plan.preparedZones().isEmpty() && plan.preparedZones().size() != plan.zones().stream().mapToInt(zone -> zone.acts().size()).sum()) {
             throw new IllegalArgumentException("Backing patch requires validated mod zones");
         }
-        if (plan.preparedZones().stream().anyMatch(zone -> zone.eventFactory() != null)
+        if (plan.preparedZones().stream().anyMatch(zone -> zone.eventFactory() != null || zone.runtimeFactory() != null)
                 && faultBoundary == null) {
             throw new IllegalArgumentException("Mod zone events require an installed fault boundary");
         }
@@ -149,7 +149,9 @@ public final class ModBackedGamePatch implements GamePatch {
                             "Host adapter requested unsupported additive-zone runtime features",
                             null, null);
                 }
-                return zone.withRuntimeProfile(profile, hostData);
+                PreparedModZone prepared = zone.withRuntimeProfile(profile, hostData);
+                return zone.runtimeFactory() == null ? prepared : prepared.withRuntimeFactory(
+                        new OwnedModZoneRuntimeFactory(zone.ownerModId(), zone.localKey(), zone.runtimeFactory(), faultBoundary, plan.contributionLimit()));
             }).toList();
         }
         List<PreparedModZone> publishedZones = resolvedZones;
@@ -163,7 +165,7 @@ public final class ModBackedGamePatch implements GamePatch {
         Map<String, ObjectSpriteSheet> romSheets = plan.romObjectArt().isEmpty()
                 ? Map.of()
                 : romArtSource.materialize(plan.ownerModId(), plan.romObjectArt());
-        return new DelegatingGameModule(base, id()) {
+        GameModule decorated = new DelegatingGameModule(base, id()) {
             private com.openggf.game.PlayableCharacterRegistry playableCharacters;
             private com.openggf.game.ObjectArtProvider objectArtProvider;
             private com.openggf.game.ZoneRegistry zoneRegistry;
@@ -354,6 +356,10 @@ public final class ModBackedGamePatch implements GamePatch {
                 if (registry instanceof ModZoneRegistry mods) {
                     PreparedModZone contribution = mods.levelContribution(levelIndex);
                     if (contribution != null) {
+                        if (contribution.runtimeFactory() != null) {
+                            var parallax = com.openggf.game.GameServices.parallaxOrNull();
+                            return new int[]{cameraX, parallax == null ? cameraY : parallax.getVscrollFactorBG()};
+                        }
                         return switch (contribution.runtimeProfile().scroll()) {
                             case FLAT -> new int[]{cameraX, cameraY};
                         };
@@ -416,6 +422,7 @@ public final class ModBackedGamePatch implements GamePatch {
                 return getDataSelectPresentationProvider();
             }
         };
+        return OwnedModServices.decorate(decorated, plan, faultBoundary);
     }
 
     private static ModZoneLevelData prepareHostData(PreparedModZone zone) {

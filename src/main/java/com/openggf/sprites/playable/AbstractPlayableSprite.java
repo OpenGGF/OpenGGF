@@ -1712,6 +1712,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return false;
         }
 
+        final boolean hasConstructionCallbackInvoker(com.openggf.game.CharacterConstructionScope.CallbackInvoker invoker) {
+                return characterCallbackInvoker == invoker;
+        }
+
         final boolean dispatchAbilityActivate(boolean up, boolean down, boolean left, boolean right) {
                 return com.openggf.game.CharacterConstructionScope.invoke(characterCallbackInvoker,
                         () -> onAbilityActivate(up, down, left, right));

@@ -9,7 +9,6 @@ import java.util.Objects;
 /**
  * Gameplay-session owner for single-use seamless resource handoffs.
  */
-@com.openggf.game.ModApi
 public final class SeamlessTransitionResourceHandoffRegistry
         implements RewindSnapshottable<
                 SeamlessTransitionResourceHandoffRegistry.Snapshot> {
@@ -114,7 +113,6 @@ public final class SeamlessTransitionResourceHandoffRegistry
         failedTransfers.clear();
     }
 
-    @com.openggf.game.ModApi
     public record Snapshot(
             long nextId,
             Map<SeamlessTransitionResourceHandoffId,

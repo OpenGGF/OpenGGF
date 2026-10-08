@@ -4,13 +4,16 @@ Read [candidate setup and first build](../getting-started.md) first: Java 21, Ma
 
 Music packs are the smallest mod: no Java and no trust grant.
 
-1. Copy the [music sample](../samples/phase4-gallery-music-pack/README.md).
-2. Give the manifest a unique lower-case id and target one stock game.
-3. Put WAV or Ogg assets under `audio/` and describe them in
-   `audio/audio-manifest.yaml`.
+1. Open the generated `my-music` project; it includes an original WAV and audio manifest.
+2. Keep its unique lower-case id and choose the target stock game in the mod manifest.
+3. Put WAV or Ogg assets under `src/main/resources/audio/` and describe them in
+   that directory's `audio-manifest.yaml`.
 4. Map stock music ids to local track ids in `audioOverrides`.
-5. Run `ggfmod package --input <exploded-dir> --out <mod.jar>`; packaging validates.
-6. Copy the jar to `mods/`, enable it, save the pending state, and restart.
+5. Repeat the Maven package command and validate `target/my-music-mod.jar`.
+6. Copy that jar to `mods/`, enable it, Apply the pending state, and restart.
+
+The [music sample](../samples/phase4-gallery-music-pack/README.md) is an alternative
+checkout reference; follow its asset-generator instructions before manual packaging.
 
 Use the [full music guide](../music-packs.md) for loop frames, gain, tempo effects,
 codec limits, and per-game stock-id isolation. MP3 and base-game SFX replacement are

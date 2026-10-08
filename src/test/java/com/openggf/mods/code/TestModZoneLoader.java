@@ -30,6 +30,114 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestModZoneLoader {
+    @Test void invalidReturnedRuntimeMetadataFaultsTheActualOwnerThroughRealConsumers() {
+        for(String invalid:List.of("stage","snapshot")) {
+            var boundary=new ModFaultBoundary(Map.of("dependent",Set.of("alpha")),new com.openggf.mods.ModRuntimeFindingStore(),
+                    ignored->new com.openggf.mods.ModStateSaveResult.Saved(),ignored->{});
+            var effect=new com.openggf.game.render.SpecialRenderEffect() {
+                public com.openggf.game.render.SpecialRenderEffectStage stage() { return null; }
+                public void render(com.openggf.game.render.SpecialRenderEffectContext ignored) { }
+            };
+            var state=new com.openggf.game.zone.ZoneRuntimeState() {
+                public String gameId() { return "s2"; } public int zoneIndex() { return 3; } public int actIndex() { return 0; }
+                public byte[] captureBytes() { return null; } public void restoreBytes(byte[] bytes) { }
+            };
+            var runtime=new OwnedModZoneRuntimeFactory("alpha","zone",context->invalid.equals("stage")
+                    ?com.openggf.game.modzone.ModZoneRuntimeServices.builder().renderEffect(effect).build()
+                    :com.openggf.game.modzone.ModZoneRuntimeServices.builder().state(state).build(),boundary).create(
+                    new com.openggf.game.modzone.ModZoneRuntimeContext(new ZoneKey.Mod("alpha","zone"),"s2",3,0,mock(com.openggf.level.Level.class)));
+            var failure=assertThrows(ModFaultBoundary.CallbackAborted.class,()-> {
+                if(invalid.equals("stage")) new com.openggf.game.render.SpecialRenderEffectRegistry().register(runtime.renderEffects().getFirst());
+                else { var registry=new com.openggf.game.zone.ZoneRuntimeRegistry();registry.install(runtime.state());registry.capture(); }
+            });
+            assertEquals("alpha",failure.owner());assertEquals(Set.of("alpha","dependent"),failure.disabledOwners());
+        }
+    }
+
+    @Test void zoneRuntimeLimitIncludesOptionalFacilitiesBeforePublishingAnyCallback() {
+        var boundary = new ModFaultBoundary(Map.of("dependent", Set.of("alpha")),
+                new com.openggf.mods.ModRuntimeFindingStore(), ignored -> new com.openggf.mods.ModStateSaveResult.Saved(), ignored -> { });
+        var factory = new OwnedModZoneRuntimeFactory("alpha", "zone", context ->
+                com.openggf.game.modzone.ModZoneRuntimeServices.builder()
+                        .water(mock(com.openggf.game.WaterDataProvider.class))
+                        .scroll(mock(com.openggf.level.scroll.ZoneScrollHandler.class)).build(), boundary, 1);
+        var failure = assertThrows(ModFaultBoundary.CallbackAborted.class, () -> factory.create(
+                new com.openggf.game.modzone.ModZoneRuntimeContext(new ZoneKey.Mod("alpha","zone"),"s2",3,0,
+                        mock(com.openggf.level.Level.class))));
+        assertEquals("alpha", failure.owner());
+        assertEquals(Set.of("alpha","dependent"), failure.disabledOwners());
+    }
+    @Test
+    void ownedRuntimeDispatchesWaterAnimationScrollPaletteRenderAndStateThroughRealConsumers() throws Exception {
+        var calls = new java.util.ArrayList<String>();
+        var findings = new com.openggf.mods.ModRuntimeFindingStore();
+        var boundary = new ModFaultBoundary(Map.of("dependent", Set.of("alpha")), findings,
+                ignored -> new com.openggf.mods.ModStateSaveResult.Saved(), ignored -> { });
+        var water = new com.openggf.game.WaterDataProvider() {
+            public boolean hasWater(int zone, int act, com.openggf.game.PlayerCharacter character) { return true; }
+            public int getStartingWaterLevel(int zone, int act) { return 160; }
+            public com.openggf.level.Palette[] getUnderwaterPalette(com.openggf.data.Rom rom, int zone, int act, com.openggf.game.PlayerCharacter character) { calls.add("water-palette"); return null; }
+            public com.openggf.game.DynamicWaterHandler getDynamicHandler(int zone, int act, com.openggf.game.PlayerCharacter character) {
+                return (state, x, y) -> { assertEquals("alpha", OwnerCallbackScope.current()); calls.add("water"); state.setTarget(180); };
+            }
+        };
+        var scroll = mock(com.openggf.level.scroll.ZoneScrollHandler.class);
+        org.mockito.Mockito.doAnswer(call -> { assertEquals("alpha", OwnerCallbackScope.current()); calls.add("scroll"); return null; })
+                .when(scroll).update(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+        var state = new com.openggf.game.zone.ZoneRuntimeState() {
+            public String gameId() { return "s2"; } public int zoneIndex() { return 3; } public int actIndex() { return 1; }
+            public byte[] captureBytes() { calls.add("state-capture"); return new byte[]{7}; }
+            public void restoreBytes(byte[] value) { assertEquals(7, value[0]); calls.add("state-restore"); }
+        };
+        var effect = new com.openggf.game.render.SpecialRenderEffect() {
+            public com.openggf.game.render.SpecialRenderEffectStage stage() { return com.openggf.game.render.SpecialRenderEffectStage.AFTER_SPRITES; }
+            public void render(com.openggf.game.render.SpecialRenderEffectContext context) { assertEquals("alpha", OwnerCallbackScope.current()); calls.add("render"); }
+        };
+        var mode = new com.openggf.game.render.AdvancedRenderMode() {
+            public String id() { return "tide"; }
+            public void contribute(com.openggf.game.render.AdvancedRenderModeContext context, com.openggf.game.render.AdvancedRenderFrameState.Builder builder) { calls.add("mode"); }
+        };
+        var animation = new com.openggf.game.animation.AnimatedTileChannel("waves", () -> true,
+                context -> context.frameCounter(), com.openggf.game.animation.DestinationPlan.single(0),
+                com.openggf.game.animation.AnimatedTileCachePolicy.ON_PHASE_CHANGE, context -> {
+                    assertEquals("alpha", OwnerCallbackScope.current()); calls.add("tiles"); });
+        var factory = new OwnedModZoneRuntimeFactory("alpha", "campaign", context ->
+                com.openggf.game.modzone.ModZoneRuntimeServices.builder().water(water).scroll(scroll).state(state)
+                        .animatedTile(animation).paletteAnimation(() -> calls.add("palette")).renderEffect(effect).renderMode(mode).build(), boundary);
+        var level = mock(com.openggf.level.Level.class);
+        var runtime = factory.create(new com.openggf.game.modzone.ModZoneRuntimeContext(new ZoneKey.Mod("alpha", "campaign"), "s2", 3, 1, level));
+        var waterSystem = new com.openggf.level.WaterSystem();
+        waterSystem.loadForLevelFromProvider(runtime.water(), null, 64, 1, com.openggf.game.PlayerCharacter.SONIC_ALONE);
+        waterSystem.updateDynamic(64, 1, 100, 20);
+        var graph = new com.openggf.game.animation.AnimatedTileChannelGraph(); graph.install(runtime.animatedTiles());
+        graph.update(new com.openggf.game.animation.ChannelContext(graph, null, level, null, 3, 1, 1));
+        runtime.scroll().update(new int[224],100,20,1,1); runtime.paletteAnimation().update();
+        var registry = new com.openggf.game.render.SpecialRenderEffectRegistry(); registry.register(runtime.renderEffects().getFirst());
+        var camera = mock(com.openggf.camera.Camera.class); var manager = mock(com.openggf.level.LevelManager.class);
+        registry.dispatch(com.openggf.game.render.SpecialRenderEffectStage.AFTER_SPRITES,
+                new com.openggf.game.render.SpecialRenderEffectContext(camera,1,manager,mock(com.openggf.graphics.GraphicsManager.class)));
+        var modes = new com.openggf.game.render.AdvancedRenderModeController(); modes.register(runtime.renderModes().getFirst());
+        modes.resolve(new com.openggf.game.render.AdvancedRenderModeContext(camera,1,manager,3,1,100));
+        runtime.state().restoreBytes(runtime.state().captureBytes());
+        assertEquals(List.of("water-palette","water","tiles","scroll","palette","render","mode","state-capture","state-restore"), calls);
+        assertEquals("alpha:campaign:waves", graph.channels().getFirst().channelId());
+    }
+    @Test
+    void returnedDynamicWaterCallbackFailureDisablesTheFactoryOwnerAndDependent() {
+        var boundary = new ModFaultBoundary(Map.of("dependent", Set.of("alpha")), new com.openggf.mods.ModRuntimeFindingStore(),
+                ignored -> new com.openggf.mods.ModStateSaveResult.Saved(), ignored -> { });
+        var water = mock(com.openggf.game.WaterDataProvider.class);
+        when(water.hasWater(64, 0, com.openggf.game.PlayerCharacter.SONIC_ALONE, false)).thenReturn(true);
+        when(water.getDynamicHandler(64,0,com.openggf.game.PlayerCharacter.SONIC_ALONE))
+                .thenReturn((state,x,y) -> { throw new IllegalStateException("returned dynamic handler"); });
+        var owned = new OwnedModZoneRuntimeFactory("alpha", "zone", context ->
+                com.openggf.game.modzone.ModZoneRuntimeServices.builder().water(water).build(), boundary)
+                .create(new com.openggf.game.modzone.ModZoneRuntimeContext(new ZoneKey.Mod("alpha","zone"),"s2",3,0,mock(com.openggf.level.Level.class)));
+        var system = new com.openggf.level.WaterSystem();
+        system.loadForLevelFromProvider(owned.water(),null,64,0,com.openggf.game.PlayerCharacter.SONIC_ALONE);
+        var failure = assertThrows(ModFaultBoundary.CallbackAborted.class, () -> system.updateDynamic(64,0,0,0));
+        assertEquals("alpha",failure.owner()); assertEquals(Set.of("alpha","dependent"),failure.disabledOwners());
+    }
     @TempDir Path temp;
     @Test
     void patchDelegatesPreparedZoneToResolvedModuleAdapter() throws Exception {
@@ -45,6 +153,49 @@ class TestModZoneLoader {
 
         verify(adapter).validate(eq("alpha"), org.mockito.ArgumentMatchers.any());
         verify(adapter).load(eq("alpha"), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void twoAuthoredActsUseOneTaggedZoneAndDistinctHostPayloadsAndResultsEdges() throws Exception {
+        ModZoneContribution zone = ModZoneContribution.multiAct("campaign",
+                List.of(new BakedLevelRef("act1/level.json"), new BakedLevelRef("act2/level.json")),
+                "mtz3", null, true);
+        var first = PreparedModZone.prepared("alpha", zone, minimalDefinition(), 0);
+        var second = PreparedModZone.prepared("alpha", zone,
+                minimalDefinition(new ModLevelDefinition.StockMusic(9)), 1);
+        ModRegistrationPlan plan = new ModRegistrationPlan("alpha", "s2", Map.of(), Map.of(), Map.of(),
+                List.of(), List.of(zone), List.of(first, second));
+        ModZoneAdapter adapter = mock(ModZoneAdapter.class);
+        when(adapter.runtimeProfile(eq("alpha"), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(ModZoneRuntimeProfile.flatEmpty());
+        GameModule module = new ModBackedGamePatch(plan).apply(moduleProxy(stockRegistry(), adapter), patchContext());
+        ZoneRegistry registry = module.getZoneRegistry();
+        int custom = registry.resolveZoneKey(ZoneKey.mod("alpha", "campaign")).orElseThrow();
+        assertEquals(4, registry.getZoneCount());
+        assertEquals(2, registry.getActCount(custom));
+        assertNotEquals(registry.getLevelDataForZone(custom).get(0).levelIndex(),
+                registry.getLevelDataForZone(custom).get(1).levelIndex());
+        assertEquals(9, registry.getMusicId(custom, 1));
+        assertEquals(new ZoneProgressionPlan.Successor(custom, 1),
+                registry.progressionPlan().next(registry.progressionTopology(), custom, 0));
+        assertEquals(new ZoneProgressionPlan.Successor(2, 0),
+                registry.progressionPlan().next(registry.progressionTopology(), custom, 1));
+        module.loadLevelOverride(registry.getLevelDataForZone(custom).get(0).levelIndex());
+        module.loadLevelOverride(registry.getLevelDataForZone(custom).get(1).levelIndex());
+        var loads = org.mockito.ArgumentCaptor.forClass(ModZoneLevelData.class);
+        verify(adapter, org.mockito.Mockito.times(2)).load(eq("alpha"), loads.capture());
+        assertEquals(List.of(0x40, 0x40), loads.getAllValues().stream().map(ModZoneLevelData::zoneIndex).toList());
+        assertEquals(1, ((ModZoneRegistry)registry).gameStartContributions().size());
+
+        var payload = new java.util.LinkedHashMap<String,Object>(taggedPayload("alpha", "campaign"));
+        payload.put("act", 1);
+        var profile = new com.openggf.game.sonic2.dataselect.S2DataSelectProfile(() -> registry);
+        assertEquals(new DataSelectDestination(custom, 1), profile.resolveLoadDestination(payload));
+        var rebuilt = ModZoneRegistry.decorate(stockRegistry(), List.of(first, second));
+        assertEquals(new DataSelectDestination(rebuilt.resolveZoneKey(ZoneKey.mod("alpha", "campaign")).orElseThrow(), 1),
+                new com.openggf.game.sonic2.dataselect.S2DataSelectProfile(() -> rebuilt).resolveLoadDestination(payload));
+        assertThrows(IllegalArgumentException.class, () -> new ModRegistrationPlan("alpha", "s2",
+                Map.of(), Map.of(), Map.of(), List.of(), List.of(zone), List.of(second, first)));
     }
 
     @Test
@@ -169,6 +320,47 @@ class TestModZoneLoader {
         assertEquals(new ZoneProgressionPlan.Successor(2, 0), plan.next(topology, 5, 0));
         assertEquals(new ZoneProgressionPlan.Successor(4, 0), plan.next(topology, 0, 0));
         assertEquals(new ZoneProgressionPlan.Successor(1, 0), plan.next(topology, 4, 0));
+    }
+
+    @Test
+    void identicalAuthoredMetadataIsRemappedBeforeTheActualHostLoadConsumer() throws Exception {
+        ModZoneAdapter adapter = mock(ModZoneAdapter.class);
+        when(adapter.runtimeProfile(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(ModZoneRuntimeProfile.flatEmpty());
+        ModLevelDefinition authored = minimalDefinition();
+        GameModule stock = moduleProxy(stockRegistry(), adapter);
+        GameModule alpha = new ModBackedGamePatch(zonePlan("alpha", "zone", authored)).apply(stock, patchContext());
+        GameModule beta = new ModBackedGamePatch(zonePlan("beta", "zone", authored)).apply(alpha, patchContext());
+        var zones = beta.getZoneRegistry();
+        beta.loadLevelOverride(zones.getLevelDataForZone(3).getFirst().levelIndex());
+        beta.loadLevelOverride(zones.getLevelDataForZone(4).getFirst().levelIndex());
+        var data = org.mockito.ArgumentCaptor.forClass(ModZoneLevelData.class);
+        verify(adapter).load(eq("alpha"), data.capture());
+        assertEquals(0x40, data.getValue().zoneIndex());
+        verify(adapter).load(eq("beta"), data.capture());
+        assertEquals(0x41, data.getValue().zoneIndex());
+        assertEquals(0x40, authored.zoneIndex(), "Allocation never changes the immutable creator export");
+        assertEquals(0x400, authored.levelIndex());
+    }
+
+    @Test
+    void repeatedOwnerLocalIdsAreRemappedAndSavedKeysSurviveOrderAndDisable() {
+        PreparedModZone alpha = prepared("alpha", "same", 0x400, 0x40);
+        PreparedModZone beta = prepared("beta", "same", 0x400, 0x40);
+        ZoneKey betaSave = ZoneKey.mod("beta", "same");
+        var both = (ModZoneRegistry) ModZoneRegistry.decorate(stockRegistry(), List.of(alpha, beta));
+        assertEquals(0x400, both.getLevelDataForZone(3).getFirst().levelIndex());
+        assertEquals(0x401, both.getLevelDataForZone(4).getFirst().levelIndex());
+        assertEquals("alpha", both.levelContribution(0x400).ownerModId());
+        assertEquals("beta", both.levelContribution(0x401).ownerModId());
+        var reordered = (ModZoneRegistry) ModZoneRegistry.decorate(stockRegistry(), List.of(beta, alpha));
+        int restoredIndex = reordered.resolveZoneKey(betaSave).orElseThrow();
+        assertEquals(betaSave, reordered.zoneKey(restoredIndex));
+        assertEquals("beta", reordered.levelContribution(
+                reordered.getLevelDataForZone(restoredIndex).getFirst().levelIndex()).ownerModId());
+        var remaining = ModZoneRegistry.decorate(stockRegistry(), List.of(beta));
+        assertEquals(betaSave, remaining.zoneKey(remaining.resolveZoneKey(betaSave).orElseThrow()));
+        assertTrue(remaining.resolveZoneKey(ZoneKey.mod("alpha", "same")).isEmpty());
     }
 
     @Test
@@ -375,14 +567,11 @@ class TestModZoneLoader {
     }
 
     @Test
-    void aggregateAuthoredIdCollisionIsRejectedBeforeARegistryCanPublish() {
+    void duplicateNamespacedZoneIdentityIsRejectedBeforeARegistryCanPublish() {
         PreparedModZone alpha = prepared("alpha", "a", 0x400, 0x40);
-        PreparedModZone betaSameZone = prepared("beta", "b", 0x401, 0x40);
-        PreparedModZone betaSameLevel = prepared("beta", "c", 0x400, 0x41);
+        PreparedModZone duplicate = prepared("alpha", "a", 0x401, 0x41);
         assertThrows(IllegalArgumentException.class,
-                () -> ModZoneRegistry.decorate(stockRegistry(), List.of(alpha, betaSameZone)));
-        assertThrows(IllegalArgumentException.class,
-                () -> ModZoneRegistry.decorate(stockRegistry(), List.of(alpha, betaSameLevel)));
+                () -> ModZoneRegistry.decorate(stockRegistry(), List.of(alpha, duplicate)));
     }
 
     @Test
@@ -520,7 +709,7 @@ class TestModZoneLoader {
                 });
     }
 
-    private static ModLevelDefinition minimalDefinition() {
+    static ModLevelDefinition minimalDefinition() {
         return minimalDefinition(new ModLevelDefinition.StockMusic(1));
     }
 

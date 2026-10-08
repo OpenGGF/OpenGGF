@@ -8,7 +8,15 @@ import java.util.function.Function;
 /** Immutable decoded-placement transformations. Registration and trusted ownership stay in ModContext. */
 @com.openggf.game.ModApi
 public final class LevelPatch {
-    private record Operation(Predicate<ObjectSpawn> select, Function<ObjectSpawn, ObjectSpawn> edit) { }
+    private record Operation(Predicate<ObjectSpawn> select, Function<ObjectSpawn, ObjectSpawn> edit,
+                             String bindingOwner, String bindingKey) {
+        ObjectSpawn apply(ObjectSpawn spawn) {
+            if (edit != null) return edit.apply(spawn);
+            if (spawn.ownerModId()!=null) throw new IllegalArgumentException("Cannot rebind another mod's placement");
+            return new ObjectSpawn(spawn.x(),spawn.y(),spawn.objectId(),spawn.subtype(),spawn.renderFlags(),
+                    spawn.respawnTracked(),spawn.rawYWord(),spawn.layoutIndex(),bindingOwner,bindingKey);
+        }
+    }
     private final List<Operation> operations;
     private LevelPatch(List<Operation> operations) { this.operations=List.copyOf(operations); }
     public static LevelPatch empty() { return new LevelPatch(List.of()); }
@@ -17,16 +25,18 @@ public final class LevelPatch {
     /** Takes one snapshot and publishes the final placements once; source geometry is preserved. */
     public MutableLevel apply(Level source) {
         MutableLevel result=MutableLevel.snapshot(Objects.requireNonNull(source));
-        result.replaceObjectSpawnsPersisted(applyToObjects(source.getObjects()));
+        result.replaceObjectSpawnsPersisted(applyToObjects(result.getObjects()));
         return result;
     }
     public List<ObjectSpawn> applyToObjects(List<ObjectSpawn> placements) {
+        for (Operation operation:operations) if (operation.edit()==null && operation.bindingOwner()==null)
+            throw new IllegalStateException("Local object bindings require ModContext.decodedLevelPatch registration");
         List<ObjectSpawn> result=List.copyOf(placements);
         validateIdentities(result);
         for (Operation operation : operations) {
             List<ObjectSpawn> edited=new ArrayList<>(result.size());
             for (ObjectSpawn spawn : result) {
-                ObjectSpawn replacement=operation.select().test(spawn) ? operation.edit().apply(spawn) : spawn;
+                ObjectSpawn replacement=operation.select().test(spawn) ? operation.apply(spawn) : spawn;
                 if (replacement != null) {
                     if (spawn.layoutIndex()!=replacement.layoutIndex()) throw new IllegalArgumentException("Patch must preserve placement identity");
                     edited.add(replacement);
@@ -36,6 +46,22 @@ public final class LevelPatch {
         }
         validateIdentities(result);
         return result;
+    }
+
+    LevelPatch bindOwnership(String owner, Set<String> registeredObjectKeys) {
+        com.openggf.game.ModKeySyntax.requireManifestId(owner);
+        Objects.requireNonNull(registeredObjectKeys,"registeredObjectKeys");
+        List<Operation> bound=new ArrayList<>(operations.size());
+        for (Operation operation:operations) {
+            if (operation.edit()!=null) { bound.add(operation); continue; }
+            if (operation.bindingOwner()!=null && !owner.equals(operation.bindingOwner()))
+                throw new IllegalArgumentException("Object binding belongs to another mod owner");
+            String key=operation.bindingOwner()==null ? owner+":"+operation.bindingKey() : operation.bindingKey();
+            if (!registeredObjectKeys.contains(key))
+                throw new IllegalArgumentException("Object binding needs a registered owner factory: "+key);
+            bound.add(new Operation(operation.select(),null,owner,key));
+        }
+        return new LevelPatch(bound);
     }
     private static void validateIdentities(List<ObjectSpawn> placements) {
         Set<Integer> identities=new HashSet<>();
@@ -49,7 +75,7 @@ public final class LevelPatch {
         private Selection(LevelPatch patch, Predicate<ObjectSpawn> predicate) { this.patch=patch; this.predicate=predicate; }
         private LevelPatch append(Function<ObjectSpawn, ObjectSpawn> edit) {
             List<Operation> operations=new ArrayList<>(patch.operations);
-            operations.add(new Operation(predicate,edit)); return new LevelPatch(operations);
+            operations.add(new Operation(predicate,edit,null,null)); return new LevelPatch(operations);
         }
         public LevelPatch remove() { return append(spawn -> null); }
         /** Replaces gameplay fields, retaining the placement slot and existing owner/key pair. */
@@ -65,16 +91,20 @@ public final class LevelPatch {
         public LevelPatch move(int dx, int dy) {
             return replace(spawn -> spawn.withPosition(Math.addExact(spawn.x(),dx),Math.addExact(spawn.y(),dy)));
         }
+        /** Uses a local registered factory; ModContext supplies its verified owner during admission. */
+        public LevelPatch bind(String localObjectKey) {
+            return appendBinding(null,com.openggf.game.ModKeySyntax.requireLocalName(localObjectKey));
+        }
         /** Explicitly redirects native placements to an already registered namespaced factory. */
         public LevelPatch bind(String owner, String objectKey) {
             com.openggf.game.ModKeySyntax.requireManifestId(owner);
             com.openggf.game.ModKeySyntax.requireDisplayKey(objectKey);
             if (!objectKey.startsWith(owner+":")) throw new IllegalArgumentException("Object key must match owner");
-            return append(spawn -> {
-                if (spawn.ownerModId()!=null) throw new IllegalArgumentException("Cannot rebind another mod's placement");
-                return new ObjectSpawn(spawn.x(),spawn.y(),spawn.objectId(),spawn.subtype(),spawn.renderFlags(),
-                        spawn.respawnTracked(),spawn.rawYWord(),spawn.layoutIndex(),owner,objectKey);
-            });
+            return appendBinding(owner,objectKey);
+        }
+        private LevelPatch appendBinding(String owner,String key) {
+            List<Operation> operations=new ArrayList<>(patch.operations);
+            operations.add(new Operation(predicate,null,owner,key)); return new LevelPatch(operations);
         }
     }
 }

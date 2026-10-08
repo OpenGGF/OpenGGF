@@ -1,5 +1,6 @@
 package com.openggf.mods.ui;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Objects;
 
@@ -7,14 +8,14 @@ import java.util.Objects;
 @com.openggf.game.ModApi
 public final class BitmapFont {
     private final String alphabet;
-    private final String bits;
+    private final int[][] rectangles;
     private final int glyphWidth;
     private final int glyphHeight;
     private final int advance;
 
     private BitmapFont(String alphabet, String bits, int glyphWidth, int glyphHeight, int advance) {
         this.alphabet = alphabet;
-        this.bits = bits;
+        this.rectangles = rectangles(bits, alphabet.length(), glyphWidth, glyphHeight);
         this.glyphWidth = glyphWidth;
         this.glyphHeight = glyphHeight;
         this.advance = advance;
@@ -55,6 +56,7 @@ public final class BitmapFont {
                 Math.addExact(Math.multiplyExact(text.length() - 1, advance), glyphWidth), scale);
     }
 
+    /** Emits cached disjoint rectangles; adjacent identical row spans share one rectangle. */
     public void glyphs(String text, int x, int y, int scale, CompactFont.RunSink sink) {
         Objects.requireNonNull(text, "text");
         Objects.requireNonNull(sink, "sink");
@@ -63,15 +65,11 @@ public final class BitmapFont {
             int index = alphabet.indexOf(text.charAt(letter));
             if (index < 0) continue;
             int left = Math.addExact(x, Math.multiplyExact(letter, advance * scale));
-            for (int row = 0; row < glyphHeight; row++) {
-                int base = (index * glyphHeight + row) * glyphWidth;
-                for (int column = 0; column < glyphWidth; column++) {
-                    if (bits.charAt(base + column) != '1') continue;
-                    int start = column;
-                    while (column + 1 < glyphWidth && bits.charAt(base + column + 1) == '1') column++;
-                    sink.run(Math.addExact(left, start * scale), Math.addExact(y, row * scale),
-                            (column - start + 1) * scale, scale);
-                }
+            int[] geometry = rectangles[index];
+            for (int part = 0; part < geometry.length; part += 4) {
+                sink.run(Math.addExact(left, geometry[part] * scale),
+                        Math.addExact(y, geometry[part + 1] * scale),
+                        geometry[part + 2] * scale, geometry[part + 3] * scale);
             }
         }
     }
@@ -83,5 +81,41 @@ public final class BitmapFont {
 
     private static void requireScale(int scale) {
         if (scale < 1 || scale > 8) throw new IllegalArgumentException("Bitmap scale must be 1..8");
+    }
+
+    /** Linear bounded construction; merge identical spans only on adjacent rows. */
+    private static int[][] rectangles(String pixels, int count, int width, int height) {
+        int[][] result = new int[count][];
+        for (int glyph = 0; glyph < count; glyph++) {
+            int[] geometry = new int[width * height * 4];
+            int used = 0;
+            int[] previous = new int[width];
+            Arrays.fill(previous, -1);
+            for (int row = 0; row < height; row++) {
+                int[] current = new int[width];
+                Arrays.fill(current, -1);
+                int base = (glyph * height + row) * width;
+                for (int column = 0; column < width; column++) {
+                    if (pixels.charAt(base + column) != '1') continue;
+                    int start = column;
+                    while (column + 1 < width && pixels.charAt(base + column + 1) == '1') column++;
+                    int span = column - start + 1;
+                    int prior = previous[start];
+                    if (prior >= 0 && geometry[prior + 2] == span) {
+                        geometry[prior + 3]++;
+                        current[start] = prior;
+                    } else {
+                        current[start] = used;
+                        geometry[used++] = start;
+                        geometry[used++] = row;
+                        geometry[used++] = span;
+                        geometry[used++] = 1;
+                    }
+                }
+                previous = current;
+            }
+            result[glyph] = Arrays.copyOf(geometry, used);
+        }
+        return result;
     }
 }

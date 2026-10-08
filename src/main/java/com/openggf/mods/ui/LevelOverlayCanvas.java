@@ -1,7 +1,6 @@
 package com.openggf.mods.ui;
 
 import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
 import java.util.Objects;
 
@@ -25,14 +24,6 @@ public final class LevelOverlayCanvas implements PixelCanvas {
         int right = (int) Math.min(width, (long) x + w);
         int bottom = (int) Math.min(height, (long) y + h);
         if (right > left && bottom > top) graphics.registerCommand(
-                new ScreenRect(left, top, right - left, bottom - top, argb));
-    }
-    private record ScreenRect(int x, int y, int width, int height, int argb) implements GLCommandable {
-        public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
-            new GLCommand(GLCommand.CommandType.RECTI, 0, GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
-                    ((argb >>> 16) & 255) / 255f, ((argb >>> 8) & 255) / 255f, (argb & 255) / 255f,
-                    (argb >>> 24) / 255f, x, y, Math.addExact(x, width), Math.addExact(y, height))
-                    .execute(0, 0, cameraWidth, cameraHeight);
-        }
+                GLCommand.screenSpaceRect(graphics, height, left, top, right - left, bottom - top, argb));
     }
 }

@@ -18,13 +18,15 @@ public record ModManifest(int formatVersion, String id, String name,
                           VersionRange engineApiRange, ModType type,
                           String baseGame, String entrypoint, List<ModDependency> dependencies,
                           Map<Integer, String> audioOverrides, Map<String, String> artOverrides,
-                          String insertAfter, OptionalInt patternWindows) {
+                          String insertAfter, OptionalInt patternWindows, ModCompositionMetadata composition) {
     private static final Pattern ENTRYPOINT = Pattern.compile(
             "[A-Za-z_$][A-Za-z0-9_$]*(?:\\.[A-Za-z_$][A-Za-z0-9_$]*)+");
     private static final Pattern INSERT_AFTER = Pattern.compile("[a-z0-9][a-z0-9-]{0,31}");
     private static final Set<String> BASE_GAMES = Set.of("s1", "s2", "s3k", "any");
 
     public ModManifest {
+        composition = Objects.requireNonNull(composition, "composition");
+        composition.requireDistinctOwner(id);
         if (formatVersion != 1) throw new IllegalArgumentException("formatVersion must be 1");
         id = ModKeySyntax.requireManifestId(id);
         name = requireDisplayText(name, "name");
@@ -69,6 +71,17 @@ public record ModManifest(int formatVersion, String id, String name,
             throw new IllegalArgumentException(
                     "baseGame any requires a compiled startup scene without stock overrides, progression or pattern windows");
         }
+    }
+
+    /** Compatibility constructor: existing manifests carry no optional composition declarations. */
+    public ModManifest(int formatVersion, String id, String name, SemanticVersion version,
+            List<String> authors, String description, VersionRange engineApiRange, ModType type,
+            String baseGame, String entrypoint, List<ModDependency> dependencies,
+            Map<Integer,String> audioOverrides, Map<String,String> artOverrides,
+            String insertAfter, OptionalInt patternWindows) {
+        this(formatVersion, id, name, version, authors, description, engineApiRange, type,
+                baseGame, entrypoint, dependencies, audioOverrides, artOverrides,
+                insertAfter, patternWindows, ModCompositionMetadata.EMPTY);
     }
 
     private static String requireDisplayText(String value, String field) {

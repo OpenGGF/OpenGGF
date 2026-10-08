@@ -24,6 +24,10 @@ import java.util.jar.JarOutputStream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestModRegistrationRuntime {
+    @Test void dataCompositionUsesActualPreparedWinnersAndExcludesFailedOwners() {
+        com.openggf.mods.PreparedCompositionAssertions.verify();
+    }
+
     @TempDir Path temp;
 
     @Test
@@ -177,29 +181,110 @@ class TestModRegistrationRuntime {
     }
 
     @Test
-    void aggregateAuthoredIdCollisionExcludesOwnerAndDependentButPublishesEarlierAndIndependent()
-            throws Exception {
-        ModDescriptor earlier = zoneDescriptor("zone-earlier", 0x40, 0x400, List.of());
-        ModDescriptor collision = zoneDescriptor("zone-collision", 0x40, 0x401, List.of());
-        ModDescriptor dependent = zoneDescriptor("zone-dependent", 0x42, 0x402,
-                List.of(new ModDependency("zone-collision", VersionRange.parse("*"))));
-        ModDescriptor independent = zoneDescriptor("zone-independent", 0x43, 0x403, List.of());
-        EffectiveModCatalog catalog = new EffectiveModCatalog(
-                List.of(earlier, collision, dependent, independent));
-        ModClassLoaderFactory factory = new ModClassLoaderFactory(getClass().getClassLoader(),
+    void publishedPlanDiagnosticsContainOnlySuccessfulOwnersFromTheLatestPass() throws Exception {
+        var good = descriptor("plan-good", GoodEntrypoint.class, List.of());
+        var bad = descriptor("plan-bad", ThrowingEntrypoint.class, List.of());
+        var factory = new ModClassLoaderFactory(getClass().getClassLoader(),
                 (descriptor, snapshot) -> new ModValidationReport(List.of()));
+        try (ModRuntime runtime = factory.create(new EffectiveModCatalog(List.of(good, bad)), Set.of("plan-good", "plan-bad"))) {
+            assertTrue(runtime.registrationPlans().isEmpty());
+            runtime.newRegistrationPlan();
+            Map<String, ModRegistrationPlan> prior = runtime.registrationPlans();
+            assertEquals(Set.of("plan-good"), prior.keySet());
+            assertEquals("plan-good", prior.get("plan-good").ownerModId());
+            assertThrows(UnsupportedOperationException.class, () -> prior.clear());
+            runtime.disableOwnersForProcess(Set.of("plan-good"));
+            runtime.newRegistrationPlan();
+            assertTrue(runtime.registrationPlans().isEmpty(), "Disabled and failed owners cannot retain stale transactions");
+            assertEquals(Set.of("plan-good"), prior.keySet(), "Previously returned immutable diagnostics are stable");
+        }
+    }
 
-        try (ModRuntime runtime = factory.create(catalog,
-                Set.of("zone-earlier", "zone-collision", "zone-dependent", "zone-independent"))) {
-            ModuleResolutionService.PatchPlan plan = runtime.newRegistrationPlan();
-            assertEquals(List.of("zone-earlier:content", "zone-independent:content"),
+    @Test
+    void independentOwnersAndDifferentHostsCanReuseAuthoredNumericMetadata() throws Exception {
+        ModDescriptor first = zoneDescriptor("zone-first", 0x40, 0x400, List.of());
+        ModDescriptor second = zoneDescriptor("zone-second", 0x40, 0x400, List.of());
+        ModDescriptor thirdSource = zoneDescriptor("zone-third", 0x40, 0x400, List.of());
+        ModManifest m = thirdSource.manifest();
+        ModManifest differentHost = new ModManifest(m.formatVersion(), m.id(), m.name(), m.version(),
+                m.authors(), m.description(), m.engineApiRange(), m.type(), "s3k", m.entrypoint(),
+                m.dependencies(), m.audioOverrides(), m.artOverrides(), m.insertAfter(), m.patternWindows());
+        ModDescriptor third = new ModDescriptor(thirdSource.jarPath(), differentHost,
+                thirdSource.sha256(), true, List.of());
+        var factory = new ModClassLoaderFactory(getClass().getClassLoader(),
+                (descriptor, snapshot) -> new ModValidationReport(List.of()));
+        try (ModRuntime runtime = factory.create(new EffectiveModCatalog(List.of(first, second, third)),
+                Set.of("zone-first", "zone-second", "zone-third"))) {
+            var plan = runtime.newRegistrationPlan();
+            assertEquals(List.of("zone-first:content", "zone-second:content", "zone-third:content"),
                     plan.registrations().stream().map(RegisteredPatch::namespacedId).toList());
-            assertEquals(Set.of("zone-collision", "zone-dependent"),
-                    runtime.registrationFailures().keySet());
-            assertTrue(runtime.registrationFailures().get("zone-collision").getMessage()
-                    .contains("zoneIndex"));
-            assertTrue(runtime.runtimeDisabledOwners().containsAll(
-                    Set.of("zone-collision", "zone-dependent")));
+            assertTrue(runtime.registrationFailures().isEmpty(), runtime.registrationFailures().toString());
+            assertTrue(runtime.runtimeDisabledOwners().isEmpty());
+        }
+    }
+
+    private ModDescriptor withComposition(ModDescriptor source, ModCompositionMetadata composition) {
+        ModManifest m = source.manifest();
+        ModManifest manifest = new ModManifest(m.formatVersion(),m.id(),m.name(),m.version(),m.authors(),m.description(),
+                m.engineApiRange(),m.type(),m.baseGame(),m.entrypoint(),m.dependencies(),m.audioOverrides(),m.artOverrides(),
+                m.insertAfter(),m.patternWindows(),composition);
+        return new ModDescriptor(source.jarPath(),manifest,source.sha256(),source.containsCode(),source.findings());
+    }
+    private ModState enabled(List<ModDescriptor> descriptors) {
+        var entries = new ArrayList<ModState.Entry>();
+        for (int index=0;index<descriptors.size();index++) {
+            var descriptor = descriptors.get(index);
+            entries.add(new ModState.Entry(descriptor.manifest().id(),true,index,true,descriptor.sha256()));
+        }
+        return new ModState(1,entries);
+    }
+    @Test
+    void catalogOptionalOrderCyclesAndConflictsHaveDeterministicProductionEligibility() throws Exception {
+        var a = descriptor("a",GoodEntrypoint.class,List.of());
+        var b = withComposition(descriptor("b",GoodEntrypoint.class,List.of()),
+                new ModCompositionMetadata(List.of("a"),List.of("missing"),List.of(),Set.of()));
+        for (List<ModDescriptor> discovered : List.of(List.of(a,b),List.of(b,a))) {
+            var catalog = new EffectiveCatalogBuilder().build(discovered,enabled(List.of(a,b)));
+            assertEquals(List.of("b","a"),catalog.effective().orderedEnabled().stream().map(value -> value.manifest().id()).toList());
+        }
+        var cyclicA = withComposition(a,new ModCompositionMetadata(List.of("b"),List.of(),List.of(),Set.of()));
+        var cyclic = new EffectiveCatalogBuilder().build(List.of(cyclicA,b),enabled(List.of(a,b)));
+        assertTrue(cyclic.effective().orderedEnabled().isEmpty());
+        assertEquals("ORDERING_CYCLE",cyclic.eligibility().get("a").reasons().getFirst().code());
+        var conflict = withComposition(a,new ModCompositionMetadata(List.of(),List.of(),List.of("b"),Set.of()));
+        var conflicting = new EffectiveCatalogBuilder().build(List.of(conflict,b),enabled(List.of(a,b)));
+        assertTrue(conflicting.effective().orderedEnabled().isEmpty());
+        assertEquals("MOD_CONFLICT",conflicting.eligibility().get("b").reasons().getFirst().code());
+        var unavailableA = withComposition(descriptor("a",GoodEntrypoint.class,List.of(
+                new ModDependency("absent",VersionRange.parse("*")))),
+                new ModCompositionMetadata(List.of("b"),List.of(),List.of(),Set.of()));
+        var unavailableNeighbor = new EffectiveCatalogBuilder().build(List.of(unavailableA,b),enabled(List.of(unavailableA,b)));
+        assertEquals(List.of("b"),unavailableNeighbor.effective().orderedEnabled().stream().map(value -> value.manifest().id()).toList());
+        assertEquals("DEPENDENCY_MISSING",unavailableNeighbor.eligibility().get("a").reasons().getFirst().code());
+    }
+    @Test
+    void unusedAndConflictingActualPublishedExclusiveClaimsRejectOwnersAndHardDependents() throws Exception {
+        var first = withComposition(descriptor("first",SharedSceneEntrypoint.class,List.of()),
+                new ModCompositionMetadata(List.of(),List.of(),List.of(),Set.of("startup-scene")));
+        var second = descriptor("second",SharedSceneEntrypoint.class,List.of());
+        var dependent = descriptor("dependent",GoodEntrypoint.class,List.of(new ModDependency("first",VersionRange.parse("*"))));
+        var unused = withComposition(descriptor("unused",GoodEntrypoint.class,List.of()),
+                new ModCompositionMetadata(List.of(),List.of(),List.of(),Set.of("game-start")));
+        var factory = new ModClassLoaderFactory(getClass().getClassLoader(),(descriptor,snapshot)->new ModValidationReport(List.of()));
+        try (var runtime = factory.create(new EffectiveModCatalog(List.of(first,second,dependent,unused)),Set.of("first","second","dependent","unused"))) {
+            runtime.installFaultBoundary(new ModFaultBoundary(Map.of(),new ModRuntimeFindingStore(), ignored -> new ModStateSaveResult.Saved(),ignored -> {}));
+            assertTrue(runtime.newRegistrationPlan().registrations().isEmpty());
+            assertTrue(runtime.registrationPlans().isEmpty());
+            assertEquals(Set.of("first","second","dependent","unused"),runtime.registrationFailures().keySet());
+            assertTrue(runtime.registrationFailures().get("first").getMessage().contains("Exclusive contribution conflict"));
+            assertTrue(runtime.registrationFailures().get("unused").getMessage().contains("Unused exclusive"));
+        }
+        try (var runtime = factory.create(new EffectiveModCatalog(List.of(second)),Set.of("second"))) {
+            runtime.installFaultBoundary(new ModFaultBoundary(Map.of(),new ModRuntimeFindingStore(), ignored -> new ModStateSaveResult.Saved(),ignored -> {}));
+            runtime.newRegistrationPlan();
+            var target = runtime.contributionReport().targets().stream().filter(value -> value.contribution().equals("startup-scene")).findFirst().orElseThrow();
+            assertEquals("second",target.winner()); assertTrue(target.shadowedOwners().isEmpty());
+            runtime.disableOwnersForProcess(Set.of("second")); assertTrue(runtime.contributionReport().targets().isEmpty());
         }
     }
 

@@ -127,6 +127,11 @@ public final class ModSceneHost {
         return lastFrame;
     }
 
+    /** Immutable recording for engine diagnostics and the separately distributed creator testkit. */
+    public List<SceneDrawOp> recordedFrame() {
+        return List.copyOf(lastFrame);
+    }
+
     /** Closes the open scene: calls {@link ModScene#exit} and releases its textures. */
     public void close() {
         ModScene closing = scene;

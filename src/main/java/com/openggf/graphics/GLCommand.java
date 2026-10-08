@@ -59,6 +59,7 @@ public class GLCommand implements GLCommandable {
 	private GLCommandable customAction;
 	private final GraphicsManager graphicsManager;
 	private final int screenHeightPixels;
+	private final int screenSpaceHeight;
 
 	// Static VAO/VBO for primitive rendering (shared across all instances)
 	private static int vaoId = 0;
@@ -85,6 +86,7 @@ public class GLCommand implements GLCommandable {
 			SonicConfigurationService configService) {
 		this.graphicsManager = graphicsManager;
 		this.screenHeightPixels = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+		this.screenSpaceHeight = 0;
 		this.glCmdCommandType = commandType;
 		this.value = value;
 	}
@@ -98,6 +100,7 @@ public class GLCommand implements GLCommandable {
 			SonicConfigurationService configService) {
 		this.graphicsManager = graphicsManager;
 		this.screenHeightPixels = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+		this.screenSpaceHeight = 0;
 		this.glCmdCommandType = commandType;
 		this.customAction = customAction;
 	}
@@ -126,6 +129,7 @@ public class GLCommand implements GLCommandable {
 			GraphicsManager graphicsManager, SonicConfigurationService configService) {
 		this.graphicsManager = graphicsManager;
 		this.screenHeightPixels = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+		this.screenSpaceHeight = 0;
 		this.glCmdCommandType = glCmdCommandType;
 		this.drawMethod = drawMethod;
 		this.colour1 = colour1;
@@ -152,6 +156,7 @@ public class GLCommand implements GLCommandable {
 			GraphicsManager graphicsManager, SonicConfigurationService configService) {
 		this.graphicsManager = graphicsManager;
 		this.screenHeightPixels = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+		this.screenSpaceHeight = 0;
 		this.glCmdCommandType = glCmdCommandType;
 		this.drawMethod = drawMethod;
 		this.colour1 = colour1;
@@ -176,8 +181,17 @@ public class GLCommand implements GLCommandable {
 			float colour2,
 			float colour3, float alpha, int x1, int y1, int x2, int y2,
 			GraphicsManager graphicsManager, SonicConfigurationService configService) {
+		this(glCmdCommandType, drawMethod, blendType, colour1, colour2, colour3, alpha,
+				x1, y1, x2, y2, graphicsManager,
+				configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS), 0);
+	}
+
+	private GLCommand(CommandType glCmdCommandType, int drawMethod, BlendType blendType, float colour1,
+			float colour2, float colour3, float alpha, int x1, int y1, int x2, int y2,
+			GraphicsManager graphicsManager, int displayHeight, int screenSpaceHeight) {
 		this.graphicsManager = graphicsManager;
-		this.screenHeightPixels = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+		this.screenHeightPixels = displayHeight;
+		this.screenSpaceHeight = screenSpaceHeight;
 		this.glCmdCommandType = glCmdCommandType;
 		this.drawMethod = drawMethod;
 		this.colour1 = colour1;
@@ -191,6 +205,44 @@ public class GLCommand implements GLCommandable {
 		this.blendMode = blendType;
 	}
 
+	/**
+	 * Creates a filled ARGB rectangle in logical screen coordinates. Camera movement
+	 * does not affect queued execution or immutable CPU sprite preparation. The
+	 * supplied graphics host owns projection and shader state; logicalHeight is
+	 * the fallback when that host has no projection. Bounds are not clipped here.
+	 * Use the host from engine services; creator-defined host overrides are rejected
+	 * before their virtual methods can become deferred render callbacks.
+	 */
+	public static GLCommand screenSpaceRect(GraphicsManager graphics, int logicalHeight,
+			int x, int y, int width, int height, int argb) {
+		requireScreenGraphics(graphics);
+		if (logicalHeight <= 0 || width <= 0 || height <= 0) {
+			throw new IllegalArgumentException("Screen rectangle dimensions must be positive");
+		}
+		int right = Math.addExact(x, width), bottom = Math.addExact(y, height);
+		int displayHeight = screenDisplayHeight(graphics, logicalHeight);
+		Math.subtractExact(displayHeight, y);
+		Math.subtractExact(displayHeight, bottom);
+		return new GLCommand(CommandType.RECTI, 0, BlendType.ONE_MINUS_SRC_ALPHA,
+				((argb >>> 16) & 255) / 255f, ((argb >>> 8) & 255) / 255f, (argb & 255) / 255f,
+				(argb >>> 24) / 255f, x, y, right, bottom, graphics, displayHeight, logicalHeight);
+	}
+
+	private static GraphicsManager requireScreenGraphics(GraphicsManager graphics) {
+		java.util.Objects.requireNonNull(graphics, "graphics");
+		if (graphics.getClass().getClassLoader() != GraphicsManager.class.getClassLoader()) {
+			throw new SecurityException("Screen-space drawing requires an engine-owned graphics host");
+		}
+		return graphics;
+	}
+
+	private static int screenDisplayHeight(GraphicsManager graphics, int fallback) {
+		RenderProjection projection = graphics.getProjectionSource();
+		int height = projection == null ? fallback : projection.getCurrentDisplayHeight();
+		if (height <= 0) throw new IllegalStateException("Invalid rendering projection height");
+		return height;
+	}
+
 	// Accessor methods for GLCommandGroup batching
 	public float getX1() { return x1; }
 	public float getY1() { return y1; }
@@ -202,20 +254,28 @@ public class GLCommand implements GLCommandable {
 
 	/** Immutable CPU description for diagnostic/procedural sprite primitives. */
 	record PresentationPrimitive(CommandType type, int method, BlendType blend,
-			float red, float green, float blue, float alpha, int x1, int y1, int x2, int y2)
-			implements SpritePresentation.Geometry {
+			float red, float green, float blue, float alpha, int x1, int y1, int x2, int y2,
+			int screenSpaceHeight) implements SpritePresentation.Geometry {
 		public GLCommand command(int cameraX, int cameraY) {
+			if (screenSpaceHeight > 0) return command(bootstrapGraphicsManager(), cameraX, cameraY);
 			return new GLCommand(type, method, blend, red, green, blue, alpha,
 					x1 + cameraX, y1 + cameraY, x2 + cameraX, y2 + cameraY);
+		}
+		public GLCommand command(GraphicsManager graphics, int cameraX, int cameraY) {
+			if (screenSpaceHeight == 0) return command(cameraX, cameraY);
+			return new GLCommand(type, method, blend, red, green, blue, alpha, x1, y1, x2, y2,
+					requireScreenGraphics(graphics),
+					screenDisplayHeight(graphics, screenSpaceHeight), screenSpaceHeight);
 		}
 	}
 
 	PresentationPrimitive preparePrimitive(int cameraX, int cameraY) {
 		if (glCmdCommandType != CommandType.RECTI && glCmdCommandType != CommandType.VERTEX2I)
 			throw new IllegalStateException("Non-primitive GL command in CPU sprite preparation: " + glCmdCommandType);
+		int offsetX = screenSpaceHeight > 0 ? 0 : cameraX, offsetY = screenSpaceHeight > 0 ? 0 : cameraY;
 		return new PresentationPrimitive(glCmdCommandType, drawMethod, blendMode,
-				colour1, colour2, colour3, alpha, x1 - cameraX, screenHeightPixels - y1 - cameraY,
-				x2 - cameraX, screenHeightPixels - y2 - cameraY);
+				colour1, colour2, colour3, alpha, x1 - offsetX, screenHeightPixels - y1 - offsetY,
+				x2 - offsetX, screenHeightPixels - y2 - offsetY, screenSpaceHeight);
 	}
 
 	private static void ensureBuffers() {
@@ -233,7 +293,10 @@ public class GLCommand implements GLCommandable {
 	}
 
 	private static void setupShaderAndUniforms(int cameraX, int cameraY) {
-		GraphicsManager gm = bootstrapGraphicsManager();
+		setupShaderAndUniforms(bootstrapGraphicsManager(), cameraX, cameraY);
+	}
+
+	private static void setupShaderAndUniforms(GraphicsManager gm, int cameraX, int cameraY) {
 		ShaderProgram debugShader = gm.getDebugShaderProgram();
 		if (debugShader == null) {
 			return;
@@ -272,6 +335,7 @@ public class GLCommand implements GLCommandable {
 	}
 
 	public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+		if (screenSpaceHeight > 0) { cameraX = 0; cameraY = 0; }
 		switch (glCmdCommandType) {
 			case USE_PROGRAM:
 				glUseProgram(value);
@@ -308,14 +372,21 @@ public class GLCommand implements GLCommandable {
 		}
 
 		ensureBuffers();
-		setupShaderAndUniforms(cameraX, cameraY);
+		if (screenSpaceHeight > 0) setupShaderAndUniforms(graphicsManager, cameraX, cameraY);
+		else setupShaderAndUniforms(cameraX, cameraY);
 
 		if (CommandType.RECTI.equals(glCmdCommandType)) {
 			// Draw filled rectangle using GL_TRIANGLE_FAN
+			int displayHeight = screenSpaceHeight > 0
+					? screenDisplayHeight(graphicsManager, screenSpaceHeight) : screenHeightPixels;
 			float rx1 = x1 - cameraX;
-			float ry1 = y1 + cameraY;
+			float ry1 = screenSpaceHeight > 0
+					? (float) displayHeight - (screenHeightPixels - y1)
+					: y1 + cameraY;
 			float rx2 = x2 - cameraX;
-			float ry2 = y2 + cameraY;
+			float ry2 = screenSpaceHeight > 0
+					? (float) displayHeight - (screenHeightPixels - y2)
+					: y2 + cameraY;
 
 			vertexBuffer.clear();
 			// 4 vertices for rectangle (bottom-left, bottom-right, top-right, top-left)

@@ -118,10 +118,18 @@ and `--s3k` paths. A standalone starter needs no ROM.
 
 ## Verify and share
 
-Run `ggfmod validate <mod.jar>` and review every warning. `--format json` produces
-structured findings; `--warnings error` is an explicit CI policy for clean public
-API consumers. Warnings about intentional internal references remain useful even
-when a prototype opts into `--warnings allow`.
+Validate this project's packaged jar with the kit launcher, from any directory:
+
+```sh
+sh /absolute/path/creator-kit/ggfmod validate /absolute/path/my-mod/target/my-mod-mod.jar --format json --warnings allow
+```
+
+Review every warning. `--format json` produces structured findings;
+`--warnings error` is an explicit CI policy for clean public API consumers.
+This prototype permits warnings about intentional internal references with
+`--warnings allow`; those findings still need review. Share the validated
+`/absolute/path/my-mod/target/my-mod-mod.jar`. The isolated `target/play` directory
+contains generated runtime configuration and saves, not the distributable.
 
 Check actual visible/gameplay behavior, rewind and save/load. A validation pass
 proves structure, not that your chosen stock art key or animation is used.

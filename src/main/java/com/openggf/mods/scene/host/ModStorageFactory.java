@@ -11,7 +11,11 @@ public final class ModStorageFactory {
     public static SceneStorage forOwner(Path saveRoot, String verifiedOwner) {
         // Creator code receives a handle from its verified ModContext/SceneContext.
         // The public bridge exists only because these engine hosts occupy different packages.
-        Class<?> caller = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE).getCallerClass();
+        Class<?> caller = StackWalker.getInstance(java.util.Set.of(
+                        StackWalker.Option.RETAIN_CLASS_REFERENCE, StackWalker.Option.SHOW_HIDDEN_FRAMES))
+                .walk(frames -> frames.map(StackWalker.StackFrame::getDeclaringClass)
+                        .filter(type -> type != ModStorageFactory.class && type.getClassLoader() != null)
+                        .findFirst().orElseThrow());
         if (caller.getClassLoader() != ModStorageFactory.class.getClassLoader()) {
             throw new SecurityException("Creator storage must come from its owner-scoped context");
         }

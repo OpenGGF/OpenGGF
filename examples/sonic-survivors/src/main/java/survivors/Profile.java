@@ -1,14 +1,12 @@
 package survivors;
 
-import java.io.IOException;
 import com.openggf.mods.state.VersionedSettings;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import com.openggf.mods.ModStorage;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Permanent progress kept between runs in {@code saves/sonic-survivors/profile.txt}: the ring
+ * Permanent progress kept between runs in owner-scoped {@code profile.txt}: the ring
  * bank and the shop levels it buys, the Chaos Emeralds won from zone bosses, the furthest zone a
  * run may start from, and lifetime records. Saved as plain {@code key=value} lines whenever it
  * changes; an unreadable file starts a fresh profile rather than failing the game.
@@ -21,7 +19,7 @@ final class Profile {
     /** Zone bosses EHZ to OOZ each award one emerald, once. */
     static final int EMERALDS = 7;
 
-    private final Path file;
+    private final ModStorage storage;
     private boolean loaded;
     private boolean writable = true;
     /** Shop scale version: 2 is the small-increment shop. Older saves convert once on load. */
@@ -46,7 +44,7 @@ final class Profile {
     /** Longest unlimited survival per route stage, in seconds. */
     final int[] bestUnlimited = new int[Stages.COUNT];
 
-    Profile(Path file) { this.file = file; }
+    Profile(ModStorage storage) { this.storage = java.util.Objects.requireNonNull(storage); }
 
     static String shopName(int item) {
         return switch (item) {
@@ -217,9 +215,10 @@ final class Profile {
     Profile load() {
         if (loaded) return this;
         loaded = true;
-        if (!Files.isRegularFile(file)) return this;
+        var text = storage.read("profile.txt");
+        if (text.isEmpty()) return this;
         try {
-            var settings = VersionedSettings.parse(Files.readString(file)).requireVersion(0);
+            var settings = VersionedSettings.parse(text.orElseThrow()).requireVersion(0);
             for (var entry : settings.entries().entrySet()) {
                 String key = entry.getKey();
                 int value;
@@ -263,9 +262,9 @@ final class Profile {
             }
         } catch (IllegalArgumentException unsupportedFormat) {
             writable = false;
-            Logger.getLogger(Profile.class.getName()).log(Level.WARNING, "Unsupported profile format " + file, unsupportedFormat);
-        } catch (IOException | RuntimeException e) {
-            Logger.getLogger(Profile.class.getName()).log(Level.WARNING, "Could not read " + file, e);
+            Logger.getLogger(Profile.class.getName()).log(Level.WARNING, "Unsupported owned Survivors profile format", unsupportedFormat);
+        } catch (RuntimeException e) {
+            Logger.getLogger(Profile.class.getName()).log(Level.WARNING, "Could not read owned Survivors profile", e);
         }
         if (shopVersion < SHOP_VERSION) convertShop();
         return this;
@@ -311,10 +310,10 @@ final class Profile {
         }
         for (int i = 0; i < SHOP_COUNT; i++) out.append("shop.").append(i).append('=').append(shop[i]).append('\n');
         try {
-            Files.createDirectories(file.getParent());
-            Files.writeString(file, VersionedSettings.parse(out.toString()).serialize());
-        } catch (IOException | RuntimeException e) {
-            Logger.getLogger(Profile.class.getName()).log(Level.WARNING, "Could not save " + file, e);
+            if (!storage.write("profile.txt", VersionedSettings.parse(out.toString()).serialize()))
+                Logger.getLogger(Profile.class.getName()).warning("Could not save owned Survivors profile");
+        } catch (RuntimeException e) {
+            Logger.getLogger(Profile.class.getName()).log(Level.WARNING, "Could not save owned Survivors profile", e);
         }
     }
 }

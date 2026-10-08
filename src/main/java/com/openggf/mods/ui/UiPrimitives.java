@@ -9,13 +9,15 @@ public final class UiPrimitives {
     public static void frame(PixelCanvas c, int x, int y, int w, int h, int argb) {
         Objects.requireNonNull(c, "canvas");
         if (w <= 0 || h <= 0) return;
-        c.fill(x, y, w, 1, argb); c.fill(x, y + h - 1, w, 1, argb);
-        c.fill(x, y, 1, h, argb); c.fill(x + w - 1, y, 1, h, argb);
+        int right = Math.addExact(x, w - 1), bottom = Math.addExact(y, h - 1);
+        c.fill(x, y, w, 1, argb); c.fill(x, bottom, w, 1, argb);
+        c.fill(x, y, 1, h, argb); c.fill(right, y, 1, h, argb);
     }
     public static void gradient(PixelCanvas c, int x, int y, int w, int h, int top, int bottom) {
         Objects.requireNonNull(c, "canvas");
         if (w <= 0 || h <= 0) return;
         if (h > 4096) throw new IllegalArgumentException("Gradient height exceeds 4096");
+        Math.addExact(y, h - 1);
         for (int row = 0; row < h; row++) {
             double amount = h == 1 ? 0 : (double) row / (h - 1);
             int color = 0;

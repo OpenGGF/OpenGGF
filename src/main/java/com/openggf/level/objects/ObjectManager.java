@@ -2375,6 +2375,36 @@ public class ObjectManager {
         return ObjectInstanceQueries.activeObjectsOfType(activeObjects, dynamicObjects, type);
     }
 
+    private final ObjectQuery objectQuery = new ObjectQuery() {
+        @Override public <T extends ObjectInstance> List<T> activeObjectsOfType(Class<T> type) {
+            List<T> objects=ObjectManager.this.activeObjectsOfType(java.util.Objects.requireNonNull(type));
+            objects.sort((left,right) -> compareQueryIdentities(rewindObjectIds.get(left),rewindObjectIds.get(right)));
+            return List.copyOf(objects);
+        }
+        @Override public java.util.Optional<ObjectRefId> identityOf(ObjectInstance object) {
+            for (ObjectInstance live:getActiveObjects()) if (live == object)
+                return java.util.Optional.ofNullable(rewindObjectIds.get(object));
+            return java.util.Optional.empty();
+        }
+        @Override public java.util.Optional<ObjectInstance> resolve(ObjectRefId identity) {
+            java.util.Objects.requireNonNull(identity);
+            for (ObjectInstance live:getActiveObjects()) if (identity.equals(rewindObjectIds.get(live)))
+                return java.util.Optional.of(live);
+            return java.util.Optional.empty();
+        }
+    };
+
+    public ObjectQuery objectQuery() { return objectQuery; }
+
+    private static int compareQueryIdentities(ObjectRefId left,ObjectRefId right) {
+        if (left == right) return 0;
+        if (left == null) return 1;
+        if (right == null) return -1;
+        int order=Integer.compare(left.dynamicId(),right.dynamicId());
+        if (order == 0) order=Integer.compare(left.spawnId(),right.spawnId());
+        return order == 0 ? Integer.compare(left.generation(),right.generation()) : order;
+    }
+
     /**
      * Test helper: reserve dynamic slots (from the front of the pool) until exactly
      * {@code freeSlots} remain free. Used by the spilled-ring atomic-allocation tests
