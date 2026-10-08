@@ -1098,6 +1098,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Measured fixtures release source/evidence caches and owned mock history, with
   fixed frame-driving stubs installed once. SOZ route checks draw every frame
   without reading back discarded pixels; screenshot checks keep pixel readback.
+  Lower-rock puzzle checks compute each whole-world rewind diff once, and
+  background checks read pixels only from frames used by their assertions.
   Strict byte validation, digest pins, ROM configurations, stress sizes, and real
   socket exchanges remain covered. An opt-in two-JVM test profile retains serial
   execution inside each worker. Public audio tests retain synthetic chip vectors;
