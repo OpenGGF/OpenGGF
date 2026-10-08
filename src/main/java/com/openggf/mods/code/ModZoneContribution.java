@@ -22,9 +22,11 @@ public record ModZoneContribution(String localKey, BakedLevelRef level,
         if (additionalActs.size() >= com.openggf.io.ModInputLimits.DEFAULT_MAX_COLLECTION_ENTRIES)
             throw new IllegalArgumentException("Too many authored acts");
     }
-    public ModZoneContribution(String localKey, BakedLevelRef level, String insertAfter,
-            ZoneEventFactory eventFactory, boolean gameStart) {
-        this(localKey, level, insertAfter, eventFactory, gameStart, List.of(), null);
+    /** A single authored act; use {@link #multiAct} for an ordered campaign. */
+    public static ModZoneContribution singleAct(String localKey, BakedLevelRef level,
+            String insertAfter, ZoneEventFactory eventFactory, boolean gameStart) {
+        return new ModZoneContribution(localKey, level, insertAfter, eventFactory,
+                gameStart, List.of(), null);
     }
     public static ModZoneContribution multiAct(String localKey, List<BakedLevelRef> acts,
             String insertAfter, ZoneEventFactory events, boolean gameStart) {

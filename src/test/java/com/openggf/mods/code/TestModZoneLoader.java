@@ -232,24 +232,24 @@ class TestModZoneLoader {
     @Test
     void registrationIsOwnerScopedOrderedAndDuplicatePoisonsTransaction() {
         ModContext context = new ModContext("alpha", "s2", nullAssets(), "mtz3");
-        context.registerZone(new ModZoneContribution("first", new BakedLevelRef("one/level.json"), null, null, false));
-        context.registerZone(new ModZoneContribution("second", new BakedLevelRef("two/level.json"), "cpz2", null, false));
+        context.registerZone(ModZoneContribution.singleAct("first", new BakedLevelRef("one/level.json"), null, null, false));
+        context.registerZone(ModZoneContribution.singleAct("second", new BakedLevelRef("two/level.json"), "cpz2", null, false));
         assertThrows(ModRegistrationException.class, context::freeze,
                 "missing level bytes must prevent publication of the transaction");
 
-        assertEquals("mtz3", new ModZoneContribution("first", new BakedLevelRef("level.json"), null, null, false)
+        assertEquals("mtz3", ModZoneContribution.singleAct("first", new BakedLevelRef("level.json"), null, null, false)
                 .withDefaultAnchor("mtz3").insertAfter());
 
         ModContext duplicate = new ModContext("alpha", "s2", nullAssets(), "mtz3");
-        duplicate.registerZone(new ModZoneContribution("same", new BakedLevelRef("one/level.json"), null, null, false));
+        duplicate.registerZone(ModZoneContribution.singleAct("same", new BakedLevelRef("one/level.json"), null, null, false));
         assertThrows(ModRegistrationException.class, () -> duplicate.registerZone(
-                new ModZoneContribution("same", new BakedLevelRef("two/level.json"), null, null, false)));
+                ModZoneContribution.singleAct("same", new BakedLevelRef("two/level.json"), null, null, false)));
         assertThrows(ModRegistrationException.class, duplicate::freeze);
     }
 
     @Test
     void zoneRegistrationDefaultsToMtz3WhileAnchorlessHostsDeferToCapabilityValidation() {
-        ModZoneContribution declaration = new ModZoneContribution(
+        ModZoneContribution declaration = ModZoneContribution.singleAct(
                 "zone", new BakedLevelRef("level.json"), null, null, false);
         assertEquals("mtz3", declaration.withDefaultAnchor("mtz3").insertAfter());
         ModContext wrongGame = new ModContext("alpha", "s1", nullAssets(), null);
@@ -270,14 +270,14 @@ class TestModZoneLoader {
         try (var assets = com.openggf.io.ModAssetRoot.jar(
                 temp, jar, com.openggf.io.ModInputLimits.production())) {
             ModContext context = new ModContext("alpha", "s2", assets, null);
-            context.registerZone(new ModZoneContribution(
+            context.registerZone(ModZoneContribution.singleAct(
                     "zone", new BakedLevelRef("level.json"), null, null, false));
             ModRegistrationPlan plan = context.freeze();
             assertEquals("mtz3", plan.zones().getFirst().insertAfter());
             assertEquals("mtz3", plan.preparedZones().getFirst().insertAfter());
         }
 
-        ModZoneContribution declared = new ModZoneContribution(
+        ModZoneContribution declared = ModZoneContribution.singleAct(
                 "declared", new BakedLevelRef("level.json"), "mtz3", null, false);
         PreparedModZone wrong = prepared("alpha", "different", 0x400, 0x40);
         assertThrows(IllegalArgumentException.class, () -> new ModRegistrationPlan(
@@ -287,7 +287,7 @@ class TestModZoneLoader {
 
     @Test
     void anchorlessDeclarationAndPreparedPayloadMatchNullSafely() {
-        ModZoneContribution declared = new ModZoneContribution(
+        ModZoneContribution declared = ModZoneContribution.singleAct(
                 "sky", new BakedLevelRef("level.json"), null, null, false);
         PreparedModZone prepared = PreparedModZone.prepared("alpha", declared, minimalDefinition());
 
@@ -406,7 +406,7 @@ class TestModZoneLoader {
     void preparedFixtureBuildsPlayableLevelAndRetainsTaggedSpawnIdentity() throws Exception {
         ModLevelDefinition definition = minimalDefinition();
         PreparedModZone prepared = PreparedModZone.prepared("alpha",
-                new ModZoneContribution("zone", new BakedLevelRef("level.json"), "mtz3", null, false),
+                ModZoneContribution.singleAct("zone", new BakedLevelRef("level.json"), "mtz3", null, false),
                 definition);
         var sheet = new com.openggf.level.rings.RingSpriteSheet(
                 new com.openggf.level.Pattern[0], List.of(), 1, 8, 0, 0);
@@ -430,7 +430,7 @@ class TestModZoneLoader {
         ModLevelDefinition keyedOnly = copyWith(base, 8, base.blockBytes(),
                 List.of(base.objects().getLast()), namespaced);
         PreparedModZone preparedEight = PreparedModZone.prepared("alpha",
-                new ModZoneContribution("eight", new BakedLevelRef("level.json"), "mtz3", null, false),
+                ModZoneContribution.singleAct("eight", new BakedLevelRef("level.json"), "mtz3", null, false),
                 keyedOnly);
         var sheet = new com.openggf.level.rings.RingSpriteSheet(
                 new com.openggf.level.Pattern[0], List.of(), 1, 8, 0, 0);
@@ -444,7 +444,7 @@ class TestModZoneLoader {
         ModLevelDefinition sixteen = copyWith(base, 16, new byte[512],
                 List.of(base.objects().getLast()), namespaced);
         PreparedModZone preparedSixteen = PreparedModZone.prepared("alpha",
-                new ModZoneContribution("sixteen", new BakedLevelRef("level.json"), "mtz3", null, false),
+                ModZoneContribution.singleAct("sixteen", new BakedLevelRef("level.json"), "mtz3", null, false),
                 sixteen);
         var loadedSixteen = ModZoneLoader.loadStandalone(preparedSixteen, sheet);
         assertEquals(16, loadedSixteen.getChunksPerBlockSide());
@@ -454,14 +454,14 @@ class TestModZoneLoader {
         ModLevelDefinition withStockObject = copyWith(base, 8, base.blockBytes(),
                 base.objects(), namespaced);
         PreparedModZone withStock = PreparedModZone.prepared("alpha",
-                new ModZoneContribution("stock", new BakedLevelRef("level.json"), "mtz3", null, false),
+                ModZoneContribution.singleAct("stock", new BakedLevelRef("level.json"), "mtz3", null, false),
                 withStockObject);
         assertThrows(java.io.IOException.class,
                 () -> ModZoneLoader.loadStandalone(withStock, sheet));
         ModLevelDefinition withStockMusic = copyWith(base, 8, base.blockBytes(),
                 List.of(base.objects().getLast()), base.music());
         PreparedModZone stockMusic = PreparedModZone.prepared("alpha",
-                new ModZoneContribution("music", new BakedLevelRef("level.json"), "mtz3", null, false),
+                ModZoneContribution.singleAct("music", new BakedLevelRef("level.json"), "mtz3", null, false),
                 withStockMusic);
         assertThrows(java.io.IOException.class,
                 () -> ModZoneLoader.loadStandalone(stockMusic, sheet));
@@ -478,7 +478,7 @@ class TestModZoneLoader {
                 base.secondaryCollisionIndices(), base.paletteLines(), base.patternCount(),
                 base.chunkCount(), base.blockCount(), base.solidProfileCount());
         PreparedModZone prepared = PreparedModZone.prepared("alpha",
-                new ModZoneContribution("zone", new BakedLevelRef("level.json"), "mtz3", null, false), sixteen);
+                ModZoneContribution.singleAct("zone", new BakedLevelRef("level.json"), "mtz3", null, false), sixteen);
         var sheet = new com.openggf.level.rings.RingSpriteSheet(
                 new com.openggf.level.Pattern[0], List.of(), 1, 8, 0, 0);
         assertThrows(java.io.IOException.class, () -> ModZoneLoader.load(prepared, sheet));
@@ -542,7 +542,7 @@ class TestModZoneLoader {
         ModLevelDefinition definition = minimalDefinition(new ModLevelDefinition.TrackMusic(
                 new com.openggf.mods.TrackKey("alpha", "zone-theme")));
         PreparedModZone prepared = PreparedModZone.prepared("alpha",
-                new ModZoneContribution("zone", new BakedLevelRef("level.json"), "mtz3", null, false), definition);
+                ModZoneContribution.singleAct("zone", new BakedLevelRef("level.json"), "mtz3", null, false), definition);
         ZoneRegistry registry = ModZoneRegistry.decorate(stockRegistry(), List.of(prepared));
 
         assertEquals(MusicReference.namespaced("alpha", "zone-theme"),
@@ -636,7 +636,7 @@ class TestModZoneLoader {
     }
 
     private static ModRegistrationPlan zonePlan(String owner, String local, int level, int zone) {
-        ModZoneContribution declared = new ModZoneContribution(
+        ModZoneContribution declared = ModZoneContribution.singleAct(
                 local, new BakedLevelRef(local + "/level.json"), "mtz3", null, false);
         PreparedModZone prepared = PreparedModZone.prepared(owner, declared,
                 definitionWithIds(level, zone));
@@ -646,7 +646,7 @@ class TestModZoneLoader {
 
     private static ModRegistrationPlan zonePlan(String owner, String local,
                                                 ModLevelDefinition definition) {
-        ModZoneContribution declared = new ModZoneContribution(
+        ModZoneContribution declared = ModZoneContribution.singleAct(
                 local, new BakedLevelRef(local + "/level.json"), "mtz3", null, false);
         PreparedModZone prepared = PreparedModZone.prepared(owner, declared, definition);
         return new ModRegistrationPlan(owner, "s2", Map.of(), Map.of(), Map.of(), List.of(),
@@ -654,7 +654,7 @@ class TestModZoneLoader {
     }
 
     private static ModRegistrationPlan s3kZonePlan(String owner, String local) {
-        ModZoneContribution declared = new ModZoneContribution(
+        ModZoneContribution declared = ModZoneContribution.singleAct(
                 local, new BakedLevelRef(local + "/level.json"), null, null, false);
         PreparedModZone prepared = PreparedModZone.prepared(owner, declared,
                 TestS3kModZoneAdapter.definition(2, null,
@@ -664,7 +664,7 @@ class TestModZoneLoader {
     }
 
     private static PreparedModZone prepared(String owner, String local, int level, int zone) {
-        ModZoneContribution declared = new ModZoneContribution(
+        ModZoneContribution declared = ModZoneContribution.singleAct(
                 local, new BakedLevelRef(local + "/level.json"), "mtz3", null, false);
         return PreparedModZone.prepared(owner, declared, definitionWithIds(level, zone));
     }

@@ -273,7 +273,7 @@ class TestModZoneRuntimeProfile {
                                              ModFaultBoundary boundary) {
         ModLevelDefinition definition = TestS3kModZoneAdapter.definition(
                 2, null, List.of(new ModPaletteClaim(2, 0, 0)));
-        ModZoneContribution declared = new ModZoneContribution(
+        ModZoneContribution declared = ModZoneContribution.singleAct(
                 "sky", new BakedLevelRef("level.json"), null, eventFactory, false);
         int ordinal = "outer".equals(owner) ? 1 : 0;
         PreparedModZone prepared = new PreparedModZone(

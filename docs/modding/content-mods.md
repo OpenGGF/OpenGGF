@@ -220,7 +220,8 @@ collision, and palette data needed to load without a ROM-address fallback.
 `ggfmod convert level` validates this exact inventory and copies a retained snapshot
 to the baked output.
 
-Register the result with `registerZone(new ModZoneContribution(...))`. Mod zones use
+Register a single act with `registerZone(ModZoneContribution.singleAct(...))`,
+or an ordered campaign with `ModZoneContribution.multiAct(...)`. Mod zones use
 owner-local authored metadata (`zoneIndex` from `0x40`, `levelIndex` from `0x400`).
 Independent mods can both start with `64` and `1024`, including mods for different
 host games. The engine allocates distinct effective zone and level IDs after
@@ -309,13 +310,13 @@ this complete policy set against a real S3K launch and shows how the policies st
 destination-scoped while the gameplay controller remains ordinary mod object code.
 
 Mod API 0.7 lets a complete-zone patch mark one owned zone as a fresh-game start and
-attach launch-only policies to that tagged destination. Set the trailing
-`ModZoneContribution` component to `true`; pass `false` for an ordinary contributed
-zone. A mod using these contracts should declare `>=0.7.0 <0.8.0`:
+attach launch-only policies to that tagged destination. Set the `gameStart`
+argument of `ModZoneContribution.singleAct(...)` or `multiAct(...)` to `true`;
+pass `false` for an ordinary contributed zone. A mod using these contracts should declare `>=0.7.0 <0.8.0`:
 
 ```java
 var destination = ZoneKey.mod("my-mod", "flappy");
-context.registerZone(new ModZoneContribution(
+context.registerZone(ModZoneContribution.singleAct(
         "flappy", new BakedLevelRef("levels/flappy/level.json"), null, null, true));
 context.registerLaunchTeam(new ModLaunchTeamContribution(
         destination, CharacterKey.TAILS, List.of()));

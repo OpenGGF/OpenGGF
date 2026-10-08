@@ -1118,3 +1118,63 @@ nine fresh suites / 73 tests with zero failures/errors/skips. The actual combine
 release-size guard method passes alongside character, sensor and rewind controls;
 the level count is now 3,143. The object-query extraction and complete fresh
 guards must still be composed and verified before resubmitting the broad run.
+
+
+### Complete fresh guards before ordinary admission
+
+The object collaborator in `eb35fdd8daec80618811440e49d498c7af7a2098` moves live
+query membership/ordering and native-slot queries into `ObjectInstanceQueries`.
+The three existing public query methods remain real thin delegates, preserving
+the creator declaration surface. ObjectManager is 3,079 effective lines against
+the unchanged 3,086 budget. Queued focused session 67415 passes 16 fresh XML
+reports / 113 tests with zero failures, errors or skips, terminal 06:10:16 UTC;
+the real size guard method also passes in a fresh one-case diagnostic. The final
+merged source `dac26bc39cd6fd3a6c0a573339752f7c5af46881` contains all three extractions.
+
+Direct session 18604 measures that clean source with
+`DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B`.
+After about 48 minutes of normal queue waiting, Maven completes at 07:04:59 UTC
+with exit one, 4:36 execution, **86 fresh XML reports / 672 tests / 12 failures /
+zero errors or skips**. Tracked executable inputs remain frozen at fingerprint
+`a9399a220a1e114abddf39a23e5a71863f434b6d2d847377af2e11567b1112f0`.
+The complete failure identities and concrete causes are:
+
+| Guard class and method | Measured failure |
+|---|---|
+| `TestAudioPresentationArchitectureGuard#noRuntimeInstallationOrCaptureLeaseSwitchRemains` | The prohibited `captureRuntime` substring appears in four save classes and two owner-bound callback wrappers. |
+| `TestProductionSingletonClosureGuard#productionCodeOnlyUsesRawGetInstanceAtEngineServicesBootstrapBridge` | Twelve new ownership, reconstruction, projection and storage helpers call raw `.getInstance()`. |
+| `TestRewindArchitectureGuard#productionRewindRegistryConstructionStaysGameplayScoped` | Support-classifier `ModTestKit.moduleState` constructs a registry under main source. |
+| `TestObjectServicesMigrationGuard#objectPackages_shouldNotNullCheckStrictServicesAccessor` | Two optional reconstruction paths null-check `services()`. |
+| `TestObjectUpdateClockTerminologyGuard#objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks` | The no-op TestObjectQuery fixture names its update clock `count`. |
+| `TestNoProvisionalModApiShims#removedRecordOverloadsStayAbsent` | ModZoneContribution reintroduces a five-argument constructor alongside the seven-component canonical constructor. |
+| `TestArchUnitRules#package_slices_are_free_of_cycles` | NativeRewindAdapterPublication calls the mod implementation OwnerBoundGamePatch directly, creating game → mods → game. |
+| `TestArchUnitRules#low_level_layers_do_not_depend_on_runtime_layers` | SilentNativeAudioProfile declares a Rom parameter in the lower-level audio package. |
+| `TestArchUnitRules#runtime_registry_controllers_are_only_constructed_by_runtime_composition_roots` | The same support-only ModTestKit registry construction is counted as runtime composition. |
+| `TestArchUnitRules#core_runtime_cycle_cluster_does_not_gain_top_level_edges` | The new game → mods edge also fails the frozen top-level ratchet. |
+| `TestNativeImageResourceGuard#everyRuntimeResourceIsReachableFromTheNativeImageConfig` | The starter index resource lacks native-image inclusion. |
+| `TestNoLeakedTemporaryFiles#testsDoNotCreateTemporaryFilesTheyNeverRemove` | TestModContextAndFaultBoundary creates a temporary directory without the recognized fixture lifetime. |
+
+These are new candidate failures and block broad/delivery qualification. No
+budget, cycle ratchet, singleton allowance or provisional-constructor assertion
+is raised to accommodate them. Three independent existing workers own bounded
+repairs; the coordinator replaces the constructor with the named `singleAct`
+factory, updates every current consumer/template and the mutable candidate pin,
+and retains the canonical constructor assertion.
+
+
+The named single-act correction is measured by direct queued session 8815:
+`python3 tools/testing/maven_queue.py --lean -Dmse=off -B -q
+-Dtest=TestNoProvisionalModApiShims,TestModApiSignatureSurface,TestModZoneLoader,TestModGameStartResolver,TestModZoneRuntimeProfile,TestModRegistrationRuntime,TestS3kModZoneAdapter,TestS3kModZoneLifecycle,TestModuleResolutionService,TestSampleFlappyRegistration,TestSampleRomArtRemixRegistration test`,
+with `DISPLAY=:0`, Lua 5.4 and the three absolute verified ROM properties used
+above. It waits 46 seconds, exits zero, and has **11 fresh XML reports / 103 tests
+/ zero failures, errors or skips**. The tracked executable-input fingerprint
+`fc65a4c4af200eca7f3f5abee119324714c2c743903737b08d3fe6187f500be8`
+remains unchanged. Compiled snapshot generation exits zero and matches the
+17,272-line candidate pin exactly: one constructor removal and one named factory
+addition, with no type-count change. The descriptor and ModApiVersion remain the
+unpublished 0.7.0 candidate according to the existing mutable-candidate policy;
+there is no stable baseline or version promotion. All current five-input Java,
+fixture/template and handbook consumers use `singleAct`; the old four-input ROM
+art handbook snippet is corrected as well. The Python modding suite passes 12
+cases, and `git diff --check` passes. These focused checks do not qualify the
+remaining guard repairs or the ordinary suite.

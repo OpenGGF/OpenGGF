@@ -31,7 +31,7 @@ public final class FlappySampleMod implements GgfMod {
         context.registerObject("pipe", (spawn, registry) -> new FlappyPipe(spawn));
         context.registerObjectArt("pipe", new BakedSheetRef("art/pipe.ggfs"));
         context.registerObjectPreview("pipe", "pipe");
-        context.registerZone(new ModZoneContribution("flappy-garden",
+        context.registerZone(ModZoneContribution.singleAct("flappy-garden",
                 new BakedLevelRef("levels/flappy/level.json"), null, null, true));
         context.registerLaunchTeam(new ModLaunchTeamContribution(
                 flappy, CharacterKey.TAILS, List.of()));
