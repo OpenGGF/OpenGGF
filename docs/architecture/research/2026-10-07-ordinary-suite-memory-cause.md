@@ -575,6 +575,9 @@ load-history assertions remain. Existing image consumers retain readback.
 New native controls compare ordinary/title pixels and state at 320/800 widths,
 exercise actual S3K special-stage results, and assert that the draw-only call
 does not invoke screenshot readback.
+Source comparison against `2fc65c847` also matched the common/results drawing
+blocks exactly after removing their screenshot returns and factoring the common
+block into `drawFrame`; neither pass ordering nor `glFinish` changed.
 
 The independent acknowledgment fix was delivered in `37a57ebdb`, with its
 process-lock evidence in the [focused-throughput research](2026-10-07-maven-focused-throughput.md#independent-diagnostic-cleanup-follow-up).
@@ -668,3 +671,49 @@ Native controls require a non-uniform framebuffer, exact pixel/state equality,
 an active title overlay in title cases, and zero screenshot calls during the
 draw-only path. Production drawing and the measured nine-class inputs were
 unchanged by these control corrections.
+
+The candidate then merged Sitar's updated integration `be3c31418` as
+`a9152b1c3`, without conflicts in the eleven changed/control Java inputs; their
+recorded source fingerprints remained identical. The subsequent destination
+`a87271f43` changes only Sitar's validation documentation. Sitar's completed
+updated-base run selected 3,020 ordinary classes and fresh guards: its published
+record reports 26,373 ordinary cases with 28 inherited assertion failures,
+zero errors and 62 matched skips, followed by 672 passing guard cases with no
+skips. The ordinary lane took 6,523.21 seconds; this is another task's baseline
+evidence, not a passing full-suite result for this candidate. Before its
+diagnostics were consumed, direct report inspection confirmed 177 cases from
+eight of the nine selected memory classes and 53 cases across four mandatory
+S3K control reports passed without skips; the audio comparator's report was not
+individually read.
+
+Rechecking the combined dry-run plan against the original task pin at
+`a9152b1c3` selected 3,022 ordinary classes plus guards, including the two new
+control classes and intervening upstream work. The bounded validation rationale
+above still applies to this task's fixture lifetimes and optional capture
+readback. The final focused scope is the nine measured classes, the two new
+controls, existing SOZ background/capture-argument controls, mandatory S3K
+loading/bootstrap/decoding controls (including both packages' classes named
+`TestSonic3kLevelLoading`), and the teardown-extension control: 19 classes,
+expected 364 cases. It exercises natural collection in a reused
+fork, rather than requesting collection between classes. No queued request has
+been cancelled, reprioritized or admitted outside the shared scheduler.
+
+The corrected native/ownership command completed against `a9152b1c3` plus
+research-only documentation edits on 2026-10-08, with all eleven Java source
+fingerprints unchanged. Both reports passed: **seven cases, zero failures,
+errors or skips**. Exact pixels/state matched for ordinary and active title-card
+frames at 320/800 widths, and actual special-stage results pixels matched with
+a non-uniform framebuffer. Draw-only calls performed no screenshot readback;
+scoped cleanup released final-class inline mocks/spies while preserving another
+fixture's mock. The command recompiled 3,700 production and 3,587 test source
+files under the normal JVM settings, taking **75 seconds** including tests.
+Its last waiting heartbeat was 10,758 seconds (about 179 minutes), separate
+from execution. Final integrated validation is still pending.
+The command below uses `OPENGGF_CHECKOUT` for the verified absolute main
+checkout path, keeping the recorded command portable.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dtest=TestOwnedMocks,TestGameplayCaptureFrameRendering \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
