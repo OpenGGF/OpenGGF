@@ -1178,3 +1178,64 @@ fixture/template and handbook consumers use `singleAct`; the old four-input ROM
 art handbook snippet is corrected as well. The Python modding suite passes 12
 cases, and `git diff --check` passes. These focused checks do not qualify the
 remaining guard repairs or the ordinary suite.
+
+
+Normal artifact-only refresh session 97042 completes at clean dac with exit zero:
+`python3 tools/testing/maven_queue.py -Dmse=off -B -q -DskipTests -Puniversal-jar verify`,
+serial/exclusive normal admission after 2,348 seconds waiting. The source and
+classifier identities stay dac/dirty=false/engine 0.7.prerelease/API candidate
+0.7.0. Two independently generated kits are byte-identical, each 52,912,113 bytes,
+SHA-256 `ae8fbd565815f0855604b476efc54e3204d073b8b9ece1dbd7aa88df21dd42a1`;
+all 420 manifest entry hashes match. The kit has eight source exports, passes the
+launcher art-key check, and contains no consumer build targets. Readback finds
+13,377 engine classes with no SDK/testkit/packager classes, 61 SDK tool classes,
+three testkit support classes and 960 API-documentation files with index.html.
+Artifacts are:
+
+| Artifact | Bytes | SHA-256 |
+|---|---:|---|
+| engine.jar | 52,733,928 | `565bf87e64413f6419283e843d880efa7a7274db07fcc88765efd085dfa25255` |
+| sdk.jar | 220,727 | `9aaeb3b0fb9181cecc0bdc2084411fab839e3b829c108189dfbeb48aa00c9e75` |
+| mod-testkit.jar | 29,097 | `7a4779e76800fd015088048a45c227fcce7f30f7154660ea1a144e7dd6fb9b98` |
+| api-docs.jar | 1,089,868 | `bc0fbd89482b9af169966e17e4db1a66bf238d4a69357489d7887dac0b0450d7` |
+
+This is historical artifact evidence at dac, with tests explicitly skipped. The
+new guard repairs change source after that build. Final artifacts and the changed
+content starter/reskin/Flappy/ROM-art consumers must therefore be refreshed after
+composition; the earlier unchanged consumer acceptance retains its actual source
+attribution. No second whole acceptance matrix is warranted by unchanged inputs.
+
+
+The presentation repair `e6b47b9459e240eca45fb41664068452c2787f4a` renames the
+save callback to `captureSaveFields`, lets silent standalone audio inherit an
+optional null native loader from GameAudioProfile, and preserves all three
+native/expert loader overrides. Reconstruction queries inspect their optional
+source services locally, retaining manager-first precedence and empty/null
+fallbacks. Two reconstruction regressions and the fixture clock rename are
+included. Direct queued session 95568 measures dac plus these repairs and two
+borrowed callback-name comparisons: 16 fresh XML / 89 tests / three failures /
+zero errors or skips, terminal 07:21:59 UTC. All six real-ROM audio controls,
+standalone, save, packaged-example and object reconstruction behaviors pass.
+ArchUnit executes all 26 rules despite a `#field` selector; the two remaining
+architecture failures are the separately assigned module cycle and support
+registry construction. The third failure is the changed pin's ordering.
+Regeneration from compiled classes and direct queued session 48288 pass API9
+with zero failures/errors/skips, terminal 07:24:11 UTC. The sorted candidate pin
+still has 880 types / 17,272 lines. Borrowed wrapper changes are excluded from
+the clean committed repair and must be composed with the ownership worker.
+
+The creator repair `10723e6c2ecc2d9aa50acf6a9069000304e126a9` marks only the
+support-only ModTestKit as a composition root. Gameplay's production registry
+allowlist is unchanged; the exact source exception is coupled to the real
+classifier staging/engine exclusion guard. An isolated support jar composes,
+captures and restores a module registry; the artifact verifier rejects actual
+support bytecode leaked into an engine jar. The native-image starter namespace
+is included and the storage test directory is JUnit-owned. Direct queued
+session 77269 uses normal `-Dmse=off -B` and the nine exact selectors
+`TestModTestKit,TestModTestKitPackager,TestModTestKitDistributionGuard,TestModSdkArtifactVerifier,TestNativeImageResourceGuard,TestNoLeakedTemporaryFiles,TestModContextAndFaultBoundary,TestRewindArchitectureGuard#productionRewindRegistryConstructionStaysGameplayScoped,TestArchUnitRules#runtime_registry_controllers_are_only_constructed_by_runtime_composition_roots`.
+It waits 11 seconds and exits one: nine fresh XML / 67 tests / two failures /
+zero errors or skips. All 41 owned cases and the actual ArchUnit registry rule
+pass. The remaining architecture failures are the separately owned silent-audio
+edge and module cycle. No frozen rule store, POM, version, pin or runtime registry
+algorithm changes. These are bounded qualification of assigned repairs, not a
+complete guard-profile pass.
