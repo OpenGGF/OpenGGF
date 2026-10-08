@@ -1,8 +1,8 @@
 package com.openggf.net.client;
 
 import com.openggf.net.host.HostMasterLink;
-import com.openggf.net.host.RaceHostServer;
-import com.openggf.net.host.DirectRoomTls;
+import com.openggf.net.host.RaceHostImpl;
+import com.openggf.net.host.RaceRoomHost;
 import com.openggf.net.hub.RoomHostConfig;
 import com.openggf.net.hub.TrackValidationProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
@@ -13,6 +13,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.net.URI;
 import java.lang.reflect.Method;
@@ -81,8 +83,10 @@ class TestMasterClient {
         host.close();
     }
 
-    @Test
-    void directJoinFallsBackToRelayWhenHostUnreachable(@TempDir Path dir) throws Exception {
+    @ParameterizedTest
+    @EnumSource(RaceHostImpl.class)
+    void directJoinFallsBackToRelayWhenHostUnreachable(RaceHostImpl impl, @TempDir Path dir)
+            throws Exception {
         server = MasterServer.start(TestMasterServer.testConfig(), dir);
         MasterClient host = connect(dir.resolve("host"), "HOST");
         establish(dir.resolve("host"));
@@ -92,7 +96,7 @@ class TestMasterClient {
                 List.of(), "ab".repeat(32))
                 .get(10, TimeUnit.SECONDS).roomId();
 
-        try (RaceHostServer hostServer = RaceHostServer.start(0,
+        try (RaceRoomHost hostServer = impl.start(0,
                 new RoomHostConfig("Lan", "s3k", 0, 0, "OPEN", null, 8, FP),
                 PlayerIdentity.loadOrCreate(dir.resolve("host")),
                 TrackValidationProfileSource.none())) {
@@ -115,8 +119,10 @@ class TestMasterClient {
         }
     }
 
-    @Test
-    void directTunnelFallbackRejectsRelayedWelcomeFromDifferentHost(@TempDir Path dir)
+    @ParameterizedTest
+    @EnumSource(RaceHostImpl.class)
+    void directTunnelFallbackRejectsRelayedWelcomeFromDifferentHost(RaceHostImpl impl,
+                                                                   @TempDir Path dir)
             throws Exception {
         server = MasterServer.start(TestMasterServer.testConfig(), dir);
         MasterClient advertisedHost = connect(dir.resolve("advertised"), "HOST");
@@ -126,7 +132,7 @@ class TestMasterClient {
         String roomId = advertisedHost.createRoom(descriptor, "DIRECT", 1, FP,
                 List.of(), "ab".repeat(32)).get(10, TimeUnit.SECONDS).roomId();
 
-        try (RaceHostServer otherHostServer = RaceHostServer.start(0,
+        try (RaceRoomHost otherHostServer = impl.start(0,
                 new RoomHostConfig("Lan", "s3k", 0, 0, "OPEN", null, 8, FP),
                 PlayerIdentity.loadOrCreate(dir.resolve("differentHost")),
                 TrackValidationProfileSource.none())) {
@@ -149,19 +155,21 @@ class TestMasterClient {
         }
     }
 
-    @Test
-    void brokerPinnedDirectRoomJoinsOverTls(@TempDir Path dir) throws Exception {
+    @ParameterizedTest
+    @EnumSource(RaceHostImpl.class)
+    void brokerPinnedDirectRoomJoinsOverTls(RaceHostImpl impl, @TempDir Path dir)
+            throws Exception {
         server = MasterServer.start(TestMasterServer.testConfig(), dir);
         MasterClient host = connect(dir.resolve("host"), "HOST");
         establish(dir.resolve("host"));
         PlayerIdentity hostIdentity = PlayerIdentity.loadOrCreate(dir.resolve("host"));
         ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(
                 "Secure", "s3k", 0, 0, "OPEN", null, 8, false);
-        try (RaceHostServer hostServer = DirectRoomTls.start(0,
+        try (RaceRoomHost hostServer = impl.startTls(0,
                 new RoomHostConfig("Secure", "s3k", 0, 0, "OPEN", null, 8, FP),
                 hostIdentity, TrackValidationProfileSource.none())) {
             String roomId = host.createRoom(descriptor, "DIRECT", hostServer.port(), FP,
-                    List.of(), DirectRoomTls.certificateSha256(hostServer))
+                    List.of(), hostServer.tlsCertificateSha256())
                     .get(10, TimeUnit.SECONDS).roomId();
             MasterClient guest = connect(dir.resolve("guest"), "GUEST");
             RaceConnection room = guest.joinRoom(roomId,

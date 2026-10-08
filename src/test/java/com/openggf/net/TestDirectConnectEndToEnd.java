@@ -4,17 +4,19 @@ import com.openggf.ghost.GhostFrame;
 import com.openggf.net.client.GhostStreamPublisher;
 import com.openggf.net.client.RaceClient;
 import com.openggf.net.client.RemoteGhostPlayback;
-import com.openggf.net.host.RaceHostServer;
 import com.openggf.net.host.ControlledRaceHost;
+import com.openggf.net.host.RaceHostImpl;
+import com.openggf.net.host.RaceRoomHost;
 import com.openggf.net.hub.HostRoundEngine;
 import com.openggf.net.hub.RoomHostConfig;
 import com.openggf.net.hub.TrackValidationProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlMessage;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -26,11 +28,14 @@ import java.util.function.Predicate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Phase-2 acceptance gate: complete real-socket round with a latency-proxied guest. */
+/**
+ * Phase-2 acceptance gate: complete real-socket round with a latency-proxied guest,
+ * on both the Netty and the JDK room host.
+ */
 @Timeout(120)
 class TestDirectConnectEndToEnd {
     private static final String FP = "0.6:cafe1234";
-    private RaceHostServer server;
+    private RaceRoomHost server;
     private LatencyProxy proxy;
 
     @AfterEach
@@ -83,10 +88,12 @@ class TestDirectConnectEndToEnd {
                 HexFormat.of().formatHex(publisher.streamHashSha256()), null));
     }
 
-    @Test
-    void fullRoundWithLatencyProxiedGuest(@TempDir Path dir) throws Exception {
+    @ParameterizedTest
+    @EnumSource(RaceHostImpl.class)
+    void fullRoundWithLatencyProxiedGuest(RaceHostImpl impl, @TempDir Path dir)
+            throws Exception {
         PlayerIdentity hostIdentity = PlayerIdentity.loadOrCreate(dir.resolve("host"));
-        ControlledRaceHost clock = new ControlledRaceHost();
+        ControlledRaceHost clock = new ControlledRaceHost(impl);
         server = clock.start(0,
                 new RoomHostConfig("E2E", "s3k", 0, 0,
                         "OPEN", null, 8, FP,
