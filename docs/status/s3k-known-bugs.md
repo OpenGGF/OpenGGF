@@ -16,7 +16,9 @@ For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
 **Current stock verification, 2026-10-08:** the [continued stock audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
 and [S3K lane audit](../architecture/audits/2026-10-07-s3k-parity-gap-verification.md)
-record executed candidates; composition broad validation and delivery remain pending.
+record executed candidates and [actual-main qualification](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#actual-main-delivery-qualification).
+Integrated `5d1ff9b` retains 27 concrete inherited ordinary failures, zero errors
+and 62 literal inherited skips; all 672 fresh guards pass. FBZ→SOZ is repaired.
 Admission (`45c6eed2`) preserved every advertised opening row, and raw-controller
 bar handling (`b3eff620`) cleared the early Tails-Y span. Full SaveGame completion
 (`828bc94d8`) now clears the existing captured 32-bit collected-ring mask at exactly
@@ -45,8 +47,9 @@ two matched old-owner failures: both actual publication phases restore correctly
 The load-floor zero is a null state captured before deferred assignment, not
 positive pending-state evidence. These checks certify neither whole levels nor
 all load/rewind products. Published baseline `a872` retains 28 inherited ordinary
-failures and 62 literal no-ROM skips; 672 guards pass. It is not a wholly green
-baseline or completed composition delivery.
+failures and 62 literal skips, with no ROM skips; 672 guards pass. It is not a
+wholly green baseline. The completed composition qualification above removes
+the FBZ→SOZ failure while retaining all other concrete failures and skip reasons.
 
 Entries should include:
 - **Location** — the file(s) where the bug lives, if known

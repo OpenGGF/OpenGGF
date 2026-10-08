@@ -1125,3 +1125,62 @@ regression-repair policy. The combined actual-main full run still verifies the
 final integrated source. The prior canonical results are reused for unchanged
 gameplay behavior; this structural repair does not establish a new canonical
 trace-profile measurement.
+
+### Actual-main delivery qualification
+
+The Sitar owner released its source freeze after 148 integrated focused cases
+and 672 fresh guard cases passed without failures/errors/skips at exact `ae2`.
+Published successor `09cfcc0f882305d6a0c6a4fc05b600d3ca27a888` changes only
+the Sitar example README, dated polish evidence and measurement hazards. It
+establishes no new full ordinary baseline. Private merge
+`3d10f507efb35069ee4de7a7fa3047de25518890` retains both stock-input hazards
+and the independently added Sitar preparation hazard at their sole prose
+conflict; no engine/test/resources/POM/API delta accompanies that merge.
+Guard repairs are committed as `98137d8516a06e546185aa070bf0bf574473c04a`.
+
+Normal integration into the existing `develop` branch produces
+**`5d1ff9b8206594ee1c979ae5174328dd9134ffd4`**, whose complete committed tree
+is identical to the qualified private composition. Main's three dirty
+disassembly submodules and four unrelated untracked files are preserved.
+The source remains frozen through mandatory owned run
+**`20261008T053400Z-a3c0531f`**, against the actual published destination:
+
+```sh
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 09cfcc0f882305d6a0c6a4fc05b600d3ca27a888 --run --max-minutes 150
+```
+
+The inspected plan selects the **full 3,027-class ordinary inventory and all
+fresh guards**, with one normal ordinary fork, no queue wait and the previously
+stated 150-minute execution / ten-minute no-output stopping rules. Its normal
+Maven command has no narrowed test selection and uses all three original,
+verified absolute ROM paths. Terminal summaries are written at
+2026-10-08 07:04:34.078316 UTC:
+
+| Actual-main lane | Reports | Cases | Failures | Errors | Skips | Execution seconds | Maven exit |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Full ordinary | 3025 | 26422 | 27 | 0 | 62 | 5144.88 | 1 |
+| Separate fresh guards | 86 | 672 | 0 | 0 | 0 | 230.04 | 0 |
+
+Both lanes complete without timeout or omitted diagnostics. All 27 remaining
+failure identities, kinds, types and full concrete first assertion lines match
+the qualified inherited expectation: **26 literally**, and the named SSZ
+Tails case after only exception-prefix removal and verified
+`RewindObjectStateBlob@hex` normalization. Its complete 2,952-character first
+line becomes the same 2,907-character assertion retained from the qualified
+baseline. All **62 skip identities and first causal lines match literally**;
+there are no new/worsened/unattributed cases or ROM skips. The sole removed
+failure is the freshly passing, unskipped FBZ→SOZ timeline restoration case.
+All 138 Sitar cases, thirteen new input/save controls, Infinite Sonic's 206
+passing cases (including its driver-observation case) pass; Infinite's 32 skips remain
+literal inherited matches. The two formerly failing structural guards pass
+with unchanged budgets and lifecycle policy.
+
+This accepts inherited ordinary failures; it is **not a green whole-suite or
+full-game parity claim**. The separate canonical trace-profile measurement above
+retains its three open chains, with the newly reached S1/S3K frontiers and S2
+clock/results frontiers unchanged by the structural follow-up. The source freeze
+is released after terminal comparison. The exact consumed diagnostic run is
+acknowledged and its directory removed; no raw logs are archived. The final
+follow-up changes evidence/current status prose only and therefore uses relevant
+links, syntax, mirror and policy checks rather than repeating engine tests.
