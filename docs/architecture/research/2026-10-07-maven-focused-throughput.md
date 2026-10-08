@@ -260,3 +260,9 @@ and the actual tool preflight before the cleanup merge was finalized. Whitespace
 and the agent-document mirror also passed. Java fixture/readback work is a
 separate pending part of the same throughput task; this cleanup verification is
 not an engine-suite pass.
+
+A live-host control of the delivered `37a57ebdb` CLI removed its own synthetic
+recognized diagnostic directory in **0.076 seconds**, while the previously
+observed shared Surefire JVM remained alive. This exercised the real
+`run_categories.py --acknowledge` path; it launched no Maven command and made
+no engine-test or validation-pass claim. The synthetic metadata was deleted.

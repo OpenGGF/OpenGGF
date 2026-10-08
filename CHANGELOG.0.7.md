@@ -1076,6 +1076,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   analysis, share immutable S3K oracle captures, read only the required trace-input
   column, consolidate equivalent FBZ traversals, and advance integration-test room
   deadlines through a controlled clock with observed membership and publication barriers.
+  Measured fixtures release source/evidence caches and owned mock history, with
+  fixed frame-driving stubs installed once. SOZ route checks draw every frame
+  without reading back discarded pixels; screenshot checks keep pixel readback.
   Strict byte validation, digest pins, ROM configurations, stress sizes, and real
   socket exchanges remain covered. An opt-in two-JVM test profile retains serial
   execution inside each worker. Public audio tests retain synthetic chip vectors;
