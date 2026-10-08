@@ -853,3 +853,19 @@ launch failed preflight before executing any tests.
 Before integration, develop advanced to `c039c009131be4548c3ab40eb809a0f85c2808f1`.
 Its delta from the task pin is parity evidence/coverage prose only. The candidate
 fast-forwarded to that actual base without source changes or conflicts.
+
+The task commit `cc9565959f284d809490c2dc476b0ab4a8ae2424` integrated as
+`88ec2bad7859d8a6938a603351dbb8b30d4946da`. The final ordinary focused command
+below ran without JFR and passed **23 cases, zero failures/errors/skips**, in
+**52.170 seconds including compilation**. All fully qualified identities/outcomes
+matched the baseline subset, and the three test-source hashes matched the measured
+candidate. Class times were lower-rock 24.664 s, background 1.254 s and render
+contract 2.642 s. Different warmup and instrumentation make these validation
+times separate from the matched benchmark above. The unchanged nine full routes
+were not repeated after their two passing runs. No full-suite/guard pass is claimed.
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozLowerRockPuzzleCapture,TestSozBackgroundCapture,TestGameplayCaptureFrameRendering \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
