@@ -106,6 +106,17 @@ do not use queue comparison rows as readiness input or fit a lag exception.
 The existing S1 hardware-timing kind can carry the matching native arm, but an
 implementation without a fixture stream is not measured timing coverage.
 
+An unchanged engine does not freeze validation inputs (2026-10-08, shared
+main qualification): a Java test read its controller BK2 directly from the
+source tree after compilation. Another owner's test/fixture merge after
+admission changed the live input despite unchanged engine/API/POM/hooks.
+Preserve the legitimate merge, mark that exact owned invocation incomplete
+and qualify the updated fixture before replacing the invalid run. Hold
+tracked tests and fixtures through both lanes as well as production source.
+Separate worktrees with independent regular/reflink files retain their own
+input versions; verify the actual file blob rather than inferring it from an
+engine-only diff or branch label.
+
 Unpaced mod captures can outrun preparation (2026-10-08, Sitar Hero polish):
 `ExampleModCapture` advances ticks as quickly as it can while ROM song preparation
 runs on a worker. A short capture without video or frequent PNGs can finish before

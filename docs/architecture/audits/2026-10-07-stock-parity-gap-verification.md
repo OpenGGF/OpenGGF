@@ -1546,3 +1546,210 @@ ten-minute no-output timeout. A timeout, omitted report, ROM skip or any new,
 worsened or unattributed ordinary failure blocks integration. Compare test
 identity/type/full first assertion and every literal skip reason, not totals.
 Mandatory actual-main qualification, push and owned cleanup remain required.
+
+
+### Round 3 private composition with integrated Sitar source
+
+Sitar privately qualifies frozen source `984cb8e2e317848344883879088762ebac7cbc88`
+and combines the exact published framework policy inputs at `c615362c4552`. Its
+ordinary run20261008T123028Z-dbe57c8c completes3058 selected classes/3056
+reports/26535 cases,27 inherited failures, zero errors and62 literal inherited
+skips in4978.39seconds; separate fresh guards complete87 reports/674 passing
+cases, zero skips in222.71seconds. The owner compares26 literal complete first
+assertions plus the full SSZ assertion after only the verified blob-hash
+normalization, and all62 literal skip identities/reasons. There are no omissions,
+timeouts or ROM skips. This is that owner's private candidate evidence, not
+actual-main qualification or qualification of the later parity composition.
+
+Sitar integrates into main `develop` at
+`eaafa6ee053f5624c00a78652e841d8f78598f5d`, pinned base
+`d740b7a0fadd97b2e7c104d56481a0235bdffb4c`. Its already-owned session21395
+is admitted at14:11:37Z as run20261008T141137Z-f3777bdd: all3058 ordinary
+classes and separate fresh guards under the150-minute admission-excluded cap.
+Main source and publication remain frozen until the owner's terminal result
+and delivery. Root preserves that run, all foreign work and the original clean
+parity candidate `1f3bf97d5c67bdade2f54429e9e00d4740e76cf7`, whose
+run20261008T135710Z-ec467d13/session57481 is separately executing against
+published `d740`. No duplicate baseline invocation or foreign acknowledgment
+is submitted.
+
+Root creates a second isolated worktree,
+`.worktrees/ai-parity-swarm-20261008-r3-composition`, at exact integrated main
+source and merges the original parity branch conflict-free at
+`2683eb992989e33866e91eb5b18b2a4a62465abd`. Both source ancestries and the
+independent changes to the existing changelog and implementation-pitfall
+catalogue are preserved. Against `eaafa6ee`, all Sitar production/test/API
+inputs remain unchanged: the existing `PLAYHEAD` and `cuePart` pin additions
+are retained exactly. No stock music-driver or sequencer change is added.
+
+The combined focus uses the prior30 parity/timing/geometry/API selectors plus
+Sitar's20 audio/model/protocol/API/packaging/documentation selectors, deduplicating
+`TestModApiSignatureSurface`:49 selectors, the three original absolute ROM
+paths and one supported queued `--lean -Dmse=off` invocation. Its session61683
+checks actual compiled combined consumers in the new worktree's own `target/`.
+The unchanged category plan against `eaafa6ee` selects all3060 ordinary classes
+and separate fresh guards; actual launch preflight passes Java21/Lua5.4/
+PowerShell. This plan and tool check execute no engine tests.
+
+The updated published destination, its terminal baseline evidence and the
+combined candidate's normal ordinary/fresh-guard results remain required. Shared death/radius and timing transport still take normal
+validation, not the proportionate exception. A terminal result for the original
+`d740` candidate alone will not qualify the new combined Sitar source. Main
+integration, its mandatory actual-main qualification, push and owned cleanup
+are not yet claimed.
+
+
+#### Read-only next-frontier resumption
+
+Root reuses the same three Sol conversations for a bounded read-only pass while
+qualification runs. No worker starts another build/capture, edits source or
+creates a commit. The findings refine next work without changing the frozen
+parity candidate or either owner's verification.
+
+- **S1 MZ2_3 row101:** old timing input is absent. Held gameplay counter0066
+  with advancing VBlank B6AC→B6AD reaches the untimed held-tail branch in
+  `PlcFrameLifecycleCoordinator.prepareAfterLoop`, withholding preparation.
+  Native `RunPLC` at1379–1415 writes eighteen remaining patterns before
+  table construction under `FixBugs=0`; the measured arm precedes the lag
+  interrupt. Row shape cannot locate the interrupt before or after that write.
+  A future real service/coordinator discriminator should compare identical
+  held classification with matching recorded readiness admitted versus absent,
+  preserving kind/ordinal/fingerprint/boundary rejection. Existing isolated
+  arm tests and generic held-tail tests cover the pieces, not this combination.
+  No counter-only production fix or publication of the withheld whole fixture
+  is established.
+- **S2 ARZ1 row4213:** `Obj0D_Main` clears the HUD timer as Sonic crosses
+  signpost X298C at row4212. Native `Sonic_RevertToNormal` at1ABF2 writes
+  `prev_anim=Run(1)` (`11 7C 00 01 00 1D`) before same-pass `Sonic_Animate`,
+  restarting still-selected Roll(2) at mapping3D. Engine
+  `Sonic2SuperStateController.onRevertStarted` restores the set without that
+  sentinel; `SpriteManager` performs Super work through `tickStatus` after
+  animation/touch rather than native `Sonic_Super` before animation. Mapping
+  continues to41. No earlier compared gameplay difference is reported, but
+  hidden animation state is not in the recording. The next bounded regression
+  must use a real tick: newly paused signpost timer, mid-cycle Super Roll,
+  unchanged movement profile for that tick, same-tick3D then41, and a Run(1)
+  equality control. Callback-only coverage cannot establish dispatch order.
+  This is a source-backed next hypothesis awaiting regression proof, not a
+  delivered reversion fix.
+- **S3K returned HCZ:** native fan slot10 writes ground velocity1 before
+  belt slot91 at row1505. Belt phase0C→12 at1507 chooses mapping0063 while
+  Y remains07DF; phase1E→24 at1510 chooses0064 and Y07CB+0B=07D6. Engine
+  observed marker0/phase0 selects mapping0095 and Y07CB+14=07DF from the
+  same tables. The two first errors correspond to different thresholds of
+  that pose phase; the missing-marker cause is still unproven. Object-owned
+  mapping publication and controlled movement make primary animation overwrite
+  less likely, but actual runtime ownership flags were not sampled. Native
+  unconditional samples first observe Main at1247 with timer/toggle0/0; they
+  do not capture Init or prove earlier lifetime. Next probe must observe
+  unconditional engine fan entry/init/retirement, pre/post marker and belt-entry
+  state, aligned to episode1247 and1499–1515. Active-only logging, slot reversal
+  alone and the rejected fitted timer increment do not establish causality.
+  The delivered fan corrections still show no trace-frontier improvement.
+
+
+#### Destination test-input update during Sitar qualification
+
+A separate owner merges the shorter solo-Sonic Sandopolis controller route at
+`6124a524eef9b42efb800d5bcb95376147507c9e`,14:14:25Z, after Sitar's
+14:11:37 admission. The six paths are one existing Java test, its BK2, the
+authored controller script and three prose files. Engine, Sitar/API, POM and
+hooks remain equivalent to `eaafa6ee`, but `TestSozColdRouteCapture` reads
+its BK2 directly from the source tree. Original validation inputs were not
+retained, so the owner identifies its exact runner3994735/cwd/argv/stdout and
+interrupts only that process. Session21395 exits130; runner and Java3998156
+are absent; status is incomplete with no results and no broad pass.
+
+The owner preserves the merged commit and the other owner's queued focused
+fixture check, reads its updated-base73 passing cases and coordinates an
+extended main tracked-input/publication freeze. It will replace only its
+invalid actual-main request once at `6124a524`, retaining original integration
+base `d740` and the150-minute normal combined cap. Root's frozen candidate
+`1f3`/session57481 remains unchanged. The updated fixture will be privately
+reconciled after the already-owned combined focus completes and its owner's
+terminal fixture evidence is available. No source-equivalent baseline claim
+is made for an input-mutated run.
+
+
+#### Combined focus terminal and input reconciliation
+
+Queued session61683 completes at `2026-10-08T15:05:37Z`, Maven exit0 /
+BUILD SUCCESS,11:13 execution after1924seconds queue waiting: **50 fresh XML
+suites,476 cases, zero failures/errors/skips**. All49 requested selectors
+are represented (the loading selector matches two packages); fresh XML mtimes
+span14:55:40–15:05:37Z. The API reflection9, SDK10, Javadoc7, release-policy13
+and documentation-link case pass alongside all parity/timing regressions,
+Sitar's152 cases, native music/cues18 and the four mandatory S3K startup
+selectors. This is focused combined-source qualification at exact `2683eb992`,
+not a full ordinary pass.
+
+The exact combined command, with machine-local paths normalized only to the
+three original root filenames, is:
+
+```sh
+OPENGGF_ROM_ROOT=/absolute/path/to/OpenGGF
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestDeathRadiusTransition,TestHurtAnimationPublication,TestDeathRestartRoutineParity,TestAbstractPlayableSpriteRewindCapture,TestHCZCGZFanObjectInstance,TestS3kHczCgzFanGraphRewind,TestHCZConveyorBeltObjectInstance,TestSonic2SpecialStageSuperResults,TestSonic2SpecialStageResultsTallyCadence,TestSonic2SpecialStageResultsPlcReadiness,TestSonic2SpecialStageResultsWidescreenCommands,TestSplitNameResultsMessages,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestHardwareTimingStreamLoader,TestSonic1PlcArmTiming,TestTraceDataHardwareTiming,TestTraceV5LoadingContract,TestTraceRunManifest,TestTraceFixtureCompressionGuard,TestTraceFixtureMovieAlignmentGuard,TestTraceV5PositiveInputGuard,TestHardwareTimingAuthorityGuard,TestHardwareTimingInterstitialStream,TestTraceRunHardwareTimingCoordinator,TestPlayableGroundTransitions,TestPhysicsProfileEditing,TestModApiSignatureSurface,TestSitarHeroArcade,TestSitarHeroCareer,TestSitarHeroCharts,TestSitarHeroControls,TestSitarHeroFeedback,TestSitarHeroModel,TestSitarHeroOnlineMatch,TestSitarHeroPerformers,TestSitarHeroS1SongCatalogue,TestSitarHeroS2SongCatalogue,TestSitarHeroS3kSongCatalogue,TestSitarHeroStory,TestSitarHeroWorldTour,TestSceneMusicRom,TestScenePartCues,TestModApiSdkPackager,TestModApiJavadocTool,TestModdingDocumentationLinks,TestModApiReleasePolicy' \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+Root privately merges qualified main input update `6124a524` without conflicts,
+preserving its exact Java test/BK2/controller-script bytes. Its owner reports
+the existing post-merge check terminal at14:54:23Z:73 cases, zero failures/
+errors/skips including all nine SOZ routes, exact prior identities/outcomes
+and unchanged qualified input bytes. Sitar independently checks source
+equivalence of engine/examples/API/POM/hooks to `eaafa6ee` and fixture equality
+to qualified `c02`. The replacement actual-main session75501 is submitted once
+against6124 with original pre-integration based740, all3058 ordinary classes
+and fresh guards under150minutes admission-excluded; it is queued, with no
+terminal result claimed. The invalid f3777bdd run is consumed/acknowledged
+exit0 and absent. Main's extended tracked-input/publication freeze is preserved.
+
+The completed normal17-case trace selection at `84f0c20f` remains applicable:
+all stock gameplay/physics, walkers, drivers and trace fixture/movie inputs
+are unchanged from frozen `1f3` through the Sitar composition. The production
+upstream delta is four scene-mod files (one has only Javadoc changes), with no
+references to the new scene-music types in the selected stock/trace paths.
+Sandopolis changes an ordinary capture test and its separate route input,
+not any of these fifteen trace selectors or fixtures. Fresh476-case focus
+exercises the changed audio/API consumers. No repeated unchanged trace run is
+submitted; the original13:34:11Z result remains17 cases/four qualified
+failures/zero errors/skips, with the same explicit inherited/attributed limits.
+
+The held-iteration and generic-coordinator Javadocs are corrected to match the
+observed native early arm: a lag counter shape cannot prove `RunPLC` has not
+published its count. Removing block comments gives literal before/after
+executable-source equality in both files; no classification, admission, test
+assertion or dispatch behavior changes. The unsafe cost-based inference is
+removed while the existing untimed fallback and recorded authority remain.
+
+Full assertions are compared from `failed_cases[].detail` first lines, not
+capped messages. Skip identities and literal first-line reasons are compared
+to the retained baseline table; unreported world state and stack-trace suffix
+equality are not claimed. The original private full run remains executing
+with its own unchanged regular-file Sandopolis input matching frozen1f3.
+Updated-base terminal qualification, final combined ordinary/fresh guards,
+actual-main integration/qualification, develop push and cleanup remain pending.
+
+
+At15:06:46Z the sole replacement actual-main request is admitted as
+run20261008T150646Z-9377cfcd/session75501 at exact6124, pinned pre-integration
+based740:3058/3058 ordinary classes, one worker plus fresh guards,150-minute
+admission-excluded cap. The owner verifies plan/actual ROM properties and
+fresh hashes of the three original absolute main files. Both Sitar and the
+fixture owner hold tracked main inputs/commits/push until terminal delivery.
+Root preserves that source/publication freeze.
+
+The final private source composition after the conflict-free6124 merge is
+`6bbdb294df792521d5b80a5f06c14932a8680fc9`; only the evidence above and two
+comments-only native-timing clarifications follow it. Its unmodified plan
+against actual destination6124 selects all3060 ordinary classes plus fresh
+guards. Shared death/radius and timing transport require the normal combined
+run. Expected cost remains80–110minutes ordinary plus about4minutes guards;
+use150minutes excluding admission and the unchanged ten-minute no-output rule.
+Freeze the entire exact candidate tree through both lanes. Any timeout, missing
+required suite, ROM skip or new/worsened/unattributed assertion blocks
+integration. Baseline acceptance waits for the owner's completed updated-main
+qualification; no result is inferred from its still-executing request.

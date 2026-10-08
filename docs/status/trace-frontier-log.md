@@ -112121,3 +112121,27 @@ provenance. Next causal targets are S1 PLC prepared-state, S2 newly reached
 ARZ1/return-clock and S3K returned HCZ mapping before Y. Separately owned AIZ
 paths and all foreign jobs remain untouched; no full act/route-product,
 pixel or audio certificate is inferred.
+
+
+Read-only resumption while ordinary qualification runs refines the same targets
+without new code or test jobs. S1 row101 is an untimed held-tail preparation
+limit: native `FixBugs=0` publishes the count before table construction, so a
+held counter cannot locate the arm. S2 ARZ1 row4213 maps to Super reversion's
+missing `prev_anim=Run` sentinel and later engine dispatch; a same-tick real
+Roll/Run discriminator is still required before calling it a fix. S3K mapping
+1507 and Y1510 correspond to different thresholds of conveyor pose phase:
+engine marker0/phase0 versus the native fan marker1 and advancing phase.
+Unconditional fan lifecycle/marker and belt-entry observations remain needed
+to identify the missing writer or overwrite; active-only logging and a fitted
+timer increment remain rejected. Exact source/ROM owners and limits are in
+[the continued audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#read-only-next-frontier-resumption).
+
+A separate private composition at `2683eb992` preserves integrated Sitar source
+and passes50 fresh XML suites/476 cases, zero failures/errors/skips at15:05:37Z
+(session61683). Qualified Sandopolis input6124 merges conflict-free afterwards;
+stock/trace source and the15-selector domain inputs remain unchanged, so the
+completed17-case result above is retained without a duplicate trace run. The
+updated ordinary plan selects all3060 classes plus fresh guards. Main6124
+is frozen in its owner's admitted replacement9377cfcd/session75501; root's
+original1f3/ec467d13/session57481 remains unchanged. Neither pending broad
+result, actual-main parity integration, push nor cleanup is claimed complete.
