@@ -15,6 +15,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   World-held policy services keep core lifecycle independent of creator schemas;
   title-first capture preserves existing direct-level fade and input-last CSV contracts.
 
+- **Sonic 2 title SFX priority:** the flashing star's last twinkle now runs to
+  its own stop, as in the ROM, releasing the sound driver's SFX priority. A stop
+  at star deletion had left the latch set, so lower-priority sounds that mods play
+  over the stock title, such as Mutator Lab's `SndID_Blip`, stayed silent until
+  another sound of equal or higher priority finished.
+
 - **Sonic 1 background scrolling:** Scrap Brain Act 1 uses the REV01 cloud
   interpolation and three building bands, with separate fractional cameras,
   rewind restoration and tile-cache window coverage at wider viewports. Scrap
