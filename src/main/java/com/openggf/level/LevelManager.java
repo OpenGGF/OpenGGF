@@ -17,7 +17,6 @@ import com.openggf.data.AnimatedPatternProvider;
 import com.openggf.data.Rom;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.resources.DynamicArtDecisionOwner;
-import com.openggf.game.DynamicStartPositionProvider;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.debug.DebugObjectArtViewer;
@@ -276,10 +275,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
     private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
     private boolean resetCounterPlacementAfterCameraSnap;
-    // Current-state reload guard, restored before the next frame/rewind boundary.
-    private boolean nativeCurrentReloadInProgress;
-    // Load-attempt-only handoff: a retained entry centre also owns the first camera focus.
-    private boolean moduleFreshEntryCameraPending;
+    private final ModuleLevelLoadController moduleLevelLoads = new ModuleLevelLoadController();
     private long completedProductionLoadGeneration;
 
     private final FreshLevelTransitionBoundaryController freshLevelTransitionBoundary = new FreshLevelTransitionBoundaryController();
@@ -502,7 +498,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void loadLevel(int levelIndex, LevelLoadMode loadMode, LevelLoadContext ctx) throws IOException {
         discardInitialProcessSpritesLifecycle();
-        moduleFreshEntryCameraPending = false;
+        moduleLevelLoads.resetFreshEntryCamera();
         try {
             ctx.resetInitialProcessSpritesRequestForLoadAttempt();
             GameModule module = activeGameModule();
@@ -550,7 +546,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             LOGGER.log(SEVERE, "Unexpected error while loading level " + levelIndex, e);
             throw new IOException("Failed to load level due to unexpected error.", e);
         } finally {
-            moduleFreshEntryCameraPending = false;
+            moduleLevelLoads.resetFreshEntryCamera();
             // The suppress flag belongs to this load only. A load that fails before
             // ScheduleLevelMusic — or a preview capture, which has no music step — must not
             // leave it latched for the next level, which would start that level silent.
@@ -683,7 +679,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (loaded == null) {
             loaded = game.loadLevel(levelIndex);
         }
-        installRegisteredPlacements(levelIndex, loaded, stockDecoded);
+        moduleLevelLoads.installPlacements(gameModule, levelIndex, loaded, stockDecoded);
         writeCurrentLevel(loaded);
         installHudProfile();
         rebuildLevelDerivedState();
@@ -795,18 +791,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                         : game.loadLevel(levelIndex);
             }
         }
-        installRegisteredPlacements(levelIndex, loaded, stockDecoded);
+        moduleLevelLoads.installPlacements(gameModule, levelIndex, loaded, stockDecoded);
         writeCurrentLevel(loaded);
         installHudProfile();
         rebuildLevelDerivedState();
         adoptPreparedTilemaps(prepared);
         return loaded;
-    }
-
-    private void installRegisteredPlacements(int levelIndex, Level loaded, boolean stockDecoded) {
-        RegisteredLevelPlacements placements = gameModule == null ? null
-                : gameModule.getGameService(RegisteredLevelPlacements.class);
-        if (placements != null) placements.install(gameModule.getGameCode(), levelIndex, loaded, stockDecoded);
     }
 
     private void installHudProfile() {
@@ -2975,7 +2965,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * ROM: S1/S2 StartLocations / Obj79_LoadData, S3K Get_PlayerStart.
      */
     public void spawnPlayerAtStartPosition(LevelLoadContext ctx) {
-        moduleFreshEntryCameraPending = false;
+        moduleLevelLoads.resetFreshEntryCamera();
         String mainCode = resolveMainCharacterCode();
         Sprite player = spriteManager.getSprite(mainCode);
         if (player == null) {
@@ -3015,47 +3005,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             LOGGER.info("Set player position from checkpoint: X=" + ctx.getCheckpointX() +
                     ", Y=" + ctx.getCheckpointY() + " (center coordinates)");
         } else {
-            int spawnX = levelData.startX();
-            spawnY = levelData.startY();
-
-            if (game instanceof DynamicStartPositionProvider dynamicStartProvider) {
-                try {
-                    int[] dynamicStart = dynamicStartProvider.getStartPosition(currentZone, currentAct);
-                    if (dynamicStart != null && dynamicStart.length >= 2) {
-                        spawnX = dynamicStart[0];
-                        spawnY = dynamicStart[1];
-                        LOGGER.info("Set player position from dynamic start provider: X=" + spawnX +
-                                ", Y=" + spawnY + " (zone=" + currentZone + ", act=" + currentAct + ")");
-                    } else {
-                        LOGGER.info("Dynamic start provider unavailable, using levelData fallback for " +
-                                levelData.toString());
-                    }
-                } catch (IOException e) {
-                    LOGGER.warning("DynamicStartPositionProvider failed, using levelData fallback: " + e.getMessage());
-                }
-            }
-
-            if (ctx.getLoadMode() == LevelLoadMode.FULL
-                    && !nativeCurrentReloadInProgress && !transitions.isLevelRoutineReentry()
-                    && !transitions.hasBigRingReturn() && !transitions.isBonusStageReturn()
-                    && transitions.sanctuaryReentryStage().isEmpty()) {
-                var freshPosition = java.util.Objects.requireNonNull(
-                        activeGameModule().freshLevelStartPosition(currentZone, currentAct),
-                        "freshLevelStartPosition must return an Optional");
-                if (freshPosition.isPresent()) {
-                    spawnX = freshPosition.orElseThrow().centreX();
-                    spawnY = freshPosition.orElseThrow().centreY();
-                    moduleFreshEntryCameraPending = true;
-                }
-            }
-            if (player instanceof AbstractPlayableSprite playable) {
-                com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(playable, spawnX);
-                com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(playable, spawnY);
-            } else {
-                player.setCentreX((short) spawnX);
-                player.setCentreY((short) spawnY);
-            }
-            LOGGER.info("Set player position from level start: X=" + spawnX +
+            var nativeStart = moduleLevelLoads.nativeStartPosition(game, levelData, currentZone, currentAct, LOGGER);
+            var start = moduleLevelLoads.placeStartPosition(activeGameModule(), ctx, transitions,
+                    currentZone, currentAct, player, nativeStart.centreX(), nativeStart.centreY());
+            spawnY = start.centreY();
+            LOGGER.info("Set player position from level start: X=" + start.centreX() +
                     ", Y=" + spawnY + " (center coordinates)" +
                     ", level: " + levelData);
         }
@@ -3119,8 +3073,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     // Package-private entry used by LevelCameraInitialization for explicit
     // positioned captures/tests. Such a resnap is not Get_LevelSizeStart.
     void initCameraForLevel(boolean initializeLoadRegisters) {
-        boolean retainedFreshEntry = moduleFreshEntryCameraPending;
-        moduleFreshEntryCameraPending = false;
+        boolean retainedFreshEntry = moduleLevelLoads.consumeFreshEntryCamera();
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (!(player instanceof AbstractPlayableSprite playable)) {
             checkpointCoordinator.consumePersistentRespawnForCameraSnap();
@@ -3611,7 +3564,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Loads the current level for death respawn (no title card).
      */
     public void respawnPlayer() {
-        reloadCurrentNativeState(false, LevelLoadMode.FULL);
+        loadCurrentLevel(LevelLoadMode.FULL, false);
     }
 
     /**
@@ -3619,17 +3572,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Unlike a deliberate fresh load, this never applies a module's fresh-entry position.
      */
     public void loadCurrentLevel(LevelLoadMode loadMode, boolean showTitleCard) {
-        reloadCurrentNativeState(showTitleCard, loadMode);
-    }
-
-    private void reloadCurrentNativeState(boolean showTitleCard, LevelLoadMode loadMode) {
-        boolean previousNativeReload = nativeCurrentReloadInProgress;
-        nativeCurrentReloadInProgress = true;
-        try {
-            loadCurrentLevel(showTitleCard, loadMode, true);
-        } finally {
-            nativeCurrentReloadInProgress = previousNativeReload;
-        }
+        moduleLevelLoads.reloadCurrentNativeState(() -> loadCurrentLevel(showTitleCard, loadMode, true));
     }
 
     /**

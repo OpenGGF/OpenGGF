@@ -100,8 +100,28 @@ light results are retained outside Git. No peer branch is imported. Mutators own
 overlay/configuration/lifecycle, Multigame exclusive worker step/input/media, and
 this branch bounded native placements, launch and input opt-ins.
 
-Final combined validation is still pending. Actual published-base selection is
-3032 ordinary classes across all ten categories plus separate fresh guards:
+Final combined request 66538 completed on `7bb15c49a`, against published base
+`02796b4c`: 3032 selected classes / 3030 ordinary reports / 26,428 tests,
+28 assertion failures, zero errors and 62 skips in 4994.61 seconds. Every full
+assertion and every skip identity/first causal line matches the qualified base;
+only exception prefixes and the known SSZ Tails object-blob hash are normalized.
+There are no new, changed, absent or omitted failures/skips, and no ROM skips.
+This is inherited-red ordinary validation, not a green whole-suite result.
+
+The separate fresh guard JVM produced 87 reports / 678 cases, one assertion
+failure, zero errors/skips in 219.58 seconds. The owned blocker is
+`TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction`:
+LevelManager had 3183 effective source lines against its unchanged 3145 budget.
+The module placement, fresh-position and reload hooks are being extracted into
+the package-private `ModuleLevelLoadController`, together with the adjacent
+native dynamic-start resolver. The collaborator is load-owned; suppression
+unwinds in finally and camera handoff is consumed before the next frame/rewind
+boundary. Native checkpoint/return authority and signed fallback coordinates
+retain their existing meaning. The public API and ratchet budget are unchanged.
+Bounded production load/retry/placement regressions and fresh guards remain
+required for this extraction before the implementation handoff.
+
+The completed combined command was:
 
 ```sh
 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
@@ -111,10 +131,12 @@ LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
 Java21/Lua5.4/PowerShell preflight passes. Latest measured published-base ordinary
 cost is about109 minutes plus3.6 minutes fresh guards; the150-minute execution
 cap and10-minute no-output cap exclude queue waiting. Timeout is incomplete.
-All concrete failures/skips must be compared to qualified published-base evidence,
-not totals. The base has28 inherited ordinary assertions and62 expected skips;
-this is not a green whole-suite claim or a replacement for candidate validation.
-Consumed runner diagnostics will be acknowledged after inspection.
+All concrete failures/skips were compared to qualified published-base evidence,
+not totals. The light identity/assertion summary remains in the outside task
+ledger; consumed runner diagnostics were acknowledged and deleted. Extracting
+these unchanged algorithms does not require repeating the completed ordinary
+lane. The bounded follow-up must resolve the actual guard and exercise the
+relocated production boundaries; it does not substitute totals for attribution.
 
 The user subsequently requested root-owned Claude Opus5.5 hands-on polish, then a
 separate promo-video task. After these implementation gates, the lead supplies a
