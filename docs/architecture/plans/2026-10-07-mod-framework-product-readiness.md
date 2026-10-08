@@ -787,3 +787,47 @@ delivery results with all 28 complete assertions and all 62 skip identities/reas
 recorded above. Any changed result requires bounded matched attribution. External
 creator acceptance remains pinned to clean `4f3d2c27`; this upstream change does
 not alter its mod/API/packaging inputs.
+
+### Compact-font count-in integration correction: 2026-10-08
+
+The upstream Sitar presentation merge in `d85d2b63f55660283690e4e533d318fa842a8034`
+retained the shared `CompactFont` adoption and added an authored count-in digit at
+scale 5. `SitarScreens.countIn()` calls `SitarUi.big()`, whose shared metrics and
+drawing rejected scales above 4. An isolated Java 21 probe against the unchanged
+helper reproduced `IllegalArgumentException: Font scale must be 1..4` for both
+scales 5 and 8. After admitting scales 1–8, the same probe returned widths 25 and
+40 for digit `3`. No glyph, stage coordinate, audible clock, public declaration,
+candidate version or signature pin changed.
+
+The five-file correction was handed off locally as
+`d49a741a249bf63508115930a2c5f306c878577d` while its original normal-lane request
+39735 was still waiting. SHA-256 checks confirmed identical Java and documentation
+bytes before and after that commit, at admission, and after completion. The
+focused run admitted after 5,122 seconds, compiled 3,760 production and 3,617 test
+sources with Java 21.0.12.1, and completed successfully at
+`2026-10-08T05:18:15Z` after 1 minute 12 seconds of Maven execution. The original
+absolute ROM arguments are shown through their main-workspace root below:
+
+```bash
+ROM_ROOT="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk LUA_BIN=/usr/bin/lua5.4 \
+python3 tools/testing/maven_queue.py -Dmse=off \
+  "-Dtest=TestCreatorUi,TestSitarHeroArcade,TestSitarHeroPerformers" \
+  "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+All three fresh XML reports identify those absolute ROM properties and contain
+54 tests, zero failures, errors or skips: `TestCreatorUi` 16,
+`TestSitarHeroArcade` 37 and `TestSitarHeroPerformers` 1. The new helper regressions
+check every authored digit pixel exactly once at scales 5 and 8, preserve alpha,
+match width and fitting metrics, and reject scales 0 and 9 before emitting any
+geometry. The new arcade regression draws the actual child-loaded Sitar scene
+with a controlled audible position of minus three seconds, checks every scale-5
+digit pixel in its authored location, and proves drawing does not change that
+clock. Its music player and ROM boundary are controlled fixture doubles; passing
+the three ROM properties does not turn it into a live venue or speaker capture.
+This is focused verification. Combined development and postintegration checks
+remain the coordinator's delivery obligations.
