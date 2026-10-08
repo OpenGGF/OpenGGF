@@ -17,6 +17,33 @@ Entries should include:
 
 ---
 
+## Current stock parity frontiers — 2026-10-08
+
+The [continued stock audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md)
+and [frontier log](trace-frontier-log.md) retain the exact commands and limits.
+Round 3 is privately composed at `84f0c20f11` against published `d740b7a0`;
+275 focused cases pass with no failures/errors/skips. Combined canonical verification completes17/4/0/0, preserving the qualified
+frontiers below. Ordinary and fresh-guard qualification remain pending.
+
+- S1: native death/floor reset closes all 192 MZ1 differences. The next early
+  frontier remains MZ2_3 row101's three PLC prepared-state comparisons; a fresh
+  native timing capture closes them locally but fails later matching/closure,
+  so it is withheld. Segment33 remains an incomplete inherited premature-death
+  route; the radius correction changes its propagation to 3203 errors and
+  cursor210396, with exact attribution in the S1 audit.
+- S2: native seventh-emerald leave/return/wait handling clears the SS7 results
+  walk and reaches ARZ1/ARZ2. ARZ1 first differs at row4213 mapping frame
+  `61/65`; ARZ2 first differs at row2175 X fraction `8800/5800`, then loses
+  ownership in TITLE_CARD at cursor110617. Twelve return-gap clock axes remain.
+- S3K: fan movement, retirement, clock and saturated-pool RNG behavior are
+  corrected locally. Returned HCZ remains 82067 errors, first mapping row1507,
+  first primary Y row1510, and LEVEL ownership loss at cursor68801. Earlier
+  AIZ sidekick frontiers remain owned separately and unchanged.
+
+These are trace parity and lifecycle frontiers, not complete-game certification.
+Supported act/character, viewport, donor, load/respawn, whole-route rewind and
+native presentation obligations remain in the [coverage backlog](level-test-coverage.md).
+
 ## Table of Contents
 
 1. [Game Over and Continue Parity Details](#game-over-and-continue-parity-details)

@@ -1131,6 +1131,11 @@ ROM-header secondary cue. A trace may select the ordinary production
 presentation-omitted transition, but it cannot submit, mutate, service, or
 release either queue.
 
+Dedicated timing input resolves `hardware_timing.jsonl` or its `.gz` sibling,
+with plain-file precedence and identical strict schema/UTF-8 checks. Compressed
+empty input retains recorded authority; damaged or zero-byte gzip is rejected.
+This storage support does not expand the kinds or ownership authorized below.
+
 The hardware-timing replay exception below does not apply to S2 DPLCs at
 all, and applies to S1 PLCs only at the `RunPLC` FIFO-head arming edge
 (`NEMESIS_PLC_QUEUE`). Physics and auxiliary trace data remain
@@ -1860,17 +1865,19 @@ determinism measurement of its own.
 
 ## S2 Whole-Run V-int Clock Cannot Be Made Exact
 
-Current qualification (2026-10-07): standalone special stages 2/5/6 and EHZ1
-segment 2 pass after restoring the semantic Tails body-art owner. The continued
-swarm's locally committed native Coconuts targeting correction closes EHZ1
-segment 1 and the opening chain's coconut damage and SS1 art disagreements.
-The continuous complete-emerald prefix passes; the full chain advances from
-special-stage segment 1 to segment 17 (SS7). A further native zero-duration
-CPZ tube correction clears CPZ1/CPZ2 in the chain and all three standalone
-fixtures. ARZ1, stage 7 art and earlier gap-clock differences remain measured.
-These candidates are awaiting combined integration qualification. Stage 7 remains red. Historical segment-11 and
-unreached-stage observations below describe their dated runs, not the current
-frontier. See the
+Current qualification (2026-10-08): delivered art, spring, Coconuts and CPZ
+tube corrections clear all compared physics/art surfaces through segment17
+(SS7). The round 3 private candidate's native seventh-emerald leave/return/wait
+sequence clears the results walk and reaches ARZ1/ARZ2. Its eight-case normal
+trace selection has one chain assertion failure and no errors/skips. ARZ1
+has 119 differences, first row4213 mapping frame `61/65`; ARZ2 remains
+incomplete with 47450 differences, first row2175 X fraction `8800/5800`,
+then loses ownership in TITLE_CARD at cursor110617. Twelve gap-clock axes
+remain, with the first ten retaining their earlier identities/values and
+first edge10308/10268. Root composed trace qualification retains those exact profiles (17 cases,
+four inherited/attributed failures, no errors/skips); ordinary/guard and
+actual-main qualification remain pending. Historical segment-11 and unreached-stage observations below describe
+their dated runs. See the
 [S2 audit](../architecture/audits/2026-10-07-s2-parity-gap-verification.md).
 
 `TestS2CompleteEmeraldRunChain`'s final physics axis is blocked on this, after eleven

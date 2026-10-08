@@ -313,11 +313,19 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
             advanceFanFrame();
         }
 
+        // Both native side-effect gates read Level_frame_counter+1, not the
+        // V_int_run_count supplied to update. A detached object has no level clock.
+        var levelManager = services().levelManager();
+        if (levelManager == null) {
+            return;
+        }
+        int levelFrameCounter = levelManager.getFrameCounter();
+
         // Sound effect (sonic3k.asm:65409-65417)
         // ROM: tst.b render_flags(a0) / bpl.s — only if on-screen
         if (isOnScreen()) {
             // ROM: move.b (Level_frame_counter+1).w,d0 / addq.b #1,d0 / andi.b #$F,d0
-            int fc = (vIntRunCount & 0xFF) + 1;
+            int fc = (levelFrameCounter & 0xFF) + 1;
             if ((fc & SFX_INTERVAL_MASK) == 0) {
                 try {
                     services().playSfx(Sonic3kSfx.FAN_SMALL.id);
@@ -329,7 +337,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
 
         // Underwater bubble spawning (sonic3k.asm:65420-65447)
         if (isUnderwater) {
-            spawnBubbles(vIntRunCount);
+            spawnBubbles(levelFrameCounter);
         }
     }
 
@@ -432,19 +440,24 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
      * ROM: loc_3070C (sonic3k.asm:65420-65447).
      * Spawns a bubble every 4 frames that rises until it reaches the water surface.
      */
-    private void spawnBubbles(int vIntRunCount) {
+    private void spawnBubbles(int levelFrameCounter) {
         // ROM: andi.b #3,d0 / bne.s — every 4 frames
-        if ((vIntRunCount & BUBBLE_SPAWN_INTERVAL_MASK) != 0) {
+        if ((levelFrameCounter & BUBBLE_SPAWN_INTERVAL_MASK) != 0) {
             return;
         }
-        // ROM: jsr (AllocateObject).l
+        // HCZCGZFan_SpawnBubbles: AllocateObject precedes Random_Number.
+        // Reserve the lowest free SST slot first, including slots below the fan;
+        // a saturated pool must return without advancing the global RNG.
+        var objectManager = services().objectManager();
+        if (objectManager == null) {
+            return;
+        }
         try {
-            int bubbleX = x + services().rng().nextInt(16) - 8;  // ROM: random X offset -8..+7
-            // ROM: Obj_HCZCGZFan uses AllocateObject here, not
-            // AllocateObjectAfterCurrent. Bubbles therefore take the lowest
-            // free dynamic SST slot, which can be below their fan parent.
-            spawnFreeChild(() -> new FanBubbleChild(
-                    new ObjectSpawn(bubbleX, y, Sonic3kObjectIds.HCZ_CGZ_FAN, 0, 0, false, 0)));
+            objectManager.createDynamicObjectWithReservedSlot(() -> {
+                int bubbleX = x + services().rng().nextInt(16) - 8;
+                return new FanBubbleChild(new ObjectSpawn(
+                        bubbleX, y, Sonic3kObjectIds.HCZ_CGZ_FAN, 0, 0, false, 0));
+            });
         } catch (Exception e) {
             // Object allocation failed
         }
@@ -720,22 +733,15 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         // ROM: move.w #$300,priority(a1)
         private static final int PRIORITY = 6;
 
-        // Safety: max lifetime in frames before forced cleanup (prevents leaks).
-        // At -8 pixels/frame, a bubble traverses ~480px in 60 frames — more than
-        // enough to reach any water surface in HCZ.
-        private static final int MAX_LIFETIME = 120;
-
         private int x;
         private int y;
         private int yVelocity;          // y_vel = -$800
-        private int lifetime;
 
         FanBubbleChild(ObjectSpawn spawn) {
             super(spawn, "HCZFanBubble");
             this.x = spawn.x();
             this.y = spawn.y();
             this.yVelocity = BUBBLE_Y_VELOCITY;
-            this.lifetime = 0;
         }
 
         @Override
@@ -745,13 +751,6 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
 
         @Override
         public void update(int vIntRunCount, PlayableEntity playerEntity) {
-            // Safety: force-destroy after max lifetime to prevent object leaks
-            lifetime++;
-            if (lifetime >= MAX_LIFETIME) {
-                setDestroyed(true);
-                return;
-            }
-
             // ROM checks water level BEFORE moving (sonic3k.asm:65511-65515)
             // ROM: cmp.w (Water_level).w,d0 / bhs.s — delete when above water level
             try {
@@ -770,16 +769,13 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
                 // Water system not available
             }
 
-            // Off-screen cleanup fallback
-            if (!isOnScreen(64)) {
-                setDestroyed(true);
-                return;
-            }
+            // HCZCGZFan_Bubble has no camera or age deletion branch. Draw_Sprite
+            // merely enqueues the child; it remains allocated until the water check.
 
-            // ROM: Obj_HCZCGZFan's bubble routine calls MoveSprite2 twice
-            // after the water check. $800 is 8 pixels per call, so the native
-            // bubble advances 16 pixels upward per frame.
-            y += 2 * (yVelocity >> 8);
+            // HCZCGZFan_Bubble ($30834): one MoveSprite2 after the water
+            // check, then Draw_Sprite. The latter only enqueues the sprite;
+            // it does not move it again. Native y_vel=-$800 moves eight pixels.
+            y += yVelocity >> 8;
         }
 
         @Override
