@@ -974,3 +974,54 @@ python3 tools/testing/maven_queue.py --lean -Dmse=off \
   "-Dsonic1.rom.path=${OPENGGF_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
   "-Dsonic2.rom.path=${OPENGGF_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
 ```
+
+### Integrated qualification and coordinated publication (2026-10-08)
+
+The queued post-merge focused command above completed at 14:54:23Z on
+`6124a524eef9b42efb800d5bcb95376147507c9e`, exit 0: **73 cases, zero
+failures/errors/skips**. All fully qualified case identities and outcomes match
+the updated-base 73-case run at `eaafa6ee0`. The nine cold routes pass, together
+with 64 loading/bootstrap/decoding/AIZ/input-author cases. Maven execution took
+2m 51s excluding queue wait; the cold-route class took 144.638s. This is integrated
+qualification, not a new matched performance experiment; it does not establish
+an aggregate throughput improvement.
+
+The separately owned [Sitar main qualification evidence](../plans/2026-10-08-sitar-hero-fumble-feedback.md)
+records completed ordinary run `20261008T153213Z-5cd93bac` at 6124:
+3,056 reports / 26,535 cases / 27 exact inherited failures / zero errors / 62 literal
+inherited skips. All nine SOZ cases pass without skips. The ordinary lane finished
+at 16:57:28Z with Maven exit 1. The owning coordinator attributed every failure and
+skip to its baseline; these are its verified results, not another run performed
+by this task. Research-only HEAD drift to `17ae561ad` made the combined category
+invocation incomplete and suppressed its guard lane. A separate fresh normal
+main guard invocation at 17ae then passed **674 cases, zero failures/errors/skips**,
+exit 0, finishing at 17:15:24Z. The complete ordinary lane and fresh guard lane qualify
+unchanged executable inputs separately; the ordinary suite is not all green.
+
+The coordinator published and independently verified develop at
+`378c1d715a2565249b696babab4f7aaed943cc6e`, then released the main hold. Its delta
+from tested 17ae changes only two evidence/measurement Markdown files. This task
+re-read that durable evidence, fast-forward pulled main without a HEAD change,
+and checked that its integrated SOZ test, script and BK2 still match measured
+candidate `7679a7793b506ae3dd6dc7eaa397f4f66f00941b` byte for byte.
+
+The earlier 6124 fixture merge occurred beneath another owner's active ordinary
+run and changed a movie read directly from `src/test/resources`. That interrupted
+invocation was incomplete, not pass evidence. The owning coordinator records this
+in the existing [measurement-hazard catalogue](../../agent-workflow/briefing-trace-rounds.md):
+compilation does not freeze committed fixture inputs. Main's tracked inputs and
+commits were preserved throughout the replacement qualification/publication.
+This follow-up changes evidence prose only; no unchanged engine tests or reviews
+were repeated.
+
+After publication, the task tree was re-inspected: clean tracked status, all
+commits already merged, and no identified process using its directory. Ignored
+contents were accounted for as owned build/probe output, generated configuration
+and symlinks to original ROM/config/disassembly inputs; the generated configuration
+example matched the bundled template. Consumed owned root diagnostics were removed
+under the worktree metadata lease, with XML hashes checked before deletion and
+changed reports preserved. Normal worktree removal succeeded; the fully merged
+`feature/ai-soz-shorter-inputs` branch was deleted and stale metadata pruned.
+Original ROMs, unrelated worktrees, main's three dirty disassemblies and four known
+untracked paths, foreign jobs and the external rendered visualization were preserved.
+No temporary agents were created for this task.

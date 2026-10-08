@@ -980,6 +980,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   module-only rewind composition isolated from engine artifacts, portable
   example projects, repeatable builds, artifact-only CI and explicit packaging
   warnings suitable for automation.
+  A separate experimental Windows native friends bundle packages the maintained
+  example mods and launch shortcuts using GraalVM runtime class loading, with
+  generated member retention and startup checks. Gameplay qualification remains
+  experimental; the normal native release policy is unchanged.
   Owner-local zone and level identities compose across mods and retain namespaced
   save locations. Multi-act campaigns, typed runtime contributions and captured
   zone events use deterministic ordering and inspectable conflict decisions.
