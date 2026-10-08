@@ -1490,3 +1490,20 @@ boundary; also fade a cue that exhausts its selected source window. Sitar Hero's
 2026-10-08 fumble regression measured 439 nonzero post-taper frames before this
 ordering repair and zero afterward. Keep calibrated judgment coordinates separate
 from the audible song clock when testing cue freshness or sending peer timestamps.
+
+**Physical input cannot reconstruct admitted fractional-speed input.** A tap can
+be retained across a zero-tick presentation or a native S2 special-stage lag, then
+consumed after the physical key is released. Live rewind must retain the actual
+admitted P1/P2 sample and post-tick fractional/pending state in an aligned internal
+history ring; replaying held-only BK2 rows loses the tap and can reset a nonzero
+remainder. Preserve ordinary driver/debug fields and reject metadata from a
+different world, level, provider or entry lifetime. Never obtain these values from
+trace comparison rows. Mutator Lab reproduced the loss at 75% and 150% and verified
+the repaired native acceptance/jump (stage commit `7cca6aef3`, 2026-10-08).
+
+**A bound context can outlive its current world.** The native hub can retain a
+retired gameplay context during title/session handoff. Check that the context is
+runtime-ready before resolving its world/module/policies; an eager global module
+lookup crashes startup even when no gameplay body is due. Bonus mode also does not
+imply interactive readiness: let its pending initial ProcessSprites setup finish
+at canonical cadence before spending a modified speed budget.

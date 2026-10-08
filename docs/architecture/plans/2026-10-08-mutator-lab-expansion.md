@@ -340,3 +340,63 @@ bindings rather than the Engine supplier, and the ownership fixture nested mock
 stubbing; those failures do not establish production defects. Corrected controls
 are queued as `27621` before further input/ownership repair claims. This stage tree
 is based on `02f194c2`, so composed `17ae` runtime qualification still follows integration.
+
+
+### Native stage and admitted-input history completion
+
+Stage commit `7cca6aef357153908dd990d1af6e7e024c266ccc` extends pacing to
+interactive S1/S2/S3K special stages and native Slots/Gumball/Pachinko. Native
+startup, initial ProcessSprites, results, death, fades, pause and external
+canonical ownership remain unchanged. A mode/world/level/provider/entry change
+ends the current fast budget. Readiness uses native semantic state rather than
+the presence of a provider or a shared banner: S3K PERFECT is playable.
+
+Correct Engine-bound controls in request `27621` established the retained tap,
+main-level released jump, 50-point remainder and no-world defects before repair;
+stock 100% lag and PERFECT controls passed. Request `92041` then passed the eight
+regressions, admitted-input/history alignment and unchanged consumers: 253 cases,
+251 passes and two new Gumball/Pachinko setup failures, no errors/skips. The
+readiness refinement lets one canonical native setup iteration finish before
+modified gameplay. Request `33905` passed all 147 selected cases with no skips;
+108 unchanged passes from `92041` are retained, yielding 255 unique focused cases,
+not one 255-case invocation or a whole-suite pass. Exact final stage source SHA
+is `145342e43028c9fb8c5f97b230cbb62af2aff633eb2a52d4c1455615dc6b7671`.
+
+An aligned engine-owned metadata ring captures delivered immutable P1/P2 input
+and post-tick pacing state. Native acceptance ordinals distinguish actual S2
+ReadJoypads sampling from a lag iteration. Replay retains BK2/menu/debug input,
+uses stock fallback when metadata is absent, and restores only within the same
+live world/level/provider lifetime. Held rewind discards fresh host edges while
+preserving restored historical ones. Older-keyframe 75/150% and released main
+jumps now replay correctly. The native hub no longer eagerly resolves an absent
+module through a retained retired context. No trace comparison fields hydrate
+gameplay and no native arithmetic or structural budget was tuned.
+
+The internal pacing SPI trusts concrete engine-classloader implementations; it
+is not ROM provenance for arbitrary classpath test doubles. Concrete same-loader
+acceptance, foreign-loader denial and the real owner-bound creator proxy are
+covered. Inherited native getters retain native provider identity. One bounded
+read-only review matched the frozen source and found the setup readiness gap and
+this precise trust/coverage caveat; no additional reachable history/input defect
+was established. Slots remains non-rewindable. The stage's actual compiled
+17,714-line export is unchanged; root's factory and cue union still needs the
+fresh composed 17,717-line check.
+
+Published `913c5a351` adds only native packaging tools/workflow/prose beyond
+`17ae561ad`; engine/test/API/POM/hooks/runner inputs are identical. Private merge
+`7f6a238ce` preserves both native-semantic and image-retention pitfalls. Root's
+stage intent composition has no textual conflict. Combined native Lab startup,
+API/SDK, mandatory S3K, domain and full actual-base gates remain pending, followed
+by fresh Opus hands-on polish and a separate refreshed promo for PR215.
+
+Combined request `20639` completed 2026-10-08 19:44:17 UTC after 1707 seconds
+of normal queue waiting and 115 seconds execution. All 22 exact selected reports
+were fresh: 198 passes, no failures/errors/skips, including retained-context hub,
+native stage/older-keyframe, all-game world services, title/save/overlay/package,
+composed audio, API/SDK and mandatory S3K controls. All 12,029 frozen inputs were
+unchanged. SDK/Javadoc/artifact verification completed. Actual compiled export
+is the same 17,717-line candidate SHA `0d03969dba73973ba1f1a574e4961466cbc47673f63dfb520a7f92c38bcc95c8`,
+byte-equal to the pin; the internal stage/history changes add no creator surface.
+Normal-window/PCM, affected trace and full candidate/fresh-guard gates remain
+pending. The compiled build records the pre-commit dirty intent composition; its
+source fingerprint, rather than cached window title metadata, owns attribution.

@@ -20,6 +20,10 @@ public final class WorldSessionPolicyAccess {
         if (hasPolicies(world)) registry.register(world.policies.rewindAdapter());
     }
 
+    public static void beforeSpecialStageForwardTick(WorldSession world) {
+        if (hasPolicies(world)) world.policies.beforeSpecialStageForwardTick();
+    }
+
     public static void bindRoster(WorldSession world, SpriteManager sprites) {
         if (hasPolicies(world)) world.policies.bindRoster(sprites);
     }

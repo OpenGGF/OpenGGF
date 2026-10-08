@@ -120,6 +120,14 @@ composes reviewed anatomical masks after native SAT admission, with native
 fallbacks for ball, powered, donor/custom and unreviewed poses. Do not scale the
 entire player quad or use `setHidden` to fake an appearance-only effect.
 
+Game Speed covers interactive native level, special and bonus play. Stage setup,
+results and exits remain under their native presentation owners. A provider being
+installed is not proof that it is active or interactive. Creator-owned stage
+callbacks keep canonical scheduling; the internal native pacing SPI is not a
+creator opt-in. Live rewind records the admitted logical player sample and the
+post-tick pacing state separately from physical BK2 input, so a short press and
+fractional remainder survive older-keyframe replay without trace-state authority.
+
 Saved requested preferences are bounded, schema-versioned, profile-namespaced
 JSON. The host selects the root; creators cannot supply paths. Secure directory
 streams, directory/file identity checks and atomic replacement protect byte

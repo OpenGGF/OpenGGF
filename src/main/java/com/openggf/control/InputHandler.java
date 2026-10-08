@@ -431,6 +431,10 @@ public class InputHandler {
 		return mouseInputSeen;
 	}
 
+    void publishNativeStagePlayers(PlayerInputState p1, PlayerInputState p2) {
+        logicalSnapshot = NativeStageLogicalSample.withPlayers(logicalSnapshot, p1, p2);
+    }
+
 	public void setLogicalOverride(LogicalInputSnapshot override) {
 		retainedGameplayInput = null;
 		logicalOverride = override != null ? override : LogicalInputSnapshot.neutral();

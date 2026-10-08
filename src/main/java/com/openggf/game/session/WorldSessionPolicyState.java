@@ -10,6 +10,7 @@ public interface WorldSessionPolicyState {
     RewindSnapshottable<?> rewindAdapter();
     void beforeAssembly(LevelLoadCause cause);
     void bindRoster(SpriteManager sprites);
+    default void beforeSpecialStageForwardTick() { }
     void failedAssembly(LevelLoadCause cause);
     void closeScreens();
     void retire();

@@ -30,7 +30,7 @@ progression and supported native teammates remain available. For packaging only,
 Ordinary JVM launches can install that jar in the Mod Manager: enable it, trust
 its exact hash and restart the executable. Code installation/replacement remains
 boot-scoped. Prepared settings can be changed without restarting the executable.
-Compiled creator code is unavailable in the engine's native image; see the
+Compiled creator code is unavailable in the engine's standard native image; see the
 [trust guide](../../docs/modding/concepts/trust.md).
 
 ## Catalogue and boundaries
@@ -71,7 +71,10 @@ switch on during that transition cannot abandon the player. Sonic 1 and Sonic 2
 have no bonus stages, so that row is unavailable there; unsupported monitor types
 are labelled per game instead of pretending every subtype exists everywhere.
 
-Game Speed schedules complete native ticks with a captured fractional remainder.
+Game Speed schedules complete native ticks in ordinary level play, the three
+native special stages and Sonic 3 & Knuckles bonus gameplay, with a captured
+fractional remainder. Native stage startup/setup, results and exits keep their
+existing cadence; bonus setup finishes before modified gameplay ticks begin.
 At 25%, three presentation frames have no native tick and the fourth has one;
 at 150%, frames alternate one and two ticks. Inputs remain held across skipped
 frames, and a press is consumed once. Pause, settings and focus still respond
@@ -134,7 +137,8 @@ Requested settings are saved per game under
 builder defaults to `target/example-mutators/player-settings`; `--save-root`
 selects another owned writable root. Existing schema-1 Gravity/Stealth choices
 remain valid; newly added mutators default off. Rewind captures admitted policies,
-entry permits and pacing, and never rewrites player preferences. Historical values
+entry permits and pacing, and never rewrites player preferences. The native Slots
+bonus stage remains non-rewindable. Historical values
 that differ from the saved choice require an explicit edit to branch future events.
 
 Start, Resume, Restart and Return save before admitting or leaving. A failed save

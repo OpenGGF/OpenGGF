@@ -47,7 +47,7 @@ import static com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants.*
  * - Rendering the background and track
  * - (Future) Player physics and object collision
  */
-public class Sonic2SpecialStageManager {
+public class Sonic2SpecialStageManager implements com.openggf.game.internal.NativeSpecialStagePacing {
     private static final Logger LOGGER = Logger.getLogger(Sonic2SpecialStageManager.class.getName());
     private final BackgroundCommandPool backgroundCommandPool = new BackgroundCommandPool();
 
@@ -81,6 +81,14 @@ public class Sonic2SpecialStageManager {
     private Rom rom;
 
     private boolean initialized = false;
+    private final com.openggf.game.internal.NativeSpecialStagePacingOwner pacingOwner =
+            new com.openggf.game.internal.NativeSpecialStagePacingOwner();
+    @Override public com.openggf.game.internal.NativeSpecialStagePacingOwner pacingOwner() { return pacingOwner; }
+    @Override public com.openggf.game.internal.NativeSpecialStagePacing.State pacingState() {
+        var emerald = objectManager == null ? null : objectManager.getActiveEmerald();
+        return pacingOwner.state(initialized && intro != null && intro.isComplete() && !isFinished()
+                && (emerald == null || !emerald.restrictsControlsToStart()) && !alignmentTestMode, previousPhysicalHeldButtons, previousPhysicalP2HeldButtons, sonicPlayer != null && tailsPlayer != null);
+    }
     private int currentStage = 0;
     private ResultState resultState = ResultState.RUNNING;
     private boolean emeraldCollected = false;
@@ -416,6 +424,7 @@ public class Sonic2SpecialStageManager {
      * @throws IOException If data loading fails
      */
     public void initialize(int stageIndex) throws IOException {
+        pacingOwner.beginEntry();
         // Reset any partial state from previous initialization attempts
         prepareForInitialization();
 
@@ -1492,6 +1501,7 @@ public class Sonic2SpecialStageManager {
     }
 
     private void latchCurrentPhysicalInputForNextVint() {
+        pacingOwner.acceptedSample();
         // ReadJoypads compares held state at executed VInts. Physical mapper
         // edges whose release or press occurred only on skipped updates are not
         // separate ROM observations (s2.asm:1361-1387).
@@ -2827,6 +2837,7 @@ public class Sonic2SpecialStageManager {
      * Resets the Special Stage manager state.
      */
     public void reset() {
+        pacingOwner.beginEntry();
         // Audio is owned by the transition that resets this manager: the entry
         // has already queued SndID_SpecStageEntry and MusID_FadeOut
         // (s2.asm:6543-6546) and stopping playback here would cut both, and

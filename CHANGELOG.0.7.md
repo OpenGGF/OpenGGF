@@ -21,7 +21,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   two lines with plain-language boundary feedback.
   Typed catalogue contributions also declare scatter, head-presentation, semantic
   monitor removal, checkpoint/ring suppression, independent stage-entry gates,
-  defeat knockback and whole-step speed; native consumer expansion is in progress.
+  defeat knockback and whole-step speed across ordinary play and native special/bonus
+  gameplay. Native setup, stage results and canonical movie/trace ticks retain their
+  existing owners; live rewind preserves admitted taps and fractional pacing.
 
 - **Sonic 2 title SFX priority:** the flashing star's last twinkle now runs to
   its own stop, as in the ROM, releasing the sound driver's SFX priority. A stop

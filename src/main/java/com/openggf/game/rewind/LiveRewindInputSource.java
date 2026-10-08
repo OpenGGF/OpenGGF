@@ -20,6 +20,7 @@ import java.util.Objects;
 public final class LiveRewindInputSource implements InputSource {
 
     private Bk2FrameInput[] frames = new Bk2FrameInput[128];
+    private LiveRewindPacingFrame[] pacingFrames = new LiveRewindPacingFrame[128];
     private int head;
     private int size;
     private int baseFrame;
@@ -29,6 +30,10 @@ public final class LiveRewindInputSource implements InputSource {
     }
 
     public void appendFrame(InputHandler input, SonicConfigurationService config) {
+        appendFrame(input, config, null);
+    }
+
+    void appendFrame(InputHandler input, SonicConfigurationService config, LiveRewindPacingFrame pacing) {
         Objects.requireNonNull(input, "input");
         Objects.requireNonNull(config, "config");
         int frameIndex = baseFrame + size;
@@ -47,13 +52,15 @@ public final class LiveRewindInputSource implements InputSource {
                 input.isControlDown(),
                 input.isAltDown(),
                 input.isSuperDown(),
-                "live:" + frameIndex));
+                "live:" + frameIndex), pacing);
     }
 
     public void discardAfter(int frame) {
         int keepCount = Math.max(1, Math.min(size, frame - baseFrame + 1));
         while (size > keepCount) {
-            frames[(head + --size) % frames.length] = null;
+            int index = (head + --size) % frames.length;
+            frames[index] = null;
+            pacingFrames[index] = null;
         }
     }
 
@@ -63,7 +70,9 @@ public final class LiveRewindInputSource implements InputSource {
             return;
         }
         for (int i = 0; i < removeCount; i++) {
-            frames[(head + i) % frames.length] = null;
+            int index = (head + i) % frames.length;
+            frames[index] = null;
+            pacingFrames[index] = null;
         }
         head = (head + removeCount) % frames.length;
         size -= removeCount;
@@ -82,9 +91,10 @@ public final class LiveRewindInputSource implements InputSource {
             return;
         }
         Bk2FrameInput retained = read(frame);
+        LiveRewindPacingFrame retainedPacing = pacingFrame(frame);
         clear();
         baseFrame = frame;
-        append(retained);
+        append(retained, retainedPacing);
     }
 
     public int earliestFrame() {
@@ -106,26 +116,40 @@ public final class LiveRewindInputSource implements InputSource {
         return frames[(head + index) % frames.length];
     }
 
+    LiveRewindPacingFrame pacingFrame(int frame) {
+        int index = frame - baseFrame;
+        return index < 0 || index >= size ? null : pacingFrames[(head + index) % frames.length];
+    }
+
     private void resetToSingleNeutralFrame(int frame) {
         clear();
         baseFrame = frame;
         append(neutralFrameInput(frame));
     }
 
-    private void append(Bk2FrameInput frame) {
+    private void append(Bk2FrameInput frame) { append(frame, null); }
+
+    private void append(Bk2FrameInput frame, LiveRewindPacingFrame pacing) {
         if (size == frames.length) {
             Bk2FrameInput[] grown = new Bk2FrameInput[frames.length * 2];
             int tail = Math.min(size, frames.length - head);
             System.arraycopy(frames, head, grown, 0, tail);
             System.arraycopy(frames, 0, grown, tail, size - tail);
+            LiveRewindPacingFrame[] grownPacing = new LiveRewindPacingFrame[grown.length];
+            System.arraycopy(pacingFrames, head, grownPacing, 0, tail);
+            System.arraycopy(pacingFrames, 0, grownPacing, tail, size - tail);
             frames = grown;
+            pacingFrames = grownPacing;
             head = 0;
         }
-        frames[(head + size++) % frames.length] = frame;
+        int index = (head + size++) % frames.length;
+        frames[index] = frame;
+        pacingFrames[index] = pacing;
     }
 
     private void clear() {
         Arrays.fill(frames, null);
+        Arrays.fill(pacingFrames, null);
         head = 0;
         size = 0;
     }

@@ -3,7 +3,6 @@ package com.openggf;
 import com.openggf.audio.AudioManager;
 import com.openggf.control.InputHandler;
 import com.openggf.control.InputHandlerInternalAccess;
-import com.openggf.game.GameModule;
 import com.openggf.game.mutators.GameplayMutatorPacing;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.WorldSessionPolicyAccess;
@@ -18,10 +17,16 @@ final class GameLoopGameplayPacing {
     private GameLoopGameplayPacing() { }
 
     static boolean step(GameLoop loop, GameplayModeContext context, Supplier<Level> level,
-                        GameModule module, InputHandler input, AudioManager audio,
-                        BooleanSupplier eligible, Consumer<GameplayMutatorPacing> zeroStep,
-                        boolean audioOwned) {
-        Level levelAtStart = level.get();
+                        InputHandler input, AudioManager audio, BooleanSupplier eligible,
+                        BooleanSupplier outsideRewind, BooleanSupplier rewindOwner,
+                        Consumer<GameplayMutatorPacing> zeroStep,
+                        GameLoopSpecialStageInput specialInput, boolean audioOwned) {
+        context = context != null && context.isGameplayRuntimeReady() ? context : null;
+        var module = context == null ? null : context.getWorldSession().getGameModule();
+        var boundary = GameLoopPacingBoundary.capture(loop, context, context == null ? null : level.get());
+        boolean rewindWasActive = rewindOwner.getAsBoolean();
+        BooleanSupplier outsideRewindAllowed = () -> outsideRewind.getAsBoolean() && !loop.resolveFadeManager().isActive();
+        boolean restoredBefore = rewindWasActive && boundary.same(loop, level, outsideRewindAllowed);
         var runtime = context == null ? null : WorldSessionPolicyAccess.getService(
                 context.getWorldSession(), GameplayMutatorPacing.class);
         boolean paced = module != null && eligible.getAsBoolean();
@@ -39,20 +44,26 @@ final class GameLoopGameplayPacing {
                 : paced ? Math.clamp(module.gameplayStepsPerFrame(), 1, 32) : 1;
         boolean interrupted = !paced || runtime != null && !modified
                 && (module.gameplayFrameController() != null || loop.resolveFadeManager().isActive());
-        if (interrupted && runtime != null) runtime.clearPendingInput();
+        if (interrupted && runtime != null && !restoredBefore) runtime.clearPendingInput();
         if (interrupted) InputHandlerInternalAccess.discardRetainedGameplayInput(input);
         if (steps == 0) {
             zeroStep.accept(runtime);
         } else {
-            if (runtime != null && runtime.hasPendingInput()) {
+            boolean special = loop.getCurrentGameMode() == com.openggf.game.GameMode.SPECIAL_STAGE;
+            if (!special && runtime != null && runtime.hasPendingInput() && !restoredBefore) {
                 InputHandlerInternalAccess.retainGameplayInput(input, runtime.pendingPlayer1(), runtime.pendingPlayer2());
                 runtime.clearPendingInput();
             }
-            loop.step();
-            for (int i = 1; i < steps && sameBoundary(loop, context, level, levelAtStart, pumpAllowed); i++) loop.step();
+            Runnable wholeStep = special && (modified || restoredBefore || runtime != null && runtime.hasPendingInput())
+                    ? () -> specialInput.runPresentationTick(boundary.special(), !restoredBefore && modified, loop::step)
+                    : loop::step;
+            wholeStep.run();
+            for (int i = 1; i < steps && boundary.same(loop, level, pumpAllowed); i++) wholeStep.run();
         }
-        if (!sameBoundary(loop, context, level, levelAtStart, pumpAllowed)) {
-            if (runtime != null) runtime.clearPendingInput();
+        if (!boundary.same(loop, level, pumpAllowed)) {
+            boolean restoredAfter = (rewindWasActive || rewindOwner.getAsBoolean())
+                    && boundary.same(loop, level, outsideRewindAllowed);
+            if (runtime != null && !restoredAfter) runtime.clearPendingInput();
             InputHandlerInternalAccess.discardRetainedGameplayInput(input);
             if (audioOwned) audio.setForwardPlaybackRate(1.0);
             audioOwned = false;
@@ -60,8 +71,4 @@ final class GameLoopGameplayPacing {
         return audioOwned;
     }
 
-    private static boolean sameBoundary(GameLoop loop, GameplayModeContext context, Supplier<Level> level,
-                                        Level started, BooleanSupplier eligible) {
-        return loop.resolveGameplayModeContext() == context && level.get() == started && eligible.getAsBoolean();
-    }
 }
