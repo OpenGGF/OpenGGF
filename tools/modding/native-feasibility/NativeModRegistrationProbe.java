@@ -25,6 +25,18 @@ import java.util.Set;
  */
 public final class NativeModRegistrationProbe {
     public static void main(String[] args) throws Exception {
+        if (args.length > 0 && args[0].equals("--audit")) {
+            if (args.length != 2) throw new IllegalArgumentException("Expected: --audit <members.tsv>");
+            NativeModMemberAudit.verify(Path.of(args[1]));
+            return;
+        }
+        if (args.length > 0 && args[0].equals("--members")) {
+            if (args.length < 3) throw new IllegalArgumentException("Expected: --members <members.tsv> <mods-directory> [owner-id]");
+            NativeModMemberAudit.verify(Path.of(args[1]));
+            args = java.util.Arrays.copyOfRange(args, 2, args.length);
+        }
+        boolean listOnly = args.length == 2 && args[0].equals("--list");
+        if (listOnly) args = new String[] {args[1]};
         if (args.length < 1 || args.length > 2) {
             throw new IllegalArgumentException("Expected: <mods-directory> [owner-id]");
         }
@@ -37,6 +49,11 @@ public final class NativeModRegistrationProbe {
                 throw new AssertionError(entry);
             }
             String owner = descriptor.manifest().id();
+            if (listOnly) {
+                System.out.println("OWNER\t" + owner);
+                passed++;
+                continue;
+            }
             if (args.length == 2 && !owner.equals(args[1])) {
                 continue;
             }

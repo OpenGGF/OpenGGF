@@ -89,8 +89,11 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 
 - `tools/modding/native-feasibility/probe.py` builds closed-world, Crema and optional
   JIT controls around the production mod classloader, then compiles two external
-  fixture JARs after the images exist. The companion registration probe exercises
-  real package validation and owner transactions. Origin: [GraalVM native mod
+  fixture JARs after the images exist. `registration_probe.py` derives exact-class
+  preservation from the canonical API and all packaged mod bytecode, audits
+  types/fields/methods before creator execution, and checks real validation and
+  owner transactions on JVM/native. The companion `NativeModMemberContractTest`
+  covers dormant callbacks and missing linkage. Origin: [GraalVM native mod
   feasibility, 2026-10-08](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md).
 
 - `SitarHeroCapture` (`src/test/java/com/openggf/tools/`) packages the real
