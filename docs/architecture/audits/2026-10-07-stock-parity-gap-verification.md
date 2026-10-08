@@ -1254,3 +1254,52 @@ The sampler source SHA-256 is
 the original movie SHA-256 remains
 `f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`.
 The recurring measurement hazard is recorded in the existing trace briefing.
+
+### Fresh round-3 frontier checks
+
+The three workers independently replay the unchanged stock production at
+`098053c4a`; these are terminal trace-profile checks, separate from ordinary
+suite qualification. All use the original absolute, identity-verified ROMs and
+the unchanged compressed fixtures.
+
+| Lane | Cases / failures / errors / skips | Reproduced frontier |
+| --- | --- | --- |
+| S1 full chain and standalone MZ1 | 2 / 1 / 0 / 0 | Chain MZ1 segment 7 retains 192 physics-group differences, zero animation differences and complete comparison; first row 3261 Y `$03CB/$03D5`. Standalone MZ1 passes. |
+| S2 full chain, prefix and standalone SS7 | 3 / 1 / 0 / 0 | Prefix and SS7 pass. The chain retains the SS7 results walk at cursor 101691 and ten gap-clock axes; the first return edge remains native 10308 / engine 10268. Every reached segment through 17 still has zero physics/art differences. |
+| S3K Sonic+Tails full chain | 1 / 1 / 0 / 0 | Returned HCZ segment 11 retains 69,393 physics and 12,674 animation differences and loses ownership at cursor 68801. The first comparison of any kind is mapping row 1507, native `$63` / engine `$95`, before the first Y difference at row 1510. |
+
+S1's bounded fourteen-case death regression runs against the old production
+first: ten intended failures, zero errors/skips, Maven 24.864 seconds. The
+native rolling-floor reset is missing before death velocity; ordinary standing
+and already-correct reverse/ceiling controls distinguish that omission from a
+blanket position adjustment. Candidate focused and canonical checks remain
+pending at this checkpoint. Later S1 segment totals are sums of physics and
+animation groups, not new physics-only counts.
+
+S2's source proof is the stock `Obj6F_TallyScore` gate: successful acquisition
+with exactly seven emeralds, except native `Player_mode == 2`, selects routine
+`$30` immediately. Its leave/init/return/latch/hold/display sequence is 210
+subsequent dispatches, not an arbitrary replacement timer. The earlier Perfect
+branch has no stock results input in the current model and remains unsupported;
+live results rewind is excluded by the existing GameLoop mode gate. Neither
+limitation is silently extended by this bounded correction. The new regression
+is queued against unchanged production; no candidate pass is claimed yet.
+
+The S3K native fan/belt observation completes with 1,431 samples and seventeen
+matching surrounding player rows. At the first span the fan is already active,
+rejecting a timer-start explanation. ROM `$30834` contains one `MoveSprite2`
+call before `Draw_Sprite`; 565 same-slot/code bubble observations move by exactly
+eight pixels upward. The engine's doubled motion is independently incorrect.
+Native fan slot 10 precedes belt slot 91; the engine baseline has fan slot 24
+after belt slot 11. Whether correcting bubble occupancy explains that reversed
+ordering requires the pending matched engine probe and one-variable candidate
+replay. No dispatcher override, timer fit or full HCZ closure is claimed.
+
+While these checks wait, another owner integrates mod framework readiness into
+main at `bf7c56e1986fd8ca4a4c5e0cafdf3087e73b545a`; its actual-main run and
+publication are pending. Root explicitly preserves that source freeze and all
+Sitar jobs. Round-3 trees remain private on `098053c4a` until the actual published
+successor and qualification can be reconciled. In particular, upstream character
+callback/specification changes must be composed with the separate death-reset
+hunk before final validation. This checkpoint is evidence of verified gaps and
+pending candidates, not delivery or a new whole-suite pass.
