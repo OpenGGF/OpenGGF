@@ -17,10 +17,7 @@ public final class OwnerBoundCallbacks {
 
     public OwnerBoundCallbacks(String owner, ModFaultBoundary boundary, int limit,
             Map<String,? extends RewindSnapshottable<?>> adapters) {
-        Class<?> caller = StackWalker.getInstance(Set.of(StackWalker.Option.RETAIN_CLASS_REFERENCE,
-                StackWalker.Option.SHOW_HIDDEN_FRAMES)).walk(frames -> frames.map(StackWalker.StackFrame::getDeclaringClass)
-                .filter(type -> type != OwnerBoundCallbacks.class && type.getClassLoader() != null)
-                .findFirst().orElseThrow());
+        Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(OwnerBoundCallbacks.class);
         if (caller.getClassLoader() != OwnerBoundCallbacks.class.getClassLoader())
             throw new SecurityException("Creator callback authority belongs to its engine registration");
         this.owner = ModKeySyntax.requireManifestId(owner);
@@ -89,7 +86,7 @@ public final class OwnerBoundCallbacks {
                         result = Objects.requireNonNull(result,"Owned zone runtime snapshot");
                     if (value instanceof com.openggf.game.render.SpecialRenderEffect && method.getName().equals("stage"))
                         result = Objects.requireNonNull(result,"Owned render effect stage");
-                    if (value instanceof com.openggf.game.save.SaveSnapshotProvider && method.getName().equals("captureRuntimeFields"))
+                    if (value instanceof com.openggf.game.save.SaveSnapshotProvider && method.getName().equals("captureSaveFields"))
                         return com.openggf.game.save.RuntimeSaveCapture.freezeFields(saveFields(result));
                     Class<?> returned = method.getReturnType();
                     return result != null && publicInterface(returned)

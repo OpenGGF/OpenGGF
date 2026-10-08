@@ -25,7 +25,6 @@ import java.util.Objects;
 @com.openggf.game.ModApi
 public final class RewindRegistry {
     private static final String GAME_RNG_KEY = "gamerng";
-    private static final StackWalker CALLERS = StackWalker.getInstance(java.util.Set.of(StackWalker.Option.RETAIN_CLASS_REFERENCE, StackWalker.Option.SHOW_HIDDEN_FRAMES));
 
     // Engine sessions own their registry admission. A creator may still build a private registry.
     private final ClassLoader mutationAuthority = mutationCallerLoader();
@@ -144,9 +143,8 @@ public final class RewindRegistry {
     }
 
     private static ClassLoader mutationCallerLoader() {
-        return CALLERS.walk(frames -> frames.map(StackWalker.StackFrame::getDeclaringClass)
-                .filter(type -> type != RewindRegistry.class && type.getClassLoader() != null)
-                .findFirst().orElse(RewindRegistry.class).getClassLoader());
+        return com.openggf.util.EngineCallerAccess
+                .callerOutsideOrBoundary(RewindRegistry.class).getClassLoader();
     }
 
     private void requireMutationAuthority() {

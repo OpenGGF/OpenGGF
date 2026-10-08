@@ -20,11 +20,8 @@ public final class OwnedCharacterRegistry {
 
     public static PlayableCharacterRegistry bind(String verifiedOwner, PlayableCharacterRegistry registry,
             PlayableCharacterRegistry inherited, ModFaultBoundary boundary) {
-        ClassLoader caller=StackWalker.getInstance(Set.of(StackWalker.Option.RETAIN_CLASS_REFERENCE,
-                StackWalker.Option.SHOW_HIDDEN_FRAMES)).walk(frames->frames
-                .map(StackWalker.StackFrame::getDeclaringClass)
-                .filter(type->type!=OwnedCharacterRegistry.class && type.getClassLoader()!=null)
-                .findFirst().orElseThrow().getClassLoader());
+        ClassLoader caller=com.openggf.util.EngineCallerAccess
+                .callerOutside(OwnedCharacterRegistry.class).getClassLoader();
         if (caller!=OwnedCharacterRegistry.class.getClassLoader())
             throw new SecurityException("Character registry ownership belongs to engine publication");
         String owner=ModKeySyntax.requireManifestId(verifiedOwner);
