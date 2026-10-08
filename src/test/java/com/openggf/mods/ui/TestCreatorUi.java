@@ -277,6 +277,48 @@ class TestCreatorUi {
         assertThrows(IllegalArgumentException.class, () -> CompactFont.width("A", 0));
     }
 
+    @Test void compactLargeScalesKeepEveryTranslucentPixelAndMatchingMetrics() {
+        String[] digit = {"11110", "00001", "00001", "01110", "00001", "00001", "11110"};
+        for (int scale : new int[] {5, 8}) {
+            int[][] visits = new int[7 * scale][5 * scale];
+            PixelCanvas canvas = new PixelCanvas() {
+                public int width() { return 80; }
+                public int height() { return 80; }
+                public void fill(int x, int y, int w, int h, int argb) {
+                    assertEquals(0x8044AAFF, argb);
+                    assertTrue(x >= 7 && y >= 11 && x + w <= 7 + 5 * scale && y + h <= 11 + 7 * scale);
+                    for (int py = y; py < y + h; py++)
+                        for (int px = x; px < x + w; px++) visits[py - 11][px - 7]++;
+                }
+            };
+            CompactFont.draw(canvas, "3", 7, 11, scale, 0x8044AAFF);
+            for (int y = 0; y < visits.length; y++)
+                for (int x = 0; x < visits[y].length; x++)
+                    assertEquals(digit[y / scale].charAt(x / scale) - '0', visits[y][x],
+                            "large glyphs must preserve every pixel exactly once at scale " + scale);
+            assertEquals(scale == 5 ? 25 : 40, CompactFont.width("3", scale));
+            assertEquals(scale == 5 ? 85 : 136, CompactFont.width("3 A", scale));
+            assertEquals(0, CompactFont.width("", scale));
+            assertEquals("A...", CompactFont.fit("ABCDE", scale == 5 ? 115 : 184, scale));
+            assertEquals("..", CompactFont.fit("ABCDE", scale == 5 ? 55 : 88, scale));
+        }
+    }
+
+    @Test void compactScaleBoundsRejectBeforeDrawing() {
+        List<List<Integer>> emitted = new ArrayList<>();
+        PixelCanvas canvas = new PixelCanvas() {
+            public int width() { return 80; }
+            public int height() { return 80; }
+            public void fill(int x, int y, int w, int h, int argb) { emitted.add(List.of(x, y, w, h, argb)); }
+        };
+        for (int scale : new int[] {0, 9}) {
+            assertThrows(IllegalArgumentException.class, () -> CompactFont.width("3", scale));
+            assertThrows(IllegalArgumentException.class, () -> CompactFont.fit("3", 80, scale));
+            assertThrows(IllegalArgumentException.class, () -> CompactFont.draw(canvas, "3", 7, 11, scale, -1));
+        }
+        assertTrue(emitted.isEmpty(), "invalid scales must not emit a partial glyph");
+    }
+
     @Test void compactRasterRunsMatchTheMaintainedGlyphDesign() {
         List<List<Integer>> runs = new ArrayList<>();
         CompactFont.glyphs("A", 10, 20, 1,

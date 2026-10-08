@@ -2,7 +2,7 @@ package com.openggf.mods.ui;
 
 import java.util.Objects;
 
-/** Code-drawn 5x7 glyphs on a six-pixel advance, shared by scenes and level overlays. */
+/** Code-drawn 5x7 glyphs on a six-pixel advance at scales 1–8, shared by scenes and level overlays. */
 @com.openggf.game.ModApi
 public final class CompactFont {
     private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -13,7 +13,7 @@ public final class CompactFont {
     @com.openggf.game.ModApi
     @FunctionalInterface public interface RunSink { void run(int x, int y, int width, int height); }
     private static void scale(int scale) {
-        if (scale < 1 || scale > 4) throw new IllegalArgumentException("Font scale must be 1..4");
+        if (scale < 1 || scale > 8) throw new IllegalArgumentException("Font scale must be 1..8");
     }
     public static int width(String text, int scale) {
         Objects.requireNonNull(text, "text"); scale(scale);

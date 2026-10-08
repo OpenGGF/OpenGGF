@@ -951,6 +951,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Shared helpers cover standalone assembly, character landing/reset hooks,
   immutable physics and placement edits, bounded storage and captured state,
   authored fonts and overlays, remappable actions and ROM-qualified scene art.
+  Shared compact-font metrics and drawing support scales 1–8, including Sitar's
+  five-times-size count-in without changing its authored pixels or audible clock.
   Generated character starters draw their installed baked art; walkthroughs use
   repeatable Maven outputs and the examples' actual required ROMs.
   Generated standalone starters materialize authored audio as runtime resources
