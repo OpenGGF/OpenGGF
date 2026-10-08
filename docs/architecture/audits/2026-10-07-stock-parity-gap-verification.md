@@ -2060,3 +2060,36 @@ documentation successor's HEAD, owns these outcomes.
 
 Publication and accounted-for owned worktree/agent cleanup follow this
 qualification; their final observed outcome is recorded below.
+
+#### Independent remote publication after the original main qualification
+
+The completed actual-main qualification above remains attributed to863/run9deb.
+Publication of its evidence-only successor `5662ad2c2` is blocked before any
+push: remote develop independently advances to
+`d4993a7307241bf90f004e0d7cf90936f075cf46` through Starfall Frontier and
+Eggman's Sky merges while local main remains frozen. Fetch preserves all
+local source and known dirt. The complete incoming delta is123 paths,
+including13 engine Java files, new/changed creator-scene tests, two example
+mods and22 API signature-pin lines, alongside existing engineering/prose.
+There is no POM, hooks, selection-policy or testing-runner change. This is
+not source-equivalent to the completed863 validation.
+
+Private reconciliation retains both source histories. All parity production
+and Java-test paths are disjoint from the incoming changes; shared changelog,
+measurement hazards and implementation pitfalls merge by retaining both
+owners' entries. A separate clean updated-remote worktree at exactd499 uses
+its canonical original absolute main ROM files and normal full ordinary plus
+fresh guards, selected against pre-importf5de. The combined parity candidate
+uses the unmodified normal plan against actual destinationd499. Fresh focus
+covers incoming creator scenes, detached ROM art/rendering, startup audio,
+API/SDK/Javadoc consumers and S3K startup before combined qualification.
+The published remote's earlier noncanonical-ROM, incomplete broad result
+is not reused as a canonical full baseline. No new/worsened/unattributed
+failure or unexplained skip can be accepted by totals alone.
+
+The earlier complete negative-case table is retained as an immutable source
+comparison. Updated-base, combined private and actual-main results will be
+recorded with their own exact source and command before final publication.
+Foreign private requests and native captures remain untouched; local main
+and publication hold continue while this source-changing reconciliation is
+qualified.

@@ -153,6 +153,14 @@ and cut loading waits from promotional footage without calling them real-time lo
 measurements. Offline audio establishes content and cue timing, not physical speaker
 latency. See the [example's capture notes](../../examples/sitar-hero/README.md#testing-and-captures).
 
+Scene draw recording is not GPU rendering (2026-10-08, Eggman's Sky): the
+headless update/recording cost was about 0.5 ms while native draw submission
+alone cost 5.3 ms due to repeated writes to an in-flight vertex buffer. Measure
+`ModSceneHost.draw` with a real GL context and account for GPU completion.
+`ExampleModCapture --every 0` with no video never submits a frame; it cannot
+measure rendering throughput. Separate warm-up, update, submission and finish
+costs, and compare deterministic framebuffer output when changing uploads.
+
 Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
 task): the positioned MHZ capture retained about 22 MiB after its callback while
 three complete capture/rewind/ROM-loading passes settled near 16.8 MiB, with only

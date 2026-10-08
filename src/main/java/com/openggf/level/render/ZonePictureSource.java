@@ -46,6 +46,22 @@ public interface ZonePictureSource {
      */
     Picture foreground(int zone, int act, int x, int y, int width, int height);
 
+    /**
+     * Whether {@link #kit} has the act. The default builds the kit to find out, so a provider
+     * should cache what it builds.
+     */
+    default boolean hasKit(int zone, int act) {
+        return kit(zone, act) != null;
+    }
+
+    /**
+     * The act's building blocks (layout, block pictures, block collision, background and
+     * palette) for presentations that assemble their own terrain, or null when unsupported.
+     */
+    default DetachedLevelKit kit(int zone, int act) {
+        return null;
+    }
+
     /** Whether {@link #titleCard} has the act's title card. */
     boolean hasTitleCard(int zone, int act);
 
