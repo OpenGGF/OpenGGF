@@ -4,6 +4,10 @@ Goal: audible, instrument-specific mistakes with reliable solo, local and direct
 
 Base: `c039c009131be4548c3ab40eb809a0f85c2808f1`, fetched/fast-forward checked on develop. User authorized planning and execution plus a bounded Opus ideas consultation. Parent owns all implementation and delivery.
 
+Current checkpoint: the updated framework candidate is qualified with unchanged
+baseline failures and skips, and all 674 fresh guards pass. Actual-main integration,
+its mandatory combined validation, develop push and owned cleanup remain pending.
+
 ## Design
 
 Keep judgment and scoring inside the mod. A resolved miss or wrong strike mutes its part until a successful hit. Dropping a sustain is quiet. Each mistake emits one short cue, with rate limiting to avoid chords or dense misses becoming a wall of noise. The cue is a pitched, enveloped fragment of the selected ROM part, retaining the current song timbre. Existing roles are Sitar, Harp, Synth and Bongos.
@@ -22,7 +26,7 @@ Peer presentation packets carry round, independent sequence, song sample positio
 - [x] Add sequenced peer presentation messages and tests for duplicates, malformed fields, stale/rematch/pause, paired co-op, independent scoring and production loopback.
 - [x] Wire the packaged scene through mod-owned `PerformanceAudio`; cover solo, local players, online co-op/duel, quiet tail, retry and pause.
 - [x] Record README/creator recipes, candidate API rationale, changelog, audio evidence and validation limitations.
-- [ ] Run focused affected/API tests, inspect selection and preflight; freeze source then normal combined candidate validation and fresh guards.
+- [x] Run focused affected/API tests, inspect selection and preflight; freeze source then normal combined candidate validation and fresh guards.
 - [ ] Merge into current develop without switching it, run mandatory integrated selection, compare concrete failures/skips, push only develop and clean owned worktree/branch/Opus resources.
 
 ## Verification baseline and review focus
@@ -251,7 +255,7 @@ are no source conflicts or removed upstream helper changes. The scene-music and
 network implementation inputs remain those of the completed first candidate.
 
 The original compile-only queue request was verified unadmitted with no child
-process, then cancelled with exit130 after1023 seconds; no Maven result is claimed.
+process, then cancelled with exit 130 after 1,023 seconds; no Maven result is claimed.
 It was replaced once by the supported focused test lane, which both compiles the
 composition and checks its public contract. Actual command below is normalized
 only for the three machine-local ROM paths:
@@ -264,28 +268,91 @@ DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean \
   "-Ds3k.rom.path=${S3K_ROM}" test -B
 ```
 
-The wrapper admitted normally after3621 seconds with its own4GiB/4-core budget;
-3770 production and3627 test sources freshly compiled at Java21. It completed
-at2026-10-08T12:18:31Z, exit0 / BUILD SUCCESS, Maven execution10:48. All20 fresh
-XML reports were independently inspected (mtime12:09–12:18Z):210 cases, zero
-failures, errors or skips. Sitar's13 classes contribute152 cases (Arcade39 includes
-one upstream helper check); native music/cues18, API signatures9, SDK10, Javadoc7,
-links1, release policy13. The XML ROM properties point at the three original main
+The wrapper admitted normally after 3,621 seconds with its own budget of 4 GiB
+and four cores; 3,770 production and 3,627 test sources freshly compiled at Java 21.
+It completed at `2026-10-08T12:18:31Z`, exit 0 / BUILD SUCCESS, Maven execution
+10:48. All 20 fresh XML reports were independently inspected (mtime 12:09–12:18Z):
+210 cases, zero failures, errors or skips. Sitar's 13 classes contribute 152 cases
+(Arcade's 39 include one upstream helper check); native music/cues 18, API
+signatures 9, SDK 10, Javadoc 7, links 1, release policy 13. The XML ROM properties
+point at the three original main
 filenames; SHA1/CRC hashes independently match the documented REV01/locked-on
 identities. This is focused composition verification, not a new full-suite pass.
 
 The tested source index tree remained exactly
 `1af721093e5f4414770fac80df632f982b5dacc4` throughout execution. A separate invocation
-of freshly compiled `ModApiSignatureSurface --snapshot` generated17274 lines,
+of freshly compiled `ModApiSignatureSurface --snapshot` generated 17,274 lines,
 exactly equal to the merged candidate pin. Against bf7 it has precisely the
 `SceneMusicPlayer.PLAYHEAD` field and `cuePart(long,int,double,double,double,double)`
 method additions, zero removals and no additional exported types. No manual
 candidate version/schema change or published-pin edit is introduced.
 
-The actual updated change plan selects3058/3058 ordinary classes, one worker and
-fresh guards; Java21/Lua5.4/PowerShell tool preflight passes. Normal combined
-candidate validation will retain the150-minute execution cap (queue wait excluded,
+At this checkpoint, the updated change plan selected 3,058/3,058 ordinary classes,
+one worker and fresh guards; Java 21/Lua 5.4/PowerShell tool preflight passed.
+Normal combined candidate validation retained the 150-minute execution cap (queue wait excluded,
 10-minute no-output rule) and compare complete failures/skips with the framework
 owner's qualified updated base. Main remains under that owner's kit/evidence/push
 freeze. Mandatory actual-main qualification, develop push and owned cleanup remain
 pending; this private checkpoint does not claim delivery.
+
+## Updated framework candidate qualification
+
+The complete updated baseline is the framework owner's actual-main run
+`20261008T103708Z-730bd986`, at
+`bf7c56e1986fd8ca4a4c5e0cafdf3087e73b545a`: 3,056 selected ordinary classes,
+3,054 reports / 26,514 cases / 27 failures / zero errors / 62 skips, followed by
+87 fresh guard reports / 674 passing cases without skips. Attribution and the
+complete uncapped failure/skip tables are in the
+[framework readiness plan](2026-10-07-mod-framework-product-readiness.md).
+Those tables were read in full and compared by identity and concrete assertion,
+not merely by totals.
+
+The updated private candidate was frozen clean at
+`984cb8e2e317848344883879088762ebac7cbc88`. Its actual command was:
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base bf7c56e1986fd8ca4a4c5e0cafdf3087e73b545a --max-minutes 150 --run
+```
+
+Run `20261008T123028Z-dbe57c8c` admitted immediately at `12:30:28Z`, selecting
+all 3,058 ordinary classes with one worker and fresh guards. Ordinary completed
+in 4,978.39 seconds: 3,056 reports / 26,535 cases / 27 failures / zero errors /
+62 skips, exit 1. Fresh guards completed in 222.71 seconds: 87 reports / 674
+cases / zero failures, errors or skips, exit 0. The outer runner terminated with
+exit 1 and failed status before the `13:58:02Z` inspection. Both lanes completed;
+there was no timeout and all failure/skip omission counts were zero. This is
+qualification with inherited failures, not an all-green suite claim.
+
+All 27 failure identities and exception types match the baseline. Twenty-six
+full assertion first lines match literally. The complete SSZ first line is
+2,951 characters; after only its exception prefix and the previously verified
+`RewindObjectStateBlob@hex` suffix normalization, all 2,907 remaining characters
+match. No concrete field is removed. All 62 skip identities and first causal
+reason lines match literally, with zero added, removed or changed skips and no
+ROM-prerequisite skip. There are no new, worsened, resolved or unattributed
+failures in this candidate comparison.
+
+Fresh ordinary XML was inspected before cleanup: all 13 Sitar classes / 152
+cases, native scene music and part cues / 18, API signatures / 9, SDK / 10 and
+Javadoc / 7 passed without skips. Required S3K AIZ / 8, bootstrap / 6, decoding /
+3 and both level-loading classes / 36 + 7 also passed without skips. The actual
+launch properties used the three original absolute main ROM filenames; their
+SHA-1 and CRC32 values were independently rehashed and match the required
+REV01/locked-on identities.
+
+HEAD and clean tracked status were rechecked after termination. The launch
+working-tree fingerprint was
+`45d754079c61a71e8e2f6be15f2e5e3f55c903b68262f5255a7eab6f2ccd14f8`.
+After complete consumption, the exact run's normal acknowledgment exited 0 and
+its directory was verified absent. Raw diagnostics are not archived.
+
+The framework owner subsequently published
+`d740b7a0fadd97b2e7c104d56481a0235bdffb4c` and released main's freeze after owned
+cleanup. Its successor delta from bf7 is confined to content-policy tooling and
+prose, with no engine, Java-test or API delta. The owner reports 32 policy checks
+and 137 focused Java guards passing on that policy repair. This is attributed
+owner evidence, not a second local execution. Reconcile that successor before
+main integration, then run the mandatory actual-main ordinary and fresh guards
+against the actual pre-integration develop commit. Develop push and owned
+worktree/branch cleanup remain pending.
