@@ -349,6 +349,13 @@ jobs:
               print(f"::error ::{message}", file=sys.stderr)
               sys.exit(1)
 
+          # Native builds cannot load code mods and ship no bundled mods (JVM only).
+          def reject_bundled(archive_path, names):
+              bundled = sorted(name for name in names
+                               if "bundled/" in f"/{name}" or "bundled-mods.json" in name)
+              if bundled:
+                  fail(f"{archive_path} must not carry bundled mods: {', '.join(bundled[:5])}")
+
           pom = Path("pom.xml").read_text(encoding="utf-8")
           match = re.search(r"<version>([^<]+)</version>", pom)
           if not match:
@@ -397,6 +404,7 @@ jobs:
                   fail(f"{archive_path} is missing required entries: {', '.join(missing)}")
               if not any(name.startswith("OpenGGF/") and name.endswith(".dll") for name in names):
                   fail(f"{archive_path} does not include packaged LWJGL .dll libraries")
+              reject_bundled(archive_path, names)
           elif platform == "macos":
               archive_path = distribution_root / "OpenGGF-macos.zip"
               if not archive_path.is_file():
@@ -412,6 +420,7 @@ jobs:
                   missing = sorted(required - names)
                   if missing:
                       fail(f"{archive_path} is missing required entries: {', '.join(missing)}")
+                  reject_bundled(archive_path, names)
                   info_plist = archive.read("OpenGGF.app/Contents/Info.plist").decode(
                       "utf-8", errors="replace")
                   for executable in ("OpenGGF.app/Contents/MacOS/OpenGGF",
@@ -437,6 +446,7 @@ jobs:
                   fail(f"{archive_path} OpenGGF/OpenGGF is not executable")
               if not any(name.startswith("OpenGGF/") and name.endswith(".so") for name in members):
                   fail(f"{archive_path} does not include packaged LWJGL .so libraries")
+              reject_bundled(archive_path, members)
           else:
               fail(f"Unknown release platform: {platform}")
 
@@ -527,6 +537,32 @@ jobs:
           for classifier, (prefix, suffix) in required_native_payloads.items():
               if not any(name.startswith(prefix) and name.endswith(suffix) for name in names):
                   fail(f"{jar} is missing LWJGL {classifier} payload entries under {prefix} ending in {suffix}")
+
+          # Bundled first-party mods: the engine's pinned manifest must list exactly the
+          # embedded jars, each matching its recorded size and SHA-256.
+          import hashlib
+          import json
+          bundled_manifest = "META-INF/openggf/bundled-mods.json"
+          if bundled_manifest not in names:
+              fail(f"{jar} is missing the bundled mod manifest {bundled_manifest}")
+          with zipfile.ZipFile(jar) as archive:
+              manifest_data = json.loads(archive.read(bundled_manifest))
+              if manifest_data.get("formatVersion") != 1:
+                  fail(f"{jar} bundled mod manifest has an unsupported formatVersion")
+              listed = {}
+              for mod in manifest_data.get("mods", []):
+                  entry = f"openggf-bundled/{mod['file']}"
+                  if entry not in names:
+                      fail(f"{jar} does not embed bundled mod {mod['id']} at {entry}")
+                  payload = archive.read(entry)
+                  if len(payload) != mod["size"] or hashlib.sha256(payload).hexdigest() != mod["sha256"]:
+                      fail(f"{jar} embedded bundled mod {mod['id']} does not match its pinned hash")
+                  listed[entry] = mod["id"]
+          embedded = {name for name in names if name.startswith("openggf-bundled/") and not name.endswith("/")}
+          unexpected = sorted(embedded - set(listed))
+          if unexpected:
+              fail(f"{jar} embeds bundled jars missing from its manifest: {', '.join(unexpected)}")
+          print(f"Universal JVM jar carries {len(listed)} bundled mod(s): {', '.join(sorted(listed.values())) or 'none'}")
 
           distribution_root.mkdir(parents=True, exist_ok=True)
           stable_jar = distribution_root / "OpenGGF-universal.jar"
