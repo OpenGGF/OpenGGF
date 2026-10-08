@@ -212,6 +212,11 @@ public class DelegatingGameModule implements GameModule {
     }
 
     @Override
+    public com.openggf.level.Level transformDecodedLevel(com.openggf.level.Level source) {
+        return base.transformDecodedLevel(source);
+    }
+
+    @Override
     public com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet()
             throws java.io.IOException {
         return base.getAdditiveLevelRingSpriteSheet();

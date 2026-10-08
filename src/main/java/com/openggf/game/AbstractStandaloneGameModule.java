@@ -14,13 +14,28 @@ import com.openggf.level.objects.TouchResponseTable;
  *
  * <p>{@link #getGameId()} is fixed to {@link GameId#STANDALONE};
  * {@link #getIdentifier()} is also the title/save game code and must equal the
- * manifest owner. Creators implement source-based game and touch-table creation,
- * object registry/placement encoding, audio profile, zone registry, and physics
- * provider. All other providers have no-ROM-safe neutral defaults. ROM-shaped
- * creation methods deliberately throw.</p>
+ * manifest owner. The optional {@link StandaloneGameSpec} constructor supplies
+ * source-based games, registries, physics, launch initialization and save defaults.
+ * No-argument subclasses retain the expert provider override path. Other providers
+ * have no-ROM-safe neutral defaults; ROM-shaped creation methods deliberately throw.</p>
  */
 @ModApi
 public abstract class AbstractStandaloneGameModule implements GameModule {
+    private final StandaloneGameSpec specification;
+    public AbstractStandaloneGameModule() { specification = null; }
+    protected AbstractStandaloneGameModule(StandaloneGameSpec specification) {
+        this.specification = java.util.Objects.requireNonNull(specification, "specification");
+    }
+    private StandaloneGameSpec specification() {
+        if (specification == null) throw new UnsupportedOperationException("Override this provider or construct with StandaloneGameSpec");
+        return specification;
+    }
+    @Override public String getIdentifier() { return specification().owner(); }
+    @Override public boolean supportsSidekick() { return specification == null ? GameModule.super.supportsSidekick() : specification.supportsSidekick(); }
+    @Override public LevelInitProfile getLevelInitProfile() { return specification == null ? GameModule.super.getLevelInitProfile() : specification.levelInitProfile(); }
+    @Override public com.openggf.game.save.SaveSnapshotProvider getSaveSnapshotProvider() { return specification == null ? GameModule.super.getSaveSnapshotProvider() : specification.saveSnapshotProvider(); }
+    @Override public MusicReference getLevelMusicReference(int zone, int act) { return getZoneRegistry().getMusicReference(zone, act); }
+
     @Override public final GameId getGameId() { return GameId.STANDALONE; }
     @Override public final String getGameCode() { return getIdentifier(); }
 
@@ -36,14 +51,15 @@ public abstract class AbstractStandaloneGameModule implements GameModule {
         throw new UnsupportedOperationException("Standalone modules use GameDataSource");
     }
 
-    @Override public abstract Game createGame(GameDataSource source);
-    @Override public abstract TouchResponseTable createTouchResponseTable(GameDataSource source)
-            throws java.io.IOException;
-    @Override public abstract ObjectRegistry createObjectRegistry();
-    @Override public abstract ObjectPlacementEncoding getObjectPlacementEncoding();
-    @Override public abstract GameAudioProfile getAudioProfile();
-    @Override public abstract ZoneRegistry getZoneRegistry();
-    @Override public abstract PhysicsProvider getPhysicsProvider();
+    @Override public Game createGame(GameDataSource source) { return specification().createGame(source); }
+    @Override public TouchResponseTable createTouchResponseTable(GameDataSource source) throws java.io.IOException {
+        return specification().createTouchResponseTable();
+    }
+    @Override public ObjectRegistry createObjectRegistry() { return specification().createObjectRegistry(); }
+    @Override public ObjectPlacementEncoding getObjectPlacementEncoding() { return specification().placementEncoding(); }
+    @Override public GameAudioProfile getAudioProfile() { return specification().audio(); }
+    @Override public ZoneRegistry getZoneRegistry() { return specification().zoneRegistry(); }
+    @Override public PhysicsProvider getPhysicsProvider() { return specification().physics(); }
 
     @Override public int getPlaneSwitcherObjectId() { return 0; }
     @Override public PlaneSwitcherConfig getPlaneSwitcherConfig() {

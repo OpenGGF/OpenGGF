@@ -1,6 +1,5 @@
 package com.openggf.graphics;
 
-import com.openggf.Engine;
 import org.lwjgl.system.MemoryUtil;
 import com.openggf.game.GameServices;
 import com.openggf.level.PatternDesc;
@@ -538,9 +537,9 @@ public class PatternRenderCommand implements GLCommandable {
     }
 
     private static int resolveDisplayHeight(GraphicsManager graphicsManager) {
-        Engine engine = graphicsManager.getEngine();
-        if (engine != null && engine.isFBOProjectionActive()) {
-            return engine.getCurrentDisplayHeight();
+        RenderProjection projection = graphicsManager.getProjectionSource();
+        if (projection != null && projection.isFBOProjectionActive()) {
+            return projection.getCurrentDisplayHeight();
         }
         // Cached on the GraphicsManager (invalidated on reshape/resetState) instead
         // of a config-service lookup per obtain() — this runs per tile per frame on

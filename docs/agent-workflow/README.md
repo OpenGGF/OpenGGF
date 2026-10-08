@@ -25,6 +25,13 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Creator kit builder](../../tools/modding/build_creator_kit.py) exports matching
+  engine/SDK/API-doc/testkit artifacts, pinned portable examples and launchers;
+  [catalog probe](../../src/main/java/com/openggf/tools/modsdk/CreatorCatalogProbe.java)
+  measures production discovery, validation and registration at explicit bounded
+  catalog/asset shapes. Origin: mod framework readiness, 2026-10-07; see
+  [probe limits and acceptance](../modding/tools/scalability.md).
+
 - [Sitar Hero S2 native reference](../../src/test/java/com/openggf/mods/code/SitarHeroS2NativeProgram.java) (test scope): independently interprets supplied S2 ROM control flow, saved duration/frequency and service cadence; `TestSitarHeroS2SongCatalogue` compares complete requested attack streams and natural ends (2026-10-07 full-song catalogue).
 
 - [Sitar Hero S3K song probe](../../src/main/java/com/openggf/tools/SitarHeroS3kSongProbe.java): executes both locked-on ROM music tables through the production S3K driver and reports complete jump candidates, tempo boundaries, real channel/sample attacks and natural stops; input is an absolute ROM path and optional hex music IDs (2026-10-07 full song catalogue).

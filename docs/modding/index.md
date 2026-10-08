@@ -1,5 +1,9 @@
 # OpenGGF mod creator handbook
 
+Start with [setup and your first project](getting-started.md). Recipients use
+[installing, updating and removing mods](installing-mods.md). The API is the
+mutable, unpublished 0.7.0 candidate; use matching artifacts from one commit.
+
 OpenGGF's mod workflow is source-first and reproducible: author files, convert them
 with `ggfmod`, validate/package a jar, then enable it in the Mod Manager and restart.
 Choose the smallest quickstart that matches your goal; they are ordered by typical
@@ -11,7 +15,7 @@ contracts.
 
 ## Native builds vs. the JVM jar
 
-Code-bearing mods (objects, characters, zones, and standalone games) require the
+Code-bearing mods (objects, characters, zones, scenes, and standalone games) require the
 **JVM jar**. They are loaded at runtime by the engine's mod classloader, which a
 GraalVM native-image binary cannot use under closed-world AOT. Native builds do
 not load these mods: the Mod Manager marks them `UNSUPPORTED` and refuses to
@@ -25,6 +29,23 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
 4. [Sonic 2 zone](quickstarts/zone.md)
 5. [Playable character](quickstarts/character.md)
 6. [Standalone game](quickstarts/standalone.md)
+7. [Scene or non-platformer game](guides/mod-scenes.md)
+
+## What you can build
+
+| Scope | Delivered path | Current boundary |
+|---|---|---|
+| Music | Data-only WAV/Ogg stock overrides | No MP3 or base-game streamed SFX overrides |
+| Object reskin | Baked sheet over exact stock provider key | Preserve host palette indices and all consumed mapping frames; no playable-character reskin |
+| Object/character | Owned factories, injected services, character specifications, landing/reset hooks, saves and rewind | JVM; no arbitrary static gameplay state or mod super form |
+| Stock-level edits | Immutable decoded placement operations, including owned object bindings | JVM; preserves the stock load pipeline; live editor application is separate |
+| New zone or campaign | Sonic 2 v1 and bounded S3K v2 adapters, ordered acts and owned runtime providers | S1 adapter planned; S3K does not inherit arbitrary stock zone events |
+| Scene/whole-screen game | Startup scene with input, audio, storage and canvas | JVM; ROM-backed scenes require the relevant supplied ROM |
+| Original standalone game | No-ROM levels, characters, audio and progression | JVM; no standalone patch stacking, bonus/special-stage or roster UI |
+| Shared UI and input | [Fonts, layout/focus and overlays](guides/creator-helpers.md); [named remappable actions](guides/action-bindings.md) | Logical pixels and explicit input edges; game rules and visual styling stay in the mod |
+| State and testing | [Storage, captured state and service bundles](guides/creator-helpers.md); [production-backed Jupiter tests](testing.md) | Use complete session tests for gameplay rewind and renderer/capture checks for appearance |
+
+See the detailed guides for narrower contracts; roadmap entries do not imply implementation.
 
 ## Follow-along guides
 
@@ -38,6 +59,9 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
   `sample-platformer` gallery sample: a no-ROM standalone game with a Tiled-authored
   level, an original character with a double jump, a patrolling badnik, and a spring
   gimmick.
+- [Two-act Tide Circuit](guides/two-act-campaign.md) — an original hosted Sonic 2
+  campaign with per-act runtime providers, checkpoints, progression, tagged saves
+  and a route/rewind coverage matrix.
 - [Mod scenes](guides/mod-scenes.md) — full-screen menus and games drawn by the mod: the
   startup-scene registration, lifecycle and fault boundary, the canvas, ROM sprites and
   characters, audio, storage and headless testing. Start from
@@ -53,19 +77,22 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
   Industrial Action: defend Robotnik's base door from 15 waves of unionised
   Flickies with six ROM-drawn badnik defenses, upgrades, repair and an emergency
   bomb. An S3K mod scene with mouse/pad controls and saved records; not one of the
-  eight maintained gallery samples.
+  nine maintained gallery samples.
 
-- [Sonic Survivors](../../examples/sonic-survivors/README.md) — a separate Sonic 2 survivors roguelike: walled arenas cut from each route act, ROM-art badniks with hitpoints, a bounce combo, level-up cards, zone bosses, a route with act choice and saved meta-progression, all through the existing code-patch API. Not part of the eight maintained gallery samples.
+- [Sonic Survivors](../../examples/sonic-survivors/README.md) — a separate Sonic 2 survivors roguelike: walled arenas cut from each route act, ROM-art badniks with hitpoints, a bounce combo, level-up cards, zone bosses, a route with act choice and saved meta-progression, all through the existing code-patch API. Not part of the nine maintained gallery samples.
 
 - [Slay the Robotnik](../../examples/slay-the-robotnik/README.md) — a Slay the Spire-style deck-building roguelike on Sonic 3 & Knuckles, built as a mod scene: three heroes, four acts of zone maps, ROM-drawn badniks and bosses, events, shops and relics.
-- [Infinite Sonic](../../examples/infinite-sonic/README.md) — a separate endless Sonic 1 project with terrain-aware ground/flying encounters using ROM-derived sections, seeded world recycling and the existing code-patch API. Not part of the eight maintained gallery samples.
+- [Infinite Sonic](../../examples/infinite-sonic/README.md) — a separate endless Sonic 1 project with terrain-aware ground/flying encounters using ROM-derived sections, seeded world recycling and the existing code-patch API. Not part of the nine maintained gallery samples.
 
-- [Putt Putt Paradise](../../examples/putt-putt-paradise/README.md) — Sonic 2 Mini Golf using ROM-backed Emerald Hill courses, timed charges, independent alternating golfers, and host-authoritative direct TCP play. An external candidate-API project, not one of the eight maintained gallery samples.
+- [Putt Putt Paradise](../../examples/putt-putt-paradise/README.md) — Sonic 2 Mini Golf using ROM-backed Emerald Hill courses, timed charges, independent alternating golfers, and host-authoritative direct TCP play. An external candidate-API project, not one of the nine maintained gallery samples.
 - [Sitar Hero](../../examples/sitar-hero/README.md) — full-song ROM rhythm with career, four difficulties, practice, local and direct-connect multiplayer, and native instrument-playing performers on real ROM stages. Demonstrates mixed-ROM startup scenes, timestamped player controls, consumed-sample music timing, cancellable preparation, owner-scoped peer transport and running-game menu audio; its README is a reading-order tour of the source with recipes.
 
 ## Reference
 
 - [`ggfmod` command reference](ggfmod.md)
+- [Production-backed creator tests](testing.md)
+- [Shared UI, art, animation, physics and state helpers](guides/creator-helpers.md)
+- [Custom action bindings and remappable input](guides/action-bindings.md)
 - [Manifest v1](formats/manifest.md)
 - [Baked art containers](formats/baked-containers.md)
 - [`ModLevelDefinition` formats v1 and v2](formats/level-definition.md)
@@ -75,37 +102,13 @@ mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
 - [Executable-code trust](concepts/trust.md)
 - [Namespaced identity semantics](concepts/id-semantics.md)
 - [`ggfmod validate` findings](troubleshooting.md)
+- [Catalog scalability probe and acceptance](tools/scalability.md)
 - [Maintained sample gallery](samples/index.md)
 - [Deferred-backlog decisions](BACKLOG.md)
 - [GUI tooling evaluation](GUI_TOOLING_EVALUATION.md)
 
-The eight sample sources are built by the default test suite. Treat them as
+The nine sample sources are built by the default test suite. Treat them as
 executable contracts rather than snippets copied out of context.
 
-Custom game modules can opt into faster interactive gameplay with
-`GameModule.gameplayStepsPerFrame()` (default 1, host range 1–32). Return alternating
-counts for fractional rates and capture the accumulator through `rewindAdapters()`.
-Return the continuous matching rate from `gameplayAudioPlaybackRate()` (default
-1.0, bounded to 1–32) to accelerate music and effects without alternating their
-pitch with the integer step budget. The host releases its audio rate at pause,
-rewind, death, scene changes and teardown; external trace/movie owners retain
-control of their own playback.
-
-A module can also drive the engine's live rewind itself by returning a
-`ScriptedRewind` from `GameModule.scriptedRewind()` (default `null`). While one is
-returned, level play records rewind history even with live rewind switched off. When
-its `requested()` is true the host rewinds with the ordinary presentation, taking
-`stepsThisFrame()` steps per frame and checking `reachedTarget()` on the restored
-state after each, then calls `ended(boolean)` once. Keep the implementation's own
-state out of `rewindAdapters()`: it decides where the restore stops. Infinite Sonic's
-CONTINUE is the worked example.
-The host advances complete simulation ticks, preserving per-tick collision and
-movement. Pause, rewind, external movie/trace ownership, transitions and non-level
-scenes retain their normal pacing. `GameLoop.step()` remains one deterministic tick;
-interactive hosts use `stepPresentationFrame()`. The
-[Infinite Sonic example](../../examples/infinite-sonic/README.md) demonstrates a
-rewindable clock that compounds speed every 30 seconds of active play.
-A module can also pin a display aspect for its session with
-`GameModule.requiredDisplayAspect()` (a `display.aspect` preset name; the master title
-restores the player's setting) and hide the level select with
-`GameModule.suppressesLevelSelect()`. Infinite Sonic uses both.
+Advanced module authors can configure [session pacing, scripted rewind and display
+controls](content-mods.md#advanced-module-session-controls).

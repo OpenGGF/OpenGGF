@@ -50,6 +50,75 @@ also hide its `Supplier` callback-boundary capability. Verify a real placed
 object's owner scope through the production loader before and after forced
 rewind recreation; dynamic-object containment alone misses this boundary.
 
+**An engine-invoked method reference retains its creator's authority.** A direct
+`StackWalker.getCallerClass()` check can hide a child-loaded lambda/method-reference
+frame and see only the engine callback host. A creator returning
+`ModStorageFactory::forOwner` reproduced that admission gap. Authority bridges
+must inspect hidden frames and the first external, non-bootstrap defining loader;
+matching a reported owner or binary class name is insufficient. Keep regressions
+for direct calls, engine-invoked creator method references and legitimate engine
+method references such as `List.forEach(registry::register)`. Preserve inherited
+owned adapters while validating fresh publication against its verified owner.
+Use the internal `EngineCallerAccess` inspection bridge for new admission gates;
+its immutable JDK walker comes from the `EngineContext` bootstrap factory, without
+locating a live gameplay session. Keep lower-level consumers on the utility bridge
+and inspect a module-lineage provider's actual defining loader before calling it.
+Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md).
+
+**Returned concrete values can contain deferred creator callbacks.** An owned
+interface proxy does not automatically bind callbacks inside a returned record
+or concrete registry. The `InitStep`/`StaticFixup` records returned by
+`LevelInitProfile` run actions later in level loading/reset, and
+`PlayableCharacterRegistry` definitions contain
+factory, art and respawn callbacks. Project these contracts explicitly through
+bounded immutable values, preserve metadata and earlier-owned callback identity,
+and test the later production consumer. Concrete captured services also need
+provenance on their underlying state, not just their published rewind proxy.
+Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md).
+
+**Published creator controllers can be interface proxies.** Keep frame, draw,
+rewind and close operations on the published controller. A headless fixture
+needing creator-specific configuration or diagnostics obtains the separately
+published concrete service and invokes its callbacks through the same retained
+fault boundary; reflecting on the proxy's implementation class does not expose
+creator methods or fields. The Golf peer fixture's missing `configure` method
+was hidden by a second missing-field exception during shutdown. Preserve the
+primary exception and suppress cleanup failures before attributing a dead peer
+to networking. Assert registered owner identity and rewind participation instead
+of assuming the concrete service and interface proxy are the same object.
+Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md#development-full-run-fixture-repairs).
+
+**Mockito defaults differ from production interface defaults.** A bare
+`GameModule` mock returns null for `transformDecodedLevel`, although the real
+default returns the supplied level unchanged. Fixtures exercising a real load
+must invoke that default or provide the intended valid transformation, preserving
+loaded-level identity and publication assertions. Conversely, `when` invokes a
+real method on a `CALLS_REAL_METHODS` mock before installing the stub: use
+`doReturn` to install an expert standalone identifier override when the fixture
+deliberately has no declarative specification. Keep the real identity consumers
+under test. These gaps stopped HUD publication and standalone routing fixtures
+before their existing assertions could run.
+Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md#development-full-run-fixture-repairs).
+
+**Embedded Java snippets are executable API consumers.** Constructor and method
+migrations include compiler text blocks, maintained samples and SDK templates.
+A failed compiler-exit assertion can look like a runtime warning-count mismatch;
+inspect captured compiler diagnostics before changing the later assertion.
+`TestModTestKit` still called the retired five-argument zone constructor inside
+a text block. Migrating it to `singleAct` retained the same declaration and
+allowed the original missing-owner warning/recovery checks to execute.
+Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md#development-full-run-fixture-repairs).
+
+**An isolated packed-mod test needs its own rewind class resolver.**
+`GameplaySessionFactory` normally reads the process-wide `ModSubsystem`. A test
+that scans, validates and launches through a private `ModRuntime` must attach
+that runtime's `ModClassResolver` to the session's `LevelManager` before loading.
+Otherwise a correctly owned object can fail capture or recreation because the
+session cannot resolve its private loader. The distributed testkit exposes this
+as `rewindClassResolver()`. Check identical binary names from two different
+owners against the actual loaded classes; never infer ownership from a name.
+Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md).
+
 **Camera limits are not terrain extents.** Sonic 2's decoded `maxY` limits the
 camera origin; `Sonic_Boundary_CheckBottom` compares the player centre with
 `maxY + $E0`. A custom lost-ball rule based on `maxY` alone rejects valid low
@@ -57,6 +126,17 @@ floors. Boss-free courses also need the native outgoing camera extent: EHZ2's
 egg-prison placement lies beyond the closed boss arena, and `loc_2F460` opens
 the camera toward `$2AB0`. Derive the custom finish from ROM placements and
 release its view bound explicitly, rather than simulating a boss to open it.
+
+**Overlay text also passes through CPU sprite preparation.** An opaque
+`GLCommandable` is rejected by the preparation guard even when its eventual GPU
+operation is a rectangle. Use typed screen primitives whose immutable geometry
+retains logical coordinates and fallback height; replay them through the supplied
+render host. Keep the guard and existing world-relative primitives unchanged.
+Exercise clipping, translucent pixels, nonzero cameras and replay through a
+different manager/projection. Admit a deferred host by its actual defining loader
+before virtual calls, preserving trusted host subclasses while rejecting creator
+overrides. The Survivors font adoption exposed this boundary in focused session
+`38496`; see [framework readiness](plans/2026-10-07-mod-framework-product-readiness.md).
 
 **A title can select a different viewport after manager construction.** Refresh
 the camera dimensions before level load, and rebuild render geometry from the
@@ -66,6 +146,15 @@ sizing breaks the native-camera/wide-presentation split. A scene-only width fix
 still leaves the native framebuffer or
 background period using the manager's old cache. Putt Putt Paradise's normal
 title-to-level and 320→800 scene tests cover both boundaries.
+
+**A persisted pixel-width write does not replace the resolved aspect overlay.**
+`SCREEN_WIDTH_PIXELS` is derived from `DISPLAY_ASPECT`; in a synthetic test,
+use `setSessionOverride` for an explicit width and assert the camera's resolved
+dimensions before interpreting missing pixels. Survivors' full-font check requested
+974 pixels with `setConfigValue`, but retained the native 320-pixel camera: local
+pixel 312 at origin nine was correctly clipped at absolute X321. A session override
+restored every pixel at scales one through three with unchanged projection,
+translucency and 276 cached primitives. Keep production clipping intact.
 
 **Touch listeners are not the ROM's special-touch branch.** The shared controller
 notifies listeners for harmful contacts too. An object whose collision byte changes
@@ -1295,3 +1384,23 @@ A seamless reload's current-bound and target-bound overrides are separate. AIZ's
 `AIZ1BGE_Finish` writes a fixed X lock of `$10/$10`, and `Do_ResizeEvents` eases
 only max Y. Pin the engine's X targets too, or the loaded defaults move the lock
 on the next tick (S3K trace campaign, 2026-10-03).
+
+### Native service recreation needs verified publication authority
+
+`LevelManager.initGameModule` calls `createGame` on every full load. Sonic 2 and
+S3&K consequently publish a new PLC service, even when their root module object
+is unchanged. Strict generic `registerOrRefresh` correctly rejects a different
+unowned adapter reporting the old key; relaxing that rule would also admit
+creator collisions and host-state theft. The 2026-10-07 composed focus exposed
+this distinction in 107 Golf cases and one S3K lifecycle case.
+
+Use `NativeRewindAdapterPublication` for the exact current adapter published by
+the session's verified native root. Preserve that raw service's identity and all
+queue state, refresh its incarnation under the same root authority, and advance
+the course registry generation so retained checkpoints cannot silently cross
+loads. Do not retain/reset a PLC queue merely to avoid adapter replacement.
+Private fixtures must likewise retain the same root for module resolution,
+world-session construction and pinned data: two separate `new Sonic2GameModule`
+objects describe different lifetimes even when their names match. The native
+publication regression covers direct and hidden creator method references,
+foreign roots, bundle retagging, and both real ROM-backed PLC lifecycles.

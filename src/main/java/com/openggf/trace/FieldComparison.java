@@ -3,7 +3,6 @@ package com.openggf.trace;
 /**
  * Comparison result for a single field on a single frame.
  */
-@com.openggf.game.ModApi
 public record FieldComparison(
     String fieldName,
     String expected,

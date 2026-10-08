@@ -1,7 +1,7 @@
 package hello;
 
 import com.openggf.mods.scene.ModScene;
-import com.openggf.mods.scene.RomSpriteRequest;
+import com.openggf.mods.scene.art.*;
 import com.openggf.mods.scene.SceneBackdrop;
 import com.openggf.mods.scene.SceneButtons;
 import com.openggf.mods.scene.SceneCanvas;
@@ -45,6 +45,7 @@ public final class HelloScene implements ModScene {
     private SceneBackdrop background;
     private SceneSpriteSet sonic;
     private SceneSpriteSet ring;
+    private SceneArtCache spriteCache;
 
     // State.
     private float x = 60;
@@ -69,11 +70,10 @@ public final class HelloScene implements ModScene {
             // A sprite from the ROM by address: the ring's art (Nemesis-compressed), its mappings,
             // and the palette lines it draws in. The addresses come from the disassembly's listing
             // (ArtNem_RingHUDText and Map_Ring in sonic3k.lst; `ggfmod sprites` shows the frames).
-            int[] palette = new int[64];
-            System.arraycopy(rom.palette(0x0A8A3C, 16), 0, palette, 0, 16); // Pal_SonicTails, line 0
-            System.arraycopy(rom.palette(0x0A8B7C, 48), 0, palette, 16, 48); // Pal_AIZ, lines 1-3
-            ring = rom.sprites(RomSpriteRequest.of(0x192AEE, RomSpriteRequest.Compression.NEMESIS, 0x01A99A, 1),
-                    palette);
+            int[] palette = new PaletteAssembly().rom(rom, 0x0A8A3C, 0, 16)
+                    .rom(rom, 0x0A8B7C, 16, 48).build(); // Pal_SonicTails + Pal_AIZ
+            spriteCache = new SceneArtCache(rom, 4);
+            ring = spriteCache.sprites(StockSceneArt.S3K_RING, palette);
         }
         best = ctx.storage().read(SAVE_FILE).map(HelloScene::parse).orElse(0);
         placeRings(ctx.width());
@@ -228,15 +228,12 @@ public final class HelloScene implements ModScene {
 
     /** The frame of a ROM animation script at a time, looping. */
     private static SceneSprite frame(SceneSpriteSet set, int anim, int ticks) {
-        int[] frames = set.animationFrames(anim);
-        if (frames.length == 0) {
-            return null;
-        }
-        // Walking and running scripts take their speed from the player's ground speed ($FF);
-        // a scene has none, so show them at a brisk fixed pace.
-        int delay = set.animationDelay(anim) > 30 ? 4 : set.animationDelay(anim) + 1;
-        int frame = frames[(ticks / delay) % frames.length];
-        return set.frame(frame >= 0xF0 ? frames[0] : frame); // $F0 and up are script commands
+        // Preserve this scene's authored extra tick and brisk long-script presentation rate.
+        return AnimationSampling.frame(set, anim, ticks, new AnimationSampling.Timing(0, 30, 4, 1));
+    }
+
+    @Override public void exit(SceneContext ctx) {
+        if (spriteCache != null) spriteCache.close();
     }
 
     private static int parse(String text) {

@@ -6,6 +6,11 @@ import com.openggf.game.launch.*;
 import com.openggf.game.patch.*;
 import com.openggf.game.save.SaveManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.RenderPriority;
+import com.openggf.graphics.SpritePresentation;
+import com.openggf.level.render.SpritePresentationRenderer;
+import com.openggf.sprites.render.PlayerSpriteRenderer;
 import com.openggf.mods.*;
 import com.openggf.mods.code.*;
 import com.openggf.io.ModInputLimits;
@@ -110,6 +115,66 @@ class TestPhase3SampleCharacterIntegration {
             assertSame(base, resolver.resolveForLaunch(base,
                     new GameplayLaunchRequest("s2", CODE, List.of()),
                     ModuleResolutionService.LaunchPolicy.DETERMINISTIC));
+        }
+    }
+
+    @Test
+    void packagedCharacterDrawsItsBakedArtAndHonorsVisibility() throws Exception {
+        try (CatalogFixture fixture = load(buildSample())) {
+            SonicConfigurationService config = SonicConfigurationService.createStandalone(temp.resolve("render-config"));
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, CODE);
+            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            ModuleResolutionService resolver = new ModuleResolutionService(List.of(),
+                    new EffectiveCatalogPatchEnablement(fixture.effective()),
+                    new LogicalRomResolver(() -> null), config, ignored -> fixture.plan());
+            GameModule resolved = resolver.resolveForLaunch(new Sonic2GameModule(),
+                    new GameplayLaunchRequest("s2", CODE, List.of()),
+                    ModuleResolutionService.LaunchPolicy.STANDARD);
+            TestEnvironment.configureGameModuleFixture(resolved);
+            SpriteManager sprites = new SpriteManager(config);
+            var sprite = com.openggf.game.session.GameplayTeamBootstrap.registerActiveTeam(
+                    resolved, sprites, config, (short) 128, (short) 96).mainSprite();
+            com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(sprite, 128);
+            com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(sprite, 96);
+            CharacterDefinition definition = resolved.getPlayableCharacterRegistry()
+                    .find(CharacterKey.parsePersisted(CODE)).orElseThrow();
+            var art = definition.artSupplier().load(CODE);
+            GraphicsManager graphics = new GraphicsManager();
+            graphics.initHeadless();
+            sprite.setSpriteRenderer(new PlayerSpriteRenderer(art, graphics));
+            sprite.setMappingFrame(0);
+            Runnable draw = () -> {
+                SpritePresentation.layer(graphics, SpritePresentation.Layer.PLAYER);
+                sprites.prepareRenderBucketsForPass();
+                for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++) {
+                    sprites.drawPreparedUnifiedBucketWithPriority(bucket, graphics, null);
+                }
+            };
+
+            var frame = SpritePresentationRenderer.prepare(graphics, 40, 60, draw);
+            // runner-sheet.yaml authors one 8x8 piece at (-4, -4), palette line zero.
+            assertEquals(1, frame.tiles().size(), "The owned sprite must draw its installed baked art");
+            var tile = frame.tiles().getFirst();
+            assertEquals(SpritePresentation.Layer.PLAYER, tile.layer());
+            assertEquals(84, tile.x());
+            assertEquals(32, tile.y());
+            assertEquals(0, tile.palette());
+            var captured = frame.patternVersions().get(tile.patternId());
+            assertNotNull(captured, "CPU preparation must retain the displayed DPLC pattern");
+            assertNotEquals(new SpritePresentation.PatternVersion(0, 0, 0, 0), captured);
+            var pixels = SpritePresentationRenderer.pattern(captured);
+            for (int y = 0; y < 8; y++) {
+                for (int x = 0; x < 8; x++) {
+                    assertEquals(art.artTiles()[0].getPixel(x, y), pixels.getPixel(x, y));
+                }
+            }
+
+            sprite.setHidden(true);
+            assertTrue(SpritePresentationRenderer.prepare(graphics, 40, 60, draw).tiles().isEmpty());
+            sprite.setHidden(false);
+            sprite.setSpriteRenderer(null);
+            assertTrue(SpritePresentationRenderer.prepare(graphics, 40, 60, draw).tiles().isEmpty());
+            assertTrue(fixture.runtime().runtimeDisabledOwners().isEmpty());
         }
     }
 

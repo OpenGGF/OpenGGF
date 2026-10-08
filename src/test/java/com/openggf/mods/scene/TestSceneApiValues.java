@@ -32,6 +32,14 @@ class TestSceneApiValues {
     void romSpriteRequestFactoriesAndValidation() {
         RomSpriteRequest compressed = RomSpriteRequest.of(0x367DCA, RomSpriteRequest.Compression.KOSINSKI_MODULED,
                 0x3616C0, 1);
+        assertEquals(0, compressed.mappingFrameCount());
+        var reordered = compressed.withMappingFrameCount(3).withTileOffset(-4);
+        assertEquals(3, reordered.mappingFrameCount());
+        assertEquals(-4, reordered.tileOffset());
+        assertNotEquals(compressed, reordered);
+        assertThrows(IllegalArgumentException.class, () -> compressed.withMappingFrameCount(-1));
+        assertThrows(IllegalArgumentException.class, () -> compressed.withMappingFrameCount(513));
+        assertEquals(512, compressed.withMappingFrameCount(512).mappingFrameCount());
         assertFalse(compressed.hasDplc());
         assertEquals(-1, compressed.dplcAddress());
         RomSpriteRequest raw = RomSpriteRequest.uncompressed(0x158CAE, 0x200, 0x1000, 0);

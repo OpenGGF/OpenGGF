@@ -12,6 +12,18 @@ import com.openggf.game.rules.GameRules;
 @com.openggf.game.ModApi
 public interface PhysicsProvider {
 
+    /** Constant tuning with explicit game-wide modifiers and rules. */
+    static PhysicsProvider fixed(PhysicsProfile profile, PhysicsModifiers modifiers, GameRules rules) {
+        java.util.Objects.requireNonNull(profile, "profile");
+        java.util.Objects.requireNonNull(modifiers, "modifiers");
+        java.util.Objects.requireNonNull(rules, "rules");
+        return new PhysicsProvider() {
+            @Override public PhysicsProfile getProfile(String character) { return profile; }
+            @Override public PhysicsModifiers getModifiers() { return modifiers; }
+            @Override public GameRules getRules() { return rules; }
+        };
+    }
+
     /**
      * Returns the physics profile for the given character type.
      *
@@ -44,4 +56,22 @@ public interface PhysicsProvider {
     PhysicsModifiers getModifiers();
 
     GameRules getRules();
+    /** Applies an immutable edit only to matching characters, including their optional init profile. */
+    default PhysicsProvider transform(java.util.function.Predicate<String> characters,
+                                      java.util.function.Function<PhysicsProfile, PhysicsProfile> edit) {
+        java.util.Objects.requireNonNull(characters, "characters");
+        java.util.Objects.requireNonNull(edit, "edit");
+        PhysicsProvider source = this;
+        return new PhysicsProvider() {
+            private PhysicsProfile map(String character, PhysicsProfile profile) {
+                return profile == null || !characters.test(character) ? profile
+                        : java.util.Objects.requireNonNull(edit.apply(profile), "Profile transform returned null");
+            }
+            @Override public PhysicsProfile getProfile(String character) { return map(character, source.getProfile(character)); }
+            @Override public PhysicsProfile getInitProfile(String character) { return map(character, source.getInitProfile(character)); }
+            @Override public PhysicsModifiers getModifiers() { return source.getModifiers(); }
+            @Override public GameRules getRules() { return source.getRules(); }
+        };
+    }
+
 }
