@@ -1844,3 +1844,28 @@ guard input: run one fresh normal private guard profile before integration.
 Actual-main normal combined qualification, push and owned cleanup remain
 pending. Native Windows artifacts retain their separate owner's qualification
 limits; this stock-parity work makes no Windows delivery claim.
+
+At exact `163b782ee596d999cf15e60e1a2a81124ab16521`/published base913c,
+the once-submitted separate normal private command is:
+
+```sh
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py \
+  -Dmse=off -Pguards test -B
+```
+
+The actual invocation also passes the three original absolute ROM properties;
+its retained user service preflights Java21/Lua5.4/PowerShell and bounds total
+lifetime without changing the Maven profile. After178seconds queue waiting,
+it completes `2026-10-08T19:08:05Z`, Maven exit0/BUILD SUCCESS,4:00 execution:
+**87 fresh XML suites,674 cases, zero failures/errors/skips**. All fresh XML
+mtimes are after the owning invocation began. Before/after source fingerprint
+is literally identical:
+`2c1e7e79ad8b07057e64a24fc90720412e317f195ac93de5f34acb9f8204affb`.
+Owned supervisor/runner PIDs are absent after terminal. This closes the
+published experimental-workflow guard obligation; unchanged ordinary/domain
+results retain their exact earlier attribution. No Windows artifact result
+is inferred. Other active gameplay/native owners agree to preserve main
+tracked inputs/HEAD/publication for upcoming parity integration. The SOZ
+owner had already announced a test-only78-case-qualified follow-up before
+this hold; finish its existing delivery and reconcile that source first.
+Actual-main parity integration, qualification, push and cleanup remain pending.
