@@ -123,7 +123,7 @@ Starposts, landings, launches, docking, warps, every two minutes and on exit.
   procedural climate sky because their detached background art is incomplete; Hydrocity 2 is
   left out for the same reason in its foreground.
 - `art/FaunaCatalog` lists 83 creature bodies (badniks and animals from all three games) by ROM
-  label; `art/PixelArt` grows outlined, lit, Genesis-quantised flora, crystals and boulders.
+  label, using each animal species’ own ROM mapping table; `art/PixelArt` grows outlined, lit, Genesis-quantised flora, crystals and boulders.
   Flora includes ferns, succulent rosettes, reeds, fan leaves, bell flowers and shelf fungi,
   with six seeded specimens per species and climate-specific shape pools. These are visual
   variations of the existing resources; material types, yields and discovery IDs are unchanged.

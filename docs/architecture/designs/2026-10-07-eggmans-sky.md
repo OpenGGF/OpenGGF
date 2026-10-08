@@ -287,3 +287,43 @@ available), all against the working changes above `86ec1047a88c`:
   IDs for the portrait survey; the user's expedition was not changed. Temporary captures:
   `/tmp/eggsky-qol-visuals/`. A repeat initially rejected the existing capture-build jar;
   removing that generated jar allowed the corrected capture to finish.
+
+## Creature sprite layouts (2026-10-08)
+
+Working changes above `587c705fa4a0efcb9f67a3b46a6a94cd8aa45ddf` in the current
+`feature/ai-eggmans-sky` checkout correct eleven animal mapping assignments.
+The reported fragmented penguin appearance is reproduced by decoding Penguin.nem
+through Map_Animals4 (seal): its tile dimensions and second-frame tile start are
+wrong. It needs Map_Animals5. This is a catalogue error, not corrupted ROM art or
+a recolouring/rasterizer defect; changing shared rendering was unnecessary.
+
+ROM species tables provide the oracle: S1 `Anml_Variables` at `0x95E4`, S2
+`Obj28_Properties` at `0x118F0`, and S3K `word_2C7EA`. Each entry contains two
+velocity words followed by the species' mapping pointer. S1's chicken, seal, pig,
+flicky and squirrel previously all used the rabbit layout. S2's rabbit and turtle
+used Flicky's. S3K's seal and penguin used the wrong dimensions/strides; pig and
+squirrel mapping pointers were swapped too (those two mapping layouts currently
+have identical pieces). Explicit per-species mappings preserve creature IDs and saves.
+
+Validation against these working changes, Java 21:
+
+- Verified all three root ROM SHA-1s against the repository's expected revisions.
+- `TestEggmansSkyFauna` checks all 17 animal mapping pointers against their owning
+  ROM tables and decodes every selected frame of all 83 catalogue bodies, checking
+  valid frame indices and nonempty output. Temporary before/after contact sheets
+  were inspected across the full catalogue; the affected animal frames are intact.
+  These are CPU sprite rasterizations, not native GPU gameplay captures.
+- Inspected `run_categories.py --base 587c705fa4a0efcb9f67a3b46a6a94cd8aa45ddf`:
+  3,012 ordinary classes plus guards, due to unclassified example paths and an
+  unrelated untracked movie. Proportionate validation applies to this mod-local
+  mapping-data fix; no shared engine, physics, timing or API behavior changed.
+- `maven_queue.py --lean -Dmse=off
+  -Dtest=TestEggmansSkyFauna,TestEggmansSkyScene,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+  -Dsonic1.rom.path=<absolute root S1 ROM>
+  -Dsonic2.rom.path=<absolute root S2 ROM>
+  -Ds3k.rom.path=<absolute root S3K ROM> test`: 73 tests passed, zero failures,
+  errors or skips, including the scene's all-biome traversal. The first sandboxed
+  attempt could not create the queue's `.git` lock; the permitted rerun completed.
+  Focused validation only, not a full ordinary/guard suite pass.
+- `python3 examples/build_example.py eggmans-sky --skip-engine`: compiled,
+  validated and rebuilt `target/examples/eggmans-sky/eggmans-sky.jar`.

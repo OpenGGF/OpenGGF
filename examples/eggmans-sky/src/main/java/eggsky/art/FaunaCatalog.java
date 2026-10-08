@@ -32,13 +32,14 @@ public final class FaunaCatalog {
         s1("bomb", "Bomb", z(4, 5), 0x38C00, 0x122FC, 0, FaunaDef.WALK, f(0, 1, 2), 8);         // Nem_Bomb
         s1("orbinaut1", "Orbinaut", z(3, 4), 0x38E98, 0x125B8, 0, FaunaDef.FLY, f(0), 8);       // Nem_Orbinaut
         s1("caterkiller", "Caterkiller", z(1, 5), 0x39076, 0x1751A, 1, FaunaDef.WALK, f(0, 1, 2), 8); // Nem_Cat
-        s1a("pocky1", "Pocky", 0x3B884);      // Nem_Rabbit
-        s1a("cucky1", "Cucky", 0x3B9DC);      // Nem_Chicken
-        s1a("pecky1", "Pecky", 0x3BB38);      // Nem_Penguin
-        s1a("rocky1", "Rocky", 0x3BCB4);      // Nem_Seal
-        s1a("picky1", "Picky", 0x3BDD0);      // Nem_Pig
-        s1a("flicky1", "Flicky", 0x3BF06);    // Nem_Flicky
-        s1a("ricky1", "Ricky", 0x3C040);      // Nem_Squirrel
+        // Anml_Variables (0x95E4): rabbit, chicken, penguin, seal, pig, flicky, squirrel.
+        s1a("pocky1", "Pocky", 0x3B884, 0x9AE4);      // Nem_Rabbit
+        s1a("cucky1", "Cucky", 0x3B9DC, 0x9AFC);      // Nem_Chicken
+        s1a("pecky1", "Pecky", 0x3BB38, 0x9AE4);      // Nem_Penguin
+        s1a("rocky1", "Rocky", 0x3BCB4, 0x9AFC);      // Nem_Seal
+        s1a("picky1", "Picky", 0x3BDD0, 0x9B14);      // Nem_Pig
+        s1a("flicky1", "Flicky", 0x3BF06, 0x9AFC);    // Nem_Flicky
+        s1a("ricky1", "Ricky", 0x3C040, 0x9B14);      // Nem_Squirrel
 
         // ---- Sonic 2 ----
         s2("buzzer", "Buzzer", z(0), 0x8316A, 0x2D2EA, 0, FaunaDef.FLY, f(0), 8);               // ArtNem_Buzzer
@@ -60,9 +61,9 @@ public final class FaunaCatalog {
         s2("nebula", "Nebula", z(8), 0x8A142, 0x3789A, 1, FaunaDef.FLY, f(0, 1, 2, 3), 4);      // ArtNem_Nebula
         s2("turtloid", "Turtloid", z(8), 0x8A362, 0x37B62, 0, FaunaDef.FLY, f(0, 1), 10);       // ArtNem_Turtloid
         s2("balkiry", "Balkiry", z(8, 9), 0x8BC16, 0x393CC, 0, FaunaDef.FLY, f(0, 1), 4);       // ArtNem_Balkiry
-        s2a("flicky2", "Flicky", 0x7EF60);   // ArtNem_Flicky
-        s2a("pocky2", "Pocky", 0x7FDD2);     // ArtNem_Rabbit
-        s2a("tocky2", "Tocky", 0x7FADE);     // ArtNem_Turtle
+        s2a("flicky2", "Flicky", 0x7EF60, 0x11E1C);   // ArtNem_Flicky
+        s2a("pocky2", "Pocky", 0x7FDD2, 0x11EAC);     // ArtNem_Rabbit
+        s2a("tocky2", "Tocky", 0x7FADE, 0x11E40);     // ArtNem_Turtle
 
         // ---- Sonic 3 & Knuckles ----
         s3u("rhinobot", "Rhinobot", z(0), 0x36732A, 0xAA0, 0x3615A8, 0x36156E, FaunaDef.WALK, f(0, 1, 2, 3), 4);
@@ -99,12 +100,13 @@ public final class FaunaCatalog {
         s3u("fireworm", "Fireworm", z(9), 0x16EFB2, 0x380, 0x8FABE, 0x8FAA6, FaunaDef.FLY, f(1, 2, 3), 4);
         s3("iwamodoki", "Iwamodoki", z(9), 0x16F4E4, 0x8FC90, FaunaDef.WALK, f(1, 2, 3, 4, 5), 8);
         s3("toxomister", "Toxomister", z(9), 0x16F7E6, 0x9008E, FaunaDef.FLY, f(1), 8);
+        // word_2C7EA selects Map_Animals1-5; tile dimensions/strides differ by species.
         s3a("flicky3", "Flicky", 0x1931D6, 0x02CEBA);   // ArtNem_BlueFlicky, Map_Animals1
         s3a("cucky3", "Cucky", 0x193308, 0x02CEBA);     // ArtNem_Chicken
-        s3a("picky3", "Picky", 0x19308A, 0x02CED8);     // ArtNem_Pig, Map_Animals2
-        s3a("rocky3", "Rocky", 0x192F6E, 0x02CED8);     // ArtNem_Seal
-        s3a("ricky3", "Ricky", 0x1935A8, 0x02CEF6);     // ArtNem_Squirrel, Map_Animals3
-        s3a("pecky3", "Pecky", 0x193456, 0x02CF14);     // ArtNem_Penguin, Map_Animals4
+        s3a("picky3", "Picky", 0x19308A, 0x02CEF6);     // ArtNem_Pig, Map_Animals3
+        s3a("rocky3", "Rocky", 0x192F6E, 0x02CF14);     // ArtNem_Seal
+        s3a("ricky3", "Ricky", 0x1935A8, 0x02CED8);     // ArtNem_Squirrel, Map_Animals2
+        s3a("pecky3", "Pecky", 0x193456, 0x02CF32);     // ArtNem_Penguin, Map_Animals5
         s3a("pocky3", "Pocky", 0x193706, 0x02CF32);     // ArtNem_Rabbit, Map_Animals5
     }
 
@@ -149,9 +151,9 @@ public final class FaunaCatalog {
                 frames, ticks, false));
     }
 
-    /** A Sonic 1 animal (Map_Animal1: running 0-1, released 2). */
-    private void s1a(String key, String name, int art) {
-        all.add(new FaunaDef(key, name, "s1", -1L, RomSpriteRequest.of(art, Compression.NEMESIS, 0x9AE4, 0),
+    /** Sonic 1 Anml_Variables selects Map_Animal1/2/3 by species, not one shared layout. */
+    private void s1a(String key, String name, int art, int map) {
+        all.add(new FaunaDef(key, name, "s1", -1L, RomSpriteRequest.of(art, Compression.NEMESIS, map, 0),
                 key.startsWith("flicky") || key.startsWith("cucky") ? FaunaDef.FLY : FaunaDef.HOP, f(0, 1), 6, true));
     }
 
@@ -160,9 +162,9 @@ public final class FaunaCatalog {
                 frames, ticks, false));
     }
 
-    /** A Sonic 2 animal (Obj28_MapUnc_11E1C). */
-    private void s2a(String key, String name, int art) {
-        all.add(new FaunaDef(key, name, "s2", -1L, RomSpriteRequest.of(art, Compression.NEMESIS, 0x11E1C, 0),
+    /** Sonic 2 Obj28_Properties selects its mapping table by species. */
+    private void s2a(String key, String name, int art, int map) {
+        all.add(new FaunaDef(key, name, "s2", -1L, RomSpriteRequest.of(art, Compression.NEMESIS, map, 0),
                 key.startsWith("flicky") ? FaunaDef.FLY : FaunaDef.HOP, f(0, 1), 6, true));
     }
 
