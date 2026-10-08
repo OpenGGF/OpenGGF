@@ -61,7 +61,10 @@ public interface GameAudioProfile {
         FRAME_MULTIPLY
     }
 
-    SmpsLoader createSmpsLoader(Rom rom);
+    /** Optional native ROM loader. Profiles using only authored audio leave it absent. */
+    default SmpsLoader createSmpsLoader(Rom rom) {
+        return null;
+    }
 
     SmpsSequencerConfig getSequencerConfig();
 

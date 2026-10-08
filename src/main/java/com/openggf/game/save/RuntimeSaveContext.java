@@ -54,7 +54,7 @@ public final class RuntimeSaveContext {
         Progress progress=new Progress(true,zone,act,key,lives,continues,chaos,supers,converted,emeralds);
         var provider=module == null ? null : module.getSaveSnapshotProvider();
         var runtime=mode.getZoneRuntimeRegistry();
-        Map<String,Object> fields=provider == null ? Map.of() : provider.captureRuntimeFields(runtime == null ? null : runtime.current());
+        Map<String,Object> fields=provider == null ? Map.of() : provider.captureSaveFields(runtime == null ? null : runtime.current());
         return new RuntimeSaveContext(progress,details,RuntimeSaveFields.freeze(fields));
     }
 

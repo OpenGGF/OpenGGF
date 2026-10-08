@@ -6,7 +6,7 @@ import java.util.*;
 public final class RuntimeSaveFields {
     private RuntimeSaveFields() { }
     public static Map<String,Object> freeze(Map<String,Object> fields) {
-        Objects.requireNonNull(fields,"captureRuntimeFields returned null");
+        Objects.requireNonNull(fields,"captureSaveFields returned null");
         @SuppressWarnings("unchecked") Map<String,Object> frozen=(Map<String,Object>)freeze(fields,0);
         return frozen;
     }

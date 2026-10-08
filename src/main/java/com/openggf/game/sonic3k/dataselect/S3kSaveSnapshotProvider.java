@@ -62,7 +62,7 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
     }
 
     @Override
-    public Map<String,Object> captureRuntimeFields(com.openggf.game.zone.ZoneRuntimeState zoneState) {
+    public Map<String,Object> captureSaveFields(com.openggf.game.zone.ZoneRuntimeState zoneState) {
         // loc_7BCB0 publishes the SSZ2 ending flag before SaveGame. Rewinding restores
         // this runtime flag; capture it without latching SaveSessionContext.clear.
         boolean clear=zoneState instanceof com.openggf.game.sonic3k.runtime.SszZoneRuntimeState state
