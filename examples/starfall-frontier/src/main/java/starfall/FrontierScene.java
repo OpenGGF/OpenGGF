@@ -1,0 +1,225 @@
+package starfall;
+
+import com.openggf.mods.scene.*;
+import com.openggf.mods.scene.art.AnimationSampling;
+import java.util.Optional;
+
+/** Scene orchestration. Debug commands: play, craft, inventory, journal, map, cavern, warden, victory. */
+public final class FrontierScene implements ModScene,DebuggableScene {
+    private final byte[] font;
+    private FrontierView view;
+    private SceneSpriteSet sonic;
+    private SceneContext context;
+    private World world, saved;
+    private String screen="TITLE",returnScreen="PLAY";
+    private int cursor,recipe,inventoryCursor,presentation,saveTimer;
+    private boolean dirty,debug,existingSave,mouseAim;
+    private int currentMusic=-1;
+    private double cameraX,cameraY;
+    private String status="";
+    public FrontierScene(byte[] font) {this.font=font.clone();}
+    public World world(){return world;}
+    public String screen(){return screen;}
+    @Override public void enter(SceneContext ctx) {
+        context=ctx;view=new FrontierView(font);existingSave=ctx.storage().read("world.sav").isPresent();
+        if(ctx.art().rom()!=null)sonic=ctx.art().rom().character("sonic");
+        Optional<World> primary=ctx.storage().read("world.sav").flatMap(SaveCodec::decode);
+        saved=primary.orElseGet(()->ctx.storage().read("world-backup.sav").flatMap(SaveCodec::decode).orElse(null));
+        if(primary.isEmpty()&&saved!=null)status="Recovered your backup save.";
+        else if(saved==null&&ctx.storage().read("world.sav").isPresent())status="Save unreadable. Original files preserved.";
+        world=new World(0x57A2FA11L);snapCamera(ctx);music(ctx,0x2F);
+    }
+    @Override public void update(SceneContext ctx) {
+        presentation++;
+        if(screen.equals("TITLE")) {titleInput(ctx);return;}
+        if(screen.equals("NEW")) {
+            if(back(ctx)){screen="TITLE";return;}
+            if(confirm(ctx)){newWorld(ctx);return;}return;
+        }
+        if(screen.equals("HELP")) {if(back(ctx)||confirm(ctx)||ctx.keyPressed(SceneKeys.H))screen=returnScreen;return;}
+        if(!screen.equals("PLAY")) {panelInput(ctx);return;}
+        if(ctx.buttonPressed(SceneButtons.START)||ctx.keyPressed(SceneKeys.ESCAPE)||ctx.keyPressed(SceneKeys.P)) {screen="PAUSE";cursor=0;return;}
+        if(ctx.keyPressed(SceneKeys.C)||ctx.buttonPressed(SceneButtons.B)){screen="CRAFT";return;}
+        if(ctx.keyPressed(SceneKeys.TAB)||ctx.keyPressed(SceneKeys.I)){screen="INVENTORY";return;}
+        if(ctx.keyPressed(SceneKeys.J)){screen="JOURNAL";return;}
+        if(ctx.keyPressed(SceneKeys.M)){screen="MAP";return;}
+        if(ctx.keyPressed(SceneKeys.F1)){help("PLAY");return;}
+        if(ctx.mouse().leftPressed()) {
+            if(ctx.mouse().over(ctx.width()-170,7,162,30)){screen="JOURNAL";return;}
+            if(ctx.mouse().over(8,210,212,14)) {
+                int mx=ctx.mouse().x();screen=mx<63?"INVENTORY":mx<115?"CRAFT":mx<174?"JOURNAL":"MAP";return;
+            }
+        }
+        for(int i=0;i<8;i++)if(ctx.keyPressed(SceneKeys.DIGIT_1+i))world.slot=i;
+        if(ctx.keyPressed(SceneKeys.Q))world.slot=(world.slot+7)%8;
+        if(ctx.keyPressed(SceneKeys.R))world.slot=(world.slot+1)%8;
+        if(ctx.mouse().wheel()!=0)world.slot=Math.floorMod(world.slot-Integer.signum(ctx.mouse().wheel()),8);
+        if(ctx.mouse().leftPressed()&&ctx.mouse().over((ctx.width()-240)/2,181,240,28)) {
+            world.slot=(ctx.mouse().x()-(ctx.width()-240)/2)/30;return;
+        }
+        int move=(ctx.buttonDown(SceneButtons.RIGHT)||ctx.keyDown(SceneKeys.D)?1:0)-(ctx.buttonDown(SceneButtons.LEFT)||ctx.keyDown(SceneKeys.A)?1:0);
+        boolean jump=ctx.buttonPressed(SceneButtons.A)||ctx.keyPressed(SceneKeys.W)||ctx.keyPressed(SceneKeys.SPACE);
+        boolean drop=ctx.buttonDown(SceneButtons.DOWN)||ctx.keyDown(SceneKeys.S);
+        int oldHp=world.hp,oldKills=world.kills,oldQuest=world.quest;
+        world.step(new World.Input(move,jump,drop));dirty=true;saveTimer++;
+        music(ctx,world.enemies.stream().anyMatch(e->e.kind==3)?0x19:world.won?0x15:
+                world.y/World.T>58?0x14:world.x/World.T<88?0x0F:world.x/World.T<170?0x0B:0x13);
+        cameraX+=(targetCameraX(ctx)-cameraX)*.12;cameraY+=(targetCameraY()-cameraY)*.12;
+        int tx=(int)(world.x/World.T)+(world.facingLeft?-2:2),ty=(int)(world.y/World.T);
+        if(drop){tx=(int)(world.x/World.T);ty=(int)((world.y+14)/World.T);}
+        if(ctx.buttonDown(SceneButtons.UP)){tx=(int)(world.x/World.T);ty=(int)((world.y-22)/World.T);}
+        if(ctx.mouse().inside()&&(ctx.mouse().moved()||ctx.mouse().leftDown()||ctx.mouse().rightDown()))mouseAim=true;
+        if(ctx.buttonDown(SceneButtons.C))mouseAim=false;
+        if(mouseAim&&ctx.mouse().inside()&&ctx.mouse().y()>32&&ctx.mouse().y()<180) {
+            tx=(int)Math.floor((ctx.mouse().x()+cameraX)/World.T);ty=(int)Math.floor((ctx.mouse().y()+cameraY)/World.T);
+        }
+        tx=Math.max(1,Math.min(World.W-2,tx));ty=Math.max(0,Math.min(World.H-3,ty));world.aimX=tx;world.aimY=ty;
+        if(ctx.keyPressed(SceneKeys.E)||ctx.buttonPressed(SceneButtons.UP))interact(ctx,tx,ty);
+        if(ctx.keyPressed(SceneKeys.H)&&world.heal())ctx.audio().playSfx(0x33);
+        boolean mouseWorld=ctx.mouse().inside()&&ctx.mouse().y()>32&&ctx.mouse().y()<180;
+        if(ctx.buttonDown(SceneButtons.C)||ctx.keyDown(SceneKeys.F)||mouseWorld&&ctx.mouse().leftDown()) {
+            if(world.use(tx,ty)){ctx.audio().playSfx(world.selected().weapon()?0x62:0x33);}
+        }else {world.mining=0;}
+        if(mouseWorld&&ctx.mouse().rightDown()&&world.place(tx,ty,world.selected()))ctx.audio().playSfx(0x9E);
+        if(world.hp<oldHp)ctx.audio().playSfx(0x9E);
+        if(world.kills>oldKills||world.quest>oldQuest)ctx.audio().playSfx(0x33);
+        if(saveTimer>=1800)save(ctx);
+    }
+    private void interact(SceneContext ctx,int tx,int ty) {
+        boolean ok=world.interact(tx,ty);
+        if(!ok) {
+            outer:for(int a=-3;a<=3;a++)for(int b=-3;b<=3;b++) {
+                int px=(int)world.x/World.T+a,py=(int)world.y/World.T+b;
+                int t=world.tile(px,py);
+                if((t==World.CHEST||t==World.BUSH||t==World.SHRINE)&&world.interact(px,py)){ok=true;break outer;}
+            }
+        }
+        if(ok)ctx.audio().playSfx(0x33);
+    }
+    private void titleInput(SceneContext ctx) {
+        if(up(ctx))cursor=Math.floorMod(cursor-1,4);if(down(ctx))cursor=(cursor+1)%4;
+        int picked=confirm(ctx)?cursor:-1;
+        for(int i=0;i<4;i++)if(ctx.mouse().over(ctx.width()/2-96,108+i*19,192,17)) {
+            if(ctx.mouse().lastInputWasMouse())cursor=i;if(ctx.mouse().leftPressed())picked=i;
+        }
+        switch(picked) {
+            case 0 -> {if(saved!=null){world=saved;saved=null;debug=false;screen="PLAY";dirty=false;snapCamera(ctx);music(ctx,0x0F);}else if(existingSave)screen="NEW";else newWorld(ctx);}
+            case 1 -> {if(saved!=null||existingSave)screen="NEW";else newWorld(ctx);}
+            case 2 -> help("TITLE");case 3 -> ctx.exitToMasterTitle();default -> { }
+        }
+    }
+    private void newWorld(SceneContext ctx) {
+        world=new World(java.util.concurrent.ThreadLocalRandom.current().nextLong());screen="PLAY";
+        saved=null;debug=false;dirty=true;saveTimer=0;snapCamera(ctx);save(ctx);music(ctx,0x0F);
+    }
+    private void help(String from){returnScreen=from;screen="HELP";}
+    private void panelInput(SceneContext ctx) {
+        if(screen.equals("PAUSE")) {
+            if(back(ctx)||ctx.buttonPressed(SceneButtons.START)||ctx.keyPressed(SceneKeys.P)){screen="PLAY";return;}
+            if(up(ctx))cursor=Math.floorMod(cursor-1,8);if(down(ctx))cursor=(cursor+1)%8;
+            int picked=confirm(ctx)?cursor:-1;
+            for(int i=0;i<8;i++)if(ctx.mouse().over(ctx.width()/2-100,47+i*17,200,15)) {
+                if(ctx.mouse().lastInputWasMouse())cursor=i;if(ctx.mouse().leftPressed())picked=i;
+            }
+            switch(picked) {
+                case 0 -> screen="PLAY";case 1 -> screen="INVENTORY";case 2 -> screen="CRAFT";
+                case 3 -> screen="JOURNAL";case 4 -> screen="MAP";
+                case 5 -> {world.recall();snapCamera(ctx);screen="PLAY";dirty=true;}
+                case 6 -> help("PAUSE");
+                case 7 -> {if(save(ctx)||!dirty){saved=SaveCodec.decode(SaveCodec.encode(world)).orElse(null);screen="TITLE";cursor=0;music(ctx,0x2F);}}
+                default -> { }
+            }
+            return;
+        }
+        if(back(ctx)||ctx.buttonPressed(SceneButtons.START)||ctx.keyPressed(SceneKeys.ESCAPE)
+                ||screen.equals("CRAFT")&&ctx.keyPressed(SceneKeys.C)
+                ||screen.equals("INVENTORY")&&(ctx.keyPressed(SceneKeys.TAB)||ctx.keyPressed(SceneKeys.I))
+                ||screen.equals("MAP")&&ctx.keyPressed(SceneKeys.M)||screen.equals("JOURNAL")&&ctx.keyPressed(SceneKeys.J)) {screen="PLAY";return;}
+        if(screen.equals("CRAFT")) {
+            if(up(ctx)||ctx.mouse().wheel()>0)recipe=Math.floorMod(recipe-1,world.content.recipes.size());
+            if(down(ctx)||ctx.mouse().wheel()<0)recipe=(recipe+1)%world.content.recipes.size();
+            int top=Math.max(0,Math.min(world.content.recipes.size()-10,recipe-4));
+            for(int i=0;i<10;i++)if(ctx.mouse().over(54,55+i*13,192,12)&&ctx.mouse().leftPressed())recipe=top+i;
+            if(confirm(ctx)||ctx.mouse().leftPressed()&&ctx.mouse().over(270,166,190,18)) {
+                if(world.craft(recipe)){dirty=true;ctx.audio().playSfx(0x33);}
+            }
+        }else if(screen.equals("INVENTORY")) {
+            int n=Content.Item.values().length;
+            if(left(ctx))inventoryCursor=Math.floorMod(inventoryCursor-1,n);
+            if(right(ctx))inventoryCursor=(inventoryCursor+1)%n;
+            if(up(ctx))inventoryCursor=Math.floorMod(inventoryCursor-8,n);
+            if(down(ctx))inventoryCursor=(inventoryCursor+8)%n;
+            for(int i=0;i<n;i++)if(ctx.mouse().over(51+(i%8)*53,55+(i/8)*28,49,25)&&ctx.mouse().leftPressed())inventoryCursor=i;
+            for(int i=0;i<8;i++)if(ctx.keyPressed(SceneKeys.DIGIT_1+i))world.slot=i;
+            if(ctx.keyPressed(SceneKeys.Q))world.slot=(world.slot+7)%8;if(ctx.keyPressed(SceneKeys.R))world.slot=(world.slot+1)%8;
+            if(ctx.buttonPressed(SceneButtons.C))world.slot=(world.slot+1)%8;
+            if(ctx.buttonPressed(SceneButtons.A)||ctx.keyPressed(SceneKeys.ENTER)||ctx.mouse().leftPressed()&&ctx.mouse().over(260,182,208,16)) {
+                Content.Item item=Content.Item.values()[inventoryCursor];
+                if(world.count(item)>0){world.equip(item);dirty=true;ctx.audio().playSfx(0x33);}else world.say("You have not collected this yet.");
+            }
+            if(ctx.keyPressed(SceneKeys.H)){if(world.consume(Content.Item.values()[inventoryCursor])){dirty=true;ctx.audio().playSfx(0x33);}}
+        }
+    }
+    private boolean save(SceneContext ctx) {
+        if(debug)return true;
+        String data=SaveCodec.encode(world);
+        // Back up only a successfully decoded prior document, never a corrupt save.
+        Optional<String> old=ctx.storage().read("world.sav");
+        if(old.flatMap(SaveCodec::decode).isPresent()&&!ctx.storage().write("world-backup.sav",old.get())) {
+            status="Backup failed. Progress is still in memory.";world.say(status);return false;
+        }
+        if(!ctx.storage().write("world.sav",data)){status="SAVE FAILED. Retry from the pause menu.";world.say(status);return false;}
+        dirty=false;existingSave=true;saveTimer=0;status="WORLD SAVED";return true;
+    }
+    private void music(SceneContext ctx,int id){if(currentMusic!=id){currentMusic=id;ctx.audio().playMusic(id);}}
+    private double targetCameraX(SceneContext ctx){return Math.max(0,Math.min(World.W*World.T-ctx.width(),world.x-ctx.width()*.46));}
+    private double targetCameraY(){return Math.max(0,Math.min(World.H*World.T-224,world.y-109));}
+    private void snapCamera(SceneContext ctx){cameraX=targetCameraX(ctx);cameraY=targetCameraY();}
+    private boolean confirm(SceneContext ctx){return ctx.buttonPressed(SceneButtons.A|SceneButtons.C)||ctx.keyPressed(SceneKeys.ENTER);}
+    private boolean back(SceneContext ctx){return ctx.buttonPressed(SceneButtons.B)||ctx.keyPressed(SceneKeys.BACKSPACE)||ctx.mouse().rightPressed();}
+    private boolean up(SceneContext ctx){return ctx.buttonRepeated(SceneButtons.UP);}
+    private boolean down(SceneContext ctx){return ctx.buttonRepeated(SceneButtons.DOWN);}
+    private boolean left(SceneContext ctx){return ctx.buttonRepeated(SceneButtons.LEFT);}
+    private boolean right(SceneContext ctx){return ctx.buttonRepeated(SceneButtons.RIGHT);}
+    @Override public void draw(SceneContext ctx,SceneCanvas canvas) {
+        view.world(canvas,world,cameraX,cameraY,presentation);
+        if(sonic!=null&&(!screen.equals("PLAY")||world.invulnerable%8<5)) {
+            int anim=screen.equals("TITLE")?5:!world.grounded?2:Math.abs(world.vx)>.2?0:5;
+            SceneSprite pose=AnimationSampling.frame(sonic,anim,world.ticks,new AnimationSampling.Timing(0,30,4,1));
+            if(pose!=null)canvas.draw(pose,(float)(world.x-cameraX),(float)(world.y+10-cameraY-(pose.height()-pose.originY())*.65),
+                    SceneDraw.plain().withScale(.65f).withFlipX(world.facingLeft));
+        }
+        if(screen.equals("TITLE"))view.title(canvas,cursor,saved!=null,presentation,status);
+        else if(screen.equals("NEW"))view.confirmNew(canvas);
+        else {
+            view.hud(canvas,world,status,presentation,screen.equals("PLAY"),cameraX,cameraY);
+            switch(screen) {
+                case "CRAFT" -> view.crafting(canvas,world,recipe);
+                case "INVENTORY" -> view.inventory(canvas,world,inventoryCursor);
+                case "JOURNAL" -> view.journal(canvas,world);
+                case "MAP" -> view.map(canvas,world);
+                case "PAUSE" -> view.pause(canvas,cursor);
+                case "HELP" -> view.help(canvas);
+                default -> { }
+            }
+        }
+        if(screen.equals("HELP")&&returnScreen.equals("TITLE"))view.help(canvas);
+    }
+    @Override public void exit(SceneContext ctx){if(dirty&&world!=null)save(ctx);}
+    @Override public boolean debugJump(String command) {
+        boolean priorDebug=debug;debug=true;
+        if(command.equals("play")){screen="PLAY";snapCamera(context);return true;}
+        if(command.equals("craft")||command.equals("inventory")||command.equals("journal")||command.equals("map")) {
+            screen=command.toUpperCase();return true;
+        }
+        if(command.equals("cavern")||command.equals("warden")) {
+            world.x=world.shrineX[0]*World.T-24;world.y=(world.shrineY[0]-2)*World.T;world.hp=world.maxHp=160;
+            for(Content.Item i:Content.Item.values())world.add(i,30);
+            world.hotbar[0]=Content.Item.IRON_PICK;world.hotbar[2]=Content.Item.STAFF;
+            if(command.equals("warden"))world.interact(world.shrineX[0],world.shrineY[0]-1);
+            screen="PLAY";snapCamera(context);return true;
+        }
+        if(command.equals("victory")){world.wardens=7;world.won=true;world.quest=7;screen="JOURNAL";return true;}
+        debug=priorDebug;return false;
+    }
+}

@@ -1,0 +1,14 @@
+formatVersion: 1
+id: starfall-frontier
+name: Starfall Frontier
+version: 1.0.0
+authors:
+  - OpenGGF contributors
+description: A Terraria inspired mining and building adventure. Explore three biomes, craft equipment, awaken ancient wardens and restore the Starfall beacon. Original procedural scenery with Sonic and music from your S3K ROM.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s3k
+entrypoint: starfall.StarfallMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

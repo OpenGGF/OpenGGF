@@ -73,6 +73,11 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 
 ## Experimental projects
 
+- [Starfall Frontier](../../examples/starfall-frontier/README.md) — a Terraria inspired
+  solo mining and building adventure with a seeded tile world, three biomes,
+  crafting stations, equipment, seven quests, three wardens and persistent saves.
+  An original mod scene using the player's S3K character art and audio.
+
 - [Robotnik Tower Defence](../../examples/robotnik-tower-defense/README.md) —
   Industrial Action: defend Robotnik's base door from 15 waves of unionised
   Flickies with six ROM-drawn badnik defenses, upgrades, repair and an emergency
