@@ -19,17 +19,20 @@ without committing a machine-local home path.
 
 Each row needs implemented behavior, an example or consumer proving usefulness,
 and relevant verification. Status changes record evidence rather than intent.
+All 27 outcomes are implemented. The latest [actual-main qualification](#actual-main-ordinary-and-fresh-guard-qualification)
+and [matching creator kit](#final-integrated-creator-kit) record the completed
+checks, 27 inherited engine failures, unchanged skips and passing fresh guards.
 
 | ID | Outcome | Initial owner / sequence | Status |
 |---|---|---|---|
 | 01 | Visible stock signpost reskin, complete frames, art-key diagnostics/catalogue | Creator | Focused reskin cases and both exported packaging paths pass; zero validation findings |
 | 02 | Every maintained starter supports repeated builds after edits | Creator | All seven exported starters packaged twice without cleaning after edits, with changed outputs and zero findings |
-| 03 | Java 21, matching candidate artifacts, pinned tooling, purpose-specific scaffolds | Creator | Clean matched artifacts and all seven purpose starters verified externally at 7318; final source refresh is recorded separately |
-| 04 | Reproducible creator download with SDK, API docs, launchers, starters and artifact-only CI proof | Creator | Twelve Python checks and ten external acceptance stages pass; duplicate ZIPs match at 7318 and d49 |
+| 03 | Java 21, matching candidate artifacts, pinned tooling, purpose-specific scaffolds | Creator | Final clean matching artifacts at bf; all seven purpose starters pass; the maintained sample/template mismatch is repaired and its focused and actual-main cases pass. See [final kit](#final-integrated-creator-kit) and [fixture repairs](#development-full-run-fixture-repairs) |
+| 04 | Reproducible creator download with SDK, API docs, launchers, starters and artifact-only CI proof | Creator | Twelve Python checks pass; duplicate bf ZIPs and all 420 entry hashes match, artifact separation and launcher pass, and external Hello Jupiter/ordinary-package isolation remains source-qualified. See [final kit](#final-integrated-creator-kit) and [refreshed acceptance](#refreshed-artifact-only-creator-acceptance) |
 | 05 | Recipient install/update/retrust/dependency/order/rollback/uninstall journey | Creator | Integrated from d4b7d1641; 31 focused tests pass, zero skips |
 | 06 | Consistent beginner paths and delivered/limited/planned capability matrix | Creator, finalized after capabilities | Capability/navigation reconciliation composed; direct kit commands and explicit CI warning policy integrated from a242f28b8; handbook links/syntax pass |
 | 07 | Packaging reports sorted warnings and machine-readable findings with explicit CI policy | Creator | Integrated from 6691b0277; included in 33 focused passes, zero skips |
-| 08 | Portable exported examples and one shared build launcher with explicit ROM inputs | Creator, example migrations later | All eight exports pass portable and normal Maven packaging at 7318; Sitar's final changed export passes both again at d49 |
+| 08 | Portable exported examples and one shared build launcher with explicit ROM inputs | Creator, example migrations later | All eight exports pass portable and normal Maven packaging; changed sample, Flappy and ROM-art-remix exports pass both again against c24, with strict entry-hash readback and zero production-testkit leakage. See [refreshed acceptance](#refreshed-artifact-only-creator-acceptance) |
 | 09 | Distributed test support uses production validation, loading, ownership and Jupiter lifecycle | Coordinator, after runtime fixes | Testkit 13, launcher two and packager two cases pass in 38496; nested Jupiter Slay 126 / Tower 17 pass; external Hello Jupiter and ordinary-package isolation pass |
 | 10 | Authored numeric zone/level metadata is owner-local; namespaced saves survive composition | Runtime safety | Owner-local metadata/remapping and tagged-save cases pass in 38496: zone loader 29, runtime save context 16 and existing save consumers |
 | 11 | Owned rewind adapters cannot overwrite host or another owner | Runtime safety | Owner patch 21, registry 16 and native publication nine cases pass in 38496, including cold, host and delegated-root lifetimes |
@@ -1511,3 +1514,218 @@ resolution and three owner/anchor admission cases. An independent review of the
 three one-line fixture corrections found no ownership bypass or assertion
 weakening. These bounded results qualify the repairs; they do not relabel the
 frozen full invocation as passing.
+
+## Actual-main ordinary and fresh-guard qualification
+
+The reviewed task tree `d5274839d8452ea1e7ee7a9668526b432805fce4` was
+integrated without conflicts into the unchanged main-workspace `develop` branch
+at `bf7c56e1986fd8ca4a4c5e0cafdf3087e73b545a`. Their Git trees are identical:
+`792b8644b134b0880fe7e1a1505c8089f7332ad8`. Fetch and fast-forward pull had
+confirmed the actual pre-task destination `098053c4a01c2af283ca6797463bb5051442ef0b`.
+Unrelated work and the three dirty disassembly submodules were preserved.
+
+Main source remained frozen through the completed run:
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 098053c4a01c2af283ca6797463bb5051442ef0b --run --max-minutes 150
+```
+
+Run `20261008T103708Z-730bd986` selected all 3,056 ordinary source classes
+with one worker, followed by every structural guard in a separate fresh JVM.
+Actual launch-environment preflight passed Java 21, Lua 5.4 and PowerShell.
+Admission waited 4,073 seconds; queue waiting did not count toward the
+150-minute execution timeout. All three original absolute ROM paths were passed,
+and their CRC32/SHA-1 identities matched the repository's required revisions.
+
+Ordinary completed in 4,913.15 seconds: 3,054 XML reports / 26,514 tests,
+27 failures, zero errors and 62 skips, exit one. Fresh guards completed in
+208.35 seconds: 87 reports / 674 tests, zero failures, errors or skips, exit zero.
+Ordinary Maven finished at `2026-10-08T11:59:01Z`. Guard Maven finished at `2026-10-08T12:02:30Z`; outer termination was observed
+before the `12:02:39Z` inspection. This is a completed red ordinary run with
+passing guards, not an all-green suite claim.
+
+Complete results contain no omitted failed/skipped cases and no duplicate case
+identities. All 27 failure identities, kinds, exception types and full assertion
+first lines match the qualified baseline. Only the verified identity-address
+suffix of `RewindObjectStateBlob` is normalized for the known SSZ comparison;
+the actual uncapped assertion below retains this run's addresses. Every one of
+the 62 skip identities and concrete reason first lines matches, with no added,
+removed or changed skip and no ROM-prerequisite skip. All seven repaired fixture
+identities were directly observed passing in this actual-main run by the
+`2026-10-08T11:14:35Z` fresh-report checkpoint. No new or worsened failure remains.
+
+At launch, admission and after terminal inspection, all 9,831 tracked input files
+in `src/main`, `src/test`, `pom.xml`, `mod-api-release-policy.properties`,
+`.githooks`, `tools/testing` and `.mvn` retained SHA-256
+`e2b976bfe5e65f33d5f89f492bcfa76843d2017822ed2d602b0d3fcab9bfa479`.
+The digest concatenates sorted relative path, NUL, lowercase file SHA-256 and
+newline. HEAD remained `bf7c56e`; preserved unrelated Git status matched byte
+for byte. The final evidence update changes only this dated prose artifact;
+it does not change the tested engine, test, build, hook or selection inputs.
+
+The following tables are the actual main run's identities and uncapped first
+assertion/reason lines, inspected before normal diagnostic acknowledgment.
+
+
+### Actual-main failure identities and assertions
+
+| Identity | Kind / exception type | Full assertion first line |
+|---|---|---|
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[2]` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: late pulley owns Tails ==> expected: <true> but was: <false>` |
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[3]` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: late pulley owns Sonic ==> expected: <true> but was: <false>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <96> but was: <0>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <96> but was: <0>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase(int)[1]` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at 26706 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase(int)[2]` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at 26750 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <96> but was: <0>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldEmeraldTeamClearsBothActsFinalFightAndDoomsday` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at 53897 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <96> but was: <0>` |
+| `com.openggf.tools.TestLrzActTwoColdRouteCapture#coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 36526 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestLrzBossColdRouteCapture#coldTeamCompletesBossActWithEarnedShieldAndRepeatableWorldState` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 36526 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <1069> but was: <899>` |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 19460 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsRestoresActTwoTraversalToTheMiddleCorridor` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 19460 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsCompletesBossActAndReachesPlayableHiddenPalace` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 19460 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsCompletesActTwoAndRestoresTheBoulderHandoff` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 19460 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestLrzWideBossColdRouteCapture#coldWideTeamClearsBossAndReleasesHiddenPalaceWithRepeatableWorld` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <2796> but was: <524>` |
+| `com.openggf.tools.TestMhzPairColdRouteCapture#pairedColdCompletionIsolatesTheLiveTimelineAtTheActualFbzLoad` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: the route must observe the actual history-reset boundary ==> expected: <true> but was: <false>` |
+| `com.openggf.tools.TestMhzWideColdRouteCapture#wideSonicCompletesBothActsThroughProductionLoopWithWholeWorldReplay` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: [wide-route-19500] restore 0 zone-runtime: [zone-runtime.stateBytes[2]: A=46 B=26, zone-runtime.stateBytes[3]: A=-104 B=64, zone-runtime.stateBytes[6]: A=38 B=21, zone-runtime.stateBytes[7]: A=-44 B=-32, zone-runtime.stateBytes[10]: A=31 B=17, zone-runtime.stateBytes[11]: A=16 B=-128] ==> expected: <true> but was: <false>` |
+| `com.openggf.tools.TestSszColdRouteCapture#coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 7311 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestSszColdRouteCapture#coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 7311 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestSszSoloColdRouteCapture#coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at 7671 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestSszSoloColdRouteCapture#coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at 7671 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[1]` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <48> but was: <0>` |
+| `com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[2]` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <48> but was: <0>` |
+| `com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int)[2]` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: replay at 4018 object-manager: [object-manager.usedSlotsBits differs, object-manager.usedSlotsBits.onlyA: 24, 29, object-manager.dynamic[6][ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=125, kind=DYNAMIC]] missing in B (A=DynamicObjectEntry[className=com.openggf.game.sonic3k.objects.badniks.EggRoboJetFlameChildInstance, spawn=ObjectSpawn[x=1291, y=2332, objectId=0, subtype=0, renderFlags=1, respawnTracked=false, rawYWord=0, layoutIndex=-1, ownerModId=null, objectKey=null], slotIndex=6, state=PerObjectRewindSnapshot[destroyed=false, destroyedRespawnable=false, hasDynamicSpawn=true, dynamicSpawnX=1291, dynamicSpawnY=2332, preUpdateX=1291, preUpdateY=2332, preUpdateValid=true, preUpdateCollisionFlags=-1, skipTouchThisFrame=false, solidContactFirstFrame=false, slotIndex=6, respawnStateIndex=-1, badnikExtra=null, badnikSubclassExtra=null, objectSubclassExtra=RewindExtra[parentId=null, x=1291, y=2332, mappingFrame=5, hFlip=true], playerExtra=null, genericState=null, compactGenericState=com.openggf.game.rewind.schema.RewindObjectStateBlob@a462ec40], playerOwner=null, objectId=ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=125, kind=DYNAMIC], ownerModId=null, rewindableAuxiliary=false]), object-manager.dynamic[28][ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=126, kind=DYNAMIC]] missing in B (A=DynamicObjectEntry[className=com.openggf.game.sonic3k.objects.badniks.EggRoboGunArmChildInstance, spawn=ObjectSpawn[x=1307, y=2300, objectId=0, subtype=0, renderFlags=1, respawnTracked=false, rawYWord=0, layoutIndex=-1, ownerModId=null, objectKey=null], slotIndex=28, state=PerObjectRewindSnapshot[destroyed=false, destroyedRespawnable=false, hasDynamicSpawn=true, dynamicSpawnX=1307, dynamicSpawnY=2300, preUpdateX=1307, preUpdateY=2300, preUpdateValid=true, preUpdateCollisionFlags=-1, skipTouchThisFrame=false, solidContactFirstFrame=false, slotIndex=28, respawnStateIndex=-1, badnikExtra=null, badnikSubclassExtra=null, objectSubclassExtra=RewindExtra[parentId=null, x=1307, y=2300, cooldown=-1, hFlip=true], playerExtra=null, genericState=null, compactGenericState=com.openggf.game.rewind.schema.RewindObjectStateBlob@dd91c8f8], playerOwner=null, objectId=ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=126, kind=DYNAMIC], ownerModId=null, rewindableAuxiliary=false]), object-manager.dynamic[27][ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=128, kind=DYNAMIC]].slotIndex: A=27 B=6, object-manager.dynamic[27][ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=128, kind=DYNAMIC]].state.slotIndex: A=27 B=6, object-manager.dynamic[33][ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=129, kind=DYNAMIC]].slotIndex: A=33 B=27, object-manager.dynamic[33][ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=129, kind=DYNAMIC]].state.slotIndex: A=33 B=27] ==> expected: <true> but was: <false>` |
+| `com.openggf.tools.audio.timeline.TestS1GameplayAudioTimelineCli#shellUsesAbsoluteBootstrapToolsAndRejectsInjectedEnvironmentBeforePathLookup` | `failure / org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <0> but was: <4>` |
+
+### Actual-main skip identities and reasons
+
+| Identity | Concrete reason first line |
+|---|---|
+| `com.openggf.audio.TestSmpsRepeatedPlaybackBenchmark#repeatedPublicMusicAndSfxPlaybackEmitsStableRawSamples` | `System property [openggf.audio.repeatedPlaybackBenchmark] does not exist` |
+| `com.openggf.game.rewind.TestLiveRewindCheckpointCost#compareCheckpointCadencesOnTheSameRecordedRoute` | `System property [openggf.checkpoint.measure] does not exist` |
+| `com.openggf.game.rewind.TestRewindTorture#tortureProgressiveLongRewinds` | `org.opentest4j.TestAbortedException: Assumption failed: Long-running soak profile; excluded from normal runs — run manually with -Drewind.soak=true` |
+| `com.openggf.game.rewind.TestS3kRewindAllocationProbe#measure` | `System property [openggf.rewind.alloc.measure] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestS3kAiz1CompatibilityRoutes#axisRouteCompletes(int, String)` | `System property [openggf.aiz1.routes] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestS3kAiz1EntryMatrix#introReleasesInputAndEntryReplaysTwice(int, String)` | `System property [openggf.aiz1.entry] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestS3kAiz1SpringRecovery#liveSpringJumpCrossesAndReplaysWhileWalkingIsRejected(int, String)` | `System property [openggf.aiz1.recovery] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestSozAct1VictoryCapture#captureVictoryAndHandoff` | `System property [soz.act1.victory.capture] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestSozColdAct1Capture#fixedControllerRouteReachesVisiblePlayableAct2FromColdAct1` | `System property [soz.cold.act1.capture] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestSozColdAct2Capture#fixedControllerRouteReachesVisibleLavaReefFromColdAct2` | `System property [soz.cold.act2.capture] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestSozEndBossVictoryCapture#captureBattleAndLrz` | `System property [soz.endboss.victory.capture] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestSozMinibossCapture#positionedAwakening` | `System property [soz.miniboss.capture] does not exist` |
+| `com.openggf.graphics.TestArenaMaskRenderer#nativeWidthCentrePixelsFrameCadenceAndGlStateSurviveCaptureFbo` | `org.opentest4j.TestAbortedException: Assumption failed: assumption is not true` |
+| `com.openggf.graphics.TestBackgroundScrollWrapPixels#integerScrollNeverSamplesOutsideTheRenderedPeriod` | `org.opentest4j.TestAbortedException: Assumption failed: OpenGL 4.1 unavailable` |
+| `com.openggf.graphics.TestForegroundWindowRendering#windowReplacesScrolledForegroundAndItsPriorityMask` | `org.opentest4j.TestAbortedException: Assumption failed: Surfaceless EGL unavailable (try EGL_PLATFORM=surfaceless)` |
+| `com.openggf.graphics.TestScrollBufferUploadNative#arraysAndViewsUploadExactValuesAcrossResourceAndContextRecreation` | `System property [openggf.scrollNative] does not exist` |
+| `com.openggf.graphics.TestShaderPixelCentreSampling#pixelCentresSurviveNativeIntegerAndFractionalScalingWithViewportOffsets` | `org.opentest4j.TestAbortedException: Assumption failed: OpenGL 4.1 unavailable` |
+| `com.openggf.graphics.TestSlotWindowGpuPassNative#pixelsAndDrawStateSurviveResizeCleanupAndContextRecreation(boolean)` | `System property [openggf.slotNative] does not exist` |
+| `com.openggf.graphics.shaderlib.TestDisplayShaderPackDiagnostics#writeCompatibilityReportForLocalShaderPack` | `org.opentest4j.TestAbortedException: Assumption failed: Set -Dshaderlib.diagnostic.enabled=true to scan a local shader pack` |
+| `com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#captureLiveBackgroundSamplingScenes` | `org.opentest4j.TestAbortedException: Assumption failed: enable with -Dopenggf.capture.backgroundSampling=true` |
+| `com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#postWarmupRenderSamplingAllocationProbe` | `org.opentest4j.TestAbortedException: Assumption failed: enable with -Dopenggf.measure.backgroundSampling=true` |
+| `com.openggf.level.objects.TestObjectRewindTypeSafetyDispatchPerformance#measureMixedRouteDispatchAllocationAndTime` | `System property [openggf.performance.rewindDispatch.measure] does not exist` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[11]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[12]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[19]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[20]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[21]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[22]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[23]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[24]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[25]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[26]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[27]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[28]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[29]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[30]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[31]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[32]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[33]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[34]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[35]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[36]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[11]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[12]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[19]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[20]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[21]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[22]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[23]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[24]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[33]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[34]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[35]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[36]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestSonicSurvivors#balanceProbe` | `org.opentest4j.TestAbortedException: Assumption failed: opt-in diagnostic` |
+| `com.openggf.tests.TestCPZObjectBugs#testSpinTubeForcesRolling` | `org.opentest4j.TestAbortedException: Assumption failed: Spin tube at (1920,896) did not capture/release Sonic` |
+| `com.openggf.tests.TestSozAct1ArenaCapture#naturalArenaAdmission` | `System property [soz.act1.capture] does not exist` |
+| `com.openggf.tests.TestSozConnectedMechanismCapture#capture(Scene)` | `System property [soz.connected.capture] does not exist` |
+| `com.openggf.tests.TestSozPostBossRedrawCapture#capture(int)` | `System property [soz.postboss.redraw.capture] does not exist` |
+| `com.openggf.tools.TestS3kSlotsGlassNative#glassOccludesPlayerAfterRealBonusFrame(String, int)` | `System property [openggf.test.gl.native] does not exist` |
+| `com.openggf.tools.audio.parity.TestS1OpenGgfAudioCapture#capturesTheCompleteReferenceControlledInterval` | `org.opentest4j.TestAbortedException: Assumption failed: local deterministic BizHawk reference required` |
+| `com.openggf.tools.audio.timeline.TestS1Ghz1OpenGgfAudioTimelineCapture#captureRequestedOutput` | `org.opentest4j.TestAbortedException: Assumption failed: no local OpenGGF timeline capture was requested` |
+
+## Final integrated creator kit
+
+The final producer refresh used clean source
+`bf7c56e1986fd8ca4a4c5e0cafdf3087e73b545a`, exactly the integrated code
+qualified above. Its external task directory is
+`openggf-creator-integrated-20261008-bf7c56e`; `kit-first.zip` is retained for
+delivery. `${OPENGGF_ACCEPTANCE_ROOT}` below denotes the external directory
+containing the temporary acceptance driver and that task directory.
+
+```bash
+python3 "${OPENGGF_ACCEPTANCE_ROOT}/creator_artifact_acceptance.py" artifacts \
+  --tree "${OPENGGF_ROM_ROOT}/.worktrees/ai-mod-framework-creator" \
+  --kit "${OPENGGF_ACCEPTANCE_ROOT}/openggf-creator-integrated-20261008-bf7c56e/kit" \
+  --work "${OPENGGF_ACCEPTANCE_ROOT}/openggf-creator-integrated-20261008-bf7c56e/work" \
+  --expected-sha bf7c56e1986fd8ca4a4c5e0cafdf3087e73b545a
+```
+
+Nested producer command:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -B -q -DskipTests -Puniversal-jar verify
+```
+
+Session `68407` exited zero. Exact Maven queue telemetry ends at
+`2026-10-08T12:03:07Z`, with 9,056.9 seconds waiting and 36.2 seconds execution,
+a serial 7 GiB / eight-core reservation and peak RSS 2.571 GiB. Tests were
+explicitly skipped by this producer; engine qualification comes from the
+completed actual-main ordinary and fresh guards, not from packaging.
+
+Two independently exported ZIPs are byte-identical, 52,907,784 bytes each, with
+SHA-256 `c2a75bb56ea9bc335b70d99d78da54436dfe4886e69a10f8ab95306c7422da9d`.
+All 420 manifest entry hashes were reverified against the extracted kit.
+The exported S2 `ggfmod art-keys` launcher includes `signpost` and excludes
+`EndSign`. The unpacked kit has 421 files / 57,075,557 bytes, eight exported
+examples, no example `target` trees and no `work` directory.
+
+| Artifact | SHA-256 | Entry/class separation |
+|---|---|---|
+| Engine | `7e6bbc5af8bc4d067cde88cb9c25c493934699af459317603b74b9594d7fb85d` | 14,450 entries / 13,380 classes; excludes SDK tools/resources and testkit support |
+| SDK | `8adf70bb1128dc64d3293ac244f39b81dd3ce814db620f7b87d446df50e6278c` | 127 entries / 61 tooling classes; starter index present |
+| Testkit | `d4376bf39eeca2b5920c865220f1716a82a7167a07c3af37fde74202d39546e4` | 15 entries / three support classes |
+| API docs | `84cf95f16f1fcd34b5059bd8f8282ae08de9e2b91e2cfb6d7fb83dadc484d858` | 960 entries / zero classes; `index.html` present |
+
+All four embedded identities agree: `app.version=0.7.prerelease`,
+`app.baseVersion=0.7.prerelease`, `app.commit=bf7c56e19`, `app.dirty=false`.
+Kit metadata records the full commit, clean source and API `0.7.0 candidate`.
+The mutable candidate descriptor and published baseline policy are unchanged;
+this is a creator-kit artifact, not a master release or stable API publication.
+
+No unchanged consumer acceptance was repeated merely to refresh commit metadata.
+The completed c24 portable/Maven/strict-repack and external Hello Jupiter followed
+by ordinary-package-isolation evidence remains qualified: c24→bf changes only
+the six fixture/sample text paths listed in the repair section and the two
+engineering prose artifacts. Production Java/resources, root POM, descriptor,
+hooks, test tooling and Maven configuration have an empty diff. The maintained
+sample POM edit is a comment only; its XML model is identical. All seven repaired
+test identities additionally pass in the actual-main full run.
+
+All 27 inventory outcomes are implemented and locally qualified with the
+explicit inherited engine failures and skips above. The final delivery successor
+changes only this evidence prose; normal push and accounted owned-worktree
+cleanup follow without another engine run on unchanged executable inputs.
