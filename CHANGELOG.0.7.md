@@ -921,7 +921,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   timestamped physical input, owner-scoped peer transport and consumed-audio-clock
   ROM playback. Full and selected-part synthesis have cancellable background jobs
   with progress, a ten-minute cap and a 256 MiB combined PCM budget. Runtime
-  character, stage and music assets come from the user's ROMs.
+  character, stage and music assets come from the user's ROMs. The main menu stages
+  the installed band rehearsing on a rotating real act with parallax and stage
+  lights. Performers stand on each act's floor, intermissions stage both speakers
+  on the world's level, and Sonic 3 & Knuckles zone themes load behind the ROM's
+  own title card. Screens ease in, highlights glide, the count-in follows the audio
+  clock, and results tally like an act clear. Menus play the running game's own
+  theme, cursor, ring, giant-ring, tally and act-clear sounds; the driver is
+  silenced before a song starts. The README now walks through the source in
+  reading order with recipes.
 - `ggfmod run` of a patch mod now opens the mod's base game directly instead of the master title game picker (holding Escape still returns to it), so a creator's build-and-run loop lands in their mod; test mode keeps its configured startup. Slay the Robotnik's `play.sh` uses it to build and launch the example in one step.
 - The master title takes the mouse: hovering highlights actions and clicking opens them, the carousel's arrows, neighbouring names and the wheel change game, clicking the game's name browses the list, and right-click goes back; the game browser, quit prompt, tools and start choices answer clicks too. Pointer positions map through the letterboxed viewport with the same helper mod scenes use.
 - The Sonic 1 title screen accepts an optional background override (`Sonic1TitleScreenManager.setBackgroundOverride`) that replaces its scrolling Green Hill plane and backdrop while keeping the emblem, sprites and fades.

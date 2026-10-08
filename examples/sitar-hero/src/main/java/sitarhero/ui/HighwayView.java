@@ -8,9 +8,13 @@ import java.util.List;
 
 /** One readable highway; update owns feedback timers, draw only reads them. */
 public final class HighwayView {
+    /** Ticks a struck lane's burst lasts, and a streak milestone's banner. */
+    private static final int BURST_TICKS = 10, MILESTONE_TICKS = 60;
     private int hits, misses;
     private long feedbackUntil;
     private boolean good;
+    private int judged, burstLanes, lastStreak, milestone;
+    private long burstAt = Long.MIN_VALUE / 2, milestoneAt = Long.MIN_VALUE / 2;
 
     public void observe(RhythmSession session, long ticks) {
         if (session.hits() != hits || session.misses() != misses) {
@@ -18,8 +22,20 @@ public final class HighwayView {
             feedbackUntil = ticks + 12;
             hits = session.hits(); misses = session.misses();
         }
+        // Lanes of notes judged as hits this tick burst at the strike line.
+        int struck = 0;
+        for (int i = judged; i < session.nextNote(); i++)
+            if (session.status(i) == 1) struck |= session.chart().notes().get(i).lanes();
+        judged = session.nextNote();
+        if (struck != 0) { burstLanes = struck; burstAt = ticks; }
+        int streak = session.streak();
+        if (streak >= 50 && streak / 50 > lastStreak / 50) { milestone = streak / 50 * 50; milestoneAt = ticks; }
+        lastStreak = streak;
     }
-    public void reset() { hits = 0; misses = 0; feedbackUntil = 0; }
+    public void reset() {
+        hits = 0; misses = 0; feedbackUntil = 0; judged = 0; burstLanes = 0; lastStreak = 0; milestone = 0;
+        burstAt = Long.MIN_VALUE / 2; milestoneAt = Long.MIN_VALUE / 2;
+    }
 
     public void draw(SceneCanvas c, RhythmSession session, long position, int rate,
                      ControlSettings settings, boolean drums, int lanes, int x, int top,
@@ -68,6 +84,22 @@ public final class HighwayView {
                 (session.held() & 1 << lane) != 0 ? SitarUi.CREAM : laneColor(lane), false, false);
         if (drums) c.fill(x + 8, bottom + 10, width - 16, 5,
                 (session.held() & 16) != 0 ? SitarUi.CREAM : SitarUi.GOLD);
+        long burst = ticks - burstAt;
+        if (burst >= 0 && burst < BURST_TICKS) {
+            // A ring opens from each struck target; reduced flashes keeps it dim and small.
+            int alpha = (int) ((BURST_TICKS - burst) * (settings.reducedFlashes() ? 90 : 200) / BURST_TICKS);
+            int radius = 7 + (int) (settings.reducedFlashes() ? burst / 3 : burst);
+            for (int lane = 0; lane < lanes; lane++) if ((burstLanes & 1 << lane) != 0)
+                ring(c, laneX(mid, bottom, lane, lanes, settings.lefty(), top, height, width), bottom, radius,
+                        alpha << 24 | (laneColor(lane) & 0xFFFFFF));
+            if (drums && (burstLanes & 16) != 0) c.fill(x + 8, bottom + 9, width - 16, 7, alpha / 2 << 24 | 0xFFF3CB);
+        }
+        long shown = ticks - milestoneAt;
+        if (milestone > 0 && shown >= 0 && shown < MILESTONE_TICKS) {
+            double fade = shown < MILESTONE_TICKS - 20 ? 1 : (MILESTONE_TICKS - shown) / 20.0;
+            SitarUi.center(new Motion.ShiftedCanvas(c, 0, fade), milestone + " NOTE STREAK!", x, top + 24 - (int) (shown / 10),
+                    width, SitarUi.GOLD);
+        }
         if (ticks < feedbackUntil) {
             SitarUi.center(c, good ? "HIT!" : "MISS", x, top + 8, width, good ? SitarUi.CYAN : 0xFFFF5969);
             if (!settings.reducedFlashes()) c.fill(x + 8, bottom - 3, width - 16, 2, good ? SitarUi.CYAN : 0xFFFF5969);
@@ -88,6 +120,16 @@ public final class HighwayView {
     private static int laneColor(int lane) {
         return switch (lane) { case 0 -> 0xFF51DC61; case 1 -> 0xFFF85765; case 2 -> SitarUi.GOLD;
             case 3 -> 0xFF609CFF; default -> 0xFFFF934B; };
+    }
+    /** A one-pixel octagon outline of radius {@code r} centred on (x, y). */
+    private static void ring(SceneCanvas c, int x, int y, int r, int argb) {
+        int a = r / 2;
+        c.fill(x - a, y - r, a * 2 + 1, 1, argb); c.fill(x - a, y + r, a * 2 + 1, 1, argb);
+        c.fill(x - r, y - a, 1, a * 2 + 1, argb); c.fill(x + r, y - a, 1, a * 2 + 1, argb);
+        for (int k = 1; k < r - a; k++) {
+            c.fill(x - a - k, y - r + k, 1, 1, argb); c.fill(x + a + k, y - r + k, 1, 1, argb);
+            c.fill(x - a - k, y + r - k, 1, 1, argb); c.fill(x + a + k, y + r - k, 1, 1, argb);
+        }
     }
     private static void gem(SceneCanvas c, int x, int y, int r, int color, boolean hopo, boolean star) {
         c.fill(x - r, y - r + 2, r * 2 + 1, r * 2 - 2, SitarUi.INK);

@@ -1,12 +1,20 @@
-package sitarhero;
+package sitarhero.stage;
 
 import com.openggf.mods.scene.*;
 import java.util.ArrayList;
 import java.util.List;
 import sitarhero.model.Role;
 
-/** ROM-backed cosmetic actors; instrument props are new pixel art drawn by this mod. */
-final class PerformerArt {
+/**
+ * One performer: native ROM body, arms and hands cut out around an original instrument prop.
+ *
+ * <p>{@link #notePlayed} starts a short gesture; the scene calls it only for judged
+ * successful notes (or, on the title, for rehearsal noodles on a separate instance).
+ * {@link #draw} places the figure by its native origin; {@link #footOffset} says how far
+ * below that origin the lowest native pixel sits, so a stage can stand it on a floor.
+ * Instrument props are new pixel art drawn here; every character pixel comes from the ROM.
+ */
+public final class PerformerArt {
     private record Layer(SceneSpriteSet set, int frame, int x, int y) { }
     private final List<Layer> layers = new ArrayList<>();
     private SceneSpriteSet character;
@@ -15,8 +23,9 @@ final class PerformerArt {
     private final String game;
     private final PerformerMotion motion = new PerformerMotion();
     private PerformerRig rig;
+    private int footOffset = Integer.MIN_VALUE;
 
-    PerformerArt(SceneRomArt rom, String performer) {
+    public PerformerArt(SceneRomArt rom, String performer) {
         this.performer = performer;
         game = rom.gameId();
         switch (performer) {
@@ -86,16 +95,36 @@ final class PerformerArt {
     }
 
     /** Called only for a judged note-on, including HOPO, chord and direct-drum hits. */
-    void notePlayed(Role role, int lanes, long ticks) { motion.notePlayed(role, lanes, ticks); }
+    public void notePlayed(Role role, int lanes, long ticks) { motion.notePlayed(role, lanes, ticks); }
 
-    void draw(SceneCanvas c, int x, int y, long ticks, String instrument, boolean playing) {
-        Role role = switch (instrument) {
-            case "Bongos" -> Role.BONGOS;
-            case "Synth" -> Role.SYNTH;
-            case "Harp" -> Role.HARP;
-            default -> Role.SITAR;
-        };
-        motion.beginDraw(ticks, playing);
+    /**
+     * Rows from the native origin down to the lowest native pixel of the resting figure
+     * (body, arms and native feet; not the prop). Stand a performer on floor row {@code f}
+     * by drawing it at {@code y = f - footOffset()}; hovering performers add their own lift.
+     */
+    public int footOffset() {
+        if (footOffset == Integer.MIN_VALUE) {
+            PerformerRig built = rig();
+            int lowest = lowestRow(built.pixels.body().image()) - built.pixels.body().originY();
+            for (var limb : built.pixels.limbs()) {
+                int row = lowestRow(limb.nativePart.image());
+                if (row >= 0) lowest = Math.max(lowest, limb.y + row - limb.nativePart.originY());
+            }
+            footOffset = lowest;
+        }
+        return footOffset;
+    }
+
+    /** True for the S3K Eggmobile, which floats above the stage rather than standing on it. */
+    public boolean hovers() { return performer.equals("robotnik") && game.equals("s3k"); }
+
+    private static int lowestRow(SceneImage image) {
+        for (int y = image.height() - 1; y >= 0; y--)
+            for (int x = 0; x < image.width(); x++) if ((image.pixel(x, y) >>> 24) != 0) return y;
+        return -1;
+    }
+
+    private PerformerRig rig() {
         if (rig == null) {
             List<PerformerCutout.Positioned> pose = new ArrayList<>();
             if (character != null) {
@@ -106,7 +135,19 @@ final class PerformerArt {
             for (Layer layer : layers) pose.add(new PerformerCutout.Positioned(layer.set().frame(layer.frame()), layer.x(), layer.y()));
             rig = PerformerRig.of(pose, performer, game);
         }
-        int bob = ticks % 120 < 30 ? -1 : 0; // quiet breathing, never a fake note attack
+        return rig;
+    }
+
+    /**
+     * Draws the performer with its native origin at (x, y) holding {@code role}'s prop.
+     * {@code playing=false} (menus, pause, previews) clears pending gestures so a resumed
+     * song never replays an old strike.
+     */
+    public void draw(SceneCanvas c, int x, int y, long ticks, Role role, boolean playing) {
+        motion.beginDraw(ticks, playing);
+        PerformerRig rig = rig();
+        // Standing figures keep their feet planted; only the floating Eggmobile drifts.
+        int bob = hovers() && ticks % 120 < 60 ? -1 : 0;
         SceneDraw style = SceneDraw.plain();
         // Obj_Tails_Tail_AniSelection: native standing tail frames $22..$26
         // share the body's origin; mapping frame zero is a transparent placeholder.
@@ -118,7 +159,7 @@ final class PerformerArt {
             c.draw(foot.turn(0), x + foot.x, y + bob + foot.y + kick / 2, style);
         }
         int contactY = y + bob + rig.contactY;
-        instrument(c, x, contactY - 3, instrument);
+        instrument(c, x, contactY - 3, role);
         if (role == Role.SYNTH) for (int lane = 0; lane < 5; lane++) {
             if (motion.age(role, 1 << lane, ticks) < 4) c.fill(x - 21 + lane * 10, contactY + 4, 5, 3, 0xFF9DE6FF);
         }
@@ -165,9 +206,9 @@ final class PerformerArt {
         c.fill(x - radius + 1, y - 5, 2, 1, argb); c.fill(x + radius - 2, y - 5, 2, 1, argb);
     }
 
-    private void instrument(SceneCanvas c, int x, int y, String role) {
+    private void instrument(SceneCanvas c, int x, int y, Role role) {
         switch (role) {
-            case "Bongos" -> {
+            case BONGOS -> {
                 for (int i = 0; i < 2; i++) {
                     c.fill(x - 24 + i * 25, y + 4, 22, 17, 0xFF8D4424);
                     c.fill(x - 24 + i * 25, y + 3, 22, 5, 0xFFFFD090);
@@ -175,7 +216,7 @@ final class PerformerArt {
                 }
                 c.fill(x - 5, y + 27, 10, 4, 0xFF555575);
             }
-            case "Synth" -> {
+            case SYNTH -> {
                 c.fill(x - 30, y + 3, 60, 15, 0xFF283850);
                 for (int i = 0; i < 8; i++) {
                     c.fill(x - 27 + i * 7, y + 6, 6, 9, 0xFFFFF4DB);
@@ -183,7 +224,7 @@ final class PerformerArt {
                 }
                 c.fill(x - 25, y + 18, 3, 15, 0xFF8DA0BC); c.fill(x + 22, y + 18, 3, 15, 0xFF8DA0BC);
             }
-            case "Harp" -> {
+            case HARP -> {
                 c.fill(x + 28, y - 20, 5, 46, 0xFFE6A329); c.fill(x + 2, y + 23, 31, 5, 0xFFE6A329);
                 for (int i = 0; i < 6; i++) {
                     int height = 14 + i * 5;
