@@ -1184,3 +1184,73 @@ is released after terminal comparison. The exact consumed diagnostic run is
 acknowledged and its directory removed; no raw logs are archived. The final
 follow-up changes evidence/current status prose only and therefore uses relevant
 links, syntax, mirror and policy checks rather than repeating engine tests.
+
+
+## Round 3 continuation — updated base and native PLC boundary
+
+The requested continuation starts privately from published develop
+`098053c4a01c2af283ca6797463bb5051442ef0b` on 2026-10-08. Its complete delta
+from the previous published `c039c0091` is the independently qualified SOZ
+capture throughput change, standalone JFR reader and accompanying prose.
+There is no production Java, POM, hook, workflow or selection-policy delta.
+The two changed SOZ fixtures retain their inputs, frame counts, assertions,
+case identities and drawing; discarded readbacks and duplicate diff computation
+are removed. The upstream matched 32 cases and integrated 23-case subset pass
+without skips. This is focused qualification, not a new full ordinary pass.
+The previous actual-main run at `5d1ff9b82` remains the exact source of the
+27 full failure assertions and 62 literal skip expectations; neither changed
+SOZ fixture is among those failures or skips. Final combined parity qualification
+is still pending and must name its actual source and destination.
+
+Three saved native Sol workers resume in new isolated worktrees: S1 MZ1 death,
+S2 special-stage results/return, and returned S3K HCZ. Root retains integration,
+shared ledgers and unassigned shared runtime ownership. Main remains on develop,
+with its three dirty disassembly submodules and four user-authored untracked
+files preserved. The separate Sitar feedback owner reports only mod and generic
+scene-music cue scope; its private `3afd81879` full run and all unrelated jobs
+are preserved. Integration/source-freeze coordination remains mandatory.
+
+### S1 queue arm: accepted native observation, no runtime correction
+
+The complete original S1 movie, sync settings and verified World REV01 ROM are
+replayed through the existing BizHawk 2.11/GPGX headless host, without RAM writes,
+input substitution, fixture publication or gameplay hydration. The diagnostic
+observes `RunPLC` entry `$0015E4`, the instruction after its count write `$00160E`,
+and its return `$001638`, plus frame ends. The ROM bytes at `$00160A` are
+`31 C2 F6 F8` (`move.w d2,(v_plc_patternsleft).w`), followed by the code-table
+call. This is the shipped `FixBugs=0` branch of `RunPLC`; the fixed branch moves
+that write after table preparation.
+
+The corrected capture completes with exit0 in95.815 seconds, 38 observations,
+one arm, 71,641 execute callbacks and thirteen consecutive frame-end samples.
+Every compared player position, fraction, velocity, inertia, status, routine,
+animation and mapping value, plus `v_framecount` and the low word at `$FE0E` of `v_vblank_count`, matches
+committed MZ2_3 rows95–107 literally. Native zone/act are2/1; the manifest's act2
+is a one-based label, not a RAM value. The initial act2 assertion rejected the
+first sample before accepted data; that failed attempt is not evidence.
+
+At original BK2 index47,135 (completed frame47,136 / segment row101),
+`RunPLC` enters with zero patterns and descriptor source `$03C040`, destination
+`$B000`. Before `NemDec_BuildCodeTable` it writes eighteen patterns; the same
+row's frame end has gameplay counter102 and VBlank counter46,764. The call
+returns during index47,136 / row102, after VBlank advances to46,765 while the
+gameplay counter remains102. Thus the observed lag interrupted the very call
+that had already exposed its arm. The fixture's prepared=true/remaining18 is
+correct, whereas the current counter-lookahead hold defers it one row.
+
+This disproves treating a held gameplay counter as proof that `RunPLC` has not
+armed. It does not justify moving every arm earlier, using queue comparison
+values as readiness input, widening comparisons or fitting a row-specific
+exception. The existing S1 hardware-timing kind is implemented, but this fixture
+contains no corresponding stream. The three queue comparisons remain an open
+boundary until a matching native timing stream or another general production
+mechanism establishes the arm's service identity. No PLC/timing/fixture behavior
+changes in this continuation are claimed from this diagnostic.
+
+Durable source, provenance, observations and completion marker remain in the
+external task directory `parity-r3-s1-plc-arm-20261008`, capture `capture-headless-v2`.
+The sampler source SHA-256 is
+`22b8ec61b6e0392e21e80685d7e2eabfc171ccb979040752f657d97542184014`;
+the original movie SHA-256 remains
+`f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`.
+The recurring measurement hazard is recorded in the existing trace briefing.

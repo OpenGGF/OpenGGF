@@ -95,6 +95,17 @@ and publication seam; preserve legitimate scripted control rather than clearing
 all forced state or adjusting physics. Native controller latches are a separate
 observation from both physical BK2 rows and engine input publication.
 
+A held gameplay counter does not prove that `RunPLC` has not armed (2026-10-08,
+stock parity S1 MZ2 return): native `FixBugs=0` writes `v_plc_patternsleft`
+before `NemDec_BuildCodeTable`. An observed call armed eighteen patterns in
+row101 and returned in row102 after the intervening lag VBlank, with the
+gameplay counter held. All thirteen surrounding player and clock observations
+matched the committed fixture. Counter lookahead alone therefore cannot choose
+which side of the arm the interrupt sampled. Observe entry, the write and return;
+do not use queue comparison rows as readiness input or fit a lag exception.
+The existing S1 hardware-timing kind can carry the matching native arm, but an
+implementation without a fixture stream is not measured timing coverage.
+
 Unpaced mod captures can outrun preparation (2026-10-08, Sitar Hero polish):
 `ExampleModCapture` advances ticks as quickly as it can while ROM song preparation
 runs on a worker. A short capture without video or frequent PNGs can finish before
