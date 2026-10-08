@@ -4,10 +4,10 @@ Goal: audible, instrument-specific mistakes with reliable solo, local and direct
 
 Base: `c039c009131be4548c3ab40eb809a0f85c2808f1`, fetched/fast-forward checked on develop. User authorized planning and execution plus a bounded Opus ideas consultation. Parent owns all implementation and delivery.
 
-Current checkpoint: implementation is integrated into develop. The completed
-actual-main ordinary lane has unchanged baseline failures and skips, and a separate
-fresh actual-main invocation passes all 674 guards. Final evidence publication and
-owned worktree/branch cleanup remain pending.
+Delivered on develop: the completed actual-main ordinary lane has unchanged
+baseline failures and skips, and a separate fresh actual-main invocation passes
+all 674 guards. Qualification evidence is published and the owned task worktree,
+branch, temporary agent registry and diagnostic outputs are removed.
 
 ## Design
 
@@ -28,7 +28,7 @@ Peer presentation packets carry round, independent sequence, song sample positio
 - [x] Wire the packaged scene through mod-owned `PerformanceAudio`; cover solo, local players, online co-op/duel, quiet tail, retry and pause.
 - [x] Record README/creator recipes, candidate API rationale, changelog, audio evidence and validation limitations.
 - [x] Run focused affected/API tests, inspect selection and preflight; freeze source then normal combined candidate validation and fresh guards.
-- [ ] Merge into current develop without switching it, run mandatory integrated selection, compare concrete failures/skips, push only develop and clean owned worktree/branch/Opus resources.
+- [x] Merge into current develop without switching it, run mandatory integrated selection, compare concrete failures/skips, push only develop and clean owned worktree/branch/Opus resources.
 
 ## Verification baseline and review focus
 
@@ -452,9 +452,41 @@ queue wait. Admission waited 590 seconds; Maven completed at `17:15:24Z` in
 known dirt and the complete guard launch fingerprint
 `4c515b6c756b4b928037b53f4cb5454a8685c7a986a3fe0e3ab5104b7a21a037` were unchanged
 after termination. Both supervisors and all identified owned child processes were
-verified absent. Raw reports and logs remain temporary until final cleanup.
+verified absent. The consumed raw reports, logs and invocation files were removed
+during final cleanup; no diagnostic archive was created.
 
 Together, the source-equivalent complete ordinary lane and fresh actual-main guards
 satisfy the integration qualification. The whole ordinary suite retains its 27
 known failures; it is not all green. Remaining follow-ups change evidence prose only
 and require documentation/policy checks, not another unchanged engine execution.
+
+## Delivery and cleanup
+
+Qualification evidence was committed and pushed only on develop as
+`8cefcd4ebef1f88a95244c8f341c4888f49aee07`; the remote branch was independently
+verified at that exact commit. It contains the Sitar integration and both preserved
+foreign integrations. Its delta from tested 17ae changes only this plan and the
+existing measurement-hazard catalogue. Markdown fences, local link targets, diff
+whitespace, policy trailers and the exact final Codex/Opus co-author block were
+checked; hooks and the CI push-policy validator passed. No engine test was repeated
+for evidence-only changes.
+
+Before removal, the task worktree was re-inspected: clean tracked status, no
+untracked nonignored changes, every commit already merged into develop and no
+process using its directory. Ignored contents were accounted for as generated
+configuration/probe reports, test/build outputs, image caches and bootstrap
+symlinks to main ROM/config/disassembly inputs. The configuration example exactly
+matched the committed template. Normal `git worktree remove` succeeded;
+`feature/ai-sitar-hero-fumble` was deleted as fully merged and stale worktree
+metadata pruned. No original ROM, shared build tree or unrelated worktree was removed.
+
+Both registered Opus tasks are terminal with no pending child runs; their prior
+native task cancellation disposed automatic delivery while preserving useful
+published results. The owned temporary registry and messages were removed after
+exporting review rulings here. A small lifecycle cleanup receipt remains outside
+the repository under the temporary-agent state directory. All identified owned
+validation processes are absent. The twelve regenerable audio evidence WAVs and
+their provenance README remain in the external task capture directory. Main's
+three unrelated dirty submodules and four known untracked paths are unchanged;
+foreign jobs and requests were preserved. This final status follow-up changes only
+the plan and does not alter the qualified runtime or test inputs.
