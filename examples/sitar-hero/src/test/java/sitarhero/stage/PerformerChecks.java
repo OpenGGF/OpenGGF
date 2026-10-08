@@ -1,4 +1,4 @@
-package sitarhero;
+package sitarhero.stage;
 
 import com.openggf.mods.scene.*;
 import sitarhero.model.Role;
@@ -12,8 +12,8 @@ public final class PerformerChecks {
     public static void main(String[] args) {
         nativePixelsPartitionExactly(); compositeMasksLeaveBackingLayersIntact(); pivotsAndRotationKeepNativePalette();
         hitsHaveFiniteEnvelopes(); drumsAndChordsRemainIndependent(); pauseAndClockResetCancelHits();
-        drawRequiresActualHitsAndPlacesHandsAfterProps();
-        System.out.println("7 external performer checks passed");
+        drawRequiresActualHitsAndPlacesHandsAfterProps(); feetRestOnTheLowestNativePixel();
+        System.out.println("8 external performer checks passed");
     }
 
     private static void compositeMasksLeaveBackingLayersIntact() {
@@ -116,16 +116,48 @@ public final class PerformerChecks {
         List<String> ops = new ArrayList<>();
         var canvas = (SceneCanvas) Proxy.newProxyInstance(PerformerChecks.class.getClassLoader(), new Class<?>[] {SceneCanvas.class},
                 (proxy, method, values) -> { ops.add(method.getName()); return null; });
-        actor.draw(canvas, 50, 50, 40, "Synth", true);
+        actor.draw(canvas, 50, 50, 40, Role.SYNTH, true);
         var idle = List.copyOf(ops);
         yes(idle.indexOf("draw") < idle.indexOf("fill"), "body before instrument");
         yes(idle.lastIndexOf("draw") > idle.lastIndexOf("fill"), "native hands before any effect, after prop");
-        ops.clear(); actor.notePlayed(Role.SYNTH, 5, 40); actor.draw(canvas, 50, 50, 42, "Synth", true);
+        ops.clear(); actor.notePlayed(Role.SYNTH, 5, 40); actor.draw(canvas, 50, 50, 42, Role.SYNTH, true);
         yes(ops.size() > idle.size(), "actual note creates transient key/ring effects");
-        ops.clear(); actor.draw(canvas, 50, 50, 43, "Synth", false);
+        ops.clear(); actor.draw(canvas, 50, 50, 43, Role.SYNTH, false);
         yes(ops.equals(idle), "paused performer retains prop without note effects");
-        ops.clear(); actor.draw(canvas, 50, 50, 60, "Synth", true);
+        ops.clear(); actor.draw(canvas, 50, 50, 60, Role.SYNTH, true);
         yes(ops.equals(idle), "resume/sustain does not pretend to play");
+    }
+
+    /** A stage stands performers by footOffset, so it must match the drawn native pixels exactly. */
+    private static void feetRestOnTheLowestNativePixel() {
+        int[] pixels = new int[32 * 40];
+        for (int y = 0; y < 31; y++) for (int x = 8; x < 24; x++) pixels[y * 32 + x] = 0xFF334477;
+        var set = new SceneSpriteSet() {
+            public int frameCount() { return 1; }
+            public SceneSprite frame(int frame) { return new SceneSprite(new SceneImage(32, 40, pixels), 16, 20); }
+            public int[] animationFrames(int id) { return new int[] {0}; }
+            public int animationDelay(int id) { return 8; }
+        };
+        var rom = (SceneRomArt) Proxy.newProxyInstance(PerformerChecks.class.getClassLoader(), new Class<?>[] {SceneRomArt.class},
+                (proxy, method, values) -> switch (method.getName()) {
+                    case "gameId" -> "s3k";
+                    case "character" -> set;
+                    default -> null;
+                });
+        var actor = new PerformerArt(rom, "sonic");
+        eq(10, actor.footOffset()); // rows 0..30 opaque, origin row 20
+        yes(!actor.hovers(), "Sonic stands");
+        List<Integer> bodyBottoms = new ArrayList<>();
+        var canvas = (SceneCanvas) Proxy.newProxyInstance(PerformerChecks.class.getClassLoader(), new Class<?>[] {SceneCanvas.class},
+                (proxy, method, values) -> {
+                    if (method.getName().equals("draw") && values[0] instanceof SceneSprite sprite && bodyBottoms.isEmpty())
+                        bodyBottoms.add(Math.round((Float) values[2]) - sprite.originY() + 30);
+                    return null;
+                });
+        for (Role role : Role.values()) for (long tick : new long[] {0, 30, 119}) {
+            bodyBottoms.clear(); actor.draw(canvas, 60, 100 - actor.footOffset(), tick, role, false);
+            eq(100, bodyBottoms.getFirst()); // idle breathing never lifts planted feet
+        }
     }
 
     private static void eq(long expected, long actual) { yes(expected == actual, expected + " != " + actual); }

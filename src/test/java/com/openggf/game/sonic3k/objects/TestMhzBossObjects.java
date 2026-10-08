@@ -61,6 +61,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.OwnedMocks;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -81,7 +82,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.clearInvocations;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -89,9 +89,14 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 class TestMhzBossObjects {
+    private final OwnedMocks mocks = new OwnedMocks();
     @AfterEach
     void resetObjectCameraBounds() {
-        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        try {
+            AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        } finally {
+            mocks.close();
+        }
     }
 
     @Test
@@ -167,7 +172,7 @@ class TestMhzBossObjects {
         Camera camera = new Camera();
         camera.setX((short) 0x3C40);
         camera.setMinX((short) 0x0000);
-        Sonic3kLevelEventManager events = mock(Sonic3kLevelEventManager.class);
+        Sonic3kLevelEventManager events = mocks.mock(Sonic3kLevelEventManager.class);
         ObjectServices services = new StubObjectServices() {
             @Override
             public Camera camera() {
@@ -196,8 +201,8 @@ class TestMhzBossObjects {
         camera.setX((short) 0x3900);
         camera.setY((short) 0x0200);
         camera.setMinX((short) 0x1234);
-        Sonic3kLevelEventManager events = mock(Sonic3kLevelEventManager.class);
-        ObjectManager objectManager = mock(ObjectManager.class);
+        Sonic3kLevelEventManager events = mocks.mock(Sonic3kLevelEventManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         ObjectServices services = new StubObjectServices() {
             @Override
             public Camera camera() {
@@ -289,7 +294,7 @@ class TestMhzBossObjects {
         camera.setX((short) 0x2D00);
         camera.setY((short) 0x0500);
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -331,7 +336,7 @@ class TestMhzBossObjects {
     void mhzEndBossHitFlashWritesRomFiveWordPaletteSet() {
         RecordingPaletteServices services = new RecordingPaletteServices();
         services.withRom(new FixedReadRom(new byte[32]));
-        com.openggf.graphics.GraphicsManager graphicsManager = mock(com.openggf.graphics.GraphicsManager.class);
+        com.openggf.graphics.GraphicsManager graphicsManager = mocks.mock(com.openggf.graphics.GraphicsManager.class);
         when(graphicsManager.isGlInitialized()).thenReturn(false);
         services.withGraphicsManager(graphicsManager);
         services.registry.beginFrame();
@@ -361,7 +366,7 @@ class TestMhzBossObjects {
     void mhzEndBossHitFlashRestoresRomRealColorsWhenInvulnerabilityWindowEnds() {
         RecordingPaletteServices services = new RecordingPaletteServices();
         services.withRom(new FixedReadRom(new byte[32]));
-        com.openggf.graphics.GraphicsManager graphicsManager = mock(com.openggf.graphics.GraphicsManager.class);
+        com.openggf.graphics.GraphicsManager graphicsManager = mocks.mock(com.openggf.graphics.GraphicsManager.class);
         when(graphicsManager.isGlInitialized()).thenReturn(false);
         services.withGraphicsManager(graphicsManager);
         services.registry.beginFrame();
@@ -395,7 +400,7 @@ class TestMhzBossObjects {
     void mhzEndBossQueuesSpikeArtWhenCameraReachesRomThreshold() {
         Camera camera = new Camera();
         camera.setX((short) 0x400F);
-        Sonic3kObjectArtProvider artProvider = mock(Sonic3kObjectArtProvider.class);
+        Sonic3kObjectArtProvider artProvider = mocks.mock(Sonic3kObjectArtProvider.class);
         ObjectRenderManager renderManager = new ObjectRenderManager(artProvider);
         ObjectServices services = new StubObjectServices() {
             @Override
@@ -428,9 +433,9 @@ class TestMhzBossObjects {
     void mhzMinibossFatalHitQueuesRomFadeExplosionAndSignpostHandoff() {
         List<ObjectInstance> spawned = new ArrayList<>();
         int[] lastSfx = {-1};
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -546,7 +551,7 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossWeatherMachineChildSignalsParentWhenDestroyed() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -605,7 +610,7 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossWeatherMachineKeepsSpawnPositionWhileParentMoves() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -641,7 +646,7 @@ class TestMhzBossObjects {
         List<ObjectInstance> spawned = new ArrayList<>();
         int[] playCount = {0};
         int[] lastSfx = {-1};
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -681,7 +686,7 @@ class TestMhzBossObjects {
     void weatherMachineExplosionRetainsWeatherSfxWithoutExplode() {
         List<ObjectInstance> spawned = new ArrayList<>();
         List<Integer> playedSfx = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -723,7 +728,7 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossWeatherMachineDeletesAfterRomWaitDrawTimer() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -768,7 +773,7 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossWeatherMachineSpawnsRomPaletteFadeController() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -879,13 +884,13 @@ class TestMhzBossObjects {
                 0x00, 0x02, 0x00, 0x04, 0x00, 0x06,
                 0x00, 0x08, 0x00, 0x0A, 0x00, 0x0C
         });
-        LevelManager levelManager = mock(LevelManager.class);
+        LevelManager levelManager = mocks.mock(LevelManager.class);
         when(levelManager.getCurrentLevel()).thenReturn(services.level);
 
         try (MockedStatic<GameServices> gameServices = mockStatic(GameServices.class)) {
             gameServices.when(GameServices::level).thenReturn(levelManager);
             gameServices.when(GameServices::paletteOwnershipRegistryOrNull).thenReturn(services.registry);
-            gameServices.when(GameServices::graphics).thenReturn(mock(com.openggf.graphics.GraphicsManager.class));
+            gameServices.when(GameServices::graphics).thenReturn(mocks.mock(com.openggf.graphics.GraphicsManager.class));
 
             superState.tickSuperPalette();
         }
@@ -898,7 +903,7 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossWeatherMachineFadeReturnsToRomPostWeatherPaletteTargets() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -950,7 +955,7 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossWeatherMachineDestructionClearsRomSeasonFlag() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -986,13 +991,13 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossWeatherMachineSpawnsRomAnimatedVisualChildren() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
         }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
         PatternSpriteRenderer renderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_END_BOSS)).thenReturn(renderer);
         ObjectServices services = new StubObjectServices() {
             @Override
@@ -1072,7 +1077,7 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossWeatherVisualChildrenDeleteWhenWeatherMachineParentIsDeleted() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -1115,7 +1120,7 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossChildObjectsUseRomObjectDataRenderBounds() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -1181,7 +1186,7 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossHitProxyUsesRomOffsetAndDelegatesAcceptedHits() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -1231,13 +1236,13 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossHitProxyQueuesTouchResponseWithoutDrawing() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
         }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
         PatternSpriteRenderer renderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_END_BOSS)).thenReturn(renderer);
         ObjectServices services = new StubObjectServices() {
             @Override
@@ -1268,7 +1273,7 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossRobotnikShipFlameMirrorsWithParentRenderFlags() {
-        Sonic3kObjectArtProvider artProvider = mock(Sonic3kObjectArtProvider.class);
+        Sonic3kObjectArtProvider artProvider = mocks.mock(Sonic3kObjectArtProvider.class);
         PatternSpriteRenderer renderer = readyRenderer();
         when(artProvider.getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP)).thenReturn(renderer);
         ObjectRenderManager renderManager = new ObjectRenderManager(artProvider);
@@ -1299,13 +1304,13 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossArenaAlternateSpikeReturnsBeforeDrawWhenInactive() {
-        Sonic3kMHZEvents events = mock(Sonic3kMHZEvents.class);
+        Sonic3kMHZEvents events = mocks.mock(Sonic3kMHZEvents.class);
         when(events.isEndBossArenaForegroundRefreshActive()).thenReturn(true);
         when(events.isEndBossArenaSpikeDeletionFlagSet()).thenReturn(false);
         when(events.getEndBossArenaSpikeActiveForTest()).thenReturn(new boolean[] {false, false});
         when(events.getEndBossArenaSpikeYForTest()).thenReturn(new int[] {-1, -1});
         PatternSpriteRenderer renderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_END_BOSS_SPIKES)).thenReturn(renderer);
         MhzEndBossArenaHelperInstance spike =
                 MhzEndBossArenaHelperInstance.spike(events, 1, 2, true);
@@ -1322,7 +1327,7 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossHitProxyDeletesWhenParentStatusBit7IsSet() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -1354,7 +1359,7 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossSpikeChildrenUseRomOffsetsAndAlternatingDashCollision() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -1417,7 +1422,7 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossSpikeChildrenDeleteWhenParentStatusBit7IsSet() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -1453,13 +1458,13 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossSpikeDrawsOnlyOnRomActiveCollisionFrames() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
         }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
         PatternSpriteRenderer renderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_END_BOSS)).thenReturn(renderer);
         ObjectServices services = new StubObjectServices() {
             @Override
@@ -1493,13 +1498,13 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossVisualChildrenUseRomPriorityFramesAndArenaHighPriorityFlag() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
         }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
         PatternSpriteRenderer renderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_END_BOSS)).thenReturn(renderer);
         ObjectServices services = new StubObjectServices() {
             @Override
@@ -1555,7 +1560,7 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossVisualChildrenDeleteWhenParentSetsChildDrawSprite2Flag() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -1591,13 +1596,13 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossSpawnsRobotnikHead4ChildFromRomSetupData() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
         }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
         PatternSpriteRenderer renderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP)).thenReturn(renderer);
         ObjectServices services = new StubObjectServices() {
             @Override
@@ -1642,13 +1647,13 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossRobotnikHeadDoesNotUseDefeatedFrameAfterHurtFlashClears() {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
         }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
         PatternSpriteRenderer renderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP)).thenReturn(renderer);
         ObjectServices services = new StubObjectServices() {
             @Override
@@ -1930,7 +1935,7 @@ class TestMhzBossObjects {
     @Test
     void mhzEndBossFatalHitEntersRomDefeatDashHandoff() {
         int[] lastSfx = {-1};
-        GameStateManager gameState = mock(GameStateManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
         ObjectServices services = new StubObjectServices() {
             @Override
             public void playSfx(int soundId) {
@@ -1985,7 +1990,7 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossKnucklesFatalHitUsesRomHigherDefeatDashVelocity() {
-        GameStateManager gameState = mock(GameStateManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
         ObjectServices services = new StubObjectServices() {
             @Override
             public GameStateManager gameState() {
@@ -2015,8 +2020,8 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossFatalHitSpawnsRomPlayerWalkoffPrepController() throws Exception {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
         Sonic3kMHZEvents mhzEvents = new Sonic3kMHZEvents();
         MhzZoneRuntimeState runtimeState = new MhzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, mhzEvents);
         List<ObjectInstance> freeSpawned = new ArrayList<>();
@@ -2111,8 +2116,8 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossFatalHitStartsRomSubtype20ExplosionController() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
         List<ObjectInstance> spawned = new ArrayList<>();
         int[] lastSfx = {-1};
         doAnswer(invocation -> {
@@ -2159,9 +2164,9 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossDefeatDashThresholdStartsFadeShakeAndTimerStop() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         ObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
@@ -2207,10 +2212,10 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossFadeWaitUnderflowStartsRomClimbAwaySetup() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
-        Sonic3kObjectArtProvider artProvider = mock(Sonic3kObjectArtProvider.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
+        Sonic3kObjectArtProvider artProvider = mocks.mock(Sonic3kObjectArtProvider.class);
         ObjectRenderManager renderManager = new ObjectRenderManager(artProvider);
         ObjectServices services = new StubObjectServices() {
             @Override
@@ -2275,9 +2280,9 @@ class TestMhzBossObjects {
     @ParameterizedTest
     @ValueSource(ints = {0, 1})
     void mhzEndBossFadeWaitUnderflowSpawnsRomDefeatFragments(int parentFlip) {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         Camera camera = new Camera();
         camera.setX((short) 0x4400);
         camera.setY((short) 0x0200);
@@ -2286,7 +2291,7 @@ class TestMhzBossObjects {
             afterCurrentSpawned.add(invocation.getArgument(0));
             return null;
         }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
-        Sonic3kObjectArtProvider artProvider = mock(Sonic3kObjectArtProvider.class);
+        Sonic3kObjectArtProvider artProvider = mocks.mock(Sonic3kObjectArtProvider.class);
         PatternSpriteRenderer renderer = readyRenderer();
         when(artProvider.getRenderer(Sonic3kObjectArtKeys.MHZ_END_BOSS)).thenReturn(renderer);
         ObjectRenderManager renderManager = new ObjectRenderManager(artProvider);
@@ -2394,9 +2399,9 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossClimbPastCameraHandoffSpawnsFixedCapsuleAndClearsBossId() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         Camera camera = new Camera();
         camera.setY((short) 0x0180);
         List<ObjectInstance> spawned = new ArrayList<>();
@@ -2460,9 +2465,9 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossPostCapsuleHandoffScrollsCameraRightAndPinsAt45A0() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         Camera camera = new Camera();
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
@@ -2551,13 +2556,13 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossCapsuleResultsFlagStartsPostCapsuleEscapeSetup() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         Camera camera = new Camera();
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
-        Sonic3kObjectArtProvider artProvider = mock(Sonic3kObjectArtProvider.class);
+        Sonic3kObjectArtProvider artProvider = mocks.mock(Sonic3kObjectArtProvider.class);
         ObjectRenderManager renderManager = new ObjectRenderManager(artProvider);
         Sonic3kMHZEvents mhzEvents = new Sonic3kMHZEvents();
         MhzZoneRuntimeState runtimeState = new MhzZoneRuntimeState(1, PlayerCharacter.SONIC_AND_TAILS, mhzEvents);
@@ -2661,8 +2666,8 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossCapsuleResultsFlagRelocksNativePlayersWithUpInput() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
         Camera camera = new Camera();
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
@@ -2731,9 +2736,9 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossRobotnikShipTimerUnderflowStartsEscapeAndFlameChild() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         Camera camera = new Camera();
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
@@ -2814,9 +2819,9 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossRobotnikShipEscapeMovesWithCustomGravityAndSetsCameraFlag() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         Camera camera = new Camera();
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
@@ -2922,9 +2927,9 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossRobotnikShipEscapeSubtractsLevelRepeatOffsetAfterMovement() throws Exception {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         Sonic3kMHZEvents mhzEvents = new Sonic3kMHZEvents();
         MhzZoneRuntimeState runtimeState = new MhzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, mhzEvents);
         Camera camera = new Camera();
@@ -2992,8 +2997,8 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossActiveCoreSubtractsLevelRepeatOffsetAfterRoutineDispatch() throws Exception {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
         Sonic3kMHZEvents mhzEvents = new Sonic3kMHZEvents();
         MhzZoneRuntimeState runtimeState = new MhzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, mhzEvents);
         Camera camera = new Camera();
@@ -3031,9 +3036,9 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossRobotnikShipEscapeAppliesNegativeGravityBeforeCameraCatchesShip() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         Camera camera = new Camera();
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
@@ -3098,9 +3103,9 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossRobotnikShipCameraFlagStopsPlayerAtWalkoffThreshold() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         Camera camera = new Camera();
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
@@ -3171,9 +3176,9 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossWalkoffStopStateForcesUpWhileWaitingForLaunchTrigger() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         Camera camera = new Camera();
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
@@ -3243,9 +3248,9 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossWalkoffStopStateLaunchesPlayerWhenShipSignalFlagSet() throws Exception {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         Camera camera = new Camera();
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
@@ -3323,9 +3328,9 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossWalkoffLaunchGrabsPlayerWhenVerticalVelocityTurnsNonNegative() throws Exception {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         Camera camera = new Camera();
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
@@ -3439,9 +3444,9 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossGrabHandoffSpawnsPlayerTwoCarryChild() throws Exception {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         Camera camera = new Camera();
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
@@ -3556,9 +3561,9 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossGrabWaitTimerRequestsFlyingBatteryAndDeletesBoss() throws Exception {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         Camera camera = new Camera();
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
@@ -3653,9 +3658,9 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossRobotnikShipCameraFlagForcesRightUntilWalkoffThreshold() {
-        ObjectManager objectManager = mock(ObjectManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        LevelState levelState = mock(LevelState.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
+        GameStateManager gameState = mocks.mock(GameStateManager.class);
+        LevelState levelState = mocks.mock(LevelState.class);
         Camera camera = new Camera();
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
@@ -3748,7 +3753,7 @@ class TestMhzBossObjects {
         Camera camera = new Camera();
         camera.setX((short) 0x2D00);
         camera.setY((short) 0x0500);
-        Sonic3kLevelEventManager events = mock(Sonic3kLevelEventManager.class);
+        Sonic3kLevelEventManager events = mocks.mock(Sonic3kLevelEventManager.class);
         ObjectServices services = new StubObjectServices() {
             @Override
             public Camera camera() {
@@ -3775,13 +3780,13 @@ class TestMhzBossObjects {
         camera.setX((short) 0x2D00);
         camera.setY((short) 0x0500);
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
         }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
         PatternSpriteRenderer renderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS)).thenReturn(renderer);
         ObjectServices services = new StubObjectServices() {
             @Override
@@ -3923,13 +3928,13 @@ class TestMhzBossObjects {
         camera.setY((short) 0x0500);
         camera.setMaxX((short) 0x2D00);
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
         }).when(objectManager).addDynamicObjectNextFrame(any(ObjectInstance.class));
         PatternSpriteRenderer renderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS)).thenReturn(renderer);
         ObjectServices services = new StubObjectServices() {
             @Override
@@ -3981,7 +3986,7 @@ class TestMhzBossObjects {
     @Test
     void mhzMinibossOffscreenDashWaitOnlyRunsWhenRenderedAndThenStartsDecelerationDash() {
         PatternSpriteRenderer renderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS)).thenReturn(renderer);
         MhzMinibossInstance miniboss = managedMinibossWithRenderManager(0x2D00, 0x0500, renderManager);
 
@@ -4055,7 +4060,7 @@ class TestMhzBossObjects {
             }
         };
         ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null,
-                mock(com.openggf.graphics.GraphicsManager.class), camera, services);
+                mocks.mock(com.openggf.graphics.GraphicsManager.class), camera, services);
         managerRef[0] = manager;
         MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
                 0x0190, 0x0060, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
@@ -4125,7 +4130,7 @@ class TestMhzBossObjects {
         camera.setX((short) 0x2D00);
         camera.setY((short) 0x0500);
         PatternSpriteRenderer renderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS)).thenReturn(renderer);
         int[] lastSfx = {-1};
         ObjectServices services = new StubObjectServices() {
@@ -4394,7 +4399,7 @@ class TestMhzBossObjects {
     @Test
     void mhzMinibossReturnBounceLandingSeedsRoutine1E() {
         PatternSpriteRenderer renderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS)).thenReturn(renderer);
         MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
                 0x3021, 0x051F, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
@@ -4481,7 +4486,7 @@ class TestMhzBossObjects {
     @Test
     void mhzMinibossFinalEscapeSwingSpawnsEscapeShardOnChopFrame() throws Exception {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -4524,7 +4529,7 @@ class TestMhzBossObjects {
 
     @Test
     void mhzMinibossEscapeShardInitializesLaunchVelocityTowardPlayer() {
-        PlayableEntity player = mock(PlayableEntity.class);
+        PlayableEntity player = mocks.mock(PlayableEntity.class);
         when(player.getCentreX()).thenReturn((short) 0x3081);
         MhzMinibossInstance parent = new MhzMinibossInstance(new ObjectSpawn(
                 0x3011, 0x0520, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
@@ -4541,10 +4546,10 @@ class TestMhzBossObjects {
 
     @Test
     void mhzMinibossEscapeShardUsesRomLogAnimationScript() {
-        PlayableEntity player = mock(PlayableEntity.class);
+        PlayableEntity player = mocks.mock(PlayableEntity.class);
         when(player.getCentreX()).thenReturn((short) 0x3081);
         PatternSpriteRenderer renderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS_LOG)).thenReturn(renderer);
         MhzMinibossInstance parent = new MhzMinibossInstance(new ObjectSpawn(
                 0x3011, 0x0520, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
@@ -4620,7 +4625,7 @@ class TestMhzBossObjects {
     @Test
     void mhzMinibossEscapeShardWaitCallbackStartsUpwardRoutineAndSpawnsSplinter() throws Exception {
         List<ObjectInstance> spawned = new ArrayList<>();
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
@@ -4937,7 +4942,7 @@ class TestMhzBossObjects {
         PatternSpriteRenderer minibossRenderer = readyRenderer();
         PatternSpriteRenderer treeRenderer = readyRenderer();
         PatternSpriteRenderer endBossRenderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS)).thenReturn(minibossRenderer);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS_TREE)).thenReturn(treeRenderer);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_END_BOSS)).thenReturn(endBossRenderer);
@@ -4972,7 +4977,7 @@ class TestMhzBossObjects {
     void mhzMinibossTreeMirrorsBossScratch42MappingFrame() {
         AbstractObjectInstance.updateCameraBounds(0x1700, 0x0300, 0x1900, 0x0500, 0);
         PatternSpriteRenderer treeRenderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS_TREE)).thenReturn(treeRenderer);
 
         MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
@@ -4981,7 +4986,7 @@ class TestMhzBossObjects {
         MhzMinibossTreeInstance tree = new MhzMinibossTreeInstance(new ObjectSpawn(
                 0x1810, 0x0410, Sonic3kObjectIds.MHZ_MINIBOSS_TREE, 0, 0, false, 0));
 
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         when(objectManager.getActiveObjects()).thenReturn(List.of(miniboss, tree));
         ObjectServices services = new StubObjectServices() {
             @Override
@@ -5013,7 +5018,7 @@ class TestMhzBossObjects {
         MhzMinibossTreeInstance tree = new MhzMinibossTreeInstance(new ObjectSpawn(
                 0x1810, 0x0410, Sonic3kObjectIds.MHZ_MINIBOSS_TREE, 0, 0, false, 0));
 
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         when(objectManager.getActiveObjects()).thenReturn(List.of(miniboss, tree));
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
@@ -5057,7 +5062,7 @@ class TestMhzBossObjects {
         miniboss.setCustomFlag(0x42, 1);
         MhzMinibossTreeInstance tree = new MhzMinibossTreeInstance(new ObjectSpawn(
                 0x1810, 0x0410, Sonic3kObjectIds.MHZ_MINIBOSS_TREE, 0, 0, false, 0));
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         when(objectManager.getActiveObjects()).thenReturn(List.of(miniboss, tree));
         tree.setServices(new StubObjectServices() {
             @Override
@@ -5080,7 +5085,7 @@ class TestMhzBossObjects {
         miniboss.setCustomFlag(0x42, 1);
         MhzMinibossTreeInstance tree = new MhzMinibossTreeInstance(new ObjectSpawn(
                 0x1810, 0x0410, Sonic3kObjectIds.MHZ_MINIBOSS_TREE, 0, 0, false, 0));
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         when(objectManager.getActiveObjects()).thenReturn(List.of(miniboss, tree));
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
@@ -5136,7 +5141,7 @@ class TestMhzBossObjects {
         MhzMinibossTreeInstance tree = new MhzMinibossTreeInstance(new ObjectSpawn(
                 0x1810, 0x0410, Sonic3kObjectIds.MHZ_MINIBOSS_TREE, 0, 0, false, 0));
 
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         when(objectManager.getActiveObjects()).thenReturn(List.of(miniboss, tree));
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
@@ -5179,7 +5184,7 @@ class TestMhzBossObjects {
         AbstractObjectInstance.updateCameraBounds(0x1700, 0x0300, 0x1900, 0x0500, 0);
         List<ObjectInstance> spawned = new ArrayList<>();
         PatternSpriteRenderer logRenderer = readyRenderer();
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS_LOG)).thenReturn(logRenderer);
         MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
                 0x1800, 0x0400, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
@@ -5187,7 +5192,7 @@ class TestMhzBossObjects {
         MhzMinibossTreeInstance tree = new MhzMinibossTreeInstance(new ObjectSpawn(
                 0x1810, 0x0410, Sonic3kObjectIds.MHZ_MINIBOSS_TREE, 0, 0, false, 0));
 
-        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectManager objectManager = mocks.mock(ObjectManager.class);
         when(objectManager.getActiveObjects()).thenReturn(List.of(miniboss, tree));
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
@@ -5287,8 +5292,8 @@ class TestMhzBossObjects {
                         + "entry every time the 1-2-3-2-1-0 cycle wraps, not just once");
     }
 
-    private static PatternSpriteRenderer readyRenderer() {
-        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+    private PatternSpriteRenderer readyRenderer() {
+        PatternSpriteRenderer renderer = mocks.mock(PatternSpriteRenderer.class);
         when(renderer.isReady()).thenReturn(true);
         return renderer;
     }

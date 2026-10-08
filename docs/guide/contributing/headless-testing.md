@@ -48,6 +48,26 @@ declares `SingletonResetExtension`, `@RequiresRom`, or an `@AfterEach`.
 `TestHeadlessStateTeardownGuard` (run under `-Pguards`) pins the wiring and
 `TestHeadlessStateTeardownExtension` proves it is active at runtime.
 
+### Test-owned memory
+
+Resetting engine state does not release static source corpora, input-evidence maps
+or inline mock call history. Keep input caches within the fixture that needs them
+and release them in `@AfterEach`/`@AfterAll`. A streaming stress factory must also
+retain bounded input state; production diagnostic counters do not measure its
+factory's memory.
+
+For measured mock retention, create mocks/spies through `OwnedMocks` and close
+that owner after the invocation's assertions and engine teardown. It clears only
+the registered mocks; global inline cleanup can invalidate other live fixtures.
+Use `stubOnly()` only when the test never verifies that mock, and install fixed
+frame-driving stubs once rather than restubbing identical values on each tick.
+
+Rendered route checks that discard pixels can use
+`GameplayCaptureSession.renderFrame()`. It performs the same drawing, overlays,
+effects and GPU completion as `render()` without framebuffer readback. Keep
+`render()` for screenshots and pixel comparisons. Omitting drawing altogether
+would miss render-state progression and is not equivalent validation.
+
 ## Manual setup (legacy)
 
 `HeadlessTestFixture.java` (`com.openggf.tests`) implements these steps and is the worked example to read.
