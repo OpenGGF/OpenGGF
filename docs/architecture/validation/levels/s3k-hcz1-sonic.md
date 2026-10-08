@@ -187,3 +187,23 @@ The matched native trace remains red with 4,699 divergences, first frame 9,482
 for commands, rejected approaches and final delivery validation. Other main
 characters/teams, checkpoint/death-restart, donor breadth at late rewind spots,
 presentation/oracle and trace-parity obligations remain open.
+
+## Full SaveGame consumer boundary — 2026-10-08
+
+Results act-2 completion clears the inherited AIZ mask before HCZ initialization, preserving same-zone seamless loads and special-stage returns. Final combined replay has complete segment9 with zero errors/55 lag and successful giant-ring handoff; standalone matches 3519 executed samples of 3574 rows, zero physics/animation/bootstrap/warnings. Newly reachable segment11 remains incomplete: 82067 errors (69393 physics/12674 animation), first primary Y row1510 `07D6/07DF`, ownership lost at cursor68801 in LEVEL, load generation9, zone1 act0.
+
+`828bc94d8` clears the native32-bit collected-ring mask at exactly seven existing
+full-SaveGame gates; existing game-state rewind owns the mask. Focused138 cases
+pass without failures/errors/skips, including direct Results tally/helper and
+mask-restoration checks. The other six non-tally live routes, successful disk
+persistence, live SK-alone, and this matrix's remaining route/rewind/breadth
+products are not newly certified. Generic persistence and special-stage/lives/
+death/reload/seamless semantics remain distinct. See the [lane audit](../../audits/2026-10-07-s3k-parity-gap-verification.md)
+for native ordering and scope, and [combined qualification](../../audits/2026-10-07-stock-parity-gap-verification.md#final-composed-canonical-replay-2026-10-08)
+for exact commands/frontiers. Broad validation and delivery remain pending.
+
+Composed canonical71207 passes standalone HCZ and complete chain segment9:
+3,574 source rows,55lag, zero physics/animation/bootstrap/warnings, and the
+giant-ring handoff succeeds. The newly reached segment11 is incomplete, first
+row1510 Y07D6/07DF; AIZ frontiers remain unchanged. This does not establish
+native pixel, dynamic-art or audio parity beyond the fixture's comparisons.

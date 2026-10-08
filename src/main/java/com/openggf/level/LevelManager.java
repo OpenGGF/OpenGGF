@@ -3697,11 +3697,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
         spriteManager.setPlaybackInputSuppressed(true);
-        Sprite main = spriteManager.getSprite(resolveMainCharacterCode());
-        if (main instanceof AbstractPlayableSprite playable) {
-            playable.setForcedInputMask(playback.getCurrentForcedInputMask());
-            playable.setForcedJumpPress(playback.isCurrentForcedJumpPress());
-        }
     }
 
     private void applyPersistedEditorEdits() {

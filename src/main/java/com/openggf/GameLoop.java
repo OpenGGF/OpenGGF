@@ -59,6 +59,7 @@ import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.SpecialStageReturnSpawn;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.ScheduledPlaybackInputOps;
 import com.openggf.game.session.SessionManager;
 import com.openggf.integration.presence.PresenceFormatter;
 import com.openggf.integration.presence.PresenceManager;
@@ -304,6 +305,8 @@ public class GameLoop {
     // Optional trace camera focus controller — ticked at the top of every stepInternal()
     private TraceCameraFocusController traceCameraFocusController;
     private GameplayModeContext liveRewindBoundaryReporterContext;
+    private GameplayModeContext livePlaybackInputPublisherContext;
+    private final Runnable scheduledPlaybackInputPublisher = this::applyScheduledPlaybackInputImmediately;
 
     /** @deprecated use {@link com.openggf.GameModeChangeListener}. */
     @Deprecated
@@ -392,6 +395,7 @@ public class GameLoop {
     private void refreshRuntimeBindings() {
         GameplayModeContext currentGameplayMode = resolveGameplayModeContext();
         if (currentGameplayMode == null || !currentGameplayMode.isGameplayRuntimeReady()) {
+            bindScheduledPlaybackInputPublisher(null);
             // Gameplay mode has been torn down (e.g. trace teardown returning to
             // master title). Clear cached references so resolveFadeManager()
             // falls back to the graphics-owned bootstrap manager rather than
@@ -417,9 +421,23 @@ public class GameLoop {
         this.gameState = currentGameplayMode.getGameStateManager();
         this.fadeManager = currentGameplayMode.getFadeManager();
         this.waterSystem = currentGameplayMode.getWaterSystem();
+        bindScheduledPlaybackInputPublisher(currentGameplayMode);
         engineServices.graphics().bindRuntimeManagedReferences(this.camera, this.fadeManager);
         if (currentGameplayMode != liveRewindBoundaryReporterContext) {
             installLiveRewindBoundaryReporter();
+        }
+    }
+
+    private void bindScheduledPlaybackInputPublisher(GameplayModeContext context) {
+        if (livePlaybackInputPublisherContext != context) {
+            if (livePlaybackInputPublisherContext != null) {
+                ScheduledPlaybackInputOps.detach(livePlaybackInputPublisherContext,
+                        scheduledPlaybackInputPublisher);
+            }
+            livePlaybackInputPublisherContext = context;
+        }
+        if (context != null) {
+            ScheduledPlaybackInputOps.attach(context, scheduledPlaybackInputPublisher);
         }
     }
 

@@ -14,26 +14,39 @@ For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 > for durable bug explanations, but check the frontier log before treating an old AIZ/CNZ frame
 > entry as the next live blocker.
 
-**Current verification, 2026-10-07:** the [continued stock audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
-records executed local candidates, not completed delivery. The HCZ run-chain
-startup correction is confined to admission of an unrepresented input gap;
-production physics is unchanged. Its measured candidate compares all 3,574
-rows, reduces 32,343 errors to 563 and first diverges at row 653 in Tails Y;
-the giant-ring exit is still missed. The final admission-boundary guard passes
-66 focused cases and retains that same complete chain profile. A following
-raw-controller bar correction passes 75 focused/control cases and clears the
-standalone HCZ replay; the chain retains 488 late mismatches, first animation
-at row 3,531 and first physics at row 3,532 primary X. Native giant-ring capture
-is absent in the engine; the native collected-ring mask reset is being checked.
-The FBZ → SOZ
-repair passes 125 focused cases, including twelve pending-shield regressions,
-the full destination restore and both unchanged eight-frame replay cycles.
-A completed probe attributed the earlier one-step dynamic-art mismatch to
-stale fresh-level boundary state after rewind; the existing transition adapter
-now captures that owner and clears stale state at the load floor. Positive
-pending-state restoration and combined integration qualification remain
-pending. These local checks do not certify the whole route or load/rewind
-breadth.
+**Current stock verification, 2026-10-08:** the [continued stock audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
+and [S3K lane audit](../architecture/audits/2026-10-07-s3k-parity-gap-verification.md)
+record executed candidates; composition broad validation and delivery remain pending.
+Admission (`45c6eed2`) preserved every advertised opening row, and raw-controller
+bar handling (`b3eff620`) cleared the early Tails-Y span. Full SaveGame completion
+(`828bc94d8`) now clears the existing captured 32-bit collected-ring mask at exactly
+seven unchanged native caller gates. The 138-case focused selection passed with
+zero failures/errors/skips; this is bounded consumer/API/startup evidence, not
+whole-act or route-product certification. Other six non-tally live callers were
+not directly newly qualified; successful disk persistence and live SK-alone
+execution are not certified by these checks.
+
+Final combined request 71207 at `45a941` plus the frozen shared-input candidate
+completed 16 tests, three chain assertion failures, zero errors/skips. Standalone
+HCZ compares 3519 executed samples of 3574 rows (55 lag), with zero physics,
+animation, bootstrap and warnings. Chain HCZ segment9 is complete with zero
+errors and 55 lag; the giant-ring handoff succeeds and reaches segment11.
+That segment remains incomplete: 82067 errors (69393 physics/12674 animation),
+first non-camera physics row1510 primary Y native `07D6`/engine `07DF`, then
+ownership loss in LEVEL at BK2 cursor68801, load generation9, zone1 act0.
+AIZ segment6 retains 189 errors, first row3319 sidekick X `31C1/31CA`;
+segment8 retains 13254 (13113 physics/141 animation), first row1583
+sidekick X `366C/3674`. These earlier frontiers are unchanged.
+
+The root's 82-case focused selection passed without skips, including five
+FullSave cases, nine exact API cases, 60 startup keepers and eight shared-input
+cases. FBZ→SOZ positive pending-state coverage (`a33`) passes 16 cases against
+two matched old-owner failures: both actual publication phases restore correctly.
+The load-floor zero is a null state captured before deferred assignment, not
+positive pending-state evidence. These checks certify neither whole levels nor
+all load/rewind products. Published baseline `a872` retains 28 inherited ordinary
+failures and 62 literal no-ROM skips; 672 guards pass. It is not a wholly green
+baseline or completed composition delivery.
 
 Entries should include:
 - **Location** — the file(s) where the bug lives, if known

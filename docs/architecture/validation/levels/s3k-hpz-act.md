@@ -54,3 +54,17 @@ boundary keeps him away from the post, which the rows now assert.
 Breadth follow-up: `TestS3kHpzCompatibilityMatrix` 102 tests and `TestS3kHpzLifecycleProduction`
 35 tests, 0 failures, 0 skips. Title-card set (`-Dtest=TestSonic3kTitleCardSublevelMappings,*TitleCard*`):
 19 classes, 81 tests, 0 failures, 0 skips.
+
+## Full SaveGame consumer boundary — 2026-10-08
+
+Both existing HPZ full SaveGame exit gates (sonic3k.asm:91524/91718) now dispatch through the semantic helper; camera/player and ending-countdown gates are unchanged.
+
+`828bc94d8` clears the native32-bit collected-ring mask at exactly seven existing
+full-SaveGame gates; existing game-state rewind owns the mask. Focused138 cases
+pass without failures/errors/skips, including direct Results tally/helper and
+mask-restoration checks. The other six non-tally live routes, successful disk
+persistence, live SK-alone, and this matrix's remaining route/rewind/breadth
+products are not newly certified. Generic persistence and special-stage/lives/
+death/reload/seamless semantics remain distinct. See the [lane audit](../../audits/2026-10-07-s3k-parity-gap-verification.md)
+for native ordering and scope, and [combined qualification](../../audits/2026-10-07-stock-parity-gap-verification.md#final-composed-canonical-replay-2026-10-08)
+for exact commands/frontiers. Broad validation and delivery remain pending.

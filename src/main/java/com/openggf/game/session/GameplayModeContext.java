@@ -162,6 +162,7 @@ public final class GameplayModeContext implements ModeContext {
     private RewindController rewindController;
     private PlaybackController playbackController;
     private RewindBoundaryReporter rewindBoundaryReporter = RewindBoundaryReporter.NO_OP;
+    private Runnable scheduledPlaybackInputPublisher;
     private final Set<String> levelEventExtraRewindKeys = new LinkedHashSet<>();
     private HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver =
             HardwareTimingBoundaryObserver.NO_OP;
@@ -1122,6 +1123,28 @@ public final class GameplayModeContext implements ModeContext {
         }
     }
 
+    /** Attaches the live loop's input publisher without capturing its current handler. */
+    void setScheduledPlaybackInputPublisher(Runnable publisher) {
+        if (!managersTornDown) {
+            scheduledPlaybackInputPublisher = publisher;
+        }
+    }
+
+    /** A stale loop must not detach a newer loop's publisher. */
+    void clearScheduledPlaybackInputPublisher(Runnable publisher) {
+        if (scheduledPlaybackInputPublisher == publisher) {
+            scheduledPlaybackInputPublisher = null;
+        }
+    }
+
+    /** Publishes a newly activated movie row before the destination's first body. */
+    void publishScheduledPlaybackInput() {
+        Runnable publisher = scheduledPlaybackInputPublisher;
+        if (!managersTornDown && publisher != null) {
+            publisher.run();
+        }
+    }
+
     // ── Bonus stage provider ─────────────────────────────────────────────
 
     /**
@@ -1159,6 +1182,7 @@ public final class GameplayModeContext implements ModeContext {
             return;
         }
         managersTornDown = true;
+        scheduledPlaybackInputPublisher = null;
         // Hand the session's final V-int count back to the power-on carrier.
         EngineServices.current().vIntRunCounter().unbindObjectClock();
         installGameplayInputFilter(GameplayInputFilter.IDENTITY);

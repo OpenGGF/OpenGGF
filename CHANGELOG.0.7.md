@@ -16,6 +16,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   art owner by character identity, restoring Tails DPLC submissions for runtime
   names such as `tails_p2`. Horizontal springs apply the native unsigned
   launch-side check for both participants, including the flipped equality case.
+  All five native spring types finish initialization before checking players on
+  the following update, preventing early launches when a spring reloads.
   Coconuts faces and targets the nearer native player, preserving the ROM's
   signed-word range check and main-player tie preference.
   CPZ spin tubes preserve native zero-duration waypoints and the signed
@@ -26,7 +28,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   existing progress. Unsupported two-player title actions return to the title
   menu instead of starting an ordinary level. Sonic 1 results transitions defer
   returned player art until the native release prelude and palette tail have
-  completed; rewind preserves the pending tail's boundary.
+  completed; rewind preserves the pending tail's boundary. Movie-driven level
+  starts apply the first recorded input immediately; later neutral rows release
+  held directions and jump instead of leaving Up or Right stuck.
 
 - **Window and display aspect:** a launch that changes the display aspect (a launch
   profile's aspect, or a module's required aspect such as a mod laid out for 16:9) now
@@ -43,7 +47,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   leaving its registration to the next ordinary status tick. Fresh title
   boundaries retain their deferred assembly and publication state on rewind.
   HCZ hanging bars read the native raw companion-controller directions,
-  preserving neutral input while the follower CPU steers.
+  preserving neutral input while the follower CPU steers. Full native saves
+  clear collected giant rings at their seven existing save points, including in
+  No Save games, restoring giant-ring availability in later levels. Ordinary
+  persistence requests, special-stage and lives saves, and death reloads preserve
+  collected rings.
 
 - **S3K Launch Base:** Cup elevators now resolve each player’s solid contact before checking capture, restoring airborne side collisions and normal landing admission, and preserve native movement and animation control through the NPC Knuckles cutscene. Rolling drums preserve native rider state when unloading, after completing their final player updates. The Act1 miniboss preserves the fatal-hit dispatch before its defeat countdown, including explosion timing through rewind. Carried results now finish their twelve real children before publishing control release, then initialize the next title owner on its following dispatch. Retained title owners reset level counters only after their ROM-backed art and moving children settle, preserving the independent presentation clock. Ribot creates its visual children before its first active orbit, matching the ROM initialization return. The seamless Act 2 reload holds the inherited camera limits until the title owner releases them, then runs its gradual boundary children in their native creation pass.
 

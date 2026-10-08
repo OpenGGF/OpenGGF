@@ -503,3 +503,17 @@ On `ae21cd421` plus this test-only addition,
 zero failures/errors/skips. The inspected plan selects1959 gameplay classes;
 focused validation is proportionate for this bounded test-only extension. No
 production change or broad-suite rerun is claimed.
+
+## Full SaveGame consumer boundary — 2026-10-08
+
+The existing ending timer full SaveGame boundary at `loc_81CA4` (sonic3k.asm:173818) now dispatches through the semantic helper; timer and ending gates are unchanged. Existing real-services `TestS3kDdzLifecycleProduction#endingRequestSavesProgressAndStartsAnIsolatedTimeline` remains a seeded endpoint consumer for combined ordinary validation, not a new live route result.
+
+`828bc94d8` clears the native32-bit collected-ring mask at exactly seven existing
+full-SaveGame gates; existing game-state rewind owns the mask. Focused138 cases
+pass without failures/errors/skips, including direct Results tally/helper and
+mask-restoration checks. The other six non-tally live routes, successful disk
+persistence, live SK-alone, and this matrix's remaining route/rewind/breadth
+products are not newly certified. Generic persistence and special-stage/lives/
+death/reload/seamless semantics remain distinct. See the [lane audit](../../audits/2026-10-07-s3k-parity-gap-verification.md)
+for native ordering and scope, and [combined qualification](../../audits/2026-10-07-stock-parity-gap-verification.md#final-composed-canonical-replay-2026-10-08)
+for exact commands/frontiers. Broad validation and delivery remain pending.

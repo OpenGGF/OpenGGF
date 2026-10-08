@@ -112028,3 +112028,38 @@ Commands and owning routine evidence are retained in the linked lane and stock
 audits. New ARZ initialization, HCZ collected-ring and positive pending-boundary
 checks remain in progress. These results do not constitute combined ordinary,
 guard or cross-game trace qualification, integration into main, or a push.
+
+
+## 2026-10-08 — Stock parity swarm, composed canonical frontier
+
+Request `71207`, private composition `45a9414233553b0fed9dd0b764c06e3dadafd44f`
+plus the frozen shared-input correction, finishes at03:14:26 UTC: sixteen cases,
+three full-chain assertion failures, zero errors/skips, 108 seconds Maven.
+Thirteen other cases pass, including S1's two prefixes and every selected S2
+standalone/prefix and S3K standalone HCZ case. Source fingerprints are unchanged.
+Actual original ROMs were passed by absolute path; the root variable below is
+portable notation for that launch, not a created link or substitute ROM.
+
+```sh
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical \
+  "-Dtest=TestS1CompleteEmeraldRunChain,TestS1CompleteEmeraldRunPrefix,TestS2Arz1CompleteEmeraldsSegmentTraceReplay,TestS2Cpz1Seg8CompleteEmeraldsSegmentTraceReplay,TestS2Cpz2Seg9CompleteEmeraldsSegmentTraceReplay,TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay,TestS2Ehz1Seg1CompleteEmeraldsSegmentTraceReplay,TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay,TestS2SpecialStage2TraceReplay,TestS2SpecialStage5TraceReplay,TestS2SpecialStage6TraceReplay,TestS2CompleteEmeraldRunPrefix,TestS2CompleteEmeraldRunChain,TestS3kSonicTailsHczSegmentTraceReplay,TestS3kSonicTailsCompleteEmeraldRunChain" \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+| Game | Closed frontier | Current first errors and stop |
+| --- | --- | --- |
+| S1 | Common-load persistent sprite input removed; chain stop12→33, segment8 remains0; segment12 196,129→3 queue-state comparisons; three early art gaps close. | Segment7 192 physics-group errors, first row3261 Y03CB/03D5. Segment12 first row101 `queue.s1_nemesis_plc.prepared` true/false (allthree errors are queue auxiliary state). Seven later art gaps, earliest LZ3→SLZ1 edge ordinal78,614/78,616. Segment33 incomplete3,192 (2,615physics/577animation), first row356 `dynamic_art.edges`; walk loses ownership in TITLE_CARD at BK2cursor210395. |
+| S2 | ARZ standalone3,203→0, chain19,884→0; following SS7 art22,405→0; every reached compared segment physics/art remainszero through17. | Ten gap-clock axes, earliest `ss→seg2_ehz1` edge0 movie clock10,308/10,268; walk remains SPECIAL_STAGE_RESULTS at cursor101691. Eleven failed axes total; post-SS7 route unreached. |
+| S3K | HCZ complete3,574rows/55lag: zero physics/animation/bootstrap/warnings. Native full-SaveGame clear restores giant-ring handoff and reaches11; standalone3,519 executed rows also pass. | AIZ6 189 first3319 `sidekick_x`31C1/31CA; AIZ8 13,254 first1583 `sidekick_x`366C/3674, unchanged. Segment11 incomplete82,067 (69,393physics/12,674animation), first1510 Y07D6/07DF; ownership loss LEVEL/cursor68801. Three failed axes total; incomplete hardware closure remains unqualified. |
+
+Newly reached downstream mismatches are measured frontiers, not regressions
+against formerly unexecuted route coverage. S1's eighteenth-axis failure has
+one walk, ten completed segment and seven art-gap assertions; its partial
+segment33 report is not a completed segment assertion. The full chain and gap
+inventories, source references, focused results and rejected prototypes are in
+[the stock audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#final-composed-canonical-replay-2026-10-08).
+This canonical trace profile is separate from the pending ordinary/guard
+qualification against publisheda872 and actual-main delivery. It certifies no
+full campaign, route-product breadth, pixel or audio parity.

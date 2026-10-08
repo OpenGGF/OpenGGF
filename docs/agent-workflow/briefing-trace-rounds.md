@@ -84,6 +84,17 @@ actual address and owner rather than inferring a clock from a probe's heading.
 An emulator startup crash with no observations is rejected evidence, even if a
 host wrapper reports that it launched.
 
+Correct logical input can coexist with stale effective sprite input (2026-10-08,
+stock parity S1 frontiers): the actual BK2, prepared/applied cursor, zero offset
+and InputHandler snapshot all agreed on neutral input, while movement consumed
+Up or Right from persistent sprite forced masks seeded at the load seam. Inspect
+incoming movement flags, effective directions, forced masks, legacy forced
+direction flags and control locks at the same body entry. A neutral logical
+snapshot alone does not prove neutral gameplay input. Correct the owning writer
+and publication seam; preserve legitimate scripted control rather than clearing
+all forced state or adjusting physics. Native controller latches are a separate
+observation from both physical BK2 rows and engine input publication.
+
 Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
 task): the positioned MHZ capture retained about 22 MiB after its callback while
 three complete capture/rewind/ROM-loading passes settled near 16.8 MiB, with only
