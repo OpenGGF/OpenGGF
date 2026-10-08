@@ -92,7 +92,11 @@ class TestFlappyTailsScene {
         for (String word : List.of("FLAPPY TAILS", "GET READY", "GAME OVER", "SUPER TAILS", "PAUSE", "RECORDS")) {
             assertEquals(true, canSpell.invoke(font, word), word);
         }
-        assertTrue(SceneHostTestAccess.lastFrameOps(harness.host()) > 50, "the title drew its world and menu");
+        int worldOnly = SceneHostTestAccess.lastFrameOps(harness.host());
+        play(60);                                          // the menu fades in after the logo, from tick 30
+        int withMenu = SceneHostTestAccess.lastFrameOps(harness.host());
+        assertTrue(worldOnly > 0, "the title drew its world");
+        assertTrue(withMenu > worldOnly, "the menu added to the title: " + worldOnly + " -> " + withMenu);
         assertEquals(Map.of(), harness.findings());
     }
 
