@@ -296,6 +296,65 @@ class TestHardenedPrototype {
                 .filter(object -> object.getClass().getName().equals("hardened.Sentry")).findFirst().orElseThrow());
     }
 
+    @Test void fatalHitShowsTheNativeDeathArcBeforeTheRetryPanelAndReplaysTwice() throws Exception {
+        var fixture = launch();
+        releaseEntry(fixture);
+        var post = GameServices.level().getCheckpointState();
+        for (int frame = 0; frame < 40 && !post.isActive(); frame++) {
+            step(fixture, action(com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_RIGHT, false, false));
+        }
+        assertEquals(2, post.getLastCheckpointIndex(), "native collision must touch the ROM post");
+        int savedX = post.getSavedX(), savedY = post.getSavedY();
+        for (int frame = 0; frame < 30; frame++) step(fixture, LogicalInputSnapshot.neutral());
+        var level = GameServices.level().getCurrentLevel();
+        int lives = GameServices.gameState().getLives();
+        var player = GameServices.sprites().getMainPlayable();
+        assertTrue(player.applyPitDeath(), "declared native death stimulus");
+        step(fixture, LogicalInputSnapshot.neutral());
+        assertEquals("CAUGHT", screen(), "a fatal hit first shows the native death arc");
+        assertFalse(controller.nativePlayerInput());
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var caught = registry.capture();
+        int startY = player.getCentreY(), highest = startY, rows = 0;
+        while (screen().equals("CAUGHT") && rows < 200) {
+            step(fixture, LogicalInputSnapshot.neutral());
+            highest = Math.min(highest, player.getCentreY());
+            rows++;
+        }
+        assertEquals("FAILED", screen());
+        assertTrue(highest < startY, "neutral native rows run the corpse's upward death arc");
+        assertTrue(rows < 120, "the corpse leaves the view before the hold cap: " + rows);
+        assertTrue(player.getCentreY() - GameServices.camera().getY() >= 224,
+                "the panel follows the visible fall");
+        assertTrue(player.getCentreY() - GameServices.camera().getY() <= 0x100,
+                "the hold ends before S3K's Camera_Y+$100 restart row");
+        assertSame(level, GameServices.level().getCurrentLevel(), "no native death reload ran");
+        assertEquals(lives, GameServices.gameState().getLives(), "native restart/life loss is never reached");
+        var failed = registry.capture();
+        int heldY = player.getCentreY();
+        for (int frame = 0; frame < 30; frame++) step(fixture, LogicalInputSnapshot.neutral());
+        assertEquals(heldY, player.getCentreY(), "the result menu holds the world");
+        for (int cycle = 0; cycle < 2; cycle++) {
+            registry.restore(caught);
+            assertEquals("CAUGHT", screen());
+            for (int frame = 0; frame < rows; frame++) step(fixture, LogicalInputSnapshot.neutral());
+            var actual = registry.capture();
+            assertEquals(failed.entries().keySet(), actual.entries().keySet());
+            for (String key : failed.entries().keySet()) {
+                var differences = com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key, failed.get(key), actual.get(key));
+                assertTrue(differences.isEmpty(), key + " caught replay " + cycle + ": " + differences.stream().limit(8).toList());
+            }
+        }
+        for (int frame = 0; frame < 10; frame++) step(fixture, LogicalInputSnapshot.neutral());
+        step(fixture, action(0, true, false)); assertEquals("RETRY", screen());
+        for (int frame = 0; frame < 18; frame++) step(fixture, LogicalInputSnapshot.neutral());
+        assertNotSame(level, GameServices.level().getCurrentLevel());
+        assertEquals(savedX, GameServices.sprites().getMainPlayable().getCentreX());
+        assertEquals(savedY, GameServices.sprites().getMainPlayable().getCentreY());
+        releaseEntry(fixture);
+        assertFalse(GameServices.sprites().getMainPlayable().getDead());
+    }
+
     @Test void retryBeforePostIsAnExplicitFreshLoadAndDoesNotDriftToTheDistantNativeStart() throws Exception {
         var fixture = launch();
         for (int cycle = 0; cycle < 2; cycle++) {

@@ -11,7 +11,7 @@ survey floor, headroom, camera edges, nearby native objects and ring placements
 through production decoding. Cite the physical checkpoint's native centre,
 subtype and local approach separately from combat-safe geometry. S3K SKL object
 `0x8D` is Mushmeanie; S3KL `0x8D` is Rhinobot. The stock detached Mushmeanie shell
-is harmless, so a harmful borrowed shell needs an unambiguous pointed warning.
+is harmless, so a harmful borrowed shell needs an unambiguous spiked warning.
 
 Copy `examples/hardened-s3k` to your own namespaced creator project. Change the
 manifest ID, entry point, registration keys and rewind keys together. Keep assets
@@ -96,6 +96,19 @@ The title/lesson and transitions use the engine font, render queue and native
 ROM music/SFX. Do not count a queued cue as observed sound: inspect final PCM
 variance/DC/flat windows and the actual captured scene. Repeated close/launch
 must release drawing, capture and session resources.
+
+Check readability in a 320x224 capture, not only a scaled window. The engine
+pixel font has a 9x10 cell: whole-number scales land on exact pixels at every
+integer window scale, while fractional scales below 1x smear into unreadable
+glyphs at native size. The example therefore uses 1x copy, 2x headlines and at
+most 31 characters per panel line, and wraps runtime text such as fault reasons.
+Keep HUD additions clear of the native SCORE/TIME/RINGS digits and the lives icon.
+World marks around ROM sprites (`Marks`) draw a dark outline pass before their
+colour so they read on both bright grass and dark canopy; tie each colour to an
+actual rule, such as the crown turning red exactly while the body is harmful.
+A fatal hit may show the native death arc by admitting neutral rows, but end the
+hold before the game's own restart row (S3K `Camera_Y_pos+$100`); otherwise the
+native life loss, restart and game-over owners run underneath your retry menu.
 
 ## Package, verify and report
 

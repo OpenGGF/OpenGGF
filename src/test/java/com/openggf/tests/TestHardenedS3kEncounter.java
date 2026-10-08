@@ -74,7 +74,7 @@ class TestHardenedS3kEncounter {
         var arguments = new ArrayList<>(List.of("--release", "21", "-classpath",
                 TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(), "-d", classes.toString()));
         Path source = Path.of("examples/hardened-s3k/src/main/java/hardened");
-        for (String name : List.of("EncounterPlan", "EncounterState", "Sentry", "Spore"))
+        for (String name : List.of("EncounterPlan", "EncounterState", "Marks", "Sentry", "Spore"))
             arguments.add(source.resolve(name + ".java").toString());
         Path fixture = Path.of("src/test/resources/mods/hardened-encounter-src");
         arguments.add(fixture.resolve("hardened/fixture/EncounterFixtureMod.java").toString());

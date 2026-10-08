@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * A bounded, committed-aim spore. The stock detached Mushmeanie shell has no
- * collision; this mod's shell carries a permanent pointed outline and native
+ * collision; this mod's shell carries permanent outlined spinning spikes and native
  * hurt category $80 plus React_Sizes $0B (8px radii). No custom damage handler.
  */
 public final class Spore extends AbstractObjectInstance implements RewindRecreatable, TouchResponseProvider {
@@ -58,7 +58,9 @@ public final class Spore extends AbstractObjectInstance implements RewindRecreat
 
     @Override public void update(int vIntRunCount, PlayableEntity player) {
         var state = services().gameService(EncounterState.class);
-        if (state == null || !state.active() || getRenderer(Sentry.ART_KEY) == null
+        // A caught run lets shots in flight finish their path while the native death
+        // fall plays; getCollisionFlags already makes them harmless. A fault removes them.
+        if (state == null || state.aborted() || getRenderer(Sentry.ART_KEY) == null
                 || ++age > EncounterPlan.PROJECTILE_LIFE_TICKS) {
             ObjectLifetimeOps.expireDynamic(this);
             return;
@@ -86,6 +88,7 @@ public final class Spore extends AbstractObjectInstance implements RewindRecreat
         var renderer = getRenderer(Sentry.ART_KEY);
         if (renderer == null) return;
         renderer.drawFrameIndex(0, getX(), getY(), motionState.xVel > 0, (age / 6 & 1) == 1, 2);
-        Sentry.drawPointedCue(services(), getX(), getY(), 14, 0xffdda0);
+        // Map_Mushmeanie frame 0 is one 24x16 piece at (-12,-8): spikes ring that shell.
+        Marks.spikes(services(), getX(), getY(), 12, 8, age, Marks.CROWN);
     }
 }

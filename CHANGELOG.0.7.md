@@ -850,7 +850,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 - **Post Two Ambush:** added a maintained JVM mod example on Mushroom Hill's
   native second-checkpoint shelf. A readable title and lesson lead into a spore
-  sentry with a visible tell, committed aim, two volleys and recovery. One native
+  sentry with a visible tell, committed aim, two volleys and recovery. A closing
+  sight, a red lock with the native lock-on cue, spiked shots and a phase coaching
+  line keep each rule readable at 320px; a fatal hit shows Sonic's native death
+  arc before the retry menu. One native
   recovery ring, physical checkpoint retry, pause, results and title return
   complete the short trial for solo Sonic at 320px, donor off and no-save.
   Bounded transaction-owned placement plans preserve native level, objects,

@@ -38,15 +38,23 @@ arbitrary compiled JVM mods are not native-image compatible.
 2. The entry panel advances neutral native loading frames and releases movement
    after the fade, title and actual terrain/enemy-art owners finish. Touch
    the starpost yourself; the mod never fabricates its saved state.
-3. Read the pointed warning cue. The sentry commits its aim before firing, so
-   moving afterward gives a safe solution. A safe retreat remains available;
-   waiting does not require taking a hit or spending a powerup.
-4. Survive both volleys, wait for recovery and follow the **Exit** marker on the upper path. The
-   clear screen offers another attempt or a return to the title.
-5. A failed attempt offers a native checkpoint retry. Before touching the post,
-   the menu explicitly offers **Start a Fresh Attempt**; after contact, the real post's
-   saved position wins over the fresh encounter entrance. Full fresh launch is
-   a separate operation reached by returning to the title and beginning again.
+3. Read the tell. The sentry's spiked crown means it cannot be bopped like a stock
+   Mushmeanie; the crown turns red exactly while its body hurts. A yellow sight
+   follows Sonic and closes in during the charge, then turns red, flashes and
+   plays the native lock-on cue when the aim commits. Both volleys fly to that
+   marked point, so moving afterward gives a safe solution. A safe retreat
+   remains available; waiting does not require taking a hit or spending a powerup.
+4. Survive both volleys and wait for recovery. A native switch cue opens the
+   **Exit** marker on the upper path. The bottom coaching line names the current
+   phase throughout. The clear screen shows the run time and kept rings, then
+   offers another attempt or a return to the title.
+5. A fatal hit plays Sonic's native death arc on neutral rows, then the result
+   panel rises before the native restart row, so no life is lost and the native
+   game-over flow never runs. It offers a native checkpoint retry. Before
+   touching the post, the menu explicitly offers **Start Fresh**; after contact,
+   the real post's saved position wins over the fresh encounter entrance. Full
+   fresh launch is a separate operation reached by returning to the title and
+   beginning again.
 
 | Action | Example keyboard | Primary controller |
 | --- | --- | --- |
@@ -57,8 +65,10 @@ arbitrary compiled JVM mods are not native-image compatible.
 | Back from a menu | Esc | C/back action |
 | Independent host pause | P | Ambush Start menu owns its Start edge |
 
-The isolated launch configuration selects `P` for host pause to keep menu Enter
-clear. Normal installed play retains configured bindings. The engine's configured
+On-screen prompts name the live bindings and follow the last device used: a
+keyboard player sees keys such as `ENTER` and `BACKSPACE`, a pad player sees
+that pad family's buttons. The isolated launch configuration selects `P` for
+host pause to keep menu Enter clear. Normal installed play retains configured bindings. The engine's configured
 escape-to-master-title path remains available. Logical replay inputs own gameplay
 and menu actions; UI polling does not inject physical keys into a replay.
 The ambush menu holds gameplay while ambient music and menu cues continue;
@@ -91,8 +101,9 @@ difficulty certification are not promised by this prototype.
 | `EncounterState` | Session-owned phase/aim/volley/checkpoint outcome with a rewind adapter |
 | `Sentry` / `Spore` | Resident Mushmeanie ROM mappings; readable tell; native hurt contact; bounded recreatable children |
 | `Title` | Title/lesson navigation and a session-owned fresh launch |
-| `AmbushFlow` | Native-input opt-in, neutral native entry, menu holds, real post retry, clear/failure/exit transitions |
-| `Canvas` | Engine UI font and queued screen-space geometry; no separate graphics/audio backend |
+| `AmbushFlow` | Native-input opt-in, neutral native entry, menu holds, native death arc, real post retry, clear/failure/exit transitions, HUD and coaching line |
+| `Canvas` | Engine UI font at whole-number scales, live binding prompts and queued screen-space geometry; no separate graphics/audio backend |
+| `Marks` | Outlined world-space sight, crown and spore spikes queued around the ROM sprites |
 
 Read the [agent authoring walkthrough](../../docs/modding/quickstarts/hardened-s3k.md)
 before changing the room. The prototype's compiled Java values are the accepted

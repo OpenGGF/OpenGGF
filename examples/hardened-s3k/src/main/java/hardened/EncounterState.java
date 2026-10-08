@@ -34,6 +34,8 @@ public final class EncounterState implements RewindSnapshottable<EncounterState.
     public boolean active() { return status == Status.ACTIVE; }
     public boolean cleared() { return status == Status.CLEARED; }
     public boolean failed() { return status == Status.FAILED || status == Status.ABORTED; }
+    /** A fault or closed session, as opposed to an ordinary caught run. */
+    public boolean aborted() { return status == Status.ABORTED; }
 
     /** A native full load installs a fresh graph, so its ledger starts a fresh timeline. */
     public void resetForLoad() {

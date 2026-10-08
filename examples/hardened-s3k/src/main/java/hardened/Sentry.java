@@ -59,10 +59,12 @@ public final class Sentry extends AbstractObjectInstance
 
     @Override public void update(int vIntRunCount, PlayableEntity player) {
         var state = encounter();
-        if (state == null || state.failed()) {
+        if (state == null || state.aborted()) {
             ObjectLifetimeOps.expireDynamic(this);
             return;
         }
+        // A caught or cleared run holds its last pose while the native death fall or
+        // result plays out; collision already requires an active run, so it is harmless.
         if (!state.active()) return;
         // A recreated layout entry shares the run's ledger. Re-entry cannot
         // allocate a third volley or erase a still-required recovery period.
@@ -96,7 +98,11 @@ public final class Sentry extends AbstractObjectInstance
                         aimX = player.getCentreX() & 0xffff;
                         aimY = player.getCentreY() & 0xffff;
                     }
-                    if (phaseTick >= EncounterPlan.TELL_TICKS) enter(EncounterState.Phase.LOCKED);
+                    if (phaseTick >= EncounterPlan.TELL_TICKS) {
+                        enter(EncounterState.Phase.LOCKED);
+                        // S3K sfx_Targeting (LRZ3 autoscroll lock-on): the audible "move now" beat.
+                        services().playSfx(0x9d);
+                    }
                 }
                 case LOCKED -> {
                     // The marker stops following Sonic at the end of TELL. Both
@@ -116,7 +122,10 @@ public final class Sentry extends AbstractObjectInstance
                     if (phaseTick >= EncounterPlan.VOLLEY_GAP_TICKS) enter(EncounterState.Phase.RECOVERY);
                 }
                 case RECOVERY -> {
-                    if (phaseTick >= EncounterPlan.RECOVERY_TICKS) enter(EncounterState.Phase.RESTING);
+                    if (phaseTick >= EncounterPlan.RECOVERY_TICKS) {
+                        enter(EncounterState.Phase.RESTING);
+                        services().playSfx(0x5b); // S3K sfx_Switch: the exit gate is open.
+                    }
                 }
                 default -> { }
             }
@@ -170,32 +179,32 @@ public final class Sentry extends AbstractObjectInstance
         int frame = telling ? 1 + phaseTick / 6 % 3 : phase == EncounterState.Phase.RECOVERY ? 2 : 1;
         renderer.drawFrameIndex(frame, getX(), getY(), aimX < getX(), false);
         renderer.drawFrameIndex(0, getX(), getY(), aimX < getX(), false, 2);
-        // An always-pointed crown distinguishes this hazardous authored variant from
-        // native Mushmeanie. The pulsing size makes its wind-up visible without audio.
-        int crown = telling ? 8 + phaseTick / 6 % 2 * 3 : 8;
-        pointedCue(getX(), getY() - 18, crown, 0xffdda0);
-        if (telling) {
-            pointedCue(aimX, aimY, phase == EncounterState.Phase.LOCKED ? 12 : 8, 0xffe6aa);
-        }
-    }
-
-    /** Four pointed arms around ROM art, using the engine's ordinary primitive queue. */
-    void pointedCue(int x, int y, int radius, int rgb) {
-        drawPointedCue(services(), x, y, radius, rgb);
-    }
-    static void drawPointedCue(com.openggf.level.objects.ObjectServices services,
-                               int x, int y, int radius, int rgb) {
-        for (int arm = 0; arm < 4; arm++) {
-            for (int step = 0; step < 4; step++) {
-                int width = 4 - step;
-                int offset = radius - 3 + step;
-                int px = x + (arm == 0 ? offset : arm == 1 ? -offset : -width / 2);
-                int py = y + (arm == 2 ? offset : arm == 3 ? -offset : -width / 2);
-                int w = arm < 2 ? 1 : width, h = arm < 2 ? width : 1;
-                services.graphicsManager().registerCommand(new GLCommand(GLCommand.CommandType.RECTI, 0,
-                        (rgb >> 16 & 255) / 255f, (rgb >> 8 & 255) / 255f, (rgb & 255) / 255f,
-                        px, py, px + w, py + h));
-            }
+        // The always-pointed crown marks this authored variant: unlike a native
+        // Mushmeanie it cannot be bopped. It turns red exactly while its body is
+        // harmful (getCollisionFlags), and bobs with the wind-up during the tell.
+        var state = encounter();
+        boolean live = state != null && state.active();
+        boolean harmful = live && (phase == EncounterState.Phase.LOCKED || phase == EncounterState.Phase.VOLLEY_ONE
+                || phase == EncounterState.Phase.VOLLEY_TWO);
+        int lift = phase == EncounterState.Phase.TELL ? phaseTick / 6 % 2 : harmful ? 2 : 0; // Taller spikes, not only red.
+        int crown = harmful ? Marks.LOCK : phase == EncounterState.Phase.TELL && phaseTick / 6 % 2 == 1
+                ? Marks.CROWN_TELL : Marks.CROWN;
+        Marks.crown(services(), getX(), getY() - 8, lift, crown); // Shell top: frame 0 spans y-8..y+7.
+        // A caught, cleared or aborted run holds a harmless pose: no aim marks remain.
+        if (!cueReady || !live) return;
+        // Standing Sonic spans about 12px either side of x_pos and y_radius $13 vertically;
+        // the committed box keeps every bracket just outside that body.
+        int closing = phase == EncounterState.Phase.TELL
+                ? 10 * (EncounterPlan.TELL_TICKS - phaseTick) / EncounterPlan.TELL_TICKS : 0;
+        switch (phase) {
+            // The sight follows Sonic and closes in as the tell runs out ...
+            case TELL -> Marks.sight(services(), aimX, aimY, 18 + closing, 24 + closing, false, Marks.SIGHT);
+            // ... then stops on the committed point and flashes until the first volley.
+            case LOCKED -> Marks.sight(services(), aimX, aimY, 18, 24, true,
+                    phaseTick / 3 % 2 == 0 ? Marks.LOCK : Marks.LOCK_FLASH);
+            // Both volleys travel to that same point, so it stays marked while they fly.
+            case VOLLEY_ONE, VOLLEY_TWO -> Marks.sight(services(), aimX, aimY, 18, 24, true, Marks.SPENT);
+            default -> { }
         }
     }
 }
