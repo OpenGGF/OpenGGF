@@ -71,6 +71,23 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Committed fixtures are live validation inputs (2026-10-08, Sitar Hero delivery):
+freeze test sources, BK2 files and scripts alongside runtime code. A fixture merge
+during an ordinary run makes the invocation incomplete even if already compiled
+Java bytes remain unchanged: a later test can read the changed movie. Compare the
+complete input delta before reusing evidence. A HEAD change confined to prose and
+standalone probes can preserve completed ordinary execution, but the runner's
+fingerprint still correctly suppresses later lanes; qualify those lanes separately
+against the actual source and label the interrupted combined invocation accurately.
+
+A dead command session does not prove Maven stopped (2026-10-08, Sitar Hero
+delivery): an unexpected native exit 143 left the exact Maven/test children alive
+after their output reader and deadline supervisor disappeared. Verify owning PIDs,
+working directories and arguments before stopping only those orphans. No terminal
+results means incomplete validation. Retain a bounded supervisor, explicit exit
+status and the normal runner limits for recovery; do not infer the signal's cause
+from elapsed time or treat partial XML as a completed run.
+
 Movie input is not a native movement latch (2026-10-07, stock parity S1
 frontiers): the recorder's input column comes from the BK2 row, with raw RAM
 only as a fallback; it does not observe the game's logical held/new pair at

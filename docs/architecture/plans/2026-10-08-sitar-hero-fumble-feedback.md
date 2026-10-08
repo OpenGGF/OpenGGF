@@ -4,9 +4,10 @@ Goal: audible, instrument-specific mistakes with reliable solo, local and direct
 
 Base: `c039c009131be4548c3ab40eb809a0f85c2808f1`, fetched/fast-forward checked on develop. User authorized planning and execution plus a bounded Opus ideas consultation. Parent owns all implementation and delivery.
 
-Current checkpoint: the updated framework candidate is qualified with unchanged
-baseline failures and skips, and all 674 fresh guards pass. Actual-main integration,
-its mandatory combined validation, develop push and owned cleanup remain pending.
+Current checkpoint: implementation is integrated into develop. The completed
+actual-main ordinary lane has unchanged baseline failures and skips, and a separate
+fresh actual-main invocation passes all 674 guards. Final evidence publication and
+owned worktree/branch cleanup remain pending.
 
 ## Design
 
@@ -371,3 +372,89 @@ The updated owner's policy evidence applies to those identical policy inputs;
 the upcoming mandatory actual-main run will also execute fresh structural guards.
 The actual pre-integration base is d740, subject to a final main-head check before
 integration. This composition is not yet a develop delivery.
+
+## Actual-main qualification
+
+The feature merged into main's existing `develop` branch as
+`eaafa6ee053f5624c00a78652e841d8f78598f5d`, against pre-integration base
+`d740b7a0fadd97b2e7c104d56481a0235bdffb4c`. No branch switch occurred. All three
+unrelated dirty disassembly submodules and four known untracked paths were preserved.
+
+Two interrupted main invocations provide no delivery qualification. A concurrent
+SOZ fixture merge changed executable test/BK2 inputs during the first invocation;
+only the verified owning runner was cancelled, exit 130, and its incomplete run
+was acknowledged. The replacement, run `20261008T150646Z-9377cfcd`, lost its native
+command session with exit 143 before completion. The origin of that signal was
+not established. Its exact surviving Maven/test process group was identified by
+PID, working directory and arguments, stopped, and verified absent before the
+incomplete run was acknowledged. No partial count is treated as a pass. A bounded
+supervisor retained the next normal invocation, its explicit terminal exit and
+the runner's normal 150-minute admission-excluded limit.
+
+The successful ordinary execution was frozen at
+`6124a524eef9b42efb800d5bcb95376147507c9e`, preserving the separately qualified SOZ
+fixture changes. Its command was:
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base d740b7a0fadd97b2e7c104d56481a0235bdffb4c --max-minutes 150 --run
+```
+
+Run `20261008T153213Z-5cd93bac` admitted at `15:32:13Z` and completed ordinary at
+`16:57:28Z`: all 3,058 selected classes, 3,056 reports / 26,535 cases / 27 failures /
+zero errors / 62 skips, 5,115.06 seconds, Maven exit 1. All diagnostic omission
+counts were zero; there was no timeout. All 27 failure identities and exception
+types match the updated bf7 framework baseline. Twenty-six full assertion first
+lines match literally. The complete SSZ first line is 2,952 characters and matches
+all 2,907 normalized characters after only its exception prefix and the previously
+verified `RewindObjectStateBlob@hex` suffix normalization. All 62 skip identities
+and first causal reasons match literally, with no ROM skips. There are no new,
+worsened, resolved or unattributed failures.
+
+Fresh ordinary XML independently confirms all 13 Sitar classes / 152 cases,
+ROM scene music and part cues / 18, API signatures / 9, S3K AIZ / 8, bootstrap / 6,
+decoding / 3, both level-loading classes / 36 + 7, SOZ / 9 and documentation links /
+1 pass without skips. Infinite Sonic has 238 cases: 206 pass and the same 32
+accepted skips. SDK / 10 and Javadoc / 7 also pass without skips, as established
+by their fresh Maven completion lines; their main XML was not independently read
+before automatic cleanup. The three actual absolute ROM paths identify the
+original main filenames; rehashed SHA-1/CRC32 values match the documented
+REV01/locked-on inputs.
+
+During that run, develop advanced to published
+`17ae561add0c88ec6e2e5c84d55a7457066b1a3b`. The seven changed paths contain only
+GraalVM feasibility research, standalone probes outside Maven inputs, and related
+prose. The exact 6124-to-17ae diff is empty for runtime, Java tests/resources,
+examples, POM, Maven settings, hooks, API policy and testing tools. The research
+owner separately qualified the probes' syntax, command behavior, negative controls
+and actual JVM/native registration; that is attributed owner evidence. Reconstructing
+the launch fingerprint using the original HEAD and current dirty/untracked inputs
+matches `4a9c8073fc3350ab40178f80b38533b6bb77f1ba4294a644f6385b00150b3ace` exactly.
+The ordinary result therefore qualifies unchanged executable inputs. The category
+runner correctly refused guards after its HEAD fingerprint changed: outer exit 2,
+status incomplete. This is not a completed combined-run claim. The exact consumed
+ordinary run was acknowledged, exit 0, and its directory verified absent.
+
+A separate fresh normal guard invocation qualified actual main at 17ae:
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py \
+  -Dmse=off -Pguards test -B \
+  -Dopenggf.surefire.reports=target/sitar-fumble-main-guards-reports \
+  -Dopenggf.test.tmpdir=target/sitar-fumble-main-guards-tmp
+```
+
+The actual two output arguments were absolute main `target/` paths. The retained
+supervisor launched once at `17:00:45Z`, with a six-hour outer lifetime including
+queue wait. Admission waited 590 seconds; Maven completed at `17:15:24Z` in
+04:46, exit 0 / BUILD SUCCESS. All 87 fresh XML reports were independently read:
+674 cases / zero failures, errors or skips. No selection was narrowed. HEAD,
+known dirt and the complete guard launch fingerprint
+`4c515b6c756b4b928037b53f4cb5454a8685c7a986a3fe0e3ab5104b7a21a037` were unchanged
+after termination. Both supervisors and all identified owned child processes were
+verified absent. Raw reports and logs remain temporary until final cleanup.
+
+Together, the source-equivalent complete ordinary lane and fresh actual-main guards
+satisfy the integration qualification. The whole ordinary suite retains its 27
+known failures; it is not all green. Remaining follow-ups change evidence prose only
+and require documentation/policy checks, not another unchanged engine execution.
