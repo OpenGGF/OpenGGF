@@ -471,3 +471,48 @@ the later full-act/MVP/product gates. Feature push/PR remains held for the user'
 root-owned Opus polish and separate promo stage. The final observed pane footer
 needs spacing/glyph review during that polish; the native viewport and player
 sprites themselves remain complete.
+
+### Final published successor composition
+
+The final fetch found published develop
+`33d3976c53304dbbea1c695914ecdd7bfc64cf9d`, intent-merged without conflicts as
+`3f0172ddf46b972c0c42ee5dd88c20f4aff5ba8a`. Its fifteen-path delta after
+`02796b4c4` adds scoped test-fixture release, optional screenshot readback in
+`GameplayCaptureSession` and their controls/documentation. The owning
+[memory investigation](../research/2026-10-07-ordinary-suite-memory-cause.md)
+records 364 passing integrated focused cases and natural-collection limits;
+it explicitly does not certify a green ordinary suite or whole-suite 1 GiB
+capacity. That evidence is not relabeled as this branch's execution.
+
+Multigame workers do not use `GameplayCaptureSession`. Its actual gameplay,
+input, audio and Mod API/POM/pin sources are unchanged from the repaired-source
+guard and native checks. The final actual-base dry-run still selects all
+categories, **3,033 ordinary classes plus guards**, without altering selection.
+Java 21 / Lua 5.4 / PowerShell preflight passed on the composed source. The
+completed broad run above remains attributed to its original source/base;
+the bounded upstream capture/fixture changes are supplemented proportionately:
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestOwnedMocks,TestGameplayCaptureFrameRendering' \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  verify dependency:build-classpath -Dmdep.outputFile=target/challenge-classpath.txt
+```
+
+Normal composed request `44239` admitted immediately and completed in 91 seconds:
+**seven tests / two fresh reports, zero failures/errors/skips**, Java 21 compile
+3,720 main / 3,598 test sources. Native title/results/ordinary pixels and state
+match with optional readback, while scoped mock cleanup preserves another owner.
+Final engine/fatjar/SDK/Javadoc and artifact verification passed; the actual
+final fatjar again exactly matches the **20,105-line** normalized candidate pin.
+Fresh Linux/runtime/ROM properties were inspected and consumed, with a light
+source/command/count summary retained outside Git. This is composed focused
+validation, not a new full-suite run on `33d3976c5`.
+
+Both fully integrated input/worker child worktrees and local branches were
+removed after exact clean-state, ancestry, ignored-resource and process
+accounting. Generated config examples matched bundled bytes; only those
+workflow outputs and hook-created resource links were discarded, preserving
+their original targets. Child results and harness-owned histories remain.
+The unmerged lead branch/worktree is retained for root-owned Opus polish;
+no feature push or PR occurred during this implementation handoff.
