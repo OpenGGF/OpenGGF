@@ -1239,3 +1239,275 @@ pass. The remaining architecture failures are the separately owned silent-audio
 edge and module cycle. No frozen rule store, POM, version, pin or runtime registry
 algorithm changes. These are bounded qualification of assigned repairs, not a
 complete guard-profile pass.
+
+## Actual updated-main baseline qualification
+
+The actual main checkout at `5d1ff9b8206594ee1c979ae5174328dd9134ffd4` completed
+run `20261008T053400Z-a3c0531f` at `2026-10-08T07:04:34.078316Z`:
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 09cfcc0f882305d6a0c6a4fc05b600d3ca27a888 --run --max-minutes 150
+```
+
+It selected all 3,027 ordinary source classes: 3,025 reports / 26,422 tests,
+27 failures, zero errors and 62 skips (5,144.88 seconds, exit one). Separate
+fresh guards produced 86 reports / 672 tests, zero failures, errors or skips
+(230.04 seconds, exit zero). No cases were omitted. Its owner inspected full
+results and acknowledged the run; no copied diagnostics are retained here.
+Compared with the previously recorded 28 failures, only the FBZ→SOZ timeline
+identity is removed. Twenty-six remaining assertions are literal matches; the
+SSZ Tails frame-2952 assertion differs only in the verified object-blob identity
+hexadecimal suffix. All 62 skip identities and reasons match literally, with
+no ROM prerequisite skips.
+
+The destination advanced to `098053c4a01c2af283ca6797463bb5051442ef0b` before
+the final development run. Production Java, POM, hooks, signature pins, policy
+and production resources are unchanged from `5d1ff9b8`. The only Java changes
+are `TestSozBackgroundCapture`, `TestSozLowerRockPuzzleCapture` and the tooling
+summary `JfrTestSummary`; related prose records the measured optimization.
+The two capture fixtures still render every frame, retain the final pixel read
+and all 45-frame forward-replay/identity assertions, and avoid unused framebuffer
+readbacks and duplicate diffs. They are absent from all inherited failure and
+skip classes. A bounded matched 32-case comparison passed on base/current;
+actual integrated verification passed 23 cases, with the remaining nine cold
+routes qualified by two complete passing runs on unchanged inputs. The recorded
+27-failure/62-skip baseline therefore applies to `098053c4` without another
+duplicate full baseline. Final fetch confirmed origin and main at that commit.
+
+## Completed development ordinary and fresh guards
+
+Run `20261008T074448Z-f180051a` used clean source
+`c24abf6c62673c490563899b526b09e1791752a0` and the actual destination base:
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 098053c4a01c2af283ca6797463bb5051442ef0b --run --max-minutes 150
+```
+
+It selected all 3,056 ordinary source classes with one worker, plus every fresh
+structural guard. Admission waited zero seconds. Ordinary completed in
+5,075.43 seconds: 3,054 reports / 26,514 tests, 32 failures, two errors and
+62 skips, exit one. Fresh guards completed in 219.39 seconds: 87 reports /
+674 tests, zero failures, errors or skips, exit zero. Guard Maven's recorded
+finished-at line is `2026-10-08T09:13:03Z`; outer command termination was observed
+at `09:14:05Z`. HEAD and tracked Git status remained clean at `c24abf6c6`
+through termination. The retained launch input digest is
+`c5148fee9159ee88dcb02c23e5dce3ae36d542329ff53cb456196cdd27c348b7`.
+
+Inspection of complete `results.json` found zero omitted failed/skipped cases
+and no duplicate case identities. All 27 inherited failure identities, kinds,
+types and concrete assertion first lines match the qualified baseline; only
+the verified `RewindObjectStateBlob` identity suffix is normalized in the known
+SSZ assertion. All 62 skipped-case identities and concrete reason first lines
+match, with no new, removed or changed reasons and no ROM prerequisite skips.
+The earlier tables retain those exact failure and skip identities/reasons;
+remove only the now-passing FBZ→SOZ identity from the old 28-failure table.
+
+The seven new identities are the fixture/template gaps detailed below. Their
+verified isolated repairs are composed at `0379c0434`; production Java,
+candidate signatures and architectural allowances are unchanged from the
+measured `c24abf6c6`. Following the red-broad-run policy, the complete development
+run remains reported as red and each new identity has a bounded passing
+regression/control run. Do not repeat another full development run on unchanged
+production code solely to replace that historical red result. Actual main
+post-integration ordinary and fresh guards remain required separately.
+
+## Composed ownership and structural verification
+
+The API ownership repair is `d91b4a0f68c424fb187d49c5f92e00bd85de7a3e`.
+It moves the immutable caller-inspection bootstrap into engine context and a
+lower-layer utility, preserving the defining-loader/frame checks at all twelve
+intakes. Native rewind publication consumes an engine-owned provider interface;
+it rejects a child-loaded provider before invoking the callback. Tests exercise
+a hostile provider returning the actual native root and confirm zero callback
+reads. This removes the package cycle without exposing an owner locator,
+unwrapping creator controllers, changing public EngineContext signatures or
+relaxing architectural allowances.
+
+Focused queued request `11514` completed at `2026-10-08T07:29:47Z`: sixteen
+fresh XML suites / 208 tests, zero failures, errors or skips, with explicit
+verified S1, S2 and S3K ROM paths. Request `41146` separately exercised five
+fresh structural suites / 189 tests; its one remaining testkit-distribution
+failure was independently owned and subsequently composed from `10723e6c2`.
+All other 188 cases passed. Neither invocation is a full ordinary-suite result.
+
+The surviving XML selectors/ROM properties and owned queue telemetry recover
+the following invocation inputs; original shell argument order, quoting and
+optional batch flag were not retained:
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestNativeRewindAdapterPublication,TestOwnerBoundGamePatch,TestModContextAndFaultBoundary,TestRewindRegistry,TestModuleResolutionService,TestOwnedCharacterRegistry,TestModStorage,TestLevelPatch,TestRenderProjection,TestModRegistrationRuntime,TestModZoneRuntimeProfile,TestRuntimeSaveContext,TestGameServiceBundle,TestTwoActModCampaign,TestS3kModZoneLifecycle,TestModApiSignatureSurface' \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dtest=TestProductionSingletonClosureGuard,TestArchUnitRules,TestAudioPresentationArchitectureGuard,TestSingletonLifecycleGuard,TestArchitecturalSourceGuard' test
+```
+
+Both launched at `6c93b53363506c325c7e61ed0d13504ad5908fed` plus the eighteen
+owned changes subsequently committed unchanged as `d91b4a0f6`; no independent
+launch-time whole-tree fingerprint was retained. All eighteen owned files are
+byte-identical in `c24abf6c6`. This qualifies the repair source, not whole-tree
+equivalence. The complete 208-case totals were inspected at execution time;
+later focused runs overwrote two suites, so they are not represented as a new
+reconstruction from the surviving fourteen reports. The historical guard
+failure is `TestArchUnitRules#runtime_registry_controllers_are_only_constructed_by_runtime_composition_roots`,
+reporting `ModTestKit.moduleState` constructing `RewindRegistry` at line 205.
+
+The coherent source `c24abf6c62673c490563899b526b09e1791752a0` includes these
+ownership changes, the independently verified save/audio/object and testkit
+repairs, the named `ModZoneContribution.singleAct` factory, and main's
+`098053c4` updates. A separate fresh-JVM command completed at
+`2026-10-08T07:41:02Z` after 4 minutes 30 seconds:
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+```
+
+All 87 fresh XML suites / 674 tests passed, with zero failures, errors or
+skips. Source remained clean at `c24abf6c6` throughout; all tracked launch
+input digests matched before and after execution. The compiled signature
+snapshot matched the 17,272-line candidate pin exactly (880 types). Java 21,
+Lua 5.4 and PowerShell passed the actual-launch category preflight. These are
+structural and signature results; ordinary verification is recorded separately.
+
+## Refreshed artifact-only creator acceptance
+
+Clean `c24abf6c62673c490563899b526b09e1791752a0` supplied the four matching
+artifacts in queued request `93273`. The universal-jar verification explicitly
+used `-DskipTests`; it is artifact evidence, not a test-suite pass. Both exported
+creator ZIPs are byte-identical: 52,907,913 bytes, SHA-256
+`9a0d870715f5448f968fbc88225de2834eae0b375cf776134277a2f31fb31ec4`.
+All 420 manifest entry digests match. Each artifact reports application version
+and base version `0.7.prerelease`, clean source `c24abf6c6`; kit metadata pins
+the full source commit and API candidate `0.7.0`. The exported launcher resolves
+the S2 `signpost` key.
+
+The engine contains 13,380 classes with no SDK or testkit classes; the SDK
+contains 61 tooling classes, the testkit three support classes, and the API
+archive documentation only. The artifact SHA-256 values are:
+
+| Artifact | SHA-256 |
+|---|---|
+| Engine | `9c6045fca6894862ad9e3e386410b2c43219e886a724b15e1dfebc1318354676` |
+| SDK | `38ae4ced808af7463567abf7c135d739db79b65c6024e8e4f4704eca2797eb70` |
+| Testkit | `a1899d50045b5fb8ae9dadd8cfacffa8439b7e522c53eb77caac4d29ad25585f` |
+| API docs | `578786c8f5aff6d1885f796d0716836f0f51b66682294e3228fc6a9836cccb15` |
+
+The content starter built normally twice after actual Java, art and manifest
+edits, without cleaning (requests `10898` and `4513`). Only the expected
+manifest, generated art and creator class payloads changed. The three fixtures
+changed by the named zone-factory migration—sample-mod, Flappy and ROM-art
+remix—were exported from the pinned source into independent portable and Maven
+projects. Portable packaging `15291`, the normal Maven reactor `3370`, and
+strict readback `32774` all passed. All seven resulting consumer jars have zero
+findings or warnings under JSON validation with `--warnings error`, identical
+entry digests after strict repacking, and no engine, Jupiter or testkit classes.
+These consumer projects have no test sources; no fresh XML or compiled test
+classes were produced. Earlier exported Jupiter/runtime evidence remains
+attributed to its measured source rather than relabeled as this packaging run.
+
+The temporary acceptance drivers used the artifact-only engine/SDK properties
+and project-relative POMs, never checkout source roots. Portable and Maven
+outputs were validated independently; byte equality between those different
+compiler configurations was not asserted. A final matching-artifact refresh
+will identify the integrated source separately.
+
+The late testkit/composition and caller-inspection repairs also received a fresh
+exported Jupiter check against these exact retained artifacts. The wrapper tree
+was clean `6c4608b71`, while engine/SDK/testkit and kit metadata remained clean
+`c24abf6c6`; these source identities are intentionally distinguished. The
+exported Hello target did not exist at the recorded `08:48:58Z` cutoff.
+Driver `53963` installed the matching testkit and ran ordinary queued Maven
+with the creator-test profile. One fresh XML test passed:
+`hello.HelloSceneIntegrationTest#packagedSceneLoadsTicksDrawsAndClosesWithoutFaults`,
+zero failures, errors or skips (0.228-second suite). Queue telemetry records the
+matched testkit installation ending at `09:11:20Z`, then creator-tests package
+ending at `09:13:05Z`; the independently observed driver exit is zero. These
+are queue end timestamps, not inferred from report modification times.
+
+Subsequent ordinary package driver `97204` ended at `09:15:15Z`, exit zero.
+The compiled test class remained present, but the XML modification time and
+SHA-256 were unchanged, proving that the normal build skipped stale compiled
+creator tests. The production jar still has exactly three entries (two Hello
+classes and its manifest), zero findings and no tests, support, Jupiter or SDK
+tooling. Its SHA-256 is
+`1de752f4f5119679c966e937f1a10831f630eaa81bddfba203f26e5d1b8a2539`.
+Producer hashes and exported source hashes were checked before and after.
+
+The actual nested queued Maven inputs were:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -B -q \
+  org.apache.maven.plugins:maven-install-plugin:3.1.4:install-file \
+  "-Dfile=${CREATOR_KIT}/mod-testkit.jar" -DgroupId=com.openggf \
+  -DartifactId=OpenGGF -Dversion=0.7.prerelease -Dclassifier=mod-testkit \
+  -Dpackaging=jar -DgeneratePom=true
+python3 tools/testing/maven_queue.py -Dmse=off -B -q \
+  -f "${CREATOR_KIT}/examples/hello-scene/pom.xml" package -Pcreator-tests \
+  -Dopenggf.testkit.version=0.7.prerelease \
+  "-Dopenggf.engine.jar=${CREATOR_KIT}/engine.jar" \
+  "-Dopenggf.sdk.jar=${CREATOR_KIT}/sdk.jar"
+python3 tools/testing/maven_queue.py -Dmse=off -B -q \
+  -f "${CREATOR_KIT}/examples/hello-scene/pom.xml" package \
+  "-Dopenggf.engine.jar=${CREATOR_KIT}/engine.jar" \
+  "-Dopenggf.sdk.jar=${CREATOR_KIT}/sdk.jar"
+```
+
+Here `${CREATOR_KIT}` is the absolute retained c24 export directory. All Maven
+commands ran through the creator worktree's normal queue; producers and the
+seven already-verified consumer packages were not rebuilt for this check.
+
+## Development full-run fixture repairs
+
+The full ordinary invocation remained frozen at clean `c24abf6c6`. Its seven
+newly failing identities were repaired in separate trees; no production source,
+signature pin, guard allowance or failing assertion was changed by these repairs.
+
+| Failing identity | Measured assertion or error | Cause and verified repair |
+|---|---|---|
+| `com.openggf.game.TestStandaloneGameCodeRouting#standaloneBaseOwnsStandaloneIdentityAndUsesIdentifierAsGameCode` | `java.lang.UnsupportedOperationException: Override this provider or construct with StandaloneGameSpec` | `5b5321848`: Mockito `when` invoked the real specification-backed provider before its identifier override existed. `doReturn` installs the same override without invoking it; real identity/game-code assertions remain. |
+| `com.openggf.mods.code.TestGolfOnlineIntegration#twoProcessesExchangeActualShotsScenesPausesAndConcession` | `Peer did not answer; alive=false, reader=null` | `e68e6eadb`: probe reflection requested creator-specific `configure(Selection)` on the published interface proxy. |
+| `com.openggf.mods.code.TestGolfOnlineIntegration#bothOnlineGolfersCanRewindWithoutChangingTurnOrDuplicatingScore` | `Peer did not answer; alive=false, reader=null` | Same probe issue; shutdown's missing `online` field masked the primary exception. |
+| `com.openggf.mods.code.TestModHudProfileResolution#levelLoadResolvesAfterPublicationAndStockLoadResetsTheProfile` | `java.lang.NullPointerException: Decoded level transform` | `7f21a260a`: the bare module mock returned null instead of the real default identity transform. The fixture now invokes that default; loaded-level identity, publication ordering and stock-reset assertions remain. |
+| `com.openggf.mods.integration.TestPhase2SampleModIntegration#realCreatorSampleBuildsAndRegistersAuthoredResourcesWithoutRom` | `Checked sample differs from real ggfmod init at README.md ==> expected: <-1> but was: <455>` | `6c4608b71`: maintained sample README was not refreshed after the authoritative generator changed. |
+| `com.openggf.mods.integration.TestPhase2SampleModIntegration#realCreatorSampleLoadsZoneObjectRewindAndKeyedSave` | `Checked sample differs from real ggfmod init at README.md ==> expected: <-1> but was: <455>` | Same mirror gap. README and one POM comment now match; all seven text mirrors and the unchanged parsed Maven model were checked. |
+| `com.openggf.mods.testing.TestModTestKit#missingSavedOwnerRecoveryRetainsTheNormalRuntimeWarning` | `expected: <0> but was: <1>` | `9633db4c1`: embedded Java still used the removed five-argument zone constructor. Compilation failed before warning/recovery assertions. `singleAct` preserves the exact declaration shape and all assertions. |
+
+The disposable cold-publication probe measured the Golf primary
+`NoSuchMethodException: jdk.proxy3.$Proxy2.configure(paradise.ui.GolfMenu$Selection)`
+and cleanup `NoSuchFieldException: online`. The repaired fixture obtains concrete
+creator state through its published service only for controlled configuration
+and diagnostics, under the same retained fault boundary. Gameplay, drawing,
+capture/rewind presentation and close use the published controller. It asserts
+shared registered owner identity and full/course rewind partitioning, and keeps
+cleanup failures suppressed on the primary exception. Temporary probe inputs
+were removed; no production unwrapping or new API was introduced.
+
+Focused evidence, each inspected from fresh XML before committing:
+
+| Repair | Queued session | Terminal UTC | Fresh XML / tests | Failures / errors / skips |
+|---|---|---|---|---|
+| Standalone routing | `47809` | `2026-10-08T07:56:11Z` | 4 / 11 | 0 / 0 / 0 |
+| Owned Golf probe | `52214` | `2026-10-08T08:14:00Z` | 4 / 36 | 0 / 0 / 0 |
+| HUD identity default | `46764` | `2026-10-08T08:14:55Z` | 3 / 32 | 0 / 0 / 0 |
+| Creator sample mirrors | `46953` | `2026-10-08T08:28:45Z` | 3 / 8 | 0 / 0 / 0 |
+| Embedded zone factory | `96834` | `2026-10-08T08:28:05Z` | 3 / 8 | 0 / 0 / 0 |
+
+The sample-mirror terminal time comes from Maven's explicit finished-at line.
+Its tested source was `c24abf6c6` plus the two changes committed unchanged as
+`6c4608b71`, tree `80e9fa6de1043464a00ceeb5326e1eb554d759c8`; no independent
+whole-tree launch fingerprint was retained for that focused invocation.
+
+The Golf run includes both actual two-process identities (15.113 seconds), six
+Golf invocations, nineteen fault-boundary and nine native-publication controls,
+with verified absolute S2 and S3K ROM paths. Sample mirror verification includes
+both previously failing identities, actual ROM-backed sample load/rewind/save,
+all purpose starters and classifier-backed standalone generation. The eight
+factory/recovery controls cover actual kit state/recovery, three S2 saved-zone
+resolution and three owner/anchor admission cases. An independent review of the
+three one-line fixture corrections found no ownership bypass or assertion
+weakening. These bounded results qualify the repairs; they do not relabel the
+frozen full invocation as passing.

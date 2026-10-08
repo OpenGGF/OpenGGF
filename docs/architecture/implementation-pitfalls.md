@@ -76,6 +76,39 @@ and test the later production consumer. Concrete captured services also need
 provenance on their underlying state, not just their published rewind proxy.
 Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md).
 
+**Published creator controllers can be interface proxies.** Keep frame, draw,
+rewind and close operations on the published controller. A headless fixture
+needing creator-specific configuration or diagnostics obtains the separately
+published concrete service and invokes its callbacks through the same retained
+fault boundary; reflecting on the proxy's implementation class does not expose
+creator methods or fields. The Golf peer fixture's missing `configure` method
+was hidden by a second missing-field exception during shutdown. Preserve the
+primary exception and suppress cleanup failures before attributing a dead peer
+to networking. Assert registered owner identity and rewind participation instead
+of assuming the concrete service and interface proxy are the same object.
+Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md#development-full-run-fixture-repairs).
+
+**Mockito defaults differ from production interface defaults.** A bare
+`GameModule` mock returns null for `transformDecodedLevel`, although the real
+default returns the supplied level unchanged. Fixtures exercising a real load
+must invoke that default or provide the intended valid transformation, preserving
+loaded-level identity and publication assertions. Conversely, `when` invokes a
+real method on a `CALLS_REAL_METHODS` mock before installing the stub: use
+`doReturn` to install an expert standalone identifier override when the fixture
+deliberately has no declarative specification. Keep the real identity consumers
+under test. These gaps stopped HUD publication and standalone routing fixtures
+before their existing assertions could run.
+Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md#development-full-run-fixture-repairs).
+
+**Embedded Java snippets are executable API consumers.** Constructor and method
+migrations include compiler text blocks, maintained samples and SDK templates.
+A failed compiler-exit assertion can look like a runtime warning-count mismatch;
+inspect captured compiler diagnostics before changing the later assertion.
+`TestModTestKit` still called the retired five-argument zone constructor inside
+a text block. Migrating it to `singleAct` retained the same declaration and
+allowed the original missing-owner warning/recovery checks to execute.
+Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md#development-full-run-fixture-repairs).
+
 **An isolated packed-mod test needs its own rewind class resolver.**
 `GameplaySessionFactory` normally reads the process-wide `ModSubsystem`. A test
 that scans, validates and launches through a private `ModRuntime` must attach
