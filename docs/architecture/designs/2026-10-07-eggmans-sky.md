@@ -396,7 +396,9 @@ No player credential or network is used at runtime.
 clean masters, edits and blind transcription checks in an external task cache.
 The catalogue's synthesis estimate is about $0.77 before transcription and the
 one regenerated stuttering take; provider usage reporting lagged, so this is not
-an exact billed total. The generator checks a $5 reported-key-usage safety ceiling
+an exact billed total. At 21:25:26Z the key reports $0.921038196 total usage,
+including the earlier auditions; provider billing can still lag. The generator
+checks a $5 reported-key-usage safety ceiling
 and refuses automatic retries of uncertain requests. Source and output hashes,
 whole-utterance edits, final word checks and the recipe are in the shipped
 `audio/voice/provenance.json`. Publishing derives manifest ids and speech queue
@@ -470,10 +472,25 @@ Validation in progress:
   incomplete run for the separately coordinated parity integration. It is not
   qualifying baseline evidence. All reported skips were inspected (no missing-ROM
   skip); consumed diagnostics were acknowledged and removed. Existing parity and
-  Windows requests remain untouched. Updated-base acceptance waits for the
-  coordinated completed main qualification.
+  Windows requests remain untouched. The owning actual-main qualification
+  subsequently completed at `863683b092f7` as run
+  `20261008T194559Z-9deb33e8`: 3058 ordinary reports/26570 cases, 26 inherited
+  failures, zero errors and 62 inherited skips; separate fresh guards have
+  87 reports/674 passing cases with zero skips. Its complete assertion and skip
+  table is in the [owning parity audit](../audits/2026-10-07-stock-parity-gap-verification.md#actual-main-full-assertion-and-skip-summary).
+  Evidence-only successor `5662ad2c2291` changes that audit alone, retaining
+  every executable/test/build input of tested863.
 
-The combined plan against frozen develop `863683b092f7` selects all 3067 ordinary
+Voice commit `d5f4a36ccd40` passed the required hooks after removing the
+unnecessary descriptor comment. Private merge `46cfd4208` imports the completed
+main evidence; `a5ac85a1b2dc` imports independently published develop `d4993a730`,
+including Starfall and the original Eggman's Sky feature. The latter merge only
+conflicts in the hazard catalogue: retain all parity hazards and one copy of the
+identical Eggman's Sky draw-cost note. Voice source/assets and scene SFX routing,
+registry and launch-factory code are unchanged by these imports. Main local and
+remote publication holds remain in effect pending the coordinated successor.
+
+The combined plan against actual held main `5662ad2c2291` selects all 3070 ordinary
 classes plus separate fresh guards. Qualification uses the normal runner with
 `--max-minutes 150`, excluding queue wait, and the unchanged ten-minute no-output
 rule. Estimated cost is 80–110 minutes ordinary plus about four minutes guards.
