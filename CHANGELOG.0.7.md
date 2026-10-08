@@ -1146,6 +1146,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   without reading back discarded pixels; screenshot checks keep pixel readback.
   Lower-rock puzzle checks compute each whole-world rewind diff once, and
   background checks read pixels only from frames used by their assertions.
+  The solo Sonic Sandopolis approach uses a shorter authored controller route,
+  with boss-entry and sand-defeat rewind checks beside the traversal checks.
   Strict byte validation, digest pins, ROM configurations, stress sizes, and real
   socket exchanges remain covered. An opt-in two-JVM test profile retains serial
   execution inside each worker. Public audio tests retain synthetic chip vectors;
