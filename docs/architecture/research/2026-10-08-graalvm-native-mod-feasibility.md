@@ -388,6 +388,9 @@ option field and exports its actual module package. This avoids reflecting the
 private anonymous subclass and preserves the requirement that class loading is
 really enabled. Windows requalification and publication await coordination with
 the main integration hold; no usable ZIP is claimed at this checkpoint.
+`jar --describe-module` additionally identifies the key's owning module as
+`org.graalvm.nativeimage.shared`, rather than `org.graalvm.nativeimage.builder`;
+the export flag follows that shipped module descriptor.
 
 The plan at base `d2a501ebc9919e6c43412a2eedf02a372eac5309` selects all 3,058
 ordinary classes plus guards because the new tools/workflow are unclassified.
