@@ -33,7 +33,11 @@ After the `ready` JSON response, write one JSON action per line to stdin, or use
 ```
 
 `key` accepts `keys` for simultaneous inputs and a bounded `hold` in seconds.
-Every key uses explicit press and release events. `wait` is bounded to 30 seconds;
+Every key uses explicit press and release events. Each key action records the X
+input focus at event time (`focus.window_id`, `focus.owned`); add
+`"require_focus": true` to fail closed when another client owns focus. The Engine
+pauses and clears key state while unfocused, so an unowned-focus key is absent
+input, not evidence about menu routing. `wait` is bounded to 30 seconds;
 `focus-away`/`focus-back` exercise focus pause. `close` sends WM_DELETE_WINDOW and
 requires Engine exit code zero within seven seconds. An unexpected Engine exit,
 including an unrequested clean exit, fails the walkthrough. The whole helper expires

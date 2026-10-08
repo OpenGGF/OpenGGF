@@ -56,6 +56,14 @@ class CaptureOwnershipFailures(unittest.TestCase):
         self.assertTrue(result['temporary_log_closed'])
         self.assertEqual(len(result['errors']), 3)
 
+    def test_key_focus_distinguishes_owned_foreign_and_pointer_root(self):
+        window = SimpleNamespace(id=123)
+        for focus, owned, focus_id in ((SimpleNamespace(id=123), True, 123), (SimpleNamespace(id=456), False, 456),
+                                       (capture.X.PointerRoot, False, capture.X.PointerRoot)):
+            with self.subTest(focus=focus):
+                connection = SimpleNamespace(get_input_focus=lambda: SimpleNamespace(focus=focus))
+                self.assertEqual(capture.key_focus(connection, window), {'window_id': focus_id, 'owned': owned})
+
     def test_primary_late_exit_survives_cleanup_failure(self):
         class Host:
             pid = 777

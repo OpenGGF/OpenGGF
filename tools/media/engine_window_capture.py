@@ -65,6 +65,12 @@ def cleanup_owned(processes, focus_window, connection, module, log):
     return result
 
 
+def key_focus(d,window):
+    """X input focus at key time. Engine pauses and clears key state while its window is unfocused."""
+    focus=d.get_input_focus().focus
+    focus_id=getattr(focus,'id',focus)
+    return {'window_id':focus_id if isinstance(focus_id,int) else None,'owned':focus_id==window.id}
+
 def owned_window(d,pid,visible=True):
     atom=d.intern_atom("_NET_WM_PID")
     def visit(w,depth=0):
@@ -186,6 +192,9 @@ def main():
             receipt['actions'].append({'at_seconds':stamp,**action});record()
             if op=='key':
                 window.set_input_focus(X.RevertToParent,X.CurrentTime);d.sync()
+                focus=key_focus(d,window);receipt['actions'][-1]['focus']=focus;record()
+                if action.get('require_focus') and not focus['owned']:
+                    raise RuntimeError('Owned Engine window lacked X input focus at key time')
                 names=action.get('keys',[action.get('key','Return')]);codes=[d.keysym_to_keycode(XK.string_to_keysym(name)) for name in names]
                 if not all(codes):raise ValueError('Unknown X11 key')
                 for event_type,mask in ((X.KeyPress,X.KeyPressMask),(X.KeyRelease,X.KeyReleaseMask)):
