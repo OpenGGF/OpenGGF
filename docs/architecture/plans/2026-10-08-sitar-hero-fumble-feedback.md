@@ -356,3 +356,18 @@ owner evidence, not a second local execution. Reconcile that successor before
 main integration, then run the mandatory actual-main ordinary and fresh guards
 against the actual pre-integration develop commit. Develop push and owned
 worktree/branch cleanup remain pending.
+
+## Published policy successor composition
+
+After the framework owner's explicit freeze release, main was fetched and its
+current `develop` branch fast-forward checked: already at published
+`d740b7a0fadd97b2e7c104d56481a0235bdffb4c`. All three unrelated dirty submodules
+and four known untracked paths were preserved. No main branch switch occurred.
+The published successor merged privately without conflicts. Index comparisons
+show no delta from tested `984cb8e2e` in engine, Java tests, examples, POM, API
+policy or Maven settings; the composed hook and snapshot-policy inputs match
+d740 exactly. The candidate pin and its two generic part-cue members are retained.
+The updated owner's policy evidence applies to those identical policy inputs;
+the upcoming mandatory actual-main run will also execute fresh structural guards.
+The actual pre-integration base is d740, subject to a final main-head check before
+integration. This composition is not yet a develop delivery.
