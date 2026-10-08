@@ -44,6 +44,10 @@ including an unrequested clean exit, fails the walkthrough. The whole helper exp
 after ten minutes. Read the visible result before interpreting a later action.
 The example's [window walkthrough](../../examples/example-mutators/window-walkthrough.jsonl)
 starts from fresh defaults; it supplements the maintained BK2 capture input.
+Development patch launches open their declared base game automatically. For an
+all-game package, return from that native title to the master hub before changing
+games. Verify the visible hub and subsequent native title; arrows sent during the
+base game's intro do not select another game.
 
 Output includes `window.mkv`, stereo 48 kHz `device-output.wav`, screenshots and
 `window-evidence.json` with child environment, action timestamps, exact window

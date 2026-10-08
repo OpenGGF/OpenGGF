@@ -1,4 +1,9 @@
 {"op": "wait", "seconds": 5}
+{"op": "key", "key": "Return", "hold": 0.25, "require_focus": true}
+{"op": "wait", "seconds": 20}
+{"op": "screenshot", "name": "development-title"}
+{"op": "key", "key": "Escape", "hold": 0.25, "require_focus": true}
+{"op": "wait", "seconds": 3}
 {"op": "screenshot", "name": "startup-hub"}
 {"op": "key", "key": "Right", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
@@ -246,6 +251,7 @@
 {"op": "key", "key": "Return", "hold": 0.25, "require_focus": true}
 {"op": "wait", "seconds": 3}
 {"op": "screenshot", "name": "hub"}
+{"op": "key", "key": "Right", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Return", "hold": 0.25, "require_focus": true}
 {"op": "wait", "seconds": 30}

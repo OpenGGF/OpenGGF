@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Development launch is not a fresh game-selection hub (2026-10-08, Mutator Lab
+expansion): a shared package declares Sonic 2 as its development base, and the
+Engine opens that title automatically. Two recipes labelled Sonic 1 sent Left
+before returning to the hub; their actual screenshots remained Sonic 2. Reject
+the game label, finish the native intro, return with Escape, and inspect the
+master hub and selected native title before certifying the route. The corrected
+recipe reaches the Sonic 1 title and Green Hill menu without changing Engine
+startup, native input or gameplay readiness.
+
 Committed fixtures are live validation inputs (2026-10-08, Sitar Hero delivery):
 freeze test sources, BK2 files and scripts alongside runtime code. A fixture merge
 during an ordinary run makes the invocation incomplete even if already compiled

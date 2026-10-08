@@ -173,6 +173,12 @@ recordings and universal character/pose coverage remain separate work.
 
 ## Maintained capture inputs
 
+The development launcher opens this package's declared Sonic 2 base game. The
+Sonic 1 and Sonic 3 & Knuckles window recipes first finish that intro, return
+to the master hub with Escape, and select their native game there. Read the
+actual title and game subtitle before interpreting the following screenshots;
+an action filename does not establish which game was launched.
+
 Use `capture.script` for Sonic 1/2 and `capture-s3k.script` for Sonic 3 &
 Knuckles. The S3K input script and its window walkthrough wait thirty seconds
 after entry/restart for the native intro; this is an input margin, not an engine

@@ -2,7 +2,7 @@
 
 ## Outcome and base
 
-Expand the existing Mutator Lab example and PR215 to the original catalogue in
+Expand the existing Mutator Lab example and PR 215 to the original catalogue in
 Sonic 1, Sonic 2 and Sonic 3 & Knuckles. The user explicitly selected all three
 games. Preserve the lifecycle contract: enabling, disabling and each option
 choose their own safe boundary. Existing settings widgets, atomic save before
@@ -387,7 +387,7 @@ Published `913c5a351` adds only native packaging tools/workflow/prose beyond
 `7f6a238ce` preserves both native-semantic and image-retention pitfalls. Root's
 stage intent composition has no textual conflict. Combined native Lab startup,
 API/SDK, mandatory S3K, domain and full actual-base gates remain pending, followed
-by fresh Opus hands-on polish and a separate refreshed promo for PR215.
+by fresh Opus hands-on polish and a separate refreshed promo for PR 215.
 
 Combined request `20639` completed 2026-10-08 19:44:17 UTC after 1707 seconds
 of normal queue waiting and 115 seconds execution. All 22 exact selected reports
@@ -400,3 +400,31 @@ byte-equal to the pin; the internal stage/history changes add no creator surface
 Normal-window/PCM, affected trace and full candidate/fresh-guard gates remain
 pending. The compiled build records the pre-commit dirty intent composition; its
 source fingerprint, rather than cached window title metadata, owns attribution.
+
+
+### Normal-window native controls
+
+The completed composed source `e239433b9` ran through default-WM Engine.loop
+walkthroughs in S1/S2/S3K; no Engine window/input changes or frameless fallback
+were needed. Actual 640×448 movies decoded 7078/7818/9862 frames for S2/S1/S3K,
+with real stereo 48 kHz device PCM and clean application/recorder/private-sink
+teardown. The native-game matrix records observed controls and precise limits.
+S3K master selection uses Sonic+Tails; canonical solo captures remain separate.
+
+Two S1-labelled recipes selected too early and actually stayed in S2. The
+launcher opens the shared package's declared S2 development base automatically.
+Finishing its intro and returning with Escape before native game selection
+reaches S1/S3K correctly. The hub defaults to S2 again after Return; maintained
+recipes explicitly reselect their game. This corrects input authoring without
+changing stock startup, physics or readiness. S2's restart still catches a fade;
+S1 rings 0 before LOAD admission follow native hurt. Neither is presented as
+No Rings proof. S1 also reports its native GHZ Edge Wall mapping 0xE8DF warning;
+the mapping loader and constant are unchanged by this task, and no matched
+runtime attribution or whole-act art qualification is claimed.
+
+The parity owner holds main tracked inputs/HEAD/publication at `863683b092` while
+its mandatory normal 3060-class run `20261008T194559Z-9deb33e8` executes against
+`f5de9524a9`. Root acknowledged that hold through T3 and requested the final
+published SHA and light full-assertion/skip summary. No main or foreign-request
+actions are authorized by this private expansion. Candidate domain/full gates,
+Opus polish, refreshed promo and PR 215 delivery remain outstanding.
