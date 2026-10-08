@@ -197,7 +197,7 @@ def build(args):
         r"-H:IncludeResources=com/openggf/.*\.class", f"-H:ConfigurationFileDirectories={metadata}",
         "-J-Dopenggf.experimental.native.mods=true",
         "-J--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.hub=ALL-UNNAMED",
-        "-J--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.option=ALL-UNNAMED",
+        "-J--add-exports=org.graalvm.nativeimage.shared/com.oracle.svm.shared.option=ALL-UNNAMED",
         "--features=com.openggf.tools.nativewindows.ExperimentalNativeFeature",
         "-cp", native_classpath, MAIN, str(native / "OpenGGF")]
     argfile = work / "native-image.args"
