@@ -569,3 +569,9 @@ the Toxomister body pose and adding Orbinaut's ROM spike sprites. A refresh
 attempt hit the SDK's refusal to overwrite an existing output jar before any
 frames were rendered; deleting only that generated capture jar allowed a fresh
 capture from the final source. It did not affect gameplay or player saves.
+
+Implementation revision: `4e7946fc20` (final production/test source validated
+above; only evidence prose followed). Delivery integrates this revision into
+`feature/ai-starfall-frontier` without switching the main workspace branch,
+then rebuilds and installs/enables/trusts local mod 1.3.0. Existing world files
+are left untouched; no remote push or release publication is part of this task.
