@@ -30,13 +30,19 @@ This survey establishes authoring geometry; it does not itself prove combat.
 | Projectile recreation and two restore/forward replay cycles | Passed: native safe-ring/danger volleys, ring loss, all three elemental shields, projectile recreation and two whole-registry 60-tick restore/forward cycles. |
 | Packaged title, entry holds, pause, real checkpoint menu retry and owner abort | `TestHardenedPrototype`: seven packaged/native cases pass with zero skips after neutral entry and mandatory native-card consumption. Includes two real checkpoint menu retries, pre-contact fresh attempts, entry restore/forward cycles and owner-fault return. |
 | Fresh entry/checkpoint/death/stage-return precedence and no-save attachment | 55 focused cases passed with zero skips; the corrected native fresh-camera/checkpoint method also passes. Stock death camera remains `0x1CC0`. |
-| Actual GPU title/tells/transitions and final ROM PCM | Composed safe1316/fatal715 GPU frames with stereo48k PCM, native1376-row safe walkthrough and337-row missing-ROM recovery inspected. First PLAY includes Sonic/foreground; both volleys, clear/fatal, post retry and separate fresh entry are observed. Native device capture uses an explicitly owned frameless workaround; caller/HID/speaker limits are in the implementation plan. |
+| Actual GPU title/tells/transitions and final ROM PCM | Final composition including 33d: safe 1316/fatal 715 GPU frames with stereo 48k PCM, plus source-attributed c732 native1376-row safe walkthrough and 337-row missing-ROM recovery inspected. First PLAY includes Sonic/foreground; both volleys, clear/fatal, post retry and separate fresh entry are observed. Native device capture uses an explicitly owned frameless workaround; caller/HID/speaker limits are in the implementation plan. |
 
 The [implementation plan](../../plans/2026-10-07-hardened-s3k-prototype.md) and
 [blueprint](../../designs/2026-10-07-hardened-s3k-blueprint.md) preserve the
 original base, contract decisions and later-stage limits. The outside-repository ledger records exact commands and corrected fixture failures.
-Final combined broad verification remains pending; these focused/capture results are
-not a full-suite or full-act certification.
+The completed 3032-class combined run has 28 qualified inherited ordinary failures,
+zero errors and 62 exact matched skips. Its one owned facade-size guard failure
+was resolved by unchanged-algorithm extraction, 158 focused passes and678 fresh
+guard passes, all without skips. Actual33d composition adds 74 focused capture/
+API/SDK/prototype passes, with no errors/skips and byte-identical final CSV/PCM.
+These are source-attributed checks, not a green whole suite, trace pass or stock
+full-act certification. Root-owned Opus polish and separate promo precede PR
+delivery; later campaign cells remain unchanged.
 
 ## Claims
 

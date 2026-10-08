@@ -323,3 +323,41 @@ final video extent and actual device samples must be inspected. This caller uses
 unmodified `Engine.display` at a diagnostic 60 Hz and does not certify
 `Engine.loop`, physical HID hardware or speakers. Final merged recapture remains
 required; the earlier three-frame missing-ROM movie remains rejected.
+
+
+### Implementation evidence — 2026-10-08
+
+The earlier implementation checkpoints above retain their stated source and
+pending state. They are superseded for prototype delivery by the
+[implementation plan](../plans/2026-10-07-hardened-s3k-prototype.md) and the
+[local MHZ1 cell](../validation/levels/s3k-mhz-act1.md#post-two-ambush-local-prototype--2026-10-07).
+Final compiled composition `cd38571ab4` includes actual published base
+`33d3976c53304dbbea1c695914ecdd7bfc64cf9d`, preserving original 6d provenance.
+
+The working JVM example now has title/lesson/entry/tells/two volleys/recovery,
+clear/fatal/retry/exit, physical native post contact and respawn, scarce native
+rings, ROM art/music/SFX and two whole-registry restore/forward cycles. The
+clean 2fc SAME3 trace baseline completed; the final composed candidate's full
+57/99/4699 assertions match it literally, with no errors/skips. They are inherited
+failures, not route passes. The combined 3032-class ordinary run produced 28 full
+inherited assertions and 62 exact causal skips, no errors/new/worse/unattributed
+failures. Its owned facade-size guard was fixed by a package-private load-owner
+extraction;158 focused cases and all 678 fresh guards pass without skips. A
+single interrupted guard invocation remains 130/incomplete/causeunknown.
+
+The 33d capture-helper/test-fixture successor was intent-merged without gameplay/
+audio/publicAPI changes, then rebuilt and checked with 74 capture/API/SDK/prototype
+passes, zero failures/errors/skips. Actual compiled candidate signatures match
+the pin and the maintained 18-entry creator jar contains classes/manifest only.
+Final GPU safe 1316/fatal 715 movies and stereo 48k PCM fully decode; actual state
+CSV/WAV bytes match the extraction capture. Native c732 keyboard/window/device
+walkthroughs observe 1376 safe and 337 missing-ROM rows, with successful owned
+process/recorder/sink cleanup. Their explicit frameless/diagnostic 60Hz/HID/speaker
+limits remain; no default-window or Engine.loop certificate is inferred.
+
+The implementation is prepared for a clean outside-repository handoff. The user
+then requested root-owned Claude Opus 5.5 hands-on polish followed by a separate
+promo-video task, so feature push and the one PR are held for that integration.
+Full MHZ act, chapter, campaign, extra characters/widths/donors and Stage Trials
+certification remain later stages; this evidence closes only the scoped local
+prototype implementation gates.

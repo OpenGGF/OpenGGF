@@ -21,8 +21,10 @@ The later full-act, chapter, campaign and Stage Trials gates remain future work.
    reload, the four mandatory S3K regressions and AIZ→HCZ safety. Review the actual
    combined selection, preflight and run required category/guard validation.
 7. Independently review high-risk boundaries and the final base-to-head diff;
-   fetch/assess develop, push only the feature branch and open/link its PR.
-   Account for children and retain the PR tree for review.
+   fetch/assess develop and provide a clean implementation handoff. The user's
+   subsequent root-owned Opus polish and separate promo stages precede feature
+   push and the one requested PR. Account for children and retain the feature
+   tree, branch and native histories for that integration and review.
 
 Parallel ownership: placement child owns frozen plan registration/application;
 encounter child owns geometry, gameplay objects and focused mechanics; session
@@ -31,14 +33,17 @@ authoring documentation and delivery. Each child uses a separate copy-on-write
 worktree and queued focused Maven commands. Their commits and exact verification
 are reconciled in the outside-repository task ledger before integration.
 
-Current composition is `6fbddbdca82d5396e1160ae4142f7e46ff99f6cc`, with published
-integration base `02796b4c497c3aa887f77a8d8e9697b7009d2b4c`. Original `6d817a9d`
-remains an ancestor. Intent merges preserve upstream `onNewGameFromTitle`,
-DelegatingGameModule forwarding, unavailable TWO_PLAYER title branch, stock
-invincibility music rules and the subsequent banked SMPS/scene contracts. The
-ModApiVersion comment and compatibility prose retain both API intents. The
-published successor adds only a Sitar architecture document and launcher beyond
-`be3c3141`; it changes no engine, tests, API, POM, hooks or selection policy.
+Final compiled composition is `cd38571ab4c9a5a98d55e2c705266e6390fa46a1`, with
+published integration base `33d3976c53304dbbea1c695914ecdd7bfc64cf9d`.
+Original `6d817a9d` remains an ancestor. Intent merges preserve upstream
+`onNewGameFromTitle`, DelegatingGameModule forwarding, unavailable TWO_PLAYER
+title branch, stock invincibility music rules and banked SMPS/scene contracts.
+The ModApiVersion comment and compatibility prose retain both API intents.
+The latest published successor changes one production capture helper: drawing
+and `glFinish` are shared by `render` and the new discard-readback `renderFrame`.
+Existing screenshot capture still calls `render`. The other changes are test
+fixture ownership/cleanup and documentation; no Engine, GameLoop, gameplay,
+audio, Mod API, POM, hook or selection-policy delta is introduced by this merge.
 
 The actual composed package request selected 20 class names and produced 21 fresh
 XML reports: **197 passes, zero failures/errors/skips**, exit 0, including audio
@@ -62,7 +67,7 @@ unknown and its validation incomplete. Historical 151-case 2fc focus and correct
 22-case API/SDK focus remain source-attributed; three nonexistent earlier selector
 names provide no coverage.
 
-Actual composed audiovisual evidence is outside Git at
+Actual audiovisual evidence is outside Git at
 `${OPENGGF_TASK_SCRATCH}/hardened-s3k/captures`.
 The maintained controller programs drive production gameplay; no trace values
 supply state or readiness. Inspected PNGs include the first animated title,
@@ -70,10 +75,16 @@ first released PLAY, committed aim, volleys, results and checkpoint reentry.
 
 | Capture | Observed state and decoded evidence |
 | --- | --- |
-| `composed-safe-01` | 1316 GPU frames / 1,052,800 stereo PCM frames; native post313, tell332, lock368, volleys380/404, clear675, post respawn840, title951, separate fresh1035. Full 60fps 640×448 movie decodes. |
-| `composed-failure-01` | 715 GPU frames / 572,000 stereo PCM frames; post279, lock337, volley349, actual zero-ring death352, post respawn531, title642. Full movie decodes. |
-| `composed-native-safe-02` | Genuine native X11 press/release input; 1376 state rows / 1429 decoded desktop frames, post372, volleys438/462, clear735, native respawn900, title1011, separate fresh1106. Stereo48k device PCM AC RMS1195/1201 per channel. |
-| `composed-missing-rom-01` | 337 native rows / 360 decoded frames: actual ROM-not-found0, preserved S3K selection90, repeated refusal180, responsive menu300. Both recorder exits0; device PCM AC RMS1804 per channel. |
+| `final-33d-safe-01` | Actual compiled `cd38571ab`: 1316 GPU frames / 1,052,800 stereo PCM frames; native post313, tell332, lock368, volleys380/404, clear675, post respawn840, title951, separate fresh1035. Full 60fps 640×448 movie decodes. |
+| `final-33d-failure-01` | Actual compiled `cd38571ab`: 715 GPU frames / 572,000 stereo PCM frames; post279, lock337, volley349, actual zero-ring death352, post respawn531, title642. Full movie decodes. |
+| `extraction-native-safe-01` | Actual compiled `c73270ded`: genuine native X11 press/release input; 1376 state rows / 1425 decoded desktop frames, post372, volleys438/462, clear735, native respawn900, title1011, separate fresh1106. Stereo48k device PCM AC RMS1194/1199 per channel. |
+| `extraction-missing-rom-01` | Actual compiled `c73270ded`: 337 native rows / 361 decoded desktop frames, actual ROM-not-found0, preserved S3K selection90, repeated refusal180, responsive menu300. Engine and both recorder exits0; device PCM AC RMS1805 per channel. |
+
+The complete final safe/fatal CSV and WAV bytes equal their `c73270ded` captures,
+not merely selected rows or audio event counts. The `33d3976c` helper delta is
+exercised by new real S3K rendering tests and final GPU walkthroughs. It does not
+change the native `Engine.display` caller used for the source-attributed c732
+window captures; those are retained with their exact source and limits.
 
 The native captures identify an AMD Radeon RX9070XT / Mesa26.2.4 OpenGL4.6
 backend, exact owned Engine PID/title/viewable geometry and focused window.
@@ -81,7 +92,7 @@ This host's explicit GLFW show call stalled; only that owned window was mapped
 frameless. Child-only `ALSOFT_DRIVERS=pulse`, private `PULSE_SINK`,
 `LD_PRELOAD=/usr/lib/libkeyutils.so.1`, `vblank_mode=0` and
 `__GL_SYNC_TO_VBLANK=0` were recorded. Engine/recorders stopped and private sinks
-unloaded. This is unmodified Engine.display at diagnostic60Hz, not certification
+unloaded. This is unmodified Engine.display at diagnostic 60Hz, not certification
 of normal WM initialization, Engine.loop cadence, hardware controllers or speakers.
 The GPU tool separately observes actual ROM PCM: title AC1247/1251, volley-one
 1769/1806 and volley-two1743/1816 per channel, with no flat10ms volley windows.
@@ -112,14 +123,22 @@ The separate fresh guard JVM produced 87 reports / 678 cases, one assertion
 failure, zero errors/skips in 219.58 seconds. The owned blocker is
 `TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction`:
 LevelManager had 3183 effective source lines against its unchanged 3145 budget.
-The module placement, fresh-position and reload hooks are being extracted into
-the package-private `ModuleLevelLoadController`, together with the adjacent
+Commit `c73270ded` extracted module placement, fresh-position and reload hooks
+into the package-private `ModuleLevelLoadController`, together with the adjacent
 native dynamic-start resolver. The collaborator is load-owned; suppression
 unwinds in finally and camera handoff is consumed before the next frame/rewind
 boundary. Native checkpoint/return authority and signed fallback coordinates
 retain their existing meaning. The public API and ratchet budget are unchanged.
-Bounded production load/retry/placement regressions and fresh guards remain
-required for this extraction before the implementation handoff.
+Independent source review found no blockers. Normal queued package request 86055
+then passed **158 cases in 18 fresh reports**, zero failures/errors/skips, covering
+native post/death/fresh/stage-return precedence, placement fault boundaries,
+packaged retry/two-cycle replay, prepared/deferred loading, stock manager state
+and all four mandatory S3K regressions. Fresh guard request 85829 ended 130 during
+execution: 48 partial reports/239 cases are incomplete, cause unknown. After
+exact owned-process reconciliation established no surviving execution, one
+identical normal replacement 34304 passed **87 fresh reports/678 cases**, zero
+failures/errors/skips. The actual ratchet blocker is resolved at its original
+budget. Original incomplete evidence remains in the light outside ledger.
 
 The completed combined command was:
 
@@ -128,17 +147,42 @@ LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
   --base 02796b4c497c3aa887f77a8d8e9697b7009d2b4c --max-minutes 150 --run
 ```
 
-Java21/Lua5.4/PowerShell preflight passes. Latest measured published-base ordinary
-cost is about109 minutes plus3.6 minutes fresh guards; the150-minute execution
-cap and10-minute no-output cap exclude queue waiting. Timeout is incomplete.
-All concrete failures/skips were compared to qualified published-base evidence,
-not totals. The light identity/assertion summary remains in the outside task
-ledger; consumed runner diagnostics were acknowledged and deleted. Extracting
-these unchanged algorithms does not require repeating the completed ordinary
-lane. The bounded follow-up must resolve the actual guard and exercise the
-relocated production boundaries; it does not substitute totals for attribution.
+Java21/Lua5.4/PowerShell preflight passes against actual base `33d3976c`.
+Its unchanged combined-selection rules select 3034 classes: the completed 3032
+ordinary inventory plus two upstream capture/ownership test classes. Latest
+published-base ordinary cost is about 109 minutes plus 3.6 minutes fresh guards;
+the 150-minute execution and 10-minute no-output caps exclude queue waiting.
+Timeout is incomplete. The combined diagnostics were inspected, acknowledged
+and deleted; full concrete failure/skip comparisons remain as light task facts.
 
-The user subsequently requested root-owned Claude Opus5.5 hands-on polish, then a
+The unchanged-algorithm facade extraction was verified by the 158 focused cases
+and all 678 fresh guards; it does not warrant repeating the completed ordinary
+lane. The localized 33d capture-helper/test-fixture successor has a bounded
+production path and no unresolved gameplay/public-contract/timing change.
+Normal request 69268 rebuilt 3705 production and 3600 test sources, then passed
+**74 cases in 13 fresh reports**, zero failures/errors/skips, and packaged the
+engine, SDK and Javadoc. Its exact selectors cover the five new real S3K
+pixel/state/title/results parity cases, owned-mock cleanup, capture smoke,
+skipped titles/arguments, actual API/SDK classes and packaged prototype launch.
+The final compiled 20,186-line export remains byte-equal to the candidate pin;
+creator packaging/SDK validation and actual final GPU/PCM walkthroughs passed.
+This is composed focused evidence after the qualified inherited-red ordinary
+run, not a full 33d ordinary-suite pass or a new clean-base baseline.
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -B -Dmse=off \
+  "-Dsonic1.rom.path=$OPENGGF_S1_ROM" "-Dsonic2.rom.path=$OPENGGF_S2_ROM" \
+  "-Ds3k.rom.path=$OPENGGF_S3K_ROM" \
+  -Dtest=TestGameplayCaptureFrameRendering,TestOwnedMocks,TestGameplayCaptureSmoke,TestGameplayCaptureSkippedTitles,TestGameplayCaptureToolArgs,TestModApiPinPolicy,TestModApiSignatureSurface,TestModApiReleasePolicy,TestModApiRuntimePolicy,TestModApiJavadocTool,TestGgfModCliCommands,TestModApiSdkPackager,TestHardenedPrototype \
+  package
+```
+
+The variables denote existing user ROMs discovered by identity, not newly
+created links or renamed copies. The exact absolute paths and all commands,
+source IDs, results/skips and incomplete invocation history are in the outside
+ledger. No own build, capture, recorder or private sink remains running.
+
+The user subsequently requested root-owned Claude Opus 5.5 hands-on polish, then a
 separate promo-video task. After these implementation gates, the lead supplies a
 clean exact-source handoff outside Git and holds feature push/PR for polish
 integration. Native semantics and prototype scope remain fixed; full-act,
