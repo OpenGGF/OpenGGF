@@ -9,8 +9,8 @@ import java.util.zip.GZIPOutputStream;
 /** Versioned, bounded saves. Decode into a fresh world; reject the entire malformed document. */
 public final class SaveCodec {
     private SaveCodec() { }
-    private static final int MAGIC=0x53544631, VERSION=2, MAX_BYTES=World.W*World.H*3+100000;
-    static final int MAX_TEXT=16*1024*1024;
+    private static final int MAGIC=0x53544631, VERSION=2, MAX_BYTES=World.MAX_W*World.H*3+100000;
+    static final int MAX_TEXT=32*1024*1024;
     public static String encode(World w) {
         try {
             ByteArrayOutputStream bytes=new ByteArrayOutputStream();

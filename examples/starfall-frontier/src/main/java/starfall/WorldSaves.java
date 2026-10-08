@@ -6,7 +6,7 @@ import java.util.*;
 /** Atomic manifest publication keeps large worlds inside the storage port's 1 MiB file limit. */
 final class WorldSaves {
     private static final String HEADER="STARFALL-CHUNKS-1\n",PREFIX="world-part-";
-    private static final int CHUNK=750000,MAX_CHUNKS=23;
+    private static final int CHUNK=750000,MAX_CHUNKS=(SaveCodec.MAX_TEXT+CHUNK-1)/CHUNK;
     private WorldSaves() { }
     static Optional<String> read(SceneStorage storage,String name) {
         return storage.read(name).flatMap(value-> {

@@ -406,12 +406,20 @@ public final class FrontierView {
         for(int i=0;i<lines.length;i++)text(c,lines[i],54,55+i*11,i<6?TEXT:MUTED);
         text(c,"AUTOSAVES EVERY 30 SECONDS. SAVE FROM PAUSE TO LEAVE.",54,191,MINT);
     }
-    public void confirmNew(SceneCanvas c) {
-        c.fill(0,0,c.width(),224,0xAA142332);box(c,94,65,340,87);
-        center(c,"SET OUT FOR A NEW FRONTIER?",c.width()/2,79,GOLD,1);
-        center(c,"THIS REPLACES YOUR ACTIVE WORLD.",c.width()/2,96,TEXT,1);
-        center(c,"NEW WORLD: 8192 X 384 TILES",c.width()/2,109,MINT,1);
-        center(c,"ENTER / A: BEGIN   B / BACKSPACE: KEEP WORLD",c.width()/2,123,MUTED,1);
+    public void confirmNew(SceneCanvas c,WorldSize selected,boolean replacing) {
+        c.fill(0,0,c.width(),224,0xAA142332);box(c,42,30,444,175);
+        center(c,"NEW FRONTIER",c.width()/2,40,GOLD,1);
+        center(c,replacing?"THIS REPLACES YOUR ACTIVE WORLD.":"CHOOSE YOUR WORLD SIZE",c.width()/2,57,TEXT,1);
+        WorldSize[] sizes=WorldSize.values();
+        for(int i=0;i<sizes.length;i++) {
+            int y=74+i*24;WorldSize size=sizes[i];boolean active=size==selected;
+            if(active)box(c,60,y,408,22);
+            text(c,active?"> "+size.label:"  "+size.label,72,y+7,active?GOLD:TEXT);
+            text(c,size.width+" X "+World.H+" TILES",254,y+7,active?MINT:MUTED);
+        }
+        center(c,"BIOMES SCALE WITH WORLD LENGTH",c.width()/2,150,MINT,1);
+        box(c,c.width()/2-90,168,180,19);center(c,"ENTER / A: BEGIN",c.width()/2,174,GOLD,1);
+        center(c,"ARROWS: SIZE   B / BACKSPACE: CANCEL",c.width()/2,194,MUTED,1);
     }
     public void icon(SceneCanvas c,Content.Item i,int x,int y,int scale) {
         int color=i.color;

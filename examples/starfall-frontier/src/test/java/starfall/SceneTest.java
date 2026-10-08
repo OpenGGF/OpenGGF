@@ -28,9 +28,49 @@ class SceneTest {
     private Object call(ModTestKit kit,String method) throws Exception {return scene(kit).getClass().getMethod(method).invoke(scene(kit));}
     private long ticks(ModTestKit kit) throws Exception {Object world=call(kit,"world");return world.getClass().getField("ticks").getLong(world);}
     private void press(ModTestKit kit,int key){kit.input().key(key,true);kit.tick();kit.input().key(key,false);kit.tick();}
+    private void begin(ModTestKit kit) throws Exception {press(kit,GLFW_KEY_ENTER);assertEquals("NEW",call(kit,"screen"));press(kit,GLFW_KEY_ENTER);}
+    private void click(ModTestKit kit,int x,int y) {
+        kit.input().handler().handleMouseMove(x,y);
+        kit.input().handler().handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_PRESS);kit.tick();
+        kit.input().handler().handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_RELEASE);kit.tick();
+    }
+    private int width(ModTestKit kit) throws Exception {Object w=call(kit,"world");return w.getClass().getField("width").getInt(w);}
+    @Test void firstAdventureSelectsSmallWithKeyboardAndContinueRetainsItsWidth() throws Exception {
+        Path saves=work.resolve("saves");
+        try(var kit=open(work.resolve("mods-a"),saves)) {
+            press(kit,GLFW_KEY_ENTER);assertEquals("NEW",call(kit,"screen"));
+            long before=ticks(kit);press(kit,GLFW_KEY_LEFT);assertFalse(kit.draw().isEmpty());
+            assertEquals(before,ticks(kit));press(kit,GLFW_KEY_ENTER);assertEquals(4096,width(kit));
+            press(kit,GLFW_KEY_P);
+        }
+        try(var kit=open(work.resolve("mods-b"),saves)) {
+            press(kit,GLFW_KEY_ENTER);assertEquals("PLAY",call(kit,"screen"));assertEquals(4096,width(kit));
+            assertTrue(kit.findings().isEmpty(),kit.findings()::toString);
+        }
+    }
+    @Test void mouseSelectsLargeThenRequiresExplicitBegin() throws Exception {
+        try(var kit=open(work.resolve("mods"),work.resolve("saves"))) {
+            click(kit,260,130);assertEquals("NEW",call(kit,"screen"));
+            click(kit,270,132);assertEquals("NEW",call(kit,"screen"));
+            assertEquals(8192,width(kit),"selecting a size does not generate or overwrite the world");
+            assertFalse(kit.draw().isEmpty());click(kit,264,177);
+            assertEquals("PLAY",call(kit,"screen"));assertEquals(16384,width(kit));
+            assertTrue(kit.findings().isEmpty(),kit.findings()::toString);
+        }
+    }
+    @Test void cancellingReplacementPreservesSavedWorldAndContinueDoesNotOpenTheSelector() throws Exception {
+        Path saves=work.resolve("saves");
+        try(var kit=open(work.resolve("mods-a"),saves)){begin(kit);press(kit,GLFW_KEY_P);}
+        try(var kit=open(work.resolve("mods-b"),saves)) {
+            press(kit,GLFW_KEY_DOWN);press(kit,GLFW_KEY_ENTER);assertEquals("NEW",call(kit,"screen"));
+            press(kit,GLFW_KEY_RIGHT);press(kit,GLFW_KEY_ESCAPE);assertEquals("TITLE",call(kit,"screen"));
+            press(kit,GLFW_KEY_UP);press(kit,GLFW_KEY_ENTER);assertEquals("PLAY",call(kit,"screen"));
+            assertEquals(8192,width(kit));assertTrue(kit.findings().isEmpty(),kit.findings()::toString);
+        }
+    }
     @Test void keyboardPanelsPauseAndRepeatedDrawsNeverAdvanceWorld() throws Exception {
         try(var kit=open(work.resolve("mods"),work.resolve("saves"))) {
-            assertFalse(kit.draw().isEmpty());press(kit,GLFW_KEY_ENTER);assertEquals("PLAY",call(kit,"screen"));
+            assertFalse(kit.draw().isEmpty());begin(kit);assertEquals("PLAY",call(kit,"screen"));
             kit.input().key(GLFW_KEY_RIGHT,true);for(int i=0;i<20;i++)kit.tick();kit.input().key(GLFW_KEY_RIGHT,false);kit.tick();
             for(int key:new int[]{GLFW_KEY_C,GLFW_KEY_TAB,GLFW_KEY_J,GLFW_KEY_M,GLFW_KEY_P}) {
                 press(kit,key);assertNotEquals("PLAY",call(kit,"screen"));long before=ticks(kit);
@@ -43,7 +83,7 @@ class SceneTest {
     }
     @Test void atlasPansAcrossTheExpandedWorldWithoutAdvancingGameplay() throws Exception {
         try(var kit=open(work.resolve("mods"),work.resolve("saves"))) {
-            press(kit,GLFW_KEY_ENTER);press(kit,GLFW_KEY_M);
+            begin(kit);press(kit,GLFW_KEY_M);
             var mapX=scene(kit).getClass().getDeclaredField("mapX");mapX.setAccessible(true);
             int original=mapX.getInt(scene(kit));long before=ticks(kit);
             press(kit,GLFW_KEY_RIGHT);assertTrue(mapX.getInt(scene(kit))>original);
@@ -58,7 +98,7 @@ class SceneTest {
     }
     @Test void heldMouseChopsAndBuildsWhileLetterboxClicksCannotAct() throws Exception {
         try(var kit=open(work.resolve("mods"),work.resolve("saves"))) {
-            press(kit,GLFW_KEY_ENTER);for(int i=0;i<20;i++)kit.tick();
+            begin(kit);for(int i=0;i<20;i++)kit.tick();
             Object w=call(kit,"world");Class<?> type=w.getClass();
             int width=type.getField("width").getInt(w),surface=(int)type.getMethod("surface",int.class).invoke(w,40);
             byte[] tiles=(byte[])type.getField("tiles").get(w);tiles[(surface-2)*width+43]=World.LOG;tiles[(surface-1)*width+43]=World.LOG;
@@ -81,7 +121,7 @@ class SceneTest {
     @Test void saveContinueAndBackupRecoveryRetainTheSameTerrainAndInventory() throws Exception {
         Path saves=work.resolve("saves");String encoded;
         try(var kit=open(work.resolve("mods-a"),saves)) {
-            press(kit,GLFW_KEY_ENTER);for(int i=0;i<90;i++)kit.tick();
+            begin(kit);for(int i=0;i<90;i++)kit.tick();
             press(kit,GLFW_KEY_P); // freeze exact state before closing
             Object world=call(kit,"world");Class<?> codec=kit.loader("starfall-frontier").loadClass("starfall.SaveCodec");
             encoded=(String)codec.getMethod("encode",world.getClass()).invoke(null,world);

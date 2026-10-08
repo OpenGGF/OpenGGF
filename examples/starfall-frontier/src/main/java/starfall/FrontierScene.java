@@ -15,6 +15,7 @@ public final class FrontierScene implements ModScene,DebuggableScene {
     private int cursor,recipe,inventoryCursor,presentation,saveTimer,mapX,mapY;
     private boolean dirty,debug,existingSave,mouseAim;
     private int currentMusic=-1;
+    private WorldSize worldSize=WorldSize.MEDIUM;
     private double cameraX,cameraY;
     private String status="";
     public FrontierScene(byte[] font) {this.font=font.clone();}
@@ -27,14 +28,14 @@ public final class FrontierScene implements ModScene,DebuggableScene {
         saved=primary.orElseGet(()->WorldSaves.read(ctx.storage(),"world-backup.sav").flatMap(SaveCodec::decode).orElse(null));
         if(primary.isEmpty()&&saved!=null)status="Recovered your backup save.";
         else if(saved==null&&ctx.storage().read("world.sav").isPresent())status="Save unreadable. Original files preserved.";
+        if(saved!=null)worldSize=WorldSize.forWidth(saved.width);
         world=new World(0x57A2FA11L);snapCamera(ctx);music(ctx,0x2F);
     }
     @Override public void update(SceneContext ctx) {
         presentation++;
         if(screen.equals("TITLE")) {titleInput(ctx);return;}
         if(screen.equals("NEW")) {
-            if(back(ctx)){screen="TITLE";return;}
-            if(confirm(ctx)){newWorld(ctx);return;}return;
+            newWorldInput(ctx);return;
         }
         if(screen.equals("HELP")) {if(back(ctx)||confirm(ctx)||ctx.keyPressed(SceneKeys.H))screen=returnScreen;return;}
         if(!screen.equals("PLAY")) {panelInput(ctx);return;}
@@ -105,13 +106,22 @@ public final class FrontierScene implements ModScene,DebuggableScene {
             if(ctx.mouse().lastInputWasMouse())cursor=i;if(ctx.mouse().leftPressed())picked=i;
         }
         switch(picked) {
-            case 0 -> {if(saved!=null){world=saved;saved=null;debug=false;screen="PLAY";dirty=false;snapCamera(ctx);music(ctx,world.musicId());}else if(existingSave)screen="NEW";else newWorld(ctx);}
-            case 1 -> {if(saved!=null||existingSave)screen="NEW";else newWorld(ctx);}
+            case 0 -> {if(saved!=null){world=saved;saved=null;debug=false;screen="PLAY";dirty=false;snapCamera(ctx);music(ctx,world.musicId());}else screen="NEW";}
+            case 1 -> screen="NEW";
             case 2 -> help("TITLE");case 3 -> ctx.exitToMasterTitle();default -> { }
         }
     }
+    private void newWorldInput(SceneContext ctx) {
+        if(back(ctx)||ctx.keyPressed(SceneKeys.ESCAPE)){screen="TITLE";return;}
+        int change=(right(ctx)||down(ctx)?1:0)-(left(ctx)||up(ctx)?1:0);
+        if(ctx.mouse().wheel()!=0)change-=Integer.signum(ctx.mouse().wheel());
+        WorldSize[] sizes=WorldSize.values();
+        worldSize=sizes[Math.floorMod(worldSize.ordinal()+change,sizes.length)];
+        for(int i=0;i<sizes.length;i++)if(ctx.mouse().leftPressed()&&ctx.mouse().over(60,74+i*24,408,22))worldSize=sizes[i];
+        if(confirm(ctx)||ctx.mouse().leftPressed()&&ctx.mouse().over(ctx.width()/2-90,168,180,19))newWorld(ctx);
+    }
     private void newWorld(SceneContext ctx) {
-        world=new World(java.util.concurrent.ThreadLocalRandom.current().nextLong());screen="PLAY";
+        world=new World(java.util.concurrent.ThreadLocalRandom.current().nextLong(),worldSize);screen="PLAY";
         saved=null;debug=false;dirty=true;saveTimer=0;snapCamera(ctx);save(ctx);music(ctx,world.musicId());
     }
     private void openMap(){screen="MAP";mapX=(int)(world.x/World.T);mapY=(int)(world.y/World.T);}
@@ -194,7 +204,7 @@ public final class FrontierScene implements ModScene,DebuggableScene {
                     SceneDraw.plain().withScale(.65f).withFlipX(world.facingLeft));
         }
         if(screen.equals("TITLE"))view.title(canvas,cursor,saved!=null,presentation,status);
-        else if(screen.equals("NEW"))view.confirmNew(canvas);
+        else if(screen.equals("NEW"))view.confirmNew(canvas,worldSize,saved!=null||existingSave);
         else {
             view.hud(canvas,world,status,presentation,screen.equals("PLAY"),cameraX,cameraY);
             switch(screen) {

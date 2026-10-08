@@ -6,7 +6,7 @@ import static starfall.Content.Item.*;
 
 /** A creator-owned tile world, independent of stock zone geometry and gameplay clocks. */
 public final class World {
-    public static final int W=8192, H=384, T=12;
+    public static final int W=8192, MAX_W=16384, H=384, T=12;
     public static final int AIR=0, DIRT=1, GRASS=2, STONE=3, COPPER=4, IRON=5, CRYSTAL=6,
             LOG=7, LEAVES=8, PLANK=9, PLATFORM=10, TORCH=11, BENCH=12, FURNACE=13,
             ANVIL=14, SHRINE=15, CHEST=16, BUSH=17, BEDROCK=18, SNOW=19, EMBER=20;
@@ -52,11 +52,12 @@ public final class World {
         }
     }
     public World(long seed) { this(seed,true); }
+    public World(long seed,WorldSize size) { this(seed,true,size.width,H); }
     World(long seed,boolean generate) {
         this(seed,generate,W,H);
     }
     World(long seed,boolean generate,int width,int height) {
-        if(!((width==256&&height==96)||(width==W&&height==H)))throw new IllegalArgumentException("Unsupported world dimensions");
+        if(!((width==256&&height==96)||WorldSize.supports(width,height)))throw new IllegalArgumentException("Unsupported world dimensions");
         this.width=width;this.height=height;
         tiles=new byte[width*height];walls=new byte[tiles.length];seen=new byte[tiles.length];
         shrineX=new int[]{geographyTile(68),geographyTile(140),geographyTile(215)};

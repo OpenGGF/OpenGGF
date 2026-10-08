@@ -575,3 +575,70 @@ above; only evidence prose followed). Delivery integrates this revision into
 `feature/ai-starfall-frontier` without switching the main workspace branch,
 then rebuilds and installs/enables/trusts local mod 1.3.0. Existing world files
 are left untouched; no remote push or release publication is part of this task.
+
+
+## Player-selectable world length (1.4.0)
+
+Follow-up: the user requested several world lengths selectable by the player,
+with biome widths scaling to the chosen length. Checkout:
+`.worktrees/starfall-sizes`, branch `feature/ai-starfall-sizes`, integration
+base `1b68efd0166eb527d6dbd45a240d3a01851a2a9e`.
+
+Both first adventure and New Frontier now open a size picker. Small is
+4,096 × 384, Medium is 8,192 × 384 (the existing default), and Large is
+16,384 × 384. Arrows/pad directions cycle the choices, the wheel cycles them,
+and a mouse click selects a row. Enter/pad A or the Begin button explicitly
+generates the selection. Backspace/pad B, right click or Escape cancels.
+The picker states when Begin would replace the active saved world. Continue
+bypasses the picker and restores the save's own dimensions. On reopening the
+scene, the initial choice matches the saved world's supported length; legacy
+256 × 96 saves default the picker to Medium without altering their world.
+
+The existing proportional geography drives surface regions, central palace,
+shrines, cloud ruin spacing and buried treasure counts at all three lengths.
+Later surface biome widths are 512 / 1,024 / 2,048 tiles and Angel Island is
+twice that. Depth stays 384 and underground/sky thresholds stay unchanged;
+local player movement, mining reach and combat distances retain their scale.
+Selecting another size changes newly generated worlds only. The V2 save wire
+already persists dimensions, so no wire-version migration was needed. Decoder
+allocation accepts only the three preset shapes and the legacy 256 × 96 shape.
+Its decompression/text ceilings cover the largest shape; chunk manifests derive
+their maximum part count from that text ceiling and retain the 750,000-character
+part size and engine 1 MiB/file contract. Existing V1 and Medium V2 saves load
+unchanged. Engine code, Mod API and stock native zone behavior are unchanged.
+
+Combined change-based plan against the pinned base selected all 3,059 ordinary
+classes plus guards because creator example paths are unclassified. Proportionate
+validation applies: this is an isolated creator UI/generation/codec change with
+direct production scene, boundary, save and packaging coverage. The inherited
+preflight still reports Lua 5.4 mismatch and missing PowerShell; no broad engine
+run was started. This is focused validation, not a full-suite result.
+
+Commands (Java 21, IDE Maven on PATH, existing absolute locked-on ROM property):
+
+```sh
+python3 tools/testing/run_categories.py --base 1b68efd016
+python3 tools/testing/run_categories.py --base 1b68efd016 --preflight
+python3 tools/testing/maven_queue.py --lean -B -q -Dmse=off \
+  '-Dtest=TestStarfallFrontierExample,TestStarfallFrontierScene,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  '-Ds3k.rom.path=<existing absolute locked-on ROM>' test
+python3 examples/starfall-frontier/build.py --skip-engine
+```
+
+Result: 48 creator Jupiter tests, packaging/production ROM scene bridge, and
+60 S3K regression checks passed with zero failures/errors/skips. Coverage adds
+all three generated sizes, surface boundaries on both sides, proportional
+shrines, starter ore and collision, far-eastern builds/discovery and save/load,
+palace/sky geography after restore, unsupported shape rejection, and dense
+Large-world chunk publication/failure/recovery. Physical scene tests exercise
+first-adventure keyboard selection, mouse row selection requiring explicit
+Begin, cancellation while a valid save exists, and Small-world Continue.
+Existing scene tests now confirm the size picker before starting a fresh game;
+Continue tests retain their one-action flow. No tests were repeated after a pass
+on unchanged source. Full unassisted playthroughs at every size remain unverified.
+
+The existing ExampleModCapture records the actual size picker, each selected
+row and cancellation at 528 × 224, scale 3. Durable captures belong under
+`$HOME/OpenGGF-captures/starfall-frontier-sizes/selection`. Only the local
+Starfall Frontier branch and installed mod are updated; no world is generated
+in the user's save directory by delivery and no remote publication is requested.

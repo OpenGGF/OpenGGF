@@ -10,12 +10,31 @@ recover three emerald fragments from Eggman's shrine sentinels. Restore the
 beacon, then keep expanding your world. Explore eleven S3K-inspired biomes, from palm jungle and icy cliffs to
 buried waterworks, volcanic caves and floating sanctuary ruins.
 
-New seeded worlds are **8,192 × 384 tiles**: 32 times wider, four times deeper,
-and 128 times the area of the original frontier. Each later surface biome
-spans 1,024 tiles (Angel Island spans 2,048). An uninterrupted straight run
-across the width takes about 4½ minutes at top speed, before terrain,
-combat, mining, building or exploring the deeper layers. The seeded world comes with caves, three widely separated shrine chambers,
-384 buried treasure rooms, surface berries, trees and copper, iron and chaos shard deposits.
+Choose the world length in-game before starting a **New Frontier**:
+
+| Size | World dimensions | Each later surface biome | Angel Island |
+| --- | --- | --- | --- |
+| Small | 4,096 × 384 tiles | 512 tiles wide | 1,024 tiles wide |
+| Medium (default) | 8,192 × 384 tiles | 1,024 tiles wide | 2,048 tiles wide |
+| Large | 16,384 × 384 tiles | 2,048 tiles wide | 4,096 tiles wide |
+
+Use arrows/pad directions or the mouse wheel to choose; mouse players can
+click a size row. Press Enter/pad A or click **Begin** to generate the selected
+world. Backspace/pad B or Escape cancels. This selection also appears for your
+first adventure. Continuing a save goes straight back into its own world.
+When replacing a saved world, the same screen states that it will replace
+your active world; merely selecting a size or cancelling leaves it intact.
+
+Medium is 32 times wider, four times deeper and 128 times the area of the
+original frontier. An uninterrupted straight run across the width takes about
+2¼ minutes in Small, 4½ in Medium and 9 in Large at top speed, before terrain,
+combat, mining, building or exploring the deeper layers. All sizes keep the
+same depth, mining distances and local movement/combat scale. Surface biome
+boundaries, the central crystal region, shrine spacing and treasure count
+scale with world length. Camp and its starter mine stay close together.
+The seeded world has caves, three widely separated shrine chambers, buried
+treasure rooms (192 / 384 / 768 by size), surface berries, trees and copper,
+iron and chaos shard deposits.
 There are 32 inventory items and 18 recipes: three pick tiers, an axe, two
 swords, a bow and arrows, a regenerating magic staff, armor, potions,
 heartstones, building materials and crafting stations. Seven quest stages
@@ -53,7 +72,7 @@ sound effects. Startup now attaches ROM audio before entering the mod scene.
 
 ## Biomes
 
-New worlds run west to east through Angel Island (tiles 1–2,047), Marble
+Medium worlds run west to east through Angel Island (tiles 1–2,047), Marble
 Garden (2,048–3,071), Mushroom Hill (3,072–4,095), Carnival Night
 (4,096–5,119), Icecap (5,120–6,143), Sandopolis (6,144–7,167) and
 Launch Base (7,168–8,190). Camp stays near the western edge of Angel Island.
@@ -62,7 +81,7 @@ Pan with arrows/pad directions, scroll horizontally with the mouse wheel,
 or click the surface strip to inspect another part of the world. Reopening
 centers the map on you. Undiscovered underground terrain stays hidden.
 
-| Region | Where to explore in new worlds | Enemies |
+| Region | Where to explore in Medium worlds | Enemies |
 | --- | --- | --- |
 | Angel Island | Western palm jungle | Rhinobot, Monkey Dude, Bloominator |
 | Marble Garden | Ancient highlands | Spiker |
@@ -76,6 +95,8 @@ centers the map on you. Undiscovered underground terrain stays hidden.
 | Hidden Palace | Central crystal region: tiles 3,072–5,119, depth 172 or more | Crystal Orbinaut |
 | Sky Sanctuary | More than 56 tiles above the surface, east of tile 2,048; mineable cloud ruins with caches | Egg Robo |
 
+Small uses half the listed horizontal coordinates; Large uses double.
+Depth thresholds stay the same in all three sizes.
 Depth is measured below the local surface. Hidden Palace takes precedence
 over Lava Reef in its crystal region. Sandopolis tombs begin at depth 32.
 Enemies use their native ROM artwork and source-zone palettes with creator
@@ -187,10 +208,12 @@ available from pause when a warden is not active.
 
 Version 1 worlds remain compatible at their original **256 × 96** size, with
 terrain, builds, resources, discoveries, shrine locations and quests retained.
-They gain the biome enemy roster. **Select New Frontier to get the expanded
-world**; the confirmation displays its size. Existing worlds are not stretched
+They gain the biome enemy roster. **Select New Frontier and choose a size to get an expanded
+world**; the selector displays the available dimensions. Existing worlds are not stretched
 or overwritten by loading them. Compact saves retain the earlier biome/depth
-boundaries. Version 2 saves record world dimensions and all enemy types.
+boundaries. Version 2 saves record world dimensions and all enemy types. Existing
+8,192 × 384 worlds are Medium; size selection changes only newly generated
+worlds, and cannot resize a world you have already mined or built in.
 
 One world is saved automatically after every 30 seconds of active simulation,
 on save-and-return, and on scene exit. The engine keeps it under
@@ -206,7 +229,9 @@ before starting a new frontier. New Frontier replaces the active world after
 confirmation. Mod scenes use their own save state; stock developer rewind
 does not rewind this adventure.
 
-The creator tests cover expanded and compact biome/depth boundaries, actual
+The creator tests cover every selectable world length, keyboard/mouse size
+selection, cancellation and continued-save sizing, expanded and compact
+biome/depth boundaries, actual
 biome spawn selection, enemy attacks and collision, large-world forward replay,
 version 1 loading, chunk publication failures and missing-part backup recovery, music transitions without
 song restarts, boss overrides, saved-region music, recoil-safe enemy facing,

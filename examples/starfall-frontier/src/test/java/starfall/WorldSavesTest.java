@@ -18,7 +18,7 @@ class WorldSavesTest {
         public List<String> list(){return List.copyOf(files.keySet());}
     }
     @Test void chunkedPublicationRecoversBackupCleansOldGenerationsAndSurvivesInterruptedWrites() {
-        Storage storage=new Storage();World world=new World(73);
+        Storage storage=new Storage();World world=new World(73,WorldSize.LARGE);
         // Dense, valid edits force multiple files regardless of terrain compression changes.
         Random random=new Random(12);for(int i=0;i<world.tiles.length;i++)world.tiles[i]=(byte)random.nextInt(World.EMBER+1);
         String first=SaveCodec.encode(world);assertTrue(first.length()>750000);

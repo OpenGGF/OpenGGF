@@ -21,6 +21,9 @@ class TestStarfallFrontierScene {
             harness.open(harness.apply(GameServices.module()),work.resolve("saves"),528,224);
             harness.host().draw(null,null);
             harness.press(GLFW_KEY_ENTER);
+            assertEquals("NEW",harness.scene().getClass().getMethod("screen").invoke(harness.scene()));
+            harness.host().draw(null,null);
+            harness.press(GLFW_KEY_ENTER);
             assertEquals("PLAY",harness.scene().getClass().getMethod("screen").invoke(harness.scene()));
             harness.input().handleKeyEvent(GLFW_KEY_RIGHT,GLFW_PRESS);
             for(int i=0;i<90;i++)harness.tick();
