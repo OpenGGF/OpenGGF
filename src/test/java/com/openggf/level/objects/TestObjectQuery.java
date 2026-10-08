@@ -22,7 +22,7 @@ class TestObjectQuery {
     public static final class Probe extends AbstractObjectInstance implements ModRewindRecreatable {
         int counter;
         public Probe(ObjectSpawn spawn) { super(spawn,"Query probe"); }
-        public void update(int count,PlayableEntity player) { counter++; }
+        public void update(int vIntRunCount,PlayableEntity player) { counter++; }
         public void appendRenderCommands(List<GLCommand> commands) { }
         public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
             assertNotNull(context.objects());
@@ -70,5 +70,28 @@ class TestObjectQuery {
         assertTrue(context.objects().activeObjectsOfType(Probe.class).isEmpty());
         assertTrue(context.payload(PerObjectRewindSnapshot.ObjectSubclassRewindExtra.class).isEmpty());
         assertDoesNotThrow(()->context.enqueuePendingPlayerBoundEntry(Probe.class));
+    }
+
+    @Test void creatorReconstructionAllowsAbsentOptionalRestoreServices() {
+        var spawn=new ObjectSpawn(10,20,0,0,0,false,20);
+        var context=new ObjectReconstructionContext(new RewindRecreateContext(spawn,null,null));
+        assertSame(spawn,context.spawn()); assertNull(context.services());
+        assertSame(ObjectQuery.EMPTY,context.objects()); assertNull(context.players());
+        assertTrue(context.payload(PerObjectRewindSnapshot.ObjectSubclassRewindExtra.class).isEmpty());
+        assertDoesNotThrow(()->context.enqueuePendingPlayerBoundEntry(Probe.class));
+    }
+
+    @Test void creatorReconstructionQueriesTheRestoringManagerWithoutOptionalServices() {
+        var manager=new ObjectManager(List.of(),new ObjectRegistry() {
+            public ObjectInstance create(ObjectSpawn spawn) { return new Probe(spawn); }
+            public void reportCoverage(List<ObjectSpawn> spawns) { }
+            public String getPrimaryName(int id) { return "Query probe"; }
+        },0,null,null,null,null,new StubObjectServices());
+        Probe parent=manager.createDynamicObject(()->new Probe(new ObjectSpawn(10,20,0,0,0,false,20)));
+        var context=new ObjectReconstructionContext(new RewindRecreateContext(
+                parent.getSpawn(),null,null,manager,null));
+        assertNull(context.services()); assertNull(context.players());
+        assertEquals(List.of(parent),context.objects().activeObjectsOfType(Probe.class));
+        assertSame(parent,context.objects().resolve(context.objects().identityOf(parent).orElseThrow()).orElseThrow());
     }
 }

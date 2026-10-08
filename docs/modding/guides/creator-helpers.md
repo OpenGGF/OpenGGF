@@ -309,7 +309,7 @@ path. The existing expert reconstruction contract remains available.
 
 Save providers receive one immutable `RuntimeSaveContext` with the current zone
 key, act, lives, continues, emerald state and selected save/team information.
-`captureRuntimeFields(zoneState)` supplies optional game-owned JSON inputs at the
+`captureSaveFields(zoneState)` supplies optional game-owned JSON inputs at the
 save boundary. The host freezes nested string-keyed maps and lists before
 `capture(reason, context)` reads `capturedFields()`. Describe the custom payload
 and its version in the mod, and use `restoreProgress` for supported custom

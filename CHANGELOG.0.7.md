@@ -967,6 +967,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   zone events use deterministic ordering and inspectable conflict decisions.
   Returned callbacks, decoded-level transforms and shared service/rewind graphs
   retain the verified owner's fault and restoration boundaries.
+  Save-field inputs are frozen through the provider's owner boundary, standalone
+  audio profiles can omit a native ROM loader, and object reconstruction preserves
+  optional restore services without exposing runtime fallback access.
   Shared helpers cover standalone assembly, character landing/reset hooks,
   immutable physics and placement edits, bounded storage and captured state,
   authored fonts and overlays, remappable actions and ROM-qualified scene art.

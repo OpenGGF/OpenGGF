@@ -67,6 +67,8 @@ public MyStandaloneModule(String owner, Level loadedLevel) {
 
 The typed spec supplies the identifier/game code, no-ROM game loader, zone/act
 registry, initialization, common progression saves and `GameAudioProfile.silentNative()`.
+Audio profiles can inherit the optional `createSmpsLoader(Rom)` default when they
+use only authored audio. Native and expert profiles retain their loader overrides.
 Add ordered acts through `.zone(name, acts...)` and
 configure touch responses, sidekick support, audio or saves when needed. A declared
 act includes its level index, decoded level, start position and owned streamed
@@ -191,7 +193,7 @@ Continue restores the namespaced main and sidekick identities.
 `StandaloneGameSpec`'s default saves preserve that common team/location flow. Use
 `.saveSnapshotProvider(SaveSnapshotProvider)` for additional quest flags, inventories or progression.
 The provider receives an immutable `RuntimeSaveContext` with captured zone/act,
-team and common progress. Its optional `captureRuntimeFields(ZoneRuntimeState)` can
+team and common progress. Its optional `captureSaveFields(ZoneRuntimeState)` can
 capture additional runtime inputs once; maps/lists and supported JSON scalar values
 are defensively frozen inside the provider's owner boundary before publication.
 Invalid returned data faults that owner and required dependents. The payload returned
