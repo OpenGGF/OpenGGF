@@ -178,6 +178,86 @@ class TestEggmansSkyScene {
         }
     }
 
+    @Test
+    void blueCrystalsProvideLaunchFuelNearFreshLandingSites() throws Exception {
+        try (ExampleModHarness harness = open()) {
+            for (long seed : new long[] {7, 42, 123, 2026}) {
+                assertTrue(harness.debugJump("new:" + seed));
+                play(harness, 320);
+                Object game = harness.scene().getClass().getMethod("game").invoke(harness.scene());
+                Object surface = game.getClass().getMethod("mode").invoke(game);
+                Object ship = surface.getClass().getField("ship").get(surface);
+                float startX = ship.getClass().getField("x").getFloat(ship);
+                Object terrain = surface.getClass().getField("terrain").get(surface);
+                int hydrogen = harness.loader().loadClass("eggsky.game.Catalog").getField("DIHYDROGEN").getInt(null);
+                List<?> things = (List<?>) surface.getClass().getField("things").get(surface);
+                int nearbyYield = 0;
+                for (Object thing : things) {
+                    Class<?> type = thing.getClass();
+                    if (type.getField("yield").getInt(thing) != hydrogen) continue;
+                    float x = type.getField("x").getFloat(thing);
+                    float dx = (float) terrain.getClass().getMethod("dx", float.class, float.class)
+                            .invoke(terrain, startX, x);
+                    if (Math.abs(dx) > 768) continue;
+                    assertTrue((boolean) type.getMethod("mineable").invoke(thing));
+                    var sprite = (com.openggf.mods.scene.SceneSprite) type.getField("sprite").get(thing);
+                    boolean visible = false;
+                    for (int y = 0; y < sprite.height(); y++) {
+                        for (int px = 0; px < sprite.width(); px++) {
+                            visible |= (sprite.image().pixel(px, y) >>> 24) != 0;
+                        }
+                    }
+                    assertTrue(visible, "crystal art is visible");
+                    nearbyYield += type.getField("yieldCount").getInt(thing);
+                }
+                assertTrue(nearbyYield >= 40, "seed " + seed + " has only " + nearbyYield + " nearby hydrogen");
+            }
+        }
+    }
+
+    @Test
+    void eggmanPodAndExhaustFaceTheDirectionOfTravel() throws Exception {
+        try (ExampleModHarness harness = open()) {
+            Object game = harness.scene().getClass().getMethod("game").invoke(harness.scene());
+            Class<?> shipType = harness.loader().loadClass("eggsky.surface.Ship");
+            Object ship = shipType.getConstructor().newInstance();
+            var canvas = org.mockito.Mockito.mock(com.openggf.mods.scene.SceneCanvas.class);
+            for (int facing : new int[] {-1, 1}) {
+                org.mockito.Mockito.clearInvocations(canvas);
+                shipType.getField("facing").setInt(ship, facing);
+                shipType.getMethod("draw", game.getClass(), com.openggf.mods.scene.SceneCanvas.class,
+                        float.class, float.class, boolean.class, int.class)
+                        .invoke(ship, game, canvas, 200f, 100f, true, -1);
+                var styles = org.mockito.ArgumentCaptor.forClass(com.openggf.mods.scene.SceneDraw.class);
+                org.mockito.Mockito.verify(canvas, org.mockito.Mockito.times(3)).draw(
+                        org.mockito.ArgumentMatchers.any(com.openggf.mods.scene.SceneSprite.class),
+                        org.mockito.ArgumentMatchers.anyFloat(), org.mockito.ArgumentMatchers.anyFloat(), styles.capture());
+                for (var style : styles.getAllValues()) assertEquals(facing > 0, style.flipX());
+            }
+            // These screens draw ROM frames directly rather than using Ship.draw.
+            assertTrue(harness.debugJump("new:42"));
+            play(harness, 320);
+            Object art = game.getClass().getField("art").get(game);
+            Object body = art.getClass().getMethod("frame", String.class, int.class).invoke(art, "ship", 5);
+            for (String name : new String[] {"eggsky.ui.TitleMode", "eggsky.ui.IntroMode",
+                    "eggsky.ui.EndingMode", "eggsky.station.StationMode"}) {
+                Class<?> type = harness.loader().loadClass(name);
+                Object screen = type.getConstructor().newInstance();
+                type.getMethod("enter", game.getClass()).invoke(screen, game);
+                var age = type.getDeclaredField("age");
+                age.setAccessible(true);
+                age.setInt(screen, 400);
+                org.mockito.Mockito.clearInvocations(canvas);
+                type.getMethod("draw", game.getClass(), com.openggf.mods.scene.SceneCanvas.class)
+                        .invoke(screen, game, canvas);
+                org.mockito.Mockito.verify(canvas).draw(
+                        org.mockito.ArgumentMatchers.same((com.openggf.mods.scene.SceneSprite) body),
+                        org.mockito.ArgumentMatchers.anyFloat(), org.mockito.ArgumentMatchers.anyFloat(),
+                        org.mockito.ArgumentMatchers.argThat(style -> style.flipX()));
+            }
+        }
+    }
+
     private static Path findSave(Path root) throws Exception {
         if (!Files.exists(root)) {
             return null;

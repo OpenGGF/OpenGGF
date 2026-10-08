@@ -47,3 +47,44 @@ small or have no ground.
 - Pirates first orbited behind the player (only edge markers visible); they now jockey for
   position ahead with occasional attack runs, with aim assist, a lock-on reticle and a radar.
 - Measured cost through the scene host: surface ≈0.05 ms, space ≈0.5 ms per update+draw.
+
+## First-build bug reports (2026-10-08)
+
+Investigated from `2df2ad46d6` in the current `feature/ai-eggmans-sky` checkout:
+
+- Silence was not intentional. `ModSceneLauncher` bypassed title/level initialization,
+  leaving native IDs without their active ROM audio source. Install that source before
+  scene entry. Testing after `SharedLevel.load` would hide the bug; the new launcher
+  regression checks final music PCM, stops music, then checks an isolated ring effect.
+- `Map_RobotnikShip` faces left by default. The head, pod and exhaust now flip when
+  travelling right; the muzzle and exhaust positions already followed travel direction.
+  Direct draws in the title, intro, ending and station also face right.
+- Di-hydrogen existed in the random table (6% crystal selection, 60% of those blue,
+  reduced further when choosing cave floors), but no nearby supply was guaranteed.
+  Add three blue crystals on available exposed ground per 512-pixel sector, yielding
+  at least 42 units where all three fit. Separate `#fuel` IDs and no additional random
+  draws preserve the original placement IDs/sequence. Existing saves gain these deposits.
+  Tests inspect populated, visible, mineable crystals near several fresh landing sites.
+
+Validation uses focused scene, startup and audio regressions: the change-based plan
+selects all ordinary classes due to unclassified example/launcher paths (and an unrelated
+untracked trace movie), but these changes do not alter the audio driver, frame clock,
+shared physics or public API. No engine-wide suite claim is made.
+
+Completed checks on the working changes above `2df2ad46d6` (Java 21, real S3K ROM
+passed by absolute `-Ds3k.rom.path`; all three supplied ROMs available to the scene):
+
+- `maven_queue.py --lean -Dmse=off -Dtest=TestEggmansSkyScene,TestGameLoopAudioPresentationModes,TestModSceneHost,TestEngineConfiguredHeadlessStartup,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`:
+  114 tests passed, zero failures/errors/skips. Includes all supplied biomes and the
+  four fresh expedition seeds; the two identically named level-loading classes both ran.
+- `maven_queue.py --lean -Dmse=off -Dtest=TestModSceneLauncherAudio test`: one test
+  passed with zero skips, checking within-channel PCM variation for music and SFX.
+- `maven_queue.py --lean -Dmse=off -Dtest=TestEggmansSkyScene test`: all five
+  passed again after the direct-screen facing fixes, zero skips. The direction test
+  now also checks the title, intro, ending and station pod draws.
+- `python3 examples/build_example.py eggmans-sky`: engine compilation and mod packaging/
+  validation succeeded; final mod-only rebuild with `--skip-engine` also passed; output `target/examples/eggmans-sky/eggmans-sky.jar`.
+
+The audio fix is in the engine launcher, so the rebuilt mod needs the updated engine;
+`python3 examples/build_example.py eggmans-sky --run` uses both from this checkout.
+Speaker-device listening and a full ordinary/guard run were not performed.

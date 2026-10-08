@@ -70,7 +70,7 @@ public final class IntroMode implements Mode {
         SceneSprite body = g.art.frame("ship", Art.SHIP_BODY);
         SceneSprite head = g.art.frame("ship", hit ? Art.SHIP_HEAD_HURT : age > 250 ? Art.SHIP_HEAD_IDLE1
                 : (age / 30) % 3 == 0 ? Art.SHIP_HEAD_LAUGH : Art.SHIP_HEAD_IDLE0);
-        SceneDraw style = SceneDraw.plain();
+        SceneDraw style = SceneDraw.plain().withFlipX(true);
         if (hit && (age / 3) % 2 == 0) {
             style = style.withFlash(0xFFFFFFFF);
         }

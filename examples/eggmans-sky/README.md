@@ -45,7 +45,7 @@ Knuckles* on its title returns to the stock game; holding Escape returns to the 
 
 1. **Crash landing.** An intro shows the Tornado shooting the Egg Mobile down onto a gentle
    world. The objective panel walks through the first loop: mine Ferrite, laser blue
-   Di-hydrogen crystals, refine both in the menu, craft **Egg Fuel**, fuel the launch thrusters
+   Di-hydrogen crystals (regular exposed deposits supplement the random spawns), refine both in the menu, craft **Egg Fuel**, fuel the launch thrusters
    and hold Up + C to blast into orbit.
 2. **Planets.** Each planet is a loop of terrain (walk all the way round and you come back)
    remixed from one stock act, in its own Mega Drive palette, with a climate (temperate, lush,

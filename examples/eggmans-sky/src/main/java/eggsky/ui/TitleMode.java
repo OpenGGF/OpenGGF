@@ -167,13 +167,13 @@ public final class TitleMode implements Mode {
         SceneSprite flame = g.art.frame("ship", Art.SHIP_FLAME);
         float sy = 112 + (float) Math.sin(age * 0.04) * 6;
         if (flame != null && (age / 2) % 2 == 0) {
-            c.draw(flame, shipX - 30, sy + 2, SceneDraw.plain().withScale(1.3f));
+            c.draw(flame, shipX - 30, sy + 2, SceneDraw.plain().withFlipX(true).withScale(1.3f));
         }
         if (head != null) {
-            c.draw(head, shipX, sy - 0x1C, SceneDraw.plain());
+            c.draw(head, shipX, sy - 0x1C, SceneDraw.plain().withFlipX(true));
         }
         if (body != null) {
-            c.draw(body, shipX, sy, SceneDraw.plain());
+            c.draw(body, shipX, sy, SceneDraw.plain().withFlipX(true));
         }
         // Logo.
         float drop = Math.min(1, age / 40f);

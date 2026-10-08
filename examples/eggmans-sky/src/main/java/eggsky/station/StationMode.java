@@ -361,10 +361,10 @@ public final class StationMode implements Mode {
         SceneSprite head = g.art.frame("ship", (age / 20) % 2 == 0 ? Art.SHIP_HEAD_IDLE0 : Art.SHIP_HEAD_IDLE1);
         float bob = (float) Math.sin(age * 0.05) * 1.5f;
         if (head != null) {
-            c.draw(head, 70, 128 + bob - 0x1C, SceneDraw.plain());
+            c.draw(head, 70, 128 + bob - 0x1C, SceneDraw.plain().withFlipX(true));
         }
         if (ship != null) {
-            c.draw(ship, 70, 128 + bob, SceneDraw.plain());
+            c.draw(ship, 70, 128 + bob, SceneDraw.plain().withFlipX(true));
         }
         // The Egg Robo shopkeeper.
         // The Egg Robo hovering behind the counter (sub_91988: body frame 1 or 3 with the thruster

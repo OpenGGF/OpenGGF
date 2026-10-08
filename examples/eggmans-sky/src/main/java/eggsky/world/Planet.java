@@ -498,6 +498,21 @@ public final class Planet {
                 placements.add(new Placement(P_FAUNA, x, y, rng.nextInt(fauna.size()), key + "#f" + i));
             }
         }
+        // Launch fuel must remain obtainable independently of the sparse random crystal
+        // roll. Add exposed deposits throughout the circumference (three crystals yield
+        // at least 42 di-hydrogen). Separate IDs and no RNG consumption preserve existing
+        // placements and loot identities when an expedition made by an older build loads.
+        for (int sector = 0; sector < w; sector += 512) {
+            int placed = 0;
+            for (int x = sector + 24; x < Math.min(w, sector + 512) && placed < 3; x += 32) {
+                int y = terrain.topFloor(x);
+                if (y < 40) {
+                    continue;
+                }
+                placements.add(new Placement(P_CRYSTAL, x, y, 0, key + "#fuel" + sector + ":" + placed));
+                placed++;
+            }
+        }
     }
 
     /** All species on the planet. */

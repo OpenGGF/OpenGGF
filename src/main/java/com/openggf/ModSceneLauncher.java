@@ -42,6 +42,16 @@ final class ModSceneLauncher {
         if (factory == null || config.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
             return false;
         }
+        // Startup scenes bypass initializeTitleScreenMode/level loading, so install the
+        // selected module's ROM audio before the scene's enter callback requests music.
+        if (!GameModuleRouting.isStandalone(module)) {
+            try {
+                GameServices.audio().setAudioProfile(module.getAudioProfile());
+                GameServices.audio().setRom(GameServices.rom().getRom());
+            } catch (IOException e) {
+                throw new IllegalStateException("Failed to load ROM audio for startup scene", e);
+            }
+        }
         SceneServices services = new SceneServices(
                 GameServices.audio(),
                 romArt(module),

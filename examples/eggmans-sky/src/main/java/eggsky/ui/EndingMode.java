@@ -95,10 +95,10 @@ public final class EndingMode implements Mode {
             SceneSprite head = g.art.frame("ship", (age / 12) % 2 == 0 ? Art.SHIP_HEAD_LAUGH : Art.SHIP_HEAD_IDLE0);
             float sx = Math.min(80, -60 + (age - 300) * 1.2f);
             if (head != null) {
-                c.draw(head, sx, 150 - 0x1C, SceneDraw.plain());
+                c.draw(head, sx, 150 - 0x1C, SceneDraw.plain().withFlipX(true));
             }
             if (body != null) {
-                c.draw(body, sx, 150, SceneDraw.plain());
+                c.draw(body, sx, 150, SceneDraw.plain().withFlipX(true));
             }
         }
         Font f = g.font;

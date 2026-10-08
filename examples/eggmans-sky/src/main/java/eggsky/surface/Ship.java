@@ -246,7 +246,8 @@ public final class Ship {
         }
         float bob = (float) Math.sin(g.ticks * 0.08) * (onCushion ? 1.2f : 0.6f);
         float py = sy + bob;
-        SceneDraw style = SceneDraw.plain().withFlipX(!right);
+        // Map_RobotnikShip is left-facing; mirror the head, pod and exhaust to face right.
+        SceneDraw style = SceneDraw.plain().withFlipX(right);
         if (hurtTicks > 0 && (g.ticks / 2) % 2 == 0) {
             style = style.withFlash(0xFFFFFFFF);
         }
@@ -255,7 +256,7 @@ public final class Ship {
         if (flame != null && (thrusting || boosting || (g.ticks / 2) % 3 != 0)) {
             float fx = sx - facing * (halfWidth + 6 + (boosting ? 6 : 0));
             float scale = boosting ? 1.6f + (g.ticks % 3) * 0.2f : 1f;
-            c.draw(flame, fx, py + 2, SceneDraw.plain().withFlipX(!right).withScale(scale));
+            c.draw(flame, fx, py + 2, SceneDraw.plain().withFlipX(right).withScale(scale));
         }
         int head = headOverride >= 0 ? headOverride
                 : hurtTicks > 0 ? Art.SHIP_HEAD_HURT
