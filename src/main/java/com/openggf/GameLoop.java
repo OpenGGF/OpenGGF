@@ -128,6 +128,7 @@ public class GameLoop {
     final SonicConfigurationService configService;
     private final AudioManager audioManager;
     private boolean gameplayAudioRateOwned;
+    private final GameLoopSpecialStageInput specialStagePacingInput = new GameLoopSpecialStageInput();
     private final OuterFramePresentation outerFramePresentation;
     private final RomManager romManager;
     private final DebugOverlayManager debugOverlayManager;
@@ -863,8 +864,9 @@ public class GameLoop {
     /** Interactive 60/50 Hz presentation entry; canonical {@link #step()} remains one tick. */
     public void stepPresentationFrame() {
         gameplayAudioRateOwned = GameLoopGameplayPacing.step(this, resolveGameplayModeContext(),
-                () -> levelManager == null ? null : levelManager.getCurrentLevel(), GameServices.module(),
-                inputHandler, audioManager, this::canUseGameplayPacing, pacing -> {
+                () -> levelManager == null ? null : levelManager.getCurrentLevel(),
+                inputHandler, audioManager, this::canUseGameplayPacing, this::canUseGameplayPacingOutsideRewind,
+                liveRewindManager::isRewindingOrReleasing, pacing -> {
                     try {
                         GameLoopZeroStepPresentation.run(currentGameMode, inputHandler, configService,
                                 playbackDebugManager, userPaused, escapeToMasterTitleController,
@@ -875,7 +877,7 @@ public class GameLoop {
                     } finally {
                         runAfterStepMasterTitleLaunchCallbackIfPresent(); presenceManager.tick();
                     }
-                }, gameplayAudioRateOwned);
+                }, specialStagePacingInput, gameplayAudioRateOwned);
     }
 
     private void releaseGameplayAudioRate() {
@@ -886,16 +888,18 @@ public class GameLoop {
     }
 
     private boolean canUseGameplayPacing() {
-        return currentGameMode == GameMode.LEVEL
+        return canUseGameplayPacingOutsideRewind()
+                && GameLoopPacingInterruption.allows(liveRewindManager, configService, inputHandler);
+    }
+
+    private boolean canUseGameplayPacingOutsideRewind() {
+        return GameLoopPacingActivity.allows(currentGameMode,
+                currentGameMode == GameMode.SPECIAL_STAGE ? getActiveSpecialStageProvider() : null,
+                activeBonusStageProvider, titleCardProvider, camera, levelManager, specialStageRewindBoundaryThisFrame)
                 && !isPaused() && !isNonRewindableTransitionPending()
                 && !ExternalFrameOrInputOwnership.active(engineServices)
                 && (inputHandler == null || !inputHandler.hasLogicalOverride())
-                && !userRecordingControls.shouldPumpFastForward()
-                && !liveRewindManager.isRewindingOrReleasing()
-                && !(configService.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED)
-                    && inputHandler != null
-                    && inputHandler.isKeyDown(configService.getInt(SonicConfiguration.LIVE_REWIND_KEY)))
-                && (camera == null || camera.getFocusedSprite() == null || !camera.getFocusedSprite().getDead());
+                && !userRecordingControls.shouldPumpFastForward();
     }
 
     public void closePresence() {
@@ -4724,11 +4728,7 @@ public class GameLoop {
             return;
         }
 
-        SpecialStageInputMapper.MappedInput mapped =
-                SpecialStageInputMapper.map(inputHandler.logical());
-        ssProvider.handleInput(mapped.p1Held(), mapped.p1Pressed(),
-                inputHandler.isShiftDown(), inputHandler.isControlDown());
-        ssProvider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
+        specialStagePacingInput.apply(ssProvider, inputHandler, resolveGameplayModeContext().getWorldSession());
     }
 
     // ==================== Ending / Credits Sequence Methods ====================

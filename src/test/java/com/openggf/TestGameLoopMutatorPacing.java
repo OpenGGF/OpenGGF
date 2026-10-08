@@ -192,6 +192,7 @@ class TestGameLoopMutatorPacing {
         var world = MutatorPhysicsWorld.create(policy::get);
         var context = mock(GameplayModeContext.class);
         when(context.getWorldSession()).thenReturn(world);
+        when(context.isGameplayRuntimeReady()).thenReturn(true);
         var pacing = WorldSessionPolicyAccess.getService(world, GameplayMutatorPacing.class);
         InputHandler input = new InputHandler(InputBindingFactory.supplier(SonicConfigurationService.getInstance()));
         PumpLoop loop = new PumpLoop(input);

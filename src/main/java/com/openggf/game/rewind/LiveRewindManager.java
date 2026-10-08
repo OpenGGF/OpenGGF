@@ -263,7 +263,8 @@ public final class LiveRewindManager {
             return;
         }
         inputSource.discardAfter(rewindController.currentFrame());
-        inputSource.appendFrame(input, config);
+        inputSource.appendFrame(input, config, LiveRewindPacingFrame.capture(mode, installedGameplayMode,
+                mode == GameMode.SPECIAL_STAGE ? specialStageProviderSupplier.get() : null, input));
         if (rewindController.recordExternalStep()) {
             pruneOldHistory();
         }

@@ -71,6 +71,10 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         admissionError = admission.accepted() ? "" : "Reload kept prior settings: " + admission.message();
     }
 
+    @Override public void beforeSpecialStageForwardTick() {
+        if (!state.isClosed()) state.onForwardTick();
+    }
+
     @Override public void bindRoster(SpriteManager sprites) {
         SpriteManagerInternalAccess.bindMutatorPolicies(sprites, new PlayableMutatorPolicySource() {
             @Override public void beforeForwardTick() { state.onForwardTick(); }

@@ -44,6 +44,27 @@ public final class GameplayMutatorPacing implements RewindSnapshottable<Gameplay
     public PlayerInputState pendingPlayer1() { return player1; }
     public PlayerInputState pendingPlayer2() { return player2; }
 
+    /** Internal native-controller acknowledgement: consume only edges actually latched, independently per player. */
+    public void discardUnsupportedPlayer2() {
+        player2 = PlayerInputState.neutral();
+        if (!hasEdges(player1)) clearPendingInput();
+    }
+    public void acknowledgeNativeSamples(int p1Accepted, int p2Accepted) {
+        player1 = withoutAccepted(player1, p1Accepted);
+        player2 = withoutAccepted(player2, p2Accepted);
+        if (!hasEdges(player1) && !hasEdges(player2)) clearPendingInput();
+    }
+    private static PlayerInputState withoutAccepted(PlayerInputState player, int accepted) {
+        int actions = ((accepted & 0x40) != 0 ? 1 : 0)
+                | ((accepted & 0x10) != 0 ? 2 : 0) | ((accepted & 0x20) != 0 ? 4 : 0);
+        return PlayerInputState.of(player.heldMask(), player.pressedMask() & ~(accepted & 0x0f),
+                player.actionHeldMask(), player.actionPressedMask() & ~actions,
+                player.startHeld(), player.startPressed() && (accepted & 0x80) == 0);
+    }
+    private static boolean hasEdges(PlayerInputState player) {
+        return player.pressedMask() != 0 || player.actionPressedMask() != 0 || player.startPressed();
+    }
+
     public void clearPendingInput() {
         player1 = PlayerInputState.neutral();
         player2 = PlayerInputState.neutral();
