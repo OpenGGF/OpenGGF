@@ -158,6 +158,23 @@ class TestMutatorWorldIntegration {
         press(screen,input,org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER,true);
         assertEquals(LevelInputOverlay.Command.NONE,screen.consumeCommand());
     }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints={org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER,org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE})
+    void helpBackUsesFixedKeyboardEdgesWithoutExitingTitle(int backKey) throws Exception {
+        var world=open(List.of(definition("gravity",MutatorScope.LIVE,o->List.of(new MutatorPolicy.DrySonicGravity(50)))));
+        var screen=new MutatorConfigurationScreen(world,"Help controls",null,c->{});screen.initialize();
+        var input=new com.openggf.control.InputHandler();
+        press(screen,input,org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN,false);
+        press(screen,input,org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN,false);
+        press(screen,input,org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER,false);
+        var page=MutatorConfigurationScreen.class.getDeclaredField("page");page.setAccessible(true);
+        assertEquals("HELP",page.get(screen).toString());
+        press(screen,input,backKey,false);
+        assertEquals("HOME",page.get(screen).toString());
+        assertEquals(TitleScreenProvider.State.ACTIVE,screen.getState());
+        assertEquals(LevelInputOverlay.Command.NONE,screen.consumeCommand());
+        assertEquals(100,MutatorWorldAccess.state(world).effective().gravityPercent());
+    }
     @Test void titleBackSaveFailureRetainsDraftAndRetryQueuesHubExactlyOnce() throws Exception {
         var preparations=new java.util.concurrent.atomic.AtomicInteger();
         var world=open(List.of(definition("gravity",MutatorScope.LIVE,o->{preparations.incrementAndGet();return List.of(new MutatorPolicy.DrySonicGravity(50));})));

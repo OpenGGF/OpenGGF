@@ -4,12 +4,33 @@ Original implementation base: `6d817a9d74f135714f3da59ab9aab156cc09473e`.
 This is an opening-play prototype, not certification of the entire stock act.
 The [implementation plan](../../plans/2026-10-07-mutators-prototype-implementation.md)
 and [creator guide](../../../modding/guides/mutators.md) own delivery and authoring.
-The final integration base is `37a57ebdbe62864737f39e7b14c72932fbaf3d74`.
+The earlier integration base is `37a57ebdbe62864737f39e7b14c72932fbaf3d74`.
 Its intent-merged 16-class focused invocation 35517 passed 106 cases, zero
 failures/errors/skips, including the native revision/recreation replay and
 stock power-up music rules. Captures below use normal compiled merge source
 `157401f252` against 2fc; the subsequent 37a merge changes tools/docs only.
 SDK verification and affected traces completed; final combined validation is pending.
+
+The composed repair source `0a874c2371` contains published `02796b4` and Sitar's
+SMPS/scene contracts. Its fresh 2,077-frame GPU/state/PCM walkthrough observes
+title, help (620), settings, native animation (1,130 → 1,135), Stealth (1,360),
+resume and restart. The real Engine window capture observes play, both LIVE
+edits, restart, hub return and repeated launch, with close zero and all owned
+cleanup. That run required an exact owned frameless window mapping workaround;
+the fresh default-WM attempt did not become viewable within 90 seconds. Device
+monitor PCM has varying AC output around navigation and gameplay, including
+producer rebuilds. Physical speaker output and an isolated SFX waveform are
+not certified. A separately inspected native help image shows the help page;
+its synthetic Escape snapshot stayed there, so it is not evidence of Back.
+Both actual fixed keyboard Back edges pass the controlled production-menu test.
+
+After those captures, published `33d3976c5` adds optional capture pixel readback
+and fixture cleanup. Intent composition retains title drawing in the new
+draw-only method. Six native title/level/results pixel checks, two controlled
+help Back cases and 31 API cases pass (39 total, zero skips). Fresh compiled
+candidate export remains byte-identical, 20,392 lines. Earlier source evidence
+is retained under its original commit; required normal trace profile and final
+combined ordinary/fresh guards against actual destination remain pending.
 
 ## Supported cell and obligations
 

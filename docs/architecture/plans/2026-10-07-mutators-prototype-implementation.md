@@ -310,3 +310,48 @@ budgets are unchanged. SDK preparation, Javadoc packaging and artifact verificat
 completed successfully (44.192 seconds execution after 485 seconds queue wait).
 Current jars contain no obsolete moved policy classes. Composed-source audiovisual,
 trace/domain and final full ordinary/fresh-guards comparison are still pending.
+
+## Published capture composition and implementation handoff gate
+
+Repair merge `0a874c23712aaeb746bfc308997e86dc8e1aa47c` preserves original
+`6d817a9` provenance and published `02796b4` ancestry. Normal hooks passed.
+Fresh normal-class GPU/PCM capture contains 2,077 synchronized frames and
+1,661,600 stereo 48 kHz PCM frames. Inspected frames include title 600, help 620,
+options 704/774, native animation 1,130/1,135, Stealth 1,360, restored body 1,570,
+restart title card 1,800 and new level 2,076. Both configuration hold intervals
+retain position, velocity and camera. Native capture 15466 closes zero and
+cleans every owned resource; actual frames show Gravity/Stealth/resume/restart,
+hub retirement and two fresh launches. Exact owned PID/title, 640×448,
+depth 24 and viewable state are recorded. Default WM mapping failed within
+90 seconds; the successful path uses only this window's frameless mapping and
+child-only Pulse/keyutils/vblank environment, with the normal Engine loop limiter.
+Device PCM includes changing AC samples around navigation and play; neither
+physical speaker output nor an isolated SFX waveform is claimed.
+
+Native action filenames are not state evidence: the first named help image
+remained Home. A bounded 0.25-second press/release follow-up visibly opens Help,
+but its Escape image still shows Help. Controlled production-menu Enter/Escape
+Back cases both pass; synthetic host sampling remains a capture limitation.
+The original helper input lesson and cleanup tests remain maintained.
+
+Fetched destination `33d3976c53304dbbea1c695914ecdd7bfc64cf9d` includes
+optional pixel readback and fixture teardown improvements, not merely prose.
+Its intent composition preserves the title-first branch in draw-only rendering.
+Focused invocation 98392 compiles the composed source and passes 39 cases:
+six real title/level/results pixel checks (including a new S2 title no-readback
+check), two fixed-key Help Back cases and 31 public-policy/signature checks;
+zero failures/errors/skips, 74 seconds execution after 80 seconds queue wait.
+Fresh actual compiled export is byte-identical to the 20,392-line candidate pin.
+Descriptor/runtime remain unpublished 0.7.0 candidate. No published pin changed.
+
+Invocation 83012 ran 21 explicitly selected trace cases: 18 passed, three exact
+inherited assertions, zero errors/skips. Its invalid `-Ptrace` name did not
+activate a profile; this is recorded as incomplete normal-profile qualification.
+The corrected `trace-replay` profile is required after composition. No shared
+baseline is duplicated. Final combined validation uses the actual destination,
+full change-based selection and fresh guards, 150-minute execution caps and the
+existing ten-minute no-output rule; waiting is excluded. Latest published-base
+cost is about 109 minutes ordinary plus 3.6 minutes guards, not an ETA.
+All full assertion/skip identities must match the qualified baseline before
+handoff. Source remains lead-owned; feature push/PR is held for root-owned Opus
+polish and its separate promo-video stage.
