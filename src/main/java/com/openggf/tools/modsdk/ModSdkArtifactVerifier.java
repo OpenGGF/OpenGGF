@@ -22,7 +22,7 @@ public final class ModSdkArtifactVerifier {
             throw new IllegalStateException("SDK unexpectedly ran standalone: " + sdkOnly.output);
     }
 
-    private static void rejectTooling(Path jar) throws IOException {
+    static void rejectTooling(Path jar) throws IOException {
         try (JarFile archive=new JarFile(jar.toFile())) {
             if (archive.stream().anyMatch(entry -> entry.getName().startsWith("com/openggf/tools/modsdk/")
                     || entry.getName().startsWith("META-INF/openggf-mod-sdk/")

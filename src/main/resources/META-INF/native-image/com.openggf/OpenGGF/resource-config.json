@@ -11,6 +11,7 @@
       { "pattern": "load-time-profiles/.*\\.json" },
       { "pattern": "net/.*\\.json" },
       { "pattern": "\\QMETA-INF/openggf-mod-sdk/templates/\\E.*" },
+      { "pattern": "\\QMETA-INF/openggf-mod-sdk/starters/\\E.*" },
       { "pattern": "shaders/.*\\.(glsl|vert|frag)" },
       { "pattern": "\\Qorg/lwjgl/\\E.*" }
     ]
