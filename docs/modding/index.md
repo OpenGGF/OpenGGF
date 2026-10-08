@@ -23,6 +23,11 @@ enable them, and a boot notice lists any that were enabled. **Data-only music
 packs and reskins are unaffected and work on native builds.** To use code-bearing
 mods, run `OpenGGF-<ver>-jar-with-dependencies.jar` (or the universal jar).
 
+Experimental GraalVM runtime class loading provides a possible future path.
+The [native mod feasibility study](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md)
+records Community Edition licensing, external-JAR controls, registration results,
+and the remaining qualification work. This does not change native mod support.
+
 1. [Music pack](quickstarts/music-pack.md)
 2. [Data-only art reskin](quickstarts/reskin.md)
 3. [Object or badnik](quickstarts/object.md)

@@ -941,7 +941,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   setlists, shared tour progress, optional side gigs and satirical authored
   intermissions on Robotnik's shared tour. Quick play, no-fail practice,
   four difficulties, local co-op/score duels and direct-connect peer matches share
-  seven cosmetic performers and four real FM/PSG/DAC parts. ROM-pixel arms and
+  seven cosmetic performers and four real FM/PSG/DAC parts. Mistakes mute the
+  selected part and produce restrained, instrument-specific ROM-timbre fumbles;
+  local and online co-op retain a successful partner's part, while sequenced,
+  batched peer cues remain independent of scoring and cannot cross a rematch.
+  Generic scene part cues are bounded, pitch-gliding and pause/stop-owned.
+  ROM-pixel arms and
   hands layer over instruments and move on successful judgments with sound waves.
   Charts preserve native attacks, voice handoffs and medley tempo changes while
   curating density, chords, sustains, HOPO and Star Power. Independent player
@@ -1152,6 +1157,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   without reading back discarded pixels; screenshot checks keep pixel readback.
   Lower-rock puzzle checks compute each whole-world rewind diff once, and
   background checks read pixels only from frames used by their assertions.
+  The solo Sonic Sandopolis approach uses a shorter authored controller route,
+  with boss-entry and sand-defeat rewind checks beside the traversal checks.
   Strict byte validation, digest pins, ROM configurations, stress sizes, and real
   socket exchanges remain covered. An opt-in two-JVM test profile retains serial
   execution inside each worker. Public audio tests retain synthetic chip vectors;

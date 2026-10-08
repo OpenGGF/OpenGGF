@@ -84,6 +84,40 @@ class TestSitarHeroArcade {
         assertEquals(18, gestureAge(other, f.tick));
     }
 
+    @Test void soloMistakesMuteAndCueOnceWithoutAnIdleMissChorus() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        assertTrue(f.debug("practice:green-hill:BONGOS:sonic:MEDIUM"));
+        f.step();f.step();f.step();
+        f.music.player.position=150;f.step();
+        assertFalse(f.music.player.audible);
+        assertEquals(1,f.music.player.cues.size(),"first missed chord creates one ROM-part fumble");
+        f.music.player.position=1000;f.step();
+        assertEquals(1,f.music.player.cues.size(),"remaining idle misses stay quiet");
+        f.scene.exit(f);
+    }
+
+    @Test void wrongStrikeAndPauseInOneBatchRetainMutingOnResume() throws Exception {
+        for (boolean deferredPeer : List.of(false,true)) {
+            Fixture f=new Fixture(List.of("s1"));
+            assertTrue(f.debug("practice:green-hill:SITAR:sonic:MEDIUM"));
+            f.step();f.step();f.step();f.music.player.position=-50;
+            if (deferredPeer) {
+                // Isolate the scene's deferred-control branch; full handshake/pause ownership is tested by OnlineMatchChecks.
+                ScenePeer peer=mock(ScenePeer.class);when(peer.state()).thenReturn(ScenePeer.State.CONNECTING);
+                Class<?> peerType=harness.loader().loadClass("sitarhero.net.OnlineMatch");
+                Object match=peerType.getConstructor(ScenePeer.class,boolean.class,List.class).newInstance(peer,true,List.of("s1"));
+                var field=type.getDeclaredField("online");field.setAccessible(true);field.set(f.scene,match);
+            }
+            f.physical=new PhysicalInput(f.tick*50_000_000L,List.of(SceneKeys.UP,SceneKeys.ESCAPE),List.of(),List.of(
+                    new PhysicalInputEvent(f.sequence++,f.tick*50_000_000L,PhysicalInputEvent.Kind.KEY,-1,SceneKeys.UP,1),
+                    new PhysicalInputEvent(f.sequence++,f.tick*50_000_000L+1,PhysicalInputEvent.Kind.KEY,-1,SceneKeys.ESCAPE,1)),0);
+            f.step();assertEquals(deferredPeer?"PLAY":"PAUSED",f.screen());
+            assertFalse(f.music.player.audible,"wrong strike is applied before immediate or deferred pause");
+            if (!deferredPeer) {f.key(SceneKeys.ENTER);assertEquals("PLAY",f.screen());assertFalse(f.music.player.audible);}
+            f.scene.exit(f);
+        }
+    }
+
     private static int gestureAge(Object artist, long tick) throws Exception {
         var field = artist.getClass().getDeclaredField("motion"); field.setAccessible(true);
         Object motion = field.get(artist);
@@ -150,13 +184,17 @@ class TestSitarHeroArcade {
     }
     private static final class Player implements SceneMusicPlayer {
         long position;
-        boolean paused, stopped, speakerUnavailable;
+        boolean paused, stopped, speakerUnavailable, audible = true;
+        final List<String> cues = new ArrayList<>();
         Player(long position) { this.position = position; }
         public long samplePosition() { return position; }
         public long samplePositionAt(long nanos) { return position; }
         public void pause() { paused = true; }
         public void resume() { if (!speakerUnavailable) paused = false; }
-        public void setPartAudible(boolean value) { }
+        public void setPartAudible(boolean value) { audible = value; }
+        public boolean cuePart(long source, int duration, double from, double to, double gain, double pan) {
+            if(paused || stopped)return false; cues.add(source+":"+duration+":"+from+":"+to+":"+gain+":"+pan);return true;
+        }
         public void setWhammy(double value) { }
         public boolean finished() { return stopped || position >= 20_000; }
         public boolean paused() { return paused; }
@@ -524,8 +562,8 @@ class TestSitarHeroArcade {
         Fixture f = new Fixture(List.of("s1")); f.music.rate = 8_000;
         ScenePeer peer = mock(ScenePeer.class); when(peer.state()).thenReturn(ScenePeer.State.CONNECTED);
         when(peer.send(anyString())).thenReturn(true);
-        when(peer.poll()).thenReturn(List.of(new ScenePeer.Message("SH1 HELLO s1", 0),
-                new ScenePeer.Message("SH1 OFFER 1 green-hill BONGOS MEDIUM coop", 0))).thenReturn(List.of());
+        when(peer.poll()).thenReturn(List.of(new ScenePeer.Message("SH2 HELLO s1", 0),
+                new ScenePeer.Message("SH2 OFFER 1 green-hill BONGOS MEDIUM coop", 0))).thenReturn(List.of());
         Class<?> onlineType = harness.loader().loadClass("sitarhero.net.OnlineMatch");
         Object match = onlineType.getConstructor(ScenePeer.class, boolean.class, List.class).newInstance(peer, false, List.of("s1"));
         var field = type.getDeclaredField("online"); field.setAccessible(true); field.set(f.scene, match);
@@ -534,7 +572,7 @@ class TestSitarHeroArcade {
         f.key(SceneKeys.ESCAPE); assertEquals("LOBBY", f.screen());
         f.key(SceneKeys.ENTER); f.step(); f.step();
         assertEquals("LOBBY", f.screen()); assertEquals(true, onlineType.getMethod("ready").invoke(match));
-        verify(peer).send(matches("SH1 READY 1 8000 [0-9a-f]+")); f.scene.exit(f);
+        verify(peer).send(matches("SH2 READY 1 8000 [0-9a-f]+")); f.scene.exit(f);
     }
 
     @Test void mouseActivatesVisibleRowsAndIgnoresOutsideClicks() throws Exception {

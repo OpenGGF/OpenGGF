@@ -19,7 +19,8 @@ public final class ModApiVersion {
      * session-owned actual-PCM recording support creator rewind without giving
      * it developer-history or sound-driver restore ownership. Mixed-ROM startup
      * scenes expose supplied-game art, immutable timestamped physical input and
-     * bounded semantic ROM music with consumed-sample playback and section parts.
+     * bounded semantic ROM music with consumed-sample playback, section parts,
+     * and bounded pitch-gliding ROM-part cues that preserve the song clock.
      * Boot-prepared typed mutators declare independent action/option scopes,
      * immutable gravity/Stealth, scatter, head-presentation, semantic placement,
      * checkpoint, ring-award, stage-entry, defeat-knockback and pacing policies;

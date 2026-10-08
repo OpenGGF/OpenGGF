@@ -2699,6 +2699,7 @@ FIELD com.openggf.mods.scene.SceneKeys public,static,final int W
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int X
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int Y
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int Z
+FIELD com.openggf.mods.scene.SceneMusicPlayer public,static,final long PLAYHEAD
 FIELD com.openggf.mods.scene.SceneMusicPreparation$State public,static,final com.openggf.mods.scene.SceneMusicPreparation$State CANCELLED
 FIELD com.openggf.mods.scene.SceneMusicPreparation$State public,static,final com.openggf.mods.scene.SceneMusicPreparation$State FAILED
 FIELD com.openggf.mods.scene.SceneMusicPreparation$State public,static,final com.openggf.mods.scene.SceneMusicPreparation$State PREPARING
@@ -11030,6 +11031,7 @@ METHOD com.openggf.mods.scene.SceneMusicPart public  long onsetSamples()
 METHOD com.openggf.mods.scene.SceneMusicPart public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.scene.SceneMusicPart public,final  int hashCode()
 METHOD com.openggf.mods.scene.SceneMusicPart public,final  java.lang.String toString()
+METHOD com.openggf.mods.scene.SceneMusicPlayer public  boolean cuePart(long,int,double,double,double,double)
 METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  boolean finished()
 METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  boolean paused()
 METHOD com.openggf.mods.scene.SceneMusicPlayer public,abstract  long samplePosition()

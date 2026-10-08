@@ -1472,3 +1472,11 @@ world-session construction and pinned data: two separate `new Sonic2GameModule`
 objects describe different lifetimes even when their names match. The native
 publication regression covers direct and hidden creator method references,
 foreign roots, bundle retagging, and both real ROM-backed PLC lifecycles.
+
+**Finite audio tails own the complete presentation.** A cue mixed after a song's
+end taper can remain audible beyond finite EOF even though the song clock has
+stopped. Fade the combined output and retire remaining cue voices at the finite
+boundary; also fade a cue that exhausts its selected source window. Sitar Hero's
+2026-10-08 fumble regression measured 439 nonzero post-taper frames before this
+ordering repair and zero afterward. Keep calibrated judgment coordinates separate
+from the audible song clock when testing cue freshness or sending peer timestamps.

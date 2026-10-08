@@ -214,6 +214,32 @@ selected part only: the difference between the full and masked mixes. The backin
 stays on its clock. It is a presentation effect, not an emulated guitar-controller
 DSP contract. Scope it to roles that use it.
 
+`player.cuePart(sourceSample, durationSamples, startRate, endRate, gain, pan)`
+mixes a short fragment of the selected part into the same performance. Use a real
+song sample coordinate, or `SceneMusicPlayer.PLAYHEAD` to continue the part at the
+next render cursor. The host adds a short attack, exponential decay and zero tail,
+with a linear pitch-rate glide. Duration is at most a quarter-second; rates are
+0.5–2, gain is 0–1, and stereo balance is -1–1. All values must be finite. Balance
+attenuates one side and preserves the ROM's stereo; it does not repan a mono copy.
+
+```java
+// Continue and bend the selected ROM part down; no creator-owned PCM or extra asset.
+boolean accepted = player.cuePart(SceneMusicPlayer.PLAYHEAD,
+        prepared.sampleRate() * 90 / 1000, 1.0, 0.90, 0.60, 0.0);
+```
+
+Six cue voices are available. A paused/stopped player, exhausted playhead, PLAYHEAD
+before song start or full cue bus returns false; supporting hosts throw for malformed
+arguments. Unsupported hosts return false without argument validation. Pause freezes accepted voices,
+and stop releases them. Source exhaustion fades rather than wrapping; the finite
+song tail also fades and discards remaining cues. Cues ignore whammy and never advance the song coordinate.
+The current host smooths part-audibility changes over four milliseconds. The
+fragment is the full-minus-masked presentation residual, like whammy, rather than
+a separately exposed emulated channel. `sitarhero.audio.PerformanceAudio` owns
+instrument presets, cooldowns, source selection and co-op mixing; none of those
+rhythm-game decisions belong to the engine. Legacy hosts may decline cues while
+still supporting the original part-muting contract.
+
 **One source is audible at a time.** While a `SceneMusicPlayer` exists (playing,
 paused or waiting in its lead-in), its PCM replaces the base game's sound driver
 output. Music and sound effects started with `ctx.audio()` keep running in the

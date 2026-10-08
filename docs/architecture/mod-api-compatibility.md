@@ -567,3 +567,17 @@ with four bounded native ROM SFX IDs. It returns the host-owned settings screen
 without exposing global engine services. This is an ordinary candidate surface
 regeneration; `0.7` remains unpublished, and the final pin is generated from
 compiled classes.
+
+## Bounded ROM-part cue candidate
+
+Sitar Hero's fumble follow-up adds `SceneMusicPlayer.PLAYHEAD` and the default
+`cuePart(long,int,double,double,double,double)` method. It exposes no PCM, synth,
+thread or mod-specific instrument type. The production host mixes at most six
+enveloped, pitch-gliding residual fragments, validates duration/rate/gain/balance,
+smooths audibility over 4 ms, freezes cues on pause and releases them on stop.
+Unsupported legacy hosts decline a cue instead of losing basic playback. The
+normalized 0.7 candidate pin gains exactly two additive entries, with no removals.
+`ModApiVersion` documents the capability; the policy-generated release descriptor
+retains unpublished candidate `0.7.0` and its existing schema/publication state.
+See the [creator recipe](../modding/guides/mod-scenes.md) and
+[fumble implementation plan](plans/2026-10-08-sitar-hero-fumble-feedback.md).

@@ -310,3 +310,33 @@ presentation-entry regression, not a successful desktop capture or a diagnosed
 window-manager failure. The stage-pacing owner will add a no-current-world control
 and resolve the module from the existing context only after its frozen request
 drains. All own Engine/helper processes and Pulse modules were cleaned.
+
+### Published successor composition: `17ae561ad`
+
+After the creator-boundary commit `774e2edf1`, the actual published destination
+advanced from `d740b7a0f` to `17ae561ad`. Its 37 paths add bounded generic ROM-part
+cues and Sitar feedback/network behavior, a shorter SOZ controller fixture, and
+experimental GraalVM research. This is not a documentation-only successor. The
+private intent merge retains both Mutator and ROM-part cue API descriptions.
+There is no conflict in Lab/native pacing consumers. Normal request `82365`
+completed at 18:25:46 UTC: all seven selected reports were fresh, 49 cases passed
+with no failures/errors/skips, and SDK/Javadoc/artifact verification completed.
+All 11,995 frozen source files were unchanged. Actual compiled export has 17,717
+lines (SHA-256 `0d03969dba73973ba1f1a574e4961466cbc47673f63dfb520a7f92c38bcc95c8`),
+byte-equal to the candidate pin: 443 own additions and zero removals against the
+published 17,274-line destination. This establishes the previously provisional
+union of the factory and upstream cue additions, not the full candidate gate.
+Final physics/rewind composition and full candidate gates remain outstanding.
+Prior source-specific captures retain their original frozen-production attribution.
+
+The stage worker's native reproduction `43032` separately completed on frozen
+source `871e597`: eight cases, five assertion failures, one fixture error and no
+skips. Actual S2 older-keyframe resimulation reproduced a pacing remainder changing
+from 50 to 0 at 75% and 150% despite matching native comparison state and sample ordinal.
+A real retained-context hub test reproduced the eager `GameServices.module()`
+startup exception. These authorize bounded engine-owned remainder-history and
+inactive-context repairs. Pulse/main/stock-lag controls had used standalone input
+bindings rather than the Engine supplier, and the ownership fixture nested mock
+stubbing; those failures do not establish production defects. Corrected controls
+are queued as `27621` before further input/ownership repair claims. This stage tree
+is based on `02f194c2`, so composed `17ae` runtime qualification still follows integration.
