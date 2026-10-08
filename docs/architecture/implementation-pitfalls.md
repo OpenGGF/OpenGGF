@@ -1295,3 +1295,60 @@ A seamless reload's current-bound and target-bound overrides are separate. AIZ's
 `AIZ1BGE_Finish` writes a fixed X lock of `$10/$10`, and `Do_ResizeEvents` eases
 only max Y. Pin the engine's X targets too, or the loaded defaults move the lock
 on the next tick (S3K trace campaign, 2026-10-03).
+
+### Palette colours and palette clocks are separate rewind owners
+
+Restoring the live palette surface cannot restore the timer and frame that will
+write its next colour. Sonic 1's pattern-only animation snapshot omitted those
+palette clocks; a normal controlled GHZ checkpoint replay immediately diverged
+in full GPU RGBA while its native positions and pre-focus PCM matched. The
+combined level animation owner now captures the exact cycle counters in the
+existing `pattern-animator` entry, retaining pattern-then-palette forward order.
+Labyrinth's cycler also retains a private underwater palette array separately
+from the water system, so capture that actual surface as well as its counters.
+Use complete GPU, producer PCM and per-owner registry comparisons together;
+position-only or palette-colour-only checks cannot prove visual replay.
+
+Animation counters and published tiles likewise differ. The S1 handler counters
+point to the next update; positive timers leave the previous tiles visible.
+Restoring counters alone retained future GHZ flower pixels for four replay
+frames, even though every registered owner compared equal. A 36-tick interval
+happened to end on matching art, while a 12-tick interval exposed the omission.
+Retain the actual published tiles for each handler's destinations and upload
+those same bytes on restore, without ticking an animation or re-priming it.
+Check more than one interval and compare pixels immediately after restore;
+a cycle-aligned green comparison does not establish surface restoration.
+
+
+### Standalone presentation must retain its supplied output owner
+
+A standalone AudioManager's supplied configuration and sink are lifetime owners,
+not ambient bootstrap defaults. Multigame's ROM-loaded menu called `setRom` after
+constructing its standalone producer, which rebuilt presentation and replaced the
+custom UI sink. Cue requests succeeded while the capture remained header-only.
+Load explicit ROM SMPS/DAC data through the profile loader without that unrelated
+reconfiguration; test actual emitted PCM/device packets and focused feedback.
+The standalone factory also retains its configuration for later private tuning
+and history resolution instead of falling back to the active engine root.
+
+### Existing text and pane renderers may use different projections
+
+PixelFont emits bottom-up vertices from a fixed224-pixel origin. A top-left host
+quad projection at1024×700 therefore placed its text offscreen. Match that text
+owner's coordinate convention with a separate projection while preserving pane
+geometry and the normal font API. Inspect the actual desktop/title and GPU image;
+correct quad placement does not establish readable text.
+
+### GLFW's X11 show wait can spin forever when the desktop withholds a map
+
+On X11/XWayland, a visible `glfwCreateWindow` and `glfwShowWindow` wait for a
+VisibilityNotify with a 0.1 s timeout that only counts down while the client's
+event queue is empty. When the window manager manages the window but does not
+map it, while delivering ConfigureNotify, the queue is never empty and the wait
+spins at full CPU, ignoring close requests. A locked KDE Plasma Wayland session
+reproduced this on 2026-10-08 for the bundled LWJGL 3.3.3 GLFW, the Three
+Openings host and a plain Xlib window alike, so first map a plain control window
+(`tools/challenge/check_window_startup.py`) before blaming host code. The host
+now creates its window hidden, issues the same `XMapWindow` without that wait,
+and holds its title until the window is viewable. `Engine` still uses
+`glfwShowWindow`. An override_redirect map is a diagnostic only.

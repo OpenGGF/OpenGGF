@@ -132,6 +132,21 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
             return;
         }
         frame.copyTo(packetScratch, 0);
+        offerCopiedPacket(stereoFrames);
+    }
+
+    /** Accepts final worker PCM at this sink's negotiated rate; copies before returning. */
+    public void acceptStereoPcm(short[] samples) {
+        Objects.requireNonNull(samples, "samples");
+        if (samples.length % 2 != 0 || samples.length / 2 > sampleRate) {
+            throw new IllegalArgumentException("Invalid final stereo PCM packet");
+        }
+        if (closed || failed || paused) return;
+        System.arraycopy(samples, 0, packetScratch, 0, samples.length);
+        offerCopiedPacket(samples.length / 2);
+    }
+
+    private void offerCopiedPacket(int stereoFrames) {
         long droppedBefore = fifo.droppedStereoFrames();
         fifo.offer(packetScratch, stereoFrames);
         if (fifo.droppedStereoFrames() != droppedBefore) {

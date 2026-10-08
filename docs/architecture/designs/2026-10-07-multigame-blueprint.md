@@ -5,6 +5,12 @@ Design/research at develop `09282b17305cb5794e43a26855cd2b9543b4ff5f`, 2026-10-0
 
 ## Intent and architectural decision
 
+The bounded prototype implementation is tracked separately in its
+[implementation plan](../plans/2026-10-07-multigame-prototype.md) and
+[evidence record](../validation/2026-10-07-multigame-prototype.md). The MVP and
+campaign gates below remain future work; implementation does not imply their
+completion.
+
 A player controls three real OpenGGF games side by side with one controller sequence. Each retains its own movement, enemies, timing, lives, progression and ROM assets. Success means every declared route finishes under that common sequence; three animations or separately steered route controllers do not qualify. The polished ambition is three complete campaigns. Opening-act success establishes only an opening-act challenge.
 
 **Recommend an engine-owned process host for the prototype and MVP, retaining it as the reference backend.** One worker JVM owns one console/game; the application host owns input capture, scheduling, composition, device output and challenge records. Current global state makes this the credible first delivery. Three JVMs and framebuffer transport cost memory and latency, so performance is a gate, not an assumed advantage.

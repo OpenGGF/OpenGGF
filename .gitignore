@@ -54,6 +54,10 @@ tools/*
 !tools/testing/
 !tools/testing/**
 /tools/testing/__pycache__/
+!tools/challenge/
+!tools/challenge/capture_host.py
+!tools/challenge/check_host_lifecycle.py
+/tools/challenge/__pycache__/
 /.openggf/test-runs/
 !tools/audio/lib/s1_audio_parity_protocol.sh
 !tools/audio/nuked-opn2/

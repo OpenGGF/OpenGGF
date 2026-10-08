@@ -219,6 +219,7 @@ public class AudioManager implements MusicRestoreSink {
     private AudioPresentationTuning standaloneTuning;
     private int standaloneFrameRate;
     private String standaloneGameId;
+    private SonicConfigurationService standaloneConfiguration;
     private long standaloneVoiceId = 1;
     /**
      * Launch-scoped creator presentation port. The authoritative presentation
@@ -323,6 +324,7 @@ public class AudioManager implements MusicRestoreSink {
                 java.util.Objects.requireNonNull(
                         coordFlagHandlers, "coordFlagHandlers");
         manager.standaloneGameId = gameId;
+        manager.standaloneConfiguration = java.util.Objects.requireNonNull(config, "config");
         manager.standaloneFrameRate = FrameRateResolver.effective(
                 java.util.Objects.requireNonNull(config, "config"));
         manager.standaloneTuning = new AudioPresentationTuning(
@@ -630,7 +632,7 @@ public class AudioManager implements MusicRestoreSink {
         return FrameRateResolver.effective(config);
     }
 
-    private static int configuredPcmHistoryFrames(int sampleRate) {
+    private int configuredPcmHistoryFrames(int sampleRate) {
         var config = configuredServicesOrNull();
         if (config == null) {
             return sampleRate * PCM_HISTORY_SECONDS;
@@ -641,7 +643,10 @@ public class AudioManager implements MusicRestoreSink {
         return PcmHistoryRing.capacityFramesFor(sampleRate, limitType, seconds, sizeMB);
     }
 
-    private static com.openggf.configuration.SonicConfigurationService configuredServicesOrNull() {
+    private com.openggf.configuration.SonicConfigurationService configuredServicesOrNull() {
+        if (standaloneConfiguration != null) {
+            return standaloneConfiguration;
+        }
         try {
             return GameServices.configuration();
         } catch (IllegalStateException e) {

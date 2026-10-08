@@ -6,6 +6,19 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **Three Openings prototype:** play Sonic 1, Sonic 2 and Sonic 3 & Knuckles
+  together with one controller in a standalone JVM triptych. Isolated workers
+  preserve each game's native clocks, input polling, GPU frame and synthesis;
+  the host supplies ROM validation, title/loading/countdown with per-zone
+  standby panes, per-pane sound status and focus, linked pause (Escape pauses
+  before it leaves a run), fresh restart and fault recovery, with crisp
+  pixel-font screens and native Sonic 1 menu cues. The window opens once the
+  desktop shows it and stays idle and closable while a session holds new
+  windows back. Full-act common completion remains a later challenge gate.
+  Maintained native capture, startup, lifecycle and isolation walkthroughs
+  record the assessed support, and keep owned-window release during exit free
+  of duplicate protocol diagnostics.
+
 - **Sonic 1 background scrolling:** Scrap Brain Act 1 uses the REV01 cloud
   interpolation and three building bands, with separate fractional cameras,
   rewind restoration and tile-cache window coverage at wider viewports. Scrap
@@ -1052,6 +1065,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   draw resources so the renderer can be reused after graphics-context recreation.
   Timing-file loaders share strict field decoding while keeping schemas and
   timing authority in their existing owners.
+  Sonic 1's level animation owner also retains its published animated tiles,
+  palette-cycle counters and private Labyrinth underwater colours through
+  rewind, preserving the same pattern-then-palette update order during play.
 
 ## Build and release
 

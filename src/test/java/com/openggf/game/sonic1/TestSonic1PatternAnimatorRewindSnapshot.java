@@ -62,7 +62,7 @@ public class TestSonic1PatternAnimatorRewindSnapshot {
         PatternAnimatorSnapshot snap = anim.capture();
         assertEquals(0, snap.scriptCounters().length,
                 "S1 uses inner handlers, not AniPLC scripts");
-        assertNull(snap.extra(), "S1 has no extra scalar blob");
+        assertNotNull(snap.extra(), "S1 retains the tiles its handlers last published");
     }
 
     @Test
@@ -157,11 +157,76 @@ public class TestSonic1PatternAnimatorRewindSnapshot {
         }
     }
 
+    @Test
+    void publishedPatternsRestoreImmediatelyWithoutWaitingForAnotherAnimationTick() throws IOException {
+        int[] zones = {Sonic1Constants.ZONE_GHZ, Sonic1Constants.ZONE_MZ,
+                Sonic1Constants.ZONE_SBZ, Sonic1Constants.ZONE_ENDZ};
+        for (int caseIndex = 0; caseIndex < zones.length; caseIndex++) {
+            TestLevel level = new TestLevel(1024);
+            Sonic1PatternAnimator animator = buildAnimator(level, zones[caseIndex]);
+            for (int frame = 1; frame <= 5; frame++) {
+                OscillationManager.update(frame);
+                animator.update();
+            }
+            var checkpoint = animator.capture();
+            byte[] published = patternPixels(level);
+            // Observe a real publication change, rather than choosing an interval
+            // that can finish on the same animation frame (both SBZ smoke cycles did).
+            for (int frame = 6; frame <= 505 && Arrays.equals(published, patternPixels(level)); frame++) {
+                OscillationManager.update(frame);
+                animator.update();
+            }
+            assertFalse(Arrays.equals(published, patternPixels(level)),
+                    "The forward interval must change actual published art for zone " + zones[caseIndex]);
+            animator.restore(checkpoint);
+            assertArrayEquals(published, patternPixels(level),
+                    "Restore must republish checkpoint art before the next tick for zone " + zones[caseIndex]);
+            assertArrayEquals(checkpoint.handlerCounters(), animator.capture().handlerCounters());
+            assertArrayEquals(checkpoint.extra(), animator.capture().extra());
+        }
+    }
+
+    @Test
+    void malformedPublishedPatternShapeIsRejectedBeforeCountersOrPixelsChange() throws IOException {
+        TestLevel level = new TestLevel(1024);
+        Sonic1PatternAnimator animator = buildAnimator(level, Sonic1Constants.ZONE_GHZ);
+        var before = animator.capture();
+        byte[] pixels = patternPixels(level);
+        byte[] invalid = before.extra().clone();
+        java.nio.ByteBuffer.wrap(invalid).putInt(0);
+        var changedCounters = before.handlerCounters().clone();
+        changedCounters[0] = new PatternAnimatorSnapshot.HandlerCounter(111, 222, 0);
+        assertThrows(IllegalArgumentException.class, () -> animator.restore(new PatternAnimatorSnapshot(
+                before.scriptCounters(), changedCounters, invalid)));
+        assertArrayEquals(before.handlerCounters(), animator.capture().handlerCounters());
+        assertArrayEquals(pixels, patternPixels(level));
+        assertThrows(IllegalArgumentException.class, () -> animator.restore(new PatternAnimatorSnapshot(
+                before.scriptCounters(), changedCounters, Arrays.copyOf(before.extra(), before.extra().length - 1))));
+        assertArrayEquals(pixels, patternPixels(level));
+        byte[] wrongDestination = before.extra().clone();
+        java.nio.ByteBuffer.wrap(wrongDestination).putInt(Integer.BYTES, -1);
+        assertThrows(IllegalArgumentException.class, () -> animator.restore(new PatternAnimatorSnapshot(
+                before.scriptCounters(), changedCounters, wrongDestination)));
+        assertArrayEquals(before.handlerCounters(), animator.capture().handlerCounters());
+        assertArrayEquals(pixels, patternPixels(level));
+    }
+
+    private static byte[] patternPixels(Level level) {
+        byte[] result = new byte[level.getPatternCount() * Pattern.PATTERN_SIZE_IN_MEM];
+        for (int i = 0; i < level.getPatternCount(); i++)
+            level.getPattern(i).copyInto(result, i * Pattern.PATTERN_SIZE_IN_MEM);
+        return result;
+    }
+
     // ===== Helpers =====
 
     private static Sonic1PatternAnimator buildAnimator(int zone) throws IOException {
         int capacity = 1024;
         TestLevel level = new TestLevel(capacity);
+        return buildAnimator(level, zone);
+    }
+
+    private static Sonic1PatternAnimator buildAnimator(Level level, int zone) throws IOException {
         RomByteReader reader = RomByteReader.fromRom(
                 com.openggf.tests.TestEnvironment.currentRom());
         return new Sonic1PatternAnimator(reader, level, zone);

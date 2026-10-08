@@ -1189,3 +1189,13 @@ debug:
     height: 448   # DEPRECATED manual window height; used only when display.windowAutosize=false
     scale: 1.0   # DEPRECATED AWT debug-viewer scale factor
 ```
+
+## Three Openings prototype tool
+
+The standalone JVM [Three Openings host](examples/three-openings/README.md) accepts
+explicit `--s1`, `--s2`, `--s3k` ROM paths, optional `--program` held-input source
+and `--capture-dir` outside-repository evidence output. Its keyboard/gamepad
+controls and fixed support recipe are documented in that example; they do not
+change stock bindings or persist player configuration. The host has separate
+pause/restart/sound-focus commands. Worker configuration is a whitelist of native
+320×224, NTSC60, REALISTIC loading, normal intros, fixed roster and no donor.
