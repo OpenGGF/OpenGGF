@@ -1,5 +1,6 @@
 package com.openggf.mods.testing;
 
+import com.openggf.architecture.CompositionRoot;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.StockMusicDomains;
 import com.openggf.io.ModInputLimits;
@@ -49,6 +50,7 @@ import java.util.Set;
  * module resolution and owner fault boundaries. This is distributed in the matched testkit
  * artifact, rather than the runtime Mod API. It never changes the user's enabled/trusted state.
  */
+@CompositionRoot
 public final class ModTestKit implements AutoCloseable {
     private final ModCatalog catalog;
     private final ModRuntime runtime;

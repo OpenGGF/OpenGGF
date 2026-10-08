@@ -959,7 +959,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The creator handbook now starts with a Java 21 setup path, seven purpose-specific
   starters, a capability matrix and the complete recipient install/update/trust/
   rollback journey. Creator kits pair the engine, SDK, API documentation and
-  production-backed Jupiter test support from one source commit, with portable
+  production-backed Jupiter test support from one source commit, with its
+  module-only rewind composition isolated from engine artifacts, portable
   example projects, repeatable builds, artifact-only CI and explicit packaging
   warnings suitable for automation.
   Owner-local zone and level identities compose across mods and retain namespaced
@@ -1112,7 +1113,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   lookup returned a null stream and the S3K game module threw while building its
   load-time profile, so the game failed to start under the default `FAST` load-time
   simulation. The window icon set, the bundled track-validation profiles and the mod
-  SDK templates were missing from the same file and are now embedded as well. A
+  SDK templates were missing from the same file and are now embedded as well,
+  including the starter resource inventory. A
   structural guard fails whenever a runtime resource under `src/main/resources` is
   unreachable from that config, so the drift cannot reach a shipped bundle again.
 

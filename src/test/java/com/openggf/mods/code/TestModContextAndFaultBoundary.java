@@ -233,8 +233,8 @@ class TestModContextAndFaultBoundary {
         }
     }
     @Test
-    void storageUsesInjectedRootAndDecodedTemplateBindsRegisteredLocalFactory() throws Exception {
-        java.nio.file.Path root = java.nio.file.Files.createTempDirectory("owned-mod-context");
+    void storageUsesInjectedRootAndDecodedTemplateBindsRegisteredLocalFactory(
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path root) throws Exception {
         var context = new ModContext("owner", "s2", ModAssetRoot.forTests("owner"), null, false, root);
         context.storage().write("settings.json", "{}") ;
         assertEquals("{}", java.nio.file.Files.readString(root.resolve("mods/owner/settings.json")));
