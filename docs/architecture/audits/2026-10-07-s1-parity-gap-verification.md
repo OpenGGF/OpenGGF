@@ -323,3 +323,133 @@ separate pending-staging reset hypothesis remains unproved and was not bundled
 into this fix. S2/S3K affected-consumer and combined destination validation
 remain coordinator-owned; this lane records focused validation and partial
 canonical improvement, not a full-suite or whole-campaign pass.
+
+
+## Qualified shared input helper follow-up
+
+Local merge `9b8052b8fe8f24bb38f745298fb5a55551fa5fbe` joins the proven
+S1 lifecycle commit `0268a6eef7b69b108d1ddc69170115eb36579ad2` with qualified
+shared admission helper `45c6eed2d6e3a85442cd42e12b2c74c347ec9c8d`. Hooks passed;
+the prepared and committed merge message parsed the final GPT-6.1-Sol coauthor.
+The exact canonical command above was repeated with unchanged profile, selectors,
+absolute ROM paths and POM single-fork default, without heap/fork overrides.
+Session 34533 (wrapper PID 2047526, shell 2047516, Maven 2111716) completed
+exit 1 after 41.531 seconds execution, excluding about 63 minutes queue waiting.
+Fresh Surefire XML records chain 1/1/0/0 and prefix 2/0/0/0
+(tests/failures/errors/skips). Source was frozen throughout admission/execution.
+
+All compared ordinary segments retain their prior candidate totals: segment 0
+(chain and both prefix identities), 3, 6, 8 and 11 have zero errors; segment 7
+has 5466 (5276 physics-group, 190 animation), and segment 12 has 196129
+(175792 physics-group, 20337 animation). Special-stage structural/art reports
+for segments 1, 4 and 9 retain zero errors. Complete reports have no bootstrap
+errors/warnings. The first complete player disagreements remain MZ1 row 4
+(animation 05/07, mapping 01/05) and MZ2 row 87 (`x_sub` 7E00/9600,
+`x_speed` 0495/04AD); first non-camera physics-group disagreements remain
+MZ1 row 5 `dynamic_art.edges` and MZ2 row 87 `x_sub`. The same three movie
+gaps (MZ1→MZ1_2, MZ2→MZ2_2, MZ2_2→MZ2_3) retain ordinal 14 / transfer 7
+offsets and ledger fingerprint errors. Segment 12 still misses its giant-ring
+exit; Final Zone remains unreached. The shared helper is qualified for absence
+of measured S1 regression, not causal closure of these S1 frontiers.
+
+A bounded ROM/source check does not establish another movement fix. MZ2 row 87
+has matching positive Y velocity 03A8: native `Sonic_AirDrag`'s unsigned
+`cmpi.w #-$400` / `blo` skips air drag, matching the engine's negative-Y gate.
+`Sonic_JumpDirection` doubles acceleration and adds it only with Right held;
+status 06 leaves roll-jump bit 4 clear. The +0018 horizontal speed / +1800
+subpixel differences remain consistent with one extra held input, but this
+helper replay disproves assuming its repaired plain pre-window admission alone
+closes either row. No shared movement/animation changes were made.
+
+## Fresh deferred-boundary rewind coverage
+
+Read-only root investigation established a distinct production rewind gap:
+`FreshLevelTransitionBoundaryController.pending` and `initialPublished` were
+absent from registry capture. Root's SOZ probe showed the first eight fixture
+steps starting with an unclaimed boundary publication (art 41→41), then seven
+closures through 48; repeated eight steps after registry restore began ordinary
+closure immediately and reached 49. There were no SETUP_ONLY retries.
+
+Boundary ordering qualifies the explanation: controller `load` calls the inner
+`loadZoneAndActWithTitleCard` before assigning `pending`; inner LevelManager
+`markRewindLevelLoadBoundary` synchronously reaches LiveRewindManager
+`resetToFrameZero`, and RewindController immediately captures registry floor 0.
+That floor captures a null fresh boundary. The new private transition snapshot
+therefore clears stale later pending state when seeking floor 0; it does not
+reconstruct a pending assembly at that floor. Explicit snapshots taken after
+fresh load must separately retain the complete deferred boundary and publication
+phase. Public LevelSnapshot and the original two-cycle floor-zero test remain
+unchanged; arbitrary intermediate driver-latch capture is outside this coverage.
+
+`TestFreshLevelBoundaryRewindHeadless` supplies the positive behavior regression
+for explicit unpublished and published phases using the real S3K ROM, public
+fresh load/publish/complete APIs and the existing transition adapter. Restore
+itself must leave live player/camera mutations untouched; subsequent publication
+restores native initial held assembly only for the unpublished phase, while an
+already-published phase remains idempotent. Real completion restores deferred
+player/camera state and dispatches initial Process_Sprites exactly once, observed
+through ObjectManager's production pass counter and the consumed lifecycle token.
+
+Red command on unchanged old transition production at local merge 9b8052b8
+(`ROM_ROOT` denotes the absolute main-workspace ROM root used in execution;
+paths are normalized here to obey repository resource policy):
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestFreshLevelBoundaryRewindHeadless -Dsonic1.rom.path=${ROM_ROOT}/s1.gen -Dsonic2.rom.path=${ROM_ROOT}/s2.gen -Ds3k.rom.path=${ROM_ROOT}/s3k.gen test
+```
+
+Session 96970 (wrapper 2116880, shell 2116870) completed exit 1 in 23.707 seconds:
+2 tests, 2 intended failures, 0 errors/skips. Both phases reach actual first
+publication/completion, then fail because restore leaves pending false.
+Candidate qualification follows below.
+
+
+Root transition fix `3190a0ff8d21cd2e5b4263f616e2182f8ceb21ad` was merged
+with normal hooks as `3e3550b8da2a1eb88a09b4b7c8f078c629e45a99`; final
+coauthor parsed before/after. Its ancestry also brings concurrent develop and
+ordinary-memory tooling changes; this is not a full pinned-old-tree comparison.
+
+The first candidate run (60398, wrapper 2140117 / shell 2140107) measured
+16/2/0/0 in 70 seconds. Both boundary restoration/publication assertions passed,
+but the test compared repeated initial dispatch against objects left initialized
+by the earlier pass (expected Y speed 0, actual 56). This was a fixture ownership
+error, not evidence for another production fix. The final test captures and
+restores the whole registry for the selected phase before injecting sentinels,
+then directly restores the transition adapter again to verify no player/camera
+writes. All real publication, deferred assembly and dispatch assertions remain.
+
+Final candidate command:
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestFreshLevelBoundaryRewindHeadless,TestLevelContinuationCarry,TestLevelTransitionCoordinatorPeeks -Dsonic1.rom.path=${ROM_ROOT}/s1.gen -Dsonic2.rom.path=${ROM_ROOT}/s2.gen -Ds3k.rom.path=${ROM_ROOT}/s3k.gen test
+```
+
+Session 58727 (wrapper 2153110 / shell 2153100) completed exit 0 in 23.731
+seconds execution, with 16 tests and zero failures/errors/skips: two final
+positive boundary cases and fourteen sanctuary/continuation controls.
+
+A matched final-fixture old-transition-owner check then temporarily restored
+only FreshLevelTransitionBoundaryController, LevelTransitionRewindAdapter,
+LevelManager and their two constructor-consumer tests from 9b8052b8. The final
+new regression, shield fix and unrelated current production remained intact.
+It repeated the red command above (selector TestFreshLevelBoundaryRewindHeadless),
+not a full old-tree run. Session 44424 (wrapper 2366446 / shell 2366436)
+completed exit 1 in 75 seconds: two intended missing-pending failures at line 66,
+zero errors/skips. All five files were restored from exact HEAD after terminal;
+SHA-256 for them plus the final test matched the qualified candidate exactly.
+The completed green is reused without another unchanged run.
+
+Candidate/restored file SHA-256 values:
+
+- `src/main/java/com/openggf/level/FreshLevelTransitionBoundaryController.java`: `0eb22c771e9c69166ec7035eeb2b35386565c6c0aa32f8613977810d586afd59`
+- `src/main/java/com/openggf/level/LevelTransitionRewindAdapter.java`: `65871284977b50a6e9d4efca9c2ce6ca449147dea38836c445295bc293ee5227`
+- `src/main/java/com/openggf/level/LevelManager.java`: `5feb3fdc01983eca2dc7920c96988d9e59648babc0f47b2f444a2542f6d0d623`
+- `src/test/java/com/openggf/level/TestLevelContinuationCarry.java`: `858d04b1abedcdffdae3f9ccc28419dce9526da26a5001fab1a91b4a2656d5dc`
+- `src/test/java/com/openggf/level/TestLevelTransitionCoordinatorPeeks.java`: `7eb53394444126b382b362bfe89bd239b03342af75f9480f022ac28c3e6c9ee1`
+- `src/test/java/com/openggf/tests/TestFreshLevelBoundaryRewindHeadless.java`: `9a347c5952d2b213bf0e6f65010b9a9335b6444c45daff03512d4ccc2511a3c1`
+
+No source diagnostics, comparator changes or gameplay input changes were added.
+The original floor-zero full-registry/two-cycle FBZ test is unchanged. Root
+owns updated-base broad qualification, central ledgers, integration and push.
+Raw owned target logs/reports remain temporarily retained at the coordinator's
+request for final inspection/cleanup; no copies or archives were created.
