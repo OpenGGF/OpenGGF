@@ -2,7 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.save.SaveReason;
+import com.openggf.game.sonic3k.S3kFullSaveGame;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
@@ -520,7 +520,7 @@ public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
                 if (timer >= 0) {
                     return;
                 }
-                services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
+                S3kFullSaveGame.complete(services());
                 services().requestZoneAndAct(0x0D, 1, true);
                 deleteNow();
             }
