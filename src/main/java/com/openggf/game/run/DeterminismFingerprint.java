@@ -1,4 +1,4 @@
-package com.openggf.game.timeattack;
+package com.openggf.game.run;
 
 /** Physics build identity for replay verification routing (security spec §6.2). IO-free. */
 public record DeterminismFingerprint(String engineVersion, int romChecksum) {

@@ -1,5 +1,6 @@
 package com.openggf.game.timeattack;
 
+import com.openggf.game.run.DeterminismFingerprint;
 import com.openggf.ModSubsystem;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;

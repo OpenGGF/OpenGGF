@@ -67,7 +67,7 @@ import com.openggf.game.patch.ModuleResolutionService;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.game.timeattack.TimeAttackLaunchRequest;
 import com.openggf.game.timeattack.TimeAttackRuntime;
-import com.openggf.game.timeattack.DeterminismFingerprint;
+import com.openggf.game.run.DeterminismFingerprint;
 import com.openggf.game.timeattack.mp.LiveLevelProfileFactory;
 import com.openggf.game.timeattack.mp.MultiplayerRaceCoordinator;
 import com.openggf.game.timeattack.mp.RaceTransport;
@@ -2059,18 +2059,22 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		GameplayModeContext gameplay = SessionManager.openGameplaySession(
 				rootModule, module, dataSource, saveContext);
 		initializeGameplayRuntime(gameplay, false);
+		TimeAttackRuntime timeAttackRuntime = gameLoop.getTimeAttackRuntime();
+		timeAttackRuntime.armForLaunch(request);
+		if (timeAttackRuntime.isActive()) {
+			// The run policy is fixed before the level loads so every object sees it.
+			com.openggf.game.run.RunSpec spec = timeAttackRuntime.runSpec();
+			gameplay.beginGameplayRun(spec.policy(), spec.zone(), spec.act());
+			timeAttackRuntime.attachHandle(gameLoop.beginHostedRun(spec, timeAttackRuntime,
+					gameLoop::startTimeAttackReturnToMenuFade));
+		}
 		loadLevelFromDataSelect(request.zone(), request.act());
 		gameLoop.setGameMode(GameMode.LEVEL);
 
 		// loadLevelFromDataSelect -> levelManager.loadZoneAndAct(...) bypasses
-		// GameLoop.doZoneAct (the mid-game zone-transition path that already
-		// calls onLevelReady() for a time-attack retry), so fire it explicitly
-		// here for this fresh launch.
-		TimeAttackRuntime timeAttackRuntime = gameLoop.getTimeAttackRuntime();
-		timeAttackRuntime.armForLaunch(request);
-		if (timeAttackRuntime.isActive()) {
-			timeAttackRuntime.onLevelReady();
-		}
+		// GameLoop.doZoneAct (the mid-game zone-transition path that announces the
+		// level for a retry), so announce it explicitly for this fresh launch.
+		gameLoop.announceHostedRunLevelReady();
 	}
 
 	GameModule resolveTimeAttackModuleForLaunch(

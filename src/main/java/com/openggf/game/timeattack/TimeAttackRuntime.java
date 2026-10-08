@@ -1,20 +1,23 @@
 package com.openggf.game.timeattack;
 
-import com.openggf.control.InputHandler;
-import com.openggf.game.GameServices;
+import com.openggf.game.run.DeterminismFingerprint;
 import com.openggf.game.ghost.GhostCaptureBuffer;
 import com.openggf.ghost.GhostFrame;
-import com.openggf.game.ghost.GhostFrameSampler;
 import com.openggf.game.ghost.GhostHeader;
 import com.openggf.game.ghost.GhostFileCodec;
 import com.openggf.game.ghost.GhostPlaybackCursor;
 import com.openggf.game.ghost.GhostRecording;
-import com.openggf.game.ghost.GhostRenderRegistry;
-import com.openggf.game.recording.RecordingMainPlayerResolver;
 import com.openggf.sprites.ghost.ActiveGhost;
-import com.openggf.sprites.ghost.GhostRenderer;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.version.AppVersion;
+import com.openggf.game.run.GhostPose;
+import com.openggf.game.run.PlayerPose;
+import com.openggf.game.run.RunEndReason;
+import com.openggf.game.run.RunHandle;
+import com.openggf.game.run.RunHost;
+import com.openggf.game.run.RunInput;
+import com.openggf.game.run.RunLevelStart;
+import com.openggf.game.run.RunSpec;
+import com.openggf.game.run.RunStep;
+import com.openggf.game.session.GameplayRunPolicy;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -29,8 +32,17 @@ import java.util.logging.Logger;
  * in TimeAttackAttempt; this class samples live state, feeds the attempt,
  * captures the ghost, plays back opponents, and persists new bests.
  */
-public final class TimeAttackRuntime {
+public final class TimeAttackRuntime implements RunHost {
     private static final Logger LOGGER = Logger.getLogger(TimeAttackRuntime.class.getName());
+
+    /** Per-frame partner of a multiplayer round: drains the network and may hold the run. */
+    public interface FrameCompanion {
+        /** Called every level frame before the step; false holds the run (countdown). */
+        boolean admit(RunInput input);
+
+        /** Called after every executed step. */
+        void afterStep();
+    }
 
     /** Multiplayer bridge for spawn-anchored attempt lifecycle and frame streaming. */
     public interface AttemptListener {
@@ -49,8 +61,6 @@ public final class TimeAttackRuntime {
     private final GhostStore store;
     private final java.nio.file.Path identityDir;
     private final java.util.function.BooleanSupplier launchBlocked;
-    private final GhostRenderer ghostRenderer = new GhostRenderer();
-    private final GhostRenderRegistry.GhostLayerRenderer layerRenderer = this::renderGhostsForLayer;
     private com.openggf.net.identity.PlayerIdentity identity;
     private TimeAttackLaunchRequest launch;
     private TimeAttackAttempt attempt;
@@ -62,9 +72,9 @@ public final class TimeAttackRuntime {
     private boolean tainted;
     private boolean newBest;
     private boolean retryRequested;
-    private int pendingHeldMask;
-    private boolean pendingStartHeld;
-    private GhostRenderRegistry registeredRegistry;
+    private RunHandle handle;
+    private java.util.function.IntSupplier retryKey;
+    private FrameCompanion companion;
     private AttemptListener attemptListener;
     private int attemptOrdinal;
     private Supplier<List<ActiveGhost>> extraGhostSupplier;
@@ -169,6 +179,29 @@ public final class TimeAttackRuntime {
     public void requestRetry() {
         voidCurrentAttempt();
         retryRequested = true;
+        if (handle != null) {
+            handle.retry();
+        }
+    }
+
+    /** The run handle the engine returned when it began hosting this runtime's run. */
+    public void attachHandle(RunHandle handle) {
+        this.handle = handle;
+    }
+
+    /** Key (GLFW/SceneKeys code) that retries the attempt. */
+    public void setRetryKey(java.util.function.IntSupplier retryKey) {
+        this.retryKey = retryKey;
+    }
+
+    public void setFrameCompanion(FrameCompanion companion) {
+        this.companion = companion;
+    }
+
+    /** The spec the engine runs for the armed launch: one isolated act. */
+    public RunSpec runSpec() {
+        return new RunSpec(launch.gameId(), launch.zone(), launch.act(), launch.character(),
+                GameplayRunPolicy.isolatedAct());
     }
 
     /** Voids an ARMED or RUNNING attempt exactly once. */
@@ -250,81 +283,57 @@ public final class TimeAttackRuntime {
 
     // ── Live wrappers (thin; all decision logic above) ─────────────────────
 
-    /** Spawn hook: level for an armed/retried run has just loaded. */
-    public void onLevelReady() {
-        String fingerprint = new DeterminismFingerprint(AppVersion.get(), romChecksumOrZero()).asString();
-        beginAttemptForTest(fingerprint);
-        // The sidekick pattern-bank cursor resets on every level load
-        // (LevelPlayableArtInitializer), so cached ghost slots hold stale bank
-        // bases — clear them before the new level's first render.
-        ghostRenderer.clearSlots();
-        attachRenderer(GameServices.ghostRenderRegistryOrNull());
-        applyRunPolicy(com.openggf.game.session.SessionManager.getCurrentGameplayMode(), true);
-    }
+    // ── RunHost (thin; all decision logic above) ──────────────────────────
 
-    /**
-     * Starts or ends the isolated-act run policy on the session, tolerating a null session
-     * (mirrors the other GameServices-resolved wrappers in this class). The policy suppresses
-     * special/bonus stages, rewind and the editor, and returns to the menu at act completion;
-     * it lasts across a retry's level reload. Package-visible seam so the lifecycle is testable
-     * without a live engine.
-     */
-    void applyRunPolicy(com.openggf.game.session.GameplayModeContext session, boolean active) {
-        if (session == null) {
-            return;
-        }
-        if (active && launch != null) {
-            session.beginGameplayRun(com.openggf.game.session.GameplayRunPolicy.isolatedAct(),
-                    launch.zone(), launch.act());
-        } else {
-            session.endGameplayRun();
+    @Override
+    public void onLevelReady(RunLevelStart start) {
+        beginAttemptForTest(start.determinismFingerprint());
+        if (start.debugAssisted()) {
+            // An overlay already visible before spawn is as much an advantage as
+            // toggling one on mid-run, so taint immediately.
+            markTainted();
         }
     }
 
-    /**
-     * Register the ghost layer renderer on {@code registry}, first detaching from any
-     * previously-registered registry. A retry re-enters {@link #onLevelReady()} on the
-     * same {@code GameplayModeContext} (and an editor round-trip on a rebuilt one), so
-     * without this detach the renderer would stack duplicate registrations and draw the
-     * ghost N+1 times. Package-visible seam so registration is testable engine-free.
-     */
-    void attachRenderer(GhostRenderRegistry registry) {
-        if (registeredRegistry != null) {
-            registeredRegistry.unregister(layerRenderer);
-            registeredRegistry = null;
+    @Override
+    public boolean admitStep(RunInput input) {
+        if (retryKey != null && input.keyPressed(retryKey.getAsInt())) {
+            requestRetry();
         }
-        if (registry != null) {
-            registry.register(layerRenderer);
-            registeredRegistry = registry;
+        return companion == null || companion.admit(input);
+    }
+
+    @Override
+    public void afterStep(RunStep step) {
+        if (step.debugAssisted()) {
+            markTainted();
+        }
+        PlayerPose pose = step.player();
+        tickForTest(step.heldMask(), step.startHeld(), step.actComplete(), step.checkpointIndex(),
+                new GhostFrame(pose.centreX(), pose.centreY(), pose.mappingFrame(), pose.hFlip(),
+                        pose.vFlip(), false, pose.priorityBucket(), pose.highPriority()));
+        if (companion != null) {
+            companion.afterStep();
         }
     }
 
-    private int romChecksumOrZero() {
-        try {
-            return GameServices.rom().getRom().calculateChecksum();
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to compute ROM checksum for time-attack fingerprint", e);
-            return 0;
-        }
-    }
-
-    private void renderGhostsForLayer(int bucket, boolean highPriority) {
-        var sprites = GameServices.spritesOrNull();
-        if (sprites == null) {
-            return;
-        }
-        AbstractPlayableSprite player;
-        try {
-            player = RecordingMainPlayerResolver.resolve(GameServices.configuration(), sprites);
-        } catch (IllegalStateException e) {
-            return;
-        }
+    @Override
+    public List<GhostPose> ghosts() {
         List<ActiveGhost> active = assembleActiveGhosts();
-        if (active.isEmpty()) {
-            return;
+        List<GhostPose> poses = new ArrayList<>(active.size());
+        for (ActiveGhost ghost : active) {
+            GhostFrame f = ghost.frame();
+            poses.add(new GhostPose(ghost.slotId(), ghost.characterCode() == null ? "sonic" : ghost.characterCode(),
+                    new PlayerPose(f.x(), f.y(), f.mappingFrame(), f.hFlip(), f.vFlip(), f.priorityBucket(),
+                            f.highPriority()),
+                    ghost.nameplate(), ghost.opacityScale()));
         }
-        ghostRenderer.renderForLayer(active, bucket, highPriority,
-                player.getCentreX(), player.getCentreY());
+        return poses;
+    }
+
+    @Override
+    public void onRunEnded(RunEndReason reason) {
+        deactivate();
     }
 
     private List<ActiveGhost> assembleActiveGhosts() {
@@ -357,41 +366,7 @@ public final class TimeAttackRuntime {
         return List.copyOf(assembleActiveGhosts());
     }
 
-    public void beforeLevelFrame(InputHandler input) {
-        var p1 = input.logical().player1();
-        pendingHeldMask = p1.heldMask();
-        pendingStartHeld = p1.startHeld();
-    }
-
-    public void afterLevelFrame() {
-        var sprites = GameServices.spritesOrNull();
-        var level = GameServices.levelOrNull();
-        var gameState = GameServices.gameStateOrNull();
-        if (sprites == null || level == null || gameState == null) {
-            return;
-        }
-        AbstractPlayableSprite player;
-        try {
-            player = RecordingMainPlayerResolver.resolve(GameServices.configuration(), sprites);
-        } catch (IllegalStateException e) {
-            return;
-        }
-        // S3K raises the ROM Level_end_flag (endOfLevelActive); S1/S2 raise the
-        // game-agnostic act-completion signal (their ROMs never set Level_end_flag,
-        // and shared physics reads it for the strict right-boundary clamp).
-        boolean endOfLevel = gameState.isEndOfLevelActive() || gameState.isActCompletionSignalActive();
-        var checkpointState = level.getCheckpointState();
-        int checkpointIndex = checkpointState != null ? checkpointState.getLastCheckpointIndex() : -1;
-        GhostFrame sampledFrame = GhostFrameSampler.sample(player, false);
-        tickForTest(pendingHeldMask, pendingStartHeld, endOfLevel, checkpointIndex, sampledFrame);
-    }
-
     public void deactivate() {
-        if (registeredRegistry != null) {
-            registeredRegistry.unregister(layerRenderer);
-            registeredRegistry = null;
-        }
-        ghostRenderer.clearSlots();
         // Drop opponent cursors so a frozen ghost cannot keep rendering after
         // a level-ended deactivate.
         opponents.clear();
@@ -400,6 +375,7 @@ public final class TimeAttackRuntime {
         attempt = null;
         attemptListener = null;
         extraGhostSupplier = null;
-        applyRunPolicy(com.openggf.game.session.SessionManager.getCurrentGameplayMode(), false);
+        handle = null;
+        companion = null;
     }
 }

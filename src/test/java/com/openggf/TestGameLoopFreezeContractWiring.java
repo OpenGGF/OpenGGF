@@ -265,6 +265,8 @@ class TestGameLoopFreezeContractWiring {
                 "s3k", 0, 0, "sonic", List.of()));
         setField(loop, "timeAttackRuntime", timeAttack);
         gameplay.beginGameplayRun(com.openggf.game.session.GameplayRunPolicy.isolatedAct(), 0, 0);
+        timeAttack.attachHandle(loop.beginHostedRun(timeAttack.runSpec(), timeAttack,
+                loop::startTimeAttackReturnToMenuFade));
 
         loop.step();
 

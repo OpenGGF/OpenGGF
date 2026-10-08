@@ -77,9 +77,13 @@ import com.openggf.game.recording.UserRecordingVerificationResult;
 import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.game.timeattack.GhostStore;
 import com.openggf.game.timeattack.TimeAttackHudOverlay;
-import com.openggf.game.timeattack.TimeAttackDebugInput;
+import com.openggf.control.DebugAssistInput;
 import com.openggf.game.timeattack.TimeAttackLaunchRequest;
 import com.openggf.game.session.GameplayRunPolicy;
+import com.openggf.game.run.RunEndReason;
+import com.openggf.game.run.RunHandle;
+import com.openggf.game.run.RunHost;
+import com.openggf.game.run.RunSpec;
 import com.openggf.game.session.GameplayRunRouting;
 import com.openggf.game.timeattack.TimeAttackMenu;
 import com.openggf.game.timeattack.TimeAttackRuntime;
@@ -236,6 +240,8 @@ public class GameLoop {
     private final UserRecordingSessionLauncher userRecordingSessionLauncher;
     private final UserRecordingRuntimeControls userRecordingControls;
     private final TimeAttackRuntime timeAttackRuntime;
+    final HostedRunController hostedRuns;
+    private Runnable hostedRunReturn = () -> { };
     private final TimeAttackHudOverlay timeAttackHudOverlay;
     private final MultiplayerHudRenderer multiplayerHudRenderer;
     private MultiplayerRaceCoordinator multiplayerRaceCoordinator;
@@ -350,6 +356,8 @@ public class GameLoop {
                 () -> TraceSessionLauncher.active() != null
                         || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
                         || playbackDebugManager.isDriving(GameMode.LEVEL));
+        this.timeAttackRuntime.setRetryKey(this::timeAttackRetryKey);
+        this.hostedRuns = new HostedRunController(configService);
         this.timeAttackHudOverlay = new TimeAttackHudOverlay(timeAttackRuntime::hudState, configService);
         this.multiplayerHudRenderer = new MultiplayerHudRenderer(configService);
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
@@ -510,6 +518,10 @@ public class GameLoop {
         timeAttackHudOverlay.render(textRenderer);
         if (multiplayerRaceCoordinator != null) {
             multiplayerHudRenderer.render(textRenderer, multiplayerRaceCoordinator.hudState());
+        }
+        if (hostedRuns.isActive() && camera != null) {
+            hostedRuns.drawOverlay(new com.openggf.mods.ui.LevelOverlayCanvas(
+                    GameServices.graphics(), camera.getWidth(), camera.getHeight()));
         }
     }
 
@@ -1145,11 +1157,6 @@ public class GameLoop {
         wasMasterTitleScreenActiveLastFrame = false;
     }
 
-    private void handleTimeAttackRetryInput() {
-        if (timeAttackRuntime.isActive() && inputHandler.isKeyPressed(timeAttackRetryKey())) {
-            timeAttackRuntime.requestRetry();
-        }
-    }
 
     private void requireInputHandler() {
         if (inputHandler == null) {
@@ -1323,7 +1330,6 @@ public class GameLoop {
         escapeToMasterTitleController.update(currentGameMode, inputHandler);
         if (currentGameMode == GameMode.LEVEL) {
             userRecordingControls.updateLevelControlInput(inputHandler);
-            handleTimeAttackRetryInput();
         }
 
         boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler);
@@ -1369,9 +1375,9 @@ public class GameLoop {
 
         profiler.beginSection("input");
         boolean debugShortcutsEnabled = debugShortcutsEnabled();
-        if (timeAttackRuntime.isActive() && debugShortcutsEnabled
-                && TimeAttackDebugInput.taintPressed(inputHandler, configService)) {
-            timeAttackRuntime.markTainted();
+        if (hostedRuns.isActive() && debugShortcutsEnabled
+                && DebugAssistInput.pressed(inputHandler, configService)) {
+            hostedRuns.noteDebugAssist();
         }
         debugOverlayManager.updateInput(inputHandler, debugShortcutsEnabled, configService);
         if (debugShortcutsEnabled) {
@@ -1700,13 +1706,9 @@ public class GameLoop {
                 tcp, this::startPendingInLevelTitleCard,
                 this::applyTitleCardControlLock);
 
-        if (multiplayerRaceCoordinator != null) {
-            multiplayerRaceCoordinator.pump();
-            multiplayerRaceCoordinator.pollLocalInput(inputHandler);
-            if (multiplayerRaceCoordinator.holdGameplay()) {
-                updateNonGameplayAudio(doFrameStep);
-                return true;
-            }
+        if (!hostedRuns.admitStep(inputHandler)) {
+            updateNonGameplayAudio(doFrameStep);
+            return true;
         }
 
         // Check if a title card was requested (new level loaded)
@@ -1747,7 +1749,7 @@ public class GameLoop {
             // defeat -> credits, and the S3K seamless cross-act reload).
             if (levelManager.consumeHostReturnRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                endHostedRun();
+                endHostedRun(RunEndReason.ACT_COMPLETED);
                 levelIterationAdmission.finishPlaybackBoundary(
                         false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
@@ -1757,7 +1759,7 @@ public class GameLoop {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 // A host-returning run ends instead of bleeding into the next act.
                 if (runPolicy().returnsToHostOnActCompletion()) {
-                    endHostedRun();
+                    endHostedRun(RunEndReason.ACT_COMPLETED);
                 } else {
                     startNextActFade();
                 }
@@ -1770,7 +1772,7 @@ public class GameLoop {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 // A host-returning run ends instead of bleeding into the next zone.
                 if (runPolicy().returnsToHostOnActCompletion()) {
-                    endHostedRun();
+                    endHostedRun(RunEndReason.ACT_COMPLETED);
                 } else {
                     startNextZoneFade();
                 }
@@ -1792,7 +1794,7 @@ public class GameLoop {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 // A host-returning run ends instead of bleeding into the credits.
                 if (runPolicy().returnsToHostOnActCompletion()) {
-                    endHostedRun();
+                    endHostedRun(RunEndReason.ACT_COMPLETED);
                 } else if (GameServices.module().getGameId() == GameId.STANDALONE) {
                     masterTitleExitCoordinator.startStandaloneCompletion();
                 } else {
@@ -1803,10 +1805,18 @@ public class GameLoop {
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
-            if (timeAttackRuntime.isActive() && timeAttackRuntime.consumeRetryRequested()) {
-                TimeAttackLaunchRequest retryLaunch = timeAttackRuntime.launch();
+            if (hostedRuns.consumeLeave()) {
+                userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
+                endHostedRun(RunEndReason.LEFT);
+                levelIterationAdmission.finishPlaybackBoundary(
+                        false, playbackDebugManager, userRecordingControls);
+                updateNonGameplayAudio(doFrameStep);
+                return false;
+            }
+            if (hostedRuns.consumeRetry()) {
+                RunSpec retrySpec = hostedRuns.spec();
                 levelManager.getCheckpointState().clear();
-                levelManager.getTransitions().requestZoneAndAct(retryLaunch.zone(), retryLaunch.act());
+                levelManager.getTransitions().requestZoneAndAct(retrySpec.zone(), retrySpec.act());
                 levelIterationAdmission.finishPlaybackBoundary(
                         false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
@@ -1843,8 +1853,8 @@ public class GameLoop {
                 // the PAUSE_KEY-style userPaused toggle below (which does both) --
                 // see the pauseKey handling earlier in this method.
                 userRecordingControls.beforeLevelFrame(inputHandler);
-                if (timeAttackRuntime.isActive()) {
-                    timeAttackRuntime.beforeLevelFrame(inputHandler);
+                if (hostedRuns.isActive()) {
+                    hostedRuns.beforeStep(inputHandler);
                 }
                 int heldVblank = levelManager.getObjectManager() != null
                         ? levelManager.getObjectManager().getVblaCounter()
@@ -1870,12 +1880,7 @@ public class GameLoop {
                     levelManager.getObjectManager().initVblaCounter(heldVblank);
                 }
                 userRecordingControls.afterLevelFrame();
-                if (timeAttackRuntime.isActive()) {
-                    timeAttackRuntime.afterLevelFrame();
-                }
-                if (multiplayerRaceCoordinator != null) {
-                    multiplayerRaceCoordinator.afterLevelFrame();
-                }
+                hostedRuns.afterStep();
             } else if (levelManager.getObjectManager() != null
                     && !holdVblankForPendingLoad) {
                 // ROM v_vbla_byte increments in VBlank even on rows where
@@ -1998,15 +2003,29 @@ public class GameLoop {
                 run.getRunZone(), run.getRunAct(), request.type(), request.targetZone(), request.targetAct())) {
             return false;
         }
-        endHostedRun();
+        endHostedRun(RunEndReason.ACT_COMPLETED);
         updateNonGameplayAudio(doFrameStep);
         return true;
     }
 
     /** Ends the session's hosted run and hands control back to its host. */
-    private void endHostedRun() {
-        timeAttackRuntime.deactivate();
-        startTimeAttackReturnToMenuFade();
+    private void endHostedRun(RunEndReason reason) {
+        Runnable back = hostedRunReturn;
+        hostedRunReturn = () -> { };
+        hostedRuns.end(reason);
+        back.run();
+    }
+
+    /** Tells the hosted run its level is ready when a launch bypassed {@code doZoneAct}. */
+    void announceHostedRunLevelReady() {
+        hostedRuns.onLevelReady(debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY));
+    }
+
+    /** Hosts {@code host}'s run of {@code spec}; {@code returnToHost} runs once when it ends. */
+    RunHandle beginHostedRun(RunSpec spec, RunHost host, Runnable returnToHost) {
+        RunHandle handle = hostedRuns.begin(spec, host);
+        hostedRunReturn = Objects.requireNonNull(returnToHost, "returnToHost");
+        return handle;
     }
 
     private GameplayRunPolicy runPolicy() {
@@ -3721,12 +3740,11 @@ public class GameLoop {
         userRecordingSessionLauncher.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
         userRecordingSessionLauncher.endPlaybackSession();
         levelIterationAdmission.resetLastAppliedPlaybackFrame();
-        // Every route out of a time-attack session funnels through this method
-        // (escape-to-master-title hold and TraceSessionLauncher teardown), so
-        // this is the single place isActive() must be cleared -- otherwise it
-        // stays sticky and the frame hooks above would keep firing during the
-        // next, unrelated gameplay session.
-        timeAttackRuntime.deactivate();
+        // Every route out of a hosted run that was not already ended funnels through
+        // this method (escape-to-master-title hold and TraceSessionLauncher teardown),
+        // so the run must end here or its frame hooks would fire in the next session.
+        hostedRunReturn = () -> { };
+        hostedRuns.end(RunEndReason.ABORTED);
         masterTitleLaunchCoordinator.returnToMasterTitle();
     }
 
@@ -3746,7 +3764,7 @@ public class GameLoop {
      * escape-to-title hold, then arms {@link #pendingReopenTimeAttackMenu} so
      * the title screen reopens the time attack menu once it becomes active.
      */
-    private void startTimeAttackReturnToMenuFade() {
+    void startTimeAttackReturnToMenuFade() {
         GameLoopMenuTransitions.fadeOutTo(resolveFadeManager(), audioManager,
                 () -> pendingReopenTimeAttackMenu = multiplayerRaceCoordinator == null, this::returnToMasterTitle);
     }
@@ -4546,15 +4564,9 @@ public class GameLoop {
             throw new RuntimeException("Failed to load zone " + zone + " act " + act, e);
         }
 
-        if (timeAttackRuntime.isActive()) {
-            timeAttackRuntime.onLevelReady();
-            // An overlay already visible before spawn is just as much an advantage as
-            // toggling one on mid-run (see the anyDebugOverlayTogglePressed() taint check
-            // below), so taint immediately rather than waiting for the next toggle press.
-            if (debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY)) {
-                timeAttackRuntime.markTainted();
-            }
-        }
+        // An overlay already visible before spawn is as much an advantage as toggling
+        // one on mid-run, so the host hears about it with the level start.
+        hostedRuns.onLevelReady(debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY));
 
         if (levelManager.hasPendingFreshLevelTransitionBoundary()
                 && getTitleCardProviderLazy() instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary

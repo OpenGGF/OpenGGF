@@ -1,7 +1,6 @@
 package com.openggf.game.timeattack;
 
 import com.openggf.ghost.GhostFrame;
-import com.openggf.game.ghost.GhostRenderRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -97,22 +96,6 @@ class TestTimeAttackRuntime {
     }
 
     @Test
-    void reattachingRendererDoesNotStackDuplicateRegistrations(@TempDir Path root) {
-        // A retry re-enters onLevelReady() on the same GameplayModeContext, so the ghost
-        // layer renderer must be detached before re-registering — otherwise it draws N+1
-        // times. Two attaches must net exactly one registration: after deactivate()
-        // unregisters once, the registry must be empty.
-        GhostRenderRegistry registry = new GhostRenderRegistry();
-        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root),
-                root.resolve("identity"), () -> false);
-        runtime.attachRenderer(registry);
-        runtime.attachRenderer(registry);
-        assertFalse(registry.isEmpty());
-        runtime.deactivate();
-        assertTrue(registry.isEmpty(), "duplicate registration left the ghost rendering after deactivate");
-    }
-
-    @Test
     void deactivateClearsOpponentGhosts(@TempDir Path root) throws Exception {
         // A frozen ghost must not keep rendering after a level-ended deactivate.
         GhostStore store = new GhostStore(root);
@@ -143,30 +126,67 @@ class TestTimeAttackRuntime {
     }
 
     @Test
-    void applyRunPolicyStartsAndEndsTheIsolatedActRun(@TempDir Path root) {
-        // Engine-free seam for onLevelReady()/deactivate(): the session is a plain
-        // GameplayModeContext rather than one resolved through SessionManager.
+    void runSpecIsAnIsolatedActForTheArmedLaunch(@TempDir Path root) {
         TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root),
                 root.resolve("identity"), () -> false);
-        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 1, 1, "sonic", java.util.List.of()));
-        var session = new com.openggf.game.session.GameplayModeContext(
-                new com.openggf.game.session.WorldSession(new com.openggf.game.sonic3k.Sonic3kGameModule()));
-        assertEquals(com.openggf.game.session.GameplayRunPolicy.stock(), session.getRunPolicy());
-
-        runtime.applyRunPolicy(session, true); // mirrors onLevelReady()
-        assertEquals(com.openggf.game.session.GameplayRunPolicy.isolatedAct(), session.getRunPolicy());
-        assertEquals(1, session.getRunZone());
-        assertEquals(1, session.getRunAct());
-
-        runtime.applyRunPolicy(session, false); // mirrors deactivate()
-        assertEquals(com.openggf.game.session.GameplayRunPolicy.stock(), session.getRunPolicy());
-        assertEquals(-1, session.getRunZone());
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 1, 1, "knuckles", java.util.List.of()));
+        var spec = runtime.runSpec();
+        assertEquals("s3k", spec.gameId());
+        assertEquals(1, spec.zone());
+        assertEquals(1, spec.act());
+        assertEquals("knuckles", spec.character());
+        assertEquals(com.openggf.game.session.GameplayRunPolicy.isolatedAct(), spec.policy());
     }
 
     @Test
-    void applyRunPolicyToleratesNullSession(@TempDir Path root) {
+    void retryKeyVoidsTheAttemptAndAsksTheRunToRetry(@TempDir Path root) {
         TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root),
                 root.resolve("identity"), () -> false);
-        assertDoesNotThrow(() -> runtime.applyRunPolicy(null, true));
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
+        boolean[] retried = new boolean[1];
+        runtime.attachHandle(new com.openggf.game.run.RunHandle() {
+            @Override public void retry() { retried[0] = true; }
+            @Override public void leave() { }
+            @Override public boolean isActive() { return true; }
+        });
+        runtime.setRetryKey(() -> 82);
+        runtime.onLevelReady(new com.openggf.game.run.RunLevelStart(runtime.runSpec(), "fp", false));
+        assertTrue(runtime.isAttemptActive());
+
+        assertTrue(runtime.admitStep(keys(82)));
+
+        assertFalse(runtime.isAttemptActive(), "retry voids the running attempt");
+        assertTrue(retried[0], "retry is a run command, applied by the engine at the next boundary");
+    }
+
+    @Test
+    void debugAssistedLevelStartTaintsTheAttempt(@TempDir Path root) throws Exception {
+        GhostStore store = new GhostStore(root);
+        TimeAttackRuntime runtime = new TimeAttackRuntime(store, root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
+        runtime.onLevelReady(new com.openggf.game.run.RunLevelStart(runtime.runSpec(), "fp", true));
+        com.openggf.game.run.PlayerPose pose = new com.openggf.game.run.PlayerPose(10, 20, 0, false, false, 2, false);
+        runtime.afterStep(new com.openggf.game.run.RunStep(0, 0x08, false, pose, false, -1, false));
+        runtime.afterStep(new com.openggf.game.run.RunStep(1, 0x08, false, pose, true, -1, false));
+        assertTrue(runtime.hudState().finished());
+        assertTrue(store.loadBest("s3k", 0, 0, "sonic").isEmpty(), "a tainted finish is never saved");
+    }
+
+    @Test
+    void endingTheRunDeactivatesTheRuntime(@TempDir Path root) {
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root),
+                root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
+        assertTrue(runtime.isActive());
+        runtime.onRunEnded(com.openggf.game.run.RunEndReason.ACT_COMPLETED);
+        assertFalse(runtime.isActive());
+    }
+
+    private static com.openggf.game.run.RunInput keys(int pressedKey) {
+        return new com.openggf.game.run.RunInput() {
+            @Override public com.openggf.control.LogicalInputSnapshot input() { return null; }
+            @Override public boolean keyDown(int key) { return key == pressedKey; }
+            @Override public boolean keyPressed(int key) { return key == pressedKey; }
+        };
     }
 }

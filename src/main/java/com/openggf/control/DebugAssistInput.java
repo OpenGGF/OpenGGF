@@ -1,16 +1,16 @@
-package com.openggf.game.timeattack;
+package com.openggf.control;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.DebugOverlayToggle;
 
-/** Detects debug inputs that taint, but never block, a timed attempt. */
-public final class TimeAttackDebugInput {
-    private TimeAttackDebugInput() {
+/** Detects debug shortcuts that assist the player; a hosted run reports them, never blocks them. */
+public final class DebugAssistInput {
+    private DebugAssistInput() {
     }
 
-    public static boolean taintPressed(InputHandler input,
+    public static boolean pressed(InputHandler input,
                                        SonicConfigurationService configuration) {
         for (DebugOverlayToggle toggle : DebugOverlayToggle.values()) {
             if (input.isKeyPressed(toggle.keyCode())) {

@@ -475,6 +475,15 @@ CF-ANNOTATION TYPE com.openggf.game.rules.PlayerMovementRules visible @com.openg
 CF-ANNOTATION TYPE com.openggf.game.rules.PowerUpRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.RingRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.SidekickCpuRules visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.run.GhostPose visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.run.PlayerPose visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.run.RunEndReason visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.run.RunHandle visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.run.RunHost visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.run.RunInput visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.run.RunLevelStart visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.run.RunSpec visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.run.RunStep visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.save.RuntimeSaveContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.save.SaveManager visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.save.SaveReason visible @com.openggf.game.ModApi
@@ -773,6 +782,7 @@ CF-ANNOTATION TYPE com.openggf.mods.scene.SceneButtons visible @com.openggf.game
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneCanvas visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneDraw visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneGameplay visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneImage visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneKeys visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneLevelStage visible @com.openggf.game.ModApi
@@ -1231,6 +1241,11 @@ CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,bo
 CONSTRUCTOR com.openggf.game.rules.PowerUpRules public  <init>(int,int,int,int,int,boolean,boolean,int,int,boolean)
 CONSTRUCTOR com.openggf.game.rules.RingRules public  <init>(int,int,boolean,boolean,int,int,int,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.SidekickCpuRules public  <init>(int,int,int,boolean,boolean,boolean,boolean,int,boolean,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.game.run.GhostPose public  <init>(java.lang.String,java.lang.String,com.openggf.game.run.PlayerPose,java.lang.String,float)
+CONSTRUCTOR com.openggf.game.run.PlayerPose public  <init>(int,int,int,boolean,boolean,int,boolean)
+CONSTRUCTOR com.openggf.game.run.RunLevelStart public  <init>(com.openggf.game.run.RunSpec,java.lang.String,boolean)
+CONSTRUCTOR com.openggf.game.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy)
+CONSTRUCTOR com.openggf.game.run.RunStep public  <init>(long,int,boolean,com.openggf.game.run.PlayerPose,boolean,int,boolean)
 CONSTRUCTOR com.openggf.game.save.SaveManager public  <init>(java.nio.file.Path)
 CONSTRUCTOR com.openggf.game.save.SaveSlotSummary public  <init>(int,com.openggf.game.save.SaveSlotState,java.util.Map<java.lang.String,java.lang.Object>)
 CONSTRUCTOR com.openggf.game.save.SelectedTeam public  <init>(java.lang.String,java.util.List<java.lang.String>)
@@ -2222,6 +2237,10 @@ FIELD com.openggf.game.rules.GameRules public,static,final com.openggf.game.rule
 FIELD com.openggf.game.rules.ObjectInteractionRules public,static,final int DUCK_TOUCH_BOX_HEIGHT
 FIELD com.openggf.game.rules.ObjectInteractionRules public,static,final int DUCK_TOUCH_BOX_TOP_SHIFT
 FIELD com.openggf.game.rules.ObjectInteractionRules public,static,final int NO_DUCK_TOUCH_BOX
+FIELD com.openggf.game.run.RunEndReason public,static,final com.openggf.game.run.RunEndReason ABORTED
+FIELD com.openggf.game.run.RunEndReason public,static,final com.openggf.game.run.RunEndReason ACT_COMPLETED
+FIELD com.openggf.game.run.RunEndReason public,static,final com.openggf.game.run.RunEndReason LEFT
+FIELD com.openggf.game.run.RunEndReason public,static,final com.openggf.game.run.RunEndReason LOAD_FAILED
 FIELD com.openggf.game.save.SaveReason public,static,final com.openggf.game.save.SaveReason CLEAR_RESTART_COMMIT
 FIELD com.openggf.game.save.SaveReason public,static,final com.openggf.game.save.SaveReason EXISTING_SLOT_LOAD
 FIELD com.openggf.game.save.SaveReason public,static,final com.openggf.game.save.SaveReason LIVES_CONTINUES_SAVE
@@ -7033,6 +7052,62 @@ METHOD com.openggf.game.rules.SidekickCpuRules public  int sidekickFollowSnapThr
 METHOD com.openggf.game.rules.SidekickCpuRules public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.rules.SidekickCpuRules public,final  int hashCode()
 METHOD com.openggf.game.rules.SidekickCpuRules public,final  java.lang.String toString()
+METHOD com.openggf.game.run.GhostPose public  com.openggf.game.run.PlayerPose pose()
+METHOD com.openggf.game.run.GhostPose public  float opacity()
+METHOD com.openggf.game.run.GhostPose public  java.lang.String characterCode()
+METHOD com.openggf.game.run.GhostPose public  java.lang.String nameplate()
+METHOD com.openggf.game.run.GhostPose public  java.lang.String slotId()
+METHOD com.openggf.game.run.GhostPose public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.run.GhostPose public,final  int hashCode()
+METHOD com.openggf.game.run.GhostPose public,final  java.lang.String toString()
+METHOD com.openggf.game.run.PlayerPose public  boolean hFlip()
+METHOD com.openggf.game.run.PlayerPose public  boolean highPriority()
+METHOD com.openggf.game.run.PlayerPose public  boolean vFlip()
+METHOD com.openggf.game.run.PlayerPose public  int centreX()
+METHOD com.openggf.game.run.PlayerPose public  int centreY()
+METHOD com.openggf.game.run.PlayerPose public  int mappingFrame()
+METHOD com.openggf.game.run.PlayerPose public  int priorityBucket()
+METHOD com.openggf.game.run.PlayerPose public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.run.PlayerPose public,final  int hashCode()
+METHOD com.openggf.game.run.PlayerPose public,final  java.lang.String toString()
+METHOD com.openggf.game.run.RunEndReason public,static  com.openggf.game.run.RunEndReason valueOf(java.lang.String)
+METHOD com.openggf.game.run.RunEndReason public,static  com.openggf.game.run.RunEndReason[] values()
+METHOD com.openggf.game.run.RunHandle public,abstract  boolean isActive()
+METHOD com.openggf.game.run.RunHandle public,abstract  void leave()
+METHOD com.openggf.game.run.RunHandle public,abstract  void retry()
+METHOD com.openggf.game.run.RunHost public  boolean admitStep(com.openggf.game.run.RunInput)
+METHOD com.openggf.game.run.RunHost public  java.util.List<com.openggf.game.run.GhostPose> ghosts()
+METHOD com.openggf.game.run.RunHost public  void afterStep(com.openggf.game.run.RunStep)
+METHOD com.openggf.game.run.RunHost public  void drawOverlay(com.openggf.mods.ui.LevelOverlayCanvas)
+METHOD com.openggf.game.run.RunHost public  void onLevelReady(com.openggf.game.run.RunLevelStart)
+METHOD com.openggf.game.run.RunHost public  void onRunEnded(com.openggf.game.run.RunEndReason)
+METHOD com.openggf.game.run.RunInput public,abstract  boolean keyDown(int)
+METHOD com.openggf.game.run.RunInput public,abstract  boolean keyPressed(int)
+METHOD com.openggf.game.run.RunInput public,abstract  com.openggf.control.LogicalInputSnapshot input()
+METHOD com.openggf.game.run.RunLevelStart public  boolean debugAssisted()
+METHOD com.openggf.game.run.RunLevelStart public  com.openggf.game.run.RunSpec spec()
+METHOD com.openggf.game.run.RunLevelStart public  java.lang.String determinismFingerprint()
+METHOD com.openggf.game.run.RunLevelStart public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.run.RunLevelStart public,final  int hashCode()
+METHOD com.openggf.game.run.RunLevelStart public,final  java.lang.String toString()
+METHOD com.openggf.game.run.RunSpec public  com.openggf.game.session.GameplayRunPolicy policy()
+METHOD com.openggf.game.run.RunSpec public  int act()
+METHOD com.openggf.game.run.RunSpec public  int zone()
+METHOD com.openggf.game.run.RunSpec public  java.lang.String character()
+METHOD com.openggf.game.run.RunSpec public  java.lang.String gameId()
+METHOD com.openggf.game.run.RunSpec public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.run.RunSpec public,final  int hashCode()
+METHOD com.openggf.game.run.RunSpec public,final  java.lang.String toString()
+METHOD com.openggf.game.run.RunStep public  boolean actComplete()
+METHOD com.openggf.game.run.RunStep public  boolean debugAssisted()
+METHOD com.openggf.game.run.RunStep public  boolean startHeld()
+METHOD com.openggf.game.run.RunStep public  com.openggf.game.run.PlayerPose player()
+METHOD com.openggf.game.run.RunStep public  int checkpointIndex()
+METHOD com.openggf.game.run.RunStep public  int heldMask()
+METHOD com.openggf.game.run.RunStep public  long ordinal()
+METHOD com.openggf.game.run.RunStep public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.run.RunStep public,final  int hashCode()
+METHOD com.openggf.game.run.RunStep public,final  java.lang.String toString()
 METHOD com.openggf.game.save.RuntimeSaveContext public  boolean emeraldsConverted()
 METHOD com.openggf.game.save.RuntimeSaveContext public  boolean hasLiveGameplayState()
 METHOD com.openggf.game.save.RuntimeSaveContext public  boolean isClear()
@@ -10612,6 +10687,7 @@ METHOD com.openggf.mods.code.StandaloneLevelLoader public,static  com.openggf.le
 METHOD com.openggf.mods.code.ZoneEventFactory public,abstract  com.openggf.game.LevelEventProvider create()
 METHOD com.openggf.mods.scene.DebuggableScene public,abstract  boolean debugJump(java.lang.String)
 METHOD com.openggf.mods.scene.ModScene public  void exit(com.openggf.mods.scene.SceneContext)
+METHOD com.openggf.mods.scene.ModScene public  void resumed(com.openggf.mods.scene.SceneContext,com.openggf.game.run.RunEndReason)
 METHOD com.openggf.mods.scene.ModScene public,abstract  void draw(com.openggf.mods.scene.SceneContext,com.openggf.mods.scene.SceneCanvas)
 METHOD com.openggf.mods.scene.ModScene public,abstract  void enter(com.openggf.mods.scene.SceneContext)
 METHOD com.openggf.mods.scene.ModScene public,abstract  void update(com.openggf.mods.scene.SceneContext)
@@ -10675,6 +10751,7 @@ METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void fill(int,int,int
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void text(java.lang.String,int,int,int)
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void unclip()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.control.PhysicalInput physicalInput()
+METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneGameplay gameplay()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneMusic music()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneNetwork network()
 METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean buttonDown(int)
@@ -10710,6 +10787,8 @@ METHOD com.openggf.mods.scene.SceneDraw public  int hashCode()
 METHOD com.openggf.mods.scene.SceneDraw public  int tint()
 METHOD com.openggf.mods.scene.SceneDraw public  java.lang.String toString()
 METHOD com.openggf.mods.scene.SceneDraw public,static  com.openggf.mods.scene.SceneDraw plain()
+METHOD com.openggf.mods.scene.SceneGameplay public,abstract  com.openggf.game.run.RunHandle launch(com.openggf.game.run.RunSpec,com.openggf.game.run.RunHost)
+METHOD com.openggf.mods.scene.SceneGameplay public,abstract  java.util.List<java.lang.String> availableGames()
 METHOD com.openggf.mods.scene.SceneImage public  com.openggf.mods.scene.SceneImage crop(int,int,int,int)
 METHOD com.openggf.mods.scene.SceneImage public  int height()
 METHOD com.openggf.mods.scene.SceneImage public  int pixel(int,int)
@@ -14109,6 +14188,33 @@ RECORD-COMPONENT com.openggf.game.rules.SidekickCpuRules sidekickHurtRestoresRad
 RECORD-COMPONENT com.openggf.game.rules.SidekickCpuRules sidekickPanicTreatsPinballModeAsSpindashFlag boolean
 RECORD-COMPONENT com.openggf.game.rules.SidekickCpuRules sidekickRespawnEntersCatchUpFlight boolean
 RECORD-COMPONENT com.openggf.game.rules.SidekickCpuRules sidekickSpawningRequiresGroundedLeader boolean
+RECORD-COMPONENT com.openggf.game.run.GhostPose characterCode java.lang.String
+RECORD-COMPONENT com.openggf.game.run.GhostPose nameplate java.lang.String
+RECORD-COMPONENT com.openggf.game.run.GhostPose opacity float
+RECORD-COMPONENT com.openggf.game.run.GhostPose pose com.openggf.game.run.PlayerPose
+RECORD-COMPONENT com.openggf.game.run.GhostPose slotId java.lang.String
+RECORD-COMPONENT com.openggf.game.run.PlayerPose centreX int
+RECORD-COMPONENT com.openggf.game.run.PlayerPose centreY int
+RECORD-COMPONENT com.openggf.game.run.PlayerPose hFlip boolean
+RECORD-COMPONENT com.openggf.game.run.PlayerPose highPriority boolean
+RECORD-COMPONENT com.openggf.game.run.PlayerPose mappingFrame int
+RECORD-COMPONENT com.openggf.game.run.PlayerPose priorityBucket int
+RECORD-COMPONENT com.openggf.game.run.PlayerPose vFlip boolean
+RECORD-COMPONENT com.openggf.game.run.RunLevelStart debugAssisted boolean
+RECORD-COMPONENT com.openggf.game.run.RunLevelStart determinismFingerprint java.lang.String
+RECORD-COMPONENT com.openggf.game.run.RunLevelStart spec com.openggf.game.run.RunSpec
+RECORD-COMPONENT com.openggf.game.run.RunSpec act int
+RECORD-COMPONENT com.openggf.game.run.RunSpec character java.lang.String
+RECORD-COMPONENT com.openggf.game.run.RunSpec gameId java.lang.String
+RECORD-COMPONENT com.openggf.game.run.RunSpec policy com.openggf.game.session.GameplayRunPolicy
+RECORD-COMPONENT com.openggf.game.run.RunSpec zone int
+RECORD-COMPONENT com.openggf.game.run.RunStep actComplete boolean
+RECORD-COMPONENT com.openggf.game.run.RunStep checkpointIndex int
+RECORD-COMPONENT com.openggf.game.run.RunStep debugAssisted boolean
+RECORD-COMPONENT com.openggf.game.run.RunStep heldMask int
+RECORD-COMPONENT com.openggf.game.run.RunStep ordinal long
+RECORD-COMPONENT com.openggf.game.run.RunStep player com.openggf.game.run.PlayerPose
+RECORD-COMPONENT com.openggf.game.run.RunStep startHeld boolean
 RECORD-COMPONENT com.openggf.game.save.SaveSlotSummary payload java.util.Map<java.lang.String,java.lang.Object>
 RECORD-COMPONENT com.openggf.game.save.SaveSlotSummary slot int
 RECORD-COMPONENT com.openggf.game.save.SaveSlotSummary state com.openggf.game.save.SaveSlotState
@@ -15751,6 +15857,7 @@ TYPE enum public,final com.openggf.game.profiles.touchresponse.TouchOverlapStopP
 TYPE enum public,final com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability SUPER java.lang.Enum<com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability>
 TYPE enum public,final com.openggf.game.render.SpecialRenderEffectStage SUPER java.lang.Enum<com.openggf.game.render.SpecialRenderEffectStage>
 TYPE enum public,final com.openggf.game.rewind.identity.ObjectRefKind SUPER java.lang.Enum<com.openggf.game.rewind.identity.ObjectRefKind>
+TYPE enum public,final com.openggf.game.run.RunEndReason SUPER java.lang.Enum<com.openggf.game.run.RunEndReason>
 TYPE enum public,final com.openggf.game.save.SaveReason SUPER java.lang.Enum<com.openggf.game.save.SaveReason>
 TYPE enum public,final com.openggf.game.save.SaveSlotState SUPER java.lang.Enum<com.openggf.game.save.SaveSlotState>
 TYPE enum public,final com.openggf.game.solid.ContactKind SUPER java.lang.Enum<com.openggf.game.solid.ContactKind>
@@ -15936,6 +16043,9 @@ TYPE interface public,abstract com.openggf.game.render.AdvancedRenderMode SUPER 
 TYPE interface public,abstract com.openggf.game.render.SpecialRenderEffect SUPER <none>
 TYPE interface public,abstract com.openggf.game.rewind.RewindSnapshottable<S> SUPER <none>
 TYPE interface public,abstract com.openggf.game.rewind.ScriptedRewind SUPER <none>
+TYPE interface public,abstract com.openggf.game.run.RunHandle SUPER <none>
+TYPE interface public,abstract com.openggf.game.run.RunHost SUPER <none>
+TYPE interface public,abstract com.openggf.game.run.RunInput SUPER <none>
 TYPE interface public,abstract com.openggf.game.save.SaveSnapshotProvider SUPER <none>
 TYPE interface public,abstract com.openggf.game.solid.SolidExecutionRegistry SUPER <none>
 TYPE interface public,abstract com.openggf.game.startup.DonatedDataSelectWarmupTask SUPER <none>
@@ -15978,6 +16088,7 @@ TYPE interface public,abstract com.openggf.mods.scene.SceneArt SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneAudio SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneCanvas SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneContext SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.SceneGameplay SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneMusic SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneMusicPlayer SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneMusicPreparation SUPER <none>
@@ -16121,6 +16232,11 @@ TYPE record public,final com.openggf.game.rules.PlayerMovementRules SUPER java.l
 TYPE record public,final com.openggf.game.rules.PowerUpRules SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rules.RingRules SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rules.SidekickCpuRules SUPER java.lang.Record
+TYPE record public,final com.openggf.game.run.GhostPose SUPER java.lang.Record
+TYPE record public,final com.openggf.game.run.PlayerPose SUPER java.lang.Record
+TYPE record public,final com.openggf.game.run.RunLevelStart SUPER java.lang.Record
+TYPE record public,final com.openggf.game.run.RunSpec SUPER java.lang.Record
+TYPE record public,final com.openggf.game.run.RunStep SUPER java.lang.Record
 TYPE record public,final com.openggf.game.save.SaveSlotSummary SUPER java.lang.Record
 TYPE record public,final com.openggf.game.save.SelectedTeam SUPER java.lang.Record
 TYPE record public,final com.openggf.game.session.GameplayRunPolicy SUPER java.lang.Record
@@ -16842,6 +16958,15 @@ TYPE-ANNOTATION com.openggf.game.rules.PlayerMovementRules @com.openggf.game.Mod
 TYPE-ANNOTATION com.openggf.game.rules.PowerUpRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.RingRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.SidekickCpuRules @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.run.GhostPose @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.run.PlayerPose @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.run.RunEndReason @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.run.RunHandle @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.run.RunHost @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.run.RunInput @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.run.RunLevelStart @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.run.RunSpec @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.run.RunStep @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.save.RuntimeSaveContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.save.SaveManager @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.save.SaveReason @com.openggf.game.ModApi
@@ -17140,6 +17265,7 @@ TYPE-ANNOTATION com.openggf.mods.scene.SceneButtons @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneCanvas @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneDraw @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneGameplay @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneImage @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneKeys @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneLevelStage @com.openggf.game.ModApi

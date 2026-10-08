@@ -27,7 +27,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /** Bridges a room connection to one attached time-attack runtime per round. */
-public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.AttemptListener {
+public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.AttemptListener,
+        TimeAttackRuntime.FrameCompanion {
     private static final Logger LOGGER = Logger.getLogger(
             MultiplayerRaceCoordinator.class.getName());
     private static final long PING_INTERVAL_MILLIS = 500;
@@ -90,6 +91,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         this.publisher = new GhostStreamPublisher(transport::sendBinary);
         runtime.setAttemptListener(this);
         runtime.setExtraGhostSupplier(this::remoteActiveGhosts);
+        runtime.setFrameCompanion(this);
     }
 
     public void detachRuntime() {
@@ -97,6 +99,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         if (runtime != null) {
             runtime.setAttemptListener(null);
             runtime.setExtraGhostSupplier(null);
+            runtime.setFrameCompanion(null);
             runtime = null;
         }
         if (publisherActive && publisher != null) {
@@ -162,6 +165,18 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         return runtime != null && session.phase() == ClientRaceSession.Phase.COUNTDOWN;
     }
 
+    @Override
+    public boolean admit(com.openggf.game.run.RunInput input) {
+        pump();
+        pollLocalInput(input);
+        return !holdGameplay();
+    }
+
+    @Override
+    public void afterStep() {
+        afterLevelFrame();
+    }
+
     public void afterLevelFrame() {
         if (runtime != null && !session.isWindowOpen() && runtime.isAttemptActive()) {
             runtime.voidCurrentAttempt();
@@ -214,13 +229,13 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         transport.sendControl(new ControlMessage.RoundConfigure(config));
     }
 
-    public void pollLocalInput(InputHandler input) {
+    public void pollLocalInput(com.openggf.game.run.RunInput input) {
         for (int option = 0; option < 3; option++) {
-            if (input.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_1 + option)) {
+            if (input.keyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_1 + option)) {
                 castVote(option);
             }
         }
-        var logical = input.logical();
+        var logical = input.input();
         int dx = (logical.menuRight() ? 1 : 0) - (logical.menuLeft() ? 1 : 0);
         int dy = (logical.menuDown() ? 1 : 0) - (logical.menuUp() ? 1 : 0);
         boolean active = runtime != null && runtime.isAttemptFinished()

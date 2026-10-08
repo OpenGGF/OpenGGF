@@ -38,6 +38,10 @@ public interface ModScene {
     /** Draws the current state. Must not change game state; it may be skipped or repeated. */
     void draw(SceneContext ctx, SceneCanvas canvas);
 
+    /** A run launched through {@link SceneContext#gameplay()} has ended and the scene is shown again. */
+    default void resumed(SceneContext ctx, com.openggf.game.run.RunEndReason reason) {
+    }
+
     /** The scene is closing; save anything worth keeping. Images are released afterwards. */
     default void exit(SceneContext ctx) {
     }
