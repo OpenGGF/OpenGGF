@@ -15,7 +15,6 @@ public final class RemoteGhostRegistry {
                               RemoteGhostPlayback.RenderState state) {
     }
 
-    @com.openggf.game.ModApi
     public record FarPlayer(int slot, String displayName, String character,
                             int cellX, int cellY, int status) { }
 

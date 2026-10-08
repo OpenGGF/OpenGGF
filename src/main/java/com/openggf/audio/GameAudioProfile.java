@@ -14,6 +14,9 @@ import java.util.Map;
 
 @com.openggf.game.ModApi
 public interface GameAudioProfile {
+    /** No native ROM audio; namespaced streamed music and PCM effects remain available. */
+    static GameAudioProfile silentNative() { return new SilentNativeAudioProfile(); }
+
     @com.openggf.game.ModApi
     enum OrdinaryMusicSfxPolicy {
         PRESERVE_ACTIVE,
@@ -58,7 +61,10 @@ public interface GameAudioProfile {
         FRAME_MULTIPLY
     }
 
-    SmpsLoader createSmpsLoader(Rom rom);
+    /** Optional native ROM loader. Profiles using only authored audio leave it absent. */
+    default SmpsLoader createSmpsLoader(Rom rom) {
+        return null;
+    }
 
     SmpsSequencerConfig getSequencerConfig();
 

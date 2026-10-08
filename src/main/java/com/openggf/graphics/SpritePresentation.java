@@ -39,7 +39,13 @@ public final class SpritePresentation {
 
     public record Attributes(int palette, boolean hFlip, boolean vFlip, boolean priority) { }
 
-    public interface Geometry { GLCommandable command(int cameraX, int cameraY); }
+    public interface Geometry {
+        GLCommandable command(int cameraX, int cameraY);
+        /** Reconstruct for the supplied render host; existing geometry keeps its legacy dispatch. */
+        default GLCommandable command(GraphicsManager graphics, int cameraX, int cameraY) {
+            return command(cameraX, cameraY);
+        }
+    }
 
     public record Primitive(int beforeTile, Layer layer, Geometry primitive) { }
 

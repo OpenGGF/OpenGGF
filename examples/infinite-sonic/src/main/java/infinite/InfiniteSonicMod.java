@@ -66,12 +66,7 @@ public final class InfiniteSonicMod implements GgfMod {
         @Override public com.openggf.game.rules.GameRules getRules() { return stock.getRules(); }
         private static PhysicsProfile slower(PhysicsProfile p) {
             if (p == null) return null;
-            return new PhysicsProfile(p.runAccel(), p.runDecel(), p.friction(),
-                    (short) Math.min(p.max(), CourseController.COURSE_MAX_SPEED), p.jump(), p.slopeRunning(),
-                    p.slopeRollingUp(), p.slopeRollingDown(), p.rollDecel(), p.minStartRollSpeed(),
-                    p.minRollSpeed(), p.maxRoll(), p.rollHeight(), p.runHeight(), p.standXRadius(),
-                    p.standYRadius(), p.rollXRadius(), p.rollYRadius(), p.singleFacingBalance(),
-                    p.onObjectBalanceShift());
+            return p.withMax(Math.min(p.max(), CourseController.COURSE_MAX_SPEED));
         }
     }
 

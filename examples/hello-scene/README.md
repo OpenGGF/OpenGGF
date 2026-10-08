@@ -44,11 +44,22 @@ Then read the [mod scene guide](../../docs/modding/guides/mod-scenes.md) for the
 
 Things that trip people up:
 
-- **No static state.** The mod validator rejects enums, static collections and static
-  initialisers. Keep state in fields of your scene; `static final` numbers and strings are
+- **No static state.** The mod validator accepts constrained immutable enums, but rejects mutable
+  enum payloads, static collections and arbitrary initialisers. Keep state in fields of your scene; `static final` numbers and strings are
   fine.
 - **Change state only in `update`.** The engine may skip or repeat `draw` (headless capture
   draws only some frames), so `draw` should only read your fields.
 - **ROM addresses** come from the disassembly's listing file (`sonic3k.lst`), not from line
   numbers. `ggfmod sprites` draws every frame of a sprite at those addresses so you can check
   them before writing code.
+
+
+## Use matching creator artifacts
+
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+
+```sh
+python3 examples/build_example.py hello-scene --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s3k /absolute/own-s3k.gen
+```
+
+Use `--s1`, `--s2`, or `--s3k` for the games this example consumes. Explicit paths create isolated development configuration and saves; no ROM is copied or linked. The creator kit exports this example with a portable POM and `tools/build_project.py`; it needs no engine source checkout. Only production sources/resources enter the validated mod jar. Read [recipient installation](../../docs/modding/installing-mods.md) before sharing.

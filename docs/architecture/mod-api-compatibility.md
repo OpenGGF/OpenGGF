@@ -235,6 +235,8 @@ members remain absent.
 
 The underlying current behaviors remain available through their canonical 0.7
 owners; this inventory records deleted shims, not removed product capabilities.
+Zone declarations use named `ModZoneContribution.singleAct(...)` and
+`multiAct(...)` factories; the record retains only its canonical constructor.
 
 ## Historical development corpus
 

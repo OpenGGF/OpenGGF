@@ -497,7 +497,7 @@ The class's Javadoc lists every option and script step. To get the classpath fil
 | What you see | Why, and what to do |
 |---|---|
 | The stock title screen opens instead of your scene | The mod is not enabled (or not trusted) in the Mod Manager; another enabled mod later in load order also registers a startup scene; you are running a native build, which loads no code mods; or test mode is on (`debug.testMode.enabled`), which skips startup scenes. |
-| `ggfmod package` fails with `STATIC_STATE_UNSUPPORTED` | A mod class has an enum, a static collection or array, or a static initialiser. Move the state onto your scene or an object it owns; use `static final` numbers and strings for kinds. |
+| `ggfmod package` fails with `STATIC_STATE_UNSUPPORTED` | A mod class has mutable static state, an unsupported enum payload, a static collection or array, or arbitrary initialization. Move the state onto your scene or an object it owns; use `static final` numbers and strings for kinds. |
 | The mod is disabled and the Mod Manager shows a finding | One of your scene calls threw an exception. The finding and the engine log say which. |
 | Reading a mod file from the scene fails | Mod files can only be read during `register`. Read them there and pass the bytes to the scene. |
 | A ROM sprite has the wrong colours or is scrambled | The palette line, palette address, compression or DPLC layout does not match the object. Check the request with `ggfmod sprites`, which draws every frame with your settings. |

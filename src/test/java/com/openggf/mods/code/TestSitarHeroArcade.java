@@ -25,6 +25,37 @@ class TestSitarHeroArcade {
     }
     @AfterAll static void close() throws Exception { if (harness != null) harness.close(); }
 
+    @Test void audibleCountInDrawsTheAuthoredFiveScaleDigitWithoutChangingItsClock() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        try {
+            assertTrue(f.debug("perform:green-hill:SITAR:sonic"));
+            for (int i = 0; i < 15; i++) f.step();
+            assertEquals("PLAY", f.screen());
+            f.music.player.position = -3L * f.music.rate;
+            int[][] visits = new int[35][25];
+            var canvas = mock(SceneCanvas.class);
+            when(canvas.width()).thenReturn(400); when(canvas.height()).thenReturn(224);
+            doAnswer(call -> {
+                int x = call.getArgument(0), y = call.getArgument(1);
+                int w = call.getArgument(2), h = call.getArgument(3), argb = call.getArgument(4);
+                if (argb == 0xFFFFD45B)
+                    for (int py = Math.max(92, y); py < Math.min(127, y + h); py++)
+                        for (int px = Math.max(188, x); px < Math.min(213, x + w); px++)
+                            visits[py - 92][px - 188]++;
+                return null;
+            }).when(canvas).fill(anyInt(), anyInt(), anyInt(), anyInt(), anyInt());
+            assertDoesNotThrow(() -> f.scene.draw(f, canvas));
+            String[] digit = {"11110", "00001", "00001", "01110", "00001", "00001", "11110"};
+            for (int y = 0; y < 35; y++)
+                for (int x = 0; x < 25; x++)
+                    assertEquals(digit[y / 5].charAt(x / 5) - '0', visits[y][x],
+                            "the audible three-second count-in must draw the complete scale-5 digit at " + x + "," + y);
+            assertEquals(-3L * f.music.rate, f.music.player.samplePosition(), "drawing cannot advance the audible clock");
+        } finally {
+            f.scene.exit(f);
+        }
+    }
+
     @Test
     void judgedHitsAnimateIndependentNativePerformersAndPauseClearsGestures() throws Exception {
         var f = new Fixture(List.of("s1"));

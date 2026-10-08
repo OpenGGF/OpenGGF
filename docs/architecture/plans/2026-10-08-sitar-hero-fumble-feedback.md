@@ -222,7 +222,7 @@ Plan fingerprint:
 After complete consumption, the exact run was acknowledged with exit 0 and its
 diagnostics deleted. Temporary wrapper output is consumed rather than archived.
 
-### New framework composition remains pending
+### Framework change at the first checkpoint
 
 During the first candidate run, the framework owner integrated a new actual-main
 source at `bf7c56e1986fd8ca4a4c5e0cafdf3087e73b545a`. Its main validation freeze
@@ -238,3 +238,54 @@ packaging/API/input/audio consumers. Use the framework owner's terminal base
 qualification when available. The final actual destination still needs its
 mandatory normal combined ordinary and fresh-guard execution before push; no
 main integration, delivery or cleanup completion is claimed here.
+
+
+## Private framework composition checkpoint
+
+The private merge with frozen framework source
+`bf7c56e1986fd8ca4a4c5e0cafdf3087e73b545a` preserves its shared action-binding,
+physical binding-capture and UI helper migrations alongside the fumble rules.
+Only `implementation-pitfalls.md` conflicted: the complete upstream document was
+retained and the independently authored finite-audio-tail lesson appended. There
+are no source conflicts or removed upstream helper changes. The scene-music and
+network implementation inputs remain those of the completed first candidate.
+
+The original compile-only queue request was verified unadmitted with no child
+process, then cancelled with exit130 after1023 seconds; no Maven result is claimed.
+It was replaced once by the supported focused test lane, which both compiles the
+composition and checks its public contract. Actual command below is normalized
+only for the three machine-local ROM paths:
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean \
+  -Dmse=off \
+  -Dtest=TestSitarHeroArcade,TestSitarHeroCareer,TestSitarHeroCharts,TestSitarHeroControls,TestSitarHeroFeedback,TestSitarHeroModel,TestSitarHeroOnlineMatch,TestSitarHeroPerformers,TestSitarHeroS1SongCatalogue,TestSitarHeroS2SongCatalogue,TestSitarHeroS3kSongCatalogue,TestSitarHeroStory,TestSitarHeroWorldTour,TestSceneMusicRom,TestScenePartCues,TestModApiSignatureSurface,TestModApiSdkPackager,TestModApiJavadocTool,TestModdingDocumentationLinks,TestModApiReleasePolicy \
+  "-Dsonic1.rom.path=${S1_ROM}" "-Dsonic2.rom.path=${S2_ROM}" \
+  "-Ds3k.rom.path=${S3K_ROM}" test -B
+```
+
+The wrapper admitted normally after3621 seconds with its own4GiB/4-core budget;
+3770 production and3627 test sources freshly compiled at Java21. It completed
+at2026-10-08T12:18:31Z, exit0 / BUILD SUCCESS, Maven execution10:48. All20 fresh
+XML reports were independently inspected (mtime12:09–12:18Z):210 cases, zero
+failures, errors or skips. Sitar's13 classes contribute152 cases (Arcade39 includes
+one upstream helper check); native music/cues18, API signatures9, SDK10, Javadoc7,
+links1, release policy13. The XML ROM properties point at the three original main
+filenames; SHA1/CRC hashes independently match the documented REV01/locked-on
+identities. This is focused composition verification, not a new full-suite pass.
+
+The tested source index tree remained exactly
+`1af721093e5f4414770fac80df632f982b5dacc4` throughout execution. A separate invocation
+of freshly compiled `ModApiSignatureSurface --snapshot` generated17274 lines,
+exactly equal to the merged candidate pin. Against bf7 it has precisely the
+`SceneMusicPlayer.PLAYHEAD` field and `cuePart(long,int,double,double,double,double)`
+method additions, zero removals and no additional exported types. No manual
+candidate version/schema change or published-pin edit is introduced.
+
+The actual updated change plan selects3058/3058 ordinary classes, one worker and
+fresh guards; Java21/Lua5.4/PowerShell tool preflight passes. Normal combined
+candidate validation will retain the150-minute execution cap (queue wait excluded,
+10-minute no-output rule) and compare complete failures/skips with the framework
+owner's qualified updated base. Main remains under that owner's kit/evidence/push
+freeze. Mandatory actual-main qualification, develop push and owned cleanup remain
+pending; this private checkpoint does not claim delivery.

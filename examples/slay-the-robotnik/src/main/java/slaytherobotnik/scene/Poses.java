@@ -2,6 +2,8 @@ package slaytherobotnik.scene;
 
 import com.openggf.mods.scene.SceneSprite;
 import com.openggf.mods.scene.SceneSpriteSet;
+import com.openggf.mods.scene.art.AnimationSampling;
+import com.openggf.mods.scene.art.SpriteAnchors;
 
 /**
  * Character poses taken from the ROM's own animation scripts (ids from the engine's
@@ -27,45 +29,19 @@ public final class Poses {
 
     /** The frame of animation {@code anim} at time {@code ticks}, looping; null when unknown. */
     public static SceneSprite frame(SceneSpriteSet set, int anim, long ticks) {
-        if (set == null) {
-            return null;
-        }
-        int[] frames = set.animationFrames(anim);
-        if (frames.length == 0) {
-            return null;
-        }
-        int delay = set.animationDelay(anim);
-        if (delay > 30) {
-            // Walk and run scripts use a speed-driven delay (0xFF); show them at a brisk pace.
-            delay = 4;
-        }
-        int index = (int) ((ticks / delay) % frames.length);
-        int frame = frames[index];
-        if (frame >= 0xF0) {
-            frame = frames[0];
-        }
-        return set.frame(frame);
+        return AnimationSampling.frame(set, anim, ticks, new AnimationSampling.Timing(0, 30, 4, 0));
     }
 
     /** Draws a sprite with its feet (bottom edge) on {@code groundY}, centred on {@code x}. */
     public static void stand(com.openggf.mods.scene.SceneCanvas c, SceneSprite sprite, float x, float groundY,
             com.openggf.mods.scene.SceneDraw style) {
-        if (sprite == null) {
-            return;
-        }
-        float bottom = (sprite.height() - sprite.originY()) * style.scaleY();
-        c.draw(sprite, x, groundY - bottom, style);
+        SpriteAnchors.feet(c, sprite, x, groundY, style);
     }
 
     /** Draws a sprite centred (by its bounding box) on a point. */
     public static void centre(com.openggf.mods.scene.SceneCanvas c, SceneSprite sprite, float x, float y,
             com.openggf.mods.scene.SceneDraw style) {
-        if (sprite == null) {
-            return;
-        }
-        float dx = (sprite.originX() - sprite.width() / 2f) * style.scaleX();
-        float dy = (sprite.originY() - sprite.height() / 2f) * style.scaleY();
-        c.draw(sprite, x + (style.flipX() ? -dx : dx), y + dy, style);
+        SpriteAnchors.centre(c, sprite, x, y, style);
     }
 
     /**
@@ -101,10 +77,6 @@ public final class Poses {
 
     /** The first frame of an animation (a still pose). */
     public static SceneSprite still(SceneSpriteSet set, int anim) {
-        if (set == null) {
-            return null;
-        }
-        int[] frames = set.animationFrames(anim);
-        return frames.length == 0 ? null : set.frame(frames[0]);
+        return AnimationSampling.still(set, anim);
     }
 }

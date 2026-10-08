@@ -19,7 +19,6 @@ import java.util.Objects;
  * a GL-free state object, {@link #render()} mega-batches the font draws, and
  * {@link #consumeCloseRequested()} tells the host when to drop the menu.
  */
-@com.openggf.game.ModApi
 public final class TimeAttackMenu {
     private int focus;
     private MenuTextEditor editor;
@@ -159,12 +158,10 @@ public final class TimeAttackMenu {
     }
 
     @FunctionalInterface
-    @com.openggf.game.ModApi
     public interface LaunchStarter {
         void launch(TimeAttackLaunchRequest request);
     }
 
-    @com.openggf.game.ModApi
     public interface NetworkStarter {
         NetworkStarter NONE = new NetworkStarter() {
             @Override public void host(TimeAttackLaunchRequest request, String policy,

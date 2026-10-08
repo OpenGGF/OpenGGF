@@ -292,6 +292,11 @@ public interface GameModule {
         return null;
     }
 
+    /** Final decoded-level transformation, invoked once after native, prepared or override loading. */
+    default com.openggf.level.Level transformDecodedLevel(com.openggf.level.Level source) {
+        return source;
+    }
+
     /** Supplies stock ring presentation for additive levels in this game. */
     default com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet()
             throws java.io.IOException {

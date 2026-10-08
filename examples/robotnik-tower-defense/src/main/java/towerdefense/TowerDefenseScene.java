@@ -5,6 +5,8 @@ import towerdefense.art.RomArt;
 import towerdefense.core.*;
 import towerdefense.ui.BattleView;
 import towerdefense.ui.PixelFont;
+import com.openggf.mods.ui.FocusRegions;
+import java.util.List;
 
 /** Input and scene lifecycle; the rules core remains engine-independent. */
 public final class TowerDefenseScene implements ModScene, DebuggableScene {
@@ -15,6 +17,7 @@ public final class TowerDefenseScene implements ModScene, DebuggableScene {
     private String screen = "TITLE", returnScreen = "TITLE", focus = "GRID", message = "";
     private int ticks, site, kind, action, cursor, helpPage, messageTicks;
     private boolean paused, recorded, debugRun;
+    private final FocusRegions titleRegions = new FocusRegions();
 
     public TowerDefenseScene(byte[] fontBytes) { this.fontBytes = fontBytes.clone(); }
     public Battlefield battlefield() { return battle; }
@@ -48,15 +51,16 @@ public final class TowerDefenseScene implements ModScene, DebuggableScene {
     }
 
     private void titleInput(SceneContext ctx) {
-        if (up(ctx)) cursor = (cursor + 2) % 3;
-        if (down(ctx)) cursor = (cursor + 1) % 3;
+        titleRegions.replace(List.of(new FocusRegions.Region("0",112,139,176,18,true),
+                new FocusRegions.Region("1",112,162,176,14,true),
+                new FocusRegions.Region("2",112,181,176,14,true)));
+        titleRegions.focus(Integer.toString(cursor));
+        if (up(ctx)) cursor = Integer.parseInt(titleRegions.move(FocusRegions.Direction.PREVIOUS));
+        if (down(ctx)) cursor = Integer.parseInt(titleRegions.move(FocusRegions.Direction.NEXT));
         int picked = accept(ctx) ? cursor : -1;
-        for (int i = 0; i < 3; i++) {
-            int y = i == 0 ? 139 : i == 1 ? 162 : 181;
-            int h = i == 0 ? 18 : 14;
-            if (ctx.mouse().over(112, y, 176, h) && ctx.mouse().lastInputWasMouse()) cursor = i;
-            if (ctx.mouse().leftPressed() && ctx.mouse().over(112, y, 176, h)) picked = i;
-        }
+        String hit = ctx.mouse().inside() ? titleRegions.hit(ctx.mouse().x(), ctx.mouse().y()) : null;
+        if (hit != null && ctx.mouse().lastInputWasMouse()) cursor = Integer.parseInt(hit);
+        if (hit != null && ctx.mouse().leftPressed()) picked = Integer.parseInt(hit);
         if (back(ctx)) { ctx.exitToMasterTitle(); return; }
         switch (picked) {
             case 0 -> newGame(ctx);

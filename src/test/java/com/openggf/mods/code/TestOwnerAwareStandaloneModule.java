@@ -336,29 +336,46 @@ class TestOwnerAwareStandaloneModule {
     }
 
     @Test
-    void functionalFactoriesAndDynamicServicesRemainInsideBoundary() {
+    void functionalFactoriesRemainInsideTheirActualOwnerBoundary() {
         ModFaultBoundary boundary = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
                 owners -> new ModStateSaveResult.Saved(), owners -> { });
         GameModule delegate = mock(GameModule.class);
         when(delegate.getInvincibilityStarsFactory()).thenReturn(player -> {
             throw new IllegalStateException("factory");
         });
+        GameModule wrapped = OwnerAwareStandaloneModule.wrap("owner", delegate, boundary, Map.of());
+
+        var failure = assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> wrapped.getInvincibilityStarsFactory().apply(null));
+        assertEquals("factory", failure.getCause().getMessage());
+        assertEquals("owner", failure.owner());
+    }
+
+    @Test
+    void publicDynamicServicesRemainInsideTheirActualOwnerBoundary() {
+        ModFaultBoundary boundary = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+                owners -> new ModStateSaveResult.Saved(), owners -> { });
+        GameModule delegate = mock(GameModule.class);
         DynamicService service = mock(DynamicService.class);
         when(delegate.getGameService(DynamicService.class)).thenReturn(service);
         doThrow(new IllegalStateException("service")).when(service).invoke();
         GameModule wrapped = OwnerAwareStandaloneModule.wrap("owner", delegate, boundary, Map.of());
 
-        assertThrows(ModFaultBoundary.CallbackAborted.class,
-                () -> wrapped.getInvincibilityStarsFactory().apply(null));
-        assertThrows(ModFaultBoundary.CallbackAborted.class,
+        var failure = assertThrows(ModFaultBoundary.CallbackAborted.class,
                 () -> wrapped.getGameService(DynamicService.class).invoke());
+        assertEquals("service", failure.getCause().getMessage());
+        assertEquals("owner", failure.owner());
     }
 
     @Test
-    void standaloneLevelMusicMustBeNonNullNamespacedAndOwnedByTheModule() {
+    void standaloneLevelMusicMustBeExplicitSilenceOrAnOwnedTrack() {
         assertEquals(com.openggf.game.MusicReference.namespaced("owner", "level"),
                 wrappedMusic(com.openggf.game.MusicReference.namespaced("owner", "level"))
                         .getLevelMusicReference(0, 0));
+        assertEquals(com.openggf.game.MusicReference.stock(-1),
+                wrappedMusic(com.openggf.game.MusicReference.stock(-1)).getLevelMusicReference(0, 0));
+        assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> wrappedMusic(com.openggf.game.MusicReference.stock(-2)).getLevelMusicReference(0, 0));
         assertThrows(ModFaultBoundary.CallbackAborted.class,
                 () -> wrappedMusic(com.openggf.game.MusicReference.stock(1))
                         .getLevelMusicReference(0, 0));
@@ -384,7 +401,7 @@ class TestOwnerAwareStandaloneModule {
                 com.openggf.sprites.playable.SecondaryAbility.NONE, false, code -> null);
     }
 
-    private interface DynamicService { void invoke(); }
+    public interface DynamicService { void invoke(); }
 
     private static ObjectSpawn ownedSpawn() {
         return new ObjectSpawn(0, 0, 0, 0, 0, false, 0, -1,

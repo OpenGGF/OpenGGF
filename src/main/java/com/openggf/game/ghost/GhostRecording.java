@@ -3,7 +3,6 @@ package com.openggf.game.ghost;
 import com.openggf.ghost.GhostFrame;
 import com.openggf.ghost.GhostFrameCodec;
 
-@com.openggf.game.ModApi
 public final class GhostRecording {
     private final GhostHeader header;
     private final byte[] frameData;

@@ -96,8 +96,12 @@ class TestModApiSdkPackager {
         Path compiled = temp.resolve("build/classes");
         copyCompiledPackage(compiled, Path.of("com/openggf/tools/modsdk"));
         copyCompiledPackage(compiled, Path.of("META-INF/openggf-mod-sdk"));
+        Path generatedStarter = compiled.resolve("META-INF/openggf-mod-sdk/starters/mods/sample-character-src/project/target/generated.class");
+        Files.createDirectories(generatedStarter.getParent());
+        Files.write(generatedStarter, new byte[]{1, 2, 3});
         copyCompiledFixture(compiled, com.openggf.mods.code.GgfMod.class);
         copyCompiledFixture(compiled, packagePrivate);
+        Files.writeString(compiled.resolve("version.properties"), "app.baseVersion=0.7.prerelease\napp.commit=abcdef123\napp.dirty=false\n");
         Path classes = temp.resolve("build/sdk-classes");
         Path docs = temp.resolve("build/sdk-javadocs");
 
@@ -117,8 +121,12 @@ class TestModApiSdkPackager {
                 "com/openggf/tools/modsdk/") && value.contains("$")), copied::toString);
         assertTrue(copied.contains("META-INF/openggf-mod-sdk/templates/pom.xml.template"), copied::toString);
         assertTrue(copied.stream().allMatch(value -> value.startsWith("com/openggf/tools/modsdk/")
-                || value.startsWith("META-INF/openggf-mod-sdk/templates/")
+                || value.startsWith("META-INF/openggf-mod-sdk/")
+                || value.equals("META-INF/openggf-build.properties")
                 || value.startsWith("META-INF/services/")), copied::toString);
+        assertEquals(Files.readString(compiled.resolve("version.properties")), Files.readString(classes.resolve("META-INF/openggf-build.properties")));
+        assertEquals(Files.readString(compiled.resolve("version.properties")), Files.readString(docs.resolve("META-INF/openggf-build.properties")));
+        assertFalse(copied.contains("META-INF/openggf-mod-sdk/starters/mods/sample-character-src/project/target/generated.class"));
         assertFalse(copied.contains("com/openggf/mods/code/GgfMod.class"));
         assertFalse(copied.contains("com/openggf/io/AbstractModAssetRoot.class"));
         assertFalse(Files.exists(classes.resolve(

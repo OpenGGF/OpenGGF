@@ -7,7 +7,7 @@ import com.openggf.level.objects.*;
 import java.util.List;
 
 /** Small ROM-art explosion that can cross a course rebase without jumping position. */
-public final class CourseBurst extends AbstractObjectInstance implements RewindRecreatable {
+public final class CourseBurst extends AbstractObjectInstance implements ModRewindRecreatable {
     private int x;
     private int y;
     private int age;
@@ -32,7 +32,7 @@ public final class CourseBurst extends AbstractObjectInstance implements RewindR
     @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (++age >= 40) setDestroyed(true);
     }
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new CourseBurst(context.spawn());
     }
     @Override public int getPriorityBucket() {

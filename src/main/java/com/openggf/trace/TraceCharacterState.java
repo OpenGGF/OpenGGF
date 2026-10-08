@@ -11,7 +11,6 @@ import com.openggf.sprites.playable.SidekickCpuController;
 /**
  * Per-character trace state used for optional sidekick tracking in schema v5+.
  */
-@com.openggf.game.ModApi
 public record TraceCharacterState(
     boolean present,
     short x,

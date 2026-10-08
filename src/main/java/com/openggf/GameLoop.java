@@ -1,6 +1,5 @@
 package com.openggf;
 
-import com.openggf.game.ModApi;
 import com.openggf.game.GameOverExit;
 import com.openggf.game.ContinueScreenProvider;
 import com.openggf.game.session.EngineContext;
@@ -114,7 +113,6 @@ import java.util.logging.Logger;
  * For headless testing, create a GameLoop with a mock InputHandler
  * and call {@link #step()} to advance one frame.
  */
-@ModApi
 public class GameLoop {
     static final int STATUS_FIRE_SHIELD_BIT = 4;
     static final int STATUS_LIGHTNING_SHIELD_BIT = 5;
@@ -310,7 +308,6 @@ public class GameLoop {
 
     /** @deprecated use {@link com.openggf.GameModeChangeListener}. */
     @Deprecated
-    @ModApi
     public interface GameModeChangeListener extends com.openggf.GameModeChangeListener {
     }
 

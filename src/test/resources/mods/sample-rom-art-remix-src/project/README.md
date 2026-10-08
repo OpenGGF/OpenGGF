@@ -1,5 +1,16 @@
 # ROM Art Remix
 
+Use a Java 21 JDK and matching engine/SDK artifacts from one commit of the mutable,
+unpublished candidate. The default Maven profile uses local jars; it does not
+resolve an unpublished API from a Maven repository:
+
+```sh
+mvn package -Dopenggf.engine.jar=/absolute/path/engine.jar -Dopenggf.sdk.jar=/absolute/path/sdk.jar
+```
+
+After editing source, repeat the same command. The lifecycle removes only generated
+outputs before reconverting current assets; authored sources stay intact.
+
 A minimal Sonic 2 patch mod showing how to request a bounded art, mapping, and DPLC
 window from the user's ROM. The packaged mod contains only original level data,
 metadata, and Java code; the Tails sheet is materialized in memory at launch.

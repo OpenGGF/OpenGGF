@@ -141,8 +141,7 @@ import static org.lwjgl.system.MemoryUtil.*;
  * @author james
  */
 @CompositionRoot
-@com.openggf.game.ModApi
-public class Engine {
+public class Engine implements com.openggf.graphics.RenderProjection {
 	private static final Logger LOGGER = Logger.getLogger(Engine.class.getName());
 	public static final String RESOURCES_SHADERS_PIXEL_SHADER_GLSL = "shaders/shader_the_hedgehog.glsl";
 	private final SonicConfigurationService configService;
@@ -830,7 +829,7 @@ public class Engine {
 
 	private void initializePresentationGraphics() throws IOException {
 		graphicsManager.init(RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
-		graphicsManager.setEngine(this);
+		com.openggf.graphics.GraphicsProjectionAccess.install(graphicsManager, this);
 		displayColorProfileController = DisplayColorProfileController.fromConfig(
 				configService,
 				graphicsManager,

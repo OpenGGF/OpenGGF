@@ -17,7 +17,7 @@ import java.util.List;
  * Weapon projectiles use growable primitive arrays; cosmetic effects use a fixed pool.
  * The ordinary mod-object rewind capture restores both with the controller.
  */
-public final class Stage extends AbstractObjectInstance implements RewindRecreatable {
+public final class Stage extends AbstractObjectInstance implements ModRewindRecreatable {
     static final int CAMP = 0, INTRO = 1, FIGHT = 2, BOSS = 3, CLEAR_WAIT = 4, CLEAR = 5, DEAD = 6, VICTORY = 7;
     static final int OVERLAY_NONE = 0, OVERLAY_LEVEL_UP = 1, OVERLAY_CHEST = 2;
     static final int INTRO_FRAMES = 150;
@@ -138,7 +138,7 @@ public final class Stage extends AbstractObjectInstance implements RewindRecreat
     @Override public boolean isPersistent() { return true; }
     @Override public boolean isHighPriority() { return true; }
     @Override public int getPriorityBucket() { return 0; }
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new Stage(context.spawn());
     }
 
