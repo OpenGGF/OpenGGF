@@ -50,8 +50,10 @@ Knuckles songs. Any performer can play any game's songs. Sonic and Robotnik come
 any ROM; Sonic 2 adds Tails and Silver Sonic; Sonic 3 & Knuckles adds Tails, Knuckles,
 Mecha Sonic and an Egg Robo.
 
-The game you launch with is the **running game**. Its own sound driver supplies the menu
-music and the menu sound effects, whichever ROM a song or stage comes from:
+The game the mod launches with is the **running game**: `default` in `config.yaml` when
+that ROM is available (otherwise the first available of Sonic 1, 2 and 3 & Knuckles), or
+the first ROM you name to `build.py`. Its own sound driver supplies the menu music and
+the menu sound effects, whichever ROM a song or stage comes from:
 
 | Running game | Menu theme | Cursor | Confirm | Start | Results |
 |---|---|---|---|---|---|
@@ -102,8 +104,8 @@ minutes, whichever is longer (Scrap Brain therefore lasts 144 seconds). A song t
 in the ROM, such as the ending and credits medleys, plays once from its start to its
 native stop, tempo changes included. Sonic 3's Credits loops in the ROM, so it follows
 the looping rule. Short title, Continue, power-up, results and Knuckles cues are not in
-the library. If your ROM does not have a
-picture for a song's zone, the song is staged on another act from the same ROM.
+the library. If your ROM has no picture for a song's zone, the song is staged on another
+act from the same ROM.
 
 ### Controls
 
@@ -135,7 +137,8 @@ and mutes your part until your next hit, while the band plays on.
 
 **Settings** remaps keyboard and pad controls per player and per instrument (Enter/A
 captures a binding, Tab switches device, Delete clears it). It also has input and display
-offsets, lefty flip, reduced flashes and highway speed. Tap calibration plays the ROM's
+offsets, lefty flip, reduced flashes (stage lights hold still, hit bursts stay dim and the
+highway never flashes) and highway speed. Tap calibration plays the ROM's
 own drums: tap the kick on the beat at least eight times, then Enter saves the median as
 your input offset.
 
@@ -342,6 +345,8 @@ real speaker latency or controller timing.
   Supported acts are those `hasZonePictures` lists; others use another act from the same
   ROM.
 - Menu cues and music come from the running game only, and are silent while a song plays.
+  The driver is stopped (music and sound effects) just before a song starts, so when a
+  song is already prepared and starts at once, the giant-ring start cue is cut short.
 - Title cards appear for Sonic 3 & Knuckles zone themes only; the other games' cards are
   not yet in the API.
 - Direct-connect is unencrypted, has no discovery and needs a reachable port.

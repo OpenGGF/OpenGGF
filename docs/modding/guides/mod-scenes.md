@@ -219,8 +219,9 @@ paused or waiting in its lead-in), its PCM replaces the base game's sound driver
 output. Music and sound effects started with `ctx.audio()` keep running in the
 driver but cannot be heard, and pausing the player pauses all scene audio. When
 the player stops, the driver is audible again from wherever it has reached.
-So stop or fade any `ctx.audio()` music before `start`. Drop menu cues while a
-player exists, and ask for menu music again after `stop`. Sitar Hero's
+So stop or fade any `ctx.audio()` music before `start`; `stopMusic` stops sound
+effects too, so a short cue still ringing is cut. Drop menu cues while a player
+exists, and ask for menu music again after `stop`. Sitar Hero's
 `HouseAudio` shows the pattern.
 
 The clock follows consumed final PCM on a live device, with optional OpenAL Soft
@@ -424,8 +425,9 @@ ggfmod sprites s3k.gen s3k knuckles.png char=knuckles   # a playable character, 
 `baseGame: any` scene, the ROM the player launched with, even when your art or
 `ctx.music()` songs come from another installed ROM. Pick IDs per game
 (`ctx.art().rom().gameId()`). Stock fades take the game's own time (S1 and S2
-about two seconds, S3K about four). Sonic 1's fade also stops sound effects, so play a cue
-before fading or after the fade. Fade or stop your music when the scene leaves, so
+about two seconds, S3K about four). Sonic 1's fade also stops any sound effect still
+playing, so let a cue finish before you fade (Sitar Hero waits 48 ticks after its start
+cue). Fade or stop your music when the scene leaves, so
 none of it plays on into the next screen. See the note above on `ctx.music()`
 replacing this output while a song player exists.
 

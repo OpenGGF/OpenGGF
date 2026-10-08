@@ -129,6 +129,97 @@ fades, which are motion rather than flashes.
   jingle at the scripted ticks. Offline captures prove scene behaviour, not
   speaker latency.
 
+## As built (`fd39e29bc`, merged with develop as `676a433c4`)
+
+The design held, with these differences:
+
+- **Venues.** The title rotates through Angel Island 1, Green Hill, Chemical
+  Plant, Launch Base and Angel Island 2, as installed. Sky Sanctuary was dropped
+  from the rotation: its pictured state is a flat sky. Hydrocity's pictured state
+  is underwater. Neither reads as a concert.
+- **Layout.** The wordmark and menu share one card on the left; the band plays on
+  the right. The camera sways ±16 pixels over 20 seconds.
+- **Lighting.** Readability comes from the card and a light top haze rather than a
+  vignette. The light cones sweep slowly, or hold still with reduced flashes.
+- **Caching.** Venues and band members are cached on the scene instance, so returning
+  to the title does not decode them again.
+- **Code split.** `SitarScene` (rules) and `SitarScreens` (pictures) replace the
+  planned per-screen view classes. The screens read the scene's package-private
+  fields and never write them.
+- **Not done.** Menu input helpers stayed in the scene. A separate `MenuInput` would
+  have touched every hit-tested coordinate for little gain.
+- **Additions:**
+  - the highway bursts each struck lane and marks 50-note streak milestones;
+  - a new-best badge follows the results tally;
+  - character and instrument previews settle onto their stage line;
+  - venues dissolve into each other over 16 ticks;
+  - the loading performer label sits below the ROM title card, and the mod
+    header is hidden while the card owns the screen.
+
+Offline audio evidence (`ExampleModCapture` WAVs, running game S3K, all ROMs):
+
+- the Data Select theme plays at the title at about -30 dBFS RMS;
+- cursor and confirm cues land on their scripted ticks;
+- the big-ring cue is followed by a gradual S3K fade from 48 ticks;
+- cancelling after the fade restarts the theme, and cancelling before it keeps the
+  theme without a restart;
+- a song's PCM replaces the driver for its duration;
+- after the song, the Act Clear jingle plays with the tally clicks and the register
+  (results opened at tick ≈2590 in the paced probe).
+
+One misreading is worth recording. An apparently silent jingle came from treating
+the end of the song's audio as the start of results. Extracted frames showed results
+opening about 260 ticks earlier, and those ticks were the jingle. Check frames for
+the screen state before concluding that audio failed.
+
+After the jingle, the driver's idle output holds a small DC level (sample 120,
+-48.7 dBFS). This is driver state, not a cue.
+
+`AudioManager.stopMusic` stops sound effects as well as music. When a song is already
+prepared and its player starts within the cue's length, `beforePlayback` cuts the
+start cue short. This is accepted rather than hidden behind an artificial loading
+delay, and the README states it.
+
+`ExampleModCapture` does not pace ticks to the wall clock. Without video or PNG
+output it runs about 7,000 ticks per second, so an asynchronously prepared song may
+never start inside a short capture. The README records this.
+
+## Verification at the source freeze (`676a433c4`)
+
+These are focused checks, not a combined-suite pass. The change-based plan for this
+diff selects the full ordinary suite and guards, because `examples/` maps to shared
+categories. That broad run belongs to the parent's integration.
+
+- **Focused Maven run.** Command:
+  `maven_queue.py -Dmse=off "-Dtest=TestSitarHero*,TestModdingDocumentationLinks"`,
+  with the three ROM properties naming the original main ROM files, then `test`.
+  - It covered 13 classes and 139 tests: 0 failures, 0 errors, 0 skipped.
+  - All 13 surefire XML reports were written by this run, and their totals match.
+  - New regressions: subset band casting and venue rotation; running-driver cue IDs;
+    same-tick priority and the soft rate limit; loading cancel, fade and failure
+    returning to an audible menu; pause, results, retry and exit with no latent
+    theme; the leave latch; and floor placement for the title band, solo and local
+    performers. `PerformerChecks` adds a check that feet rest on the lowest native
+    pixel.
+  - An earlier draft iteration ran 138 tests with 0 failures and 0 skips.
+- **`SitarHeroCapture`, one fresh JVM per subset.** Every subset passed with the same
+  picture counts as the pre-polish acceptance:
+
+  | Subset | PNGs | Songs | Performers |
+  |---|---|---|---|
+  | all | 213 | 79 | 7 |
+  | S1 | 66 | 11 | 2 |
+  | S2 | 92 | 22 | 4 |
+  | S3K | 104 | 46 | 6 |
+
+  The title tableaux show the S1 duo on Green Hill, the S2 quartet (Silver Sonic on
+  drums) on Chemical Plant, and the S3K and all-ROM quartets on Angel Island. Media and
+  provenance are in `$SITAR_POLISH_ROOT/acceptance-v1`.
+- **Promo.** A 71.2-second 1080p60 promo was recorded from this freeze with the 40
+  captured mod source files hashed. It passes a full decode at -16.0 LUFS, LRA 4.7 LU
+  and true peak -1.5 dBFS. Media, edit list and chapter map are in
+  `$SITAR_POLISH_ROOT/promo/edit-v2`.
+
 ## Considered and rejected
 
 - **Song previews on song select.** A preview needs a `ctx.music()` player. While a
