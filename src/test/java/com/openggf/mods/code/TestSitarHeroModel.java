@@ -46,6 +46,8 @@ class TestSitarHeroModel {
             throw e;
         }
     }
+    @Test void chordStrikesGroupAndSustainReleaseStaysQuiet() throws Exception { check("feedbackChordsAndTails"); }
+    @Test void mistakesEmitIndependentConsumableAudioEvents() throws Exception { check("feedbackEvents"); }
     @Test void windowsAndSingleFretAnchoring() throws Exception { check("windowAndAnchoring"); }
     @Test void exactChordsAndOverstrums() throws Exception { check("chordsAndOverstrum"); }
     @Test void earlyHopoChainAndStrumRecovery() throws Exception { check("hopoChainAndRecovery"); }

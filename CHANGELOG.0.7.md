@@ -918,7 +918,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   setlists, shared tour progress, optional side gigs and satirical authored
   intermissions on Robotnik's shared tour. Quick play, no-fail practice,
   four difficulties, local co-op/score duels and direct-connect peer matches share
-  seven cosmetic performers and four real FM/PSG/DAC parts. ROM-pixel arms and
+  seven cosmetic performers and four real FM/PSG/DAC parts. Mistakes mute the
+  selected part and produce restrained, instrument-specific ROM-timbre fumbles;
+  local and online co-op retain a successful partner's part, while sequenced,
+  batched peer cues remain independent of scoring and cannot cross a rematch.
+  Generic scene part cues are bounded, pitch-gliding and pause/stop-owned.
+  ROM-pixel arms and
   hands layer over instruments and move on successful judgments with sound waves.
   Charts preserve native attacks, voice handoffs and medley tempo changes while
   curating density, chords, sustains, HOPO and Star Power. Independent player
