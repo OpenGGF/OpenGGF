@@ -221,12 +221,18 @@ while preserving stock geometry and loading.
 ## Captured state and persistent settings
 
 `ModStorage` supplies bounded UTF-8 `read`, `write`, `delete` and `list` operations
-for a verified owner. Gameplay modules obtain it from their registration context;
+for a verified owner, plus `readBytes` and `writeBytes` for binary files such as
+recorded inputs or ghosts. Gameplay modules obtain it from their registration context;
 scenes use the compatible `SceneStorage` interface. Both reach the same
-`saves/mods/<verified-owner>/` namespace. Single files are limited to 1 MiB,
-names to the accepted local filename syntax, and paths cannot cross into another
-owner or stock save namespace. A write/delete result reports success; a read can
-be absent. Check the result when persistence affects the player's decisions.
+`saves/mods/<verified-owner>/` namespace, and text and binary files share it. Text
+files are limited to `ModStorage.MAX_TEXT_BYTES` (1 MiB) and binary files to
+`ModStorage.MAX_BINARY_BYTES` (4 MiB); an oversized write returns false and leaves
+the previous file untouched. Names follow the accepted local filename syntax, and
+paths cannot cross into another owner or stock save namespace. Every write stages
+the whole file beside its target and renames it into place, so readers see either
+the old or the new file. A write/delete result reports success; a read can be
+absent, and `readBytes` returns a fresh copy. Check the result when persistence
+affects the player's decisions.
 
 Legacy scene files retain the eligible old owner-directory read fallback, then
 new writes use the canonical directory. Built-in game namespaces are excluded

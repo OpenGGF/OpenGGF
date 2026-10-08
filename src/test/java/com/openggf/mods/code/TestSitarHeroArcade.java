@@ -283,6 +283,8 @@ class TestSitarHeroArcade {
             return new SceneStorage() {
                 public Optional<String> read(String name) { return Optional.ofNullable(saves.get(name)); }
                 public boolean write(String name, String text) { saves.put(name, text); return true; }
+                public Optional<byte[]> readBytes(String name) { return Optional.empty(); }
+                public boolean writeBytes(String name, byte[] bytes) { return false; }
                 public boolean delete(String name) { return saves.remove(name) != null; }
                 public List<String> list() { return saves.keySet().stream().sorted().toList(); }
             };

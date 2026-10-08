@@ -29,6 +29,11 @@ readable and historical versions can be referenced directly.
   ordinary master replies and final joins stay bound to their request order and
   room context, and a rejected relay attach fails the join immediately.
 
+- **Binary mod storage:** code mods can keep binary files of up to 4 MiB, such as
+  recorded inputs or ghosts, in their private save directory beside their text
+  settings. Each write replaces the whole file atomically and an oversized write
+  leaves the previous file untouched.
+
 Work promoted from `next` is recorded in [CHANGELOG.0.7.md](CHANGELOG.0.7.md).
 
 ## Release files

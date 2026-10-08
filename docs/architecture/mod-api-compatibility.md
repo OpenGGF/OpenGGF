@@ -97,6 +97,14 @@ rebuild compiled mods using that constructor. Candidate `0.7.0` remains unpublis
 the runtime candidate description and normalized pin are updated together. The
 release descriptor retains its existing candidate version and publication state.
 
+The bundled-mod lane adds bounded binary owner storage: `ModStorage.readBytes`,
+`ModStorage.writeBytes`, and the `MAX_TEXT_BYTES` (1 MiB) and `MAX_BINARY_BYTES` (4 MiB)
+caps. Binary files share the text namespace and name rules, are staged and renamed
+into place like text, and reads return a fresh copy. `SceneStorage` inherits both
+methods, so creator test doubles implementing it must add them. These are additions
+to the unpublished `0.7.0` candidate; the runtime description and normalized pin are
+updated together and the descriptor is unchanged.
+
 ## What the 0.7 candidate includes
 
 The candidate exposes the accumulated creator capabilities together:
