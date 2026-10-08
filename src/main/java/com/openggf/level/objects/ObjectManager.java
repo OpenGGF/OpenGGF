@@ -1640,18 +1640,8 @@ public class ObjectManager {
      * and matches the snapshot, deferring to the off-screen respawn timer.
      */
     public int objectIdInSlot(int slot) {
-        if (slot < 0) {
-            return -1;
-        }
-        for (ObjectInstance instance : getActiveObjects()) {
-            if (instance instanceof AbstractObjectInstance aoi
-                    && objectCallbacks.call(instance, aoi::getSlotIndex) == slot
-                    && !objectCallbacks.call(instance, instance::isDestroyed)) {
-                ObjectSpawn spawn = objectCallbacks.call(instance, instance::getSpawn);
-                if (spawn != null) return spawn.objectId() & 0xFF;
-            }
-        }
-        return -1;
+        return slot < 0 ? -1 : ObjectInstanceQueries.objectIdInSlot(
+                getActiveObjects(), objectCallbacks, slot);
     }
 
     /**
@@ -2258,17 +2248,7 @@ public class ObjectManager {
 
     /** Read-only retirement probe for the ring manager's legacy mirror. */
     public boolean hasLiveLostRingAtSlot(int slotIndex) {
-        if (slotIndex < 0) {
-            return false;
-        }
-        for (ObjectInstance inst : dynamicObjects) {
-            if (inst instanceof com.openggf.level.rings.LostRingObjectInstance ring
-                    && !ring.isDestroyed()
-                    && ring.getSlotIndex() == slotIndex) {
-                return true;
-            }
-        }
-        return false;
+        return ObjectInstanceQueries.hasLiveLostRingAtSlot(dynamicObjects, slotIndex);
     }
 
     /**
@@ -2375,35 +2355,20 @@ public class ObjectManager {
         return ObjectInstanceQueries.activeObjectsOfType(activeObjects, dynamicObjects, type);
     }
 
+    private final ObjectQuery liveObjectQuery = ObjectInstanceQueries.liveQuery(this, rewindObjectIds);
     private final ObjectQuery objectQuery = new ObjectQuery() {
         @Override public <T extends ObjectInstance> List<T> activeObjectsOfType(Class<T> type) {
-            List<T> objects=ObjectManager.this.activeObjectsOfType(java.util.Objects.requireNonNull(type));
-            objects.sort((left,right) -> compareQueryIdentities(rewindObjectIds.get(left),rewindObjectIds.get(right)));
-            return List.copyOf(objects);
+            return liveObjectQuery.activeObjectsOfType(type);
         }
         @Override public java.util.Optional<ObjectRefId> identityOf(ObjectInstance object) {
-            for (ObjectInstance live:getActiveObjects()) if (live == object)
-                return java.util.Optional.ofNullable(rewindObjectIds.get(object));
-            return java.util.Optional.empty();
+            return liveObjectQuery.identityOf(object);
         }
         @Override public java.util.Optional<ObjectInstance> resolve(ObjectRefId identity) {
-            java.util.Objects.requireNonNull(identity);
-            for (ObjectInstance live:getActiveObjects()) if (identity.equals(rewindObjectIds.get(live)))
-                return java.util.Optional.of(live);
-            return java.util.Optional.empty();
+            return liveObjectQuery.resolve(identity);
         }
     };
 
     public ObjectQuery objectQuery() { return objectQuery; }
-
-    private static int compareQueryIdentities(ObjectRefId left,ObjectRefId right) {
-        if (left == right) return 0;
-        if (left == null) return 1;
-        if (right == null) return -1;
-        int order=Integer.compare(left.dynamicId(),right.dynamicId());
-        if (order == 0) order=Integer.compare(left.spawnId(),right.spawnId());
-        return order == 0 ? Integer.compare(left.generation(),right.generation()) : order;
-    }
 
     /**
      * Test helper: reserve dynamic slots (from the front of the pool) until exactly
