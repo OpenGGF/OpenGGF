@@ -1017,3 +1017,40 @@ qualified at both captured publication phases by sixteen focused passing
 cases and two matched old-owner assertion failures. Local consumer checks and
 these trace improvements do not discharge the matrices' full-route, donor,
 roster, viewport, load/respawn, rewind or native-presentation obligations.
+
+### Updated delivery destination before broad execution
+
+While the first candidate request92466 was queued, fetch observed published
+`33d3976c53304dbbea1c695914ecdd7bfc64cf9d` and actual-main
+`ae2dfd3dd75d7a4dc7ece3bdebbdebbb41fcdb36`. Only this task's still-unadmitted
+request was cancelled, exit130: no Maven admission, tests or diagnostic run
+directory. No other job was cancelled or acknowledged.
+
+Published throughput changes are qualified separately by364 focused cases,
+zero failures/errors/skips. Their source/test ownership and draw-only capture
+improvements are recorded in [the existing memory investigation](../research/2026-10-07-ordinary-suite-memory-cause.md#integrated-natural-collection-control).
+Sitar's mod-only polish has141 updated-base passing cases and148 integrated
+passing cases in fourteen reports; all141 prior identities/statuses remain,
+with seven new passing presentation/audio regressions. The owner explicitly
+uses proportionate validation for that mod change and retains its queued fresh
+guards. Main stays frozen for that owner's verification; no whole-suite pass
+at either intervening revision is inferred.
+
+Private composition merged actual-mainae2 as
+`358081604650e9f2d13085064c77af89f70a9c34` with no conflicts. All45 parity
+production/test/mirrored-skill paths remain byte-identical to386e2ad66; prior
+focused and canonical qualification therefore remains applicable to those
+unchanged implementations. The actual-base plan now selects3,027 ordinary
+classes and allguards. Full source is frozen for the combined candidate run,
+with a150-minute execution limit excluding queue waits and a10-minute
+no-output limit. Either timeout leaves qualification incomplete.
+
+The completedbe3 full comparison remains the concrete inherited-failure/skip
+expectation, supplemented by the intervening scoped qualifications above.
+Those do not establish source equivalence betweenbe3 andae2 or a freshly
+measured full baseline atae2. The combined run will compare full assertions,
+types and literal skip reasons; any disputed case requires a bounded matched
+current-destination check, rather than silent normalization or a totals-only
+claim. Its own post-integration actual-main full run remains required. The
+Sitar owner will separately supply its terminal guard and published successor;
+this task will preserve that verification and reconcile its evidence-only head.
