@@ -260,6 +260,14 @@ Adding a new event type:
 
 ## Compressing trace payloads
 
+Dedicated `hardware_timing.jsonl` streams also load transparently from `.gz`.
+Use `gzip -9 -n hardware_timing.jsonl` when publishing new timing payloads;
+the native compression threshold and the helper below apply to physics and
+auxiliary payloads. Do not leave a plain timing sibling beside its gzip: the
+loader follows the existing trace-file policy and prefers the plain file.
+Compression changes storage only; strict v5 event and timing authority checks
+still apply to the decoded stream.
+
 Larger `aux_state.jsonl` and `physics.csv` files are stored gzip-compressed in the repo to keep
 under GitHub's 100 MB hard limit (50 MB recommended max). The Java parser
 ([`TraceData.load`](../../../src/main/java/com/openggf/trace/TraceData.java)) loads either form
