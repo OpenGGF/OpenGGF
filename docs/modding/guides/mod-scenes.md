@@ -14,6 +14,9 @@ Examples go with this guide:
 - [Slay the Robotnik](../../../examples/slay-the-robotnik/README.md) is a complete
   deck-building roguelike on Sonic 3 & Knuckles, and shows how a whole game is organised
   around one scene.
+- [Flappy Tails](../../../examples/flappy-tails/README.md) is built step by step by the
+  [Flappy Tails tutorial](flappy-tails/README.md): a scene from an empty class to a polished
+  game, with a checkpoint you can build at each stage.
 - [Sitar Hero](../../../examples/sitar-hero/README.md) combines supplied Sonic 1,
   Sonic 2 and S3K content in a rhythm game, with timestamped physical input, bounded
   ROM-synthesized music, performers standing on real ROM stages and a README that
