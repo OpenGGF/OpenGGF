@@ -43,20 +43,29 @@ public final class SitarUi {
         c.fill(x + 1, y + 1, w - 2, 1, 0xFF476AA2);
     }
     public static void choice(SceneCanvas c, String label, int x, int y, int w, int h, boolean selected) {
-        if (selected) {
-            c.fill(x, y, w, h, 0xFF173B6C); frame(c, x, y, w, h, CYAN);
-            c.fill(x + 1, y + 1, 3, h - 2, GOLD);
-        }
-        text(c, selected ? ">" : " ", x + 9, y + (h - 7) / 2, GOLD);
+        if (selected) highlight(c, x, y, w, h);
+        choiceLabel(c, label, x, y, w, h, selected);
+    }
+    /** The selection bar on its own, so a list can glide it between rows. */
+    public static void highlight(SceneCanvas c, int x, int y, int w, int h) {
+        c.fill(x, y, w, h, 0xFF173B6C); frame(c, x, y, w, h, CYAN);
+        c.fill(x + 1, y + 1, 3, h - 2, GOLD);
+    }
+    /** A row's marker and label without its bar. */
+    public static void choiceLabel(SceneCanvas c, String label, int x, int y, int w, int h, boolean selected) {
+        if (selected) text(c, ">", x + 9, y + (h - 7) / 2, GOLD);
         label(c, label, x + 21, y + (h - 10) / 2, w - 28, selected ? GOLD : CREAM);
     }
     public static void page(SceneCanvas c, int step) {
         page(c, step, "ARCADE");
     }
     public static void page(SceneCanvas c, int step, String section) {
-        c.fill(0, 0, c.width(), c.height(), 0xAD000D28);
-        for (int y = 36; y < 198; y += 12) for (int x = c.width() / 2; x < c.width(); x += 12)
-            if ((x / 12 + y / 12) % 2 == 0) c.fill(x, y, 12, Math.min(12, 198 - y), 0x143D75AD);
+        // A light veil: panels carry the text, so the ROM venue can stay visible around them.
+        c.fill(0, 0, c.width(), c.height(), 0x78000D28);
+        header(c, step, section);
+    }
+    /** The top bar alone: logo, then the four selection steps or a section name. */
+    public static void header(SceneCanvas c, int step, String section) {
         c.fill(0, 0, c.width(), 35, 0xF00B2457);
         c.fill(0, 34, c.width(), 1, GOLD);
         logo(c, 12, 9);
@@ -74,12 +83,28 @@ public final class SitarUi {
         text(c, fit(first, c.width() - 24), 12, 202, CYAN);
         text(c, fit(second, c.width() - 24), 12, 213, CREAM);
     }
-    public static void logo(SceneCanvas c, int x, int y) {
+    public static void logo(SceneCanvas c, int x, int y) { logo(c, x, y, 2); }
+    /** The two-tone outlined wordmark at an integer pixel scale. */
+    public static void logo(SceneCanvas c, int x, int y, int scale) {
         String text = "SITAR HERO";
-        for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) pixels(c, text, x + dx, y + dy, 2, INK);
-        pixels(c, text, x + 1, y + 2, 2, 0xFF941B2F);
-        pixels(c, text, x, y, 2, 0xFFFF7840);
-        c.clip(x, y, width(text, 2), 7); pixels(c, text, x, y, 2, GOLD); c.unclip();
+        for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) pixels(c, text, x + dx, y + dy, scale, INK);
+        pixels(c, text, x + 1, y + scale, scale, 0xFF941B2F);
+        pixels(c, text, x, y, scale, 0xFFFF7840);
+        c.clip(x, y, width(text, scale), 3 * scale + scale / 2); pixels(c, text, x, y, scale, GOLD); c.unclip();
+    }
+    /** Large outlined text centred on {@code centreX}, for counts and grades. */
+    public static void big(SceneCanvas c, String text, int centreX, int y, int scale, int color) {
+        int x = centreX - width(text, scale) / 2;
+        for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) pixels(c, text, x + dx, y + dy, scale, INK);
+        pixels(c, text, x, y, scale, color);
+    }
+    /** A 9x9 pixel star: filled when earned, an outline when not. */
+    public static void star(SceneCanvas c, int x, int y, boolean earned) {
+        int fill = earned ? GOLD : 0xFF233A63, edge = earned ? 0xFFFFF3CB : DIM;
+        c.fill(x + 4, y, 1, 2, edge); c.fill(x + 3, y + 2, 3, 1, fill);
+        c.fill(x, y + 3, 9, 2, fill); c.fill(x + 1, y + 5, 7, 1, fill);
+        c.fill(x + 2, y + 6, 5, 1, fill); c.fill(x + 1, y + 7, 2, 2, fill); c.fill(x + 6, y + 7, 2, 2, fill);
+        c.fill(x, y + 3, 9, 1, edge);
     }
     private static void pixels(SceneCanvas c, String text, int x, int y, int scale, int color) {
         CompactFont.draw(c, text, x, y, scale, color);

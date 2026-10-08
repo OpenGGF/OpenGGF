@@ -62,8 +62,31 @@ class TestSitarHeroArcade {
         return (int) age.invoke(motion, drums, 16, tick);
     }
 
+    /** Records driver calls in order, sharing the log with music starts. */
+    private static final class AudioLog implements SceneAudio {
+        final List<String> calls = new ArrayList<>();
+        public void playMusic(int id) { calls.add("music:" + Integer.toHexString(id)); }
+        public void playSfx(int id) { calls.add("sfx:" + Integer.toHexString(id)); }
+        public void fadeOutMusic() { calls.add("fade"); }
+        public void stopMusic() { calls.add("stop"); }
+        List<String> since(int mark) { return List.copyOf(calls.subList(mark, calls.size())); }
+    }
+    /** A loading job the test completes or fails by hand. */
+    private static final class HeldPreparation implements SceneMusicPreparation {
+        final ScenePreparedMusic song;
+        State state = State.PREPARING;
+        HeldPreparation(ScenePreparedMusic song) { this.song = song; }
+        public State state() { return state; }
+        public int progressPercent() { return state == State.READY ? 100 : 40; }
+        public String error() { return state == State.FAILED ? "synthesis failed" : null; }
+        public ScenePreparedMusic prepared() { if (state != State.READY) throw new IllegalStateException(); return song; }
+        public void cancel() { if (state == State.PREPARING) state = State.CANCELLED; }
+    }
     private static final class Music implements SceneMusic {
         final ScenePreparedMusic song;
+        final AudioLog log = new AudioLog();
+        HeldPreparation held;
+        boolean hold;
         Player player;
         int lastPreparedId, lastPreparedFrames, rate = 1_000;
         Music() {
@@ -85,8 +108,14 @@ class TestSitarHeroArcade {
             };
         }
         public ScenePreparedMusic prepare(String game, int id, int frames) { lastPreparedId = id; lastPreparedFrames = frames; return song; }
+        public SceneMusicPreparation prepareAsync(String game, int id, int frames) {
+            if (!hold) return SceneMusic.super.prepareAsync(game, id, frames);
+            lastPreparedId = id; lastPreparedFrames = frames; held = new HeldPreparation(song); return held;
+        }
         public SceneMusicPlayer start(ScenePreparedMusic song, int fm, int psg, boolean dac, int lead) { return start(song, List.of(new SceneMusicPart(0, fm, psg, dac)), lead); }
-        public SceneMusicPlayer start(ScenePreparedMusic song, List<SceneMusicPart> parts, int lead) { player = new Player(-lead); return player; }
+        public SceneMusicPlayer start(ScenePreparedMusic song, List<SceneMusicPart> parts, int lead) {
+            log.calls.add("start"); player = new Player(-lead); return player;
+        }
     }
     private static final class Player implements SceneMusicPlayer {
         long position;
@@ -179,7 +208,7 @@ class TestSitarHeroArcade {
                 public SceneRomArt rom(String game) { return games.contains(game) ? roms.computeIfAbsent(game, TestSitarHeroArcade.this::fakeRom) : null; }
             };
         }
-        public SceneAudio audio() { return mock(SceneAudio.class); }
+        public SceneAudio audio() { return music.log; }
         public SceneMusic music() { return music; }
         public SceneStorage storage() {
             return new SceneStorage() {
@@ -708,5 +737,169 @@ class TestSitarHeroArcade {
         f.key(SceneKeys.ESCAPE); assertEquals("SETTINGS", f.screen());
         assertFalse(f.saves.containsKey("profile.txt"));
         f.scene.exit(f);
+    }
+
+    @Test void houseSoundsUseTheRunningDriverWhicheverRomSuppliesTheShow() throws Exception {
+        // Sonic 1 is the running game; Sonic 3 & Knuckles only adds songs, scenery and performers.
+        Fixture f = new Fixture(List.of("s1", "s3k"));
+        f.step();
+        assertEquals(List.of("stop", "music:89"), f.music.log.calls, "S1 menus use its looping Special Stage theme");
+        int mark = f.music.log.calls.size();
+        f.key(SceneKeys.DOWN);
+        assertEquals(List.of("sfx:cd"), f.music.log.since(mark), "S1's own sfx_Switch, never the S3K cue");
+        mark = f.music.log.calls.size();
+        f.key(SceneKeys.ENTER); f.key(SceneKeys.ESCAPE);
+        assertEquals(List.of("sfx:b5", "sfx:cd"), f.music.log.since(mark), "confirm rings, back clicks, the theme is never restarted");
+        f.scene.exit(f);
+    }
+
+    @Test void titleBandAndVenueFollowEveryInstalledSubset() throws Exception {
+        Map<List<String>, List<String>> bands = Map.of(
+                List.of("s1"), List.of("ROBOTNIK", "SONIC"),
+                List.of("s2"), List.of("TAILS", "SILVER_SONIC", "SONIC", "ROBOTNIK"),
+                List.of("s3k"), List.of("TAILS", "KNUCKLES", "SONIC", "ROBOTNIK"),
+                List.of("s1", "s2", "s3k"), List.of("TAILS", "KNUCKLES", "SONIC", "ROBOTNIK"));
+        Map<List<String>, List<String>> venues = Map.of(
+                List.of("s1"), List.of("Green Hill"), List.of("s2"), List.of("Chemical Plant"),
+                List.of("s3k"), List.of("Angel Island"),
+                List.of("s1", "s2", "s3k"), List.of("Angel Island", "Green Hill", "Chemical Plant", "Angel Island"));
+        var titleField = type.getDeclaredField("title"); titleField.setAccessible(true);
+        for (var subset : bands.keySet()) {
+            Fixture f = new Fixture(subset);
+            Object title = titleField.get(f.scene);
+            assertEquals(bands.get(subset), ((List<?>) title.getClass().getMethod("lineUp").invoke(title)).stream()
+                    .map(Object::toString).toList(), "one performer per instrument from " + subset);
+            for (String expected : venues.get(subset)) {
+                title = titleField.get(f.scene);
+                Object venue = title.getClass().getMethod("venue").invoke(title);
+                assertEquals(expected, venue.getClass().getMethod("name").invoke(venue), "venue rotation for " + subset);
+                f.key(SceneKeys.ENTER); f.key(SceneKeys.ESCAPE);   // each return to the title moves on
+            }
+            f.scene.exit(f);
+        }
+    }
+
+    @Test void leavingFadesTheThemeAndNothingRestartsIt() throws Exception {
+        Fixture f = new Fixture(List.of("s2"));
+        f.step();
+        assertEquals("music:89", f.music.log.calls.getLast(), "S2 menus use its Options theme");
+        int mark = f.music.log.calls.size();
+        f.key(SceneKeys.ESCAPE);
+        for (int i = 0; i < 10; i++) f.step();
+        assertEquals(List.of("fade"), f.music.log.since(mark), "the theme fades out with the exit and is not requested again");
+        f.scene.exit(f);
+        assertEquals("stop", f.music.log.calls.getLast());
+    }
+
+    @Test void importantCuesBeatSameTickMovesAndOnlyCursorClicksAreRateLimited() throws Exception {
+        Fixture f = new Fixture(List.of("s3k"));
+        f.step();
+        int mark = f.music.log.calls.size();
+        f.mouse(35, 81, true, 0);
+        assertEquals("CHARACTERS", f.screen(), "hover and click on one tick");
+        assertEquals(List.of("sfx:33"), f.music.log.since(mark), "the confirm wins over the hover move");
+        mark = f.music.log.calls.size();
+        f.key(SceneKeys.DOWN); f.key(SceneKeys.DOWN); f.key(SceneKeys.ENTER);
+        assertEquals("ROLES", f.screen());
+        assertEquals(List.of("sfx:5b", "sfx:33"), f.music.log.since(mark),
+                "a move two ticks after a move is dropped; the following confirm is not");
+        f.scene.exit(f);
+    }
+
+    @Test void loadingFadesTheThemeAndEveryWayBackLeavesTheMenuAudible() throws Exception {
+        Fixture f = new Fixture(List.of("s3k")); f.music.hold = true;
+        f.step();
+        assertTrue(f.debug("perform:angel-island-1:SITAR:sonic"));
+        int mark = f.music.log.calls.size();
+        f.step(); f.key(SceneKeys.ESCAPE);
+        assertEquals("SONGS", f.screen());
+        assertEquals(List.of("sfx:b3", "sfx:5b"), f.music.log.since(mark),
+                "a quick cancel keeps the unfaded theme instead of restarting it");
+        assertTrue(f.debug("perform:angel-island-1:SITAR:sonic"));
+        for (int i = 0; i < 60; i++) f.step();
+        assertTrue(f.music.log.calls.contains("fade"), "the theme fades under a long load");
+        mark = f.music.log.calls.size();
+        f.key(SceneKeys.ESCAPE);
+        assertEquals(List.of("music:2f", "sfx:5b"), f.music.log.since(mark), "returning after the fade restarts the theme");
+        assertTrue(f.debug("perform:angel-island-1:SITAR:sonic"));
+        for (int i = 0; i < 60; i++) f.step();
+        f.music.held.state = SceneMusicPreparation.State.FAILED;
+        mark = f.music.log.calls.size();
+        f.step();
+        assertEquals("ERROR", f.screen());
+        assertEquals(List.of("music:2f", "sfx:b2"), f.music.log.since(mark), "a failed load returns to an audible menu");
+        f.scene.exit(f);
+    }
+
+    @Test void songsOwnTheOutputAndNoMenuThemeOutlivesPausesResultsOrExit() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        f.step();
+        assertTrue(f.debug("perform:green-hill:SITAR:sonic"));
+        int mark = f.music.log.calls.size();
+        f.step(); f.step(); f.step();
+        assertEquals("PLAY", f.screen());
+        List<String> starting = f.music.log.since(mark);
+        assertTrue(starting.contains("sfx:c3"), "the giant ring rings the gig in: " + starting);
+        assertTrue(starting.indexOf("stop") >= 0 && starting.indexOf("stop") < starting.indexOf("start"),
+                "the driver is silenced before the song's PCM replaces it: " + starting);
+        mark = f.music.log.calls.size();
+        f.key(SceneKeys.ESCAPE); f.key(SceneKeys.DOWN); f.key(SceneKeys.DOWN);
+        assertEquals("PAUSED", f.screen());
+        assertEquals(List.of(), f.music.log.since(mark), "no driver cue can queue behind a paused song");
+        f.key(SceneKeys.ENTER);
+        assertEquals("SONGS", f.screen());
+        assertEquals(List.of("music:89", "sfx:b5"), f.music.log.since(mark), "pause to song select brings the theme back");
+        assertTrue(f.debug("perform:green-hill:SITAR:sonic")); assertTrue(f.debug("autoplay"));
+        for (int i = 0; i < 500 && !f.screen().equals("RESULTS"); i++) f.step();
+        assertEquals("RESULTS", f.screen());
+        assertEquals("music:8e", f.music.log.calls.getLast(), "a clear plays S1's act-clear jingle");
+        mark = f.music.log.calls.size();
+        for (int i = 0; i < 100; i++) f.step();
+        List<String> tally = f.music.log.since(mark);
+        assertTrue(tally.stream().filter("sfx:cd"::equals).count() >= 10 && tally.getLast().equals("sfx:c5"),
+                "the score tallies with switch clicks and ends on the register: " + tally);
+        mark = f.music.log.calls.size();
+        f.key(SceneKeys.ENTER); f.step(); f.step();
+        assertEquals("PLAY", f.screen(), "retry");
+        List<String> retry = f.music.log.since(mark);
+        assertEquals("sfx:c3", retry.getFirst());
+        assertTrue(retry.indexOf("stop") < retry.indexOf("start") && !retry.contains("music:89"),
+                "the jingle is stopped, never replaced by a latent theme: " + retry);
+        mark = f.music.log.calls.size();
+        f.scene.exit(f);
+        assertEquals(List.of("stop"), f.music.log.since(mark), "closing the scene leaves the driver silent");
+    }
+
+    @Test void performersStandOnTheVenueFloorOnEveryStagedScreen() throws Exception {
+        // The fake ROM pictures acts but finds no floor, so every venue uses the deck at row 180.
+        Fixture f = new Fixture(List.of("s3k"));
+        f.step();
+        assertEquals(181, lowestPerformerRow(f), "title band");
+        assertTrue(f.debug("perform:angel-island-1:SITAR:knuckles"));
+        f.step(); f.step(); f.step();
+        assertEquals("PLAY", f.screen());
+        assertEquals(181, lowestPerformerRow(f), "solo performance");
+        assertTrue(f.debug("local:angel-island-1:BONGOS:tails:MEDIUM:versus"));
+        f.step(); f.step(); f.step();
+        assertEquals(181, lowestPerformerRow(f), "both local performers");
+        f.scene.exit(f);
+    }
+
+    /** The lowest opaque pixel row of any sprite drawn this frame. */
+    private static int lowestPerformerRow(Fixture f) {
+        int[] lowest = {Integer.MIN_VALUE};
+        var canvas = mock(SceneCanvas.class);
+        when(canvas.width()).thenReturn(400); when(canvas.height()).thenReturn(224);
+        doAnswer(call -> {
+            SceneSprite sprite = call.getArgument(0);
+            for (int y = sprite.height() - 1; y >= 0; y--) {
+                boolean opaque = false;
+                for (int x = 0; x < sprite.width(); x++) opaque |= (sprite.image().pixel(x, y) >>> 24) != 0;
+                if (opaque) { lowest[0] = Math.max(lowest[0], Math.round((float) call.getArgument(2)) - sprite.originY() + y); break; }
+            }
+            return null;
+        }).when(canvas).draw(any(SceneSprite.class), anyFloat(), anyFloat(), any());
+        f.scene.draw(f, canvas);
+        return lowest[0];
     }
 }

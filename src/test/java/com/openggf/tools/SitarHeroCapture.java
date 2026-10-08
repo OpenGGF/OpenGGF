@@ -86,6 +86,8 @@ public final class SitarHeroCapture {
                 try {
                     tick(harness);
                     requireScreen(harness, "TITLE");
+                    // Let the wordmark land and the band settle before the title picture.
+                    for (int settle = 0; settle < 40; settle++) tick(harness);
                     capture(harness, visit, "title");
                     List<String> performers = strings(harness, "availablePerformers");
                     List<String> expected = ROSTER.stream().filter(id -> available(id, games)).toList();
@@ -93,7 +95,7 @@ public final class SitarHeroCapture {
                     verifyCatalogue(harness, games, visit);
                     verifyStage(harness);
                     // Real mouse selection of Quick play, followed by keyboard menu navigation.
-                    click(harness, 50, 87);
+                    click(harness, 50, 77); // second title row (rows start at 58, 13 pixels apart)
                     requireScreen(harness, "CHARACTERS");
                     require(invoke(harness, "mode").equals("QUICK_PLAY"), "Mouse did not select Quick play");
                     for (String performer : performers) {
@@ -585,6 +587,11 @@ public final class SitarHeroCapture {
     }
 
     private static void capture(ExampleModHarness harness, Path visit, String name) throws Exception {
+        // Menu content eases in for ten ticks after a screen opens; picture the settled screen.
+        // Timed screens (loading, play, pause, calibration) are captured exactly where the step left them.
+        // Results also wait for the score tally and star reveal.
+        if (!List.of("LOADING", "PLAY", "PAUSED", "CALIBRATION").contains(screen(harness)))
+            for (int settle = screen(harness).equals("RESULTS") ? 120 : 12; settle > 0; settle--) tick(harness);
         GL11.glViewport(0, 0, WIDTH, HEIGHT);
         GL11.glClearColor(0, 0, 0, 1);
         GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
@@ -602,8 +609,9 @@ public final class SitarHeroCapture {
     }
 
     private static void verifyStage(ExampleModHarness harness) throws Exception {
-        SceneBackdrop backdrop = (SceneBackdrop) field(harness.scene(), "backdrop");
-        SceneImage foreground = (SceneImage) field(harness.scene(), "foreground");
+        Object venue = field(harness.scene(), "venue");
+        SceneBackdrop backdrop = (SceneBackdrop) method(venue, "backdrop");
+        SceneImage foreground = (SceneImage) method(venue, "foreground");
         List<String> failures = new ArrayList<>();
         if (backdrop == null) failures.add("missing backdrop");
         else if (nonblackColors(backdrop.image()) <= 8) failures.add("empty backdrop palette/art");

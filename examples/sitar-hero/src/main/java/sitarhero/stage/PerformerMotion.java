@@ -1,4 +1,4 @@
-package sitarhero;
+package sitarhero.stage;
 
 import sitarhero.model.Role;
 import java.util.Arrays;

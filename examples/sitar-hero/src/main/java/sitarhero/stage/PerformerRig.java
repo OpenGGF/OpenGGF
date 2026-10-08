@@ -1,8 +1,8 @@
-package sitarhero;
+package sitarhero.stage;
 
 import com.openggf.mods.scene.SceneSprite;
 import java.util.List;
-import static sitarhero.PerformerCutout.Mask;
+import static sitarhero.stage.PerformerCutout.Mask;
 
 /** Reference geometry in native mapping-origin pixels, never replacement character art. */
 final class PerformerRig {
