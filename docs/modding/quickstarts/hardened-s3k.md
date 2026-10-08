@@ -80,8 +80,8 @@ native movement in PLAY. ENTRY advances ordinary native rows with neutral input
 so the fade and native terrain/enemy-art owners can finish. Release follows the
 completed row, minimum presentation, `presentationReady()` and the query-only
 `RuntimeArtCoordinator.levelEntryArtReady()` gate. Queue diagnostics alone miss
-deferred work, and HOLD starves its producer. ENTRY first uses
-`CourseControl.finishInitialPresentation()` consumes the pending Level routine
+deferred work, and HOLD starves its producer. ENTRY first calls
+`CourseControl.finishInitialPresentation()` to consume the pending Level routine
 card through its omitted-presentation owner, including on checkpoint retry; its
 teardown and enemy-art handoff still run. Simply bypassing the ordinary card
 consumer leaves that producer pending indefinitely. Menus HOLD the world. Other

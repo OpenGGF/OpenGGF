@@ -26,16 +26,16 @@ This survey establishes authoring geometry; it does not itself prove combat.
 | --- | --- |
 | Native decode, geometry and preserved protected inventory | Both ROM-backed checks passed with zero skips. Concrete native objects, ring inventory, terrain and PLC are preserved. |
 | Physical post contact and two real death reloads | Passed: real native collision activates index 2, followed by two production death reloads. No checkpoint fixture is counted as combat evidence. |
-| Safe/failure paths, ordinary ring/shield/hurt dispatch | Passed: native safe-ring/danger volleys, ring loss, all three elemental shields, projectile recreation and two whole-registry 60-tick restore/forward cycles. |
+| Safe/failure paths, ordinary ring/shield/hurt dispatch | Passed: real safe/fatal paths, native ring loss and all three elemental shields use stock hurt dispatch. |
 | Projectile recreation and two restore/forward replay cycles | Passed: native safe-ring/danger volleys, ring loss, all three elemental shields, projectile recreation and two whole-registry 60-tick restore/forward cycles. |
 | Packaged title, entry holds, pause, real checkpoint menu retry and owner abort | `TestHardenedPrototype`: seven packaged/native cases pass with zero skips after neutral entry and mandatory native-card consumption. Includes two real checkpoint menu retries, pre-contact fresh attempts, entry restore/forward cycles and owner-fault return. |
 | Fresh entry/checkpoint/death/stage-return precedence and no-save attachment | 55 focused cases passed with zero skips; the corrected native fresh-camera/checkpoint method also passes. Stock death camera remains `0x1CC0`. |
-| Actual GPU title/tells/transitions and final ROM PCM | Camera and entry follow-ups have actual pre-2fc GPU/PCM diagnostics: first released PLAY contains foreground and Sonic, safe/fatal paths reach native post retries, initial title controls do not overlap. Final merged-source video/device evidence remains pending. |
+| Actual GPU title/tells/transitions and final ROM PCM | Composed safe1316/fatal715 GPU frames with stereo48k PCM, native1376-row safe walkthrough and337-row missing-ROM recovery inspected. First PLAY includes Sonic/foreground; both volleys, clear/fatal, post retry and separate fresh entry are observed. Native device capture uses an explicitly owned frameless workaround; caller/HID/speaker limits are in the implementation plan. |
 
 The [implementation plan](../../plans/2026-10-07-hardened-s3k-prototype.md) and
 [blueprint](../../designs/2026-10-07-hardened-s3k-blueprint.md) preserve the
 original base, contract decisions and later-stage limits. The outside-repository ledger records exact commands and corrected fixture failures.
-Final captures and broad verification remain pending; these focused results are
+Final combined broad verification remains pending; these focused/capture results are
 not a full-suite or full-act certification.
 
 ## Claims

@@ -80,3 +80,11 @@ This movie belongs to native host/window diagnostics. `ModWalkthroughCaptureTool
 requires a valid ROM and does not render the missing-ROM host screen. The dated
 implementation evidence records the exact native diagnostic caller, owned-window
 recipe and its limits separately from the GPU/PCM tool.
+
+`native-safe.script/.bk2` is the native-keyboard variant with an extra neutral
+entry margin. It round-trips1376 held-input rows and completes the same post,
+volleys, clear, retry and fresh-launch flow through genuine X11 key edges. Native
+window initialization may admit presentation at a different pace from the logical
+GPU tool; starting movement before ENTRY releases can miss the tell. This input
+margin is not an engine frame gate. The dated artifact records the qualified
+owned-window diagnostic recipe and its actual backend/environment limitations.
