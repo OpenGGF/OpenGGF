@@ -223,7 +223,7 @@ class TestModTestKit {
             }
         }
         pack(repository, "owner", "", """
-                context.registerZone(new com.openggf.mods.code.ModZoneContribution("present",
+                context.registerZone(com.openggf.mods.code.ModZoneContribution.singleAct("present",
                     new com.openggf.mods.code.BakedLevelRef("levels/tide/act1/level.json"),
                     null, null, false));
                 """, "s2", assets);
