@@ -1054,3 +1054,74 @@ current-destination check, rather than silent normalization or a totals-only
 claim. Its own post-integration actual-main full run remains required. The
 Sitar owner will separately supply its terminal guard and published successor;
 this task will preserve that verification and reconcile its evidence-only head.
+
+### Completed candidate ordinary lane and guard repairs
+
+Candidate `7d87e02a1c75b80c8f5969ab6654ee1cf3976b7a`, measured against
+`ae2dfd3dd75d7a4dc7ece3bdebbdebbb41fcdb36`, completes owned run
+`20261008T034810Z-47c3194d`. The command is:
+
+```sh
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base ae2dfd3dd75d7a4dc7ece3bdebbdebbb41fcdb36 --run --max-minutes 150
+```
+
+The full ordinary selection contains 3,027 source classes and produces
+3,025 reports / 26,422 tests / **27 failures, zero errors, 62 skips** in
+5,221.08 seconds; Maven exits 1. Every remaining failure retains its qualified
+baseline identity, kind, type and full concrete first assertion line: 26 match
+literally, and the named SSZ Tails parameterized case matches after stripping
+only the exception prefix and replacing verified `RewindObjectStateBlob@hex`
+identities with `@HASH`. Its complete 2,952-character first line normalizes to
+2,907 characters, exactly matching the retained baseline, rather than a capped
+message prefix. All 62 skip identities and first causal lines match literally;
+fresh XML corroborates all 62, with no ROM skips or omitted diagnostics. The
+sole removed failure is
+`TestFbzSandopolisTimelineHeadless#productionExitResetsTimelineAndFreshDestinationRestoresAndReplaysTwice`,
+which passes without a skip. Both lanes finish without timeout. This is an
+inherited ordinary-failure qualification, not a green whole-suite result.
+
+The same invocation's separate fresh guard JVM produces 86 reports / 672
+cases / **two failures, zero errors, zero skips**, in 211.56 seconds. Both
+failures are caused by this composition and block integration:
+
+- `TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction`:
+  the pending-shield snapshot implementation grows `AbstractPlayableSprite`
+  to 3,261 effective lines against its unchanged 3,258 budget.
+- `TestSingletonLifecycleGuard#ambientGameplayModeSetupsDoNotGrowWithoutLifecycleTriage`:
+  `TestScheduledPlaybackInputPublisher#configureServices` directly configures
+  ambient engine services instead of using the central fixture reset.
+
+The bounded repair moves the pending-shield capture/restore branches into the
+existing package-private `PendingInstaShieldRewindExtra` collaborator, retaining
+its record component, snapshot interface, conditions, recreation side effects,
+exception text and deferred registration order. Publisher tests use
+`TestEnvironment.resetAll()` before and after each case. No guard budget,
+public API, descriptor, pin or timing/physics behavior changes. Affected
+shield/input/rewind/API regressions and separate fresh guards must qualify
+these repairs before integration; the actual-main full run remains required.
+The consumed owned diagnostic directory was acknowledged and removed.
+
+Repair qualification measures the frozen three-file follow-up to `7d87e02a`.
+Focused request `52813` completes at 2026-10-08 05:26:03 UTC: ten fresh XML
+reports / **56 cases, zero failures/errors/skips**, Maven exit 0, 81 seconds
+execution after 217 seconds queued. Its selectors are `TestShieldRewindRestore`,
+`TestShieldRewindPendingRestore`, `TestAbstractPlayableSpriteRewindCapture`,
+`TestPlayableSubclassRewind`, `TestPlayableSpriteRewindState`,
+`TestFbzSandopolisTimelineHeadless`, `TestFreshLevelBoundaryRewindHeadless`,
+`TestModApiSignatureSurface`, `TestScheduledLevelPlaybackInput` and
+`TestScheduledPlaybackInputPublisher`, using the queue wrapper, `-Dmse=off`
+and all three verified absolute ROM properties. Both publication phases and
+the repaired FBZ→SOZ full-registry replay remain passing.
+
+Separate fresh request `40077` runs
+`DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B`.
+It completes at 2026-10-08 05:29:58 UTC: **86 fresh XML reports / 672 cases,
+zero failures/errors/skips**, Maven exit 0, 206 seconds execution, no queue
+wait. Both formerly failing guard identities now pass; all three repair source
+hashes remain unchanged through both invocations. These bounded repairs are
+qualified narrowly after the completed red broad run, following the repository's
+regression-repair policy. The combined actual-main full run still verifies the
+final integrated source. The prior canonical results are reused for unchanged
+gameplay behavior; this structural repair does not establish a new canonical
+trace-profile measurement.

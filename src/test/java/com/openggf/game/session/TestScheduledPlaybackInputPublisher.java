@@ -1,6 +1,8 @@
 package com.openggf.game.session;
 
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.tests.TestEnvironment;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
@@ -13,7 +15,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TestScheduledPlaybackInputPublisher {
     @BeforeEach
     void configureServices() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetAll();
+    }
+
+    @AfterEach
+    void resetServices() {
+        TestEnvironment.resetAll();
     }
 
     @Test

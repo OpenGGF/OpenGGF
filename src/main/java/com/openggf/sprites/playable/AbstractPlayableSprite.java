@@ -1062,32 +1062,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         null,                // badnikExtra
                         null,                // badnikSubclassExtra
                         extra                // playerExtra
-                ).withObjectSubclassExtra(capturePendingInstaShieldRewindState());
-        }
-
-        private PendingInstaShieldRewindExtra capturePendingInstaShieldRewindState() {
-                if (!instaShieldRegistered && instaShieldObject instanceof AbstractObjectInstance object
-                                && !instaShieldObject.isDestroyed()) {
-                        // ObjectManager has no entry for this handle until tickStatus
-                        // registers it, so the sprite must capture its current state.
-                        return new PendingInstaShieldRewindExtra(object.captureRewindState());
-                }
-                return null;
-        }
-
-        private void restorePendingInstaShieldRewindState(PerObjectRewindSnapshot snapshot) {
-                if (!(snapshot.objectSubclassExtra() instanceof PendingInstaShieldRewindExtra pending)) {
-                        return;
-                }
-                if ((instaShieldObject == null || instaShieldObject.isDestroyed()) && powerUpSpawner != null) {
-                        instaShieldObject = powerUpSpawner.createInstaShield(this);
-                }
-                if (!(instaShieldObject instanceof AbstractObjectInstance object)) {
-                        throw new IllegalStateException("Pending insta-shield restore requires a rewind-capable handle");
-                }
-                // Restore only the sprite-owned pending values here. Registration
-                // and manager rebinding still wait for the registry's post-restore phase.
-                object.restoreRewindState(pending.shieldState());
+                ).withObjectSubclassExtra(PendingInstaShieldRewindExtra.capture(
+                        instaShieldRegistered, instaShieldObject));
         }
 
         /**
@@ -1273,7 +1249,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // subclasses without a captured payload): see restoreSubclassRewindState()
                 // Javadoc for the null contract subclasses must honor.
                 restoreSubclassRewindState(extra.subclassExtra());
-                restorePendingInstaShieldRewindState(s);
+                instaShieldObject = PendingInstaShieldRewindExtra.restore(s.objectSubclassExtra(),
+                        instaShieldObject, powerUpSpawner != null
+                                ? () -> instaShieldObject = powerUpSpawner.createInstaShield(this) : null);
         }
 
         /**
