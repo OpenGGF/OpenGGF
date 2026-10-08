@@ -2,6 +2,10 @@ package com.openggf.level;
 
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.game.mutators.GameplayMutatorPolicy;
+import com.openggf.game.mutators.GameplayMutatorPolicySource;
+import com.openggf.game.mutators.LevelMutatorPolicyAccess;
+import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -32,7 +36,7 @@ final class LevelLostRingSpawnCoordinator
         if (levelManager.ringManager == null || player == null) {
             return;
         }
-        int count = player.getRingCount();
+        int count = resolveScatterCount(player);
         if (count <= 0) {
             return;
         }
@@ -43,7 +47,7 @@ final class LevelLostRingSpawnCoordinator
         if (player == null || levelManager.ringManager == null) {
             return;
         }
-        int count = player.getRingCount();
+        int count = resolveScatterCount(player);
         if (count <= 0) {
             return;
         }
@@ -90,7 +94,7 @@ final class LevelLostRingSpawnCoordinator
             if (frameCounter <= spawn.frameCounter()) {
                 continue;
             }
-            if (spawn.player().getRingCount() > 0) {
+            if (allowSpill(spawn.player()) && spawn.player().getRingCount() > 0) {
                 levelManager.ringManager.spawnLostRingsWithInitialObjectStep(
                         spawn.player(), spawn.ringCount(), frameCounter,
                         spawn.x(), spawn.y(), spawn.preallocatedSlots(),
@@ -102,6 +106,32 @@ final class LevelLostRingSpawnCoordinator
             }
             iterator.remove();
         }
+    }
+
+    private int resolveScatterCount(AbstractPlayableSprite player) {
+        int held = player.getRingCount();
+        if (held <= 0 || !allowSpill(player)) return 0;
+        ObjectManager objects = levelManager.objectManager;
+        var services = objects == null ? null : objects.getObjectServices();
+        GameplayMutatorPolicySource source = services == null ? null
+                : WorldSessionPolicyAccess.getService(services.worldSession(), GameplayMutatorPolicySource.class);
+        GameplayMutatorPolicy policy = source == null ? GameplayMutatorPolicy.STOCK : source.policy();
+        if (policy.ringfallPercent() == 100 && policy.ringfallCap() == 0) return held;
+        int basis = Math.min(held, 32);
+        int count = Math.min(basis, Math.max(1, basis * policy.ringfallPercent() / 100));
+        return policy.ringfallCap() == 0 ? count : Math.min(count, policy.ringfallCap());
+    }
+
+    private boolean allowSpill(AbstractPlayableSprite player) {
+        var objects = levelManager.objectManager;
+        var services = objects == null ? null : objects.getObjectServices();
+        if (LevelMutatorPolicyAccess.ringsAllowed(services)) return true;
+        if (player.getRingCount() > 0) {
+            var state = levelManager.getLevelGamestate();
+            if (state != null) state.resetRingsForLoss();
+            else player.setRingCount(0);
+        }
+        return false;
     }
 
     void reset() {

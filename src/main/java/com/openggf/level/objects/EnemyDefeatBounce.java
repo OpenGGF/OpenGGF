@@ -1,6 +1,9 @@
 package com.openggf.level.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.session.WorldSession;
+import com.openggf.game.session.WorldSessionPolicyAccess;
+import com.openggf.game.mutators.GameplayMutatorPolicySource;
 
 /**
  * The badnik-kill player rebound shared by all three ROMs.
@@ -40,21 +43,30 @@ public final class EnemyDefeatBounce {
      *                same moment as the overlap that produced the kill
      */
     public static void apply(PlayableEntity player, int enemyY) {
+        player.setYSpeed(resolve(player, enemyY));
+    }
+
+    private static short resolve(PlayableEntity player, int enemyY) {
         short ySpeed = player.getYSpeed();
         if (ySpeed < 0) {
             // bmi loc_85750: addi.w #$100,y_vel(a1)
-            player.setYSpeed((short) (ySpeed + 0x100));
-            return;
+            return (short) (ySpeed + 0x100);
         }
-        // The overlap and bounce both dereference the same object slot in all three
-        // ROMs; keep the already-resolved touch Y instead of re-reading a later
-        // engine projection (S1 ReactToItem.asm:163,301-304; S2 s2.asm:
-        // 85127,85414-85420; S3K sonic3k.asm:20697,20974-20989).
-        if (player.getCentreY() < enemyY) {
-            player.setYSpeed((short) -ySpeed);
-        } else {
-            // loc_85758: subi.w #$100,y_vel(a1)
-            player.setYSpeed((short) (ySpeed - 0x100));
+        // Use the native centre already matched by the touch owner, not a later projection.
+        return player.getCentreY() < enemyY ? (short) -ySpeed : (short) (ySpeed - 0x100);
+    }
+
+    /** Actual native defeat producer with its injected world, after matching touch coordinates. */
+    public static void apply(PlayableEntity player, int enemyY, WorldSession world) {
+        short resolved = resolve(player, enemyY);
+        GameplayMutatorPolicySource source = WorldSessionPolicyAccess.getService(world, GameplayMutatorPolicySource.class);
+        if (source != null && source.policy().defeatReboundPercent() != 100) {
+            var policy = source.policy();
+            // Amplify the resolved signed ROM word once; horizontal/ground/air state stays native.
+            int amplified = resolved * policy.defeatReboundPercent() / 100;
+            int cap = policy.defeatVerticalCap();
+            resolved = (short) Math.clamp(amplified, -cap, cap);
         }
+        player.setYSpeed(resolved);
     }
 }
