@@ -87,6 +87,16 @@ Forward the engine-internal classifier for native placements; a namespaced,
 creator-owned override remains outside that native classification. Preserve
 placement indices and allocation order. Do not extend the creator API merely
 to carry this internal capability (Mutator Lab expansion, 2026-10-08).
+**Native mod registration does not establish API retention.** Experimental
+runtime-loaded callbacks can resolve members that normal image reachability
+trimmed, even after other mods registered successfully. Exact package retention
+does not include subpackages: `com.openggf.game` omitted `GameRules.SONIC_2` and
+both standalone modules aborted. Derive exact-class preservation from the
+canonical API plus all static mod references, retain original `.class` resources
+for validators, and run a metadata audit before creator execution. Prove the audit
+rejects a deliberately pruned image; metadata presence still does not qualify
+every invocation, gameplay callback or VM fault boundary.
+Origin: [October 8 native mod follow-up](research/2026-10-08-graalvm-native-mod-feasibility.md#follow-up-both-standalone-mods-and-automatic-member-coverage).
 
 **An engine-invoked method reference retains its creator's authority.** A direct
 `StackWalker.getCallerClass()` check can hide a child-loaded lambda/method-reference
