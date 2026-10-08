@@ -6,7 +6,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
-- **Mutator Lab prototype:** JVM boot-prepared Sonic 2 Gravity and Stealth use
+- **Mutator Lab prototype and expansion contracts:** JVM boot-prepared Sonic 2 Gravity and Stealth use
   typed scoped options, atomic admission, owner fault isolation and session rewind
   separate from saved preferences. The title/configuration/play/restart/hub flow
   keeps native movement and sprite admission, with an explicit EHZ1 solo-Sonic
@@ -17,6 +17,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Its title card sits below the native emblem, How to play names the live key
   bindings, play-hold configuration dims the held frame, and option help wraps to
   two lines with plain-language boundary feedback.
+  Typed catalogue contributions also declare scatter, head-presentation, semantic
+  monitor removal, checkpoint/ring suppression, independent stage-entry gates,
+  defeat knockback and whole-step speed; native consumer expansion is in progress.
 
 - **Sonic 2 title SFX priority:** the flashing star's last twinkle now runs to
   its own stop, as in the ROM, releasing the sound driver's SFX priority. A stop

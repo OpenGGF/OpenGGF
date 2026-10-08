@@ -461,9 +461,59 @@ public final class MutatorSessionState implements AutoCloseable {
             return numerator.divide(denominator).max(BigInteger.valueOf(25)).min(BigInteger.valueOf(200)).intValueExact();
         }
         public List<MutatorPolicy.PlayerStealth> stealthPolicies() {
-            return policies.values().stream().flatMap(List::stream)
-                    .filter(MutatorPolicy.PlayerStealth.class::isInstance)
-                    .map(MutatorPolicy.PlayerStealth.class::cast).toList();
+            return contributions(MutatorPolicy.PlayerStealth.class);
+        }
+
+        public int headScalePercent(boolean leader) {
+            return multiplyPercent(contributions(MutatorPolicy.BigHead.class).stream()
+                    .filter(value -> leader || value.target() == MutatorPolicy.Target.ALL_TEAM)
+                    .map(MutatorPolicy.BigHead::percent).toList(), 100, 200);
+        }
+
+        public com.openggf.game.mutators.LevelMutatorPolicy levelPolicy(Set<MutatorCapability> available) {
+            var removed = java.util.EnumSet.noneOf(com.openggf.game.mutators.MonitorContent.class);
+            if (available.contains(MutatorCapability.MONITOR_FILTER))
+                contributions(MutatorPolicy.MonitorFilter.class).forEach(value -> removed.addAll(value.removedContents()));
+            return new com.openggf.game.mutators.LevelMutatorPolicy(removed,
+                    active(available, MutatorCapability.NO_RINGS),
+                    active(available, MutatorCapability.NO_CHECKPOINTS),
+                    active(available, MutatorCapability.NO_SPECIAL_STAGES),
+                    active(available, MutatorCapability.NO_BONUS_STAGES));
+        }
+
+        public com.openggf.game.mutators.GameplayMutatorPolicy gameplayPolicy(Set<MutatorCapability> available) {
+            var spills = available.contains(MutatorCapability.RINGFALL)
+                    ? contributions(MutatorPolicy.Ringfall.class) : List.<MutatorPolicy.Ringfall>of();
+            var rebounds = available.contains(MutatorCapability.DEFEAT_KNOCKBACK)
+                    ? contributions(MutatorPolicy.DefeatKnockback.class) : List.<MutatorPolicy.DefeatKnockback>of();
+            var speeds = available.contains(MutatorCapability.GAMEPLAY_SPEED)
+                    ? contributions(MutatorPolicy.GameplaySpeed.class) : List.<MutatorPolicy.GameplaySpeed>of();
+            int cap = spills.stream().mapToInt(MutatorPolicy.Ringfall::hardCap).filter(value -> value > 0).min().orElse(0);
+            int verticalCap = rebounds.stream().mapToInt(MutatorPolicy.DefeatKnockback::verticalSpeedCap).min().orElse(0xC00);
+            return new com.openggf.game.mutators.GameplayMutatorPolicy(
+                    multiplyPercent(spills.stream().map(MutatorPolicy.Ringfall::percent).toList(), 10, 100), cap,
+                    multiplyPercent(rebounds.stream().map(MutatorPolicy.DefeatKnockback::percent).toList(), 100, 300), verticalCap,
+                    multiplyPercent(speeds.stream().map(MutatorPolicy.GameplaySpeed::percent).toList(), 25, 400),
+                    speeds.stream().anyMatch(MutatorPolicy.GameplaySpeed::audioFollowsSpeed));
+        }
+
+        private boolean active(Set<MutatorCapability> available, MutatorCapability capability) {
+            return available.contains(capability) && policies.values().stream().flatMap(List::stream)
+                    .anyMatch(value -> value.capability() == capability);
+        }
+
+        private <P extends MutatorPolicy> List<P> contributions(Class<P> type) {
+            return policies.values().stream().flatMap(List::stream).filter(type::isInstance).map(type::cast).toList();
+        }
+
+        private static int multiplyPercent(List<Integer> values, int minimum, int maximum) {
+            BigInteger numerator = BigInteger.valueOf(100), denominator = BigInteger.ONE;
+            for (int value : values) {
+                numerator = numerator.multiply(BigInteger.valueOf(value));
+                denominator = denominator.multiply(BigInteger.valueOf(100));
+            }
+            return numerator.divide(denominator).max(BigInteger.valueOf(minimum))
+                    .min(BigInteger.valueOf(maximum)).intValueExact();
         }
     }
 

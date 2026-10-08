@@ -67,12 +67,14 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
             @Override public PlayableMutatorPolicy policyFor(AbstractPlayableSprite sprite) {
                 if (support == null || state.isClosed()) return PlayableMutatorPolicy.STOCK;
                 boolean leader = sprites.getMainPlayable() == sprite;
-                if (!support.supportsPlayer(sprite.getCode(), leader)) return PlayableMutatorPolicy.STOCK;
                 Set<MutatorCapability> available = Set.copyOf(support.capabilities(world.getCurrentZone(), world.getCurrentAct()));
                 var effective = state.effective();
-                int gravity = available.contains(MutatorCapability.DRY_SONIC_GRAVITY) ? effective.gravityPercent() : 100;
+                int gravity = available.contains(MutatorCapability.DRY_SONIC_GRAVITY)
+                        && support.supportsPlayer(MutatorCapability.DRY_SONIC_GRAVITY, sprite.characterKey().persisted(), leader)
+                        ? effective.gravityPercent() : 100;
                 boolean body = false, appendage = false, effects = false;
-                if (available.contains(MutatorCapability.PLAYER_STEALTH)) {
+                if (available.contains(MutatorCapability.PLAYER_STEALTH)
+                        && support.supportsPlayer(MutatorCapability.PLAYER_STEALTH, sprite.characterKey().persisted(), leader)) {
                     for (var policy : effective.stealthPolicies()) {
                         if (leader || policy.target() == MutatorPolicy.Target.ALL_TEAM) {
                             body |= policy.hideBody();
@@ -81,8 +83,11 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
                         }
                     }
                 }
-                return gravity == 100 && !body && !appendage && !effects ? PlayableMutatorPolicy.STOCK
-                        : new PlayableMutatorPolicy(gravity, body, appendage, effects);
+                int head = available.contains(MutatorCapability.BIG_HEAD)
+                        && support.supportsPlayer(MutatorCapability.BIG_HEAD, sprite.characterKey().persisted(), leader)
+                        ? effective.headScalePercent(leader) : 100;
+                return gravity == 100 && !body && !appendage && !effects && head == 100 ? PlayableMutatorPolicy.STOCK
+                        : new PlayableMutatorPolicy(gravity, body, appendage, effects, head);
             }
         });
     }
@@ -139,7 +144,22 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         };
     }
     @Override public <T> T getService(Class<T> type) {
-        return type == MutatorWorldState.class ? type.cast(this) : null;
+        if (type == MutatorWorldState.class) return type.cast(this);
+        if (type == com.openggf.game.mutators.LevelMutatorPolicySource.class) {
+            return type.cast((com.openggf.game.mutators.LevelMutatorPolicySource)
+                    () -> state.isClosed() ? com.openggf.game.mutators.LevelMutatorPolicy.STOCK
+                            : state.effective().levelPolicy(availableCapabilities()));
+        }
+        if (type == com.openggf.game.mutators.GameplayMutatorPolicySource.class) {
+            return type.cast((com.openggf.game.mutators.GameplayMutatorPolicySource)
+                    () -> state.isClosed() ? com.openggf.game.mutators.GameplayMutatorPolicy.STOCK
+                            : state.effective().gameplayPolicy(availableCapabilities()));
+        }
+        return null;
+    }
+    private Set<MutatorCapability> availableCapabilities() {
+        return support == null || state.isClosed() ? Set.of()
+                : Set.copyOf(support.capabilities(world.getCurrentZone(), world.getCurrentAct()));
     }
     @Override public RewindSnapshottable<?> rewindAdapter() { return this; }
     @Override public void failedAssembly(LevelLoadCause cause) {

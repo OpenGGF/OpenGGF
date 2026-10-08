@@ -532,3 +532,17 @@ exchange bounded queues and state. The scene host closes networking on exit
 requests and every callback fault, rather than depending on a later caller
 cleanup. The [scene handbook](../modding/guides/mod-scenes.md#direct-peer-messaging)
 owns framing, deadlines, clock meaning and direct-connect limitations.
+
+### Mutator Lab catalogue expansion (unpublished candidate)
+
+The expansion adds typed scatter, head-presentation, semantic monitor removal,
+checkpoint/ring suppression, independent stage-entry gates, defeat knockback and
+whole-step speed contributions. Existing `DrySonicGravity` and `PlayerStealth`
+constructors remain available. Capability-specific character eligibility and
+module-owned native location/option support metadata extend the common settings
+contract through backward-compatible default methods. All effects still declare
+independent enable, disable and option scopes; placement/death-bank filters require
+LOAD. Engine consumers use world-owned semantic ports rather than concrete mod
+state. The mutable `0.7` signature pin is regenerated from compiled source;
+`0.7.0` remains unpublished and no published baseline changes. Consumer behavior
+and the three-game example are tracked in the dated expansion plan.
