@@ -4,7 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
-import com.openggf.game.save.SaveReason;
+import com.openggf.game.sonic3k.S3kFullSaveGame;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -126,7 +126,7 @@ public final class HpzTeleporterRouteHelperObjectInstance extends AbstractObject
         exitRequested = true;
         // moveq #cmd_FadeOut / SaveGame / move.w #$A01,d0 / StartNewLevel
         services().fadeOutMusic();
-        services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
+        S3kFullSaveGame.complete(services());
         services().requestZoneAndAct(Sonic3kZoneIds.ZONE_SSZ, 1, true);
     }
 
@@ -263,7 +263,7 @@ public final class HpzTeleporterRouteHelperObjectInstance extends AbstractObject
                 }
                 exitRequested = true;
                 services().fadeOutMusic();
-                services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
+                S3kFullSaveGame.complete(services());
                 services().requestZoneAndAct(Sonic3kZoneIds.ZONE_SSZ, 0, true);
                 return true;
             }

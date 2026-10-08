@@ -154,7 +154,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     /**
      * S3K Special Stage Entry Ring collected bitfield (ROM: Collected_special_ring_array).
      * 32-bit bitfield where each ring's subtype (0-31) is a bit index.
-     * Reset per level load.
+     * Preserved across same-zone loads; cleared by the native full SaveGame boundary.
      */
     private int collectedSpecialRings;
 
@@ -651,6 +651,11 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      */
     public void markSpecialRingCollected(int bitIndex) {
         collectedSpecialRings |= (1 << (bitIndex & 0x1F));
+    }
+
+    // Engine-only write; full S3K SaveGame clears this at loc_C4CC, not level load.
+    void clearSpecialRingCollection() {
+        collectedSpecialRings = 0;
     }
 
     /**
