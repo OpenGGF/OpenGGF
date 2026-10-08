@@ -1131,6 +1131,11 @@ ROM-header secondary cue. A trace may select the ordinary production
 presentation-omitted transition, but it cannot submit, mutate, service, or
 release either queue.
 
+Dedicated timing input resolves `hardware_timing.jsonl` or its `.gz` sibling,
+with plain-file precedence and identical strict schema/UTF-8 checks. Compressed
+empty input retains recorded authority; damaged or zero-byte gzip is rejected.
+This storage support does not expand the kinds or ownership authorized below.
+
 The hardware-timing replay exception below does not apply to S2 DPLCs at
 all, and applies to S1 PLCs only at the `RunPLC` FIFO-head arming edge
 (`NEMESIS_PLC_QUEUE`). Physics and auxiliary trace data remain

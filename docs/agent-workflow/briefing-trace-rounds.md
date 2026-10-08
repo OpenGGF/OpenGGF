@@ -163,6 +163,12 @@ status/controller refresh continued to read the live S2 module. An expected red
 case passed and the registered-shield control failed. Use
 `TestEnvironment.configureGameModuleFixture` for the intended live world, verify
 the positive control, and discard the mixed result before attributing behavior.
+The October8 death-radius fixture reproduced this hazard across a restore:
+initial S3K rules produced the expected kill, but animation publication refreshed
+the retained S2 world and the next kill used S2 landing rules. Correct the live
+fixture rather than the native expectation. Conversely, clearing a ROM-backed
+fixture's session without reopening it made the S2 results tests fail during
+setup; those errors were not evidence that the intended regression reproduced.
 
 A complete registry restore can still omit a scheduling owner (2026-10-07,
 FBZ → SOZ destination floor): pending shield restoration exposed five art clocks

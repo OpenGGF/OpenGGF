@@ -8,9 +8,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -28,6 +30,69 @@ class TestHardwareTimingStreamLoader {
 
         assertFalse(schedule.hasRecordedInput());
         assertTrue(schedule.edges().isEmpty());
+    }
+
+    @Test
+    void gzipStreamPreservesTheSameEdgesAndAdmissionPolicies() throws IOException {
+        String content = edge(0, "pre_main_loop", "nemesis_plc_queue", 0) + "\n";
+        HardwareTimingSchedule plain = TraceData.load(writeFixture(content))
+                .hardwareTimingSchedule();
+        HardwareTimingSchedule compressed = TraceData.load(
+                writeGzipFixture(content.getBytes(StandardCharsets.UTF_8)))
+                .hardwareTimingSchedule();
+
+        assertTrue(compressed.hasRecordedInput());
+        assertEquals(plain.edges(), compressed.edges());
+        assertEquals(plain.admissionPolicies(), compressed.admissionPolicies());
+    }
+
+    @Test
+    void gzipEmptyStreamRetainsRecordedAuthority() throws IOException {
+        HardwareTimingSchedule schedule = TraceData.load(writeGzipFixture(new byte[0]))
+                .hardwareTimingSchedule();
+
+        assertTrue(schedule.hasRecordedInput());
+        assertTrue(schedule.edges().isEmpty());
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                schedule.admissionPolicies().get(HardwareWorkKind.NEMESIS_PLC_QUEUE));
+    }
+
+    @Test
+    void gzipStreamRetainsStrictUtf8FramingAndRangeChecks() throws IOException {
+        assertRejected(writeGzipFixture(new byte[]{(byte) 0xC3, 0x28}), "valid UTF-8");
+        assertRejected(writeGzipFixture((edge(0, "pre_main_loop", "nemesis_plc_queue", 0)
+                + "\r\n").getBytes(StandardCharsets.UTF_8)), "LF-terminated UTF-8 lines");
+        assertRejected(writeGzipFixture((edge(2, "pre_main_loop", "nemesis_plc_queue", 0)
+                + "\n").getBytes(StandardCharsets.UTF_8)), "raw_frame");
+    }
+
+    @Test
+    void corruptedGzipIsRejectedInsteadOfBecomingAbsentTiming() throws IOException {
+        Path fixture = writeGzipFixture((edge(0, "pre_main_loop", "nemesis_plc_queue", 0)
+                + "\n").getBytes(StandardCharsets.UTF_8));
+        Path path = fixture.resolve("hardware_timing.jsonl.gz");
+        byte[] bytes = Files.readAllBytes(path);
+        bytes[bytes.length - 8] ^= 1; // Damage the gzip checksum, preserving readable JSON.
+        Files.write(path, bytes);
+
+        assertRejected(fixture, "invalid gzip stream");
+    }
+
+    @Test
+    void zeroByteGzipIsRejectedInsteadOfAuthorizingRecordedEmptyTiming() throws IOException {
+        Path fixture = writeFixture(null);
+        Files.write(fixture.resolve("hardware_timing.jsonl.gz"), new byte[0]);
+
+        assertRejected(fixture, "invalid gzip stream");
+    }
+
+    @Test
+    void plainSiblingKeepsTheExistingTraceFilePrecedence() throws IOException {
+        Path fixture = writeGzipFixture("malformed gzip JSON\n".getBytes(StandardCharsets.UTF_8));
+        Files.writeString(fixture.resolve("hardware_timing.jsonl"),
+                edge(0, "pre_main_loop", "nemesis_plc_queue", 0) + "\n");
+
+        assertEquals(1, TraceData.load(fixture).hardwareTimingSchedule().edges().size());
     }
 
     @Test
@@ -168,6 +233,15 @@ class TestHardwareTimingStreamLoader {
     void timingStreamRejectsNegativeRawFrame() throws IOException {
         assertRejected(writeFixture(edge(-1, "post_objects", "kos_module_queue", 0) + "\n"),
                 "raw_frame");
+    }
+
+    private Path writeGzipFixture(byte[] content) throws IOException {
+        Path fixture = writeFixture(null);
+        try (GZIPOutputStream gzip = new GZIPOutputStream(
+                Files.newOutputStream(fixture.resolve("hardware_timing.jsonl.gz")))) {
+            gzip.write(content);
+        }
+        return fixture;
     }
 
     private Path writeFixture(String hardwareTiming) throws IOException {

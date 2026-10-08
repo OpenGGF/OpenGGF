@@ -370,6 +370,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   guidance actually documents, the TraceChaser cutover inventory retains the
   re-created native capture guide, and the two opt-in probes now assert their output.
 
+- **Trace loading:** compressed hardware-timing streams use the same strict
+  schema checks as plain streams; damaged and truncated gzip inputs are rejected.
+
 - **Sprite priority buckets:** objects transcribed from S3K now convert the ROM
   `priority` word to a bucket (`$280` is bucket 5, not clamped to 7), so the CNZ
   hover fan, cannon and trap door and the LRZ collapsing bridge draw in their ROM

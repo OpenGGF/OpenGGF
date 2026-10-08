@@ -1303,3 +1303,135 @@ successor and qualification can be reconciled. In particular, upstream character
 callback/specification changes must be composed with the separate death-reset
 hunk before final validation. This checkpoint is evidence of verified gaps and
 pending candidates, not delivery or a new whole-suite pass.
+
+### Additional native bubble lifetime evidence and queue interruption
+
+The separate HCZ bubble lifecycle capture completes with 50,341 observations:
+24,404 entries at ROM `$30834` and 25,937 frame-end slot samples. Root independently
+matches all 630 represented frame ends against the existing HCZ2 fixture for
+player X/Y/mapping, camera X/Y, gameplay counter and VBlank low word, with zero
+differences. The original BK2 index minus 63,075 selects the fixture row.
+There are 11,900 same-slot/code updates that survive more than 64 pixels above
+the camera while still below the water surface, each moving upward by eight
+pixels. This directly rejects the engine's camera-based bubble retirement.
+All 254 sampled surface-eligible entries retire or reuse their slot by frame
+end (247 absent, seven reused); none retains the same owner. The longest
+contiguous observed lifetime is 100 updates, so this capture does not exercise
+the engine's 120-update cap. The owning ROM routine has no such cap, and
+`Draw_Sprite` only enqueues drawing; that source proof is distinct from observed
+lifetime coverage.
+
+All 281 frame-end first-appearance or same-slot reset samples with a preceding
+frame-end sample have `Level_frame_counter & 3 == 0`; their VBlank residues vary.
+This corroborates the ROM's gameplay-counter gate, but does not identify every
+allocation call or independently prove random-number ordering. The native
+routine allocates before drawing randomness; the existing reserved-slot factory
+can reproduce that order without changing shared object allocation. Speed,
+lifetime, clock and saturated-pool controls are to be tested independently before
+claiming their contribution to the returned HCZ frontier. Durable source and
+accepted observations are in external task directory
+`parity-r3-s3k-fan-conveyor-20261008`, capture `bubble-lifecycle-v1`; sampler
+SHA-256 is `b59b0b952980f2526b70cd1e81ccf187ce83df08708bfcd2392c39d906327444`.
+
+The first S2 regression request, session60545, ends while queued at
+2026-10-08T10:29:32Z: exit130, 2,447.2 seconds waiting, zero execution/hold time.
+It therefore provides no red test result. Neither root nor the worker requested
+cancellation. Read-only inspection establishes that the wrapper reports this
+outcome for an interrupt/termination signal; the sender is unobserved, and the
+parent app process remains alive. No queue timeout or internal cancellation
+mechanism is established. The unchanged command is retried as session9560;
+no queue code, lock or foreign job is changed.
+
+### Canonical S1 timing capture: native and loader qualification, publication withheld
+
+Root uses the `bizhawk-headless-trace` skill and an isolated producer checkout
+at pinned TraceChaser `e0a2443e086ca657a49227c5467eeecd06e40ece`. Its verified
+Roslyn build and seven `S1PlcHardwareTimingObserver` tests pass with zero
+failures/skips. The complete original 225,101-input movie is then captured with
+`--mode trace --run-id s1-sonic-complete-withemeralds --load-queue-state
+--compress-threshold 1`, explicit producer/consumer/fixture roots and the
+original absolute S1 ROM. Session67758 completes exit0 with BizHawk2.11,
+34 segments and twelve transitions; the owning process tree is absent.
+There are no input substitutions, RAM writes, observation edits or new
+recorder behavior in this candidate.
+
+The whole manifest is literally unchanged. All 34 decompressed physics streams
+(208,586 represented rows) and all 34 decompressed auxiliary streams
+(2,755,825 events) are byte-identical to the old fixture. Every metadata delta
+is solely `recording_date`, August4 to October8. Differences in some stored
+gzip bytes are encoding differences, not changed observations. The added
+28 level timing streams contain 242 canonically ordered events with gapless
+run-wide ordinals0–241. MZ2_3 row101/ordinal59 has fingerprint
+`sha256:0495d001d7b7d63f2d70ab32c084cb31f69866a3a401d712c7ecc2861dd2206e`;
+root independently computes it from the earlier native source `$03C040`,
+destination tile `$580` and eighteen-pattern ROM header. This corroborates
+the same arm without deriving gameplay expectations from the timing stream.
+Root also independently reads all 32 ROM cue lists at `$01DD86`: 203 entries,
+150 unique descriptor identities. Every one of the 242 native events belongs
+to that ROM-defined set (38 distinct observed identities, zero unmatched).
+This establishes descriptor membership; it does not substitute for proving
+execution order, row ownership or a matching engine submission in replay.
+
+Accepted output remains outside the repo in
+`parity-r3-s1-canonical-timing-20261008/capture-v5`: 131 files, 41,932,357 bytes.
+The ordered JSON inventory (path/bytes/SHA-256, sorted keys, compact separators)
+has SHA-256 `3590bd88eb32c644af297fc8175cbe0abdd925a06f1277b86c4c779f2032e6a2`.
+The fresh producer executable is
+`ecea6c71c94f7800afe303a76da7d70e2ea98aec56756fbeb33383dece0ae178`, distinct
+from the earlier diagnostic binary. The original BK2 remains intact. The
+complete private fixture candidate contains it plus every captured segment;
+timing streams are losslessly gzip-compressed with zero timestamp. Its
+132-file, 41,989,269-byte inventory SHA-256 is
+`b94858c17f194983ea9abd370e9c62b83a8f99fd5b3526171af89811eea96f39`.
+The pinned producer's read-only `traces/validate_trace_v5.py <capture-v5>
+--require-frame-keyed-auxiliary` completes exit0 in session56500. It validates
+the accepted native output, separately from the pending Java consumer checks.
+The same validator also completes exit0 against the installed package in
+session75476, exercising the 28 compressed timing streams. The pinned producer
+already supports that storage encoding; no producer source or pin changes.
+
+The existing timing loader otherwise silently ignores `.gz` siblings. Root
+adds the existing trace-file resolver and strict gzip decoding, preserving
+plain-file precedence, exact UTF-8/framing/range checks and the v5 authority
+registry. Six regressions cover equal edges/policies, empty recorded authority,
+invalid UTF-8/framing/range, damaged checksum, zero-byte gzip and sibling
+precedence. Initial eleven-class focus89934 completes with 111 passing cases,
+zero errors/skips, and eleven fresh XML suites. A subsequent one-case
+regression72515 reproduces a truncated zero-byte gzip being accepted as
+recorded-empty timing: the expected rejection is absent. Restricting the old
+empty-file shortcut to the plain filename retains that compatibility while
+decoding every compressed file strictly. Final focus92204 completes at
+2026-10-08T12:13:15Z with eleven fresh suites and 112 passing cases, zero
+failures/errors/skips. Both focus commands use queued `--lean -Dmse=off` Maven
+with the loader, S1 arm, trace-data, loading-contract, manifest, compression,
+movie-alignment, positive-input, authority, interstitial and run-coordinator
+selectors. No authority registry or matching semantics change.
+
+The normal `-Ptrace-replay` canonical chain, two prefix controls and standalone
+MZ1 control run together as session25381 with the original absolute
+S1 ROM. Production death handling remains unchanged in this timing-only tree;
+the separate S1 worker qualifies its radius correction against the old timing
+fixture. At 2026-10-08T12:15:42Z the replay completes exit1: four cases, one
+chain failure, zero errors/skips; both prefix cases and standalone MZ1 pass.
+MZ2_3 and MZ3_2 become complete with zero physics/animation/bootstrap errors
+and zero warnings (previously three and six comparator errors). The original
+MZ1 death mismatch remains 192 errors at row3261. LZ3 improves from 10,212 to
+10,209 total errors, but the later route is not qualified: SLZ1 increases from
+3,880 to 5,214, and SLZ2 acquires 8,606 errors. SLZ1 already misses the ring at
+row1771; at row4570 the native completion `NEMESIS_PLC_QUEUE#170`, fingerprint
+`sha256:766b2fc7fa7662ce89c289f933718b2ffd110d031b70d4e196be0de4a06741b8`,
+has no prepared engine job. At the following completion the engine still
+owns the late job170. The strict port retains these unmatched completions and
+fails run closure. The terminal engine mode is LEVEL rather than the manifest's
+TITLE_SCREEN. These downstream changes block publishing the whole fixture.
+
+Root verifies the exact installed inventory before restoring only this run's
+tracked package to its original state and removing the 28 owned new compressed
+timing files. The complete accepted native capture and original movie remain
+in the external task directory. No edges are dropped, renumbered or fitted to
+engine behavior; no gameplay state, new work or substitute readiness is supplied.
+The native reference can support a future correction of the earliest remaining
+production frontier, after which whole-run timing qualification must be repeated.
+The independently passing gzip transport fix remains in the delivery candidate.
+There is no published S1 timing fixture, closed three-comparison frontier,
+runtime PLC correction or new whole-suite qualification at this checkpoint.
