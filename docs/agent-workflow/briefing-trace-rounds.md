@@ -86,6 +86,14 @@ focus fades/menu-cue overlap, match selected native pre-focus PCM through the
 host post-focus stream to actual device-loopback anchors. This proves the
 observed output path, not physical-speaker audition.
 
+Unpaced mod captures can outrun preparation (2026-10-08, Sitar Hero polish):
+`ExampleModCapture` advances ticks as quickly as it can while ROM song preparation
+runs on a worker. A short capture without video or frequent PNGs can finish before
+the player starts; its simulated loading-tick count is not wall-clock latency.
+Check the actual screen/player state and corresponding PCM before diagnosing silence,
+and cut loading waits from promotional footage without calling them real-time loading
+measurements. Offline audio establishes content and cue timing, not physical speaker
+latency. See the [example's capture notes](../../examples/sitar-hero/README.md#testing-and-captures).
 
 Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
 task): the positioned MHZ capture retained about 22 MiB after its callback while
