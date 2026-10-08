@@ -15,6 +15,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.OwnedMocks;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -26,7 +27,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.withSettings;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.when;
 
 /**
@@ -41,6 +43,8 @@ import static org.mockito.Mockito.when;
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzMinibossHitPath {
+
+    private final OwnedMocks mocks = new OwnedMocks();
 
     private static final int SPAWN_X = 0x2CA0;
     private static final int SPAWN_Y = 0x0880;
@@ -66,7 +70,8 @@ class TestLrzMinibossHitPath {
         RomByteReader reader = RomByteReader.fromRom(rom);
         GraphicsManager.getInstance().initHeadless();
 
-        player = mock(AbstractPlayableSprite.class);
+        // These tests assert boss state, never verify player call history.
+        player = mocks.mock(AbstractPlayableSprite.class, withSettings().stubOnly());
         when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
         when(player.getYRadius()).thenReturn((short) 14);
         when(player.getAnimationId()).thenReturn(ANIM_ROLL);
@@ -77,6 +82,7 @@ class TestLrzMinibossHitPath {
         camera.setX((short) ARENA_CAMERA_X);
         camera.setY((short) ARENA_CAMERA_Y);
 
+        var debugOverlay = mocks.mock(com.openggf.debug.DebugOverlayManager.class, withSettings().stubOnly());
         TestObjectServices services = new TestObjectServices() {
             @Override
             public ObjectPlayerQuery playerQuery() {
@@ -85,7 +91,7 @@ class TestLrzMinibossHitPath {
 
             @Override
             public com.openggf.debug.DebugOverlayManager debugOverlay() {
-                return mock(com.openggf.debug.DebugOverlayManager.class);
+                return debugOverlay;
             }
         };
         services.withCamera(camera).withRomReader(reader).withGraphicsManager(GraphicsManager.getInstance());
@@ -102,11 +108,15 @@ class TestLrzMinibossHitPath {
 
     @AfterEach
     void tearDown() {
-        if (rom != null) {
-            rom.close();
+        try {
+            if (rom != null) {
+                rom.close();
+            }
+            GraphicsManager.getInstance().resetState();
+            AbstractObjectInstance.resetCameraBoundsForTests();
+        } finally {
+            mocks.close();
         }
-        GraphicsManager.getInstance().resetState();
-        AbstractObjectInstance.resetCameraBoundsForTests();
     }
 
     @Test
@@ -210,13 +220,17 @@ class TestLrzMinibossHitPath {
     }
 
     private void driveToTheSlamWindow() {
+        positionPlayerAwayFromTheDrill();
         int guard = 0;
         while (boss.getRoutineByte() != LrzMinibossInstance.slamRoutineByte() && guard++ < 4000) {
-            positionPlayerAwayFromTheDrill();
             step();
         }
         assertEquals(LrzMinibossInstance.slamRoutineByte(), boss.getRoutineByte(),
                 "loc_7871A never ran");
+        assertTrue(mockingDetails(player).getInvocations().isEmpty(),
+                "frame-driving stubs must not accumulate player call history");
+        assertEquals(6, mockingDetails(player).getStubbings().size(),
+                "fixed position is installed once, not once per frame");
     }
 
     /**

@@ -273,7 +273,7 @@ class TestModZoneRuntimeProfile {
                                              ModFaultBoundary boundary) {
         ModLevelDefinition definition = TestS3kModZoneAdapter.definition(
                 2, null, List.of(new ModPaletteClaim(2, 0, 0)));
-        ModZoneContribution declared = new ModZoneContribution(
+        ModZoneContribution declared = ModZoneContribution.singleAct(
                 "sky", new BakedLevelRef("level.json"), null, eventFactory, false);
         int ordinal = "outer".equals(owner) ? 1 : 0;
         PreparedModZone prepared = new PreparedModZone(
@@ -319,6 +319,7 @@ class TestModZoneRuntimeProfile {
         when(base.getModZoneAdapter()).thenReturn(adapter);
         when(base.getZoneRegistry()).thenReturn(registry);
         when(base.createGame(any(GameDataSource.class))).thenReturn(game);
+        when(base.transformDecodedLevel(any(Level.class))).thenCallRealMethod();
         when(base.getObjectArtProvider()).thenReturn(objectArt);
         when(base.getLevelEventProvider()).thenReturn(mock(LevelEventProvider.class));
         when(base.getGameplayPolicyProvider()).thenReturn(

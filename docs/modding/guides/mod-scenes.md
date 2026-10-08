@@ -15,8 +15,9 @@ Examples go with this guide:
   deck-building roguelike on Sonic 3 & Knuckles, and shows how a whole game is organised
   around one scene.
 - [Sitar Hero](../../../examples/sitar-hero/README.md) combines supplied Sonic 1,
-  Sonic 2 and S3K content in an arcade rhythm game, with timestamped physical input
-  and bounded ROM-synthesized music.
+  Sonic 2 and S3K content in a rhythm game, with timestamped physical input, bounded
+  ROM-synthesized music, performers standing on real ROM stages and a README that
+  walks through its source in reading order.
 
 When this guide and their source differ, the source is authoritative. Build and run either
 from a checkout with `python3 examples/build_example.py <name> --run` (Java 21 and Maven, and
@@ -172,13 +173,30 @@ long audibleSample = player.samplePosition();
 long inputSample = player.samplePositionAt(event.timestampNanos());
 ```
 
-Preparation is bounded to 90 seconds at the native 60 Hz driver cadence and may
-take several seconds. It reads only the requested supplied ROM, with no ambient
+Preparation is bounded to ten minutes at the native 60 Hz driver cadence. Full
+and selected-part stereo PCM together have a 256 MiB budget; high output rates
+can therefore limit the accepted duration. Note metadata is bounded to 200,000
+completed events. Preparation reads only the requested supplied ROM, with no ambient
 music/SFX restore side effects. `SceneNoteEvent` identifies FM/PSG/DAC attacks,
 channel, pitch/sample id, source offset, onset and duration in samples. Ties and
 rests do not become fabricated attacks; equal-pitch and duration-only retriggers
 remain separate. Events provide timing evidence, rather than automatic playable
 charts: curate musical parts, density, lanes, chords and difficulty in your mod.
+
+Use `prepareAsync(game, id, frames)` for long performances. Keep its
+`SceneMusicPreparation` handle and poll `state()` and `progressPercent()` in
+`update`; call `prepared()` only when READY. FAILED exposes a bounded `error()`.
+ROM loading stays on the scene thread; independent synthesis uses one host worker
+with one queued job. A different request cancels the old job. Call `cancel()`
+when leaving a loading screen; scene exit also cancels and stops the worker.
+Do not spin or wait for completion in your scene.
+
+After authoring the chart's channel sections, call
+`preparePartAsync(song, parts)` and poll that second job. Its READY `prepared()`
+publishes the selected mix without starting audio. A subsequent `start` with the
+same sections reuses it, so rendering does not interrupt the count-in. Legacy
+scene hosts can complete these defaults synchronously and render the part during
+`start`; the production engine supplies background preparation.
 
 One scene retains one prepared song and one selected arrangement. Repeating the
 same request reuses it; preparing a different song retires the old preparation
@@ -191,8 +209,46 @@ called. A sorted `SceneMusicPart` list can change that selection by section; its
 first onset must be zero. FM/PSG indices are zero-based; logical PSG3 includes its
 noise output. DAC remains a separate flag. The host synthesizes full and masked
 mixes separately to preserve chip interactions and backing progression.
-`setWhammy` bends the selected residual; it is a presentation effect rather than
-an emulated guitar-controller DSP contract. Scope it to roles that use it.
+`setWhammy(amount)` applies a 5 Hz vibrato, up to 24 samples deep at 1.0, to the
+selected part only: the difference between the full and masked mixes. The backing
+stays on its clock. It is a presentation effect, not an emulated guitar-controller
+DSP contract. Scope it to roles that use it.
+
+`player.cuePart(sourceSample, durationSamples, startRate, endRate, gain, pan)`
+mixes a short fragment of the selected part into the same performance. Use a real
+song sample coordinate, or `SceneMusicPlayer.PLAYHEAD` to continue the part at the
+next render cursor. The host adds a short attack, exponential decay and zero tail,
+with a linear pitch-rate glide. Duration is at most a quarter-second; rates are
+0.5–2, gain is 0–1, and stereo balance is -1–1. All values must be finite. Balance
+attenuates one side and preserves the ROM's stereo; it does not repan a mono copy.
+
+```java
+// Continue and bend the selected ROM part down; no creator-owned PCM or extra asset.
+boolean accepted = player.cuePart(SceneMusicPlayer.PLAYHEAD,
+        prepared.sampleRate() * 90 / 1000, 1.0, 0.90, 0.60, 0.0);
+```
+
+Six cue voices are available. A paused/stopped player, exhausted playhead, PLAYHEAD
+before song start or full cue bus returns false; supporting hosts throw for malformed
+arguments. Unsupported hosts return false without argument validation. Pause freezes accepted voices,
+and stop releases them. Source exhaustion fades rather than wrapping; the finite
+song tail also fades and discards remaining cues. Cues ignore whammy and never advance the song coordinate.
+The current host smooths part-audibility changes over four milliseconds. The
+fragment is the full-minus-masked presentation residual, like whammy, rather than
+a separately exposed emulated channel. `sitarhero.audio.PerformanceAudio` owns
+instrument presets, cooldowns, source selection and co-op mixing; none of those
+rhythm-game decisions belong to the engine. Legacy hosts may decline cues while
+still supporting the original part-muting contract.
+
+**One source is audible at a time.** While a `SceneMusicPlayer` exists (playing,
+paused or waiting in its lead-in), its PCM replaces the base game's sound driver
+output. Music and sound effects started with `ctx.audio()` keep running in the
+driver but cannot be heard, and pausing the player pauses all scene audio. When
+the player stops, the driver is audible again from wherever it has reached.
+So stop or fade any `ctx.audio()` music before `start`; `stopMusic` stops sound
+effects too, so a short cue still ringing is cut. Drop menu cues while a player
+exists, and ask for menu music again after `stop`. Sitar Hero's
+`HouseAudio` shows the pattern.
 
 The clock follows consumed final PCM on a live device, with optional OpenAL Soft
 backend latency correction; a no-device capture follows PCM actually rendered.
@@ -210,6 +266,65 @@ To lay out for one width, call `context.requireDisplayWidth(400)` in `register` 
 400, 528 or 800): the engine switches the session to that display aspect before the scene
 opens and refits the window, and the player's own setting comes back at the master title.
 Slay the Robotnik asks for 400.
+
+## Direct peer messaging
+
+`ctx.network()` is a scene-owned text transport for explicit user Host/Connect
+actions. Obtaining it opens no socket. Keep the returned `ScenePeer` on your scene:
+
+```java
+// Choose on the user's Host/Connect action:
+ScenePeer peer = hosting ? ctx.network().host(24807)
+        : ctx.network().connect("192.168.1.20", 24807);
+// In update:
+if (peer.state() == ScenePeer.State.CONNECTED) {
+    for (ScenePeer.Message message : peer.poll()) {
+        // Validate your own protocol and update local state from message.text().
+    }
+}
+// On the user's Ready action, once connected:
+boolean queued = peer.send("READY 1");
+// Show peer.state() and, for FAILED, peer.error(); close before hosting again.
+```
+
+The host listens on all local interfaces for one peer; after that acceptance the
+listener closes. A scene may have only one listening, connecting or connected
+endpoint. Ports must be 1..65535. Connect accepts IPv4/IPv6 literals without
+brackets or scope ids, and `localhost`; DNS names are unsupported. Invalid
+arguments throw `IllegalArgumentException`; an active endpoint or closed scene
+throws `IllegalStateException`. Bind and connection failures are asynchronous:
+check `state()` (`LISTENING`, `CONNECTING`, `CONNECTED`, `CLOSED`, `FAILED`) and
+`error()` (a bounded reason for `FAILED`, otherwise null). `LISTENING` includes
+the asynchronous bind phase, so a connection attempted immediately on another
+thread may need a user retry.
+
+`send` returns true when queued, without guaranteeing delivery. Null, malformed
+UTF-16, more than 4096 Java characters, disconnected peers and full queues return
+false. Empty text is valid. Incoming and outgoing messages share 256 pending
+slots, including a write in progress; incoming overflow fails the connection
+explicitly. `poll` drains an immutable list in receive order. Each
+`Message(text, receivedNanos)` uses the local monotonic observation clock shared
+with physical input. It includes network/scheduling delay, is not the remote
+clock and does not synchronize song clocks or gameplay automatically.
+
+All I/O belongs to one lazy engine worker per scene; tick calls never wait for
+sockets, DNS or worker termination. Listening times out after 60 seconds,
+connecting after five, and an incomplete read or stalled write after five.
+Established idle peers may remain connected. `close` cancels every phase,
+discards pending messages and is idempotent; failed handles retain their error.
+A clean remote EOF becomes `CLOSED` while retaining complete received messages
+until polled or explicitly closed. Scene exit requests, replacement, shutdown
+and callback faults close the transport permanently, including accept/connect
+waits; stale contexts cannot reopen it.
+
+The wire format is a four-byte big-endian UTF-8 byte length followed by strict
+UTF-8 text, with a 16384-byte frame ceiling and the 4096-character limit checked
+after decoding. Truncated/invalid frames fail the connection. This is plaintext,
+unauthenticated direct TCP; it supplies no discovery, relay, NAT traversal or
+automatic reconnect. Validate version, session and every application field.
+Send gameplay/control text only: never encode ROM or content assets into
+messages. Creators receive no sockets, threads or filesystem handles through
+this facade. Existing fixtures may leave `SceneContext.network()` unsupported.
 
 ## 3. Drawing
 
@@ -354,7 +469,15 @@ ggfmod sprites s3k.gen s3k knuckles.png char=knuckles   # a playable character, 
 ## 5. Audio and storage
 
 `ctx.audio()` plays the base game's music and sound effects by driver ID (`playMusic`,
-`playSfx`, `fadeOutMusic`, `stopMusic`).
+`playSfx`, `fadeOutMusic`, `stopMusic`). "Base game" means the running game: in a
+`baseGame: any` scene, the ROM the player launched with, even when your art or
+`ctx.music()` songs come from another installed ROM. Pick IDs per game
+(`ctx.art().rom().gameId()`). Stock fades take the game's own time (S1 and S2
+about two seconds, S3K about four). Sonic 1's fade also stops any sound effect still
+playing, so let a cue finish before you fade (Sitar Hero waits 48 ticks after its start
+cue). Fade or stop your music when the scene leaves, so
+none of it plays on into the next screen. See the note above on `ctx.music()`
+replacing this output while a song player exists.
 
 `ctx.storage()` keeps small text files for your mod under the save root
 (`saves/mods/<mod-id>/`): `read`, `write`, `delete`, `list`. Slay the Robotnik saves the
@@ -396,7 +519,7 @@ The class's Javadoc lists every option and script step. To get the classpath fil
 | What you see | Why, and what to do |
 |---|---|
 | The stock title screen opens instead of your scene | The mod is not enabled (or not trusted) in the Mod Manager; another enabled mod later in load order also registers a startup scene; you are running a native build, which loads no code mods; or test mode is on (`debug.testMode.enabled`), which skips startup scenes. |
-| `ggfmod package` fails with `STATIC_STATE_UNSUPPORTED` | A mod class has an enum, a static collection or array, or a static initialiser. Move the state onto your scene or an object it owns; use `static final` numbers and strings for kinds. |
+| `ggfmod package` fails with `STATIC_STATE_UNSUPPORTED` | A mod class has mutable static state, an unsupported enum payload, a static collection or array, or arbitrary initialization. Move the state onto your scene or an object it owns; use `static final` numbers and strings for kinds. |
 | The mod is disabled and the Mod Manager shows a finding | One of your scene calls threw an exception. The finding and the engine log say which. |
 | Reading a mod file from the scene fails | Mod files can only be read during `register`. Read them there and pass the bytes to the scene. |
 | A ROM sprite has the wrong colours or is scrambled | The palette line, palette address, compression or DPLC layout does not match the object. Check the request with `ggfmod sprites`, which draws every frame with your settings. |

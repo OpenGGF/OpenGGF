@@ -2,38 +2,44 @@ package sitarhero.model;
 
 /** Musical roles retain the ROM's voices; instrument names describe the performer props. */
 public enum Role {
-    SITAR("Sitar / Lead", false),
-    BONGOS("Bongos / DAC", true),
-    SYNTH("Synth / PSG", false),
-    HARP("Harp / Rhythm", false);
+    SITAR("Sitar", "Lead", false),
+    BONGOS("Bongos", "DAC", true),
+    SYNTH("Synth", "PSG", false),
+    HARP("Harp", "Rhythm", false);
 
-    private final String label;
+    private final String instrument;
+    private final String part;
     private final boolean drums;
 
-    Role(String label, boolean drums) {
-        this.label = label;
+    Role(String instrument, String part, boolean drums) {
+        this.instrument = instrument;
+        this.part = part;
         this.drums = drums;
     }
 
-    public String label() { return label; }
+    /** Menu label: the prop the performer holds, then the ROM voices it plays. */
+    public String label() { return instrument + " / " + part; }
+    /** The prop alone, as HUDs and story cards name it. */
+    public String instrument() { return instrument; }
     public boolean drums() { return drums; }
 
-    /**
-     * Union of a role's selected FM channels for metadata/legacy callers. Actual playback
-     * uses ChartCurator.audioParts: GHZ changes lead/rhythm ownership at authored section
-     * boundaries. CPZ lead is FM1; AIZ FM1 is bass and its doubled melody is FM2+FM3.
-     */
+    /** Union of authored section ownership. Playback uses ChartCurator.audioParts. */
     public int fmMask(SongSpec song) {
-        return switch (this) {
-            case SITAR -> "green-hill".equals(song.id()) ? 0b11101 : "angel-island-1".equals(song.id()) ? 0b00110 : 0b00001;
-            case HARP -> "green-hill".equals(song.id()) ? 0b11111 : 0b11000;
-            default -> 0;
-        };
+        return mask(SongCatalog.arrangement(song.id()).orElseThrow(), "FM");
     }
 
-    /** CPZ stops PSG1/2: its PSG part is the authentic PSG3 noise hi-hat. */
     public int psgMask(SongSpec song) {
-        return this == SYNTH ? ("chemical-plant".equals(song.id()) ? 0b100 : 0b011) : 0;
+        return mask(SongCatalog.arrangement(song.id()).orElseThrow(), "PSG");
+    }
+
+    private int mask(SongArrangement form, String kind) {
+        int mask = 0;
+        for (SongArrangement.Section section : form.sections(this)) {
+            if (!section.kind().equals(kind)) continue;
+            mask |= 1 << section.channel();
+            if (section.harmony() >= 0) mask |= 1 << section.harmony();
+        }
+        return mask;
     }
 
     /** True when subtraction of DAC forms the performer's part. */

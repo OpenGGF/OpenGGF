@@ -65,6 +65,7 @@ class TestSozColdRouteCapture {
                 resultsFinished = false, isolatedHistory = false;
         int health = 8, hits = 0, readyFrame = -1, bonusLoads = 0;
         boolean bonusRoute = act == 0 && main.equals("knuckles");
+        boolean shorterSoloRoute = act == 0 && !paired && main.equals("sonic");
         boolean knucklesActTwo = act == 1 && main.equals("knuckles");
         // Cork release, light pull, rock coupling/door, upper switch, spike-edge
         // glide/wall break, final switch and arena drop on the fixed cold route.
@@ -100,7 +101,7 @@ class TestSozColdRouteCapture {
                 var pendingSpots = new HashSet<String>();
                 var input = input(movie, frame);
                 session.step(input);
-                session.render();
+                session.renderFrame();
                 if (bonusRoute && frame >= 3100 && frame < 3800
                         && beforeLevel != GameServices.level().getCurrentLevel()) {
                     assertTrue(beforeHistoryFrame > 10, "outgoing bonus boundary history at " + frame);
@@ -120,9 +121,14 @@ class TestSozColdRouteCapture {
                 if (level.getCurrentZone() == 8 && level.getCurrentAct() == act) {
                     var objects = level.getObjectManager();
                     for (var golem : objects.activeObjectsOfType(SozMinibossInstance.class)) {
+                        if (shorterSoloRoute && !bossSeen)
+                            pendingSpots.add("boss-entry");
                         bossSeen = true;
                         // sub_772F6 starts the positional defeat at y_pos >= $A10.
-                        sinking |= (golem.getY() & 0xFFFF) >= 0xA10;
+                        boolean sandDefeat = (golem.getY() & 0xFFFF) >= 0xA10;
+                        if (shorterSoloRoute && sandDefeat && !sinking)
+                            pendingSpots.add("golem-sinking");
+                        sinking |= sandDefeat;
                     }
                     for (var boss : objects.activeObjectsOfType(SozEndBossInstance.class)) {
                         if (!bossSeen)
@@ -178,9 +184,10 @@ class TestSozColdRouteCapture {
                     readyFrame = frame;
                 // Fixed input observations cover the cold traversal and boss/results approach;
                 // a window must never restore the outgoing registry across a level load.
-                // Tails reaches Act2 before 17000 and LRZ before 29000; keep replay windows before each load.
+                // Tails and the shorter solo Sonic route reach their destinations earlier;
+                // source windows must end before their actual level replacement.
                 int lastSourceSpot = knucklesActTwo ? 35000 : bonusRoute ? 23000 : main.equals("tails") ? (act == 0 ? 16000 : 28000)
-                        : act == 0 && paired ? 26000 : 31000;
+                        : shorterSoloRoute ? 28000 : act == 0 && paired ? 26000 : 31000;
                 if ((frame >= 100 && frame <= lastSourceSpot && (frame == 100 || frame % 1000 == 0))
                         || (bonusRoute && (frame == 3100 || frame == 3400 || frame == 3500 || frame == 3700))
                         || (knucklesActTwo && knucklesPuzzleSpots.contains(frame))
@@ -200,9 +207,13 @@ class TestSozColdRouteCapture {
             if (bonusRoute) assertEquals(2, bonusLoads, "real bonus entry and return loads");
             assertTrue(bossSeen, "cold route reaches its real boss");
             assertTrue(resultsSeen && resultsFinished, "actual results sequence finishes");
-            if (act == 0)
+            if (act == 0) {
                 assertTrue(sinking, "golem reaches the native sand defeat height");
-            else {
+                if (shorterSoloRoute) {
+                    assertTrue(semanticChecked.contains("boss-entry"));
+                    assertTrue(semanticChecked.contains("golem-sinking"));
+                }
+            } else {
                 assertEquals(8, hits);
                 assertEquals(0, health);
                 assertTrue(capsule);
@@ -211,7 +222,7 @@ class TestSozColdRouteCapture {
             assertEquals(act == 0 ? 1 : 0, GameServices.level().getCurrentAct());
             assertTrue(readyFrame >= 0, "destination releases both control owners");
             assertEquals(
-                    knucklesActTwo ? 37 + knucklesPuzzleSpots.size() : bonusRoute ? 29 : main.equals("tails") ? (act == 0 ? 18 : 30) : act == 0 && paired ? 28 : 33, checked.size(), "all traversal and destination replay windows ran");
+                    knucklesActTwo ? 37 + knucklesPuzzleSpots.size() : bonusRoute ? 29 : main.equals("tails") ? (act == 0 ? 18 : 30) : shorterSoloRoute ? 30 : act == 0 && paired ? 28 : 33, checked.size(), "all traversal and destination replay windows ran");
             if (act == 1) {
                 assertTrue(semanticChecked.contains("boss-entry"));
                 for (int hp = 0; hp < 8; hp++) assertTrue(semanticChecked.contains("boss-hp-" + hp));
@@ -235,7 +246,7 @@ class TestSozColdRouteCapture {
         var saved = registry.capture();
         for (int n = 1; n <= 45; n++) {
             session.step(input(movie, frame + n));
-            session.render();
+            session.renderFrame();
         }
         assertSame(level, GameServices.level().getCurrentLevel(), "replay window crosses a load at " + frame);
         var forward = registry.capture();
@@ -244,7 +255,7 @@ class TestSozColdRouteCapture {
         session.restoreInputHistory(input(movie, frame));
         for (int n = 1; n <= 45; n++) {
             session.step(input(movie, frame + n));
-            session.render();
+            session.renderFrame();
         }
         same(forward, registry.capture(), "replay " + frame);
         registry.restore(saved);

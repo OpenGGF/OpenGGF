@@ -45,6 +45,9 @@ class TestS3kStartNewLevel {
         config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
         var services = mock(ObjectServices.class);
         when(services.configuration()).thenReturn(config); when(services.currentZone()).thenReturn(zone);
+        var state = new com.openggf.game.GameStateManager();
+        state.markSpecialRingCollected(1);
+        when(services.gameState()).thenReturn(state);
         var object = new S3kStartNewLevelObjectInstance(new ObjectSpawn(0x100, 0x100, 0xB3, 0x2C, 0, false, 0));
         object.setServices(services);
         var player = new TestablePlayableSprite(character, (short)0, (short)0);

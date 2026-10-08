@@ -140,7 +140,7 @@ for Sonic, Tails and Knuckles. All five posts have native-character activation/r
 | PARALLAX / HEAT SHIMMER | `SwScrlSoz`: ROM tables, seven fractional bands and independent FG/BG phases; SOZ1 render mode enables foreground rows | Normal desert moving-camera capture; all-line boundary regression | Camera/frame reconstruction; restored foreground mode reproduces GPU frame; existing production route restore/replay passes | 600 native rows / 134,400 scroll words match source-derived arithmetic; BG copies and art phase also agree | 320/528 corrected scenes inspected; all five viewport period checks, exposed-sky seam and320/528 foreground row-displacement regressions; exact native pixel match and full route breadth open |
 | ANIMATED TILES / PALETTE | Corrected SOZ1 DMA/channel range `$330..$341`; `AnPal_SOZ1` cycle; unused LRZ scripts excluded | All32 secondary-art phases and 49 palette passes checked against ROM | Six-pass timer/offset restore checked; quicksand/vine/mechanism world replay passes | Full six-tile secondary transfer; native phase/cadence corroboration | Static `$350..$357` preserved across update/VBlank cycles; purple flame overwrite removed in captures; matched cadence/pixel sequence still open |
 | ARENA PRESENTATION | `SozAct1Events`, source window, background priority replay, shake/sand and phase handoff implemented | Positioned approach reaches native arena admission; production test covers post-results seamless reload | `TestSozAct1ArenaProduction` covers admission, redraw boundaries, successful allocation prefixes and destination replay after seamless handoff; connected positioned fight-to-handoff replay is covered by `TestSozAct1VictoryProduction` | `sub_55DB6`, `sub_55E4C` differ from normal desert | Temple doorway capture inspected; 42 phased/whole arena A/B images at native Y and widths320/528/800 are identical because foreground hides partial writes; seamless redraw is behind fade. Native pixel identity remains open |
-| ENTRY / LOAD / RESET | ROM loading and event/scroll owners implemented; cold sand intro in Act1 and title-owned ghosts in Act2 | Seeded FBZ EXIT_READY → fresh SOZ load verified; full incoming route open | `TestFbzSandopolisTimelineHeadless` verifies incoming load reset/destination replay; all checkpoints and selected repeated team reloads covered below | Unmatched | Unmatched |
+| ENTRY / LOAD / RESET | ROM loading and event/scroll owners implemented; cold sand intro in Act1 and title-owned ghosts in Act2 | Seeded FBZ EXIT_READY → fresh SOZ load reached in the ordinary recheck; full incoming route open | The 2026-10-07 repaired candidate passes 125 focused cases, including twelve shield regressions and the unchanged `TestFbzSandopolisTimelineHeadless` destination restore and both complete eight-frame replay cycles. The transition adapter clears stale deferred state at the captured floor. The separate ROM-backed `TestFreshLevelBoundaryRewindHeadless#restoredBoundaryRetainsPublicationPhaseAndDispatchesDeferredAssembly` passes both explicitly captured unpublished and published phases: boundary-adapter restoration writes no player/camera state, unpublished publication restores native held state, published publication is a no-op, and completion performs deferred assembly and one initial sprite pass. Its final focused selection passes 16 cases with zero failures/errors/skips (`a33b8029`, session 58727); the identical final fixture fails both phases on the old transition owner (session 44424). See the [S1 lane audit](../../audits/2026-10-07-s1-parity-gap-verification.md). [Actual-main qualification](../../audits/2026-10-07-stock-parity-gap-verification.md#actual-main-delivery-qualification) passes this destination-restoration case without a skip and all 672 fresh guards; 27 other concrete inherited ordinary failures and 62 literal skips remain. Checkpoint and selected repeated team reload evidence is recorded below | Unmatched | Unmatched |
 | Quicksand entry/held/release | `TestSozQuicksand`: four variant branches, unsigned bounds, input and clock tests | Act 1 short cold route: `TestSozAct1QuicksandRoute`; Act 2 binding/traversal open | Registered acquisition/held/release capture-restore and forward replay twice for the first strip in all four representative configurations; local slide cooldown reconstruction; other variant production spots open | Native Act 1 acquisition/held force observations corroborate source; no full engine sequence match | Invisible owner; terrain/palette presentation unverified |
 | Spring-vine acquisition/tension/launch | `SozSpringVineObjectInstance`; native P2-before-P1 tension, pixel slope and eight-piece child | `TestSozAct1SpringVineRoute`: cold first-vine approach/launch at 320/640 widths, S1 donor and extra follower | All registered state restored and replayed twice at acquisition/tension/launch in each configuration; unit child recreation and independent participant state | 473 native slope/child-height observations match the source-derived arithmetic; full trajectory parity open | Native image and engine eight-piece display inspected; short engine capture ends before vine acquisition, no matched pixel certification |
 | Sand-rock rolling landing / breakup / removal | `SozBreakableSandRockObjectInstance`; saved animation and owner standing latch | `TestSozSandRockProduction`: positioned first-rock spot; cold reachability open | All registered state restored and replayed twice at break, phase 6 and phase 24 removal | Source-derived; mixed-rider and offscreen retained-latch unit checks; native trajectory unmatched | ROM mapping/art checks pass; positioned engine capture inspected at intact frame 40 and breakup frame 100; native pixel comparison open |
@@ -479,3 +479,35 @@ with all 29 full-world replay windows.
 
 Running these checks after a trace prefix in the same JVM used to fail. The
 cause was a leaked playback session, fixed in `d427fdd9ba`.
+
+## Shorter solo Sonic inputs (2026-10-08)
+
+At task base `d740b7a0fadd97b2e7c104d56481a0235bdffb4c`, the nine current cold
+routes pass with zero failures, errors or skips. The solo Sonic movie now retains
+original input ranges `[0,22350)`, `[23896,24207)` and `[25718,31671)`:
+**28,614 inputs rather than 31,671**. The removed 3,057 inputs are an obstructed
+approach pause and repeated stationary hopping. Its committed `.script` is the
+reproducible controller source; `InputLogAuthorTool` checked every emitted pad
+against the production loader. It changes no runtime state or rules.
+
+A cold-prefix whole-registry branch probe reaches the real sand defeat at27006,
+matching the original route's owning input30063 after the removed intervals.
+This probe is authoring evidence. Fresh uninterrupted acceptance then passes
+all nine routes with no skips: solo Sonic reaches playable Act2 at28436 rather
+than31490, retains180 playable destination frames (including three neutral
+inputs after the movie ends), and passes the full-world replay comparisons.
+The other eight routes keep their original ready frames and outcomes.
+
+The more aggressive variant also removed arena-entry inputs and died at27483
+without winning; it was rejected. The existing paired Act1 and Tails Act1/Act2
+movies also died early when tried with solo Sonic, so they were not reused.
+
+The shortened route retains a traversal window at100 and every1000 inputs
+through28000, a destination window, and semantic full-world45-input replays at
+boss entry, actual sand defeat and results start. These are30 traversal/destination
+and three semantic windows. Source observations stop before the replacement world.
+Every frame still draws; real victory, finished results, control release and the
+solo roster remain required. The other eight movies, Knuckles puzzle/bonus checks
+and inherited native/visual parity limits retain their existing scope. Commands,
+timings and final delivery checks are recorded in the
+[memory/throughput research](../../research/2026-10-07-ordinary-suite-memory-cause.md).

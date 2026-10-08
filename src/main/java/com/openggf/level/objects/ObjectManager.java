@@ -1640,18 +1640,8 @@ public class ObjectManager {
      * and matches the snapshot, deferring to the off-screen respawn timer.
      */
     public int objectIdInSlot(int slot) {
-        if (slot < 0) {
-            return -1;
-        }
-        for (ObjectInstance instance : getActiveObjects()) {
-            if (instance instanceof AbstractObjectInstance aoi
-                    && objectCallbacks.call(instance, aoi::getSlotIndex) == slot
-                    && !objectCallbacks.call(instance, instance::isDestroyed)) {
-                ObjectSpawn spawn = objectCallbacks.call(instance, instance::getSpawn);
-                if (spawn != null) return spawn.objectId() & 0xFF;
-            }
-        }
-        return -1;
+        return slot < 0 ? -1 : ObjectInstanceQueries.objectIdInSlot(
+                getActiveObjects(), objectCallbacks, slot);
     }
 
     /**
@@ -2258,17 +2248,7 @@ public class ObjectManager {
 
     /** Read-only retirement probe for the ring manager's legacy mirror. */
     public boolean hasLiveLostRingAtSlot(int slotIndex) {
-        if (slotIndex < 0) {
-            return false;
-        }
-        for (ObjectInstance inst : dynamicObjects) {
-            if (inst instanceof com.openggf.level.rings.LostRingObjectInstance ring
-                    && !ring.isDestroyed()
-                    && ring.getSlotIndex() == slotIndex) {
-                return true;
-            }
-        }
-        return false;
+        return ObjectInstanceQueries.hasLiveLostRingAtSlot(dynamicObjects, slotIndex);
     }
 
     /**
@@ -2374,6 +2354,21 @@ public class ObjectManager {
     public <T extends ObjectInstance> List<T> activeObjectsOfType(Class<T> type) {
         return ObjectInstanceQueries.activeObjectsOfType(activeObjects, dynamicObjects, type);
     }
+
+    private final ObjectQuery liveObjectQuery = ObjectInstanceQueries.liveQuery(this, rewindObjectIds);
+    private final ObjectQuery objectQuery = new ObjectQuery() {
+        @Override public <T extends ObjectInstance> List<T> activeObjectsOfType(Class<T> type) {
+            return liveObjectQuery.activeObjectsOfType(type);
+        }
+        @Override public java.util.Optional<ObjectRefId> identityOf(ObjectInstance object) {
+            return liveObjectQuery.identityOf(object);
+        }
+        @Override public java.util.Optional<ObjectInstance> resolve(ObjectRefId identity) {
+            return liveObjectQuery.resolve(identity);
+        }
+    };
+
+    public ObjectQuery objectQuery() { return objectQuery; }
 
     /**
      * Test helper: reserve dynamic slots (from the front of the pool) until exactly

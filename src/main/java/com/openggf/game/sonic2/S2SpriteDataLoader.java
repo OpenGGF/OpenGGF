@@ -71,6 +71,20 @@ public final class S2SpriteDataLoader {
                     "S2 mapping table at 0x%X has implausible frame count %d (first word=0x%04X) - wrong address?",
                     mappingAddr, frameCount, firstOffset));
         }
+        return loadMappingFrames(reader, mappingAddr, frameCount, tileOffset);
+    }
+
+    /** Reads an explicit number of pointers when frame data is reordered or shared. */
+    public static List<SpriteMappingFrame> loadMappingFrames(
+            RomByteReader reader, int mappingAddr, int frameCount) {
+        if (frameCount < 1 || frameCount > 512) {
+            throw new IllegalArgumentException("frameCount must be 1-512");
+        }
+        return loadMappingFrames(reader, mappingAddr, frameCount, 0);
+    }
+
+    private static List<SpriteMappingFrame> loadMappingFrames(
+            RomByteReader reader, int mappingAddr, int frameCount, int tileOffset) {
         List<SpriteMappingFrame> frames = new ArrayList<>(frameCount);
         for (int i = 0; i < frameCount; i++) {
             int rawOffset = reader.readU16BE(mappingAddr + i * 2);

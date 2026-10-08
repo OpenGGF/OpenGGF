@@ -16,11 +16,21 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   art owner by character identity, restoring Tails DPLC submissions for runtime
   names such as `tails_p2`. Horizontal springs apply the native unsigned
   launch-side check for both participants, including the flipped equality case.
+  All five native spring types finish initialization before checking players on
+  the following update, preventing early launches when a spring reloads.
+  Coconuts faces and targets the nearer native player, preserving the ROM's
+  signed-word range check and main-player tie preference.
+  CPZ spin tubes preserve native zero-duration waypoints and the signed
+  fixed-point velocity calculation, preventing an extra movement step.
 
 - **Stock title starts:** starting a new Sonic 1 game clears emeralds and the
   special-stage cursor while preserving configured stage counts; Continue keeps
   existing progress. Unsupported two-player title actions return to the title
-  menu instead of starting an ordinary level.
+  menu instead of starting an ordinary level. Sonic 1 results transitions defer
+  returned player art until the native release prelude and palette tail have
+  completed; rewind preserves the pending tail's boundary. Movie-driven level
+  starts apply the first recorded input immediately; later neutral rows release
+  held directions and jump instead of leaving Up or Right stuck.
 
 - **Window and display aspect:** a launch that changes the display aspect (a launch
   profile's aspect, or a module's required aspect such as a mod laid out for 16:9) now
@@ -33,6 +43,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   camera offset while preserving MHZ1’s separate locked-on camera focus.
   Live zone handoffs now run the fresh title and terrain-loading lifecycle,
   restoring players before the initial sprite pass without adding a frame.
+  Rewind preserves a fresh-load insta-shield's pending attack and slot state,
+  leaving its registration to the next ordinary status tick. Fresh title
+  boundaries retain their deferred assembly and publication state on rewind.
+  HCZ hanging bars read the native raw companion-controller directions,
+  preserving neutral input while the follower CPU steers. Full native saves
+  clear collected giant rings at their seven existing save points, including in
+  No Save games, restoring giant-ring availability in later levels. Ordinary
+  persistence requests, special-stage and lives saves, and death reloads preserve
+  collected rings.
 
 - **S3K Launch Base:** Cup elevators now resolve each player’s solid contact before checking capture, restoring airborne side collisions and normal landing admission, and preserve native movement and animation control through the NPC Knuckles cutscene. Rolling drums preserve native rider state when unloading, after completing their final player updates. The Act1 miniboss preserves the fatal-hit dispatch before its defeat countdown, including explosion timing through rewind. Carried results now finish their twelve real children before publishing control release, then initialize the next title owner on its following dispatch. Retained title owners reset level counters only after their ROM-backed art and moving children settle, preserving the independent presentation clock. Ribot creates its visual children before its first active orbit, matching the ROM initialization return. The seamless Act 2 reload holds the inherited camera limits until the title owner releases them, then runs its gradual boundary children in their native creation pass.
 
@@ -893,15 +912,36 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - Added the [Slay the Robotnik example mod](examples/slay-the-robotnik/README.md), a Slay the Spire-style deck-building roguelike played on Sonic 3 & Knuckles as a full-screen mod scene. Sonic (Focus and Combo multi-hits), Tails (Dexterity, discards and Ring Bombs) and Knuckles (Strength) each have a starter deck, a starting relic and 42–43 more cards; 55 relics, 16 item monitors and 22 events round out four acts — Angel Island, Hydrocity and Launch Base as branching 15-floor zone maps with badnik fights, three elites and two bosses each, then a short Sky Sanctuary finale against Mecha Sonic, who returns as Super Mecha Sonic. Every character, badnik, boss, monitor, ring, the Tornado, explosions, music and sounds come from the player's ROM: bosses are assembled from their mapping frames at the original child-object offsets, defeated badniks explode and free a Flicky, and card and relic pictures are one-line text recipes of ROM sprites and drawn effects. Fights, Starposts and capsules are staged on stretches of each act's real level, moving through it as the map climbs, with every character standing on the ground under it. Runs save at every room; the title adds a Compendium and per-hero records. The title screen flies through four zones' real levels behind a Tornado chase, each act opens with its zone's ROM title card, and every event plays out the chosen option with the game's own objects (the slot machine spins the bonus stage's own reels). Fights open with an entrance that names each boss, claimed rings, cards and relics fly to the HUD, and every highlighted card term and HUD readout has a tip. The engine suite builds, validates and runs the example's tests and opens every fight and event through the scene against S3K.
 - Added [Robotnik Tower Defence](examples/robotnik-tower-defense/README.md), an S3K mod scene in which Robotnik defends his base door from 15 waves of unionised Flickies. Six badnik defenses provide direct fire, ground splash, anti-air, armor piercing, slowing and chain attacks; towers can be upgraded or sold, the door repaired between waves, and an emergency bomb repels breaches. Couriers, shield carriers, flyers, organisers and saboteurs introduce coordinated wave tactics. ROM-backed Launch Base art and audio, mouse/pad controls, pause, help and saved records complete the game without changing stock gameplay.
 - Added [hello-scene](examples/hello-scene/README.md), a two-class starter for mod scenes (Sonic collecting rings over Angel Island's background), and `examples/build_example.py`, which builds and runs any example. `ggfmod sprites` draws every frame of a ROM sprite request, or a playable character, into one numbered PNG. In the engine's tests, `ExampleModHarness` and `ExampleModCapture` build any example scene from source and record it headless to PNG, MP4 and WAV.
-- **Sitar Hero:** added a source-first arcade rhythm example with Green Hill,
-  Chemical Plant and Angel Island Act 1, filtered by any supplied ROM subset.
-  Seven cosmetic performers share the library; Sitar, Harp and Synth use five
-  frets/strum, chords, sustains, HOPO and Star Power, while Bongos uses four
-  direct-hit pads plus kick. ROM-derived timings feed curated charts, remappable
-  keyboard/gamepad controls, calibration, finite results and retry. Reusable
-  candidate scene APIs provide mixed-ROM art, timestamped physical events and
-  bounded semantic ROM music on the consumed audio clock. ROM assets stay runtime
-  inputs; career and multiplayer remain future requirements.
+- **Sitar Hero:** added a source-first full-song rhythm example combining the
+  supplied Sonic 1, 2 and 3 & Knuckles ROM libraries into 79 songs. Looping performances last
+  two complete loops or two minutes, whichever is longer; non-looping ending/credits
+  tracks play to their natural stops. Career follows Sonic worlds with main-act
+  setlists, shared tour progress, optional side gigs and satirical authored
+  intermissions on Robotnik's shared tour. Quick play, no-fail practice,
+  four difficulties, local co-op/score duels and direct-connect peer matches share
+  seven cosmetic performers and four real FM/PSG/DAC parts. Mistakes mute the
+  selected part and produce restrained, instrument-specific ROM-timbre fumbles;
+  local and online co-op retain a successful partner's part, while sequenced,
+  batched peer cues remain independent of scoring and cannot cross a rematch.
+  Generic scene part cues are bounded, pitch-gliding and pause/stop-owned.
+  ROM-pixel arms and
+  hands layer over instruments and move on successful judgments with sound waves.
+  Charts preserve native attacks, voice handoffs and medley tempo changes while
+  curating density, chords, sustains, HOPO and Star Power. Independent player
+  controls/calibration, records, help, mouse menus, lefty mode, reduced flashes
+  and highway speed complete the arcade flow. Candidate scene APIs provide
+  timestamped physical input, owner-scoped peer transport and consumed-audio-clock
+  ROM playback. Full and selected-part synthesis have cancellable background jobs
+  with progress, a ten-minute cap and a 256 MiB combined PCM budget. Runtime
+  character, stage and music assets come from the user's ROMs. The main menu stages
+  the installed band rehearsing on a rotating real act with parallax and stage
+  lights. Performers stand on each act's floor, intermissions stage both speakers
+  on the world's level, and Sonic 3 & Knuckles zone themes load behind the ROM's
+  own title card. Screens ease in, highlights glide, the count-in follows the audio
+  clock, and results tally like an act clear. Menus play the running game's own
+  theme, cursor, ring, giant-ring, tally and act-clear sounds; the driver is
+  silenced before a song starts. The README now walks through the source in
+  reading order with recipes.
 - `ggfmod run` of a patch mod now opens the mod's base game directly instead of the master title game picker (holding Escape still returns to it), so a creator's build-and-run loop lands in their mod; test mode keeps its configured startup. Slay the Robotnik's `play.sh` uses it to build and launch the example in one step.
 - The master title takes the mouse: hovering highlights actions and clicking opens them, the carousel's arrows, neighbouring names and the wheel change game, clicking the game's name browses the list, and right-click goes back; the game browser, quit prompt, tools and start choices answer clicks too. Pointer positions map through the letterboxed viewport with the same helper mod scenes use.
 - The Sonic 1 title screen accepts an optional background override (`Sonic1TitleScreenManager.setBackgroundOverride`) that replaces its scrolling Green Hill plane and backdrop while keeping the emblem, sprites and fades.
@@ -923,6 +963,38 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   standalone games, and custom-zone work are now available on the development
   line. Explicit development-directory launches show their active mod, details,
   and notices in a read-only Mod Manager without changing installed-mod settings.
+  The creator handbook now starts with a Java 21 setup path, seven purpose-specific
+  starters, a capability matrix and the complete recipient install/update/trust/
+  rollback journey. Creator kits pair the engine, SDK, API documentation and
+  production-backed Jupiter test support from one source commit, with its
+  module-only rewind composition isolated from engine artifacts, portable
+  example projects, repeatable builds, artifact-only CI and explicit packaging
+  warnings suitable for automation.
+  A separate experimental Windows native friends bundle packages the maintained
+  example mods and launch shortcuts using GraalVM runtime class loading, with
+  generated member retention and startup checks. Gameplay qualification remains
+  experimental; the normal native release policy is unchanged.
+  Owner-local zone and level identities compose across mods and retain namespaced
+  save locations. Multi-act campaigns, typed runtime contributions and captured
+  zone events use deterministic ordering and inspectable conflict decisions.
+  Returned callbacks, decoded-level transforms and shared service/rewind graphs
+  retain the verified owner's fault and restoration boundaries.
+  Save-field inputs are frozen through the provider's owner boundary, standalone
+  audio profiles can omit a native ROM loader, and object reconstruction preserves
+  optional restore services without exposing runtime fallback access.
+  Shared helpers cover standalone assembly, character landing/reset hooks,
+  immutable physics and placement edits, bounded storage and captured state,
+  authored fonts and overlays, remappable actions and ROM-qualified scene art.
+  Shared compact-font metrics and drawing support scales 1–8, including Sitar's
+  five-times-size count-in without changing its authored pixels or audible clock.
+  Generated character starters draw their installed baked art; walkthroughs use
+  repeatable Maven outputs and the examples' actual required ROMs.
+  Generated standalone starters materialize authored audio as runtime resources
+  before packaging.
+  The maintained examples adopt these helpers while retaining their game rules,
+  visuals, input formats, random sequences and saved profiles. Creator tests use
+  production validation/loading/resolution and record real scene input and draws;
+  authored playable routes retain their wider gameplay/rewind coverage obligations.
   The API descriptor remains the version/publication authority; this
   branch rollover does not publish or freeze it.
 - **Gameplay capture tooling:** `GameplayCaptureTool` pictures or films any
@@ -1052,7 +1124,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   lookup returned a null stream and the S3K game module threw while building its
   load-time profile, so the game failed to start under the default `FAST` load-time
   simulation. The window icon set, the bundled track-validation profiles and the mod
-  SDK templates were missing from the same file and are now embedded as well. A
+  SDK templates were missing from the same file and are now embedded as well,
+  including the starter resource inventory. A
   structural guard fails whenever a runtime resource under `src/main/resources` is
   unreachable from that config, so the drift cannot reach a shipped bundle again.
 
@@ -1062,6 +1135,13 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   analysis, share immutable S3K oracle captures, read only the required trace-input
   column, consolidate equivalent FBZ traversals, and advance integration-test room
   deadlines through a controlled clock with observed membership and publication barriers.
+  Measured fixtures release source/evidence caches and owned mock history, with
+  fixed frame-driving stubs installed once. SOZ route checks draw every frame
+  without reading back discarded pixels; screenshot checks keep pixel readback.
+  Lower-rock puzzle checks compute each whole-world rewind diff once, and
+  background checks read pixels only from frames used by their assertions.
+  The solo Sonic Sandopolis approach uses a shorter authored controller route,
+  with boss-entry and sand-defeat rewind checks beside the traversal checks.
   Strict byte validation, digest pins, ROM configurations, stress sizes, and real
   socket exchanges remain covered. An opt-in two-JVM test profile retains serial
   execution inside each worker. Public audio tests retain synthetic chip vectors;
@@ -1089,7 +1169,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   reservations alongside normal runs. A busy worktree's aged request retains its
   place without blocking unrelated trees. Optional profilers measure process-tree RSS/CPU
   for ordinary/guard runs and per-test allocation, sampled peaks and repeated post-GC
-  retention for explicitly selected tests. No task registration, validation receipts,
+  retention for explicitly selected tests. An ordinary-suite observer measures actual
+  Surefire class floors, native evidence and the Maven parent's separate memory cost.
+  No task registration, validation receipts,
   cumulative budgets or retry gates are needed. Per-invocation category timeouts exclude
   queue waiting. Full CI and release validation remain unchanged.
 

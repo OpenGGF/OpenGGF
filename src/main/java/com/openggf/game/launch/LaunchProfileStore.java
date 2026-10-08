@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Logger;
 
-@com.openggf.game.ModApi
 public class LaunchProfileStore {
     private static final Logger LOGGER = Logger.getLogger(LaunchProfileStore.class.getName());
 

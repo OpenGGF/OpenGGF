@@ -1,7 +1,6 @@
 package com.openggf.net.hub;
 
 /** Transport-neutral peer connection used by both direct and relay rooms. */
-@com.openggf.game.ModApi
 public interface HubConnection {
     void sendText(String text);
 

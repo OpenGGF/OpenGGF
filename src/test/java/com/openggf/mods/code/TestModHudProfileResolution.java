@@ -90,6 +90,7 @@ class TestModHudProfileResolution {
         when(loaded.getLayerWidthBlocks(org.mockito.ArgumentMatchers.anyByte())).thenReturn(1);
         when(loaded.getLayerHeightBlocks(org.mockito.ArgumentMatchers.anyByte())).thenReturn(1);
         when(module.loadLevelOverride(org.mockito.ArgumentMatchers.anyInt())).thenReturn(loaded);
+        when(module.transformDecodedLevel(loaded)).thenCallRealMethod();
 
         WorldSession world = new WorldSession(module);
         world.setCurrentZone(1);

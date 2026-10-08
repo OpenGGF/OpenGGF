@@ -18,7 +18,6 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_C;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_R;
 
 /** Master-title room browser backed by an admitted master-server connection. */
-@com.openggf.game.ModApi
 public final class ServerBrowserScreen {
     private static final int VISIBLE_ROOMS = 4;
     private enum Focus { ROOMS, CREATE, REFRESH, PAGE }
@@ -26,7 +25,6 @@ public final class ServerBrowserScreen {
     private InputHandler menuInput;
     private static final long REFRESH_INTERVAL_MILLIS = 2000;
 
-    @com.openggf.game.ModApi
     public interface Actions {
         void join(ControlMessage.RoomSummary room);
         void create(String routing);

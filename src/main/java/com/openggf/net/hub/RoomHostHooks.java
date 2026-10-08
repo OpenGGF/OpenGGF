@@ -3,7 +3,6 @@ package com.openggf.net.hub;
 import java.util.function.Predicate;
 
 /** Optional relay/master behavior layered onto the Phase 2 room host. */
-@com.openggf.game.ModApi
 public record RoomHostHooks(boolean relevanceFiltering,
                             ChatGate chatGate,
                             RoundOutcomeListener roundOutcomeListener,
@@ -13,18 +12,15 @@ public record RoomHostHooks(boolean relevanceFiltering,
                             String roomId,
                             VerificationHooks verificationHooks) {
     @FunctionalInterface
-    @com.openggf.game.ModApi
     public interface ChatGate {
         boolean mayChat(String fingerprint, long memberSinceMillis);
     }
 
     @FunctionalInterface
-    @com.openggf.game.ModApi
     public interface RoundOutcomeListener {
         void onRoundComplete(String fingerprint, boolean clean);
     }
 
-    @com.openggf.game.ModApi
     public interface VerificationHooks {
         void onFinishNeedingVerification(String roomId, int slot,
                 String identityFingerprint, com.openggf.net.protocol.ControlMessage.AttemptFinish finish,

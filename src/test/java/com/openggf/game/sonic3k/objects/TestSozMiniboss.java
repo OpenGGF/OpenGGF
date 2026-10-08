@@ -12,6 +12,7 @@ import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.OwnedMocks;
 import com.openggf.tests.rules.*;
 import org.junit.jupiter.api.*;
 import org.mockito.MockedStatic;
@@ -22,6 +23,7 @@ import static org.mockito.Mockito.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSozMiniboss {
+    private final OwnedMocks mocks = new OwnedMocks();
     private Rom rom;
     private RomByteReader reader;
     private ObjectManager manager;
@@ -35,19 +37,20 @@ class TestSozMiniboss {
     @BeforeEach void setup() throws Exception {
         rom=new Rom();assertTrue(rom.open(RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));reader=RomByteReader.fromRom(rom);
         GraphicsManager.getInstance().initHeadless();
-        player=mock(AbstractPlayableSprite.class);
+        player=mocks.mock(AbstractPlayableSprite.class);
         when(player.getCentreX()).thenAnswer(call -> (short)(boss==null?0x43C0:boss.getX()+50));
         when(player.getCentreY()).thenReturn((short)0x9D0);
         camera=new Camera();camera.setX((short)0x42E0);camera.setY((short)0x980);camera.setMinX((short)0x4200);camera.setMaxX((short)0x4450);
         runtime=new SozZoneRuntimeState(0,PlayerCharacter.SONIC_ALONE);
         var gameState=new GameStateManager();
-        var levelState=mock(LevelState.class);
+        var levelState=mocks.mock(LevelState.class, withSettings().stubOnly());
+        var debugOverlay=mocks.mock(com.openggf.debug.DebugOverlayManager.class, withSettings().stubOnly());
         services=new StubObjectServices(){
             @Override public ObjectManager objectManager(){return manager;}
             @Override public LevelState levelGamestate(){return levelState;}
             @Override public GameStateManager gameState(){return gameState;}
             @Override public Camera camera(){return camera;}
-            @Override public com.openggf.debug.DebugOverlayManager debugOverlay(){return mock(com.openggf.debug.DebugOverlayManager.class);}
+            @Override public com.openggf.debug.DebugOverlayManager debugOverlay(){return debugOverlay;}
             @Override public RomByteReader romReader(){return reader;}
             @Override public Rom rom(){return null;}
             @Override public SozZoneRuntimeState zoneRuntimeState(){return runtime;}
@@ -60,7 +63,16 @@ class TestSozMiniboss {
         terrain=mockStatic(ObjectTerrainUtils.class);
         terrain.when(()->ObjectTerrainUtils.checkFloorDist(anyInt(),anyInt(),anyInt())).thenAnswer(call -> new TerrainCheckResult(0xA32-(int)call.getArgument(1)-(int)call.getArgument(2),(byte)0,1));
     }
-    @AfterEach void cleanup() throws Exception {if(terrain!=null)terrain.close();if(rom!=null)rom.close();GraphicsManager.getInstance().resetState();AbstractObjectInstance.resetCameraBoundsForTests();}
+    @AfterEach void cleanup() throws Exception {
+        try {
+            if(terrain!=null)terrain.close();
+            if(rom!=null)rom.close();
+            GraphicsManager.getInstance().resetState();
+            AbstractObjectInstance.resetCameraBoundsForTests();
+        } finally {
+            mocks.close();
+        }
+    }
     private ObjectSpawn spawn(){return new ObjectSpawn(0x439D,0x9F7,0x97,0,0,false,0);}
     private void step(){manager.update(0x42E0,player,List.of(),clock++,false);}
     private void until(java.util.function.BooleanSupplier gate,int limit){for(int i=0;i<limit && !gate.getAsBoolean();i++)step();assertTrue(gate.getAsBoolean(),"frontier phase="+boss.phase()+" routine="+boss.routine()+" at "+clock);}

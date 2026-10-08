@@ -8,7 +8,15 @@
     <dependency><groupId>com.fasterxml.jackson.dataformat</groupId><artifactId>jackson-dataformat-yaml</artifactId><version>2.22.0</version></dependency>
     <dependency><groupId>org.ow2.asm</groupId><artifactId>asm</artifactId><version>9.9.1</version></dependency>
   </dependencies>
-  <build><finalName>phase3-character-mod</finalName><plugins>
+  <build><plugins>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.0</version></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-antrun-plugin</artifactId><version>3.1.0</version><executions>
+      <execution><id>remove-stale-generated-mod-outputs</id><phase>initialize</phase><goals><goal>run</goal></goals><configuration><target>
+        <delete file="${project.build.outputDirectory}/art/runner.ggfp" quiet="true"/>
+        <delete dir="${project.build.outputDirectory}/levels/sample" quiet="true"/>
+        <delete file="${project.build.directory}/phase3-character-mod.jar" quiet="true"/>
+      </target></configuration></execution>
+    </executions></plugin>
     <plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.1.0</version><executions>
       <execution><id>convert-playable-art</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration>
         <executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>

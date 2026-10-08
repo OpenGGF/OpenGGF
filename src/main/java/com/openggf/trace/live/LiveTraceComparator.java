@@ -42,7 +42,6 @@ import java.util.function.Supplier;
  * {@link PlaybackFrameObserver}; gates ROM lag frames and accumulates
  * divergences into a ring buffer plus counters.
  */
-@com.openggf.game.ModApi
 public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHudModel {
     private static final int RING_CAPACITY = 5;
 

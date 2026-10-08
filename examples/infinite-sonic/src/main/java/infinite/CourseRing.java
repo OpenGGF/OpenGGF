@@ -10,7 +10,7 @@ import java.util.List;
 
 /** Procedural pickup using the ordinary ROM ring renderer, award and touch contracts. */
 public final class CourseRing extends AbstractObjectInstance
-        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener {
+        implements ModRewindRecreatable, TouchResponseProvider, TouchResponseListener {
     private int x;
     private int y;
     private int ticks;
@@ -31,7 +31,7 @@ public final class CourseRing extends AbstractObjectInstance
         y += dy;
         updateDynamicSpawn(x, y);
     }
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new CourseRing(context.spawn());
     }
     @Override public void update(int vIntRunCount, PlayableEntity player) {

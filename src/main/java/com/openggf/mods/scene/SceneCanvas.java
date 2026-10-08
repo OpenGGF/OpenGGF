@@ -7,7 +7,7 @@ package com.openggf.mods.scene;
  * received it.
  */
 @com.openggf.game.ModApi
-public interface SceneCanvas {
+public interface SceneCanvas extends com.openggf.mods.ui.PixelCanvas {
     /** The logical screen width in pixels (the same as {@link SceneContext#width()}). */
     int width();
 

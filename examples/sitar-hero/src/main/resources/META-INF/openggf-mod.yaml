@@ -1,10 +1,10 @@
 formatVersion: 1
 id: sitar-hero
 name: Sitar Hero
-version: 0.1.0
+version: 0.3.0
 authors:
   - OpenGGF contributors
-description: A Sonic-styled arcade rhythm game with Green Hill, Chemical Plant and Angel Island Act 1, using your supplied ROMs. Five-fret instruments and direct-hit bongos share a cosmetic seven-character roster.
+description: A rhythm game with up to 79 full songs from your Sonic 1, Sonic 2 and Sonic 3 & Knuckles ROMs. Tour every world in a career, practise, or play local and direct-connect co-op and duels on sitar, bongos, synth or harp, with seven native ROM performers on real ROM stages.
 engineApiRange: ">=0.7.0 <0.8.0"
 type: patch
 baseGame: any

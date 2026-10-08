@@ -25,12 +25,31 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Creator kit builder](../../tools/modding/build_creator_kit.py) exports matching
+  engine/SDK/API-doc/testkit artifacts, pinned portable examples and launchers;
+  [catalog probe](../../src/main/java/com/openggf/tools/modsdk/CreatorCatalogProbe.java)
+  measures production discovery, validation and registration at explicit bounded
+  catalog/asset shapes. Origin: mod framework readiness, 2026-10-07; see
+  [probe limits and acceptance](../modding/tools/scalability.md).
+
+- [Sitar Hero S2 native reference](../../src/test/java/com/openggf/mods/code/SitarHeroS2NativeProgram.java) (test scope): independently interprets supplied S2 ROM control flow, saved duration/frequency and service cadence; `TestSitarHeroS2SongCatalogue` compares complete requested attack streams and natural ends (2026-10-07 full-song catalogue).
+
+- [Sitar Hero S3K song probe](../../src/main/java/com/openggf/tools/SitarHeroS3kSongProbe.java): executes both locked-on ROM music tables through the production S3K driver and reports complete jump candidates, tempo boundaries, real channel/sample attacks and natural stops; input is an absolute ROM path and optional hex music IDs (2026-10-07 full song catalogue).
+
+- [Sonic 1 song-form survey](../../tools/audio/s1_song_forms.py): independently
+  walks a supplied REV01 ROM's SMPS calls, counted loops, native tempo/divider
+  changes and track stops to report complete forms and natural endings. Origin:
+  Sitar Hero full-song catalogue, 2026-10-07; command and limits are in the
+  [catalogue evidence](../architecture/designs/2026-10-07-sitar-hero-s1-song-catalogue.md).
+
 - `GameplayAllocationTool`: ordinary BK2-driven loop/render bytes per frame, excluding PNG/readback and CSV allocation. Use `--rom <absolute-path> --input <bk2> --zone <numeric-id> --act <one-based> --out-dir target/alloc`; optional `--frames 6000 --warmup 600 --width 400 --main sonic --sidekick tails --rewind true --jfr true`. `--sidekick none` selects solo play; the console reports the live roster count. Loop allocation includes input-row decoding. Compare route state before interpreting allocation deltas; JFR includes other threads, whereas reported counters measure the gameplay thread. Keep raw diagnostics temporary.
 
 - [Sprite sheet dump](../../src/main/java/com/openggf/tools/modsdk/SpriteSheetDump.java) (`ggfmod sprites`): renders every mapping frame of a ROM sprite (art, mappings, optional DPLC, palettes) or a playable character (`char=sonic`, with its animation scripts) into one numbered PNG grid, for choosing frames without booting a level (2026-10-05 Slay the Robotnik; a ggfmod subcommand since 2026-10-06).
 - [Example mod capture](../../src/test/java/com/openggf/mods/code/ExampleModCapture.java) (test scope) with [ExampleModHarness](../../src/test/java/com/openggf/mods/code/ExampleModHarness.java): builds any `examples/` mod with a startup scene from source and records its scene headless with GL to PNGs, an MP4 (ffmpeg) and a WAV of its music and sound effects, from an input script whose `jump=` steps use the scene's `DebuggableScene` entry (2026-10-05 Slay the Robotnik capture, generalised 2026-10-06 for the example's highlight reel).
 - [Maven resource profiler](../../tools/testing/profile_maven.py): sample queued ordinary/guard runs for process-tree memory and CPU admission estimates (2026-09-15 Maven resource task).
 - [Per-test memory profiler](../../tools/testing/profile_test_memory.py): explicit capture/rewind/ROM tests in a repeated diagnostic JVM, with executing-thread allocation, sampled peaks and post-GC pass floors; see [measurement limits](../../tools/testing/README.md#per-test-memory-diagnostics) (2026-10-07 throughput task).
+- [Ordinary-suite memory observer](../../tools/testing/profile_ordinary_memory.py): actual Surefire class/test peaks and post-teardown GC floors, with separate Maven RSS/swap/heap probes and bounded GC/native evidence (2026-10-07 memory-cause investigation).
+- [Streaming JFR test summary](../../tools/testing/java/com/openggf/tools/JfrTestSummary.java): `java -Xmx128m --source 21 tools/testing/java/com/openggf/tools/JfrTestSummary.java target/recording.jfr [test-class-prefix ...]` separates sampled threads, test owners and capture phases without expanding event JSON; weights estimate churn, native samples include waiting (2026-10-08 SOZ test-throughput follow-up).
 
 - [FBZ boundary comparator](../../tools/bizhawk/compare_fbz_boundary_fixture.py) supports `--sprite-publication` to compare the complete native CPU sprite table with the following consecutive frame’s VDP table; duplicate samples and gaps are explicit. The boundary exporter supplies the read-only CPU snapshots.
 
@@ -68,9 +87,26 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 
 ## Test harness helpers
 
+- `tools/modding/native-windows/build_inputs.py` rebuilds all friends mods with
+  the real converters and package validator; `build_windows.py` compiles a
+  separately labelled Windows native image, audits retained members, qualifies
+  registration and the actual engine boot path, and assembles the ZIP with
+  per-mod shortcuts and retained licences. Origin: [experimental Windows ZIP,
+  2026-10-08](../../tools/modding/native-windows/README.md).
+
+- `tools/modding/native-feasibility/probe.py` builds closed-world, Crema and optional
+  JIT controls around the production mod classloader, then compiles two external
+  fixture JARs after the images exist. `registration_probe.py` derives exact-class
+  preservation from the canonical API and all packaged mod bytecode, audits
+  types/fields/methods before creator execution, and checks real validation and
+  owner transactions on JVM/native. The companion `NativeModMemberContractTest`
+  covers dormant callbacks and missing linkage. Origin: [GraalVM native mod
+  feasibility, 2026-10-08](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md).
+
 - `SitarHeroCapture` (`src/test/java/com/openggf/tools/`) packages the real
-  example and captures ROM-backed performers, stages and finite arcade behavior
-  for explicit ROM subsets; its source header records inputs and evidence limits.
+  example and captures ROM-backed performers, stages, finite arcade behavior,
+  career boards and labelled authored-story previews for explicit ROM subsets;
+  its source header records inputs and evidence limits.
   Origin: Sitar Hero proof of concept, 2026-10-06.
 
 - `src/test/java/com/openggf/tests/route/` — shared route primitives for headless
@@ -148,8 +184,18 @@ Do not stage generated-resource entries. The policy rejects symlinks at
 `config.yaml`, any path ending in `.gen`, and `docs/s1disasm`,
 `docs/s2disasm`, `docs/kis2disasm`, `docs/scddisasm`, or `docs/skdisasm`.
 Separately, the repository-wide ROM-like asset rule rejects added or modified
-paths ending in `.gen`, `.smd`, `.bin`, `.sms`, `.gg`, or `.32x`. It also
-rejects absolute symlink targets anywhere in the repository. If a broad
+paths ending in `.gen`, `.smd`, `.bin`, `.sms`, `.gg`, or `.32x`. The sole
+reviewed authored-content exception is the two-act Tide fixture's 22 original
+assets, pinned by exact canonical path, mode `100644`, byte length and SHA-256 in
+[the authored-fixture manifest](../../.githooks/authored-fixtures.json).
+[The shared verifier](../../.githooks/authored_fixture_policy.py) checks Git blobs
+in staged, historical-commit and delivered-snapshot admission; it never runs a
+candidate generator. Changed bytes, moved/case-varied paths, other binaries,
+executable files and symlinks receive no exception. Prefer the existing
+`binary-assets.properties` text-source convention for future authored fixtures;
+this manifest is not a directory or filename-pattern exemption.
+
+The policy also rejects absolute symlink targets anywhere in the repository. If a broad
 `git add` includes one, unstage it, keep or recreate the local link only in the
 filesystem, and inspect `git diff --cached` before committing. The ignore rules
 cover both a real reference directory and a hook-created link; use `git add -f`

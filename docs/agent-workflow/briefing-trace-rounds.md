@@ -78,6 +78,52 @@ alone cost 5.3 ms due to repeated writes to an in-flight vertex buffer. Measure
 `ExampleModCapture --every 0` with no video never submits a frame; it cannot
 measure rendering throughput. Separate warm-up, update, submission and finish
 costs, and compare deterministic framebuffer output when changing uploads.
+Committed fixtures are live validation inputs (2026-10-08, Sitar Hero delivery):
+freeze test sources, BK2 files and scripts alongside runtime code. A fixture merge
+during an ordinary run makes the invocation incomplete even if already compiled
+Java bytes remain unchanged: a later test can read the changed movie. Compare the
+complete input delta before reusing evidence. A HEAD change confined to prose and
+standalone probes can preserve completed ordinary execution, but the runner's
+fingerprint still correctly suppresses later lanes; qualify those lanes separately
+against the actual source and label the interrupted combined invocation accurately.
+
+A dead command session does not prove Maven stopped (2026-10-08, Sitar Hero
+delivery): an unexpected native exit 143 left the exact Maven/test children alive
+after their output reader and deadline supervisor disappeared. Verify owning PIDs,
+working directories and arguments before stopping only those orphans. No terminal
+results means incomplete validation. Retain a bounded supervisor, explicit exit
+status and the normal runner limits for recovery; do not infer the signal's cause
+from elapsed time or treat partial XML as a completed run.
+Movie input is not a native movement latch (2026-10-07, stock parity S1
+frontiers): the recorder's input column comes from the BK2 row, with raw RAM
+only as a fallback; it does not observe the game's logical held/new pair at
+movement entry. Replay the original movie with its original sync settings,
+verify the exact ROM callback bytes, and observe the owning read boundary.
+Match surrounding frame-end position, subposition, speed, status and animation
+to the committed rows before interpreting the latch. The S1 capture matched all
+20 surrounding rows and measured neutral raw and logical pairs at both release
+frontiers. Its CSV heading `vfc` read `$FE04`, the level frame counter; label the
+actual address and owner rather than inferring a clock from a probe's heading.
+An emulator startup crash with no observations is rejected evidence, even if a
+host wrapper reports that it launched.
+Correct logical input can coexist with stale effective sprite input (2026-10-08,
+stock parity S1 frontiers): the actual BK2, prepared/applied cursor, zero offset
+and InputHandler snapshot all agreed on neutral input, while movement consumed
+Up or Right from persistent sprite forced masks seeded at the load seam. Inspect
+incoming movement flags, effective directions, forced masks, legacy forced
+direction flags and control locks at the same body entry. A neutral logical
+snapshot alone does not prove neutral gameplay input. Correct the owning writer
+and publication seam; preserve legitimate scripted control rather than clearing
+all forced state or adjusting physics. Native controller latches are a separate
+observation from both physical BK2 rows and engine input publication.
+Unpaced mod captures can outrun preparation (2026-10-08, Sitar Hero polish):
+`ExampleModCapture` advances ticks as quickly as it can while ROM song preparation
+runs on a worker. A short capture without video or frequent PNGs can finish before
+the player starts; its simulated loading-tick count is not wall-clock latency.
+Check the actual screen/player state and corresponding PCM before diagnosing silence,
+and cut loading waits from promotional footage without calling them real-time loading
+measurements. Offline audio establishes content and cue timing, not physical speaker
+latency. See the [example's capture notes](../../examples/sitar-hero/README.md#testing-and-captures).
 
 Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
 task): the positioned MHZ capture retained about 22 MiB after its callback while
@@ -89,6 +135,28 @@ retained memory. Allocation counters measure churn, sampled JVM-global peaks
 include caches, and high RSS after GC does not establish Java or native leaks.
 Record skips, GC observation, repeated-pass order and the actual source revision.
 
+Class completion is not always fixture release (2026-10-07 ordinary-suite memory
+investigation): a JUnit 5.10.3 control retained a 20 MiB `PER_CLASS` fixture at the
+next class boundary and released it only after the entire plan returned. Actual
+Surefire executed its two-class control in one plan. Label within-plan post-GC
+growth as retention candidates; compare the final post-plan floor and inspect
+fixture/static owners before claiming application leaks. An `@AfterAll` callback
+or a closed native handle does not by itself make a fixture's Java graph unreachable.
+
+Immediate post-GC counters can disagree (2026-10-07 compiler-memory experiment):
+the owned Maven parent dropped from about 1.27 GiB used heap to 79.5 MiB after a
+requested collection, while RSS and NMT committed counters had not yet followed
+the logical heap resize. A later reading showed RSS plus swap falling from
+2.54 GiB to 0.78 GiB. Compare settled counters and distinguish a later used-heap
+reading from a post-GC floor before attributing the difference to native retention.
+
+A constant-retention stress assertion can measure the wrong owner (2026-10-07
+audio-comparator investigation): production validation kept bounded semantic
+state, but the test factory's static evidence map held 500,128 input services.
+Clearing that map after the selected plan returned released 309.5 MiB. Compare
+post-plan floors and release explicit owners in sequence; the test's internal
+retention counter does not include its input factory or framework bookkeeping.
+
 Moving a live log across filesystems loses its writer (2026-10-07, stock parity
 swarm): moving stdout from `/tmp` on tmpfs into a btrfs worktree copied and
 unlinked the original file while the queued wrapper retained its open inode.
@@ -97,6 +165,27 @@ worktree's `target/` before launching. If recovery is needed, verify the exact
 owned process and follow its `/proc/<pid>/fd/1` descriptor with a bounded
 `tail --pid` follower; record and clean up that follower. Log recovery and queue
 admission are not test completion.
+
+A bootstrap module switch is not a live-world fixture switch (2026-10-07,
+pending insta-shield rewind regression): `TestEnvironment.resetAll` had already
+opened an S2 world. Setting `GameModuleRegistry` to S3K changed the default while
+status/controller refresh continued to read the live S2 module. An expected red
+case passed and the registered-shield control failed. Use
+`TestEnvironment.configureGameModuleFixture` for the intended live world, verify
+the positive control, and discard the mixed result before attributing behavior.
+
+A complete registry restore can still omit a scheduling owner (2026-10-07,
+FBZ → SOZ destination floor): pending shield restoration exposed five art clocks
+one step higher after an otherwise matching eight-row replay. A read-only retry
+probe showed no setup-only retry or fade; the original first row published a
+pending fresh-level boundary without claiming a closure, whereas its replay
+ran ordinary work. The deferred boundary was absent from registry capture.
+The load reporter captures floor zero before the controller assigns its pending
+assembly, so restoring that floor must clear stale pending state; explicit later
+captures must retain their complete deferred state and publication phase.
+Inspect the first actual dispatch and its ownership before compensating clocks
+or blaming driver counters. Capture the complete deferred state through its
+existing production owner; keep the floor and full forward comparison intact.
 
 A macOS native-test stall can be AWT rather than gameplay (2026-10-06,
 `1ae1596837`): the ordinary suite stopped producing output in
@@ -326,6 +415,17 @@ with `ThreadMXBean` around loop and rendering separately, excluding screenshot
 readback/encoding and CSV writes, after a fixed warmup. Match controller route,
 rewind setting, viewport and sampled state before comparing. Bytes/frame is not
 a frame-time or GC-pause improvement. `GameplayAllocationTool` preserves this probe.
+
+SOZ JFR follow-up (2026-10-08): sampling events identify their observed thread in
+`sampledThread`, while allocation events use `eventThread`. A generic thread scrub
+removed the sampling events in this recording; use the streaming `JfrTestSummary`
+reader instead. Its positive control attributed screenshot allocation/readback to
+the lower-rock tests, and the draw-only candidate removed those samples. Default
+JDK 21 profile periods differ: Java 10 ms, native 20 ms; do not combine counts into
+CPU percentages. Native samples include waiting in `glFinish`. Expanding this
+recording's full stacks as JSON produced 9.4 GB and made the analysis process grow
+to 9.6 GB RSS; that approach was stopped and its output deleted. Stream counters
+under a bounded heap instead of materializing event objects or expanded JSON.
 
 SOZ controller-route rewind (2026-09-16): a composite gameplay snapshot does
 not own a standalone `HeadlessTestRunner`'s external button history. Before

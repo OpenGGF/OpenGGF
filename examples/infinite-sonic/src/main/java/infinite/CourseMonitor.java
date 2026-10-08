@@ -13,7 +13,7 @@ import java.util.List;
  * running into one never stalls Sonic against the scrolling edge.
  */
 public final class CourseMonitor extends AbstractObjectInstance
-        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener {
+        implements ModRewindRecreatable, TouchResponseProvider, TouchResponseListener {
     // Map_Monitor frame 11 is the broken shell; Ani_Monitor .shield: speed 1, frames 0,6,6,1,6,6,2,6,6
     // (.rings shows icon 8 the same way).
     private static final int BROKEN_FRAME = 0x0b;
@@ -47,7 +47,7 @@ public final class CourseMonitor extends AbstractObjectInstance
         y += dy;
         updateDynamicSpawn(x, y);
     }
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new CourseMonitor(context.spawn());
     }
     @Override public void update(int vIntRunCount, PlayableEntity player) {

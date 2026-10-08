@@ -21,6 +21,35 @@ This is Sonic-with-CPU-Tails route coverage, not full level certification or tra
 | Arena trigger boundaries | `TestHczMinibossRomParity` | Initial camera window and horizontal admission checked on both sides at all five widths, retaining vertical-gate independence and native world-bound writes. |
 | PRESENT / ORACLE | Separate trace/native lanes | No pixels/audio or trace comparison is claimed. |
 
+## Stock trace handoff verification — 2026-10-07
+
+The [continued stock audit](../../audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
+keeps strict trace parity separate from the ordinary routes above. A temporary
+probe found an ordinary player pass on input 53,607, before the advertised
+HCZ window at input 53,608. Moving comparison attachment earlier was rejected
+because it would bind the wrong input. The candidate uses the existing shared-gap
+owner for that unrepresented row and retains comparison of every advertised row.
+
+The executed candidate's final focused startup/gap selection passes 66 tests with no
+failures, errors or skips. The complete chain compares all 3,574 HCZ rows and
+moves the first mismatch from row zero's fractional Y to row 653's Tails Y,
+reducing 32,343 errors to 563. A standalone HCZ replay independently reports the
+same first mismatch; its one compressed mismatch entry spans 75 rows, rather
+than proving that only one row differs. The giant-ring exit remains missed.
+The final guard forbids suppressed gap stepping at the advertised input
+boundary, with a real-ROM denied-admission regression that leaves the cursor,
+physics and level clock unchanged. Local commit `45c6eed2d6e3` retains the same
+563-error profile after that guard. The subsequent raw-controller bar correction
+(`b3eff6209ed9`) passes 75 focused cases with all mandatory startup controls;
+standalone HCZ has zero compared errors. The chain removes exactly the 75 early
+Tails-Y observations and retains 488 errors (402 physics, 86 animation), with
+the first animation difference at row 3,531 and first physics difference at
+row 3,532 primary X `1457/1452`. The native giant ring captures Sonic while the
+engine lacks that ring; the collected-ring mask's native save boundary is under
+investigation. All 3,574 rows and 55 lag rows remain accounted for. Combined
+delivery qualification remains open. No broader
+viewport, donor, character/team, native-pixel or audio coverage is inferred.
+
 ## Route construction and rejected approaches
 
 Task `route-green-20260914`, pinned integration base `f1843f54a1`; isolated
@@ -158,3 +187,25 @@ The matched native trace remains red with 4,699 divergences, first frame 9,482
 for commands, rejected approaches and final delivery validation. Other main
 characters/teams, checkpoint/death-restart, donor breadth at late rewind spots,
 presentation/oracle and trace-parity obligations remain open.
+
+## Full SaveGame consumer boundary — 2026-10-08
+
+Results act-2 completion clears the inherited AIZ mask before HCZ initialization, preserving same-zone seamless loads and special-stage returns. Final combined replay has complete segment9 with zero errors/55 lag and successful giant-ring handoff; standalone matches 3519 executed samples of 3574 rows, zero physics/animation/bootstrap/warnings. Newly reachable segment11 remains incomplete: 82067 errors (69393 physics/12674 animation), first primary Y row1510 `07D6/07DF`, ownership lost at cursor68801 in LEVEL, load generation9, zone1 act0.
+
+`828bc94d8` clears the native32-bit collected-ring mask at exactly seven existing
+full-SaveGame gates; existing game-state rewind owns the mask. Focused138 cases
+pass without failures/errors/skips, including direct Results tally/helper and
+mask-restoration checks. The other six non-tally live routes, successful disk
+persistence, live SK-alone, and this matrix's remaining route/rewind/breadth
+products are not newly certified. Generic persistence and special-stage/lives/
+death/reload/seamless semantics remain distinct. See the [lane audit](../../audits/2026-10-07-s3k-parity-gap-verification.md)
+for native ordering and scope, and [combined qualification](../../audits/2026-10-07-stock-parity-gap-verification.md#final-composed-canonical-replay-2026-10-08)
+for exact commands/frontiers. [Actual-main qualification](../../audits/2026-10-07-stock-parity-gap-verification.md#actual-main-delivery-qualification)
+retains 27 concrete inherited ordinary failures and 62 literal skips with zero
+errors; all 672 fresh guards pass. This preserves the route/breadth limits above.
+
+Composed canonical71207 passes standalone HCZ and complete chain segment9:
+3,574 source rows,55lag, zero physics/animation/bootstrap/warnings, and the
+giant-ring handoff succeeds. The newly reached segment11 is incomplete, first
+row1510 Y07D6/07DF; AIZ frontiers remain unchanged. This does not establish
+native pixel, dynamic-art or audio parity beyond the fixture's comparisons.

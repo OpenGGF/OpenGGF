@@ -99,33 +99,46 @@ at registration, and declare the secondary ability consistently:
 
 ```java
 public final class MyRunner extends AbstractPlayableSprite {
-    private static final CharacterKey KEY =
-            CharacterKey.mod("my-character-pack", "runner");
+    private final CharacterKey key;
 
     public MyRunner(String code, int x, int y) {
-        super(code, (short) x, (short) y);
-        setWidth(18);
-        setHeight(38);
+        super(code, (short) x, (short) y, physicsSpec());
+        key = CharacterKey.parsePersisted(code.replaceFirst("_p\\d+$", ""));
     }
 
-    @Override public CharacterKey characterKey() { return KEY; }
+    private static CharacterPhysicsSpec physicsSpec() {
+        return new CharacterPhysicsSpec(PhysicsProfile.builder()
+                .movement(0x10, 0x80, 0x10, 0x500, 0x640)
+                .rolling(0x20, 0x80, 0x80, 0xE00).build());
+    }
+
+    @Override public CharacterKey characterKey() { return key; }
     @Override public SecondaryAbility getSecondaryAbility() {
         return SecondaryAbility.NONE;
     }
-
-    @Override protected void defineSpeeds() { /* safe construction defaults */ }
-    @Override protected void createSensorLines() { /* six terrain sensors */ }
-    @Override public void draw() { /* renderer installed from baked art */ }
+    @Override public void draw() {
+        if (!isHidden() && getSpriteRenderer() != null) {
+            getSpriteRenderer().drawFrame(getMappingFrame(), getRenderCentreX(), getRenderCentreY(),
+                    getRenderHFlip(), getRenderVFlip());
+        }
+    }
 }
 ```
 
-Runtime physics are resolved with `PhysicsProvider.getProfile(key.persisted())`.
-For a patch character, decorate the base module's provider in a `GamePatch`, return
-the custom `PhysicsProfile` only for the canonical key, and delegate all other keys,
-modifiers, and rules to the base provider. The acceptance sample's
-`SampleCharacterPhysicsPatch` is the minimal complete pattern. Keep `defineSpeeds()`
-safe for construction, but do not use an `instanceof` branch or a stock character
-name as the runtime profile key.
+`CharacterPhysicsSpec` owns this instance's active speeds, standing/rolling shape
+and sensors. It creates paired terrain probes with `PlayableSensorSpec.standard()`
+by default; pass an explicit sensor spec for different side-probe reach. Grouped
+`PhysicsProfile` builders validate ranges before narrowing values. Keep custom
+specs on each instance or construct them through a factory; creator classes cannot
+keep engine objects in static fields.
+
+The module still supplies game-wide modifiers and `GameRules`. A patch can also
+expose the authored tuning through its provider for other module consumers. The
+maintained `SampleCharacterPhysicsPatch` uses a scoped transformation of the
+inherited provider, reusing `SampleCharacter.physicsSpec().profile()` and preserving
+other characters, rules and modifiers. The instance constructor uses that same
+factory. Legacy expert subclasses can retain `defineSpeeds()` and
+`createSensorLines()`; new characters need no duplicated construction defaults.
 
 The character's generated content patch automatically advertises the canonical key
 to the stock launch configuration. Its display name comes from the registry. A saved
@@ -175,6 +188,12 @@ The hook runs only for a valid airborne ability-button activation. Returning `tr
 consumes the press before built-in ability dispatch; `false` leaves stock dispatch
 unchanged. It is not a general replacement for ground movement or the player state
 machine.
+
+Reset grounded abilities in `onLanded()` and load/respawn state in `onLevelReset()`.
+`onGroundStateChanged(boolean airborne)` reports both transition directions. These
+hooks run through the character's owner fault boundary during simulation. Drawing
+must not change gameplay state. Rewind restores captured state without emitting
+landing/reset events, so an ability latch must still be captured explicitly.
 
 Mod characters cannot opt into stock super forms in the current 0.7 contract: set
 `supportsSuperForm` to `false`. This prevents a custom sprite from transforming with
@@ -251,11 +270,10 @@ protected void restoreSubclassRewindState(PerObjectRewindSnapshot.PlayableSubcla
 }
 ```
 
-A rewind seek that lands exactly on a keyframe or replays a cached segment now
-restores `doubleJumpUsed` byte-for-byte instead of depending on the landing
-reset (`draw()` clearing the latch on the next grounded frame) to eventually
-self-correct it — the landing reset remains a good defensive habit, but it is
-no longer load-bearing for this field.
+A rewind seek that lands exactly on a keyframe or replays a cached segment
+restores `doubleJumpUsed` byte-for-byte. Bolt clears it in `onLanded()` and
+`onLevelReset()` during new simulation transitions; its draw method only renders.
+Restoring a grounded keyframe and drawing repeatedly preserve the captured latch.
 
 Before distributing a character mod:
 
@@ -266,3 +284,12 @@ Before distributing a character mod:
 5. rewind across construction and ability use; and
 6. disable or remove the mod and confirm the saved slot reports the missing owner and
    falls back safely rather than corrupting the slot.
+
+Expert module registries also bind fresh character factories, art/palette suppliers
+and custom respawn strategies to the module's verified owner. New custom keys must
+use that registered owner. Inherited definition
+instances keep their earlier ownership. A replacement for a builtin retains its
+semantic `sonic`, `tails` or `knuckles` key while its callbacks belong to the mod
+that publishes it. Factories create a fresh sprite for each player/session;
+reusing an instance from an earlier construction is rejected because it retains
+its previous runtime callback boundary.

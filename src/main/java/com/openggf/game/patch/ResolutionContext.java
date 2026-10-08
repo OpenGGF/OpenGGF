@@ -26,14 +26,27 @@ public final class ResolutionContext {
     private final List<RegisteredPatch> registrations;
     private final Map<PatchOwner, Set<PatchOwner>> dependencies;
     private final Map<PatchOwner, Set<PatchOwner>> dependents;
+    private final Map<PatchOwner, Set<PatchOwner>> orderingDependencies;
+    private final Map<PatchOwner, Set<PatchOwner>> orderingDependents;
     private final Map<PatchOwner, Throwable> failures = new LinkedHashMap<>();
 
     private ResolutionContext(PatchEnablement enablement, List<RegisteredPatch> registrations,
-            Map<PatchOwner, ? extends Set<PatchOwner>> dependencies) {
+            Map<PatchOwner, ? extends Set<PatchOwner>> dependencies,
+            Map<PatchOwner, ? extends Set<PatchOwner>> softOrder) {
         this.registrations = List.copyOf(Objects.requireNonNull(registrations, "registrations"));
         validateUniqueRegistrations(this.registrations);
         this.dependencies = freezeGraph(dependencies);
         this.dependents = reverse(this.dependencies);
+        Map<PatchOwner,Set<PatchOwner>> order = new LinkedHashMap<>(this.dependencies);
+        Set<PatchOwner> publishedOwners = this.registrations.stream().map(RegisteredPatch::owner).collect(java.util.stream.Collectors.toSet());
+        freezeGraph(softOrder).forEach((owner, predecessors) -> {
+            if (!publishedOwners.contains(owner)) return;
+            predecessors = predecessors.stream().filter(publishedOwners::contains).collect(java.util.stream.Collectors.toSet());
+            Set<PatchOwner> union = new LinkedHashSet<>(order.getOrDefault(owner, Set.of()));
+            union.addAll(predecessors); order.put(owner, Set.copyOf(union));
+        });
+        this.orderingDependencies = freezeGraph(order);
+        this.orderingDependents = reverse(this.orderingDependencies);
         this.enablement = freezeEnablement(
                 Objects.requireNonNull(enablement, "enablement"),
                 this.registrations, this.dependencies);
@@ -43,13 +56,19 @@ public final class ResolutionContext {
     public static ResolutionContext forTests(PatchEnablement enablement,
             List<RegisteredPatch> registrations,
             Map<PatchOwner, ? extends Set<PatchOwner>> dependencies) {
-        return new ResolutionContext(enablement, registrations, dependencies);
+        return new ResolutionContext(enablement, registrations, dependencies, Map.of());
     }
 
     static ResolutionContext create(PatchEnablement enablement,
             List<RegisteredPatch> registrations,
             Map<PatchOwner, ? extends Set<PatchOwner>> dependencies) {
-        return new ResolutionContext(enablement, registrations, dependencies);
+        return new ResolutionContext(enablement, registrations, dependencies, Map.of());
+    }
+
+    static ResolutionContext create(PatchEnablement enablement, List<RegisteredPatch> registrations,
+            Map<PatchOwner, ? extends Set<PatchOwner>> dependencies,
+            Map<PatchOwner, ? extends Set<PatchOwner>> orderingDependencies) {
+        return new ResolutionContext(enablement, registrations, dependencies, orderingDependencies);
     }
 
     public PatchEnablement enablement() {
@@ -107,7 +126,7 @@ public final class ResolutionContext {
         Map<PatchOwner, Integer> remainingDependencies = new HashMap<>();
         PriorityQueue<PatchOwner> ready = new PriorityQueue<>(ownerOrder);
         for (PatchOwner owner : byOwner.keySet()) {
-            int count = (int) dependencies.getOrDefault(owner, Set.of()).stream()
+            int count = (int) orderingDependencies.getOrDefault(owner, Set.of()).stream()
                     .filter(byOwner::containsKey)
                     .count();
             remainingDependencies.put(owner, count);
@@ -119,7 +138,7 @@ public final class ResolutionContext {
         while (!ready.isEmpty()) {
             PatchOwner owner = ready.remove();
             orderedOwners.add(owner);
-            for (PatchOwner dependent : dependents.getOrDefault(owner, Set.of())) {
+            for (PatchOwner dependent : orderingDependents.getOrDefault(owner, Set.of())) {
                 if (!remainingDependencies.containsKey(dependent)) {
                     continue;
                 }
@@ -143,8 +162,8 @@ public final class ResolutionContext {
 
     private void validateAcyclic() {
         Set<PatchOwner> nodes = new LinkedHashSet<>();
-        nodes.addAll(dependencies.keySet());
-        dependencies.values().forEach(nodes::addAll);
+        nodes.addAll(orderingDependencies.keySet());
+        orderingDependencies.values().forEach(nodes::addAll);
         Set<PatchOwner> visited = new HashSet<>();
         Set<PatchOwner> visiting = new HashSet<>();
         for (PatchOwner node : nodes) {
@@ -157,9 +176,9 @@ public final class ResolutionContext {
             return;
         }
         if (!visiting.add(owner)) {
-            throw new IllegalArgumentException("Owner dependency cycle includes " + owner);
+            throw new IllegalArgumentException("Owner ordering/dependency cycle includes " + owner);
         }
-        for (PatchOwner dependency : dependencies.getOrDefault(owner, Set.of())) {
+        for (PatchOwner dependency : orderingDependencies.getOrDefault(owner, Set.of())) {
             validateNode(dependency, visited, visiting);
         }
         visiting.remove(owner);

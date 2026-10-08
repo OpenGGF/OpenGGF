@@ -86,6 +86,100 @@ except KeyboardInterrupt:
                 self.fail('Requests were not published to the scheduler')
             time.sleep(.02)
 
+    def launch_cleanup(self, root=None):
+        root = root or self.linked
+        run = root / 'target/category-tests/20261007T120000Z-00000000'
+        run.mkdir(parents=True)
+        (run / 'plan.json').write_text('{}')
+        code = '''
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from category_artifacts import acknowledge_run
+from maven_queue import handle_termination
+with handle_termination():
+    acknowledge_run(Path(sys.argv[2]), sys.argv[3])
+'''
+        process = subprocess.Popen([sys.executable, '-c', code, str(TOOLS), str(root), run.name],
+                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        self.processes.append(process)
+        return process, run
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
+    def test_acknowledgment_overlaps_another_worktree_job(self):
+        os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
+        holder, marker = self.launch('holder')
+        self.wait_started(holder, marker)
+        cleanup, run = self.launch_cleanup()
+        output = cleanup.communicate(timeout=3)[0]
+        self.assertEqual(0, cleanup.returncode, output)
+        self.assertFalse(run.exists())
+        self.assertIsNone(holder.poll())
+        self.assertEqual([], list((self.root / '.git/maven-waiters').glob('*.request')))
+        marker.with_suffix('.release').touch()
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
+    def test_acknowledgment_waits_for_its_own_worktree(self):
+        os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
+        holder, marker = self.launch('holder', self.linked)
+        self.wait_started(holder, marker)
+        cleanup, run = self.launch_cleanup()
+        time.sleep(.3)
+        self.assertIsNone(cleanup.poll())
+        self.assertTrue(run.exists())
+        marker.with_suffix('.release').touch()
+        holder.wait(timeout=5)
+        output = cleanup.communicate(timeout=3)[0]
+        self.assertEqual(0, cleanup.returncode, output)
+        self.assertFalse(run.exists())
+
+    def test_acknowledgment_waits_for_legacy_exclusive_lock(self):
+        from maven_queue import _try_lock, _unlock
+        with (self.root / '.git/maven-queue.lock').open('a+b') as legacy:
+            legacy.write(b'\0')
+            legacy.flush()
+            _try_lock(legacy)
+            try:
+                cleanup, run = self.launch_cleanup()
+                time.sleep(.3)
+                self.assertIsNone(cleanup.poll())
+                self.assertTrue(run.exists())
+            finally:
+                _unlock(legacy)
+            output = cleanup.communicate(timeout=3)[0]
+            self.assertEqual(0, cleanup.returncode, output)
+            self.assertFalse(run.exists())
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX process termination')
+    def test_cancelled_cleanup_releases_its_worktree_lock(self):
+        from maven_queue import _try_lock, _unlock, _acquire
+        git_dir = Path(subprocess.check_output(['git', 'rev-parse', '--absolute-git-dir'],
+                                              cwd=self.linked, text=True).strip())
+        with (self.root / '.git/maven-queue.lock').open('a+b') as legacy:
+            legacy.write(b'\0')
+            legacy.flush()
+            _try_lock(legacy)
+            try:
+                cleanup, run = self.launch_cleanup()
+                tree_path = git_dir / 'maven-worktree.lock'
+                deadline = time.monotonic() + 3
+                while not tree_path.exists():
+                    self.assertLess(time.monotonic(), deadline)
+                    time.sleep(.02)
+                with tree_path.open('a+b') as tree:
+                    # Wait until cleanup owns its local lock, blocked on compatibility.
+                    while _acquire(tree):
+                        _unlock(tree)
+                        self.assertLess(time.monotonic(), deadline)
+                        time.sleep(.02)
+                    cleanup.terminate()
+                    cleanup.communicate(timeout=3)
+                    self.assertTrue(_acquire(tree))
+                    _unlock(tree)
+                    self.assertTrue(run.exists())
+            finally:
+                _unlock(legacy)
+
     def test_legacy_unregistered_lock_and_scheduler_remain_mutually_exclusive(self):
         from maven_queue import _try_lock, _unlock, _acquire
         with (self.root / '.git/maven-queue.lock').open('a+b') as legacy:

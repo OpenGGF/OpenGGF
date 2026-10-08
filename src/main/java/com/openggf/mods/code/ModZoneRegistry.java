@@ -18,6 +18,7 @@ public final class ModZoneRegistry implements ZoneRegistry {
     private final ZoneRegistry stock;
     private final List<PreparedModZone> contributions;
     private final List<List<LevelDescriptor>> zones;
+    private final List<List<PreparedModZone>> modZones;
     private final Map<ZoneKey.Mod, Integer> indices;
     private final Map<Integer, PreparedModZone> byLevelIndex;
     private final ZoneProgressionPlan.ZoneTopology topology;
@@ -25,37 +26,52 @@ public final class ModZoneRegistry implements ZoneRegistry {
 
     private ModZoneRegistry(ZoneRegistry stock, List<PreparedModZone> contributions) {
         this.stock = stock;
-        this.contributions = List.copyOf(contributions);
         ArrayList<List<LevelDescriptor>> assembled = new ArrayList<>(stock.getAllZones());
         LinkedHashMap<ZoneKey.Mod, Integer> keys = new LinkedHashMap<>();
         LinkedHashMap<Integer, PreparedModZone> levels = new LinkedHashMap<>();
-        java.util.HashSet<Integer> authoredZones = new java.util.HashSet<>();
-        for (PreparedModZone contribution : contributions) {
-            ZoneKey.Mod key = new ZoneKey.Mod(contribution.ownerModId(), contribution.localKey());
-            int syntheticIndex = assembled.size();
-            if (keys.putIfAbsent(key, syntheticIndex) != null) {
-                throw new IllegalArgumentException("Duplicate mod zone identity: " + key);
-            }
-            if (levels.putIfAbsent(contribution.levelIndex(), contribution) != null) {
-                throw new IllegalArgumentException("Duplicate mod level index: " + contribution.levelIndex());
-            }
-            if (!authoredZones.add(contribution.authoredZoneIndex())) {
-                throw new IllegalArgumentException("Duplicate authored mod zone index: " + contribution.authoredZoneIndex());
-            }
-            assembled.add(List.of(contribution.descriptor()));
+        java.util.HashSet<Integer> usedLevels = new java.util.HashSet<>();
+        assembled.forEach(zone -> zone.forEach(level -> usedLevels.add(level.levelIndex())));
+        LinkedHashMap<ZoneKey.Mod, List<PreparedModZone>> grouped = new LinkedHashMap<>();
+        for (PreparedModZone authored : contributions) {
+            ZoneKey.Mod key = new ZoneKey.Mod(authored.ownerModId(), authored.localKey());
+            List<PreparedModZone> acts = grouped.computeIfAbsent(key, ignored -> new ArrayList<>());
+            if (authored.actIndex() != acts.size())
+                throw new IllegalArgumentException("Duplicate or unordered mod act identity: " + key + "/" + authored.actIndex());
+            acts.add(authored);
         }
+        ArrayList<PreparedModZone> remapped = new ArrayList<>();
+        ArrayList<List<PreparedModZone>> effectiveZones = new ArrayList<>();
+        int nextLevel = 0x400;
+        int nextRomZone = 0x40;
+        for (var entry : grouped.entrySet()) {
+            ArrayList<PreparedModZone> acts = new ArrayList<>();
+            int runtimeRomZone = nextRomZone++;
+            for (PreparedModZone authored : entry.getValue()) {
+                while (usedLevels.contains(nextLevel)) nextLevel++;
+                PreparedModZone contribution = authored.withRuntimeIndices(nextLevel++, runtimeRomZone);
+                usedLevels.add(contribution.levelIndex());
+                acts.add(contribution);
+                remapped.add(contribution);
+                levels.put(contribution.levelIndex(), contribution);
+            }
+            keys.put(entry.getKey(), assembled.size());
+            assembled.add(acts.stream().map(PreparedModZone::descriptor).toList());
+            effectiveZones.add(List.copyOf(acts));
+        }
+        this.contributions = List.copyOf(remapped);
+        this.modZones = List.copyOf(effectiveZones);
         this.zones = List.copyOf(assembled);
         this.indices = Map.copyOf(keys);
         this.byLevelIndex = Map.copyOf(levels);
 
         ArrayList<ZoneProgressionPlan.ZoneMetadata> metadata =
                 new ArrayList<>(stock.progressionTopology().zones());
-        contributions.forEach(ignored -> metadata.add(new ZoneProgressionPlan.ZoneMetadata(
-                1, ZoneProgressionPlan.Completion.RESULTS_DRIVEN)));
+        modZones.forEach(acts -> metadata.add(new ZoneProgressionPlan.ZoneMetadata(
+                acts.size(), ZoneProgressionPlan.Completion.RESULTS_DRIVEN)));
         this.topology = ZoneProgressionPlan.ZoneTopology.of(metadata);
         ZoneProgressionPlan.Builder builder = ZoneProgressionPlan.builder(topology);
-        for (int i = 0; i < contributions.size(); i++) {
-            PreparedModZone contribution = contributions.get(i);
+        for (int i = 0; i < modZones.size(); i++) {
+            PreparedModZone contribution = modZones.get(i).getFirst();
             if (contribution.insertAfter() == null) continue;
             int anchor = stock.resolveStockZoneAnchor(contribution.insertAfter());
             if (anchor < 0 || anchor >= stock.getZoneCount()) {
@@ -91,12 +107,11 @@ public final class ModZoneRegistry implements ZoneRegistry {
     public int getActCount(int zoneIndex) { return getLevelDataForZone(zoneIndex).size(); }
     public String getZoneName(int zoneIndex) {
         return zoneIndex < stock.getZoneCount() ? stock.getZoneName(zoneIndex)
-                : contributions.get(zoneIndex - stock.getZoneCount()).zoneName();
+                : modZones.get(zoneIndex - stock.getZoneCount()).getFirst().zoneName();
     }
     public int[] getStartPosition(int zoneIndex, int actIndex) {
         if (zoneIndex < stock.getZoneCount()) return stock.getStartPosition(zoneIndex, actIndex);
-        PreparedModZone zone = contributions.get(zoneIndex - stock.getZoneCount());
-        if (actIndex != 0) throw new IllegalArgumentException("Mod zones currently contain one act");
+        PreparedModZone zone = modZones.get(zoneIndex - stock.getZoneCount()).get(actIndex);
         return new int[]{zone.startX(), zone.startY()};
     }
     public List<LevelDescriptor> getLevelDataForZone(int zoneIndex) {
@@ -109,12 +124,11 @@ public final class ModZoneRegistry implements ZoneRegistry {
     }
     public MusicReference getMusicReference(int zoneIndex, int actIndex) {
         if (zoneIndex < stock.getZoneCount()) return stock.getMusicReference(zoneIndex, actIndex);
-        if (actIndex != 0) throw new IllegalArgumentException("Mod zones currently contain one act");
-        return contributions.get(zoneIndex - stock.getZoneCount()).musicReference();
+        return modZones.get(zoneIndex - stock.getZoneCount()).get(actIndex).musicReference();
     }
     public ZoneKey zoneKey(int zoneIndex) {
         if (zoneIndex < stock.getZoneCount()) return stock.zoneKey(zoneIndex);
-        PreparedModZone zone = contributions.get(zoneIndex - stock.getZoneCount());
+        PreparedModZone zone = modZones.get(zoneIndex - stock.getZoneCount()).getFirst();
         return ZoneKey.mod(zone.ownerModId(), zone.localKey());
     }
     public OptionalInt resolveZoneKey(ZoneKey key) {
