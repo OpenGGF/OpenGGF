@@ -135,7 +135,9 @@ final class Content {
     }
 
     private void food() {
-        item("chili_dog", "CHILI DOG", Kind.FOOD, 120, 60, "THE BEST MOMENTUM IN THE VALLEY.");
+        item("chili_dog", "CHILI DOG", Kind.FOOD, 60, 60, "THE BEST MOMENTUM IN THE VALLEY.");
+        item("radish_soup", "RING RADISH SOUP", Kind.FOOD, 25, 25, "CLEMENTINE'S. WARM AND GOLDEN.");
+        item("loop_pie", "LOOP BERRY PIE", Kind.FOOD, 45, 40, "A WHOLE PIE. NO SLICES.");
     }
 
     private void tool(String id, String name, String text) {

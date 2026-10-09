@@ -47,7 +47,7 @@ public final class PlayScreen implements Screen {
         farm.interact = () -> interact(shell, Actor.FARM, farm.runner.x, farm.feetY());
         valley.interact = () -> interact(shell, Actor.VALLEY, valley.runner.x, valley.runner.y);
         places.put("seed_stall", s -> s.push(new ShopMenu()));
-        places.put("inn", s -> s.toast("THE LAMPPOST INN OPENS SOON"));
+        places.put("inn", s -> s.push(new InnMenu(this)));
         places.put("workshop", s -> s.push(new WorkshopMenu()));
         places.put("egg", s -> {
             if (s.game.calendar.dayNumber() < 4) {
