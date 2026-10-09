@@ -117,8 +117,9 @@ public class PlayerSpriteRenderer {
             };
             if (head) {
                 com.openggf.graphics.SpritePresentation.withHead(graphicsManager,
-                        new com.openggf.graphics.SpritePresentation.HeadTransform(mask, i, originX, originY,
-                                hFlip, vFlip, subject.headScalePercent(), headFragmentBase, versions), nativeDraw);
+                        new com.openggf.graphics.SpritePresentation.HeadTransform(mask.mask(), i, originX, originY,
+                                hFlip, vFlip, subject.headScalePercent(), headFragmentBase, versions,
+                                com.openggf.level.render.SpritePresentationRenderer.headSatReplay()), nativeDraw);
             } else nativeDraw.run();
         }
     }

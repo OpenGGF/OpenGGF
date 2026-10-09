@@ -16,21 +16,16 @@ import java.util.Set;
 public final class PlayerHeadProfile {
     public enum Kind { MASKED, BALL_STOCK, UNSUPPORTED, EMPTY }
     public record Point(int x, int y) { }
-    public record FrameHead(Kind kind, int anchorX, int anchorY, Set<Integer> pieces,
-                            List<Point> polygon, String reason) {
-        public FrameHead { pieces = Set.copyOf(pieces); polygon = List.copyOf(polygon); }
-        /** Source pixel centres, in unflipped mapping coordinates. */
-        public boolean contains(int piece, int x, int y) {
-            if (kind != Kind.MASKED || !pieces.contains(piece)) return false;
-            double px = x + .5, py = y + .5;
-            boolean inside = false;
-            for (int i = 0, j = polygon.size() - 1; i < polygon.size(); j = i++) {
-                Point a = polygon.get(i), b = polygon.get(j);
-                if ((a.y() > py) != (b.y() > py)
-                        && px < (b.x() - a.x()) * (py - a.y()) / (b.y() - a.y()) + a.x()) inside = !inside;
-            }
-            return inside;
+    public record FrameHead(Kind kind, com.openggf.graphics.SpritePresentation.HeadMask mask, String reason) {
+        public FrameHead(Kind kind, int anchorX, int anchorY, Set<Integer> pieces, List<Point> polygon, String reason) {
+            this(kind, new com.openggf.graphics.SpritePresentation.HeadMask(anchorX, anchorY, pieces,
+                    polygon.stream().map(p -> new com.openggf.graphics.SpritePresentation.MaskPoint(p.x(), p.y())).toList()), reason);
         }
+        public int anchorX() { return mask.anchorX(); }
+        public int anchorY() { return mask.anchorY(); }
+        public Set<Integer> pieces() { return mask.pieces(); }
+        /** Source pixel centres, in unflipped mapping coordinates. */
+        public boolean contains(int piece, int x, int y) { return kind == Kind.MASKED && mask.contains(piece, x, y); }
     }
     private static final FrameHead UNKNOWN = new FrameHead(Kind.UNSUPPORTED, 0, 0, Set.of(), List.of(),
             "This art/pose has no reviewed head mask; stock pixels retained");

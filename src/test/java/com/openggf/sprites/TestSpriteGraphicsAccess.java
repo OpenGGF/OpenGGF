@@ -45,9 +45,16 @@ class TestSpriteGraphicsAccess {
             assertSame(alternate, SpriteGraphicsAccess.graphics(second));
             Function<AbstractSprite, GraphicsManager> hostReference = SpriteGraphicsAccess::graphics;
             assertSame(original.graphics(), hostReference.apply(first));
+            Function<AbstractSprite, GraphicsManager> hostLambda = sprite -> SpriteGraphicsAccess.graphics(sprite);
+            assertSame(original.graphics(), hostLambda.apply(first));
+            assertSame(original.graphics(), HostNested.graphics(first));
         } finally {
             EngineServices.configure(original);
         }
+    }
+
+    private static final class HostNested {
+        static GraphicsManager graphics(AbstractSprite sprite) { return SpriteGraphicsAccess.graphics(sprite); }
     }
 
     @Test void directAndHiddenCreatorCallsCannotAcquireNativeGraphics() throws Exception {
@@ -61,6 +68,13 @@ class TestSpriteGraphicsAccess {
                 public final class SpriteGraphicsProbe {
                     public static GraphicsManager direct(AbstractSprite sprite) {
                         return SpriteGraphicsAccess.graphics(sprite);
+                    }
+                    public static GraphicsManager nested(AbstractSprite sprite) { return Nested.graphics(sprite); }
+                    private static final class Nested {
+                        static GraphicsManager graphics(AbstractSprite sprite) { return SpriteGraphicsAccess.graphics(sprite); }
+                    }
+                    public static Function<AbstractSprite, GraphicsManager> lambda() {
+                        return sprite -> SpriteGraphicsAccess.graphics(sprite);
                     }
                     public static Function<AbstractSprite, GraphicsManager> hidden() {
                         return SpriteGraphicsAccess::graphics;
@@ -77,6 +91,12 @@ class TestSpriteGraphicsAccess {
             var denied = assertThrows(InvocationTargetException.class,
                     () -> probe.getMethod("direct", AbstractSprite.class).invoke(null, sprite));
             assertInstanceOf(SecurityException.class, denied.getCause());
+            var nested = assertThrows(InvocationTargetException.class,
+                    () -> probe.getMethod("nested", AbstractSprite.class).invoke(null, sprite));
+            assertInstanceOf(SecurityException.class, nested.getCause());
+            @SuppressWarnings("unchecked")
+            var lambda = (Function<AbstractSprite, GraphicsManager>) probe.getMethod("lambda").invoke(null);
+            assertThrows(SecurityException.class, () -> lambda.apply(sprite));
             @SuppressWarnings("unchecked")
             var hidden = (Function<AbstractSprite, GraphicsManager>) probe.getMethod("hidden").invoke(null);
             assertThrows(SecurityException.class, () -> hidden.apply(sprite));

@@ -32,7 +32,7 @@ class TestPlayerHeadPresentation {
         var version = SpritePresentationRenderer.version(pixels);
         for (boolean flip : new boolean[]{false,true}) for (boolean vertical : new boolean[]{false,true}) {
             int x = flip?92:100;
-            var head = new SpritePresentation.HeadTransform(mask,0,100,100,flip,vertical,150,PatternAtlasRange.PLAYER_PRESENTATION.base(),Map.of(id,version));
+            var head = new SpritePresentation.HeadTransform(mask.mask(),0,100,100,flip,vertical,150,PatternAtlasRange.PLAYER_PRESENTATION.base(),Map.of(id,version),SpritePresentationRenderer.headSatReplay());
             var subject = new SpritePresentation.Subject("sonic_p2",SpritePresentation.Part.BODY,false,150,head);
             var tile = new SpritePresentation.Tile(SpritePresentation.Layer.PLAYER,id,2,flip,vertical,true,
                     x-10,vertical?72:80,8,8,true,4,true,.5f,2,7,subject);

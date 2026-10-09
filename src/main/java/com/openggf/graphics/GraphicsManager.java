@@ -2187,8 +2187,10 @@ public class GraphicsManager {
 				return;
 			}
 
-            if (processedEntries.stream().anyMatch(entry -> entry.presentationSubject().head() != null)) {
-                com.openggf.level.render.SpritePresentationRenderer.replayHeadSat(this, processedEntries,
+            var headReplay = processedEntries.stream().map(entry -> entry.presentationSubject().head())
+                    .filter(java.util.Objects::nonNull).findFirst();
+            if (headReplay.isPresent()) {
+                headReplay.get().replay().replay(this, processedEntries,
                         entry -> appendBatchedReplayCommands(entry, -1));
                 return;
             }

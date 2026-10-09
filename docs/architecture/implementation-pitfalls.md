@@ -1487,6 +1487,16 @@ explicitly includes the text metadata. Review panels use 112px cells and reject 
 cropping through the maximum 200% scale; a smaller plausible-looking sheet clipped pushing
 Sonic at the edge (Mutator Lab, 2026-10-08).
 
+The graphics boundary owns immutable mask geometry and a producer-supplied replay
+interface. Pose classification and the native head renderer stay above that boundary;
+graphics must not name a player profile or call a level renderer directly. Carry the
+shared replay adapter with the draw metadata so native SAT admission and ordering run
+before the same head composition, without a global runtime-renderer registration.
+Engine-only sprite graphics access uses the session bootstrap's immutable caller walker,
+including hidden frames, and checks the actual caller's class loader. A lambda or nested
+creator class must not inherit engine access from its host invocation (Mutator Lab guard
+repair, 2026-10-09).
+
 **ROM palette constants can describe another revision.** Sonic 1 REV01 moves the Sonic
 palette relative to REV00. A raw sheet read through the old absolute palette constant
 can still look plausible while turning Sonic green/yellow. Character contact sheets use
