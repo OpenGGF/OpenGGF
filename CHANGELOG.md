@@ -5,6 +5,22 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`next` / 0.8)
 
+- **Time Attack is a bundled mod:** Time Attack now ships as the first-party **Time Attack**
+  mod, bundled with JVM builds and enabled by default (disable it in **Mods**). It adds a
+  Time Attack entry to the master title and plays every run as a stock, non-saving session,
+  so ghost times stay comparable. Ghosts and the player identity stay in `ghosts/` and
+  `identity/`. The engine no longer carries racing code, its `timeAttack.*` settings or the
+  Netty, Bouncy Castle and SQLite libraries; the master server, dedicated host and verifier
+  build separately from `racing/server`. Native builds do not load code mods, so Time Attack
+  is JVM-only.
+
+- **Mod API candidate: title entries and gameplay runs:** a mod may add one master-title entry
+  whose scene launches stock gameplay runs through `SceneContext.gameplay()` and is resumed when
+  each ends. A run host observes level starts and executed steps, may hold steps, draws ghosts
+  and an overlay, and issues retry, leave and post-completion spectator commands; a session run
+  policy controls special/bonus stage entry, act-completion handoff, rewind and the editor. See
+  [Title entries and gameplay runs](docs/modding/guides/gameplay-runs.md).
+
 - **Configurable widescreen HUD anchor:** the score, time, rings, and lives HUD can
   keep its centered native-frame position or align to the left edge of the screen.
   Native 4:3 positioning is unchanged.

@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 
 /** Asynchronous out-of-band uploader for input-only attempt recordings. */
 public final class RecordingUploader implements AutoCloseable {
-    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
+    private final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     private static final long RETRY_DELAY_MILLIS = 2_000;
 
     private final String sessionToken;

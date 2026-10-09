@@ -27,7 +27,7 @@ import java.util.logging.Logger;
 /** Bridges a room connection to one attached time-attack runtime per round. */
 public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.AttemptListener,
         TimeAttackRuntime.FrameCompanion {
-    private static final Logger LOGGER = Logger.getLogger(
+    private final Logger LOGGER = Logger.getLogger(
             MultiplayerRaceCoordinator.class.getName());
     private static final long PING_INTERVAL_MILLIS = 500;
     private static final long STANDINGS_PAGE_INTERVAL_MILLIS = 2000;

@@ -49,7 +49,7 @@
              classes (META-INF/openggf/bundled-mods.json); an empty list writes an empty
              manifest. Only the universal-jar profile embeds the jars; native builds skip
              the step and carry no bundled mods. -->
-        <openggf.bundled.mods></openggf.bundled.mods>
+        <openggf.bundled.mods>racing/time-attack</openggf.bundled.mods>
         <openggf.bundled.skip>false</openggf.bundled.skip>
         <openggf.bundled.embed.directory>${project.build.directory}/bundled-embed-disabled</openggf.bundled.embed.directory>
     </properties>
