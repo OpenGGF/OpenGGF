@@ -573,3 +573,8 @@ ROM library, parks audio playback/borrowed routes and releases GPU textures.
 Pending level exits are rewindable until consumed; entry uses the normal level-load
 boundary and exit reports the non-rewindable mode boundary. The candidate pin is
 regenerated in place; no new published baseline or version promise is introduced.
+
+Compact record constructor validation is implementation, already represented by
+the canonical component signature. The Bash and PowerShell coupling checks
+exclude its body; component and member declaration changes still require the
+candidate pin. The exact compiled signature inventory remains the final check.

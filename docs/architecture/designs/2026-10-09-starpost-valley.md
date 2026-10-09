@@ -1691,7 +1691,7 @@ The public records and methods above are the implemented contract. Destination
 ownership and registration are validated synchronously inside the scene callback.
 Spawn overrides are one-shot centre writes after **all** native start selection and
 before reset, team placement and camera/object initialization. `ActLaunch` copies
-its team/state, uses zero-based acts, native positive centre words and health rings
+its team/state, uses zero-based acts, signed or unsigned native centre words and health rings
 0–999. Scene entry is a normal load boundary. Pending exit payloads participate in
 the existing level transition rewind adapter; the first request wins. Consumption
 occurs before the next LEVEL body, both handoff fades freeze world/scene updates,
@@ -1768,3 +1768,21 @@ trusted project resource generation after copying source resources, and the test
 harness follows the same convention. The generator reproduces all nine original
 typed assets exactly; no ROM input is read. A launcher regression checks ordering
 and generator failure propagation. Generated blobs remain disposable output.
+
+Final review rejected a signed-positive-only spawn check. Baked levels accept
+X through 0xFFFF (`ModLevelDefinitionParser`), while `AbstractSprite.getCentreX/Y`
+return signed shorts. `ActLaunch` accepts either signed or unsigned 16-bit word
+representations, and a production bootstrap regression writes upper-half X and
+signed Y without losing their bits. Values outside a native word remain invalid.
+The first broad invocation was deliberately interrupted before completion for
+this correction; it is not a suite pass, and its diagnostics were acknowledged.
+
+The hook initially rejected that validation-only record edit even though the
+normalized signature snapshot remained identical. Its non-class heuristic kept
+compact-constructor bodies as if they were public declarations. Bash and
+PowerShell now exclude those bodies while retaining the canonical declaration,
+record components and other members. `TestModApiHookPolicy` verifies body edits
+pass without fake pin churn, component edits fail without the pin and pass with
+it; all 21 policy cases pass on both hosts. This fixes the actual coupling check
+rather than bypassing hooks, changing descriptor authority or inventing API.
+The corrected bridge/host/signature focused run reports 36/36, zero skips.

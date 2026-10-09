@@ -21,8 +21,8 @@ public record ActLaunch(ZoneKey.Mod destination, int act, CharacterKey main,
         if (act < 0 || rings < 0 || rings > 999)
             throw new IllegalArgumentException("Invalid act or ring count");
         for (OptionalInt position : List.of(spawnX, spawnY)) {
-            if (position.isPresent() && (position.getAsInt() < 0 || position.getAsInt() > 0x7fff))
-                throw new IllegalArgumentException("Spawn must fit positive native centre coordinates");
+            if (position.isPresent() && (position.getAsInt() < Short.MIN_VALUE || position.getAsInt() > 0xffff))
+                throw new IllegalArgumentException("Spawn must fit signed or unsigned native centre words");
         }
         state = Map.copyOf(state);
     }

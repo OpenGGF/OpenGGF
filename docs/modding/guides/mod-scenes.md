@@ -608,6 +608,9 @@ calls `resume` once on the same suspended scene/context, inside its fault bounda
 }
 ```
 
+Spawn values accept signed or unsigned 16-bit centre words, including values
+returned by native sprite getters.
+
 `ActResult` carries destination, reason, remaining health rings, executed level
 frames and the exit state map. `ActExit` values are `COMPLETED`, `LEFT`, `FAINTED`,
 `TIME_UP`, `ABORTED`. Objects/controllers decide when these semantic exits apply;

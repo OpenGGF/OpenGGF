@@ -118,6 +118,18 @@ class TestModSceneActBridge {
         assertTrue(loop.modSceneHost.isOpen()); assertFalse(loop.modSceneHost.isSuspended());
         bridge.reset();
     }
+    @Test void signedAndUnsignedNativeCentreWordsSurviveLaunch() {
+        Probe probe = new Probe(); var bridge = openProbe(probe);
+        var launch = new ActLaunch(launch().destination(),0,CharacterKey.KNUCKLES,List.of(),
+                OptionalInt.of(0x8010),OptionalInt.of((short)0xff02),7,Map.of());
+        probe.context.startAct(launch); bridge.admitLaunch(); drainFade();
+        assertEquals(GameMode.LEVEL,loop.getCurrentGameMode());
+        assertEquals(0x8010,Short.toUnsignedInt(player().getCentreX()));
+        assertEquals(0xff02,Short.toUnsignedInt(player().getCentreY()));
+        assertThrows(IllegalArgumentException.class, () -> new ActLaunch(launch.destination(),0,
+                launch.main(),List.of(),OptionalInt.of(0x10000),OptionalInt.empty(),0,Map.of()));
+        bridge.reset();
+    }
     @Test void pendingExitRestoresWithRewindBeforeConsumption() {
         Probe probe = new Probe(); var bridge = openProbe(probe);
         probe.context.startAct(launch()); bridge.admitLaunch(); drainFade();

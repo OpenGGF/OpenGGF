@@ -160,14 +160,16 @@ contains_mod_api_annotation() {
 # Declaration text of a Java source that can change the normalized signature pin.
 # Comments are removed. A file whose first type declaration is not a class
 # (interface, record, enum, annotation) keeps all remaining text, because its
-# members are implicitly public. A class keeps annotations, type declaration
+# members are implicitly public. Record compact-constructor bodies are excluded:
+# their canonical signature already comes from the component declaration. A class
+# keeps annotations, type declaration
 # lines and public/protected declarations, including their parenthesised
 # continuation lines, so method bodies, private members and comments never
 # demand a pin change the snapshot cannot express. TestModApiSignatureSurface
 # remains the exact check; this only decides when the pin must be staged.
 mod_api_surface_text() {
     printf '%s\n' "$1" | awk '
-    BEGIN { inblock = 0; kind = ""; n = 0 }
+    BEGIN { inblock = 0; kind = ""; typeName = ""; n = 0 }
     {
         line = $0; out = ""
         while (1) {
@@ -182,14 +184,34 @@ mod_api_surface_text() {
             out = out substr(line, 1, s - 1); line = substr(line, s + 2); inblock = 1
         }
         lines[++n] = out
-        if (kind == "" && match(out, /(^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_]/)) {
-            t = substr(out, RSTART, RLENGTH); sub(/^[ \t]+/, "", t); split(t, parts, /[ \t]+/); kind = parts[1]
+        if (kind == "" && match(out, /(^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_][A-Za-z0-9_]*/)) {
+            t = substr(out, RSTART, RLENGTH); sub(/^[ \t]+/, "", t); split(t, parts, /[ \t]+/); kind = parts[1]; typeName = parts[2]
         }
     }
     END {
-        whole = (kind != "class"); depth = 0
+        whole = (kind != "class"); depth = 0; compactDepth = 0; quote = ""; escaped = 0
         for (i = 1; i <= n; i++) {
             l = lines[i]
+            start = 1
+            if (compactDepth == 0 && kind == "record" &&
+                    l ~ ("^[ \t]*(public[ \t]+|protected[ \t]+|private[ \t]+)?" typeName "[ \t]*\{")) {
+                start = index(l, "{") + 1; compactDepth = 1
+                print substr(l, 1, start - 1)
+            }
+            if (compactDepth > 0) {
+                for (j = start; j <= length(l); j++) {
+                    c = substr(l, j, 1)
+                    if (quote != "") {
+                        if (escaped) escaped = 0
+                        else if (c == "\\") escaped = 1
+                        else if (c == quote) quote = ""
+                    } else if (c == "\"" || c == sprintf("%c", 39)) quote = c
+                    else if (c == "{") compactDepth++
+                    else if (c == "}" && --compactDepth == 0) { print "}"; break }
+                }
+                if (compactDepth > 0) continue
+                l = substr(l, j + 1)
+            }
             if (l !~ /[^ \t]/) continue
             if (whole) { print l; continue }
             if (depth > 0 || l ~ /(^|[^A-Za-z0-9_])(public|protected)[ \t]/ || l ~ /^[ \t]*@/ \
