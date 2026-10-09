@@ -51,6 +51,13 @@ final class WorkshopMenu implements Screen {
             out.add(new Offer("MONITOR SLOTS " + slots, "item_monitor", slots == 24 ? 2000 : 10000, Map.of(),
                     () -> game.inventory.resize(slots), "CARRY " + slots + " STACKS."));
         }
+        int open = game.farm.open();
+        if (open < starpost.core.Farm.COLUMNS) {
+            int next = Math.min(starpost.core.Farm.COLUMNS, open + 12);
+            int price = open < 36 ? 1500 : open < 48 ? 4000 : 9000;
+            out.add(new Offer("CLEAR MORE LAND", "palm_wood", price, inputs("palm_wood", open < 36 ? 20 : 50, "scrap", 0),
+                    () -> game.farm.open(next), "TAILS CLEARS 12 MORE COLUMNS OF FIELD (" + open + " TO " + next + ")."));
+        }
         tool(out, game, "fire_shield", 300, inputs("scrap", 5, "marble_chip", 0));
         tool(out, game, "lightning_shield", 2500, inputs("scrap", 20, "marble_chip", 20));
         tool(out, game, "fishing_rod", 400, inputs("scrap", 3, "palm_wood", 10));
