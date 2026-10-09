@@ -361,3 +361,215 @@ branch: no shared renderer, physics, timing, public API or save format changed.
 - `python3 examples/build_example.py eggmans-sky --skip-engine`: compilation,
   mod validation and packaging passed. Installed the rebuilt jar into `mods/`
   and refreshed its existing trusted SHA-256 in `mods/modstate.json`.
+
+## Original system voice (2026-10-08)
+
+The voice task started from `c4124257094e` in the existing isolated Eggman's Sky
+checkout, on local `feature/ai-eggmans-sky-voice`. The user approved Alice's
+matter-of-fact performance and the metallic/DAC audition, then requested the
+complete bank in the mod. `4229554eafcf` brings published develop `913c5a3516b1`
+into the private branch: signature conflicts retain both level-kit and current
+scene-music additions, and both measurement notes are preserved. Main integration
+is held for the separately coordinated parity qualification; this section does
+not claim publication.
+
+`c83f87386403` privately imports the frozen parity main source at
+`863683b092f7`. The only merge conflict was the measurement-hazard catalogue:
+both the Eggman's Sky draw-cost note and all upstream parity/environment/input
+hazards are retained. A worktree metadata lease prevented queued compilation
+from observing the temporary merge/stash state. No main inputs or publication
+were changed.
+
+The bank contains 122 literal announcements (274 seconds), covering vitals,
+climates/weather, travel, heroes/security, discoveries, inventory/production,
+station services/missions, saves/recovery and the core/new-galaxy progression.
+Procedural names and quantities remain visual. Capsule salvage and wreck salvage,
+destruction and rebuild, and partial recharge and complete restoration have
+separate lines so speech describes the actual state. Save success is announced
+only after storage succeeds. The shipped WAVs are original ElevenLabs Alice
+performances directed through OpenRouter, not samples/clones of No Man's Sky.
+ROM music, effects and visual assets continue through their existing pipelines.
+No player credential or network is used at runtime.
+
+`voice-bank.json` records the text and performance direction. The promoted
+`tools/audio/eggmans_sky_voice.py` preserves paid-request state, raw MP3 sources,
+clean masters, edits and blind transcription checks in an external task cache.
+The catalogue's synthesis estimate is about $0.77 before transcription and the
+one regenerated stuttering take; provider usage reporting lagged, so this is not
+an exact billed total. At 21:25:26Z the key reports $0.921038196 total usage,
+including the earlier auditions; provider billing can still lag. The generator
+checks a $5 reported-key-usage safety ceiling
+and refuses automatic retries of uncertain requests. Source and output hashes,
+whole-utterance edits, final word checks and the recipe are in the shipped
+`audio/voice/provenance.json`. Publishing derives manifest ids and speech queue
+leases from actual 48 kHz mono 16-bit PCM frames.
+
+The accepted processing has 73 Hz metallic modulation and short 7.6/11.3/17.9 ms
+reflections, a 6% 24-band vocoder blend with a 185 Hz harmonic carrier, loudness
+normalization, a strong 7-bit/8 kHz zero-order-hold DAC approximation, and 10%
+upper-band consonant recovery. There is no room reverb. The earlier irritated
+performance was rejected despite accepted effects; six-bit DAC processing lost
+consonants. The final performance is neutral, evenly paced and literal. Eleven v4
+sometimes rehearsed/repeated words, even in one-line requests: whole utterances
+were retained at quiet gaps and rechecked after processing. Direct cuts at ASR word
+timestamps proved unreliable (loose/overlapping times cut consonants or retained
+a previous ending); the final bank passes all 122 literal word checks. This is
+an artistic retro effect, not YM2612 hardware emulation or an official account
+of No Man's Sky's production method.
+
+`SceneAudio.playSfx(String)` provides the missing narrow bridge to existing
+namespaced audio. The host validates the local name and supplies the trusted
+scene owner, then records the existing `PlayNamespacedSfx` command. Unknown clips,
+suppressed playback, closed contexts and absent headless audio return false.
+Patch SFX declarations now use the same bounded owner-atomic validation/decode
+pipeline as standalone SFX. The first focused run exposed remaining
+standalone-only filters in both scanned and packed validation: accepted patch
+manifests still yielded an empty registry. Both registry paths now retain valid
+patch SFX; the eligibility check exercises both paths. The launch factory also
+admits SFX-only stock-game patches: its previous no-track early return would
+silently omit the entire bank. The packaged-bank test traverses this production
+factory to reproduce that failure; no numeric mod IDs, cross-owner requests or
+base-game SFX override map are introduced. The unpublished 0.7 version prose
+and mutable candidate signature pin are updated together; the release descriptor
+retains candidate 0.7.0. The commit hook rejected an unnecessary descriptor
+comment during ordinary pin regeneration, so that comment was removed to retain
+the existing publication/version contract.
+
+The mod's eight-entry queue uses priorities, per-line cooldowns, severity
+replacement, resolved-vital cancellation, 15-second pending expiry and measured
+PCM-duration reservations at the scene's 60 Hz clock. Pulse/hull/shield threshold
+warnings have hysteresis. A separate SYSTEM voice toggle preserves other settings
+and persists in `settings.txt`; an active one-shot finishes when muted. Tests
+exercise the real packaged mod's queue and settings, host ownership/lifetime, and
+all assets through production validation, preparation and stereo PCM cursors.
+This proves content and nominal queue timing, not physical speaker latency.
+
+Validation and qualification:
+
+- Final offline publication: all 122 current hashes and blind word checks pass;
+  finite non-silent mono WAVs have no clipped samples. Every catalogue line has
+  an owning runtime hook. Python syntax and `git diff --check` pass.
+- Direct Java 21 example compilation against the current private engine classes
+  passes. The first queued focused Maven attempt reached test compilation and
+  failed on two new scene-test helper calls; those factory lambdas are corrected.
+- Focused request: `python3 tools/testing/maven_queue.py --lean -Dmse=off
+  -Dtest=TestModSceneHost,TestModCatalogValidator,TestEggmansSkyVoice,TestEggmansSkyVoiceAssets,TestModApiSignatureSurface test`.
+  The first completed run had 46 cases: 44 passed, two failed, zero errors/skips.
+  Both failures identify the accepted-but-empty patch SFX registry described
+  above; the eight queue/settings tests, 18 scene-host tests and nine API surface
+  tests passed. After fixing both registry paths, the narrow rerun is
+  `maven_queue.py --lean -Dmse=off
+  -Dtest=TestModCatalogValidator,TestEggmansSkyVoiceAssets test` on the updated
+  private base `c83f87386403`. It completed at 21:15:28Z, exit 0: all 11 cases
+  passed with zero failures/errors/skips, including validation and production
+  PCM playback of all 122 packaged clips.
+- The pre-existing base request selected 3058 ordinary classes at
+  `913c5a3516b1`, with a 40-minute execution cap. Run
+  `20261008T185944Z-d6436e78` terminated at that cap, outer exit 2: 2690 ordinary
+  reports, 23434 cases, two failures, zero errors and 56 skips; no guard lane ran.
+  Its two failures were `TestS3kMhzAct2AuthoredRoute` incoming-route cases [2]/[3],
+  asserting late pulley ownership of Tails/Sonic. Main also changed during this
+  incomplete run for the separately coordinated parity integration. It is not
+  qualifying baseline evidence. All reported skips were inspected (no missing-ROM
+  skip); consumed diagnostics were acknowledged and removed. Existing parity and
+  Windows requests remain untouched. The owning actual-main qualification
+  subsequently completed at `863683b092f7` as run
+  `20261008T194559Z-9deb33e8`: 3058 ordinary reports/26570 cases, 26 inherited
+  failures, zero errors and 62 inherited skips; separate fresh guards have
+  87 reports/674 passing cases with zero skips. Its complete assertion and skip
+  table is in the [owning parity audit](../audits/2026-10-07-stock-parity-gap-verification.md#actual-main-full-assertion-and-skip-summary).
+  Evidence-only successor `5662ad2c2291` changes that audit alone, retaining
+  every executable/test/build input of tested863.
+
+Voice commit `d5f4a36ccd40` passed the required hooks after removing the
+unnecessary descriptor comment. Private merge `46cfd4208` imports the completed
+main evidence; `a5ac85a1b2dc` imports independently published develop `d4993a730`,
+including Starfall and the original Eggman's Sky feature. The latter merge only
+conflicts in the hazard catalogue: retain all parity hazards and one copy of the
+identical Eggman's Sky draw-cost note. Voice source/assets and scene SFX routing,
+registry and launch-factory code are unchanged by these imports. Main local and
+remote publication holds remain in effect pending the coordinated successor.
+
+The combined plan against actual held main `5662ad2c2291` selects all 3070 ordinary
+classes plus separate fresh guards. Qualification used the normal runner with
+`--max-minutes 150`, excluding queue wait, and the unchanged ten-minute no-output
+rule. The announced estimate was 80–110 minutes ordinary plus about four minutes guards.
+Timeout, omitted required reports, missing-ROM skips or new/worsened/unattributed
+assertions block integration. The entire candidate input tree remained frozen
+through both lanes; source/publication in main remains under the parity hold.
+
+Private qualification of `d2899a86d75f` completed at 2026-10-08T23:20:45Z,
+after admission at 21:49:35Z, as `20261008T214935Z-95b99174`. Both
+`python3 tools/testing/run_categories.py --base 5662ad2c2291 --max-minutes 150 --preflight`
+and the same command with `--run` used Java 21 and the normal launch environment
+without inherited `LD_LIBRARY_PATH`, with all three verified original ROM paths.
+The retained six-hour supervisor excluded queue wait from the runner's 150-minute
+execution cap. No timeout occurred, and the recorded input fingerprint remained
+`286a3184ee22a24b50fbef883158a2d3a400974d110f5c90c0dafa5e6bd54b55`
+through both lanes and the terminal inspection.
+
+- Ordinary: all 3070 selected classes, 3068 reports, 26609 cases, 26 failures,
+  zero errors and 63 skips, in 5224.24 seconds. Exit 1 is the inherited-failure
+  outcome, not a green full-suite result. No negative cases were omitted.
+- Fresh guards: 87 reports, 674 cases, all passing, zero skips,
+  in 245.57 seconds; exit 0.
+- Every failure identity, kind/type and complete first assertion matches
+  actual-main `863683b092f7` / run `20261008T194559Z-9deb33e8` in the
+  [owning parity table](../audits/2026-10-07-stock-parity-gap-verification.md#actual-main-full-assertion-and-skip-summary).
+  Twenty-five assertions match literally. The complete SSZ assertion matches
+  at 2907 characters after only that table's exception-prefix removal and
+  replacement of two verified `RewindObjectStateBlob@hex` values with `@HASH`.
+  There are no added, removed or worsened failure assertions.
+- All 62 inherited skip identities and literal first reasons match. The sole
+  addition is
+  `com.openggf.mods.scene.host.TestSceneRenderer#changingBatchSizesPreservesEveryPixelAndStreamingUpdates`:
+  `org.opentest4j.TestAbortedException: Assumption failed: OpenGL 4.1 unavailable`.
+  This test's source is byte-identical to incoming develop `d4993a730724`;
+  GPU rendering remains explicitly unverified by this run. There are no
+  missing-ROM skips. The absent CLI failure remains an inherited loader-environment
+  effect, not a source fix.
+
+`python3 examples/build_example.py eggmans-sky` also completed with zero
+validation findings. Its 17285297-byte JAR contains all 122 WAVs and provenance
+byte-identical to the committed resources, excludes private request/credential
+files, and has SHA-256
+`75d30e818a41eef5a942bf57028b586154aa4f013e1df9ed6e4e5a5b6600a8cb`.
+A copy is preserved in the external voice-bank task directory while temporary
+Maven output remains under this worktree's `target/`.
+
+Consumed qualification diagnostics are acknowledged and deleted. This completed
+private result does not release the main/publication hold: the parity owner is
+qualifying the updated remote baseline and combined successor. Reconcile that
+published successor before main integration, then complete destination validation,
+push and accounted-for cleanup. No main inputs, commits or publication changed.
+
+The parity hold was released with published develop
+`019dd454b0d63b10a1d0585450bb28f34e360c04`. Its actual-main qualification belongs
+to `b317e94ebdce60c6f81553113543295c75b1d826`, run
+`20261009T015657Z-e417e53f`, with a verified prose-only publication successor.
+The [updated complete baseline table](../audits/2026-10-07-stock-parity-gap-verification.md#updated-actual-main-full-assertion-and-skip-summary)
+matches all 26 private failure assertions and all 63 skip identities/reasons.
+Private merge `211b61de2999` retains the published hazard catalogue and audit;
+the only conflict was the catalogue's relocation of the Eggman draw-cost note.
+Compared with tested private `d2899a86d75f`, only three documentation paths
+change: that catalogue, the parity audit and this task record. Every executable,
+test, fixture, example asset, build and API input remains unchanged, so the
+completed private qualification is reused rather than repeated.
+
+Destination qualification will pin published `efedf9198eef`, select all 3070
+ordinary classes and separate fresh guards, and use the normal runner's
+150-minute execution cap excluding queue wait, unchanged ten-minute no-output
+rule and a retained six-hour outer supervisor. Expected cost is 80–110 minutes
+ordinary plus about four minutes guards. Freeze main tracked inputs and HEAD
+through both lanes, compare the complete negative cases against the updated
+source-attributed baseline, and block push on incomplete coverage, missing-ROM
+skips or new/worsened/unattributed failures. Preserve all seven unrelated main
+paths and the user's private `.env` during integration and cleanup.
+
+Before main integration, independently published Windows evidence advanced develop
+to `efedf9198eef5e717c8827f1aa34dc7728cb92fd`. The destination guard stopped
+before changing main. Its delta from `019dd454b0d6` is exactly one research
+Markdown path, with no executable/test/build/API change. Import that evidence
+and use the newer published SHA as the actual destination base; the tested
+`b317e94ebdce` negative-case table and completed private voice qualification
+remain applicable to their unchanged inputs.
