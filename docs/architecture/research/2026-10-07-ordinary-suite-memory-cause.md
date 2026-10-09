@@ -1255,3 +1255,81 @@ SSZ `RewindObjectStateBlob` hashes. The entire2,907-character normalized SSZ
 payload was compared, including all fields. No other assertion was normalized.
 These focused results preserve inherited negatives; they are not a whole-suite
 or parity pass.
+
+
+### Completed matched extension and updated destination
+
+Candidate `bf067973517e79e634a0c92046375a8e1a2bdabd` completed the normal
+ordinary request at2026-10-09T10:26:53Z:29 reports/189 cases/24 matching inherited
+failures/zero errors/skips,402.710s summed test time,7:06 Maven,exit1. Initial and
+terminal fingerprints were identical:
+`bd8b277fbc939bc26fc97f4e23e244c3d3c0309d59d40f742594f2fc70a649b7`.
+Its separate FBZ request completed at2026-10-09T10:11:57Z with2 reports/2 passing
+cases,zero failures/errors/skips,73.904s summed test time,exit0,at the same source
+and fingerprint. Both invocations use normal queue/JVM settings, matching the
+baseline; no profiling, parallel test forks or heap changes were introduced.
+
+All191 baseline case identities/outcomes match;23 failing primary messages match
+literally. The remaining SSZ-Tails assertion matches all2,907 normalized characters
+with only the two previously verified `RewindObjectStateBlob` hashes replaced.
+The baseline hashes were `3f35b2e1` and `262a384e`; candidate hashes were `526e3ae0`
+and `698d9127`, for the same JetFlame/GunArm missing entries. Blob `hashCode()`
+includes `Class<?>`, whose identity varies between JVMs; the owning audit already
+verifies this normalization. All reported spawn, scalar, extra, slot and object-ID
+fields match. This is complete assertion equality after that normalization, not
+equality of unreported blob payloads or world state beyond the failing assertion.
+All13 recorded SOZ/LRZ/SSZ witness lines and both FBZ replay-window lines match.
+
+The additional23 route classes/113 cases dropped from1,558.150s to425.207s:
+**72.7% less summed test time,3.66× faster,18m53s saved** in this one matched pair.
+The original SOZ nine-case class and69 unchanged controls are excluded from that
+extension gain; the original SOZ optimization was already active in both trees.
+These are single-pair class timings on a shared host, excluding queue/compile time;
+concurrent host load and JVM warmup remain sources of variation. Whole ordinary
+suite throughput and memory/OOM effects were not measured by this extension.
+
+| Route family | Additional classes/cases | Before (s) | After (s) | Speedup | Drawing policy |
+|---|---:|---:|---:|---:|---|
+| DEZ | 4/25 | 664.526 | 137.115 | 4.85× | Checkpoint and complete replay drawing |
+| LRZ | 9/32 | 556.457 | 127.597 | 4.36× | Checkpoint and complete replay drawing |
+| SSZ | 5/42 | 157.505 | 39.069 | 4.03× | Checkpoint and complete replay drawing |
+| FBZ | 2/2 | 112.559 | 73.904 | 1.52× | Checkpoint and complete replay drawing |
+| MHZ | 2/2 | 43.591 | 33.019 | 1.32× | Every tick drawn; discarded readback removed |
+| SOZ | 1/10 | 23.512 | 14.503 | 1.62× | Lower-rock class only; checkpoint/replay drawing |
+
+The existing assertions and counts of movie-input, snapshot capture/restore and
+input-history calls were compared statically in all24 route classes and are
+unchanged. No discarded `session.render()` call remains in these classes.
+Capture/pixel/native presentation checks keep their image readbacks. The package
+helper is used only by these24 consumers and the two bounded control classes.
+
+Exact ordinary selector used in both timed invocations (plus the three original
+absolute ROM properties):
+
+```text
+TestDezColdRouteCapture,TestDezIncomingFinalRouteCapture,TestDezSoloActTwoColdRouteCapture,TestDezSoloColdRouteCapture,TestLrzActTwoColdRouteCapture,TestLrzBossColdRouteCapture,TestLrzColdRouteCapture,TestLrzKnucklesColdRouteCapture,TestLrzPostBossPaletteRouteCapture,TestLrzTailsColdRouteCapture,TestLrzWideActTwoColdRouteCapture,TestLrzWideBossColdRouteCapture,TestLrzWideColdRouteCapture,TestMhzPairColdRouteCapture,TestMhzWideColdRouteCapture,TestSozColdRouteCapture,TestSozLowerRockPuzzleCapture,TestSszBridgeCheckpointCapture,TestSszColdRouteCapture,TestSszSoloColdRouteCapture,TestSszTailsColdRouteCapture,TestSszWidePairedColdRouteCapture,TestSozColdRouteFrameDrawing,TestGameplayCaptureFrameRendering,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+Command shape: `python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=<selector-above> <original-absolute-ROM-properties> test -B`.
+Separate tagged command: `python3 tools/testing/maven_queue.py -Dmse=off
+-Pfbz-routes -Dtest=TestFbzKnucklesColdRouteCapture,TestFbzTailsColdRouteCapture
+<original-absolute-ROM-properties> test -B`.
+
+The inspected change-based plan againstcf0ad selects3,072 ordinary classes plus
+fresh guards because `RouteFrameDrawing.java` is unclassified. Proportionate
+focused validation covers every helper consumer, all existing replay assertions,
+explicit new state/pixel gaps,5 rendering controls and60 required S3K
+loading/bootstrap/decoding/AIZ cases, plus the separate tagged FBZ lane. The change
+has no production, fixture, build, queue, public API or selection-policy delta.
+This bounded test-harness change does not warrant repeating unrelated ordinary
+categories; runner selection and CI/release gates are unchanged. This is focused
+qualification with inherited failures, not a whole-suite green claim.
+
+The destination subsequently published Flappy Tails at
+`8668a901216717d8f3696945a95bbfe8e628b652`. Private merge
+`bbc7952ed` is conflict-free and preserves all qualified consumer/helper hashes,
+production Java, POM, fixtures and queue inputs from bf067. The upstream delta
+adds examples/prose and three unrelated mod tests, plus a terminology-guard
+comment. Actual-main integration, normal focused verification and publication
+remain pending at this checkpoint.
