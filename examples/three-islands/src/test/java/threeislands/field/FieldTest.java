@@ -121,9 +121,39 @@ class FieldTest {
         assertFalse(enemy.done);
     }
     @Test
-    void optionalCluesDoNotGateAnOtherwiseReachableBoss() {
-        assertTrue(field().bossReady());
-        assertEquals(0, field().discoveries());
+    void everyAnchorNeedsItsDungeonAndRelayAndEveryTrailNeedsItsBoss() {
+        for (Zone zone : Zone.values()) {
+            Progress progress = new Progress(1);
+            Field field = new Field(zone, null);
+            assertFalse(field.relayReady());
+            assertFalse(field.anchorExposed());
+            assertFalse(field.bossReady());
+            progress.markSeen(zone.key + "-field-memory");
+            field.restore(progress);
+            assertTrue(field.relayReady());
+            assertFalse(field.anchorExposed());
+            progress.markSeen(zone.key + "-field-signal");
+            field.restore(SaveCodec.decode(SaveCodec.encode(progress)));
+            assertTrue(field.anchorExposed());
+            for (Field.Spot spot : field.spots) if (spot.kind == Field.Kind.MIDBOSS) field.complete(progress, spot);
+            assertTrue(field.bossReady());
+            if (zone != Zone.DEATH_EGG) {
+                for (int y = 88; y <= field.height() - 48; y++) {
+                    assertFalse(field.walkable(field.exitX(), y), "no edge bypass: " + zone);
+                }
+                field.setPosition(field.exitX() - 20, 336);
+                for (int i = 0; i < 50; i++) field.step(1, 0, true, i);
+                assertTrue(field.x() < field.exitX() - 8, "running cannot cross a seal");
+            }
+            progress.clear(zone);
+            field.restore(SaveCodec.decode(SaveCodec.encode(progress)));
+            assertTrue(field.walkable(field.exitX(), 336));
+            assertTrue(field.walkable(56, 336), "backtracking stays open");
+            // Existing saves keep their cleared trails even without newly required discoveries.
+            Progress legacy = new Progress(1); legacy.clear(zone); field.restore(legacy);
+            assertTrue(field.bossReady());
+            assertTrue(field.walkable(field.exitX(), 336));
+        }
     }
 
 }

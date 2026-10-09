@@ -222,7 +222,7 @@ public final class Game {
     public boolean canTravelForward(Zone current) {
         Zone next = neighbour(current, 1);
         if (next == null) return false;
-        if (current == Zone.ANGEL_ISLAND && !progress.isCleared(current)) return false;
+        if (!progress.isCleared(current)) return false;
         return next.island() == current.island() || progress.islandComplete(current.island());
     }
 
@@ -233,7 +233,7 @@ public final class Game {
         return true;
     }
 
-    /** Walking is the only travel UI. Local paths are open; chapter crossings follow the story. */
+    /** Walking is the only travel UI. Every onward trail is held by its local anchor; backtracking remains open. */
     public boolean travel(FieldScreen from, boolean forward) {
         Zone current = from.zone();
         if (forward && !canTravelForward(current)) return false;
@@ -326,6 +326,7 @@ public final class Game {
         boolean emerald = zone.emerald >= 0 && (progress.emeralds() & (1 << zone.emerald)) == 0;
         progress.addEmerald(zone.emerald);
         progress.completeChapter(zone);
+        if (background instanceof FieldScreen field) field.field().restore(progress);
         progress.setResume(zone, 2);
         if (zone == Zone.ANGEL_ISLAND) progress.join(HeroId.KNUCKLES);
         progress.restAll();

@@ -1,28 +1,18 @@
-# Three Islands story script. Original text for this mod.
-# "@name" starts a scene. "Speaker: words" is dialogue; "> words" is narration.
-# Scene names the game looks for:
-#   prologue, <island>-arrive, village-<island>, <zone>-enter, <zone>-mid, <zone>-boss,
-#   <zone>-clear, ending. Islands: south, west, angel, death_egg. Zones: ghz slz syz ehz cpz
-#   mcz aiz hcz lbz dez. A missing scene is simply skipped.
+# Original Three Islands dialogue. @name starts a scene; > is a physical observation or inscription.
 
 @prologue
-> Three islands. Three skies. Three adventures that were never meant to meet.
-> South Island, where the Chaos Emeralds were first found.
-> West Side Island, where a two-tailed fox builds aeroplanes in a workshop by the sea.
-> And Angel Island, floating high above them all on the power of the Master Emerald.
-> One night the stars went out of place, and rings of light tore open in every sky.
-> Something was pulling the three islands together...
+Flicky: Last night I could see another island through the stars.
+Sonic: This morning I tried to reach the city. The road folded back on itself.
+Flicky: Can you make it stop?
+Sonic: I'm going to find whoever's doing this.
 
 @south-arrive
-> South Island. Dawn.
-Sonic: Whoa... since when does the sky have cracks in it?
-Flicky: Sonic! Sonic! You've got to help us!
-Sonic: Easy, little guy. What's up?
-Flicky: Badniks came out of those glowing rings! They're not like the old ones. They hit harder, and they glow!
-Flicky: The shrine went quiet. Even the sea sounds wrong.
-Sonic: Badniks, stolen emeralds and a broken sky. Sounds like a certain doctor's back in business.
-Sonic: Tell everyone to sit tight. I'll handle this.
-
+Flicky: Sonic! The sea's climbing into the sky!
+Sonic: And there's a city where the sun should be. Everybody out of the water.
+Flicky: We tried the Star Light trail. That blue light throws us back.
+Sonic: Eggman's machines have the same glow. That's no coincidence.
+Flicky: Can you get our sky back?
+Sonic: That's the plan. First I need to find out what's holding it here.
 
 @village-south
 Flicky: Welcome to Flicky Village! Resting here heals everyone and saves your journey.
@@ -31,41 +21,42 @@ Rocky: Shields are worth every ring. A shield blocks a whole hit, and it charges
 Flicky: Hit a foe with the element it's weak to and it takes half again as much damage.
 
 @ghz-enter
-> Green Hill. The grass still smells like summer, but the badniks are restless.
-Sonic: Alright, Green Hill. Let's see what's got everyone so spooked.
-Flicky: My sister went to the old ruins when the sky broke. She hasn't come home.
-Sonic: What was she listening for?
-Flicky: She said she could hear herself singing. She never sings alone.
-
-
+Flicky: My sister went into the seaside shrine when the sky broke. She hasn't come home.
+Sonic: What was she doing in there?
+Flicky: She heard singing. Now all I can hear is machinery.
+Sonic: Then someone owes us a sister and a quiet morning.
 
 @ghz-boss
-Sonic: Huh? That Motobug's the size of a house!
-Flicky: That's the glow, Sonic! The rings make them grow!
-Sonic: Bigger just means easier to hit.
+Sonic: There you are. Sitting on the anchor like you own the place.
+Sonic: You can keep the dents. I'm taking our road back.
 
 @ghz-clear
-Sonic: Too easy. But that glow... it came from the sky.
-Flicky: The rings showed up right after Dr. Eggman's ship flew over the city of Star Light!
-Sonic: Funny. Those city lights are reflected in the water... but the city is behind us.
+Sonic: Hear that? Just the waves. The trail's stopped humming.
+Flicky: I can see the Star Light road again!
+Sonic: This anchor was borrowing power from somewhere else. No emerald inside.
+Flicky: The crates in the shrine had the observatory's name on them.
+Sonic: Then that's where I'm headed. Keep an eye on your sister for me.
 
 @slz-enter
-> Star Light Zone. Highways of light hang over the night city.
-Sonic: Quiet up here. Too quiet.
-Sonic: Those Bombs blow up into fire. A Bubble Shield ought to put them out.
+Rocky: Don't trust the clock, lad. I've watched the same minute pass three times.
+Sonic: Does it always come with a wall across the road?
+Rocky: Only since they took the observatory lens. I can hear it humming inside that enormous Bomb.
+Sonic: Eggman's giving stolen property legs now.
 
 @slz-boss
-> A fuse hisses in the dark. Something enormous waddles out from under the highway...
-Sonic: A Bomb? The size of a house? And it's carrying a Chaos Emerald!
+Sonic: That's a Chaos Emerald in your fuse, isn't it?
+Sonic: I'd ask nicely, but you look ready to explode.
 
 @slz-clear
-> Sonic recovered the green Chaos Emerald!
-Sonic: One down. And look at this... a little machine wrapped around it. "Rift Anchor".
-Sonic: Eggman's using the emeralds to hold those rings open. I'm shutting this down.
+Sonic: One emerald, out of Eggman's hands. And the road's holding still.
+Rocky: The clock only struck once. I never thought I'd miss an ordinary minute.
+Sonic: Keep it running. I've got a doctor to catch.
 
 @syz-enter
-> Spring Yard. Neon lights flicker on and off with the rhythm of the rifts.
-Sonic: Bumpers, springs and badniks. My kind of town.
+Pocky: He took over the whole carnival. Said we wouldn't need tickets in his new world.
+Sonic: Let me guess. Round guy. Terrible moustache.
+Pocky: He's waiting past the freight yard. Even his own workers can't get through the light.
+Sonic: Good. For once he's staying put.
 
 @syz-boss
 Eggman: Ho ho ho! I wondered when that blue pest would turn up.
@@ -75,25 +66,20 @@ Eggman: ...and one sky deserves one ruler. Me!
 Sonic: Not a chance, Egghead!
 
 @syz-clear
-> Sonic recovered the second Chaos Emerald!
-Eggman: Blast it! This is only one island, Sonic. The engine is already pulling on the next!
-> Eggman dives into a shimmering Warp Ring, and it begins to close.
-Sonic: Oh no you don't!
-> The Warp Ring steadies. Through it comes the smell of rain on unfamiliar grass.
+Sonic: Two emeralds. How many more have you wired into this mess?
+Eggman: Enough! Every anchor you break brings you closer to my Convergence Engine. You're following my roads!
+Sonic: Then you know where to wait for me.
+Eggman: Catch me first!
+Sonic: Gone through his own ring. But that double pulse is still there. The kid kept his promise.
 
 @west-arrive
-> West Side Island. The air smells of sea salt and engine oil.
-Sonic: Where... am I? This isn't South Island.
-Tails: Hey! Are you okay? You fell right out of that glowing ring!
-Sonic: I've had softer landings. Name's Sonic.
-Tails: I'm Miles, but everyone calls me Tails. I've been tracking those rings with my Rift Compass!
-Tails: They appeared the same night the badniks went wild. They're draining something from the island.
-Sonic: Chaos Emeralds. Eggman's using them to drag the islands together. I'm here to stop him.
-Tails: Then I'm coming too! I can fix you up, scan the badniks, and I've got a few tricks of my own.
-Sonic: Can you keep up?
-Tails: Watch me!
-> Tails joins the party!
-> When Sonic and Tails both still have a turn this round, they can use a Dual Tech together.
+Tails: You made it! I wasn't sure anyone could hear me.
+Sonic: You were the voice on the relay? Nice work. I'm Sonic.
+Tails: Miles. Everyone calls me Tails. I've been trying to hold the islands apart, but my compass can't find the source.
+Sonic: Eggman calls it the Convergence Engine. I break his anchors; he builds another. We've got to reach the engine itself.
+Tails: Then you'll need someone who can shut it down without taking the islands with it.
+Sonic: Sounds like you just volunteered.
+Tails: I was hoping you'd say that.
 
 @village-west
 Tails: Welcome to my workshop! You can rest here, and I keep spare monitors in stock.
@@ -102,57 +88,58 @@ Ricky: The Tornado's nearly ready. Tails says it can fly through a Warp Ring!
 Tails: Remember: a Dual Tech uses both of our turns, but it's worth it.
 
 @ehz-enter
-> Emerald Hill. Waterfalls glitter under a sky that's too bright, too close.
-Tails: My compass is going crazy. The nearest Rift Anchor is past these hills!
-Sonic: Then let's not keep it waiting.
+Tails: That's my workshop across the hill. The badniks drove everyone out.
+Sonic: Your compass pointing at it?
+Tails: It's pointing at everything. I left the calibration notes inside.
+Sonic: Well, I wanted to see where you built that thing anyway.
 
 @ehz-boss
 Tails: Uh, Sonic? That Coconuts is wearing a crown.
 Sonic: And holding a coconut the size of me. Try to keep up, Tails!
 
 @ehz-clear
-Tails: That was amazing! Hey, look, a chemical trail... it leads to the plant across the bay.
-Sonic: Chemical Plant. Lovely.
+Tails: The hill's anchor was being fed from across the bay. Chemical Plant.
+Sonic: And now the trail's open. You coming?
+Tails: You'd get lost without me.
+Sonic: Now you're getting it.
 
 @cpz-enter
-> Chemical Plant. Pipes rattle, and the Mega Mack is rising.
-Tails: Careful! That pink stuff's no swimming pool.
-Sonic: Noted. Let's find that anchor and get out of here.
+Tails: The evacuation alarm's still running. Those tunnels should have drained hours ago.
+Sonic: Someone's down there. I can hear them banging on the pipes.
+Tails: The pump station has a manual return. If it's still intact...
+Sonic: Let's find out.
 
 @cpz-boss
-> A mechanical shadow drops from the pipes overhead...
-Tails: A Grabber! A huge one! It's got an emerald in its claws!
+Tails: Above you! That Grabber's got an emerald in its claws!
 Sonic: Then it's about to drop it.
 
 @cpz-clear
-> Sonic and Tails recovered the third Chaos Emerald!
-Tails: The anchor's readings point down... deep underground. Mystic Cave!
-Sonic: Caves, huh. Stick close, buddy.
+Tails: Three emeralds safe. The last current runs beneath Mystic Cave.
+Sonic: Another road back where it belongs. Can everybody get home?
+Tails: Ricky's taking them over the hill.
+Sonic: Then we're going underground.
 
 @mcz-enter
-> Mystic Cave. Lanterns swing in a wind that comes from nowhere.
-Tails: I don't like it down here. Something's watching us.
-Sonic: Nah. Probably.
+Tails: Those footsteps stop when we stop.
+Sonic: Great. An audience.
+Tails: Eggman's been digging around the old lantern shrine. Whatever he found, he didn't want anyone else seeing it.
 
 @mcz-boss
-> Metal footsteps echo through the cavern. A silver figure steps into the lantern light.
-Tails: Is that... you?
+Tails: There it is. It even stands like you.
 Sonic: A robot copy? Eggman, you really need a new hobby.
-> The machine's eyes glow red. It curls into a ball, and its spines turn to blades.
 
 @mcz-clear
-> Sonic and Tails recovered the fourth Chaos Emerald!
-Tails: Sonic, look at the compass! The biggest rift of all is up there, above the clouds.
-Tails: There's an island floating up there. The engine's pulling it down!
-Sonic: Then it's time to fly. Is the Tornado ready?
-Tails: I thought you'd never ask!
-> The Tornado's propeller catches. Far above, roots hang through the clouds.
+Tails: Four emeralds. And the compass has a clear reading above the clouds.
+Sonic: The floating island?
+Tails: It's sinking. The engine must be pulling on the Master Emerald.
+Sonic: How soon can the Tornado fly?
+Tails: She's been ready since you got here.
 
 @angel-arrive
-> Angel Island. An island that floats on the power of the Master Emerald.
-Tails: Whoa... the whole island is floating! And it's sinking, Sonic. Look at the edges!
-Sonic: The engine's dragging it into the other skies. We'd better hurry.
-> Somewhere in the jungle, someone is watching them land.
+Tails: The island's sinking, Sonic. Look at those roots dragging through the clouds.
+Sonic: Eggman's engine is pulling it into the others.
+Tails: If we can return the Master Emerald, it might hold this island up again.
+Sonic: Then we find it before there's nothing left to hold.
 
 @village-angel
 Tails: This old shrine must be where the Master Emerald sits. But the altar is empty...
@@ -160,144 +147,143 @@ Flicky: A red guardian lives here. He's been searching for someone who stole his
 Pocky: He was very angry. You'd better not let him catch you!
 
 @aiz-enter
-> Angel Island Zone. The jungle shakes with distant explosions.
 Sonic: I smell smoke.
-Tails: That's Eggman's flamethrower ship! He's burning the jungle!
+Tails: Eggman's ship. He's burning a path through the jungle.
+Sonic: And somebody's following us through the trees. Keep close.
 
 @aiz-mid
 Eggman: You again? You're like a weed, Sonic. But weeds burn!
 Sonic: Not today!
 
 @aiz-boss
-> A red blur bursts from the trees and lands between Sonic and the path ahead.
-Knuckles: So YOU'RE the thieves the doctor warned me about.
-Sonic: Thieves? Pal, we're the good guys here.
-Knuckles: That's what a thief would say. Give back the Master Emerald, or I'll take it back!
-Tails: Sonic, he's not listening!
-Sonic: Then I guess we do this the hard way.
+Knuckles: Stay away from the shrine! The doctor told me what you stole.
+Sonic: He told his own machines a different story. We've got his orders.
+Knuckles: Then you stole those too.
+Tails: Please, just look at them!
+Knuckles: Put them down. And step away from the anchor.
 
 @aiz-clear
-Knuckles: Ugh... you're strong. Stronger than a thief should be.
-Sonic: Because we're not thieves. Eggman lied to you.
-Tails: He's using the Chaos Emeralds to pull the islands together. We've been taking them back!
-Knuckles: Then where's the Master Emerald?
-Tails: My compass says there's a huge machine siphoning power somewhere above Launch Base...
-Knuckles: That two-faced egg! He used me. Again.
-Knuckles: Fine. I'm coming with you. But only to get the Master Emerald back. Don't get the wrong idea.
-Sonic: Wouldn't dream of it.
-Knuckles: Here. The doctor gave me this as a "reward". It's yours.
-> Knuckles joins the party! Sonic received the fifth Chaos Emerald!
-> Knuckles can now use Dual Techs with Sonic and Tails, and the Trinity Rush when all three have a turn.
+Knuckles: Wait. That's his command seal.
+Tails: These orders sent the fire ship here. We stopped it.
+Knuckles: He said you took the Master Emerald. He said this anchor would protect the island.
+Sonic: It's pulling your island out of the sky.
+Knuckles: ...Then I'm coming with you. I know what the Master Emerald can do. He doesn't.
+Tails: We'll need that knowledge.
+Knuckles: Take this Chaos Emerald. He told me it was safe in his machine.
+Sonic: Five safe with us. And room for one more on the team.
 
 @hcz-enter
-> Hydrocity. Ancient waterways flooded with stolen power.
-Knuckles: The old waterworks. The anchor will be at the bottom.
-Tails: Watch the water bots. Lightning should short them out!
+Knuckles: These waterways used to run clear. I could hear them from the shrine.
+Tails: The anchor's forcing the current backwards.
+Knuckles: The sanctuary records the old channels. My people left it for a reason.
 
 @hcz-boss
-> The water churns. A drill-nosed machine rises out of the depths.
-Eggman: Did you think I'd let a mere echidna stop my engine? Ha!
-Knuckles: You're going to regret lying to me, Eggman!
+Eggman: My waterworks! Do you know what those cost?
+Knuckles: Yours? You built a machine in somebody else's home!
+Sonic: That's pretty much his whole business.
 
 @hcz-clear
-> The party recovered the sixth Chaos Emerald!
-Eggman: Curses! No matter. The Death Egg is almost ready to launch!
-Knuckles: Launch Base. He built his launch pad on MY island.
+Tails: Six emeralds. The water's flowing away from the island again.
+Eggman: Enjoy it while you can! The Death Egg is almost ready!
+Knuckles: He built the launch pad on my island too.
+Sonic: Let's go have a word about the rent.
 
 @lbz-enter
-> Launch Base. The Death Egg sits on its tower, humming with stolen light.
-Tails: The engine's on board the Death Egg! If it launches, the islands will collide!
-Sonic: Then we don't let it launch.
+Tails: The Convergence Engine's aboard the Death Egg. Those cables run straight into it.
+Knuckles: It's lifting the whole tower. The island can't take much more.
+Sonic: Then we loosen its grip before we follow it up.
 
 @lbz-boss
 Eggman: Too late, you meddlers! Behold the Beam Rocket!
 Sonic: Is it too late to just say "no"?
 
 @lbz-clear
-> The party recovered the seventh Chaos Emerald!
-> The ground shakes. With a roar, the Death Egg tears free of its tower and climbs into the merged sky.
-Tails: It's launching! The Tornado can still catch it!
-Knuckles: Then what are we waiting for?
+Sonic: Seven emeralds. That should even the odds.
+Tails: The Death Egg's lifting off! But the island's staying here.
+Knuckles: My emerald isn't.
+Sonic: Then neither are we. Tails, can the Tornado catch it?
+Tails: Get aboard and find out!
 
 @death_egg-arrive
-> The Death Egg. High above three islands drawn into one sky.
-Sonic: All seven Chaos Emeralds. With these, I can stop the engine for good.
-Knuckles: And the Master Emerald is in there somewhere.
-Tails: Let's end this. Together!
-> With all seven Chaos Emeralds, Sonic can become Super Sonic in battle for 50 rings. It drains 10 rings every turn.
+Sonic: That's the engine ahead. All this way, and he still puts his face on it.
+Knuckles: I can feel the Master Emerald inside. It's holding back more than he knows.
+Tails: We need a return path for that power before we free it.
+Sonic: Then we give these islands their own skies again. All of us go home.
 
 @village-death_egg
 Tails: The Tornado's docked. We can rest and restock here before we go in.
 Knuckles: No more running. The doctor ends this today.
 
 @dez-enter
-> Inside the Death Egg. Lights pulse in time with the Convergence Engine.
-Tails: Two control relays feed the core. We can reach them through the maintenance ring.
-Sonic: Good. I hate to be bored.
+Tails: The engine's overwritten the navigation system. It thinks the islands belong in the same place.
+Knuckles: Can you undo it?
+Tails: If the original coordinates are still in the archive.
+Sonic: Eggman never throws anything away. Especially his own work.
 
 @dez-mid
-> A chrome figure lands without a sound.
-Knuckles: Another robot copy of you, Sonic?
-Sonic: This one looks like it means business. Let's go!
+Knuckles: Another metal you. Doesn't he ever get tired of building these?
+Sonic: This one looks like it means business.
+Tails: So do we.
 
 @dez-boss
-> The engine core: a colossal arm of steel, pulling three skies together.
-Eggman: Behold! The Convergence Engine! Fed by the Master Emerald, it will remake the world!
-Knuckles: Give back the Master Emerald, Eggman!
-Eggman: Come and take it, you red-quilled fool!
-Sonic: Everyone, together. This is it!
+Eggman: My Convergence Engine! One world, one sky, one ruler!
+Knuckles: And one stolen emerald. Give it back.
+Eggman: Come and take it!
+Sonic: Glad you asked. Ready, guys?
 
 @dez-clear
-> The engine sputters. The Master Emerald's light floods the core.
-Eggman: No... NO! My beautiful engine!
-Knuckles: The Master Emerald! It's free!
-Tails: The rings are closing! The islands are drifting back to their own skies!
-Eggman: This isn't over, Sonic! I'll be back! I always come back!
-Sonic: And we'll always be waiting.
+Eggman: No! My beautiful engine!
+Knuckles: I've got the Master Emerald. Tails, hold the channel!
+Tails: The islands are separating. It's working!
+Sonic: Your roads are closing, Eggman. Better run.
+Eggman: This isn't over!
+Sonic: It is for today.
 
 @ending
-> South Island's sky was blue again. The Flickies sang in Green Hill.
-> On West Side Island, Tails began work on a brand new aeroplane. Something even faster.
-> On Angel Island, the Master Emerald returned to its altar, and its guardian kept watch once more.
-Knuckles: Next time you're in trouble... I might help. Maybe.
-Tails: Hey Sonic, where are you going?
+Flicky: The sea's down where it belongs. We sang all morning and nothing answered but the other birds.
+Tails: I could get used to a quiet sky. Might build something faster, though.
+Knuckles: The Master Emerald's home. Next time you visit, try landing without a warship behind you.
+Sonic: Is that an invitation?
+Knuckles: Don't push it.
+Tails: Where are you going now?
 Sonic: Wherever the wind takes me. See you around, buddy!
-> Three islands. Three skies. One adventure.
 > THE END. Thank you for playing!
 
 @ghz-friend
 Flicky: My sister used to sing in the seaside shrine. Yesterday, the shrine sang back.
 Sonic: A voice?
-Flicky: It sounds like her. But older. Please bring her home.
-> Flicky presses two battered Super Ring monitors into Sonic's hands.
+Flicky: Hers. But coming through a machine. Please bring her home.
+Flicky: Take these monitors. I was saving them for her.
 
 @ghz-memory
-> A frightened Flicky waits beside a cracked altar. Three lights pulse in the stone behind her.
-Flicky: That voice said our village would be gone by sundown. Is that tomorrow?
-Sonic: Maybe. But tomorrow hasn't met us yet. Your sister sent me. Let's get you home.
-Flicky: The machines kept saying "Star Light Observatory". Is that where the voices come from?
-> She takes one last look at the altar, then stays close to Sonic.
+Flicky: Don't touch the altar! I tried, and all the machines lit up.
+Sonic: Those cables weren't here last summer.
+Flicky: The one with the red stripe runs outside. I heard the sentries call it a return line.
+Sonic: A way to take the power back out. And here's the coupling they were keeping from you.
+Flicky: Will the big machine let us leave?
+Sonic: It won't get a vote. Stay close.
 
 @ghz-dungeon-enter
-> Beyond the broken shrine, marble halls descend beneath Green Hill. A small voice calls from the inner chamber.
-Sonic: Hang on! I'm coming.
-> Fresh wheel tracks cut through the marble dust. Behind the bars, something small is singing.
+Flicky: Hello? Is somebody there?
+Sonic: Your sister sent me!
+Flicky: Be careful! The machines close the bars when they hear me.
+Sonic: Then let's give them something louder to worry about.
 
 @ghz-rescue
-> The sisters rush to each other beside the shrine. Above them, the ring of light flickers.
-Flicky: You brought her back! Thank you, Sonic!
-Sonic: Stick together. I'm going to find out what the observatory has to do with all this.
-> The sisters start the same song, a little out of time. This time, neither one stops.
+Flicky: You're back! I thought I'd lost you!
+Sister: He heard us. I told you someone would.
+Sonic: Stay together. That machine outside is still holding the trail shut.
+Flicky: We'll keep singing. So you can find us again.
 
 @ghz-signal
-> Three lights pulse on a buried machine. Beside it lies a shipping label: STAR LIGHT OBSERVATORY.
-Sonic: This cable is warm. And that humming... I can feel it in my shoes.
-> Sonic disconnects the relay. For an instant, the water reflects a night sky.
-Sonic: That was no reflection of today.
+Sonic: Same red stripe as the shrine cable. Let's see if this coupling fits...
+Sonic: There. The current's running back toward the shrine.
+Sonic: That big Motobug just lost its glow. Still hear it rattling away, though.
 
 @ghz-camp
-> The birds' song carries across the water. For a moment, the sky seems ordinary.
-Sonic: I said I'd handle it. Guess that means slowing down enough to listen.
+Sonic: Can't outrun a road that folds back on itself.
+Flicky: Will you stay until it opens?
+Sonic: Until you're safe. That's a promise.
 
 @slz-friend
 Rocky: I kept the observatory clock for thirty years. Tonight it struck the same minute twice.
@@ -305,19 +291,19 @@ Sonic: Eggman's been through here?
 Rocky: His freight crane took the old lens. The empty mounting still casts a shadow at midnight.
 
 @slz-memory
-> The observatory log is open to tomorrow's date. Every entry is in the clockkeeper's hand.
-Rocky: It says I leave the city. I haven't packed a thing.
-Sonic: Then you still get to choose.
-> A pencilled diagram shows how the lens focuses an emerald into a Rift Anchor.
+Sonic: Rocky left his log here. Tomorrow's page is already filled in.
+Sonic: "Lens release fitted beneath the mounting." Still here, too.
+Sonic: And this drawing... an emerald in the lens, feeding the roads and the Bomb's shield.
+Sonic: Let's give Rocky a tomorrow he hasn't already written.
 
 @slz-signal
-> Sonic turns the relay's lens away from the city. The repeating bells fall quiet.
-Sonic: These aren't just shortcuts. They're pulling pieces of different skies through.
-> A distress call escapes the relay: a young voice asking whether anyone can hear him. Then static.
-Sonic: Hang on, whoever you are.
+Sonic: The lens release fits. Turn it away from the city...
+Tails: ...anyone hear me? I'm holding a way through, but I can't...
+Sonic: Hey! I'm here!
+Sonic: Lost him. But the shield's gone quiet. I'll get through, whoever you are.
 
 @slz-camp
-Rocky: The clock's running again. What if the log was right?
+Rocky: What if that log is right about tomorrow?
 Sonic: Then we'll give you something better to write.
 
 @syz-friend
@@ -326,19 +312,20 @@ Sonic: I'll get the lights back on.
 Pocky: Someone bought every ticket for tomorrow. Paid with rings that were warm to the touch.
 
 @syz-memory
-> Beneath the abandoned ticket booth, Sonic finds a list of islands. Each has a different arrival time. All have the same destination.
-Sonic: He's not invading them one at a time. He's bringing them here.
-> One crate is marked MASTER EMERALD: REQUIRES GUARDIAN ACCESS.
+Sonic: South Island. West Side Island. Angel Island. Different arrival times, same destination.
+Sonic: He's dragging the islands together. There won't be room for anyone.
+Sonic: "Master Emerald: guardian access required." What's he after now?
+Sonic: This freight override should still work on the yard relay.
 
 @syz-signal
-> The relay spits out the same young voice heard in Star Light.
-Tails: If anyone hears this, follow the double pulse. I'm keeping a way open!
-Sonic: Message received, pal. Just have to deal with the landlord first.
-> The lights around Eggman's court flicker out.
+Sonic: Freight override accepted. His private power supply's going dark.
+Tails: If anyone hears this, I'm keeping a way open! Follow the double pulse!
+Sonic: I hear you, pal. Just have to deal with the landlord first.
 
 @syz-camp
-> The carnival plays a warped little melody. Sonic taps his foot, waiting for the missing note.
-Sonic: Three islands, one destination. No wonder the stars look crowded.
+Sonic: Three islands in one place. No wonder the stars look crowded.
+Pocky: Will there still be room for us?
+Sonic: In our own sky. I'm getting it back.
 
 @ehz-friend
 Ricky: Tails spent three nights building that compass. He said somebody would answer his signal.
@@ -347,16 +334,17 @@ Sonic: Good thing you kept trying.
 Ricky: Since then, things keep washing ashore with his handwriting on them. Things he hasn't built yet.
 
 @ehz-memory
-> Tails' first compass lies beside a burned workbench. Its needle points at Sonic.
-Tails: It broke the night you arrived. I thought I'd made everything worse.
-Sonic: You kept a way open. That's why I'm here.
-> Tails recovers the calibration notes. The compass can now distinguish an anchor from an echo.
+Tails: My first compass. Its needle's stuck pointing at you.
+Sonic: Can't blame it.
+Tails: I thought opening that signal had made everything worse.
+Sonic: It brought me here. You did alright.
+Tails: These notes separate the real current from the echoes. Now I can turn a relay without feeding its shield.
 
 @ehz-signal
-Tails: This relay carries the same chemical residue as the badniks. Someone's pumping power through the bay.
-Sonic: Can you shut it off?
-Tails: I can reverse it. Give the hill its power back.
-> The waterfalls brighten. The compass points toward Chemical Plant.
+Tails: There. That's the real current. If I reverse it...
+Sonic: The waterfall's coming back!
+Tails: And the chief's shield is draining. I didn't make it worse this time.
+Sonic: You didn't last time, either.
 
 @ehz-camp
 Tails: Do you ever get scared?
@@ -369,16 +357,16 @@ Tails: These pumps are running backwards. That isn't an accident.
 Sonic: And we'll bring them out.
 
 @cpz-memory
-> A worker's chart shows the pumps feeding the Rift Anchor instead of the drains.
-Tails: This isn't a leak. Eggman flooded the evacuation tunnels on purpose.
-Sonic: Can we open another way?
-Tails: The return line is still intact. Whoever changed this was in a hurry.
+Tails: Look at this valve chart. The pumps are feeding the anchor instead of the drains.
+Sonic: He flooded the way out on purpose?
+Tails: And used the stolen power for that Grabber's shield. But the return valve has a removable handle.
+Sonic: Which he left right here. Thanks, Eggman.
 
 @cpz-signal
-> Tails bridges two contacts. The pumps reverse, lowering the flooded tunnels.
-Ricky: They're coming out! All of them!
-Sonic: Nice work, partner.
-Tails: The stolen power was going underground. There's another anchor beneath Mystic Cave.
+Tails: The return valve's turning. Hold it there!
+Ricky: The water's going down! We can get out!
+Sonic: Everybody clear of the pipes!
+Tails: The shield's losing pressure too. That Grabber can't hide behind them anymore.
 
 @cpz-camp
 Tails: I used to build machines so people would leave me alone.
@@ -391,16 +379,17 @@ Sonic: I've got a terrible feeling about its sense of humour.
 Tails: Even its footsteps sound like yours. A second too late.
 
 @mcz-memory
-> In an old mine ledger, Tails finds a sketch of a floating island. A red guardian stands beside a green jewel.
-Tails: The Master Emerald. It could power every anchor at once.
-Sonic: So that's the crate on Eggman's shipping list.
-> A fresh order lies over the sketch: TELL THE GUARDIAN THE BLUE ONE STOLE IT.
+Tails: This ledger has a drawing of a floating island. The Master Emerald's holding it up.
+Sonic: That's the jewel on Eggman's freight order.
+Tails: And underneath: "Tell the guardian the blue one stole it."
+Sonic: Of course.
+Tails: He left the tracking crystal with his orders. It should let me cancel the robot's signal.
 
 @mcz-signal
-> The relay projects a blue silhouette running through the mine. Every movement repeats exactly.
-Tails: It's teaching that robot how you move.
-Sonic: Then let's try something it hasn't seen. Two of us.
-> Tails blanks the tracking signal. The mechanical footsteps draw closer.
+Tails: That's your running pattern in the relay. It's been teaching the robot.
+Sonic: Bet it didn't learn how to do this with a friend.
+Tails: Crystal reversed. No tracking, no shield.
+Sonic: Now let's meet my biggest fan.
 
 @mcz-camp
 Tails: That message about the guardian... what if he believes Eggman?
@@ -415,21 +404,20 @@ Sonic: He's not. We just need him to figure that out.
 Flicky: The stone remembered his name before he was born. He never liked talking about that.
 
 @aiz-memory
-> A stone memorial names generations of guardians. The final name has been freshly carved: KNUCKLES.
-Tails: He looks after this whole island alone?
-Sonic: That would make anyone protective.
-> Beneath the stone lies Eggman's forged warning. Sonic keeps it as proof.
+Tails: All these names... generations of guardians. The last one is Knuckles.
+Sonic: One guy looking after a whole island. No wonder he's worried.
+Tails: This warning has Eggman's signature. And his command seal.
+Sonic: Proof he lied, and a way into his fire relay. Let's take both.
 
 @aiz-signal
-> Tails overrides the fire relay. The advancing wall of flame falters.
-Tails: Those orders came from Eggman's ship. I've saved the transmission.
-Sonic: Proof and a safer jungle. Now we get past that ship and talk to the guardian.
-> The Flame Craft descends near the northern crossing.
+Tails: The command seal works. I'm cutting power to the Flame Craft's shield.
+Sonic: The fire's easing off too.
+Tails: I've saved Eggman's orders. Perhaps the guardian will listen.
+Sonic: Let's hope he's a better listener than the doctor.
 
 @aiz-camp
 Tails: What if we'd landed here first?
 Sonic: We'd still have met. You're pretty hard to miss in that plane.
-> Beyond the camp, a red shape watches the restored jungle in silence.
 
 @hcz-friend
 Flicky: The old floodgates are closing. We thought the guardian had forgotten us.
@@ -438,16 +426,16 @@ Sonic: Good thing there's still time to fix it.
 Flicky: There are fish carved into the walls. The real fish used to follow them when the gates opened.
 
 @hcz-memory
-> A mural shows three islands beneath separate stars, their waters joining beneath the earth.
-Knuckles: My people built these gates to share water. Eggman turned them into a weapon.
-Tails: The relay is the key. Reversing it cuts the anchor off from its supply.
-Knuckles: Then we use this place for what it was meant for.
+Knuckles: Three islands sharing water beneath the earth. That's what this mural means.
+Tails: So these grooves aren't decoration. They're the original valve settings.
+Knuckles: I walked past them for years.
+Sonic: Good thing you brought someone who likes diagrams.
 
 @hcz-signal
-> Knuckles holds a damaged gate while Tails rewires the relay.
-Knuckles: A little faster would be nice!
-Sonic: You've got it. We're right here.
-> Clean water rushes into the dry channels. For the first time, Knuckles lets someone else take the weight.
+Knuckles: I've got the broken gate. Set the valves!
+Tails: Following the mural... there!
+Sonic: Water's clear. I've got this side, Knuckles. You can let go.
+Knuckles: ...Thanks. The doctor's shield is draining with the old channel.
 
 @hcz-camp
 Knuckles: I should have known he was lying.
@@ -461,16 +449,17 @@ Knuckles: We cut its moorings to the island, then board it.
 Pocky: The mooring ropes are pulling upward. Even the loose ones.
 
 @lbz-memory
-> Tails finds the final convergence schedule. The three islands will occupy the same sky at sunrise.
-Tails: We can't just break the engine. The recoil would tear them apart.
-Knuckles: The Master Emerald can return their power safely. I know how.
-Sonic: Then getting you inside is the plan.
+Tails: Eggman's schedule says the islands will occupy the same sky at sunrise.
+Sonic: Then we smash the engine before sunrise.
+Tails: With all that power trapped inside? The recoil could tear the islands apart.
+Knuckles: The Master Emerald can return it safely. Get me to it.
+Tails: Here are the mooring releases. We can reach the ship without dragging the island along.
 
 @lbz-signal
-> Together, they release the island-side moorings. The ground's shaking begins to ease.
-Tails: The Tornado has a clear approach now. But that Beam Rocket is still covering the tower.
-Knuckles: One last lock.
-Sonic: Let's open it.
+Tails: Mooring release accepted. The island's coming free!
+Knuckles: I can feel it. The ground's stopped pulling against us.
+Sonic: That Beam Rocket's still covering the tower.
+Tails: But its shield was tied to the moorings. It's on its own now.
 
 @lbz-camp
 Knuckles: When this is over, you can visit. If you don't break anything.
@@ -479,72 +468,61 @@ Knuckles: It's a warning.
 Tails: I'll put it on the calendar.
 
 @dez-friend
-Ricky: I got aboard in a supply crate. I can keep the Tornado ready while you go inside.
+Ricky: I got aboard in a supply crate. I'll keep the Tornado ready.
 Tails: You came all this way?
 Ricky: You came back for us at the plant. Of course I did.
-> Ricky has tied a scrap of red cloth to the Tornado. It stirs in a wind blowing toward the engine.
 
 @dez-memory
-> The archive holds the original skies: three islands, three horizons. The engine is overwriting them.
-Tails: These coordinates are our way home. I've copied them to the compass.
-Knuckles: The Master Emerald is still answering. It's waiting for us.
-Sonic: Then nobody gets left behind.
+Tails: Found them. Three islands, three original horizons. I've copied them to the compass.
+Knuckles: The Master Emerald is still answering. It remembers too.
+Sonic: Then we aren't asking it to guess where home is.
 
 @dez-signal
-> Tails loads the original coordinates. Knuckles steadies the emerald current. Sonic opens the return channel.
-Tails: Escape route ready. Once we free the emerald, the islands can separate safely.
-Knuckles: First the metal copy. Then the doctor.
-Sonic: Together. All the way.
+Tails: Original coordinates loaded. The return channel's open.
+Knuckles: When we free the Master Emerald, I'll guide the power through it.
+Sonic: And I'll keep Eggman busy. His shield just went out.
+Tails: Sonic? Don't try to do it all yourself.
+Sonic: Wasn't planning to.
 
 @dez-camp
-> Through the window, three shorelines drift beneath one impossible dawn.
 Sonic: When I started, I thought this was another badnik problem.
 Tails: Still think you could handle it alone?
 Sonic: Not a chance.
 
 @slz-dungeon-enter
-> Under the observatory, starlit machinery ticks through the same minute again and again.
 Sonic: Same tick. Same tock. No wonder nobody could sleep.
+Sonic: Rocky's log should be somewhere beyond those sentries.
 
 @syz-dungeon-enter
-> A stairway under the ticket office leads to ancient freight tunnels. New badnik tracks score the marble.
-Sonic: Eggman's been moving more than carnival prizes through here.
+Sonic: Marble halls under a ticket booth. Eggman's been moving more than carnival prizes.
 
 @ehz-dungeon-enter
-> Tails opens a hatch beneath the old workshop. Lanterns pick out a winding cavern full of abandoned parts.
-Tails: I hid my calibration notes in the inner workshop. Those badniks weren't here before.
+Tails: This used to be my inner workshop. Those sentries weren't here before.
 Sonic: Then let's evict them.
 
 @cpz-dungeon-enter
-> The pump station's service door opens onto a low machinery hall. Locked gates protect the control room.
-Tails: The valve chart should tell us how to drain the evacuation tunnels.
-Sonic: I can hear them through the pipes.
+Tails: The control room's still dry. We might be in luck.
+Sonic: I can hear people through the pipes. Hang on, everyone!
 
 @mcz-dungeon-enter
-> Lanterns still burn inside a forgotten underground shrine. A mine ledger lies beyond two barred crossings.
-Tails: These carvings are older than the mine. Eggman is looking for something down here.
-Sonic: Let's find it first.
+Tails: These carvings are older than the mine. What was Eggman looking for?
+Sonic: Whatever it was, he left guards.
 
 @aiz-dungeon-enter
-> Heat rises through the guardian shrine's stone floors. Badnik sentries stand among the memorials.
-Tails: Eggman's machines got in here too.
-Sonic: Then the guardian needs our help, whether he knows it yet or not.
+Tails: Eggman's machines got into the shrine too.
+Sonic: The guardian needs our help, whether he knows it yet or not.
 
 @hcz-dungeon-enter
-> Blue stone halls surround the sanctuary's old water channels. The mural chamber has been sealed.
-Knuckles: These gates were built to protect the water. I'll help you open them.
-Tails: The mural will tell us which channels feed the anchor.
+Knuckles: I haven't been down here since I was small. I thought these gates would protect themselves.
+Tails: They're still standing. We can work with that.
 
 @lbz-dungeon-enter
-> Below the launch tower, volcanic stone supports a humming mooring vault. The flight records are locked inside.
 Knuckles: I can feel the island's power running through these walls.
 Sonic: Then this is where we find out how to give it back.
 
 @dez-dungeon-enter
-> The archive door opens into an empty metal hall. Far above, the Convergence Engine shakes the ceiling.
-Tails: Eggman's final schedule is in the inner terminal. We need to know how to shut this down safely.
+Tails: The archive's still intact. Eggman protected his records better than his workers.
 Sonic: Stay together. We're nearly there.
-
 
 @ghz-garden-verse
 > Three suns are carved around a hollow stone: one sinking, one rising, one high above the waves.
@@ -566,6 +544,78 @@ Sonic: Guess somebody was listening after all.
 Sonic: No name. Just a pressed flower. Still smells fresh.
 
 @ghz-horizon
-> Two shorelines lie in the water's reflection. Above the water, there is only one.
-> A small yellow aeroplane passes through the reflected clouds. Its engine makes no sound.
-Sonic: Hey! ...Huh. Gone.
+Sonic: Two shorelines in the water. Only one above it.
+Sonic: Hey! You in the yellow plane!
+Sonic: ...Gone. Couldn't even hear the engine.
+
+@south-purpose
+Sonic: Eggman's machines are pulling another sky into ours. I'm going to find the source and give everyone their home back.
+
+@west-purpose
+Tails: Breaking anchors buys us time. We have to reach Eggman's Convergence Engine before the islands collide.
+
+@angel-purpose
+Tails: The engine is pulling on the Master Emerald. We have to return it before this island falls into the others.
+
+@death_egg-purpose
+Sonic: Free the Master Emerald, return the stolen power, get everyone home. We didn't come this far to leave anybody behind.
+
+@ghz-relay-sealed
+Sonic: No handle. That cable runs back toward the seaside shrine. What did they take out of there?
+
+@ghz-friend-after
+Flicky: My sister says you listened. Most people just told us to hide. Thank you.
+
+@slz-relay-sealed
+Sonic: The lens won't turn. Rocky said they took it from the observatory. Maybe they left something behind.
+
+@slz-friend-after
+Rocky: That log doesn't know you very well, does it? It never mentioned anyone trying to help.
+
+@syz-relay-sealed
+Sonic: Freight override required. Guess I'm not on the guest list. Where does he keep his deliveries?
+
+@syz-friend-after
+Pocky: When the roads are safe, the first ride's on me. Assuming you fit in the seats.
+
+@ehz-relay-sealed
+Tails: I can't separate the echoes from the current. My old workshop notes would make sense of this.
+
+@ehz-friend-after
+Ricky: Tails left room for two in every plane he drew. Don't tell him I told you.
+
+@cpz-relay-sealed
+Tails: The return valve's missing its handle. Someone moved the controls into the pump station.
+
+@cpz-friend-after
+Ricky: We'll wait for the current to settle. Nobody's leaving anybody behind this time.
+
+@mcz-relay-sealed
+Tails: A tracking crystal locks the controls. Whoever was running the dig must have kept it close.
+
+@mcz-friend-after
+Rocky: I can tell you two apart now. The real one waits for his friend.
+
+@aiz-relay-sealed
+Tails: It wants Eggman's command seal. He must have left orders for the machines in the shrine.
+
+@aiz-friend-after
+Flicky: The guardian keeps looking toward the shrine. I think he's afraid to ask what you found.
+
+@hcz-relay-sealed
+Knuckles: These valves are older than me. The sanctuary records how my people used them.
+
+@hcz-friend-after
+Flicky: He came back. Whatever happened with the doctor, our guardian came back.
+
+@lbz-relay-sealed
+Tails: I can't release the moorings blind. The flight records should say which lines are carrying the island's weight.
+
+@lbz-friend-after
+Pocky: Funny. Three of you standing here makes that great big tower seem smaller.
+
+@dez-relay-sealed
+Tails: The return channel needs the original coordinates. Without the archive, we'd be sending everyone nowhere.
+
+@dez-friend-after
+Ricky: The Tornado's ready. I'll keep a place for all three of you.

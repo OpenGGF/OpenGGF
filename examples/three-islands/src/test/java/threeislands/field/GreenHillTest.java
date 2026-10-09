@@ -33,7 +33,7 @@ class GreenHillTest {
             Field field = new Field(Zone.GREEN_HILL, null);
             Progress progress = new Progress(7);
             assertFalse(reachable(field, 1232, 832));
-            assertTrue(reachable(field, field.exitX(), 336), "mysteries do not gate onward travel");
+            assertFalse(reachable(field, field.exitX(), 336), "the anchor seals onward travel");
             assertTrue(reachable(field, 880, 768));
             assertTrue(reachable(field, 1456, 864));
             turn(field, progress, reverse ? "sluice-east" : "sluice-west");
@@ -68,7 +68,7 @@ class GreenHillTest {
         for (String id : new String[] {"bell-dusk", "bell-dawn", "bell-noon"}) turn(restored, progress, id);
         assertEquals(before + 1, progress.count(Item.LIGHTNING_SHIELD));
         assertTrue(restored.bellsOpen());
-        assertTrue(restored.bossReady());
+        assertFalse(restored.bossReady(), "garden puzzles do not substitute for the anchor relay");
         assertEquals(0, restored.discoveries(), "puzzles do not alter chapter discovery catch-up levels");
     }
     @Test void expansionDoesNotResizeOtherFieldsOrTheShrine() {

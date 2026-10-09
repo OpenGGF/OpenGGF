@@ -67,25 +67,27 @@ level-selection map or village hub. The title is also accessible through the pau
 it is never part of travel or chapter progression.
 
 **Travel and exploration.** Use all four directions to explore, and walk through the eastern
-or western trail openings to move between connected areas. Ordinary paths within an island
-are open before their bosses are defeated: for example, you can walk from Green Hill to
-Star Light and Spring Yard to investigate. Earlier areas remain accessible by walking back.
-Story barriers are specific: Knuckles guards the passage beyond Angel Island; an island's
-final guardian remains shielded while its other anchors are active; island-crossing Warp
-Rings open after that island's anchors are freed. Defeating a boss leaves the party in the
-same field. Cross the onward trail when ready.
+or western trail openings to move between connected areas. Eggman's anchors fold the onward
+roads into rifts: a visible curtain of light blocks each eastern trail until its guardian
+falls. Local dungeon discoveries let the party operate the area's relay; shutting it down
+removes the guardians' shields. Defeat those guardians to free the anchor and reopen the
+trail. Backtracking remains available. Island-crossing Warp Rings open after that island's
+anchors are freed. Defeating a boss leaves the party in the same field; cross when ready.
+Previously cleared areas in older saves retain their open trails.
 
 Use **A / Enter** beside characters, landmarks, monitors, Starposts or bosses. Pocky's
 travelling stall sells supplies in the field; closing it returns to the same spot. Starposts
 provide repeatable free rest. Visible patrols can be avoided. The minimap shows terrain, your position, and places you have already investigated;
 it does not reveal unseen discoveries or patrols. Nearby interaction prompts retain the controls.
 
-**Story and journal.** The optional discoveries develop the Convergence mystery, the people
-affected by it and the party's relationships. They can be investigated in either order and
-do not serve as mandatory keys for every boss. **Menu -> Journal** replays discoveries and
-records what you have actually found, without listing undiscovered objectives. Defeating a chapter boss provides level milestones and supplies, so the
-main story can be followed without grinding or collecting every clue. Traveller dialogue
-responds to discoveries, and camp conversations give the party time to talk.
+**Story and journal.** Sonic wants to give everyone their own sky back. Following Eggman's
+anchors brings him to the Convergence Engine, while Tails and Knuckles discover how to
+return the stolen power safely. Characters explain the stakes, respond to local changes,
+and offer observations when something resists them. Dungeon discoveries and relays matter
+to progression; side puzzles, caches and ordinary patrols remain optional. **Menu -> Journal**
+recalls the party's purpose and discoveries already made, without listing undiscovered
+objectives. Boss milestones and discoveries provide level catch-up and supplies without
+requiring patrol grinding.
 
 **Green Hill.** The 1536 x 1024 overworld extends beyond the original clearing into a
 bell garden, a flooded orchard, a southern grove and an unfamiliar reflected shoreline.
@@ -200,10 +202,11 @@ java -cp target/test-classes:target/classes:$(cat target/test-classpath.txt) \
 - `TestThreeIslandsExample` (engine tests) packages and validates the mod and runs that
   suite; `TestThreeIslandsScene` plays it against a real S3K session: a new game through the
   field startup and in-world dialogue/save, all zones and bosses, a keyboard-fought battle,
-  discovery persistence, free local travel/backtracking, exact battle field/camera identity,
+  discovery persistence, sealed local trails and open backtracking, exact battle field/camera identity,
   and Green Hill's Sonic 1 theme taking over from the stand-in. Dungeon checks exercise all
   available interiors through the actual entrances, both sentry battles, indoor save/continue,
-  the story reward, repeat interaction and returning/re-entering. Model checks flood-fill the
+  the story reward, repeat interaction and returning/re-entering, then the relay, shield removal,
+  save/continue, every guardian, onward travel and the final ending. Model checks flood-fill the
   gate geometry, preserve old saves/entrances and simulate dungeon combat, including a
   level-one Sonic in the first shrine. Green Hill checks cover both sluice orders, the
   locked/revealed orchard route, bell mistakes and recovery, one-time rewards, save/continue,

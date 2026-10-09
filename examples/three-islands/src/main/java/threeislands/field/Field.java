@@ -50,6 +50,7 @@ public final class Field {
     private int trailHead, grace;
     private double distance;
     private int bellPhrase;
+    private boolean cleared;
 
     public boolean expanded() { return dungeon == null && zone == Zone.GREEN_HILL; }
     public int width() { return expanded() ? 1536 : WIDTH; }
@@ -95,7 +96,7 @@ public final class Field {
 
     /** Physical portcullises cannot be bypassed by walking around the sentries. */
     public boolean sealed(double px, double py) {
-        if (dungeon == null) return false;
+        if (dungeon == null) return !cleared && zone != Zone.DEATH_EGG && px >= exitX() - 8;
         return (!guardDefeated(0) && px >= 384 && px < 400 && py >= 304 && py <= 368)
                 || (!guardDefeated(1) && px >= 688 && px < 704
                     && py >= dungeon.y(272) - 32 && py <= dungeon.y(272) + 32);
@@ -147,6 +148,7 @@ public final class Field {
 
     public String key(Spot spot) { return zone.key + "-field-" + spot.id; }
     public void restore(Progress progress) {
+        cleared = progress.isCleared(zone);
         for (Spot spot : spots) spot.done = progress.seen(key(spot))
                 || (dungeon == null && progress.isCleared(zone) && (spot.kind == Kind.BOSS || spot.kind == Kind.MIDBOSS));
     }
@@ -164,8 +166,10 @@ public final class Field {
         for (Spot spot : spots) if ((spot.kind == Kind.DISCOVERY || spot.kind == Kind.DUNGEON) && spot.done) n++;
         return n;
     }
+    public boolean relayReady() { return cleared || done("memory"); }
+    public boolean anchorExposed() { return cleared || (relayReady() && done("signal")); }
     public boolean bossReady() {
-
+        if (!anchorExposed()) return false;
         for (Spot spot : spots) if (spot.kind == Kind.MIDBOSS && !spot.done) return false;
         return true;
     }
@@ -222,7 +226,7 @@ public final class Field {
     }
     public boolean walkable(double px, double py) {
         if (dungeon != null) return dungeon.floor(px, py) && !sealed(px, py);
-        if (px < 48 || px > width() - 48 || py < 88 || py > height() - 48 || water(px, py)) return false;
+        if (px < 48 || px > width() - 48 || py < 88 || py > height() - 48 || water(px, py) || sealed(px, py)) return false;
         for (int[] bank : banks()) if (px > bank[0] && px < bank[0] + bank[2]
                 && py > bank[1] && py < bank[1] + bank[3]) return false;
         return true;

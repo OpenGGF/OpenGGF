@@ -63,9 +63,10 @@ public final class FieldScreen implements Screen {
         if (exitCooldown > 0) exitCooldown--;
         if (field.dungeon != null && dx < 0 && field.atStart()) { game.leaveDungeon(this); return; }
         if (field.dungeon == null && exitCooldown == 0 && ((dx < 0 && field.atStart())
-                || (dx > 0 && field.x() >= field.exitX() && Math.abs(field.y() - 336) < 44))) {
+                || (dx > 0 && field.x() >= field.exitX() - (game.canTravelForward(zone) ? 0 : 18) && Math.abs(field.y() - 336) < 44))) {
             if (!game.travel(this, dx > 0)) {
-                say(dx > 0 ? "Light knots around the passage. Its pulse matches the island's anchors." : "The trail disappears into the surf.");
+                if (dx > 0) speak(game, "Sonic", "Same pulse as that guardian. This trail isn't going anywhere while it's still holding the anchor.");
+                else say("The trail disappears into the surf.");
                 exitCooldown = 90;
             }
             return;
@@ -148,17 +149,18 @@ public final class FieldScreen implements Screen {
                 boolean helped = !spot.done;
                 field.complete(game.progress, spot);
                 if (helped) game.progress.addItem(threeislands.core.Item.SUPER_RING, 2);
+                game.save();
                 Runnable returnToField = () -> {
                     if (helped) say("Received 2 Super Rings.");
                     game.swap(this);
                 };
-                if (field.discoveries() > 0) {
-                    game.swap(new StoryScreen(game, List.of(new Story.Line(null,
-                            "The traveller listens as you describe what you found. Word of your discoveries is spreading back to camp."),
-                            new Story.Line(null, "For a while, the camp feels less lonely.")), this, returnToField));
-                } else game.replayStory(zone.key + "-friend", this, returnToField);
+                game.replayStory(zone.key + (field.discoveries() > 0 ? "-friend-after" : "-friend"), this, returnToField);
             }
             case DISCOVERY -> {
+                if (!field.relayReady()) {
+                    game.replayStory(zone.key + "-relay-sealed", this, () -> game.swap(this));
+                    return;
+                }
                 game.replayStory(zone.key + "-" + spot.id, this, () -> {
                     field.complete(game.progress, spot);
                     // Discoveries carry progression so avoiding optional battles never requires grinding.
@@ -174,10 +176,12 @@ public final class FieldScreen implements Screen {
                 });
             }
             case MIDBOSS -> {
+                if (!field.anchorExposed()) { shielded(game); return; }
                 game.playStory(zone.key + "-mid", this, () -> game.battle(this, spot, spot.group));
             }
             case BOSS -> {
-                if (!field.bossReady()) { say("A guardian stands between you and the anchor."); return; }
+                if (!field.anchorExposed()) { shielded(game); return; }
+                if (!field.bossReady()) { speak(game, "Sonic", "That other machine's still covering it. I can't get close yet."); return; }
                 if (!game.chapterBossReady(zone)) {
                     say("The shield pulses in time with the island's other anchors.");
                     return;
@@ -185,6 +189,12 @@ public final class FieldScreen implements Screen {
                 game.playStory(zone.key + "-boss", this, () -> game.battle(this, spot, spot.group));
             }
         }
+    }
+    private void speak(Game game, String speaker, String text) {
+        game.swap(new StoryScreen(game, List.of(new Story.Line(speaker, text)), this, () -> game.swap(this)));
+    }
+    private void shielded(Game game) {
+        speak(game, "Sonic", "That light throws me back before I can touch it. Something else is feeding its shield.");
     }
     private void say(String text) { toast = text; toastTicks = 210; }
     public void afterBattle(Game game, Field.Spot spot, boolean won) {
@@ -213,13 +223,20 @@ public final class FieldScreen implements Screen {
     public void drawWorld(Game game, SceneCanvas c, Field.Spot hidden, boolean showParty) {
         if (dungeonArt != null) dungeonArt.draw(c, field, cameraX, cameraY, game.ticks());
         else stage.fieldArt.draw(c, field, cameraX, cameraY, game.ticks());
+        if (field.dungeon == null && field.sealed(field.exitX(), 336)) {
+            int edge = sx(field.exitX() - 8);
+            c.fill(edge, sy(88), 24, field.height() - 136, 0x604D60C0);
+            for (int i = 0; i < 3; i++) {
+                c.fill(edge + i * 6, sy(88), 2, field.height() - 136, 0xB0ACCFFF);
+            }
+        }
         if (field.dungeon != null) game.font.shadowed(c, "< Exit", sx(60), sy(312), Ui.GOLD);
         if (hidden == null && field.dungeon == null) {
             Zone next = null;
             for (Zone candidate : Zone.values()) if (candidate.ordinal() > zone.ordinal() && game.art.has(candidate.game)) { next = candidate; break; }
             if (next != null) {
                 String label = game.canTravelForward(zone) ? "To " + next.label + " ->" : "Rift-sealed trail";
-                game.font.shadowed(c, label, sx(field.exitX() - 76), sy(304), Ui.GOLD);
+                game.font.shadowed(c, label, sx(field.exitX()) - game.font.width(label) - 54, sy(288), Ui.GOLD);
                 if (next.island() != zone.island() && game.canTravelForward(zone)) {
                     SceneSpriteSet ring = game.art.sprites("s3k:ring");
                     if (ring != null) c.draw(ring.frame((int) (game.ticks() / 8 % 4)), sx(field.exitX()), sy(328), SceneDraw.plain().withScale(3));
@@ -258,6 +275,12 @@ public final class FieldScreen implements Screen {
         c.fill(x - 10, y - 2, 20, 4, 0x50000000);
         switch (spot.kind) {
             case ENCOUNTER, MIDBOSS, BOSS, GUARDIAN -> {
+                if ((spot.kind == Field.Kind.BOSS || spot.kind == Field.Kind.MIDBOSS) && !field.anchorExposed()) {
+                    c.fill(x - 28, y - 54, 56, 56, 0x504D60C0);
+                    c.fill(x - 29, y - 55, 2, 58, 0xC0ACCFFF);
+                    c.fill(x + 27, y - 55, 2, 58, 0xC0ACCFFF);
+                    c.fill(x - 29, y - 55, 58, 2, 0xC0ACCFFF);
+                }
                 game.enemies.draw(c, spot.group.get(0), x, y, ticks, SceneDraw.plain());
                 if (spot.kind == Field.Kind.ENCOUNTER) game.font.shadowed(c, "x" + spot.group.size(), x + 10, y - 26, Ui.DIM);
             }
@@ -356,6 +379,7 @@ public final class FieldScreen implements Screen {
 
     public void journal(Game game) {
         List<Story.Line> lines = new ArrayList<>();
+        lines.addAll(game.story.scene(zone.island().key() + "-purpose"));
         // Recorded observations only; opening the journal cannot discover content for the player.
         for (String id : new String[] {"memory", "signal", "garden-verse", "garden-song", "orchard-note", "orchard-letter", "horizon"}) {
             if (game.progress.seen(zone.key + "-field-" + id) || game.progress.seen(zone.key + "-" + id)) {

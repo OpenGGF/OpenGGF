@@ -51,13 +51,14 @@ class ContentTest {
         List<String> wanted = new ArrayList<>(List.of("prologue", "ending", "ghz-rescue", "ghz-garden-verse", "ghz-garden-song", "ghz-orchard-note", "ghz-orchard-letter", "ghz-horizon"));
         for (Island island : Island.values()) {
             wanted.add(island.key() + "-arrive");
+            wanted.add(island.key() + "-purpose");
             wanted.add("village-" + island.key());
         }
         for (Zone zone : Zone.values()) {
             wanted.add(zone.key + "-enter");
             wanted.add(zone.key + "-boss");
             wanted.add(zone.key + "-clear");
-            for (String suffix : List.of("friend", "memory", "signal", "camp", "dungeon-enter")) wanted.add(zone.key + "-" + suffix);
+            for (String suffix : List.of("friend", "friend-after", "relay-sealed", "memory", "signal", "camp", "dungeon-enter")) wanted.add(zone.key + "-" + suffix);
             if (zone.bossKinds().size() > 1) wanted.add(zone.key + "-mid");
         }
         for (String scene : wanted) assertTrue(story.has(scene), "missing scene " + scene);
