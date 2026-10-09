@@ -871,6 +871,57 @@ full execution, new fresh guards, a whole-8668 baseline pass nor a green suite.
 No verification blocker remains before the requested isolated Opus 5.5 hands-on
 polish. Promo, existing PR215 publication and accountable cleanup remain pending.
 
+## Opus hands-on polish (round 3) and ring-scaled Big Head
+
+Isolated worktree `feature/ai-mutators-expansion-opus-polish` from clean `7655c0d86`.
+Inspection used title-first GPU `GameplayCaptureTool` captures (canonical one
+tick per input frame, offline PCM) in all three games, then real `Engine.loop`
+window walkthroughs through the maintained helper with explicit hub reselection.
+
+Established issues and fixes:
+
+- Backing out of a mutator's options returned focus to the first catalogue row, so
+  a long list lost its place (and How to play/Configure returned to Start). Back now
+  lands on the row that opened the page. The maintained BK2 scripts and window
+  walkthroughs were re-counted for this; their earlier recorded evidence remains
+  attributed to the earlier source.
+- Row boundary text said "full restart / death reload" on the title, where the
+  notice correctly said Start, and its "/ Enter: options" suffix was clipped in play.
+  Rows now name Start before play and "restart or death" in play, with the live
+  confirm label. Unavailable rows named a boundary that cannot apply; they now show
+  the first sentence of their reason, and a saved unavailable toggle shows On with
+  "Change to switch off".
+- Thirteen example descriptions/help strings were cut at the two-line, 46-column
+  detail panel; the copy is now within two lines at 320 px.
+- Choosing Restart or Return to game hub resumed native play during the ~22-frame
+  fade-out (Sonic visibly moved; input, damage and reopening the menu were live).
+  `GameLoopConfigurationCommands` now holds native play and input behind that fade;
+  the restart load owner releases it, and a finished or cancelled fade or a mode
+  change ends it. The restart still loads on the same frame in all three games.
+
+Rejected: a three-line detail panel (would remove the boundary legend for every
+creator) and tracking the restart inside the creator-facing screen (no completion
+signal; risk of a permanent hold).
+
+PCM cue isolation against a same-length neutral title control shows a distinct
+onset for navigate, confirm, edit, refusal and back in Sonic 1, Sonic 2 and
+Sonic 3 & Knuckles; first PCM difference is the first cue frame. This is
+offline SMPS output, not speaker certification.
+
+User-requested addition: Big Head **Scale with rings** (default off). The head is
+native size at zero rings and grows linearly to the Head size value at 100 rings,
+clamped above. `MutatorPolicy.BigHead` gains `scaleWithRings` with its original
+fixed-size constructor retained (three additive pin entries). The world adapter
+reads each eligible target's live native ring count at presentation, so pickup,
+hurt, reloads and rewind need no copied state; No Rings yields a normal head and
+Stealth still hides it. A same-schema saved entry predating the option takes its
+declared default instead of discarding every saved preference. Native frames at
+0/25/50/100/150 starting rings show 100/125/150/200/200% heads in all three games;
+zero rings is pixel-identical to Big Head off, and 100 vs 150 differ only in HUD
+digits. Natural pickup (S3K 0→11 rings) and the in-play readout were observed;
+hurt-driven shrinking is covered by the live-read test, not a captured hurt.
+
+
 
 ### Preventing automated desktop input takeover (2026-10-09)
 
@@ -908,3 +959,37 @@ unchanged. Proportionate media regression and launch/lifecycle checks address it
 actual consumers without repeating the engine suite. Opus's separate substantive
 polish validation continues at its own frozen source. Existing PR215 delivery,
 separate promo and fully accounted cleanup remain pending.
+
+
+### Accepted Opus polish qualification (2026-10-09)
+
+Opus committed the hands-on fixes and optional ring-scaled Big Head at
+`345ec13b2505c5c08db53c7d8f0f1de623d2dff9`. Its existing normal run
+`20261009T183630Z-a821da3b`, based on the completed `7655c0d8` implementation,
+finished 3,116 selected classes / 3,114 ordinary reports / 26,938 cases, with
+27 failures, zero errors and 63 skips. All 26 complete qualified baseline
+assertions match; the additional Eggman menu assertion is literal-equal to the
+separately measured clean-8668 control. All 63 skip identities and full first
+causes match. Only the existing exception-prefix removal and verified named SSZ
+blob identity normalization apply. Fresh guards have 88 reports / 675 passing
+cases, no failures or skips. The run is consumed and acknowledged. This is
+inherited-failure qualification, not a green suite or fresh whole-8668 baseline.
+
+The normal queued `-B -Dmse=off -DskipTests verify` also completed with exit zero
+(31.448 seconds execution after 280 seconds queue wait), including SDK/Javadoc
+packaging and artifact verification. Tests were deliberately skipped in this
+separate packaging command. Root subsequently exported the actual compiled API
+from that fat jar: 17,743 lines, SHA-256
+`c9c807ab99d19d00ee3d10cd9beff39d1d3332110abc86ec58fcd07f8960589d`, byte-equal to
+the normalized candidate pin. Three entries are additive for the ring-scaled
+option; the original fixed-size constructor and candidate descriptor remain.
+
+Root accepts that verified polish and composes it with the isolated-window
+repair above. The only conflict was the dated plan's appended evidence; both
+records are retained. Java production/tests/resources, POM, hooks and category
+runner inputs are byte-identical to the verified Opus source. The additional
+Python diagnostic and guidance have their own eleven passing controls and
+fail-closed launch check. There is no reason to repeat the unchanged full run.
+The Opus session limit interrupted its final prose handoff after packaging,
+not the completed compilation/tests. Root retains the inspected terminal commands
+and light comparisons; separate Opus promo and PR215 delivery remain pending.

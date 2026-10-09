@@ -38,13 +38,19 @@ public sealed interface MutatorPolicy permits MutatorPolicy.DrySonicGravity,
         @Override public MutatorCapability capability() { return MutatorCapability.RINGFALL; }
     }
 
-    /** Scale only reviewed anatomical head pixels; unsupported and ball art remains native. */
+    /**
+     * Scale only reviewed anatomical head pixels; unsupported and ball art remains native.
+     * With {@code scaleWithRings}, {@code percent} is the size reached at 100 native rings:
+     * the host grows linearly from 100% at zero rings and clamps above 100 rings.
+     */
     @com.openggf.game.ModApi
-    record BigHead(int percent, Target target) implements MutatorPolicy {
+    record BigHead(int percent, Target target, boolean scaleWithRings) implements MutatorPolicy {
         public BigHead {
             if (percent < 100 || percent > 200) throw new IllegalArgumentException("Head scale must be 100..200 percent");
             Objects.requireNonNull(target, "target");
         }
+        /** A fixed head size, independent of rings. */
+        public BigHead(int percent, Target target) { this(percent, target, false); }
         @Override public MutatorCapability capability() { return MutatorCapability.BIG_HEAD; }
     }
 

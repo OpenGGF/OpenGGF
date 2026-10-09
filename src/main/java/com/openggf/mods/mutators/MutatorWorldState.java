@@ -99,7 +99,8 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
                 }
                 int head = available.contains(MutatorCapability.BIG_HEAD)
                         && support.supportsPlayer(MutatorCapability.BIG_HEAD, sprite.characterKey().persisted(), leader)
-                        ? effective.headScalePercent(leader) : 100;
+                        // Native ring inventory is ordinary live/rewound state; it is read, never cached.
+                        ? effective.headScalePercent(leader, sprite.getRingCount()) : 100;
                 return gravity == 100 && !body && !appendage && !effects && head == 100 ? PlayableMutatorPolicy.STOCK
                         : new PlayableMutatorPolicy(gravity, body, appendage, effects, head);
             }

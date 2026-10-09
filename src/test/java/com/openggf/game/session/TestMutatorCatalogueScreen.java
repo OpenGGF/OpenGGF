@@ -48,7 +48,7 @@ class TestMutatorCatalogueScreen {
         assertEquals(11,state.definitions().size());
         if(!game.equals("s3k")) {
             var notice=MutatorConfigurationScreen.class.getDeclaredField("notice");notice.setAccessible(true);
-            assertTrue(((String)notice.get(screen)).contains("unavailable"));
+            assertTrue(((String)notice.get(screen)).toLowerCase(java.util.Locale.ROOT).contains("unavailable"));
         }
         press(screen,input,GLFW_KEY_ESCAPE,false);
         assertEquals(TitleScreenProvider.State.ACTIVE,screen.getState());
@@ -56,6 +56,42 @@ class TestMutatorCatalogueScreen {
         var rows=MutatorConfigurationScreen.class.getDeclaredMethod("rows");rows.setAccessible(true);
         var first=((List<?>)rows.invoke(screen)).getFirst();var label=first.getClass().getDeclaredMethod("label");label.setAccessible(true);
         assertEquals("Start "+game,label.invoke(first));
+    }
+
+    @Test void backingOutKeepsTheOpeningRowAndUnavailableRowsNameTheirReason() throws Exception {
+        var world=open("s2");var state=MutatorWorldAccess.state(world);
+        var screen=new MutatorConfigurationScreen(world,"Catalogue",null,c->{});screen.initialize();
+        var input=new InputHandler();
+        var row=MutatorConfigurationScreen.class.getDeclaredField("row");row.setAccessible(true);
+        for(int i=0;i<2;i++) press(screen,input,GLFW_KEY_DOWN,false);
+        press(screen,input,GLFW_KEY_ENTER,false);
+        press(screen,input,GLFW_KEY_ESCAPE,false);
+        assertEquals(2,row.get(screen),"How to play keeps focus after Back");
+        press(screen,input,GLFW_KEY_UP,false);press(screen,input,GLFW_KEY_ENTER,false);
+        for(int i=0;i<3;i++) press(screen,input,GLFW_KEY_DOWN,false);
+        press(screen,input,GLFW_KEY_ENTER,false);
+        press(screen,input,GLFW_KEY_ESCAPE,false);
+        assertEquals(3,row.get(screen),"an options page returns to the mutator that opened it");
+        press(screen,input,GLFW_KEY_ESCAPE,false);
+        assertEquals(1,row.get(screen),"the catalogue returns to Configure");
+
+        var rows=MutatorConfigurationScreen.class.getDeclaredMethod("rows");rows.setAccessible(true);
+        var rowType=Class.forName(MutatorConfigurationScreen.class.getName()+"$Row");
+        var scope=MutatorConfigurationScreen.class.getDeclaredMethod("scope",rowType);scope.setAccessible(true);
+        var value=MutatorConfigurationScreen.class.getDeclaredMethod("value",rowType);value.setAccessible(true);
+        press(screen,input,GLFW_KEY_ENTER,false);
+        var list=(List<?>)rows.invoke(screen);
+        assertEquals("Applies at Start",((String)scope.invoke(screen,list.getFirst())).split(" / ")[0],
+                "a LOAD edit before play is applied by Start");
+        var bonus=list.get(10);
+        assertEquals("Unavailable",value.invoke(screen,bonus));
+        assertEquals("Unavailable for this game or art profile.",scope.invoke(screen,bonus));
+        state.requestEnabled("catalogue:bonus",true);
+        assertEquals("[x] On",value.invoke(screen,bonus),"a saved unavailable toggle still shows that it is on");
+        assertEquals("Unavailable here. Change to switch off.",scope.invoke(screen,bonus));
+        for(int i=0;i<10;i++) press(screen,input,GLFW_KEY_DOWN,false);
+        press(screen,input,GLFW_KEY_RIGHT,false);
+        assertFalse(state.requested().get("catalogue:bonus").enabled());
     }
 
     @Test void hostFactoryValidatesNativeCuesAndPinsPreparedWorldLifetime() {

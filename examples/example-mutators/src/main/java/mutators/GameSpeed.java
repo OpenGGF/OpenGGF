@@ -9,7 +9,7 @@ public final class GameSpeed {
     private GameSpeed() { }
     public static MutatorDefinition definition() {
         return new MutatorDefinition("game-speed", "Game Speed Modifier",
-                "Play at quarter speed up to four times speed. Native physics run in whole steps; settings stay responsive.",
+                "Quarter speed up to four times speed. Physics run in whole native steps.",
                 MutatorScope.LIVE, MutatorScope.LIVE,
                 List.of(new MutatorOption.IntegerSlider("percent", "Game speed", "25 to 400 percent. Jump presses wait for a native step during slow motion.",
                                 MutatorScope.LIVE, 100, 25, 400, 25, "%"),

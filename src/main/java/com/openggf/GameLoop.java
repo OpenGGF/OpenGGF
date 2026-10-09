@@ -1323,6 +1323,10 @@ public class GameLoop {
             return;
         }
 
+        if (configurationCommands.holdsTransition(currentGameMode, () -> resolveFadeManager().isActive())) {
+            inputHandler.update();
+            return;
+        }
         boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler);
         var overlay = GameLoopPauseInput.overlay(currentGameMode);
         var titleInputOwner = currentGameMode == GameMode.TITLE_SCREEN ? getTitleScreenProviderLazy() : null;
@@ -1502,6 +1506,7 @@ public class GameLoop {
                     audioManager.fadeOutMusic();
                     GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), resolveFadeManager(), () -> {
                         levelManager.restartCurrentLevelFromConfiguration();
+                        configurationCommands.releaseTransition();
                         GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), resolveFadeManager(), null);
                     });
                 });

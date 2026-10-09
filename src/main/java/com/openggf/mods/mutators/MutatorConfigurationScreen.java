@@ -134,7 +134,14 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
 
     private boolean usable() { return !settings.isClosed() && SessionManager.getCurrentWorldSession() == world; }
     private void animate() { age++; pageAge++; overlayAge++; highlight += (row - highlight) * .45f; }
-    private void switchPage(Page next) { page = next; row = 0; pageAge = 0; highlight = 0; notice = ""; }
+    private void switchPage(Page next) { switchPage(next, 0); }
+    /** Backing out lands on the row that opened the page, so a long catalogue keeps its place. */
+    private void switchPage(Page next, int focus) { page = next; row = focus; pageAge = 0; highlight = focus; notice = ""; }
+    private int mutatorRow(String key) {
+        var owned = settings.definitions();
+        for (int i = 0; i < owned.size(); i++) if (owned.get(i).key().equals(key)) return i;
+        return 0;
+    }
     private List<Row> rows() {
         var rows = new ArrayList<Row>();
         if (page == Page.HOME) {
@@ -190,8 +197,8 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     }
     private void back() {
         if (page == Page.HOME && !inGameplay) activate(new Row(null,null,"Return to game hub",Action.HUB));
-        else if (page == Page.OPTIONS) switchPage(Page.LIST);
-        else if (page == Page.HELP || !inGameplay && page == Page.LIST) switchPage(Page.HOME);
+        else if (page == Page.OPTIONS) switchPage(Page.LIST, mutatorRow(selectedKey));
+        else if (page == Page.HELP || !inGameplay && page == Page.LIST) switchPage(Page.HOME, page == Page.HELP ? 2 : 1);
         else if (inGameplay) { notice = "Choose Resume to apply. Esc keeps play held."; }
     }
     private void activate(Row item) {
@@ -278,7 +285,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         var definition=definition(item.key()).definition();
         if (!support.capabilities(world.getCurrentZone(),world.getCurrentAct()).containsAll(definition.capabilities())) {
             String reason=support.optionUnavailableReason(definition.localId(),item.option()==null?"":item.option());
-            return reason.isBlank()?"This effect is unavailable for the current game or art profile.":reason;
+            return reason.isBlank()?"Unavailable for this game or art profile.":reason;
         }
         return item.option()==null ? "" : support.optionUnavailableReason(definition.localId(),item.option());
     }
@@ -455,6 +462,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             if (d.capabilities().contains(MutatorCapability.BIG_HEAD)) {
                 String reason=leaderHeadPresentationReason();
                 if (!reason.isBlank()) return reason;
+                if (current.option()==null) { String rings=ringScaledHeadReadout(); if (!rings.isBlank()) return rings; }
             }
             return current.option()!=null ? d.option(current.option()).help() : d.description();
         }
@@ -478,6 +486,18 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         if (renderer.headProfileId().isBlank())
             return "The leader's current art has no reviewed head mask. Native size is kept.";
         return renderer.headPresentationReason(player.getMappingFrame());
+    }
+
+    /** The admitted ring-scaled size, read from the leader's live native inventory. */
+    private String ringScaledHeadReadout() {
+        var sprites=GameServices.spritesOrNull();
+        var player=sprites==null?null:sprites.getMainPlayable();
+        boolean scaled=settings.effective().policies().values().stream().flatMap(List::stream)
+                .anyMatch(policy -> policy instanceof MutatorPolicy.BigHead head && head.scaleWithRings());
+        if (!inGameplay || player==null || !scaled) return "";
+        int rings=player.getRingCount();
+        return "Head grows with rings: "+settings.effective().headScalePercent(true,rings)+"% at "+rings
+                +" rings, full size at "+MutatorSessionState.Effective.RING_SCALE_FULL+".";
     }
 
     /** Word wrap on the compact grid; an overlong final line keeps the shared ellipsis. */
@@ -523,8 +543,9 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private String value(Row item) {
         if(item.key()==null) return "";
         var requested=settings.requested().get(item.key());
+        if(item.option()==null && requested.enabled()) return "[x] On";
         if (!unavailable(item).isBlank()) return "Unavailable";
-        if(item.option()==null) return requested.enabled()?"[x] On":"[ ] Off";
+        if(item.option()==null) return "[ ] Off";
         return format(definition(item.key()).definition().option(item.option()),requested.options().get(item.option()));
     }
     private static String format(MutatorOption option, Object value) {
@@ -540,15 +561,24 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private String scope(Row item) {
         if(item.key()==null) return "";
         var d=definition(item.key()).definition();
+        String unavailable=unavailable(item);
+        if(!unavailable.isBlank()) {
+            // No boundary applies here: name the reason, or how to clear a toggle saved before it became unavailable.
+            if(item.option()==null && settings.requested().get(item.key()).enabled()) return "Unavailable here. Change to switch off.";
+            int sentence=unavailable.indexOf(". ");
+            return sentence<0?unavailable:unavailable.substring(0,sentence+1);
+        }
         var admitted=settings.admitted().get(item.key());
         MutatorScope scope=scopeOf(item);
         var pendingEdit=settings.pending().stream().filter(p->p.key().equals(item.key()) && Objects.equals(p.optionId(),item.option())).findFirst();
         boolean pending=pendingEdit.isPresent();
         if (pending && pendingEdit.get().reason().contains("edit")) return "History differs / edit to apply";
-        String boundary=switch(scope){case LIVE->inGameplay?"Resume":"Start";case LOAD->"full restart / death reload";case LAUNCH->"new game";};
+        // Before play every boundary is the Start load; in play the row names the menu choice that applies it.
+        String boundary=!inGameplay?"Start":switch(scope){case LIVE->"Resume";case LOAD->"restart or death";case LAUNCH->"new game";};
         if(item.option()!=null && pending) return "Pending "+boundary+" / now "
                 +format(d.option(item.option()),admitted.options().get(item.option())).replace("[x] ","").replace("[ ] ","");
-        return (pending?"Pending ":"Applies at ")+boundary+(item.action()==Action.MUTATOR?" / Enter: options":"");
+        String options=item.action()==Action.MUTATOR && lastInput!=null?" / "+MenuInput.confirmLabel(lastInput)+": options":"";
+        return (pending?"Pending ":"Applies at ")+boundary+options;
     }
     @Override public void close() {
         if(font!=null) font.cleanup(); if(renderer!=null) renderer.cleanup();

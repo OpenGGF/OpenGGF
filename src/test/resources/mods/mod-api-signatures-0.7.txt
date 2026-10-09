@@ -1476,6 +1476,7 @@ CONSTRUCTOR com.openggf.mods.mutators.MutatorOption$Choice public  <init>(java.l
 CONSTRUCTOR com.openggf.mods.mutators.MutatorOption$IntegerSlider public  <init>(java.lang.String,java.lang.String,java.lang.String,com.openggf.mods.mutators.MutatorScope,java.lang.Integer,int,int,int,java.lang.String)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorOptions public  <init>(java.util.Map<java.lang.String,java.lang.Object>)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$BigHead public  <init>(int,com.openggf.mods.mutators.MutatorPolicy$Target)
+CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$BigHead public  <init>(int,com.openggf.mods.mutators.MutatorPolicy$Target,boolean)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback public  <init>(int,int)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity public  <init>(int)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed public  <init>(int,boolean)
@@ -10826,6 +10827,7 @@ METHOD com.openggf.mods.mutators.MutatorOptions public,final  boolean equals(jav
 METHOD com.openggf.mods.mutators.MutatorOptions public,final  int hashCode()
 METHOD com.openggf.mods.mutators.MutatorOptions public,final  java.lang.String toString()
 METHOD com.openggf.mods.mutators.MutatorPolicy public,abstract  com.openggf.mods.mutators.MutatorCapability capability()
+METHOD com.openggf.mods.mutators.MutatorPolicy$BigHead public  boolean scaleWithRings()
 METHOD com.openggf.mods.mutators.MutatorPolicy$BigHead public  com.openggf.mods.mutators.MutatorCapability capability()
 METHOD com.openggf.mods.mutators.MutatorPolicy$BigHead public  com.openggf.mods.mutators.MutatorPolicy$Target target()
 METHOD com.openggf.mods.mutators.MutatorPolicy$BigHead public  int percent()
@@ -15189,6 +15191,7 @@ RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$IntegerSlider step int
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorOption$IntegerSlider unit java.lang.String
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorOptions values java.util.Map<java.lang.String,java.lang.Object>
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$BigHead percent int
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$BigHead scaleWithRings boolean
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$BigHead target com.openggf.mods.mutators.MutatorPolicy$Target
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback percent int
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback verticalSpeedCap int

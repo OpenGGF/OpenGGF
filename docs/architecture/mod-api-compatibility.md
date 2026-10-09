@@ -568,6 +568,15 @@ without exposing global engine services. This is an ordinary candidate surface
 regeneration; `0.7` remains unpublished, and the final pin is generated from
 compiled classes.
 
+`MutatorPolicy.BigHead` gains a `scaleWithRings` record component for a head that
+grows from native size at zero rings to its `percent` at 100 native rings. The
+original `(int, Target)` constructor remains and declares a fixed size. The host
+reads each eligible target's live native ring count at presentation, so rewind and
+reloads need no extra state. This regenerates the mutable `0.7` pin with three
+additive entries and no removals; `0.7.0` stays unpublished. Saved preferences for
+a same-schema mutator that later adds an option take that option's declared
+default; unknown options and changed schema versions are still rejected.
+
 ## Bounded ROM-part cue candidate
 
 Sitar Hero's fumble follow-up adds `SceneMusicPlayer.PLAYHEAD` and the default

@@ -119,6 +119,11 @@ Violent Explosions amplifies only the resolved native badnik rebound. Big Head
 composes reviewed anatomical masks after native SAT admission, with native
 fallbacks for ball, powered, donor/custom and unreviewed poses. Do not scale the
 entire player quad or use `setHidden` to fake an appearance-only effect.
+`BigHead(percent, target, true)` scales with the target's live native ring count:
+normal size at zero rings, `percent` at 100 rings and above. The host reads the
+count at presentation, so pickup, hurt, reloads and rewind need no copied state.
+A saved entry that predates a newly added option takes its declared default, so
+an added checkbox should default to the old behaviour.
 
 Game Speed covers interactive native level, special and bonus play. Stage setup,
 results and exits remain under their native presentation owners. A provider being

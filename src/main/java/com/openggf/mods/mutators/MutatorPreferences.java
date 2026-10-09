@@ -15,7 +15,10 @@ public record MutatorPreferences(String profile, Map<String, Entry> entries) {
         entries.keySet().forEach(ModKeySyntax::requireDisplayKey);
     }
 
-    /** Unknown owners stay inert. Changed schemas require an explicit reset, never guessed migration. */
+    /**
+     * Unknown owners stay inert. Changed schemas require an explicit reset, never guessed migration.
+     * An option added later under the same schema takes its declared default; saved values never change.
+     */
     public Map<String, MutatorSessionState.Configuration> forSession(List<OwnedMutator> definitions) {
         Map<String, MutatorSessionState.Configuration> result = new LinkedHashMap<>();
         for (OwnedMutator owned : definitions) {
@@ -24,11 +27,13 @@ public record MutatorPreferences(String profile, Map<String, Entry> entries) {
             if (entry.schemaVersion() != owned.definition().schemaVersion()) {
                 throw new IllegalArgumentException("Saved schema changed for " + owned.key() + "; reset its preferences");
             }
-            if (!entry.options().keySet().equals(owned.definition().defaults().keySet())) {
-                throw new IllegalArgumentException("Unknown or missing saved options for " + owned.key());
+            Map<String, Object> options = new LinkedHashMap<>(owned.definition().defaults());
+            if (!options.keySet().containsAll(entry.options().keySet())) {
+                throw new IllegalArgumentException("Unknown saved options for " + owned.key());
             }
-            owned.definition().options().forEach(option -> option.validate(entry.options().get(option.id())));
-            result.put(owned.key(), new MutatorSessionState.Configuration(entry.enabled(), entry.options()));
+            options.putAll(entry.options());
+            owned.definition().options().forEach(option -> option.validate(options.get(option.id())));
+            result.put(owned.key(), new MutatorSessionState.Configuration(entry.enabled(), options));
         }
         return Map.copyOf(result);
     }

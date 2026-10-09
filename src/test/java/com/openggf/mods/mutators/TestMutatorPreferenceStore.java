@@ -70,6 +70,16 @@ class TestMutatorPreferenceStore {
         }
         assertTrue(new MutatorPreferences("s2", Map.of("uninstalled:old",
                 new MutatorPreferences.Entry(1, true, Map.of("unknown", 999)))).forSession(catalog).isEmpty());
+        MutatorDefinition grown = new MutatorDefinition("gravity", "Gravity", "", MutatorScope.LIVE,
+                MutatorScope.LIVE, List.of(new MutatorOption.IntegerSlider("percent", "Gravity", "",
+                MutatorScope.LIVE, 100, 25, 200, 1, "%"), new MutatorOption.Checkbox("later", "Later", "",
+                MutatorScope.LIVE, false)), Set.of(MutatorCapability.DRY_SONIC_GRAVITY),
+                options -> List.of(new MutatorPolicy.DrySonicGravity(options.integer("percent"))));
+        var retained = new MutatorPreferences("s2", Map.of("owner:gravity", new MutatorPreferences.Entry(1, true,
+                Map.of("percent", 50)))).forSession(List.of(new OwnedMutator("owner", grown))).get("owner:gravity");
+        assertEquals(Map.of("percent", 50, "later", false), retained.options(),
+                "a later same-schema option takes its declared default; saved values are unchanged");
+        assertTrue(retained.enabled());
     }
 
     @Test

@@ -100,6 +100,61 @@ class TestMutatorWorldIntegration {
         first.requestEnabled("first-owner:gravity", true);
         assertFalse(second.requested().get("first-owner:gravity").enabled());
     }
+    @Test void ringScaledHeadFollowsLiveNativeInventoryWhileFixedAndOffModesStayUnchanged() {
+        var rings=new java.util.concurrent.atomic.AtomicInteger();
+        var bigHead=new MutatorDefinition("big-head","Big Head","",MutatorScope.LIVE,MutatorScope.LIVE,
+                List.of(new MutatorOption.IntegerSlider("percent","Head size","",MutatorScope.LIVE,150,100,200,10,"%"),
+                        new MutatorOption.Checkbox("rings","Scale with rings","",MutatorScope.LIVE,false),
+                        new MutatorOption.Checkbox("team","All team","",MutatorScope.LIVE,false)),
+                Set.of(MutatorCapability.BIG_HEAD),o->List.of(
+                        new MutatorPolicy.BigHead(o.integer("percent"),o.checkbox("team")?MutatorPolicy.Target.ALL_TEAM
+                                :MutatorPolicy.Target.LEADER,o.checkbox("rings"))));
+        var stealth=new MutatorDefinition("stealth","Stealth","",MutatorScope.LIVE,MutatorScope.LIVE,List.of(),
+                Set.of(MutatorCapability.PLAYER_STEALTH),o->List.of(new MutatorPolicy.PlayerStealth(true,true,MutatorPolicy.Target.LEADER,false)));
+        var catalog=new MutatorCatalog(List.of(new OwnedMutator("test-mutators",bigHead),new OwnedMutator("test-mutators",stealth)),faults);
+        var m=new DelegatingGameModule(new Sonic2GameModule(),"test-mutators:heads") {
+            @Override public boolean supportsSidekick() { return false; }
+            @Override public <T> T getGameService(Class<T> type) {
+                if(type==WorldSessionPolicyProvider.class) return type.cast(new MutatorWorldProvider(catalog));
+                if(type==MutatorSupportProfile.class) return type.cast(new MutatorSupportProfile(){
+                    public Set<MutatorCapability> capabilities(int z,int a){ return Set.of(MutatorCapability.BIG_HEAD,MutatorCapability.PLAYER_STEALTH); }
+                    public boolean supportsPlayer(String key,boolean leader){ return true; }
+                    public boolean supportsPlayer(MutatorCapability capability,String key,boolean leader){ return key.equals("sonic"); }
+                });
+                return super.getGameService(type);
+            }
+        };
+        GameModuleRegistry.setCurrent(m);SessionManager.openGameplaySession(new Sonic2GameModule(),m,null);
+        TestEnvironment.activeGameplayMode();
+        var world=SessionManager.getCurrentWorldSession();var state=MutatorWorldAccess.state(world);
+        var sonic=new com.openggf.sprites.playable.Sonic("sonic",(short)32,(short)48) {
+            @Override public int getRingCount() { return rings.get(); }
+        };
+        GameServices.sprites().addSprite(sonic);
+        java.util.function.IntSupplier head=()->com.openggf.sprites.playable.PlayableSpriteInternalAccess.mutatorPolicy(sonic).headScalePercent();
+        state.requestEnabled("test-mutators:big-head",true);
+        state.requestOption("test-mutators:big-head","percent",200);
+        MutatorWorldAccess.beforeAssembly(world,LevelLoadCause.FULL_LEVEL_ASSEMBLY);
+        rings.set(0);assertEquals(200,head.getAsInt(),"default fixed mode ignores rings");
+        state.requestOption("test-mutators:big-head","rings",true);
+        assertEquals(200,head.getAsInt(),"a LIVE edit waits for Resume");
+        assertTrue(state.boundary(MutatorScope.LIVE).accepted());
+        int[][] expected={{0,100},{25,125},{50,150},{99,199},{100,200},{150,200},{999,200}};
+        for(int[] pair:expected) { rings.set(pair[0]);assertEquals(pair[1],head.getAsInt(),pair[0]+" rings"); }
+        rings.set(100);rings.set(40);assertEquals(140,head.getAsInt(),"losing rings shrinks the head");
+        rings.set(80);assertEquals(180,head.getAsInt(),"restored inventory is read live, never cached");
+        rings.set(0);assertSame(com.openggf.sprites.playable.PlayableMutatorPolicy.STOCK,
+                com.openggf.sprites.playable.PlayableSpriteInternalAccess.mutatorPolicy(sonic),"zero rings is the stock presentation");
+        state.requestOption("test-mutators:big-head","percent",150);assertTrue(state.boundary(MutatorScope.LIVE).accepted());
+        rings.set(50);assertEquals(125,head.getAsInt(),"the slider is the 100-ring maximum");
+        rings.set(100);state.requestEnabled("test-mutators:stealth",true);assertTrue(state.boundary(MutatorScope.LIVE).accepted());
+        var hidden=com.openggf.sprites.playable.PlayableSpriteInternalAccess.mutatorPolicy(sonic);
+        assertTrue(hidden.suppressBody(),"Stealth still owns visibility; the renderer hides the body before any head scale");
+        var tails=new com.openggf.sprites.playable.Tails("tails",(short)32,(short)48);
+        GameServices.sprites().addSprite(tails);
+        assertEquals(100,com.openggf.sprites.playable.PlayableSpriteInternalAccess.mutatorPolicy(tails).headScalePercent(),
+                "unsupported art keeps its stock head");
+    }
     @Test void firstLaunchCreatesRequestedStoreAndWorldRetirementRejectsHistoricalState() {
         var world=open(List.of(definition("gravity",MutatorScope.LIVE,o->List.of(new MutatorPolicy.DrySonicGravity(50)))));
         var state=MutatorWorldAccess.state(world); state.requestEnabled("test-mutators:gravity",true);

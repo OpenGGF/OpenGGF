@@ -9,9 +9,9 @@ public final class ViolentExplosions {
     private ViolentExplosions() { }
     public static MutatorDefinition definition() {
         return new MutatorDefinition("violent-explosions", "Violent Explosions",
-                "Badnik defeats kick you back harder vertically. Decorative blasts, bosses and unrelated hazards stay native.",
+                "Badnik defeats bounce you higher. Blasts, bosses and other hazards stay native.",
                 MutatorScope.LIVE, MutatorScope.LIVE,
-                List.of(new MutatorOption.IntegerSlider("percent", "Defeat knockback", "150 to 300 percent of the resolved native vertical rebound. Horizontal speed stays native.",
+                List.of(new MutatorOption.IntegerSlider("percent", "Defeat knockback", "150 to 300 percent of the native vertical rebound. Horizontal speed stays native.",
                                 MutatorScope.LIVE, 150, 150, 300, 25, "%"),
                         new MutatorOption.IntegerSlider("cap", "Vertical speed cap", "Bound the amplified vertical rebound in pixels per native tick.",
                                 MutatorScope.LIVE, 12, 1, 32, 1, " px/tick")),
