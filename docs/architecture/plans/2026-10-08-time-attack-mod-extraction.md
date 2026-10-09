@@ -157,3 +157,47 @@ Rejected: blocking `SSLServerSocket.accept` (a stalled TLS peer could not be har
 without its close path), a PKCS12 keystore (password and PBE cost for one key), validating the
 in-tree classes with reserved findings filtered (vacuous, see above), and deleting the static
 facade now (would edit `net/master`, outside this lane).
+
+## Lane B record: bundled catalog source, binary storage, build (2026-10-08)
+
+Worktree `.worktrees/ai-bundled-mod-source`, branch `feature/ai-bundled-mod-source` from
+`next` b1e8b5254. Commits: `01bdc4206` binary owner storage; `89b4c98c1` bundled catalog
+source and Mod Manager badge; `c9ebcb2f6` locator hardening; `4748838fb` build step,
+universal-jar embedding and release checks.
+
+Decisions:
+
+- **Trust anchor.** The manifest (`META-INF/openggf/bundled-mods.json`: id, version, file,
+  SHA-256, size) is written into the engine's own classes at `prepare-package`, so the
+  engine artifact pins the hashes. `bundled/` beside the jar and `openggf-bundled/`
+  resources supply bytes only. Rejected: a manifest inside `bundled/`, because whoever
+  can drop a jar there could also rewrite its hash list.
+- **Byte sources.** Embedded resources win over `bundled/`. Embedded jars extract to
+  `SavePaths.root()/bundled-mod-cache/<sha256>.jar` (staged, hashed while streaming,
+  bounded by the recorded size, re-hashed every boot, engine-named stale files pruned).
+  Install directory: `-Dopenggf.installDir`, else the engine code source's parent
+  directory (jar → its directory; `target/classes` → `target`). The working directory is
+  never used.
+- **Verification.** Size and SHA-256 are checked before parsing (so damage reads as
+  `BUNDLED_MOD_HASH_MISMATCH`), then the retained `ModAssetRoot.jar` snapshot is hashed
+  again and its manifest id/version must equal the entry. The descriptor carries that
+  snapshot as `retainedSource`, so `ModCatalogValidator`, `ModAudioPreparer` and
+  `ModClassLoaderFactory`/`ModValidator` all read the verified bytes.
+- **Defaults and persistence.** A verified bundled id without a `modstate.json` entry is
+  injected enabled and ordered before user mods (user overrides keep winning). Trust for
+  the manifest hash is injected into the in-memory startup state every boot and stripped
+  by `PendingModStateEditor.save`, so `modstate.json` only holds player grants and choices.
+  An explicit disable persists across upgrades; a new build trusts only its own hash.
+- **Duplicates.** Manifest ids are reserved whether or not the bundled jar verified: a
+  `mods/` jar with that id becomes an `InvalidModEntry` (`BUNDLED_MOD_ID_RESERVED`) so the
+  bundled copy is not blocked as `DUPLICATE_MOD_ID`. Rejected: falling back to the user
+  copy when the bundled jar fails, which would let a damaged install silently switch code.
+- **Policy.** The locator runs inside the `normalBootLoader` supplier, so
+  `STARTUP_DETERMINISTIC` boots never open or extract; development runs skip it. Native
+  profile skips packaging; native resource config carries neither manifest nor jars.
+- **Binary storage.** `ModStorage.readBytes/writeBytes`, 4 MiB per file, shared namespace
+  and name rules, staged-and-renamed writes. No per-owner total quota yet.
+
+Open questions for integration: a fault-boundary disable is persisted exactly like a
+player's disable, so it also survives the upgrade that fixes the fault; and a bundled mod
+that registers a startup scene would replace stock titles for every player by default.

@@ -27,6 +27,8 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
     }
 
     @Override public void render() { screen.render(); }
+    /** The neutral screen this host adapts; for same-package composition tests. */
+    ModManagerScreen screen() { return screen; }
     @Override public boolean consumeCloseRequested() { return screen.consumeCloseRequested(); }
     @Override public void suppressInputUntilNeutral() { screen.suppressInputUntilNeutral(); }
 

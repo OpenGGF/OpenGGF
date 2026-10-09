@@ -2517,6 +2517,8 @@ FIELD com.openggf.level.resources.KosinskiModuleQueue$Phase public,static,final 
 FIELD com.openggf.level.resources.KosinskiModuleQueue$Phase public,static,final com.openggf.level.resources.KosinskiModuleQueue$Phase READY_TO_START
 FIELD com.openggf.level.scroll.BgTilemapUpdateMode public,static,final com.openggf.level.scroll.BgTilemapUpdateMode PERSISTENT_NAMETABLE_64X32
 FIELD com.openggf.level.scroll.BgTilemapUpdateMode public,static,final com.openggf.level.scroll.BgTilemapUpdateMode STATIC_WINDOW
+FIELD com.openggf.mods.ModStorage public,static,final int MAX_BINARY_BYTES
+FIELD com.openggf.mods.ModStorage public,static,final int MAX_TEXT_BYTES
 FIELD com.openggf.mods.code.RomArtCompression public,static,final com.openggf.mods.code.RomArtCompression KOSINSKI
 FIELD com.openggf.mods.code.RomArtCompression public,static,final com.openggf.mods.code.RomArtCompression NEMESIS
 FIELD com.openggf.mods.code.RomArtCompression public,static,final com.openggf.mods.code.RomArtCompression UNCOMPRESSED
@@ -10511,7 +10513,9 @@ METHOD com.openggf.level.spawn.SpawnPoint public,abstract  int x()
 METHOD com.openggf.level.spawn.SpawnPoint public,abstract  int y()
 METHOD com.openggf.mods.ModStorage public,abstract  boolean delete(java.lang.String)
 METHOD com.openggf.mods.ModStorage public,abstract  boolean write(java.lang.String,java.lang.String)
+METHOD com.openggf.mods.ModStorage public,abstract  boolean writeBytes(java.lang.String,byte[])
 METHOD com.openggf.mods.ModStorage public,abstract  java.util.List<java.lang.String> list()
+METHOD com.openggf.mods.ModStorage public,abstract  java.util.Optional<byte[]> readBytes(java.lang.String)
 METHOD com.openggf.mods.ModStorage public,abstract  java.util.Optional<java.lang.String> read(java.lang.String)
 METHOD com.openggf.mods.TrackKey public  java.lang.String localName()
 METHOD com.openggf.mods.TrackKey public  java.lang.String modId()

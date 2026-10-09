@@ -42,6 +42,16 @@
              verify-build-jdk execution. -->
         <openggf.jdk.check.skip>false</openggf.jdk.check.skip>
         <native.macos.package.skip>true</native.macos.package.skip>
+        <!-- First-party mods bundled with JVM distributions: comma-separated project
+             directories (examples/ layout) packaged at prepare-package by
+             BundledModPackager through ggfmod package, warnings as errors. The jars go to
+             target/bundled/ and their build-pinned hash manifest into the engine's own
+             classes (META-INF/openggf/bundled-mods.json); an empty list writes an empty
+             manifest. Only the universal-jar profile embeds the jars; native builds skip
+             the step and carry no bundled mods. -->
+        <openggf.bundled.mods></openggf.bundled.mods>
+        <openggf.bundled.skip>false</openggf.bundled.skip>
+        <openggf.bundled.embed.directory>${project.build.directory}/bundled-embed-disabled</openggf.bundled.embed.directory>
     </properties>
 
     <!-- LWJGL native classifier profiles -->
@@ -748,6 +758,10 @@
         <!-- GraalVM native-image build: mvn package -Pnative -DskipTests -->
         <profile>
             <id>native</id>
+            <properties>
+                <!-- Native images cannot load code mods; they ship no bundled mods. -->
+                <openggf.bundled.skip>true</openggf.bundled.skip>
+            </properties>
             <build>
                 <plugins>
                     <!-- Extract LWJGL native libraries from classifier JARs.
@@ -862,6 +876,10 @@
              GitHub release can publish one JVM artifact alongside native bundles. -->
         <profile>
             <id>universal-jar</id>
+            <properties>
+                <!-- Embed the bundled mod jars as openggf-bundled/<file> resources. -->
+                <openggf.bundled.embed.directory>${project.build.directory}/bundled</openggf.bundled.embed.directory>
+            </properties>
             <dependencies>
                 <dependency>
                     <groupId>org.lwjgl</groupId>
@@ -1386,6 +1404,23 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                                 <argument>${project.basedir}/src/main/java</argument>
                                 <argument>${project.build.directory}/mod-sdk/classes</argument>
                                 <argument>${project.build.directory}/mod-sdk/javadocs</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>prepare-bundled-mods</id>
+                        <phase>prepare-package</phase>
+                        <goals><goal>exec</goal></goals>
+                        <configuration>
+                            <skip>${openggf.bundled.skip}</skip>
+                            <executable>java</executable>
+                            <arguments>
+                                <argument>-cp</argument><classpath/>
+                                <argument>com.openggf.tools.modsdk.BundledModPackager</argument>
+                                <argument>${project.basedir}</argument>
+                                <argument>${project.build.directory}/bundled</argument>
+                                <argument>${project.build.outputDirectory}/META-INF/openggf/bundled-mods.json</argument>
+                                <argument>${openggf.bundled.mods}</argument>
                             </arguments>
                         </configuration>
                     </execution>
