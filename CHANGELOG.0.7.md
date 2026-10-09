@@ -24,6 +24,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   fixed-point velocity calculation, preventing an extra movement step.
   Seventh-emerald results use the ROM's leave/return movement, wait and draw
   suppression, including the exact-seven and Tails-alone gates.
+  The Metropolis Zone boss's sheet is registered for act 3, where Obj54 fights,
+  both at level load and through the arena's `PLC_MTZ_BOSS` (`ArtNem_MTZBoss`);
+  it was registered only for acts 1 and 2.
 
 - **Native death reactions:** rolling deaths perform each game's floor/radius
   reset before the death launch, preserving native centres and subpixels.

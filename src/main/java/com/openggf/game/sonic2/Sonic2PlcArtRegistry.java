@@ -308,6 +308,9 @@ public final class Sonic2PlcArtRegistry {
                 Sonic2ObjectArtKeys.MCZ_BOSS, Sonic2ObjectArt::loadMCZBossSheet);
         reg(Sonic2Constants.ART_NEM_OOZ_BOSS_ADDR,
                 Sonic2ObjectArtKeys.OOZ_BOSS, Sonic2ObjectArt::loadOOZBossSheet);
+        // PLC_MTZ_BOSS (Sonic2MTZEvents, act 3 arena): ArtNem_MTZBoss.
+        reg(Sonic2Constants.ART_NEM_MTZ_BOSS_ADDR,
+                Sonic2ObjectArtKeys.MTZ_BOSS, Sonic2ObjectArt::loadMTZBossSheet);
     }
 
     /**

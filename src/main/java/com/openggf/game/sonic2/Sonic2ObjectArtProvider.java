@@ -431,6 +431,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, com.openggf.g
                 registerIfAbsent(Sonic2ObjectArtKeys.OOZ_BOSS, artLoader::loadOOZBossSheet);
                 break;
             case 0x04: // ROM_ZONE_MTZ
+            case 0x05: // ROM_ZONE_MTZ_3: Obj54's fight is in act 3 (metropolis_zone_2)
                 registerIfAbsent(Sonic2ObjectArtKeys.MTZ_BOSS, artLoader::loadMTZBossSheet);
                 break;
             case 0x0E: // ROM_ZONE_DEZ
