@@ -190,6 +190,24 @@ class PolishArtTest {
         assertEquals(0, gentle.skid, "a gentle turn does not skid");
     }
 
+    @Test
+    void pushingTheFarmBoundaryStopsMotionAndEndsOnReleaseOrJump() {
+        BeltRunner r = new BeltRunner(16, 30);
+        r.step(16, 1264, 68, true, false, false, false, false, false);
+        assertTrue(r.pushing, "a held direction against the boundary is a push");
+        assertTrue(r.facingLeft);
+        assertEquals(0, r.speed);
+        r.step(16, 1264, 68, false, false, false, false, false, false);
+        assertFalse(r.pushing, "release returns to idle");
+        r.step(16, 1264, 68, true, false, false, false, true, true);
+        assertFalse(r.pushing, "an airborne farmer rolls rather than pushes");
+        BeltRunner right = new BeltRunner(1264, 30);
+        right.step(16, 1264, 68, false, true, false, false, false, false);
+        assertTrue(right.pushing);
+        assertFalse(right.facingLeft);
+        assertEquals(0, right.speed);
+    }
+
     private static int[] frames(int body, int ticks) {
         TailsTails t = tails();
         int[] out = new int[ticks];

@@ -17,6 +17,8 @@ public final class BeltRunner {
     public float ySpeed;
     public boolean facingLeft;
     public boolean rolling;
+    /** Grounded, holding a direction against the field boundary. */
+    public boolean pushing;
     /**
      * Ticks left of the skid animation ($D, AniSonic0D: four frames of four ticks), started by
      * braking hard on the ground; 0 when not skidding. The dust drops its puffs meanwhile.
@@ -79,7 +81,13 @@ public final class BeltRunner {
                 rolling = false;
             }
         }
-        x = Math.max(minX, Math.min(maxX, x + speed));
+        float nextX = x + speed;
+        pushing = height == 0 && !rolling && (left && nextX <= minX || right && nextX >= maxX);
+        x = Math.max(minX, Math.min(maxX, nextX));
+        if (pushing) {
+            speed = 0;
+            skid = 0;
+        }
         depth = Math.max(0, Math.min(maxDepth, depth + depthSpeed));
         return jumped;
     }

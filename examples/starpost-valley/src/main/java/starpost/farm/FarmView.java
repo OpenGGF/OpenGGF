@@ -222,7 +222,7 @@ public final class FarmView {
         if (Math.abs(runner.x - DOOR_X) < 12 && runner.depth < 6 && in.upPressed) {
             request = Request.SLEEP;
         }
-        if (runner.x >= GATE_X + 8 && runner.speed > 0) {
+        if (runner.x >= GATE_X + 8 && (runner.speed > 0 || runner.pushing && !runner.facingLeft)) {
             request = Request.TO_VALLEY;
         }
         float target = Float.isNaN(cameraTarget) ? runner.x - shell.width() / 2f + (runner.facingLeft ? -20 : 20)
@@ -230,6 +230,7 @@ public final class FarmView {
         camera += (clampCamera(target) - camera) * (Float.isNaN(cameraTarget) ? 0.15f : 0.04f);
         if (chargeTicks > 0 || dashing || looping) {
             runner.skid = 0;
+            runner.pushing = false;
         }
         animate(charged);
         dust.update(anim.id() == Anim.SPINDASH, anim.id() == Anim.SKID, false, false, runner.x,
@@ -603,6 +604,8 @@ public final class FarmView {
             anim.set(Anim.SPINDASH, 0);
         } else if (runner.skid > 0 && runner.height == 0) {
             anim.set(Anim.SKID, 3);                       // AniSonic0D: delay 3
+        } else if (runner.pushing) {
+            anim.set(Anim.PUSH, 9);                       // AniTails04 / AniSonic04
         } else if (speed > 0.05f) {
             anim.set(speed >= 6 ? Anim.RUN : Anim.WALK, Math.max(0, 8 - (int) speed));
         } else if (holdStill.getAsBoolean() && runner.height == 0) {
