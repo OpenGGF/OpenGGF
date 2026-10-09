@@ -1,0 +1,10 @@
+# s2 dez: built by TypingHedgehogRailBuilderProbe from src/test/resources/traces/s2/dez_ending (0 repairs, ended boss)
+game s2
+zone 10
+act 0
+team sonic,tails
+validated 166
+engine 0.7.prerelease-26bf29066
+rom 7B905383
+program 166:8
+boss 166

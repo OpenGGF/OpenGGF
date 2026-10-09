@@ -269,6 +269,22 @@ and record validated length (settles team and repair budget); (2) capture at the
 play to the validated end, restore, and expect no layout-version rejection (including a
 two-sprite Sonic and Tails roster); (3) typed text from a non-US layout reaches the controller.
 
+**Restore slot-order caveat (kill test 2, rails lane, `TypingHedgehogRailProbe` at e87acba21).**
+Nine stands (stock badniks removed, 600-row neutral soak, then restore and replay to the
+validated end) kept P1 position, speeds, rings, `GameRng` seed and the level/V-int/timer
+counters exactly equal to the uninterrupted run, with no layout-version rejection (43 in S1/S2,
+52 in S3K, Sonic+Tails included). The whole course snapshot was identical for S3K DEZ1 and SOZ1
+and S2 HTZ2. In S1 LZ3, S1 SBZ2 and S2 CPZ2, however, any restore (the no-soak control shows
+the same) puts dynamic objects back in different SST slots: `object-manager.usedSlotsBits`
+differs (CPZ2: slots 20-23 and 49-52 in the uninterrupted run, 0-3 and 31-34 after the restore),
+along with the player's `interactSlotIndex` and `solid-execution` dynamic ids; S1 palette colours
+also differ, depending on the soak. P1 was unaffected over 1,300-2,900 rows, but slot order is
+execution and RNG-draw order, so a later object interaction can diverge after a stand. Engine
+code is not changed in this lane. Mitigation: the rail builder accepts a stand only when Course's
+whole stand chain (each stand captured, held for an 1800-row soak and restored) reproduces the
+straight run's P1 state on every row, and the shipped-rail regression test drives the real
+Course through every stand.
+
 ### Mod structure
 
 - One `baseGame: any` jar: the hub is its startup scene, and one patch per game
