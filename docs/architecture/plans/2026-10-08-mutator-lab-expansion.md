@@ -870,3 +870,41 @@ This qualifies the implementation with inherited failures; it is neither another
 full execution, new fresh guards, a whole-8668 baseline pass nor a green suite.
 No verification blocker remains before the requested isolated Opus 5.5 hands-on
 polish. Promo, existing PR215 publication and accountable cleanup remain pending.
+
+
+### Preventing automated desktop input takeover (2026-10-09)
+
+The subsequent Opus polish's native-window walkthroughs validated their own
+Engine PID but used shared `DISPLAY=:0`, repeatedly acquiring input focus and
+sending keys for 181–321 seconds. The user reported the interruption. All five
+owned walkthroughs were already terminal, with Engine/recorders/private sinks
+absent; the existing normal Maven validation remains preserved. That ownership
+check established which window received input, not isolation from the user's
+session. Repeated real-time window routes were the wrong routine validation path.
+
+Use existing headless engine tests and offscreen gameplay captures for behavioral
+checks, presentation inspection and promo footage. Reserve window automation for
+focus/close/window questions. The maintained helper now requires its own fresh
+Xvfb server, allocated through `-displayfd` without touching existing X11 locks.
+Its Xlib connection, Engine and ffmpeg share only that server; inherited Wayland
+routing is removed. Missing/failed isolation rejects launch before Engine, audio
+or focus/key actions. There is no shared-display fallback. Independent cleanup
+closes clients before reaping the owned server, preserving primary errors.
+
+The regression reproduces ambient desktop access before the repair. All eleven
+media controls pass afterward, including missing dependency, explicit private
+connection/child environment, invalid or reused display numbers, startup timeout,
+real controlled-child protocol/teardown, and independent cleanup failures.
+`python3 -m unittest discover -s tools/media -p 'test_*.py'` and Python compilation
+pass. A real helper invocation on this host, where Xvfb is unavailable, exits one
+with the isolation error, zero Engine/recorder processes, no audio module and
+clean cleanup. This is fail-closed verification, not a real Xvfb renderer/window
+claim. Documentation links, AGENTS/CLAUDE equality and diff whitespace pass.
+
+The inspected change-based plan falls back to all 3,115 ordinary classes for an
+unclassified media script. This repair changes only the Python diagnostic and
+its guidance; Java/runtime timing, API, POM, hooks and test-selection policy are
+unchanged. Proportionate media regression and launch/lifecycle checks address its
+actual consumers without repeating the engine suite. Opus's separate substantive
+polish validation continues at its own frozen source. Existing PR215 delivery,
+separate promo and fully accounted cleanup remain pending.

@@ -747,6 +747,18 @@ its consumers are migrated and validated together. Its CSV keeps input last;
 appending host observation columns silently broke a prefix comparator that strips
 the final field. Extended host columns are explicit in the title-first mode.
 
+Exact window ownership does not isolate desktop input (2026-10-09 Mutator Lab
+polish): the helper validated its own Engine PID but repeatedly focused that
+window and injected keys on shared `DISPLAY=:0` for 181–321 seconds, taking input
+away from the user. Default to existing headless tests and offscreen captures;
+real-time desktop walkthroughs do not add evidence for routine gameplay/UI checks.
+For a question specifically about window focus or close, the maintained helper now
+creates its own Xvfb server with `-displayfd`, explicitly connects to that display
+and gives Engine/recorders only that display, without inherited Wayland routing.
+Missing or failed isolation must stop before Engine/audio/input admission; never
+fall back to the desktop. Reap the owned server after clients. Virtual-window
+observations do not certify the user's window manager or hardware input.
+
 Desktop visibility and input need separate proof (2026-10-07 Mutator Lab): an
 X11 window may exist but remain unmapped while `glfwShowWindow` waits. Recheck
 its exact child PID, title, `IsViewable` state and positive geometry immediately
@@ -754,10 +766,10 @@ before recording. Default-visible creation and explicit ShowWindow are distinct
 paths; one successful path does not certify the other. A bounded workaround may
 map only the owned window with `override_redirect`; record that frameless path
 and any child-only driver/audio environment rather than claiming default WM
-support. Never change global display/audio settings or another process's window. On
-shared DISPLAY, recheck the exact owned window's focus/readiness at each input
-event and possible overlapping capture before treating an unchanged page as a
-routing defect.
+support. Never change global display/audio settings or another process's window. Early
+shared-display captures are historical evidence only, not permission to repeat
+that automation. Recheck focus/readiness within the isolated server before
+treating an unchanged page as a routing defect.
 
 Synthetic X11 releases must use `protocol.event.KeyRelease`: constructing a
 `KeyPress` object with a `type=KeyRelease` argument still serializes a press in

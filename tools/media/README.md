@@ -1,10 +1,19 @@
-# Owned Engine desktop capture
+# Engine window diagnostics on an isolated display
 
-`engine_window_capture.py` launches the real compiled Engine, records its X11
-window and a unique Pulse null-sink monitor, and sends only host input. It is a
-bounded desktop complement to `GameplayCaptureTool`'s deterministic GPU/state
-capture. Requirements: Linux X11 access, Python `Xlib`, `ffmpeg`, `pactl`, Java 21,
-a compiled checkout and supplied ROMs. It does not build or copy ROMs.
+Use headless engine tests for behavior and `GameplayCaptureTool` for deterministic
+offscreen GPU/state/audio captures and promo footage. These do not need synthetic
+desktop input or a real-time window walkthrough. See
+[headless testing](../../docs/guide/contributing/headless-testing.md) and the
+[capture skill](../../.agents/skills/gameplay-capture/SKILL.md).
+
+Use `engine_window_capture.py` only when the question specifically concerns a
+window, focus loss or application close. It launches the real compiled Engine
+on a fresh, owned Xvfb server, records that window and a unique Pulse null-sink
+monitor, and sends input only within that virtual display. It never connects to
+the user's desktop, inherits its Wayland display or falls back to a shared X11
+display. Missing Xvfb fails before Engine/audio launch or input/focus operations.
+Requirements: Linux, `Xvfb`, Python `Xlib`, `ffmpeg`, `pactl`, Java 21, a compiled
+checkout and supplied ROMs. It does not build or copy ROMs.
 
 ```bash
 python3 examples/example-mutators/build.py
@@ -42,6 +51,8 @@ input, not evidence about menu routing. `wait` is bounded to 30 seconds;
 requires Engine exit code zero within seven seconds. An unexpected Engine exit,
 including an unrequested clean exit, fails the walkthrough. The whole helper expires
 after ten minutes. Read the visible result before interpreting a later action.
+This diagnostic retains the normal Engine clock and real-time waits; it is not
+the routine test or footage-generation path.
 The example's [window walkthrough](../../examples/example-mutators/window-walkthrough.jsonl)
 starts from fresh defaults; it supplements the maintained BK2 capture input.
 Development patch launches open their declared base game automatically. For an
@@ -50,7 +61,8 @@ games. Verify the visible hub and subsequent native title; arrows sent during th
 base game's intro do not select another game.
 
 Output includes `window.mkv`, stereo 48 kHz `device-output.wav`, screenshots and
-`window-evidence.json` with child environment, action timestamps, exact window
+`window-evidence.json` with the owned virtual display's name/PID, child environment,
+action timestamps, exact window
 PID/title/geometry/visibility, recorder-start timestamp and actual cleanup outcomes.
 Cleanup attempts every owned resource independently and preserves the primary
 failure if another cleanup action fails. The sink is a process-scoped device
@@ -59,14 +71,18 @@ music and SFX, not merely a sink-input or nonzero RMS. Raw temporary stderr stay
 in the checkout's `target/`; inspect and remove consumed diagnostic logs.
 
 The helper validates PID/title/IsViewable/positive geometry immediately before
-starting ffmpeg. It removes only its own sink and recorder/Engine processes.
+starting ffmpeg. It removes only its own sink, recorder/Engine processes and Xvfb
+server. Display allocation uses Xvfb's `-displayfd`; no existing X11 lock files
+are deleted.
 Evidence must be outside the checkout; each run uses a fresh isolated config and
 player-settings directory. EOF or expiry tears down the owned processes, while
 `close` records normal application shutdown.
 
 Some hosts need explicit diagnostic options. `--unmanaged-window` maps only the
 owned Engine window with X11 `override_redirect`; this is a frameless workaround,
-not certification of normal window-manager mapping. `--disable-vsync` sets only
+not certification of the user's window-manager mapping. Virtual-display evidence
+does not certify desktop composition, hardware input or physical speaker output.
+`--disable-vsync` sets only
 this child's driver variables, retaining the Engine tick limiter. If bundled
 OpenAL reports an unresolved keyutils symbol, `--keyutils-preload /absolute/existing/libkeyutils.so.1`
 adds only that existing library to this child's preload. All options are recorded.

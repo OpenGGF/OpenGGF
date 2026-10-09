@@ -28,6 +28,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Native special/bonus-stage clock, input and offline PCM observations are
   reproducible with `MutatorStageProbeTool`; its direct-entry and hidden-GL
   limits are documented separately from desktop footage.
+  Routine validation and footage use headless/offscreen paths; window-specific
+  diagnostics create an owned virtual display and fail if isolation is unavailable,
+  preventing automated walkthroughs from taking desktop keyboard focus.
 
 - **Sonic 2 title SFX priority:** the flashing star's last twinkle now runs to
   its own stop, as in the ROM, releasing the sound driver's SFX priority. A stop

@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Record a bounded, owned OpenGGF Engine X11 window and Pulse monitor output.
+"""Record OpenGGF on an owned virtual X11 display, without desktop input.
 
 Inputs: compiled checkout/classpath, optional development mod, supplied ROM
 paths and JSON-line key/wait/screenshot/focus/close actions. No gameplay-state
 writes. Creates an isolated config, a unique null sink and owned recorder
-processes; leaves user configuration and unrelated windows unchanged.
+processes. Never connects to the user's display or falls back to it.
 Origin: 2026-10-07 Mutator Lab visibility/input/audio investigation.
-Requires python-xlib, ffmpeg, pactl and an existing X11/Pulse session.
+Requires Xvfb, python-xlib, ffmpeg, pactl and Pulse. Prefer headless tests and
+offscreen GameplayCaptureTool captures for ordinary validation and promo footage.
 """
-import argparse, json, os, select, signal, subprocess, sys, time, uuid
+import argparse, json, os, select, shutil, signal, subprocess, sys, time, uuid
 from pathlib import Path
 from Xlib import X, XK, display
 from Xlib.protocol import event as xevent
@@ -21,6 +22,70 @@ def stop(process):
         process.terminate()
         try: process.wait(timeout=3)
         except subprocess.TimeoutExpired: process.kill(); process.wait(timeout=3)
+
+
+class VirtualDisplay:
+    """Own a fresh server; displayfd allocates it without touching existing locks."""
+    def __init__(self, log):
+        self.log = log
+        self.process = None
+        self.name = None
+
+    def start(self):
+        executable = shutil.which('Xvfb')
+        if not executable:
+            raise RuntimeError('Xvfb is required for isolated window diagnostics; '
+                               'use headless tests or offscreen captures instead')
+        read_fd, write_fd = os.pipe()
+        environment = os.environ.copy()
+        for key in ('DISPLAY', 'WAYLAND_DISPLAY', 'XAUTHORITY'):
+            environment.pop(key, None)
+        try:
+            self.process = subprocess.Popen(
+                [executable, '-displayfd', str(write_fd), '-screen', '0', '1280x720x24',
+                 '-nolisten', 'tcp', '-noreset', '-ac'],
+                env=environment, pass_fds=(write_fd,), stdin=subprocess.DEVNULL,
+                stdout=self.log, stderr=self.log)
+            os.close(write_fd)
+            write_fd = None
+            deadline = time.monotonic() + 10
+            response = b''
+            while b'\n' not in response:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0 or self.process.poll() is not None:
+                    raise RuntimeError('Owned Xvfb failed to become ready within ten seconds')
+                if not select.select([read_fd], [], [], remaining)[0]:
+                    raise RuntimeError('Owned Xvfb display allocation timed out')
+                chunk = os.read(read_fd, 32)
+                if not chunk or len(response) + len(chunk) > 16:
+                    raise RuntimeError('Owned Xvfb returned an invalid display number')
+                response += chunk
+            number = response.strip()
+            if not number.isdigit():
+                raise RuntimeError('Owned Xvfb returned an invalid display number')
+            ambient_number = os.environ.get('DISPLAY', '').rsplit(':', 1)[-1].split('.')[0]
+            if ambient_number.isdigit() and int(number) == int(ambient_number):
+                raise RuntimeError('Owned Xvfb must not reuse the desktop display number')
+            self.name = ':' + str(int(number))
+            return self.child_environment()
+        except BaseException:
+            self.close()
+            raise
+        finally:
+            os.close(read_fd)
+            if write_fd is not None:
+                os.close(write_fd)
+
+    def child_environment(self):
+        if self.name is None or self.process.poll() is not None:
+            raise RuntimeError('Owned virtual display is not running')
+        environment = os.environ.copy()
+        environment.pop('WAYLAND_DISPLAY', None)
+        environment.update(DISPLAY=self.name, XDG_SESSION_TYPE='x11', XAUTHORITY='/dev/null')
+        return environment
+
+    def close(self):
+        stop(self.process)
 
 def require_successful_close(host):
     if host.returncode != 0:
@@ -38,7 +103,7 @@ def finish_engine_run(host, intentional_stop, receipt):
         receipt['status'] = 'stopped before normal window close'
 
 
-def cleanup_owned(processes, focus_window, connection, module, log):
+def cleanup_owned(processes, focus_window, connection, module, log, virtual_display=None):
     """Attempt every owned resource, retaining independent errors and actual outcomes."""
     result = {'processes_stopped': {}, 'errors': []}
     for name, process in processes.items():
@@ -52,7 +117,8 @@ def cleanup_owned(processes, focus_window, connection, module, log):
             result['processes_stopped'][name] = False
             result['errors'].append(f'{name} status: {failure!r}')
     operations = [('focus_window_destroyed', lambda: focus_window.destroy() if focus_window else None),
-                  ('display_closed', connection.close),
+                  ('display_closed', lambda: connection.close() if connection else None),
+                  ('virtual_display_stopped', lambda: virtual_display.close() if virtual_display else None),
                   ('audio_module_unloaded', lambda: subprocess.run(['pactl', 'unload-module', module], check=True, timeout=5) if module else None),
                   ('temporary_log_closed', log.close)]
     for name, action in operations:
@@ -119,18 +185,23 @@ def main():
     text+='display:\n  aspect: NATIVE_4_3\n  windowAutosize: false\ndebug:\n  window:\n    width: 640\n    height: 448\n    scale: 2\n'
     text+='startup:\n  legalDisclaimer: false\n  titleScreen: true\n  masterTitleScreen: true\ncharacters:\n  main: sonic\n  sidekick: ""\n'
     (config/'config.yaml').write_text(text)
-    d=display.Display();host=video=sound=None;module=None;focus_window=None
+    d=None;host=video=sound=None;module=None;focus_window=None
     sink='openggf_capture_'+uuid.uuid4().hex[:12]
     log_path=root/'target'/('engine-window-'+uuid.uuid4().hex+'.log');log_path.parent.mkdir(exist_ok=True)
     log=log_path.open('wb');started=time.monotonic()
+    virtual=VirtualDisplay(log)
     receipt={'sink':sink,'config':str(config),'processes':{},'status':'starting','actions':[]}
     def record(): (out/'window-evidence.json').write_text(json.dumps(receipt,indent=2)+'\n')
     def reply(value): print(json.dumps(value),flush=True)
     try:
+        env=virtual.start()
+        receipt['virtual_display']={'name':virtual.name,'pid':virtual.process.pid,'owned':True}
+        record()
+        d=display.Display(virtual.name)
         module=subprocess.check_output(['pactl','load-module','module-null-sink','sink_name='+sink,'rate=48000','channels=2'],text=True,timeout=5).strip()
         if not module.isdigit():raise RuntimeError('No exact owned audio module ID')
         receipt['owned_audio_module']=module
-        env=os.environ.copy();env.update(PULSE_SINK=sink,ALSOFT_DRIVERS='pulse')
+        env.update(PULSE_SINK=sink,ALSOFT_DRIVERS='pulse')
         if args.disable_vsync:
             # This own frameless surface gets no normal WM presentation pacing; the Engine retains its tick limiter.
             env.update(vblank_mode='0',__GL_SYNC_TO_VBLANK='0')
@@ -168,16 +239,17 @@ def main():
         receipt['window_title']=window_title;receipt['window_id']=window.id;receipt['window_size']=[geom.width,geom.height]
         receipt['window_depth']=geom.depth;receipt['window_map_state']=attributes.map_state
         grab=['ffmpeg','-hide_banner','-loglevel','error','-y','-f','x11grab','-window_id',str(window.id),
-              '-video_size',str(geom.width)+'x'+str(geom.height),'-framerate','30','-draw_mouse','0','-i',env.get('DISPLAY',':0')]
-        video=subprocess.Popen(grab+['-c:v','libx264','-preset','veryfast','-crf','16',str(out/'window.mkv')],stdout=subprocess.DEVNULL,stderr=log)
+              '-video_size',str(geom.width)+'x'+str(geom.height),'-framerate','30','-draw_mouse','0','-i',virtual.name]
+        video=subprocess.Popen(grab+['-c:v','libx264','-preset','veryfast','-crf','16',str(out/'window.mkv')],env=env,stdout=subprocess.DEVNULL,stderr=log)
         sound=subprocess.Popen(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','pulse','-i',sink+'.monitor',
-                                '-ar','48000','-ac','2','-c:a','pcm_s16le',str(out/'device-output.wav')],stdout=subprocess.DEVNULL,stderr=log)
+                                '-ar','48000','-ac','2','-c:a','pcm_s16le',str(out/'device-output.wav')],env=env,stdout=subprocess.DEVNULL,stderr=log)
         receipt['processes'].update(video=video.pid,audio=sound.pid)
         receipt['recording_started_seconds']=round(time.monotonic()-started,3)
         receipt['status']='recording';record()
         reply({'ready':True,'engine_pid':host.pid,'window_id':window.id,'log':str(log_path)})
         pending=args.actions.read_bytes().splitlines() if args.actions else [];buffer=b'';intentional_stop=False
         while host.poll() is None and time.monotonic()-started<600:
+            if virtual.process.poll() is not None:raise RuntimeError('Owned virtual display stopped early')
             if video.poll() is not None or sound.poll() is not None:raise RuntimeError('Output recorder stopped early')
             if not pending:
                 if args.actions:intentional_stop=True;break
@@ -209,7 +281,7 @@ def main():
                 name=action.get('name','window')
                 if not name.replace('-','').replace('_','').isalnum():raise ValueError('Unsafe image name')
                 image=out/(name+'.png')
-                subprocess.run(grab+['-frames:v','1',str(image)],stdout=subprocess.DEVNULL,stderr=log,check=True,timeout=10)
+                subprocess.run(grab+['-frames:v','1',str(image)],env=env,stdout=subprocess.DEVNULL,stderr=log,check=True,timeout=10)
                 reply({'image':str(image)})
             elif op=='focus-away':
                 if focus_window is None:
@@ -234,9 +306,9 @@ def main():
         raise
     finally:
         primary_failure=sys.exc_info()[0] is not None
-        cleanup=cleanup_owned({'engine':host,'video':video,'audio':sound},focus_window,d,module,log)
+        cleanup=cleanup_owned({'engine':host,'video':video,'audio':sound},focus_window,d,module,log,virtual)
         receipt['cleanup']=cleanup
-        receipt['all_owned_processes_stopped']=all(cleanup['processes_stopped'].values())
+        receipt['all_owned_processes_stopped']=all(cleanup['processes_stopped'].values()) and cleanup['virtual_display_stopped']
         receipt['owned_audio_module_removed']=module if cleanup['audio_module_unloaded'] else None
         receipt['temporary_log']=str(log_path)
         if cleanup['errors'] and not primary_failure:receipt['status']='cleanup failed'
