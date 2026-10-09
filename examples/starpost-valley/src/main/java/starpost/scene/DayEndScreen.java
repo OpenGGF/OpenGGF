@@ -72,8 +72,8 @@ public final class DayEndScreen implements Screen {
                 shell.ticks);
         canvas.fill(0, 0, w, h, 0x60000010);
         long age = age(shell);
-        // The signpost spins, slowing to a stop on Sonic's face (Map_Sign frames 0-3).
-        int frame = age < 60 ? (int) (age / Math.max(1, 2 + age / 12) % 4) : 3;
+        // The signpost spins (Map_Sign 0 Robotnik, 1-3 turning), slowing to a stop on the hero's face (4).
+        int frame = age < 60 ? (int) (age / Math.max(1, 2 + age / 12) % 4) : 4;   // Map_Sign 4: the hero's face
         if (frame < shell.art.signpost.frameCount()) {
             SceneSprite sign = shell.art.signpost.frame(frame);
             canvas.draw(sign, w / 2f, 64, SceneDraw.plain().withScale(1));

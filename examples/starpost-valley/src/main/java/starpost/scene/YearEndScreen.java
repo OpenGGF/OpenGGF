@@ -14,7 +14,7 @@ import starpost.ui.Text;
  * The Signpost Spin (design doc §9.16): on the first morning of the second year the Elder Totem
  * weighs the valley, and the old signpost spins. It flips once for each thing done well (rings
  * earned, animals home, the capsule restored, a well-kept farm). Four flips and it stops on the
- * hero's face, as Sonic 1's end-of-act signpost does; on the EGG route it stops on Robotnik
+ * hero's face, as Sonic 1's end-of-act signpost does; on the Robomart route it stops on Robotnik
  * whatever else was done. Then the credits.
  */
 final class YearEndScreen implements Screen {
@@ -39,12 +39,12 @@ final class YearEndScreen implements Screen {
         Game game = shell.game;
         game.flags.add("evaluated_y1");
         opened = shell.ticks;
-        egg = game.flags.contains("egg_member");
+        egg = game.flags.contains("robo_member");
         check(game.totalEarned >= 50000, "RINGS EARNED: " + game.totalEarned);
         check(game.population >= 30, "ANIMALS HOME: " + game.population);
         Capsule capsule = game.section(Capsule.class);
         boolean restored = capsule != null && capsule.restored(shell.catalog);
-        check(restored, egg ? "THE CAPSULE: SEALED BY EGG" : restored ? "THE GREAT CAPSULE RESTORED" : "THE GREAT CAPSULE: NOT YET");
+        check(restored, egg ? "THE CAPSULE: SEALED BY ROBOMART" : restored ? "THE GREAT CAPSULE RESTORED" : "THE GREAT CAPSULE: NOT YET");
         int tilled = 0;
         for (int r = 0; r < starpost.core.Farm.ROWS; r++) {
             for (int c = 0; c < starpost.core.Farm.COLUMNS; c++) {
@@ -83,12 +83,12 @@ final class YearEndScreen implements Screen {
         canvas.drawBackdrop(shell.art.season(0).backdrop(1), 0, 0, w, canvas.height(), 8, age * 0.4, shell.ticks);
         canvas.fill(0, 0, w, canvas.height(), 0x40000010);
         shell.art.cardFont.centred(canvas, "THE SIGNPOST SPIN", 14, SceneDraw.plain());
-        // Map_Sign: 0 Robotnik, 1-2 edge-on, 3 the hero. Spin fast, slow, then settle by the score.
+        // Map_Sign: 0 Robotnik, 1-3 turning, 4 the hero. Spin fast, slow, then settle by the score.
         int frame;
         if (age < 150) {
             frame = (int) (age / Math.max(2, 2 + age / 25) % 4);
         } else {
-            frame = score >= 4 ? 3 : 0;
+            frame = score >= 4 ? 4 : 0;
         }
         SceneSprite sign = shell.art.signpost.frame(Math.min(frame, shell.art.signpost.frameCount() - 1));
         canvas.draw(sign, w / 2f, 84, SceneDraw.plain());

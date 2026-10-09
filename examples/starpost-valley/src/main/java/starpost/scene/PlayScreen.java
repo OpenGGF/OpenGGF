@@ -49,11 +49,11 @@ public final class PlayScreen implements Screen {
         places.put("seed_stall", s -> s.push(new ShopMenu()));
         places.put("inn", s -> s.push(new InnMenu(this)));
         places.put("workshop", s -> s.push(new WorkshopMenu()));
-        places.put("egg", s -> {
+        places.put("robomart", s -> {
             if (s.game.calendar.dayNumber() < 4) {
-                s.toast("EGG: GRAND OPENING SPRING 5!");
+                s.toast("ROBOMART: GRAND OPENING SPRING 5!");
             } else {
-                s.push(new EggMenu());
+                s.push(new RobomartMenu());
             }
         });
         places.put("capsule", s -> s.push(new CapsuleMenu()));

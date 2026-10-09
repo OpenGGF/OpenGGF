@@ -86,7 +86,7 @@ public final class Art {
         public final SceneImage seedStall;
         public final SceneImage inn;
         public final SceneImage workshop;
-        public final SceneImage eggStore;
+        public final SceneImage robomart;
         /** Green Hill's lake surface (the background's water rows), for the farm pond. */
         public final SceneImage water;
         private final SceneImage[] blocks;
@@ -108,7 +108,7 @@ public final class Art {
             seedStall = tone.apply(facades.seedStall);
             inn = tone.apply(facades.inn);
             workshop = tone.apply(facades.workshop);
-            eggStore = tone.apply(facades.eggStore);
+            robomart = tone.apply(facades.robomart);
             water = sky.crop(0, Math.min(sky.height() - 32, 168), 128, 32);
             blocks = new SceneImage[kit.blockCount()];
         }

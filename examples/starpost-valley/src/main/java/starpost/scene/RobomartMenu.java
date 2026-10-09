@@ -10,13 +10,13 @@ import starpost.core.Item;
 import starpost.ui.Text;
 
 /**
- * EGG — Eggman Enterprises General Goods (design doc §6.4), staffed by Egg Robos. Seeds at a
- * mark-up, cheaper than Dandel's for members. The Egg Membership seals the Great Capsule for
+ * Robomart (design doc §6.4): Robotnik's store, staffed by Egg Robos. Seeds at a
+ * mark-up, cheaper than Dandel's for members. The Robomart Membership seals the Great Capsule for
  * good; after that the Valley Development Form sells each chamber's reward for rings, and
  * badniks build it. The cost is not in the menu: the animals leave (other systems read the
- * {@code egg_member} flag).
+ * {@code robo_member} flag).
  */
-final class EggMenu implements Screen {
+final class RobomartMenu implements Screen {
     private static final int ROWS = 7;
 
     private record Offer(String name, String icon, int rings, Runnable effect, String text) {
@@ -33,19 +33,19 @@ final class EggMenu implements Screen {
     private List<Offer> offers(Shell shell) {
         Game game = shell.game;
         List<Offer> out = new ArrayList<>();
-        boolean member = game.flags.contains("egg_member");
+        boolean member = game.flags.contains("robo_member");
         if (!member) {
-            out.add(new Offer("EGG MEMBERSHIP", "item_monitor", 5000, () -> {
-                game.flags.add("egg_member");
-                shell.toast("WELCOME TO THE EGG FAMILY! HO HO HO!");
+            out.add(new Offer("ROBOMART MEMBERSHIP", "item_monitor", 5000, () -> {
+                game.flags.add("robo_member");
+                shell.toast("WELCOME TO THE ROBOMART FAMILY! HO HO HO!");
             }, "CHEAPER SEEDS. THE CAPSULE IS SEALED FOR GOOD."));
         } else {
-            form(out, game, "capsule_garden", "EGG GREENHOUSE", 35000, "BADNIKS BUILD THE CAPSULE GARDEN.");
-            form(out, game, "minecart", "EGG MINECART", 15000, "BADNIKS RUN THE RUINS MINECART.");
-            form(out, game, "lake_bridge", "EGG BRIDGE", 25000, "BADNIKS REBUILD THE LAKE BRIDGE.");
-            form(out, game, "big_coop", "EGG COOP", 20000, "A BIGGER COOP AND PEN, BADNIK-BUILT.");
-            form(out, game, "flicky_roost", "EGG ROOSTS", 20000, "ROOSTS FOR FLICKIES. THEY DON'T LIKE THEM.");
-            form(out, game, "farm_open", "EGG LAND CLEARANCE", 40000, "THE WHOLE FARM, CLEARED BY BULLDOZERS.");
+            form(out, game, "capsule_garden", "ROBO GREENHOUSE", 35000, "BADNIKS BUILD THE CAPSULE GARDEN.");
+            form(out, game, "minecart", "ROBO MINECART", 15000, "BADNIKS RUN THE RUINS MINECART.");
+            form(out, game, "lake_bridge", "ROBO BRIDGE", 25000, "BADNIKS REBUILD THE LAKE BRIDGE.");
+            form(out, game, "big_coop", "ROBO COOP", 20000, "A BIGGER COOP AND PEN, BADNIK-BUILT.");
+            form(out, game, "flicky_roost", "ROBO ROOSTS", 20000, "ROOSTS FOR FLICKIES. THEY DON'T LIKE THEM.");
+            form(out, game, "farm_open", "ROBO LAND CLEARANCE", 40000, "THE WHOLE FARM, CLEARED BY BULLDOZERS.");
         }
         for (Item seed : shell.catalog.seedsFor(game.calendar.season())) {
             int base = shell.catalog.seedPrice(seed.id());
@@ -59,7 +59,7 @@ final class EggMenu implements Screen {
         if (!game.flags.contains(flag)) {
             out.add(new Offer(name, "scrap", rings, () -> {
                 game.flags.add(flag);
-                game.flags.add("egg_" + flag);
+                game.flags.add("robo_" + flag);
                 if (flag.equals("farm_open")) {
                     game.farm.open(starpost.core.Farm.COLUMNS);
                 }
@@ -107,8 +107,8 @@ final class EggMenu implements Screen {
         canvas.fill(x, y, w, h, 0xE0202430);
         canvas.fill(x, y, w, 3, 0xFFDB0000);
         canvas.fill(x, y + h - 3, w, 3, 0xFFDB0000);
-        Text.shadow(canvas, "EGG", x + 10, y + 8, Text.RED);
-        CompactFont.shadowed(canvas, "EGGMAN ENTERPRISES GENERAL GOODS", x + 10, y + 21, 1, 0xFFDBDBDB, 0xFF000000);
+        Text.shadow(canvas, "ROBOMART", x + 10, y + 8, Text.RED);
+        CompactFont.shadowed(canvas, "EVERYTHING YOU NEED. NOTHING YOU WANT.", x + 10, y + 21, 1, 0xFFDBDBDB, 0xFF000000);
         Text.right(canvas, game.rings + " RINGS", x + w - 10, y + 8, Text.WHITE);
         if (shell.art.eggRobo != null && shell.art.eggRobo.frameCount() > 0) {
             var robo = shell.art.eggRobo.frame(0);

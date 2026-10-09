@@ -38,6 +38,12 @@ public final class InventoryMenu implements Screen {
             shell.push(new OptionsMenu(true));
             return;
         }
+        if (shell.in.nextTool || shell.in.upPressed && cursor < COLUMNS) {
+            // The neighbours' page sits "above" the monitor slots (starpost.people).
+            shell.pop();
+            shell.push(new starpost.people.SocialPage(() -> shell.push(new InventoryMenu())));
+            return;
+        }
         int size = inv.size();
         if (shell.in.rightPressed) {
             cursor = (cursor + 1) % size;
@@ -86,16 +92,20 @@ public final class InventoryMenu implements Screen {
         Game game = shell.game;
         Inventory inv = game.inventory;
         int rows = (inv.size() + COLUMNS - 1) / COLUMNS;
-        int slot = 20, w = COLUMNS * slot + 20, h = 60 + rows * slot + 52;
-        int x = (canvas.width() - w) / 2, y = 30;
+        int slot = 20, w = 340, h = 38 + rows * slot + 74;
+        int x = (canvas.width() - w) / 2, y = Math.max(6, (canvas.height() - h) / 2 - 8);
+        int gx = x + (w - COLUMNS * slot) / 2;
         Text.panel(canvas, x, y, w, h);
         Text.shadow(canvas, game.farmName + " FARM", x + 10, y + 8, Text.YELLOW);
         Text.right(canvas, Calendar.seasonName(game.calendar.season()) + " " + game.calendar.day() + "  YEAR "
                 + game.calendar.year(), x + w - 10, y + 8, Text.WHITE);
-        Text.shadow(canvas, "RINGS " + game.rings + "   MOMENTUM " + game.momentum + "/" + game.maxMomentum,
-                x + 10, y + 22, Text.WHITE);
+        com.openggf.mods.ui.CompactFont.shadowed(canvas, "RINGS " + game.rings + "   MOMENTUM " + game.momentum + "/"
+                + game.maxMomentum, x + 10, y + 22, 1, 0xFFFFFFFF, 0xFF000000);
+        com.openggf.mods.ui.CompactFont.shadowed(canvas, "VALLEY: " + game.population + " ANIMALS",
+                x + w - 10 - com.openggf.mods.ui.CompactFont.width("VALLEY: " + game.population + " ANIMALS", 1), y + 22, 1,
+                0xFF92FF49, 0xFF000000);
         for (int i = 0; i < inv.size(); i++) {
-            int sx = x + 10 + (i % COLUMNS) * slot, sy = y + 40 + (i / COLUMNS) * slot;
+            int sx = gx + (i % COLUMNS) * slot, sy = y + 34 + (i / COLUMNS) * slot;
             boolean sel = i == cursor;
             canvas.fill(sx, sy, 18, 18, sel ? 0xFFFFDB00 : i == held ? 0xFF92FF49 : 0xFF203060);
             canvas.fill(sx + 1, sy + 1, 16, 16, 0xFF101838);
@@ -107,25 +117,25 @@ public final class InventoryMenu implements Screen {
                 }
             }
         }
-        starpost.core.Skills skills = game.section(starpost.core.Skills.class);
-        if (skills != null) {
-            int sy = y + h - 22;
-            for (int s = 0; s < starpost.core.Skills.COUNT; s++) {
-                int sx = x + 10 + s * 48;
-                com.openggf.mods.ui.CompactFont.shadowed(canvas, starpost.core.Skills.name(s).substring(0, 4) + " "
-                        + skills.level(s), sx, sy, 1, 0xFFFFDB00, 0xFF000000);
-                canvas.fill(sx, sy + 9, 44, 3, 0xFF203060);
-                canvas.fill(sx, sy + 9, Math.round(44 * skills.progress(s)), 3, 0xFF24B6FF);
-            }
-            com.openggf.mods.ui.CompactFont.shadowed(canvas, "VALLEY " + game.population, x + w - 52, sy, 1,
-                    0xFF92FF49, 0xFF000000);
-            com.openggf.mods.ui.CompactFont.shadowed(canvas, "O: OPTIONS", x + w - 60, y + 22, 1, 0xFF92DBFF, 0xFF000000);
-        }
+        int ty = y + 38 + rows * slot;
         if (inv.id(cursor) != null) {
             Item item = game.item(inv.id(cursor));
-            int ty = y + 44 + rows * slot;
             Text.shadow(canvas, item.name(), x + 10, ty, Text.YELLOW);
             Text.note(canvas, item.text(), x + 10, ty + 12, w - 20, Text.GREY);
         }
+        starpost.core.Skills skills = game.section(starpost.core.Skills.class);
+        if (skills != null) {
+            int sy = ty + 28;
+            for (int s = 0; s < starpost.core.Skills.COUNT; s++) {
+                int sx = x + 10 + s * 64;
+                String[] shortNames = {"FARM", "RANGE", "FISH", "SCRAP", "BOP"};
+                com.openggf.mods.ui.CompactFont.shadowed(canvas, shortNames[s] + " " + skills.level(s), sx, sy,
+                        1, 0xFFFFDB00, 0xFF000000);
+                canvas.fill(sx, sy + 9, 58, 3, 0xFF203060);
+                canvas.fill(sx, sy + 9, Math.round(58 * skills.progress(s)), 3, 0xFF24B6FF);
+            }
+        }
+        com.openggf.mods.ui.CompactFont.shadowed(canvas, "UP/E: NEIGHBOURS    O: OPTIONS    BACK: CLOSE", x + 10, y + h - 12,
+                1, 0xFF92DBFF, 0xFF000000);
     }
 }

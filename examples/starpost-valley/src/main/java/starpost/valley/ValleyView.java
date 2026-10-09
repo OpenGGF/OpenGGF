@@ -200,7 +200,7 @@ public final class ValleyView {
                 case "seed_stall" -> look.seedStall;
                 case "inn" -> look.inn;
                 case "workshop" -> look.workshop;
-                case "egg" -> look.eggStore;
+                case "robomart" -> look.robomart;
                 default -> null;
             };
             int floor = valley.floorBelow(place.x(), 0);

@@ -19,7 +19,7 @@ public final class Facades {
     public final SceneImage seedStall;
     public final SceneImage inn;
     public final SceneImage workshop;
-    public final SceneImage eggStore;
+    public final SceneImage robomart;
 
     Facades(Art art) {
         SceneImage flat = art.kit.blockImage(60);
@@ -33,7 +33,7 @@ public final class Facades {
         seedStall = stall();
         inn = inn();
         workshop = workshop();
-        eggStore = eggStore();
+        robomart = robomart();
     }
 
     /** A pixel buffer with blits from the ROM pieces. */
@@ -181,7 +181,7 @@ public final class Facades {
         return p.image();
     }
 
-    private SceneImage eggStore() {
+    private SceneImage robomart() {
         Pic p = new Pic(120, 96);
         walls(p, 6, 26, 108, 70);
         // Scrap Brain grey: the checker drained of colour, with a red stripe.

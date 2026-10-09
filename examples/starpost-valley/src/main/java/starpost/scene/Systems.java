@@ -24,6 +24,7 @@ public final class Systems {
         out.add(new Capsule());
         out.add(new starpost.core.Skills());
         out.add(new starpost.ruins.RuinsSection());
+        out.add(new starpost.people.People());
         return out;
     }
 
@@ -35,5 +36,6 @@ public final class Systems {
             actors.addAll(pickups.today(shell.game, play.valley().valley));
         }
         starpost.ruins.RuinsSystem.install(shell, play, places);
+        starpost.people.PeopleSystem.install(shell, play, actors);
     }
 }

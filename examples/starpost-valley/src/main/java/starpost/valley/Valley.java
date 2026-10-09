@@ -29,7 +29,7 @@ public final class Valley implements Runner.Ground {
         places.add(new Place("seed_stall", 2 * Art.BLOCK + 112, 20, "DANDEL'S SEEDS"));
         places.add(new Place("inn", 3 * Art.BLOCK + 128, 16, "LAMPPOST INN"));
         places.add(new Place("workshop", 4 * Art.BLOCK + 128, 16, "TAILS' WORKSHOP"));
-        places.add(new Place("egg", 5 * Art.BLOCK + 128, 16, "EGG"));
+        places.add(new Place("robomart", 5 * Art.BLOCK + 128, 16, "ROBOMART"));
         places.add(new Place("ruins", 11 * Art.BLOCK + 64, 18, "MARBLE RUINS"));
         places.add(new Place("capsule", 12 * Art.BLOCK + 120, 28, "THE GREAT CAPSULE"));
         places.add(new Place("lake", 12 * Art.BLOCK + 228, 20, "WATERFALL LAKE"));
