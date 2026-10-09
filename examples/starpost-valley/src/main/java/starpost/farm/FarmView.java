@@ -11,6 +11,7 @@ import starpost.art.Anim;
 import starpost.art.Art;
 import starpost.core.CropDef;
 import starpost.core.Farm;
+import starpost.core.Farmers;
 import starpost.core.Game;
 import starpost.core.Item;
 import starpost.core.Inventory;
@@ -60,6 +61,8 @@ public final class FarmView {
     public float cameraTarget = Float.NaN;
     private int chargeTicks;
     private boolean dashing;
+    /** Plots the current spin dash has tilled (Tails's weaker spin stops tilling after three). */
+    private int dashTilled;
     private long lastActionAt = -100;
     private int lastActionRow = -1;
     private int lastActionColumn = -1;
@@ -147,7 +150,8 @@ public final class FarmView {
         } else {
             if (chargeTicks >= DASH_CHARGE_TICKS && !holdAct) {
                 dashing = true;
-                runner.speed = (runner.facingLeft ? -1 : 1) * 9;
+                dashTilled = 0;
+                runner.speed = (runner.facingLeft ? -1 : 1) * Farmers.dashSpeed(game.farmer);
                 runner.rolling = true;
                 shell.sfx(Sfx.DASH);
             } else if (chargeTicks > 0 && chargeTicks < DASH_CHARGE_TICKS && !holdAct) {
@@ -213,7 +217,7 @@ public final class FarmView {
             runner.x = LOOP_X + 136;
             runner.depth = 2;
             int now = game.calendar.minutes();
-            int bonus = now - lastLapAt >= 60 ? 30 : 5;
+            int bonus = Farmers.lapBonus(game.farmer, now - lastLapAt >= 60);
             lastLapAt = now;
             game.restoreBySpeed(bonus);
             shell.toast(game.stamina ? "NICE LAP!" : "LAP! +" + bonus + " MOMENTUM");
@@ -378,6 +382,13 @@ public final class FarmView {
             } else if (!plot.watered && spend(game, 1)) {
                 plot.watered = true;
                 game.waterCharges--;
+                // Tails's two tails fan the same charge over the next plot on.
+                for (int i = 1; i < Farmers.waterReach(game.farmer); i++) {
+                    Plot next = game.farm.plot(row, column + (runner.facingLeft ? -i : i));
+                    if (next != null && next.tilled && next.object == null) {
+                        next.watered = true;
+                    }
+                }
                 shell.sfx(Sfx.SPLASH);
                 marked(row, column);
             }
@@ -387,11 +398,30 @@ public final class FarmView {
             plot.tilled = true;
             shell.sfx(Sfx.GROUND_SLIDE);
             marked(row, column);
+            dugUp(game);
+        }
+    }
+
+    /** Knuckles digs rather than tills, and sometimes turns something up. */
+    private void dugUp(Game game) {
+        String found = Farmers.dig(game);
+        if (found == null) {
+            return;
+        }
+        if (found.startsWith("rings:")) {
+            int n = Integer.parseInt(found.substring(6));
+            game.rings += n;
+            shell.toast("BURIED RINGS! +" + n);
+            shell.sfx(Sfx.RING);
+        } else if (game.inventory.add(game.item(found), 1) == 0) {
+            shell.toast("DUG UP: " + game.item(found).name());
+            shell.sfx(Sfx.GRAB);
         }
     }
 
     private void clearCover(Game game, Plot plot, Item held, int row, int column) {
         boolean fire = held != null && held.id().equals("fire_shield");
+        boolean punch = plot.cover == Plot.ROCK && Farmers.punchesRocks(game.farmer);
         switch (plot.cover) {
             case Plot.WEED -> {
                 if (spend(game, 1)) {
@@ -403,7 +433,7 @@ public final class FarmView {
                 }
             }
             case Plot.ROCK, Plot.STUMP -> {
-                if (!fire) {
+                if (!fire && !punch) {
                     shell.toast(plot.cover == Plot.ROCK ? "A FIRE SHIELD WOULD BREAK THIS ROCK"
                             : "A FIRE SHIELD WOULD CLEAR THIS STUMP");
                     shell.sfx(Sfx.ERROR);
@@ -434,16 +464,18 @@ public final class FarmView {
         return false;
     }
 
-    /** The spin dash tills every grass plot it rolls over in its row (1 Momentum each). */
+    /** The spin dash tills the grass plots it rolls over in its row (1 Momentum each; Tails's, three at most). */
     private void tillUnderfoot(Game game) {
         int[] rc = plotUnderfoot();
         if (rc == null) {
             return;
         }
         Plot plot = game.farm.plot(rc[0], rc[1]);
-        if (plot != null && !plot.tilled && plot.cover != Plot.ROCK && plot.cover != Plot.STUMP && game.spend(1)) {
+        if (plot != null && !plot.tilled && plot.cover != Plot.ROCK && plot.cover != Plot.STUMP
+                && dashTilled < Farmers.dashTills(game.farmer) && game.spend(1)) {
             plot.cover = Plot.GRASS;
             plot.tilled = true;
+            dashTilled++;
             marked(rc[0], rc[1]);
         }
     }
