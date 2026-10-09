@@ -9,6 +9,7 @@ import com.openggf.mods.code.ModContext;
  */
 public final class BootstrapControl implements GgfMod {
     private record Pair(String name, int value) { }
+    public interface Value { String value(); }
 
     @Override
     public void register(ModContext context) {
@@ -25,5 +26,8 @@ public final class BootstrapControl implements GgfMod {
             default -> -1;
         };
         if (result != 7) throw new AssertionError("Pattern-switch bootstrap failed");
+        Value proxy = (Value) java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class<?>[] {Value.class}, (instance, method, arguments) -> "proxy control");
+        if (!proxy.value().equals("proxy control")) throw new AssertionError("Runtime proxy bootstrap failed");
     }
 }

@@ -582,3 +582,11 @@ This remains focused validation. Baseline at `8668a9012` passes all 49 cases in
 the seven directly affected existing suites, without skips. The added regression
 tests fail on old code: both admission controls reproduce unsupported defaults;
 the badnik control reproduces the zero-byte/payload rejection.
+
+While the final image waited in the queue, Sitar Hero passed the corrected
+image's native performance route with offline PCM peak 5,962. A ROM-free native
+standalone check exposed another exact JDK-package omission: the runtime-generated
+proxy invoked `java.lang.reflect.Proxy.<init>(InvocationHandler)` and aborted
+with exit 134. The runtime-loaded regression fixture now also generates a proxy
+for its own interface; Linux preserves `java.lang.reflect` explicitly. This is
+an experimental image correction, with no further engine/API change.
