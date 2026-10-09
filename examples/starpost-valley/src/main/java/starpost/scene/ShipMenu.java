@@ -30,7 +30,7 @@ final class ShipMenu extends ListMenu {
 
     @Override
     protected String right(Shell shell, Item item) {
-        return shell.game.inventory.total(item.id()) + " X " + item.price();
+        return shell.game.inventory.total(item.id()) + " X " + shell.game.sellPrice(item);
     }
 
     @Override

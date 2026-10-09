@@ -114,6 +114,34 @@ public final class Game {
         };
     }
 
+    /** Adds skill experience when the skills system is installed. */
+    public void xp(int skill, int amount) {
+        Skills skills = section(Skills.class);
+        if (skills != null) {
+            skills.add(skill, amount);
+        }
+    }
+
+    /** Whether the farmer has a profession (false when skills are not installed). */
+    public boolean has(String profession) {
+        Skills skills = section(Skills.class);
+        return skills != null && skills.has(profession);
+    }
+
+    /** What one of an item sells for, with the farmer's professions applied. */
+    public int sellPrice(Item item) {
+        float mult = switch (item.kind()) {
+            case CROP -> has("ringgrower") ? 1.1f : 1;
+            case ANIMAL_GOOD -> has("rancher") ? 1.2f : 1;
+            case ARTISAN -> has("artisan") ? 1.4f : 1;
+            case FORAGE -> has("botanist") ? 1.5f : 1;
+            case FISH -> has("angler") ? 1.25f : 1;
+            case MINERAL -> has("jeweller") ? 1.3f : 1;
+            default -> 1;
+        };
+        return Math.round(item.price() * mult);
+    }
+
     /** An animal freed from a badnik joins the valley. Returns true when the count went up. */
     public boolean free() {
         if (population >= MAX_POPULATION) {
@@ -131,7 +159,7 @@ public final class Game {
     public int shippingValue() {
         int total = 0;
         for (Map.Entry<String, Integer> e : shipping.entrySet()) {
-            total += catalog.item(e.getKey()).price() * e.getValue();
+            total += sellPrice(catalog.item(e.getKey())) * e.getValue();
         }
         return total;
     }

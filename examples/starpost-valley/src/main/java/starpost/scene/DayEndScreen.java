@@ -57,7 +57,7 @@ final class DayEndScreen implements Screen {
             shell.sfx(paid > 0 ? Sfx.PERFECT : Sfx.SWITCH);
         }
         if (age > done + 60 || skip && age > 20) {
-            shell.go(new MorningCard(() -> new PlayScreen(shell)));
+            shell.go(LevelUpScreen.chain(shell, () -> new MorningCard(() -> new PlayScreen(shell))));
         }
     }
 
@@ -85,7 +85,7 @@ final class DayEndScreen implements Screen {
                 break;
             }
             Item item = items.get(i);
-            int value = item.price() * counts.get(i);
+            int value = game.sellPrice(item) * counts.get(i);
             total += value;
             Text.shadow(canvas, item.name() + " X" + counts.get(i), w / 2 - 120, y, Text.WHITE);
             Text.right(canvas, Integer.toString(value), w / 2 + 120, y, Text.WHITE);

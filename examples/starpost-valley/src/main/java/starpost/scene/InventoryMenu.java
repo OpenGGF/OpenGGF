@@ -79,7 +79,7 @@ final class InventoryMenu implements Screen {
         Game game = shell.game;
         Inventory inv = game.inventory;
         int rows = (inv.size() + COLUMNS - 1) / COLUMNS;
-        int slot = 20, w = COLUMNS * slot + 20, h = 60 + rows * slot + 30;
+        int slot = 20, w = COLUMNS * slot + 20, h = 60 + rows * slot + 52;
         int x = (canvas.width() - w) / 2, y = 30;
         Text.panel(canvas, x, y, w, h);
         Text.shadow(canvas, game.farmName + " FARM", x + 10, y + 8, Text.YELLOW);
@@ -99,6 +99,19 @@ final class InventoryMenu implements Screen {
                     canvas.text(n, sx + 18 - canvas.textWidth(n), sy + 10, Text.WHITE);
                 }
             }
+        }
+        starpost.core.Skills skills = game.section(starpost.core.Skills.class);
+        if (skills != null) {
+            int sy = y + h - 22;
+            for (int s = 0; s < starpost.core.Skills.COUNT; s++) {
+                int sx = x + 10 + s * 48;
+                com.openggf.mods.ui.CompactFont.shadowed(canvas, starpost.core.Skills.name(s).substring(0, 4) + " "
+                        + skills.level(s), sx, sy, 1, 0xFFFFDB00, 0xFF000000);
+                canvas.fill(sx, sy + 9, 44, 3, 0xFF203060);
+                canvas.fill(sx, sy + 9, Math.round(44 * skills.progress(s)), 3, 0xFF24B6FF);
+            }
+            com.openggf.mods.ui.CompactFont.shadowed(canvas, "VALLEY " + game.population, x + w - 52, sy, 1,
+                    0xFF92FF49, 0xFF000000);
         }
         if (inv.id(cursor) != null) {
             Item item = game.item(inv.id(cursor));

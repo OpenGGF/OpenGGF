@@ -65,8 +65,13 @@ public final class Pickups implements SaveSection {
                     game.restore(1);
                     shell.sfx(Sfx.RING);
                 } else if (game.inventory.add(game.item(item), 1) == 0) {
+                    boolean pair = game.has("gatherer") && game.rng.nextInt(5) == 0;
+                    if (pair) {
+                        game.inventory.add(game.item(item), 1);
+                    }
+                    game.xp(starpost.core.Skills.RANGING, 7);
                     shell.sfx(Sfx.GRAB);
-                    shell.toast("FOUND " + game.item(item).name());
+                    shell.toast("FOUND " + (pair ? "TWO " : "") + game.item(item).name());
                 } else {
                     owner.untake(index);
                 }

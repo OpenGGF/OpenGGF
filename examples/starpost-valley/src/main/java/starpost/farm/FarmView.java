@@ -263,7 +263,13 @@ public final class FarmView {
         if (game.farm.ripe(game.catalog, plot)) {
             CropDef crop = game.farm.harvest(game.catalog, plot);
             Item produce = game.item(crop.produce());
-            int leftover = game.inventory.add(produce, crop.yield());
+            int count = crop.yield();
+            if (game.has("supergrower") && game.rng.nextInt(10) == 0) {
+                count *= 2;
+                shell.toast("A DOUBLE HARVEST!");
+            }
+            game.xp(starpost.core.Skills.FARMING, 1 + produce.price() / 10);
+            int leftover = game.inventory.add(produce, count);
             if (leftover > 0) {
                 shell.toast("NO ROOM FOR " + produce.name());
             }
@@ -340,6 +346,7 @@ public final class FarmView {
                 if (spend(game, 1)) {
                     plot.cover = Plot.GRASS;
                     game.inventory.add(game.item("fibre"), 1);
+                    game.xp(starpost.core.Skills.RANGING, 1);
                     shell.sfx(fire ? Sfx.FIRE_SHIELD : Sfx.GRAB);
                     marked(row, column);
                 }
@@ -350,8 +357,13 @@ public final class FarmView {
                             : "A FIRE SHIELD WOULD CLEAR THIS STUMP");
                     shell.sfx(Sfx.ERROR);
                 } else if (spend(game, 4)) {
-                    game.inventory.add(game.item(plot.cover == Plot.ROCK ? "marble_chip" : "palm_wood"),
-                            plot.cover == Plot.ROCK ? 3 : 5);
+                    boolean rock = plot.cover == Plot.ROCK;
+                    int wood = 5 + (game.has("forester") ? 1 : 0);
+                    if (game.has("lumberjack")) {
+                        wood *= 2;
+                    }
+                    game.inventory.add(game.item(rock ? "marble_chip" : "palm_wood"), rock ? 3 : wood);
+                    game.xp(rock ? starpost.core.Skills.SCRAPPING : starpost.core.Skills.RANGING, rock ? 3 : 5);
                     shell.sfx(plot.cover == Plot.ROCK ? Sfx.BREAK : Sfx.CHOP_TREE);
                     plot.cover = Plot.GRASS;
                     marked(row, column);

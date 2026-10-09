@@ -22,6 +22,7 @@ public final class Systems {
         List<SaveSection> out = new ArrayList<>();
         out.add(new Pickups());
         out.add(new Capsule());
+        out.add(new starpost.core.Skills());
         return out;
     }
 

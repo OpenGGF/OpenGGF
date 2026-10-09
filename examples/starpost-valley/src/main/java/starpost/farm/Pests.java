@@ -140,7 +140,8 @@ public final class Pests {
             popped = 0;
             animalX = x;
             shell.sfx(Sfx.BREAK);
-            game.inventory.add(game.item("scrap"), 1);
+            game.inventory.add(game.item("scrap"), game.has("scrapper") ? 2 : 1);
+            game.xp(starpost.core.Skills.BOPPING, 10);
             if (game.free()) {
                 shell.toast("AN ANIMAL IS FREE! VALLEY: " + game.population);
             }
@@ -150,7 +151,7 @@ public final class Pests {
             if (age % 30 != 0) {
                 return;
             }
-            int lost = Math.min(game.rings, 10);
+            int lost = Math.min(game.rings, game.has("ring_keeper") ? 5 : 10);
             game.rings -= lost;
             sonic.speed = sonic.x < x ? -3 : 3;
             sonic.ySpeed = -3;
