@@ -1,8 +1,8 @@
 package starpost.scene;
 
 import com.openggf.mods.scene.SceneCanvas;
+import com.openggf.mods.ui.CompactFont;
 import java.util.List;
-import starpost.ui.Text;
 
 /** A letter on screen: a parchment panel, its lines, and confirm to put it away. */
 final class NoteScreen implements Screen {
@@ -40,20 +40,38 @@ final class NoteScreen implements Screen {
 
     @Override
     public void draw(Shell shell, SceneCanvas canvas) {
+        // Paper takes ink: the compact font has no outline (the menu font's black outline clots on it).
         int w = 300, x = (canvas.width() - w) / 2;
-        List<String> lines = Text.wrap(canvas, body, w - 28);
-        int h = 40 + lines.size() * 12 + 18, y = (canvas.height() - h) / 2;
+        List<String> lines = inkWrap(body, w - 28);
+        int h = 44 + lines.size() * 11 + 18, y = (canvas.height() - h) / 2;
         canvas.fill(x, y, w, h, 0xFFFFDBB6);
         canvas.fill(x, y, w, 3, 0xFFB66D24);
         canvas.fill(x, y + h - 3, w, 3, 0xFF924900);
         canvas.fill(x, y, 3, h, 0xFFB66D24);
         canvas.fill(x + w - 3, y, 3, h, 0xFF924900);
-        canvas.text(heading, x + 14, y + 12, 0xFF924900);
+        CompactFont.draw(canvas, heading, x + 14, y + 12, 2, 0xFF924900);
         for (int i = 0; i < lines.size(); i++) {
-            canvas.text(lines.get(i), x + 14, y + 30 + i * 12, 0xFF492400);
+            CompactFont.draw(canvas, lines.get(i), x + 14, y + 36 + i * 11, 1, 0xFF492400);
         }
         if ((shell.ticks - opened) / 30 % 2 == 0) {
-            canvas.text(">", x + w - 20, y + h - 16, 0xFF924900);
+            CompactFont.draw(canvas, ">", x + w - 18, y + h - 14, 1, 0xFF924900);
         }
+    }
+
+    /** Lines of the compact font no wider than {@code pixels}. */
+    private static List<String> inkWrap(String text, int pixels) {
+        List<String> out = new java.util.ArrayList<>();
+        StringBuilder line = new StringBuilder();
+        for (String word : text.split(" ")) {
+            String next = line.isEmpty() ? word : line + " " + word;
+            if (CompactFont.width(next, 1) > pixels && !line.isEmpty()) {
+                out.add(line.toString());
+                line = new StringBuilder(word);
+            } else {
+                line = new StringBuilder(next);
+            }
+        }
+        out.add(line.toString());
+        return out;
     }
 }
