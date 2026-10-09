@@ -5,10 +5,11 @@ configurable effects for Sonic 1, Sonic 2 and Sonic 3 & Knuckles. Play uses nati
 ROM levels, sprites, music and sound effects. Every mutator starts off; the jar
 contains creator code and declarations, never commercial assets.
 
-The expanded catalogue is being verified against all three games. The
+The [native-game coverage matrix](../../docs/architecture/validation/levels/mutator-lab-native-games.md)
+defines the tested routes and rewind controls. The
 [expansion plan](../../docs/architecture/plans/2026-10-08-mutator-lab-expansion.md)
-records current evidence and remaining gates; registration or a successful load
-alone does not certify every route, pose or character.
+records source-attributed verification; registration or a successful load alone
+does not certify every route, pose or character.
 
 ## Build and play
 
@@ -18,8 +19,10 @@ Use Java 21 and configure your original ROM images in the game hub:
 python3 examples/example-mutators/build.py --run
 ```
 
-The builder queues Maven compilation, compiles the maintained example source and
-runs `ggfmod package`. Its jar is
+The builder uses the local Maven wrapper for engine compilation and classpath
+preparation, compiles the maintained example source and runs `ggfmod package`.
+Known build-only preparation holds this worktree's build/test lock without
+reserving a shared test slot. Its jar is
 `target/example-mutators/example-mutators.jar`. The shared `baseGame: any`
 catalogue installs once; choose **Sonic 1**, **Sonic 2** or **Sonic 3 & Knuckles**
 from the hub with native Sonic as leader. Configure the Lab title, then start

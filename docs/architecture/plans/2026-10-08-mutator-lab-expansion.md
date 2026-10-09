@@ -1024,4 +1024,48 @@ compiled SDK/pin verification cover the composition boundary. The initial
 preflight rejected ambient Lua 5.5; explicit `LUA_BIN=/usr/bin/lua5.4` passed.
 No runner selection is edited and no prior full result is relabelled as a
 whole-current-destination pass. These focused composition results and promo
-acceptance remain pending before PR publication.
+acceptance completed before PR publication.
+
+At composed `c9806fd53904cbbcbed2147e2de8611b4435de24`, normal queued
+`-Dmse=off -Dtest=<33 fully-qualified classes> verify dependency:build-classpath`
+completed with 33 fresh reports / 315 passing cases, no failures/errors/skips,
+no unmatched selectors and an unchanged source fingerprint. Both native
+level-loading classes and all four mandated S3K checks execute against the
+rehashed original ROMs. The same invocation completed SDK/Javadoc and artifact
+verification. A separate normal `-Pguards test` produced 88 fresh reports / 675
+passing cases without skips. The exact focused class list and commands are in
+the light `pr215-composition-256-summary.json` under task scratch; consumed raw
+XML/text reports are deleted rather than archived. No whole-current-base result
+is inferred from this focused composition.
+
+The actual compiled fat-jar API remains 17,743 lines with the `c9c807ab...` SHA-256
+recorded above, byte-equal to the candidate pin. Creator compilation/package
+against those fresh classes produces 15 ROM-free jar entries and the same
+`a77d49b2...428f9d56` hash as the accepted ring-option example. No target trees
+are shared or copied; only the packaged creator deliverable is exported to the
+task's durable `deliverables` directory. The final evidence/README follow-up
+changes documentation only.
+
+The separate Opus 5.5 promo completed without a provider limit. Its
+`opus-expansion-promo/out/mutator-lab-expanded-promo.mp4` is 81.4 seconds,
+1920×1080/60 H.264 with stereo 48 kHz AAC, SHA-256
+`2d10f2598d5481118954909459aa66f19a5c9463521896a3405c78cbc47d6e34`.
+Thumbnail, chapter/source manifest and reproducible ffmpeg edit recipe remain
+alongside it outside Git. Root independently decoded the entire movie without
+errors and inspected first/middle/last, catalogue and all-three ring-head grids.
+The edit uses earlier precisely attributed offscreen working-copy captures;
+their metadata is not relabelled as final-build footage. All eleven native
+option pages, three-game play, Big Head, Stealth, Resume/restart and ring scales
+are shown. Gravity physics differences, spill/filter/death behavior, interactive
+speed, denied entry, amplified rebound and ring-loss shrink are described in
+captions rather than demonstrated in this movie. No desktop-window capture or
+synthetic OS input is used by the promo stage.
+
+PR215 is updated in place; main is not integrated or switched. Saved provider
+conversations, useful media/results and the open-PR source are retained. Twelve
+registered temporary ancestor worktrees are accounted for: 65 admission dirty
+paths match final source or exact initial import; the four physics files are
+known peer copies, including the pre-retirement runtime superseded by the
+accepted admission owner. Config copies and an ignored rewind note are preserved
+before cleanup, with no unknown source discarded. Actual feature publication
+and cleanup completion are recorded in the final task result, not inferred here.
