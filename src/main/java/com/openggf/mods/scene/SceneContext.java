@@ -76,6 +76,12 @@ public interface SceneContext {
     /** Small text files kept for this mod across sessions (saves, settings, high scores). */
     SceneStorage storage();
 
+    /** Suspends this visit and launches an owned, registered mod act at the next frame boundary.
+     * The same scene and context receive {@link ModScene#resume} when it exits. */
+    default void startAct(ActLaunch launch) {
+        throw new UnsupportedOperationException("Scene acts unavailable");
+    }
+
     /** Fades out and returns to the base game's own title screen. */
     void exitToGameTitle();
 

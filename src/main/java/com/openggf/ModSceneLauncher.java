@@ -50,7 +50,12 @@ final class ModSceneLauncher {
                 window == 0 ? null : mouseMapper(window, graphics, logicalWidth, logicalHeight),
                 () -> exitToGameTitle(gameLoop),
                 () -> gameLoop.fadeOutTo(gameLoop::returnToMasterTitle),
-                romLibrary(module));
+                romLibrary(module), launch -> {
+                    int zone = module.getZoneRegistry().resolveZoneKey(launch.destination()).orElseThrow(
+                            () -> new IllegalArgumentException("Unregistered mod zone: " + launch.destination()));
+                    if (launch.act() >= module.getZoneRegistry().getActCount(zone))
+                        throw new IllegalArgumentException("Unregistered mod act: " + launch.act());
+                });
         gameLoop.setGameMode(GameMode.MOD_SCENE);
         gameLoop.modSceneHost.open(factory, services, logicalWidth, logicalHeight);
         gameLoop.resolveFadeManager().startFadeFromBlack(null);

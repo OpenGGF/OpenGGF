@@ -568,3 +568,56 @@ The class's Javadoc lists every option and script step. To get the classpath fil
 | A ROM sprite has the wrong colours or is scrambled | The palette line, palette address, compression or DPLC layout does not match the object. Check the request with `ggfmod sprites`, which draws every frame with your settings. |
 | Animations stand still in captures, or run fast | State changes in `draw`. The engine may skip or repeat `draw`; advance timers in `update` only. |
 | `zoneBackdrop`, `levelStages` or `titleCard` return null | The game has no such picture for that act yet. Ask `hasZonePictures` and `hasTitleCard` first and draw something of your own otherwise. |
+
+## Visiting a real act from a scene
+
+Register a mod zone normally, then call `ctx.startAct` from `enter`, `update` or a
+fault-bounded debug callback. Acts are zero-based and the `ZoneKey.Mod` must belong
+to the scene's owner. Launching retains the scene instance, its context, storage and
+ROM library. The scene stops ticking during the act and fades; its images are
+uploaded again when it resumes. Gameplay owns native movement, collision, objects,
+HUD and rewind. The launch state map is creator bookkeeping, not engine physics.
+
+```java
+ctx.startAct(new ActLaunch(new ZoneKey.Mod(ctx.ownerModId(), "valley"), 0,
+    CharacterKey.SONIC, List.of(), OptionalInt.of(190), OptionalInt.of(173),
+    5, Map.of("visit", "town")));
+```
+
+Optional positions are **player centre coordinates**, applied after the native
+start-position provider and before normal camera/team/object initialization. Empty
+coordinates preserve that axis's native start; supplied centres must be 0–32767. Rings are native health (0–999),
+separate from any saved mod wallet. The engine retains the selected team only for
+the visit and restores the previous configuration on return or title exit.
+
+A level object calls the injected services to hand back:
+
+```java
+services().requestActExit(ActExit.LEFT, Map.of("door", "inn"));
+```
+
+The first request wins; its immutable payload participates in rewind until the
+engine consumes it at a frame boundary. Requests outside a scene-launched act do
+nothing. Exit fades freeze gameplay. The engine re-prepares base ROM audio and
+calls `resume` once on the same suspended scene/context, inside its fault boundary:
+
+```java
+@Override public void resume(SceneContext ctx, ActResult result) {
+    // Open the requested menu; when it closes, startAct can visit the same door again.
+    ctx.audio().playMusic(0x81);
+}
+```
+
+`ActResult` carries destination, reason, remaining health rings, executed level
+frames and the exit state map. `ActExit` values are `COMPLETED`, `LEFT`, `FAINTED`,
+`TIME_UP`, `ABORTED`. Objects/controllers decide when these semantic exits apply;
+ordinary native progression/death is not automatically remapped. Entry is a normal
+level-load boundary; scene return clears the level rewind timeline. Holding Escape
+still closes the retained visit and returns to the master title. A creator fault
+also closes it safely rather than delivering a result to a disabled scene.
+
+Starpost Valley uses a blank, flat native-collision placeholder until its encoded
+terrain is integrated. Its farm gate launches `starpost-valley:valley`; doors open
+existing scene menus and relaunch at the returned centre when they close. The
+`town scene` debug command keeps its earlier scene valley reachable; `town act`
+restores act launches and `town enter` directly exercises the bridge from play.

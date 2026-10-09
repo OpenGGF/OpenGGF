@@ -13,6 +13,10 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.managers.SpriteManager;
 
 import java.util.Objects;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.data.Rom;
+import java.io.IOException;
+import com.openggf.game.patch.DeterministicPatchLaunches;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -40,6 +44,13 @@ final class GameplayTeamBootstrapContext {
                                     SonicConfigurationService configuration,
                                     int zone, int act,
                                     Consumer<GameplayModeContext> publishMode) throws java.io.IOException {
+        return openAndLoad(rootModule, module, engineServices, configuration, zone, act, publishMode, null);
+    }
+
+    GameplayModeContext openAndLoad(GameModule rootModule, GameModule module,
+            EngineContext engineServices, SonicConfigurationService configuration,
+            int zone, int act, Consumer<GameplayModeContext> publishMode,
+            com.openggf.mods.scene.ActLaunch launch) throws java.io.IOException {
         Objects.requireNonNull(publishMode, "publishMode");
         GameplayModeContext gameplayMode = SessionManager.openGameplaySession(
                 rootModule, module,
@@ -61,8 +72,53 @@ final class GameplayTeamBootstrapContext {
                     gameplayMode.getCamera().setFocusedSprite(team.mainSprite());
                     gameplayMode.getCamera().updatePosition(true);
                 },
-                () -> gameplayMode.getLevelManager().loadZoneAndAct(zone, act));
+                () -> {
+                    if (launch != null) com.openggf.level.LevelSceneActAccess.prepareSpawn(gameplayMode.getLevelManager(), launch);
+                    gameplayMode.getLevelManager().loadZoneAndAct(zone, act);
+                });
         return gameplayMode;
+    }
+
+    /** Recording and scene acts share this team's production publication/load owner. */
+    void restartRecording(GameLoop loop, EngineContext engineServices,
+            com.openggf.game.recording.RecordingLaunchContext context) {
+        SonicConfigurationService configuration = engineServices.configuration();
+        Objects.requireNonNull(context, "context");
+
+        configuration.clearSessionOverrides();
+        configuration.setSessionOverride(SonicConfiguration.DEFAULT_ROM, context.gameId());
+        configuration.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, context.debugToolsEnabled());
+        configuration.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, context.mainCharacter());
+        configuration.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,
+                String.join(",", context.sidekickCharacters()));
+        configuration.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+        configuration.resolveDisplayAspect();
+
+        try {
+            engineServices.roms().close();
+            Rom rom = engineServices.roms().getRom();
+            GameModule rootModule = engineServices.romDetection()
+                    .detectAndCreateModule(rom)
+                    .orElseThrow(() -> new IOException(
+                            "ROM not recognized for recording launch context: " + context.gameId()));
+
+            GameModule module = DeterministicPatchLaunches.forRecording(
+                    engineServices.moduleResolutionService(), rootModule, context);
+            engineServices.audio().setAudioProfile(module.getAudioProfile());
+            engineServices.audio().setRom(rom);
+            loop.resetModuleScopedProviders();
+
+            openAndLoad(
+                    rootModule, module, engineServices, configuration, context.zone(), context.act(),
+                    loop::setGameplayMode);
+
+            loop.setGameMode(com.openggf.game.GameMode.LEVEL);
+            java.util.logging.Logger.getLogger(GameLoop.class.getName()).info("Restarted recording launch context: " + context.gameId()
+                    + " zone " + context.zone() + " act " + context.act()
+                    + " team " + context.mainCharacter());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to restart from recording launch context", e);
+        }
     }
 
     static <T> T publishBootstrapAndLoad(GameplayModeContext gameplayMode,

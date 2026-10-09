@@ -22,7 +22,13 @@ public record SceneServices(
         MouseMapper mouse,
         Runnable toGameTitle,
         Runnable toMasterTitle,
-        SceneRomLibrary romLibrary) {
+        SceneRomLibrary romLibrary,
+        java.util.function.Consumer<com.openggf.mods.scene.ActLaunch> validateAct) {
+
+    public SceneServices(AudioManager audio, SceneRomArt romArt, Path storageRoot,
+            MouseMapper mouse, Runnable toGameTitle, Runnable toMasterTitle, SceneRomLibrary romLibrary) {
+        this(audio, romArt, storageRoot, mouse, toGameTitle, toMasterTitle, romLibrary, null);
+    }
 
     /** Legacy running-ROM scenes do not need a multi-ROM library. */
     public SceneServices(AudioManager audio, SceneRomArt romArt, Path storageRoot,
