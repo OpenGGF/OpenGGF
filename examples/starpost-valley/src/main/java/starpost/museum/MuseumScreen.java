@@ -29,6 +29,7 @@ final class MuseumScreen implements Screen {
 
     private final MuseumSystem sys;
     private final List<Exhibits.Exhibit> exhibits;
+    private final List<String> records;
     /** 0-2 the collections, 3 the Sound Test shelf. */
     int tab;
     /** The selected cell, or -1 on the tab row. */
@@ -38,7 +39,8 @@ final class MuseumScreen implements Screen {
 
     MuseumScreen(MuseumSystem sys) {
         this.sys = sys;
-        this.exhibits = Exhibits.all(sys.shell.catalog);
+        this.exhibits = sys.exhibits;
+        this.records = records(sys.shell);
     }
 
     @Override
@@ -55,7 +57,7 @@ final class MuseumScreen implements Screen {
     }
 
     private List<String> cells(Shell shell) {
-        return soundTab() ? records(shell) : exhibits.get(tab).items();
+        return soundTab() ? records : exhibits.get(tab).items();
     }
 
     /** Columns of the grid on a page. */

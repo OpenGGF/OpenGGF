@@ -31,12 +31,15 @@ public final class MuseumSystem {
     final PlayScreen play;
     final Museum museum;
     final MuseumArt art;
+    /** The collections this catalogue fills (built once a day, not every frame). */
+    final List<Exhibits.Exhibit> exhibits;
 
     private MuseumSystem(Shell shell, PlayScreen play, Museum museum) {
         this.shell = shell;
         this.play = play;
         this.museum = museum;
         this.art = new MuseumArt(shell.art);
+        this.exhibits = Exhibits.all(shell.catalog);
     }
 
     /** The section, added if a save predates the museum. */
@@ -157,9 +160,8 @@ public final class MuseumSystem {
             float x = x() - cx, y = y() - cy;
             canvas.draw(building, x - building.width() / 2f, y - building.height() + 2, tint);
             // A finished collection shows its prize in a window: restoration you can see.
-            List<Exhibits.Exhibit> all = Exhibits.all(game.catalog);
-            for (int i = 0; i < all.size(); i++) {
-                Exhibits.Exhibit e = all.get(i);
+            for (int i = 0; i < exhibits.size(); i++) {
+                Exhibits.Exhibit e = exhibits.get(i);
                 if (!museum.complete(e)) {
                     continue;
                 }
