@@ -799,7 +799,8 @@ suite (23 engine-free tests at `94c3d883c`):
 - **Progress.**
   - The Great Capsule's chambers and bundles. Unknown items are left out until their system
     is installed.
-  - The EGG store and Valley Development Form.
+  - The EGG store and Valley Development Form (renamed Robomart at `93eb0fb10`, after the
+    user's naming: Joja → Robo, JojaMart → Robomart, Joja Cola → Robo Cola).
   - Five skills with professions at levels 5 and 10.
   - Weather: storms, snow, badnik swarms and the Emerald Aurora.
   - The Lamppost Inn's counter and jukebox (Records unlock tracks).
@@ -821,11 +822,42 @@ Lanes (lead plus a few at a time, each in its own worktree, merged into
 
 | Lane | Scope |
 |---|---|
-| Lead | Integration, art direction (buildings assembled from Green Hill pieces, the Sonic 1 HUD, the title, the intro and ending), Momentum and the farm loop, crafting and Tails's upgrades, the Capsule and EGG, festivals, museum, weather, balance, captures, README, PR |
+| Lead | Integration, art direction (buildings assembled from Green Hill pieces, the Sonic 1 HUD, the title, the intro and ending), Momentum and the farm loop, crafting and Tails's upgrades, the Capsule and Robomart, the three farmers, weather, balance, captures, README, PR |
 | Audio | The engine's background-music addition (§3.3) |
 | People | `starpost.people`: the villager roster, schedules, picture speech, the translator, gifts, hearts, heart events, mail, Partners |
 | Ruins | `starpost.ruins`: the Marble Ruins chambers from the Marble Zone kit, spin-jump combat, ores and minerals, Star Post elevators, Scrap Brain Depths |
 | Waters and barns | Fishing (Bubble Bar, fish, badnik legends, the lake), animals and buildings on the farm, artisan machines, badnik automation, Flicky roosts |
+| Festivals | `starpost.festivals`: the eight festivals and their games, the Signpost Board's requests, the trophy shelf |
+
+### Integration and the farmers (`afc4d901e`..)
+
+- **The three farmers (§4).** In the valley and the Ruins, `Runner.secondMove` gives Tails
+  flight (`FLY_TIME` 480 frames, then tired) and Knuckles a glide that grabs walls to climb. On
+  the farm, `core.Farmers` holds the differences as engine-free rules (`FarmersTest`). Sonic's
+  spin dash (9) tills its whole roll. Tails's spin (6) tills three plots, but a Water Shield
+  charge also waters the next plot on. Knuckles's spin is 8; his tilling is a dig that turns
+  something up one time in eight (rings 5–20, a marble chip or the season's forage), he punches
+  rocks without the Fire Shield, and he gets half the farm loop's Momentum. The brainstorm's "Tails
+  carries two held items" was dropped: the hotbar has one selection, and a second would change
+  every menu.
+- **Merges.** Ruins `6d315491b`, People `358bd88c1`, audio `29e66cd79`, Waters and Barns
+  `736f2a231`, Festivals `3a5dfeda8`. The shared hooks (`Content.register`, `Systems.sections`
+  and `install`, `Debug`) were the only conflicts, resolved as unions. `Systems.install` hands
+  the Ice Cap Festival the Waters lane's `FishingSystem::contest` through the Festivals lane's
+  `FishingContest` seam. The board test that forbade fish requests was written before fishing
+  existed; it now checks that a requested fish is a priced catch.
+- **The soundtrack.** `Music` now calls `ctx.audio().playMusic(game, id)` (§3.3.1) for every
+  track. Songs loop at their own loop points and sound effects play over them. The prepared-PCM
+  player and its three-minute restart are gone.
+- **A session limit stopped three lanes at once.** Audio and Waters had committed; Festivals
+  had about an hour of uncommitted work. The lead compiled it, ran the creator tests (88/88),
+  committed it as a checkpoint (`ab519c910`) and briefed a fresh agent to do the visual pass.
+  Lesson for lanes: commit at each working milestone, not only at the end.
+- **Scene smoke test.** `TestStarpostValleyScene` (engine suite, S3K plus Sonic 1) plays each
+  farmer on the farm and in the valley, six Ruins chambers across the three zones, a talk, the
+  social page and a heart event, the lake and the Bubble Bar, every festival, the board, a
+  night's tally and the year's end. Everything goes through debug jumps with frames ticked and
+  drawn. The fault boundary must catch nothing.
 
 ## 15. People (lane)
 
