@@ -4,26 +4,30 @@ import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneImage;
 import com.openggf.mods.scene.SceneLevelKit;
+import com.openggf.mods.scene.SceneRomArt;
+import com.openggf.mods.scene.RomSpriteRequest.Compression;
+import java.util.Arrays;
 import threeislands.core.Zone;
 
 /** Cached ROM fragments assembled as a freely walkable oblique field, never stock platform physics. */
 public final class FieldArt {
-    private final SceneImage ground, cliff, lip, water, palm, flowers;
+    private final SceneImage ground, cliff, lip, palm, flowers;
     private final SceneLevelKit kit;
+    private final SceneImage[] waterFrames;
     private final boolean greenHill;
     private final int grassColour;
 
-    public FieldArt(Zone zone, SceneLevelKit kit) {
+    public FieldArt(Zone zone, SceneLevelKit kit, SceneRomArt rom) {
         this.kit = kit;
         greenHill = zone == Zone.GREEN_HILL;
         if (greenHill) {
-            // GHZ act-1 decoded chunk atlas: 1 = palm/grass bank, 6 = checker cliff,
-            // 48 = distant water, 60 = low grass platform. Coordinates address decoded kit art,
+            // GHZ act-1 decoded chunk atlas: 1 = palm/grass bank, 6 = checker cliff.
+            // Coordinates address decoded kit art,
             // not external images; the kit owns ROM parsing, palette and tile flips.
             ground = crop(kit.blockImage(1), 0, 128, 32, 8);
             cliff = crop(kit.blockImage(6), 32, 32, 32, 32);
             lip = crop(kit.blockImage(1), 0, 128, 32, 16);
-            water = crop(kit.blockImage(48), 0, 160, 32, 32);
+            waterFrames = greenHillWater(rom, kit.palette());
             palm = crop(kit.blockImage(1), 96, 0, 80, 128);
             flowers = crop(kit.blockImage(1), 0, 80, 32, 48);
         } else {
@@ -32,7 +36,8 @@ public final class FieldArt {
             cliff = tile;
             lip = tile;
             SceneImage source = kit.backdrop() == null ? tile : kit.backdrop().image();
-            water = crop(source, 0, Math.max(0, source.height() - 32), 32, 32);
+            SceneImage water = crop(source, 0, Math.max(0, source.height() - 32), 32, 32);
+            waterFrames = new SceneImage[] {water};
             palm = null;
             flowers = null;
         }
@@ -46,6 +51,25 @@ public final class FieldArt {
             }
         }
         grassColour = selected | 0xFF000000;
+    }
+
+    /** GHZ Blk16 $61: $40F6,$40F7,$40F8,$40F9 (line 2, row-major, no flips).
+     * PalCycle_GHZ animates these reflections, not AniArt_GHZ_Waterfall's vertical art.
+     * ROM offsets are Sonic 1 World REV01: Nem_GHZ_1st and Pal_GHZCyc_Water.
+     */
+    static SceneImage[] greenHillWater(SceneRomArt rom, int[] zonePalette) {
+        SceneImage[] frames = new SceneImage[4];
+        for (int step = 0; step < frames.length; step++) {
+            int[] palette = Arrays.copyOfRange(zonePalette, 32, 48);
+            System.arraycopy(rom.palette(0x1B7E + step * 8, 4), 0, palette, 8, 4);
+            frames[step] = rom.tiles(0x3CB3C, Compression.NEMESIS, 0xF6, 2, 2, false, palette);
+        }
+        return frames;
+    }
+
+    SceneImage waterFrame(long ticks) {
+        // PCycGHZ_Go reloads 5 then decrements through zero: six scene ticks per step.
+        return waterFrames[(int) Math.floorMod(ticks / 6, waterFrames.length)];
     }
 
     private static SceneImage crop(SceneImage image, int x, int y, int width, int height) {
@@ -79,15 +103,16 @@ public final class FieldArt {
         c.clear(kit.palette()[0] & 0xFFFFFF);
         // The strip of distant scenery above the traversable area is the ROM backdrop.
         if (kit.backdrop() != null) c.drawBackdrop(kit.backdrop(), 0, -(int) cameraY,
-                Field.WIDTH, 88, 0, cameraX, ticks);
+                field.width(), 88, 0, cameraX, ticks);
         for (int y = (int) cameraY / 16 * 16; y < cameraY + c.height() + 16; y += 16) {
             for (int x = (int) cameraX / 16 * 16; x < cameraX + c.width() + 16; x += 16) {
                 if (y < 80) continue;
-                boolean wet = x >= 400 && x < 560 && y >= 224 && y < 432 && (y < 304 || y >= 352);
-                boolean edge = ((x < 48 || x >= Field.WIDTH - 48) && (y < 304 || y >= 368)) || y >= Field.HEIGHT - 48;
-                SceneImage tile = wet ? water : edge ? cliff : ground;
+                boolean wet = field.water(x + 8, y + 8);
+                boolean edge = ((x < 48 || x >= field.width() - 48) && (y < 304 || y >= 368)) || y >= field.height() - 48;
+                boolean crossing = field.orchardCrossing(x + 8, y + 8);
+                SceneImage tile = wet ? waterFrame(ticks) : edge || crossing ? cliff : ground;
                 // Grass fragments retain original pixels, repeated in two short rows for ground depth.
-                if (greenHill && !wet && !edge) {
+                if (greenHill && !wet && !edge && !crossing) {
                     c.fill((int) (x - cameraX), (int) (y - cameraY), 16, 16, grassColour);
                     // A side-facing grass fringe is not a top-down floor. Use the palette for
                     // the ground plane and keep the real grass art as sparse, un-stretched tufts.
@@ -99,17 +124,16 @@ public final class FieldArt {
             }
         }
         // Raised banks use the original face and grass fringe. Their rectangles are collision owners.
-        bank(c, 112, 144, 64, 80, cameraX, cameraY);
-        bank(c, 784, 400, 96, 64, cameraX, cameraY);
+        for (int[] bank : field.banks()) bank(c, bank[0], bank[1], bank[2], bank[3], cameraX, cameraY);
         // Natural bridge: the same grass and checkerboard bank, not a generated wooden texture.
         for (int x = 400; x < 560; x += 32) {
             c.draw(lip, (float) (x - cameraX), (float) (350 - cameraY));
         }
         if (greenHill) {
-            for (int[] tree : new int[][] {{64,296},{164,208},{344,448},{608,288},{876,232},{624,568},{64,536},{184,512}}) {
+            for (int[] tree : new int[][] {{64,296},{164,208},{344,448},{608,288},{876,232},{624,568},{64,536},{184,512},{288,720},{160,912},{688,752},{832,928},{944,592},{1040,240},{1280,400},{1440,704},{1264,864},{1392,960}}) {
                 c.draw(palm, (float) (tree[0] - 40 - cameraX), (float) (tree[1] - 128 - cameraY));
             }
-            for (int[] flower : new int[][] {{96,288},{264,240},{360,432},{656,272},{672,568},{880,560}}) {
+            for (int[] flower : new int[][] {{96,288},{264,240},{360,432},{656,272},{672,568},{880,560},{1120,624},{1280,640},{1216,880},{704,880},{256,816},{1408,224}}) {
                 c.draw(flowers, (float) (flower[0] - cameraX), (float) (flower[1] - 48 - cameraY));
             }
         } else {

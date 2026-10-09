@@ -19,10 +19,10 @@ Sonic: Whoa... since when does the sky have cracks in it?
 Flicky: Sonic! Sonic! You've got to help us!
 Sonic: Easy, little guy. What's up?
 Flicky: Badniks came out of those glowing rings! They're not like the old ones. They hit harder, and they glow!
-Flicky: They took the Chaos Emeralds from the shrine by the sea. Everyone's hiding in the village.
+Flicky: The shrine went quiet. Even the sea sounds wrong.
 Sonic: Badniks, stolen emeralds and a broken sky. Sounds like a certain doctor's back in business.
 Sonic: Tell everyone to sit tight. I'll handle this.
-> The eastern trail leads deeper into the island. Starposts offer rest; Pocky trades supplies beside the path.
+
 
 @village-south
 Flicky: Welcome to Flicky Village! Resting here heals everyone and saves your journey.
@@ -34,9 +34,10 @@ Flicky: Hit a foe with the element it's weak to and it takes half again as much 
 > Green Hill. The grass still smells like summer, but the badniks are restless.
 Sonic: Alright, Green Hill. Let's see what's got everyone so spooked.
 Flicky: My sister went to the old ruins when the sky broke. She hasn't come home.
-Sonic: Then that's where we start. The big bug can wait.
-> Explore freely. Talk with travellers or investigate the ruins. Approach someone and press A or Enter to speak.
-> Walk around patrols to avoid battle. Follow the eastern trail once the giant Motobug is gone.
+Sonic: What was she listening for?
+Flicky: She said she could hear herself singing. She never sings alone.
+
+
 
 @ghz-boss
 Sonic: Huh? That Motobug's the size of a house!
@@ -46,7 +47,7 @@ Sonic: Bigger just means easier to hit.
 @ghz-clear
 Sonic: Too easy. But that glow... it came from the sky.
 Flicky: The rings showed up right after Dr. Eggman's ship flew over the city of Star Light!
-Sonic: Star Light it is. The eastern trail follows the coast there.
+Sonic: Funny. Those city lights are reflected in the water... but the city is behind us.
 
 @slz-enter
 > Star Light Zone. Highways of light hang over the night city.
@@ -78,7 +79,7 @@ Sonic: Not a chance, Egghead!
 Eggman: Blast it! This is only one island, Sonic. The engine is already pulling on the next!
 > Eggman dives into a shimmering Warp Ring, and it begins to close.
 Sonic: Oh no you don't!
-> The Warp Ring steadies beside the eastern trail. Sonic can follow when he is ready.
+> The Warp Ring steadies. Through it comes the smell of rain on unfamiliar grass.
 
 @west-arrive
 > West Side Island. The air smells of sea salt and engine oil.
@@ -145,7 +146,7 @@ Tails: Sonic, look at the compass! The biggest rift of all is up there, above th
 Tails: There's an island floating up there. The engine's pulling it down!
 Sonic: Then it's time to fly. Is the Tornado ready?
 Tails: I thought you'd never ask!
-> Tails readies the Tornado at the eastern trail. The flight to Angel Island is waiting.
+> The Tornado's propeller catches. Far above, roots hang through the clouds.
 
 @angel-arrive
 > Angel Island. An island that floats on the power of the Master Emerald.
@@ -265,34 +266,34 @@ Sonic: Wherever the wind takes me. See you around, buddy!
 > THE END. Thank you for playing!
 
 @ghz-friend
-Flicky: I hid here when the sky cracked. My sister is at the northwest ruins, listening to a voice in the light.
+Flicky: My sister used to sing in the seaside shrine. Yesterday, the shrine sang back.
 Sonic: A voice?
 Flicky: It sounds like her. But older. Please bring her home.
-> The traveller shares two Super Rings. The northern and southern trails meet beyond the lake.
+> Flicky presses two battered Super Ring monitors into Sonic's hands.
 
 @ghz-memory
 > A frightened Flicky waits beside a cracked altar. Three lights pulse in the stone behind her.
 Flicky: That voice said our village would be gone by sundown. Is that tomorrow?
 Sonic: Maybe. But tomorrow hasn't met us yet. Your sister sent me. Let's get you home.
 Flicky: The machines kept saying "Star Light Observatory". Is that where the voices come from?
-> The Flicky follows Sonic. Return through the western doorway to reunite the sisters.
+> She takes one last look at the altar, then stays close to Sonic.
 
 @ghz-dungeon-enter
 > Beyond the broken shrine, marble halls descend beneath Green Hill. A small voice calls from the inner chamber.
 Sonic: Hang on! I'm coming.
-> Defeat the sentries to open each gate. The refuge Starpost restores the party. Walk west through the doorway to leave.
+> Fresh wheel tracks cut through the marble dust. Behind the bars, something small is singing.
 
 @ghz-rescue
 > The sisters rush to each other beside the shrine. Above them, the ring of light flickers.
 Flicky: You brought her back! Thank you, Sonic!
 Sonic: Stick together. I'm going to find out what the observatory has to do with all this.
-> The rescued Flicky's clue joins the journal. The shrine remains open for exploration.
+> The sisters start the same song, a little out of time. This time, neither one stops.
 
 @ghz-signal
 > Three lights pulse on a buried machine. Beside it lies a shipping label: STAR LIGHT OBSERVATORY.
-Sonic: Power from the northwest shrine, running through this thing. Someone wired them together.
-> Sonic disconnects the relay. Across the clearing, the giant Motobug loses its strange glow.
-Sonic: Found your trick. Time to make this place safe again.
+Sonic: This cable is warm. And that humming... I can feel it in my shoes.
+> Sonic disconnects the relay. For an instant, the water reflects a night sky.
+Sonic: That was no reflection of today.
 
 @ghz-camp
 > The birds' song carries across the water. For a moment, the sky seems ordinary.
@@ -301,7 +302,7 @@ Sonic: I said I'd handle it. Guess that means slowing down enough to listen.
 @slz-friend
 Rocky: I kept the observatory clock for thirty years. Tonight it struck the same minute twice.
 Sonic: Eggman's been through here?
-Rocky: His freight crane took the old lens. The logs are north; the power relay is across the lake.
+Rocky: His freight crane took the old lens. The empty mounting still casts a shadow at midnight.
 
 @slz-memory
 > The observatory log is open to tomorrow's date. Every entry is in the clockkeeper's hand.
@@ -322,7 +323,7 @@ Sonic: Then we'll give you something better to write.
 @syz-friend
 Pocky: The carnival used to be loud. Now everyone listens for the next alarm.
 Sonic: I'll get the lights back on.
-Pocky: The ticket office kept the freight records. And the relay by the south gate opens Eggman's court.
+Pocky: Someone bought every ticket for tomorrow. Paid with rings that were warm to the touch.
 
 @syz-memory
 > Beneath the abandoned ticket booth, Sonic finds a list of islands. Each has a different arrival time. All have the same destination.
@@ -343,7 +344,7 @@ Sonic: Three islands, one destination. No wonder the stars look crowded.
 Ricky: Tails spent three nights building that compass. He said somebody would answer his signal.
 Tails: You weren't supposed to tell him that!
 Sonic: Good thing you kept trying.
-Ricky: The old workshop logs are north. A relay washed up on the southeast shore.
+Ricky: Since then, things keep washing ashore with his handwriting on them. Things he hasn't built yet.
 
 @ehz-memory
 > Tails' first compass lies beside a burned workbench. Its needle points at Sonic.
@@ -364,14 +365,14 @@ Tails: Then I think I'm doing this right.
 
 @cpz-friend
 Ricky: The emergency pumps stopped when the rifts opened. My friends are trapped beyond the south tanks.
-Tails: We'll find the valve chart and cut the relay. Both paths are still dry.
+Tails: These pumps are running backwards. That isn't an accident.
 Sonic: And we'll bring them out.
 
 @cpz-memory
 > A worker's chart shows the pumps feeding the Rift Anchor instead of the drains.
 Tails: This isn't a leak. Eggman flooded the evacuation tunnels on purpose.
 Sonic: Can we open another way?
-Tails: Yes. The southeast relay controls all the pumps.
+Tails: The return line is still intact. Whoever changed this was in a hurry.
 
 @cpz-signal
 > Tails bridges two contacts. The pumps reverse, lowering the flooded tunnels.
@@ -387,7 +388,7 @@ Tails: Yeah. I like this better.
 @mcz-friend
 Rocky: That silver thing keeps asking where the blue hedgehog went. Same words. Same voice.
 Sonic: I've got a terrible feeling about its sense of humour.
-Tails: The lantern archive and the south relay should tell us what it's guarding.
+Tails: Even its footsteps sound like yours. A second too late.
 
 @mcz-memory
 > In an old mine ledger, Tails finds a sketch of a floating island. A red guardian stands beside a green jewel.
@@ -411,7 +412,7 @@ Sonic: We'll stick around until he does.
 Flicky: The guardian led us out of the fire, then ran back for the shrine.
 Tails: He doesn't sound like our enemy.
 Sonic: He's not. We just need him to figure that out.
-Flicky: His memorial is northwest. The fire-control relay is southeast.
+Flicky: The stone remembered his name before he was born. He never liked talking about that.
 
 @aiz-memory
 > A stone memorial names generations of guardians. The final name has been freshly carved: KNUCKLES.
@@ -434,7 +435,7 @@ Sonic: We'd still have met. You're pretty hard to miss in that plane.
 Flicky: The old floodgates are closing. We thought the guardian had forgotten us.
 Knuckles: I haven't. I just trusted the wrong person.
 Sonic: Good thing there's still time to fix it.
-Flicky: The northern mural shows the gates. Their relay is to the southeast.
+Flicky: There are fish carved into the walls. The real fish used to follow them when the gates opened.
 
 @hcz-memory
 > A mural shows three islands beneath separate stars, their waters joining beneath the earth.
@@ -457,7 +458,7 @@ Sonic: You can beat yourself up later. We've still got an island to save.
 Pocky: The launch siren stopped, but the tower keeps shaking.
 Tails: The engine doesn't need its rockets anymore. The rifts are lifting it.
 Knuckles: We cut its moorings to the island, then board it.
-Pocky: Flight records north. Mooring controls southeast.
+Pocky: The mooring ropes are pulling upward. Even the loose ones.
 
 @lbz-memory
 > Tails finds the final convergence schedule. The three islands will occupy the same sky at sunrise.
@@ -481,7 +482,7 @@ Tails: I'll put it on the calendar.
 Ricky: I got aboard in a supply crate. I can keep the Tornado ready while you go inside.
 Tails: You came all this way?
 Ricky: You came back for us at the plant. Of course I did.
-> The maintenance ring connects the memory archive, the southern relay and the engine court.
+> Ricky has tied a scrap of red cloth to the Tornado. It stirs in a wind blowing toward the engine.
 
 @dez-memory
 > The archive holds the original skies: three islands, three horizons. The engine is overwriting them.
@@ -503,7 +504,7 @@ Sonic: Not a chance.
 
 @slz-dungeon-enter
 > Under the observatory, starlit machinery ticks through the same minute again and again.
-Sonic: The old logs must be in the vault. Let's get those doors open.
+Sonic: Same tick. Same tock. No wonder nobody could sleep.
 
 @syz-dungeon-enter
 > A stairway under the ticket office leads to ancient freight tunnels. New badnik tracks score the marble.
@@ -517,7 +518,7 @@ Sonic: Then let's evict them.
 @cpz-dungeon-enter
 > The pump station's service door opens onto a low machinery hall. Locked gates protect the control room.
 Tails: The valve chart should tell us how to drain the evacuation tunnels.
-Sonic: First, the guards. Then we get those people out.
+Sonic: I can hear them through the pipes.
 
 @mcz-dungeon-enter
 > Lanterns still burn inside a forgotten underground shrine. A mine ledger lies beyond two barred crossings.
@@ -543,3 +544,28 @@ Sonic: Then this is where we find out how to give it back.
 > The archive door opens into an empty metal hall. Far above, the Convergence Engine shakes the ceiling.
 Tails: Eggman's final schedule is in the inner terminal. We need to know how to shut this down safely.
 Sonic: Stay together. We're nearly there.
+
+
+@ghz-garden-verse
+> Three suns are carved around a hollow stone: one sinking, one rising, one high above the waves.
+> Beneath them: "We sang the sun to sleep, called it home, and shared our bread beneath it. Then the garden answered."
+Sonic: Someone's worn this stone smooth just sitting here.
+
+@ghz-garden-song
+> Inside the singing stone lay a Lightning Shield and a child's drawing: three islands under three separate skies.
+> On the back: "For when we are far apart. You play your part and I'll play mine."
+Sonic: Guess somebody was listening after all.
+
+@ghz-orchard-note
+> Most of the gardener's notebook has washed away. One sketch survives: two streams feeding the same basin.
+> "I shut one channel and waited all summer. The other kept bringing the sea home. The trees remember where the path was."
+
+@ghz-orchard-letter
+> Beneath the oldest tree, a sealed tin holds a 1-Up and a letter addressed to the gardener. The date is tomorrow's.
+> "The water went down today. I sat in our orchard again. You were right to keep the old wheels turning."
+Sonic: No name. Just a pressed flower. Still smells fresh.
+
+@ghz-horizon
+> Two shorelines lie in the water's reflection. Above the water, there is only one.
+> A small yellow aeroplane passes through the reflected clouds. Its engine makes no sound.
+Sonic: Hey! ...Huh. Gone.

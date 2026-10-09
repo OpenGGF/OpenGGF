@@ -59,11 +59,12 @@ engine and choose Sonic 3 & Knuckles on the master title.
 
 ## Playing
 
-**Start in the world.** Launching the mod opens directly on Sonic in Green Hill, or resumes
-your saved field. Walk to begin the opening conversation. Dialogue appears over the same
-field, with the characters and scenery still visible. There is no level-selection map or
-village hub. The optional title screen is accessible through the pause menu for starting
-a new save; it is never part of travel or chapter progression.
+**Start at the title.** Launching the mod opens the title menu. Choose **New Game** to start
+with Sonic in Green Hill, or **Continue** to resume your save. Continue is selected when a
+save exists, but waits for confirmation. Walk to begin the opening conversation. Dialogue
+appears over the same field, with the characters and scenery still visible. There is no
+level-selection map or village hub. The title is also accessible through the pause menu;
+it is never part of travel or chapter progression.
 
 **Travel and exploration.** Use all four directions to explore, and walk through the eastern
 or western trail openings to move between connected areas. Ordinary paths within an island
@@ -76,15 +77,22 @@ same field. Cross the onward trail when ready.
 
 Use **A / Enter** beside characters, landmarks, monitors, Starposts or bosses. Pocky's
 travelling stall sells supplies in the field; closing it returns to the same spot. Starposts
-provide repeatable free rest. Visible patrols can be avoided. The minimap marks discoveries
-in gold, foes in red and supplies/rest points in green.
+provide repeatable free rest. Visible patrols can be avoided. The minimap shows terrain, your position, and places you have already investigated;
+it does not reveal unseen discoveries or patrols. Nearby interaction prompts retain the controls.
 
 **Story and journal.** The optional discoveries develop the Convergence mystery, the people
 affected by it and the party's relationships. They can be investigated in either order and
 do not serve as mandatory keys for every boss. **Menu -> Journal** replays discoveries and
-gives directions. Defeating a chapter boss provides level milestones and supplies, so the
+records what you have actually found, without listing undiscovered objectives. Defeating a chapter boss provides level milestones and supplies, so the
 main story can be followed without grinding or collecting every clue. Traveller dialogue
 responds to discoveries, and camp conversations give the party time to talk.
+
+**Green Hill.** The 1536 x 1024 overworld extends beyond the original clearing into a
+bell garden, a flooded orchard, a southern grove and an unfamiliar reflected shoreline.
+Inscriptions and physical responses provide the clues. Both puzzles are optional; mistakes
+cost no items and never block the main route. Solved bells, individual sluices, discoveries
+and their one-time rewards survive saving and revisiting. An unfinished bell phrase starts
+fresh when the field reloads. Old shrine, chapter and camp saves remain valid.
 
 **Saving.** Field arrivals, discoveries, Starposts and chapter milestones save automatically.
 Loading returns directly to a safe position in that field. Defeated patrols, opened caches,
@@ -148,7 +156,7 @@ ROMs at runtime: characters through `SceneRomArt.character`, badniks and bosses 
 Sonic walks South Island and S3K's trio walks Angel Island. The jar holds only code and
 text: the story script (`text/story.txt`), the original mixed-case font (`text/font.txt`)
 and the manifest. The field geometry is assembled for free exploration from ROM terrain. Green Hill uses
-its decoded grass, checkerboard cliff, palm, plant and water pieces; its ground plane takes
+its decoded grass, checkerboard cliff, palm, plant and water pieces, including full-size water reflections with the original four-step ROM palette cycle; its ground plane takes
 its colour from the ROM palette. Battle and exploration share this renderer. Sonic the Hedgehog is a trademark of SEGA; this is an unofficial fan project.
 
 ## Source tour
@@ -162,7 +170,7 @@ its colour from the ROM palette. Battle and exploration share this renderer. Son
 | `field/` | `Field` (movement, collision and persistent landmarks), `FieldArt` (ROM field composition), `Stage` (kit ownership), plus legacy route diagnostics. |
 | `art/` | `Art` (every ROM request and palette), `Heroes` (poses from each ROM's animation scripts), `EnemyArt` (badniks and multi-part bosses), `Font`. |
 | `audio/Audio` | Driver songs and effects, background Sonic 1/2 synthesis with a stand-in. |
-| `screen/`, `view/` | Field, in-place battle and dialogue, travelling shop, party menu, loading, optional title, game over and ending; shared windows and controls. |
+| `screen/`, `view/` | Field, in-place battle and dialogue, travelling shop, party menu, loading, title, game over and ending; shared windows and controls. |
 
 The old act route finder is retained for ROM loading/diagnostics only. Exploration
 uses its own two-dimensional coordinates; its terrain and encounter collision do not depend
@@ -197,16 +205,18 @@ java -cp target/test-classes:target/classes:$(cat target/test-classpath.txt) \
   available interiors through the actual entrances, both sentry battles, indoor save/continue,
   the story reward, repeat interaction and returning/re-entering. Model checks flood-fill the
   gate geometry, preserve old saves/entrances and simulate dungeon combat, including a
-  level-one Sonic in the first shrine.
+  level-one Sonic in the first shrine. Green Hill checks cover both sluice orders, the
+  locked/revealed orchard route, bell mistakes and recovery, one-time rewards, save/continue,
+  and the expanded eastern trail through real scene interactions.
 
 ## Known limits
 
-- Outdoor fields share a compact clearing topology; dungeons use connected rooms with
-  alternating north/south wings and two guarded crossings. Green Hill
+- Outdoor fields other than Green Hill share a compact clearing topology; dungeons use
+  connected rooms with alternating north/south wings and two guarded crossings. Green Hill
   has curated ROM decorations; other regions currently use simpler ROM texture composition.
   Character sprites retain their original side-facing poses.
 - Marble Zone is not an outdoor chapter: its stock route and background are unsuitable
   for the current route renderer. Its decoded masonry is used directly in dungeon rooms.
-- ROM fragments are the initial level-kit art; stock animated tiles and palette cycles are not simulated.
+- Other ROM fragments are the initial level-kit art; stock animated tiles and palette cycles beyond Green Hill field water are not simulated.
 - Sound effects are silent in Sonic 1 and Sonic 2 fields while their ROM theme plays
   (see Audio).

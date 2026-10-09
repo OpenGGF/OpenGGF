@@ -83,7 +83,9 @@ class TestThreeIslandsScene {
     void startupIsPlayableAndArrivalDialogueAndRestStayInTheField() throws Exception {
         try (ExampleModHarness harness = open()) {
             play(harness, 2);
-            assertEquals("FIELD", screen(harness), "no title, level selector or village hub at startup");
+            assertEquals("TITLE", screen(harness), "startup waits for a menu choice");
+            harness.press(GLFW_KEY_ENTER);
+            assertTrue(until(harness, "FIELD", 700), "New Game opens the field");
             assertFalse(harness.host().recordedFrame().isEmpty());
             harness.input().handleKeyEvent(GLFW_KEY_RIGHT, GLFW_PRESS);
             assertTrue(until(harness, "STORY", 80), "arrival begins after Sonic starts walking");
@@ -107,6 +109,48 @@ class TestThreeIslandsScene {
             assertTrue(text.startsWith("three-islands-save 1"));
             assertTrue(text.contains("-arrive"), "arrival happened within gameplay");
             assertTrue(text.contains("-field-camp"), "resting at the real Starpost saved");
+            harness.host().close();
+            harness.open(harness.apply(GameServices.module()), work.resolve("saves"), 400, 224);
+            play(harness, 30);
+            assertEquals("TITLE", screen(harness), "an existing save must not bypass the title");
+            assertEquals(text, Files.readString(save), "waiting at the title preserves the save");
+            harness.press(GLFW_KEY_ENTER);
+            assertTrue(until(harness, "FIELD", 700), "Continue resumes only after confirmation");
+            clean(harness);
+        }
+    }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_1)
+    void greenHillWaterUsesNativeReflectionPixelsAndSixTickPaletteCycle() throws Exception {
+        try (ExampleModHarness harness = open()) {
+            play(harness, 3);
+            assertTrue(harness.debugJump("field:ghz"));
+            Object game = harness.scene().getClass().getMethod("game").invoke(harness.scene());
+            Object screen = game.getClass().getMethod("screen").invoke(game);
+            Object stage = screen.getClass().getMethod("stage").invoke(screen);
+            Object fieldArt = stage.getClass().getField("fieldArt").get(stage);
+            var frame = fieldArt.getClass().getDeclaredMethod("waterFrame", long.class);
+            frame.setAccessible(true);
+            Object art = game.getClass().getField("art").get(game);
+            var rom = (com.openggf.mods.scene.SceneRomArt) art.getClass().getMethod("rom", String.class).invoke(art, "s1");
+            byte[] patterns = com.openggf.data.compression.NemesisReader.decompress(
+                    java.nio.channels.Channels.newChannel(new java.io.ByteArrayInputStream(rom.read(0x3CB3C, 16384))));
+            // Independent ROM oracle: Blk16 $61 has four unflipped, row-major patterns.
+            for (int tick = 0; tick <= 24; tick++) {
+                var image = (com.openggf.mods.scene.SceneImage) frame.invoke(fieldArt, (long) tick);
+                assertEquals(16, image.width());
+                assertEquals(16, image.height());
+                int[] colours = rom.palette(0x1B7E + (tick / 6 % 4) * 8, 4);
+                for (int y = 0; y < 16; y++) for (int x = 0; x < 16; x++) {
+                    int tile = 0xF6 + y / 8 * 2 + x / 8;
+                    int packed = patterns[tile * 32 + y % 8 * 4 + x % 8 / 2] & 255;
+                    int index = (packed >> (x % 2 == 0 ? 4 : 0)) & 15;
+                    assertTrue(index >= 8 && index <= 11, "only the four cycling water colours");
+                    assertEquals(colours[index - 8], image.pixel(x, y), "native water pixel at tick " + tick);
+                }
+            }
+            assertEquals(frame.invoke(fieldArt, 0L), frame.invoke(fieldArt, 24L), "cached cycle wraps");
             clean(harness);
         }
     }
@@ -242,6 +286,51 @@ class TestThreeIslandsScene {
     }
 
     @Test
+    void greenHillMysteriesUseRealInteractionsAndPersistThroughContinue() throws Exception {
+        try (ExampleModHarness harness = open()) {
+            play(harness, 2);
+            assertTrue(harness.debugJump("field:ghz"), "this route requires the configured Sonic 1 ROM");
+            Object game = harness.scene().getClass().getMethod("game").invoke(harness.scene());
+            Object fieldScreen = game.getClass().getMethod("screen").invoke(game);
+            Object field = fieldScreen.getClass().getMethod("field").invoke(fieldScreen);
+            Object progress = game.getClass().getField("progress").get(game);
+            // An empty journal cannot supply either puzzle's clues.
+            fieldScreen.getClass().getMethod("journal", game.getClass()).invoke(fieldScreen, game);
+            assertEquals(false, progress.getClass().getMethod("seen", String.class).invoke(progress, "ghz-field-garden-verse"));
+            harness.press(GLFW_KEY_BACKSPACE); play(harness, 2);
+            game.getClass().getMethod("swap", fieldScreen.getClass().getInterfaces()[0]).invoke(game, fieldScreen);
+            for (int[] point : new int[][] {{1152,672},{1344,576},{1088,576},{1216,512},{880,768},{1456,864},{1232,832}}) {
+                field.getClass().getMethod("setPosition", double.class, double.class).invoke(field, (double) point[0], (double) point[1]);
+                play(harness, 1);
+                harness.press(GLFW_KEY_ENTER); play(harness, 2);
+                assertEquals("STORY", screen(harness));
+                harness.press(GLFW_KEY_BACKSPACE); play(harness, 2);
+                assertEquals("FIELD", screen(harness));
+            }
+            assertEquals(true, field.getClass().getMethod("bellsOpen").invoke(field));
+            assertEquals(true, field.getClass().getMethod("orchardOpen").invoke(field));
+            assertEquals(true, progress.getClass().getMethod("seen", String.class).invoke(progress, "ghz-field-orchard-letter"));
+            Object oneUp = Stream.of(field.getClass().getClassLoader().loadClass("threeislands.core.Item").getEnumConstants())
+                    .filter(item -> item.toString().equals("ONE_UP")).findFirst().orElseThrow();
+            int count = (int) progress.getClass().getMethod("count", oneUp.getClass()).invoke(progress, oneUp);
+            harness.press(GLFW_KEY_ENTER); play(harness, 2);
+            harness.press(GLFW_KEY_BACKSPACE); play(harness, 2);
+            assertEquals(count, progress.getClass().getMethod("count", oneUp.getClass()).invoke(progress, oneUp), "letter reward cannot be farmed");
+            var saved = (java.util.Optional<?>) game.getClass().getMethod("readSave").invoke(game);
+            assertTrue(saved.isPresent());
+            game.getClass().getMethod("continueGame", saved.get().getClass()).invoke(game, saved.get());
+            assertTrue(until(harness, "LOADING", 60));
+            assertTrue(until(harness, "FIELD", 700));
+            Object resumed = game.getClass().getMethod("screen").invoke(game);
+            Object model = resumed.getClass().getMethod("field").invoke(resumed);
+            assertEquals(true, model.getClass().getMethod("bellsOpen").invoke(model));
+            assertEquals(true, model.getClass().getMethod("orchardOpen").invoke(model));
+            assertEquals(0, model.getClass().getMethod("discoveries").invoke(model));
+            clean(harness);
+        }
+    }
+
+    @Test
     void physicalTrailsConnectFieldsAndBattleUsesTheEncounterField() throws Exception {
         try (ExampleModHarness harness = open()) {
             play(harness, 2);
@@ -249,7 +338,7 @@ class TestThreeIslandsScene {
                 Object startGame = harness.scene().getClass().getMethod("game").invoke(harness.scene());
                 Object start = startGame.getClass().getMethod("screen").invoke(startGame);
                 Object startModel = start.getClass().getMethod("field").invoke(start);
-                startModel.getClass().getMethod("setPosition", double.class, double.class).invoke(startModel, 896.0, 336.0);
+                startModel.getClass().getMethod("setPosition", double.class, double.class).invoke(startModel, ((Number) startModel.getClass().getMethod("exitX").invoke(startModel)).doubleValue(), 336.0);
                 harness.press(GLFW_KEY_RIGHT);
                 assertTrue(until(harness, "LOADING", 60));
                 assertTrue(until(harness, "FIELD", 600));

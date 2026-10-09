@@ -73,10 +73,7 @@ public final class Game {
         for (Island island : Island.values()) {
             if (!art.has(island.game)) notices.add(name(island.game) + " ROM not found: " + island.label + " will be skipped.");
         }
-        Optional<Progress> saved = readSave();
-        if (saved.isPresent()) progress = saved.get();
-        Zone start = saved.isPresent() ? resumeDestination() : firstAvailable();
-        openField(start, progress.resumeZone() == start.ordinal() ? progress.resumeX() : 0, stage(start));
+        swap(new TitleScreen(this));
     }
 
     public static String name(String game) {
@@ -306,7 +303,7 @@ public final class Game {
         Field field = new Field(zone, stage.path);
         field.restore(progress);
         if (checkpoint > 0) field.resumeAtCamp(checkpoint);
-        else if (checkpoint == -1) field.setPosition(864, 336);
+        else if (checkpoint == -1) field.setPosition(field.exitX() - 32, 336);
         progress.setResume(zone, checkpoint == -1 || checkpoint == 2 ? 2 : checkpoint > 0 ? 1 : 0);
         FieldScreen outside = new FieldScreen(this, stage, field);
         swap(outside);
@@ -320,7 +317,7 @@ public final class Game {
         var kit = art.kit(zone);
         if (kit == null) return null;
         FieldPath path = Stage.route(zone, kit);
-        cachedStage = new Stage(zone, kit, path);
+        cachedStage = new Stage(zone, kit, path, art.rom(zone.game));
         return cachedStage;
     }
 

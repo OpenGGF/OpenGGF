@@ -9,7 +9,7 @@ import threeislands.core.Zone;
 
 /** An explorable two-dimensional area. Terrain, interaction and encounter distance share coordinates. */
 public final class Field {
-    public enum Kind { ENCOUNTER, MONITOR, STARPOST, DISCOVERY, FRIEND, MERCHANT, MIDBOSS, BOSS, DUNGEON, GUARDIAN, RELIC }
+    public enum Kind { ENCOUNTER, MONITOR, STARPOST, DISCOVERY, FRIEND, MERCHANT, MIDBOSS, BOSS, DUNGEON, GUARDIAN, RELIC, CLUE, MECHANISM }
     public static final int WIDTH = 960, HEIGHT = 640;
     public static final double WALK = 1.6, RUN = 2.8;
     public static final int TRAIL = 96, FOLLOW_GAP = 12, TOUCH = 18;
@@ -49,6 +49,12 @@ public final class Field {
     private final double[] trail = new double[TRAIL], trailY = new double[TRAIL];
     private int trailHead, grace;
     private double distance;
+    private int bellPhrase;
+
+    public boolean expanded() { return dungeon == null && zone == Zone.GREEN_HILL; }
+    public int width() { return expanded() ? 1536 : WIDTH; }
+    public int height() { return expanded() ? 1024 : HEIGHT; }
+    public int exitX() { return width() - 64; }
 
     public Field(Zone zone, FieldPath path) {
         this(zone, path, null);
@@ -125,6 +131,18 @@ public final class Field {
         }
         spots.add(new Spot(Kind.BOSS, 848, 128, List.of(bosses.get(bosses.size() - 1)), null, 0,
                 "boss", "Rift anchor"));
+        if (expanded()) {
+            add(Kind.CLUE, 1152, 672, "garden-verse", "Weathered inscription");
+            add(Kind.MECHANISM, 1088, 576, "bell-dawn", "Sunrise bell");
+            add(Kind.MECHANISM, 1216, 512, "bell-noon", "High sun bell");
+            add(Kind.MECHANISM, 1344, 576, "bell-dusk", "Sunset bell");
+            add(Kind.CLUE, 832, 688, "orchard-note", "Water-stained notebook");
+            add(Kind.MECHANISM, 880, 768, "sluice-west", "Root-bound wheel");
+            add(Kind.MECHANISM, 1456, 864, "sluice-east", "Salt-crusted wheel");
+            add(Kind.CLUE, 1232, 832, "orchard-letter", "Tin beneath the roots");
+            add(Kind.CLUE, 1440, 160, "horizon", "Split reflection");
+            spots.add(new Spot(Kind.MONITOR, 272, 864, List.of(), Item.BLUE_SPHERE, 0, "cache-grove", "Overgrown monitor"));
+        }
     }
 
     public String key(Spot spot) { return zone.key + "-field-" + spot.id; }
@@ -151,28 +169,63 @@ public final class Field {
         for (Spot spot : spots) if (spot.kind == Kind.MIDBOSS && !spot.done) return false;
         return true;
     }
-    public String objective() {
-        if (dungeon != null) {
-            if (dungeonComplete()) return "Return west to the entrance when ready.";
-            if (!guardDefeated(0)) return "Defeat the sentries to open the first gate.";
-            if (!guardDefeated(1)) return "Explore the chamber and open the inner gate.";
-            return "Find " + dungeon.goal().toLowerCase() + " in the inner chamber.";
+    /** Optional mysteries never participate in chapter/boss admission. */
+    public boolean orchardOpen() { return done("sluice-west") && done("sluice-east"); }
+    private boolean done(String id) {
+        return spots.stream().anyMatch(spot -> spot.id.equals(id) && spot.done);
+    }
+    public boolean bellsOpen() { return done("bell-dawn") && done("bell-noon") && done("bell-dusk"); }
+
+    /** A failed phrase starts afresh; solved mechanisms and each wheel survive saves. */
+    public String mechanism(Progress progress, Spot spot) {
+        if (spot.kind != Kind.MECHANISM || !expanded()) return "";
+        if (spot.id.startsWith("sluice-")) {
+            if (spot.done) return "The wheel rests against its stop. Water trickles through the stonework.";
+            complete(progress, spot);
+            return orchardOpen() ? "The two channels answer each other. Water slips away from the orchard's old stone crossing."
+                    : "The wheel turns. Water runs along one channel, but the pool still presses back from the other side.";
         }
-        if (boss().done) return "The eastern trail is open. Keep exploring, or follow it.";
-        if (!bossReady()) return "Defeat the guardian at the northern crossing.";
-        return "Reach the rift anchor in the northeast.";
+        if (bellsOpen()) return "The bells carry their little song across the garden. Nothing answers from beneath the stone.";
+        String[] phrase = {"bell-dusk", "bell-dawn", "bell-noon"};
+        if (!spot.id.equals(phrase[bellPhrase])) {
+            bellPhrase = spot.id.equals(phrase[0]) ? 1 : 0;
+            return bellPhrase == 1 ? "A low note. Beneath the garden, something begins to hum." : "A lone note fades. The answering hum falls silent.";
+        }
+        bellPhrase++;
+        if (bellPhrase < phrase.length) return bellPhrase == 1 ? "A low note. Beneath the garden, something begins to hum." : "A bright note joins the low one. The stone holds both sounds.";
+        bellPhrase = 0;
+        for (Spot bell : spots) if (bell.id.startsWith("bell-")) complete(progress, bell);
+        progress.markSeen("ghz-garden-song");
+        progress.addItem(Item.LIGHTNING_SHIELD, 1);
+        return "Three notes linger together. A hollow stone opens: a Lightning Shield beside a child's drawing of three separate skies.";
     }
 
-    /** A lake/shaft divides the clearing; north and south paths reconnect around it. */
+    /** Water and raised banks are shared with the renderer, including the revealed causeway. */
+    public boolean orchardCrossing(double px, double py) {
+        return expanded() && orchardOpen() && px >= 1200 && px <= 1248 && py >= 736 && py <= 816;
+    }
+    public boolean water(double px, double py) {
+        if (px > 400 && px < 560 && py > 224 && py < 432 && !(py >= 308 && py <= 356)) return true;
+        if (!expanded()) return false;
+        if (px > 384 && px < 656 && py > 672 && py < 928 && !(py >= 784 && py <= 832)) return true;
+        if (px > 896 && px <= 960 && py > 752 && py < 784) return true;
+        if (px >= 1408 && px < 1440 && py > 848 && py < 880) return true;
+        boolean pool = px > 960 && px < 1408 && py > 736 && py < 928;
+        boolean island = px >= 1184 && px <= 1296 && py >= 800 && py <= 864;
+        boolean crossing = orchardCrossing(px, py);
+        return pool && !island && !crossing;
+    }
+    public int[][] banks() {
+        return expanded() ? new int[][] {{112,144,64,80},{784,400,96,64},{240,624,112,128},
+                {736,832,112,112},{1008,176,192,112},{1040,352,224,64}}
+                : new int[][] {{112,144,64,80},{784,400,96,64}};
+    }
     public boolean walkable(double px, double py) {
         if (dungeon != null) return dungeon.floor(px, py) && !sealed(px, py);
-        if (px < 48 || px > WIDTH - 48 || py < 88 || py > HEIGHT - 48) return false;
-        // The central bridge is broad enough for the whole formation.
-        boolean lake = px > 400 && px < 560 && py > 224 && py < 432;
-        boolean bridge = py >= 308 && py <= 356;
-        if (lake && !bridge) return false;
-        return !(px > 112 && px < 176 && py > 144 && py < 224)
-                && !(px > 784 && px < 880 && py > 400 && py < 464);
+        if (px < 48 || px > width() - 48 || py < 88 || py > height() - 48 || water(px, py)) return false;
+        for (int[] bank : banks()) if (px > bank[0] && px < bank[0] + bank[2]
+                && py > bank[1] && py < bank[1] + bank[3]) return false;
+        return true;
     }
     public double x() { return x; }
     public double y() { return y; }
@@ -196,7 +249,7 @@ public final class Field {
         if (!walkable(px, py)) return;
         x = px; y = py; resetTrail();
     }
-    public void setX(double value) { setPosition(Math.max(48, Math.min(WIDTH - 48, value)), y); }
+    public void setX(double value) { setPosition(Math.max(48, Math.min(width() - 48, value)), y); }
 
     public Spot step(int dx, boolean run, long ticks) { return step(dx, 0, run, ticks); }
     public Spot step(int dx, int dy, boolean run, long ticks) {
@@ -228,7 +281,7 @@ public final class Field {
         Spot best = null;
         double nearest = 38;
         for (Spot spot : spots) {
-            if (spot.kind == Kind.ENCOUNTER || (spot.done && spot.kind != Kind.STARPOST && spot.kind != Kind.FRIEND && spot.kind != Kind.MERCHANT && spot.kind != Kind.DUNGEON && spot.kind != Kind.RELIC)) continue;
+            if (spot.kind == Kind.ENCOUNTER || (spot.done && spot.kind != Kind.STARPOST && spot.kind != Kind.FRIEND && spot.kind != Kind.MERCHANT && spot.kind != Kind.DUNGEON && spot.kind != Kind.RELIC && spot.kind != Kind.CLUE && spot.kind != Kind.MECHANISM)) continue;
             double d = Math.hypot(spot.x(ticks) - x, spot.homeY - y);
             if (d < nearest) { nearest = d; best = spot; }
         }
@@ -248,7 +301,7 @@ public final class Field {
         return boss();
     }
     /** Debug only. Runtime resumes restore a camp, never infer completed content from position. */
-    public void skipTo(double toX) { setPosition(Math.max(48, Math.min(900, toX)), 336); }
+    public void skipTo(double toX) { setPosition(Math.max(48, Math.min(exitX(), toX)), 336); }
     public Spot boss() {
         for (Spot spot : spots) if (spot.kind == Kind.BOSS) return spot;
         throw new IllegalStateException("Missing anchor");

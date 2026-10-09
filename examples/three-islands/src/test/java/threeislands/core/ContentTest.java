@@ -48,7 +48,7 @@ class ContentTest {
     @Test
     void theStoryHasEverySceneTheGameAsksFor() throws IOException {
         Story story = new Story(resource("text/story.txt"));
-        List<String> wanted = new ArrayList<>(List.of("prologue", "ending", "ghz-rescue"));
+        List<String> wanted = new ArrayList<>(List.of("prologue", "ending", "ghz-rescue", "ghz-garden-verse", "ghz-garden-song", "ghz-orchard-note", "ghz-orchard-letter", "ghz-horizon"));
         for (Island island : Island.values()) {
             wanted.add(island.key() + "-arrive");
             wanted.add("village-" + island.key());

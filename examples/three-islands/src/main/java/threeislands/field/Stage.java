@@ -3,6 +3,7 @@ package threeislands.field;
 import com.openggf.mods.scene.SceneBackdrop;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneLevelKit;
+import com.openggf.mods.scene.SceneRomArt;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -28,11 +29,11 @@ public final class Stage {
     private int groundColour;
     private double groundCamY = Double.NaN;
 
-    public Stage(Zone zone, SceneLevelKit kit, FieldPath path) {
+    public Stage(Zone zone, SceneLevelKit kit, FieldPath path, SceneRomArt rom) {
         this.zone = zone;
         this.kit = kit;
         this.path = path;
-        this.fieldArt = new FieldArt(zone, kit);
+        this.fieldArt = new FieldArt(zone, kit, rom);
         this.size = kit.blockSize();
         this.area = KitTerrain.extent(kit);
     }
