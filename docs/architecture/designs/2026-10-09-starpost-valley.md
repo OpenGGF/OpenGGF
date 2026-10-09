@@ -1,0 +1,660 @@
+# Starpost Valley — design brainstorm
+
+A farming and life-sim example mod inspired by *Stardew Valley*: a farm, crops, seasons,
+neighbours, fishing, mines, animals, festivals and a long-term restoration goal, rebuilt
+from Sonic's own ROM art, music and movement. Status: **brainstorm, nothing built**.
+Base: `8668a9012` (`develop`). Branch: `feature/ai-starpost-valley` in
+`.worktrees/ai-starpost-valley`.
+
+The quality bar is the rest of the series: Slay the Robotnik (28,770 main lines), Eggman's
+Sky (15,036), Sonic Survivors, Sitar Hero and Starfall Frontier. Only inspiration comes
+from *Stardew Valley*. The mod uses none of its names, characters, text, art or data.
+
+How this was produced: a cited survey of the Mod API and examples, an independent creative
+brainstorm from the Fable model, and the lead's own pass. They were merged here and every
+claim was checked against the engine survey. Section 12 lists what was changed or dropped
+for feasibility.
+
+## Kickoff decisions (2026-10-09)
+
+| Question | Decision |
+|---|---|
+| Foundation | A scene mod with **two views** (§3.4). The **farm is a belt-scroller field** (§3.2 D): plot rows in front of a Green Hill back wall. The **rest of the valley is side view** (§3.2 B): town, lake, plateau, Ruins and festivals, built from Green Hill's own level blocks and collision. The user first chose side view after the §13 look test, then changed it to this hybrid ("belt view for the farm itself is sick"). |
+| ROMs | Base game **S3K**; **S1 required** for Green Hill; **S2 optional** extras, each with a fallback (§3.3). |
+| Scope | The **complete one-year game** (§10). |
+| Concepts | All four accepted: **Momentum** instead of stamina (conventional energy stays behind a switch), **choose your farmer** (Sonic, Tails or Knuckles), **Partners** instead of romance, and animal villagers who **speak in pictures until the translator**. |
+| Name | **Starpost Valley** (the user's rename, replacing "Green Hill Valley"). A Star Post is the checkpoint you always return to, which fits §9.21's home for a hero who never stops, and the name echoes the genre's inspiration. The valley still sits in Green Hill. The Inn becomes the **Lamppost Inn**, Sonic 1's own name for the checkpoint, so the two names don't collide. |
+| Delivery | Assumed from the previous series: one pull request against `develop` when finished, with a lead plus a few subagents. |
+
+## 1. The pitch
+
+> Every Sonic game ends with Sonic running away from the wreckage of his victory.
+> **Starpost Valley** is the part the credits skip.
+
+The Sonic 1 ending plays: Sonic runs through Green Hill with freed animals streaming
+behind him. This time, at the signpost, he stops, and so do the animals. The camera tilts
+up the cliff to show the damage. The checkered soil is churned by Motobug tracks, a rusted
+Buzz Bomber lies in the creek and the animal capsule on the hill is cracked. A Flicky lands
+on his nose and the title card reads `SPRING 1 — STARPOST VALLEY`. Sonic has a note
+from Tails, a shovel and about sixty animals with nowhere to go.
+
+At the valley gate an old Star Post leans in the grass. Sonic taps it, it spins and lights,
+and the checkpoint chime plays: this is where he will keep coming back. It is the valley's
+namesake, where you wake after fainting (§9.20), and the last thing the ending shows.
+
+**Design rule:** speed buys more actions in a day, never a shorter season. Sonic does not
+slow down and crops do not speed up. The game lives in that gap. "Gotta grow slow" stays as
+a loading-screen gag rather than the thesis: a forty-hour argument that Sonic should stop
+being Sonic fights the licence. The genre's real emotional core is restoration, and Sonic
+already has all three ingredients in the ROM: despoiled land, a corporate villain
+(Robotnik) and a community (the animals he freed).
+
+### Pillars
+
+1. **It plays like Sonic between the chores.** The walk to the field is the best part of a
+   Sonic game: momentum, springs, slopes, a loop on the farm.
+2. **Everything you see comes from your ROMs.** Original art is limited to fish, food and
+   item icons, UI and one sleeping pose. Nothing original has a face.
+3. **Every named thing changes a rule.** A *Fire Shield Pepper* that behaves like any other
+   crop is just a reskin. Eating one grants lava immunity in the Ruins.
+4. **Restoration you can see.** Every badnik you pop frees an animal who walks home. The
+   valley's population, palette, music and festivals visibly recover.
+
+## 2. What the engine gives us (survey at `8668a9012`)
+
+The Mod API and existing examples already support or constrain the game in these ways:
+
+- **Mod scene.** `ModContext.registerStartupScene` and a full-screen `ModScene` with a
+  60 Hz `update`, a side-effect-free `draw`, fault boundaries and `requireDisplayWidth`
+  (320/352/400/528/800 × 224). This is the route used by Slay the Robotnik, Eggman's Sky
+  and Starfall Frontier.
+- **Multi-ROM art.** `ctx.art().rom("s1"|"s2"|"s3k")` gives independent views. A missing
+  game returns `null`, and Eggman's Sky probes each one.
+  - `SceneRomArt.levelKit(zone, act)` returns 256-px block images with collision,
+    palette and backdrop. Kits exist for every S1 act, so Green Hill, Marble, Spring Yard,
+    Labyrinth, Star Light and Scrap Brain are all available.
+  - `levelOverview`, `zoneBackdrop`, `levelStages` and `levelForeground` exist for S1 GHZ1.
+  - `sprites(RomSpriteRequest, palette)` decodes Nemesis/Kosinski/KosM art with DPLCs.
+  - `character()` gives Sonic (S1), Sonic/Tails (S2) and Sonic/Tails/Knuckles (S3K).
+- **Recolouring is free.** Every decode takes a caller palette. Terrain can be recoloured
+  through `pixels()` the way Eggman's Sky does it in `core/Recolor`, and `withTint` /
+  `withFlash` work at draw time. Seasons, dusk and weather are therefore palette work,
+  not new art.
+- **Assets already catalogued.**
+  - Animals: S1 and S3K have the rabbit, chicken, penguin, seal, pig, Flicky and squirrel.
+    S2 adds a mouse, monkey, eagle, turtle and bear. `eggsky.art.FaunaCatalog` has 83
+    ready `RomSpriteRequest`s.
+  - S1 objects: purple rock, spikes, bridge, monitor, ring, signpost, lamppost, prison
+    capsule, Eggman and the S1 badniks.
+  - S3K objects: Egg Robo, Robotnik ship, egg capsule, ring, monitors, starpost and springs.
+  - Animated GHZ flowers and water are uncompressed art. Kits only show their first frame,
+    so the mod animates them itself.
+- **Audio.** `ctx.audio()` drives the base game's sound driver, so its music and SFX play
+  together. `ctx.music().prepare("s1", id, frames)` synthesises any supplied ROM's song as
+  PCM, so S1 music can play on S3K.
+  - **Constraint:** while a prepared player exists its PCM replaces all driver output,
+    so SFX go silent. A soundtrack that crosses ROMs needs the engine change in §3.3.
+- **Storage.** UTF-8 text files of at most 1 MiB under `saves/mods/<id>/`, replaced
+  atomically. Starfall's gzip+Base64 split-part codec with a backup already handles larger
+  saves.
+- **No scene-to-level handoff.** A scene cannot start a real stock level and get control
+  back. Patch mods can run custom objects inside real levels (Infinite Sonic rewrites GHZ
+  terrain with real physics, and Sonic Survivors runs a whole roguelike UI in real S2
+  acts). That is a different mod kind with its own session.
+- **Packaging.** `ggfmod package` rejects mutable static state (`STATIC_STATE_UNSUPPORTED`).
+  Catalogues must be instance-owned.
+- **Tests and footage.** `ExampleModHarness` gives bridge tests, and `ExampleModCapture`
+  produces scripted PNG, MP4 and WAV.
+
+## 3. The three foundation decisions
+
+### 3.1 Architecture: scene mod (recommended) or patch mod
+
+| | **Scene mod** (own simulation) | **Patch mod** (real S1 levels) |
+|---|---|---|
+| Movement | Creator controller ported from `Sonic_Move`/`Sonic_Roll`/`Sonic_Jump`/slope resistance, on authored height maps. Starfall's flat controller is the starting point. Loops are scripted. | The engine's real physics: slopes, loops, spindash, rolling, rings-as-health. |
+| Art | Kit blocks, ROM sprites and palettes, all drawn by the mod. GHZ flower and water animation reimplemented. | Real GHZ rendering, animated tiles, palette cycles, parallax and objects. |
+| UI (inventory, shops, dialogue, calendar, crafting) | Natural. Slay has a screen stack, focus regions and mouse support. | Overlays over gameplay (`LevelOverlayCanvas`). Every modal screen fights the level loop. |
+| World state (days, schedules, off-screen growth) | Mod-owned; save on sleep. | Rebuild each area from mod state on every load, and give every mod object rewind recreation and captured state. |
+| Cross-game cast (Tails, Knuckles, Egg Robo) | `rom("s3k")` sprites through the API. | Patch ROM-art intake is S2-only. An S1 patch would need new hooks or non-API engine references (Survivors imports `GraphicsManager` and `AbstractPlayableSprite`). |
+| API cleanliness as an example | Clean, like Slay and Eggman's Sky. | Heavy use of non-API engine internals. |
+
+**Recommendation: scene mod.** Every system the genre needs is mod-owned state plus UI,
+and the cast spans three ROMs. Authentic movement is achievable with a ported controller
+on terrain we author ourselves. The patch route buys real physics but would need several
+engine hooks and still fight the UI.
+
+A real engine level inside a scene (for an arcade cabinet that runs the real GHZ1, say)
+would be a large new Mod API capability: a scene-to-gameplay-session bridge. It is noted
+as a stretch, not a dependency.
+
+### 3.2 Perspective: side view, the "cross-section valley" (recommended)
+
+- **(A) Top-down 3/4.** This gives the deepest farm grid, but no ROM has front-facing
+  walk frames for any character. Blue Sphere has back views and everything else is side
+  view, so "walking toward the camera", the most common facing in that view, would be
+  original art for the three heroes and every villager. Green Hill's tiles are side
+  elevations: the checker pattern is a cliff face, not a floor. The result is high cost,
+  weak identity and the biggest risk of looking like a fan sprite sheet.
+- **(B) Side view.** Every kit, character, badnik and animal works unmodified, and the
+  walk between chores becomes Sonic movement. The cost is that each terrace's farm is a
+  one-dimensional row. Verticality, a cellar, width and terrace allocation compensate.
+- **(C) Hybrid** (top-down valley, side-view expeditions). This inherits A's art problem
+  and B's full cost: two half-games.
+- **(D) Belt-scroller depth band** (River City Ransom style). Characters stay in profile
+  and walk up and down inside a shallow ground band, which gives the farm two or three
+  rows of depth. It is worth a look test if B's single row proves thin.
+
+**Recommendation: B** (superseded for the farm by §3.4). The valley is one continuous side-view world, roughly five
+screens wide and three terraces plus a cellar high, about the footprint of GHZ Act 1:
+
+- the farm on the left third;
+- the town in the middle;
+- the waterfall lake on the right;
+- the Marble Ruins under the cliffs;
+- a plateau above.
+
+Plots are 16 px wide, so a 400-px screen holds 25. The farm starts as two terraces of
+about 40 plots and grows to six terraces plus the cellar, about 300 plots. That is within
+what most players of the genre actually cultivate. Prototype a back-row lane (D-lite:
+holding up while standing still steps to a second plot lane 8 px up, drawn one shade
+darker) only if the slice shows that single rows feel thin.
+
+### 3.3 ROMs, base game and audio
+
+- **Base game: S3K.** Sonic, Tails and Knuckles, the Egg Robo, the elemental shields and
+  their sounds, and the richest SFX set are all native, as in Slay and Eggman's Sky.
+- **Required: S1 as well.** Green Hill is Sonic 1. Without it the mod shows a friendly
+  "needs Sonic 1" screen.
+- **Optional: S2.** It adds Emerald Hill (summer), Casino Night (the fair), Sky Chase (the
+  flight to Angel Island), and the bear, monkey, eagle, mouse and turtle villagers and
+  livestock. Each has a fallback.
+- **Engine addition (Mod API): background music from another supplied ROM, mixed under
+  the base driver's SFX.** The season/hour soundtrack in §8 crosses all three ROMs, and
+  today that silences every tool, spring and ring sound. Any multi-ROM scene benefits,
+  Eggman's Sky included. The fallback is a soundtrack drawn from S3K only, which loses
+  Green Hill's own theme in spring. That loss is unacceptable for this game.
+
+### 3.4 Two views: the belt-view farm inside a side-view valley
+
+The look test showed each view's strength. The belt field is the most convincing farm: rows
+of crops with depth and a Stardew-like density. The side view is the most convincing Green
+Hill: springs, slopes and the loop, using the act's own blocks. The game uses each where it
+is strongest.
+
+- **The farm (belt view).**
+  - Plot rows run in front of an upright back wall of Green Hill blocks drawn at 1:1. The
+    farmhouse, coop, barn and Capsule Garden stand along that wall as facades.
+  - Sonic, Tails or Knuckles walks side-on, moving into and out of the screen, with
+    Sonic_Move's acceleration and a jump. Animals, villagers, Flickies and pests share the
+    depth-sorted field.
+  - The field grows by rows and columns as it expands, instead of by terraces.
+  - The spin dash runs along a row, tilling as it goes.
+- **Everything else (side view).** The valley path, the town, the lake and fishing, the
+  plateau, the Ruins, festivals and Angel Island use the ported side-view controller with
+  springs, slopes and loops.
+- **The seam.** The farm gate at the valley's west end is a Star Post. Running past it
+  folds the view: the side-view terrace tilts down into the field over about half a second,
+  and Sonic keeps his speed and facing. Leaving through the gate reverses it.
+  - Each view owns its controller and camera; the day clock, inventory and Momentum carry
+    across.
+  - A visit never changes view mid-screen anywhere except at the gate.
+- **The cost, accepted.** There are two controllers and two renderers, but the look test
+  already has both. Every farm system (plots, buildings, animals, automation) is laid out
+  in belt coordinates (column, row). The valley's systems use side-view world coordinates.
+
+## 4. Who farms
+
+Use the S3K convention: **choose Sonic, Tails or Knuckles**, and the other two become
+villagers. Each plays differently, so the choice is more than a skin:
+
+- **Sonic.** Fastest. Spin dash tills three plots in a line. Needs springs to reach the
+  upper terraces. This is the canonical story and the default.
+- **Tails.** Flies between terraces freely and carries two held items. His spin is weaker
+  (tills one plot).
+- **Knuckles.** Glides and climbs cliff faces. He **digs** instead of tilling, which is
+  instant and can turn up buried items, and he breaks rocks in one punch. He is too slow
+  for the farm loop's full payoff.
+
+Each unchosen pair needs dialogue variants. Budget for that, or ship Sonic first and add
+the other two farmers in the full game (§10).
+
+## 5. The day
+
+- **Time.** A day runs 06:00–02:00 over about 14 real minutes (configurable), in 28-day
+  seasons. Time pauses in menus and cutscenes. At 02:00 you faint.
+- **Energy: Momentum (prototype) or conventional stamina (fallback).** Sonic does not get
+  tired, so a stamina bar is the wrong fiction. **Momentum** is drained 2–4 points per
+  chore (till, plant, water, harvest, chop, mine). It refills only through Sonic things:
+  a lap of the farm loop (+30), springs, rings, popping badniks and food. A full bar is
+  about 60 chores. This is the single most likely mechanic to become annoying, so it sits
+  behind one switch and the slice decides.
+- **Rings are currency and health.** A pest hit scatters rings in the classic burst. Grab
+  them back within three seconds or lose them. A hit at zero rings means fainting: the
+  "you fainted" jingle, a Continue screen, and the rest of the day lost.
+- **The HUD is Sonic 1's.** SCORE shows banked rings, TIME is the day clock and RINGS is
+  rings in hand.
+- **Day start.** The S1 title card reads `SUMMER 12` / `STARPOST VALLEY`.
+- **Day end.** The shipping bin is a signpost. At bedtime it spins, and the act-clear tally
+  counts up `CROP BONUS / ANIMAL BONUS / ARTISAN BONUS / TOTAL` to the clear jingle.
+- **Idle.** Sonic's foot tap tells the time: it quickens as the night gets later.
+- **Saving.** The game saves on sleep, as the genre does.
+
+## 6. Systems, mapped
+
+### 6.1 Farm buildings and placeables
+
+| Genre role | Starpost Valley | Notes |
+|---|---|---|
+| Chest | **Item Monitor** | Punch it open. Its screen shows the icon of what's inside. |
+| Coop, upgraded twice | **Cucky Coop** → Flicky nests → Pecky roost | Eggs, blue feathers, Ice Eggs (winter's only animal income). |
+| Barn, upgraded twice | **Pocky Pen** → Picky sty → S2 bear den (optional) | Fluff (wool), Hill Truffles, honeycomb. |
+| Well | **Waterfall Tap** | Redirects a GHZ waterfall onto one terrace, giving that row unlimited water. |
+| Greenhouse | **Capsule Garden** | The animal capsule, its dome rebuilt in glass. The reward for restoring the Great Capsule. Any crop, any season. |
+| Paths and stable | **Springs and the Farm Loop** | Placed red and yellow springs connect terraces. The loop refills Momentum. |
+| Sprinklers | **Reprogrammed Buzz Bomber** (8 plots) → Mk II (16) → **Caterkiller Crawler** (crawls a whole row) | Tails rebuilds badnik shells you bring back from the Ruins. |
+| Auto-harvest huts | **Flicky Roost** | A flock of 4–6 Flickies harvests one terrace into a basket, then circles Sonic in the S3K-ending formation. |
+| Fish pond | **Rocky's Pool** | A Rocky seal fishes passively. |
+| Tree tapper | **Ricky Roost** | A squirrel gathers nuts and sap. |
+| Bee house | **Buzz Hive** | A docile Buzz Bomber colony. Honey flavour follows the nearest flower. |
+| Monster hutch | **Badnik Garage** | Where your automation badniks sleep. |
+| Warp totems | **Big Ring warps** | Late game. |
+| Scarecrow | **Sonic Scarecrow** (totem wood) | Badniks avoid it. Mistakenly crafting the **Robotnik** scarecrow scares your own animals. |
+| Checkpoint | **Star Post** | You wake here after fainting. |
+
+### 6.2 Tools: moves plus the S3K shields
+
+Sonic's moveset is the tool belt. The three elemental shields are the upgrade tiers: one
+is equipped at a time from a Monitor Rack at home, with one spare carried (rising to
+three). Sonic never holds a hoe.
+
+| Job | Tool | Upgrade ladder (built by Rusty the Egg Robo) |
+|---|---|---|
+| Till | **Spin dash** (innate) | Sneakers (1 plot) → Power Sneakers (2) → Speed Shoes (3) → Chaos Sneakers (3, and you can run on water) |
+| Water | **Water Shield** | 10 → 20 → 40 → 80 plots per fill. Refills instantly from any water. |
+| Chop and mine | **Fire Shield** | Fewer hits per tier. Burns weeds. Lava immunity in the Ruins. |
+| Harvest | **Lightning Shield** | Ripe produce flies to you, and dropped rings with it. The radius grows by tier. |
+| Fish | **Fishing rod** | Tails makes it from a Buzz Bomber stinger. Tiers add bait and tackle. |
+| Inventory | **Monitor slots** | 12 → 24 → 36. |
+
+### 6.3 Crops (original names; each must change a rule)
+
+- **Spring**
+  - Ring Radish: the starter, 4 days, 35 rings.
+  - Green Hill Sunflower: the zone's own sunflower art. Regrows, and its seeds feed Cuckies.
+  - Palm Bean: grows on a trellis and regrows.
+  - Checker Cauliflower: can become a giant crop.
+  - Spring Tulip: the festival flower.
+  - Spin Spud.
+- **Summer**
+  - Emerald Melon: can become a giant crop.
+  - Motobug Tomato: regrows.
+  - Fire Shield Pepper: grants lava immunity for a day.
+  - Bluesphere Berry.
+  - Star Post Corn: summer and fall.
+  - Spring Yard Hops: trellis.
+- **Fall**
+  - Eggman Pumpkin: a three-plot giant crop that grows a Robotnik face, the best
+    screenshot in the game.
+  - Egg-plant: 1% grow a moustache, and Robotnik loves them.
+  - Marble Grape: trellis; Knuckles loves them.
+  - Ruby Berry.
+  - Totem Choke.
+  - Scrap Brain Amaranth.
+- **Winter.** Nothing can be sown. The valley takes on Ice Cap colours. Forage Snow Spuds,
+  Ice Crystals and Frost Rings (rings frozen in ice that the Fire Shield breaks out).
+- **Trees**
+  - The real GHZ palm, which gives coconuts.
+  - **Ring Fruit Tree**: matures in 28 days, then drops 10 rings a day in season. This is
+    the slow investment.
+  - Chaos Cherry.
+- **Rares**
+  - **Super Sunflower**: gold, from the Ruins.
+  - **Emerald Seedlings**: seven, each needing a full season of particular care (watered
+    only at night, planted on the cliff, and so on) to grow a Chaos Emerald. Each Emerald
+    adds +10 maximum Momentum. All seven unlock Super Sonic Harvest Day (§9).
+
+### 6.4 The Great Capsule and EGG (the community-centre and corporate paths)
+
+**The Great Capsule** is the cracked animal capsule on the hill. Restoring Robotnik's
+prison inverts its meaning. Flickies in six **Chambers** accept bundles:
+
+| Chamber | Accepts |
+|---|---|
+| Pantry | Crops |
+| Hatchery | Animal goods |
+| Reef | Fish and caught badniks |
+| Scrapyard | Minerals and badnik parts |
+| Bulletin | Friendship milestones |
+| Vault | 2,500 / 5,000 / 10,000 / 25,000 rings |
+
+Rewards: the Capsule Garden, the lake bridge, the Ruins minecart, the Tornado's parts (the
+route to Angel Island) and the Big Ring warps.
+
+**EGG (Eggman Enterprises General Goods)** opens at the valley gate in Scrap Brain
+storefront tiles, staffed by Egg Robos. It offers cheap seeds, an Egg Membership (5,000
+rings) and a **Valley Development Form**: badniks build each improvement for rings. Finish
+the form and the Capsule becomes a **Badnik Factory**. The cost is not a mechanical
+penalty but the population: animals leave, villagers' dialogue sours, and at the year-two
+evaluation the signpost stops on Robotnik and stays there.
+
+### 6.5 The Marble Ruins and Scrap Brain Depths (mines)
+
+- **The Marble Ruins** lie under the cliffs.
+  - 40 chambers, each a one- or two-screen room assembled from Marble Zone kit blocks
+    with Eggman's Sky's seam-repair remixer.
+  - A hand-authored landmark every fifth chamber, plus Star Post elevators.
+  - Hazards: lava, pushable blocks, Caterkillers, Batbrains and Buzz Bombers.
+  - Yields: Scrap (from popped badniks), Marble Ore, Rubies and Emerald Shards.
+  - Combat is the spin jump, and every popped badnik frees an animal who walks home.
+- **Scrap Brain Depths** is the endless dungeon, reached through a flooded Labyrinth
+  passage after chamber 40. It has conveyors, electric beams, Ball Hogs, Bombs, and the
+  real drowning countdown wherever water intrudes.
+
+### 6.6 Fishing
+
+You can catch two kinds of thing:
+
+- **Fish:** 12–16 original fish in the S1 palette. Fish are the lowest-risk original art
+  there is.
+- **Submerged badniks:** Choppers, Jaws, and from S3K Jawz and Blastoid. They are the
+  legendary catches, and each yields an animal and a shell.
+
+The legendary of legendaries is **the Red Chopper**, the giant Chopper under the lake
+bridge that ate Barnaby's hat.
+
+The minigame is the **Bubble Bar**. Hold to rise and release to sink, keeping the catch
+inside a Labyrinth air bubble that shrinks under tension. On legendary catches the
+drowning-countdown digits appear as pure theatre.
+
+Fishing spots: the farm pond, the river, Waterfall Lake, the Labyrinth Cistern (diving,
+with the real air timer) and, later, the Angel Island shore.
+
+### 6.7 Animals and the population counter
+
+Livestock: Cucky (eggs), Pocky (Fluff), Picky (Hill Truffles, dug from the terrace), Pecky
+(Ice Eggs), Rocky (passive fish), Ricky (nuts and sap). With S2: the bear tends the Buzz
+Hive and the monkey picks tree fruit. Flickies are never livestock; they are helpers and
+couriers.
+
+Every freed animal joins the **valley population**, from wherever it was freed: farm
+pests, the Ruins or a fishing line. It starts at 6 and caps at 60. Every 10 unlocks a
+market stall, a festival booth or a new villager. The population takes the place of the
+genre's family: your household is the town.
+
+### 6.8 Town, collections and progression
+
+- **The Lamppost Inn.** Its lamp spins while it's open. Clementine cooks and Rusty tends
+  bar. Friday is Jukebox Night. Its music is Spring Yard Zone, which is already a lounge
+  tune.
+- **Arcade cabinets**, paid in Inn tokens that buy a prize shelf:
+  - **Spin the Signpost**, a timing game;
+  - a **Special Stage**, the S1 rotating maze rebuilt in-scene, whose goal is a rare seed;
+  - a **GHZ Dash** sprint on the valley's own physics. The real stock GHZ1 would need the
+    §3.1 bridge.
+- **Tails's Workshop Museum.**
+  - A Scrap Collection (the badnik bestiary).
+  - Minerals.
+  - Relics: totem fragments, ring moulds and Star Post caps.
+  - The **Sound Test.** "Records" found in the Ruins unlock ROM tracks for the jukebox and
+    your bedside radio. A ROM-music collection is the most Sonic collectible available.
+- **Signpost Board.** Quests are pinned outside the Inn and mail arrives by Flicky.
+  Robotnik posts suspicious special orders ("500 Egg-plants, no questions asked").
+- **Skills.** The level-5 and level-10 choices branch, as in the genre:
+
+  | Skill | Covers | Level-5 choices |
+  |---|---|---|
+  | Farming | Crops and animals | Ringgrower / Rancher |
+  | Ranging | Foraging | Forester / Gatherer |
+  | Fishing | Fishing | Angler / Trapper |
+  | Scrapping | Mining | Scrapper / Geologist |
+  | Bopping | Combat | Insta-Shield / Drop Dash |
+
+  Bopping's late choices include **Ring Keeper** (lose fewer rings).
+- **Crafting and artisan goods.**
+  - Machines: the Scrap Brain Furnace (Scrap → Steel → Chrome → Eggmanium), Monitor Jar,
+    Spring Yard Keg, Fluff Loom, Egg Machine (Robotnik's design), Sunflower Press.
+  - **Chili Dogs**, the one canon Sonic food, are the best Momentum meal in the game.
+
+### 6.9 Angel Island (the later-game island)
+
+The repaired Tornado flies to Angel Island. The flight is a Sky Chase shooter: on S2's Sky
+Chase kit if supplied, otherwise over the S3K AIZ intro sea.
+
+| Island location | Purpose |
+|---|---|
+| Mushroom Hill | Its mushrooms are the island's crops |
+| Lava Reef | Dungeon |
+| Hidden Palace | Knuckles's home and shrine |
+
+## 7. Neighbours
+
+The ROMs contain no humans except Robotnik, so the valley is populated by the animals Sonic
+freed. In canon they only chirp, so **animal villagers speak in icon bubbles until Tails's
+2-heart event, when you receive the Chirp Translator** and their speech becomes text. The
+first fortnight is spent reading pictures, and the moment the valley finds its voice is a
+real beat.
+
+**No romance.** A cast of a teenage hedgehog and rescued rabbits makes romance wrong. At 10
+hearts a villager becomes a **Partner**: they build a cabin on your farm (Knuckles just
+visits) and give a daily effect, and you can have several. Bonds fit a hero whose whole
+mythology is friendship.
+
+| Villager | Art | Home | Personality | Loves | Arc (2/4/6/8/10 hearts) |
+|---|---|---|---|---|---|
+| **Tails** | S3K | Workshop under the wrecked Tornado | Earnest inventor, over-explains, hero-worships you | Scrap, Chili Dogs | Reprograms Moto → Translator → Buzz Bomber sprinkler blueprint → finds the Tornado engine → first flight to Angel Island |
+| **Knuckles** | S3K | Cliff shrine; glides in during Summer Y1 after an Emerald Shard | Blunt, proud, allergic to lies | Marble Grapes, Emerald Shards | Suspects you → tests you in the Ruins → teaches digging → admits he's lonely → Hidden Palace |
+| **Dr. Robotnik** | S1/S3K | Egg Mobile caravan behind EGG | Grandiloquent schemer, occasionally and genuinely helpful | Egg-plants, eggs | Sells to you → tries to buy the farm → the Fair judging scandal → shows the "badniks were meant to be *rides*" blueprint → betrays you anyway, warmly. Never a Partner. |
+| **Rusty** (Egg Robo) | S3K | The Inn's back room | Literal and gentle; left Robotnik after a firmware fault | Oil, batteries | Learns to want things → asks what a day off is → repairs the Star Posts → chooses a name → becomes the valley clockmaker |
+| **Pip** (Flicky) | S1/S3K | Nests in your signpost | Gossip and courier, never lands for long | Sunflower seeds | Postal route → the lost letter → organises Night of the Flickies → leads the migration and comes back |
+| **Dandel** (Pocky) | S1 | Seed stall | Anxious rabbit, undercut by EGG | Ring Radish | Stall failing → you stock it → Robotnik's buyout → refuses → it becomes a co-op |
+| **Clementine** (Cucky) | S1 | Inn kitchen | Warm, bossy, feeds everyone | Star Post Corn, honey | Recipes → cookbook → the Chili Dog recipe → caters the Fair → the Inn is named for her |
+| **Pud** (Picky) | S1 | Shack at the Ruins mouth | Brave about gems, scared of the dark since his capture | Rubies, anything shiny | Won't enter → sells you a lamp → follows you to chamber 10 → finds the Super Sunflower seed → opens the minecart |
+| **Barnaby** (Rocky) | S1 | The lake jetty | Old fisherman with one story | Ice Eggs | Teaches fishing → the hat story → the Red Chopper → you catch it → he gives you the hat |
+| **Frost** (Pecky) | S1 | Ice hut by the river | The only one who loves winter; homesick | Snow Spuds | Hosts the Ice Cap Festival → snowboard → admits homesickness → the Ice Cap Record → stays |
+| **Hazel** (Ricky) | S1 | Treehouse over the museum | Kid squirrel who wants to be fast | Acorns, relics | Museum assistant → the stolen relic → you teach her the spin dash → she takes the loop → she's fine |
+| **Moto** (Motobug) | S1 | Your farm | Pet, beeps | Petting | At game start, choose Moto or a Crabmeat |
+| **The Elder Totem** | GHZ totem | Hilltop | The valley's memory; faces animate by palette; speaks in riddles | Festival offerings | Gives the year-two evaluation. A grandparent figure without inventing a human. |
+| S2 extras | S2 bear, monkey | Arrive at population 30/40 | Beekeeper, carny | Honey, mangoes | Short arcs; they run the Hives and the Fair booth. |
+
+Example Partner effects:
+
+- Tails tops up one automation badnik a day.
+- Knuckles digs up one buried item.
+- Clementine leaves a meal in your monitor.
+- Pip ships your bin for +5%.
+
+## 8. Calendar, festivals, weather and music
+
+| Season | Festivals | Day / night music | Look |
+|---|---|---|---|
+| Spring | 13 **Ring Hunt** (60 s to find rings around town; Tails wins until you beat him). 24 **Sunflower Parade** (every sunflower blooms, palette cycles). | Green Hill (S1) / Star Light (S1) | Stock GHZ |
+| Summer | 11 **Great Valley Race** (a looped GHZ track against Tails, Knuckles and Robotnik in the Egg Mobile). 28 **Night of the Flickies** (the S3K-ending migration over the lake). | Emerald Hill (S2) or Angel Island 1 / Mushroom Hill | Warmer, saturated |
+| Fall | 16 **Valley Fair** (a grange display judged by a biased Robotnik, Casino Night slots, a spring-launch strength test). 27 **Scrap Brain Night** (a haunted maze with a Mecha Sonic silhouette at the end). | Mushroom Hill 2 (its autumn turn) / Angel Island 2 (the burning palette) | MHZ autumn ramps |
+| Winter | 8 **Ice Cap Festival** (a fishing contest and the snowboard run). 25 **Star Light Feast** (secret gifts). | Ice Cap (S3K) / Star Light | Ice Cap palette on GHZ, snow caps |
+
+- **Weather.** Sun, rain, storms, snow and two special days:
+  - Rain is the Labyrinth palette, and the Labyrinth theme plays.
+  - A storm gives a free Lightning Shield charge.
+  - A **Badnik Swarm** day: the TV warns "Robotnik is active" and a Buzz Bomber wave
+    crosses at noon.
+  - On the rare **Emerald Aurora** night, crops planted that day roll for Super quality.
+- **Other music.**
+  - The Ruins play Marble, then Labyrinth, then Scrap Brain.
+  - EGG plays Scrap Brain.
+  - Bosses and legendary catches use the boss theme.
+  - The credits use the S1 ending.
+  - The jukebox overrides everything once you own a Record.
+- **Seasonal palettes.** Every palette is derived from palettes that already exist in the
+  ROMs. Emerald Hill is a Green Hill recolour, Mushroom Hill has an autumn turn, Angel
+  Island 2 has a burnt palette and Ice Cap is winter. Never swap the kit: the valley must
+  always read as Green Hill.
+
+## 9. Signature ideas only a Sonic game can have
+
+1. **Tilled soil is the checkered dirt.** Spin-dash across grass and it becomes the iconic
+   brown-and-tan checker.
+2. **Rings are health,** with a three-second recovery window.
+3. **The farm has a loop on purpose:** take a lap to refill Momentum.
+4. **The HUD is Sonic 1's;** the end-of-day tally is the act-clear screen.
+5. **The day opens with a title card.**
+6. **The foot tap is the clock.**
+7. **Pests are badniks, and popping them grows the town.**
+8. **Monitors are chests** and show their contents.
+9. **The elemental shields are the tools.**
+10. **Reprogrammed badniks are the automation.**
+11. **Flickies are the harvesters.**
+12. **The animal capsule becomes the greenhouse.**
+13. **Deep fishing uses the drowning countdown** honestly. The Water Shield extends it.
+14. **Big Ring bonus.** Bank 50 rings in a day and a Big Ring hangs over the signpost at
+    dusk, leading to a special-stage maze with a rare seed.
+15. **Seven Emerald Seedlings unlock Super Sonic Harvest Day,** once a season. For 60
+    seconds the clock stops, the Super palette cycles and you harvest the entire farm.
+16. **The Signpost Spin is the year-two evaluation.** The post flips through Robotnik and
+    the Elder Totem's faces and, if you did well, stops on yours, as the S1 end-of-act post
+    does. The number of flips (1–4) is the score.
+17. **Weather is palette.**
+18. **The Sound Test is a collectible.**
+19. **The Giant Eggman Pumpkin.**
+20. **Placed springs and Star Posts are your paths and checkpoints.**
+21. **The ending.** Restore the Capsule and grow all seven Emeralds, and the giant
+    Special Stage ring appears at the valley gate at dusk.
+    - Sonic stands at the signpost, tapping his foot and looking at it. The animals wave.
+    - He runs through, and the credits roll over the S1 ending: flowers bloom where he
+      runs.
+    - Then `YEAR 3 — SPRING 1`, and he is back in his hammock. The ring stays as a door.
+    - The valley becomes the place a hero who never stops comes back to.
+
+## 10. Scope tiers
+
+- **Vertical slice (proves the fantasy):**
+  - Spring only, with Sonic as the farmer.
+  - Two terraces and the loop.
+  - Five crops and the Water Shield.
+  - Momentum, and rings-as-health with Motobug and Buzz Bomber pests.
+  - Four villagers (Tails, Robotnik, Pip, Dandel) up to 4 hearts with icon speech.
+  - The Inn and Ruins chambers 1–5.
+  - Pond fishing with four fish and a Chopper.
+  - The Ring Hunt, the signpost tally, day and night, and saving on sleep.
+
+  Success test: a player who knows neither game reference says "this feels like Sonic"
+  unprompted.
+- **Complete one-year game (recommended delivery):**
+  - All four seasons, every crop and the trees.
+  - Three shields and four sneaker tiers.
+  - All villagers up to 8 hearts, the Translator, and at least two Partners.
+  - The Great Capsule and the EGG route with its ending.
+  - Ruins to chamber 40.
+  - 16 fish and the badnik legends.
+  - All the animals and the automation.
+  - Eight festivals.
+  - The museum and the Sound Test.
+  - Population up to 60.
+  - The Signpost Spin evaluation.
+- **Full game:**
+  - Angel Island.
+  - Scrap Brain Depths.
+  - The Emerald Seedlings, Super Harvest Day, and the Big Ring ending into Year 3.
+  - All 10-heart events, including Robotnik's.
+  - Tails and Knuckles as farmers.
+  - Partner cabins and Big Ring warps.
+  - Achievements.
+  - Optional direct-connect co-op, using Putt-Putt Paradise's network precedent.
+
+## 11. Risks of a cheap reskin
+
+| Risk | Cure |
+|---|---|
+| Top-down by reflex | Side view, decided now. |
+| Content only pun-deep | Every named thing changes a rule (§1 pillar 3). |
+| Villagers who are genre archetypes in costume | Cast from canon relationships (Knuckles's distrust, Tails's hero-worship, Robotnik's showmanship). The Translator arc makes the animals' silence a story. |
+| A thin one-dimensional farm | Terraces, cellar, density. A back-row lane only if the slice needs it. |
+| Momentum becomes a chore | A generous bar, food, Emerald growth, and a fallback behind a switch. |
+| Garish seasons | Ramps derived from existing ROM palettes only. |
+| A defanged Robotnik | He escalates: Swarm days, the Fair scandal, the Development Form, and an EGG ending that is a real loss. |
+| Soundtrack loop fatigue | Season and hour rotation, plus the Sound Test as progression. |
+| Scope sprawl toward Angel Island | Nothing beyond the one-year game starts before the Signpost Spin works. |
+| Original art creeping in | A hard rule: original art covers fish, food and icons, UI and one sleeping pose. Nothing with a face. |
+| The arcade steals the show | The farm's movement must feel at least as good as the cabinets. Cabinets cost game time. |
+| Save-state sprawl | Simulation lives in a few mod-owned models with one versioned codec. Save on sleep, plus a recoverable backup. |
+
+## 12. Changes from the raw brainstorm, for feasibility
+
+- **The real GHZ1 in the Inn cabinet** needs a scene-to-gameplay bridge that doesn't exist
+  (§2). It becomes a GHZ Dash on the valley's own physics. The bridge is listed as a
+  stretch engine capability.
+- **"Real CNZ slots"** become CNZ slot art (optional S2) driven by the scene. They can't
+  be the stock object.
+- **Bear and monkey villagers** were described as S2/S3K. The survey shows they are S2
+  only, so they are optional extras with fallbacks.
+- **"Real Sonic physics"** in a scene means a creator controller ported from the ROM's
+  movement routines. Starfall's controller is flat-only, so slopes, rolling and spin dash
+  are new work. Loops are scripted.
+- **Season music across three ROMs** needs the §3.3 mixing addition, because a prepared
+  cross-ROM player silences driver SFX today.
+- **Rewind adapters** were listed as a save risk. They don't apply to a scene mod, whose
+  state is mod-owned. The real risk is save-state size and versioning.
+
+## 13. Proposed next step: a look test before any systems
+
+Spend about a day on a throwaway scene, captured with `ExampleModCapture`, to answer the
+two questions that could overturn this design:
+
+1. A composed farm terrace built from GHZ kit blocks, with tilled checker soil, three crop
+   rows at different growth stages, the four seasonal palettes and dusk, at 400×224.
+   Does it read as Green Hill **and** as a farm?
+2. Sonic on the ported controller running the terrace, springing up a level and taking
+   the loop. Does the walk between chores feel like Sonic?
+
+Kill conditions: if the terrace reads as wallpaper or the single row looks thin, prototype
+the back-row lane (D-lite) before building systems. If the controller doesn't feel right
+on slopes, fix it before any farm system depends on it.
+
+### Look test as built (2026-10-09, uncommitted, base `8668a9012`)
+
+`examples/starpost-valley` with the `starpost.looktest` package (about 1,700 lines,
+throwaway). The jar validates with zero findings. Both views share their art, crops, seasons,
+time of day, farming actions and Green Hill's music. Tab switches between them.
+
+- **Side view.** Green Hill act 1 blocks 13, 45, 60, 3, 60, 45, 53, 38 and 1 (waterfall,
+  palms, field, totem ledge, field, palms, loop, slope, meadow), using the kit's own per-pixel
+  collision. Flat floors are at the ROM's row 192 and the ledge at row 96.
+  - Sonic uses a controller ported from `Sonic_Move`, `Sonic_RollSpeed`, `Sonic_Jump` and
+    `Sonic_SpinDash`.
+  - A tilled plot drops that column's grass lip and shows Green Hill's checker.
+  - The loop is scripted. Block 53's primary-path collision holds only the entry ramp, the
+    right inner wall and the top, so at speed Sonic rolls round it and exits past its right
+    foot.
+- **Belt view.** The same blocks stand upright at 1:1 as a back wall, with their floor line on
+  screen row 136. In front is a field of Green Hill's three grass greens with four rows of
+  plots, a shadow fading toward the viewer, and depth-sorted crops, props and Sonic (side-on,
+  with a shadow).
+- **Seasons** are colour maps over the ROM art, snapped to the engine's Mega Drive levels.
+  **Dusk and night** are palette-mapped skies (sunset orange and pink, or navy) plus a
+  multiply over the land.
+- **Background.** The kit's backdrop is cut into Sonic 1's Green Hill parallax: three
+  drifting cloud strips, mountains, hills, and water strips that move faster toward the
+  viewer.
+- **Footage** (outside the repository): `~/Videos/OGGF/starpost-valley/look-test/`
+  - `side-vs-belt.png`: both views in spring, fall, winter, dusk and night;
+  - `look-test-clip.mp4`: 21 seconds with Green Hill's music, made with `ExampleModCapture`
+    from the stills/clip scripts.
+
+Rejected during the look test:
+
+- **Terrain cut into a tiled grass strip.** Replaced by whole kit blocks, which keep the
+  zone's decoration, slopes and collision exactly.
+- **A belt-view back wall scaled to two thirds.** Non-integer scaling distorts the ROM's
+  pixels; the wall is drawn at 1:1.
+- **Dusk and night as a translucent fill.** Over Green Hill's deep blue sky it read as
+  purple; replaced by mapping the sky's palette.
+- **13-pixel crops.** Unreadable next to Sonic; the ripe crops are now 20–24 pixels tall.
+- **Static arrays for the crop pictures and names.** The validator rejects them
+  (`STATIC_STATE_UNSUPPORTED`); they are now methods and instance fields.
+
+Known look-test limits:
+
+- The keyboard's default pad mapping binds only A (Space), so X farms directly.
+- Prepared cross-ROM music silences sound effects (§3.3), so with music on the farming sounds
+  are inaudible.
+- The controller has no slope physics. Sonic follows slopes but they don't change his speed.
