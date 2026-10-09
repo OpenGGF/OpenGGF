@@ -556,7 +556,7 @@ change: that catalogue, the parity audit and this task record. Every executable,
 test, fixture, example asset, build and API input remains unchanged, so the
 completed private qualification is reused rather than repeated.
 
-Destination qualification will pin published `019dd454b0d6`, select all 3070
+Destination qualification will pin published `efedf9198eef`, select all 3070
 ordinary classes and separate fresh guards, and use the normal runner's
 150-minute execution cap excluding queue wait, unchanged ten-minute no-output
 rule and a retained six-hour outer supervisor. Expected cost is 80–110 minutes
@@ -565,3 +565,11 @@ through both lanes, compare the complete negative cases against the updated
 source-attributed baseline, and block push on incomplete coverage, missing-ROM
 skips or new/worsened/unattributed failures. Preserve all seven unrelated main
 paths and the user's private `.env` during integration and cleanup.
+
+Before main integration, independently published Windows evidence advanced develop
+to `efedf9198eef5e717c8827f1aa34dc7728cb92fd`. The destination guard stopped
+before changing main. Its delta from `019dd454b0d6` is exactly one research
+Markdown path, with no executable/test/build/API change. Import that evidence
+and use the newer published SHA as the actual destination base; the tested
+`b317e94ebdce` negative-case table and completed private voice qualification
+remain applicable to their unchanged inputs.
