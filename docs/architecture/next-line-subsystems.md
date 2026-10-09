@@ -126,15 +126,17 @@ audit rather than claimed solved here.
 Operator commands:
 
 Broker-listed `DIRECT` rooms use `wss://`. The host creates a fresh self-signed TLS
-certificate when its direct server starts; Netty's Java 21 certificate generator
-uses Bouncy Castle at runtime. The authenticated host registers the certificate's
+certificate when its direct server starts: the mod's in-process JDK host builds an
+in-memory ECDSA P-256 certificate from JDK APIs, and the server's Netty dedicated host
+uses Netty's generator, which needs Bouncy Castle. The authenticated host registers the certificate's
 SHA-256 digest with the broker, which stores it with the room and returns it to
 joiners. A joining client pins that exact certificate and checks the broker-pinned
 host identity in `Welcome` before signing its challenge. The session token travels
 only after this TLS and identity check, so a fake endpoint cannot collect it and a
-live TCP relay sees ciphertext. The private certificate key is temporary and is
-deleted when the direct server closes. Manual LAN hosting uses the same authenticated
-server; its lobby displays and copies `HOST_IP:port#<share-code>`. The host replaces
+live TCP relay sees ciphertext. The private certificate key is temporary: the JDK host
+never writes it, and the Netty host deletes it when the direct server closes. Manual LAN
+hosting uses the same authenticated protocol; its lobby displays `HOST_IP:port#<share-code>`
+and saves it as `lan-invite.txt` in the mod's storage (scenes have no clipboard). The host replaces
 `HOST_IP` with a reachable LAN address before sharing. The 86-character unpadded
 base64url code contains both 32-byte pins. Manual join decodes those pins, requires
 `wss://`, and verifies both the certificate and host `Welcome` identity before
