@@ -133,9 +133,9 @@ class Publication(unittest.TestCase):
         (self.output/'stale_take.ogg').write_bytes(b'unpublished')
         self.publish(enum=enum)
         java = enum.read_text()
-        self.assertIn('ANNOUNCER_TITLE(Speaker.ANNOUNCER, "voice-announcer-title", 8, 3, 0, null, '
+        self.assertIn('ANNOUNCER_TITLE("ANNOUNCER", "voice-announcer-title", 8, 3, 0, null, '
                       '"The Typing of the Hedgehog!")', java)
-        self.assertIn('ROBOTNIK_TAUNT_TOASTER(Speaker.ROBOTNIK, "voice-robotnik-taunt-toaster", 8, 3, 0, "any", '
+        self.assertIn('ROBOTNIK_TAUNT_TOASTER("ROBOTNIK", "voice-robotnik-taunt-toaster", 8, 3, 0, "any", '
                       '"You call that typing? My toaster types faster!")', java)
         self.assertIn('public enum Speaker { ANNOUNCER, ROBOTNIK, TAILS }', java)
         self.assertIn('public static final String RETRO_SUFFIX = "-md";', java)
