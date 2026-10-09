@@ -60,3 +60,9 @@ external `--output-root` to satisfy it). Fixing that needs a review of
 one-line change; it is out of scope here. The S1 gameplay driver oracle
 (`run_s1_audio_parity.sh --mode gameplay`) is the separate, working path for
 gameplay-sourced S1 audio capture.
+
+## Original creator voice assets
+
+`eggmans_sky_voice.py` is the offline OpenRouter generator for Eggman's Sky's original
+Alice announcements. It requires FFmpeg, NumPy and SciPy. Its private key and raw-source
+cache stay outside shipped assets; see the [mod's regeneration instructions](../../examples/eggmans-sky/README.md#system-voice).

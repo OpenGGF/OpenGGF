@@ -4,6 +4,7 @@ import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneSprite;
 import eggsky.Game;
+import eggsky.core.VoiceLine;
 import eggsky.Mode;
 import eggsky.art.Art;
 import eggsky.art.PixelArt;
@@ -28,6 +29,7 @@ public final class EndingMode implements Mode {
 
     @Override
     public void enter(Game g) {
+        g.voice.say(VoiceLine.CORE_ARRIVAL);
         g.sound.resetMusic();
         g.sound.music(Sound.M_ENDING);
         g.player.coreReached = true;
@@ -41,6 +43,7 @@ public final class EndingMode implements Mode {
     @Override
     public void update(Game g) {
         age++;
+        if (age == 420) g.voice.say(VoiceLine.EXPEDITION_COMPLETE);
         if (age == 200 || age == 420) {
             g.sound.sfx(Sound.SUPER_EMERALD);
             g.flash(0xFFFFFFFF, 12);
@@ -51,7 +54,7 @@ public final class EndingMode implements Mode {
             old.rings += 25000;
             old.shards += 2500;
             g.newExpedition(g.newSeed(), next, old);
-            g.banner("GALAXY " + next, "The Eggman Empire expands", 0xFFFFD040);
+            g.banner(VoiceLine.NEXT_GALAXY, "GALAXY " + next, "The Eggman Empire expands", 0xFFFFD040);
             g.land(0, true);
         }
     }

@@ -1,0 +1,369 @@
+formatVersion: 1
+tracks: []
+sfx:
+  - id: voice-systems-online
+    assetPath: audio/voice/systems_online.wav
+    gain: 1.0
+  - id: voice-save-complete
+    assetPath: audio/voice/save_complete.wav
+    gain: 1.0
+  - id: voice-save-failed
+    assetPath: audio/voice/save_failed.wav
+    gain: 1.0
+  - id: voice-crash-landing
+    assetPath: audio/voice/crash_landing.wav
+    gain: 1.0
+  - id: voice-mobile-destroyed
+    assetPath: audio/voice/mobile_destroyed.wav
+    gain: 1.0
+  - id: voice-cargo-recovered
+    assetPath: audio/voice/cargo_recovered.wav
+    gain: 1.0
+  - id: voice-life-low
+    assetPath: audio/voice/life_low.wav
+    gain: 1.0
+  - id: voice-life-empty
+    assetPath: audio/voice/life_empty.wav
+    gain: 1.0
+  - id: voice-life-restored
+    assetPath: audio/voice/life_restored.wav
+    gain: 1.0
+  - id: voice-hazard-low
+    assetPath: audio/voice/hazard_low.wav
+    gain: 1.0
+  - id: voice-hazard-empty
+    assetPath: audio/voice/hazard_empty.wav
+    gain: 1.0
+  - id: voice-hazard-restored
+    assetPath: audio/voice/hazard_restored.wav
+    gain: 1.0
+  - id: voice-launch-empty
+    assetPath: audio/voice/launch_empty.wav
+    gain: 1.0
+  - id: voice-launch-restored
+    assetPath: audio/voice/launch_restored.wav
+    gain: 1.0
+  - id: voice-hull-repaired
+    assetPath: audio/voice/hull_repaired.wav
+    gain: 1.0
+  - id: voice-deflector-restored
+    assetPath: audio/voice/deflector_restored.wav
+    gain: 1.0
+  - id: voice-systems-full
+    assetPath: audio/voice/systems_full.wav
+    gain: 1.0
+  - id: voice-recharge-unavailable
+    assetPath: audio/voice/recharge_unavailable.wav
+    gain: 1.0
+  - id: voice-auto-recharge
+    assetPath: audio/voice/auto_recharge.wav
+    gain: 1.0
+  - id: voice-hull-critical
+    assetPath: audio/voice/hull_critical.wav
+    gain: 1.0
+  - id: voice-shield-empty
+    assetPath: audio/voice/shield_empty.wav
+    gain: 1.0
+  - id: voice-pulse-low
+    assetPath: audio/voice/pulse_low.wav
+    gain: 1.0
+  - id: voice-heat
+    assetPath: audio/voice/heat.wav
+    gain: 1.0
+  - id: voice-cold
+    assetPath: audio/voice/cold.wav
+    gain: 1.0
+  - id: voice-toxin
+    assetPath: audio/voice/toxin.wav
+    gain: 1.0
+  - id: voice-radiation
+    assetPath: audio/voice/radiation.wav
+    gain: 1.0
+  - id: voice-storm-approaching
+    assetPath: audio/voice/storm_approaching.wav
+    gain: 1.0
+  - id: voice-storm-passed
+    assetPath: audio/voice/storm_passed.wav
+    gain: 1.0
+  - id: voice-rainstorm
+    assetPath: audio/voice/rainstorm.wav
+    gain: 1.0
+  - id: voice-blizzard
+    assetPath: audio/voice/blizzard.wav
+    gain: 1.0
+  - id: voice-firestorm
+    assetPath: audio/voice/firestorm.wav
+    gain: 1.0
+  - id: voice-sandstorm
+    assetPath: audio/voice/sandstorm.wav
+    gain: 1.0
+  - id: voice-spores
+    assetPath: audio/voice/spores.wav
+    gain: 1.0
+  - id: voice-acid-rain
+    assetPath: audio/voice/acid_rain.wav
+    gain: 1.0
+  - id: voice-ash-storm
+    assetPath: audio/voice/ash_storm.wav
+    gain: 1.0
+  - id: voice-electrical-storm
+    assetPath: audio/voice/electrical_storm.wav
+    gain: 1.0
+  - id: voice-shelter
+    assetPath: audio/voice/shelter.wav
+    gain: 1.0
+  - id: voice-launching
+    assetPath: audio/voice/launching.wav
+    gain: 1.0
+  - id: voice-orbit
+    assetPath: audio/voice/orbit.wav
+    gain: 1.0
+  - id: voice-landing
+    assetPath: audio/voice/landing.wav
+    gain: 1.0
+  - id: voice-landed
+    assetPath: audio/voice/landed.wav
+    gain: 1.0
+  - id: voice-docking
+    assetPath: audio/voice/docking.wav
+    gain: 1.0
+  - id: voice-docked
+    assetPath: audio/voice/docked.wav
+    gain: 1.0
+  - id: voice-undocked
+    assetPath: audio/voice/undocked.wav
+    gain: 1.0
+  - id: voice-pulse-on
+    assetPath: audio/voice/pulse_on.wav
+    gain: 1.0
+  - id: voice-pulse-blocked-hostiles
+    assetPath: audio/voice/pulse_blocked_hostiles.wav
+    gain: 1.0
+  - id: voice-pulse-blocked-proximity
+    assetPath: audio/voice/pulse_blocked_proximity.wav
+    gain: 1.0
+  - id: voice-warp-engaged
+    assetPath: audio/voice/warp_engaged.wav
+    gain: 1.0
+  - id: voice-warp-complete
+    assetPath: audio/voice/warp_complete.wav
+    gain: 1.0
+  - id: voice-warp-empty
+    assetPath: audio/voice/warp_empty.wav
+    gain: 1.0
+  - id: voice-warp-range
+    assetPath: audio/voice/warp_range.wav
+    gain: 1.0
+  - id: voice-warp-upgrade
+    assetPath: audio/voice/warp_upgrade.wav
+    gain: 1.0
+  - id: voice-black-hole
+    assetPath: audio/voice/black_hole.wav
+    gain: 1.0
+  - id: voice-laser-hot
+    assetPath: audio/voice/laser_hot.wav
+    gain: 1.0
+  - id: voice-wildlife-harmed
+    assetPath: audio/voice/wildlife_harmed.wav
+    gain: 1.0
+  - id: voice-wanted-one
+    assetPath: audio/voice/wanted_one.wav
+    gain: 1.0
+  - id: voice-wanted-two
+    assetPath: audio/voice/wanted_two.wav
+    gain: 1.0
+  - id: voice-wanted-three
+    assetPath: audio/voice/wanted_three.wav
+    gain: 1.0
+  - id: voice-wanted-four
+    assetPath: audio/voice/wanted_four.wav
+    gain: 1.0
+  - id: voice-wanted-five
+    assetPath: audio/voice/wanted_five.wav
+    gain: 1.0
+  - id: voice-wanted-clear
+    assetPath: audio/voice/wanted_clear.wav
+    gain: 1.0
+  - id: voice-flicky-repelled
+    assetPath: audio/voice/flicky_repelled.wav
+    gain: 1.0
+  - id: voice-tails-repelled
+    assetPath: audio/voice/tails_repelled.wav
+    gain: 1.0
+  - id: voice-sonic-repelled
+    assetPath: audio/voice/sonic_repelled.wav
+    gain: 1.0
+  - id: voice-knuckles-repelled
+    assetPath: audio/voice/knuckles_repelled.wav
+    gain: 1.0
+  - id: voice-super-sonic-repelled
+    assetPath: audio/voice/super_sonic_repelled.wav
+    gain: 1.0
+  - id: voice-pirates
+    assetPath: audio/voice/pirates.wav
+    gain: 1.0
+  - id: voice-tornado
+    assetPath: audio/voice/tornado.wav
+    gain: 1.0
+  - id: voice-tornado-downed
+    assetPath: audio/voice/tornado_downed.wav
+    gain: 1.0
+  - id: voice-scan
+    assetPath: audio/voice/scan.wav
+    gain: 1.0
+  - id: voice-discovery
+    assetPath: audio/voice/discovery.wav
+    gain: 1.0
+  - id: voice-planet-discovered
+    assetPath: audio/voice/planet_discovered.wav
+    gain: 1.0
+  - id: voice-system-discovered
+    assetPath: audio/voice/system_discovered.wav
+    gain: 1.0
+  - id: voice-planet-named
+    assetPath: audio/voice/planet_named.wav
+    gain: 1.0
+  - id: voice-survey-complete
+    assetPath: audio/voice/survey_complete.wav
+    gain: 1.0
+  - id: voice-ruins
+    assetPath: audio/voice/ruins.wav
+    gain: 1.0
+  - id: voice-emerald-signal
+    assetPath: audio/voice/emerald_signal.wav
+    gain: 1.0
+  - id: voice-emerald-found
+    assetPath: audio/voice/emerald_found.wav
+    gain: 1.0
+  - id: voice-emeralds-complete
+    assetPath: audio/voice/emeralds_complete.wav
+    gain: 1.0
+  - id: voice-giant-ring
+    assetPath: audio/voice/giant_ring.wav
+    gain: 1.0
+  - id: voice-cargo-full
+    assetPath: audio/voice/cargo_full.wav
+    gain: 1.0
+  - id: voice-materials-missing
+    assetPath: audio/voice/materials_missing.wav
+    gain: 1.0
+  - id: voice-refined
+    assetPath: audio/voice/refined.wav
+    gain: 1.0
+  - id: voice-crafted
+    assetPath: audio/voice/crafted.wav
+    gain: 1.0
+  - id: voice-discarded
+    assetPath: audio/voice/discarded.wav
+    gain: 1.0
+  - id: voice-salvage
+    assetPath: audio/voice/salvage.wav
+    gain: 1.0
+  - id: voice-rings-received
+    assetPath: audio/voice/rings_received.wav
+    gain: 1.0
+  - id: voice-shards-received
+    assetPath: audio/voice/shards_received.wav
+    gain: 1.0
+  - id: voice-barrier-fire
+    assetPath: audio/voice/barrier_fire.wav
+    gain: 1.0
+  - id: voice-barrier-thunder
+    assetPath: audio/voice/barrier_thunder.wav
+    gain: 1.0
+  - id: voice-invincible
+    assetPath: audio/voice/invincible.wav
+    gain: 1.0
+  - id: voice-trap
+    assetPath: audio/voice/trap.wav
+    gain: 1.0
+  - id: voice-sold
+    assetPath: audio/voice/sold.wav
+    gain: 1.0
+  - id: voice-bought
+    assetPath: audio/voice/bought.wav
+    gain: 1.0
+  - id: voice-rings-missing
+    assetPath: audio/voice/rings_missing.wav
+    gain: 1.0
+  - id: voice-upgrade-installed
+    assetPath: audio/voice/upgrade_installed.wav
+    gain: 1.0
+  - id: voice-upgrade-max
+    assetPath: audio/voice/upgrade_max.wav
+    gain: 1.0
+  - id: voice-upgrade-missing
+    assetPath: audio/voice/upgrade_missing.wav
+    gain: 1.0
+  - id: voice-mission-accepted
+    assetPath: audio/voice/mission_accepted.wav
+    gain: 1.0
+  - id: voice-mission-complete
+    assetPath: audio/voice/mission_complete.wav
+    gain: 1.0
+  - id: voice-mission-incomplete
+    assetPath: audio/voice/mission_incomplete.wav
+    gain: 1.0
+  - id: voice-mission-active
+    assetPath: audio/voice/mission_active.wav
+    gain: 1.0
+  - id: voice-no-valuables
+    assetPath: audio/voice/no_valuables.wav
+    gain: 1.0
+  - id: voice-station-recharged
+    assetPath: audio/voice/station_recharged.wav
+    gain: 1.0
+  - id: voice-core-locked
+    assetPath: audio/voice/core_locked.wav
+    gain: 1.0
+  - id: voice-core-arrival
+    assetPath: audio/voice/core_arrival.wav
+    gain: 1.0
+  - id: voice-expedition-complete
+    assetPath: audio/voice/expedition_complete.wav
+    gain: 1.0
+  - id: voice-next-galaxy
+    assetPath: audio/voice/next_galaxy.wav
+    gain: 1.0
+  - id: voice-sonic-approaching
+    assetPath: audio/voice/sonic_approaching.wav
+    gain: 1.0
+  - id: voice-flicky-approaching
+    assetPath: audio/voice/flicky_approaching.wav
+    gain: 1.0
+  - id: voice-tails-approaching
+    assetPath: audio/voice/tails_approaching.wav
+    gain: 1.0
+  - id: voice-knuckles-approaching
+    assetPath: audio/voice/knuckles_approaching.wav
+    gain: 1.0
+  - id: voice-super-sonic-approaching
+    assetPath: audio/voice/super_sonic_approaching.wav
+    gain: 1.0
+  - id: voice-cargo-expanded
+    assetPath: audio/voice/cargo_expanded.wav
+    gain: 1.0
+  - id: voice-reserve-on
+    assetPath: audio/voice/reserve_on.wav
+    gain: 1.0
+  - id: voice-reserve-off
+    assetPath: audio/voice/reserve_off.wav
+    gain: 1.0
+  - id: voice-reserve-locked
+    assetPath: audio/voice/reserve_locked.wav
+    gain: 1.0
+  - id: voice-objective-pinned
+    assetPath: audio/voice/objective_pinned.wav
+    gain: 1.0
+  - id: voice-objective-unpinned
+    assetPath: audio/voice/objective_unpinned.wav
+    gain: 1.0
+  - id: voice-capsule-salvaged
+    assetPath: audio/voice/capsule_salvaged.wav
+    gain: 1.0
+  - id: voice-mobile-rebuilt
+    assetPath: audio/voice/mobile_rebuilt.wav
+    gain: 1.0
+  - id: voice-system-recharged
+    assetPath: audio/voice/system_recharged.wav
+    gain: 1.0

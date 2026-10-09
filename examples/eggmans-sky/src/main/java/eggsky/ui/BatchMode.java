@@ -2,6 +2,7 @@ package eggsky.ui;
 
 import com.openggf.mods.scene.SceneCanvas;
 import eggsky.Game;
+import eggsky.core.VoiceLine;
 import eggsky.Mode;
 import eggsky.core.Sound;
 import eggsky.game.Production;
@@ -48,15 +49,15 @@ public final class BatchMode implements Mode {
         if (g.in.confirmPressed && age > 2) {
             if (row == 3) {
                 g.player.pinned = g.player.pinned == output ? 0 : output;
-                g.toast(g.player.pinned == 0 ? "OBJECTIVE UNPINNED" : "RECIPE PINNED", Ui.CYAN);
+                g.toast(g.player.pinned == 0 ? VoiceLine.OBJECTIVE_UNPINNED : VoiceLine.OBJECTIVE_PINNED, g.player.pinned == 0 ? "OBJECTIVE UNPINNED" : "RECIPE PINNED", Ui.CYAN);
                 g.setMode(back);
             } else if (Production.make(g.player, output, outCount, inputs, counts, quantity())) {
-                g.toast((craft ? "CRAFTED " : "REFINED ") + quantity() * outCount + " "
+                g.toast(craft ? VoiceLine.CRAFTED : VoiceLine.REFINED, (craft ? "CRAFTED " : "REFINED ") + quantity() * outCount + " "
                         + g.catalog.name(output), Ui.CYAN);
                 g.sound.sfx(Sound.CLANK);
                 g.setMode(back);
             } else {
-                g.toast("CHECK MATERIALS, RESERVES AND CARGO SPACE", Ui.RED);
+                g.toast(VoiceLine.MATERIALS_MISSING, "CHECK MATERIALS, RESERVES AND CARGO SPACE", Ui.RED);
                 g.sound.sfx(Sound.ERROR);
             }
         }

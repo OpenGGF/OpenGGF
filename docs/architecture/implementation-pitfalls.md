@@ -1131,6 +1131,16 @@ deletes/recreates the graph; do not merely null the reference during capture.
 The cold SSZ route first diverged at input7076 because the restored bar now caught
 Sonic, requiring an ordinary jump to continue along the upper walkway.
 
+HCZ fan bubbles (`HCZCGZFan_Bubble`, `$30834`, 2026-10-08) likewise call
+`MoveSprite2` once and then `Draw_Sprite`; the draw tail supplies neither a
+second move nor camera/age retirement. Native observations show bubbles
+continuing outside the camera margin until their own water check. Preserve
+allocation before RNG: use the existing reserved-slot factory so a saturated
+pool does not consume randomness before discovering allocation failure.
+The fan's sound and bubble gates read `Level_frame_counter`, whereas object
+`update` receives `V_int_run_count`; test the clocks with different residues.
+See the [S3K lane audit](audits/2026-10-07-s3k-parity-gap-verification.md).
+
 ### A dying child can outlive its parent's SST identity
 
 FBZ's cold Tails results replay (2026-09-27) found the same ownership error in

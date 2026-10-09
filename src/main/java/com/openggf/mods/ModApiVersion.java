@@ -26,7 +26,8 @@ public final class ModApiVersion {
      * Scene-owned direct peer text messaging is asynchronous and bounded, with
      * socket/thread ownership and lifetime kept in the engine.
      * Power-up rules expose explicit invincibility-expiry music ownership for modes
-     * with continuous music.
+     * with continuous music. Owned patch scenes can play their validated audio-manifest
+     * SFX by local name without numeric ids or creator-supplied ownership.
      * Creator helpers include character specifications and lifecycle hooks, decoded
      * placement transforms, owner storage and service bundles, named single-act and
      * multi-act zone factories, shared UI/input and ROM-qualified scene art.

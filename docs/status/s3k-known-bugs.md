@@ -34,7 +34,8 @@ HCZ compares 3519 executed samples of 3574 rows (55 lag), with zero physics,
 animation, bootstrap and warnings. Chain HCZ segment9 is complete with zero
 errors and 55 lag; the giant-ring handoff succeeds and reaches segment11.
 That segment remains incomplete: 82067 errors (69393 physics/12674 animation),
-first non-camera physics row1510 primary Y native `07D6`/engine `07DF`, then
+first compared difference is row1507 mapping frame native `0063`/engine `0095`;
+first primary-Y difference is row1510 native `07D6`/engine `07DF`, then
 ownership loss in LEVEL at BK2 cursor68801, load generation9, zone1 act0.
 AIZ segment6 retains 189 errors, first row3319 sidekick X `31C1/31CA`;
 segment8 retains 13254 (13113 physics/141 animation), first row1583
@@ -50,6 +51,19 @@ all load/rewind products. Published baseline `a872` retains 28 inherited ordinar
 failures and 62 literal skips, with no ROM skips; 672 guards pass. It is not a
 wholly green baseline. The completed composition qualification above removes
 the FBZ→SOZ failure while retaining all other concrete failures and skip reasons.
+
+**Round 3 private candidate, 2026-10-08:** fan-only native corrections at
+`fa2ac5e67` restore one eight-pixel bubble move, water-owned retirement,
+`Level_frame_counter` cadence and allocation-before-RNG. Ninety focused fan,
+conveyor, graph-rewind and startup cases pass without skips. The normal
+five-case trace selection retains two assertion failures: the complete chain
+and the independently baseline-qualified returned-HCZ standalone. Returned
+chain segment11 still has 82067 errors, first mapping row1507, first Y row1510,
+and ownership loss at cursor68801. No conveyor or AIZ correction is inferred.
+Root composition `84f0c20f11`, based on published framework `d740b7a0`, passes
+275 focused cases with zero failures/errors/skips, including the unchanged
+exported API pin. Combined canonical qualification completes17/4/0/0, with the same S3K
+profiles. Ordinary and fresh-guard qualification remain pending. See the [round 3 lane evidence](../architecture/audits/2026-10-07-s3k-parity-gap-verification.md).
 
 Entries should include:
 - **Location** — the file(s) where the bug lives, if known

@@ -6,6 +6,7 @@ import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneLevelKit;
 import com.openggf.mods.scene.SceneSprite;
 import eggsky.Game;
+import eggsky.core.VoiceLine;
 import eggsky.Mode;
 import eggsky.art.Art;
 import eggsky.core.Colour;
@@ -46,6 +47,7 @@ public final class StationMode implements Mode {
 
     @Override
     public void enter(Game g) {
+        g.voice.say(VoiceLine.DOCKED);
         system = g.system();
         try {
             SceneLevelKit kit = g.art.s3k().levelKit(11, 0);
@@ -69,7 +71,7 @@ public final class StationMode implements Mode {
         Player p = g.player;
         String done = Missions.handIn(g);
         if (done != null) {
-            g.banner("MISSION COMPLETE", done, 0xFF80FF80);
+            g.banner(VoiceLine.MISSION_COMPLETE, "MISSION COMPLETE", done, 0xFF80FF80);
             g.sound.sfx(Sound.PERFECT);
         }
         say(pickGreeting(rng));
@@ -202,14 +204,14 @@ public final class StationMode implements Mode {
                 int id = list.get(row);
                 int n = p.available(id);
                 if (n == 0) {
-                    g.toast("STOCK RESERVED - CLEAR IN CARGO MENU", Ui.RED);
+                    g.toast(VoiceLine.RESERVE_LOCKED, "STOCK RESERVED - CLEAR IN CARGO MENU", Ui.RED);
                     return;
                 }
                 int earned = n * price(g, id, true);
                 p.cargo.remove(id, n);
                 p.rings += earned;
                 p.statRingsEarned += earned;
-                g.toast("SOLD " + n + " " + g.catalog.name(id).toUpperCase() + " +" + Ui.num(earned), Ui.GOLD);
+                g.toast(VoiceLine.SOLD, "SOLD " + n + " " + g.catalog.name(id).toUpperCase() + " +" + Ui.num(earned), Ui.GOLD);
                 g.sound.sfx(Sound.REGISTER);
                 if (earned > 5000) {
                     say("Ooh, a big spender! I mean... seller!");
@@ -221,33 +223,33 @@ public final class StationMode implements Mode {
                 int n = item.stack() >= 100 ? (bulk ? 100 : 25) : 1;
                 int cost = n * price(g, id, false);
                 if (p.rings < cost) {
-                    g.toast("NOT ENOUGH RINGS", Ui.RED);
+                    g.toast(VoiceLine.RINGS_MISSING, "NOT ENOUGH RINGS", Ui.RED);
                     g.sound.sfx(Sound.ERROR, 4);
                     say("No rings, no goods. Even for you, Doctor.");
                     return;
                 }
                 if (p.cargo.room(id) < n) {
-                    g.toast("CARGO FULL", Ui.RED);
+                    g.toast(VoiceLine.CARGO_FULL, "CARGO FULL", Ui.RED);
                     g.sound.sfx(Sound.ERROR, 4);
                     return;
                 }
                 p.rings -= cost;
                 p.cargo.add(id, n);
-                g.toast("BOUGHT " + n + " " + item.name().toUpperCase(), 0xFF80FF80);
+                g.toast(VoiceLine.BOUGHT, "BOUGHT " + n + " " + item.name().toUpperCase(), 0xFF80FF80);
                 g.sound.sfx(Sound.REGISTER);
             }
             case 2 -> {
                 Catalog.Tech t = g.catalog.tech(row);
                 int lvl = p.level(row);
                 if (lvl >= t.max()) {
-                    g.toast("FULLY UPGRADED", Ui.GREY);
+                    g.toast(VoiceLine.UPGRADE_MAX, "FULLY UPGRADED", Ui.GREY);
                     return;
                 }
                 int next = lvl + 1;
                 int shards = t.shards() * next;
                 int mats = t.count() * next;
                 if (p.shards < shards || !p.cargo.has(t.material(), mats)) {
-                    g.toast("NEED " + shards + " SHARDS + " + mats + " " + g.catalog.name(t.material()).toUpperCase(),
+                    g.toast(VoiceLine.UPGRADE_MISSING, "NEED " + shards + " SHARDS + " + mats + " " + g.catalog.name(t.material()).toUpperCase(),
                             Ui.RED);
                     g.sound.sfx(Sound.ERROR, 4);
                     return;
@@ -257,7 +259,7 @@ public final class StationMode implements Mode {
                 p.tech[row] = next;
                 p.cargo.resize(p.slots());
                 p.refill();
-                g.banner("INSTALLED", t.name() + " " + roman(next), 0xFF60E0FF);
+                g.banner(VoiceLine.UPGRADE_INSTALLED, "INSTALLED", t.name() + " " + roman(next), 0xFF60E0FF);
                 g.sound.sfx(Sound.CLANK);
                 say("Installed! It only exploded twice in testing.");
             }
@@ -265,21 +267,21 @@ public final class StationMode implements Mode {
                 if (row == 0) {
                     String done = Missions.handIn(g);
                     if (done != null) {
-                        g.banner("MISSION COMPLETE", done, 0xFF80FF80);
+                        g.banner(VoiceLine.MISSION_COMPLETE, "MISSION COMPLETE", done, 0xFF80FF80);
                         g.sound.sfx(Sound.PERFECT);
                     } else if (Missions.active(p) != null) {
-                        g.toast("MISSION NOT FINISHED", Ui.RED);
+                        g.toast(VoiceLine.MISSION_INCOMPLETE, "MISSION NOT FINISHED", Ui.RED);
                         g.sound.sfx(Sound.ERROR, 4);
                     }
                     return;
                 }
                 if (Missions.active(p) != null) {
-                    g.toast("FINISH YOUR CURRENT MISSION FIRST", Ui.RED);
+                    g.toast(VoiceLine.MISSION_ACTIVE, "FINISH YOUR CURRENT MISSION FIRST", Ui.RED);
                     g.sound.sfx(Sound.ERROR, 4);
                     return;
                 }
                 Missions.accept(p, offers.get(row - 1));
-                g.toast("MISSION ACCEPTED", 0xFF80FF80);
+                g.toast(VoiceLine.MISSION_ACCEPTED, "MISSION ACCEPTED", 0xFF80FF80);
                 g.sound.sfx(Sound.SWITCH);
                 say("Splendid! Report back to any Egg Station.");
             }
@@ -301,26 +303,26 @@ public final class StationMode implements Mode {
             case 0 -> {
                 int cost = repairCost(p);
                 if (cost <= 0) {
-                    g.toast("HULL ALREADY PERFECT", Ui.GREY);
+                    g.toast(VoiceLine.HULL_REPAIRED, "HULL ALREADY PERFECT", Ui.GREY);
                 } else if (p.rings < cost) {
-                    g.toast("NOT ENOUGH RINGS (" + Ui.num(cost) + ")", Ui.RED);
+                    g.toast(VoiceLine.RINGS_MISSING, "NOT ENOUGH RINGS (" + Ui.num(cost) + ")", Ui.RED);
                 } else {
                     p.rings -= cost;
                     p.hull = p.maxHull();
-                    g.toast("HULL REPAIRED", 0xFF80FF80);
+                    g.toast(VoiceLine.HULL_REPAIRED, "HULL REPAIRED", 0xFF80FF80);
                     g.sound.sfx(Sound.CLANK);
                 }
             }
             case 1 -> {
                 int cost = Math.round((100 - p.launchFuel) * 18);
                 if (cost <= 0) {
-                    g.toast("THRUSTERS FULL", Ui.GREY);
+                    g.toast(VoiceLine.SYSTEMS_FULL, "THRUSTERS FULL", Ui.GREY);
                 } else if (p.rings < cost) {
-                    g.toast("NOT ENOUGH RINGS (" + Ui.num(cost) + ")", Ui.RED);
+                    g.toast(VoiceLine.RINGS_MISSING, "NOT ENOUGH RINGS (" + Ui.num(cost) + ")", Ui.RED);
                 } else {
                     p.rings -= cost;
                     p.launchFuel = 100;
-                    g.toast("LAUNCH THRUSTERS FILLED", 0xFF80FF80);
+                    g.toast(VoiceLine.LAUNCH_RESTORED, "LAUNCH THRUSTERS FILLED", 0xFF80FF80);
                     g.sound.sfx(Sound.SHIELD);
                 }
             }
@@ -329,7 +331,7 @@ public final class StationMode implements Mode {
                 p.life = p.maxLife();
                 p.hazard = p.maxHazard();
                 p.pulse = 100;
-                g.toast("SHIELDS AND LIFE SUPPORT RECHARGED", 0xFF80FF80);
+                g.toast(VoiceLine.STATION_RECHARGED, "SHIELDS AND LIFE SUPPORT RECHARGED", 0xFF80FF80);
                 g.sound.sfx(Sound.SHIELD);
             }
             default -> {
@@ -345,10 +347,10 @@ public final class StationMode implements Mode {
                 if (total > 0) {
                     p.rings += total;
                     p.statRingsEarned += total;
-                    g.toast("SOLD VALUABLES +" + Ui.num(total), Ui.GOLD);
+                    g.toast(VoiceLine.SOLD, "SOLD VALUABLES +" + Ui.num(total), Ui.GOLD);
                     g.sound.sfx(Sound.REGISTER);
                 } else {
-                    g.toast("NO VALUABLES IN CARGO", Ui.GREY);
+                    g.toast(VoiceLine.NO_VALUABLES, "NO VALUABLES IN CARGO", Ui.GREY);
                 }
             }
         }
