@@ -80,6 +80,16 @@ final class Debug {
                     shell.goNow(new IntroScreen());
                 }
                 case "sleep" -> shell.go(new DayEndScreen(false));
+                case "restore" -> {
+                    // Promo captures: a year well spent (the Signpost Spin's four checks).
+                    starpost.core.Capsule capsule = shell.game.section(starpost.core.Capsule.class);
+                    if (capsule != null) {
+                        capsule.debugRestore(shell.game, shell.catalog);
+                    }
+                    shell.game.totalEarned = Math.max(shell.game.totalEarned, 64000);
+                    shell.game.population = Math.max(shell.game.population, 42);
+                    demo(shell.game);
+                }
                 case "card" -> {
                     // Promotional captures: a chapter card, "/" between its two lines.
                     String all = String.join(" ", java.util.Arrays.copyOfRange(p, 1, p.length));

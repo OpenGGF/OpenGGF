@@ -136,6 +136,23 @@ public final class Capsule implements SaveSection {
         }
     }
 
+    /** Debug and promo captures: every bundle delivered and every chamber's reward granted. */
+    public void debugRestore(Game game, Catalog catalog) {
+        for (Chamber chamber : chambers(catalog)) {
+            for (Bundle bundle : chamber.bundles()) {
+                if (bundle.rings() > 0) {
+                    delivered.put(bundle.id() + ".rings", bundle.rings());
+                }
+                for (Map.Entry<String, Integer> want : bundle.wants().entrySet()) {
+                    delivered.put(bundle.id() + "." + want.getKey(), want.getValue());
+                }
+            }
+            if (game.flags.add(chamber.reward())) {
+                reward(game, chamber.reward());
+            }
+        }
+    }
+
     /** Whether every chamber the game can fill is done: the capsule is restored. */
     public boolean restored(Catalog catalog) {
         List<Chamber> all = chambers(catalog);
