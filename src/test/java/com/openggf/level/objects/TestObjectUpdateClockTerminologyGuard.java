@@ -39,8 +39,8 @@ class TestObjectUpdateClockTerminologyGuard {
     private static final String EXPECTED_NAME = "vIntRunCount";
     private static final String PLAYABLE_ENTITY = "com.openggf.game.PlayableEntity";
     /**
-     * Whole-tree attribution retains ~0.9 GiB, so a 1 GiB child thrashed in marking cycles and took
-     * 94-120 s on CI against the old 2-minute bound. The bound now only catches a hung child.
+     * Whole-tree attribution retains ~0.9 GiB, which kept a 1 GiB child in back-to-back marking
+     * cycles. CI runners take 94-130 s at either heap size, so the bound only catches a hung child.
      */
     private static final String GUARD_HEAP = "-Xmx2g";
     private static final long GUARD_TIMEOUT_MINUTES = 6;
