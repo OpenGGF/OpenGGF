@@ -1473,6 +1473,11 @@ blocks, with an empty 128px sky row. The GHZ background is also split and
 compacted. No Sega asset bytes are committed or bundled. Without S1, the
 placeholder remains; a debug launcher with a null PatchContext cannot provide
 S1. Creator packaging reports zero validator findings.
+The checkpoint's ignored `.bin` placeholder outputs were not tracked. The final
+source uses typed `.gptn/.gchk/.gblk/.gmap/.gshg/.gswd/.gsan/.gcol` resource
+names plus `examples/starpost-valley/tools/make_placeholder.py`. All nine tiny
+files regenerate byte-for-byte without ROM inputs; they contain only constant
+colour and empty records. No resource-policy exception or hook bypass is used.
 
 ### Assumptions and measured evidence
 
@@ -1545,6 +1550,9 @@ locked-on `63522553`. All Maven tests use `tools/testing/maven_queue.py`,
 
 - `-Dtest=TestStarpostRealValley,TestStarpostValleyExample`: **15 passed**, no
   failures/errors/skips; creator bridge **175 passed**, zero findings.
+- With the final tracked placeholder assets, the combined RealValley/bridge run
+  again passed **15 engine checks and 176 creator checks**, no failures/errors/skips
+  or validator findings. Independent placeholder regeneration matches all nine files.
 - After adding the vertical-reflection sentinel regression,
   `-Dtest=TestStarpostValleyExample`: **2 passed**, creator bridge **176 passed**,
   no skips or validator findings (six pure encoder tests).
@@ -1552,6 +1560,9 @@ locked-on `63522553`. All Maven tests use `tools/testing/maven_queue.py`,
   **62 passed**, no failures/errors/skips.
 - `-Dtest=TestS3kModZoneAdapter,TestModZoneAdapterRouting,TestModZoneLoader,TestModZoneRuntimeProfile,TestModZoneEventLifecycle,TestSonic3kModZoneObjectSet,TestSonic3kLivesHudPaletteOverride`:
   **82 passed**, no failures/errors/skips.
+- Optional `-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestObjectPriorityBucketGuard,TestPatternSpriteRendererCorruptionGuard`
+  was cancelled after over six minutes waiting for shared admission, before Maven
+  execution. No pass or failure is attributed to those selectors.
 - `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base acb094c76 --preflight`:
   passed Java/Lua/PowerShell prerequisites. The default Lua executable initially
   failed preflight; Lua 5.4 corrected the prerequisite.
