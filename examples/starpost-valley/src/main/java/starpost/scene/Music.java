@@ -1,14 +1,12 @@
 package starpost.scene;
 
 import com.openggf.mods.scene.SceneContext;
-import com.openggf.mods.scene.SceneMusicPlayer;
-import com.openggf.mods.scene.SceneMusicPreparation;
 
 /**
  * Chooses and plays the soundtrack: Green Hill by day in spring, Star Light at night, and so on
- * (design doc §8). Tracks from another ROM are synthesised through {@code ctx.music()}; until
- * the background-music engine addition lands, that player silences the driver's sound effects
- * while it plays.
+ * (design doc §8). Every track goes through {@code ctx.audio().playMusic(game, id)}: Sonic 3 &
+ * Knuckles's own songs take the base route and Sonic 1's or Sonic 2's take the cross-game donor
+ * route, so a song loops at its own loop point and the sound effects stay audible over it.
  */
 public final class Music {
     // Sonic 1 driver IDs (Sonic1Music).
@@ -21,7 +19,6 @@ public final class Music {
     public static final int S1_ENDING = 0x8B;
     public static final int S1_GOT_THROUGH = 0x8E;
     public static final int S1_CREDITS = 0x91;
-    private static final int LENGTH_FRAMES = 60 * 180;
 
     private final SceneContext ctx;
     private boolean enabled = true;
@@ -29,14 +26,12 @@ public final class Music {
     private int wantedId = -1;
     private String playingGame;
     private int playingId = -1;
-    private SceneMusicPreparation preparing;
-    private SceneMusicPlayer player;
 
     public Music(SceneContext ctx) {
         this.ctx = ctx;
     }
 
-    /** Asks for a track; nothing happens if it is already playing or being prepared. */
+    /** Asks for a track; nothing happens if it is already playing (or its ROM was not supplied). */
     public void want(String game, int id) {
         wantedGame = game;
         wantedId = id;
@@ -58,52 +53,25 @@ public final class Music {
         return enabled;
     }
 
-    /** One tick: starts, switches or loops the wanted track. */
+    /** One tick: starts or switches to the wanted track. */
     public void update() {
-        if (!enabled || wantedId < 0) {
+        if (!enabled || wantedId < 0 || wantedId == playingId && wantedGame.equals(playingGame)) {
             return;
         }
-        boolean same = wantedId == playingId && wantedGame.equals(playingGame);
-        if (!same) {
-            release();
-            try {
-                preparing = ctx.music().prepareAsync(wantedGame, wantedId, LENGTH_FRAMES);
-                playingGame = wantedGame;
-                playingId = wantedId;
-            } catch (RuntimeException e) {
-                wantedId = -1;
+        playingGame = wantedGame;
+        playingId = wantedId;
+        try {
+            if (!ctx.audio().playMusic(wantedGame, wantedId)) {
+                ctx.audio().stopMusic();   // that game's ROM was not supplied: silence, not the last song
             }
-            return;
-        }
-        if (preparing != null) {
-            switch (preparing.state()) {
-                case READY -> {
-                    player = ctx.music().start(preparing.prepared(), 0, 0, false, 0);
-                    preparing = null;
-                }
-                case FAILED, CANCELLED -> {
-                    preparing = null;
-                    wantedId = -1;
-                }
-                default -> {
-                }
-            }
-        } else if (player != null && player.finished()) {
-            // The prepared song ends; start it again from the top.
-            player.stop();
-            player = null;
-            playingId = -1;
+        } catch (RuntimeException e) {
+            wantedId = -1;
         }
     }
 
     private void release() {
-        if (preparing != null) {
-            preparing.cancel();
-            preparing = null;
-        }
-        if (player != null) {
-            player.stop();
-            player = null;
+        if (playingId >= 0) {
+            ctx.audio().stopMusic();
         }
         playingId = -1;
         playingGame = null;
