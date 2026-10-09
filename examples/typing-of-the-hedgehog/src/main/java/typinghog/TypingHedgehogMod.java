@@ -16,6 +16,7 @@ import typinghog.hub.HubScene;
 import typinghog.play.Cast;
 import typinghog.play.Course;
 import typinghog.play.CourseAssets;
+import typinghog.play.Props;
 import typinghog.play.Sounds;
 import typinghog.play.Stagehand;
 import typinghog.play.TypingIds;
@@ -24,8 +25,9 @@ import typinghog.rails.TypingPatch;
 
 /**
  * Typing of the Hedgehog: a Typing of the Dead homage over every supplied Sonic ROM. The hub is
- * the startup scene; each game's patch removes stock badniks and installs the {@link Course}
- * controller, which drives Sonic along the act's rail and stages the typed fights.
+ * the startup scene; each game's patch installs the {@link Course} controller, which drives Sonic
+ * along the act's rail (stock badniks stay; runs put bonus words on them) and stages the typed
+ * fights at stands.
  */
 public final class TypingHedgehogMod implements GgfMod {
     // The mod validator allows only literal static constants, so lists live on the instance.
@@ -41,11 +43,13 @@ public final class TypingHedgehogMod implements GgfMod {
         PlateFont font = new PlateFont(text(context, "art/plate-font.txt", null));
         Map<String, Cast> casts = new HashMap<>();
         Map<String, Sounds> sounds = new HashMap<>();
+        Map<String, Props> props = new HashMap<>();
         Map<String, Rail> rails = new HashMap<>();
         Map<String, String> badniks = new HashMap<>();
         for (String game : games) {
             casts.put(game, Cast.parse(text(context, "cast/" + game + ".txt", "")));
             sounds.put(game, Sounds.parse(text(context, "sounds/" + game + ".txt", "")));
+            props.put(game, Props.parse(text(context, "props/" + game + ".txt", "")));
             badniks.put(game, text(context, "badniks/" + game + ".txt", ""));
         }
         for (String line : text(context, "rails/index.txt", "").split("\n")) {
@@ -55,14 +59,18 @@ public final class TypingHedgehogMod implements GgfMod {
             rails.put(rail.game() + ":" + rail.zone() + ":" + rail.act(), rail);
         }
         CourseAssets assets = new CourseAssets(lexicon, new Plates(font), Map.copyOf(casts), Map.copyOf(sounds),
-                Map.copyOf(rails));
+                Map.copyOf(props), Map.copyOf(rails));
         var storage = context.storage();
-        context.requireDisplayWidth(400);
+        // Rails are validated at the native 320-pixel view: a wider view activates objects earlier and the
+        // recorded runs diverge (rails kill test, 2026-10-09).
+        context.requireDisplayWidth(320);
         context.registerObject("puppet", (spawn, registry) -> new typinghog.play.Puppet(spawn));
         context.registerServiceBundle("course", () -> {
             Stagehand stagehand = new Stagehand();
+            Course course = new Course(storage, assets, stagehand);
             return GameServiceBundle.builder()
-                    .frameController("course", new Course(storage, assets, stagehand))
+                    .frameController("course", course)
+                    .service(Course.class, course)
                     .service(Stagehand.class, stagehand)
                     .build();
         });

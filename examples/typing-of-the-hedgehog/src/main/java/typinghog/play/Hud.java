@@ -102,6 +102,7 @@ public final class Hud {
             drawSparks(canvas, encounter.effects(), cameraX, cameraY);
             if (encounter.bossFight() != null) drawBoss(canvas, course, encounter.bossFight(), width);
         }
+        if (course.phase() == Course.Phase.RUN) drawRunTags(canvas, course, cameraX, cameraY);
         drawPanel(canvas, course, width);
         if (bannerRows > 0) {
             bannerRows--;
@@ -123,6 +124,23 @@ public final class Hud {
     private void drawPlates(PixelCanvas canvas, Course course, Encounter encounter, int cameraX, int cameraY) {
         TypingField field = course.field();
         boolean punctuation = course.intent().punctuation();
+        for (Pickup pickup : encounter.pickups()) {
+            var target = field.target(pickup.targetId);
+            if (target == null) continue;
+            boolean locked = field.locked() == pickup.targetId;
+            Plates.Style style = locked ? Plates.Style.LOCKED : switch (pickup.kind) {
+                case DECOY -> Plates.Style.DECOY;
+                case RESCUE -> Plates.Style.RESCUE;
+                default -> Plates.Style.POWER;
+            };
+            int sx = pickup.visual.x - cameraX, sy = pickup.visual.y - cameraY - 18;
+            if (pickup.kind.monitor() && !pickup.visual.visible) {
+                // No ROM monitor art mapped for this game yet: a plain box stands in.
+                canvas.fill(sx - 8, sy + 2, 16, 16, 0xFF808898);
+                canvas.fill(sx - 6, sy + 4, 12, 10, style.rimColour());
+            }
+            plates.draw(canvas, target.prompt(), target.progress(), style, sx, sy, punctuation, 0);
+        }
         for (Enemy enemy : encounter.enemies()) {
             for (Enemy.Part part : enemy.parts()) {
                 var target = part.targetId() >= 0 ? field.target(part.targetId()) : null;
@@ -136,6 +154,33 @@ public final class Hud {
                 if (locked) Plates.reticle(canvas, sx, part.visual.y - cameraY,
                         Math.max(enemy.species().halfWidth(), enemy.species().halfHeight()) + 4, presented, GOLD);
             }
+        }
+    }
+
+    private void drawRunTags(PixelCanvas canvas, Course course, int cameraX, int cameraY) {
+        TypingField field = course.field();
+        boolean punctuation = course.intent().punctuation();
+        for (RunTags.Tag tag : course.runTags().tags()) {
+            int sx = tag.x - cameraX, sy = tag.y - cameraY;
+            if (tag.tagged) {
+                int pulse = (presented / 4) % 2;
+                canvas.fill(sx - 1, sy - 26 - pulse, 3, 3, GOLD);
+                canvas.fill(sx - 3, sy - 25 - pulse, 7, 1, GOLD);
+                continue;
+            }
+            var target = field.target(tag.targetId);
+            if (target == null) continue;
+            boolean locked = field.locked() == tag.targetId;
+            plates.draw(canvas, target.prompt(), target.progress(), locked ? Plates.Style.LOCKED : Plates.Style.RESCUE,
+                    sx, sy - 18, punctuation, 0);
+        }
+        for (int[] burst : course.runTags().bursts()) {
+            int r = burst[2], sx = burst[0] - cameraX, sy = burst[1] - cameraY;
+            for (int i = 0; i < 8; i++) {
+                double a = i * Math.PI / 4;
+                canvas.fill(sx + (int) (Math.cos(a) * r), sy + (int) (Math.sin(a) * r), 2, 2, GOLD);
+            }
+            if (r < 24) font.shadowed(canvas, "+" + RunTags.SMASH_BONUS, sx - 9, sy - 20 - r / 2, GOLD, SHADOW);
         }
     }
 

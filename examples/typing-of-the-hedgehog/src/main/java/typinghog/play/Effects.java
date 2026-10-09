@@ -79,6 +79,14 @@ public final class Effects {
         props.add(new Prop(score, Kind.POINTS));
     }
 
+    /** A score sprite rising from {@code x, y} (rescues and bonuses), without an explosion. */
+    void score(Course course, int x, int y, int points) {
+        var score = course.stagehand().add("points", x, y - 8);
+        score.bucket = 6;
+        score.frame = switch (points) { case 100 -> 0; case 200 -> 1; case 500 -> 2; default -> 3; };
+        props.add(new Prop(score, Kind.POINTS));
+    }
+
     /** Spills {@code count} letter-rings from Sonic in the ROM's alternating fan. */
     void spill(Course course, int count) {
         int px = course.playerX(), py = course.playerY();

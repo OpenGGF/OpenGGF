@@ -30,7 +30,8 @@ import java.util.Locale;
  * is skipped when unset), {@code openggf.artsheets.game} ({@code s1}, {@code s2},
  * {@code s3k}; default {@code s2}), {@code openggf.artsheets.acts} (comma-separated 0-based
  * {@code zone:act} pairs; default {@code 0:0}), {@code openggf.artsheets.keys} (optional
- * comma-separated substrings; only matching art keys are drawn). Files are named
+ * comma-separated substrings; only matching art keys are drawn), {@code openggf.artsheets.warmup}
+ * (idle frames stepped before reading, for art loaded through queued PLCs; default 0). Files are named
  * {@code <zone>-<act>-<key>.png}. The usual ROM path properties select the ROM.
  *
  * <pre>
@@ -64,7 +65,9 @@ class ObjectArtContactSheetProbe {
             int zone = Integer.decode(za[0]), act = Integer.decode(za[1]);
             SharedLevel shared = SharedLevel.load(game, zone, act);
             try {
-                HeadlessTestFixture.builder().withSharedLevel(shared).build();
+                var fixture = HeadlessTestFixture.builder().withSharedLevel(shared).build();
+                // Games whose object art arrives through queued loads (Sonic 1's PLCs) need frames.
+                fixture.stepIdleFrames(Integer.getInteger("openggf.artsheets.warmup", 0));
                 var level = GameServices.level().getCurrentLevel();
                 var art = GameServices.module().getObjectArtProvider();
                 for (String key : art.getRendererKeys()) {
