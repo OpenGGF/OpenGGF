@@ -9,6 +9,7 @@ public final class StarpostValleyMod implements GgfMod {
     @Override
     public void register(ModContext context) {
         context.requireDisplayWidth(400);
-        context.registerStartupScene(StarpostScene::new);
+        var town = starpost.realtown.TownContent.register(context);
+        context.registerStartupScene(() -> new StarpostScene(town));
     }
 }

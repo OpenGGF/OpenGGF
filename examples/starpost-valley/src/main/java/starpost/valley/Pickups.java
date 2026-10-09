@@ -36,6 +36,9 @@ public final class Pickups implements SaveSection {
             this.item = item;
         }
 
+        public int index() { return index; }
+        public String item() { return item; }
+
         @Override
         public int view() {
             return VALLEY;
@@ -58,22 +61,9 @@ public final class Pickups implements SaveSection {
             }
             Runner r = play.valley().runner;
             if (Math.abs(r.x - x) < 12 && Math.abs(r.y - 16 - y) < 22) {
-                owner.take(index);
-                Game game = shell.game;
-                if (item == null) {
-                    game.rings++;
-                    game.restoreBySpeed(1);
-                    shell.sfx(Sfx.RING);
-                } else if (game.inventory.add(game.item(item), 1) == 0) {
-                    boolean pair = game.has("gatherer") && game.rng.nextInt(5) == 0;
-                    if (pair) {
-                        game.inventory.add(game.item(item), 1);
-                    }
-                    game.xp(starpost.core.Skills.RANGING, 7);
-                    shell.sfx(Sfx.GRAB);
-                    shell.toast("FOUND " + (pair ? "TWO " : "") + game.item(item).name());
-                } else {
-                    owner.untake(index);
+                if (owner.collect(index, item, shell.game)) {
+                    shell.sfx(item == null ? Sfx.RING : Sfx.GRAB);
+                    if (item != null) shell.toast("FOUND " + shell.game.item(item).name());
                 }
             }
         }
@@ -104,35 +94,40 @@ public final class Pickups implements SaveSection {
 
     /** The day's pickups, built once per morning from the valley's layout and the season. */
     public List<Pickup> today(Game game, Valley valley) {
+        return today(game, valley, valley.springX, valley.loopX);
+    }
+
+    /** Shared daily placement for a real-level ground seam as well as the scene valley. */
+    public List<Pickup> today(Game game, Runner.Ground ground, int springX, int loopX) {
         int day = game.calendar.dayNumber();
         if (day != builtForDay) {
-            build(game, valley);
+            build(game, ground, springX, loopX);
             builtForDay = day;
         }
         return pickups;
     }
 
-    private void build(Game game, Valley valley) {
+    private void build(Game game, Runner.Ground ground, int springX, int loopX) {
         pickups.clear();
         int n = 0;
         // Ring lines along the path, an arc over the spring and a ring round the loop.
-        for (int x = 320; x < valley.width() - 200; x += 230) {
-            if (Math.abs(x - valley.springX) < 120 || Math.abs(x - valley.loopX - 128) < 160) {
+        for (int x = 320; x < (ground.right() - ground.left()) - 200; x += 230) {
+            if (Math.abs(x - springX) < 120 || Math.abs(x - loopX - 128) < 160) {
                 continue;
             }
-            int floor = valley.floorBelow(x, 0);
+            int floor = ground.floorBelow(x, 0);
             for (int i = 0; i < 5; i++) {
                 pickups.add(new Pickup(this, n++, x + i * 16, floor - 16, null));
             }
         }
         for (int i = 0; i < 7; i++) {
             double a = Math.PI * i / 6;
-            pickups.add(new Pickup(this, n++, valley.springX + 24 + (float) Math.cos(Math.PI - a) * 40,
+            pickups.add(new Pickup(this, n++, springX + 24 + (float) Math.cos(Math.PI - a) * 40,
                     96 - 20 - (float) Math.sin(a) * 60, null));
         }
         for (int i = 0; i < 10; i++) {
             double a = Math.PI * 2 * i / 10;
-            pickups.add(new Pickup(this, n++, valley.loopX + 126 + (float) Math.sin(a) * 58,
+            pickups.add(new Pickup(this, n++, loopX + 126 + (float) Math.sin(a) * 58,
                     111 + (float) Math.cos(a) * 58, null));
         }
         // Forage: a few seasonal finds at spots that change each day.
@@ -145,15 +140,15 @@ public final class Pickups implements SaveSection {
         long seed = game.calendar.dayNumber() * 2654435761L + 17;
         for (int i = 0; i < 6; i++) {
             seed = seed * 6364136223846793005L + 1442695040888963407L;
-            int x = 260 + (int) ((seed >>> 33) % (valley.width() - 520));
-            pickups.add(new Pickup(this, n++, x, valley.floorBelow(x, 0) - 10, forage[(int) ((seed >>> 13) & 1)]));
+            int x = 260 + (int) ((seed >>> 33) % ((ground.right() - ground.left()) - 520));
+            pickups.add(new Pickup(this, n++, x, ground.floorBelow(x, 0) - 10, forage[(int) ((seed >>> 13) & 1)]));
         }
         if (taken.length != n) {
             taken = new boolean[n];
         }
     }
 
-    boolean taken(int index) {
+    public boolean taken(int index) {
         return index < taken.length && taken[index];
     }
 
@@ -167,6 +162,37 @@ public final class Pickups implements SaveSection {
         if (index < taken.length) {
             taken[index] = false;
         }
+    }
+
+    /** Rewards are identical in scene and act; a full bag leaves forage available. */
+    public boolean collect(int index, String item, Game game) {
+        if (index < 0 || index >= taken.length || taken(index)) return false;
+        if (item == null) {
+            game.rings++;
+            game.restoreBySpeed(1);
+        } else {
+            if (game.inventory.add(game.item(item), 1) != 0) return false;
+            if (game.has("gatherer") && game.rng.nextInt(5) == 0) game.inventory.add(game.item(item), 1);
+            game.xp(starpost.core.Skills.RANGING, 7);
+        }
+        take(index);
+        return true;
+    }
+
+    public record Snapshot(int day, List<Boolean> taken) {
+        public Snapshot { taken = List.copyOf(taken); }
+    }
+
+    public Snapshot capture() {
+        List<Boolean> bits = new ArrayList<>();
+        for (boolean bit : taken) bits.add(bit);
+        return new Snapshot(builtForDay, bits);
+    }
+
+    public void restore(Snapshot snapshot) {
+        builtForDay = snapshot.day();
+        taken = new boolean[snapshot.taken().size()];
+        for (int i = 0; i < taken.length; i++) taken[i] = snapshot.taken().get(i);
     }
 
     @Override

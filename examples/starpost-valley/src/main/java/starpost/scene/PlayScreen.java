@@ -111,6 +111,9 @@ public final class PlayScreen implements Screen {
         chooseMusic(shell);
     }
 
+    /** Act hand-back to the existing farm view, retaining this day's screen and actors. */
+    public void returnToFarm() { debugPlace(true, starpost.people.Anchors.FARM_GATE - 24, 40); }
+
     /** Stands the farmer in the valley at x, still (festivals start from their place; debug). */
     public void placeInValley(float x) {
         debugPlace(false, x, 0);

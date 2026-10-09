@@ -17,6 +17,26 @@ import starpost.ui.Text;
  */
 public final class StarpostScene implements ModScene, DebuggableScene {
     private Shell shell;
+    private final starpost.realtown.TownSession town;
+    private PlayScreen actPlay;
+
+    public StarpostScene() { this(null); }
+    public StarpostScene(starpost.realtown.TownSession town) { this.town = town; }
+
+    /** E1 owner calls this immediately before SceneContext.startAct. */
+    public starpost.realtown.TownSession prepareTownAct() {
+        if (town == null || !(shell.screen() instanceof PlayScreen play))
+            throw new IllegalStateException("Town launch requires the live play screen");
+        actPlay = play;
+        starpost.realtown.TownBridge.prepare(town, shell, play);
+        return town;
+    }
+
+    /** E1 owner calls this after returning to the suspended scene, once per exit. */
+    public void resumeTownAct() {
+        if (town == null || actPlay == null) throw new IllegalStateException("No suspended town act");
+        starpost.realtown.TownBridge.resume(shell, actPlay, town.consumeHandBack());
+    }
     private String failure;
 
     @Override

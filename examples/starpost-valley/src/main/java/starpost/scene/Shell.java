@@ -122,6 +122,9 @@ public final class Shell {
         toastAt = ticks;
     }
 
+    /** The act exit uses the same day-end screen as scene free play. */
+    public void endActDay(boolean fainted) { go(new DayEndScreen(fainted)); }
+
     public void save() {
         if (game != null) {
             ctx.storage().write(SaveCodec.FILE, SaveCodec.encode(game));

@@ -1540,3 +1540,30 @@ scene-physics simulation, restoring by decoding a disk save, and remapping S1 ar
 to unrelated S3K bodies. A minimal S3K placeholder act tests objects before the
 terrain lane is available. Phase 2 owns the actual scene round trip; this lane
 provides a typed hand-back latch and binder without pretending the API exists.
+
+
+### Town milestone: rules and registration
+
+Design committed first at `8d9143843`. The first implementation adds `TownContent`,
+`TownSession`, a layout/act-ground seam, five registered object types and a
+`LevelInputOverlay`. `TownBridge`/`StarpostScene.prepareTownAct` and
+`resumeTownAct` are callable integration points, not an implementation of E1.
+Existing menus remain scene screens. `Calendar` captures its partial tick exactly;
+`Pickups` shares generation/rewards and captures daily bits; `Speech` accepts the
+live `People`/`Game` without a scene director. `FestivalSystem.drawOnLevel` reuses
+board, trophies and dressing with act ground and animation time.
+
+The initial `ObjectTerrainUtils` floor call produced two NON_API_ENGINE_REFERENCE
+warnings; rejected in favour of public decoded chunk/solid-profile queries.
+`ActGround` handles descriptor flips and signed column heights for NPC placement.
+It is not a physics controller or a native floor-register implementation. Villagers
+stop at cliffs/pits; a terrain author must supply connected walkable town anchors.
+The real S3K player retains its native sensors, loops and abilities. Town rings add
+one to both the saved wallet and the act's native health ring count. E1 must not
+replace the saved wallet with `ActResult.rings` (damage affects native health).
+
+Observed on this lane: queued Java 21 engine test-compile/classpath build passed;
+creator main/tests compiled with `javac --release 21`; SDK packaging reported
+**Validation passed: 0 findings**; the creator launcher ran **178/178**, no skips,
+including eight town rule tests. Running-act and full scene bridge verification
+are the next milestone. No terrain or scene-round-trip claim is implied.
