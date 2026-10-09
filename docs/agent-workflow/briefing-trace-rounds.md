@@ -71,13 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
-Scene draw recording is not GPU rendering (2026-10-08, Eggman's Sky): the
-headless update/recording cost was about 0.5 ms while native draw submission
-alone cost 5.3 ms due to repeated writes to an in-flight vertex buffer. Measure
-`ModSceneHost.draw` with a real GL context and account for GPU completion.
-`ExampleModCapture --every 0` with no video never submits a frame; it cannot
-measure rendering throughput. Separate warm-up, update, submission and finish
-costs, and compare deterministic framebuffer output when changing uploads.
+A frozen local source does not freeze another clone's publication (2026-10-08,
+stock parity delivery): local main's complete ordinary/guard run retained its
+exact HEAD and input fingerprint while remote develop acquired independent
+engine/API merges. The old result remains valid for its tested source; it does
+not qualify the incoming source or a future publication. Verify remote refs
+before pushing, preserve both histories, inspect the complete input delta and
+qualify a changed composition against the actual updated destination. Do not
+force-push over legitimate remote work or substitute local HEAD equality for
+remote source equivalence.
 
 An inherited loader environment can change a shell test without a source change
 (2026-10-08, stock parity delivery): the audio CLI deliberately rejects `LD_*`
@@ -88,7 +90,6 @@ base/current command check reproduced both outcomes by changing only that
 variable's presence. Attribute the absent failure to launch environment, inspect
 the complete remaining assertions and skips, and retain normal validation.
 Do not report this as a source fix or recreate an unrelated failure deliberately.
-
 
 Committed fixtures are live validation inputs (2026-10-08, Sitar Hero delivery):
 freeze test sources, BK2 files and scripts alongside runtime code. A fixture merge
@@ -106,6 +107,7 @@ working directories and arguments before stopping only those orphans. No termina
 results means incomplete validation. Retain a bounded supervisor, explicit exit
 status and the normal runner limits for recovery; do not infer the signal's cause
 from elapsed time or treat partial XML as a completed run.
+
 Movie input is not a native movement latch (2026-10-07, stock parity S1
 frontiers): the recorder's input column comes from the BK2 row, with raw RAM
 only as a fallback; it does not observe the game's logical held/new pair at
@@ -118,6 +120,7 @@ frontiers. Its CSV heading `vfc` read `$FE04`, the level frame counter; label th
 actual address and owner rather than inferring a clock from a probe's heading.
 An emulator startup crash with no observations is rejected evidence, even if a
 host wrapper reports that it launched.
+
 Correct logical input can coexist with stale effective sprite input (2026-10-08,
 stock parity S1 frontiers): the actual BK2, prepared/applied cursor, zero offset
 and InputHandler snapshot all agreed on neutral input, while movement consumed
@@ -128,7 +131,6 @@ snapshot alone does not prove neutral gameplay input. Correct the owning writer
 and publication seam; preserve legitimate scripted control rather than clearing
 all forced state or adjusting physics. Native controller latches are a separate
 observation from both physical BK2 rows and engine input publication.
-
 
 A held gameplay counter does not prove that `RunPLC` has not armed (2026-10-08,
 stock parity S1 MZ2 return): native `FixBugs=0` writes `v_plc_patternsleft`
@@ -161,8 +163,13 @@ and cut loading waits from promotional footage without calling them real-time lo
 measurements. Offline audio establishes content and cue timing, not physical speaker
 latency. See the [example's capture notes](../../examples/sitar-hero/README.md#testing-and-captures).
 
-
-
+Scene draw recording is not GPU rendering (2026-10-08, Eggman's Sky): the
+headless update/recording cost was about 0.5 ms while native draw submission
+alone cost 5.3 ms due to repeated writes to an in-flight vertex buffer. Measure
+`ModSceneHost.draw` with a real GL context and account for GPU completion.
+`ExampleModCapture --every 0` with no video never submits a frame; it cannot
+measure rendering throughput. Separate warm-up, update, submission and finish
+costs, and compare deterministic framebuffer output when changing uploads.
 
 Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
 task): the positioned MHZ capture retained about 22 MiB after its callback while

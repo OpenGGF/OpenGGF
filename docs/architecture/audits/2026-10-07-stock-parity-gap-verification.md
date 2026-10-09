@@ -1221,7 +1221,7 @@ and its return `$001638`, plus frame ends. The ROM bytes at `$00160A` are
 call. This is the shipped `FixBugs=0` branch of `RunPLC`; the fixed branch moves
 that write after table preparation.
 
-The corrected capture completes with exit0 in95.815 seconds, 38 observations,
+The corrected capture completes with exit 0 in95.815 seconds, 38 observations,
 one arm, 71,641 execute callbacks and thirteen consecutive frame-end samples.
 Every compared player position, fraction, velocity, inertia, status, routine,
 animation and mapping value, plus `v_framecount` and the low word at `$FE0E` of `v_vblank_count`, matches
@@ -1350,7 +1350,7 @@ Roslyn build and seven `S1PlcHardwareTimingObserver` tests pass with zero
 failures/skips. The complete original 225,101-input movie is then captured with
 `--mode trace --run-id s1-sonic-complete-withemeralds --load-queue-state
 --compress-threshold 1`, explicit producer/consumer/fixture roots and the
-original absolute S1 ROM. Session67758 completes exit0 with BizHawk2.11,
+original absolute S1 ROM. Session67758 completes exit 0 with BizHawk2.11,
 34 segments and twelve transitions; the owning process tree is absent.
 There are no input substitutions, RAM writes, observation edits or new
 recorder behavior in this candidate.
@@ -1384,9 +1384,9 @@ timing streams are losslessly gzip-compressed with zero timestamp. Its
 132-file, 41,989,269-byte inventory SHA-256 is
 `b94858c17f194983ea9abd370e9c62b83a8f99fd5b3526171af89811eea96f39`.
 The pinned producer's read-only `traces/validate_trace_v5.py <capture-v5>
---require-frame-keyed-auxiliary` completes exit0 in session56500. It validates
+--require-frame-keyed-auxiliary` completes exit 0 in session56500. It validates
 the accepted native output, separately from the pending Java consumer checks.
-The same validator also completes exit0 against the installed package in
+The same validator also completes exit 0 against the installed package in
 session75476, exercising the 28 compressed timing streams. The pinned producer
 already supports that storage encoding; no producer source or pin changes.
 
@@ -1478,7 +1478,7 @@ Private composition `84f0c20f11c689a6f7969edfcbd1da349a2fb3e0` contains:
 The updated framework automerge changes no intended parity behavior. The
 `AbstractPlayableSprite` delta against actual `d740` is only the native death
 call. The package-private radius helper adds no exported API. Root focus4920
-finishes at13:04:13Z, Maven exit0: **31 fresh XML suites, 275 cases,
+finishes at13:04:13Z, Maven exit 0: **31 fresh XML suites, 275 cases,
 zero failures/errors/skips**. The original absolute paths for all three verified
 ROMs are supplied. Four mandatory S3K startup selectors, geometry/custom-profile
 consumers and exact API reflection remain green. Command, from
@@ -1673,13 +1673,13 @@ is made for an input-mutated run.
 
 #### Combined focus terminal and input reconciliation
 
-Queued session61683 completes at `2026-10-08T15:05:37Z`, Maven exit0 /
+Queued session61683 completes at `2026-10-08T15:05:37Z`, Maven exit 0 /
 BUILD SUCCESS,11:13 execution after1924seconds queue waiting: **50 fresh XML
 suites,476 cases, zero failures/errors/skips**. All49 requested selectors
 are represented (the loading selector matches two packages); fresh XML mtimes
-span14:55:40–15:05:37Z. The API reflection9, SDK10, Javadoc7, release-policy13
+span14:55:40–15:05:37Z. The API reflection 9, SDK 10, Javadoc 7, release-policy13
 and documentation-link case pass alongside all parity/timing regressions,
-Sitar's152 cases, native music/cues18 and the four mandatory S3K startup
+Sitar's152 cases, native music/cues 18 and the four mandatory S3K startup
 selectors. This is focused combined-source qualification at exact `2683eb992`,
 not a full ordinary pass.
 
@@ -1705,7 +1705,7 @@ to qualified `c02`. The replacement actual-main session75501 is submitted once
 against6124 with original pre-integration based740, all3058 ordinary classes
 and fresh guards under150minutes admission-excluded; it is queued, with no
 terminal result claimed. The invalid f3777bdd run is consumed/acknowledged
-exit0 and absent. Main's extended tracked-input/publication freeze is preserved.
+exit 0 and absent. Main's extended tracked-input/publication freeze is preserved.
 
 The completed normal17-case trace selection at `84f0c20f` remains applicable:
 all stock gameplay/physics, walkers, drivers and trace fixture/movie inputs
@@ -1771,7 +1771,7 @@ The source inventory/report difference is accounted for: one abstract base,
 seven helpers and23 explicitly excluded tagged classes, plus29 nested XML
 suites, give3058−1−7−23+29=3056; eleven package/path aliases map to present
 suites. No unexplained ordinary omission, timeout or ROM skip exists.
-Exact consumed diagnostics are acknowledged exit0 and removed.
+Exact consumed diagnostics are acknowledged exit 0 and removed.
 
 The updated main baseline is qualified by its owner using completed ordinary
 run `20261008T153213Z-5cd93bac` at `6124a524`/base `d740`:3058 selected,
@@ -1780,7 +1780,7 @@ run `20261008T153213Z-5cd93bac` at `6124a524`/base `d740`:3058 selected,
 The research-only `17ae561a` HEAD change preserves all ordinary executable,
 test and build bytes and the known dirty-input fingerprint, but correctly
 makes the outer runner exit2 before guards. A separate fresh normal guard
-profile at17ae completes17:15:24Z, exit0:87 reports/674 cases, zero failures,
+profile at17ae completes17:15:24Z, exit 0:87 reports/674 cases, zero failures,
 errors or skips. These are qualified separate lanes, not a completed combined
 run. The owner publishes evidence-only `378c1d715`, independently confirms
 remote develop and completes owned cleanup/releasing the main hold. See the
@@ -1808,7 +1808,7 @@ fingerprint remains
 The actual command uses the three original absolute main ROM files; fresh
 SHA-1/CRC32 identities match before and after execution. Both lanes complete
 without timeout, diagnostic omission or ROM skip. Exact diagnostics are
-consumed/acknowledged exit0 and deleted; owning supervisor/runner are absent.
+consumed/acknowledged exit 0 and deleted; owning supervisor/runner are absent.
 
 All26 remaining failure identities/types/full first assertions match:
 25 literally plus the complete SSZ2951-character line, which becomes the
@@ -1856,7 +1856,7 @@ DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py \
 The actual invocation also passes the three original absolute ROM properties;
 its retained user service preflights Java21/Lua5.4/PowerShell and bounds total
 lifetime without changing the Maven profile. After178seconds queue waiting,
-it completes `2026-10-08T19:08:05Z`, Maven exit0/BUILD SUCCESS,4:00 execution:
+it completes `2026-10-08T19:08:05Z`, Maven exit 0/BUILD SUCCESS,4:00 execution:
 **87 fresh XML suites,674 cases, zero failures/errors/skips**. All fresh XML
 mtimes are after the owning invocation began. Before/after source fingerprint
 is literally identical:
@@ -2060,3 +2060,352 @@ documentation successor's HEAD, owns these outcomes.
 
 Publication and accounted-for owned worktree/agent cleanup follow this
 qualification; their final observed outcome is recorded below.
+
+#### Independent remote publication after the original main qualification
+
+The completed actual-main qualification above remains attributed to863/run9deb.
+Publication of its evidence-only successor `5662ad2c2` is blocked before any
+push: remote develop independently advances to
+`d4993a7307241bf90f004e0d7cf90936f075cf46` through Starfall Frontier and
+Eggman's Sky merges while local main remains frozen. Fetch preserves all
+local source and known dirt. The complete incoming delta is 123 paths,
+including 13 engine Java files, new/changed creator-scene tests, two example
+mods and 22 API signature-pin lines, alongside existing engineering/prose.
+There is no POM, hooks, selection-policy or testing-runner change. This is
+not source-equivalent to the completed 863 validation.
+
+Private reconciliation retains both source histories. All parity production
+and Java-test paths are disjoint from the incoming changes; shared changelog,
+measurement hazards and implementation pitfalls merge by retaining both
+owners' entries. A separate clean updated-remote worktree at exact d499 uses
+its canonical original absolute main ROM files and normal full ordinary plus
+fresh guards, selected against pre-import f5de. The combined parity candidate
+uses the unmodified normal plan against actual destination d499. Fresh focus
+covers incoming creator scenes, detached ROM art/rendering, startup audio,
+API/SDK/Javadoc consumers and S3K startup before combined qualification.
+The published remote's earlier noncanonical-ROM, incomplete broad result
+is not reused as a canonical full baseline. No new/worsened/unattributed
+failure or unexplained skip can be accepted by totals alone.
+
+The earlier complete negative-case table is retained as an immutable source
+comparison. Updated-base, combined private and actual-main results will be
+recorded with their own exact source and command before final publication.
+Foreign private requests and native captures remain untouched; local main
+and publication hold continue while this source-changing reconciliation is
+qualified.
+
+Private composition `d8f7ab7205935a608948ea6813b38e281df0cce8` passes
+its once-submitted queued focus at 2026-10-08T21:48:57Z, Maven exit 0 /
+BUILD SUCCESS, 2:02 execution after normal queue waiting. All 20 selectors
+are represented in 21 fresh XML suites (level loading matches two packages):
+146 cases, 145 passed, zero failures/errors and one explicit GPU skip.
+The skipped identity is
+`com.openggf.mods.scene.host.TestSceneRenderer#changingBatchSizesPreservesEveryPixelAndStreamingUpdates`;
+its literal first causal reason is
+`org.opentest4j.TestAbortedException: Assumption failed: OpenGL 4.1 unavailable`.
+No ROM case skips. This does not certify the skipped GPU pixel behavior.
+API reflection 9, SDK 10, Javadoc 7, both creator mods 22, startup audio 2,
+detached pictures 2, S3K backdrops 10, texture cache 5, host music/cues 18
+and required S3K startup 60 all pass. Fresh reports are selected by mtimes
+after the owning invocation, not earlier target output. Before/after source
+fingerprint is identical:
+`2d7b785be8c2eb4dea26ef7564ab07136fa735f7116bc8cfc592fd7ed874f78d`.
+Owning focus supervisor/runner are absent after terminal.
+
+The exact focused command, with only machine-local path spelling normalized,
+is:
+
+```sh
+OPENGGF_ROM_ROOT=/absolute/path/to/OpenGGF
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestEggmansSkyStartupAudio,TestEggmansSkyFauna,TestEggmansSkyQualityOfLife,TestEggmansSkyScene,TestStarfallFrontierExample,TestStarfallFrontierScene,TestModSceneLauncherAudio,TestSceneBackdropS3k,TestDetachedStockScenePictures,TestSceneRenderer,TestSceneTextureCache,TestModApiSignatureSurface,TestModApiSdkPackager,TestModApiJavadocTool,TestSceneMusicRom,TestScenePartCues,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The canonical updated-base normal run admits at 21:47:48Z as
+`20261008T214748Z-737dcb35`, exact d499/base f5de, all 3066 ordinary
+classes plus fresh guards, one worker and 150 minutes excluding admission.
+The combined candidate's unmodified plan against actual destination d499
+selects all 3068 ordinary classes plus fresh guards. Expected execution cost
+is 85–110 minutes ordinary plus 4–5 minutes guards for each invocation; queue
+waiting is additional. A timeout, unexplained omission, ROM skip or new/
+worsened/unattributed failure blocks integration. The incoming GPU skip must
+match the updated canonical baseline by identity and literal reason. Final
+combined private and actual-main qualification, publication and cleanup
+remain pending.
+
+## Updated remote baseline and combined candidate terminal qualification
+
+The canonical updated baseline is tested at
+`d4993a7307241bf90f004e0d7cf90936f075cf46`, selected against
+`f5de9524a943d55191dbf798d405ca8e8e20ca9e`. Run
+`20261008T214748Z-737dcb35` admitted at 2026-10-08T21:47:48Z and
+finished at 2026-10-08T23:19:18Z. The combined candidate is tested at
+`94bbd3bda56c3dcc81cfcc89a750b8955cb14dc6` against the actual
+published destination `d4993a7307241bf90f004e0d7cf90936f075cf46`.
+Run `20261008T232550Z-db7081e2` admitted at
+2026-10-08T23:25:50Z and finished at 2026-10-09T00:51:22Z.
+
+| Exact source/lane | Selected classes | Fresh XML reports | Cases | Failures | Errors | Skips | Execution seconds | Maven exit |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| d499 ordinary | 3,066 | 3,064 | 26,563 | 26 | 0 | 63 | 5,238.46 | 1 |
+| d499 fresh guards | — | 87 | 674 | 0 | 0 | 0 | 251.60 | 0 |
+| 94bb ordinary | 3,068 | 3,066 | 26,598 | 26 | 0 | 63 | 4,870.86 | 1 |
+| 94bb fresh guards | — | 87 | 674 | 0 | 0 | 0 | 260.05 | 0 |
+
+Both invocations use the normal, unmodified ordinary command and a separate
+fresh guard JVM, one worker, canonical original absolute main ROM filenames,
+and the 150-minute admission-excluded cap. Java 21, Lua 5.4 and PowerShell
+preflight pass. All three ROM SHA-1/CRC identities match. No lean, heap or
+fork overrides are added to either broad invocation.
+
+The commands, from the separate updated-base and composition worktrees, are:
+
+```sh
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base f5de9524a943d55191dbf798d405ca8e8e20ca9e --max-minutes 150 --run
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base d4993a7307241bf90f004e0d7cf90936f075cf46 --max-minutes 150 --run
+```
+
+All 26 failure identities, kinds and types match the qualified 863 reference
+on the updated baseline and the candidate. Twenty-five full first assertion
+lines match literally. The complete SSZ first line is 2,952 characters on
+both new runs; removing only the exception prefix and replacing the two
+verified `RewindObjectStateBlob@hex` identities with `@HASH` yields the
+same 2,907-character assertion. No other value or text is normalized.
+The 62 prior skip identities and literal first reasons are preserved, with
+exactly one incoming renderer skip: the identity and OpenGL 4.1 reason
+recorded above. All 63 skip identities/reasons match literally between d499
+and 94bb. There are no new, worsened or unattributed ordinary negative
+cases, duplicate negative identities, omitted diagnostics, timeouts or ROM
+skips. This is inherited-failure qualification, not a green ordinary suite.
+
+The candidate adds exactly 35 passing cases over the updated baseline:
+death-radius 14, S2 super-results 8, seven additional fan cases and six
+additional strict timing-loader cases. Fresh suites confirm fan 12,
+fan-graph rewind 2, timing loader 19, API reflection 9, SDK 10 and Javadoc 7
+pass without skips. All 13 Sitar suites/152 cases and host music/cues 18
+pass without skips. Required S3K startup 60, incoming creator scenes,
+detached stock art and startup-audio checks pass; the explicit renderer GPU
+skip remains a coverage limit. SDK/Javadoc counts are also confirmed by the
+fresh owning ordinary Maven completion lines.
+
+Before/after fingerprints remain identical within each frozen invocation:
+
+- d499: `6de3884fad261de2a57bcd6e0209cd146b4106a8ec09dd3e2cfbb07941ae8833`.
+- 94bb: `c2938174a1f4ad637345cd87ed4fae8644c38cd7be1edc608dae198db1f5324a`.
+
+Both owning supervisor/runner pairs are absent, and their service control
+groups are collected. Complete results were consumed before acknowledging
+each exact run with exit 0; both run directories are absent. No foreign
+request, process or diagnostic was acknowledged or cancelled.
+
+The combined private source is qualified. Its evidence-only successor may
+be integrated into the held main develop branch with d499 as the pinned
+validation base. Updated actual-main normal ordinary plus fresh guards,
+publication and owned cleanup remain required; the earlier 863 main result
+does not certify the incoming engine/API composition.
+
+## Updated actual-main qualification
+
+The held develop branch integrates the qualified evidence successor
+`0135fac91da0f85f4ac4d91c641f41acd88a7d18` conflict-free at
+`b317e94ebdce60c6f81553113543295c75b1d826`, with first parent
+`5662ad2c2291bc9c5578094b5ad37a7ee31e55e2`. Its index and committed
+tree match the qualified private composition exactly. The actual pinned
+published validation base is
+`d4993a7307241bf90f004e0d7cf90936f075cf46`; the seven known unrelated
+dirty/untracked main paths and their bytes remain preserved.
+
+The one normal actual-main command was submitted at 2026-10-09T00:56:57Z,
+admitted at 01:56:57Z as `20261009T015657Z-e417e53f`, and finished at
+03:23:31Z. Queue waiting is excluded from the 150-minute execution cap.
+Java 21, Lua 5.4 and PowerShell preflight pass. The unmodified plan selects
+all 3,068 ordinary classes, one worker and separate fresh guards. Actual
+ordinary and guard commands use the three original absolute main ROM
+filenames, independently rehashed at submission and admission to the
+canonical SHA-1/CRC identities. No lean, heap or fork overrides are added.
+
+```sh
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base d4993a7307241bf90f004e0d7cf90936f075cf46 --max-minutes 150 --run
+```
+
+| Exact b317 lane | Selected classes | Fresh reports | Cases | Failures | Errors | Skips | Execution seconds | Maven exit |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Ordinary | 3,068 | 3,066 | 26,598 | 26 | 0 | 63 | 4,963.90 | 1 |
+| Separate fresh guards | — | 87 | 674 | 0 | 0 | 0 | 230.26 | 0 |
+
+The normal runner and retained supervisor finish with exit 1/status
+`failed` because the inherited ordinary failures remain. Both lanes are
+complete. Against the canonical d499 result, all 26 failure identities,
+kinds and types match; 25 complete first assertions match literally.
+The SSZ first line is 2,952 characters. Removing only the exception prefix
+and replacing the two verified `RewindObjectStateBlob@11f491d5` and
+`RewindObjectStateBlob@a1a53d79` hashes with `@HASH` yields the same
+complete 2,907-character assertion. Every concrete assertion field is
+retained. All 63 skip identities and first causal reasons match literally,
+including the explicitly unavailable OpenGL 4.1 renderer case. There are
+zero new, worsened or unattributed failures, duplicate negative identities,
+omitted diagnostics, timeouts or ROM skips. This is inherited-failure
+qualification, not a green whole-suite or completed stock-ROM parity claim.
+
+Fresh actual-main suites confirm death-radius 14, S2 super-results 8, fan
+12, fan-graph rewind 2, timing loader 19, API reflection 9, SDK 10 and
+Javadoc 7 pass without skips. All 13 Sitar suites/152 cases, host music/cues
+18 and the five required S3K suites/60 cases pass without skips. Incoming
+creator scenes, detached stock art, startup-audio and texture-cache checks
+pass. SDK/Javadoc are also confirmed by fresh owning ordinary Maven
+completion lines. The renderer's explicit GPU skip remains a coverage limit;
+separate trace/native frontier results above remain red or incomplete as
+recorded and are not certified by ordinary counts.
+
+Initial, admitted-plan, final and independently current main fingerprints
+are identical:
+`e9d660f01a5b0b602789bfc3a56c84e54d74320625d0d6846dbf2bc3017a850a`.
+The exact supervisor 1012438, runner 1012652 and owning Maven 1070806 are
+absent; the service is collected with MainPID 0 and no control group.
+Complete results were consumed before acknowledging only
+`20261009T015657Z-e417e53f` with exit 0; its run directory is absent.
+No foreign job, request or diagnostic was changed, acknowledged or cancelled.
+Publication and owned worktree/generated-artifact cleanup follow this
+terminal qualification; their observed outcome is recorded below.
+
+## Updated actual-main full assertion and skip summary
+
+This light complete negative-case table belongs to tested actual-main
+`b317e94ebdce60c6f81553113543295c75b1d826`, run
+`20261009T015657Z-e417e53f`, against canonical published
+`d4993a7307241bf90f004e0d7cf90936f075cf46`. A later prose-only delivery
+successor may reuse it only after verifying zero executable/test/build/API
+delta. The earlier 863 table remains immutable and applies only to its own
+tested source. Assertions come from the complete first line of
+`failed_cases[].detail`, not the capped `message`; raw stack traces and
+logs are not archived. Only the explicitly marked SSZ row uses the verified
+exception-prefix/blob-hash normalization described above.
+
+### All 26 complete inherited assertions at updated actual-main
+
+| Test identity | Kind / type | Complete first assertion |
+|---|---|---|
+| <code>com.openggf.tests.TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)&#91;2&#93;</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: late pulley owns Tails ==&gt; expected: &lt;true&gt; but was: &lt;false&gt;</code> |
+| <code>com.openggf.tests.TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)&#91;3&#93;</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: late pulley owns Sonic ==&gt; expected: &lt;true&gt; but was: &lt;false&gt;</code> |
+| <code>com.openggf.tools.TestDezIncomingFinalRouteCapture#coldEmeraldTeamClearsBothActsFinalFightAndDoomsday</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: death at 53897 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt;</code> |
+| <code>com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: expected: &lt;96&gt; but was: &lt;0&gt;</code> |
+| <code>com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: expected: &lt;96&gt; but was: &lt;0&gt;</code> |
+| <code>com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: expected: &lt;96&gt; but was: &lt;0&gt;</code> |
+| <code>com.openggf.tools.TestDezIncomingFinalRouteCapture#coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: expected: &lt;96&gt; but was: &lt;0&gt;</code> |
+| <code>com.openggf.tools.TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase(int)&#91;1&#93;</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: death at 26706 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt;</code> |
+| <code>com.openggf.tools.TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase(int)&#91;2&#93;</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: death at 26750 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt;</code> |
+| <code>com.openggf.tools.TestLrzActTwoColdRouteCapture#coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: death at input 36526 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt;</code> |
+| <code>com.openggf.tools.TestLrzBossColdRouteCapture#coldTeamCompletesBossActWithEarnedShieldAndRepeatableWorldState</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: death at input 36526 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt;</code> |
+| <code>com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: expected: &lt;1069&gt; but was: &lt;899&gt;</code> |
+| <code>com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: death at input 19460 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt;</code> |
+| <code>com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsCompletesActTwoAndRestoresTheBoulderHandoff</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: death at input 19460 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt;</code> |
+| <code>com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsCompletesBossActAndReachesPlayableHiddenPalace</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: death at input 19460 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt;</code> |
+| <code>com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsRestoresActTwoTraversalToTheMiddleCorridor</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: death at input 19460 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt;</code> |
+| <code>com.openggf.tools.TestLrzWideBossColdRouteCapture#coldWideTeamClearsBossAndReleasesHiddenPalaceWithRepeatableWorld</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: expected: &lt;2796&gt; but was: &lt;524&gt;</code> |
+| <code>com.openggf.tools.TestMhzPairColdRouteCapture#pairedColdCompletionIsolatesTheLiveTimelineAtTheActualFbzLoad</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: the route must observe the actual history-reset boundary ==&gt; expected: &lt;true&gt; but was: &lt;false&gt;</code> |
+| <code>com.openggf.tools.TestMhzWideColdRouteCapture#wideSonicCompletesBothActsThroughProductionLoopWithWholeWorldReplay</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: &#91;wide-route-19500&#93; restore 0 zone-runtime: &#91;zone-runtime.stateBytes&#91;2&#93;: A=46 B=26, zone-runtime.stateBytes&#91;3&#93;: A=-104 B=64, zone-runtime.stateBytes&#91;6&#93;: A=38 B=21, zone-runtime.stateBytes&#91;7&#93;: A=-44 B=-32, zone-runtime.stateBytes&#91;10&#93;: A=31 B=17, zone-runtime.stateBytes&#91;11&#93;: A=16 B=-128&#93; ==&gt; expected: &lt;true&gt; but was: &lt;false&gt;</code> |
+| <code>com.openggf.tools.TestSszColdRouteCapture#coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: death at input 7311 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt;</code> |
+| <code>com.openggf.tools.TestSszColdRouteCapture#coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: death at input 7311 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt;</code> |
+| <code>com.openggf.tools.TestSszSoloColdRouteCapture#coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: death at 7671 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt;</code> |
+| <code>com.openggf.tools.TestSszSoloColdRouteCapture#coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: death at 7671 ==&gt; expected: &lt;false&gt; but was: &lt;true&gt;</code> |
+| <code>com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int)&#91;2&#93;</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | SSZ normalization only: <code>replay at 4018 object-manager: &#91;object-manager.usedSlotsBits differs, object-manager.usedSlotsBits.onlyA: 24, 29, object-manager.dynamic&#91;6&#93;&#91;ObjectRefId&#91;slotIndex=-1, generation=0, spawnId=-1, dynamicId=125, kind=DYNAMIC&#93;&#93; missing in B (A=DynamicObjectEntry&#91;className=com.openggf.game.sonic3k.objects.badniks.EggRoboJetFlameChildInstance, spawn=ObjectSpawn&#91;x=1291, y=2332, objectId=0, subtype=0, renderFlags=1, respawnTracked=false, rawYWord=0, layoutIndex=-1, ownerModId=null, objectKey=null&#93;, slotIndex=6, state=PerObjectRewindSnapshot&#91;destroyed=false, destroyedRespawnable=false, hasDynamicSpawn=true, dynamicSpawnX=1291, dynamicSpawnY=2332, preUpdateX=1291, preUpdateY=2332, preUpdateValid=true, preUpdateCollisionFlags=-1, skipTouchThisFrame=false, solidContactFirstFrame=false, slotIndex=6, respawnStateIndex=-1, badnikExtra=null, badnikSubclassExtra=null, objectSubclassExtra=RewindExtra&#91;parentId=null, x=1291, y=2332, mappingFrame=5, hFlip=true&#93;, playerExtra=null, genericState=null, compactGenericState=com.openggf.game.rewind.schema.RewindObjectStateBlob@HASH&#93;, playerOwner=null, objectId=ObjectRefId&#91;slotIndex=-1, generation=0, spawnId=-1, dynamicId=125, kind=DYNAMIC&#93;, ownerModId=null, rewindableAuxiliary=false&#93;), object-manager.dynamic&#91;28&#93;&#91;ObjectRefId&#91;slotIndex=-1, generation=0, spawnId=-1, dynamicId=126, kind=DYNAMIC&#93;&#93; missing in B (A=DynamicObjectEntry&#91;className=com.openggf.game.sonic3k.objects.badniks.EggRoboGunArmChildInstance, spawn=ObjectSpawn&#91;x=1307, y=2300, objectId=0, subtype=0, renderFlags=1, respawnTracked=false, rawYWord=0, layoutIndex=-1, ownerModId=null, objectKey=null&#93;, slotIndex=28, state=PerObjectRewindSnapshot&#91;destroyed=false, destroyedRespawnable=false, hasDynamicSpawn=true, dynamicSpawnX=1307, dynamicSpawnY=2300, preUpdateX=1307, preUpdateY=2300, preUpdateValid=true, preUpdateCollisionFlags=-1, skipTouchThisFrame=false, solidContactFirstFrame=false, slotIndex=28, respawnStateIndex=-1, badnikExtra=null, badnikSubclassExtra=null, objectSubclassExtra=RewindExtra&#91;parentId=null, x=1307, y=2300, cooldown=-1, hFlip=true&#93;, playerExtra=null, genericState=null, compactGenericState=com.openggf.game.rewind.schema.RewindObjectStateBlob@HASH&#93;, playerOwner=null, objectId=ObjectRefId&#91;slotIndex=-1, generation=0, spawnId=-1, dynamicId=126, kind=DYNAMIC&#93;, ownerModId=null, rewindableAuxiliary=false&#93;), object-manager.dynamic&#91;27&#93;&#91;ObjectRefId&#91;slotIndex=-1, generation=0, spawnId=-1, dynamicId=128, kind=DYNAMIC&#93;&#93;.slotIndex: A=27 B=6, object-manager.dynamic&#91;27&#93;&#91;ObjectRefId&#91;slotIndex=-1, generation=0, spawnId=-1, dynamicId=128, kind=DYNAMIC&#93;&#93;.state.slotIndex: A=27 B=6, object-manager.dynamic&#91;33&#93;&#91;ObjectRefId&#91;slotIndex=-1, generation=0, spawnId=-1, dynamicId=129, kind=DYNAMIC&#93;&#93;.slotIndex: A=33 B=27, object-manager.dynamic&#91;33&#93;&#91;ObjectRefId&#91;slotIndex=-1, generation=0, spawnId=-1, dynamicId=129, kind=DYNAMIC&#93;&#93;.state.slotIndex: A=33 B=27&#93; ==&gt; expected: &lt;true&gt; but was: &lt;false&gt;</code> |
+| <code>com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)&#91;1&#93;</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: expected: &lt;48&gt; but was: &lt;0&gt;</code> |
+| <code>com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)&#91;2&#93;</code> | <code>failure</code> / <code>org.opentest4j.AssertionFailedError</code> | <code>org.opentest4j.AssertionFailedError: expected: &lt;48&gt; but was: &lt;0&gt;</code> |
+
+### All 63 literal inherited causal skip reasons at updated actual-main
+
+| Test identity | Literal first causal reason |
+|---|---|
+| <code>com.openggf.audio.TestSmpsRepeatedPlaybackBenchmark#repeatedPublicMusicAndSfxPlaybackEmitsStableRawSamples</code> | <code>System property &#91;openggf.audio.repeatedPlaybackBenchmark&#93; does not exist</code> |
+| <code>com.openggf.game.rewind.TestLiveRewindCheckpointCost#compareCheckpointCadencesOnTheSameRecordedRoute</code> | <code>System property &#91;openggf.checkpoint.measure&#93; does not exist</code> |
+| <code>com.openggf.game.rewind.TestRewindTorture#tortureProgressiveLongRewinds</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: Long-running soak profile; excluded from normal runs — run manually with -Drewind.soak=true</code> |
+| <code>com.openggf.game.rewind.TestS3kRewindAllocationProbe#measure</code> | <code>System property &#91;openggf.rewind.alloc.measure&#93; does not exist</code> |
+| <code>com.openggf.game.sonic3k.objects.TestS3kAiz1CompatibilityRoutes#axisRouteCompletes(int, String)</code> | <code>System property &#91;openggf.aiz1.routes&#93; does not exist</code> |
+| <code>com.openggf.game.sonic3k.objects.TestS3kAiz1EntryMatrix#introReleasesInputAndEntryReplaysTwice(int, String)</code> | <code>System property &#91;openggf.aiz1.entry&#93; does not exist</code> |
+| <code>com.openggf.game.sonic3k.objects.TestS3kAiz1SpringRecovery#liveSpringJumpCrossesAndReplaysWhileWalkingIsRejected(int, String)</code> | <code>System property &#91;openggf.aiz1.recovery&#93; does not exist</code> |
+| <code>com.openggf.game.sonic3k.objects.TestSozAct1VictoryCapture#captureVictoryAndHandoff</code> | <code>System property &#91;soz.act1.victory.capture&#93; does not exist</code> |
+| <code>com.openggf.game.sonic3k.objects.TestSozColdAct1Capture#fixedControllerRouteReachesVisiblePlayableAct2FromColdAct1</code> | <code>System property &#91;soz.cold.act1.capture&#93; does not exist</code> |
+| <code>com.openggf.game.sonic3k.objects.TestSozColdAct2Capture#fixedControllerRouteReachesVisibleLavaReefFromColdAct2</code> | <code>System property &#91;soz.cold.act2.capture&#93; does not exist</code> |
+| <code>com.openggf.game.sonic3k.objects.TestSozEndBossVictoryCapture#captureBattleAndLrz</code> | <code>System property &#91;soz.endboss.victory.capture&#93; does not exist</code> |
+| <code>com.openggf.game.sonic3k.objects.TestSozMinibossCapture#positionedAwakening</code> | <code>System property &#91;soz.miniboss.capture&#93; does not exist</code> |
+| <code>com.openggf.graphics.shaderlib.TestDisplayShaderPackDiagnostics#writeCompatibilityReportForLocalShaderPack</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: Set -Dshaderlib.diagnostic.enabled=true to scan a local shader pack</code> |
+| <code>com.openggf.graphics.TestArenaMaskRenderer#nativeWidthCentrePixelsFrameCadenceAndGlStateSurviveCaptureFbo</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: assumption is not true</code> |
+| <code>com.openggf.graphics.TestBackgroundScrollWrapPixels#integerScrollNeverSamplesOutsideTheRenderedPeriod</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: OpenGL 4.1 unavailable</code> |
+| <code>com.openggf.graphics.TestForegroundWindowRendering#windowReplacesScrolledForegroundAndItsPriorityMask</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: Surfaceless EGL unavailable (try EGL&#95;PLATFORM=surfaceless)</code> |
+| <code>com.openggf.graphics.TestScrollBufferUploadNative#arraysAndViewsUploadExactValuesAcrossResourceAndContextRecreation</code> | <code>System property &#91;openggf.scrollNative&#93; does not exist</code> |
+| <code>com.openggf.graphics.TestShaderPixelCentreSampling#pixelCentresSurviveNativeIntegerAndFractionalScalingWithViewportOffsets</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: OpenGL 4.1 unavailable</code> |
+| <code>com.openggf.graphics.TestSlotWindowGpuPassNative#pixelsAndDrawStateSurviveResizeCleanupAndContextRecreation(boolean)</code> | <code>System property &#91;openggf.slotNative&#93; does not exist</code> |
+| <code>com.openggf.level.objects.TestObjectRewindTypeSafetyDispatchPerformance#measureMixedRouteDispatchAllocationAndTime</code> | <code>System property &#91;openggf.performance.rewindDispatch.measure&#93; does not exist</code> |
+| <code>com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#captureLiveBackgroundSamplingScenes</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: enable with -Dopenggf.capture.backgroundSampling=true</code> |
+| <code>com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#postWarmupRenderSamplingAllocationProbe</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: enable with -Dopenggf.measure.backgroundSampling=true</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;11&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;12&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;19&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;20&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;21&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;22&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;23&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;24&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;25&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;26&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;27&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;28&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;29&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;30&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;31&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;32&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;33&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;34&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;35&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)&#91;36&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)&#91;11&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act places no platforms</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)&#91;12&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act places no platforms</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)&#91;19&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act places no platforms</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)&#91;20&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act places no platforms</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)&#91;21&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act places no platforms</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)&#91;22&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act places no platforms</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)&#91;23&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act places no platforms</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)&#91;24&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act places no platforms</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)&#91;33&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act places no platforms</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)&#91;34&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act places no platforms</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)&#91;35&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act places no platforms</code> |
+| <code>com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)&#91;36&#93;</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: act places no platforms</code> |
+| <code>com.openggf.mods.code.TestSonicSurvivors#balanceProbe</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: opt-in diagnostic</code> |
+| <code>com.openggf.mods.scene.host.TestSceneRenderer#changingBatchSizesPreservesEveryPixelAndStreamingUpdates</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: OpenGL 4.1 unavailable</code> |
+| <code>com.openggf.tests.TestCPZObjectBugs#testSpinTubeForcesRolling</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: Spin tube at (1920,896) did not capture/release Sonic</code> |
+| <code>com.openggf.tests.TestSozAct1ArenaCapture#naturalArenaAdmission</code> | <code>System property &#91;soz.act1.capture&#93; does not exist</code> |
+| <code>com.openggf.tests.TestSozConnectedMechanismCapture#capture(Scene)</code> | <code>System property &#91;soz.connected.capture&#93; does not exist</code> |
+| <code>com.openggf.tests.TestSozPostBossRedrawCapture#capture(int)</code> | <code>System property &#91;soz.postboss.redraw.capture&#93; does not exist</code> |
+| <code>com.openggf.tools.audio.parity.TestS1OpenGgfAudioCapture#capturesTheCompleteReferenceControlledInterval</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: local deterministic BizHawk reference required</code> |
+| <code>com.openggf.tools.audio.timeline.TestS1Ghz1OpenGgfAudioTimelineCapture#captureRequestedOutput</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: no local OpenGGF timeline capture was requested</code> |
+| <code>com.openggf.tools.TestS3kSlotsGlassNative#glassOccludesPlayerAfterRealBonusFrame(String, int)</code> | <code>System property &#91;openggf.test.gl.native&#93; does not exist</code> |
+
+## Publication and owned cleanup
+
+The qualified integration and complete updated-main negative-case table are
+pushed to develop at `9c563bf3067ec6739bb1d0533d431287dff8338d`;
+an independent remote-ref query matches that full SHA. Its delta from tested
+b317 changes only this audit, with zero executable, test, build or API change.
+Normal commit/push hooks and the CI push policy validator pass.
+
+After that verified push, all six owned R3 worktrees are inspected clean and
+fully merged, then removed with their local task branches and exact worktree
+metadata. Ignored contents are accounted for: Maven output, Python caches,
+generated rewind-probe reports and ROM image-cache manifests, post-checkout
+symlinks, and an identical config example. No unknown source or unmerged
+change is discarded. Unrelated worktree metadata is identical before/after.
+
+Both owned main wrapper/status pairs are removed after their exact category
+runs were consumed and acknowledged. No owning process remains. The three
+durable native-capture directories remain outside the repository. The seven
+known main dirty/untracked paths and their bytes, unrelated jobs/requests,
+and app-owned saved agent conversations are preserved. No provider state is
+deleted because those conversations belong to the app, not this run.
+
+This final follow-up changes audit prose only; completed engine checks are
+not repeated. Its prepared message and lifecycle registry remain through the
+verified push, then the small lifecycle cleanup receipt records their exact
+teardown outside the removed registry.
