@@ -52,13 +52,14 @@ class TestSszBridgeCheckpointCapture {
             default -> null;
         };
         var settings = new GameplayCaptureSession.Settings(width, main, follower, donor, donorRom, null, null);
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 10, 0, settings);
             assertConfiguration(width, donor);
             GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
             boolean bridgeReleased = false;
             for (int frame = 0; frame < 1800; frame++) {
-                step(session, frame > 200);
+                step(session, drawing, frame > 200);
                 assertFalse(GameServices.sprites().getMainPlayable().getDead(), "arrival must reach the bridge alive");
                 var state = S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).orElseThrow();
                 var checkpoint = GameServices.level().getCheckpointState();
@@ -67,10 +68,12 @@ class TestSszBridgeCheckpointCapture {
                     break;
                 }
             }
+            drawing.checkpoint(session);
             assertTrue(bridgeReleased, "ordinary input must finish the bridge and publish its checkpoint");
             assertCheckpoint();
             for (int cycle = 0; cycle < 2; cycle++) {
-                for (int frame = 0; frame < 30; frame++) step(session, false);
+                for (int frame = 0; frame < 30; frame++) step(session, drawing, false);
+                drawing.checkpoint(session);
                 var objects = GameServices.level().getObjectManager();
                 var oldState = S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).orElseThrow();
                 var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
@@ -81,7 +84,7 @@ class TestSszBridgeCheckpointCapture {
                 assertTrue(GameServices.sprites().getMainPlayable().applyPitDeath());
                 boolean reloaded = false;
                 for (int frame = 0; frame < 1000; frame++) {
-                    step(session, false);
+                    step(session, drawing, false);
                     if (objects != GameServices.level().getObjectManager()) {
                         var incomingRewind = SessionManager.getCurrentGameplayMode().getRewindController();
                         assertTrue(incomingRewind == null || incomingRewind.currentFrame() < history,
@@ -90,6 +93,7 @@ class TestSszBridgeCheckpointCapture {
                         break;
                     }
                 }
+                drawing.checkpoint(session);
                 assertTrue(reloaded, "production death lifecycle must reload SSZ");
                 assertCheckpoint();
                 assertConfiguration(width, donor);
@@ -97,11 +101,12 @@ class TestSszBridgeCheckpointCapture {
                 assertEquals(0xC6C, GameServices.sprites().getMainPlayable().getCentreY());
                 assertNotSame(oldState, S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).orElseThrow());
                 for (int frame = 0; frame < 180; frame++) {
-                    step(session, false);
+                    step(session, drawing, false);
                     assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
                             .noneMatch(object -> object instanceof SszArrivalControllerObjectInstance && !object.isDestroyed()),
                             "Last_star_post_hit must suppress the arrival throughout the restart");
                 }
+                drawing.checkpoint(session);
                 assertFalse(GameServices.sprites().getMainPlayable().getDead());
                 assertFalse(GameServices.sprites().getMainPlayable().isObjectControlled());
                 assertEquals(main.equals("tails") ? CharacterKey.TAILS : CharacterKey.SONIC, GameServices.sprites().getMainPlayable().characterKey());
@@ -119,7 +124,7 @@ class TestSszBridgeCheckpointCapture {
                 int startX = GameServices.sprites().getMainPlayable().getCentreX();
                 boolean sawExtendedBridge = false;
                 for (int frame = 0; frame < 180; frame++) {
-                    step(session, true);
+                    step(session, drawing, true);
                     for (var bridge : GameServices.level().getObjectManager().activeObjectsOfType(
                             com.openggf.game.sonic3k.objects.SszCutsceneBridgeObjectInstance.class)) {
                         assertTrue(bridge.extendedForTest(), "restart bridge must enter loc_4501A");
@@ -127,6 +132,7 @@ class TestSszBridgeCheckpointCapture {
                         sawExtendedBridge = true;
                     }
                 }
+                drawing.checkpoint(session);
                 assertFalse(GameServices.sprites().getMainPlayable().getDead(), "bridge approach stays playable");
                 assertTrue(sawExtendedBridge, "ordinary movement reaches the restarted bridge");
                 assertTrue(GameServices.sprites().getMainPlayable().getCentreX() > startX + 8, "restart is playable");
@@ -152,8 +158,8 @@ class TestSszBridgeCheckpointCapture {
         assertEquals(0, GameServices.level().getCurrentAct());
     }
 
-    private static void step(GameplayCaptureSession session, boolean right) {
+    private static void step(GameplayCaptureSession session, RouteFrameDrawing drawing, boolean right) {
         session.step(new Bk2FrameInput(0, right ? AbstractPlayableSprite.INPUT_RIGHT : 0, 0, false, ""));
-        session.render();
+        drawing.afterStep(session);
     }
 }

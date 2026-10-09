@@ -75,6 +75,29 @@ class TestPhase2SampleModIntegration {
         }
     }
 
+    @Test void destroyedCreatorBadnikSubmitsTheGamesBadnikHitSound() throws Exception {
+        Path jar = buildInitializedSample();
+        try (CatalogFixture fixture = load(jar, true)) {
+            GameModule base = new Sonic2GameModule();
+            GameModule resolved = resolver(base, fixture).resolveForLaunch(base,
+                    new GameplayLaunchRequest("s2", "sonic", List.of()),
+                    ModuleResolutionService.LaunchPolicy.STANDARD);
+            var requests = new com.openggf.game.sonic2.audio.Sonic2SoundRequestPipeline<String>();
+            StubObjectServices services = new StubObjectServices() {
+                @Override public GameModule gameModule() { return resolved; }
+                @Override public void playSfx(int soundId) { requests.submitSound(soundId, "badnik"); }
+            };
+            ObjectSpawn spawn = new ObjectSpawn(96, 96, 0, 0, 0, false, 96, -1,
+                    "phase2-sample", "phase2-sample:sample-badnik");
+            AbstractBadnikInstance badnik = (AbstractBadnikInstance) resolved.createObjectRegistry().create(spawn);
+            badnik.setServices(services);
+            badnik.onPlayerAttack(null, new TouchResponseResult(1, 8, 8, TouchCategory.ENEMY));
+            assertTrue(badnik.isDestroyed());
+            assertEquals(com.openggf.game.sonic2.constants.Sonic2AudioConstants.SFX_BADNIK_HIT,
+                    requests.snapshot().sfx0().requestByte());
+        }
+    }
+
     @Test
     @RequiresRom(SonicGame.SONIC_2)
     void realCreatorSampleLoadsZoneObjectRewindAndKeyedSave() throws Exception {

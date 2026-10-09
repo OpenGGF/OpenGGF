@@ -4,6 +4,10 @@ Date: 2026-10-08. Engine/input baseline: `6124a524eef9b42efb800d5bcb95376147507c
 on `develop`. Investigation branch: `feature/ai-graal-native-mod-feasibility-20261008`.
 Host: Linux x86_64, kernel `7.2.8-2-cachyos`; Java sources compiled with Java 21.
 
+Later source-attributed qualification follows below, including the
+[Windows refresh](#windows-refresh-2026-10-09); the initial sixteen-mod study
+does not describe the coverage of those later artifacts.
+
 ## Decision
 
 **Proceed with an explicitly experimental Community Edition prototype; keep the
@@ -489,3 +493,415 @@ CLI/exit-status handling, temporary-output cleanup and documentation links are
 checked separately. The new reproducer qualifies neither full gameplay nor an
 engine suite. Tool preflight passed with `LUA_BIN=/usr/bin/lua5.4`; the default
 `lua` was 5.5 and correctly failed that unrelated engine prerequisite.
+
+### Experimental Linux friends ZIP follow-up (2026-10-09)
+
+The Linux successor starts from `8668a901216717d8f3696945a95bbfe8e628b652`,
+including the new Starfall Frontier, Eggman's Sky and Flappy Tails examples.
+Its builder and extra Java sources live outside Maven source roots under
+[`tools/modding/native-linux`](../../../tools/modding/native-linux/README.md).
+It reuses the independently qualified isolated hosted feature/substitution.
+Initial tool-only checkpoints leave stock Java unchanged; the gameplay follow-up
+also corrects the bounded overlay/scaffold defects documented below. POM, API
+surface/version, hooks, testing tools and release workflow remain unchanged.
+
+The pinned CE Linux archive SHA-256 is
+`05ccbbe783210b6886ff7b08fcd0b061c5dce4852b05db87284fc0e24abb08e2`.
+Compilation uses an owned rootless Ubuntu 22.04.5 base archive
+(`242cd8898b33ea806ef5f13b1076ed7c76f9f989d18384452f7166692438ff1a`),
+with Ubuntu's GCC 11/glibc 2.35 build packages, rather than this rolling host's
+newer glibc. GraalVM Community licensing and corresponding-source obligations
+remain those established above; full CE notices accompany the ZIP.
+
+Qualification extends registration with real native OpenGL framebuffers,
+production discovery/loader/fault boundaries, bounded level input sequences,
+mod-owned zone selection and both campaign acts, scene debug routes, lifecycle
+reopening and registered module-state roundtrips. Prepared creator audio is
+installed before level loading. Sitar's asynchronous preparation must reach PLAY
+with nonzero final PCM; elapsed wall time is allowed for preparation rather than
+mistaking a fast artificial tick loop for a completed performance. A new
+ROM-library lease is created for each scene reopening. Data overrides are checked
+against their actual prepared music/art targets. These are smoke checks; complete
+campaign, networking, full-world rewind and recipient performance remain outside
+this evidence. The generated static-member contract and ordinary-exit negative
+controls remain mandatory before creator code executes.
+
+The category plan selects 3,073 ordinary classes because these standalone sources
+are unclassified. That fallback is disproportionate here: no production/test/build
+selection input changes, and the actual new executable/archive consumers are
+exercised directly. Use the native contract, all-mod registration/boot/rendered
+checks, archive/launcher regression controls and separate fresh normal guards.
+This is focused validation, not a green whole-engine suite claim. Initial tool
+preflight found the default Lua was not 5.4; `LUA_BIN=/usr/bin/lua5.4` passed the
+Java/Lua/PowerShell preflight without executing tests.
+
+Final binary, source attribution and terminal qualification results are recorded
+below when completed; this initial implementation checkpoint is not a native
+artifact qualification.
+
+The first Linux image at tool source `da8b70bae0c0999a0b93b3a57e2760b46401c9f9`
+passed the member audit, missing-member controls and Eggman's Sky registration and
+engine boot, then aborted (exit 134) during its rendered route. The fatal method
+was `java.lang.runtime.ObjectMethods.bootstrap`, invoked by generated record
+methods. Package preservation is exact: `java.lang` does not retain
+`java.lang.runtime`. A separately compiled runtime-loaded `BootstrapControl`
+reproduced that same fatal without graphics. It exercises record equality,
+hashing, string formatting and a pattern-switch bootstrap. It is excluded from
+the image classpath to prevent closed-world analysis from masking the fault, and
+removed before immutable distribution assembly. The correction preserves the
+small JDK bootstrap package; successful registration alone remains insufficient
+evidence of gameplay support.
+
+The corrected image's bootstrap control and Eggman's Sky, Flappy Tails and Hello
+Scene rendered checks passed. Infinite Sonic then rejected
+`ModBackedGamePatch$1.getZoneRegistry()` with `NoSuchMethodException`: its owner
+boundary queries concrete engine module methods reflectively. Static creator
+references alone cannot infer this host reflection seam. The standalone contract
+generator now accepts explicit implementation roots; Linux requests `GameModule`,
+retaining concrete and anonymous engine implementations plus their ancestors.
+A bytecode control covers an otherwise unreferenced implementation. Applied to
+the earlier image, the extended audit rejects 143 missing members with ordinary
+exit 1; an isolated contract row also rejects the exact missing wrapper getter.
+This detects the demonstrated reflection omission before creator execution.
+
+Matched JVM gameplay exposed two additional issues. The generated badnik sample
+submitted native sound byte zero with a nonempty payload on destruction. Its
+scaffold and checked samples now resolve `GameSound.BADNIK_HIT` through the active
+game's sound map. The art-overlay provider omitted nine existing title-card and
+runtime-art admission methods, so respawn fell into unsupported defaults. It now
+forwards unchanged leases, scalar identities, ownership kinds, policies and base
+exceptions. Nested-overlay and stale-lease regression tests reproduced the old
+failure; no new admission algorithm or public API is introduced. The Flappy
+qualification also applies the creator's required launch team through the normal
+save/session launch context, rather than selecting Sonic for a Tails-only route.
+
+Validation scope was reassessed for these localized production consumers. The
+combined runner plan still selects 3,073 classes. Proportionate validation uses
+the affected art/scaffold/mod integration tests, S3K title-card and rewind tests,
+ROM loading invariants and mapping checks, fresh normal structural guards and
+the actual all-mod native rendered qualification. The forwarding fix preserves
+the base provider's existing timing/ownership rules; no PLC decoding, registry
+entries, ROM offsets, shared physics, build policy or API contract changes.
+This remains focused validation. Baseline at `8668a9012` passes all 49 cases in
+the seven directly affected existing suites, without skips. The added regression
+tests fail on old code: both admission controls reproduce unsupported defaults;
+the badnik control reproduces the zero-byte/payload rejection.
+
+While the final image waited in the queue, Sitar Hero passed the corrected
+image's native performance route with offline PCM peak 5,962. A ROM-free native
+standalone check exposed another exact JDK-package omission: the runtime-generated
+proxy invoked `java.lang.reflect.Proxy.<init>(InvocationHandler)` and aborted
+with exit 134. The runtime-loaded regression fixture now also generates a proxy
+for its own interface; Linux preserves `java.lang.reflect` explicitly. This is
+an experimental image correction, with no further engine/API change.
+
+Image `17babc7b7` passed the runtime-loaded record/switch/proxy fixture and the
+first three rendered scenes, then Infinite Sonic reached its terrain loader and
+raised `AbstractMethodError` at `Arrays.stream(profile).min()`. The interface
+metadata existed, but the primitive-stream implementation was not executable.
+A separately runtime-loaded control reproduces the same ordinary exit 1; its
+JVM counterpart passes. Linux now preserves `java.util.stream` explicitly, and
+the fixture also covers min/max, distinct/sorted arrays and reference-to-primitive
+filter/map/sum dispatch. This is another exact-package omission, not a change to
+Infinite Sonic or the engine's terrain algorithm. Member metadata audit and
+runtime invocation controls answer different questions and both remain required.
+
+The remaining checks on that image passed fourteen other mods (seventeen of
+nineteen total), including both standalone samples and Sitar's PCM route. Slay
+the Robotnik aborted with `Cannot load undefined field` for
+`java.nio.charset.StandardCharsets.UTF_8`. The image's native compiler had folded
+the field away from runtime-loaded access. Linux separately preserves
+`java.nio.charset`; the runtime-loaded fixture now roundtrips a non-ASCII UTF-8
+string through the same constant and codecs. Neither failed image is distributed.
+
+The corrected image at composed source `751fdc66d1e61f9526b3dbac98c29d01b037292c`
+passes the stream/UTF-8 fixture. Infinite Sonic then reaches progress saving and
+aborts on `StandardCopyOption.REPLACE_EXISTING`; Slay progresses past UTF-8 and
+aborts on `StringWriter.<init>()`. All other seventeen rendered checks pass again.
+The static-field omission is independently rejected by a single-row metadata
+audit with ordinary exit 1. Static input analysis is now extended rather than
+adding only the latest observed package.
+
+Linux opts into `--jdk-members`: every direct JDK method, constructor and static
+field reference in creator bytecode, including dormant callbacks, method handles
+and nested dynamic constants, enters the same startup contract. Symbolic owners
+resolve through JDK hierarchy without class initialization; constructors never
+resolve through ancestors. The declaring packages enter a generated preservation
+list. Existing Windows/default generation remains unchanged. Controls cover
+dormant JDK fields/handles, inherited methods, constructor non-inheritance, missing
+fields and unchanged default mode. The actual nineteen-mod contract grows to
+15,844 entries / 1,210 types, with eighteen derived JDK packages. Applied to image
+`751fdc66d`, it rejects 71 missing members with ordinary exit 1 before creator code.
+This also catches the dormant `Level.WARNING` field and file-save constants.
+
+Metadata lookup still does not prove virtual invocation or compiler-generated
+bootstrap behavior. The separately runtime-loaded fixture retains record, switch,
+proxy, UTF-8 and primitive/reference stream execution checks, and now exercises a
+writer plus file copy and atomic replacement in an owned temporary directory.
+Reflection-only/dynamically named JDK calls are outside static reference discovery;
+the known reflection seam and direct native gameplay checks remain necessary.
+
+These corrections change only standalone experiment tools. The immutable Maven
+engine/SDK and nineteen mod JARs remain pinned to `751fdc66d`; their bytes are reused
+for the image-only successor. Native-tool source is independently frozen during
+preparation, recorded in `build-info.json`, and linked beside engine/mod source in
+the distribution. This avoids conflating an unchanged engine artifact's commit
+stamp with the experimental compiler configuration. The updated category plan at
+`751fdc66d` against actual published destination `ed45a1990` selects 3,075 ordinary
+classes. The same proportionate scope applies; the incoming route-drawing changes
+affect only tests/documentation and were independently published/qualified.
+
+The image-only attempt at native-tool source `777a6545312b881786a21f28886e203483ade707`
+stops before analysis: the preservation request cannot find `java.util.logging`.
+The compiler's default module graph does not expose that JDK package even though
+the source contract resolves it on the JVM. The native-image help documents
+`--add-modules` as adding root modules; the builder now explicitly resolves
+`java.logging`. This is a compiler-input correction, with unchanged engine/SDK/mod
+bytes and no native artifact from the failed attempt.
+
+Resolving that module clears the package error, but analysis at `c681ddd73`
+terminates with `OutOfMemoryError: GC overhead limit exceeded` in the existing
+5 GiB heap. The pinned compiler's `--expert-options-detail=Preserve` offers
+package/module/path selectors, without an individual-class selector. The
+generator's complete direct-member coverage is retained. The image successor
+uses an 8 GiB heap and four threads, submitted through the existing exclusive
+queue mode (`OPENGGF_MAVEN_QUEUE=serial`) because it exceeds the normal shared
+reservation. Other running jobs drain normally; nothing is cancelled. No engine,
+mod, testing-policy or queue implementation changes accompany this correction.
+
+#### Terminal Linux artifact qualification
+
+The successor at native-tool source
+`2698bac036c4bbfdf9b41dda6ef762d56db5198d` compiled successfully at
+15:49:52 BST on 2026-10-09, in 1m 53s, with peak compiler RSS 8.07 GiB.
+The executable SHA-256 is
+`9c9193eddf0aba09b43697bdf7f5c4ea6033920639238bdee4e9f7a8fe0a1a12`.
+Engine, SDK and all nineteen mod JARs remain from the clean composed source
+`751fdc66d1e61f9526b3dbac98c29d01b037292c`, incorporating published
+`ed45a1990cf6baf089be7d167ea114341870c3a1` without runtime conflicts.
+The engine JAR SHA-256 is
+`a3e5ab4fb1c48b99139c42a074c86d0952cc649668381a447341343d35982e66`;
+SDK SHA-256 is
+`912cd95ab513967757f6cf4fb83429cb87bfd7b86a2cdb0fdcb5c29b5f90bbab`.
+
+| Completed check | Source attribution | Observed result |
+| --- | --- | --- |
+| Seven existing affected suites, original S2/S3K ROMs | Baseline `8668a9012` | 49 cases, zero failures/errors/skips |
+| Same suites with the three reproducing regressions | Production fix `85d8b1851` | 52 cases, zero failures/errors/skips |
+| S3K load/bootstrap/decoding, title-card/rewind, PLC mapping and renderer invariants | `85d8b1851` | 180 cases, zero failures/errors/skips |
+| Separate fresh normal `-Pguards` | `85d8b1851` | 674 cases, zero failures/errors/skips |
+| Contract generator and JVM audit | Engine/mods `751fdc66d`, tools `2698bac03` | 15,844 entries / 1,210 types; dormant-member and constructor-resolution controls pass |
+| Native startup audit and deliberately absent field/method | Native image `2698bac03` | Full audit passes; both absent controls exit 1 ordinarily |
+| Separately runtime-loaded JDK execution fixture | Same image; fixture excluded from image classpath | Records, switch, proxy, UTF-8, streams, writer, copy and atomic replacement pass |
+| Matched JVM/native registration | Same nineteen immutable mod JARs | All 19 results match exactly |
+| Actual engine boot capability/trust/registration | Same image | All 17 code-bearing mods pass |
+| Native rendered gameplay | Same image, original ROMs rehashed | All 19 pass, including Infinite Sonic and Slay; no owner findings/disabled owners; registered module-state roundtrips and scene reopening where applicable |
+| Actual ZIP extracted into a path with spaces, launched from `/` | Final archive below | 1,406 file hashes; all 19 shortcuts pass; CRC, ELF architecture, modes, exploded-mod bytes and ROM exclusion pass |
+| ROM-free native gameplay from the extracted ZIP | No JDK or ROM mounts | Both authored standalone samples pass |
+| Normal `Engine.main` through `Launch standalone.sh` | Same ZIP contents in a disposable path with spaces | Remains running for 12 seconds with no JDK/ROM mounts; owned process deliberately stopped; bounded startup check only |
+
+The final native rendering used an Ubuntu 22.04 rootfs with no JDK, a cleared
+environment and Mesa software OpenGL. Original ROM SHA-1/CRC32 identities matched
+the repository's canonical table; checks used those original absolute paths.
+The repository's ordinary post-checkout hook created shared-development links
+inside the task worktree. Those links are generated setup outputs, were not used
+as test prerequisites, and are removed with the worktree while original inputs
+are preserved. No ROM bytes are copied or included in the friends artifact.
+Final captures explicitly retain Tails through Flappy death/respawn/title-card
+phases and finish alive in LEVEL at frame 599. Both campaign acts are exercised.
+Offline PCM peaks are 5,962 for Sitar, 9,608 for the music override and 6,727 for
+the campaign. Infinite/Slay/Flappy final framebuffers were visually inspected.
+These are representative gameplay checks, not complete campaign/network/driver
+or full-world rewind certification, and not an ordinary whole-suite pass.
+
+Artifact: `OpenGGF-experimental-linux-x64-with-mods.zip`, 147,884,606 bytes;
+SHA-256 `4a21cbfee8903f5f4ea9c3528854c02e02e39471b31f3a3fc7a9bcd1c5610ddf`.
+The executable and all fifteen shared libraries were checked with `readelf`;
+the highest required GLIBC symbol is 2.34. The supported baseline remains glibc
+2.35 / Ubuntu 22.04, with X11/XWayland and OpenGL drivers. Shell shortcuts have
+executable ZIP permissions. Configuration expects `s1.gen`, `s2.gen`, `s3k.gen`.
+Full engine/GraalVM notices and corresponding-source links are included; no ROM,
+temporary regression mod, Java installation, capture or source save is packaged.
+
+Reproduction uses the committed Linux README's queued Maven package/input steps,
+`build_linux.py --stage prepare`, then the exclusive queued `--stage compile`
+with the pinned toolchain/rootfs. `--stage qualify --runtime-rootfs ... --roms`
+takes the three original absolute ROM paths and an external `--captures` directory.
+This artifact used `target/linux-friends-inputs-r4` and
+`target/linux-friends-native-r7`; those directory labels are local staging names,
+not source versions. Durable final ZIP, checksum, qualification/ELF/archive
+summaries and final PNG/CSV/audio observations are retained in the external task
+directory `openggf-native-linux-2026-10-09` (local path represented by
+`$OPENGGF_LINUX_CAPTURE_ROOT`).
+Failed/rehearsal images and raw logs remain temporary and are removed at cleanup.
+
+#### Integrated Linux delivery verification
+
+Integration into the main workspace's existing `develop` branch was conflict-free
+at `14e0e2b63499bde2ea6b8973c49c2b49df103279`, against actual destination
+`ed45a1990cf6baf089be7d167ea114341870c3a1`. All seven unrelated dirty/untracked
+main paths were preserved, including file-byte and submodule-state comparisons.
+The artifact's engine/mod source and native-tool pins remain those above.
+
+Post-integration verification at that unchanged source:
+
+- Queued lean focused tests completed at 16:02:29 BST: **232 cases**, zero
+  failures/errors/skips. All 17 suite report identities and their counts match
+  the development runs. The original seven-suite 49-case baseline has zero
+  negatives; its existing suite identities remain present, with exactly three
+  additional reproducing regression cases.
+- A separate fresh normal queued `-Pguards test` completed at 16:07:07 BST:
+  **87 suite reports / 674 cases**, zero failures/errors/skips, Maven exit 0.
+  Every guard suite identity and count matches the development run.
+- Actual main-launch Java 21/Lua 5.4/PowerShell preflight passed with
+  `LUA_BIN=/usr/bin/lua5.4`; the preflight itself executes no tests.
+
+The focused command uses `maven_queue.py --lean -B -Dmse=off test`, the original
+absolute ROM properties, and these exact selectors (no profile narrowing):
+
+```text
+TestModArtOverrides,TestPhase2SampleModIntegration,TestPhase3StandaloneSampleIntegration,TestProjectScaffolder,TestSampleFlappyIntegration,TestSonic3kTitleCardManagerRewind,TestSonic3kTitleCardKosQueue,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSonic3kPlcArtRegistry,TestSonic3kPlcArtRewindSnapshot,TestSonic3kTitleCardTeardownModel,TestPatternSpriteRendererCorruptionGuard
+```
+
+The full fallback selection is 3,075 ordinary classes; the documented
+proportionate-validation decision above applies to this combined delivery.
+No full ordinary-suite pass is claimed. Final native gameplay and archive checks
+are independent experimental-domain evidence, rather than substitutes for an
+unreported broad run. Final captures/ZIP are preserved externally; rehearsal
+captures and regenerable captured runtime stores have been removed. Publication
+is followed by removal of the clean, fully merged task worktree/local branch and
+consumed temporary logs, without touching foreign jobs or source inputs.
+
+## Windows refresh, 2026-10-09
+
+The Windows rebuild starts from published Linux-delivery source
+`b84398a29771fdaf4198c10d34dd181b4ff058b0`, in isolated
+`bugfix/ai-native-windows-mods-20261009`. Stock engine, tests, API, POM, hooks,
+testing policy and normal release build remain unchanged. The three original ROM
+paths are used only locally; no ROM is uploaded to Actions or included in a ZIP.
+
+The previous Windows ZIP (source `f5de9524a943d55191dbf798d405ca8e8e20ca9e`,
+SHA-256 `382e9d183e89c49e11da9f7116c0cb8770d17be97d3f9aa45f9e25228f304d8c`)
+was preserved. Under Wine 11.19 it passes its original 14,992-entry / 1,097-type
+audit. Substituting the current 19-mod, 15,844-entry contract rejects 280 missing
+members with ordinary exit 1. These include newer engine/mod references as well
+as omitted `StandardCharsets`, `StandardCopyOption`, concrete Sonic modules and
+wrapper methods; the total must not be attributed entirely to one original bug.
+A separately compiled runtime-loaded bootstrap fixture aborts the old PE with
+exit 3: `java.lang.runtime.ObjectMethods.bootstrap` was never compiled, and the
+VM specifically recommends preserving `java.lang.runtime`. This independently
+reproduces the Linux record-bootstrap omission in the Windows image under Wine.
+
+The Windows builder now applies the proven Linux contract options
+`--implementation-root=com.openggf.game.GameModule --jdk-members`, derives the
+JDK preservation packages, retains implicit bootstrap/reflection/stream/charset
+packages, resolves `java.logging`, and uses an 8 GiB compilation heap. The shared
+runtime fixture is absent from image analysis and removed before shipping.
+Registration PASS lines must match the JVM exactly. Every mod shortcut and the
+normal launcher are actually invoked with diagnostic arguments on the Windows
+builder. The Windows entry point also compiles the existing platform-neutral
+OpenGL gameplay checker; its historical Linux package name does not select any
+OS-specific runtime behavior. `qualify_wine.py` consumes the immutable Windows
+artifact and runs the same representative gameplay recipes locally through the
+extracted batch shortcuts, with a private prefix and path containing spaces.
+
+Validation scope: the untouched ordinary engine inputs retain the prior
+Linux-delivery qualification. The change-based plan against `b84398a29` selects
+3,075 ordinary classes via its unclassified standalone-tool/workflow fallback.
+For this bounded experimental image correction, direct native image/contract/
+runtime/packaging checks and fresh structural guards replace that disproportionate
+ordinary rerun. Java 21 / Lua 5.4 / PowerShell preflight passes with
+`LUA_BIN=lua5.4`; the initial unqualified default Lua launch was rejected before
+tests. Development-tree `maven_queue.py -B -Dmse=off -Pguards test` completed
+2026-10-09 16:17:30Z: 674 cases, zero failures/errors/skips, Maven exit 0.
+Portable Windows and Linux packaging controls pass (three cases each).
+This is focused validation, not a whole ordinary-suite pass.
+
+Actual Windows compilation/runtime checks and Wine rendered qualification were
+pending at correction checkpoint `03b4dec34`. Their terminal evidence follows.
+
+### Terminal Windows qualification and delivery
+
+The correction integrated conflict-free and was pushed as
+`0d3d9c1d6cfa76f8ba451599e7a54239a9f6a4a1`. Its delta from `b84398a29` is
+confined to the standalone Windows tool/workflow, their tests and prose; there
+is zero stock engine/test/API/POM/hook/testing-tool or normal release delta.
+The actual destination's queued fresh `-B -Dmse=off -Pguards test` finished
+2026-10-09 16:24:22Z, exit 0: 87 fresh suite identities, 674 cases, no failures,
+errors or skips, matching the development run by identity and case count.
+The main report directory also held unrelated stale ordinary reports; only
+the 87 suites named by this invocation's terminal log were counted and consumed.
+The Windows and Linux portable packaging suites also pass at the destination.
+
+[Windows build run 37958994125](https://github.com/OpenGGF/OpenGGF/actions/runs/37958994125)
+is terminal **success** at that exact source, including both required jobs.
+On `windows-latest` with the pinned Windows CE/MSVC toolchain, the image compiled
+in 6m29s at 8.35 GiB peak RSS. The actual Windows process passed:
+
+- Contract regression controls and the complete 15,844-entry / 1,210-type audit.
+- Deliberate missing field and method controls rejected with ordinary exit 1.
+- The separately runtime-loaded JDK fixture: records, pattern switches, generated
+  proxy, UTF-8, writers, file copy/atomic replacement, and primitive/reference streams.
+- All 19 exact JVM/native registration comparisons; actual engine boot for all
+  17 code mods through their batch shortcuts. Both data-mod shortcuts and
+  `OpenGGF.bat` passed their diagnostics from a different working directory.
+
+The required independent Ubuntu guard job finished 2026-10-09 16:39:17Z:
+87 fresh report identities / 674 cases, zero failures/errors/skips, Maven exit 0.
+The runner's clean Windows ZIP has 1,406 entries / 139,602,042 bytes, SHA-256
+`af1c0e1f78b04d492d32e95b1f001c066a0b3d716ae84f7b20c74d5710c5d598`.
+Engine/mod and native-builder source pins both equal `0d3d9c1d6cfa76f8ba451599e7a54239a9f6a4a1`;
+`OpenGGF.exe` SHA-256 is
+`ddbf6a9c14ba2704714be14bd7b2f5294d4b18778f5237599f9653588054bc43`.
+
+Local `qualify_wine.py` consumed that immutable ZIP, verified the same three
+original ROM identities, and ran every extracted `.bat` through the Windows PE
+with Wine 11.19 / Mesa software OpenGL, from a path containing spaces. All 19
+rendered smoke checks passed without creator findings or disabled owners, with
+module-state roundtrip and scene reopen where applicable. The existing shared
+recipes cover the title/scene/level paths recorded in the Linux qualification,
+including Eggman's Sky planets, Flappy Tails classic/Sonic play, tower waves,
+Slay combat/shop/map, Starfall cavern/warden and Sitar performance/pause/resume.
+Level samples advance 600 frames and exercise additional acts where supplied.
+Sonic Survivors' capture includes its camp/menu and level updates; it does not
+certify a complete arena run. Eighty-three PNGs and twenty state CSVs were
+retained under `$OPENGGF_WINDOWS_CAPTURE_ROOT/native-captures`, alongside the
+structured qualification and a contact sheet. Sitar's offline PCM peak was
+5,962; this establishes produced audio, not physical device latency or quality.
+The primitive sample Flappy screenshot matches the qualified Linux sample
+pixel-for-pixel; its authored test artwork is not a Windows rendering regression.
+
+A matched local fixture check used the exact same bootstrap JAR bytes as the
+old-image negative: refreshed PE exit 0 / successful registration versus old
+PE exit 3 / unreachable `ObjectMethods.bootstrap`. The normal extracted
+`Launch standalone.bat` also invoked `Engine.main` and remained alive for a
+bounded 12-second startup observation without Java or ROMs beside the bundle;
+only that owned prefix was deliberately stopped afterward. This establishes
+normal startup through the shortcut, not a complete interactive route.
+
+The deliverable was reconstructed from immutable Windows inputs to exclude
+every probe-created config/cache/save, then had separately labelled Wine
+evidence added to `build-info.json` and the README. Final ZIP CRC, complete
+per-file checksums, all mod hashes, native PE hash, 19 launchers, CE/project
+licences and `s1.gen` / `s2.gen` / `s3k.gen` configuration verified. It contains
+no ROMs, JDK or diagnostic bootstrap mod. Output:
+`$OPENGGF_WINDOWS_CAPTURE_ROOT/OpenGGF-experimental-windows-x64-with-mods.zip`,
+1,406 entries / 142,464,410 bytes, SHA-256
+`9ac1ea0642071bd908b4fb6f3e093535fc0fd79f42d4ef7c584676d9e872f1b1`.
+Its checksum sidecar is retained, and the prior 2026-10-08 ZIP remains untouched.
+
+**Limits:** actual Microsoft Windows evidence covers compilation, packaging,
+JDK runtime semantics, registration and boot/shortcuts. Representative rendered
+gameplay was checked under Wine, not on a physical Windows graphics/audio stack.
+This does not certify every route, long session, rewind boundary, multiplayer
+peer, graphics driver or future third-party mod. Static member scans cannot
+prove arbitrary dynamically named reflective members; bootstrap/dispatch
+controls and real gameplay remain necessary alongside metadata audits.
+No whole ordinary-suite or production-native-support claim is made.
+
+The terminal follow-up changes only this research Markdown; it does not alter
+any executable, packaged source or CI qualification input. Consumed Maven/native
+logs and owned Wine state are temporary; rendered captures, final ZIP and light
+source-attributed evidence are retained outside the task worktree. Main's seven
+unrelated dirty/untracked paths were independently byte/state checked and
+preserved through integration.

@@ -44,16 +44,17 @@ class TestFbzTailsColdRouteCapture {
         boolean bossSeen = false, signSeen = false, resultsSeen = false;
         int reload = -1;
         int replayWindows = 0;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 4, 0, settings);
             assertEquals(320, GameServices.camera().getWidth());
             // The recording starts after the production one-shot setup pass.
             // Consume it with an ordinary neutral GameLoop step, as the capture does.
             session.step(null);
-            session.render();
+            drawing.draw(session);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 var player = session.player();
                 assertInstanceOf(Tails.class, player);
                 assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
@@ -95,10 +96,11 @@ class TestFbzTailsColdRouteCapture {
                 checked.addAll(pending);
                 replayWindows++;
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= horizon; n++) {
                     session.step(movie.getFrame(frame + n));
-                    session.render();
+                    drawing.draw(session);
                 }
                 var forward = registry.capture();
                 for (int cycle = 0; cycle < 2; cycle++) {
@@ -107,13 +109,14 @@ class TestFbzTailsColdRouteCapture {
                     session.restoreInputHistory(movie.getFrame(frame));
                     for (int n = 1; n <= horizon; n++) {
                         session.step(movie.getFrame(frame + n));
-                        session.render();
+                        drawing.draw(session);
                     }
                     same(forward, registry.capture(), "replay " + pending + " cycle " + cycle);
                 }
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             for (int spot : spots) assertTrue(checked.contains("frame-" + spot));
             assertTrue(checked.containsAll(Set.of("flight", "floating-platform", "launcher",
                     "upper-lift", "snake-platform", "signpost", "results", "checkpoint-5")), checked.toString());
@@ -130,7 +133,7 @@ class TestFbzTailsColdRouteCapture {
             int releasedX = session.player().getCentreX();
             for (int n = 0; n < 24; n++) {
                 session.step(right);
-                session.render();
+                drawing.draw(session);
             }
             assertTrue(session.player().getCentreX() > releasedX + 8, "ordinary movement in Act 2");
             assertFalse(session.player().getDead());

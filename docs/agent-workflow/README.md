@@ -92,12 +92,22 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 
 ## Test harness helpers
 
+- `tools/modding/native-linux/build_linux.py` uses a pinned rootless Ubuntu/CE
+  toolchain for the experimental Linux ZIP, preserving the isolated Windows
+  feature. Its native gameplay probe uses production loaders, real OpenGL,
+  prepared music, scene lifecycle and module-state checks for every packaged mod.
+  Origin: [Linux friends ZIP, 2026-10-09](../../tools/modding/native-linux/README.md).
+
 - `tools/modding/native-windows/build_inputs.py` rebuilds all friends mods with
   the real converters and package validator; `build_windows.py` compiles a
   separately labelled Windows native image, audits retained members, qualifies
-  registration and the actual engine boot path, and assembles the ZIP with
+  exact JVM/native registration, runtime-loaded JDK bootstrap controls and the
+  actual engine boot path through `.bat` shortcuts, and assembles the ZIP with
   per-mod shortcuts and retained licences. Origin: [experimental Windows ZIP,
   2026-10-08](../../tools/modding/native-windows/README.md).
+  `qualify_wine.py` consumes that immutable Windows ZIP, checks every extracted
+  shortcut through representative OpenGL gameplay using original local ROMs,
+  and adds explicitly labelled Wine compatibility evidence to a clean archive.
 
 - `tools/modding/native-feasibility/probe.py` builds closed-world, Crema and optional
   JIT controls around the production mod classloader, then compiles two external
