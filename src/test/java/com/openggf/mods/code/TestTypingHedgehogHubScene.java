@@ -49,8 +49,8 @@ import org.junit.jupiter.api.io.TempDir;
  * and drives its hub scene against a scripted scene context: typed menus, the story's
  * hand-offs into gameplay and into another supplied game, results merged on return, a Boss
  * Rush carried on to its next boss, a Typing School drill played to its grade, options saved,
- * and every screen drawn without faults. ROM art is a stand-in; the ROM-backed smoke test is
- * {@link TestTypingHedgehogHubRom}.
+ * and every screen drawn without faults at the mod's 320-pixel width and at 400. ROM art is a
+ * stand-in; the ROM-backed smoke test is {@link TestTypingHedgehogHubRom}.
  */
 class TestTypingHedgehogHubScene {
     private static final Path RESOURCES = Path.of("examples/typing-of-the-hedgehog/src/main/resources");
@@ -238,14 +238,16 @@ class TestTypingHedgehogHubScene {
 
     @Test void everyScreenDrawsInEveryGameWithoutFaults() throws Exception {
         for (String game : List.of("s1", "s2", "s3k")) {
-            Fixture f = new Fixture(game, List.of(game), new HashMap<>(), Set.of());
-            f.debug("demo");
-            for (String screen : List.of("title", "menu", "story", "arcade", "endless", "rush", "school",
-                    "drill:REFLEX", "drill:BOSS_TRAINING", "options", "records:ACTS", "records:SCHOOL", "records:KEYS",
-                    "results:sample", "results:fail")) {
-                assertTrue(f.debug(screen), screen);
-                f.step(120);
-                f.drawAll();
+            for (int width : List.of(320, 400)) {
+                Fixture f = new Fixture(game, List.of(game), new HashMap<>(), Set.of(), width);
+                f.debug("demo");
+                for (String screen : List.of("title", "menu", "story", "arcade", "endless", "rush", "school",
+                        "drill:REFLEX", "drill:BOSS_TRAINING", "options", "records:ACTS", "records:SCHOOL",
+                        "records:KEYS", "results:sample", "results:fail")) {
+                    assertTrue(f.debug(screen), screen);
+                    f.step(120);
+                    f.drawAll();
+                }
             }
         }
     }
@@ -309,7 +311,9 @@ class TestTypingHedgehogHubScene {
                     "game " + p[0] + "\nzone " + p[1] + "\nact " + p[2] + "\nprogram 600:8\n"));
         }
         Class<?> assetsType = loader.loadClass("typinghog.play.CourseAssets");
-        Object assets = assetsType.getConstructors()[0].newInstance(lexicon, plates, Map.of(), sounds, rails);
+        // CourseAssets(lexicon, plates, casts, sounds, props, rails): the hub reads only the
+        // lexicon, sounds and rails.
+        Object assets = assetsType.getConstructors()[0].newInstance(lexicon, plates, Map.of(), sounds, Map.of(), rails);
         Class<?> hubAssetsType = loader.loadClass("typinghog.hub.HubAssets");
         UnaryOperator<String> reader = TestTypingHedgehogHubScene::read;
         Object hubAssets = hubAssetsType.getMethod("read", UnaryOperator.class).invoke(null, reader);
@@ -345,11 +349,18 @@ class TestTypingHedgehogHubScene {
         final List<SceneLaunch> relaunched = new ArrayList<>();
         final Set<Integer> pressed = new HashSet<>();
         final List<String> audio = new ArrayList<>();
+        final int width;
         SceneLaunch launch;
         String typed = "";
         long tick;
 
         Fixture(String game, List<String> games, Map<String, String> saves, Set<String> railed) throws Exception {
+            this(game, games, saves, railed, 320);
+        }
+
+        Fixture(String game, List<String> games, Map<String, String> saves, Set<String> railed, int width)
+                throws Exception {
+            this.width = width;
             this.game = game;
             this.games = games;
             this.saves = saves;
@@ -381,15 +392,31 @@ class TestTypingHedgehogHubScene {
 
         String screen() throws Exception { return (String) scene.getClass().getMethod("screen").invoke(scene); }
 
+        /** Draws a frame and checks that no image (text included) leaves the screen sideways. */
         void drawAll() {
             SceneCanvas canvas = mock(SceneCanvas.class);
-            when(canvas.width()).thenReturn(400);
+            when(canvas.width()).thenReturn(width);
             when(canvas.height()).thenReturn(224);
+            List<String> outside = new ArrayList<>();
+            org.mockito.Mockito.doAnswer(call -> {
+                float dx = call.getArgument(5), dw = call.getArgument(7);
+                if (dx < -1 || dx + dw > width + 1) outside.add(dx + "+" + dw);
+                return null;
+            }).when(canvas).drawRegion(any(), anyInt(), anyInt(), anyInt(), anyInt(), org.mockito.ArgumentMatchers.anyFloat(),
+                    org.mockito.ArgumentMatchers.anyFloat(), org.mockito.ArgumentMatchers.anyFloat(),
+                    org.mockito.ArgumentMatchers.anyFloat(), any());
             scene.draw(this, canvas);
+            try {
+                assertTrue(outside.isEmpty(), "drawn past the " + width + "-pixel screen on " + screen() + ": " + outside);
+            } catch (AssertionError e) {
+                throw e;
+            } catch (Exception e) {
+                throw new AssertionError(e);
+            }
         }
 
         @Override public String ownerModId() { return "typing-of-the-hedgehog"; }
-        @Override public int width() { return 400; }
+        @Override public int width() { return width; }
         @Override public int height() { return 224; }
         @Override public long ticks() { return tick; }
         @Override public boolean buttonDown(int buttons) { return false; }

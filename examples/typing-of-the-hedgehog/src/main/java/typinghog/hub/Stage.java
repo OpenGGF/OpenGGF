@@ -18,6 +18,7 @@ final class Stage {
     private static final int HEADROOM = 120;
     private static final int MAX_RISE = 24;
     private static final int SLACK = 160;
+    private static final int CANDIDATES = 5;
 
     private final SceneBackdrop backdrop;
     private final SceneImage foreground;
@@ -49,13 +50,43 @@ final class Stage {
                 stages = rom.levelStages(zone, act, width, HEADROOM, MAX_RISE);
             }
             if (stages.isEmpty()) return new Stage(backdrop, null, null, 0, 0, width, 0);
-            SceneLevelStage stage = stages.get(0);
-            int top = stage.floorY() - FLOOR_ROW;
-            SceneImage fg = rom.levelForeground(zone, act, stage.x(), top, width + slack, height);
-            return new Stage(backdrop, fg, stage, stage.x(), top, width, slack);
+            // The most open of a few candidate stretches, so the zone's backdrop shows round
+            // Sonic rather than a wall of terrain.
+            SceneLevelStage best = null;
+            SceneImage bestFg = null;
+            int bestTop = 0;
+            double bestOpen = -1;
+            int candidates = Math.min(CANDIDATES, stages.size());
+            for (int i = 0; i < candidates; i++) {
+                SceneLevelStage stage = stages.get(i * stages.size() / candidates);
+                int top = stage.floorY() - FLOOR_ROW;
+                SceneImage fg = rom.levelForeground(zone, act, stage.x(), top, width + slack, height);
+                double open = openness(fg);
+                if (open > bestOpen) {
+                    best = stage;
+                    bestFg = fg;
+                    bestTop = top;
+                    bestOpen = open;
+                }
+            }
+            return new Stage(backdrop, bestFg, best, best.x(), bestTop, width, slack);
         } catch (RuntimeException unavailable) {
             return new Stage(null, null, null, 0, 0, width, 0);
         }
+    }
+
+    /** The share of transparent pixels above the floor row: how much sky a stretch leaves. */
+    static double openness(SceneImage fg) {
+        if (fg == null) return 0;
+        int clear = 0, total = 0;
+        int rows = Math.min(fg.height(), FLOOR_ROW - 8);
+        for (int y = 0; y < rows; y += 4) {
+            for (int x = 0; x < fg.width(); x += 4) {
+                total++;
+                if ((fg.pixel(x, y) >>> 24) == 0) clear++;
+            }
+        }
+        return total == 0 ? 0 : clear / (double) total;
     }
 
     boolean pictured() { return backdrop != null; }

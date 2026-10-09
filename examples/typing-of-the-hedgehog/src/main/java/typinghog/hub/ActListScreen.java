@@ -196,7 +196,7 @@ final class ActListScreen implements Screen {
             return;
         }
         int shake = t - shakeTick < 10 ? (int) Math.round(Math.sin((t - shakeTick) * 2.2) * 3) : 0;
-        int listW = 186;
+        int listW = listWidth(w);
         hub.font.shadow(c, subtitle(), 10, 31, Gfx.GOLD, 1);
         Gfx.panel(c, 6 + shake, LIST_TOP - 4, listW + 6, VISIBLE * ROW_H + 8);
         for (int i = scroll; i < Math.min(rows.size(), scroll + VISIBLE); i++) {
@@ -210,18 +210,29 @@ final class ActListScreen implements Screen {
             }
             StoryBook.Stop stop = row.stop();
             hub.font.shadow(c, HubScene.gameShort(stop.game()), 14 + shake, y + 2, Gfx.DIM, 1);
-            String label = stop.title().toUpperCase() + " " + (stop.act() + 1);
+            int room = (listW - (mode == LaunchIntent.Mode.BOSS_RUSH ? 38 : 0) - 34) / HubFont.ADVANCE;
+            String label = fit(stop.title().toUpperCase(), room - 2) + " " + (stop.act() + 1);
             hub.font.shadow(c, label, 40 + shake, y + 2, on ? Gfx.WHITE : Gfx.TEXT, 1);
             if (on && words.matched(i) > 0 && words.spelling(i).equalsIgnoreCase(stop.title())) {
-                hub.font.draw(c, label.substring(0, words.matched(i)), 40 + shake, y + 2, Gfx.TYPED, 1);
+                hub.font.draw(c, label.substring(0, Math.min(label.length(), words.matched(i))), 40 + shake, y + 2,
+                        Gfx.TYPED, 1);
             }
-            if (mode == LaunchIntent.Mode.BOSS_RUSH) stars(hub, c, 150 + shake, y + 1, hub.profile.stars(stop.game(), stop.zone(), stop.act()));
+            if (mode == LaunchIntent.Mode.BOSS_RUSH) stars(hub, c, listW - 34 + shake, y + 1,
+                    hub.profile.stars(stop.game(), stop.zone(), stop.act()));
         }
         if (scroll > 0) hub.font.centred(c, "^", 6 + listW / 2, LIST_TOP - 10, Gfx.GOLD, 1);
         if (scroll + VISIBLE < rows.size()) hub.font.centred(c, "v", 6 + listW / 2, LIST_TOP + VISIBLE * ROW_H + 4, Gfx.GOLD, 1);
         table(hub, c, w, t);
         hub.footer(c, words.buffer(), mode == LaunchIntent.Mode.BOSS_RUSH ? "TYPE A BOSS OR A GAME, THEN GO" : "TYPE AN ACT, THEN GO");
     }
+
+    /** {@code text} cut to {@code chars} characters, ending in a stop when cut. */
+    private static String fit(String text, int chars) {
+        return text.length() <= chars ? text : text.substring(0, Math.max(1, chars - 1)).strip() + ".";
+    }
+
+    /** The list's width: 186 on a 400-pixel screen, under half of narrower ones. */
+    private static int listWidth(int width) { return Math.min(186, width * 15 / 32); }
 
     private String subtitle() {
         return switch (mode) {
@@ -245,7 +256,7 @@ final class ActListScreen implements Screen {
 
     private void table(HubScene hub, SceneCanvas c, int w, long t) {
         Row row = rows.get(cursor);
-        int x = 206, y = LIST_TOP - 4, pw = w - x - 8;
+        int x = listWidth(w) + 20, y = LIST_TOP - 4, pw = w - x - 6;
         Gfx.panel(c, x, y, pw, VISIBLE * ROW_H + 8 + 30);
         String table;
         String heading;
@@ -283,12 +294,12 @@ final class ActListScreen implements Screen {
                 Profile.Entry e = list.get(i);
                 int colour = i == 0 ? Gfx.GOLD : Gfx.TEXT;
                 hub.font.shadow(c, (i + 1) + ".", x + 8, ry, Gfx.DIM, 1);
-                hub.font.shadow(c, Long.toString(e.score()), x + 28, ry, colour, 1);
-                hub.font.shadow(c, e.grade(), x + 96, ry, typinghog.hub.model.Grades.colour(e.grade()), 1);
+                hub.font.shadow(c, Long.toString(e.score()), x + 24, ry, colour, 1);
+                hub.font.shadow(c, e.grade(), x + 24 + Math.max(44, (pw - 24) / 3), ry, typinghog.hub.model.Grades.colour(e.grade()), 1);
                 hub.font.right(c, Math.round(e.wpm()) + " WPM", x + pw - 8, ry, Gfx.DIM, 1);
             } else {
                 hub.font.shadow(c, (i + 1) + ".", x + 8, ry, 0x60808898, 1);
-                hub.font.shadow(c, "-----", x + 28, ry, 0x60808898, 1);
+                hub.font.shadow(c, "-----", x + 24, ry, 0x60808898, 1);
             }
         }
     }

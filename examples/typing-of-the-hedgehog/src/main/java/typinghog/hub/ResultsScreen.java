@@ -197,10 +197,12 @@ final class ResultsScreen implements Screen {
         } else {
             hub.backdrop(c, 0.6f);
         }
-        Hero.sonic(c, hub.art, hub.game, HubArt.ANIM_WAIT, t, 62, 190, false, 1f);
+        // The panel takes up to 276 pixels on the right; Sonic waits in what is left.
+        int pw = Math.min(276, w - 84);
+        int home = w - pw - 8;
+        Hero.sonic(c, hub.art, hub.game, HubArt.ANIM_WAIT, t, home / 2 + 4, 190, false, 1f);
         float slide = Math.min(1, age / (float) SLIDE);
-        int px = 116 + (int) ((1 - slide) * (w - 100));
-        int pw = w - 124;
+        int px = home + (int) ((1 - slide) * (w - home + 16));
         Gfx.panel(c, px, 10, pw, 196);
         String head = switch (r.mode()) {
             case ENDLESS -> "WAVES SURVIVED";
@@ -233,7 +235,14 @@ final class ResultsScreen implements Screen {
         if (finished(age)) {
             String hint = rushNext != null ? "ENTER: NEXT BOSS" : r.mode() == LaunchIntent.Mode.STORY && r.cleared()
                     ? "ENTER: MAP   NEXT: NEXT STOP   AGAIN: REPLAY" : "ENTER: CONTINUE   AGAIN: REPLAY";
-            if ((t / 20) % 3 != 0) hub.font.centred(c, hint, px + pw / 2, 194, Gfx.WHITE, 1);
+            if ((t / 20) % 3 != 0) {
+                var lines = hub.font.wrap(hint.replace("   ", "  "), pw - 12, 1);
+                int hy = 196 - (lines.size() - 1) * 10;
+                for (String line : lines) {
+                    hub.font.centred(c, line, px + pw / 2, hy, Gfx.WHITE, 1);
+                    hy += 10;
+                }
+            }
         }
     }
 

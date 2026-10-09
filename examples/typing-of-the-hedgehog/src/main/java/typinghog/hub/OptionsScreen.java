@@ -188,7 +188,7 @@ final class OptionsScreen implements Screen {
         hub.backdrop(c, 0.55f);
         hub.header(c, "OPTIONS", "SAVED AS YOU GO");
         int shake = t - shakeTick < 10 ? (int) Math.round(Math.sin((t - shakeTick) * 2.2) * 3) : 0;
-        int x = 40, pw = w - 80;
+        int x = w >= 380 ? 40 : 20, pw = w - 2 * x;
         Gfx.panel(c, x - 8 + shake, TOP - 6, pw + 16, ROWS * ROW_H + 10);
         for (int i = 0; i < ROWS; i++) {
             int y = TOP + i * ROW_H;

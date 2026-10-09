@@ -105,7 +105,13 @@ final class MenuScreen implements Screen {
         }
     }
 
-    private static int panelX(HubScene hub) { return Math.max(150, hub.width() - 250); }
+    /** The menu panel's width: room for TYPING SCHOOL at double size, at most 240. */
+    private static int panelWidth(int width) { return Math.min(240, width - 114); }
+
+    private static int panelX(HubScene hub) { return hub.width() - panelWidth(hub.width()) - 10; }
+
+    /** Sonic waits in the space left of the panel. */
+    private static int sonicX(HubScene hub) { return Math.min(70, (panelX(hub) - 6) / 2); }
 
     private static String describe(int item) {
         return switch (item) {
@@ -124,8 +130,9 @@ final class MenuScreen implements Screen {
         long t = hub.ticks;
         hub.backdrop(c, 0.35f);
         int w = c.width();
-        int floor = hub.stage.floorRow(70, t);
-        Hero.sonic(c, hub.art, hub.game, HubArt.ANIM_WAIT, t, 70, floor, false, 1f);
+        int sx = sonicX(hub);
+        int floor = hub.stage.floorRow(sx, t);
+        Hero.sonic(c, hub.art, hub.game, HubArt.ANIM_WAIT, t, sx, floor, false, 1f);
         hub.header(c, "MAIN MENU", "EMERALDS " + hub.profile.totalEmeralds() + "   LIFETIME WPM "
                 + Math.round(hub.profile.lifetimeWpm()));
         int x = panelX(hub), pw = w - x - 10;
