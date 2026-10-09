@@ -66,7 +66,7 @@ public final class Effects {
     void kill(Course course, int x, int y, int points) {
         var stagehand = course.stagehand();
         var boom = stagehand.add("explosion", x, y);
-        boom.bucket = 5;
+        boom.bucket = 1;
         props.add(new Prop(boom, Kind.EXPLOSION));
         var animal = stagehand.add("animal", x, y);
         Prop hop = new Prop(animal, Kind.ANIMAL);
@@ -74,7 +74,7 @@ public final class Effects {
         hop.vy = -0x400;
         props.add(hop);
         var score = stagehand.add("points", x, y - 8);
-        score.bucket = 6;
+        score.bucket = 1;
         score.frame = switch (points) { case 100 -> 0; case 200 -> 1; case 500 -> 2; default -> 3; };
         props.add(new Prop(score, Kind.POINTS));
     }
@@ -82,14 +82,14 @@ public final class Effects {
     /** An explosion alone, as a beaten boss throws off while it burns. */
     void blast(Course course, int x, int y) {
         var boom = course.stagehand().add("explosion", x, y);
-        boom.bucket = 6;
+        boom.bucket = 1;
         props.add(new Prop(boom, Kind.EXPLOSION));
     }
 
     /** A score sprite rising from {@code x, y} (rescues and bonuses), without an explosion. */
     void score(Course course, int x, int y, int points) {
         var score = course.stagehand().add("points", x, y - 8);
-        score.bucket = 6;
+        score.bucket = 1;
         score.frame = switch (points) { case 100 -> 0; case 200 -> 1; case 500 -> 2; default -> 3; };
         props.add(new Prop(score, Kind.POINTS));
     }

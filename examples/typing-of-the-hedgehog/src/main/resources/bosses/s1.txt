@@ -10,9 +10,10 @@
 *  flame     eggman           0  0   *=3:8,9 lunge=1:8,9 defeat=- flee=2:9,8,11,12,11,12,9,8
 
 # Green Hill: the checkered wrecking ball (Obj48: Map_GBall 0/1 alternating, chain links
-# Map_Swing_GHZ frame 1 hanging from the craft), on a shorter chain so it swings at Sonic's height.
+# Map_Swing_GHZ frame 1 on palette line 0, make_art_tile(ArtTile_GHZ_MZ_Swing,0,0), hanging from
+# the craft), on a shorter chain so it swings at Sonic's height.
 0  hover     -                6  80
-0  ball      boss_ball        0  24  *=2:0,1 swing=64,60,256 links=swing_ghz:1:0,16,32,48
+0  ball      boss_ball        0  24  *=2:0,1 swing=64,60,256 links=swing_ghz:1:0,16,32,48:0
 0  ship      eggman           0  0   *=15:0
 0  face      eggman           0  0   idle=5:1,2 open=3:1,2 lunge=1:1,2 hit=31:5 laugh=4:3,4 defeat=15:7 flee=3:6,1
 0  flame     eggman           0  0   *=3:8,9 lunge=1:8,9 defeat=- flee=2:9,8,11,12,11,12,9,8

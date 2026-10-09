@@ -41,6 +41,10 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_UP;
 public final class Course implements GameplayFrameController, RewindSnapshottable<Integer> {
     enum Phase { IDLE, ENTRY, RUN, STAND, STAND_CLEAR, BOSS, DYING, TALLY, LEAVING }
 
+    /** Rows an attract demo plays before handing back to the title (two minutes). */
+
+    static final int DEMO_ROWS = 7200;
+
     static final int START_RINGS = 10;
     static final int START_LIVES = 3;
     static final int STAND_CLEAR_ROWS = 50;
@@ -81,6 +85,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     private SplittableRandom random;
     private SplittableRandom demoRandom;
     private int demoWait;
+    private long demoStartRow;
     private typinghog.core.Lexicon.Picker picker;
     private final KeyStats keyStats = new KeyStats();
     private final RunTags runTags = new RunTags();
@@ -103,9 +108,20 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         announcer.update(rows, asset -> GameServices.audio().playNamespacedSfx(
                 new com.openggf.audio.StreamedMusicPort.SfxRef(TypingIds.MOD, asset)));
         if (phase == Phase.IDLE) enter(Phase.ENTRY);
-        if (course.keyPressed(GLFW_KEY_ESCAPE) && phase != Phase.TALLY && phase != Phase.LEAVING) paused = !paused;
         String typed = course.typedText();
         boolean backspace = course.keyPressed(GLFW_KEY_BACKSPACE);
+        if (intent.demo()) {
+            // An attract demo ends on any key (or after DEMO_ROWS) and records nothing.
+            if (phase == Phase.LEAVING) return false;
+            if (!typed.isEmpty() || backspace || course.keyPressed(GLFW_KEY_ENTER) || course.keyPressed(GLFW_KEY_ESCAPE)
+                    || rows - demoStartRow > DEMO_ROWS) {
+                enter(Phase.LEAVING);
+                titleRequest = true;
+                return false;
+            }
+            typed = "";
+        }
+        if (course.keyPressed(GLFW_KEY_ESCAPE) && phase != Phase.TALLY && phase != Phase.LEAVING) paused = !paused;
         if (paused) {
             hud.pauseInput(this, typed, course.keyPressed(GLFW_KEY_ENTER), course.keyPressed(GLFW_KEY_UP),
                     course.keyPressed(GLFW_KEY_DOWN));
@@ -195,6 +211,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         random = new SplittableRandom(intent.seed());
         demoRandom = new SplittableRandom(intent.seed() ^ 0xDE30L);
         demoWait = 30;
+        demoStartRow = rows;
         picker = assets.lexicon().new Picker(intent.seed() ^ 0x5EED, 48);
         keyStats.clear();
         announcer.clear();
@@ -370,7 +387,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
                 card.wpm(), card.accuracy(), card.bestChain(), card.kills(), card.hitsTaken(), card.rescues(),
                 Math.max(0, rings), tally.grade(), tally.total(), cleared && bossDefeated && intent.mode() == LaunchIntent.Mode.STORY,
                 keyStats.hits(), keyStats.misses());
-        storage.write(ActResult.FILE, result.encode());
+        if (!intent.demo()) storage.write(ActResult.FILE, result.encode());
         enter(Phase.LEAVING);
         titleRequest = true;
     }
@@ -486,7 +503,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
 
     /** The course at a glance; {@code railRow} is the next program row the rail will play. */
     public record View(String phase, int railRow, int nextStand, int rings, int lives, long score, int chain,
-                       int kills, double wpm, java.util.List<TargetView> targets, int visuals, boolean paused) { }
+                       int kills, double wpm, java.util.List<TargetView> targets, int visuals, int sprites,
+                       boolean paused) { }
 
     public View view() {
         java.util.List<TargetView> targets = new java.util.ArrayList<>();
@@ -498,7 +516,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         }
         return new View(phase.name(), cursor == null ? -1 : cursor.row(), nextStand, rings, lives,
                 card == null ? 0 : card.score(), card == null ? 0 : card.chain(), card == null ? 0 : card.kills(),
-                card == null ? 0 : card.wpm(), java.util.List.copyOf(targets), stagehand.all().size(), paused);
+                card == null ? 0 : card.wpm(), java.util.List.copyOf(targets), stagehand.all().size(),
+                stagehand.all().stream().mapToInt(v -> v.sprites.isEmpty() ? 1 : v.sprites.size()).sum(), paused);
     }
 
     // ---- views for the encounter and HUD -------------------------------------------------------

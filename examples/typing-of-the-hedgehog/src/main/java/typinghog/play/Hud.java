@@ -119,6 +119,10 @@ public final class Hud {
         }
         if (course.phase() == Course.Phase.TALLY && tally != null) drawTally(canvas, course, width, course.phaseRows());
         if (course.paused()) drawPause(canvas, width, height);
+        if (course.intent().demo() && (presented / 32) % 2 == 0) {
+            String demo = "DEMO - PRESS ANY KEY";
+            font.shadowed(canvas, demo, (width - font.width(demo)) / 2, 206, GOLD, SHADOW);
+        }
         if (flashRows > 0) {
             flashRows--;
             canvas.fill(0, 0, width, height, (flashColour & 0x00FFFFFF) | ((flashRows * 18) << 24));

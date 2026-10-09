@@ -35,7 +35,7 @@
 7      Cluckoid       mhz_cluckoid        SHOOTER    false      24    16    7     0,1,2,3,4,5,6,7,8,9,10,11,12,13
 8      Skorp          soz_skorp           RUSHER     false      21    14    9     1,0,1,2
 8      Sandworm       soz_sandworm        SURFACER   false      8     12    9     0,2
-8      Rockn          soz_rockn           ARMOURED   false      16    8     8     0,1,0,2
+8      Rock'n         soz_rockn           ARMOURED   false      16    8     8     0,1,0,2
 9      Fireworm       lrz_fireworm        SEGMENTED  false      12    12    6     1,2,3
 9      Iwamodoki      lrz_iwamodoki       ARMOURED   false      16    13    7     0,1,2,3
 9      Toxomister     lrz_toxomister      SHOOTER    false      8     8     8     1

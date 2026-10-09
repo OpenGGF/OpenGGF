@@ -300,6 +300,18 @@ two-sprite Sonic and Tails roster); (3) typed text from a non-US layout reaches 
   when a window closes unanswered (wind-up, dash, hit, laughing retreat), shudders
   back when struck, and when beaten explodes in place for 120 rows before fleeing
   right with its escape flame, as the stock bosses do.
+- Draw order: the engine draws display list 0 front-most (as the ROM's BuildSprites),
+  and slotless auxiliary objects in one list draw in no fixed order (`activeObjects` is an
+  identity map). A boss is therefore one compound visual whose single puppet draws the
+  rig's sprites in file order (list 3, behind Sonic, as the stock bosses), with `back`
+  parts in a second visual one list further back. Explosions and score sprites use list 1.
+- Rig art gaps found while compiling the tables (from reading the engine, not yet run):
+  S3K `robotnik_ship` is not registered in CNZ, MHZ, LRZ, DEZ or DDZ, nor in act 1 of
+  MGZ, FBZ and SOZ; `cnz_end_boss` loads only behind the stock boss's camera gate; S2
+  Metropolis act 3 (ROM zone $05) registers no `mtz_boss`. Possible stock-boss rendering
+  bugs seen on the way: the engine's MTZ boss face frames ($D/$E/$F) disagree with
+  `Ani_obj53` ($C/$D normal, $E/$F laugh, $10 hit, $11 defeat) and it draws frame 0 (jet
+  tiles the sheet lacks) as the pod; the CNZ boss treats face frames 6/7 as a propeller.
 - A `demo=true` intent makes the course type for the player (the locked word's next
   letter, else the most urgent word's, about ten keys a second, on its own random
   stream). It drives captures, and the hub can use it for an attract demo.

@@ -31,7 +31,10 @@ public final class Boss {
 
     private final Style style;
     private final BossRig rig;
-    private final List<List<Stagehand.Visual>> visuals = new ArrayList<>();
+    /** Per rig part, its sprites (chain links first); they live on {@link #front} or {@link #behind}. */
+    private final List<List<Stagehand.Sprite>> sprites = new ArrayList<>();
+    private Stagehand.Visual front;
+    private Stagehand.Visual behind;
     private boolean spawned;
     private boolean facingRight;
     private BossRig.Mood mood = BossRig.Mood.IDLE;
@@ -136,15 +139,22 @@ public final class Boss {
         x = startX;
         y = startY;
         stateRow = 0;
+        // One compound visual per layer keeps the rig's file order exact. The craft sits in the
+        // ROM bosses' display list 3, behind Sonic (2); back parts one list further back.
+        front = course.stagehand().add(rig.parts().isEmpty() ? "eggman" : rig.parts().getFirst().artKey(), x, y);
+        front.bucket = 3;
+        behind = course.stagehand().add(front.artKey, x, y);
+        behind.bucket = 4;
         for (BossRig.Part part : rig.parts()) {
-            List<Stagehand.Visual> sprites = new ArrayList<>();
+            Stagehand.Visual layer = part.back() ? behind : front;
+            List<Stagehand.Sprite> list = new ArrayList<>();
             for (int i = 0; i < part.sprites(); i++) {
-                Stagehand.Visual visual = course.stagehand().add(i < spritesOfLinks(part) ? part.links().artKey()
-                        : part.artKey(), x, y);
-                visual.bucket = part.back() ? 4 : 5;
-                sprites.add(visual);
+                boolean link = i < spritesOfLinks(part);
+                Stagehand.Sprite sprite = layer.sprite(link ? part.links().artKey() : part.artKey());
+                sprite.palette = link ? part.links().palette() : part.palette();
+                list.add(sprite);
             }
-            visuals.add(sprites);
+            sprites.add(list);
         }
         course.say(switch (style) {
             case QUIZ -> VoiceLine.ROBOTNIK_INTRO_QUIZ;
@@ -212,10 +222,14 @@ public final class Boss {
         int mirror = facingRight ? -1 : 1;
         // A struck craft shudders back; a beaten one shakes while it burns.
         int ox = recoil * mirror / 2 + (defeated && defeatRows <= EXPLODE_ROWS ? (defeatRows & 2) - 1 : 0);
-        int blink = flash > 0 ? flash : 0;
-        for (int p = 0; p < visuals.size(); p++) {
+        for (Stagehand.Visual layer : new Stagehand.Visual[] {front, behind}) {
+            layer.blink = flash;
+            layer.x = x;
+            layer.y = y;
+        }
+        for (int p = 0; p < sprites.size(); p++) {
             BossRig.Part part = rig.parts().get(p);
-            List<Stagehand.Visual> sprites = visuals.get(p);
+            List<Stagehand.Sprite> parts = sprites.get(p);
             BossRig.Anim anim = part.anim(mood);
             int ax = x + ox + part.dx() * mirror, ay = y + part.dy();
             int links = spritesOfLinks(part);
@@ -224,10 +238,9 @@ public final class Boss {
                 angle = Math.toRadians(part.swing().degrees()
                         * Math.sin(2 * Math.PI * row / Math.max(1, part.swing().periodRows())));
             }
-            for (int i = 0; i < sprites.size(); i++) {
-                Stagehand.Visual visual = sprites.get(i);
+            for (int i = 0; i < parts.size(); i++) {
+                Stagehand.Sprite visual = parts.get(i);
                 visual.visible = anim != null;
-                visual.blink = blink;
                 visual.flipX = facingRight ^ part.flip();
                 if (i < links) {
                     int d = part.links().distances()[i];

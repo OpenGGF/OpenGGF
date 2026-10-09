@@ -18,7 +18,24 @@ import java.util.Set;
  * delete itself on its next update.
  */
 public final class Stagehand {
-    /** One drawn thing. Mutable: the course moves and animates it each row. */
+    /** One sprite of a compound visual, in world coordinates. */
+    public static final class Sprite {
+        public String artKey;
+        public int frame;
+        public int x;
+        public int y;
+        public boolean flipX;
+        public boolean visible = true;
+        /** Palette line override, or -1 for the sheet's own. */
+        public int palette = -1;
+        Sprite(String artKey) { this.artKey = artKey; }
+    }
+
+    /**
+     * One drawn thing. Mutable: the course moves and animates it each row. A visual with
+     * {@link #sprites} is compound: its one puppet draws them back to front in list order, which
+     * separate puppets in one bucket cannot promise (slotless objects draw in no fixed order).
+     */
     public static final class Visual {
         final int id;
         public String artKey;
@@ -30,8 +47,17 @@ public final class Stagehand {
         /** Rows left to blink (hit flash or a dying fade); odd rows are hidden. */
         public int blink;
         public boolean visible = true;
-        /** 0 back .. 7 front, the engine's render buckets. */
+        /** The engine's render bucket: 0 front-most .. 7 back (ROM display lists; Sonic is 2). */
         public int bucket = 4;
+        /** A compound visual's sprites, back to front; empty for a single sprite. */
+        public final List<Sprite> sprites = new ArrayList<>();
+
+        /** Adds a sprite to this compound visual, in front of those already added. */
+        public Sprite sprite(String key) {
+            Sprite sprite = new Sprite(key);
+            sprites.add(sprite);
+            return sprite;
+        }
         Visual(int id, String artKey) { this.id = id; this.artKey = artKey; }
         public int id() { return id; }
     }

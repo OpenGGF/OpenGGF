@@ -21,8 +21,9 @@ import java.util.Map;
  * them. An animation is {@code mood=delay:frames} or {@code mood=-} (hidden); see
  * {@link Part#anim} for how unnamed moods fall back. Options:
  * {@code back} draws the part behind the rest of the boss's sprites; {@code flip} mirrors the
- * part itself; {@code swing=length,degrees,periodRows} hangs it on a pendulum from its offset,
- * and {@code links=artKey:frame:distances} draws chain links along the rope;
+ * part itself; {@code pal=N} draws it on palette line N where the stock object overrides its
+ * sheet's line; {@code swing=length,degrees,periodRows} hangs it on a pendulum from its offset,
+ * and {@code links=artKey:frame:distances[:palette]} draws chain links along the rope;
  * {@code orbit=radius,periodRows,count} circles {@code count} copies round its offset. Zone
  * {@code *} is the rig for zones without their own.
  *
@@ -40,12 +41,12 @@ public final class BossRig {
 
     record Swing(int length, int degrees, int periodRows) { }
 
-    record Links(String artKey, int frame, int[] distances) { }
+    record Links(String artKey, int frame, int[] distances, int palette) { }
 
     record Orbit(int radius, int periodRows, int count) { }
 
-    record Part(String name, String artKey, int dx, int dy, boolean back, boolean flip, Map<Mood, Anim> anims,
-                Anim fallback, Swing swing, Links links, Orbit orbit) {
+    record Part(String name, String artKey, int dx, int dy, boolean back, boolean flip, int palette,
+                Map<Mood, Anim> anims, Anim fallback, Swing swing, Links links, Orbit orbit) {
         /**
          * The part's animation in {@code mood}, or null when it is hidden. A mood the part does
          * not name borrows its parent's: lunge from open, open, hit and laugh from idle, flee from
@@ -116,6 +117,7 @@ public final class BossRig {
             Map<Mood, Anim> anims = new EnumMap<>(Mood.class);
             Anim fallback = null;
             boolean back = false, flip = false;
+            int palette = -1;
             Swing swing = null;
             Links links = null;
             Orbit orbit = null;
@@ -123,12 +125,14 @@ public final class BossRig {
                 String token = f[i];
                 if (token.equals("back")) back = true;
                 else if (token.equals("flip")) flip = true;
+                else if (token.startsWith("pal=")) palette = Integer.parseInt(token.substring(4));
                 else if (token.startsWith("swing=")) {
                     int[] v = ints(token.substring(6), ",");
                     swing = new Swing(v[0], v[1], v[2]);
                 } else if (token.startsWith("links=")) {
                     String[] l = token.substring(6).split(":");
-                    links = new Links(l[0], Integer.parseInt(l[1]), ints(l[2], ","));
+                    links = new Links(l[0], Integer.parseInt(l[1]), ints(l[2], ","),
+                            l.length > 3 ? Integer.parseInt(l[3]) : -1);
                 } else if (token.startsWith("orbit=")) {
                     int[] v = ints(token.substring(6), ",");
                     orbit = new Orbit(v[0], v[1], v[2]);
@@ -148,7 +152,7 @@ public final class BossRig {
             }
             if (links != null && swing == null) throw new IllegalArgumentException("boss line " + number + ": links need a swing");
             zones.computeIfAbsent(zone, ignored -> new ArrayList<>()).add(new Part(f[1], f[2], Integer.parseInt(f[3]),
-                    Integer.parseInt(f[4]), back, flip, Map.copyOf(anims), fallback, swing, links, orbit));
+                    Integer.parseInt(f[4]), back, flip, palette, Map.copyOf(anims), fallback, swing, links, orbit));
         }
         Map<Integer, BossRig> rigs = new HashMap<>();
         zones.forEach((zone, list) -> {

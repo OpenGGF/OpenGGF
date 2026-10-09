@@ -1,0 +1,134 @@
+# Sonic 3 & Knuckles boss rigs (format: typinghog.play.BossRig). Zones are ROM zone ids: 0 AIZ ... 12 DDZ,
+# 22 the LRZ boss act. Robotnik is Map_RobotnikShip (robotnik_ship): head 0/1 at AniRaw_RobotnikHead
+# delay 5, hurt 2, defeated 3 (Obj_RobotnikHeadMain), Egg Mobile 5, cockpit tops 8/9/$A/$B, flame 6
+# at (+$1E,0) (Child1_MakeRoboShipFlame); the head rides (0,-$1C) above its ship (Child1_MakeRoboHead).
+# S3K has no laugh frame, so laugh replays the head cycle faster. Offsets are the engine boss classes'.
+# Art gaps: robotnik_ship is not registered in CNZ, MHZ, LRZ, DEZ or DDZ, nor in act 1 of MGZ, FBZ
+# and SOZ; cnz_end_boss loads only behind the stock boss's camera gate (queueCnzEndBossArt).
+
+# Every zone without its own rig: the Egg Mobile (Obj_RobotnikShip, subtype 5).
+*  face      robotnik_ship      0   -28  idle=5:0,1 open=3:0,1 lunge=1:0,1 hit=31:2 laugh=2:0,1 defeat=15:3
+*  ship      robotnik_ship      0   0    *=15:5
+*  flame     robotnik_ship      30  0    idle=- lunge=1:6 defeat=- flee=1:6
+
+# Angel Island: the flame craft (Obj_AIZEndBoss; AizEndBossShipChild: cockpit 8 at (0,-$14), escape
+# ship 5; AizEndBossArmChild arms 1/$2A at (+-$14,-4); byte_69B0E nozzle 6 retracted, 4 extended).
+0  face      robotnik_ship      0   -48  idle=5:0,1 open=3:0,1 lunge=1:0,1 hit=31:2 laugh=2:0,1 defeat=15:3
+0  cockpit   robotnik_ship      0   -20  *=15:8 flee=-
+0  escape    robotnik_ship      0   -20  idle=- defeat=- flee=15:5
+0  flame     robotnik_ship      30  -20  idle=- defeat=- flee=1:6
+0  body      aiz_end_boss       0   0    *=15:0 flee=-
+0  arm       aiz_end_boss       20  -4   *=15:1 flee=-
+0  arm2      aiz_end_boss       -20 -4   *=15:42 flee=-
+0  nozzle    aiz_end_boss       -36 12   *=15:6 open=- defeat=-
+0  flamer    aiz_end_boss       -48 -4   idle=- open=15:4 defeat=-
+
+# Hydrocity: the Screw Mobile (Obj_HCZEndBoss: ship 5 at (0,$C), housing 1 at (0,$1C), turbine
+# 2-5 at (0,$24), depth charges 6/7 at ($23,$12), ($1B,$A), ($13,$A)).
+1  face      robotnik_ship      0   -16  idle=5:0,1 open=3:0,1 lunge=1:0,1 hit=31:2 laugh=2:0,1 defeat=15:3
+1  charge    hcz_end_boss       35  18   *=15:6 lunge=2:6,7 defeat=-
+1  ship      robotnik_ship      0   12   *=15:5
+1  turbine   hcz_end_boss       0   36   *=4:2,3,4,5 lunge=1:2,3,4,5
+1  housing   hcz_end_boss       0   28   *=15:1
+1  charge2   hcz_end_boss       27  10   *=15:6 lunge=2:6,7 defeat=-
+1  charge3   hcz_end_boss       19  10   *=15:6 lunge=2:6,7 defeat=-
+1  body      hcz_end_boss       0   0    *=15:0
+1  flame     robotnik_ship      30  12   idle=- lunge=1:6 defeat=- flee=1:6
+
+# Marble Garden: the drill (Obj_MGZEndBoss at angle 0: ChildObjDat_6D7C0 piece 1, byte_6D24A/6D25A
+# piece 2 and tip 9, byte_6D2D2 lower pieces 6; pod Child1_MakeRoboShip3 frame 9 at (-6,4), escape $A).
+2  lower2    mgz_endboss        -12 24   *=15:6 flee=-
+2  piece     mgz_endboss        -20 15   *=15:1 flee=-
+2  angled    mgz_endboss        -28 16   *=15:2 flee=-
+2  body      mgz_endboss        0   0    *=15:0 flee=-
+2  face      robotnik_ship      -6  -24  idle=5:0,1 open=3:0,1 lunge=1:0,1 hit=31:2 laugh=2:0,1 defeat=15:3
+2  pod       robotnik_ship      -6  4    *=15:9 flee=15:10
+2  flame     robotnik_ship      24  4    idle=- defeat=- flee=1:6
+2  tip       mgz_endboss        -51 16   *=15:9 flee=-
+2  lower     mgz_endboss        8   24   *=15:6 flee=-
+
+# Carnival Night: the magnet carousel (Obj_CNZEndBoss: ship 9 at (0,-8), escape $A; four arms on
+# a 44-pixel carousel at y+8, faces 1/8/2 by angle, byte_6EE0E 1/3; magnet 4/5 at (0,$14)).
+3  armback   cnz_end_boss       0   8    *=15:2 defeat=-
+3  face      robotnik_ship      0   -36  idle=5:0,1 open=3:0,1 lunge=1:0,1 hit=31:2 laugh=2:0,1 defeat=15:3
+3  ship      robotnik_ship      0   -8   *=15:9 flee=15:10
+3  flame     robotnik_ship      30  -8   idle=- lunge=1:6 defeat=- flee=1:6
+3  body      cnz_end_boss       0   0    *=15:0 flee=-
+3  magnet    cnz_end_boss       0   20   *=4:4,5 flee=-
+3  armleft   cnz_end_boss       -44 8    *=15:8 defeat=-
+3  armright  cnz_end_boss       44  8    *=15:8 defeat=-
+3  arm       cnz_end_boss       0   8    *=15:1 lunge=2:1,3 defeat=-
+
+# Flying Battery: the hanging claw machine (Obj_FBZEndBoss: arms 1 at (+-$30,$48), joints 2 above
+# them, weapon 3 at (0,-$28), ship $B at (0,4), escape 5; FBZ head sheet 0-3; the engine draws the
+# machine mirrored when it faces left, hence flip).
+4  hover     -                  6   96
+4  arm       fbz_end_boss       -48 72   *=15:1 flip flee=-
+4  arm2      fbz_end_boss       48  72   *=15:1 flip flee=-
+4  joint     fbz_end_boss       -48 40   *=15:2 flee=-
+4  joint2    fbz_end_boss       48  40   *=15:2 flee=-
+4  body      fbz_end_boss       0   0    *=15:0 flip flee=-
+4  face      fbz_robotnik_head  0   -24  idle=15:0 hit=31:2 laugh=8:0,1 defeat=15:3
+4  ship      robotnik_ship      0   4    *=15:11 flee=15:5
+4  weapon    fbz_end_boss       0   -40  *=15:3 flip flee=-
+4  flame     robotnik_ship      30  4    idle=- lunge=1:6 defeat=- flee=1:6
+
+# Ice Cap: the freezer (Obj_ICZEndBoss: STRUCTURAL_CHILD_SPECS bottom 2 at (0,$2D), middle 1 at
+# (0,$B), top 3 at ($18,7) and damaged 4; ship 9 on the body, escape $A; flame, head, ship order).
+5  bottom    icz_end_boss       0   45   *=15:2 flee=-
+5  middle    icz_end_boss       0   11   *=15:1 flee=-
+5  flame     robotnik_ship      30  0    idle=- lunge=1:6 defeat=- flee=1:6
+5  face      robotnik_ship      0   -28  idle=5:0,1 open=3:0,1 lunge=1:0,1 hit=31:2 laugh=2:0,1 defeat=15:3
+5  ship      robotnik_ship      0   0    *=15:9 flee=15:10
+5  body      icz_end_boss       0   0    *=15:0 flee=-
+5  top       icz_end_boss       24  7    *=15:3 hit=15:4 defeat=15:4 flee=-
+
+# Launch Base: Big Arm (Obj_LBZFinalBoss2: ChildObjDat_75122 housing 0 at ($C,-$14), inner 1 at
+# (0,-$18), upper arm 2 at ($14,$24); ChildObjDat_75144 forearm 4-7 and claw 8-$B; cockpit 8).
+6  inner     lbz_final_boss_2   0   -24  *=15:1
+6  face      robotnik_ship      0   -28  idle=5:0,1 open=3:0,1 lunge=1:0,1 hit=31:2 laugh=2:0,1 defeat=15:3
+6  cockpit   robotnik_ship      0   0    *=15:8
+6  housing   lbz_final_boss_2   12  -20  *=15:0
+6  joint     lbz_final_boss_2   33  11   *=15:3
+6  claw      lbz_final_boss_2   -54 34   *=15:8 lunge=10:8,9,10,9,8,11
+6  upperarm  lbz_final_boss_2   20  36   *=15:2
+6  forearm   lbz_final_boss_2   -22 34   *=15:4 lunge=10:4,5,6,5,4,7
+
+# Mushroom Hill: the weather machine (Obj_MHZEndBoss: visual children 1 and 3, weather machine 4
+# at ($11,-$51), dash spikes $11 at (-$14,$18) and (-$2C,$18)). robotnik_ship is not loaded in MHZ.
+7  core      mhz_end_boss       0   0    *=15:1
+7  machine   mhz_end_boss       17  -81  *=15:4 defeat=-
+7  body      mhz_end_boss       0   0    *=15:3
+7  spike     mhz_end_boss       -20 24   idle=- lunge=15:17 defeat=-
+7  spike2    mhz_end_boss       -44 24   idle=- lunge=15:17 defeat=-
+
+# Sandopolis: the Egg Mobile ($A) with its front piece 6 at (0,36) (SozEndBossChild PILOT -28,
+# FRONT 36, FLAME 30); the limb chain is left out.
+8  hover     -                  6   96
+8  face      robotnik_ship      0   -28  idle=5:0,1 open=3:0,1 lunge=1:0,1 hit=31:2 laugh=2:0,1 defeat=15:3
+8  ship      robotnik_ship      0   0    *=15:10
+8  flame     robotnik_ship      30  0    idle=- lunge=1:6 defeat=- flee=1:6
+8  front     soz_end_boss       0   36   *=15:6 flee=-
+
+# Sky Sanctuary: Mecha Sonic on foot (Map_MechaSonic: stand 0, crouch 1/2 byte_7D5A2, spin ball
+# 3-5 byte_7D523, slump $E/$F byte_7D5E4).
+10 hover     -                  0   12   grounded
+10 mecha     mecha_sonic        0   0    idle=126:0 open=9:1,2 lunge=1:3,4,5 hit=31:14 laugh=5:1,2 defeat=15:15 flee=1:3,4,5
+
+# Death Egg: the Red Eye (Obj_DEZEndBoss: body 0, opening 0-2 byte_7FCD4, released enemy $11/$12
+# byte_7FCDE, bumper $A at radius $28 toward Sonic); Robotnik runs off (byte_70419 run 0,1,2,1).
+11 bumper    dez_end_boss       -40 0    *=15:10 flip defeat=-
+11 body      dez_end_boss       0   0    *=15:0 open=15:2 defeat=15:0 flee=-
+11 enemy     dez_end_boss       0   0    idle=- open=3:17,18 defeat=-
+11 robotnik  dez_robotnik_run   0   8    idle=- defeat=- flee=5:0,1,2,1
+
+# Lava Reef boss act ($1600): Obj_LRZEndBoss (body 0; ChildObjDat_7A18C blade 1-3 byte_7A1C2 at
+# (0,-$12) and head $F/$10/$11 at (-$15,1); ChildObjDat_7A19A launcher 4 at (0,-$18), 5 at (0,-$37)).
+22 launcher  lrz_end_boss       0   -24  *=15:4 flee=-
+22 hatch     lrz_end_boss       0   -55  *=15:5 lunge=4:6,7,8,9 flee=-
+22 body      lrz_end_boss       0   0    *=15:0
+22 blade     lrz_end_boss       0   -18  *=2:1,2,3
+22 face      lrz_end_boss       -21 1    idle=15:15 hit=31:16 defeat=15:17
+
+# Lava Reef acts 1-2 (zone 9) and Doomsday (zone 12) have no rig: zone 9 registers no Robotnik art
+# (his boss is the $1600 act above), and Doomsday's ship is plane art with only loose sprite parts.
