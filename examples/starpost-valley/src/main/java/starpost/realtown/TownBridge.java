@@ -19,6 +19,7 @@ public final class TownBridge {
         shell.goNow(play);
         switch (result.place()) {
             case "farm_gate" -> play.returnToFarm();
+            case "festival" -> FestivalSystem.forPlay(play).startAcceptedInvitation();
             case "heart_event" -> PeopleSystem.of(play).startHeartEvent(result.event());
             case "inventory" -> shell.push(new starpost.scene.InventoryMenu());
             case "time_up", "fainted" -> shell.endActDay(result.place().equals("fainted"));

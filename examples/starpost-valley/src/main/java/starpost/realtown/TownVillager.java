@@ -17,6 +17,7 @@ public final class TownVillager extends AbstractObjectInstance implements ModRew
     private long animation;
     public TownVillager(ObjectSpawn spawn) { super(spawn,"Town neighbour"); x=spawn.x(); feet=spawn.y(); }
     public boolean isPersistent() { return true; }
+    public int getPriorityBucket() { return 4; }
     public int getX() { return Math.round(x); }
     public int getY() { return feet; }
     public float x() { return x; }

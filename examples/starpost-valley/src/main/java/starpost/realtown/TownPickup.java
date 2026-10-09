@@ -10,6 +10,7 @@ import starpost.valley.Pickups;
 public final class TownPickup extends AbstractObjectInstance implements ModRewindRecreatable {
     public TownPickup(ObjectSpawn spawn) { super(spawn,"Town pickup"); }
     public boolean isPersistent() { return true; }
+    public int getPriorityBucket() { return 3; }
     private TownSession town() { return services().gameService(TownSession.class); }
     public Pickups.Pickup pickup() {
         TownSession t=town();

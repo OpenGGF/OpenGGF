@@ -245,13 +245,18 @@ class TestStarpostTownAct {
         }
         assertTrue(graphics.rectangles>100,"ROM art and labels emitted visible rectangle commands");
         assertEquals(before,call(town,"capture"),"drawing may repeat without advancing town rules");
+        if (name.equals("pictures")) {
+            // The unused right side of opaque dialogue must cover world rings and name labels.
+            for (int y=165;y<190;y++) for (int x=300;x<380;x++)
+                assertEquals(0xFF101848,graphics.image.getRGB(x,y),"world object drew over dialogue");
+        }
         String external=System.getProperty("starpost.town.capture.dir");
         Path directory=external==null?temp.resolve("pictures"):Path.of(external);
         assertTrue(directory.isAbsolute()); Files.createDirectories(directory);
         javax.imageio.ImageIO.write(graphics.image,"png",directory.resolve(name+".png").toFile());
         graphics.paint.dispose();
     }
-    private static final class RectangleWitness extends com.openggf.graphics.GraphicsManager {
+    static final class RectangleWitness extends com.openggf.graphics.GraphicsManager {
         final java.awt.image.BufferedImage image=new java.awt.image.BufferedImage(400,224,java.awt.image.BufferedImage.TYPE_INT_ARGB);
         final java.awt.Graphics2D paint=image.createGraphics();
         int rectangles;

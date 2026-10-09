@@ -148,6 +148,13 @@ public final class FestivalSystem {
         }
     }
 
+    /** The level already asked and accepted; reuse the event without asking twice. */
+    public void startAcceptedInvitation() {
+        if (today != null && today.openAt(shell.game.calendar)
+                && !festivals.joined(today.id, shell.game.calendar.year())) start(today);
+        else ask();
+    }
+
     /** Starts a festival's event as its own screen. */
     void start(Festival f) {
         shell.toast("");         // a notice from the day must not ride over the festival's title card
