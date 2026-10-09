@@ -7,6 +7,8 @@ import com.openggf.mods.scene.SceneImage;
 import com.openggf.mods.scene.SceneLevelKit;
 import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneSpriteSet;
+import com.openggf.mods.scene.art.PaletteAssembly;
+import com.openggf.mods.scene.art.SceneArtCache;
 import com.openggf.mods.scene.art.StockSceneArt;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,6 +38,16 @@ public final class Art {
     public final int[] ghzPalette;
     public final int[] aizPalette;
     private final Map<String, SceneSpriteSet> farmers = new HashMap<>();
+    /** Obj_DashDust's spin dash cloud and skid puffs, in each farmer's own palette line 0. */
+    private final Map<String, SceneSpriteSet> dust = new HashMap<>();
+    private final SceneArtCache dustBanks;
+    // Animation tables read from the ROM for the shared RomAnimationPlayer (sonic3k.lst).
+    private static final int ANI_DASH_SPLASH_DROWN = 0x018DC0;       // 52 bytes, to Map_DashDust
+    private static final int TAILS_TAIL_ANI_SELECTION = 0x016164;    // 50 bytes, to AniTails_Tail
+    private static final int ANI_TAILS_TAIL = 0x016196;              // 100 bytes, 13 scripts
+    private final byte[] dustScripts;
+    private final byte[] tailsSelection;
+    private final byte[] tailsScripts;
     public final SceneSpriteSet tailsTails;
     public final SceneSpriteSet spring;
     public final SceneSpriteSet starpost;
@@ -152,9 +164,16 @@ public final class Art {
         aizPalette = new int[64];
         System.arraycopy(s3k.palette(PAL_SONIC_TAILS, 16), 0, aizPalette, 0, 16);
         System.arraycopy(s3k.palette(PAL_AIZ, 48), 0, aizPalette, 16, 48);
+        dustBanks = new SceneArtCache(s3k, 4);
         for (String code : new String[] {"sonic", "tails", "knuckles"}) {
             farmers.put(code, s3k.character(code));
+            // Obj_DashDust's art_tile is make_art_tile(ArtTile_DashDust,0,0): the player's own line 0.
+            dust.put(code, dustBanks.sprites(StockSceneArt.S3K_DASH_DUST,
+                    new PaletteAssembly().line(0, s3k.characterPalette(code)).build()));
         }
+        dustScripts = s3k.read(ANI_DASH_SPLASH_DROWN, 52);
+        tailsSelection = s3k.read(TAILS_TAIL_ANI_SELECTION, 50);
+        tailsScripts = s3k.read(ANI_TAILS_TAIL, 100);
         tailsTails = s3k.characterAccessory("tails");
         spring = s3k.sprites(RomSpriteRequest.of(0x1927FE, Compression.NEMESIS,  // ArtNem_SpikesSprings
                 0x02375C, 0).withTileOffset(-0x10), aizPalette);                       // Map_Spring
@@ -230,6 +249,21 @@ public final class Art {
 
     public SceneSpriteSet farmer(String code) {
         return farmers.getOrDefault(code, farmers.get("sonic"));
+    }
+
+    /** The dust Obj_DashDust draws for this farmer (spin dash cloud, skid puffs). */
+    public SceneSpriteSet dust(String code) {
+        return dust.getOrDefault(code, dust.get("sonic"));
+    }
+
+    /** A new dust object for one farmer, playing the ROM's Ani_DashSplashDrown. */
+    public Dust newDust() {
+        return new Dust(dustScripts);
+    }
+
+    /** A new tail object for Tails, playing the ROM's Obj_Tails_Tail_AniSelection and AniTails_Tail. */
+    public TailsTails newTails() {
+        return new TailsTails(tailsSelection, tailsScripts);
     }
 
     public SceneSpriteSet animal(String name) {

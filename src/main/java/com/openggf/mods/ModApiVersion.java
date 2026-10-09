@@ -32,7 +32,8 @@ public final class ModApiVersion {
      * the cross-game donor route, under a donor registration scoped to the scene.
      * Creator helpers include character specifications and lifecycle hooks, decoded
      * placement transforms, owner storage and service bundles, named single-act and
-     * multi-act zone factories, shared UI/input and ROM-qualified scene art.
+     * multi-act zone factories, shared UI/input and ROM-qualified scene art, including
+     * the players' S3K dash dust.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

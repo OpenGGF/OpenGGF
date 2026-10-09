@@ -61,6 +61,8 @@ public final class RuinsScreen implements Screen {
     private final SnapshotRandom rng;
     private final Runner runner = new Runner(0, 0);
     private final Anim anim = new Anim();
+    private final starpost.art.Dust dust;
+    private final starpost.art.TailsTails tails;
 
     private Chamber chamber;
     private int number;
@@ -105,6 +107,8 @@ public final class RuinsScreen implements Screen {
 
     public RuinsScreen(Shell shell, PlayScreen play, RuinsArt art, int start) {
         this.shell = shell;
+        this.dust = shell.art.newDust();
+        this.tails = shell.art.newTails();
         this.play = play;
         this.art = art;
         this.section = RuinsSystem.section(shell.game);
@@ -218,6 +222,8 @@ public final class RuinsScreen implements Screen {
             flash--;
         }
         animate();
+        dust.update(anim.id() == Anim.SPINDASH, false, runner.underwater, air < 12, runner.x, originY(runner.y));
+        tails.update(anim.id(), runner.facingLeft, runner.speed, runner.onGround ? 0 : runner.ySpeed);
         float targetX = runner.x - shell.width() / 2f + (runner.facingLeft ? -24 : 24);
         camX += (clampX(targetX) - camX) * 0.18f;
         camY += (clampY(runner.y - 140) - camY) * 0.15f;
@@ -822,7 +828,7 @@ public final class RuinsScreen implements Screen {
         } else if (getAir > 0) {
             anim.set(ANIM_GET_AIR, 8);
         } else if (runner.flying) {
-            anim.set(runner.flyTimer > 0 ? 0x20 : 0x24, runner.flyTimer > 0 ? 1 : 4);   // TAILS_FLY, TAILS_FLY_TIRED
+            anim.set(Anim.flying(runner.flyTimer == 0, runner.ySpeed), 0x0B);           // AniTails24's delay
         } else if (runner.gliding) {
             anim.set(0x20, 3);                                                         // Knuckles's glide
         } else if (runner.climbing) {
@@ -1227,12 +1233,20 @@ public final class RuinsScreen implements Screen {
         if (fireDash > 0) {
             style = style.withFlash(0x80FF6D00);
         }
-        float feet = runner.y - cy;
-        if (anim.id() == Anim.ROLL) {
-            canvas.draw(pose, runner.x - cx, feet - 15, style);
-        } else {
-            canvas.draw(pose, runner.x - cx, feet - (pose.height() - pose.originY()), style);
+        float originY = originY(runner.y) - cy;
+        if (shell.game.farmer.equals("tails")) {
+            tails.draw(canvas, shell.art.tailsTails, runner.x - cx, originY, style);
         }
+        canvas.draw(pose, runner.x - cx, originY, style);
+        SceneSpriteSet puffs = shell.art.dust(shell.game.farmer);
+        dust.drawDash(canvas, puffs, runner.x - cx, originY, runner.facingLeft, style.withFlash(0));
+        dust.drawPuffs(canvas, puffs, cx, cy, SceneDraw.plain());
+    }
+
+    /** The farmer's body origin (the ROM's x_pos/y_pos row) for feet at world row {@code feet}. */
+    private float originY(float feet) {
+        SceneSprite pose = anim.pose(shell.art.farmer(shell.game.farmer));
+        return anim.id() == Anim.ROLL ? feet - 15 : feet - (pose.height() - pose.originY());
     }
 
     private void drawWaterSurface(SceneCanvas canvas, int cx, int cy) {

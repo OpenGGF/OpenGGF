@@ -39,6 +39,10 @@ final class PondLine implements Actor {
     private long splashAt = -1000;
     private long biteAt = -1000;
     private long reeledAt = -1000;
+    /** When the line last went out and came back in (the rod's whip and lift), and whether it is out. */
+    private long castAt = -1000;
+    private long inAt = -1000;
+    private boolean wasOut;
     /** Debug: what the next bite is. */
     private String forced;
 
@@ -122,14 +126,29 @@ final class PondLine implements Actor {
         castX = runner.x;
         castFeet = feet;
         float dir = runner.facingLeft ? -1 : 1;
-        line.cast(runner.x + dir * 19, feet - 33, tx, ty, Fishing.POND_DEPTH, Fishing.level(game));
+        float[] tip = Rod.tip(game.farmer, Rod.BACK);
+        line.cast(runner.x + dir * tip[0], feet - tip[1], tx, ty, Fishing.POND_DEPTH, Fishing.level(game));
         hooked = null;
         shell.sfx(SFX_CAST);
         return true;
     }
 
+    /** Whether the farmer holds the rod still (the line out, or just reeled in): no idle fidgets. */
+    boolean holding(Shell shell) {
+        return line.out() || shell.ticks - inAt < Rod.REEL_TICKS + 20;
+    }
+
     @Override
     public void update(Shell shell, PlayScreen play) {
+        boolean out = line.out();
+        if (out != wasOut) {
+            if (out) {
+                castAt = shell.ticks;
+            } else {
+                inAt = shell.ticks;
+            }
+            wasOut = out;
+        }
         if (!line.out()) {
             return;
         }
@@ -215,11 +234,29 @@ final class PondLine implements Actor {
         boolean left = farm.runner.facingLeft;
         float dir = left ? -1 : 1;
         drawSplash(shell, canvas, cx);
+        boolean pulling = line.state == Line.BITE || line.state == Line.FIGHT;
+        boolean still = play.onFarm() && farm.runner.height == 0 && farm.runner.speed == 0 && farm.runner.depthSpeed == 0
+                && !farm.charging();
+        float[] hand = Rod.hand(shell.game.farmer);
+        float hx = fx + dir * hand[0], hy = feet - hand[1];
+        float[] tip = null;
         if (line.out()) {
-            boolean pulling = line.state == Line.BITE || line.state == Line.FIGHT;
-            float bend = pulling ? (float) Math.sin(shell.ticks / 2.0) * 2 + 6 : 0;
-            float tipX = fx + dir * (19 - bend / 2), tipY = feet - 33 + bend;
-            drawLine(canvas, fx + dir * 6, feet - 17, tipX, tipY, 0xFF924900, 0);
+            float angle = line.state == Line.FLYING ? Rod.castAngle((int) (shell.ticks - castAt))
+                    : pulling ? Rod.BITE : Rod.WAIT;
+            tip = Rod.draw(canvas, hx, hy, dir, angle, Rod.bend(shell.ticks, pulling) + (line.nibble > 0 ? 2 : 0));
+        } else if (still && Fishing.holdingRod(shell.game)) {
+            long since = shell.ticks - inAt;
+            tip = Rod.draw(canvas, hx, hy, dir, Rod.reelAngle((int) Math.min(since, 1000)), 0);
+            if (since < Rod.REEL_TICKS) {
+                // The line winds in to the tip from where the bobber lay.
+                float t = since / (float) Rod.REEL_TICKS;
+                float bx = line.toX - cx + (tip[0] - (line.toX - cx)) * t, by = line.toY + (tip[1] - line.toY) * t;
+                drawLine(canvas, tip[0], tip[1], bx, by, 0xC0FFFFFF, 0);
+                drawBobber(canvas, bx, by);
+            }
+        }
+        if (line.out()) {
+            float tipX = tip[0], tipY = tip[1];
             float bx = line.bobberX() - cx, by = line.bobberY();
             drawLine(canvas, tipX, tipY, bx, by, 0xC0FFFFFF, pulling ? 0 : 6);
             if (line.state == Line.WAITING || line.state == Line.FLYING) {

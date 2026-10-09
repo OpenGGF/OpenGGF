@@ -548,6 +548,17 @@ descriptor keeps unpublished candidate `0.7.0`, as for every additive candidate 
 See the [creator recipe](../modding/guides/mod-scenes.md#5-audio-and-storage) and the
 [design note](designs/2026-10-09-starpost-valley.md#331-background-music-engine-addition).
 
+## Stock dash dust recipe candidate
+
+Starpost Valley adds `StockSceneArt.S3K_DASH_DUST`, a named recipe for Obj_DashDust's art
+(`ArtUnc_DashDust`, `Map_DashDust`, `DPLC_DashSplashDrown`, player DPLC layout, palette line 0)
+on the verified S3&K locked-on ROM. Like the other recipes it is ROM-qualified and decodes the
+user's bytes; it adds a private enum constructor for requests that are not compressed art. The
+normalized 0.7 candidate pin gains exactly one additive enum-constant entry, with no removals,
+and the policy-generated release descriptor keeps unpublished candidate `0.7.0`. See the
+[creator recipe](../modding/guides/creator-helpers.md#rom-art-without-repeated-decoding) and the
+[design note](designs/2026-10-09-starpost-valley.md#20-rom-art-polish).
+
 ## Scene SFX candidate
 
 `SceneAudio.playSfx(String)` plays a declared one-shot using the scene owner's

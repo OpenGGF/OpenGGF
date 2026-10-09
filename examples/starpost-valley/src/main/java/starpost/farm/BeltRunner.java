@@ -17,6 +17,12 @@ public final class BeltRunner {
     public float ySpeed;
     public boolean facingLeft;
     public boolean rolling;
+    /**
+     * Ticks left of the skid animation ($D, AniSonic0D: four frames of four ticks), started by
+     * braking hard on the ground; 0 when not skidding. The dust drops its puffs meanwhile.
+     */
+    public int skid;
+    public static final int SKID_TICKS = 16;
 
     public BeltRunner(float x, float depth) {
         this.x = x;
@@ -27,12 +33,16 @@ public final class BeltRunner {
     public boolean step(float minX, float maxX, float maxDepth, boolean left, boolean right, boolean up,
             boolean down, boolean jumpPressed, boolean jumpHeld) {
         boolean airborne = height > 0 || ySpeed < 0;
+        if (skid > 0) {
+            skid--;
+        }
+        boolean braking = !airborne && (left && speed > 0 || right && speed < 0);
         if (left) {
             speed = speed > 0 ? speed - starpost.valley.Runner.DECEL : Math.max(-starpost.valley.Runner.TOP, speed - (airborne ? starpost.valley.Runner.AIR_ACCEL : starpost.valley.Runner.ACCEL));
-            facingLeft = true;
+            facingLeft |= !braking;          // braking, he still faces the way he slides (Sonic_Move)
         } else if (right) {
             speed = speed < 0 ? speed + starpost.valley.Runner.DECEL : Math.min(starpost.valley.Runner.TOP, speed + (airborne ? starpost.valley.Runner.AIR_ACCEL : starpost.valley.Runner.ACCEL));
-            facingLeft = false;
+            facingLeft &= braking;
         } else if (!airborne) {
             speed -= Math.signum(speed) * Math.min(Math.abs(speed), starpost.valley.Runner.FRICTION * 4);
         }
@@ -43,8 +53,16 @@ public final class BeltRunner {
         } else {
             depthSpeed -= Math.signum(depthSpeed) * Math.min(Math.abs(depthSpeed), DEPTH_ACCEL);
         }
+        // Sonic_Move's skid (sub_113F6 / sub_11482): braking hard on the ground; turning round
+        // or leaving the ground ends it.
+        if (braking && skid == 0 && skidsAt(speed)) {
+            skid = SKID_TICKS;
+        } else if (!braking && (left || right) || airborne) {
+            skid = 0;
+        }
         boolean jumped = false;
         if (!airborne && jumpPressed) {
+            skid = 0;
             ySpeed = -starpost.valley.Runner.JUMP;
             rolling = true;
             jumped = true;
@@ -64,5 +82,17 @@ public final class BeltRunner {
         x = Math.max(minX, Math.min(maxX, x + speed));
         depth = Math.max(0, Math.min(maxDepth, depth + depthSpeed));
         return jumped;
+    }
+
+    /**
+     * Whether braking that leaves this ground speed starts a skid: Sonic_MoveLeft/Right
+     * (sub_113F6, sub_11482) skid at $400 or more, but test the speed after the angle check has
+     * overwritten its low byte (FixBugs off: "move.b angle(a0),d0" instead of d1). On flat ground
+     * the comparison sees the speed with its low byte cleared, so braking from the right needs
+     * $400 and from the left only more than $300; the fixed branch compares the whole speed.
+     */
+    public static boolean skidsAt(float speed) {
+        int word = Math.round(speed * 256) & ~0xFF;
+        return word >= 0x400 || word <= -0x400;
     }
 }

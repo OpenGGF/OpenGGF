@@ -30,6 +30,7 @@ public final class FishingSystem {
         shell.art.icons.addSource("fishing", item -> sys.art.icon(item, sys.table));
         actors.add(sys.pond);
         play.farm().pondAction = () -> sys.pond.cast(shell);
+        play.farm().holdStill = () -> Fishing.holdingRod(shell.game) || sys.pond.holding(shell);
         places.put("lake", s -> s.go(new LakeScreen(s, play, sys)));
     }
 
