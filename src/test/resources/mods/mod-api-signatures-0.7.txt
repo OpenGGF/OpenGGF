@@ -10629,6 +10629,7 @@ METHOD com.openggf.mods.scene.SceneArt public  com.openggf.mods.scene.SceneRomAr
 METHOD com.openggf.mods.scene.SceneArt public  java.util.List<java.lang.String> availableGames()
 METHOD com.openggf.mods.scene.SceneArt public,abstract  com.openggf.mods.scene.SceneImage png(byte[])
 METHOD com.openggf.mods.scene.SceneArt public,abstract  com.openggf.mods.scene.SceneRomArt rom()
+METHOD com.openggf.mods.scene.SceneAudio public  boolean playMusic(java.lang.String,int)
 METHOD com.openggf.mods.scene.SceneAudio public  boolean playSfx(java.lang.String)
 METHOD com.openggf.mods.scene.SceneAudio public,abstract  void fadeOutMusic()
 METHOD com.openggf.mods.scene.SceneAudio public,abstract  void playMusic(int)

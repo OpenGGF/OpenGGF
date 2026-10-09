@@ -93,7 +93,8 @@ The Mod API and existing examples already support or constrain the game in these
   together. `ctx.music().prepare("s1", id, frames)` synthesises any supplied ROM's song as
   PCM, so S1 music can play on S3K.
   - **Constraint:** while a prepared player exists its PCM replaces all driver output,
-    so SFX go silent. A soundtrack that crosses ROMs needs the engine change in §3.3.
+    so SFX go silent. A soundtrack that crosses ROMs needs the engine change in §3.3,
+    now built as `ctx.audio().playMusic(game, id)` (§3.3.1).
 - **Storage.** UTF-8 text files of at most 1 MiB under `saves/mods/<id>/`, replaced
   atomically. Starfall's gzip+Base64 split-part codec with a backup already handles larger
   saves.
@@ -169,11 +170,90 @@ darker) only if the slice shows that single rows feel thin.
 - **Optional: S2.** It adds Emerald Hill (summer), Casino Night (the fair), Sky Chase (the
   flight to Angel Island), and the bear, monkey, eagle, mouse and turtle villagers and
   livestock. Each has a fallback.
-- **Engine addition (Mod API): background music from another supplied ROM, mixed under
-  the base driver's SFX.** The season/hour soundtrack in §8 crosses all three ROMs, and
+- **Engine addition (Mod API): background music from another supplied ROM, played
+  under the base driver's SFX (built; §3.3.1).** The season/hour soundtrack in §8 crosses all three ROMs, and
   today that silences every tool, spring and ring sound. Any multi-ROM scene benefits,
   Eggman's Sky included. The fallback is a soundtrack drawn from S3K only, which loses
   Green Hill's own theme in spring. That loss is unacceptable for this game.
+
+#### 3.3.1 Background music engine addition
+
+**Built:** `SceneAudio.playMusic(game, id)`, a default method next to the existing
+`playMusic(id)`. The running game's songs take the base route. Another supplied game's
+song takes the existing cross-game **donor route** (`AudioManager.playDonorMusic`,
+`MusicRoute.DONOR_SMPS`), the route that plays S3K Super music in an S2 game. The call
+returns false when that ROM was not supplied or has no such song. The creator recipe is
+in [mod-scenes.md](../../modding/guides/mod-scenes.md#5-audio-and-storage).
+
+**How the donor route fits.** The song is a second game's sequencer running inside the
+base driver session, with its own loader, DAC bank, sequencer config and coordination-flag
+handlers. It is the driver's current music, so the stock rules apply unchanged:
+
+- It loops at its own loop jump.
+- Effects take over music channels and hand them back.
+- `stopMusic` and `fadeOutMusic` act on it.
+- A stock jingle saves and restores it.
+- It is recorded in the command timeline like any song.
+
+Evidence (`TestSceneDonorMusic`, an S3K session playing S1 Green Hill over 3,768 frames,
+past its loop jump at 3,168):
+
+- **It is Green Hill as Sonic 1 plays it.** The 100 ms loudness envelope matches Sonic 1's
+  own driver rendering with correlation 0.997, at zero lag. The Marble control scores 0.03.
+- **It loops to the body, not the intro.** The repeat matches the loop body with
+  correlation 0.999; the same window shifted 97 frames scores 0.36.
+- **It never falls silent.** The quietest 100 ms window scores RMS 152.
+- **Effects play over it.** An S3K ring's contribution correlates 0.67 with the ring
+  alone. The music channel the ring takes over should explain the shortfall, but that
+  was not measured separately.
+- **The 1-up hands it back.** The S3K 1-up replaces the song while it plays (relative
+  change 1.36), and the song returns afterwards.
+
+No engine fix was needed to play S1 songs in the S3K driver session.
+
+**The one gap was lifecycle.** The donor registry is global and keyed by the real game
+code, which is also the key presentation coordination handlers resolve by. A scene's
+loaders read `SceneRomLibrary`'s own ROM views, which close with the scene. The registry
+had no per-key unregister, and `clearDonorAudio()` would also wipe the
+`CrossGameFeatureProvider` donor registered at gameplay bootstrap. The fix is
+`com.openggf.audio.ScopedDonorAudio`, an engine-internal helper over package-private
+`AudioManager` state capture, so it adds no creator surface. Opening it captures the
+key's route and its music and sound bindings. Closing it restores them, under a fresh
+generation so no asset cached for the scene can answer for the restored route.
+`TestScopedDonorAudio` registers a stand-in prior donor, borrows the key and checks that
+the prior one is back. Leaving the scene also stops another game's song that is still
+playing; the base game's own music is left as it was.
+
+**Accepted limits.**
+
+- Every profile's `OrdinaryMusicSfxPolicy` is `STOP_ALL`, so starting or changing a song
+  stops effects still ringing, as every stock song change does.
+- There is no music volume. Fades are the base game's own (S3K about four seconds).
+- Effects steal music channels, as on the console.
+- A `ctx.music()` song player still replaces all driver output, donor song included.
+
+**Considered and set aside: a second, additive synthesizer.** This was built first and is
+kept off the branch as a patch. Each song ran in its own `OwnedSmpsAudioStream`, the
+session finite `prepare` uses, and its PCM was added to the base driver's final mix
+through the `ScenePcmSource` hook. It shared `prepare`'s session code and offered volume,
+fades of any length and no global registry. Its tests were written but never run: the
+first queued run failed to compile on an unrelated probe, and the lead chose the donor
+route before a second run. It cost one more emulated chip per frame, its effects never
+shared a channel with the music, and a jingle ended the background instead of pausing it.
+More decisively, it duplicated what cross-game donation already does, and the user asked
+for one shared route.
+
+**Rejected outright.**
+
+1. **Restarting a finite `prepare` song.** It replays the intro instead of the loop body,
+   leaves a seam, is capped at ten minutes, and a started player silences every effect.
+2. **Prepared PCM with a loop region.** SMPS has no song-level loop point: each track
+   jumps on its own (`smpsJump`, `F6`), and local `F7` repeats also jump backwards. A
+   splice also cannot carry chip state across the seam (FM release tails, envelopes, PSG
+   noise and LFO phase).
+3. **The patch-mod `StreamedMusicPort`.** It is a launch-prepared, rewind-snapshotted
+   `@ModApi` port whose `State.sourceFramePosition` restore needs a seekable source,
+   which live SMPS synthesis is not.
 
 ### 3.4 Two views: the belt-view farm inside a side-view valley
 

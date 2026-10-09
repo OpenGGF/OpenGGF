@@ -482,6 +482,36 @@ cue). Fade or stop your music when the scene leaves, so
 none of it plays on into the next screen. See the note above on `ctx.music()`
 replacing this output while a song player exists.
 
+`ctx.audio().playMusic(game, id)` plays a song from any supplied ROM as the current
+music, so an S3K scene can play Sonic 1's Green Hill and still hear its own rings and
+springs over it:
+
+```java
+// Green Hill when Sonic 1 is installed, otherwise the base game's own Angel Island.
+if (!ctx.audio().playMusic("s1", 0x81)) {
+    ctx.audio().playMusic("s3k", 0x01);
+}
+ctx.audio().playSfx(0x33);   // the S3K ring, heard over Green Hill
+ctx.audio().fadeOutMusic();  // fades whichever song is playing
+```
+
+Game ids are `"s1"`, `"s2"` and `"s3k"`, and music ids are that game's own driver IDs.
+The running game's songs take their normal route. Another game's song plays through the
+same sound driver by its own game's rules. This is the cross-game donor route that plays
+S3K Super music in Sonic 2, so the song loops at its own loop point for as long as the
+scene runs and needs no second sound chip. It is simply the current music: `playMusic`,
+`stopMusic` and `fadeOutMusic` replace, stop or fade it. A stock jingle such as the S3K
+1-up interrupts it and then hands it back, as for a stock song. The call returns false,
+changing nothing, when that game's ROM was not supplied or has no such song, so the
+fallback above needs no ROM check. An unknown game id throws.
+
+The driver route has limits. Starting or changing a song stops any sound effect still
+playing, as every stock song change does. There is no music volume control, and fades
+take the base game's own time. While an effect plays it takes over a music channel, as on
+the console. Leaving the scene stops another game's song that is still playing and hands
+the donor route back to cross-game donation; the base game's own music is left as it was.
+A `ctx.music()` song player still replaces all of this output while it exists.
+
 `ctx.storage()` keeps small text files for your mod under the save root
 (`saves/mods/<mod-id>/`): `read`, `write`, `delete`, `list`. Slay the Robotnik saves the
 run in progress, the player's records and the compendium there.

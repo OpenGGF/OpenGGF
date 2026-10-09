@@ -28,6 +28,8 @@ public final class ModApiVersion {
      * Power-up rules expose explicit invincibility-expiry music ownership for modes
      * with continuous music. Owned patch scenes can play their validated audio-manifest
      * SFX by local name without numeric ids or creator-supplied ownership.
+     * Scene audio can play any supplied ROM's song as the base driver's music through
+     * the cross-game donor route, under a donor registration scoped to the scene.
      * Creator helpers include character specifications and lifecycle hooks, decoded
      * placement transforms, owner storage and service bundles, named single-act and
      * multi-act zone factories, shared UI/input and ROM-qualified scene art.
