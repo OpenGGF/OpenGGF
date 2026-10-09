@@ -849,3 +849,24 @@ bounded Infinite Sonic check will qualify the 32 affected records against the
 unchanged fully tested runtime/test inputs. No unchanged whole-engine rerun or
 new baseline is required for this projection repair; supplemental evidence must
 remain separately attributed before implementation handoff.
+
+The bounded follow-up at clean `35e831e08076b52d56a5eda805f25abffe5e6edd`
+completes one normal `TestInfiniteSonic` invocation: 238 source-reconciled cases,
+206 passes and exactly 32 expected skips, no failures/errors or ROM skips.
+Each uncapped abort envelope has 64 complete Java frames and 5,701–5,725
+characters; all 32 projected causes and identities match the full-run observations
+and qualified baseline literally. Runtime/resource/test/POM/hook/API inputs are
+identical to the completed full candidate, and source/config hashes are unchanged
+during this 98.564-second execution. Raw XML, the bounded log and owned temporary
+directory are consumed and deleted; exact processes/groups are absent.
+
+A new explicitly supplemental light comparison combines the completed full
+candidate with only those separately measured 32 causal records. The unchanged
+comparator returns valid exit 1: all 26 full baseline assertions and all 63 causes
+match, with the sole difference being the separately controlled Eggman menu
+assertion described above. Its bounded clean-8668 attribution remains separate
+from the full baseline counts. The original invalid comparison is byte-preserved.
+This qualifies the implementation with inherited failures; it is neither another
+full execution, new fresh guards, a whole-8668 baseline pass nor a green suite.
+No verification blocker remains before the requested isolated Opus 5.5 hands-on
+polish. Promo, existing PR215 publication and accountable cleanup remain pending.
