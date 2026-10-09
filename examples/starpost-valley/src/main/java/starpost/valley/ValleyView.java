@@ -226,13 +226,11 @@ public final class ValleyView {
         SceneSprite pose = anim.pose(set);
         SceneDraw style = tint.withFlipX(runner.facingLeft);
         float feet = runner.y - cy;
-        if (looping) {
-            canvas.draw(pose, runner.x - cx, feet, style);
-        } else if (anim.id() == Anim.ROLL) {
-            canvas.draw(pose, runner.x - cx, feet - 15, style);
-        } else {
-            canvas.draw(pose, runner.x - cx, feet - (pose.height() - pose.originY()), style);
+        float originY = looping ? feet : anim.id() == Anim.ROLL ? feet - 15 : feet - (pose.height() - pose.originY());
+        if (shell.game.farmer.equals("tails")) {
+            Anim.drawTails(canvas, shell.art.tailsTails, anim.id(), shell.ticks, runner.x - cx, originY, style);
         }
+        canvas.draw(pose, runner.x - cx, originY, style);
     }
 
     static void drawSprite(SceneCanvas canvas, SceneSpriteSet set, int frame, float x, float feet, SceneDraw style,

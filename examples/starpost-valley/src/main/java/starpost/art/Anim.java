@@ -46,6 +46,27 @@ public final class Anim {
         }
     }
 
+    /**
+     * Tails's twin tails, drawn behind him at his body's origin: the tail object shares his
+     * position in the ROM. Idle swish frames $22-$26 every 8 ticks, rolling $05-$08 every 3,
+     * pushing $1E-$21 every 10 (Obj_Tails_Tail_AniSelection); none while walking or running.
+     */
+    public static void drawTails(com.openggf.mods.scene.SceneCanvas canvas, SceneSpriteSet tails, int anim, long ticks,
+            float x, float originY, com.openggf.mods.scene.SceneDraw style) {
+        if (tails == null) {
+            return;
+        }
+        int frame = switch (anim) {
+            case WAIT, DUCK, LOOK_UP -> 0x22 + (int) (ticks / 8 % 5);
+            case ROLL, SPINDASH -> 5 + (int) (ticks / 3 % 4);
+            case PUSH -> 0x1E + (int) (ticks / 10 % 4);
+            default -> -1;
+        };
+        if (frame >= 0 && frame < tails.frameCount()) {
+            canvas.draw(tails.frame(frame), x, originY, style);
+        }
+    }
+
     public SceneSprite pose(SceneSpriteSet set) {
         int[] frames = set.animationFrames(id);
         if (frames == null || frames.length == 0) {

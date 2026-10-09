@@ -664,11 +664,11 @@ public final class FarmView {
         SceneSprite pose = anim.pose(set);
         SceneDraw style = tint.withFlipX(runner.facingLeft);
         float feet = ground - runner.height;
-        if (anim.id() == Anim.ROLL) {
-            canvas.draw(pose, x, feet - 15, style);
-        } else {
-            canvas.draw(pose, x, feet - (pose.height() - pose.originY()), style);
+        float originY = anim.id() == Anim.ROLL ? feet - 15 : feet - (pose.height() - pose.originY());
+        if (shell.game.farmer.equals("tails")) {
+            Anim.drawTails(canvas, shell.art.tailsTails, anim.id(), shell.ticks, x, originY, style);
         }
+        canvas.draw(pose, x, originY, style);
     }
 
     static void drawSprite(SceneCanvas canvas, SceneSpriteSet set, int frame, float x, float feet, SceneDraw style,
