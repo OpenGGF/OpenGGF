@@ -145,6 +145,7 @@ resource reservations, priority and serial override:
 python3 tools/testing/maven_queue.py -Dmse=off compile
 python3 tools/testing/maven_queue.py -Dmse=off test-compile
 python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests compile dependency:build-classpath -Dmdep.outputFile=target/examples-classpath.txt
 ```
 
 They hold only the current worktree's `maven-worktree.lock`, preventing concurrent
@@ -153,8 +154,12 @@ cannot delay them. They publish no shared waiting/running records or queue telem
 Direct `mvn compile` and `mvn -DskipTests package` are also allowed when nothing else
 is writing this worktree's `target/`; use the wrapper when that exclusion matters.
 
-Recognition covers this POM's lifecycle phases before `test`, and later phases with
-explicit `-DskipTests` or `-Dmaven.test.skip=true`. The last definition of each
+Recognition covers this POM's lifecycle phases before `test`, later phases with
+explicit `-DskipTests` or `-Dmaven.test.skip=true`, and `dependency:build-classpath`.
+That dependency goal only resolves dependencies and writes a classpath; it does
+not execute or fork tests. Mod launch shortcuts combine it with `compile`, so
+their engine build bypasses the shared test queue. They can still wait for a
+build or test using the same worktree's `target/`. The last definition of each
 property wins; `false` does not skip tests. Split `-D`/`--define` forms are supported.
 Arbitrary plugin goals (including direct Surefire/Failsafe goals), alternate POMs,
 unknown profiles, non-default `.mvn/maven.config` and `MAVEN_ARGS` stay queued because

@@ -306,7 +306,7 @@ SHARED_PROFILES = frozenset({
 
 
 def build_only(args):
-    """Recognize this POM's build lifecycles; uncertain invocations stay queued.
+    """Recognize build lifecycles/classpath generation; uncertain invocations stay queued.
 
     Skip properties use the last command-line definition, as Maven does. Never
     infer that arbitrary plugin goals obey Surefire's test-skip properties.
@@ -321,7 +321,10 @@ def build_only(args):
         'clean', 'validate', 'initialize', 'generate-sources', 'process-sources',
         'generate-resources', 'process-resources', 'compile', 'process-classes',
         'generate-test-sources', 'process-test-sources', 'generate-test-resources',
-        'process-test-resources', 'test-compile', 'process-test-classes'}
+        'process-test-resources', 'test-compile', 'process-test-classes',
+        # This dependency goal writes the mod launchers' classpath without
+        # executing or forking a lifecycle. Dependency resolution runs no tests.
+        'dependency:build-classpath'}
     after_tests = {'test', 'prepare-package', 'package', 'pre-integration-test',
                    'integration-test', 'post-integration-test', 'verify', 'install', 'deploy'}
     profiles = SHARED_PROFILES | {'tracechaser-integration', 'benchmarks', 'test-concurrent',
