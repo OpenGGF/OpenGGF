@@ -24,8 +24,8 @@ engine=$(realpath target/*-jar-with-dependencies.jar)
 sdk=$(realpath target/*-openggf-mod-sdk.jar)
 python3 tools/modding/native-windows/build_inputs.py --engine-jar "$engine" --sdk-jar "$sdk" --output target/linux-friends-inputs
 python3 tools/modding/native-linux/build_linux.py --stage prepare --engine-jar "$engine" --inputs target/linux-friends-inputs --runtime-classpath target/native-runtime-classpath.txt --graal target/linux-toolchain/graalvm-community-25.4.4.1.1+1.1 --output target/linux-friends-native
-# Reserve the normal queue budget for the 5 GiB / four-thread image compilation.
-python3 tools/testing/maven_queue.py -Dmse=off exec:exec -Dexec.executable=python3 "-Dexec.args=tools/modding/native-linux/build_linux.py --stage compile --engine-jar $engine --inputs target/linux-friends-inputs --runtime-classpath target/native-runtime-classpath.txt --graal target/linux-toolchain/graalvm-community-25.4.4.1.1+1.1 --rootfs target/linux-toolchain/ubuntu-rootfs --output target/linux-friends-native"
+# Use the exclusive queue lane: the 8 GiB compiler heap exceeds the normal budget.
+OPENGGF_MAVEN_QUEUE=serial python3 tools/testing/maven_queue.py -Dmse=off exec:exec -Dexec.executable=python3 "-Dexec.args=tools/modding/native-linux/build_linux.py --stage compile --engine-jar $engine --inputs target/linux-friends-inputs --runtime-classpath target/native-runtime-classpath.txt --graal target/linux-toolchain/graalvm-community-25.4.4.1.1+1.1 --rootfs target/linux-toolchain/ubuntu-rootfs --output target/linux-friends-native"
 ```
 
 Then run the `qualify` stage with the same artifact arguments and `--roms` followed

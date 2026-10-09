@@ -654,3 +654,13 @@ the source contract resolves it on the JVM. The native-image help documents
 `--add-modules` as adding root modules; the builder now explicitly resolves
 `java.logging`. This is a compiler-input correction, with unchanged engine/SDK/mod
 bytes and no native artifact from the failed attempt.
+
+Resolving that module clears the package error, but analysis at `c681ddd73`
+terminates with `OutOfMemoryError: GC overhead limit exceeded` in the existing
+5 GiB heap. The pinned compiler's `--expert-options-detail=Preserve` offers
+package/module/path selectors, without an individual-class selector. The
+generator's complete direct-member coverage is retained. The image successor
+uses an 8 GiB heap and four threads, submitted through the existing exclusive
+queue mode (`OPENGGF_MAVEN_QUEUE=serial`) because it exceeds the normal shared
+reservation. Other running jobs drain normally; nothing is cancelled. No engine,
+mod, testing-policy or queue implementation changes accompany this correction.
