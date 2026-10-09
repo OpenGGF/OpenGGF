@@ -125,16 +125,61 @@ receipts, cumulative budget, retry authorization or manual timing records are re
 Repeated checks should have a reason, such as changed code or repaired prerequisites;
 there is no hard attempt limit. Partial or interrupted coverage never certifies a pass.
 
-### Queued Maven execution
+<a id="queued-maven-execution"></a>
+
+### Build-only Maven execution and queued tests
 
 Category `--run` commands automatically wait for a shared Maven slot across all linked
-worktrees. For focused tests or any other Maven invocation, run this from the intended
+worktrees. For focused tests or lifecycle commands that run tests, run this from the intended
 worktree (PowerShell accepts the same Python command):
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test
 python3 tools/testing/maven_queue.py -Dmse=off package
 ```
+
+Build-only commands bypass the shared test scheduler automatically, including its
+resource reservations, priority and serial override:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off compile
+python3 tools/testing/maven_queue.py -Dmse=off test-compile
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package
+```
+
+They hold only the current worktree's `maven-worktree.lock`, preventing concurrent
+writes to its `target/` by another wrapped build or test. A test in another worktree
+cannot delay them. They publish no shared waiting/running records or queue telemetry.
+Direct `mvn compile` and `mvn -DskipTests package` are also allowed when nothing else
+is writing this worktree's `target/`; use the wrapper when that exclusion matters.
+
+Recognition covers this POM's lifecycle phases before `test`, and later phases with
+explicit `-DskipTests` or `-Dmaven.test.skip=true`. The last definition of each
+property wins; `false` does not skip tests. Split `-D`/`--define` forms are supported.
+Arbitrary plugin goals (including direct Surefire/Failsafe goals), alternate POMs,
+unknown profiles, non-default `.mvn/maven.config` and `MAVEN_ARGS` stay queued because
+their test behavior is uncertain. A skip flag does not certify an arbitrary plugin
+goal as build-only. Custom settings or Maven extensions may also change lifecycle
+bindings; inspect those before relying on automatic recognition. A native-image build
+with tests skipped bypasses admission too; its CPU/memory cost is not the Java-build
+estimate. Build CPU/RAM is visible as ordinary host load when later tests seek admission.
+
+On this Linux host (32 logical CPUs, Java 21.0.12.1, Maven 3.9.16), clean builds
+of `607e97d54` measured on 2026-10-09 with the existing local dependency cache were:
+
+- `clean compile`: 58.48 seconds, 1.524 GiB peak process-tree RSS, 1.891 average
+  CPU cores, 53.3 MiB allocated under `target/`.
+- `clean package -DskipTests`: 96.57 seconds, 3.427 GiB peak process-tree RSS,
+  2.088 average CPU cores, 893.4 MiB allocated under `target/`. This still compiles
+  test sources; `-Dmaven.test.skip=true` also skips test compilation.
+
+Both used `python3 tools/testing/maven_queue.py -Dmse=off -B` with no custom
+heap/thread limits and exited successfully. These are build measurements, not
+suite validation or guaranteed resource limits. The existing `UsageSampler`
+sampled the wrapper/Maven descendants every 100 ms; RSS sums shared pages and
+short-lived peaks/CPU can be missed. Disk figures exclude the checkout and Maven's
+dependency cache. Native-image compilation was not measured. The 7 GiB / 8-core
+test reservation below includes a separate test JVM and is not a build requirement.
 
 For small focused tests with known bounded memory needs, use the **lean lane**:
 
@@ -247,7 +292,7 @@ single-worker default suite and the profiles that keep it: `smoke`, `guards`, `c
 `trace-replay`, `trace-segments`, `trace-replay-r7`, `trace-diagnostics`, `fbz-routes`,
 `audio-reference` and `audio-local-wave`. A Python test pins that shape against `pom.xml`.
 `benchmarks` (wall-clock sensitive), `test-concurrent` (two forks), `audio-stress`,
-`tracechaser-integration`, packaging and other profiles, category `--workers 2`,
+`tracechaser-integration`, packaging with tests and other profiles, category `--workers 2`,
 Maven thread/fork/heap overrides, and nonempty `MAVEN_OPTS`,
 `JAVA_TOOL_OPTIONS` or `JDK_JAVA_OPTIONS` retain exclusive execution. Implicit profiles
 or heap settings in custom project/user Maven configuration are not detected; use the
@@ -286,7 +331,7 @@ kill, especially on Windows, check for surviving Maven/JVM processes before furt
 This is local coordination, not a sandbox against arbitrary commands.
 
 Direct `mvn` and runners predating the single-lock queue do not participate. Use the
-wrapper for local Maven builds/tests. Previous single-lock and resource-admission wrappers remain lock-compatible, but
+wrapper for local tests and for builds that need worktree exclusion. Previous single-lock and resource-admission wrappers remain lock-compatible, but
 they do not publish priority requests and can bypass waiting order. Update participating
 worktrees to this scheduler for its priority/aging policy to apply throughout the queue. Existing `openggf-validation/task.json`, `task.lock` and
 `target/category-tests-last-broad.json` files are ignored, not migrated or deleted;
