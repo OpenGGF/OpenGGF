@@ -31,6 +31,10 @@ For split files, use `rg --files` under the relevant disassembly directory.
 A name match is a candidate, not proof: verify bytes/decompression and the
 routine's pointer to the asset. Check the actual ROM filename and revision.
 
+When citing disassembly lines in code or docs, name the label beside the numbers
+(`Label (sonic3k.asm:N-M)`) and count lines in the pinned revision; your local checkout
+may differ. `python3 tools/disasm/disasm_citations.py check <paths>` verifies them.
+
 ## Porting details
 
 S2/S3K mapping frames have a word piece count and 6-byte pieces (signed word X).
