@@ -1,0 +1,168 @@
+# Tails' Typing School: authored drill lines and Tails' instructor lines (original text).
+# [section] headers, one entry per line. Lesson sections lead their lesson; dictionary words
+# made from the lesson's keys (Lexicon.lessonWords) fill the rest.
+
+[home]
+asdf jkl
+fjfj dkdk
+a sad lad
+all fall
+flash
+glass
+salsa
+half a flask
+shall
+a lass asks
+
+[top]
+type
+power
+quiet
+tower
+pretty
+witty
+wire
+your poetry
+rewrite
+port
+
+[bottom]
+jazz
+max
+snack
+black
+banana
+calm
+fax
+lamb
+a black cab
+van
+zack
+cash
+
+[numbers]
+1991
+1992
+1994
+100 rings
+7 emeralds
+3 lives
+2 acts
+60 fps
+50 rings
+10 seconds
+1 up
+99 points
+25 rings
+4 shields
+9 to 5
+
+[capitals]
+Sonic
+Tails
+Knuckles
+Robotnik
+Green Hill
+Angel Island
+Death Egg
+Chaos Emerald
+Super Sonic
+Flicky
+Mega Drive
+Metal Sonic
+
+[punctuation]
+Hey, Sonic!
+Way past cool!
+Don't panic.
+Rings, rings, rings!
+Gotta go, Tails.
+Is that a Motobug?
+You're too slow!
+Ready? Set. Go!
+Wait, what's that?
+Robotnik's at it again!
+
+# ---- Tails, the instructor -------------------------------------------------------------------
+
+[tails.welcome]
+Hi Sonic! Welcome to my Typing School!
+Ready for class? Pick a lesson or a drill!
+Fingers on the home row and let's go!
+
+[tails.exam.locked]
+Get a C or better in every drill to open the Final Exam!
+
+[tails.exam.open]
+You're ready for the Final Exam. Good luck!
+
+[tails.HOME_ROW]
+Rest your fingers on A S D F and J K L. Feel the bumps on F and J!
+[tails.TOP_ROW]
+Reach up from the home row, then come right back down!
+[tails.BOTTOM_ROW]
+Curl your fingers down for Z X C V B N M.
+[tails.NUMBERS]
+Numbers live up on the top row. Stretch!
+[tails.CAPITALS]
+Hold Shift with your other hand for capitals!
+[tails.PUNCTUATION]
+Commas, apostrophes and shouting! Type them all this time.
+[tails.RING_RUSH]
+Sixty seconds. Type every word you can!
+[tails.SUDDEN_DEATH]
+One mistake and it's over. Careful, Sonic!
+[tails.REFLEX]
+Letters will flash up. Hit them fast!
+[tails.LONG_WORDS]
+Big words! Keep a steady rhythm.
+[tails.PHRASES]
+Whole phrases. Don't forget the spaces!
+[tails.BOSS_TRAINING]
+Practise for Robotnik: perfect phrases, talk-backs and his silly quiz!
+[tails.WEAK_KEYS]
+I watched your typing. Let's train the keys you miss most!
+[tails.FINAL_EXAM]
+This is it! Everything you've learned, all at once.
+
+[tails.grade.A]
+Amazing! You're as fast as you run!
+Wow, Sonic! Top marks!
+[tails.grade.B]
+Great job! Almost perfect!
+Really good! Keep it up!
+[tails.grade.C]
+Not bad! A bit more practice and you'll fly!
+That's a pass. Nice!
+[tails.grade.D]
+Hmm, keep practising. You'll get it!
+Slow down a little and aim for accuracy.
+[tails.grade.E]
+Don't give up, Sonic! Try that one again.
+Even I crashed the Tornado my first time!
+
+[tails.quit]
+Come back soon!
+
+[tails.cheer]
+Nice streak!
+You're on fire!
+Way past cool!
+Keep it rolling!
+
+[tails.oops]
+Oops! Steady now.
+Eyes on the next letter!
+Shake it off!
+
+[tails.round.won]
+Got him!
+Robotnik won't like that!
+Perfect!
+
+[tails.round.lost]
+He got away! Next one!
+Too slow! Keep going!
+
+[tails.ready]
+Ready? Set...

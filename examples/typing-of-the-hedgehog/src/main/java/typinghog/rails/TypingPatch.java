@@ -15,10 +15,11 @@ import java.util.Set;
 import typinghog.play.TypingIds;
 
 /**
- * One game's patch: every decoded level loses its stock badniks (the typed badniks replace them,
- * and the rails were validated without them), so the rail run is exactly the run it was
- * validated as. Badnik object ids come from {@code badniks/<game>.txt} (hexadecimal, one per
- * line, with the disassembly's object name as a comment).
+ * One game's patch. Stock badniks stay in every level: removing them changes the recorded runs
+ * the rails come from (rails kill test, 2026-10-09), and Sonic 3 &amp; Knuckles reuses badnik
+ * object ids for bosses in other zones. The optional {@code badniks/<game>.txt} table
+ * (hexadecimal object ids, {@code 0x..}, one per line) can still strip placements for an
+ * experiment; the shipped mod leaves it empty, so levels load unchanged.
  */
 public final class TypingPatch implements GamePatch {
     private final String game;

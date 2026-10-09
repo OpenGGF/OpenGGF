@@ -1,0 +1,223 @@
+# Typing of the Hedgehog hub art: original pixel props and icons (TextArt format, see
+# typinghog.hub.model.TextArt). Every character, badnik, ring and backdrop comes from the
+# player's ROMs; only these props are shipped.
+
+palette
+K 101018
+W FFFFFF
+w D8E0EC
+g 98A0B4
+G 586078
+Y FFE040
+O F09000
+R E83020
+r 901010
+B 3878F0
+b 1838A0
+L 88D0FF
+t 9C6430
+T 5C3418
+N 38C858
+n 107030
+
+# The keyboard backpack Sonic wears (the Dreamcast nod): a little console box with a folded
+# keyboard strapped on, worn on his back. Drawn behind-right of his origin, facing right.
+sprite backpack
+..KKKKKKKKKKKK..
+.KwwwwwwwwwwwwK.
+KwWWWWWWWWWWWWgK
+KwWKKWKKWKKWKKgK
+KwWKWWKWWKWWKWgK
+KwWKKWKKWKKWKKgK
+KwWWWWWWWWWWWWgK
+KwWKKWKKWKKWKKgK
+KwWKWWKWWKWWKWgK
+KwWKKWKKWKKWKKgK
+KwWWWWWWWWWWWWgK
+KwWKKKKKKKKWKKgK
+KwWKWWWWWWKWKWgK
+KwWKKKKKKKKWKKgK
+KgwwwwwwwwwwwwgK
+KgggOOgggggggggK
+KgGOWOgGGGGGGGgK
+KgggOOgggggggggK
+.KKKKKKKKKKKKKK.
+
+# Shoulder strap, drawn over Sonic's chest after him.
+sprite strap
+TT
+tT
+tt
+tt
+tT
+TT
+
+# A gem template drawn tinted in each emerald's colour (tint multiplies these greys).
+sprite emerald
+...KKKK...
+..KWWwgK..
+.KWWwwggK.
+KWWwwgggGK
+KWwwgggGGK
+.KwggGGGK.
+..KgGGGK..
+...KGGK...
+....KK....
+
+sprite star
+....K....
+...KYK...
+KKKKYKKKK
+KYYYWYYYK
+.KYYYYYK.
+..KYYYK..
+.KYYKYYK.
+.KYK.KYK.
+.KK...KK.
+
+sprite lock
+..KKKK..
+.KggggK.
+.Kg..gK.
+.Kg..gK.
+KKKKKKKK
+KYYYYYYK
+KYOKKOYK
+KYOKKOYK
+KYYYYYYK
+KKKKKKKK
+
+# Hazard sign for acts whose rail is still being built.
+sprite construction
+.....KKK.....
+....KYYYK....
+...KYYKYYK...
+..KYYYKYYYK..
+..KYYYKYYYK..
+.KYYYYKYYYYK.
+.KYYYYYYYYYK.
+KYYYYYKYYYYYK
+KKKKKKKKKKKKK
+
+sprite check
+..........KK
+.........KNK
+........KNNK
+.KK....KNNK.
+KNNK..KNNK..
+.KNNKKNNK...
+..KNNNNK....
+...KNNK.....
+....KK......
+
+# ---- main menu icons (13x13) -----------------------------------------------------------------
+
+sprite icon.story
+....KKKKK....
+...KYYYYYK...
+..KYYBBBYYK..
+..KYBBBBBYK..
+..KYYBBBYYK..
+...KYYYYYK...
+....KKKKK....
+......K......
+......K......
+......K......
+......K......
+.....KKK.....
+....KKKKK....
+
+sprite icon.arcade
+.....KKK.....
+....KRRRK....
+....KRWRK....
+....KRRRK....
+.....KKK.....
+......K......
+......K......
+..KKKKKKKKK..
+.KgwwwwwwwgK.
+.KgwRKwYKwgK.
+.KgwwwwwwwgK.
+.KGgggggggGK.
+..KKKKKKKKK..
+
+sprite icon.rush
+......K......
+.....KRK.....
+....KRRRK....
+...KRRWRRK...
+..KRRRWRRRK..
+.KRRRRWRRRRK.
+KRRRRRWRRRRRK
+.KRRRRRRRRRK.
+..KRRRWRRRK..
+...KRRRRRK...
+....KRRRK....
+.....KRK.....
+......K......
+
+sprite icon.endless
+.............
+.............
+..KKK...KKK..
+.KLLLK.KLLLK.
+KLK.KLKLK.KLK
+KLK..KLK..KLK
+KLK.KLKLK.KLK
+.KLLLK.KLLLK.
+..KKK...KKK..
+.............
+
+sprite icon.school
+......K......
+....KKbKK....
+..KKbbbbbKK..
+KKbbbbbbbbbKK
+..KKbbbbbKKY.
+....KKbKK..Y.
+...KbbbbbK.Y.
+...KbbbbbK.Y.
+....KKKKK.KYK
+..........KYK
+
+sprite icon.records
+.KKKKKKKKKKK.
+KYKYYYYYYYKYK
+KYKYWYYYYYKYK
+.KKYWYYYYYKK.
+...KYYYYYK...
+....KYYYK....
+.....KYK.....
+.....KYK.....
+....KKKKK....
+...KOOOOOK...
+...KKKKKKK...
+
+sprite icon.options
+.....KKK.....
+..KK.KgK.KK..
+.KwgKKgKKgwK.
+..KgwwgggwK..
+KKKwgKKKggKKK
+KgggK...KgggK
+KggwK...KgggK
+KKKggKKKggKKK
+..KgggggggK..
+.KggKKgKKggK.
+..KK.KgK.KK..
+.....KKK.....
+
+sprite icon.quit
+..KKKKKKKK...
+..KttttttK...
+..KtTTTTtK...
+..KtT..TtK...
+..KtT..TtK.K.
+..KtT..YtKKWK
+..KtT..TtWWWWK
+..KtT..TtKKWK
+..KtT..TtK.K.
+..KtTTTTtK...
+..KttttttK...
+..KKKKKKKK...

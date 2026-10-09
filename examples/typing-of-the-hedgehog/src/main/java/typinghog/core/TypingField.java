@@ -72,6 +72,16 @@ public final class TypingField {
         }
     }
 
+    /**
+     * Pre-types the first {@code characters} of an untouched target (an assist power); never
+     * completes it, so the player still types the rest.
+     */
+    public void assist(int id, int characters) {
+        Target target = targets.get(id);
+        if (target == null || target.progress != 0) return;
+        target.progress = Math.max(0, Math.min(characters, target.prompt.typed().length() - 1));
+    }
+
     /** Removes a target that left without being typed (it struck, fled or was destroyed). */
     public void remove(int id) {
         targets.remove(id);
@@ -121,7 +131,7 @@ public final class TypingField {
         if (typed == ' ') return new Event(Kind.IGNORED, -1, 0);
         Target best = null;
         for (Target target : targets.values()) {
-            if (!target.typeable || target.progress != 0 || target.prompt.lead() != typed) continue;
+            if (!target.typeable || target.prompt.typed().codePointAt(target.progress) != typed) continue;
             if (best == null || target.urgency < best.urgency) best = target;
         }
         if (best == null) return new Event(Kind.ERROR, -1, 0);

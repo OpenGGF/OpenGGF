@@ -216,6 +216,30 @@ still subject to the feasibility kill tests below.
 - The typing layer never touches native player physics, RNG or native object slots.
 - Bullet time advances the native world on only some rows.
 
+**Kill-test results (rails lane, probe e87acba21, 2026-10-09; tables in the task directory).**
+At 400 px no recording slice reaches a boss or act end (best variants drift after 234–2,558
+rows; only the engine-authored S3K DDZ route completes). At 320 px with lag rows dropped, the
+recordings replay exactly to the act end in S1 GHZ3, SYZ3, SLZ3, SBZ2 and FZ and S2 HTZ2, OOZ2
+and ARZ2 (DEZ in sync to its last row; CPZ2 and MCZ2 reach the boss), but the recordings' own
+hits cap validated length (S1 GHZ3 row 5044, SYZ3 1239, SLZ3 1141, SBZ2 2170), removing stock
+badniks breaks the exact replays (GHZ3 drifts at row 373, MZ3 240, LZ3 123), S3K recordings drift
+even at 320 from cold act-1 starts, and every cold act-2 slice drifts at row 0. Stand
+capture/soak/restore passed in nine stands across all three games (Sonic solo and Sonic+Tails):
+no adapter-layout rejection, no hurt in 600-row soaks, and Sonic's final state, rings, RNG and
+counters equal an uninterrupted run. Caveat: in S1 and S2 CPZ2 a restore returns dynamic objects
+in different object slots (and S1 palette colours differ, display only); Sonic was unaffected over
+1,300–2,900 rows, but slot order sets execution and RNG order, so this is a latent engine restore
+fidelity risk outside this task.
+
+**Decisions.** View 320 px (`requireDisplayWidth(320)`). Stock badniks stay in the level (removal
+breaks exact replays and S3K reuses badnik ids for bosses across zones); during runs they get
+optional bonus plates instead, and the typed fights happen at stands. Teams: S1 Sonic alone, S2
+and S3K Sonic and Tails (the recordings' team). Rails come from an offline repair tool that
+replays a source program under the mod's exact semantics and repairs hurts and drift by local
+input search against the recording's own 320 path, then picks soak-tested stand rows; a
+regression test runs every shipped rail through the packaged course. A story stop uses act 1
+when the boss act cannot be railed.
+
 Kill tests, in order: (1) replay every source program headless at 400 wide with the chosen team
 and record validated length (settles team and repair budget); (2) capture at the first stand,
 play to the validated end, restore, and expect no layout-version rejection (including a

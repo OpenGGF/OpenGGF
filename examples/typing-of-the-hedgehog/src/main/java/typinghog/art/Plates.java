@@ -15,6 +15,7 @@ public final class Plates {
         POWER(0xFF40C0FF), BOSS(0xFFFF60C0);
         final int rim;
         Style(int rim) { this.rim = rim; }
+        public int rimColour() { return rim; }
     }
 
     public static final int TEXT = 0xFFFFFFFF;

@@ -192,7 +192,25 @@ public final class ModAudioPreparer {
                                 track.gain(), track.tempoEffects(), sourceSha));
                     } else {
                         ModAudioSfx sfx = declaration.sfx();
-                        ownerPreparedSfx.add(new PreparedSfx(sfx.key(), cached.pcm(), sfx.gain(), sourceSha));
+                        CachedPcm played = cached;
+                        if (sfx.dac() != null) {
+                            // A derived rendering shares the clean decode and is cached beside it.
+                            CacheKey variantKey = new CacheKey(sourceSha, outputRate, codec + "|" + sfx.dac().fingerprint());
+                            CachedPcm variant = cache.get(variantKey);
+                            if (variant == null) variant = nextCache.get(variantKey);
+                            if (variant == null) variant = ownerCache.get(variantKey);
+                            if (variant == null) variant = activePcm.get(variantKey);
+                            if (variant == null) {
+                                variant = new CachedPcm(sfx.dac().apply(cached.pcm()), cached.sourceRate(), cached.sourceFrames());
+                            }
+                            if (!ownerCache.containsKey(variantKey) && !nextCache.containsKey(variantKey)
+                                    && !activePcm.containsKey(variantKey)) {
+                                provisionalBytes = Math.addExact(provisionalBytes, variant.pcm().byteSize());
+                            }
+                            ownerCache.putIfAbsent(variantKey, variant);
+                            played = variant;
+                        }
+                        ownerPreparedSfx.add(new PreparedSfx(sfx.key(), played.pcm(), sfx.gain(), sourceSha));
                     }
                 }
                 long ownerNewBytes = provisionalBytes;

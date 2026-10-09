@@ -12,10 +12,12 @@ import java.util.Map;
 import typinghog.art.PlateFont;
 import typinghog.art.Plates;
 import typinghog.core.Lexicon;
+import typinghog.hub.HubAssets;
 import typinghog.hub.HubScene;
 import typinghog.play.Cast;
 import typinghog.play.Course;
 import typinghog.play.CourseAssets;
+import typinghog.play.Props;
 import typinghog.play.Sounds;
 import typinghog.play.Stagehand;
 import typinghog.play.TypingIds;
@@ -24,27 +26,31 @@ import typinghog.rails.TypingPatch;
 
 /**
  * Typing of the Hedgehog: a Typing of the Dead homage over every supplied Sonic ROM. The hub is
- * the startup scene; each game's patch removes stock badniks and installs the {@link Course}
- * controller, which drives Sonic along the act's rail and stages the typed fights.
+ * the startup scene; each game's patch installs the {@link Course} controller, which drives Sonic
+ * along the act's rail (stock badniks stay; runs put bonus words on them) and stages the typed
+ * fights at stands.
  */
 public final class TypingHedgehogMod implements GgfMod {
-    static final List<String> GAMES = List.of("s1", "s2", "s3k");
-    static final List<String> WORD_POOLS = List.of("common", "tricky", "phrases", "rescues", "lore-s1", "lore-s2", "lore-s3k");
+    // The mod validator allows only literal static constants, so lists live on the instance.
+    private final List<String> games = List.of("s1", "s2", "s3k");
+    private final List<String> wordPools = List.of("common", "tricky", "phrases", "rescues", "lore-s1", "lore-s2", "lore-s3k");
 
     @Override public void register(ModContext context) {
         Lexicon lexicon = new Lexicon();
-        for (String pool : WORD_POOLS) lexicon.pool(pool, text(context, "words/" + pool + ".txt", ""));
+        for (String pool : wordPools) lexicon.pool(pool, text(context, "words/" + pool + ".txt", ""));
         lexicon.taunts(text(context, "words/taunts.txt", ""));
         lexicon.trivia(text(context, "words/trivia.txt", ""));
         lexicon.pool("user", context.storage().read("words.txt").orElse(""));
         PlateFont font = new PlateFont(text(context, "art/plate-font.txt", null));
         Map<String, Cast> casts = new HashMap<>();
         Map<String, Sounds> sounds = new HashMap<>();
+        Map<String, Props> props = new HashMap<>();
         Map<String, Rail> rails = new HashMap<>();
         Map<String, String> badniks = new HashMap<>();
-        for (String game : GAMES) {
+        for (String game : games) {
             casts.put(game, Cast.parse(text(context, "cast/" + game + ".txt", "")));
             sounds.put(game, Sounds.parse(text(context, "sounds/" + game + ".txt", "")));
+            props.put(game, Props.parse(text(context, "props/" + game + ".txt", "")));
             badniks.put(game, text(context, "badniks/" + game + ".txt", ""));
         }
         for (String line : text(context, "rails/index.txt", "").split("\n")) {
@@ -54,19 +60,24 @@ public final class TypingHedgehogMod implements GgfMod {
             rails.put(rail.game() + ":" + rail.zone() + ":" + rail.act(), rail);
         }
         CourseAssets assets = new CourseAssets(lexicon, new Plates(font), Map.copyOf(casts), Map.copyOf(sounds),
-                Map.copyOf(rails));
+                Map.copyOf(props), Map.copyOf(rails));
         var storage = context.storage();
-        context.requireDisplayWidth(400);
+        // Rails are validated at the native 320-pixel view: a wider view activates objects earlier and the
+        // recorded runs diverge (rails kill test, 2026-10-09).
+        context.requireDisplayWidth(320);
         context.registerObject("puppet", (spawn, registry) -> new typinghog.play.Puppet(spawn));
         context.registerServiceBundle("course", () -> {
             Stagehand stagehand = new Stagehand();
+            Course course = new Course(storage, assets, stagehand);
             return GameServiceBundle.builder()
-                    .frameController("course", new Course(storage, assets, stagehand))
+                    .frameController("course", course)
+                    .service(Course.class, course)
                     .service(Stagehand.class, stagehand)
                     .build();
         });
-        for (String game : GAMES) context.registerGamePatch(new TypingPatch(game, badniks.get(game)));
-        context.registerStartupScene(() -> new HubScene(assets));
+        for (String game : games) context.registerGamePatch(new TypingPatch(game, badniks.get(game)));
+        HubAssets hub = HubAssets.read(path -> text(context, path, ""));
+        context.registerStartupScene(() -> new HubScene(assets, hub));
     }
 
     private static String text(ModContext context, String path, String fallback) {

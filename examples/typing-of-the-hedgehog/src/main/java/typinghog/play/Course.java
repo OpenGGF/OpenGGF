@@ -71,10 +71,15 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     private boolean titleRequest;
     private boolean advancedThisRow;
     private boolean bossDefeated;
+    private boolean shield;
+    private int slowRows;
+    private int invincibleRows;
+    private int slowPhase;
     private long rows;
     private SplittableRandom random;
     private typinghog.core.Lexicon.Picker picker;
     private final KeyStats keyStats = new KeyStats();
+    private final RunTags runTags = new RunTags();
 
     public Course(ModStorage storage, CourseAssets assets, Stagehand stagehand) {
         this.storage = storage;
@@ -99,10 +104,20 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
             return false;
         }
         phaseRows++;
+        typeRow(typed, backspace);
+        if (invincibleRows > 0) invincibleRows--;
+        if (slowRows > 0 || intent.slowMotion()) {
+            if (slowRows > 0) slowRows--;
+            // Slow motion advances the native world (and everything on it) every other row; the
+            // run is the same sequence of native steps, so it stays deterministic.
+            if (phase == Phase.RUN || phase == Phase.STAND || phase == Phase.BOSS) {
+                if ((++slowPhase & 1) == 0) return false;
+            }
+        }
         advancedThisRow = switch (phase) {
             case ENTRY -> entry(course);
             case RUN -> run(course);
-            case STAND, BOSS -> stand(course, typed, backspace);
+            case STAND, BOSS -> stand(course);
             case STAND_CLEAR -> standClear(course);
             case DYING -> dying(course);
             case TALLY -> tally();
@@ -114,6 +129,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     @Override public void afterTick(CourseControl course, boolean advanced) {
         if (intent == null || rail == null) return;
         if (advanced && encounter != null) encounter.advance(this);
+        if (advanced && phase == Phase.RUN) runTags.advance(this);
         spawnPuppets();
     }
 
@@ -162,6 +178,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         phaseRows = 0;
         stagehand.clear();
         stagehand.invalidatePuppets();
+        runTags.clear(new TypingField(false));
         if (intent == null || rail == null) return;
         cursor = new Rail.Cursor(rail);
         nextStand = 0;
@@ -176,6 +193,9 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         previousMask = 0;
         standCheckpoint = null;
         bossDefeated = false;
+        shield = false;
+        slowRows = 0;
+        invincibleRows = 0;
         paused = false;
         GameServices.level().setForceHudSuppressed(true);
     }
@@ -186,46 +206,64 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     }
 
     private boolean entry(CourseControl course) {
-        if (course.presentationReady()) enter(Phase.RUN);
+        if (!course.presentationReady()) return true;
+        if (intent.mode() == LaunchIntent.Mode.BOSS_RUSH) {
+            // Boss Rush skips the run: the boss arrives where the act begins.
+            beginStand(course, true);
+            return stand(course);
+        }
+        enter(Phase.RUN);
         return true;
+    }
+
+    /** Applies the row's typing to whatever is on screen: run tags while running, the stand's targets in a stand. */
+    private void typeRow(String typed, boolean backspace) {
+        if (phase == Phase.RUN) {
+            if (backspace) field.release();
+            typed.codePoints().forEach(cp -> runTags.onEvent(this, field.type(cp), cp));
+        } else if ((phase == Phase.STAND || phase == Phase.BOSS) && encounter != null) {
+            if (backspace) encounter.onRelease(this, field.release());
+            typed.codePoints().forEach(cp -> encounter.onEvent(this, field.type(cp), cp));
+        } else {
+            return;
+        }
+        if (!field.targets().isEmpty()) card.activeRow();
     }
 
     private boolean run(CourseControl course) {
         if (cursor.row() >= rail.bossRow()) {
             beginStand(course, true);
-            return stand(course, "", false);
+            return stand(course);
         }
         if (nextStand < rail.stands().size() && cursor.row() >= rail.stands().get(nextStand)) {
             nextStand++;
             beginStand(course, false);
-            return stand(course, "", false);
+            return stand(course);
         }
         if (cursor.finished()) {
             beginStand(course, true);
-            return stand(course, "", false);
+            return stand(course);
         }
         return true;
     }
 
     private void beginStand(CourseControl course, boolean boss) {
+        runTags.clear(field);
         standCheckpoint = course.capture();
         standPreviousMask = previousMask;
         enter(boss ? Phase.BOSS : Phase.STAND);
-        encounter = boss ? Encounter.boss(this) : Encounter.stand(this, nextStand);
+        encounter = boss ? Encounter.boss(this)
+                : intent.mode() == LaunchIntent.Mode.ENDLESS ? Encounter.endless(this) : Encounter.stand(this, nextStand);
         field.clear();
         hud.banner(boss ? "WARNING!" : "STAND " + nextStand, boss ? 0xFFFF4040 : 0xFFFFD000);
         play(Sounds.Cue.STAND_START);
         if (boss) playMusic(Sounds.Cue.BOSS_MUSIC);
     }
 
-    private boolean stand(CourseControl course, String typed, boolean backspace) {
+    private boolean stand(CourseControl course) {
         holdPlayer();
-        if (field != null) {
-            if (backspace) encounter.onRelease(this, field.release());
-            typed.codePoints().forEach(cp -> encounter.onEvent(this, field.type(cp), cp));
-        }
-        if (!field.targets().isEmpty()) card.activeRow();
         if (encounter.finished()) {
+            encounter.clearPickups(this);
             if (phase == Phase.BOSS) {
                 bossDefeated = true;
                 playMusic(Sounds.Cue.ACT_CLEAR_MUSIC);
@@ -318,8 +356,31 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         player.setGSpeed((short) 0);
     }
 
+    /** Grants a monitor's power. */
+    void grant(Pickup.Kind kind) {
+        switch (kind) {
+            case SHIELD -> { shield = true; play(Sounds.Cue.SHIELD); hud.banner("SHIELD!", 0xFF60C0FF); }
+            case SPEED -> { slowRows = 600; hud.banner("SLOW MOTION!", 0xFF60C0FF); }
+            case INVINCIBLE -> { invincibleRows = 600; playMusic(Sounds.Cue.INVINCIBLE_MUSIC); hud.banner("INVINCIBLE!", 0xFFFFD000); }
+            case SUPER_RING -> { addRings(10); hud.banner("SUPER RING!", 0xFFFFD000); }
+            case EXTRA_LIFE -> { lives++; playMusic(Sounds.Cue.EXTRA_LIFE_MUSIC); hud.banner("1-UP!", 0xFF60FF60); }
+            case DECOY, RESCUE -> { }
+        }
+    }
+
+    boolean invincible() { return invincibleRows > 0; }
+    boolean shielded() { return shield; }
+    int slowRows() { return slowRows; }
+
     /** A badnik reached Sonic. */
     void hitSonic() {
+        if (invincibleRows > 0) return;
+        if (shield) {
+            shield = false;
+            play(Sounds.Cue.HIT);
+            hud.banner("SHIELD LOST", 0xFF60C0FF);
+            return;
+        }
         card.hitTaken();
         if (rings > 0) {
             int spill = Math.min(rings, 20);
@@ -351,6 +412,28 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         if (id >= 0) GameServices.audio().playMusic(id);
     }
 
+    // ---- a read-only view for tests, captures and debugging ----------------------------------------
+
+    /** One target on screen: its typed form, progress and whether it is locked. */
+    public record TargetView(int id, String typed, int progress, boolean locked) { }
+
+    /** The course at a glance; {@code railRow} is the next program row the rail will play. */
+    public record View(String phase, int railRow, int nextStand, int rings, int lives, long score, int chain,
+                       int kills, double wpm, java.util.List<TargetView> targets, int visuals, boolean paused) { }
+
+    public View view() {
+        java.util.List<TargetView> targets = new java.util.ArrayList<>();
+        if (field != null) {
+            for (var target : field.targets()) {
+                targets.add(new TargetView(target.id(), target.prompt().typed(), target.progress(),
+                        field.locked() == target.id()));
+            }
+        }
+        return new View(phase.name(), cursor == null ? -1 : cursor.row(), nextStand, rings, lives,
+                card == null ? 0 : card.score(), card == null ? 0 : card.chain(), card == null ? 0 : card.kills(),
+                card == null ? 0 : card.wpm(), java.util.List.copyOf(targets), stagehand.all().size(), paused);
+    }
+
     // ---- views for the encounter and HUD -------------------------------------------------------
 
     void spawnPuppets() {
@@ -368,6 +451,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     KeyStats keyStats() { return keyStats; }
     Hud hud() { return hud; }
     Encounter encounter() { return encounter; }
+    RunTags runTags() { return runTags; }
     int rings() { return rings; }
     int lives() { return lives; }
     long rows() { return rows; }
