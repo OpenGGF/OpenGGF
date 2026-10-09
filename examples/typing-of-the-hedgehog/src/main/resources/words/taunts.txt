@@ -1,0 +1,156 @@
+# Typing of the Hedgehog: Robotnik taunts for the Talk Back bosses. Format: tag|line
+# Tags: any, a game (s1, s2, s3k) or game:zone (s1:ghz, s2:cnz, s3k:aiz ...). Original lines.
+any|You will never outrun my genius, hedgehog!
+any|Type all you like, my robots never tire!
+any|Your little fingers are no match for my machines!
+any|I have a thousand badniks and only one of you!
+any|Every keystroke brings you closer to defeat!
+any|Behold the brilliance of the Robotnik Empire!
+any|You call that typing? My toaster types faster!
+any|I shall build a robot that types twice as fast!
+any|Spell my name correctly, you prickly pest!
+any|Mind your spelling, hedgehog, I am watching!
+any|Your rings will be mine, every last one!
+any|Surrender the Chaos Emeralds and I may be merciful!
+any|Bow before the greatest scientist in the world!
+any|My mustache is more impressive than your speed!
+any|I did not spend years in my lab for this!
+any|Ha! Another typo! I am counting every one!
+any|You have the reflexes of a sleepy snail!
+any|Even my weakest badnik is smarter than you!
+any|Keep typing, hedgehog, it will not save you!
+any|I will turn every animal into a loyal badnik!
+any|Give up now and I will name a robot after you!
+any|My plans are flawless and my machines are perfect!
+any|Nobody defies the genius of Doctor Robotnik!
+any|You are a speed bump on my road to glory!
+any|I have calculated your defeat to the last letter!
+any|Prepare to be out-typed by superior engineering!
+any|One misspelling and my machines will pounce!
+any|Your fan club will be very disappointed today!
+any|Tick tock, hedgehog, my clocks never lie!
+any|What is that? A typo? How delightful!
+any|My robots read your keystrokes before you press them!
+any|Oh, the ingenuity! Oh, the sheer genius of me!
+any|Typing lessons will not save you now, hedgehog!
+any|Is that the best those little blue hands can do?
+any|Your precious friends cannot help you here!
+any|Sooner or later, every hedgehog runs out of rings!
+any|I have more robots than you have letters!
+any|Do try to keep up, hedgehog. This is embarrassing!
+any|Soon the whole world will bear my name!
+any|You may win this round, but not the next!
+any|Curses! Beaten by a hedgehog with a keyboard!
+any|My next machine will be twice as big!
+any|A hedgehog with a keyboard? How utterly ridiculous!
+any|I designed every badnik with my own brilliant hands!
+any|My egg-shaped empire grows larger every day!
+any|Your vowels are wobbly and your consonants are weak!
+any|Stop typing at once! That is an order!
+any|I will have my revenge, and my rings!
+any|You are only fast because I let you be!
+any|Admire my machines while you still have the chance!
+any|Every great genius needs an annoying blue rival!
+any|Space bar? I invented the space bar!
+s1|Welcome to South Island, my future robot factory!
+s1|The Chaos Emeralds of South Island belong to me!
+s1|Six emeralds, hedgehog, and I want every one!
+s1|Every animal on this island will serve my machines!
+s1|Your blue spines will not stop my Scrap Brain factory!
+s1|This whole island is my laboratory, hedgehog!
+s1|Run through my zones and see how far you get!
+s1|The Final Zone awaits you, if you ever get there!
+s1|Ha! You will never collect all six emeralds!
+s1|My badniks outnumber the rings on this island!
+s1|You will never find the Special Stage, hedgehog!
+s1|I juggle Chaos Emeralds for fun, you know!
+s1|The animals of South Island will power my badniks!
+s1|Your first adventure ends right here, hedgehog!
+s1:ghz|Enjoy the green hills while they are still green!
+s1:ghz|My wrecking ball swings faster than you can type!
+s1:ghz|These checkered hills will soon be paved with badniks!
+s1:mz|Mind the lava, hedgehog, it is terribly warm!
+s1:mz|These ancient ruins will be your typing exam!
+s1:syz|Spring Yard is my playground, and you are not invited!
+s1:syz|I will pull the blocks right out from under you!
+s1:lz|Hold your breath and your spelling, hedgehog!
+s1:lz|The water rises, and so does my genius!
+s1:slz|Star Light is lovely, until the seesaws start!
+s1:slz|My spiked bombs will bounce right off your typos!
+s1:sbz|Welcome to my factory. Please do not touch anything!
+s1:sbz|Scrap Brain runs on gears, steam and my genius!
+s1:fz|This is the Final Zone, and the final word!
+s1:fz|Choose a cylinder, any cylinder, hedgehog!
+s2|The Death Egg will rise, and you cannot stop it!
+s2|Seven Chaos Emeralds will power my Death Egg!
+s2|Two of you now? Twice the typing, half the talent!
+s2|Your fox friend cannot fly you out of this one!
+s2|West Side Island is my workshop now!
+s2|My Silver Sonic is faster, shinier and smarter!
+s2|Your spin dash will not dash my hopes!
+s2|Even with a sidekick, you are no match for me!
+s2|The Tornado is a lovely plane. Shame about the passengers!
+s2|My Wing Fortress will darken the skies!
+s2|Enjoy my zones, hedgehog, I built most of them!
+s2|Miles? Tails? Whatever his name is, he is in my way!
+s2|Super Sonic? Let us see you type that fast!
+s2|My Death Egg Robot is the finest machine ever built!
+s2:ehz|Emerald Hill is pretty, but my drill car is prettier!
+s2:ehz|My coconut-throwing badniks never miss, and neither do I!
+s2:cpz|Mind the Mega Mack, hedgehog, it stains!
+s2:cpz|My chemical plant is bubbling over with genius!
+s2:arz|These ruins are old, but my arrows are new!
+s2:arz|Bubbles will not save you in my aquatic ruin!
+s2:cnz|Step right up, hedgehog! The house always wins!
+s2:cnz|Spin the slots, hedgehog, and lose all your rings!
+s2:htz|The mountain shakes at the sound of my name!
+s2:htz|Feel the heat of the lava and my genius!
+s2:mcz|In the dark, nobody sees your typos. Except me!
+s2:ooz|Slip in my oil and sink out of sight!
+s2:mtz|My factory has three acts of trouble for you!
+s2:mtz|Cogs, nuts and bolts, all turning against you!
+s2:scz|Enjoy the sky, it is the last calm you will see!
+s2:wfz|Welcome aboard my Wing Fortress, uninvited guest!
+s2:dez|Behold the Death Egg, the egg of tomorrow!
+s2:dez|My Death Egg Robot will crush your little keyboard!
+s3k|That foolish echidna believes every word I say!
+s3k|Knuckles will guard this island for me, how kind!
+s3k|The Master Emerald will power my Death Egg forever!
+s3k|Angel Island floats, and soon it will be mine!
+s3k|The Death Egg will launch, with or without you!
+s3k|Those Super Emeralds would look lovely in my lab!
+s3k|My Eggrobos never make typing mistakes!
+s3k|Mecha Sonic is ready for a rematch, hedgehog!
+s3k|Every bonus stage is a trap, I promise you!
+s3k|Hyper Sonic? Hyper typing? We shall see!
+s3k|Your shields cannot block a single typo!
+s3k|The echidna and the hedgehog, what a pair of fools!
+s3k|My Flying Battery will rain badniks on your head!
+s3k|I fixed the Death Egg once, I can fix it again!
+s3k:aiz|Welcome to Angel Island, hedgehog. Now leave!
+s3k:aiz|My bombers will turn this jungle into toast!
+s3k:hcz|Hold your breath, hedgehog! The water is mine!
+s3k:hcz|Hydrocity was built for fish, not hedgehogs!
+s3k:mgz|Spin all the tops you like, my drill spins faster!
+s3k:mgz|These marble ruins will crumble beneath your typos!
+s3k:cnz|Welcome to the carnival! Every ride is rigged!
+s3k:cnz|Up and down, hedgehog! Up and down on my barrel!
+s3k:icz|Chill out, hedgehog! IceCap is my cold storage!
+s3k:icz|Snowboard all you like, you will still slip up!
+s3k:lbz|Launch Base is ready, and so is my Death Egg!
+s3k:lbz|The countdown has begun! Type faster, hedgehog!
+s3k:mhz|The seasons change, but my genius is eternal!
+s3k:mhz|These mushrooms are bouncy, but my robots bounce back!
+s3k:fbz|Welcome aboard the Flying Battery, stowaway!
+s3k:fbz|Magnets, lasers and mines, all just for you!
+s3k:soz|In the dark, the ghosts do my bidding!
+s3k:soz|Keep the lights on, hedgehog, if you can type that fast!
+s3k:lrz|Lava Reef is warm, but my welcome is warmer!
+s3k:lrz|My Death Egg rests here, and you shall not wake it!
+s3k:hpz|The Master Emerald is mine! Stand aside, echidna!
+s3k:ssz|From up here, the whole island looks like a toy!
+s3k:ssz|Mecha Sonic will settle this among the clouds!
+s3k:dez|Welcome to my Death Egg. Gravity is optional!
+s3k:dez|You are inside my masterpiece, hedgehog! Be impressed!
+s3k:ddz|Out here among the stars, my genius shines brightest!
+s3k:ddz|The emeralds are mine, and so is the sky!

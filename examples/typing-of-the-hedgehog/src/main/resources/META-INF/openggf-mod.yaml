@@ -1,0 +1,14 @@
+formatVersion: 1
+id: typing-of-the-hedgehog
+name: Typing of the Hedgehog
+version: 0.1.0
+authors:
+  - OpenGGF contributors
+description: A Typing of the Dead homage. Sonic runs the real stock acts of every Sonic 1, Sonic 2 and Sonic 3 & Knuckles ROM you own with a keyboard on his back; badniks carry words, and typing them spin-attacks them. Story, Arcade, Boss Rush, Endless and Tails' Typing School.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: any
+entrypoint: typinghog.TypingHedgehogMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

@@ -1,0 +1,207 @@
+# Typing of the Hedgehog: Sonic the Hedgehog (1991) lore, display capitalisation.
+# Names checked against docs/s1disasm object and title-card labels; badniks use their
+# international names (the disassembly's "Basaran" is listed beside Batbrain).
+# Zones and stages
+Green Hill
+Green Hill Zone
+Marble
+Marble Zone
+Spring Yard
+Spring Yard Zone
+Labyrinth
+Labyrinth Zone
+Star Light
+Star Light Zone
+Scrap Brain
+Scrap Brain Zone
+Final Zone
+Special Stage
+South Island
+Act One
+Act Two
+Act Three
+# Badniks
+Motobug
+Buzz Bomber
+Chopper
+Crabmeat
+Newtron
+Batbrain
+Basaran
+Caterkiller
+Roller
+Burrobot
+Jaws
+Orbinaut
+Bomb
+Ball Hog
+Yadrin
+Badnik
+Badniks
+# Characters and animals
+Sonic
+Sonic the Hedgehog
+Hedgehog
+Dr. Robotnik
+Doctor Robotnik
+Robotnik
+Eggman
+Dr. Eggman
+Flicky
+Pocky
+Cucky
+Pecky
+Ricky
+Picky
+Rocky
+Freed Animals
+# Robotnik's machines
+Egg Mobile
+Egg Wrecker
+Wrecking Ball
+Plasma Ball
+Crushing Cylinder
+Prison Capsule
+# Items and monitors
+Ring
+Rings
+Golden Ring
+Super Ring
+Ten Rings
+Shield
+Invincibility
+Speed Shoes
+Extra Life
+1-Up
+Monitor
+Chaos Emerald
+Chaos Emeralds
+Six Chaos Emeralds
+Giant Ring
+Lamppost
+Signpost
+Spring
+Red Spring
+Yellow Spring
+Spikes
+Bumper
+Button
+Cannonball
+Buzz Bomber Missile
+Hidden Bonus
+# Green Hill
+Green Hill Bridge
+Swinging Platform
+Spiked Pole Helix
+Collapsing Ledge
+Purple Rock
+Smashable Wall
+Edge Wall
+Waterfall
+Checkered Hills
+Loop
+Tunnel
+# Marble
+Lava
+Lava Geyser
+Wall of Lava
+Burning Grass
+Grassy Platform
+Green Glass Block
+Chained Stomper
+Pushable Block
+Smashable Green Block
+Marble Bricks
+Fireball
+Marble Ruins
+# Spring Yard
+Spinning Light
+Floating Block
+Spiked Ball and Chain
+Big Spiked Ball
+# Labyrinth
+Water
+Underwater
+Air Bubble
+Air Bubbles
+Drowning Countdown
+Water Splash
+Water Surface
+Breakable Pole
+Wind Tunnel
+Flapping Door
+Gargoyle
+Conveyor
+Labyrinth Block
+Rising Water
+# Star Light
+Seesaw
+Fan
+Elevator
+Circling Platform
+Staircase
+Pylon
+Fireball Maker
+Spikeball on a Seesaw
+# Scrap Brain
+Small Door
+Rotating Junction
+Running Disc
+Conveyor Belt
+Spinning Platform
+Trapdoor
+Saw
+Pizza Cutter
+Stomper
+Sliding Door
+Vanishing Platform
+Flamethrower
+Electrocuter
+Girder Block
+Teleporter
+Crumbling Floor
+Factory
+# Special Stage
+Rotating Maze
+Goal Block
+R Block
+1-Up Block
+Emerald
+Birds and Fish
+# Screens and tally
+Sega
+Sonic Team
+Sonic Team Presents
+Press Start Button
+Title Screen
+Sonic Has Passed
+Sonic Got Them All
+Score
+Time
+Time Bonus
+Ring Bonus
+Game Over
+Time Over
+Continue
+Try Again
+Level Select
+Debug Mode
+Lives
+# Moves and actions
+Spin Attack
+Spin Jump
+Roll
+Rolling
+Jump
+Run
+Skid
+Push
+Look Up
+Crouch
+Bounce
+Loop the Loop
+Free the Animals
+Smash the Badniks
+Collect the Rings
+Find the Emeralds
+Stop Robotnik
