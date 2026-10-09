@@ -1560,9 +1560,10 @@ locked-on `63522553`. All Maven tests use `tools/testing/maven_queue.py`,
   **62 passed**, no failures/errors/skips.
 - `-Dtest=TestS3kModZoneAdapter,TestModZoneAdapterRouting,TestModZoneLoader,TestModZoneRuntimeProfile,TestModZoneEventLifecycle,TestSonic3kModZoneObjectSet,TestSonic3kLivesHudPaletteOverride`:
   **82 passed**, no failures/errors/skips.
-- Optional `-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestObjectPriorityBucketGuard,TestPatternSpriteRendererCorruptionGuard`
-  was cancelled after over six minutes waiting for shared admission, before Maven
-  execution. No pass or failure is attributed to those selectors.
+- `-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestObjectPriorityBucketGuard,TestPatternSpriteRendererCorruptionGuard`:
+  **16 passed**, no failures/errors/skips. This run waited over six minutes, then
+  completed before an attempted cancellation; final logs establish execution.
+  This is targeted structural coverage, not the entire guards profile.
 - `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base acb094c76 --preflight`:
   passed Java/Lua/PowerShell prerequisites. The default Lua executable initially
   failed preflight; Lua 5.4 corrected the prerequisite.
