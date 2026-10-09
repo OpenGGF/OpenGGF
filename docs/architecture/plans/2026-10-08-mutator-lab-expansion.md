@@ -688,3 +688,68 @@ errors and one expected absent-preserved-report skip. Tool preflight succeeds
 with Java 21 and explicit Lua 5.4. These are tool/fixture checks, not engine-wide
 qualification. Runtime, producer, graphics and full fresh-guard composition
 remain the lead's delivery gates.
+
+
+## Checked load failure and native recovery
+
+The final ordinary candidate at `1217399ecfd8e7042cf8ddc6cec74d48056e0b8b`
+exposed a deferred creator-load regression: the extracted `LevelLoadAttempt`
+returned `CallbackAborted` directly where `LevelManager.loadLevel` had preserved
+its declared `IOException` boundary. The matched clean
+`019dd454b0d63b10a1d0585450bb28f34e360c04` control passed that same owner-bound
+loader assertion. Its Eggman's Sky menu assertion and both golf development-boot
+assertions failed identically to the candidate; the golf failures occurred at
+the patched-module prerequisite check before title input. No example or input
+behavior was changed to hide those inherited failures.
+
+An abort from the actual deferred `InitStep.execute()` now has a host-constructed,
+final checked load carrier
+that retains the original abort object. Module/profile construction and
+policy/roster admission aborts remain direct. The frame and creator fault boundaries
+accept only this carrier, directly
+or as the immediate cause of the existing plain runtime load wrapper; the fault
+boundary also handles its own private checked-callback wrapper. Arbitrary cause
+chains remain untrusted, and fatal failures retain their existing escape behavior.
+The bonus-entry and ending-demo IO fallbacks explicitly propagate this trusted
+abort instead of swallowing it. Restoring `IOException` without those recovery
+paths was rejected because it would lose the original creator's fault or let a
+load consumer take its ownership. Quarantine and native arithmetic are unchanged.
+
+The current matched reproduction used the original three absolute ROM properties,
+private tracked-reference configuration, no ROM aliases, no Java option injection,
+and the inherited native-library path. Its four identities produced four assertion
+failures with no errors or skips; only the deferred-load identity differed from
+the clean control. The initial inherited-main-configuration arm is recorded
+separately and is not treated as a matched default control. Focused repair
+validation and the root's combined fresh ordinary/guard gate remain separate.
+
+The normal-lane repair check used
+`maven_queue.py -Dmse=off -Dtest=TestLevelLoadAttempt,TestOwnerBoundGamePatch,TestModContextAndFaultBoundary,TestEngineModCallbackAbortBoundary,TestGameLoop,TestModGameplayPolicyFaultBoundary test dependency:build-classpath`
+with those same explicit ROM properties and environment. It completed at
+2026-10-09T10:05:45Z: six fresh selected reports, 160 cases, no failures/errors/skips,
+and unchanged source fingerprint `8a39084efffc506d33f1f3dc7a356a82a80dd0936ebcb27cc434d46c86e86fb0`.
+Old unselected Eggman/golf XML reports belong to the earlier reproduction and
+are excluded from that focused result. The genuine export from this tree's
+compiled classes and its own dependency classpath remains byte-equal to the
+17739-line candidate pin (`e08a807c0ab1c1ed5dc7d7fb3f4258227a45c9d7835c94268f9701abbb89aef1`),
+with zero added/removed signatures. No synthetic pin or guard change is needed.
+The unchanged GameLoop source budget remains 3381; the repaired source is 3372
+effective lines. The actual change-based plan selects all 3108 ordinary classes
+and fresh guards for the root's composed candidate; this focused pass does not
+replace that gate or certify the three inherited example failures.
+
+Root source review of `0606c7a25eacb416f28c8e71a1a8007cd485db3c` found that
+the first recording catch also enclosed module lookup, profile lookup and
+step-list construction. That broader recording was rejected before integration:
+the catch now surrounds only `InitStep.execute()`. The historical 160-case pass
+above remains attributed to its exact source. An affected-only normal follow-up
+(`-Dtest=TestLevelLoadAttempt,TestOwnerBoundGamePatch`) completed at
+2026-10-09T10:13:12Z with two fresh reports/26 cases, no failures/errors/skips,
+and unchanged source fingerprint
+`01e99ef0b7c6f21c29579b27b6dcea47f9e0ee371d78873f8afe3ce8de007eb9`.
+Its three new negative cells preserve the exact direct HostAbort from the module
+supplier, profile getter and step-list constructor. The unchanged original
+cancellation control and real deferred creator-load/consumer ownership tests pass.
+The final compiled API export was rechecked after this compile and remains the
+byte-equal 17739-line pin. No broader repeat was submitted; the root combined
+ordinary/guard gate is still required.

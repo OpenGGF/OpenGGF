@@ -47,6 +47,11 @@ public final class ModFaultBoundary implements com.openggf.level.objects.ObjectC
             throw aborted;
         } catch (Throwable failure) {
             rethrowIfFatal(failure);
+            // A checked deferred load still belongs to the callback that failed, not
+            // to a later consumer. Recognize only the loader and our own IO carrier.
+            var loadAbort = callbackAbortFromLoadFailure(
+                    failure instanceof IoCallbackFailure ? failure.getCause() : failure);
+            if (loadAbort != null) throw loadAbort;
             Set<String> disabled = ownerAndDependents(owner);
             synchronized (this) {
                 var quarantine = new LinkedHashSet<>(quarantinedOwners);
@@ -83,6 +88,13 @@ public final class ModFaultBoundary implements com.openggf.level.objects.ObjectC
             }
             throw new CallbackAborted(owner, disabled, failure);
         }
+    }
+
+    /** Host recovery accepts the existing abort or the level owner's exact trusted load carrier. */
+    public static CallbackAborted callbackAbortFromLoadFailure(Throwable failure) {
+        if (failure instanceof CallbackAborted direct) return direct;
+        var carried = com.openggf.level.DeferredLevelLoadException.callbackAbortInLoadFailure(failure);
+        return carried instanceof CallbackAborted aborted ? aborted : null;
     }
 
     /** Host authority outside historical snapshots; restored policy cannot revive failed code. */

@@ -23,6 +23,7 @@ final class LevelLoadAttempt {
     private final LevelLoadContext context;
     private final LevelLoadCause admissionCause;
     private final java.util.function.Consumer<LevelLoadCause> afterAdmission;
+    private ObjectCallbackAbortException deferredStepAbort;
 
     LevelLoadAttempt(WorldSession world, SpriteManager sprites, LevelLoadMode mode, LevelLoadContext context) {
         this(world, sprites, mode, context, ignored -> { });
@@ -59,7 +60,12 @@ final class LevelLoadAttempt {
         }
         for (InitStep step : steps) {
             long start = System.nanoTime();
-            step.execute();
+            try {
+                step.execute();
+            } catch (ObjectCallbackAbortException aborted) {
+                deferredStepAbort = aborted;
+                throw aborted;
+            }
             long elapsed = (System.nanoTime() - start) / 1_000_000;
             LevelManager.LOGGER.fine(() -> String.format("  [%s] %dms — %s", step.name(), elapsed, step.romRoutine()));
         }
@@ -73,8 +79,12 @@ final class LevelLoadAttempt {
         } catch (ObjectCallbackAbortException quarantined) {
             if (!(failure instanceof ObjectCallbackAbortException)) failure.addSuppressed(quarantined);
         }
-        // Preserve the original subtype and its owner/recovery information.
-        if (failure instanceof ObjectCallbackAbortException aborted) throw aborted;
+        if (failure instanceof ObjectCallbackAbortException aborted) {
+            // Supplier/profile/policy/roster aborts remain direct. Deferred step callbacks
+            // keep loadLevel's checked contract, with the exact abort retained for recovery.
+            if (aborted != deferredStepAbort) throw aborted;
+            return new DeferredLevelLoadException(aborted);
+        }
         Throwable cause = failure.getCause();
         if (cause instanceof IOException ioe) {
             LevelManager.LOGGER.log(SEVERE, "Failed to load level " + levelIndex, ioe);

@@ -17,6 +17,35 @@ class TestLevelLoadAttempt {
         HostAbort(String message) { super(message, new IllegalStateException(message)); }
     }
 
+    @Test void moduleSupplierAbortStaysDirectRatherThanBecomingACheckedDeferredFailure() {
+        var original = new HostAbort("module owner unavailable");
+        java.util.function.Supplier<GameModule> supplier = () -> { throw original; };
+        var attempt = new LevelLoadAttempt(null, null, LevelLoadMode.FULL, new LevelLoadContext());
+
+        assertSame(original, assertThrows(HostAbort.class, () -> attempt.execute(supplier, 0)));
+        assertSame(original, assertThrows(HostAbort.class, () -> attempt.failure(original, supplier, () -> {}, 0)));
+        assertEquals(0, original.getSuppressed().length);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"profile", "steps"})
+    void profileConstructionAbortStaysDirectRatherThanBecomingACheckedDeferredFailure(String source) {
+        var module = mock(GameModule.class);
+        var profile = mock(LevelInitProfile.class);
+        var original = new HostAbort("profile owner unavailable");
+        if (source.equals("profile")) when(module.getLevelInitProfile()).thenThrow(original);
+        else {
+            when(module.getLevelInitProfile()).thenReturn(profile);
+            when(profile.levelLoadSteps(any())).thenThrow(original);
+        }
+        var attempt = new LevelLoadAttempt(null, null, LevelLoadMode.FULL, new LevelLoadContext());
+
+        assertSame(original, assertThrows(HostAbort.class, () -> attempt.execute(() -> module, 0)));
+        assertSame(original, assertThrows(HostAbort.class,
+                () -> attempt.failure(original, () -> module, () -> {}, 0)));
+        assertEquals(0, original.getSuppressed().length);
+    }
+
     @Test void originalTypedAbortSurvivesAbortDuringCancellation() {
         var module = mock(GameModule.class);
         var profile = mock(LevelInitProfile.class);
