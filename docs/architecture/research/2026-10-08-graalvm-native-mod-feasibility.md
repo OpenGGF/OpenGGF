@@ -698,7 +698,11 @@ SDK SHA-256 is
 
 The final native rendering used an Ubuntu 22.04 rootfs with no JDK, a cleared
 environment and Mesa software OpenGL. Original ROM SHA-1/CRC32 identities matched
-the repository's canonical table; no ROM was renamed, copied or linked.
+the repository's canonical table; checks used those original absolute paths.
+The repository's ordinary post-checkout hook created shared-development links
+inside the task worktree. Those links are generated setup outputs, were not used
+as test prerequisites, and are removed with the worktree while original inputs
+are preserved. No ROM bytes are copied or included in the friends artifact.
 Final captures explicitly retain Tails through Flappy death/respawn/title-card
 phases and finish alive in LEVEL at frame 599. Both campaign acts are exercised.
 Offline PCM peaks are 5,962 for Sitar, 9,608 for the music override and 6,727 for
@@ -722,7 +726,44 @@ takes the three original absolute ROM paths and an external `--captures` directo
 This artifact used `target/linux-friends-inputs-r4` and
 `target/linux-friends-native-r7`; those directory labels are local staging names,
 not source versions. Durable final ZIP, checksum, qualification/ELF/archive
-summaries and final PNG/CSV/PCM captures are retained in the external task
+summaries and final PNG/CSV/audio observations are retained in the external task
 directory `openggf-native-linux-2026-10-09` (local path represented by
 `$OPENGGF_LINUX_CAPTURE_ROOT`).
 Failed/rehearsal images and raw logs remain temporary and are removed at cleanup.
+
+#### Integrated Linux delivery verification
+
+Integration into the main workspace's existing `develop` branch was conflict-free
+at `14e0e2b63499bde2ea6b8973c49c2b49df103279`, against actual destination
+`ed45a1990cf6baf089be7d167ea114341870c3a1`. All seven unrelated dirty/untracked
+main paths were preserved, including file-byte and submodule-state comparisons.
+The artifact's engine/mod source and native-tool pins remain those above.
+
+Post-integration verification at that unchanged source:
+
+- Queued lean focused tests completed at 16:02:29 BST: **232 cases**, zero
+  failures/errors/skips. All 17 suite report identities and their counts match
+  the development runs. The original seven-suite 49-case baseline has zero
+  negatives; its existing suite identities remain present, with exactly three
+  additional reproducing regression cases.
+- A separate fresh normal queued `-Pguards test` completed at 16:07:07 BST:
+  **87 suite reports / 674 cases**, zero failures/errors/skips, Maven exit 0.
+  Every guard suite identity and count matches the development run.
+- Actual main-launch Java 21/Lua 5.4/PowerShell preflight passed with
+  `LUA_BIN=/usr/bin/lua5.4`; the preflight itself executes no tests.
+
+The focused command uses `maven_queue.py --lean -B -Dmse=off test`, the original
+absolute ROM properties, and these exact selectors (no profile narrowing):
+
+```text
+TestModArtOverrides,TestPhase2SampleModIntegration,TestPhase3StandaloneSampleIntegration,TestProjectScaffolder,TestSampleFlappyIntegration,TestSonic3kTitleCardManagerRewind,TestSonic3kTitleCardKosQueue,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSonic3kPlcArtRegistry,TestSonic3kPlcArtRewindSnapshot,TestSonic3kTitleCardTeardownModel,TestPatternSpriteRendererCorruptionGuard
+```
+
+The full fallback selection is 3,075 ordinary classes; the documented
+proportionate-validation decision above applies to this combined delivery.
+No full ordinary-suite pass is claimed. Final native gameplay and archive checks
+are independent experimental-domain evidence, rather than substitutes for an
+unreported broad run. Final captures/ZIP are preserved externally; rehearsal
+captures and regenerable captured runtime stores have been removed. Publication
+is followed by removal of the clean, fully merged task worktree/local branch and
+consumed temporary logs, without touching foreign jobs or source inputs.
