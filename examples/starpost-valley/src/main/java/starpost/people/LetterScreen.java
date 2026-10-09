@@ -1,6 +1,7 @@
 package starpost.people;
 
 import com.openggf.mods.scene.SceneCanvas;
+import com.openggf.mods.ui.CompactFont;
 import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneImage;
 import java.util.List;
@@ -21,8 +22,9 @@ final class LetterScreen implements Screen {
     }
 
     /** Letter text wraps at this many characters, up to this many lines (tested for every letter). */
-    static final int LINE_CHARS = 29;
-    static final int MAX_LINES = 7;
+    /** The letter's ink lines in the compact font: 5x7 glyphs on a six-pixel advance across the paper. */
+    static final int LINE_CHARS = 48;
+    static final int MAX_LINES = 8;
 
     private final PeopleSystem sys;
     private String id;
@@ -134,7 +136,8 @@ final class LetterScreen implements Screen {
         canvas.fill(x, y, w, h, 0xFFFFF2DB);
         canvas.fill(x, y + h / 2, w, 1, 0xFFE6D2B6);
         canvas.fill(x + w - 14, y, 14, 14, 0xFFE6D2B6);
-        canvas.text("FROM: " + sender(shell), x + 12, y + 10, 0xFF6D2400);
+        // Paper takes ink: the compact font has no outline (the menu font's black outline clots on cream).
+        CompactFont.draw(canvas, "FROM: " + sender(shell), x + 12, y + 10, 2, 0xFF6D2400);
         SceneImage face = faceOf(view.from());
         if (face != null) {
             canvas.draw(face, x + w - 22 - face.width(), y + 6, SceneDraw.plain());
@@ -146,11 +149,11 @@ final class LetterScreen implements Screen {
                         SceneDraw.plain(), true) + 10;
             }
         } else {
-            int ly = y + 32;
+            int ly = y + 36;
             List<String> rows = Speech.wrap(view.text(), LINE_CHARS);
             for (int i = 0; i < Math.min(MAX_LINES, rows.size()); i++) {
-                canvas.text(rows.get(i), x + 12, ly, 0xFF241848);
-                ly += 13;
+                CompactFont.draw(canvas, rows.get(i), x + 14, ly, 1, 0xFF241848);
+                ly += 11;
             }
         }
         if (view.item() != null && shell.catalog.hasItem(view.item())) {
@@ -158,12 +161,12 @@ final class LetterScreen implements Screen {
             int ey = y + h - 40;
             canvas.fill(x + 10, ey - 3, w - 20, 22, 0xFFFFDBB6);
             shell.art.icons.draw(canvas, item, x + 14, ey, SceneDraw.plain());
-            canvas.text("ENCLOSED: " + item.name() + (view.count() > 1 ? " X" + view.count() : ""), x + 36, ey + 4,
-                    0xFF6D2400);
+            CompactFont.draw(canvas, "ENCLOSED: " + item.name() + (view.count() > 1 ? " X" + view.count() : ""),
+                    x + 36, ey + 5, 1, 0xFF6D2400);
         }
         int left = sys.people.mailbox().size();
         String footer = left > 1 ? "CONFIRM: NEXT LETTER (" + (left - 1) + " MORE)" : "CONFIRM: PUT IT AWAY";
-        canvas.text(footer, x + w - 12 - canvas.textWidth(footer), y + h - 14, 0xFFB6926D);
+        CompactFont.draw(canvas, footer, x + w - 12 - CompactFont.width(footer, 1), y + h - 12, 1, 0xFF926D49);
     }
 
     private String sender(Shell shell) {

@@ -154,8 +154,7 @@ final class FairScreen extends FestivalScreen {
     @Override
     void paintOver(SceneCanvas canvas) {
         var hud = shell.art.hud;
-        canvas.draw(hud.rings, 16, 6, com.openggf.mods.scene.SceneDraw.plain());
-        hud.number(canvas, Integer.toString(shell.game.rings), 66, 2);
+        hud.row(canvas, hud.rings, Integer.toString(shell.game.rings), 16, 6, 0x30, 3);
         long shown = display.stream().filter(java.util.Objects::nonNull).count();
         String note = shown == 0 ? "UP AT A BOOTH TO PLAY" : "DISPLAY: " + shown + " OF " + Fair.DISPLAY_SLOTS
                 + ". THE JUDGE WAITS AT THE GRANGE";

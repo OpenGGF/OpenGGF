@@ -93,10 +93,9 @@ abstract class FestivalScreen implements Screen {
     void hud(SceneCanvas canvas, int secondsLeft, int rings) {
         var hud = shell.art.hud;
         boolean flash = shell.ticks / 8 % 2 == 0;
-        canvas.draw(secondsLeft < 10 && flash ? hud.timeRed : hud.time, 16, 6, SceneDraw.plain());
-        hud.number(canvas, Integer.toString(Math.max(0, secondsLeft)), 66, 2);
-        canvas.draw(hud.rings, 120, 6, SceneDraw.plain());
-        hud.number(canvas, Integer.toString(rings), 170, 2);
+        hud.row(canvas, secondsLeft < 10 && flash ? hud.timeRed : hud.time, Integer.toString(Math.max(0, secondsLeft)),
+                16, 6, 0x28, 0);
+        hud.row(canvas, hud.rings, Integer.toString(rings), 120, 6, 0x30, 3);
     }
 
     /** "3", "2", "1", "GO!" in the middle of the screen for a countdown of {@code ticksLeft}. */

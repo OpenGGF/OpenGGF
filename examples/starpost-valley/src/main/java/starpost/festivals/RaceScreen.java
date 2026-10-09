@@ -355,8 +355,7 @@ final class RaceScreen extends FestivalScreen {
     void paintOver(SceneCanvas canvas) {
         var hud = shell.art.hud;
         int time = farmer.finish >= 0 ? farmer.finish : Math.max(0, go);
-        canvas.draw(hud.time, 16, 6, SceneDraw.plain());
-        hud.number(canvas, clock(time), 66, 2);
+        hud.row(canvas, hud.time, clock(time), 16, 6, 0x28, 0);
         int lap = Math.min(Race.LAPS, 1 + (int) Math.max(0, (farmer.runner.x - START_X) / track.length()));
         Text.shadow(canvas, "LAP " + lap + "/" + Race.LAPS, 150, 10, Text.YELLOW);
         int position = 1;
@@ -367,7 +366,7 @@ final class RaceScreen extends FestivalScreen {
                 position++;
             }
         }
-        hud.number(canvas, Integer.toString(position), canvas.width() - 70, 2);
+        hud.number(canvas, Integer.toString(position), canvas.width() - 70, hud.digitY(hud.time, 6));
         Text.shadow(canvas, ordinal(position).substring(1), canvas.width() - 54, 10, Text.WHITE);
         if (go < 0) {
             countdown(canvas, -go, Race.COUNTDOWN);

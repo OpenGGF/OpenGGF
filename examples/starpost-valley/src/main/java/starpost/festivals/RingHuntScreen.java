@@ -219,7 +219,7 @@ final class RingHuntScreen extends FestivalScreen {
             int fh = Math.min(20, face.height());
             canvas.drawRegion(face, 0, 0, face.width(), fh, w - 96, 4, face.width(), fh, SceneDraw.plain());
         }
-        shell.art.hud.number(canvas, Integer.toString(champion.score), w - 60, 2);
+        shell.art.hud.number(canvas, Integer.toString(champion.score), w - 60, shell.art.hud.digitY(shell.art.hud.time, 6));
         if (phase == 1) {
             countdown(canvas, COUNT - (t - phaseAt), COUNT);
         } else if (phase == 2 && hunt < 45) {

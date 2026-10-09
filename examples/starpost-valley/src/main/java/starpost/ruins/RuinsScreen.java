@@ -1262,12 +1262,9 @@ public final class RuinsScreen implements Screen {
         // with the banked rings beneath in the menu font.
         boolean warn = ringsInHand == 0 && (ticks / 8) % 2 == 0;
         var hud = shell.art.hud;
-        canvas.draw(game.calendar.minutes() >= 24 * 60 && (ticks / 8) % 2 == 0 ? hud.timeRed : hud.time, 16, 8,
-                com.openggf.mods.scene.SceneDraw.plain());
-        int h = game.calendar.minutes() / 60 % 24, m = game.calendar.minutes() % 60;
-        hud.number(canvas, (h < 10 ? " " : "") + h + ":" + (m < 10 ? "0" : "") + m, 66, 4);
-        canvas.draw(warn ? hud.ringsRed : hud.rings, 16, 24, com.openggf.mods.scene.SceneDraw.plain());
-        hud.number(canvas, Integer.toString(ringsInHand), 66, 20);
+        hud.timeRow(canvas, game.calendar.minutes() >= 24 * 60 && (ticks / 8) % 2 == 0,
+                game.calendar.minutes() / 60 % 24, game.calendar.minutes() % 60, 8);
+        hud.ringsRow(canvas, warn, ringsInHand, 24);
         com.openggf.mods.ui.CompactFont.shadowed(canvas, "BANK " + game.rings, 16, 40, 1, 0xFFB6B6B6, 0xFF000000);
         Text.right(canvas, "CHAMBER " + number, canvas.width() - 8, 6, Text.WHITE);
         int bw = 72, bx = canvas.width() - 8 - bw, by = 19;

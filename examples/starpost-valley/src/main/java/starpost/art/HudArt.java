@@ -24,6 +24,8 @@ public final class HudArt {
     public final SceneImage timeRed;
     public final SceneImage ringsRed;
     private final SceneImage[] digits = new SceneImage[11];
+    /** The last opaque row of the digit glyphs inside Art_Hud's 16-row tiles. */
+    private final int digitBottom;
 
     HudArt(SceneRomArt s1, int[] palette) {
         SceneSpriteSet hud = s1.sprites(RomSpriteRequest.of(NEM_HUD, RomSpriteRequest.Compression.NEMESIS, MAP_HUD, 0),
@@ -37,6 +39,47 @@ public final class HudArt {
         for (int d = 0; d < digits.length; d++) {
             digits[d] = s1.tiles(ART_HUD, RomSpriteRequest.Compression.UNCOMPRESSED, d * 2, 1, 2, true, palette);
         }
+        int bottom = 15;
+        while (bottom > 0 && emptyRow(digits[0], bottom)) {
+            bottom--;
+        }
+        digitBottom = bottom;
+    }
+
+    /**
+     * One of Map_HUD's rows: the TIME label at x 16 with its counter on the same 16-pixel row. The
+     * time counter starts $28 right of the label, so the minute digit is at 56 and the colon at 64;
+     * an hour of two digits reaches back to 48, the label's own right edge.
+     */
+    public void timeRow(SceneCanvas canvas, boolean red, int hours, int minutes, float y) {
+        SceneImage label = red ? timeRed : time;
+        canvas.draw(label, 16, y, SceneDraw.plain());
+        String h = Integer.toString(hours);
+        number(canvas, h + ":" + (minutes < 10 ? "0" : "") + minutes, 64 - 8 * h.length(), digitY(label, y));
+    }
+
+    /**
+     * The RINGS row: Map_HUD's ring counter is three digits from $30 past the label, right-aligned
+     * as Hud_Rings writes it; a wallet of four or more digits grows rightwards from there.
+     */
+    public void ringsRow(SceneCanvas canvas, boolean red, int count, float y) {
+        row(canvas, red ? ringsRed : rings, Integer.toString(count), 16, y, 0x30, 3);
+    }
+
+    /**
+     * A label at ({@code x}, {@code y}) and its counter on the same row, {@code counterAt} pixels
+     * further on: right-aligned within {@code digits} places as the ROM's counters are (0: left-aligned),
+     * growing rightwards when the value is longer.
+     */
+    public void row(SceneCanvas canvas, SceneImage label, String value, float x, float y, int counterAt, int digits) {
+        canvas.draw(label, x, y, SceneDraw.plain());
+        float vx = x + counterAt + (value.length() < digits ? 8 * (digits - value.length()) : 0);
+        number(canvas, value, vx, digitY(label, y));
+    }
+
+    /** The y for digits beside a label drawn at {@code labelY}: their glyphs end on the label's last row. */
+    public float digitY(SceneImage label, float labelY) {
+        return labelY + label.height() - 1 - digitBottom;
     }
 
     /** The label rows of a HUD frame (SCOR, TIME, RINGS), each cropped to its pixels. */

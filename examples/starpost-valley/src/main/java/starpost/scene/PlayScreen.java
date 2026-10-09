@@ -330,11 +330,8 @@ public final class PlayScreen implements Screen {
         var hud = shell.art.hud;
         boolean flash = shell.ticks / 8 % 2 == 0;
         boolean late = cal.minutes() >= 24 * 60;
-        canvas.draw(late && flash ? hud.timeRed : hud.time, 16, 8, SceneDraw.plain());
-        int h = cal.minutes() / 60 % 24, m = cal.minutes() % 60;
-        hud.number(canvas, (h < 10 ? " " : "") + h + ":" + (m < 10 ? "0" : "") + m, 66, 4);
-        canvas.draw(game.rings == 0 && flash ? hud.ringsRed : hud.rings, 16, 24, SceneDraw.plain());
-        hud.number(canvas, Integer.toString(game.rings), 66, 20);
+        hud.timeRow(canvas, late && flash, cal.minutes() / 60 % 24, cal.minutes() % 60, 8);
+        hud.ringsRow(canvas, game.rings == 0 && flash, game.rings, 24);
         String date = Calendar.seasonName(cal.season()) + " " + cal.day() + " " + Calendar.weekdayName(cal.weekday());
         Text.right(canvas, date, canvas.width() - 8, 6, Text.WHITE);
         // Momentum: a bar that drains with chores and refills with Sonic things.

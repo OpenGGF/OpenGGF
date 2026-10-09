@@ -369,10 +369,8 @@ final class MazeScreen extends FestivalScreen {
     @Override
     void paintOver(SceneCanvas canvas) {
         var hud = shell.art.hud;
-        canvas.draw(left < 600 && shell.ticks / 8 % 2 == 0 ? hud.timeRed : hud.time, 16, 6, SceneDraw.plain());
-        hud.number(canvas, clock(left), 66, 2);
-        canvas.draw(hud.rings, 130, 6, SceneDraw.plain());
-        hud.number(canvas, Integer.toString(rings), 180, 2);
+        hud.row(canvas, left < 600 && shell.ticks / 8 % 2 == 0 ? hud.timeRed : hud.time, clock(left), 16, 6, 0x28, 0);
+        hud.row(canvas, hud.rings, Integer.toString(rings), 130, 6, 0x30, 3);
         Text.right(canvas, "HOLD JUMP TO RUN", canvas.width() - 10, 10, Text.GREY);
     }
 }
