@@ -24,7 +24,7 @@ GRAAL_SHA256 = "05ccbbe783210b6886ff7b08fcd0b061c5dce4852b05db87284fc0e24abb08e2
 MAIN = "com.openggf.tools.nativelinux.LinuxNativeEngine"
 RECIPES = {
     "starfall-frontier": ["play", "craft", "cavern", "warden"],
-    "eggmans-sky": ["new:0x5eed", "space", "station", "planet:1:0x5eed"],
+    "eggmans-sky": ["new:24301", "space", "station", "planet:1:24301"],
     "flappy-tails": ["seed:0x5eed", "autopilot:on", "play:classic", "play:sonic:1"],
     "robotnik-tower-defense": ["wave:1", "wave:4", "win"],
     "slay-the-robotnik": ["sonic:42:fight:hcz:big_shaker", "sonic:7:room:Shop:2", "sonic:7:map:1"],
@@ -160,8 +160,14 @@ def qualify(args):
         finally: (bundle / "native-mod-members.tsv").write_bytes(original)
     for mod in json.loads((inputs / "build-info.json").read_text())["mods"]:
         owner,slug=mod["id"],mod["slug"]
+        jvm=run([tool("java"),"-Xmx1g","-cp",os.pathsep.join(map(str,(work / "host-classes",engine))),
+            "com.openggf.tools.NativeModRegistrationProbe",inputs / "mods",owner],work)
+        if f"PASS registration: {owner};" not in jvm: raise AssertionError("No JVM registration result: "+owner)
         output=run([bundle / "OpenGGF","--check-mods",owner],bundle)
         if f"PASS registration: {owner};" not in output: raise AssertionError("No registration result: "+owner)
+        expected=next(line for line in jvm.splitlines() if line.startswith(f"PASS registration: {owner};"))
+        observed=next(line for line in output.splitlines() if line.startswith(f"PASS registration: {owner};"))
+        if expected!=observed: raise AssertionError("JVM/native registration mismatch: "+owner)
         evidence["registrations"].append(owner)
         with zipfile.ZipFile(inputs / "mods" / (slug+".jar")) as jar:
             code=any(name.endswith(".class") for name in jar.namelist())
