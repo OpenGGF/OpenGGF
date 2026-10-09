@@ -542,3 +542,26 @@ private result does not release the main/publication hold: the parity owner is
 qualifying the updated remote baseline and combined successor. Reconcile that
 published successor before main integration, then complete destination validation,
 push and accounted-for cleanup. No main inputs, commits or publication changed.
+
+The parity hold was released with published develop
+`019dd454b0d63b10a1d0585450bb28f34e360c04`. Its actual-main qualification belongs
+to `b317e94ebdce60c6f81553113543295c75b1d826`, run
+`20261009T015657Z-e417e53f`, with a verified prose-only publication successor.
+The [updated complete baseline table](../audits/2026-10-07-stock-parity-gap-verification.md#updated-actual-main-full-assertion-and-skip-summary)
+matches all 26 private failure assertions and all 63 skip identities/reasons.
+Private merge `211b61de2999` retains the published hazard catalogue and audit;
+the only conflict was the catalogue's relocation of the Eggman draw-cost note.
+Compared with tested private `d2899a86d75f`, only three documentation paths
+change: that catalogue, the parity audit and this task record. Every executable,
+test, fixture, example asset, build and API input remains unchanged, so the
+completed private qualification is reused rather than repeated.
+
+Destination qualification will pin published `019dd454b0d6`, select all 3070
+ordinary classes and separate fresh guards, and use the normal runner's
+150-minute execution cap excluding queue wait, unchanged ten-minute no-output
+rule and a retained six-hour outer supervisor. Expected cost is 80–110 minutes
+ordinary plus about four minutes guards. Freeze main tracked inputs and HEAD
+through both lanes, compare the complete negative cases against the updated
+source-attributed baseline, and block push on incomplete coverage, missing-ROM
+skips or new/worsened/unattributed failures. Preserve all seven unrelated main
+paths and the user's private `.env` during integration and cleanup.
