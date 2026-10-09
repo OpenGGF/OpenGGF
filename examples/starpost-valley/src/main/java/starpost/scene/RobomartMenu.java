@@ -47,6 +47,11 @@ final class RobomartMenu implements Screen {
             form(out, game, "flicky_roost", "ROBO ROOSTS", 20000, "ROOSTS FOR FLICKIES. THEY DON'T LIKE THEM.");
             form(out, game, "farm_open", "ROBO LAND CLEARANCE", 40000, "THE WHOLE FARM, CLEARED BY BULLDOZERS.");
         }
+        if (shell.catalog.hasItem("robo_cola")) {
+            Item cola = game.item("robo_cola");
+            out.add(new Offer(cola.name(), cola.id(), member ? 20 : 25, () -> game.inventory.add(cola, 1),
+                    "+8 MOMENTUM. " + cola.text()));
+        }
         for (Item seed : shell.catalog.seedsFor(game.calendar.season())) {
             int base = shell.catalog.seedPrice(seed.id());
             int price = member ? base * 4 / 5 : base * 5 / 4;

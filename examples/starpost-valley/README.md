@@ -55,7 +55,7 @@ If you know *Stardew Valley*, you know the rhythm; the names are Sonic's.
 | Hoe / watering can / axe & pickaxe | Spin dash / Water Shield / Fire Shield (S3K's own monitor icons) |
 | Shipping bin | The shipping signpost (it spins at night, like the end of an act) |
 | Community Center | The Great Capsule: six chambers of bundles |
-| JojaMart | EGG — Eggman Enterprises General Goods |
+| JojaMart / Joja Cola | Robomart / Robo Cola |
 | Robin and Clint | Tails's workshop: Buzz Bomber waterers, the Caterkiller Crawler, Item Monitors, upgrades |
 | Crows | Badnik pests (pop them: each frees an animal and grows the valley) |
 | Grandpa's evaluation | The Signpost Spin, on the first morning of year two |
@@ -63,7 +63,7 @@ If you know *Stardew Valley*, you know the rhythm; the names are Sonic's.
 **The farm** is a field in front of Green Hill's cliffs: walk along it and into and out of its
 rows. The Star Post at its east end folds the view into **the valley**, which plays in side view
 with Sonic's own movement: springs, slopes, the loop, and the town (Dandel's seeds, the Lamppost Inn,
-Tails's workshop, EGG), up to the plateau where the Great Capsule stands.
+Tails's workshop, Robomart), up to the plateau where the Great Capsule stands.
 
 **A day** runs from 6:00 to 2:00 (14 real minutes; 20 or 28 in Options). Sleep at the farmhouse door
 to ship, grow, and see the night's tally; stay out past 2:00 and you pass out, losing some rings.

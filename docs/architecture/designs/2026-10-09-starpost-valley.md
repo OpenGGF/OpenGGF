@@ -338,6 +338,11 @@ the form and the Capsule becomes a **Badnik Factory**. The cost is not a mechani
 penalty but the population: animals leave, villagers' dialogue sours, and at the year-two
 evaluation the signpost stops on Robotnik and stays there.
 
+**Renamed (2026-10-09, the user's idea "Joja = Robo"):** the store is **Robomart** (the
+membership, the badnik-built Development Form upgrades and the facade follow), and its own drink is
+**Robo Cola**: cheap, a little Momentum, and the classic junk catch once fishing lands. Robotnik's
+Egg Mobile keeps its name.
+
 ### 6.5 The Marble Ruins and Scrap Brain Depths (mines)
 
 - **The Marble Ruins** lie under the cliffs.

@@ -95,7 +95,7 @@ public final class ItemIcons {
             }
         }
         return switch (item.kind()) {
-            case FOOD -> grid(chiliDog(), 0, 0);
+            case FOOD -> item.id().equals("robo_cola") ? grid(colaCan(), 0xFFDB0000, 0xFF920000) : grid(chiliDog(), 0, 0);
             case MATERIAL -> grid(item.id().equals("palm_wood") ? log() : item.id().equals("scrap") ? scrap() : stone(), 0, 0);
             case FISH -> grid(fish(), 0xFF6DB6FF, 0xFF2449DB);
             case TOOL -> grid(rod(), 0, 0);
@@ -143,6 +143,23 @@ public final class ItemIcons {
             "...kwwwwwwwwk...",
             "...kYwbwbwbYk...",
             "...kkkkkkkkkk...",
+        };
+    }
+
+    /** A Robo Cola can: Robomart red with a white band. */
+    private static String[] colaCan() {
+        return new String[] {
+            ".....kkkkkk.....",
+            "....kYwwwwYk....",
+            "....kFFFFFFk....",
+            "....kFFFFFFk....",
+            "....kwwwwwwk....",
+            "....kwkkwkwk....",
+            "....kwwwwwwk....",
+            "....kFFFFFFk....",
+            "....kfFFFFfk....",
+            "....kffffffk....",
+            ".....kkkkkk.....",
         };
     }
 
