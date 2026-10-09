@@ -103,6 +103,14 @@ final class ResultsScreen implements Screen {
         if (!rankPlayed && (skipped || age >= rankTick())) {
             rankPlayed = true;
             hub.audio.cue(HubAudio.Cue.REGISTER);
+            ActResult r = outcome.result();
+            if (r.cleared() || r.mode() == LaunchIntent.Mode.ENDLESS) hub.say(HubScene.line("ANNOUNCER_RANK_" + r.grade()));
+            if (outcome.place() == 1 && r.score() > outcome.previousBest()) hub.say(typinghog.audio.VoiceLine.ANNOUNCER_NEW_RECORD);
+            if (outcome.newEmerald()) {
+                hub.say(hub.profile.emeraldCount(r.game()) >= Profile.EMERALDS
+                        ? typinghog.audio.VoiceLine.ANNOUNCER_ALL_EMERALDS : typinghog.audio.VoiceLine.ANNOUNCER_EMERALD);
+            }
+            if (outcome.firstClear() && chapterDone(hub, r.game())) hub.say(typinghog.audio.VoiceLine.ANNOUNCER_CHAPTER_CLEAR);
         }
         if (!extrasPlayed && (skipped || age >= rankTick() + 30)) {
             extrasPlayed = true;
@@ -131,6 +139,14 @@ final class ResultsScreen implements Screen {
             }
             carryOn(hub);
         }
+    }
+
+    /** True when every playable stop of {@code game}'s chapter is cleared. */
+    private static boolean chapterDone(HubScene hub, String game) {
+        for (StoryBook.Stop stop : hub.story.chapter(game)) {
+            if (hub.railed(stop) && !hub.profile.isCleared(game, stop.zone(), stop.act())) return false;
+        }
+        return true;
     }
 
     private boolean finished(long age) { return skipped || age >= rankTick() + 30; }
@@ -236,7 +252,15 @@ final class ResultsScreen implements Screen {
             String hint = rushNext != null ? "ENTER: NEXT BOSS" : r.mode() == LaunchIntent.Mode.STORY && r.cleared()
                     ? "ENTER: MAP   NEXT: NEXT STOP   AGAIN: REPLAY" : "ENTER: CONTINUE   AGAIN: REPLAY";
             if ((t / 20) % 3 != 0) {
-                var lines = hub.font.wrap(hint.replace("   ", "  "), pw - 12, 1);
+                // Wrap between the hint's commands, never inside one.
+                var lines = new java.util.ArrayList<String>();
+                for (String part : hint.split(" {3}")) {
+                    if (!lines.isEmpty() && hub.font.width(lines.getLast() + "   " + part, 1) <= pw - 12) {
+                        lines.set(lines.size() - 1, lines.getLast() + "   " + part);
+                    } else {
+                        lines.add(part);
+                    }
+                }
                 int hy = 196 - (lines.size() - 1) * 10;
                 for (String line : lines) {
                     hub.font.centred(c, line, px + pw / 2, hy, Gfx.WHITE, 1);
@@ -250,7 +274,7 @@ final class ResultsScreen implements Screen {
         float scale = age < 8 ? 6 + (8 - age) * 1.5f : 6;
         int s = Math.round(scale);
         int colour = Grades.colour(grade);
-        hub.font.centred(c, "RANK", cx, cy - 34, Gfx.DIM, 1);
+        hub.font.centred(c, "RANK", cx, cy - 30, Gfx.DIM, 1);
         int gw = hub.font.width(grade, s);
         int x = cx - gw / 2, y = cy - (HubFont.H * s) / 3;
         hub.font.draw(c, grade, x + s / 2 + 1, y + s / 2 + 1, 0xC0000000, s);

@@ -236,6 +236,42 @@ class TestTypingHedgehogHubScene {
         f.drawAll();
     }
 
+    @Test void voiceLinesFollowTheVoiceOption() throws Exception {
+        Map<String, String> megaDrive = new HashMap<>();
+        Fixture md = new Fixture("s3k", List.of("s3k"), megaDrive, Set.of());
+        md.step(60);
+        assertTrue(md.audio.contains("clip:voice-announcer-title-md"), "Mega Drive render by default: " + md.audio);
+        md.debug("school");
+        md.step(30);
+        assertFalse(md.audio.contains("clip:voice-tails-welcome-md"), "one speaker: Tails waits for the title line");
+        md.step(150);
+        assertTrue(md.audio.contains("clip:voice-tails-welcome-md"), "Tails welcomes the class: " + md.audio);
+
+        Map<String, String> clean = new HashMap<>();
+        clean.put("profile.txt", "version=2\nvoice=CLEAN\n");
+        Fixture cl = new Fixture("s3k", List.of("s3k"), clean, Set.of());
+        cl.step(60);
+        assertTrue(cl.audio.contains("clip:voice-announcer-title"), "the clean recording: " + cl.audio);
+        assertFalse(cl.audio.contains("clip:voice-announcer-title-md"));
+
+        Map<String, String> off = new HashMap<>();
+        off.put("profile.txt", "version=2\nvoice=OFF\n");
+        Fixture quiet = new Fixture("s3k", List.of("s3k"), off, Set.of());
+        quiet.step(60);
+        quiet.debug("school");
+        quiet.step(30);
+        assertTrue(quiet.audio.stream().noneMatch(call -> call.startsWith("clip:voice-")), "voice off: " + quiet.audio);
+        // Switching the option on the Options screen takes effect at once.
+        quiet.debug("options");
+        quiet.step(1);
+        quiet.type("mega drive");
+        quiet.debug("menu");
+        quiet.step(1);
+        quiet.type("story");
+        quiet.step(30);
+        assertTrue(quiet.audio.contains("clip:voice-announcer-mode-story-md"), "voice back on: " + quiet.audio);
+    }
+
     @Test void everyScreenDrawsInEveryGameWithoutFaults() throws Exception {
         for (String game : List.of("s1", "s2", "s3k")) {
             for (int width : List.of(320, 400)) {
@@ -444,6 +480,10 @@ class TestTypingHedgehogHubScene {
                 @Override public void playSfx(int id) { audio.add("sfx:" + Integer.toHexString(id)); }
                 @Override public void fadeOutMusic() { audio.add("fade"); }
                 @Override public void stopMusic() { audio.add("stop"); }
+                @Override public boolean playSfx(String localName) {
+                    audio.add("clip:" + localName);
+                    return true;
+                }
             };
         }
         @Override public SceneStorage storage() {

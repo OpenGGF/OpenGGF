@@ -11,7 +11,7 @@ import typinghog.hub.model.WordMenu;
  * once a story act has been cleared.
  */
 final class MenuScreen implements Screen {
-    private static final int ROW_H = 17;
+    private static final int ROW_H = 16;
     private static final int TOP = 28;
 
     private final WordMenu menu = new WordMenu(List.of(
@@ -93,6 +93,16 @@ final class MenuScreen implements Screen {
             return;
         }
         hub.audio.cue(HubAudio.Cue.CONFIRM);
+        hub.say(HubScene.line(switch (item) {
+            case 0 -> "ANNOUNCER_MODE_STORY";
+            case 1 -> "ANNOUNCER_MODE_ARCADE";
+            case 2 -> "ANNOUNCER_MODE_BOSS_RUSH";
+            case 3 -> "ANNOUNCER_MODE_ENDLESS";
+            case 4 -> "ANNOUNCER_MODE_SCHOOL";
+            case 5 -> "ANNOUNCER_MODE_RECORDS";
+            case 6 -> "ANNOUNCER_MODE_OPTIONS";
+            default -> "";
+        }));
         switch (item) {
             case 0 -> hub.go(hub.storyMap);
             case 1 -> hub.go(hub.arcade);
@@ -113,15 +123,16 @@ final class MenuScreen implements Screen {
     /** Sonic waits in the space left of the panel. */
     private static int sonicX(HubScene hub) { return Math.min(70, (panelX(hub) - 6) / 2); }
 
+    /** One line on a 400-pixel screen, two at most on a 320-pixel one. */
     private static String describe(int item) {
         return switch (item) {
-            case 0 -> "Run every zone of every Sonic you own. Badniks carry words: type them first!";
-            case 1 -> "Replay any cleared act for a high score on the top-10 board.";
-            case 2 -> "Robotnik's machines back to back. Every win adds a star to that boss.";
+            case 0 -> "Every zone of every Sonic you own. Type the badniks down!";
+            case 1 -> "Replay a cleared act for a top-10 score.";
+            case 2 -> "Robotnik's machines back to back. Each win adds a star.";
             case 3 -> "One stand, wave after wave, until the rings run out.";
-            case 4 -> "Tails teaches touch typing: lessons, graded drills and the Final Exam.";
+            case 4 -> "Tails teaches touch typing: lessons, drills, Final Exam.";
             case 5 -> "Best scores, drill grades and your keyboard heatmap.";
-            case 6 -> "Difficulty, dictionaries and assists.";
+            case 6 -> "Difficulty, dictionaries, voice and assists.";
             default -> "Back to the OpenGGF title screen.";
         };
     }
@@ -141,7 +152,7 @@ final class MenuScreen implements Screen {
         float glide = Math.min(1, (t - moveTick) / 5f);
         int fromY = TOP + 8 + previous * ROW_H, toY = TOP + 8 + menu.cursor() * ROW_H;
         int hy = Math.round(fromY + (toY - fromY) * glide);
-        Gfx.highlight(c, x + shake, hy, pw, ROW_H - 2, t);
+        Gfx.highlight(c, x + shake, hy, pw, ROW_H - 1, t);
         for (int i = 0; i < menu.items().size(); i++) {
             int y = TOP + 8 + i * ROW_H;
             WordMenu.Item item = menu.items().get(i);
@@ -168,6 +179,7 @@ final class MenuScreen implements Screen {
         String desc = locked(hub, menu.cursor()) ? "Clear a story act to open this mode." : describe(menu.cursor());
         int dy = TOP + menu.items().size() * ROW_H + 20;
         var lines = hub.font.wrap(desc, pw - 8, 1);
+        while (lines.size() > 1 && dy + lines.size() * 11 + 3 > c.height() - 17) lines.removeLast();
         Gfx.panel(c, x - 6, dy - 3, pw + 12, lines.size() * 11 + 6, 0xD0101830, 0xFF3058B0);
         for (String line : lines) {
             hub.font.shadow(c, line, x, dy, Gfx.TEXT, 1);

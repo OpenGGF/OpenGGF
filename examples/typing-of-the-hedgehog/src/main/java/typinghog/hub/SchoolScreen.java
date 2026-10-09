@@ -70,6 +70,7 @@ final class SchoolScreen implements Screen {
         items.add(WordMenu.Item.of("BACK", "back", "menu"));
         words = new WordMenu(items);
         say(hub, hub.material.tails("welcome", (int) (hub.ticks / 7)));
+        hub.say(typinghog.audio.VoiceLine.TAILS_WELCOME);
         hub.audio.theme(HubAudio.Theme.SCHOOL);
     }
 
@@ -169,6 +170,7 @@ final class SchoolScreen implements Screen {
         modeTick = hub.ticks;
         typed = "";
         say(hub, hub.material.tails(drill.name(), 0));
+        hub.say(HubScene.line("TAILS_" + drill.name()));
         hub.audio.cue(HubAudio.Cue.CONFIRM);
     }
 
@@ -203,12 +205,17 @@ final class SchoolScreen implements Screen {
                 hub.audio.cue(HubAudio.Cue.ERROR);
                 if (e.signal() == DrillSession.Signal.RESTART || session.card().errors() % 4 == 1) {
                     say(hub, hub.material.tails("oops", session.card().errors()));
+                    hub.say(session.card().errors() % 8 == 1 ? typinghog.audio.VoiceLine.TAILS_KEEP_GOING
+                            : typinghog.audio.VoiceLine.TAILS_SLOW_DOWN);
                 }
             }
             case COMPLETE -> {
                 hub.audio.cue(HubAudio.Cue.CONFIRM);
                 int chain = session.card().chain();
-                if (chain > 0 && chain % 6 == 0) say(hub, hub.material.tails("cheer", chain / 6));
+                if (chain > 0 && chain % 6 == 0) {
+                    say(hub, hub.material.tails("cheer", chain / 6));
+                    hub.say(chain % 12 == 0 ? typinghog.audio.VoiceLine.TAILS_AWESOME : typinghog.audio.VoiceLine.TAILS_GREAT);
+                }
             }
             case ROUND_WON -> {
                 hub.audio.cue(HubAudio.Cue.REGISTER);
@@ -226,10 +233,17 @@ final class SchoolScreen implements Screen {
         mode = Mode.RESULT;
         modeTick = hub.ticks;
         typed = "";
+        boolean examWasOpen = School.examUnlocked(hub.profile);
         improved = School.record(hub.profile, session);
         hub.save();
         DrillSession.Result r = session.result();
         say(hub, hub.material.tails("grade." + r.grade(), (int) hub.ticks));
+        if (r.drill() == Drill.FINAL_EXAM && Grades.atLeast(r.grade(), "C")) {
+            hub.say(typinghog.audio.VoiceLine.TAILS_EXAM_PASSED);
+        } else {
+            hub.say(HubScene.line("TAILS_GRADE_" + r.grade()));
+        }
+        if (!examWasOpen && School.examUnlocked(hub.profile)) hub.say(typinghog.audio.VoiceLine.TAILS_UNLOCKED);
     }
 
     // ---- result -----------------------------------------------------------------------------
@@ -277,7 +291,7 @@ final class SchoolScreen implements Screen {
         int gx = gridX(w);
         hub.header(c, w >= 380 ? "TAILS' TYPING SCHOOL" : "TYPING SCHOOL", School.examUnlocked(hub.profile)
                 ? "FINAL EXAM OPEN" : School.drillsBelowC(hub.profile) + " DRILLS TO PASS");
-        Hero.instructor(c, hub.art, hub.game, t, 22, 132, t - speechTick < 60);
+        Hero.instructor(c, hub.art, hub.game, t, 28, 132, t - speechTick < 60);
         Hero.speech(c, hub.font, speech, 38, 26, Math.min(160, gx - 44), 44, t - speechTick);
         // The lifetime heatmap, and the selected drill beside it.
         int key = heatKey(w);

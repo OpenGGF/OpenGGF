@@ -19,6 +19,7 @@ final class TitleScreen implements Screen {
     private long shakeTick = -100;
     private long exitTick = -1;
     private boolean skipIntro;
+    private boolean prompted;
 
     @Override public String name() { return "TITLE"; }
 
@@ -30,6 +31,7 @@ final class TitleScreen implements Screen {
         typed = 0;
         exitTick = -1;
         hub.audio.theme(HubAudio.Theme.TITLE);
+        prompted = false;
     }
 
     @Override public void update(HubScene hub) {
@@ -37,6 +39,11 @@ final class TitleScreen implements Screen {
         if (exitTick >= 0) {
             if (hub.ticks - exitTick >= EXIT) hub.go(hub.menu);
             return;
+        }
+        if (age == DROP) hub.say(typinghog.audio.VoiceLine.ANNOUNCER_TITLE);
+        if (!prompted && typed == 0 && age >= DROP + 480) {
+            prompted = true;
+            hub.say(typinghog.audio.VoiceLine.ANNOUNCER_PRESS_ANY_KEY);
         }
         if (age < DROP / 2) return;
         Controls in = hub.controls;
