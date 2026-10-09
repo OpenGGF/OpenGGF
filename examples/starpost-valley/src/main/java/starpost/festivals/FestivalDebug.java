@@ -17,8 +17,9 @@ import starpost.scene.Shell;
  *   <li>{@code festival trophies}: every trophy on the shelf; {@code festival secret ID}: this
  *       year's secret friend; {@code festival population N}: the valley's population (the
  *       Flickies); {@code festival exit}: in the maze, a step from Mecha Sonic; {@code festival
- *       at X}: during a festival in the valley, the farmer to x;</li>
- *   <li>{@code board}: open the board; {@code board calendar}: open it on the calendar;
+ *       at X}: during a festival in the valley, the farmer to x; {@code festival catch N}: the Ice
+ *       Cap Festival's fishing contest ends now with N points;</li>
+ *   <li>{@code board}: open the board; {@code board calendar}, {@code board records}: open it on that page;
  *       {@code board post N}: N mornings' notes; {@code board accept}: take on the first note;
  *       {@code board fill}: the goods for every delivery taken on.</li>
  * </ul>
@@ -66,6 +67,12 @@ public final class FestivalDebug {
                     sys.start(f);
                 }
             }
+            case "catch" -> {
+                if (festivals.contestAway == null) {
+                    return false;
+                }
+                festivals.contestAway.accept(Integer.parseInt(p[2]));
+            }
             case "population" -> game.population = Math.max(6, Math.min(Game.MAX_POPULATION, Integer.parseInt(p[2])));
             case "exit" -> {
                 if (!(shell.screen() instanceof MazeScreen maze)) {
@@ -82,7 +89,9 @@ public final class FestivalDebug {
             }
             case "trophies" -> {
                 for (Festival f : festivals.book.all()) {
-                    festivals.takePrize("trophy." + f.id);
+                    if (Festivals.hasTrophy(f.id)) {
+                        festivals.takePrize("trophy." + f.id);
+                    }
                 }
             }
             case "secret" -> {
@@ -106,7 +115,7 @@ public final class FestivalDebug {
         FestivalSystem sys = play == null ? null : FestivalSystem.of(play);
         String what = p.length > 1 ? p[1] : "open";
         switch (what) {
-            case "open", "calendar" -> {
+            case "open", "calendar", "records" -> {
                 if (sys == null) {
                     return false;
                 }
@@ -114,6 +123,8 @@ public final class FestivalDebug {
                 shell.push(board);
                 if (what.equals("calendar")) {
                     board.debugCalendar();
+                } else if (what.equals("records")) {
+                    board.debugRecords();
                 }
             }
             case "post" -> {

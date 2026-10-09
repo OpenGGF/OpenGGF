@@ -20,7 +20,7 @@ public final class RingHunt {
     public static final int RIGHT = 2280;
     /** The champion's pace: pixels a tick, and ticks spent counting each ring. */
     public static final float CHAMPION_SPEED = 1.3f;
-    public static final int CHAMPION_PAUSE = 70;
+    public static final int CHAMPION_PAUSE = 90;
     /** Rings the farmer's hunt pays, each (and a win's purse). */
     public static final int RINGS_EACH = 10;
     public static final int WIN_PURSE = 500;
@@ -53,10 +53,12 @@ public final class RingHunt {
             int fy = floor.applyAsInt(x + 32);
             for (int i = 0; i < 5; i++) {
                 float rx = x + i * 16;
+                // Kept under the town's name boards (their foot is about 62 pixels up): a ring in
+                // front of a sign hides its letters.
                 float ry = switch (kind) {
                     case 0 -> fy - 16;                                              // a line on the ground
-                    case 1 -> fy - 24 - (float) Math.sin(Math.PI * i / 4) * 56;     // an arc to jump through
-                    default -> fy - 70;                                             // a high line: jump for it
+                    case 1 -> fy - 16 - (float) Math.sin(Math.PI * i / 4) * 36;     // an arc to jump through
+                    default -> fy - 50;                                             // a high line: jump for it
                 };
                 out.add(new Spot(rx, ry));
             }

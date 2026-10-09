@@ -17,7 +17,9 @@ import starpost.valley.Runner;
 
 /**
  * The Ice Cap Festival's contest. With the fishing system installed ({@link Festivals#fishingContest})
- * the farmer chooses between its fishing contest and the snowboard run; without it, the run.
+ * the farmer chooses between its fishing contest and the snowboard run; without it, the run. The
+ * fishing contest hands the day to the lake for {@value #CONTEST_SECONDS} seconds and comes back
+ * here, to the meadow, for Frost's verdict on the catch.
  *
  * <p>The run: down Green Hill under snow (the valley's winter blocks, each set where the last one
  * ended, see {@link Snowboard#course}), riding the board Sonic rode into Ice Cap Zone (Sonic's
@@ -28,6 +30,8 @@ import starpost.valley.Runner;
  */
 final class IceCapScreen extends FestivalScreen {
     private static final int ICZ1 = 0x0B;              // Sonic3kMusic ICZ1
+    /** The fishing contest's length on the lake. */
+    static final int CONTEST_SECONDS = 120;
     private static final float GRAVITY = Runner.GRAVITY;
     private static final float PUSH = 0.045f;
     private static final float SLOPE = 0.28f;
@@ -39,7 +43,7 @@ final class IceCapScreen extends FestivalScreen {
     private static final int RIDE_UP = 8;
     private static final int AIR = 9;
     /** Map_Snowboard: flat, tilted down to the right, tilted up. */
-    private static final int BOARD_FLAT = 1;
+    static final int BOARD_FLAT = 1;
     private static final int BOARD_DOWN = 2;
     private static final int BOARD_UP = 4;
 
@@ -60,8 +64,12 @@ final class IceCapScreen extends FestivalScreen {
     private final List<float[]> rocks = new ArrayList<>();
     private int run;
     private int finishAt = -1;
-    private int phase;           // 0 choosing / intro, 1 running, 2 done
+    private int phase;           // 0 choosing / intro, 1 running, 2 done, 3 away fishing
     private boolean chose;
+    /** When the run's introduction began (-1 while the contest is being chosen). */
+    private int introAt = -1;
+    /** The fishing contest's points once it has handed back, else -1. */
+    private int catchScore = -1;
     private float camX;
     private float camY;
     private int score;
@@ -142,24 +150,28 @@ final class IceCapScreen extends FestivalScreen {
             if (!chose) {
                 chose = true;
                 if (festivals.fishingContest != null) {
+                    caption("frost", "WELCOME TO THE ICE CAP FESTIVAL! FISH THE LAKE OR RIDE THE SNOWBOARD RUN. "
+                            + "EITHER WAY, BEAT MY RECORD!", "snow", "fish", "?", "sparkle", "!");
                     shell.push(new Choose("FROST'S ICE CAP CONTEST", List.of("FISHING CONTEST", "SNOWBOARD RUN"), null,
                             i -> {
                                 if (i == 0) {
                                     fishing();
+                                } else {
+                                    runIntro();
                                 }
                             }));
+                } else {
+                    runIntro();
                 }
-                caption("frost", "WELCOME TO THE ICE CAP FESTIVAL! THE SNOWBOARD RUN! BEAT MY RECORD, "
-                        + Snowboard.FROST_RECORD + " POINTS. JUMP THE ROCKS. SPIN IN THE AIR.",
-                        "snow", "arrow", "sparkle", "!");
             }
-            if (t > 160 || t > 40 && (shell.in.confirm || shell.in.act)) {
+            int since = t - introAt;
+            if (introAt >= 0 && (since > 160 || since > 40 && (shell.in.confirm || shell.in.act))) {
                 phase = 1;
                 shell.sfx(Sfx.STARPOST);
             }
             return;
         }
-        if (phase == 2) {
+        if (phase >= 2) {
             return;
         }
         run++;
@@ -272,24 +284,59 @@ final class IceCapScreen extends FestivalScreen {
                 won ? new String[] {"sparkle", "heart", "snow", "!"} : new String[] {"snow", "heart"});
     }
 
-    /** Hands the day to the fishing system's contest; its score comes back here. */
+    /** Frost explains the run; it starts after a while or on a press. */
+    private void runIntro() {
+        introAt = t;
+        caption("frost", "THE SNOWBOARD RUN! BEAT MY RECORD, " + Snowboard.FROST_RECORD
+                + " POINTS. JUMP THE ROCKS. SPIN IN THE AIR.", "snow", "arrow", "sparkle", "!");
+    }
+
+    /**
+     * Hands the day to the fishing system's contest. Its points come back to this screen (the
+     * contest's {@code shell.go(play)} gives way: {@code Shell.go} keeps the first screen asked
+     * for), where Frost judges the catch and the festival ends as the others do.
+     */
     private void fishing() {
-        restore();
+        phase = 3;
+        restore();               // the play screen as it was, in case the contest never hands back
         FishingContest contest = festivals.fishingContest;
-        contest.start(shell, play, 120, catchScore -> {
-            Game game = shell.game;
-            boolean won = catchScore > contest.recordToBeat();
-            List<String> notices = Snowboard.reward(game, festivals, catchScore, 0, won);
-            Calendar c = game.calendar;
-            c.set(c.year(), c.season(), c.day(), festival.after(c.minutes()));
-            shell.toast(String.join(". ", notices));
-        });
+        festivals.contestAway = points -> {
+            festivals.contestAway = null;
+            catchScore = Math.max(0, points);
+            shell.go(this);
+        };
+        contest.start(shell, play, CONTEST_SECONDS, festivals.contestAway);
+    }
+
+    /** Back from the lake: Frost's verdict on the catch, then the results. */
+    @Override
+    void resume() {
+        if (catchScore < 0) {
+            return;
+        }
+        shell.music.want("s3k", ICZ1);
+        Game game = shell.game;
+        FishingContest contest = festivals.fishingContest;
+        int record = contest == null ? FishingContest.FROST_CATCH : contest.recordToBeat();
+        boolean won = Snowboard.beats(catchScore, record);
+        List<String> lines = new ArrayList<>();
+        lines.add(catchScore + (catchScore == 1 ? " POINT" : " POINTS") + ". FROST'S RECORD: " + record);
+        lines.addAll(Snowboard.fishingReward(game, festivals, catchScore, record));
+        finish(won ? "NEW RECORD" : "FROST KEEPS IT", lines);
+        caption("frost", won ? "YOU OUT-FISHED ME! ON MY OWN LAKE! I'M SO PROUD I COULD MELT."
+                : catchScore == 0 ? "NOTHING BIT? THE ICE CAP CHAR ARE SHY IN THE COLD. NEXT YEAR!"
+                : "MY RECORD STANDS! BUT WHAT A LOVELY CATCH. I'LL TELL BARNABY.",
+                won ? new String[] {"fish", "sparkle", "heart", "!"} : new String[] {"fish", "snow", "heart"});
     }
 
     // ------------------------------------------------------------------ drawing
 
     @Override
     void paint(SceneCanvas canvas) {
+        if (phase == 3) {
+            play.draw(shell, canvas);     // back on the meadow for the verdict
+            return;
+        }
         int w = canvas.width(), h = canvas.height();
         Art.Seasonal look = shell.art.season(Calendar.WINTER);
         int cx = Math.round(camX), cy = Math.round(camY);
@@ -360,6 +407,9 @@ final class IceCapScreen extends FestivalScreen {
 
     @Override
     void paintOver(SceneCanvas canvas) {
+        if (phase == 3) {
+            return;
+        }
         var hud = shell.art.hud;
         canvas.draw(hud.time, 16, 6, SceneDraw.plain());
         hud.number(canvas, clock(finishAt >= 0 ? finishAt : run), 66, 2);

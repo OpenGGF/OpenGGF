@@ -29,7 +29,7 @@ final class MazeScreen extends FestivalScreen {
     private static final int RADIUS = 7;
     private static final int LIGHT = 58;
     /** Map_MechaSonic: standing, and the lunge. */
-    private static final int MECHA_STAND = 9;
+    static final int MECHA_STAND = 9;
     private static final int MECHA_LUNGE = 12;
 
     private Maze maze;

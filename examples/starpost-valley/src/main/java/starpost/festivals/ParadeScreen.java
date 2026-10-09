@@ -3,6 +3,7 @@ package starpost.festivals;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneImage;
+import com.openggf.mods.ui.CompactFont;
 import java.util.ArrayList;
 import java.util.List;
 import starpost.core.Game;
@@ -179,8 +180,7 @@ final class ParadeScreen extends FestivalScreen {
         Game game = shell.game;
         List<String> lines = new ArrayList<>();
         int place = Parade.place(farmerScore, rivals);
-        lines.add(entry == null ? "YOU WATCHED THE PARADE" : game.item(entry).name() + ": " + farmerScore
-                + " POINTS, " + ordinal(place));
+        lines.add(entry == null ? "YOU WATCHED THE PARADE" : game.item(entry).name() + ": " + farmerScore + " POINTS");
         if (entry != null) {
             game.inventory.remove(entry, 1);       // Dandel keeps the winners for the stall's window
         }
@@ -257,19 +257,17 @@ final class ParadeScreen extends FestivalScreen {
 
     @Override
     void paintOver(SceneCanvas canvas) {
-        if (phase != 3) {
+        title(canvas);
+        if (phase != 3 || showingResults()) {
             return;
         }
-        // Dandel's judging card: each entry and its score, revealed in turn.
+        // Dandel's judging card: each entrant, their flower and its score, revealed in turn.
         Game game = shell.game;
         int shown = (t - phaseAt) / REVEAL;
-        int w = 270, h = 22 + (rivals.size() + 1) * 12, x = canvas.width() - w - 10, y = 34;
-        Text.panel(canvas, x, y, w, h);
-        Text.shadow(canvas, "DANDEL'S CARD", x + 8, y + 6, Text.YELLOW);
-        for (int i = 0; i <= rivals.size(); i++) {
-            if (i >= shown) {
-                break;
-            }
+        int w = 340, h = 24 + (rivals.size() + 1) * 12, x = (canvas.width() - w) / 2, y = 34;
+        solidPanel(canvas, x, y, w, h);
+        Text.shadow(canvas, BoardScreen.name(host, game) + "'S CARD", x + 8, y + 6, Text.YELLOW);
+        for (int i = 0; i <= rivals.size() && i < shown; i++) {
             String who, flower;
             int score;
             if (i < rivals.size()) {
@@ -282,11 +280,14 @@ final class ParadeScreen extends FestivalScreen {
                 flower = entry == null ? "NO ENTRY" : game.item(entry).name();
                 score = farmerScore;
             }
-            int ry = y + 20 + i * 12;
-            com.openggf.mods.ui.CompactFont.shadowed(canvas, Text.fit(canvas, who + ": " + flower, 210), x + 8, ry, 1,
-                    i == rivals.size() ? 0xFFFFDB00 : 0xFFFFFFFF, 0xFF000000);
-            String value = score == 0 && i < rivals.size() ? "DISQUALIFIED" : Integer.toString(score);
-            com.openggf.mods.ui.CompactFont.shadowed(canvas, value, x + w - 8 - value.length() * 6, ry, 1,
+            int ry = y + 22 + i * 12;
+            boolean mine = i == rivals.size();
+            int colour = mine ? 0xFFFFDB00 : 0xFFFFFFFF;
+            CompactFont.shadowed(canvas, CompactFont.fit(who, 84, 1), x + 8, ry, 1, colour, 0xFF000000);
+            CompactFont.shadowed(canvas, CompactFont.fit(flower, 170, 1), x + 96, ry, 1, mine ? colour : 0xFFB6B6B6,
+                    0xFF000000);
+            String value = score == 0 && !mine ? "DISQUALIFIED" : Integer.toString(score);
+            CompactFont.shadowed(canvas, value, x + w - 8 - CompactFont.width(value, 1), ry, 1,
                     score == 0 ? 0xFFFF4949 : 0xFF92FF49, 0xFF000000);
         }
     }

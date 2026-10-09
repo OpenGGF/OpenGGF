@@ -133,6 +133,7 @@ public final class FestivalSystem {
 
     /** Starts a festival's event as its own screen. */
     void start(Festival f) {
+        shell.toast("");         // a notice from the day must not ride over the festival's title card
         Screen screen = switch (f.id) {
             case FestivalBook.RING_HUNT -> new RingHuntScreen(this, f);
             case FestivalBook.PARADE -> new ParadeScreen(this, f);
@@ -177,7 +178,7 @@ public final class FestivalSystem {
             if (near && !inZone && today.openAt(game.calendar) && !festivals.joined(today.id, game.calendar.year())
                     && !shell.hasOverlay() && !shell.transitioning() && play.valley().runner.onGround) {
                 play.valley().runner.speed = 0;
-                shell.push(new Ask("THE " + today.name + " IS ON! JOIN IN?", () -> start(today)));
+                shell.push(new Ask("THE " + today.name + " IS ON!\nJOIN IN?", () -> start(today)));
             }
             inZone = near;
         }
@@ -233,27 +234,22 @@ public final class FestivalSystem {
     }
 
     /**
-     * The trophy stand between the Lamppost Inn and the Workshop: two plank tiers on log legs,
-     * three prizes a tier, in the order the festivals come round.
+     * The trophy stand between the Lamppost Inn and the Workshop: two tiers of bridge log on log
+     * posts, three prizes a tier, in the order the festivals come round.
      */
     private void drawShelf(SceneCanvas canvas, int cx, int cy, SceneDraw tint) {
         List<String> trophies = festivals.trophies();
         if (trophies.isEmpty()) {
             return;
         }
+        SceneImage shelf = art.shelf(shell.game.calendar.season());
         int floor = floor(TROPHY_X);
-        int x0 = TROPHY_X - 54, x1 = TROPHY_X + 54;
-        int lower = floor - 14, upper = floor - 52;
-        for (int lx : new int[] {x0 + 2, x1 - 5}) {
-            canvas.fill(lx - cx, upper - cy, 3, floor - upper, 0xFF6D2400);
-        }
-        for (int tier : new int[] {lower, upper}) {
-            canvas.fill(x0 - cx, tier - cy, x1 - x0, 4, 0xFFB66D24);
-            canvas.fill(x0 - cx, tier + 4 - cy, x1 - x0, 2, 0xFF492400);
-        }
-        for (int i = 0; i < trophies.size(); i++) {
-            int tx = x0 + 18 + (i % 3) * 36;
-            drawTrophy(canvas, trophies.get(i), tx - cx, (i < 3 ? lower : upper) - cy, tint);
+        int x0 = TROPHY_X - FestivalArt.SHELF_W / 2, y0 = floor - FestivalArt.SHELF_H + 2;
+        canvas.draw(shelf, x0 - cx, y0 - cy, tint);
+        for (int i = 0; i < Math.min(6, trophies.size()); i++) {
+            int tx = x0 + 20 + (i % 3) * 36;
+            int tier = y0 + (i < 3 ? FestivalArt.SHELF_LOWER : FestivalArt.SHELF_UPPER);
+            drawTrophy(canvas, trophies.get(i), tx - cx, tier + 1 - cy, tint);
         }
     }
 
@@ -269,8 +265,8 @@ public final class FestivalSystem {
             }
             case FestivalBook.RACE -> standSprite(canvas, shell.art.lamppost, 3, x, top, tint);
             case FestivalBook.FAIR -> standSprite(canvas, art.bumper(), 0, x, top, tint);
-            case FestivalBook.SCRAP_BRAIN -> standSprite(canvas, art.mechaSonic(), 3, x, top, tint);
-            case FestivalBook.ICE_CAP -> standSprite(canvas, art.snowboard(), 3, x, top, tint);
+            case FestivalBook.SCRAP_BRAIN -> standSprite(canvas, art.mechaSonic(), MazeScreen.MECHA_STAND, x, top, tint);
+            case FestivalBook.ICE_CAP -> standSprite(canvas, art.snowboard(), IceCapScreen.BOARD_FLAT, x, top, tint);
             default -> {
             }
         }
@@ -354,12 +350,16 @@ public final class FestivalSystem {
             return;      // a quiet night: lamps lit along the meadow, nothing strung across the sky
         }
         // Two of Green Hill's palms carry the bunting across the street, tied a third of the way up.
-        int left = ax - 152, right = ax + 118;
+        // Each stands on ground level with the sign (walked in from its spot past any ledge or
+        // pillar), and the rope hangs from the sign's own ground, so the banner sits at the same
+        // height over every gathering place.
+        int base = floor(ax);
+        int left = level(ax - 152, 8, base), right = level(ax + 118, -8, base);
         SceneImage palm = shell.art.season(shell.game.calendar.season()).palm;
         for (int px : new int[] {left, right}) {
             canvas.draw(palm, px - palm.width() / 2f - cx, floor(px) - palm.height() + 2 - cy, tint);
         }
-        int top = floor(left) - 160;
+        int top = base - 150;
         int[] colours = switch (today.id) {
             case FestivalBook.ICE_CAP -> new int[] {0xFFFFFFFF, 0xFF6DB6FF, 0xFFB6DBFF};
             case FestivalBook.SCRAP_BRAIN -> new int[] {0xFF6D6D6D, 0xFFB60000, 0xFF242424};
@@ -396,6 +396,14 @@ public final class FestivalSystem {
         if (today.id.equals(FestivalBook.PARADE)) {
             drawSunflowers(canvas, cx, cy, tint);
         }
+    }
+
+    /** From {@code x}, steps of {@code step} toward the sign until the ground is within 16 pixels of {@code base}. */
+    private int level(int x, int step, int base) {
+        for (int i = 0; i < 12 && Math.abs(floor(x) - base) > 16; i++) {
+            x += step;
+        }
+        return x;
     }
 
     /**

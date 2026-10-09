@@ -63,9 +63,9 @@ final class FairScreen extends FestivalScreen {
             booths.add(place);
             valley.places.add(0, place);       // ahead of the festival's own doorway at the plaza
         }
-        play.places.put(id(0), s -> s.push(new GrangeScreen(this)));
-        play.places.put(id(1), s -> s.push(new SlotsScreen(this)));
-        play.places.put(id(2), s -> s.push(new StrengthScreen(this)));
+        play.places.put(id(0), s -> booth(new GrangeScreen(this)));
+        play.places.put(id(1), s -> booth(new SlotsScreen(this)));
+        play.places.put(id(2), s -> booth(new StrengthScreen(this)));
         shell.music.want("s3k", CNZ1);
     }
 
@@ -79,13 +79,18 @@ final class FairScreen extends FestivalScreen {
             freezeInput();
             play.update(shell);
             int since = t - judgedAt;
+            int place = Fair.place(score);
             if (since == 1) {
-                caption("robotnik", "HMM. " + Fair.ROBOTNIK + " POINTS FOR MY ROBOMART DELUXE HAMPER, NATURALLY. AND YOURS...");
-            } else if (since == 150) {
-                int place = Fair.place(score);
-                caption("robotnik", place == 1 ? "...I CANNOT DENY IT. IT IS UNDENIABLE. FIRST PRIZE. I HATE THIS."
-                        : "...A CLOSE SECOND. TO ME. OUTSTANDING JUDGING, IF I SAY SO MYSELF.");
-            } else if (since == 300) {
+                caption("robotnik", place == 0
+                        ? "NO DISPLAY? THEN MY ROBOMART DELUXE HAMPER WINS BY DEFAULT. AS PLANNED."
+                        : "HMM. " + Fair.ROBOTNIK + " POINTS FOR MY ROBOMART DELUXE HAMPER, NATURALLY. AND YOURS...");
+            } else if (since == 150 && place > 0) {
+                caption("robotnik", switch (place) {
+                    case 1 -> "...I CANNOT DENY IT. IT IS UNDENIABLE. FIRST PRIZE. I HATE THIS.";
+                    case 2 -> "...A CLOSE SECOND. TO ME. OUTSTANDING JUDGING, IF I SAY SO MYSELF.";
+                    default -> "...THIRD. BEHIND MY HAMPER AND THE HEN'S PIES. AN HONOURABLE MENTION.";
+                });
+            } else if (since == (place == 0 ? 150 : 300)) {
                 end();
             }
             return;
@@ -93,8 +98,21 @@ final class FairScreen extends FestivalScreen {
         stepTown();
     }
 
+    /** Opens a booth's screen; the welcome speech has done its job by then. */
+    private void booth(starpost.scene.Screen screen) {
+        clearCaption();
+        shell.push(screen);
+    }
+
+    /** Robotnik's lines wait under a booth's screen (they would show through it) and play out after. */
+    @Override
+    boolean captionHidden() {
+        return shell.hasOverlay();
+    }
+
     /** The grange booth's "call the judge": the fair ends with the judging. */
     void callJudge() {
+        play.valley().labels = false;          // the booths are shut for the judging
         score = Fair.score(shell.game, display);
         judging = true;
         judgedAt = t;
@@ -103,10 +121,20 @@ final class FairScreen extends FestivalScreen {
     private void end() {
         Game game = shell.game;
         List<String> lines = new ArrayList<>();
-        lines.add("YOURS " + score + " POINTS, ROBOTNIK'S " + Fair.ROBOTNIK);
+        lines.add(score == 0 ? "NO DISPLAY. ROBOTNIK'S HAMPER " + Fair.ROBOTNIK + " POINTS"
+                : "YOURS " + score + " POINTS, ROBOTNIK'S " + Fair.ROBOTNIK);
         lines.addAll(Fair.reward(game, festivals, score));
-        int place = Fair.place(score);
-        finish(place == 1 ? "BLUE RIBBON" : place == 2 ? "SECOND PRIZE" : "THIRD PRIZE", lines);
+        finish(headline(Fair.place(score)), lines);
+    }
+
+    /** The results' headline for a place (0: no display was judged). */
+    static String headline(int place) {
+        return switch (place) {
+            case 1 -> "BLUE RIBBON";
+            case 2 -> "SECOND PRIZE";
+            case 3 -> "THIRD PRIZE";
+            default -> "NO ENTRY";
+        };
     }
 
     @Override

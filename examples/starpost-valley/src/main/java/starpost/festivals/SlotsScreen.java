@@ -100,7 +100,7 @@ final class SlotsScreen implements Screen {
         if (pay < 0) {
             int taken = Math.min(game.rings, -pay);
             game.rings -= taken;
-            result = "ROBOTNIK! HIS SPIKE BALLS TAKE " + taken + " RINGS";
+            result = "ROBOTNIK! -" + taken + " RINGS";
             resultColour = Text.RED;
             shell.sfx(Sfx.RING_LOSS);
             fair.caption("robotnik", "HO HO HO! THE HOUSE ALWAYS WINS. I AM THE HOUSE.");
@@ -113,25 +113,32 @@ final class SlotsScreen implements Screen {
         if (a == b && b == c && fair.festivals.takePrize("record." + FestivalBook.FAIR)) {
             List<String> notices = new ArrayList<>();
             Prizes.give(game, fair.festivals, "record_slots", 1, notices);
-            shell.toast(notices.isEmpty() ? "THREE OF A KIND!" : notices.get(0));
+            // Said on the cabinet (a toast would land on its title).
+            result = notices.isEmpty() ? "THREE OF A KIND!" : notices.get(0).contains("WAITS")
+                    ? "THE RECORD WAITS AT THE BOARD" : "+" + pay + " RINGS AND A RECORD!";
+            resultColour = Text.YELLOW;
             shell.sfx(Sfx.PERFECT);
         }
     }
 
+    /**
+     * The cabinet: red body, gold trim, three reel windows each showing a face and slivers of its
+     * neighbours, the price and the hint under them, and the last result. It stands clear of the
+     * bottom of the screen, where the judge's remarks appear.
+     */
     @Override
     public void draw(Shell shell, SceneCanvas canvas) {
         FestivalArt art = fair.sys.art;
-        int w = 220, h = 150, x = (canvas.width() - w) / 2, y = 36;
-        // The cabinet: red body, gold trim, three reel windows.
+        int w = 300, h = 124, x = (canvas.width() - w) / 2, y = 30;
         canvas.fill(x, y, w, h, 0xFF240000);
         canvas.fill(x + 2, y + 2, w - 4, h - 4, 0xFF920000);
         canvas.fill(x + 2, y + 2, w - 4, 3, 0xFFFFDB00);
         canvas.fill(x + 2, y + h - 5, w - 4, 3, 0xFFDB9200);
         String title = art.casinoNight() ? "CASINO NIGHT SLOTS" : "SLOT BONUS";
-        Text.centred(canvas, title, y + 10, Text.YELLOW);
-        int rx0 = x + 34;
+        Text.centred(canvas, title, y + 9, Text.YELLOW);
+        int rx0 = x + (w - 2 * 54 - 32) / 2;
         for (int r = 0; r < 3; r++) {
-            int rx = rx0 + r * 54, ry = y + 34;
+            int rx = rx0 + r * 54, ry = y + 26;
             canvas.fill(rx - 3, ry - 3, 38, 46, 0xFFFFDB00);
             canvas.fill(rx - 1, ry - 1, 34, 42, 0xFF000000);
             canvas.clip(rx - 1, ry - 1, 34, 42);
@@ -141,19 +148,21 @@ final class SlotsScreen implements Screen {
             int[] strip = Fair.strip(r);
             for (int k = -1; k <= 1; k++) {
                 SceneImage face = art.slotFace(strip[Math.floorMod(base + k, 8)]);
-                float fy = ry + 4 - (k - frac) * -36 - 0;
-                fy = ry + 4 + (k - frac) * 36;
+                float fy = ry + 4 + (k - frac) * 36;
                 if (face != null) {
                     canvas.draw(face, rx, fy, SceneDraw.plain());
                 }
             }
             canvas.unclip();
+            if (!spinning[r] && next >= 0 && r < next) {
+                canvas.fill(rx - 3, ry + 44, 38, 2, 0xFFFFFFFF);     // this reel has stopped
+            }
         }
-        Text.centred(canvas, Fair.SPIN_COST + " RINGS A SPIN.  RINGS: " + shell.game.rings, y + 92, Text.WHITE);
+        Text.centred(canvas, Fair.SPIN_COST + " RINGS A SPIN.  RINGS: " + shell.game.rings, y + 76, Text.WHITE);
         String hint = next < 0 ? "JUMP: SPIN    BACK: LEAVE" : "JUMP: STOP REEL " + (next + 1);
-        Text.centred(canvas, hint, y + 108, Text.GREY);
+        Text.centred(canvas, hint, y + 90, Text.GREY);
         if (!result.isEmpty() && shell.ticks - resultAt < 240) {
-            Text.centred(canvas, result, y + 126, resultColour);
+            Text.centred(canvas, result, y + 106, resultColour);
         }
     }
 }

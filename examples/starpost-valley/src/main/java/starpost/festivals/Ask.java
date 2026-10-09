@@ -37,14 +37,22 @@ final class Ask implements Screen {
         }
     }
 
+    /** The question (wrapped to two lines when long) over YES and NOT YET, on a solid panel. */
     @Override
     public void draw(Shell shell, SceneCanvas canvas) {
-        int w = Math.max(220, canvas.textWidth(question) + 32), h = 52;
+        java.util.List<String> rows = Text.wrap(canvas, question, 336);
+        int widest = 0;
+        for (String row : rows) {
+            widest = Math.max(widest, canvas.textWidth(row));
+        }
+        int w = Math.max(220, widest + 32), h = 40 + rows.size() * 12;
         int x = (canvas.width() - w) / 2, y = 70;
-        Text.panel(canvas, x, y, w, h);
-        Text.centred(canvas, question, y + 10, Text.WHITE);
-        int cx = canvas.width() / 2;
-        Text.shadow(canvas, choiceYes ? "> YES" : "  YES", cx - 70, y + 30, choiceYes ? Text.YELLOW : Text.GREY);
-        Text.shadow(canvas, choiceYes ? "  NOT YET" : "> NOT YET", cx + 10, y + 30, choiceYes ? Text.GREY : Text.YELLOW);
+        FestivalScreen.solidPanel(canvas, x, y, w, h);
+        for (int i = 0; i < rows.size(); i++) {
+            Text.centred(canvas, rows.get(i), y + 10 + i * 12, Text.WHITE);
+        }
+        int cx = canvas.width() / 2, oy = y + h - 22;
+        Text.shadow(canvas, choiceYes ? "> YES" : "  YES", cx - 70, oy, choiceYes ? Text.YELLOW : Text.GREY);
+        Text.shadow(canvas, choiceYes ? "  NOT YET" : "> NOT YET", cx + 10, oy, choiceYes ? Text.GREY : Text.YELLOW);
     }
 }
