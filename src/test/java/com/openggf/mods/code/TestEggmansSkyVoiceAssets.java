@@ -4,7 +4,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.ModSubsystem;
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.StreamedMusicPort;
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.io.ModInputLimits;
 import com.openggf.mods.DefaultModRepositoryScanner;
 import com.openggf.mods.EffectiveModCatalog;
@@ -20,8 +23,10 @@ import java.util.HexFormat;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Isolated;
 
 /** The entire packaged bank traverses production validation, decode, ownership and PCM playback. */
+@Isolated
 class TestEggmansSkyVoiceAssets {
     @TempDir Path work;
 
@@ -83,7 +88,46 @@ class TestEggmansSkyVoiceAssets {
                     assertEquals(duration, chunks, id);
                     assertTrue(energy > 1000, id+" silent playback");
                 }
+                assertEveryClipReachesFinalPcm(port, lines);
             }
+        }
+    }
+
+    private static void assertEveryClipReachesFinalPcm(StreamedMusicPort port, Object[] lines)
+            throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setBackend(new NullAudioBackend());
+        try {
+            audio.installStreamedMusicPort(port);
+            try (var capture = audio.beginLiveCaptureAudio(audio.presentationFrameRate())) {
+                short[] samples = new short[capture.maxStereoFramesPerPacket() * 2];
+                for (Object line : lines) {
+                    String asset = (String) line.getClass().getField("asset").get(line);
+                    int duration = line.getClass().getField("durationTicks").getInt(line);
+                    audio.stopAllSfx();
+                    assertTrue(audio.playNamespacedSfx(new StreamedMusicPort.SfxRef("eggmans-sky", asset)), asset);
+                    boolean audible = false;
+                    for (int tick = 0; tick < duration + 2; tick++) {
+                        audio.presentFrame(PresentationMode.FORWARD);
+                        audio.update();
+                        int count = capture.drainPresentationFrame(samples);
+                        for (int channel = 0; channel < 2; channel++) {
+                            int min = Short.MAX_VALUE;
+                            int max = Short.MIN_VALUE;
+                            for (int i = channel; i < count * 2; i += 2) {
+                                min = Math.min(min, samples[i]);
+                                max = Math.max(max, samples[i]);
+                            }
+                            audible |= count > 0 && max - min > 32;
+                        }
+                    }
+                    assertTrue(audible, asset + " must reach final mixed PCM through the session view");
+                }
+            }
+        } finally {
+            // Retire presentation before the enclosing prepared view releases its lease.
+            audio.resetState();
         }
     }
 }
