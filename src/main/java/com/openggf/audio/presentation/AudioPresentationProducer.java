@@ -1426,13 +1426,16 @@ public final class AudioPresentationProducer {
             int endSample = boundary ? sourceFrameSamples : (int) (end * sourceFrameSamples);
             int frames = endSample - (int) (sourceFramePhase * sourceFrameSamples);
             if (frames > 0) {
-                short[] chunk;
                 if (smpsSession != null) {
                     smpsSession.renderFrames(smpsSourcePcm, sourceFrames * CHANNELS, frames);
-                    chunk = mixer.mixPcmVoices(registry, frames, smpsSourcePcm, sourceFrames * CHANNELS);
                 } else {
-                    chunk = mixer.mix(registry, frames);
+                    // Sample-only fractional presentation starts with silence;
+                    // driverless SMPS handles never become synthesis carriers.
+                    Arrays.fill(smpsSourcePcm, sourceFrames * CHANNELS,
+                            (sourceFrames + frames) * CHANNELS, (short) 0);
                 }
+                short[] chunk = mixer.mixPcmVoices(
+                        registry, frames, smpsSourcePcm, sourceFrames * CHANNELS);
                 System.arraycopy(chunk, 0, smpsSourcePcm, sourceFrames * CHANNELS, frames * CHANNELS);
                 sourceFrames += frames;
             }

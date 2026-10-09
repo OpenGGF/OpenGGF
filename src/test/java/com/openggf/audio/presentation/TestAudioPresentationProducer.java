@@ -234,9 +234,26 @@ class TestAudioPresentationProducer {
         } finally { f.producer.close(); }
     }
 
+    @Test
+    void sampleOnlyQuarterRateClearsThePreviousChunkWhenItsVoiceEnds() {
+        Fixture f = fixture(8, 2, constantStereo("quarter-end", 1, (short) 123, (short) -321));
+        try {
+            f.submitTone();
+            f.producer.setForwardRate(0.25);
+            f.producer.present(0, PresentationMode.FORWARD);
+            assertArrayEquals(repeatStereo(4, (short) 123, (short) -321), f.sink.lastPacket(4));
+            assertEquals(0, f.registry.orderedVoiceCount());
+            f.producer.present(1, PresentationMode.FORWARD);
+            assertArrayEquals(new short[8], f.sink.lastPacket(4),
+                    "no session or remaining PCM voice may reuse the previous source chunk");
+            assertEquals(2, f.sink.acceptCount);
+            assertEquals(0.5, f.producer.snapshot().forwardTiming().phase());
+        } finally { f.producer.close(); }
+    }
+
     @ParameterizedTest
-    @CsvSource({"0.25,1,50", "0.5,2,50", "1,4,50", "2,8,50", "4,16,50",
-            "0.25,1,60", "0.5,2,60", "1,4,60", "2,8,60", "4,16,60"})
+    @CsvSource({"0.25,1,50", "0.5,2,50", "1,4,50", "1.5,6,50", "2,8,50", "4,16,50",
+            "0.25,1,60", "0.5,2,60", "1,4,60", "1.5,6,60", "2,8,60", "4,16,60"})
     void nativeSmpsServiceAndPcmConsumptionFollowFractionalSourceTime(double rate, int services, int hz) {
         int frameSamples = 44_100 / hz;
         int sourceFrames = frameSamples * services;
@@ -259,12 +276,13 @@ class TestAudioPresentationProducer {
         } finally { f.producer.close(); }
     }
 
-    @Test
-    void nativeQuarterRateSnapshotReplaysSameSourceIntervalAndPcm() {
+    @ParameterizedTest
+    @CsvSource({"0.25,2", "1.5,12", "4,32"})
+    void nativeFractionalRateSnapshotReplaysSameSourceIntervalAndPcm(double rate, int consumedSamples) {
         SmpsDriverSession session = SmpsSessionTestSupport.installed(8);
-        Fixture f = fixture(8, 2, rampStereo("quarter-restore", 32), new RecordingSink(8, 4), session);
+        Fixture f = fixture(8, 2, rampStereo("paced-restore", 128), new RecordingSink(8, 4), session);
         try {
-            f.submitTone(); f.producer.setForwardRate(0.25);
+            f.submitTone(); f.producer.setForwardRate(rate);
             f.producer.present(0, PresentationMode.FORWARD);
             var saved = f.producer.snapshot();
             f.producer.present(1, PresentationMode.FORWARD);
@@ -274,7 +292,7 @@ class TestAudioPresentationProducer {
             f.producer.present(2, PresentationMode.FORWARD);
             assertArrayEquals(expected, f.sink.lastPacket(4));
             assertEquals(after, f.producer.snapshot().forwardTiming());
-            assertEquals(2L << 32, sampleCursor(f.registry));
+            assertEquals((long) consumedSamples << 32, sampleCursor(f.registry));
         } finally { f.producer.close(); }
     }
 

@@ -139,6 +139,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
     private final float[] matrixBuffer = new float[16];
 
     private Rom rom;
+    private HeadlessSmpsAudioBackend installedHeadlessAudioBackend;
     private boolean closed;
     private java.util.function.UnaryOperator<GameModule> moduleDecorator = java.util.function.UnaryOperator.identity();
 
@@ -153,6 +154,12 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
     public void setModuleDecorator(java.util.function.UnaryOperator<GameModule> decorator) {
         this.moduleDecorator = java.util.Objects.requireNonNull(decorator, "decorator");
+    }
+
+    /** Observes this boot's exact audio owner without exposing backend commands. */
+    boolean hasInstalledHeadlessAudioBackend() {
+        return !closed && installedHeadlessAudioBackend != null
+                && engineServices.audio().hasInstalledBackend(installedHeadlessAudioBackend);
     }
 
     /**
@@ -429,6 +436,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
         // Mirrors Engine.initializeGlobalGameplayServices (Engine.java:676);
         // setBackend() falls back to NullAudioBackend if OpenAL init fails.
         SonicConfigurationService audioConfig = services.configuration();
+        installedHeadlessAudioBackend = null;
         if (audioConfig.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
             // Headless backend: it builds the normal presentation producer
             // over a NoDeviceAudioSink (AudioBackend.createPresentationSink),
@@ -436,8 +444,9 @@ public final class HeadlessGameBoot implements AutoCloseable {
             // without ever opening an audio device. AudioManager's offline
             // capture lease is a non-consuming view of that producer, not a
             // replacement for it.
-            services.audio().setBackend(
-                    new HeadlessSmpsAudioBackend(audioConfig, services.profiler()));
+            installedHeadlessAudioBackend =
+                    new HeadlessSmpsAudioBackend(audioConfig, services.profiler());
+            services.audio().setBackend(installedHeadlessAudioBackend);
         }
 
         // --- per-replay subsystem reset ---------------------------------
@@ -689,6 +698,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
             rethrowCloseFailure(failure);
         }
         closed = true;
+        installedHeadlessAudioBackend = null;
     }
 
     private void closeNativeGl() {
