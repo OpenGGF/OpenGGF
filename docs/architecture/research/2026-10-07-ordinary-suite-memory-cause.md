@@ -1130,3 +1130,40 @@ python3 tools/testing/maven_queue.py --lean -Dmse=off \
   "-Dsonic1.rom.path=${OPENGGF_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
   "-Dsonic2.rom.path=${OPENGGF_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
 ```
+
+
+### Published-base drawing qualification and renewed main coordination (2026-10-09)
+
+The parity owner released main/publication holds at published
+`019dd454b0d63b10a1d0585450bb28f34e360c04`. Its complete ordinary/guard evidence
+is attributed to tested `b317e94ebdce60c6f81553113543295c75b1d826`, with an
+independently verified audit-only publication successor, in the
+[updated parity negative-case table](../audits/2026-10-07-stock-parity-gap-verification.md#updated-actual-main-full-assertion-and-skip-summary).
+Those are the parity owner's full results, not a new full run by this task.
+
+Private merge `5b44c0ccb6c6c12052829ed7d2a5ce9df9f05499` reconciles that published
+base without conflicts. All three drawing-test source hashes remain unchanged;
+production/build inputs exactly inherit the base. The same focused command above
+completed at 2026-10-09T03:41:33Z: **78 cases, zero failures/errors/skips**, Maven
+exit0, 2m06s including compilation. Every fully qualified case identity/outcome
+and all nine printed route result lines match the earlier terminal78-case check.
+The SOZ class took45.740s; this is qualification, not another matched benchmark.
+The selected eight report identities retain5 capture controls,9 routes,4 strict
+state/pixel controls and60 required S3K loading/bootstrap/decoding/AIZ cases.
+Actual tool preflight again passed Java21, Lua5.4 and PowerShell. The current
+change-based fallback selects3069 ordinary classes plus guards; the previously
+explained bounded proportionate validation remains the chosen scope.
+
+Before main integration, published develop advanced to
+`efedf9198eef5e717c8827f1aa34dc7728cb92fd`. Its complete delta is one Windows
+research Markdown path, with no executable/test/build/API change. Private
+prose-only merge `c05940fb1da72cf2915a41840e403d9c5cc4aa0c` preserves that update;
+the completed qualification remains attributed to5b44. Both destination checks
+stopped before writing any main input or commit. Main then acquired the unrelated
+voice integration `0103b9bdc880c142301073fba9024750ccf4f1c2`, whose owner had already
+submitted its normal full destination command against efedf. Its
+[delivery plan](../designs/2026-10-07-eggmans-sky.md) freezes main inputs and HEAD
+through ordinary and fresh guards. This task preserves that invocation and
+all foreign jobs; SOZ has not reached main. Updated private composition,
+actual-main focused qualification, publication and owned cleanup remain pending
+that owner's completed delivery. No post-merge result is claimed.
