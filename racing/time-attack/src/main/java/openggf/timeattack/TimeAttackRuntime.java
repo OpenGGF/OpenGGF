@@ -44,6 +44,16 @@ public final class TimeAttackRuntime implements RunHost {
         /** The run's level is loaded (launch or retry). */
         default void levelReady(RunLevelStart start) {
         }
+
+        /**
+         * Draws the companion's presentation after the solo HUD.
+         *
+         * @param levelWidth   the act's width in pixels from the last level start (0 when unknown)
+         * @param localCentreX the local player's centre X after the latest step, or -1 before one
+         */
+        default void drawOverlay(com.openggf.mods.ui.LevelOverlayCanvas canvas, int levelWidth,
+                                 int localCentreX) {
+        }
     }
 
     /** Multiplayer bridge for spawn-anchored attempt lifecycle and frame streaming. */
@@ -80,6 +90,8 @@ public final class TimeAttackRuntime implements RunHost {
     private AttemptListener attemptListener;
     private int attemptOrdinal;
     private Supplier<List<GhostPose>> extraGhostSupplier;
+    private int levelWidth;
+    private int localCentreX = -1;
 
     public TimeAttackRuntime(GhostStore store, java.nio.file.Path identityDir,
                              java.util.function.BooleanSupplier launchBlocked) {
@@ -296,6 +308,8 @@ public final class TimeAttackRuntime implements RunHost {
 
     @Override
     public void onLevelReady(RunLevelStart start) {
+        levelWidth = start.levelWidth();
+        localCentreX = -1;
         beginAttemptForTest(start.determinismFingerprint());
         if (start.debugAssisted()) {
             // An overlay already visible before spawn is as much an advantage as
@@ -321,6 +335,7 @@ public final class TimeAttackRuntime implements RunHost {
             markTainted();
         }
         PlayerPose pose = step.player();
+        localCentreX = pose.centreX();
         tickForTest(step.heldMask(), step.startHeld(), step.actComplete(), step.checkpointIndex(),
                 new GhostFrame(pose.centreX(), pose.centreY(), pose.mappingFrame(), pose.hFlip(),
                         pose.vFlip(), false, pose.priorityBucket(), pose.highPriority()));
@@ -337,6 +352,9 @@ public final class TimeAttackRuntime implements RunHost {
     @Override
     public void drawOverlay(com.openggf.mods.ui.LevelOverlayCanvas canvas) {
         TimeAttackHud.draw(canvas, hudState());
+        if (companion != null) {
+            companion.drawOverlay(canvas, levelWidth, localCentreX);
+        }
     }
 
     @Override

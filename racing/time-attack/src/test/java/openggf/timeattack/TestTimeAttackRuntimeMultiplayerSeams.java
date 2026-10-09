@@ -137,4 +137,29 @@ class TestTimeAttackRuntimeMultiplayerSeams {
         runtime.tickForTest(0, false, false, -1, frame(1));
         assertEquals(8, runtime.activeGhostsForTest().size());
     }
+
+    @Test
+    void companionDrawsWithTheLevelWidthAndTheLatestLocalCentreX(@TempDir Path root) {
+        TimeAttackRuntime runtime = armedRuntime(root);
+        List<int[]> draws = new ArrayList<>();
+        runtime.setFrameCompanion(new TimeAttackRuntime.FrameCompanion() {
+            @Override public boolean admit(com.openggf.game.run.RunInput input) { return true; }
+            @Override public void afterStep() { }
+            @Override public void drawOverlay(com.openggf.mods.ui.LevelOverlayCanvas canvas, int levelWidth,
+                                              int localCentreX) {
+                draws.add(new int[] {levelWidth, localCentreX});
+            }
+        });
+        com.openggf.mods.ui.LevelOverlayCanvas canvas =
+                org.mockito.Mockito.mock(com.openggf.mods.ui.LevelOverlayCanvas.class);
+        com.openggf.game.run.RunSpec spec = runtime.runSpec();
+        runtime.onLevelReady(new com.openggf.game.run.RunLevelStart(spec, "0.6:cafe", false, 9216, 1024));
+        runtime.drawOverlay(canvas);
+        runtime.afterStep(new com.openggf.game.run.RunStep(0, 0, false,
+                new com.openggf.game.run.PlayerPose(567, 300, 1, false, false, 2, false), false, -1, false));
+        runtime.drawOverlay(canvas);
+        assertEquals(2, draws.size());
+        assertArrayEquals(new int[] {9216, -1}, draws.get(0), "no step yet");
+        assertArrayEquals(new int[] {9216, 567}, draws.get(1));
+    }
 }

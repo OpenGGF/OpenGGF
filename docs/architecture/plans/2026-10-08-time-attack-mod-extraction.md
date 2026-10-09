@@ -238,3 +238,60 @@ Decisions taken during integration:
   the attempt runtime, so the engine would have depended on the mod); a generic in-engine
   netplay transport (no second consumer); moving the race protocol into the public Mod API
   (develop had just removed `@ModApi` from `ControlMessage`).
+
+## Lane MP record: multiplayer racing inside the mod (2026-10-09)
+
+Worktree `.worktrees/ai-time-attack-multiplayer`, branch `feature/ai-time-attack-multiplayer`
+from `feature/ai-time-attack-mod` 18fdd90c3.
+
+Design:
+
+- **`RaceSession`** (`openggf.timeattack.mp`, owned by `TimeAttackScene`, closed in `exit()`)
+  ports the removed Engine orchestration: host LAN on `JdkRaceHostServer.startTls`, join by
+  `DirectJoinAddress` invite, browse the master (`MasterClient`, optional trust-all TLS), create
+  relay/direct master rooms (`DirectRoomRegistration`, `HostMasterLink`), the direct-host
+  heartbeat and track updates, round launch and leave. The determinism fingerprint comes from
+  `SceneGameplay.determinismFingerprint(gameId)` (lead seam d996ab332); empty shows a "ROM
+  is not available" message. The scene claims `ModScene.capturesTextInput()` while a text
+  field is focused, so the engine holds back its global display and capture shortcuts.
+- **Threads.** Each connecting operation runs on one virtual thread and returns a continuation
+  that `poll()` runs on the engine thread; network threads never touch the scene, run or
+  coordinator. An operation owns what it has built (room host, connections, a created master
+  room, a bound host link) until the engine thread adopts it, so leave/cancel/exit mid-connect
+  closes half-built rooms and late connections. Waits poll a cancellation flag in 50 ms
+  slices instead of interrupting, because an interrupt during `PlayerIdentity.loadOrCreate`
+  could cut identity creation short; identity loading is serialized for the same reason.
+  The master link thread drains the master socket (nothing else reads it once a room is
+  joined, and a full inbound queue disconnects) and sends the direct host's heartbeat, reading
+  the room's player count and track on the room host's own thread (the Engine read them
+  unsynchronized from its heartbeat thread).
+- **Rounds.** The lobby launches one run per `RoundStart` the coordinator has seen
+  (`roundsStarted`): joining during a running round launches once, a host restart from
+  ROUND_END launches, and a player who returns while the window is still open stays in the
+  lobby. The Engine kept a per-screen "launched" flag that reset only in LOBBY and built a new
+  lobby screen on every return, so leaving a run during the window relaunched the same round
+  at once. A LOCKED round launches with its locked character. The host applies
+  `LiveLevelProfileFactory.fromLevelStart` to its room through the coordinator's level-ready
+  hook.
+- **Views.** Lobby, room browser, settings and a keyboard text field are scene views driven by
+  a small `ViewInput` (so tests drive them without a scene host). The text field reads keys
+  only: Space and Backspace are pad A and Start by default, so a button-driven field would
+  confirm while typing. Scenes have no clipboard: the LAN invite is shown in full on the lobby's
+  invite page, written to `lan-invite.txt` in the mod's storage and logged. In the lobby,
+  keys 1-3 vote (the Engine lobby had no vote input; votes were in-run only).
+- **Settings** (`TimeAttackSettings`, `settings.txt` in mod storage): host port 27888, last join
+  address, display name, master URL, master trust-insecure false, minimap true.
+- **HUD.** `TimeAttackRuntime.FrameCompanion.drawOverlay(canvas, levelWidth, localCentreX)`;
+  the runtime passes the act width from `RunLevelStart` and the player's centre X from the
+  latest `RunStep`, and the coordinator draws `MultiplayerHudRenderer`.
+
+Rejected: blocking `.get()` on the engine thread as the Engine did (a five-second frame freeze
+per connect); interrupting cancelled workers (identity creation risk, above); a cached
+"last fingerprint seen at level start" instead of the engine seam (wrong after every upgrade
+and empty before the first solo run); Mockito-mocking the final `MasterClient` in browser tests
+(the view now depends on a two-method `RoomDirectory`).
+
+Open items: `RaceClient`/`MasterClient` never close their `HttpClient`, whose selector thread
+outlives the connection until collected; the solo and multiplayer HUDs both draw top-right
+(as in the Engine); a player who leaves a run while the window is open cannot rejoin that
+round; the master link's five-second heartbeat cadence is not covered by a test.
