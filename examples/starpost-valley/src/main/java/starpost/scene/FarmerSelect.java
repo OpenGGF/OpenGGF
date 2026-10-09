@@ -19,8 +19,8 @@ final class FarmerSelect implements Screen {
     private static String perk(int i) {
         return switch (i) {
             case 0 -> "FASTEST. SPIN DASH TILLS A WHOLE ROW.";
-            case 1 -> "FLIES OVER CLIFFS. CARRIES MORE.";
-            default -> "DIGS UP BURIED FINDS. PUNCHES ROCKS.";
+            case 1 -> "FLIES. HIS TAILS WATER TWO PLOTS.";
+            default -> "GLIDES, CLIMBS AND DIGS UP FINDS.";
         };
     }
 

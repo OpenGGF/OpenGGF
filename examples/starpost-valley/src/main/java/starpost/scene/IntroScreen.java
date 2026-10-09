@@ -244,6 +244,8 @@ final class IntroScreen implements Screen {
         }
         if (phase == 0 && t < 200) {
             int alpha = (int) Math.max(0, Math.min(255, (200 - t) * 4));
+            // A dark band behind the title, so the town's signs never show through it.
+            canvas.fill(0, 42, w, 52, (alpha * 13 / 16) << 24);
             shell.art.cardFont.centred(canvas, "GREEN HILL", 50, SceneDraw.plain().withAlpha(alpha / 255f));
             Text.centred(canvas, "AFTER THE CREDITS", 80, alpha << 24 | 0xFFDB00);
         }

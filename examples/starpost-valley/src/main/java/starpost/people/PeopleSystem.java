@@ -193,13 +193,15 @@ public final class PeopleSystem implements Actor {
             noticeAt = shell.ticks;
         }
         String next = people.nextLetter();
-        if (post == 0 && play.onFarm() && next != null && !next.equals(heldLetter) && !shell.transitioning()) {
+        // The post waits while a cutscene or festival holds the clock (the opening intro ends on the farm).
+        if (post == 0 && play.onFarm() && next != null && !next.equals(heldLetter) && !shell.transitioning()
+                && !play.clockStopped) {
             post = 1;
             postX = farmerX() + 230;
             postHeight = 110;
         }
         if (post == 1) {
-            if (!play.onFarm() || people.nextLetter() == null) {
+            if (!play.onFarm() || people.nextLetter() == null || play.clockStopped) {
                 post = 0;
             } else {
                 float target = farmerX() + 14;
