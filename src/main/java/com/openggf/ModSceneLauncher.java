@@ -42,7 +42,10 @@ final class ModSceneLauncher {
         if (factory == null || config.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
             return false;
         }
+        gameLoop.modSceneNavigation.setStartupSceneOpener(
+                () -> openStartupScene(gameLoop, config, window, graphics, logicalWidth, logicalHeight));
         prepareSceneAudio(module);
+        SceneRomLibrary library = romLibrary(module);
         SceneServices services = new SceneServices(
                 GameServices.audio(),
                 romArt(module),
@@ -50,7 +53,8 @@ final class ModSceneLauncher {
                 window == 0 ? null : mouseMapper(window, graphics, logicalWidth, logicalHeight),
                 () -> exitToGameTitle(gameLoop),
                 () -> gameLoop.fadeOutTo(gameLoop::returnToMasterTitle),
-                romLibrary(module));
+                library,
+                gameLoop.modSceneNavigation.forVisit(library));
         gameLoop.setGameMode(GameMode.MOD_SCENE);
         gameLoop.modSceneHost.open(factory, services, logicalWidth, logicalHeight);
         gameLoop.resolveFadeManager().startFadeFromBlack(null);

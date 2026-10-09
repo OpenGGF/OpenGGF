@@ -23,6 +23,18 @@ public final class CourseControl {
      * Controllers own edge detection. Movie inputs should use their controller menu command instead. */
     public boolean rewindHeld() { return rewindHeld; }
 
+    /** Characters typed this row through the operating system's text input (layout- and
+     * Shift-aware, control characters omitted); consuming empties the row's text. Empty when the
+     * row has no live input handler. Pair with {@link GameplayFrameController#capturesKeyboardText()}
+     * so letter shortcuts do not also fire. */
+    public String typedText() { return input == null ? "" : input.consumeTypedText(); }
+
+    /** Held state of a GLFW key, including keys claimed by keyboard text capture. */
+    public boolean keyDown(int glfwKey) { return input != null && input.isCapturedKeyDown(glfwKey); }
+
+    /** Press edge of a GLFW key this row, including keys claimed by keyboard text capture. */
+    public boolean keyPressed(int glfwKey) { return input != null && input.isCapturedKeyPressed(glfwKey); }
+
     /** Records final presented PCM for a bounded reverse view (1..120 seconds; at most four live
      * recordings per session). Start immediately before its first forward row and close on
      * settlement, replay completion or cancellation. Paused/silent rows are not recorded.

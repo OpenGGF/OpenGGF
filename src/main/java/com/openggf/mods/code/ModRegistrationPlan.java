@@ -35,6 +35,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                                   Map<String, java.util.function.Supplier<com.openggf.game.GameServiceBundle>> serviceBundles,
                                   Map<String, com.openggf.level.LevelPatch> decodedLevelPatches,
                                   int contributionLimit) {
+    private static final java.util.Set<String> STOCK_GAMES = java.util.Set.of("s1", "s2", "s3k");
     public ModRegistrationPlan {
         if (contributionLimit < 1 || contributionLimit > com.openggf.io.ModInputLimits.production().maxCollectionEntries())
             throw new IllegalArgumentException("Invalid contribution limit");
@@ -112,20 +113,20 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 }
             }
         }
-        if ("any".equals(baseGameId) && (startupScene == null || !objectFactories.isEmpty()
-                || !objectArt.isEmpty() || !explicitPatches.isEmpty() || !zones.isEmpty()
-                || !objectPreviewArtKeys.isEmpty() || !characters.isEmpty() || !romObjectArt.isEmpty()
-                || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty() || !serviceBundles.isEmpty() || !decodedLevelPatches.isEmpty())) {
-            throw new IllegalArgumentException(
-                    "baseGame any may register only a startup scene and its display requirement");
+        if ("any".equals(baseGameId) && ((startupScene == null && explicitPatches.isEmpty()) || !zones.isEmpty()
+                || !characters.isEmpty() || !romObjectArt.isEmpty()
+                || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty() || !decodedLevelPatches.isEmpty()
+                || explicitPatches.stream().anyMatch(patch -> !STOCK_GAMES.contains(patch.baseGameId())))) {
+            throw new IllegalArgumentException(ModContext.ANY_GAME_RULE);
         }
     }
 
-    /** Expands a validated shared startup scene into ordinary stock-game decorators. */
+    /** Expands a validated {@code any} plan into ordinary per-game plans, each keeping only its game's patches. */
     List<ModRegistrationPlan> stockScenePlans() {
         if (!"any".equals(baseGameId)) return List.of(this);
         return List.of("s1", "s2", "s3k").stream().map(game -> new ModRegistrationPlan(
-                ownerModId, game, objectFactories, objectArt, preparedObjectArt, explicitPatches,
+                ownerModId, game, objectFactories, objectArt, preparedObjectArt,
+                explicitPatches.stream().filter(patch -> game.equals(patch.baseGameId())).toList(),
                 zones, preparedZones, objectPreviewArtKeys, characters, null, romObjectArt,
                 launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect, serviceBundles, decodedLevelPatches, contributionLimit)).toList();
     }

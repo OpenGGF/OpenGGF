@@ -516,4 +516,70 @@ class TestModSceneHost {
         assertEquals(1, empty.width());
         assertEquals(0, empty.image().pixel(0, 0));
     }
+
+    @Test
+    void stockActAndRelaunchRequestsRunTheNavigatorsTransitionOnceAndRefuseWhenItDeclines() {
+        List<String> transitions = new ArrayList<>();
+        var running = new com.openggf.mods.scene.SceneLaunch("s2", "sonic", List.of("tails"));
+        SceneNavigator navigator = new SceneNavigator() {
+            @Override public Runnable prepareStockAct(int zone, int act) {
+                return zone == 99 ? null : () -> transitions.add("act " + zone + "/" + act);
+            }
+            @Override public com.openggf.mods.scene.SceneLaunch currentLaunch() { return running; }
+            @Override public Runnable prepareRelaunch(com.openggf.mods.scene.SceneLaunch launch) {
+                return "s1".equals(launch.gameId()) ? null : () -> transitions.add("relaunch " + launch.gameId());
+            }
+        };
+        SceneContext[] retained = new SceneContext[1];
+        ModSceneHost host = new ModSceneHost();
+        host.open(owned(() -> new ModScene() {
+            @Override public void enter(SceneContext ctx) { retained[0] = ctx; }
+            @Override public void update(SceneContext ctx) { }
+            @Override public void draw(SceneContext ctx, SceneCanvas canvas) { }
+        }), new SceneServices(null, null, temp, null, () -> { }, () -> { }, null, navigator), 320, 224);
+        assertSame(running, retained[0].currentLaunch());
+        assertFalse(retained[0].startStockAct(99, 0), "a refused act leaves the scene open");
+        assertFalse(retained[0].relaunch(new com.openggf.mods.scene.SceneLaunch("s1", "sonic", List.of())));
+        assertTrue(retained[0].startStockAct(4, 1));
+        assertFalse(retained[0].relaunch(new com.openggf.mods.scene.SceneLaunch("s3k", "sonic", List.of())),
+                "only one exit transition per visit");
+        assertEquals(List.of("act 4/1"), transitions);
+        host.close();
+    }
+
+    @Test
+    void scenesWithoutANavigatorCannotStartGameplay() {
+        SceneContext[] retained = new SceneContext[1];
+        ModSceneHost host = new ModSceneHost();
+        host.open(owned(() -> new ModScene() {
+            @Override public void enter(SceneContext ctx) { retained[0] = ctx; }
+            @Override public void update(SceneContext ctx) { }
+            @Override public void draw(SceneContext ctx, SceneCanvas canvas) { }
+        }), services(new ArrayList<>()), 320, 224);
+        assertFalse(retained[0].startStockAct(0, 0));
+        assertNull(retained[0].currentLaunch());
+        host.close();
+    }
+
+    @Test
+    void typedTextAndKeyboardCaptureReachTheScene() {
+        InputHandler input = new InputHandler();
+        SceneContext[] retained = new SceneContext[1];
+        List<String> typed = new ArrayList<>();
+        ModSceneHost host = new ModSceneHost();
+        host.open(owned(() -> new ModScene() {
+            @Override public void enter(SceneContext ctx) { retained[0] = ctx; }
+            @Override public void update(SceneContext ctx) {
+                ctx.captureKeyboardText();
+                typed.add(ctx.typedText() + "|" + ctx.keyDown(com.openggf.mods.scene.SceneKeys.A));
+            }
+            @Override public void draw(SceneContext ctx, SceneCanvas canvas) { }
+        }), services(new ArrayList<>()), 320, 224);
+        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_A, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        com.openggf.control.MenuInput.handleCharEvent(input, 'a');
+        host.update(input);
+        assertEquals(List.of("a|true"), typed);
+        assertFalse(input.isKeyDown(org.lwjgl.glfw.GLFW.GLFW_KEY_A), "the scene's claim hides A from host shortcuts");
+        host.close();
+    }
 }

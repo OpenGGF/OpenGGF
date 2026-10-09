@@ -39,9 +39,12 @@ public final class ControlledFrameRuntime {
             audio.beginGameplayAudioFrame(audio.commandTimeline().currentFrame() + 1);
         }
         var course = new CourseControl(context, input);
+        if (input != null && controller.capturesKeyboardText()) input.captureKeyboardText();
         boolean advance = controller.beforeTick(course, snapshot);
         serviceTitleCardOverlay(context);
         if (advance) {
+            LogicalInputSnapshot nativeInput = java.util.Objects.requireNonNull(
+                    controller.nativeInput(course), "native input");
             beforeGameplay.run();
             EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();
             context.plcFrameLifecycle().runLogicalIteration(frame -> { }, context.getFadeManager()::update,
@@ -49,7 +52,7 @@ public final class ControlledFrameRuntime {
                         var frameContext = LevelFrameContext.from(context);
                         LevelFrameStep.updateTimers(frameContext);
                         boolean overrideOwned = input.hasLogicalOverride();
-                        input.setLogicalOverride(LogicalInputSnapshot.neutral());
+                        input.setLogicalOverride(nativeInput);
                         try {
                             return LevelFrameStep.execute(frameContext, frame, PlcLifecyclePhase.ORDINARY_LEVEL,
                                     context.getLevelManager(), context.getCamera(),

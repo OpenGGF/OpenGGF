@@ -52,6 +52,22 @@ public interface SceneContext {
     /** Physical keyboard/pad events, timestamped in the host's monotonic clock domain. */
     default PhysicalInput physicalInput() { return PhysicalInput.neutral(); }
 
+    /**
+     * Characters typed this tick through the operating system's text input, honouring the
+     * user's keyboard layout and Shift; control characters are omitted. Use this, not key codes,
+     * for anything the player spells. Each tick's text is returned to every call in that tick.
+     */
+    default String typedText() { return ""; }
+
+    /**
+     * Claims the keyboard's text and editing keys through the next tick, so host shortcuts bound
+     * to letters (display filters, recording chords) do not fire while the player types. Call it
+     * every tick the scene wants typing; the claim lapses on its own. Escape, function keys and
+     * gamepads stay with the host. {@link #keyDown}, {@link #keyPressed} and
+     * {@link #physicalInput()} still report claimed keys to this scene.
+     */
+    default void captureKeyboardText() { }
+
     /** True while a key is held ({@link SceneKeys} code, such as {@code SceneKeys.TAB}). */
     boolean keyDown(int key);
 
@@ -75,6 +91,27 @@ public interface SceneContext {
 
     /** Small text files kept for this mod across sessions (saves, settings, high scores). */
     SceneStorage storage();
+
+    /**
+     * Fades out, closes the scene and starts {@code act} of {@code zone} in the running game
+     * with this mod's patches active. Indices are the running game's zone registry indices, as a
+     * title screen's start zone uses. Returns false, doing nothing, when the indices are out of
+     * range or the host cannot start gameplay (headless or mid-transition). Gameplay returns
+     * here when a frame controller requests the title
+     * ({@link com.openggf.game.mode.GameplayFrameController#consumeTitleRequest()}).
+     */
+    default boolean startStockAct(int zone, int act) { return false; }
+
+    /** The running stock session's game and team. */
+    default SceneLaunch currentLaunch() { return null; }
+
+    /**
+     * Relaunches through the master title into {@code launch}'s game with its team for this
+     * session only (the player's own settings are untouched), reopening this mod's startup scene
+     * there. Use it to move between supplied games or to fix the team a mode needs. Returns
+     * false, doing nothing, when that game's ROM is unavailable or the host is mid-transition.
+     */
+    default boolean relaunch(SceneLaunch launch) { return false; }
 
     /** Fades out and returns to the base game's own title screen. */
     void exitToGameTitle();

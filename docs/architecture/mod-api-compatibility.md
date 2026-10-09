@@ -147,6 +147,22 @@ remain synchronous. These are additive changes to the mutable 0.7 candidate;
 the descriptor/runtime version remains unpublished 0.7.0 and the normalized
 signature pin is regenerated in place.
 
+Typing of the Hedgehog (2026-10-09) adds four candidate capabilities. Multi-game
+code mods: `baseGame: any` may register objects, object art, service bundles and
+per-game patches (each patch names `s1`, `s2` or `s3k` and expands only into that
+game's plan); single-game content (characters, mod zones, ROM art intake, zone
+policies, decoded level patches) stays rejected. Scene navigation:
+`SceneContext.startStockAct`, `currentLaunch` and `relaunch` with the `SceneLaunch`
+record, backed by the engine-internal `SceneNavigator`; a controlled course's title
+request reopens the startup scene, and a relaunch carries its team as session-only
+overrides through the programmatic master-title exit. Controlled input:
+`GameplayFrameController.nativeInput` (neutral by default) supplies the advanced
+row's pad. Text capture: `InputHandler.captureKeyboardText`/`consumeTypedText` and
+the claim-owner reads, `GameplayFrameController.capturesKeyboardText`,
+`CourseControl.typedText/keyDown/keyPressed` and `SceneContext.typedText/
+captureKeyboardText`. All are additive defaults; the descriptor/runtime version
+remains unpublished 0.7.0 and the normalized signature pin is regenerated in place.
+
 Before changing the candidate surface:
 
 1. Run `TestModApiSignatureSurface` and inspect every added or changed line.

@@ -1,0 +1,168 @@
+# Typing of the Hedgehog: quiz boss questions. Format: game|question|correct|wrong1|wrong2
+# game is s1, s2, s3k or any. Facts are for the shipped Mega Drive games; badnik, boss and
+# timer facts were checked against the disassemblies. The three answers to a question start
+# with different letters so the first key picks one plate.
+s1|Which zone opens Sonic the Hedgehog?|Green Hill|Marble|Spring Yard
+s1|Which zone comes right after Green Hill?|Marble|Labyrinth|Star Light
+s1|Which zone comes just before the Final Zone?|Scrap Brain|Labyrinth|Marble
+s1|How many Chaos Emeralds are there in Sonic 1?|six|four|eight
+s1|How many acts does a regular Sonic 1 zone have?|three|four|one
+s1|Which badnik is a ladybug rolling on one wheel?|Motobug|Crabmeat|Newtron
+s1|Which bee badnik fires from its stinger?|Buzz Bomber|Chopper|Yadrin
+s1|Which piranha badnik leaps out of the water under bridges?|Chopper|Jaws|Masher
+s1|Which crab badnik fires two shots at once?|Crabmeat|Yadrin|Roller
+s1|Which chameleon badnik appears out of nowhere in Green Hill?|Newtron|Motobug|Caterkiller
+s1|Which bat badnik swoops down from the ceiling in Marble Zone?|Batbrain|Chopper|Orbinaut
+s1|Which caterpillar badnik has a spiky body?|Caterkiller|Motobug|Roller
+s1|Which mole badnik drills out of the ground in Labyrinth?|Burrobot|Jaws|Newtron
+s1|Which armadillo badnik curls into a ball in Spring Yard?|Roller|Yadrin|Ball Hog
+s1|Which badnik is circled by spiked balls?|Orbinaut|Bomb|Newtron
+s1|Which walking badnik bursts when Sonic comes near?|Bomb|Orbinaut|Yadrin
+s1|Which pig badnik drops bouncing cannonballs?|Ball Hog|Motobug|Caterkiller
+s1|What swings from Robotnik's craft in the Green Hill boss?|wrecking ball|spike ball|drill
+s1|Which zone's boss drops fire onto the lava?|Marble|Spring Yard|Green Hill
+s1|Which boss pulls blocks out from under Sonic?|Spring Yard|Marble|Labyrinth
+s1|In which zone do you chase Robotnik up a flooding shaft?|Labyrinth|Scrap Brain|Marble
+s1|Which boss drops spiked bombs onto seesaws?|Star Light|Green Hill|Marble
+s1|What does Robotnik fire at you in the Final Zone?|plasma balls|lasers|missiles
+s1|Scrap Brain act three is a flooded maze like which zone?|Labyrinth|Marble|Spring Yard
+s1|What marks the end of a first or second act?|signpost|lamppost|giant ring
+s1|After a boss, what does Sonic open to free the animals?|prison capsule|giant ring|egg mobile
+s1|How many rings do you need at the end of an act for a Giant Ring to appear?|fifty|twenty|one hundred
+s1|Where does a Sonic 1 Giant Ring take you?|Special Stage|Bonus Stage|Final Zone
+s1|What kind of stage is the Sonic 1 Special Stage?|rotating maze|half pipe|sphere grid
+s1|Which Special Stage block sends Sonic back out?|goal|bumper|reverse
+s1|What does touching a lamppost do?|saves your place|gives a shield|adds ten rings
+s1|How long do Speed Shoes last in Sonic 1?|twenty seconds|five seconds|one minute
+s1|What animal is Flicky?|bird|rabbit|seal
+s1|What animal is Pocky?|rabbit|squirrel|pig
+s1|What animal is Pecky?|penguin|chicken|seal
+s1|What animal is Rocky?|seal|rabbit|penguin
+s1|Which move is missing from the original Sonic 1?|spin dash|jump|roll
+s1|What does Robotnik juggle on the Try Again screen?|Chaos Emeralds|rings|animals
+s1|In Marble Zone, what can Sonic ride across the lava?|push block|glass block|seesaw
+s1|Which zone has saws, flamethrowers and electrocuters?|Scrap Brain|Marble|Labyrinth
+s1|Which zone has a gargoyle that spits fireballs?|Labyrinth|Spring Yard|Green Hill
+s1|Which zone is full of round bumpers?|Spring Yard|Green Hill|Labyrinth
+s1|What does the Sonic 1 results card say?|Sonic Has Passed|Act Complete|Level Clear
+s1|Which badnik is called Basaran in Japan?|Batbrain|Motobug|Chopper
+s2|Which zone opens Sonic 2?|Emerald Hill|Chemical Plant|Green Hill
+s2|Which zone comes right after Emerald Hill?|Chemical Plant|Aquatic Ruin|Hill Top
+s2|Which zone comes right after Chemical Plant?|Aquatic Ruin|Casino Night|Mystic Cave
+s2|Which zone comes right after Oil Ocean?|Metropolis|Wing Fortress|Hill Top
+s2|Which Sonic 2 zone has three acts?|Metropolis|Emerald Hill|Casino Night
+s2|In which zone does Sonic ride on the wing of a biplane?|Sky Chase|Wing Fortress|Death Egg
+s2|What is the name of Tails' biplane?|Tornado|Cyclone|Hurricane
+s2|What is the final zone of Sonic 2?|Death Egg|Wing Fortress|Final Zone
+s2|What is Tails' real first name?|Miles|Teddy|Felix
+s2|Which move did Sonic 2 add for a fast standing start?|spin dash|peel out|insta shield
+s2|How many Chaos Emeralds are there in Sonic 2?|seven|eight|five
+s2|How many rings does Sonic need to turn into Super Sonic?|fifty|one hundred|twenty
+s2|Which zone has the rising Mega Mack?|Chemical Plant|Oil Ocean|Aquatic Ruin
+s2|Which zone has pinball flippers and slot machines?|Casino Night|Mystic Cave|Spring Yard
+s2|Which zone shakes with an earthquake and rising lava?|Hill Top|Mystic Cave|Oil Ocean
+s2|Which zone has hanging vines and glowing lanterns?|Mystic Cave|Hill Top|Aquatic Ruin
+s2|In which zone can Sonic sink into oil?|Oil Ocean|Chemical Plant|Metropolis
+s2|Which zone has giant cogs and steam springs?|Metropolis|Chemical Plant|Hill Top
+s2|Which monkey badnik throws coconuts in Emerald Hill?|Coconuts|Masher|Buzzer
+s2|Which piranha badnik jumps out of Emerald Hill's water?|Masher|Chop Chop|Buzzer
+s2|Which spider badnik grabs Sonic in Chemical Plant?|Grabber|Spiny|Crawl
+s2|Which drill badnik pops out of walls in Aquatic Ruin?|Grounder|Spiker|Whisp
+s2|Which fish badnik swims in Aquatic Ruin?|Chop Chop|Masher|Aquis
+s2|Which badnik hides behind a bumper shield in Casino Night?|Crawl|Spiny|Grabber
+s2|Which firefly badnik glows in Mystic Cave?|Flasher|Whisp|Sol
+s2|Which snake badnik strikes from Mystic Cave walls?|Crawlton|Rexon|Grounder
+s2|Which octopus badnik leaps about in Oil Ocean?|Octus|Aquis|Masher
+s2|Which badnik is circled by fireballs in Hill Top?|Sol|Rexon|Flasher
+s2|Which long-necked badnik spits fireballs in Hill Top?|Rexon|Crawlton|Sol
+s2|Which badnik throws its drill in Hill Top?|Spiker|Grounder|Rexon
+s2|Which mantis badnik throws its pincers in Metropolis?|Slicer|Crawl|Asteron
+s2|Which crab badnik shoots out a long claw in Metropolis?|Shellcracker|Crawl|Asteron
+s2|Which badnik drops bombs in Sky Chase?|Nebula|Balkiry|Turtloid
+s2|Which chicken badnik guards Wing Fortress?|Clucker|Balkiry|Spiny
+s2|Which robot copy of Sonic waits on the Death Egg?|Silver Sonic|Metal Sonic|Knuckles
+s2|What is the final boss of Sonic 2?|Death Egg Robot|Big Arm|Egg Wrecker
+s2|What does Robotnik drive in the Emerald Hill boss?|drill car|wrecking ball|submarine
+s2|In the Aquatic Ruin boss, what fires out of the pillars?|arrows|bubbles|fireballs
+s2|What surrounds Robotnik in the Metropolis boss?|shield orbs|lasers|flames
+s2|What does the Sonic 2 Special Stage look like?|half pipe|rotating maze|sphere grid
+s2|What hazard in the Special Stage costs you rings?|bombs|spikes|lasers
+s2|With fifty rings, which checkpoint sprouts stars to a Special Stage?|star post|lamppost|giant ring
+s2|Which bonus is awarded for collecting every ring in an act?|perfect bonus|time bonus|ring bonus
+s2|Who follows Sonic around in Sonic 2?|Tails|Knuckles|Amy
+s2|What does breaking a Robotnik monitor do?|hurts Sonic|gives rings|adds a life
+s3k|Which zone opens Sonic 3?|Angel Island|Hydrocity|Emerald Hill
+s3k|Which zone comes right after Angel Island?|Hydrocity|Marble Garden|IceCap
+s3k|Which zone ends Sonic 3 on its own?|Launch Base|IceCap|Death Egg
+s3k|Which zone opens Sonic and Knuckles?|Mushroom Hill|Flying Battery|Sandopolis
+s3k|For Sonic, which zone comes right after Mushroom Hill?|Flying Battery|Sandopolis|Lava Reef
+s3k|Which zone comes right after Sandopolis?|Lava Reef|Hidden Palace|Sky Sanctuary
+s3k|Where is the Master Emerald kept?|Hidden Palace|Sky Sanctuary|Lava Reef
+s3k|Who takes Sonic's emeralds when he lands on Angel Island?|Knuckles|Tails|Mecha Sonic
+s3k|What kind of animal is Knuckles?|echidna|hedgehog|armadillo
+s3k|What colour is Knuckles?|red|purple|green
+s3k|What does Sonic become with all seven Super Emeralds?|Hyper Sonic|Super Sonic|Ultra Sonic
+s3k|Which birds fly beside Super Tails?|Super Flickies|Hyper Pockies|Mega Peckies
+s3k|Which move belongs only to Sonic in Sonic 3 and Knuckles?|Insta-Shield|glide|fly
+s3k|Which character can glide and climb walls?|Knuckles|Tails|Sonic
+s3k|Which shield lets Sonic breathe underwater?|Bubble Shield|Flame Shield|Lightning Shield
+s3k|Which shield pulls nearby rings toward Sonic?|Lightning Shield|Bubble Shield|Flame Shield
+s3k|Where does a hidden Giant Ring take you?|Special Stage|Bonus Stage|Final Zone
+s3k|Where do the stars above a Star Post take you?|Bonus Stage|Special Stage|Competition
+s3k|In the Special Stage, which spheres must you avoid?|red|blue|yellow
+s3k|Which zone starts with Sonic snowboarding?|IceCap|Marble Garden|Sky Sanctuary
+s3k|Which zone has spinning tops to ride?|Marble Garden|Carnival Night|Lava Reef
+s3k|Which zone has a barrel you move by pressing up and down?|Carnival Night|Flying Battery|Hydrocity
+s3k|Which zone takes place on Robotnik's airship?|Flying Battery|Wing Fortress|Death Egg
+s3k|Which desert zone is haunted by ghosts?|Sandopolis|Desert Palace|Lava Reef
+s3k|What are the Sandopolis ghosts called?|Hyudoro|Skorp|Rockn
+s3k|In Sandopolis act two, what must stay on to keep the ghosts away?|lights|fans|water
+s3k|Which zone takes Super Sonic out into space?|The Doomsday|Death Egg|Sky Chase
+s3k|Where does Sonic battle Mecha Sonic?|Sky Sanctuary|Death Egg|Launch Base
+s3k|Which zone flips gravity in its rooms?|Death Egg|Flying Battery|Launch Base
+s3k|What is the final boss of Sonic 3 called?|Big Arm|Death Egg Robot|Egg Wrecker
+s3k|Which rhino badnik charges through Angel Island?|Rhinobot|Motobug|Grounder
+s3k|Which monkey badnik throws coconuts in Angel Island?|Monkey Dude|Coconuts|Bloominator
+s3k|Which flower badnik shoots spiked balls in Angel Island?|Bloominator|Mushmeanie|Rhinobot
+s3k|Which tiny fish latches onto Sonic and eats his rings?|Mega Chopper|Jawz|Pointdexter
+s3k|Which penguin badnik slides on its belly in IceCap?|Penguinator|Star Pointer|Clucker
+s3k|Which mole badnik pops up in Mushroom Hill?|Madmole|Burrobot|Grounder
+s3k|Which scorpion badnik lurks in Sandopolis?|Skorp|Rockn|Fireworm
+s3k|Which Lava Reef badnik puffs out clouds of smoke?|Toxomister|Fireworm|Iwamodoki
+s3k|Which Robotnik-shaped robot appears in Sonic and Knuckles?|Eggrobo|Mecha Sonic|Silver Sonic
+s3k|Which screen lets you save your progress?|Data Select|Sound Test|Level Select
+s3k|What lets Sonic and Knuckles join up with Sonic 3?|Lock-On|cartridge adapter|memory card
+s3k|Locking on Sonic 2 lets you play it as whom?|Knuckles|Mecha Sonic|Robotnik
+s3k|How many acts do most Sonic 3 and Knuckles zones have?|two|four|one
+s3k|What happens to Angel Island's jungle when Robotnik's bombers arrive?|burns|floods|sinks
+s3k|What does Robotnik try to launch from Angel Island in Sonic 3?|Death Egg|Wing Fortress|Flying Battery
+any|What colour is Sonic?|blue|green|yellow
+any|What colour are Sonic's shoes?|red|blue|green
+any|What kind of animal is Sonic?|hedgehog|echidna|armadillo
+any|What kind of animal is Tails?|fox|rabbit|squirrel
+any|How many tails does Tails have?|two|one|four
+any|What does Robotnik put inside his badniks?|animals|rings|emeralds
+any|What is Doctor Robotnik called in Japan?|Eggman|Ivo|Robo
+any|Which hovering craft does Robotnik fly into battle?|Egg Mobile|Tornado|Wing Fortress
+any|How many rings earn an extra life?|one hundred|fifty|ten
+any|What does Sonic drop when he is hit while holding rings?|rings|shoes|emeralds
+any|Which item lets Sonic take one hit without losing rings?|shield|ten rings|extra life
+any|Which power-up makes Sonic run faster?|speed shoes|invincibility|extra life
+any|Which power-up surrounds Sonic with twinkling stars?|invincibility|shield|extra life
+any|What does a monitor showing Sonic's face give you?|extra life|shield|ten rings
+any|Which spring colour bounces Sonic higher?|red|yellow|blue
+any|What are Robotnik's robot enemies called?|badniks|drones|minions
+any|How many lives does Sonic start with?|three|five|one
+any|What does Sonic do if you leave him standing still?|taps his foot|falls asleep|starts dancing
+any|What warns Sonic that he is running out of air?|countdown|sirens|fireworks
+any|What happens when the act clock reaches ten minutes?|time over|game over|bonus stage
+any|Which bonus rewards finishing an act quickly?|time bonus|ring bonus|perfect bonus
+any|What spins at the end of an act and shows a face?|signpost|monitor|giant ring
+any|Who builds every badnik?|Robotnik|Tails|Knuckles
+any|Which gems does Robotnik want most of all?|Chaos Emeralds|rubies|diamonds
+any|Which hazard hurts Sonic even when he is rolling?|spikes|bumpers|monitors
+any|What colour is Tails?|orange|blue|purple
+any|Which item gives ten rings?|super ring|extra life|invincibility
+any|What runs out if Sonic stays underwater too long?|air|rings|time
+any|What pops up with the animal when a badnik breaks?|points|rings|emerald
+any|Which animal friend is a little blue bird?|Flicky|Pocky|Cucky

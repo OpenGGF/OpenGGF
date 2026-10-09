@@ -408,8 +408,11 @@ Return a stable `GameplayFrameController` from a patch's module and register tha
 same controller through `rewindAdapters()` if its mode state is rewindable.
 The host invokes `beforeTick(CourseControl, LogicalInputSnapshot)` once per mode
 row: `false` holds course physics, objects, clocks, animation and PLC work; `true`
-admits one native step with neutral player input. `afterTick` receives whether
-that step ran. Keep aim, menus and feedback in the controller; keep physics in
+admits one native step. That step's pad input is `nativeInput(CourseControl)`,
+neutral by default so live input never reaches a controlled course; return a
+snapshot derived only from controller state (for example one row of a recorded
+pad program, with press edges from the previous row) to drive the player
+reproducibly. `afterTick` receives whether that step ran. Keep aim, menus and feedback in the controller; keep physics in
 native gameplay. Stock modules return no controller and retain their normal path.
 Initial setup rows are excluded from movie/history input; subsequent HOLD rows
 are included. Released native title-card text continues its presentation exit,
@@ -432,6 +435,14 @@ It is false while a logical movie override is active. Supply an A-operated menu
 command for Genesis movie replay, whose controller rows cannot encode that key
 or bumper. This accessor is part of the unpublished 0.7 candidate surface; its
 normalized pin is regenerated without changing the policy/version descriptor.
+
+A controller whose player types returns true from `capturesKeyboardText()`. While it
+does, host shortcuts and keyboard bindings read printable and editing keys as up (so
+`R` cannot also start live rewind, and Enter cannot toggle host pause), and
+`CourseControl.typedText()` returns the row's characters from the operating system's
+text input. `CourseControl.keyDown(key)`/`keyPressed(key)` read any GLFW key for the
+controller, claimed or not. Escape, function keys, modifiers and gamepads stay with
+the host. A controller with its own pause should offer it on a key it reads itself.
 
 `GameplayFrameController.rewindPresentation()` optionally returns a finite,
 bounded `RewindPresentation` value for creator-owned reverse playback. The host

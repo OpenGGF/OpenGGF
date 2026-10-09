@@ -207,6 +207,26 @@ and record validated length (settles team and repair budget); (2) capture at the
 play to the validated end, restore, and expect no layout-version rejection (including a
 two-sprite Sonic and Tails roster); (3) typed text from a non-US layout reaches the controller.
 
+### Mod structure
+
+- One `baseGame: any` jar: the hub is its startup scene, and one patch per game
+  installs the course controller and removes stock badniks through
+  `transformDecodedLevel`. Shared state crosses the scene/gameplay boundary only
+  through the mod's storage: the hub writes `intent.txt` (mode, act, difficulty,
+  options, seed) before `startStockAct`; the course writes `result.txt` before its
+  title request reopens the hub.
+- The course controller owns all typing state (field, scorecard, rings, lives,
+  enemies, effects). Enemies are controller records drawn by auxiliary puppet
+  objects with the zone's own ROM art; a puppet whose record is gone (for example
+  after a stand restore) deletes itself, so the controller stays authoritative.
+- Plates and the HUD draw as screen-space fills with an original 5x9 face
+  (`art/plate-font.txt`), exact ARGB colours independent of the zone palette. Each
+  fill is one GL draw call, so text has no outline pass; plates sit on a dark
+  translucent box instead. Profile before adding outlines; a baked glyph sheet is
+  the fallback.
+- The engine-free core (`typinghog.core`: prompt forms, typing field, scorecard,
+  lexicon) is checked by `CoreChecks` without the engine.
+
 ## Delivery plan
 
 1. Feasibility kill tests: controller-driven pad input reaches the act end on one act per game;

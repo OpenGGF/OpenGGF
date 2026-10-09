@@ -31,6 +31,10 @@ public final class ModApiVersion {
      * Creator helpers include character specifications and lifecycle hooks, decoded
      * placement transforms, owner storage and service bundles, named single-act and
      * multi-act zone factories, shared UI/input and ROM-qualified scene art.
+     * Multi-game code mods carry per-game patches; startup scenes start stock acts,
+     * are reopened by controlled title requests and relaunch sessions with a team;
+     * controllers supply the native step's pad; scenes and controllers read typed text
+     * while claiming the keyboard from host shortcuts.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);
