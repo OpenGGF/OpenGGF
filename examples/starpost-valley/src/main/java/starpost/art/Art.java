@@ -62,6 +62,10 @@ public final class Art {
     private final SceneImage plant;
     private final Seasonal[] seasons = new Seasonal[4];
     public final ItemIcons icons;
+    public final HudArt hud;
+    /** Sonic 3 &amp; Knuckles title-card lettering and the card's red banner (null if unavailable). */
+    public final CardFont cardFont;
+    public final SceneImage cardBanner;
     private final Facades facades;
 
     /** A season's recoloured pictures, built on first use. */
@@ -187,6 +191,27 @@ public final class Art {
         plant = opaqueBounds(kit.blockImage(1), 0, 60, 34, 66);
         icons = new ItemIcons(this);
         facades = new Facades(this);
+        hud = new HudArt(s1, ghzPalette);
+        cardFont = new CardFont(s3k);
+        cardBanner = s3k.hasTitleCard(0, 0) ? plainBanner(s3k.titleCard(0, 0).frame(0).image()) : null;
+    }
+
+    /**
+     * The title card's red banner without the game's name at its foot: the banner's own red is
+     * carried down over the lettering, so the card reads as Starpost Valley's.
+     */
+    private static SceneImage plainBanner(SceneImage banner) {
+        int[] px = banner.pixels();
+        int w = banner.width(), h = banner.height();
+        int red = banner.pixel(w / 2, h / 3);
+        for (int y = h * 3 / 4; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                if (px[y * w + x] >>> 24 != 0) {
+                    px[y * w + x] = red;
+                }
+            }
+        }
+        return new SceneImage(w, h, px);
     }
 
     private void animal(String name, int art, int map) {

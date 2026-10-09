@@ -110,20 +110,28 @@ final class DayEndScreen implements Screen {
         }
     }
 
-    /** The morning's card, after Sonic 1's: the date on a blue band, the valley's name below. */
+    /**
+     * The morning's card, after Sonic 3 &amp; Knuckles': the red banner drops in on the left while the
+     * season and the valley's name slide in from the right, then the day in Sonic 1's HUD digits.
+     */
     private void drawTitleCard(Shell shell, SceneCanvas canvas, Game game) {
         int w = canvas.width();
         long age = age(shell);
-        int slide = (int) Math.max(0, 200 - age * 12);
         canvas.fill(0, 0, w, canvas.height(), 0xFF000000);
-        canvas.fill(w / 2 - 110 + slide, 78, 220, 22, 0xFF2449DB);
-        canvas.fill(w / 2 - 110 + slide, 100, 220, 4, 0xFFFFDB00);
-        String date = Calendar.seasonName(game.calendar.season()) + " " + game.calendar.day();
-        Text.shadow(canvas, date, w / 2 - canvas.textWidth(date) / 2 + slide, 84, Text.WHITE);
+        int in = (int) Math.max(0, 320 - age * 16);
+        if (shell.art.cardBanner != null) {
+            canvas.draw(shell.art.cardBanner, w / 2f - 120, -in * 0.7f, SceneDraw.plain());
+        }
+        var font = shell.art.cardFont;
+        String season = Calendar.seasonName(game.calendar.season());
+        font.draw(canvas, season, w / 2f - 40 + in, 76, SceneDraw.plain());
         String name = game.farmName + " VALLEY";
-        Text.shadow(canvas, name, w / 2 - canvas.textWidth(name) / 2 - slide, 112, Text.YELLOW);
-        if (game.raining) {
-            Text.centred(canvas, "RAIN TODAY", 136, Text.BLUE);
+        font.draw(canvas, name, w / 2f - 40 + in * 1.4f, 108, SceneDraw.plain());
+        String day = Integer.toString(game.calendar.day());
+        float dx = w / 2f - 40 + font.width(season) + 12 + in * 1.2f;
+        shell.art.hud.number(canvas, day, dx, 68, 2);
+        if (game.raining && age > 30) {
+            Text.centred(canvas, "RAIN TODAY", 150, Text.BLUE);
         }
     }
 }

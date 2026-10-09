@@ -257,10 +257,15 @@ public final class PlayScreen implements Screen {
     static void drawHud(Shell shell, SceneCanvas canvas) {
         Game game = shell.game;
         Calendar cal = game.calendar;
-        Text.shadow(canvas, "TIME", 8, 6, Text.YELLOW);
-        Text.shadow(canvas, cal.clock(), 64, 6, Text.WHITE);
-        Text.shadow(canvas, "RINGS", 8, 18, Text.YELLOW);
-        Text.shadow(canvas, Integer.toString(game.rings), 64, 18, Text.WHITE);
+        // Sonic 1's HUD: TIME turns red after midnight, RINGS when there are none (flashing, as in the ROM).
+        var hud = shell.art.hud;
+        boolean flash = shell.ticks / 8 % 2 == 0;
+        boolean late = cal.minutes() >= 24 * 60;
+        canvas.draw(late && flash ? hud.timeRed : hud.time, 16, 8, SceneDraw.plain());
+        int h = cal.minutes() / 60 % 24, m = cal.minutes() % 60;
+        hud.number(canvas, (h < 10 ? " " : "") + h + ":" + (m < 10 ? "0" : "") + m, 66, 4);
+        canvas.draw(game.rings == 0 && flash ? hud.ringsRed : hud.rings, 16, 24, SceneDraw.plain());
+        hud.number(canvas, Integer.toString(game.rings), 66, 20);
         String date = Calendar.seasonName(cal.season()) + " " + cal.day() + " " + Calendar.weekdayName(cal.weekday());
         Text.right(canvas, date, canvas.width() - 8, 6, Text.WHITE);
         // Momentum: a bar that drains with chores and refills with Sonic things.

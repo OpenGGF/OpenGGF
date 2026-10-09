@@ -62,21 +62,27 @@ final class TitleScreen implements Screen {
     public void draw(Shell shell, SceneCanvas canvas) {
         int w = canvas.width(), h = canvas.height();
         canvas.drawBackdrop(shell.art.season(0).backdrop(0), 0, 0, w, h, 0, shell.ticks * 1.5, shell.ticks);
-        // Sonic runs across the bottom, as on Sonic 1's title.
+        // Green Hill's own ground scrolling under Sonic, as on Sonic 1's title.
+        var look = shell.art.season(0);
+        int scroll = (int) (shell.ticks * 3 % 256);
+        for (int x = -scroll; x < w; x += 256) {
+            canvas.drawRegion(look.block(60), 0, 180, 256, 76, x, h - 52, 256, 76, SceneDraw.plain());
+        }
         SceneSpriteSet sonic = shell.art.farmer("sonic");
         SceneSprite pose = run.pose(sonic);
-        float x = (shell.ticks * 3) % (w + 120) - 60;
-        canvas.fill(0, 176, w, h - 176, 0xFF49B600);
-        canvas.fill(0, 176, w, 3, 0xFF92FF00);
-        canvas.draw(pose, x, 176 - (pose.height() - pose.originY()), SceneDraw.plain());
-        Text.panel(canvas, w / 2 - 110, 36, 220, 42);
-        Text.centred(canvas, "STARPOST VALLEY", 46, Text.YELLOW);
-        Text.centred(canvas, "THE VALLEY AFTER THE CREDITS", 60, Text.WHITE);
+        float x = w * 0.3f + (float) Math.sin(shell.ticks / 50.0) * 30;
+        canvas.draw(pose, x, h - 40 - (pose.height() - pose.originY()), SceneDraw.plain());
+        // The name in Sonic 3 & Knuckles' title-card lettering, dropping in.
+        int drop = (int) Math.max(0, 60 - shell.ticks * 3);
+        Text.panel(canvas, w / 2 - 92, 22 - drop, 184, 66);
+        shell.art.cardFont.centred(canvas, "STARPOST", 30 - drop, SceneDraw.plain());
+        shell.art.cardFont.centred(canvas, "VALLEY", 58 - drop, SceneDraw.plain());
+        Text.centred(canvas, "THE VALLEY AFTER THE CREDITS", 96, Text.YELLOW);
         String[] options = options();
         for (int i = 0; i < options.length; i++) {
             boolean disabled = i == 1 && !hasSave;
             String label = (i == cursor ? "> " : "  ") + options[i];
-            Text.centred(canvas, label, 104 + i * 16, disabled ? 0xFF6D6D6D : i == cursor ? Text.YELLOW : Text.WHITE);
+            Text.centred(canvas, label, 116 + i * 14, disabled ? 0xFF6D6D6D : i == cursor ? Text.YELLOW : Text.WHITE);
         }
     }
 }
