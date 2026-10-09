@@ -73,8 +73,13 @@ class TypingHedgehogStandRestoreProbe {
             var id = query.identityOf(object);
             if (id.isEmpty()) continue;
             ObjectRefId ref = id.get();
-            int x = object instanceof com.openggf.level.objects.AbstractObjectInstance a ? a.getX() : -1;
-            int y = object instanceof com.openggf.level.objects.AbstractObjectInstance a ? a.getY() : -1;
+            int x = -1, y = -1;
+            try {
+                x = object.getX();
+                y = object.getY();
+            } catch (RuntimeException spawnless) {
+                // Spawnless dynamic objects have no placement position to report.
+            }
             out.put(ref.dynamicId(), new Census(ref.dynamicId(), ref.spawnId(), ref.kind().name(),
                     object.getClass().getName(), object instanceof RewindRecreatable,
                     object instanceof ModRewindRecreatable, x, y));
@@ -98,6 +103,10 @@ class TypingHedgehogStandRestoreProbe {
                 else Files.copy(p, target);
             }
         }
+        // The probed rail may be held out of the shipped index: list it in the copy.
+        Path index = project.resolve("src/main/resources/rails/index.txt");
+        String listed = Files.exists(index) ? Files.readString(index) : "";
+        if (!listed.lines().map(String::strip).toList().contains(RAIL)) Files.writeString(index, listed + "\n" + RAIL + "\n");
         Path work = temp.resolve("work");
         int failingStandRow = -1, heldRows = -1;
         String culpritType = null;
@@ -133,6 +142,10 @@ class TypingHedgehogStandRestoreProbe {
                 Object view = course.getClass().getMethod("view").invoke(course);
                 String phase = (String) get(view, "phase");
                 int railRow = (int) get(view, "railRow");
+                if (i == 600 && (phase.equals("IDLE") || railRow < 0)) {
+                    System.out.println("RESTOREPROBE|A the course never started the rail (phase " + phase + ")");
+                    break;
+                }
                 if (phase.equals("BOSS") || phase.equals("TALLY")) {
                     System.out.println("RESTOREPROBE|A reached " + phase + " at rail row " + railRow + " without a restore failure");
                     break;
