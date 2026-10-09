@@ -172,6 +172,12 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
   writes validated length, failure class, first divergence from the recording
   (comparison-only), boss/act-end rows and course-checkpoint stand determinism as TSV.
   Origin: Typing of the Hedgehog rail kill tests, 2026-10-09.
+- `TypingHedgehogRailBuilderProbe` (test scope, opt-in `-Dmse=off -Dtypinghog.railbuild=<game or game:act>`,
+  `typinghog.railbuild.out=<rails dir>`) builds Typing of the Hedgehog `.rail` files: replays a recording slice
+  or authored route through the mod's controlled rail semantics at 320 px, repairs hurts and drift with bounded
+  local input edits spliced back onto the reference path (recorded states, comparison-only), re-validates every
+  repair by a fresh straight run, and picks soak-safe boss and stand rows whose whole stand chain restores
+  exactly. Origin: rails lane, 2026-10-09.
 
 ## Docs
 
