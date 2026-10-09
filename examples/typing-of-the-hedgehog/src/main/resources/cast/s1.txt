@@ -1,0 +1,23 @@
+# Sonic 1 cast: each zone's badniks with their stock art keys. Frames and delays are the
+# walk/fly/swim cycles from the disassembly's animation scripts (_anim/*.asm).
+# zone name           artKey       archetype  facesRight halfW halfH delay frames
+0      Motobug        motobug      RUSHER     false      20    14    7     0,1,0,2
+0      Buzz_Bomber    buzz_bomber  DIVER      false      24    12    2     0,1
+0      Crabmeat       crabmeat     SHOOTER    false      22    16    15    0,1
+0      Chopper        chopper      SURFACER   false      12    16    7     0,1
+0      Newtron        newtron      RUSHER     false      16    16    2     6,7
+1      Batbrain       batbrain     DIVER      false      12    12    3     1,2,3,2
+1      Buzz_Bomber    buzz_bomber  DIVER      false      24    12    2     0,1
+1      Caterkiller    caterkiller  SEGMENTED  false      12    8     8     0
+2      Roller         roller       RUSHER     false      16    16    3     3,4,2
+2      Crabmeat       crabmeat     SHOOTER    false      22    16    15    0,1
+2      Yadrin         yadrin       RUSHER     false      20    16    7     0,3,1,4,0,3,2,5
+2      Buzz_Bomber    buzz_bomber  DIVER      false      24    12    2     0,1
+3      Jaws           jaws         RUSHER     false      16    12    7     0,1,2,3
+3      Burrobot       burrobot     RUSHER     false      12    20    3     0,1
+3      Orbinaut       orbinaut     ORBITER    false      12    12    15    0
+4      Bomb           bomb         RUSHER     false      12    16    19    5,4,3,2
+4      Orbinaut       orbinaut     ORBITER    false      12    12    15    0
+5      Ball_Hog       ball_hog     SHOOTER    false      16    20    9     0,2,3,2
+5      Caterkiller    caterkiller  SEGMENTED  false      12    8     8     0
+5      Bomb           bomb         RUSHER     false      12    16    19    5,4,3,2

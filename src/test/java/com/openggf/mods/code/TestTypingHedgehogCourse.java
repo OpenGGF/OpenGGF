@@ -138,6 +138,13 @@ class TestTypingHedgehogCourse {
         var input = new InputHandler();
         stepUntil(fixture, input, "STAND", 900);
         assertEquals(STAND_ROW, get(view(), "railRow"), "the stand starts on its rail row");
+        var art = GameServices.module().getObjectArtProvider();
+        for (String key : List.of("motobug", "explosion", "animal", "points")) {
+            var sheet = art.getSheet(key);
+            assertNotNull(art.getRenderer(key), "puppets draw " + key + " with the zone's loaded ROM art");
+            System.out.println("[typing-hedgehog] S1 GHZ1 sheet " + key + ": "
+                    + (sheet == null ? "null" : sheet.getFrameCount() + " frames"));
+        }
         int kills = 0;
         for (int i = 0; i < 6000 && "STAND".equals(get(view(), "phase")); i++) {
             @SuppressWarnings("unchecked")
