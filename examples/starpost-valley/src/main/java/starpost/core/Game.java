@@ -34,6 +34,9 @@ public final class Game {
     public final Map<String, Integer> shipping = new LinkedHashMap<>();
     public final Set<String> flags = new LinkedHashSet<>();
     public long totalEarned;
+    /** The freed animals living in the valley (design doc §6.7): 6 at the start, up to 60. */
+    public int population = 6;
+    public static final int MAX_POPULATION = 60;
     public int waterCharges = 10;
     public int waterCapacity = 10;
     /** The game's other systems, each saving its own keys (see {@link SaveSection}). */
@@ -79,6 +82,15 @@ public final class Game {
 
     public void restore(int amount) {
         momentum = Math.min(maxMomentum, momentum + amount);
+    }
+
+    /** An animal freed from a badnik joins the valley. Returns true when the count went up. */
+    public boolean free() {
+        if (population >= MAX_POPULATION) {
+            return false;
+        }
+        population++;
+        return true;
     }
 
     public void ship(String id, int count) {

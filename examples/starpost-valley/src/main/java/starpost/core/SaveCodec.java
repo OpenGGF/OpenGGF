@@ -27,6 +27,7 @@ public final class SaveCodec {
         line(out, "momentum", g.momentum + "," + g.maxMomentum);
         line(out, "weather", (g.raining ? 1 : 0) + "," + (g.rainTomorrow ? 1 : 0));
         line(out, "water", g.waterCharges + "," + g.waterCapacity);
+        line(out, "population", g.population);
         line(out, "flags", String.join(",", g.flags));
         line(out, "inventory", g.inventory.size() + "," + g.inventory.selected());
         for (int i = 0; i < g.inventory.size(); i++) {
@@ -133,6 +134,7 @@ public final class SaveCodec {
             int[] water = ints(v.getOrDefault("water", "10,10"), 2);
             g.waterCapacity = Math.max(10, Math.min(200, water[1]));
             g.waterCharges = Math.max(0, Math.min(g.waterCapacity, water[0]));
+            g.population = Math.max(0, Math.min(Game.MAX_POPULATION, Integer.parseInt(v.getOrDefault("population", "6"))));
             for (String flag : v.getOrDefault("flags", "").split(",")) {
                 if (!flag.isBlank() && flag.length() < 64) {
                     g.flags.add(flag);

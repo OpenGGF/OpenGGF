@@ -42,6 +42,7 @@ public final class Art {
     public final SceneSpriteSet monitor;
     public final SceneSpriteSet ring;
     public final SceneSpriteSet flicky;
+    public final SceneSpriteSet explosion;
     public final SceneSpriteSet eggRobo;
     public final SceneSpriteSet signpost;
     public final SceneSpriteSet motobug;
@@ -158,6 +159,7 @@ public final class Art {
                 0x01DBA2, 0), aizPalette);                                              // Map_Monitor
         ring = s3k.sprites(StockSceneArt.S3K_RING.request(s3k), aizPalette);
         flicky = s3k.sprites(StockSceneArt.S3K_BLUE_FLICKY.request(s3k), aizPalette);
+        explosion = s3k.sprites(StockSceneArt.S3K_EXPLOSION.request(s3k), aizPalette);
         eggRobo = s3k.sprites(StockSceneArt.S3K_EGG_ROBO.request(s3k), s3k.palette(PAL_CONTINUE, 64));
         // Sonic 1 objects draw in Green Hill's own palette (sonic.lst addresses).
         signpost = s1.sprites(RomSpriteRequest.of(0x3A9E8, Compression.NEMESIS, 0xF3C4, 0), ghzPalette); // Nem_SignPost, Map_Sign

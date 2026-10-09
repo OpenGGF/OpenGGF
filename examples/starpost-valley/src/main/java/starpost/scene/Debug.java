@@ -53,6 +53,12 @@ final class Debug {
                     play.debugPlace(p[0].equals("farm"), Float.parseFloat(p[1]), p.length > 2 ? Float.parseFloat(p[2]) : 30);
                 }
                 case "demo" -> demo(shell.game);
+                case "pest" -> {
+                    if (!(shell.screen() instanceof PlayScreen play)) {
+                        return false;
+                    }
+                    play.actors.add(starpost.farm.Pests.motobug(shell.game, Integer.parseInt(p[1]), Float.parseFloat(p[2])));
+                }
                 case "intro" -> {
                     shell.game = shell.newGame(1234, p.length > 1 ? p[1] : "sonic");
                     shell.goNow(new IntroScreen());

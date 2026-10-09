@@ -27,6 +27,7 @@ public final class Systems {
 
     /** Adds the systems' actors and place handlers to a new play screen. */
     public static void install(Shell shell, PlayScreen play, List<Actor> actors, Map<String, Consumer<Shell>> places) {
+        actors.addAll(starpost.farm.Pests.spawn(shell.game));
         Pickups pickups = shell.game.section(Pickups.class);
         if (pickups != null) {
             actors.addAll(pickups.today(shell.game, play.valley().valley));
