@@ -858,6 +858,25 @@ Lanes (lead plus a few at a time, each in its own worktree, merged into
   social page and a heart event, the lake and the Bubble Bar, every festival, the board, a
   night's tally and the year's end. Everything goes through debug jumps with frames ticked and
   drawn. The fault boundary must catch nothing.
+- **First-run playtest with real input (no debug jumps)** found four seams that only show when
+  lanes meet:
+  1. A new game's intro ends on the farm, where the Flicky post arrived and froze the cutscene
+     behind a letter. The post now waits while the clock is held.
+  2. The board's morning notice fired during the intro's fade and rode over the black morning
+     card. Notices now wait out transitions.
+  3. Pip standing beside the shipping signpost took the action button, so nothing could be
+     shipped. The signpost answers first.
+  4. Closing a menu with the action button left the key held into the farm, whose tap-on-release
+     acted on the signpost and reopened its menu. A hold that began in a menu is now ignored.
+
+  Also: the title band of the intro, the farmer-select lines, and labels drawn above the field
+  (`Actor.drawOver`). Verified afterwards: title to farmer to intro to morning card to letters, a
+  shipped tally (540 rings) and the next morning, and Continue loading the save. Capture
+  scripts must read letters with confirm: the `close` debug command dismisses a letter unread, so
+  the Flicky brings it again.
+- **Knuckles's climbing** had never been seen: no valley wall stands at glide height, and the
+  probed Ruins chambers had none either. `AbilitiesTest` drives the controller against a synthetic
+  wall: glide, cling, climb, pull up, kick off.
 
 ## 15. People (lane)
 
