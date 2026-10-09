@@ -157,6 +157,7 @@ def prepare(args):
         "java.util","java.util.function","java.util.stream","java.nio.charset"}
     preserve=f"path={contract / 'preserved-engine.jar'},"+','.join('package='+name for name in sorted(packages))
     arguments=["-march=compatibility","-J-Xmx5g","--parallelism=4",
+        "--add-modules=java.logging",
         "--initialize-at-run-time=org.lwjgl,java.awt,javax.swing,sun.awt,sun.java2d",
         "-H:+UnlockExperimentalVMOptions","-H:+RuntimeClassLoading",
         "-H:Preserve="+preserve,

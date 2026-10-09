@@ -646,3 +646,11 @@ stamp with the experimental compiler configuration. The updated category plan at
 `751fdc66d` against actual published destination `ed45a1990` selects 3,075 ordinary
 classes. The same proportionate scope applies; the incoming route-drawing changes
 affect only tests/documentation and were independently published/qualified.
+
+The image-only attempt at native-tool source `777a6545312b881786a21f28886e203483ade707`
+stops before analysis: the preservation request cannot find `java.util.logging`.
+The compiler's default module graph does not expose that JDK package even though
+the source contract resolves it on the JVM. The native-image help documents
+`--add-modules` as adding root modules; the builder now explicitly resolves
+`java.logging`. This is a compiler-input correction, with unchanged engine/SDK/mod
+bytes and no native artifact from the failed attempt.

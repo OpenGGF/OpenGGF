@@ -46,7 +46,9 @@ including anonymous wrappers, because owner-bound dispatch inspects their concre
 methods reflectively. Their members enter the same mandatory startup audit.
 Direct JDK method, constructor and static-field references also enter the contract,
 including dormant callbacks and method handles. Their declaring packages are
-preserved automatically. JDK constructors are never resolved through inheritance.
+preserved automatically. The image explicitly resolves `java.logging` so its
+packages are available to preservation as well as the default `java.base` module.
+JDK constructors are never resolved through inheritance.
 Missing-field and missing-method controls must return ordinary exit 1;
 crashes never pass. A separately compiled, runtime-loaded regression mod exercises
 record equality/hash/string, pattern-switch and generated-proxy bootstraps,
