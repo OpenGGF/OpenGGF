@@ -179,6 +179,12 @@ transcription also stamped every word at the clip end. Other renderings of the s
 take were transcribed with four repeats. Bound the clip length against the script and
 refuse edits whose word times are degenerate before trusting a word check.
 
+FFmpeg is not the authority on Ogg Vorbis length (2026-10-09, same task): it decoded
+42,408 frames from a 0.9-second clip whose final granule position and stb_vorbis
+(the engine's `OggPcmDecoder`) both gave the encoded 42,536; the batch's other 95
+clips agreed. Take queue leases from the granule and check them with the engine
+decoder.
+
 Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
 task): the positioned MHZ capture retained about 22 MiB after its callback while
 three complete capture/rewind/ROM-loading passes settled near 16.8 MiB, with only

@@ -146,9 +146,33 @@ ceiling, blind word checks, whole-utterance edits, approved-recipe pins) to per-
 and presets and generates `typinghog.audio.VoiceLine`. OpenRouter lists 21 ElevenLabs premade
 voices for `elevenlabs/eleven-v4`. Auditions (three voices per speaker, two lines each, clean and
 through a light 8-bit/16 kHz arcade DAC and a 7-bit/8 kHz Mega Drive DAC) moved reported key
-usage from $1.827 to $1.932; the voices and presets await the user's choice. One take
-repeated its line at least four times while Whisper reported a single utterance, so checks
-also bound clip length and refuse degenerate word timestamps.
+usage from $1.827 to $1.932. One take repeated its line at least four times while Whisper
+reported a single utterance, so checks also bound clip length and refuse degenerate word
+timestamps.
+
+The user chose harry (announcer) and callum (Robotnik) with the Mega Drive DAC, then asked for
+the effect to be applied programmatically. The jar ships only the clean render: 101 lines, 266 s,
+3.0 MB of bit-exact Ogg Vorbis (q4). Each line declares `voice-<line>` and `voice-<line>-md` on
+the same file, the latter with the engine's per-SFX `dac:` block (8 kHz, 7 bits, 3.4 kHz
+low-pass, 10% recovery above 2.4 kHz). The generator's gate mirrors `ModSfxDac` on the decoded
+shipped clip. The engine point-samples the low-passed input, so it is grittier than the
+auditioned `megadrive_strong`, which resampled through a polyphase anti-alias filter. Clean
+clips pass the blind check strictly. Retakes fixed a repeated "Ten chain", a stuttered
+"Impossible", a double growl, a 15-second laugh and a gate mishearing of "Curses". Two gate
+mishearings are accepted and recorded per line: "Ten chain" heard as "Can-chain" and "Boss
+rush" as "Both rush" (both also shown on screen). US spellings and "Dr." became orthographic
+aliases. Letters are joined before repeats collapse, so "outtyped" matches "out-typed".
+`rank_e` has a reviewed 3-second length bound (one reading with a deadpan pause).
+stb_vorbis decodes every clip at its granule length; FFmpeg did not (recorded hazard).
+`TestTypingHedgehogVoiceAssets` checks every clip through `OggPcmDecoder` against its
+provenance and `VoiceLine` lease.
+
+Tails round 1 was rejected: jessica and laura sounded "more girly than young" and liam "closer
+to a Sonic than a Tails". Round 2 directs a bright, eager nine-year-old boy. It auditions will,
+charlie, chris, river, bella and the retagged liam through the engine DAC, plus pitch/formant
+shifts: +3 semitones pitch with +1.5 formant, and +5 with +2.5. The shifts use an FFmpeg rate
+change plus Rubber Band with formants preserved, applied to liam, will and river (+3 only).
+Mature voices, the two cast voices and the adult women were excluded.
 
 ## Architecture
 

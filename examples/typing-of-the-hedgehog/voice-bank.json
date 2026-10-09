@@ -7,6 +7,22 @@
   "room_reverb_mix": 0,
   "usage_ceiling_usd": 6.0,
   "synthesis_estimate_cap_usd": 2.5,
+  "shipping": {
+    "format": "ogg",
+    "vorbis_quality": 4,
+    "note": "Only the clean render ships. The Ogg final granule and stb_vorbis frame counts equal the render; FFmpeg decode can drop the last 128 frames of a short clip."
+  },
+  "runtime_variant": {
+    "suffix": "-md",
+    "dac": {
+      "sampleRate": 8000,
+      "bits": 7,
+      "lowpassHz": 3400,
+      "recoveryMix": 0.1,
+      "recoveryHighpassHz": 2400
+    },
+    "note": "Each line declares voice-<line> (the shipped clean clip) and voice-<line>-md on the same file with this per-SFX dac block, rendered by the engine at load time. The tool applies the same DAC (megadrive_strong parameters) to the decoded shipped clip offline as the intelligibility gate."
+  },
   "taunt_source": "src/main/resources/words/taunts.txt",
   "word_aliases": {
     "practice": "practise",
@@ -15,7 +31,10 @@
     "badnicks": "badniks",
     "robotnick": "robotnik",
     "okay": "ok",
-    "mustache": "moustache"
+    "mustache": "moustache",
+    "practicing": "practising",
+    "practiced": "practised",
+    "dr": "doctor"
   },
   "master": {
     "decode": {
@@ -93,13 +112,49 @@
         "effect": "edge_fades",
         "milliseconds": 5
       }
+    ],
+    "clean_boy3": [
+      {
+        "effect": "pitch_formant",
+        "semitones": 3,
+        "formant_semitones": 1.5,
+        "method": "rate change by the formant ratio, then Rubber Band tempo restore and residual pitch with formants preserved"
+      },
+      {
+        "effect": "loudness",
+        "integrated_lufs": -18,
+        "true_peak_db": -2.5,
+        "lra": 5
+      },
+      {
+        "effect": "edge_fades",
+        "milliseconds": 5
+      }
+    ],
+    "clean_boy5": [
+      {
+        "effect": "pitch_formant",
+        "semitones": 5,
+        "formant_semitones": 2.5,
+        "method": "rate change by the formant ratio, then Rubber Band tempo restore and residual pitch with formants preserved"
+      },
+      {
+        "effect": "loudness",
+        "integrated_lufs": -18,
+        "true_peak_db": -2.5,
+        "lra": 5
+      },
+      {
+        "effect": "edge_fades",
+        "milliseconds": 5
+      }
     ]
   },
   "speakers": {
     "announcer": {
       "role": "Hammy B-movie arcade announcer: titles, menus, wave callouts, pickups, ranks.",
-      "voice": null,
-      "preset": null,
+      "voice": "harry",
+      "preset": "clean",
       "delivery_tag": "[booming hammy B-movie arcade announcer, theatrical over-the-top excitement, dramatic emphasis, crisp clear diction]",
       "audition": {
         "voices": [
@@ -116,12 +171,13 @@
           "arcade_light",
           "megadrive_strong"
         ]
-      }
+      },
+      "choice": "2026-10-09 user pick from round-1 auditions: harry, Mega Drive DAC (megadrive_strong) as the retro variant."
     },
     "robotnik": {
       "role": "Pompous theatrical villain: boss intros, quiz host, hurt and defeat lines, talk-back taunts.",
-      "voice": null,
-      "preset": null,
+      "voice": "callum",
+      "preset": "clean",
       "delivery_tag": "[pompous theatrical villain, grandiose and gloating, mock-dignified, rich exaggerated delivery, crisp clear diction]",
       "audition": {
         "voices": [
@@ -138,28 +194,78 @@
           "arcade_light",
           "megadrive_strong"
         ]
-      }
+      },
+      "choice": "2026-10-09 user pick from round-1 auditions: callum, Mega Drive DAC (megadrive_strong) as the retro variant."
     },
     "tails": {
-      "role": "Cheerful young instructor for Typing School: lessons, feedback and grades.",
+      "role": "Young boy (about 8-10), bright and eager, running Typing School: lessons, feedback and grades.",
       "voice": null,
       "preset": null,
-      "delivery_tag": "[cheerful upbeat young instructor, friendly and encouraging, bright energy, clear diction]",
+      "delivery_tag": "[bright eager young boy, about nine years old, excited and cheerful, quick light delivery, clear diction]",
       "audition": {
-        "voices": [
-          "liam",
-          "jessica",
-          "laura"
-        ],
+        "round": "round2",
         "lines": [
           "welcome",
           "grade_a"
         ],
-        "presets": [
-          "clean",
-          "arcade_light",
-          "megadrive_strong"
-        ]
+        "candidates": [
+          {
+            "voice": "will",
+            "renders": [
+              "clean+md",
+              "clean_boy3+md",
+              "clean_boy5+md"
+            ]
+          },
+          {
+            "voice": "charlie",
+            "renders": [
+              "clean+md"
+            ]
+          },
+          {
+            "voice": "chris",
+            "renders": [
+              "clean+md"
+            ]
+          },
+          {
+            "voice": "river",
+            "renders": [
+              "clean+md",
+              "clean_boy3+md"
+            ]
+          },
+          {
+            "voice": "bella",
+            "renders": [
+              "clean+md"
+            ]
+          },
+          {
+            "voice": "liam",
+            "renders": [
+              "clean+md",
+              "clean_boy3+md",
+              "clean_boy5+md"
+            ]
+          }
+        ],
+        "excluded": {
+          "adam, brian, bill, george, daniel, eric, roger": "mature adult men",
+          "harry, callum": "already cast as the announcer and Robotnik",
+          "sarah, alice, lily, matilda": "mature or professional adult women",
+          "jessica, laura": "rejected in round 1 as more girly than young"
+        },
+        "shift_note": "Shifted renders reuse the same cached takes: liam (the round-1 reference) and will (young male); river (neutral) at +3 only. Median F0 with the boy direction: liam ~300 Hz, will ~280 Hz, river ~340 Hz."
+      },
+      "round1": {
+        "delivery_tag": "[cheerful upbeat young instructor, friendly and encouraging, bright energy, clear diction]",
+        "rejected": {
+          "jessica": "more girly than young",
+          "laura": "more girly than young",
+          "liam": "closer to a Sonic than a Tails"
+        }
       }
     }
   },
@@ -202,7 +308,9 @@
       "group": "menu",
       "text": "Boss rush.",
       "priority": 2,
-      "cooldown_ticks": 0
+      "cooldown_ticks": 0,
+      "take": 2,
+      "retro_mishearing_accepted": "Both takes' clean clips pass ('Boss rush.'); through the 8 kHz DAC the final s of 'Boss' reads as 'th' (gate heard 'BOTH RUSH!'). The mode name is on screen."
     },
     {
       "id": "mode_endless",
@@ -322,7 +430,9 @@
       "group": "chain",
       "text": "Ten chain!",
       "priority": 1,
-      "cooldown_ticks": 0
+      "cooldown_ticks": 0,
+      "take": 2,
+      "retro_mishearing_accepted": "Take 2's clean clip passes ('Ten chain!'); through the 8 kHz DAC the gate heard 'Can-chain!' (initial T blurred). The chain count is also on screen."
     },
     {
       "id": "chain_twenty",
@@ -550,7 +660,9 @@
       "text": "Rank E. Ouch.",
       "priority": 3,
       "cooldown_ticks": 0,
-      "direction": "[wincing, deadpan]"
+      "direction": "[wincing, deadpan]",
+      "max_seconds": 3.0,
+      "max_seconds_reason": "One reading with a deadpan pause: raw word times span the clip (Rank 0.30-0.72 s, E 0.72-1.60 s, Ouch 1.60-2.72 s); clean and Mega Drive checks pass."
     },
     {
       "id": "blazing",
@@ -673,7 +785,8 @@
       "text": "Curses!",
       "priority": 1,
       "cooldown_ticks": 60,
-      "direction": "[pained, furious]"
+      "direction": "[pained, furious]",
+      "take": 2
     },
     {
       "id": "hurt_c",
@@ -682,7 +795,8 @@
       "text": "Impossible!",
       "priority": 1,
       "cooldown_ticks": 60,
-      "direction": "[pained, outraged]"
+      "direction": "[pained, outraged]",
+      "take": 2
     },
     {
       "id": "hurt_d",
@@ -691,7 +805,8 @@
       "text": "Grr!",
       "priority": 1,
       "cooldown_ticks": 60,
-      "direction": "[pained growl]"
+      "direction": "[short pained growl]",
+      "take": 2
     },
     {
       "id": "defeat_a",
@@ -727,7 +842,7 @@
       "text": "Ho ho ho ho!",
       "priority": 2,
       "cooldown_ticks": 300,
-      "direction": "[gloating evil laugh]"
+      "take": 2
     },
     {
       "id": "final",

@@ -62,6 +62,13 @@ class WordChecks(unittest.TestCase):
         self.assertFalse(self.matches('Get ready! Get ready!', 'Get ready!'))
         self.assertTrue(self.matches('Rank ass', 'Rank S!', accept=['Rank ass']))
 
+    def test_letters_join_before_collapsing(self):
+        self.assertTrue(self.matches('Prepare to be outtyped!', 'Prepare to be out-typed!'))
+        self.assertTrue(self.matches('Nobody defies the genius of Dr. Robotnik!', 'Nobody defies the genius of Doctor Robotnik!'))
+        self.assertTrue(self.matches('Rank D. Keep practicing.', 'Rank D. Keep practising.'))
+        stamps = [{'word': w, 'start': i*.4, 'end': i*.4+.35} for i, w in enumerate('Prepare to be outtyped!'.split())]
+        self.assertEqual(VOICE.find_takes(stamps, {'text': 'Prepare to be out-typed!'}, self.aliases), [(0, 3)])
+
     def test_last_complete_utterance_is_selected(self):
         stamps = [{'word': w, 'start': i*.4, 'end': i*.4+.35}
                   for i, w in enumerate('You call that? You call that typing? My toaster types faster!'.split())]
@@ -82,78 +89,111 @@ class Publication(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         self.bank = bank()
+        self.bank['shipping'] = {'format': 'wav'}  # no FFmpeg needed for the synthetic cache
         self.bank['entries'] = [e for e in self.bank['entries'] if e['id'] in ('title', 'taunt_toaster')]
-        for name, speaker in self.bank['speakers'].items():
-            speaker.update(voice='test-voice', preset='clean')
-        self.saved = dict(VOICE.APPROVED_PRESET_SHA256)
-        VOICE.APPROVED_PRESET_SHA256['clean'] = VOICE.preset_hash(self.bank['presets']['clean'])
+        self.speakers = ['announcer', 'robotnik']
         self.output = self.root/'resources/audio/voice'
-        self.output.mkdir(parents=True)
         for entry in self.bank['entries']:
             self.fake_line(entry, frames=7*VOICE.TICK_FRAMES+1)  # rounds up to 8 ticks
 
     def tearDown(self):
-        VOICE.APPROVED_PRESET_SHA256.clear()
-        VOICE.APPROVED_PRESET_SHA256.update(self.saved)
         self.temp.cleanup()
 
-    def fake_line(self, entry, frames):
+    def publish(self, bank=None, enum=None):
+        VOICE.publish(bank or self.bank, self.root/'cache', self.output, enum or self.root/'VoiceLine.java', self.speakers)
+
+    def fake_line(self, entry, frames, retro_transcript=None):
         key = VOICE.line_key(entry)
-        folder = self.root/'cache/lines'/key
-        folder.mkdir(parents=True)
+        folder = VOICE.line_folder(self.root/'cache', entry)
+        folder.mkdir(parents=True, exist_ok=True)
         (folder/'raw.mp3').write_bytes(b'synthetic source '+key.encode())
-        path = self.output/(key+'.wav')
-        with wave.open(str(path), 'wb') as handle:
+        shipped = folder/'shipped.wav'
+        with wave.open(str(shipped), 'wb') as handle:
             handle.setnchannels(1)
             handle.setsampwidth(2)
             handle.setframerate(VOICE.RATE)
             handle.writeframes(b'\x00\x10'*frames)
-        request = {'model': self.bank['model'], 'voice': 'test-voice', 'response_format': 'mp3',
+        speaker = self.bank['speakers'][entry['speaker']]
+        request = {'model': self.bank['model'], 'voice': speaker['voice'], 'response_format': 'mp3',
                    'input': VOICE.request_input(self.bank, entry)}
         VOICE.write_json(folder/'request.json', {'state': 'complete', 'request': request,
                                                 'source_sha256': hashlib.sha256((folder/'raw.mp3').read_bytes()).hexdigest()})
         VOICE.write_json(folder/'verification.json', {
-            'frames': frames, 'seconds': frames/VOICE.RATE, 'peak_dbfs': -6.0,
-            'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+            'frames': frames, 'seconds': frames/VOICE.RATE, 'peak_dbfs': -6.0, 'format': 'wav',
+            'sha256': hashlib.sha256(shipped.read_bytes()).hexdigest(), 'clean_wav_sha256': 'c', 'gate_sha256': 'g',
             'source_sha256': hashlib.sha256((folder/'raw.mp3').read_bytes()).hexdigest(),
-            'preset': 'clean', 'preset_sha256': VOICE.preset_hash(self.bank['presets']['clean']),
-            'transcript': entry['text'], 'matches_words': True, 'duration_ok': True})
+            'preset': speaker['preset'], 'preset_sha256': VOICE.canonical_hash(self.bank['presets'][speaker['preset']]),
+            'runtime_variant_sha256': VOICE.runtime_variant_hash(self.bank),
+            'clean_transcript': entry['text'], 'retro_transcript': retro_transcript or entry['text']})
 
-    def test_publish_writes_enum_manifest_block_and_provenance(self):
+    def test_publish_writes_enum_manifest_blocks_and_provenance(self):
         manifest = self.output.parent/'audio-manifest.yaml'
         enum = self.root/'java/typinghog/audio/VoiceLine.java'
-        VOICE.publish(self.bank, self.root/'cache', self.output, enum)
+        (self.output).mkdir(parents=True)
+        (self.output/'stale_take.ogg').write_bytes(b'unpublished')
+        self.publish(enum=enum)
         java = enum.read_text()
         self.assertIn('ANNOUNCER_TITLE(Speaker.ANNOUNCER, "voice-announcer-title", 8, 3, 0, null, '
                       '"The Typing of the Hedgehog!")', java)
         self.assertIn('ROBOTNIK_TAUNT_TOASTER(Speaker.ROBOTNIK, "voice-robotnik-taunt-toaster", 8, 3, 0, "any", '
                       '"You call that typing? My toaster types faster!")', java)
         self.assertIn('public enum Speaker { ANNOUNCER, ROBOTNIK, TAILS }', java)
-        self.assertIn('assetPath: audio/voice/robotnik_taunt_toaster.wav', manifest.read_text())
+        self.assertIn('public static final String RETRO_SUFFIX = "-md";', java)
+        self.assertIn('this.clip = new Announcer.Clip(asset, durationTicks, priority, cooldownTicks);', java)
+        self.assertIn('public Speaker speaker() {', java)
+        text = manifest.read_text()
+        self.assertIn('  - id: voice-robotnik-taunt-toaster\n    assetPath: audio/voice/robotnik_taunt_toaster.wav\n'
+                      '    gain: 1.0\n  - id: voice-robotnik-taunt-toaster-md\n'
+                      '    assetPath: audio/voice/robotnik_taunt_toaster.wav\n    gain: 1.0\n    dac:\n'
+                      '      sampleRate: 8000\n      bits: 7\n      lowpassHz: 3400\n      recoveryMix: 0.1\n'
+                      '      recoveryHighpassHz: 2400\n', text)
+        self.assertEqual(sorted(p.name for p in self.output.iterdir()),
+                         ['announcer_title.wav', 'provenance.json', 'robotnik_taunt_toaster.wav'])
         provenance = json.loads((self.output/'provenance.json').read_text())
         self.assertEqual([e['id'] for e in provenance['entries']], ['announcer_title', 'robotnik_taunt_toaster'])
-        # A later publication replaces only the generated block.
-        manifest.write_text(manifest.read_text().replace('sfx:\n', 'sfx:\n  - id: other-sfx\n    assetPath: audio/other.wav\n    gain: 1.0\n'))
-        VOICE.publish(self.bank, self.root/'cache', self.output, enum)
+        self.assertEqual(provenance['entries'][0]['retro_asset'], 'voice-announcer-title-md')
+        # A later publication replaces only the generated blocks.
+        manifest.write_text(text.replace('sfx:\n', 'sfx:\n  - id: other-sfx\n    assetPath: audio/other.wav\n    gain: 1.0\n'))
+        self.publish(enum=enum)
         text = manifest.read_text()
         self.assertIn('id: other-sfx', text)
-        self.assertEqual(text.count('id: voice-announcer-title'), 1)
+        self.assertEqual(text.count('id: voice-announcer-title\n'), 1)
+        self.assertEqual(text.count('id: voice-announcer-title-md'), 1)
+
+    def test_retro_mishearing_needs_a_recorded_acceptance(self):
+        entry = self.bank['entries'][1]
+        self.fake_line(entry, frames=4000, retro_transcript='You call that piping? My toaster types faster!')
+        with self.assertRaisesRegex(AssertionError, 'retro gate misheard'):
+            self.publish()
+        entry['retro_mishearing_accepted'] = 'clean render passes; DAC blurs t/p'
+        self.publish()
+        record = json.loads((self.output/'provenance.json').read_text())['entries'][1]
+        self.assertFalse(record['retro_gate_word_check'])
+        self.assertEqual(record['retro_mishearing_accepted'], 'clean render passes; DAC blurs t/p')
 
     def test_unmarked_existing_manifest_is_not_overwritten(self):
+        self.output.mkdir(parents=True)
         manifest = self.output.parent/'audio-manifest.yaml'
         manifest.write_text('formatVersion: 1\ntracks: []\nsfx: []\n')
         with self.assertRaises(SystemExit):
-            VOICE.publish(self.bank, self.root/'cache', self.output, self.root/'VoiceLine.java')
+            self.publish()
         self.assertEqual(manifest.read_text(), 'formatVersion: 1\ntracks: []\nsfx: []\n')
 
-    def test_unapproved_preset_or_changed_asset_refuses(self):
+    def test_unapproved_recipe_or_changed_source_refuses(self):
         changed = copy.deepcopy(self.bank)
         changed['presets']['clean'] = [{'effect': 'edge_fades', 'milliseconds': 6}]
         with self.assertRaises(SystemExit):
-            VOICE.publish(changed, self.root/'cache', self.output, self.root/'VoiceLine.java')
-        (self.output/'announcer_title.wav').write_bytes(b'tampered')
-        with self.assertRaises(AssertionError):
-            VOICE.publish(self.bank, self.root/'cache', self.output, self.root/'VoiceLine.java')
+            self.publish(changed)
+        changed = copy.deepcopy(self.bank)
+        changed['runtime_variant']['dac']['bits'] = 6
+        with self.assertRaises(SystemExit):
+            self.publish(changed)
+        with self.assertRaises(SystemExit):
+            VOICE.publish(self.bank, self.root/'cache', self.output, self.root/'VoiceLine.java', ['tails'])
+        folder = VOICE.line_folder(self.root/'cache', self.bank['entries'][0])
+        (folder/'shipped.wav').write_bytes(b'tampered')
+        with self.assertRaisesRegex(AssertionError, 'shipped file changed'):
+            self.publish()
 
 
 if __name__ == '__main__':
