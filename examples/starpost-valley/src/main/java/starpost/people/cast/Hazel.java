@@ -77,7 +77,12 @@ public final class Hazel {
         v.line("YOU'RE MY HERO. DON'T TELL TAILS. HE THINKS HE'S MY HERO. HE CAN BE SECOND.").hearts(4)
                 .pic("farmer", "heart", "who:tails");
         v.line("A RELIC WENT MISSING FROM THE MUSEUM. A STAR POST CAP. I DIDN'T TAKE IT. I DUST IT. I'M WORRIED.")
-                .after("hazel_4", 7).pic("sparkle", "no", "sad", "?");
+                .after("hazel_4", 7).without("museum_cap_returned").pic("sparkle", "no", "sad", "?");
+        // The museum's thread (starpost.museum): the cap lies under the palms where she buries coconuts.
+        v.line("STILL NO STAR POST CAP. I LOOKED UNDER EVERY PALM. WELL. MOST PALMS. THE EAST ONES ARE FAR.")
+                .flag("museum_relic_missing").without("museum_cap_returned").pic("item:museum_starpost_cap", "?", "arrow");
+        v.line("THE STAR POST CAP IS BACK ON THE SHELF! I DUST IT TWICE AS FAST. AND I WRITE DOWN WHERE I BURY THINGS.")
+                .flag("museum_cap_returned").pic("item:museum_starpost_cap", "sparkle", "heart");
         v.line("I CAN TALK! I CAN TALK REALLY FAST! LISTEN! WAIT. THE TRANSLATOR CAN'T KEEP UP.")
                 .flag(People.TRANSLATOR).after("tails_2", 6);
         v.line("TOMORROW'S THE RING HUNT! I'M GOING TO FIND A RING! A REAL ONE!").on(SPRING, 12)

@@ -32,6 +32,8 @@ public record PlaceableDef(String id, Role role, int reach) {
         MACHINE,
         /** Harvests ripe crops within {@code reach} columns of its row into its basket each morning. */
         ROOST,
+        /** A sapling that grows into a fruit tree overnight (its growth is {@code starpost.orchard.Orchard}'s). */
+        TREE,
         /** Anything decorative. */
         DECOR
     }

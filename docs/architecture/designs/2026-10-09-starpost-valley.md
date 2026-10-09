@@ -1340,3 +1340,116 @@ contest), so it runs longer than two minutes; no waving pose for the farmer at t
 parade's petals are recoloured rather than a ROM palette cycle; the board screen is a menu panel,
 not the board's own planks; festivals are the same each year apart from per-year layouts (hunt,
 maze, course); and the fair's "bribes at the caravan" is only a line.
+
+## 19. Orchard, sneakers and museum (lane)
+
+Branch `feature/ai-starpost-orchard` (base `d84226216`), packages `starpost.orchard` and
+`starpost.museum`, plus `core.Sneakers`. The three gaps the one-year scope (§10) left: the sneaker
+tiers (§6.2), the trees (§6.3) and Tails's Workshop Museum (§6.8). Commits `c2ef44102`
+(sneakers and trees), `0d99ef50f` (museum), `07180d757`, `1414928c3`, `018f67b4b`.
+
+### Sneakers
+
+| Part | Where | Notes |
+|---|---|---|
+| Tiers | `core.Sneakers` | Sneakers till the dash's row; Power Sneakers also the row in front (toward the screen); Speed Shoes both neighbours; Chaos Sneakers as Speed Shoes, and the farm pond holds a farmer moving at 3 px a tick or more (half `Runner.TOP`) along the field. Slower than that for 12 ticks on the water, or landing in it from a jump without them, puts the farmer back on the last dry spot with a splash (this also ends a stuck-in-the-pond case the old edge check had). |
+| Save | `game.flags` | `sneakers_power`, `_speed`, `_chaos`; the tier is the best flag. No save format change. |
+| Shop | `OrchardSystem.workshopOffers` | Tails sells the next pair: 600 rings + 10 scrap, 2,500 + 30 scrap, 6,000 + an Emerald Shard (the tank's ladder is 500, 2,000, 5,000). Icons are the S3K Speed Shoes monitor screen (`Map_Monitor` frame 5), recoloured per tier. |
+| Combination | `Sneakers.Dash`, `Farmers` | A dash tills a column at a time. Tails's three plots are three columns, each as wide as his sneakers (a 3x3 patch in Speed Shoes); Sonic and Knuckles till every column they roll over. A point of Momentum a plot; rocks, stumps and placed objects are rolled past. Knuckles's dig (one plot) is unchanged. |
+| Shown | `InventoryMenu` | One line under the skills: "SPEED SHOES: THE DASH TILLS 3 ROWS". |
+
+### Trees
+
+Saplings are `PlaceableDef` role `TREE`, placed by FarmView's own placement; `Orchard` (section
+`orchard`, keyed "row.column") grows them a night at a time in every season without water and
+reconciles with the field (a tree knocked loose is forgotten). Tails crafts them: palm 400 rings + 15
+palm wood + 10 fibre, Ring Fruit 1,500 + 20 wood + 20 marble chips, Chaos Cherry 3,000 + an Emerald
+Shard + 20 wood once `orchard_chaos_cherry` is set (the museum's minerals). Picked with the action
+button; after its first night a tree's roots refuse the Fire Shield.
+
+| Tree | Grows | Its rule (pillar 3) | Picture |
+|---|---|---|---|
+| Green Hill Palm | 14 nights | A coconut every other day in summer and fall, three at most; a stormy day shakes two more loose in any season it storms (five at most). | Sonic 1 GHZ block 1: crown (x 96-170) over its 8-pixel trunk segment repeated (3 young, 7 grown); sapling is the star-leaved plant at x 64-94. Coconuts are original fruit. |
+| Ring Fruit Tree | 28 nights | Ten rings a day spring to fall, thirty at most. Shaken, they burst out as `RLoss_Count`'s spray at half speed with `RLoss_Bounce` and the shared 255-frame timer; caught by running through them (each also a point of Momentum); a held Lightning Shield pulls them in from 64 px. Uncaught rings are lost. | S3K Mushroom Hill act 1: block 135's leaf clump (its round right half mirrored) on a slice of block 37's bark; the S3K ring sprite hangs in it. |
+| Chaos Cherry | 21 nights | The only tree that bears in winter: each morning a cherry with chance population/60 (four at most), so it gives more as the valley recovers (pillar 4). | The same clump in three puffs, recoloured to a five-step blossom ramp; single cherries cycling the seven emeralds' colours (original fruit). |
+
+### Museum
+
+| Part | Where | Notes |
+|---|---|---|
+| Collections | `Exhibits`, `Museum` (section `museum`) | Built per catalogue. Minerals (8: the Ruins' ores, gems, geodes): 3 → 800 rings, 6 → a Chaos Cherry sapling and the flag that offers its recipe, 8 → Record: Lava Reef. Scrap Collection (14): 4 → a Caterkiller Crawler, 9 → 2,500 rings, 14 → Record: Mini-Boss. Relics (10): 3 → 500 rings, 6 → two Star Posts, 10 → Record: Sandopolis. Confirm donates one of everything carried that a page lacks; a reward that does not fit waits. The three Records set `record.s3k.13/18/11`, new tracks in the Inn's list. |
+| Badnik parts | `Finds`, hooks in `Pests` and `RuinsScreen` | A popped badnik leaves its part one time in five (the farm's Motobugs; each Ruins kind; the Walking Bomb when it goes off); the Labyrinth's Jaws leaves the lake's `jaws_fin`. Plus the fishing lane's five catches. Pictures are each object's first frame in its zone's palette (`Pal_MZ`/`Pal_LZ`/`Pal_SBZ1`; Jawz and Blastoid in `Pal_HCZ1_Water`; the Red Chopper in deeper reds). |
+| Relics | `MuseumContent`, `Finds`, `DigSpot` | Crops of ROM art: Green Hill's totem (chip, wing, face), the S3K ring as a stone mould, Sonic 1's giant ring (`Art_BigRing`), S3K yellow spring and broken monitor, Sonic 1's signpost plate and lamppost globe. Each is in one Ruins band's rocks (one rock in 20) and one season's ground: Knuckles's dig turns one up about one dig in 64, and glinting spots (one a morning on the farm's open grass, two for Knuckles, one along the valley path; 2 Momentum; 45% a relic, else chips, a geode or rings) serve every farmer. |
+| Hazel's cap | `Museum.capBuried`, `MuseumSystem.capReturned`, `cast/Hazel` | After `museum_relic_missing` the Star Post Cap (the S3K Star Post ball) glints under the palms east of town until it is on the shelf or carried (or kept in an Item Monitor). Donating it plays a scene: Hazel works out she buried it with her coconuts, gives a palm sapling and gains a heart; `museum_cap_returned`. Two new Hazel lines: a hint while it is missing, relief after. |
+| Page | `MuseumScreen` | Q/E or the tab row: Minerals, Scrap, Relics, Records. Donated pieces in colour, missing ones as silhouettes (`withFlash`), a carried one lit with "!", where to look, milestone boxes (rewards, GOT IT / WAITS FOR ROOM / AT N). The Records shelf shows every Record found and confirm opens the Inn's own jukebox (`Systems.jukebox`), the Sound Test, rather than duplicating it. |
+| Annex | `MuseumArt`, `MuseumSystem.Annex` | A 100-pixel building between the workshop and Robomart (doorway `museum` at x 1283), from Green Hill's pixels like `Facades`: checker walls, a pediment of stepped bridge logs, totem-pole columns, a plank door. A finished collection shows its prize in a window. |
+
+### Seams outside the packages
+
+`core`: `Content.register` calls `OrchardContent` (before the barn, so Chaos Cherries get a jar)
+and `MuseumContent`; `PlaceableDef.Role.TREE`; `Farmers` documents the combination and its dig
+turns up relics. `farm/FarmView`: the dash delegates to `Sneakers.Dash`; `pond()` replaces the edge
+check; `ObjectHook.lockedText`. `farm/Pests` and `ruins/RuinsScreen`: part and relic drops (three
+calls). `scene`: `Systems` (sections, offers, installs, `jukebox`), `InnMenu` (jukebox-first
+constructor, three tracks), `InventoryMenu` (the tier line), `Debug` (`orchard ...`,
+`museum ...`). `valley/Valley`: the `museum` place. `people/cast/Hazel`: two lines and a
+`without`. `TestStarpostValleyScene`: the orchard and museum steps.
+
+### Decisions and rejected approaches
+
+- **A growth aura for the Chaos Cherry.** Rejected: sections' `nextDay` runs after `Farm.nextDay`
+  has replaced last night's `watered` flags with the morning's, so the tree cannot tell which
+  neighbours grew; hand-watered crops would never get it. Population-driven bearing needs no core
+  change and ties the tree to the valley's recovery.
+- **"Chaos Control" (a cherry stops the clock).** Rejected: a clock freeze in `Calendar` plus an
+  eat hook in `InventoryMenu`, which refuses food at full Momentum, for a move from later games.
+- **Cherries as pairs.** The classic two-cherry icon read as pairs of eyes in the blossom (capture
+  `cap1`); they are single fruit hanging from the lower edge (nothing original has a face).
+- **The palm at full height.** Ten segments reached the HUD from the back rows; seven keep the
+  ROM's proportions (block 33's shorter palm).
+- **Pink by channel arithmetic.** A flat salmon; a five-step ramp keyed to the leaf's brightness
+  keeps the clump's light and shade.
+- **The annex at x 1260, 118 wide.** It overlapped the workshop's facade and sign (`cap5` first
+  pass); 100 wide at x 1283 leaves about 15 px each side.
+- **Silhouettes and milestone text.** `0xFF141C3C` vanished on the panel and `Text.fit` (the menu
+  font's widths) cut CompactFont rewards to "CHAOS"; now `0xFF34407C` and a CompactFont word wrap.
+- **The dash's tilling in FarmView.** Moved to `Sneakers.Dash` so the farmers' combination is a
+  creator test, not a capture.
+- **The ring burst at full speed.** Not tried: a tree drops its rings rather than flinging them,
+  so the spray runs at half speed and loses a quarter along the field at each bounce.
+
+### Tests and captures
+
+`src/test/java/starpost/orchard/OrchardRulesTest.java` (18) and
+`src/test/java/starpost/museum/MuseumRulesTest.java` (12), engine-free: each tier's rows, the
+flag's save round trip, the ladder, sinking; dashes for every farmer and tier (Tails's 3x3, rocks
+and objects, Momentum running out); the saplings and recipes; growth over 28 winter nights; each
+tree's bearing rule and cap; picking with full slots; forgetting a knocked-loose tree; the section's
+round trip and clamping; the burst's bounce, 255-frame end and catching; the collections' sizes and
+sources (every part has a pop or a catch, every relic a band and a season); drop and spot odds;
+donations, milestones, waiting rewards, the cherry flag and Records; Hazel's cap in hand, chest and
+shelf; glint placement; the museum's save. 157/157 with the other lanes'; a mutation check (Tails
+four columns, thirty-ring cap forty, part odds one in four, rewards ignoring room) turned five
+tests red. `TestStarpostValleyScene` with the new steps passes run directly; a misspelt museum step
+fails it.
+
+```
+# fast creator tests (RunCreatorTests, a throwaway runner outside the repository)
+java -cp "$R/out:$CP" RunCreatorTests $R/tests $R/main
+# captures (ExampleModCapture; jump=orchard_..., jump=museum_...); validation: "Validation passed: 0 findings"
+java -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom "$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --mod examples/starpost-valley --out <dir> --script-file <script> --every 10 --ticks 400
+# the scene smoke test without Maven (JUnit console launcher, S3K and Sonic 1 paths as -D properties)
+java -cp "$CP" org.junit.platform.console.ConsoleLauncher --select-class com.openggf.mods.code.TestStarpostValleyScene
+```
+
+Captures in `~/scratch/sv-orchard/final/` (`orchard-sheet.png`, `sneakers-sheet.png`,
+`museum-sheet.png`). Debug: `orchard plant palm|ring|cherry R C [AGE [FRUIT]]`, `night`, `clear`,
+`shake R C`, `sneakers 0-3`, `stand R C`; `museum open [page]`, `donate ID`, `fill PAGE N`,
+`missing`, `cap`, `returned`, `spot`, `vspot`.
+
+Not done: running on the Waterfall Lake (the fishing lane's screen; only the farm pond holds a
+Chaos Sneakers farmer), the formal `TestStarpostValleyExample` bridge (the lead runs it), a capture
+of a Ruins part or relic drop (random; the drop path is the Ruins' own pickup with the museum's
+icons), more minerals than the Ruins' eight, and tree-specific gifts or recipes (the Chaos Cherry and
+coconut only sell, fill jars and restore Momentum).

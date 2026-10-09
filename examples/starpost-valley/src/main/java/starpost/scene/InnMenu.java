@@ -35,6 +35,12 @@ final class InnMenu implements Screen {
         this.play = play;
     }
 
+    /** Opened on the jukebox (the museum's Sound Test shelf links here). */
+    InnMenu(PlayScreen play, boolean jukebox) {
+        this.play = play;
+        this.jukebox = jukebox;
+    }
+
     @Override
     public boolean overlay() {
         return true;
@@ -71,6 +77,10 @@ final class InnMenu implements Screen {
         out.add(new Track("SLOT BONUS", "s3k", 0x1D, "record.s3k.1d"));
         out.add(new Track("DEATH EGG", "s3k", 0x16, "record.s3k.16"));
         out.add(new Track("ICECAP (SONIC 3)", "s3k", 0x10B, "record.s3k.10b"));
+        // Records awarded by the museum's milestones (MuseumContent.recordSong).
+        out.add(new Track("LAVA REEF", "s3k", 0x13, "record.s3k.13"));
+        out.add(new Track("MINI-BOSS", "s3k", 0x18, "record.s3k.18"));
+        out.add(new Track("SANDOPOLIS", "s3k", 0x11, "record.s3k.11"));
         // Slotting a Record in for good opens the next of these.
         out.add(new Track("ANGEL ISLAND", "s3k", 0x01, "slot"));
         out.add(new Track("MUSHROOM HILL", "s3k", 0x0F, "slot"));

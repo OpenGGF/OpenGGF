@@ -20,7 +20,8 @@ import org.junit.jupiter.api.io.TempDir;
 /**
  * Smoke test for Starpost Valley against a real S3K session with Sonic 1 supplied: it plays each
  * farmer on the belt farm and in the valley, then visits the Marble Ruins' three zones, a
- * neighbour's talk and heart event, Waterfall Lake and the Bubble Bar, every festival, the board,
+ * neighbour's talk and heart event, Waterfall Lake and the Bubble Bar, every festival, the orchard's
+ * trees and a ring burst, the museum and Hazel's scene, the board,
  * a night's tally and the year's end through the scene's debug jumps, playing and drawing frames
  * (recording only, no GL). The engine's fault boundary must catch nothing and the scene must
  * never leave. Skipped when Sonic 1 is not supplied (the scene then only explains what is missing).
@@ -82,6 +83,20 @@ class TestStarpostValleyScene {
                 step(harness, "festival start " + festival, 240);
                 assertTrue(!screen(harness).equals("PlayScreen"), festival + " is under way: " + screen(harness));
             }
+            step(harness, "new sonic", 10);
+            step(harness, "orchard sneakers 3", 1);
+            step(harness, "orchard plant palm 1 10 14 3", 1);
+            step(harness, "orchard plant ring 2 14 28 30", 1);
+            step(harness, "orchard plant cherry 3 18 21 4", 1);
+            step(harness, "farm 400 30", 30);
+            step(harness, "orchard shake 2 14", 120);           // the Ring Fruit Tree's burst flies and is drawn
+            step(harness, "museum fill relics 5", 1);
+            step(harness, "valley 1283", 30);
+            step(harness, "museum open scrap", 60);
+            assertEquals("PlayScreen", screen(harness), "the museum opens over the valley");
+            step(harness, "close", 5);
+            step(harness, "museum missing", 1);
+            step(harness, "museum returned", 240);              // Hazel's scene for her Star Post Cap
             step(harness, "new sonic", 10);
             step(harness, "board", 30);
             step(harness, "close", 5);

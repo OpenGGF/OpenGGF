@@ -6,6 +6,10 @@ package starpost.core;
  * water over the next plot too. Knuckles digs instead of tilling, sometimes turning up what is
  * buried, and punches rocks apart without the Fire Shield; he is too heavy for the farm loop's
  * full payoff.
+ *
+ * <p>Sneakers ({@link Sneakers}) widen every farmer's dash the same way: each column the dash
+ * tills becomes as many rows as the sneakers reach. Tails's limit counts columns, so his three
+ * plots become three columns (a 3x3 patch in Speed Shoes); Knuckles's dig stays one plot.
  */
 public final class Farmers {
     public static final String SONIC = "sonic";
@@ -26,7 +30,10 @@ public final class Farmers {
         };
     }
 
-    /** How many plots one spin dash may till (Integer.MAX_VALUE: all it rolls over). */
+    /**
+     * How many columns one spin dash may till (Integer.MAX_VALUE: all it rolls over); each column is
+     * one plot in plain Sneakers and as many rows as better ones reach.
+     */
     public static int dashTills(String farmer) {
         return farmer.equals(TAILS) ? 3 : Integer.MAX_VALUE;
     }
@@ -49,7 +56,8 @@ public final class Farmers {
 
     /**
      * What Knuckles's dig turns up, or null (most digs, and every other farmer's tilling): rings
-     * as {@code "rings:N"}, otherwise an item id from the catalog.
+     * as {@code "rings:N"}, otherwise an item id from the catalog (marble chips, a museum relic of
+     * the season, or the season's forage).
      */
     public static String dig(Game game) {
         if (!game.farmer.equals(KNUCKLES) || game.rng.nextInt(DIG_ODDS) != 0) {
@@ -60,7 +68,9 @@ public final class Farmers {
             return "rings:" + (5 + game.rng.nextInt(16));
         }
         if (roll == 2) {
-            return "marble_chip";
+            // Half the stones he turns up are relics for the museum (the season's: starpost.museum.Finds).
+            String relic = starpost.museum.Finds.buriedRelic(game);
+            return game.rng.nextInt(2) == 0 && game.catalog.hasItem(relic) ? relic : "marble_chip";
         }
         String forage = switch (game.calendar.season()) {
             case Calendar.SPRING -> "totem_leek";

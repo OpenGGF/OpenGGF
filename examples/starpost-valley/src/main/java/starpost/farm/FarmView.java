@@ -18,6 +18,7 @@ import starpost.core.Inventory;
 import starpost.core.Kind;
 import starpost.core.PlaceableDef;
 import starpost.core.Plot;
+import starpost.core.Sneakers;
 import starpost.scene.Actor;
 import starpost.scene.Sfx;
 import starpost.scene.Shell;
@@ -61,10 +62,16 @@ public final class FarmView {
     public float cameraTarget = Float.NaN;
     private int chargeTicks;
     private boolean dashing;
-    /** Plots the current spin dash has tilled (Tails's weaker spin stops tilling after three). */
-    private int dashTilled;
+    /** The current spin dash's tilling (Tails's weaker spin stops after three columns). */
+    private Sneakers.Dash dash = new Sneakers.Dash();
     /** The action button went down in a menu (closing it): its hold and release are not the farm's. */
     private boolean foreignHold;
+    /** The pond: the last dry spot underfoot, and ticks spent too slow on the water (Chaos Sneakers). */
+    private float dryX = DOOR_X + 40;
+    private float dryDepth;
+    private int slowOnWater;
+    /** Whether the farmer is running on the pond's surface (Chaos Sneakers), for the spray. */
+    public boolean onWater;
     private long lastActionAt = -100;
     private int lastActionRow = -1;
     private int lastActionColumn = -1;
@@ -92,6 +99,11 @@ public final class FarmView {
         /** Whether the Fire Shield may knock it loose (a loaded machine may not). */
         default boolean removable(int row, int column, String id) {
             return true;
+        }
+
+        /** What to say when {@link #removable} refuses, or null for the usual "EMPTY IT FIRST". */
+        default String lockedText(int row, int column, String id) {
+            return null;
         }
 
         /** Draws the object standing at ({@code x}, {@code feet}); true when drawn. Must not change state. */
@@ -159,7 +171,7 @@ public final class FarmView {
         } else {
             if (chargeTicks >= DASH_CHARGE_TICKS && !holdAct) {
                 dashing = true;
-                dashTilled = 0;
+                dash = new Sneakers.Dash();
                 runner.speed = (runner.facingLeft ? -1 : 1) * Farmers.dashSpeed(game.farmer);
                 runner.rolling = true;
                 shell.sfx(Sfx.DASH);
@@ -186,12 +198,7 @@ public final class FarmView {
             if (runner.step(16, WIDTH - 16, maxDepth, in.left, in.right, in.up, in.down, in.jump, in.jumpHeld)) {
                 shell.sfx(Sfx.JUMP);
             }
-            if (runner.height == 0 && inPond(runner.x, feetY())) {
-                runner.x = beforeX;          // the pond's edge stops a walk (a jump clears it)
-                runner.depth = beforeDepth;
-                runner.speed = 0;
-                runner.depthSpeed = 0;
-            }
+            pond(game, beforeX, beforeDepth);
         }
         float entry = LOOP_X + 110;
         if (!looping && runner.depth < 10 && runner.height == 0 && runner.speed >= 4
@@ -286,11 +293,15 @@ public final class FarmView {
         Inventory chest = def != null && def.slots() > 0 ? game.farm.chest(row, column, def.slots()) : null;
         if (held != null && held.id().equals("fire_shield")) {
             boolean locked = false;
+            String why = null;
             for (ObjectHook hook : objectHooks) {
-                locked |= !hook.removable(row, column, plot.object);
+                if (!hook.removable(row, column, plot.object)) {
+                    locked = true;
+                    why = why != null ? why : hook.lockedText(row, column, plot.object);
+                }
             }
             if (chest != null && !empty(chest) || locked) {
-                shell.toast("EMPTY IT FIRST");
+                shell.toast(why != null ? why : "EMPTY IT FIRST");
                 shell.sfx(Sfx.ERROR);
             } else if (game.inventory.add(game.item(plot.object), 1) == 0) {
                 game.farm.chests.remove(row + "." + column);
@@ -474,19 +485,55 @@ public final class FarmView {
         return false;
     }
 
-    /** The spin dash tills the grass plots it rolls over in its row (1 Momentum each; Tails's, three at most). */
+    /**
+     * The spin dash tills the grass it rolls over (1 Momentum a plot): its own row, and the rows
+     * its sneakers reach. Tails's weaker spin tills three columns at most ({@link Sneakers.Dash}).
+     */
     private void tillUnderfoot(Game game) {
         int[] rc = plotUnderfoot();
         if (rc == null) {
             return;
         }
-        Plot plot = game.farm.plot(rc[0], rc[1]);
-        if (plot != null && !plot.tilled && plot.cover != Plot.ROCK && plot.cover != Plot.STUMP
-                && dashTilled < Farmers.dashTills(game.farmer) && game.spend(1)) {
-            plot.cover = Plot.GRASS;
-            plot.tilled = true;
-            dashTilled++;
-            marked(rc[0], rc[1]);
+        int[] tilled = dash.over(game, rc[0], rc[1]);
+        if (tilled.length > 0) {
+            marked(tilled[0], rc[1]);
+        }
+    }
+
+    /**
+     * The pond after a step: its edge stops a walk (a jump clears it), and a farmer who lands in
+     * it is back on the bank with a splash. Chaos Sneakers run across it: on at running speed,
+     * and under again after dawdling too long ({@link Sneakers#sinks}).
+     */
+    private void pond(Game game, float beforeX, float beforeDepth) {
+        onWater = false;
+        if (runner.height > 0) {
+            return;
+        }
+        if (!inPond(runner.x, feetY())) {
+            dryX = runner.x;
+            dryDepth = runner.depth;
+            slowOnWater = 0;
+            return;
+        }
+        int tier = Sneakers.tier(game);
+        boolean fromBank = !inPond(beforeX, DEPTH_MIN + beforeDepth);
+        slowOnWater = Sneakers.fastEnough(runner.speed) ? 0 : slowOnWater + 1;
+        if (fromBank && !(Sneakers.runsOnWater(tier) && Sneakers.fastEnough(runner.speed))) {
+            runner.x = beforeX;
+            runner.depth = beforeDepth;
+            runner.speed = 0;
+            runner.depthSpeed = 0;
+        } else if (Sneakers.sinks(tier, slowOnWater)) {
+            runner.x = dryX;
+            runner.depth = dryDepth;
+            runner.speed = 0;
+            runner.depthSpeed = 0;
+            slowOnWater = 0;
+            shell.sfx(Sfx.SPLASH);
+            shell.toast(Sneakers.runsOnWater(tier) ? "TOO SLOW! KEEP RUNNING ON WATER" : "SPLASH! BACK ON THE BANK");
+        } else {
+            onWater = true;
         }
     }
 
