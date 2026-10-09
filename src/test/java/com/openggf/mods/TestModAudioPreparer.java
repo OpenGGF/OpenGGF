@@ -20,6 +20,7 @@ import java.security.MessageDigest;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestModAudioPreparer {
@@ -160,6 +161,37 @@ class TestModAudioPreparer {
         assertTrue(session.tracks().isEmpty(), "owner-atomic failure removes the cached track too");
         assertTrue(session.sfx().isEmpty());
         assertTrue(session.findings().stream().anyMatch(f -> f.message().contains("SFX duration")));
+    }
+
+    @Test
+    void aDacVariantSharesTheCleanDecodeAndPreparesItsOwnRendering() throws Exception {
+        short[] tone = new short[16_000];
+        for (int i = 0; i < tone.length; i++) tone[i] = (short) Math.round(Math.sin(i * 2 * Math.PI * 440 / 16_000) * 12_000);
+        ModDescriptor owner = descriptor("voices", List.of(), Map.of("audio/line.wav", wav(16_000, tone)));
+        ModSfxDac dac = new ModSfxDac(8_000, 4, 3_400, 0f, 2_400);
+        ModSfxRegistry sfx = new ModSfxRegistry(List.of(
+                new ModAudioSfx(new SfxKey("voices", "line"), "audio/line.wav", 1),
+                new ModAudioSfx(new SfxKey("voices", "line-md"), "audio/line.wav", 1, dac)));
+        ModAudioPreparer preparer = new ModAudioPreparer(root(), ModInputLimits.production(),
+                new ModRuntimeFindingStore(), new RecordingSink(new ModStateSaveResult.Saved()));
+
+        PreparedAudioSession session = preparer.prepare(
+                new EffectiveModCatalog(List.of(owner)), new ModTrackRegistry(List.of()), sfx, 16_000);
+
+        assertTrue(session.failedOwners().isEmpty(), session.findings().toString());
+        var clean = session.sfx().stream().filter(s -> s.key().localName().equals("line")).findFirst().orElseThrow();
+        var retro = session.sfx().stream().filter(s -> s.key().localName().equals("line-md")).findFirst().orElseThrow();
+        assertEquals(clean.pcm().sampleCount(), retro.pcm().sampleCount(), "the rendering keeps the clean timing");
+        assertEquals(clean.sourceSha256(), retro.sourceSha256());
+        assertArrayEquals(tone, clean.pcm().copySamples(), "the clean entry plays as recorded");
+        short[] rendered = retro.pcm().copySamples();
+        var levels = new java.util.TreeSet<Short>();
+        for (int i = 200; i < rendered.length - 200; i++) levels.add(rendered[i]);
+        assertTrue(levels.size() <= 16, "4-bit quantisation without recovery leaves at most 16 levels: " + levels.size());
+        int holds = 0;
+        for (int i = 201; i < rendered.length - 200; i++) if (rendered[i] != rendered[i - 1]) holds++;
+        assertTrue(holds <= rendered.length / 2 + 2, "an 8 kHz hold changes at most every other 16 kHz frame");
+        session.close();
     }
 
     @Test
