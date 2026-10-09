@@ -28,7 +28,8 @@ public final class NativeModMemberContractTest implements Opcodes {
         Path engine = root.resolve("engine.jar");
         Map<String, byte[]> input = Map.of("Base", host("Base", "java/lang/Object"),
                 "Child", host("Child", PREFIX + "Base"), "Dormant", host("Dormant", "java/lang/Object"),
-                "Signature", host("Signature", "java/lang/Object"));
+                "Signature", host("Signature", "java/lang/Object"),
+                "Unreferenced", host("Unreferenced", PREFIX + "Base"));
         try (var jar = new JarOutputStream(Files.newOutputStream(engine))) {
             for (var entry : input.entrySet()) {
                 jar.putNextEntry(new JarEntry(PREFIX + entry.getKey() + ".class"));
@@ -50,12 +51,18 @@ public final class NativeModMemberContractTest implements Opcodes {
             if (!contract.contains(expected)) throw new AssertionError("Not retained: " + expected);
         }
         try (var jar = new JarFile(output.resolve("preserved-engine.jar").toFile())) {
-            for (var entry : input.entrySet()) {
+            for (var entry : input.entrySet().stream().filter(e -> !e.getKey().equals("Unreferenced")).toList()) {
                 try (var stream = jar.getInputStream(jar.getJarEntry(PREFIX + entry.getKey() + ".class"))) {
                     if (!Arrays.equals(entry.getValue(), stream.readAllBytes())) throw new AssertionError("Rewritten class bytes");
                 }
             }
         }
+        Path implementations = root.resolve("implementations");
+        NativeModMemberContract.main(new String[] {engine.toString(), mods.toString(), implementations.toString(),
+                "--references-only", "--implementation-root=com.openggf.nativefixture.Base"});
+        if (!Files.readAllLines(implementations.resolve("members.tsv")).contains(
+                "M\tcom.openggf.nativefixture.Unreferenced\tprobe\t()V"))
+            throw new AssertionError("Unreferenced implementation method omitted");
         // The superclass has (I)V, but the child has only ()V. Constructors must not resolve through inheritance.
         for (String kind : new String[] {"field", "method", "constructor", "type"}) {
             writeMod(mods, kind);
@@ -83,6 +90,7 @@ public final class NativeModMemberContractTest implements Opcodes {
             constructor(writer, parent, "(I)V");
         }
         if (name.equals("Dormant")) writer.visitMethod(ACC_PRIVATE | ACC_STATIC | ACC_NATIVE, "future", "()V", null, null).visitEnd();
+        if (name.equals("Unreferenced")) writer.visitMethod(ACC_PUBLIC | ACC_NATIVE, "probe", "()V", null, null).visitEnd();
         constructor(writer, parent, "()V");
         writer.visitEnd();
         return writer.toByteArray();

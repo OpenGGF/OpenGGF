@@ -107,7 +107,15 @@ public final class NativeGameplayCheck {
                     EngineServices.current().roms().setRom(ownedRom);
                     GameModule root=EngineServices.current().romDetection().detectAndCreateModule(ownedRom).orElseThrow();
                     module=kit.launch(root,new GameplayLaunchRequest(game,character,List.of()));
-                    var mode=HeadlessGameBoot.openResolvedSessionForBoot(EngineServices.current(),module);
+                    int zone=ownedZone(module,manifest.id());
+                    var launch=com.openggf.game.save.SaveSessionContext.noSave(game,
+                            new com.openggf.game.save.SelectedTeam(character,List.of()),zone,0);
+                    var requiredTeam=module.getGameplayPolicyProvider()
+                            .launchTeam(module.getZoneRegistry().zoneKey(zone));
+                    if (requiredTeam.isPresent()) launch=com.openggf.game.save.SaveSessionLaunchTeamAccess
+                            .withLaunchTeam(launch,requiredTeam.orElseThrow());
+                    var mode=SessionManager.openGameplaySession(root,module,
+                            StockGameDataSources.pinned(ownedRom,root),launch);
                     GameplaySessionFactory.attachManagers(mode,EngineServices.current());
                     GameModuleRegistry.setCurrent(module);
                     installAudio(kit,repository,manifest,game);
@@ -116,8 +124,9 @@ public final class NativeGameplayCheck {
                     loop.setGameMode(GameMode.LEVEL);
                     loop.setInputHandler(kit.input().handler());
                     var team=GameplayTeamBootstrap.registerActiveTeam(module,GameServices.sprites(),config);
+                    if(requiredTeam.isPresent() && !team.mainSprite().characterKey().equals(requiredTeam.orElseThrow().main()))
+                        throw new AssertionError("Required creator launch team was not applied");
                     GameServices.level().setRewindClassResolver(kit.rewindClassResolver());
-                    int zone=ownedZone(module,manifest.id());
                     GameServices.level().loadZoneAndAct(zone,0);
                     GameServices.camera().setFocusedSprite(team.mainSprite());
                     GameServices.camera().updatePosition(true);
@@ -267,7 +276,7 @@ public final class NativeGameplayCheck {
     private static void exerciseLevel(ModTestKit kit, GameLoop loop, Path output) throws Exception {
         var level = GameServices.level();
         startCapture();
-        StringBuilder states=new StringBuilder("frame,x,y,dead,mode,objects\n");
+        StringBuilder states=new StringBuilder("frame,character,x,y,dead,mode,objects\n");
         level.skipPendingInitialTitleCardPresentation();
         if (loop.getCurrentGameMode() == GameMode.TITLE_CARD) loop.setGameMode(GameMode.LEVEL);
         for (int frame=0; frame<600; frame++) {
@@ -283,7 +292,8 @@ public final class NativeGameplayCheck {
             if (frame%60==0 || frame==599) {
                 var player=GameServices.camera().getFocusedSprite();
                 if(player==null) throw new AssertionError("No playable sprite");
-                states.append(frame).append(',').append(player.getCentreX()).append(',').append(player.getCentreY())
+                states.append(frame).append(',').append(player.characterKey().persisted()).append(',')
+                    .append(player.getCentreX()).append(',').append(player.getCentreY())
                     .append(',').append(player.getDead()).append(',').append(loop.getCurrentGameMode())
                     .append(',').append(level.getObjectManager().getActiveObjects().size()).append('\n');
                 GameServices.graphics().runPendingRenderThreadTasks();

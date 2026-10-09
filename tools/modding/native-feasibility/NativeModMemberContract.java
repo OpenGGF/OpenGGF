@@ -46,17 +46,24 @@ public final class NativeModMemberContract {
     private final Set<String> contract = new TreeSet<>();
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 3 && args.length != 4) {
-            throw new IllegalArgumentException("Expected: <engine.jar> <mods-directory> <output-directory> [--references-only]");
+        if (args.length < 3) {
+            throw new IllegalArgumentException("Expected: <engine.jar> <mods-directory> <output-directory> [--references-only] [--implementation-root=engine.Type]");
         }
-        boolean referencesOnly = args.length == 4 && args[3].equals("--references-only");
-        if (args.length == 4 && !referencesOnly) {
-            throw new IllegalArgumentException("Unknown mode: " + args[3]);
+        boolean referencesOnly = false;
+        var implementationRoots = new ArrayList<String>();
+        for (int i = 3; i < args.length; i++) {
+            if (args[i].equals("--references-only")) referencesOnly = true;
+            else if (args[i].startsWith("--implementation-root=")) {
+                String root = args[i].substring("--implementation-root=".length()).replace('.', '/');
+                if (!engine(root)) throw new IllegalArgumentException("Expected an engine implementation root");
+                implementationRoots.add(root);
+            } else throw new IllegalArgumentException("Unknown mode: " + args[i]);
         }
-        new NativeModMemberContract().generate(Path.of(args[0]), Path.of(args[1]), Path.of(args[2]), referencesOnly);
+        new NativeModMemberContract().generate(Path.of(args[0]), Path.of(args[1]), Path.of(args[2]), referencesOnly, implementationRoots);
     }
 
-    private void generate(Path engine, Path mods, Path output, boolean referencesOnly) throws Exception {
+    private void generate(Path engine, Path mods, Path output, boolean referencesOnly,
+                          List<String> implementationRoots) throws Exception {
         try (var jar = new JarFile(engine.toFile())) {
             for (var entry : jar.stream().filter(e -> e.getName().startsWith("com/openggf/")
                     && e.getName().endsWith(".class")).toList()) {
@@ -72,6 +79,14 @@ public final class NativeModMemberContract {
                 retain(api.getName().replace('.', '/'));
                 apiTypes++;
             }
+        }
+        // Known engine reflection seams can inspect an implementation rather
+        // than its annotated interface. Include even anonymous, unreferenced
+        // implementations and their method-owning ancestors in the same audit.
+        for (String root : implementationRoots) {
+            info(root); // Fail explicitly when a requested root is absent.
+            for (String name : new TreeSet<>(bytes.keySet()))
+                if (subtype(name, root)) retain(name);
         }
         List<Path> jars;
         try (var paths = Files.list(mods)) {
@@ -108,6 +123,14 @@ public final class NativeModMemberContract {
 
     private static boolean engine(String name) {
         return name != null && name.startsWith("com/openggf/");
+    }
+
+    private boolean subtype(String name, String root) {
+        if (root.equals(name)) return true;
+        if (!engine(name)) return false;
+        Info type = info(name);
+        return subtype(type.parent(), root)
+                || type.interfaces().stream().anyMatch(parent -> subtype(parent, root));
     }
 
     private Info info(String name) {

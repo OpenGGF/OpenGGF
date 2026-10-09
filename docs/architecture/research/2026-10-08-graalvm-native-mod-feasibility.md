@@ -496,8 +496,10 @@ The Linux successor starts from `8668a901216717d8f3696945a95bbfe8e628b652`,
 including the new Starfall Frontier, Eggman's Sky and Flappy Tails examples.
 Its builder and extra Java sources live outside Maven source roots under
 [`tools/modding/native-linux`](../../../tools/modding/native-linux/README.md).
-It reuses the independently qualified isolated hosted feature/substitution;
-stock Java, tests, POM, API, hooks, testing tools and release workflow are unchanged.
+It reuses the independently qualified isolated hosted feature/substitution.
+Initial tool-only checkpoints leave stock Java unchanged; the gameplay follow-up
+also corrects the bounded overlay/scaffold defects documented below. POM, API
+surface/version, hooks, testing tools and release workflow remain unchanged.
 
 The pinned CE Linux archive SHA-256 is
 `05ccbbe783210b6886ff7b08fcd0b061c5dce4852b05db87284fc0e24abb08e2`.
@@ -545,3 +547,38 @@ the image classpath to prevent closed-world analysis from masking the fault, and
 removed before immutable distribution assembly. The correction preserves the
 small JDK bootstrap package; successful registration alone remains insufficient
 evidence of gameplay support.
+
+The corrected image's bootstrap control and Eggman's Sky, Flappy Tails and Hello
+Scene rendered checks passed. Infinite Sonic then rejected
+`ModBackedGamePatch$1.getZoneRegistry()` with `NoSuchMethodException`: its owner
+boundary queries concrete engine module methods reflectively. Static creator
+references alone cannot infer this host reflection seam. The standalone contract
+generator now accepts explicit implementation roots; Linux requests `GameModule`,
+retaining concrete and anonymous engine implementations plus their ancestors.
+A bytecode control covers an otherwise unreferenced implementation. Applied to
+the earlier image, the extended audit rejects 143 missing members with ordinary
+exit 1; an isolated contract row also rejects the exact missing wrapper getter.
+This detects the demonstrated reflection omission before creator execution.
+
+Matched JVM gameplay exposed two additional issues. The generated badnik sample
+submitted native sound byte zero with a nonempty payload on destruction. Its
+scaffold and checked samples now resolve `GameSound.BADNIK_HIT` through the active
+game's sound map. The art-overlay provider omitted nine existing title-card and
+runtime-art admission methods, so respawn fell into unsupported defaults. It now
+forwards unchanged leases, scalar identities, ownership kinds, policies and base
+exceptions. Nested-overlay and stale-lease regression tests reproduced the old
+failure; no new admission algorithm or public API is introduced. The Flappy
+qualification also applies the creator's required launch team through the normal
+save/session launch context, rather than selecting Sonic for a Tails-only route.
+
+Validation scope was reassessed for these localized production consumers. The
+combined runner plan still selects 3,073 classes. Proportionate validation uses
+the affected art/scaffold/mod integration tests, S3K title-card and rewind tests,
+ROM loading invariants and mapping checks, fresh normal structural guards and
+the actual all-mod native rendered qualification. The forwarding fix preserves
+the base provider's existing timing/ownership rules; no PLC decoding, registry
+entries, ROM offsets, shared physics, build policy or API contract changes.
+This remains focused validation. Baseline at `8668a9012` passes all 49 cases in
+the seven directly affected existing suites, without skips. The added regression
+tests fail on old code: both admission controls reproduce unsupported defaults;
+the badnik control reproduces the zero-byte/payload rejection.

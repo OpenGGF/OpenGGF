@@ -135,7 +135,8 @@ def prepare(args):
     java=[tool("java"),"-cp",os.pathsep.join(map(str,(classes,engine)))]
     run([*java,"com.openggf.tools.NativeModMemberContractTest",work / "fixtures"],work)
     contract=work / "contract"
-    run([*java,"com.openggf.tools.NativeModMemberContract",engine,inputs / "mods",contract],work)
+    run([*java,"com.openggf.tools.NativeModMemberContract",engine,inputs / "mods",contract,
+        "--implementation-root=com.openggf.game.GameModule"],work)
     run([*java,"com.openggf.tools.NativeModMemberAudit",contract / "members.tsv"],work)
     bootstrap_control(work,engine)
     metadata=work / "metadata";metadata.mkdir()

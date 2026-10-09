@@ -41,7 +41,10 @@ Omitting ROMs explicitly limits qualification to audit/registration and is
 recorded by the empty `renderedGameplay` list; it does not qualify gameplay.
 
 The generated member contract covers dormant creator callbacks as well as live
-ones. Missing-field and missing-method controls must return ordinary exit 1;
+ones. The Linux build also retains engine implementations of `GameModule`,
+including anonymous wrappers, because owner-bound dispatch inspects their concrete
+methods reflectively. Their members enter the same mandatory startup audit.
+Missing-field and missing-method controls must return ordinary exit 1;
 crashes never pass. A separately compiled, runtime-loaded regression mod exercises
 record equality/hash/string and pattern-switch bootstraps; it never enters the
 image classpath or final distribution. `java.lang.runtime` is explicitly preserved
