@@ -188,8 +188,10 @@ class Publication(unittest.TestCase):
         changed['runtime_variant']['dac']['bits'] = 6
         with self.assertRaises(SystemExit):
             self.publish(changed)
+        unchosen = copy.deepcopy(self.bank)
+        unchosen['speakers']['tails']['voice'] = None
         with self.assertRaises(SystemExit):
-            VOICE.publish(self.bank, self.root/'cache', self.output, self.root/'VoiceLine.java', ['tails'])
+            VOICE.publish(unchosen, self.root/'cache', self.output, self.root/'VoiceLine.java', ['tails'])
         folder = VOICE.line_folder(self.root/'cache', self.bank['entries'][0])
         (folder/'shipped.wav').write_bytes(b'tampered')
         with self.assertRaisesRegex(AssertionError, 'shipped file changed'):
