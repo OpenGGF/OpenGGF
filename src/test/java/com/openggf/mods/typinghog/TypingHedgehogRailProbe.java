@@ -80,7 +80,7 @@ import java.util.TreeMap;
  *     -Dtypinghog.rails=true -Dsonic1.rom.path=... test
  * </pre>
  * Optional: {@code -Dtypinghog.rails.only=ghz3,mz3} (source id prefixes),
- * {@code -Dtypinghog.rails.phases=runs,controls,badniks,stands},
+ * {@code -Dtypinghog.rails.phases=runs,controls,badniks,badniks320,stands},
  * {@code -Dtypinghog.rails.out=target/typinghog-rails}. Results are TSV lines in that directory
  * (one file per game) and on stdout with the {@code RAIL|} prefix.
  *
