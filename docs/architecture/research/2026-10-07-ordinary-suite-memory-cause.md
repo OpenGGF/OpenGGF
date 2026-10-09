@@ -1333,3 +1333,48 @@ production Java, POM, fixtures and queue inputs from bf067. The upstream delta
 adds examples/prose and three unrelated mod tests, plus a terminology-guard
 comment. Actual-main integration, normal focused verification and publication
 remain pending at this checkpoint.
+
+
+### Actual-main focused qualification (2026-10-09)
+
+Main integration `bd35fff33aaf01d9c630c6a3a0ffff3d540469ea` has first parent
+`8668a901216717d8f3696945a95bbfe8e628b652`; its index exactly matches qualified
+private evidence successor `e30bb9852037a1543c75563db90ad1db92714701`. The merge
+is conflict-free. The three dirty disassembly trees and four unrelated untracked
+main paths were byte-preserved during integration. No main branch switch occurred.
+
+The actual-main change plan against8668 selected3,075 ordinary classes plus
+fresh guards through the same unclassified-helper fallback. The bounded focused
+scope justified above was retained. Default Lua lookup failed preflight before
+tests; `LUA_BIN=/usr/bin/lua5.4` then passed Java21, Lua5.4 and PowerShell preflight.
+All three original absolute main ROM files independently matched their canonical
+SHA-1/CRC32 identities before launch; no ROM prerequisite was skipped.
+
+Two normal queued commands ran at frozen bd35. Ordinary used the exact timed
+selector above plus `TestRouteFrameDrawing`; FBZ used the unchanged separate
+`-Pfbz-routes` selector. Both launch environments explicitly set Lua5.4. Initial
+and final source fingerprints were identical in both invocations:
+`78898dceb99482b691065cf337e4d0ede8ede81864ba43b601d3e0fb9a063fb4`.
+
+| Actual-main command | Finished (UTC) | Reports/cases | Failures/errors/skips | Summed class time | Maven status/time |
+|---|---|---:|---:|---:|---|
+| Ordinary routes and controls | 2026-10-09T11:34:41Z | 30/208 | 24/0/0 | 581.267s | exit1;10:10 |
+| Separate frozen FBZ routes | 2026-10-09T11:38:11Z | 2/2 | 0/0/0 | 72.909s | exit0;1:40 |
+
+Together: **32 reports/210 cases/186 passing/24 matching inherited failures/zero
+errors or skips**. Every191 baseline identity/outcome matches; the19 added
+world/pixel controls pass. The23 other complete primary failure messages match
+literally; the entire SSZ assertion matches after only the two documented blob
+hashes are normalized,2,907 characters with no omitted fields. All13 recorded
+ordinary witness lines and both FBZ replay-window lines match. All88 controls
+(19 new,4 existing SOZ,5 image rendering,60 required S3K) pass without skips.
+The latest waiting notices were2,953s ordinary and3,676s FBZ; waiting is excluded
+from execution/class times. These timings qualify actual main and are not another
+matched benchmark. No foreign request was cancelled, reprioritized or bypassed.
+
+This remains **focused inherited-failure qualification**, not a green whole-suite
+or full-route presentation claim. The verified executable/test/build/API inputs
+remain those of bd35; this subsequent evidence update changes only this research
+Markdown. The delivery flow pushes only integrated develop, then removes the
+accounted task worktrees/branches and consumed raw diagnostics while preserving
+unrelated main paths, foreign jobs and durable user artifacts.
