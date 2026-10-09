@@ -29,6 +29,9 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   original directed Alice announcements through OpenRouter, preserves raw takes outside
   Git, verifies literal words after the approved metallic/vocoder/DAC processing, and
   derives manifest entries and queue leases from the final PCM (2026-10-08).
+- [Typing of the Hedgehog voice generator](../../tools/audio/typing_hedgehog_voice.py) generalises
+  it to a multi-speaker cast with per-speaker voices and presets, receipted auditions, approved-recipe
+  pins, taunt-tagged lines and a generated `VoiceLine` enum (2026-10-09).
 
 - [Creator kit builder](../../tools/modding/build_creator_kit.py) exports matching
   engine/SDK/API-doc/testkit artifacts, pinned portable examples and launchers;

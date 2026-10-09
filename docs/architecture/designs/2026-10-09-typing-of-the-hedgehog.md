@@ -136,6 +136,20 @@ Each boss takes the stock hit count (8 unless the stock boss differs).
   (instructor). Lines are original performances; no game voice cloning.
 - Menus accept typed words (type STORY to choose Story) as well as arrows and Enter.
 
+### Voice bank (2026-10-09)
+
+`examples/typing-of-the-hedgehog/voice-bank.json` drafts 128 literal lines: 53 announcer, 18
+Robotnik plus 30 talk-back taunts (tagged with their exact `taunts.txt` text and tag, from the
+`any`/`s1`/`s2`/`s3k` tables the boss picks from), and 27 Tails. `tools/audio/typing_hedgehog_voice.py`
+generalises Eggman's Sky's generator (receipted, never auto-retried paid requests, key-usage
+ceiling, blind word checks, whole-utterance edits, approved-recipe pins) to per-speaker voices
+and presets and generates `typinghog.audio.VoiceLine`. OpenRouter lists 21 ElevenLabs premade
+voices for `elevenlabs/eleven-v4`. Auditions (three voices per speaker, two lines each, clean and
+through a light 8-bit/16 kHz arcade DAC and a 7-bit/8 kHz Mega Drive DAC) moved reported key
+usage from $1.827 to $1.932; the voices and presets await the user's choice. One take
+repeated its line at least four times while Whisper reported a single utterance, so checks
+also bound clip length and refuse degenerate word timestamps.
+
 ## Architecture
 
 ### Engine facts the design rests on

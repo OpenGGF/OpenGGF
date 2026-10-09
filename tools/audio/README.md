@@ -66,3 +66,18 @@ gameplay-sourced S1 audio capture.
 `eggmans_sky_voice.py` is the offline OpenRouter generator for Eggman's Sky's original
 Alice announcements. It requires FFmpeg, NumPy and SciPy. Its private key and raw-source
 cache stay outside shipped assets; see the [mod's regeneration instructions](../../examples/eggmans-sky/README.md#system-voice).
+
+`typing_hedgehog_voice.py` generalises it to Typing of the Hedgehog's multi-speaker cast
+(announcer, Robotnik, Tails). [voice-bank.json](../../examples/typing-of-the-hedgehog/voice-bank.json)
+gives each speaker an ElevenLabs premade voice, a delivery tag and a processing preset, and
+tags voiced Robotnik taunts with their exact `words/taunts.txt` text. `--list-voices` prints
+the voices OpenRouter offers; `--audition DIR` renders each speaker's candidate voices clean
+and through every candidate preset, with blind transcripts, into an external directory. Bank
+generation and publication refuse a speaker without a chosen voice or a preset whose hash is
+not in the tool's approved list. Every paid run checks reported key usage against the
+catalogue ceiling and an estimate-based `--budget`. Publication writes the WAVs'
+`provenance.json`, owns only a marked block of the mod's `audio-manifest.yaml`, and generates
+`typinghog.audio.VoiceLine` (asset, 60 Hz duration, priority, cooldown, speaker, taunt tag and
+text). Eleven v4 sometimes repeats a line several times in one take, and the Whisper check
+can report such a take as a single utterance, so every check also bounds clip length.
+Offline tests: `python3 -m unittest discover -s tools/audio/tests -p test_typing_hedgehog_voice.py`.

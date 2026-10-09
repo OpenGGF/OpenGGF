@@ -1,0 +1,1237 @@
+{
+  "format_version": 1,
+  "origin": "Original directed ElevenLabs premade-voice performances through OpenRouter; literal lines, no cloning or imitation of any real or game voice actor.",
+  "model": "elevenlabs/eleven-v4",
+  "transcription_model": "openai/whisper-large-v3-turbo",
+  "seed": 20261009,
+  "room_reverb_mix": 0,
+  "usage_ceiling_usd": 6.0,
+  "synthesis_estimate_cap_usd": 2.5,
+  "taunt_source": "src/main/resources/words/taunts.txt",
+  "word_aliases": {
+    "practice": "practise",
+    "supersonic": "super sonic",
+    "badnick": "badnik",
+    "badnicks": "badniks",
+    "robotnick": "robotnik",
+    "okay": "ok",
+    "mustache": "moustache"
+  },
+  "master": {
+    "decode": {
+      "sample_rate_hz": 48000,
+      "channels": 1
+    },
+    "highpass_hz": 80,
+    "loudness": {
+      "integrated_lufs": -18,
+      "true_peak_db": -2.5,
+      "lra": 5
+    },
+    "trim": {
+      "audible_threshold_dbfs": -48,
+      "lead_ms": 60,
+      "tail_ms": 120
+    },
+    "process_tail_pad_ms": 40
+  },
+  "presets": {
+    "clean": [
+      {
+        "effect": "edge_fades",
+        "milliseconds": 5
+      }
+    ],
+    "arcade_light": [
+      {
+        "effect": "drive",
+        "pre_gain_db": 6,
+        "wet_mix": 0.3,
+        "curve": "tanh"
+      },
+      {
+        "effect": "loudness",
+        "integrated_lufs": -18,
+        "true_peak_db": -2.5,
+        "lra": 5
+      },
+      {
+        "effect": "dac",
+        "lowpass_hz": 6500,
+        "sample_rate_hz": 16000,
+        "bits": 8,
+        "quantization": "signed linear, rounding, no dither",
+        "reconstruction": "zero order hold at 48000 Hz",
+        "dac_mix": 0.88,
+        "recovery_mix": 0.12,
+        "recovery_highpass_hz": 4500
+      },
+      {
+        "effect": "edge_fades",
+        "milliseconds": 5
+      }
+    ],
+    "megadrive_strong": [
+      {
+        "effect": "loudness",
+        "integrated_lufs": -18,
+        "true_peak_db": -2.5,
+        "lra": 5
+      },
+      {
+        "effect": "dac",
+        "lowpass_hz": 3400,
+        "sample_rate_hz": 8000,
+        "bits": 7,
+        "quantization": "signed linear, rounding, no dither",
+        "reconstruction": "zero order hold at 48000 Hz",
+        "dac_mix": 0.9,
+        "recovery_mix": 0.1,
+        "recovery_highpass_hz": 2400
+      },
+      {
+        "effect": "edge_fades",
+        "milliseconds": 5
+      }
+    ]
+  },
+  "speakers": {
+    "announcer": {
+      "role": "Hammy B-movie arcade announcer: titles, menus, wave callouts, pickups, ranks.",
+      "voice": null,
+      "preset": null,
+      "delivery_tag": "[booming hammy B-movie arcade announcer, theatrical over-the-top excitement, dramatic emphasis, crisp clear diction]",
+      "audition": {
+        "voices": [
+          "adam",
+          "brian",
+          "harry"
+        ],
+        "lines": [
+          "title",
+          "rank_s"
+        ],
+        "presets": [
+          "clean",
+          "arcade_light",
+          "megadrive_strong"
+        ]
+      }
+    },
+    "robotnik": {
+      "role": "Pompous theatrical villain: boss intros, quiz host, hurt and defeat lines, talk-back taunts.",
+      "voice": null,
+      "preset": null,
+      "delivery_tag": "[pompous theatrical villain, grandiose and gloating, mock-dignified, rich exaggerated delivery, crisp clear diction]",
+      "audition": {
+        "voices": [
+          "george",
+          "callum",
+          "bill"
+        ],
+        "lines": [
+          "intro_a",
+          "taunt_toaster"
+        ],
+        "presets": [
+          "clean",
+          "arcade_light",
+          "megadrive_strong"
+        ]
+      }
+    },
+    "tails": {
+      "role": "Cheerful young instructor for Typing School: lessons, feedback and grades.",
+      "voice": null,
+      "preset": null,
+      "delivery_tag": "[cheerful upbeat young instructor, friendly and encouraging, bright energy, clear diction]",
+      "audition": {
+        "voices": [
+          "liam",
+          "jessica",
+          "laura"
+        ],
+        "lines": [
+          "welcome",
+          "grade_a"
+        ],
+        "presets": [
+          "clean",
+          "arcade_light",
+          "megadrive_strong"
+        ]
+      }
+    }
+  },
+  "entries": [
+    {
+      "id": "title",
+      "speaker": "announcer",
+      "group": "menu",
+      "text": "The Typing of the Hedgehog!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "press_any_key",
+      "speaker": "announcer",
+      "group": "menu",
+      "text": "Type to begin.",
+      "priority": 1,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "mode_story",
+      "speaker": "announcer",
+      "group": "menu",
+      "text": "Story mode.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "mode_arcade",
+      "speaker": "announcer",
+      "group": "menu",
+      "text": "Arcade.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "mode_boss_rush",
+      "speaker": "announcer",
+      "group": "menu",
+      "text": "Boss rush.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "mode_endless",
+      "speaker": "announcer",
+      "group": "menu",
+      "text": "Endless.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "mode_school",
+      "speaker": "announcer",
+      "group": "menu",
+      "text": "Typing school.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "mode_records",
+      "speaker": "announcer",
+      "group": "menu",
+      "text": "Records.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "mode_options",
+      "speaker": "announcer",
+      "group": "menu",
+      "text": "Options.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "get_ready",
+      "speaker": "announcer",
+      "group": "combat",
+      "text": "Get ready!",
+      "priority": 3,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "type_to_survive",
+      "speaker": "announcer",
+      "group": "combat",
+      "text": "Type to survive!",
+      "priority": 3,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "here_they_come",
+      "speaker": "announcer",
+      "group": "combat",
+      "text": "Here they come!",
+      "priority": 3,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "stand_ground",
+      "speaker": "announcer",
+      "group": "combat",
+      "text": "Stand your ground!",
+      "priority": 3,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "incoming",
+      "speaker": "announcer",
+      "group": "combat",
+      "text": "Incoming badniks!",
+      "priority": 2,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "wave_clear",
+      "speaker": "announcer",
+      "group": "combat",
+      "text": "Wave clear!",
+      "priority": 2,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "go_go_go",
+      "speaker": "announcer",
+      "group": "combat",
+      "text": "Go, go, go!",
+      "priority": 3,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "watch_out",
+      "speaker": "announcer",
+      "group": "combat",
+      "text": "Watch out!",
+      "priority": 2,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "elite",
+      "speaker": "announcer",
+      "group": "combat",
+      "text": "Elite badnik!",
+      "priority": 3,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "trap",
+      "speaker": "announcer",
+      "group": "combat",
+      "text": "Don't type the trap!",
+      "priority": 3,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "chain_ten",
+      "speaker": "announcer",
+      "group": "chain",
+      "text": "Ten chain!",
+      "priority": 1,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "chain_twenty",
+      "speaker": "announcer",
+      "group": "chain",
+      "text": "Twenty chain!",
+      "priority": 1,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "chain_thirty",
+      "speaker": "announcer",
+      "group": "chain",
+      "text": "Unstoppable!",
+      "priority": 1,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "chain_fifty",
+      "speaker": "announcer",
+      "group": "chain",
+      "text": "Keyboard warrior!",
+      "priority": 1,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "ouch",
+      "speaker": "announcer",
+      "group": "damage",
+      "text": "Ouch!",
+      "priority": 2,
+      "cooldown_ticks": 120
+    },
+    {
+      "id": "rings_lost",
+      "speaker": "announcer",
+      "group": "damage",
+      "text": "Rings lost! Grab the letters!",
+      "priority": 2,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "no_rings",
+      "speaker": "announcer",
+      "group": "damage",
+      "text": "No rings left!",
+      "priority": 3,
+      "cooldown_ticks": 600
+    },
+    {
+      "id": "last_life",
+      "speaker": "announcer",
+      "group": "damage",
+      "text": "Last life!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "game_over",
+      "speaker": "announcer",
+      "group": "damage",
+      "text": "Game over.",
+      "priority": 4,
+      "cooldown_ticks": 0,
+      "direction": "[slow, ominous]"
+    },
+    {
+      "id": "continue",
+      "speaker": "announcer",
+      "group": "damage",
+      "text": "Continue?",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "shield",
+      "speaker": "announcer",
+      "group": "item",
+      "text": "Shield!",
+      "priority": 2,
+      "cooldown_ticks": 120
+    },
+    {
+      "id": "speed_shoes",
+      "speaker": "announcer",
+      "group": "item",
+      "text": "Speed shoes! Time slows down!",
+      "priority": 2,
+      "cooldown_ticks": 120
+    },
+    {
+      "id": "invincible",
+      "speaker": "announcer",
+      "group": "item",
+      "text": "Invincible!",
+      "priority": 2,
+      "cooldown_ticks": 120
+    },
+    {
+      "id": "super_ring",
+      "speaker": "announcer",
+      "group": "item",
+      "text": "Super ring!",
+      "priority": 2,
+      "cooldown_ticks": 120
+    },
+    {
+      "id": "extra_life",
+      "speaker": "announcer",
+      "group": "item",
+      "text": "Extra life!",
+      "priority": 2,
+      "cooldown_ticks": 120
+    },
+    {
+      "id": "animal_rescued",
+      "speaker": "announcer",
+      "group": "item",
+      "text": "Animal rescued!",
+      "priority": 1,
+      "cooldown_ticks": 120
+    },
+    {
+      "id": "boss_warning",
+      "speaker": "announcer",
+      "group": "boss",
+      "text": "Warning! Boss approaching!",
+      "priority": 4,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "boss_defeated",
+      "speaker": "announcer",
+      "group": "boss",
+      "text": "Boss defeated!",
+      "priority": 4,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "emerald",
+      "speaker": "announcer",
+      "group": "progress",
+      "text": "Chaos emerald!",
+      "priority": 4,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "all_emeralds",
+      "speaker": "announcer",
+      "group": "progress",
+      "text": "All seven chaos emeralds!",
+      "priority": 4,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "act_clear",
+      "speaker": "announcer",
+      "group": "progress",
+      "text": "Act clear!",
+      "priority": 4,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "chapter_clear",
+      "speaker": "announcer",
+      "group": "progress",
+      "text": "Chapter complete!",
+      "priority": 4,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "new_record",
+      "speaker": "announcer",
+      "group": "progress",
+      "text": "New record!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "rank_s",
+      "speaker": "announcer",
+      "group": "result",
+      "text": "Rank S! Outstanding!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "rank_a",
+      "speaker": "announcer",
+      "group": "result",
+      "text": "Rank A! Excellent!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "rank_b",
+      "speaker": "announcer",
+      "group": "result",
+      "text": "Rank B! Good work!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "rank_c",
+      "speaker": "announcer",
+      "group": "result",
+      "text": "Rank C. Not bad.",
+      "priority": 3,
+      "cooldown_ticks": 0,
+      "direction": "[mildly unimpressed]"
+    },
+    {
+      "id": "rank_d",
+      "speaker": "announcer",
+      "group": "result",
+      "text": "Rank D. Keep practising.",
+      "priority": 3,
+      "cooldown_ticks": 0,
+      "direction": "[disappointed]"
+    },
+    {
+      "id": "rank_e",
+      "speaker": "announcer",
+      "group": "result",
+      "text": "Rank E. Ouch.",
+      "priority": 3,
+      "cooldown_ticks": 0,
+      "direction": "[wincing, deadpan]"
+    },
+    {
+      "id": "blazing",
+      "speaker": "announcer",
+      "group": "result",
+      "text": "Blazing fast!",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "perfect",
+      "speaker": "announcer",
+      "group": "result",
+      "text": "Perfect! Not a single hit!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "super_sonic",
+      "speaker": "announcer",
+      "group": "boss",
+      "text": "Super Sonic!",
+      "priority": 4,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "final_boss",
+      "speaker": "announcer",
+      "group": "boss",
+      "text": "The final battle begins!",
+      "priority": 4,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "thanks",
+      "speaker": "announcer",
+      "group": "menu",
+      "text": "Thanks for playing!",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "intro_a",
+      "speaker": "robotnik",
+      "group": "boss_intro",
+      "text": "So, the hedgehog has learned to type!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "intro_b",
+      "speaker": "robotnik",
+      "group": "boss_intro",
+      "text": "Let us see you spell your way out of this!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "intro_c",
+      "speaker": "robotnik",
+      "group": "boss_intro",
+      "text": "My badniks have been studying the dictionary!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "intro_quiz",
+      "speaker": "robotnik",
+      "group": "boss_intro",
+      "text": "Answer my questions, hedgehog, if you dare!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "quiz_right",
+      "speaker": "robotnik",
+      "group": "quiz",
+      "text": "Correct. A lucky guess!",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "quiz_wrong",
+      "speaker": "robotnik",
+      "group": "quiz",
+      "text": "Wrong! Ho ho ho!",
+      "priority": 2,
+      "cooldown_ticks": 0,
+      "direction": "[gloating]"
+    },
+    {
+      "id": "duel",
+      "speaker": "robotnik",
+      "group": "boss_intro",
+      "text": "My machine types faster than you ever will!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "talk_back",
+      "speaker": "robotnik",
+      "group": "boss_intro",
+      "text": "Repeat after me, if you can!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "hurt_a",
+      "speaker": "robotnik",
+      "group": "hurt",
+      "text": "Ow!",
+      "priority": 1,
+      "cooldown_ticks": 60,
+      "direction": "[pained yelp]"
+    },
+    {
+      "id": "hurt_b",
+      "speaker": "robotnik",
+      "group": "hurt",
+      "text": "Curses!",
+      "priority": 1,
+      "cooldown_ticks": 60,
+      "direction": "[pained, furious]"
+    },
+    {
+      "id": "hurt_c",
+      "speaker": "robotnik",
+      "group": "hurt",
+      "text": "Impossible!",
+      "priority": 1,
+      "cooldown_ticks": 60,
+      "direction": "[pained, outraged]"
+    },
+    {
+      "id": "hurt_d",
+      "speaker": "robotnik",
+      "group": "hurt",
+      "text": "Grr!",
+      "priority": 1,
+      "cooldown_ticks": 60,
+      "direction": "[pained growl]"
+    },
+    {
+      "id": "defeat_a",
+      "speaker": "robotnik",
+      "group": "defeat",
+      "text": "This isn't over, hedgehog!",
+      "priority": 4,
+      "cooldown_ticks": 0,
+      "direction": "[furious, retreating]"
+    },
+    {
+      "id": "defeat_b",
+      "speaker": "robotnik",
+      "group": "defeat",
+      "text": "I'll be back! With a bigger keyboard!",
+      "priority": 4,
+      "cooldown_ticks": 0,
+      "direction": "[furious, retreating]"
+    },
+    {
+      "id": "defeat_c",
+      "speaker": "robotnik",
+      "group": "defeat",
+      "text": "Nooo! My beautiful machine!",
+      "priority": 4,
+      "cooldown_ticks": 0,
+      "direction": "[anguished wail]"
+    },
+    {
+      "id": "laugh",
+      "speaker": "robotnik",
+      "group": "gloat",
+      "text": "Ho ho ho ho!",
+      "priority": 2,
+      "cooldown_ticks": 300,
+      "direction": "[gloating evil laugh]"
+    },
+    {
+      "id": "final",
+      "speaker": "robotnik",
+      "group": "boss_intro",
+      "text": "You will never type fast enough to stop me!",
+      "priority": 4,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "trap_typed",
+      "speaker": "robotnik",
+      "group": "gloat",
+      "text": "You fell for it, hedgehog!",
+      "priority": 2,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "welcome",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "Welcome to my typing school, Sonic!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "home_row",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "Let's start with the home row. Fingers on A, S, D, F and J, K, L!",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "top_row",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "Now reach up to the top row.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "bottom_row",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "Next, the bottom row. Stretch those fingers!",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "numbers",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "Numbers time! Reach all the way up.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "capitals",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "Hold shift for capital letters.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "punctuation",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "Punctuation! Commas, full stops, and more.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "ring_rush",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "Ring rush! Type as many words as you can!",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "sudden_death",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "Sudden death! One mistake and it's over!",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "reflex",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "Reflex test! Type each letter the moment it appears!",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "long_words",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "Long words! Take your time and stay accurate.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "phrases",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "Phrases! Don't forget the spaces.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "boss_training",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "Boss training! Practise Robotnik's tricks.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "weak_keys",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "Let's practise your weakest keys.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "final_exam",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "The final exam! Show me what you've learned!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "exam_passed",
+      "speaker": "tails",
+      "group": "exam",
+      "text": "You passed! You're a typing champion!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "great",
+      "speaker": "tails",
+      "group": "feedback",
+      "text": "Great job!",
+      "priority": 1,
+      "cooldown_ticks": 240
+    },
+    {
+      "id": "awesome",
+      "speaker": "tails",
+      "group": "feedback",
+      "text": "Awesome!",
+      "priority": 1,
+      "cooldown_ticks": 240
+    },
+    {
+      "id": "try_again",
+      "speaker": "tails",
+      "group": "feedback",
+      "text": "Try again, you can do it!",
+      "priority": 1,
+      "cooldown_ticks": 240,
+      "direction": "[gentle, encouraging]"
+    },
+    {
+      "id": "keep_going",
+      "speaker": "tails",
+      "group": "feedback",
+      "text": "Keep going!",
+      "priority": 1,
+      "cooldown_ticks": 240
+    },
+    {
+      "id": "slow_down",
+      "speaker": "tails",
+      "group": "feedback",
+      "text": "Slow down and stay accurate.",
+      "priority": 1,
+      "cooldown_ticks": 240,
+      "direction": "[gentle, encouraging]"
+    },
+    {
+      "id": "grade_a",
+      "speaker": "tails",
+      "group": "grade",
+      "text": "Grade A! Way past cool!",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "grade_b",
+      "speaker": "tails",
+      "group": "grade",
+      "text": "Grade B! Nice typing!",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "grade_c",
+      "speaker": "tails",
+      "group": "grade",
+      "text": "Grade C. Pretty good!",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "grade_d",
+      "speaker": "tails",
+      "group": "grade",
+      "text": "Grade D. Let's practise some more.",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "grade_e",
+      "speaker": "tails",
+      "group": "grade",
+      "text": "Grade E. Don't give up!",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "unlocked",
+      "speaker": "tails",
+      "group": "lesson",
+      "text": "You unlocked the final exam!",
+      "priority": 2,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_toaster",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "You call that typing? My toaster types faster!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_outrun",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "You will never outrun my genius, hedgehog!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_never_tire",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "Type all you like, my robots never tire!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_little_fingers",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "Your little fingers are no match for my machines!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_thousand_badniks",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "I have a thousand badniks and only one of you!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_every_keystroke",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "Every keystroke brings you closer to defeat!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_spell_my_name",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "Spell my name correctly, you prickly pest!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_surrender",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "Surrender the Chaos Emeralds and I may be merciful!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_bow_before",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "Bow before the greatest scientist in the world!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_mustache",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "My mustache is more impressive than your speed!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_another_typo",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "Ha! Another typo! I am counting every one!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_sleepy_snail",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "You have the reflexes of a sleepy snail!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_nobody_defies",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "Nobody defies the genius of Doctor Robotnik!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_out_typed",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "Prepare to be out-typed by superior engineering!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_tick_tock",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "Tick tock, hedgehog, my clocks never lie!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_delightful",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "What is that? A typo? How delightful!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_ingenuity",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "Oh, the ingenuity! Oh, the sheer genius of me!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_ridiculous",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "A hedgehog with a keyboard? How utterly ridiculous!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_wobbly_vowels",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "Your vowels are wobbly and your consonants are weak!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_space_bar",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "any",
+      "text": "Space bar? I invented the space bar!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_s1_south_island",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "s1",
+      "text": "Welcome to South Island, my future robot factory!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_s1_six_emeralds",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "s1",
+      "text": "Six emeralds, hedgehog, and I want every one!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_s1_juggle",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "s1",
+      "text": "I juggle Chaos Emeralds for fun, you know!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_s1_first_adventure",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "s1",
+      "text": "Your first adventure ends right here, hedgehog!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_s2_death_egg",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "s2",
+      "text": "The Death Egg will rise, and you cannot stop it!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_s2_two_of_you",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "s2",
+      "text": "Two of you now? Twice the typing, half the talent!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_s2_silver_sonic",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "s2",
+      "text": "My Silver Sonic is faster, shinier and smarter!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_s3k_echidna",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "s3k",
+      "text": "That foolish echidna believes every word I say!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_s3k_hyper",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "s3k",
+      "text": "Hyper Sonic? Hyper typing? We shall see!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    },
+    {
+      "id": "taunt_s3k_mecha_sonic",
+      "speaker": "robotnik",
+      "group": "taunt",
+      "taunt_tag": "s3k",
+      "text": "Mecha Sonic is ready for a rematch, hedgehog!",
+      "priority": 3,
+      "cooldown_ticks": 0
+    }
+  ]
+}

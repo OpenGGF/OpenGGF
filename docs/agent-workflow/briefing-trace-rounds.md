@@ -171,6 +171,14 @@ alone cost 5.3 ms due to repeated writes to an in-flight vertex buffer. Measure
 measure rendering throughput. Separate warm-up, update, submission and finish
 costs, and compare deterministic framebuffer output when changing uploads.
 
+A transcript that matches is not proof of one utterance (2026-10-09, Typing of the
+Hedgehog voice auditions): Eleven v4 repeated "Rank S! Outstanding!" at least
+four times in one 10.8-second take. Whisper turbo transcribed the raw take, and one
+rendering of it, as a single utterance, so the literal word check passed; the raw
+transcription also stamped every word at the clip end. Other renderings of the same
+take were transcribed with four repeats. Bound the clip length against the script and
+refuse edits whose word times are degenerate before trusting a word check.
+
 Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
 task): the positioned MHZ capture retained about 22 MiB after its callback while
 three complete capture/rewind/ROM-loading passes settled near 16.8 MiB, with only
