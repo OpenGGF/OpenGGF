@@ -44,7 +44,7 @@ public final class PlayScreen implements Screen {
         valley.interact = () -> interact(shell, Actor.VALLEY, valley.runner.x, valley.runner.y);
         places.put("seed_stall", s -> s.push(new ShopMenu()));
         places.put("inn", s -> s.toast("THE LAMPPOST INN OPENS SOON"));
-        places.put("workshop", s -> s.toast("TAILS IS OUT. BACK LATER!"));
+        places.put("workshop", s -> s.push(new WorkshopMenu()));
         places.put("egg", s -> s.toast("EGG: OPENING NEXT SEASON"));
         places.put("capsule", s -> s.toast("THE GREAT CAPSULE IS CRACKED AND SILENT"));
         places.put("ruins", s -> s.toast("THE RUINS ARE DARK. PUD WON'T GO IN."));
@@ -165,6 +165,7 @@ public final class PlayScreen implements Screen {
             switch (farm.update(shell.in)) {
                 case SLEEP -> shell.push(new ConfirmMenu("GO TO BED FOR THE NIGHT?", () -> shell.go(new DayEndScreen(false))));
                 case SHIP -> shell.push(new ShipMenu());
+                case CHEST -> shell.push(new ChestMenu(farm.openedChest));
                 case TO_VALLEY -> startFold(shell, true);
                 default -> {
                 }

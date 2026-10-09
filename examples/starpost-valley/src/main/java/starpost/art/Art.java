@@ -47,6 +47,7 @@ public final class Art {
     public final SceneSpriteSet motobug;
     public final SceneSpriteSet buzzBomber;
     public final SceneSpriteSet crabmeat;
+    public final SceneSpriteSet caterkiller;
     public final SceneSpriteSet purpleRock;
     public final SceneSpriteSet lamppost;
     public final SceneSpriteSet capsule;
@@ -163,6 +164,7 @@ public final class Art {
         motobug = s1.sprites(RomSpriteRequest.of(0x37A2C, Compression.NEMESIS, 0xFE2C, 0), ghzPalette);  // Nem_Motobug, Map_Moto
         buzzBomber = s1.sprites(RomSpriteRequest.of(0x3639E, Compression.NEMESIS, 0xA0B4, 0), ghzPalette); // Nem_Buzz, Map_Buzz
         crabmeat = s1.sprites(RomSpriteRequest.of(0x35EB0, Compression.NEMESIS, 0x9DCE, 0), ghzPalette); // Nem_Crabmeat, Map_Crab
+        caterkiller = s1.sprites(RomSpriteRequest.of(0x39076, Compression.NEMESIS, 0x1751A, 1), ghzPalette); // Nem_Cat, Map_Cat
         purpleRock = s1.sprites(RomSpriteRequest.of(0x300BA, Compression.NEMESIS, 0xD79C, 3), ghzPalette); // Nem_PplRock, Map_PRock
         lamppost = s1.sprites(RomSpriteRequest.of(0x3AE64, Compression.NEMESIS, 0x178A4, 0), ghzPalette); // Nem_Lamp, Map_Lamp
         capsule = s1.sprites(RomSpriteRequest.of(0x5DC4A, Compression.NEMESIS, 0x1B52A, 0), ghzPalette); // Nem_Prison, Map_Pri

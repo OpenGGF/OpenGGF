@@ -37,7 +37,12 @@ final class Debug {
                             shell.game.calendar.day(), hhmm / 100 * 60 + hhmm % 100);
                 }
                 case "rain" -> shell.game.raining = p[1].equals("on");
-                case "give" -> shell.game.inventory.add(shell.game.item(p[1]), p.length > 2 ? Integer.parseInt(p[2]) : 1);
+                case "give" -> {
+                    // Item ids contain underscores: the last part is the count when it is a number.
+                    boolean counted = p.length > 2 && p[p.length - 1].matches("\\d+");
+                    String id = String.join("_", java.util.Arrays.copyOfRange(p, 1, counted ? p.length - 1 : p.length));
+                    shell.game.inventory.add(shell.game.item(id), counted ? Integer.parseInt(p[p.length - 1]) : 1);
+                }
                 case "rings" -> shell.game.rings = Integer.parseInt(p[1]);
                 case "momentum" -> shell.game.momentum = Integer.parseInt(p[1]);
                 case "select" -> shell.game.inventory.select(Integer.parseInt(p[1]));

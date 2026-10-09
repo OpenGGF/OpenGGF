@@ -41,14 +41,23 @@ public final class SaveCodec {
                 if (p == null) {
                     continue;
                 }
-                if (p.cover != Plot.GRASS || p.tilled || p.crop != null) {
+                if (p.cover != Plot.GRASS || p.tilled || p.crop != null || p.object != null) {
                     line(out, "plot." + r + "." + c, p.cover + "," + (p.tilled ? 1 : 0) + "," + (p.watered ? 1 : 0)
-                            + "," + (p.crop == null ? "" : p.crop) + "," + p.age + "," + (p.dead ? 1 : 0));
+                            + "," + (p.crop == null ? "" : p.crop) + "," + p.age + "," + (p.dead ? 1 : 0)
+                            + "," + (p.object == null ? "" : p.object));
                 }
             }
         }
         for (Map.Entry<String, Integer> e : g.shipping.entrySet()) {
             line(out, "ship." + e.getKey(), e.getValue());
+        }
+        for (Map.Entry<String, Inventory> e : g.farm.chests.entrySet()) {
+            Inventory chest = e.getValue();
+            for (int i = 0; i < chest.size(); i++) {
+                if (chest.id(i) != null) {
+                    line(out, "chest." + e.getKey() + "." + i, chest.id(i) + "," + chest.count(i));
+                }
+            }
         }
         for (SaveSection section : g.sections) {
             Map<String, String> keys = new TreeMap<>();
@@ -161,9 +170,21 @@ public final class SaveCodec {
                     p.crop = !parts[3].isEmpty() && catalog.crop(parts[3]) != null ? parts[3] : null;
                     p.age = p.crop == null ? 0 : Math.max(0, Math.min(99, Integer.parseInt(parts[4])));
                     p.dead = p.crop != null && parts[5].equals("1");
+                    p.object = parts.length > 6 && !parts[6].isEmpty() && catalog.placeable(parts[6]) != null ? parts[6] : null;
                 }
             }
             for (Map.Entry<String, String> e : v.entrySet()) {
+                if (e.getKey().startsWith("chest.")) {
+                    String[] key = e.getKey().split("\\.");
+                    String[] parts = e.getValue().split(",");
+                    int r = Integer.parseInt(key[1]), c = Integer.parseInt(key[2]), slot = Integer.parseInt(key[3]);
+                    Plot p = r >= 0 && r < Farm.ROWS && c >= 0 && c < Farm.COLUMNS ? g.farm.raw(r, c) : null;
+                    PlaceableDef def = p == null || p.object == null ? null : catalog.placeable(p.object);
+                    if (def != null && def.role() == PlaceableDef.Role.CHEST && slot >= 0 && slot < def.reach()
+                            && catalog.hasItem(parts[0])) {
+                        g.farm.chest(r, c, def.reach()).set(slot, parts[0], Math.min(Inventory.MAX_STACK, Integer.parseInt(parts[1])));
+                    }
+                }
                 if (e.getKey().startsWith("ship.")) {
                     String id = e.getKey().substring(5);
                     int count = Integer.parseInt(e.getValue());

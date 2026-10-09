@@ -19,9 +19,11 @@ public final class Plot {
     public boolean dead;
     /** A harvested regrowing crop waits this many days. */
     public int regrowIn;
+    /** A placed object's item id (sprinkler, chest...), or null. Objects stand on untilled or tilled ground. */
+    public String object;
 
     public boolean empty() {
-        return crop == null;
+        return crop == null && object == null;
     }
 
     public void clearCrop() {

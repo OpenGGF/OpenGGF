@@ -15,23 +15,49 @@ public final class Catalog {
     private final Map<String, CropDef> crops = new LinkedHashMap<>();
     private final Map<String, CropDef> cropsBySeed = new LinkedHashMap<>();
     private final Map<String, Integer> seedPrices = new LinkedHashMap<>();
+    private final Map<String, PlaceableDef> placeables = new LinkedHashMap<>();
+    private final List<Recipe> recipes = new ArrayList<>();
 
     public Catalog() {
         new Content(this).register();
     }
 
-    void add(Item item) {
+    public void add(Item item) {
         if (items.putIfAbsent(item.id(), item) != null) {
             throw new IllegalStateException("Duplicate item " + item.id());
         }
     }
 
-    void add(CropDef crop, int seedPrice) {
+    public void add(CropDef crop, int seedPrice) {
         if (crops.putIfAbsent(crop.id(), crop) != null) {
             throw new IllegalStateException("Duplicate crop " + crop.id());
         }
         cropsBySeed.put(crop.seed(), crop);
         seedPrices.put(crop.seed(), seedPrice);
+    }
+
+    public void add(PlaceableDef placeable) {
+        placeables.put(placeable.id(), placeable);
+    }
+
+    public void add(Recipe recipe) {
+        recipes.add(recipe);
+    }
+
+    /** What an item becomes when placed, or null when it cannot be placed. */
+    public PlaceableDef placeable(String id) {
+        return placeables.get(id);
+    }
+
+    /** Recipes whose product and ingredients are all known. */
+    public List<Recipe> recipes() {
+        List<Recipe> out = new ArrayList<>();
+        for (Recipe recipe : recipes) {
+            if (items.containsKey(recipe.product()) && items.keySet().containsAll(recipe.inputs().keySet())) {
+                out.add(recipe);
+            }
+        }
+        return out;
     }
 
     public Item item(String id) {

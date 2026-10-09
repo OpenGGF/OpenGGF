@@ -55,6 +55,18 @@ public final class ItemIcons {
             int[] fruit = CropArt.fruit(crop);
             return grid(packet(), fruit[0], fruit[1]);
         }
+        if (item.kind() == Kind.PLACEABLE) {
+            SceneImage picture = switch (item.id()) {
+                case "buzz_waterer", "buzz_waterer_mk2" -> art.buzzBomber.frame(0).image();
+                case "caterkiller_crawler" -> art.caterkiller.frame(0).image();
+                case "item_monitor" -> art.monitor.frame(0).image();
+                case "star_post" -> art.starpost.frame(0).image();
+                default -> null;
+            };
+            if (picture != null) {
+                return fit(picture);
+            }
+        }
         return switch (item.kind()) {
             case FOOD -> grid(chiliDog(), 0, 0);
             case MATERIAL -> grid(item.id().equals("palm_wood") ? log() : item.id().equals("scrap") ? scrap() : stone(), 0, 0);

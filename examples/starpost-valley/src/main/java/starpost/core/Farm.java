@@ -15,6 +15,17 @@ public final class Farm {
 
     private final Plot[][] plots = new Plot[ROWS][COLUMNS];
     private int open = START_COLUMNS;
+    /** Item Monitors' contents, keyed "row.column". */
+    public final java.util.Map<String, Inventory> chests = new java.util.LinkedHashMap<>();
+
+    /** The storage of the Item Monitor on a plot, created on first use. */
+    public Inventory chest(int row, int column, int slots) {
+        return chests.computeIfAbsent(row + "." + column, k -> {
+            Inventory inv = new Inventory();
+            inv.resize(slots);
+            return inv;
+        });
+    }
 
     public Farm() {
         for (int r = 0; r < ROWS; r++) {
@@ -54,8 +65,41 @@ public final class Farm {
         open = Math.max(open, Math.min(COLUMNS, columns));
     }
 
-    /** Grows every watered crop by a day, dries the soil, and kills what is out of season. */
+    /**
+     * Overnight: grows every watered crop by a day and kills what is out of season, then waters
+     * the new morning's soil from the rain and the sprinklers. Soil a sprinkler covers never
+     * grasses over.
+     */
     public void nextDay(Catalog catalog, int season, boolean rain, SnapshotRandom rng) {
+        boolean[][] covered = season == Calendar.WINTER ? new boolean[ROWS][COLUMNS] : coverage(catalog);
+        grow(catalog, season, rain, covered, rng);
+    }
+
+    /** The plots the placed sprinklers reach. */
+    private boolean[][] coverage(Catalog catalog) {
+        boolean[][] covered = new boolean[ROWS][COLUMNS];
+        for (int r = 0; r < ROWS; r++) {
+            for (int c = 0; c < COLUMNS; c++) {
+                PlaceableDef def = plots[r][c].object == null ? null : catalog.placeable(plots[r][c].object);
+                if (def == null) {
+                    continue;
+                }
+                int rows = def.role() == PlaceableDef.Role.SPRINKLER ? def.reach()
+                        : def.role() == PlaceableDef.Role.ROW_SPRINKLER ? 0 : -1;
+                for (int dr = -rows; dr <= rows; dr++) {
+                    for (int dc = -def.reach(); dc <= def.reach(); dc++) {
+                        int rr = r + dr, cc = c + dc;
+                        if (rows >= 0 && rr >= 0 && rr < ROWS && cc >= 0 && cc < COLUMNS && (dr != 0 || dc != 0)) {
+                            covered[rr][cc] = true;
+                        }
+                    }
+                }
+            }
+        }
+        return covered;
+    }
+
+    private void grow(Catalog catalog, int season, boolean rain, boolean[][] covered, SnapshotRandom rng) {
         for (int r = 0; r < ROWS; r++) {
             for (int c = 0; c < COLUMNS; c++) {
                 Plot plot = plots[r][c];
@@ -66,12 +110,13 @@ public final class Farm {
                     } else if (plot.watered && plot.age < crop.days()) {
                         plot.age++;
                     }
-                } else if (plot.tilled && plot.crop == null && !plot.watered && rng.nextInt(100) < 10) {
+                } else if (plot.tilled && plot.crop == null && !plot.watered && !covered[r][c] && rng.nextInt(100) < 10) {
                     plot.tilled = false; // untended soil grasses over
-                } else if (!plot.tilled && plot.cover == Plot.GRASS && c >= STARTER_PATCH && rng.nextInt(1000) < 6) {
+                } else if (!plot.tilled && plot.object == null && plot.cover == Plot.GRASS && c >= STARTER_PATCH
+                        && rng.nextInt(1000) < 6) {
                     plot.cover = Plot.WEED;
                 }
-                plot.watered = rain && plot.tilled;
+                plot.watered = (rain || covered[r][c]) && plot.tilled;
             }
         }
     }

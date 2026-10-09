@@ -26,6 +26,44 @@ final class Content {
         forage();
         materials();
         food();
+        placeables();
+        recipes();
+    }
+
+    private void placeables() {
+        place("buzz_waterer", "BUZZ BOMBER WATERER", PlaceableDef.Role.SPRINKLER, 1,
+                "TAILS'S REPROGRAMMED BUZZ BOMBER. WATERS THE 8 PLOTS AROUND IT.");
+        place("buzz_waterer_mk2", "BUZZ BOMBER MK II", PlaceableDef.Role.SPRINKLER, 2,
+                "WATERS TWO PLOTS OUT IN EVERY DIRECTION.");
+        place("caterkiller_crawler", "CATERKILLER CRAWLER", PlaceableDef.Role.ROW_SPRINKLER, 12,
+                "CRAWLS ITS ROW EACH MORNING, WATERING 12 PLOTS EACH SIDE.");
+        place("sonic_scarecrow", "SONIC SCARECROW", PlaceableDef.Role.SCARECROW, 4,
+                "TOTEM WOOD SONIC. BADNIKS KEEP CLEAR WITHIN 4 PLOTS.");
+        place("item_monitor", "ITEM MONITOR", PlaceableDef.Role.CHEST, 24,
+                "PUNCH IT OPEN. HOLDS 24 STACKS.");
+        place("star_post", "STAR POST", PlaceableDef.Role.CHECKPOINT, 0,
+                "YOU WAKE HERE IF YOU FAINT AWAY FROM HOME.");
+    }
+
+    private void recipes() {
+        recipe("item_monitor", 1, 50, "palm_wood", 20, "marble_chip", 10);
+        recipe("sonic_scarecrow", 1, 0, "palm_wood", 20, "fibre", 20);
+        recipe("buzz_waterer", 1, 150, "scrap", 5, "marble_chip", 10);
+        recipe("buzz_waterer_mk2", 1, 600, "scrap", 20, "buzz_waterer", 1);
+        recipe("caterkiller_crawler", 1, 2000, "scrap", 40, "buzz_waterer_mk2", 1);
+        recipe("star_post", 1, 100, "palm_wood", 10, "marble_chip", 5);
+    }
+
+    private void place(String id, String name, PlaceableDef.Role role, int reach, String text) {
+        catalog.add(new Item(id, name, Kind.PLACEABLE, 0, 0, id, text));
+        catalog.add(new PlaceableDef(id, role, reach));
+    }
+
+    private void recipe(String product, int count, int rings, String a, int na, String b, int nb) {
+        java.util.Map<String, Integer> inputs = new java.util.LinkedHashMap<>();
+        inputs.put(a, na);
+        inputs.put(b, nb);
+        catalog.add(new Recipe(product, count, rings, inputs, null));
     }
 
     private void tools() {

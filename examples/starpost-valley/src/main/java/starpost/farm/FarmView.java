@@ -13,7 +13,9 @@ import starpost.core.CropDef;
 import starpost.core.Farm;
 import starpost.core.Game;
 import starpost.core.Item;
+import starpost.core.Inventory;
 import starpost.core.Kind;
+import starpost.core.PlaceableDef;
 import starpost.core.Plot;
 import starpost.scene.Actor;
 import starpost.scene.Sfx;
@@ -71,8 +73,12 @@ public final class FarmView {
         NONE,
         SLEEP,
         SHIP,
+        CHEST,
         TO_VALLEY
     }
+
+    /** The chest opened by the last {@link Request#CHEST}. */
+    public Inventory openedChest;
 
     public FarmView(Shell shell) {
         this.shell = shell;
@@ -202,8 +208,46 @@ public final class FarmView {
             shell.sfx(Sfx.ERROR);
             return Request.NONE;
         }
+        if (plot.object != null) {
+            return useObject(game, plot, rc[0], rc[1]);
+        }
         work(game, plot, rc[0], rc[1]);
         return Request.NONE;
+    }
+
+    /** A placed object underfoot: the Fire Shield knocks it loose; otherwise it is used (chests open). */
+    private Request useObject(Game game, Plot plot, int row, int column) {
+        PlaceableDef def = game.catalog.placeable(plot.object);
+        Item held = game.inventory.selectedId() == null ? null : game.item(game.inventory.selectedId());
+        Inventory chest = def != null && def.role() == PlaceableDef.Role.CHEST ? game.farm.chest(row, column, def.reach()) : null;
+        if (held != null && held.id().equals("fire_shield")) {
+            if (chest != null && !empty(chest)) {
+                shell.toast("EMPTY THE MONITOR FIRST");
+                shell.sfx(Sfx.ERROR);
+            } else if (game.inventory.add(game.item(plot.object), 1) == 0) {
+                game.farm.chests.remove(row + "." + column);
+                plot.object = null;
+                shell.sfx(Sfx.BREAK);
+                marked(row, column);
+            }
+            return Request.NONE;
+        }
+        if (chest != null) {
+            openedChest = chest;
+            shell.sfx(Sfx.DOOR_OPEN);
+            return Request.CHEST;
+        }
+        shell.toast(game.item(plot.object).text());
+        return Request.NONE;
+    }
+
+    private static boolean empty(Inventory inventory) {
+        for (int i = 0; i < inventory.size(); i++) {
+            if (inventory.id(i) != null) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void work(Game game, Plot plot, int row, int column) {
@@ -227,6 +271,18 @@ public final class FarmView {
         }
         if (plot.cover != Plot.GRASS) {
             clearCover(game, plot, held, row, column);
+            return;
+        }
+        if (held != null && held.kind() == Kind.PLACEABLE) {
+            if (plot.crop != null) {
+                shell.toast("SOMETHING IS GROWING THERE");
+                shell.sfx(Sfx.ERROR);
+            } else {
+                plot.object = held.id();
+                game.inventory.useOne(game.inventory.selected());
+                shell.sfx(Sfx.SWITCH);
+                marked(row, column);
+            }
             return;
         }
         if (held != null && held.kind() == Kind.SEED) {
@@ -413,7 +469,7 @@ public final class FarmView {
                     break;
                 }
                 Plot plot = game.farm.raw(row, c);
-                if (plot.crop != null || plot.cover != Plot.GRASS) {
+                if (plot.crop != null || plot.cover != Plot.GRASS || plot.object != null) {
                     order.add(new float[] {ROW_Y + row * ROW_STEP - 2, 0, row, c});
                 }
             }
@@ -462,6 +518,10 @@ public final class FarmView {
         float x = FIELD_X + c * 16 - cx;
         boolean pop = lastActionRow == row && lastActionColumn == c && shell.ticks - lastActionAt < 8;
         SceneDraw style = pop ? tint.withScale(1.12f) : tint;
+        if (plot.object != null) {
+            drawObject(canvas, look, style, plot.object, x + 8, feet);
+            return;
+        }
         if (plot.crop != null) {
             CropDef crop = game.catalog.crop(plot.crop);
             int stage = crop == null ? 0 : crop.stage(plot.age);
@@ -479,6 +539,23 @@ public final class FarmView {
             }
             default -> {
             }
+        }
+    }
+
+    /** Placed objects in ROM art: Buzz Bombers hover over their plot, a Caterkiller lies along it. */
+    private void drawObject(SceneCanvas canvas, Art.Seasonal look, SceneDraw style, String id, float x, float feet) {
+        Art art = shell.art;
+        int wing = (int) (shell.ticks / 2 % 2);
+        switch (id) {
+            case "buzz_waterer" -> drawSprite(canvas, art.buzzBomber, wing, x, feet - 14, style, true);
+            case "buzz_waterer_mk2" -> drawSprite(canvas, art.buzzBomber, wing, x, feet - 14,
+                    style.withTint(0xFFFFDB49), true);
+            case "caterkiller_crawler" -> drawSprite(canvas, art.caterkiller, (int) (shell.ticks / 12 % 2), x, feet,
+                    style, false);
+            case "sonic_scarecrow" -> canvas.draw(look.totem, x - look.totem.width() / 2f, feet - look.totem.height(), style);
+            case "item_monitor" -> drawSprite(canvas, art.monitor, 0, x, feet, style, false);
+            case "star_post" -> drawSprite(canvas, art.starpost, 0, x, feet, style, false);
+            default -> canvas.fill(Math.round(x) - 4, Math.round(feet) - 8, 8, 8, 0xFFB6B6B6);
         }
     }
 
