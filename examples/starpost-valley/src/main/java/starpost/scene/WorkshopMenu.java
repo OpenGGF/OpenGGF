@@ -162,7 +162,7 @@ final class WorkshopMenu implements Screen {
             CompactFont.shadowed(canvas, cost.toString(), x + 32, ry + 13, 1, can ? 0xFF92DBFF : 0xFFFF6D6D, 0xFF000000);
         }
         if (!offers.isEmpty()) {
-            Text.shadow(canvas, offers.get(Math.min(cursor, offers.size() - 1)).text(), x + 10, y + h - 16, Text.GREY);
+            Text.note(canvas, offers.get(Math.min(cursor, offers.size() - 1)).text(), x + 10, y + h - 16, w - 20, Text.GREY);
         }
     }
 

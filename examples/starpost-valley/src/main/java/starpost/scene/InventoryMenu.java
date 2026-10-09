@@ -104,7 +104,7 @@ final class InventoryMenu implements Screen {
             Item item = game.item(inv.id(cursor));
             int ty = y + 44 + rows * slot;
             Text.shadow(canvas, item.name(), x + 10, ty, Text.YELLOW);
-            Text.shadow(canvas, item.text(), x + 10, ty + 12, Text.GREY);
+            Text.note(canvas, item.text(), x + 10, ty + 12, w - 20, Text.GREY);
         }
     }
 }

@@ -73,12 +73,12 @@ abstract class ListMenu implements Screen {
                 canvas.fill(x + 6, ry - 2, w - 12, 19, 0x60B66D24);
             }
             shell.art.icons.draw(canvas, item, x + 10, ry, SceneDraw.plain());
-            Text.shadow(canvas, item.name(), x + 32, ry + 4, i == cursor ? Text.YELLOW : Text.WHITE);
+            Text.shadow(canvas, Text.fit(canvas, item.name(), w - 120), x + 32, ry + 4, i == cursor ? Text.YELLOW : Text.WHITE);
             Text.right(canvas, right(shell, item), x + w - 10, ry + 4, Text.WHITE);
         }
         if (!rows.isEmpty()) {
             Item item = rows.get(Math.min(cursor, rows.size() - 1));
-            Text.shadow(canvas, item.text(), x + 10, y + h - 30, Text.GREY);
+            Text.note(canvas, item.text(), x + 10, y + h - 30, w - 20, Text.GREY);
         }
         Text.shadow(canvas, footer(shell), x + 10, y + h - 16, Text.BLUE);
     }

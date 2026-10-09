@@ -41,6 +41,34 @@ public final class Text {
         canvas.fill(x + w - 2, y, 2, h, EDGE_DARK);
     }
 
+    /**
+     * Shortens a name to fit a width: drops a trailing " SEEDS" first (the packet icon says it),
+     * then whole words, then letters.
+     */
+    public static String fit(SceneCanvas canvas, String text, int width) {
+        if (canvas.textWidth(text) <= width) {
+            return text;
+        }
+        String s = text.endsWith(" SEEDS") ? text.substring(0, text.length() - 6) : text;
+        while (canvas.textWidth(s) > width && s.contains(" ")) {
+            s = s.substring(0, s.lastIndexOf(' '));
+        }
+        while (canvas.textWidth(s) > width && s.length() > 1) {
+            s = s.substring(0, s.length() - 1);
+        }
+        return s;
+    }
+
+    /** One line of description: the menu font when it fits, the compact font when it does not. */
+    public static void note(SceneCanvas canvas, String text, int x, int y, int width, int argb) {
+        if (canvas.textWidth(text) <= width) {
+            shadow(canvas, text, x, y, argb);
+        } else {
+            com.openggf.mods.ui.CompactFont.shadowed(canvas, com.openggf.mods.ui.CompactFont.fit(text, width, 1),
+                    x, y + 2, 1, argb, 0xFF000000);
+        }
+    }
+
     /** Splits text into lines no wider than {@code width} pixels. */
     public static java.util.List<String> wrap(SceneCanvas canvas, String text, int width) {
         java.util.List<String> lines = new java.util.ArrayList<>();

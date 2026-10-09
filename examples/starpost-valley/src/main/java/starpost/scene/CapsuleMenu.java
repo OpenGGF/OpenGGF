@@ -25,6 +25,12 @@ final class CapsuleMenu implements Screen {
 
     @Override
     public void update(Shell shell) {
+        if (shell.game.flags.contains("egg_member")) {
+            if (shell.in.back || shell.in.confirm || shell.in.menu) {
+                shell.pop();
+            }
+            return;
+        }
         Capsule capsule = shell.game.section(Capsule.class);
         List<Capsule.Chamber> chambers = capsule.chambers(shell.catalog);
         if (shell.in.back && !inBundles || shell.in.menu && !shell.in.confirm) {
@@ -75,6 +81,12 @@ final class CapsuleMenu implements Screen {
     @Override
     public void draw(Shell shell, SceneCanvas canvas) {
         Game game = shell.game;
+        if (game.flags.contains("egg_member")) {
+            Text.panel(canvas, 60, 80, canvas.width() - 120, 50);
+            Text.centred(canvas, "THE CAPSULE IS SEALED.", 92, Text.RED);
+            Text.centred(canvas, "AN EGG PADLOCK HANGS ON THE DOOR.", 108, Text.GREY);
+            return;
+        }
         Capsule capsule = game.section(Capsule.class);
         List<Capsule.Chamber> chambers = capsule.chambers(shell.catalog);
         int w = 360, h = 190, x = (canvas.width() - w) / 2, y = 16;
