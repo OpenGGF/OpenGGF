@@ -60,7 +60,8 @@ public final class TypingHedgehogMod implements GgfMod {
             rails.put(rail.game() + ":" + rail.zone() + ":" + rail.act(), rail);
         }
         CourseAssets assets = new CourseAssets(lexicon, new Plates(font), Map.copyOf(casts), Map.copyOf(sounds),
-                Map.copyOf(props), Map.copyOf(rails));
+                Map.copyOf(props), Map.copyOf(rails),
+                Map.copyOf(typinghog.hub.model.TextArt.parse(text(context, "hub/art.txt", ""))));
         var storage = context.storage();
         // Rails are validated at the native 320-pixel view: a wider view activates objects earlier and the
         // recorded runs diverge (rails kill test, 2026-10-09).

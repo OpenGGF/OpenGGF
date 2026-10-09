@@ -390,7 +390,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
             hud.banner("OUCH!", 0xFFFF6060);
             return;
         }
-        lives--;
+        // No-Fail retries the stand without spending a life.
+        if (!intent.noFail()) lives--;
         play(Sounds.Cue.HIT);
         enter(Phase.DYING);
         hud.banner(lives > 0 || intent.noFail() ? "TOO SLOW!" : "GAME OVER", 0xFFFF4040);

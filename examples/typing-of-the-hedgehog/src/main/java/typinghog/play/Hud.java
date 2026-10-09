@@ -102,6 +102,7 @@ public final class Hud {
             drawSparks(canvas, encounter.effects(), cameraX, cameraY);
             if (encounter.bossFight() != null) drawBoss(canvas, course, encounter.bossFight(), width);
         }
+        drawBackpack(canvas, course, cameraX, cameraY);
         if (course.phase() == Course.Phase.RUN) drawRunTags(canvas, course, cameraX, cameraY);
         drawPanel(canvas, course, width);
         if (bannerRows > 0) {
@@ -153,6 +154,34 @@ public final class Hud {
                         locked && shakeRows > 0 ? (shakeRows % 2 == 0 ? 2 : -2) : 0);
                 if (locked) Plates.reticle(canvas, sx, part.visual.y - cameraY,
                         Math.max(enemy.species().halfWidth(), enemy.species().halfHeight()) + 4, presented, GOLD);
+            }
+        }
+    }
+
+    /**
+     * Sonic's keyboard backpack (the Dreamcast nod), worn on his back while he stands or runs and
+     * hidden while he is a spinning ball. Drawn as runs of fills from the shipped pixel art.
+     */
+    private void drawBackpack(PixelCanvas canvas, Course course, int cameraX, int cameraY) {
+        if (!(GameServices.camera().getFocusedSprite() instanceof com.openggf.sprites.playable.AbstractPlayableSprite sonic)) return;
+        if (sonic.getRolling() || sonic.getAir() || sonic.isHidden()) return;
+        var picture = assets.pictures().get("backpack");
+        if (picture == null) return;
+        boolean left = sonic.getDirection() == com.openggf.physics.Direction.LEFT;
+        // The hub's placement (Hero.java): behind Sonic, 7 px from his origin, 14 px above it.
+        int x = sonic.getCentreX() - cameraX + (left ? 7 : -7 - picture.width());
+        int y = sonic.getCentreY() - cameraY - 14;
+        for (int row = 0; row < picture.height(); row++) {
+            int start = 0;
+            while (start < picture.width()) {
+                int argb = picture.argb()[row * picture.width() + start];
+                int end = start + 1;
+                while (end < picture.width() && picture.argb()[row * picture.width() + end] == argb) end++;
+                if ((argb >>> 24) != 0) {
+                    int sx = left ? x + picture.width() - end : x + start;
+                    canvas.fill(sx, y + row, end - start, 1, argb);
+                }
+                start = end;
             }
         }
     }
