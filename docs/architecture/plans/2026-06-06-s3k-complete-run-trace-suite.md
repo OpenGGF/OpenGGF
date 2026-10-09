@@ -32,7 +32,7 @@ Segment N = `[zone N first level frame, zone N+1 first level frame)` — include
 | 14 | Z23 (DEZ/special) | 459510 | single | 465614 |
 | 15 | Z13 (DDZ) | 465614 | — | 466334 (END) |
 
-S3K RAM: `game_mode 0xF600` (level family = `(gm & 0xDF? )`; `0x0C/0x4C/0x8C` masked to `0x0C`), `zone 0xFE10`, `act 0xFE11`, `apparent_act 0xEE4F`, `player_mode 0xFF08`, `Game_paused 0xFFF63A` (`docs/skdisasm/s3.asm:1694` `Pause_Loop`).
+S3K RAM: `game_mode 0xF600` (level family = `(gm & 0xDF? )`; `0x0C/0x4C/0x8C` masked to `0x0C`), `zone 0xFE10`, `act 0xFE11`, `apparent_act 0xEE4F`, `player_mode 0xFF08`, `Game_paused 0xFFF63A` (`docs/skdisasm/s3.asm:1717` `Pause_Loop`).
 
 ---
 
@@ -57,7 +57,7 @@ Extension over the single-arm recorder:
 
 **Files:** the gameplay per-frame update path used by trace replay (`HeadlessTestFixture.stepFrameFromRecording` → object/physics/camera tick) and live play (`Engine`/`GameLoop`). Add a `Game_paused`-style state distinct from the existing loop-level `paused`/`userPaused`.
 
-- Model `Pause_Loop` (`docs/skdisasm/s3.asm:1694-1757`): Start press toggles in-game pause; while paused, **skip the object/physics/camera update** for the frame but still advance the frame counter and consume input; unpause on the ROM's unpause input.
+- Model `Pause_Loop` (`docs/skdisasm/s3.asm:1717-1780`): Start press toggles in-game pause; while paused, **skip the object/physics/camera update** for the frame but still advance the frame counter and consume input; unpause on the ROM's unpause input.
 - Gate on input + pausable game-state (semantic), shared across games (pause is universal in S1/S2/S3K); if the trigger/unpause differs per game, use a `PhysicsFeatureSet`/owning-boundary flag — never a frame/zone carve-out.
 - Cross-game: confirm S1/S2 trace baselines unaffected (their traces have no pause press; the path is inert unless Start is pressed during gameplay).
 

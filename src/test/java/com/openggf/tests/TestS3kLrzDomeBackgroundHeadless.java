@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The Lava Reef act 1 dome background on a real level load: {@code LRZ1_BackgroundInit}'s
- * Knuckles-only chunk (sonic3k.asm:115239-115242) and the {@code loc_56E40} lock reached from a
+ * Knuckles-only chunk (sonic3k.asm:115285-115288) and the {@code loc_56E40} lock reached from a
  * live Player 1 position.
  *
  * <p>{@code LRZ1_BackgroundInit} is called with {@code a3} on the <b>background</b> layout row

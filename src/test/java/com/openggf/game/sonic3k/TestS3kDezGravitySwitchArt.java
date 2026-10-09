@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * The art behind SKL {@code $58}, {@code Obj_DEZGravitySwitch}.
  *
- * <p>The object header (sonic3k.asm:94800-94807) names three things the engine has to
+ * <p>The object header (sonic3k.asm:94846-94853) names three things the engine has to
  * agree with before the pad can be drawn at all: {@code Map_DEZGravitySwitch} at ROM
  * {@code $48BEA} (sonic3k.lst:112040), the art tile
  * {@code make_art_tile(ArtTile_DEZMisc+$143,1,0)} — so palette line 1, based on the same

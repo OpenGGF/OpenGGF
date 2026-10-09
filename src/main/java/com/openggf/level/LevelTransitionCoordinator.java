@@ -263,21 +263,21 @@ public class LevelTransitionCoordinator {
      * table.
      *
      * <p>ROM {@code sub_EB1A} -- the rings-manager init reached from
-     * {@code loc_E8BE} (docs/skdisasm/sonic3k.asm:18232-18238) -- wipes
+     * {@code loc_E8BE} (docs/skdisasm/sonic3k.asm:18268-18274) -- wipes
      * {@code Ring_status_table} only while {@code Respawn_table_keep} is clear:
      * {@code tst.b (Respawn_table_keep).w} then {@code bne.s loc_EB30} skips
-     * the entire {@code $400}-byte clear (:18561-18570). That is the same byte
+     * the entire {@code $400}-byte clear (:18597-18606). That is the same byte
      * which preserves {@code Object_respawn_table}, so the ring status rides in
      * the same snapshot rather than forming a second notion of "keep".
      *
      * <p>The predicate is the presence of that snapshot, and deliberately not
      * {@link #isLastStarPostHitSet()}: the star-post flag gates the ROM's saved
-     * <em>position</em> restore ({@code Load_Starpost_Settings}, :61763-61836)
+     * <em>position</em> restore ({@code Load_Starpost_Settings}, :61803-61876)
      * and has no bearing on the table wipe. {@code loc_618AC} clears
      * {@code Last_star_post_hit} while still setting {@code Respawn_table_keep}
-     * (:128411-128421), so the two must not share a predicate. Nor is it keyed
+     * (:128465-128475), so the two must not share a predicate. Nor is it keyed
      * on which entry path ran: {@code loc_61892} sets the flag for the
-     * giant-ring entry (:128407-128412) and :128421 for the Super-Emerald
+     * giant-ring entry (:128461-128466) and :128475 for the Super-Emerald
      * entry.
      */
     public long[] bigRingReturnRingStatusTable() {
@@ -297,28 +297,28 @@ public class LevelTransitionCoordinator {
     /**
      * Models the ROM's {@code Last_star_post_hit} gate on the saved-position
      * restore. A level load restores a saved position only while that flag is
-     * non-zero: {@code loc_1BE46} (skdisasm/sonic3k.asm:38148-38151) tests it
+     * non-zero: {@code loc_1BE46} (skdisasm/sonic3k.asm:38188-38191) tests it
      * and, when it is zero, falls through to {@code loc_1BE5E}
-     * (sonic3k.asm:38157-38168) which reads {@code Sonic_Start_Locations}
+     * (sonic3k.asm:38197-38208) which reads {@code Sonic_Start_Locations}
      * instead. Only when it is non-zero does {@code Load_Starpost_Settings}
-     * (sonic3k.asm:61763-61836) restore {@code Saved_} or, for
+     * (sonic3k.asm:61803-61876) restore {@code Saved_} or, for
      * {@code Special_bonus_entry_flag}, {@code Saved2_}.
      * <p>
-     * {@code Save_Level_Data2} (sonic3k.asm:61735) leaves the flag alone, so it
-     * stays set here; {@code loc_618AC} (sonic3k.asm:128411-128417) writes
-     * {@code move.b #0,(Last_star_post_hit).w} at sonic3k.asm:128414 when it
+     * {@code Save_Level_Data2} (sonic3k.asm:61775) leaves the flag alone, so it
+     * stays set here; {@code loc_618AC} (sonic3k.asm:128465-128471) writes
+     * {@code move.b #0,(Last_star_post_hit).w} at sonic3k.asm:128468 when it
      * requests the Super Emerald arena restart, and the special-stage clear
      * re-sets bit 7 with {@code ori.b #$80,(Last_star_post_hit).w}
-     * (sonic3k.asm:12119-12120 and 12673-12674) for the return leg.
+     * (sonic3k.asm:12155-12156 and 12673-12674) for the return leg.
      */
     private boolean lastStarPostHitSet = true;
 
-    /** ROM {@code move.b #0,(Last_star_post_hit).w} (sonic3k.asm:128414). */
+    /** ROM {@code move.b #0,(Last_star_post_hit).w} (sonic3k.asm:128468). */
     public void clearLastStarPostHit() {
         this.lastStarPostHitSet = false;
     }
 
-    /** ROM {@code ori.b #$80,(Last_star_post_hit).w} (sonic3k.asm:12673-12674). */
+    /** ROM {@code ori.b #$80,(Last_star_post_hit).w} (sonic3k.asm:12709-12710). */
     public void setLastStarPostHit() {
         this.lastStarPostHitSet = true;
     }

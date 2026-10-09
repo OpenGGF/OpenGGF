@@ -9,7 +9,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * ROM {@code loc_460A6} (sonic3k.asm:92009-92022): the pose table both {@code Obj_SSZRotating-
+ * ROM {@code loc_460A6} (sonic3k.asm:92055-92068): the pose table both {@code Obj_SSZRotating-
  * Platform} and its carrier child use to draw a player who is being swung around a post.
  *
  * <p>The index arithmetic is {@code d0 = ((((angle + $A) & $FF) * 3) >> 5) & $FFFE} — twelve

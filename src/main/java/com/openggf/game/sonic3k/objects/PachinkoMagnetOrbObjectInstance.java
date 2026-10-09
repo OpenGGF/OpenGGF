@@ -117,13 +117,13 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
             releasePlayer(player, state, vIntRunCount, false);
             return;
         }
-        // ROM sub_4A428 (sonic3k.asm:96955-96967) runs the captured branch with no
+        // ROM sub_4A428 (sonic3k.asm:97001-97013) runs the captured branch with no
         // on-screen, camera-distance or render-flag test of any kind: once `(a2)` is
         // non-zero, the only exits are Debug_placement_mode, `routine(a1) >= 4`,
         // `object_control` bit 7, and an A/B/C press in that player's own
         // Ctrl_N_logical pressed byte (`andi.b #button_A_mask|button_B_mask|
         // button_C_mask,d1 / bne.w loc_4A4B4`). Player 2 goes through exactly the
-        // same subroutine from loc_4A408 (sonic3k.asm:96943-96949), so there is no
+        // same subroutine from loc_4A408 (sonic3k.asm:96989-96995), so there is no
         // CPU-sidekick-specific release at all. An extra "release a CPU sidekick
         // that has left the screen" gate ejects Tails as soon as the camera follows
         // Sonic away from the orb, and the loc_4A4F6 tail it then runs sets
@@ -144,7 +144,7 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
         int previousX = player.getCentreX();
         int previousY = player.getCentreY();
         placePlayerOnOrbit(player, state);
-        // ROM sub_4A428 loc_4A464 (sonic3k.asm:96974-96989): saves the OLD x_pos/y_pos,
+        // ROM sub_4A428 loc_4A464 (sonic3k.asm:97020-97035): saves the OLD x_pos/y_pos,
         // recomputes the new orbit position via sub_4A5E0, then computes
         // `sub.w x_pos(a1),d1` (old-new) followed by `asl.w #8,d1` and `neg.w d1`,
         // yielding x_vel = -(old-new)<<8 = (new-old)<<8 -- i.e. plain per-frame
@@ -176,19 +176,19 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0x0800);
-        // ROM sub_4A428 loc_4A5AA (sonic3k.asm:97086-97097) writes ground_vel,
+        // ROM sub_4A428 loc_4A5AA (sonic3k.asm:97132-97143) writes ground_vel,
         // render_flags, anim and `move.b #1,object_control(a1)` -- it never
         // touches Ctrl_1_locked/Ctrl_2_locked. Setting the engine's control lock
         // here latched logicalInputState (Obj01_Control's Ctrl_1_locked
-        // short-circuit, sonic3k.asm:21968-21971), so the frozen word was what
-        // Sonic_RecordPos (sonic3k.asm:22132) stored into Stat_table. ROM copies
+        // short-circuit, sonic3k.asm:22004-22007), so the frozen word was what
+        // Sonic_RecordPos (sonic3k.asm:22168) stored into Stat_table. ROM copies
         // Ctrl_1 -> Ctrl_1_logical BEFORE the `btst #0,object_control(a0)` test at
-        // sonic3k.asm:21973, so a captured player still records live pad state and
+        // sonic3k.asm:22009, so a captured player still records live pad state and
         // the sidekick's $44-back Stat_table read (loc_13DA6/loc_13DD0,
-        // sonic3k.asm:26682-26700) sees the release press on the correct frame.
-        // ROM sub_4A428 loc_4A5AA (sonic3k.asm:97091): `move.b #1,object_control(a1)`
+        // sonic3k.asm:26722-26740) sees the release press on the correct frame.
+        // ROM sub_4A428 loc_4A5AA (sonic3k.asm:97137): `move.b #1,object_control(a1)`
         // sets ONLY bit 0 (movement-suppress) of object_control, not bit 7. The
-        // Sonic_Control dispatcher's own TouchResponse gate (sonic3k.asm:22019-22022:
+        // Sonic_Control dispatcher's own TouchResponse gate (sonic3k.asm:22055-22058:
         // `move.b object_control(a0),d0 / andi.b #$A0,d0 / bne.s locret_10C8E / jsr
         // (TouchResponse).l`) only skips TouchResponse (which runs BOTH
         // Test_Ring_Collisions/GiveRing and the general Touch_Loop) when bits 5 or 7
@@ -209,7 +209,7 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
 
     private void placePlayerOnOrbit(AbstractPlayableSprite player, PlayerState state) {
         int radius = (TrigLookupTable.cosHex(state.angleA & 0xFF) * ORBIT_RADIUS_SCALE) >> 16;
-        // ROM sub_4A5E0 (sonic3k.asm:97103-97119): computes the X term as
+        // ROM sub_4A5E0 (sonic3k.asm:97149-97165): computes the X term as
         // `moveq #0,d2 / ... / sub.l d5,d2 / asr.l #8,d2` -- i.e. it NEGATES the
         // full-precision product (radius*sin(angleB)) first and THEN applies the
         // arithmetic shift, giving asr(-P, 8). The Y term has no negation:
@@ -248,13 +248,13 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
             player.setYSpeed((short) yVelocity);
         }
 
-        // ROM loc_4A4F0/loc_4A4F6 (sonic3k.asm:97024-97042) clears object_control
+        // ROM loc_4A4F0/loc_4A4F6 (sonic3k.asm:97070-97088) clears object_control
         // bits 0-1 only; there is no Ctrl_1_locked write to undo here either.
         player.releaseFromObjectControl(frameCounter);
         player.setAir(true);
         player.setOnObject(false);
         if (!player.getRolling()) {
-            // ROM loc_4A4F6 (sonic3k.asm:97029-97042) asserts y_radius=$E, x_radius=7
+            // ROM loc_4A4F6 (sonic3k.asm:97075-97088) asserts y_radius=$E, x_radius=7
             // and the Status_Roll bit as direct writes with NO y_pos modification --
             // unlike Sonic_Roll's feet-planted `addq.w #5,y_pos`, the magnet-orb
             // release keeps the player's centre (y_pos) fixed while the collision box

@@ -44,7 +44,7 @@ public class CheckpointState implements RespawnState {
     // survives a death respawn and a special-stage detour.
     //   S2  save  docs/s2disasm/s2.asm:44743
     //   S1  save  docs/s1disasm/_incObj/79 Lamppost.asm:158
-    //   S3K save  docs/skdisasm/sonic3k.asm:61721 (and Saved2 at :61745)
+    //   S3K save  docs/skdisasm/sonic3k.asm:61761 (and Saved2 at :61785)
     private long savedTimerFrames;
     private boolean hasSavedTimer;
     private int savedRings;
@@ -143,7 +143,7 @@ public class CheckpointState implements RespawnState {
      * ROM {@code move.l (Timer).w,(Saved_Timer).w} at the star post's save
      * routine -- S2 docs/s2disasm/s2.asm:44743,
      * S1 docs/s1disasm/_incObj/79 Lamppost.asm:158,
-     * S3K docs/skdisasm/sonic3k.asm:61721. All three games bank the running act
+     * S3K docs/skdisasm/sonic3k.asm:61761. All three games bank the running act
      * timer alongside position, rings and camera.
      */
     private void saveActTimerIfPresent() {
@@ -171,8 +171,8 @@ public class CheckpointState implements RespawnState {
      *
      * S2 {@code Obj79_LoadData} docs/s2disasm/s2.asm:44783-44785,
      * S1 docs/s1disasm/_incObj/79 Lamppost.asm:193-195,
-     * S3K docs/skdisasm/sonic3k.asm:61776-61778 (and the Saved2 big-ring path
-     * at :61803-61805).
+     * S3K docs/skdisasm/sonic3k.asm:61816-61818 (and the Saved2 big-ring path
+     * at :61843-61845).
      *
      * <p>{@code Timer} is minute/second/frame with {@code Timer_frame} counting
      * UP and rolling at 60 in {@code HudUpdate} (docs/s2disasm/s2.asm:87775-87786),
@@ -293,7 +293,7 @@ public class CheckpointState implements RespawnState {
             //       "subi.w #320/2,d1" / "subi.w #$60,d0" clamped tail
             //       (_inc/LevelSizeLoad & BgScrollSpeed.asm:79-146).
             //   S3K the same "subi.w #$A0,d1 / subi.w #$60,d0" clamped tail
-            //       (sonic3k.asm:38244-38266).
+            //       (sonic3k.asm:38284-38306).
             //
             // Camera.updatePosition(true) IS that formula (see its comment), and
             // the level re-init on this path has already applied it from the

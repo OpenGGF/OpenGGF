@@ -174,7 +174,7 @@ class TestSonic3kSpringObjectInstance {
 
         assertEquals(SolidRoutineKind.FULL_SOLID, verticalProfile.kind());
         // ROM SolidObject_cont uses an inclusive right edge for every Obj_Spring
-        // variant (cmp.w d3,d0 / bhi.w, sonic3k.asm:41394-41401), not only the
+        // variant (cmp.w d3,d0 / bhi.w, sonic3k.asm:41434-41441), not only the
         // horizontal one. AIZ1 CPU-Tails f4234 proved the vertical spring keeps
         // SolidObject side-contact/Status_Push alive when Tails' centre sits on
         // the spring's exact right edge.
@@ -188,7 +188,7 @@ class TestSonic3kSpringObjectInstance {
     @Test
     void nativeInitExecutionDoesNotRunHorizontalSpringRoutineUntilNextFrame() {
         // Obj_Spring rewrites (a0) to Obj_Spring_Horizontal through Spring_Common
-        // and returns (sonic3k.asm:47500-47652). The horizontal routine therefore
+        // and returns (sonic3k.asm:47540-47692). The horizontal routine therefore
         // cannot execute SolidObjectFull2_1P/sub_2326C until the next object pass.
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x14B8, 0x0770, Sonic3kObjectIds.SPRING, 0x10, 1, false, 0));
@@ -465,7 +465,7 @@ class TestSonic3kSpringObjectInstance {
 
         // Every Obj_Spring variant resolves solidity through SolidObjectFull2_1P
         // -> SolidObject_cont, whose x-window rejects only with bhi (d0 > d1*2),
-        // making the right edge inclusive (sonic3k.asm:41394-41401). AIZ1 f4234.
+        // making the right edge inclusive (sonic3k.asm:41434-41441). AIZ1 f4234.
         assertEquals(true, horizontal.usesInclusiveRightEdge(),
                 "Obj_Spring_Horizontal uses SolidObjectFull2_1P, whose x-window rejects with bhi");
         assertEquals(true, vertical.usesInclusiveRightEdge(),
@@ -637,14 +637,14 @@ class TestSonic3kSpringObjectInstance {
 
     @Test
     void upSpringRestoresControlAndClearsStatusOnObjAfterSettingAir() throws Exception {
-        // ROM cite: sub_22F98 (sonic3k.asm:47723-47724)
+        // ROM cite: sub_22F98 (sonic3k.asm:47763-47764)
         //   bset #1,status(a1)   ; Status_InAir
         //   bclr #3,status(a1)   ; Status_OnObj
         // SolidObjectFull2_1P just landed the player on the spring (set OnObj=1);
         // the trigger sub immediately clears it as the player launches off.
         // Without this clear, OnObj remains true into subsequent frames where
         // ROM has it cleared (causes mid-frame Tails CPU follow-steering bias
-        // at loc_13DA6 / sonic3k.asm:26690).
+        // at loc_13DA6 / sonic3k.asm:26730).
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x00, 0, false, 0));
         spring.setServices(new TestObjectServices().withGameState(new GameStateManager())
@@ -669,7 +669,7 @@ class TestSonic3kSpringObjectInstance {
 
     @Test
     void downSpringRestoresControlAndClearsStatusOnObjAfterSettingAir() throws Exception {
-        // ROM cite: sub_233CA (sonic3k.asm:48139-48140)
+        // ROM cite: sub_233CA (sonic3k.asm:48179-48180)
         //   bset #Status_InAir,status(a1)
         //   bclr #Status_OnObj,status(a1)
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
@@ -695,7 +695,7 @@ class TestSonic3kSpringObjectInstance {
 
     @Test
     void upDiagonalSpringRestoresControlAndClearsStatusOnObjAfterSettingAir() throws Exception {
-        // ROM cite: sub_234E6 (sonic3k.asm:48213-48214)
+        // ROM cite: sub_234E6 (sonic3k.asm:48253-48254)
         //   bset #Status_InAir,status(a1)
         //   bclr #Status_OnObj,status(a1)
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
@@ -722,7 +722,7 @@ class TestSonic3kSpringObjectInstance {
 
     @Test
     void downDiagonalSpringRestoresControlWhenLaunchingHurtPlayer() throws Exception {
-        // ROM cite: sub_23624 (sonic3k.asm:48306-48310) mirrors the
+        // ROM cite: sub_23624 (sonic3k.asm:48346-48350) mirrors the
         // up-diagonal tail's Status_InAir/routine=2 transition.
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x40, 0, false, 0));

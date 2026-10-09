@@ -14,10 +14,10 @@ import java.util.List;
 
 /**
  * The ring that flashes round a Lava Reef miniboss hand when the hand is hit:
- * {@code ChildObjDat_78D98} -> {@code loc_78A28} (sonic3k.asm:160467-160472), created by
+ * {@code ChildObjDat_78D98} -> {@code loc_78A28} (sonic3k.asm:160543-160548), created by
  * {@code sub_78CF4} on the frame the hit lands.
  *
- * <p>{@code loc_78A46} (sonic3k.asm:160474-160484) is the whole of its life: {@code Obj_Wait} over
+ * <p>{@code loc_78A46} (sonic3k.asm:160550-160560) is the whole of its life: {@code Obj_Wait} over
  * {@code $2E = $1F} towards {@code Go_Delete_Sprite}, then copy {@code parent3}'s {@code x_pos}
  * and {@code y_pos} -- so it rides the hand rather than the frame it was born on -- and then one
  * test: if {@code parent3}'s {@code status} bit 7 is set, the hand has been destroyed and the ring

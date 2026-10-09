@@ -7,9 +7,9 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 /**
  * Sonic 3 &amp; Knuckles Death Egg ({@code $B00}, {@code $B01}) screen and background events:
  * {@code DEZ1_ScreenEvent}, {@code DEZ2_ScreenInit} and {@code DEZ2_ScreenEvent}
- * (sonic3k.asm:118623-118735). <b>Not</b> Sonic 2's Death Egg.
+ * (sonic3k.asm:118669-118781). <b>Not</b> Sonic 2's Death Egg.
  *
- * <p>{@code ScreenEvents} (:102233) enters the foreground handler with
+ * <p>{@code ScreenEvents} (:102279) enters the foreground handler with
  * {@code a3 = Level_layout_main}, whose first {@code $40} words are line pointers with the
  * foreground and background rows interleaved (constants.asm:288): foreground row {@code n} is at
  * offset {@code 4n}, background row {@code n} at {@code 4n + 2}. That is how the three offsets

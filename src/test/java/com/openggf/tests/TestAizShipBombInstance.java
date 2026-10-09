@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestAizShipBombInstance {
 
     private static final int BOMB_SCRIPT_X = 0x3F5C;
-    /** ROM AIZShipBomb_ReadyDrop: `addq.w #2,$30(a0)` (sonic3k.asm:105392). */
+    /** ROM AIZShipBomb_ReadyDrop: `addq.w #2,$30(a0)` (sonic3k.asm:105438). */
     private static final int READY_DROP_STEP = 2;
     private static final int PORT_START_Y = 0x0A60;
     private static final int PORT_READY_Y = 0x0A80;
@@ -43,8 +43,8 @@ public class TestAizShipBombInstance {
 
         // Obj_AIZShipBomb's init ends at `move.w #6,$32(a0)` and the very next
         // line is the label Obj_AIZShipBombMain, with no rts between them
-        // (docs/skdisasm/sonic3k.asm:105367-105379). Main dispatches routine 0
-        // straight into AIZShipBomb_ReadyDrop (:105384, :105391), whose first
+        // (docs/skdisasm/sonic3k.asm:105413-105425). Main dispatches routine 0
+        // straight into AIZShipBomb_ReadyDrop (:105430, :105437), whose first
         // instruction is `addq.w #2,$30(a0)`. The ship allocates the bomb with
         // AllocateObjectAfterCurrent, so its slot is still ahead of the object
         // pass and it runs on its creation frame -- init AND one ReadyDrop step.
@@ -115,7 +115,7 @@ public class TestAizShipBombInstance {
                         baseSecondaryY));
 
         // AIZ2SE_ShipRefresh takes the ship's slot with plain AllocateObject,
-        // not AllocateObjectAfterCurrent (docs/skdisasm/sonic3k.asm:104917-104928),
+        // not AllocateObjectAfterCurrent (docs/skdisasm/sonic3k.asm:104963-104974),
         // so the pass that creates it need not reach it -- and in the recorded
         // run it does not. The first call is therefore that unused creation
         // pass; it must do nothing at all.
@@ -164,7 +164,7 @@ public class TestAizShipBombInstance {
 
     @Test
     public void testExplosionFragmentCollidableWindowMatchesRomTiming() {
-        // ROM Obj_AIZBombExplosion (sonic3k.asm:105471) waits delay+1 frames
+        // ROM Obj_AIZBombExplosion (sonic3k.asm:105517) waits delay+1 frames
         // (`subq.w #1,$2E(a0) / bmi`), then falls through to loc_505E4 and
         // animates on that same frame. Ani_AIZ2BombExplode_Script0 is
         // 1,3 2,4 3,5 4,5 5,5 and Animate_SpriteIrregularDelay's

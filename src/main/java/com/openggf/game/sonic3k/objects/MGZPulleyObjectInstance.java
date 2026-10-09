@@ -27,7 +27,7 @@ import java.util.Map;
 /**
  * Object 0x5A - MGZ Pulley.
  *
- * <p>ROM: {@code Obj_MGZPulley} (sonic3k.asm:71117-71473).
+ * <p>ROM: {@code Obj_MGZPulley} (sonic3k.asm:71157-71513).
  * The parent object renders the pulley wheel while a child multisprite renders
  * the hanging chain. Players are captured by proximity at the pulley handle,
  * the extension retracts while anyone is hanging, and jump releases the player
@@ -190,7 +190,7 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         // $39(a0) byte independently tracks P2.  Therefore a P2-only rider
         // does not hold the pulley retracted: loc_34900 takes the ordinary
         // target-extension path while sub_349A2 still carries P2 at the moving
-        // handle (sonic3k.asm:71178-71224,71242-71345).
+        // handle (sonic3k.asm:71218-71264,71282-71385).
         boolean primaryPlayerGrabbed = grabbed[0];
 
         if (!primaryPlayerGrabbed) {
@@ -442,7 +442,7 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
     private boolean isPlayerOffScreen(AbstractPlayableSprite player) {
         // ROM sub_349BA consumes the sign bit already published in the
         // playable's render_flags byte, not a fresh point-in-camera test
-        // (sonic3k.asm:71246-71249). BuildSprites keeps a player visible across
+        // (sonic3k.asm:71286-71289). BuildSprites keeps a player visible across
         // its width/height margin, which matters while a pulley carries P2
         // just below the nominal 224px viewport.
         if (player.hasRenderFlagOnScreenState()) {

@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code loc_78AA8} and the two camera releases behind it (sonic3k.asm:160505-160545).
+ * {@code loc_78AA8} and the two camera releases behind it (sonic3k.asm:160581-160621).
  *
  * <p>The ordering is the whole point. Nothing happens until {@code End_of_level_flag} is set,
  * which in Lava Reef is after the seamless act change, so both thresholds are read against act 2's
@@ -97,7 +97,7 @@ class TestLrzPostDefeatCameraRelease {
                 .toList();
     }
 
-    /** {@code tst.b (End_of_level_flag).w / beq.w locret_78536} (sonic3k.asm:160506-160507). */
+    /** {@code tst.b (End_of_level_flag).w / beq.w locret_78536} (sonic3k.asm:160582-160583). */
     @Test
     void theWaiterDoesNothingAndAllocatesNothingUntilTheLevelHasEnded() {
         LrzPostDefeatCameraReleaseInstance waiter = waiter();
@@ -143,7 +143,7 @@ class TestLrzPostDefeatCameraRelease {
     }
 
     /**
-     * {@code loc_78B08} (sonic3k.asm:160536-160539): the sibling is the one that fires first,
+     * {@code loc_78B08} (sonic3k.asm:160612-160615): the sibling is the one that fires first,
      * because {@code $2C0} is the nearer threshold, and it is the one that carries act 2's
      * palette.
      */

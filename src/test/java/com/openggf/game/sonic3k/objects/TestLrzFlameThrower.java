@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_LRZFlameThrower} (sonic3k.asm:89227-89448), its two variants and the flame at
+ * {@code Obj_LRZFlameThrower} (sonic3k.asm:89273-89494), its two variants and the flame at
  * {@code loc_44048}.
  *
  * <p>Every expectation is computed from the ROM's own immediates and the ROM's own sine table
@@ -28,7 +28,7 @@ class TestLrzFlameThrower {
 
     private static final int X = 0x0400;
     private static final int Y = 0x0500;
-    /** {@code move.w #2*60,$30(a0)} (sonic3k.asm:89241). */
+    /** {@code move.w #2*60,$30(a0)} (sonic3k.asm:89287). */
     private static final int FIRING_FRAMES = 120;
 
     private TestObjectServices services;
@@ -37,7 +37,7 @@ class TestLrzFlameThrower {
     void setUp() {
         TestEnvironment.resetAll();
         SessionManager.clear();
-        // tst.b render_flags(a0) / bpl (sonic3k.asm:89297) skips the allocation while the
+        // tst.b render_flags(a0) / bpl (sonic3k.asm:89343) skips the allocation while the
         // thrower is off screen, and isWithinSolidContactBounds() is the engine's model of that
         // bit, so the camera has to be looking at it for any flame to exist.
         com.openggf.camera.Camera camera = TestEnvironment.activeGameplayMode().getCamera();
@@ -58,7 +58,7 @@ class TestLrzFlameThrower {
         return object;
     }
 
-    /** {@code bpl.s loc_43DC4} (sonic3k.asm:89235) and the two {@code $32} seeds. */
+    /** {@code bpl.s loc_43DC4} (sonic3k.asm:89281) and the two {@code $32} seeds. */
     @Test
     void subtypeBitSevenPicksTheVariantAndTheRestIsTheIdleLength() {
         LrzFlameThrowerObjectInstance horizontal = thrower(0x13, false);
@@ -74,14 +74,14 @@ class TestLrzFlameThrower {
 
         assertEquals(FIRING_FRAMES, horizontal.phaseTimer(), "move.w #2*60,$30(a0)");
         assertFalse(horizontal.isIdle(), "a cleared slot starts at $2F = 0, firing");
-        // The solid widths differ and the heights do not (sonic3k.asm:89333-89335, :89428-89430).
+        // The solid widths differ and the heights do not (sonic3k.asm:89379-89381, :89474-89476).
         assertEquals(0x23, horizontal.getSolidParams().halfWidth());
         assertEquals(0x1B, vertical.getSolidParams().halfWidth());
         assertEquals(horizontal.getSolidParams().airHalfHeight(), vertical.getSolidParams().airHalfHeight());
     }
 
     /**
-     * The phase machine at {@code loc_43DDC} (sonic3k.asm:89257-89274): {@code 2*60} firing, then
+     * The phase machine at {@code loc_43DDC} (sonic3k.asm:89303-89320): {@code 2*60} firing, then
      * {@code $32} idle, then {@code 2*60} again. The counts are the ROM's {@code subq.w}/{@code bpl}
      * semantics, so each phase ends on the frame the counter goes negative.
      */
@@ -109,7 +109,7 @@ class TestLrzFlameThrower {
     }
 
     /**
-     * {@code andi.b #3,d0} on {@code Level_frame_counter+1} (sonic3k.asm:89283-89285). Only every
+     * {@code andi.b #3,d0} on {@code Level_frame_counter+1} (sonic3k.asm:89329-89331). Only every
      * fourth level frame reaches {@code loc_43E4E}, and {@code angle} steps {@code 8} there.
      */
     @Test
@@ -129,7 +129,7 @@ class TestLrzFlameThrower {
     }
 
     /**
-     * The allocation block (sonic3k.asm:89292-89320). {@code $2E = sin(angle) asr 4} for the angle
+     * The allocation block (sonic3k.asm:89338-89366). {@code $2E = sin(angle) asr 4} for the angle
      * <em>before</em> the step, and the flame leaves at {@code cos($2E) asl 2} horizontally with
      * {@code sin($2E) asl 2} vertically, from {@code x_pos + $10}.
      */
@@ -155,7 +155,7 @@ class TestLrzFlameThrower {
     }
 
     /**
-     * {@code btst #0,status(a0)} (sonic3k.asm:89311-89314): the mirrored placement negates
+     * {@code btst #0,status(a0)} (sonic3k.asm:89357-89360): the mirrored placement negates
      * {@code x_vel} and moves the flame {@code $20} back, so the jet leaves the other side.
      */
     @Test
@@ -173,7 +173,7 @@ class TestLrzFlameThrower {
 
     /**
      * The vertical variant swaps which trig term drives which axis and offsets in {@code y}
-     * instead (sonic3k.asm:89401-89426).
+     * instead (sonic3k.asm:89447-89472).
      */
     @Test
     void theVerticalFlameSwapsTheAxes() {
@@ -192,7 +192,7 @@ class TestLrzFlameThrower {
     }
 
     /**
-     * {@code loc_44048} (sonic3k.asm:89434-89448). {@code $24} seeded at 8 steps
+     * {@code loc_44048} (sonic3k.asm:89480-89494). {@code $24} seeded at 8 steps
      * {@code mapping_frame} by two, and the step that reaches {@code 6} deletes the flame: the
      * first step lands on the ninth dispatch and each later one eight after, because the step
      * reloads {@code 7}.
@@ -223,7 +223,7 @@ class TestLrzFlameThrower {
                 "cmpi.b #6,mapping_frame(a0) / bhs.s loc_44084 (sonic3k.asm:89438-89439)");
     }
 
-    /** {@code jsr (MoveSprite2)} with no gravity term (sonic3k.asm:89444). */
+    /** {@code jsr (MoveSprite2)} with no gravity term (sonic3k.asm:89490). */
     @Test
     void theFlameCarriesItsVelocityWithNoGravity() {
         LrzFlameObjectInstance flame = new LrzFlameObjectInstance(X, Y, 0x200, -0x100, 0, 2,

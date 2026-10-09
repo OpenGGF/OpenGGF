@@ -149,7 +149,7 @@ public interface TitleCardProvider {
      * its lifetime still run: {@link #beginOmittedPresentationExitTail} models
      * the tail, and {@link #beginOmittedFreshLevelOwner} models the entry art
      * {@code Obj_TitleCardInit} queues on the object's first dispatch
-     * (docs/skdisasm/sonic3k.asm:62108-62164). The entry half runs only for a
+     * (docs/skdisasm/sonic3k.asm:62148-62204). The entry half runs only for a
      * load that owns the destination's fresh runtime art — a host-placed level
      * entry never reached the game's own {@code Level:} routine and so
      * installed no owner to queue it.
@@ -171,7 +171,7 @@ public interface TitleCardProvider {
      *
      * <p>Omitting the presentation does not delete the owner. S3K installs
      * {@code Obj_TitleCard} in slot 5 and runs the locked loop
-     * {@code loc_62CC} (docs/skdisasm/sonic3k.asm:7735-7748) until the object
+     * {@code loc_62CC} (docs/skdisasm/sonic3k.asm:7767-7780) until the object
      * clears {@code objoff_48}; every iteration of that loop is one V-int, so
      * the owner is dispatched once per recorded row whether or not anything is
      * drawn.
@@ -326,7 +326,7 @@ public interface TitleCardProvider {
      *
      * <p>Sonic 3 &amp; Knuckles has no such gate: {@code Process_Sprites} always
      * walks the whole {@code Object_RAM}, including {@code Level_object_RAM}
-     * (docs/skdisasm/sonic3k.asm:35963-35976, sonic3k.constants.asm:309).
+     * (docs/skdisasm/sonic3k.asm:36003-36016, sonic3k.constants.asm:316).
      * Sonic 1 has no level-only fixed slot family at all.
      */
     default boolean shouldRunLevelOnlyFixedSlotsDuringLockedPhase() {

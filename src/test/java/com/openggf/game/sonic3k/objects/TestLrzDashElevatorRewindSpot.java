@@ -38,7 +38,7 @@ class TestLrzDashElevatorRewindSpot {
 
     private static final int OBJECT_X = 0x1000;
     private static final int BASE_Y = 0x0600;
-    /** {@code (subtype & $7F) * 8}: a {@code $100}-pixel shaft (sonic3k.asm:88391-88393). */
+    /** {@code (subtype & $7F) * 8}: a {@code $100}-pixel shaft (sonic3k.asm:88437-88439). */
     private static final int SUBTYPE = 0x20;
     private static final ObjectSpawn SPAWN = new ObjectSpawn(
             OBJECT_X, BASE_Y, Sonic3kObjectIds.LBZ_SPIN_LAUNCHER, SUBTYPE, 0, false, 0);
@@ -137,7 +137,7 @@ class TestLrzDashElevatorRewindSpot {
 
     // ----- harness ------------------------------------------------------------------------------
 
-    /** {@code Obj_LRZDashElevator} latches a rider only while its {@code anim} is 9 (:88415). */
+    /** {@code Obj_LRZDashElevator} latches a rider only while its {@code anim} is 9 (:88461). */
     private static void latch(LrzDashElevatorObjectInstance elevator, TestablePlayableSprite player) {
         player.setAirForTest(false);
         player.setAnimationId(Sonic3kAnimationIds.SPINDASH.id());

@@ -30,7 +30,7 @@ import java.util.List;
 /**
  * Object 0xB3 - ICZ segmented column.
  *
- * <p>ROM reference: {@code Obj_ICZSegmentColumn} (sonic3k.asm:188694-188873).
+ * <p>ROM reference: {@code Obj_ICZSegmentColumn} (sonic3k.asm:188787-188966).
  * The visible/solid pieces are child objects produced by
  * {@code CreateChild8_TreeListRepeated}; the root object only owns the cascade.
  */
@@ -362,13 +362,13 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
         @Override
         public int getBalanceWidthPixels() {
             // ROM width_pixels byte for the segment, written by SetUp_ObjAttributes3 from
-            // word_8ACEE (docs/skdisasm/sonic3k.asm:188863-188864: dc.w $280 / dc.b $20,$10,$A,0;
-            // field order at :176907-176912). Verified in the ROM image at 0x8ACEE:
+            // word_8ACEE (docs/skdisasm/sonic3k.asm:188956-188957: dc.w $280 / dc.b $20,$10,$A,0;
+            // field order at :176998-177003). Verified in the ROM image at 0x8ACEE:
             // 02 80 20 10 0A 00.
             //
-            // Deliberately NOT the SolidObjectFull d1 ($2B, sub_8AC70 at :188811-188815): the
+            // Deliberately NOT the SolidObjectFull d1 ($2B, sub_8AC70 at :188904-188908): the
             // on-object balance test reads width_pixels(a1), not the solid half-width. Sonic's
-            // Sonic_Move (:22460-22473) and Tails' Tails_InputAcceleration_Path (:27820-27831)
+            // Sonic_Move (:22495-22508) and Tails' Tails_InputAcceleration_Path (:27860-27871)
             // both compute d1 = width_pixels(a1) + x_pos(a0) - x_pos(a1) and compare it against
             // d2 = 2*width_pixels - shift, so the shared 16px default balances the rider on the
             // wrong edge of this 32px-wide column.
@@ -414,7 +414,7 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
         @Override
         public int romObjectCodePointerHighWord() {
             // Obj_ICZSegmentColumn child segments install loc_8ABB0 in word 0
-            // (docs/skdisasm/sonic3k.asm:188708-188731); S3K Tails CPU
+            // (docs/skdisasm/sonic3k.asm:188801-188824); S3K Tails CPU
             // stores that high word in Tails_CPU_interact.
             return ROM_CODE_POINTER_HIGH_WORD;
         }

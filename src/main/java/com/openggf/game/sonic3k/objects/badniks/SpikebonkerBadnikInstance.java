@@ -20,29 +20,29 @@ import com.openggf.physics.SwingMotion;
 import java.util.List;
 
 /**
- * S3K SKL Obj {@code $A4} — Spikebonker ({@code Obj_Spikebonker}, sonic3k.asm:198893-199124).
+ * S3K SKL Obj {@code $A4} — Spikebonker ({@code Obj_Spikebonker}, sonic3k.asm:199000-199231).
  *
  * <p>Death Egg's mace robot: 7 act 1 and 11 act 2 placements. It hovers on a vertical swing,
  * patrols back and forth, and when a player comes within {@code $60} px <em>on the side it is
  * walking toward</em> it stops and slams its mace.
  *
  * <p><b>It is three objects.</b> The body carries the destructible enemy hitbox
- * ({@code ObjDat_Spikebonker}, :199117-199120: priority {@code $280}, {@code $10} x {@code $14},
+ * ({@code ObjDat_Spikebonker}, :199224-199227: priority {@code $280}, {@code $10} x {@code $14},
  * frame 0, collision flags {@code $1A}). A pivot child hangs {@code $14} px below it, and the
- * mace head hangs off that with its own attributes ({@code word_91C26}, :199121-199123: priority
+ * mace head hangs off that with its own attributes ({@code word_91C26}, :199228-199230: priority
  * {@code $200}, {@code $10} x {@code $10}, frame 1, collision flags {@code $9A} — bit 7 set, so
  * the mace hurts and cannot be broken). Destroying the badnik means hitting the body.
  *
  * <p><b>The patrol is an {@code Obj_Wait} countdown, and its two phases differ.</b> Init stores
  * {@code subtype - 1} in {@code $2E(a0)} and {@code subtype * 2 - 1} in {@code $3A(a0)}
- * (:198912-198918); {@code Obj_Wait} decrements {@code $2E} and calls {@code loc_91AB0} when it
+ * (:199019-199025); {@code Obj_Wait} decrements {@code $2E} and calls {@code loc_91AB0} when it
  * goes negative, which negates {@code x_vel}, flips {@code render_flags} bit 0 and reloads
  * {@code $2E} from {@code $3A}. So the first leg is {@code subtype} frames from the placement and
  * every leg after it is {@code subtype * 2} — the badnik starts at one end of its beat, not in
  * the middle of it.
  *
  * <p><b>The mace's swing is horizontal, not circular.</b> {@code MoveSprite_AngleXLookupOffset}
- * (:178670-178713) reads {@code AngleLookup_1}, whose 64 entries run 0 to {@code $C}, mirrors it
+ * (:178761-178804) reads {@code AngleLookup_1}, whose 64 entries run 0 to {@code $C}, mirrors it
  * through the angle's top two bits, and writes the result into the mace's <em>X</em> only; its Y
  * is the pivot's. The whole assembly's vertical motion is the body's own
  * {@code Swing_UpAndDown}.
@@ -50,25 +50,25 @@ import java.util.List;
 public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
         implements SpawnRewindRecreatable {
 
-    /** {@code ObjDat_Spikebonker} collision flags (:199120). */
+    /** {@code ObjDat_Spikebonker} collision flags (:199227). */
     private static final int COLLISION_SIZE_INDEX = 0x1A;
-    /** {@code dc.w $280} (:199119): bucket 5. */
+    /** {@code dc.w $280} (:199226): bucket 5. */
     private static final int PRIORITY_BUCKET = 5;
-    /** {@code dc.b $10,$14} (:199120): width_pixels and height_pixels. */
+    /** {@code dc.b $10,$14} (:199227): width_pixels and height_pixels. */
     private static final int RENDER_HALF_WIDTH = 0x10;
     private static final int RENDER_HALF_HEIGHT = 0x14;
     private static final int WAIT_OFFSCREEN_MARGIN = 0x20;
 
-    /** {@code move.w #-$80,d0} (:198908), negated for a {@code render_flags} bit 0 placement. */
+    /** {@code move.w #-$80,d0} (:199015), negated for a {@code render_flags} bit 0 placement. */
     private static final int WALK_SPEED = 0x80;
-    /** {@code move.w #$40,d0 / move.w d0,$3E(a0) / move.w d0,y_vel(a0)} (:198926-198928). */
+    /** {@code move.w #$40,d0 / move.w d0,$3E(a0) / move.w d0,y_vel(a0)} (:199033-199035). */
     private static final int SWING_PEAK = 0x40;
-    /** {@code move.w #4,$40(a0)} (:198929). */
+    /** {@code move.w #4,$40(a0)} (:199036). */
     private static final int SWING_ACCELERATION = 4;
-    /** {@code cmpi.w #$60,d2 / bhs.s loc_91A88} (:198936-198937). */
+    /** {@code cmpi.w #$60,d2 / bhs.s loc_91A88} (:199043-199044). */
     private static final int DETECT_RANGE = 0x60;
 
-    /** Body routine index {@code Spikebonker_Index} (:198901-198903). */
+    /** Body routine index {@code Spikebonker_Index} (:199008-199010). */
     private enum Routine { INIT, PATROL, BONKING }
 
     private Routine routine = Routine.INIT;
@@ -98,7 +98,7 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
         if (isDestroyed()) {
             return;
         }
-        // Obj_WaitOffscreen (:198894): the whole object is parked until it has been drawn.
+        // Obj_WaitOffscreen (:199001): the whole object is parked until it has been drawn.
         if (waitingForOnscreen) {
             if (placeholderRenderedOnscreen) {
                 waitingForOnscreen = false;
@@ -111,7 +111,7 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
             case INIT -> init();
             case PATROL -> patrol(playerEntity);
             case BONKING -> {
-                // loc_91AC2 (:198969-198973): nothing happens until the mace clears bit 3.
+                // loc_91AC2 (:199076-199080): nothing happens until the mace clears bit 3.
                 if (!bonkInProgress) {
                     routine = Routine.PATROL;
                 }
@@ -121,7 +121,7 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
         updateDynamicSpawn(currentX, currentY);
     }
 
-    /** {@code loc_91A0C} :198906-198932. */
+    /** {@code loc_91A0C} :199013-199039. */
     private void init() {
         xVelocity = facingLeft ? -WALK_SPEED : WALK_SPEED;
         int subtype = spawn.subtype() & 0xFF;
@@ -134,11 +134,11 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
         routine = Routine.PATROL;
     }
 
-    /** {@code loc_91A6A} :198934-198958. */
+    /** {@code loc_91A6A} :199041-199065. */
     private void patrol(PlayableEntity playerEntity) {
         PlayableEntity target = mainPlayerForDetection(playerEntity);
         if (target != null && shouldBonk(target)) {
-            // loc_91A9A (:198952-198956).
+            // loc_91A9A (:199059-199063).
             routine = Routine.BONKING;
             bonkInProgress = true;
             if (tryServices() != null) {
@@ -146,13 +146,13 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
             }
             return;
         }
-        // loc_91A88 (:198946-198949).
+        // loc_91A88 (:199053-199056).
         SwingMotion.Result swing = SwingMotion.update(
                 SWING_ACCELERATION, yVelocity, SWING_PEAK, swingDirectionDown);
         yVelocity = swing.velocity();
         swingDirectionDown = swing.directionDown();
         moveWithVelocity();
-        // Obj_Wait (:180237-180243): the handler runs on the update the counter goes negative.
+        // Obj_Wait (:180328-180334): the handler runs on the update the counter goes negative.
         if (--walkTimer < 0) {
             turnAround();
         }
@@ -160,7 +160,7 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
 
     /**
      * {@code sub.w x_pos(a1),d2 / cmpi.w #$60,d2 / bhs} then
-     * {@code btst #0,render_flags(a0) / subq.w #2,d0 / tst.w d0 / beq} (:198934-198944).
+     * {@code btst #0,render_flags(a0) / subq.w #2,d0 / tst.w d0 / beq} (:199041-199051).
      *
      * <p>{@code Find_OtherObject} leaves {@code d0} at 0 when the object's X is at or above the
      * player's — that is, the player is to its left — and 2 otherwise. The
@@ -177,14 +177,14 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
         return playerIsLeft == facingLeft;
     }
 
-    /** {@code loc_91AB0} :198960-198964. */
+    /** {@code loc_91AB0} :199067-199071. */
     private void turnAround() {
         xVelocity = -xVelocity;
         facingLeft = !facingLeft;
         walkTimer = walkTimerReload;
     }
 
-    /** {@code lea (Player_1).w,a1} (:198935): the slam never answers to the sidekick. */
+    /** {@code lea (Player_1).w,a1} (:199042): the slam never answers to the sidekick. */
     private PlayableEntity mainPlayerForDetection(PlayableEntity updatePlayer) {
         if (tryServices() == null || services().playerQuery() == null) {
             return updatePlayer;
@@ -223,7 +223,7 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
         this.mace = restored;
     }
 
-    /** {@code bclr #3,$38(a1)} in {@code loc_91B56} (:199049-199053). */
+    /** {@code bclr #3,$38(a1)} in {@code loc_91B56} (:199156-199160). */
     void clearBonkFlag() {
         bonkInProgress = false;
     }
@@ -294,21 +294,21 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
     public static final class SpikebonkerMace extends AbstractObjectInstance
             implements TouchResponseProvider, RewindRecreatable {
 
-        /** {@code ChildObjDat_91C2C} (:199124-199126): the pivot hangs {@code $14} px below. */
+        /** {@code ChildObjDat_91C2C} (:199231-199233): the pivot hangs {@code $14} px below. */
         private static final int PIVOT_Y_OFFSET = 0x14;
-        /** {@code word_91C26} (:199121-199123). */
+        /** {@code word_91C26} (:199228-199230). */
         private static final int COLLISION_FLAGS = 0x9A;
         private static final int HALF_SIZE = 0x10;
-        /** {@code subq.b #8,d0} (:199010, :199042): the angle walks down by eight an update. */
+        /** {@code subq.b #8,d0} (:199117, :199149): the angle walks down by eight an update. */
         private static final int ANGLE_STEP = 8;
-        /** {@code moveq #-4,d0} (:199021), negated by {@code render_flags} bit 0. */
+        /** {@code moveq #-4,d0} (:199128), negated by {@code render_flags} bit 0. */
         private static final int SLAM_SPEED = 4;
-        /** {@code move.w #$1F,$2E(a0)} (:199027, :199047). */
+        /** {@code move.w #$1F,$2E(a0)} (:199134, :199154). */
         private static final int SLAM_FRAMES = 0x1F;
-        /** {@code cmpi.b #$80,d0 / beq} (:199039-199040): the far end of the slam sweep. */
+        /** {@code cmpi.b #$80,d0 / beq} (:199146-199147): the far end of the slam sweep. */
         private static final int SLAM_ANGLE_END = 0x80;
 
-        /** {@code AngleLookup_1} (sonic3k.asm:201847-201850), 64 bytes, 0 to {@code $C}. */
+        /** {@code AngleLookup_1} (sonic3k.asm:201961-201964), 64 bytes, 0 to {@code $C}. */
         private static final int[] ANGLE_LOOKUP_1 = {
             0, 0, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 5, 5,
             6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 0xA, 0xA,
@@ -316,7 +316,7 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
             0xC, 0xC, 0xC, 0xC, 0xC, 0xC, 0xC, 0xC, 0xC, 0xC, 0xC
         };
 
-        /** {@code byte_91C0E} (:199115-199116): (upper bound, frame) pairs, tested with {@code bls}. */
+        /** {@code byte_91C0E} (:199222-199223): (upper bound, frame) pairs, tested with {@code bls}. */
         private static final int[][] FRAME_TABLE = {
             {0x00, 1}, {0x30, 1}, {0x50, 2}, {0xB0, 3}, {0xD0, 2}, {0xFF, 1}
         };
@@ -343,7 +343,7 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
             if (body == null || body.isDestroyed()) {
-                // Child_CheckParent (:180545-180557) deletes a child whose parent slot is gone.
+                // Child_CheckParent (:180636-180648) deletes a child whose parent slot is gone.
                 ObjectLifetimeOps.deleteNoRespawn(this);
                 return;
             }
@@ -354,7 +354,7 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
                 case SLAM_BACK -> slide(Phase.ORBIT);
                 default -> { }
             }
-            // loc_91BD4 (:199091-199098): the frame and the plane the head draws on both come
+            // loc_91BD4 (:199198-199205): the frame and the plane the head draws on both come
             // from the angle, and only then is the position written.
             mappingFrame = frameForAngle(angle);
             // addi.b #$40,d0 / bpl: the far half of the sweep drops behind the body.
@@ -362,10 +362,10 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
             updateDynamicSpawn(pivotX() + horizontalOffset(), pivotY());
         }
 
-        /** {@code loc_91AEC} :199001-199014. */
+        /** {@code loc_91AEC} :199108-199121. */
         private void orbit() {
             if (angle == 0 && body.isBonkInProgress()) {
-                // loc_91B14 (:199019-199028).
+                // loc_91B14 (:199126-199135).
                 phase = Phase.SLAM_OUT;
                 slamVelocity = body.isFacingLeftForTest() ? -SLAM_SPEED : SLAM_SPEED;
                 slamTimer = SLAM_FRAMES;
@@ -374,15 +374,15 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
             angle = (angle - ANGLE_STEP) & 0xFF;
         }
 
-        /** {@code loc_91B3E} :199033-199037, counted out by {@code Obj_Wait}. */
+        /** {@code loc_91B3E} :199140-199144, counted out by {@code Obj_Wait}. */
         private void slide(Phase next) {
             slamOffset += slamVelocity;
             if (--slamTimer < 0) {
                 if (next == Phase.SWEEP) {
-                    // loc_91B68 (:199057-199059) hands over to the sweep.
+                    // loc_91B68 (:199164-199166) hands over to the sweep.
                     phase = Phase.SWEEP;
                 } else {
-                    // loc_91B56 (:199049-199053): the body is released and the orbit resumes.
+                    // loc_91B56 (:199156-199160): the body is released and the orbit resumes.
                     slamOffset = 0;
                     phase = Phase.ORBIT;
                     body.clearBonkFlag();
@@ -390,10 +390,10 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
             }
         }
 
-        /** {@code loc_91B70} :199061-199070. */
+        /** {@code loc_91B70} :199168-199177. */
         private void sweep() {
             if (angle == SLAM_ANGLE_END) {
-                // loc_91B8A (:199072-199077): reverse and slide back.
+                // loc_91B8A (:199179-199184): reverse and slide back.
                 phase = Phase.SLAM_BACK;
                 slamVelocity = -slamVelocity;
                 slamTimer = SLAM_FRAMES;
@@ -403,7 +403,7 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         /**
-         * {@code MoveSprite_AngleXLookupOffset} :178670-178713. The angle's top two bits pick
+         * {@code MoveSprite_AngleXLookupOffset} :178761-178804. The angle's top two bits pick
          * one of four readings of the same 64-entry table, and the result is added to X only.
          */
         static int angleOffset(int angleByte) {
@@ -416,7 +416,7 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
             };
         }
 
-        /** {@code sub_91BFA} :199101-199110 over {@code byte_91C0E}. */
+        /** {@code sub_91BFA} :199208-199217 over {@code byte_91C0E}. */
         static int frameForAngle(int angleByte) {
             int a = angleByte & 0xFF;
             for (int[] row : FRAME_TABLE) {
@@ -429,7 +429,7 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
 
         private int horizontalOffset() {
             int offset = angleOffset(angle);
-            // btst #0,render_flags(a1) / neg.w d1 (:178692-178695): mirrored with the parent.
+            // btst #0,render_flags(a1) / neg.w d1 (:178783-178786): mirrored with the parent.
             return (body.isFacingLeftForTest() ? offset : -offset) + slamOffset;
         }
 
@@ -447,7 +447,7 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         /**
-         * {@code word_91C26} carries no {@code collision_property} byte (:199121-199123), so
+         * {@code word_91C26} carries no {@code collision_property} byte (:199228-199230), so
          * the mace keeps the zero {@code SetUp_ObjAttributes3} leaves: it is a hurt box, not a
          * boss with a hit counter.
          */

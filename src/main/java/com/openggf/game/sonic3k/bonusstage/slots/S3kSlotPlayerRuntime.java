@@ -22,19 +22,19 @@ public final class S3kSlotPlayerRuntime {
     private int slotOriginX;
     private int slotOriginY;
     // ROM x_pos(a0)/y_pos(a0) as they stand right after sub_4BABC's ground-velocity
-    // projection (sonic3k.asm:98789-98848) -- the value sub_4BDCA (ring pickup,
-    // sonic3k.asm:99144) and sub_4BE3A (tile dispatch, sonic3k.asm:99195) both read
-    // directly from memory. sub_4BCB0 (air gravity, sonic3k.asm:99010-99075) only
+    // projection (sonic3k.asm:98835-98894) -- the value sub_4BDCA (ring pickup,
+    // sonic3k.asm:99190) and sub_4BE3A (tile dispatch, sonic3k.asm:99241) both read
+    // directly from memory. sub_4BCB0 (air gravity, sonic3k.asm:99056-99121) only
     // updates x_vel/y_vel from LOCAL copies (d2/d3); it never writes x_pos/y_pos.
     // MoveSprite2 -- which folds x_vel/y_vel into x_pos/y_pos -- runs AFTER both
-    // sub_4BDCA and sub_4BE3A (sonic3k.asm:98776-98780). So the ring/tile checks
+    // sub_4BDCA and sub_4BE3A (sonic3k.asm:98822-98826). So the ring/tile checks
     // must see the ground-only position, not the fully-stepped one.
     private int groundProjectedOriginX;
     private int groundProjectedOriginY;
-    // ROM loc_4BA98 (sonic3k.asm:98776-98780) runs sub_4BDCA (ring pickup) and
+    // ROM loc_4BA98 (sonic3k.asm:98822-98826) runs sub_4BDCA (ring pickup) and
     // sub_4BE3A (tile dispatch -- bumper launch, goal, spike, reel) BEFORE the
     // jsr MoveSprite2 that folds the just-updated x_vel/y_vel into x_pos/y_pos.
-    // The bumper branch (loc_4BE5A, sonic3k.asm:99213-99239) overwrites x_vel/y_vel
+    // The bumper branch (loc_4BE5A, sonic3k.asm:99259-99285) overwrites x_vel/y_vel
     // with the launch velocity, so MoveSprite2 advances the player by the launch
     // velocity on the SAME frame the bumper fires. This hook lets the stage runtime
     // splice its ring/tile-dispatch work in at that exact point (between
@@ -91,15 +91,15 @@ public final class S3kSlotPlayerRuntime {
 
     /**
      * ROM {@code Obj_Sonic_RotatingSlotBonus}'s routine==0 init handler
-     * ({@code loc_4B9CE}, sonic3k.asm:98710-98741) falls straight through --
+     * ({@code loc_4B9CE}, sonic3k.asm:98756-98787) falls straight through --
      * with no intervening {@code rts} -- into the per-frame movement
-     * dispatcher ({@code loc_4BA4E}, sonic3k.asm:98742-98784) on the very
+     * dispatcher ({@code loc_4BA4E}, sonic3k.asm:98788-98830) on the very
      * same call that creates the object: {@code routine(a0)} is bumped from
      * 0 to 2 ({@code addq.b #2,routine(a0)}), {@code Status_InAir} is set,
      * and then that SAME invocation immediately runs {@code sub_4BABC}
      * (ground velocity), {@code sub_4BCB0} (air gravity/velocity),
      * {@code sub_4BDCA}, {@code sub_4BE3A}, and {@code MoveSprite2}
-     * (position update, sonic3k.asm:98780) before returning -- a full
+     * (position update, sonic3k.asm:98826) before returning -- a full
      * physics tick baked into the object's own spawn frame. That spawn
      * frame belongs to the scripted level-reload/fade transition that
      * precedes the first frame the headless trace fixture drives (the same
@@ -123,31 +123,31 @@ public final class S3kSlotPlayerRuntime {
      * Runs the animation half of that same spawn-frame invocation.
      *
      * <p>{@code Obj_Sonic_RotatingSlotBonus} does not return after its routine
-     * dispatch: {@code loc_4B97C} (sonic3k.asm:98669-98671) unconditionally
+     * dispatch: {@code loc_4B97C} (sonic3k.asm:98715-98717) unconditionally
      * stores {@code #2} into {@code anim(a0)} and calls {@code sub_4B99E},
      * which jumps to {@code Animate_Sonic}/{@code Animate_Tails}/
      * {@code Animate_Knuckles} by {@code character_id}
-     * (sonic3k.asm:98679-98695). On the spawn invocation {@code anim} ($02)
+     * (sonic3k.asm:98725-98741). On the spawn invocation {@code anim} ($02)
      * differs from the {@code prev_anim} left by {@code clearRAM Object_RAM}
-     * (sonic3k.asm:7619), so {@code Animate_Sonic}'s change branch
-     * (sonic3k.asm:24741) zeroes {@code anim_frame}/{@code anim_frame_timer}
+     * (sonic3k.asm:7651), so {@code Animate_Sonic}'s change branch
+     * (sonic3k.asm:24781) zeroes {@code anim_frame}/{@code anim_frame_timer}
      * and falls through to {@code loc_12A2A}'s
-     * {@code subq.b #1,anim_frame_timer(a0)} (sonic3k.asm:25151), which
+     * {@code subq.b #1,anim_frame_timer(a0)} (sonic3k.asm:25191), which
      * underflows immediately: the first script frame is published and
      * {@code anim_frame_timer} is reloaded with
      * {@code ($400 - |ground_vel|) >> 8} on this very invocation.
      *
      * <p>That invocation is the one-shot {@code Process_Sprites} pass Level
-     * runs at {@code loc_6468} (sonic3k.asm:7849-7855) before {@code LevelLoop}
+     * runs at {@code loc_6468} (sonic3k.asm:7881-7887) before {@code LevelLoop}
      * increments {@code Level_frame_counter} for the first time
-     * (sonic3k.asm:7885-7889) -- the same pass whose physics half this method
+     * (sonic3k.asm:7917-7921) -- the same pass whose physics half this method
      * already models above. Modelling only the physics half left the animation
      * change and first publish to happen on the first LevelLoop iteration
      * instead, so every roll step ran one executed frame late for the whole
      * stage.
      *
      * <p>{@code Level_frame_counter} is still 0 here ({@code Clear_DisplayData},
-     * sonic3k.asm:7532-7536), which is the clock this pass genuinely sees.
+     * sonic3k.asm:7564-7568), which is the clock this pass genuinely sees.
      */
     private void primeSpawnFrameAnimation(AbstractPlayableSprite player) {
         player.getAnimationManager().update(0);
@@ -175,7 +175,7 @@ public final class S3kSlotPlayerRuntime {
     }
 
     /**
-     * ROM Obj_Sonic_RotatingSlotBonus and its subroutines (sonic3k.asm:98656-99567:
+     * ROM Obj_Sonic_RotatingSlotBonus and its subroutines (sonic3k.asm:98702-99613:
      * loc_4B9CE/loc_4BA4E per-frame dispatch, sub_4BABC ground velocity,
      * sub_4BCB0 air gravity, sub_4BD5A collision, loc_4BC1E/loc_4BC46/loc_4BC54
      * goal-exit rotation/fade) never write {@code angle(a0)} -- the whole
@@ -243,7 +243,7 @@ public final class S3kSlotPlayerRuntime {
         captureGroundProjectedOrigin();
         applyAirMotionWithCollision(player);
         // ROM sub_4BDCA (ring) + sub_4BE3A (tile dispatch) run here, before
-        // MoveSprite2 (sonic3k.asm:98776-98780). The bumper branch overwrites
+        // MoveSprite2 (sonic3k.asm:98822-98826). The bumper branch overwrites
         // x_vel/y_vel with the launch velocity, so applyVelocityStep must see it.
         if (preMoveInteractionHook != null) {
             preMoveInteractionHook.run();
@@ -283,19 +283,19 @@ public final class S3kSlotPlayerRuntime {
     }
 
     /**
-     * ROM loc_4BED0 (sonic3k.asm:99247-99253): the goal-tile dispatch branch that
+     * ROM loc_4BED0 (sonic3k.asm:99293-99299): the goal-tile dispatch branch that
      * fires this transition does nothing but {@code addq.b #2,routine(a0)} (2->4)
      * and play {@code sfx_Goal} -- it never touches {@code status(a0)}. By the time
      * sub_4BE3A (tile dispatch) runs this frame, sub_4BCB0 (air gravity, called
-     * earlier in the same per-frame chain, sonic3k.asm:98776-98777) has already
+     * earlier in the same per-frame chain, sonic3k.asm:98822-98823) has already
      * cleared {@code Status_InAir} for whichever axis (X wall or Y floor) the goal
      * tile collided on -- touching a solid special tile at all guarantees a
-     * same-frame {@code bclr #Status_InAir,status(a0)} (sonic3k.asm:99032/99050).
+     * same-frame {@code bclr #Status_InAir,status(a0)} (sonic3k.asm:99078/99050).
      * Forcing {@code player.setAir(true)} here overwrote that already-correct
      * grounded state with a fabricated airborne one for the entire frozen
      * goal-exit sequence (TestS3kSlotsBonusTraceReplay frame 868: expected
      * air=0/status_byte=0x05 vs engine's air=1/status_byte=0x07). Leave air
-     * (and rolling, already true since spawn per Status_Roll, sonic3k.asm:98727)
+     * (and rolling, already true since spawn per Status_Roll, sonic3k.asm:98773)
      * exactly as sub_4BCB0's collision resolution left them.
      */
     public void startGoalExit(AbstractPlayableSprite player) {
@@ -304,7 +304,7 @@ public final class S3kSlotPlayerRuntime {
         }
         player.setControlLocked(true);
         ObjectControlState.none().applyTo(player);
-        // Status_Roll is set once at spawn (sonic3k.asm:98727) and never cleared for
+        // Status_Roll is set once at spawn (sonic3k.asm:98773) and never cleared for
         // the rest of the object's lifetime -- restate it defensively rather than
         // assume it's still true (unlike Status_InAir, ROM has no branch here that
         // would leave it false).
@@ -312,7 +312,7 @@ public final class S3kSlotPlayerRuntime {
         player.setOnObject(false);
         // Mirrors ROM loc_4BED0's addq.b #2,routine(a0) (2->4): routine(a0) never
         // changes again for the rest of the exit sequence (loc_4BC1E onward only
-        // swaps the object's own dispatch address, sonic3k.asm:98970), so this is
+        // swaps the object's own dispatch address, sonic3k.asm:99016), so this is
         // a one-shot latch, not a per-frame recompute.
         player.setObjectRoutineOverride(4);
         exitSequence = new S3kSlotExitSequence(new S3kSlotStageController(stageState));
@@ -428,7 +428,7 @@ public final class S3kSlotPlayerRuntime {
             }
         } else if (left) {
             if (gSpeed > 0) {
-                // ROM sub_4BB54 loc_4BB76 (sonic3k.asm:98871-98878): subi.w #$40,d0 is
+                // ROM sub_4BB54 loc_4BB76 (sonic3k.asm:98917-98924): subi.w #$40,d0 is
                 // stored unconditionally -- the trailing "bcc.s loc_4BB7E / nop" is dead
                 // code (both paths fall into the same move.w d0,ground_vel(a0)). Unlike
                 // the neutral-decel path (loc_4BAF0, which DOES clamp at 0 via a real
@@ -441,7 +441,7 @@ public final class S3kSlotPlayerRuntime {
             player.setDirection(com.openggf.physics.Direction.LEFT);
         } else {
             if (gSpeed < 0) {
-                // ROM sub_4BB84 loc_4BBA4 (sonic3k.asm:98899-98905): addi.w #$40,d0
+                // ROM sub_4BB84 loc_4BBA4 (sonic3k.asm:98945-98951): addi.w #$40,d0
                 // is likewise stored unconditionally with no zero clamp -- mirror image
                 // of the left-reversal case above.
                 gSpeed += GROUND_REVERSAL_DECEL;
@@ -538,7 +538,7 @@ public final class S3kSlotPlayerRuntime {
      * object-controlled/debug-mode transitions below) -- which previously
      * discarded exactly the fraction {@link #primeSpawnFrameFallthrough}
      * establishes, reproducing the same ROM x_pos/y_pos 32-bit-word
-     * (sonic3k.asm:98780 MoveSprite2) truncation bug from the opposite
+     * (sonic3k.asm:98826 MoveSprite2) truncation bug from the opposite
      * direction.
      */
     private void captureSlotOriginFromPlayer(AbstractPlayableSprite player) {

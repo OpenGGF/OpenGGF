@@ -69,11 +69,11 @@ parser bug is `develop`'s.
 **On develop:** `ObjectSlotLayout.SONIC_3K = new ObjectSlotLayout(4, 89, 110, ...)`.
 
 **The ROM:** `Dynamic_object_RAM ds.b object_size*90` — 90 objects
-(`docs/skdisasm/sonic3k.constants.asm:307`). With `firstDynamicSlot = 4` the managed window is
+(`docs/skdisasm/sonic3k.constants.asm:314`). With `firstDynamicSlot = 4` the managed window is
 absolute SST slots 4-93, so `lastDynamicSlotExclusive()` must be 94. That is exactly the range
 `Offset_ObjectsDuringTransition` walks: it starts at `Dynamic_object_RAM + object_size` and
 runs `(Breathing_bubbles - (Dynamic_object_RAM + object_size))/object_size - 1` through `dbf`,
-i.e. 90 iterations over absolute slots 4-93 (`sonic3k.asm:104166-104180`).
+i.e. 90 iterations over absolute slots 4-93 (`sonic3k.asm:104212-104226`).
 
 **Why it matters on develop:** 89 makes the last dynamic slot 92 and drops slot 93 out of the
 allocatable window entirely, so any object the ROM would place there is either refused or

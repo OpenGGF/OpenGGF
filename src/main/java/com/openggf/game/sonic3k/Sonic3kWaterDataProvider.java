@@ -17,7 +17,7 @@ import java.util.logging.Logger;
 /**
  * Water data provider for Sonic 3 &amp; Knuckles.
  * <p>
- * Water zones from CheckLevelForWater (sonic3k.asm:9751):
+ * Water zones from CheckLevelForWater (sonic3k.asm:9787):
  * <ul>
  *   <li>Zone 0 (AIZ) - Angel Island, both acts</li>
  *   <li>Zone 1 (HCZ) - Hydrocity, both acts</li>
@@ -28,7 +28,7 @@ import java.util.logging.Logger;
  * <p>
  * Starting heights from StartingWaterHeights.bin (32 big-endian words).
  * <p>
- * Dynamic handlers from DynamicWaterHeight_Index (sonic3k.asm:8609).
+ * Dynamic handlers from DynamicWaterHeight_Index (sonic3k.asm:8641).
  */
 public class Sonic3kWaterDataProvider implements WaterDataProvider {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kWaterDataProvider.class.getName());
@@ -36,7 +36,7 @@ public class Sonic3kWaterDataProvider implements WaterDataProvider {
     private static final int PALETTE_SIZE_BYTES = 128; // 4 palette lines x 32 bytes each (used for padding)
 
     /**
-     * Water palette IDs from LoadWaterPalette (sonic3k.asm:9817).
+     * Water palette IDs from LoadWaterPalette (sonic3k.asm:9853).
      * Each entry is the PalPoint table index for that zone/act combination.
      * -1 indicates no water palette for that zone/act.
      * Indexed as [zone][act].
@@ -80,7 +80,7 @@ public class Sonic3kWaterDataProvider implements WaterDataProvider {
     @Override
     public boolean hasWater(int zoneId, int actId, PlayerCharacter character,
                             boolean seamlessTransition) {
-        // CheckLevelForWater (sonic3k.asm:9751-9778)
+        // CheckLevelForWater (sonic3k.asm:9787-9814)
         // AIZ1: water for all characters (line 9752-9753)
         if (zoneId == Sonic3kZoneIds.ZONE_AIZ && actId == 0) return true;
         // AIZ2: ROM checks Apparent_zone_and_act (line 9756).
@@ -149,7 +149,7 @@ public class Sonic3kWaterDataProvider implements WaterDataProvider {
             Palette[] palettes = PaletteLoader.fromBytes(paletteData);
 
             // Knuckles palette patch: overwrite colors 2-4 of palette line 0
-            // with zone-specific data from Pal_WaterKnux (sonic3k.asm:9872)
+            // with zone-specific data from Pal_WaterKnux (sonic3k.asm:9908)
             if (character == PlayerCharacter.KNUCKLES
                     && zoneId < Sonic3kConstants.PAL_WATER_KNUX_ZONE_COUNT) {
                 int knuxPatchAddr = Sonic3kConstants.PAL_WATER_KNUX_ADDR
@@ -177,7 +177,7 @@ public class Sonic3kWaterDataProvider implements WaterDataProvider {
 
     /**
      * Returns the PalPoint palette ID for the given zone/act, or -1 if none.
-     * Based on LoadWaterPalette in sonic3k.asm:9817.
+     * Based on LoadWaterPalette in sonic3k.asm:9853.
      */
     private int getWaterPaletteId(int zoneId, int actId) {
         if (zoneId < 0 || zoneId >= WATER_PALETTE_IDS.length) {
@@ -244,7 +244,7 @@ public class Sonic3kWaterDataProvider implements WaterDataProvider {
 
     @Override
     public int getUnderwaterSuperPaletteCycleAddress(int zoneId, int actId) {
-        // SuperHyper_PalCycle_SonicApply (sonic3k.asm:4671-4677): AIZ and ICZ use the
+        // SuperHyper_PalCycle_SonicApply (sonic3k.asm:4703-4709): AIZ and ICZ use the
         // green-tinted underwater table, every other water zone the blue-tinted one.
         if (zoneId == Sonic3kZoneIds.ZONE_AIZ || zoneId == Sonic3kZoneIds.ZONE_ICZ) {
             return Sonic3kConstants.PAL_CYCLE_SUPER_SONIC_UNDERWATER_AIZ_ICZ_ADDR;

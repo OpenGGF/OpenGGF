@@ -63,7 +63,7 @@ class TestBonusStageShieldRestore {
     /**
      * ROM {@code SpawnLevelMainSprites_SpawnPowerup} restores the saved
      * elemental shield on the BONUS zone's own level spawn
-     * (docs/skdisasm/sonic3k.asm:8264-8323), so the shield is live for the
+     * (docs/skdisasm/sonic3k.asm:8296-8355), so the shield is live for the
      * duration of the bonus stage -- not only after the return to the level.
      */
     @Test

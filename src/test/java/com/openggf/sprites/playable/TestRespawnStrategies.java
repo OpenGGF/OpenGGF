@@ -156,7 +156,7 @@ class TestRespawnStrategies {
 
     @Test
     void reverseGravityRespawnsTheCpuSidekickFromTheOtherSideOfTheLeader() {
-        // ROM Tails_Catch_Up_Flying loc_13B50 (sonic3k.asm:26493-26499):
+        // ROM Tails_Catch_Up_Flying loc_13B50 (sonic3k.asm:26533-26539):
         //   move.w y_pos(a1),d0 / move.w d0,(Tails_CPU_target_Y).w
         //   subi.w #$C0,d0
         //   tst.b (Reverse_gravity_flag).w / beq.s loc_13B78

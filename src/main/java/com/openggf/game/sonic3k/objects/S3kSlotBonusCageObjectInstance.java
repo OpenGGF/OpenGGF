@@ -79,13 +79,13 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
 
     /**
      * {@code Obj_SlotBonus} owns its whole lifetime: the live routine
-     * {@code loc_4BF9A} (sonic3k.asm:99324-99560) contains no {@code out_of_range}
+     * {@code loc_4BF9A} (sonic3k.asm:99370-99606) contains no {@code out_of_range}
      * macro, no {@code MarkObjGone} and no {@code Delete_Current_Sprite} on any
      * path, so the cage can never unload while the bonus stage is running -- it is
      * torn down only when the stage itself ends. Taking the shared camera-relative
      * unload instead frees the cage's SST slot, and because the cage sits in the
      * lowest dynamic slot the ROM keeps occupied, the next {@code AllocateObject}
-     * (sonic3k.asm:37911-37914, forward scan from the first slot) hands that slot
+     * (sonic3k.asm:37951-37954, forward scan from the first slot) hands that slot
      * to a freshly spawned {@code Obj_SlotRing}. A ring landing at or below the
      * cage's slot has already been passed by the ascending object walk, so it
      * loses the routine-0 tick it should have run on its own spawn frame and its
@@ -142,11 +142,11 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // ROM loc_4C026 (sonic3k.asm:99395-99396) writes the capture position with
+        // ROM loc_4C026 (sonic3k.asm:99441-99442) writes the capture position with
         // move.w #$460,x_pos(a1) / move.w #$430,y_pos(a1) -- a word-sized store that
         // only overwrites the pixel half of the 32-bit x_pos/y_pos, leaving the
         // subpixel half (x_sub/y_sub, 2 bytes further into the same long -- see
-        // MoveSprite2's own comment at sonic3k.asm:36057) exactly as this frame's
+        // MoveSprite2's own comment at sonic3k.asm:36097) exactly as this frame's
         // own ground/air movement (sub_4BABC/sub_4BCB0 + MoveSprite2, already run
         // earlier in the same object dispatch) left it. setCentreX/setCentreY would
         // zero that subpixel fraction, which measurably diverges the trace (e.g.
@@ -181,7 +181,7 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM {@code loc_4C026} (sonic3k.asm:99385-99394) tests each axis with
+     * ROM {@code loc_4C026} (sonic3k.asm:99431-99440) tests each axis with
      * {@code sub.w x_pos(a0),d0 / addi.w #$18,d0 / cmpi.w #$30,d0 / bhs skip} --
      * a biased *unsigned* window, so the accepted range is the half-open
      * {@code [-$18, +$18)}, not the symmetric {@code |d| < $18} an abs()
@@ -193,11 +193,11 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
     }
 
     private void updateSpawnRewards(AbstractPlayableSprite player, int frameCounter) {
-        // ROM's hold state (loc_4C0AA/loc_4C172, sonic3k.asm:99416-99509) never
+        // ROM's hold state (loc_4C0AA/loc_4C172, sonic3k.asm:99462-99555) never
         // writes x_pos/y_pos/x_vel/y_vel for the captured player again once
         // object_control is set by loc_4C026 -- the player's own routine already
         // skips ground/air movement entirely while object-controlled (loc_4BA62,
-        // sonic3k.asm:98751-98752 tst.b object_control(a0)/bne). Re-snapping the
+        // sonic3k.asm:98797-98798 tst.b object_control(a0)/bne). Re-snapping the
         // pixel position here every frame (as this used to) stomped the subpixel
         // fraction captureSlotOriginFromPlayer/syncPlayerToSlotOrigin otherwise
         // preserve, re-zeroing it on the very next tick after the capture fix
@@ -253,8 +253,8 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // ROM loc_4C250 (sonic3k.asm:99533-99552): GetSineCosine returns sin in
-        // d0 / cos in d1 (sonic3k.asm:3014-3015), and the launch write order is
+        // ROM loc_4C250 (sonic3k.asm:99579-99598): GetSineCosine returns sin in
+        // d0 / cos in d1 (sonic3k.asm:3046-3047), and the launch write order is
         // `move.w d0,x_vel(a1)` then `move.w d1,y_vel(a1)` -- i.e. x_vel is the
         // SINE term and y_vel is the COSINE term. Swapping these (cos->x,
         // sin->y, matching sub_4BBB2's jump-launch convention instead) produced

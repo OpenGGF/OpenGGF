@@ -17,36 +17,36 @@ import java.util.List;
 
 /**
  * The ball {@code Obj_LRZSpikeBallLauncher} allocates with {@code AllocateObjectAfterCurrent}
- * (sonic3k.asm:89855-89874), and the two routines it lives in: {@code loc_44954}, which is a bare
- * {@code Sprite_CheckDeleteTouch3}, and {@code loc_44916} (:89917-89932), the flight.
+ * (sonic3k.asm:89901-89920), and the two routines it lives in: {@code loc_44954}, which is a bare
+ * {@code Sprite_CheckDeleteTouch3}, and {@code loc_44916} (:89963-89978), the flight.
  *
  * <p><b>It is never not a hazard.</b> {@code collision_flags} is {@code $9A}, written once at
- * allocation (:89869), and neither routine changes it -- so the ball hurts a player who walks into
+ * allocation (:89915), and neither routine changes it -- so the ball hurts a player who walks into
  * it while it sits on the launcher, as much as one it comes down on.
  *
  * <p><b>The rest height is a latch, not a floor test.</b> {@code $46(a1)} is the allocated
- * {@code y_pos} (:89861), and the flight ends when {@code cmp.w y_pos(a0),d0 / bhs} fails -- an
- * <em>unsigned</em> comparison of the rest height against the current one (:89935-89938). The
+ * {@code y_pos} (:89907), and the flight ends when {@code cmp.w y_pos(a0),d0 / bhs} fails -- an
+ * <em>unsigned</em> comparison of the rest height against the current one (:89981-89984). The
  * ball is snapped exactly back to {@code $46}, so a launch and its landing are pixel-identical
  * however far it went, and nothing about the level's terrain is consulted.
  *
- * <p><b>The spin is three frames on a two-frame timer</b> (:89917-89924), and it only runs while
+ * <p><b>The spin is three frames on a two-frame timer</b> (:89963-89970), and it only runs while
  * the ball is in flight; {@code mapping_frame} is forced back to {@code 0} on landing.
- * {@code MoveSprite} (sonic3k.asm:36032-36042) applies the old {@code y_vel} and then adds
+ * {@code MoveSprite} (sonic3k.asm:36072-36082) applies the old {@code y_vel} and then adds
  * {@code $38}, so the first frame of flight moves by the launcher's own velocity exactly.
  */
 public final class LrzSpikeBallLauncherBallInstance extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable {
 
-    /** {@code move.w #$280,priority(a1)} (sonic3k.asm:89866). */
+    /** {@code move.w #$280,priority(a1)} (sonic3k.asm:89912). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);
-    /** {@code move.b #$10,width_pixels(a1)} / {@code height_pixels(a1)} (:89867-89868). */
+    /** {@code move.b #$10,width_pixels(a1)} / {@code height_pixels(a1)} (:89913-89914). */
     private static final int HALF_EXTENT = 0x10;
-    /** {@code move.b #$9A,collision_flags(a1)} (:89869). */
+    /** {@code move.b #$9A,collision_flags(a1)} (:89915). */
     private static final int COLLISION_FLAGS = 0x9A;
-    /** {@code move.b #2,anim_frame_timer(a0)} (:89920). */
+    /** {@code move.b #2,anim_frame_timer(a0)} (:89966). */
     private static final int SPIN_RELOAD = 2;
-    /** {@code cmpi.b #3,mapping_frame(a0) / blo} (:89922-89923). */
+    /** {@code cmpi.b #3,mapping_frame(a0) / blo} (:89968-89969). */
     private static final int SPIN_FRAMES = 3;
 
     /** ROM {@code $46(a0)}: the allocated {@code y_pos}, which the flight always returns to. */
@@ -85,7 +85,7 @@ public final class LrzSpikeBallLauncherBallInstance extends AbstractObjectInstan
         return new LrzSpikeBallLauncherBallInstance(ctx.spawn());
     }
 
-    /** {@code loc_448E2} (sonic3k.asm:89892-89901): the launcher's only write into this slot. */
+    /** {@code loc_448E2} (sonic3k.asm:89938-89947): the launcher's only write into this slot. */
     public void launch(int yVelocity) {
         motion.yVel = yVelocity;
         inFlight = true;
@@ -97,7 +97,7 @@ public final class LrzSpikeBallLauncherBallInstance extends AbstractObjectInstan
             // loc_44954 is a bare Sprite_CheckDeleteTouch3: the ball sits, and still hurts.
             return;
         }
-        // subq.b #1,anim_frame_timer(a0) / bpl.s loc_44934 (:89917-89918).
+        // subq.b #1,anim_frame_timer(a0) / bpl.s loc_44934 (:89963-89964).
         spinTimer = (spinTimer - 1) & 0xFF;
         if (spinTimer > 0x7F) {
             spinTimer = SPIN_RELOAD;
@@ -106,7 +106,7 @@ public final class LrzSpikeBallLauncherBallInstance extends AbstractObjectInstan
         SubpixelMotion.moveSprite(motion, SubpixelMotion.S3K_GRAVITY);
         motion.x &= 0xFFFF;
         motion.y &= 0xFFFF;
-        // move.w $46(a0),d0 / cmp.w y_pos(a0),d0 / bhs.s loc_44954 (:89935-89938): still flying
+        // move.w $46(a0),d0 / cmp.w y_pos(a0),d0 / bhs.s loc_44954 (:89981-89984): still flying
         // while the rest height is at or below the current one, unsigned.
         if (Integer.compareUnsigned(restY, motion.y) < 0) {
             motion.y = restY;
@@ -162,7 +162,7 @@ public final class LrzSpikeBallLauncherBallInstance extends AbstractObjectInstan
 
     @Override
     public boolean isHighPriority() {
-        // move.w art_tile(a0),art_tile(a1) (:89865) copies make_art_tile(ArtTile_LRZ2Misc,1,0).
+        // move.w art_tile(a0),art_tile(a1) (:89911) copies make_art_tile(ArtTile_LRZ2Misc,1,0).
         return false;
     }
 

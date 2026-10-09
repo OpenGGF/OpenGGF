@@ -15,7 +15,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code Obj_TeleporterBeam} (sonic3k.asm:91244-91404) for the HPZ teleporters.
+ * ROM {@code Obj_TeleporterBeam} (sonic3k.asm:91290-91450) for the HPZ teleporters.
  *
  * <p>The multi-sprite beam first stacks up to seven segments ({@code Obj_TeleporterBeamSpawn}),
  * waits 16 frames ({@code Obj_TeleporterBeamWait}), then spreads two columns apart
@@ -83,7 +83,7 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
         // move.w y_pos(a0),$44(a0) / subi.w #$88,$44(a0)
         this.expandBaseY = spawn.y() - 0x88;
         if (startExpanded) {
-            // Obj_57C1E (sonic3k.asm:116775-116786) installs Obj_TeleporterBeamExpand directly
+            // Obj_57C1E (sonic3k.asm:116821-116832) installs Obj_TeleporterBeamExpand directly
             // with mainspr_childsprites = 2 and $46 = $18, so the Sky Sanctuary arrival beam
             // begins fully expanded instead of stacking segments.
             this.phase = PHASE_EXPAND;

@@ -67,28 +67,28 @@ There are currently no checked-in Sonic 2 or Sonic 3K trace fixtures under `src/
 
 | Subsystem | Full level frame | VBlank-only lag frame | Evidence |
 |---|---|---|---|
-| `Level_frame_counter` | yes | no | `docs/skdisasm/sonic3k.asm:7884-7890`, `docs/skdisasm/sonic3k.constants.asm:782` |
-| `V_int_run_count` | yes | yes | `docs/skdisasm/sonic3k.constants.asm:790`, `docs/skdisasm/sonic3k.asm:566-581` |
-| `Lag_frame_count` | reset during normal frame | increments on lag V-int 0 | `docs/skdisasm/sonic3k.asm:566-581`, `docs/skdisasm/sonic3k.asm:784-786` |
-| special events / sprite load / process sprites / deform / screen events / rings / animated tiles / oscillation | yes | no | `docs/skdisasm/sonic3k.asm:7889-7911` |
-| lag V-int palette / H-int setup | no | yes | `docs/skdisasm/sonic3k.asm:584-648` |
-| lag V-int sprite-table DMA | competition mode only | yes | `docs/skdisasm/sonic3k.asm:623-647` |
-| HUD / DMA queue / demo timer housekeeping | yes | V-int-side when normal frame path reaches `Do_Updates` | `docs/skdisasm/sonic3k.asm:764-793` |
+| `Level_frame_counter` | yes | no | `docs/skdisasm/sonic3k.asm:7916-7922`, `docs/skdisasm/sonic3k.constants.asm:804` |
+| `V_int_run_count` | yes | yes | `docs/skdisasm/sonic3k.constants.asm:812`, `docs/skdisasm/sonic3k.asm:588-603` |
+| `Lag_frame_count` | reset during normal frame | increments on lag V-int 0 | `docs/skdisasm/sonic3k.asm:588-603`, `docs/skdisasm/sonic3k.asm:806-808` |
+| special events / sprite load / process sprites / deform / screen events / rings / animated tiles / oscillation | yes | no | `docs/skdisasm/sonic3k.asm:7921-7943` |
+| lag V-int palette / H-int setup | no | yes | `docs/skdisasm/sonic3k.asm:606-670` |
+| lag V-int sprite-table DMA | competition mode only | yes | `docs/skdisasm/sonic3k.asm:645-669` |
+| HUD / DMA queue / demo timer housekeeping | yes | V-int-side when normal frame path reaches `Do_Updates` | `docs/skdisasm/sonic3k.asm:786-815` |
 
 ### Counter Address Table
 
-The Sonic 3K constants file phases RAM at `$FFFF0000` in `docs/skdisasm/sonic3k.constants.asm:283-285`. The named temporary labels in the same file confirm the low-word addresses in the `$F600`, `$FAA0`, and `$FE00` regions, allowing the exact addresses below to be computed from the layout.
+The Sonic 3K constants file phases RAM at `$FFFF0000` in `docs/skdisasm/sonic3k.constants.asm:288-290`. The named temporary labels in the same file confirm the low-word addresses in the `$F600`, `$FAA0`, and `$FE00` regions, allowing the exact addresses below to be computed from the layout.
 
 | Name | Label | Address | Evidence |
 |---|---|---:|---|
-| gameplay frame counter | `Level_frame_counter` | `0xFE08` | `docs/skdisasm/sonic3k.constants.asm:776-782` with `CrossResetRAM` at `0xFE04` from the preceding layout ending at `System_stack = 0xFE04` |
-| VBlank counter low word | `V_int_run_count+2` | `0xFE12` | `docs/skdisasm/sonic3k.constants.asm:790` and the same `CrossResetRAM` layout |
-| lag counter | `Lag_frame_count` | `0xF628` | `docs/skdisasm/sonic3k.constants.asm:536`, `docs/skdisasm/sonic3k.constants.asm:550-555` |
+| gameplay frame counter | `Level_frame_counter` | `0xFE08` | `docs/skdisasm/sonic3k.constants.asm:798-804` with `CrossResetRAM` at `0xFE04` from the preceding layout ending at `System_stack = 0xFE04` |
+| VBlank counter low word | `V_int_run_count+2` | `0xFE12` | `docs/skdisasm/sonic3k.constants.asm:812` and the same `CrossResetRAM` layout |
+| lag counter | `Lag_frame_count` | `0xF628` | `docs/skdisasm/sonic3k.constants.asm:555`, `docs/skdisasm/sonic3k.constants.asm:569-574` |
 
 ### S3K Address Derivation Notes
 
 - `Game_mode` sits at `0xF600`:
-  - `_tempF608` begins at `0xF608` in `docs/skdisasm/sonic3k.constants.asm:536`, so the preceding controls and mode bytes anchor this block.
+  - `_tempF608` begins at `0xF608` in `docs/skdisasm/sonic3k.constants.asm:555`, so the preceding controls and mode bytes anchor this block.
 - `Lag_frame_count` follows:
   - `H_int_counter_command` at `0xF624`
   - `Palette_fade_info` at `0xF626`
@@ -96,7 +96,7 @@ The Sonic 3K constants file phases RAM at `$FFFF0000` in `docs/skdisasm/sonic3k.
 - `CrossResetRAM` begins at `0xFE04`:
   - `Stack_contents` is `0x100` bytes starting at `0xFD04`
   - therefore `System_stack = 0xFE04`
-  - `CrossResetRAM` begins immediately after in `docs/skdisasm/sonic3k.constants.asm:776-780`
+  - `CrossResetRAM` begins immediately after in `docs/skdisasm/sonic3k.constants.asm:798-802`
 - From there:
   - unused word at `0xFE04`
   - `Restart_level_flag` at `0xFE06`

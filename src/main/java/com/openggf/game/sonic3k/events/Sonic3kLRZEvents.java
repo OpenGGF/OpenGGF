@@ -29,7 +29,7 @@ import com.openggf.game.mutation.MutationEffects;
  * Lava Reef screen and background events for {@code $900}, {@code $901} and the boss act
  * {@code $1600}.
  *
- * <p>{@code LRZ1_ScreenEvent} (sonic3k.asm:115199-115214) and {@code LRZ2_ScreenEvent}
+ * <p>{@code LRZ1_ScreenEvent} (sonic3k.asm:115245-115260) and {@code LRZ2_ScreenEvent}
  * (115670-115673) both start by adding {@code Screen_shake_offset} to {@code Camera_Y_pos_copy},
  * and every background-event exit tail-calls {@code ShakeScreen_Setup} (115318, 115364, 115388,
  * 115682) to produce the next frame's offset. The engine runs that setup once at the head of its
@@ -74,9 +74,9 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * {@code LRZ1_ScreenEvent}'s chunk edits (sonic3k.asm:115201-115224). {@code a3} is
-     * {@code Level_layout_main} (the {@code ScreenEvents} preamble at :102237 loads it), whose
-     * entries are longs -- {@code Layout_row_index_mask} is {@code $7C} (:102207) -- so the
+     * {@code LRZ1_ScreenEvent}'s chunk edits (sonic3k.asm:115247-115270). {@code a3} is
+     * {@code Level_layout_main} (the {@code ScreenEvents} preamble at :102283 loads it), whose
+     * entries are longs -- {@code Layout_row_index_mask} is {@code $7C} (:102253) -- so the
      * {@code movea.w} at {@code $38(a3)}, {@code $3C(a3)} and {@code $40(a3)} reads the FOREGROUND
      * row pointer of layout rows 14, 15 and 16, and {@code lea $1D(a1)} indexes column 29 of that
      * row. The rock crusher's own bridge positions confirm the reading independently: subtype 0
@@ -90,16 +90,16 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     private static final int CRUSHER_EDIT_ROW_A = 14;
     private static final int CRUSHER_EDIT_ROW_B = 15;
     private static final int CRUSHER_EDIT_ROW_C = 16;
-    /** {@code move.b #$44 / #0 / #$4A} at {@code loc_56B2C} (:115211-115214). */
+    /** {@code move.b #$44 / #0 / #$4A} at {@code loc_56B2C} (:115257-115260). */
     private static final int[] CRUSHER_EDIT_ROW_A_IDS = {0x44, 0x00, 0x4A};
-    /** {@code move.b #$3E / #0 / #$4B} at {@code loc_56B2C} (:115216-115219). */
+    /** {@code move.b #$3E / #0 / #$4B} at {@code loc_56B2C} (:115262-115265). */
     private static final int[] CRUSHER_EDIT_ROW_B_IDS = {0x3E, 0x00, 0x4B};
-    /** {@code move.b #$9C,$A(a1)} on the positive branch (:115207). */
+    /** {@code move.b #$9C,$A(a1)} on the positive branch (:115253). */
     private static final int CRUSHER_EDIT_POSITIVE_COLUMN = 10;
     private static final int CRUSHER_EDIT_POSITIVE_ID = 0x9C;
 
     /**
-     * {@code LRZ1_BackgroundInit} (sonic3k.asm:115239-115242): with {@code Player_mode} 3
+     * {@code LRZ1_BackgroundInit} (sonic3k.asm:115285-115288): with {@code Player_mode} 3
      * (Knuckles) it takes the background layout's row 1 pointer and writes {@code $F6}
      * ({@code move.b #-$A,4(a1)}) into its column 4 -- one chunk, once, before the first
      * deformation. Everything else in that routine is the row-0 repeat the engine's plane period
@@ -110,15 +110,15 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     private static final int KNUCKLES_BG_CHUNK_COLUMN = 4;
     private static final int KNUCKLES_BG_CHUNK_ID = 0xF6;
 
-    /** {@code move.w #$C,(Events_routine_bg)} at {@code loc_56BD2} (sonic3k.asm:115292). */
+    /** {@code move.w #$C,(Events_routine_bg)} at {@code loc_56BD2} (sonic3k.asm:115338). */
     public static final int BG_STAGE_ACT_CHANGE = 0x0C;
     /** {@code ArtKosM_LRZ2_Secondary} (sonic3k.lst: ROM {@code $1B97D6}). */
     private static final int ACT2_SECONDARY_ART_SOURCE = 0x1B97D6;
-    /** {@code move.w #tiles_to_bytes($090),d2} at {@code loc_56BD2} (sonic3k.asm:115286). */
+    /** {@code move.w #tiles_to_bytes($090),d2} at {@code loc_56BD2} (sonic3k.asm:115332). */
     private static final int ACT2_SECONDARY_ART_TILE = 0x090;
-    /** {@code moveq #$30,d0 / jsr (Load_PLC)} at {@code loc_56BD2} (sonic3k.asm:115288-115289). */
+    /** {@code moveq #$30,d0 / jsr (Load_PLC)} at {@code loc_56BD2} (sonic3k.asm:115334-115335). */
     private static final int ACT2_PLC = 0x30;
-    /** {@code move.w #$2C00,d0} at {@code loc_56CAA} (sonic3k.asm:115361). */
+    /** {@code move.w #$2C00,d0} at {@code loc_56CAA} (sonic3k.asm:115407). */
     private static final int ACT2_REBASE_X = 0x2C00;
     /** {@code Dynamic_object_RAM+object_size}, the first slot {@code Offset_ObjectsDuringTransition} walks. */
     private static final int FIRST_ROM_WORLD_OFFSET_SLOT = 4;
@@ -132,7 +132,7 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
 
     private boolean act1BackgroundInitialised;
     /**
-     * {@code LRZ2_BackgroundInit} (sonic3k.asm:115655-115668) runs on a direct {@code $901} load
+     * {@code LRZ2_BackgroundInit} (sonic3k.asm:115701-115714) runs on a direct {@code $901} load
      * and leaves {@code Events_routine_bg} on 8. The seamless change does not run it at all --
      * {@code loc_56CAA} calls {@code Load_Level}, not the background initializer, and ends on
      * {@code clr.w (Events_routine_bg)} -- so {@link #requestAct2Reload} sets this before the
@@ -158,7 +158,7 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
             });
             return;
         }
-        // LRZ1_ScreenEvent reads Events_bg+$0C before anything else draws (:115201-115204); with
+        // LRZ1_ScreenEvent reads Events_bg+$0C before anything else draws (:115247-115250); with
         // no pending edit it is loc_56B5E, DrawTilesAsYouMove only, which the engine's own tile
         // streaming already does. The stage machines arrive with their slices.
         applyBackgroundInit(act);
@@ -262,8 +262,8 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * {@code LRZ2_BackgroundInit} (sonic3k.asm:115655-115668) and then
-     * {@code LRZ2_BackgroundEvent} (:115676-115738), which act 2 dispatches every frame in place
+     * {@code LRZ2_BackgroundInit} (sonic3k.asm:115701-115714) and then
+     * {@code LRZ2_BackgroundEvent} (:115722-115784), which act 2 dispatches every frame in place
      * of act 1's.
      *
      * <p>The initializer is skipped for the seamless change on purpose: {@code loc_56CAA} runs
@@ -323,8 +323,8 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
 
     /**
      * {@code LRZ1_BackgroundEvent} stage 0's {@code Events_fg_5} branch ({@code loc_56BD2},
-     * sonic3k.asm:115274-115293) and stage {@code $C}, the act change itself ({@code loc_56CAA},
-     * sonic3k.asm:115347-115374).
+     * sonic3k.asm:115320-115339) and stage {@code $C}, the act change itself ({@code loc_56CAA},
+     * sonic3k.asm:115393-115420).
      *
      * <p>The two halves exist together on purpose: stage 0 advancing {@code Events_routine_bg} to
      * {@code $C} with no stage {@code $C} behind it would leave the background event pointing at a
@@ -342,7 +342,7 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
             return true;
         }
         // Only stage 0 (loc_56BD2) reads Events_fg_5: stages 4 (loc_56C6E) and 8 (loc_56C88)
-        // never look at the word (LRZ1_BackgroundEvent_Index, sonic3k.asm:115264-115271).
+        // never look at the word (LRZ1_BackgroundEvent_Index, sonic3k.asm:115310-115317).
         if (lrz.backgroundRoutine() != LrzBackgroundStageMachine.BG_STAGE_NORMAL) {
             return false;
         }
@@ -422,17 +422,17 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
                 .objectSurvivalPolicy(
                         SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST)
                 .preserveOffsetCameraPosition(true)
-                // sub.w d0,(Player_1+x_pos) / (Player_2+x_pos) (sonic3k.asm:115363-115364) and
-                // jsr (Offset_ObjectsDuringTransition) (:115365), which walks
+                // sub.w d0,(Player_1+x_pos) / (Player_2+x_pos) (sonic3k.asm:115409-115410) and
+                // jsr (Offset_ObjectsDuringTransition) (:115411), which walks
                 // Dynamic_object_RAM+object_size up to Breathing_bubbles -- ROM SST slots 4 to 94
-                // exclusive (sonic3k.constants.asm:303-311) -- and subtracts d0/d1 from every
+                // exclusive (sonic3k.constants.asm:310-318) -- and subtracts d0/d1 from every
                 // entry whose render_flags bit 2 says it is in world coordinates.
                 .playerOffset(-ACT2_REBASE_X, 0)
                 .romWorldObjectOffsetRange(FIRST_ROM_WORLD_OFFSET_SLOT,
                         LAST_ROM_WORLD_OFFSET_SLOT_EXCLUSIVE)
-                // sub.w d0,(Camera_X_pos) / (Camera_X_pos_copy) (:115366-115367).
+                // sub.w d0,(Camera_X_pos) / (Camera_X_pos_copy) (:115391-115392).
                 .cameraOffset(-ACT2_REBASE_X, 0)
-                // sub.w d0,(Camera_min_X_pos) / (Camera_max_X_pos) (:115368-115369). loc_56CAA
+                // sub.w d0,(Camera_min_X_pos) / (Camera_max_X_pos) (:115393-115394). loc_56CAA
                 // touches no Y word at all and Load_Level writes no camera word, so the Y bounds
                 // the arena left behind have to be carried across unchanged rather than taking
                 // act 2's own. Change_Act2Sizes releases Y after the title; the two
@@ -447,7 +447,7 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
                 .postTransitionMaxYTarget((int) camera.getMaxYTarget())
                 .resourceHandoff(handoff)
                 .build();
-        // jsr (Clear_Switches) at :115355 runs BEFORE jsr (Load_Level) at :115359, so a trigger
+        // jsr (Clear_Switches) at :115380 runs BEFORE jsr (Load_Level) at :115384, so a trigger
         // bit an act-2 initializer sets during the reload must survive. FBZ does the same.
         com.openggf.game.sonic3k.Sonic3kLevelTriggerManager.reset();
         // loc_56CAA never calls LRZ2_BackgroundInit: the act 2 background arrives through
@@ -467,7 +467,7 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
 
 
     /**
-     * {@code Load_Level} (sonic3k.asm:38747-38761) copies the level layout and nothing else: no
+     * {@code Load_Level} (sonic3k.asm:38787-38801) copies the level layout and nothing else: no
      * palette. So the ROM carries the fight's own lines -- {@code Pal_LRZMiniboss1} on
      * {@code Normal_palette_line_2} and {@code Pal_LRZMiniboss2} on {@code line_3} and the line
      * after it -- straight through the act change, and only {@code loc_78B08} replaces them, once
@@ -486,11 +486,11 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
                 Sonic3kConstants.PAL_LRZ_MINIBOSS_2_ADDR + PALETTE_LINE_BYTES);
     }
 
-    /** {@code Obj_Results}' {@code st (Events_fg_5)} for Lava Reef (sonic3k.asm:62615-62622). */
+    /** {@code Obj_Results}' {@code st (Events_fg_5)} for Lava Reef (sonic3k.asm:62655-62662). */
     public void setEventsFg5(boolean flag) {
         LrzZoneRuntimeState lrz = state();
         // Obj_Results' own gate is zone and act, not handler: tst.b (Apparent_act) / bne and the
-        // Angel Island / Ice Cap exclusions (sonic3k.asm:62615-62622). The Lava Reef runtime
+        // Angel Island / Ice Cap exclusions (sonic3k.asm:62655-62662). The Lava Reef runtime
         // state is shared with the boss act, so without this the word latches there and is
         // carried in rewind with nothing to consume it.
         if (lrz != null && lrz.zoneIndex() == Sonic3kZoneIds.ZONE_LRZ && lrz.actIndex() == 0) {
@@ -499,7 +499,7 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * {@code sub_56DCA} (sonic3k.asm:115457-115497), which {@code LRZ1_BackgroundEvent} runs from
+     * {@code sub_56DCA} (sonic3k.asm:115503-115543), which {@code LRZ1_BackgroundEvent} runs from
      * both its stage 0 ({@code loc_56C28}) and its stage 4 ({@code loc_56C6E}).
      *
      * <p>What lands here is the state half: {@code Events_bg+$00} and {@code Obj_56EA0}. The
@@ -556,7 +556,7 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * {@code LRZ1_ScreenEvent} {@code loc_56B2C}/{@code loc_56B54} (sonic3k.asm:115201-115224).
+     * {@code LRZ1_ScreenEvent} {@code loc_56B2C}/{@code loc_56B54} (sonic3k.asm:115247-115270).
      * {@code tst.w} on the request word: zero does nothing, negative takes the two-row opening,
      * and positive the single {@code $9C} write. Either way {@code loc_56B54} clears the word and
      * redraws the screen directly, which is what consuming the request and letting the mutation
@@ -602,7 +602,7 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     /**
      * {@code LevelLoop} calls {@code Draw_LRZ_Special_Rock_Sprites} once a frame, right after
      * {@code ScreenEvents} and {@code Load_Rings} and only while {@code Current_zone} is 9
-     * (sonic3k.asm:7899-7903). It reads {@code Camera_X_pos}, not the copy the renderer later
+     * (sonic3k.asm:7931-7935). It reads {@code Camera_X_pos}, not the copy the renderer later
      * subtracts, and leaves the two placement pointers in the runtime state for
      * {@code sub_1CB68} to walk during {@code Render_Sprites}.
      */

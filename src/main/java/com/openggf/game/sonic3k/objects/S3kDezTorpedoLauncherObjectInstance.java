@@ -10,7 +10,7 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 
 import java.util.List;
 
-/** SKL $4D, Obj_DEZTorpedoLauncher / loc_471D6..loc_47284 (sonic3k.asm:93011-93072). */
+/** SKL $4D, Obj_DEZTorpedoLauncher / loc_471D6..loc_47284 (sonic3k.asm:93057-93118). */
 public final class S3kDezTorpedoLauncherObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
     private boolean initialized;

@@ -81,7 +81,7 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance
             // loc_240E2 clears this participant's object-side push bit after
             // sub_24280, even when invulnerability prevents damage. Leaving it
             // live lets a later SolidObject miss publish a spurious Walk word
-            // over the hurt animation (sonic3k.asm:49064,49071).
+            // over the hurt animation (sonic3k.asm:49104,49111).
             services().objectManager().solidContacts().releaseObjectPushLatch(player, this);
         }
     }
@@ -101,7 +101,7 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance
     public boolean isWithinSolidContactBounds() {
         // loc_24090/loc_2413E move the spike before calling SolidObjectFull,
         // but loc_1DF88 observes render_flags bit 7 from the preceding
-        // Render_Sprites pass (sonic3k.asm:49011-49037,49102-49131,
+        // Render_Sprites pass (sonic3k.asm:49051-49077,49142-49171,
         // 41390-41392). Test the frame-start position, not the freshly moved
         // one, so a spike entering the viewport cannot become solid early.
         return isPreUpdateWithinRenderSpriteBounds(
@@ -113,7 +113,7 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance
         if (!mainRoutineReached) {
             // Obj_Spikes initialization stores loc_2413E/loc_24090/etc. in (a0)
             // and returns before the movement + SolidObjectFull body can run
-            // (sonic3k.asm:48925-49012).  The first main-routine frame starts
+            // (sonic3k.asm:48965-49052).  The first main-routine frame starts
             // on the next object execution.
             // loc_23FE8 XORs the placement status Y-flip with Reverse_gravity_flag
             // to select loc_2413E. That routine tests SolidObjectFull's gravity-
@@ -165,7 +165,7 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance
         // S3K Render_Sprites reads width_pixels(a0) for the on-screen X test,
         // and Obj_Spikes initializes that byte from Spikes_Dimensions --
         // $10/$20/$30/$40 for the upright sizes, $10 for the sideways ones
-        // (docs/skdisasm/sonic3k.asm:48926-48934 table, :48937-48939 store).
+        // (docs/skdisasm/sonic3k.asm:48966-48974 table, :48977-48979 store).
         // The AbstractObjectInstance default of 16 is only correct for the
         // narrowest entry, so a wide spike strip whose centre sits just left of
         // the camera reads as offscreen, skips SolidObjectFull entirely, and

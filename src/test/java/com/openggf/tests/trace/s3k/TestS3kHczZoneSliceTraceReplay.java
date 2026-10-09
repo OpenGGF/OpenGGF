@@ -42,8 +42,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>The cause is <i>not</i> a defect in this zone. Commit {@code b31069c3f} corrected two
  * ROM-cited MegaChopper defects — {@code Obj_MegaChopper}'s opening
  * {@code jsr (Obj_WaitOffscreen)} suppressing every routine including Init until the sprite is
- * drawn (sonic3k.asm:184233, :180271-180302), and its {@code Touch_Special} defeat path owing the
- * player the {@code EnemyDefeated} bounce itself (:184242-184244 -> loc_85758's
+ * drawn (sonic3k.asm:184326, :180362-180393), and its {@code Touch_Special} defeat path owing the
+ * player the {@code EnemyDefeated} bounce itself (:184335-184337 -> loc_85758's
  * {@code subi.w #$100,y_vel(a1)}). That moved the HCZ <i>segment</i> frontier 1434 -> 2478.
  *
  * <p>It also moved this class red, and the propagation is fully traced: at frame 1481 the
@@ -52,7 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * object-slot occupancy on 16,289 of 31,482 rows, so 27,600 frames later the boss-hurt ring
  * scatter puts ring 0 in a different slot (38 vs 4). {@code Obj_Bouncing_Ring} gates its floor
  * probe on its own SST slot — {@code move.b (V_int_run_count+3).w,d0 / add.b d7,d0 /
- * andi.b #7,d0 / bne} (sonic3k.asm:35629-35632), {@code d7} being {@code Process_Sprites}' live
+ * andi.b #7,d0 / bne} (sonic3k.asm:35669-35672), {@code d7} being {@code Process_Sprites}' live
  * slot countdown — and those slots are two apart in the {@code &7} cycle, so the ring bounces
  * differently and is collected four frames early.
  *

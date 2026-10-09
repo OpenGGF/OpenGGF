@@ -4,7 +4,7 @@ package com.openggf.game.sonic3k.objects;
 final class S3kNativeObjectAngle {
     private S3kNativeObjectAngle() { }
     /**
-     * {@code sub_8622C} (sonic3k.asm:181154-181215): the byte angle from ({@code fromX},{@code fromY})
+     * {@code sub_8622C} (sonic3k.asm:181245-181306): the byte angle from ({@code fromX},{@code fromY})
      * towards ({@code toX},{@code toY}), 0 pointing down and {@code $40} right, built from
      * {@code (min << 5) / max} and the octant. Returns the low byte used by the native callers.
      */

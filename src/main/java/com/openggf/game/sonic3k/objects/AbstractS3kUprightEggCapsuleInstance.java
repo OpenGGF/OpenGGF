@@ -167,7 +167,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     public int getPieceBalanceWidthPixels(int pieceIndex) {
         // Object-edge balance reads width_pixels, not the SolidObjectFull widths:
         // ObjDat_EggCapsule sets $20 and the button's word_86B3E sets $10
-        // (sonic3k.asm:182155-182162), against solid half-widths $2B and $1B.
+        // (sonic3k.asm:182246-182253), against solid half-widths $2B and $1B.
         return pieceIndex == PIECE_BUTTON ? 0x10 : 0x20;
     }
 
@@ -204,7 +204,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
 
     /**
      * ROM {@code _unkFAA8}, which {@code Check_TailsEndPose} requires before it ends
-     * Player_2 (sonic3k.asm:181924-181945). Bosses normally set it before their
+     * Player_2 (sonic3k.asm:182015-182036). Bosses normally set it before their
      * capsule opens.
      */
     protected boolean endOfLevelFlagSet() {
@@ -304,7 +304,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         // sub_868F8 calls AllocateObject, so Obj_LevelResults takes the lowest
         // free SST. If that slot has already run, Obj_LevelResultsInit and its
         // three KosM submissions wait for the next Process_Sprites pass
-        // (sonic3k.asm:181978-181990).
+        // (sonic3k.asm:182069-182081).
         S3kResultsScreenObjectInstance result =
                 spawnFreeChild(() -> createResultsScreen(character, currentAct));
         if (result != null && nativeResultsRunsInAllocationPass()

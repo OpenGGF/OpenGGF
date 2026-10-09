@@ -9,7 +9,7 @@ import com.openggf.sprites.NativePositionOps;
 
 import java.util.List;
 
-/** SKL $50, Obj_DEZConveyorBelt / sub_47854 (sonic3k.asm:93515-93559). */
+/** SKL $50, Obj_DEZConveyorBelt / sub_47854 (sonic3k.asm:93561-93605). */
 public final class S3kDezConveyorBeltObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
     public S3kDezConveyorBeltObjectInstance(ObjectSpawn spawn) {

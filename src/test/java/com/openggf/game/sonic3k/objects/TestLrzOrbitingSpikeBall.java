@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * {@code Obj_LRZOrbitingSpikeBallHorizontal} / {@code Obj_LRZOrbitingSpikeBallVertical}
- * (sonic3k.asm:89077-89222), the two act 2 orbiting spike balls.
+ * (sonic3k.asm:89123-89268), the two act 2 orbiting spike balls.
  *
  * <p>Every claim below is the ROM's arithmetic, not a fitted value: the angle is
  * {@code (Level_frame_counter+1) * 2} as a byte, negated for {@code status} bit 0, plus the
@@ -39,7 +39,7 @@ class TestLrzOrbitingSpikeBall {
 
     @Test
     void subtypeBitZeroSelectsTheLargeBallAndIsClearedFromThePhase() {
-        // bclr #0,subtype(a0) (sonic3k.asm:89083): the bit selects the ball AND is written back.
+        // bclr #0,subtype(a0) (sonic3k.asm:89129): the bit selects the ball AND is written back.
         LrzOrbitingSpikeBallObjectInstance small =
                 build(LrzOrbitingSpikeBallObjectInstance.Axis.HORIZONTAL, 0x80, false);
         LrzOrbitingSpikeBallObjectInstance large =
@@ -52,7 +52,7 @@ class TestLrzOrbitingSpikeBall {
 
     @Test
     void theBallIsHarmfulOnlyWhileTheByteAngleHasBitSevenSet() {
-        // move.b #0,collision_flags then the restore only under bpl (sonic3k.asm:89097-89109).
+        // move.b #0,collision_flags then the restore only under bpl (sonic3k.asm:89143-89155).
         LrzOrbitingSpikeBallObjectInstance ball =
                 build(LrzOrbitingSpikeBallObjectInstance.Axis.HORIZONTAL, 0x00, false);
         StringBuilder log = new StringBuilder();
@@ -96,7 +96,7 @@ class TestLrzOrbitingSpikeBall {
 
     @Test
     void statusBitZeroReversesTheOrbit() {
-        // neg.b d0 after the doubling (sonic3k.asm:89102-89103).
+        // neg.b d0 after the doubling (sonic3k.asm:89148-89149).
         LrzOrbitingSpikeBallObjectInstance forward =
                 build(LrzOrbitingSpikeBallObjectInstance.Axis.HORIZONTAL, 0x00, false);
         LrzOrbitingSpikeBallObjectInstance reversed =

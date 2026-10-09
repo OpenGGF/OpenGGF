@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_56EA0} (sonic3k.asm:115568-115631): the dome region's lava surface.
+ * {@code Obj_56EA0} (sonic3k.asm:115614-115677): the dome region's lava surface.
  *
  * <p>Every expectation is a ROM write or a ROM branch: the fixed {@code x_pos $1E80}, the
  * {@code $988} base the negated phase is subtracted from, the {@code ±$C000} velocity reload and

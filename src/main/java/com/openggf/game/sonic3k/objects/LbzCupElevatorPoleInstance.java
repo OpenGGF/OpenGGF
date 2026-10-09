@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * S3K S3KL object $19 - LBZ cup elevator pole.
  *
- * <p>ROM reference: {@code Obj_LBZCupElevatorPole} (sonic3k.asm:53187-53211).
+ * <p>ROM reference: {@code Obj_LBZCupElevatorPole} (sonic3k.asm:53227-53251).
  */
 public final class LbzCupElevatorPoleInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int SHORT_HEIGHT = 0x30;

@@ -41,7 +41,7 @@ public record PhysicsModifiers(
     );
 
     /** Knuckles: lower underwater jump ($300 vs Sonic's $380).
-     *  ROM: Knux_Jump (sonic3k.asm:32457) move.w #$300,d2 */
+     *  ROM: Knux_Jump (sonic3k.asm:32497) move.w #$300,d2 */
     public static final PhysicsModifiers KNUCKLES = new PhysicsModifiers(
             0.5f,       // waterAccelMul
             0.5f,       // waterDecelMul

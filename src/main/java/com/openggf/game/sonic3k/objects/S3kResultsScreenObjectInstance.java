@@ -47,7 +47,7 @@ import java.util.logging.Logger;
  * S3K results screen -- displays "{CHARACTER} GOT THROUGH ACT {N}" with
  * time bonus and ring bonus tally after the signpost lands.
  *
- * <p>ROM: Obj_LevelResults (sonic3k.asm lines 62499-63003).
+ * <p>ROM: Obj_LevelResults (sonic3k.asm lines 62539-63043).
  *
  * <p>Key differences from S2:
  * <ul>
@@ -183,7 +183,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     protected boolean skipsSameFrameUpdateAfterSpawn() {
         // The grounded short-tail owner is published by AllocateObject from an
         // earlier SST and does not run Obj_LevelResultsInit until the next
-        // Process_Sprites pass (sonic3k.asm:62512-62531). Ordinary result
+        // Process_Sprites pass (sonic3k.asm:62552-62571). Ordinary result
         // owners retain their native same-pass dispatch.
         return usesShortResultsChildRetireTail
                 && resultsChildTimingAdjustment
@@ -512,7 +512,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // ROM Obj_LevelResultsInit queues three Kosinski module loads and advances
         // to Obj_LevelResultsCreate; Create polls Kos_modules_left before
         // allocating child objects and setting Events_fg_5
-        // (docs/skdisasm/sonic3k.asm:62512-62584, 62586-62616).
+        // (docs/skdisasm/sonic3k.asm:62552-62624, 62626-62656).
         // Obj_LevelResultsCreate rechecks global Kos_modules_left on every
         // allocation retry, including after its own three archives were claimed.
         if (S3kRuntimeArtCoordinator.from(services()).moduleQueue().hasPendingPhysicalModules()) {
@@ -529,7 +529,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // A failed first AllocateObjectAfterCurrent leaves Create active for a
         // retry: nothing is published and Events_fg_5 stays clear until at least
         // the first child exists. The art stays claimed across that retry while
-        // the global queue poll still runs (sonic3k.asm:62586-62616).
+        // the global queue poll still runs (sonic3k.asm:62626-62656).
         if (!createResultChildSsts()) {
             return false;
         }
@@ -544,7 +544,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     }
 
     /**
-     * ROM: Obj_LevelResultsWait2 after 90-frame wait (sonic3k.asm lines 62686-62690).
+     * ROM: Obj_LevelResultsWait2 after 90-frame wait (sonic3k.asm lines 62726-62730).
      * Increments exit queue counter each frame. Children start sliding out when
      * the counter reaches their priority. When all are gone, fire onExitReady().
      */
@@ -767,7 +767,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     }
 
     /**
-     * ROM: Obj_LevelResultsCreate (sonic3k.asm line 62610-62616).
+     * ROM: Obj_LevelResultsCreate (sonic3k.asm line 62650-62656).
      * Sets Events_fg_5 for Act 1 zones (except AIZ zone 0 and ICZ zone 5)
      * to trigger the background event handler's seamless act transition.
      *
@@ -844,7 +844,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // changes into the in-level Act 2 title card without touching camera
         // bounds; Obj_EndSignControlDoStart waits for that title card to set
         // End_of_level_flag before Change_Act2Sizes creates the gradual
-        // level-size objects (sonic3k.asm:62708-62720,62276-62279,
+        // level-size objects (sonic3k.asm:62748-62760,62316-62319,
         // 180415-180419,180575-180609).
         // When the AIZ2 cutscene override is active, the
         // Aiz2BossEndSequenceController manages camera bounds for the walk-right
@@ -893,7 +893,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
         if (isAct2OrSpecial || (!fbzCarriedTitleOwner && retainedTransitionFlagOwner)) {
             // ROM loc_2DCF8 sets End_of_level_flag directly for Act 2/Sky
-            // Sanctuary/LRZ boss results (sonic3k.asm:62693-62705).
+            // Sanctuary/LRZ boss results (sonic3k.asm:62733-62745).
             // A retained native transition owner can request the same ready
             // flag through the event bridge without this object inferring its
             // transition policy from the current zone.
@@ -904,7 +904,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             // Act 1: transition to act 2 (ROM lines 62708-62720)
             // ROM loc_2DD06 mutates the results object into Obj_TitleCard
             // without setting End_of_level_flag. The in-level title-card wait
-            // path sets it after its children are gone (sonic3k.asm:62708-62720,
+            // path sets it after its children are gone (sonic3k.asm:62748-62760,
             // 62244-62279).
             // ROM: move.b #1,(Apparent_act).w — update display act so
             // death/restart title cards show "Act 2" from this point on.
@@ -955,12 +955,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             // gamestate directly since no level reload occurs. AIZ's miniboss
             // handoff carries its Timer/Ring_count reset through the title-card
             // request above, where it becomes visible after the title children
-            // reach their display positions (sonic3k.asm:62708-62720,
+            // reach their display positions (sonic3k.asm:62748-62760,
             // 62214-62235).
             // loc_2DD06 deletes the results owner for Sandopolis 1 and Death Egg 1
             // without creating Obj_TitleCard, so nothing clears Timer/Ring_count
             // here; the later act title card's Obj_TitleCardWait owns that reset
-            // (sonic3k.asm:62708-62730, 62220-62235).
+            // (sonic3k.asm:62748-62770, 62260-62275).
             if (!hasSeamlessTransition && !retainedReloadState
                     && !aizAct1MinibossTitleHandoff && !skipTitleCard) {
                 resetLevelGamestateForActTransition();
@@ -1000,7 +1000,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      * ROM {@code Obj_LevelResultsWait2} has already changed this retained SST
      * into {@code Obj_TitleCard}; its next object dispatch performs
      * {@code Obj_TitleCardInit} and queues the four ROM-backed KosM jobs
-     * (docs/skdisasm/sonic3k.asm:62108-62166, 62684-62725).
+     * (docs/skdisasm/sonic3k.asm:62148-62206, 62724-62765).
      */
     private void initializePublishedTitleCard() {
         int zone = services().romZoneId();
@@ -1046,7 +1046,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 } else {
                     s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
                             // Ordinary retained owners poll Obj_TitleCardWait's $34
-                            // child-movement latch (sonic3k.asm:62255-62278);
+                            // child-movement latch (sonic3k.asm:62295-62318);
                             // short-tail owners use a dispatch count.
                             usesShortResultsChildRetireTail
                                     ? mutatedTitleCardResetDispatches(true,
@@ -1090,7 +1090,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      * A live EndSignControl owner in a lower SST slot has already run in this
      * Process_Sprites pass. Its Obj_EndSignControlAwaitStart poll observes the
      * cleared _unkFAA8 and calls Restore_PlayerControl on the next pass
-     * (sonic3k.asm:180398-180403), so this results owner must not restore early.
+     * (sonic3k.asm:180489-180494), so this results owner must not restore early.
      */
     private boolean lowerSlotEndSignControlOwnsRestore() {
         var objectManager = services().objectManager();
@@ -1202,7 +1202,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // Obj_LevelResults never writes the camera bounds. After SOZ1's golem,
         // loc_76E5C spawns Obj_DecLevStartXGradual and Obj_EndSignControlDoStart
         // spawns Obj_IncLevEndXGradual, which open the arena words gradually
-        // (sonic3k.asm:158186-158200, 158701-158704).
+        // (sonic3k.asm:158262-158276, 158777-158780).
         boolean actOneBossOwnedGradualExpansion = act == 0 && zone == 0x08;
         return !actOneInLevelTitleHandoff && !actTwoPostBossHandoff
                 && !actOneBossOwnedGradualExpansion;
@@ -1586,7 +1586,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     /**
      * Renders a 7-digit BCD value with leading zero suppression.
-     * ROM: LevResults_DisplayScore (sonic3k.asm lines 62789-62815).
+     * ROM: LevResults_DisplayScore (sonic3k.asm lines 62829-62855).
      *
      * Each digit uses a mapping frame from Map_Results:
      *   Frame 0 = blank (suppressed leading zero)

@@ -19,14 +19,14 @@ import java.util.List;
 
 /**
  * ROM object {@code Obj_LRZCorkscrew} - object id {@code $15} in the {@code SKL} pointer set
- * (sonic3k.asm:87494-87513, {@code Obj_LRZCorkscrew} at ROM {@code $0004224E}). One act 1
+ * (sonic3k.asm:87540-87559, {@code Obj_LRZCorkscrew} at ROM {@code $0004224E}). One act 1
  * placement.
  *
  * <p>It has no mappings and no {@code art_tile}: Init writes only {@code width_pixels} and the
- * routine pointer (:87495-87496), so the object is invisible and exists purely to drive the player
+ * routine pointer (:87541-87542), so the object is invisible and exists purely to drive the player
  * along a path the level art already shows.
  *
- * <p><b>Capture</b> ({@code sub_42278}, :87525-87543). The box is {@code $20} wide and {@code $20}
+ * <p><b>Capture</b> ({@code sub_42278}, :87571-87589). The box is {@code $20} wide and {@code $20}
  * tall around the placement, but the two tests are written differently: the horizontal one is
  * {@code addi.w #$10 / sub.w x_pos(a0) / bcs} - an <em>unsigned</em> borrow test - followed by a
  * signed {@code bge #$20}, while the vertical one is a plain signed {@code bgt #$20}, so the
@@ -34,7 +34,7 @@ import java.util.List;
  * must be free of any other {@code object_control}, on the ground, and moving right
  * ({@code tst.w ground_vel / bmi}); a rider slower than {@code $600} is sped up to it.
  *
- * <p><b>The ride</b> ({@code loc_423D0}, :87613-87620). {@code $30(a0)} and {@code $34(a0)} are
+ * <p><b>The ride</b> ({@code loc_423D0}, :87659-87666). {@code $30(a0)} and {@code $34(a0)} are
  * per-player <em>longs</em>, and the ROM reads them two ways: {@code add.l} accumulates
  * {@code ground_vel} shifted left by eight, while every {@code cmpi.w}/{@code move.w} on
  * {@code (a2)} reads the <em>high</em> word. So the high word is the ride parameter, advancing by
@@ -42,7 +42,7 @@ import java.util.List;
  * "the high word reached {@code $700}" (forwards). {@code ground_vel} climbs {@code $10} a frame to
  * a cap of {@code $1000}.
  *
- * <p><b>Position</b> (:87622-87646). X is {@code GetSineCosine(param >> 1)} multiplied by
+ * <p><b>Position</b> (:87668-87692). X is {@code GetSineCosine(param >> 1)} multiplied by
  * {@code $4800} with the high word of the product taken ({@code muls.w} then {@code swap}), added
  * to the placement X. Y indexes a 128-byte table, or a 64-byte one once the parameter passes
  * {@code $600}, and the add is a <em>byte</em> add into a word whose low seven bits were just
@@ -51,16 +51,16 @@ import java.util.List;
  * the camera and the sidekick following correctly.
  *
  * <p><b>Both exits eject the player moving left.</b> {@code loc_42368} and {@code loc_42396} each
- * do {@code neg.w ground_vel(a1)} (:87591, :87607), and {@code ground_vel} is positive for the
+ * do {@code neg.w ground_vel(a1)} (:87637, :87653), and {@code ground_vel} is positive for the
  * whole ride, so leaving either end turns the player around. The forwards exit also restores
  * {@code top_solid_bit} {@code $E} and {@code lrb_solid_bit} {@code $F} and sets
  * {@code Status_Facing}; the backwards exit sets {@code Status_InAir} instead.
  *
  * <p>{@code move.w #1,anim(a1)} is a <em>word</em> write over {@code anim} and {@code prev_anim}
- * (:87589), so the player leaves with {@code anim} 0 - the walk - and {@code prev_anim} 1, not with
+ * (:87635), so the player leaves with {@code anim} 0 - the walk - and {@code prev_anim} 1, not with
  * {@code anim} 1.
  *
- * <p><b>{@code FixBugs = 0} branch</b> (:87513-87519). The shipped ROM advances {@code d6} from
+ * <p><b>{@code FixBugs = 0} branch</b> (:87559-87565). The shipped ROM advances {@code d6} from
  * Player 1's standing bit to Player 2's with {@code addq.b}, which leaves the high half of
  * {@code d6} dirty after Player 1's {@code Perform_Player_DPLC} has run; the fixed branch would
  * {@code moveq} the whole register. The dirty value is what the shipped game does, and
@@ -70,25 +70,25 @@ import java.util.List;
 public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, RomObjectCodePointerProvider {
 
-    /** {@code move.b #$D0,width_pixels(a0)} (sonic3k.asm:87495). */
+    /** {@code move.b #$D0,width_pixels(a0)} (sonic3k.asm:87541). */
     private static final int WIDTH_PIXELS = 0xD0;
-    /** {@code addi.w #$10,d0} and {@code cmpi.w #$20,d0} (:87527-87534). */
+    /** {@code addi.w #$10,d0} and {@code cmpi.w #$20,d0} (:87573-87580). */
     private static final int CAPTURE_HALF_SPAN = 0x10;
     private static final int CAPTURE_SPAN = 0x20;
-    /** {@code cmpi.w #$600,ground_vel(a1)} (:87540). */
+    /** {@code cmpi.w #$600,ground_vel(a1)} (:87586). */
     private static final int MINIMUM_RIDE_SPEED = 0x600;
-    /** {@code addi.w #$10,ground_vel(a1)} up to {@code cmpi.w #$1000} (:87618-87620). */
+    /** {@code addi.w #$10,ground_vel(a1)} up to {@code cmpi.w #$1000} (:87664-87666). */
     private static final int RIDE_ACCELERATION = 0x10;
     private static final int MAXIMUM_RIDE_SPEED = 0x1000;
-    /** {@code cmpi.w #$700,(a2)} (:87616): the forwards exit, on the accumulator's high word. */
+    /** {@code cmpi.w #$700,(a2)} (:87662): the forwards exit, on the accumulator's high word. */
     private static final int RIDE_END = 0x700;
-    /** {@code cmpi.w #$600,(a2)} (:87635): which Y table the second half uses. */
+    /** {@code cmpi.w #$600,(a2)} (:87681): which Y table the second half uses. */
     private static final int SECOND_TABLE_THRESHOLD = 0x600;
-    /** {@code muls.w #$4800,d0} (:87627). */
+    /** {@code muls.w #$4800,d0} (:87673). */
     private static final int X_AMPLITUDE = 0x4800;
-    /** {@code divu.w #$16,d0} (:87652). */
+    /** {@code divu.w #$16,d0} (:87698). */
     private static final int ANIMATION_DIVISOR = 0x16;
-    /** {@code move.b #$E,top_solid_bit(a1)} / {@code #$F,lrb_solid_bit(a1)} (:87600-87601). */
+    /** {@code move.b #$E,top_solid_bit(a1)} / {@code #$F,lrb_solid_bit(a1)} (:87646-87647). */
     private static final int EXIT_TOP_SOLID_BIT = 0x0E;
     private static final int EXIT_LRB_SOLID_BIT = 0x0F;
 
@@ -145,7 +145,7 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        // sub_42262 (sonic3k.asm:87505-87519): Player 1 against $30(a0), then Player 2 against
+        // sub_42262 (sonic3k.asm:87551-87565): Player 1 against $30(a0), then Player 2 against
         // $34(a0). Delete_Sprite_If_Not_In_Range is the engine's generic off-screen handling.
         stepPlayer(playerEntity, true);
         stepPlayer(nativeP2OrNull(), false);
@@ -162,7 +162,7 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
         }
     }
 
-    /** {@code sub_42278} head (sonic3k.asm:87525-87575). */
+    /** {@code sub_42278} head (sonic3k.asm:87571-87621). */
     private void tryCapture(AbstractPlayableSprite player, boolean isPlayerOne) {
         // move.w x_pos(a1),d0 / addi.w #$10,d0 / sub.w x_pos(a0),d0 / bcs -> an unsigned borrow,
         // then a signed bge against $20.
@@ -188,13 +188,13 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
             player.setGSpeed((short) MINIMUM_RIDE_SPEED);
         }
 
-        // loc_422E6 (:87554-87575).
+        // loc_422E6 (:87600-87621).
         setRiding(isPlayerOne, true);
         setAccumulator(isPlayerOne, 0);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.applyStandingRadii(false);
-        // andi.b #$89,status(a1) (sonic3k.asm:87563): the capture keeps only bits 0, 3 and 7 --
+        // andi.b #$89,status(a1) (sonic3k.asm:87609): the capture keeps only bits 0, 3 and 7 --
         // the facing bit, Status_OnObj and bit 7 -- and clears Status_InAir, Status_Roll and
         // Status_Push with them. The roll clear is the one the cold act 1 route measures: the
         // rider reaches this corkscrew rolling, native row 3394 has rolling 0 with anim 0 from
@@ -218,7 +218,7 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
         setInteractSlot(player);
     }
 
-    /** {@code loc_423D0} through {@code loc_42438} (sonic3k.asm:87613-87660). */
+    /** {@code loc_423D0} through {@code loc_42438} (sonic3k.asm:87659-87706). */
     private void advanceRide(AbstractPlayableSprite player, boolean isPlayerOne) {
         int accumulator = accumulator(isPlayerOne);
         // move.w ground_vel(a1),d0 / ext.l d0 / lsl.l #8,d0 / add.l d0,(a2).
@@ -245,12 +245,12 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
         applyRidePosition(player, parameter);
     }
 
-    /** {@code loc_423F0} onwards (sonic3k.asm:87622-87660). */
+    /** {@code loc_423F0} onwards (sonic3k.asm:87668-87706). */
     private void applyRidePosition(AbstractPlayableSprite player, int parameter) {
         int angle = (parameter >> 1) & 0xFFFF;
 
         // bclr #7,art_tile(a1) then, when ((param >> 1) + $40) stays positive as a BYTE, bset it
-        // again: the rider is drawn in front on the near half of the turn (:87623-87629).
+        // again: the rider is drawn in front on the near half of the turn (:87669-87675).
         player.setHighPriority((((angle & 0xFF) + 0x40) & 0xFF) < 0x80);
 
         int previousX = player.getCentreX();
@@ -279,13 +279,13 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
         player.setMappingFrame(ANIM_4247E[quotient]);
     }
 
-    /** {@code loc_42368} (sonic3k.asm:87582-87593). */
+    /** {@code loc_42368} (sonic3k.asm:87628-87639). */
     private void releaseBackwards(AbstractPlayableSprite player, boolean isPlayerOne) {
         releaseCommon(player, isPlayerOne);
         player.setAir(true);
     }
 
-    /** {@code loc_42396} (sonic3k.asm:87599-87610). */
+    /** {@code loc_42396} (sonic3k.asm:87645-87656). */
     private void releaseForwards(AbstractPlayableSprite player, boolean isPlayerOne) {
         player.setTopSolidBit((byte) EXIT_TOP_SOLID_BIT);
         player.setLrbSolidBit((byte) EXIT_LRB_SOLID_BIT);
@@ -310,7 +310,7 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
         player.setYSpeed((short) 0);
     }
 
-    /** {@code move.w a0,interact(a1)} (sonic3k.asm:87554). */
+    /** {@code move.w a0,interact(a1)} (sonic3k.asm:87600). */
     private void setInteractSlot(AbstractPlayableSprite player) {
         try {
             player.setInteractSlotIndex(getSlotIndex());
@@ -406,7 +406,7 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        // Init writes no mappings and no art_tile (sonic3k.asm:87495-87496): the corkscrew is
+        // Init writes no mappings and no art_tile (sonic3k.asm:87541-87542): the corkscrew is
         // invisible and the level art draws the shape the player is driven along.
     }
 }

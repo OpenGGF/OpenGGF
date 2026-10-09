@@ -161,7 +161,7 @@ final class ObjectCollisionResponseList {
         // Add_SpriteToCollisionResponseList has no camera-range gate; the
         // object routine decides whether to publish, and this helper only
         // enforces the native $7E-byte list capacity
-        // (docs/skdisasm/sonic3k.asm:21200-21210).
+        // (docs/skdisasm/sonic3k.asm:21236-21246).
         if (!(instance instanceof TouchResponseProvider)) {
             return false;
         }

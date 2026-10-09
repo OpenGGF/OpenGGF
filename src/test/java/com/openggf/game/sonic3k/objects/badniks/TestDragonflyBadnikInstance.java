@@ -248,7 +248,7 @@ class TestDragonflyBadnikInstance {
 
         // CreateChild4_LinkListRepeated allocates every segment through
         // AllocateObjectAfterCurrent with a0 still the Dragonfly; that routine
-        // scans forward from a0 for the first free SST (sonic3k.asm:37917-37930),
+        // scans forward from a0 for the first free SST (sonic3k.asm:37957-37970),
         // so the chain occupies ascending slots and the object-execution walk
         // runs Dragonfly, segment 0, segment 1, ... within one frame.
         int frame = 2;

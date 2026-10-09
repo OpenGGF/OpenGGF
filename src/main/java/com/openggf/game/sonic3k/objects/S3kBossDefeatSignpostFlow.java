@@ -92,9 +92,9 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
 
     /**
      * The same flow, with {@code Obj_EndSignControlDoStart}'s {@code Change_Act2Sizes} call
-     * (sonic3k.asm:180420-180424).
+     * (sonic3k.asm:180511-180515).
      *
-     * <p>{@code Change_Act2Sizes} (sonic3k.asm:180580-180596) returns early for two zones only --
+     * <p>{@code Change_Act2Sizes} (sonic3k.asm:180671-180687) returns early for two zones only --
      * Sandopolis ({@code cmpi.b #8,d0}, whose own event leads to act 2) and Hydrocity
      * ({@code cmpi.b #$10,d0}, the zone index shifted left by four) -- so every other act 1 boss
      * reaches it and takes act 2's stored camera bounds plus {@code Make_LevelSizeObj}'s gradual
@@ -183,11 +183,11 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
     }
 
     /**
-     * {@code Offset_ObjectsDuringTransition} (sonic3k.asm:104166-104178) walks
+     * {@code Offset_ObjectsDuringTransition} (sonic3k.asm:104212-104224) walks
      * {@code Dynamic_object_RAM+object_size} to {@code Breathing_bubbles} and subtracts the
      * handover's {@code d0}/{@code d1} from the {@code x_pos}/{@code y_pos} of every slot whose
      * {@code render_flags} bit 2 is set. This flow IS such a slot: it is the boss's own SST entry
-     * rewritten by {@code loc_787E0} ({@code Obj_EndSignControl}, sonic3k.asm:180377-180383) and
+     * rewritten by {@code loc_787E0} ({@code Obj_EndSignControl}, sonic3k.asm:180468-180474) and
      * it keeps the boss's {@code render_flags}, so a seamless act change moves it with everything
      * else. Its only position word the engine models is {@code signpostX}, the x the signpost
      * child is spawned at; {@code getY()} is fixed at zero because no routine after
@@ -256,7 +256,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
     private void updateWaitFade() {
         timer--;
         if (timer <= 0) {
-            // ROM: boss_saved_mus played when timer expires (sonic3k.asm:180484-180486).
+            // ROM: boss_saved_mus played when timer expires (sonic3k.asm:180575-180577).
             // Restore the zone music before the signpost spawns.
             resumeZoneMusic();
             phase = Phase.SPAWN_SIGNPOST;
@@ -435,7 +435,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
      * as {@code _unkFAA8} clears. The routine leaves the title-card controller
      * lock and velocities independently owned, while clearing object control,
      * in-air state and publishing a fresh Wait animation
-     * (docs/skdisasm/sonic3k.asm:180361-180424).
+     * (docs/skdisasm/sonic3k.asm:180452-180515).
      */
     static void restoreNativePlayerControl(AbstractPlayableSprite player) {
         if (player == null) {
@@ -467,7 +467,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
                 }
                 // Change_Act2Sizes creates all three Child1_Act2LevelSize
                 // siblings in this order before deleting EndSignControl
-                // (sonic3k.asm:180580-180615). Releasing only X leaves the
+                // (sonic3k.asm:180671-180706). Releasing only X leaves the
                 // miniboss min-Y carried into Act 2, hiding its upward route.
                 // Preserve the native accelerating release, not a reload snap.
                 spawnAfterCurrentSibling(() -> new S3kIncLevelEndXGradualInstance(0, 0));

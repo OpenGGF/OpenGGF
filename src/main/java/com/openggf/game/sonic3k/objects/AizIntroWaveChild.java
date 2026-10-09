@@ -30,7 +30,7 @@ public class AizIntroWaveChild extends AbstractObjectInstance implements RewindR
     static final int DELETE_X = 0x60;
 
     /**
-     * ROM animation data from byte_67A9B (sonic3k.asm:136013).
+     * ROM animation data from byte_67A9B (sonic3k.asm:136078).
      * Pairs of (mapping_frame, delay). Delay value N means N+1 frames.
      * First pair (0,1) is skipped on first call (anim_frame starts at 0, incremented to 2).
      * Sentinel -1 means delete sprite.

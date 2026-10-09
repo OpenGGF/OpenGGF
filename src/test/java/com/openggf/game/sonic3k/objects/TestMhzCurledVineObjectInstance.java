@@ -156,7 +156,7 @@ class TestMhzCurledVineObjectInstance {
         SolidObjectListener listener = assertInstanceOf(SolidObjectListener.class, vine);
         // Frame 0 establishes the ride (ROM standing bit still clear: the fall-through
         // loc_3EA1E/loc_1E45A landing owns Y). Frame 1 is a continued-ride frame with the
-        // bit set, so loc_3E9FA (sonic3k.asm:82963-82977) contours Y to the curl surface.
+        // bit set, so loc_3E9FA (sonic3k.asm:83004-83018) contours Y to the curl surface.
         listener.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
         listener.onSolidContact(player, new SolidContact(true, false, false, true, false), 1);
 
@@ -181,7 +181,7 @@ class TestMhzCurledVineObjectInstance {
         MhzCurledVineObjectInstance concreteVine =
                 assertInstanceOf(MhzCurledVineObjectInstance.class, vine);
 
-        // ROM sub_3E9C6->loc_3EA1E (sonic3k.asm:82942-82986): a FALLING player
+        // ROM sub_3E9C6->loc_3EA1E (sonic3k.asm:82983-83027): a FALLING player
         // (y_vel>=0) whose (playerX - vineX + $40) is in [0, rangeWidth) lands via
         // the SEGMENT-height surface $1A(a2,d0*6) - 8, not a flat surface at spawn.y.
         // The engine must expose that per-x curl surface to landing detection, i.e.
@@ -240,7 +240,7 @@ class TestMhzCurledVineObjectInstance {
         int halfWidth = params.halfWidth();
         int width2 = halfWidth * 2;
 
-        // ROM sub_3E9C6 (sonic3k.asm:82949-82953) accepts
+        // ROM sub_3E9C6 (sonic3k.asm:82990-82994) accepts
         // 0 <= (playerX - vineX + $40) < rangeWidth, i.e. window
         // [vineX-$40, vineX-$40+rangeWidth) -- offset $40 LEFT of vineX, not centred.
         int justInsideRomWindowX = vineX - 0x40 + 1;

@@ -15,7 +15,7 @@ import com.openggf.physics.SwingMotion;
  * animation, reversing direction on each swing peak. Returns to the swing state via a
  * scripted animation callback.
  *
- * <p>Based on {@code Obj_BubblesBadnik} (sonic3k.asm, lines 184598–184707).
+ * <p>Based on {@code Obj_BubblesBadnik} (sonic3k.asm, lines 184691–184800).
  *
  * <h3>State machine (ROM routines 0/2/4):</h3>
  * <ul>
@@ -33,7 +33,7 @@ import com.openggf.physics.SwingMotion;
  */
 public final class BubblesBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
 
-    // From disassembly (sonic3k.asm:184610-184613):
+    // From disassembly (sonic3k.asm:184703-184706):
     //   move.b #$12,collision_flags(a0)          ; default: attackable, size $12
     //   cmpi.b #4,mapping_frame(a0) / bne.s
     //   move.b #$86,collision_flags(a0)           ; frame 4: HURT, size $06
@@ -55,7 +55,7 @@ public final class BubblesBadnikInstance extends AbstractS3kBadnikInstance imple
     private static final int SWING_MAX_VELOCITY = 0x100;
     private static final int SWING_ACCELERATION = 2;
 
-    // Animation scripts — (mapping_frame, delay) pairs from sonic3k.asm:184690-184706.
+    // Animation scripts — (mapping_frame, delay) pairs from sonic3k.asm:184783-184799.
     // byte_8844D (swing): 0,$7F / 3,3 / 4,$6B / 4,$6B / 3,3 / 0,$7F / $FC (loop to start)
     private static final int[] SWING_FRAMES = {0, 3, 4, 4, 3, 0};
     private static final int[] SWING_DELAYS = {0x7F, 3, 0x6B, 0x6B, 3, 0x7F};
@@ -87,7 +87,7 @@ public final class BubblesBadnikInstance extends AbstractS3kBadnikInstance imple
     protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) return;
 
-        // Obj_BubblesBadnik starts with Obj_WaitOffscreen (sonic3k.asm:184598,
+        // Obj_BubblesBadnik starts with Obj_WaitOffscreen (sonic3k.asm:184691,
         // helper at 180266-180298). Its own routine does not run, and
         // collision_flags is not written, until Render_Sprites marks it visible.
         if (waitingForOnscreen) {
@@ -215,7 +215,7 @@ public final class BubblesBadnikInstance extends AbstractS3kBadnikInstance imple
     }
 
     /**
-     * Port of Animate_RawMultiDelay (sonic3k.asm:177558). Decrements
+     * Port of Animate_RawMultiDelay (sonic3k.asm:177649). Decrements
      * anim_frame_timer; when it underflows, advances anim_frame by 2 and loads the
      * next (mapping_frame, delay) pair. Script pair 0 is only re-read via the $FC
      * loop command — normal advances start at pair 1. Returns true on a successful

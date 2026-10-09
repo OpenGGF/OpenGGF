@@ -262,7 +262,7 @@ class TestBuildToolingGuard {
             // (green-campaign round 1): bonus-stage segments must NOT receive
             // the generic fixture ground-snap terrain probe -- the ROM enters
             // bonus stages with Special_bonus_entry_flag set and skips the
-            // zone air/animation branches (sonic3k.asm:8117-8118), so snapping
+            // zone air/animation branches (sonic3k.asm:8149-8150), so snapping
             // at bootstrap forced Status_InAir one tick early and desynced
             // frame 0. Data-driven trace_profile gate, not a zone/route/frame
             // carve-out; comparison-only (removes a fixture-side mutation).

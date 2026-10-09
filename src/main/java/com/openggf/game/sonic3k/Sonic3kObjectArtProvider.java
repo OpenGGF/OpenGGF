@@ -716,7 +716,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * {@code $384} past {@code ArtTile_Bubbles}, which lands on
      * {@code ArtTile_DashDust} — a VRAM window {@code AirCountdown_Load_Art}
      * refills by DMA with six tiles from {@code ArtUnc_AirCountdown} per
-     * mapping frame (sonic3k.asm:33489-33516).
+     * mapping frame (sonic3k.asm:33529-33556).
      *
      * <p>We can't express "same mapping, different source tiles" with a flat
      * tile offset, so this rebuilds those ten frames from the ROM mapping
@@ -1590,7 +1590,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     /**
      * Mirrors {@code SSEntryRing_Display}'s {@code loc_6196A} tail, which
      * re-queues {@code ArtKosM_BadnikExplosion} to {@code ArtTile_Explosion}
-     * when a special-stage entry ring retires (sonic3k.asm:128448-128490).
+     * when a special-stage entry ring retires (sonic3k.asm:128502-128544).
      *
      * <p>The ring is deleted on the same frame and never polls the job, so —
      * exactly as for the StarPost bonus stars above — the ROM's global module
@@ -1761,7 +1761,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             // LoadEnemyArt selects PLCKosM_FBZ for both acts. Preserve the
             // ROM batch order and VRAM destinations; these parents produce
             // the direct Kosinski children through the ordinary module tail.
-            // docs/skdisasm/sonic3k.asm:64325-64326, 64386-64390
+            // docs/skdisasm/sonic3k.asm:64365-64366, 64426-64430
             case Sonic3kZoneIds.ZONE_FBZ -> List.of(
                     new EnemyKosEntry(
                             Sonic3kConstants.ART_KOSM_FBZ_BLASTER_ADDR,
@@ -1774,7 +1774,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                             Sonic3kConstants.ARTTILE_FBZ_BUTTON));
             // ROM PLCKosM_ICZ queues these entries in this order from
             // LoadEnemyArt after the title-card owner retires.
-            // docs/skdisasm/sonic3k.asm:62287-62300, 64392-64395
+            // docs/skdisasm/sonic3k.asm:62327-62340, 64432-64435
             case Sonic3kZoneIds.ZONE_ICZ -> List.of(
                     new EnemyKosEntry(
                             Sonic3kConstants.ART_KOSM_ICZ_SNOWDUST_ADDR,
@@ -1784,7 +1784,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                             Sonic3kConstants.ARTTILE_ICZ_STAR_POINTER));
             // ROM PLCKosM_LBZ queues these entries in this order from
             // LoadEnemyArt after the title-card owner retires.
-            // docs/skdisasm/sonic3k.asm:62287-62300, 64397-64402
+            // docs/skdisasm/sonic3k.asm:62327-62340, 64437-64442
             case Sonic3kZoneIds.ZONE_LBZ -> List.of(
                     new EnemyKosEntry(
                             Sonic3kConstants.ART_KOSM_SNALE_BLASTER_ADDR,
@@ -1800,7 +1800,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                             Sonic3kConstants.ARTTILE_CORKEY));
             // ROM PLCKosM_MHZ1 / PLCKosM_MHZ2 queue these entries in this
             // order from LoadEnemyArt; act 2 leads with the Cluckoid arrow.
-            // docs/skdisasm/sonic3k.asm:64331-64332, 64404-64415
+            // docs/skdisasm/sonic3k.asm:64371-64372, 64444-64455
             case Sonic3kZoneIds.ZONE_MHZ -> actIndex == 0
                     ? List.of(
                             new EnemyKosEntry(
@@ -1827,7 +1827,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                                     Sonic3kConstants.ARTTILE_DRAGONFLY));
             // ROM Offs_LoadEnemyArt selects PLCKosM_SOZ for both acts and
             // queues Skorp, Sandworm and Rockn in this order.
-            // docs/skdisasm/sonic3k.asm:64333-64334, 64417-64421
+            // docs/skdisasm/sonic3k.asm:64373-64374, 64457-64461
             case Sonic3kZoneIds.ZONE_SOZ -> List.of(
                     new EnemyKosEntry(
                             Sonic3kConstants.ART_KOSM_SKORP_ADDR,
@@ -2000,7 +2000,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * An in-level card presents over live gameplay, and the manager's COMPLETE
      * transition runs at the top of the frame — one dispatch ahead of the
      * native {@code Obj_TitleCardWait2} dispatch that reaches
-     * {@code LoadEnemyArt} (docs/skdisasm/sonic3k.asm:62302-62312). Defer the
+     * {@code LoadEnemyArt} (docs/skdisasm/sonic3k.asm:62342-62352). Defer the
      * enemy KosM submission to the following runtime-art pass so it lands on
      * the native level frame.
      */
@@ -2020,7 +2020,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * <p>A skipped presentation removes only the locked display loop. The owner
      * object still runs {@code Obj_TitleCardWait2}'s {@code objoff_2E} countdown
      * and then drains its card elements before {@code loc_2D8CA} reaches
-     * {@code LoadEnemyArt} ({@code docs/skdisasm/sonic3k.asm:62249-62261},
+     * {@code LoadEnemyArt} ({@code docs/skdisasm/sonic3k.asm:62289-62301},
      * {@code 62295-62301}).
      */
     @Override
@@ -2036,13 +2036,13 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     /**
      * Re-queues the current zone/act's enemy KosM archives, matching a
      * mid-level ROM {@code jsr (LoadEnemyArt).l}
-     * ({@code docs/skdisasm/sonic3k.asm:64281-64313}): the caller's object runs
+     * ({@code docs/skdisasm/sonic3k.asm:64321-64353}): the caller's object runs
      * {@code Queue_Kos_Module} for every {@code PLCKosM_*} entry during its own
      * execution frame, so the submissions happen immediately rather than
      * waiting for the next {@link #processRuntimeArtQueue()} pump.
      *
      * <p>Used by {@code HCZGeyser_ReloadEnemyArtAndDelete}
-     * ({@code docs/skdisasm/sonic3k.asm:65002-65004}), which restores the
+     * ({@code docs/skdisasm/sonic3k.asm:65042-65044}), which restores the
      * badnik art the horizontal geyser sheet overwrote before deleting itself.
      */
     public void reloadEnemyKosArt() {
@@ -2056,12 +2056,12 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      *
      * <p>{@code Obj_TitleCard} creates its card elements through
      * {@code CreateNewSprite4}, which scans forward from the creator's own slot
-     * ({@code docs/skdisasm/sonic3k.asm:37894-37919}), so every element lives in
+     * ({@code docs/skdisasm/sonic3k.asm:37934-37959}), so every element lives in
      * a higher {@code Dynamic_object_RAM} slot and {@code ExecuteObjects} runs
      * the owner before its children. After {@code Draw_Sprite} records an
      * off-screen result, the child's following dispatch sees the clear render
      * flag and decrements {@code objoff_30}
-     * ({@code docs/skdisasm/sonic3k.asm:62358-62361}). The owner has already
+     * ({@code docs/skdisasm/sonic3k.asm:62398-62401}). The owner has already
      * tested {@code objoff_30} in that retirement dispatch and returned through the
      * {@code addq.w #1,objoff_32} branch ({@code 62256-62261}). It first
      * observes the drained counter — and so first reaches {@code loc_2D8CA}'s

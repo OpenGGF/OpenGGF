@@ -19,17 +19,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * {@code Obj_Toxomister}'s body is an ordinary enemy, and a rolling player destroys it.
  *
- * <p>{@code ObjDat_Toxomister} (sonic3k.asm:196950-196954) ends {@code dc.b 8,8,1,$18}: the last
- * byte is {@code collision_flags}. {@code Touch_ChkValue} (sonic3k.asm:20774-20776) takes only
+ * <p>{@code ObjDat_Toxomister} (sonic3k.asm:197057-197061) ends {@code dc.b 8,8,1,$18}: the last
+ * byte is {@code collision_flags}. {@code Touch_ChkValue} (sonic3k.asm:20810-20812) takes only
  * bits 6-7 as the type, and {@code $18 & $C0} is zero -- the {@code Touch_Enemy} type. The low
- * six bits are the {@code Touch_Sizes} index, and entry {@code $18} (sonic3k.asm:20713+, the
+ * six bits are the {@code Touch_Sizes} index, and entry {@code $18} (sonic3k.asm:20749+, the
  * 25th pair) is {@code dc.b 4,4}, an 8x8 box. That is a much smaller box than the {@code 8,8}
  * {@code width_pixels}/{@code height_pixels} in the same record, which are the sprite's size and
  * not its touch box.
  *
- * <p>{@code Touch_Enemy} (sonic3k.asm:20880-20886) sends a player whose {@code anim} is
+ * <p>{@code Touch_Enemy} (sonic3k.asm:20916-20922) sends a player whose {@code anim} is
  * {@code 2} (rolling) to {@code .checkhurtenemy}, and with {@code boss_hitcount2} zero that falls
- * straight into {@code Touch_EnemyNormal} (sonic3k.asm:20945-20990): the badnik takes
+ * straight into {@code Touch_EnemyNormal} (sonic3k.asm:20981-21026): the badnik takes
  * {@code status} bit 7 and is rewritten to {@code Obj_Explosion}, and the player is rebounded.
  * Which rebound depends on where the player is: {@code tst.w y_vel(a0) / bmi} bounces a rising
  * player down by {@code +$100}; otherwise {@code cmp.w y_pos(a1),d0 / bhs} bounces a player at or

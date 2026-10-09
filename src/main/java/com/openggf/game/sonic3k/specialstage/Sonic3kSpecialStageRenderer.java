@@ -14,7 +14,7 @@ import static com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageConstants
 /**
  * Renderer for the S3K Blue Ball special stage.
  * <p>
- * Implements Draw_SSSprites (sonic3k.asm:12266) — the pseudo-3D perspective
+ * Implements Draw_SSSprites (sonic3k.asm:12302) — the pseudo-3D perspective
  * projection that renders spheres, rings, bumpers, and springs from the 32x32
  * grid onto the screen using pre-computed perspective maps.
  * <p>
@@ -104,7 +104,7 @@ public class Sonic3kSpecialStageRenderer {
     /**
      * Direction table for perspective grid traversal.
      * 4 quadrants, 6 fields each: col_start, row_start, col_step, col_mask, row_step, row_mask.
-     * From word_98B0 (sonic3k.asm:12229).
+     * From word_98B0 (sonic3k.asm:12265).
      */
     private static final int[][] DIR_TABLE = {
         { 0x18, 6,  1, 0x1F, -1, 0x1F },  // North (0x00-0x3F)
@@ -267,7 +267,7 @@ public class Sonic3kSpecialStageRenderer {
      * Render the "Get Blue Spheres" banner.
      * <p>
      * Two halves slide in from the screen edges, display for 3 seconds, then slide out.
-     * ROM: Obj_SStage_8E40 (sonic3k.asm:11310). Object center at VDP (0x120, 0xE8)
+     * ROM: Obj_SStage_8E40 (sonic3k.asm:11346). Object center at VDP (0x120, 0xE8)
      * = screen (160, 104). Left half slides from -0xC0 to 0, right from +0xC0 to 0.
      * <p>
      * Map_GetBlueSpheres has 4 frames: 0=left part1, 1=right part1, 2=left part2, 3=right part2.
@@ -658,7 +658,7 @@ public class Sonic3kSpecialStageRenderer {
     }
 
     /**
-     * Floor frame lookup matching SS_Pal_Map_Ptrs (sonic3k.asm:11107).
+     * Floor frame lookup matching SS_Pal_Map_Ptrs (sonic3k.asm:11143).
      * <p>
      * The Enigma map data contains 9 frames at offsets in RAM:
      * <pre>
@@ -744,7 +744,7 @@ public class Sonic3kSpecialStageRenderer {
     /**
      * Render grid sprites using ROM-accurate pseudo-3D perspective.
      * <p>
-     * Implements Draw_SSSprites (sonic3k.asm:12266):
+     * Implements Draw_SSSprites (sonic3k.asm:12302):
      * <ol>
      *   <li>Select direction table based on angle quadrant</li>
      *   <li>Compute animation frame from position/angle</li>

@@ -16,7 +16,7 @@ import java.util.logging.Logger;
 /**
  * Cutscene button for Hydrocity Zone Act 2.
  *
- * <p>ROM reference: Obj_CutsceneButton subtype 2 (loc_65C72 in sonic3k.asm:133972).
+ * <p>ROM reference: Obj_CutsceneButton subtype 2 (loc_65C72 in sonic3k.asm:134029).
  * Spawned as a child of CutsceneKnux_HCZ2. Triggered when cutscene Knuckles
  * walks within proximity. On press:
  * <ul>
@@ -96,7 +96,7 @@ public class Hcz2CutsceneButtonInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: loc_65C72 (sonic3k.asm:133972) — CutsceneButton subtype 2 action.
+     * ROM: loc_65C72 (sonic3k.asm:134029) — CutsceneButton subtype 2 action.
      * Sets Level_trigger_array[8] which the tension bridge monitors.
      */
     private void press() {

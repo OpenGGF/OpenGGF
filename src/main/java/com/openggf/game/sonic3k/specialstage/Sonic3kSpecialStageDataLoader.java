@@ -315,7 +315,7 @@ public class Sonic3kSpecialStageDataLoader {
 
     /**
      * Load and decompress the compressed layout data (SK Set 1 or 2).
-     * ROM: SSCompressedLayoutPtrs (sonic3k.asm:202580)
+     * ROM: SSCompressedLayoutPtrs (sonic3k.asm:202695)
      *
      * @param setIndex 0 for SK Set 1, 1 for SK Set 2
      * @return decompressed layout data

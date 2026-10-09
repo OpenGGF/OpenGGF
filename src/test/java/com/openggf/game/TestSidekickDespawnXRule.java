@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * <p>Disassembly references:
  * <ul>
  *   <li>S3K: {@code sub_13ECA} writes {@code #$7F00, x_pos(a0)}
- *       (sonic3k.asm:26800-26807).</li>
+ *       (sonic3k.asm:26840-26847).</li>
  *   <li>S2:  {@code TailsCPU_RespawnTails} resets Tails to Sonic's position
  *       instead of consuming an off-screen marker, so the engine retains its
  *       historic {@code 0x4000} placeholder for parity with existing traces.</li>

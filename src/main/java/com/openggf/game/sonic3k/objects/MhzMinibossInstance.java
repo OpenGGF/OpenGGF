@@ -260,7 +260,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
         // routine. Routine $08 deliberately waits at x=$4428 until camera
         // scrolling brings the boss back inside ObjDat_MHZMiniboss's $48/$40
         // render bounds, then observes the latched bit on the next dispatch
-        // (sonic3k.asm:155584-155592, 155695-155726, 156770-156775).
+        // (sonic3k.asm:155658-155666, 155769-155800, 156844-156849).
         if (isWithinRenderSpriteBounds(RENDER_WIDTH_PIXELS, RENDER_HEIGHT_PIXELS)) {
             state.renderFlags |= 0x80;
         } else {
@@ -291,7 +291,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
         // reaches zero. BossDefeated writes $2E=$3F before loc_75DCC installs
         // Wait_FadeToLevelMusic; that shared waiter uses subq/bmi, so $0000 is
         // still a retained boss-frame and the callback runs on the 64th
-        // decrement (sonic3k.asm:156704-156732,179656-179674,180819-180826).
+        // decrement (sonic3k.asm:156778-156806,179747-179765,180910-180917).
         setCustomFlag(SCRATCH_2E, 0x3F);
         defeatHandoffQueued = false;
         // loc_75DCC allocates an independent CreateBossExp10 controller.
@@ -380,10 +380,10 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
         }
         spawnChild(() -> new MhzMinibossFlameInstance(this, 0));
         spawnChild(() -> new MhzMinibossFlameInstance(this, 1));
-        // ROM loc_75220 (sonic3k.asm:155651-155654) does NOT play the miniboss
+        // ROM loc_75220 (sonic3k.asm:155725-155728) does NOT play the miniboss
         // music directly: it AllocateObjects an Obj_Song_Fade_Transition with
         // subtype = mus_Miniboss, which fades the zone track over 90 frames
-        // (Obj_Song_Fade_Transition, :180323) before swapping to the boss track.
+        // (Obj_Song_Fade_Transition, :180414) before swapping to the boss track.
         // Playing it instantly gave the miniboss music no time to fade in.
         spawnChild(() -> SongFadeTransitionInstance.transitionTo(Sonic3kMusic.MINIBOSS.id));
         // loc_75220 loads PLC_MHZMiniboss_Explosion (ArtTile_BossExplosion2).
@@ -400,7 +400,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
 
     /**
      * ROM: {@code lea Pal_MHZMiniboss(pc),a1 / jsr PalLoad_Line1} during
-     * {@code Obj_MHZMiniboss} setup (sonic3k.asm:155660-155661). S&K-side ROM
+     * {@code Obj_MHZMiniboss} setup (sonic3k.asm:155734-155735). S&K-side ROM
      * offset 0x075F28 was verified by searching the 32-byte palette payload.
      */
     private void loadBossPalette() {
@@ -522,7 +522,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
             // for loc_75E1A after publishing the $6000 target.
             // That worker owns Camera_max_X_pos and advances it by $4000 in
             // 16.16 fixed point until Camera_stored_max_X_pos is reached
-            // (sonic3k.asm:155708-155716, 156749-156766).
+            // (sonic3k.asm:155782-155790, 156823-156840).
             spawnFreeChild(() -> new S3kIncLevelEndXGradualInstance(state.x, state.y, true));
         }
     }
@@ -958,7 +958,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
             // EndSignControl chain. In this SST ordering the first signpost
             // results-timer entry has already elapsed, and Obj_LevelResults
             // mutates to Obj_TitleCard as soon as the final child retires; no
-            // carried-child render entries remain (sonic3k.asm:156704-156732,
+            // carried-child render entries remain (sonic3k.asm:156778-156806,
             // 176198-176238, 62708-62720).
             spawnChild(() -> new S3kBossDefeatSignpostFlow(
                     state.x, svc.currentAct(), S3kBossDefeatSignpostFlow.CleanupAction.NONE,

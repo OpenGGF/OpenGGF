@@ -29,7 +29,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * Each HCZ end-boss child is its own ROM object with its own {@code priority} word
- * and art-word bit 15 (ObjDat tables at sonic3k.asm:142150-142196, Robotnik ship and
+ * and art-word bit 15 (ObjDat tables at sonic3k.asm:142215-142261, Robotnik ship and
  * head at 136645-136658). The Java children must pass those buckets to
  * {@link AbstractBossChild} instead of a shared placeholder.
  */
@@ -65,7 +65,7 @@ class TestHczEndBossChildBuckets {
     }
 
     /**
-     * HCZEndBossBomb_PriorityBySubtype (sonic3k.asm:141667-141670): $280 / $200 / $180 for
+     * HCZEndBossBomb_PriorityBySubtype (sonic3k.asm:141732-141735): $280 / $200 / $180 for
      * subtypes 0 / 2 / 4, written at init (141394) and again after the subq.b #2,subtype shift
      * in HCZEndBossBomb_StartDropWait (141430-141435).
      */
@@ -93,7 +93,7 @@ class TestHczEndBossChildBuckets {
 
     /**
      * Obj_RobotnikShipInit creates the head with Child1_MakeRoboHead / CreateChild1_Normal
-     * (sonic3k.asm:136415-136416, 176924-176929), an AllocateObjectAfterCurrent, so
+     * (sonic3k.asm:136480-136481, 177015-177020), an AllocateObjectAfterCurrent, so
      * the head occupies a later slot than the ship. Both are priority $280 and
      * Draw_Sprite appends in slot order with the lower sprite-table entry in
      * front, so the ship covers the head: the folded renderer paints the head first.

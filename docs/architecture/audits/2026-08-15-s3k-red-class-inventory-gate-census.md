@@ -75,8 +75,8 @@ side took). Two ROM events are inventory-gated and leave a signature in the fixt
 
 | event | ROM | fixture signature | engine cannot produce it because |
 |---|---|---|---|
-| Giant-ring 50-ring award | `Obj_SSEntryRing` arm `loc_61794`, `sonic3k.asm:128327-128328` — `moveq #50,d0 / jmp (AddRings).l`. The **only** `moveq #50,d0` feeding `AddRings` in the whole disassembly | `rings` steps **+0x32 in a single frame** | the `cmpi.b #7,(Chaos_emerald_count).w` at `:128283` reads 0 in a segment |
-| Super/Hyper transformation | `Sonic_Transform`, `sonic3k.asm:23492` — `move.b #$1F,anim(a0)` (Knuckles' twin at `:32596`; the only two writers) | `player_animation_id == 0x1F` | `SuperStateController.canTransform()` (`:241`) requires `hasTransformationEmeralds()` → `GameStateManager.hasAllEmeralds()`, and `emeraldCount` is 0 for a fresh segment |
+| Giant-ring 50-ring award | `Obj_SSEntryRing` arm `loc_61794`, `sonic3k.asm:128381-128382` — `moveq #50,d0 / jmp (AddRings).l`. The **only** `moveq #50,d0` feeding `AddRings` in the whole disassembly | `rings` steps **+0x32 in a single frame** | the `cmpi.b #7,(Chaos_emerald_count).w` at `:128283` reads 0 in a segment |
+| Super/Hyper transformation | `Sonic_Transform`, `sonic3k.asm:23527` — `move.b #$1F,anim(a0)` (Knuckles' twin at `:32596`; the only two writers) | `player_animation_id == 0x1F` | `SuperStateController.canTransform()` (`:241`) requires `hasTransformationEmeralds()` → `GameStateManager.hasAllEmeralds()`, and `emeraldCount` is 0 for a fresh segment |
 
 The engine's *other* arm is equally visible: `loc_6173A` (`:128290-128295`) writes
 `mapping_frame = 0`, `anim = $1C`, `object_control = $53`.

@@ -46,7 +46,7 @@ frame, or trace predicates.
 ## Evidence
 
 - `ed113599f`: ROM-backed signpost bump bounds and
-  `Obj_EndSignFall` ordering (`sonic3k.asm:176149-176160`,
+  `Obj_EndSignFall` ordering (`sonic3k.asm:176240-176251`,
   `176347-176405`).
 - `07b866ced`: results-child timing adjustment that replaced the earlier
   inaccurate allocation-owner interpretation.

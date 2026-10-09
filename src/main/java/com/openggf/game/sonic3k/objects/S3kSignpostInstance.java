@@ -249,7 +249,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
      * same delta as the players/camera during a seamless act reload (e.g. CNZ
      * (-$3000, +$200)), so the signpost stays on screen and in Obj_EndSignAfter
      * after the Act 1 -> Act 2 transition instead of being stranded at its old
-     * Act 1 world position (docs/skdisasm/sonic3k.asm:176262-176279, CNZ1BGE_DoTransition).
+     * Act 1 world position (docs/skdisasm/sonic3k.asm:176353-176370, CNZ1BGE_DoTransition).
      */
     @Override
     public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
@@ -359,14 +359,14 @@ public class S3kSignpostInstance extends AbstractObjectInstance
                     resultsTimerCatchUpEntries,
                     preservesPostObjectResultDispatchBoundary,
                     bumpedFromBelow);
-            // ROM loc_838AA (docs/skdisasm/sonic3k.asm:176191-176194) is the whole
+            // ROM loc_838AA (docs/skdisasm/sonic3k.asm:176282-176285) is the whole
             // landing branch: it writes routine, $38 bit 0 and the $40 timer, and
             // touches NEITHER velocity nor either sub-pixel. The velocities are
             // cleared only later, by loc_838D6 when the post-land timer expires
-            // (:176209-176218) -- which this class already does at that transition.
+            // (:176300-176309) -- which this class already does at that transition.
             //
             // Clearing x_vel here broke the hidden-monitor re-bounce. loc_838FA
-            // (:176222-176227) resumes routine 2 with `move.b #$20,$20(a0)` and
+            // (:176313-176318) resumes routine 2 with `move.b #$20,$20(a0)` and
             // `move.w #-$200,y_vel(a0)` only, so the signpost carries its
             // PRE-LANDING x_vel back into the air and keeps drifting sideways.
             // With x_vel zeroed the engine's signpost hung motionless in x after
@@ -416,9 +416,9 @@ public class S3kSignpostInstance extends AbstractObjectInstance
 
         // ROM EndSign_CheckPlayerHit range-tests both players once, then calls
         // sub_83A70 for Player 1 and afterwards for Player 2
-        // (docs/skdisasm/sonic3k.asm:176347-176371, 176376-176397).
+        // (docs/skdisasm/sonic3k.asm:176438-176462, 176467-176488).
         //
-        // FixBugs conditional at docs/skdisasm/sonic3k.asm:176357-176365. The
+        // FixBugs conditional at docs/skdisasm/sonic3k.asm:176448-176456. The
         // engine takes the FixBugs = 0 branch, which is what the shipped ROM
         // does. The fixed branch would push/pop d0 around the Player 1 call so
         // that the following `swap d0 / tst.w d0` still holds Player 2's
@@ -431,12 +431,12 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         //
         // HUD_AddToScore has TWO exits and both leave the same thing in d0's
         // high word, which is the only half the following `swap d0 / tst.w d0`
-        // can see (:17645-17665):
+        // can see (:17681-17701):
         //   - the ordinary `.end` exit returns after `move.l (a3),d0`, so d0 is
         //     the whole 32-bit Score;
         //   - the extra-life exit does `move.w #mus_ExtraLife,d0` and tail-jumps
         //     to Play_Music, which writes only `d0.b` into Z80 RAM and touches
-        //     no register (:1471-1475; its stopZ80/startZ80 macros are pure
+        //     no register (:1493-1497; its stopZ80/startZ80 macros are pure
         //     memory writes, sonic3k.macros.asm:94-103). That `move.w` replaces
         //     only the LOW word, so the high word is still the Score's.
         // The extra-life exit is reachable in an ordinary run, not hypothetical,
@@ -504,12 +504,12 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         // Check_PlayerInRange interprets EndSign_Range as left,width,top,height:
         // (-$20,$40) produces [-$20,+$20), and (-$18,$30) produces
         // [-$18,+$18), rather than treating $40/$30 as absolute maxima
-        // (sonic3k.asm:176350-176353,176410-176411,179994-180019).
+        // (sonic3k.asm:176441-176444,176501-176502,180085-180110).
         return dx >= BUMP_LEFT && dx < BUMP_RIGHT && dy >= BUMP_TOP && dy < BUMP_BOTTOM;
     }
 
     static int romBumpXVelocity(int signpostX, int playerX) {
-        // ROM sub_83A70 (docs/skdisasm/sonic3k.asm:176381-176390):
+        // ROM sub_83A70 (docs/skdisasm/sonic3k.asm:176472-176481):
         //   move.w x_pos(a0),d0
         //   sub.w  x_pos(a1),d0
         //   bne.s  loc_83A92
@@ -529,7 +529,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
 
     static boolean hasRomBumpPose(AbstractPlayableSprite player) {
         // ROM sub_83A70 only accepts anim(a1)==#2 and upward y_vel(a1);
-        // it does not test Status_InAir (docs/skdisasm/sonic3k.asm:176372-176387).
+        // it does not test Status_InAir (docs/skdisasm/sonic3k.asm:176463-176478).
         return player != null
                 && player.getAnimationId() == Sonic3kAnimationIds.ROLL.id()
                 && player.getYSpeed() < 0;
@@ -576,7 +576,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
 
     static boolean romPostLandTimerExpired(int timerAfterDecrement) {
         // Obj_EndSignLanded uses subq.w #1,$2E(a0); bmi.s, so $0000 is still
-        // a waiting frame and only $FFFF advances (docs/skdisasm/sonic3k.asm:176198-176208).
+        // a waiting frame and only $FFFF advances (docs/skdisasm/sonic3k.asm:176289-176299).
         return (short) timerAfterDecrement < 0;
     }
 
@@ -586,7 +586,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         // engine object walk, so an unbumped sign has already consumed one
         // native falling/countdown boundary by the time the engine lands it.
         // A real EndSign_CheckPlayerHit bounce re-phases the falling owner and
-        // retains the full $40 countdown instead (sonic3k.asm:176225-176253,
+        // retains the full $40 countdown instead (sonic3k.asm:176316-176344,
         // 176342-176387, 107590-107601).
         int nativeAllocationCatchUp = postObjectAllocationBoundary && !bumpedFromBelow ? 1 : 0;
         return Math.max(0, POST_LAND_TIMER - configuredCatchUpEntries - nativeAllocationCatchUp);
@@ -626,7 +626,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
 
         // ROM Obj_EndSignLanded writes only Ctrl_2_locked before this routine;
         // Obj_EndSignResults calls Set_PlayerEndingPose with a1=Player_1 only
-        // (sonic3k.asm:176198-176218,176229-176238). Tails keeps executing his
+        // (sonic3k.asm:176289-176309,176320-176329). Tails keeps executing his
         // CPU movement until Obj_LevelResults' later Check_TailsEndPose path.
         for (PlayableEntity candidate : playerQuery(player)
                 .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
@@ -722,7 +722,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
             return;
         }
         // Check_TailsEndPose clears Ctrl_2_locked immediately before tail-calling
-        // Set_PlayerEndingPose (sonic3k.asm:181919-181940).
+        // Set_PlayerEndingPose (sonic3k.asm:182010-182031).
         sprite.setControlLocked(false);
         if (sprite.getCpuController() != null) {
             sprite.getCpuController().setController2SignedLocked(false);
@@ -737,11 +737,11 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         // Set_PlayerEndingPose writes object_control=$81, victory animation,
         // clears spin_dash_flag / Status_Push, and zeroes velocities, but does
         // not set Ctrl_1_locked
-        // (docs/skdisasm/sonic3k.asm:181977-181988). Obj_EndSignLanded only
-        // locks Ctrl_2 (docs/skdisasm/sonic3k.asm:176198-176218), so Sonic
+        // (docs/skdisasm/sonic3k.asm:182068-182079). Obj_EndSignLanded only
+        // locks Ctrl_2 (docs/skdisasm/sonic3k.asm:176289-176309), so Sonic
         // keeps copying raw Ctrl_1 into Ctrl_1_logical while object_control
         // freezes movement; Sonic_RecordPos then stores that live input for
-        // Tails' delayed follow history (docs/skdisasm/sonic3k.asm:21541-21545,
+        // Tails' delayed follow history (docs/skdisasm/sonic3k.asm:21577-21581,
         // 22119-22136).
         ObjectControlState.nativeBit7FullControl().applyTo(sprite);
         sprite.setSpindash(false);
@@ -792,7 +792,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
      * owner publishes its next routine. The engine keeps the signpost's
      * routine-8 work in this object, so without consuming both pending flags
      * it can reapply the victory pose after {@code Restore_PlayerControl} in
-     * the same object pass (docs/skdisasm/sonic3k.asm:176229-176272,
+     * the same object pass (docs/skdisasm/sonic3k.asm:176320-176363,
      * 180437-180451).
      */
     void completeNativeResultsControlRestore() {
@@ -808,7 +808,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
             // The ROM's routine-6 dispatch allocates Obj_LevelResults and returns;
             // Check_TailsEndPose belongs to the later routine-8 dispatch. Keep
             // that distinct entry boundary even though the engine models the
-            // results allocation as a free child (sonic3k.asm:176229-176272).
+            // results allocation as a free child (sonic3k.asm:176320-176363).
             sidekickEndingPoseCheckArmed = true;
             return;
         }

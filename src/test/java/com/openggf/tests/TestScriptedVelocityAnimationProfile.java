@@ -92,7 +92,7 @@ public class TestScriptedVelocityAnimationProfile {
         sprite.setAir(false);
         sprite.setHurt(true);
         // HurtCharacter's common tail already performed its one-shot
-        // `move.b #$1A,anim(a0)` (docs/skdisasm/sonic3k.asm:21321), so the hurt
+        // `move.b #$1A,anim(a0)` (docs/skdisasm/sonic3k.asm:21357), so the hurt
         // byte is live when the profile runs.
         sprite.setAnimationId(profile.getHurtAnimId());
 

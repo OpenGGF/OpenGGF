@@ -62,17 +62,17 @@
 The earlier claim that SSZ has a native `SpawnLevelMainSprites` falling
 introduction was stale. In the owning S&K routine, `loc_68A6` is reached by the
 LRZ1 `$0900` comparison and the LRZ boss `$1600` comparison
-(`docs/skdisasm/sonic3k.asm:8161-8178`); SSZ's `$0A00/$0A01` values are listed
-separately as SSZ acts (`sonic3k.asm:10154-10157`) and are not compared there.
+(`docs/skdisasm/sonic3k.asm:8193-8210`); SSZ's `$0A00/$0A01` values are listed
+separately as SSZ acts (`sonic3k.asm:10190-10193`) and are not compared there.
 The S3 standalone routine likewise has no SSZ branch
-(`docs/skdisasm/s3.asm:6175-6260`). Existing SSZ event and teleporter behavior
+(`docs/skdisasm/s3.asm:6211-6296`). Existing SSZ event and teleporter behavior
 therefore does not need a falling-introduction override. The negative SSZ gate
 is covered by `TestS3kLrzFallingIntroBootstrap` so a future change cannot
 silently reintroduce the stale attribution.
 
 ## Level Boundaries
 
-From `LevelSizes` (sonic3k.asm line 38112-38113):
+From `LevelSizes` (sonic3k.asm line 38152-38153):
 
 | Act | X Start | X End | Y Start | Y End | Notes |
 |-----|---------|-------|---------|-------|-------|
@@ -127,7 +127,7 @@ SSZ is an S&K zone; the S3 `LevelResizeArray` (line 38808) maps SSZ slots to `No
 
 ### Act 1 Screen Init (SSZ1_ScreenInit)
 
-**Disassembly location:** sonic3k.asm line 115846
+**Disassembly location:** sonic3k.asm line 115892
 
 **Initialization sequence:**
 1. If no checkpoint (`Last_star_post_hit == 0`): Spawns `Obj_57C1E` (teleporter beam controller) at X=$100 with `$2D` = $6C. Sets `Events_bg+$05` flag.
@@ -140,7 +140,7 @@ SSZ is an S&K zone; the S3 `LevelResizeArray` (line 38808) maps SSZ slots to `No
 
 ### Act 1 Screen Event (SSZ1_ScreenEvent)
 
-**Disassembly location:** sonic3k.asm line 115899
+**Disassembly location:** sonic3k.asm line 115945
 
 **Pre-dispatch:** Adds `Screen_shake_offset` to `Camera_Y_pos_copy` (screen shake applied to FG). Dispatches on `Events_routine_fg`.
 
@@ -154,7 +154,7 @@ SSZ is an S&K zone; the S3 `LevelResizeArray` (line 38808) maps SSZ slots to `No
 
 ### Act 1 Dynamic Boundaries (sub_575EA)
 
-**Disassembly location:** sonic3k.asm line 115193
+**Disassembly location:** sonic3k.asm line 115239
 
 **Called from:** SSZ1_ScreenEvent stage 0 (normal play)
 
@@ -196,7 +196,7 @@ SSZ is an S&K zone; the S3 `LevelResizeArray` (line 38808) maps SSZ slots to `No
 
 ### Act 1 Crumbling Platform Manager (sub_5750C)
 
-**Disassembly location:** sonic3k.asm line 116094
+**Disassembly location:** sonic3k.asm line 116140
 
 Manages 10 crumbling platforms stored in HScroll_table+$80. Each platform has:
 - Position (4 bytes at HScroll_table+$80)
@@ -210,7 +210,7 @@ Also tracks the player object's position relative to platforms for ride detectio
 
 ### Act 1 Cloud Sprite Update (sub_5758A)
 
-**Disassembly location:** sonic3k.asm line 116148
+**Disassembly location:** sonic3k.asm line 116194
 
 Updates 5 cloud sprite positions stored at HScroll_table+$1F6. For each sprite:
 - Calculates effective Y = Camera_Y_pos * 1.25 + _unkEE9C * 0.625 + shake_offset
@@ -221,7 +221,7 @@ These are foreground decorative cloud objects that parallax relative to the came
 
 ### Act 2 Screen Init (SSZ2_ScreenInit)
 
-**Disassembly location:** sonic3k.asm line 117719
+**Disassembly location:** sonic3k.asm line 117765
 
 **Initialization sequence:**
 1. Sets `Palette_cycle_counters+$00` flag (enables palette cycling gate).
@@ -232,7 +232,7 @@ These are foreground decorative cloud objects that parallax relative to the came
 
 ### Act 2 Screen Event (SSZ2_ScreenEvent)
 
-**Disassembly location:** sonic3k.asm line 117744
+**Disassembly location:** sonic3k.asm line 117790
 
 **Pre-dispatch:** Adds `Screen_shake_offset` to `Camera_Y_pos_copy`. Dispatches on `Events_routine_fg`.
 
@@ -256,7 +256,7 @@ These are foreground decorative cloud objects that parallax relative to the came
 
 ### Act 2 Camera Controller Object (loc_59078)
 
-**Disassembly location:** sonic3k.asm line 118362
+**Disassembly location:** sonic3k.asm line 118408
 
 3-phase object controlling SSZ2's vertical camera motion:
 
@@ -268,7 +268,7 @@ These are foreground decorative cloud objects that parallax relative to the came
 
 ### Act 1 Background Init (SSZ1_BackgroundInit)
 
-**Disassembly location:** sonic3k.asm line 116380
+**Disassembly location:** sonic3k.asm line 116426
 
 1. Clears `Events_bg+$10` (sky mode flag).
 2. Spawns main cloud oscillator object (`loc_57B6A`) which controls `_unkEE9C` via Gradual_SwingOffset (amplitude $8000, step $100).
@@ -279,7 +279,7 @@ These are foreground decorative cloud objects that parallax relative to the came
 
 ### Act 1 Background Event (SSZ1_BackgroundEvent)
 
-**Disassembly location:** sonic3k.asm line 116427
+**Disassembly location:** sonic3k.asm line 116473
 
 **State machine (Events_routine_bg):**
 
@@ -292,7 +292,7 @@ These are foreground decorative cloud objects that parallax relative to the came
 
 ### Act 1 Sky BG Position (sub_579F0)
 
-**Disassembly location:** sonic3k.asm line 116563
+**Disassembly location:** sonic3k.asm line 116609
 
 Two modes controlled by `Events_bg+$10`:
 
@@ -308,7 +308,7 @@ Transition between modes triggers when Camera_X_pos crosses $1800, with immediat
 
 ### Act 1 Cloud Parallax (sub_57A60)
 
-**Disassembly location:** sonic3k.asm line 116610
+**Disassembly location:** sonic3k.asm line 116656
 
 Calculates multi-layer cloud parallax for the $800-$F00 Y range:
 
@@ -334,7 +334,7 @@ Calculates multi-layer cloud parallax for the $800-$F00 Y range:
 
 ### Act 2 Background Init (SSZ2_BackgroundInit)
 
-**Disassembly location:** sonic3k.asm line 117974
+**Disassembly location:** sonic3k.asm line 118020
 
 1. Clears `_unkEE9C` (4 bytes).
 2. Calls sub_58D3E (BG position/parallax setup).
@@ -343,7 +343,7 @@ Calculates multi-layer cloud parallax for the $800-$F00 Y range:
 
 ### Act 2 Background Event (SSZ2_BackgroundEvent)
 
-**Disassembly location:** sonic3k.asm line 117983
+**Disassembly location:** sonic3k.asm line 118029
 
 **State machine (Events_routine_bg):**
 
@@ -354,7 +354,7 @@ Calculates multi-layer cloud parallax for the $800-$F00 Y range:
 
 ### Act 2 BG Parallax (sub_58D3E)
 
-**Disassembly location:** sonic3k.asm line 118006
+**Disassembly location:** sonic3k.asm line 118052
 
 **Three modes based on Events_routine_fg:**
 
@@ -420,9 +420,9 @@ $120, $8, $8, $4, $4, $8, $8, $18, $10, $10, $7FFF
 
 ## Animated Tiles (AniPLC_SSZ)
 
-**Disassembly location:** sonic3k.asm line 56035
+**Disassembly location:** sonic3k.asm line 56075
 
-**Dispatch:** Act 1 uses `AnimateTiles_DoAniPLC` (generic AniPLC processor). Act 2 uses `AnimateTiles_NULL`, a bare `rts` (`Offs_AniFunc`, sonic3k.asm:53881-53884): the `AniPLC_SSZ` pointer stored next to it is never consumed, so act 2 animates nothing.
+**Dispatch:** Act 1 uses `AnimateTiles_DoAniPLC` (generic AniPLC processor). Act 2 uses `AnimateTiles_NULL`, a bare `rts` (`Offs_AniFunc`, sonic3k.asm:53921-53924): the `AniPLC_SSZ` pointer stored next to it is never consumed, so act 2 animates nothing.
 
 | Script | Speed | Art Source | VRAM Dest | Frames | Tile Size | Description |
 |--------|-------|------------|-----------|--------|-----------|-------------|
@@ -495,12 +495,12 @@ Both routines are also used by the Ending_ScreenEvent (line 121268): sub_592EE d
 ### Act 1: Mecha Sonic (Obj_SSZEndBoss)
 
 - **Object:** `Obj_SSZEndBoss` at line 164157
-- **Spawn trigger:** the `$79` pad at ($1A40,$670) running `loc_45A66`/`loc_45A84` (sonic3k.asm:91406-91432): once `Camera_Y_pos == Camera_max_Y_pos` it allocates `Obj_SSZEndBoss` and stores the slot in `_unkFAA4`. Act 2 spawns the same object from `Obj_KnuxFinalBossCrane` (`loc_7CB64`)
+- **Spawn trigger:** the `$79` pad at ($1A40,$670) running `loc_45A66`/`loc_45A84` (sonic3k.asm:91452-91478): once `Camera_Y_pos == Camera_max_Y_pos` it allocates `Obj_SSZEndBoss` and stores the slot in `_unkFAA4`. Act 2 spawns the same object from `Obj_KnuxFinalBossCrane` (`loc_7CB64`)
 - **Arena:** Camera_min_X_pos=$19A0, Camera_min/target_max_Y_pos=$5C0 (sub_575EA final arena)
 - **Art:** ObjSlot_MechaSonic + ArtKosM_MechaSonicExtra (DPLC-driven)
 - **Health:** 8 hits (collision_property = 8)
 - **State machine:** 21 states (SSZEndBoss_Index, line 164169). Multi-phase fight including dash attacks, jumping patterns, and defeat sequence.
-- **Defeat (act 1):** ends the act (`End_of_level_flag`, results, then the launch). The in-place switch to `Obj_SSZ2_Boss` (`loc_7BBE0`, sonic3k.asm:164932-164955) is act 2 only.
+- **Defeat (act 1):** ends the act (`End_of_level_flag`, results, then the launch). The in-place switch to `Obj_SSZ2_Boss` (`loc_7BBE0`, sonic3k.asm:165010-165033) is act 2 only.
 - **RNG:** init `loc_7B2DC` copies `V_int_run_count` into `RNG_seed`.
 - **Act split in init:** `Current_act == 0` → `loc_7B308` (routine 4, `x_vel -$800`, position from the camera, children `ChildObjDat_7D47A`); act 2 → fixed position `($220,$4A0)` then `loc_7B35A`.
 - **Notes:** Uses Map_MechaSonic and DPLCPtr_MechaSonic for sprite rendering. The `Obj_SSZ2_Boss` phase (act 2 only) is Super Mecha Sonic using the Master Emerald.

@@ -213,10 +213,10 @@ class TestLoadQueueTraceComparison {
 
     /**
      * A child published by {@code Process_Kos_Module_Queue}'s loop tail
-     * (docs/skdisasm/sonic3k.asm:7908) is still an unfinished FIFO head at the
+     * (docs/skdisasm/sonic3k.asm:7940) is still an unfinished FIFO head at the
      * next {@code Wait_VSync} sample (7888): {@code Process_Kos_Queue} (7887)
      * can be interrupted and bookmarked mid-stream by V-int
-     * (docs/skdisasm/sonic3k.asm:2840-2843, 2957). A held loop tail does not
+     * (docs/skdisasm/sonic3k.asm:2872-2875, 2989). A held loop tail does not
      * change that, so the recorded row is compared as sampled.
      */
     @Test

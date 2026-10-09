@@ -8,12 +8,12 @@ package com.openggf.game.rules;
  *
  * @param rightStrict
  *        S3K's {@code blo} right-edge test with no normal-play {@code +$40}
- *        extension (docs/skdisasm/sonic3k.asm:23183-23186), against S1/S2's
+ *        extension (docs/skdisasm/sonic3k.asm:23218-23221), against S1/S2's
  *        {@code bls} plus the extension.
  * @param usesCentreY
  *        the bottom test compares the ROM {@code y_pos} word, i.e. centre-Y
  *        (docs/s1disasm/_incObj/01 Sonic.asm:1094; docs/s2disasm/s2.asm:36950;
- *        docs/skdisasm/sonic3k.asm:23195).
+ *        docs/skdisasm/sonic3k.asm:23230).
  * @param lockUsesScreenLockFlag
  *        the right-edge extension is removed by S1's persistent
  *        {@code f_lockscreen} (docs/s1disasm/_incObj/01 Sonic.asm:1071-1073)
@@ -23,7 +23,7 @@ package com.openggf.game.rules;
  *        the death-restart row is measured from the camera's bottom boundary —
  *        S1 {@code v_limitbtm2} (docs/s1disasm/_incObj/01 Sonic.asm:2004) and S2
  *        {@code Camera_Max_Y_pos} (docs/s2disasm/s2.asm:38277) — rather than
- *        S3K's {@code Camera_Y_pos} (docs/skdisasm/sonic3k.asm:24541,24581).
+ *        S3K's {@code Camera_Y_pos} (docs/skdisasm/sonic3k.asm:24581,24621).
  * @param deathFallRestartHandoffCancelsGravity
  *        the crossing frame writes {@code y_vel = -gravity} so the fall that
  *        follows it nets to no movement. S1 alone does this
@@ -39,7 +39,7 @@ package com.openggf.game.rules;
  *        off the top of the screen dies. Assembling with {@code FixBugs = 1}
  *        swaps in {@code blt}, which treats {@code $Fxxx} as negative and kills
  *        only at the bottom. S2 and S3K ship the signed form already
- *        (docs/s2disasm/s2.asm:38213-38214; docs/skdisasm/sonic3k.asm:24477-24481),
+ *        (docs/s2disasm/s2.asm:38213-38214; docs/skdisasm/sonic3k.asm:24517-24521),
  *        so this is a genuine per-game divergence, not an S1 carve-out.
  *        <p>The companion divergence — which boundary word the row is measured
  *        from ({@code v_limitbtm2}/target for S1, the live

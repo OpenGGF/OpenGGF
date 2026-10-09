@@ -175,8 +175,8 @@ public class AizMinibossFlameChild extends AbstractObjectInstance implements Tou
         return true;
     }
 
-    // ObjDat_AIZMiniboss_Flame priority $100 (sonic3k.asm:137848); AIZMiniboss_ImpactFlame_Init
-    // rewrites the same $100 for the subtype-6 impact flame (sonic3k.asm:137182).
+    // ObjDat_AIZMiniboss_Flame priority $100 (sonic3k.asm:137913); AIZMiniboss_ImpactFlame_Init
+    // rewrites the same $100 for the subtype-6 impact flame (sonic3k.asm:137247).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
 
     @Override

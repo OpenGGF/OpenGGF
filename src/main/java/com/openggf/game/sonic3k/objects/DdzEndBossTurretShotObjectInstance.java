@@ -15,7 +15,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
 /**
- * ROM {@code loc_81F14} (sonic3k.asm:174022-174030) with {@code sub_82CA4} and {@code sub_82BE4}: a
+ * ROM {@code loc_81F14} (sonic3k.asm:174113-174121) with {@code sub_82CA4} and {@code sub_82BE4}: a
  * turret shot ({@code word_831C6}: priority {@code $280}, frame {@code $24}) moving at
  * {@code word_82CB6[direction]} ({@code $400} along eight directions). While Player 1 is powered a
  * shot touching an unhurt Player 1 ({@code word_82C20}) sets {@code invulnerability_timer = 59},

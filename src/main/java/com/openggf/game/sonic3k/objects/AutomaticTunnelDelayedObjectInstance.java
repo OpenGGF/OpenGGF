@@ -13,7 +13,7 @@ import java.util.List;
  * Delayed entry point for {@link AutomaticTunnelObjectInstance}.
  *
  * <p>ROM reference: {@code Obj_AutomaticTunnelDelayed}
- * ({@code sonic3k.asm:57171-57179}). The delay byte is stored in
+ * ({@code sonic3k.asm:57211-57219}). The delay byte is stored in
  * {@code anim_frame_timer}; after it underflows the object becomes a normal
  * {@code Obj_AutomaticTunnel}.
  */

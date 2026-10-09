@@ -66,7 +66,7 @@ final class DdzObjectSupport {
     }
 
     /**
-     * {@code Check_InMyRange} (sonic3k.asm:179957-179981): the target's position lies inside the box
+     * {@code Check_InMyRange} (sonic3k.asm:180048-180072): the target's position lies inside the box
      * {@code [x + box[0], x + box[0] + box[1])} by {@code [y + box[2], y + box[2] + box[3])} of this
      * object. Signed word comparisons.
      */

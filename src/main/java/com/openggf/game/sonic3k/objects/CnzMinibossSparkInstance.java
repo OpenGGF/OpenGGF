@@ -21,7 +21,7 @@ import java.util.List;
  * CNZ miniboss open-coil spark child.
  *
  * <p>Created by Obj_CNZMinibossOpenGo via Child1_CNZCoilOpenSparks
- * (sonic3k.asm:144950-144951,145672-145692). The three children are
+ * (sonic3k.asm:145015-145016,145737-145757). The three children are
  * hurt-category touch objects while the boss remains open.
  */
 public final class CnzMinibossSparkInstance extends AbstractObjectInstance
@@ -97,7 +97,7 @@ public final class CnzMinibossSparkInstance extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
-        // ObjDat3_CNZMinibossSpark collision byte is $92 (sonic3k.asm:145660-145663).
+        // ObjDat3_CNZMinibossSpark collision byte is $92 (sonic3k.asm:145725-145728).
         return isDestroyed() ? 0 : COLLISION_FLAGS;
     }
 

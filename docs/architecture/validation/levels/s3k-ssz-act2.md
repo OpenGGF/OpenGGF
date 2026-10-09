@@ -452,7 +452,7 @@ scene pixel parity. Full delivery verification remains separate.
 
 ## Full SaveGame consumer boundary — 2026-10-08
 
-The existing final-defeat full SaveGame gate at `loc_7BCB0` (sonic3k.asm:165014), after fade/control handling, now dispatches through the semantic helper; defeat and stop-line gates are unchanged.
+The existing final-defeat full SaveGame gate at `loc_7BCB0` (sonic3k.asm:165092), after fade/control handling, now dispatches through the semantic helper; defeat and stop-line gates are unchanged.
 
 `828bc94d8` clears the native32-bit collected-ring mask at exactly seven existing
 full-SaveGame gates; existing game-state rewind owns the mask. Focused138 cases

@@ -14,7 +14,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code Obj_SSZCollapsingBridge} ({@code $7C}, sonic3k.asm:90120-90220): the flat sanctuary
+ * ROM {@code Obj_SSZCollapsingBridge} ({@code $7C}, sonic3k.asm:90166-90266): the flat sanctuary
  * bridge section that breaks into four pieces when it is stood on. Eight act-1 placements,
  * {@code $00} seven times and {@code $80} once.
  *

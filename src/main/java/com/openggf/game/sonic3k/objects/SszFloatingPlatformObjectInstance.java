@@ -14,7 +14,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code Obj_SSZFloatingPlatform} ({@code $7F}, sonic3k.asm:89968-90005): the small sanctuary
+ * ROM {@code Obj_SSZFloatingPlatform} ({@code $7F}, sonic3k.asm:90014-90051): the small sanctuary
  * platform that dips under a standing player.
  *
  * <p>Init: {@code render_flags 4}, {@code height_pixels $11}, {@code width_pixels $20},

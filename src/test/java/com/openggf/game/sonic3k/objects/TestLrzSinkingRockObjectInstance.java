@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * {@code Obj_LRZSinkingRock} (sonic3k.asm:87898-87941, ROM {@code $4279E}).
+ * {@code Obj_LRZSinkingRock} (sonic3k.asm:87944-87987, ROM {@code $4279E}).
  *
  * <p>Every expectation here is the routine's own arithmetic or a byte of the ROM's
  * {@code SineTable} ({@code Levels/Misc/sine.bin}, read out for the four angles asserted below),
@@ -22,7 +22,7 @@ class TestLrzSinkingRockObjectInstance {
     private static final int BASE_X = 0x04F8;
     private static final int BASE_Y = 0x0543;
 
-    /** {@code move.w #$1B,d1 / #$10,d2 / #$11,d3} (sonic3k.asm:87934-87936). */
+    /** {@code move.w #$1B,d1 / #$10,d2 / #$11,d3} (sonic3k.asm:87980-87982). */
     @Test
     void solidParamsAreTheRoutineArguments() {
         LrzSinkingRockObjectInstance rock = rock();
@@ -31,7 +31,7 @@ class TestLrzSinkingRockObjectInstance {
         assertEquals(0x11, rock.getSolidParams().groundHalfHeight(), "d3");
     }
 
-    /** {@code move.w y_pos(a0),$46(a0)} (:87904); act 1 keeps {@code mapping_frame} 0 (:87908). */
+    /** {@code move.w y_pos(a0),$46(a0)} (:87950); act 1 keeps {@code mapping_frame} 0 (:87954). */
     @Test
     void initLatchesThePlacedYAndActOneMappingFrame() {
         LrzSinkingRockObjectInstance rock = rock();
@@ -42,7 +42,7 @@ class TestLrzSinkingRockObjectInstance {
     }
 
     /**
-     * {@code loc_427F8} (:87924-87927): a standing player raises {@code $2E} by one a frame and
+     * {@code loc_427F8} (:87970-87973): a standing player raises {@code $2E} by one a frame and
      * {@code cmpi.b #$40} stops it there. The standing bit is the one the PREVIOUS frame's
      * {@code SolidObjectFull} left, so the first update after a contact is the first rise.
      */
@@ -65,7 +65,7 @@ class TestLrzSinkingRockObjectInstance {
     }
 
     /**
-     * {@code loc_427E2} (:87919-87922): with no standing bit the angle counts back down and
+     * {@code loc_427E2} (:87965-87968): with no standing bit the angle counts back down and
      * {@code tst.b} stops it at zero rather than wrapping to {@code $FF}.
      */
     @Test
@@ -91,7 +91,7 @@ class TestLrzSinkingRockObjectInstance {
     }
 
     /**
-     * {@code loc_42804} (:87929-87933): {@code GetSineCosine} then {@code asr.w #3} then a word add
+     * {@code loc_42804} (:87975-87979): {@code GetSineCosine} then {@code asr.w #3} then a word add
      * onto {@code $46(a0)}. The four sine values are ROM bytes: {@code sine.bin} holds
      * {@code $0000}, {@code $0061}, {@code $00B5} and {@code $0100} at angles 0, {@code $10},
      * {@code $20} and {@code $40}, which the arithmetic shift turns into 0, 12, 22 and 32 pixels.
@@ -113,7 +113,7 @@ class TestLrzSinkingRockObjectInstance {
         }
     }
 
-    /** {@code move.w #$280,priority(a0)} and a clear priority bit (:87900, :87903). */
+    /** {@code move.w #$280,priority(a0)} and a clear priority bit (:87946, :87949). */
     @Test
     void renderStateIsTheInitWrites() {
         LrzSinkingRockObjectInstance rock = rock();

@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * ROM {@code Obj_SSZMTZBoss} (sonic3k.asm:163023-163363): the Metropolis recreation, the second of
+ * ROM {@code Obj_SSZMTZBoss} (sonic3k.asm:163101-163441): the Metropolis recreation, the second of
  * Sky Sanctuary act 1's three rebuilt boss fights. Like the Green Hill one it is not placed —
  * {@code sub_575EA}'s {@code loc_5775C} allocates it once the upper arena's lock has eased the
  * camera down to {@code $380}.
@@ -139,7 +139,7 @@ public final class SszMtzBossObjectInstance extends AbstractBossInstance
     private static final int ESCAPE_X_VEL = 0x400;
     /** {@code move.w #(2*60)-1,$2E(a0)} in {@code loc_85674}. */
     private static final int ESCAPE_FRAMES = (2 * 60) - 1;
-    /** {@code move.w #$3F,$2E(a0)} in {@code BossDefeated} (sonic3k.asm:180822). */
+    /** {@code move.w #$3F,$2E(a0)} in {@code BossDefeated} (sonic3k.asm:180913). */
     private static final int DEFEAT_WAIT_FRAMES = 0x3F;
 
     /**

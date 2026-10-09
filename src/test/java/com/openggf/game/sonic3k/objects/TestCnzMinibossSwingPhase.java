@@ -77,7 +77,7 @@ class TestCnzMinibossSwingPhase {
         boss.setServices(services);
 
         // Fast-forward through Init+Lower+Go2+Move waits so Obj_CNZMinibossGo3
-        // fires. Per ROM (sonic3k.asm:144918..144922), Go3 writes x_vel=0x100
+        // fires. Per ROM (sonic3k.asm:144983..144922), Go3 writes x_vel=0x100
         // and falls through to Obj_CNZMinibossCloseGo which advances routine
         // from 4 (Move) to 6 (Move-duplicate slot); the T5 port wires this
         // fallthrough so the assertion below reads routine 6.

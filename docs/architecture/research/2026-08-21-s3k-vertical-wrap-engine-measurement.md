@@ -88,7 +88,7 @@ picked `$7FF` here".
 ## Divergence B is ACTIVE in 22 of 26 acts, including the whole release slice
 
 The engine enables vertical wrapping only when `minY < 0` (`LevelManager.java:2852`). The
-ROM has no such gate: `Render_Sprites` masks unconditionally at sonic3k.asm:36360 and 36487,
+ROM has no such gate: `Render_Sprites` masks unconditionally at sonic3k.asm:36400 and 36487,
 and `$FFFF` is how the ROM *expresses* "no wrap". All four AIZ and HCZ acts have `minY = 0`,
 so **on the primary release slice the engine does not mask at all while the ROM masks with
 `$FFF`.**
@@ -129,7 +129,7 @@ of them reads the ROM constant:
    The ownership point is unchanged; the fix is smaller than reported.
 
 The ROM writes its three — `Screen_Y_wrap_value`, `Camera_Y_pos_mask`,
-`Layout_row_index_mask` — as one triple from one place (`LevelSetup`, sonic3k.asm:102205-102207),
+`Layout_row_index_mask` — as one triple from one place (`LevelSetup`, sonic3k.asm:102251-102253),
 so they cannot disagree. The engine derives its three from two different sources plus one
 literal, so they can. Fixing A properly means giving the period a single owner first;
 patching only the camera's mask would leave `LevelTilemapManager` computing a different
@@ -140,8 +140,8 @@ period from the same layout, and the `0x3FF` BG literal untouched.
 1. **Whether B is observable in any committed trace** — see above. Needs a trace run.
 2. ~~**Whether `minY < 0` is itself ROM-accurate** as the engine's wrap trigger.~~
    **CLOSED** by the follow-up doc: it is ROM-derived, but S3K's player/camera paths test
-   `Camera_min_Y_pos == -$100` exactly (sonic3k.asm:21989, "is vertical wrapping enabled?")
-   while its object-load manager uses a `< 0` sign test (sonic3k.asm:37560) — and
+   `Camera_min_Y_pos == -$100` exactly (sonic3k.asm:22025, "is vertical wrapping enabled?")
+   while its object-load manager uses a `< 0` sign test (sonic3k.asm:37600) — and
    `Render_Sprites` uses **no trigger at all**. So B is a slightly wrong threshold for
    position wrapping and an *invented gate* for the render path.
 3. ~~**Whether `VERTICAL_WRAP_BG_MASK = 0x3FF` corresponds to any ROM constant.**~~

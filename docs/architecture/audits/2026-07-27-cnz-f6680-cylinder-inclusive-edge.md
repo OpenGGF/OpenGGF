@@ -15,16 +15,16 @@ collision boundary: `x_pos(a1)-x_pos(a0) == d1`.
 ## Native evidence
 
 `Obj_CNZCylinder` calls `SolidObjectFull` with `d1=$2B`, `d2=$20`, and
-`d3=$21` after updating its position (`sonic3k.asm:67656-67672`).
+`d3=$21` after updating its position (`sonic3k.asm:67696-67712`).
 The new-contact path reaches `SolidObject_cont`, whose horizontal entry gate
 doubles `d1` and rejects only when the translated relative X is higher
 (`cmp.w d3,d0; bhi`). Equality remains live
-(`sonic3k.asm:41383-41400`).
+(`sonic3k.asm:41423-41440`).
 
 The side branch at equality has `d0=0`, so `loc_1E042` skips velocity stopping
 and performs a zero position correction. Because Sonic is grounded,
 `loc_1E06E` still sets both the cylinder pushing bit and player
-`Status_Push` (`sonic3k.asm:41468-41501`). Thus the simultaneous native
+`Status_Push` (`sonic3k.asm:41508-41541`). Thus the simultaneous native
 outcomes are push set, `$000C` velocity retained, and no X correction.
 
 The engine already models those side-contact effects in the shared solid

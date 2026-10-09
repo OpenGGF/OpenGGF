@@ -36,7 +36,7 @@ import java.util.List;
 /**
  * Object 0xB1 - ICZ breakable wall.
  *
- * <p>ROM reference: {@code Obj_ICZBreakableWall} at sonic3k.asm:187693.
+ * <p>ROM reference: {@code Obj_ICZBreakableWall} at sonic3k.asm:187786.
  * The wall uses {@code Map_ICZWallAndColumn} frame 6 and breaks when Knuckles
  * side-contacts it or when {@code Obj_ICZPathFollowPlatform_2} enters the
  * trigger box from {@code word_8A2FC}.
@@ -48,11 +48,11 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_ICZBreakableWall} is installed from the S3K object pointer table at
      * {@code $0008A26C} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:187698).
+     * label is defined at docs/skdisasm/sonic3k.asm:187791).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0008}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {

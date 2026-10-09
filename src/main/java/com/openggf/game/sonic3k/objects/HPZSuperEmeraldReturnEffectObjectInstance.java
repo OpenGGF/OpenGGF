@@ -20,7 +20,7 @@ import java.util.List;
 
 /**
  * Invincibility-star ring of the Super Emerald results reveal.
- * ROM: {@code loc_2ECD0}-{@code loc_2EDCA} (sonic3k.asm:64173-64274).
+ * ROM: {@code loc_2ECD0}-{@code loc_2EDCA} (sonic3k.asm:64213-64314).
  *
  * <p>{@code Obj_SpecialStage_Results} allocates eight of these SSTs at once
  * ({@code loc_2E70C} converging onto the cleared pedestal, {@code loc_2E7A0}
@@ -177,7 +177,7 @@ public final class HPZSuperEmeraldReturnEffectObjectInstance
         return drawCurrentFrame;
     }
 
-    // loc_2ECD0 never writes priority (sonic3k.asm:64173-64193), so the AllocateObject-cleared
+    // loc_2ECD0 never writes priority (sonic3k.asm:64213-64233), so the AllocateObject-cleared
     // word 0 stands: display list 0 is the ROM value.
     private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
 
@@ -188,7 +188,7 @@ public final class HPZSuperEmeraldReturnEffectObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        // loc_2ECD0 art make_art_tile(ArtTile_Shield,0,1) sets bit 15 (sonic3k.asm:64176).
+        // loc_2ECD0 art make_art_tile(ArtTile_Shield,0,1) sets bit 15 (sonic3k.asm:64216).
         return true;
     }
 

@@ -4,9 +4,9 @@ package com.openggf.level;
  * Gameplay-step bridge for the AIZ2 forest-loop foreground plane ring.
  *
  * <p>ROM {@code ScreenEvents} ends in {@code DrawTilesAsYouMove}
- * (sonic3k.asm:104978, 103171), which fills Plane A from the live
+ * (sonic3k.asm:105024, 103217), which fills Plane A from the live
  * {@code Camera_X_pos_copy} against {@code Camera_X_pos_rounded} inside the CPU
- * loop. {@code AIZ2_DoShipLoop} (sonic3k.asm:105205) retargets that baseline in
+ * loop. {@code AIZ2_DoShipLoop} (sonic3k.asm:105251) retargets that baseline in
  * the same routine as its {@code $200} camera subtraction, so the engine's ring
  * must take the live camera and the live {@code Level_repeat_offset} together,
  * from the gameplay step, before any VBlank publication. Only H-scroll/VSRAM/SAT

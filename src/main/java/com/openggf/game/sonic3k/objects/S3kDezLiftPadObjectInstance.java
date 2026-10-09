@@ -9,7 +9,7 @@ import com.openggf.physics.TrigLookupTable;
 import java.util.List;
 import java.io.IOException;
 
-/** SKL $4E, Obj_DEZLiftPad / sub_4748E / sub_4757A (sonic3k.asm:93091-93315). */
+/** SKL $4E, Obj_DEZLiftPad / sub_4748E / sub_4757A (sonic3k.asm:93137-93361). */
 public final class S3kDezLiftPadObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, SolidObjectProvider, RomObjectCodePointerProvider {
     private Arm arm;

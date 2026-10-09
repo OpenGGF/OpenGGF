@@ -15,10 +15,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * The player is drawn upside down while {@code Reverse_gravity_flag} is set.
  *
- * <p>{@code loc_10C62} (sonic3k.asm:22007-22013), {@code loc_138C8} (:26251-26257) and
- * {@code loc_16614} (:30450-30456) apply {@code eori.b #2,render_flags(a0)} after the
- * animator, and {@code sub_125E0} (:24711-24718), {@code sub_15842} (:29336),
- * {@code sub_17D1E} (:33017) and {@code loc_15A7A} (:29591-29597) repeat it in the hurt,
+ * <p>{@code loc_10C62} (sonic3k.asm:22043-22049), {@code loc_138C8} (:26291-26297) and
+ * {@code loc_16614} (:30490-30496) apply {@code eori.b #2,render_flags(a0)} after the
+ * animator, and {@code sub_125E0} (:24751-24758), {@code sub_15842} (:29376),
+ * {@code sub_17D1E} (:33057) and {@code loc_15A7A} (:29631-29637) repeat it in the hurt,
  * dead and rotation paths.
  *
  * <p>Exercise animation followed by the real player draw: independently testing a

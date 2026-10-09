@@ -76,7 +76,7 @@ class TestS3kLrzCompatibilityMatrix {
 
     /**
      * Act 2's own skins. {@code Obj_LRZSinkingRock} takes {@code mapping_frame} 1 and the
-     * {@code $090} tile base in act 2 (sonic3k.asm:87907-87910), and the door, button and
+     * {@code $090} tile base in act 2 (sonic3k.asm:87953-87956), and the door, button and
      * swinging spike ball each have their own act 2 art key; the badniks share one sheet across
      * both acts, which is why they appear in both lists.
      */

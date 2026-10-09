@@ -34,7 +34,7 @@ public class Sonic3kSpecialStageBackground {
 
     /**
      * Update background scroll values based on player movement.
-     * ROM: sub_9D5E (sonic3k.asm:12694)
+     * ROM: sub_9D5E (sonic3k.asm:12730)
      *
      * @param player the current player state
      */

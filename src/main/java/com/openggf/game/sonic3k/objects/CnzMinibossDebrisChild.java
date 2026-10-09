@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * CNZ Act 1 miniboss break-apart debris.
  *
- * <p>ROM: {@code Obj_CNZMinibossDebris} at sonic3k.asm:145365. Spawned by
+ * <p>ROM: {@code Obj_CNZMinibossDebris} at sonic3k.asm:145430. Spawned by
  * {@code Child6_CNZMinibossMakeDebris} when {@code Obj_CNZMinibossEnd} runs.
  * The pieces use {@code byte_6E022} offsets, {@code CNZMinibossDebris_Frames},
  * {@code Set_IndexedVelocity(d0=0)}, then {@code Obj_FlickerMove}.

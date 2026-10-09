@@ -20,7 +20,7 @@ import java.util.List;
  * One half of the GAME OVER / TIME OVER card: S1 {@code GameOverCard} (Obj39,
  * docs/s1disasm/_incObj/39 Game Over.asm), S2 {@code Obj39}
  * (docs/s2disasm/s2.asm:27670-27774) and S3K {@code Obj_GameOver}
- * (docs/skdisasm/sonic3k.asm:62020-62101). The ROM loads two of these: the
+ * (docs/skdisasm/sonic3k.asm:62060-62141). The ROM loads two of these: the
  * "GAME"/"TIME" word (mapping frame 0 or 2) that slides in from the left and
  * owns the wait timer, and the "OVER" word (frame 1 or 3) that slides in from
  * the right. Bit 0 of the mapping frame is the ROM's own "is this the OVER

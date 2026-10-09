@@ -53,7 +53,7 @@ final class LevelActTransitionExecutor {
             // The ROM's own seamless advance -- AIZ1BGE_Finish writes
             // Current_zone_and_act and calls Load_Level from inside the
             // level's background-event dispatch
-            // (docs/skdisasm/sonic3k.asm:104733-104746), leaving neither the
+            // (docs/skdisasm/sonic3k.asm:104779-104792), leaving neither the
             // level mode nor the recorded run segment. This routine is the
             // single owner of that identity change, so it is where a run
             // replay observes the identity reached; a no-op outside a run.
@@ -115,10 +115,10 @@ final class LevelActTransitionExecutor {
         boolean endOfLevelActive = gameState.isEndOfLevelActive();
         boolean endOfLevelFlag = gameState.isEndOfLevelFlag();
         // An in-place act change runs no RAM wipe in the ROM: the Death Egg
-        // act 1 -> act 2 handover loc_593EC (sonic3k.asm:118724) calls Load_Level
+        // act 1 -> act 2 handover loc_593EC (sonic3k.asm:118770) calls Load_Level
         // and LoadSolids only, so Reverse_gravity_flag ($FFFFF7C6) carries into the
         // next act. resetForLevel() models Level_ClrRam's `clearRAM
-        // Tails_CPU_interact,$100` (:7621) and must not fire here.
+        // Tails_CPU_interact,$100` (:7653) and must not fire here.
         boolean reverseGravityActive = gameState.isReverseGravityActive();
         gameState.resetForLevel();
         gameState.setReverseGravityActive(reverseGravityActive);

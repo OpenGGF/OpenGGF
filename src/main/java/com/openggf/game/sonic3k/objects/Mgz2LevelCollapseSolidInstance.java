@@ -90,7 +90,7 @@ public final class Mgz2LevelCollapseSolidInstance extends AbstractObjectInstance
     public boolean usesInclusiveRightEdge() {
         // Obj_MGZ2LevelCollapseSolid jumps to SolidObjectFull2. Its entry X
         // gate rejects only values above d1*2, so the exact right edge remains
-        // eligible (sonic3k.asm:41065-41067,106955-106970).
+        // eligible (sonic3k.asm:41105-41107,107001-107016).
         return true;
     }
 
@@ -99,7 +99,7 @@ public final class Mgz2LevelCollapseSolidInstance extends AbstractObjectInstance
         // SolidObjectFull2_1P falls directly into SolidObject_cont when the
         // standing bit is clear. Unlike SolidObjectFull_1P it never tests the
         // render flag, which is essential here because this carrier is always
-        // invisible (sonic3k.asm:41065-41067,106955-106970).
+        // invisible (sonic3k.asm:41105-41107,107001-107016).
         return true;
     }
 
@@ -108,7 +108,7 @@ public final class Mgz2LevelCollapseSolidInstance extends AbstractObjectInstance
         // SolidObjectFull2_1P tests its retained standing bit before entering
         // SolidObject_cont. If the rider has jumped, loc_1DCF0 clears the bit
         // and returns d4=0; it must not fall through to loc_1E154's upward
-        // position lift (sonic3k.asm:41065-41084,41608-41637).
+        // position lift (sonic3k.asm:41105-41124,41648-41677).
         return true;
     }
 

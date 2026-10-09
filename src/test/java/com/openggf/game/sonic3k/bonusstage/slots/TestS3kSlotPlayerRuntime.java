@@ -46,7 +46,7 @@ class TestS3kSlotPlayerRuntime {
         assertEquals(0, player.getXSpeed());
         // ROM Obj_Sonic_RotatingSlotBonus's routine==0 init handler falls
         // straight through into the per-frame movement dispatcher on the
-        // same spawn-frame call (sonic3k.asm:98710-98784 loc_4B9CE ->
+        // same spawn-frame call (sonic3k.asm:98756-98830 loc_4B9CE ->
         // loc_4BA4E, no intervening rts) -- one gravity tick (AIR_GRAVITY
         // 0x2A) is already baked into y_speed by the time initialize()
         // returns.
@@ -176,7 +176,7 @@ class TestS3kSlotPlayerRuntime {
 
         // initialize()'s spawn-frame fallthrough already advances Stat_table
         // by SStage_scalar_index_1 (0x40) once; this tick() advances it a
-        // second time, matching ROM's loc_4BA4E tail (sonic3k.asm:98781-98783).
+        // second time, matching ROM's loc_4BA4E tail (sonic3k.asm:98827-98829).
         assertEquals(0x80, state.rawStatTable());
     }
 
@@ -309,8 +309,8 @@ class TestS3kSlotPlayerRuntime {
 
     @Test
     void tileResponseAnchorMatchesRomPointerMath() {
-        // ROM sub_4BE3A (sonic3k.asm:99214-99223): $32(a0) holds the post-increment
-        // sub_4BDA2 pointer (TABLE + idx + 1), and subi.l #-$CFFF,d1 (sonic3k.asm:99215)
+        // ROM sub_4BE3A (sonic3k.asm:99260-99269): $32(a0) holds the post-increment
+        // sub_4BDA2 pointer (TABLE + idx + 1), and subi.l #-$CFFF,d1 (sonic3k.asm:99261)
         // adds it back -- TABLE's low word is $3000, and $3000 + $CFFF + 1 == $10000,
         // so the low-word reconstruction is exactly idx (the "+1" cancels out, it does
         // NOT carry through to the recovered row/col). See
@@ -396,10 +396,10 @@ class TestS3kSlotPlayerRuntime {
 
         runtime.tick(player, false, false, false, false, false, 0);
 
-        // ROM sub_4BDCA (ring pickup, sonic3k.asm:99144) and sub_4BE3A (tile dispatch,
-        // sonic3k.asm:99195) both read x_pos(a0)/y_pos(a0) right after sub_4BABC's
+        // ROM sub_4BDCA (ring pickup, sonic3k.asm:99190) and sub_4BE3A (tile dispatch,
+        // sonic3k.asm:99241) both read x_pos(a0)/y_pos(a0) right after sub_4BABC's
         // ground-velocity projection and BEFORE this frame's air velocity is folded
-        // into position by MoveSprite2 (sonic3k.asm:98776-98780) -- see the
+        // into position by MoveSprite2 (sonic3k.asm:98822-98826) -- see the
         // groundProjectedOriginX/Y field javadoc. With gSpeed==0 the ground-projection
         // step contributes no delta, so groundProjectedOriginY() must stay pinned at
         // its pre-tick snapshot for this tick while the fully-stepped slotOriginY()

@@ -8,7 +8,7 @@ Implement the S3K invincibility star visual effect as a new game-specific object
 
 The invincibility monitor (type 8) grants temporary damage immunity with a visual sparkle effect. The timer/damage/music logic is already fully implemented in `AbstractPlayableSprite.giveInvincibility()`. What's missing is the S3K-specific visual rendering — currently S3K falls through to the S2 `InvincibilityStarsObjectInstance`, which uses a simple 4-star circular orbit that doesn't match the original game.
 
-### S3K vs S2 Behavior (from disassembly Obj_Invincibility, sonic3k.asm:33751)
+### S3K vs S2 Behavior (from disassembly Obj_Invincibility, sonic3k.asm:33791)
 
 | Aspect | S2 (current) | S3K (target) |
 |--------|-------------|-------------|

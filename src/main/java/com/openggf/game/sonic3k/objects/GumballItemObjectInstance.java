@@ -75,16 +75,16 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
 
     // ROM loc_60EFC: the ball is only checked against Check_PlayerInRange (and thus
     // eligible to award its reward) once it has fallen at least $10 (16px) below its
-    // spawning container's current y_pos (sonic3k.asm:127619-127624). Below that, the
+    // spawning container's current y_pos (sonic3k.asm:127673-127678). Below that, the
     // ball is still resting/being carried at the dispenser mouth and cannot be collected.
     private static final int DOCK_ELIGIBLE_THRESHOLD = 0x10;
 
-    // ROM word_610F0 (sonic3k.asm:127793-127794): dc.w -$18,$30,-$18,$30 — the moving
+    // ROM word_610F0 (sonic3k.asm:127847-127848): dc.w -$18,$30,-$18,$30 — the moving
     // ball is reward-eligible against a PLAYER-CENTERED proximity box of ±$18 (24px) in
     // both axes around the ball, tested every frame via Check_PlayerInRange/sub_8592C
-    // (sonic3k.asm:180018-180031) — a much larger, half-open [-24,24) window than the
+    // (sonic3k.asm:180109-180122) — a much larger, half-open [-24,24) window than the
     // ball's own small 8x8 physical collision box (which only applies to STATICALLY
-    // placed items via Add_SpriteToCollisionResponseList, sonic3k.asm:96850). Ejected
+    // placed items via Add_SpriteToCollisionResponseList, sonic3k.asm:96896). Ejected
     // balls therefore bypass the generic touch framework entirely (getCollisionFlags()
     // returns 0 while GUMBALL_EJECT) and self-poll this box each eligible frame instead.
     private static final int PROXIMITY_RADIUS = 0x18;
@@ -142,7 +142,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
      * Live y of the spawning container/crank (ROM {@code parent3(a0)}), used to clamp
      * the moving ball's y each frame (ROM loc_60EE0) and gate reward eligibility
      * (ROM loc_60EFC). Null for statically-placed items and Pachinko orbs, which use
-     * neither ROM code path (sonic3k.asm:127602-127624).
+     * neither ROM code path (sonic3k.asm:127656-127678).
      */
     private final java.util.function.IntSupplier parentYSupplier;
 
@@ -183,7 +183,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     /**
      * Mirrors ROM {@code collision_property} bits 0/1 for the Pachinko reward paths.
      *
-     * <p>ROM {@code loc_4A312} / {@code loc_4A34C} (sonic3k.asm:96843-96845, 96866-96869)
+     * <p>ROM {@code loc_4A312} / {@code loc_4A34C} (sonic3k.asm:96889-96891, 96912-96915)
      * do NOT react inside the player's {@code Touch_Response}: the touch pass only sets
      * {@code collision_property(a0)}, and the reward itself is dispatched by
      * {@code sub_4A362}/{@code sub_4A384} from the ITEM's own slot pass later in the same
@@ -276,7 +276,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
             }
             SubpixelMotion.moveSprite2(motionState);
 
-            // ROM loc_60EE0 (sonic3k.asm:127609-127624): after moving, the ball cannot
+            // ROM loc_60EE0 (sonic3k.asm:127663-127678): after moving, the ball cannot
             // rise above (numerically below) its spawning container's CURRENT y — the
             // container tracks the machine's y drift every frame via Refresh_ChildPosition,
             // so this clamp effectively carries the ball down with the still-drifting
@@ -295,16 +295,16 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
 
             updateDynamicSpawn(motionState.x, motionState.y);
 
-            // ROM sub_610E0/loc_60EFC (sonic3k.asm:127623-127624): once dock-eligible,
+            // ROM sub_610E0/loc_60EFC (sonic3k.asm:127677-127678): once dock-eligible,
             // the ball self-polls Check_PlayerInRange every frame -- not the standard
             // touch/collision-response-list path (getCollisionFlags() is 0 in this mode).
             // loc_60EFC calls sub_610E0 UNCONDITIONALLY on every dock-eligible frame; the
-            // only per-poll gate in sub_610E0/loc_6115C (sonic3k.asm:127786-127809,
+            // only per-poll gate in sub_610E0/loc_6115C (sonic3k.asm:127840-127863,
             // 127849-127868) is Check_PlayerInRange's own box test -- there is no ROM
             // flag that permanently disables re-polling a still-alive (d2=0, not
             // deleted) subtype-4 push ball after its first push. loc_6116E's
             // `clr.b collision_property(a0)` only clears the STANDARD touch-response-list
-            // latch (Add_SpriteToCollisionResponseList/Touch_Loop, sonic3k.asm:96850),
+            // latch (Add_SpriteToCollisionResponseList/Touch_Loop, sonic3k.asm:96896),
             // which this self-polled GUMBALL_EJECT path never consults (getCollisionFlags()
             // returns 0 while ejected, see class doc). A push ball that drifts back within
             // the +-24px box on a later frame pushes again in ROM; gating repeats behind
@@ -337,8 +337,8 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM sub_610E0 (sonic3k.asm:127786-127809) via Check_PlayerInRange/sub_8592C
-     * (sonic3k.asm:179994-180031): tests whether {@code playerEntity} falls within a
+     * ROM sub_610E0 (sonic3k.asm:127840-127863) via Check_PlayerInRange/sub_8592C
+     * (sonic3k.asm:180085-180122): tests whether {@code playerEntity} falls within a
      * half-open {@code [-$18,$18)} box on both axes centered on the ball, and if so,
      * dispatches the reward exactly like a standard touch.
      */
@@ -457,7 +457,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM {@code sub_4A362} (sonic3k.asm:96874-96884): runs {@code sub_4A384} for
+     * ROM {@code sub_4A362} (sonic3k.asm:96920-96930): runs {@code sub_4A384} for
      * Player_1 then Player_2, for whichever {@code collision_property} bits the touch pass
      * set, then clears the property. Called from {@link #update} so the reward lands in the
      * item's own slot pass, exactly as {@code loc_4A312}/{@code loc_4A34C} do.
@@ -480,7 +480,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     }
 
     private void handlePachinkoReward(PlayableEntity player, int frameCounter) {
-        // ROM sub_4A384 (sonic3k.asm:96888): move.l #Delete_Current_Sprite,(a0) runs
+        // ROM sub_4A384 (sonic3k.asm:96934): move.l #Delete_Current_Sprite,(a0) runs
         // UNCONDITIONALLY, ahead of the subtype dispatch. This is where the Pachinko orb
         // path differs from the gumball-machine path (loc_60F28), whose delete is skipped
         // when the handler returns d2 = 0 -- sub_4A384's callers never inspect d2, so even
@@ -542,7 +542,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     }
 
     private void onCollectPachinkoRingReward(PlayableEntity player) {
-        // ROM loc_4A3B6 (sonic3k.asm:96921-96924):
+        // ROM loc_4A3B6 (sonic3k.asm:96967-96970):
         //   move.b  y_pos(a0),d0   ; big-endian byte read = HIGH byte of the y_pos word
         //   andi.w  #$F,d0         ; -> (y_pos >> 8) & $F
         //   move.b  (byte_1E44C4,d0.w),d0
@@ -577,7 +577,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
         // ROM: jsr (GetArcTan).l — returns angle in d0
         int angle = TrigLookupTable.calcAngle((short) dx, (short) dy);
 
-        // ROM sub_61176 (sonic3k.asm:127878-127880):
+        // ROM sub_61176 (sonic3k.asm:127932-127934):
         //   move.b (Level_frame_counter).w,d1 / andi.w #3,d1 / add.w d1,d0
         // Level_frame_counter is a big-endian WORD; `move.b (addr).w` reads the
         // HIGH byte, so the jitter is (Level_frame_counter >> 8) & 3 — a value that

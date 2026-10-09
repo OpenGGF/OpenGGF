@@ -22,7 +22,7 @@ import java.util.Map;
  * Object 0x50 - MGZ Twisting Loop.
  *
  * <p>Invisible controller for the spiral descent after the top-platform launcher.
- * ROM reference: Obj_MGZTwistingLoop (sonic3k.asm:70187-70387).
+ * ROM reference: Obj_MGZTwistingLoop (sonic3k.asm:70227-70427).
  */
 public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final int CAPTURE_X_BIAS = 0x24;

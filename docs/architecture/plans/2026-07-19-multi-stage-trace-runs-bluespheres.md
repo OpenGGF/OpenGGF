@@ -18,7 +18,7 @@
 - Recordings absent: the replay test lands skip-if-missing on `src/test/resources/traces/s3k/special_stage/` (dedicated) and activates for run segments via the chain later; the RAM map carries a documented VERIFY-ON-FIRST-CAPTURE obligation (self-check prints in the recorder + a frontier-log note) because no SS-entering bk2 exists to probe today.
 - Guard awareness: new src/main trace classes may trip `TestBuildToolingGuard` (profile-gate patterns) and the SS harness/test naming must respect `TestTraceReplayInvariantGuard` (register the new abstract base if the test ends in `*TraceReplay.java`). Register per convention with justification; never weaken.
 
-## Verified S3K SS RAM map (BizHawk `mainmemory` addresses; phase overlay base `0xE400` = `Stat_table`, `sonic3k.constants.asm:331,1012-1057`)
+## Verified S3K SS RAM map (BizHawk `mainmemory` addresses; phase overlay base `0xE400` = `Stat_table`, `sonic3k.constants.asm:340,1037-1082`)
 
 | Column | Symbol | Addr | Size |
 |---|---|---|---|

@@ -91,7 +91,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
 
     // ROM collision gate: mapping_frame must be >= 8 for collision to be active.
     // Formation frames are 0-7, idle frames are 8-11. This is the definitive guard
-    // matching sonic3k.asm line 128261: cmpi.b #8,mapping_frame(a0) / blo.s locret_61708
+    // matching sonic3k.asm line 128315: cmpi.b #8,mapping_frame(a0) / blo.s locret_61708
     private static final int COLLISION_FRAME_THRESHOLD = 8;
 
     // Ring award when all emeralds already collected
@@ -156,7 +156,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     /** ROM: Obj_WaitOffscreen has released the ring into its own routine. */
     private boolean displayReleased;
     /**
-     * ROM {@code loc_85B02} (sonic3k.asm:180300-180302) restores the object's
+     * ROM {@code loc_85B02} (sonic3k.asm:180391-180393) restores the object's
      * code pointer and then {@code rts}es straight back to the object loop, so
      * on the release frame neither {@code SSEntryRing_Init}/{@code _Main} nor
      * {@code SSEntryRing_Display} runs. The ring's first {@code Animate_Raw}
@@ -212,7 +212,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
             case MARKED_DELETE -> { /* Retired by the display pass below, as in ROM. */ }
         }
         // ROM Obj_SSEntryRing runs the routine then falls through to
-        // SSEntryRing_Display in the SAME frame (sonic3k.asm:128229-128230);
+        // SSEntryRing_Display in the SAME frame (sonic3k.asm:128283-128284);
         // loc_61794 ends `jmp (AddRings)`, whose rts lands on that bra. So a
         // touch that sets bit 5 of $38 is seen by the display pass immediately.
         if (releasedThisFrame) {
@@ -266,7 +266,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     /**
      * Combined formation + idle handler matching ROM's SSEntryRing_Main.
      * <p>
-     * ROM flow (sonic3k.asm line 128257-128269):
+     * ROM flow (sonic3k.asm line 128311-128323):
      * <ol>
      *   <li>{@code jsr (Animate_Raw).l} — advance animation</li>
      *   <li>{@code cmpi.b #8,mapping_frame(a0) / blo.s locret} — gate collision on frame number</li>
@@ -286,11 +286,11 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
             if (!isWithinRenderSpriteBounds(OFFSCREEN_HALF_EXTENT, OFFSCREEN_HALF_EXTENT)) {
                 return;
             }
-            // ROM loc_85B02 (sonic3k.asm:180300-180302) only writes the saved
+            // ROM loc_85B02 (sonic3k.asm:180391-180393) only writes the saved
             // code pointer back into (a0) and rts'es; Obj_SSEntryRing itself is
             // not entered until the following frame. Consuming the release
             // frame here keeps the formation animation - and therefore the
-            // `cmpi.b #8,mapping_frame` collision gate at sonic3k.asm:128266 -
+            // `cmpi.b #8,mapping_frame` collision gate at sonic3k.asm:128320 -
             // on the ROM's schedule instead of opening it a frame early.
             displayReleased = true;
             releasedThisFrame = true;
@@ -422,7 +422,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         services().playSfx(Sonic3kSfx.BIG_RING.id);
 
         if (awardsFiftyRingsInsteadOfCapture(gameState)) {
-            // Path B: ROM loc_61794 (sonic3k.asm:128325-128333) marks the ring
+            // Path B: ROM loc_61794 (sonic3k.asm:128379-128387) marks the ring
             // collected, sets the retirement bit and awards 50 rings. It does
             // not delete here — the following display pass sees
             // btst #5,$38 and retires through loc_6196A, which re-queues
@@ -444,7 +444,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
 
     /**
      * ROM {@code SSEntryRing_Main}'s collision branch
-     * (skdisasm/sonic3k.asm:128283-128291):
+     * (skdisasm/sonic3k.asm:128337-128345):
      * <pre>
      *   cmpi.b  #7,(Chaos_emerald_count).w
      *   bne.s   loc_6173A          ; fewer than 7 Chaos Emeralds -> capture sequence
@@ -466,7 +466,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
      * <p>
      * The ROM's touch branch does not test {@code subtype} at all — the
      * Hidden-Palace/arena decision belongs to {@code SSEntryFlash_GoSS}
-     * (sonic3k.asm:128388-128400), after the capture sequence. The engine's
+     * (sonic3k.asm:128442-128454), after the capture sequence. The engine's
      * so a subtype-bit-7 ring is not a 50-ring award here either. MHZ's ring is
      * one of those, which is why the fixture shows it entering the capture
      * sequence with fewer than 7 Super Emeralds.
@@ -479,7 +479,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     }
 
     /**
-     * ROM {@code SSEntry_CheckLevel} (skdisasm/sonic3k.asm:128433-128443):
+     * ROM {@code SSEntry_CheckLevel} (skdisasm/sonic3k.asm:128487-128497):
      * {@code Current_zone} &gt;= 7, or exactly 4, returns 1 (an S&amp;K level);
      * every other zone returns 0 (an S3 level).
      */
@@ -491,7 +491,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     /**
      * ROM {@code SSEntryFlash_GoSS} reads {@code subtype(a0)} of the flash,
      * which {@code SSEntryFlash_Init} copies from its parent ring
-     * (skdisasm/sonic3k.asm:128357). Exposed so the flash can evaluate the
+     * (skdisasm/sonic3k.asm:128411). Exposed so the flash can evaluate the
      * ROM's destination branch.
      */
     boolean hasNegativeSubtype() {
@@ -518,15 +518,15 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
 
         // Save_Level_Data2 is deliberately deferred until SSEntryFlash_GoSS,
         // after the existing flash animation and wait.
-        // ROM: the touch response (loc_6173A, sonic3k.asm:128290-128306) does NOT
+        // ROM: the touch response (loc_6173A, sonic3k.asm:128344-128360) does NOT
         // save the return state. Save_Level_Data2 is called 42 frames later by
-        // SSEntryFlash_GoSS (sonic3k.asm:128392), with a0 pointing at the FLASH
-        // object -- so `move.w x_pos(a0),(Saved2_X_pos).w` (sonic3k.asm:61738-61739)
+        // SSEntryFlash_GoSS (sonic3k.asm:128446), with a0 pointing at the FLASH
+        // object -- so `move.w x_pos(a0),(Saved2_X_pos).w` (sonic3k.asm:61778-61779)
         // stores the RING's position, not the player's. The save therefore lives in
         // Sonic3kSSEntryFlashObjectInstance#saveLevelData2.
 
         // Lock player: hidden + object controlled
-        // ROM loc_6173A (sonic3k.asm:128292-128304) writes, in order:
+        // ROM loc_6173A (sonic3k.asm:128346-128358) writes, in order:
         //   move.b #-1,(Player_prev_frame).w   ; make the player disappear
         //   move.b #0,mapping_frame(a1)
         //   move.b #$1C,anim(a1)               ; AniSonic1C: dc.b $77,0,$FF
@@ -548,7 +548,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         // ROM loc_6173A does NOT touch the camera. Camera_X_pos keeps being
         // driven by ScrollHoriz from DeformLayers for the rest of the entry
         // sequence; it simply stops advancing because object_control $53 bit 0
-        // stops the player moving (sonic3k.asm:21973-21977), so the camera
+        // stops the player moving (sonic3k.asm:22009-22013), so the camera
         // settles on its own once the follow offset is satisfied. Freezing it
         // here dropped the final ScrollHoriz step of the capture frame itself.
 
@@ -556,12 +556,12 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         // ROM: direction bit is set on the ring (not flash) based on player approach,
         // but has no visual effect since flash uses internal h-flip toggle.
         //
-        // ROM loc_61778 (docs/skdisasm/sonic3k.asm:128306-128309) calls
+        // ROM loc_61778 (docs/skdisasm/sonic3k.asm:128360-128363) calls
         // `jsr (AllocateObject).l`, NOT AllocateObjectAfterCurrent.
-        // AllocateObject (sonic3k.asm:37911-37914) rescans Dynamic_object_RAM
+        // AllocateObject (sonic3k.asm:37951-37954) rescans Dynamic_object_RAM
         // from its base and returns the LOWEST free SST, so the flash can land
         // below the ring's own slot; Process_Sprites walks Object_RAM upwards
-        // (sonic3k.asm:35965-35992), so in that case the flash's routine-0 init
+        // (sonic3k.asm:36005-36032), so in that case the flash's routine-0 init
         // does not run until the next frame. spawnDynamicObject would instead
         // pin AllocateObjectAfterCurrent semantics and always dispatch the
         // init on the touch frame, shortening the whole entry sequence by one
@@ -585,12 +585,12 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     }
 
     /**
-     * ROM {@code loc_6173A} (sonic3k.asm:128295-128297): {@code mapping_frame}
+     * ROM {@code loc_6173A} (sonic3k.asm:128349-128351): {@code mapping_frame}
      * is zeroed and {@code anim} set to {@code $1C} before the object-control
      * byte is written. {@code AniSonic1C} is {@code dc.b $77,0,$FF} — a single
      * frame 0 held for $78 frames — so the mapping frame stays 0 for the whole
      * entry sequence whether or not object_control bit 1 suppresses
-     * {@code Animate_Sonic} (sonic3k.asm:22008-22010).
+     * {@code Animate_Sonic} (sonic3k.asm:22044-22046).
      */
     private List<PlayableEntity> sidekickParticipants(AbstractPlayableSprite player) {
         ObjectPlayerQuery query = new ObjectPlayerQuery(

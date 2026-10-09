@@ -16,13 +16,13 @@ import java.util.List;
 
 /**
  * The two camera releases the Lava Reef miniboss leaves behind, ROM {@code loc_78AA8}
- * (sonic3k.asm:160505-160545), allocated by {@code loc_787E0} on the frame the drill dies.
+ * (sonic3k.asm:160581-160621), allocated by {@code loc_787E0} on the frame the drill dies.
  *
  * <p>Both are the same shape -- wait for the camera to reach an x, write
  * {@code Camera_min_X_pos} there and delete -- so one class carries both as a {@link Gate}:
  * <ul>
  *   <li>{@link Gate#WAITER} is the allocated object itself. It does nothing until
- *       {@code End_of_level_flag} is set ({@code tst.b} at :160506), then installs the palette
+ *       {@code End_of_level_flag} is set ({@code tst.b} at :160582), then installs the palette
  *       rotation, <b>allocates its sibling</b> and falls straight into its own test at
  *       {@code loc_78AE6}: {@code Camera_X_pos >= $940} writes {@code Camera_min_X_pos = $940}.</li>
  *   <li>{@link Gate#SIBLING} is {@code loc_78B08}, the one the waiter allocates. At
@@ -32,7 +32,7 @@ import java.util.List;
  * </ul>
  *
  * <p><b>The palette write is the visible half, and it is why act 2 looks wrong without this.</b>
- * {@code Load_Level} (sonic3k.asm:38747-38761) copies the level layout and nothing else -- no
+ * {@code Load_Level} (sonic3k.asm:38787-38801) copies the level layout and nothing else -- no
  * palette -- so the seamless act change carries the miniboss's own lines into act 2 and they stay
  * there until the player has walked to {@code $2C0}. Measured on a native BizHawk capture of the
  * recorded movie (`~/Videos/OGGF/lrz-bring-up/native-lrz2-bg/run1`, movie frame 416433 = trace row
@@ -40,7 +40,7 @@ import java.util.List;
  * miniboss palette, gold rather than blue.
  *
  * <p>The ROM's names are one-based, so {@code Normal_palette_line_2} is engine palette line
- * <b>1</b> and {@code line_3} is line <b>2</b> (sonic3k.constants.asm:766-770); {@code sub_78B38}
+ * <b>1</b> and {@code line_3} is line <b>2</b> (sonic3k.constants.asm:786-790); {@code sub_78B38}
  * copies {@code $40} bytes from {@code line_3}, which is lines 2 and 3 and stops exactly at the
  * end of {@code Normal_palette}.
  *
@@ -59,9 +59,9 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
         SIBLING
     }
 
-    /** {@code cmpi.w #$940,(Camera_X_pos).w} (sonic3k.asm:160524). */
+    /** {@code cmpi.w #$940,(Camera_X_pos).w} (sonic3k.asm:160600). */
     public static final int WAITER_CAMERA_X = 0x0940;
-    /** {@code cmpi.w #$2C0,(Camera_X_pos).w} (sonic3k.asm:160537). */
+    /** {@code cmpi.w #$2C0,(Camera_X_pos).w} (sonic3k.asm:160613). */
     public static final int SIBLING_CAMERA_X = 0x02C0;
     /** {@code Normal_palette_line_2}, one-based: engine line 1. */
     private static final int ACT2_PALETTE_LINE = 1;
@@ -87,7 +87,7 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
         this.awaitingEndOfLevel = gate == Gate.WAITER;
         this.siblingAllocated = false;
         // Neither slot is drawn and neither carries render_flags bit 2, so
-        // Offset_ObjectsDuringTransition (sonic3k.asm:104166-104181) leaves both alone as the
+        // Offset_ObjectsDuringTransition (sonic3k.asm:104212-104227) leaves both alone as the
         // act change rebases the world.
         setRomWorldPositioned(false);
     }
@@ -113,7 +113,7 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (awaitingEndOfLevel) {
-            // tst.b (End_of_level_flag).w / beq.w locret_78536 (sonic3k.asm:160506-160507).
+            // tst.b (End_of_level_flag).w / beq.w locret_78536 (sonic3k.asm:160582-160583).
             if (!services().gameState().isEndOfLevelFlag()) {
                 return;
             }
@@ -121,7 +121,7 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
             startPaletteRotation();
             writePrimaryPaletteTimer(0x7FFF);
             if (!siblingAllocated) {
-                // jsr (AllocateObject) / move.l #loc_78B08,(a1) (:160517-160519).
+                // jsr (AllocateObject) / move.l #loc_78B08,(a1) (:160593-160595).
                 siblingAllocated = true;
                 spawnFreeChild(
                         () -> new LrzPostDefeatCameraReleaseInstance(Gate.SIBLING));
@@ -145,7 +145,7 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
         } else {
             writePrimaryPaletteTimer(0);
         }
-        // jmp (Delete_Current_Sprite) (sonic3k.asm:160528, :160547): neither slot is a placement
+        // jmp (Delete_Current_Sprite) (sonic3k.asm:160604, :160623): neither slot is a placement
         // and neither comes back.
         com.openggf.level.objects.ObjectLifetimeOps.destroyLatched(this);
     }
@@ -201,8 +201,8 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
     }
 
     /**
-     * {@code loc_78B08}'s two copies (sonic3k.asm:160540-160545) and {@code sub_78B38}
-     * (:160548-160555).
+     * {@code loc_78B08}'s two copies (sonic3k.asm:160616-160621) and {@code sub_78B38}
+     * (:160624-160631).
      */
     private void installActTwoPalette() {
         try {

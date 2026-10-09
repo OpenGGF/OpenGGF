@@ -106,7 +106,7 @@ class TestPlayableSpriteMovementTailsFlight {
     void activationFrameKeepsNormalAirGravityBeforeFlightGravityStarts() throws Exception {
         // Recorded s3k-tails-full-chain-all-emeralds SOZ1 rows 533-535: y_vel
         // $FE18 -> $FE50 on the activating repress, then $FE58. Tails_Stand_Freespace
-        // (sonic3k.asm:27553) sets double_jump_flag inside Tails_JumpHeight but still
+        // (sonic3k.asm:27593) sets double_jump_flag inside Tails_JumpHeight but still
         // runs MoveSprite_TestGravity (+$38) that frame; Tails_FlyingSwimming's
         // +$08 begins on the next frame.
         tails.setYSpeed((short) -0x1E8);

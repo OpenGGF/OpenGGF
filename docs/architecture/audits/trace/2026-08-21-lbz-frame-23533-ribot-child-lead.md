@@ -37,8 +37,8 @@ acceleration source and not a cap. Nothing here should be tuned.
 ## What hurts him
 
 `HURT by=RibotChild at=(1270,063C)`, from a probe on the hurt path. The hazard is
-ROM slot 20, `object_code 0x0008C370` = `loc_8C370` (`sonic3k.asm:191313`), a
-`parent3`-owning child of `Obj_Ribot` (`sonic3k.asm:191259`) that draws through
+ROM slot 20, `object_code 0x0008C370` = `loc_8C370` (`sonic3k.asm:191406`), a
+`parent3`-owning child of `Obj_Ribot` (`sonic3k.asm:191352`) that draws through
 `Child_DrawTouch_Sprite`. The engine calls it `RibotChild`. It is long-lived, not
 a projectile: aux `object_appeared` creates it at frame 23436, ~97 rows earlier.
 
@@ -91,8 +91,8 @@ would accumulate; over ~57 covered rows it would be ~57 rows of lead.
 **Not a creation-frame offset.** The engine `CREATE`s the child at compared row
 23436 and `MOVE`s it in that same row. The ROM does the same: aux
 `object_appeared` installs `0x0008C370` in slot 20 at frame 23436, and the
-creating helper `CreateChild1_Normal` (`sonic3k.asm:176924`) allocates through
-`AllocateObjectAfterCurrent` (`sonic3k.asm:176929`), which takes a slot after the
+creating helper `CreateChild1_Normal` (`sonic3k.asm:177015`) allocates through
+`AllocateObjectAfterCurrent` (`sonic3k.asm:177020`), which takes a slot after the
 parent -- so `Process_Sprites` reaches the child later in the same frame's walk
 and the child runs its own routine in its creation frame. Both sides create and
 run it on row 23436, so no offset is acquired there.

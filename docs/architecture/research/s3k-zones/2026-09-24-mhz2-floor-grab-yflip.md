@@ -5,7 +5,7 @@
 ## ROM behavior
 
 `CutsceneKnux_MHZ2` calls `sub_65E62/sub_65E72` throughout the press sequence
-(`docs/skdisasm/sonic3k.asm:134163-134192`). `sub_65E72` selects animation 5
+(`docs/skdisasm/sonic3k.asm:134220-134249`). `sub_65E72` selects animation 5
 before the cutscene object's animation frame reaches `$0C`. At `$0C` and later,
 it writes `object_control=$83`, selects animation 0, sets `render_flags` bit 1,
 and publishes the raw mappings `$B4/$B5` for Sonic or `$A7/$A8` for Tails.

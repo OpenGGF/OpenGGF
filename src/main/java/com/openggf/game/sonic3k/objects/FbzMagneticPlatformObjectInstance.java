@@ -133,8 +133,8 @@ public final class FbzMagneticPlatformObjectInstance extends AbstractObjectInsta
     @Override public int getY() { return y; }
     @Override public int getBalanceWidthPixels() {
         // Obj_FBZMagneticPlatform initializes width_pixels(a0)=$18
-        // (sonic3k.asm:78930). Sonic_Move reads that byte directly for the
-        // on-object d1 edge test (sonic3k.asm:22455-22473), independently of
+        // (sonic3k.asm:78971). Sonic_Move reads that byte directly for the
+        // on-object d1 edge test (sonic3k.asm:22490-22508), independently of
         // SolidObjectFull_Offset's d1=$23 collision width below. FBZ f13930
         // places Sonic at d1==2: native does not take the signed BLT left-edge
         // balance branch, while the engine's old default width $10 produced

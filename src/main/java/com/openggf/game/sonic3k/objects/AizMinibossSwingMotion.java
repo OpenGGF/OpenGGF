@@ -43,7 +43,7 @@ public class AizMinibossSwingMotion {
      * ROM: Swing_UpAndDown — oscillate y_vel between -maxSpeed and +maxSpeed.
      * Returns true if a half-cycle peak was reached (d3=1 in ROM).
      *
-     * <p>ROM (sonic3k.asm:177851 Swing_UpAndDown) flow at peak:
+     * <p>ROM (sonic3k.asm:177942 Swing_UpAndDown) flow at peak:
      * <pre>
      *   ; going up branch (bit 0 of $38 clear):
      *   neg.w  d0           ; d0 = -accel
@@ -65,7 +65,7 @@ public class AizMinibossSwingMotion {
      * Skipping this bounce-back kept y_vel at the extreme for one extra frame
      * and pushed the AIZ miniboss swing apex 6+ frames out of sync with ROM,
      * causing the engine to detect the boss/Sonic overlap one frame ahead of
-     * ROM at trace F7660 (sonic3k.asm:20913 neg.w x_vel/y_vel/ground_vel).
+     * ROM at trace F7660 (sonic3k.asm:20949 neg.w x_vel/y_vel/ground_vel).
      */
     public boolean update(BossStateContext state) {
         boolean peakReached = false;

@@ -33,7 +33,7 @@ import java.util.List;
  * 0x20 each animation cycle. Special corner transition at (0x580, 0x5A0) shifts
  * both x and y by -0x20. Destroys self when x_pos &gt;= 0x980.
  * <p>
- * ROM references: Obj_HCZWaterRush (sonic3k.asm:64743-64833).
+ * ROM references: Obj_HCZWaterRush (sonic3k.asm:64783-64873).
  */
 @com.openggf.game.rewind.RewindRecreateOnRestore(
         reason = "Constructor writes global zone state (HCZBreakableBarState.setState(3)) "
@@ -177,7 +177,7 @@ public class HCZWaterRushObjectInstance extends AbstractObjectInstance implement
      * <strong>Phase 2:</strong> Moves up by 0x10 per frame until y_pos reaches 0x560,
      * then destroys self by moving off screen.
      * <p>
-     * ROM references: loc_2FEB2 / loc_2FEBE (sonic3k.asm:64811-64832).
+     * ROM references: loc_2FEB2 / loc_2FEBE (sonic3k.asm:64851-64872).
      */
     static class WaterRushBlockChild extends AbstractObjectInstance
             implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
@@ -186,11 +186,11 @@ public class HCZWaterRushObjectInstance extends AbstractObjectInstance implement
          * Word 0 of this object's S3K SST holds its live ROM code pointer.
          * ROM {@code Obj_HCZWaterRush} is installed from the S3K object pointer table at
          * {@code $0002FDA4} (table read from the user-supplied ROM; the
-         * label is defined at docs/skdisasm/sonic3k.asm:64748).
+         * label is defined at docs/skdisasm/sonic3k.asm:64788).
          * Its whole code block lies in one bank, so the HIGH word that
          * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
          * on the next off-screen on-object frame is {@code $0002}
-         * (docs/skdisasm/sonic3k.asm:26816-26843).
+         * (docs/skdisasm/sonic3k.asm:26856-26883).
          */
         @Override
         public int romObjectCodePointerHighWord() {

@@ -251,7 +251,7 @@ import java.util.logging.Logger;
  * S3K results screen — displays "{CHARACTER} GOT THROUGH ACT {N}" with
  * time bonus and ring bonus tally after the signpost lands.
  *
- * <p>ROM: Obj_LevelResults (sonic3k.asm lines 62499-63003).
+ * <p>ROM: Obj_LevelResults (sonic3k.asm lines 62539-63043).
  *
  * <p>Key differences from S2:
  * <ul>
@@ -611,7 +611,7 @@ private static class ResultsElement {
 
 ```java
 private void createElements() {
-    // ROM data from ObjArray_LevResults (sonic3k.asm lines 62919-63003)
+    // ROM data from ObjArray_LevResults (sonic3k.asm lines 62959-63043)
     // Format: {type, targetX, startX, Y, mappingFrame, width, exitQueuePriority}
     int charNameFrame = getCharNameFrame();
     int charNameTargetX = 0xE0;
@@ -857,7 +857,7 @@ The ROM renders bonus values as 7-digit BCD displays using child sprite position
 ```java
 /**
  * Render a bonus value as a 7-digit display.
- * ROM: LevResults_DisplayScore (sonic3k.asm lines 62789-62815)
+ * ROM: LevResults_DisplayScore (sonic3k.asm lines 62829-62855)
  * Digits positioned from (x - $38) rightward, 8px apart.
  */
 private void renderBonusDigits(List<GLCommand> commands, int worldX, int worldY, int value) {
@@ -972,7 +972,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class TestS3kResultsTally {
 
-    // ROM-accurate time bonus table (sonic3k.asm lines 62910-62918)
+    // ROM-accurate time bonus table (sonic3k.asm lines 62950-62958)
     private static final int[] TIME_BONUSES = {5000, 5000, 1000, 500, 400, 300, 100, 10};
 
     /** Calculate time bonus matching ROM logic (lines 62550-62573) */

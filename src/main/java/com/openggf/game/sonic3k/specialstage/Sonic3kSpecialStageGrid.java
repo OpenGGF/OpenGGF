@@ -101,7 +101,7 @@ public class Sonic3kSpecialStageGrid {
      * Convert player subpixel position to a grid buffer index.
      * ROM formula: ((Y+0x80)>>8 & 0x1F) * 0x20 + ((X+0x80)>>8 & 0x1F)
      * <p>
-     * Reference: sub_972E (sonic3k.asm:12088)
+     * Reference: sub_972E (sonic3k.asm:12124)
      *
      * @param xPos player X position in subpixels
      * @param yPos player Y position in subpixels
@@ -126,7 +126,7 @@ public class Sonic3kSpecialStageGrid {
 
     /**
      * Count all blue spheres remaining in the grid.
-     * ROM: sub_9EA0 (sonic3k.asm:12861)
+     * ROM: sub_9EA0 (sonic3k.asm:12897)
      *
      * @return number of blue sphere cells
      */
@@ -142,7 +142,7 @@ public class Sonic3kSpecialStageGrid {
 
     /**
      * Clear all grid cells to empty (used during stage clear sequence).
-     * ROM: loc_9BB2 (sonic3k.asm:12555)
+     * ROM: loc_9BB2 (sonic3k.asm:12591)
      */
     public void clearAll() {
         for (int i = 0; i < GRID_CELL_COUNT; i++) {

@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * S3K SKL Obj $8E - Dragonfly.
  *
- * <p>ROM reference: {@code Obj_Dragonfly} at {@code sonic3k.asm:193742}.
+ * <p>ROM reference: {@code Obj_Dragonfly} at {@code sonic3k.asm:193841}.
  * This parent owns the collidable body and executes the shared
  * {@code Swing_LeftAndRight}, {@code Swing_UpAndDown}, and {@code MoveSprite2}
  * path before pausing at the vertical midpoint.
@@ -103,7 +103,7 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
         if (waitingForOnscreen) {
             // Obj_WaitOffscreen restores Obj_Dragonfly only after Draw_Sprite
             // has retained render_flags bit 7 for the next object dispatch
-            // (sonic3k.asm:180266-180298, 193742-193812).
+            // (sonic3k.asm:180357-180389, 193841-193911).
             placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
                     WAIT_OFFSCREEN_MARGIN, WAIT_OFFSCREEN_MARGIN);
         }
@@ -381,7 +381,7 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
         // segment is allocated by CreateChild4_LinkListRepeated through
         // AllocateObjectAfterCurrent with a0 still the Dragonfly, and that
         // routine scans FORWARD from a0 for the first free SST
-        // (sonic3k.asm:37917-37930), so segment n always lands in a higher
+        // (sonic3k.asm:37957-37970), so segment n always lands in a higher
         // slot than segment n-1 and the ascending object-execution walk runs
         // it later in the same frame. ObjectManager reproduces that order
         // (SlotAllocator.allocateAfter), so no explicit visibility delay is

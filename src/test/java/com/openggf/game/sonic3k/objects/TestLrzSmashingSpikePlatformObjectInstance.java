@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_LRZSmashingSpikePlatform} (sonic3k.asm:88538-88651, ROM {@code $433E8}).
+ * {@code Obj_LRZSmashingSpikePlatform} (sonic3k.asm:88584-88697, ROM {@code $433E8}).
  *
  * <p>Every expectation is the routine's own arithmetic, read from the disassembly: the fall is
  * {@code y_vel += $40} a frame with the PREVIOUS velocity applied, so after {@code n} updates the
@@ -29,7 +29,7 @@ class TestLrzSmashingSpikePlatformObjectInstance {
     /** The smallest of Lava Reef's ten act 1 subtypes; {@code $09 << 3} is 72 pixels. */
     private static final int SUBTYPE = 0x09;
 
-    /** {@code moveq #0,d0 / move.b subtype(a0),d0 / lsl.w #3,d0} (sonic3k.asm:88546-88549). */
+    /** {@code moveq #0,d0 / move.b subtype(a0),d0 / lsl.w #3,d0} (sonic3k.asm:88592-88595). */
     @Test
     void initLatchesThePlacedYAndTheSubtypeShiftedLeftThree() {
         LrzSmashingSpikePlatformObjectInstance block = block(SUBTYPE);
@@ -47,7 +47,7 @@ class TestLrzSmashingSpikePlatformObjectInstance {
     }
 
     /**
-     * {@code loc_43128} (:88555-88562). The displacement is the motion, not the velocity field:
+     * {@code loc_43128} (:88601-88608). The displacement is the motion, not the velocity field:
      * this asserts {@code y_pos} itself against the closed form of the ROM's accumulation.
      */
     @Test
@@ -67,7 +67,7 @@ class TestLrzSmashingSpikePlatformObjectInstance {
      * {@code cmp.w $38(a0),d2 / blo} with {@code $38 = $48}: {@code n(n-1)/8} first reaches 72 at
      * {@code n = 25} (600/8 = 75), and frame 24 is still short (552/8 = 69). Landing clears
      * {@code y_vel}, pins {@code $34}'s high word to {@code $38} and loads the thirty-frame hold
-     * (:88567-88571).
+     * (:88613-88617).
      */
     @Test
     void landingHappensOnTheFirstFrameThePixelCountReachesTheTarget() {
@@ -88,7 +88,7 @@ class TestLrzSmashingSpikePlatformObjectInstance {
     }
 
     /**
-     * {@code RawAni_43196} (:88589) and the {@code beq} that follows the {@code move.b} (:88584):
+     * {@code RawAni_43196} (:88635) and the {@code beq} that follows the {@code move.b} (:88630):
      * the twenty-entry table is stepped once a frame and the trailing zero freezes
      * {@code anim_frame}, so the block sits on frame 0 for the last eleven of the thirty hold
      * frames.
@@ -112,9 +112,9 @@ class TestLrzSmashingSpikePlatformObjectInstance {
     }
 
     /**
-     * {@code loc_431AA} (:88592-88599): one whole pixel a frame off {@code $34}'s high word, with
+     * {@code loc_431AA} (:88638-88645): one whole pixel a frame off {@code $34}'s high word, with
      * {@code addq.b #8 / andi.b #8} flickering {@code mapping_frame} between 8 and 0. At zero
-     * {@code loc_431D4} clears {@code $32} and the next update starts a new fall (:88605-88607).
+     * {@code loc_431D4} clears {@code $32} and the next update starts a new fall (:88651-88653).
      */
     @Test
     void theRiseIsOnePixelAFrameAndEndsByRestartingTheFall() {
@@ -143,7 +143,7 @@ class TestLrzSmashingSpikePlatformObjectInstance {
 
     /**
      * {@code d1 = width_pixels + $B}, {@code d2 = height_pixels - (mapping_frame & 7)},
-     * {@code d3 = d2 + 1} (:88612-88621). The squash frames shrink the solid box with the art, and
+     * {@code d3 = d2 + 1} (:88658-88667). The squash frames shrink the solid box with the art, and
      * the rise's frame 8 masks back to zero.
      */
     @Test
@@ -167,10 +167,10 @@ class TestLrzSmashingSpikePlatformObjectInstance {
     }
 
     /**
-     * {@code swap d6 / andi.w #4|8,d6 / sub_24280} (:88626-88640). Bits 18 and 19 are set only by
-     * {@code loc_1E10E}'s {@code d4 = d6 + $F} (sonic3k.asm:41578-41583), the branch that drives an
+     * {@code swap d6 / andi.w #4|8,d6 / sub_24280} (:88672-88686). Bits 18 and 19 are set only by
+     * {@code loc_1E10E}'s {@code d4 = d6 + $F} (sonic3k.asm:41618-41623), the branch that drives an
      * overlapping player downward. {@code sub_24280} then rewinds the complete 16.16 {@code y_pos}
-     * by this frame's 8.8 {@code y_vel} before {@code HurtCharacter} (sonic3k.asm:49213-49220).
+     * by this frame's 8.8 {@code y_vel} before {@code HurtCharacter} (sonic3k.asm:49253-49260).
      */
     @Test
     void aPlayerDrivenDownwardIsHurtWithTheFixedPointRewind() {
@@ -202,7 +202,7 @@ class TestLrzSmashingSpikePlatformObjectInstance {
         assertEquals(-1, pushed.hurtY, "a side push is not the loc_1E10E branch");
     }
 
-    /** {@code move.w #$280,priority(a0)} and {@code make_art_tile(ArtTile_LRZMisc,2,0)} (:88540). */
+    /** {@code move.w #$280,priority(a0)} and {@code make_art_tile(ArtTile_LRZMisc,2,0)} (:88586). */
     @Test
     void renderStateIsTheInitWrites() {
         LrzSmashingSpikePlatformObjectInstance block = block(SUBTYPE);

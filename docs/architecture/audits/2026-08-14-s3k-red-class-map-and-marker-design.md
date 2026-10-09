@@ -250,7 +250,7 @@ diagnosed except for one link, and the recorder **already carries the exact prob
 `sonic_floor_probe_x/y`, `solid_pre_y`, `solid_surface_y`, `solid_delta`). It is simply **hooks-off**
 in `aiz1_to_hcz_fullrun` (`sonic_floor_seen: false`, `solid_vertical_seen: false`).
 
-**What is known:** the ROM rejects `d0 == 0` landings (`sonic3k.asm:42005-42015`, `blo` is
+**What is known:** the ROM rejects `d0 == 0` landings (`sonic3k.asm:42045-42055`, `blo` is
 unsigned), the engine accepts them, and flipping that reds five classes. Instrumentation shows
 the engine's Sonic *does* descend and land inside the ROM's window — **16 frames late**, owned by
 the ground-sensor floor-distance snap, not by anything in the solid path. Every field the fixture

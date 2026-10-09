@@ -41,8 +41,8 @@ import java.util.logging.Logger;
 /**
  * HCZ (Hydrocity Zone) dynamic level events.
  *
- * <p>ROM: HCZ1_Resize / HCZ2_Resize (sonic3k.asm lines 39244-39320)
- * and HCZ1_BackgroundEvent / HCZ2_BackgroundEvent (sonic3k.asm lines 105702-106121).
+ * <p>ROM: HCZ1_Resize / HCZ2_Resize (sonic3k.asm lines 39284-39360)
+ * and HCZ1_BackgroundEvent / HCZ2_BackgroundEvent (sonic3k.asm lines 105748-106167).
  *
  * <h3>Act 1 FG (HCZ1_Resize) — 3 stages:</h3>
  * <ul>
@@ -87,16 +87,16 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     private static final int PAL_MUT_CAM_Y_PAST = 0x500;
     private static final int PAL_MUT_CAM_X_PAST = 0x900;
 
-    // HCZ1 underwater palette mutation, ROM loc_1C892 (sonic3k.asm:39261-39273).
+    // HCZ1 underwater palette mutation, ROM loc_1C892 (sonic3k.asm:39301-39313).
     //
     // FixBugs conditional (sonic3k.asm:38 -- the shipped ROM assembles with
     // FixBugs = 0, so THIS is the branch the engine implements).
     //   Shipped (FixBugs = 0), implemented here: the first colour written is
-    //   $B80 (sonic3k.asm:39270-39271, whose own comment reads "Bug: this should
+    //   $B80 (sonic3k.asm:39310-39311, whose own comment reads "Bug: this should
     //   be $680"). The second and third colours, $240 and $220, are outside the
     //   conditional and are the same either way.
     //   Fixed (FixBugs = 1), NOT implemented: $680 instead of $B80
-    //   (sonic3k.asm:39267-39268), a darker first colour in the underwater ramp.
+    //   (sonic3k.asm:39307-39308), a darker first colour in the underwater ramp.
     private static final int[] PALETTE_UNDERWATER = {0x0B80, 0x0240, 0x0220};
     // Revert palette colors: $0CEE, $0ACE, $008A
     private static final int[] PALETTE_NORMAL = {0x0CEE, 0x0ACE, 0x008A};
@@ -416,7 +416,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
      * then receive their first active dispatch when the in-level title card
      * finishes. Each child owns one native player slot, writes
      * {@code object_control=1}, and carries that player on its own fixed-point
-     * arc (sonic3k.asm:139998-140077).
+     * arc (sonic3k.asm:140063-140142).
      *
      * <p>The bridge method keeps its historical name because transition event
      * providers already expose that signal; the behavior is an object-routine
@@ -863,7 +863,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
 
     /**
      * Requests the seamless transition from HCZ Act 1 to HCZ Act 2.
-     * ROM: HCZ1BGE_DoTransition (sonic3k.asm lines 105747-105780).
+     * ROM: HCZ1BGE_DoTransition (sonic3k.asm lines 105793-105826).
      *
      * <p>Actions in the ROM:
      * <ul>
@@ -939,7 +939,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                 // HCZ1BGE_DoTransition performs Load_Level and every coordinate
                 // subtraction inside this background-event dispatch. Deferring
                 // through the outer game loop leaves one unshifted comparison
-                // frame (sonic3k.asm:105747-105780).
+                // frame (sonic3k.asm:105793-105826).
                 lm.executeActTransition(request);
                 // _unkFAA2 is a global word and survives Load_Level. The engine
                 // stores dynamic-water state per act, so carry the lock onto the
@@ -986,7 +986,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     // =========================================================================
     // Act 2 BG: Wall-chase event (HCZ2_BackgroundEvent)
     //
-    // ROM: sonic3k.asm lines 106023-106170.
+    // ROM: sonic3k.asm lines 106069-106216.
     // 5-state dispatch: init → wall move → transition → refresh → normal.
     // The wall-chase drives a moving solid collision wall from the left side,
     // with screen shake, speed ramping, and BG collision gating.
@@ -1055,7 +1055,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
 
     /**
      * BG state 4: HCZ2BGE_WallMove.
-     * ROM: sonic3k.asm lines 106048-106070 (dispatch) and 106129-106170 (HCZ2_WallMove).
+     * ROM: sonic3k.asm lines 106094-106116 (dispatch) and 106129-106170 (HCZ2_WallMove).
      * Runs wall movement logic each frame and gates BG collision.
      */
     private void act2BgWallMove(int frameCounter) {
@@ -1073,7 +1073,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         }
 
         // Gate Background_collision_flag by player position
-        // ROM: sonic3k.asm lines 106051-106067
+        // ROM: sonic3k.asm lines 106097-106113
         updateBgCollisionGating();
 
         // Run wall movement logic
@@ -1124,7 +1124,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
 
     /**
      * HCZ2_WallMove — core wall movement logic.
-     * ROM: sonic3k.asm lines 106129-106170.
+     * ROM: sonic3k.asm lines 106175-106216.
      *
      * <p>Wall movement sequence:
      * <ol>
@@ -1199,7 +1199,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
 
     /**
      * Gate Background_collision_flag based on player position.
-     * ROM: sonic3k.asm lines 106051-106067.
+     * ROM: sonic3k.asm lines 106097-106113.
      * BG collision is only enabled when the player is within the wall-chase corridor.
      */
     private void updateBgCollisionGating() {

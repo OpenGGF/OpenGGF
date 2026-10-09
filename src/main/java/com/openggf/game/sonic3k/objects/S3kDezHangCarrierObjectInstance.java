@@ -14,7 +14,7 @@ import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
-/** SKL $4C, Obj_DEZHangCarrier / sub_4703E (sonic3k.asm:92844-93002). */
+/** SKL $4C, Obj_DEZHangCarrier / sub_4703E (sonic3k.asm:92890-93048). */
 public class S3kDezHangCarrierObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
     private int xFixed;

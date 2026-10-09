@@ -14,7 +14,7 @@ import java.util.List;
  *
  * <p>The ROM installs {@code Obj_HCZWaterSplash} subtype 1 at
  * {@code Dynamic_object_RAM+2}, absolute SST slot 5, during HCZ level init
- * (sonic3k.asm:7807-7809). Its player-facing state is coordinated by
+ * (sonic3k.asm:7839-7841). Its player-facing state is coordinated by
  * {@link com.openggf.game.sonic3k.features.HCZWaterSkimHandler}; this object
  * keeps the native slot occupied so later {@code AllocateObject} calls scan
  * the same SST window as the ROM.

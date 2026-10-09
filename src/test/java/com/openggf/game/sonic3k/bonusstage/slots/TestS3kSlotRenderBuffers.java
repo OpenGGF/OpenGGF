@@ -86,9 +86,9 @@ class TestS3kSlotRenderBuffers {
 
         assertTrue(layoutIndex >= 0);
         assertTrue(buffers.startSlotWallAnimationAt(layoutIndex, 0x02));
-        // ROM loc_4BF30 (sonic3k.asm:99283-99300) only claims the slot; the resting
+        // ROM loc_4BF30 (sonic3k.asm:99329-99346) only claims the slot; the resting
         // tile is still in the layout until loc_4B65A's first sub_4B592 pass
-        // (sonic3k.asm:98499-98513) publishes byte_4B688[0] = $D.
+        // (sonic3k.asm:98545-98559) publishes byte_4B688[0] = $D.
         assertEquals(0x01, buffers.layout()[layoutIndex] & 0xFF);
         buffers.tickTransientAnimations();
         assertEquals(0x0D, buffers.layout()[layoutIndex] & 0xFF);

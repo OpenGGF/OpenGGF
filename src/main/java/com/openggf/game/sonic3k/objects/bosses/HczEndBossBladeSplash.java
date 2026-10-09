@@ -65,8 +65,8 @@ public class HczEndBossBladeSplash extends AbstractBossChild implements RewindRe
      * @param bladeX World X of the blade when it entered water.
      */
     public HczEndBossBladeSplash(HczEndBossInstance boss, int bladeX) {
-        // HCZEndBossSplash_ObjData priority $80 (sonic3k.asm:142174-142176), applied by
-        // HCZEndBossSplash_Init's SetUp_ObjAttributes2 (sonic3k.asm:141283-141285).
+        // HCZEndBossSplash_ObjData priority $80 (sonic3k.asm:142239-142241), applied by
+        // HCZEndBossSplash_Init's SetUp_ObjAttributes2 (sonic3k.asm:141348-141350).
         super(boss, "HCZEndBossBladeSplash", RenderPriority.fromS3kWord(0x80), 0);
         this.boss = boss;
 
@@ -86,7 +86,7 @@ public class HczEndBossBladeSplash extends AbstractBossChild implements RewindRe
     @Override
     public boolean isHighPriority() {
         // HCZEndBossSplash_ObjData art make_art_tile(ArtTile_HCZEndBoss,0,1) sets bit 15
-        // (sonic3k.asm:142175).
+        // (sonic3k.asm:142240).
         return true;
     }
 

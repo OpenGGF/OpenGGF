@@ -18,8 +18,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * ROM {@code loc_57BB2}/{@code loc_57BF6} (sonic3k.asm:116735-116757) and the placement
- * routine {@code sub_5758A} (sonic3k.asm:116153-116192): the five drifting foreground clouds
+ * ROM {@code loc_57BB2}/{@code loc_57BF6} (sonic3k.asm:116781-116803) and the placement
+ * routine {@code sub_5758A} (sonic3k.asm:116199-116238): the five drifting foreground clouds
  * {@code SSZ1_ScreenInit} allocates from {@code word_58758} and records in
  * {@code HScroll_table+$1F6}.
  *

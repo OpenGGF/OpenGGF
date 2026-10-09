@@ -24,8 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * SKL {@code $55}, {@code Obj_DEZEnergyBridge} (sonic3k.asm:93909-93990) and its subtype
- * decoder {@code sub_47DDE} (:93879-93902).
+ * SKL {@code $55}, {@code Obj_DEZEnergyBridge} (sonic3k.asm:93955-94036) and its subtype
+ * decoder {@code sub_47DDE} (:93925-93948).
  *
  * <p>Every expected number is a literal from the ROM listing or from the decoded
  * {@code DEZ2_Sprites} layout. The period table, the phase step and the on-duration are
@@ -47,7 +47,7 @@ class TestS3kDezEnergyBridgeHeadless {
     }
 
     /**
-     * {@code sub_47DDE} :93884-93896. Bits 2-3 pick the period out of {@code word_47DD6}
+     * {@code sub_47DDE} :93930-93942. Bits 2-3 pick the period out of {@code word_47DD6}
      * ({@code $7F}, {@code $FF}, {@code $1FF}, {@code $3FF}), bits 4-7 are a phase index scaled
      * by a sixteenth of the period, and bits 0-1 give the on-duration {@code ((n + 2) << 5)}.
      */
@@ -71,7 +71,7 @@ class TestS3kDezEnergyBridgeHeadless {
         }
     }
 
-    /** {@code move.b #$40,width_pixels(a0)} and {@code move.w #9,d3} (:93911, :93941). */
+    /** {@code move.b #$40,width_pixels(a0)} and {@code move.w #9,d3} (:93957, :93987). */
     @Test
     void theSolidBoxIsTheRomsArgumentsToSolidObjectTop() {
         HeadlessTestFixture fixture = fixture();
@@ -87,7 +87,7 @@ class TestS3kDezEnergyBridgeHeadless {
     }
 
     /**
-     * {@code loc_1E45A} :42000-42007. {@code cmpi.w #-$10,d0 / blo} is an unsigned compare, so
+     * {@code loc_1E45A} :42040-42047. {@code cmpi.w #-$10,d0 / blo} is an unsigned compare, so
      * it rejects every {@code d0} below {@code $FFF0} — including zero. The accepted window is
      * {@code -$10 <= d0 <= -1} and the exact surface boundary is not a landing. This is the
      * frame the DEZ act 2 route turns on: native row 20299 leaves the player airborne with
@@ -105,7 +105,7 @@ class TestS3kDezEnergyBridgeHeadless {
     }
 
     /**
-     * {@code Obj_DEZEnergyBridge} :93914-93925. {@code sub.w d1,d0 / bcc} is an unsigned
+     * {@code Obj_DEZEnergyBridge} :93960-93971. {@code sub.w d1,d0 / bcc} is an unsigned
      * subtraction of the on-duration from the phase, so a borrow means the phase is still
      * inside the on window; the object then enters that window part-used and decrements on the
      * same update, without waiting a frame.
@@ -128,7 +128,7 @@ class TestS3kDezEnergyBridgeHeadless {
     }
 
     /**
-     * {@code loc_47E5C} / {@code loc_47E62} :93927-93933. A phase at or past the on-duration
+     * {@code loc_47E5C} / {@code loc_47E62} :93973-93979. A phase at or past the on-duration
      * installs the off routine, which falls straight through and runs on the same update; it
      * then waits for the phase to reach zero.
      */
@@ -153,7 +153,7 @@ class TestS3kDezEnergyBridgeHeadless {
     }
 
     /**
-     * {@code loc_47E8C} :93942-93944. The update on which {@code $34} reaches zero branches
+     * {@code loc_47E8C} :93988-93990. The update on which {@code $34} reaches zero branches
      * past the {@code SolidObjectTop} call, so a {@code $60}-frame window is solid for
      * {@code $5F} updates and not the last one.
      */
@@ -178,7 +178,7 @@ class TestS3kDezEnergyBridgeHeadless {
     }
 
     /**
-     * {@code sub_47EE8} :93977-93984: the object clears its own standing bit and, only if it
+     * {@code sub_47EE8} :94023-94030: the object clears its own standing bit and, only if it
      * was set, clears the player's {@code Status_OnObj} and sets {@code Status_InAir}.
      */
     @Test
@@ -210,7 +210,7 @@ class TestS3kDezEnergyBridgeHeadless {
     }
 
     /**
-     * {@code loc_47EBE} :93945-93947: {@code Level_frame_counter+1} is the counter's low byte,
+     * {@code loc_47EBE} :93991-93993: {@code Level_frame_counter+1} is the counter's low byte,
      * so the frame is the counter and 3. {@code Map_DEZEnergyBridge} has exactly four.
      */
     @Test
@@ -230,7 +230,7 @@ class TestS3kDezEnergyBridgeHeadless {
     }
 
     /**
-     * {@code loc_47EBE} :93948-93953: {@code sfx_EnergyZap} ({@code $A8}) every eighth frame
+     * {@code loc_47EBE} :93994-93999: {@code sfx_EnergyZap} ({@code $A8}) every eighth frame
      * while the object is on screen. The off routine never reaches this code, so a bridge
      * outside its window is silent.
      */
@@ -265,7 +265,7 @@ class TestS3kDezEnergyBridgeHeadless {
     }
 
     /**
-     * The off routine jumps to {@code Delete_Sprite_If_Not_In_Range} (:93933) without reaching
+     * The off routine jumps to {@code Delete_Sprite_If_Not_In_Range} (:93979) without reaching
      * the {@code SolidObjectTop} call.
      *
      * <p>Coverage limit, stated rather than faked: the ROM also skips the display on that path,

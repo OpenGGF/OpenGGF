@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * HPZ sanctuary background scroll parity against {@code HPZ_BackgroundEvent}
- * (sonic3k.asm:120069-120280).
+ * (sonic3k.asm:120115-120326).
  */
 class SwScrlHpzTest {
 

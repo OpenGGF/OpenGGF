@@ -71,8 +71,8 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     private Sonic3kLevelAnimationManager levelAnimationManager;
     // ROM AIZ_vine_angle ($FFFFFEBA) is deliberately OUTSIDE the level-init
     // clear: Level does clearRAM Oscillating_table,(AIZ_vine_angle-Oscillating_table)
-    // (sonic3k.asm:10609) and the special stage repeats the same bounded clear
-    // (sonic3k.asm:10606-10607 region), both stopping one word short of it, so the
+    // (sonic3k.asm:10645) and the special stage repeats the same bounded clear
+    // (sonic3k.asm:10642-10643 region), both stopping one word short of it, so the
     // word free-runs for the whole session. A Game instance does NOT: LevelManager
     // rebuilds one on every load (LevelManager.java:459), so this state is injected
     // by the session-lived Sonic3kGameModule instead of being owned here.
@@ -262,17 +262,17 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         S3kRuntimeArtCoordinator coordinator = S3kRuntimeArtCoordinator.current();
         // LoadLevelLoadBlock queues both parents at the call and only then
         // blocks at loc_7870 until Kos_modules_left reaches zero
-        // (docs/skdisasm/sonic3k.asm:9727 and 9734 queue the two parents,
-        // 9736-9743 is the wait; Level: calls it at :7761), so the
+        // (docs/skdisasm/sonic3k.asm:9763 and 9734 queue the two parents,
+        // 9736-9743 is the wait; Level: calls it at :7793), so the
         // parents are in the FIFO before anything else can reach it. Nothing
         // in Level: defers that queueing, and the enemy art that follows comes
-        // later still, from Obj_TitleCardWait2's LoadEnemyArt (:62298). A
+        // later still, from Obj_TitleCardWait2's LoadEnemyArt (:62338). A
         // deferred publication inverted that order: it released the slots it
         // had, and the following level frames' object art took all four before
         // the deferred batch could retry, leaving the terrain art permanently
         // starved behind a full FIFO.
         // Reaching LoadLevelLoadBlock means the card's own modules have already
-        // drained (Obj_TitleCardCreate waits on Kos_modules_left, :62169-62171).
+        // drained (Obj_TitleCardCreate waits on Kos_modules_left, :62209-62211).
         // A caller that arrives while they are still outstanding is ahead of
         // that gate, and waits for the queue rather than queueing behind it.
         if (coordinator.freshLevelArtWaitsForModuleQueue()) {
@@ -633,7 +633,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
             boundariesMinXOverride = 0;
         } else if (zone == Sonic3kZoneIds.ZONE_MHZ && act == 0
                 && !"knuckles".equalsIgnoreCase(inputs.mainCharacter())) {
-            // ROM Get_LevelSizeStart loc_1BF1E (sonic3k.asm:38214-38225): for MHZ1
+            // ROM Get_LevelSizeStart loc_1BF1E (sonic3k.asm:38254-38265): for MHZ1
             // (Current_zone_and_act==$0700) played as Sonic/Tails (Player_mode<3,
             // cmpi.w #3/bhs.s skip) with Sonic 3 locked on (SK_alone_flag==0), the
             // level-load routine overrides Camera_min_X_pos to $C0.
@@ -1012,7 +1012,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
      *
      * <p>SolidIndexes entries are 32-bit pointers to collision index data, one per act
      * (indexed as zone*2+act). The format is determined by address comparison, matching
-     * the original LoadSolids routine (sonic3k.asm:9549-9558):
+     * the original LoadSolids routine (sonic3k.asm:9584-9593):
      * <ul>
      *   <li>Address >= S3_LEVEL_SOLID_DATA (0x260000): non-interleaved (S3 zones)</li>
      *   <li>Address < S3_LEVEL_SOLID_DATA: interleaved (SK zones)</li>

@@ -34,7 +34,7 @@ import java.util.List;
  * {@link Sonic3kLevelTriggerManager} flag that can trigger
  * {@code CollapsingBridge} collapse.
  *
- * <p>Based on {@code Obj_Blastoid} (sonic3k.asm, lines 183566–183674).
+ * <p>Based on {@code Obj_Blastoid} (sonic3k.asm, lines 183659–183767).
  *
  * <h3>Subtype:</h3>
  * Bits 0-3: trigger array index — set to $FF on defeat
@@ -164,15 +164,15 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         if (initPending) {
-            // Blastoid_Init (sonic3k.asm:183586-183588) is
+            // Blastoid_Init (sonic3k.asm:183679-183681) is
             // `lea ObjDat_Blastoid,a1 / jmp SetUp_ObjAttributes`, whose tail is
             // `addq.b #2,routine(a0)` then `rts`
-            // (sonic3k.asm:176901-176919). Init RETURNS rather than falling
+            // (sonic3k.asm:176992-177010). Init RETURNS rather than falling
             // through to Blastoid_DetectPlayer, so this dispatch runs no player
             // detection and starts no attack; the routine-2 detect begins on the
             // next dispatch.
             initPending = false;
-            // Obj_Blastoid (sonic3k.asm:183570-183578) still runs
+            // Obj_Blastoid (sonic3k.asm:183663-183671) still runs
             // Blastoid_CheckPlayerTouch and Sprite_CheckDeleteTouch after the
             // routine returns, so the tail work happens on the Init dispatch too.
             processPendingTouch(vIntRunCount);

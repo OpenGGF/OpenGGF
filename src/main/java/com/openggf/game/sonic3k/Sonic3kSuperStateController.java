@@ -169,7 +169,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
     }
 
     /**
-     * ROM {@code loc_8160A} (sonic3k.asm:173296-173312): the Doomsday flight controller turns Player 1
+     * ROM {@code loc_8160A} (sonic3k.asm:173387-173403): the Doomsday flight controller turns Player 1
      * Super without {@code Sonic_Transform}. It adds 50 rings and writes the same
      * {@code Super_palette_status}, {@code Palette_timer}, {@code Super_Sonic_Knux_flag = 1},
      * {@code Super_frame_count = 60}, mappings, transformation animation, top speed and
@@ -200,7 +200,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
     }
 
     /**
-     * ROM {@code sub_5FCCE} (sonic3k.asm:126664-126668) as {@code loc_8167C} calls it: set
+     * ROM {@code sub_5FCCE} (sonic3k.asm:126710-126714) as {@code loc_8167C} calls it: set
      * {@code Super_Sonic_Knux_flag} to -1, restart {@code Palette_frame} at 0 with the fade marked
      * done and {@code Palette_timer} 0, then install {@code Obj_HyperSonic_Stars} and the after-image
      * trail.
@@ -331,7 +331,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
     protected int getInitialRingDrainCounter() {
         // Sonic_Transform, Tails_Transform and Knux_Transform each write 60 to
         // Super_frame_count before setting the powered-form flag
-        // (sonic3k.asm:23487-23498,28673-28680,32592-32603).
+        // (sonic3k.asm:23522-23533,28713-28720,32632-32643).
         return getRingDrainInterval();
     }
 
@@ -529,8 +529,8 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     @Override
     protected PhysicsProfile getSuperProfile() {
-        // S3K Super Tails: max=$800, accel=$18, decel=$C0 (sonic3k.asm:26325-26327)
-        // S3K Super Sonic: max=$A00, accel=$30, decel=$100 (sonic3k.asm:22084-22086)
+        // S3K Super Tails: max=$800, accel=$18, decel=$C0 (sonic3k.asm:26365-26367)
+        // S3K Super Sonic: max=$A00, accel=$30, decel=$100 (sonic3k.asm:22120-22122)
         if (player instanceof Tails) {
             return PhysicsProfile.SONIC_3K_SUPER_TAILS;
         }
@@ -577,7 +577,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
         captureNormalPalette();
         configurePaletteForActiveTier();
         // Sonic_Transform, Tails_Transform, Knux_Transform and loc_8160A all write
-        // Super_palette_status = 1 and Palette_timer = $F (sonic3k.asm:23487-23489,
+        // Super_palette_status = 1 and Palette_timer = $F (sonic3k.asm:23522-23524,
         // 28673-28674, 32592-32593, 173302-173303).
         paletteState = 1;
         paletteFrame = 0;
@@ -641,7 +641,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
     }
 
     /**
-     * {@code SuperHyper_PalCycle}'s fading branch (sonic3k.asm:4608-4660), the pass that releases
+     * {@code SuperHyper_PalCycle}'s fading branch (sonic3k.asm:4640-4692), the pass that releases
      * {@code object_control}. {@code Palette_timer} counts down from {@code $F}; each expiry reloads
      * it with 1. Tails and Knuckles (Player_mode 2 and 3) finish on the first expiry. Sonic applies
      * one {@code PalCycle_SuperSonic} fade frame per expiry and finishes on the one that brings

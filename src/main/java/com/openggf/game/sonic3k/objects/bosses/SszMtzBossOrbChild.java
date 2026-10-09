@@ -27,7 +27,7 @@ import com.openggf.physics.TrigLookupTable;
 import java.util.List;
 
 /**
- * ROM {@code loc_7AD8A} (sonic3k.asm:163663-163830): the seven orbs the Metropolis recreation
+ * ROM {@code loc_7AD8A} (sonic3k.asm:163741-163908): the seven orbs the Metropolis recreation
  * carries, and the one object that does the fight's actual damage.
  *
  * <p><b>There is no separate controller.</b> {@code loc_7A72C} allocates one slot with

@@ -503,7 +503,7 @@ public class GroundSensor extends Sensor {
         // the low nibble, the combined no-collision distance is 31 - yInTile.
         // Ceiling attachment enters FindFloor with WalkCeiling's eori.w #$F
         // already applied to d2 (S1 Sonic AnglePos.asm:289-306; S2 s2.asm:43175-43191;
-        // S3K sonic3k.asm:18977-18993), so the empty-tile default must mirror
+        // S3K sonic3k.asm:19013-19029), so the empty-tile default must mirror
         // the probe low nibble even though the engine's tile lookup coordinate is
         // kept unmirrored for existing solid-tile parity.
         int yInTile = mirrorLowNibble

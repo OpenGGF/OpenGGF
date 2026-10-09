@@ -9,7 +9,7 @@ import com.openggf.level.objects.ObjectServices;
 
 /**
  * Palette cycling for the AIZ1 intro's Super Sonic visual effect.
- * Port of sub_679B8 (sonic3k.asm:135904).
+ * Port of sub_679B8 (sonic3k.asm:135969).
  *
  * This is NOT the SuperStateController palette cycling - it's a standalone
  * helper used only by the intro cutscene object. Cycles through

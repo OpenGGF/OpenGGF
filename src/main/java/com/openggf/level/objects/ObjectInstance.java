@@ -168,7 +168,7 @@ public interface ObjectInstance {
      * Returns true when this object is currently within the camera viewport (ROM
      * render_flags bit 7 equivalent, set by Render_Sprites).  Solid contact
      * resolution is gated on this in ROM SolidObject_cont (s2.asm:35140-35145
-     * SolidObject_OnScreenTest, sonic3k.asm:41390-41392 loc_1DF88,
+     * SolidObject_OnScreenTest, sonic3k.asm:41430-41432 loc_1DF88,
      * s1disasm/_incObj/sub SolidObject.asm:124-126 Solid_ChkEnter / line 86-87
      * SolidObject2F).  Off-screen objects skip the side / top / bottom path so
      * the player keeps their velocity even when the camera has scrolled past.
@@ -212,7 +212,7 @@ public interface ObjectInstance {
     /**
      * ROM parity: true when this destroy was triggered by an off-screen check
      * (Sprite_OnScreen_Test family in sonic3k.asm). ROM clears bit 7 of the
-     * respawn-table entry ({@code bclr #7,(a2)} at loc_1B5A0 / sonic3k.asm:37275)
+     * respawn-table entry ({@code bclr #7,(a2)} at loc_1B5A0 / sonic3k.asm:37315)
      * so the placement system can re-spawn the object when the camera returns.
      * Implementors that mark themselves destroyed via off-screen self-delete
      * must override and return {@code true}; the placement layer routes those

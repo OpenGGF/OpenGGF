@@ -25,7 +25,7 @@ import com.openggf.level.objects.TouchShieldDeflectCapability;
 import java.util.List;
 
 /**
- * ROM object: {@code Obj_LBZAlarm} ({@code sonic3k.asm:57034-57112}).
+ * ROM object: {@code Obj_LBZAlarm} ({@code sonic3k.asm:57074-57152}).
  *
  * <p>The alarm is an invisible S3K special-property touch object. Touching its
  * {@code collision_flags = $D7} box latches {@code collision_property}, starts

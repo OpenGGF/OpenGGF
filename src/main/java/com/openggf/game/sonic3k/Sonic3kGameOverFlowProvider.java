@@ -8,7 +8,7 @@ import com.openggf.level.objects.AbstractGameOverCardObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 
 /**
- * Sonic 3&amp;K {@code loc_12432} / {@code loc_12498} (docs/skdisasm/sonic3k.asm:24588-24616):
+ * Sonic 3&amp;K {@code loc_12432} / {@code loc_12498} (docs/skdisasm/sonic3k.asm:24628-24656):
  * <pre>
  *   move.l  #Obj_GameOver,(Reserved_object_3).w     ; frame 0 (GAME) / 2 (TIME)
  *   move.l  #Obj_GameOver,(Dynamic_object_RAM).w    ; frame 1 / 3 (OVER)

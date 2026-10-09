@@ -20,7 +20,7 @@ public class TestExplosionObjectInstance {
     /**
      * ROM Obj27 (S2/S3K): {@code anim_frame_duration} init 3, reload 7, delete
      * at mapping_frame 5 (docs/s2disasm/s2.asm:46672-46684,
-     * docs/skdisasm/sonic3k.asm:42195-42205). The first {@code update} is the
+     * docs/skdisasm/sonic3k.asm:42235-42245). The first {@code update} is the
      * same-frame Init-&gt;Main fall-through (the ROM-spawn frame), so counting
      * that first update as game-frame 1, the explosion self-deletes on the 36th
      * update — i.e. 35 game frames after spawn, matching the EHZ1/SCZ/WFZ trace

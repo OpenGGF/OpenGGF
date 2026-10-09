@@ -281,9 +281,9 @@ public class TestTouchResponseManager {
     @Test
     public void testS3kTouchSpecialUnlistedC0FlagDoesNotDecodeAsBoss() {
         // ROM Touch_ChkValue routes all $C0 flags to Touch_Special
-        // (sonic3k.asm:20773-20778). Touch_Special only mutates
+        // (sonic3k.asm:20809-20814). Touch_Special only mutates
         // collision_property for listed sizes; unlisted size $0F returns
-        // without boss handling (sonic3k.asm:21162-21183).
+        // without boss handling (sonic3k.asm:21198-21219).
         MockS3kTouchSpecialObject obj = new MockS3kTouchSpecialObject(160, 112, 0xCF);
         setupTableSize(0x0F, 24, 24);
         objectManager.addDynamicObject(obj);
@@ -300,7 +300,7 @@ public class TestTouchResponseManager {
         // Reproduce the latent CNZ-balloon false-positive from the AIZ F6313 round-16
         // diagnostic: ROM-accurate Tails at (0x09E1, 0x0658) vs balloon at
         // (0x0A78, 0x068C) — a 151px X-distance that should NOT overlap with
-        // Touch_Sizes[$17] = (8, 8). ROM Obj_CNZBalloon at sonic3k.asm:66747.
+        // Touch_Sizes[$17] = (8, 8). ROM Obj_CNZBalloon at sonic3k.asm:66787.
         when(player.getCentreX()).thenReturn((short) 0x09E1);
         when(player.getCentreY()).thenReturn((short) 0x0658);
         when(player.getYRadius()).thenReturn((short) 15); // Tails standYRadius
@@ -318,8 +318,8 @@ public class TestTouchResponseManager {
 
     @Test
     public void testTouchResponseSkippedWhenObjectControlSuppresses() {
-        // ROM Sonic_Display (sonic3k.asm:22019-22021) and Tails_Display
-        // (sonic3k.asm:26263-26266) skip the TouchResponse pass when
+        // ROM Sonic_Display (sonic3k.asm:22055-22057) and Tails_Display
+        // (sonic3k.asm:26303-26306) skip the TouchResponse pass when
         // object_control's bit-7-equivalent is set. Engine's
         // PlayableEntity#isTouchResponseSuppressedByObjectControl() exposes
         // this gate. Without it, sprites in CATCH_UP_FLIGHT or
@@ -341,10 +341,10 @@ public class TestTouchResponseManager {
 
     @Test
     public void testSidekickTouchResponseSkippedWhenObjectControlSuppresses() {
-        // ROM Tails_Display (sonic3k.asm:26263-26266) skips TouchResponse for
+        // ROM Tails_Display (sonic3k.asm:26303-26306) skips TouchResponse for
         // Tails when object_control bit 7 is set. This is the path
-        // Tails_Catch_Up_Flying (sonic3k.asm:26511) and Tails_FlySwim_Unknown
-        // (sonic3k.asm:26542) take when entering CATCH_UP_FLIGHT and
+        // Tails_Catch_Up_Flying (sonic3k.asm:26551) and Tails_FlySwim_Unknown
+        // (sonic3k.asm:26582) take when entering CATCH_UP_FLIGHT and
         // FLIGHT_AUTO_RECOVERY — both write object_control=$81. Engine's
         // sidekick CPU controller mirrors that via setObjectControlled(true)
         // without setObjectControlAllowsCpu(true).
@@ -1125,7 +1125,7 @@ public class TestTouchResponseManager {
         objectManager.update(0, player, List.of(), 2);
 
         // Touch_Loop polls ENEMY every frame; only SPECIAL/monitor contacts use
-        // the persistent-overlap edge latch (docs/skdisasm/sonic3k.asm:20655-20778).
+        // the persistent-overlap edge latch (docs/skdisasm/sonic3k.asm:20691-20814).
         assertTrue(enemy.wasTouched,
                 "ENEMY touch must poll continuously for single-region objects while overlap persists");
     }

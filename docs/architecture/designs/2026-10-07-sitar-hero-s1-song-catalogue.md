@@ -37,7 +37,7 @@ The native owners are:
   `cfRepeatAtPos` (`:2596..2609`), `cfJumpToGosub` (`:2611..2619`), and `cfStopTrack`
   (`:2489`): global divider, signed relative branches, bounded inner repeats,
   subroutines and native termination.
-- `sound/_smps2asm_inc.asm:484..500`: `smpsSetTempoMod` emits `$EA`; `smpsSetTempoDiv`
+- `sound/_smps2asm_inc.asm:486..500`: `smpsSetTempoMod` emits `$EA`; `smpsSetTempoDiv`
   emits `$EB`. Macro names alone are insufficient to distinguish those operations.
 
 The independent interpreter omits synthesis/modulation/note-fill releases because

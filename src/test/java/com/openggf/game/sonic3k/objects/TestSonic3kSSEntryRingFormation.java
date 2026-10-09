@@ -34,7 +34,7 @@ import static org.mockito.Mockito.*;
  * Verifies that the S3K big ring (Obj_SSEntryRing) is NOT interactable
  * during its initial growing animation, matching the ROM's behaviour.
  * <p>
- * ROM reference: sonic3k.asm lines 128257-128262
+ * ROM reference: sonic3k.asm lines 128311-128316
  * <pre>
  * SSEntryRing_Main:
  *     jsr (Animate_Raw).l
@@ -73,7 +73,7 @@ public class TestSonic3kSSEntryRingFormation {
 
     /**
      * ROM {@code Obj_WaitOffscreen}'s release path {@code loc_85B02} is
-     * {@code move.l $34(a0),(a0) / rts} (docs/skdisasm/sonic3k.asm:180300-180302):
+     * {@code move.l $34(a0),(a0) / rts} (docs/skdisasm/sonic3k.asm:180391-180393):
      * it only writes the saved code pointer back and returns to the object
      * loop, so {@code Obj_SSEntryRing} -- and therefore the first
      * {@code Animate_Raw} -- is not entered until the following frame. The
@@ -356,11 +356,11 @@ public class TestSonic3kSSEntryRingFormation {
 
     /**
      * ROM {@code SSEntryRing_Main}'s collision branch
-     * (docs/skdisasm/sonic3k.asm:128283-128291) never reads {@code subtype}:
+     * (docs/skdisasm/sonic3k.asm:128337-128345) never reads {@code subtype}:
      * with fewer than 7 Chaos Emeralds the {@code bne.s loc_6173A} takes the
      * capture sequence regardless of the ring's subtype bit 7. The
      * negative-subtype test belongs to {@code SSEntryFlash_GoSS}
-     * (sonic3k.asm:128393) at the far end of the flash, so a bit-7 ring must
+     * (sonic3k.asm:128447) at the far end of the flash, so a bit-7 ring must
      * lock the player here, not pay out 50 rings, and must not request a zone
      * change on the touch frame.
      */

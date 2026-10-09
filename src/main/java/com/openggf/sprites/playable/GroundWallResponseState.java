@@ -15,7 +15,7 @@ package com.openggf.sprites.playable;
  *       consumes + clears it mid-frame.</li>
  *   <li>The <b>terrain push provenance</b> ({@code pushFromGroundWallCollision}): true
  *       when this cycle's live {@code Status_Push} bit was set by a terrain ground-wall
- *       collision (sonic3k.asm:28012-28017 {@code bset Status_Push}), not by a released
+ *       collision (sonic3k.asm:28052-28057 {@code bset Status_Push}), not by a released
  *       solid-object contact. Lets the CPU sidekick keep a genuine ROM terrain push
  *       live for the loc_13DD0 read.</li>
  *   <li>The <b>pre-control ground speed</b> ({@code preControlGSpeed}): snapshot of

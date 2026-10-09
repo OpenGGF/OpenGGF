@@ -13,17 +13,17 @@ import java.util.List;
 
 /**
  * ROM object {@code Obj_Fireworm} -- object id {@code $99} in the {@code SKL} pointer set
- * (sonic3k.asm:196192-196232, ROM {@code $8F760}). The {@code S3KL} set spends the same id on
+ * (sonic3k.asm:196297-196337, ROM {@code $8F760}). The {@code S3KL} set spends the same id on
  * {@code Obj_HCZMiniboss}. Lava Reef places 20 in act 1 and 9 in act 2.
  *
  * <p>This placement object is a spawner and nothing else. {@code Obj_WaitOffscreen} heads its
- * routine, its init ({@code loc_8F770}, :196206-196208) runs {@code SetUp_ObjAttributes} from
+ * routine, its init ({@code loc_8F770}, :196311-196313) runs {@code SetUp_ObjAttributes} from
  * {@code ObjDat3_8F9DE} -- {@code Map_FirewormSegments}, {@code priority $280}, a
  * {@code $C x $C} box and {@code collision_flags 0}, so it can neither be hit nor hurt -- and
- * routine 2 ({@code loc_8F77A}, :196211-196215) waits for {@code Find_SonicTails} to report a
+ * routine 2 ({@code loc_8F77A}, :196316-196320) waits for {@code Find_SonicTails} to report a
  * horizontal distance under {@code $80}. It then creates the head through
  * {@code ChildObjDat_8FA0E} at {@code (0,-8)}, copies its own subtype onto it, and settles into
- * routine 4, which is a bare {@code rts} ({@code locret_8F7A2}, :196230).
+ * routine 4, which is a bare {@code rts} ({@code locret_8F7A2}, :196335).
  *
  * <p>There is no {@code Draw_Sprite} anywhere in {@code Obj_Fireworm}, so the spawner is never
  * drawn; every visible part of the worm belongs to {@link FirewormHeadInstance} and its children.
@@ -68,7 +68,7 @@ public final class FirewormBadnikInstance extends AbstractObjectInstance
         if (spawned) {
             return;
         }
-        // Obj_WaitOffscreen (sonic3k.asm:180271-180302) is a one-shot latch: once the placeholder
+        // Obj_WaitOffscreen (sonic3k.asm:180362-180393) is a one-shot latch: once the placeholder
         // has been on screen the real routine runs for the rest of the slot's life.
         if (!awake) {
             awake = isOnScreen();

@@ -31,7 +31,7 @@ import java.util.logging.Logger;
 /**
  * Standard ground-based egg capsule for HCZ2 (and other S3K zones).
  *
- * <p>ROM reference: Obj_EggCapsule (sonic3k.asm line 181496).
+ * <p>ROM reference: Obj_EggCapsule (sonic3k.asm line 181587).
  * The capsule sits at a fixed position on the ground with the button
  * on TOP at offset (0, -0x24). The player must STAND on the button
  * (SolidObjectFull) to open the capsule.
@@ -54,11 +54,11 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_EggCapsule} is installed from the S3K object pointer table at
      * {@code $00086540} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:181501).
+     * label is defined at docs/skdisasm/sonic3k.asm:181592).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0008}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -70,7 +70,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
     private static final int OBJECT_ID = Sonic3kObjectIds.EGG_CAPSULE;
     private static final int PRIORITY = 5;
 
-    // ROM: SolidObjectFull parameters (sonic3k.asm:181502-181506)
+    // ROM: SolidObjectFull parameters (sonic3k.asm:181593-181597)
     private static final int SOLID_HALF_WIDTH = 0x2B;
     private static final int SOLID_HALF_HEIGHT = 0x18;
 
@@ -163,7 +163,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         if (!opened) {
             // The button child publishes its ROM standing-bit result after this
             // parent slot has run. Consume that signal on the next parent entry,
-            // matching loc_865D0/sub_865DE (sonic3k.asm:181590-181630).
+            // matching loc_865D0/sub_865DE (sonic3k.asm:181681-181721).
             if (buttonPressed) {
                 openCapsule();
             }
@@ -221,7 +221,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         postOpenTimer = POST_OPEN_DELAY;
 
         // ROM sub_865DE sets Ctrl_2_locked after the capsule's button child
-        // signals the parent (sonic3k.asm:181548-181555). The capsule runs
+        // signals the parent (sonic3k.asm:181639-181646). The capsule runs
         // after Player_2's slot, so the current CPU step has already happened;
         // the signed lock suppresses Tails_CPU_Control beginning next frame.
         if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
@@ -294,7 +294,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         // already animated. Defer the engine-side pose publication to the next
         // parent entry so that this dispatch retains the player's current
         // mapping; the following player tick then observes the native Victory
-        // write and restarts its script (sonic3k.asm:181586-181590,
+        // write and restarts its script (sonic3k.asm:181677-181681,
         // 181900-181918).
         mainEndingPosePending = true;
         // sub_868F8 calls AllocateObject, which scans from the beginning of
@@ -318,7 +318,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         }
 
         // Check_TailsEndPose clears Ctrl_2_locked immediately before tail-calling
-        // Set_PlayerEndingPose (sonic3k.asm:181919-181940).
+        // Set_PlayerEndingPose (sonic3k.asm:182010-182031).
         tailsEndingPoseApplied = true;
         if (sidekick.getCpuController() != null) {
             sidekick.getCpuController().queueNativeEndingPoseForNextPlayerSlot();
@@ -362,7 +362,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         // itself. The next capsule dispatch is the first owner pass after that
         // deletion, so publish the Wait pose and signed locks here; doing it
         // from the result owner's exit would make the trace one player pass
-        // early (sonic3k.asm:141054-141072).
+        // early (sonic3k.asm:141119-141137).
         restorePlayersForGeyserHandoff();
 
         // Reset camera Y min to allow full vertical scrolling
@@ -453,7 +453,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         protected boolean skipsSameFrameUpdateAfterSpawn() {
             // sub_868F8 uses AllocateObject for Obj_LevelResults. Keep its
             // first Obj_LevelResultsInit dispatch on the following
-            // Process_Sprites pass (sonic3k.asm:181900-181918,
+            // Process_Sprites pass (sonic3k.asm:181991-182009,
             // 182027-182046).
             return true;
         }
@@ -463,7 +463,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
             // Obj_LevelResultsInit follows the capsule's AllocateObject path
             // across the next hardware service boundary in HCZ2, so the
             // three Queue_Kos_Module calls begin on the following dispatch
-            // (sonic3k.asm:182027-182046, 62542-62598).
+            // (sonic3k.asm:182118-182137, 62582-62638).
             return true;
         }
 

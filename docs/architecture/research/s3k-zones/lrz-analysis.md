@@ -43,9 +43,9 @@
 `Sonic3kLevelEventManager` now models the native
 `SpawnLevelMainSprites` falling introduction for LRZ1 when the player is not
 Knuckles. The owning ROM path compares `$0900` at
-`sonic3k.asm:8161-8165`; `Player_mode == 3` (Knuckles) skips `loc_68A6`, while
+`sonic3k.asm:8193-8197`; `Player_mode == 3` (Knuckles) skips `loc_68A6`, while
 other LRZ1 modes fall through to the animation `$1B` / `Status_InAir` writes at
-`sonic3k.asm:8172-8178`. The engine mirrors that gate after player spawn and
+`sonic3k.asm:8204-8210`. The engine mirrors that gate after player spawn and
 `TestS3kLrzFallingIntroBootstrap` covers Sonic + Tails, Tails alone, Knuckles,
 and LRZ2. The `lrz_completerun` payload is present, but a direct replay attempt
 currently stops before gameplay while compiling its final v5 hardware-timing

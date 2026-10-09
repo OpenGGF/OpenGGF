@@ -38,11 +38,11 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_MHZSwingBarVertical} is installed from the S3K object pointer table at
      * {@code $0003F05A} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:83549).
+     * label is defined at docs/skdisasm/sonic3k.asm:83590).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0003}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -94,7 +94,7 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
     }
 
     /**
-     * ROM {@code loc_3F0CC} (sonic3k.asm:83575-83577): after both players are
+     * ROM {@code loc_3F0CC} (sonic3k.asm:83616-83618): after both players are
      * processed, if Player 1 is hanging ({@code $30(a0)}) the bar writes
      * {@code Scroll_force_positions} plus the bar's own {@code x_pos} into
      * {@code Scroll_forced_X_pos} and {@code Player_1+y_pos} into
@@ -203,11 +203,11 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
         int correctedCentreY = player.getCentreY() + player.getYRadius() - player.getStandYRadius();
         player.setRolling(false);
         if (wasRolling) {
-            // ROM loc_3F2BE (sonic3k.asm:83752-83754): add.w d0,y_pos(a1) touches only the pixel word,
+            // ROM loc_3F2BE (sonic3k.asm:83793-83795): add.w d0,y_pos(a1) touches only the pixel word,
             // leaving y_sub untouched.
             NativePositionOps.writeYPosPreserveSubpixel(player, correctedCentreY);
         }
-        // ROM loc_3F316 (sonic3k.asm:83757-83759): move.w d0,x_pos(a1) touches only the pixel word,
+        // ROM loc_3F316 (sonic3k.asm:83798-83800): move.w d0,x_pos(a1) touches only the pixel word,
         // leaving x_sub untouched.
         NativePositionOps.writeXPosPreserveSubpixel(player, spawn.x() + sideOffset);
         player.setRenderFlips(sideOffset < 0, false);
@@ -235,7 +235,7 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
             return;
         }
         state.phase = (state.phase + 8) & 0xFF;
-        // ROM sub_3F11C (sonic3k.asm:83625-83626): add.w x_pos(a0),d1 / move.w d1,x_pos(a1) writes only
+        // ROM sub_3F11C (sonic3k.asm:83666-83667): add.w x_pos(a0),d1 / move.w d1,x_pos(a1) writes only
         // the pixel word each climb frame, leaving x_sub untouched.
         NativePositionOps.writeXPosPreserveSubpixel(player, spawn.x() + hangingXOffsetFor(state.phase, player.getRenderHFlip()));
         player.setMappingFrame(hangingFrameFor(state.phase));
@@ -263,7 +263,7 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
         ObjectControlState.none().applyTo(player);
         player.setObjectMappingFrameControl(false);
         player.setAnimationId(Sonic3kAnimationIds.WALK);
-        // ROM loc_3F1C8 (sonic3k.asm:83669): move.w x_pos(a0),x_pos(a1) touches only the pixel word,
+        // ROM loc_3F1C8 (sonic3k.asm:83710): move.w x_pos(a0),x_pos(a1) touches only the pixel word,
         // leaving x_sub untouched.
         NativePositionOps.writeXPosPreserveSubpixel(player, spawn.x());
         player.setXSpeed((short) xSpeed);

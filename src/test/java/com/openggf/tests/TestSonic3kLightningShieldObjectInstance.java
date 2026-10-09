@@ -79,8 +79,8 @@ class TestSonic3kLightningShieldObjectInstance {
 
     /**
      * ROM Obj_LightningShield_CreateSpark copies the shield's art_tile into each spark
-     * (sonic3k.asm:34825) right after Obj_LightningShield_Main re-synced that word's bit 15
-     * from Player_1 (sonic3k.asm:34751-34755), so a spark carries the player's high-priority
+     * (sonic3k.asm:34865) right after Obj_LightningShield_Main re-synced that word's bit 15
+     * from Player_1 (sonic3k.asm:34791-34795), so a spark carries the player's high-priority
      * flag as it stood on the creation frame and keeps it afterwards.
      */
     @Test

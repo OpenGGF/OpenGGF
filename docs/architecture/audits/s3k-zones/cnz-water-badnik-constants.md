@@ -10,4 +10,4 @@ Checklist verified against the locked-on `docs/skdisasm/sonic3k.asm`:
 | `Obj_Sparkle` (`186058`) | `$80` target range; wait `4`; fire wait `$20`; Y step `$68`; projectile velocity `$600`; deceleration `$40`; raw scripts | matches |
 | `Obj_Batbot` (`186271`) | `$40` target range; initial/chase cap `$200`; chase step `8`; parent/body raw scripts and offsets `$10/3` | matches |
 
-The water-helper mismatch was a flag-ownership error rather than a numeric target error: `_unkFAA3` is set by the earlier CNZ2 cutscene-button path at `loc_65CC2` (`sonic3k.asm:133988`), not by the cork-floor helper.
+The water-helper mismatch was a flag-ownership error rather than a numeric target error: `_unkFAA3` is set by the earlier CNZ2 cutscene-button path at `loc_65CC2` (`sonic3k.asm:134045`), not by the cork-floor helper.

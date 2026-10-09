@@ -20,7 +20,7 @@ import com.openggf.sprites.playable.Tails;
 import java.util.List;
 
 /**
- * SKL {@code $59}, {@code Obj_DEZTeleporter} (sonic3k.asm:94913-95168).
+ * SKL {@code $59}, {@code Obj_DEZTeleporter} (sonic3k.asm:94959-95214).
  *
  * <p>Twenty-one of these sit in Death Egg act 2, always in vertically paired columns: the
  * placement table has them at matching {@code x} with one high and one low, and the pair's
@@ -29,27 +29,27 @@ import java.util.List;
  *
  * <p>The object is a thin dispatcher. {@code Obj_DEZTeleporter} runs {@code sub_48C30}
  * twice, once with {@code a1 = Player_1, a4 = $30(a0)} and once with
- * {@code a1 = Player_2, a4 = $3A(a0)} (:94914-94919), so each player gets an independent
+ * {@code a1 = Player_2, a4 = $3A(a0)} (:94960-94965), so each player gets an independent
  * ten-byte state block and an independent routine index. The jump table {@code off_48C3C}
- * (:94933-94936) has four entries:
+ * (:94979-94982) has four entries:
  *
  * <ol>
- *   <li><b>Capture</b> ({@code loc_48C44}, :94939-94990).</li>
- *   <li><b>Spin-up</b> ({@code loc_48D2C}, :94992-95006), which ramps {@code 4(a4)} to
+ *   <li><b>Capture</b> ({@code loc_48C44}, :94985-95036).</li>
+ *   <li><b>Spin-up</b> ({@code loc_48D2C}, :95038-95052), which ramps {@code 4(a4)} to
  *       {@code $300} and only then launches.</li>
- *   <li><b>Ride</b> ({@code loc_48DCA}, :95064-95158), which owns the flag write and the
+ *   <li><b>Ride</b> ({@code loc_48DCA}, :95110-95204), which owns the flag write and the
  *       exit nudge.</li>
- *   <li><b>Release</b> ({@code loc_48E94}, :95160-95168).</li>
+ *   <li><b>Release</b> ({@code loc_48E94}, :95206-95214).</li>
  * </ol>
  *
  * <p><b>The capture window is mirrored, not widened.</b> {@code addq.w #3,d0} then, when
  * {@code status} bit 0 is set, {@code addi.w #$A,d0} before {@code cmpi.w #$10,d0 / bhs}
- * (:94944-94952). Unflipped that is {@code -3 <= dx <= $C}; flipped it is
+ * (:94990-94998). Unflipped that is {@code -3 <= dx <= $C}; flipped it is
  * {@code -$D <= dx <= 2}. The window is the same {@code $10} px wide either way and simply
  * sits on the other side of the object's own centre, which is what a mirrored placement
- * needs. The Y window is a plain {@code -$20 <= dy < $20} (:94953-94957).
+ * needs. The Y window is a plain {@code -$20 <= dy < $20} (:94999-95003).
  *
- * <p><b>The flag write is the midpoint, Player 1 only</b> ({@code loc_48DCA}, :95065-95080):
+ * <p><b>The flag write is the midpoint, Player 1 only</b> ({@code loc_48DCA}, :95111-95126):
  * {@code cmp.w d2,d1 / bne} requires the remaining frame budget {@code 6(a4)} to equal the
  * half budget {@code 8(a4)}, and {@code cmpa.w #Player_1,a1} rejects Player 2 outright. The
  * value written is subtype bit 7 ({@code rol.b #1,d0 / andi.b #1,d0}), and {@code 1(a4)} is
@@ -59,36 +59,36 @@ import java.util.List;
 public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
 
-    /** ROM {@code addq.w #3,d0} (:94946) and {@code cmpi.w #$10,d0} (:94952). */
+    /** ROM {@code addq.w #3,d0} (:94992) and {@code cmpi.w #$10,d0} (:94998). */
     private static final int CAPTURE_X_BIAS = 3;
     private static final int CAPTURE_X_WIDTH = 0x10;
-    /** ROM {@code addi.w #$A,d0} (:94951) when {@code status} bit 0 is set. */
+    /** ROM {@code addi.w #$A,d0} (:94997) when {@code status} bit 0 is set. */
     private static final int CAPTURE_X_MIRROR_BIAS = 0x0A;
-    /** ROM {@code addi.w #$20,d1} / {@code cmpi.w #$40,d1} (:94955-94957). */
+    /** ROM {@code addi.w #$20,d1} / {@code cmpi.w #$40,d1} (:95001-95003). */
     private static final int CAPTURE_Y_BIAS = 0x20;
     private static final int CAPTURE_Y_HEIGHT = 0x40;
 
-    /** ROM {@code addq.w #8,4(a4)} to {@code cmpi.w #$300,4(a4)} (:94993-94995). */
+    /** ROM {@code addq.w #8,4(a4)} to {@code cmpi.w #$300,4(a4)} (:95039-95041). */
     private static final int SPIN_STEP = 8;
     private static final int SPIN_LAUNCH = 0x300;
-    /** ROM {@code move.w #$1000,d0}, negated unless {@code status} bit 1 is set (:95001-95005). */
+    /** ROM {@code move.w #$1000,d0}, negated unless {@code status} bit 1 is set (:95047-95051). */
     private static final int LAUNCH_Y_VEL = 0x1000;
-    /** ROM {@code cmpi.w #$C00,d0 / subi.w #$C00,d0} (:95009-95013): the pose phase wrap. */
+    /** ROM {@code cmpi.w #$C00,d0 / subi.w #$C00,d0} (:95055-95059): the pose phase wrap. */
     private static final int POSE_PHASE_WRAP = 0x0C00;
-    /** ROM {@code move.b #6,2(a4)} when {@code Status_Facing} is set (:95058). */
+    /** ROM {@code move.b #6,2(a4)} when {@code Status_Facing} is set (:95104). */
     private static final int POSE_PHASE_FACING_LEFT = 6;
 
-    /** {@code RawAni_48DB2} (:95051): the twelve captured-player mapping frames. */
+    /** {@code RawAni_48DB2} (:95097): the twelve captured-player mapping frames. */
     private static final int[] POSE_FRAMES = {
         0x55, 0x59, 0x5A, 0x5B, 0x5A, 0x59, 0x55, 0x56, 0x57, 0x58, 0x57, 0x56
     };
-    /** {@code byte_48DBE} (:95061): the X-flip bit paired with each pose frame. */
+    /** {@code byte_48DBE} (:95107): the X-flip bit paired with each pose frame. */
     private static final int[] POSE_FLIP_BITS = {0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0};
 
-    /** ROM {@code cmpi.w #5,d1} and {@code subq.w #5,d2} (:95082, :95086). */
+    /** ROM {@code cmpi.w #5,d1} and {@code subq.w #5,d2} (:95128, :95132). */
     private static final int INVULNERABLE_WINDOW_MARGIN = 5;
 
-    /** ROM {@code moveq #9,d0} / {@code moveq #$11,d0} for {@code character_id == 1} (:95121-95125). */
+    /** ROM {@code moveq #9,d0} / {@code moveq #$11,d0} for {@code character_id == 1} (:95167-95171). */
     private static final int EXIT_NUDGE = 9;
     private static final int EXIT_NUDGE_TAILS = 0x11;
     /** ROM {@code moveq #7,d0} / {@code moveq #-7,d0} and the {@code subq/addq #8} for Tails. */
@@ -97,7 +97,7 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
     /** ROM {@code moveq #$10,d0} / {@code moveq #-$10,d0} when {@code 1(a4)} is latched. */
     private static final int EXIT_NUDGE_FLIPPED = 0x10;
 
-    /** ROM {@code addi.w #$10,d0 / cmpi.w #$20,d0} (:95162-95164). */
+    /** ROM {@code addi.w #$10,d0 / cmpi.w #$20,d0} (:95208-95210). */
     private static final int RELEASE_X_HALF_WIDTH = 0x10;
 
     private enum Routine { CAPTURE, SPIN_UP, RIDE, RELEASE }
@@ -122,7 +122,7 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
         if (playerTwo == playerOne) {
             playerTwo = null;
         }
-        // Obj_DEZTeleporter (:94914-94919): the same subroutine, twice, over two state blocks.
+        // Obj_DEZTeleporter (:94960-94965): the same subroutine, twice, over two state blocks.
         if (playerOne != null) {
             runFor(playerOne, playerOneState, true);
         }
@@ -141,7 +141,7 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
         }
     }
 
-    /** {@code loc_48C44} (:94939-94990). */
+    /** {@code loc_48C44} (:94985-95036). */
     private void tryCapture(AbstractPlayableSprite player, RiderState state) {
         int dx = (player.getCentreX() - getX() + CAPTURE_X_BIAS
                 + (xFlippedPlacement() ? CAPTURE_X_MIRROR_BIAS : 0)) & 0xFFFF;
@@ -168,8 +168,8 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code loc_48CB0} (:94974-94990). The un-roll adjustment is the reverse-gravity row
-     * ({@code tst.b (Reverse_gravity_flag).w / neg.w d0}, :94987-94989): the radius change
+     * {@code loc_48CB0} (:95020-95036). The un-roll adjustment is the reverse-gravity row
+     * ({@code tst.b (Reverse_gravity_flag).w / neg.w d0}, :95033-95035): the radius change
      * moves the player's centre the other way once down is up.
      */
     private void capture(AbstractPlayableSprite player, RiderState state) {
@@ -193,14 +193,14 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
             NativePositionOps.addYPosPreserveSubpixel(player, radiusDelta);
         }
         state.flagChangedLatch = false;
-        // clr.w 2(a4) / move.b #6,2(a4) when Status_Facing is set (:95055-95058): the pose
+        // clr.w 2(a4) / move.b #6,2(a4) when Status_Facing is set (:95101-95104): the pose
         // phase starts half a turn round for a player who entered facing left.
         state.posePhase = player.getDirection() == Direction.LEFT
                 ? POSE_PHASE_FACING_LEFT << 8 : 0;
         state.spin = 0;
     }
 
-    /** {@code loc_48D2C} (:94992-95006), then the shared pose update. */
+    /** {@code loc_48D2C} (:95038-95052), then the shared pose update. */
     private void spinUp(AbstractPlayableSprite player, RiderState state) {
         state.spin += SPIN_STEP;
         if (state.spin == SPIN_LAUNCH) {
@@ -217,7 +217,7 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
         updatePose(player, state);
     }
 
-    /** {@code loc_48DCA} (:95064-95158). */
+    /** {@code loc_48DCA} (:95110-95204). */
     private void ride(AbstractPlayableSprite player, RiderState state, boolean isPlayerOne) {
         if (state.budget == state.halfBudget && isPlayerOne) {
             writeFlagAtMidpoint(state);
@@ -225,7 +225,7 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
         applyInvulnerabilityWindow(player, state);
         state.budget--;
         if (state.budget >= 0) {
-            // move.l y_pos(a1),d3 / asl.l #8,d0 / add.l d0,d3 (:95095-95101).
+            // move.l y_pos(a1),d3 / asl.l #8,d0 / add.l d0,d3 (:95141-95147).
             NativePositionOps.addYPos16_16(player, player.getYSpeed() << 8);
             updatePose(player, state);
             return;
@@ -233,20 +233,20 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
         finishRide(player, state);
     }
 
-    /** {@code loc_48DCA} :95065-95080: the only gravity write this object makes. */
+    /** {@code loc_48DCA} :95111-95126: the only gravity write this object makes. */
     private void writeFlagAtMidpoint(RiderState state) {
         GameStateManager gameState = gameStateOrNull();
         if (gameState == null) {
             return;
         }
-        // rol.b #1,d0 / andi.b #1,d0 (:95072-95074): subtype bit 7, nothing else.
+        // rol.b #1,d0 / andi.b #1,d0 (:95118-95120): subtype bit 7, nothing else.
         boolean target = (spawn.subtype() & 0x80) != 0;
         state.flagChangedLatch = target != gameState.isReverseGravityActive();
         gameState.setReverseGravityActive(target);
     }
 
     /**
-     * {@code loc_48DF6} (:95081-95092). The rider is invulnerable only across the middle of
+     * {@code loc_48DF6} (:95127-95138). The rider is invulnerable only across the middle of
      * the ride: the timer is cleared every frame, then set when the remaining budget is at
      * least 5 and still below {@code 2 * halfBudget - 5}.
      */
@@ -262,7 +262,7 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code loc_48E2C} (:95103-95158). Control returns, and the player is nudged by an
+     * {@code loc_48E2C} (:95149-95204). Control returns, and the player is nudged by an
      * offset chosen from three things: subtype bit 7, {@code status} bit 1, and whether the
      * midpoint write actually changed the flag.
      */
@@ -296,7 +296,7 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
         NativePositionOps.addYPosPreserveSubpixel(player, nudge);
     }
 
-    /** {@code loc_48E94} (:95160-95168): the block is only reusable once the player leaves. */
+    /** {@code loc_48E94} (:95206-95214): the block is only reusable once the player leaves. */
     private void release(AbstractPlayableSprite player, RiderState state) {
         int dx = (player.getCentreX() - getX() + RELEASE_X_HALF_WIDTH) & 0xFFFF;
         if (dx < RELEASE_X_HALF_WIDTH * 2) {
@@ -306,10 +306,10 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code loc_48D66} (:95008-95022). The pose phase is a word that advances by the spin
+     * {@code loc_48D66} (:95054-95068). The pose phase is a word that advances by the spin
      * ramp and wraps at {@code $C00}; its <em>high</em> byte ({@code move.b 2(a4),d0} on a
      * big-endian word) indexes the twelve-entry tables. The reverse-gravity row is
-     * {@code ori.b #2,d0} on the flip byte (:95018-95020), which the engine already composes
+     * {@code ori.b #2,d0} on the flip byte (:95064-95066), which the engine already composes
      * at the draw from the same flag, so only the X flip is written here.
      */
     private void updatePose(AbstractPlayableSprite player, RiderState state) {
@@ -325,7 +325,7 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
 
     /**
      * {@code movea.w interact(a1),a3 / cmpi.l #Obj_DEZTeleporter,(a3) / tst.b (a3,d0.w)}
-     * (:94968-94973): a player whose last interaction was another teleporter that still has a
+     * (:95014-95019): a player whose last interaction was another teleporter that still has a
      * live state block for them is not captured again. Modelled by asking the other
      * teleporters directly, which is the same question without a raw RAM pointer.
      */
@@ -369,7 +369,7 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
         return objectServices == null ? null : objectServices.gameState();
     }
 
-    /** ROM {@code cmpi.b #1,character_id(a1)} (:95123, :95132, :95147): character 1 is Tails. */
+    /** ROM {@code cmpi.b #1,character_id(a1)} (:95169, :95178, :95193): character 1 is Tails. */
     private static boolean isTails(AbstractPlayableSprite player) {
         return player instanceof Tails;
     }

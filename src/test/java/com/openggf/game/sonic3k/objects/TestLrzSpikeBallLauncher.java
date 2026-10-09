@@ -15,9 +15,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_LRZSpikeBallLauncher} (sonic3k.asm:89848-89933), its ball at {@code loc_44916} /
+ * {@code Obj_LRZSpikeBallLauncher} (sonic3k.asm:89894-89979), its ball at {@code loc_44916} /
  * {@code loc_44954}, and the {@code Animate_SpriteIrregularDelay} script that drives both
- * (:36238-36308).
+ * (:36278-36348).
  *
  * <p>The cycle lengths here are the ROM's own {@code subq.b}/{@code bcc} arithmetic applied to
  * {@code byte_4495E} and {@code byte_44964}, not measurements taken off the class. A delay byte
@@ -62,19 +62,19 @@ class TestLrzSpikeBallLauncher {
         return object;
     }
 
-    /** {@code move.b subtype(a0),d0 / lsl.w #4,d0 / neg.w d0} (sonic3k.asm:89894-89900). */
+    /** {@code move.b subtype(a0),d0 / lsl.w #4,d0 / neg.w d0} (sonic3k.asm:89940-89946). */
     @Test
     void theSubtypeIsTheLaunchSpeedAndNothingElse() {
         assertEquals(-0x0500, launcher(0x50).launchVelocity(), "subtype $50");
         assertEquals(-0x0600, launcher(0x60).launchVelocity(), "subtype $60");
         assertEquals(-0x0700, launcher(0x70).launchVelocity(), "subtype $70");
-        // The solid box is the same for every one of them (:89904-89906).
+        // The solid box is the same for every one of them (:89950-89952).
         assertEquals(0x1B, launcher(0x60).getSolidParams().halfWidth());
         assertEquals(4, launcher(0x60).getSolidParams().airHalfHeight());
         assertEquals(5, launcher(0x60).getSolidParams().groundHalfHeight());
     }
 
-    /** The {@code AllocateObjectAfterCurrent} block (sonic3k.asm:89855-89874). */
+    /** The {@code AllocateObjectAfterCurrent} block (sonic3k.asm:89901-89920). */
     @Test
     void theBallIsAllocatedEightPixelsAboveTheLauncherAndIsAHazardAtRest() {
         LrzSpikeBallLauncherObjectInstance object = launcher(0x60);
@@ -134,7 +134,7 @@ class TestLrzSpikeBallLauncher {
     }
 
     /**
-     * {@code loc_44916} (sonic3k.asm:89917-89932). {@code MoveSprite} moves with the <em>old</em>
+     * {@code loc_44916} (sonic3k.asm:89963-89978). {@code MoveSprite} moves with the <em>old</em>
      * {@code y_vel} and only then adds {@code $38}, so the first frame of flight is the launch
      * velocity exactly: {@code -$600 >> 8 = -6} pixels.
      */
@@ -151,7 +151,7 @@ class TestLrzSpikeBallLauncher {
 
     /**
      * The flight ends on an unsigned compare of {@code $46} against {@code y_pos}
-     * (:89935-89938) and snaps back to {@code $46} exactly, so a launch and its landing are
+     * (:89981-89984) and snaps back to {@code $46} exactly, so a launch and its landing are
      * pixel-identical however high the ball went.
      */
     @Test
@@ -185,7 +185,7 @@ class TestLrzSpikeBallLauncher {
 
     /**
      * {@code subq.b #1,anim_frame_timer(a0) / bpl} with a reload of {@code 2}
-     * (:89917-89924): three frames, each held for three passes, and only while flying.
+     * (:89963-89970): three frames, each held for three passes, and only while flying.
      */
     @Test
     void theSpinIsThreeFramesOnATwoFrameTimer() {

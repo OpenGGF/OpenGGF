@@ -24,11 +24,11 @@ the forest entrance into visible cells.
 
 ## ROM model
 
-`AIZ2_DoShipLoop` (`sonic3k.asm:105205`) runs from `SpecialEvents` in the CPU
+`AIZ2_DoShipLoop` (`sonic3k.asm:105251`) runs from `SpecialEvents` in the CPU
 loop and, on the wrap frame, sets `Level_repeat_offset`, subtracts `$200` from
 camera and players, and retargets `Camera_X_pos_rounded` to the new camera
 rounded down minus `$10`, all in one routine. `AIZ2SE_End` then calls
-`DrawTilesAsYouMove` (`sonic3k.asm:104978`, `103171`), whose `Draw_TileColumn`
+`DrawTilesAsYouMove` (`sonic3k.asm:105024`, `103171`), whose `Draw_TileColumn`
 compares live `Camera_X_pos_copy` with `Camera_X_pos_rounded` and writes the one
 entering column to VRAM immediately. Only H-scroll, VSRAM and the sprite table
 are published at VInt and retained on lag; Plane A is 64 tiles = `$200` wide,

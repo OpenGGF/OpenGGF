@@ -6,7 +6,7 @@ import com.openggf.game.rewind.RewindStateful;
 import java.io.IOException;
 
 /**
- * ROM raw animation interpreters (sonic3k.asm:177341-177720) over a window of script bytes
+ * ROM raw animation interpreters (sonic3k.asm:177432-177811) over a window of script bytes
  * read from the ROM. A script is addressed by its ROM address, as the ROM keeps the script
  * pointer in {@code $30(a0)}; the jump commands rewrite that address.
  *
@@ -199,7 +199,7 @@ public final class S3kRawAnimation {
     }
 
     /**
-     * {@code Animate_RawNoSSTMultiDelayFlipX} (sonic3k.asm:177628-177651). Same script layout as
+     * {@code Animate_RawNoSSTMultiDelayFlipX} (sonic3k.asm:177719-177742). Same script layout as
      * {@link #animateMultiDelay}, with the script passed in {@code a1} rather than taken from
      * {@code $30(a0)}, and with bit 6 of a frame byte meaning "toggle {@code render_flags} bit 0"
      * rather than being part of the frame index ({@code bclr #6,d1 / bne / bchg #0,render_flags}).

@@ -12,7 +12,7 @@ package com.openggf.game.rules;
  * (docs/s2disasm/s2.asm:41743-41746) is not the recorded behaviour. S3K gates the
  * same override much more narrowly, requiring the push status bit, a clear wind
  * tunnel flag, and a parent {@code mapping_frame} in [$A9,$AC]
- * (docs/skdisasm/sonic3k.asm:30043-30051). S1 has no Tails' tails object at all.
+ * (docs/skdisasm/sonic3k.asm:30083-30091). S1 has no Tails' tails object at all.
  *
  * @param supported                     whether the game has a Tails' tails object that applies the override
  * @param requiresPushMappingFrameRange whether the parent's mapping frame must lie in the range below
@@ -33,7 +33,7 @@ public record TailsTailPushDetection(
     public static final TailsTailPushDetection STATUS_BIT_ONLY =
             new TailsTailPushDetection(true, false, 0, 0);
 
-    /** Pushing status bit plus parent mapping frame $A9..$AC (docs/skdisasm/sonic3k.asm:30043-30051). */
+    /** Pushing status bit plus parent mapping frame $A9..$AC (docs/skdisasm/sonic3k.asm:30083-30091). */
     public static final TailsTailPushDetection STATUS_BIT_AND_PUSH_MAPPING_FRAMES =
             new TailsTailPushDetection(true, true, 0xA9, 0xAC);
 }

@@ -30,7 +30,7 @@ import java.util.List;
  * A child collision object provides spike damage that tracks the log's rotation,
  * with the spike hitbox Y-offset changing per mapping frame.
  * <p>
- * ROM references: Obj_AIZSpikedLog (sonic3k.asm:60038-60196).
+ * ROM references: Obj_AIZSpikedLog (sonic3k.asm:60078-60236).
  */
 public class AizSpikedLogObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
@@ -39,11 +39,11 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_AIZSpikedLog} is installed from the S3K object pointer table at
      * {@code $0002B758} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:60043).
+     * label is defined at docs/skdisasm/sonic3k.asm:60083).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0002}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -58,15 +58,15 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
     // Priority $200 → bucket 4
     private static final int PRIORITY = 4;
 
-    // Swing physics (sonic3k.asm:60087-60102)
+    // Swing physics (sonic3k.asm:60127-60142)
     private static final int SWING_ANGLE_MAX = 0x40;
     private static final int SWING_ANGLE_STEP = 4;
     private static final int SWING_AMPLITUDE_SHIFT = 5; // sin(angle) >> 5
 
     // Animation timing
-    private static final int WATER_ANIM_DELAY = 3;     // 4 frames per step (sonic3k.asm:60107)
-    private static final int IDLE_ANIM_DELAY = 0x17;   // 24 frames per step (sonic3k.asm:60121)
-    private static final int WATER_ANIM_LENGTH = 0x10;  // 16 frames full cycle (sonic3k.asm:60111)
+    private static final int WATER_ANIM_DELAY = 3;     // 4 frames per step (sonic3k.asm:60147)
+    private static final int IDLE_ANIM_DELAY = 0x17;   // 24 frames per step (sonic3k.asm:60161)
+    private static final int WATER_ANIM_LENGTH = 0x10;  // 16 frames full cycle (sonic3k.asm:60151)
 
     // Idle animation table: mapping frames 7→8→9→10→9→8, -1=loop (byte_2B88E)
     private static final int[] IDLE_ANIM_TABLE = { 7, 8, 9, 0x0A, 9, 8, -1 };
@@ -105,11 +105,11 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
         if (initialized) return;
         initialized = true;
 
-        // Snapshot water counter (sonic3k.asm:60046)
+        // Snapshot water counter (sonic3k.asm:60086)
         WaterSystem water = services().waterSystem();
         this.waterCounterSnapshot = (water != null) ? water.getWaterEnteredCounter() : 0;
 
-        // Spawn collision child (sonic3k.asm:60047-60053)
+        // Spawn collision child (sonic3k.asm:60087-60093)
         spikeChild = spawnChild(() -> new SpikedLogCollisionChild(
                 buildSpawnAt(spawn.x(), spawn.y()), this));
     }
@@ -124,7 +124,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
 
     /**
      * Updates the swing state machine: water detection, standing detection, angle decay.
-     * sonic3k.asm:60058-60095
+     * sonic3k.asm:60098-60135
      */
     private void updateSwingState() {
         // $34 negative → angle is ramping up from water trigger
@@ -133,7 +133,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Check for water state change (sonic3k.asm:60061-60066)
+        // Check for water state change (sonic3k.asm:60101-60106)
         WaterSystem water = services().waterSystem();
         int currentWaterCounter = (water != null) ? water.getWaterEnteredCounter() : 0;
         if (currentWaterCounter != waterCounterSnapshot) {
@@ -144,7 +144,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // No water change → check if player is standing (sonic3k.asm:60069-60076)
+        // No water change → check if player is standing (sonic3k.asm:60109-60116)
         if (isPlayerRiding()) {
             initStandingSwingIfNeeded();
             increaseSwingAngle();
@@ -160,7 +160,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
 
     /**
      * First frame of standing trigger: saves animation state, starts spinning.
-     * Only executes when swingState == 0 (sonic3k.asm:60079-60085).
+     * Only executes when swingState == 0 (sonic3k.asm:60119-60125).
      */
     private void initStandingSwingIfNeeded() {
         if (swingState != 0) return;
@@ -173,7 +173,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
 
     /**
      * Increases swing angle toward max. Clears bit 7 of swingState when max reached.
-     * sonic3k.asm:60087-60095
+     * sonic3k.asm:60127-60135
      */
     private void increaseSwingAngle() {
         if (swingAngle < SWING_ANGLE_MAX) {
@@ -182,14 +182,14 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
                 swingAngle = SWING_ANGLE_MAX;
             }
         } else {
-            // Angle at max → andi.b #$7F,$34(a0) (sonic3k.asm:60094-60095)
+            // Angle at max → andi.b #$7F,$34(a0) (sonic3k.asm:60134-60135)
             swingState &= 0x7F;
         }
     }
 
     /**
      * Calculates Y position from sine wave oscillation.
-     * Y = sin(swingAngle) >> 5 + baseY (sonic3k.asm:60097-60102)
+     * Y = sin(swingAngle) >> 5 + baseY (sonic3k.asm:60137-60142)
      */
     private void updateYPosition() {
         int sinValue = TrigLookupTable.sinHex(swingAngle);
@@ -200,7 +200,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
     /**
      * Updates animation state based on swingState.
      * swingState != 0 → fast spinning; swingState == 0 → slow idle rocking.
-     * sonic3k.asm:60103-60131
+     * sonic3k.asm:60143-60171
      */
     private void updateAnimation() {
         if (swingState != 0) {
@@ -213,7 +213,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
     /**
      * Fast spinning animation triggered by water change or standing.
      * Decrements mapping_frame through 0-15 range, 4 frames per step.
-     * sonic3k.asm:60103-60115
+     * sonic3k.asm:60143-60155
      */
     private void updateSpinningAnimation() {
         animFrameTimer--;
@@ -225,7 +225,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
         animFrame++;
 
         if (animFrame >= WATER_ANIM_LENGTH) {
-            // Animation complete → restore saved state (sonic3k.asm:60113-60114)
+            // Animation complete → restore saved state (sonic3k.asm:60153-60154)
             animFrame = savedAnimFrame;
             swingState = 0;
         }
@@ -234,7 +234,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
     /**
      * Slow idle rocking animation cycling frames 7→8→9→10→9→8.
      * 24 frames per step. Uses byte_2B88E lookup table.
-     * sonic3k.asm:60118-60131
+     * sonic3k.asm:60158-60171
      */
     private void updateIdleAnimation() {
         animFrameTimer--;
@@ -244,7 +244,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
         int index = animFrame;
         mappingFrame = IDLE_ANIM_TABLE[index];
 
-        // Check if next table entry is the loop marker (sonic3k.asm:60126-60128)
+        // Check if next table entry is the loop marker (sonic3k.asm:60166-60168)
         if (index + 1 >= IDLE_ANIM_TABLE.length || IDLE_ANIM_TABLE[index + 1] < 0) {
             animFrame = 0;
         } else {
@@ -313,9 +313,9 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean skipsCpuSidekickWhenRenderFlagOffScreen() {
-        // Obj_AIZSpikedLog calls SolidObjectFull (sonic3k.asm:60148-60153).
+        // Obj_AIZSpikedLog calls SolidObjectFull (sonic3k.asm:60188-60193).
         // That helper skips Player_2 when render_flags bit 7 is clear
-        // (sonic3k.asm:41003-41008), unlike SolidObjectFull2.
+        // (sonic3k.asm:41043-41048), unlike SolidObjectFull2.
         return true;
     }
 
@@ -334,12 +334,12 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
      * Follows the parent's position with a Y-offset based on the current animation frame.
      * Collision is disabled when the Y-offset is 0 (spikes not pointing dangerously).
      * <p>
-     * ROM references: loc_2B8EE (sonic3k.asm:60178-60196), byte_2B918 Y-offset table.
+     * ROM references: loc_2B8EE (sonic3k.asm:60218-60236), byte_2B918 Y-offset table.
      */
     static class SpikedLogCollisionChild extends AbstractObjectInstance
             implements TouchResponseProvider, RewindRecreatable {
 
-        // collision_flags = 0x9C: HURT type (bit 7), size index 0x1C (sonic3k.asm:60051)
+        // collision_flags = 0x9C: HURT type (bit 7), size index 0x1C (sonic3k.asm:60091)
         private static final int COLLISION_FLAGS_ACTIVE = 0x9C;
         private AizSpikedLogObjectInstance parent;
         private int currentX;
@@ -386,11 +386,11 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
                 setDestroyed(true);
                 return;
             }
-            // Copy parent position (sonic3k.asm:60179-60181)
+            // Copy parent position (sonic3k.asm:60219-60221)
             currentX = parent.getX();
             currentY = parent.getY();
 
-            // Apply Y offset based on parent's mapping frame (sonic3k.asm:60183-60187)
+            // Apply Y offset based on parent's mapping frame (sonic3k.asm:60223-60227)
             int yOffset = parent.getSpikeYOffset();
             if (yOffset != 0) {
                 currentY += yOffset;
@@ -400,7 +400,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
         /**
          * ROM parity: {@code loc_2B8EE} copies the parent position, applies the
          * mapping-frame spike offset, and only THEN tail-calls
-         * {@code Add_SpriteToCollisionResponseList} (sonic3k.asm:60179-60190). The
+         * {@code Add_SpriteToCollisionResponseList} (sonic3k.asm:60219-60230). The
          * entry placed on {@code Collision_response_list} therefore carries this
          * child's freshly-computed current x/y, not a frame-start snapshot. The
          * inline player/sidekick touch path must read the live position for this
@@ -442,7 +442,7 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
 
         @Override
         public int getCollisionFlags() {
-            // Only active when spike offset is non-zero (sonic3k.asm:60185 beq.s locret_2B916)
+            // Only active when spike offset is non-zero (sonic3k.asm:60225 beq.s locret_2B916)
             return parent.getSpikeYOffset() != 0 ? COLLISION_FLAGS_ACTIVE : 0;
         }
 

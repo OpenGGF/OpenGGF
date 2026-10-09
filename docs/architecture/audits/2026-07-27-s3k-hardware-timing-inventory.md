@@ -31,22 +31,22 @@ used to derive the classification.
 
 | ROM owner | service point | polled gate | main loop admitted while pending | gameplay consumer | existing replay symptom | disposition |
 |---|---|---|---|---|---|---|
-| VInt request and `Wait_VSync` | `Wait_VSync` publishes the requested routine and waits for VInt acknowledgement (`docs/skdisasm/sonic3k.asm:2976-2983`); VInt samples controllers, services DMA, and bookmarks resumable Kosinski state (`docs/skdisasm/sonic3k.asm:701-840`). | VInt routine acknowledgement. | No for a missed admission; the next level-loop iteration starts only after the wait returns. | All game-mode loops synchronized to VInt. | Raw lag and boundary phase already represent admission. | `LAG` / `PHASE` |
-| Direct Kosinski queue: `Kos_decomp_queue_count` | `Queue_Kos` appends a direct job; `Process_Kos_Queue` sets the busy bit, resumes from the bookmark, and clears busy/decrements count when a stream completes (`docs/skdisasm/sonic3k.asm:2803-2967`). KosM children enter this same physical FIFO. | AIZ intro and ICZ transition test the direct queue count for zero (`docs/skdisasm/sonic3k.asm:104575-104590,110259-110287`). | Yes. `LevelLoop` runs direct-queue service before `Wait_VSync`, and admitted gameplay continues while work remains (`docs/skdisasm/sonic3k.asm:7884-7922`). | AIZ intro layout progression and ICZ act-transition progression. | Queue identity, retirement without a sampled zero, identical replacement, append/shift reconciliation, and cross-kind edge ordering are covered by the native recorder and Java/C# golden tests. | `KOS_DECOMPRESSION_QUEUE_AUTHORITATIVE_V2` |
-| Kosinski module queue: `Kos_modules_left` | `Queue_Kos_Module` initializes or appends a module job; `Process_Kos_Module_Queue` sets bit 7 while a module is being decoded, waits for the direct queue to finish it, enqueues its DMA, decrements the module count, and advances the module queue (`docs/skdisasm/sonic3k.asm:2668-2791`). | Production consumers test `Kos_modules_left` for zero before art-dependent lifecycle transitions. | Yes. Normal objects run before module service in each admitted `LevelLoop` (`docs/skdisasm/sonic3k.asm:7884-7922`), and the recurring special-stage loop continues sprite processing, collision, and drawing before its readiness poll and module service (`docs/skdisasm/sonic3k.asm:10737-10753,12613-12625`). | Title card, results, special-stage emerald clearing, super-form support objects, transitions, walls/fans, and post-boss refresh flows listed below. | Title-card/ring lifecycle traces show completion-sensitive timing that is not explained by loop admission alone; the direction can differ across captures, which rules out a fixed delay. | `KOS_MODULE_QUEUE_AUTHORITATIVE_V1` |
-| Phase-local module-queue loops | Title/load setup and special-stage-results modes call `Process_Kos_Module_Queue` explicitly within their own wait loop (`docs/skdisasm/sonic3k.asm:6459-6470,9721-9745,63073-63112`). | `Kos_modules_left == 0`. | No admitted gameplay loop; the dedicated phase loop advances until ready. | Title presentation, level-load block, and special-stage results. | Their elapsed time is preserved by admission and phase ordering; the queue kind remains the same, but these loops do not establish an admitted gameplay consumer edge. | `PHASE` |
-| DMA command queue | `Add_To_DMA_Queue` appends commands and returns if the queue is full; `Process_DMA_Queue` drains and resets it during VInt (`docs/skdisasm/sonic3k.asm:1663-1769,701-840`). | No production gameplay routine polls a persistent DMA-complete owner. | Gameplay resumes after VInt service. | Visual publication, including module output after it has been decompressed. | DMA visibility can diagnose presentation differences, but the ROM lifecycle gates above poll the module queue, not DMA completion. | `DIAGNOSTIC_ONLY` |
+| VInt request and `Wait_VSync` | `Wait_VSync` publishes the requested routine and waits for VInt acknowledgement (`docs/skdisasm/sonic3k.asm:3008-3015`); VInt samples controllers, services DMA, and bookmarks resumable Kosinski state (`docs/skdisasm/sonic3k.asm:723-862`). | VInt routine acknowledgement. | No for a missed admission; the next level-loop iteration starts only after the wait returns. | All game-mode loops synchronized to VInt. | Raw lag and boundary phase already represent admission. | `LAG` / `PHASE` |
+| Direct Kosinski queue: `Kos_decomp_queue_count` | `Queue_Kos` appends a direct job; `Process_Kos_Queue` sets the busy bit, resumes from the bookmark, and clears busy/decrements count when a stream completes (`docs/skdisasm/sonic3k.asm:2835-2999`). KosM children enter this same physical FIFO. | AIZ intro and ICZ transition test the direct queue count for zero (`docs/skdisasm/sonic3k.asm:104621-104636,110305-110333`). | Yes. `LevelLoop` runs direct-queue service before `Wait_VSync`, and admitted gameplay continues while work remains (`docs/skdisasm/sonic3k.asm:7916-7954`). | AIZ intro layout progression and ICZ act-transition progression. | Queue identity, retirement without a sampled zero, identical replacement, append/shift reconciliation, and cross-kind edge ordering are covered by the native recorder and Java/C# golden tests. | `KOS_DECOMPRESSION_QUEUE_AUTHORITATIVE_V2` |
+| Kosinski module queue: `Kos_modules_left` | `Queue_Kos_Module` initializes or appends a module job; `Process_Kos_Module_Queue` sets bit 7 while a module is being decoded, waits for the direct queue to finish it, enqueues its DMA, decrements the module count, and advances the module queue (`docs/skdisasm/sonic3k.asm:2668-2791`). | Production consumers test `Kos_modules_left` for zero before art-dependent lifecycle transitions. | Yes. Normal objects run before module service in each admitted `LevelLoop` (`docs/skdisasm/sonic3k.asm:7916-7954`), and the recurring special-stage loop continues sprite processing, collision, and drawing before its readiness poll and module service (`docs/skdisasm/sonic3k.asm:10773-10789,12649-12661`). | Title card, results, special-stage emerald clearing, super-form support objects, transitions, walls/fans, and post-boss refresh flows listed below. | Title-card/ring lifecycle traces show completion-sensitive timing that is not explained by loop admission alone; the direction can differ across captures, which rules out a fixed delay. | `KOS_MODULE_QUEUE_AUTHORITATIVE_V1` |
+| Phase-local module-queue loops | Title/load setup and special-stage-results modes call `Process_Kos_Module_Queue` explicitly within their own wait loop (`docs/skdisasm/sonic3k.asm:6491-6502,9757-9781,63113-63152`). | `Kos_modules_left == 0`. | No admitted gameplay loop; the dedicated phase loop advances until ready. | Title presentation, level-load block, and special-stage results. | Their elapsed time is preserved by admission and phase ordering; the queue kind remains the same, but these loops do not establish an admitted gameplay consumer edge. | `PHASE` |
+| DMA command queue | `Add_To_DMA_Queue` appends commands and returns if the queue is full; `Process_DMA_Queue` drains and resets it during VInt (`docs/skdisasm/sonic3k.asm:1663-1769,723-862`). | No production gameplay routine polls a persistent DMA-complete owner. | Gameplay resumes after VInt service. | Visual publication, including module output after it has been decompressed. | DMA visibility can diagnose presentation differences, but the ROM lifecycle gates above poll the module queue, not DMA completion. | `DIAGNOSTIC_ONLY` |
 | VDP busy status and synchronous transfer/setup paths | The 68000 polls VDP busy state synchronously during setup (`docs/skdisasm/sonic3k.asm:281-289`). | VDP status/return. | No. | Display setup. | Elapsed interrupts appear as admission lag; there is no ordinary continuing loop with a ROM readiness owner. | `LAG` |
-| Delayed plane-row software state | Plane draw routines consume and decrement `Draw_delayed_rowcount` one software step at a time (`docs/skdisasm/sonic3k.constants.asm:450`; `docs/skdisasm/sonic3k.asm:103429-103590`). | Condition codes derived from the row counter. | Yes, where event handlers call the draw routine once per admitted iteration. | AIZ, SOZ, and ending/event draw progressions (`docs/skdisasm/sonic3k.asm:104588-104718,114651-114684,121043-121121`). | The owner is a deterministic software phase counter rather than asynchronous hardware completion. | `PHASE` |
-| Controller sampling | VInt polls controllers before returning to the selected mode loop (`docs/skdisasm/sonic3k.asm:701-840`). | Subsequent code consumes the published input bytes. | Yes after VInt service. | Player, menus, and scripted control. | Input visibility is captured by the phase contract. | `PHASE` |
-| `Level_frame_counter` and other hardware-relative seeds | The level loop increments the counter on admitted iterations before object processing (`docs/skdisasm/sonic3k.asm:7884-7922`). | Objects/events read its inherited value or low bits. | Yes. | Oscillation, periodic behavior, animation, and RNG-adjacent state. | A segment can begin after the counter has accumulated prior hardware time. | `INITIAL_BASE` |
-| Z80 bus/audio and visual presentation | VInt brackets sound/driver access and publishes display state (`docs/skdisasm/sonic3k.asm:701-840`). | Bus/status return; no gameplay lifecycle completion poll. | Gameplay resumes after interrupt service. | Audio and visual presentation. | Useful as diagnostic evidence, but not completion authority. | `DIAGNOSTIC_ONLY` |
+| Delayed plane-row software state | Plane draw routines consume and decrement `Draw_delayed_rowcount` one software step at a time (`docs/skdisasm/sonic3k.constants.asm:463`; `docs/skdisasm/sonic3k.asm:103475-103636`). | Condition codes derived from the row counter. | Yes, where event handlers call the draw routine once per admitted iteration. | AIZ, SOZ, and ending/event draw progressions (`docs/skdisasm/sonic3k.asm:104634-104764,114697-114730,121089-121167`). | The owner is a deterministic software phase counter rather than asynchronous hardware completion. | `PHASE` |
+| Controller sampling | VInt polls controllers before returning to the selected mode loop (`docs/skdisasm/sonic3k.asm:723-862`). | Subsequent code consumes the published input bytes. | Yes after VInt service. | Player, menus, and scripted control. | Input visibility is captured by the phase contract. | `PHASE` |
+| `Level_frame_counter` and other hardware-relative seeds | The level loop increments the counter on admitted iterations before object processing (`docs/skdisasm/sonic3k.asm:7916-7954`). | Objects/events read its inherited value or low bits. | Yes. | Oscillation, periodic behavior, animation, and RNG-adjacent state. | A segment can begin after the counter has accumulated prior hardware time. | `INITIAL_BASE` |
+| Z80 bus/audio and visual presentation | VInt brackets sound/driver access and publishes display state (`docs/skdisasm/sonic3k.asm:723-862`). | Bus/status return; no gameplay lifecycle completion poll. | Gameplay resumes after interrupt service. | Audio and visual presentation. | Useful as diagnostic evidence, but not completion authority. | `DIAGNOSTIC_ONLY` |
 
 ## Exact queue RAM ownership
 
 The constants file enters a `phase $FFFF0000` RAM namespace
-(`docs/skdisasm/sonic3k.constants.asm:283-284`). From that namespace and the adjacent
-label layout (`docs/skdisasm/sonic3k.constants.asm:866,896-909`), the queue owners are:
+(`docs/skdisasm/sonic3k.constants.asm:288-289`). From that namespace and the adjacent
+label layout (`docs/skdisasm/sonic3k.constants.asm:888,918-931`), the queue owners are:
 
 | owner | 68000 address | BizHawk `mainmemory` address | interpretation |
 |---|---:|---:|---|
@@ -59,7 +59,7 @@ label layout (`docs/skdisasm/sonic3k.constants.asm:866,896-909`), the queue owne
 | `Kos_module_destination` | `$FFFFFF68` | `$FF68` | Word alias for entry 0 offset 4, initially the VRAM destination; module service advances the active head field after each DMA submission. |
 
 The module layout is declared together at
-`docs/skdisasm/sonic3k.constants.asm:904-909`. FIFO entry `i` starts at
+`docs/skdisasm/sonic3k.constants.asm:926-931`. FIFO entry `i` starts at
 `$FFFFFF64 + (i * 6)`: a four-byte source followed by a two-byte destination.
 The recorder must snapshot all four entries, not only the active aliases, and use one
 source-pointer convention before fingerprinting:
@@ -69,7 +69,7 @@ source-pointer convention before fingerprinting:
 - When the queue is empty, `Queue_Kos_Module` branches directly to initialization with
   `a1` at that header. Initialization consumes `(a1)+` and stores the resulting `a1` in
   entry 0, so the first active RAM source is `canonical header + 2`
-  (`docs/skdisasm/sonic3k.asm:2668-2671,2694-2715`). When a new ordinal first appears
+  (`docs/skdisasm/sonic3k.asm:2690-2693,2694-2715`). When a new ordinal first appears
   directly as the active entry, normalize exactly once as
   `canonical_source = observed_active_source - 2`.
 - When work is appended, the ROM stores the original, unconsumed `a1` in the free slot
@@ -89,7 +89,7 @@ entry 0 mutates, and the remaining slot order reconciles a head shift.
 
 Busy state is not a third independent RAM variable. It is encoded in the high bit of each
 owner. `Process_Kos_Queue` sets and clears bit 15
-(`docs/skdisasm/sonic3k.asm:2840-2847,2941-2942`), while
+(`docs/skdisasm/sonic3k.asm:2872-2879,2973-2974`), while
 `Process_Kos_Module_Queue` sets and clears bit 7
 (`docs/skdisasm/sonic3k.asm:2732-2752`).
 
@@ -125,16 +125,16 @@ zero:
 2. Bind the active head entry to the oldest mirrored ordinal and retain that identity
    while its low-seven-bit count decrements. The count initialization at
    `Process_Kos_Module_Queue_Init` derives and writes the active job's total
-   (`docs/skdisasm/sonic3k.asm:2705-2715`).
+   (`docs/skdisasm/sonic3k.asm:2737-2747`).
 3. Treat a previously observed final-module state—bit 7 set with low-seven-bit count
    one—as complete when the next module-service boundary retires that active head.
    The ROM clears bit 7, decrements one to zero, and enqueues the final DMA
-   (`docs/skdisasm/sonic3k.asm:2750-2770`).
+   (`docs/skdisasm/sonic3k.asm:2782-2802`).
 4. Detect retirement either as an empty head/count zero or as the queue shift to the next
    mirrored ordinal. With back-to-back work, the ROM shifts the remaining entries and
    immediately jumps to initialization, which rewrites `Kos_modules_left` to the next
    job's nonzero total before the service call returns
-   (`docs/skdisasm/sonic3k.asm:2771-2787,2705-2715`). Therefore a zero sample is not
+   (`docs/skdisasm/sonic3k.asm:2803-2819,2737-2747`). Therefore a zero sample is not
    required.
 5. Emit one `KOS_MODULE_QUEUE` event for the retired ordinal/fingerprint, then activate the
    next mirrored ordinal at the same boundary. FIFO identity—not fingerprint uniqueness—
@@ -160,30 +160,30 @@ not gameplay consumers.
 
 | consumer | ROM poll | effect while pending or on completion |
 |---|---|---|
-| SK title loop | `docs/skdisasm/sonic3k.asm:6459-6470` | Holds title progression until module art is ready. |
-| Level-load block | `docs/skdisasm/sonic3k.asm:9721-9745` | Remains in synchronous load phase. |
-| Recurring special-stage emerald clearing | `docs/skdisasm/sonic3k.asm:10737-10753,12613-12625` | The admitted loop continues sprites, special-stage collision, drawing, and other recurring work while `sub_9B62` polls readiness; completion advances the clear routine and emerald lifecycle. |
-| Hyper-form stars | `docs/skdisasm/sonic3k.asm:34455-34490` | Defers star-object lifecycle until queued modules are ready. |
-| Super Tails birds | `docs/skdisasm/sonic3k.asm:35005-35040` | Defers support-object lifecycle. |
-| AIZ resize/battleship setup, first gate | `docs/skdisasm/sonic3k.asm:38985-39000` | Serializes new module submission behind pending work. |
-| AIZ resize/battleship setup, second gate | `docs/skdisasm/sonic3k.asm:39105-39124` | Holds the next scripted setup state. |
-| AIZ resize/battleship setup, third gate | `docs/skdisasm/sonic3k.asm:39216-39235` | Holds the next scripted setup state. |
-| Title-card object | `docs/skdisasm/sonic3k.asm:62140-62171` | Defers art-dependent title-card creation. |
-| Level-results object | `docs/skdisasm/sonic3k.asm:62545-62593` | Defers art-dependent result-card lifecycle after bonus setup. |
-| Special-stage results | `docs/skdisasm/sonic3k.asm:63073-63112` | Holds the dedicated results phase. |
-| HCZ horizontal water wall | `docs/skdisasm/sonic3k.asm:64854-64863` | Holds wall activation while the level loop continues. |
-| HCZ vertical water wall | `docs/skdisasm/sonic3k.asm:65117-65131` | Pulls players upward while pending, then advances the wall routine. |
-| HCZ large fan | `docs/skdisasm/sonic3k.asm:65604-65613` | Holds fan art-dependent lifecycle. |
-| AIZ transition finish | `docs/skdisasm/sonic3k.asm:104670-104731` | Holds the transition's final art-dependent state. |
-| HCZ act transition | `docs/skdisasm/sonic3k.asm:105718-105754` | Holds act-transition progression. |
-| MGZ act transition | `docs/skdisasm/sonic3k.asm:106285-106314` | Holds act-transition progression. |
-| CNZ teleporter | `docs/skdisasm/sonic3k.asm:108036-108067` | Holds teleporter progression. |
-| SOZ act transition | `docs/skdisasm/sonic3k.asm:113758-113775` | Holds act-transition progression. |
-| SOZ post-boss refresh | `docs/skdisasm/sonic3k.asm:114651-114684` | Serializes refresh/draw progression behind module readiness. |
-| LRZ act transition | `docs/skdisasm/sonic3k.asm:115347-115374` | Holds act-transition progression. |
-| DEZ act transition | `docs/skdisasm/sonic3k.asm:118660-118682` | Holds act-transition progression. |
-| Ending transition, first gate | `docs/skdisasm/sonic3k.asm:120991-121012` | Holds ending progression. |
-| Ending transition, second gate | `docs/skdisasm/sonic3k.asm:121100-121121` | Holds later ending progression. |
+| SK title loop | `docs/skdisasm/sonic3k.asm:6491-6502` | Holds title progression until module art is ready. |
+| Level-load block | `docs/skdisasm/sonic3k.asm:9757-9781` | Remains in synchronous load phase. |
+| Recurring special-stage emerald clearing | `docs/skdisasm/sonic3k.asm:10773-10789,12649-12661` | The admitted loop continues sprites, special-stage collision, drawing, and other recurring work while `sub_9B62` polls readiness; completion advances the clear routine and emerald lifecycle. |
+| Hyper-form stars | `docs/skdisasm/sonic3k.asm:34495-34530` | Defers star-object lifecycle until queued modules are ready. |
+| Super Tails birds | `docs/skdisasm/sonic3k.asm:35045-35080` | Defers support-object lifecycle. |
+| AIZ resize/battleship setup, first gate | `docs/skdisasm/sonic3k.asm:39025-39040` | Serializes new module submission behind pending work. |
+| AIZ resize/battleship setup, second gate | `docs/skdisasm/sonic3k.asm:39145-39164` | Holds the next scripted setup state. |
+| AIZ resize/battleship setup, third gate | `docs/skdisasm/sonic3k.asm:39256-39275` | Holds the next scripted setup state. |
+| Title-card object | `docs/skdisasm/sonic3k.asm:62180-62211` | Defers art-dependent title-card creation. |
+| Level-results object | `docs/skdisasm/sonic3k.asm:62585-62633` | Defers art-dependent result-card lifecycle after bonus setup. |
+| Special-stage results | `docs/skdisasm/sonic3k.asm:63113-63152` | Holds the dedicated results phase. |
+| HCZ horizontal water wall | `docs/skdisasm/sonic3k.asm:64894-64903` | Holds wall activation while the level loop continues. |
+| HCZ vertical water wall | `docs/skdisasm/sonic3k.asm:65157-65171` | Pulls players upward while pending, then advances the wall routine. |
+| HCZ large fan | `docs/skdisasm/sonic3k.asm:65644-65653` | Holds fan art-dependent lifecycle. |
+| AIZ transition finish | `docs/skdisasm/sonic3k.asm:104716-104777` | Holds the transition's final art-dependent state. |
+| HCZ act transition | `docs/skdisasm/sonic3k.asm:105764-105800` | Holds act-transition progression. |
+| MGZ act transition | `docs/skdisasm/sonic3k.asm:106331-106360` | Holds act-transition progression. |
+| CNZ teleporter | `docs/skdisasm/sonic3k.asm:108082-108113` | Holds teleporter progression. |
+| SOZ act transition | `docs/skdisasm/sonic3k.asm:113804-113821` | Holds act-transition progression. |
+| SOZ post-boss refresh | `docs/skdisasm/sonic3k.asm:114697-114730` | Serializes refresh/draw progression behind module readiness. |
+| LRZ act transition | `docs/skdisasm/sonic3k.asm:115393-115420` | Holds act-transition progression. |
+| DEZ act transition | `docs/skdisasm/sonic3k.asm:118706-118728` | Holds act-transition progression. |
+| Ending transition, first gate | `docs/skdisasm/sonic3k.asm:121037-121058` | Holds ending progression. |
+| Ending transition, second gate | `docs/skdisasm/sonic3k.asm:121146-121167` | Holds later ending progression. |
 
 The ordinary level-loop consumers and recurring special-stage emerald consumer establish
 why queue completion is external work rather than phase alone: gameplay scanning,
@@ -194,8 +194,8 @@ perform gameplay-visible work during that interval.
 
 | consumer | ROM poll | effect | disposition |
 |---|---|---|---|
-| AIZ intro | `docs/skdisasm/sonic3k.asm:104575-104590` | Holds intro layout/event progression while `Kos_decomp_queue_count` is nonzero. | `KOS_DECOMPRESSION_QUEUE_AUTHORITATIVE_V2` |
-| ICZ act transition | `docs/skdisasm/sonic3k.asm:110259-110287` | Holds transition progression until the direct queue count reaches zero. | `KOS_DECOMPRESSION_QUEUE_AUTHORITATIVE_V2` |
+| AIZ intro | `docs/skdisasm/sonic3k.asm:104621-104636` | Holds intro layout/event progression while `Kos_decomp_queue_count` is nonzero. | `KOS_DECOMPRESSION_QUEUE_AUTHORITATIVE_V2` |
+| ICZ act transition | `docs/skdisasm/sonic3k.asm:110305-110333` | Holds transition progression until the direct queue count reaches zero. | `KOS_DECOMPRESSION_QUEUE_AUTHORITATIVE_V2` |
 
 The engine independently submits the AIZ/ICZ descriptors and module children,
 scans their ROM stream shape, and computes their identity. Recorded authority
@@ -289,9 +289,9 @@ The design's three raw boundaries map to ROM visibility as follows:
 
 | boundary | ROM work visible | module-completion rule |
 |---|---|---|
-| `vint_service` | Controller sampling, DMA draining, and `Set_Kos_Bookmark` in VInt (`docs/skdisasm/sonic3k.asm:701-840`). | VInt does not itself run module-queue service. A pending-to-complete transition first observable on a held-counter row is admitted here only when no ROM-owned object-scan loop is active. This is an admission/visibility boundary, not a claim that VInt caused decompression. |
-| `pre_main_loop` | Direct decoder progress from `Process_Kos_Queue`, which precedes `Wait_VSync` in `LevelLoop` (`docs/skdisasm/sonic3k.asm:7884-7888`). | Schema 2 emits a proven direct-head retirement here. AIZ/ICZ screen events in the admitted loop can observe the resulting queue-empty state in that same scan. No module-parent completion is emitted at this boundary. |
-| `post_objects` | Normal `Process_Sprites` executes before `Process_Kos_Module_Queue` (`docs/skdisasm/sonic3k.asm:7894-7908`). The held-counter title-card loop at `loc_62CC` has the same ordering, then branches on physical slot 8's `objoff_48` word or `Nem_decomp_queue` (`docs/skdisasm/sonic3k.asm:7735-7748`). The recurring special-stage loop likewise performs sprites, collision, drawing, and `sub_9B62` before module service (`docs/skdisasm/sonic3k.asm:10737-10753,12613-12625`). | Emit retirement here when the frame counter advances or the exact title-card lifecycle proves that the held-counter row ran `Process_Sprites`. The lifecycle can arm only from the fixed `Obj_TitleCard` parent and cannot be inferred from a Nemesis job alone. Consumers in that same scan saw the preceding pending state; they consume readiness on their next admitted scan. |
+| `vint_service` | Controller sampling, DMA draining, and `Set_Kos_Bookmark` in VInt (`docs/skdisasm/sonic3k.asm:723-862`). | VInt does not itself run module-queue service. A pending-to-complete transition first observable on a held-counter row is admitted here only when no ROM-owned object-scan loop is active. This is an admission/visibility boundary, not a claim that VInt caused decompression. |
+| `pre_main_loop` | Direct decoder progress from `Process_Kos_Queue`, which precedes `Wait_VSync` in `LevelLoop` (`docs/skdisasm/sonic3k.asm:7916-7920`). | Schema 2 emits a proven direct-head retirement here. AIZ/ICZ screen events in the admitted loop can observe the resulting queue-empty state in that same scan. No module-parent completion is emitted at this boundary. |
+| `post_objects` | Normal `Process_Sprites` executes before `Process_Kos_Module_Queue` (`docs/skdisasm/sonic3k.asm:7926-7940`). The held-counter title-card loop at `loc_62CC` has the same ordering, then branches on physical slot 8's `objoff_48` word or `Nem_decomp_queue` (`docs/skdisasm/sonic3k.asm:7767-7780`). The recurring special-stage loop likewise performs sprites, collision, drawing, and `sub_9B62` before module service (`docs/skdisasm/sonic3k.asm:10773-10789,12649-12661`). | Emit retirement here when the frame counter advances or the exact title-card lifecycle proves that the held-counter row ran `Process_Sprites`. The lifecycle can arm only from the fixed `Obj_TitleCard` parent and cannot be inferred from a Nemesis job alone. Consumers in that same scan saw the preceding pending state; they consume readiness on their next admitted scan. |
 
 This ordering prevents the recorder from making completion visible to an object one
 iteration too early or inventing a main-loop/object scan on a lag row. It also keeps event

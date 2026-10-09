@@ -13,12 +13,12 @@ import java.util.List;
 /**
  * ROM {@code Obj_CreateBossExplosion} subtype {@code $14} ({@code CreateBossExp14}: timer 8,
  * X range {@code $80}, Y range {@code $20}, routine set {@code $10} = {@code Obj_Wait} +
- * {@code Obj_NormalExpControl}, sonic3k.asm:176674-176688), created by {@code loc_64930} at
+ * {@code Obj_NormalExpControl}, sonic3k.asm:176765-176779), created by {@code loc_64930} at
  * {@code ($1880,$3D0)}.
  *
  * <p>{@code Obj_Wait} never looks at the parent, so the spawner stays at {@code ($1880,$3D0)} and
  * outlives the Knuckles object. Every third pass {@code Obj_NormalExpControl}
- * (sonic3k.asm:176782-176795) creates a {@code Child6_MakeNormalExplosion} ({@code Obj_Explosion}
+ * (sonic3k.asm:176873-176886) creates a {@code Child6_MakeNormalExplosion} ({@code Obj_Explosion}
  * routine 2, {@code art_tile} bit 7) and only after a successful {@code CreateChild6_Simple}
  * draws {@code Random_Number} for its offset; the eighth decrement deletes the spawner.
  */

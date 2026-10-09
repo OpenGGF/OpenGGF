@@ -592,7 +592,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         // ROM loc_71C36 first creates Obj_RobotnikShip4, then three body children.
         // The ship creates its Robotnik child when slot 25 dispatches, and the
         // bottom body creates loc_720C6 when slot 28 dispatches. These six SSTs
-        // remain live together (sonic3k.asm:150612-150634,150875-150908).
+        // remain live together (sonic3k.asm:150680-150702,150943-150976).
         // This implementation folds their rendering/behavior into the boss, but
         // must retain their allocator pressure and Process_Sprites phase.
         int[] childSlots = tryServices().objectManager().allocateChildSlotsAfter(
@@ -1228,7 +1228,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         if (services().gameState() != null) {
             services().gameState().addScore(1000);
         }
-        // ROM loc_722E6: jmp (BossDefeated_StopTimer).l (sonic3k.asm:151307).
+        // ROM loc_722E6: jmp (BossDefeated_StopTimer).l (sonic3k.asm:151375).
         stopLevelTimerOnBossDefeat();
     }
 
@@ -1422,12 +1422,12 @@ public final class IczEndBossInstance extends AbstractBossInstance
 
     @Override
     public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
-        // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41611-41621) re-reads
+        // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41651-41661) re-reads
         // width_pixels(a0) for the landing X gate. The solid bottom child is
         // initialized from word_7231E with width_pixels = $18
-        // (sonic3k.asm:150958-150962,151337-151339); ObjDat3_72324 belongs
+        // (sonic3k.asm:151026-151030,151405-151407); ObjDat3_72324 belongs
         // to its later effect children, not this SolidObjectFull caller.
-        // loc_71F30 passes d1 = $23 (sonic3k.asm:150928-150939), so the
+        // loc_71F30 passes d1 = $23 (sonic3k.asm:150996-151007), so the
         // default d1 - $B = $18 heuristic happens to match the native child.
         return 0x18;
     }
@@ -1550,7 +1550,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         return Sonic3kSfx.EXPLODE.id;
     }
 
-    // loc_71C36 ObjDat3_72306 priority $280 (sonic3k.asm:150619-150620, 151276).
+    // loc_71C36 ObjDat3_72306 priority $280 (sonic3k.asm:150687-150688, 151344).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
     // The ROM child SSTs are drawn inline from this owner, each in its own
     // priority list (MultiBucketRenderable). ChildObjDat_7233E body children
@@ -1588,7 +1588,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
 
     @Override
     public boolean isHighPriority() {
-        // ObjDat3_72306 art make_art_tile(ArtTile_ICZEndBoss,1,1) sets bit 15 (sonic3k.asm:151275).
+        // ObjDat3_72306 art make_art_tile(ArtTile_ICZEndBoss,1,1) sets bit 15 (sonic3k.asm:151343).
         return true;
     }
 
@@ -1972,7 +1972,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
             super.update(vIntRunCount, player);
         }
 
-        // loc_720F2 word_72330 priority $180 (sonic3k.asm:151293); CreateChild1_Normal copied the
+        // loc_720F2 word_72330 priority $180 (sonic3k.asm:151361); CreateChild1_Normal copied the
         // boss's art_tile, so the inherited high-priority flag stands.
         private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
 

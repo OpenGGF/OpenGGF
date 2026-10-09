@@ -5,7 +5,7 @@ import static com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageConstants
 /**
  * "Get Blue Spheres" banner for the S3K Blue Ball special stage.
  * <p>
- * ROM: Obj_SStage_8E40 (sonic3k.asm:11310)
+ * ROM: Obj_SStage_8E40 (sonic3k.asm:11346)
  * <p>
  * The banner starts DISPLAYED at the center of the screen. After 3 seconds
  * it slides OUT to the edges (left half goes left, right half goes right).

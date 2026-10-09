@@ -14,10 +14,10 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 /**
  * {@code DEZ1_ScreenEvent}, {@code DEZ2_ScreenInit} and {@code DEZ2_ScreenEvent}
- * (sonic3k.asm:118623-118705 and :118695-118735) — the Sonic 3 &amp; Knuckles Death Egg
+ * (sonic3k.asm:118669-118751 and :118741-118781) — the Sonic 3 &amp; Knuckles Death Egg
  * foreground layout writes.
  *
- * <p>{@code ScreenEvents} (:102233) calls the foreground handler with
+ * <p>{@code ScreenEvents} (:102279) calls the foreground handler with
  * {@code a3 = Level_layout_main}, whose first {@code $40} words are line pointers with the
  * foreground and background rows interleaved: foreground row {@code n} is at offset {@code 4n}
  * and background row {@code n} at {@code 4n + 2} (constants.asm:288; the same arithmetic gives

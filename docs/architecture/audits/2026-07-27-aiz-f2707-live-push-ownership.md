@@ -23,7 +23,7 @@ Every compared physical value at f2707 already agreed. Tails was at
 `TailsCPU_Normal` reads the live Tails `Status_Push` bit at `loc_13DD0`.
 When the delayed leader status does not also contain Push, it branches
 directly to `loc_13E9C`, preserving the already-loaded `Ctrl_2_logical`
-sample (`docs/skdisasm/sonic3k.asm:26696-26705,26775-26785`).
+sample (`docs/skdisasm/sonic3k.asm:26736-26745,26815-26825`).
 
 The following ordinary `Tails_InputAcceleration_Path` tests `ground_vel`
 before its no-input friction:
@@ -33,7 +33,7 @@ before its no-input friction:
 - the next player dispatch enters the stationary branch and writes `$05`.
 
 The relevant ordering is
-`docs/skdisasm/sonic3k.asm:27798-27837,27898-27920`.
+`docs/skdisasm/sonic3k.asm:27838-27877,27938-27960`.
 
 ## Native observation
 

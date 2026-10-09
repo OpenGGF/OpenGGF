@@ -17,50 +17,50 @@ import com.openggf.sprites.playable.ObjectControlState;
 import java.util.List;
 
 /**
- * SKL {@code $5F}, {@code Obj_DEZGravityRoom} (sonic3k.asm:95814-95952).
+ * SKL {@code $5F}, {@code Obj_DEZGravityRoom} (sonic3k.asm:95860-95998).
  *
  * <p>One act 1 placement: the turbine corridor, a {@code $500} px long room the player is
  * blown rightwards through while steering up and down. {@code sub_4964A} runs once per player
  * over a single state byte — {@code $30(a0)} for Player 1 and {@code $31(a0)} for Player 2.
  *
  * <p><b>The corridor only catches a player to its right.</b> {@code sub.w x_pos(a0),d0 /
- * cmpi.w #$500,d0 / bhs} (:95847-95849) is an <em>unsigned</em> compare on the raw difference,
+ * cmpi.w #$500,d0 / bhs} (:95893-95895) is an <em>unsigned</em> compare on the raw difference,
  * so a player left of the object wraps to a huge value and is skipped; the window is
  * {@code [x, x+$500)} in X and {@code ±$140} in Y. The same compare is the release test
- * (:95871-95875), which is why leaving the far end and backing out of the near end both simply
+ * (:95917-95921), which is why leaving the far end and backing out of the near end both simply
  * hand control back.
  *
  * <p><b>The blow is an uncapped accumulation and the steering is clamped.</b>
- * {@code addi.w #$38,x_vel(a1)} (:95872) has no ceiling of its own — the corridor's length is
+ * {@code addi.w #$38,x_vel(a1)} (:95918) has no ceiling of its own — the corridor's length is
  * the limit. Up and down each move {@code y_vel} by {@code $18} toward {@code ∓$600}
- * (:95874-95908), and the clamp is written so that a player already past {@code ±$600} keeps
+ * (:95920-95954), and the clamp is written so that a player already past {@code ±$600} keeps
  * the speed they arrived with rather than being pulled back to the limit. Then
  * {@code asr.w #5} of {@code y_vel} is subtracted from it as drag, with the borrow deciding
- * whether the result crosses zero and is flattened (:95910-95932).
+ * whether the result crosses zero and is flattened (:95956-95978).
  *
  * <p>The object moves and collides the player itself ({@code MoveSprite2},
- * {@code Player_JumpAngle}, {@code SonicKnux_DoLevelCollision}, :95733-95736) because
+ * {@code Player_JumpAngle}, {@code SonicKnux_DoLevelCollision}, :95779-95782) because
  * {@code object_control = 1} has stopped the player's own movement, and then sets
- * {@code Status_InAir} again (:95737) so a landing inside the corridor never sticks.
+ * {@code Status_InAir} again (:95783) so a landing inside the corridor never sticks.
  *
  * <p>It reads {@code Reverse_gravity_flag} nowhere, and act 1 has no gravity flip in it.
  */
 public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
 
-    /** {@code cmpi.w #$500,d0 / bhs} (:95849, :95875): the corridor's length. */
+    /** {@code cmpi.w #$500,d0 / bhs} (:95895, :95921): the corridor's length. */
     private static final int CORRIDOR_LENGTH = 0x500;
-    /** {@code addi.w #$140,d0 / cmpi.w #$280,d0 / bhs} (:95852-95854). */
+    /** {@code addi.w #$140,d0 / cmpi.w #$280,d0 / bhs} (:95898-95900). */
     private static final int HALF_HEIGHT = 0x140;
-    /** {@code addi.w #$38,x_vel(a1)} (:95872). */
+    /** {@code addi.w #$38,x_vel(a1)} (:95918). */
     private static final int BLOW_ACCELERATION = 0x38;
-    /** {@code move.w #$18,d5} (:95874): the steering step. */
+    /** {@code move.w #$18,d5} (:95920): the steering step. */
     private static final int STEER_STEP = 0x18;
-    /** {@code move.w #$600,d6} (:95873): the steering limit. */
+    /** {@code move.w #$600,d6} (:95919): the steering limit. */
     private static final int STEER_LIMIT = 0x600;
-    /** {@code asr.w #5,d1} (:95919): the drag divisor. */
+    /** {@code asr.w #5,d1} (:95965): the drag divisor. */
     private static final int DRAG_SHIFT = 5;
-    /** {@code move.b (Level_frame_counter+1).w,d0 / andi.b #$F,d0} (:95738-95740). */
+    /** {@code move.b (Level_frame_counter+1).w,d0 / andi.b #$F,d0} (:95784-95786). */
     private static final int SFX_PERIOD_MASK = 0x0F;
 
     private final RoomState playerOneState = new RoomState();
@@ -105,7 +105,7 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
 
     @Override
     public boolean isCustomOutOfRange(int cameraX) {
-        // Obj_DEZGravityRoom (:95823-95828): unlike RememberState's normal range,
+        // Obj_DEZGravityRoom (:95869-95874): unlike RememberState's normal range,
         // the anchor is shifted $400 right and the native unsigned limit is $680.
         // The viewport term follows the engine's existing widescreen window policy.
         // Keeping the owner alive is essential while object_control suppresses movement.
@@ -114,13 +114,13 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
         return ((shiftedAnchor - coarseBack) & 0xFFFF) > 0x400 + coarseXCullRange();
     }
 
-    /** {@code sub_4964A} :95843-95952. */
+    /** {@code sub_4964A} :95889-95998. */
     private void runFor(AbstractPlayableSprite player, RoomState state) {
         if (!state.captured) {
             tryCapture(player, state);
             return;
         }
-        // loc_496A8 :95869-95876.
+        // loc_496A8 :95915-95922.
         if (player.isDebugMode() || !insideCorridor(player)) {
             ObjectControlState.none().applyTo(player);
             state.captured = false;
@@ -131,7 +131,7 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
         playTurbineSfx();
     }
 
-    /** {@code sub_4964A}'s capture, :95845-95867. */
+    /** {@code sub_4964A}'s capture, :95891-95913. */
     private void tryCapture(AbstractPlayableSprite player, RoomState state) {
         if (!insideCorridor(player)) {
             return;
@@ -144,7 +144,7 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
             return;
         }
         // move.b #1,flip_angle / move.b #-1,flips_remaining / move.b #4,flip_speed
-        // (:95858-95861): a non-zero flips_remaining is the endless tumble through the room.
+        // (:95904-95907): a non-zero flips_remaining is the endless tumble through the room.
         player.setFlipAngle(1);
         player.setAnimationId(Sonic3kAnimationIds.WALK);
         player.setFlipsRemaining(-1);
@@ -152,13 +152,13 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
         player.setRollingJump(false);
         player.setJumping(false);
         player.setAir(true);
-        // move.b #1,object_control(a1) (:95866): bits 0-6 with bit 7 clear, so the player can
+        // move.b #1,object_control(a1) (:95912): bits 0-6 with bit 7 clear, so the player can
         // still jump out while their own movement is the object's to run.
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         state.captured = true;
     }
 
-    /** {@code loc_496C8} :95872-95932. */
+    /** {@code loc_496C8} :95918-95978. */
     private void blow(AbstractPlayableSprite player) {
         player.setXSpeed((short) (player.getXSpeed() + BLOW_ACCELERATION));
         int yVel = player.getYSpeed();
@@ -173,7 +173,7 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
     }
 
     /**
-     * {@code loc_496DA} / {@code loc_496F2} (:95876-95908). The step is applied, and only
+     * {@code loc_496DA} / {@code loc_496F2} (:95922-95954). The step is applied, and only
      * taken back when it would carry the player past the limit; a player already beyond the
      * limit is left where they are rather than pulled back to it.
      */
@@ -188,7 +188,7 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
     }
 
     /**
-     * {@code loc_49706} :95910-95932. {@code d1 = y_vel asr 5}, then {@code y_vel -= d1} with
+     * {@code loc_49706} :95956-95978. {@code d1 = y_vel asr 5}, then {@code y_vel -= d1} with
      * the 68000 borrow deciding whether the subtraction crossed zero, in which case the
      * result is flattened to zero.
      */
@@ -209,7 +209,7 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
         return borrow ? result : 0;
     }
 
-    /** {@code loc_49730} :95733-95737. */
+    /** {@code loc_49730} :95779-95783. */
     private void moveAndCollide(AbstractPlayableSprite player) {
         player.move(player.getXSpeed(), player.getYSpeed());
         jumpAngle(player);
@@ -219,13 +219,13 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
         if (collisionSystem != null) {
             collisionSystem.resolveAirCollision(player, landed -> { });
         }
-        // bset #Status_InAir,status(a1) (:95737): a landing inside the corridor is undone on
+        // bset #Status_InAir,status(a1) (:95783): a landing inside the corridor is undone on
         // the same frame it happens, which is what keeps the blow going over floor terrain.
         player.setAir(true);
     }
 
     /**
-     * {@code Player_JumpAngle} (:24518-24534): {@code angle} walks toward 0 by two a frame and
+     * {@code Player_JumpAngle} (:24558-24574): {@code angle} walks toward 0 by two a frame and
      * stops there. The corridor calls it directly because the player's own airborne tail is
      * not running while {@code object_control} is set.
      */

@@ -11,7 +11,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import java.util.List;
 
 /**
- * The Doomsday end boss's explosion spawners (sonic3k.asm:175574-175720).
+ * The Doomsday end boss's explosion spawners (sonic3k.asm:175665-175811).
  *
  * <p>{@link Kind#DEFEAT} is {@code loc_82E9A}: it follows the boss and every {@code $20} frames
  * ({@code $2E}) flashes the second {@code word_82D9E} row onto palette line 3 (the first row on the

@@ -19,9 +19,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Lava Reef's trigger family: {@code Obj_LRZDoor} ({@code $19}, sonic3k.asm:88015-88063),
- * {@code Obj_LRZBigDoor} ({@code $1A}, :88070-88145), {@code Obj_LRZButtonHorizontal}
- * ({@code $1C}, :88221-88277) and {@code Obj_LRZShootingTrigger} ({@code $1D}, :88279-88361).
+ * Lava Reef's trigger family: {@code Obj_LRZDoor} ({@code $19}, sonic3k.asm:88061-88109),
+ * {@code Obj_LRZBigDoor} ({@code $1A}, :88116-88191), {@code Obj_LRZButtonHorizontal}
+ * ({@code $1C}, :88267-88323) and {@code Obj_LRZShootingTrigger} ({@code $1D}, :88325-88407).
  *
  * <p>Every expectation below is the routine's own arithmetic, taken from the cited label rather
  * than from the Java under test: the doors' travel is {@code GetSineCosine($2E)} shifted right by
@@ -47,7 +47,7 @@ class TestLrzDoorsButtonsAndTriggers {
 
     // ----- Obj_LRZDoor -------------------------------------------------------------------------
 
-    /** {@code move.b subtype(a0),d0 / andi.w #$F,d0} (sonic3k.asm:88033-88034). */
+    /** {@code move.b subtype(a0),d0 / andi.w #$F,d0} (sonic3k.asm:88079-88080). */
     @Test
     void doorTakesItsTriggerIndexFromTheLowNibble() {
         for (int subtype = 0x00; subtype <= 0x0F; subtype++) {
@@ -81,7 +81,7 @@ class TestLrzDoorsButtonsAndTriggers {
     }
 
     /**
-     * {@code GetSineCosine($2E) asr #2 / neg / add $46(a0)} (sonic3k.asm:88050-88056) over the
+     * {@code GetSineCosine($2E) asr #2 / neg / add $46(a0)} (sonic3k.asm:88096-88102) over the
      * whole quarter turn, and the {@code cmpi.b #$40} that freezes it at 64 pixels.
      */
     @Test
@@ -119,7 +119,7 @@ class TestLrzDoorsButtonsAndTriggers {
 
     /**
      * {@code move.w #$1B,d1 / moveq #0,d2 / move.b height_pixels(a0),d2 / move.w d2,d3 /
-     * addq.w #1,d3} (sonic3k.asm:88058-88062). Act 1's {@code height_pixels} is {@code $28}.
+     * addq.w #1,d3} (sonic3k.asm:88104-88108). Act 1's {@code height_pixels} is {@code $28}.
      */
     @Test
     void doorSolidBoxIsTheRoutinesOwnArguments() {
@@ -143,9 +143,9 @@ class TestLrzDoorsButtonsAndTriggers {
     }
 
     /**
-     * {@code swap d6 / andi.w #3,d6} (sonic3k.asm:88253-88254) is the side-touch pair
-     * {@code SolidObject_cont} writes at {@code bit standing_bit + $D} (:41501-41503,
-     * :41510-41512). Standing on this button is not a press.
+     * {@code swap d6 / andi.w #3,d6} (sonic3k.asm:88299-88300) is the side-touch pair
+     * {@code SolidObject_cont} writes at {@code bit standing_bit + $D} (:41541-41543,
+     * :41550-41552). Standing on this button is not a press.
      */
     @Test
     void horizontalButtonIsPressedBySideContactOnly() {
@@ -181,7 +181,7 @@ class TestLrzDoorsButtonsAndTriggers {
     }
 
     /**
-     * {@code move.w #$10,d1 / #$F,d2 / #$10,d3} (sonic3k.asm:88236-88238): note {@code d2} is one
+     * {@code move.w #$10,d1 / #$F,d2 / #$10,d3} (sonic3k.asm:88282-88284): note {@code d2} is one
      * less than {@code d3}, unlike the door.
      */
     @Test
@@ -191,7 +191,7 @@ class TestLrzDoorsButtonsAndTriggers {
 
     // ----- Obj_LRZShootingTrigger --------------------------------------------------------------
 
-    /** {@code andi.w #$F0,d0 / lsr.w #2,d0} for the two placed subtypes (sonic3k.asm:88292-88293). */
+    /** {@code andi.w #$F0,d0 / lsr.w #2,d0} for the two placed subtypes (sonic3k.asm:88338-88339). */
     @Test
     void shootingTriggerSplitsItsSubtypeIntoTriggerIndexAndShotPeriod() {
         assertEquals(0x0, trigger(0xA0).triggerIndex());
@@ -201,7 +201,7 @@ class TestLrzDoorsButtonsAndTriggers {
     }
 
     /**
-     * {@code subq.w #1,$2E(a0) / bpl.s loc_42E84} (sonic3k.asm:88297-88298): the reload lands on
+     * {@code subq.w #1,$2E(a0) / bpl.s loc_42E84} (sonic3k.asm:88343-88344): the reload lands on
      * the frame the word first goes negative, so a fresh trigger fires on its very first update
      * and then every {@code shotPeriod + 1} frames.
      */
@@ -236,7 +236,7 @@ class TestLrzDoorsButtonsAndTriggers {
     }
 
     /**
-     * {@code sub_42EC0} (sonic3k.asm:88349-88359): negate both velocities, {@code bset d3,(a3)}
+     * {@code sub_42EC0} (sonic3k.asm:88395-88405): negate both velocities, {@code bset d3,(a3)}
      * with {@code d3} still zero, and rewrite the slot as {@code Obj_Explosion}.
      */
     @Test
@@ -259,7 +259,7 @@ class TestLrzDoorsButtonsAndTriggers {
 
     /**
      * {@code move.w #$200,x_vel(a1) / y_vel(a1)} and the {@code btst #0,status(a0) / neg.w}
-     * (sonic3k.asm:88325-88330). {@code MoveSprite2} has no gravity term, so both stay constant.
+     * (sonic3k.asm:88371-88376). {@code MoveSprite2} has no gravity term, so both stay constant.
      */
     @Test
     void shootingTriggerShotCarriesTheRoutinesVelocities() {
@@ -275,8 +275,8 @@ class TestLrzDoorsButtonsAndTriggers {
     }
 
     /**
-     * {@code jsr (MoveSprite2)} (sonic3k.asm:88342). The routine is {@code ext.l / lsl.l #8 /
-     * add.l} for each axis (:36054-36061), so an {@code $200} velocity is two pixels a frame, not
+     * {@code jsr (MoveSprite2)} (sonic3k.asm:88388). The routine is {@code ext.l / lsl.l #8 /
+     * add.l} for each axis (:36094-36101), so an {@code $200} velocity is two pixels a frame, not
      * two subpixels. Asserting the velocity fields alone let this class move 1/256 of the right
      * distance until the fireball launcher's own motion test caught the same mistake.
      */
@@ -299,7 +299,7 @@ class TestLrzDoorsButtonsAndTriggers {
     // ----- Obj_LRZBigDoor ----------------------------------------------------------------------
 
     /**
-     * {@code loc_42A68} (sonic3k.asm:88089-88097). The Y test is unsigned after
+     * {@code loc_42A68} (sonic3k.asm:88135-88143). The Y test is unsigned after
      * {@code addi.w #-$40}, so the band is {@code [y+$40, y+$C0)}; the X test is signed, so the
      * player must be at least {@code $50} to the right.
      */
@@ -327,7 +327,7 @@ class TestLrzDoorsButtonsAndTriggers {
     }
 
     /**
-     * {@code GetSineCosine($2E) asr #1} added to {@code $46(a0)} (sonic3k.asm:88119-88122): the
+     * {@code GetSineCosine($2E) asr #1} added to {@code $46(a0)} (sonic3k.asm:88165-88168): the
      * big door sinks, and its total travel is the {@code $80} the already-open branch applies.
      */
     @Test
@@ -345,7 +345,7 @@ class TestLrzDoorsButtonsAndTriggers {
         assertEquals(BASE_Y + 0x80, bigDoor.getCentreY());
     }
 
-    /** {@code move.w #$3B,d1 / #$40,d2 / #$41,d3} (sonic3k.asm:88130-88132). */
+    /** {@code move.w #$3B,d1 / #$40,d2 / #$41,d3} (sonic3k.asm:88176-88178). */
     @Test
     void bigDoorSolidBoxIsTheRoutinesOwnArguments() {
         assertEquals(SolidObjectParams.of(0x3B, 0x40, 0x41), bigDoor().getSolidParams());

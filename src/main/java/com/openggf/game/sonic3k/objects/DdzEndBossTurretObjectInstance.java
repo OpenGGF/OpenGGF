@@ -14,7 +14,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
 /**
- * ROM {@code loc_81E82} (sonic3k.asm:173963-174030): a phase-1 end boss turret
+ * ROM {@code loc_81E82} (sonic3k.asm:174054-174121): a phase-1 end boss turret
  * ({@code ObjDat3_831BA}: priority {@code $280}, frame {@code $1C}). Its countdown starts at
  * {@code subtype * 8}; once the boss sets {@code $38} bit 3 each expiry reloads {@code $60} and fires a
  * {@code loc_81F14} shot. Every sixteenth V-int it aims at Player 1 in eight directions (frame

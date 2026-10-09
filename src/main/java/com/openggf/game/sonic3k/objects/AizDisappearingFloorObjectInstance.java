@@ -29,7 +29,7 @@ import java.util.List;
  * (Map_AIZDisappearingFloor2). The child moves off-screen when the parent's
  * mapping frame returns to 3 during the reappear sequence.
  * <p>
- * ROM references: Obj_AIZDisappearingFloor (sonic3k.asm:58320).
+ * ROM references: Obj_AIZDisappearingFloor (sonic3k.asm:58360).
  */
 public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
@@ -87,7 +87,7 @@ public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
 
     private int levelFrameCounter(int fallbackCounter) {
         // Obj_AIZDisappearingFloor reads Level_frame_counter, not
-        // V_int_run_count (sonic3k.asm:58373-58375). LevelManager stores the
+        // V_int_run_count (sonic3k.asm:58413-58415). LevelManager stores the
         // previous completed frame until the current Process_Sprites pass, so
         // the value visible to this object is its counter plus one.
         return services().levelManager() != null
@@ -95,7 +95,7 @@ public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
                 : fallbackCounter;
     }
 
-    // ROM: sonic3k.asm:58343-58353
+    // ROM: sonic3k.asm:58383-58393
     private void applyInitTimingCheck(int levelFrameCounter) {
         int masked = (levelFrameCounter + phaseOffset) & periodMask;
         if (masked == 0) return;
@@ -115,7 +115,7 @@ public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
             applyInitTimingCheck(levelFrameCounter);
         }
 
-        // ROM: sonic3k.asm:58358-58368
+        // ROM: sonic3k.asm:58398-58408
         int masked = (levelFrameCounter + phaseOffset) & periodMask;
         if (masked == 0) {
             animIndex = 1;
@@ -131,7 +131,7 @@ public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
         // ROM: jsr (Animate_SpriteIrregularDelay).l
         updateIrregularAnimation();
 
-        // ROM: sonic3k.asm:58373-58389 — spawn child at frame 5
+        // ROM: sonic3k.asm:58413-58429 — spawn child at frame 5
         if (mappingFrame == 5 && !childSpawned) {
             childSpawned = true;
             spawnChild(() -> new BorderChild(
@@ -194,7 +194,7 @@ public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
      * visual (Map_AIZDisappearingFloor2). Moved off-screen when the parent
      * reaches frame 3.
      * <p>
-     * ROM references: loc_2A36C (sonic3k.asm:58395-58414).
+     * ROM references: loc_2A36C (sonic3k.asm:58435-58454).
      */
     static class BorderChild extends AbstractObjectInstance
             implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
@@ -203,11 +203,11 @@ public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
          * Word 0 of this object's S3K SST holds its live ROM code pointer.
          * ROM {@code Obj_AIZDisappearingFloor} is installed from the S3K object pointer table at
          * {@code $0002A252} (table read from the user-supplied ROM; the
-         * label is defined at docs/skdisasm/sonic3k.asm:58325).
+         * label is defined at docs/skdisasm/sonic3k.asm:58365).
          * Its whole code block lies in one bank, so the HIGH word that
          * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
          * on the next off-screen on-object frame is {@code $0002}
-         * (docs/skdisasm/sonic3k.asm:26816-26843).
+         * (docs/skdisasm/sonic3k.asm:26856-26883).
          */
         @Override
         public int romObjectCodePointerHighWord() {
@@ -251,10 +251,10 @@ public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
 
         @Override
         public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
-            // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41611-41621) re-reads
+            // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41651-41661) re-reads
             // width_pixels(a0) for the landing X gate. The border child is
-            // spawned with width_pixels = $28 (sonic3k.asm:58390) while its
-            // solid call passes d1 = $2B (sonic3k.asm:58413-58418), so the
+            // spawned with width_pixels = $28 (sonic3k.asm:58430) while its
+            // solid call passes d1 = $2B (sonic3k.asm:58453-58458), so the
             // default d1 - $B = $20 heuristic is 8px too narrow.
             return 0x28;
         }

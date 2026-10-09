@@ -104,7 +104,7 @@ public final class Sonic3kSpecialStageConstants {
     /**
      * 8-way direction offsets for sphere-to-ring conversion.
      * Grid index deltas for all 8 neighbors (NW,N,NE,W,E,SW,S,SE).
-     * From SStage_8_Directions (sonic3k.asm:13216).
+     * From SStage_8_Directions (sonic3k.asm:13252).
      */
     public static final int[] DIRECTIONS_8 = {
             -0x21, -0x20, -0x1F,
@@ -115,7 +115,7 @@ public final class Sonic3kSpecialStageConstants {
     /**
      * 4-way direction offsets for DFS loop detection.
      * Left, Up, Right, Down, Left, Up (with wraparound entries).
-     * From SStage_4_Directions (sonic3k.asm:13225).
+     * From SStage_4_Directions (sonic3k.asm:13261).
      */
     public static final int[] DIRECTIONS_4 = {
             -1, -0x20, 1, 0x20, -1, -0x20
@@ -124,7 +124,7 @@ public final class Sonic3kSpecialStageConstants {
     /**
      * Grid traversal direction tables for perspective rendering.
      * 4 quadrants (one per 90-degree angle range), each with 6 words.
-     * From word_98B0 (sonic3k.asm:12229).
+     * From word_98B0 (sonic3k.asm:12265).
      * Each entry: [col_base, row_start, col_step, col_mask, row_step, row_mask]
      */
     public static final int[][] PERSPECTIVE_DIRECTION_TABLES = {
@@ -138,7 +138,7 @@ public final class Sonic3kSpecialStageConstants {
 
     /**
      * Walking animation frame sequence (12 frames, looping).
-     * From byte_91E8 (sonic3k.asm:11592).
+     * From byte_91E8 (sonic3k.asm:11628).
      */
     public static final int[] ANIM_WALKING = {
             2, 6, 7, 8, 7, 6, 2, 3, 4, 5, 4, 3, 1, 0
@@ -146,7 +146,7 @@ public final class Sonic3kSpecialStageConstants {
 
     /**
      * P1 jumping animation frame sequence.
-     * From byte_91F6 (sonic3k.asm:11594).
+     * From byte_91F6 (sonic3k.asm:11630).
      */
     public static final int[] ANIM_JUMP_P1 = {
             9, 0xB, 0xA, 0xB, 9, 0xB, 0xA, 0xB, 9, 0xB, 0xA, 0xB, 0xB, 0
@@ -154,7 +154,7 @@ public final class Sonic3kSpecialStageConstants {
 
     /**
      * P2 (Tails) jumping animation frame sequence.
-     * From byte_9204 (sonic3k.asm:11596).
+     * From byte_9204 (sonic3k.asm:11632).
      */
     public static final int[] ANIM_JUMP_P2 = {
             9, 0xA, 0xB, 9, 0xA, 0xB, 9, 0xA, 0xB, 9, 0xA, 0xB, 0xB, 0
@@ -176,7 +176,7 @@ public final class Sonic3kSpecialStageConstants {
     public static final int BLUE_SPHERE_ANIM_TIMER = 9;
     /**
      * Ring animation cell sequence. Cell values cycle through these before clearing.
-     * From byte_9E2E (sonic3k.asm:12801).
+     * From byte_9E2E (sonic3k.asm:12837).
      */
     public static final int[] RING_ANIM_CELLS = { 6, 7, 8, 9, 0 };
 
@@ -232,7 +232,7 @@ public final class Sonic3kSpecialStageConstants {
     public static final int SHADOW_P2_X = 0x110;
 
     // ==================== Art Tile Bases ====================
-    // From sonic3k.constants.asm:1097-1107
+    // From sonic3k.constants.asm:1122-1132
 
     public static final int ART_TILE_GET_BLUE_SPHERES = 0x055F;
     public static final int ART_TILE_ICONS = 0x0589;
@@ -250,7 +250,7 @@ public final class Sonic3kSpecialStageConstants {
     /**
      * Number of sprite type entries in the MapPtr_A10A table.
      * Each entry is 8 bytes: mapping pointer (4), art_tile (2), flags (2).
-     * From MapPtr_A10A (sonic3k.asm:13255).
+     * From MapPtr_A10A (sonic3k.asm:13291).
      */
     public static final int SPRITE_TYPE_COUNT = 14;
 

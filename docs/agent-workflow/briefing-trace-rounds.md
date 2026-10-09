@@ -3339,7 +3339,7 @@ Three questions, in order; a "no" at any one ends it:
 2. In the ROM, is the write site reached **after** that object's dispatch already read its
    selector this frame? **This reduces to a single lookup, with no reasoning about slot order.**
    `TouchResponse` runs from the *player's own* control routine — `Sonic_Control` /
-   `Tails_Control` / `Knuckles_Control` (`sonic3k.asm:21947, :26159, :30389`) and from Sonic's
+   `Tails_Control` / `Knuckles_Control` (`sonic3k.asm:21983, :26199, :30429`) and from Sonic's
    and Tails' object code in S2 (`s2.asm:38998`) — and the players run before the object slots,
    so a `Touch_Response` write **always** lands before the touched object's own dispatch, in all
    three games. So: find where the ROM writes the selector. Inside `Touch_Response` /
@@ -3363,9 +3363,9 @@ child already ran is not a property of the write site at all.
    construction, so **not a member**. Before → **member**.
 
 **And Q4 is not always answerable by reading.** Slot order is the allocator's:
-`AllocateObjectAfterCurrent` (`s2.asm:33705-33724`, `sonic3k.asm:37917-37930`) scans forward from
+`AllocateObjectAfterCurrent` (`s2.asm:33705-33724`, `sonic3k.asm:37957-37970`) scans forward from
 `a0` and is therefore *always after* the parent — settled by reading. Plain `AllocateObject`
-(`s2.asm:33681-33695`, `sonic3k.asm:37911-37914`) scans from the start of the dynamic table for
+(`s2.asm:33681-33695`, `sonic3k.asm:37951-37954`) scans from the start of the dynamic table for
 the first free slot, so the child may land before *or* after depending on live occupancy.
 For those children **membership is a runtime property that reading cannot settle**, and it can
 differ between two runs of the same object. That is strictly harder than the same-object
@@ -3375,7 +3375,7 @@ population, where reading always settles it.
 true cross-object install, which resolves to a non-member by reading (S2's `LoadChildObject` calls
 `AllocateObjectAfterCurrent`, `s2.asm:73012-73014`). No level-event manager writes an object's
 selector. Nine of S3K's ten `CreateChild*` helpers use `AllocateObjectAfterCurrent`; the exception
-is `CreateChild7_Normal2` (`sonic3k.asm:177145-177175`), plain `AllocateObject`, whose four call
+is `CreateChild7_Normal2` (`sonic3k.asm:177236-177266`), plain `AllocateObject`, whose four call
 sites include `HCZEndBossBomb_ResetOrSpawn` (`:141453`) — inside the AIZ→HCZ slice and **not yet
 implemented**. That is a constraint to hand the implementer, not a defect to fix.
 
@@ -3444,7 +3444,7 @@ than an obviously broken probe. It was caught only by going to read *why* a resu
 instead of banking it.
 
 **Related, on scope:** the same batch settled its ROM half from **one routine per game**
-(`Touch_Enemy`'s boss path, `sonic3k.asm:20908-20925`; `Touch_Enemy_Part2`, `s2.asm:85373-85382`)
+(`Touch_Enemy`'s boss path, `sonic3k.asm:20944-20961`; `Touch_Enemy_Part2`, `s2.asm:85373-85382`)
 rather than nine readings — neither writes a routine, so the install is in each boss's own
 dispatch. Same fingerprint, same lever, one reading. But the engine half reached only 1 of 9: the
 rest are blocked on **fixture depth, not analysis** — objects no trace reaches, needing real level
@@ -3675,7 +3675,7 @@ itself is corrected — without treating the revival as evidence.
 ## One hundred and twentieth rule: "does the engine model this ROM behaviour" is a per-branch question
 
 `SpawnLevelMainSprites_SpawnPlayers` contains **two** `addi.w #4,y_pos` writes on **two branches**
-— one on the Player_2 arm (Tails as sidekick, `sonic3k.asm:8367`) and one on the Player_mode == 2
+— one on the Player_2 arm (Tails as sidekick, `sonic3k.asm:8399`) and one on the Player_mode == 2
 arm (Tails as Player 1, `:8388`). The engine implemented the first, and its comment cites the
 routine by name.
 

@@ -104,7 +104,7 @@ public final class HPZMasterEmeraldObjectInstance extends AbstractObjectInstance
         if (!paletteCycleDelayWritten) {
             paletteCycleDelayWritten = true;
             // Obj_HPZMasterEmerald init: move.w #8000-1,(Palette_cycle_counter1).w
-            // (sonic3k.asm:197497) holds AnPal_HPZ off while the altar owns line 4.
+            // (sonic3k.asm:197604) holds AnPal_HPZ off while the altar owns line 4.
             var registry = services().zoneRuntimeRegistry();
             if (registry != null) {
                 S3kRuntimeStates.currentHpz(registry)

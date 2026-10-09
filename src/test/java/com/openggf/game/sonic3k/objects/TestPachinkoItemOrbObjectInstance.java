@@ -49,8 +49,8 @@ class TestPachinkoItemOrbObjectInstance {
     }
 
     /**
-     * ROM sonic3k.asm:96777-96786 (loc_4A218) arms the orb on touch but does not convert the
-     * same pass, and sonic3k.asm:96789-96791 (loc_4A238 -&gt; loc_4A274) re-checks
+     * ROM sonic3k.asm:96823-96832 (loc_4A218) arms the orb on touch but does not convert the
+     * same pass, and sonic3k.asm:96835-96837 (loc_4A238 -&gt; loc_4A274) re-checks
      * collision_property next pass and stays armed for as long as the touch persists — the orb
      * only converts once a pass resolves with the touch signal clear (contact released).
      */

@@ -24,8 +24,8 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     // Status_Push without replacing the public raw animation byte.
     private boolean pushUsesWalkSpecialHandler;
     // Reload-timer shift for the $FF Walk handler's push sub-branch:
-    // ROM Animate_Sonic/loc_12A72 uses lsr.w #6 (sonic3k.asm:25193), while
-    // Animate_Knuckles/loc_17ECC uses lsr.w #8 (sonic3k.asm:33216). Defaults
+    // ROM Animate_Sonic/loc_12A72 uses lsr.w #6 (sonic3k.asm:25233), while
+    // Animate_Knuckles/loc_17ECC uses lsr.w #8 (sonic3k.asm:33256). Defaults
     // to 6 so existing Sonic/Tails/S2 profiles are unaffected.
     private int pushDelayShift = 6;
     // S3K's Player_ChkWalk clears Duck before its no-input preservation tail;
@@ -59,7 +59,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     // offset (subq.b #1,d0 at s2.asm:38080). S1 does not do this.
     private boolean anglePreAdjust;
     // S2 Super Run uses compact slope layout (lsr.b #1,d0 = d0/2), while S3K Super Run
-    // uses standard run spacing (add.b d0,d0 = d0*2). ROM: s2.asm:38159 vs s3.asm:22323.
+    // uses standard run spacing (add.b d0,d0 = d0*2). ROM: s2.asm:38159 vs s3.asm:22378.
     private boolean compactSuperRunSlope;
     // Some native character handlers publish the current walk/run mapping
     // before advancing their frame timer; others gate the mapping write first.
@@ -74,7 +74,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
     private int runSlopeFrameStride;
     private int highSpeedSlopeFrameStride;
     private boolean doubleWalkRunAnimationSpeedWhenSliding;
-    // Tumble/rotation frame base: S2 = 0x5F (s2.asm:38216), S3K = 0x31 (sonic3k.asm:24955).
+    // Tumble/rotation frame base: S2 = 0x5F (s2.asm:38216), S3K = 0x31 (sonic3k.asm:24995).
     private int tumbleFrameBase = 0x5F;
     // Optional native flip_type-indexed tumble bases. S3K uses
     // byte_1286E={0,$3D,$49,$49} for types 0-3.
@@ -220,7 +220,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // movement routines, so they cannot overwrite anim. Bit 7 alone only
         // suppresses touch response: scripted input may still drive ordinary
         // movement and publish animations (CNZ2's rival-Knuckles walk uses
-        // object_control=$80 with Ctrl_1_locked; sonic3k.asm:129247-129294).
+        // object_control=$80 with Ctrl_1_locked; sonic3k.asm:129304-129351).
         if (sprite.isObjectControlSuppressesMovement()) {
             return null;
         }
@@ -229,7 +229,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // persist for the duration of the lock. S3K is the exception for Duck:
         // SonicKnux_Roll/Tails_Roll runs after the move_lock-gated Move routine and
         // writes anim=$08 independently when Down is held below the $100 roll
-        // threshold (sonic3k.asm:22434-22435,23223-23240,27796-27797,28458-28475).
+        // threshold (sonic3k.asm:22469-22470,23258-23275,27836-27837,28498-28515).
         boolean rollCrouchWriteAfterMoveLock = !sprite.isCpuControlled()
                 && sprite.getCrouching()
                 && sprite.getGameRules() != null
@@ -244,7 +244,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // the movement dispatch result rather than interpreting the final zero
         // timer as an unlocked movement frame (S1 01 Sonic.asm:385-388,
         // 1405-1434; S2 s2.asm:36423-36429,37458-37479; S3K
-        // sonic3k.asm:21619-21623,23909-23948).
+        // sonic3k.asm:21655-21659,23949-23988).
         if (sprite.getAnimationManager() != null
                 && sprite.getAnimationManager().isGroundMovementAnimationSuppressed()
                 && !rollCrouchWriteAfterMoveLock) {
@@ -281,7 +281,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // Hurt state uses separate hurt animation (animation 0x19).
         //
         // The native hurt animation is a ONE-SHOT byte write on HurtCharacter's
-        // common tail (`move.b #$1A,anim(a0)`, sonic3k.asm:21321; equivalents in
+        // common tail (`move.b #$1A,anim(a0)`, sonic3k.asm:21357; equivalents in
         // s1disasm/_incObj/01 Sonic.asm and s2.asm). The hurt ROUTINE that runs on
         // the following frames -- S3K loc_1569C, S1 Sonic_Hurt, S2 Obj01_Hurt --
         // never rewrites anim, so any later owner that stores the byte during the
@@ -297,7 +297,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         }
         // Tails_FlyingSwimming calls Tails_Set_Flying_Animation every frame and
         // writes anim $20-$28 before the shared animation routine runs
-        // (sonic3k.asm:27570-27717). Preserve that ROM-owned anim byte instead
+        // (sonic3k.asm:27610-27757). Preserve that ROM-owned anim byte instead
         // of replacing it with the generic airborne walk/roll selection. CPU
         // recovery already reaches the same result through forcedAnimationId;
         // this branch covers player-controlled flight and swimming.
@@ -384,7 +384,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 // write obAnim. Preserve whatever explicit owner was active
                 // (normally Roll, but LZWaterSlides may have published Slide)
                 // throughout that airborne arc (S1 01 Sonic.asm:1203-1274;
-                // S2 s2.asm:37318-37397; S3K sonic3k.asm:23303-23363).
+                // S2 s2.asm:37318-37397; S3K sonic3k.asm:23338-23398).
                 if (sprite.getRollingJump()) {
                     return null;
                 }
@@ -406,7 +406,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 // before AnglePos detaches the player. In S3K, Tails_Roll
                 // publishes Duck after Tails_InputAcceleration_Path; neither
                 // the detach nor the following airborne routine overwrites it
-                // (sonic3k.asm:27518-27531,28458-28513). Keep that later write
+                // (sonic3k.asm:27558-27571,28498-28553). Keep that later write
                 // instead of reconstructing the earlier Walk value.
                 if (duckAnimId >= 0 && sprite.getAnimationId() == duckAnimId) {
                     return null;
@@ -469,7 +469,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // the recovered player now has zero inertia. The frame-start snapshot
         // clears this semantic marker before the next normal-control frame
         // (S1 01 Sonic.asm:1901-1908,1941-1951; S2 s2.asm:38187-38226,
-        // 41074-41114; S3K sonic3k.asm:24463-24506,29208-29251).
+        // 41074-41114; S3K sonic3k.asm:24503-24546,29248-29291).
         if (sprite.getHurtRecoveryCompletedThisFrame()
                 || (sprite.getHurtAtFrameStart() && !sprite.isHurt())) {
             return walkAnimId;
@@ -482,7 +482,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // resumes on the next frame. HurtStop and rolling landings publish Walk
         // explicitly and therefore take priority over this ordinary path (S1
         // 01 Sonic.asm:1527-1547,1839-1864,1901-1908; S2 s2.asm:
-        // 37464-37504,37744-37774; S3K sonic3k.asm:24046-24103,24325-24359).
+        // 37464-37504,37744-37774; S3K sonic3k.asm:24086-24143,24365-24399).
         if (sprite.getAirAtFrameStart() && !sprite.getAir()) {
             return null;
         }
@@ -495,7 +495,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // write Walk, but opposite-direction braking does not. If braking reaches
         // zero, the enclosing Move routine then writes Wait even though the button
         // remains held (S1 Objects/Sonic.asm:284-310,480-567; S2 s2.asm:
-        // 36558-36577,36880-36999; S3K sonic3k.asm:22787-22918).
+        // 36558-36577,36880-36999; S3K sonic3k.asm:22822-22953).
         // Roll-stop likewise writes Wait directly before Animate runs (S1
         // Objects/Sonic.asm:573-623; S2 s2.asm:37009-37062; S3K sonic3k.asm:
         // 22924-22994,28169-28239).
@@ -521,7 +521,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             // frame leaves Duck intact, so releasing Down changes it to Walk.
             // At zero inertia Move has already replaced Duck with Wait, and
             // the later comparison therefore performs no write
-            // (sonic3k.asm:23247-23265,28458-28482).
+            // (sonic3k.asm:23282-23300,28498-28522).
             if (duckReleasePublishesWalk && !sprite.getCrouching() && duckAnimId >= 0
                     && sprite.getAnimationId() == duckAnimId) {
                 return walkAnimId;
@@ -533,7 +533,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         // selects SonAni_Run from inertia >= $600 instead
         // (docs/s1disasm/_incObj/01 Sonic.asm:634-658,704-722,2253-2315).
         // S2 and S3K use the same split (s2.asm:36880-36962,38473-38503;
-        // sonic3k.asm:22792-22877,24833-24879). Preserve a distinct Run script
+        // sonic3k.asm:22827-22912,24873-24919). Preserve a distinct Run script
         // for rendering while exposing the ROM-accurate raw animation id.
         if (speed >= runSpeedThreshold) {
             return runFramesUseWalkAnimationId ? walkAnimId : runAnimId;

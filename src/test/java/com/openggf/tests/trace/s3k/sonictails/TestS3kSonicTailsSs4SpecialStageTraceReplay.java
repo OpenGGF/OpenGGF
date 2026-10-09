@@ -15,7 +15,7 @@ import java.nio.file.Path;
  * this third S3K route diverged. It now replays clean over its full row count:
  * the divergence was the special stage's grid-cell check running after the
  * jump physics rather than at its ROM position inside the movement routine
- * sub_9580 (sonic3k.asm:11467, gate at 12074-12078), which consumed a
+ * sub_9580 (sonic3k.asm:11503, gate at 12074-12078), which consumed a
  * jump-landed blue sphere one frame early. Nothing was weakened,
  * tolerance-fitted or trimmed to reach the green; see
  * {@code docs/status/trace-frontier-log.md}.

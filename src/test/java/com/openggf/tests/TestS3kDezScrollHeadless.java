@@ -18,13 +18,13 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 /**
  * Sonic 3 &amp; Knuckles Death Egg acts 1 and 2 background scroll.
  *
- * <p>{@code DEZ1_BackgroundInit} and {@code DEZ2_BackgroundInit} (sonic3k.asm:118641 and
- * :118770) both do {@code clr.w (Camera_X_pos_BG_copy).w} / {@code clr.w (Camera_Y_pos_BG_copy).w}
- * and then run {@code PlainDeformation} (:103598), which reads those two words and never writes
+ * <p>{@code DEZ1_BackgroundInit} and {@code DEZ2_BackgroundInit} (sonic3k.asm:118687 and
+ * :118816) both do {@code clr.w (Camera_X_pos_BG_copy).w} / {@code clr.w (Camera_Y_pos_BG_copy).w}
+ * and then run {@code PlainDeformation} (:103644), which reads those two words and never writes
  * them. Nothing else in the game writes them either — they are only ever set by a zone's own
  * deformation routine — so for the whole of both acts the background horizontal scroll word is 0
  * and {@code V_scroll_value_BG} (written from {@code Camera_Y_pos_BG_copy} at the end of
- * {@code ScreenEvents}, :102254) is 0. The Death Egg background does not move.
+ * {@code ScreenEvents}, :102300) is 0. The Death Egg background does not move.
  *
  * <p>The foreground word is {@code PlainDeformation}'s {@code -Camera_X_pos_copy} on every one of
  * the 224 visible lines.

@@ -24,7 +24,7 @@ The disassembly separates three responsibilities:
 3. The rebased `Obj_TitleCardInit` queues Red Act, S3K zone text, Act 2, and AIZ
    title art on its next object dispatch.
 
-Relevant source is `sonic3k.asm:62108-62166`, `62684-62725`, and
+Relevant source is `sonic3k.asm:62148-62206`, `62684-62725`, and
 `180361-180424`.
 
 ## Current mismatch

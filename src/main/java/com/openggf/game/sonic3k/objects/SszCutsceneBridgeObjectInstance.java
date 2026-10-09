@@ -22,7 +22,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code Obj_SSZCutsceneBridge} ({@code $77}, sonic3k.asm:90405-90470): the bridge at
+ * ROM {@code Obj_SSZCutsceneBridge} ({@code $77}, sonic3k.asm:90451-90516): the bridge at
  * {@code ($320,$C88)} that extends when cutscene Knuckles hits the button.
  *
  * <p>Init records the placement X in {@code $12(a0)} and sets {@code $2E = $C0}, the offset added

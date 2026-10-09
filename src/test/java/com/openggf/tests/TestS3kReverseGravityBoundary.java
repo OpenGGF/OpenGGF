@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The death plane moves to the top of the level while the S3K
  * {@code Reverse_gravity_flag} ($FFFFF7C6) is set.
  *
- * <p>{@code Player_Boundary_CheckBottom} (sonic3k.asm:23188-23206) tests the flag after
+ * <p>{@code Player_Boundary_CheckBottom} (sonic3k.asm:23223-23241) tests the flag after
  * {@code Disable_death_plane} and branches to {@code loc_11722}, which is
  * {@code move.w (Camera_min_Y_pos).w,d0 / cmp.w y_pos(a0),d0 / blt.s <alive>}: the
  * player survives while {@code Camera_min_Y_pos &lt; y_pos} and is killed at or above it.
@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code Camera_max_Y_pos + $E0} has no counterpart.
  *
  * <p>{@code Tails_Check_Screen_Boundaries} {@code loc_14F30}/{@code loc_14F4C}
- * (:28423-28441) is the same code for the sidekick, which is why the engine's single
+ * (:28463-28481) is the same code for the sidekick, which is why the engine's single
  * shared boundary owner covers both ROM rows.
  */
 @RequiresRom(SonicGame.SONIC_3K)
@@ -65,10 +65,10 @@ class TestS3kReverseGravityBoundary {
     }
 
     /**
-     * {@code sub_12318} (sonic3k.asm:24471-24491) is the hurt routine's own kill test,
+     * {@code sub_12318} (sonic3k.asm:24511-24531) is the hurt routine's own kill test,
      * run before it hands off to the terrain pass. Under the flag it branches to
      * {@code loc_12336} and reads {@code Camera_min_Y_pos} with no {@code $E0} offset;
-     * {@code sub_15716} (:29220) and {@code sub_17C10} (:32911) are the Tails and
+     * {@code sub_15716} (:29260) and {@code sub_17C10} (:32951) are the Tails and
      * Knuckles copies.
      *
      * <p><strong>This pair asserts the outcome, not the owner.</strong> Measured
@@ -123,7 +123,7 @@ class TestS3kReverseGravityBoundary {
     }
 
     /**
-     * {@code loc_123DE} (sonic3k.asm:24549-24560) is the <em>dead</em> player's own
+     * {@code loc_123DE} (sonic3k.asm:24589-24600) is the <em>dead</em> player's own
      * off-screen test, the one that spends the life and restarts the act. Upright it is
      * {@code addi.w #$100,d0 / cmp.w y_pos(a0),d0 / bge locret}: the restart waits until
      * the corpse has fallen {@code $100} <em>below</em> {@code Camera_Y_pos}. Under the

@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Plan-vs-ROM divergence note: the plan text for T6 describes
  * "routine C = Lower2" and "routine E = End", but the ROM dispatch
- * table at {@code CNZMiniboss_Index} (sonic3k.asm:144874-144882)
+ * table at {@code CNZMiniboss_Index} (sonic3k.asm:144939-144947)
  * places {@code Obj_CNZMinibossClosing} at slot C (144968) and
  * {@code Obj_CNZMinibossLower2} at slot E (144972). {@code
  * Obj_CNZMinibossEnd} (144984) is not in the dispatch table at all;

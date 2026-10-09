@@ -391,7 +391,7 @@ public class DrowningController {
      * Restarts the music the player should hear now that the countdown is over.
      *
      * <p>Which track that is belongs to the game. S3K's
-     * {@code Player_ResetAirTimer} (sonic3k.asm:33663-33686) loads the level
+     * {@code Player_ResetAirTimer} (sonic3k.asm:33703-33726) loads the level
      * track and then overrides it for an invincible player, a Super or Hyper
      * player, and a boss fight; S1 and S2 keep the level track. The choice is
      * made by the active audio profile, which already owns the music ids, so
@@ -416,7 +416,7 @@ public class DrowningController {
         audioManager.playMusic(musicId);
     }
 
-    /** ROM: {@code tst.b (Boss_flag).w} at sonic3k.asm:33681. */
+    /** ROM: {@code tst.b (Boss_flag).w} at sonic3k.asm:33721. */
     private boolean bossOwnsMusic() {
         return PlayableSpriteRuntimeServices.levelEventsOrNull()
                 instanceof AbstractLevelEventManager events

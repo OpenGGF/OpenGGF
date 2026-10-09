@@ -12,9 +12,9 @@ seed were therefore correct. Call ownership and dispatch order differed.
 
 S3K `Obj_Explosion` allocates an `Obj_Animal` SST and copies its position and
 points value without consuming RNG
-(`docs/skdisasm/sonic3k.asm:42164-42175`). The subtype-zero animal consumes one
+(`docs/skdisasm/sonic3k.asm:42204-42215`). The subtype-zero animal consumes one
 `Random_Number` result only when its own SST reaches `loc_2C924`
-(`docs/skdisasm/sonic3k.asm:61049-61055`). S2 has the same ownership split in
+(`docs/skdisasm/sonic3k.asm:61089-61095`). S2 has the same ownership split in
 `Obj27_InitWithAnimal` and `Obj28_InitRandom`.
 
 The engine's S3K destruction configuration previously used

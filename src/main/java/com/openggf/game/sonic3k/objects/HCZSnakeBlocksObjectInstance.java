@@ -19,7 +19,7 @@ import java.util.List;
 /**
  * Object 0x67 - HCZ Snake Blocks (Hydrocity Zone Act 2).
  *
- * <p>ROM: Obj_HCZSnakeBlocks (sonic3k.asm:50869-50996).
+ * <p>ROM: Obj_HCZSnakeBlocks (sonic3k.asm:50909-51036).
  *
  * <p>A solid 32x32 block that moves along a 128x128 pixel square path centered
  * on its spawn position. The path is divided into 4 quadrants; within each
@@ -41,11 +41,11 @@ public class HCZSnakeBlocksObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_HCZSnakeBlocks} is installed from the S3K object pointer table at
      * {@code $000256BE} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:50874).
+     * label is defined at docs/skdisasm/sonic3k.asm:50914).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0002}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -221,7 +221,7 @@ public class HCZSnakeBlocksObjectInstance extends AbstractObjectInstance
         // loc_25724 moves the block first, then loads the updated x_pos into
         // d4 immediately before SolidObjectFull. The continued-ride path copies
         // d4 to d2, and MvSonicOnPtfm subtracts that same current x_pos, so the
-        // horizontal carry delta is zero (sonic3k.asm:50893-50910,
+        // horizontal carry delta is zero (sonic3k.asm:50933-50950,
         // 41016-41042,41642-41679).
         return false;
     }

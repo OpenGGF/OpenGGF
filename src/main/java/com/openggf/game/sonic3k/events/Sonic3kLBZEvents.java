@@ -46,7 +46,7 @@ import java.util.Optional;
  * Launch Base Zone dynamic level events.
  *
  * <p>ROM: {@code LBZ1_ScreenEvent} / {@code LBZ1_CheckLayoutMod}
- * (docs/skdisasm/s3.asm:74713-75083). LBZ1's "interior reveal" spaces are
+ * (docs/skdisasm/s3.asm:74769-75139). LBZ1's "interior reveal" spaces are
  * foreground layout copies: entering one of four player rectangles copies
  * chunk-index bytes from hidden staging rows into the visible foreground
  * layout, and leaving the matching exit X range restores the covered variant.
@@ -1076,7 +1076,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             deathEggTerrainArtOrdinal = deathEggTerrainArtHandle.ordinal();
             // LBZ2_Resize queues the one-module Death Egg 2 art immediately
             // after the terrain KosM parent, so it remains behind that parent
-            // in the native module FIFO (sonic3k.asm:39529-39543).
+            // in the native module FIFO (sonic3k.asm:39569-39583).
             queueDeathEggLaunchArt();
         } catch (IOException e) {
             throw new IllegalStateException(

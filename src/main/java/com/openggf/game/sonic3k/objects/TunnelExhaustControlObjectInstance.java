@@ -16,7 +16,7 @@ import java.util.List;
  * LBZ tunnel exhaust controller.
  *
  * <p>ROM reference: {@code Obj_TunnelExhaustControl}
- * ({@code sonic3k.asm:57461-57572}). The control object emits a small sprite
+ * ({@code sonic3k.asm:57501-57612}). The control object emits a small sprite
  * every four frames for 60 frames, then moves itself off-screen.
  *
  * <p>The emitted sprite depends on the act ({@code loc_298F4}): act 1 runs

@@ -11,10 +11,10 @@
 **Tech Stack:** Java 21, JUnit 5 / Jupiter only, no new dependencies.
 
 **ROM References:**
-- `Obj_BossExplosionSpecial` (sonic3k.asm:176812) — explosion controller
-- `Obj_BossExpControl2` (sonic3k.asm:176792) — spawns children every 2 frames
-- `Obj_BossExplosion2` (sonic3k.asm:176840) — individual explosion with `sfx_Explode` (0xB4)
-- `CreateBossExp02` (sonic3k.asm:176703) — timer=$28, range=±$80, routine set $18
+- `Obj_BossExplosionSpecial` (sonic3k.asm:176903) — explosion controller
+- `Obj_BossExpControl2` (sonic3k.asm:176883) — spawns children every 2 frames
+- `Obj_BossExplosion2` (sonic3k.asm:176931) — individual explosion with `sfx_Explode` (0xB4)
+- `CreateBossExp02` (sonic3k.asm:176794) — timer=$28, range=±$80, routine set $18
 - `AIZTrans_WavyFlame` (Screen Events.asm:702-729) — VDP Vscroll-based fire wave
 - `AIZ_FlameVScroll` (Screen Events.asm:740) — wave amplitude table (max -15px)
 
@@ -111,7 +111,7 @@ Expected: FAIL — class not found
 
 - [ ] **Step 3: Implement S3kBossExplosionController**
 
-ROM logic from `Obj_CreateBossExplosion` (sonic3k.asm:176654-176718) + `Obj_BossExpControl2` (176792-176809):
+ROM logic from `Obj_CreateBossExplosion` (sonic3k.asm:176745-176809) + `Obj_BossExpControl2` (176792-176809):
 
 ```java
 package com.openggf.game.sonic3k.objects;
@@ -182,7 +182,7 @@ public class S3kBossExplosionController {
     }
 
     private void spawnExplosionChild() {
-        // ROM: sub_83E84 random offset calculation (sonic3k.asm:176745-176768)
+        // ROM: sub_83E84 random offset calculation (sonic3k.asm:176836-176859)
         // Uses bitmask: andi.w #(range*2-1),d0 then sub range
         int random = ThreadLocalRandom.current().nextInt(0x10000);
         int xMask = (xRange * 2) - 1;
@@ -217,7 +217,7 @@ git commit -m "feat(s3k): add S3K boss explosion controller (ROM: Obj_BossExplos
 
 ### Task 2: Create S3kBossExplosionChild
 
-Individual explosion child that plays S3K SFX and animates. ROM: `Obj_BossExplosion2` (sonic3k.asm:176840).
+Individual explosion child that plays S3K SFX and animates. ROM: `Obj_BossExplosion2` (sonic3k.asm:176931).
 
 **Files:**
 - Create: `src/main/java/com/openggf/game/sonic3k/objects/S3kBossExplosionChild.java`
@@ -244,7 +244,7 @@ import java.util.List;
  * S3K boss explosion child (ROM: Obj_BossExplosion2).
  * Plays sfx_Explode (0xB4) on init, animates through AniRaw_BossExplosion frames.
  *
- * ROM animation (sonic3k.asm:176871 AniRaw_BossExplosion):
+ * ROM animation (sonic3k.asm:176962 AniRaw_BossExplosion):
  *   0, 0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 4, $F4
  * Uses ArtTile_BossExplosion2 (palette 0, priority 1).
  */

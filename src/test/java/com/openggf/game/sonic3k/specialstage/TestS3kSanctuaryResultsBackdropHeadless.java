@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Production-level coverage for the Super Emerald results reveal: the $1701 sanctuary rebuilt
  * behind {@link S3kSpecialStageResultsScreen} ({@code SpecialStage_Results},
- * sonic3k.asm:63121-63201) and driven by routines $E-$12 of {@code Obj_SpecialStage_Results}.
+ * sonic3k.asm:63161-63241) and driven by routines $E-$12 of {@code Obj_SpecialStage_Results}.
  *
  * <p>Updates are 1-based loop iterations; with 30 rings the tally ends and routine $E begins
  * on update 862 (see {@code TestS3kSpecialStageResultsReveal}).

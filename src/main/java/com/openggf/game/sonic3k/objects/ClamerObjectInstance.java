@@ -48,10 +48,10 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
 
     /*
      * ROM Clamer spring child collision_flags = $D7 ($C0 | $17), set once at
-     * spawn by word_89136 (sonic3k.asm:185986+) and never modified. Size index
+     * spawn by word_89136 (sonic3k.asm:186079+) and never modified. Size index
      * $17 = 8x8 collision rect. The high $C0 bits would normally decode to
      * BOSS in engine, but $17 is one of the Touch_Special property indices
-     * (sonic3k.asm:21165-21194), so usesS3kTouchSpecialPropertyResponse() = true
+     * (sonic3k.asm:21201-21230), so usesS3kTouchSpecialPropertyResponse() = true
      * routes the rect through SPECIAL with a cprop-style latch. This object
      * exposes the rect with the ROM-correct $D7 flags every frame the spring
      * is "in the response list" -- never widening to $12 (engine-only hack).
@@ -80,7 +80,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     private static final ObjectPlayerParticipationPolicy CPROP_TARGET_PARTICIPATION =
             ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
 
-    /** Routine values from Clamer_Index (sonic3k.asm:185866-185874). */
+    /** Routine values from Clamer_Index (sonic3k.asm:185959-185967). */
     private static final int ROUTINE_IDLE = 0x02;
     private static final int ROUTINE_SNAP_SHUT = 0x04;
     private static final int ROUTINE_AUTO_CLOSE = 0x06;
@@ -106,7 +106,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
 
     /**
      * Spring-child routine state, mirroring the ROM (a0) pointer cycle at
-     * sonic3k.asm:185953-185973. LIVE = loc_890AA (in list, can fire).
+     * sonic3k.asm:186046-186066. LIVE = loc_890AA (in list, can fire).
      * COOLDOWN_DRAIN = loc_890C8 cooldown frame (NOT added to list).
      * COOLDOWN_DONE = engine-only intermediate; (a0)=loc_890AA but slot was
      * NOT in last frame list, so Sonic touch walk skips this slot and any
@@ -123,7 +123,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     private SpringRoutine springRoutine = SpringRoutine.LIVE;
     /**
      * Mirrors ROM {@code collision_property(a0)} byte for the spring child
-     * (sonic3k.asm:21162-21194 + 179904-179924). Each in-range overlap during
+     * (sonic3k.asm:21198-21230 + 179904-179924). Each in-range overlap during
      * {@code Touch_Special} adds:
      * <ul>
      *   <li>+1 when the toucher is Player_1 (Sonic / primary character)
@@ -139,7 +139,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
      * True when {@link #onTouchResponse} fired the spring during this engine
      * frame touch phase. Recorded so the subsequent
      * {@link #advanceSpringRoutine} call still simulates ROM
-     * {@code loc_890C4: jmp Child_DrawTouch_Sprite} (sonic3k.asm:185961-185962)
+     * {@code loc_890C4: jmp Child_DrawTouch_Sprite} (sonic3k.asm:186054-186055)
      * which adds the slot to the response list AFTER the fire branch sets
      * {@code (a0) = loc_890C8}.
      */
@@ -188,7 +188,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         ensureSpringChildSlot();
         lastObservedFrameCounter = vIntRunCount;
 
-        // ROM Clamer_Index dispatch (sonic3k.asm:185860).
+        // ROM Clamer_Index dispatch (sonic3k.asm:185953).
         switch (routine) {
             case ROUTINE_IDLE -> updateIdle(playerEntity);
             case ROUTINE_SNAP_SHUT -> updateSnapShut();
@@ -210,8 +210,8 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
 
     /**
      * Advances the ROM (a0) cycle and the Add_SpriteToCollisionResponseList
-     * timing (sonic3k.asm:185953-185973). Only loc_890AA reaches loc_890C4
-     * which jumps to Child_DrawTouch_Sprite (sonic3k.asm:178048-178053) --
+     * timing (sonic3k.asm:186046-186066). Only loc_890AA reaches loc_890C4
+     * which jumps to Child_DrawTouch_Sprite (sonic3k.asm:178139-178144) --
      * the only path that calls Add_SpriteToCollisionResponseList. The
      * cooldown frame and its tail-call into loc_890D0 both return via plain
      * rts, leaving the slot absent from the list for one frame. This is the
@@ -232,10 +232,10 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
                     // (a0)=loc_890C8 store.
                     springRoutine = SpringRoutine.COOLDOWN_DRAIN;
                 } else if (springCprop != 0) {
-                    // ROM loc_890AA (sonic3k.asm:185953-185962): bsr.w
+                    // ROM loc_890AA (sonic3k.asm:186046-186055): bsr.w
                     // Check_PlayerCollision; beq.s loc_890C4 (no fire branch).
                     // Non-zero collision_property -> Check_PlayerCollision
-                    // (sonic3k.asm:179904-179924) masks bits 0-1, indexes
+                    // (sonic3k.asm:179995-180015) masks bits 0-1, indexes
                     // word_85890 = [P1, P1, P2, P2] to pick the launch target,
                     // then clears the byte. Reached when a latch survived
                     // through cooldown into the post-cooldown LIVE state
@@ -252,7 +252,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
                 addToList = true;
             }
             case COOLDOWN_DRAIN -> {
-                // ROM loc_890C8 (sonic3k.asm:185965-185968): subq.w #1, $2E(a0);
+                // ROM loc_890C8 (sonic3k.asm:186058-186061): subq.w #1, $2E(a0);
                 // bmi.s loc_890D0; rts. Both paths skip Child_DrawTouch_Sprite,
                 // so the slot is NOT added to the list this frame.
                 springRoutine = SpringRoutine.COOLDOWN_DONE;
@@ -287,14 +287,14 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             return;
         }
         // ROM loc_88FDC spawns ChildObjDat_89148 with CreateChild1_Normal
-        // (sonic3k.asm:185875-185879, 185998-186000). The engine keeps the
+        // (sonic3k.asm:185968-185972, 186091-186093). The engine keeps the
         // spring response on the parent for multi-region cprop timing, but
         // the child still has to consume a real SST slot for placement order.
         springChildSlot = spawnChild(() -> new ClamerSpringChild(this));
     }
 
     /**
-     * ROM Check_PlayerCollision (sonic3k.asm:179904-179924):
+     * ROM Check_PlayerCollision (sonic3k.asm:179995-180015):
      * <pre>
      *     move.b  collision_property(a0),d0
      *     beq.s   locret_8588E
@@ -334,7 +334,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     }
 
     private void fireSpring(AbstractPlayableSprite player) {
-        // ROM loc_890AA fire branch (sonic3k.asm:185955-185959):
+        // ROM loc_890AA fire branch (sonic3k.asm:186048-186052):
         //     move.l #loc_890C8, (a0)
         //     bsr.w  sub_890D8           (apply launch velocities)
         //     movea.w parent3(a0), a1
@@ -342,7 +342,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         applySpringLaunch(player);
         springFiredFlag = true;
         if (routine == ROUTINE_AUTO_CLOSE) {
-            // ROM loc_89064 (sonic3k.asm:185930-185942) does not test $38 bit 0;
+            // ROM loc_89064 (sonic3k.asm:186023-186035) does not test $38 bit 0;
             // the auto-close animation and ChildObjDat_89150 projectile spawn
             // continue even if the spring child fires during routine 6.
             return;
@@ -357,7 +357,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM loc_88FEC (sonic3k.asm:185880-185902): idle / auto-close gate.
+     * ROM loc_88FEC (sonic3k.asm:185973-185995): idle / auto-close gate.
      * <pre>
      * loc_88FEC:
      *     btst    #0, $38(a0)             ; spring-fired flag
@@ -384,7 +384,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Find_SonicTails (sonic3k.asm:178243-178277): returns closer of Sonic/Tails
+        // Find_SonicTails (sonic3k.asm:178334-178368): returns closer of Sonic/Tails
         // by abs(dx). d0 = 0 if closer is left of object, 2 if right.
         ClosestPlayer closest = findClosestPlayer(primary);
         if (closest == null) {
@@ -408,7 +408,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             routine = ROUTINE_AUTO_CLOSE;
             mappingFrame = 0;
             // Animate_RawNoSSTMultiDelay increments anim_frame by 2 before
-            // reading byte_89185 (sonic3k.asm:177561-177574). loc_89036 clears
+            // reading byte_89185 (sonic3k.asm:177652-177665). loc_89036 clears
             // anim_frame, so the first routine-6 animation tick leaves frame 0
             // as the already-visible mapping and loads the second table pair.
             autoCloseAnimIndex = 1;
@@ -419,7 +419,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM loc_8904E (sonic3k.asm:185919-185921): snap-shut animation after
+     * ROM loc_8904E (sonic3k.asm:186012-186014): snap-shut animation after
      * spring-child fires. We collapse this onto our local close timer and
      * then return to routine 0x02 via loc_89056.
      */
@@ -434,7 +434,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM loc_89064 (sonic3k.asm:185930-185940): auto-close uses
+     * ROM loc_89064 (sonic3k.asm:186023-186033): auto-close uses
      * Animate_RawNoSSTMultiDelay over byte_89185, and when a frame change sets
      * mapping_frame = 8 it spawns ChildObjDat_89150 through
      * CreateChild5_ComplexAdjusted. The child is a real SST slot
@@ -445,7 +445,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         // Animate_RawNoSSTMultiDelay decrements the unsigned byte timer first;
         // bpl returns while it remains non-negative. When it underflows, the
         // next anim_frame-selected frame/delay pair is loaded
-        // (sonic3k.asm:177561-177574, 185930-185940; byte_89185 at
+        // (sonic3k.asm:177652-177665, 186023-186033; byte_89185 at
         // 186039-186049).
         autoCloseAnimTimer = (autoCloseAnimTimer - 1) & 0xFF;
         if (autoCloseAnimTimer < 0x80) {
@@ -470,7 +470,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             // loc_89064 tests the retained render_flags sign bit, which is set
             // only when the full $14x$10 Clamer render box overlaps the screen.
             // An X-only gate incorrectly fires projectiles from vertically
-            // off-screen Clamers (sonic3k.asm:185930-185942,186052-186058).
+            // off-screen Clamers (sonic3k.asm:186023-186035,186145-186151).
             spawnAutoCloseProjectile();
         }
     }
@@ -486,10 +486,10 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     }
 
     private void spawnAutoCloseProjectile() {
-        // ChildObjDat_89150 (sonic3k.asm:186020-186027):
+        // ChildObjDat_89150 (sonic3k.asm:186113-186120):
         // loc_86D4A child, ObjDat3_8913C, MoveSprite2, offset -$10,+2,
         // x_vel -$200. CreateChild5_ComplexAdjusted flips X offset/velocity
-        // when parent render_flags bit 0 is set (sonic3k.asm:177062-177108).
+        // when parent render_flags bit 0 is set (sonic3k.asm:177153-177199).
         int xOffset = -0x10;
         int xVelocity = -0x200;
         if (facingRight) {
@@ -509,7 +509,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         if (destroyed || waitingForOnscreen) {
             return 0;
         }
-        // ROM loc_89014 (sonic3k.asm:185899-185906) clears collision_flags
+        // ROM loc_89014 (sonic3k.asm:185992-185999) clears collision_flags
         // during the snap-shut animation (routine 0x04). loc_89036 (auto-close)
         // does NOT clear collision_flags, so the parent collision box stays
         // alive while the auto-close anim plays.
@@ -531,10 +531,10 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean usesS3kTouchSpecialPropertyResponse() {
-        // ROM Touch_ChkValue (sonic3k.asm:20773-20778) routes objects with
+        // ROM Touch_ChkValue (sonic3k.asm:20809-20814) routes objects with
         // collision_flags high bits = $C0 to Touch_Special. The spring child
         // uses cflags = $D7 (size $17), which is one of the Touch_Special
-        // property indices (sonic3k.asm:21165-21194). Without this hook the
+        // property indices (sonic3k.asm:21201-21230). Without this hook the
         // engine decoder maps $C0 to BOSS, blocking SPECIAL dispatch.
         return true;
     }
@@ -558,9 +558,9 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         TouchRegion parent = new TouchRegion(currentX, currentY, getCollisionFlags());
         // The spring rect is exposed only when the spring slot was in the
         // ROM Collision_response_list at the end of the previous frame.
-        // ROM Process_Sprites (sonic3k.asm:35965+) runs slot 3
+        // ROM Process_Sprites (sonic3k.asm:36005+) runs slot 3
         // (Reserved_object_3 / Obj_ResetCollisionResponseList,
-        // sonic3k.asm:8467) which clears the list before slots 4+ repopulate
+        // sonic3k.asm:8499) which clears the list before slots 4+ repopulate
         // it, but slot 0 (Sonic) reads the list before the clear. So Sonic
         // touch walk at frame F sees slot 5 last-frame list state -- only
         // present when loc_890AA ran during F-1.
@@ -580,7 +580,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // ROM Touch_Special (sonic3k.asm:21162-21194) increments
+        // ROM Touch_Special (sonic3k.asm:21198-21230) increments
         // collision_property(a1) for size index $17 on every overlap. The
         // increment is +1 for Player_1 (main character) and +2 for Player_2
         // (sidekick), so the byte encodes which character(s) touched this
@@ -598,7 +598,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             // fire branch.
             //
             // ROM Check_PlayerCollision clears the cprop byte before applying
-            // the launch (sonic3k.asm:179907), so we mirror that: a same-frame
+            // the launch (sonic3k.asm:179998), so we mirror that: a same-frame
             // immediate fire CONSUMES the byte rather than latching it. A
             // subsequent same-frame Touch_Special hit (e.g. the OTHER player
             // also touching) will then re-set the byte for the NEXT
@@ -706,7 +706,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * Engine equivalent of ROM Find_SonicTails (sonic3k.asm:178243-178277):
+     * Engine equivalent of ROM Find_SonicTails (sonic3k.asm:178334-178368):
      * picks the closer of Sonic/Tails by abs(dx). Returns closer player and
      * its signed dx (positive when player is right of object).
      */
@@ -787,7 +787,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         private ClamerAutoCloseProjectile(ObjectSpawn spawn, int xVelocity) {
             super(spawn, "ClamerAutoCloseProjectile");
             // loc_86D4A sets ObjDat3_8913C and loc_86D5E runs MoveSprite2
-            // before Sprite_CheckDeleteTouchXY (sonic3k.asm:182257-182265).
+            // before Sprite_CheckDeleteTouchXY (sonic3k.asm:182348-182356).
             this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, xVelocity, 0);
         }
 
@@ -824,7 +824,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             //   y_pos - Camera_Y_pos + $80 < $200 unsigned
             // Camera_X_pos_coarse_back is refreshed by Load_Sprites as
             // (Camera_X_pos - $80) & $FF80 before Process_Sprites
-            // (sonic3k.asm:37545-37553, 179027-179039).
+            // (sonic3k.asm:37585-37593, 179118-179130).
             int xAligned = getX() & 0xFF80;
             int coarseBack = (cameraX - 0x80) & 0xFF80;
             int xDistance = (xAligned - coarseBack) & 0xFFFF;
@@ -870,7 +870,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             // Sprite_CheckDeleteTouchXY tail, not by ObjectManager's generic
             // post-update out_of_range pass. Go_Delete_Sprite keeps the SST
             // slot occupied as a Delete_Current_Sprite marker until the next
-            // ExecuteObjects pass (sonic3k.asm:182263-182266,179027-179039,
+            // ExecuteObjects pass (sonic3k.asm:182354-182357,179118-179130,
             // 179131-179134,36108-36122).
             return true;
         }
@@ -901,7 +901,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         }
 
         // S3KBadnikProjectile_Init runs SetUp_ObjAttributes on ObjDat3_8913C, priority $200
-        // (sonic3k.asm:182264, 186019).
+        // (sonic3k.asm:182355, 186112).
         private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x200);
 
         @Override

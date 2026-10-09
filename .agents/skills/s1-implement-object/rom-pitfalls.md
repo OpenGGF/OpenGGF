@@ -259,7 +259,7 @@ The engine models `locktime`/`move_lock` as `moveLockTimer`, decremented only in
 
 **Rewind note.** Parent-recreated render-only children resolve via `TestRewindCoverageGuard` baseline entries (the recreate path is parent-driven; baseline-entry the child's `#recreate` + `#finalScalar` keys). Precedents: `SpikedBallChain$ChainChild`, `CollapsingLedge$Fragment`.
 
-**Cross-game note.** S2/S3K spawn multi-piece children through `AllocateObject` (lowest-free) / `AllocateObjectAfterCurrent` (after parent) — `docs/s2disasm/s2.asm` and `docs/skdisasm/sonic3k.asm:37911,37917`. Same "real OST slot per piece, count = dbf+1" rule.
+**Cross-game note.** S2/S3K spawn multi-piece children through `AllocateObject` (lowest-free) / `AllocateObjectAfterCurrent` (after parent) — `docs/s2disasm/s2.asm` and `docs/skdisasm/sonic3k.asm:37951,37957`. Same "real OST slot per piece, count = dbf+1" rule.
 
 **Originating commit.** `9f47f557f` (S1 SBZ2 Obj 0x15 swinging-platform chain links — render-only children spawned as real OST slots). Banked: MZ3 ChainStomp `StomperPieceChild`; S1 GHZ Obj 0x17 spiked-pole helix `HelixSpikeChild` (`Hel_Main .loopBuildHelix`, `docs/s1disasm/_incObj/17 GHZ Spiked Pole Helix.asm:46-90` — 16-spike helixes held 1 slot instead of 16, leaving GHZ3's SST 30 slots emptier than ROM, so a hit's `RLoss_Count` found 31 free slots instead of 19 and scattered 12 extra rings; the player re-collected 3 of them and reached `GotThroughAct` with 59 rings against ROM's 56, stretching `Got_Bonus` by 3 frames and softlocking the GHZ3 -> MZ1 boundary). **The tell is a ring count, not a slot field:** the run comparators leave `EngineDiagnostics.rings` at -1, so ring divergence is silent — dump the ROM `slot_dump` against `ObjectManager.occupiedDynamicSlotIds()` and diff the object-id MULTISET; a single id whose count is wildly off (32 vs 2) names the under-allocating multi-piece object immediately.
 
@@ -355,7 +355,7 @@ The engine models `locktime`/`move_lock` as `moveLockTimer`, decremented only in
 
 **ROM citation.** `docs/s1disasm/_incObj/sub SolidObject.asm:167-168` (`cmp.w d3,d0 / bhi.w Solid_NoCollision`).
 
-**Cross-game note.** S2 `SolidObject_cont` (`docs/s2disasm/s2.asm:35353-35354`) and S3K `SolidObject` (`docs/skdisasm/sonic3k.asm:41364-41365`) use the same `cmp.w d3,d0 / bhi` inclusive right edge. Apply `usesInclusiveRightEdge()` for any `SolidObject`-family object in those games too.
+**Cross-game note.** S2 `SolidObject_cont` (`docs/s2disasm/s2.asm:35353-35354`) and S3K `SolidObject` (`docs/skdisasm/sonic3k.asm:41404-41405`) use the same `cmp.w d3,d0 / bhi` inclusive right edge. Apply `usesInclusiveRightEdge()` for any `SolidObject`-family object in those games too.
 
 **Originating commit.** `caf70abb7` (S1 FZ boss uses ROM-inclusive SolidObject right edge for roll-bounce; f837 -> f1724).
 
@@ -726,7 +726,7 @@ move-lock setter; keep any launch marker free of input semantics.
 
 **ROM citation.** docs/s1disasm/_incObj/41 Springs.asm:144. Cross-game: S2 `loc_18B1C` at
 `docs/s2disasm/s2.asm:34031`, S3K `loc_231BE` at
-`docs/skdisasm/sonic3k.asm:47907`, S1 `.doBounce` at
+`docs/skdisasm/sonic3k.asm:47947`, S1 `.doBounce` at
 `docs/s1disasm/_incObj/41 Springs.asm:144`.
 
 **Originating commit.** `<pending: spring grounded control lock milestone>`.

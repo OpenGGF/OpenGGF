@@ -29,7 +29,7 @@ import java.util.List;
  *   <li>4-7: SOZ (torch flames, base 0x40F, palette 2)</li>
  * </ul>
  * <p>
- * ROM reference: sonic3k.asm lines 60377-60427
+ * ROM reference: sonic3k.asm lines 60417-60467
  */
 public class AnimatedStillSpriteInstance extends AbstractObjectInstance
         implements RewindRecreatable, com.openggf.level.objects.RomObjectCodePointerProvider {
@@ -37,7 +37,7 @@ public class AnimatedStillSpriteInstance extends AbstractObjectInstance
     @Override
     public int romObjectCodePointerHighWord() {
         // Obj_AnimatedStillSprite runs from $0002BF5A; Tails CPU sub_13EFC compares this word when
-        // a stale interact slot is reused by this object (sonic3k.asm:26816-26843).
+        // a stale interact slot is reused by this object (sonic3k.asm:26856-26883).
         return 0x0002;
     }
 

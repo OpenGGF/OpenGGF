@@ -384,7 +384,7 @@ public abstract class AbstractTraceReplayTest {
             // LevelLoop iteration has been dispatched yet. A replay that begins
             // at trace row 0 is exactly that -- row 0 is LevelLoop iteration 1,
             // so the player still carries its spawn-determined Status_InAir
-            // (set only by the explicit per-zone bsets at sonic3k.asm:8132-8177;
+            // (set only by the explicit per-zone bsets at sonic3k.asm:8164-8209;
             // MHZ1 $700 and CNZ1 $300 fall through to loc_68D8 at 8178-8197 and
             // spawn grounded). Whether the fixture also ground-snaps the
             // metadata start is a separate question, and gating on it let the
@@ -411,7 +411,7 @@ public abstract class AbstractTraceReplayTest {
             // Sonic's escape-through-the-top exit trigger never fired --
             // producing a same-frame-only camera_x divergence at the exact
             // frame ROM's Restart_level_flag check skips DeformBgLayer
-            // (sonic3k.asm:7895-7896) after Process_Sprites. Apply the ground
+            // (sonic3k.asm:7927-7928) after Process_Sprites. Apply the ground
             // snap/camera reset first so any bonus-entry object injection
             // survives it, matching production's load-then-inject order.
             TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
@@ -806,8 +806,8 @@ public abstract class AbstractTraceReplayTest {
 
         // Align SpriteManager.frameCounter with ROM Level_frame_counter so Tails-CPU
         // AI gates that read (Level_frame_counter & MASK) fire on the same trace
-        // frames as the ROM (sonic3k.asm:26761 loc_13E7C dx-256-frame check,
-        // sonic3k.asm:26775 loc_13E9C 64-frame jump-cadence check, etc.).
+        // frames as the ROM (sonic3k.asm:26801 loc_13E7C dx-256-frame check,
+        // sonic3k.asm:26815 loc_13E9C 64-frame jump-cadence check, etc.).
         //
         // The trace records each frame's gfc. The first iteration steps fc by one,
         // so for AI on iter K=K_start to see fc == T_K_start.gfc (== ROM's
@@ -873,7 +873,7 @@ public abstract class AbstractTraceReplayTest {
                 // The handoff row is skipped for gameplay comparison, but ROM ran a
                 // full LevelLoop on it: Level_frame_counter increments before
                 // Process_Sprites and Animate_Tiles runs after it
-                // (sonic3k.asm:7889-7906). Mirror both native post-row effects so
+                // (sonic3k.asm:7921-7938). Mirror both native post-row effects so
                 // the next driven row observes the same ROM-visible counters, with
                 // no trace-gated compensation inside gameplay object code.
                 TraceReplaySessionBootstrap.applyS3kCompleteRunHandoffNativePostRowEffects(trace);
@@ -1123,7 +1123,7 @@ public abstract class AbstractTraceReplayTest {
         // ("tools/tracechaser/bizhawk-headless/src/Recording/S2TraceCaptureRunner.cs":383-390),
         // leaving that iteration's callbacks buffered with no further
         // PublishRow, so PublishTerminal attaches them to the last row
-        // (:520-529 FlushDynamicArtSegment -> S2DynamicArtObserver.cs:268
+        // (:536-545 FlushDynamicArtSegment -> S2DynamicArtObserver.cs:268
         // PublishTerminal, terminalForwarded=true).
         //
         // A run segment is a slice with a run gap after it. The run capture

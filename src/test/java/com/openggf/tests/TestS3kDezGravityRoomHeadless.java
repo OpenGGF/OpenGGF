@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * SKL {@code $5F}, {@code Obj_DEZGravityRoom} (sonic3k.asm:95814-95952): Death Egg act 1's
+ * SKL {@code $5F}, {@code Obj_DEZGravityRoom} (sonic3k.asm:95860-95998): Death Egg act 1's
  * turbine corridor, one placement.
  */
 @RequiresRom(SonicGame.SONIC_3K)
@@ -46,7 +46,7 @@ class TestS3kDezGravityRoomHeadless {
     }
 
     /**
-     * {@code sub.w x_pos(a0),d0 / cmpi.w #$500,d0 / bhs} (:95847-95849) is an <em>unsigned</em>
+     * {@code sub.w x_pos(a0),d0 / cmpi.w #$500,d0 / bhs} (:95893-95895) is an <em>unsigned</em>
      * compare on the raw difference, so the corridor reaches {@code $500} px to its right and
      * nothing at all to its left.
      */
@@ -61,7 +61,7 @@ class TestS3kDezGravityRoomHeadless {
     }
 
     /**
-     * The capture (:95858-95866) leaves the player tumbling: {@code flip_angle} 1,
+     * The capture (:95904-95912) leaves the player tumbling: {@code flip_angle} 1,
      * {@code flips_remaining} -1 and {@code flip_speed} 4, airborne and under object control.
      */
     @Test
@@ -91,7 +91,7 @@ class TestS3kDezGravityRoomHeadless {
     }
 
     /**
-     * {@code addi.w #$38,x_vel(a1)} (:95872) every frame, with no ceiling of its own: the
+     * {@code addi.w #$38,x_vel(a1)} (:95918) every frame, with no ceiling of its own: the
      * corridor's length is the only limit on how fast the player leaves it.
      */
     @Test
@@ -116,7 +116,7 @@ class TestS3kDezGravityRoomHeadless {
     }
 
     /**
-     * {@code loc_496C8} :95874-95908, driven through the object rather than through its
+     * {@code loc_496C8} :95920-95954, driven through the object rather than through its
      * arithmetic: up and down move {@code y_vel} by {@code $18} toward {@code ∓$600} and stop
      * there. The first version of this test called the steering helper with the test's own
      * copies of the step and the limit, so changing either constant in the object left it
@@ -158,7 +158,7 @@ class TestS3kDezGravityRoomHeadless {
     }
 
     /**
-     * {@code loc_49706} :95910-95932: {@code y_vel} loses {@code y_vel asr 5} a frame, and the
+     * {@code loc_49706} :95956-95978: {@code y_vel} loses {@code y_vel asr 5} a frame, and the
      * 68000 borrow flattens the result to zero on the frame it would cross.
      */
     @Test
@@ -174,7 +174,7 @@ class TestS3kDezGravityRoomHeadless {
     }
 
     /**
-     * {@code bset #Status_InAir,status(a1)} (:95737) runs <em>unconditionally</em> after the
+     * {@code bset #Status_InAir,status(a1)} (:95783) runs <em>unconditionally</em> after the
      * object's own {@code SonicKnux_DoLevelCollision}, so a landing inside the corridor never
      * sticks. Asserted by handing the object a grounded player, which is what a landing leaves
      * behind: an earlier version watched a player who never landed, and stayed green with the
@@ -200,7 +200,7 @@ class TestS3kDezGravityRoomHeadless {
     }
 
     /**
-     * {@code loc_496A8} :95869-95876: the same unsigned {@code $500} compare releases the
+     * {@code loc_496A8} :95915-95922: the same unsigned {@code $500} compare releases the
      * player, and {@code move.b #0,object_control(a1)} hands control back.
      */
     @Test

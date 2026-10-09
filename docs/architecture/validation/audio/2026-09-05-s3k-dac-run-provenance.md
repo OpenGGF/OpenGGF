@@ -80,10 +80,10 @@ reports service 2943 (reference 1, engine 0), then 2944 (0, 1).
 Retail source uses `fix_sndbugs=0`
 (`docs/skdisasm/Sound/Z80 Sound Driver.asm:16`). The relevant owners are:
 
-- `sonic3k.asm:1517-1522`, `Change_Music_Tempo`: stop the Z80, write `d0`
+- `sonic3k.asm:1539-1544`, `Change_Music_Tempo`: stop the Z80, write `d0`
   directly to `Z80_RAM+zTempoSpeedup`, restart the Z80. This is a separate
   input address from the three request mailboxes.
-- `sonic3k.asm:40820-40841`, `Monitor_Give_SpeedShoes`: set the speed-shoes
+- `sonic3k.asm:40860-40881`, `Monitor_Give_SpeedShoes`: set the speed-shoes
   state and timer, then call `Change_Music_Tempo` with `d0=8`.
 - `Sound/Z80 Sound Driver.asm:743-758`: the SFX/music tail checks
   `zTempoSpeedup`, reloads `zSpeedupTimeout`, and performs extra music work.

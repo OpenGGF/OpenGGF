@@ -107,7 +107,7 @@ public final class FbzWireCageStationaryObjectInstance extends AbstractObjectIns
     private void applyForcedRideObjectSetRide(AbstractPlayableSprite player) {
         // loc_3A2F0 sets Status_InAir before RideObject_SetRide, so its
         // Player_TouchFloor branch always runs even though entry required a
-        // grounded player (sonic3k.asm:77949-77955,42027-42048).
+        // grounded player (sonic3k.asm:77990-77996,42067-42088).
         int savedDoubleJumpFlag=player.getDoubleJumpFlag();
         int oldYRadius=player.getYRadius();
         int centreY=player.getCentreY();

@@ -48,7 +48,7 @@ import java.util.logging.Logger;
  *   <li>Bits 0-3: Timer multiplier. value * 60 = break countdown frames. 0 = no timer.</li>
  * </ul>
  * <p>
- * ROM references: Obj_HCZBreakableBar (sonic3k.asm:42726), loc_1ED8E (vertical init),
+ * ROM references: Obj_HCZBreakableBar (sonic3k.asm:42766), loc_1ED8E (vertical init),
  * loc_1EDB0 (vertical update), loc_1EF64 (horizontal update), sub_1EDEC (vertical capture),
  * sub_1EFA0 (horizontal capture), loc_1EEEC (vertical break), loc_1F09A (horizontal break).
  */
@@ -460,7 +460,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
 
     /**
      * Both native bar loops pass the raw Ctrl_1/Ctrl_2 word to the grab routine
-     * (sonic3k.asm:42783/42788 and 42947/42952). Direction tests read its held
+     * (sonic3k.asm:42823/42788 and 42947/42952). Direction tests read its held
      * high byte, not the CPU-written Ctrl_2_logical or the pressed low byte.
      */
     private static boolean isRawDirectionHeld(AbstractPlayableSprite player, int direction) {

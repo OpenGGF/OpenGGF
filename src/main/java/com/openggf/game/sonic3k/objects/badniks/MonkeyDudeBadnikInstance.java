@@ -142,7 +142,7 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
             armRootActivated = true;
             // Obj_WaitOffscreen's release pass is loc_85B02: it restores the
             // saved operation into (a0) and `rts` back to Process_Sprites
-            // (sonic3k.asm:180299-180301). It does NOT re-enter Obj_MonkeyDude,
+            // (sonic3k.asm:180390-180392). It does NOT re-enter Obj_MonkeyDude,
             // so the release frame runs no routine at all -- routine 0 is
             // dispatched on the FOLLOWING frame. Returning here keeps that
             // dispatch separate from the Init dispatch below; both frames exist
@@ -151,9 +151,9 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
         }
 
         if (initPending) {
-            // MonkeyDude_Init (sonic3k.asm:182710-182728) calls
+            // MonkeyDude_Init (sonic3k.asm:182801-182819) calls
             // SetUp_ObjAttributes (tail `addq.b #2,routine(a0)` / `rts`,
-            // sonic3k.asm:176901-176919), rewrites subtype = subtype >> 2 and
+            // sonic3k.asm:176992-177010), rewrites subtype = subtype >> 2 and
             // $39 = subtype >> 3, points $30 at AniRaw_MonkeyDudeWait, sets
             // $2E = 60-1 and $34 = MonkeyDude_StartActive, and ends by jumping to
             // CreateChild4_LinkListRepeated for the arm chain. Every path RETURNS
@@ -181,7 +181,7 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
     @Override
     public int getCollisionFlags() {
         // collision_flags is written by SetUp_ObjAttributes inside
-        // MonkeyDude_Init (sonic3k.asm:176910), so the SST slot still reads zero
+        // MonkeyDude_Init (sonic3k.asm:177001), so the SST slot still reads zero
         // for the whole Init dispatch: the frame's touch scan runs at the player
         // slot before this object's routine.
         return initPending ? 0 : super.getCollisionFlags();
@@ -457,7 +457,7 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
      * The live collision/debug anchor follows the same facing-dependent origin as
      * the body sprite. Keep the inherited frame-start anchor: S3K's player touch
      * pass reads the object's frame-start {@code x_pos}, while the ROM's render
-     * flip does not move that field (sonic3k.asm:20655-20681).
+     * flip does not move that field (sonic3k.asm:20691-20717).
      */
     @Override
     public int getCollisionX() {

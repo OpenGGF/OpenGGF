@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests S3K physics constants for normal single-player mode.
- * <p>The {@code Character_Speeds} table (sonic3k.asm:202288) is only used in
+ * <p>The {@code Character_Speeds} table (sonic3k.asm:202403) is only used in
  * Competition mode ({@code Sonic2P_Index}, line 21457). Normal single-player
  * uses the same canonical $600/$C/$80 values as S2.
  * <p>The competition-mode profiles ({@code SONIC_3K_SONIC_INIT}, {@code SONIC_3K_TAILS_INIT})
@@ -39,7 +39,7 @@ class TestS3kCharacterSpeeds {
 
     @Test
     void sonicCompetitionProfile_matchesCharacterSpeedsTable() {
-        // sonic3k.asm:202289 — dc.w $600, $10, $20, 0
+        // sonic3k.asm:202404 — dc.w $600, $10, $20, 0
         PhysicsProfile p = PhysicsProfile.SONIC_3K_SONIC_INIT;
         assertEquals(0x600, p.max(), "Sonic competition max");
         assertEquals(0x10, p.runAccel(), "Sonic competition accel");
@@ -48,7 +48,7 @@ class TestS3kCharacterSpeeds {
 
     @Test
     void tailsCompetitionProfile_matchesCharacterSpeedsTable() {
-        // sonic3k.asm:202290 — dc.w $4C0, $1C, $70, 0
+        // sonic3k.asm:202405 — dc.w $4C0, $1C, $70, 0
         PhysicsProfile p = PhysicsProfile.SONIC_3K_TAILS_INIT;
         assertEquals(0x4C0, p.max(), "Tails competition max");
         assertEquals(0x1C, p.runAccel(), "Tails competition accel");
@@ -151,7 +151,7 @@ class TestS3kCharacterSpeeds {
         sprite.giveSpeedShoes();
 
         // S3K speed shoes are a byte timer (150) decremented only on every 8th
-        // level frame (Sonic_ChkShoes, sonic3k.asm:22072-22078). Advance the
+        // level frame (Sonic_ChkShoes, sonic3k.asm:22108-22114). Advance the
         // level frame counter alongside each timer tick, as the live frame step
         // does, so the every-8th-frame gate fires. The shoes then expire across
         // the ~1200-frame ROM window via 150 decrements.

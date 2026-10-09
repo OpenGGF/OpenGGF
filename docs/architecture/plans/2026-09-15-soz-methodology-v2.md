@@ -3183,7 +3183,7 @@ routes exposed two real rewind defects, both fixed: the capsule explosion helper
 Rejected in this round:
 
 - Masking only for S1 in `Camera.wrapFocusedSpriteYPositionWord`. S2/S3K `MoveCameraY`
-  masks a local copy (`sonic3k.asm:38440-38446`) and never writes the player; the shared
+  masks a local copy (`sonic3k.asm:38480-38486`) and never writes the player; the shared
   camera does. It fixed row 51860 (measured 598 -> 597 at the time); rows 59289+ show
   the same masked `y` while the boss holds Sonic (not re-measured). `Camera` is `@ModApi` and the policy
   hook requires a signature-pin change for any edit, while the pin itself cannot

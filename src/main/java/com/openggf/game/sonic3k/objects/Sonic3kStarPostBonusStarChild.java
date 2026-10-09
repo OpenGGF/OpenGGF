@@ -21,7 +21,7 @@ import java.util.logging.Logger;
 /**
  * S3K bonus star child - spirals around StarPost when player has 20+ rings.
  * <p>
- * ROM: sub_2D3C8 (sonic3k.asm line 61828) creates 4 star children,
+ * ROM: sub_2D3C8 (sonic3k.asm line 61868) creates 4 star children,
  * loc_2D47E (routine 8) handles their orbital motion and collision.
  * <p>
  * Setup (sub_2D3C8):
@@ -62,7 +62,7 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implem
     // S3K ring threshold for bonus stars
     private static final int RING_THRESHOLD = 20;
 
-    // ROM Touch_Sizes entry $18 (collision_flags $D8 & $3F), sonic3k.asm:20713+24
+    // ROM Touch_Sizes entry $18 (collision_flags $D8 & $3F), sonic3k.asm:20749+24
     private static final int TOUCH_HALF_WIDTH = 4;
     private static final int TOUCH_HALF_HEIGHT = 4;
     // ROM Touch_NoInstaShield player width $10 -> half-width 8, sonic3k.asm:20650
@@ -132,10 +132,10 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implem
             return;
         }
 
-        // ROM ORDER (loc_2D47E, sonic3k.asm:61891-61932): the object tests
+        // ROM ORDER (loc_2D47E, sonic3k.asm:61931-61972): the object tests
         // collision_property FIRST and only then falls through to loc_2D50A's
         // motion. collision_property is written by the player's TouchResponse
-        // (sonic3k.asm:20610, called from Obj_Sonic at :22022), which runs
+        // (sonic3k.asm:20646, called from Obj_Sonic at :22058), which runs
         // earlier in the same Process_Sprites pass and therefore reads this
         // object's x_pos/y_pos as they stood at the END of the previous frame --
         // before this frame's loc_2D50A repositioning. Testing the overlap here,
@@ -186,7 +186,7 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implem
         updateAnimation();
 
         // loc_2D5B6 tail-calls Sprite_CheckDeleteTouch3 with the star's own x_pos
-        // against Camera_X_pos_coarse_back (sonic3k.asm:37359-37372), so an
+        // against Camera_X_pos_coarse_back (sonic3k.asm:37399-37412), so an
         // orbiting star leaves on its own once its side of the orbit scrolls out.
         var camera = services().camera();
         if (camera != null) {
@@ -298,14 +298,14 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implem
     }
 
     /**
-     * ROM {@code Touch_Process} overlap test (sonic3k.asm:20654-20711) for this
+     * ROM {@code Touch_Process} overlap test (sonic3k.asm:20690-20747) for this
      * object's {@code collision_flags} of {@code $D8} (loc_2D574,
-     * sonic3k.asm:61979).
+     * sonic3k.asm:62019).
      *
      * <p>{@code $D8 & $3F} is {@code $18}, which indexes {@code Touch_Sizes}
-     * (sonic3k.asm:20713) entry 24 = {@code dc.b 4,4} -- the object's half-width
+     * (sonic3k.asm:20749) entry 24 = {@code dc.b 4,4} -- the object's half-width
      * and half-height. The player box is {@code Touch_NoInstaShield}
-     * (sonic3k.asm:20641-20652): left edge {@code x_pos - 8} with width
+     * (sonic3k.asm:20677-20688): left edge {@code x_pos - 8} with width
      * {@code $10}, bottom edge {@code y_pos - (y_radius - 3)} with height
      * {@code (y_radius - 3) * 2}. {@code Touch_Width} / {@code Touch_Height}
      * then accept when the boxes overlap on both axes inclusively, which for

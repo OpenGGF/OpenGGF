@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests insta-shield activation gating.
- * ROM: sonic3k.asm:23397-23479 (Sonic_ShieldMoves).
+ * ROM: sonic3k.asm:23432-23514 (Sonic_ShieldMoves).
  */
 class TestInstaShieldGating {
 

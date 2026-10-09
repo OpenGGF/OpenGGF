@@ -61,7 +61,7 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
     @Override
     public boolean usesInclusiveRightEdge() {
         // ROM SolidObject_cont keeps relX == width * 2 in contact; it rejects
-        // only relX > width * 2 (sonic3k.asm:41395-41401).
+        // only relX > width * 2 (sonic3k.asm:41435-41441).
         return true;
     }
 
@@ -71,7 +71,7 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
         // overlap within $10 pixels of the padded side edge escapes the squash
         // path through SolidObject_LeftRight / loc_1E042, then sets push in
         // SolidObject_AtEdge / loc_1E06E even when the player is moving away
-        // (s2.asm:35336-35402; sonic3k.asm:41564-41568,41473-41495).
+        // (s2.asm:35336-35402; sonic3k.asm:41604-41608,41513-41535).
         return true;
     }
 
@@ -152,7 +152,7 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
         // S2 Obj36 and S3K Obj_Spikes store the placement X in objoff_30/$30
         // and feed that saved origin to MarkObjGone2/Sprite_OnScreen_Test2
         // after live spike movement (docs/s2disasm/s2.asm:29221-29226;
-        // docs/skdisasm/sonic3k.asm:49038-49039,49071-49072,49102-49103).
+        // docs/skdisasm/sonic3k.asm:49078-49079,49111-49112,49142-49143).
         return baseX;
     }
 
@@ -260,7 +260,7 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
         if (ySpeed != 0) {
             // ROM Touch_ChkHurt2/sub_24280 subtract y_vel<<8 from y_pos before
             // HurtCharacter (docs/s2disasm/s2.asm:29297-29312;
-            // docs/skdisasm/sonic3k.asm:49211-49220).
+            // docs/skdisasm/sonic3k.asm:49251-49260).
             player.move((short) 0, (short) -ySpeed);
         }
     }

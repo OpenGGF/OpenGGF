@@ -13,10 +13,10 @@ import static org.junit.jupiter.api.Assertions.assertSame;
  * Pins the owner of ROM {@code AIZ_vine_angle}.
  *
  * <p>{@code ChangeRingFrame} advances the word every Level main-loop iteration
- * (docs/skdisasm/sonic3k.asm:9693) and NOTHING clears it while the console runs:
+ * (docs/skdisasm/sonic3k.asm:9729) and NOTHING clears it while the console runs:
  * both the level init and the special-stage init clear the oscillating table with
  * {@code clearRAM Oscillating_table,(AIZ_vine_angle-Oscillating_table)}
- * (sonic3k.asm:10609 and :7622), a length that stops one word short of it. The
+ * (sonic3k.asm:10645 and :7654), a length that stops one word short of it. The
  * swing phase of every AIZ giant ride vine therefore carries across a
  * giant-ring / special-stage round trip.
  *

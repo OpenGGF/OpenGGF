@@ -55,15 +55,15 @@ public class AizEndBossFlameChild extends AbstractObjectInstance
      * <p>Not approximate: it is the length of the flame's own animation script.
      * {@code AIZEndBossFlame_Init} stores the by-angle script in {@code $30(a0)}
      * and {@code AIZEndBossFlame_SpawnBomb} in {@code $34(a0)}
-     * (docs/skdisasm/sonic3k.asm:138579-138591), and
+     * (docs/skdisasm/sonic3k.asm:138644-138656), and
      * {@code AIZEndBossFlame_Main} steps it with {@code Animate_Raw}
-     * (:138606-138611). That animator is the shared-delay form
-     * ({@code Animate_RawNoSST}, :177333-177352): the script's FIRST byte is one
+     * (:138671-138676). That animator is the shared-delay form
+     * ({@code Animate_RawNoSST}, :177424-177443): the script's FIRST byte is one
      * delay for the whole script and the rest is a flat frame list, walked one
      * byte per advance.
      *
      * <p>Both scripts -- {@code AniRaw_AIZEndBossFlame_Diagonal} and
-     * {@code _Vertical} (:139123-139168) -- open with a delay byte of {@code 0},
+     * {@code _Vertical} (:139188-139233) -- open with a delay byte of {@code 0},
      * so each entry lasts one frame, and each carries exactly 20 pairs, i.e.
      * <b>40 frame bytes</b>, before its {@code $F4} terminator. The terminator
      * invokes {@code $34}, which is what spawns the bomb.

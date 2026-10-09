@@ -35,8 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *   <li>S2 {@code PauseGame} / {@code Pause_Loop} —
  *       {@code docs/s2disasm/s2.asm:1585-1633}</li>
  *   <li>S3K {@code Pause_Game} / {@code Pause_Loop} sitting at the top of
- *       {@code LevelLoop} — {@code docs/skdisasm/s3.asm:1690-1761},
- *       {@code docs/skdisasm/sonic3k.asm:7884-7894}</li>
+ *       {@code LevelLoop} — {@code docs/skdisasm/s3.asm:1713-1784},
+ *       {@code docs/skdisasm/sonic3k.asm:7916-7926}</li>
  * </ul>
  */
 class TestInGamePause {

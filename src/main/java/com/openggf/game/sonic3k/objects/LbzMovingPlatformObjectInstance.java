@@ -26,7 +26,7 @@ import java.util.List;
 /**
  * S3K S3KL object $11 - LBZ moving platform.
  *
- * <p>ROM reference: {@code Obj_LBZMovingPlatform} (sonic3k.asm:50066-50610).
+ * <p>ROM reference: {@code Obj_LBZMovingPlatform} (sonic3k.asm:50106-50650).
  * The object shares most of the common S3K platform routines with
  * {@code Obj_FloatingPlatform}, but LBZ slot $11 replaces the rising-platform
  * subtype with {@code Platform_DiagonalLift} and adds delayed/active falling
@@ -39,11 +39,11 @@ public final class LbzMovingPlatformObjectInstance extends AbstractObjectInstanc
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_LBZMovingPlatform} is installed from the S3K object pointer table at
      * {@code $00024E3C} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:50071).
+     * label is defined at docs/skdisasm/sonic3k.asm:50111).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0002}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {

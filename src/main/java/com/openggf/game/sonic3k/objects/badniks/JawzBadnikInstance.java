@@ -16,7 +16,7 @@ import com.openggf.sprites.playable.Tails;
 /**
  * S3K Obj $93 - Jawz (HCZ Act 2).
  *
- * <p>ROM reference: {@code Obj_Jawz} (sonic3k.asm:183518-183570).
+ * <p>ROM reference: {@code Obj_Jawz} (sonic3k.asm:183611-183663).
  * The object is intentionally small: it waits until it is on-screen, then
  * sets its initial horizontal velocity toward the player, animates with a
  * two-frame raw loop, and otherwise uses the shared badnik destruction path.
@@ -41,9 +41,9 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
     private static final int ANIM_RESET_DELAY = 0;
 
     // Obj_WaitOffscreen seeds the placeholder with width_pixels = height_pixels
-    // = $20 (sonic3k.asm:180271-180276) and that is what Render_Sprites tests
+    // = $20 (sonic3k.asm:180362-180367) and that is what Render_Sprites tests
     // when it sets render_flags bit 7, which loc_85AD2 reads on its next
-    // dispatch (:180279-180280, :180303-180305). Both margins are therefore the
+    // dispatch (:180370-180371, :180394-180396). Both margins are therefore the
     // ROM's $20. An earlier $22 y-margin released the wait one frame early
     // wherever the camera was scrolling vertically -- the two pixels were the
     // camera's own per-frame advance, not a ROM quantity.
@@ -101,7 +101,7 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
             // dispatch; Render_Sprites sets that bit after object execution.
             // Retain the post-camera placeholder visibility rather than
             // recomputing it early in the following update
-            // (sonic3k.asm:180266-180298, 36318-36365).
+            // (sonic3k.asm:180357-180389, 36358-36405).
             placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
                     WAIT_PLACEHOLDER_X_MARGIN, WAIT_PLACEHOLDER_Y_MARGIN);
         }

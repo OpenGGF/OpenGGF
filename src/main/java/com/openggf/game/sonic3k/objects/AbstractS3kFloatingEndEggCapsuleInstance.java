@@ -189,7 +189,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         // passes that saved coordinate to SolidObjectFull after movement. The
         // separate button child refreshes from the parent's current position.
         // Preserve both anchors when collapsing those native slots into one
-        // engine object (sonic3k.asm:181501-181545,181739-181767).
+        // engine object (sonic3k.asm:181592-181636,181830-181858).
         solidBodyX = currentX;
         onBeforeCapsuleUpdate();
         if (!opened) {
@@ -198,7 +198,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                 // capsule setup, creates the button/sprite children, then
                 // returns through SolidObjectFull/Draw_Sprite. loc_8662A
                 // motion and loc_86770 button checks begin on later object
-                // routine entries (sonic3k.asm:181496-181545,181588-181647).
+                // routine entries (sonic3k.asm:181587-181636,181679-181738).
                 routeInitPending = false;
                 initializeRoute8FromCamera();
                 checkpointAll();
@@ -216,7 +216,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                 // ROM loc_86770 is a separate button child: Refresh_ChildPosition,
                 // sub_86A54, then Check_PlayerInRange/y_vel. Run the collapsed
                 // child solid checkpoint before testing the trigger bit
-                // (sonic3k.asm:181739-181767,182049-182054).
+                // (sonic3k.asm:181830-181858,182140-182145).
                 checkpointAll();
                 scanButtonTrigger(vIntRunCount, playerEntity);
             } else {
@@ -280,7 +280,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
 
         // ROM loc_8662A compares the current x_pos against the current
         // camera-relative edge, possibly negates $3A, then adds $3A. It does
-        // not clamp overshoot (sonic3k.asm:181604-181625).
+        // not clamp overshoot (sonic3k.asm:181695-181716).
         if (xDirection >= 0) {
             int rightBound = (cameraX + RIGHT_BOUND_OFFSET) & 0xFFFF;
             if (Integer.compareUnsigned(rightBound, currentX & 0xFFFF) < 0) {
@@ -389,7 +389,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                 // ROM loc_86770 only switches the button child to loc_867CA
                 // and sets parent $38 bit 1. The parent Obj_EggCapsule
                 // routine sees that bit on its next object slot and then
-                // runs sub_865DE (sonic3k.asm:181739-181767,181556-181570).
+                // runs sub_865DE (sonic3k.asm:181830-181858,181647-181661).
                 buttonTriggered = true;
                 buttonRecess = BUTTON_RECESS;
                 buttonTriggerSource = candidate == nativeP1 ? 1 : 2;
@@ -419,7 +419,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
             int buttonX) {
         // ROM loc_86770 refreshes the button child from parent x/y, runs
         // sub_86A54, then calls Check_PlayerInRange before the parent routine's
-        // Swing_UpAndDown render motion (sonic3k.asm:181739-181767,181604-181647).
+        // Swing_UpAndDown render motion (sonic3k.asm:181830-181858,181695-181738).
         int buttonY = currentY + BUTTON_Y_OFFSET;
         int dx = player.getCentreX() - buttonX;
         int dy = player.getCentreY() - buttonY;
@@ -435,7 +435,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         if (!nativeP1) {
             // ROM loc_86770 checks Player_2 only after Player_1 is absent or
             // rejected, then branches to the trigger immediately after the
-            // upward-y-velocity test (sonic3k.asm:181777-181800).
+            // upward-y-velocity test (sonic3k.asm:181868-181891).
             return true;
         }
         if (isTailsCharacter(player)) {
@@ -443,7 +443,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         }
         // ROM loc_86770 accepts native Player_1 Sonic/Knuckles only when
         // anim(a1) is #2 before setting the parent trigger bit
-        // (sonic3k.asm:181777-181800).
+        // (sonic3k.asm:181868-181891).
         return player.getAnimationId() == Sonic3kAnimationIds.ROLL.id();
     }
 
@@ -460,7 +460,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         mappingFrame = 1;
         buttonRecess = BUTTON_RECESS;
         // ROM sub_865DE stores $2E=$40. Both results routines pre-decrement
-        // and wait for signed underflow (sonic3k.asm:181556-181570,
+        // and wait for signed underflow (sonic3k.asm:181647-181661,
         // 181900-181918,182027-182046).
         postOpenTimer = POST_OPEN_DELAY;
 

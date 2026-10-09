@@ -141,7 +141,7 @@ At the start of `applyUnderwaterAirGravityReduction()`, replace the existing wat
 ```java
 // Tails_FlyingSwimming owns y_vel through Tails_Move_FlySwim and then calls
 // MoveSprite_TestGravity2 directly; only Tails_Stand_Freespace reaches the
-// ordinary underwater reduction (sonic3k.asm:27553-27588).
+// ordinary underwater reduction (sonic3k.asm:27593-27628).
 if (!sprite.isInWater() || isTailsFlightPhysicsActive(sprite)) {
     return;
 }

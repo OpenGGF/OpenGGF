@@ -281,7 +281,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
      *
      * <p>S3K calls {@code SpecialEvents} before {@code Load_Sprites}/{@code Process_Sprites},
      * while {@code ScreenEvents} runs after {@code DeformBgLayer} later in the frame
-     * (sonic3k.asm:7887-7902, 104080-104094). Keep the repeat offset live through the
+     * (sonic3k.asm:7919-7934, 104126-104140). Keep the repeat offset live through the
      * following player/object slots instead of publishing it from the post-camera handler.
      */
     public void updateSpecialEvents(int act) {
@@ -421,7 +421,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
                         // Obj_EndSignControl is a distinct retained SST owner
                         // after the title-card children finish. Its DoStart
                         // poll reaches Change_Act2Sizes ten owner dispatches
-                        // later (sonic3k.asm:180407-180423).
+                        // later (sonic3k.asm:180498-180514).
                         .inLevelTitleCardExitAdditionalDispatches(10)
                         // MHZ1_BackgroundEvent subtracts $4200 from the live
                         // camera, Camera_X_pos_copy, min X, and max X after
@@ -1493,7 +1493,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
 
     /**
      * True when {@code MHZ2_BackgroundEvent}'s dispatch table
-     * (sonic3k.asm:112861-113104) routes vertical BG deform through
+     * (sonic3k.asm:112907-113150) routes vertical BG deform through
      * {@code sub_554B8} for the current {@code Events_routine_bg} value,
      * instead of the shared {@code MHZ_Deform} routine.
      *

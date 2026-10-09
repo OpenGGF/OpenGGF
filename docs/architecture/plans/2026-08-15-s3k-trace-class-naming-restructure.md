@@ -17,7 +17,7 @@ committed:
 siblings but are different characters from different movies, and a round built a wrong
 discriminator on the assumption they differed only by sidekick. Some directory labels
 lie outright: the `dez23*` fixtures are not Death Egg — the level-size table names that
-zone `Special Stage Arena (HPZ)` (`docs/skdisasm/sonic3k.asm:38144`).
+zone `Special Stage Arena (HPZ)` (`docs/skdisasm/sonic3k.asm:38184`).
 
 ## Target shape
 

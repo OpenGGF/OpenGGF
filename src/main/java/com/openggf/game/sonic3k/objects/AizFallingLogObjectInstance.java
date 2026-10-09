@@ -33,7 +33,7 @@ import java.util.logging.Logger;
  *   <li>Bits [7:4]: phase offset (shifted left by max(period-3, 0))</li>
  * </ul>
  * <p>
- * ROM references: Obj_AIZFallingLog (sonic3k.asm line 59887), word_2B566 (line 59868),
+ * ROM references: Obj_AIZFallingLog (sonic3k.asm line 59927), word_2B566 (line 59868),
  * loc_2B5D4 (spawner loop), loc_2B6A0 (log falling), loc_2B6BC (log at water),
  * loc_2B6D8 (solid + draw), loc_2B72C (splash animation).
  */
@@ -41,7 +41,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
 
     private static final Logger LOG = Logger.getLogger(AizFallingLogObjectInstance.class.getName());
 
-    // word_2B566: timing mask table (sonic3k.asm line 59868)
+    // word_2B566: timing mask table (sonic3k.asm line 59908)
     // Index N → mask = (2^(N+1)) - 1, so effective period = mask + 1 frames.
     private static final int[] TIMING_MASKS = {
             0x0001, 0x0003, 0x0007, 0x000F,
@@ -74,7 +74,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
         this.spawnX = spawn.x();
         this.spawnY = spawn.y();
 
-        // Parse subtype (sonic3k.asm lines 59900-59914)
+        // Parse subtype (sonic3k.asm lines 59940-59954)
         int subtype = spawn.subtype();
         int periodIndex = subtype & 0x0F;
         this.timingMask = periodIndex < TIMING_MASKS.length
@@ -148,7 +148,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
 
         // Spawner timing: (Level_frame_counter + phaseOffset) & timingMask == 0.
         // ObjectManager passes its VBlank execution clock, but the ROM reads the
-        // independent Level_frame_counter here (sonic3k.asm:59918-59922). The
+        // independent Level_frame_counter here (sonic3k.asm:59958-59962). The
         // LevelManager stores the previous completed frame until its late-frame
         // update, so +1 is the value visible during Process_Sprites.
         int levelFrameCounter = levelFrameCounterForSpawner(vIntRunCount);
@@ -203,11 +203,11 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
          * Word 0 of this object's S3K SST holds its live ROM code pointer.
          * ROM {@code Obj_AIZFallingLog} is installed from the S3K object pointer table at
          * {@code $0002B586} (table read from the user-supplied ROM; the
-         * label is defined at docs/skdisasm/sonic3k.asm:59892).
+         * label is defined at docs/skdisasm/sonic3k.asm:59932).
          * Its whole code block lies in one bank, so the HIGH word that
          * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
          * on the next off-screen on-object frame is {@code $0002}
-         * (docs/skdisasm/sonic3k.asm:26816-26843).
+         * (docs/skdisasm/sonic3k.asm:26856-26883).
          */
         @Override
         public int romObjectCodePointerHighWord() {
@@ -312,7 +312,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
                 case STATE_AT_WATER -> updateAtWater();
             }
 
-            // ROM coarse range check (loc_2B6D8, sonic3k.asm lines 59994-59998):
+            // ROM coarse range check (loc_2B6D8, sonic3k.asm lines 60034-60038):
             // andi.w #$FF80,d0 / sub.w (Camera_X_pos_coarse_back).w,d0 / cmpi.w #$280,d0
             if (!isInRangeAt(x)) {
                 destroyWithSplash();
@@ -391,7 +391,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
      * Splash effect child. Tracks the linked log body position and animates
      * through 4 frames, cycling every 4 frames.
      * <p>
-     * ROM reference: loc_2B72C (sonic3k.asm line 60024).
+     * ROM reference: loc_2B72C (sonic3k.asm line 60064).
      */
     static class SplashChild extends AbstractObjectInstance implements RewindRecreatable {
 

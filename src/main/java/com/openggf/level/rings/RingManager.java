@@ -262,7 +262,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             return;
         }
         // Test_Ring_Collisions chooses its lightning-shield branch instead
-        // of Test_Ring_Collisions_NoAttraction (sonic3k.asm:18445-18476).
+        // of Test_Ring_Collisions_NoAttraction (sonic3k.asm:18481-18512).
         // A successful allocation returns immediately; a second ordinary
         // overlap scan would collect later placement records prematurely.
         if (lightningShieldEnabled(player) && player.getShieldType() == ShieldType.LIGHTNING) {
@@ -295,7 +295,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         // animation and never to Tails. With fixBugs = 1 the test would be the
         // animation id (AniIDSonAni_Duck), applying for the whole duck and to both
         // characters. S3K dropped the adjustment entirely
-        // (Test_Ring_Collisions_NoAttraction, sonic3k.asm:18465-18476), which is
+        // (Test_Ring_Collisions_NoAttraction, sonic3k.asm:18501-18512), which is
         // NO_DUCK_TOUCH_BOX. See ObjectInteractionRules#duckTouchBoxMappingFrame.
         ObjectInteractionRules interactionRules = playerObjectInteractionRules(player);
         if (interactionRules != null
@@ -427,7 +427,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * <p>Used only to carry that state across a level reload the ROM performs
      * with {@code Respawn_table_keep} set, where {@code sub_EB1A} skips its
      * {@code Ring_status_table} wipe
-     * (docs/skdisasm/sonic3k.asm:18561-18570, reached from :18232-18238).
+     * (docs/skdisasm/sonic3k.asm:18597-18606, reached from :18268-18274).
      */
     public long[] captureRingStatusTable() {
         return placement.collected.toLongArray();
@@ -654,7 +654,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * the post-player frame phase, after the normal object loop has already run.
      * ROM S3K allocates the Obj_Bouncing_Ring owner during the player slot and
      * then reaches the new Obj37 slots later in the same ExecuteObjects pass
-     * (docs/skdisasm/sonic3k.asm:21065-21088, 35490-35616), so apply that first
+     * (docs/skdisasm/sonic3k.asm:21101-21124, 35530-35656), so apply that first
      * Obj37 movement step immediately when the delayed spawn is flushed.
      */
     public void spawnLostRingsWithInitialObjectStep(AbstractPlayableSprite player, int ringCount,
@@ -868,7 +868,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
                 // Test_Ring_Collisions_AttractRing runs from the player's SST inside
                 // Process_Sprites, after Load_Sprites has filled first-free slots
-                // (sonic3k.asm:7884-7894). When the engine runs the player before the
+                // (sonic3k.asm:7916-7926). When the engine runs the player before the
                 // object load, reserve the SST after that load instead.
                 boolean deferSlot = objectManager != null
                         && levelManager.objectsExecuteAfterPlayerPhysics();
@@ -903,7 +903,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     /**
-     * ROM: AttractedRing_Move (sonic3k.asm:35795).
+     * ROM: AttractedRing_Move (sonic3k.asm:35835).
      * Per-axis acceleration of $30 subpixels/frame². When the ring's velocity
      * opposes the direction to the player, acceleration is 4× stronger to
      * reverse quickly. Position updated via MoveSprite2 (velocity→subpixel).
@@ -1102,7 +1102,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * {@code loc_1A934} {@code Delete_Current_Sprite} has already cleared the SST
      * by the time a later fixed slot (the lightning shield after
      * {@code Dynamic_object_RAM}) calls {@code AllocateObject} in the same frame
-     * (sonic3k.asm:35780-35790). The ring manager otherwise advances attracted
+     * (sonic3k.asm:35820-35830). The ring manager otherwise advances attracted
      * rings after the object pass.
      */
     public void releaseAttractedRingsDeletingThisPass() {
@@ -1809,7 +1809,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             // HurtCharacter preallocates ring 0 with AllocateObject, then Obj37_Init uses
             // plain AllocateObject for the remainder (s2.asm:85444-85461,25125-25146). S3K
             // uses the owner slot and AllocateObjectAfterCurrent for the rest
-            // (sonic3k.asm:21065-21088,35549-35591).
+            // (sonic3k.asm:21101-21124,35589-35631).
             boolean preallocateOwnerSlot = objectManager != null && objectManager.preallocatesLostRingOwnerSlot();
             boolean allocateRemainderAfterOwner = objectManager != null
                     && objectManager.lostRingRemainderAllocatesAfterOwnerSlot();
@@ -1891,7 +1891,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                         // Obj37_Init clears Ring_count when the owner SST runs.
                         // An owner allocated behind the live Process_Sprites
                         // cursor remains routine 0 until the following pass
-                        // (docs/skdisasm/sonic3k.asm:21065-21088,35549-35616).
+                        // (docs/skdisasm/sonic3k.asm:21101-21124,35589-35656).
                         ringObject.clearMainPlayerRingsOnFirstUpdate();
                     }
                     if (i > 0 && ownerWaitsForNextPass
@@ -1944,7 +1944,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
             if (!deferRingCountClear) {
                 // S3K Obj_Bouncing_Ring clears Ring_count and Extra_life_flags in
-                // the owner init (sonic3k.asm:35617-35621).
+                // the owner init (sonic3k.asm:35657-35661).
                 LevelState levelState = levelManager != null ? levelManager.getLevelGamestate() : null;
                 if (levelState != null) {
                     levelState.resetRingsForLoss();
@@ -1967,7 +1967,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         private static int phaseOffsetForSlot(ObjectManager objectManager, int slotIndex) {
             // Obj37 adds Process_Sprites' live d7 countdown to V_int_run_count.
             // S3K walks all 110 Object_RAM slots, including the fixed tail after
-            // Dynamic_object_RAM (sonic3k.asm:35965-35980).
+            // Dynamic_object_RAM (sonic3k.asm:36005-36020).
             int lastSlotExclusive = objectManager != null
                     ? objectManager.getLastProcessSlotExclusive()
                     : 128;

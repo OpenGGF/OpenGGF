@@ -57,7 +57,7 @@ to a separately versioned authoritative readiness owner.
 `Kos_decomp_queue_count`. `Process_Kos_Queue` owns the FIFO head, sets bit 15
 while decoding, resumes through the VInt bookmark, clears the busy bit, retires
 one stream, and shifts remaining entries
-(`docs/skdisasm/sonic3k.asm:2803-2967`).
+(`docs/skdisasm/sonic3k.asm:2835-2999`).
 
 `Process_Kos_Module_Queue` does not have a private decoder. It appends the
 current module to the same direct FIFO, sets the module busy bit, waits for the
@@ -66,7 +66,7 @@ module/archive state (`docs/skdisasm/sonic3k.asm:2668-2791`).
 
 The ordinary level loop services the direct queue before `Wait_VSync`, runs
 objects and screen events, then services the module queue
-(`docs/skdisasm/sonic3k.asm:7884-7922`). Therefore:
+(`docs/skdisasm/sonic3k.asm:7916-7954`). Therefore:
 
 - direct completion is observable at `PRE_MAIN_LOOP`;
 - AIZ and ICZ screen events can consume queue-empty readiness in that same
@@ -74,8 +74,8 @@ objects and screen events, then services the module queue
 - final module retirement remains `POST_OBJECTS`.
 
 The two gameplay consumers of the direct count are AIZ intro progression
-(`docs/skdisasm/sonic3k.asm:104575-104590`) and ICZ act-transition progression
-(`docs/skdisasm/sonic3k.asm:110259-110287`). Numerous act transitions enqueue
+(`docs/skdisasm/sonic3k.asm:104621-104636`) and ICZ act-transition progression
+(`docs/skdisasm/sonic3k.asm:110305-110333`). Numerous act transitions enqueue
 ordinary chunks/blocks beside KosM art, so the shared FIFO also affects module
 completion indirectly.
 
@@ -561,10 +561,10 @@ The wrong field comes from
 constant through `S3kKosModuleQueue`.
 
 The ROM owner is unambiguous. `Process_Kos_Module_Queue` passes
-`Kos_decomp_buffer` to `Queue_Kos` (`sonic3k.asm:2736-2740`), the native
+`Kos_decomp_buffer` to `Queue_Kos` (`sonic3k.asm:2768-2772`), the native
 four-entry FIFO contains the sign-extended longword `0xFFFFD000`, and the RAM
 layout defines the `$1000`-byte buffer immediately before `H_scroll_buffer`
-(`sonic3k.constants.asm:328`). `0xFFFFD400` is not the module decompression
+(`sonic3k.constants.asm:335`). `0xFFFFD400` is not the module decompression
 buffer. Production must correct the shared constant to `0xFFFFD000`; recorder
 or fixture normalization is forbidden.
 

@@ -38,10 +38,10 @@ import java.util.List;
  * {@code x} ({@code $44}) before re-arming.
  *
  * <p>ROM references: {@code Obj_FBZDEZPlayerLauncher} entry
- * {@code docs/skdisasm/sonic3k.asm:79394-79409}, main routine {@code loc_3B97A}
- * {@code :79410-79433}, rider handler {@code sub_3B9D8} {@code :79437-79470}, and
- * return-to-home routine {@code loc_3BA4A} {@code :79474-79488}. The DEZ art swap
- * at {@code :79398-79401} is keyed on {@code Current_zone} = $B in the ROM; it is
+ * {@code docs/skdisasm/sonic3k.asm:79435-79450}, main routine {@code loc_3B97A}
+ * {@code :79451-79474}, rider handler {@code sub_3B9D8} {@code :79478-79511}, and
+ * return-to-home routine {@code loc_3BA4A} {@code :79515-79529}. The DEZ art swap
+ * at {@code :79439-79442} is keyed on {@code Current_zone} = $B in the ROM; it is
  * carried here by the art key the zone's art registry resolves, not by a zone test
  * in this class.
  */
@@ -54,26 +54,26 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
         // Word 0 of this object's SST holds its live code pointer, which
         // Obj_FBZDEZPlayerLauncher rewrites between loc_3B97A ($0003B97A) and
         // loc_3BA4A ($0003BA4A) as it arms and returns home
-        // (docs/skdisasm/sonic3k.asm:79408,79416,79474). All of those pointers
+        // (docs/skdisasm/sonic3k.asm:79449,79457,79515). All of those pointers
         // live in the same S&K-half bank, so the HIGH word that
         // Tails_CPU_interact samples is $0003 throughout
-        // (docs/skdisasm/sonic3k.asm:26816-26843).
+        // (docs/skdisasm/sonic3k.asm:26856-26883).
         return 0x0003;
     }
 
-    /** ROM {@code move.w #$10,d1} at {@code sonic3k.asm:79426}. */
+    /** ROM {@code move.w #$10,d1} at {@code sonic3k.asm:79467}. */
     private static final int SOLID_HALF_WIDTH = 0x10;
-    /** ROM {@code move.w #3,d3} at {@code sonic3k.asm:79427}. */
+    /** ROM {@code move.w #3,d3} at {@code sonic3k.asm:79468}. */
     private static final int SOLID_TOP_HALF_HEIGHT = 3;
-    /** ROM {@code move.b #$10,width_pixels/height_pixels} at {@code :79403-79404}. */
+    /** ROM {@code move.b #$10,width_pixels/height_pixels} at {@code :79444-79445}. */
     private static final int RENDER_HALF_SIZE = 0x10;
-    /** ROM {@code moveq #4,d0} at {@code sonic3k.asm:79441}: rider x offset from the pad. */
+    /** ROM {@code moveq #4,d0} at {@code sonic3k.asm:79482}: rider x offset from the pad. */
     private static final int RIDER_X_OFFSET = 4;
-    /** ROM {@code move.w #$100,d1} at {@code sonic3k.asm:79442}: initial pad speed. */
+    /** ROM {@code move.w #$100,d1} at {@code sonic3k.asm:79483}: initial pad speed. */
     private static final int INITIAL_SPEED = 0x100;
-    /** ROM {@code move.b #$C,$30(a0)} at {@code sonic3k.asm:79466}. */
+    /** ROM {@code move.b #$C,$30(a0)} at {@code sonic3k.asm:79507}. */
     private static final int RUN_FRAMES = 0xC;
-    /** ROM {@code move.b #4,$31(a0)} at {@code sonic3k.asm:79467}. */
+    /** ROM {@code move.b #4,$31(a0)} at {@code sonic3k.asm:79508}. */
     private static final int DOUBLING_FRAMES = 4;
 
     private int homeX;
@@ -94,10 +94,10 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
     /**
      * Whether the routine that ran this frame handed {@code SolidObjectTop} a
      * pre-move carry reference in {@code d4}. {@code loc_3B9AC} passes the
-     * post-move {@code x_pos} (sonic3k.asm:79428), so {@code MvSonicOnPtfm}
+     * post-move {@code x_pos} (sonic3k.asm:79469), so {@code MvSonicOnPtfm}
      * computes a zero horizontal carry and the rider is not dragged; the
      * return-to-home routine {@code loc_3BA4A} instead stacks {@code x_pos}
-     * before stepping (:79475, :79472) and does carry the rider.
+     * before stepping (:79516, :79513) and does carry the rider.
      */
     private boolean carryRiderThisFrame;
 
@@ -122,7 +122,7 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
         p2Standing = false;
 
         if (returningHome) {
-            // loc_3BA4A (sonic3k.asm:79474-79483): step one pixel per frame back
+            // loc_3BA4A (sonic3k.asm:79515-79524): step one pixel per frame back
             // toward $44, then hand the routine back to loc_3B97A. sub_3B9D8 is not
             // called on this path, so riders are untouched while the pad returns.
             if (motion.x == homeX) {
@@ -138,7 +138,7 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
 
         carryRiderThisFrame = false;
 
-        // loc_3B97A (sonic3k.asm:79410-79423).
+        // loc_3B97A (sonic3k.asm:79451-79464).
         if (runTimer != 0) {
             runTimer--;
             if (runTimer == 0) {
@@ -154,7 +154,7 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
             }
         }
 
-        // loc_3B9AC (sonic3k.asm:79424-79425): sub_3B9D8 for each standing player.
+        // loc_3B9AC (sonic3k.asm:79465-79466): sub_3B9D8 for each standing player.
         if (ridingP1) {
             applyRider(playerEntity);
         }
@@ -165,7 +165,7 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
         updateDynamicSpawn(motion.x, motion.y);
     }
 
-    /** ROM {@code sub_3B9D8} (sonic3k.asm:79437-79470). */
+    /** ROM {@code sub_3B9D8} (sonic3k.asm:79478-79511). */
     private void applyRider(PlayableEntity entity) {
         if (!(entity instanceof AbstractPlayableSprite player)) {
             return;
@@ -183,14 +183,14 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
         NativePositionOps.writeXPosPreserveSubpixel(player, (motion.x + riderOffset) & 0xFFFF);
 
         if (releasing) {
-            // loc_3BA14 (sonic3k.asm:79456-79462).
+            // loc_3BA14 (sonic3k.asm:79497-79503).
             player.setAnimationId(0);
             player.setAir(true);
             player.setYSpeed((short) 0);
             return;
         }
 
-        // loc_3BA1E (sonic3k.asm:79465-79470).
+        // loc_3BA1E (sonic3k.asm:79506-79511).
         short padSpeed = (short) motion.xVel;
         player.setXSpeed(padSpeed);
         player.setGSpeed(padSpeed);
@@ -235,8 +235,8 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // SolidObjectTop takes a single vertical parameter, d3 = 3
-        // (sonic3k.asm:79427). Both the landing test and MvSonicOnPtfm's
-        // per-frame re-seat (sonic3k.asm:41647-41684, y_pos(a1) = y_pos(a0)
+        // (sonic3k.asm:79468). Both the landing test and MvSonicOnPtfm's
+        // per-frame re-seat (sonic3k.asm:41687-41724, y_pos(a1) = y_pos(a0)
         // - d3 - y_radius(a1)) use that same d3, so the air and ground half
         // heights are equal here -- there is no d3+1 anywhere in this object.
         return SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_TOP_HALF_HEIGHT, SOLID_TOP_HALF_HEIGHT);
@@ -268,7 +268,7 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
         return RENDER_HALF_SIZE;
     }
 
-    // Obj_FBZDEZPlayerLauncher writes priority $280 at loc_3B956 (sonic3k.asm:79406).
+    // Obj_FBZDEZPlayerLauncher writes priority $280 at loc_3B956 (sonic3k.asm:79447).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
 
     @Override

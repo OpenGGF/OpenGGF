@@ -8,7 +8,7 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 /**
  * S3K SKL Obj $8F - Butterdroid.
  *
- * <p>ROM reference: {@code Obj_Butterdroid} at {@code sonic3k.asm:193990}.
+ * <p>ROM reference: {@code Obj_Butterdroid} at {@code sonic3k.asm:194095}.
  * The main routine faces the nearest player, calls {@code Chase_Object} with
  * max speed {@code $100} and acceleration {@code 4}, then runs the raw
  * eight-step wing animation.
@@ -76,7 +76,7 @@ public final class ButterdroidBadnikInstance extends AbstractS3kBadnikInstance i
             // Obj_WaitOffscreen's loc_85AD2 tests render_flags bit 7 before
             // restoring Obj_Butterdroid. Draw_Sprite sets that bit later in
             // the frame, so the normal operation resumes on the next object
-            // dispatch (sonic3k.asm:180266-180298, 193990-194024).
+            // dispatch (sonic3k.asm:180357-180389, 194095-194129).
             placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
                     WAIT_OFFSCREEN_MARGIN, WAIT_OFFSCREEN_MARGIN);
         }

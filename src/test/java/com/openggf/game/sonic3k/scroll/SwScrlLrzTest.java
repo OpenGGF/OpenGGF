@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
- * Lava Reef background scroll parity against {@code LRZ1_Deform} (sonic3k.asm:115389-115435,
+ * Lava Reef background scroll parity against {@code LRZ1_Deform} (sonic3k.asm:115435-115481,
  * reached from {@code LRZ1_BackgroundInit}/{@code LRZ1_BackgroundEvent}) and {@code sub_57082}
  * (115739-115820, reached from {@code LRZ2_BackgroundInit}/{@code LRZ2_BackgroundEvent}).
  *
@@ -44,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
  *       {@code LRZ2_BGDeformArray}.</li>
  * </ul>
  *
- * <p>Band heights come straight from the ROM arrays at sonic3k.asm:115643 and 115845.
+ * <p>Band heights come straight from the ROM arrays at sonic3k.asm:115689 and 115845.
  */
 class SwScrlLrzTest {
 
@@ -207,8 +207,8 @@ class SwScrlLrzTest {
 
     /**
      * {@code loc_56C6E}: while {@code Events_routine_bg} is 4, {@code sub_56DAC}
-     * (sonic3k.asm:115442-115452) replaces {@code LRZ1_Deform} and {@code PlainDeformation}
-     * (:103598-103613) replaces {@code ApplyDeformation}, so every line carries the same pair.
+     * (sonic3k.asm:115488-115498) replaces {@code LRZ1_Deform} and {@code PlainDeformation}
+     * (:103644-103659) replaces {@code ApplyDeformation}, so every line carries the same pair.
      */
     @Test
     void theLockedDomeFillsEveryLineFromSub56DAC() {

@@ -38,11 +38,11 @@ public final class CnzRisingPlatformInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_CNZRisingPlatform} is installed from the S3K object pointer table at
      * {@code $00031B9E} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:67131).
+     * label is defined at docs/skdisasm/sonic3k.asm:67171).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0003}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -155,7 +155,7 @@ public final class CnzRisingPlatformInstance extends AbstractObjectInstance
     @Override
     public int getOnScreenHalfWidth() {
         // ROM Obj_CNZRisingPlatform writes width_pixels=$30; Sonic_Move uses
-        // width_pixels(a1) for object-edge balance (sonic3k.asm:67132,
+        // width_pixels(a1) for object-edge balance (sonic3k.asm:67172,
         // 22462-22473), so the render/balance width must match the solid width.
         return HALF_WIDTH;
     }

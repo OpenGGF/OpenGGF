@@ -123,7 +123,7 @@ with `setCentreYPreserveSubpixel(...)` after `setRolling(...)`. Do not use
 `getRollHeightAdjustment()` unless the ROM explicitly adjusts `y_pos`.
 
 **ROM citation.** `Obj_HCZConveyorBelt` release `loc_312D4`
-(`docs/skdisasm/sonic3k.asm:66440-66457`) writes status/radii/animation but
+(`docs/skdisasm/sonic3k.asm:66480-66497`) writes status/radii/animation but
 does not write `y_pos`.
 
 **Originating commit.** `fix: preserve HCZ conveyor release center y`.
@@ -146,8 +146,8 @@ left/right cull comparisons. Do not substitute the current raw camera coarse
 unless the ROM routine actually reads `Camera_X_pos`.
 
 **ROM citation.** `Obj_HCZConveyorBelt` cull check
-(`docs/skdisasm/sonic3k.asm:66355-66364`) and `Load_Sprites`
-coarse-back setup (`docs/skdisasm/sonic3k.asm:37472-37478`).
+(`docs/skdisasm/sonic3k.asm:66395-66404`) and `Load_Sprites`
+coarse-back setup (`docs/skdisasm/sonic3k.asm:37512-37518`).
 
 **Originating commit.** `fix: model HCZ conveyor coarse-back culling`.
 
@@ -234,7 +234,7 @@ accurate owner from `docs/architecture/per-game-rule-placement.md`. Never gate o
 `gameId`.
 
 **ROM citation.** S3K immediate-warp baseline at
-`docs/skdisasm/sonic3k.asm:26800-26809` (`sub_13ECA`). S2 deferred flow at
+`docs/skdisasm/sonic3k.asm:26840-26849` (`sub_13ECA`). S2 deferred flow at
 `docs/s2disasm/s2.asm:40736-40759`.
 
 **Originating commit.** `a4aca7d6f fix(s2): sidekick death uses
@@ -264,7 +264,7 @@ must use `AbstractSprite.move(xSpeed, ySpeed)` — which mirrors ROM's
 `add.l d0, x_pos(a0)` / `add.l d0, y_pos(a0)` — rather than manual
 `centreY += (ySpeed >> 8)` arithmetic.
 
-**ROM citation.** S3K `MoveSprite` (`docs/skdisasm/sonic3k.asm:36032-36042`)
+**ROM citation.** S3K `MoveSprite` (`docs/skdisasm/sonic3k.asm:36072-36082`)
 and `ObjectMoveAndFall`. Same 16:16 fixed-point convention as S1 / S2.
 Engine equivalent: `AbstractSprite.move` in
 `src/main/java/com/openggf/sprites/AbstractSprite.java`.
@@ -299,7 +299,7 @@ respawning / object-controlled states. The `routine >= 6` path covers the
 Dead / Gone / Respawning routines themselves.
 
 For S3K, `obj_control` is set on frame N+1 immediately via `sub_13ECA`
-(`docs/skdisasm/sonic3k.asm:26800-26809`), which means the `obj_control`
+(`docs/skdisasm/sonic3k.asm:26840-26849`), which means the `obj_control`
 gate covers most of the dead-fall window. The S2 deferred-despawn flow
 spends multiple frames in routine = 6 BEFORE `obj_control` flips, so the
 `routine >= 6` gate is required there. An engine that ports only the
@@ -485,8 +485,8 @@ negative values drop below.
 **What to check.** When porting any S3K SlopedSolidProvider:
 
 1. Find the ROM routine that samples the slope and computes the
-   surface.  S3K uses `SolidObjCheckSloped` (sonic3k.asm:41982-42015),
-   `SolidObjCheckSloped2` (sonic3k.asm:41887-41914), or the
+   surface.  S3K uses `SolidObjCheckSloped` (sonic3k.asm:42022-42055),
+   `SolidObjCheckSloped2` (sonic3k.asm:41927-41954), or the
    per-object loc_19EB6-style direct subtraction.
 2. Look at the slope data values relative to ROM `y_pos(a0) - d3`:
    - If slope[mid] ~= 0 and the surface visually sits at object_y,
@@ -745,8 +745,8 @@ code; cite the side that applies to the object being ported. If one game
 differs, gate the behaviour at the owning abstraction instead of changing
 every game implicitly.
 
-**ROM citation.** S3K `docs/skdisasm/sonic3k.asm:40723-40753`; S3-side
-`docs/skdisasm/s3.asm:33392-33421`; S2 analogue
+**ROM citation.** S3K `docs/skdisasm/sonic3k.asm:40763-40793`; S3-side
+`docs/skdisasm/s3.asm:33447-33476`; S2 analogue
 `docs/s2disasm/s2.asm:25618-25631`; S1 analogue
 `docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:35-43`.
 
@@ -780,9 +780,9 @@ chosen an already-visited lower slot and deferred the child's first dispatch.
    been visited in the current object pass.
 
 **ROM citation.** Upright egg-capsule `sub_868F8` calls `AllocateObject` before
-publishing `Obj_LevelResults` (`docs/skdisasm/sonic3k.asm:181978-181990`).
+publishing `Obj_LevelResults` (`docs/skdisasm/sonic3k.asm:182069-182081`).
 `Obj_LevelResultsInit` immediately queues three KosM archives on its first
-dispatch (`sonic3k.asm:62542-62575`). Engine equivalents are
+dispatch (`sonic3k.asm:62582-62615`). Engine equivalents are
 `spawnFreeChild()` and `spawnChild()` in `AbstractObjectInstance`.
 
 **Originating commit.** `fix(s3k): preserve results-owner lowest-free slot`.
@@ -813,7 +813,7 @@ same-pass producer-to-consumer edge into one or more deferred callbacks.
 
 **ROM citation.** CNZ end-boss `loc_6E724` reads `_unkFAA8` directly after
 `Obj_LevelResultsWait2` clears it, then restores both players in that dispatch
-(`docs/skdisasm/sonic3k.asm:146087-146103`). The egg capsule is not part of
+(`docs/skdisasm/sonic3k.asm:146152-146168`). The egg capsule is not part of
 that publication edge.
 
 **Originating commit.** `fix(s3k): consume CNZ results publication in boss slot`.
@@ -841,11 +841,11 @@ the visible spill. Model both the pre-hurt Y rewind and the delayed ring-spend
 ordering; do not special-case the trace frame or zone.
 
 **ROM citation.** `Obj_InvisibleHurtBlockHorizontal` routes contact through
-`sub_1F58C` (`docs/skdisasm/sonic3k.asm:43268-43431`), which calls
-`sub_24280` (`docs/skdisasm/sonic3k.asm:49200-49220`) before
-`HurtCharacter` (`docs/skdisasm/sonic3k.asm:21065-21088`). The S3K
+`sub_1F58C` (`docs/skdisasm/sonic3k.asm:43308-43471`), which calls
+`sub_24280` (`docs/skdisasm/sonic3k.asm:49240-49260`) before
+`HurtCharacter` (`docs/skdisasm/sonic3k.asm:21101-21124`). The S3K
 `Obj_Bouncing_Ring` init path reads `Ring_count`, creates spilled rings, and
-clears the counter at `docs/skdisasm/sonic3k.asm:35490-35616`.
+clears the counter at `docs/skdisasm/sonic3k.asm:35530-35656`.
 
 **Originating commit.** `<pending>` (ICZ hidden hurt block moved the
 complete-run trace from f3174 same-frame ring spend to f3273 lost-ring
@@ -877,7 +877,7 @@ stay clear until the object opted into `usesInclusiveRightEdge()`.
 
 **ROM citation.** AIZ/LRZ/EMZ rock uses the standard solid side-contact path;
 the S&K-side helper rejects the X bound with `bhi` and then sets `Status_Push`
-in the side branch (`docs/skdisasm/sonic3k.asm:41403-41406,41494-41500`).
+in the side branch (`docs/skdisasm/sonic3k.asm:41443-41446,41534-41540`).
 The S2 Obj42 SteamSpring mirror is documented in the S2 pitfall catalogue.
 
 **Originating commit.** `<pending>` cross-game mirror of the S2 MTZ SteamSpring
@@ -909,7 +909,7 @@ downstream object mis-slotted much later. Count matters: a ROM `dbf d1` loop wit
 the allocator mapping). Render-only children still occupy a slot. Parent-recreated
 render-only children resolve via `TestRewindCoverageGuard` baseline entries.
 
-**ROM citation.** `docs/skdisasm/sonic3k.asm:37911` (`AllocateObject`, lowest
+**ROM citation.** `docs/skdisasm/sonic3k.asm:37951` (`AllocateObject`, lowest
 free) / `:37917` (`AllocateObjectAfterCurrent`, after parent).
 
 **Originating commit (S1 origin).** `9f47f557f` (S1 swinging-platform chain links
@@ -919,7 +919,7 @@ See `s1-implement-object/rom-pitfalls.md` P8.
 **S3K confirmation.** CNZ Batbot's render-only body and lamp are also real
 `CreateChild1_Normal` SSTs. Restoring their after-parent slot occupancy and
 independent raw animation advanced the complete-run physics frontier from
-f3129 to f4100 (`docs/skdisasm/sonic3k.asm:186195-186407`).
+f3129 to f4100 (`docs/skdisasm/sonic3k.asm:186288-186500`).
 
 ---
 
@@ -978,7 +978,7 @@ the inline `out_of_range` camera-coarse checks (`docs/skdisasm/sonic3k.asm`
 camera-coarse bound keyed on its width, not a fixed engine margin.
 The same rule applies to behavior gates that read retained `render_flags` bit 7:
 CNZ Clamer's frame-8 projectile needs the full `$14x$10` render box, not an
-X-only visibility check (`docs/skdisasm/sonic3k.asm:185930-185942`).
+X-only visibility check (`docs/skdisasm/sonic3k.asm:186023-186035`).
 
 ---
 
@@ -1016,9 +1016,9 @@ collection windows, or same-frame object execution.
    `Obj37_Init` calls plain `AllocateObject` for the remaining rings.
 
 **ROM citation.** S3K `HurtCharacter` creates the first Obj_Bouncing_Ring owner
-(`docs/skdisasm/sonic3k.asm:21065-21088`). `Obj_Bouncing_Ring` then loops with
+(`docs/skdisasm/sonic3k.asm:21101-21124`). `Obj_Bouncing_Ring` then loops with
 `AllocateObjectAfterCurrent` for the remaining rings
-(`docs/skdisasm/sonic3k.asm:35549-35591`). S2 analog:
+(`docs/skdisasm/sonic3k.asm:35589-35631`). S2 analog:
 `docs/s2disasm/s2.asm:85444-85461,25125-25146`.
 
 **Originating commit (S2 origin).** `d27307e27` S2 ARZ2 Obj37 allocation split:
@@ -1052,7 +1052,7 @@ sample the pre-scroll camera instead of the render-visible camera.
    collision flags.
 
 **ROM citation.** `Obj_WaitOffscreen` and `Render_Sprites` at
-`docs/skdisasm/sonic3k.asm:180266-180298,36318-36365`; Jawz caller at
+`docs/skdisasm/sonic3k.asm:180357-180389,36358-36405`; Jawz caller at
 `183518-183570`.
 
 **Originating commit.** `<pending: HCZ milestone 46>`.
@@ -1060,7 +1060,7 @@ sample the pre-scroll camera instead of the render-visible camera.
 **CNZ confirmation.** The retained routine also performs its coarse-X deletion
 while still dormant. A never-visible Batbot wrapper otherwise held slot 6 until
 the later near Batbot loaded, shifting the complete-run allocation order
-(`docs/skdisasm/sonic3k.asm:180279-180300`).
+(`docs/skdisasm/sonic3k.asm:180370-180391`).
 
 ---
 
@@ -1099,7 +1099,7 @@ such as `Animate_RawGetFaster` can make this error much larger than one frame.
 `byte_6BDF4` and callback `loc_6B212`; that callback alone creates the water
 column. The column later creates spray child `loc_6B3DE`, whose
 `loc_6B3FC` setup returns before `loc_6B410` begins suction
-(`docs/skdisasm/sonic3k.asm:141030-141069,141205-141229,142241-142247,
+(`docs/skdisasm/sonic3k.asm:141095-141134,141270-141294,142306-142312,
 177749-177792`).
 
 **Originating commit.** `<pending: HCZ milestone 51>`.
@@ -1126,7 +1126,7 @@ value through eligibility early returns as well as the active branch.
 `sub_6B9C8` for P1 and P2. A player right of the column negates `d2`, so the
 second player's direction depends on the first call. Its sibling `sub_6B9E2`
 likewise shares `a1`; P1 carry consumes `(a1)+`, shifting P2's grab-zone table
-view by one word (`docs/skdisasm/sonic3k.asm:141757-141881,141925-141930`).
+view by one word (`docs/skdisasm/sonic3k.asm:141822-141946,141990-141995`).
 
 **Originating commit.** `<pending: HCZ milestone 53>`.
 
@@ -1150,9 +1150,9 @@ change previous-list snapshot semantics.
 **ROM citation.** HCZ turbine `loc_6B1A8` dispatches its routine, calls
 `Refresh_ChildPosition`, then tail-calls
 `Child_DrawTouch_Sprite2_FlickerMove`, which adds the refreshed child
-(`docs/skdisasm/sonic3k.asm:141019-141033,178139-178153`). CNZ Batbot likewise
+(`docs/skdisasm/sonic3k.asm:141084-141098,178230-178244`). CNZ Batbot likewise
 runs `Chase_Object` and `MoveSprite2` before its draw/touch tail
-(`docs/skdisasm/sonic3k.asm:186312-186319,20656-20710`).
+(`docs/skdisasm/sonic3k.asm:186405-186412,20692-20746`).
 
 **Originating commits.** `<pending: HCZ milestone 56>`; CNZ f2920 Batbot live
 touch-coordinate milestone.
@@ -1178,7 +1178,7 @@ can respawn if the camera returns.
 
 **ROM citation.** HCZ twisting loop `loc_3909C` tests both player phase bytes
 and calls `Delete_Sprite_If_Not_In_Range` only when both are zero
-(`docs/skdisasm/sonic3k.asm:76482-76505,37262-37277`).
+(`docs/skdisasm/sonic3k.asm:76523-76546,37302-37317`).
 
 **Originating commit.** `<pending: HCZ milestone 57>`.
 
@@ -1200,7 +1200,7 @@ old value through every intermediate animation dispatch.
 
 **ROM citation.** HCZ end-boss turbine `loc_6B244` selects routine 8 and
 `byte_6BE01`; `loc_6B262` alone clears collision after
-`Animate_RawGetSlower` completes (`docs/skdisasm/sonic3k.asm:141084-141106,
+`Animate_RawGetSlower` completes (`docs/skdisasm/sonic3k.asm:141149-141171,
 142249-142257,177749-177792`).
 
 **Originating commit.** `<pending: HCZ milestone 59>`.
@@ -1233,9 +1233,9 @@ constructor defaults.
 **ROM citation.** Turbo Spiker's attached shell reads `parent3`; `loc_87D72`
 installs independent `loc_87DA4`, while the separately allocated trail at
 `loc_87DC0` continues reading the shell's status bit 7
-(`docs/skdisasm/sonic3k.asm:184034-184083`). The range helper installs the
+(`docs/skdisasm/sonic3k.asm:184127-184176`). The range helper installs the
 delete operation and sets that marker before the slot is freed on its next
-entry (`docs/skdisasm/sonic3k.asm:179032-179047,179136-179139`).
+entry (`docs/skdisasm/sonic3k.asm:179123-179138,179227-179230`).
 
 **Originating commit.** `<pending: Turbo Spiker HCZ closure repair>`.
 
@@ -1256,7 +1256,7 @@ and solid-helper call. Do not treat an object-local standing test as a post-cont
 listener unless the disassembly actually calls the helper first.
 
 **ROM citation.** FBZ/DEZ player launcher `loc_3B97A` calls `sub_3B9D8` for both
-players before `SolidObjectTop` (`docs/skdisasm/sonic3k.asm:79415-79427`).
+players before `SolidObjectTop` (`docs/skdisasm/sonic3k.asm:79456-79468`).
 
 **Originating commit.** `<pending: FBZ complete-run trace f202>`.
 
@@ -1276,7 +1276,7 @@ mixed byte/word access. Model 16-bit wrapping separately from selecting the high
 low byte; never infer the byte half from the Java variable name.
 
 **ROM citation.** FBZ floating-platform drop routine integrates word `$32(a0)` but
-compares byte `$32(a0)` at `loc_3A6D0` (`docs/skdisasm/sonic3k.asm:78267-78316`).
+compares byte `$32(a0)` at `loc_3A6D0` (`docs/skdisasm/sonic3k.asm:78308-78357`).
 
 **Originating commit.** `<pending: FBZ complete-run trace f681>`.
 
@@ -1297,8 +1297,8 @@ probe. Preserve its fixed-point prediction, centre/edge semantics, y-radius use,
 and signed acceptance band (`-1 <= distance < $C`).
 
 **ROM citation.** `ObjHitFloor2_DoRoutine` and `ObjCheckFloorDist2`
-(`docs/skdisasm/sonic3k.asm:177986-178007,20054-20068`); FBZ Blaster calls it at
-`loc_89512` (`docs/skdisasm/sonic3k.asm:186458-186472`).
+(`docs/skdisasm/sonic3k.asm:178077-178098,20090-20104`); FBZ Blaster calls it at
+`loc_89512` (`docs/skdisasm/sonic3k.asm:186551-186565`).
 
 **Originating commit.** `<pending: FBZ complete-run trace f868>`.
 
@@ -1323,7 +1323,7 @@ the exclusion is positional and remains valid when the cooldown is zero.
 **ROM citation.** FBZ horizontal chain capture `loc_3ACEA` quantizes the
 relative X coordinate and rejects the leftmost or rightmost cell according to
 subtype bit 6 / status bit 0
-(`docs/skdisasm/sonic3k.asm:78783-78818`).
+(`docs/skdisasm/sonic3k.asm:78824-78859`).
 
 **Originating commit.** `<pending: FBZ complete-run trace f1658>`.
 
@@ -1349,7 +1349,7 @@ otherwise remain invisible.
 
 **ROM citation.** `Touch_Process` reads an SST pointer from
 `Collision_response_list`, then reads `x_pos(a1)` and `y_pos(a1)` live
-(`docs/skdisasm/sonic3k.asm:20661-20717`). FBZ complete-run f2038 exposes
+(`docs/skdisasm/sonic3k.asm:20697-20753`). FBZ complete-run f2038 exposes
 the distinction with a TechnoSqueek moving from $04CA to $04C8 at the
 Insta-Shield's inclusive 48x48 edge.
 
@@ -1380,7 +1380,7 @@ gameplay counter.
 
 **ROM citation.** FBZ floating platform mode 3 reads
 `(Level_frame_counter+1).w` at `loc_3A664`
-(`docs/skdisasm/sonic3k.asm:78229-78243`). FBZ complete-run f2641 shows the
+(`docs/skdisasm/sonic3k.asm:78270-78284`). FBZ complete-run f2641 shows the
 engine platform at Y `$0AA6` while its retained prior position and the ROM's
 current position are `$0AA7`; both solid routines apply the correct `$2D`
 landing-seat delta.
@@ -1413,7 +1413,7 @@ offset.
 
 **ROM citation.** FBZ floating platform modes 1 and 2 read
 `Oscillating_table+$0A` and `Oscillating_table+$1E` at `loc_3A63A` and
-`loc_3A646` (`docs/skdisasm/sonic3k.asm:78211-78228`). The engine payload
+`loc_3A646` (`docs/skdisasm/sonic3k.asm:78252-78269`). The engine payload
 offsets are `$08` and `$1C`. FBZ complete-run f2795 exposed the incorrect raw
 offsets as a subtype `$10` platform alternating between Y `$0A80` and `$0B7F`
 instead of presenting the ROM landing surface near `$0A9D`.
@@ -1445,7 +1445,7 @@ failure cannot hide as an internal boolean.
 
 **ROM citation.** FBZ horizontal chain Obj72 tests the A/B/C press bits in
 `Ctrl_1_logical` and releases the player in `sub_3AA7E`
-(`docs/skdisasm/sonic3k.asm:78513-78568`). In the complete run, f3061 has
+(`docs/skdisasm/sonic3k.asm:78554-78609`). In the complete run, f3061 has
 `Ctrl_1_logical=$1810` and performs the chain jump; f3062 has `$1800`, so the
 held B is not a second press. The stale engine edge instead invoked Fire Shield
 dash and wrote `x_vel=ground_vel=$0800`, `y_vel=0`.
@@ -1480,7 +1480,7 @@ its transient status locally.
 
 **ROM citation.** FBZ Obj71 updates `x_pos`/`y_pos` through its movement
 callbacks and then calls `SolidObjectFull_Offset`
-(`docs/skdisasm/sonic3k.asm:78164-78299`); its standing bits remain in that
+(`docs/skdisasm/sonic3k.asm:78205-78340`); its standing bits remain in that
 same object's `status(a0)`. At complete-run f3199, the subtype `$30` platform
 moved from X `$0BBB` to `$0BBD`. Losing the old coordinate-keyed standing
 bit let `SolidObject_cont -> loc_1E154` apply `subq.w #1,y_pos` to Sonic's
@@ -1490,7 +1490,7 @@ to f3222.
 The same rule applies independently to every real child/member SST slot. FBZ
 Obj77 rotating-platform members update their circular `x_pos`/`y_pos` and call
 `SolidObjectFull` from `loc_3B86A`/`loc_3B8C2`
-(`docs/skdisasm/sonic3k.asm:79333-79388`). At complete-run f15331 the special
+(`docs/skdisasm/sonic3k.asm:79374-79429`). At complete-run f15331 the special
 member's native P2-pushing bit clears in its unchanged slot status byte
 (`$C0->$80`), and `sub_1E0C2` clears Tails' `Status_Push`. A coordinate-keyed
 engine latch instead remained under the member's prior dynamic spawn after it
@@ -1518,7 +1518,7 @@ test at exactly `d1 * 2`, not only at interior and exterior coordinates.
 
 **ROM citation.** FBZ ObjE4 passes `d1=$1B` to `SolidObjectFull`; the shared
 `SolidObject_cont` rejects only with unsigned `bhi`
-(`docs/skdisasm/sonic3k.asm:41399-41407`). Complete-run f3637 exposed the
+(`docs/skdisasm/sonic3k.asm:41439-41447`). Complete-run f3637 exposed the
 incorrect half-open right edge.
 
 **Originating commit.** `<pending: FBZ complete-run trace f3637>`.
@@ -1546,7 +1546,7 @@ participant tables leaves ordinary solids live.
 
 **ROM citation.** FBZ wire-cage handling reaches `RideObject_SetRide` from
 `sub_39F7E` after its custom surface check
-(`docs/skdisasm/sonic3k.asm:77203-77241`). Complete-run f3887 retained stale
+(`docs/skdisasm/sonic3k.asm:77244-77282`). Complete-run f3887 retained stale
 state until the full reset was mirrored.
 
 **Originating commit.** `<pending: FBZ complete-run trace f3887>`.
@@ -1569,7 +1569,7 @@ Do not infer inclusivity from the geometric meaning of the values.
 
 **ROM citation.** `sub_39F7E` performs `bhi` followed by
 `cmpi.w #-$10,d0; blo` before `RideObject_SetRide`
-(`docs/skdisasm/sonic3k.asm:77203-77241`). A BizHawk state probe at
+(`docs/skdisasm/sonic3k.asm:77244-77282`). A BizHawk state probe at
 complete-run f3936 confirmed that an exact zero gap is rejected until f3937.
 
 **Originating commit.** `<pending: FBZ complete-run trace f3936>`.
@@ -1622,9 +1622,9 @@ counter byte is not.
 
 **ROM citation.** FBZ ObjE4 reads `(Level_frame_counter+1).w` at
 `loc_3CD4C` and `loc_3CDD0` before its four-frame flame allocations
-(`docs/skdisasm/sonic3k.asm:80708-80772`). FBZ Obj7F independently reads the
+(`docs/skdisasm/sonic3k.asm:80749-80813`). FBZ Obj7F independently reads the
 same native clock at `loc_3C534` before arming a ballistic-projectile burst
-(`docs/skdisasm/sonic3k.asm:80160-80174`); using ObjectManager's VBla clock
+(`docs/skdisasm/sonic3k.asm:80201-80215`); using ObjectManager's VBla clock
 removes the `$9E` projectile that hurts Tails at complete-run f15235. Focused
 regressions deliberately make the object-update and native clock gates
 disagree, proving that only the native byte may allocate children.
@@ -1650,7 +1650,7 @@ differ substantially, including the spawned coordinate after its first native
 movement update.
 
 **ROM citation.** FBZ ObjE4's `sub_3CEC0` and `loc_3CF4C` consume `d1` after
-`GetSineCosine` (`docs/skdisasm/sonic3k.asm:80856-80911`). At complete-run
+`GetSineCosine` (`docs/skdisasm/sonic3k.asm:80897-80952`). At complete-run
 f4262, angles `$7C/$FC` therefore produce the ROM child X coordinates
 `$097C/$09A2`; using sine instead produced a near-centre flame and the f4276
 Tails damage divergence.
@@ -1677,7 +1677,7 @@ widths.
 
 **ROM citation.** FBZ Obj78 loads `width_pixels` from `byte_3B6D8`, while
 `loc_3B718` adds `$B` only to the `SolidObjectFull` width
-(`docs/skdisasm/sonic3k.asm:79240-79272`). At complete-run f4545, subtype 2
+(`docs/skdisasm/sonic3k.asm:79281-79313`). At complete-run f4545, subtype 2
 must use native width `$18`; the expanded width incorrectly flipped Sonic's
 facing bit.
 
@@ -1702,7 +1702,7 @@ outside the viewport but the sprite box overlapping it.
 
 **ROM citation.** FBZ ObjE4 tests `render_flags(a0)` before allocating flames
 at `loc_3CD6E` and `loc_3CDEC`, after setting `width_pixels=$10`
-(`docs/skdisasm/sonic3k.asm:80654-80772`). A centre-point check delayed the
+(`docs/skdisasm/sonic3k.asm:80695-80813`). A centre-point check delayed the
 complete-run flame phase by 16 pixels/frames and caused the f5882 sidekick
 hurt divergence.
 
@@ -1726,7 +1726,7 @@ slot order: an unrelated earlier solid followed by the actual ridden platform.
 
 **ROM citation.** S3K `SolidObjectFull_1P` clears `Status_OnObj` and the
 object's standing bit only while executing that object's own state
-(`docs/skdisasm/sonic3k.asm:41017-41035`). The complete-run FBZ snake-platform
+(`docs/skdisasm/sonic3k.asm:41057-41075`). The complete-run FBZ snake-platform
 case at f5857 exposed the folded-engine ordering bug.
 
 **Originating commit.** `<pending: FBZ complete-run trace f5857>`.
@@ -1749,7 +1749,7 @@ inclusive right edge independently of the object's stored render width. Regress
 the provider profile and a stationary grounded contact at exact equality.
 
 **ROM citation.** FBZ Egg Prison `sub_89D9C` passes `d1=$2B` directly to
-`SolidObjectFull` (`docs/skdisasm/sonic3k.asm:187185-187191`). At complete-run
+`SolidObjectFull` (`docs/skdisasm/sonic3k.asm:187278-187284`). At complete-run
 f5916, Sonic reaches `x_pos = prison_x + $2B`; ROM retains both P1 pushing
 bits while an exclusive engine profile cleared them.
 
@@ -1777,9 +1777,9 @@ latched bit on the following object update.
 
 **ROM citation.** S3K Obj_Bouncing_Ring initializes radii and
 `width_pixels=8` but leaves cleared `height_pixels=0`, and its floor probe is
-gated by `render_flags` (`docs/skdisasm/sonic3k.asm:35579-35591,
+gated by `render_flags` (`docs/skdisasm/sonic3k.asm:35619-35631,
 35624-35650`). S3K `Render_Sprites` reads `height_pixels` directly
-(`sonic3k.asm:36337-36370`), unlike S2's 32-pixel approximate path
+(`sonic3k.asm:36377-36410`), unlike S2's 32-pixel approximate path
 (`docs/s2disasm/s2.asm:30560-30611`). At FBZ complete-run f7333, the extra
 margin let one spilled ring bounce back and be collected.
 
@@ -1919,7 +1919,7 @@ ID, or trace frame.
 
 **ROM citation.** S3K `loc_13E0A`/`loc_13E34` gates the grounded +/-1 `x_pos`
 nudge on ground speed, facing, and `object_control` bit 0, not `interact(a0)`
-(`docs/skdisasm/sonic3k.asm:26707-26741`). At FBZ complete-run f9389, Tails'
+(`docs/skdisasm/sonic3k.asm:26747-26781`). At FBZ complete-run f9389, Tails'
 live button pointer was `$574` pixels vertically remote; treating it as local
 support suppressed the native +1 correction. The same bridge remains valid for
 the proven AIZ local-contact case inside its existing `$80`-pixel band.
@@ -1950,7 +1950,7 @@ reject boundary and the next entering frame.
 
 **ROM citation.** FBZ Obj71 calls `SolidObjectFull_Offset_1P`; after adding live
 `y_radius(a1)` to d2, the routine copies and doubles d2 to form the symmetric
-vertical span (`docs/skdisasm/sonic3k.asm:41294-41317`). At complete-run f9624,
+vertical span (`docs/skdisasm/sonic3k.asm:41334-41357`). At complete-run f9624,
 normal-solid geometry side-pushed rolling Tails from `$1486` to `$148B` one
 frame early; the ROM performs that push at f9625.
 
@@ -1978,7 +1978,7 @@ callback that legitimately reloads them.
 
 **ROM citation.** FBZ Blaster `loc_8956A` writes routine 2 and restores the
 turn callback, but does not copy recurring `$3A` into patrol countdown `$2E`;
-that reload occurs only in `loc_8955A` (`docs/skdisasm/sonic3k.asm:186475-186486`).
+that reload occurs only in `loc_8955A` (`docs/skdisasm/sonic3k.asm:186568-186579`).
 At complete-run f9965, resetting `$2E` from 64 to 128 after the attack let the
 engine Blaster walk to `$1406` instead of turning near the ROM's `$13E0`, where
 it incorrectly hurt Tails.
@@ -2009,10 +2009,10 @@ from the centre returned after `setRolling(false)`.
 
 **ROM citation.** `Player_TouchFloor` saves `y_radius`, installs
 `default_y_radius`, subtracts the default from the saved value, and adds the
-result to `y_pos` (`docs/skdisasm/sonic3k.asm:24335-24363`). FBZ wire cage
+result to `y_pos` (`docs/skdisasm/sonic3k.asm:24375-24403`). FBZ wire cage
 `sub_39F7E` seats the player and calls `RideObject_SetRide`, which invokes that
 floor reset only when clearing `Status_InAir`
-(`docs/skdisasm/sonic3k.asm:77618-77659`, `42027-42049`). At complete-run
+(`docs/skdisasm/sonic3k.asm:77659-77700`, `42027-42049`). At complete-run
 f10499, native rolling Sonic moves from the cage's pre-reset `$AED` to `$AE8`;
 the engine moved to `$AF2` before this correction.
 
@@ -2045,7 +2045,7 @@ or frame conditions.
 **ROM citation.** S3K `sub_14C20`/`sub_14CAC` perform the retail high-byte skid
 threshold comparison, then test `flip_type(a0)` and return on `BMI` before
 writing Stop animation, facing, SFX, or dust
-(`docs/skdisasm/sonic3k.asm:28041-28167`). FBZ moving wire cage writes
+(`docs/skdisasm/sonic3k.asm:28081-28207`). FBZ moving wire cage writes
 `flip_type=$80`; at complete-run f11804, omitting the sentinel guard flipped
 Tails left despite native status remaining `$08`, causing the next frame's
 direction-dependent follow nudge.
@@ -2074,7 +2074,7 @@ test whenever the shifted coordinate participates in collision.
 
 **ROM citation.** FBZ screw door `loc_3BCB4` negates negative-direction
 displacement before `asr.w #1` in both the bit-5 half-speed horizontal branch
-and the vertical branch (`docs/skdisasm/sonic3k.asm:79688-79710`). At complete-
+and the vertical branch (`docs/skdisasm/sonic3k.asm:79729-79751`). At complete-
 run f12435 the native subtype `$12` door moved from Y `$846` to `$845`, clearing
 its Player 2 pushing bit and Tails' `Status_Push`; Java `/ 2` left the door at
 `$846` for one extra frame.
@@ -2108,7 +2108,7 @@ current player status at the same pre-SolidObject point, and use
 **ROM citation.** S3K subtype-$03 `Obj_Spikes` reads the prior object's
 pushing bits and saved Player 1/2 status bytes in `loc_24356`/`sub_2438A`, then
 refreshes `$3E/$3F` before the current `SolidObjectFull` calls
-(`docs/skdisasm/sonic3k.asm:49239-49343`). Its successful push uses
+(`docs/skdisasm/sonic3k.asm:49279-49383`). Its successful push uses
 `addq.w #1,x_pos` for both spike and player. At FBZ complete-run f13766, using
 live Push moved the spike/player one frame early and reset Sonic's `$A300`
 fraction; native first moves them on f13767 with the fraction preserved.
@@ -2147,7 +2147,7 @@ only.
 **ROM citation.** FBZ spring plunger `loc_89C86` calls `sub_86A3E`
 (`SolidObjectFull` with d1=$1B, d2=$04, d3=$06), then immediately tests Player 1
 and Player 2 standing bits and calls `sub_8635E` to launch each at y-speed
-`-$0A00` (`docs/skdisasm/sonic3k.asm:187094-187119`). At complete-run f14411,
+`-$0A00` (`docs/skdisasm/sonic3k.asm:187187-187212`). At complete-run f14411,
 the engine landed both players but ignored the checkpoint batch, leaving
 P1 y-speed zero instead of launching in the same SST entry.
 
@@ -2180,8 +2180,8 @@ P1, and calls `sub_8635E`. That helper replaces d0 with `sfx_Spring=$B1` before
 tail-jumping `Play_SFX`; on return, `loc_89CC4` tests P2 standing bit 4 in the
 clobbered `$B1`, whose bit 4 is set. Consequently P1 standing launches both
 players even when plunger status is only `$08` and P2's interact pointer names
-another object (`docs/skdisasm/sonic3k.asm:187098-187116`, `181311-181320`;
-`docs/skdisasm/sonic3k.constants.asm:1622`). FBZ complete-run f14411 exposes
+another object (`docs/skdisasm/sonic3k.asm:187191-187209`, `181311-181320`;
+`docs/skdisasm/sonic3k.constants.asm:1647`). FBZ complete-run f14411 exposes
 this retail quirk.
 
 The clobber can also change which persistent object-status bit a helper reads,
@@ -2202,7 +2202,7 @@ bit 1 rather than standing bit 4. `sub_3A270` uses that same bit for its entry
 paths use it for `bclr`. BizHawk at complete-run f16894 records
 `$00100000->$00100001`; unchanged P1 mapping returns before the clobber and
 restores d6 `$03->$04` on the next call
-(`docs/skdisasm/sonic3k.asm:77875-77890,77896-78137,42027-42048`).
+(`docs/skdisasm/sonic3k.asm:77916-77931,77937-78178,42067-42088`).
 
 **Originating commit.** `<pending: FBZ complete-run trace f14411 P2>`.
 
@@ -2238,7 +2238,7 @@ nonnegative entry at `loc_3C6F4` adds `$10` and reaches the target-height or
 `ObjCheckFloorDist` impact paths. Both install `loc_3C768` and continue through
 `loc_3C740`; target impact also decrements parent `$40` immediately. On the next
 callback, `loc_3C768` adds Y+4 and converts the same slot to `Obj_Explosion`
-(`docs/skdisasm/sonic3k.asm:80282-80348`). At complete-run f15235, flattening
+(`docs/skdisasm/sonic3k.asm:80323-80389`). At complete-run f15235, flattening
 those branches removed all three native projectiles before slot 9's `$9E` hurt
 overlap with Tails.
 
@@ -2273,7 +2273,7 @@ is set before the object becomes destroyed.
 `x_pos(a0)` and cull anchor `$44(a0)` to `$7F00` when parent `$40` is zero;
 regardless of that branch, it calls `SolidObjectFull` and then tail-jumps to
 `Sprite_OnScreen_Test2`
-(`docs/skdisasm/sonic3k.asm:80231-80269`). At complete-run f16682, both native
+(`docs/skdisasm/sonic3k.asm:80272-80310`). At complete-run f16682, both native
 players changed from grounded/on-object to Air before slot 16 was recycled; the
 engine culled first and left both latched.
 
@@ -2392,15 +2392,15 @@ release, or CPU routine changes collapse those native ownership boundaries.
    the same numeric animation through a different native routine.
 
 **ROM citation.** `Sonic_Control` and `Tails_Control` skip their animators for
-bit 1 (`docs/skdisasm/sonic3k.asm:22067-22076,26257-26272`). The AIZ plane
+bit 1 (`docs/skdisasm/sonic3k.asm:22103-22112,26297-26312`). The AIZ plane
 intro writes player `mapping_frame=0` with `$53`, later publishes Hurt after
 the player slot, and its CPU-sidekick dormant marker writes `$83` without an
 animation write; Fly begins only at the catch-up trigger
-(`docs/skdisasm/sonic3k.asm:26389-26397,26474-26534,
+(`docs/skdisasm/sonic3k.asm:26429-26437,26514-26574,
 135492-135495,135609-135619`). HCZ level-start setup writes `$1B` before the
 ordinary sidekick init path; the landing routine writes Walk before Animate,
 and flight recovery writes Walk during its routine-4-to-6 handoff
-(`docs/skdisasm/sonic3k.asm:8111-8148,24325-24329,26631-26648`).
+(`docs/skdisasm/sonic3k.asm:8143-8180,24365-24369,26671-26688`).
 
 **Originating commits.** `b18c254e3`; `<pending: S3K intro landing milestone>`.
 
@@ -2430,7 +2430,7 @@ ROM-backed profile as well as the shared animator helper.
 
 **ROM citation.** `Animate_Tails` selects `AniTails1F` at absolute
 `ground_vel >= $700` without changing the Walk byte
-(`docs/skdisasm/sonic3k.asm:29462-29489`); `AniTails1F` is `$FF,$C3,$C4`
+(`docs/skdisasm/sonic3k.asm:29502-29529`); `AniTails1F` is `$FF,$C3,$C4`
 (`docs/skdisasm/General/Sprites/Tails/Anim - Tails.asm:79`).
 
 **Originating commit.** `<pending: S3K Tails high-speed animation tier>`.
@@ -2458,7 +2458,7 @@ executes the object once, and proves the table is unchanged.
 **ROM citation.** S3K calls `OscillateNumDo` once after
 `Process_Sprites` at the `LevelLoop` tail, while
 `Obj_MGZMovingSpikePlatform` only reads `Oscillating_table+$12`
-(`docs/skdisasm/sonic3k.asm:7909,71029-71072`).
+(`docs/skdisasm/sonic3k.asm:7941,71069-71112`).
 
 **Originating commit.** `<pending: MGZ moving-spike oscillator ownership milestone>`.
 
@@ -2486,9 +2486,9 @@ focused assertion for the returned word.
 
 **ROM citation.** `TailsCPU_UpdateObjInteract` copies `(a3)` into
 `Tails_CPU_interact`, and `sub_13EFC` compares that word against the current
-stood-on slot (`docs/skdisasm/sonic3k.asm:26816-26843`).
+stood-on slot (`docs/skdisasm/sonic3k.asm:26856-26883`).
 `Obj_MGZ2LevelCollapseSolid` runs at `$0005180A`
-(`docs/skdisasm/sonic3k.asm:106955-106970`), so its high word is `$0005`.
+(`docs/skdisasm/sonic3k.asm:107001-107016`), so its high word is `$0005`.
 
 **Originating commit.** `<pending: MGZ collapse-carrier interact milestone>`.
 
@@ -2522,8 +2522,8 @@ left/right branch:
    routine uses a different helper.
 
 **ROM citation.** S3K `SolidObject_cont` left/right classification and stop
-path at `docs/skdisasm/sonic3k.asm:41468-41483`. The MGZ invisible block calls
-`SolidObjectFull2` at `docs/skdisasm/sonic3k.asm:42656-42691`.
+path at `docs/skdisasm/sonic3k.asm:41508-41523`. The MGZ invisible block calls
+`SolidObjectFull2` at `docs/skdisasm/sonic3k.asm:42696-42731`.
 
 **Originating commit.** `<pending: MGZ invisible-block zero-speed side-stop
 milestone>`.
@@ -2548,7 +2548,7 @@ interactions such as horizontal springs whose ROM tail does not write the
 routine, and do not clear the separate invulnerability timer.
 
 **ROM citation.** S3K up, down, diagonal-up, and diagonal-down spring tails at
-`docs/skdisasm/sonic3k.asm:47720-47729,48139-48143,48213-48217,48304-48308`.
+`docs/skdisasm/sonic3k.asm:47760-47769,48179-48183,48253-48257,48344-48348`.
 Cross-game origin: `s2-implement-object/rom-pitfalls.md` P36.
 
 **Originating commit.** `<pending: CNZ spring routine-handoff milestone>`.
@@ -2570,7 +2570,7 @@ edge.
 written as `origin-N` and `origin+N`.
 
 **ROM citation.** S3K horizontal spring `sub_2326C` rejects its computed upper
-X bound with `bhs` (`docs/skdisasm/sonic3k.asm:47957-48024`).
+X bound with `bhs` (`docs/skdisasm/sonic3k.asm:47997-48064`).
 
 **Originating commit.** `<pending: CNZ horizontal-spring boundary milestone>`.
 
@@ -2596,8 +2596,8 @@ previous-list membership rule.
 
 **ROM citation.** CNZ `Obj_CNZBalloon` updates its sine-bobbed `y_pos` before
 `Sprite_CheckDeleteTouch3` at
-`docs/skdisasm/sonic3k.asm:66776-66795`; `Touch_Loop` dereferences the queued
-SST pointer at `docs/skdisasm/sonic3k.asm:20656-20710`.
+`docs/skdisasm/sonic3k.asm:66816-66835`; `Touch_Loop` dereferences the queued
+SST pointer at `docs/skdisasm/sonic3k.asm:20692-20746`.
 
 **Originating commit.** `<pending: CNZ balloon live-touch milestone>`.
 
@@ -2625,7 +2625,7 @@ slot's contents at the eventual mismatch. Test both the earlier provider and
 the mismatch target.
 
 **ROM citation.** `sub_13EFC` retains and compares `Tails_CPU_interact` at
-`docs/skdisasm/sonic3k.asm:26816-26843`; CNZ door routines occupy
+`docs/skdisasm/sonic3k.asm:26856-26883`; CNZ door routines occupy
 `$00030xxx-$00031xxx` at lines 66036-66167, while spring variants occupy
 `$00022xxx-$00023xxx` at lines 47500-47540.
 
@@ -2652,7 +2652,7 @@ direction retained.
 
 **ROM citation.** CNZ cylinder `loc_32610` writes `PlayerTwistFrames` to
 `mapping_frame`, masks `render_flags`, and ORs `PlayerTwistFlip` without
-touching `status` at `docs/skdisasm/sonic3k.asm:68078-68100`.
+touching `status` at `docs/skdisasm/sonic3k.asm:68118-68140`.
 
 **Originating commit.** `<pending: CNZ cylinder render-flip milestone>`.
 
@@ -2678,7 +2678,7 @@ actually leaves the horizontal range. Test delete, a Y-coarse transition away,
 and a later strip transition that recreates a distinct instance.
 
 **ROM citation.** `Sprite_CheckDeleteTouch3` reaches the respawn-bit-clearing
-delete path at `docs/skdisasm/sonic3k.asm:37262-37276`; the independent Y-strip
+delete path at `docs/skdisasm/sonic3k.asm:37302-37316`; the independent Y-strip
 scan is `loc_1B982` at lines 37723-37762.
 
 **Originating commit.** `<pending: S3K Y-pass self-delete respawn milestone>`.
@@ -2709,7 +2709,7 @@ publication is unconditional. Test a lower-half overlap within $10 pixels
 while moving away.
 
 **ROM citation.** S3K `SolidObjectFull` escapes the lower-half squash at
-`docs/skdisasm/sonic3k.asm:41564-41568` and publishes grounded push through
+`docs/skdisasm/sonic3k.asm:41604-41608` and publishes grounded push through
 `loc_1E06E` at lines 41473-41495. S2 follows the corresponding
 `SolidObject_Squash -> SolidObject_LeftRight` path at
 `docs/s2disasm/s2.asm:35336-35402`.
@@ -2740,7 +2740,7 @@ non-layout objects. Test an entry with bit 15 clear, mark it remembered, unload
 it, and verify a later load observes the remembered state.
 
 **ROM citation.** S3K initializes and advances `Object_respawn_table` alongside
-every layout record at `docs/skdisasm/sonic3k.asm:37513-37656`; the Camera-Y
+every layout record at `docs/skdisasm/sonic3k.asm:37553-37696`; the Camera-Y
 loader sets bit 7 and writes `respawn_addr(a1)` at lines 37741-37758.
 
 **Originating commit.** `<pending: S3K all-entry respawn persistence milestone>`.
@@ -2769,7 +2769,7 @@ object-placement margin as an activation proxy.
 
 **ROM citation.** `Obj_WaitOffscreen` installs the `$20` extents and restores
 the saved operation from the render flag at
-`docs/skdisasm/sonic3k.asm:180271-180303`; the special-stage entry ring invokes
+`docs/skdisasm/sonic3k.asm:180362-180394`; the special-stage entry ring invokes
 it before animation/collision dispatch at lines 128219-128269.
 
 **Originating commit.** `<pending: S3K entry-ring render activation milestone>`.
@@ -2800,7 +2800,7 @@ when the native vertical contact completes.
 
 **ROM citation.** CNZ's top calls `MoveSprite2`, `SolidObjectFull`, and only
 then `CNZMinibossTop_CheckPlayerBounce`; that helper probes Player 1 followed
-by Player 2 at `docs/skdisasm/sonic3k.asm:145053-145103,145530-145578`.
+by Player 2 at `docs/skdisasm/sonic3k.asm:145118-145168,145595-145643`.
 
 **Originating commit.** `<pending: CNZ miniboss P2 bounce milestone>`.
 
@@ -2866,7 +2866,7 @@ engine holds the landing value for several frames before catching up. The drift
 is small at first and compounds for the rest of the act.
 
 **Root cause.** `move_lock` is the ROM's only grounded-input lock, and in the
-spring family only the horizontal spring `sub_23190` (`loc_231BE`, `move.w #$F,$32(a1)`) writes it. The vertical/diagonal launch `sub_22F98` (sonic3k.asm:47700-47772)
+spring family only the horizontal spring `sub_23190` (`loc_231BE`, `move.w #$F,$32(a1)`) writes it. The vertical/diagonal launch `sub_22F98` (sonic3k.asm:47740-47812)
 write no lock of any kind. An engine "springing"/"recently launched" marker used
 by objects for their own re-contact and carry tests must not also gate
 horizontal input -- doing so invents a control lock the ROM has nowhere. It is
@@ -2879,9 +2879,9 @@ object that set it.
 alone. A spring that really does set `move_lock` should call the engine's
 move-lock setter; keep any launch marker free of input semantics.
 
-**ROM citation.** docs/skdisasm/sonic3k.asm:47907. Cross-game: S2 `loc_18B1C` at
+**ROM citation.** docs/skdisasm/sonic3k.asm:47947. Cross-game: S2 `loc_18B1C` at
 `docs/s2disasm/s2.asm:34031`, S3K `loc_231BE` at
-`docs/skdisasm/sonic3k.asm:47907`, S1 `.doBounce` at
+`docs/skdisasm/sonic3k.asm:47947`, S1 `.doBounce` at
 `docs/s1disasm/_incObj/41 Springs.asm:144`.
 
 **Originating commit.** `<pending: spring grounded control lock milestone>`.
@@ -2901,8 +2901,8 @@ destruction.
 call does it for them: `Child_Draw_Sprite`, `Child_DrawTouch_Sprite`,
 `Child_CheckParent` and `Child_AddToTouchList` all begin
 `movea.w parent3(a0),a1 / btst #7,status(a1) / bne.w Go_Delete_Sprite`
-(`docs/skdisasm/sonic3k.asm:178046-178072`), and `Touch_EnemyNormal` sets that
-bit on the badnik it destroys (`sonic3k.asm:20952-20953`). In
+(`docs/skdisasm/sonic3k.asm:178137-178163`), and `Touch_EnemyNormal` sets that
+bit on the badnik it destroys (`sonic3k.asm:20988-20989`). In
 `Child_DrawTouch_Sprite` the test runs **before**
 `Add_SpriteToCollisionResponseList`, so a child deleted on that pass never
 publishes a touch entry. An engine child that models only the parent's
@@ -2920,7 +2920,7 @@ attached branch is the mirror-image bug.
 call, after the movement step, test the parent's destroyed state, suppress this
 frame's touch-list publication, and destroy the child.
 
-**ROM citation.** `docs/skdisasm/sonic3k.asm:178046-178072`
+**ROM citation.** `docs/skdisasm/sonic3k.asm:178137-178163`
 (`Child_Draw_Sprite` family), `:20952-20953` (`Touch_EnemyNormal` setting status
 bit 7). Worked example: `Obj_StarPointer`'s orbit routine `loc_8BEE6` tails into
 `Child_DrawTouch_Sprite` (`:190853-190858`) while its launched `loc_8BF4C`
@@ -2953,7 +2953,7 @@ isolation, so every such global reads as its power-on default and the object
 takes the "nothing collected yet" branch forever.
 
 **Worked example.** `SSEntryRing_Main`'s collision handler `loc_6170A`
-(`docs/skdisasm/sonic3k.asm:128276-128293`) awards 50 rings at `loc_61794`
+(`docs/skdisasm/sonic3k.asm:128330-128347`) awards 50 rings at `loc_61794`
 (`:128325-128333`) when `Chaos_emerald_count` is 7 and `SSEntry_CheckLevel`
 (`:128433-128443`) reports an S3-half level; otherwise it runs the special-stage
 capture at `loc_6173A` (`:128295-128298`). Same ring, same zone, same player --
@@ -2980,7 +2980,7 @@ classification habit is universal; only the specific globals are S3K's.
 routine at all** — not even Init — until `Render_Sprites` has set `render_flags` bit 7, and the
 release frame itself still runs no routine.
 
-`Obj_WaitOffscreen` (`docs/skdisasm/sonic3k.asm:180271-180302`) pops its return address into
+`Obj_WaitOffscreen` (`docs/skdisasm/sonic3k.asm:180362-180393`) pops its return address into
 `$34(a0)` and overwrites `(a0)` with a placeholder that only draws a `$20x$20` `Map_Offscreen`
 and deletes itself past coarse-X `$280`. Once bit 7 is set it takes the restore path, puts
 `$34(a0)` back and `rts`.
@@ -3005,7 +3005,7 @@ already does.
 
 **Beware the second defect.** A badnik whose ObjDat flags classify it SPECIAL takes the object's
 own touch path, so the engine's ENEMY-category `applyEnemyBounce` never runs. In the ROM the
-player's ±`$100` bounce comes from `EnemyDefeated` (`sonic3k.asm:179752-179771`), which the badnik
+player's ±`$100` bounce comes from `EnemyDefeated` (`sonic3k.asm:179843-179862`), which the badnik
 calls itself. Fixing the offscreen gate alone can leave the bounce still missing.
 
 ---
@@ -3026,8 +3026,8 @@ run**. One missing producer bricks every art consumer after it.
 
 **Why it hides.** An object stuck in its art-wait routine is not visibly broken: it simply does
 not act. If its post-art work writes a cross-object global, the divergence surfaces in whatever
-consumes that global. The measured case: `Obj_HCZLargeFan` (sonic3k.asm:65588-65634) clears
-`(_unkF7C7).w` after its eight-frame drop; `HCZ_WaterTunnels` (sonic3k.asm:8848-8899) is gated on
+consumes that global. The measured case: `Obj_HCZLargeFan` (sonic3k.asm:65628-65674) clears
+`(_unkF7C7).w` after its eight-frame drop; `HCZ_WaterTunnels` (sonic3k.asm:8880-8931) is gated on
 that byte at `:8870`. A KosM ordinal four behind left the fan waiting forever, so the water tunnel
 never engaged, so the trace reported `x_speed 0x0400 vs 0x0300` — a player physics field, 1000+
 frames after the actual defect.
@@ -3046,7 +3046,7 @@ one-missing-producer-deadlocks-the-rest failure applies to all three games.
 
 **Originating investigation.** HCZ Sonic+Tails segment frame 2478 (1135 errors). RESOLVED
 2026-08-15: the missing producer was `HCZGeyser_ReloadEnemyArtAndDelete`'s
-`jsr (LoadEnemyArt).l` (`docs/skdisasm/sonic3k.asm:65002-65005`), lost because the
+`jsr (LoadEnemyArt).l` (`docs/skdisasm/sonic3k.asm:65042-65045`), lost because the
 engine camera-unloaded the geyser 29 frames into its 150-frame countdown. See P53 and
 `docs/status/trace-frontier-log.md`, 2026-08-15.
 
@@ -3067,7 +3067,7 @@ that turns out to be *implemented* -- it simply died before it could run.
 and the restore is the *last* thing a long countdown does. `Obj_HCZWaterWall`'s
 horizontal geyser is the measured case: `HCZWaterWall_Horizontal_UpdateChildSprites`
 arms `move.w #150,$30(a0)` and installs `HCZGeyser_CleanupDelay`
-(`docs/skdisasm/sonic3k.asm:64992-65000`), which is a bare `subq.w #1,$30(a0)` with
+(`docs/skdisasm/sonic3k.asm:65032-65040`), which is a bare `subq.w #1,$30(a0)` with
 **no range test at all**, and whose expiry runs
 `HCZGeyser_ReloadEnemyArtAndDelete` -> `jsr (LoadEnemyArt).l`
 (`:65002-65005`), re-queueing all four `PLCKosM_HCZ1` archives (`:64354-64359`).
@@ -3083,7 +3083,7 @@ that was fully implemented and simply killed early.
    name each one, including helper bodies. `Sprite_OnScreen_Test` **does unload**:
    it masks object X with `$FF80`, compares the unsigned distance from
    `Camera_X_pos_coarse_back` with `$280`, then clears respawn bit7 and deletes
-   at `loc_1B5A0` when outside (sonic3k.asm:37262–37278). `Sprite_OnScreen_Test2`
+   at `loc_1B5A0` when outside (sonic3k.asm:37302–37318). `Sprite_OnScreen_Test2`
    uses caller-provided X and has the same release path. Only its in-range
    branch draws. The former claim that this helper only draws was disproved
    during the LRZ cold-route campaign based on `bc4e3285d`: retained rocks,
@@ -3099,12 +3099,12 @@ that was fully implemented and simply killed early.
    `HCZWaterWall_Vertical_WaitPlayer` (`:65135-65136`); the horizontal branch never does.
    Model per phase, not per object, when the routines disagree.
 4. Sibling audit: any object whose tail restores shared art
-   (`Restore the overwritten badnik explosion art`, `sonic3k.asm:128487`, is another
+   (`Restore the overwritten badnik explosion art`, `sonic3k.asm:128541`, is another
    instance of the same shape) is a candidate for the same defect.
 
 **A second, cheaper failure mode of the same defect: the freed SLOT re-phases every
 later child allocation.** `Obj_SlotBonus`'s live routine `loc_4BF9A`
-(`docs/skdisasm/sonic3k.asm:99324-99560`) likewise has no `out_of_range`,
+(`docs/skdisasm/sonic3k.asm:99370-99606`) likewise has no `out_of_range`,
 `MarkObjGone` or `Delete_Current_Sprite` on any path, and the fixture's `slot_dump`
 shows it holding SST slot 4 continuously for the whole stage. The engine's shared
 camera unload retired it, and slot 4 is the LOWEST dynamic slot the ROM keeps
@@ -3136,7 +3136,7 @@ platform moves. A probe on the object itself shows the platform's own `x_pos`
 and the value it writes to the rider are both correct; something after the
 object's update adds the platform's per-frame delta a second time.
 
-**Root cause.** `MvSonicOnPtfm` (`docs/skdisasm/sonic3k.asm:41647-41684`) ends
+**Root cause.** `MvSonicOnPtfm` (`docs/skdisasm/sonic3k.asm:41687-41724`) ends
 with `sub.w x_pos(a0),d2 / sub.w d2,x_pos(a1)`, where `d2` is the `d4` the
 caller passed to `SolidObjectTop`. `d4` is a *carry reference*, not the
 platform's position: the rider is dragged by `d4 - x_pos(a0)`. A caller that
@@ -3146,7 +3146,7 @@ produces the full delta and does.
 
 **Both forms appear in one object.** `Obj_FBZDEZPlayerLauncher`'s launch routine
 `loc_3B9AC` does `move.w x_pos(a0),d4` after `MoveSprite2`
-(`sonic3k.asm:79428`) -- no carry, because `sub_3B9D8` has already written the
+(`sonic3k.asm:79469`) -- no carry, because `sub_3B9D8` has already written the
 rider's `x_pos` explicitly. Its return-to-home routine `loc_3BA4A` instead does
 `move.w x_pos(a0),-(sp)` before stepping and `move.w (sp)+,d4` after
 (`:79475`, `:79486`) -- full carry. `Obj_FBZRotatingPlatform`'s `loc_3B86A`
@@ -3205,7 +3205,7 @@ frame's routine picks the rider straight back up. In the engine, a
 "No solid call this frame" and "not solid this frame" are opposite statements.
 
 **Measured case.** `Obj_LRZCollapsingBridge`'s break routine `loc_39D84`
-(`docs/skdisasm/sonic3k.asm:77496`) is entered by `bra.w loc_39D84` at `:77416`,
+(`docs/skdisasm/sonic3k.asm:77537`) is entered by `bra.w loc_39D84` at `:77416`,
 skipping `loc_39CCC`'s `SolidObjectTop` (`:77429-77435`); `loc_39CE8` calls it
 again on the following frame (`:77440-77445`), and only `sub_39D1A` (`:77458`)
 ever clears a rider's bits. Modelling the skip as `isSolidFor() == false` moved
@@ -3247,7 +3247,7 @@ reads like sub-pixel accumulation and is not.
 
 **Root cause.** Every S3K top-solid new-landing entry point -- `sub_1E410`,
 `loc_1E42E`, `SolidObjCheckSloped` and `SolidObjCheckSloped2` -- converges on
-`loc_1E45A` (`docs/skdisasm/sonic3k.asm:42005-42015`):
+`loc_1E45A` (`docs/skdisasm/sonic3k.asm:42045-42055`):
 
 ```
         sub.w   d1,d0          ; d0 = objTop - (y_pos(a1) + y_radius(a1) + 4)
@@ -3320,7 +3320,7 @@ SolidObject_Monitor_SonicKnux:
         cmpi.b  #2,anim(a1)          ; rolling animation? -> rts (not solid)
         ...                          ; Knuckles glide / slide exemptions
 ```
-(`docs/skdisasm/sonic3k.asm:40559-40576`; `SolidObject_Monitor_Tails` has the
+(`docs/skdisasm/sonic3k.asm:40599-40616`; `SolidObject_Monitor_Tails` has the
 identical shape at `:40583-40590` with the competition-mode test.)
 
 So the roll/glide/competition exemptions are **acquire-time gates only**.
@@ -3362,9 +3362,9 @@ right, its routine transitions happen. The trace prints this nowhere near the
 object -- as a *player* velocity divergence on the frame the player's path first
 grazes the object's hitbox, typically a whole-vector sign inversion if the
 object is a boss (`neg.w x_vel / y_vel / ground_vel`,
-`docs/skdisasm/sonic3k.asm:20913-20915`).
+`docs/skdisasm/sonic3k.asm:20949-20951`).
 
-**Root cause.** `ObjCheckCeilingDist` (`docs/skdisasm/sonic3k.asm:20351-20366`)
+**Root cause.** `ObjCheckCeilingDist` (`docs/skdisasm/sonic3k.asm:20387-20402`)
 is not a generic "distance to ceiling":
 
 ```
@@ -3437,7 +3437,7 @@ active" -- shortens the window by exactly the duration of the triggering
 action.
 
 **Measured case.** `Obj_MGZDashTrigger`'s `loc_25D9C`
-(`docs/skdisasm/sonic3k.asm:51493-51545`) probes contact with `sub_1DD0E`, then
+(`docs/skdisasm/sonic3k.asm:51533-51585`) probes contact with `sub_1DD0E`, then
 stores `#$3C` into `$30(a0)` for P1 (`:51502-51521`) and again for P2
 (`:51527-51545`), and only *then* falls into `loc_25E22`'s
 `tst.w $30(a0)` / `subq.w #1,$30(a0)`. Sonic held the spindash animation
@@ -3483,12 +3483,12 @@ overrides one of them.
 
 * `SolidObject`'s X extent comes from the `d1` the caller loads --
   `width_pixels(a0) + $B` for the `Obj_Spikes` family
-  (`docs/skdisasm/sonic3k.asm:49017-49019`). The engine models this in
+  (`docs/skdisasm/sonic3k.asm:49057-49059`). The engine models this in
   `getSolidParams()`.
 * Whether the solid helper runs **at all** comes from `render_flags(a0)` bit 7,
   which `Render_Sprites` sets from `width_pixels(a0)` -- `SolidObject`'s own
   entry is `tst.b render_flags(a0) / bpl.w loc_1E0A2`
-  (`sonic3k.asm:41390-41392`). The engine models this in
+  (`sonic3k.asm:41430-41432`). The engine models this in
   `isWithinSolidContactBounds()` via `getOnScreenHalfWidth()` /
   `getOnScreenHalfHeight()`.
 
@@ -3501,14 +3501,14 @@ the ROM is still solid.
 
 **Measured case.** MGZ1's floor-spike strip at `(0x1050, 0x0220)` is layout
 subtype `$30`, so `Obj_Spikes` stores `Spikes_Dimensions[6]` = `$40, $10`
-(`sonic3k.asm:48926-48934` table, `:48937-48939` store): half-width `$40`,
+(`sonic3k.asm:48966-48974` table, `:48937-48939` store): half-width `$40`,
 footprint `0x1010-0x1090`. `Sonic3kSpikeObjectInstance` overrode
 `getOnScreenHalfHeight()` but not `getOnScreenHalfWidth()`, so the engine used
 `0x1040-0x1060`, entirely left of a camera at `0x106E`. Tails, whose own
-`SolidObjectFull` P2 gate (`sonic3k.asm:41011-41012`
+`SolidObjectFull` P2 gate (`sonic3k.asm:41051-41052`
 `tst.b render_flags(a1) / bpl.w locret_1DCB4`) had just released him back
 on-screen, ran through the strip instead of being crushed by
-`loc_1E126`'s `cmpi.w #$10,d4 / Kill_Character` (`sonic3k.asm:41595-41602`).
+`loc_1E126`'s `cmpi.w #$10,d4 / Kill_Character` (`sonic3k.asm:41635-41642`).
 
 **What to check.** For every object with a ROM `width_pixels` (or
 `height_pixels`) other than `$10`, override **both** `getOnScreenHalfWidth()`
@@ -3528,12 +3528,12 @@ width byte, and the same default lives in the shared
 
 **Shape.** A ROM routine calls `GetSineCosine`, then does `swap dN` and a long
 shift or add on the result. `GetSineCosine` writes only `d0.w` and `d1.w`
-(`move.w SineTable(pc,d0.w),d1`, `sonic3k.asm:3025`), so after `swap` the *low*
+(`move.w SineTable(pc,d0.w),d1`, `sonic3k.asm:3057`), so after `swap` the *low*
 word of the register is whatever the caller -- or, for `d1`, whatever the
 **previously executed object slot** -- happened to leave in the high word. A
 straight `sin << 12` port silently models that residue as zero.
 
-**Why it bites.** `Obj_MGZSwingingPlatform`'s `sub_34074` (`sonic3k.asm:70487`)
+**Why it bites.** `Obj_MGZSwingingPlatform`'s `sub_34074` (`sonic3k.asm:70527`)
 does `swap d0 / swap d1 / asr.l #4` and then accumulates five steps, so the
 residue reaches the integer part:
 
@@ -3550,7 +3550,7 @@ never as an object field.
 **What to check.** Whenever you port a `swap`/`asr.l`/`add.l` sequence applied
 to a `GetSineCosine`, `Random_Number` or similar word-writing helper's output,
 work out where the register's high word came from before deciding it is zero.
-`move.l (a0),d0` in `Process_Sprites`' `sub_1AAFC` (`sonic3k.asm:35983-35988`)
+`move.l (a0),d0` in `Process_Sprites`' `sub_1AAFC` (`sonic3k.asm:36023-36028`)
 makes `d0`'s high word the high word of the object's own routine pointer --
 deterministic and usually small. `d1` is *not* set by the dispatcher and carries
 across object slots.
@@ -3572,7 +3572,7 @@ and wrong on the next one. See
 with `add.w (a2)+,dN` **twice per axis without reloading the coordinate**. The
 second word is the window *span*, not a second offset from the object.
 
-`Obj_HiddenMonitorMain` (`sonic3k.asm:176046-176080`) is the canonical case:
+`Obj_HiddenMonitorMain` (`sonic3k.asm:176137-176171`) is the canonical case:
 
 ```
         move.w  x_pos(a0),d0      ; d0 = monitor x
@@ -3628,7 +3628,7 @@ produced from an entirely different ROM routine. Everything after cascades.
 **Root cause.** Several S3K objects branch on **inventory that lives outside
 the level** -- `Chaos_emerald_count`, `Super_emerald_count`,
 `Collected_special_ring_array`, `SK_alone_flag`. `Obj_SSEntryRing`'s collision
-arm `loc_6170A` (`docs/skdisasm/sonic3k.asm:128283-128291`) is the canonical
+arm `loc_6170A` (`docs/skdisasm/sonic3k.asm:128337-128345`) is the canonical
 case:
 
 ```
@@ -3697,7 +3697,7 @@ segment fixtures have the same bootstrap shape.
 
 ## P64 -- S3K Tails' off-screen "landed on something" respawn compares against a *zero* latch
 
-`sub_13EFC` (`docs/skdisasm/sonic3k.asm:26816-26843`) is Tails' off-screen
+`sub_13EFC` (`docs/skdisasm/sonic3k.asm:26856-26883`) is Tails' off-screen
 watchdog. Its usually-quoted arm is the 5-second timer (`cmpi.w #5*60`), but the
 arm that actually fires in practice is the other one:
 
@@ -3738,7 +3738,7 @@ Three things trip engine ports here:
 
 The high word is stable across an object's own code-pointer rewrites as long as
 they stay in one bank: `Obj_FBZDEZPlayerLauncher` cycles `loc_3B97A` ->
-`loc_3BA4A` (`sonic3k.asm:79408,79416`), both `$0003xxxx`, so its published word
+`loc_3BA4A` (`sonic3k.asm:79449,79457`), both `$0003xxxx`, so its published word
 is `$0003`.
 
 **Originating investigation.** FBZ1 Sonic+Tails segment, frame 116 (frontier
@@ -3755,7 +3755,7 @@ row, `frame_span: 1`) and never drift, and the emitted script is the correct one
 -- a phase offset, not a wrong animation.
 
 **Mechanism.** S3K's bonus-stage player `Obj_Sonic_RotatingSlotBonus`
-(`docs/skdisasm/sonic3k.asm:98655`) dispatches its routine and then, at
+(`docs/skdisasm/sonic3k.asm:98701`) dispatches its routine and then, at
 `loc_4B97C` (`:98669-98671`), **unconditionally** does `move.b #2,anim(a0)` and
 `bsr.s sub_4B99E` -> `Animate_Sonic`/`_Tails`/`_Knuckles` (`:98679-98695`). Its
 routine-0 handler `loc_4B9CE` (`:98710-98741`) has no `rts` and falls straight
@@ -3810,7 +3810,7 @@ counter/score field with nothing else diverging, and the delta stays constant
 because the parent re-spawns on a fixed cadence.
 
 **Mechanism.** The main object pass walks slots in ascending index order.
-`AllocateObject` (`docs/skdisasm/sonic3k.asm:37911-37914`) scans
+`AllocateObject` (`docs/skdisasm/sonic3k.asm:37951-37954`) scans
 `Dynamic_object_RAM` forward from its first slot, so a child can land **either
 side** of its parent. Above the parent's slot, the walk has not reached it yet and
 the child runs its routine 0 **in the same frame it was created**; below, it has
@@ -3852,7 +3852,7 @@ consistently one frame out.
 
 **Mechanism.** Every ROM main loop does `Wait_VSync` then
 `addq.w #1,(Level_frame_counter).w` then `Process_Sprites`
-(`docs/skdisasm/sonic3k.asm:10742-10744`, `:63207-63209`; the level and
+(`docs/skdisasm/sonic3k.asm:10778-10780`, `:63207-63209`; the level and
 competition loops have the same shape). Objects running this frame therefore read
 the **already-incremented** value, which is also what a recorder sampling per frame
 writes into `gameplay_frame_counter`. The engine advances its counter in
@@ -3885,7 +3885,7 @@ by one step.
 
 **Mechanism.** A ROM routine's terminating `bsr`/`jsr` is not a separate pass: it is
 the last thing the routine does, and **every** earlier `rts` or `bra locret_*`
-suppresses it. `sub_9580` (`docs/skdisasm/sonic3k.asm:11914-12080`) is the worked
+suppresses it. `sub_9580` (`docs/skdisasm/sonic3k.asm:11950-12116`) is the worked
 case. Its bumper different-cell unlock, `loc_96CE`, is
 `move.w d2,(Special_stage_velocity).w / rts` (`:12037-12039`) -- an `rts`, where its
 same-cell siblings `loc_96F2`/`loc_96F8` `bra` into the shared tail at `loc_96FA`.
@@ -3924,7 +3924,7 @@ it is tempting to read that as a follow-delay phase bug.
 
 **Mechanism.** `Ctrl_1_locked` and `object_control` are different bytes with
 different effects. `Obj01_Control` copies `Ctrl_1 -> Ctrl_1_logical` and only *then*
-tests `btst #0,object_control(a0)` (`docs/skdisasm/sonic3k.asm:21968-21973`), so an
+tests `btst #0,object_control(a0)` (`docs/skdisasm/sonic3k.asm:22004-22009`), so an
 object-controlled player still refreshes the logical pad word every frame, and
 `Sonic_RecordPos` (`:22132`) writes that live word into `Stat_table`. The sidekick
 reads it back 16 entries later at `Pos_table_index - $44`
@@ -3972,7 +3972,7 @@ field is correct, and the object's engine class takes a single `PlayableEntity`.
 **Mechanism.** The S3K idiom is a main routine that does
 `bsr sub_X / lea (Player_2).w,a1 / bsr sub_X`, with the subroutine branching on
 `cmpa.w #Player_1,a1` only for the *global* consequences. `Obj_PachinkoEnergyTrap`
-`loc_49FD6` (`docs/skdisasm/sonic3k.asm:96634-96637`) is the clean example: both
+`loc_49FD6` (`docs/skdisasm/sonic3k.asm:96680-96683`) is the clean example: both
 players are snapped to the beam and given `object_control = $81`, and only the rise
 latch, the exit countdown and the level restart are gated on Player 1
 (`:96665-96677`). `Obj_PachinkoMagnetOrb` `loc_4A408` (`:96943-96949`) has the same
@@ -4000,10 +4000,10 @@ becomes observable when a scoring branch runs.
 
 **Mechanism.** S3K stores the player's elemental shield across a level reload in
 `Saved_status_secondary` / `Saved2_status_secondary`, and re-gives it in
-`SpawnLevelMainSprites_SpawnPowerup` (`docs/skdisasm/sonic3k.asm:8264-8290`), which
+`SpawnLevelMainSprites_SpawnPowerup` (`docs/skdisasm/sonic3k.asm:8296-8322`), which
 runs on EVERY level spawn. The bonus zones are not exceptions to it -- they have
 their own explicit arms into the restore (`cmpi.b #$13,(Current_zone).w / beq
-loc_69E0`, and the same for `#$14`, :8270-8273), so the shield is live for the
+loc_69E0`, and the same for `#$14`, :8302-8305), so the shield is live for the
 DURATION of the bonus stage. The engine had captured the value at entry and consumed
 it only when returning to the level, which reads as a plausible "save and restore"
 pair and is half the ROM's behaviour.
@@ -4012,7 +4012,7 @@ pair and is half the ROM's behaviour.
 READER of it, not just the one that matches the engine's save/restore intuition. A
 value written on the way in and read on the way out is the shape you expect; a value
 written on the way in and read by the *destination's own spawn code* is the shape
-that gets missed. Here `loc_2D4CA` (:61925-61930) writes both saved slots, the
+that gets missed. Here `loc_2D4CA` (:61965-61970) writes both saved slots, the
 bonus spawn consumes `Saved_status_secondary` (clearing it), and the return-to-level
 spawn consumes `Saved2_status_secondary` -- two readers, two restores.
 
@@ -4034,7 +4034,7 @@ per-frame step (1 for a `subq.w #1,y_pos`), starting at the exact frame the coun
 constant predicts.
 
 **Mechanism.** S3K's level-init path runs a full object pass BEFORE the main loop
-exists. After `SpawnLevelMainSprites` (`docs/skdisasm/sonic3k.asm:7849`) it calls
+exists. After `SpawnLevelMainSprites` (`docs/skdisasm/sonic3k.asm:7881`) it calls
 `Load_Sprites`, `Load_Rings`, `Draw_LRZ_Special_Rock_Sprites` and then
 `Process_Sprites` once (`:7853`), and only afterwards does `LevelLoop` (`:7885`) begin
 `addq.w #1,(Level_frame_counter).w` / `Process_Sprites` (`:7889`, `:7894`). So every
@@ -4094,7 +4094,7 @@ the interacting object's OWN `width_pixels(a1)` byte:
         bge.s   <balance right>  ; else fall through, anim stays 5
 ```
 
-Sonic's copy is `Sonic_Move` (`docs/skdisasm/sonic3k.asm:22460-22473`); Tails' is
+Sonic's copy is `Sonic_Move` (`docs/skdisasm/sonic3k.asm:22495-22508`); Tails' is
 `Tails_InputAcceleration_Path` (`:27820-27831`) with the shift of 4 rather than 2.
 `width_pixels` comes from the object's `SetUp_ObjAttributes*` data block
 (field order at `:176907-176912`) and is **independent of the `d1` the object
@@ -4153,7 +4153,7 @@ by storing `N+1` in the constant hides the real convention and leaves the consta
 looking like a fitted number.
 
 *The arming pass.* In S3K's slot machine the branch that claims a transient
-animation slot (`loc_4BF30`, `sonic3k.asm:99283-99300`, and its ring/bumper/spike
+animation slot (`loc_4BF30`, `sonic3k.asm:99329-99346`, and its ring/bumper/spike
 siblings) writes only the type, the target byte's pointer and the restore id. It
 does **not** publish the first animation frame. A slot released with
 `clr.l (a0) / clr.l 4(a0)` (`:98511-98512`) starts with countdown 0, so the first
@@ -4200,7 +4200,7 @@ Tails_RollSpeed:
         bmi.w   loc_14DF0          ; skip input, friction AND deceleration
 ```
 
-(`docs/skdisasm/sonic3k.asm:28180-28181`; `Sonic_RollSpeed` at `:22935-22936` is identical.)
+(`docs/skdisasm/sonic3k.asm:28220-28221`; `Sonic_RollSpeed` at `:22935-22936` is identical.)
 Every ROM site that releases the player writes the whole byte — `move.b #0,spin_dash_flag(a1)`
 or `clr.b spin_dash_flag(a1)` — so all three meanings clear together.
 
@@ -4209,7 +4209,7 @@ or `clr.b spin_dash_flag(a1)` — so all three meanings clear together.
 must clear all three.** Clearing a subset leaves a latch that no later code will remove,
 and the symptom appears thousands of frames later in a completely different object's
 neighbourhood — the AIZ ride vine's grab (`AIZRideVineHandle_CheckGrab`,
-`docs/skdisasm/sonic3k.asm:46743`) cleared only the charge, and a lock set by a spin tube
+`docs/skdisasm/sonic3k.asm:46783`) cleared only the charge, and a lock set by a spin tube
 ~3,100 rows earlier survived to the end of the level.
 
 **How to find it fast.** Put a stack probe on the *setter* and count transitions across the
@@ -4254,13 +4254,13 @@ divergences look like an animation defect rather than a lifetime one.
         bhs.w   ..._ReleasePlayer
 ```
 
-`AIZRideVineHandle_ProcessPlayer` (`docs/skdisasm/sonic3k.asm:46486-46496`) and
+`AIZRideVineHandle_ProcessPlayer` (`docs/skdisasm/sonic3k.asm:46526-46536`) and
 `sub_266B0` (LBZ ride grapple) are the same routine shape. Bit 7 is written by the
 *preceding* display pass, so the drop lands on the handle's next pass — natural one-frame
 visibility, not a latency to model.
 
 **The release target is the quiet one.** `AIZRideVineHandle_ReleasePlayer`
-(`docs/skdisasm/sonic3k.asm:46548-46552`) is
+(`docs/skdisasm/sonic3k.asm:46588-46592`) is
 `clr.b object_control(a1) / clr.b (a2) / move.b #$3C,2(a2) / rts`. It sits two lines below
 `AIZRideVineHandle_ForcedRelease`, which *does* write `x_vel=$300`, `y_vel=$200` and
 `Status_InAir` — reaching for the wrong one gives the rider a launch the ROM never
@@ -4294,7 +4294,7 @@ one, because the overwriting object writes whole-pixel deltas.
 **The ROM shape.** A `$C0`-category object's `Touch_Response` entry does nothing but set
 `collision_property(a0)`. The reaction runs later, from the object's own SST slot pass.
 `Obj_PachinkoItemOrb`'s converted reward is the canonical example: `loc_4A312`
-(`sonic3k.asm:96843-96845`) and `loc_4A34C` (`:96866-96869`) both open with
+(`sonic3k.asm:96889-96891`) and `loc_4A34C` (`:96866-96869`) both open with
 `tst.b collision_property(a0) / bsr sub_4A362`, and `sub_4A362`/`sub_4A384`
 (`:96874-96916`) then dispatch through `loc_61100`. `Obj_Bumper`'s pachinko branch
 (`loc_32EF0`, `:68906-68908`) and the gumball items have the identical shape.
@@ -4332,7 +4332,7 @@ S1 and S2 make destruction persistence opt-in per layout entry (S1: bit 7 of the
 byte; S2: bit 15 of the layout Y word). **S3K does not.** `Load_Sprites` gives every
 six-byte entry its own `Object_respawn_table` byte, unconditionally `bset #7,(a3)` on load
 and unconditionally stores the address in `respawn_addr(a1)`
-(`docs/skdisasm/sonic3k.asm:37745-37766`; the sibling loaders at `:37804`, `:37847`,
+(`docs/skdisasm/sonic3k.asm:37785-37806`; the sibling loaders at `:37804`, `:37847`,
 `:37892` do the same). Bit 15 of the S3K Y word is not a remember flag at all -- the
 loader masks position with `d5 = $FFF` and takes render flags from bits 14/13 only
 (`rol.w #3,d2 / andi.w #3,d2`).
@@ -4363,7 +4363,7 @@ segment-2 return and blocked Sonic at `x = 0x1CDD` from frame 94. Chain frontier
 
 `Obj_CollapsingPlatform`'s trigger looks like "start the countdown when a player stands on
 me", and porting it that way collapses the platform one frame early -- because the ROM does
-not read the standing bits at contact time. `loc_20594` (`docs/skdisasm/sonic3k.asm:44819`)
+not read the standing bits at contact time. `loc_20594` (`docs/skdisasm/sonic3k.asm:44859`)
 tests `$3A`, and only if it is already set does it touch the `$38` countdown. It then falls
 through to `loc_205A6` (`:44826-44830`), which reads `status(a0) & standing_mask` and sets
 `$3A` -- **before** reaching `sub_205B6` (`:44835`), whose `SolidObjectTopSloped2` is the
@@ -4393,7 +4393,7 @@ dispatch the engine had already fragmented. Frontier f118 `sidekick_y` -> f150.
 
 ## A player rides exactly one object, and re-seating clears the previous object's standing bit
 
-`RideObject_SetRide` (`docs/skdisasm/sonic3k.asm:42027-42046`) is the tail every top-solid
+`RideObject_SetRide` (`docs/skdisasm/sonic3k.asm:42067-42086`) is the tail every top-solid
 landing goes through, and it opens by *un-seating* the player from whatever they were on:
 
 ```
@@ -4462,7 +4462,7 @@ the object's own standing bit**, the same bit any other solid can clear out from
 
 | path | routine | formula |
 |---|---|---|
-| fresh landing | `RideObject_SetRide` / `loc_1E45A` (`docs/skdisasm/sonic3k.asm:42004-42019`) | `surface - y_radius - 1` |
+| fresh landing | `RideObject_SetRide` / `loc_1E45A` (`docs/skdisasm/sonic3k.asm:42044-42059`) | `surface - y_radius - 1` |
 | continued ride | `SolidObjSloped2` / `loc_1E260` (`:41744-41752`) | `surface - y_radius` |
 
 The fresh-landing formula looks relative but is not: `d0 = surface - (y_pos(a1) + y_radius
@@ -4491,7 +4491,7 @@ When porting a solid object, therefore:
 ## A per-player release must not withdraw the other player's solid pass from the same dispatch
 
 ROM object routines that release a rider do it **after** the dispatch's solid pass, and the
-solid pass covers both players in one call. `loc_205DE` (`docs/skdisasm/sonic3k.asm:44850-44859`)
+solid pass covers both players in one call. `loc_205DE` (`docs/skdisasm/sonic3k.asm:44890-44899`)
 is the canonical shape:
 
 ```
@@ -4540,7 +4540,7 @@ f167 -> f3245. See `docs/status/trace-frontier-log.md`, 2026-08-20.
 
 When a ROM routine installs a state by writing a block of player fields, porting "the fields
 that obviously matter" is not enough. `Tails_Catch_Up_Flying`'s `loc_13B50`
-(`docs/skdisasm/sonic3k.asm:26498-26529`) writes velocities, `status`, radii, the flip
+(`docs/skdisasm/sonic3k.asm:26538-26569`) writes velocities, `status`, radii, the flip
 selector, `double_jump_flag`, `object_control`, facing, animation — and also:
 
 ```
@@ -4869,7 +4869,7 @@ Origin: September25 cold LRZ boss completion.
 
 ## Gravity flags that select a native routine are initialization state
 
-`Obj_Spikes` at `loc_23FE8` (sonic3k.asm:48956–48968) XORs a copy of status
+`Obj_Spikes` at `loc_23FE8` (sonic3k.asm:48996–49008) XORs a copy of status
 Y-flip with Reverse_gravity_flag and installs `loc_2413E`. It does not toggle
 the art, change movement, or reevaluate the flag on every contact. The selection
 overrides the sideways routine installed earlier. Preserve that precedence and
@@ -4881,7 +4881,7 @@ would undo the native choice. Origin: September25 DEZ gravity-reference audit.
 
 ## Direct sloped entries bypass the flat platform gravity branch
 
-S3K `SolidObjCheckSloped2`/`SolidObjCheckSloped` (sonic3k.asm:42076–42120)
+S3K `SolidObjCheckSloped2`/`SolidObjCheckSloped` (sonic3k.asm:42116–42160)
 compute an absolute sampled top and branch directly to `loc_1E45A`, bypassing
 `loc_1E44C`'s Reverse_gravity_flag test. Mirroring every top-solid position
 correction therefore invents behavior for these direct entries. The existing

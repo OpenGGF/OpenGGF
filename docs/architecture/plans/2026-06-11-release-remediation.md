@@ -321,8 +321,8 @@ Completed in `bugfix/ai-release-remediation`:
   lost-ring collection path rather than slot-count cadence.
 - ICZ Obj37 floor-probe completion: normal-gravity spilled rings now call the
   shared object floor probe path, matching `RingCheckFloorDist -> Ring_FindFloor`
-  (`docs/skdisasm/sonic3k.asm:20098-20110`,
-  `docs/skdisasm/sonic3k.asm:35624-35643`). This fixes the frame-3323
+  (`docs/skdisasm/sonic3k.asm:20134-20146`,
+  `docs/skdisasm/sonic3k.asm:35664-35683`). This fixes the frame-3323
   slot-44 bounce/collection position and moves the ICZ complete-run trace to
   frame 3752 main-player `x expected=0x464D actual=0x464E` with matching
   subpixels and a coupled `camera_x` mismatch.

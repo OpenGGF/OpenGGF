@@ -34,7 +34,7 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
      * + jmpto   DisplaySprite
      * </pre>
      * docs/s2disasm/s2.asm:46678-46686, docs/s1disasm/_incObj/24, 27 &amp; 3F
-     * Explosions.asm (ExItem_Animate), docs/skdisasm/sonic3k.asm:42199-42208.
+     * Explosions.asm (ExItem_Animate), docs/skdisasm/sonic3k.asm:42239-42248.
      * <p>
      * Only the initial duration differs per game (S1 = 7, S2/S3K = 3); see
      * {@link com.openggf.game.GameModule#explosionInitialAnimDuration()}.
@@ -63,7 +63,7 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
      * {@code jsr (PlaySound).l} immediately above {@code Obj27_Main}
      * (docs/s2disasm/s2.asm:46734-46737), and S3K writes
      * {@code move.l #loc_1E66E,(a0)} immediately above {@code loc_1E66E}
-     * (docs/skdisasm/sonic3k.asm:42202-42205). All three take the predecrement
+     * (docs/skdisasm/sonic3k.asm:42242-42245). All three take the predecrement
      * on their spawn frame.
      *
      * <p>Sonic 1's Obj3F does not. {@code Expl_Main} ends
@@ -206,7 +206,7 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
         // ROM Obj27_Init plays the explosion sound from the explosion's own
         // execution, not from whatever destroyed the object
         // (docs/s2disasm/s2.asm:46717-46734; docs/s1disasm/_incObj/24, 27 & 3F
-        // Explosions.asm; docs/skdisasm/sonic3k.asm:42199-42208).
+        // Explosions.asm; docs/skdisasm/sonic3k.asm:42239-42248).
         playPendingSfxIfPossible();
         spawnDestructionChildrenOnce();
         if (animFrameDuration < 0) {
@@ -251,7 +251,7 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
                     new ObjectSpawn(x, y, 0x29, 0, 0, false, 0), svc, pointsValue));
         }
         // S3K Obj_Explosion routine 0 allocates Obj_Animal before initializing
-        // its animation/SFX (docs/skdisasm/sonic3k.asm:42157-42180).
+        // its animation/SFX (docs/skdisasm/sonic3k.asm:42197-42220).
         if (animalFactory != null) {
             objectManager.createDynamicObject(() -> animalFactory.create(
                     new ObjectSpawn(x, y, 0x28, 0, 0, false, pointsValue), svc));
@@ -293,7 +293,7 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
     /**
      * Badnik-death explosion bucket: S1 Obj27/Obj3F {@code move.b #1,obPriority(a0)}
      * (_incObj/27, 3F Explosions.asm:35), S2 Obj27 {@code move.b #1,priority(a0)}
-     * (s2.asm:46728), S3K Obj_Explosion {@code move.w #$80,priority(a0)} (sonic3k.asm:42196).
+     * (s2.asm:46728), S3K Obj_Explosion {@code move.w #$80,priority(a0)} (sonic3k.asm:42236).
      */
     private static final int EXPLOSION_PRIORITY_BUCKET = RenderPriority.bucket(1);
 

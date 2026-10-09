@@ -27,7 +27,7 @@ import java.util.List;
 /**
  * Object 0x68 - HCZ Spinning Column (Sonic 3 & Knuckles).
  *
- * <p>ROM reference: Obj_HCZSpinningColumn (sonic3k.asm:68108-68179).
+ * <p>ROM reference: Obj_HCZSpinningColumn (sonic3k.asm:68148-68219).
  */
 public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
@@ -36,11 +36,11 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_HCZSpinningColumn} is installed from the S3K object pointer table at
      * {@code $00032656} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:68113).
+     * label is defined at docs/skdisasm/sonic3k.asm:68153).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0003}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -207,7 +207,7 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         player.setGSpeed((short) 0);
         // d5 is the Ctrl_*_logical word; andi.b addresses its low byte, which
         // contains newly pressed A/B/C bits rather than the held byte
-        // (sonic3k.asm:68136-68148,68264-68276).
+        // (sonic3k.asm:68176-68188,68304-68316).
         if (player.isJumpJustPressed()) {
             releaseRider(rider, vIntRunCount, true);
             return;
@@ -281,7 +281,7 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         }
         player.setMappingFrame(PLAYER_TWIST_FRAMES[frameIndex]);
         // ROM directly writes render_flags (andi.b #$FC / or.b flip) without
-        // touching Status_Facing (sub_32610, sonic3k.asm:68077-68091). The twist
+        // touching Status_Facing (sub_32610, sonic3k.asm:68117-68131). The twist
         // frame may therefore flip visually while the player's logical facing
         // remains unchanged for the post-column movement path.
         boolean flipLeft = PLAYER_TWIST_FLIPS[frameIndex];
@@ -351,7 +351,7 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
     @Override
     public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) {
         // The same signed test precedes new side/top classification
-        // (sonic3k.asm:41438-41440).
+        // (sonic3k.asm:41478-41480).
         return true;
     }
 
@@ -360,7 +360,7 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         // loc_326B6 moves the column before loading its updated x_pos into d4
         // for SolidObjectFull. MvSonicOnPtfm then subtracts that same current
         // x_pos, producing a zero horizontal carry delta
-        // (sonic3k.asm:68132-68157,41016-41042,41642-41679).
+        // (sonic3k.asm:68172-68197,41056-41082,41682-41719).
         return false;
     }
 
@@ -368,7 +368,7 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
     public boolean usesInclusiveRightEdge() {
         // Obj68 calls SolidObjectFull. SolidObject_cont rejects its initial X
         // window with bhi, so relX == d1*2 remains a valid zero-distance side
-        // contact that sets Status_Push (sonic3k.asm:41394-41403,
+        // contact that sets Status_Push (sonic3k.asm:41434-41443,
         // 68148-68157).
         return true;
     }

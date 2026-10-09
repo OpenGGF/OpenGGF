@@ -147,7 +147,7 @@ class TestSonic3kSpeedShoesCommandSemantics {
 
         // S3K's countdown is a byte timer the ROM decrements only on level
         // frames whose counter is divisible by eight, read from Sonic_Display
-        // (docs/skdisasm/sonic3k.asm:22103-22111). Drive whole level frames --
+        // (docs/skdisasm/sonic3k.asm:22139-22147). Drive whole level frames --
         // counter advance plus display step -- as the live frame step does, so
         // the gate fires once per eight frames.
         var levelManager = player.currentLevelManagerIfAvailable();

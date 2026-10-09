@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * SKL {@code $59}, {@code Obj_DEZTeleporter} (sonic3k.asm:94913-95168).
+ * SKL {@code $59}, {@code Obj_DEZTeleporter} (sonic3k.asm:94959-95214).
  *
  * <p>Twenty-one of these in Death Egg act 2, in vertically paired columns whose two subtypes
  * carry opposite bit 7s. Each assertion below pins one ROM mechanism, and each was shown to
@@ -31,7 +31,7 @@ class TestS3kDezTeleporterHeadless {
     private static final int OBJECT_X = 0x1150;
     private static final int OBJECT_Y = 0x072C;
 
-    /** ROM {@code move.w #$300,...} target reached in {@code $300 / 8} updates (:94993-94995). */
+    /** ROM {@code move.w #$300,...} target reached in {@code $300 / 8} updates (:95039-95041). */
     private static final int SPIN_UPDATES = 0x300 / 8;
 
     @AfterEach
@@ -40,7 +40,7 @@ class TestS3kDezTeleporterHeadless {
     }
 
     /**
-     * {@code loc_48C44} :94944-94952. {@code addq.w #3,d0}, then {@code cmpi.w #$10,d0 / bhs}.
+     * {@code loc_48C44} :94990-94998. {@code addq.w #3,d0}, then {@code cmpi.w #$10,d0 / bhs}.
      * Unflipped the window is {@code -3 <= dx <= $C}; it is {@code $10} px wide, and the
      * earlier note that {@code status} bit 0 "widens" it by {@code $A} is wrong — the extra
      * bias <em>moves</em> the same window to the object's other side.
@@ -53,7 +53,7 @@ class TestS3kDezTeleporterHeadless {
         assertFalse(capturesAt(0, 0x0D), "dx = $D is one past the right edge");
     }
 
-    /** The same {@code $10} px window, mirrored: {@code -$D <= dx <= 2} (:94950-94951). */
+    /** The same {@code $10} px window, mirrored: {@code -$D <= dx <= 2} (:94996-94997). */
     @Test
     void theXFlippedCaptureWindowIsTheSameWidthOnTheOtherSide() {
         assertTrue(capturesAt(1, -0x0D), "dx = -$D is the flipped left edge");
@@ -62,7 +62,7 @@ class TestS3kDezTeleporterHeadless {
         assertFalse(capturesAt(1, 3), "one past the flipped right edge");
     }
 
-    /** {@code addi.w #$20,d1 / cmpi.w #$40,d1} (:94955-94957): top inclusive, bottom exclusive. */
+    /** {@code addi.w #$20,d1 / cmpi.w #$40,d1} (:95001-95003): top inclusive, bottom exclusive. */
     @Test
     void theCaptureBandIsFortyPixelsTallCentredOnTheObject() {
         assertTrue(capturesAt(0, 0, -0x20), "dy = -$20 is inside");
@@ -71,7 +71,7 @@ class TestS3kDezTeleporterHeadless {
         assertFalse(capturesAt(0, 0, 0x20), "dy = $20 is the exclusive bottom edge");
     }
 
-    /** {@code btst #Status_InAir,status(a1) / bne} (:94962-94963). */
+    /** {@code btst #Status_InAir,status(a1) / bne} (:95008-95009). */
     @Test
     void anAirbornePlayerIsNotCaptured() {
         HeadlessTestFixture fixture = fixture();
@@ -90,15 +90,15 @@ class TestS3kDezTeleporterHeadless {
 
     /**
      * {@code movea.w interact(a1),a3 / cmpi.l #Obj_DEZTeleporter,(a3) / tst.b (a3,d0.w)}
-     * (:94968-94973): the refusal is keyed on the <em>same</em> state-block slot of the other
+     * (:95014-95019): the refusal is keyed on the <em>same</em> state-block slot of the other
      * teleporter.
      *
      * <p>The first version of this test could not fail. It captured the player on one
      * teleporter and immediately offered them to a second, but a captured player already has
-     * {@code object_control} set, so the earlier refusal at :94958 answered first and removing
+     * {@code object_control} set, so the earlier refusal at :95004 answered first and removing
      * the interact check left the test green. The interact check only does work in the window
      * the ROM built it for: after {@code loc_48E2C} has cleared {@code object_control}
-     * (:95105) and the player has landed, but before {@code loc_48E94} has seen them leave and
+     * (:95151) and the player has landed, but before {@code loc_48E94} has seen them leave and
      * cleared the block. This version puts the player in exactly that state.
      */
     @Test
@@ -135,7 +135,7 @@ class TestS3kDezTeleporterHeadless {
     }
 
     /**
-     * {@code loc_48D2C} :94993-95006. {@code 4(a4)} climbs by 8 and the launch happens on the
+     * {@code loc_48D2C} :95039-95052. {@code 4(a4)} climbs by 8 and the launch happens on the
      * update it reaches exactly {@code $300}: 96 updates, not the capture frame.
      */
     @Test
@@ -163,7 +163,7 @@ class TestS3kDezTeleporterHeadless {
     }
 
     /**
-     * {@code loc_48DCA} :95065-95080. The write needs {@code 6(a4) == 8(a4)} — the midpoint of
+     * {@code loc_48DCA} :95111-95126. The write needs {@code 6(a4) == 8(a4)} — the midpoint of
      * the ride — and nothing before it moves the flag.
      */
     @Test
@@ -205,7 +205,7 @@ class TestS3kDezTeleporterHeadless {
     }
 
     /**
-     * {@code cmpa.w #Player_1,a1 / bne} (:95069-95070). Player 2 rides the teleporter with the
+     * {@code cmpa.w #Player_1,a1 / bne} (:95115-95116). Player 2 rides the teleporter with the
      * same four routines and the same pose table, and never touches the flag.
      */
     @Test

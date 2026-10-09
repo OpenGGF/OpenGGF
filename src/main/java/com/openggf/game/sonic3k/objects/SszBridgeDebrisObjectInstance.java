@@ -13,7 +13,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_45052}/{@code loc_4507E} (sonic3k.asm:90491-90518): one piece of a collapsing
+ * ROM {@code loc_45052}/{@code loc_4507E} (sonic3k.asm:90537-90564): one piece of a collapsing
  * Sky Sanctuary bridge. {@code Obj_SSZCollapsingBridge} ({@code $7C}) makes four and
  * {@code Obj_SSZCollapsingBridgeDiagonal} ({@code $7B}) makes eight, from the same routine.
  *

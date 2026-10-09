@@ -165,7 +165,7 @@ class TestFbzWireCages {
         // At FBZ complete-run f16878, loc_3A3B4 stores an exactly-zero track
         // position, then branches directly to loc_3A480. The native routine
         // still adds ground_vel<<8 in that same object call before mapping the
-        // player onto the curve (sonic3k.asm:78027-78135).
+        // player onto the curve (sonic3k.asm:78068-78176).
         TestSprite main=new TestSprite("sonic"),extra=new TestSprite("sidekick_3");
         for(TestSprite player:List.of(main,extra)){
             player.setCentreX((short)(0x1000-0xB8));player.setCentreY((short)0x1000);
@@ -346,7 +346,7 @@ class TestFbzWireCages {
     @Test void stationaryCageForcesTheNativeRideObjectTouchFloorReset() {
         // loc_3A2F0 sets Status_InAir immediately before RideObject_SetRide,
         // deliberately forcing Player_TouchFloor even though the entry gate
-        // accepted only a grounded player (sonic3k.asm:77949-77955).
+        // accepted only a grounded player (sonic3k.asm:77990-77996).
         TestSprite p=new TestSprite("sonic");
         p.setCentreX((short)(0x1000-0xB8));p.setCentreY((short)0x800);
         p.setXSpeed((short)0x600);p.setYSpeed((short)0x500);p.setGSpeed((short)0x400);
@@ -370,7 +370,7 @@ class TestFbzWireCages {
     @Test void stationaryCageImmediatelyReleasesAnAirborneBubbleBounceEvenWhileOnObjectWasSet() {
         // Player_TouchFloor can call BubbleShield_Bounce before loc_3A314.
         // Native loc_3A31C then branches on Status_InAir alone and releases
-        // through loc_3A36E (sonic3k.asm:77963-78006).
+        // through loc_3A36E (sonic3k.asm:78004-78047).
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         Sonic p=new Sonic("sonic",(short)0,(short)0);
         p.setCentreX((short)(0x1000-0xB8));p.setCentreY((short)0x800);
@@ -439,7 +439,7 @@ class TestFbzWireCages {
         // Obj_FBZWireCage runs after the player slot. At this crossing the
         // player has already reached the cage surface and RideObject_SetRide
         // clears y_vel while copying x_vel to ground_vel
-        // (sonic3k.asm:77634-77655).
+        // (sonic3k.asm:77675-77696).
         TestSprite rider=new TestSprite("sonic");
         rider.setCentreX((short)0x1068);
         rider.setCentreY((short)0x826);

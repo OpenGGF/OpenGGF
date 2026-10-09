@@ -130,7 +130,7 @@ public final class ToxomisterPuffInstance extends AbstractObjectInstance impleme
             return;
         }
         if (!open) {
-            // loc_8FEC8 is Obj_Wait plus Child_CheckParent (sonic3k.asm:177281 area), and
+            // loc_8FEC8 is Obj_Wait plus Child_CheckParent (sonic3k.asm:177372 area), and
             // Child_CheckParent DELETES on the cloud's status bit 7 rather than dispersing: a
             // puff that has not opened yet simply goes away. Only loc_8FEDC, installed by the
             // $34 callback, takes the loc_8FF12 dispersal.
@@ -173,7 +173,7 @@ public final class ToxomisterPuffInstance extends AbstractObjectInstance impleme
         visible = true;
     }
 
-    /** {@code Refresh_ChildPosition} (sonic3k.asm:177281-177294). */
+    /** {@code Refresh_ChildPosition} (sonic3k.asm:177372-177385). */
     private void follow() {
         motion.x = (parent.getCentreX() + childDx) & 0xFFFF;
         motion.y = (parent.getCentreY() + childDy) & 0xFFFF;

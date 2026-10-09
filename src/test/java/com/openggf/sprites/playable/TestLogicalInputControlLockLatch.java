@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@link AbstractPlayableSprite#setLogicalInputState} is gated by
  * {@link GameRules#controlLockLatchesLogicalInput()}.
  *
- * <p>ROM ref (sonic3k.asm:21541-21545 {@code loc_10760}, S2 s2.asm:35933-35935
+ * <p>ROM ref (sonic3k.asm:21577-21581 {@code loc_10760}, S2 s2.asm:35933-35935
  * {@code Obj01_Control}):
  * <pre>
  *   tst.b   (Ctrl_1_locked).w     ; Control_Locked for S2

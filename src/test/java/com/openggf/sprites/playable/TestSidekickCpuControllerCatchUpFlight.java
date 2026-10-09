@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for SidekickCpuController.CATCH_UP_FLIGHT (ROM routine 0x02,
- * Tails_Catch_Up_Flying at sonic3k.asm:26474).
+ * Tails_Catch_Up_Flying at sonic3k.asm:26514).
  */
 class TestSidekickCpuControllerCatchUpFlight {
 

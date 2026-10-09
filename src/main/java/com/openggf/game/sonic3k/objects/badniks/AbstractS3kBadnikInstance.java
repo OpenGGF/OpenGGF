@@ -75,7 +75,7 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
     /**
      * The one place an S3K badnik's SST slot is rewritten to {@code Obj_Explosion}.
      *
-     * <p>{@code Touch_EnemyNormal} (sonic3k.asm:20945-20990) sets {@code status} bit 7 and writes
+     * <p>{@code Touch_EnemyNormal} (sonic3k.asm:20981-21026) sets {@code status} bit 7 and writes
      * {@code Obj_Explosion} over the badnik in place, so the explosion inherits the slot. Shared
      * with {@code Obj_Toxomister}'s body, which is a {@code Touch_Enemy}-type badnik that does not
      * extend this class: keeping one raw lifetime write for the whole family is also what the

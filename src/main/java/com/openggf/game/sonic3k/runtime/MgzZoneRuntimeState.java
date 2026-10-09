@@ -95,9 +95,9 @@ public final class MgzZoneRuntimeState implements S3kZoneRuntimeState {
 
     /**
      * ROM {@code st (Screen_shake_flag).w} — objects only raise the continuous
-     * shake flag (Tunnelbot: docs/skdisasm/sonic3k.asm:184784, :184886,
-     * :184907). The offset itself belongs to {@code ShakeScreen_Setup}
-     * (sonic3k.asm:104188-104210), which the zone's background event runs once
+     * shake flag (Tunnelbot: docs/skdisasm/sonic3k.asm:184877, :184979,
+     * :185000). The offset itself belongs to {@code ShakeScreen_Setup}
+     * (sonic3k.asm:104234-104256), which the zone's background event runs once
      * per frame; see {@link com.openggf.game.sonic3k.scroll.SwScrlMgz}.
      */
     public void requestContinuousScreenShake() {

@@ -31,7 +31,7 @@ public class TestS3kAizIntroStateTimeline {
     private static final int ZONE_AIZ = 0;
     private static final int ACT_1 = 0;
 
-    // ROM source: sonic3k.asm:38174-38177 (Level_FromSavedGame override)
+    // ROM source: sonic3k.asm:38214-38217 (Level_FromSavedGame override)
     // move.w #$40,(Player_1+x_pos).w / move.w #$420,(Player_1+y_pos).w
     private static final short AIZ1_INTRO_CENTRE_X = 0x40;
     private static final short AIZ1_INTRO_CENTRE_Y = 0x420;

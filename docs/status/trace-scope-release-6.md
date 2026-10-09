@@ -57,14 +57,14 @@ not the result count of this fresh run.
    "ids 0-6 are the Sonic 3 half" and listed six names for seven ids; the id it silently
    swallowed is **FBZ = 4** (`Sonic3kZoneIds.java:15`), which is an S&K-half level sitting
    inside 0-6. The ROM owns this predicate exactly: `SSEntry_CheckLevel`
-   (`docs/skdisasm/sonic3k.asm:128433-128443`) returns "S3 level" only when
+   (`docs/skdisasm/sonic3k.asm:128487-128497`) returns "S3 level" only when
    `Current_zone < 7` **and** `Current_zone != 4` -- an explicit `cmpi.b #4` carve-out for
    Flying Battery. So the in-scope ids are **{0,1,2,3,5,6}**, and out of scope are FBZ(4),
    7-0xC (MHZ, SOZ, LRZ, SSZ, DEZ, DDZ), the 0x0D intro/ending scene zone, and the
    0x16/0x17 boss and arena zones (HPZ is **0x16 act 1**, not 7-13).
 
    Note FBZ is S&K-half as a *level* while using the S3KL object table (`loc_1B6A8`,
-   `sonic3k.asm:37410-37421`) -- "which half" is not one question, so cite the routine that
+   `sonic3k.asm:37450-37461`) -- "which half" is not one question, so cite the routine that
    owns the specific question you are asking.
 2. **Character.** Knuckles routes are out of scope regardless of zone.
 
@@ -90,7 +90,7 @@ committed:
 cost rounds: the standalone `bonus_*` classes look like siblings of the Sonic+Tails bonus
 replays but are Knuckles recordings from a different movie, and the `dez23*` directories
 are not Death Egg — the level-size table names that zone `Special Stage Arena (HPZ)`
-(`docs/skdisasm/sonic3k.asm:38144`), so those eight classes are S&K-half and out of scope.
+(`docs/skdisasm/sonic3k.asm:38184`), so those eight classes are S&K-half and out of scope.
 
 ## In scope for release 6 — S3K
 

@@ -46,7 +46,7 @@ import java.util.Map;
 /**
  * Object 0x5B — MGZ Top Platform / Top Launcher.
  *
- * <p>ROM: {@code Obj_MGZTopPlatform} (sonic3k.asm:71475-72040).
+ * <p>ROM: {@code Obj_MGZTopPlatform} (sonic3k.asm:71515-72080).
  *
  * <p>Full port of the platform's state machines:
  * <ul>
@@ -244,10 +244,10 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
 
     /**
      * ROM {@code Obj_MGZTopPlatform} writes its own routine address into word 0
-     * of the object SST ({@code move.l #loc_34C54,(a0)}, sonic3k.asm:71495-71497),
+     * of the object SST ({@code move.l #loc_34C54,(a0)}, sonic3k.asm:71535-71537),
      * so the high word an S3K sidekick reads through
      * {@code Tails_CPU_interact} while standing on this platform is {@code $0003}
-     * ({@code $00034C54}). {@code sub_13EFC} (sonic3k.asm:26816-26843) latches
+     * ({@code $00034C54}). {@code sub_13EFC} (sonic3k.asm:26856-26883) latches
      * that word on every on-object frame and compares it against the next
      * off-screen on-object frame's word; without it a later landing on a
      * {@code $0002xxxx} object cannot mismatch and the sidekick is never parked
@@ -304,8 +304,8 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
         // ROM loc_34C54 calls sub_34EEC for P1/P2 before the platform body moves
-        // (sonic3k.asm:71508-71525); the post-motion player snap happens later
-        // at loc_34D62/sub_35202 (sonic3k.asm:71576-71584,72045-72064).
+        // (sonic3k.asm:71548-71565); the post-motion player snap happens later
+        // at loc_34D62/sub_35202 (sonic3k.asm:71616-71624,72085-72104).
         return true;
     }
 
@@ -922,7 +922,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         player.setControlLocked(false);
         player.setOnObject(false);
         player.setAir(true);
-        // ROM loc_34F84 (sonic3k.asm:71804-71817) arms object_control and
+        // ROM loc_34F84 (sonic3k.asm:71844-71857) arms object_control and
         // Status_InAir, but does not touch x_vel/y_vel.
         player.applyCustomRadii(player.getXRadius(), player.getStandYRadius() + 0x18);
         ObjectServices svc = tryServices();
@@ -1256,7 +1256,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         // The released ROM's sub_3555C/sub_355E4 uses d0, rather than d1, for
         // the angle test. That overwrites only d0's low byte before the signed
         // +/-$400 skid comparison, so preserve the accelerated speed's high
-        // byte and reproduce the shipped result (sonic3k.asm:72360-72467).
+        // byte and reproduce the shipped result (sonic3k.asm:72400-72507).
         int angleByte = (((player.getAngle() & 0xFF) + 0x20) & 0xC0);
         short corruptedSpeed = (short) ((groundSpeed & 0xFF00) | angleByte);
         return leftInput ? corruptedSpeed >= 0x400 : corruptedSpeed <= -0x400;
@@ -1301,7 +1301,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             if (xVel >= 0) {
                 yVel -= LATERAL_Y_KICK;
                 if (yVel > LATERAL_Y_MIN) {
-                    // ROM loc_35148 (sonic3k.asm:71966-71974): neg.w before
+                    // ROM loc_35148 (sonic3k.asm:72006-72014): neg.w before
                     // asr.w #4, then add after the -$100 compare. There is no
                     // post-add clamp, so the result can overshoot below -$100.
                     int add = (-xVel) >> 4;
@@ -1318,7 +1318,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             if (xVel < 0) {
                 yVel -= LATERAL_Y_KICK;
                 if (yVel > LATERAL_Y_MIN) {
-                    // ROM loc_3510A (sonic3k.asm:71943-71951): asr.w #4 on
+                    // ROM loc_3510A (sonic3k.asm:71983-71991): asr.w #4 on
                     // negative xVel, then add after the -$100 compare.
                     int add = xVel >> 4; // negative
                     yVel += add;
@@ -1497,9 +1497,9 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         short snapX = (short) posX;
         NativePositionOps.writeXPosPreserveSubpixel(player, snapX);
         NativePositionOps.writeYPosPreserveSubpixel(player, snapY);
-        // ROM sub_35202 (sonic3k.asm:72051-72058) only snaps x_pos/y_pos and
+        // ROM sub_35202 (sonic3k.asm:72091-72098) only snaps x_pos/y_pos and
         // clears the carry latch. It deliberately preserves the x_vel written by
-        // sub_35504/loc_3554E (sonic3k.asm:72352-72354) earlier in the frame.
+        // sub_35504/loc_3554E (sonic3k.asm:72392-72394) earlier in the frame.
         nextCarryLatched = false;
     }
 
@@ -2254,10 +2254,10 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     /**
      * ROM {@code Obj_MGZTopPlatform} init stores
      * {@code move.b #$18,width_pixels(a0)} / {@code move.b #$C,height_pixels(a0)}
-     * (docs/skdisasm/sonic3k.asm:71485-71486). Render_Sprites builds the
+     * (docs/skdisasm/sonic3k.asm:71525-71526). Render_Sprites builds the
      * render_flags bit-7 box from those bytes, and that bit is the gate
      * SolidObjectTop tests before doing any solid work
-     * (sonic3k.asm:41390-41392). The AbstractObjectInstance default of 16 is
+     * (sonic3k.asm:41430-41432). The AbstractObjectInstance default of 16 is
      * narrower than $18 and taller than $C, so the top platform stopped being
      * solid before the ROM's box left the screen. See pitfall P60.
      */

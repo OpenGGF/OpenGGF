@@ -132,7 +132,7 @@ public class InstaShieldObjectInstance extends ShieldObjectInstance implements I
     }
 
     /**
-     * ROM: {@code Obj_InstaShield_Main} sonic3k.asm:34590-34597 sets the shield's Y-flip bit from
+     * ROM: {@code Obj_InstaShield_Main} sonic3k.asm:34630-34637 sets the shield's Y-flip bit from
      * {@code Reverse_gravity_flag} after masking the inherited status down to the
      * orientation bit. See {@link ShieldAnimationArtLifecycle#reverseGravityMirror}.
      */

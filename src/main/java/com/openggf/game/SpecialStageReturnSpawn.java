@@ -16,18 +16,18 @@ import java.util.List;
  * each carry their own {@code +4}:
  * <ul>
  *   <li>{@code Player_mode == 0} (Sonic and Tails): the sidekick spawns at
- *       {@code Player_1 - $20, + 4} (docs/skdisasm/sonic3k.asm:8367).</li>
+ *       {@code Player_1 - $20, + 4} (docs/skdisasm/sonic3k.asm:8399).</li>
  *   <li>{@code Player_mode == 2} (Tails alone): Tails is Player_1 and
  *       <em>his own</em> {@code y_pos} is raised by 4
- *       (docs/skdisasm/sonic3k.asm:8388).</li>
+ *       (docs/skdisasm/sonic3k.asm:8420).</li>
  * </ul>
  *
  * <p>Both writes are unconditional -- the routine carries no {@code FixBugs}
  * conditional on either arm -- and Tails needs the offset in either role because
  * his {@code y_radius} is {@code $F} against Sonic's {@code $13}
- * (sonic3k.asm:26102, :21904), so an unadjusted centre leaves him 4px high.
+ * (sonic3k.asm:26142, :21940), so an unadjusted centre leaves him 4px high.
  *
- * <p><b>Scope.</b> The ROM applies {@code :8388} on <em>every</em> level load for
+ * <p><b>Scope.</b> The ROM applies {@code :8420} on <em>every</em> level load for
  * Tails-as-Player_1, not only on this return. The engine only fakes the re-init
  * here, so this is the site modelled today; the general level-load case is a
  * separate known gap recorded in {@code docs/status/trace-frontier-log.md}.

@@ -100,11 +100,11 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
      * Consumes the dispatch that installed the defeat handler.
      *
      * <p>{@code Obj_LBZEndBoss} runs its routine arm and only then
-     * {@code bsr.w sub_73FE2} (docs/skdisasm/sonic3k.asm:153345-153354), so the
+     * {@code bsr.w sub_73FE2} (docs/skdisasm/sonic3k.asm:153419-153428), so the
      * {@code loc_73A52} pointer that {@code loc_7403A} writes into {@code (a0)}
-     * along with {@code $2E = $7F} (:154049-154058) cannot be reached until the
+     * along with {@code $2E = $7F} (:154123-154132) cannot be reached until the
      * following object pass. {@code TouchResponse} runs from the player's own
-     * control routine (:21947, :26159, :30389) and therefore clears
+     * control routine (:21983, :26199, :30429) and therefore clears
      * {@code collision_property} before the boss's slot, exactly as the engine's
      * touch scan precedes this object's {@code update()} - so the install lands
      * mid-frame here too, and the installed handler must not run on the dispatch
@@ -1657,7 +1657,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             if (((xVel + 0x200) & 0xFFFF) >= 0x400 && (vIntRunCount & 3) == 0) {
                 LbzEndBossInstance boss = boss();
                 // ChildObjDat_74198 via CreateChild1_Normal: AllocateObjectAfterCurrent
-                // from the spike ball's own slot (sonic3k.asm:153571-153572,176929).
+                // from the spike ball's own slot (sonic3k.asm:153645-153646,177020).
                 boss.recordChild(boss.spawnChildAfterSlot(getSlotIndex(), () -> new LbzEndBossSmokePuffChild(
                         boss, currentX, currentY + TERRAIN_RADIUS, 0)));
             }
@@ -1700,7 +1700,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
     }
 
     /**
-     * Smoke puff: loc_73BA0 / loc_73BDC / byte_741F8 (sonic3k.asm:153584-153608,
+     * Smoke puff: loc_73BA0 / loc_73BDC / byte_741F8 (sonic3k.asm:153658-153682,
      * 154206). Subtype 0 rises at -$200; subtypes $10/$12/$14/$16 count $2E up
      * from -2*(subtype-$10) before moving and animating.
      *
@@ -1784,7 +1784,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             updateDynamicSpawn();
         }
 
-        /** Animate_RawNoSST (sonic3k.asm:177341-177372) over byte_741F8. */
+        /** Animate_RawNoSST (sonic3k.asm:177432-177463) over byte_741F8. */
         private void animateRaw() {
             animTimer = (byte) (animTimer - 1);
             if (animTimer >= 0) {

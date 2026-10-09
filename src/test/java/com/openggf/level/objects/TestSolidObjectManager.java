@@ -1428,7 +1428,7 @@ public class TestSolidObjectManager {
         // ROM: CutsceneKnux_CNZ2A init spawns ChildObjDat_66560 -> loc_62458, an
         // invisible SolidObjectFull2 wall (d1=$13, d2=$100) positioned at
         // parentX-$20 / parentY-$6C that stops Sonic before he reaches Knuckles
-        // (docs/skdisasm/sonic3k.asm:129076, 129175, 134968).
+        // (docs/skdisasm/sonic3k.asm:129133, 129232, 135025).
         int wallCenterX = 0x1D00 - 0x20;
         int wallCenterY = 0x0280 - 0x6C;
         com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance wall =
@@ -2043,7 +2043,7 @@ public class TestSolidObjectManager {
         int exactBoundaryY = floor.getY() - 4 - params.airHalfHeight() - sonic.getYRadius();
         sonic.setCentreY((short) exactBoundaryY);
         // The trace-backed high fixed-point phase consumes 20 zero-distance passes;
-        // the low phase consumes 21 (697588939, sonic3k.asm:104777-104790,41642-42015).
+        // the low phase consumes 21 (697588939, sonic3k.asm:104823-104836,41682-42055).
         sonic.setSubpixelRaw(0, 0xF700);
 
         TestPlayableSprite sidekick = new TestPlayableSprite((short) 0, (short) 0);

@@ -250,10 +250,10 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     private void updateCeilingShake(int vIntRunCount) {
         enforceArenaLock();
         animateRaw();
-        // ROM TunnelbotMiniboss_RumbleWait (docs/skdisasm/sonic3k.asm:184790-184796):
+        // ROM TunnelbotMiniboss_RumbleWait (docs/skdisasm/sonic3k.asm:184883-184889):
         //   moveq #-2,d0 / move.b (V_int_run_count+3).w,d1 / btst #0,d1 / beq.s + / moveq #1,d0
         // (V_int_run_count+3) is an ADDRESS: V_int_run_count is a longword
-        // (addq.l #1,(V_int_run_count).w, sonic3k.asm:543), so +3 selects its LOW
+        // (addq.l #1,(V_int_run_count).w, sonic3k.asm:559), so +3 selects its LOW
         // BYTE. It is not "counter plus three" -- adding 3 inverts bit 0 and so
         // inverts the -2/+1 rumble step, putting the boss's hitbox one frame out
         // of phase with the ROM.
@@ -295,7 +295,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     private void updateDropShake(int vIntRunCount, PlayableEntity playerEntity) {
         enforceArenaLock();
         animateRaw();
-        // ROM MGZMiniboss_DropRumbleWait (docs/skdisasm/sonic3k.asm:184932-184940):
+        // ROM MGZMiniboss_DropRumbleWait (docs/skdisasm/sonic3k.asm:185025-185033):
         // same (V_int_run_count+3) low-byte read as updateCeilingShake above,
         // with the step signs mirrored (+2 / -1).
         int vIntLowByte = vIntRunCount & 0xFF;
@@ -724,7 +724,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         // Draw_And_Touch_Sprite publishes the SST pointer. The following player
         // pass dereferences that live post-movement y_pos, rather than the
         // frame-start coordinate retained by the generic snapshot.
-        // docs/skdisasm/sonic3k.asm:184817-184834,20656-20708.
+        // docs/skdisasm/sonic3k.asm:184910-184927,20692-20744.
         return true;
     }
 
@@ -1148,11 +1148,11 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
          * Word 0 of this object's S3K SST holds its live ROM code pointer.
          * ROM {@code Obj_MGZMiniboss} is installed from the S3K object pointer table at
          * {@code $00088568} (table read from the user-supplied ROM; the
-         * label is defined at docs/skdisasm/sonic3k.asm:184816).
+         * label is defined at docs/skdisasm/sonic3k.asm:184909).
          * Its whole code block lies in one bank, so the HIGH word that
          * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
          * on the next off-screen on-object frame is {@code $0008}
-         * (docs/skdisasm/sonic3k.asm:26816-26843).
+         * (docs/skdisasm/sonic3k.asm:26856-26883).
          */
         @Override
         public int romObjectCodePointerHighWord() {
@@ -1384,7 +1384,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
             }
             // ROM loc_887DA increments and publishes the camera word before
             // comparing it with $2E00. It neither clamps the increment nor
-            // writes Camera_max_X_pos (sonic3k.asm:185020-185027).
+            // writes Camera_max_X_pos (sonic3k.asm:185113-185120).
             int nextX = ((camera.getX() & 0xFFFF) + 1) & 0xFFFF;
             camera.setX((short) nextX);
             camera.setMinX((short) nextX);

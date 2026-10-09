@@ -20,21 +20,21 @@ import java.util.List;
 
 /**
  * One drop of {@code Obj_LRZLavaFall}, ROM routines {@code loc_4374C} and {@code loc_43764}
- * (sonic3k.asm:88813-88827).
+ * (sonic3k.asm:88859-88873).
  *
  * <p>The emitter gives it {@code Map_LRZLavaFall} with {@code make_art_tile($0D3,2,0)},
  * {@code render_flags |= $84} -- bit 7 already set, so its first frame counts as drawn --
  * {@code priority $300}, {@code collision_flags $99}, {@code y_vel $800} and a life in
  * {@code $2E(a1)} of {@code $1C} frames, or {@code $24} when the emitter's {@code status} bit 0 is
- * set (:88796-88806).
+ * set (:88842-88852).
  *
- * <p>{@code MoveSprite2} (:88823) is {@code ext.l / lsl.l #8 / add.l}, so {@code $800} is eight
+ * <p>{@code MoveSprite2} (:88869) is {@code ext.l / lsl.l #8 / add.l}, so {@code $800} is eight
  * pixels a frame straight down. The life counter is decremented before the move and a negative
- * value deletes the drop (:88820-88821, :88828), so it lives exactly {@code $2E + 1} frames.
+ * value deletes the drop (:88866-88867, :88874), so it lives exactly {@code $2E + 1} frames.
  *
  * <p>Every second drop carries {@code loc_4374C}, which plays {@code sfx_LavaFall} on the frames
  * where {@code Level_frame_counter+1} is a multiple of {@code $10} and the previous render pass
- * left it on screen (:88813-88818).
+ * left it on screen (:88859-88864).
  *
  * <p>{@code loc_436EE} sets {@code shield_reaction} bit4, so the fire shield
  * blocks these drops. Other shields still take the normal harmful-object hit.
@@ -42,18 +42,18 @@ import java.util.List;
 public final class LrzLavaFallDropInstance extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable {
 
-    /** {@code move.w #$300,priority(a1)} (sonic3k.asm:88799). */
+    /** {@code move.w #$300,priority(a1)} (sonic3k.asm:88845). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0300);
-    /** {@code move.b #$20,width_pixels(a1)} / {@code height_pixels(a1)} (:88800-88801). */
+    /** {@code move.b #$20,width_pixels(a1)} / {@code height_pixels(a1)} (:88846-88847). */
     private static final int HALF_SIZE = 0x20;
-    /** {@code move.b #$99,collision_flags(a1)} (:88802). */
+    /** {@code move.b #$99,collision_flags(a1)} (:88848). */
     private static final int COLLISION_FLAGS = 0x99;
-    /** {@code move.w #$800,y_vel(a1)} (:88804). */
+    /** {@code move.w #$800,y_vel(a1)} (:88850). */
     private static final int FALL_SPEED = 0x800;
-    /** {@code move.w #$1C,$2E(a1)} and the flipped {@code #$24} (:88804, :88806). */
+    /** {@code move.w #$1C,$2E(a1)} and the flipped {@code #$24} (:88850, :88852). */
     private static final int LIFE_SHORT = 0x1C;
     private static final int LIFE_LONG = 0x24;
-    /** {@code andi.b #$F,d0} on {@code Level_frame_counter+1} (:88816). */
+    /** {@code andi.b #$F,d0} on {@code Level_frame_counter+1} (:88862). */
     private static final int SOUND_MASK = 0x0F;
 
     /** ROM {@code $2E(a0)}: the frames left before {@code Delete_Current_Sprite}. */
@@ -98,7 +98,7 @@ public final class LrzLavaFallDropInstance extends AbstractObjectInstance
                 // Headless replays can omit the audio backend.
             }
         }
-        // subq.w #1,$2E(a0) / bmi -> Delete_Current_Sprite (sonic3k.asm:88820-88821, :88828).
+        // subq.w #1,$2E(a0) / bmi -> Delete_Current_Sprite (sonic3k.asm:88866-88867, :88874).
         life = (short) (life - 1);
         if (life < 0) {
             ObjectLifetimeOps.expireDynamic(this);
@@ -182,7 +182,7 @@ public final class LrzLavaFallDropInstance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        // make_art_tile($0D3,2,0) (sonic3k.asm:88797) leaves the priority bit clear.
+        // make_art_tile($0D3,2,0) (sonic3k.asm:88843) leaves the priority bit clear.
         return false;
     }
 
@@ -199,7 +199,7 @@ public final class LrzLavaFallDropInstance extends AbstractObjectInstance
     @Override
     public boolean usesCustomOutOfRangeCheck() {
         // The drop's own routine has no out-of-range test: it dies only when $2E runs out
-        // (sonic3k.asm:88820-88828).
+        // (sonic3k.asm:88866-88874).
         return true;
     }
 

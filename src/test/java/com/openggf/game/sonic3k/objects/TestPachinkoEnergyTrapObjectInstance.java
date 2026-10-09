@@ -17,7 +17,7 @@ public class TestPachinkoEnergyTrapObjectInstance {
 
     /**
      * ROM {@code sub_49FE4} loc_49FFC..loc_4A024
-     * (docs/skdisasm/sonic3k.asm:96652-96665) is the whole of the capture and writes
+     * (docs/skdisasm/sonic3k.asm:96698-96711) is the whole of the capture and writes
      * exactly {@code move.w y_pos(a0),y_pos(a1)}, {@code move.b #$81,object_control(a1)}
      * and {@code bset #Status_InAir,status(a1)}. It never clears x_vel/y_vel/ground_vel,
      * never touches {@code Ctrl_1_locked}, and never clears the on-object bit — so this

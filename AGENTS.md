@@ -188,6 +188,10 @@ it matters:
 Disassemblies in `docs/s1disasm`, `docs/s2disasm`, and `docs/skdisasm` are
 optional development references. Builds, tests, and runtime do not require them.
 Use `git submodule update --init` when needed.
+Cite disassembly lines with the label beside them, e.g. `loc_390FA (s2.asm:77149-77163)`.
+`python3 tools/disasm/disasm_citations.py check` verifies citations against the pinned
+disassemblies; a commit that moves a disassembly pin also runs
+`disasm_citations.py remap <name> <old> <new> --write` so cited lines follow the content.
 Trace production/probes live in the optional pinned `tools/tracechaser/` submodule; initialize it with
 `git submodule update --init --recursive tools/tracechaser` for trace work.
 Follow its current guide and verified BizHawk 2.11 dependency. Use

@@ -12,7 +12,7 @@ import com.openggf.level.objects.ObjectServices;
  *
  * <p>S1 {@code Sonic_HandleDeath} (docs/s1disasm/_incObj/01 Sonic.asm:2019-2049),
  * S2 {@code CheckGameOver} (docs/s2disasm/s2.asm:38284-38316) and S3K
- * {@code loc_12432} (docs/skdisasm/sonic3k.asm:24588-24616). The shared death
+ * {@code loc_12432} (docs/skdisasm/sonic3k.asm:24628-24656). The shared death
  * code decides <em>whether</em> this frame is a game over or time over; the
  * provider owns the per-game object slots, PLC/queue and music ids.
  */

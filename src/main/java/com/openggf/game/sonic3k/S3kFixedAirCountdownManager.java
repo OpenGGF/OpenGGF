@@ -16,11 +16,11 @@ import java.util.List;
  * S3K fixed {@code Breathing_bubbles}/{@code Breathing_bubbles_P2} sidecars.
  *
  * <p>These are fixed object-RAM entries, not dynamic SST objects:
- * docs/skdisasm/sonic3k.constants.asm:311-312. Player water code installs the
- * controller directly (sonic3k.asm:22221-22224,27436-27439), and the fixed
+ * docs/skdisasm/sonic3k.constants.asm:318-319. Player water code installs the
+ * controller directly (sonic3k.asm:22257-22260,27476-27479), and the fixed
  * object pass runs after dynamic object RAM but before {@code ScreenEvents}
- * (sonic3k.asm:7893-7898,35965). Visible bubbles are still allocated through
- * the normal dynamic {@code AllocateObject} path at sonic3k.asm:33591-33610.
+ * (sonic3k.asm:7925-7930,36005). Visible bubbles are still allocated through
+ * the normal dynamic {@code AllocateObject} path at sonic3k.asm:33631-33650.
  */
 final class S3kFixedAirCountdownManager {
     static final int REWIND_STATE_BYTES = FixedController.REWIND_STATE_BYTES * 2;
@@ -148,7 +148,7 @@ final class S3kFixedAirCountdownManager {
                 routine = ROUTINE_INIT;
                 subtype = SUBTYPE_FIXED;
                 // Player_ResetAirTimer is part of the water-entry install path
-                // (sonic3k.asm:33663-33688). The controller fields above stay
+                // (sonic3k.asm:33703-33728). The controller fields above stay
                 // untouched on later water exit/re-entry; only air_left resets.
                 DrowningController drowning = owner.getDrowningController();
                 if (drowning != null) {

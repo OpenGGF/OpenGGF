@@ -66,7 +66,7 @@ public class TestCamera {
         // Force update should match ROM's level-load camera placement: sprite at
         // screen-x=160 (right edge of 144-160 horizontal scroll deadzone) and
         // screen-y=96, per s1disasm _inc/LevelSizeLoad & BgScrollSpeed.asm:111,124,
-        // s2.asm:14787,14798, sonic3k.asm:38241.
+        // s2.asm:14787,14798, sonic3k.asm:38281.
         when(mockSprite.getCentreX()).thenReturn((short) 1000);
         when(mockSprite.getCentreY()).thenReturn((short) 500);
 

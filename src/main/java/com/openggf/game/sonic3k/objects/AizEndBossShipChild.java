@@ -185,7 +185,7 @@ public class AizEndBossShipChild extends AbstractBossChild implements RewindRecr
         }
 
         boolean hFlip = boss.isFacingRight();
-        // Obj_RobotnikShip routine 0 (loc_67D68, sonic3k.asm:136292-136297) creates
+        // Obj_RobotnikShip routine 0 (loc_67D68, sonic3k.asm:136357-136362) creates
         // the head with Child1_MakeRoboHead2 / CreateChild1_Normal, which
         // allocates after the current slot (176924-176929): the head follows the
         // ship. Both are priority $280 (ObjDat_RobotnikShip 136658,

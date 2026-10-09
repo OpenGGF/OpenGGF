@@ -183,7 +183,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             // Player_1 is SST slot 0 and consumed the retained logical UP word
             // earlier in this same scan. Keep the engine's late-write
             // representation through that player dispatch and release it on the
-            // next controller entry (sonic3k.asm:133968-133970, 138317-138323).
+            // next controller entry (sonic3k.asm:134025-134027, 138382-138388).
             pendingButtonInputRelease = true;
             player.setControlLocked(false);
             services().camera().setMaxYTarget((short) POST_BUTTON_CAMERA_MAX_Y_TARGET);
@@ -235,9 +235,9 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private int postResultsControlRestoreDelay() {
         // AIZEndBoss_StartPostDefeatCutscene polls tst.b (_unkFAA8).w from the
         // boss's own SST slot and only restores control on the entry that first
-        // reads it clear (sonic3k.asm:138263-138268). The clearing owner is
+        // reads it clear (sonic3k.asm:138328-138333). The clearing owner is
         // Obj_LevelResultsWait2, created through AllocateObject
-        // (sonic3k.asm:62700-62712, 181967-181971), so whether the boss sees
+        // (sonic3k.asm:62740-62752, 182058-182062), so whether the boss sees
         // the clear in the same scan or on its next entry depends on the
         // lowest free SST slot AllocateObject happened to return -- runtime
         // allocation state the engine's folded controller does not model.

@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * SKL {@code $61}, {@code Obj_DEZGravityPuzzle} (sonic3k.asm:96087-96245): the bobbing shaft in
+ * SKL {@code $61}, {@code Obj_DEZGravityPuzzle} (sonic3k.asm:96133-96291): the bobbing shaft in
  * Death Egg act 1's turbine room, with six pressable marker panels and a bumper launch.
  *
  * <p>Every expected number here is a literal from the ROM listing, not a call back into the
@@ -48,7 +48,7 @@ class TestS3kDezGravityPuzzleHeadless {
 
     /**
      * {@code move.w #$23,d1 / move.w #$30,d2 / move.w #$31,d3 / jsr (SolidObjectFull2).l}
-     * (:96121-96124). {@code d3} is one greater than {@code d2}, which is what a
+     * (:96167-96170). {@code d3} is one greater than {@code d2}, which is what a
      * {@code SolidObjectFull} caller passes so the grounded box reaches a pixel further down.
      */
     @Test
@@ -65,7 +65,7 @@ class TestS3kDezGravityPuzzleHeadless {
     }
 
     /**
-     * {@code loc_49986} :96104-96110. The sine of the <em>current</em> angle is taken and the
+     * {@code loc_49986} :96150-96156. The sine of the <em>current</em> angle is taken and the
      * angle is advanced afterwards, so the first update sits at the stored centre. The ROM sine
      * table's first entries are 0, 6, 12, 18, 25, 31 (Levels/Misc/sine.bin), and
      * {@code asr.w #2} floors each of them: 0, 1, 3, 4, 6, 7.
@@ -90,7 +90,7 @@ class TestS3kDezGravityPuzzleHeadless {
     }
 
     /**
-     * {@code sub_49A0E} :96201-96218. The row is {@code y_pos(a1) - y_pos(a0) + $30} floored at
+     * {@code sub_49A0E} :96247-96264. The row is {@code y_pos(a1) - y_pos(a0) + $30} floored at
      * zero and shifted right by five; the column adds 3 when the unsigned
      * {@code x_pos(a1) - x_pos(a0)} does not borrow, so a player exactly level with the shaft
      * counts as being on its right.
@@ -109,7 +109,7 @@ class TestS3kDezGravityPuzzleHeadless {
     }
 
     /**
-     * {@code cmpi.w #$60,d0 / blo.s loc_49A34 / moveq #$40,d0} (:96212-96214). The replacement
+     * {@code cmpi.w #$60,d0 / blo.s loc_49A34 / moveq #$40,d0} (:96258-96260). The replacement
      * is {@code $40}, <em>not</em> the limit: {@code $60 >> 5} would be 3, which is the right
      * column's first panel, so a low player on the left would mark a right-hand panel.
      */
@@ -124,8 +124,8 @@ class TestS3kDezGravityPuzzleHeadless {
     }
 
     /**
-     * {@code bset d0,(MHZ_pollen_counter).w} (:96229) with the {@code cmpi.b #3 / blo} frame
-     * guard (:96232-96233). Mushroom Hill's particle counter is the puzzle's panel bitfield;
+     * {@code bset d0,(MHZ_pollen_counter).w} (:96275) with the {@code cmpi.b #3 / blo} frame
+     * guard (:96278-96279). Mushroom Hill's particle counter is the puzzle's panel bitfield;
      * a second push on the same panel leaves it exactly as it was.
      */
     @Test
@@ -176,9 +176,9 @@ class TestS3kDezGravityPuzzleHeadless {
     }
 
     /**
-     * {@code loc_49850} :96050-96063. {@code x_vel = $C00} away from the shaft, the facing bit
+     * {@code loc_49850} :96096-96109. {@code x_vel = $C00} away from the shaft, the facing bit
      * set only for a player on its left, and {@code ground_vel = 1} negated to match
-     * (:96064, :96078-96079).
+     * (:96110, :96124-96125).
      */
     @Test
     void thePushFiresThePlayerAwayAtTwelveHundred() {
@@ -202,7 +202,7 @@ class TestS3kDezGravityPuzzleHeadless {
     }
 
     /**
-     * The rest of {@code loc_49850} (:96057-96077): airborne, not pushing, no double jump, no
+     * The rest of {@code loc_49850} (:96103-96123): airborne, not pushing, no double jump, no
      * roll jump, not jumping, and the endless tumble {@code flips_remaining = -1} with
      * {@code flip_speed = 4}.
      */
@@ -231,7 +231,7 @@ class TestS3kDezGravityPuzzleHeadless {
     }
 
     /**
-     * {@code tst.b flip_angle(a1) / bne.s loc_498A2} (:96065-96066): a player already part way
+     * {@code tst.b flip_angle(a1) / bne.s loc_498A2} (:96111-96112): a player already part way
      * through a tumble keeps the angle they had rather than restarting it from upright.
      */
     @Test
@@ -253,7 +253,7 @@ class TestS3kDezGravityPuzzleHeadless {
     }
 
     /**
-     * {@code sub_49A02} :96188-96191: {@code sfx_TunnelBooster} ({@code $74}) plays on the push
+     * {@code sub_49A02} :96234-96237: {@code sfx_TunnelBooster} ({@code $74}) plays on the push
      * and falls straight into {@code loc_49850}. Nothing else in the object calls
      * {@code Play_SFX}, so the bob is silent.
      */
@@ -282,8 +282,8 @@ class TestS3kDezGravityPuzzleHeadless {
     }
 
     /**
-     * {@code loc_499EC} :96177-96179 with {@code FixBugs = 0}. Player 1's branch loads
-     * {@code a1} before calling {@code sub_49A0E} (:96170-96171); Player 2's calls it first and
+     * {@code loc_499EC} :96223-96225 with {@code FixBugs = 0}. Player 1's branch loads
+     * {@code a1} before calling {@code sub_49A0E} (:96216-96217); Player 2's calls it first and
      * loads {@code a1} afterwards. So when both push on the same update, Player 2's push marks
      * the panel under <em>Player 1</em> and Player 2's own row is never recorded. The fixed
      * branch would mark Player 2's row instead.
@@ -410,7 +410,7 @@ class TestS3kDezGravityPuzzleHeadless {
         }
     }
 
-    /** {@code swap d6 / andi.w #1|2,d6} (:96126-96127): the object's own pushing bit. */
+    /** {@code swap d6 / andi.w #1|2,d6} (:96172-96173): the object's own pushing bit. */
     private void push(S3kDezGravityPuzzleObjectInstance puzzle, AbstractPlayableSprite sprite) {
         puzzle.onSolidContact(sprite, new SolidContact(false, true, false, false, true), 0);
     }

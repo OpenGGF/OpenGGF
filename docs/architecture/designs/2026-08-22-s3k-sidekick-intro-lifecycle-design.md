@@ -6,11 +6,11 @@ Sonic 3&K creates Player 2 during `SpawnLevelMainSprites`, even when the
 level's intro has not yet reached the point where Tails should appear. The ROM
 does not remove that object. For AIZ1, the first ordinary Tails CPU dispatch
 enters the `Current_zone_and_act == 0` dormant branch in
-`loc_13A10` (`docs/skdisasm/sonic3k.asm:26389-26397`), which calls
+`loc_13A10` (`docs/skdisasm/sonic3k.asm:26429-26437`), which calls
 `sub_13ECA` (`:26800-26809`) and writes the `$7F00/$0000` sentinel, routine
 `$0A`, and `object_control=$83`. The AIZ resize routine later writes routine
 `$02` at the palette handoff threshold `$1308`
-(`docs/skdisasm/sonic3k.asm:38888-38905`).
+(`docs/skdisasm/sonic3k.asm:38928-38945`).
 
 The engine already models that gameplay lifecycle in
 `SidekickCpuController`: AIZ's provider predicate is consumed on the first

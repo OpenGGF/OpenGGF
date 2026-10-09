@@ -57,7 +57,7 @@ final class SpecialStageTransitionSupport {
      * replays the success reveal: {@code Obj_SpecialStage_Results} routines $E-$12 already
      * ran it behind the results screen, and {@code LevelSetup} clears
      * {@code HPZ_special_stage_completed} and {@code _unkFAC0} on any later level load
-     * (sonic3k.asm:102197-102198).
+     * (sonic3k.asm:102243-102244).
      */
     static boolean loadSpecialStageReturnLevel(
             LevelManager levelManager,

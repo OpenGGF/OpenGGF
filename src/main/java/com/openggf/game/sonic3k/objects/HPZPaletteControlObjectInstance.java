@@ -15,7 +15,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * ROM {@code Obj_HPZPaletteControl} (sonic3k.asm:133503-133528), allocated once by
+ * ROM {@code Obj_HPZPaletteControl} (sonic3k.asm:133560-133585), allocated once by
  * {@code HPZ_ScreenEvent} after the entry fade. Each frame it selects
  * {@code Pal_HPZIntro} left of camera X {@code $460} and {@code Pal_HPZ} from there
  * on, and copies {@code $60} bytes into {@code Normal_palette_line_2} only when the

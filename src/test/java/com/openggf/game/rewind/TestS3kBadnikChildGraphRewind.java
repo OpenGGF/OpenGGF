@@ -1626,7 +1626,7 @@ class TestS3kBadnikChildGraphRewind {
         try {
             Class<?> cls = Class.forName(TENSION_BRIDGE_FRAGMENT);
             // (x, y, frameIndex, delay, artKey, highPriority, priorityBucket): the bridge passes
-            // its own bucket, 4, which sub_389DE copies into each fragment (sonic3k.asm:75862).
+            // its own bucket, 4, which sub_389DE copies into each fragment (sonic3k.asm:75903).
             Constructor<?> ctor = cls.getDeclaredConstructor(
                     int.class, int.class, int.class, int.class, String.class, boolean.class, int.class);
             ctor.setAccessible(true);

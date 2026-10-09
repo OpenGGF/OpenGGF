@@ -372,7 +372,7 @@ and branch on that semantic rule/profile/provider value — never on `gameId`.
 `Obj02_CheckGameOver` deferred-fall), `docs/s2disasm/s2.asm:29967-29981`
 (`ObjectMoveAndFall`), `docs/s2disasm/s2.asm:39043-39052`
 (`TailsCPU_Despawn` final warp). S3K immediate-warp baseline at
-`docs/skdisasm/sonic3k.asm:26800-26809` (`sub_13ECA`).
+`docs/skdisasm/sonic3k.asm:26840-26849` (`sub_13ECA`).
 
 **Originating commit.** `a4aca7d6f fix(s2): sidekick death uses
 deferred-despawn flow to match S2 Obj02_Dead`.
@@ -1110,8 +1110,8 @@ of changing every game implicitly.
 
 **ROM citation.** S2 `docs/s2disasm/s2.asm:25618-25631`; S1
 `docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:35-43`; S3K
-`docs/skdisasm/sonic3k.asm:40723-40753` and S3-side
-`docs/skdisasm/s3.asm:33392-33421`.
+`docs/skdisasm/sonic3k.asm:40763-40793` and S3-side
+`docs/skdisasm/s3.asm:33447-33476`.
 
 **Originating commit.** `<pending>` (trace frontier advancement loop iter 11:
 CNZ speed-shoes monitor reward timing advanced the CNZ frontier from f976 to
@@ -1281,7 +1281,7 @@ playable code, read the reset routine for each game and character:
 **ROM citation.** `docs/s2disasm/s2.asm:40629-40636`
 (`Tails_ResetOnFloor_Part2` branches past radius restore when rolling is
 clear), `docs/s2disasm/s2.asm:37781-37786` (S2 Sonic fixed rolling lift), and
-`docs/skdisasm/sonic3k.asm:24341-24363` (S3K Player_TouchFloor restores
+`docs/skdisasm/sonic3k.asm:24381-24403` (S3K Player_TouchFloor restores
 defaults and applies radius delta).
 
 **Originating commit.** `<pending>` (S2 CNZ frame 5328 Tails Y mismatch was
@@ -2000,7 +2000,7 @@ that first update. See also P30 (`bmi`/`bpl` countdowns fire at -1).
 
 **ROM citation.** S2 `Obj27_Init`/`Obj27_Main` `docs/s2disasm/s2.asm:46672-46684`
 (init `#3`, reload `#7`, delete at mapping_frame 5); S3K `loc_1E626`/`loc_1E66E`
-`docs/skdisasm/sonic3k.asm:42195-42205` (init `#3`); S1 `ExItem_Main`/
+`docs/skdisasm/sonic3k.asm:42235-42245` (init `#3`); S1 `ExItem_Main`/
 `ExItem_Animate` `docs/s1disasm/_incObj/27, 3F Explosions.asm` (init `#7`).
 Points popup Obj29 (`docs/s2disasm/s2.asm` `Obj29_Main`) is the velocity-driven
 variant: delete when `y_vel >= 0`, 32 frames after spawn.
@@ -2043,7 +2043,7 @@ that manage the rider through `obj_control`/held-capture must NOT enable it.
 `docs/s2disasm/s2.asm:35021-35044`; carry `MvSonicOnPtfm` s2.asm:35635-35659;
 side push `SolidObject_AtEdge` s2.asm:35432-35444. Obj70 cog routes through the
 shared helper via `JmpTo16_SolidObject` (s2.asm:55132). S3K analogue:
-`SolidObjectFull_1P` `loc_1DC98` (docs/skdisasm/sonic3k.asm:41017-41035).
+`SolidObjectFull_1P` `loc_1DC98` (docs/skdisasm/sonic3k.asm:41057-41075).
 
 **Originating commit.** `<pending>` MTZ3 giant-cog ride-release:
 `CogObjectInstance.airborneStaleStandingBitReturnsNoContact()` = true; MTZ3
@@ -2120,7 +2120,7 @@ Tails' single-facing balance edge branch is `docs/s2disasm/s2.asm:39733-39743`.
 Obj16 HTZ lift initializes `width_pixels=$20` at
 `docs/s2disasm/s2.asm:47763-47771`; Obj14 HTZ seesaw initializes
 `width_pixels=$30` at `docs/s2disasm/s2.asm:47402-47409`. S3K Tails uses the
-same single-facing balance convention at `docs/skdisasm/sonic3k.asm:27842-27859`.
+same single-facing balance convention at `docs/skdisasm/sonic3k.asm:27882-27899`.
 
 **Originating commit.** `<pending>` S2 Tails object-edge balance width sweep:
 `ARZPlatformObjectInstance.getBalanceWidthPixels()` returns subtype width,
@@ -3346,7 +3346,7 @@ the Grounder Obj8F/Obj90 debris cluster.
 `AllocateObject` (`docs/s2disasm/s2.asm:85444-85461`). S2 `Obj37_Init` starts
 with `movea.l a0,a1` for ring 0 and then calls plain `AllocateObject` in the
 loop (`docs/s2disasm/s2.asm:25125-25146`). S3K analog:
-`docs/skdisasm/sonic3k.asm:21065-21088,35549-35591`.
+`docs/skdisasm/sonic3k.asm:21101-21124,35589-35631`.
 
 **Originating commit.** `d27307e27` S2 ARZ2 Obj37 allocation split:
 `TestS2Arz2LevelSelectTraceReplay` stays at f1717 but improves 1420 -> 980
@@ -3469,7 +3469,7 @@ executes the object once, and proves the table is unchanged.
 **ROM citation.** S2's level loop calls `OscillateNumDo` after
 `ExecuteObjects` (`docs/s2disasm/s2.asm:5091-5104`). S3K's concrete
 origin is `Obj_MGZMovingSpikePlatform`
-(`docs/skdisasm/sonic3k.asm:7909,71029-71072`).
+(`docs/skdisasm/sonic3k.asm:7941,71069-71112`).
 
 **Originating commit (S3K).** `<pending: MGZ moving-spike oscillator ownership milestone>`.
 
@@ -3499,7 +3499,7 @@ publication is unconditional. Test a lower-half overlap within $10 pixels
 while moving away.
 
 **ROM citation.** S3K `SolidObjectFull` escapes the lower-half squash at
-`docs/skdisasm/sonic3k.asm:41564-41568` and publishes grounded push through
+`docs/skdisasm/sonic3k.asm:41604-41608` and publishes grounded push through
 `loc_1E06E` at lines 41473-41495. S2 follows the corresponding
 `SolidObject_Squash -> SolidObject_LeftRight` path at
 `docs/s2disasm/s2.asm:35336-35402`.

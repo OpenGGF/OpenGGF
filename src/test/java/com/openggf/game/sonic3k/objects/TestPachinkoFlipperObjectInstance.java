@@ -17,7 +17,7 @@ public class TestPachinkoFlipperObjectInstance {
      * branch only reaches the launch trigger (loc_49D68 -> sub_49D72) when an A/B/C
      * button was JUST pressed; otherwise it runs loc_49D54/loc_49DE4, which
      * accelerate/project/move the locked player without ever setting Status_InAir
-     * (sonic3k.asm:96437-96534). The flipper therefore does drive x_vel/y_vel every
+     * (sonic3k.asm:96483-96580). The flipper therefore does drive x_vel/y_vel every
      * locked frame now, so absence-of-launch is asserted via Status_InAir, not via
      * "no velocity write".
      */
@@ -81,9 +81,9 @@ public class TestPachinkoFlipperObjectInstance {
         flipper.onSolidContact(player, standing, 0);
         flipper.onSolidContact(player, standing, 1);
 
-        // ROM loc_49D68's fall-through to loc_49DE4 (sonic3k.asm:96460-96462,
+        // ROM loc_49D68's fall-through to loc_49DE4 (sonic3k.asm:96506-96508,
         // 96532-96541) projects ground_vel onto angle into x_vel/y_vel and moves
-        // the player BEFORE sub_49D72 (sonic3k.asm:96469-96504) overwrites
+        // the player BEFORE sub_49D72 (sonic3k.asm:96515-96550) overwrites
         // x_vel/y_vel with the distance-based launch velocity, so setXSpeed/
         // setYSpeed are each invoked twice on a launch frame. ArgumentCaptor.
         // getValue() returns the LAST captured value, i.e. the launch overwrite.
@@ -99,10 +99,10 @@ public class TestPachinkoFlipperObjectInstance {
 
     /**
      * ROM sub_49CFE's already-locked branch (loc_49D3C -> loc_49D54 ->
-     * loc_49DE4, sonic3k.asm:96437-96521) is only reachable while the player's
+     * loc_49DE4, sonic3k.asm:96483-96567) is only reachable while the player's
      * own object_control(a1) bit 0 stays set, which makes the player's control
      * routine skip Sonic_Modes (RollRepel/RollSpeed/etc) entirely for that
-     * frame (sonic3k.asm:21973-21976). The engine keeps running its normal
+     * frame (sonic3k.asm:22009-22012). The engine keeps running its normal
      * per-frame roll update instead, so pinballSpeedLock must be asserted for
      * the whole locked ride to suppress RollSpeed's friction/deceleration/
      * stop-rolling block -- without it, ground_vel gets corrupted by the

@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Slice 3's first writer: SKL {@code $5B}, {@code Obj_DEZGravitySwap}
- * (sonic3k.asm:95472-95543).
+ * (sonic3k.asm:95518-95589).
  *
  * <p>Eleven of these sit in Death Egg act 2's open corridors, six unflipped and five
  * X-flipped. They are the objects that make {@code Reverse_gravity_flag} reachable in
@@ -39,10 +39,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * with two branch conditions inverted:
  *
  * <ul>
- *   <li>{@code sub_49228} (:95489-95517), the left-to-right crossing, writes
+ *   <li>{@code sub_49228} (:95535-95563), the left-to-right crossing, writes
  *       {@code Reverse_gravity_flag = 0} and then {@code = 1} only when
  *       {@code btst #0,render_flags(a0)} is <em>clear</em> ({@code bne.s locret}).</li>
- *   <li>{@code loc_49270} (:95518-95542), the right-to-left crossing, writes 0 and then 1
+ *   <li>{@code loc_49270} (:95564-95588), the right-to-left crossing, writes 0 and then 1
  *       only when the same bit is <em>set</em> ({@code beq.s locret}).</li>
  * </ul>
  *
@@ -57,7 +57,7 @@ class TestS3kDezGravityObjectsHeadless {
     private static final int OBJECT_X = 0x1900;
     private static final int OBJECT_Y = 0x0540;
 
-    /** ROM {@code move.w #$20,$30(a0)} (:95473). */
+    /** ROM {@code move.w #$20,$30(a0)} (:95519). */
     private static final int BAND_HALF_HEIGHT = 0x20;
 
     @AfterEach
@@ -97,7 +97,7 @@ class TestS3kDezGravityObjectsHeadless {
 
     /**
      * The Y band. {@code d2 = y_pos - $20}, {@code d3 = y_pos + $20}, and
-     * {@code cmp.w d2,d4 / blt} with {@code cmp.w d3,d4 / bge} (:95495-95507) return
+     * {@code cmp.w d2,d4 / blt} with {@code cmp.w d3,d4 / bge} (:95541-95553) return
      * without touching the flag outside {@code [y_pos - $20, y_pos + $20)}. A player who
      * runs past on another floor leaves the corridor's gravity alone.
      */
@@ -120,7 +120,7 @@ class TestS3kDezGravityObjectsHeadless {
 
     /**
      * The side latch is consumed whether or not the flag is written: {@code move.b #1,-1(a2)}
-     * sits <em>before</em> the Y-band test (:95492-95495). A player who crosses out of the
+     * sits <em>before</em> the Y-band test (:95538-95541). A player who crosses out of the
      * band and then crosses back <em>in</em> it runs the opposite body, not a repeat of the
      * first one.
      */
@@ -153,7 +153,7 @@ class TestS3kDezGravityObjectsHeadless {
 
     /**
      * Player 2 is not watched. {@code Obj_DEZGravitySwap} passes
-     * {@code lea (Player_1).w,a1} and has no second call (:95217-95219), unlike {@code $58},
+     * {@code lea (Player_1).w,a1} and has no second call (:95263-95265), unlike {@code $58},
      * which at least reads Player 2's contact bits. A sidekick crossing writes nothing.
      */
     @Test
@@ -252,9 +252,9 @@ class TestS3kDezGravityObjectsHeadless {
      * SKL {@code $58}, {@code Obj_DEZGravitySwitch}: the five act 2 pressure pads.
      *
      * <p>The pad <strong>toggles</strong> rather than writes — {@code eori.b #1,
-     * (Reverse_gravity_flag).w} at {@code loc_48B7E} (sonic3k.asm:94879) — and it does so
+     * (Reverse_gravity_flag).w} at {@code loc_48B7E} (sonic3k.asm:94925) — and it does so
      * on the <em>fourth</em> update after the press, not the press frame:
-     * {@code move.w #3,$30(a0)} (:94822) then {@code subq.w #1,$30 / bpl} (:94877-94878),
+     * {@code move.w #3,$30(a0)} (:94868) then {@code subq.w #1,$30 / bpl} (:94923-94924),
      * so the counter runs 3, 2, 1, 0 and toggles on the update that takes it negative.
      */
     @Test
@@ -303,7 +303,7 @@ class TestS3kDezGravityObjectsHeadless {
 
     /**
      * The rearm cannot start while the pad is still occupied. {@code loc_48B9C}
-     * (:94892-94896) tests {@code Status_OnObj(a0)} and resets {@code $30} to 0 every frame
+     * (:94938-94942) tests {@code Status_OnObj(a0)} and resets {@code $30} to 0 every frame
      * it is set, so a player who presses the pad and never leaves keeps it down.
      */
     @Test
@@ -344,7 +344,7 @@ class TestS3kDezGravityObjectsHeadless {
         }
     }
 
-    /** Once clear, the pad rearms twenty frames later ({@code move.w #20-1,$30}, :94880). */
+    /** Once clear, the pad rearms twenty frames later ({@code move.w #20-1,$30}, :94926). */
     @Test
     void theGravitySwitchRearmsTwentyFramesAfterItIsFree() {
         HeadlessTestFixture fixture = fixture();
@@ -370,7 +370,7 @@ class TestS3kDezGravityObjectsHeadless {
     }
 
     /**
-     * The press releases the rider: {@code sub_48B40} (:94848-94861) zeroes
+     * The press releases the rider: {@code sub_48B40} (:94894-94907) zeroes
      * {@code ground_vel}, {@code x_vel} and {@code y_vel}, sets {@code Status_InAir} and
      * clears {@code Status_OnObj} — so the player falls off the pad it just pressed, which
      * is what stops it being pressed again on the next frame.
@@ -402,7 +402,7 @@ class TestS3kDezGravityObjectsHeadless {
     }
 
     /**
-     * The pad answers to its underside too. {@code andi.w #$14,d0} (:94817) is Player 1's
+     * The pad answers to its underside too. {@code andi.w #$14,d0} (:94863) is Player 1's
      * top <em>and</em> bottom contact bits, which is the whole reason a gravity switch
      * works at all: once gravity is inverted the player reaches it from the other face.
      */
@@ -519,9 +519,9 @@ class TestS3kDezGravityObjectsHeadless {
     }
 
     /**
-     * {@code moveq #signextendB(sfx_Transporter),d0 / jsr (Play_SFX).l} (:94832-94833),
+     * {@code moveq #signextendB(sfx_Transporter),d0 / jsr (Play_SFX).l} (:94878-94879),
      * inside the press branch and nowhere else. {@code sfx_Transporter} is {@code $73}
-     * (sonic3k.constants.asm:1560), which the engine already carries as
+     * (sonic3k.constants.asm:1585), which the engine already carries as
      * {@link com.openggf.game.sonic3k.audio.Sonic3kSfx#TRANSPORTER}.
      *
      * <p>The press frame is the only frame that plays it: the toggle four updates later is
@@ -557,8 +557,8 @@ class TestS3kDezGravityObjectsHeadless {
     }
 
     /**
-     * {@code move.b #1,mapping_frame(a0)} on the press (:94821) and back to 0 when the pad
-     * rises (:94902). Frame 1 is {@code word_48C08}, the two-piece pressed pose.
+     * {@code move.b #1,mapping_frame(a0)} on the press (:94846) and back to 0 when the pad
+     * rises (:94927). Frame 1 is {@code word_48C08}, the two-piece pressed pose.
      */
     @Test
     void theGravitySwitchShowsItsPressedMappingFrameWhilePressed() {

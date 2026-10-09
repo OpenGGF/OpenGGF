@@ -65,17 +65,17 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance
             }
         }
 
-        // ROM loc_32EF0 (sonic3k.asm:68905-68919 -- the Pachinko-zone vertical
+        // ROM loc_32EF0 (sonic3k.asm:68945-68959 -- the Pachinko-zone vertical
         // variant of Obj_Bumper's on-screen test, reached via the
         // `cmpi.b #$14,(Current_zone).w / bne.s ... / bra.w loc_32EF0` dispatch
-        // at sonic3k.asm:68836-68841):
+        // at sonic3k.asm:68876-68881):
         // `move.w y_pos(a0),d0 / andi.w #$FF80,d0 / sub.w
         // (Camera_Y_pos_coarse_back).w,d0 / cmpi.w #$200,d0 / bhi.s loc_32F22`.
         // The subtraction is unsigned 16-bit; when the object's Y chunk sits more
         // than 0x200 past the trailing camera band, loc_32F22 clears the SST's
         // respawn_addr bit 7 (so the level's placement table can spawn it again)
         // and deletes the sprite. Camera_Y_pos_coarse_back = (Camera_Y_pos - 0x80)
-        // & $FF80 (sonic3k.asm:37551-37554), which for chunk-aligned arithmetic is
+        // & $FF80 (sonic3k.asm:37591-37594), which for chunk-aligned arithmetic is
         // interchangeable with (Camera_Y_pos & $FF80) - 0x80.
         //
         // Without this, the engine's generic S3K windowing (ObjectWindowingStrategy
@@ -95,7 +95,7 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // ROM loc_32EF0/loc_32EAA (sonic3k.asm:68877-68880, 68906-68908):
+        // ROM loc_32EF0/loc_32EAA (sonic3k.asm:68917-68920, 68946-68948):
         // `tst.b collision_property(a0) / beq.s ... / bsr.w sub_32F34`. The bounce
         // is gated on the ROM's own Touch_Loop-populated collision_property bit,
         // not a hand-rolled distance check against the player's terrain
@@ -170,7 +170,7 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM loc_32EF0's on-screen band test (sonic3k.asm:68913-68917): the
+     * ROM loc_32EF0's on-screen band test (sonic3k.asm:68953-68957): the
      * bumper's y_pos, chunk-aligned to $FF80, minus the trailing camera band
      * (Camera_Y_pos_coarse_back), is compared unsigned against $200. This
      * round bumper never moves for the Pachinko variant (only the CNZ/
@@ -184,7 +184,7 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance
             return false;
         }
         // ROM Camera_Y_pos_coarse_back = (Camera_Y_pos - 0x80) & $FF80
-        // (sonic3k.asm:37551-37554); chunk-aligned arithmetic makes that
+        // (sonic3k.asm:37591-37594); chunk-aligned arithmetic makes that
         // interchangeable with (Camera_Y_pos & $FF80) - 0x80.
         int cameraYCoarseBack = (camera.getY() & 0xFF80) - 0x80;
         int objChunkY = spawn.y() & 0xFF80;
@@ -197,7 +197,7 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance
         int dy = spawn.y() - player.getCentreY();
         int angle = TrigLookupTable.calcAngle((short) dx, (short) dy);
 
-        // ROM sub_32F34/sub_32F56 (sonic3k.asm:68953-68968): `move.b
+        // ROM sub_32F34/sub_32F56 (sonic3k.asm:68993-69008): `move.b
         // (Level_frame_counter).w,d1` reads the HIGH byte of the big-endian
         // Level_frame_counter word (no +1 offset, unlike the many call sites that
         // read `(Level_frame_counter+1).w` for the low/fast-changing byte), then
@@ -214,7 +214,7 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance
         player.setXSpeed((short) (cosVal * -BOUNCE_VELOCITY >> 8));
         player.setYSpeed((short) (sinVal * -BOUNCE_VELOCITY >> 8));
         player.setAir(true);
-        // ROM sub_32F56 (sonic3k.asm:68976-68977): `bclr #Status_RollJump,status(a1)`
+        // ROM sub_32F56 (sonic3k.asm:69016-69017): `bclr #Status_RollJump,status(a1)`
         // alongside the Status_InAir set and Status_Push clear already ported below.
         player.setRollingJump(false);
         player.setPushing(false);

@@ -93,7 +93,7 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
     /**
      * AIZ2_ALZ_BGDeformDelta: noisy +/-2px shimmer for BG above water.
      * 32-word cycle (mask 0x3E). Phase = (frameCounter>>1) + Camera_Y_pos_BG_copy*2.
-     * ROM reference: sonic3k.asm line 105652.
+     * ROM reference: sonic3k.asm line 105698.
      */
     private static final short[] AIZ_BG_HAZE_DEFORM = {
             -2,  1,  2,  2, -1,  2,  2,  1,  2, -1, -2, -2, -2,  1, -1, -1,
@@ -103,7 +103,7 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
     /**
      * AIZ1_WaterBGDeformDelta: smooth sinusoidal wave for BG below water.
      * 64-word cycle (mask 0x7E). Phase = (frameCounter>>1) + waterBgY*2.
-     * ROM reference: sonic3k.asm line 104254.
+     * ROM reference: sonic3k.asm line 104300.
      */
     private static final short[] AIZ_WATER_BG_DEFORM = {
              0,  0, -1, -1, -1, -1, -1, -1,  0,  0,  0,  1,  1,  1,  1,  1,

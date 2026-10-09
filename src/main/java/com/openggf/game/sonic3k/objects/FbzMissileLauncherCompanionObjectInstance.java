@@ -45,7 +45,7 @@ public final class FbzMissileLauncherCompanionObjectInstance
     }
     // loc_3C636 always reaches SolidObjectFull after the destruction branch
     // relocates x_pos to $7F00, then Sprite_OnScreen_Test2 recycles the slot
-    // (docs/skdisasm/sonic3k.asm:80231-80269). Resolve every participant while
+    // (docs/skdisasm/sonic3k.asm:80272-80310). Resolve every participant while
     // this object is still live so native P1/P2 standing bits and all extension
     // sidekick latches are released before the same-callback cull.
     services().solidExecution().resolveSolidNowAll();
@@ -56,7 +56,7 @@ public final class FbzMissileLauncherCompanionObjectInstance
   int familySlot() { return familySlot; }
   @Override public int getBalanceWidthPixels() {
     // Obj_FBZMissileLauncher writes width_pixels=$20 to its solid
-    // companion (sonic3k.asm:80143); Sonic_Move reads that byte for balance.
+    // companion (sonic3k.asm:80184); Sonic_Move reads that byte for balance.
     return 0x20;
   }
   @Override public int romObjectCodePointerHighWord() {
@@ -65,7 +65,7 @@ public final class FbzMissileLauncherCompanionObjectInstance
   }
   @Override public boolean suppressesObjectEdgeBalance() {
     // Obj_FBZMissileLauncher sets status bit 7 on this companion
-    // (sonic3k.asm:80147). Sonic_Move and Tails_Move test the signed
+    // (sonic3k.asm:80188). Sonic_Move and Tails_Move test the signed
     // stood-on status before checking width_pixels for edge balance.
     return true;
   }

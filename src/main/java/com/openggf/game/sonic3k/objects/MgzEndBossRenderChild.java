@@ -58,7 +58,7 @@ public final class MgzEndBossRenderChild extends AbstractBossChild implements Re
     @Override
     public boolean isHighPriority() {
         // Child1_MakeRoboShip3 copies the parent's art_tile, then
-        // Child_SyncDraw (sonic3k.asm:138841-138854) mirrors bit 7 from that
+        // Child_SyncDraw (sonic3k.asm:138906-138919) mirrors bit 7 from that
         // parent. Obj_MGZ2DrillingRobotnik's surprise path only loads
         // ObjDat_MGZDrillBoss (142440), while Obj_MGZEndBoss additionally sets
         // bit 7 at loc_6C354 (142754). The pod must therefore remain behind

@@ -28,8 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Rewind spots for slice 3b's two stateful mechanics: {@code Obj_LRZDoor}'s one-way opening
- * (sonic3k.asm:88032-88054) and {@code Obj_LRZButtonHorizontal}'s per-frame trigger write
- * (:88236-88273).
+ * (sonic3k.asm:88078-88100) and {@code Obj_LRZButtonHorizontal}'s per-frame trigger write
+ * (:88282-88319).
  *
  * <p>Each spot is captured before, during and after the event, and every restore is followed by a
  * forward replay: the same number of updates after a restore has to land on exactly the state an

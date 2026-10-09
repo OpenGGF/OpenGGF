@@ -134,7 +134,7 @@ ROM-vs-engine columns.
 > if it points into `ObjectManager.SolidContacts.resolveContactInternal`,
 > the offender is a solid object whose state machine has drifted from ROM
 > (e.g. AIZ F7127 was the AIZ collapsing platform stuck in
-> `state==2`/solid-stay forever; ROM's `loc_205DE` at sonic3k.asm:44850-44854
+> `state==2`/solid-stay forever; ROM's `loc_205DE` at sonic3k.asm:44890-44894
 > unconditionally promotes to the falling state when its post-fragment
 > timer underflows, but the engine had been gating that promotion on a
 > still-standing player). The correct fix touches the object's state
@@ -238,7 +238,7 @@ Current capabilities are semantic names advertised in `aux_schema_extras`:
 | `cage_execution_per_frame` | `cage_execution` | M68K execution-hook hits inside CNZ cage routines (BizHawk Lua `event.onmemoryexecute`) |
 | `velocity_write_per_frame` | `velocity_write` | Per-frame writer-PC trace for Tails `x_vel` / `y_vel` (BizHawk Lua `event.onmemorywrite`, frame-window-gated) |
 | `position_write_per_frame` | `position_write` | Per-frame writer-PC trace for Tails `x_pos` / `y_pos` with the captured `(a1)`/`(a0)` registers (v6.11-s3k recorder; BizHawk Lua `event.onmemorywrite`, frame-window-gated). Used to disambiguate Player_1 vs Player_2 targeting in routines like `SolidObjectFull2_1P` that loop both players |
-| `solid_object_cont_entry_per_frame` | `solid_object_cont_entry` | Per-frame snapshot of `(a0)`/`(a1)`/d1/d2 plus `y_radius`/`default_y_radius` and pixel x/y on entry to `SolidObject_cont` (sonic3k.asm:41394 / ROM 0x1DF90; v6.11-s3k recorder; BizHawk Lua `event.onmemoryexecute`, frame-window-gated). Used to reconstruct the `loc_1DFD6+`/`loc_1E154` push-up branch d3/d4 conditional after the fact |
+| `solid_object_cont_entry_per_frame` | `solid_object_cont_entry` | Per-frame snapshot of `(a0)`/`(a1)`/d1/d2 plus `y_radius`/`default_y_radius` and pixel x/y on entry to `SolidObject_cont` (sonic3k.asm:41434 / ROM 0x1DF90; v6.11-s3k recorder; BizHawk Lua `event.onmemoryexecute`, frame-window-gated). Used to reconstruct the `loc_1DFD6+`/`loc_1E154` push-up branch d3/d4 conditional after the fact |
 
 All event types are **diagnostic only** — they feed the divergence comparator and the
 divergence report's context window. They are never written into engine state by the test
@@ -523,7 +523,7 @@ ROM-citation requirements and per-game parity rules.
   cross-game values over flipping an unrelated global default in the same change. See
   `PlayerMovementRules.levelBoundaryUsesCentreY` for the canonical example. Another example
   is `ObjectInteractionRules.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity`, which enables
-  ROM `loc_1E154` (sonic3k.asm:41606-41632) writing the top-branch position lift before the
+  ROM `loc_1E154` (sonic3k.asm:41646-41672) writing the top-branch position lift before the
   `tst.w y_vel(a1) / bmi.s loc_1E198` test only on S3K; S1 `Solid_Landed`
   (s1disasm/_incObj/sub SolidObject.asm:278) and S2 `SolidObject_Landed` (s2.asm:35379-35380)
   bail on upward y_vel BEFORE any lift, so the rule stays false there.
@@ -533,14 +533,14 @@ ROM-citation requirements and per-game parity rules.
   Fall back to Python `open(path, 'rb').read().replace(...)`-style edits if you suspect this.
 - **Misreading aux trace `cpu_state` event field semantics.** S3K's `cpu_state` event
   reports `cpu_routine` as the raw `Tails_CPU_routine` byte — `0x06` is the NORMAL
-  ground-following AI (`loc_13D4A`, sonic3k.asm:26656), NOT a "FLY" routine. Similarly,
+  ground-following AI (`loc_13D4A`, sonic3k.asm:26696), NOT a "FLY" routine. Similarly,
   `flight_timer` is `sub_13EFC`'s `Status_OnObj` watchdog used by NORMAL routine
-  (sonic3k.asm:26816-26847), not an active-flight indicator; it ticks any time Tails is
+  (sonic3k.asm:26856-26887), not an active-flight indicator; it ticks any time Tails is
   riding the same `Tails_CPU_interact` slot, regardless of whether Tails is flying. And
   `target_x` / `target_y` are leader-history positions (the CPU's follow target), not
   Tails's own position — for Tails's actual coordinates, use the
   `object_state` event for slot 1 in the same frame. Always cross-reference
-  `Tails_CPU_Control_Index` (sonic3k.asm:26368-26386) when interpreting `cpu_routine`
+  `Tails_CPU_Control_Index` (sonic3k.asm:26408-26426) when interpreting `cpu_routine`
   values, and do not infer "Tails is flying" from a non-zero `flight_timer` alone.
 
 ## Related Files
@@ -619,7 +619,7 @@ recorded data is a 5-frame `0/0x18/0x30/0x48/0x60/0` cycle on
 `x_speed` with a sub-x snap pushback once per cycle — the canonical
 ROM "rolling-air sliding into a flush right-side wall" pattern from
 `SonicKnux_DoLevelCollision`'s `CheckRightWallDist` arm
-(`sonic3k.asm:24061-24065`). This narrowed the next-round
+(`sonic3k.asm:24101-24105`). This narrowed the next-round
 investigation to the engine's airborne right-wall probe vs the
-player path's fixed `addi.w #$A,d3` (sonic3k.asm:20195) before any
+player path's fixed `addi.w #$A,d3` (sonic3k.asm:20231) before any
 engine code was changed.

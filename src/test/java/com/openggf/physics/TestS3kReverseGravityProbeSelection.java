@@ -16,10 +16,10 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 /**
  * Step 2a-2: {@code sub_11FD6} and {@code sub_11FEE} swap which probe is the floor.
  *
- * <p>{@code sub_11FD6} (sonic3k.asm:24127-24137) is the wrapper every "check the floor"
+ * <p>{@code sub_11FD6} (sonic3k.asm:24167-24177) is the wrapper every "check the floor"
  * site in the three characters' {@code DoLevelCollision} routines calls; with
  * {@code Reverse_gravity_flag} ($FFFFF7C6) set it runs {@code Sonic_CheckCeiling}
- * instead. {@code sub_11FEE} (:24141-24151) is its opposite. This asserts the selector
+ * instead. {@code sub_11FEE} (:24181-24191) is its opposite. This asserts the selector
  * those two wrappers become, which is the branch the ROM states.
  *
  * <p><strong>Scope.</strong> This is a seam test, not the behavioural proof. It shows

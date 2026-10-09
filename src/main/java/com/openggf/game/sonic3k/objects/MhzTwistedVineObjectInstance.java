@@ -175,7 +175,7 @@ public final class MhzTwistedVineObjectInstance extends AbstractObjectInstance i
         player.setOnObject(true);
         player.setLatchedSolidObject(Sonic3kObjectIds.MHZ_TWISTED_VINE, this);
         player.setDirection(direction);
-        // ROM RideObject_SetRide (sonic3k.asm:42035-42044) forces angle=0,
+        // ROM RideObject_SetRide (sonic3k.asm:42075-42084) forces angle=0,
         // clears y_vel, copies x_vel into ground_vel, and clears Status_InAir.
         // The copy must precede this object's minimum-speed clamp: a player
         // entering from a loop can have a positive old ground_vel while x_vel

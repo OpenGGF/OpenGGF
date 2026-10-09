@@ -13,33 +13,33 @@ import java.util.List;
 
 /**
  * ROM object {@code Obj_LRZLavaFall} -- object id {@code $1F} in the {@code SKL} pointer set
- * (sonic3k.asm:88770-88808, ROM {@code $436A0}). The {@code S3KL} set spends the same id on
+ * (sonic3k.asm:88816-88854, ROM {@code $436A0}). The {@code S3KL} set spends the same id on
  * {@code Obj_LBZLoweringGrapple}.
  *
  * <p>The placement itself is an invisible emitter: Init writes no mappings and no {@code art_tile},
- * only {@code $30(a0) = subtype} (:88771-88773). Every frame it compares the low byte of
+ * only {@code $30(a0) = subtype} (:88817-88819). Every frame it compares the low byte of
  * {@code Level_frame_counter} against that value and does nothing while the clock is below it
- * (:88777-88780), so the fall runs for {@code $100 - subtype} frames out of every 256 and is off
+ * (:88823-88826), so the fall runs for {@code $100 - subtype} frames out of every 256 and is off
  * for the rest. Lava Reef's seven placements carry {@code $50}, {@code $60} and {@code $70}, giving
  * duty cycles of {@code $B0}, {@code $A0} and {@code $90} frames.
  *
  * <p>While it is running, {@code anim_frame_timer} reloads with 5, so a drop is allocated every
- * sixth frame (:88781-88784). {@code $25(a0)} alternates: the ROM increments it, and on the frame
+ * sixth frame (:88827-88830). {@code $25(a0)} alternates: the ROM increments it, and on the frame
  * it reaches 2 it is reset to 0 and that drop gets the routine that plays {@code sfx_LavaFall}
- * (:88788-88792), so every second drop is the noisy one.
+ * (:88834-88838), so every second drop is the noisy one.
  *
- * <p>Its tail is {@code Delete_Sprite_If_Not_In_Range} (:88807), so the shared camera unload
+ * <p>Its tail is {@code Delete_Sprite_If_Not_In_Range} (:88853), so the shared camera unload
  * applies.
  */
 public final class LrzLavaFallObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, RomObjectCodePointerProvider {
 
-    /** {@code move.b #5,anim_frame_timer(a0)} (sonic3k.asm:88784). */
+    /** {@code move.b #5,anim_frame_timer(a0)} (sonic3k.asm:88830). */
     private static final int DROP_PERIOD_RELOAD = 5;
-    /** {@code cmpi.b #2,$25(a0)} (sonic3k.asm:88789). */
+    /** {@code cmpi.b #2,$25(a0)} (sonic3k.asm:88835). */
     private static final int SOUND_ALTERNATION = 2;
 
-    /** {@code btst #0,status(a0)} (:88805): the X-flip gives the drops a longer life. */
+    /** {@code btst #0,status(a0)} (:88851): the X-flip gives the drops a longer life. */
     private boolean longLived;
     /** ROM {@code $30(a0)}: the clock threshold the fall runs above. */
     private int clockThreshold;
@@ -74,12 +74,12 @@ public final class LrzLavaFallObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // move.w (Level_frame_counter).w,d0 / andi.w #$FF,d0 / cmp.w $30(a0),d0 / blo
-        // (sonic3k.asm:88777-88780): an unsigned compare against the clock's low byte.
+        // (sonic3k.asm:88823-88826): an unsigned compare against the clock's low byte.
         int clock = levelFrameCounterOrFallback(vIntRunCount) & 0xFF;
         if (clock < clockThreshold) {
             return;
         }
-        // subq.b #1,anim_frame_timer(a0) / bpl (:88781-88782).
+        // subq.b #1,anim_frame_timer(a0) / bpl (:88827-88828).
         dropTimer = (byte) (dropTimer - 1);
         if (dropTimer >= 0) {
             return;
@@ -88,7 +88,7 @@ public final class LrzLavaFallObjectInstance extends AbstractObjectInstance
         emitDrop();
     }
 
-    /** {@code loc_436C8} through {@code loc_43746} (sonic3k.asm:88785-88806). */
+    /** {@code loc_436C8} through {@code loc_43746} (sonic3k.asm:88831-88852). */
     private void emitDrop() {
         // addq.b #1,$25(a0) / cmpi.b #2,$25(a0) / blo: the second of every two drops is the one
         // given the routine that plays the sound.
@@ -101,7 +101,7 @@ public final class LrzLavaFallObjectInstance extends AbstractObjectInstance
         final int y = getCentreY();
         final boolean sound = playsSound;
         final boolean longer = longLived;
-        // AllocateObjectAfterCurrent (:88785) scans forward from this object's own slot, which is
+        // AllocateObjectAfterCurrent (:88831) scans forward from this object's own slot, which is
         // spawnChild's contract.
         spawnChild(() -> new LrzLavaFallDropInstance(x, y, sound, longer));
     }
@@ -146,7 +146,7 @@ public final class LrzLavaFallObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        // Init writes no mappings and no art_tile (sonic3k.asm:88771-88775): the emitter is
+        // Init writes no mappings and no art_tile (sonic3k.asm:88817-88821): the emitter is
         // invisible and only its drops are drawn.
     }
 }

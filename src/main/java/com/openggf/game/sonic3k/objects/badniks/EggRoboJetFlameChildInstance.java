@@ -17,7 +17,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_916A8}/{@code loc_916CC} (sonic3k.asm:198606-198625): the EggRobo's jet flame,
+ * ROM {@code loc_916A8}/{@code loc_916CC} (sonic3k.asm:198713-198732): the EggRobo's jet flame,
  * the first row of {@code ChildObjDat_919D0} at {@code (-$C,$1C)}.
  *
  * <p>{@code word_919BE} gives it priority {@code $280}, {@code $C} by {@code $10} pixels and

@@ -13,7 +13,7 @@ import com.openggf.level.objects.TouchResponseProvider;
 import java.io.IOException;
 import java.util.List;
 
-/** SKL $52, Obj_DEZLightning / loc_478BE..loc_4791A (sonic3k.asm:93567-93611). */
+/** SKL $52, Obj_DEZLightning / loc_478BE..loc_4791A (sonic3k.asm:93613-93657). */
 public final class S3kDezLightningObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable, TouchResponseProvider {
     private boolean initialized;

@@ -26,8 +26,8 @@ public final class HczEndBossBladeImpactExplosion extends AbstractBossChild
     private int frameTimer = FRAME_DELAY;
 
     public HczEndBossBladeImpactExplosion(HczEndBossInstance boss, int x, int y) {
-        // HCZEndBossExplosion_ObjData priority $80 (sonic3k.asm:142183-142186), applied by
-        // HCZEndBossExplosion_Init's SetUp_ObjAttributes (sonic3k.asm:141531-141533).
+        // HCZEndBossExplosion_ObjData priority $80 (sonic3k.asm:142248-142251), applied by
+        // HCZEndBossExplosion_Init's SetUp_ObjAttributes (sonic3k.asm:141596-141598).
         super(boss, "HCZEndBossBladeImpactExplosion", RenderPriority.fromS3kWord(0x80), 0);
         this.boss = boss;
         currentX = x;
@@ -38,7 +38,7 @@ public final class HczEndBossBladeImpactExplosion extends AbstractBossChild
     @Override
     public boolean isHighPriority() {
         // HCZEndBossExplosion_ObjData art make_art_tile(ArtTile_Explosion,0,1) sets bit 15
-        // (sonic3k.asm:142185).
+        // (sonic3k.asm:142250).
         return true;
     }
 

@@ -10,7 +10,7 @@ public final class SidekickLevelEventRelease {
     }
 
     /**
-     * ROM {@code Obj_57DCC} (sonic3k.asm:116913-116917) and the shared tail of
+     * ROM {@code Obj_57DCC} (sonic3k.asm:116959-116963) and the shared tail of
      * {@code loc_13B18}: {@code clr.w (Tails_CPU_flight_timer).w} then
      * {@code move.w #6,(Tails_CPU_routine).w}, sending the sidekick straight to the ground-follow
      * routine rather than through the catch-up flight that a routine-2 write would select.

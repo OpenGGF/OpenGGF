@@ -42,7 +42,7 @@ public class TestS3kCnzDirectedTraversalHeadless {
                 .build();
 
         AbstractPlayableSprite player = fixture.sprite();
-        // ROM Obj_CNZCannon (sonic3k.asm:66870) calls SolidObjectTop with
+        // ROM Obj_CNZCannon (sonic3k.asm:66910) calls SolidObjectTop with
         // d1=$10 (half-width) and d3=$29 (top offset). MvSonicOnPtfm puts the
         // player feet at cannon.y - $29, so player centre Y must be
         // cannon.y - $29 - yRadius + small overlap to land standing.
@@ -206,8 +206,8 @@ public class TestS3kCnzDirectedTraversalHeadless {
         player.setAir(true);
         player.setRolling(true);
         // ROM Obj_CorkFloor samples Player_1+anim before SolidObjectFull
-        // (sonic3k.asm:58493-58505) and treats anim=$02 as the roll-break
-        // condition (sonic3k.asm:58515-58528, 58532-58540).
+        // (sonic3k.asm:58533-58545) and treats anim=$02 as the roll-break
+        // condition (sonic3k.asm:58555-58568, 58572-58580).
         player.setAnimationId(2);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0x0180);
@@ -272,7 +272,7 @@ public class TestS3kCnzDirectedTraversalHeadless {
                 "CNZ cylinder should suppress movement through object_control while captured");
         assertFalse(player.isControlLocked(),
                 "CNZ cylinder object_control=$03 capture does not set Ctrl_locked");
-        // ROM sub_324C0 (sonic3k.asm:67985) at capture explicitly does
+        // ROM sub_324C0 (sonic3k.asm:68025) at capture explicitly does
         // bclr #Status_Roll, status(a1) (line 68005) and writes
         // default_y_radius / default_x_radius to y_radius / x_radius
         // (lines 68003-68004). Rolling radii (7, 14) and Status_Roll are
@@ -524,7 +524,7 @@ public class TestS3kCnzDirectedTraversalHeadless {
         objectManager.addDynamicObject(cylinder);
 
         // ROM Obj_CNZCylinder init stores height_pixels=$20 before loc_32188
-        // calls SolidObjectFull (sonic3k.asm:67634-67641, 67656-67672).
+        // calls SolidObjectFull (sonic3k.asm:67674-67681, 67696-67712).
         // At this CNZ trace edge (camera_y=$187), centerY=$280 is visible for
         // a $20 render-height object but not for the engine's default $10
         // margin, so the P2 standing bit must still be fed this frame.
@@ -816,7 +816,7 @@ public class TestS3kCnzDirectedTraversalHeadless {
                 "CNZ cylinder object_control=$03 capture does not set player Ctrl_locked");
         assertFalse(sidekick.isControlLocked(),
                 "CNZ cylinder object_control=$03 capture does not set sidekick Ctrl_locked");
-        // ROM sub_324C0 (sonic3k.asm:67985) at capture explicitly does
+        // ROM sub_324C0 (sonic3k.asm:68025) at capture explicitly does
         // bclr #Status_Roll, status(a1) (line 68005) and writes
         // default_y_radius / default_x_radius (lines 68003-68004).
         assertFalse(player.getRolling(),
@@ -906,10 +906,10 @@ public class TestS3kCnzDirectedTraversalHeadless {
 
         // ROM Obj_CNZCylinder consumes the prior standing bit in sub_324C0
         // before it calls SolidObjectFull for the current object frame
-        // (sonic3k.asm:67656-67672). SolidObjectFull clears the cylinder's
+        // (sonic3k.asm:67696-67712). SolidObjectFull clears the cylinder's
         // standing bit only after seeing the rider airborne/out of bounds
-        // (sonic3k.asm:41016-41033), so the active-slot release path sees that
-        // loss on the next sub_324C0 pass (sonic3k.asm:68019-68025).
+        // (sonic3k.asm:41056-41073), so the active-slot release path sees that
+        // loss on the next sub_324C0 pass (sonic3k.asm:68059-68065).
         assertTrue(player.isObjectControlled());
         assertTrue(isPlayerOneSlotActive(cylinder));
 
@@ -942,10 +942,10 @@ public class TestS3kCnzDirectedTraversalHeadless {
         cylinder.onSolidContact(sidekick, new SolidContact(true, false, false, true, false), 4787);
 
         // ROM sub_13ECA writes the offscreen CPU marker with Status_InAir set
-        // (sonic3k.asm:26800-26809), then CNZ loc_32188 still calls the P2
-        // sub_324C0 pass (sonic3k.asm:67656-67672). Its inactive path only
+        // (sonic3k.asm:26840-26849), then CNZ loc_32188 still calls the P2
+        // sub_324C0 pass (sonic3k.asm:67696-67712). Its inactive path only
         // checks the preserved standing bit before object_control=$03 and
-        // Status_InAir clear (sonic3k.asm:67985-68005).
+        // Status_InAir clear (sonic3k.asm:68025-68045).
         sidekick.setCentreX((short) 0x7F00);
         sidekick.setCentreY((short) 0);
         sidekick.setRenderFlagOnScreen(false);

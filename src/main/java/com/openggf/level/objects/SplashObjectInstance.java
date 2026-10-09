@@ -144,7 +144,7 @@ public class SplashObjectInstance extends AbstractObjectInstance implements Rewi
     /**
      * Water splash bucket: S1 Obj08 {@code move.b #1,obPriority(a0)}
      * (_incObj/08 LZ Water Splash.asm:21), S2 Obj08 {@code move.b #1,priority(a0)}
-     * (s2.asm:42725), S3K Obj_DashDust {@code move.w #$80,priority(a0)} (sonic3k.asm:33971).
+     * (s2.asm:42725), S3K Obj_DashDust {@code move.w #$80,priority(a0)} (sonic3k.asm:34011).
      */
     private static final int DUST_PRIORITY_BUCKET = RenderPriority.bucket(1);
 

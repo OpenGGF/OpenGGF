@@ -22,7 +22,7 @@ import java.util.List;
  * S3K Obj 0x06 - AIZ Ride Vine.
  *
  * <p>Primary disassembly references:
- * Obj_AIZRideVine / Obj_AIZRideVineHandle (sonic3k.asm:46098-46748).
+ * Obj_AIZRideVine / Obj_AIZRideVineHandle (sonic3k.asm:46138-46788).
  */
 public class AizRideVineObjectInstance extends AbstractObjectInstance
         implements PostPlayerUpdateHook, SpawnRewindRecreatable {
@@ -122,7 +122,7 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
     @Override
     public int getReservedChildSlotCount() {
         // Obj_AIZRideVine allocates the first link, three more chain links,
-        // then rewrites the last child as the handle (sonic3k.asm:46115-46142).
+        // then rewrites the last child as the handle (sonic3k.asm:46155-46182).
         return 5;
     }
 

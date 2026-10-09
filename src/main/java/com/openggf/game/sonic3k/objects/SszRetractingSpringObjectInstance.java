@@ -23,7 +23,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * ROM {@code Obj_SSZRetractingSpring} ({@code $74}, sonic3k.asm:92306-92450): the horizontal
+ * ROM {@code Obj_SSZRetractingSpring} ({@code $74}, sonic3k.asm:92352-92496): the horizontal
  * spring that only exists while a player is approaching it. Five act-1 placements, all subtype 0 —
  * the subtype is never read; the placement's X-flip bit decides which side it faces.
  *

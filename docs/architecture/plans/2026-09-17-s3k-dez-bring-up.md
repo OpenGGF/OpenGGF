@@ -75,7 +75,7 @@ Read before every slice. Each line is a past failure, not a style preference.
 | Question | Decision | Reason |
 | --- | --- | --- |
 | Cold entry | Level-select/direct `$B00` load. The SSZ → DEZ launch cutscene belongs to whichever of the SSZ and DEZ campaigns lands second | `usesLevelIntroPlayerRun()` already covers `$B00` (`Obj_LevelIntro_PlayerRun`, `loc_6986`). Never position past the intro |
-| `$1700` entry | Through the `Obj_DEZEndBoss` exit (`Act3_flag`, `Act3_ring_count`, `Act3_timer`, `StartNewLevel $1700`), plus an independent direct `$1700` load for short checks | ROM level select lists `$1700` as "DDZ act 2" (`sonic3k.asm:10161`); the engine level select has no such entry (`Sonic3kLevelSelectConstants:96-97`). Adding it is in scope |
+| `$1700` entry | Through the `Obj_DEZEndBoss` exit (`Act3_flag`, `Act3_ring_count`, `Act3_timer`, `StartNewLevel $1700`), plus an independent direct `$1700` load for short checks | ROM level select lists `$1700` as "DDZ act 2" (`sonic3k.asm:10197`); the engine level select has no such entry (`Sonic3kLevelSelectConstants:96-97`). Adding it is in scope |
 | Exit | Implement `loc_803D6` in full: `SaveGame`, then `$C00` when `Player_mode < 2` and `Chaos_emerald_count == 7`, else `$D01`, else (`Player_mode == 3`) `Game_mode 0` | Closes DDZ's recorded dependency. After it lands, DDZ's cold entry inherits the camera fraction and `V_int_run_count` from a real chain: re-measure and remove the DDZ seeded-entry caveat. `$D01` stays the ending campaign; record what the engine does after the request |
 | Roster | Mandatory: Sonic + Tails, Sonic alone, Tails alone. Knuckles: level-select access to `$B00`/`$B01` only (user decision 2026-09-17): he must load and play both acts from level select with correct reverse-gravity behaviour, but no Knuckles story route advances into DEZ and no Knuckles cold-chain, `$1700` or trace obligation exists | `LaunchProfile.sanitizedFor` allows native S3K Knuckles and ROM level select does **not** deny Knuckles `$B00`/`$B01` (`LevelSelect_CheckKnuckles` denies `$A00`, `$C00`, `$1600`, `$1700`). His story never reaches DEZ, but the ROM carries Knuckles reverse-gravity code (glide, slide, wall climb). No Knuckles `$1700` row from level select; the chained `$1700` with Knuckles is recorded, not mandatory |
 | Tails differences | Own rows | Post-act-change transport landing Y `$3B0` vs `$3AC` (`loc_7E44C`, act 2 coordinates; not the miniboss landing), `$D01` exit, flight and carry under reverse gravity (`Tails_Carry_Sonic`, `Tails_Test_For_Flight`) |
@@ -150,7 +150,7 @@ Read before every slice. Each line is a past failure, not a style preference.
   objects. Factory state: 297 placements already concrete, 526 behind S3KL-only factories, 36 with
   no factory at all (`$5D-$61`). Full table: [inventory](../research/s3k-zones/dez-object-inventory.md).
 - **The act 1 → 2 signal is the results object (resolved).** ROM: `Obj_LevelResultsCreate` sets
-  `Events_fg_5` for every act 1 except AIZ and ICZ (sonic3k.asm:62615-62621). Engine:
+  `Events_fg_5` for every act 1 except AIZ and ICZ (sonic3k.asm:62655-62661). Engine:
   `S3kResultsScreenObjectInstance.signalActTransitionIfNeeded` already calls
   `S3kTransitionWriteSupport.signalActTransition` for DEZ; only the consumer (`Sonic3kDEZEvents`) is
   missing.
@@ -643,7 +643,7 @@ matrix's ORACLE rows.
 `zone_id 23`, `act 1` (the fixtures number acts from 1, so act index 0), `bk2_frame_offset`
 509032, `start_x 0x0030`, `start_y 0x00CD` — exactly `loc_7FD9E`'s `$1700` Player 1 start. The
 2026-08-15 frontier-log entry calling `Dez238` "Hidden Palace Zone proper (level-size row
-`sonic3k.asm:38142`)" is wrong and is corrected in place; the right row is `:38143`
+`sonic3k.asm:38182`)" is wrong and is corrected in place; the right row is `:38143`
 (`dc.w 0, $6000, $20, $20 ; DEZ Boss`), and the segment's `camera_x` `$80` and 163 rings are
 `DEZ3_ScreenInit` and `Act3_ring_count`, not a save/run-inventory boundary. `ssz` is `zone_id 11`
 act 1, start `$0030,$09AC`, which matches the engine's own cold `$B00` start. The campaign-wide
@@ -676,9 +676,9 @@ with the other three tests still green — then restored and re-run green. The `
   and in `s3k-known-bugs.md`.
 - Resources: act 1 `levartptrs $36,$36,$20`, act 2 `$38,$38,$21`, `$1700` `$4C,$4C,$40`
   (sonic3k.asm:199455, 199456, 199483). `PLCKosM_DEZ` is the shared enemy-art list for both acts
-  (`Offs_LoadEnemyArt` entries, :64339-64340). Music `Sonic3kMusic.DEZ1`/`DEZ2`
+  (`Offs_LoadEnemyArt` entries, :64379-64380). Music `Sonic3kMusic.DEZ1`/`DEZ2`
   (`Sonic3kZoneRegistry`), `$1700` reuses `DEZ2`. LevelSizes `0,$6000,0,$B20` / `0,$6000,0,$F10`
-  / `0,$6000,$20,$20` (:38119, :38120, :38143).
+  / `0,$6000,$20,$20` (:38159, :38160, :38183).
 - V5 aux rows and the reverse-gravity flag: `tools/tracechaser` is still uninitialised in this
   worktree, so the open question stays open. No trace field is being added either way, so it does
   not block any slice.
@@ -708,15 +708,15 @@ failure, then restored.
 
 **What the ROM says, re-read here rather than taken from the plan.**
 
-- *Scroll.* `DEZ1_BackgroundInit` (sonic3k.asm:118641) and `DEZ2_BackgroundInit` (:118770) both
+- *Scroll.* `DEZ1_BackgroundInit` (sonic3k.asm:118687) and `DEZ2_BackgroundInit` (:118816) both
   `clr.w` `Camera_X_pos_BG_copy` and `Camera_Y_pos_BG_copy` and then run `PlainDeformation`
-  (:103598), which reads both and writes neither. A grep of every reference to those two words
+  (:103644), which reads both and writes neither. A grep of every reference to those two words
   shows they are only ever written by a zone's own deformation routine, so for the whole of both
   acts the background horizontal scroll word is 0 and `V_scroll_value_BG` — copied from
-  `Camera_Y_pos_BG_copy` at the end of `ScreenEvents` (:102254) — is 0 with it. The plan's claim
+  `Camera_Y_pos_BG_copy` at the end of `ScreenEvents` (:102300) — is 0 with it. The plan's claim
   that the default handler is wrong is confirmed: `SwScrlS3kDefault` was scrolling the background
   at camera/4, which the `raw-00` baseline shows tearing away from the foreground.
-- *Palette.* Re-read `AnPal_DEZ1`/`AnPal_DEZ2` (:3661-3718). The Verified ROM values table is
+- *Palette.* Re-read `AnPal_DEZ1`/`AnPal_DEZ2` (:3693-3750). The Verified ROM values table is
   right about all three channels' periods, steps and limits, and **incomplete about channel A's
   destination**: it names `Normal_palette_line_4+$18`, but the routine writes two longwords,
   `(a0,d0.w)` to `+$18` and `4(a0,d0.w)` to `+$1C`, so eight contiguous bytes — palette index 3
@@ -726,12 +726,12 @@ failure, then restored.
   byte-identical, and so are `AnPal_PalDEZ1` frames 1/5 and 2/4 — which the first version of the
   test tripped over; the check now tries every alignment a matching colour set allows.
 - *Animated tiles.* `AniPLC_DEZ` is at `$28AEE`, and it is data, not a function: `Offs_AniFunc`
-  and `Offs_AniPLC` are one interleaved table (:53841), and Death Egg's entries 22 and 23 pair
+  and `Offs_AniPLC` are one interleaved table (:53881), and Death Egg's entries 22 and 23 pair
   `AnimateTiles_DoAniPLC` with `AniPLC_DEZ`. Nothing gates the eight scripts. Durations
   `0,1,3,-1,4,4,1,0` as the plan says; script 7 really is `$84` = 132 one-byte frames, every odd
   one tile `$2D` and the even ones stepping `0,5,$A,$F,$14,$19,$1E,$23` six frames each before
   holding `$28` for the last eighteen. Entry 46 (`$1700`) is `AnimateTiles_NULL`, asserted too.
-- *Screen events.* `ScreenEvents` (:102233) enters the foreground handler with
+- *Screen events.* `ScreenEvents` (:102279) enters the foreground handler with
   `a3 = Level_layout_main`, whose first `$40` words interleave foreground row `n` at offset `4n`
   with background row `n` at `4n + 2` (constants.asm:288; HPZ's existing `$1C(a3)` = row 7 is the
   cross-check). So the plan's unresolved offsets resolve to: `DEZ1` chunk `$BD` at **foreground
@@ -810,7 +810,7 @@ Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`,
 
 **What the ROM actually says, re-read row by row rather than taken from the table.**
 
-- `MoveSprite_TestGravity` (sonic3k.asm:36068-36083) and `MoveSprite_TestGravity2` (:36088-36101):
+- `MoveSprite_TestGravity` (sonic3k.asm:36108-36123) and `MoveSprite_TestGravity2` (:36128-36141):
   with the flag set, `x_vel` integrates normally, `addi.w #$38,y_vel(a0)` still runs unchanged, and
   only the copy of `y_vel` that feeds `add.l d0,y_pos(a0)` is negated. The stored velocity keeps
   its sign.
@@ -825,25 +825,25 @@ Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`,
   slice 3). Every other object in the game calls plain `MoveSprite`/`MoveSprite2` and never
   inverts — that is why the inversion is at the player movement call sites and **not** inside
   `AbstractSprite.move`, which every object shares.
-- `loc_125C6` (:24702-24704) is the drowning pre-death sink: `MoveSprite_TestGravity2` **then**
+- `loc_125C6` (:24742-24744) is the drowning pre-death sink: `MoveSprite_TestGravity2` **then**
   `addi.w #$10,y_vel`. It does invert. Noted separately: the engine's drowning branch adds the
   `$10` *before* moving, so it integrates the post-add velocity where the ROM integrates the
   pre-add one. That is a pre-existing one-frame ordering difference unrelated to this slice and was
   deliberately left alone — changing it would not be inert with the flag clear.
-- `sub_F61C` `loc_F638` (:19688-19700) applies the same `neg.w` to the projected `y_vel` before the
+- `sub_F61C` `loc_F638` (:19724-19736) applies the same `neg.w` to the projected `y_vel` before the
   wall probe, so `CalcRoomInFront` looks where the player will actually be.
-- `Player_Boundary_CheckBottom` (:23188-23206). The reverse branch `loc_11722` is
+- `Player_Boundary_CheckBottom` (:23223-23241). The reverse branch `loc_11722` is
   `move.w (Camera_min_Y_pos).w,d0 / cmp.w y_pos(a0),d0 / blt.s <alive>`, i.e. **alive while
   `Camera_min_Y_pos < y_pos`**, dead at or above it, with no `$E0` offset — the `$E0` belongs to
   the upright branch alone. `Disable_death_plane` gates both. `Tails_Check_Screen_Boundaries`
-  `loc_14F30`/`loc_14F4C` (:28423-28441) is byte-for-byte the same pair, so the engine's single
+  `loc_14F30`/`loc_14F4C` (:28463-28481) is byte-for-byte the same pair, so the engine's single
   shared boundary owner closes both table rows at once.
 - The open question "does `LevelActTransitionExecutor:117` run on the seamless DEZ path?" is
   **answered: yes.** `executeClaimed` is the in-place act-change path and calls
-  `gameState.resetForLevel()`. Since `loc_593EC` (:118724) runs `Load_Level`/`LoadSolids` with no
+  `gameState.resetForLevel()`. Since `loc_593EC` (:118770) runs `Load_Level`/`LoadSolids` with no
   RAM wipe, the executor now saves and restores the flag around that call. The clear itself lives
   in `resetForLevel()` next to the other RAM-wipe fields, citing
-  `clearRAM Tails_CPU_interact,$100` (:7621).
+  `clearRAM Tails_CPU_interact,$100` (:7653).
 - `GameStateManager`'s Javadoc cited `$FFFFF768` (which is `Primary_Angle`). Corrected to `$F7C6`
   on the field and the getter, as the reference document asked.
 
@@ -1027,16 +1027,16 @@ should start there and not with more reference-table rows.
 
 **A reference-table error found while starting 2a-3, and why 2a-3 was then left alone.**
 The table describes row 23294 as "`Sonic_Jump`: mirrors the launch angle". Reading the whole
-routine (sonic3k.asm:23286-23351) shows it does not. The mirrored copy of `angle(a0)` is consumed
+routine (sonic3k.asm:23321-23386) shows it does not. The mirrored copy of `angle(a0)` is consumed
 by `loc_117FC`'s `addi.b #$80,d0` / `CalcRoomOverHead` — the **headroom check**. The jump vector
-at `loc_1182E` (:23314-23317) then re-reads `angle(a0)` raw with no flag test at all. Implementing
+at `loc_1182E` (:23349-23352) then re-reads `angle(a0)` raw with no flag test at all. Implementing
 the row as written would have mirrored the wrong thing. Rows 28525 and 32441 carry the same
 description for Tails and Knuckles and are now flagged "verify before implementing"; they were not
 re-read line by line here.
 
 The three 2a-3 changes this made concrete — the headroom angle, the roll-entry offset
-(`Player_DoRoll` `addq.w #5` then `subi.w #2*5`, net −5, shared with Tails' `+1`/`−1` at :28500)
-and the jump roll-radius negation at :23344-23351 — were **deliberately not implemented**. None of
+(`Player_DoRoll` `addq.w #5` then `subi.w #2*5`, net −5, shared with Tails' `+1`/`−1` at :28540)
+and the jump roll-radius negation at :23379-23386 — were **deliberately not implemented**. None of
 them can be asserted while the upward sensors are dead: the roll-entry offset is erased within the
 same frame by the `AnglePos` re-snap, and the jump cases need a grounded inverted player. Having
 already been wrong three times in this slice about how this code behaves (the `Direction`-encoding
@@ -1058,12 +1058,12 @@ hypotheses the previous entry recorded as "killed by the bit table" were killed 
 measurement that could not have produced a hit under any bit.
 
 **The real engine gap underneath it.** The ROM has no per-sensor enable: `sub_11FD6` simply calls
-`Sonic_CheckCeiling` instead of `Sonic_CheckFloor` when the flag is set (sonic3k.asm:24127-24137).
+`Sonic_CheckCeiling` instead of `Sonic_CheckFloor` when the flag is set (sonic3k.asm:24167-24177).
 The engine models the same quadrant dispatch twice — once as `CollisionSystem`'s switch and once as
 `updateSensors`' activation — and only the first had been swapped, so under reverse gravity the
 quadrant switched off exactly the array the swapped probe was about to scan. `updateSensors` now
 picks the floor/ceiling pair through the same swap and the grounded branch is deliberately left
-alone (`Call_Player_AnglePos` :22329 mirrors `angle(a0)` instead, so ground attachment keeps using
+alone (`Call_Player_AnglePos` :22364 mirrors `angle(a0)` instead, so ground attachment keeps using
 the ground sensors with a ceiling ground mode).
 
 **RED → GREEN.** `TestS3kReverseGravityDezCorridor.invertedGravityLandsOnTheCorridorCeiling` was
@@ -1083,10 +1083,10 @@ corridor rather than from either helper's constant. Recorded in the pitfall cata
 the inactive-sensor hazard.
 
 **What is now measured, not argued.** Six push-out and snap sites × three characters = 18 rows,
-plus the two wrapper rows. Quadrant $00 floor snap (`loc_11F6E` :24081 / `loc_15444` :28917 /
-`loc_179B4` :32663), quadrant $80 push-out (`loc_120C2` :24246 / `loc_1555C` :29042 / `loc_17A94`
-:32758), and both horizontal quadrants' ceiling push-out and floor snap (`Player_HitCeiling` :24178,
-`loc_1211A` :24284, `loc_12074` :24213, `loc_12148` :24308 and the Tails/Knuckles twins). The
+plus the two wrapper rows. Quadrant $00 floor snap (`loc_11F6E` :24121 / `loc_15444` :28957 /
+`loc_179B4` :32703), quadrant $80 push-out (`loc_120C2` :24286 / `loc_1555C` :29082 / `loc_17A94`
+:32798), and both horizontal quadrants' ceiling push-out and floor snap (`Player_HitCeiling` :24218,
+`loc_1211A` :24324, `loc_12074` :24253, `loc_12148` :24348 and the Tails/Knuckles twins). The
 engine has one `resolveAirCollision` owner for all three `DoLevelCollision` routines, and the test
 is parameterised over the three characters through
 `SonicConfiguration.MAIN_CHARACTER_CODE`, so the Tails and Knuckles rows are run as those
@@ -1113,30 +1113,30 @@ Focused collision suites, one invocation, `Skipped: 0`: `TestS3kReverseGravity*`
 87 tests, 0 failures. With the flag clear the activation swap is the identity, and the S1 and S2
 classes above exercise that.
 
-**Still open in slice 2.** The grounded path (`Call_Player_AnglePos` :22330,
-`ChooseChkFloorEdge` :24156) and all of 2a-3, 2b and 2c. The three 2a-3 changes the previous entry
+**Still open in slice 2.** The grounded path (`Call_Player_AnglePos` :22365,
+`ChooseChkFloorEdge` :24196) and all of 2a-3, 2b and 2c. The three 2a-3 changes the previous entry
 left blocked — headroom angle, roll-entry offset, jump roll-radius — are now unblocked: an inverted
 player can be grounded on the corridor ceiling, so a grounded inverted fixture is available to
 assert them against.
 
 **Where slice 2 should resume, and why not further in this session.** The airborne path is done;
-the next row is the **grounded** one, `Call_Player_AnglePos` :22330, and it has to land before
+the next row is the **grounded** one, `Call_Player_AnglePos` :22365, and it has to land before
 2a-3's player actions rather than after them. Two findings say so:
 
 1. *2a-3's roll, jump and spindash rows need a grounded inverted player, and the engine cannot
    produce a correct one yet.* An inverted player now lands on the ceiling, but its `angle` and
    ground mode come from the airborne path only. The ROM's grounded attachment mirrors `angle(a0)`
-   around `Player_AnglePos` (:22329-22343), so a ceiling-standing player runs `WalkCeiling` with a
+   around `Player_AnglePos` (:22364-22378), so a ceiling-standing player runs `WalkCeiling` with a
    `$80` terrain angle mirrored back to `$00`. Until that exists, asserting a roll-entry offset on
    a ceiling-grounded player would be measuring a half-built state, not the ROM.
-2. *The roll rows are a coordinate-convention trap, not a sign flip.* `Player_DoRoll` (:23259-23268)
+2. *The roll rows are a coordinate-convention trap, not a sign flip.* `Player_DoRoll` (:23294-23303)
    does `addq.w #5,y_pos` and then, under the flag, `subi.w #2*5` — a **centre**-Y delta of −5 where
    upright is +5. The engine applies the equivalent to **top-left** Y through
    `getRollHeightAdjustment()`, which returns the full height difference (10 for Sonic) because the
    roll also shrinks the box; the centre moves 5. Negating that helper would move the centre by −10,
    not −5. The correct engine top-left delta under the flag is `fullDiff/2 + (−fullDiff/2)` = **0**
-   in GROUND/CEILING mode and `−fullDiff/2` on a wall. `loc_11578` (:22975-22991), `loc_1182E`
-   (:23344) and `loc_11C5E` (:23694) share the same shape with the radius difference in `d0`.
+   in GROUND/CEILING mode and `−fullDiff/2` on a wall. `loc_11578` (:23010-23026), `loc_1182E`
+   (:23379) and `loc_11C5E` (:23734) share the same shape with the radius difference in `d0`.
    Whoever implements these must state the convention in the test, not just flip a sign.
 
 Rows left in slice 2 after this session: group A 22330 and 24156; all of 2a-3 (B 22011,
@@ -1191,9 +1191,9 @@ writes the mirrored ROM *centre* under the flag and leaves the upright top-left 
 
 **A row the plan did not predict.** With the radius rows done, the inverted jump test still failed —
 `air=false`, the player never left the ceiling. The cause is row 23294: `Sonic_Jump` mirrors the
-angle it hands to `CalcRoomOverHead` (sonic3k.asm:23290-23300), and without it the headroom probe
+angle it hands to `CalcRoomOverHead` (sonic3k.asm:23325-23335), and without it the headroom probe
 measured into the ceiling the player was standing on and refused the jump every frame. `Tails_Jump`
-(:28524-28576) and `Knux_Jump` (:32438-32493) were then read line by line and confirm both halves of
+(:28564-28616) and `Knux_Jump` (:32478-32533) were then read line by line and confirm both halves of
 the `b38402c2a` correction: the headroom angle is mirrored, the launch vector at `loc_1182E` re-reads
 `angle(a0)` raw. That closes the "verify before implementing" flag on 28525 and 32441.
 
@@ -1324,7 +1324,7 @@ play yet. `INDEX.md` states that on every row.
 | `020-inverted-run-528` | the same run at 528 px | lands frame 47, same ceiling y=723 |
 
 **Two things the captures corrected.** The first roll take never rolled: Down was pressed after the
-player had already hit a wall and lost `ground_vel`, and `SonicKnux_Roll` (sonic3k.asm:23240-23258)
+player had already hit a wall and lost `ground_vel`, and `SonicKnux_Roll` (sonic3k.asm:23275-23293)
 also refuses a roll while left or right is held. `state.csv` showed `rolling` flat at 0 before any
 frame was opened — the skill's "read the CSV first" rule doing its job. And the run clips stop at
 x=437 because that is where the act-start ceiling meets a wall: terrain, not a physics stall. A
@@ -1463,17 +1463,17 @@ is `@com.openggf.game.ModApi`, so it cannot grow a test seam, and `PlayableSprit
 is the only observable — left for whoever can stub that renderer cheaply.
 
 **Slice 3 opens with `$5B`, and the flag is now reachable in ordinary play.**
-`S3kDezGravitySwapObjectInstance` implements `Obj_DEZGravitySwap` (sonic3k.asm:95472-95543): the
+`S3kDezGravitySwapObjectInstance` implements `Obj_DEZGravitySwap` (sonic3k.asm:95518-95589): the
 eleven invisible act 2 triggers, six unflipped and five X-flipped.
 
 | ROM fact | Where it came from |
 | --- | --- |
-| The init falls through into the first crossing check in the same frame — there is no `rts` between `move.l #loc_49214,(a0)` and `loc_49214` | :95483-95484. A trigger seeded at exactly the player's x keeps the "on the left" latch (`bhs`) and then fails the "still on the left" test (`bhi`), so it fires on its own spawn frame |
-| It writes, never toggles | Both bodies run `move.b #0,(Reverse_gravity_flag).w` before the conditional `move.b #1` (:95511/95514, :95536/95539) |
+| The init falls through into the first crossing check in the same frame — there is no `rts` between `move.l #loc_49214,(a0)` and `loc_49214` | :95529-95530. A trigger seeded at exactly the player's x keeps the "on the left" latch (`bhs`) and then fails the "still on the left" test (`bhi`), so it fires on its own spawn frame |
+| It writes, never toggles | Both bodies run `move.b #0,(Reverse_gravity_flag).w` before the conditional `move.b #1` (:95557/95514, :95582/95539) |
 | The flip bit chooses the direction, not the value | Left-to-right sets when `btst #0,render_flags(a0)` is **clear** (`bne.s locret`); right-to-left sets when it is **set** (`beq.s locret`) |
-| The Y band is `[y_pos - $20, y_pos + $20)` | `$30(a0) = $20`, then `cmp.w d2,d4 / blt` and `cmp.w d3,d4 / bge` (:95495-95507): signed word compares, top edge inclusive, bottom exclusive |
-| The side latch is consumed even when nothing is written | `move.b #1,-1(a2)` sits **before** the band test (:95492-95495) |
-| Player 2 is never watched | `lea (Player_1).w,a1` with no second call (:95217-95219) |
+| The Y band is `[y_pos - $20, y_pos + $20)` | `$30(a0) = $20`, then `cmp.w d2,d4 / blt` and `cmp.w d3,d4 / bge` (:95541-95553): signed word compares, top edge inclusive, bottom exclusive |
+| The side latch is consumed even when nothing is written | `move.b #1,-1(a2)` sits **before** the band test (:95538-95541) |
+| Player 2 is never watched | `lea (Player_1).w,a1` with no second call (:95263-95265) |
 
 Every one of those is a separate assertion in `TestS3kDezGravityObjectsHeadless`, and the
 assertions were shown able to fail: removing the band test reddens both band cases *and* the
@@ -1522,7 +1522,7 @@ the pad sinking 8 px (negated by its own Y-flip bit), `sub_48B40` releasing both
 (velocities zeroed, `Status_InAir` set, `Status_OnObj` cleared — unconditionally, with only the
 8 px nudge masked by `$14`/`$28`), `sfx_Transporter`, then `$30 = 3` counting down to the
 `eori.b #1` toggle four frames later and a 20-frame rearm that will not start while anything is
-standing on the pad (`loc_48B7E`, `loc_48B9C`, :94874-94910). `$59` (21 placements) is four
+standing on the pad (`loc_48B7E`, `loc_48B9C`, :94920-94956). `$59` (21 placements) is four
 routines per player with its own animation table `RawAni_48DB2` and a `Perform_Player_DPLC` call;
 its flag write is `loc_48DF2`, `Player_1` only, taking the value from subtype bit 7 via
 `rol.b #1,d0 / andi.b #1,d0`. `$5A` only reads the flag. `$5C`, `$5F` and `$61` contain no flag
@@ -1537,7 +1537,7 @@ eleven `$5B` sites, which is act 2 cold-route work the gate for this change came
 **Handover: what the next session picks up, in order.**
 
 1. **`$58` `Obj_DEZGravitySwitch`** (5 act 2 placements, x/y decoded in the part-3 entry). The
-   whole object is `loc_48AD6`-`loc_48BE4` (:94809-94910) and is four routines, not one:
+   whole object is `loc_48AD6`-`loc_48BE4` (:94855-94956) and is four routines, not one:
    `SolidObjectFull` with `d1 = $1B, d2 = 8, d3 = 9, d4 = x_pos`; `swap d6` then
    `andi.w #$14,d0` for Player 1's contact bits (`$28` is Player 2's, and Player 2 only ever
    reaches `sub_48B40`'s release, never the toggle); on a press, `mapping_frame = 1`,
@@ -1552,12 +1552,12 @@ eleven `$5B` sites, which is act 2 cold-route work the gate for this change came
    Note `sub_48B40` returns immediately when `object_control(a1)` is non-zero.
 2. **`$59` `Obj_DEZTeleporter`** (21 act 2 placements) — the biggest of the seven. Four routines
    per player through `off_48C3C`, run for Player 1 and Player 2 with separate `$30`/`$3A`
-   state blocks. Its flag write is `loc_48DF2` (:95080), Player 1 only
+   state blocks. Its flag write is `loc_48DF2` (:95126), Player 1 only
    (`cmpa.w #Player_1,a1`), taking the value from subtype bit 7 via `rol.b #1,d0 /
    andi.b #1,d0`; `1(a4)` is set when that value differs from the current flag, and the exit
    offsets at `loc_48E2C`-`loc_48E8E` read it. It also owns `loc_48CB0`'s unroll (with the
-   ordinary `neg.w d0` under the flag, :94990) and `loc_48D78`'s Y-flip on the captured player
-   frames (:95045), which is the row that needs `Perform_Player_DPLC`.
+   ordinary `neg.w d0` under the flag, :95036) and `loc_48D78`'s Y-flip on the captured player
+   frames (:95091), which is the row that needs `Perform_Player_DPLC`.
 3. **`$5A` `Obj_DEZGravityTube`** (24/17) reads the flag only: `loc_48FBA` mirrors `flip_angle`
    on exit and `loc_4904A` Y-flips while riding.
 4. **`$5C`, `$5F`, `$61`** contain no `Reverse_gravity_flag` reference at all. They move the
@@ -1567,8 +1567,8 @@ eleven `$5B` sites, which is act 2 cold-route work the gate for this change came
    `$5B` site. Until then the `INDEX.md` clip table stays as it is.
 6. **The eleven open group A-I rows**, listed with their reasons in
    [s3k-known-bugs](../../status/s3k-known-bugs.md). The cheapest real one is Knuckles:
-   route `checkGlideFloorDist` through the `sub_11FD6` wrapper first, then :30921, :30977 and
-   :31004 fall out together.
+   route `checkGlideFloorDist` through the `sub_11FD6` wrapper first, then :30961, :31017 and
+   :31044 fall out together.
 
 **The four-class trace comparison for this session**, `clean test` with `-Ptrace-replay` in this
 worktree, all three ROM paths absolute, on top of `04a1e84f7`:
@@ -1759,14 +1759,14 @@ about any other class.
 ### 2026-09-18 — The `$58` pad's presentation, and `$59` `Obj_DEZTeleporter`
 
 **One of the two `$58` gaps was not a gap.** `sfx_Transporter` is `$73`
-(sonic3k.constants.asm:1560) and the engine has carried it as `Sonic3kSfx.TRANSPORTER` since
+(sonic3k.constants.asm:1585) and the engine has carried it as `Sonic3kSfx.TRANSPORTER` since
 CNZ; six other S3K objects already play it. The recorded gap came from searching `GameSound`,
 which is not where S3K SFX constants live. Worth recording as a method note: when a constant
 "does not exist", check the game-specific enum before the shared one, and grep the *value*
 (`0x73`) as well as the name.
 
 The art gap was real and is closed. `Map_DEZGravitySwitch` is ROM `$48BEA`
-(sonic3k.lst:112040) and `make_art_tile(ArtTile_DEZMisc+$143,1,0)` (:94802) is the same
+(sonic3k.lst:112040) and `make_art_tile(ArtTile_DEZMisc+$143,1,0)` (:94827) is the same
 `ArtTile_DEZMisc` block the Death Egg door already draws from, so it is a plain
 `LevelArtEntry` and queues nothing new. Two frames: `word_48BEE` is four 16x8 pieces at
 y `-8`/`0` and x `-$10`/`0` — a 32x16 pad — and `word_48C08` drops the lower row for the
@@ -1792,21 +1792,21 @@ routines per player over two independent ten-byte state blocks (`$30(a0)`, `$3A(
 
 | ROM fact | Test |
 | --- | --- |
-| `addq.w #3,d0` (:94946) and `cmpi.w #$10,d0 / bhs` (:94952): the window is `-3 <= dx <= $C` | `theUnflippedCaptureWindowRunsFromMinusThreeToPlusTwelve`, all four edges |
-| `addi.w #$A,d0` when `status` bit 0 is set (:94951) **mirrors** the window to `-$D <= dx <= 2` | `theXFlippedCaptureWindowIsTheSameWidthOnTheOtherSide` |
-| `addi.w #$20,d1 / cmpi.w #$40,d1` (:94955-94957) | `theCaptureBandIsFortyPixelsTallCentredOnTheObject` |
-| `btst #Status_InAir,status(a1) / bne` (:94962) | `anAirbornePlayerIsNotCaptured` |
-| `movea.w interact(a1),a3 / tst.b (a3,d0.w)` (:94968-94973) | `aPlayerWhoseRideJustEndedIsNotCapturedAgainByItsNeighbour` |
-| `addq.w #8,4(a4)` to `cmpi.w #$300` (:94993-94995), then the budget and `±$1000` | `theLaunchWaitsForTheSpinRampToReachThreeHundred`, all 95 updates before it |
-| `cmp.w d2,d1 / bne` (:95067-95068): the write needs `6(a4) == 8(a4)` | `theFlagIsWrittenAtTheMidpointAndNotBefore` |
-| `rol.b #1,d0 / andi.b #1,d0` (:95072-95074): the value is subtype bit 7 | `thePairedSubtypeWritesZeroAtItsOwnMidpoint`, both subtypes of a real column |
-| `cmpa.w #Player_1,a1 / bne` (:95069-95070) | `playerTwoRidesButNeverWritesTheFlag` |
+| `addq.w #3,d0` (:94971) and `cmpi.w #$10,d0 / bhs` (:94977): the window is `-3 <= dx <= $C` | `theUnflippedCaptureWindowRunsFromMinusThreeToPlusTwelve`, all four edges |
+| `addi.w #$A,d0` when `status` bit 0 is set (:94976) **mirrors** the window to `-$D <= dx <= 2` | `theXFlippedCaptureWindowIsTheSameWidthOnTheOtherSide` |
+| `addi.w #$20,d1 / cmpi.w #$40,d1` (:94980-94982) | `theCaptureBandIsFortyPixelsTallCentredOnTheObject` |
+| `btst #Status_InAir,status(a1) / bne` (:94987) | `anAirbornePlayerIsNotCaptured` |
+| `movea.w interact(a1),a3 / tst.b (a3,d0.w)` (:94993-94998) | `aPlayerWhoseRideJustEndedIsNotCapturedAgainByItsNeighbour` |
+| `addq.w #8,4(a4)` to `cmpi.w #$300` (:95018-95020), then the budget and `±$1000` | `theLaunchWaitsForTheSpinRampToReachThreeHundred`, all 95 updates before it |
+| `cmp.w d2,d1 / bne` (:95092-95093): the write needs `6(a4) == 8(a4)` | `theFlagIsWrittenAtTheMidpointAndNotBefore` |
+| `rol.b #1,d0 / andi.b #1,d0` (:95097-95099): the value is subtype bit 7 | `thePairedSubtypeWritesZeroAtItsOwnMidpoint`, both subtypes of a real column |
+| `cmpa.w #Player_1,a1 / bne` (:95094-95095) | `playerTwoRidesButNeverWritesTheFlag` |
 
 **Two corrections to the handover's reading.** The `$A` bias does not *widen* the capture
 window, it **mirrors** it: `$10` px either way, on the other side of the object's centre,
-which is what a flipped placement needs. And `_unkFAB8` bit 0 (:94965) is deliberately not
+which is what a flipped placement needs. And `_unkFAB8` bit 0 (:94990) is deliberately not
 modelled in this earlier slice, on the mistaken claim that its only writer was
-`Ending_ScreenInit`'s `Obj_5D86A` (:123769). **Corrected during Act 2 boss integration
+`Ending_ScreenInit`'s `Obj_5D86A` (:123794). **Corrected during Act 2 boss integration
 on 2026-09-23:** `loc_7FBD6` sets the same bit on defeat, so the refusal is reachable.
 The boss signal now blocks fresh P1/P2 captures while allowing already active rides
 to finish. The full controller-driven fight exposed this omission.
@@ -1814,9 +1814,9 @@ to finish. The full controller-driven fight exposed this omission.
 **Two of the nine assertions could not fail on their first version, and the break found both.**
 `aPlayerAnotherTeleporterStillHoldsIsNotCapturedAgain` captured the player on one teleporter
 and offered them straight to a second — but a captured player already has `object_control`
-set, so the *earlier* refusal at :94958 answered and removing the interact check left the test
+set, so the *earlier* refusal at :94983 answered and removing the interact check left the test
 green. The interact check only does work in the window the ROM built it for: after
-`loc_48E2C` clears `object_control` (:95105) and the player lands, but before `loc_48E94`
+`loc_48E2C` clears `object_control` (:95130) and the player lands, but before `loc_48E94`
 clears the block. Rewritten to put the player in exactly that state, with both earlier
 refusals asserted inapplicable as preconditions, it reddens. The second was worse: the
 rewrite's loop was `for (…; … && first.isRidingForTest(true); …)`, whose condition is false
@@ -1829,7 +1829,7 @@ Census: act 2 placeholders 321 → 300, concrete 173 → 194. Reference table **
 partial, 17 missing, 4 n/a**. The same five inventories moved as for `$5B` and `$58`, plus
 one new shared helper: `NativePositionOps.addYPos16_16`, the Y twin of the existing
 `addXPos16_16`, because the ride's `move.l y_pos(a1),d3 / asl.l #8,d0 / add.l d0,d3`
-(:95095-95101) accumulates the whole `y_vel` in the subpixel half and a
+(:95120-95126) accumulates the whole `y_vel` in the subpixel half and a
 `addYPosPreserveSubpixel` would truncate it every frame.
 
 ### 2026-09-18 — `$5A` `Obj_DEZGravityTube`, the last flag reader
@@ -1983,13 +1983,13 @@ support marking is consulted by `finalizeInlinePlayer`, which was never what dro
 `DEZ2_Sprites` record 264 tube at `$1A40,$08C0` through `HeadlessTestFixture.stepFrame`, so
 every frame runs real player physics, the object pass and the solid-contact sweep in their
 production order. It asserts the ROM invariant rather than the observed engine behaviour:
-`Player_AnglePos` (sonic3k.asm:18735-18741) opens `btst #Status_OnObj,status(a0) / beq.s
+`Player_AnglePos` (sonic3k.asm:18771-18777) opens `btst #Status_OnObj,status(a0) / beq.s
 loc_EC5A` and, on the set branch, writes 0 to both shared angle outputs and returns — **a
 grounded player standing on an object runs no terrain probe at all**, so terrain can never hand
-them `Status_InAir`. Only the tube's own exits (`loc_48FBA` :95273, `loc_49142` :95420) clear
+them `Status_InAir`. Only the tube's own exits (`loc_48FBA` :95319, `loc_49142` :95466) clear
 `Status_OnObj`, and both need the rider already airborne or already out of the span. So a rider
 held inside the span keeps `Status_OnObj` set and `Status_InAir` clear for every frame, and the
-ride angle advances by `moveq #8,d3` (:95300) each frame. Both gravity states are asserted; the
+ride angle advances by `moveq #8,d3` (:95346) each frame. Both gravity states are asserted; the
 reverse-gravity one is the state the `$5B` beside it leaves the act in.
 
 Red before the fix, in both tests, with the alternation printed frame by frame:
@@ -2015,9 +2015,9 @@ walk-off so the player cannot stand in mid-air". `hasObjectSupport` is satisfied
 state (solid objects), a standing contact, or an **active latch**. The tube is a non-solid
 latch-and-own controller like the CNZ wire cage and barber pole, and it never took the latch,
 so every frame the player physics walked it off terrain into the air and the tube's `loc_48FA4`
-air test (:95262) dropped it on the next object pass.
+air test (:95308) dropped it on the next object pass.
 
-**The fix is the ROM's own word.** `RideObject_SetRide` (`sub_33C34`, :70172) writes
+**The fix is the ROM's own word.** `RideObject_SetRide` (`sub_33C34`, :70212) writes
 `move.w a0,interact(a1)`: the rider's interact word points at the tube for the whole ride. The
 engine models that ownership as `setLatchedSolidObject`, which is exactly what
 `hasActiveLatchedObjectSupport` reads (and what `finalizeInlinePlayer` honours). `setRide` now
@@ -2268,7 +2268,7 @@ assertion runs through `update()` or `onSolidContact()`.
 
 Answered from the fixture's own rows and the ROM, with no engine run. `$003F + $38` (one frame of
 gravity) is `$0077`, and the native `y_vel` at row 20162 is `$FF89`, which is exactly `-$0077`.
-That is `neg.w y_vel(a0)` at sonic3k.asm:20979, the enemy-destroyed arm of `Touch_ChkHurt`: the
+That is `neg.w y_vel(a0)` at sonic3k.asm:21015, the enemy-destroyed arm of `Touch_ChkHurt`: the
 player is falling (so not `.bounceplayerdown`) and above the enemy (so not `.bounceplayerup`), and
 the remaining branch negates the velocity outright. The other two arms add or subtract `$100` and
 neither reaches `$FF89` from `$003F`, which is what makes the arithmetic identifying rather than
@@ -2283,9 +2283,9 @@ full measurement is in
 This settles slice 4's order: **`$A4` `Obj_Spikebonker` is the first slice 4 class**, because it
 is the route's own blocker. Its reading, for whoever picks it up:
 
-`Obj_Spikebonker` (:198893-199124) is three objects. The body runs `Obj_WaitOffscreen`, a
+`Obj_Spikebonker` (:199000-199231) is three objects. The body runs `Obj_WaitOffscreen`, a
 three-entry routine index, then `Sprite_CheckDeleteTouch`. Init `loc_91A0C` sets up from
-`ObjDat_Spikebonker` (:199117-199120: `Map_Spikebonker`, `ArtTile_Spikebonker` palette 1,
+`ObjDat_Spikebonker` (:199224-199227: `Map_Spikebonker`, `ArtTile_Spikebonker` palette 1,
 priority `$280`, width `$10`, height `$14`, frame 0, collision flags `$1A`), gives `x_vel`
 `-$80` negated by `render_flags` bit 0, stores `subtype - 1` in `$2E(a0)` and `subtype * 2 - 1`
 in `$3A(a0)`, installs `loc_91AB0` as the `Obj_Wait` expiry handler in `$34(a0)`, creates the arm
@@ -2303,9 +2303,9 @@ positions itself with `MoveSprite_AngleXLookupOffset` over `AngleLookup_1`. Ever
 needs already has an engine precedent: `AizMinibossSwingMotion` for `Swing_UpAndDown`,
 `PoindexterBadnikInstance` for `Find_OtherObject`, `TunnelbotBadnikInstance` for
 `Refresh_ChildPositionAdjusted`, `ClamerObjectInstance` for `CreateChild1_Normal` and
-`Child_DrawTouch_Sprite`. Only `MoveSprite_AngleXLookupOffset` (sonic3k.asm:178670-178713, over the
-four-quadrant `AngleX_LookupIndex` table at :178681) has no engine consumer yet; `AngleLookup_1`
-itself (:201847) is already a named constant.
+`Child_DrawTouch_Sprite`. Only `MoveSprite_AngleXLookupOffset` (sonic3k.asm:178761-178804, over the
+four-quadrant `AngleX_LookupIndex` table at :178772) has no engine consumer yet; `AngleLookup_1`
+itself (:201961) is already a named constant.
 
 ### 2026-09-18 — The sidekick blocker is ours, and the native rows say so
 
@@ -2315,7 +2315,7 @@ he is at `0120,07E0` beside the player in act 1, at `7F00,FFF9` for the scripted
 and back in play at `0139,0301` at row 19800 — twenty-eight frames after control returns —
 dropping in from above and shadowing the player for the rest of the act.
 
-`$7F00` with `object_control $81` and `Status_InAir` is **`sub_13ECA`** (sonic3k.asm:26800-26810):
+`$7F00` with `object_control $81` and `Status_InAir` is **`sub_13ECA`** (sonic3k.asm:26840-26850):
 it zeroes `Tails_CPU_idle_timer` and `Tails_CPU_flight_timer`, sets `Tails_CPU_routine` to 2 and
 parks the sprite at `$7F00,0`. Routine 2 is the state that flies him back on screen, which is
 exactly what row 19800 shows. So the park is the CPU despawn the entrance uses, not a policy that
@@ -2328,7 +2328,7 @@ still has to be run, but it is now looking for a bug rather than deciding whethe
 
 The route named the class and then checked the work. The identification was made from arithmetic
 alone — `$003F + $38` negated is `$FF89`, which is `Touch_ChkHurt`'s enemy-destroyed
-`neg.w y_vel(a0)` at sonic3k.asm:20979 and neither of its two `±$100` siblings — and the
+`neg.w y_vel(a0)` at sonic3k.asm:21015 and neither of its two `±$100` siblings — and the
 implementation moved the seeded act 2 frontier from **390 to 472 frames**. Prediction first,
 measurement second, and they are separable: nothing about the badnik's code was written before the
 routine was named.
@@ -2341,16 +2341,16 @@ the player's x at the divergent row. The badnik was at the end of its own patrol
 **Three things about this object that the ROM says and a summary would not.**
 
 1. **The first patrol leg is half of every leg after it.** `$2E(a0) = subtype - 1` and
-   `$3A(a0) = subtype * 2 - 1` (:198914-198918), and `loc_91AB0` reloads `$2E` from `$3A`. The
+   `$3A(a0) = subtype * 2 - 1` (:199021-199025), and `loc_91AB0` reloads `$2E` from `$3A`. The
    badnik starts at one end of its beat, not in the middle of it, which is what makes its phase
    at any given frame predictable from the placement alone.
 2. **The slam is one-sided.** `Find_OtherObject` leaves `d0` at 0 when the player is to the
    badnik's left; the `btst #0,render_flags(a0) / subq.w #2,d0 / tst.w d0 / beq` sequence
-   (:198938-198944) then passes only when the player is on the side it is *walking toward*. A
+   (:199045-199051) then passes only when the player is on the side it is *walking toward*. A
    player standing the same `$40` px behind it is ignored. It reads `Player_1` only, so a
    sidekick never triggers a slam.
 3. **The mace swings horizontally, not in a circle.** `MoveSprite_AngleXLookupOffset`
-   (:178670-178713) mirrors `AngleLookup_1` through the angle's top two bits and writes the
+   (:178761-178804) mirrors `AngleLookup_1` through the angle's top two bits and writes the
    result into the head's **X** only; the Y is the pivot's. The assembly's vertical motion is the
    body's own `Swing_UpAndDown`. `AngleLookup_1`'s 64 bytes run 0 to `$C`, so the sweep is 12 px
    either side — the reach comes from the `$1F`-frame slide (`loc_91B14`/`loc_91B3E`), not the
