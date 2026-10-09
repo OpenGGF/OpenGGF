@@ -83,6 +83,9 @@ final class Debug {
                 case "fish" -> {
                     return starpost.fishing.FishingSystem.debug(shell, p);
                 }
+                case "barn" -> {
+                    return starpost.barn.BarnSystem.debug(shell, p);
+                }
                 default -> {
                     return false;
                 }

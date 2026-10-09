@@ -76,6 +76,23 @@ public final class FarmView {
     public java.util.function.BooleanSupplier interact = () -> false;
     /** The action button at the pond's edge without the Water Shield (fishing): true when it was used. */
     public java.util.function.BooleanSupplier pondAction = () -> false;
+    /** Placed objects other systems own (machines, roosts), asked before the built-in behaviour. */
+    public final List<ObjectHook> objectHooks = new ArrayList<>();
+
+    /** Use and drawing of placed objects another system owns. */
+    public interface ObjectHook {
+        /** The action button on the object (holding {@code held}, or null); true when handled. */
+        boolean use(int row, int column, String id, Item held);
+
+        /** Whether the Fire Shield may knock it loose (a loaded machine may not). */
+        default boolean removable(int row, int column, String id) {
+            return true;
+        }
+
+        /** Draws the object standing at ({@code x}, {@code feet}); true when drawn. Must not change state. */
+        boolean draw(SceneCanvas canvas, Art.Seasonal look, SceneDraw style, int row, int column, String id, float x,
+                float feet);
+    }
 
     /** What the farm asks of its screen after an update. */
     public enum Request {
@@ -252,10 +269,14 @@ public final class FarmView {
     private Request useObject(Game game, Plot plot, int row, int column) {
         PlaceableDef def = game.catalog.placeable(plot.object);
         Item held = game.inventory.selectedId() == null ? null : game.item(game.inventory.selectedId());
-        Inventory chest = def != null && def.role() == PlaceableDef.Role.CHEST ? game.farm.chest(row, column, def.reach()) : null;
+        Inventory chest = def != null && def.slots() > 0 ? game.farm.chest(row, column, def.slots()) : null;
         if (held != null && held.id().equals("fire_shield")) {
-            if (chest != null && !empty(chest)) {
-                shell.toast("EMPTY THE MONITOR FIRST");
+            boolean locked = false;
+            for (ObjectHook hook : objectHooks) {
+                locked |= !hook.removable(row, column, plot.object);
+            }
+            if (chest != null && !empty(chest) || locked) {
+                shell.toast("EMPTY IT FIRST");
                 shell.sfx(Sfx.ERROR);
             } else if (game.inventory.add(game.item(plot.object), 1) == 0) {
                 game.farm.chests.remove(row + "." + column);
@@ -264,6 +285,11 @@ public final class FarmView {
                 marked(row, column);
             }
             return Request.NONE;
+        }
+        for (ObjectHook hook : objectHooks) {
+            if (hook.use(row, column, plot.object, held)) {
+                return Request.NONE;
+            }
         }
         if (chest != null) {
             openedChest = chest;
@@ -614,6 +640,11 @@ public final class FarmView {
         boolean pop = lastActionRow == row && lastActionColumn == c && shell.ticks - lastActionAt < 8;
         SceneDraw style = pop ? tint.withScale(1.12f) : tint;
         if (plot.object != null) {
+            for (ObjectHook hook : objectHooks) {
+                if (hook.draw(canvas, look, style, row, c, plot.object, x + 8, feet)) {
+                    return;
+                }
+            }
             drawObject(canvas, look, style, plot.object, x + 8, feet);
             return;
         }

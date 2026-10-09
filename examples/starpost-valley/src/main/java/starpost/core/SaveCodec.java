@@ -60,6 +60,10 @@ public final class SaveCodec {
                 }
             }
         }
+        for (Map.Entry<String, Machine> e : g.farm.machines.entrySet()) {
+            Machine m = e.getValue();
+            line(out, "machine." + e.getKey(), m.input() + "," + m.output() + "," + m.count() + "," + m.readyDay());
+        }
         for (SaveSection section : g.sections) {
             Map<String, String> keys = new TreeMap<>();
             section.save(keys);
@@ -184,10 +188,13 @@ public final class SaveCodec {
                     int r = Integer.parseInt(key[1]), c = Integer.parseInt(key[2]), slot = Integer.parseInt(key[3]);
                     Plot p = r >= 0 && r < Farm.ROWS && c >= 0 && c < Farm.COLUMNS ? g.farm.raw(r, c) : null;
                     PlaceableDef def = p == null || p.object == null ? null : catalog.placeable(p.object);
-                    if (def != null && def.role() == PlaceableDef.Role.CHEST && slot >= 0 && slot < def.reach()
+                    if (def != null && def.slots() > 0 && slot >= 0 && slot < def.slots()
                             && catalog.hasItem(parts[0])) {
-                        g.farm.chest(r, c, def.reach()).set(slot, parts[0], Math.min(Inventory.MAX_STACK, Integer.parseInt(parts[1])));
+                        g.farm.chest(r, c, def.slots()).set(slot, parts[0], Math.min(Inventory.MAX_STACK, Integer.parseInt(parts[1])));
                     }
+                }
+                if (e.getKey().startsWith("machine.")) {
+                    machine(g, catalog, e.getKey().split("\\."), e.getValue().split(","));
                 }
                 if (e.getKey().startsWith("ship.")) {
                     String id = e.getKey().substring(5);
@@ -200,6 +207,20 @@ public final class SaveCodec {
             return g;
         } catch (RuntimeException e) {
             return null;
+        }
+    }
+
+    /** A machine's work, kept only on a plot holding a machine, with known items and sane numbers. */
+    private static void machine(Game g, Catalog catalog, String[] key, String[] parts) {
+        int r = Integer.parseInt(key[1]), c = Integer.parseInt(key[2]);
+        int count = Integer.parseInt(parts[2]), ready = Integer.parseInt(parts[3]);
+        Plot p = r >= 0 && r < Farm.ROWS && c >= 0 && c < Farm.COLUMNS ? g.farm.raw(r, c) : null;
+        PlaceableDef def = p == null || p.object == null ? null : catalog.placeable(p.object);
+        if (def != null && def.role() == PlaceableDef.Role.MACHINE && catalog.hasItem(parts[0]) && catalog.hasItem(parts[1])
+                && count > 0) {
+            int today = g.calendar.dayNumber();
+            g.farm.machines.put(r + "." + c, new Machine(parts[0], parts[1], Math.min(99, count),
+                    Math.max(0, Math.min(today + 30, ready))));
         }
     }
 
