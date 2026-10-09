@@ -105,7 +105,7 @@ final class Landmarks {
                 bestEntry = entry;
             }
         }
-        if (hinted >= 0 && hintedReached >= 24 && hintedReached * 10 >= bestReached * 7) {
+        if (hinted >= 0 && hintedReached >= 24 && hintedReached * 2 >= bestReached) {
             bestEntry = hinted;
             bestReached = hintedReached;
         }

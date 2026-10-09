@@ -824,8 +824,9 @@ public final class RuinsScreen implements Screen {
         return Math.max(0, Math.min(Math.max(0, chamber.width - shell.width()), x));
     }
 
+    /** The camera may look 40 pixels above the chamber, so play along its top edge clears the HUD. */
     private float clampY(float y) {
-        return Math.max(0, Math.min(Math.max(0, chamber.height - shell.height()), y));
+        return Math.max(-40, Math.min(Math.max(0, chamber.height - shell.height()), y));
     }
 
     // ------------------------------------------------------------------ debug
