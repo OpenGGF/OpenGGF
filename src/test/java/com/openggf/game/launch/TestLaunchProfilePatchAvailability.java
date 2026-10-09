@@ -218,6 +218,31 @@ class TestLaunchProfilePatchAvailability {
     }
 
     @Test
+    void programmaticLaunchAppliesItsSessionTeamAfterTheExitClearsOverridesAndOnlyOnce() {
+        SonicConfigurationService config = configWithS2Main("knuckles");
+        LaunchProfileStore store = patchAwareStore(config, PatchEnablement.ALL_ENABLED, true);
+        MasterTitleLaunchCoordinator coordinator = new MasterTitleLaunchCoordinator(
+                config, store, new LaunchProfileApplier(config));
+        coordinator.prepareExit("s2", true);
+        String baselineMain = config.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
+        String baselineSidekick = config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
+        String main = "sonic".equals(baselineMain) ? "knuckles" : "sonic";
+        String sidekick = "tails".equals(baselineSidekick) ? "" : "tails";
+        coordinator.setPendingSessionOverrides(Map.of(
+                SonicConfiguration.MAIN_CHARACTER_CODE, main,
+                SonicConfiguration.SIDEKICK_CHARACTER_CODE, sidekick));
+
+        coordinator.prepareExit("s2", true);
+
+        assertEquals(main, config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals(sidekick, config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+        coordinator.prepareExit("s2", true);
+        assertEquals(baselineMain, config.getString(SonicConfiguration.MAIN_CHARACTER_CODE),
+                "pending overrides are consumed by the launch that carried them");
+        assertEquals(baselineSidekick, config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+    }
+
+    @Test
     void lateMetadataFailureRemovesEarlierContributionFromFrozenUnion() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         config.setConfigValue(SonicConfiguration.LAUNCH_S1_MAIN_CHARACTER, "amy");

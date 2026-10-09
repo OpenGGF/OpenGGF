@@ -1011,6 +1011,13 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   authored playable routes retain their wider gameplay/rewind coverage obligations.
   The API descriptor remains the version/publication authority; this
   branch rollover does not publish or freeze it.
+- **Mod API: multi-game mods, scene hand-offs and typed text:** one `baseGame: any`
+  code mod can now carry a game patch per stock game alongside shared objects and
+  services. A startup scene can start a stock act, is reopened when the act's frame
+  controller asks for the title, and can relaunch the session into another supplied
+  game or team. Frame controllers can drive the player's pad for a reproducible
+  run, and scenes and controllers read typed characters in the player's own
+  keyboard layout while letter shortcuts such as rewind stay out of the way.
 - **Gameplay capture tooling:** `GameplayCaptureTool` pictures or films any
   gameplay section on the production boot path (any game, zone, act, position,
   width, donor or team), driven by a BizHawk input log, and writes PNG frames, a

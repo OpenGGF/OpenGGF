@@ -70,12 +70,28 @@ public final class HelloSceneMod implements GgfMod {
 A mod registers at most one startup scene (a second call fails registration). If several
 enabled mods register one for the same game, the mod applied last in load order wins.
 
-Use `baseGame: any` for a game-independent ROM-backed startup scene. It registers
-the same scene on each installed stock game; `ggfmod run` chooses an available
-configured game. This narrowly permits startup-scene and required-display-width
-registration. Game-specific patches, characters, objects, zones, override tables
-and insertion declarations are rejected. It does not create a no-ROM standalone
+Use `baseGame: any` for a game-independent ROM-backed startup scene or a mod that
+plays in several stock games. It registers the same scene on each installed stock
+game; `ggfmod run` chooses an available configured game. An `any` mod may also
+register objects, object art, service bundles and game patches: each patch names
+its own game (`s1`, `s2` or `s3k`) and applies only when that game launches, so one
+jar can carry a patch per game while sharing its code and its save folder. It needs
+a startup scene or at least one patch. Characters, mod zones, ROM art intake, zone
+policies, decoded level patches, stock override tables and insertion declarations
+need a single base game and are rejected. It does not create a no-ROM standalone
 game or imply that a missing ROM is available.
+
+A startup scene can hand off to the running game's real levels and get the player
+back. `ctx.startStockAct(zone, act)` fades out, closes the scene and starts that act
+(the running game's zone registry indices, as a title screen's start zone uses) with
+your patches active; it returns false for indices out of range. When your patch's
+frame controller later reports `consumeTitleRequest()`, the host reopens this startup
+scene instead of the stock title. `ctx.currentLaunch()` reports the running game and
+team as a `SceneLaunch`; `ctx.relaunch(new SceneLaunch("s3k", "sonic", List.of("tails")))`
+returns through the master title into another supplied game, or the same game with
+the team a mode needs, for this session only, and reopens your scene there. Remember
+why you left in `ctx.storage()`: a reopened scene starts fresh. Typing of the Hedgehog
+uses all three to run one story across every supplied ROM.
 
 ## 2. The scene lifecycle
 
@@ -144,6 +160,16 @@ Input comes as named buttons and keys, never raw numbers:
   both players' raw state.
 
 Slay the Robotnik's `ui/Controls` turns all of this into the few verbs its screens use.
+
+For anything the player spells (names, typed answers, typing games) read
+`ctx.typedText()`: the tick's characters from the operating system's text input,
+honouring the player's keyboard layout and Shift, without control characters. Key
+codes are physical positions and cannot tell an AZERTY `A` from a QWERTY `Q`. While
+the player types, call `ctx.captureKeyboardText()` every tick: host shortcuts bound to
+printable or editing keys (display filters, recording chords) then read those keys as
+up, and the claim lapses on its own one tick after you stop renewing it. Escape,
+function keys, modifiers and gamepads stay with the host; your own `keyDown`,
+`keyPressed` and `physicalInput()` still see the claimed keys.
 
 For five-button instruments or other device-specific controls, use
 `ctx.physicalInput()`: an immutable snapshot of keys, standard GLFW gamepads and

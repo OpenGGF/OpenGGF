@@ -14,6 +14,7 @@ import java.nio.file.Path;
  * @param mouse       maps raw window coordinates to logical pixels, or null
  * @param toGameTitle starts the fade back to the base game's title
  * @param toMasterTitle starts the fade back to the master title
+ * @param navigator   starts stock acts and relaunches sessions, or null where unavailable
  */
 public record SceneServices(
         AudioManager audio,
@@ -22,12 +23,19 @@ public record SceneServices(
         MouseMapper mouse,
         Runnable toGameTitle,
         Runnable toMasterTitle,
-        SceneRomLibrary romLibrary) {
+        SceneRomLibrary romLibrary,
+        SceneNavigator navigator) {
+
+    /** Scenes opened without gameplay navigation. */
+    public SceneServices(AudioManager audio, SceneRomArt romArt, Path storageRoot,
+            MouseMapper mouse, Runnable toGameTitle, Runnable toMasterTitle, SceneRomLibrary romLibrary) {
+        this(audio, romArt, storageRoot, mouse, toGameTitle, toMasterTitle, romLibrary, null);
+    }
 
     /** Legacy running-ROM scenes do not need a multi-ROM library. */
     public SceneServices(AudioManager audio, SceneRomArt romArt, Path storageRoot,
             MouseMapper mouse, Runnable toGameTitle, Runnable toMasterTitle) {
-        this(audio, romArt, storageRoot, mouse, toGameTitle, toMasterTitle, null);
+        this(audio, romArt, storageRoot, mouse, toGameTitle, toMasterTitle, null, null);
     }
 
     /** Window-to-logical mouse transform. Returns {@code {x, y, inside ? 1 : 0}}. */

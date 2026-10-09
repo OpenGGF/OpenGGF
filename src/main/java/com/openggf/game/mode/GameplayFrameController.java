@@ -10,6 +10,19 @@ public interface GameplayFrameController {
     boolean beforeTick(CourseControl course, LogicalInputSnapshot input);
     /** Observes the completed native step, or a held row, at a stable boundary. */
     void afterTick(CourseControl course, boolean advanced);
+    /**
+     * Pad input the native step consumes on an advanced row, asked once per advanced row after
+     * {@link #beforeTick}. The default is neutral, so live input never reaches a controlled
+     * course. Derive the snapshot from controller state only (for example a recorded program
+     * row, with press edges from the previous row) so the row stays reproducible.
+     */
+    default LogicalInputSnapshot nativeInput(CourseControl course) { return LogicalInputSnapshot.neutral(); }
+    /**
+     * Claims the keyboard's text and editing keys while true, renewed every row; see
+     * {@link com.openggf.control.InputHandler#captureKeyboardText()}. Read the row's typed
+     * characters and claimed keys through {@link CourseControl}.
+     */
+    default boolean capturesKeyboardText() { return false; }
     /** Retains a rolling ball through native landing/zero-speed/object transitions. */
     default boolean retainRolling() { return false; }
     /** Optional view-only scene, e.g. a read-only remote projection. */

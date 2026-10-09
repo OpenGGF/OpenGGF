@@ -773,6 +773,7 @@ CF-ANNOTATION TYPE com.openggf.mods.scene.SceneContext visible @com.openggf.game
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneDraw visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneImage visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneKeys visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneLaunch visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneLevelKit visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneLevelStage visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneMouse visible @com.openggf.game.ModApi
@@ -1442,6 +1443,7 @@ CONSTRUCTOR com.openggf.mods.scene.RomSpriteRequest public  <init>(int,com.openg
 CONSTRUCTOR com.openggf.mods.scene.SceneBackdrop public  <init>(com.openggf.mods.scene.SceneImage,java.util.List<com.openggf.mods.scene.SceneBackdrop$Band>)
 CONSTRUCTOR com.openggf.mods.scene.SceneBackdrop$Band public  <init>(int,int,double,double)
 CONSTRUCTOR com.openggf.mods.scene.SceneImage public  <init>(int,int,int[])
+CONSTRUCTOR com.openggf.mods.scene.SceneLaunch public  <init>(java.lang.String,java.lang.String,java.util.List<java.lang.String>)
 CONSTRUCTOR com.openggf.mods.scene.SceneLevelStage public  <init>(int,int,int,int[])
 CONSTRUCTOR com.openggf.mods.scene.SceneMusicPart public  <init>(long,int,int,boolean)
 CONSTRUCTOR com.openggf.mods.scene.SceneNoteEvent public  <init>(int,com.openggf.mods.scene.SceneNoteEvent$Kind,int,int,int,long,long)
@@ -3892,12 +3894,15 @@ METHOD com.openggf.control.InputHandler public  boolean hasMouseInputSeen()
 METHOD com.openggf.control.InputHandler public  boolean isAltDown()
 METHOD com.openggf.control.InputHandler public  boolean isAnyKeyJustPressed()
 METHOD com.openggf.control.InputHandler public  boolean isAnyModifierDown()
+METHOD com.openggf.control.InputHandler public  boolean isCapturedKeyDown(int)
+METHOD com.openggf.control.InputHandler public  boolean isCapturedKeyPressed(int)
 METHOD com.openggf.control.InputHandler public  boolean isControlDown()
 METHOD com.openggf.control.InputHandler public  boolean isDirectionHeld(int,int)
 METHOD com.openggf.control.InputHandler public  boolean isGamepadBackButtonPressed()
 METHOD com.openggf.control.InputHandler public  boolean isKeyDown(int)
 METHOD com.openggf.control.InputHandler public  boolean isKeyPressed(int)
 METHOD com.openggf.control.InputHandler public  boolean isKeyPressedWithoutModifiers(int)
+METHOD com.openggf.control.InputHandler public  boolean isKeyboardTextCaptured()
 METHOD com.openggf.control.InputHandler public  boolean isMouseButtonDown(int)
 METHOD com.openggf.control.InputHandler public  boolean isMouseButtonPressed(int)
 METHOD com.openggf.control.InputHandler public  boolean isPhysicalAltDown()
@@ -3913,6 +3918,8 @@ METHOD com.openggf.control.InputHandler public  com.openggf.control.LogicalInput
 METHOD com.openggf.control.InputHandler public  com.openggf.control.PhysicalInput capturePhysicalInput()
 METHOD com.openggf.control.InputHandler public  double getMouseX()
 METHOD com.openggf.control.InputHandler public  double getMouseY()
+METHOD com.openggf.control.InputHandler public  java.lang.String consumeTypedText()
+METHOD com.openggf.control.InputHandler public  void captureKeyboardText()
 METHOD com.openggf.control.InputHandler public  void clearKeyState()
 METHOD com.openggf.control.InputHandler public  void clearLogicalOverride()
 METHOD com.openggf.control.InputHandler public  void handleKeyEvent(int,int)
@@ -5741,6 +5748,8 @@ METHOD com.openggf.game.dataselect.HostSlotPreview public,static  com.openggf.ga
 METHOD com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType public,static  com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType valueOf(java.lang.String)
 METHOD com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType public,static  com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType[] values()
 METHOD com.openggf.game.mode.CourseControl public  boolean advanceEntryPresentation()
+METHOD com.openggf.game.mode.CourseControl public  boolean keyDown(int)
+METHOD com.openggf.game.mode.CourseControl public  boolean keyPressed(int)
 METHOD com.openggf.game.mode.CourseControl public  boolean presentationReady()
 METHOD com.openggf.game.mode.CourseControl public  boolean rewindHeld()
 METHOD com.openggf.game.mode.CourseControl public  com.openggf.audio.AudioReplay recordAudioReplay(int)
@@ -5754,6 +5763,7 @@ METHOD com.openggf.game.mode.CourseControl public  java.lang.String apiIdentity(
 METHOD com.openggf.game.mode.CourseControl public  java.lang.String engineIdentity()
 METHOD com.openggf.game.mode.CourseControl public  java.lang.String modContentSha256()
 METHOD com.openggf.game.mode.CourseControl public  java.lang.String romSha1()
+METHOD com.openggf.game.mode.CourseControl public  java.lang.String typedText()
 METHOD com.openggf.game.mode.CourseControl public  java.util.Optional<java.lang.String> buttonLabel(int,com.openggf.control.ButtonPrompts$Button)
 METHOD com.openggf.game.mode.CourseControl public  void finishInitialPresentation()
 METHOD com.openggf.game.mode.CourseControl public  void launchRolling(int,int,int,int,boolean)
@@ -5782,10 +5792,12 @@ METHOD com.openggf.game.mode.CourseControl$PlayerState public,final  boolean equ
 METHOD com.openggf.game.mode.CourseControl$PlayerState public,final  int hashCode()
 METHOD com.openggf.game.mode.CourseControl$PlayerState public,final  java.lang.String toString()
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean allowsDebugRewind()
+METHOD com.openggf.game.mode.GameplayFrameController public  boolean capturesKeyboardText()
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean consumeTitleRequest()
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean drawScene()
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean presentationPaused()
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean retainRolling()
+METHOD com.openggf.game.mode.GameplayFrameController public  com.openggf.control.LogicalInputSnapshot nativeInput(com.openggf.game.mode.CourseControl)
 METHOD com.openggf.game.mode.GameplayFrameController public  com.openggf.game.presentation.RewindPresentation rewindPresentation()
 METHOD com.openggf.game.mode.GameplayFrameController public  void close()
 METHOD com.openggf.game.mode.GameplayFrameController public  void drawOverlay()
@@ -10661,9 +10673,14 @@ METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void drawRegion(com.o
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void fill(int,int,int,int,int)
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void text(java.lang.String,int,int,int)
 METHOD com.openggf.mods.scene.SceneCanvas public,abstract  void unclip()
+METHOD com.openggf.mods.scene.SceneContext public  boolean relaunch(com.openggf.mods.scene.SceneLaunch)
+METHOD com.openggf.mods.scene.SceneContext public  boolean startStockAct(int,int)
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.control.PhysicalInput physicalInput()
+METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneLaunch currentLaunch()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneMusic music()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneNetwork network()
+METHOD com.openggf.mods.scene.SceneContext public  java.lang.String typedText()
+METHOD com.openggf.mods.scene.SceneContext public  void captureKeyboardText()
 METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean buttonDown(int)
 METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean buttonPressed(int)
 METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean buttonRepeated(int)
@@ -10706,6 +10723,12 @@ METHOD com.openggf.mods.scene.SceneImage public  int[] pixels()
 METHOD com.openggf.mods.scene.SceneImage public  long revision()
 METHOD com.openggf.mods.scene.SceneImage public  void update(int[])
 METHOD com.openggf.mods.scene.SceneImage public,static  com.openggf.mods.scene.SceneImage streaming(int,int)
+METHOD com.openggf.mods.scene.SceneLaunch public  java.lang.String gameId()
+METHOD com.openggf.mods.scene.SceneLaunch public  java.lang.String mainCharacter()
+METHOD com.openggf.mods.scene.SceneLaunch public  java.util.List<java.lang.String> sidekicks()
+METHOD com.openggf.mods.scene.SceneLaunch public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.scene.SceneLaunch public,final  int hashCode()
+METHOD com.openggf.mods.scene.SceneLaunch public,final  java.lang.String toString()
 METHOD com.openggf.mods.scene.SceneLevelKit public,abstract  byte[] blockSolidity(int)
 METHOD com.openggf.mods.scene.SceneLevelKit public,abstract  com.openggf.mods.scene.SceneBackdrop backdrop()
 METHOD com.openggf.mods.scene.SceneLevelKit public,abstract  com.openggf.mods.scene.SceneImage blockImage(int)
@@ -14833,6 +14856,9 @@ RECORD-COMPONENT com.openggf.mods.scene.SceneBackdrop$Band drift double
 RECORD-COMPONENT com.openggf.mods.scene.SceneBackdrop$Band height int
 RECORD-COMPONENT com.openggf.mods.scene.SceneBackdrop$Band speed double
 RECORD-COMPONENT com.openggf.mods.scene.SceneBackdrop$Band top int
+RECORD-COMPONENT com.openggf.mods.scene.SceneLaunch gameId java.lang.String
+RECORD-COMPONENT com.openggf.mods.scene.SceneLaunch mainCharacter java.lang.String
+RECORD-COMPONENT com.openggf.mods.scene.SceneLaunch sidekicks java.util.List<java.lang.String>
 RECORD-COMPONENT com.openggf.mods.scene.SceneMusicPart dacMuted boolean
 RECORD-COMPONENT com.openggf.mods.scene.SceneMusicPart fmMask int
 RECORD-COMPONENT com.openggf.mods.scene.SceneMusicPart onsetSamples long
@@ -16168,6 +16194,7 @@ TYPE record public,final com.openggf.mods.code.ModZoneContribution SUPER java.la
 TYPE record public,final com.openggf.mods.code.RomArtRequest SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.RomSpriteRequest SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.SceneBackdrop SUPER java.lang.Record
+TYPE record public,final com.openggf.mods.scene.SceneLaunch SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.SceneMusicPart SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.SceneNoteEvent SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.SceneSprite SUPER java.lang.Record
@@ -17136,6 +17163,7 @@ TYPE-ANNOTATION com.openggf.mods.scene.SceneContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneDraw @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneImage @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneKeys @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneLaunch @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneLevelKit @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneLevelStage @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneMouse @com.openggf.game.ModApi

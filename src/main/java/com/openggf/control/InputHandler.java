@@ -50,6 +50,7 @@ public class InputHandler {
 	final MenuRepeat menuRepeat = new MenuRepeat();
 	long menuFrame;
 	private final StringBuilder menuTypedText = new StringBuilder();
+	private long keyboardTextCaptureFrame = Long.MIN_VALUE;
 
 	/**
 	 * Creates a new InputHandler.
@@ -233,7 +234,7 @@ public class InputHandler {
 		if (keyCode < 0) {
 			return false;
 		}
-		if (keyCode < MAX_KEYS && keys[keyCode]) {
+		if (keyCode < MAX_KEYS && keys[keyCode] && !hiddenByTextCapture(keyCode)) {
 			return true;
 		}
 		return keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld();
@@ -252,7 +253,55 @@ public class InputHandler {
 
 	/** Returns raw keyboard state, ignoring any trace/replay logical override. */
 	public boolean isPhysicalKeyDown(int keyCode) {
+		return keyCode >= 0 && keyCode < MAX_KEYS && keys[keyCode] && !hiddenByTextCapture(keyCode);
+	}
+
+	/**
+	 * Claims the keyboard's text and editing keys for typed input: printable keys, Enter, Tab,
+	 * Backspace, Insert/Delete, the arrows, Home/End/Page keys and the keypad. While claimed,
+	 * host shortcuts, keyboard bindings and keyboard pause read those keys as up; Escape, function
+	 * keys, modifiers and every gamepad stay with the host. A claim lasts through the next frame,
+	 * so the owner renews it once per frame and it lapses on its own when the owner stops.
+	 * Typed characters keep arriving through {@link #consumeTypedText()}; the owner reads claimed
+	 * keys with {@link #isCapturedKeyDown(int)} and {@link #isCapturedKeyPressed(int)}.
+	 */
+	public void captureKeyboardText() {
+		keyboardTextCaptureFrame = menuFrame;
+	}
+
+	/** True while a {@link #captureKeyboardText()} claim is in force. */
+	public boolean isKeyboardTextCaptured() {
+		return keyboardTextCaptureFrame >= menuFrame - 1;
+	}
+
+	/** Raw held state for the claim owner, ignoring the claim; false for an out-of-range code. */
+	public boolean isCapturedKeyDown(int keyCode) {
 		return keyCode >= 0 && keyCode < MAX_KEYS && keys[keyCode];
+	}
+
+	/** Raw press edge for the claim owner, ignoring the claim; false for an out-of-range code. */
+	public boolean isCapturedKeyPressed(int keyCode) {
+		return keyCode >= 0 && keyCode < MAX_KEYS && keys[keyCode] && !previousKeys[keyCode];
+	}
+
+	/**
+	 * Characters typed through the operating system's text input since this frame began, in
+	 * order, honouring the user's keyboard layout and Shift; control characters are omitted.
+	 * Consuming empties the frame's text, so one owner should read it once per frame.
+	 */
+	public String consumeTypedText() {
+		return consumeMenuText();
+	}
+
+	private boolean hiddenByTextCapture(int keyCode) {
+		return isKeyboardTextCaptured() && isTextCaptureKey(keyCode);
+	}
+
+	/** Printable keys (Space through the GLFW world keys), Enter through End, and the keypad. */
+	static boolean isTextCaptureKey(int keyCode) {
+		return (keyCode >= GLFW_KEY_SPACE && keyCode <= GLFW_KEY_WORLD_2)
+				|| (keyCode >= GLFW_KEY_ENTER && keyCode <= GLFW_KEY_END)
+				|| (keyCode >= GLFW_KEY_KP_0 && keyCode <= GLFW_KEY_KP_EQUAL);
 	}
 
 	public boolean isPhysicalShiftDown() {
@@ -328,7 +377,7 @@ public class InputHandler {
 
 	boolean isRawKeyPressed(int keyCode) {
 		if (keyCode >= 0 && keyCode < MAX_KEYS) {
-			return keys[keyCode] && !previousKeys[keyCode];
+			return keys[keyCode] && !previousKeys[keyCode] && !hiddenByTextCapture(keyCode);
 		}
 		return false;
 	}
