@@ -19,7 +19,7 @@ public final class TownController extends AbstractObjectInstance implements ModR
 
     public void update(int vIntRunCount, PlayableEntity entity) {
         TownSession town = town();
-        if (town == null || !town.active() || entity == null) return;
+        if (town == null || !town.active() || entity == null || !town.claimController(spawn.subtype())) return;
         if (!placed) {
             placed = true;
             int width = town.layout().ground.right();
@@ -70,11 +70,20 @@ public final class TownController extends AbstractObjectInstance implements ModR
                 player.setObjectControlled(false); ownsHold=false;
             }
         }
+        if (town.handBack() != null) {
+            var exit = town.handBack();
+            var reason = switch (exit.place()) {
+                case "time_up" -> com.openggf.mods.scene.ActExit.TIME_UP;
+                case "fainted" -> com.openggf.mods.scene.ActExit.FAINTED;
+                default -> com.openggf.mods.scene.ActExit.LEFT;
+            };
+            services().requestActExit(reason, exit.payload());
+        }
         town.clearInput();
         services().levelGamestate().pauseTimer();
     }
     public void appendRenderCommands(List<GLCommand> commands) {
         TownSession town=town();
-        if (town!=null && town.active() && town.presentation()!=null) town.presentation().draw(services(),town);
+        if (town!=null && town.active() && town.ownsController(spawn.subtype()) && town.presentation()!=null) town.presentation().draw(services(),town);
     }
 }

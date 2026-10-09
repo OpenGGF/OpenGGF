@@ -37,6 +37,9 @@ public final class Music {
         wantedId = id;
     }
 
+    /** Retain the wanted track while the act owns the driver; resume replays it. */
+    public void parkForAct() { release(); }
+
     public void stop() {
         wantedId = -1;
         release();

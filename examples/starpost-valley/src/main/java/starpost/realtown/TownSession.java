@@ -35,6 +35,7 @@ public final class TownSession implements RewindSnapshottable<TownSession.Snapsh
     private boolean actPressed, upPressed, confirmPressed, choicePressed, menuPressed;
     private int hotbar = -1;
     private boolean initialized;
+    private int controller = -1;
     private String notice = "";
     private int noticeTicks;
 
@@ -55,6 +56,7 @@ public final class TownSession implements RewindSnapshottable<TownSession.Snapsh
         this.layout = java.util.Objects.requireNonNull(layout); this.presentation = presentation;
         if (game.section(People.class) == null || game.section(Pickups.class) == null)
             throw new IllegalArgumentException("Town needs the existing People and Pickups sections");
+        controller = -1;
         active = true; speech = null; gift = null; speaker = null; handBack = null;
         asking = invitation = false; clearInput();
         game.section(Pickups.class).today(game, layout.ground, layout.springX, layout.loopX);
@@ -64,6 +66,12 @@ public final class TownSession implements RewindSnapshottable<TownSession.Snapsh
         pickups().placeOnGround(game,ground,layout.springX,layout.loopX);
         layout = layout.withGround(ground);
     }
+    /** Admission anchors elect one persistent director per visit, including door return loads. */
+    public boolean claimController(int id) {
+        if (controller < 0) controller = id;
+        return controller == id;
+    }
+    public boolean ownsController(int id) { return controller == id; }
     public Game game() { return game; }
     public People people() { return game.section(People.class); }
     public Pickups pickups() { return game.section(Pickups.class); }
@@ -175,7 +183,7 @@ public final class TownSession implements RewindSnapshottable<TownSession.Snapsh
         Map<String, Map<String, String>> sections, Pickups.Snapshot pickups, Speech.Snapshot speech,
         String speaker, String gift, boolean asking, boolean yes, boolean invitation, boolean inZone,
         HandBack handBack, long ticks, boolean active, boolean initialized, String notice, int noticeTicks,
-        boolean action, boolean up, boolean confirm, boolean choice, boolean menu, int hotbar) {
+        boolean action, boolean up, boolean confirm, boolean choice, boolean menu, int hotbar, int controller) {
         public Snapshot {
             flags = Set.copyOf(flags); inventory = List.copyOf(inventory);
             Map<String, Map<String, String>> copy = new LinkedHashMap<>();
@@ -186,7 +194,7 @@ public final class TownSession implements RewindSnapshottable<TownSession.Snapsh
     public String key() { return "town"; }
     public Snapshot capture() {
         if (game == null) return new Snapshot(false, null, 0,0,0,0,0,0,0, Set.of(),List.of(),0,Map.of(),
-                null,null,null,null,false,true,false,false,null,0,false,false,"",0,false,false,false,false,false,-1);
+                null,null,null,null,false,true,false,false,null,0,false,false,"",0,false,false,false,false,false,-1,-1);
         List<Slot> slots = new ArrayList<>();
         for (int i = 0; i < game.inventory.size(); i++) slots.add(new Slot(game.inventory.id(i), game.inventory.count(i)));
         Map<String, Map<String, String>> sections = new LinkedHashMap<>();
@@ -196,9 +204,10 @@ public final class TownSession implements RewindSnapshottable<TownSession.Snapsh
         return new Snapshot(true, game.calendar.capture(),game.rings,game.momentum,game.maxMomentum,game.population,
             game.waterCharges,game.totalEarned,game.rng.snapshot(),game.flags,slots,game.inventory.selected(),sections,pickups().capture(),
             speech == null ? null : speech.capture(),speaker,gift,asking,yes,invitation,inFestivalZone,handBack,
-            ticks,active,initialized,notice,noticeTicks,actPressed,upPressed,confirmPressed,choicePressed,menuPressed,hotbar);
+            ticks,active,initialized,notice,noticeTicks,actPressed,upPressed,confirmPressed,choicePressed,menuPressed,hotbar,controller);
     }
     public void restore(Snapshot state) {
+        controller = state.controller();
         if (!state.bound()) { active = false; speech = null; handBack = null; clearInput(); return; }
         if (game == null) throw new IllegalStateException("Town snapshot needs its live scene game");
         game.calendar.restore(state.calendar()); game.rings=state.rings(); game.momentum=state.momentum();
@@ -217,5 +226,5 @@ public final class TownSession implements RewindSnapshottable<TownSession.Snapsh
         notice=state.notice(); noticeTicks=state.noticeTicks(); actPressed=state.action(); upPressed=state.up();
         confirmPressed=state.confirm(); choicePressed=state.choice(); menuPressed=state.menu(); hotbar=state.hotbar();
     }
-    public void resetForMissingSnapshot() { active=false; speech=null; handBack=null; clearInput(); }
+    public void resetForMissingSnapshot() { controller=-1; active=false; speech=null; handBack=null; clearInput(); }
 }

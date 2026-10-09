@@ -164,6 +164,7 @@ public final class PlayScreen implements Screen {
                     farm.arrive(true);
                 } else {
                     valley.arriveFromFarm();
+                    if (shell.startTownAct(this)) { fold = 0; return; }
                 }
                 chooseMusic(shell);
             }

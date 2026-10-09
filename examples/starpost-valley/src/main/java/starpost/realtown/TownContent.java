@@ -6,7 +6,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.mods.code.ModContext;
 import java.util.List;
 
-/** Registration is inert in stock acts. Terrain integration places only the controller. */
+/** Registration is inert in stock acts. Terrain integration places director admission anchors across the route. */
 public final class TownContent {
     public static final String OWNER = "starpost-valley";
     public static final String CONTROLLER = "starpost-valley:town-controller";
@@ -38,6 +38,8 @@ public final class TownContent {
         return new ObjectSpawn(x,y,0,index,0,false,y,-1,OWNER,key);
     }
     public static List<ObjectSpawn> placements() {
-        return List.of(spawn(CONTROLLER,0,150,192));
+        // Native object admission is camera-local; each possible return spawn needs a nearby anchor.
+        return java.util.stream.IntStream.range(0, 13)
+            .mapToObj(i -> spawn(CONTROLLER,i,150 + 256*i,192)).toList();
     }
 }

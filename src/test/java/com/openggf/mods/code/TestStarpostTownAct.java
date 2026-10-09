@@ -47,8 +47,14 @@ class TestStarpostTownAct {
             files.filter(p->p.toString().endsWith(".java")).sorted().forEach(p->args.add(p.toString()));
         }
         assertEquals(0,ToolProvider.getSystemJavaCompiler().run(null,null,null,args.toArray(String[]::new)));
-        Files.createDirectories(classes.resolve("META-INF"));
-        Files.copy(project.resolve("src/main/resources/META-INF/openggf-mod.yaml"),classes.resolve("META-INF/openggf-mod.yaml"));
+        try (var resources=Files.walk(project.resolve("src/main/resources"))) {
+            for (Path source:resources.toList()) {
+                Path destination=classes.resolve(project.resolve("src/main/resources").relativize(source));
+                if (Files.isDirectory(source)) Files.createDirectories(destination);
+                else Files.copy(source,destination);
+            }
+        }
+        ExampleModHarness.generateResources(project,classes);
         jar=temp.resolve("town.jar");
         assertEquals(0,GgfModCli.run(new String[]{"package","--input",classes.toString(),"--out",jar.toString()},System.out));
         loader=new URLClassLoader(new java.net.URL[]{jar.toUri().toURL()},TestStarpostTownAct.class.getClassLoader());

@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import zipfile
 
 
@@ -50,6 +51,19 @@ def runtime_directory(project, roms):
     return play
 
 
+def copy_resources(project, classes):
+    """Copy authored resources and run an optional trusted project resource generator.
+
+    The generator receives only the output resource root. Generated binary assets
+    stay in build output; checkout and artifact-only example builds share this path.
+    """
+    project, classes = Path(project).resolve(), Path(classes).resolve()
+    shutil.copytree(project / "src/main/resources", classes, dirs_exist_ok=True)
+    generator = project / "generate_resources.py"
+    if generator.is_file():
+        subprocess.run([sys.executable, str(generator), str(classes)], check=True, cwd=project)
+
+
 def build(project, engine, sdk, *, run=False, roms=None, testkit=None):
     project, engine, sdk = (Path(p).resolve() for p in (project, engine, sdk))
     for artifact in (engine, sdk):
@@ -67,7 +81,7 @@ def build(project, engine, sdk, *, run=False, roms=None, testkit=None):
     if sources:
         subprocess.run([java_tool("javac"), "--release", "21", "-cp", classpath,
                         "-d", str(classes), *map(str, sources)], check=True)
-    shutil.copytree(project / "src/main/resources", classes, dirs_exist_ok=True)
+    copy_resources(project, classes)
     cli = [java_tool("java"), "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
     jar = project / "target" / (project.name + "-mod.jar")
     jar.unlink(missing_ok=True)

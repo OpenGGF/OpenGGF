@@ -1510,7 +1510,7 @@ not a reason to duplicate cast content or block rules/rewind testing.
 
 ### Precise phase-2 interface proposal
 
-Use E1 from the reuse design, in an API package shared by scene and level code:
+E1 uses `com.openggf.mods.scene`, an API package shared by scene and level code:
 
 ```java
 record ActLaunch(ZoneKey.Mod destination, int act, CharacterKey main,
@@ -1519,11 +1519,11 @@ record ActLaunch(ZoneKey.Mod destination, int act, CharacterKey main,
 record ActResult(ZoneKey.Mod destination, ActExit reason, int rings,
     long frames, Map<String, String> state) {}
 enum ActExit { COMPLETED, LEFT, FAINTED, TIME_UP, ABORTED }
-// SceneContext
-void startAct(ActLaunch launch);
+// SceneContext (default throws UnsupportedOperationException on legacy hosts)
+default void startAct(ActLaunch launch) { throw new UnsupportedOperationException(); }
 // ModScene (same suspended instance and context)
 default void resume(SceneContext context, ActResult result) {}
-// ObjectServices (request latched once, consumed at the next frame boundary)
+// ObjectServices (default; request latched once, consumed at the next frame boundary)
 void requestActExit(ActExit reason, Map<String, String> state);
 ```
 
@@ -1666,11 +1666,105 @@ run. Broad preflight reports missing/wrong **Lua 5.4**; no broad/guard or full-s
 pass is claimed. The initial compile/setup failures were fixed and the completed
 runs above supersede them. Engine regressions outside this scope were not assessed.
 
-**Blocked on phase 2:** there is no `SceneContext.startAct`, `ModScene.resume` or
-`ObjectServices.requestActExit` in this branch. Nothing pretends to perform that
+**Town-lane handover (superseded below):** there was no `SceneContext.startAct`,
+`ModScene.resume` or `ObjectServices.requestActExit` at Town tip `490f3de43`. Nothing pretends to perform that
 transition. The existing startup scene remains the active route until E1 and the
 phase-1 controller placement/input registration are integrated. Production title
 → scene → valley act → door/menu → same act, native rendering/performance and
 walkable terrain anchors remain unverified. Required E1 signatures and payload are
 above; keep the scene/art/session alive across suspension, latch the exit at a
 frame boundary, release modal controls and establish fresh timeline boundaries.
+
+### Phase-2 act bridge implementation
+
+The Act Bridge lane starts at Town tip `490f3de43`. E1 lives in
+`ModSceneActBridge`, with small frame-loop delegates, `ModSceneHost` suspension,
+`GameplayTeamBootstrapContext` launch admission and engine-only
+`LevelSceneActAccess`. Scene suspension retains the original instance/context,
+ROM library, decoded art, prepared music and networking; it releases GPU textures
+and parks audible playback/borrowed donor routes. Resume re-prepares base ROM
+audio before `OwnedSceneFactory` calls the creator under its fault boundary.
+Title/fault teardown retires the retained visit before resetting audio or unloading
+mod owners. A duplicate launch cannot replace the first pending request.
+
+The public records and methods above are the implemented contract. Destination
+ownership and registration are validated synchronously inside the scene callback.
+Spawn overrides are one-shot centre writes after **all** native start selection and
+before reset, team placement and camera/object initialization. `ActLaunch` copies
+its team/state, uses zero-based acts, native positive centre words and health rings
+0–999. Scene entry is a normal load boundary. Pending exit payloads participate in
+the existing level transition rewind adapter; the first request wins. Consumption
+occurs before the next LEVEL body, both handoff fades freeze world/scene updates,
+and return marks `MODE_EXIT_TO_NON_REWINDABLE`. Held input edges are retired through
+the fades. Explicit controllers own semantic completion/faint/timeout exits; stock
+progression is not guessed or converted automatically. `ABORTED` is available to a
+controller; hold-Escape and mod faults retire the scene to master title instead of
+calling a disabled scene's resume.
+
+The town registers `starpost-valley:valley` with a generated blank, flat native
+collision placeholder (26×2 S3K blocks; floor 192; no Sega art packaged). The farm
+fold launches at centre 190,173 with the chosen farmer. `TownController` submits
+its immutable hand-back payload through `services().requestActExit`; the retained
+`PlayScreen` opens the existing door/festival/event/menu handler. Closing a menu
+relaunches at the returned centre, retaining native health independently of the
+saved wallet. Gate/time-up/faint return to farm/day-end rather than relaunching.
+`town scene` retains the original scene valley; `town act` restores the default
+and `town enter` launches directly from a live play screen.
+
+Phase 1 replaces this zone's placeholder source with ROM-backed encoded terrain,
+retains the tagged destination and director admission anchors, and supplies correct
+connected ground/door anchors and entry centre for that terrain. Existing town
+width/pickup identities and the registered TownSession must stay consistent. This
+bridge does not certify the future loop, terrain, viewport/character route matrix
+or cross-ROM native object-art work.
+
+The brief's 3,072-line GameLoop ceiling differs from this checkout: the actual
+`TestArchitecturalSourceGuard` pins it at 3,381 and the inherited source is about
+3,349 effective lines. The bridge does not raise that pin; recording restart
+orchestration moves into its existing bootstrap helper and GameLoop shrinks.
+LevelManager's 3,145-line ratchet also stays unchanged; native start-provider
+selection moves into the level helper without changing its fallback semantics.
+
+The hook rejected an explanatory descriptor comment: ordinary candidate signature
+regeneration must not edit `mod-api-release-policy.properties`. It remains the
+unchanged authority (`currentApi=0.7.0`, candidate); the API version Javadoc,
+compatibility guidance and replacement 0.7 pin document this extension. No
+published version/pin or topology is invented to bypass that rule.
+
+A single controller at the gate was rejected by the executable round trip: a
+door return at centre 896 admitted no gate object, so the town stopped ticking.
+`TownContent.placements()` now supplies 256-pixel admission anchors along the
+route. The first admitted director claims the visit in captured `TownSession`
+state; the others neither update nor draw. Bind resets this claim, and rewind
+restores it with the controller objects. Phase 1 must preserve admission coverage
+for every entry/door/menu return centre, not merely place one distant gate object.
+The test checks exactly one town tick per world frame on both visits. Returned
+Y uses the controller's native collision result (172 here), not the initial
+launch Y of 173. The placeholder's start lies within its declared bounds.
+
+Working milestones: engine/API `5a0097933`; town glue and production bootstrap
+round-trip checks follow in this lane. Focused `TestModSceneActBridge` reports
+5/5, zero failures/errors/skips, using both absolute ROM properties. The town,
+example packaging and existing scene classes report 8/8, 2/2 and 1/1 respectively;
+the example invokes 181 creator cases (all pass, zero skips) and SDK validation
+reports zero findings. The four engine bridge cases passed before the relaunch
+fix; the last run passes all five, including farm → act → inn menu → act → gate
+→ the same farm/session. Final broad validation is recorded below when complete.
+
+The tick assertion initially treated a headless step as one object pass. S3K's
+initial `Process_Sprites` pass runs before the first LevelLoop iteration, and
+`HeadlessTestRunner` retries its SETUP_ONLY result. The test now retires that
+native setup pass before measuring one director tick per ordinary world frame;
+it does not alter engine timing or fit a town tick gate to the fixture. The
+scene return's audio preparation, exit-once behavior, rewindable pending payload,
+load/mode boundaries, hold-Escape and creator object fault teardown are exercised
+separately from the complete Starpost route.
+
+The resource-policy hook rejected staging even the nine tiny original `.bin`
+placeholder assets. Instead of changing that policy or renaming binary blobs,
+`examples/starpost-valley/generate_resources.py` now authors them directly into
+the packaging resource root. Checkout and artifact-only launchers share optional
+trusted project resource generation after copying source resources, and the test
+harness follows the same convention. The generator reproduces all nine original
+typed assets exactly; no ROM input is read. A launcher regression checks ordering
+and generator failure propagation. Generated blobs remain disposable output.

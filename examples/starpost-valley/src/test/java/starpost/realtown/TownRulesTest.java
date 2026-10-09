@@ -84,6 +84,16 @@ class TownRulesTest {
         assertEquals(dialog,town.capture());
         assertThrows(UnsupportedOperationException.class,()->before.flags().add("fake"));
     }
+    @Test void admissionAnchorsElectOneRewindableDirectorPerVisit() {
+        TownSession town=town();
+        var empty=town.capture();
+        assertTrue(town.claimController(3)); assertFalse(town.claimController(2));
+        var elected=town.capture();
+        town.restore(empty); assertTrue(town.claimController(2));
+        town.restore(elected); assertTrue(town.ownsController(3)); assertFalse(town.claimController(2));
+        town.bind(town.game(),town.layout(),town.presentation());
+        assertTrue(town.claimController(8)); assertFalse(town.claimController(3));
+    }
     @Test void handBackIsLatchedAndConsumedOnce() {
         TownSession town=town(); var before=town.capture();
         town.request("inn",null,896,173); town.request("ruins",null,3000,173);

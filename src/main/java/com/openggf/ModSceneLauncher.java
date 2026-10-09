@@ -76,7 +76,7 @@ final class ModSceneLauncher {
     /** Fades out of the mod scene to the base game's title screen. */
     private static void exitToGameTitle(GameLoop gameLoop) {
         gameLoop.resolveFadeManager().startFadeToBlack(() -> {
-            gameLoop.modSceneHost.close();
+            gameLoop.retireModScene();
             gameLoop.initializeTitleScreenMode();
         });
     }

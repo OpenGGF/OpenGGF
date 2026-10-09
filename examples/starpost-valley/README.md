@@ -116,3 +116,18 @@ improvements at Robomart. The year ends with the Signpost Spin.
 
 Built as an example of the scene API at production scale; the design, the decisions and the
 rejected approaches are in `docs/architecture/designs/2026-10-09-starpost-valley.md`.
+
+The farm gate now visits a real S3K act at the registered destination
+`starpost-valley:valley`. Until the terrain lane lands, it is a flat collision
+placeholder with the town objects and ROM-decoded presentation. Door menus return
+to the same act at the door; the gate returns to the same farm/day/session. Health
+rings are separate from the saved wallet. For the earlier scene valley, send the
+scene debug command `town scene` (`town act` restores act visits). `town enter`
+exercises the bridge from a live play screen. Terrain integration replaces the
+placeholder source and validates connected anchors and native routes; this phase
+does not claim Green Hill act parity.
+
+The build runs the authored `generate_resources.py` after copying resources. Its
+blank tiles and flat collision assets are generated only into packaging output;
+no ROM bytes or generated binary files are committed. Artifact-only builds use
+the same generator convention.
