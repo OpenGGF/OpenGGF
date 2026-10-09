@@ -25,6 +25,7 @@ public final class Systems {
         out.add(new starpost.core.Skills());
         out.add(new starpost.ruins.RuinsSection());
         out.add(new starpost.people.People());
+        out.add(new starpost.fishing.FishingSection());
         return out;
     }
 
@@ -37,5 +38,6 @@ public final class Systems {
         }
         starpost.ruins.RuinsSystem.install(shell, play, places);
         starpost.people.PeopleSystem.install(shell, play, actors);
+        starpost.fishing.FishingSystem.install(shell, play, actors, places);
     }
 }

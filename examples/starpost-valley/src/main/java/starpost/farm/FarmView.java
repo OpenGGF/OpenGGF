@@ -74,6 +74,8 @@ public final class FarmView {
     /** Set by the play screen: the farm's actors, and the action button offered to them first. */
     public java.util.function.IntFunction<List<Actor>> actors = view -> List.of();
     public java.util.function.BooleanSupplier interact = () -> false;
+    /** The action button at the pond's edge without the Water Shield (fishing): true when it was used. */
+    public java.util.function.BooleanSupplier pondAction = () -> false;
 
     /** What the farm asks of its screen after an update. */
     public enum Request {
@@ -224,8 +226,8 @@ public final class FarmView {
                 game.waterCharges = game.waterCapacity;
                 shell.sfx(Sfx.BUBBLE_SHIELD);
                 shell.toast("WATER SHIELD FULL: " + game.waterCapacity);
-            } else {
-                shell.toast("THE FARM POND. HOLD THE WATER SHIELD TO FILL IT.");
+            } else if (!pondAction.getAsBoolean()) {
+                shell.toast("THE FARM POND. HOLD THE WATER SHIELD OR A ROD.");
             }
             return Request.NONE;
         }

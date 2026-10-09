@@ -80,6 +80,9 @@ final class Debug {
                 case "people" -> {
                     return starpost.people.PeopleDebug.apply(shell, p);
                 }
+                case "fish" -> {
+                    return starpost.fishing.FishingSystem.debug(shell, p);
+                }
                 default -> {
                     return false;
                 }

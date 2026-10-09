@@ -30,6 +30,7 @@ final class Content {
         placeables();
         recipes();
         new starpost.ruins.RuinsContent(catalog).register();
+        new starpost.fishing.FishingContent(catalog).register();
     }
 
     private void placeables() {

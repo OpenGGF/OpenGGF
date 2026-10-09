@@ -145,7 +145,8 @@ public final class Game {
             case ANIMAL_GOOD -> has("rancher") ? 1.2f : 1;
             case ARTISAN -> has("artisan") ? 1.4f : 1;
             case FORAGE -> has("botanist") ? 1.5f : 1;
-            case FISH -> has("angler") ? 1.25f : 1;
+            // Badnik catches carry a "badnik:" icon key (starpost.fishing.FishingContent).
+            case FISH -> (has("angler") ? 1.25f : 1) * (has("reef_hand") && item.icon().startsWith("badnik:") ? 1.5f : 1);
             case MINERAL -> has("jeweller") ? 1.3f : 1;
             default -> 1;
         };
