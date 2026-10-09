@@ -1150,8 +1150,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   column, consolidate equivalent FBZ traversals, and advance integration-test room
   deadlines through a controlled clock with observed membership and publication barriers.
   Measured fixtures release source/evidence caches and owned mock history, with
-  fixed frame-driving stubs installed once. SOZ route checks draw every frame
-  without reading back discarded pixels; screenshot checks keep pixel readback.
+  fixed frame-driving stubs installed once. Route checks avoid discarded pixel
+  readback and omit traversal drawing where state/pixel controls agree, while
+  keeping checkpoints and complete rewind branches drawn, with an opt-in
+  mode that draws every traversal frame. Screenshot checks keep pixel readback.
   Lower-rock puzzle checks compute each whole-world rewind diff once, and
   background checks read pixels only from frames used by their assertions.
   The solo Sonic Sandopolis approach uses a shorter authored controller route,
