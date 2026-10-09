@@ -39,6 +39,9 @@ final class RingHuntScreen extends FestivalScreen {
     private int phaseAt;
     private int hunt;
     private final List<float[]> sparkles = new ArrayList<>();
+    /** The crowd cheers a ring grabbed within this many pixels of the sign, and at GO and the end. */
+    private static final int CHEER_RANGE = 220;
+    private long cheerUntil;
 
     RingHuntScreen(FestivalSystem sys, Festival festival) {
         super(sys, festival);
@@ -61,6 +64,8 @@ final class RingHuntScreen extends FestivalScreen {
         taken = new boolean[rings.size()];
         championId = RingHunt.champion(game);
         champion = new RingHunt.Champion(ax + 40, sys.floor(ax) - 36);
+        // The champion hunts in person, so the festival draws the crowd itself (one champion, not two).
+        offstage(true);
         shell.music.want("s1", S1_SPECIAL_STAGE);
         phaseAt = t;
     }
@@ -91,6 +96,7 @@ final class RingHuntScreen extends FestivalScreen {
                 if (t - phaseAt >= COUNT) {
                     phase = 2;
                     phaseAt = t;
+                    cheerUntil = ticks + 60;
                     shell.sfx(Sfx.STARPOST);
                 }
             }
@@ -130,6 +136,9 @@ final class RingHuntScreen extends FestivalScreen {
                 taken[i] = true;
                 farmer++;
                 shell.sfx(Sfx.RING);
+                if (Math.abs(s.x() - sys.anchorX(festival)) < CHEER_RANGE) {
+                    cheerUntil = ticks + 40;
+                }
                 sparkles.add(new float[] {s.x(), s.y(), ticks});
             }
         }
@@ -137,6 +146,7 @@ final class RingHuntScreen extends FestivalScreen {
 
     private void end() {
         phase = 3;
+        cheerUntil = ticks + 1_000_000;
         Game game = shell.game;
         boolean won = RingHunt.farmerWins(farmer, champion.score);
         List<String> lines = new ArrayList<>();
@@ -157,6 +167,7 @@ final class RingHuntScreen extends FestivalScreen {
         play.draw(shell, canvas);
         ValleyView view = play.valley();
         int cx = Math.round(view.cameraX()), cy = Math.round(view.cameraY());
+        drawCrowd(canvas, cx, cy, championId, ticks < cheerUntil);
         SceneSpriteSet ring = shell.art.ring;
         int frame = (int) (ticks / 8 % 4);
         for (int i = 0; i < rings.size(); i++) {
@@ -223,6 +234,7 @@ final class RingHuntScreen extends FestivalScreen {
     @Override
     void restore() {
         super.restore();
+        offstage(false);
         shell.music.stop();
     }
 

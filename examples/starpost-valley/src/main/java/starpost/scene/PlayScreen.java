@@ -241,7 +241,7 @@ public final class PlayScreen implements Screen {
         Game game = shell.game;
         Art.Seasonal look = shell.art.season(game.calendar.season());
         int light = game.calendar.light();
-        SceneDraw tint = SceneDraw.plain().withTint(light == 0 ? 0xFFFFFFFF : light == 1 ? 0xFFFFC8A0 : 0xFF6D80C8);
+        SceneDraw tint = lightTint(light);
         if (onFarm) {
             farm.draw(canvas, look, light, tint);
         } else {
@@ -259,6 +259,11 @@ public final class PlayScreen implements Screen {
         if (!hudHidden) {
             drawHud(shell, canvas);
         }
+    }
+
+    /** The world's tint at a light (0 day, 1 dusk, 2 night), for anything drawn into the valley from outside it. */
+    public static SceneDraw lightTint(int light) {
+        return SceneDraw.plain().withTint(light == 0 ? 0xFFFFFFFF : light == 1 ? 0xFFFFC8A0 : 0xFF6D80C8);
     }
 
     /** The fold: Green Hill's checker closes from top and bottom like a shutter, then opens on the other view. */

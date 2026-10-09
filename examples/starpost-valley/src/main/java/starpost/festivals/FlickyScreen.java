@@ -35,7 +35,6 @@ final class FlickyScreen extends FestivalScreen {
     private final boolean[] wavedAt = new boolean[16];
     private int waved;
     private boolean ended;
-    private final List<int[]> stars = new ArrayList<>();
 
     FlickyScreen(FestivalSystem sys, Festival festival) {
         super(sys, festival);
@@ -56,9 +55,7 @@ final class FlickyScreen extends FestivalScreen {
             }
         }
         pipLeads = present("pip");
-        for (int i = 0; i < 40; i++) {
-            stars.add(new int[] {Board.mix(i, 3) % 400, 30 + Board.mix(i, 4) % 80, Board.mix(i, 5) % 60});
-        }
+        moonSky();
         shell.music.want("s3k", S3K_ENDING);
     }
 
@@ -112,7 +109,7 @@ final class FlickyScreen extends FestivalScreen {
     private void end() {
         Game game = shell.game;
         List<String> lines = new ArrayList<>();
-        lines.add(waved == 0 ? "YOU WATCHED THEM GO" : "YOU WAVED TO " + waved + (waved == 1 ? " WAVE" : " WAVES"));
+        lines.add(waved == 0 ? "YOU WATCHED THEM GO" : waved + (waved == 1 ? " FLOCK" : " FLOCKS") + " WAVED BACK");
         lines.addAll(FlickyNight.reward(game, festivals, waved));
         finish("GOODNIGHT, FLICKIES", lines);
         if (pipLeads) {
@@ -125,6 +122,7 @@ final class FlickyScreen extends FestivalScreen {
     void restore() {
         super.restore();
         offstage(false);
+        play.valley().sky = null;
     }
 
     /** Where a bird is on screen at a tick (NaN when not in the sky), as {x, y}. */
@@ -137,8 +135,9 @@ final class FlickyScreen extends FestivalScreen {
         float lead = canvas.width() + 30 - age * SPEED;
         // A V on its side: the leader in front (west), the arms trailing up and down behind.
         float x = lead + b.rank() * 22 + b.phase() % 3;
-        float y = 72 + b.wave() % 3 * 22 + b.side() * b.rank() * 9
-                + (float) Math.sin((t + b.wave() * 40) / 37.0) * 6 + (float) Math.sin((t + b.phase() * 9) / 11.0);
+        // High over the meadow (between the letterbox and the watchers' heads).
+        float y = 62 + b.wave() % 3 * 9 + b.side() * b.rank() * 6
+                + (float) Math.sin((t + b.wave() * 40) / 37.0) * 5 + (float) Math.sin((t + b.phase() * 9) / 11.0);
         if (index == visitor) {
             // Down to the farmer, round once, and back up to its place.
             int v = t - visitAt;
@@ -156,16 +155,6 @@ final class FlickyScreen extends FestivalScreen {
     void paint(SceneCanvas canvas) {
         play.draw(shell, canvas);
         int w = canvas.width();
-        // Stars twinkling over the backdrop and the moon over the lake (plain shapes).
-        for (int[] s : stars) {
-            if ((ticks + s[2]) % 90 < 70) {
-                canvas.fill(s[0], s[1], 1, 1, 0xC0FFFFFF);
-            }
-        }
-        canvas.fill(w - 70, 40, 18, 18, 0xFFFFFFB6);
-        canvas.fill(w - 72, 44, 22, 10, 0xFFFFFFB6);
-        canvas.fill(w - 66, 38, 10, 22, 0xFFFFFFB6);
-        canvas.fill(w - 66, 42, 12, 12, 0xFFFFFFDB);
         ValleyView view = play.valley();
         int cx = Math.round(view.cameraX()), cy = Math.round(view.cameraY());
         // The watchers along the meadow, looking up.
@@ -173,7 +162,8 @@ final class FlickyScreen extends FestivalScreen {
         for (int i = 0; i < watchers.size(); i++) {
             int x = ax - 150 + i * 30 + (i % 2) * 6;
             int f = sys.floor(x);
-            drawVillager(canvas, watchers.get(i), x - cx, f - cy, Bodies.LOOK_UP, i % 2 == 0, 0, SceneDraw.plain());
+            drawVillager(canvas, watchers.get(i), x - cx, f - cy, Bodies.LOOK_UP, i % 2 == 0, 0,
+                    starpost.scene.PlayScreen.lightTint(shell.game.calendar.light()));
         }
         SceneSpriteSet blue = shell.art.flicky;
         SceneSpriteSet s1 = shell.art.animal("flicky");
@@ -200,6 +190,21 @@ final class FlickyScreen extends FestivalScreen {
                 canvas.draw(heart, view.runner.x - cx - heart.width() / 2f, view.runner.y - cy - 62, SceneDraw.plain());
             }
         }
+    }
+
+    /**
+     * The moon rises over the lake: the night backdrop with the moon painted where it shows just
+     * under the letterbox, a little right of centre, from where the camera stands for the night
+     * (the backdrop's top row on screen is ValleyView's {@code 8 + camY / 10}, and its slowest
+     * rows scroll at 0.03 of the camera).
+     */
+    private void moonSky() {
+        ValleyView view = play.valley();
+        var night = shell.art.season(shell.game.calendar.season()).backdrop(2);
+        int top = Math.max(0, Math.min(32, Math.round(8 + view.cameraY() * 0.1f)));
+        int w = night.image().width();
+        int moonX = Math.floorMod((int) Math.floor(view.cameraX() * 0.03) + shell.width() / 2 + 30, w);
+        view.sky = FestivalArt.moonlit(night, moonX, top + 48);
     }
 
     @Override

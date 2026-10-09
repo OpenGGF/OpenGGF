@@ -371,11 +371,11 @@ final class RaceScreen extends FestivalScreen {
         Text.shadow(canvas, ordinal(position).substring(1), canvas.width() - 54, 10, Text.WHITE);
         if (go < 0) {
             countdown(canvas, -go, Race.COUNTDOWN);
-            Text.centred(canvas, "HOLD DOWN AND TAP JUMP TO REV A SPIN DASH", canvas.height() - 16, Text.YELLOW);
+            Text.centred(canvas, "HOLD DOWN, TAP JUMP: REV A SPIN DASH", canvas.height() - 16, Text.YELLOW);
         } else if (go < 45) {
             countdown(canvas, -go, Race.COUNTDOWN);
         }
-        if (farmer.finish >= 0 && done >= 0) {
+        if (farmer.finish >= 0 && done >= 0 && !showingResults()) {
             shell.art.cardFont.centred(canvas, placeWord(place()), 90, SceneDraw.plain());
         }
     }

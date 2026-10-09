@@ -88,13 +88,21 @@ class FestivalRulesTest {
     void theMorningCardNamesTheFestivalAndItsEve() {
         Game game = game("sonic");
         at(game, Calendar.SPRING, 13, 600);
-        assertEquals("RING HUNT TODAY: THE TOWN PLAZA, 9AM-2PM", festivals(game).morningNote(game));
+        assertEquals("RING HUNT TODAY AT 9AM", festivals(game).morningNote(game));
         at(game, Calendar.SPRING, 12, 600);
         assertEquals("TOMORROW: THE RING HUNT", festivals(game).morningNote(game));
         at(game, Calendar.SPRING, 2, 600);
         assertNull(festivals(game).morningNote(game));
         at(game, Calendar.WINTER, 28, 600);
         assertNull(festivals(game).morningNote(game), "spring's first day has no festival");
+        // The card centres one line in the menu font (10 pixels a letter) on a 400-pixel screen.
+        for (Festival f : festivals(game).book.all()) {
+            for (int day : new int[] {f.day, f.day - 1}) {
+                at(game, f.season, day, 600);
+                String note = festivals(game).morningNote(game);
+                assertTrue(note.length() <= 36, "the card's line fits the screen: " + note);
+            }
+        }
     }
 
     @Test
@@ -187,7 +195,21 @@ class FestivalRulesTest {
         }
         assertTrue(champion.score >= 20, "the champion is a real rival: " + champion.score);
         assertTrue(champion.score <= year1.size() / 2,
-                "but leaves more than half the rings to a farmer who keeps moving: " + champion.score);
+                "but leaves more than half the rings to a farmer who keeps moving: " + champion.score + " of " + year1.size());
+    }
+
+    @Test
+    void theRingHuntsTownRingsHangUnderTheShopSigns() {
+        int floor = 192, spring = 1812, ledgeTop = 96;
+        for (int year = 1; year <= 5; year++) {
+            for (RingHunt.Spot s : RingHunt.layout(year, x -> floor, spring, 1824, 2016, ledgeTop)) {
+                boolean special = s.y() == ledgeTop - 16 || Math.abs(s.x() - (spring + 6)) < 1;
+                if (!special) {
+                    assertTrue(floor - s.y() <= 52, "a ring in the street hangs under the name boards: " + s);
+                    assertTrue(floor - s.y() >= 16, "and above the grass: " + s);
+                }
+            }
+        }
     }
 
     @Test
@@ -462,6 +484,19 @@ class FestivalRulesTest {
     }
 
     @Test
+    void anEmptyGrangeTableEndsTheFairWithNoPlace() {
+        Game game = game("sonic");
+        Festivals festivals = festivals(game);
+        int rings = game.rings;
+        Fair.reward(game, festivals, Fair.score(game, java.util.Arrays.asList(null, null, null)));
+        assertEquals(rings, game.rings, "nothing judged, nothing paid");
+        assertTrue(festivals.joined(FestivalBook.FAIR, 1), "but the fair was joined: it is over for the year");
+        assertEquals(0, festivals.place(FestivalBook.FAIR, 1));
+        assertEquals("JOINED", festivals.resultLine(FestivalBook.FAIR, 1));
+        assertFalse(festivals.trophies().contains(FestivalBook.FAIR));
+    }
+
+    @Test
     void theFairsBlueRibbonPaysOnceInFull() {
         Game game = game("sonic");
         int rings = game.rings;
@@ -517,6 +552,16 @@ class FestivalRulesTest {
     }
 
     @Test
+    void theSnowboardCourseRunsOnlyOverOpenAirBlocks() {
+        Set<Integer> open = Set.of(60, 2, 37, 40, 41, 45, 42, 46, 1, 7);
+        for (int year = 1; year <= 30; year++) {
+            for (int block : Snowboard.course(year)) {
+                assertTrue(open.contains(block), "year " + year + " lays block " + block + ", which has cave walls");
+            }
+        }
+    }
+
+    @Test
     void theIceCapContestFallsBackToTheSnowboardWithoutFishing() {
         Festivals festivals = new Festivals();
         assertNull(festivals.fishingContest, "fishing is not installed by the festivals themselves");
@@ -526,7 +571,74 @@ class FestivalRulesTest {
         assertTrue(game.flags.contains("record.s3k.10b"));
     }
 
+    @Test
+    void theIceCapFishingContestScoresAgainstFrostsCatchAndKeepsItsOwnBest() {
+        Game game = game("sonic");
+        Festivals festivals = festivals(game);
+        int record = FishingContest.FROST_CATCH;
+        int rings = game.rings;
+        Snowboard.fishingReward(game, festivals, record + 1, record);
+        assertEquals(rings + (record + 1) * Snowboard.RINGS_EACH, game.rings, "each point pays like a ring on the run");
+        assertEquals(1, festivals.place(FestivalBook.ICE_CAP, 1), "out-fishing Frost wins the festival");
+        assertEquals(1, game.inventory.total("record_icecap_s3"));
+        assertTrue(festivals.trophies().contains(FestivalBook.ICE_CAP));
+        assertEquals(0, festivals.best(FestivalBook.ICE_CAP), "the run's best is not a catch");
+        assertEquals(record + 1, festivals.best(Snowboard.FISHING_BEST));
+        game.calendar.set(2, Calendar.WINTER, 8, 900);
+        rings = game.rings;
+        Snowboard.fishingReward(game, festivals, record, record);
+        assertEquals(2, festivals.place(FestivalBook.ICE_CAP, 2), "a tie leaves the record with Frost");
+        assertEquals(rings + record * Snowboard.RINGS_EACH, game.rings);
+        Snowboard.reward(game, festivals, 900, 0, false);
+        assertEquals("RUN 900, CATCH " + (record + 1), festivals.bestLine(FestivalBook.ICE_CAP));
+        assertEquals(record + 1, festivals.best(Snowboard.FISHING_BEST), "a lower catch keeps the best");
+    }
+
+    // ------------------------------------------------------------------ trophies and records
+
+    @Test
+    void onlyTheSixContestsPutATrophyOnTheShelf() {
+        Game game = game("sonic");
+        Festivals festivals = festivals(game);
+        for (Festival f : festivals.book.all()) {
+            festivals.takePrize("trophy." + f.id);
+        }
+        assertEquals(6, festivals.trophies().size(), "two tiers of three");
+        assertFalse(festivals.trophies().contains(FestivalBook.FLICKIES), "the migration has no winner");
+        assertFalse(festivals.trophies().contains(FestivalBook.FEAST), "nor the gifts");
+        assertFalse(Festivals.hasTrophy(FestivalBook.FLICKIES));
+        assertTrue(Festivals.hasTrophy(FestivalBook.RACE));
+    }
+
+    @Test
+    void theRecordsPageSaysEachYearsResultAndBest() {
+        Game game = game("sonic");
+        Festivals festivals = festivals(game);
+        assertEquals("-", festivals.resultLine(FestivalBook.RING_HUNT, 1), "not joined yet");
+        assertEquals("", festivals.bestLine(FestivalBook.RING_HUNT), "no best before the first hunt");
+        RingHunt.reward(game, festivals, 20, 25);
+        assertEquals("2ND", festivals.resultLine(FestivalBook.RING_HUNT, 1));
+        assertEquals("20 RINGS", festivals.bestLine(FestivalBook.RING_HUNT));
+        Race.reward(game, festivals, 1, 1830);
+        assertEquals("WON", festivals.resultLine(FestivalBook.RACE, 1));
+        assertEquals("30.5 SECONDS", festivals.bestLine(FestivalBook.RACE));
+        FlickyNight.reward(game, festivals, 3);
+        assertEquals("JOINED", festivals.resultLine(FestivalBook.FLICKIES, 1), "a night without winners");
+        assertEquals("3 FLOCKS WAVED BACK", festivals.bestLine(FestivalBook.FLICKIES));
+        Maze.reward(game, festivals, 4, 0, true, 3720);
+        assertEquals("OUT IN 1:02", festivals.bestLine(FestivalBook.SCRAP_BRAIN));
+        assertEquals("-", festivals.resultLine(FestivalBook.RING_HUNT, 2), "each year starts afresh");
+    }
+
     // ------------------------------------------------------------------ the Star Light Feast
+
+    @Test
+    void aSecretGiftIsNamedAsAFriendWouldSayIt() {
+        assertEquals("A CHILI DOG", Feast.some("CHILI DOG"));
+        assertEquals("AN EMERALD MELON", Feast.some("EMERALD MELON"));
+        assertEquals("RING RADISH SEEDS", Feast.some("RING RADISH SEEDS"), "a packet of seeds takes no article");
+        assertEquals("A BUBBLE BASS", Feast.some("BUBBLE BASS"), "a single fish ending in SS keeps its article");
+    }
 
     @Test
     void theSecretFriendIsDrawnOnWinter18AndTheLetterArrives() {
@@ -697,6 +809,7 @@ class FestivalRulesTest {
         RingHunt.reward(game, festivals, 25, 20);
         Race.reward(game, festivals, 2, 2000);
         festivals.recordTime(FestivalBook.SCRAP_BRAIN, 3333);
+        festivals.recordBest(Snowboard.FISHING_BEST, 47);
         festivals.debugSecret("hazel", 1);
         festivals.owe("chili_dog", 2);
         festivals.morning(game);
@@ -721,6 +834,7 @@ class FestivalRulesTest {
         assertEquals(1, f.place(FestivalBook.RING_HUNT, 1));
         assertEquals(25, f.best(FestivalBook.RING_HUNT));
         assertEquals(3333, f.bestTime(FestivalBook.SCRAP_BRAIN));
+        assertEquals(47, f.best(Snowboard.FISHING_BEST), "the Ice Cap catch keeps its own best");
         assertTrue(f.prizeTaken("trophy." + FestivalBook.RING_HUNT));
         assertEquals("hazel", f.secretFriend(loaded));
         assertEquals(2, f.owed().get("chili_dog"));
@@ -740,13 +854,16 @@ class FestivalRulesTest {
                 sections()), "a malformed number is refused");
         // Unknown festivals and items are dropped, numbers clamped.
         String odd = text + "s.festivals.place.martian_ball@1=1\ns.festivals.owed.moon_rock=3\n"
-                + "s.festivals.place.ring_hunt@2=99\n";
+                + "s.festivals.place.ring_hunt@2=99\ns.festivals.best.martian_ball:fishing=5\n"
+                + "s.festivals.best.ice_cap:=5\n";
         Game loaded = SaveCodec.decode(catalog, odd, sections());
         assertNotNull(loaded);
         Festivals f = festivals(loaded);
         assertEquals(-1, f.place("martian_ball", 1));
         assertFalse(f.owed().containsKey("moon_rock"));
         assertEquals(8, f.place(FestivalBook.RING_HUNT, 2), "places are clamped");
+        assertEquals(0, f.best("martian_ball:fishing"), "a contest at an unknown festival is dropped");
+        assertEquals(0, f.best("ice_cap:"), "and a contest without a name");
         assertEquals(0, SaveCodec.decode(catalog, SaveCodec.encode(game("sonic")), sections())
                 .section(Festivals.class).board.completed(), "a fresh game loads empty");
     }

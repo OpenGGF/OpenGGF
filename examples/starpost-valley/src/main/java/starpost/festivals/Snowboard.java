@@ -33,8 +33,12 @@ public final class Snowboard {
      * and bumps, ending on the flat where the signpost stands. Slopes up are rare (a kicker).
      */
     public static int[] course(int year) {
-        int[] downs = {2, 37, 35, 46, 47, 40, 41};
-        int[] flats = {45, 12, 21, 26, 60};
+        // Open-air blocks only: 2 the long slope down, 37 the dip, 40 and 41 a ledge to fly off,
+        // then flats with palms (45, 42), a bump (46), the short flat (60) and the plain (1).
+        // Blocks with cave walls or cliffs above their path (12, 21, 26, 35, 47) drew them across
+        // the sky, with the rider passing in front.
+        int[] downs = {2, 37, 2, 40, 41, 37};
+        int[] flats = {45, 42, 46, 60, 1};
         int length = 34;
         int[] out = new int[length];
         out[0] = 60;
@@ -60,14 +64,37 @@ public final class Snowboard {
     }
 
     public static boolean beatsFrost(int score) {
-        return score > FROST_RECORD;
+        return beats(score, FROST_RECORD);
     }
 
-    /** The run's prizes (or the fishing contest's, with its own record). Returns notices. */
+    /** Whether a score takes Frost's record (a tie leaves it with Frost). */
+    public static boolean beats(int score, int record) {
+        return score > record;
+    }
+
+    /** The run's prizes. Returns notices. */
     public static List<String> reward(Game game, Festivals festivals, int score, int rings, boolean won) {
-        List<String> notices = new ArrayList<>();
         festivals.record(FestivalBook.ICE_CAP, game.calendar.year(), won ? 1 : 2, score);
-        int pay = rings * RINGS_EACH;
+        return prizes(game, festivals, rings * RINGS_EACH, won);
+    }
+
+    /**
+     * The fishing contest's prizes: each point pays like a ring on the run, beating Frost's catch
+     * record wins as beating the run's does. Its best is kept apart from the run's
+     * ({@link #FISHING_BEST}): the two count different things. Returns notices.
+     */
+    public static List<String> fishingReward(Game game, Festivals festivals, int points, int record) {
+        boolean won = beats(points, record);
+        festivals.record(FestivalBook.ICE_CAP, game.calendar.year(), won ? 1 : 2, 0);
+        festivals.recordBest(FISHING_BEST, points);
+        return prizes(game, festivals, Math.max(0, points) * RINGS_EACH, won);
+    }
+
+    /** The best-score key of the fishing contest (the run's is the festival's own). */
+    public static final String FISHING_BEST = FestivalBook.ICE_CAP + ":fishing";
+
+    private static List<String> prizes(Game game, Festivals festivals, int pay, boolean won) {
+        List<String> notices = new ArrayList<>();
         if (won) {
             if (festivals.takePrize("trophy." + FestivalBook.ICE_CAP)) {
                 Prizes.give(game, festivals, "record_icecap_s3", 1, notices);

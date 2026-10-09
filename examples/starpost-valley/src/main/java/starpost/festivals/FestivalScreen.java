@@ -60,12 +60,24 @@ abstract class FestivalScreen implements Screen {
     public void enter(Shell shell) {
         play.clockStopped = true;
         play.hudHidden = true;
+        if (entered) {
+            resume();
+            return;
+        }
+        entered = true;
         cardUntil = ticks + CARD_TICKS;
         begin();
     }
 
+    /** Whether the screen has been entered once (later entries come back from a handed-over contest). */
+    private boolean entered;
+
     /** Set up the event (called on entering). */
     abstract void begin();
+
+    /** Back from another screen the festival handed the day to (the Ice Cap Festival's lake); nothing by default. */
+    void resume() {
+    }
 
     /** One tick of the event itself (after the title card, before results). */
     abstract void step();
@@ -189,6 +201,33 @@ abstract class FestivalScreen implements Screen {
                 facingLeft, hop, tint);
     }
 
+    /**
+     * The crowd where {@link Festivals#spot} gathers it by the festival's sign, drawn by the
+     * festival itself (the neighbours are {@link #offstage}) so that one of them, {@code except},
+     * can play a part elsewhere. They face the farmer; {@code cheering} has them celebrate.
+     */
+    void drawCrowd(SceneCanvas canvas, int cx, int cy, String except, boolean cheering) {
+        People people = people();
+        if (people == null) {
+            return;
+        }
+        int ax = sys.anchorX(festival);
+        float farmerX = play.valley().runner.x;
+        int i = 0;
+        for (VillagerDef v : people.cast.all()) {
+            starpost.people.Spot spot = v.id.equals(except) ? null : festivals.spot(v, shell.game);
+            if (spot == null || spot.inside() || spot.farm()) {
+                continue;
+            }
+            int x = ax + spot.dx();
+            boolean hopper = v.body().startsWith("animal:");
+            float hop = cheering && hopper ? Math.abs((float) Math.sin((shell.ticks + i * 7) * 0.2)) * 4 : 0;
+            drawVillager(canvas, v.id, x - cx, sys.floor(x) - cy, cheering ? Bodies.HAPPY : Bodies.IDLE, farmerX < x,
+                    hop, SceneDraw.plain());
+            i++;
+        }
+    }
+
     /** Takes the neighbours off the valley's stage (this festival draws them itself), or puts them back. */
     void offstage(boolean value) {
         PeopleSystem people = PeopleSystem.of(play);
@@ -200,7 +239,8 @@ abstract class FestivalScreen implements Screen {
     /** Ends the event: the results panel, then back to the day. */
     void finish(String headline, List<String> lines) {
         this.headline = headline;
-        this.lines = lines;
+        this.lines = new ArrayList<>(lines);
+        this.lines.removeIf("+0 RINGS"::equals);          // nothing paid: nothing to say
         results = true;
         resultsAt = ticks;
         shell.sfx(Sfx.PERFECT);
@@ -284,7 +324,7 @@ abstract class FestivalScreen implements Screen {
         if (!carding()) {
             paintOver(canvas);
         }
-        if (caption != null && ticks - captionAt < captionTicks) {
+        if (caption != null && !captionHidden()) {
             drawCaption(canvas);
         }
         if (carding()) {
@@ -325,22 +365,42 @@ abstract class FestivalScreen implements Screen {
         }
     }
 
+    /** Whether the caption is kept out of sight now (a booth's own screen is open over the fair); no by default. */
+    boolean captionHidden() {
+        return false;
+    }
+
+    /** Takes the caption down (the fair's welcome, once the farmer is at a booth). */
+    void clearCaption() {
+        caption = null;
+    }
+
+    /**
+     * The speaker's line at the foot of the screen, three lines at a time: a longer line turns
+     * its pages every {@value #CAPTION_PAGE} ticks rather than losing its end. Picture speech
+     * shows its pictures one by one.
+     */
     private void drawCaption(SceneCanvas canvas) {
         int w = canvas.width(), h = canvas.height();
         int boxH = 40, y = h - BAR_BOTTOM - boxH - 4, x = 8, bw = w - 16;
-        Text.panel(canvas, x, y, bw, boxH);
-        int textX = x + 8;
-        if (captionWho != null) {
-            SceneSprite face = sys.peopleArt().portrait(bodyOf(captionWho), ticks);
-            if (face != null) {
-                boolean flip = PeopleArt.facesLeft(bodyOf(captionWho));
-                canvas.draw(face, x + 20, y + boxH - 4 - (face.height() - face.originY()), SceneDraw.plain().withFlipX(flip));
-                textX = x + 40;
-            }
+        long age = ticks - captionAt;
+        SceneSprite face = captionWho == null ? null : sys.peopleArt().portrait(bodyOf(captionWho), ticks);
+        int textX = face != null ? x + 40 : x + 8;
+        List<String> wrapped = captionPics != null ? List.of() : Text.wrap(canvas, caption, bw - (textX - x) - 8);
+        int pages = Math.max(1, (wrapped.size() + 2) / 3);
+        int shownFor = captionPics != null ? Math.max(captionTicks, captionPics.length * 16 + 120)
+                : Math.max(captionTicks, pages * CAPTION_PAGE);
+        if (age >= shownFor) {
+            return;
+        }
+        solidPanel(canvas, x, y, bw, boxH);
+        if (face != null) {
+            boolean flip = PeopleArt.facesLeft(bodyOf(captionWho));
+            canvas.draw(face, x + 20, y + boxH - 4 - (face.height() - face.originY()), SceneDraw.plain().withFlipX(flip));
         }
         if (captionPics != null) {
             People people = people();
-            int shown = (int) Math.min(captionPics.length, (ticks - captionAt) / 16 + 1);
+            int shown = (int) Math.min(captionPics.length, age / 16 + 1);
             float px = textX;
             for (int i = 0; i < shown; i++) {
                 int tw = sys.peopleArt().drawToken(canvas, captionPics[i], px, y + 4, boxH - 8, shell.catalog,
@@ -349,24 +409,58 @@ abstract class FestivalScreen implements Screen {
             }
             return;
         }
-        List<String> wrapped = Text.wrap(canvas, caption, bw - (textX - x) - 8);
-        for (int i = 0; i < Math.min(3, wrapped.size()); i++) {
-            Text.shadow(canvas, wrapped.get(i), textX, y + 6 + i * 11, Text.WHITE);
+        int page = (int) Math.min(pages - 1, age / CAPTION_PAGE);
+        for (int i = page * 3; i < Math.min(page * 3 + 3, wrapped.size()); i++) {
+            Text.shadow(canvas, wrapped.get(i), textX, y + 6 + (i - page * 3) * 11, Text.WHITE);
+        }
+        if (page < pages - 1 && ticks / 12 % 2 == 0) {
+            canvas.fill(x + bw - 14, y + boxH - 9, 6, 2, Text.YELLOW);       // more to come
+            canvas.fill(x + bw - 13, y + boxH - 7, 4, 1, Text.YELLOW);
+            canvas.fill(x + bw - 12, y + boxH - 6, 2, 1, Text.YELLOW);
         }
     }
 
+    /** Ticks each page of three caption lines stays up. */
+    private static final int CAPTION_PAGE = 170;
+
+    /**
+     * The results: the headline in the title-card lettering, then each line wrapped to the panel
+     * (the first in yellow), over everything the event drew.
+     */
     private void drawResults(SceneCanvas canvas) {
         int w = canvas.width();
-        int pw = 376, ph = 46 + lines.size() * 12 + 18, px = (w - pw) / 2, py = 40;
-        Text.panel(canvas, px, py, pw, ph);
-        shell.art.cardFont.centred(canvas, headline, py + 8, SceneDraw.plain());
+        int pw = 376, px = (w - pw) / 2, py = 36;
+        List<String> rows = new ArrayList<>();
+        List<Integer> colours = new ArrayList<>();
         for (int i = 0; i < lines.size(); i++) {
-            Text.centred(canvas, Text.fit(canvas, lines.get(i), pw - 16), py + 40 + i * 12,
-                    i == 0 ? Text.YELLOW : Text.WHITE);
+            for (String row : Text.wrap(canvas, lines.get(i), pw - 20)) {
+                rows.add(row);
+                colours.add(i == 0 ? Text.YELLOW : Text.WHITE);
+            }
+        }
+        int ph = 44 + rows.size() * 12 + 16;
+        solidPanel(canvas, px, py, pw, ph);
+        shell.art.cardFont.centred(canvas, headline, py + 8, SceneDraw.plain());
+        for (int i = 0; i < rows.size(); i++) {
+            Text.centred(canvas, rows.get(i), py + 40 + i * 12, colours.get(i));
         }
         if (ticks - resultsAt > 40 && ticks / 20 % 2 == 0) {
             Text.centred(canvas, "PRESS JUMP", py + ph - 14, Text.GREY);
         }
+    }
+
+    /**
+     * A panel that hides what lies under it. {@code Text.panel} lets the world show through, which
+     * ghosts signs and labels behind a festival's text; its own colour, made solid, does not.
+     */
+    static void solidPanel(SceneCanvas canvas, int x, int y, int w, int h) {
+        canvas.fill(x, y, w, h, 0xFF000000 | Text.PANEL);
+        Text.panel(canvas, x, y, w, h);
+    }
+
+    /** The festival's name in the top bar, for events without a HUD of their own. */
+    void title(SceneCanvas canvas) {
+        Text.shadow(canvas, festival.name, 16, 10, Text.YELLOW);
     }
 
     /** The People lane's body key for a villager id (the hero bodies are "hero:" + id). */
@@ -397,25 +491,15 @@ abstract class FestivalScreen implements Screen {
         };
     }
 
-    /** "0:42" in Sonic 1's HUD digits' terms (minutes and seconds). */
     static String clock(int ticks) {
-        int s = Math.max(0, ticks / 60);
-        return s / 60 + ":" + (s % 60 < 10 ? "0" : "") + s % 60;
+        return Festivals.watch(ticks);
     }
 
-    /** "1ST", "2ND"... */
     static String ordinal(int place) {
-        return place + switch (place) {
-            case 1 -> "ST";
-            case 2 -> "ND";
-            case 3 -> "RD";
-            default -> "TH";
-        };
+        return Festivals.ordinal(place);
     }
 
-    /** A seconds clock from ticks: "42.5". */
     static String seconds(int ticks) {
-        int tenths = ticks / 6;
-        return tenths / 10 + "." + tenths % 10;
+        return Festivals.seconds(ticks);
     }
 }

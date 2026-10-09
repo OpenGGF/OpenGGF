@@ -55,6 +55,8 @@ public final class Festivals implements SaveSection, People.Gathering, People.Er
      * saved). Without it the festival's contest is the snowboard run.
      */
     public FishingContest fishingContest;
+    /** While the Ice Cap Festival's contest is out on the lake, where its points go (not saved; debug captures end it early). */
+    java.util.function.IntConsumer contestAway;
 
     @Override
     public String prefix() {
@@ -89,11 +91,25 @@ public final class Festivals implements SaveSection, People.Gathering, People.Er
     /** Records a festival's result; returns true when the score is a new best. */
     public boolean record(String festival, int year, int place, int score) {
         places.put(festival + "@" + year, Math.max(0, place));
-        if (score > best.getOrDefault(festival, 0)) {
-            best.put(festival, score);
+        return recordBest(festival, score);
+    }
+
+    /**
+     * Keeps a best score under a festival's id, or under {@code "id:event"} for a second contest
+     * at the same festival (the Ice Cap Festival's fishing); returns true when it is a new best.
+     */
+    public boolean recordBest(String key, int score) {
+        if (score > best.getOrDefault(key, 0)) {
+            best.put(key, score);
             return true;
         }
         return false;
+    }
+
+    /** Whether a best-score key names a festival in the book (its id, or "id:event"). */
+    private boolean knownBest(String key) {
+        int colon = key.indexOf(':');
+        return book.get(colon < 0 ? key : key.substring(0, colon)) != null && (colon < 0 || colon < key.length() - 1);
     }
 
     /** The best time in ticks, or 0 when there is none. */
@@ -151,15 +167,88 @@ public final class Festivals implements SaveSection, People.Gathering, People.Er
         return out;
     }
 
+    /**
+     * A festival's result in a year for the board's records page: "WON", "2ND"..., "JOINED" (no
+     * place given, or a festival without winners), or "-" when not joined.
+     */
+    public String resultLine(String festival, int year) {
+        int place = place(festival, year);
+        if (place < 0) {
+            return "-";
+        }
+        if (place == 0 || !hasTrophy(festival)) {
+            return "JOINED";
+        }
+        return place == 1 ? "WON" : ordinal(place);
+    }
+
+    /**
+     * A festival's best ever in its own terms, for the records page, or "" before it has one:
+     * rings found, the judge's points, a time (the race's and the maze's way out), flocks waved
+     * to, and the Ice Cap Festival's run and catch apart.
+     */
+    public String bestLine(String festival) {
+        int score = best(festival), time = bestTime(festival);
+        return switch (festival) {
+            case FestivalBook.RING_HUNT -> score > 0 ? score + " RINGS" : "";
+            case FestivalBook.PARADE, FestivalBook.FAIR -> score > 0 ? score + " POINTS" : "";
+            case FestivalBook.RACE -> time > 0 ? seconds(time) + " SECONDS" : "";
+            case FestivalBook.FLICKIES -> score > 0 ? score + (score == 1 ? " FLOCK WAVED BACK" : " FLOCKS WAVED BACK")
+                    : "";
+            case FestivalBook.SCRAP_BRAIN -> time > 0 ? "OUT IN " + watch(time)
+                    : score > 0 ? score + " RINGS" : "";
+            case FestivalBook.ICE_CAP -> {
+                int fishing = best(Snowboard.FISHING_BEST);
+                String run = score > 0 ? "RUN " + score : "";
+                String fish = fishing > 0 ? "CATCH " + fishing : "";
+                yield run.isEmpty() || fish.isEmpty() ? run + fish : run + ", " + fish;
+            }
+            default -> "";
+        };
+    }
+
+    /** A stopwatch from ticks: "0:42" (minutes and seconds). */
+    static String watch(int ticks) {
+        int s = Math.max(0, ticks / 60);
+        return s / 60 + ":" + (s % 60 < 10 ? "0" : "") + s % 60;
+    }
+
+    /** "1ST", "2ND"... */
+    static String ordinal(int place) {
+        return place + switch (place) {
+            case 1 -> "ST";
+            case 2 -> "ND";
+            case 3 -> "RD";
+            default -> "TH";
+        };
+    }
+
+    /** Seconds and tenths from ticks: "42.5". */
+    static String seconds(int ticks) {
+        int tenths = ticks / 6;
+        return tenths / 10 + "." + tenths % 10;
+    }
+
     /** Trophies won, in the book's order (the shelf beside the board shows them). */
     public List<String> trophies() {
         List<String> out = new ArrayList<>();
         for (Festival f : book.all()) {
-            if (prizes.contains("trophy." + f.id)) {
+            if (hasTrophy(f.id) && prizes.contains("trophy." + f.id)) {
                 out.add(f.id);
             }
         }
         return out;
+    }
+
+    /**
+     * Whether a festival is won for a trophy: the six contests. The Night of the Flickies and the
+     * Star Light Feast have no winner (the migration and the gifts are their rewards).
+     */
+    public static boolean hasTrophy(String festival) {
+        return switch (festival) {
+            case FestivalBook.FLICKIES, FestivalBook.FEAST -> false;
+            default -> true;
+        };
     }
 
     // ------------------------------------------------------------------ the day
@@ -224,11 +313,14 @@ public final class Festivals implements SaveSection, People.Gathering, People.Er
         return host.equals(game.farmer) ? "sonic" : host;
     }
 
-    /** The morning card's line on a festival day (and its eve), or null. */
+    /**
+     * The morning card's line on a festival day (and its eve), or null. One short line (the card
+     * centres it on a 400-pixel screen): where it is held is on the board and at the door.
+     */
     public String morningNote(Game game) {
         Festival f = today(game);
         if (f != null) {
-            return f.name + " TODAY: " + f.where + ", " + f.hours();
+            return f.name + " TODAY AT " + Festival.clock(f.open);
         }
         Festival eve = book.tomorrow(game.calendar);
         return eve == null ? null : "TOMORROW: THE " + eve.name;
@@ -379,7 +471,7 @@ public final class Festivals implements SaveSection, People.Gathering, People.Er
                 }
             } else if (key.startsWith("best.")) {
                 int score = Integer.parseInt(value.trim());
-                if (book.get(key.substring(5)) != null) {
+                if (knownBest(key.substring(5))) {
                     best.put(key.substring(5), Math.max(0, score));
                 }
             } else if (key.equals("prizes")) {

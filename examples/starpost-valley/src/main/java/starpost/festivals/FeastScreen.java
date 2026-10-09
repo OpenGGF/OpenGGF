@@ -106,7 +106,7 @@ final class FeastScreen extends FestivalScreen {
             }
             case 4 -> {
                 if (since % 14 == 0) {
-                    sparks.add(new float[] {40 + Board.mix(t, 1) % 320, 40 + Board.mix(t, 2) % 50, t});
+                    sparks.add(burst());
                     shell.sfx(starpost.scene.Sfx.RING);
                 }
                 if (since > 260) {
@@ -118,6 +118,14 @@ final class FeastScreen extends FestivalScreen {
             }
         }
         sparks.removeIf(s -> t - s[2] > 40);
+    }
+
+    /**
+     * A firework in the night above the letterbox's edge: the plaza's sky is only a strip under the
+     * bunting, full of signs, so the bursts open in the dark band at the top of the screen.
+     */
+    private float[] burst() {
+        return new float[] {24 + Board.mix(t, 1) % 352, 12 + Board.mix(t, 2) % 5, t};
     }
 
     private void next(int p) {
@@ -159,11 +167,12 @@ final class FeastScreen extends FestivalScreen {
             return;
         }
         var taste = people.cast.get(friend).taste(gift);
+        String what = Feast.some(gift.name());
         String line = switch (taste) {
-            case LOVE -> "A " + gift.name() + "! HOW DID YOU KNOW? IT'S PERFECT!";
-            case LIKE -> "A " + gift.name() + ". THAT'S REALLY KIND OF YOU.";
-            case NEUTRAL -> "OH, A " + gift.name() + ". THANK YOU!";
-            default -> "A... " + gift.name() + ". IT'S THE THOUGHT THAT COUNTS. IT IS.";
+            case LOVE -> what + "! HOW DID YOU KNOW? IT'S PERFECT!";
+            case LIKE -> what + ". THAT'S REALLY KIND OF YOU.";
+            case NEUTRAL -> "OH, " + what + ". THANK YOU!";
+            default -> "UM... " + what + ". IT'S THE THOUGHT THAT COUNTS. IT IS.";
         };
         caption(friend, line, "gift", "item:" + gift.id(), taste == starpost.people.Taste.LOVE ? "heart"
                 : taste == starpost.people.Taste.HATE || taste == starpost.people.Taste.DISLIKE ? "sad" : "sparkle");
@@ -207,17 +216,6 @@ final class FeastScreen extends FestivalScreen {
             drawVillager(canvas, id, gx - cx, sys.floor(Math.round(gx)) - cy, pose, gx > farmerX, 0, SceneDraw.plain());
         }
         drawTable(canvas, ax, cx, cy);
-        // The fireworks: ring sparkles bursting in a circle.
-        for (float[] s : sparks) {
-            float age = t - s[2];
-            for (int k = 0; k < 8; k++) {
-                double a = Math.PI * 2 * k / 8;
-                float r = age * 1.4f;
-                int frame = 4 + (int) Math.min(3, age / 10);
-                canvas.draw(shell.art.ring.frame(frame), s[0] + (float) Math.cos(a) * r, s[1] + (float) Math.sin(a) * r,
-                        SceneDraw.plain());
-            }
-        }
     }
 
     /** A guest's place: either side of the farmer, the far ones behind the table. */
@@ -243,6 +241,20 @@ final class FeastScreen extends FestivalScreen {
 
     @Override
     void paintOver(SceneCanvas canvas) {
+        if (phase >= 4) {
+            // The fireworks: ring sparkles bursting in a circle, in the dark over the plaza.
+            for (float[] s : sparks) {
+                float age = t - s[2];
+                float r = Math.min(12, age * 0.5f);
+                int frame = 4 + (int) Math.min(3, age / 10);
+                for (int k = 0; k < 8; k++) {
+                    double a = Math.PI * 2 * k / 8;
+                    canvas.draw(shell.art.ring.frame(frame), s[0] + (float) Math.cos(a) * r,
+                            s[1] + (float) Math.sin(a) * r * 0.8f, SceneDraw.plain());
+                }
+            }
+            return;
+        }
         Text.shadow(canvas, "STAR LIGHT FEAST", 16, 10, Text.YELLOW);
         if (friend != null) {
             Text.right(canvas, "SECRET FRIEND: " + BoardScreen.name(friend, shell.game), canvas.width() - 10, 10,

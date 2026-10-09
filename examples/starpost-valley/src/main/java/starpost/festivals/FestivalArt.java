@@ -7,7 +7,9 @@ import com.openggf.mods.scene.SceneImage;
 import com.openggf.mods.scene.SceneLevelKit;
 import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneSpriteSet;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import starpost.art.Art;
 import starpost.art.Tone;
@@ -146,6 +148,48 @@ public final class FestivalArt {
         return new SceneImage(w, h, px);
     }
 
+    /**
+     * The trophy stand in a season's colours: two tiers of Green Hill's bridge log (its pixels laid
+     * along each tier) on two log posts stood on end, {@link #SHELF_W} by {@link #SHELF_H}, the
+     * upper tier's top at row {@link #SHELF_UPPER} and the lower's at {@link #SHELF_LOWER}.
+     */
+    public SceneImage shelf(int season) {
+        return shelves.computeIfAbsent(season, k -> new Tone(k).apply(buildShelf()));
+    }
+
+    static final int SHELF_W = 112;
+    static final int SHELF_H = 76;
+    static final int SHELF_UPPER = 4;
+    static final int SHELF_LOWER = 62;
+    private final Map<Integer, SceneImage> shelves = new HashMap<>();
+
+    private SceneImage buildShelf() {
+        int w = SHELF_W, h = SHELF_H;
+        int[] px = new int[w * h];
+        SceneImage log = art.kit.blockImage(51).crop(0, 129, 256, 12);
+        for (int post : new int[] {3, w - 9}) {
+            for (int y = SHELF_UPPER; y < h; y++) {
+                for (int x = 0; x < 6; x++) {
+                    int c = log.pixel(Math.floorMod(y * 3 + post, 256), 3 + x);
+                    if (c >>> 24 != 0) {
+                        px[y * w + post + x] = c;
+                    }
+                }
+            }
+        }
+        for (int tier : new int[] {SHELF_UPPER, SHELF_LOWER}) {
+            for (int y = 0; y < 7; y++) {
+                for (int x = 0; x < w; x++) {
+                    int c = log.pixel(x + tier, 2 + y);
+                    if (c >>> 24 != 0) {
+                        px[(tier + y) * w + x] = c;
+                    }
+                }
+            }
+        }
+        return new SceneImage(w, h, px);
+    }
+
     // ------------------------------------------------------------------ Sonic 1 pieces
 
     /**
@@ -262,6 +306,94 @@ public final class FestivalArt {
     }
 
     private SceneImage[] steel;
+
+    /**
+     * The Night of the Flickies' sky: the valley's own night backdrop with a full moon and stars
+     * painted into its open sky, only over the sky's own colour, so clouds and the hills stay in
+     * front of them. The drifting cloud rows are held still (with the distant hills, at their
+     * slowest parallax) so the moon stays put over the lake. {@code moonX}/{@code moonY} are image
+     * coordinates. Original art (simple shapes); built once by the screen's {@code begin}.
+     */
+    public static SceneBackdrop moonlit(SceneBackdrop night, int moonX, int moonY) {
+        SceneImage image = night.image();
+        int w = image.width(), h = image.height();
+        int[] px = image.pixels();
+        int still = 0;
+        for (SceneBackdrop.Band band : night.bands()) {
+            if (band.speed() > 0.06) {
+                break;
+            }
+            still = band.top() + band.height();
+        }
+        // The sky's colour: the commonest in the still rows.
+        Map<Integer, Integer> counts = new HashMap<>();
+        for (int i = 0; i < Math.min(px.length, still * w); i++) {
+            counts.merge(px[i], 1, Integer::sum);
+        }
+        int sky = 0, most = -1;
+        for (Map.Entry<Integer, Integer> e : counts.entrySet()) {
+            if (e.getValue() > most) {
+                most = e.getValue();
+                sky = e.getKey();
+            }
+        }
+        for (int i = 0; i < 70; i++) {
+            int sx = Board.mix(i, 3) % w, sy = Board.mix(i, 4) % Math.max(1, still);
+            paint(px, w, h, sx, sy, sky, i % 5 == 0 ? 0xFFFFFFDB : 0xFF9292B6);
+        }
+        // One pass over the sky round the moon: the disc, then a glow fading out to the sky.
+        for (int dy = -16; dy <= 16; dy++) {
+            for (int dx = -16; dx <= 16; dx++) {
+                double d = Math.sqrt(dx * dx + dy * dy);
+                if (d <= 9.5) {
+                    paint(px, w, h, moonX + dx, moonY + dy, sky, 0xFFFFFFDB);
+                } else if (d <= 16) {
+                    paint(px, w, h, moonX + dx, moonY + dy, sky, blend(sky, 0xFFB6B692, (int) ((16 - d) * 14)));
+                }
+            }
+        }
+        disc(px, w, h, moonX - 3, moonY - 2, 3, 0xFFFFFFDB, 0xFFDBDBB6);
+        disc(px, w, h, moonX + 3, moonY + 3, 2, 0xFFFFFFDB, 0xFFDBDBB6);
+        disc(px, w, h, moonX + 2, moonY - 5, 1, 0xFFFFFFDB, 0xFFDBDBB6);
+        List<SceneBackdrop.Band> bands = new ArrayList<>();
+        bands.add(new SceneBackdrop.Band(0, Math.max(1, still), 0.03, 0));
+        for (SceneBackdrop.Band band : night.bands()) {
+            if (band.top() >= still) {
+                bands.add(band);
+            }
+        }
+        return new SceneBackdrop(new SceneImage(w, h, px), bands);
+    }
+
+    /** A filled circle on the {@code under} colour only (wrapping across the image's width). */
+    private static void disc(int[] px, int w, int h, int cx, int cy, int r, int under, int argb) {
+        for (int dy = -r; dy <= r; dy++) {
+            int half = (int) Math.round(Math.sqrt(r * r - dy * dy));
+            for (int dx = -half; dx <= half; dx++) {
+                paint(px, w, h, cx + dx, cy + dy, under, argb);
+            }
+        }
+    }
+
+    private static void paint(int[] px, int w, int h, int x, int y, int under, int argb) {
+        if (y < 0 || y >= h) {
+            return;
+        }
+        int i = y * w + Math.floorMod(x, w);
+        if (px[i] == under) {
+            px[i] = argb;
+        }
+    }
+
+    /** {@code a} moved toward {@code b} by {@code amount} of 255. */
+    private static int blend(int a, int b, int amount) {
+        int out = 0xFF000000;
+        for (int shift = 0; shift <= 16; shift += 8) {
+            int ca = a >> shift & 255, cb = b >> shift & 255;
+            out |= (ca + (cb - ca) * amount / 255) << shift;
+        }
+        return out;
+    }
 
     // ------------------------------------------------------------------ Sonic 3 & Knuckles pieces
 

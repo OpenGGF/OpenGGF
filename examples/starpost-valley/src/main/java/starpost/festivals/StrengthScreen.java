@@ -10,6 +10,7 @@ import starpost.scene.Sfx;
 import starpost.scene.Shell;
 import starpost.ui.Text;
 import starpost.valley.Runner;
+import java.util.List;
 
 /**
  * The fair's spring test (an overlay): a tall striped column with the bell at the top, a spring
@@ -18,7 +19,6 @@ import starpost.valley.Runner;
  */
 final class StrengthScreen implements Screen {
     private static final int COST = 10;
-    private static final int COLUMN = 150;
 
     private final FairScreen fair;
     private long meterAt;
@@ -95,43 +95,52 @@ final class StrengthScreen implements Screen {
         }
     }
 
+    /**
+     * The booth: the striped column with the bell (a ring) at its head and the spring at its
+     * foot, the power meter beside it, and the last go's result to the right.
+     */
     @Override
     public void draw(Shell shell, SceneCanvas canvas) {
-        int w = 200, h = 196, x = (canvas.width() - w) / 2, y = 14;
-        Text.panel(canvas, x, y, w, h);
+        int w = 260, h = 168, x = (canvas.width() - w) / 2, y = 30;
+        FestivalScreen.solidPanel(canvas, x, y, w, h);
         Text.shadow(canvas, "SPRING TEST", x + 10, y + 8, Text.YELLOW);
-        int colX = x + 70, base = y + h - 30, top = base - COLUMN;
+        int colX = x + 26, base = y + h - 22, top = y + 44, column = base - top;
         // The column: Green Hill's brown and orange in stripes, marks every quarter.
         for (int yy = top; yy < base; yy += 8) {
-            canvas.fill(colX, yy, 14, 8, (yy - top) / 8 % 2 == 0 ? 0xFFB66D24 : 0xFF6D2400);
+            canvas.fill(colX, yy, 14, Math.min(8, base - yy), (yy - top) / 8 % 2 == 0 ? 0xFFB66D24 : 0xFF6D2400);
         }
         for (int q = 1; q < 4; q++) {
-            int my = base - COLUMN * q / 4;
-            canvas.fill(colX - 6, my, 6, 1, 0xFFFFFFFF);
+            canvas.fill(colX - 6, base - column * q / 4, 6, 1, 0xFFFFFFFF);
         }
         // The bell: a ring at the top; the spring at the foot.
         SceneSpriteSet ring = shell.art.ring;
         boolean ringing = flying && rang || shell.ticks - resultAt < 40 && result.startsWith("DING");
-        canvas.draw(ring.frame(ringing ? 4 + (int) (shell.ticks / 4 % 4) : (int) (shell.ticks / 8 % 4)), colX - 1,
-                top - 18, SceneDraw.plain());
+        canvas.draw(ring.frame(ringing ? 4 + (int) (shell.ticks / 4 % 4) : (int) (shell.ticks / 8 % 4)), colX + 7,
+                top - 10, SceneDraw.plain());
         FestivalSystem.standSprite(canvas, shell.art.spring, flying && height < 30 ? 1 : 0, colX + 7, base + 8,
                 SceneDraw.plain());
         // The farmer, curled up, rising with the launch.
         SceneSpriteSet set = shell.art.farmer(shell.game.farmer);
         int[] roll = set.animationFrames(Anim.ROLL);
         SceneSprite ball = set.frame(roll == null || roll.length == 0 ? 0 : roll[(int) (ticks / 3 % roll.length)]);
-        float by = base - 6 - height * COLUMN / Fair.BELL;
+        float by = base - 6 - height * column / Fair.BELL;
         canvas.draw(ball, colX + 7, by - 15, SceneDraw.plain());
         // The meter.
         int power = flying ? 0 : Fair.meter((int) (shell.ticks - meterAt));
-        int mx = x + 140, mh = 120, my = base - mh;
+        int mx = x + 58, mh = column, my = top;
         canvas.fill(mx, my, 12, mh, 0xFF000000);
-        int fill = mh * power / 100;
-        canvas.fill(mx + 1, my + mh - fill, 10, fill, power > 90 ? 0xFFFF4924 : power > 60 ? 0xFFFFDB00 : 0xFF24B6FF);
-        Text.shadow(canvas, flying ? "" : "JUMP!", mx - 6, my - 12, Text.WHITE);
-        Text.shadow(canvas, COST + " RINGS A GO", x + 10, y + h - 18, Text.GREY);
+        int fill = (mh - 2) * power / 100;
+        canvas.fill(mx + 1, my + mh - 1 - fill, 10, fill, power > 90 ? 0xFFFF4924 : power > 60 ? 0xFFFFDB00 : 0xFF24B6FF);
+        // The words: what to do, and how the last go went.
+        int tx = x + 90, tw = w - 100;
+        Text.shadow(canvas, flying ? "UP SHE GOES!" : "JUMP: LAUNCH", tx, top, flying ? Text.YELLOW : Text.WHITE);
+        Text.shadow(canvas, "BACK: LEAVE", tx, top + 14, Text.GREY);
         if (!result.isEmpty() && shell.ticks - resultAt < 300) {
-            Text.note(canvas, result, x + 10, y + 22, w - 20, result.startsWith("DING") ? Text.YELLOW : Text.WHITE);
+            List<String> rows = Text.wrap(canvas, result, tw);
+            for (int i = 0; i < Math.min(4, rows.size()); i++) {
+                Text.shadow(canvas, rows.get(i), tx, top + 40 + i * 12, result.startsWith("DING") ? Text.YELLOW : Text.WHITE);
+            }
         }
+        Text.shadow(canvas, COST + " RINGS A GO", tx, base - 8, Text.GREY);
     }
 }

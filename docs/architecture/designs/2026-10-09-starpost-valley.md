@@ -1200,3 +1200,124 @@ professions do nothing yet), the river, the Labyrinth Cistern and Angel Island's
 Machine and Scrap Brain Furnace, the Ricky Roost and Buzz Hive, S2's bear and monkey, naming
 animals, a collection page for catches (the section counts them), and talking to Barnaby at the lake
 (he talks in the valley).
+
+## 18. Festivals and the board (lane)
+
+Branch `feature/ai-starpost-festivals`, package `starpost.festivals`: the year's eight festivals
+(§8), the Signpost Board (§6.8), prizes, records and the trophy shelf. The first agent's session
+ended before its visual pass; its work was checkpointed by the lead (`ab519c910`), and a second
+pass played every festival in captures and fixed what looked wrong (`9af6907eb`).
+
+### Festivals
+
+Each festival is a `FestivalScreen` over the day's `PlayScreen`: the clock stops and the HUD hides
+behind letterbox bars, a title card in the S3K lettering opens it, a results panel closes it, and
+leaving moves the clock on by the festival's length (`Festival.after`, never past 1AM) and goes
+back to the same play screen. On the day the valley gathers by the festival's sign from half an
+hour before it opens (`Festivals` is a `People.Gathering`); walking up during the posted hours
+invites the farmer (`Ask`). Every festival is played once a year (`Festivals.joined`).
+
+| Festival | Date, hours, length | What is played | Prizes |
+|---|---|---|---|
+| Ring Hunt (`RingHunt`) | Spring 13, 9AM-2PM, plaza, 2 h | 60 s in the town on the real controller to S1's Special Stage music (`$89`): lines, arcs and high lines along the street (under the name boards), a row on the totem ledge and a column over the spring, laid out per year. The champion, Tails (Sonic when Tails farms), flies to the nearest ring (`Map_Tails` `$A0` with the tail object's `$27`-`$28`) and stops 90 ticks to count each; ties go to him. The festival draws the crowd itself so the champion is not also standing by the sign. | 10 rings a ring; first win the Special Stage Record and a gold ring on the shelf, later wins +500 |
+| Sunflower Parade (`Parade`) | Spring 24, 10AM-3PM, plaza, 3 h | Green Hill's big flower (`Art_GhzFlower1`, the two frames `AniArt_GHZ` swaps every 16) along the street, petals cycling through four colours; the valley marches with flowers to Mushroom Hill 1; Dandel judges the farmer's flower against Clementine (76), Pud (62, painted gold), Hazel (41) and Robotnik's Robomart plastic one (disqualified). | First win Pud's Super Sunflower seed, the shelf's sunflower and Dandel's thanks; later +500; second +200; else 3 sunflower seeds |
+| Great Valley Race (`Race`, `RaceTrack`) | Summer 11, 9AM-1PM, plaza, 2.5 h | Twice round a Green Hill circuit of act 1's own blocks with their collision, on the ported controller, with the scripted loops and the totem ledge's spring, to the Knuckles theme. Tails or Sonic spin dash off the line, Knuckles runs at 0.98 pace, Robotnik flies the Egg Mobile (`Map_RobotnikShip` frames 5 and 2, flame 6) at 5.4 a tick and boosts to 8 once a lap when 300 behind. The signpost spins for the first across. | 1000/400/200/50; first win the Speed Shoes (+20 Momentum for good) and a Star Post on the shelf |
+| Night of the Flickies (`FlickyNight`) | Summer 28, 8PM-12AM, meadow, 2.5 h | Waves of V formations of S1 and S3K Flickies over the lake, as many as the valley's population (at least six), Pip leading; the action button under a passing wave brings one down to circle the farmer. A moon and stars are painted into the night backdrop. S3K's ending music. | No winner: friendship with everyone and more with Pip; the first year the Migration Record |
+| Valley Fair (`Fair`) | Fall 16, 9AM-4PM, plaza, 4 h | Three booths along the town as doorways, to Carnival Night 1. The grange display (nine places; 6 a kind, 3 an item, value up to 35, 5 for a full table, 12 for each Robomart good) judged by Robotnik against his own hamper (78): first only if undeniable (93+). The slot booth on Sonic 2's reel strips and `SlotMachine_ChooseReward` (×5 rings, 25 a spin, three Robotniks take 100), Casino Night's faces with S2, else Sonic 3's. The spring test: stop the meter, the spring launches the farmer under Sonic's gravity, the bell at 400. Calling the judge ends the fair. | 1500 (then 800)/300/100 and a bumper on the shelf; the first triple the Slot Bonus Record; the bell 120 rings and, once, a chili dog |
+| Scrap Brain Night (`Maze`) | Fall 27, 7PM-12AM, plaza, 2 h | A perfect 13×7 maze per year and farm, from above, in Scrap Brain act 1's steel, dark but for a pool of light; Caterkiller shadows give frights (3 rings dropped); dead ends hold rings or scrap; 90 s; Mecha Sonic waits at the exit and lunges (S3K boss music). | 10 rings a ring, 300 for getting out; the first time the Death Egg Record and Mecha Sonic on the shelf |
+| Ice Cap Festival (`Snowboard`, `IceCapScreen`) | Winter 8, 9AM-3PM, meadow, 3 h | A choice: the Waters lane's fishing contest (`FishingSystem.contest`, 120 s at the lake, against Frost's catch record of 40) or the snowboard run down the year's course of open-air winter blocks on Sonic's Ice Cap board (`ArtUnc_SonicSnowboard`; Tails and Knuckles crouch on the empty board), to Ice Cap 1: jump the rocks, spin in the air for tricks, against Frost's 900. The contest comes back to the meadow for Frost's verdict. | Points or rings ×5 rings; beating Frost the first time the S3 Ice Cap Record, a snowboard on the shelf and Frost's +150, later +600 |
+| Star Light Feast (`Feast`) | Winter 25, 5PM-11PM, plaza, 4 h | Star Light Zone's sky (S1's level-kit backdrop) and music over the plaza, Clementine's long table, the secret friend (drawn on Winter 18 and named by letter) stepping up for a gift from the monitors (their taste ×3), another neighbour's present for the farmer, fireworks of ring sparkles. | Momentum full, friendship with everyone, the present |
+
+### The board, prizes and records
+
+- **Requests** (`Board`, `Request`): each morning old notes come down and a neighbour pins a
+  delivery or popping job for what can be had this season; Mondays bring a weekly one and, from
+  Robomart's opening, Robotnik's special order (four times the price, partly in Robo Cola; Dandel
+  loses 150 friendship). Three can be taken on. A delivery is finished by talking to whoever asked
+  (`Festivals` is a `People.Errands`); popping finishes itself.
+- **Board screen** (`BoardScreen`, the `board` doorway by the Lamppost Inn): requests, the season's
+  calendar (festivals and birthdays) and the records page: each festival's date, this year's result,
+  its best in its own terms (rings, points, a time, flocks, the run and the catch apart) and its
+  trophy. The board says what happened on its own bottom line. Prizes owed for want of room are
+  handed over when it opens.
+- **In the valley** (`FestivalSystem`): the board with a note per posting and its little signpost
+  spinning on a new one; the trophy shelf between the Inn and the Workshop (Green Hill's bridge logs,
+  six trophies in standing frames); on a festival day palms, bunting and the festival's banner, S1
+  lampposts, and the fair's stalls or the feast's table.
+- **Prizes** (`Prizes`): items into the monitors or owed at the board; Records set
+  `record.<game>.<id>` and open their songs on the Inn's jukebox (`FestivalContent.recordSong`).
+- **Mail** (`FestivalMail`): the board's opening notice, Robotnik's first order and the secret
+  friend's letter.
+- **Save** (`festivals` section): places by year, bests (`id` or `id:event`), best times, prizes,
+  trophies, owed items, the secret friend and the board; damaged entries reject the save, unknown
+  festivals and items are dropped and numbers clamped.
+
+### Seams touched outside the package
+
+`Content.register` (`FestivalContent`); `Cast` (`FestivalMail`); `People` (`Gathering`, `Errands`,
+`spotFor`, `errand`), `PeopleSystem` (`offstage`, `playScene`, `present`), `VillagerActor` (hidden
+when offstage), `DialogueScreen` (an errand first), `EventScreen` and `HeartEvent.scene` (scenes for
+other systems); `Systems.sections`, `install` and `morningNote` (the lead wired
+`Festivals.fishingContest = FishingSystem::contest`); `Debug` (`festival ...`, `board ...` to
+`FestivalDebug`); `InnMenu` (five Record tracks); `MorningCard` (the note); `PlayScreen.placeInValley`
+and `lightTint`; `ValleyView.sky`.
+
+### Decisions and rejected approaches (evidence from the captures)
+
+- **See-through panels.** `Text.panel` is 88% opaque: the parade's card showed the banner's letters
+  through it, the grange showed through its item list. Festival panels are solid.
+- **Captions lost their ends.** The caption box shows three lines; the fair's welcome lost "THE
+  CARAVAN." and the maze's "OVERDONE IT." Long speeches now turn pages every 170 ticks.
+- **Two Tails.** The Ring Hunt drew the champion flying while the People lane drew Tails as the host
+  by the sign. The hunt takes the neighbours offstage and draws the crowd at their gathering spots.
+- **Rings over the shop signs.** High lines at 70 pixels hid "DANDEL'S SEEDS"; rings now stay
+  within 52. Lower rings let the champion take 38 of 65 (the test wants under half); his count
+  per ring went from 70 to 90 ticks.
+- **A moon over the palms.** Plain shapes drawn after the valley sat in front of the palm leaves;
+  the moon is painted into the backdrop on the sky's own colour, and the drifting cloud rows are held
+  still so it does not drift. A first version painted its glow rings outer to inner, each only on
+  sky, so the disc never painted and the moon came out a dim halo.
+- **The banner in the HUD.** The rope hung from the left palm's ground; at the meadow that palm
+  stood on a checker pillar. Palms now walk in to ground level with the sign, and the rope hangs from
+  the sign's ground. Fireworks over the feast covered the signs and moved to the dark band above.
+- **Cave walls in the sky.** A probe of every Green Hill block with its surface line showed blocks
+  12, 21, 26, 35 and 47 have cave walls or cliffs above the path; the run crossed in front of them.
+- **Fishing skipped its verdict.** The contest's callback toasted the prizes and left for the day,
+  and recorded the catch (tens of points) as the run's best (hundreds). It now returns to the
+  festival's screen (`Shell.go` keeps the first screen asked for, so the lake's own `go(play)` gives
+  way), and the catch's best is `ice_cap:fishing`.
+- **A fair without an end.** The grange refused an empty table and the judging is the only way out:
+  a farmer with nothing to show was stuck. An empty table now asks to end the fair (no place).
+- **Sonic 2 is optional.** `rom("s2")` is null without it; only the slot faces use it and fall back
+  to Sonic 3's slot bonus faces. Every festival was run from a scratch directory whose `config.yaml`
+  names only the S1 and S3K images (no ROM copies or links): no crash, the booth reads "SLOT BONUS".
+
+### Tests and captures
+
+`src/test/java/starpost/festivals/FestivalRulesTest.java` (engine-free): the calendar and gathering,
+hosts, each festival's scoring, places and prizes (first wins once, later purses), the race field
+and Robotnik's boost, the flock's size, Casino Night's rewards, the grange's bias, the spring test,
+the perfect maze, the snowboard's open-air course, the fishing contest against Frost's catch, the
+records page's lines, the shelf's six trophies, ring heights, the morning line's width, the secret
+friend, the board's requests, specials, popping, expiry and the section's round trip and damage.
+130/130 with the other lanes' tests; a mutation check (a cave block in the course, the Flickies with
+a trophy, rings at 70, any best key accepted) turned four tests red.
+
+```
+# fast creator tests (RunCreatorTests, a throwaway runner outside the repository)
+java -cp "$R/out:$CP" RunCreatorTests $R/tests $R/main
+# captures (ExampleModCapture): jump=festival_start_<id>, festival_day_<id>, festival_catch_N,
+# board, board_calendar, board_records, board_post_3, board_accept, festival_trophies
+java -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom "$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --mod examples/starpost-valley --out <dir> --script-file <script> --every 30 --ticks 4700
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off -Dtest=TestStarpostValleyExample test
+```
+
+Captures in `~/scratch/sv-festivals/final/` (a contact sheet per festival, and the board's). Every
+capture reports "Validation passed: 0 findings".
+
+Not done: the Ice Cap contest's clock stands still during Bubble Bar fights (the Waters lane's
+contest), so it runs longer than two minutes; no waving pose for the farmer at the Flickies; the
+parade's petals are recoloured rather than a ROM palette cycle; the board screen is a menu panel,
+not the board's own planks; festivals are the same each year apart from per-year layouts (hunt,
+maze, course); and the fair's "bribes at the caravan" is only a line.

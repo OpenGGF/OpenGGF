@@ -22,6 +22,14 @@ public final class Feast {
     private Feast() {
     }
 
+    /** A gift's name as a friend says it: "A CHILI DOG", "AN EMERALD MELON", "RING RADISH SEEDS". */
+    public static String some(String name) {
+        if (name.endsWith("S") && !name.endsWith("SS")) {
+            return name;
+        }
+        return ("AEIOU".indexOf(name.charAt(0)) >= 0 ? "AN " : "A ") + name;
+    }
+
     /** What a gift is worth to the secret friend: their taste, three times over. */
     public static int giftPoints(VillagerDef friend, Item gift) {
         return People.points(friend.taste(gift)) * GIFT_FACTOR;

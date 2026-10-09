@@ -61,9 +61,10 @@ final class Choose implements Screen {
 
     @Override
     public void draw(Shell shell, SceneCanvas canvas) {
-        int w = 260, rows = Math.min(ROWS, labels.size()), h = 34 + rows * 20 + 6;
+        int w = Math.min(380, Math.max(260, canvas.textWidth(title) + 24));
+        int rows = Math.min(ROWS, labels.size()), h = 34 + rows * 20 + 6;
         int x = (canvas.width() - w) / 2, y = (canvas.height() - h) / 2;
-        Text.panel(canvas, x, y, w, h);
+        FestivalScreen.solidPanel(canvas, x, y, w, h);
         Text.shadow(canvas, title, x + 10, y + 8, Text.YELLOW);
         for (int i = top; i < Math.min(labels.size(), top + ROWS); i++) {
             int ry = y + 28 + (i - top) * 20;
