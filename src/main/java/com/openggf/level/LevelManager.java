@@ -47,6 +47,7 @@ import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.rewind.RewindBoundary;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.GameplayRunRouting;
 import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
@@ -3739,11 +3740,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     /** The session's run policy; package-visible so unit tests can supply one without a session. */
-    java.util.function.Supplier<com.openggf.game.session.GameplayRunPolicy> runPolicySource = () -> {
-        GameplayModeContext runSession = SessionManager.getCurrentGameplayMode();
-        return runSession != null ? runSession.getRunPolicy()
-                : com.openggf.game.session.GameplayRunPolicy.stock();
-    };
+    java.util.function.Supplier<com.openggf.game.session.GameplayRunPolicy> runPolicySource = GameplayRunRouting::currentPolicy;
 
     /**
      * Advance to the next level in progression order.
@@ -3759,10 +3756,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * touching the zone/act counters or loading anything.
      */
     public void advanceToNextLevel() throws IOException {
-        if (runPolicySource.get().returnsToHostOnActCompletion()) {
-            transitions.requestHostReturn();
-            return;
-        }
+        if (transitions.requestHostReturnIf(runPolicySource.get())) return;
         ZoneProgressionPlan.ZoneTopology topology = activeProgressionTopology();
         ZoneProgressionPlan.ProgressionResult next = zoneProgressionPlan.next(
                 topology, currentZone, currentAct);

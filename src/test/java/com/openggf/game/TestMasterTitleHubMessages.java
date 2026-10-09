@@ -28,7 +28,7 @@ class TestMasterTitleHubMessages {
         var screen = screen(true);
         screen.setSelectedIndexForTest(3);
         press(screen, GLFW_KEY_DOWN);
-        for (int i = 0; i < 3; i++) press(screen, GLFW_KEY_DOWN);
+        for (int i = 0; i < 2; i++) press(screen, GLFW_KEY_DOWN);
         press(screen, GLFW_KEY_ENTER);
         for (int i = 0; i < 600; i++) screen.update(new InputHandler());
         draw(screen);
@@ -47,7 +47,7 @@ class TestMasterTitleHubMessages {
         assertFalse(font.allText().contains("Recordings is not available for standalone games"));
     }
 
-    @ParameterizedTest @ValueSource(ints = {1, 2, 3})
+    @ParameterizedTest @ValueSource(ints = {1, 2})
     void missingRomActionsExplainTheMissingFile(int action) throws Exception {
         var screen = screen(false);
         press(screen, GLFW_KEY_DOWN);

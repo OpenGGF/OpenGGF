@@ -53,6 +53,11 @@ final class HostedRunController {
     private boolean debugAssistThisStep;
     private boolean retryRequested;
     private RunEndReason leaveReason;
+    private boolean actCompleteSeen;
+    private boolean spectating;
+    private boolean spectateActive;
+    private int spectateDx;
+    private int spectateDy;
 
     HostedRunController(SonicConfigurationService configuration) {
         this.configuration = Objects.requireNonNull(configuration, "configuration");
@@ -92,8 +97,55 @@ final class HostedRunController {
         // bases; clear them before the new level's first render.
         ghostRenderer.clearSlots();
         attachRenderer(GameServices.ghostRenderRegistryOrNull());
-        RunLevelStart start = new RunLevelStart(spec, determinismFingerprint, debugAssisted);
+        stopSpectating();
+        actCompleteSeen = false;
+        int[] size = levelSize();
+        RunLevelStart start = new RunLevelStart(spec, determinismFingerprint, debugAssisted, size[0], size[1]);
         guarded(() -> host.onLevelReady(start));
+    }
+
+    private static int[] levelSize() {
+        var levelManager = GameServices.levelOrNull();
+        var level = levelManager != null ? levelManager.getCurrentLevel() : null;
+        if (level == null) {
+            return new int[] {0, 0};
+        }
+        int block = level.getBlockPixelSize();
+        return new int[] {Math.max(1, level.getLayerWidthBlocks(0)) * block,
+                Math.max(1, level.getLayerHeightBlocks(0)) * block};
+    }
+
+    /** Applies the host's spectator request; honoured only once the act is complete. */
+    private void applySpectate() {
+        var camera = GameServices.cameraOrNull();
+        if (camera == null) {
+            return;
+        }
+        if (!spectateActive || !actCompleteSeen) {
+            stopSpectating();
+            return;
+        }
+        if (!spectating) {
+            spectating = true;
+            camera.setFrozen(true);
+        }
+        int x = Math.clamp(camera.getX() + (long) spectateDx, camera.getMinX(), camera.getMaxX());
+        int y = Math.clamp(camera.getY() + (long) spectateDy, camera.getMinY(), camera.getMaxY());
+        camera.setX((short) x);
+        camera.setY((short) y);
+    }
+
+    private void stopSpectating() {
+        spectateActive = false;
+        spectateDx = 0;
+        spectateDy = 0;
+        if (spectating) {
+            spectating = false;
+            var camera = GameServices.cameraOrNull();
+            if (camera != null) {
+                camera.setFrozen(false);
+            }
+        }
     }
 
     private static int romChecksumOrZero() {
@@ -111,7 +163,9 @@ final class HostedRunController {
             return true;
         }
         try {
-            return host.admitStep(new FrameInput(input));
+            boolean admitted = host.admitStep(new FrameInput(input));
+            applySpectate();
+            return admitted;
         } catch (RuntimeException failure) {
             abort(failure);
             return true;
@@ -153,6 +207,7 @@ final class HostedRunController {
         boolean actComplete = gameState.isEndOfLevelActive() || gameState.isActCompletionSignalActive();
         var checkpointState = level.getCheckpointState();
         int checkpointIndex = checkpointState != null ? checkpointState.getLastCheckpointIndex() : -1;
+        actCompleteSeen |= actComplete;
         RunStep step = new RunStep(stepOrdinal++, pendingHeldMask, pendingStartHeld, poseOf(player),
                 actComplete, checkpointIndex, debugAssistThisStep);
         debugAssistThisStep = false;
@@ -191,6 +246,7 @@ final class HostedRunController {
             return;
         }
         RunHost ended = host;
+        stopSpectating();
         detachRenderer();
         ghostRenderer.clearSlots();
         handle.active = false;
@@ -292,6 +348,15 @@ final class HostedRunController {
         public void leave() {
             if (active && leaveReason == null) {
                 leaveReason = RunEndReason.LEFT;
+            }
+        }
+
+        @Override
+        public void spectate(boolean on, int dx, int dy) {
+            if (active) {
+                spectateActive = on;
+                spectateDx = on ? dx : 0;
+                spectateDy = on ? dy : 0;
             }
         }
 

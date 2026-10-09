@@ -77,7 +77,7 @@ class TestTitleInputOwnership {
     void programmaticallyOpenedChildOwnsInputWithoutActionPaneFocus() {
         Fixture f = new Fixture();
         f.title.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
-        assertTrue(f.title.tryOpenTimeAttackMenu());
+        assertTrue(f.title.tryOpenUserRecordingMenuForSelectedGame());
         f.input.handleKeyEvent(GLFW_KEY_V, GLFW_PRESS);
         assertFalse(f.routeDisplay());
         assertNull(f.persisted.get());

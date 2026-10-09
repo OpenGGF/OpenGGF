@@ -32,7 +32,8 @@ public final class ModApiVersion {
      * completion handing control back to the run's host, live rewind and editor entry.
      * Scenes launch stock gameplay runs (RunSpec) observed by a RunHost: level-ready,
      * step admission (hold), immutable executed steps with the player's pose, engine-drawn
-     * ghost poses, a screen overlay, end reasons and queued retry/leave commands.
+     * ghost poses, a screen overlay, end reasons and queued retry/leave commands; the level
+     * start reports the act's size and a finished act may pan a spectator camera.
      * Any mod may add one master-title entry opening a scene that launches such runs
      * and is resumed when each ends.
      * Creator helpers include character specifications and lifecycle hooks, decoded

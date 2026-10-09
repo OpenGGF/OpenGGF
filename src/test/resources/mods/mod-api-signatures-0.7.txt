@@ -1243,7 +1243,7 @@ CONSTRUCTOR com.openggf.game.rules.RingRules public  <init>(int,int,boolean,bool
 CONSTRUCTOR com.openggf.game.rules.SidekickCpuRules public  <init>(int,int,int,boolean,boolean,boolean,boolean,int,boolean,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.run.GhostPose public  <init>(java.lang.String,java.lang.String,com.openggf.game.run.PlayerPose,java.lang.String,float)
 CONSTRUCTOR com.openggf.game.run.PlayerPose public  <init>(int,int,int,boolean,boolean,int,boolean)
-CONSTRUCTOR com.openggf.game.run.RunLevelStart public  <init>(com.openggf.game.run.RunSpec,java.lang.String,boolean)
+CONSTRUCTOR com.openggf.game.run.RunLevelStart public  <init>(com.openggf.game.run.RunSpec,java.lang.String,boolean,int,int)
 CONSTRUCTOR com.openggf.game.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy)
 CONSTRUCTOR com.openggf.game.run.RunStep public  <init>(long,int,boolean,com.openggf.game.run.PlayerPose,boolean,int,boolean)
 CONSTRUCTOR com.openggf.game.save.SaveManager public  <init>(java.nio.file.Path)
@@ -1898,14 +1898,6 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration SUPER_SONIC_DEBUG_KEY
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TEST
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TEST_MODE_ENABLED
-FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TIME_ATTACK_HUD_MINIMAP
-FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TIME_ATTACK_MENU_KEY
-FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TIME_ATTACK_NET_DISPLAY_NAME
-FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TIME_ATTACK_NET_HOST_PORT
-FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TIME_ATTACK_NET_LAST_JOIN_ADDRESS
-FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TIME_ATTACK_NET_MASTER_TRUST_INSECURE
-FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TIME_ATTACK_NET_MASTER_URL
-FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TIME_ATTACK_RETRY_KEY
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TITLE_SCREEN_ON_STARTUP
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TRACE_CATALOG_DIR
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration TRACE_REWIND_KEY
@@ -7075,6 +7067,7 @@ METHOD com.openggf.game.run.RunEndReason public,static  com.openggf.game.run.Run
 METHOD com.openggf.game.run.RunHandle public,abstract  boolean isActive()
 METHOD com.openggf.game.run.RunHandle public,abstract  void leave()
 METHOD com.openggf.game.run.RunHandle public,abstract  void retry()
+METHOD com.openggf.game.run.RunHandle public,abstract  void spectate(boolean,int,int)
 METHOD com.openggf.game.run.RunHost public  boolean admitStep(com.openggf.game.run.RunInput)
 METHOD com.openggf.game.run.RunHost public  java.util.List<com.openggf.game.run.GhostPose> ghosts()
 METHOD com.openggf.game.run.RunHost public  void afterStep(com.openggf.game.run.RunStep)
@@ -7086,6 +7079,8 @@ METHOD com.openggf.game.run.RunInput public,abstract  boolean keyPressed(int)
 METHOD com.openggf.game.run.RunInput public,abstract  com.openggf.control.LogicalInputSnapshot input()
 METHOD com.openggf.game.run.RunLevelStart public  boolean debugAssisted()
 METHOD com.openggf.game.run.RunLevelStart public  com.openggf.game.run.RunSpec spec()
+METHOD com.openggf.game.run.RunLevelStart public  int levelHeight()
+METHOD com.openggf.game.run.RunLevelStart public  int levelWidth()
 METHOD com.openggf.game.run.RunLevelStart public  java.lang.String determinismFingerprint()
 METHOD com.openggf.game.run.RunLevelStart public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.run.RunLevelStart public,final  int hashCode()
@@ -8459,6 +8454,7 @@ METHOD com.openggf.level.LevelTransitionCoordinator public  boolean isSanctuaryO
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean isSpecialStageRequested()
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean isSuppressNextMusicChange()
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean isTitleCardRequested()
+METHOD com.openggf.level.LevelTransitionCoordinator public  boolean requestHostReturnIf(com.openggf.game.session.GameplayRunPolicy)
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean requestSanctuaryExit()
 METHOD com.openggf.level.LevelTransitionCoordinator public  com.openggf.game.BonusStageType consumeBonusStageRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  com.openggf.game.BonusStageType peekBonusStageRequest()
@@ -14203,6 +14199,8 @@ RECORD-COMPONENT com.openggf.game.run.PlayerPose priorityBucket int
 RECORD-COMPONENT com.openggf.game.run.PlayerPose vFlip boolean
 RECORD-COMPONENT com.openggf.game.run.RunLevelStart debugAssisted boolean
 RECORD-COMPONENT com.openggf.game.run.RunLevelStart determinismFingerprint java.lang.String
+RECORD-COMPONENT com.openggf.game.run.RunLevelStart levelHeight int
+RECORD-COMPONENT com.openggf.game.run.RunLevelStart levelWidth int
 RECORD-COMPONENT com.openggf.game.run.RunLevelStart spec com.openggf.game.run.RunSpec
 RECORD-COMPONENT com.openggf.game.run.RunSpec act int
 RECORD-COMPONENT com.openggf.game.run.RunSpec character java.lang.String

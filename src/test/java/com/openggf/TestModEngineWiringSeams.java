@@ -24,7 +24,7 @@ class TestModEngineWiringSeams {
     @Test
     void everyNamedEntrySeamInstallsEmptyAndReleasesPreparedPcm() throws Exception {
         for (String className : List.of(
-                "com.openggf.game.timeattack.AttemptReplayHarness",
+                "openggf.racing.server.verifier.AttemptReplayHarness",
                 "com.openggf.game.recording.UserRecordingSessionLauncher",
                 "com.openggf.tools.TraceCaptureTool",
                 "com.openggf.tools.TraceCaptureSession",
@@ -50,8 +50,13 @@ class TestModEngineWiringSeams {
 
     @Test
     void attemptReplayDisablesExternalContentBeforeRomAndFrameSetup() throws IOException {
-        assertBefore("game/timeattack/AttemptReplayHarness.java", DISABLE,
-                "if (!rom.open(romPath.toString()))");
+        // The verifier's replay harness lives in the racing server, outside the engine tree.
+        String source = Files.readString(Path.of(
+                "racing/server/src/main/java/openggf/racing/server/verifier/AttemptReplayHarness.java"));
+        int disable = source.indexOf(DISABLE);
+        int romOpen = source.indexOf("if (!rom.open(romPath.toString()))");
+        assertTrue(disable >= 0 && romOpen > disable,
+                "AttemptReplayHarness must disable external content before opening the ROM");
     }
 
     @Test

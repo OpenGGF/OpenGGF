@@ -62,11 +62,6 @@ final class EngineSettingLabels {
             case CAPTURE_OUTPUT_DIR -> "Recording output folder";
             case CAPTURE_FFMPEG_PASS1_ARGS -> "Encoder command arguments";
             case CAPTURE_FFMPEG_PASS2_ARGS -> "Audio mux command arguments";
-            case TIME_ATTACK_NET_LAST_JOIN_ADDRESS -> "Last LAN host address";
-            case TIME_ATTACK_NET_DISPLAY_NAME -> "Multiplayer display name";
-            case TIME_ATTACK_NET_MASTER_URL -> "Internet room server URL";
-            case TIME_ATTACK_NET_MASTER_TRUST_INSECURE -> "Allow unverified server TLS";
-            case TIME_ATTACK_NET_HOST_PORT -> "LAN hosting port";
             default -> contextualLabel(ConfigCatalog.meta(key));
         };
     }

@@ -3,8 +3,6 @@ package com.openggf.game;
 import com.openggf.InputBindingFactory;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
-import com.openggf.game.timeattack.GhostStore;
-import com.openggf.game.timeattack.TimeAttackMenu;
 import com.openggf.graphics.MenuPixelFont;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -43,29 +41,6 @@ class TestMenuRenderAlignment {
             assertEquals(2, contents.size());
             assertCentered(field, contents.getFirst().y, contents.getLast().y + 10 - contents.getFirst().y);
             assertEquals(width - 7, field.x + field.width);
-        }
-    }
-
-    @Test
-    void timeAttackFieldsAndFinalActionUseTheSameCenteredPrimaryRows() throws ReflectiveOperationException {
-        Capture capture = new Capture();
-        SonicConfigurationService config = SonicConfigurationService.createStandalone(directory);
-        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), List::of);
-        TimeAttackMenu menu = new TimeAttackMenu(List.of("s2"), "s2", new GhostStore(directory),
-                capture.font, request -> fail("Rendering must not launch"));
-        var visibleRows = menu.state().getClass().getDeclaredMethod("visibleRows");
-        visibleRows.setAccessible(true);
-        int count = ((List<?>) visibleRows.invoke(menu.state())).size();
-        for (int row = 0; row <= count; row++) {
-            capture.clear();
-            menu.render();
-            Rect focus = capture.focus.getFirst();
-            Line label = capture.lines.stream().filter(line -> line.x == 14 && line.scale == 1
-                    && line.y >= focus.y && line.y + 10 <= focus.y + focus.height).findFirst().orElseThrow();
-            assertCentered(focus, label.y, 10);
-            assertEquals(16, focus.height);
-            assertTrue(focus.y + focus.height <= 198);
-            if (row < count) press(input, menu::update, GLFW_KEY_DOWN);
         }
     }
 

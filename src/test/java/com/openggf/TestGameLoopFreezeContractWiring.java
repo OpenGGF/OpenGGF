@@ -17,9 +17,6 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
-import com.openggf.game.timeattack.GhostStore;
-import com.openggf.game.timeattack.TimeAttackLaunchRequest;
-import com.openggf.game.timeattack.TimeAttackRuntime;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.tests.TestEnvironment;
@@ -247,8 +244,7 @@ class TestGameLoopFreezeContractWiring {
     }
 
     @Test
-    void timeAttackCrossActSeamlessRouteReturnsToMenuBeforeDestinationApply(
-            @TempDir Path tempDir) throws Exception {
+    void hostedRunCrossActSeamlessRouteEndsTheRunBeforeDestinationApply() throws Exception {
         GameplayModeContext gameplay = install(new Sonic3kGameModule());
         LevelManager level = mock(LevelManager.class);
         SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest.builder(
@@ -258,23 +254,26 @@ class TestGameLoopFreezeContractWiring {
         when(level.consumeSeamlessTransitionRequest()).thenReturn(request);
         setField(gameplay, "levelManager", level);
         GameLoop loop = new GameLoop(new InputHandler());
-        TimeAttackRuntime timeAttack = new TimeAttackRuntime(
-                new GhostStore(tempDir.resolve("ghosts")),
-                tempDir.resolve("identity"), () -> false);
-        timeAttack.armForLaunch(new TimeAttackLaunchRequest(
-                "s3k", 0, 0, "sonic", List.of()));
-        setField(loop, "timeAttackRuntime", timeAttack);
-        gameplay.beginGameplayRun(com.openggf.game.session.GameplayRunPolicy.isolatedAct(), 0, 0);
-        timeAttack.attachHandle(loop.beginHostedRun(timeAttack.runSpec(), timeAttack,
-                reason -> loop.startTimeAttackReturnToMenuFade()));
+        com.openggf.game.run.RunSpec spec = new com.openggf.game.run.RunSpec("s3k", 0, 0, "sonic",
+                com.openggf.game.session.GameplayRunPolicy.isolatedAct());
+        gameplay.beginGameplayRun(spec.policy(), spec.zone(), spec.act());
+        List<com.openggf.game.run.RunEndReason> ended = new java.util.ArrayList<>();
+        List<com.openggf.game.run.RunEndReason> returned = new java.util.ArrayList<>();
+        loop.beginHostedRun(spec, new com.openggf.game.run.RunHost() {
+            @Override public void onRunEnded(com.openggf.game.run.RunEndReason reason) { ended.add(reason); }
+        }, reason -> {
+            returned.add(reason);
+            loop.fadeOutTo(() -> { });
+        });
 
         loop.step();
 
-        assertFalse(timeAttack.isActive(),
-                "cross-act routing must end the attempt before transition application");
+        assertEquals(List.of(com.openggf.game.run.RunEndReason.ACT_COMPLETED), ended,
+                "cross-act routing must end the run before transition application");
+        assertEquals(List.of(com.openggf.game.run.RunEndReason.ACT_COMPLETED), returned);
         verify(level, never()).applySeamlessTransition(request);
         assertTrue(gameplay.getFadeManager().isActive(),
-                "the suppressed destination must route back through the menu fade");
+                "the suppressed destination must route back to the host through a fade");
     }
 
     private static GameplayModeContext install(com.openggf.game.GameModule module) {

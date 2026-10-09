@@ -862,6 +862,15 @@ public class LevelTransitionCoordinator {
         this.hostReturnRequested = true;
     }
 
+    /** Requests a host return when {@code policy} hands act completion back to the run's host. */
+    public boolean requestHostReturnIf(com.openggf.game.session.GameplayRunPolicy policy) {
+        if (policy == null || !policy.returnsToHostOnActCompletion()) {
+            return false;
+        }
+        requestHostReturn();
+        return true;
+    }
+
     /**
      * Check and consume the host return request.
      *

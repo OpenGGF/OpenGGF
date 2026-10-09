@@ -10,6 +10,12 @@ public final class GameplayRunRouting {
     private GameplayRunRouting() {
     }
 
+    /** The current gameplay session's run policy, or the stock policy outside a session. */
+    public static GameplayRunPolicy currentPolicy() {
+        GameplayModeContext session = SessionManager.getCurrentGameplayMode();
+        return session != null ? session.getRunPolicy() : GameplayRunPolicy.stock();
+    }
+
     /**
      * An S3K seamless request ends a host-returning run only when it is a cross-act advance:
      * a {@code RELOAD_TARGET_LEVEL} whose target differs from the act the run started in.

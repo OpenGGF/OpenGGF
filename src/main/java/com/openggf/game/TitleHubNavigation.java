@@ -6,7 +6,7 @@ import com.openggf.control.MenuInput;
 /** Two explicit focus panes; physical/replay input authority remains in InputHandler. */
 final class TitleHubNavigation {
     enum Action {
-        START("START GAME"), LAUNCH("LAUNCH OPTIONS"), TIME_ATTACK("TIME ATTACK"),
+        START("START GAME"), LAUNCH("LAUNCH OPTIONS"),
         RECORDINGS("RECORDINGS"), MODS("MODS"), SETTINGS("SETTINGS"), TOOLS("ADVANCED"), QUIT("QUIT"),
         /** Mod-contributed title entries; shown only when at least one is registered. */
         EXTRAS("EXTRAS");

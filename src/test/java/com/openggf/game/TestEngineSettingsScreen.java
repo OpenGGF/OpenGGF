@@ -213,8 +213,6 @@ class TestEngineSettingsScreen {
         assertEquals(first, f.descriptionLines());
         assertTrue(EngineSettingsScreen.effect(CONTROLLER_DEADZONE).contains("immediately"));
         assertTrue(EngineSettingsScreen.effect(SCREEN_WIDTH).contains("Restart"));
-        assertEquals(MenuTextEditor.Mode.INTEGER, EngineSettingsScreen.fieldMode(TIME_ATTACK_NET_HOST_PORT));
-        assertEquals(MenuTextEditor.Mode.ADDRESS, EngineSettingsScreen.fieldMode(TIME_ATTACK_NET_LAST_JOIN_ADDRESS));
     }
 
     @Test

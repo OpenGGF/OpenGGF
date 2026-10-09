@@ -315,24 +315,6 @@ public final class ConfigCatalog {
                         + " (e.g. SHIFT+O, CTRL+SHIFT+O). A bare O is reserved and"
                         + " is migrated back to SHIFT+O"));
 
-        // timeAttack
-        put(TIME_ATTACK_RETRY_KEY, of("timeAttack", "retryKey", KEY,
-                "Key that instantly retries the current time attack from the act start."));
-        put(TIME_ATTACK_MENU_KEY, of("timeAttack", "menuKey", KEY,
-                "Key that opens the solo Time Attack menu from the master title screen."));
-        put(TIME_ATTACK_NET_HOST_PORT, of("timeAttack.net", "hostPort", INT,
-                "TCP/WebSocket port for player-hosted LAN race rooms."));
-        put(TIME_ATTACK_NET_LAST_JOIN_ADDRESS, of("timeAttack.net", "lastJoinAddress", STRING,
-                "Most recently joined LAN race address."));
-        put(TIME_ATTACK_NET_DISPLAY_NAME, of("timeAttack.net", "displayName", STRING,
-                "Pseudonymous multiplayer race display name."));
-        put(TIME_ATTACK_NET_MASTER_URL, of("timeAttack.net", "masterUrl", STRING,
-                "Master-server WebSocket URL for internet race browsing."));
-        put(TIME_ATTACK_NET_MASTER_TRUST_INSECURE, of("timeAttack.net", "masterTrustInsecure", BOOL,
-                "Development-only trust-all TLS mode for the master server."));
-        put(TIME_ATTACK_HUD_MINIMAP, of("timeAttack.hud", "minimap", BOOL,
-                "Show the multiplayer minimap progress strip."));
-
         // ───────────────── DEBUG BLOCK ─────────────────
 
         // debug.flags
