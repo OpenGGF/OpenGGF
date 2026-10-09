@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A frozen local source does not freeze another clone's publication (2026-10-08,
+stock parity delivery): local main's complete ordinary/guard run retained its
+exact HEAD and input fingerprint while remote develop acquired independent
+engine/API merges. The old result remains valid for its tested source; it does
+not qualify the incoming source or a future publication. Verify remote refs
+before pushing, preserve both histories, inspect the complete input delta and
+qualify a changed composition against the actual updated destination. Do not
+force-push over legitimate remote work or substitute local HEAD equality for
+remote source equivalence.
+
 An inherited loader environment can change a shell test without a source change
 (2026-10-08, stock parity delivery): the audio CLI deliberately rejects `LD_*`
 variables. Its first safe `--help` subprocess returned4 from the app's native
@@ -152,6 +162,14 @@ Check the actual screen/player state and corresponding PCM before diagnosing sil
 and cut loading waits from promotional footage without calling them real-time loading
 measurements. Offline audio establishes content and cue timing, not physical speaker
 latency. See the [example's capture notes](../../examples/sitar-hero/README.md#testing-and-captures).
+
+Scene draw recording is not GPU rendering (2026-10-08, Eggman's Sky): the
+headless update/recording cost was about 0.5 ms while native draw submission
+alone cost 5.3 ms due to repeated writes to an in-flight vertex buffer. Measure
+`ModSceneHost.draw` with a real GL context and account for GPU completion.
+`ExampleModCapture --every 0` with no video never submits a frame; it cannot
+measure rendering throughput. Separate warm-up, update, submission and finish
+costs, and compare deterministic framebuffer output when changing uploads.
 
 Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
 task): the positioned MHZ capture retained about 22 MiB after its callback while
