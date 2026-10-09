@@ -81,6 +81,22 @@ class CoreRulesTest {
     }
 
     @Test
+    void winterOnlySnowsAndRainWatersTheSoil() {
+        for (int roll = 0; roll < 100; roll++) {
+            int w = Game.rollWeather(Calendar.WINTER, roll);
+            assertTrue(w == Game.SUN || w == Game.SNOW, "winter weather " + w);
+            assertNotEquals(Game.SNOW, Game.rollWeather(Calendar.SUMMER, roll));
+        }
+        Game game = new Game(catalog, 5);
+        game.weatherTomorrow = Game.STORM;
+        Plot plot = game.farm.plot(0, 0);
+        plot.tilled = true;
+        game.sleep(false);
+        assertTrue(game.raining);
+        assertTrue(plot.watered, "a storm waters tilled soil");
+    }
+
+    @Test
     void shippingPaysOvernight() {
         Game game = new Game(catalog, 7);
         int before = game.rings;

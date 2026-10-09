@@ -51,8 +51,9 @@ final class MorningCard implements Screen {
         String day = Integer.toString(game.calendar.day());
         float dx = w / 2f - 40 + font.width(season) + 12 + in * 1.2f;
         shell.art.hud.number(canvas, day, dx, 68, 2);
-        if (game.raining && age > 30) {
-            Text.centred(canvas, "RAIN TODAY", 150, Text.BLUE);
+        if (game.weather != Game.SUN && age > 30) {
+            Text.centred(canvas, Game.weatherName(game.weather) + " TODAY", 150,
+                    game.weather == Game.SWARM ? Text.RED : Text.BLUE);
         }
     }
 }

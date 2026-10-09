@@ -34,7 +34,8 @@ public final class Pests {
             return out;
         }
         SnapshotRandom rng = new SnapshotRandom(game.rng.snapshot() ^ 0x5EED_BADL ^ day);
-        int count = rng.nextInt(100) < 45 ? 1 + rng.nextInt(day > 28 ? 4 : 2) : 0;
+        int count = game.weather == Game.SWARM ? 3 + rng.nextInt(3)
+                : rng.nextInt(100) < 45 ? 1 + rng.nextInt(day > 28 ? 4 : 2) : 0;
         for (int i = 0; i < count; i++) {
             out.add(new Motobug(game, rng.nextInt(Farm.ROWS), i * 70 + rng.nextInt(40)));
         }

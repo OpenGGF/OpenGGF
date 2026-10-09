@@ -133,7 +133,9 @@ public final class PlayScreen implements Screen {
     void chooseMusic(Shell shell) {
         Game game = shell.game;
         int light = game.calendar.light();
-        if (game.raining) {
+        if (game.weather == Game.SWARM && light == 0) {
+            shell.music.want("s1", Music.S1_SBZ);
+        } else if (game.raining) {
             shell.music.want("s1", Music.S1_LZ);
         } else if (light == 2) {
             shell.music.want("s1", Music.S1_SLZ);
@@ -241,7 +243,12 @@ public final class PlayScreen implements Screen {
             valley.draw(canvas, look, light, tint);
         }
         if (game.raining) {
-            drawRain(shell, canvas);
+            drawRain(shell, canvas, game.weather == Game.STORM);
+        } else if (game.weather == Game.SNOW) {
+            drawSnow(shell, canvas);
+        }
+        if (game.aurora && light == 2) {
+            drawAurora(shell, canvas);
         }
         drawFold(canvas);
         if (!hudHidden) {
@@ -265,14 +272,45 @@ public final class PlayScreen implements Screen {
         }
     }
 
-    private void drawRain(Shell shell, SceneCanvas canvas) {
+    private void drawRain(Shell shell, SceneCanvas canvas, boolean storm) {
         long seed = shell.ticks * 7;
-        for (int i = 0; i < 70; i++) {
-            int x = (int) ((i * 97 + seed * 3) % (canvas.width() + 40)) - 20;
+        int drops = storm ? 140 : 70;
+        for (int i = 0; i < drops; i++) {
+            int x = (int) ((i * 97 + seed * (storm ? 5 : 3)) % (canvas.width() + 40)) - 20;
             int y = (int) ((i * 53 + seed * 9) % (canvas.height() + 20)) - 10;
-            canvas.fill(x, y, 1, 6, 0x806DB6FF);
+            canvas.fill(x, y, 1, storm ? 8 : 6, 0x806DB6FF);
         }
-        canvas.fill(0, 0, canvas.width(), canvas.height(), 0x20001848);
+        canvas.fill(0, 0, canvas.width(), canvas.height(), storm ? 0x38000820 : 0x20001848);
+        // Lightning: a flash every few seconds, and the shield's crackle with it.
+        if (storm) {
+            long phase = shell.ticks % 400;
+            if (phase < 4 || phase >= 10 && phase < 12) {
+                canvas.fill(0, 0, canvas.width(), canvas.height(), 0x90FFFFFF);
+            }
+            if (phase == 0) {
+                shell.sfx(Sfx.LIGHTNING_SHIELD);
+            }
+        }
+    }
+
+    private void drawSnow(Shell shell, SceneCanvas canvas) {
+        for (int i = 0; i < 60; i++) {
+            float x = (i * 131 + shell.ticks * 0.6f + (float) Math.sin((shell.ticks + i * 40) / 30.0) * 8) % (canvas.width() + 20) - 10;
+            float y = (i * 71 + shell.ticks * (0.7f + i % 3 * 0.25f)) % (canvas.height() + 10) - 5;
+            canvas.fill(Math.round(x), Math.round(y), i % 4 == 0 ? 2 : 1, i % 4 == 0 ? 2 : 1, 0xE0FFFFFF);
+        }
+    }
+
+    /** The Emerald Aurora: green and cyan curtains rippling over the night sky. */
+    private void drawAurora(Shell shell, SceneCanvas canvas) {
+        int w = canvas.width();
+        for (int x = 0; x < w; x += 4) {
+            double wave = Math.sin((x + shell.ticks * 0.8) / 37.0) + Math.sin((x - shell.ticks * 0.5) / 23.0);
+            int top = 18 + (int) (wave * 8);
+            int height = 40 + (int) (Math.sin((x + shell.ticks) / 51.0) * 14);
+            int colour = (x / 4 % 3 == 0 ? 0x5049FF92 : 0x4024DBDB);
+            canvas.fill(x, top, 4, height, colour);
+        }
     }
 
     static void drawHud(Shell shell, SceneCanvas canvas) {

@@ -36,7 +36,11 @@ final class Debug {
                     shell.game.calendar.set(shell.game.calendar.year(), shell.game.calendar.season(),
                             shell.game.calendar.day(), hhmm / 100 * 60 + hhmm % 100);
                 }
-                case "rain" -> shell.game.raining = p[1].equals("on");
+                case "weather" -> {
+                    shell.game.weather = Integer.parseInt(p[1]);
+                    shell.game.raining = shell.game.weather == starpost.core.Game.RAIN || shell.game.weather == starpost.core.Game.STORM;
+                }
+                case "aurora" -> shell.game.aurora = p[1].equals("on");
                 case "give" -> {
                     // Item ids contain underscores: the last part is the count when it is a number.
                     boolean counted = p.length > 2 && p[p.length - 1].matches("\\d+");

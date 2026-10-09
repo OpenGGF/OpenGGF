@@ -25,7 +25,7 @@ public final class SaveCodec {
         line(out, "rings", g.rings);
         line(out, "earned", g.totalEarned);
         line(out, "momentum", g.momentum + "," + g.maxMomentum);
-        line(out, "weather", (g.raining ? 1 : 0) + "," + (g.rainTomorrow ? 1 : 0));
+        line(out, "weather", g.weather + "," + g.weatherTomorrow + "," + (g.aurora ? 1 : 0));
         line(out, "water", g.waterCharges + "," + g.waterCapacity);
         line(out, "population", g.population);
         line(out, "flags", String.join(",", g.flags));
@@ -128,9 +128,11 @@ public final class SaveCodec {
             int[] mo = ints(v.get("momentum"), 2);
             g.maxMomentum = Math.max(Game.BASE_MOMENTUM, Math.min(400, mo[1]));
             g.momentum = Math.max(0, Math.min(g.maxMomentum, mo[0]));
-            int[] weather = ints(v.getOrDefault("weather", "0,0"), 2);
-            g.raining = weather[0] == 1;
-            g.rainTomorrow = weather[1] == 1;
+            int[] weather = ints(v.getOrDefault("weather", "0,0,0"), 3);
+            g.weather = Math.max(Game.SUN, Math.min(Game.SWARM, weather[0]));
+            g.weatherTomorrow = Math.max(Game.SUN, Math.min(Game.SWARM, weather[1]));
+            g.aurora = weather[2] == 1;
+            g.raining = g.weather == Game.RAIN || g.weather == Game.STORM;
             int[] water = ints(v.getOrDefault("water", "10,10"), 2);
             g.waterCapacity = Math.max(10, Math.min(200, water[1]));
             g.waterCharges = Math.max(0, Math.min(g.waterCapacity, water[0]));

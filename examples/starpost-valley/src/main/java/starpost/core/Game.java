@@ -28,8 +28,18 @@ public final class Game {
     public int rings = START_RINGS;
     public int momentum = BASE_MOMENTUM;
     public int maxMomentum = BASE_MOMENTUM;
+    /** Today's and tomorrow's weather (design doc §8): one of the {@code SUN}...{@code SWARM} values. */
+    public int weather = SUN;
+    public int weatherTomorrow = SUN;
+    /** Tonight's sky shows the Emerald Aurora. */
+    public boolean aurora;
+    public static final int SUN = 0;
+    public static final int RAIN = 1;
+    public static final int STORM = 2;
+    public static final int SNOW = 3;
+    public static final int SWARM = 4;
+    /** Rain or storm today: tilled soil is watered. */
     public boolean raining;
-    public boolean rainTomorrow;
     /** The shipping signpost: item id to count, paid out overnight. */
     public final Map<String, Integer> shipping = new LinkedHashMap<>();
     public final Set<String> flags = new LinkedHashSet<>();
@@ -84,6 +94,26 @@ public final class Game {
         momentum = Math.min(maxMomentum, momentum + amount);
     }
 
+    /** The weather for a season from a roll of 0-99: summer storms, autumn rain, winter snow. */
+    static int rollWeather(int season, int roll) {
+        return switch (season) {
+            case Calendar.SPRING -> roll < 18 ? RAIN : roll < 22 ? STORM : roll < 26 ? SWARM : SUN;
+            case Calendar.SUMMER -> roll < 7 ? RAIN : roll < 17 ? STORM : roll < 21 ? SWARM : SUN;
+            case Calendar.FALL -> roll < 20 ? RAIN : roll < 23 ? STORM : roll < 28 ? SWARM : SUN;
+            default -> roll < 28 ? SNOW : SUN;
+        };
+    }
+
+    public static String weatherName(int weather) {
+        return switch (weather) {
+            case RAIN -> "RAIN";
+            case STORM -> "STORM";
+            case SNOW -> "SNOW";
+            case SWARM -> "BADNIK SWARM";
+            default -> "SUNNY";
+        };
+    }
+
     /** An animal freed from a badnik joins the valley. Returns true when the count went up. */
     public boolean free() {
         if (population >= MAX_POPULATION) {
@@ -117,8 +147,10 @@ public final class Game {
         totalEarned += paid;
         shipping.clear();
         calendar.nextDay();
-        raining = rainTomorrow;
-        rainTomorrow = calendar.season() != Calendar.WINTER && rng.nextInt(100) < (calendar.season() == Calendar.SUMMER ? 12 : 20);
+        weather = weatherTomorrow;
+        raining = weather == RAIN || weather == STORM;
+        weatherTomorrow = rollWeather(calendar.season(), rng.nextInt(100));
+        aurora = weather == SUN && rng.nextInt(100) < 4;
         farm.garden = flags.contains("capsule_garden");
         farm.nextDay(catalog, calendar.season(), raining, rng);
         for (SaveSection section : sections) {
