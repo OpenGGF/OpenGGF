@@ -50,8 +50,8 @@ public final class Audio {
 
     /**
      * A minute of a stock song, then it restarts. Synthesis takes roughly a twelfth of the song's
-     * length and the background part render as long again, so a longer song keeps the stand-in
-     * playing for longer.
+     * length and the background part render as long again. Keep one prepared area song
+     * through driver interludes so returning from combat needs no further synthesis.
      */
     private static final int SONG_FRAMES = 3600;
 
@@ -62,6 +62,11 @@ public final class Audio {
     private int playingId = -1;
     private SceneMusicPreparation preparation;
     private SceneMusicPreparation partPreparation;
+    // The host retains one prepared foreign song. Driver interludes must not retire it.
+    private String preparedGame;
+    private int preparedId = -1;
+    private boolean songReady;
+    private int fallbackId = -1;
     private ScenePreparedMusic song;
     private SceneMusicPlayer player;
     private boolean musicFailed;
@@ -77,44 +82,43 @@ public final class Audio {
     }
 
     /**
-     * Requests a song. A Sonic 1 or Sonic 2 song is synthesised in the background; meanwhile
-     * the S3K driver plays {@code standIn} (when not -1), and the stock song takes over once
-     * ready. Asking for the song already wanted does nothing.
+     * Requests a song. Foreign ROM synthesis is silent until ready; the fallback is used
+     * only if preparation fails. Battle and story driver cues retain the area preparation.
      */
-    public void music(String game, int id, int standIn) {
+    public void music(String game, int id, int fallback) {
         if (game.equals(wantGame) && id == wantId) return;
         wantGame = game;
         wantId = id;
+        stopPlayback();
         if (game.equals("s3k")) {
-            stopPlayer();
             ctx.audio().playMusic(id);
             playingGame = game;
             playingId = id;
-        } else {
-            stopPlayer();
-            if (standIn >= 0) {
-                if (!"s3k".equals(playingGame) || playingId != standIn) ctx.audio().playMusic(standIn);
-                playingGame = "s3k";
-                playingId = standIn;
-            } else {
-                ctx.audio().stopMusic();
-                playingGame = null;
-                playingId = -1;
-            }
+            return;
+        }
+        ctx.audio().stopMusic();
+        fallbackId = fallback;
+        if (!game.equals(preparedGame) || id != preparedId) {
+            releasePreparation();
+            preparedGame = game;
+            preparedId = id;
             try {
                 preparation = ctx.music().prepareAsync(game, id, SONG_FRAMES);
-                musicFailed = false;
             } catch (RuntimeException unavailable) {
-                preparation = null;
-                musicFailed = true;
-                lastError = unavailable.toString();
+                preparationFailed(unavailable.toString());
             }
+        }
+        try {
+            if (songReady) startPlayer();
+            else if (musicFailed) playFallback();
+        } catch (RuntimeException unavailable) {
+            preparationFailed(unavailable.toString());
         }
     }
 
     /** A one-shot S3K song (jingles); the next {@link #music} call replaces it. */
     public void jingle(int id) {
-        stopPlayer();
+        stopPlayback();
         wantGame = "s3k";
         wantId = id;
         playingGame = "s3k";
@@ -123,7 +127,7 @@ public final class Audio {
     }
 
     public void fadeOut() {
-        stopPlayer();
+        stopPlayback();
         ctx.audio().fadeOutMusic();
         wantGame = null;
         wantId = -1;
@@ -150,8 +154,9 @@ public final class Audio {
                         partPreparation = ctx.music().preparePartAsync(song, List.of(new SceneMusicPart(0, 0, 0, false)));
                     }
                     case FAILED, CANCELLED -> {
+                        String error = preparation.error();
                         preparation = null;
-                        musicFailed = true;
+                        preparationFailed(error);
                     }
                     default -> { }
                 }
@@ -162,11 +167,13 @@ public final class Audio {
                         // prepared() publishes the rendered mix; start() refuses until it has.
                         partPreparation.prepared();
                         partPreparation = null;
-                        startPlayer();
+                        songReady = true;
+                        if (wantsPreparedSong()) startPlayer();
                     }
                     case FAILED, CANCELLED -> {
+                        String error = partPreparation.error();
                         partPreparation = null;
-                        musicFailed = true;
+                        preparationFailed(error);
                     }
                     default -> { }
                 }
@@ -176,9 +183,7 @@ public final class Audio {
                 startPlayer();
             }
         } catch (RuntimeException failure) {
-            stopPlayer();
-            musicFailed = true;
-            lastError = failure.toString();
+            preparationFailed(failure.toString());
         }
     }
 
@@ -188,22 +193,50 @@ public final class Audio {
     }
 
     private void startPlayer() {
-        if (song == null) return;
-        // The player replaces the driver's output; stop the stand-in so it does not resume later.
-        if ("s3k".equals(playingGame)) ctx.audio().stopMusic();
+        if (!songReady || !wantsPreparedSong()) return;
+        ctx.audio().stopMusic();
         player = ctx.music().start(song, List.of(new SceneMusicPart(0, 0, 0, false)), 0);
         playingGame = wantGame;
         playingId = wantId;
     }
 
-    private void stopPlayer() {
+    private boolean wantsPreparedSong() {
+        return preparedGame != null && preparedGame.equals(wantGame) && preparedId == wantId;
+    }
+
+    private void preparationFailed(String error) {
+        if (wantsPreparedSong()) stopPlayback();
+        releasePreparation();
+        musicFailed = true;
+        lastError = error;
+        playFallback();
+    }
+
+    private void playFallback() {
+        if (wantsPreparedSong() && fallbackId >= 0 &&
+                (!"s3k".equals(playingGame) || playingId != fallbackId)) {
+            ctx.audio().playMusic(fallbackId);
+            playingGame = "s3k";
+            playingId = fallbackId;
+        }
+    }
+
+    private void stopPlayback() {
+        if (player != null) player.stop();
+        player = null;
+        playingGame = null;
+        playingId = -1;
+    }
+
+    private void releasePreparation() {
         if (preparation != null) preparation.cancel();
         if (partPreparation != null) partPreparation.cancel();
         preparation = null;
         partPreparation = null;
-        if (player != null) player.stop();
-        player = null;
         song = null;
+        songReady = false;
+        musicFailed = false;
+        lastError = null;
     }
 
     /** A one-line state summary for diagnostics. */
@@ -230,7 +263,8 @@ public final class Audio {
 
     /** Releases everything when the scene closes. */
     public void close() {
-        stopPlayer();
+        stopPlayback();
+        releasePreparation();
         try {
             ctx.audio().stopMusic();
         } catch (RuntimeException ignored) {

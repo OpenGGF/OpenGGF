@@ -194,7 +194,7 @@ class TestThreeIslandsScene {
     }
 
     @Test
-    void aSonic1ZonePlaysItsOwnRomSongAfterTheStandIn() throws Exception {
+    void aSonic1ZonePlaysItsOwnRomSongWithoutPlaceholderSwitches() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
             harness.open(harness.apply(GameServices.module()), work.resolve("saves"), 400, 224, true);
@@ -205,7 +205,7 @@ class TestThreeIslandsScene {
             var active = audio.getClass().getMethod("playerActive");
             var describe = audio.getClass().getMethod("describe");
             play(harness, 2);
-            assertTrue(((String) describe.invoke(audio)).contains("playing s3k:20"), "the stand-in starts at once");
+            assertFalse(((String) describe.invoke(audio)).contains("playing s3k:20"), "no unrelated stand-in");
             // Real time: the background synthesis needs wall-clock time, not ticks.
             long deadline = System.nanoTime() + 60_000_000_000L;
             while (!(boolean) active.invoke(audio) && System.nanoTime() < deadline) {
@@ -214,6 +214,20 @@ class TestThreeIslandsScene {
             }
             assertTrue((boolean) active.invoke(audio), "Green Hill's own song took over: " + describe.invoke(audio));
             assertTrue(((String) describe.invoke(audio)).contains("playing s1:81"), (String) describe.invoke(audio));
+            audio.getClass().getMethod("music", String.class, int.class).invoke(audio, "s3k", 0x18);
+            audio.getClass().getMethod("jingle", int.class).invoke(audio, 0x29);
+            audio.getClass().getMethod("music", String.class, int.class, int.class).invoke(audio, "s1", 0x81, 0x20);
+            assertTrue((boolean) active.invoke(audio), "return from combat reuses the real host's prepared song immediately");
+            assertTrue(((String) describe.invoke(audio)).contains("playing s1:81"), (String) describe.invoke(audio));
+            Object outside = value(game, "screen");
+            near(value(outside, "field"), "DUNGEON");
+            harness.press(GLFW_KEY_ENTER);
+            play(harness, 2);
+            finishDialogue(harness);
+            assertEquals("DUNGEON", screen(harness));
+            assertTrue((boolean) active.invoke(audio), "the shrine keeps the prepared area song");
+            assertTrue(((String) describe.invoke(audio)).contains("want s1:81 playing s1:81"),
+                    "crossing indoors must not request a different track: " + describe.invoke(audio));
             clean(harness);
         }
     }

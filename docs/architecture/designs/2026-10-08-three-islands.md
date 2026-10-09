@@ -274,3 +274,52 @@ The corrected package was installed with `build.py --skip-engine --install`; its
 matches the installed jar and the enabled/trusted local state. Final native field and
 battle captures were inspected after installation; two curated preview images are kept
 outside the repository, while capture build directories, probes and raw logs were removed.
+
+## Area music continuity (2026-10-09)
+
+At base `30398f3e679873a4620fdce1e9d2329b54d60eab`, every return from a driver
+battle/jingle discarded the mod's prepared-song handle and requested an S3K island
+stand-in. Even when the host could reuse the rendered ROM song, that introduced an
+unrelated cue before the next poll restored the area music. Interior entries also
+requested different music; loading independently requested the outdoor track.
+
+The field now owns one zone theme outdoors and indoors. Loading keeps the source
+cue until the destination field opens. One foreign-ROM preparation survives driver
+interludes, including jobs still rendering when a battle starts; completion may
+publish the song but cannot start it over the battle. Returning starts the prepared
+song immediately. Changing foreign areas retires the previous preparation, keeping
+memory bounded to the host's single song. Repeated field updates do not restart it.
+
+The temporary stand-in approach is retired: its observable extra cue was the reported
+inconsistency. An S3K fallback is now reserved for preparation/playback failure and
+is stable until leaving that music context. Initial foreign-song preparation can be
+silent; this does not implement prefetching, crossfades or seamless sample-position
+resume. Combat returns and the finite one-minute render restart the same theme.
+The existing host limitation that foreign playback masks driver SFX remains.
+
+Validation uses the proportionate exception: the change-based plan selected 3,075
+ordinary classes plus guards due to unclassified example paths (and pre-existing
+expedition/fixture edits). No engine/API/driver code changes; creator audio transition
+regressions, SDK packaging and actual ROM scene checks directly cover the consumers.
+In the current checkout over the base above, the Java 21 queued command
+`-Dmse=off -Dtest=TestThreeIslandsExample,TestThreeIslandsScene test`, with absolute
+root S1/S2/S3K ROM properties, passed 63 nested creator tests and 13 outer tests
+(packaging, creator launcher and 11 scene cases), no failures or skips, at 13:41 BST.
+All ten zones and interiors were exercised, including the existing expedition edits.
+A follow-up adds cached-start failure handling and a real shrine-entry music assertion;
+its focused results are recorded below. These checks establish routing and host
+playback lifecycle, not a physical-speaker listening test or full engine-suite pass.
+The initial sandboxed Maven attempt could not acquire `.git/maven-admission.lock`;
+the authorized elevated queue invocation completed normally.
+
+Unrelated expedition work remains unstaged. The local installed jar includes that
+existing working-tree content; the music commit contains only this task's edits.
+
+The follow-up queued command selected `TestThreeIslandsExample` and
+`TestThreeIslandsScene#aSonic1ZonePlaysItsOwnRomSongWithoutPlaceholderSwitches`,
+with `-Dmse=off` and the same absolute S1/S3K paths. At 13:43 BST it passed all
+64 nested creator tests (including ten audio regressions), packaging, and the
+real-ROM music/doorway case: three outer tests, zero failures/errors/skips.
+The final assertion enters the shrine through its actual door and confirms both
+the requested and playing song remain `s1:81`. The failure regression verifies an
+unavailable cached playback selects the fallback without faulting the scene.

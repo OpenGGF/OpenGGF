@@ -55,7 +55,7 @@ public final class FieldScreen implements Screen {
     public void update(Game game) {
         ticks++;
         game.progress.tick();
-        game.audio.music(zone.game, field.dungeon == null ? zone.music : field.dungeon.music(), zone.island().mapMusic);
+        game.audio.music(zone.game, zone.music, zone.island().mapMusic);
         if (toastTicks > 0) toastTicks--;
         if (game.transitioning()) return;
         if (game.controls.menu()) { game.swap(new MenuScreen(game, this, false)); return; }

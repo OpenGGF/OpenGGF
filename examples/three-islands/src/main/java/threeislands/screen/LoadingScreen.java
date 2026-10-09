@@ -80,10 +80,7 @@ public final class LoadingScreen implements Screen {
                 default -> step++;
             }
         }
-        // Start the zone's own song now; the card waits a little for it, then the island's
-        // S3K stand-in covers whatever synthesis remains.
-        game.audio.music(zone.game, zone.music, zone.island().mapMusic);
-        // Keep the card up long enough to read, even when loading is quick.
+        // The destination field owns its music. Failed/loading travel keeps the source cue.
         if (step >= 5) then.accept(stage);
     }
 
