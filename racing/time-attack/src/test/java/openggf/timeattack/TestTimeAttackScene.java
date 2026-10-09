@@ -1,10 +1,10 @@
 package openggf.timeattack;
 
 import com.openggf.control.InputHandler;
-import com.openggf.game.run.RunEndReason;
-import com.openggf.game.run.RunHandle;
-import com.openggf.game.run.RunHost;
-import com.openggf.game.run.RunSpec;
+import com.openggf.mods.run.RunEndReason;
+import com.openggf.mods.run.RunHandle;
+import com.openggf.mods.run.RunHost;
+import com.openggf.mods.run.RunSpec;
 import com.openggf.game.session.GameplayRunPolicy;
 import com.openggf.mods.ModRuntimeFindingStore;
 import com.openggf.mods.ModStateSaveResult;

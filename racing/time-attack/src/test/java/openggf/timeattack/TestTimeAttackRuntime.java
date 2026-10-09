@@ -144,14 +144,14 @@ class TestTimeAttackRuntime {
                 root.resolve("identity"), () -> false);
         runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
         boolean[] retried = new boolean[1];
-        runtime.attachHandle(new com.openggf.game.run.RunHandle() {
+        runtime.attachHandle(new com.openggf.mods.run.RunHandle() {
             @Override public void retry() { retried[0] = true; }
             @Override public void leave() { }
             @Override public void spectate(boolean active, int dx, int dy) { }
             @Override public boolean isActive() { return true; }
         });
         runtime.setRetryKey(() -> 82);
-        runtime.onLevelReady(new com.openggf.game.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0));
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0));
         assertTrue(runtime.isAttemptActive());
 
         assertTrue(runtime.admitStep(keys(82)));
@@ -165,10 +165,10 @@ class TestTimeAttackRuntime {
         GhostStore store = new GhostStore(root);
         TimeAttackRuntime runtime = new TimeAttackRuntime(store, root.resolve("identity"), () -> false);
         runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
-        runtime.onLevelReady(new com.openggf.game.run.RunLevelStart(runtime.runSpec(), "fp", true, 0, 0));
-        com.openggf.game.run.PlayerPose pose = new com.openggf.game.run.PlayerPose(10, 20, 0, false, false, 2, false);
-        runtime.afterStep(new com.openggf.game.run.RunStep(0, 0x08, false, pose, false, -1, false));
-        runtime.afterStep(new com.openggf.game.run.RunStep(1, 0x08, false, pose, true, -1, false));
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", true, 0, 0));
+        com.openggf.mods.run.PlayerPose pose = new com.openggf.mods.run.PlayerPose(10, 20, 0, false, false, 2, false);
+        runtime.afterStep(new com.openggf.mods.run.RunStep(0, 0x08, false, pose, false, -1, false));
+        runtime.afterStep(new com.openggf.mods.run.RunStep(1, 0x08, false, pose, true, -1, false));
         assertTrue(runtime.hudState().finished());
         assertTrue(store.loadBest("s3k", 0, 0, "sonic").isEmpty(), "a tainted finish is never saved");
     }
@@ -179,12 +179,12 @@ class TestTimeAttackRuntime {
                 root.resolve("identity"), () -> false);
         runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
         assertTrue(runtime.isActive());
-        runtime.onRunEnded(com.openggf.game.run.RunEndReason.ACT_COMPLETED);
+        runtime.onRunEnded(com.openggf.mods.run.RunEndReason.ACT_COMPLETED);
         assertFalse(runtime.isActive());
     }
 
-    private static com.openggf.game.run.RunInput keys(int pressedKey) {
-        return new com.openggf.game.run.RunInput() {
+    private static com.openggf.mods.run.RunInput keys(int pressedKey) {
+        return new com.openggf.mods.run.RunInput() {
             @Override public com.openggf.control.LogicalInputSnapshot input() { return null; }
             @Override public boolean keyDown(int key) { return key == pressedKey; }
             @Override public boolean keyPressed(int key) { return key == pressedKey; }

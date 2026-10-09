@@ -1,4 +1,4 @@
-package com.openggf.sprites.ghost;
+package com.openggf;
 
 import com.openggf.ghost.GhostFrame;
 import org.junit.jupiter.api.Test;

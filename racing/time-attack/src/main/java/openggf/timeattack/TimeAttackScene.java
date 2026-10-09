@@ -1,7 +1,7 @@
 package openggf.timeattack;
 
-import com.openggf.game.run.RunEndReason;
-import com.openggf.game.run.RunHandle;
+import com.openggf.mods.run.RunEndReason;
+import com.openggf.mods.run.RunHandle;
 import com.openggf.mods.ModStorage;
 import com.openggf.mods.scene.ModScene;
 import com.openggf.mods.scene.SceneCanvas;

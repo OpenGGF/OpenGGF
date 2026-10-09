@@ -145,7 +145,7 @@ public final class ModSceneHost {
      * Shows the scene again after a run it launched has ended. The scene was suspended (neither
      * updated nor drawn) while the run played; a creator failure closes it.
      */
-    public void resume(com.openggf.game.run.RunEndReason reason) {
+    public void resume(com.openggf.mods.run.RunEndReason reason) {
         if (scene == null || exiting) {
             return;
         }

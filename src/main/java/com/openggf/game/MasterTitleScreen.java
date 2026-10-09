@@ -229,9 +229,8 @@ public class MasterTitleScreen {
     private boolean gameSelected = false;
     private MasterTitleEntry.Launch selectedLaunch;
     private boolean standaloneActionOpen;
-    private List<com.openggf.mods.code.OwnedTitleEntry> titleEntries = List.of();
-    private java.util.function.BiConsumer<com.openggf.mods.code.OwnedTitleEntry, List<String>> titleEntryOpener =
-            (entry, games) -> { };
+    private List<String> titleEntries = List.of();
+    private java.util.function.ObjIntConsumer<List<String>> titleEntryOpener = (games, index) -> { };
     private boolean extrasOpen;
     private int extrasIndex;
     private int standaloneActionIndex;
@@ -547,9 +546,8 @@ public class MasterTitleScreen {
      * Mod-contributed master-title entries (from enabled mods' latest registration pass) and
      * how to open one; the opener receives the games whose ROMs are present.
      */
-    public void setTitleEntries(List<com.openggf.mods.code.OwnedTitleEntry> entries,
-            java.util.function.BiConsumer<com.openggf.mods.code.OwnedTitleEntry, List<String>> opener) {
-        titleEntries = List.copyOf(entries);
+    public void setTitleEntries(List<String> labels, java.util.function.ObjIntConsumer<List<String>> opener) {
+        titleEntries = List.copyOf(labels);
         titleEntryOpener = Objects.requireNonNull(opener, "opener");
         navigation.setExtrasVisible(!titleEntries.isEmpty());
     }
@@ -558,7 +556,7 @@ public class MasterTitleScreen {
         if (titleEntries.isEmpty()) {
             showActionError("Extras");
         } else if (titleEntries.size() == 1) {
-            openTitleEntry(titleEntries.get(0));
+            openTitleEntry(0);
         } else {
             extrasOpen = true;
             extrasIndex = 0;
@@ -566,7 +564,7 @@ public class MasterTitleScreen {
         }
     }
 
-    private void openTitleEntry(com.openggf.mods.code.OwnedTitleEntry entry) {
+    private void openTitleEntry(int index) {
         List<String> games = entries.stream()
                 .filter(MasterTitleEntry.Stock.class::isInstance)
                 .map(MasterTitleEntry.Stock.class::cast)
@@ -574,7 +572,7 @@ public class MasterTitleScreen {
                 .map(stock -> stock.game().gameId)
                 .toList();
         playConfirmSound();
-        titleEntryOpener.accept(entry, games);
+        titleEntryOpener.accept(games, index);
     }
 
     private void updateExtrasChooser() {
@@ -592,13 +590,13 @@ public class MasterTitleScreen {
         if (extrasIndex != previous) playNavigateSound();
         if (navigation.accept() || clicked) {
             extrasOpen = false;
-            openTitleEntry(titleEntries.get(extrasIndex));
+            openTitleEntry(extrasIndex);
         }
     }
 
     private String hubLabel(TitleHubNavigation.Action action) {
         return action == TitleHubNavigation.Action.EXTRAS && titleEntries.size() == 1
-                ? titleEntries.get(0).label().toUpperCase(java.util.Locale.ROOT) : action.label;
+                ? titleEntries.get(0).toUpperCase(java.util.Locale.ROOT) : action.label;
     }
 
     /** This tick's mouse in menu pixels; null without a window or before the mouse is used. */
@@ -1112,7 +1110,7 @@ public class MasterTitleScreen {
             MenuStyle.page(font, viewportWidth, "EXTRAS", "Added by mods");
             for (int i = 0; i < titleEntries.size(); i++) {
                 String label = (i == extrasIndex ? "> " : "  ")
-                        + titleEntries.get(i).label().toUpperCase(java.util.Locale.ROOT);
+                        + titleEntries.get(i).toUpperCase(java.util.Locale.ROOT);
                 MenuStyle.panel(font, viewportWidth / 2 - 90, 76 + i * 28, 180, 23);
                 if (i == extrasIndex) MenuStyle.focus(font, viewportWidth / 2 - 90, 76 + i * 28, 180, 23);
                 font.drawTextCentered(label, viewportWidth, 82 + i * 28, 1f, 1f, 1f, 1f);

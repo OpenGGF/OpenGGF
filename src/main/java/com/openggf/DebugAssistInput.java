@@ -1,4 +1,4 @@
-package com.openggf.control;
+package com.openggf;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;

@@ -1,16 +1,16 @@
 package com.openggf.mods.scene;
 
 import com.openggf.game.ModApi;
-import com.openggf.game.run.RunHandle;
-import com.openggf.game.run.RunHost;
-import com.openggf.game.run.RunSpec;
+import com.openggf.mods.run.RunHandle;
+import com.openggf.mods.run.RunHost;
+import com.openggf.mods.run.RunSpec;
 
 import java.util.List;
 
 /**
  * Launches stock gameplay runs from a scene. While a run plays the scene is suspended (no
  * update or draw); when it ends the scene is resumed through
- * {@link ModScene#resumed(SceneContext, com.openggf.game.run.RunEndReason)}.
+ * {@link ModScene#resumed(SceneContext, com.openggf.mods.run.RunEndReason)}.
  */
 @ModApi
 public interface SceneGameplay {
@@ -19,7 +19,7 @@ public interface SceneGameplay {
 
     /**
      * The determinism fingerprint a run of {@code gameId} would report in
-     * {@link com.openggf.game.run.RunLevelStart#determinismFingerprint()} (engine build and ROM),
+     * {@link com.openggf.mods.run.RunLevelStart#determinismFingerprint()} (engine build and ROM),
      * available before any run starts so a host can compare or match recordings and rooms.
      * Empty when the game's ROM is not available.
      */

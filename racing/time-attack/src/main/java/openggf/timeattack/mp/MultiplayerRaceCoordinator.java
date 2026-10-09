@@ -10,8 +10,8 @@ import openggf.racing.client.RaceClient;
 import openggf.racing.client.RemoteGhostRegistry;
 import openggf.racing.hub.HostRoundEngine;
 import openggf.racing.protocol.ControlMessage;
-import com.openggf.game.run.GhostPose;
-import com.openggf.game.run.RunLevelStart;
+import com.openggf.mods.run.GhostPose;
+import com.openggf.mods.run.RunLevelStart;
 import com.openggf.mods.scene.SceneKeys;
 import com.openggf.mods.ui.LevelOverlayCanvas;
 
@@ -175,7 +175,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     }
 
     @Override
-    public boolean admit(com.openggf.game.run.RunInput input) {
+    public boolean admit(com.openggf.mods.run.RunInput input) {
         pump();
         pollLocalInput(input);
         return !holdGameplay();
@@ -269,7 +269,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         transport.sendControl(new ControlMessage.RoundConfigure(config));
     }
 
-    public void pollLocalInput(com.openggf.game.run.RunInput input) {
+    public void pollLocalInput(com.openggf.mods.run.RunInput input) {
         for (int option = 0; option < 3; option++) {
             if (input.keyPressed(SceneKeys.DIGIT_1 + option)) {
                 castVote(option);

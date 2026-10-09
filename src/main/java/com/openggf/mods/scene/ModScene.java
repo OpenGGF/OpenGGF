@@ -48,7 +48,7 @@ public interface ModScene {
     }
 
     /** A run launched through {@link SceneContext#gameplay()} has ended and the scene is shown again. */
-    default void resumed(SceneContext ctx, com.openggf.game.run.RunEndReason reason) {
+    default void resumed(SceneContext ctx, com.openggf.mods.run.RunEndReason reason) {
     }
 
     /** The scene is closing; save anything worth keeping. Images are released afterwards. */

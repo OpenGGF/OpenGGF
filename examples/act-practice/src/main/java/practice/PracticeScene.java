@@ -1,7 +1,7 @@
 package practice;
 
-import com.openggf.game.run.RunEndReason;
-import com.openggf.game.run.RunSpec;
+import com.openggf.mods.run.RunEndReason;
+import com.openggf.mods.run.RunSpec;
 import com.openggf.game.session.GameplayRunPolicy;
 import com.openggf.mods.scene.ModScene;
 import com.openggf.mods.scene.SceneButtons;

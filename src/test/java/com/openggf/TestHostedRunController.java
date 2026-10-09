@@ -2,12 +2,12 @@ package com.openggf;
 
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.ghost.GhostRenderRegistry;
-import com.openggf.game.run.GhostPose;
-import com.openggf.game.run.PlayerPose;
-import com.openggf.game.run.RunEndReason;
-import com.openggf.game.run.RunHandle;
-import com.openggf.game.run.RunHost;
-import com.openggf.game.run.RunSpec;
+import com.openggf.mods.run.GhostPose;
+import com.openggf.mods.run.PlayerPose;
+import com.openggf.mods.run.RunEndReason;
+import com.openggf.mods.run.RunHandle;
+import com.openggf.mods.run.RunHost;
+import com.openggf.mods.run.RunSpec;
 import com.openggf.game.session.GameplayRunPolicy;
 import org.junit.jupiter.api.Test;
 

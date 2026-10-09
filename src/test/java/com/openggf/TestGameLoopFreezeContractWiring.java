@@ -254,13 +254,13 @@ class TestGameLoopFreezeContractWiring {
         when(level.consumeSeamlessTransitionRequest()).thenReturn(request);
         setField(gameplay, "levelManager", level);
         GameLoop loop = new GameLoop(new InputHandler());
-        com.openggf.game.run.RunSpec spec = new com.openggf.game.run.RunSpec("s3k", 0, 0, "sonic",
+        com.openggf.mods.run.RunSpec spec = new com.openggf.mods.run.RunSpec("s3k", 0, 0, "sonic",
                 com.openggf.game.session.GameplayRunPolicy.isolatedAct());
         gameplay.beginGameplayRun(spec.policy(), spec.zone(), spec.act());
-        List<com.openggf.game.run.RunEndReason> ended = new java.util.ArrayList<>();
-        List<com.openggf.game.run.RunEndReason> returned = new java.util.ArrayList<>();
-        loop.beginHostedRun(spec, new com.openggf.game.run.RunHost() {
-            @Override public void onRunEnded(com.openggf.game.run.RunEndReason reason) { ended.add(reason); }
+        List<com.openggf.mods.run.RunEndReason> ended = new java.util.ArrayList<>();
+        List<com.openggf.mods.run.RunEndReason> returned = new java.util.ArrayList<>();
+        loop.beginHostedRun(spec, new com.openggf.mods.run.RunHost() {
+            @Override public void onRunEnded(com.openggf.mods.run.RunEndReason reason) { ended.add(reason); }
         }, reason -> {
             returned.add(reason);
             loop.fadeOutTo(() -> { });
@@ -268,9 +268,9 @@ class TestGameLoopFreezeContractWiring {
 
         loop.step();
 
-        assertEquals(List.of(com.openggf.game.run.RunEndReason.ACT_COMPLETED), ended,
+        assertEquals(List.of(com.openggf.mods.run.RunEndReason.ACT_COMPLETED), ended,
                 "cross-act routing must end the run before transition application");
-        assertEquals(List.of(com.openggf.game.run.RunEndReason.ACT_COMPLETED), returned);
+        assertEquals(List.of(com.openggf.mods.run.RunEndReason.ACT_COMPLETED), returned);
         verify(level, never()).applySeamlessTransition(request);
         assertTrue(gameplay.getFadeManager().isActive(),
                 "the suppressed destination must route back to the host through a fade");

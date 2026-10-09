@@ -1,4 +1,4 @@
-package com.openggf.game.run;
+package com.openggf.mods.run;
 
 import com.openggf.game.ModApi;
 import com.openggf.control.LogicalInputSnapshot;

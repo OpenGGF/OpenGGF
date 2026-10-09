@@ -158,7 +158,7 @@ class TestModEngineWiringSeams {
     @Test
     void freshHostedRunDisablesModsBeforePresentationAndSessionOpen() throws IOException {
         String source = source("Engine.java");
-        String method = "private boolean launchHostedRunSession(com.openggf.game.run.RunSpec spec,";
+        String method = "private boolean launchHostedRunSession(com.openggf.mods.run.RunSpec spec,";
         assertMethodOrder(source, method,
                 "resolveHostedRunModule(rootModule, spec)",
                 "ModSubsystem.disableCurrentSessionForDeterminism()");

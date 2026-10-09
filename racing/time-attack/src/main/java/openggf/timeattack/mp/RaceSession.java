@@ -1,9 +1,9 @@
 package openggf.timeattack.mp;
 
-import com.openggf.game.run.RunHandle;
-import com.openggf.game.run.RunHost;
-import com.openggf.game.run.RunLevelStart;
-import com.openggf.game.run.RunSpec;
+import com.openggf.mods.run.RunHandle;
+import com.openggf.mods.run.RunHost;
+import com.openggf.mods.run.RunLevelStart;
+import com.openggf.mods.run.RunSpec;
 import com.openggf.mods.ModStorage;
 import openggf.racing.client.ClientRaceSession;
 import openggf.racing.client.DirectJoinAddress;

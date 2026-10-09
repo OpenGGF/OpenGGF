@@ -295,3 +295,37 @@ Open items: `RaceClient`/`MasterClient` never close their `HttpClient`, whose se
 outlives the connection until collected; the solo and multiplayer HUDs both draw top-right
 (as in the Engine); a player who leaves a run while the window is open cannot rejoin that
 round; the master link's five-second heartbeat cadence is not covered by a test.
+
+## Delivery validation (lead, 2026-10-09)
+
+Change-based run `--base 3c569f98a` (origin/next) at `b8a9ea66a`, full ordinary selection
+plus guards. A first attempt with `--max-minutes 75` timed out after 2,814 reports: the
+ordinary lane now takes about 82 minutes, not the September 24. The repeat
+(`--max-minutes 150`) completed:
+
+- Ordinary: 3,070 reports, 26,764 tests, 27 failures, 0 errors, 62 skips (4,911 s). 26
+  failures are develop's inherited S3K cold-route assertions (MHZ, DEZ, LRZ, SSZ), identical
+  first lines to the actual-main table in
+  `docs/architecture/audits/2026-10-07-stock-parity-gap-verification.md` on develop (the SSZ
+  Tails replica row under that table's normalization). The 27th,
+  `TestS1GameplayAudioTimelineCli#shellUsesAbsoluteBootstrapTools...`, is environmental: the
+  launching shell exported `LD_LIBRARY_PATH`, which `run_s1_ghz1_gameplay_audio_timeline.sh`
+  rejects by design (exit 4; exit 0 without it); script and test are unchanged from base.
+  All 62 skips appear in develop's skip table.
+- Guards: 86 reports, 674 tests, 2 failures, both caused by this branch. ArchUnit found new
+  top-level edges `game -> mods` (a new `game`/`mods` cycle), `control -> debug` and
+  `sprites -> debug`.
+
+Fix: the run API moved from `com.openggf.game.run` to `com.openggf.mods.run` (nothing in
+`game` uses it; `RunHost.drawOverlay` takes the `mods.ui` canvas), and the Mod API pins were
+regenerated; `MasterTitleScreen.setTitleEntries` takes labels and an index opener instead of
+`OwnedTitleEntry`; `DebugAssistInput` and `GhostRenderer` moved to the root `com.openggf`
+package beside `GameLoop`/`HostedRunController`, their only users. Rejected: adding the three
+edges to the core-runtime ratchet, which would pull `mods` into the frozen cycle cluster.
+
+After the fix: `-Pguards` 674 tests, 0 failures, 0 skips; a focused set (Mod API pin/policy
+tests, run seams, title entries, master title, input ownership, game loop, ghost renderer,
+gate objects, act-practice and hello-scene examples, every `openggf/timeattack` and
+`openggf/racing` test) 120 classes, 866 tests, 0 failures, 0 skips. The ordinary suite was not
+repeated: the fix is package moves and one constructor-shape change, covered by the guards
+and the focused set.

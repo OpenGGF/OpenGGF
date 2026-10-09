@@ -246,7 +246,7 @@ class TestEngineDataSelectPatchResolution {
                         false, "test"));
         assertEquals(List.of("one"), ((PatchTrail) recordingModule).ids());
         GameModule hostedRunModule = engine.resolveHostedRunModule(root,
-                new com.openggf.game.run.RunSpec("s2", 0, 0, "knuckles",
+                new com.openggf.mods.run.RunSpec("s2", 0, 0, "knuckles",
                         com.openggf.game.session.GameplayRunPolicy.isolatedAct()));
         assertEquals(List.of("one"), ((PatchTrail) hostedRunModule).ids());
         assertEquals(0, scans.get(),

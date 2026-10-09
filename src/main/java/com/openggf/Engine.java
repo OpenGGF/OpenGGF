@@ -1735,8 +1735,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		com.openggf.game.MasterTitleCatalog.bind(screen, this::masterTitleEntries);
 		if (ModSubsystem.current().policy().mayScanAtBoot()) {
 			screen.setModManagerScreenFactory(font -> ModSubsystem.current().createManager(font));
-			screen.setTitleEntries(modRuntime.titleEntries(), (entry, games) ->
-					gameLoop.requestTitleEntryOpen(() -> openTitleEntryScene(entry, games)));
+			List<com.openggf.mods.code.OwnedTitleEntry> titleEntries = modRuntime.titleEntries();
+			screen.setTitleEntries(titleEntries.stream().map(com.openggf.mods.code.OwnedTitleEntry::label).toList(),
+					(games, index) -> gameLoop.requestTitleEntryOpen(
+							() -> openTitleEntryScene(titleEntries.get(index), games)));
 		}
 		return screen;
 	}
@@ -1954,7 +1956,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	/** Starts a run a mod scene launched; a load failure returns to the scene. */
-	void startSceneHostedRun(com.openggf.game.run.RunSpec spec) {
+	void startSceneHostedRun(com.openggf.mods.run.RunSpec spec) {
 		if (!launchHostedRunSession(spec, message -> LOGGER.warning("Scene run failed to load: " + message))) {
 			gameLoop.endHostedRunAfterFailedLaunch(true);
 		}
@@ -1967,7 +1969,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 * Starting from the master title or a mod scene with no ROM loaded, this performs the
 	 * ROM-load / module-detection bootstrap that {@link #initializeGame()} performs.
 	 */
-	private boolean launchHostedRunSession(com.openggf.game.run.RunSpec spec,
+	private boolean launchHostedRunSession(com.openggf.mods.run.RunSpec spec,
 			java.util.function.Consumer<String> romError) {
 		refreshLaunchSessionCachedConfig();
 		applyResolvedDisplayDimensions();
@@ -2023,7 +2025,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private Optional<String> fingerprintForGame(String gameId) {
 		try {
 			Rom rom = romManager.getSecondaryRom(gameId);
-			return rom == null ? Optional.empty() : Optional.of(new com.openggf.game.run.DeterminismFingerprint(
+			return rom == null ? Optional.empty() : Optional.of(new com.openggf.mods.run.DeterminismFingerprint(
 					AppVersion.get(), rom.calculateChecksum()).asString());
 		} catch (IOException | RuntimeException e) {
 			LOGGER.log(java.util.logging.Level.FINE, "No determinism fingerprint for " + gameId, e);
@@ -2032,7 +2034,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	/** A hosted run's module: the stock game with built-in patches only (no mod content). */
-	GameModule resolveHostedRunModule(GameModule rootModule, com.openggf.game.run.RunSpec spec) {
+	GameModule resolveHostedRunModule(GameModule rootModule, com.openggf.mods.run.RunSpec spec) {
 		return moduleResolutionService.resolveForLaunch(rootModule,
 				new GameplayLaunchRequest(spec.gameId(), spec.character(), List.of()),
 				ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
@@ -2042,7 +2044,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 * Shows the mod scene that launched the run which just ended. The gameplay session is torn
 	 * down as for a return to the master title, but the suspended scene is resumed instead.
 	 */
-	void returnToHostScene(com.openggf.game.run.RunEndReason reason) {
+	void returnToHostScene(com.openggf.mods.run.RunEndReason reason) {
 		gameLoop.tearDownGameplayForReturn();
 		resetForGameplayFromMasterTitle();
 		gameLoop.setGameplayMode(null);

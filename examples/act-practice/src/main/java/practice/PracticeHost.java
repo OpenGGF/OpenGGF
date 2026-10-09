@@ -1,13 +1,13 @@
 package practice;
 
-import com.openggf.game.run.GhostPose;
-import com.openggf.game.run.PlayerPose;
-import com.openggf.game.run.RunEndReason;
-import com.openggf.game.run.RunHandle;
-import com.openggf.game.run.RunHost;
-import com.openggf.game.run.RunInput;
-import com.openggf.game.run.RunLevelStart;
-import com.openggf.game.run.RunStep;
+import com.openggf.mods.run.GhostPose;
+import com.openggf.mods.run.PlayerPose;
+import com.openggf.mods.run.RunEndReason;
+import com.openggf.mods.run.RunHandle;
+import com.openggf.mods.run.RunHost;
+import com.openggf.mods.run.RunInput;
+import com.openggf.mods.run.RunLevelStart;
+import com.openggf.mods.run.RunStep;
 import com.openggf.mods.scene.SceneKeys;
 import com.openggf.mods.scene.SceneStorage;
 import com.openggf.mods.ui.CompactFont;

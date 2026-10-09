@@ -5,7 +5,7 @@ import openggf.timeattack.AttemptInputRecording;
 import openggf.timeattack.TimeAttackLaunchRequest;
 import openggf.timeattack.AttemptStartDescriptor;
 
-import com.openggf.game.run.DeterminismFingerprint;
+import com.openggf.mods.run.DeterminismFingerprint;
 import com.openggf.ModSubsystem;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
