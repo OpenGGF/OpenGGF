@@ -112,8 +112,7 @@ class TestStarpostRealValley {
     /** Launches the valley act with {@code character} alone at {@code aspect}. */
     private HeadlessTestFixture launch(String character, WidescreenAspect aspect) throws Exception {
         bootstrap = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
-        assumeTrue(new LogicalRomResolver(() -> null) != null
-                && LogicalRomResolver.fromRomManager(GameServices.rom()).isAvailable(LogicalRom.S1),
+        assumeTrue(LogicalRomResolver.fromRomManager(GameServices.rom()).isAvailable(LogicalRom.S1),
                 "Sonic 1 was not supplied");
         var config = SonicConfigurationService.getInstance();
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, character);
@@ -162,8 +161,16 @@ class TestStarpostRealValley {
         assertFalse(player.getAir(), "standing at the gate: y=" + player.getCentreY());
         int floor = player.getCentreY();
         int maxX = 0;
+        int ledgeJumpFrames = 0;
+        boolean jumpedAtLedge = false;
         for (int frame = 0; frame < 1800 && player.getCentreX() < COLUMNS.length * 256 - 200; frame++) {
-            fixture.stepFrame(false, false, false, true, false);
+            // Block 3 begins with the source's 64px ledge. The spring is on that ledge;
+            // jump onto it using native input, rather than expecting held-right to climb a wall.
+            if (!jumpedAtLedge && player.getCentreX() >= 1710 && !player.getAir()) {
+                jumpedAtLedge = true;
+                ledgeJumpFrames = 20;
+            }
+            fixture.stepFrame(false, false, false, true, ledgeJumpFrames-- > 0);
             assertFalse(player.getDead(), "died at x=" + player.getCentreX() + " y=" + player.getCentreY());
             maxX = Math.max(maxX, player.getCentreX());
         }
@@ -178,8 +185,11 @@ class TestStarpostRealValley {
         AbstractPlayableSprite player = fixture.sprite();
         fixture.stepIdleFrames(5);
         // Start on the flat block west of the loop at full speed, as running up from the town would.
-        com.openggf.sprites.NativePositionOps.setCentre(player, (short) (LOOP_X - 200), (short) player.getCentreY());
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player, LOOP_X - 200);
         player.setGSpeed((short) 0x0C00);
+        fixture.camera().updatePosition(true);
+        com.openggf.level.LevelCameraInitialization.recenterPositionedEntry(GameServices.level());
+        GameServices.level().updateObjectPositions();
         int topY = Integer.MAX_VALUE;
         boolean wentOverTop = false;
         boolean wentBehind = false;
@@ -195,6 +205,8 @@ class TestStarpostRealValley {
             }
             assertFalse(player.getDead());
         }
+        System.out.printf("REAL_VALLEY A4 %s: apex y=%d, exit x=%d, secondary=%s%n",
+                character, topY, player.getCentreX(), wentBehind);
         assertTrue(wentOverTop, "ran over the loop's top: highest y=" + topY);
         assertTrue(wentBehind, "took the loop's second path across the top");
         assertTrue(player.getCentreX() >= LOOP_X + 300, "came out the far side: x=" + player.getCentreX());
@@ -243,6 +255,63 @@ class TestStarpostRealValley {
         assertTrue(glided, "Knuckles glided");
         assertTrue(knuckles.getCentreX() > startX + 60, "the glide carried him east: " + startX + " -> "
                 + knuckles.getCentreX());
+    }
+
+    /** A1/A2: host palette ownership and exact visible colour/priority survive compaction. */
+    @Test
+    void terrainAndBackgroundKeepTheirRomColoursWithinHostBudgets() throws Exception {
+        HeadlessTestFixture fixture = launch("sonic", WidescreenAspect.WIDE_16_9);
+        fixture.stepIdleFrames(20); // Includes the registered-placeholder palette bridge.
+        Level valley = GameServices.level().getCurrentLevel();
+        assertTrue(valley.getPatternCount() <= 2048);
+        assertTrue(valley.getChunkCount() <= 1024);
+        assertTrue(valley.getBlockCount() <= 256);
+        assertTrue(valley.getSolidTileCount() <= 256);
+        Level source;
+        try (Rom rom = Rom.fromReader(LogicalRomResolver.fromRomManager(GameServices.rom())
+                .openOrThrow(LogicalRom.S1), "test s1")) {
+            source = new Sonic1(rom).buildDetachedLevel(0x80);
+        }
+        int pixels = 0;
+        for (int plane = 0; plane < 2; plane++) {
+            int height = plane == 0 ? 256 : 384;
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < COLUMNS.length * 256; x++) {
+                    int sourceId = plane == 0 ? COLUMNS[x / 256]
+                            : source.getMap().getValue(1, x / 256, y / 256) & 255;
+                    int vy = y + (plane == 0 ? SKY : 0);
+                    int targetId = valley.getMap().getValue(plane, x / 128, vy / 128) & 255;
+                    long expected = pixel(source, source.getBlock(sourceId), x % 256, y % 256, false);
+                    long actual = pixel(valley, valley.getBlock(targetId), x % 128, vy % 128, true);
+                    if (actual != expected) {
+                        assertEquals(expected, actual, "colour/priority plane=" + plane + " x=" + x + " y=" + y);
+                    }
+                    pixels++;
+                }
+            }
+        }
+        System.out.printf("REAL_VALLEY A1/A2: %d patterns, %d chunks, %d blocks, %d profiles; %d exact art pixels%n",
+                valley.getPatternCount(), valley.getChunkCount(), valley.getBlockCount(),
+                valley.getSolidTileCount(), pixels);
+    }
+
+    private static long pixel(Level level, Block block, int x, int y, boolean checkReservations) {
+        ChunkDesc cell = block.getChunkDesc(x / 16, y / 16);
+        int cx = cell.getHFlip() ? 15 - x % 16 : x % 16;
+        int cy = cell.getVFlip() ? 15 - y % 16 : y % 16;
+        var desc = level.getChunk(cell.getChunkIndex()).getPatternDesc(cx / 8, cy / 8);
+        int px = desc.getHFlip() ? 7 - cx % 8 : cx % 8;
+        int py = desc.getVFlip() ? 7 - cy % 8 : cy % 8;
+        int colour = level.getPattern(desc.getPatternIndex()).getPixel(px, py);
+        if (colour == 0) return 0;
+        int line = desc.getPaletteIndex();
+        if (checkReservations) {
+            assertFalse(line == 0 || line == 1 && (colour == 1 || colour == 5 || colour == 12 || colour == 14 || colour == 15)
+                    || line == 3 && colour == 15, "art uses host/placeholder palette cell");
+        }
+        var rgb = level.getPalette(line).getColor(colour);
+        return ((long) (desc.getPriority() ? 1 : 0) << 32)
+                | (rgb.r & 255) << 16 | (rgb.g & 255) << 8 | rgb.b & 255;
     }
 
     /**
@@ -301,9 +370,12 @@ class TestStarpostRealValley {
             TerrainCheckResult result = ObjectTerrainUtils.checkFloorDist(levelManager,
                     BackgroundPlaneCollisionProvider.FOREGROUND_ONLY, false, x, probeY);
             assertNotNull(result);
-            assertEquals(SKY + surface, probeY + result.distance(), "floor sensor at x=" + x);
+            // FindFloor reports 15 - height - probeY, one pixel before the first occupied pixel.
+            assertEquals(SKY + surface - 1, probeY + result.distance(), "floor sensor at x=" + x);
             checked++;
         }
+        System.out.printf("REAL_VALLEY A3: %d exact collision pixels, %d production floor probes%n",
+                width * 256 * 4, checked);
         assertTrue(checked > width / 2, "most columns have a floor to sense: " + checked);
     }
 

@@ -14,8 +14,8 @@ import java.util.Map;
  *       chunk word's flips and solidity bits.</li>
  *   <li>Patterns, chunks and blocks are compacted to the ones the valley reaches; pattern, chunk and
  *       block 0 stay empty, as the layout's "nothing here".</li>
- *   <li>Sonic 1's collision profiles (heights, widths, angles) carry over unchanged, and each chunk
- *       keeps its Sonic 1 collision index.</li>
+ *   <li>Sonic 1's collision profiles (heights, widths, angles) are compacted by exact contents.
+ *       Relative loop-path flips are baked into profiles when both paths share one chunk word.</li>
  *   <li>The loop: Sonic 1 draws the loop block and, behind the loop ({@code Sonic_Loops}' low plane),
  *       collides with the next block. Here the loop block's primary path is its own collision and its
  *       secondary path is the twin's; PATH_SWAP objects switch planes (see {@link ValleyLevel}).</li>
@@ -57,6 +57,8 @@ public final class ValleyEncoder {
     private final Map<String, Integer> chunkIds = new HashMap<>();
     private final List<int[]> blocks = new ArrayList<>();
     private final Map<String, Integer> blockIds = new HashMap<>();
+    private final List<byte[]> profiles = new ArrayList<>();
+    private final Map<String, Integer> profileIds = new HashMap<>();
     private int remappedUses;
 
     private ValleyEncoder(S1Terrain source, Spec spec) {
@@ -65,6 +67,8 @@ public final class ValleyEncoder {
         for (int[] line : claims) {
             Arrays.fill(line, -1);
         }
+        profiles.add(new byte[33]);
+        profileIds.put(Arrays.toString(new byte[33]), 0);
         patterns.add(new byte[64]);
         patternIds.put("blank", 0);
         chunks.add(new int[4]);
@@ -120,12 +124,12 @@ public final class ValleyEncoder {
                 background[y * width + x] = (byte) quadrant(block, -1, x % 2, y % 2, false);
             }
         }
-        if (blocks.size() > 256 || chunks.size() > 1024 || patterns.size() > 2048) {
+        if (blocks.size() > 256 || chunks.size() > 1024 || patterns.size() > 2048 || profiles.size() > 256) {
             throw new IllegalStateException("The valley exceeds Sonic 3&K's limits: " + blocks.size()
                     + " blocks, " + chunks.size() + " chunks, " + patterns.size() + " patterns");
         }
         return new EncodedValley(width, height, patternBytes(), chunkBytes(), blockBytes(), foreground,
-                background, source.heights().clone(), source.widths().clone(), source.angles().clone(),
+                background, profileBytes(0, 16), profileBytes(16, 16), profileBytes(32, 1),
                 collisionColumn(0), collisionColumn(1), claimTriples(), patterns.size(), chunks.size(),
                 blocks.size(), remappedUses);
     }
@@ -297,7 +301,7 @@ public final class ValleyEncoder {
     /** A plain cell: the same chunk, flips and solidity, collision on both paths. */
     private int cell(int word, boolean solid) {
         int chunk = word & 0x3FF;
-        int collision = source.collision()[chunk];
+        int collision = profileId(source.collision()[chunk], 0);
         int id = chunkId(chunk, 0, collision, collision);
         return id | (word & 0x0C00) | (solid ? word & 0xF000 : 0);
     }
@@ -317,14 +321,16 @@ public final class ValleyEncoder {
         int flip;
         if (primary != 0) {
             flip = frontFlip;
-            if (secondary != 0 && behindFlip != frontFlip) {
-                throw new IllegalStateException("Loop cell needs two collision flips at once");
-            }
+
         } else if (secondary != 0) {
             flip = behindFlip;
         } else {
             flip = frontFlip;
         }
+        // S3K has one flip field for both paths. Bake the relative reflection into the
+        // twin's heights, widths and angle; no source geometry is approximated.
+        primary = profileId(primary, frontFlip ^ flip);
+        secondary = profileId(secondary, behindFlip ^ flip);
         int id = chunkId(front & 0x3FF, frontFlip ^ flip, primary, secondary);
         return id | flip << 10 | primarySolidity << 12 | secondarySolidity << 14;
     }
@@ -358,6 +364,40 @@ public final class ValleyEncoder {
             chunkIds.put(text, id);
         }
         return id;
+    }
+
+    /** A reflected source collision profile, compacted by all 33 bytes (including its angle). */
+    private int profileId(int sourceId, int flip) {
+        if (sourceId == 0) return 0;
+        byte[] profile = new byte[33];
+        for (int i = 0; i < 16; i++) {
+            int hx = (flip & 1) != 0 ? 15 - i : i;
+            int wy = (flip & 2) != 0 ? 15 - i : i;
+            int height = source.heights()[sourceId * 16 + hx];
+            int width = source.widths()[sourceId * 16 + wy];
+            profile[i] = (byte) ((flip & 2) != 0 ? -height : height);
+            profile[16 + i] = (byte) ((flip & 1) != 0 ? -width : width);
+        }
+        int angle = source.angles()[sourceId] & 255;
+        if ((flip & 1) != 0) angle = -angle;
+        if ((flip & 2) != 0) angle = 0x80 - angle;
+        profile[32] = (byte) angle;
+        String key = Arrays.toString(profile);
+        Integer id = profileIds.get(key);
+        if (id == null) {
+            id = profiles.size();
+            profiles.add(profile);
+            profileIds.put(key, id);
+        }
+        return id;
+    }
+
+    private byte[] profileBytes(int offset, int size) {
+        byte[] out = new byte[profiles.size() * size];
+        for (int i = 0; i < profiles.size(); i++) {
+            System.arraycopy(profiles.get(i), offset, out, i * size, size);
+        }
+        return out;
     }
 
     // ---- output ----

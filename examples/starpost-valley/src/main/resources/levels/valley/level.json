@@ -6,7 +6,7 @@
   "blockGridSide": 8,
   "width": 1,
   "height": 1,
-  "bounds": {"minX": 0, "maxX": 3008, "minY": 0, "maxY": 160},
+  "bounds": {"minX": 0, "maxX": 3008, "minY": 0, "maxY": 384},
   "start": {"x": 150, "y": 300},
   "music": {"stockId": 32},
   "assets": {

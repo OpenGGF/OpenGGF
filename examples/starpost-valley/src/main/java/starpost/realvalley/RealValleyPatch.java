@@ -3,15 +3,13 @@ package starpost.realvalley;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameModule;
-import com.openggf.game.GameServices;
+import com.openggf.game.RomDetectionService;
 import com.openggf.game.modzone.ModZoneRuntimeContribution;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.patch.GamePatch;
 import com.openggf.game.patch.GameplayLaunchRequest;
 import com.openggf.game.patch.LogicalRom;
-import com.openggf.game.patch.LogicalRomResolver;
 import com.openggf.game.patch.PatchContext;
-import com.openggf.game.sonic1.Sonic1;
 import com.openggf.level.Level;
 import java.io.IOException;
 import java.util.List;
@@ -94,7 +92,11 @@ public final class RealValleyPatch implements GamePatch {
         private synchronized S1Terrain terrain() {
             if (terrain == null) {
                 try (Rom rom = Rom.fromReader(openSonic1(), "Starpost Valley: Sonic 1")) {
-                    terrain = S1TerrainReader.read(new Sonic1(rom).buildDetachedLevel(RealValley.S1_GHZ1_LEVEL_INDEX));
+                    // Decode through the published game contract, before the host publishes its own level art.
+                    GameModule source = RomDetectionService.getInstance().detectAndCreateModule(rom)
+                            .orElseThrow(() -> new IOException("Unrecognised Sonic 1 ROM"));
+                    terrain = S1TerrainReader.read(source.createGame(rom)
+                            .loadLevel(RealValley.S1_GHZ1_LEVEL_INDEX));
                 } catch (IOException | RuntimeException failure) {
                     Logger.getLogger(Module.class.getName())
                             .warning("The valley act needs Sonic 1; loading its placeholder: " + failure);
@@ -108,8 +110,8 @@ public final class RealValleyPatch implements GamePatch {
             if (context != null) {
                 return context.openLogicalRom(LogicalRom.S1);
             }
-            // Development launches apply patches without a context.
-            return LogicalRomResolver.fromRomManager(GameServices.rom()).openOrThrow(LogicalRom.S1);
+            // A debug launcher must provide the same declared logical-ROM context as production.
+            throw new IOException("No logical-ROM PatchContext supplied");
         }
     }
 }

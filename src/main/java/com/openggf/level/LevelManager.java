@@ -680,10 +680,30 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             loaded = game.loadLevel(levelIndex);
         }
         loaded = gameModule == null ? loaded : java.util.Objects.requireNonNull(gameModule.transformDecodedLevel(loaded), "Decoded level transform");
+        if (activeModZoneRuntimeContribution != null) {
+            publishAdditiveLevelGraphics(loaded);
+        }
         writeCurrentLevel(loaded);
         installHudProfile();
         rebuildLevelDerivedState();
         return loaded;
+    }
+
+    /** Additive adapters construct CPU data; publish that exact data before building its tilemaps. */
+    private void publishAdditiveLevelGraphics(Level loaded) {
+        if (!graphicsManager.isGlInitialized()) return;
+        for (int line = 0; line < loaded.getPaletteCount(); line++) {
+            graphicsManager.cachePaletteTexture(loaded.getPalette(line), line);
+        }
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            for (int index = 0; index < loaded.getPatternCount(); index++) {
+                Pattern pattern = loaded.getPattern(index);
+                if (pattern != null) graphicsManager.cachePatternTexture(pattern, index);
+            }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
+        }
     }
 
     private final LevelLoadPreparer loadPreparer = new LevelLoadPreparer();
@@ -3009,7 +3029,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             int spawnX = levelData.startX();
             spawnY = levelData.startY();
 
-            if (game instanceof DynamicStartPositionProvider dynamicStartProvider) {
+            // Additive acts own their descriptor's start. Native ROM tables have no
+            // entry for a mod zone and a readable offset can still contain unrelated bytes.
+            if (activeGameModule().getZoneRegistry().modZoneRuntimeContribution(ctx.getLevelIndex()) == null
+                    && game instanceof DynamicStartPositionProvider dynamicStartProvider) {
                 try {
                     int[] dynamicStart = dynamicStartProvider.getStartPosition(currentZone, currentAct);
                     if (dynamicStart != null && dynamicStart.length >= 2) {
