@@ -12,7 +12,10 @@ readable and historical versions can be referenced directly.
   `identity/`. The engine no longer carries racing code, its `timeAttack.*` settings or the
   Netty, Bouncy Castle and SQLite libraries; the master server, dedicated host and verifier
   build separately from `racing/server`. Native builds do not load code mods, so Time Attack
-  is JVM-only.
+  is JVM-only. Multiplayer racing lives in the mod too: host a LAN room on the in-process
+  host, join one by invite, or browse and create master-server rooms; the lobby, room browser
+  and settings (port, display name, master URL, minimap) are part of the mod's menu, and its
+  settings are stored by the mod instead of `config.yaml`.
 
 - **Mod API candidate: title entries and gameplay runs:** a mod may add one master-title entry
   whose scene launches stock gameplay runs through `SceneContext.gameplay()` and is resumed when

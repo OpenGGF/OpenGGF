@@ -11,6 +11,9 @@ import openggf.racing.client.RemoteGhostRegistry;
 import openggf.racing.hub.HostRoundEngine;
 import openggf.racing.protocol.ControlMessage;
 import com.openggf.game.run.GhostPose;
+import com.openggf.game.run.RunLevelStart;
+import com.openggf.mods.scene.SceneKeys;
+import com.openggf.mods.ui.LevelOverlayCanvas;
 
 import java.util.ArrayList;
 import java.util.HexFormat;
@@ -20,6 +23,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.Objects;
 import java.nio.file.Path;
+import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -55,6 +59,9 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private List<ControlMessage.StandingsRow> topStandings = List.of();
     private List<ControlMessage.StandingsRow> aroundYouStandings = List.of();
     private int lastLocalFrameX;
+    private int roundsStarted;
+    private boolean showMinimap = true;
+    private Consumer<RunLevelStart> levelReadyHook;
     /** Spectator pan speed in pixels per held frame after the local attempt has finished. */
     static final int SPECTATE_PAN_SPEED_PX = 8;
 
@@ -125,6 +132,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                     if (control.message() instanceof ControlMessage.RoomState state) {
                         registry.onRoomState(state.players());
                     } else if (control.message() instanceof ControlMessage.RoundStart) {
+                        roundsStarted++;
                         registry.reset();
                         remoteGhosts = List.of();
                         localRank = -1;
@@ -176,6 +184,37 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     @Override
     public void afterStep() {
         afterLevelFrame();
+    }
+
+    @Override
+    public void levelReady(RunLevelStart start) {
+        if (levelReadyHook != null) {
+            levelReadyHook.accept(start);
+        }
+    }
+
+    /** Draws the multiplayer HUD (countdown, window, standings, votes, minimap) over the run. */
+    @Override
+    public void drawOverlay(LevelOverlayCanvas canvas, int levelWidth, int localCentreX) {
+        MultiplayerHudRenderer.render(canvas, hudState(), levelWidth, localCentreX, showMinimap);
+    }
+
+    /** Called on the engine thread when an attached run's level is ready (launch and retry). */
+    public void setLevelReadyHook(Consumer<RunLevelStart> hook) {
+        this.levelReadyHook = hook;
+    }
+
+    /** Whether the in-run HUD draws the minimap progress strip. */
+    public void setShowMinimap(boolean show) {
+        this.showMinimap = show;
+    }
+
+    /**
+     * Round starts seen on this connection; a lobby launches one run per value. A player who
+     * joins during a running round sees zero starts, so that round still launches once.
+     */
+    public int roundsStarted() {
+        return roundsStarted;
     }
 
     public void afterLevelFrame() {
@@ -232,7 +271,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
 
     public void pollLocalInput(com.openggf.game.run.RunInput input) {
         for (int option = 0; option < 3; option++) {
-            if (input.keyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_1 + option)) {
+            if (input.keyPressed(SceneKeys.DIGIT_1 + option)) {
                 castVote(option);
             }
         }

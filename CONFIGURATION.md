@@ -353,14 +353,6 @@ Time Attack mod's entry; see [Time Attack (bundled mod)](#time-attack-bundled-mo
 loading/failure pages, standalone New Game/Continue, and help share the same
 native typography and keyboard/controller navigation.
 
-Creating a LAN room shows **Copy LAN Invite / Chat** in the host lobby. Opening it
-copies a template such as `HOST_IP:27888#<share-code>`; replace `HOST_IP` with the
-host's reachable LAN IP or name before sharing the entire code. Joining requires
-that complete invite, including its certificate and host-identity pins. Plain
-addresses and `ws://` connections are rejected; the code should be shared through
-a trusted channel. The invite editor accepts up to 192 characters for IPv6 and
-long hostnames.
-
 Profiles are persistent defaults for future manual launches, but applying a profile is
 session-only. A launch can temporarily override live rewind, cross-game donation, debug
 tools, display aspect, main character, and sidekick without writing those values into the
@@ -659,6 +651,37 @@ mod rather than as engine settings; the engine has no `timeAttack.*` keys, and o
 Disable or re-enable the mod in **Mods**. During a run, **R** retries the act from its
 start. The mod keeps best ghosts in `ghosts/<game>/` and the player identity in
 `identity/`, the same locations as before the move.
+
+The menu's **Mode** row offers **Solo**, **Host LAN**, **Join LAN** and **Browse** (rooms on a
+master server). A room admits only players whose engine build and ROM for the room's game
+match the host's, so select the room's game before joining. Each round plays as its own run;
+the lobby returns when the run ends, and leaving the lobby closes the room connection (and,
+for a host, the room).
+
+Hosting a LAN room shows **LAN Invite / Chat** in the lobby. Opening it shows the complete
+invite template, such as `HOST_IP:27888#<share-code>`, which is also written to
+`lan-invite.txt` in the mod's storage folder (`mods/time-attack/` in the save directory) and
+to the log, because mod scenes have no clipboard. Replace `HOST_IP` with the host's reachable
+LAN IP or name before sharing the entire code. Joining requires that complete invite,
+including its certificate and host-identity pins. Plain addresses and `ws://` connections are
+rejected; share the code through a trusted channel. The invite, chat, display-name and URL
+fields are typed on the keyboard (Enter accepts, Escape cancels), and the global display and
+capture shortcuts are held back while one is open; the invite field accepts up to 192
+characters for IPv6 and long hostnames.
+
+### Time Attack settings
+
+The mod keeps its own settings in `settings.txt` (UTF-8 `key=value` lines) in its storage
+folder. Edit them from the **Settings** row of the Time Attack menu; changes save at once.
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `hostPort` | `27888` | Port for player-hosted rooms (manual LAN and master-listed direct rooms), served as a pinned TLS WebSocket. |
+| `lastJoinAddress` | `""` | Most recently joined complete LAN invite; it prefills the invite field. |
+| `displayName` | `""` | Multiplayer display name; blank uses the identity prefix. |
+| `masterUrl` | `""` | Master-server WebSocket URL for browsing rooms; browsing is unavailable while blank. |
+| `masterTrustInsecure` | `false` | Development only: trust any master-server TLS certificate. |
+| `minimap` | `true` | Show the multiplayer minimap progress strip. |
 
 ### Racing server: master verifier settings
 
