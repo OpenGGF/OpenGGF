@@ -12,6 +12,7 @@ import java.util.Map;
 import typinghog.art.PlateFont;
 import typinghog.art.Plates;
 import typinghog.core.Lexicon;
+import typinghog.hub.HubAssets;
 import typinghog.hub.HubScene;
 import typinghog.play.Cast;
 import typinghog.play.Course;
@@ -75,7 +76,8 @@ public final class TypingHedgehogMod implements GgfMod {
                     .build();
         });
         for (String game : games) context.registerGamePatch(new TypingPatch(game, badniks.get(game)));
-        context.registerStartupScene(() -> new HubScene(assets));
+        HubAssets hub = HubAssets.read(path -> text(context, path, ""));
+        context.registerStartupScene(() -> new HubScene(assets, hub));
     }
 
     private static String text(ModContext context, String path, String fallback) {
