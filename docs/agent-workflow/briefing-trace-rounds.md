@@ -71,6 +71,29 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Native stage measurements have multiple caller boundaries (2026-10-09, Mutator
+Lab expansion): `GameLoop.step()` and the movie renderer do not certify
+interactive speed or native stage drawing. The configured Engine headless seam
+also performs presentation backend replacement and omits the ordinary boot-time
+external registration call. Use the maintained `HeadlessGameBoot` with the real
+packaged module registered before world creation, actual configured input and
+one Engine outer audio boundary; declare direct-level/entry setup. Keep its
+clock/PCM observations separate from normal Engine.loop/window footage. A
+successful hidden GL context is not proof that a stage's pixels were rendered.
+
+Fractional stage entry can preserve a nonzero scheduling phase (2026-10-09,
+Mutator Lab expansion): a late denial comparison initially assumed remainder
+zero before counting 150% outer frames. Compare the actual incoming remainder
+and the native positive control. Do not fit a reset into the engine to make a
+zero-based expectation pass. An already-admitted stage retains its native owner.
+
+Desktop action names are intentions (2026-10-09, Mutator Lab expansion): a
+recipe labelled an image “stage entry” while its keys during the automatic
+development intro selected Gravity settings. Inspect native title/level/stage
+pixels and the resulting saved profile, retain focus ownership, and reject
+mislabelled screenshots. Do not infer menu, stage or configuration success from
+a helper exit, action caption or nonzero device PCM alone.
+
 Development launch is not a fresh game-selection hub (2026-10-08, Mutator Lab
 expansion): a shared package declares Sonic 2 as its development base, and the
 Engine opens that title automatically. Two recipes labelled Sonic 1 sent Left

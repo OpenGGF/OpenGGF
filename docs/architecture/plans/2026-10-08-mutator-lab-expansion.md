@@ -518,7 +518,7 @@ one outer audio owner, and only observe native clocks/epochs/input/remainders.
 A declared host LIVE edit inside an already-admitted stage is distinct from
 physical menu footage: the current Lab overlay opens only during LEVEL. Real
 window stage rendering and headless native clock/PCM observations remain
-separate gates. No sampler runtime or modified-stage movie pass is claimed.
+separate gates. The completed measurements below supersede that preparation-only limitation; canonical captures still do not qualify interactive pacing.
 
 Actual main b317/base d499 admitted at 2026-10-09T01:56:57Z as
 `20261009T015657Z-e417e53f`; the adjacent owner holds main tracked inputs, HEAD
@@ -526,3 +526,77 @@ and publication through terminal and delivery. Root private composition neither
 changes those holds nor requests another baseline. Final published-destination
 comparison, native stage evidence, expanded full candidate, Opus polish and
 refreshed PR215 promo remain pending.
+
+
+### Interactive native stage measurements and reusable observer
+
+At clean private `0e2167ce8`, the registered packaged Lab was observed in 48
+bounded native cells. These use the shared `HeadlessGameBoot` hidden-GL setup,
+`DevelopmentPatchLoader` before world creation, configured P1 input, the actual
+LIVE save/admission and semantic manager stage request. Direct level entry,
+solo Sonic, no donor and S3K intro omission are declared setup. Neither trace
+comparison data nor logical/movie inputs supply state. One interactive
+`stepPresentationFrame` and one Engine outer audio boundary run per sample.
+
+| Cells | Observed result |
+|---|---|
+| 24 clock/input cells: S1/S2/S3K special and S3K Gumball/Glowing Sphere/Slots, at 25/100/150/400% | All 768 measured outer rows match native journal ticks and fractional remainder, using the actual incoming phase; 32 outer rows produce 8/32/48/128 native ticks. Configured A input is retained through zero-body or lag rows until native acceptance. Bonus V-int deltas match native body counts. World/provider/entry epoch remain stable. |
+| 12 audio-follow controls: each stage at 25/400% | Native clock, input and gameplay streams match the no-follow control, and each outer audio packet remains 800 stereo frames at 48 kHz. All twelve measured PCM windows differ with nonconstant AC. This proves an audio contribution, not isolated pitch/tempo metrology or physical speaker output. |
+| 12 semantic denial cells: each stage before entry and at outer index9 after admission | Six pre-entry requests remain LEVEL for 120 outer steps. Six later LIVE revisions retain the admitted stage/world/provider/epoch and match the positive control's native observations for the entire 32-row bound. This is a host admission probe, not an in-stage settings-menu walkthrough. |
+
+Three additional native title-to-level controls settle through the actual title,
+press configured Start, reach native control and open the Lab overlay with
+configured input; the 32 held outer rows preserve the world frame. They do not
+measure a stage or certify physical desktop input. All sampler JVMs exit and
+release their owners. Useful CSV/PCM and compact source/command/ROM/identity
+summaries remain in the explicit task directory; consumed temporary logs are
+removed.
+
+The first configured-Engine sampler was rejected: presentation preparation
+replaced its supplied headless backend, and it had not performed boot-time mod
+registration. Source inspection found that launch seam inherited, not an
+expansion regression. The maintained hidden-GL boot supplies real module
+registration and audio ownership without changing Engine startup. A second
+rejected assumption treated every native stage entry as fractional phase zero;
+S1/S2/S3K special and bonus boundaries need their observed incoming phase. The
+corrected control comparison passes without changing gameplay or fixtures.
+
+The reusable observer is preserved as `MutatorStageProbeTool`, with syntax-only
+argument tests and [launch/setup limits](../../../tools/media/README.md#native-mutator-stage-observations).
+It emits observations when a native owner ends before its requested bound, so
+exit zero alone is not certification. A fresh externally bounded JVM, measured
+completion phase and stable owners remain required. The normal five-selector `verify dependency:build-classpath` completed at
+2026-10-09T03:26:19Z: five fresh suites/17 cases, no failures/errors/skips,
+unchanged 12138-input fingerprint, package/SDK/Javadoc/artifact verification
+complete. The actual compiled surface remains the byte-equal 17739-line pin
+`e08a807c...`. A fresh JVM of the maintained tool then repeats the S2 quarter-speed
+control: 32 outer rows/eight native ticks, configured A retained until acceptance,
+and one 800-frame stereo PCM packet per outer. Expanded full-candidate guards
+remain a separate gate.
+
+Normal Engine.loop clips use actual X11 press/release, scoped Pulse output and
+an explicitly owned frameless mapping workaround. Saved 150% profiles remain
+semantically unchanged in the corrected six-stage recipe. S2 halfpipe, S3K
+Blue Sphere and all three bonus interiors are visible; Gumball returns to AIZ
+within the clip. The short S1 clip stays washed out and lacks continuous focus observation, so
+it is rejected as rendering proof. An independent bounded current control uses
+observed owned focus through all neutral waits and an owner-thread read-only
+`Engine.update` observer after the unchanged update. The native stage renders
+after four seconds, reaches results and returns to Green Hill by thirty. Its
+698 stage rows show the same graphics/session fade, no pause, successful reveal
+and 904 accepted native samples; the saved 150% profile remains unchanged.
+This establishes a working native path without a gameplay/shader fix. The old
+clip's exact transient cause is unproved; no “150% freezes fade” claim is made. Debug shortcuts
+are declared setup and bypass semantic entry denial; the separate native
+manager probe above owns that gate's evidence. No physical HID/speaker or
+universal window-manager claim is made. Earlier clips with erroneous early
+hub navigation or edited Gravity settings remain explicitly rejected controls.
+
+
+The adjacent parity owner reports actual-main `b317e94eb`/base `d499` terminal
+at 2026-10-09T03:23:31Z: 3068 selected/3066 reports/26598 ordinary cases,
+26 fully matched inherited assertions, no errors and 63 literal causal skips;
+87 fresh guard reports/674 cases pass without skips. This is source-qualified
+inherited-failure evidence, not a green whole-suite claim. Publication remains
+held by that owner until final evidence and delivery; final full SHA and light
+negative-case table are still awaited before this branch's actual-base gate.

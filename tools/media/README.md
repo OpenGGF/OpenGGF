@@ -72,3 +72,60 @@ OpenAL reports an unresolved keyutils symbol, `--keyutils-preload /absolute/exis
 adds only that existing library to this child's preload. All options are recorded.
 Never apply these changes to global display/audio settings or another window.
 See the [measurement hazards](../../docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).
+
+## Native Mutator stage observations
+
+`com.openggf.tools.MutatorStageProbeTool` observes the production interactive
+presentation pump with a packaged Lab registered through `DevelopmentPatchLoader`
+and `HeadlessGameBoot`. It records `observations.csv` and little-endian stereo
+48 kHz `offline-stereo-s16le.pcm`. This differs from a canonical input-log capture:
+`stepPresentationFrame()` schedules whole native bodies and one
+`Engine.presentOuterAudioFrame()` services each outer audio boundary. It never
+uses comparison rows, a logical input override or a custom gameplay policy.
+
+Build this checkout and the example first with the normal queued commands. Use
+a fresh external directory containing only `config.yaml` and an optional empty
+ROM scan directory. Its YAML must name the three existing absolute original
+ROM paths under `roms.sonic1`, `roms.sonic2` and `roms.sonic3k`; `roms.directory`
+may name the empty directory. Supply an absolute classpath combining this
+checkout's `target/classes` and `target/mutators-classpath.txt`, and launch from
+the output directory with `-Duser.dir` set to that same path. A typical command
+is:
+
+```bash
+timeout 90s java -Xmx1g -Duser.dir=/absolute/task/fresh-stage \
+  -Dopenggf.saveRoot=/absolute/task/fresh-stage/player-settings \
+  -cp /absolute/compiled/classpath \
+  com.openggf.tools.MutatorStageProbeTool \
+  s2 special 25 false -1 32 /absolute/creator/example-mutators.jar \
+  /absolute/task/fresh-stage
+```
+
+Arguments are `game stage speed audioFollow denyAt samples creatorJar freshOut`.
+Games are `s1`, `s2` and `s3k`; stages are `special`, or S3K-only `GUMBALL`,
+`GLOWING_SPHERE` and `SLOT_MACHINE`. Speed is 25–400% in 25-point steps;
+`samples` is 8–600 eligible outer frames. `denyAt=-1` leaves entry enabled,
+`-2` enables the real denial before requesting entry, and a nonnegative index
+admits denial after that many observed outer frames. The real Lab owner saves
+preferences and admits the LIVE revision before each request. One configured
+P1 A tap spans an outer frame; it can be retained until a slow or lag-aware
+native owner accepts it. Read the measured CSV state rather than assuming
+that every native body samples input.
+
+The setup is explicit: hidden GL, direct level entry, solo native Sonic,
+S3K intro omission, no donor, and a real semantic manager request for stage
+entry. Startup settles through native control owners. This is not natural
+approach footage or proof of title/menu input, stage rendering, normal
+`Engine.loop`, a desktop backend, physical input/speakers, full stage completion
+or return. The tool returns observations when a native owner ends early;
+exit zero alone does not certify a complete requested cell. Check its final
+phase, measured count, stable world/provider/entry epoch, absence of logical or
+external ownership, and PCM clock. Use a fresh bounded JVM for every cell and
+an external supervisor for its wall-clock cap. Do not reuse a run directory.
+
+Clock checks must include the observed incoming fractional remainder:
+`floor((incoming + outerCount * speed) / 100)` is the expected native tick
+count, with the corresponding modulo remainder. An entry may preserve a
+nonzero phase. Audio-follow controls should compare equal native state streams
+and outer PCM cadence before examining the waveform difference. A waveform
+difference proves an audio contribution, not isolated pitch/tempo accuracy.

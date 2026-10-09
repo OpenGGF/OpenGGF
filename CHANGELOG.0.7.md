@@ -25,6 +25,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   gameplay. Native setup, stage results and canonical movie/trace ticks retain their
   existing owners; live rewind preserves admitted taps and fractional pacing.
 
+  Native special/bonus-stage clock, input and offline PCM observations are
+  reproducible with `MutatorStageProbeTool`; its direct-entry and hidden-GL
+  limits are documented separately from desktop footage.
+
 - **Sonic 2 title SFX priority:** the flashing star's last twinkle now runs to
   its own stop, as in the ROM, releasing the sound driver's SFX priority. A stop
   at star deletion had left the latch set, so lower-priority sounds that mods play
