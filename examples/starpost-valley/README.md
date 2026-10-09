@@ -67,6 +67,9 @@ If you know *Stardew Valley*, you know the rhythm; the names are Sonic's.
 | Villagers | Thirteen neighbours (the two heroes you did not choose among them); the animals speak in pictures until Tails builds his translator |
 | Fishing minigame | The Bubble Bar, with Sonic 1's badniks lurking in the deep |
 | Bulletin board | The Signpost Board by the Lamppost Inn |
+| Tool upgrades | Sneakers: Power Sneakers, Speed Shoes and Chaos Sneakers widen the spin dash (and run on water) |
+| Fruit trees | The Green Hill palm, the Ring Fruit Tree and the Chaos Cherry |
+| The museum | Tails's Workshop Museum: minerals, the badnik Scrap Collection, relics and Records |
 | Grandpa's evaluation | The Signpost Spin, on the first morning of year two |
 
 **The farm** is a field in front of Green Hill's cliffs: walk along it and into and out of its
@@ -100,6 +103,11 @@ kegs, the loom and the press.
 **Festivals.** Two a season, posted on the Signpost Board's calendar: a Ring Hunt, the Sunflower
 Parade, the Great Valley Race, the Night of the Flickies, the Valley Fair, Scrap Brain Night, the Ice
 Cap Festival and the Star Light Feast. The board also carries the neighbours' requests.
+
+**Orchard, sneakers and museum.** Saplings grow into trees that pay out for years (the Ring Fruit
+Tree bursts ten rings a day for you to catch). Tails's sneakers widen the spin dash a row at a time.
+Donate minerals, badnik parts and relics to the museum beside the workshop for milestone rewards;
+its Records page is the Inn's jukebox, the valley's Sound Test.
 
 **The Great Capsule.** Fill its six chambers' bundles to restore the valley, or buy the same
 improvements at Robomart. The year ends with the Signpost Spin.
