@@ -1453,3 +1453,90 @@ Chaos Sneakers farmer), the formal `TestStarpostValleyExample` bridge (the lead 
 of a Ruins part or relic drop (random; the drop path is the Ruins' own pickup with the museum's
 icons), more minerals than the Ruins' eight, and tree-specific gifts or recipes (the Chaos Cherry and
 coconut only sell, fill jars and restore Momentum).
+
+
+## §21 The town on real levels (lane)
+
+Town lane: `feature/ai-starpost-town`, base `acb094c763`. Implementation lives in
+`starpost.realtown`; it neither owns Green Hill encoding nor changes the engine API.
+
+### State, objects and ownership
+
+Register one instance-owned `TownSession` through `ModContext.registerServiceBundle`,
+as both a concrete service and a `RewindSnapshottable` adapter. The scene binds its
+live `Game` before launching; objects resolve it with `services().gameService`.
+Retain the same `Game`, `People`, inventory and save-section identities: replacing
+those on rewind would leave suspended scene actors pointing at stale state.
+Capture every field changed by town ticks (clock, rings, Momentum, inventory,
+random state and save-section keys), plus town dialogue, invitations, exits and
+pickup availability. Capture walking positions in recreatable engine objects.
+Do not use `SaveCodec` as a rewind codec: its load resets the clock and clamps saves.
+No trace rows supply state. Act load and scene return remain timeline boundaries.
+
+Register a persistent controller and recreatable villager, doorway and pickup
+objects, placed by a `TownLayout` seam. A layout supplies coordinates and floor
+queries; integration replaces the placeholder with the encoded valley. Schedules,
+arrival gates, body speeds, dialogue pools, gifts, errands and festival gatherings
+reuse `People`/`Bodies`/`Festivals`; they are not new social rules. Villagers walk
+on the act's floor, disappear at indoor destinations and leave via the farm gate.
+
+### Interaction and presentation
+
+The action key talks to the nearest visible villager. Giftable held items ask
+before applying `People.gift`; cancelling gives the day's talk. Animal dialogue
+uses the existing picture tokens until the Chirp Translator. A `LevelInputOverlay`
+owns modal keys before host pause input; the controller freezes the real player
+and the town clock while the overlay is open. Dialogue presentation is bounded to
+the 400×224 viewport and draw never changes rules.
+
+Up at a door records a single hand-back request with its place id and return
+position. Reuse **all** `PlayScreen.places` handlers: seeds, Lamppost Inn, workshop,
+museum, Robomart, Ruins, Great Capsule, Waterfall Lake and Signpost Board. The farm
+gate returns to the farm. Heart events likewise hand back by event id and retain
+the current `PlayScreen`; never make a new play screen mid-day. Festival invitations
+stay in the act; accepting hands back to the existing festival screen.
+
+Buildings remain decorative objects rather than collision or terrain: reuse
+seasonal `Facades`, board/trophy shelf and festival dressing, so relocation need
+not rewrite level data. Rings/forage reuse the daily pickup generation and reward
+rules. Ground queries and the player's centre/radii come from the actual act.
+
+`registerRomObjectArt` currently accepts S2 only (ModContext), so it cannot register
+this S1/S3K cast honestly. Until cross-ROM object-art registration exists, reuse
+ROM-decoded `Art`/`PeopleArt` and immutable image row spans through the engine's
+`LevelOverlayCanvas`, with camera-relative coordinates; no faces or art bytes are
+invented or packaged. Native object-art upload is a future rendering replacement,
+not a reason to duplicate cast content or block rules/rewind testing.
+
+### Precise phase-2 interface proposal
+
+Use E1 from the reuse design, in an API package shared by scene and level code:
+
+```java
+record ActLaunch(ZoneKey.Mod destination, int act, CharacterKey main,
+    List<CharacterKey> sidekicks, OptionalInt spawnX, OptionalInt spawnY,
+    int rings, Map<String, String> state) {}
+record ActResult(ZoneKey.Mod destination, ActExit reason, int rings,
+    long frames, Map<String, String> state) {}
+enum ActExit { COMPLETED, LEFT, FAINTED, TIME_UP, ABORTED }
+// SceneContext
+void startAct(ActLaunch launch);
+// ModScene (same suspended instance and context)
+default void resume(SceneContext context, ActResult result) {}
+// ObjectServices (request latched once, consumed at the next frame boundary)
+void requestActExit(ActExit reason, Map<String, String> state);
+```
+
+Town payload: `town.place` (door id, `farm_gate`, `festival` or `heart_event`),
+`town.event` (optional heart-event id), `town.returnX`, `town.returnY` (player
+centre coordinates). Resume applies the existing handler once, and launches again
+at the returned door when its scene menu closes. The same registered `TownSession`
+must survive suspension/resumption; new games explicitly rebind it. A pending exit
+is rewindable until the engine consumes it. Entry/exit releases held modal keys,
+freezes world updates during fades and establishes the normal level/mode boundary.
+
+Rejected: static session state (validator/isolation), copying social rules,
+scene-physics simulation, restoring by decoding a disk save, and remapping S1 art
+to unrelated S3K bodies. A minimal S3K placeholder act tests objects before the
+terrain lane is available. Phase 2 owns the actual scene round trip; this lane
+provides a typed hand-back latch and binder without pretending the API exists.
