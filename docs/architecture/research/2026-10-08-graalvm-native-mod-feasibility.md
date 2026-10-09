@@ -664,3 +664,65 @@ uses an 8 GiB heap and four threads, submitted through the existing exclusive
 queue mode (`OPENGGF_MAVEN_QUEUE=serial`) because it exceeds the normal shared
 reservation. Other running jobs drain normally; nothing is cancelled. No engine,
 mod, testing-policy or queue implementation changes accompany this correction.
+
+#### Terminal Linux artifact qualification
+
+The successor at native-tool source
+`2698bac036c4bbfdf9b41dda6ef762d56db5198d` compiled successfully at
+15:49:52 BST on 2026-10-09, in 1m 53s, with peak compiler RSS 8.07 GiB.
+The executable SHA-256 is
+`9c9193eddf0aba09b43697bdf7f5c4ea6033920639238bdee4e9f7a8fe0a1a12`.
+Engine, SDK and all nineteen mod JARs remain from the clean composed source
+`751fdc66d1e61f9526b3dbac98c29d01b037292c`, incorporating published
+`ed45a1990cf6baf089be7d167ea114341870c3a1` without runtime conflicts.
+The engine JAR SHA-256 is
+`a3e5ab4fb1c48b99139c42a074c86d0952cc649668381a447341343d35982e66`;
+SDK SHA-256 is
+`912cd95ab513967757f6cf4fb83429cb87bfd7b86a2cdb0fdcb5c29b5f90bbab`.
+
+| Completed check | Source attribution | Observed result |
+| --- | --- | --- |
+| Seven existing affected suites, original S2/S3K ROMs | Baseline `8668a9012` | 49 cases, zero failures/errors/skips |
+| Same suites with the three reproducing regressions | Production fix `85d8b1851` | 52 cases, zero failures/errors/skips |
+| S3K load/bootstrap/decoding, title-card/rewind, PLC mapping and renderer invariants | `85d8b1851` | 180 cases, zero failures/errors/skips |
+| Separate fresh normal `-Pguards` | `85d8b1851` | 674 cases, zero failures/errors/skips |
+| Contract generator and JVM audit | Engine/mods `751fdc66d`, tools `2698bac03` | 15,844 entries / 1,210 types; dormant-member and constructor-resolution controls pass |
+| Native startup audit and deliberately absent field/method | Native image `2698bac03` | Full audit passes; both absent controls exit 1 ordinarily |
+| Separately runtime-loaded JDK execution fixture | Same image; fixture excluded from image classpath | Records, switch, proxy, UTF-8, streams, writer, copy and atomic replacement pass |
+| Matched JVM/native registration | Same nineteen immutable mod JARs | All 19 results match exactly |
+| Actual engine boot capability/trust/registration | Same image | All 17 code-bearing mods pass |
+| Native rendered gameplay | Same image, original ROMs rehashed | All 19 pass, including Infinite Sonic and Slay; no owner findings/disabled owners; registered module-state roundtrips and scene reopening where applicable |
+| Actual ZIP extracted into a path with spaces, launched from `/` | Final archive below | 1,406 file hashes; all 19 shortcuts pass; CRC, ELF architecture, modes, exploded-mod bytes and ROM exclusion pass |
+| ROM-free native gameplay from the extracted ZIP | No JDK or ROM mounts | Both authored standalone samples pass |
+| Normal `Engine.main` through `Launch standalone.sh` | Same ZIP contents in a disposable path with spaces | Remains running for 12 seconds with no JDK/ROM mounts; owned process deliberately stopped; bounded startup check only |
+
+The final native rendering used an Ubuntu 22.04 rootfs with no JDK, a cleared
+environment and Mesa software OpenGL. Original ROM SHA-1/CRC32 identities matched
+the repository's canonical table; no ROM was renamed, copied or linked.
+Final captures explicitly retain Tails through Flappy death/respawn/title-card
+phases and finish alive in LEVEL at frame 599. Both campaign acts are exercised.
+Offline PCM peaks are 5,962 for Sitar, 9,608 for the music override and 6,727 for
+the campaign. Infinite/Slay/Flappy final framebuffers were visually inspected.
+These are representative gameplay checks, not complete campaign/network/driver
+or full-world rewind certification, and not an ordinary whole-suite pass.
+
+Artifact: `OpenGGF-experimental-linux-x64-with-mods.zip`, 147,884,606 bytes;
+SHA-256 `4a21cbfee8903f5f4ea9c3528854c02e02e39471b31f3a3fc7a9bcd1c5610ddf`.
+The executable and all fifteen shared libraries were checked with `readelf`;
+the highest required GLIBC symbol is 2.34. The supported baseline remains glibc
+2.35 / Ubuntu 22.04, with X11/XWayland and OpenGL drivers. Shell shortcuts have
+executable ZIP permissions. Configuration expects `s1.gen`, `s2.gen`, `s3k.gen`.
+Full engine/GraalVM notices and corresponding-source links are included; no ROM,
+temporary regression mod, Java installation, capture or source save is packaged.
+
+Reproduction uses the committed Linux README's queued Maven package/input steps,
+`build_linux.py --stage prepare`, then the exclusive queued `--stage compile`
+with the pinned toolchain/rootfs. `--stage qualify --runtime-rootfs ... --roms`
+takes the three original absolute ROM paths and an external `--captures` directory.
+This artifact used `target/linux-friends-inputs-r4` and
+`target/linux-friends-native-r7`; those directory labels are local staging names,
+not source versions. Durable final ZIP, checksum, qualification/ELF/archive
+summaries and final PNG/CSV/PCM captures are retained in the external task
+directory `openggf-native-linux-2026-10-09` (local path represented by
+`$OPENGGF_LINUX_CAPTURE_ROOT`).
+Failed/rehearsal images and raw logs remain temporary and are removed at cleanup.
