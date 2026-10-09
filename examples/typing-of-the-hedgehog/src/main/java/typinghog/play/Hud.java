@@ -20,7 +20,7 @@ public final class Hud {
     static final int SHADOW = 0xFF000000;
     static final int RING = 0xFFFFC020;
     static final int RING_DARK = 0xFFB07000;
-    static final String[] PAUSE_ITEMS = {"RESUME", "RETRY", "QUIT"};
+    private final String[] pauseItems = {"RESUME", "RETRY", "QUIT"};
     static final int TALLY_ROWS = 420;
 
     private final CourseAssets assets;
@@ -65,12 +65,12 @@ public final class Hud {
 
     /** Arrows or a typed prefix pick an item; Enter chooses it. */
     void pauseInput(Course course, String typed, boolean enter, boolean up, boolean down) {
-        if (up) pauseIndex = Math.floorMod(pauseIndex - 1, PAUSE_ITEMS.length);
-        if (down) pauseIndex = Math.floorMod(pauseIndex + 1, PAUSE_ITEMS.length);
+        if (up) pauseIndex = Math.floorMod(pauseIndex - 1, pauseItems.length);
+        if (down) pauseIndex = Math.floorMod(pauseIndex + 1, pauseItems.length);
         pauseTyped.append(typed.strip().toUpperCase());
         if (pauseTyped.length() > 8) pauseTyped.delete(0, pauseTyped.length() - 8);
-        for (int i = 0; i < PAUSE_ITEMS.length; i++) {
-            if (pauseTyped.length() > 0 && PAUSE_ITEMS[i].startsWith(pauseTyped.toString())) pauseIndex = i;
+        for (int i = 0; i < pauseItems.length; i++) {
+            if (pauseTyped.length() > 0 && pauseItems[i].startsWith(pauseTyped.toString())) pauseIndex = i;
         }
         if (enter) {
             pauseTyped.setLength(0);
@@ -258,8 +258,8 @@ public final class Hud {
     private void drawPause(PixelCanvas canvas, int width, int height) {
         canvas.fill(0, 0, width, height, 0x90000000);
         drawBig(canvas, "PAUSED", (width - font.width("PAUSED") * 2) / 2, 70, WHITE);
-        for (int i = 0; i < PAUSE_ITEMS.length; i++) {
-            String item = (i == pauseIndex ? "> " : "  ") + PAUSE_ITEMS[i];
+        for (int i = 0; i < pauseItems.length; i++) {
+            String item = (i == pauseIndex ? "> " : "  ") + pauseItems[i];
             font.shadowed(canvas, item, width / 2 - 30, 104 + i * 14, i == pauseIndex ? GOLD : WHITE, SHADOW);
         }
         font.shadowed(canvas, "TYPE A WORD, THEN ENTER", width / 2 - 66, 160, 0xFF9090A0, SHADOW);

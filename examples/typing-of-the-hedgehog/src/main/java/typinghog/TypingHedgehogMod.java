@@ -28,12 +28,13 @@ import typinghog.rails.TypingPatch;
  * controller, which drives Sonic along the act's rail and stages the typed fights.
  */
 public final class TypingHedgehogMod implements GgfMod {
-    static final List<String> GAMES = List.of("s1", "s2", "s3k");
-    static final List<String> WORD_POOLS = List.of("common", "tricky", "phrases", "rescues", "lore-s1", "lore-s2", "lore-s3k");
+    // The mod validator allows only literal static constants, so lists live on the instance.
+    private final List<String> games = List.of("s1", "s2", "s3k");
+    private final List<String> wordPools = List.of("common", "tricky", "phrases", "rescues", "lore-s1", "lore-s2", "lore-s3k");
 
     @Override public void register(ModContext context) {
         Lexicon lexicon = new Lexicon();
-        for (String pool : WORD_POOLS) lexicon.pool(pool, text(context, "words/" + pool + ".txt", ""));
+        for (String pool : wordPools) lexicon.pool(pool, text(context, "words/" + pool + ".txt", ""));
         lexicon.taunts(text(context, "words/taunts.txt", ""));
         lexicon.trivia(text(context, "words/trivia.txt", ""));
         lexicon.pool("user", context.storage().read("words.txt").orElse(""));
@@ -42,7 +43,7 @@ public final class TypingHedgehogMod implements GgfMod {
         Map<String, Sounds> sounds = new HashMap<>();
         Map<String, Rail> rails = new HashMap<>();
         Map<String, String> badniks = new HashMap<>();
-        for (String game : GAMES) {
+        for (String game : games) {
             casts.put(game, Cast.parse(text(context, "cast/" + game + ".txt", "")));
             sounds.put(game, Sounds.parse(text(context, "sounds/" + game + ".txt", "")));
             badniks.put(game, text(context, "badniks/" + game + ".txt", ""));
@@ -65,7 +66,7 @@ public final class TypingHedgehogMod implements GgfMod {
                     .service(Stagehand.class, stagehand)
                     .build();
         });
-        for (String game : GAMES) context.registerGamePatch(new TypingPatch(game, badniks.get(game)));
+        for (String game : games) context.registerGamePatch(new TypingPatch(game, badniks.get(game)));
         context.registerStartupScene(() -> new HubScene(assets));
     }
 
