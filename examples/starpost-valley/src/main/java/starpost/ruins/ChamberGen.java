@@ -315,6 +315,10 @@ public final class ChamberGen {
                 left.add(i);
             }
         }
+        // Somewhere safe to arrive: a step either way must not be lava or a drop (when there is one).
+        if (left.stream().anyMatch(s -> reach.footing(s, ARRIVAL_FOOTING))) {
+            left.removeIf(s -> !reach.footing(s, ARRIVAL_FOOTING));
+        }
         left.sort((a, b) -> reach.y(a) != reach.y(b) ? Integer.compare(reach.y(a), reach.y(b))
                 : Integer.compare(reach.x(a), reach.x(b)));
         List<Integer> out = new ArrayList<>();
@@ -342,11 +346,14 @@ public final class ChamberGen {
         return out;
     }
 
+    /** Level, hazard-free floor an entry needs either side of it, in pixels. */
+    static final int ARRIVAL_FOOTING = 24;
+
     /** The entry: the highest floor near the left edge (Sonic drops in from the shaft above). */
     static int chooseEntry(Reach reach) {
         int best = -1;
         for (int i = 0; i < reach.spotCount(); i++) {
-            if (reach.hazard(i) || reach.x(i) > 160) {
+            if (reach.hazard(i) || reach.x(i) > 160 || !reach.footing(i, ARRIVAL_FOOTING)) {
                 continue;
             }
             if (best < 0 || reach.y(i) < reach.y(best) - 8 || Math.abs(reach.y(i) - reach.y(best)) <= 8 && reach.x(i) < reach.x(best)) {

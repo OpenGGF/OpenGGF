@@ -87,10 +87,17 @@ final class Landmarks {
         int bestReached = 0;
         // The hand-picked entry, unless the generator's own picks open far more of the room.
         int hinted = -1;
-        for (int i = 0; i < reach.spotCount(); i++) {
-            if (!reach.hazard(i) && (hinted < 0 || Math.abs(reach.x(i) - spec.entryX()) + Math.abs(reach.y(i) - spec.entryY())
-                    < Math.abs(reach.x(hinted) - spec.entryX()) + Math.abs(reach.y(hinted) - spec.entryY()))) {
-                hinted = i;
+        // The nearest safe arrival to the hand-picked entry (level floor either side, no lava a step away).
+        for (boolean needFooting : new boolean[] {true, false}) {
+            for (int i = 0; i < reach.spotCount(); i++) {
+                if (!reach.hazard(i) && (!needFooting || reach.footing(i, ChamberGen.ARRIVAL_FOOTING))
+                        && (hinted < 0 || Math.abs(reach.x(i) - spec.entryX()) + Math.abs(reach.y(i) - spec.entryY())
+                        < Math.abs(reach.x(hinted) - spec.entryX()) + Math.abs(reach.y(hinted) - spec.entryY()))) {
+                    hinted = i;
+                }
+            }
+            if (hinted >= 0) {
+                break;
             }
         }
         int hintedReached = 0;

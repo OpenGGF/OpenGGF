@@ -43,8 +43,20 @@ public final class RuinsRules {
     public static final int SCRAP_CHANCE = 35;
     /** Items lost from up to this many stacks when fainting in the Ruins. */
     public static final int FAINT_STACKS = 3;
+    /**
+     * Rings the farmer takes down from the wallet as health (banked back on leaving): without them
+     * the first touch in a chamber faints him and ends the day. A design rule, not Sonic 1's.
+     */
+    public static final int CARRY_RINGS = 10;
+    /** Frames of flashing on arriving in a chamber, so a badnik drifting by the shaft cannot strike first. */
+    public static final int ARRIVAL_FLASH = 60;
 
     private RuinsRules() {
+    }
+
+    /** Rings carried down from a wallet of {@code wallet}. */
+    public static int carried(int wallet) {
+        return Math.max(0, Math.min(CARRY_RINGS, wallet));
     }
 
     /** 1-15 Marble Zone, 16-30 Labyrinth Zone, 31-40 Scrap Brain Zone. */

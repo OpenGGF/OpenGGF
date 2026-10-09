@@ -169,6 +169,29 @@ public final class Reach {
         return true;
     }
 
+    /**
+     * Whether a spot has hazard-free floor {@code half} pixels to each side within ten pixels of its
+     * height, reached or not: somewhere safe to arrive (no lava or drop one step away).
+     */
+    public boolean footing(int s, int half) {
+        if (hazard[s]) {
+            return false;
+        }
+        for (int dx = -half; dx <= half; dx += STEP) {
+            int c = Math.round((spots.get(s)[0] + dx) / (float) STEP);
+            boolean ok = false;
+            if (c >= 0 && c < byColumn.size()) {
+                for (int id : byColumn.get(c)) {
+                    ok |= !hazard[id] && Math.abs(spots.get(id)[1] - spots.get(s)[1]) <= 10;
+                }
+            }
+            if (!ok) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /** The standing spot at this floor point, or -1. */
     public int spotAt(float x, float y) {
         int c = Math.round(x / STEP);

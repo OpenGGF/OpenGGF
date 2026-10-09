@@ -211,4 +211,13 @@ class RuinsRulesTest {
         section.nextDay(game);
         assertFalse(game.flags.contains(RuinsSection.LAVA_FLAG), "the pepper wears off overnight");
     }
+
+    @Test
+    void theFarmerCarriesUpToTenRingsDownAsHealth() {
+        assertEquals(10, RuinsRules.carried(500));
+        assertEquals(3, RuinsRules.carried(3));
+        assertEquals(0, RuinsRules.carried(0));
+        assertFalse(RuinsRules.faintsOnHit(RuinsRules.carried(500)), "a first hit scatters the carried rings");
+        assertTrue(RuinsRules.ARRIVAL_FLASH < RuinsRules.RING_COLLECT_FLASH, "rings can be collected while arriving");
+    }
 }

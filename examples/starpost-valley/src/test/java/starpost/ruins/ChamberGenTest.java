@@ -63,6 +63,23 @@ class ChamberGenTest {
     }
 
     @Test
+    void sonicArrivesOnLevelGroundWithNoLavaAStepAway() {
+        int safe = 0;
+        for (int day = 0; day < 3; day++) {
+            for (int n = 1; n <= RuinsRules.CHAMBERS; n++) {
+                Chamber c = gen.generate(n, RuinsRules.chamberSeed(SAVE_SEED, day, n));
+                Reach reach = new Reach(c);
+                int entry = reach.spotAt(c.entryX, c.entryY);
+                assertTrue(entry >= 0, "chamber " + n + " has a standing spot at its entry");
+                if (reach.footing(entry, ChamberGen.ARRIVAL_FOOTING)) {
+                    safe++;
+                }
+            }
+        }
+        assertTrue(safe >= RuinsRules.CHAMBERS * 3 * 9 / 10, "nearly every arrival has footing: " + safe);
+    }
+
+    @Test
     void chambersChangeOvernight() {
         int changed = 0;
         for (int n = 1; n <= RuinsRules.CHAMBERS; n++) {

@@ -111,6 +111,9 @@ public final class RuinsScreen implements Screen {
         this.gen = new ChamberGen(art);
         this.rng = new SnapshotRandom(section.seed ^ shell.game.calendar.dayNumber() * 31L ^ start);
         this.number = start;
+        int carry = RuinsRules.carried(shell.game.rings);   // banked back by leave()
+        shell.game.rings -= carry;
+        ringsInHand = carry;
     }
 
     PlayScreen play() {
@@ -158,7 +161,7 @@ public final class RuinsScreen implements Screen {
         runner.facingLeft = false;
         wasUnderLast = runner.underwater;
         elevatorLit = RuinsRules.landmark(n) && section.deepest >= n;
-        flash = 0;
+        flash = RuinsRules.ARRIVAL_FLASH;
         if (!runner.underwater) {
             breathe();
         }
