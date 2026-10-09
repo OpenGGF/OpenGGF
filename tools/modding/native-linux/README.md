@@ -19,7 +19,7 @@ verified against upstream SHA-256 values. Ubuntu build packages come from its
 
 ```bash
 python3 tools/modding/native-linux/prepare_toolchain.py --output target/linux-toolchain
-python3 tools/testing/maven_queue.py -B -Dmse=off -DskipTests -Puniversal-jar package dependency:build-classpath -DincludeScope=runtime -Dmdep.outputFile=target/native-runtime-classpath.txt
+python3 tools/testing/maven_queue.py -B -Dmse=off -DskipTests package dependency:build-classpath -DincludeScope=runtime -Dmdep.outputFile=target/native-runtime-classpath.txt
 engine=$(realpath target/*-jar-with-dependencies.jar)
 sdk=$(realpath target/*-openggf-mod-sdk.jar)
 python3 tools/modding/native-windows/build_inputs.py --engine-jar "$engine" --sdk-jar "$sdk" --output target/linux-friends-inputs
