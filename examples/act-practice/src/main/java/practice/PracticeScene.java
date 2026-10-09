@@ -33,14 +33,17 @@ public final class PracticeScene implements ModScene {
 
     @Override
     public void update(SceneContext ctx) {
-        if (ctx.buttonPressed(SceneButtons.B) || ctx.keyPressed(SceneKeys.ESCAPE) || games.isEmpty()
-                && ctx.buttonPressed(SceneButtons.START)) {
+        boolean accept = ctx.buttonPressed(SceneButtons.START) || ctx.keyPressed(SceneKeys.ENTER);
+        if (ctx.buttonPressed(SceneButtons.B) || ctx.keyPressed(SceneKeys.ESCAPE) || games.isEmpty() && accept) {
             ctx.exitToMasterTitle();
+            return;
+        }
+        if (games.isEmpty()) {
             return;
         }
         if (ctx.buttonRepeated(SceneButtons.LEFT)) selected = Math.floorMod(selected - 1, games.size());
         if (ctx.buttonRepeated(SceneButtons.RIGHT)) selected = Math.floorMod(selected + 1, games.size());
-        if (ctx.buttonPressed(SceneButtons.START) || ctx.keyPressed(SceneKeys.ENTER)) {
+        if (accept) {
             String game = games.get(selected);
             host.prepare(game, ctx.storage());
             host.attach(ctx.gameplay().launch(new RunSpec(game, 0, 0, "sonic", practicePolicy()), host));

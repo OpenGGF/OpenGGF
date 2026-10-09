@@ -111,6 +111,29 @@ class TestActPracticeExample {
         }
     }
 
+    @Test
+    void withoutGamesTheEntryIgnoresSelectionAndLeavesOnEnter() throws Exception {
+        try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
+            SceneGameplay gameplay = new SceneGameplay() {
+                @Override public List<String> availableGames() { return List.of(); }
+                @Override public RunHandle launch(RunSpec spec, RunHost runHost) {
+                    throw new AssertionError("nothing to launch without a game");
+                }
+            };
+            List<String> exits = new ArrayList<>();
+            host.open(harness.titleEntry().scene(), new SceneServices(null, null, work.resolve("saves"), null,
+                    () -> exits.add("game"), () -> exits.add("master"), null, gameplay), 320, 224);
+            InputHandler input = new InputHandler();
+            press(input, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT);
+            press(input, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
+            assertTrue(host.isOpen(), "changing the game with an empty list is inert, not a scene fault");
+            assertEquals(List.of(), exits);
+
+            press(input, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            assertEquals(List.of("master"), exits, "Enter offers the way back when no game is available");
+        }
+    }
+
     private void press(InputHandler input, int glfwKey) {
         input.handleKeyEvent(glfwKey, org.lwjgl.glfw.GLFW.GLFW_PRESS);
         host.update(input);
