@@ -1189,7 +1189,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   common tests and structural guards retained, broad fallback for shared changes,
   and bounded diagnostics and automatic temporary-file cleanup. Tool prerequisites
   are checked before testing; category runs and a focused Maven wrapper wait automatically
-  for shared execution slots across worktrees. Linux admission can overlap up to three runs
+  for shared test execution slots across worktrees. Build-only Maven commands bypass
+  the test queue while retaining exclusion against builds/tests in their own worktree.
+  Linux admission can overlap up to three test runs
   when conservative memory/CPU reservations fit, crediting each running job's measured
   usage instead of counting it twice, while keeping each worktree exclusive and
   preserving a serial override. Single-fork trace and audio profiles no longer force

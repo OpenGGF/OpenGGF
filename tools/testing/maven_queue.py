@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Queue local Maven commands across linked worktrees; no manual registration.
+"""Queue local Maven tests across linked worktrees; builds use only a worktree lock.
 
 Usage: python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestExample test
+Build without shared admission: python3 tools/testing/maven_queue.py -DskipTests package
 Focused low-memory lane: add --lean before the Maven arguments (1 GiB JVM heaps).
 The OS owns execution and waiting leases. Short estimated runs are preferred;
 five-minute aging protects larger waiters. Origin: 2026-09-14 testing queue cleanup.
@@ -55,6 +56,31 @@ def _acquire(stream, shared=False):
         if error.errno not in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):
             raise
         return False
+
+
+@contextmanager
+def worktree_build_slot(root):
+    """Protect target/ without joining the shared test scheduler.
+
+    Retain the same local lease as queued tests, including in the Maven child.
+    Other worktrees' tests, serial overrides and queue capacity cannot block it.
+    """
+    root = Path(root).resolve()
+    git_dir = Path(subprocess.check_output(
+        ['git', 'rev-parse', '--absolute-git-dir'], cwd=root, text=True).strip()).resolve()
+    with ExitStack() as stack:
+        lease = _open_lock(stack, git_dir / 'maven-worktree.lock')
+        started = next_notice = time.monotonic()
+        while not _acquire(lease):
+            now = time.monotonic()
+            if now >= next_notice:
+                print(f'Waiting for this worktree\'s build/test lock ({now - started:.0f}s): {root}',
+                      flush=True)
+                next_notice = now + 30
+            time.sleep(.2)
+        stack.callback(_unlock, lease)
+        print(f'Build-only Maven command; shared test queue bypassed: {root}', flush=True)
+        yield lease.fileno()
 
 
 @contextmanager
@@ -279,6 +305,58 @@ SHARED_PROFILES = frozenset({
     'trace-diagnostics', 'fbz-routes', 'audio-reference', 'audio-local-wave'})
 
 
+def build_only(args):
+    """Recognize this POM's build lifecycles; uncertain invocations stay queued.
+
+    Skip properties use the last command-line definition, as Maven does. Never
+    infer that arbitrary plugin goals obey Surefire's test-skip properties.
+    Custom launch arguments/POMs/profiles may introduce earlier test executions.
+    """
+    if os.environ.get('MAVEN_ARGS'):
+        return False
+    config = Path.cwd() / '.mvn/maven.config'
+    if config.exists() and set(shlex.split(config.read_text(), comments=True)) - {'-Dmse=relaxed', '-Dmse=off'}:
+        return False
+    before_tests = {
+        'clean', 'validate', 'initialize', 'generate-sources', 'process-sources',
+        'generate-resources', 'process-resources', 'compile', 'process-classes',
+        'generate-test-sources', 'process-test-sources', 'generate-test-resources',
+        'process-test-resources', 'test-compile', 'process-test-classes'}
+    after_tests = {'test', 'prepare-package', 'package', 'pre-integration-test',
+                   'integration-test', 'post-integration-test', 'verify', 'install', 'deploy'}
+    profiles = SHARED_PROFILES | {'tracechaser-integration', 'benchmarks', 'test-concurrent',
+        'audio-stress', 'native', 'universal-jar', 'dev-run', 'lwjgl-natives-linux',
+        'lwjgl-natives-macos', 'lwjgl-natives-macos-arm64', 'lwjgl-natives-windows'}
+    switches = {'-B', '--batch-mode', '-q', '--quiet', '-e', '--errors', '-X', '--debug',
+                '-U', '--update-snapshots', '-o', '--offline', '-ntp', '--no-transfer-progress',
+                '-nsu', '--no-snapshot-updates', '-C', '--strict-checksums', '-c', '--lax-checksums'}
+    properties, goals = {}, []
+    tokens = iter(args)
+    for token in tokens:
+        if token in ('-D', '--define', '-P', '--activate-profiles', '-T', '--threads'):
+            value = next(tokens, None)
+            if value is None or value.startswith('-'):
+                return False
+            token = ('-D' if token in ('-D', '--define') else
+                     '-P' if token in ('-P', '--activate-profiles') else '-T') + value
+        if token.startswith(('-D', '--define=')):
+            definition = token[2:] if token.startswith('-D') else token.split('=', 1)[1]
+            key, separator, value = definition.partition('=')
+            properties[key] = value if separator else 'true'
+        elif token.startswith(('-P', '--activate-profiles=')):
+            value = token[2:] if token.startswith('-P') else token.split('=', 1)[1]
+            if not value or any(p.lstrip('!?-') not in profiles for p in value.split(',')):
+                return False
+        elif token in switches or token.startswith(('-T', '--threads=', '--color=')):
+            continue
+        elif token in before_tests | after_tests:
+            goals.append(token)
+        else:
+            return False
+    skip = any(properties.get(key, '').lower() == 'true' for key in ('skipTests', 'maven.test.skip'))
+    return bool(goals) and (skip or all(goal in before_tests for goal in goals))
+
+
 def needs_exclusive(args):
     """Unmeasured fork/heap/profile overrides retain the serial contract."""
     from maven_schedule import profiles_of
@@ -349,8 +427,10 @@ def main(argv=None):
         from maven_resources import GIB
         reservation = (4 * GIB, 4)
         kind = 'focused-lean'
-    with maven_slot(Path.cwd(), exclusive=exclusive, estimate=estimate,
-                    kind=kind, reservation=reservation) as fd:
+    slot = (worktree_build_slot(Path.cwd()) if not lean and build_only(args) else
+            maven_slot(Path.cwd(), exclusive=exclusive, estimate=estimate,
+                       kind=kind, reservation=reservation))
+    with slot as fd:
         with subprocess.Popen(['mvn', *args], start_new_session=(os.name == 'posix'),
                               env=environment, **inherited_slot(fd)) as process:
             try:
