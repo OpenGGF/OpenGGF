@@ -81,6 +81,15 @@ one Engine outer audio boundary; declare direct-level/entry setup. Keep its
 clock/PCM observations separate from normal Engine.loop/window footage. A
 successful hidden GL context is not proof that a stage's pixels were rendered.
 
+Capture drain length is not producer publication count (2026-10-09, Mutator Lab
+audio guard repair): the presentation capture handle advances its own capture
+clock on every drain and returns that clock-sized frame, zero-filling when no
+fresh producer packet exists. A native bootstrap fixture expected an empty
+second drain and received 800 silent stereo frames. Drain once per outer audio
+boundary; use the producer sink's accept count to verify publication cadence,
+and inspect capture clock and PCM alongside native state. Extra drains cannot
+prove extra synthesis or gameplay steps.
+
 Fractional stage entry can preserve a nonzero scheduling phase (2026-10-09,
 Mutator Lab expansion): a late denial comparison initially assumed remainder
 zero before counting 150% outer frames. Compare the actual incoming remainder

@@ -4,7 +4,6 @@ import com.openggf.Engine;
 import com.openggf.GameLoop;
 import com.openggf.InputBindingFactory;
 
-import com.openggf.audio.HeadlessSmpsAudioBackend;
 import com.openggf.audio.LiveCaptureAudioHandle;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -16,13 +15,14 @@ import com.openggf.game.GameServices;
 import com.openggf.game.SpecialStageEntryRequest;
 import com.openggf.game.internal.NativeStagePacingOwners;
 import com.openggf.game.mutators.GameplayMutatorPacing;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider;
 import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
-import com.openggf.graphics.GraphicsManager;
 import com.openggf.mods.code.DevelopmentPatchLoader;
 import com.openggf.mods.mutators.MutatorScope;
 import com.openggf.mods.mutators.MutatorSessionState;
@@ -56,7 +56,11 @@ import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
  * output directory config.yaml. See tools/media/README.md for the contract.
  */
 public final class MutatorStageProbeTool {
-    private MutatorStageProbeTool() { }
+    private final EngineContext services;
+
+    private MutatorStageProbeTool(EngineContext services) {
+        this.services = Objects.requireNonNull(services, "services");
+    }
 
     private HeadlessGameBoot boot;
     private GameLoop loop;
@@ -84,7 +88,8 @@ public final class MutatorStageProbeTool {
             if (entries.anyMatch(p -> !Set.of("config.yaml", "empty-roms").contains(p.getFileName().toString())))
                 throw new IllegalArgumentException("Fresh owned output directory required");
         }
-        new MutatorStageProbeTool().run(game, stage, speed, follow, denyAt, bound, mod, out);
+        new MutatorStageProbeTool(EngineServices.current())
+                .run(game, stage, speed, follow, denyAt, bound, mod, out);
     }
 
     /** Syntax-only validation: refuses unbounded/native-incompatible cells before startup. */
@@ -117,7 +122,7 @@ public final class MutatorStageProbeTool {
                      int bound, Path mod, Path out) throws Exception {
         Throwable primary = null;
         try {
-            config = SonicConfigurationService.getInstance();
+            config = services.configuration();
             config.setConfigValue(SonicConfiguration.DEFAULT_ROM, game);
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
             config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
@@ -131,7 +136,7 @@ public final class MutatorStageProbeTool {
             config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, false);
             config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
             config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, true);
-            boot = new HeadlessGameBoot(320, 224);
+            boot = new HeadlessGameBoot(320, 224, services);
             boot.setModuleDecorator(DevelopmentPatchLoader.fromJar(mod));
             var romKey = switch (game) {
                 case "s1" -> SonicConfiguration.SONIC_1_ROM;
@@ -142,9 +147,9 @@ public final class MutatorStageProbeTool {
             input = new InputHandler(InputBindingFactory.supplier(config));
             loop.setInputHandler(input);
             if (loop.getInputHandler() != input
-                    || !(GameServices.audio().getBackend() instanceof HeadlessSmpsAudioBackend))
+                    || !boot.hasInstalledHeadlessAudioBackend())
                 throw new IllegalStateException("Maintained input/audio bootstrap identity missing");
-            audio = GameServices.audio().beginLiveCaptureAudio(60);
+            audio = services.audio().beginLiveCaptureAudio(60);
             rows = new PrintWriter(Files.newBufferedWriter(out.resolve("observations.csv")));
             pcm = Files.newOutputStream(out.resolve("offline-stereo-s16le.pcm"));
             row("outer", "phase", "measured", "mode", "world", "level", "provider",
@@ -221,9 +226,9 @@ public final class MutatorStageProbeTool {
             cleanup = close(cleanup, () -> { if (pcm != null) pcm.close(); });
             cleanup = close(cleanup, () -> { if (audio != null) audio.close(); });
             cleanup = close(cleanup, () -> WorldSessionPolicyAccess.closeScreens(SessionManager.getCurrentWorldSession()));
-            cleanup = close(cleanup, GraphicsManager::destroyForReinit);
+            cleanup = close(cleanup, () -> services.graphics().cleanup());
             cleanup = close(cleanup, () -> { if (boot != null) boot.close(); });
-            cleanup = close(cleanup, () -> GameServices.audio().destroy());
+            cleanup = close(cleanup, () -> services.audio().destroy());
             cleanup = close(cleanup, Engine::clearGlobalInstance);
             if (primary == null && cleanup != null) {
                 if (cleanup instanceof Error error) throw error;
@@ -247,7 +252,7 @@ public final class MutatorStageProbeTool {
         var player = GameServices.camera().getFocusedSprite();
         return loop.getCurrentGameMode() == GameMode.LEVEL && context != null && context.isGameplayRuntimeReady()
                 && level != null && level.getCurrentLevel() != null && !level.hasPendingInitialProcessSpritesPass()
-                && !level.isTitleCardRequested() && !GraphicsManager.getInstance().getFadeManager().isActive()
+                && !level.isTitleCardRequested() && !services.graphics().getFadeManager().isActive()
                 && player != null && !player.getDead() && !player.isControlLocked()
                 && !titleOverlay();
     }
@@ -262,7 +267,7 @@ public final class MutatorStageProbeTool {
         var bonus = NativeStagePacingOwners.bonus(value); return bonus == null ? -1 : bonus.pacingEntryEpoch();
     }
     private boolean interactive(String stage) {
-        if (loop.isPaused() || GraphicsManager.getInstance().getFadeManager().isActive()) return false;
+        if (loop.isPaused() || services.graphics().getFadeManager().isActive()) return false;
         if (stage.equals("special")) {
             if (loop.getCurrentGameMode() != GameMode.SPECIAL_STAGE) return false;
             var owner = NativeStagePacingOwners.special(provider());
@@ -311,7 +316,7 @@ public final class MutatorStageProbeTool {
                 snapshot == null ? "" : snapshot.pending(), level == null ? "" : level.getFrameCounter(),
                 level == null || level.getObjectManager() == null ? "" : level.getObjectManager().getVblaCounter(),
                 level == null ? "" : level.hasPendingInitialProcessSpritesPass(), level == null ? "" : level.isTitleCardRequested(), titleOverlay(),
-                loop.isPaused(), GraphicsManager.getInstance().getFadeManager().isActive(),
+                loop.isPaused(), services.graphics().getFadeManager().isActive(),
                 player == null ? "" : player.getCentreX(), player == null ? "" : player.getCentreY(),
                 player == null ? "" : player.getXSpeed(), player == null ? "" : player.getYSpeed(), comparison,
                 audio.totalStereoFrames(), audio.clockSnapshot(), input.hasLogicalOverride(), loop.externalFrameOrInputOwnerActive());

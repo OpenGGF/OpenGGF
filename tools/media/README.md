@@ -82,6 +82,14 @@ and `HeadlessGameBoot`. It records `observations.csv` and little-endian stereo
 `stepPresentationFrame()` schedules whole native bodies and one
 `Engine.presentOuterAudioFrame()` services each outer audio boundary. It never
 uses comparison rows, a logical input override or a custom gameplay policy.
+The sampler captures one engine context and injects it into the maintained
+bootstrap. Configuration, fade observations, capture and cleanup use that same
+context. The bootstrap checks its exact installed headless audio owner; a
+replacement backend or a retired boot cannot satisfy that identity check.
+Drain the capture once after each outer audio boundary. A drain advances its
+capture clock and returns a full clock-sized frame even without a fresh producer
+packet, filling that missing packet with silence; an extra drain does not measure
+another native audio service.
 
 Build this checkout and the example first with the normal queued commands. Use
 a fresh external directory containing only `config.yaml` and an optional empty
