@@ -23,6 +23,8 @@ public final class ModApiVersion {
      * and bounded pitch-gliding ROM-part cues that preserve the song clock.
      * Full-song and selected-part synthesis expose cancellable host jobs with
      * progress, a ten-minute duration cap and a 256 MiB stereo PCM budget.
+     * Scene audio also starts supplied-ROM music live, preserving native intros/loops
+     * with bounded packet buffering and scene-owned stop/fade/close lifetime.
      * Scene-owned direct peer text messaging is asynchronous and bounded, with
      * socket/thread ownership and lifetime kept in the engine.
      * Power-up rules expose explicit invincibility-expiry music ownership for modes

@@ -106,7 +106,6 @@ public final class Game {
     public void update() {
         ticks++;
         controls.bind(ctx);
-        audio.tick();
         if (next != null) {
             fade = Math.max(1, fade + 1);
             if (fade >= 12) {
@@ -308,7 +307,7 @@ public final class Game {
         FieldScreen outside = new FieldScreen(this, stage, field);
         swap(outside);
         if (inside) enterDungeon(outside);
-        else save();
+        else { outside.playMusic(this); save(); }
     }
 
     /** The stage for a zone, reusing the last one built. */
@@ -363,6 +362,7 @@ public final class Game {
         progress.setResume(outside.zone(), 1);
         progress.setResumeDungeon(true);
         save();
+        room.playMusic(this);
         playStory(outside.zone().key + "-dungeon-enter", room, () -> swap(room));
     }
 
@@ -370,6 +370,7 @@ public final class Game {
         FieldScreen outside = room.overworld();
         if (outside == null) throw new IllegalStateException("Dungeon lost its entrance");
         outside.field().restore(progress);
+        outside.playMusic(this);
         var entrance = outside.field().entrance();
         outside.field().setPosition(entrance.homeX, entrance.homeY + 24);
         progress.setResume(outside.zone(), 1);

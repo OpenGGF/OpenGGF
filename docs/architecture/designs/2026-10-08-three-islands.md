@@ -323,3 +323,109 @@ real-ROM music/doorway case: three outer tests, zero failures/errors/skips.
 The final assertion enters the shrine through its actual door and confirms both
 the requested and playing song remain `s1:81`. The failure regression verifies an
 unavailable cached playback selects the fallback without faulting the scene.
+
+## Live ROM music and Continue follow-up (2026-10-09)
+
+After music commit `7693e0dc09` and expedition/input commits `36a78d1183` /
+`3888c5484f`, the user reported silence immediately after continuing into Star Light,
+noticed periodic restarts, and clarified that separate dungeon themes are welcome.
+The previous one-theme-per-zone choice is superseded. The finite transport rendered
+3,600 frames before playback, then restarted the entire recording on exhaustion;
+its first playback required both full and selected-part background renders. The
+report did not establish indefinite silence: the user had not waited long. The
+observed design nevertheless guarantees an unwanted startup delay and intro restart.
+
+Three Islands now requests `SceneAudio.playMusic(gameId, musicId)` for foreign ROMs.
+The scene host creates an isolated `LiveSceneMusic` stream using the existing
+`OwnedSmpsAudioStream`, game audio profile and ROM SMPS program/DAC bank. A bounded
+packet buffer services the driver at NTSC cadence independently of output packet
+sizes; the ROM's own jumps and loop counters continue without recording boundaries.
+Nothing is cached as a minute-long PCM song. Host pause freezes the stream; stop,
+replacement and scene close dispose it. Fade lasts one second. Foreign playback
+continues to mask base-driver SFX; battle cues release it and use the base driver.
+This does not change the stock driver's timing, restore rules or trace inputs.
+
+The existing alternatives were checked before delivery. Other scene examples use
+`SceneAudio.playMusic(int)` for their base game's songs; Sitar Hero uses finite
+performances. Neither exposes continuous foreign-ROM music to a scene. The engine's
+`AudioManager.playDonorMusic` already supports gameplay donor music, but is not
+available through `SceneContext`; its shared donor registry and host physical policy
+also have different ownership from scene-local playback. The chosen adapter reuses
+the existing ROM sequencer and owned stream, with the same isolated scene lifetime
+as finite music, rather than altering donor registration or implementing song loops.
+The trigger, Continue and dungeon-selection changes themselves remain mod code.
+
+Field opening explicitly requests its destination music before returning to gameplay.
+Indoor Continue skips any transient outdoor cue and selects its dungeon's theme,
+including before entrance dialogue. Repeated field updates do not restart a request.
+Marble interiors use S1 ID `$83` (`Sonic1Music.MZ`); their former `$82` selected
+Labyrinth. Other dungeon music follows its ROM art/act. A fallback is used only on
+an unavailable ROM/host or failed playback. Matching current JVM engine and mod
+builds are required for the additive API method.
+
+The default overload preserves alternative host implementations. The normalized
+candidate signature adds only `SceneAudio.playMusic(String,int)`; runtime documentation
+is updated while API version/status remain candidate 0.7.0. The descriptor stays
+unchanged because `.githooks/validate-policy.sh` explicitly rejects descriptor edits
+for ordinary candidate-pin regeneration.
+
+Regression coverage compares Star Light and Mystic Cave live PCM, including seconds
+60–70, with an uninterrupted independent ROM sequencer, using an odd sample rate and
+variable packet sizes. Pause/resume, fade and close have separate checks. The scene
+regression uses actual disk saves and the title's Continue input, then measures AC
+variance in first-second captured audio for outdoor Star Light and the Marble shrine.
+This measures actual PCM, not only a requested song ID. Creator tests verify repeated
+requests, intended dungeon/battle transitions, stable failure fallback and disposal.
+
+The first focused invocation stopped at test compilation because two new ROM lookups
+needed checked `IOException` declarations; no tests ran. That test-only compile error
+was corrected before rerunning. The final delivery uses normal change-based validation
+against `3888c5484f`, because this follow-up changes a public scene-audio contract.
+
+The focused queued command selected `TestThreeIslandsExample,TestThreeIslandsScene,
+TestLiveSceneMusicRom`, with `-Dmse=off` and absolute paths to the supplied S1, S2 and
+S3K root ROMs. It completed at 14:04 BST: 59 nested creator tests and 17 outer tests,
+zero failures/errors/skips. The later dungeon-ID assertion was covered by the broad
+run: 60 nested creator tests, two example/package tests, 12 scene tests and three
+live-ROM tests all passed without skips. Sitar Hero's 13 chart cases also passed,
+taking 765 seconds; its finite path remains unchanged.
+
+Java 21 / Lua 5.4 / PowerShell preflight passed. The normal command
+`python3 tools/testing/run_categories.py --base 3888c5484fdd2f6f8cbe25351c1a50dc19601930 --run`
+selected all 3,076 ordinary candidate classes plus guards on this working tree.
+Run `20261009T130520Z-c32ad5ff` reached its 40-minute invocation limit before guards:
+2,389 reports, 19,497 tests, two failures, two errors and 151 skips. This is incomplete
+validation, not a full-suite pass. The retained failures were:
+
+- `TestS3kDataSelectPresentation#visualCapture_selectedSaveSlotShowsRightBodyRail`:
+  the available graphics context rejected GLSL version 410.
+- Both `TestPhase3SampleCharacterIntegration` cases: the sample build passed an
+  input filename as a positional argument to macOS `base64`, which returned 64.
+- `TestManagedSceneNetwork#waitingConnectCanTimeOutOrBeCancelledWithoutWorkerLeaks`:
+  socket connection reset by peer.
+
+These failures remain unattributed: no matched baseline/current replay was performed.
+They were not repaired as part of the music change. Skips include literal `s2.gen`
+lookups despite the supplied absolute ROM properties, absent KiS2 lock-on data,
+unavailable graphics/capture prerequisites, inapplicable level routes, and opt-in
+diagnostics. No ROM files were renamed or linked. The unfinished ordinary remainder
+is not certified. Structural guards are run separately in a fresh queued JVM.
+
+The queued `-Dmse=off -Pguards test -B` invocation, with the same three absolute ROM
+properties, completed at 14:55 BST: 674 tests, one failure, zero errors/skips. Its
+only failure was `TestBuildToolingGuard#releaseGateToolsShouldRejectCorruptAndChangedEvidence`:
+the nested Python case `test_release_trace_collection.CollectTests.test_failure_messages_and_report_payloads_have_checkout_paths_normalized`
+retained a `/var/folders/...` checkout path instead of replacing it with `<CHECKOUT>`.
+A bounded matched check extracted that test and `compare_release_traces.py` from
+`3888c5484f` into a temporary directory (no worktree or build-tree copy), then ran
+the exact unittest case against baseline and current code under the same environment.
+Both files were byte-identical and both runs failed the same assertion in 0.27 seconds.
+This guard failure predates the music change; the other 673 guards passed. The
+unrelated release-tool normalization was not changed. This does not resolve the
+four unattributed ordinary failures or the unfinished ordinary remainder.
+
+Queued `-Dmse=off -DskipTests package` succeeded at 14:46 BST; this is packaging,
+not another test pass. `python3 examples/three-islands/build.py --skip-engine --install`
+passed creator validation with zero findings and installed/enabled/trusted the mod.
+Installed and packaged jar bytes and the mod-state trust checksum were verified equal.
+The installation uses the matching JVM engine build and requires an engine restart.

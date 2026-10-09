@@ -8,6 +8,15 @@ import threeislands.core.SaveCodec;
 import threeislands.core.Zone;
 
 class DungeonTest {
+    @org.junit.jupiter.api.Test
+    void dungeonMusicMatchesItsRomTerrainAndAct() {
+        // Sonic1Music.MZ and Sonic3kMusic.LRZ1/LRZ2; no Labyrinth/Sky Sanctuary substitutions.
+        org.junit.jupiter.api.Assertions.assertEquals(0x83, Dungeon.of(Zone.GREEN_HILL).music());
+        org.junit.jupiter.api.Assertions.assertEquals(0x83, Dungeon.of(Zone.SPRING_YARD).music());
+        org.junit.jupiter.api.Assertions.assertEquals(0x14, Dungeon.of(Zone.ANGEL_ISLAND).music());
+        org.junit.jupiter.api.Assertions.assertEquals(0x13, Dungeon.of(Zone.LAUNCH_BASE).music());
+    }
+
     private static boolean reachable(Field f, double targetX, double targetY) {
         boolean[][] seen = new boolean[f.width() / 8 + 1][f.height() / 8 + 1];
         ArrayDeque<int[]> queue = new ArrayDeque<>();

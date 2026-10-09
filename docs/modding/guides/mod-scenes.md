@@ -164,6 +164,22 @@ window polls during its frame wait, but rendering/OS scheduling can still delay
 observations. Choose one menu convention: ordinary raw pad A/B must not also be
 interpreted through their mapped Genesis aliases in the same update.
 
+## Continuous ROM music
+
+For exploration or other scenes that need the song's native intro, loops and ending,
+use `ctx.audio().playMusic("s1", 0x84)`. It starts Star Light directly from the supplied
+Sonic 1 ROM, without synthesizing a finite performance first. The boolean result is
+false on hosts without this capability or without that ROM; malformed IDs or ROM
+loading errors can throw. Request a track once per music-context change, not every
+update: the host deliberately allows an explicit repeat request to restart a song.
+
+The host keeps one isolated ROM sequencer and a bounded NTSC packet buffer. Output
+packet sizes do not control the driver's tempo. Pause freezes playback; scene close,
+`stopMusic()` or a base-game `playMusic(int)` releases it. `fadeOutMusic()` fades it
+out over one second. Live music masks the base-game driver's SFX, as finite music does.
+Starting live music retires finite preparations; requesting `ctx.music()` stops live
+music. Do not retain finite-song handles across that change of playback mode.
+
 ## Timing-sensitive ROM music
 
 `ctx.music()` prepares finite ROM-synthesized playback with semantic note attacks:

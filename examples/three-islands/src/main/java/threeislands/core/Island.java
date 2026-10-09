@@ -3,8 +3,7 @@ package threeislands.core;
 /**
  * The four chapters. {@code game} is the ROM whose art and zone music the chapter uses.
  * {@code mapMusic} is a Sonic 3 &amp; Knuckles driver song (Azure Lake, Balloon Park, Data Select,
- * Chrome Gadget) that starts instantly on the map and covers a Sonic 1 or Sonic 2 zone theme
- * while that is synthesised.
+ * Chrome Gadget) used only when a foreign ROM's live music is unavailable.
  */
 public enum Island {
     SOUTH("South Island", "s1", "Flicky Village", 0x20, 0xFF40A0FF),

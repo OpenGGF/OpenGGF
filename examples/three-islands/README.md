@@ -165,20 +165,22 @@ Boss victories fully restore the party. A defeat offers a retry from your last s
 
 ## Audio
 
-Each area keeps one exploration theme outdoors and inside its dungeon. Dialogue,
-shops, menus and local mechanisms leave it playing. Battles, victory, emerald rewards,
-the title and the ending have their own deliberate cues; returning to exploration
-restarts the area's theme directly.
+Exploration uses each outdoor area's theme and a theme matching its dungeon's ROM
+terrain: Green Hill's seaside shrine plays **Marble Zone**, for example. Dialogue,
+shops, menus and local mechanisms leave the current theme playing. Battles, victory,
+emerald rewards, the title and the ending have their own deliberate cues.
 
-The mod runs on the S3K sound driver. Angel Island and Death Egg use their S3K zone
-themes; Sonic 1 and Sonic 2 areas use their own ROM's zone theme, synthesised through
-`ctx.music()`. The first visit to a new Sonic 1/2 area can be briefly silent while its
-song prepares. Prepared music survives battles and jingles, so returning needs no
-new synthesis or temporary replacement song. An island's S3K fallback plays only if
-preparation fails. Crossing areas keeps the source music until the destination opens.
-Songs rendered from Sonic 1/2 restart after a minute. While they play, the host replaces
-the driver's output, so exploration sound effects are not heard there; battles use
-the driver and retain their sound effects.
+Sonic 1/2 music runs live from your ROM through `ctx.audio().playMusic(game, id)`.
+It starts immediately on arrival or Continue, including indoor saves. The ROM sound
+sequence owns its intro and loops; there is no one-minute render or periodic restart.
+Entering a different music area or returning from combat starts that area's theme.
+S3K areas and battle/story cues use the running S3K driver. An island's S3K fallback
+is used only if foreign-ROM playback is unavailable. Crossing areas keeps the source
+music until the destination opens. Foreign music still masks the base driver's sound
+effects; battles use the driver and retain their sound effects.
+
+Use the matching current JVM engine build: older candidate builds do not implement
+live scene ROM music. `examples/three-islands/play.sh` builds and launches that engine.
 
 ## Where everything comes from
 
@@ -202,7 +204,7 @@ its colour from the ROM palette. Battle and exploration share this renderer. Son
 | `core/` | Pure rules with no engine types: `Battle` (turn queue, commands, AI, damage), `Combatant`, `Skill`, `Item`, `EnemyKind`, `Zone`, `Island`, `Progress`, `SaveCodec`, `Story`. |
 | `field/` | `Field` (movement, collision and persistent landmarks), `FieldArt` (ROM field composition), `Stage` (kit ownership), plus legacy route diagnostics. |
 | `art/` | `Art` (every ROM request and palette), `Heroes` (poses from each ROM's animation scripts), `EnemyArt` (badniks and multi-part bosses), `Font`. |
-| `audio/Audio` | Driver songs and effects, background Sonic 1/2 synthesis retained through battle and story cues. |
+| `audio/Audio` | Driver songs and effects, live Sonic 1/2 ROM music with native intros/loops and deliberate battle/story cues. |
 | `screen/`, `view/` | Field, in-place battle and dialogue, travelling shop, party menu, loading, title, game over and ending; shared windows and controls. |
 
 The old act route finder is retained for ROM loading/diagnostics only. Exploration
@@ -234,7 +236,7 @@ java -cp target/test-classes:target/classes:$(cat target/test-classpath.txt) \
   suite; `TestThreeIslandsScene` plays it against a real S3K session: a new game through the
   field startup and in-world dialogue/save, all zones and bosses, a keyboard-fought battle,
   discovery persistence, sealed local trails and open backtracking, exact battle field/camera identity,
-  and Green Hill's Sonic 1 theme starting without a placeholder and returning immediately after combat cues. Dungeon checks exercise all
+  and immediate Sonic 1 music, Marble music in the seaside shrine, and audible Star Light/indoor Continue saves. Dungeon checks exercise all
   available interiors through the actual entrances, both sentry battles, indoor save/continue,
   the story reward, repeat interaction and returning/re-entering, then the relay, shield removal,
   save/continue, every guardian, onward travel and the final ending. Model checks flood-fill the

@@ -217,7 +217,7 @@ class TestThreeIslandsScene {
             audio.getClass().getMethod("music", String.class, int.class).invoke(audio, "s3k", 0x18);
             audio.getClass().getMethod("jingle", int.class).invoke(audio, 0x29);
             audio.getClass().getMethod("music", String.class, int.class, int.class).invoke(audio, "s1", 0x81, 0x20);
-            assertTrue((boolean) active.invoke(audio), "return from combat reuses the real host's prepared song immediately");
+            assertTrue((boolean) active.invoke(audio), "return from combat starts the ROM driver immediately");
             assertTrue(((String) describe.invoke(audio)).contains("playing s1:81"), (String) describe.invoke(audio));
             Object outside = value(game, "screen");
             near(value(outside, "field"), "DUNGEON");
@@ -225,10 +225,55 @@ class TestThreeIslandsScene {
             play(harness, 2);
             finishDialogue(harness);
             assertEquals("DUNGEON", screen(harness));
-            assertTrue((boolean) active.invoke(audio), "the shrine keeps the prepared area song");
-            assertTrue(((String) describe.invoke(audio)).contains("want s1:81 playing s1:81"),
-                    "crossing indoors must not request a different track: " + describe.invoke(audio));
+            assertTrue((boolean) active.invoke(audio), "the shrine starts its ROM song immediately");
+            assertTrue(((String) describe.invoke(audio)).contains("want s1:83 playing s1:83"),
+                    "the Marble shrine uses Marble Zone music: " + describe.invoke(audio));
             clean(harness);
+        }
+    }
+
+    @Test
+    void continueStartsStarLightImmediatelyAndIndoorContinueSelectsMarble() throws Exception {
+        level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
+            Path saves = work.resolve("saves");
+            Path save = saves.resolve("mods/three-islands/save.txt");
+            Files.createDirectories(save.getParent());
+            var effective = harness.apply(GameServices.module());
+            for (boolean inside : new boolean[] {false, true}) {
+                Files.writeString(save, "three-islands-save 1\nresume=" + (inside ? "0,1" : "1,1")
+                        + "\ndungeon=" + (inside ? "1" : "0") + "\nscene=ghz-dungeon-enter\n");
+                harness.open(effective, saves, 400, 224, true);
+                play(harness, 2);
+                assertEquals("TITLE", screen(harness));
+                harness.press(GLFW_KEY_ENTER); // Continue is selected from the real disk save.
+                assertTrue(until(harness, inside ? "DUNGEON" : "FIELD", 700));
+                Object game = value(harness.scene(), "game");
+                Object audio = game.getClass().getField("audio").get(game);
+                String expected = inside ? "s1:83" : "s1:84";
+                assertTrue(value(audio, "describe").toString().contains("playing " + expected),
+                        "destination song starts before the first field update: " + value(audio, "describe"));
+                assertTrue((boolean) value(audio, "playerActive"));
+                var manager = GameServices.audio();
+                manager.beginCaptureMode(manager.outputSampleRate(), manager.presentationFrameRate());
+                try {
+                    short[] pcm = new short[8192];
+                    long sum = 0, squares = 0, samples = 0;
+                    for (int frame = 0; frame < 60; frame++) {
+                        play(harness, 1);
+                        manager.presentFrame(com.openggf.audio.presentation.PresentationMode.FORWARD);
+                        int frames = manager.drainCaptureFrame(pcm);
+                        for (int i = 0; i < frames * 2; i++) {
+                            sum += pcm[i]; squares += (long) pcm[i] * pcm[i]; samples++;
+                        }
+                        manager.update();
+                    }
+                    assertTrue(samples > 0);
+                    assertTrue((double) squares / samples - Math.pow((double) sum / samples, 2) > 100,
+                            "Continue produces actual music PCM in its first second");
+                } finally { manager.endCaptureMode(); }
+                clean(harness);
+            }
         }
     }
 

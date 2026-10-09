@@ -35,7 +35,7 @@ import threeislands.screen.ShopScreen;
  *   <li>{@code dungeon:<zone>}, {@code position:<x>:<y>} for interior captures</li>
  *   <li>{@code battle:<zone>[:KIND,KIND,...]}, {@code boss:<zone>}, {@code win}</li>
  *   <li>{@code story:<scene>}, {@code level:<n>}, {@code emeralds}</li>
- *   <li>{@code audiostate}: writes {@code audio.txt} (what music is wanted, playing or being prepared)</li>
+ *   <li>{@code audiostate}: writes {@code audio.txt} (what music is wanted, playing or unavailable)</li>
  *   <li>{@code routestats}: writes {@code routes.txt} to the mod's storage with each act's kit size,
  *       route span, airborne columns and floor range, for judging how well the route finder
  *       follows a level (it found the Marble Zone camera-boundary problem)</li>
