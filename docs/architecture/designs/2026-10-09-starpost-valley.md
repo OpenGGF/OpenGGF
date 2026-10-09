@@ -686,6 +686,51 @@ Every further system plugs in through three seams, so lanes rarely edit the same
 Content is added through new `Content`-style registrars called from `Content.register`, never
 static tables (the validator rejects them).
 
+### Lead progress (commits `facc4b595`..`7218cfbff`)
+
+Built on the skeleton, each step verified with `ExampleModCapture` stills and the creator rules
+suite (23 engine-free tests at `94c3d883c`):
+
+- **Valley life.** Rings and seasonal forage along the path every morning (each ring is one
+  Momentum). The farm's back wall ends in Green Hill's loop: a lap at speed refills Momentum.
+- **Presentation.**
+  - The Sonic 1 HUD comes from the ROM (Nem_Hud labels, Art_Hud digits).
+  - A title-card font is gathered from the S3K zone names.
+  - The title screen.
+  - The opening cutscene to Sonic 1's ending theme, played by the real game with scripted
+    input.
+  - The morning card, and the night tally in Sonic 1's own "SONIC HAS PASSED".
+  - Buildings are assembled from Green Hill's pixels (`Facades`): sod roofs of the grass lip,
+    checker walls, plank doors from block 6, windows of the lake.
+- **Farm systems.**
+  - Placeable objects: Buzz Bomber waterers, the Caterkiller Crawler, scarecrows, Item Monitor
+    chests and Star Posts. Sprinkler coverage is computed before growth, so covered soil never
+    grasses over.
+  - Tails's workshop: recipes, the Water Shield tank, monitor slots, shields, the rod, land
+    clearing.
+  - The pond refills the Water Shield.
+  - Badnik pests: Motobugs eat crops, and each one popped frees an animal and raises the
+    valley's population.
+- **Progress.**
+  - The Great Capsule's chambers and bundles. Unknown items are left out until their system
+    is installed.
+  - The EGG store and Valley Development Form.
+  - Five skills with professions at levels 5 and 10.
+  - Weather: storms, snow, badnik swarms and the Emerald Aurora.
+  - The Lamppost Inn's counter and jukebox (Records unlock tracks).
+  - Options: music, a 14/20/28-minute day, and Momentum or stamina.
+  - The year-two Signpost Spin and the credits.
+
+Rejected or corrected along the way:
+
+- **A scaled sprite.** A 0.75× Buzz Bomber smeared the ROM pixels; it is drawn at 1×.
+- **A debug command parser.** `give` split on underscores, breaking item ids with underscores.
+- **Menu layout.** Menus overprinted long names until they gained fit-to-width text.
+- **A title-screen banner.** The S3K card's red banner carries the game's name at its foot;
+  that part is painted over with the banner's red.
+- **The intro's side effects.** It picked up forage and could fold back out through the gate;
+  cutscenes now remove pickups, lock the gate, and hide the HUD and labels.
+
 Lanes (lead plus a few at a time, each in its own worktree, merged into
 `feature/ai-starpost-valley`):
 
