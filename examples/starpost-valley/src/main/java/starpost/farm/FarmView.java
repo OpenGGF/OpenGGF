@@ -63,6 +63,8 @@ public final class FarmView {
     private boolean dashing;
     /** Plots the current spin dash has tilled (Tails's weaker spin stops tilling after three). */
     private int dashTilled;
+    /** The action button went down in a menu (closing it): its hold and release are not the farm's. */
+    private boolean foreignHold;
     private long lastActionAt = -100;
     private int lastActionRow = -1;
     private int lastActionColumn = -1;
@@ -143,6 +145,13 @@ public final class FarmView {
         // Spin dash: hold the action button to charge, release to roll along the row tilling.
         boolean holdAct = shell.ctx.buttonDown(com.openggf.mods.scene.SceneButtons.B)
                 || shell.ctx.keyDown(com.openggf.mods.scene.SceneKeys.X);
+        if (holdAct && chargeTicks == 0 && !in.act && !dashing) {
+            foreignHold = true;          // held since a menu took the press: closing a menu must not reopen it
+        }
+        if (!holdAct) {
+            foreignHold = false;
+        }
+        holdAct &= !foreignHold;
         if (holdAct && runner.height == 0 && !dashing) {
             if (++chargeTicks == DASH_CHARGE_TICKS) {
                 shell.sfx(Sfx.SPINDASH);
@@ -235,11 +244,12 @@ public final class FarmView {
 
     /** The action button: work the plot underfoot, or use the signpost. */
     private Request act(Game game) {
-        if (interact.getAsBoolean()) {
-            return Request.NONE;
-        }
+        // The signpost first: a neighbour standing beside it must not stop the shipping.
         if (Math.abs(runner.x - SIGNPOST_X) < 18 && runner.depth < 22) {
             return Request.SHIP;
+        }
+        if (interact.getAsBoolean()) {
+            return Request.NONE;
         }
         if (nearPond()) {
             Item held = game.inventory.selectedId() == null ? null : game.item(game.inventory.selectedId());
