@@ -658,3 +658,41 @@ Known look-test limits:
 - Prepared cross-ROM music silences sound effects (§3.3), so with music on the farming sounds
   are inaudible.
 - The controller has no slope physics. Sonic follows slopes but they don't change his speed.
+
+## 14. Build plan and architecture
+
+The look test's throwaway package has been replaced by the game's own packages (base of the
+skeleton: `5ddc5131b`). The source is `examples/starpost-valley/src/main/java/starpost/`.
+
+| Package | Owns |
+|---|---|
+| `core` | Engine-free rules and state. `Calendar`, `Catalog` and `Content` (items, crops), `Inventory`, `Farm` and `Plot` (belt grid: 5 rows × 60 columns, 24 open at the start), `Game` (the save's root), `SaveCodec`, and `SaveSection` (one per further system). Tested without a ROM by `src/test/java/starpost/core`. |
+| `art` | Everything from the ROMs. `Art` loads the Green Hill kit, characters, sprites and solidity. `Tone` does seasons and skies, `CropArt` the original crop pictures (5 stages), `ItemIcons` the icons (monitor screens for the shields), and `Anim` steps character animations. |
+| `scene` | `StarpostScene` (the startup scene), `Shell` (screen stack with overlays, fades, saves, music), `PlayScreen` (both views, clock, HUD, the fold at the gate), menus, `DayEndScreen`, `TitleScreen`, `FarmerSelect`, `Debug` (capture commands), `Music`, `Sfx`. Also the extension points `Actor` and `Systems`. |
+| `farm` | `FarmView` (the belt field) and `BeltRunner`. |
+| `valley` | `Valley` (the side map, Green Hill blocks 13, 45, 60×4, 45, 3, 45, 53, 38, 1, 16, and its places), `ValleyView`, and `Runner` (the ported controller). |
+| `ui` | `Controls` (one read of pad and keyboard per tick) and `Text`. |
+
+Every further system plugs in through three seams, so lanes rarely edit the same files:
+
+1. **Save state.** Implement `SaveSection` (its own key prefix, validated load, overnight
+   work). List it in `Systems.sections`.
+2. **Things in the world.** Implement `Actor` (a view, a position, update, draw, and
+   interact on the action button). `Systems.install` adds actors to the play screen. Farm
+   actors are depth-sorted with the crops.
+3. **Doorways.** `Valley.places` names them, and `PlayScreen.places` maps an id to a
+   handler, usually pushing a full-screen or overlay `Screen`.
+
+Content is added through new `Content`-style registrars called from `Content.register`, never
+static tables (the validator rejects them).
+
+Lanes (lead plus a few at a time, each in its own worktree, merged into
+`feature/ai-starpost-valley`):
+
+| Lane | Scope |
+|---|---|
+| Lead | Integration, art direction (buildings assembled from Green Hill pieces, the Sonic 1 HUD, the title, the intro and ending), Momentum and the farm loop, crafting and Tails's upgrades, the Capsule and EGG, festivals, museum, weather, balance, captures, README, PR |
+| Audio | The engine's background-music addition (§3.3) |
+| People | `starpost.people`: the villager roster, schedules, picture speech, the translator, gifts, hearts, heart events, mail, Partners |
+| Ruins | `starpost.ruins`: the Marble Ruins chambers from the Marble Zone kit, spin-jump combat, ores and minerals, Star Post elevators, Scrap Brain Depths |
+| Waters and barns | Fishing (Bubble Bar, fish, badnik legends, the lake), animals and buildings on the farm, artisan machines, badnik automation, Flicky roosts |

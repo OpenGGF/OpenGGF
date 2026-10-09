@@ -1,4 +1,4 @@
-package starpost.looktest;
+package starpost.valley;
 
 /**
  * Sonic's movement on a side-view terrace world, ported from the ROM's movement routines
@@ -9,27 +9,27 @@ package starpost.looktest;
  */
 public final class Runner {
     /** Sonic_Move: acceleration $C, deceleration $80, friction $C, top speed $600. */
-    static final float ACCEL = 0x0C / 256f;
-    static final float DECEL = 0x80 / 256f;
-    static final float FRICTION = 0x0C / 256f;
-    static final float TOP = 0x600 / 256f;
+    public static final float ACCEL = 0x0C / 256f;
+    public static final float DECEL = 0x80 / 256f;
+    public static final float FRICTION = 0x0C / 256f;
+    public static final float TOP = 0x600 / 256f;
     /** Sonic_RollSpeed: rolling friction $6 (half of walking), braking $20. */
-    static final float ROLL_FRICTION = 0x06 / 256f;
-    static final float ROLL_BRAKE = 0x20 / 256f;
+    public static final float ROLL_FRICTION = 0x06 / 256f;
+    public static final float ROLL_BRAKE = 0x20 / 256f;
     /** Sonic_Jump $680, Sonic_JumpHeight's $400 cap on release, gravity $38, air acceleration $18. */
-    static final float JUMP = 0x680 / 256f;
-    static final float JUMP_RELEASE = 0x400 / 256f;
-    static final float GRAVITY = 0x38 / 256f;
-    static final float AIR_ACCEL = 0x18 / 256f;
+    public static final float JUMP = 0x680 / 256f;
+    public static final float JUMP_RELEASE = 0x400 / 256f;
+    public static final float GRAVITY = 0x38 / 256f;
+    public static final float AIR_ACCEL = 0x18 / 256f;
     /** Sonic_SpinDash: $800 base, plus half the charge; each press adds $200 up to $800. */
-    static final float DASH_BASE = 0x800 / 256f;
-    static final float DASH_STEP = 0x200 / 256f;
-    static final float DASH_MAX = 0x800 / 256f;
+    public static final float DASH_BASE = 0x800 / 256f;
+    public static final float DASH_STEP = 0x200 / 256f;
+    public static final float DASH_MAX = 0x800 / 256f;
     /** Ground this far above the feet just ahead is a wall; slopes rise less than that. */
-    static final int WALL = 12;
+    public static final int WALL = 12;
     /** A floor more than this far below the feet is a ledge to fall from. */
-    static final int DROP = 20;
-    static final int HALF_WIDTH = 9;
+    public static final int DROP = 20;
+    public static final int HALF_WIDTH = 9;
 
     /** The terrain: per-pixel solidity, scanned for floors and walls. */
     public interface Ground {

@@ -1,4 +1,4 @@
-package starpost.looktest;
+package starpost.art;
 
 import com.openggf.mods.scene.SceneImage;
 import java.util.HashMap;

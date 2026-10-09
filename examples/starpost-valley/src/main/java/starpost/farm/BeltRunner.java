@@ -1,4 +1,4 @@
-package starpost.looktest;
+package starpost.farm;
 
 /**
  * Sonic in the belt-scroller view: Sonic_Move's acceleration and top speed along the valley,
@@ -28,13 +28,13 @@ public final class BeltRunner {
             boolean down, boolean jumpPressed, boolean jumpHeld) {
         boolean airborne = height > 0 || ySpeed < 0;
         if (left) {
-            speed = speed > 0 ? speed - Runner.DECEL : Math.max(-Runner.TOP, speed - (airborne ? Runner.AIR_ACCEL : Runner.ACCEL));
+            speed = speed > 0 ? speed - starpost.valley.Runner.DECEL : Math.max(-starpost.valley.Runner.TOP, speed - (airborne ? starpost.valley.Runner.AIR_ACCEL : starpost.valley.Runner.ACCEL));
             facingLeft = true;
         } else if (right) {
-            speed = speed < 0 ? speed + Runner.DECEL : Math.min(Runner.TOP, speed + (airborne ? Runner.AIR_ACCEL : Runner.ACCEL));
+            speed = speed < 0 ? speed + starpost.valley.Runner.DECEL : Math.min(starpost.valley.Runner.TOP, speed + (airborne ? starpost.valley.Runner.AIR_ACCEL : starpost.valley.Runner.ACCEL));
             facingLeft = false;
         } else if (!airborne) {
-            speed -= Math.signum(speed) * Math.min(Math.abs(speed), Runner.FRICTION * 4);
+            speed -= Math.signum(speed) * Math.min(Math.abs(speed), starpost.valley.Runner.FRICTION * 4);
         }
         if (up) {
             depthSpeed = Math.max(-DEPTH_TOP, depthSpeed - DEPTH_ACCEL);
@@ -45,15 +45,15 @@ public final class BeltRunner {
         }
         boolean jumped = false;
         if (!airborne && jumpPressed) {
-            ySpeed = -Runner.JUMP;
+            ySpeed = -starpost.valley.Runner.JUMP;
             rolling = true;
             jumped = true;
         }
         if (height > 0 || ySpeed < 0) {
-            if (!jumpHeld && ySpeed < -Runner.JUMP_RELEASE) {
-                ySpeed = -Runner.JUMP_RELEASE;
+            if (!jumpHeld && ySpeed < -starpost.valley.Runner.JUMP_RELEASE) {
+                ySpeed = -starpost.valley.Runner.JUMP_RELEASE;
             }
-            ySpeed += Runner.GRAVITY;
+            ySpeed += starpost.valley.Runner.GRAVITY;
             height -= ySpeed;
             if (height <= 0) {
                 height = 0;
