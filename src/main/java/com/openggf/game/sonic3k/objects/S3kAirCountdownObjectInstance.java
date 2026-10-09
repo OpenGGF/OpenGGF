@@ -19,13 +19,13 @@ import java.util.List;
  * controller.
  *
  * <p>ROM refs: visible child init/update and water-surface delete paths at
- * docs/skdisasm/sonic3k.asm:33306-33370. Fixed controllers live outside
+ * docs/skdisasm/sonic3k.asm:33346-33410. Fixed controllers live outside
  * dynamic SST, but {@code AirCountdown_MakeItem} allocates these children via
- * the normal dynamic {@code AllocateObject} scan (sonic3k.asm:33591-33610).
+ * the normal dynamic {@code AllocateObject} scan (sonic3k.asm:33631-33650).
  */
 public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
         implements NullableSpawnCoordinateZeroScalarArgsRewindRecreatable {
-    // AirCountdown_Index (sonic3k.asm:33306-33315).
+    // AirCountdown_Index (sonic3k.asm:33346-33355).
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_RISE = 0x02;
     private static final int ROUTINE_DISPLAY = 0x06;
@@ -50,7 +50,7 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
      * than a bubble. Frames $09-$12 all point at {@code word_2FD7A}, whose one
      * piece indexes tile {@code $384} relative to {@code ArtTile_Bubbles} —
      * that is {@code ArtTile_DashDust}, the DMA target of
-     * {@code AirCountdown_Load_Art} (sonic3k.asm:33489-33516). The provider
+     * {@code AirCountdown_Load_Art} (sonic3k.asm:33529-33556). The provider
      * rebuilds those frames against {@code ArtUnc_AirCountdown} under the
      * {@code AIR_COUNTDOWN_DIGITS} key, so this is the offset between the two
      * sheets' frame numbering.
@@ -213,14 +213,14 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
                 : (renderFlags & 0x7F);
     }
 
-    /** {@code AirCountdown_Display} (sonic3k.asm:33414-33420). */
+    /** {@code AirCountdown_Display} (sonic3k.asm:33454-33460). */
     private void display() {
         showNumberIfTimerExpires();
         animate();
     }
 
     /**
-     * {@code AirCountdown_AirLeft} (sonic3k.asm:33424-33444): the digit is
+     * {@code AirCountdown_AirLeft} (sonic3k.asm:33464-33484): the digit is
      * parked on screen for {@code $F} frames, then the animation switches to
      * the flashing variant unless the owner has already recovered its air.
      */
@@ -240,7 +240,7 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
         animate();
     }
 
-    /** {@code AirCountdown_DisplayNumber} (sonic3k.asm:33447-33453). */
+    /** {@code AirCountdown_DisplayNumber} (sonic3k.asm:33487-33493). */
     private void displayNumber() {
         if (ownerAirLeft() > DROWNING_AIR_THRESHOLD) {
             setDestroyed(true);
@@ -350,9 +350,9 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
         }
         // AirCountdown_ShowNumber converts the moving child into the fixed
         // screen-space number display for $0F frames
-        // (docs/skdisasm/sonic3k.asm:33410-33432). Clearing render_flags bit 2
+        // (docs/skdisasm/sonic3k.asm:33450-33472). Clearing render_flags bit 2
         // takes the object out of the camera-relative Render_Sprites path
-        // (sonic3k.asm:36374), so x/y become sprite-table coordinates.
+        // (sonic3k.asm:36414), so x/y become sprite-table coordinates.
         obj3c = 0x0F;
         yVel = 0;
         renderFlags = 0x80;
@@ -367,7 +367,7 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
         routine = ROUTINE_AIR_LEFT;
     }
 
-    /** True once ShowNumber cleared render_flags bit 2 (sonic3k.asm:36374). */
+    /** True once ShowNumber cleared render_flags bit 2 (sonic3k.asm:36414). */
     private boolean isScreenSpace() {
         return (renderFlags & 0x04) == 0;
     }
@@ -381,7 +381,7 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
     /**
      * ROM: {@code AirCountdown_Init} points the object at {@code Map_Bubbler}
      * with {@code make_art_tile(ArtTile_Bubbles,0,0)}
-     * (sonic3k.asm:33320-33327) — the same mappings and Nemesis art the HCZ
+     * (sonic3k.asm:33360-33367) — the same mappings and Nemesis art the HCZ
      * bubbler uses, so the shared {@code BUBBLER} art set renders these
      * directly.
      *
@@ -421,7 +421,7 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
         renderer.drawFrameIndex(frame, renderX, renderY, false, false);
     }
 
-    /** ROM: {@code move.w #$80,priority(a0)} (sonic3k.asm:33330). */
+    /** ROM: {@code move.w #$80,priority(a0)} (sonic3k.asm:33370). */
     @Override
     public int getPriorityBucket() {
         return 1;
@@ -430,9 +430,9 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
     /**
      * {@code Obj_AirCountdown} writes {@code width_pixels=$10} but never
      * initializes {@code height_pixels}; the cleared SST field remains zero
-     * (sonic3k.asm:33324-33330). Render_Sprites therefore uses no vertical
+     * (sonic3k.asm:33364-33370). Render_Sprites therefore uses no vertical
      * margin when refreshing this child's on-screen bit, which is also the
-     * delete gate in {@code AirCountdown_Wobble} (sonic3k.asm:33400-33408).
+     * delete gate in {@code AirCountdown_Wobble} (sonic3k.asm:33440-33448).
      */
     @Override
     public int getOnScreenHalfHeight() {

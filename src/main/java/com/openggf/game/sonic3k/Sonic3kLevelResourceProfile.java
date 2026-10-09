@@ -92,11 +92,11 @@ public record Sonic3kLevelResourceProfile(
      * question safely.
      */
     public static boolean isHpzSanctuary(int canonicalZone, int canonicalAct) {
-        // SSEntryFlash_GoSS / loc_618AC restarts into $1701 (sonic3k.asm:128417).
+        // SSEntryFlash_GoSS / loc_618AC restarts into $1701 (sonic3k.asm:128471).
         // $1601 is the playable Hidden Palace act, not a sanctuary alias: its
-        // screen events are HPZ_* (sonic3k.asm:102348-102350), its sprite
+        // screen events are HPZ_* (sonic3k.asm:102394-102396), its sprite
         // table is HPZ_Sprites (202441) and data select resumes there
-        // (LevelList_DA6E, sonic3k.asm:17510).
+        // (LevelList_DA6E, sonic3k.asm:17546).
         return canonicalAct == 1 && canonicalZone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA;
     }
 

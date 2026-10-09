@@ -59,13 +59,13 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
-     * ROM {@code Obj_CNZMinibossTop} (docs/skdisasm/sonic3k.asm:145009) is spawned by its parent rather than from the
+     * ROM {@code Obj_CNZMinibossTop} (docs/skdisasm/sonic3k.asm:145074) is spawned by its parent rather than from the
      * object pointer table; every routine in its code block lies in the
      * {@code $0006xxxx} bank.
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0006}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -73,33 +73,33 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
 
-    // ---- Routine indices (CNZMinibossTop_Index, sonic3k.asm:145011) ----
-    /** Routine 0 — Obj_CNZMinibossTopInit (sonic3k.asm:145018). */
+    // ---- Routine indices (CNZMinibossTop_Index, sonic3k.asm:145076) ----
+    /** Routine 0 — Obj_CNZMinibossTopInit (sonic3k.asm:145083). */
     private static final int ROUTINE_INIT = 0;
-    /** Routine 2 — Obj_CNZMinibossTopWait (sonic3k.asm:145026). */
+    /** Routine 2 — Obj_CNZMinibossTopWait (sonic3k.asm:145091). */
     private static final int ROUTINE_WAIT = 2;
-    /** Routine 4 — Obj_CNZMinibossTopWait2 (sonic3k.asm:145040). */
+    /** Routine 4 — Obj_CNZMinibossTopWait2 (sonic3k.asm:145105). */
     private static final int ROUTINE_WAIT2 = 4;
-    /** Routine 6 — Obj_CNZMinibossTopMain (sonic3k.asm:145053). */
+    /** Routine 6 — Obj_CNZMinibossTopMain (sonic3k.asm:145118). */
     private static final int ROUTINE_MAIN = 6;
 
     private static final int FRAME_TOP_WAIT = 7;
     private static final int FRAME_TOP_MAIN = 9;
     /**
-     * ROM: {@code AniRaw_CNZMinibossTop} (sonic3k.asm:145709).
+     * ROM: {@code AniRaw_CNZMinibossTop} (sonic3k.asm:145774).
      * Byte 0 seeds {@code $2E(a0)}, byte 1 is the terminal {@code $2F(a0)}
      * loop count, and bytes from offset 2 are mapping frames until {@code $FC}.
      */
     private static final int TOP_SPINUP_INITIAL_DELAY = 0x07;
     private static final int TOP_SPINUP_TERMINAL_LOOPS = 0x08;
     private static final int[] TOP_SPINUP_MAPPING_FRAMES = {7, 8, 9};
-    /** ROM: {@code AniRaw_CNZMinibossTop2} (sonic3k.asm:145711). */
+    /** ROM: {@code AniRaw_CNZMinibossTop2} (sonic3k.asm:145776). */
     private static final int TOP_MAIN_DELAY = 0;
     private static final int[] TOP_MAIN_FRAMES = {7, 8, 9};
     private static final int TOP_COLLISION_FLAGS = 0xAA;
     private static final int TOP_Y_RADIUS = 8;
     // Obj_CNZMinibossTopMain passes d1=$13,d2=$C,d3=8 to SolidObjectFull
-    // after MoveSprite2 (sonic3k.asm:145057-145063).
+    // after MoveSprite2 (sonic3k.asm:145122-145128).
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x13, 0x0C, 0x08);
     private static final int PLAYER_BOUNCE_Y_OFFSET = 0x0C;
     private static final int PLAYER_BOUNCE_HALF_SIZE = 0x10;
@@ -294,7 +294,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: Obj_CNZMinibossTopInit (sonic3k.asm:145018):
+     * ROM: Obj_CNZMinibossTopInit (sonic3k.asm:145083):
      * <pre>
      *   lea ObjDat3_CNZMinibossTop(pc),a1
      *   jsr (SetUp_ObjAttributes3).l        ; addq.b #2,routine(a0) tail
@@ -313,7 +313,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: Obj_CNZMinibossTopWait (sonic3k.asm:145026):
+     * ROM: Obj_CNZMinibossTopWait (sonic3k.asm:145091):
      * <pre>
      *   movea.w parent3(a0),a1
      *   btst    #1,$38(a1)
@@ -328,7 +328,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
      * </pre>
      *
      * <p>The ROM gates the transition on {@code $38} bit 1 of the parent
-     * boss — which {@code Obj_CNZMinibossGo2} (sonic3k.asm:144906,
+     * boss — which {@code Obj_CNZMinibossGo2} (sonic3k.asm:144971,
      * {@code bset #1,$38(a0)}) sets during the base's Init/Lower/Move
      * handoff. When the boss is absent (for example, the physics test
      * builds the top piece without a parent), the engine falls through
@@ -343,16 +343,16 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
             // via publishCentrePosition() in the caller.
             return;
         }
-        // ROM sonic3k.asm:145034 — move.b #4,routine(a0).
+        // ROM sonic3k.asm:145099 — move.b #4,routine(a0).
         routine = ROUTINE_WAIT2;
-        // ROM sonic3k.asm:145035-145036 — install AniRaw_CNZMinibossTop in
+        // ROM sonic3k.asm:145100-145101 — install AniRaw_CNZMinibossTop in
         // $30(a0) and Obj_CNZMinibossTopGo in $34(a0). Animate_RawGetFaster
         // claims and initializes the script on the next Wait2 update.
         startSpinupAnimation();
     }
 
     /**
-     * ROM: Obj_CNZMinibossTopWait2 (sonic3k.asm:145040):
+     * ROM: Obj_CNZMinibossTopWait2 (sonic3k.asm:145105):
      * <pre>
      *   jsr (Refresh_ChildPosition).l
      *   jmp (Animate_RawGetFaster).l
@@ -371,7 +371,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: Obj_CNZMinibossTopGo (sonic3k.asm:145045):
+     * ROM: Obj_CNZMinibossTopGo (sonic3k.asm:145110):
      * <pre>
      *   move.b #6,routine(a0)
      *   move.l #AniRaw_CNZMinibossTop2,$30(a0)
@@ -413,8 +413,8 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: {@code Animate_RawGetFaster} (sonic3k.asm:177749) over
-     * {@code AniRaw_CNZMinibossTop} (sonic3k.asm:145709). Fresh scripts
+     * ROM: {@code Animate_RawGetFaster} (sonic3k.asm:177840) over
+     * {@code AniRaw_CNZMinibossTop} (sonic3k.asm:145774). Fresh scripts
      * {@code bset #5,$38(a0)}, copy byte 0 to {@code $2E}, clear
      * {@code $2F}, and advance {@code anim_frame} before reading from
      * {@code 2(a1,d0)}, so frame 8 is the first visible Wait2 mapping frame.
@@ -512,7 +512,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: Obj_CNZMinibossTopMain (sonic3k.asm:145053-145191).
+     * ROM: Obj_CNZMinibossTopMain (sonic3k.asm:145118-145256).
      *
      * <p>The ROM body runs {@code MoveSprite2} (no gravity — the ball keeps
      * its speed) then dispatches a cascade of direction-specific edge
@@ -565,7 +565,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
         // ROM: Obj_CNZMinibossTopMain checks parent status bit 7 before
         // MoveSprite2/SolidObjectFull/terrain probes and jumps to loc_6DDD2
         // when the parent has entered CNZMiniboss_BossDefeated
-        // (sonic3k.asm:145053-145057, 145190-145199).
+        // (sonic3k.asm:145118-145122, 145255-145264).
         diagnosticLastMainBranch = "parent_destroyed";
         CnzMinibossBlockExplosionControllerChild controller = spawnChild(
                 () -> new CnzMinibossBlockExplosionControllerChild(motion.x, motion.y));
@@ -632,7 +632,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
             }
             int d1 = motion.y + Sonic3kConstants.CNZ_MINIBOSS_TOP_FLOOR_PROBE_DY;
             // ROM: Obj_CNZMinibossTopMain checks Camera_Y_pos+$E0 before the
-            // fixed $380 lower arena bound (sonic3k.asm:145101-145110).
+            // fixed $380 lower arena bound (sonic3k.asm:145166-145175).
             int cameraBottom = getCameraY() + 0xE0;
             if (d1 >= cameraBottom
                     || d1 > Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_BOTTOM
@@ -652,7 +652,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
             }
             int d1 = motion.y - Sonic3kConstants.CNZ_MINIBOSS_TOP_FLOOR_PROBE_DY;
             // ROM: upward motion checks Camera_Y_pos before the fixed $240
-            // upper arena bound (sonic3k.asm:145119-145126).
+            // upper arena bound (sonic3k.asm:145184-145191).
             if (d1 <= getCameraY()
                     || d1 <= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_TOP
                     || checkHitBase(motion.x, d1)) {
@@ -805,10 +805,10 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
      *
      * <p>ROM {@code loc_6DD94} calls {@code CNZMiniboss_BlockExplosion},
      * which writes the impact coordinates and creates the visual child
-     * (sonic3k.asm:145165-145185, 145204-145224). Base lowering is driven
+     * (sonic3k.asm:145230-145250, 145269-145289). Base lowering is driven
      * later when CNZ's arena row scanner advances {@code Events_bg+$04}, then
      * {@code CNZMiniboss_MoveDown} arms {@code Obj_CNZMinibossLower2}
-     * (sonic3k.asm:107388-107414, 145508-145515); a single top impact must
+     * (sonic3k.asm:107434-107460, 145573-145580); a single top impact must
      * not directly move or arm the parent.
      */
     private void publishArenaChunkImpact(int worldX, int worldY) {
@@ -860,7 +860,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
         // Obj_CNZMinibossTopMain runs MoveSprite2 before Draw_And_Touch_Sprite
         // publishes the SST pointer. The following player-slot Touch_Loop
         // dereferences that live post-movement x_pos/y_pos.
-        // sonic3k.asm:145058-145064,178041-178043,20660-20712.
+        // sonic3k.asm:145123-145129,178132-178134,20696-20748.
         return true;
     }
 
@@ -881,10 +881,10 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
 
     @Override
     public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
-        // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41611-41621) re-reads
+        // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41651-41661) re-reads
         // width_pixels(a0) for the landing X gate. ObjDat3_CNZMinibossTop sets
-        // width_pixels = $18 (sonic3k.asm:145662-145664) while
-        // Obj_CNZMinibossTopMain passes d1 = $13 (sonic3k.asm:145064-145068),
+        // width_pixels = $18 (sonic3k.asm:145727-145729) while
+        // Obj_CNZMinibossTopMain passes d1 = $13 (sonic3k.asm:145129-145133),
         // so the default d1 - $B = $8 heuristic is $10px too narrow.
         return 0x18;
     }
@@ -905,9 +905,9 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
 
     @Override
     public boolean skipsCpuSidekickWhenRenderFlagOffScreen() {
-        // Obj_CNZMinibossTopMain calls SolidObjectFull (sonic3k.asm:145057-145063),
+        // Obj_CNZMinibossTopMain calls SolidObjectFull (sonic3k.asm:145122-145128),
         // whose wrapper skips Player_2 when render_flags bit 7 is clear
-        // (sonic3k.asm:41003-41008).
+        // (sonic3k.asm:41043-41048).
         return true;
     }
 
@@ -915,30 +915,30 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
         // SolidObjectFull_1P consumes this object's stale standing bit with
         // Status_InAir by clearing support and returning before SolidObject_cont
-        // can reland the player (sonic3k.asm:41016-41035).
+        // can reland the player (sonic3k.asm:41056-41075).
         return true;
     }
 
     @Override
     public boolean seedsNewRideCarryFromPreUpdateX() {
         // Obj_CNZMinibossTopMain saves x_pos before MoveSprite2 and passes the
-        // saved value in d4 to SolidObjectFull (sonic3k.asm:145057-145063).
+        // saved value in d4 to SolidObjectFull (sonic3k.asm:145122-145128).
         return true;
     }
 
     @Override
     public boolean groundedSquashEdgeSideContactSetsPush() {
-        // Obj_CNZMinibossTopMain calls SolidObjectFull (sonic3k.asm:145057-145063).
+        // Obj_CNZMinibossTopMain calls SolidObjectFull (sonic3k.asm:145122-145128).
         // Its lower-half squash escape branches to loc_1E042 when |d0| < $10,
         // then loc_1E06E sets Status_Push for grounded side contact regardless
-        // of movingInto (sonic3k.asm:41564-41568, 41473-41495).
+        // of movingInto (sonic3k.asm:41604-41608, 41513-41535).
         return true;
     }
 
     @Override
     public boolean usesInstanceSolidStateLatchKey() {
         // SolidObjectFull stores P1/P2 standing and pushing bits in this top's
-        // SST status byte (sonic3k.asm:41001-41010, 41492-41495, 41528-41532).
+        // SST status byte (sonic3k.asm:41041-41050, 41532-41535, 41568-41572).
         // The engine rebuilds the top's dynamic spawn as it moves; key the
         // latch to the instance so the following no-contact frame clears the
         // same ROM-equivalent status bits.

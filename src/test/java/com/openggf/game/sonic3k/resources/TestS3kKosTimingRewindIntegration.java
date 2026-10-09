@@ -61,7 +61,7 @@ class TestS3kKosTimingRewindIntegration {
 
         replay.beginRawFrame(recordedEdge.rawFrame());
         // The module state step is the previous LevelLoop iteration's tail call
-        // (sonic3k.asm:7908), ahead of Process_Kos_Queue (7887).
+        // (sonic3k.asm:7940), ahead of Process_Kos_Queue (7887).
         queue.beforeTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
         queue.processModuleQueueAfterObjects();
         for (int servicePass = 0;

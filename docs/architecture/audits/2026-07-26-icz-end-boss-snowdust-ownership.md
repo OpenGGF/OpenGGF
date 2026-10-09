@@ -33,12 +33,12 @@ and allocated its first particle in slot 10.
 The disassembly establishes that ownership:
 
 - `Obj_ICZEndBoss` initialization does not call `AllocateObject`
-  (`docs/skdisasm/sonic3k.asm:150578-150589`).
+  (`docs/skdisasm/sonic3k.asm:150646-150657`).
 - The placed subtype-`$18` routine at `loc_8B660` stores its own SST address in
-  `_unkFAAE` (`docs/skdisasm/sonic3k.asm:189930-189950`).
+  `_unkFAAE` (`docs/skdisasm/sonic3k.asm:190023-190043`).
 - Boss teardown reads `_unkFAAE`, verifies that it still points to
   `loc_8B660`, and sets the emitter's stop bit
-  (`docs/skdisasm/sonic3k.asm:149867-149873,151245-151254`).
+  (`docs/skdisasm/sonic3k.asm:149935-149941,151313-151322`).
 
 The engine now follows the same arrangement. Arena initialization no longer
 synthesizes an emitter or owns a child reference. Teardown continues to find

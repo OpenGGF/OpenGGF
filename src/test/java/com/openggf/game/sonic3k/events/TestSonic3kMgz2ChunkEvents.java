@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests the MGZ Act 2 chunk-event terrain swaps.
  *
  * <p>ROM: {@code MGZ2_ChunkEvent} / {@code MGZ2_ModifyChunk}
- * (sonic3k.asm:106791-106926) and the replacement data tables in
+ * (sonic3k.asm:106837-106972) and the replacement data tables in
  * {@code Lockon S3/Screen Events.asm}.
  */
 @RequiresRom(SonicGame.SONIC_3K)

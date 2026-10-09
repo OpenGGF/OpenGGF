@@ -94,7 +94,7 @@ public final class Sonic3kSmpsPhysicalPolicy
         // is 4 for S&K (sonic3k.asm:27), so the SonicDriverVer==3 queue work is
         // assembled out and the loop's writes are exactly: 2Bh=80h, one latch
         // of 2Ah, then one byte of SEGA_PCM per iteration. Leaving the loop
-        // re-enters zPlayDigitalAudio, which writes 2Bh=0 (:4256-4260).
+        // re-enters zPlayDigitalAudio, which writes 2Bh=0 (:4288-4292).
         // 105 is the loop's own per-byte cycle cost, the base the ROM's
         // pcmLoopCounter macro is defined with (sonic3k.macros.asm:270-271).
         return new SmpsSegaPcmTransport(

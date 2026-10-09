@@ -13,7 +13,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 
-/** Parentless hover-machine sibling, loc_494EA / sub_4952A (sonic3k.asm:95736-95805). */
+/** Parentless hover-machine sibling, loc_494EA / sub_4952A (sonic3k.asm:95782-95851). */
 public final class S3kDezHoverRotorObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
     private int anchorX;

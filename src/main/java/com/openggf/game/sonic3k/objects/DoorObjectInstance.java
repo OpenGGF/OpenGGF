@@ -34,7 +34,7 @@ import java.util.List;
  * Art is loaded from the level's pattern buffer (zone-specific tiles). The door does not
  * animate its mappings in the ROM; opening is represented only by moving the solid object.
  * <p>
- * ROM reference: Obj_Door (sonic3k.asm:66036), loc_30FD2 (horizontal variant).
+ * ROM reference: Obj_Door (sonic3k.asm:66076), loc_30FD2 (horizontal variant).
  */
 public class DoorObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, RewindRecreatable,
@@ -122,7 +122,7 @@ public class DoorObjectInstance extends AbstractObjectInstance
         // Both Obj_Door variants install routines in the $00030xxx-$00031xxx
         // range, so word 0 of their SST code pointer is $0003. S3K sub_13EFC
         // retains and later compares this word through Tails_CPU_interact
-        // (docs/skdisasm/sonic3k.asm:66036-66167,26816-26843).
+        // (docs/skdisasm/sonic3k.asm:66076-66207,26856-26883).
         return ROM_CODE_POINTER_HIGH_WORD;
     }
 
@@ -141,12 +141,12 @@ public class DoorObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getOnScreenHalfWidth() {
-        // ROM byte_30FCE (sonic3k.asm:66167) sets width_pixels = $20 for the
+        // ROM byte_30FCE (sonic3k.asm:66207) sets width_pixels = $20 for the
         // horizontal CNZ door; byte_30E18 sets width_pixels per vertical-door
         // variant (HCZ/CNZ/DEZ). The horizontal half-width $20 is wider than
         // the engine's default 16-px on-screen margin, so the camera+margin
         // gate must use the ROM rendered half-width to match the ROM
-        // SolidObject_OnScreenTest (sonic3k.asm:36336-36370). Vertical
+        // SolidObject_OnScreenTest (sonic3k.asm:36376-36410). Vertical
         // variants share the same field; using halfWidth here keeps the
         // engine in sync regardless of variant.
         return halfWidth;
@@ -171,7 +171,7 @@ public class DoorObjectInstance extends AbstractObjectInstance
         // Both door variants call SolidObjectFull. SolidObject_cont rejects
         // the initial X window with bhi, so relX == d1 * 2 remains a valid
         // zero-distance side contact and retains Status_Push
-        // (sonic3k.asm:41394-41403,66136-66137,66249-66258).
+        // (sonic3k.asm:41434-41443,66176-66177,66289-66298).
         return true;
     }
 
@@ -183,10 +183,10 @@ public class DoorObjectInstance extends AbstractObjectInstance
     @Override
     public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity playerEntity) {
         // Obj_Door calls SolidObjectFull for both horizontal and vertical doors
-        // after preparing d1/d2/d3/d4 (docs/skdisasm/sonic3k.asm:66136-66137,
+        // after preparing d1/d2/d3/d4 (docs/skdisasm/sonic3k.asm:66176-66177,
         // 66249-66258). SolidObjectFull_1P consumes a stale standing bit with
         // Status_InAir by clearing support and returning d4=0 before
-        // SolidObject_cont can reland the player (sonic3k.asm:41017-41035).
+        // SolidObject_cont can reland the player (sonic3k.asm:41057-41075).
         return true;
     }
 
@@ -213,7 +213,7 @@ public class DoorObjectInstance extends AbstractObjectInstance
     @Override
     public boolean carriesRiderOnHorizontalMove(PlayableEntity playerEntity) {
         // Obj_Door stores the post-slide x_pos in d4 immediately before
-        // SolidObjectFull (docs/skdisasm/sonic3k.asm:66123-66137,
+        // SolidObjectFull (docs/skdisasm/sonic3k.asm:66163-66177,
         // 66239-66258). MvSonicOnPtfm subtracts current x_pos from d4, so the
         // horizontal carry delta is zero even when the horizontal CNZ door moves.
         return false;

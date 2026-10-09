@@ -9,7 +9,7 @@ import com.openggf.level.SeamlessTransitionResourceHandoff;
 import com.openggf.level.resources.DeferredLevelResourceManifest;
 
 /**
- * The act-2 side of {@code loc_56CAA} (sonic3k.asm:115347-115374), applied after the target
+ * The act-2 side of {@code loc_56CAA} (sonic3k.asm:115393-115420), applied after the target
  * {@code Load_Level} owner has run.
  *
  * <p>{@code loc_56CAA} does the whole change on one frame, and the parts that are not the reload
@@ -21,7 +21,7 @@ import com.openggf.level.resources.DeferredLevelResourceManifest;
  *       request; the two players are written here because the target's own init has already
  *       placed them by the time this runs.</li>
  *   <li>{@code jsr (Clear_Switches)} clears {@code $20} bytes from {@code Level_trigger_array},
- *       and {@code sonic3k.constants.asm:699-700} puts {@code Anim_Counters ds.b $10} directly
+ *       and {@code sonic3k.constants.asm:718-719} puts {@code Anim_Counters ds.b $10} directly
  *       after {@code Level_trigger_array ds.b $10} -- so the animated-tile phase counters go with
  *       the triggers. The trigger half is explicit here; the counters are the reloaded act's own
  *       fresh {@link LrzZoneRuntimeState}.</li>
@@ -47,7 +47,7 @@ record LrzActTransitionHandoff(byte[] act2SecondaryArt, int artTile, Sonic3kLRZE
         if (state.actIndex() != 1) {
             throw new IllegalStateException("LRZ transition did not install Act 2");
         }
-        // clr.b (LRZ_rocks_routine) at :115356 and clr.w (Events_routine_bg) at :115374. The
+        // clr.b (LRZ_rocks_routine) at :115381 and clr.w (Events_routine_bg) at :115399. The
         // target reload installs a fresh state whose fields already hold these values, so these
         // are written for the ROM's own reason rather than observed: a future act-2 initializer
         // that set either of them before this handoff runs would be wrong to keep.

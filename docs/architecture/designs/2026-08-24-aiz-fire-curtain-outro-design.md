@@ -25,22 +25,22 @@ The ROM routines define the handoff as follows:
 
 1. `AIZ2BGE_FireRedraw` continues `AIZ1_FireRise`,
    `AIZTrans_WavyFlame`, and the plane redraw until its delayed row counter
-   is exhausted (`docs/skdisasm/sonic3k.asm:105036-105050`).
+   is exhausted (`docs/skdisasm/sonic3k.asm:105082-105096`).
 2. `AIZ2BGE_WaitFire` continues the rise and wave effect. Before
    `Events_bg+$00` is latched it waits for
    `(Camera_Y_pos_BG_copy & $7F)` to enter `[$20,$30)`, then writes
-   `$180 + residue` and latches the flag (`docs/skdisasm/sonic3k.asm:105052-105078`).
+   `$180 + residue` and latches the flag (`docs/skdisasm/sonic3k.asm:105098-105124`).
 3. After that latch, every pass performs `Draw_TileRow` and compares the
    unsigned background-copy word with `$310`. The first pass at or beyond
    `$310` releases the transition, seeds the delayed background redraw, and
    advances to `AIZ2BGE_BGRedraw`
-   (`docs/skdisasm/sonic3k.asm:105079-105107`).
+   (`docs/skdisasm/sonic3k.asm:105125-105153`).
 4. `AIZ2BGE_BGRedraw` calls `AIZ2_Deform` and drains the delayed plane redraw;
    it does not call `AIZ1_FireRise`, `AIZTrans_WavyFlame`, or a fire draw
-   (`docs/skdisasm/sonic3k.asm:105128-105138`).
+   (`docs/skdisasm/sonic3k.asm:105174-105184`).
 5. The rise itself is ROM-owned: the speed ramps by `$280`, caps at `$A000`,
    and advances the fixed background position by `speed << 4`
-   (`docs/skdisasm/s3.asm:70383-70400`).
+   (`docs/skdisasm/s3.asm:70439-70456`).
 
 The original ROM was also run read-only with the committed AIZ BK2 and locked-on
 ROM. Around BK2 frames 6030-6052, while the ROM is still in `WaitFire`, the

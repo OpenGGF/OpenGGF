@@ -17,15 +17,15 @@ final class HczEndBossLowerHousing extends AbstractBossChild implements RewindRe
     private static final int MAPPING_FRAME = 1;
 
     HczEndBossLowerHousing(HczEndBossInstance boss) {
-        // HCZEndBossFlickerChild_ObjData priority $200 (sonic3k.asm:142155-142156), applied by
-        // HCZEndBossFlickerChild_Init's SetUp_ObjAttributes3 (sonic3k.asm:141518-141520).
+        // HCZEndBossFlickerChild_ObjData priority $200 (sonic3k.asm:142220-142221), applied by
+        // HCZEndBossFlickerChild_Init's SetUp_ObjAttributes3 (sonic3k.asm:141583-141585).
         super(boss, "HCZEndBossLowerHousing", RenderPriority.fromS3kWord(0x200), 0);
     }
 
     @Override
     public boolean isHighPriority() {
-        // CreateChild1_Normal copies the boss's art_tile (sonic3k.asm:176933), whose
-        // make_art_tile(ArtTile_HCZEndBoss,1,1) sets bit 15 (sonic3k.asm:142152).
+        // CreateChild1_Normal copies the boss's art_tile (sonic3k.asm:177024), whose
+        // make_art_tile(ArtTile_HCZEndBoss,1,1) sets bit 15 (sonic3k.asm:142217).
         return true;
     }
 

@@ -29,10 +29,10 @@ public class S3kHiddenMonitorInstance extends AbstractObjectInstance
         implements RewindRecreatable, RomWorldPositionedObject {
     private static final Logger LOG = Logger.getLogger(S3kHiddenMonitorInstance.class.getName());
 
-    // ROM word_8379E = -$E, $1C, -$80, $C0 (docs/skdisasm/sonic3k.asm:176098).
+    // ROM word_8379E = -$E, $1C, -$80, $C0 (docs/skdisasm/sonic3k.asm:176189).
     // Obj_HiddenMonitorMain applies these CUMULATIVELY to a running d0 -- it
     // does `add.w (a2)+,d0` twice per axis without reloading the monitor
-    // position (docs/skdisasm/sonic3k.asm:176052-176069), so the second word
+    // position (docs/skdisasm/sonic3k.asm:176143-176160), so the second word
     // is the window *span*, not an independent offset from the monitor.
     // The real windows are therefore
     //   x: [monX - $E, monX - $E + $1C) = [monX - $E, monX + $E)
@@ -142,7 +142,7 @@ public class S3kHiddenMonitorInstance extends AbstractObjectInstance
 
     /**
      * ROM {@code Obj_HiddenMonitorMain} range test against {@code word_8379E}
-     * (docs/skdisasm/sonic3k.asm:176052-176069, 176098). Each axis loads the
+     * (docs/skdisasm/sonic3k.asm:176143-176160, 176189). Each axis loads the
      * monitor coordinate into {@code d0} once and adds the two table words to
      * it in turn, so the window is {@code [coord + low, coord + low + span)},
      * tested with unsigned word compares.

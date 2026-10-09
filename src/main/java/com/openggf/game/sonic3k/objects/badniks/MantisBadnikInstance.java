@@ -22,7 +22,7 @@ import java.util.List;
 /**
  * S3K Obj $9D - Mantis (MGZ Act 2).
  *
- * <p>ROM reference: {@code Obj_Mantis} (sonic3k.asm:185695-185840).
+ * <p>ROM reference: {@code Obj_Mantis} (sonic3k.asm:185788-185933).
  * The enemy waits on-screen, turns to face the nearest player, and if the
  * player gets within 64 pixels horizontally it runs a short prep animation,
  * leaps upward, then plays a return animation before resuming idle.

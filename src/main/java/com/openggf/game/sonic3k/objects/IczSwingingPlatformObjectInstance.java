@@ -24,7 +24,7 @@ import java.util.List;
 /**
  * Object 0xB4 - ICZ Swinging Platform.
  *
- * <p>ROM: {@code Obj_ICZSwingingPlatform} (sonic3k.asm:188875-189425).
+ * <p>ROM: {@code Obj_ICZSwingingPlatform} (sonic3k.asm:188968-189518).
  * The visible platform hangs from a chain child 0x80 pixels above it. A lower
  * full-solid child starts the swing when the player rides it with enough
  * horizontal speed in the platform's facing direction; non-zero subtypes detach

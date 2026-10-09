@@ -29,7 +29,7 @@ import java.util.List;
 /**
  * Object 0xB6 - ICZ ice cube.
  * <p>
- * ROM reference: {@code Obj_ICZIceCube} at sonic3k.asm:189703. The cube is a
+ * ROM reference: {@code Obj_ICZIceCube} at sonic3k.asm:189796. The cube is a
  * {@code SolidObjectFull} block that shatters when a player standing on it has
  * animation {@code 2} (roll), launches that player upward, and spawns 12
  * {@code CreateChild1_Normal} ice debris pieces.
@@ -41,11 +41,11 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_ICZIceCube} is installed from the S3K object pointer table at
      * {@code $0008B36C} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:189625).
+     * label is defined at docs/skdisasm/sonic3k.asm:189718).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0008}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -137,7 +137,7 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
         }
         // loc_8B384 snapshots Player_1/Player_2 anim into $3A/$3B before
         // SolidObjectFull can clear rolling on a fresh landing; sub_8B3AA then
-        // tests those saved bytes (sonic3k.asm:189711-189741).
+        // tests those saved bytes (sonic3k.asm:189804-189834).
         ObjectServices services = tryServices();
         int preContactAnimationId = services != null && services.objectManager() != null
                 ? services.objectManager().getPreContactAnimationId()

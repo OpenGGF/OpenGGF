@@ -14,7 +14,7 @@ import java.util.logging.Logger;
 /**
  * AIZ2 Flying Battery battleship — crosses the screen dropping bombs.
  *
- * <p>ROM: Obj_AIZBattleship (sonic3k.asm:105257).
+ * <p>ROM: Obj_AIZBattleship (sonic3k.asm:105303).
  * The ship moves left via a 16:16 fixed-point secondary camera X counter
  * (ROM: _unkEE98 -= $8800 per frame ≈ 0.53 px/frame).
  * A scripted bomb table drives 21 bomb drops. Bombs are positioned relative
@@ -92,7 +92,7 @@ public class AizBattleshipInstance extends AbstractObjectInstance implements Spa
 
         if (!creationPassConsumed) {
             // ROM: AIZ2SE_ShipRefresh sets the secondary camera X and then takes
-            // a slot with plain AllocateObject (sonic3k.asm:104917-104928), NOT
+            // a slot with plain AllocateObject (sonic3k.asm:104963-104974), NOT
             // AllocateObjectAfterCurrent -- so the slot is not guaranteed to sit
             // ahead of the object pass that created it, and for this run it does
             // not: the recording shows slot 4 still holding Obj_AIZBattleship
@@ -103,7 +103,7 @@ public class AizBattleshipInstance extends AbstractObjectInstance implements Spa
             //
             // The ship's first real pass -- init falling through into
             // Obj_AIZBattleshipMain and its opening `subi.l #$8800,(_unkEE98).w`
-            // (:105261-105286) -- therefore happens one frame after creation.
+            // (:105307-105332) -- therefore happens one frame after creation.
             // Advancing on the creation frame left the secondary camera one step
             // ahead in its fraction for the rest of the act.
             creationPassConsumed = true;
@@ -164,7 +164,7 @@ public class AizBattleshipInstance extends AbstractObjectInstance implements Spa
         // continues translating from the ship's live secondary-camera coordinates.
         int cameraX = services().camera().getX();
         // ROM Obj_AIZBattleshipMain creates bombs with AllocateObjectAfterCurrent
-        // (sonic3k.asm:105315), so bomb slots must follow the ship's slot.
+        // (sonic3k.asm:105361), so bomb slots must follow the ship's slot.
         spawnChild(() -> new AizShipBombInstance(
                 new ObjectSpawn(cameraX + screenX, worldY, 0, 0, 0, false, 0),
                 this, bombScriptX, worldY));

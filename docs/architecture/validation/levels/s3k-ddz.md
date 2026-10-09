@@ -506,7 +506,7 @@ production change or broad-suite rerun is claimed.
 
 ## Full SaveGame consumer boundary — 2026-10-08
 
-The existing ending timer full SaveGame boundary at `loc_81CA4` (sonic3k.asm:173818) now dispatches through the semantic helper; timer and ending gates are unchanged. Existing real-services `TestS3kDdzLifecycleProduction#endingRequestSavesProgressAndStartsAnIsolatedTimeline` remains a seeded endpoint consumer for combined ordinary validation, not a new live route result.
+The existing ending timer full SaveGame boundary at `loc_81CA4` (sonic3k.asm:173909) now dispatches through the semantic helper; timer and ending gates are unchanged. Existing real-services `TestS3kDdzLifecycleProduction#endingRequestSavesProgressAndStartsAnIsolatedTimeline` remains a seeded endpoint consumer for combined ordinary validation, not a new live route result.
 
 `828bc94d8` clears the native32-bit collected-ring mask at exactly seven existing
 full-SaveGame gates; existing game-state rewind owns the mask. Focused138 cases

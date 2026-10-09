@@ -9,7 +9,7 @@ import static com.openggf.level.scroll.M68KMath.negWord;
 /**
  * Sonic 3 &amp; Knuckles Death Egg acts 1 and 2 ({@code $B00}, {@code $B01}) deformation.
  *
- * <p>Both acts use {@code PlainDeformation} (sonic3k.asm:103598):
+ * <p>Both acts use {@code PlainDeformation} (sonic3k.asm:103644):
  *
  * <pre>
  * PlainDeformation:
@@ -22,12 +22,12 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  *         ...     ; the same longword on every line
  * </pre>
  *
- * <p>{@code DEZ1_BackgroundInit} (:118641) and {@code DEZ2_BackgroundInit} (:118770) both clear
+ * <p>{@code DEZ1_BackgroundInit} (:118687) and {@code DEZ2_BackgroundInit} (:118816) both clear
  * {@code Camera_X_pos_BG_copy} and {@code Camera_Y_pos_BG_copy} before the first pass, and
  * nothing ever writes them again: those two words are only written by a zone's own deformation
  * routine, and the Death Egg routine only reads them. So the background scroll word stays 0 for
  * the whole of both acts and {@code V_scroll_value_BG} — copied from {@code Camera_Y_pos_BG_copy}
- * at the end of {@code ScreenEvents} (:102254) — stays 0 with it. The Death Egg background is a
+ * at the end of {@code ScreenEvents} (:102300) — stays 0 with it. The Death Egg background is a
  * fixed image behind a scrolling foreground.
  *
  * <p>{@code SwScrlS3kDefault} scrolls the background at a quarter of the camera speed on both

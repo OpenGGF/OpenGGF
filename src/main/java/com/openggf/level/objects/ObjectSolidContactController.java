@@ -147,7 +147,7 @@ public final class ObjectSolidContactController {
             new IdentityHashMap<>(2);
     // Per-player set of solid object spawn keys whose ROM-equivalent
     // "object standing-bit" (a0.d6) is currently SET on this player.
-    // ROM SolidObjectFull2_1P (sonic3k.asm:41066-41084):
+    // ROM SolidObjectFull2_1P (sonic3k.asm:41106-41124):
     //   - btst d6, status(a0)
     //   - beq SolidObject_cont          ; bit CLEAR -> full collision check
     //   - btst Status_InAir, status(a1)
@@ -194,7 +194,7 @@ public final class ObjectSolidContactController {
     // ride and unseat it one frame early. When
     // CollisionRules.solidObjectKeepsOnObjWhenJumpedOffSameFrame() is true,
     // this latch suppresses the same-frame unseat. Cleared per-frame
-    // (beginInlineFrame). ROM: sonic3k.asm:41016-41035 (loc_1DC98),
+    // (beginInlineFrame). ROM: sonic3k.asm:41056-41075 (loc_1DC98),
     // 41066-41084 (loc_1DCF0), 42033-42034 (RideObject_SetRide sets the bit),
     // 28553-28554 (Tails_Jump leaves Status_OnObj set).
     private final Map<PlayableEntity, Set<Object>> standingBitEstablishedThisFrame =
@@ -219,7 +219,7 @@ public final class ObjectSolidContactController {
         // DeleteObject/DeleteChild (docs/s1disasm/_incObj/sub
         // DeleteObject.asm:10-20) and S3K
         // Delete_Current_Sprite/Delete_Referenced_Sprite
-        // (docs/skdisasm/sonic3k.asm:36108-36125) all zero the whole slot -- so
+        // (docs/skdisasm/sonic3k.asm:36148-36165) all zero the whole slot -- so
         // an object that unloads and reloads from the same layout entry must
         // come back with its per-player bits CLEAR. Any new map keyed on this
         // value therefore needs an expiry paired with the object's removal, the
@@ -268,9 +268,9 @@ public final class ObjectSolidContactController {
      * {@code btst #Status_OnObj,status(a1) / movea.w interact(a1),a3 /
      * bclr d6,status(a3)} -- before {@code move.w a0,interact(a1)} and
      * {@code bset d6,status(a0)}: {@code RideObject_SetRide}
-     * (docs/skdisasm/sonic3k.asm:42027-42039), {@code sub_337D8} (:69781-69812),
-     * {@code sub_33C34} (:70166-70186), {@code loc_422D6} (:87546-87558) and
-     * {@code sub_42636} (:87789-87795). S2's {@code RideObject_SetRide}
+     * (docs/skdisasm/sonic3k.asm:42067-42079), {@code sub_337D8} (:69821-69852),
+     * {@code sub_33C34} (:70206-70226), {@code loc_422D6} (:87592-87604) and
+     * {@code sub_42636} (:87835-87841). S2's {@code RideObject_SetRide}
      * (docs/s2disasm/s2.asm:35986-35998) is the same routine with a byte
      * {@code interact} index, and S1 enforces the same invariant through
      * {@code standonobject} -- {@code Plat_NoCheck}'s {@code bclr #3,obStatus(a2)}
@@ -399,7 +399,7 @@ public final class ObjectSolidContactController {
      * not execute at all on this frame ({@link SolidObjectProvider#suppressSlopeSampleThisFrame}).
      * On such a frame the object performs no rider state change -- no sloped
      * y_pos write and no airborne-rider unseat -- exactly as ROM's
-     * {@code ObjPlatformCollapse_CreateFragments} (sonic3k.asm:45394) jmps to
+     * {@code ObjPlatformCollapse_CreateFragments} (sonic3k.asm:45434) jmps to
      * {@code Play_SFX} without falling through to {@code sub_205B6}
      * (SolidObjectTopSloped2). Used to defer the generic air-unseat paths by
      * one frame so a player who jumps on the collapse-transition frame keeps
@@ -461,7 +461,7 @@ public final class ObjectSolidContactController {
      * (docs/s2disasm/s2.asm:30329-30345), S1 {@code DeleteObject}/
      * {@code DeleteChild} (docs/s1disasm/_incObj/sub DeleteObject.asm:10-20),
      * S3K {@code Delete_Current_Sprite}/{@code Delete_Referenced_Sprite}
-     * (docs/skdisasm/sonic3k.asm:36108-36125).
+     * (docs/skdisasm/sonic3k.asm:36148-36165).
      *
      * <p>Deliberately object-side ONLY. None of the three delete routines
      * touches the player's slot, so a player standing on an object that
@@ -582,7 +582,7 @@ public final class ObjectSolidContactController {
     // and not on the player's own Status_Push, which their own tails clear
     // immediately afterwards: S1 Solid_NoCollision (`btst #5,obStatus(a0)`,
     // _incObj/sub SolidObject.asm:253-263), S2 SolidObject_TestClearPush
-    // (s2.asm:35462-35486), S3K loc_1E0A2 (sonic3k.asm:41517-41528).
+    // (s2.asm:35462-35486), S3K loc_1E0A2 (sonic3k.asm:41557-41568).
     private void publishSolidPushReleaseAnimationWord(PlayableEntity player, ObjectInstance instance) {
         ObjectInteractionRules rules = objectInteractionRulesOrNull(player);
         if (rules == null
@@ -611,7 +611,7 @@ public final class ObjectSolidContactController {
                 && spindashAnimationId >= 0
                 && sprite.getAnimationId() == spindashAnimationId) {
             // S3K loc_1E0A2 also skips Spindash ($09) before the adjacent
-            // Walk/Run word write (sonic3k.asm:41503-41515).
+            // Walk/Run word write (sonic3k.asm:41543-41555).
             return;
         }
         int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
@@ -1216,9 +1216,9 @@ public final class ObjectSolidContactController {
             return;
         }
         // ROM only skips CalcRoomInFront while object_control bit 6 is set
-        // (sonic3k.asm:22713,27958). Normal SolidObject/MvSonicOnPtfm
+        // (sonic3k.asm:22748,27998). Normal SolidObject/MvSonicOnPtfm
         // support, including the CNZ horizontal door's SolidObjectFull call
-        // (sonic3k.asm:66249-66258), does not set that bit; if object_control
+        // (sonic3k.asm:66289-66298), does not set that bit; if object_control
         // is already clear, an engine-only stale bit-6 analogue must not
         // survive onto the next movement frame.
         sprite.setSuppressGroundWallCollision(false);
@@ -1448,7 +1448,7 @@ public final class ObjectSolidContactController {
         }
         if (!inlineSupportedPlayers.contains(player)) {
             // ROM parity: Status_OnObj is set by an interactive controller
-            // (e.g. CNZ wire cage sub_33C34 at sonic3k.asm:70179 `bset #Status_OnObj,status(a1)`)
+            // (e.g. CNZ wire cage sub_33C34 at sonic3k.asm:70219 `bset #Status_OnObj,status(a1)`)
             // and stays set across frames until the controller itself clears it
             // (cage does so at loc_33A0E line 69989 `bclr #Status_OnObj,status(a1)`).
             // The engine SolidContacts ridingStates only tracks players riding
@@ -1458,7 +1458,7 @@ public final class ObjectSolidContactController {
             // SolidContacts inlineSupportedPlayers set never gains the player
             // because no SolidObject is in play. Without honouring that signal,
             // finalizeInlinePlayer would clear OnObject every frame and the
-            // sidekick CPU controller (sonic3k.asm:26690 loc_13DA6 reads
+            // sidekick CPU controller (sonic3k.asm:26730 loc_13DA6 reads
             // Sonic.Status_OnObj when computing leadOffset) would mis-trigger
             // the auto-jump path. Skip the clear when a latch is active.
             if (player instanceof AbstractPlayableSprite aps
@@ -1688,7 +1688,7 @@ public final class ObjectSolidContactController {
                         player, ridingObject, ridingPieceIndex);
         // S3K SolidObjectFull tests Player_2 render_flags before entering
         // the helper that clears Status_OnObj/d6 for airborne riders
-        // (docs/skdisasm/sonic3k.asm:41006-41010 before 41021-41034).
+        // (docs/skdisasm/sonic3k.asm:41046-41050 before 41021-41034).
         if (ridingObject != null && player.getAir()
                 && (instance == ridingObject
                     || !airborneRiderUnseatRequiresOwnCheckpoint(player, ridingObject))
@@ -1701,7 +1701,7 @@ public final class ObjectSolidContactController {
                 // same-frame unseat when this ride was just established this
                 // frame. Games can opt in globally via CollisionRules;
                 // individual solid routines can opt in for same-frame status
-                // writes after their solid helper runs (sonic3k.asm:41066-41084,
+                // writes after their solid helper runs (sonic3k.asm:41106-41124,
                 // 42033-42034, 28553-28554).
                 && !(keepsOnObjWhenAirborneAfterSameFrameStandingContact(player, ridingObject)
                         && (wasStandingBitEstablishedThisFrame(player, ridingObject, ridingPieceIndex)
@@ -1714,9 +1714,9 @@ public final class ObjectSolidContactController {
                 // platform performs no air-unseat that frame. The rider keeps
                 // Status_OnObj (aiz1 trace f3317 status 0x0E); the unseat fires
                 // the next frame when loc_205DE re-runs sub_205B6 (f3318 0x06).
-                // sonic3k.asm:44818, 45394.
+                // sonic3k.asm:44858, 45434.
                 && !suppressesSolidPassThisFrame(ridingObject, player)) {
-            // ROM SolidObjectFull2_1P air-unseat path (sonic3k.asm:41070-41084
+            // ROM SolidObjectFull2_1P air-unseat path (sonic3k.asm:41110-41124
             // loc_1DCF0): when the object's a0.d6 standing-bit is still
             // set and Status_InAir is set on the player, the helper
             // clears the bit and returns d4=0 WITHOUT falling into
@@ -1733,7 +1733,7 @@ public final class ObjectSolidContactController {
             ridingPieceIndex = -1;
             player.setOnObject(false);
         }
-        // ROM loc_1DCF0 bit clear (sonic3k.asm:41079-41084) runs when the
+        // ROM loc_1DCF0 bit clear (sonic3k.asm:41119-41124) runs when the
         // OBJECT's own SolidObjectFull2_1P call sees its a0.d6 set and the
         // player's Status_InAir set.  Snapshot the bit BEFORE clearing so
         // the resolveContactInternal lift gate (which checks
@@ -1745,7 +1745,7 @@ public final class ObjectSolidContactController {
                 && hasObjectStandingBit(player, instance)
                 && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, instance)
                 // Same-frame unseat suppression: ROM's loc_1DC98 stale-rider
-                // clear (sonic3k.asm:41017-41035) only observes the standing
+                // clear (sonic3k.asm:41057-41075) only observes the standing
                 // bit on a frame AFTER RideObject_SetRide set it. Skip when the
                 // bit was just established this frame so a same-frame jump-off
                 // keeps Status_OnObj when the game or object routine opts into
@@ -1756,7 +1756,7 @@ public final class ObjectSolidContactController {
                 // above: the platform's SolidObjectTopSloped2 does not run on
                 // ObjPlatformCollapse_CreateFragments's transition frame, so its
                 // standing-bit / Status_OnObj clear is deferred one frame
-                // (sonic3k.asm:44818, 45394; aiz1 trace f3317->f3318).
+                // (sonic3k.asm:44858, 45434; aiz1 trace f3317->f3318).
                 && !suppressesSolidPassThisFrame(instance, player)) {
             snapshotObjectStandingBit(player, instance);
             clearObjectStandingBit(player, instance);
@@ -1767,7 +1767,7 @@ public final class ObjectSolidContactController {
                 // object's standing bit is set and the player is already
                 // airborne, loc_1DC98 clears Status_OnObj/d6 and returns
                 // d4=0 without falling through to SolidObject_cont or
-                // Solid_Landed (docs/skdisasm/sonic3k.asm:41017-41035).
+                // Solid_Landed (docs/skdisasm/sonic3k.asm:41057-41075).
                 // S2's shared helper follows the same contract
                 // (docs/s2disasm/s2.asm:34831-34849). Keep the no-contact
                 // return keyed to explicit SolidObjectFull-style providers:
@@ -1781,7 +1781,7 @@ public final class ObjectSolidContactController {
         }
 
         // ROM SolidObjectFull*_1P / SolidObjectTop*_1P air-unseat
-        // (sonic3k.asm:41021-41031 SolidObjectFull_1P loc_1DC98,
+        // (sonic3k.asm:41061-41071 SolidObjectFull_1P loc_1DC98,
         // 41066-41084 SolidObjectFull2_1P loc_1DCF0, 41117-41128
         // sub_1DD24 loc_1DD48, 41793-41812 SolidObjectTop_1P loc_1E2E0):
         // when the helper sees its own a0.d6 standing-bit set AND the
@@ -1820,7 +1820,7 @@ public final class ObjectSolidContactController {
         if (shouldSkipOffscreenSidekickFullSolid(player, instance, solidProfile)) {
             if (instance == ridingObject) {
                 // ROM returns before SolidObjectFull_1P for offscreen Player_2
-                // (docs/skdisasm/sonic3k.asm:41006-41010), so the existing
+                // (docs/skdisasm/sonic3k.asm:41046-41050), so the existing
                 // standing bit and Status_OnObj survive without a carry step.
                 putRidingState(player, instance, ridingX, ridingY, ridingPieceIndex);
                 setObjectStandingBit(player, instance, ridingPieceIndex);
@@ -1987,11 +1987,11 @@ public final class ObjectSolidContactController {
         boolean wasRidingObject = useStickyBuffer && isRidingCurrentPlayerObject(instance);
 
         // ROM parity: SolidObject_cont (s2.asm:35140-35145 SolidObject_OnScreenTest,
-        // sonic3k.asm:41390-41392 loc_1DF88, s1disasm/_incObj/sub SolidObject.asm:124-126
+        // sonic3k.asm:41430-41432 loc_1DF88, s1disasm/_incObj/sub SolidObject.asm:124-126
         // Solid_ChkEnter and 86-87 SolidObject2F) gates the side/top/bottom contact
         // path on the object's render_flags bit 7. Render_Sprites clears bit 7 each
-        // frame (sonic3k.asm:36338) and re-sets it only when the object's bounding
-        // box overlaps the screen (sonic3k.asm:36370). When clear, ROM jumps to
+        // frame (sonic3k.asm:36378) and re-sets it only when the object's bounding
+        // box overlaps the screen (sonic3k.asm:36410). When clear, ROM jumps to
         // SolidObject_TestClearPush / loc_1E0A2 which only cleans up push state and
         // exits without zeroing player ground_vel/x_vel. The S2 disasm documents
         // this as an optimisation: "if Sonic outruns the screen then he can phase
@@ -2013,9 +2013,9 @@ public final class ObjectSolidContactController {
         // rider. Only the new-contact resolveContact path is gated here.
         //
         // Per-object opt-out (bypassesOffscreenSolidGate): the ROM gate at
-        // loc_1DF88 lives only in SolidObjectFull_1P (sonic3k.asm:41016-41018).
+        // loc_1DF88 lives only in SolidObjectFull_1P (sonic3k.asm:41056-41058).
         // Spring variants and several other objects route through the sibling
-        // helper SolidObjectFull2_1P (sonic3k.asm:41065-41067) which falls
+        // helper SolidObjectFull2_1P (sonic3k.asm:41105-41107) which falls
         // through directly to SolidObject_cont without the bit-7 test, so
         // they must continue to resolve push/side contact even when their
         // bounding box has scrolled off-screen.  Without this opt-out, the
@@ -2023,12 +2023,12 @@ public final class ObjectSolidContactController {
         // failed to launch Tails because the spring's bounding box sits
         // ~0xAA px below the camera viewport at that frame.
         //
-        // Top-only opt-out: ROM SolidObjectTop_1P (sonic3k.asm:41793-41819),
-        // SolidObjectTopSloped_1P (sonic3k.asm:41887-41914), and
-        // SolidObjectTopSloped2_1P (sonic3k.asm:41840-41867) ALL bypass
+        // Top-only opt-out: ROM SolidObjectTop_1P (sonic3k.asm:41833-41859),
+        // SolidObjectTopSloped_1P (sonic3k.asm:41927-41954), and
+        // SolidObjectTopSloped2_1P (sonic3k.asm:41880-41907) ALL bypass
         // loc_1DF88 entirely.  When the player isn't yet standing
         // (d6,status(a0) clear), they branch directly into SolidObjCheckSloped /
-        // SolidObjCheckSloped2 / loc_1E42E (sonic3k.asm:42071, 42095, 41982)
+        // SolidObjCheckSloped2 / loc_1E42E (sonic3k.asm:42111, 42135, 42022)
         // which do NOT test render_flags(a0). The same pattern holds in S2:
         // SlopedSolid_SingleCharacter (s2.asm:34927-34952) jumps to
         // SlopedSolid_cont (s2.asm:35066) without any on-screen test, and
@@ -2051,10 +2051,10 @@ public final class ObjectSolidContactController {
             // stands in for a solid whose slot the ROM would simply stop
             // dispatching. Every native no-contact branch of
             // SolidObjectFull_Offset_1P reaches loc_1E0A2 and therefore the
-            // Walk/Run word (sonic3k.asm:41287-41316); an object that is not
+            // Walk/Run word (sonic3k.asm:41327-41356); an object that is not
             // executed at all reaches nothing and writes nothing. So this path
             // clears the push bookkeeping the way sub_1E0C2 would
-            // (sonic3k.asm:41528-41532), but its Walk/Run word needs the
+            // (sonic3k.asm:41568-41572), but its Walk/Run word needs the
             // engine-side push ownership check below: this path conflates a
             // solid that has merely left the contact window (still dispatched by
             // the ROM, so its tail really does write) with one the ROM has
@@ -2124,7 +2124,7 @@ public final class ObjectSolidContactController {
             // object owns the push -- only the object's own bit clear is
             // guarded, and `bclr` on an already-clear bit is a no-op. All three
             // games agree: docs/s1disasm/_incObj/sub SolidObject.asm:246-263,
-            // docs/s2disasm/s2.asm:35453-35487, docs/skdisasm/sonic3k.asm:41509,
+            // docs/s2disasm/s2.asm:35453-35487, docs/skdisasm/sonic3k.asm:41549,
             // 41527-41531. So the player's bit must clear here even when this
             // object never set it; a neighbouring solid that raised the push
             // this frame (S2 Obj74 blocks tile vertically, and the slot below
@@ -2184,7 +2184,7 @@ public final class ObjectSolidContactController {
 
         // ROM: S3K Obj_CollapsingPlatform state-1 -> state-2 transition frame.
         // When $38 hits 0, loc_20594 branches to ObjPlatformCollapse_CreateFragments
-        // (sonic3k.asm:44818 -> 45394) which jmps to Play_SFX WITHOUT falling
+        // (sonic3k.asm:44858 -> 45394) which jmps to Play_SFX WITHOUT falling
         // through to sub_205B6 -- so the platform's SolidObjectTopSloped2 does
         // NOT run on the transition frame at all. The solid routine therefore
         // makes no change to the rider's status this frame: it neither writes
@@ -2300,7 +2300,7 @@ public final class ObjectSolidContactController {
             // method, before the player.getAir() unseat branch, so a player
             // who jumps on the transition frame keeps Status_OnObj for that
             // one frame (matching ROM ObjPlatformCollapse_CreateFragments
-            // skipping sub_205B6 entirely; sonic3k.asm:44818, 45394).
+            // skipping sub_205B6 entirely; sonic3k.asm:44858, 45434).
             int surfaceOffset;
             if (instance instanceof SlopedSolidProvider sloped) {
                 int slopeAnchorX = currentX + params.offsetX();
@@ -2310,12 +2310,12 @@ public final class ObjectSolidContactController {
                 surfaceOffset = params.groundHalfHeight();
             }
             int rideAdjustment = provider.getContinuedRideSnapAdjustment(player, getSolidTopYRadius(player));
-            // ROM MvSonicOnPtfm (sonic3k.asm:41648-41653): upright it computes
+            // ROM MvSonicOnPtfm (sonic3k.asm:41688-41693): upright it computes
             // `d0 = y_pos(a0) - d3` and writes `y_pos(a1) = d0 - y_radius(a1)` (loc_1E1CA,
-            // :41667-41682); under Reverse_gravity_flag it branches to loc_1E1AA, computes
+            // :41707-41722); under Reverse_gravity_flag it branches to loc_1E1AA, computes
             // `d0 = y_pos(a0) + d3` and writes `y_pos(a1) = d0 + y_radius(a1)` (loc_1E1F4,
-            // :41690-41702). The rider hangs under the platform, both terms mirrored. The
-            // unused S1 leftover at :41661 (the +/-9 branch) is unreachable and not ported.
+            // :41730-41742). The rider hangs under the platform, both terms mirrored. The
+            // unused S1 leftover at :41701 (the +/-9 branch) is unreachable and not ported.
             int rideReach = surfaceOffset + player.getYRadius() + rideAdjustment;
             int newCentreY = isReverseGravityActive(player)
                     ? rideY + params.offsetY() + rideReach
@@ -2867,7 +2867,7 @@ public final class ObjectSolidContactController {
         // they must not be repositioned by a stale riding record. S3K
         // SolidObjectFull gates offscreen Player_2 before SolidObjectFull_1P,
         // so that gate also precedes the Status_InAir riding unseat branch
-        // (docs/skdisasm/sonic3k.asm:41006-41010 before 41021-41034).
+        // (docs/skdisasm/sonic3k.asm:41046-41050 before 41021-41034).
         if (ridingObject != null && player.getAir()
                 && !preserveAirborneRideForEarlierPieces
                 && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)
@@ -2885,7 +2885,7 @@ public final class ObjectSolidContactController {
         if (ridingObject != null && ridingObject instanceof SolidObjectProvider provider) {
             SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
             // ROM: S3K SolidObjectFull tests Player_2 render_flags before
-            // entering SolidObjectFull_1P (sonic3k.asm:41006-41010), so an
+            // entering SolidObjectFull_1P (sonic3k.asm:41046-41050), so an
             // offscreen CPU sidekick does not run the standing-bounds unseat
             // branch at 41021-41034. Keep the existing ride latched.
             if (!shouldSkipOffscreenSidekickFullSolid(player, ridingObject, solidProfile)) {
@@ -2981,12 +2981,12 @@ public final class ObjectSolidContactController {
                     } else {
                         surfaceOffset = params.groundHalfHeight();
                     }
-                    // ROM MvSonicOnPtfm (sonic3k.asm:41648-41653, :41690-41702): upright it
+                    // ROM MvSonicOnPtfm (sonic3k.asm:41688-41693, :41730-41742): upright it
                     // computes `d0 = y_pos(a0) - d3` and writes `y_pos(a1) = d0 - y_radius(a1)`;
                     // under Reverse_gravity_flag it branches to loc_1E1AA, computes
                     // `d0 = y_pos(a0) + d3` and writes `y_pos(a1) = d0 + y_radius(a1)`
                     // (loc_1E1F4). The rider hangs under the platform, both terms mirrored.
-                    // The unused S1 leftover at :41661 (the ±9 branch) is unreachable.
+                    // The unused S1 leftover at :41701 (the ±9 branch) is unreachable.
                     int surfaceReach = surfaceOffset + player.getYRadius();
                     int newCentreY = isReverseGravityActive(player)
                             ? currentY + params.offsetY() + surfaceReach
@@ -3032,8 +3032,8 @@ public final class ObjectSolidContactController {
                         // ROM standing-object paths clear Status_OnObj and set
                         // Status_InAir as soon as the rider leaves the object's
                         // ride bounds: SolidObjectFull_1P loc_1DC98
-                        // (sonic3k.asm:41030-41034) and SolidObjectTop_1P
-                        // loc_1E2E0 (sonic3k.asm:41807-41812). The interact
+                        // (sonic3k.asm:41070-41074) and SolidObjectTop_1P
+                        // loc_1E2E0 (sonic3k.asm:41847-41852). The interact
                         // latch can remain non-zero; it is not itself support.
                         player.setOnObject(false);
                         if (solidProfile.forceAirOnRideExit()) {
@@ -3591,7 +3591,7 @@ public final class ObjectSolidContactController {
             // Provider-specific ROM ports can request a different sampled
             // player-position phase for top- or full-solid helper geometry.
             // S3K SolidObjectTop's new-landing check reads x_pos/y_pos/y_radius
-            // before RideObject_SetRide (sonic3k.asm:41982-42015); full-solid
+            // before RideObject_SetRide (sonic3k.asm:42022-42055); full-solid
             // callers can likewise model their concrete player-slot phase.
             int historyFrames = Math.max(0, topSolidOnly
                     ? provider.getTopSolidPlayerPositionHistoryFrames(player)
@@ -3620,7 +3620,7 @@ public final class ObjectSolidContactController {
                 : maxTop + (monitorSolidity ? maxTop : halfHeight + getSolidTopYRadius(player));
         // SPG-style monitor callers keep zero here. S3K monitors branch into
         // SolidObject_cont, which adds +4 before the d2/y_radius overlap check
-        // (docs/skdisasm/sonic3k.asm:40575-40576, 41429-41432).
+        // (docs/skdisasm/sonic3k.asm:40615-40616, 41469-41472).
         int verticalOffset = monitorSolidity ? monitorVerticalOffset : 4;
         // ROM: s2.asm:35147 uses andi.w #$7FF,d0 to handle VDP Y-coordinate
         // wrapping near y_pos=0 (16-bit hardware arithmetic). The engine uses
@@ -3628,8 +3628,8 @@ public final class ObjectSolidContactController {
         // applied — it causes phantom collisions between objects separated by
         // ~2048px vertically in tall levels (e.g. HCZ2 FanPlatformChild at Y=608
         // falsely colliding with player at Y=2654).
-        // ROM: SolidObject_cont's reverse-gravity branch (sonic3k.asm:41412-41424) is
-        // loc_1DFD6 (:41426-41440) with one extra instruction — `neg.w d3` on the
+        // ROM: SolidObject_cont's reverse-gravity branch (sonic3k.asm:41452-41464) is
+        // loc_1DFD6 (:41466-41480) with one extra instruction — `neg.w d3` on the
         // player-minus-object delta, before the +4 and the d2 add. Everything else, the
         // default_y_radius/y_radius pair included, is identical. anchorY is the object's
         // centre and maxTop is the ROM's d2 (object half-height + player y_radius), so
@@ -4004,7 +4004,7 @@ public final class ObjectSolidContactController {
             // re-seat (Solid_ResetFloor / RideObject_SetRide: clear Status_InAir,
             // set Status_OnObj, zero y_vel) on `tst.w y_vel(a1) / bmi` — a rising
             // player crossing the top upward gets no re-seat (SolidObjectFull's
-            // upward-velocity branch, sonic3k.asm:41625-41626 loc_1E198 moveq #0,d4
+            // upward-velocity branch, sonic3k.asm:41665-41666 loc_1E198 moveq #0,d4
             // / rts). Without this, a player who JUMPS off the monitor's top loses
             // his airborne state on the jump frame (SLZ3 f1187: a rolling jump off
             // a Monitor — ROM keeps Sonic rising, the engine re-grounded him).
@@ -4260,7 +4260,7 @@ public final class ObjectSolidContactController {
         if (!sticky && isSignedObjectControlNewSolidContactRejected(player, instance)) {
             // S3K SolidObject_cont rejects signed object_control before
             // side/top new-contact classification
-            // (sonic3k.asm:41394-41440). Continued standing-bit riding is
+            // (sonic3k.asm:41434-41480). Continued standing-bit riding is
             // handled before this path by SolidObjectFull_1P.
             return null;
         }
@@ -4312,16 +4312,16 @@ public final class ObjectSolidContactController {
                 return null;
             }
             if (apply) {
-                // ROM loc_1E154 (sonic3k.asm:41606-41632). Upright: `subq.w #4,d3`,
+                // ROM loc_1E154 (sonic3k.asm:41646-41672). Upright: `subq.w #4,d3`,
                 // `subq.w #1,y_pos(a1)`, `sub.w d3,y_pos(a1)` — a net `y - d3 + 3`, which
                 // is the form here. Under the flag the ROM inserts `neg.w d3` and
-                // `addq.w #2,y_pos(a1)` between them (:41623-41628), giving `y + d3 - 3`:
+                // `addq.w #2,y_pos(a1)` between them (:41663-41668), giving `y + d3 - 3`:
                 // the same landing, taken against the object's other face. The asymmetry
                 // between +3 and -3 is the ROM's own — the upright path's extra
                 // `subq.w #1` is what makes the constant 3 rather than 4.
                 int landingSnap = distY - 3 + getTopLandingSnapAdjustment(instance, player);
                 // SolidObjCheckSloped/Sloped2 branch straight to loc_1E45A,
-                // bypassing loc_1E44C's reverse-gravity test (S3K :42076-42120).
+                // bypassing loc_1E44C's reverse-gravity test (S3K :42116-42160).
                 // Their direct top-helper contract keeps the upright position
                 // arithmetic even when the world flag is set. Flat top-solid
                 // callers still select loc_1E4D6 through their normal path.
@@ -4397,7 +4397,7 @@ public final class ObjectSolidContactController {
         //
         //   S3K (false): cmp d1,d5 / bhi.w loc_1E0D4 ; cmpi.w #4,d1 /
         //     bls.w loc_1E0D4 — when d5<=d1 AND d1<=4, ROM goes to the
-        //     TOP/BOTTOM path (loc_1E0D4, sonic3k.asm:41463-41466,
+        //     TOP/BOTTOM path (loc_1E0D4, sonic3k.asm:41503-41506,
         //     41541-41546). Falls through to the vertical landing path.
         //
         //   S1/S2 (true): cmp d1,d5 / bhi <TopBottom> ; cmpi.w #4,d1 /
@@ -4507,7 +4507,7 @@ public final class ObjectSolidContactController {
             boolean leftSide = relX <= halfWidth;
             // ROM loc_1E06E sets Status_Push for any grounded side contact
             // after applying the side separation. Only speed zeroing is
-            // gated by moving into the object (sonic3k.asm:41473-41495).
+            // gated by moving into the object (sonic3k.asm:41513-41535).
             boolean movingInto = isMovingIntoSideContact(player, instance, leftSide);
             boolean pushing = !player.getAir();
             // ROM: sub SolidObject.asm lines 173-196
@@ -4596,14 +4596,14 @@ public final class ObjectSolidContactController {
             // ROM divergence (S3K loc_1E154 vs S1/S2 Solid_Landed),
             // gated by
             // CollisionRules#solidObjectTopBranchAlwaysLiftsOnUpwardVelocity:
-            //   S3K loc_1E154 (sonic3k.asm:41606-41632) writes the position
+            //   S3K loc_1E154 (sonic3k.asm:41646-41672) writes the position
             //   lift (subq.w #1, y_pos(a1) at 41617; sub.w d3, y_pos(a1) at
             //   41624) BEFORE testing tst.w y_vel(a1) / bmi.s loc_1E198 at
             //   41625-41626.  When y_vel < 0 it skips RideObject_SetRide
             //   and returns d4=0 (no contact), but the lift has already
             //   been applied.  CNZ trace F7614 exercises this when
-            //   Tails_Jump (sonic3k.asm:28519+) sets y_vel=-$680 on the
-            //   same frame Obj_Spring_Horizontal (sonic3k.asm:47771+)
+            //   Tails_Jump (sonic3k.asm:28559+) sets y_vel=-$680 on the
+            //   same frame Obj_Spring_Horizontal (sonic3k.asm:47811+)
             //   reaches loc_1E154 with d3=1 against Tails.
             //   S1 Solid_Landed (s1disasm/_incObj/sub SolidObject.asm:278)
             //   and S2 SolidObject_Landed (s2.asm:35379-35380) test y_vel
@@ -4611,12 +4611,12 @@ public final class ObjectSolidContactController {
             //
             // ROM only reaches loc_1E154 via SolidObjectFull2_1P's
             // SolidObject_cont branch when the object's a0.d6 standing-bit
-            // is CLEAR (sonic3k.asm:41066-41067 btst d6 / beq cont).  When
+            // is CLEAR (sonic3k.asm:41106-41107 btst d6 / beq cont).  When
             // the bit is still set from a previous landing and the player
             // is now airborne (e.g. AIZ F2090 yellow up-spring kick:
-            // sub_22F98 sets Status_InAir at sonic3k.asm:47723 but does
+            // sub_22F98 sets Status_InAir at sonic3k.asm:47763 but does
             // not touch a0.d6), the next frame's SolidObjectFull2_1P
-            // routes through loc_1DCF0 (sonic3k.asm:41079-41084) which
+            // routes through loc_1DCF0 (sonic3k.asm:41119-41124) which
             // clears d6 and returns d4=0 without ever reaching
             // loc_1E154.  The engine mirrors that ROM bit via
             // objectStandingBitSet (set by RideObject_SetRide-equivalent
@@ -4694,7 +4694,7 @@ public final class ObjectSolidContactController {
             // already passed), so no further width check is needed there. Sticky
             // riders follow the MvSonicOnPtfm / MvSonicOnSlope path instead.
             //
-            // ROM: loc_1E154 (sonic3k.asm:41608-41616) re-checks the X
+            // ROM: loc_1E154 (sonic3k.asm:41648-41656) re-checks the X
             // overlap against width_pixels(a0) before applying the lift,
             // so the upward-velocity-and-lift S3K path also needs this
             // narrow gate.  Sticky riders skip this on the standing branch
@@ -4711,10 +4711,10 @@ public final class ObjectSolidContactController {
             }
 
             if (apply) {
-                // ROM loc_1E154 (sonic3k.asm:41606-41632). Upright: `subq.w #4,d3`,
+                // ROM loc_1E154 (sonic3k.asm:41646-41672). Upright: `subq.w #4,d3`,
                 // `subq.w #1,y_pos(a1)`, `sub.w d3,y_pos(a1)` — a net `y - d3 + 3`, which
                 // is the form here. Under the flag the ROM inserts `neg.w d3` and
-                // `addq.w #2,y_pos(a1)` between them (:41623-41628), giving `y + d3 - 3`:
+                // `addq.w #2,y_pos(a1)` between them (:41663-41668), giving `y + d3 - 3`:
                 // the same landing, taken against the object's other face. The asymmetry
                 // between +3 and -3 is the ROM's own — the upright path's extra
                 // `subq.w #1` is what makes the constant 3 rather than 4.
@@ -4726,7 +4726,7 @@ public final class ObjectSolidContactController {
                 player.setY((short) newY);
                 if (upwardVelocity) {
                     // ROM: loc_1E154 path with tst.w y_vel(a1) / bmi.s
-                    // loc_1E198 (sonic3k.asm:41625-41626) -> moveq #0,d4 /
+                    // loc_1E198 (sonic3k.asm:41665-41666) -> moveq #0,d4 /
                     // rts at 41636-41637.  The position lift fires but
                     // RideObject_SetRide does not, so we leave angle,
                     // y_vel, ground_vel, on_object, in_air, rolling, and
@@ -4749,7 +4749,7 @@ public final class ObjectSolidContactController {
                 // ROM: bset #status.player.on_object (s2.asm:35739)
                 player.setOnObject(true);
                 // ROM: RideObject_SetRide also sets the object's
-                // a0.d6 standing-bit (sonic3k.asm:42034 bset d6,
+                // a0.d6 standing-bit (sonic3k.asm:42074 bset d6,
                 // status(a0)). Mirror that here so a subsequent
                 // air-unseat correctly routes through the no-lift
                 // path on the next frame.
@@ -4761,7 +4761,7 @@ public final class ObjectSolidContactController {
                     // frame, never on this RideObject_SetRide frame. Latch the
                     // fresh landing so a same-frame jump-off (Tails_Jump sets
                     // Status_InAir without clearing Status_OnObj,
-                    // sonic3k.asm:28553-28554) does not get unseated this frame.
+                    // sonic3k.asm:28593-28594) does not get unseated this frame.
                     markStandingBitEstablishedThisFrame(player, instance, pieceIndex);
                 }
             } else if (upwardVelocity) {
@@ -4828,11 +4828,11 @@ public final class ObjectSolidContactController {
         // S3K loc_1E0E0 instead routes every airborne bottom overlap through
         // loc_1E0F6/loc_1E0FC: it clears ground speed, applies the vertical
         // separation, and zeros y_vel even when y_vel is zero or positive
-        // (sonic3k.asm:41558-41577). This is a game-wide shared-solid branch,
+        // (sonic3k.asm:41598-41617). This is a game-wide shared-solid branch,
         // owned by CollisionRules rather than an MGZ carrier exception.
         boolean alwaysSeparatesAirBottomHit = alwaysSeparatesAirBottomSolidHit(player);
         if (apply && (player.getYSpeed() < 0 || alwaysSeparatesAirBottomHit)) {
-            // ROM loc_1E0FC (sonic3k.asm:41569-41574): `neg.w d3` under the flag, then the
+            // ROM loc_1E0FC (sonic3k.asm:41609-41614): `neg.w d3` under the flag, then the
             // same `sub.w d3,y_pos(a1)`. The separation is the same size; it points the
             // other way, because the object's "underside" is its top when gravity is
             // inverted.
@@ -4923,10 +4923,10 @@ public final class ObjectSolidContactController {
             // caller's collision d1: S1 Solid_Landed re-reads obActWid
             // (_incObj/sub SolidObject.asm:318-336), S2 SolidObject_Landed and
             // S3K Solid_Landed / loc_1E154 re-read width_pixels(a0)
-            // (s2.asm:35588+, sonic3k.asm:41611-41621). The provider models that
+            // (s2.asm:35588+, sonic3k.asm:41651-41661). The provider models that
             // field first-class: its family default reconstructs the width byte
             // (full-solid d1 = width_pixels + $B; top-solid d1 used directly per
-            // SolidObjectTop_1P, sonic3k.asm:41798-41825), and objects whose
+            // SolidObjectTop_1P, sonic3k.asm:41838-41865), and objects whose
             // caller broke the idiom override with the ObjDat width — used
             // verbatim, narrower OR wider (e.g. the MHZ1 cutscene button's
             // d1 = $1B against width_pixels = $80).
@@ -4998,7 +4998,7 @@ public final class ObjectSolidContactController {
         // Retail SolidObjectFull checks the object's render bounds before
         // routine >= 6. Its offscreen loc_1DF88 -> loc_1E0A2 tail still writes
         // WORD #1 to anim when this object's push bit survives Kill_Character
-        // (sonic3k.asm:41287-41316,41517-41528; FixBugs=0).
+        // (sonic3k.asm:41327-41356,41557-41568; FixBugs=0).
         // S1 SolidObject and S2 SolidObject_OnScreenTest use the same ordering.
         if (clearObjectPushingBit(player, instance)) {
             publishSolidPushReleaseAnimationWord(player, instance);
@@ -5036,7 +5036,7 @@ public final class ObjectSolidContactController {
         // already have consumed the emulated d6 latch, while the later ridden
         // solid still executes after Kill_Character in this same object pass.
         // Native SolidObjectFull_1P loc_1DC98 clears Status_OnObj when that
-        // later owner observes Status_InAir (sonic3k.asm:41017-41035).
+        // later owner observes Status_InAir (sonic3k.asm:41057-41075).
         if (standingBitSet) {
             snapshotObjectStandingBit(player, instance);
             clearObjectStandingBit(player, instance);
@@ -5113,7 +5113,7 @@ public final class ObjectSolidContactController {
         // returns before the P2 solid pass when clear
         // (docs/s2disasm/s2.asm:34800-34804). S3K SolidObjectFull does the
         // same for Player_2 before adding the P2 standing-bit delta
-        // (docs/skdisasm/sonic3k.asm:41006-41010). This gate belongs only
+        // (docs/skdisasm/sonic3k.asm:41046-41050). This gate belongs only
         // to the regular full-solid helper; SolidObjectFull2/SolidObject_Always,
         // top-only, and sloped helpers enter their P2 routines directly.
         return true;
@@ -5130,10 +5130,10 @@ public final class ObjectSolidContactController {
     /**
      * ROM {@code Reverse_gravity_flag} ($FFFFF7C6), read for the solid-object rows.
      *
-     * <p>{@code SolidObject_cont} (sonic3k.asm:41403-41424), {@code sub_1E0C2}'s
-     * {@code loc_1E0FC} (:41569-41573) and {@code loc_1E154} (:41623-41628),
-     * {@code MvSonicOnPtfm} (:41648-41653) and {@code sub_1E410}'s {@code loc_1E44C} /
-     * {@code loc_1E4D6} (:41999, :42053-42071) each branch on it. The flag is the whole
+     * <p>{@code SolidObject_cont} (sonic3k.asm:41443-41464), {@code sub_1E0C2}'s
+     * {@code loc_1E0FC} (:41609-41613) and {@code loc_1E154} (:41663-41668),
+     * {@code MvSonicOnPtfm} (:41688-41693) and {@code sub_1E410}'s {@code loc_1E44C} /
+     * {@code loc_1E4D6} (:42039, :42093-42111) each branch on it. The flag is the whole
      * gate — the ROM never checks the zone — so this stays engine-internal state rather
      * than a {@code GameRules} member, and S1 and S2 (which never set it) are unaffected.
      */
@@ -5151,7 +5151,7 @@ public final class ObjectSolidContactController {
     }
 
     /**
-     * ROM: {@code loc_1E154} (sonic3k.asm:41606-41632) writes the position
+     * ROM: {@code loc_1E154} (sonic3k.asm:41646-41672) writes the position
      * lift before testing {@code y_vel}; {@code Solid_Landed} /
      * {@code SolidObject_Landed} (S1/S2) test {@code y_vel} first and bail
      * without lifting. Gated via
@@ -5173,7 +5173,7 @@ public final class ObjectSolidContactController {
      * (s2.asm:35404-35412,35447-35453;
      * s1disasm/_incObj/sub SolidObject.asm:181-184,211-214). S3K sends it to
      * {@code loc_1E0D4}, the TOP/BOTTOM path
-     * (sonic3k.asm:41463-41466,41541-41546). Gated via
+     * (sonic3k.asm:41503-41506,41581-41586). Gated via
      * {@link CollisionRules#solidObjectBarelyPokingResolvesAsSide()}.
      */
     private boolean solidObjectBarelyPokingResolvesAsSide(PlayableEntity player) {
@@ -5277,7 +5277,7 @@ public final class ObjectSolidContactController {
         } else if (player instanceof AbstractPlayableSprite sprite
                 && (sprite.getYRadius() != sprite.getStandYRadius()
                 || sprite.getXRadius() != sprite.getStandXRadius())) {
-            // ROM Player_TouchFloor (sonic3k.asm:24341-24343 / 29134-29136) unconditionally
+            // ROM Player_TouchFloor (sonic3k.asm:24381-24383 / 29134-29136) unconditionally
             // resets y_radius/x_radius before testing Status_Roll. S3K despawn marker
             // writes Status_InAir directly and can leave Tails with rolling radii but no
             // roll bit — so S3K needs this reset even when not rolling.

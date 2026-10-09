@@ -145,11 +145,11 @@
   updated it dynamically. At the hollow tree area (cameraX ~`$2D30`, past `$2B00`), real
   hardware uses `$0004` (nearly invisible dark pixel) while the engine keeps `$020E` (bright red).
 - **Evidence**:
-  - ROM disassembly s3.asm lines 32171-32194: stage 2 unconditionally writes `$020E`, then
+  - ROM disassembly s3.asm lines 32226-32249: stage 2 unconditionally writes `$020E`, then
     conditionally overwrites at `$2B00` and `$2D80` thresholds
   - Engine `Sonic3kAIZEvents.updateAct1()` had NO per-frame palette writes in the
     `boundariesUnlocked` block — only `resizeMaxYFromX()` for Y boundaries
-  - S/H mode is confirmed OFF (`$8C81` = bit 3 clear, s3.asm lines 184, 273, 1520)
+  - S/H mode is confirmed OFF (`$8C81` = bit 3 clear, s3.asm lines 184, 273, 1542)
   - Trailing tiles test: 48 trailing tiles have pixel-15 but 0 FG refs → NOT the source
 - **Changes**: Added `updateStage2PaletteColor(cameraX)` to `Sonic3kAIZEvents.updateAct1()`
   after `resizeMaxYFromX()`. Converts Sega color word → `Palette.Color`, sets `pal.setColor(15, ...)`,

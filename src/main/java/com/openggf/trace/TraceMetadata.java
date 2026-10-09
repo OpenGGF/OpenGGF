@@ -459,7 +459,7 @@ public record TraceMetadata(
 
     /**
      * The ROM {@code V_int_run_count} free-running VBlank counter
-     * (sonic3k.constants.asm:790, {@code ds.l 1}) captured once at segment-arm
+     * (sonic3k.constants.asm:812, {@code ds.l 1}) captured once at segment-arm
      * time, or {@code null} for traces recorded before the v6.32-s3k recorder
      * or for non-bonus segments. The recorder reads it one V-int before row
      * zero, so it precedes row zero's {@code vblank_counter} (the same

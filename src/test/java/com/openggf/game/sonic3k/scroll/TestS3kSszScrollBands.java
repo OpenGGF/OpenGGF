@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Sky Sanctuary act-1 background scroll parity with {@code SSZ1_BackgroundInit},
  * {@code SSZ1_BackgroundEvent}, {@code sub_579F0} and {@code sub_57A60}
- * (sonic3k.asm:116385-116708).
+ * (sonic3k.asm:116431-116754).
  *
  * <p>Every expectation below is derived from the ROM listing, not from the Java: the
  * {@code $28}/{@code $160}/{@code $180} framing offsets and the {@code $1800} latch from

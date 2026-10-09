@@ -65,10 +65,10 @@
 
 ### Sonic 3 / Sonic 3K
 
-- `Level_frame_counter` advances only in `LevelLoop`, in `docs/skdisasm/s3.asm:5966-5989` and `docs/skdisasm/sonic3k.asm:7884-7911`.
-- `Lag_frame_count` increments in `VInt_0_Main`, in `docs/skdisasm/s3.asm:737-755` and `docs/skdisasm/sonic3k.asm:566-581`.
-- `Do_Updates` resets `Lag_frame_count` during a normal frame, in `docs/skdisasm/s3.asm:940-949` and `docs/skdisasm/sonic3k.asm:784-793`.
-- `sonic3k.constants.asm` gives symbol order for `Lag_frame_count`, `Level_frame_counter`, and `V_int_run_count` in `docs/skdisasm/sonic3k.constants.asm:555` and `docs/skdisasm/sonic3k.constants.asm:782-790`, but the plan intentionally treats exact S3K hex addresses as a research gate before recorder implementation. Do not guess them in code.
+- `Level_frame_counter` advances only in `LevelLoop`, in `docs/skdisasm/s3.asm:6002-6025` and `docs/skdisasm/sonic3k.asm:7916-7943`.
+- `Lag_frame_count` increments in `VInt_0_Main`, in `docs/skdisasm/s3.asm:759-777` and `docs/skdisasm/sonic3k.asm:588-603`.
+- `Do_Updates` resets `Lag_frame_count` during a normal frame, in `docs/skdisasm/s3.asm:962-971` and `docs/skdisasm/sonic3k.asm:806-815`.
+- `sonic3k.constants.asm` gives symbol order for `Lag_frame_count`, `Level_frame_counter`, and `V_int_run_count` in `docs/skdisasm/sonic3k.constants.asm:574` and `docs/skdisasm/sonic3k.constants.asm:804-812`, but the plan intentionally treats exact S3K hex addresses as a research gate before recorder implementation. Do not guess them in code.
 
 ## Schema Direction
 

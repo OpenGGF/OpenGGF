@@ -9,29 +9,29 @@ the low 16-bit offsets shown in the notes column.
 
 | Recorder field | S3K label(s) | Value | Evidence | Notes |
 | --- | --- | --- | --- | --- |
-| Game mode byte | `Game_mode` | `$FFFFF600` | `docs/skdisasm/sonic3k.constants.asm:525-531` | BizHawk `mainmemory` offset `$F600`. |
-| In-level game-mode value | level mode sentinel | `$0C` | `docs/skdisasm/sonic3k.asm:5628`, `6578`, `16778` | S3K writes `#$0C` to `(Game_mode).w` when entering a normal level. |
-| Held input P1 | `Ctrl_1_held` | `$FFFFF604` | `docs/skdisasm/sonic3k.constants.asm:528-531` | `Ctrl_1_held_logical` is the logical copy at `$FFFFF602`; raw held input remains at `$FFFFF604`. |
-| Held-logical input P1 | `Ctrl_1_held_logical` | `$FFFFF602` | `docs/skdisasm/sonic3k.constants.asm:528-531` | BizHawk offset `$F602`. |
-| Player 1 OST base | `Player_1` | `$FFFFB400` | `docs/skdisasm/sonic3k.constants.asm:303-307` | First entry in `Object_RAM`. BizHawk offset `$B400`. |
-| Player 2 OST base | `Player_2` | `$FFFFB44A` | `docs/skdisasm/sonic3k.constants.asm:303-305` | `Player_2 = Player_1 + object_size`. |
+| Game mode byte | `Game_mode` | `$FFFFF600` | `docs/skdisasm/sonic3k.constants.asm:544-550` | BizHawk `mainmemory` offset `$F600`. |
+| In-level game-mode value | level mode sentinel | `$0C` | `docs/skdisasm/sonic3k.asm:5660`, `6578`, `16778` | S3K writes `#$0C` to `(Game_mode).w` when entering a normal level. |
+| Held input P1 | `Ctrl_1_held` | `$FFFFF604` | `docs/skdisasm/sonic3k.constants.asm:547-550` | `Ctrl_1_held_logical` is the logical copy at `$FFFFF602`; raw held input remains at `$FFFFF604`. |
+| Held-logical input P1 | `Ctrl_1_held_logical` | `$FFFFF602` | `docs/skdisasm/sonic3k.constants.asm:547-550` | BizHawk offset `$F602`. |
+| Player 1 OST base | `Player_1` | `$FFFFB400` | `docs/skdisasm/sonic3k.constants.asm:310-314` | First entry in `Object_RAM`. BizHawk offset `$B400`. |
+| Player 2 OST base | `Player_2` | `$FFFFB44A` | `docs/skdisasm/sonic3k.constants.asm:310-312` | `Player_2 = Player_1 + object_size`. |
 | OST slot size | `object_size` | `$4A` bytes | `docs/skdisasm/sonic3k.constants.asm:113`, `303-307` | Critical S3K divergence from S1/S2 `$40`. |
-| Total OST slots | `Object_RAM` pool | `110` | `docs/skdisasm/sonic3k.constants.asm:303-323` | 3 fixed entries + 90 dynamic + 17 fixed in-level/support entries. |
-| First dynamic OST slot index | `Dynamic_object_RAM` | `3` | `docs/skdisasm/sonic3k.constants.asm:304-307` | `(Dynamic_object_RAM - Player_1) / $4A = 3`. |
-| Dynamic OST slot count | `Dynamic_object_RAM ... Dynamic_object_RAM_end` | `90` | `docs/skdisasm/sonic3k.constants.asm:307-308` | Dynamic scan window is slots `3..92`. |
-| Camera X | `Camera_X_pos` | `$FFFFEE7A` | `docs/skdisasm/sonic3k.constants.asm:386-415`, `docs/architecture/research/2026-04-21-s3k-trace-addresses.md` | `Apparent_zone_and_act` anchors `$EE50`; counting the intervening fields places `Camera_X_pos` at `$EE7A` (`mainmemory $EE7A`). |
-| Camera Y | `Camera_Y_pos` | `$FFFFEE7E` | `docs/skdisasm/sonic3k.constants.asm:386-415`, `docs/architecture/research/2026-04-21-s3k-trace-addresses.md` | Immediately follows `Camera_X_pos`. |
-| Current zone/act word | `Current_zone_and_act` | `$FFFFFE14` | `docs/skdisasm/sonic3k.constants.asm:790-793`, `docs/architecture/research/2026-04-19-trace-lag-model-matrix.md` | Frozen by the lag-model matrix. |
-| Current zone byte | `Current_zone` | `$FFFFFE14` | `docs/skdisasm/sonic3k.constants.asm:791-793` | BizHawk offset `$FE14`. |
-| Current act byte | `Current_act` | `$FFFFFE15` | `docs/skdisasm/sonic3k.constants.asm:791-793` | BizHawk offset `$FE15`. |
-| Ring count | `Ring_count` | `$FFFFFE24` | `docs/skdisasm/sonic3k.constants.asm:800-806`, `790-793` | Starting from frozen `Current_zone_and_act = $FE14`, the intervening HUD bytes place `Ring_count` at `$FE24`. |
-| Player mode | `Player_mode` | `$FFFFFF08` | `docs/skdisasm/sonic3k.constants.asm:870-892` | `Perfect_rings_flag` ends at `$FF07`; `Player_mode` is the next word at BizHawk offset `$FF08`. |
-| Player routine offset | `routine` | `$05` | `docs/skdisasm/sonic3k.constants.asm:20`, `docs/skdisasm/sonic3k.asm:21883-21891` | S3K player dispatch reads `routine(a0)` at offset `$05`, not `$24`. |
+| Total OST slots | `Object_RAM` pool | `110` | `docs/skdisasm/sonic3k.constants.asm:310-330` | 3 fixed entries + 90 dynamic + 17 fixed in-level/support entries. |
+| First dynamic OST slot index | `Dynamic_object_RAM` | `3` | `docs/skdisasm/sonic3k.constants.asm:311-314` | `(Dynamic_object_RAM - Player_1) / $4A = 3`. |
+| Dynamic OST slot count | `Dynamic_object_RAM ... Dynamic_object_RAM_end` | `90` | `docs/skdisasm/sonic3k.constants.asm:314-315` | Dynamic scan window is slots `3..92`. |
+| Camera X | `Camera_X_pos` | `$FFFFEE7A` | `docs/skdisasm/sonic3k.constants.asm:399-428`, `docs/architecture/research/2026-04-21-s3k-trace-addresses.md` | `Apparent_zone_and_act` anchors `$EE50`; counting the intervening fields places `Camera_X_pos` at `$EE7A` (`mainmemory $EE7A`). |
+| Camera Y | `Camera_Y_pos` | `$FFFFEE7E` | `docs/skdisasm/sonic3k.constants.asm:399-428`, `docs/architecture/research/2026-04-21-s3k-trace-addresses.md` | Immediately follows `Camera_X_pos`. |
+| Current zone/act word | `Current_zone_and_act` | `$FFFFFE14` | `docs/skdisasm/sonic3k.constants.asm:812-815`, `docs/architecture/research/2026-04-19-trace-lag-model-matrix.md` | Frozen by the lag-model matrix. |
+| Current zone byte | `Current_zone` | `$FFFFFE14` | `docs/skdisasm/sonic3k.constants.asm:813-815` | BizHawk offset `$FE14`. |
+| Current act byte | `Current_act` | `$FFFFFE15` | `docs/skdisasm/sonic3k.constants.asm:813-815` | BizHawk offset `$FE15`. |
+| Ring count | `Ring_count` | `$FFFFFE24` | `docs/skdisasm/sonic3k.constants.asm:822-828`, `790-793` | Starting from frozen `Current_zone_and_act = $FE14`, the intervening HUD bytes place `Ring_count` at `$FE24`. |
+| Player mode | `Player_mode` | `$FFFFFF08` | `docs/skdisasm/sonic3k.constants.asm:892-914` | `Perfect_rings_flag` ends at `$FF07`; `Player_mode` is the next word at BizHawk offset `$FF08`. |
+| Player routine offset | `routine` | `$05` | `docs/skdisasm/sonic3k.constants.asm:20`, `docs/skdisasm/sonic3k.asm:21919-21927` | S3K player dispatch reads `routine(a0)` at offset `$05`, not `$24`. |
 | Player primary status offset | `status` | `$2A` | `docs/skdisasm/sonic3k.constants.asm:30` | Primary status byte used for the CSV booleans. |
 | Player secondary status offset | `status_secondary` | `$2B` | `docs/skdisasm/sonic3k.constants.asm:54` | Shield / invincibility / speed-shoes flags live here; not emitted into v3 CSV. |
 | Player tertiary status offset | `status_tertiary` | `$37` | `docs/skdisasm/sonic3k.constants.asm:65` | Character-specific tertiary flags; not emitted into v3 CSV. |
 | Control-lock timer offset | `move_lock` | `$32` | `docs/skdisasm/sonic3k.constants.asm:61` | Word countdown inside the player OST. |
-| Global control-lock byte | `Ctrl_1_locked` | `$FFFFF7CA` | `docs/skdisasm/sonic3k.constants.asm:683-689`, `docs/architecture/research/2026-04-21-s3k-trace-addresses.md` | Useful extra guard for intro/cutscene recording. |
+| Global control-lock byte | `Ctrl_1_locked` | `$FFFFF7CA` | `docs/skdisasm/sonic3k.constants.asm:702-708`, `docs/architecture/research/2026-04-21-s3k-trace-addresses.md` | Useful extra guard for intro/cutscene recording. |
 | Stand-on-object tracker offset | `interact` | `$42` | `docs/skdisasm/sonic3k.constants.asm:74` | Stores the RAM address of the ridden object, not an S1/S2-style slot byte. |
 | Player X position | `x_pos` | `$10` | `docs/skdisasm/sonic3k.constants.asm:11`, `51-75` | Player positions are 32-bit: pixel word at `$10`, subpixel word at `$12`. |
 | Player Y position | `y_pos` | `$14` | `docs/skdisasm/sonic3k.constants.asm:12`, `51-75` | Pixel word at `$14`, subpixel word at `$16`. |
@@ -39,8 +39,8 @@ the low 16-bit offsets shown in the notes column.
 | Player Y velocity | `y_vel` | `$1A` | `docs/skdisasm/sonic3k.constants.asm:23` | Signed word. |
 | Player ground speed | `ground_vel` | `$1C` | `docs/skdisasm/sonic3k.constants.asm:51` | Signed word. |
 | Player angle | `angle` | `$26` | `docs/skdisasm/sonic3k.constants.asm:29` | Same semantic use as S1/S2. |
-| Player hurt routine value | `routine = 4` | `$04` | `docs/skdisasm/sonic3k.asm:21080-21111`, `21889-21891`, `26087-26094`, `30337-30344` | `HurtCharacter` writes `#4,routine(a0)` and all three character index tables map entry `4` to the hurt state. |
-| Player death routine value | `routine = 6` | `$06` | `docs/skdisasm/sonic3k.asm:21111-21144`, `21889-21892`, `26087-26095`, `30337-30345` | `Kill_Character` transitions into routine `6`; all three character tables map entry `6` to death. |
+| Player hurt routine value | `routine = 4` | `$04` | `docs/skdisasm/sonic3k.asm:21116-21147`, `21889-21891`, `26087-26094`, `30337-30344` | `HurtCharacter` writes `#4,routine(a0)` and all three character index tables map entry `4` to the hurt state. |
+| Player death routine value | `routine = 6` | `$06` | `docs/skdisasm/sonic3k.asm:21147-21180`, `21889-21892`, `26087-26095`, `30337-30345` | `Kill_Character` transitions into routine `6`; all three character tables map entry `6` to death. |
 
 ## Player_mode Routing
 
@@ -99,9 +99,9 @@ The recorder should use the canonical short names already used by the engine and
 
 `Lag_frame_count` is diagnostic only.
 
-- `docs/skdisasm/sonic3k.asm:570` increments `(Lag_frame_count).w` from V-int routine 0 during lag
+- `docs/skdisasm/sonic3k.asm:592` increments `(Lag_frame_count).w` from V-int routine 0 during lag
   VBlanks.
-- `docs/skdisasm/sonic3k.asm:786` clears `(Lag_frame_count).w` at the end of a normal frame.
+- `docs/skdisasm/sonic3k.asm:808` clears `(Lag_frame_count).w` at the end of a normal frame.
 - The counter therefore reads `0` on non-lag frames and a small positive value when gameplay did
   not advance but VBlank still ran.
 

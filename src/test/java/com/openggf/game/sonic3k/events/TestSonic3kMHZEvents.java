@@ -84,7 +84,7 @@ class TestSonic3kMHZEvents {
 
     @Test
     void act1LevelLoadPinsCameraAndMinXToRomMhzStart() {
-        // ROM Get_LevelSizeStart loc_1BF1E (sonic3k.asm:38214-38225): MHZ1
+        // ROM Get_LevelSizeStart loc_1BF1E (sonic3k.asm:38254-38265): MHZ1
         // (Current_zone_and_act==$0700) played as Sonic/Tails (Player_mode<3)
         // with Sonic 3 locked on (SK_alone_flag==0) overrides Camera_min_X_pos
         // to $00C0 and forces the initial Camera_X_pos to $00C0.
@@ -107,7 +107,7 @@ class TestSonic3kMHZEvents {
     void act1LevelLoadKeepsLevelSizesMinXForKnuckles() {
         // ROM loc_1BF1E skips the $00C0 override when Player_mode >= 3
         // (Knuckles, cmpi.w #3 / bhs.s), leaving Camera_min_X_pos at MHZ1's
-        // LevelSizes xstart of 0 (sonic3k.asm:38111,38217-38218).
+        // LevelSizes xstart of 0 (sonic3k.asm:38151,38257-38258).
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
         config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");

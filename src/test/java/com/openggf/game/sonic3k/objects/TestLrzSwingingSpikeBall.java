@@ -14,7 +14,7 @@ import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * {@code Obj_LRZSwingingSpikeBall} (sonic3k.asm:88652-88759, ROM {@code $43500}).
+ * {@code Obj_LRZSwingingSpikeBall} (sonic3k.asm:88698-88805, ROM {@code $43500}).
  *
  * <p>The geometry expectations below were computed from the ROM's own {@code SineTable}
  * ({@code Levels/Misc/sine.bin}) through {@code sub_43604}'s arithmetic, not read back from the
@@ -66,7 +66,7 @@ class TestLrzSwingingSpikeBall {
     private static final int BASE_X = 0x0800;
     private static final int BASE_Y = 0x0600;
 
-    /** {@code andi.w #$F,d0 / move.w d0,mainspr_childsprites(a1)} (sonic3k.asm:88681-88683). */
+    /** {@code andi.w #$F,d0 / move.w d0,mainspr_childsprites(a1)} (sonic3k.asm:88727-88729). */
     @Test
     void theLinkCountIsTheSubtypesLowNibble() {
         for (int subtype : new int[] {2, 3, 4}) {
@@ -75,7 +75,7 @@ class TestLrzSwingingSpikeBall {
         }
     }
 
-    /** {@code moveq #2,d0 / btst #0,status(a0) / neg.w d0} (sonic3k.asm:88699-88703). */
+    /** {@code moveq #2,d0 / btst #0,status(a0) / neg.w d0} (sonic3k.asm:88745-88749). */
     @Test
     void theFlipFlagReversesTheSwing() {
         assertEquals(2, ball(3, false).angleStep());
@@ -120,7 +120,7 @@ class TestLrzSwingingSpikeBall {
         assertEquals(BASE_X, ball.getCentreX());
     }
 
-    /** {@code tst.b subtype(a0) / bpl} (sonic3k.asm:88727-88730): bit 7 starts one step further. */
+    /** {@code tst.b subtype(a0) / bpl} (sonic3k.asm:88773-88776): bit 7 starts one step further. */
     @Test
     void subtypeBitSevenStartsTheChainOneStepFurtherOut() {
         LrzSwingingSpikeBallObjectInstance plain = ball(3, false);
@@ -131,7 +131,7 @@ class TestLrzSwingingSpikeBall {
         assertEquals(plain.getCentreX() + 16, offset.getCentreX(), "and so does the ball");
     }
 
-    /** {@code move.b #$9A,collision_flags(a0)} (sonic3k.asm:88661). */
+    /** {@code move.b #$9A,collision_flags(a0)} (sonic3k.asm:88707). */
     @Test
     void theBallIsHarmful() {
         assertEquals(0x9A, ball(3, false).getCollisionFlags());

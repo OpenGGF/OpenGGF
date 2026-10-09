@@ -17,8 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code Obj_LRZRockCrusher} (sonic3k.asm:196988-197400, ROM {@code $900E4}) and its timer child
- * {@code loc_90502} (:197215-197260).
+ * {@code Obj_LRZRockCrusher} (sonic3k.asm:197095-197507, ROM {@code $900E4}) and its timer child
+ * {@code loc_90502} (:197322-197367).
  *
  * <p>Every number here is a ROM table entry or a ROM comparison: the two {@code Check_CameraInRange}
  * windows {@code word_901B8}/{@code word_901C4}, the new camera limits those tables' entries 4 and
@@ -170,7 +170,7 @@ class TestLrzRockCrusher {
     }
 
     /**
-     * {@code Check_CameraInRange} (sonic3k.asm:180433-180446) with {@code word_901B8}:
+     * {@code Check_CameraInRange} (sonic3k.asm:180524-180537) with {@code word_901B8}:
      * {@code Camera_Y} in {@code [$5E0,$740]} and {@code Camera_X} in {@code [$DC0,$EC0]}, both
      * inclusive. Outside it the routine pops its return address and nothing in the init tail runs.
      */
@@ -193,7 +193,7 @@ class TestLrzRockCrusher {
     }
 
     /**
-     * The init tail (:197001-197009): the four live limits go to {@code Camera_stored_*}, entries
+     * The init tail (:197108-197116): the four live limits go to {@code Camera_stored_*}, entries
      * 4 and 5 of the chosen table become {@code Camera_max_X_pos} and
      * {@code Camera_target_max_Y_pos}, and entry 4 is also kept in {@code $1C(a0)}.
      */
@@ -216,7 +216,7 @@ class TestLrzRockCrusher {
         assertEquals(0x0EA0, harness.crusher.cameraTargetX(), "$1C(a0)");
     }
 
-    /** {@code word_901C4} (:197052) is the other subtype's window and its limits. */
+    /** {@code word_901C4} (:197159) is the other subtype's window and its limits. */
     @Test
     void theOtherSubtypeUsesTheSecondTable() {
         LrzRockCrusher outside = harness(2, 0xE40, 0x680);
@@ -231,7 +231,7 @@ class TestLrzRockCrusher {
     }
 
     /**
-     * {@code loc_901F4} (:197063-197093): bit 0 latches only once
+     * {@code loc_901F4} (:197170-197200): bit 0 latches only once
      * {@code Camera_target_max_Y_pos} equals {@code Camera_max_Y_pos}, bit 1 only once the camera
      * has reached {@code $1C(a0)}, and the crusher leaves routine 0 only with both.
      */
@@ -260,7 +260,7 @@ class TestLrzRockCrusher {
     }
 
     /**
-     * {@code loc_9026E} (:197097-197102): {@code bchg #0,$38(a0)} makes the step {@code +1} when
+     * {@code loc_9026E} (:197204-197209): {@code bchg #0,$38(a0)} makes the step {@code +1} when
      * the bit was clear, so the first rumble frame moves the crusher one pixel DOWN before the
      * floor is consulted. (The bit alternates, so there is no net descent -- a class that read
      * this as a creep would drift a pixel a frame; the alternation itself needs terrain to
@@ -277,8 +277,8 @@ class TestLrzRockCrusher {
     }
 
     /**
-     * {@code tst.w d1 / bpl.s loc_902BE} (:197102-197103) and {@code loc_902BE}
-     * (:197127-197135). A NEGATIVE floor distance means the crusher is still buried and it keeps
+     * {@code tst.w d1 / bpl.s loc_902BE} (:197209-197210) and {@code loc_902BE}
+     * (:197234-197242). A NEGATIVE floor distance means the crusher is still buried and it keeps
      * rumbling; anything else -- which in the level only happens once the timer child has rewritten
      * the layout out from under it -- loads routine 4, the {@code $27}-frame delay and
      * {@code word_902EC}'s drop target, and hands {@code Camera_target_max_Y_pos} back.
@@ -301,7 +301,7 @@ class TestLrzRockCrusher {
                 "Camera_stored_max_Y_pos handed back");
     }
 
-    /** {@code word_902EC} entry 1 is the other subtype's drop target (:197138). */
+    /** {@code word_902EC} entry 1 is the other subtype's drop target (:197245). */
     @Test
     void theOtherSubtypeDropsToItsOwnTarget() {
         LrzRockCrusher harness = harness(2, 0x500, 0x700);
@@ -311,7 +311,7 @@ class TestLrzRockCrusher {
     }
 
     /**
-     * {@code loc_90502}/{@code loc_90512} (:197215-197245): {@code (3*60)-1} frames, then the
+     * {@code loc_90502}/{@code loc_90512} (:197322-197352): {@code (3*60)-1} frames, then the
      * NEGATIVE request for subtype 0 -- {@code st (Events_bg+$0C)} sets the whole word -- and the
      * screen shake cleared.
      */
@@ -339,7 +339,7 @@ class TestLrzRockCrusher {
     }
 
     /**
-     * {@code loc_9056E} (:197248-197256): the other subtype writes the LOW byte only, so the same
+     * {@code loc_9056E} (:197355-197363): the other subtype writes the LOW byte only, so the same
      * word reads POSITIVE and {@code LRZ1_ScreenEvent} takes its other branch, and the shake is
      * left running.
      */
@@ -358,7 +358,7 @@ class TestLrzRockCrusher {
     }
 
     /**
-     * The pieces' shake, {@code loc_90436} (sonic3k.asm:197486-197508). {@code d3} is
+     * The pieces' shake, {@code loc_90436} (sonic3k.asm:197593-197615). {@code d3} is
      * {@code (subtype & 8) >> 1} and {@code d1} is {@code 0} or {@code 2}; the sum indexes
      * {@code byte_904AC} as a BYTE offset into four {@code (frames, delta)} PAIRS, so the pair
      * index is that sum halved and the upper row reads the table's second half. Reading the sum
@@ -395,7 +395,7 @@ class TestLrzRockCrusher {
             int[] first = table[((subtype & 8) >> 1) / 2];
             assertEquals(first[1], piece.delta(), "piece " + index + " first delta");
             // $39(a0) allows two more pair picks and loc_90490 then returns the piece to
-            // routine 4 with $2E = ((subtype & 8) >> 1) + 4 (:197509-197515), after which
+            // routine 4 with $2E = ((subtype & 8) >> 1) + 4 (:197616-197622), after which
             // routine 4 starts the next burst -- so the piece cycles 6 -> 4 -> 6 forever.
             boolean returnedToWait = false;
             for (int frame = 0; frame < 60 && !returnedToWait; frame++) {
@@ -416,7 +416,7 @@ class TestLrzRockCrusher {
         }
     }
 
-    /** {@code move.b #$40,y_radius(a0)}, {@code collision_property -1}, {@code ObjDat} (:197013-197016). */
+    /** {@code move.b #$40,y_radius(a0)}, {@code collision_property -1}, {@code ObjDat} (:197120-197123). */
     @Test
     void renderAndCollisionStateAreTheInitWrites() {
         LrzRockCrusher zero = harness(0, 0xE40, 0x680);

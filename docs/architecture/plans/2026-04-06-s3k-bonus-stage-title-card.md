@@ -303,7 +303,7 @@ In `src/main/java/com/openggf/game/sonic3k/titlecard/Sonic3kTitleCardManager.jav
 ```java
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
 
-    // Bonus mode element definitions (ObjArray_TtlCardBonus, sonic3k.asm line 62482)
+    // Bonus mode element definitions (ObjArray_TtlCardBonus, sonic3k.asm line 62522)
     // VDP coords converted to screen coords (subtract 128)
     private static final int BONUS_ELEMENT_COUNT = 2;
     private static final int BONUS_ELEM_BONUS = 0;
@@ -322,7 +322,7 @@ In `src/main/java/com/openggf/game/sonic3k/titlecard/Sonic3kTitleCardManager.jav
      * Uses 2 horizontal elements (frames 19/20) instead of the normal 4-element layout.
      * Both elements have exit priority 1 (exit simultaneously).
      *
-     * <p>ROM reference: ObjArray_TtlCardBonus (sonic3k.asm line 62482).
+     * <p>ROM reference: ObjArray_TtlCardBonus (sonic3k.asm line 62522).
      */
     @Override
     public void initializeBonus() {

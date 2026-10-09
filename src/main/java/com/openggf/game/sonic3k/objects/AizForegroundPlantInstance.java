@@ -26,7 +26,7 @@ import java.util.List;
  *   <li>Bits 4-7: Scroll rate index (0-6)</li>
  * </ul>
  * <p>
- * ROM reference: sonic3k.asm lines 60430-60582
+ * ROM reference: sonic3k.asm lines 60470-60622
  */
 public class AizForegroundPlantInstance extends AbstractObjectInstance implements RewindRecreatable {
 

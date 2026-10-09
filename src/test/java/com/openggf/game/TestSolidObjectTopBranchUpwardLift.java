@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Regression tests for the per-game gating of the
  * {@code SolidObject_cont} top-branch upward-velocity lift.
  *
- * <p>S3K {@code loc_1E154} (sonic3k.asm:41606-41632) writes the position lift
+ * <p>S3K {@code loc_1E154} (sonic3k.asm:41646-41672) writes the position lift
  * unconditionally before testing {@code y_vel(a1)}, so an upward-moving player
  * inside the small-overlap window receives the +(3 - distY) px shift even
  * though no standing/landing state changes.  S1 {@code Solid_Landed}

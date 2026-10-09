@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** AnPal_HPZ counter semantics (sonic3k.asm:3934-3951). */
+/** AnPal_HPZ counter semantics (sonic3k.asm:3966-3983). */
 class TestHpzZoneRuntimeStatePaletteCycle {
 
     private static List<Integer> writes(HpzZoneRuntimeState state, int ticks) {

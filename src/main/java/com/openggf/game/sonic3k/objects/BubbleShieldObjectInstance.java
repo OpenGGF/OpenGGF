@@ -107,7 +107,7 @@ public class BubbleShieldObjectInstance extends ShieldObjectInstance {
     }
 
     /**
-     * ROM: {@code Obj_BubbleShield_Main} sonic3k.asm:34907-34914 sets the shield's Y-flip bit from
+     * ROM: {@code Obj_BubbleShield_Main} sonic3k.asm:34947-34954 sets the shield's Y-flip bit from
      * {@code Reverse_gravity_flag} after masking the inherited status down to the
      * orientation bit. See {@link ShieldAnimationArtLifecycle#reverseGravityMirror}.
      */

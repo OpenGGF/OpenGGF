@@ -170,7 +170,7 @@ class TestTraceReplayStartPositionPolicy {
 
         // The history witness above is necessary but never sufficient to
         // downgrade a row: LevelLoop bumps Level_frame_counter in the
-        // instruction after Wait_VSync returns (skdisasm/sonic3k.asm:7884-7889),
+        // instruction after Wait_VSync returns (skdisasm/sonic3k.asm:7916-7921),
         // so a row pair that advances Level_frame_counter by one AND
         // V_int_run_count by one is, by construction, one completed main-loop
         // iteration that consumed exactly its own V-blank. This pair does

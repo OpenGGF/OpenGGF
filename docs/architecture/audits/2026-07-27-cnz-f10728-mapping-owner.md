@@ -27,19 +27,19 @@ predicate, or zone predicate is required.
 
 The relevant balloon touch routine writes `y_vel=-$700`, sets
 `Status_InAir`, and clears `object_control`
-(`docs/skdisasm/sonic3k.asm:66809-66816`). The later cylinder rider pass sees
+(`docs/skdisasm/sonic3k.asm:66849-66856`). The later cylinder rider pass sees
 its standing byte still set and executes the held-position and
 `PlayerTwist_UpdateFrame` path. Its later `SolidObjectFull` call clears
 standing status. On the following object pass, the cylinder reaches
 `loc_32604`, which clears only the rider byte
-(`sonic3k.asm:68024-68025,68076-68083`).
+(`sonic3k.asm:68064-68065,68116-68123`).
 
 The committed trace confirms the ordering without a new native probe. At
 f10727 Sonic is airborne with `object_control=0` while the final twist
 `mapping_frame=$59` remains visible. At f10728 the ordinary player pass keeps
 `anim=$00` and publishes `mapping_frame=$08`. `Animate_Sonic` owns that next
 write: the walk/run handler selects the current `anim_frame` mapping before
-its timer update (`sonic3k.asm:24849-24879`).
+its timer update (`sonic3k.asm:24889-24919`).
 
 ## RED/GREEN
 

@@ -14,7 +14,7 @@ import java.util.Objects;
  *
  * <ul>
  *   <li>{@code Events_bg+$00..$0F}: {@code LevelSetup} clears all sixteen bytes on every load
- *       (sonic3k.asm:102201-102204), so a respawn forgets a beaten boss. {@code sub_575EA} reads
+ *       (sonic3k.asm:102247-102250), so a respawn forgets a beaten boss. {@code sub_575EA} reads
  *       {@code +$00}/{@code +$02} as zero / positive / negative for idle / fighting / beaten,
  *       tests {@code +$01}/{@code +$03} as the arena-lock latches, {@code +$04} as the arrival
  *       control lock, {@code +$05} as "an event owns the bounds" and {@code +$06} as the final

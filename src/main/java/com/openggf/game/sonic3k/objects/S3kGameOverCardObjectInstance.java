@@ -6,23 +6,23 @@ import com.openggf.level.objects.AbstractGameOverCardObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 
 /**
- * Sonic 3&amp;K {@code Obj_GameOver} (docs/skdisasm/sonic3k.asm:62020-62101).
+ * Sonic 3&amp;K {@code Obj_GameOver} (docs/skdisasm/sonic3k.asm:62060-62141).
  *
  * <ul>
- *   <li>{@code tst.l (Nem_decomp_queue).w} (:62021-62023): the ROM holds until
+ *   <li>{@code tst.l (Nem_decomp_queue).w} (:62061-62063): the ROM holds until
  *       the Nemesis queue that {@code Load_PLC_2 #3} filled has drained. The
  *       engine has no per-frame S3K Nemesis drain (see
  *       {@code Sonic3kTitleCardManager}), so the card starts sliding on its
  *       first frame; recorded in docs/S3K_KNOWN_DISCREPANCIES.md.</li>
  *   <li>{@code loc_2D5CE}: the GAME word (frame 0 only, {@code tst.b
  *       mapping_frame}) calls {@code SaveGame_LivesContinues} before setting
- *       up (:62027-62030; routine at :15975-15997), so the save slot records
+ *       up (:62067-62070; routine at :16011-16033), so the save slot records
  *       the zero life count and the continues in hand.</li>
- *   <li>{@code loc_2D62A}: {@code move.w #8*60,anim_frame_timer(a0)} (:62059).</li>
+ *   <li>{@code loc_2D62A}: {@code move.w #8*60,anim_frame_timer(a0)} (:62099).</li>
  *   <li>{@code loc_2D638}: {@code Collision_response_list} is zeroed every
- *       wait frame (:62065); bit 0 of the frame is tested first, then
+ *       wait frame (:62105); bit 0 of the frame is tested first, then
  *       {@code Ctrl_1_pressed | Ctrl_2_pressed} against A/B/C/Start
- *       (:62066-62075).</li>
+ *       (:62106-62115).</li>
  * </ul>
  */
 public final class S3kGameOverCardObjectInstance extends AbstractGameOverCardObjectInstance {

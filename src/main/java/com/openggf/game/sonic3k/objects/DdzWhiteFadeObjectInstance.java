@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * Doomsday white-palette effects built on {@code sub_85EB4} and {@code loc_85EE6}
- * (sonic3k.asm:180664-180760).
+ * (sonic3k.asm:180755-180851).
  *
  * <p>{@link Mode#DDZ_FLASH} is {@code loc_83108}: five whitening passes every four frames
  * ({@code $39 = 4}, {@code $3A = 3}, the first on the allocation frame), then {@code loc_85EE6}: eight

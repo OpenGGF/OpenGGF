@@ -102,11 +102,40 @@ an S1 number prefix resolved `11 Bridge.asm` to `_maps/Bridge.asm`.
   Line drift is a mechanical problem; it went to this tool. Design review: Fable,
   2026-10-09.
 
-## Open decision
+## Decision: the fork is the S3K reference (executed 2026-10-09)
 
-Make the pins true before enforcing `check` strictly. S2 and S1 can stay on their
-upstream pins. skdisasm citations follow the fork's annotation branch, which is not on
-the `.gitmodules` URL and lacks 13 pinned upstream commits: either merge upstream into
-the fork branch, point `.gitmodules` at the fork and pin the merge (then
-`remap skdisasm 1a454a0 <merge> --write`), or keep the upstream pin and remap
-`1a454a0 → 044fa46` (2,129 carried, 183 to review).
+The user chose to make the fork canonical. Options weighed: keep the upstream pin and
+remap onto it (loses the fork's 1,812 descriptive labels, which 571 mentions in 102 files
+use), upstream the labels first (depends on sonicretro review), or leave the pins untrue.
+
+- Merged upstream `044fa46` into the fork's annotation branch as `8b2cf3c` and pushed it
+  to `raiscan/skdisasm` `feature/ai-object-pointer-annotations` (fast-forward). Two
+  conflicts, both a fork label beside an upstream constant (`#Status_InAir`,
+  `#PLCID_6C`): kept both. Undefined `loc_`/`sub_` references: none; undefined branch
+  targets: the same 30 include-defined names as both parents.
+- `.gitmodules` points `docs/skdisasm` at the fork (no `branch =`: the TraceChaser
+  boundary guard forbids floating submodule configuration); the gitlink is `8b2cf3c`.
+- `remap skdisasm 1a454a0 8b2cf3c --carry-edited --write`: 10,917 citations moved,
+  760 unchanged, 425 of them carried across in-place upstream edits, 52 refused for
+  review. Left as written: 1,266 citations inside `trace-frontier-log.md`'s hook-protected
+  historic prefix (`check` reports them as `historic`) and 425 in JSON evidence, which
+  `remap` only checks because reviewed manifests are pinned by hash
+  (`capture_fbz_visual_references.py`). Every citation that was ok or
+  near at `1a454a0` and was carried is still ok or near at `8b2cf3c` (2,887 strictly, 91
+  across edits, none wrong; 12 refused). Every changed line differs from the original only
+  in its numbers.
+- `--carry-edited` exists because upstream's renames (`#1` → `#Status_InAir`) edit lines
+  without moving them: a range is carried across a hunk only if the hunk replaces each
+  line with one of the same mnemonic (or label/comment), so new code still refuses.
+
+S3K at the new pin: ok 2,292, near 691, stale 1,363, unverifiable 8,503 (was ok 463,
+near 119, stale 3,807 at `044fa46`). S1 and S2 keep their upstream pins; their local
+checkouts differ from the pins (S1 10 commits behind, S2 one ahead) and citations fit
+both equally, so update the local checkouts rather than the pins.
+
+**Integration recipe.** The remap is regenerated, not rebased: on top of the destination
+branch, revert any earlier remap commit, then rerun
+`python3 tools/disasm/disasm_citations.py remap skdisasm 1a454a0 8b2cf3c --carry-edited --write`
+with the gitlink and `.gitmodules` change, so citations added on other branches since are
+carried too. Local checkouts follow with `git -C docs/skdisasm fetch origin` and a
+checkout of `8b2cf3c` (preserve local modifications).

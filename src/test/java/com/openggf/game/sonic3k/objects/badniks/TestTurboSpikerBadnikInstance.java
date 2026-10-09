@@ -88,7 +88,7 @@ public class TestTurboSpikerBadnikInstance {
             int shellYBeforeMove = shell.getY();
             // ROM loc_87D72 installs loc_87DA4 into the child's own (a0) and ends at
             // Sprite_CheckDeleteTouchXY, so the launch dispatch itself never moves the
-            // shell (docs/skdisasm/sonic3k.asm:184042-184058).
+            // shell (docs/skdisasm/sonic3k.asm:184135-184151).
             shell.update(20, player);
             assertEquals(shellXBeforeMove, shell.getX(),
                     "Launch dispatch installs the move routine without moving");

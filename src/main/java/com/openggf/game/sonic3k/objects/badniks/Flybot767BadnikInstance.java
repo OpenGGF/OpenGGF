@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * S3K S3KL Obj $C2 - Flybot 767 (LBZ).
  *
- * <p>ROM reference: {@code Obj_Flybot767} at {@code sonic3k.asm:191981}.
+ * <p>ROM reference: {@code Obj_Flybot767} at {@code sonic3k.asm:192074}.
  * The badnik chases Player 1, dives when below/near the player, rebounds
  * above its attack origin, then waits before returning to the chase loop.
  */
@@ -77,9 +77,9 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
             return;
         }
         if (waitingForOnscreen) {
-            // loc_85AD2 (sonic3k.asm:180279-180281) opens with
+            // loc_85AD2 (sonic3k.asm:180370-180372) opens with
             // `tst.b render_flags(a0) / bmi loc_85B02`, and bit 7 is published by
-            // a PRECEDING Render_Sprites pass (sonic3k.asm:36336-36366), never by
+            // a PRECEDING Render_Sprites pass (sonic3k.asm:36376-36406), never by
             // the pass doing the test. A freshly allocated placeholder therefore
             // always spends its first pass drawing, and can only observe the flag
             // from the next pass onwards. Both spawn routes read the same
@@ -89,7 +89,7 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
             if (!placeholderRenderedOnscreen) {
                 return;
             }
-            // loc_85B02 (sonic3k.asm:180300-180302) restores the saved
+            // loc_85B02 (sonic3k.asm:180391-180393) restores the saved
             // continuation into (a0) and `rts` -- the restored routine does NOT
             // run on the frame that restores it, so Obj_Flybot767 dispatch
             // resumes on the following pass.
@@ -356,7 +356,7 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
         // Obj_Flybot767 first calls Obj_WaitOffscreen; when it becomes visible,
         // that helper restores the saved operation pointer and returns before
         // the Sprite_CheckDeleteTouchSlotted tail can call
-        // Add_SpriteToCollisionResponseList (sonic3k.asm:179081-179090,
+        // Add_SpriteToCollisionResponseList (sonic3k.asm:179172-179181,
         // 191981-191989). The routine publishes on later passes only.
         return publishedTouchResponseListEntryThisFrame;
     }

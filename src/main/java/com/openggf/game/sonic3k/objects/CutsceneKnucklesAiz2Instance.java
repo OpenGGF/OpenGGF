@@ -250,12 +250,12 @@ public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
     @Override
     public boolean isHighPriority() {
         // ObjSlot_CutsceneKnux art make_art_tile(ArtTile_CutsceneKnux,1,1) sets bit 15
-        // (sonic3k.asm:134797).
+        // (sonic3k.asm:134854).
         return true;
     }
 
     // ObjSlot_CutsceneKnux priority $180, written by SetUp_ObjAttributesSlotted
-    // (sonic3k.asm:134800, 178886).
+    // (sonic3k.asm:134857, 178977).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
 
     @Override

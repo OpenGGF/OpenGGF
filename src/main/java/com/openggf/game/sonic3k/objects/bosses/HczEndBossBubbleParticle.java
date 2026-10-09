@@ -23,15 +23,15 @@ final class HczEndBossBubbleParticle extends AbstractBossChild implements Rewind
     private int mappingFrame;
 
     HczEndBossBubbleParticle(HczEndBossInstance boss) {
-        // HCZEndBossBubble_ObjData priority $280 (sonic3k.asm:142188-142191), applied by
-        // HCZEndBossBubble_Init's SetUp_ObjAttributes (sonic3k.asm:141315-141317).
+        // HCZEndBossBubble_ObjData priority $280 (sonic3k.asm:142253-142256), applied by
+        // HCZEndBossBubble_Init's SetUp_ObjAttributes (sonic3k.asm:141380-141382).
         super(boss, "HCZEndBossBubbleParticle", RenderPriority.fromS3kWord(0x280), 0);
     }
 
     @Override
     public boolean isHighPriority() {
         // HCZEndBossBubble_ObjData art make_art_tile(ArtTile_Bubbles,0,1) sets bit 15
-        // (sonic3k.asm:142190).
+        // (sonic3k.asm:142255).
         return true;
     }
 

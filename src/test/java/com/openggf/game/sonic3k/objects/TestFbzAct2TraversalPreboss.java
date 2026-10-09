@@ -3242,7 +3242,7 @@ public class TestFbzAct2TraversalPreboss {
                             // activation surface. loc_3CD4C gates each new pair
                             // on the parent's previous-render bounds, and
                             // loc_3CF90 keeps every child collision-enabled until
-                            // its own animation expires (sonic3k.asm:80714-80733,
+                            // its own animation expires (sonic3k.asm:80755-80774,
                             // 80915-80934). Commit the turn only after production
                             // can no longer emit and the final live wave is gone.
                             boolean sourceCanEmit = trigger7Flamethrower != null

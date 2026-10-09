@@ -886,7 +886,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     /**
      * ROM: {@code lea Pal_MHZEndBoss(pc),a1 / jsr PalLoad_Line1} during
-     * {@code Obj_MHZEndBoss} setup (sonic3k.asm:156905-156906). S&K-side ROM
+     * {@code Obj_MHZEndBoss} setup (sonic3k.asm:156981-156982). S&K-side ROM
      * offset 0x0769D4 verified by RomOffsetFinder search-rom.
      */
     private void loadBossPalette() {

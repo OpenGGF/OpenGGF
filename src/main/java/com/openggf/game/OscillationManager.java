@@ -242,7 +242,7 @@ public final class OscillationManager {
     /**
      * Returns the full ROM-format {@code Oscillating_table} bytes for
      * diagnostic comparison against trace data. Layout matches ROM
-     * sonic3k.constants.asm:853 — control word followed by 16x (value word,
+     * sonic3k.constants.asm:875 — control word followed by 16x (value word,
      * delta word). Total 66 bytes ($42).
      *
      * <p>Used by trace replay diagnostics to ROM-verify engine oscillator

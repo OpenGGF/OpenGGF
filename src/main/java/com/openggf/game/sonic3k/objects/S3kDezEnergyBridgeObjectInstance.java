@@ -21,63 +21,63 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
 /**
- * SKL {@code $55}, {@code Obj_DEZEnergyBridge} (sonic3k.asm:93909-93990) with its shared
- * subtype decoder {@code sub_47DDE} (:93879-93902). Thirteen act 1 and twelve act 2
+ * SKL {@code $55}, {@code Obj_DEZEnergyBridge} (sonic3k.asm:93955-94036) with its shared
+ * subtype decoder {@code sub_47DDE} (:93925-93948). Thirteen act 1 and twelve act 2
  * placements. S3KL {@code $55} is {@code Obj_MGZHeadTrigger}; the two tables share the number.
  *
  * <p><b>It is a top solid that exists only part of the time.</b> The object has two routines.
  * {@code loc_47E62} is the off state: it recomputes the phase every update and, while the phase
- * is not zero, jumps straight to {@code Delete_Sprite_If_Not_In_Range} (:93931-93933) — no
+ * is not zero, jumps straight to {@code Delete_Sprite_If_Not_In_Range} (:93977-93979) — no
  * display, no solidity, and an ordinary off-screen despawn. When the phase reaches zero it
  * loads the on-duration into {@code $34(a0)} and falls through into {@code loc_47E8C}, the on
  * state, which decrements that counter, runs {@code SolidObjectTop} for both players, and on
  * the update the counter reaches zero pushes every rider off before switching back.
  *
  * <p><b>The whole cycle is one subtype byte, read as three separate fields.</b>
- * {@code sub_47DDE} (:93884-93896): bits 2-3 index {@code word_47DD6} (:93872-93876) for the
+ * {@code sub_47DDE} (:93930-93942): bits 2-3 index {@code word_47DD6} (:93918-93922) for the
  * period mask {@code $7F}, {@code $FF}, {@code $1FF} or {@code $3FF}; bits 4-7 are a phase
  * index multiplied by a sixteenth of the period ({@code (mask + 1) >> 4}); bits 0-1 give the
  * on-duration as {@code ((subtype & 3) + 2) << 5}, so 64, 96, 128 or 160 frames. The clock is
  * {@code Level_frame_counter}, not {@code V_int_run_count}.
  *
  * <p><b>The init decides whether the bridge starts mid-cycle.</b> {@code sub.w d1,d0 / bcc}
- * (:93915-93916) compares the current phase against the on-duration as an unsigned subtraction.
+ * (:93961-93962) compares the current phase against the on-duration as an unsigned subtraction.
  * A borrow means the phase is still inside the on window, so the object negates the difference
- * into {@code $34(a0)} and enters the on state part-used (:93917-93920); no borrow installs the
- * off state, which then falls straight through and runs on the same update (:93923-93925).
+ * into {@code $34(a0)} and enters the on state part-used (:93963-93966); no borrow installs the
+ * off state, which then falls straight through and runs on the same update (:93969-93971).
  * Neither path waits a frame.
  *
- * <p><b>Riders are pushed off explicitly.</b> {@code sub_47EE8} (:93977-93984) tests and clears
+ * <p><b>Riders are pushed off explicitly.</b> {@code sub_47EE8} (:94023-94030) tests and clears
  * the object's own per-player standing bit and, only if it was set, clears the player's
  * {@code Status_OnObj} and sets {@code Status_InAir}. A player standing on a bridge that
  * switches off starts falling that frame rather than waiting for terrain to notice.
  *
  * <p>The two drawn pieces are 8x8 tiles {@code $40} apart that slide right by {@code $10} a
- * frame and wrap every four ({@code Map_DEZEnergyBridge}, :94088), selected by
- * {@code Level_frame_counter}'s low byte and 3 (:93945-93947). The zap sound plays every eighth
- * frame while the bridge is on screen (:93948-93953); {@code tst.b render_flags(a0) / bpl} is
+ * frame and wrap every four ({@code Map_DEZEnergyBridge}, :94134), selected by
+ * {@code Level_frame_counter}'s low byte and 3 (:93991-93993). The zap sound plays every eighth
+ * frame while the bridge is on screen (:93994-93999); {@code tst.b render_flags(a0) / bpl} is
  * the on-screen bit, so an off-screen bridge is silent.
  *
- * <p>{@code bset #7,status(a0)} at :93913 sets a bit no routine in this object, in
+ * <p>{@code bset #7,status(a0)} at :93959 sets a bit no routine in this object, in
  * {@code SolidObjectTop}, in {@code Sprite_OnScreen_Test} or in
  * {@code Delete_Sprite_If_Not_In_Range} reads back, so it is recorded rather than modelled.
  */
 public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
-    /** {@code word_47DD6} (:93872-93876), indexed by {@code (subtype & $C) >> 1} as words. */
+    /** {@code word_47DD6} (:93918-93922), indexed by {@code (subtype & $C) >> 1} as words. */
     private static final int[] PERIOD_MASKS = { 0x7F, 0xFF, 0x1FF, 0x3FF };
 
-    /** {@code move.b #$40,width_pixels(a0)} / {@code move.w #9,d3} (:93911, :93940-93941). */
+    /** {@code move.b #$40,width_pixels(a0)} / {@code move.w #9,d3} (:93957, :93986-93987). */
     private static final int SOLID_HALF_WIDTH = 0x40;
     private static final int SOLID_HALF_HEIGHT = 9;
 
-    /** {@code move.w #$300,priority(a0)} (:93882). */
+    /** {@code move.w #$300,priority(a0)} (:93928). */
     private static final int PRIORITY_WORD = 0x300;
 
-    /** {@code Map_DEZEnergyBridge} (:94088): four frames of the sliding pair. */
+    /** {@code Map_DEZEnergyBridge} (:94134): four frames of the sliding pair. */
     private static final int MAPPING_FRAME_MASK = 3;
-    /** {@code andi.b #7,d0 / bne} (:93950-93951). */
+    /** {@code andi.b #7,d0 / bne} (:93996-93997). */
     private static final int ZAP_PERIOD_MASK = 7;
 
     /** Which routine is installed: {@code loc_47E8C} when true, {@code loc_47E62} when false. */
@@ -105,7 +105,7 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
 
     /**
      * {@code move.b subtype(a0),d0 / andi.w #$C,d0 / lsr.w #1,d0 /
-     * move.w word_47DD6(pc,d0.w),d0} (:93883-93887). The shift by one turns bits 2-3 into a
+     * move.w word_47DD6(pc,d0.w),d0} (:93929-93933). The shift by one turns bits 2-3 into a
      * word offset, so the table index is {@code (subtype & $C) >> 2}.
      *
      * <p>The three subtype fields are read from the immutable placement on demand rather than
@@ -118,13 +118,13 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
 
     /**
      * {@code addq.w #1,d0 / lsr.w #4,d0 / andi.w #$F0,d1 / lsr.w #4,d1 / mulu.w d1,d0}
-     * (:93888-93892): a sixteenth of the period, times the subtype's high nibble.
+     * (:93934-93938): a sixteenth of the period, times the subtype's high nibble.
      */
     private int phaseOffset() {
         return ((periodMask() + 1) >> 4) * ((spawn.subtype() & 0xF0) >> 4);
     }
 
-    /** {@code andi.b #3,d1 / addq.b #2,d1 / lsl.w #5,d1} (:93894-93896). */
+    /** {@code andi.b #3,d1 / addq.b #2,d1 / lsl.w #5,d1} (:93940-93942). */
     private int onDuration() {
         return ((spawn.subtype() & 0x03) + 2) << 5;
     }
@@ -140,23 +140,23 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
             applyInit(levelFrameCounter);
         }
         if (!on) {
-            // loc_47E62 :93930-93933. A non-zero phase leaves the bridge invisible and
+            // loc_47E62 :93976-93979. A non-zero phase leaves the bridge invisible and
             // non-solid; the engine's own off-screen despawn stands in for
             // Delete_Sprite_If_Not_In_Range.
             if (phase(levelFrameCounter) != 0) {
                 return;
             }
-            // loc_47E76 :93936-93940, which falls through into loc_47E8C on the same update.
+            // loc_47E76 :93982-93986, which falls through into loc_47E8C on the same update.
             onFramesLeft = onDuration();
             on = true;
         }
-        // loc_47E8C :93942-93943.
+        // loc_47E8C :93988-93989.
         onFramesLeft--;
         if (onFramesLeft == 0) {
             releaseRiders();
             on = false;
         }
-        // loc_47EBE :93945-93953. Both the switch-off frame and an ordinary on frame reach
+        // loc_47EBE :93991-93999. Both the switch-off frame and an ordinary on frame reach
         // this: only the SolidObjectTop call is skipped.
         drawPublished = true; // expiry still reaches Sprite_OnScreen_Test
         mappingFrame = levelFrameCounter & MAPPING_FRAME_MASK;
@@ -168,7 +168,7 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
         }
     }
 
-    /** {@code Obj_DEZEnergyBridge} :93914-93925. */
+    /** {@code Obj_DEZEnergyBridge} :93960-93971. */
     private void applyInit(int levelFrameCounter) {
         // sub.w d1,d0 / bcc.s loc_47E5C: an unsigned subtraction, so the borrow is exactly
         // "the phase has not reached the end of the on window yet".
@@ -186,7 +186,7 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
         return (levelFrameCounter + phaseOffset()) & periodMask();
     }
 
-    /** {@code sub_47EE8} :93977-93984, called for Player 1 and then Player 2. */
+    /** {@code sub_47EE8} :94023-94030, called for Player 1 and then Player 2. */
     private void releaseRiders() {
         if (playerOneStanding) {
             release(mainPlayerOrNull());
@@ -198,7 +198,7 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
         }
     }
 
-    /** {@code bclr #Status_OnObj,status(a1) / bset #Status_InAir,status(a1)} (:93980-93981). */
+    /** {@code bclr #Status_OnObj,status(a1) / bset #Status_InAir,status(a1)} (:94026-94027). */
     private static void release(PlayableEntity player) {
         if (player instanceof AbstractPlayableSprite sprite) {
             sprite.setOnObject(false);
@@ -215,14 +215,14 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
 
     @Override
     public boolean isTopSolidOnly() {
-        // jsr (SolidObjectTop).l (:93942).
+        // jsr (SolidObjectTop).l (:93988).
         return true;
     }
 
     @Override
     public boolean isSolidFor(PlayableEntity player) {
         // The off routine never reaches the SolidObjectTop call, and neither does the update
-        // that switches the bridge off (:93944 branches past it to loc_47EBE).
+        // that switches the bridge off (:93990 branches past it to loc_47EBE).
         return on;
     }
 
@@ -232,7 +232,7 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
     }
 
     /**
-     * {@code loc_1E45A} :42000-42007. The two rejects are {@code sub.w d1,d0 / bhi} and
+     * {@code loc_1E45A} :42040-42047. The two rejects are {@code sub.w d1,d0 / bhi} and
      * {@code cmpi.w #-$10,d0 / blo}, both unsigned: the first throws out any positive
      * separation and the second throws out everything unsigned-below {@code $FFF0}, which
      * includes {@code d0 == 0}. The accepted window is therefore {@code -$10 <= d0 <= -1} — the
@@ -290,7 +290,7 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
         return services().playerQuery().mainPlayerOrNull();
     }
 
-    /** {@code lea (Player_2).w,a1} (:93973): the second native player, not every sidekick. */
+    /** {@code lea (Player_2).w,a1} (:94019): the second native player, not every sidekick. */
     private PlayableEntity sidekickOrNull() {
         if (tryServices() == null || services().playerQuery() == null) {
             return null;
@@ -303,7 +303,7 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
     // --- rendering ---
 
     /**
-     * {@code make_art_tile(ArtTile_DEZMisc+$B2,1,0)} (:93880) through
+     * {@code make_art_tile(ArtTile_DEZMisc+$B2,1,0)} (:93926) through
      * {@code Map_DEZEnergyBridge}. Nothing is drawn while the bridge is off, because the off
      * routine jumps to {@code Delete_Sprite_If_Not_In_Range} without displaying.
      * The dispatch that installs that off routine still publishes its last sprite.
@@ -341,7 +341,7 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
 
     /**
      * {@code Obj_DEZEnergyBridge} reads {@code Level_frame_counter}, not
-     * {@code V_int_run_count} (:93930). {@code LevelManager} owns that clock.
+     * {@code V_int_run_count} (:93976). {@code LevelManager} owns that clock.
      */
     private int levelFrameCounter(int fallbackFrameCounter) {
         return services().levelManager() != null

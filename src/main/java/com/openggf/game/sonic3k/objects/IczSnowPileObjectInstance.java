@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * Object 0xB9 - ICZ snow pile.
  *
- * <p>ROM reference: {@code Obj_ICZSnowPile} at sonic3k.asm:189802-190133.
+ * <p>ROM reference: {@code Obj_ICZSnowPile} at sonic3k.asm:189895-190226.
  * Low subtype values select the ROM's raw dispatch table offsets:
  * {@code $00} slows/breaks on both native players, {@code $08} launches Sonic
  * and spawns two pieces, {@code $10} launches Sonic, spawns four pieces, and

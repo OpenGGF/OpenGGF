@@ -31,7 +31,7 @@ import java.util.List;
 
 /**
  * ROM object {@code Obj_LRZRockCrusher} -- object id {@code $9C} in the {@code SKL} pointer set
- * (sonic3k.asm:196988-197400, ROM {@code $900E4}). The {@code S3KL} set spends the same id on
+ * (sonic3k.asm:197095-197507, ROM {@code $900E4}). The {@code S3KL} set spends the same id on
  * {@code Obj_Spiker}. Lava Reef act 1 places one of subtype {@code 0} and one of subtype
  * {@code 2}.
  *
@@ -40,8 +40,8 @@ import java.util.List;
  * after three seconds its timer child rewrites the layout underneath it, drops two collapsing
  * slabs in, and lets the crusher fall through and explode.
  *
- * <h2>Init (:196989-197013)</h2>
- * <p>{@code Check_CameraInRange} (:180433-180456) gates the whole init on the camera being inside
+ * <h2>Init (:197096-197120)</h2>
+ * <p>{@code Check_CameraInRange} (:180524-180547) gates the whole init on the camera being inside
  * {@code word_901B8} for subtype 0 ({@code Camera_Y} in {@code [$5E0,$740]}, {@code Camera_X} in
  * {@code [$DC0,$EC0]}) or {@code word_901C4} otherwise ({@code [$680,$880]} and
  * {@code [$400,$780]}); outside it, the routine pops its own return address and the object retries
@@ -56,31 +56,31 @@ import java.util.List;
  * {@code ($540,$860)}, {@code ArtKosM_LRZRockCrusher} queued, {@code Pal_LRZRockCrusher} on line 1,
  * and the eight {@code ChildObjDat_90626} hit pieces.
  *
- * <h2>Routines ({@code off_901EA}, :197057-197061)</h2>
+ * <h2>Routines ({@code off_901EA}, :197164-197168)</h2>
  * <ol start="0">
- *   <li>{@code loc_901F4} (:197063-197093): two independent latches in {@code $27(a0)}. Bit 0 is
+ *   <li>{@code loc_901F4} (:197170-197200): two independent latches in {@code $27(a0)}. Bit 0 is
  *       set, and {@code Camera_min_Y_pos} pulled up to it, once {@code Camera_target_max_Y_pos}
  *       equals {@code Camera_max_Y_pos} -- i.e. once the camera has finished easing down to the
  *       new limit. Bit 1 keeps writing {@code Camera_min_X_pos = Camera_X_pos} until the camera
  *       passes {@code $1C(a0)}. With both set the crusher goes to routine 2, raises {@code $38}
  *       bit 2 (which releases the hit pieces) and allocates the timer child.</li>
- *   <li>{@code loc_9026E} (:197095-197125): {@code sfx_BigRumble} continuously and a one-pixel
+ *   <li>{@code loc_9026E} (:197202-197232): {@code sfx_BigRumble} continuously and a one-pixel
  *       rumble -- {@code bchg #0,$38(a0)} alternates {@code +1} and {@code -1}, so there is no net
  *       descent. {@code ObjCheckFloorDist} then decides: a NEGATIVE distance means the crusher is
  *       still buried and it keeps rumbling (subject to the on-screen window), and a distance of
  *       zero or more -- which only happens once the timer child has rewritten the layout out from
  *       under it -- takes {@code loc_902BE}.</li>
- *   <li>{@code loc_902BE} (:197127-197135) loads routine 4, {@code ori.b #$28,$38(a0)},
+ *   <li>{@code loc_902BE} (:197234-197242) loads routine 4, {@code ori.b #$28,$38(a0)},
  *       {@code $2E = $27}, {@code $3A = word_902EC[subtype]} ({@code $850} or {@code $950}),
  *       restores {@code Camera_target_max_Y_pos} and creates {@code Child7_ChangeLevSize}.
  *       {@code loc_902F0} then counts {@code $2E} down.</li>
- *   <li>{@code loc_902FE} (:197144-197152): {@code MoveSprite} -- gravity {@code $38} -- until
+ *   <li>{@code loc_902FE} (:197251-197259): {@code MoveSprite} -- gravity {@code $38} -- until
  *       {@code y_pos} reaches {@code $3A(a0)}, then routine 8 with {@code y_vel $40},
  *       {@code $2E = $7F} and a {@code Child6_CreateBossExplosion}.</li>
- *   <li>{@code loc_90338} (:197162-197168): {@code bset #7,status(a0)} on the frame {@code $2E}
+ *   <li>{@code loc_90338} (:197269-197275): {@code bset #7,status(a0)} on the frame {@code $2E}
  *       reaches {@code $40} -- the flicker the pieces read -- {@code MoveSprite2}, then
  *       {@code Obj_Wait}; {@code loc_90352} re-arms the wait for {@code $BF} frames and
- *       {@code loc_90368} (:197175-197184) requeues the two badnik art modules, restores
+ *       {@code loc_90368} (:197282-197291) requeues the two badnik art modules, restores
  *       {@code Pal_LRZ1} and deletes the crusher.</li>
  * </ol>
  *
@@ -93,33 +93,33 @@ import java.util.List;
 public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable, RomObjectCodePointerProvider {
 
-    /** {@code ObjDat_LRZRockCrusher}: {@code dc.w $180} (sonic3k.asm:197427). */
+    /** {@code ObjDat_LRZRockCrusher}: {@code dc.w $180} (sonic3k.asm:197534). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0180);
-    /** {@code dc.b $80,$40,0,$10} (:197428). */
+    /** {@code dc.b $80,$40,0,$10} (:197535). */
     private static final int WIDTH_PIXELS = 0x80;
     private static final int HEIGHT_PIXELS = 0x40;
     private static final int COLLISION_FLAGS = 0x10;
-    /** {@code move.b #$40,y_radius(a0)} (:197016). */
+    /** {@code move.b #$40,y_radius(a0)} (:197123). */
     private static final int Y_RADIUS = 0x40;
-    /** {@code word_901B8} and {@code word_901C4} (sonic3k.asm:197050-197052). */
+    /** {@code word_901B8} and {@code word_901C4} (sonic3k.asm:197157-197159). */
     private static final int[] WINDOW_SUBTYPE_ZERO = {0x5E0, 0x740, 0xDC0, 0xEC0, 0xEA0, 0x6A0};
     private static final int[] WINDOW_OTHER = {0x680, 0x880, 0x400, 0x780, 0x4A0, 0x790};
-    /** {@code word_902EC} (:197137-197138). */
+    /** {@code word_902EC} (:197244-197245). */
     private static final int[] DROP_TARGET_Y = {0x850, 0x950};
-    /** {@code move.w #$27,$2E(a0)} (:197130). */
+    /** {@code move.w #$27,$2E(a0)} (:197237). */
     private static final int DROP_DELAY = 0x27;
-    /** {@code move.w #$7F,$2E(a0)} and {@code #$BF} (:197155, :197172). */
+    /** {@code move.w #$7F,$2E(a0)} and {@code #$BF} (:197262, :197279). */
     private static final int EXPLOSION_FRAMES = 0x7F;
     private static final int CLEANUP_FRAMES = 0xBF;
-    /** {@code cmpi.w #$40,$2E(a0)} (:197163). */
+    /** {@code cmpi.w #$40,$2E(a0)} (:197270). */
     private static final int FLICKER_AT = 0x40;
-    /** {@code move.w #$40,y_vel(a0)} (:197154). */
+    /** {@code move.w #$40,y_vel(a0)} (:197261). */
     private static final int EXPLOSION_Y_VEL = 0x40;
-    /** {@code ChildObjDat_90626} (sonic3k.asm:197446-197463). */
+    /** {@code ChildObjDat_90626} (sonic3k.asm:197553-197570). */
     private static final int[][] PIECE_OFFSETS = {
             {-0x1C, 0x1C}, {0x1C, 0x1C}, {-0x24, 0x1C}, {0x24, 0x1C},
             {-0x1C, -0x24}, {0x1C, -0x24}, {-0x24, -0x24}, {0x24, -0x24}};
-    /** {@code move.w #$F40,x_pos(a1)} / {@code #$540} (:197166-197174 of the init). */
+    /** {@code move.w #$F40,x_pos(a1)} / {@code #$540} (:197273-197281 of the init). */
     private static final int MASK_X_SUBTYPE_ZERO = 0x0F40;
     private static final int MASK_Y_SUBTYPE_ZERO = 0x0760;
     private static final int MASK_X_OTHER = 0x0540;
@@ -216,7 +216,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         }
     }
 
-    /** {@code Check_CameraInRange} (sonic3k.asm:180433-180446). */
+    /** {@code Check_CameraInRange} (sonic3k.asm:180524-180537). */
     private boolean cameraInRange() {
         Camera camera = cameraOrNull();
         if (camera == null) {
@@ -233,7 +233,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         return NativeViewportFraming.nativeLeft(camera.getX(), camera.getWidth()) & 0xFFFF;
     }
 
-    /** The init tail (sonic3k.asm:197000-197013 and :197154-197174). */
+    /** The init tail (sonic3k.asm:197107-197120 and :197261-197281). */
     private final LrzRockCrusherArtState art = new LrzRockCrusherArtState();
 
     private void initialise() {
@@ -251,7 +251,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
             // This framing remains during/after release, like the LRZ miniboss;
             // it projects bounds, not a permanent horizontal camera lock.
             state.setCenterNativeArenaCamera(true);
-            // Camera_stored_* <- the four live limits (:197001-197004).
+            // Camera_stored_* <- the four live limits (:197108-197111).
             state.storeCameraBounds(camera.getMinX() & 0xFFFF, camera.getMaxX() & 0xFFFF,
                     camera.getMinY() & 0xFFFF, camera.getMaxYTarget() & 0xFFFF);
         }
@@ -262,13 +262,13 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         // loc_90188 submits the crusher archive and explosion PLC before palette/children.
         art.submit(services());
         loadPalette();
-        // ChildObjDat_9067A: one Obj_SpriteMask, positioned by subtype (:197018-197030).
+        // ChildObjDat_9067A: one Obj_SpriteMask, positioned by subtype (:197125-197137).
         final int maskX = subtype == 0 ? MASK_X_SUBTYPE_ZERO : MASK_X_OTHER;
         final int maskY = subtype == 0 ? MASK_Y_SUBTYPE_ZERO : MASK_Y_OTHER;
         spawnFreeChild(() -> new SozSpriteMaskObjectInstance(
                 new ObjectSpawn(maskX, maskY, 0x8B, 0x8B, 0, false, 0)));
         // CreateChild1_Normal returns the pieces already wired to their parent.
-        // ChildObjDat_90626: eight pieces, subtype = index * 2 (:197031, :196933-196947).
+        // ChildObjDat_90626: eight pieces, subtype = index * 2 (:197138, :197040-197054).
         for (int i = 0; i < PIECE_OFFSETS.length; i++) {
             final int childSubtype = i * 2;
             final int dx = PIECE_OFFSETS[i][0];
@@ -281,7 +281,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         }
     }
 
-    /** {@code loc_901F4} (sonic3k.asm:197063-197093). */
+    /** {@code loc_901F4} (sonic3k.asm:197170-197200). */
     private void waitForCameraLimits() {
         Camera camera = cameraOrNull();
         if (camera == null) {
@@ -314,7 +314,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         spawnFreeChild(() -> new LrzRockCrusherTimerChildInstance(subtype));
     }
 
-    /** {@code loc_9026E} (sonic3k.asm:197095-197125). */
+    /** {@code loc_9026E} (sonic3k.asm:197202-197232). */
     private void rumble() {
         playSfx(Sonic3kSfx.BIG_RUMBLE.id);
         // moveq #1,d0 / bchg #0,$38(a0) / beq -> +1 when the bit WAS clear, -1 when it was set.
@@ -329,14 +329,14 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
             return;
         }
         if (!onScreenForRumble()) {
-            // loc_902B6 (:197124-197125): the ROM abandons the whole set piece.
+            // loc_902B6 (:197231-197232): the ROM abandons the whole set piece.
             screenShakeFlag(false);
             cleanUp();
         }
     }
 
     /**
-     * {@code loc_9028E}-{@code loc_902B4} (:197104-197122): the coarse X window
+     * {@code loc_9028E}-{@code loc_902B4} (:197211-197229): the coarse X window
      * {@code (x_pos & $FF80) - Camera_X_pos_coarse_back <= $280} and the Y window
      * {@code y_pos - Camera_Y_pos + $80 <= $200}, both unsigned.
      */
@@ -353,7 +353,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         return dy <= 0x200;
     }
 
-    /** {@code loc_902BE} (sonic3k.asm:197127-197135). */
+    /** {@code loc_902BE} (sonic3k.asm:197234-197242). */
     private void beginDrop() {
         routine = 4;
         // ori.b #$28,$38(a0): bits 3 and 5.
@@ -367,7 +367,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         }
     }
 
-    /** {@code loc_902F0} (sonic3k.asm:197140-197147). */
+    /** {@code loc_902F0} (sonic3k.asm:197247-197254). */
     private void countDownToDrop() {
         timer--;
         if (timer < 0) {
@@ -375,7 +375,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         }
     }
 
-    /** {@code loc_902FE} / {@code loc_90310} (sonic3k.asm:197144-197160). */
+    /** {@code loc_902FE} / {@code loc_90310} (sonic3k.asm:197251-197267). */
     private void drop() {
         SubpixelMotion.moveSprite(motion, SubpixelMotion.S3K_GRAVITY);
         if ((motion.y & 0xFFFF) < dropTargetY) {
@@ -384,13 +384,13 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         routine = 8;
         motion.yVel = EXPLOSION_Y_VEL;
         timer = EXPLOSION_FRAMES;
-        // Child6_CreateBossExplosion (sonic3k.asm:197157-197158): a plain emitter the owner
+        // Child6_CreateBossExplosion (sonic3k.asm:197264-197265): a plain emitter the owner
         // ticks, the same shape every other S3K boss uses.
         explosionController = new S3kBossExplosionController(
                 motion.x & 0xFFFF, motion.y & 0xFFFF, 0, services().rng());
     }
 
-    /** {@code loc_90338}, {@code loc_90352} and {@code loc_90368} (sonic3k.asm:197162-197184). */
+    /** {@code loc_90338}, {@code loc_90352} and {@code loc_90368} (sonic3k.asm:197269-197291). */
     private void explodeAndClean() {
         tickExplosions();
         if (timer == FLICKER_AT) {
@@ -427,7 +427,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code loc_90368} (sonic3k.asm:197175-197184). The two badnik art modules it requeues belong
+     * {@code loc_90368} (sonic3k.asm:197282-197291). The two badnik art modules it requeues belong
      * to {@code Obj_Fireworm} and {@code Obj_Iwamodoki}. Their standalone sheets remain intact,
      * but restoring the native shared tile bank is still an unimplemented cleanup obligation.
      * This currently restores the palette and deletes.
@@ -437,7 +437,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         ObjectLifetimeOps.expireDynamic(this);
     }
 
-    /** {@code move.w (Camera_stored_max_Y_pos).w,(Camera_target_max_Y_pos).w} (:197133, :197256). */
+    /** {@code move.w (Camera_stored_max_Y_pos).w,(Camera_target_max_Y_pos).w} (:197240, :197363). */
     static void restoreTargetMaxY(ObjectServices services, LrzZoneRuntimeState state) {
         if (services == null || state == null) {
             return;
@@ -449,7 +449,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code Child7_ChangeLevSize} (sonic3k.asm:197465-197474): the four
+     * {@code Child7_ChangeLevSize} (sonic3k.asm:197572-197581): the four
      * {@code Obj_*LevStart/End*Gradual} objects that ease every stored bound back.
      */
     static int[] changeLevSizeKinds() {
@@ -460,7 +460,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
                 S3kCameraGradualObjectInstance.INC_END_X};
     }
 
-    /** {@code lea Pal_LRZRockCrusher(pc),a1 / jsr PalLoad_Line1} (sonic3k.asm:197010-197011). */
+    /** {@code lea Pal_LRZRockCrusher(pc),a1 / jsr PalLoad_Line1} (sonic3k.asm:197117-197118). */
     private void loadPalette() {
         if (paletteLoaded) {
             return;
@@ -469,7 +469,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         paletteLoaded = true;
     }
 
-    /** {@code lea (Pal_LRZ1).l,a1 / jsr PalLoad_Line1} (sonic3k.asm:197182-197183). */
+    /** {@code lea (Pal_LRZ1).l,a1 / jsr PalLoad_Line1} (sonic3k.asm:197289-197290). */
     private void restorePalette() {
         applyPaletteLine(Sonic3kConstants.PAL_LRZ1_ADDR);
     }
@@ -622,7 +622,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getCollisionProperty() {
-        // move.b #-1,collision_property(a0) (sonic3k.asm:197015).
+        // move.b #-1,collision_property(a0) (sonic3k.asm:197122).
         return -1;
     }
 
@@ -634,7 +634,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isHighPriority() {
         // make_art_tile(ArtTile_LRZRockCrusher,1,0) leaves the bit clear; the non-zero subtype
-        // sets it with bset #7,art_tile (sonic3k.asm:197018).
+        // sets it with bset #7,art_tile (sonic3k.asm:197125).
         return subtype != 0;
     }
 

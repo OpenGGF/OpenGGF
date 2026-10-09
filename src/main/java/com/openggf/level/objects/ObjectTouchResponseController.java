@@ -304,7 +304,7 @@ final class ObjectTouchResponseController {
             return;
         }
 
-        // ROM Sonic_Display (sonic3k.asm:22019-22021) and S2/S1 equivalents
+        // ROM Sonic_Display (sonic3k.asm:22055-22057) and S2/S1 equivalents
         // skip TouchResponse when object_control's bit 7 (or $A0 in S3K) is
         // set — i.e. flight/CATCH_UP_FLIGHT/FLIGHT_AUTO_RECOVERY/super/debug
         // states where the controlling object owns the sprite. Without this
@@ -333,7 +333,7 @@ final class ObjectTouchResponseController {
         // and $C1. With fixBugs = 1 the test would be the animation id
         // (AniIDSonAni_Duck) and the smaller box would cover the whole duck for
         // every character. S3K removed the adjustment outright
-        // (sonic3k.asm:20649-20650). See ObjectInteractionRules#duckTouchBoxMappingFrame.
+        // (sonic3k.asm:20685-20686). See ObjectInteractionRules#duckTouchBoxMappingFrame.
         ObjectInteractionRules duckRulesMain = objectInteractionRulesOrNull(player);
         boolean crouching = duckRulesMain != null
                 && duckRulesMain.isDuckTouchBoxMappingFrame(player.getMappingFrame());
@@ -341,7 +341,7 @@ final class ObjectTouchResponseController {
             playerY += ObjectInteractionRules.DUCK_TOUCH_BOX_TOP_SHIFT;
             playerHeight = ObjectInteractionRules.DUCK_TOUCH_BOX_HEIGHT;
         }
-        // ROM (sonic3k.asm:20620-20640): Insta-shield expands hitbox to 48x48
+        // ROM (sonic3k.asm:20656-20676): Insta-shield expands hitbox to 48x48
         instaShieldActive = false;
         currentPlayer = player;
         int playerWidth = 0x10; // Normal width
@@ -405,11 +405,11 @@ final class ObjectTouchResponseController {
             return;
         }
 
-        // ROM Tails_Display (sonic3k.asm:26263-26266) and S2/S1 equivalents
+        // ROM Tails_Display (sonic3k.asm:26303-26306) and S2/S1 equivalents
         // skip TouchResponse when object_control's bit 7 (or $A0 in S3K) is
         // set. For S3K this is critical for Tails_CPU_routine 2/4
         // (Tails_Catch_Up_Flying / Tails_FlySwim_Unknown) which ROM enters
-        // with object_control=$81 (sonic3k.asm:26511, 26542) — both
+        // with object_control=$81 (sonic3k.asm:26551, 26582) — both
         // routines run from Tails_CPU_Control, NOT from Tails_Display, so
         // ROM never reaches the TouchResponse call in those states. Engine
         // must mirror the skip to avoid balloon/spike/etc. false-positive
@@ -588,7 +588,7 @@ final class ObjectTouchResponseController {
                 // S3K TouchResponse temporarily sets Status_Invincible during
                 // the Insta-Shield 48x48 pass, so Touch_ChkHurt returns before
                 // Touch_ChkHurt_Bounce_Projectile clears collision_flags
-                // (sonic3k.asm:20620-20640, 21003-21047).
+                // (sonic3k.asm:20656-20676, 21039-21083).
                 if (instaShieldActive && player == currentPlayer) {
                     break;
                 }
@@ -675,7 +675,7 @@ final class ObjectTouchResponseController {
             // RAM scan, so a lost ring behind the lava would still be collected.
             // Not a per-game divergence: S2's Touch_NoHurt (docs/s2disasm/s2.asm:
             // 85455-85457) and S3K's Touch_ChkHurt_Return
-            // (docs/skdisasm/sonic3k.asm:21016-21018) both do the same
+            // (docs/skdisasm/sonic3k.asm:21052-21054) both do the same
             // `moveq #-1,d0 / rts`, so all three games abandon the touch loop on a
             // suppressed damaging contact and no rules record is warranted.
             break;
@@ -756,7 +756,7 @@ final class ObjectTouchResponseController {
             // S3K's Insta-Shield pass temporarily sets Status_Invincible before
             // scanning the 48x48 box. Touch_ChkHurt therefore returns without
             // damaging Sonic, and TouchResponse exits without a second normal-
-            // sized pass (sonic3k.asm:20620-20640, 21003-21047). Preserve that
+            // sized pass (sonic3k.asm:20656-20676, 21039-21083). Preserve that
             // control flow for child-region composites as well as ordinary
             // single-region objects.
             if (category == TouchCategory.HURT
@@ -865,7 +865,7 @@ final class ObjectTouchResponseController {
                         hpBeforeHit = objectCallbacks.call(
                                 instance, provider2::getCollisionProperty);
                     }
-                    // ROM parity (sonic3k.asm:20945-20990): Touch_EnemyNormal sets
+                    // ROM parity (sonic3k.asm:20981-21026): Touch_EnemyNormal sets
                     // status bit 7 on the badnik AND applies +/-$100 bounce to the
                     // attacking player in the SAME function. The skip-when-destroyed
                     // behaviour only applies to a SUBSEQUENT collision pass (e.g. after
@@ -883,7 +883,7 @@ final class ObjectTouchResponseController {
                     // ROM byte zero-test gate, not signed compare (see player path
                     // above): S2 s2.asm:85282-85290 Touch_Enemy_Part2 tst.b
                     // collision_property/beq; S1 React_Enemy tst.b obColProp/beq;
-                    // S3K sonic3k.asm:20911-20922 tst.b boss_hitcount2/beq. A NONZERO
+                    // S3K sonic3k.asm:20947-20958 tst.b boss_hitcount2/beq. A NONZERO
                     // byte (incl. 0xFF/-1 always-bounce) negates both velocities.
                     if ((hpBeforeHit & 0xFF) != 0) {
                         // S3K boss-hit path also negates ground_vel; S1 also halves.
@@ -931,7 +931,7 @@ final class ObjectTouchResponseController {
                 : instance != null
                         ? objectCallbacks.call(instance, instance::getCollisionX)
                         : sidekick.getCentreX();
-        // HurtCharacter's common tail always publishes $1A (sonic3k.asm:21321).
+        // HurtCharacter's common tail always publishes $1A (sonic3k.asm:21357).
         // Where the ROM appears to keep the prior byte it is the solid
         // push-release tail erasing it later in the same frame, which
         // ObjectSolidContactController owns; the touch path has no say in it.
@@ -1015,9 +1015,9 @@ final class ObjectTouchResponseController {
         if (categoryBits == 0xC0 && profile != null
                 && profile.categoryDecodeMode() == TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY) {
             // ROM: S3K Touch_ChkValue sends every $C0 collision flag to
-            // Touch_Special (sonic3k.asm:20773-20778). Touch_Special only
+            // Touch_Special (sonic3k.asm:20809-20814). Touch_Special only
             // increments collision_property for selected size indices and
-            // otherwise returns (sonic3k.asm:21162-21194); it is never the
+            // otherwise returns (sonic3k.asm:21198-21230); it is never the
             // generic boss-bounce path.
             return TouchCategory.SPECIAL;
         }
@@ -1111,7 +1111,7 @@ final class ObjectTouchResponseController {
                     //       neg.w x_vel(a0); neg.w y_vel(a0)
                     //   S1  s1disasm _incObj/sub ReactToItem.asm:181-191 React_Enemy:
                     //       tst.b obColProp(a1); beq .breakenemy; neg.w obVelX/obVelY
-                    //   S3K sonic3k.asm:20911-20922 .checkhurtenemy:
+                    //   S3K sonic3k.asm:20947-20958 .checkhurtenemy:
                     //       tst.b boss_hitcount2(a1); beq Touch_EnemyNormal;
                     //       neg.w x_vel; neg.w y_vel; neg.w ground_vel
                     // A signed `> 0` test wrongly rejected 0xFF/-1. For S3K bosses

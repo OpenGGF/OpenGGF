@@ -28,7 +28,7 @@ import java.util.Locale;
  *   <li>VRAM base tile is 0x0680 (vs S2's 0x0780)</li>
  *   <li>Extra art tiles for mapping frames &gt;= 0xDA (Super Sonic / special frames)</li>
  *   <li>36 animation scripts (vs S2's 34)</li>
- *   <li>anglePreAdjust is true (S3K subtracts 1 from angle index: sonic3k.asm:24816)</li>
+ *   <li>anglePreAdjust is true (S3K subtracts 1 from angle index: sonic3k.asm:24856)</li>
  * </ul>
  */
 public class Sonic3kPlayerArt {
@@ -130,7 +130,7 @@ public class Sonic3kPlayerArt {
                 .setPushAnimId(Sonic3kAnimationIds.PUSH)
                 // Animate_Sonic's Walk $FF handler selects AniSonic04 when
                 // Status_Push is set; it does not write raw anim=Push
-                // (sonic3k.asm:24819-24836,24913-24930).
+                // (sonic3k.asm:24859-24876,24953-24970).
                 .setPushUsesWalkSpecialHandler(true)
                 .setDuckReleasePublishesWalk(true)
                 .setAirborneSlidePreservesPublishedAnimation(true)
@@ -151,9 +151,9 @@ public class Sonic3kPlayerArt {
                 .setRunSpeedThreshold(0x600)
                 .setFallbackFrame(0)
                 .setWalkRunPublishesFrameBeforeTimerAdvance(true)
-                .setAnglePreAdjust(true)       // sonic3k.asm:24816 — subq.b #1,d0
+                .setAnglePreAdjust(true)       // sonic3k.asm:24856 — subq.b #1,d0
                 .setTumbleTypeFrameBases(0, 0x3D, 0x49, 0x49)
-                .setTumbleFrameBase(0x31);     // sonic3k.asm:24955 — addi.b #$31,d0
+                .setTumbleFrameBase(0x31);     // sonic3k.asm:24995 — addi.b #$31,d0
 
         cachedSonic = new SpriteArtSet(
                 allTiles,
@@ -212,7 +212,7 @@ public class Sonic3kPlayerArt {
                 .setPushAnimId(Sonic3kAnimationIds.PUSH)
                 // Animate_Tails' Walk $FF handler selects AniTails04 when
                 // Status_Push is set; it does not write raw anim=Push
-                // (sonic3k.asm:29420-29445,29540-29557).
+                // (sonic3k.asm:29460-29485,29580-29597).
                 .setPushUsesWalkSpecialHandler(true)
                 .setDuckReleasePublishesWalk(true)
                 .setAirborneSlidePreservesPublishedAnimation(true)
@@ -234,7 +234,7 @@ public class Sonic3kPlayerArt {
                 // Animate_Tails selects private AniTails1F at |ground_vel|
                 // >= $700 while leaving the public anim byte at Walk. Its
                 // $C3/$C4 frames use one-frame slope banks
-                // (sonic3k.asm:29462-29489; Anim - Tails.asm:79).
+                // (sonic3k.asm:29502-29529; Anim - Tails.asm:79).
                 .setWalkSlopeFrameStride(4)
                 .setRunSlopeFrameStride(2)
                 .setHighSpeedWalkRunAnimId(0x1F)
@@ -242,9 +242,9 @@ public class Sonic3kPlayerArt {
                 .setHighSpeedSlopeFrameStride(1)
                 .setFallbackFrame(0)
                 .setWalkRunPublishesFrameBeforeTimerAdvance(true)
-                .setAnglePreAdjust(true)       // sonic3k.asm:29358 — Tails uses same subq.b #1,d0
+                .setAnglePreAdjust(true)       // sonic3k.asm:29398 — Tails uses same subq.b #1,d0
                 .setTumbleTypeFrameBases(0, 0x3D, 0x49, 0x49)
-                .setTumbleFrameBase(0x31);     // sonic3k.asm:24955 — shared Anim_Tumble
+                .setTumbleFrameBase(0x31);     // sonic3k.asm:24995 — shared Anim_Tumble
 
         cachedTails = new SpriteArtSet(
                 allTiles,
@@ -296,13 +296,13 @@ public class Sonic3kPlayerArt {
                 // Animate_Knuckles' Walk $FF handler tests Status_Push and
                 // branches to loc_17ECC (AniKnuckles04) instead of writing a raw
                 // anim=Push byte, exactly mirroring Animate_Sonic/loc_12A72
-                // (btst/bne at sonic3k.asm:33124-33125; loc_17ECC at 33203-33219).
+                // (btst/bne at sonic3k.asm:33164-33165; loc_17ECC at 33203-33219).
                 // loc_17ECC's subq/bpl (33204-33205) freezes mapping_frame while
                 // its reload timer counts, so a Knuckles at rest against a solid
                 // holds the last-published walk frame.
                 .setPushUsesWalkSpecialHandler(true)
                 // Knuckles' loc_17ECC reload shift is lsr.w #8 (delay 8 at rest),
-                // unlike Sonic's loc_12A72 lsr.w #6 (sonic3k.asm:33216 vs 25193).
+                // unlike Sonic's loc_12A72 lsr.w #6 (sonic3k.asm:33256 vs 25193).
                 .setPushDelayShift(8)
                 .setDuckAnimId(Sonic3kAnimationIds.DUCK)
                 .setLookUpAnimId(Sonic3kAnimationIds.LOOK_UP)
@@ -446,9 +446,9 @@ public class Sonic3kPlayerArt {
                 .setRunSpeedThreshold(0x600)
                 .setFallbackFrame(0)
                 .setWalkRunPublishesFrameBeforeTimerAdvance(true)
-                .setAnglePreAdjust(true)       // sonic3k.asm:24816 — same subq.b #1,d0
+                .setAnglePreAdjust(true)       // sonic3k.asm:24856 — same subq.b #1,d0
                 .setTumbleTypeFrameBases(0, 0x3D, 0x49, 0x49)
-                .setTumbleFrameBase(0x31);     // sonic3k.asm:24955 — shared Anim_Tumble
+                .setTumbleFrameBase(0x31);     // sonic3k.asm:24995 — shared Anim_Tumble
 
         cachedSuperSonic = new SpriteArtSet(
                 allTiles,

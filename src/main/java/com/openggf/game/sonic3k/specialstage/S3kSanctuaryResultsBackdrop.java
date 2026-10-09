@@ -18,12 +18,12 @@ import java.util.logging.Logger;
 /**
  * The Hidden Palace sanctuary rebuilt behind a Super Emerald results screen.
  *
- * <p>ROM {@code SpecialStage_Results} (sonic3k.asm:63121-63201): with
+ * <p>ROM {@code SpecialStage_Results} (sonic3k.asm:63161-63241): with
  * {@code SK_special_stage_flag} set it decompresses {@code Layout_HPZ} and the HPZ blocks
  * and art, sets {@code Current_zone_and_act} to $1701 and the camera to ($15A0,$240), runs
  * {@code Load_Sprites}, moves the camera to {@code word_2E398[Current_special_stage_2]} and
  * calls {@code LevelSetup}. The results loop then runs {@code Process_Sprites} and
- * {@code ScreenEvents} each frame without a player (loc_2E24C, :63203-63231) and never
+ * {@code ScreenEvents} each frame without a player (loc_2E24C, :63243-63271) and never
  * reloads object placement.
  *
  * <p>The engine reloads the current $1701 level for the same effect, with its music change

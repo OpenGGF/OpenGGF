@@ -88,8 +88,8 @@ public interface PlayableEntity {
      *       ({@code tst.b f_playerctrl; bmi.s .ignoreobjcoll}).</li>
      *   <li>S2: {@code s2.asm:35962-35964}
      *       ({@code tst.b obj_control(a0); bmi.s +; jsr (TouchResponse).l}).</li>
-     *   <li>S3K: {@code sonic3k.asm:22019-22021} (Sonic_Display) and
-     *       {@code sonic3k.asm:26263-26266} (Tails_Display) — both use
+     *   <li>S3K: {@code sonic3k.asm:22055-22057} (Sonic_Display) and
+     *       {@code sonic3k.asm:26303-26306} (Tails_Display) — both use
      *       {@code andi.b #$A0,d0; bne.s ...}.</li>
      * </ul>
      * In practice ROM only ever sets the sign bit (values {@code $81}/{@code $83}

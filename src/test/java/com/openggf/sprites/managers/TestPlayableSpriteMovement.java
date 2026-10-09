@@ -1312,9 +1312,9 @@ public class TestPlayableSpriteMovement {
         //   S2  Sonic_LevelBound CheckBottom:       cmp.w y_pos(a0),d0 / blt.s
         //                                            (s2.asm:36950)
         //   S3K Player_LevelBound CheckBottom:      cmp.w y_pos(a0),d0 / blt.s
-        //                                            (sonic3k.asm:23195)
+        //                                            (sonic3k.asm:23230)
         //   S3K Tails_Check_Screen_Boundaries:      cmp.w y_pos(a0),d0 / blt.s
-        //                                            (sonic3k.asm:28430-28431)
+        //                                            (sonic3k.asm:28470-28471)
         // The ROM word at y_pos(a0) is the player's centre-Y.
         // ====================================================================
 
@@ -2225,7 +2225,7 @@ public class TestPlayableSpriteMovement {
                 GameServices.sprites().addSprite(sidekick, "tails");
                 PlayableSpriteMovement sidekickMovement = new PlayableSpriteMovement(sidekick);
                 // ROM Tails_Control copies Primary_Angle/Secondary_Angle into the
-                // sidekick's own next_tilt/tilt unconditionally (sonic3k.asm:26243-26244),
+                // sidekick's own next_tilt/tilt unconditionally (sonic3k.asm:26283-26284),
                 // exactly as Sonic_Control does for the leader (25718-25719). So CPU Tails
                 // owns a SEPARATE publisher writing its own latched pair -- the tail is not
                 // absent, it is independent, and running it must not rescan or disturb the
@@ -3045,7 +3045,7 @@ public class TestPlayableSpriteMovement {
                 // AIZ vine handoff mirrors ROM object_control=$02: object control is
                 // still non-zero for sidekick/ordering gates, but bit 0 no longer owns
                 // movement. Player_AnglePos must still run and take the walkoff branch
-                // when no floor/support is found (sonic3k.asm:18728, 18839-18842).
+                // when no floor/support is found (sonic3k.asm:18764, 18875-18878).
                 tails.setObjectControlled(true);
                 tails.setObjectControlAllowsCpu(true);
                 tails.setControlLocked(true);
@@ -3365,9 +3365,9 @@ public class TestPlayableSpriteMovement {
         @Test
         public void s3kCpuSidekickMoveLockDoesNotSuppressDownOnlyRoll() throws Exception {
                 // S3K Tails_InputAcceleration_Path skips acceleration when move_lock is
-                // active (sonic3k.asm:27796-27797), but Tails_Stand_Path still calls
-                // Tails_Roll afterward (sonic3k.asm:27523-27524), and Tails_Roll has
-                // no move_lock gate before entering roll (sonic3k.asm:28461-28472).
+                // active (sonic3k.asm:27836-27837), but Tails_Stand_Path still calls
+                // Tails_Roll afterward (sonic3k.asm:27563-27564), and Tails_Roll has
+                // no move_lock gate before entering roll (sonic3k.asm:28501-28512).
                 setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setCpuControlled(true);
                 mockSprite.setAir(false);
@@ -3825,7 +3825,7 @@ public class TestPlayableSpriteMovement {
                         // ROM Tails_InputAcceleration_Path converts nonzero ground_vel
                         // to x_vel first, then CalcRoomInFront's push path zeroes
                         // ground_vel while preserving the collision x_vel for
-                        // MoveSprite_TestGravity2 (sonic3k.asm:27947-27955,
+                        // MoveSprite_TestGravity2 (sonic3k.asm:27987-27995,
                         // 27997-28017).
                         sprite.setXSpeed((short) -0x00E8);
                         sprite.setGSpeed((short) 0);
@@ -3837,7 +3837,7 @@ public class TestPlayableSpriteMovement {
                         // ROM Tails_InputAcceleration_Path converts nonzero ground_vel
                         // to x_vel first, then CalcRoomInFront's push path zeroes
                         // ground_vel while preserving the collision x_vel for
-                        // MoveSprite_TestGravity2 (sonic3k.asm:27947-27955,
+                        // MoveSprite_TestGravity2 (sonic3k.asm:27987-27995,
                         // 27997-28017).
                         sprite.setXSpeed((short) -0x00E8);
                         sprite.setGSpeed((short) 0);

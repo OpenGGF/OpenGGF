@@ -25,7 +25,7 @@ import java.util.logging.Logger;
  * Invisible trigger zone that forces the player into rolling/spinning state when
  * they cross it. Used for tunnels, S-tubes, and vertical chutes across all zones.
  * <p>
- * Based on Obj_AutoSpin from the S3K disassembly (sonic3k.asm lines 42295-42595).
+ * Based on Obj_AutoSpin from the S3K disassembly (sonic3k.asm lines 42335-42635).
  *
  * <h3>Subtype Encoding:</h3>
  * <ul>
@@ -47,7 +47,7 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
 
     private static final Logger LOG = Logger.getLogger(AutoSpinObjectInstance.class.getName());
 
-    // Size lookup table from disassembly word_1E854 (sonic3k.asm line 42327)
+    // Size lookup table from disassembly word_1E854 (sonic3k.asm line 42367)
     private static final int[] SIZE_TABLE = {0x20, 0x40, 0x80, 0x100};
 
     // From disassembly: move.w #$580,ground_vel(a1)
@@ -133,15 +133,15 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
      *
      * <p>Both main routines load Player 2 and then read
      * {@code Tails_CPU_routine} before the check, branching past it when the
-     * word is 4 -- horizontal at docs/skdisasm/sonic3k.asm:42362-42364,
-     * vertical at :42489-42491. Routine 4 is the {@code Tails_FlySwim_Unknown}
-     * entry of {@code Tails_CPU_Control_Index} (:26368-26371): a carry or
+     * word is 4 -- horizontal at docs/skdisasm/sonic3k.asm:42402-42404,
+     * vertical at :42529-42531. Routine 4 is the {@code Tails_FlySwim_Unknown}
+     * entry of {@code Tails_CPU_Control_Index} (:26408-26411): a carry or
      * flight owner is driving Tails, and the ROM leaves him to it rather than
      * rolling him out from under it.
      *
      * <p>The skipped branch is only the P2 check; both routines fall into the
      * same {@code Delete_Sprite_If_Not_In_Range}, so the object's own lifetime
-     * is unaffected. The crossing state initialised at :42340-42348 is likewise
+     * is unaffected. The crossing state initialised at :42380-42388 is likewise
      * unconditional and is left alone.
      *
      * <p>S2's {@code Obj48} reads the same word for the same purpose
@@ -159,7 +159,7 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
 
     /**
      * Sets initial crossing state based on player position relative to trigger.
-     * From disassembly init routine (sonic3k.asm lines 42329-42348).
+     * From disassembly init routine (sonic3k.asm lines 42369-42388).
      */
     private void initializeCrossingState(AbstractPlayableSprite player, AbstractPlayableSprite nativeP2,
                                          List<PlayableEntity> participants) {
@@ -225,8 +225,8 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
 
     /**
      * Per-frame crossing check for one player.
-     * Horizontal: sub_1E8C6 (sonic3k.asm lines 42372-42473)
-     * Vertical: sub_1EA14 (sonic3k.asm lines 42499-42594)
+     * Horizontal: sub_1E8C6 (sonic3k.asm lines 42412-42513)
+     * Vertical: sub_1EA14 (sonic3k.asm lines 42539-42634)
      */
     private boolean checkPlayerCrossing(AbstractPlayableSprite player, boolean pastTrigger) {
         int objX = spawn.x();
@@ -345,7 +345,7 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
      * Enables spin for horizontal triggers.
      * Sets ground_vel and spin_dash_flag, then forces roll state.
      * When noSpinLock is set, skips speed/flag writes but still forces roll.
-     * From sonic3k.asm lines 42394-42472.
+     * From sonic3k.asm lines 42434-42512.
      *
      * <p>ROM: spin_dash_flag = 0x01 (pinball mode) or 0x81 (pinball + speed lock).
      * The 0x81 value causes Sonic_RollSpeed to skip its entire body (input,
@@ -368,7 +368,7 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
     /**
      * Enables spin for vertical triggers with optional snap-to-wall.
      * Vertical handler does NOT set ground_vel to 0x580 (unlike horizontal).
-     * From sonic3k.asm lines 42520-42594.
+     * From sonic3k.asm lines 42560-42634.
      */
     private void enableSpinVertical(AbstractPlayableSprite player, boolean crossingDownward) {
         lastTraceEvent = String.format("enableV:%s:%s", crossingDownward ? "down" : "up",
@@ -386,7 +386,7 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
             player.setAngle(WALL_ANGLE);
             if (crossingDownward) {
                 // Top-to-bottom: full snap - transfer y_vel to ground_vel, clear x_vel
-                // From sonic3k.asm lines 42530-42536
+                // From sonic3k.asm lines 42570-42576
                 player.setGSpeed(player.getYSpeed());
                 player.setXSpeed((short) 0);
             }
@@ -410,7 +410,7 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
 
     /**
      * Forces player into rolling state if not already rolling.
-     * From loc_1E9B6/loc_1E9C0 (sonic3k.asm lines 42458-42472):
+     * From loc_1E9B6/loc_1E9C0 (sonic3k.asm lines 42498-42512):
      * - Check Status_Roll; if set, return
      * - Set Status_Roll, y_radius=0x0E, x_radius=0x07, anim=2
      * - Add 5 to y_pos
@@ -429,7 +429,7 @@ public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindR
         // changes width on wall modes.
         player.setCentreXPreserveSubpixel(preRollCentreX);
         // ROM Obj_AutoSpin hardcodes addq.w #5,y_pos after setting roll radii
-        // (sonic3k.asm:42464-42469), independent of character height.
+        // (sonic3k.asm:42504-42509), independent of character height.
         player.setCentreYPreserveSubpixel((short) (preRollCentreY + 5));
 
         SpriteAnimationProfile profile = player.getAnimationProfile();

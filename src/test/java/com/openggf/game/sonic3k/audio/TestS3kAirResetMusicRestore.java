@@ -23,7 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * Which track the drowning countdown hands back to, driven through a real AIZ1
  * fixture rather than through the profile alone.
  *
- * <p>{@code Player_ResetAirTimer} (sonic3k.asm:33663-33686) loads
+ * <p>{@code Player_ResetAirTimer} (sonic3k.asm:33703-33726) loads
  * {@code Current_music} and then substitutes {@code mus_Invincibility} ($2C)
  * when {@code Status_Invincible} is set, the same track again when
  * {@code Super_Sonic_Knux_flag} is set, and {@code mus_MinibossK} ($18) when

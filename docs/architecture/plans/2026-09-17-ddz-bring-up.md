@@ -216,7 +216,7 @@ credits (ending campaign, which also owns the mislabelled `ddz` segments); level
   `upgradeDoomsdayFormToHyper`. `HpzCameraGradualObjectInstance` became `S3kCameraGradualObjectInstance`
   reading `S3kCameraStoredBounds`.
 - **Shared fix:** S3K transformations released `object_control` after a fixed 30 frames (Tails/Knuckles after one
-  pass). ROM `SuperHyper_PalCycle` (sonic3k.asm:4608-4660) runs `Palette_timer $F` then six 2-frame fade steps for
+  pass). ROM `SuperHyper_PalCycle` (sonic3k.asm:4640-4692) runs `Palette_timer $F` then six 2-frame fade steps for
   Sonic and finishes on the first expiry for Tails/Knuckles. RED: `TestS3kDdzFlightControllerHeadless` release at
   frame 54 instead of 50 (diagnostic run before the fix). GREEN after. `TestSonic3kSuperStateRewind` updated
   (its one-tick pop was not trace-backed, commit `a1c45eb38`).
@@ -258,7 +258,7 @@ credits (ending campaign, which also owns the mislabelled `ddz` segments); level
   children after the current slot.
 - **Wrap seek.** The first post-wrap design called `adjustPlacementTrackingForWrap` (AIZ's cursor shift) and loaded
   nothing afterwards; removing it made the engine's big-jump refresh load ascending into low slots. ROM
-  `loc_81726` calls `Seek_Object_Manager` (sonic3k.asm:37986): cursors move around `(Camera_X + $400) & $FF80`
+  `loc_81726` calls `Seek_Object_Manager` (sonic3k.asm:38026): cursors move around `(Camera_X + $400) & $FF80`
   without loading, and the next `Load_Sprites` backward branch loads right to left. Added package-private
   `ObjectPlacementController.seekCursors` behind the non-API `ObjectPlacementSeek`. First divergence moved from
   8248 (1 px) to 8249 exact / 8627 ring phase.

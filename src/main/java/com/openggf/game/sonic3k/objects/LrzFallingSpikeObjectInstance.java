@@ -24,17 +24,17 @@ import java.util.List;
 
 /**
  * ROM object {@code Obj_LRZFallingSpike} -- object id {@code $18} in the {@code SKL} pointer set
- * (sonic3k.asm:87946-88009, ROM {@code $4284C}; {@code Map_LRZFallingSpike} at ROM {@code $42920}).
+ * (sonic3k.asm:87992-88055, ROM {@code $4284C}; {@code Map_LRZFallingSpike} at ROM {@code $42920}).
  * The {@code S3KL} set spends the same id on {@code Obj_LBZCupElevator}.
  *
  * <p>Three routines: it hangs harmful and waiting, drops under gravity when a player comes close
  * enough, and once it hits the floor it stops hurting and becomes an ordinary full-solid block.
  *
  * <p><b>The trigger distance is the subtype in pixels, not a scaled value.</b> Init does
- * {@code move.b subtype(a0),$2F(a0)} (:87955) and the waiting routine does
- * {@code cmp.w $2E(a0),d0} (:87977), and {@code $2F} is the <em>low byte of the word at
+ * {@code move.b subtype(a0),$2F(a0)} (:88001) and the waiting routine does
+ * {@code cmp.w $2E(a0),d0} (:88023), and {@code $2F} is the <em>low byte of the word at
  * {@code $2E}</em>. A freshly allocated slot is zeroed -- {@code Delete_Referenced_Sprite}
- * (:36115-36124) clears the whole SST and {@code AllocateObject} (:37911) only looks for a slot
+ * (:36155-36164) clears the whole SST and {@code AllocateObject} (:37951) only looks for a slot
  * whose first long is zero -- and this object never writes {@code $2E}'s high byte, so the compared
  * word is the subtype itself. Lava Reef's fifteen placements carry subtypes 1 to 5, so each spike
  * drops only while a player's {@code x_pos} is within one to five pixels of its own. Byte-verified
@@ -42,7 +42,7 @@ import java.util.List;
  * ({@code B0 68 00 2E}), because a value that narrow reads like a transcription slip. Writing the
  * byte to {@code $2E} instead would give {@code subtype << 8}, a 256-to-1280 pixel trigger.
  *
- * <p>The distance is the smaller of the two players' horizontal separations (:87958-87976), taken
+ * <p>The distance is the smaller of the two players' horizontal separations (:88004-88022), taken
  * with word arithmetic and a {@code neg.w}, and the comparison is unsigned ({@code bhs}).
  *
  * <p>The waiting and falling routines end in {@code Sprite_CheckDeleteTouch3}, so the shared camera
@@ -54,20 +54,20 @@ public final class LrzFallingSpikeObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable,
         RomObjectCodePointerProvider {
 
-    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:87953). */
+    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:87999). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);
-    /** {@code move.b #$10,width_pixels(a0)} / {@code height_pixels(a0)} (:87951-87952). */
+    /** {@code move.b #$10,width_pixels(a0)} / {@code height_pixels(a0)} (:87997-87998). */
     private static final int WIDTH_PIXELS = 0x10;
     private static final int HEIGHT_PIXELS = 0x10;
-    /** {@code move.b #$C,y_radius(a0)} (:87954): the radius {@code ObjCheckFloorDist} uses. */
+    /** {@code move.b #$C,y_radius(a0)} (:88000): the radius {@code ObjCheckFloorDist} uses. */
     private static final int Y_RADIUS = 0x0C;
-    /** {@code move.b #$82,collision_flags(a0)} (:87954). */
+    /** {@code move.b #$82,collision_flags(a0)} (:88000). */
     private static final int COLLISION_FLAGS_HARMFUL = 0x82;
-    /** {@code move.w #$13,d1 / #$10,d2 / #$11,d3} before {@code SolidObjectFull} (:88004-88006). */
+    /** {@code move.w #$13,d1 / #$10,d2 / #$11,d3} before {@code SolidObjectFull} (:88050-88052). */
     private static final int SOLID_HALF_WIDTH = 0x13;
     private static final int SOLID_HEIGHT_AIR = 0x10;
     private static final int SOLID_HEIGHT_GROUND = 0x11;
-    /** {@code addi.w #$38,y_vel(a0)} inside {@code MoveSprite} (sonic3k.asm:36037). */
+    /** {@code addi.w #$38,y_vel(a0)} inside {@code MoveSprite} (sonic3k.asm:36077). */
     private static final int GRAVITY = 0x38;
 
     private enum Phase { WAITING, FALLING, LANDED }
@@ -106,13 +106,13 @@ public final class LrzFallingSpikeObjectInstance extends AbstractObjectInstance
             case WAITING -> updateWaiting(playerEntity);
             case FALLING -> updateFalling();
             case LANDED -> {
-                // loc_42904 (sonic3k.asm:88003-88008) is the SolidObjectFull call the engine's
+                // loc_42904 (sonic3k.asm:88049-88054) is the SolidObjectFull call the engine's
                 // solid checkpoint makes from getSolidParams(), then a draw test.
             }
         }
     }
 
-    /** {@code loc_42898} (sonic3k.asm:87958-87981). */
+    /** {@code loc_42898} (sonic3k.asm:88004-88027). */
     private void updateWaiting(PlayableEntity playerEntity) {
         int distance = Math.min(
                 horizontalSeparation(playerEntity),
@@ -124,7 +124,7 @@ public final class LrzFallingSpikeObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code move.w x_pos(a0),d0 / sub.w x_pos(a1),d0 / bpl / neg.w d0} (:87959-87963), word
+     * {@code move.w x_pos(a0),d0 / sub.w x_pos(a1),d0 / bpl / neg.w d0} (:88005-88009), word
      * arithmetic throughout. The ROM reads the {@code Player_2} slot unconditionally, so an empty
      * slot contributes {@code |x_pos(a0) - 0|}, the object's own X -- larger than any Lava Reef
      * trigger and therefore never the smaller of the two.
@@ -137,7 +137,7 @@ public final class LrzFallingSpikeObjectInstance extends AbstractObjectInstance
         return Math.abs(delta) & 0xFFFF;
     }
 
-    /** {@code loc_428D6} (sonic3k.asm:87985-87998). */
+    /** {@code loc_428D6} (sonic3k.asm:88031-88044). */
     private void updateFalling() {
         SubpixelMotion.moveSprite(motion, GRAVITY);
         updateDynamicSpawn(motion.x, motion.y);
@@ -169,7 +169,7 @@ public final class LrzFallingSpikeObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
-        // move.b #0,collision_flags(a0) on landing (sonic3k.asm:87992): a landed spike is a plain
+        // move.b #0,collision_flags(a0) on landing (sonic3k.asm:88038): a landed spike is a plain
         // platform and stops hurting.
         return phase == Phase.LANDED ? 0 : COLLISION_FLAGS_HARMFUL;
     }
@@ -197,7 +197,7 @@ public final class LrzFallingSpikeObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
-        // d4 = x_pos(a0) (sonic3k.asm:88007); a landed spike never moves again.
+        // d4 = x_pos(a0) (sonic3k.asm:88053); a landed spike never moves again.
         return false;
     }
 
@@ -238,7 +238,7 @@ public final class LrzFallingSpikeObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        // make_art_tile(ArtTile_LRZMisc,2,0) (sonic3k.asm:87948) leaves the priority bit clear.
+        // make_art_tile(ArtTile_LRZMisc,2,0) (sonic3k.asm:87994) leaves the priority bit clear.
         return false;
     }
 

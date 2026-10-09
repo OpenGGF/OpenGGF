@@ -22,7 +22,7 @@ import java.util.List;
 /**
  * Flame child spawned by {@link LbzFlameThrowerObjectInstance}.
  *
- * <p>ROM reference: {@code Obj_AutoSpin460} ({@code sonic3k.asm:52089-52104})
+ * <p>ROM reference: {@code Obj_AutoSpin460} ({@code sonic3k.asm:52129-52144})
  * plus {@code Ani_LBZFlameThrower}. The child animates the single ROM sequence
  * and uses {@code collision_flags=$9D} with fire-shield reaction bit 4 set.
  */

@@ -45,7 +45,7 @@ import java.util.logging.Logger;
 /**
  * S3K MGZ Act 2 "Drilling Robotnik" mini-event instance.
  *
- * <h3>ROM reference (sonic3k.asm:142384-142436)</h3>
+ * <h3>ROM reference (sonic3k.asm:142449-142501)</h3>
  * {@code Obj_MGZ2DrillingRobotnik}: first-frame init changes main to
  * {@code Obj_Wait} (120 frames), queues {@code ArtKosM_MGZEndBoss} +
  * {@code ArtKosM_MGZEndBossDebris}, loads PLC #$6D (Robotnik ship/explosion/egg
@@ -60,7 +60,7 @@ import java.util.logging.Logger;
  *       {@code Child1_MakeRoboHead} (Robotnik's animated face).</li>
  *   <li>{@code CreateChild1_Normal(ChildObjDat_6D7C0)} → 4 drill-piece children.</li>
  * </ul>
- * {@code MGZ2_SpecialCheckHit} (sonic3k.asm:144369): mini-event instances
+ * {@code MGZ2_SpecialCheckHit} (sonic3k.asm:144434): mini-event instances
  * refresh {@code collision_property} to 1 on every fatal hit (the event flag
  * at $46 is set), so the player is never credited with a kill. The event
  * instance still runs its scripted drill-drop → swing → ceiling-escape flow.
@@ -216,7 +216,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private static final int END_BOSS_MINI_CRAFT_ESCAPE_TIMER = 0x100;
 
     /**
-     * ROM: {@code ChildObjDat_6D7C0} (sonic3k.asm:144579). Four children
+     * ROM: {@code ChildObjDat_6D7C0} (sonic3k.asm:144644). Four children
      * spawned from loc_6BFCA at these offsets, using the listed mapping frames
      * of {@code Map_MGZEndBoss}. Format: {mappingFrame, offX, offY}.
      */
@@ -298,7 +298,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private static final int[] FLASH_COLORS_BRIGHT = {0x0EEE, 0x0888, 0x0AAA};
 
     /**
-     * ROM: {@code ChildObjDat_6D7EA} / {@code _6D7F2} (sonic3k.asm:144597) spawn
+     * ROM: {@code ChildObjDat_6D7EA} / {@code _6D7F2} (sonic3k.asm:144662) spawn
      * 10 debris chunks from {@code loc_6C024} during the drill drop once the
      * drill is no higher than {@code Camera_Y+$120}. Spawn offset is (+$18, -$40)
      * (flipped to (-$18, -$40) for events 2 & 3). Each chunk gets a different
@@ -848,7 +848,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private void updateWaitForResultsFlag() {
         // ROM loc_6C8F4 pins Camera_min_X_pos to Camera_X_pos on every retained
         // boss-waiter pass while _unkFAA8 says the capsule/results flow is still
-        // active (sonic3k.asm:143186-143190). This write is independent of the
+        // active (sonic3k.asm:143251-143255). This write is independent of the
         // older quake-event gradual-boundary child and must therefore be
         // republished after that child runs rather than left solely to the
         // fixed-slot boss-transition event.
@@ -1225,7 +1225,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     }
 
     /**
-     * ROM init-time side effects (sonic3k.asm:142384-142401):
+     * ROM init-time side effects (sonic3k.asm:142449-142466):
      * queue MGZ end-boss art, load PLC #$6D (shared Robotnik ship art), and
      * load Pal_MGZEndBoss into palette line 1.
      */
@@ -1242,7 +1242,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
 
     /**
      * ROM {@code Obj_MGZ2DrillingRobotnik} queues the drill and debris KosM
-     * archives before loading PLC {@code $6D} (sonic3k.asm:142447-142454).
+     * archives before loading PLC {@code $6D} (sonic3k.asm:142512-142519).
      * The sheets are registered separately for rendering, but the global
      * module FIFO still owns this hardware-visible work.
      */
@@ -1306,7 +1306,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         }
     }
 
-    /** ROM: Obj_MGZ2DrillingRobotnikGo (sonic3k.asm:142404) — Play_Music(mus_EndBoss). */
+    /** ROM: Obj_MGZ2DrillingRobotnikGo (sonic3k.asm:142469) — Play_Music(mus_EndBoss). */
     private void playBossMusicOnce() {
         if (bossMusicPlayed) {
             return;
@@ -1334,7 +1334,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
 
     /**
      * ROM: {@code lea Pal_MGZEndBoss(pc),a1 / jmp PalLoad_Line1} at the end of
-     * loc_6BFCA (sonic3k.asm:142400-142401). S&K-side ROM offset 0x06D97C.
+     * loc_6BFCA (sonic3k.asm:142465-142466). S&K-side ROM offset 0x06D97C.
      */
     private void loadBossPalette() {
         if (palettesLoaded) {
@@ -1434,7 +1434,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (services().gameState() != null) {
             services().gameState().addScore(1000);
         }
-        // ROM loc_6D60A: jmp (BossDefeated_StopTimer).l (sonic3k.asm:144464).
+        // ROM loc_6D60A: jmp (BossDefeated_StopTimer).l (sonic3k.asm:144529).
         stopLevelTimerOnBossDefeat();
     }
 
@@ -1633,7 +1633,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (shipRenderer == null) return;
         int podX = state.x + renderOffsetX(POD_OFFSET_X);
         int podY = state.y + POD_OFFSET_Y;
-        // Obj_MGZEndBoss allocates the pod with Child1_MakeRoboShip3 (sonic3k.asm:142771-142772);
+        // Obj_MGZEndBoss allocates the pod with Child1_MakeRoboShip3 (sonic3k.asm:142836-142837);
         // Obj_RobotnikShipInit then creates the head (Child1_MakeRoboHead, 136415-136416)
         // and Obj_RobotnikShipReady the flame (Child1_MakeRoboShipFlame, 136465-136466),
         // each via CreateChild1_Normal / AllocateObjectAfterCurrent (176924-176929).
@@ -1650,7 +1650,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     }
 
     /**
-     * ROM: {@code Obj_RobotnikHeadMain} (sonic3k.asm:136067). Blink between
+     * ROM: {@code Obj_RobotnikHeadMain} (sonic3k.asm:136132). Blink between
      * mapping_frame 0 and 1 at the AniRaw_RobotnikHead delay of 5 frames.
      * If the parent's status bit 6 (hurt) is set, use mapping_frame 2.
      */

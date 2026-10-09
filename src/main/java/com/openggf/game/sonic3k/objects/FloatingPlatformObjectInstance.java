@@ -54,7 +54,7 @@ import java.util.logging.Logger;
  *   <li>12: Horizontal256 - slow accumulating sweep</li>
  * </ul>
  * <p>
- * ROM references: Obj_FloatingPlatform (sonic3k.asm line 50758), byte_254FA,
+ * ROM references: Obj_FloatingPlatform (sonic3k.asm line 50798), byte_254FA,
  * FloatingPlatformIndex (line 50174), Platform_Stationary (line 50190),
  * sub_24FDE (line 50229), Platform_Rising (line 50462), loc_252B8 (line 50556).
  */
@@ -177,14 +177,14 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
         this.y = baseY;
         // ROM Obj_FloatingPlatform saves x_pos to $44 and checks that anchor
         // at loc_25628, not the moving platform's live x_pos. Types 12+ widen
-        // the delete range and bias $44 by +$100 (sonic3k.asm:50810-50835).
+        // the delete range and bias $44 by +$100 (sonic3k.asm:50850-50875).
         this.outOfRangeReferenceX = moveType >= 12 ? baseX + 0x100 : baseX;
         this.outOfRangeLimit = moveType >= 12 ? 0x380 : 0x280;
 
         // Initialize SubpixelMotion state for Rising platform (type 7)
         this.risingState = new SubpixelMotion.State(baseX, baseY, 0, 0, 0, 0);
 
-        // Square path quadrant initialization (sonic3k.asm lines 50796, 50799-50812)
+        // Square path quadrant initialization (sonic3k.asm lines 50836, 50839-50852)
         // ROM: move.b status(a0),$2E(a0) — copies render flags to quadrant field
         // Then for types 8-11: checks osc value word; if negative, flips bit 0
         if (moveType >= 8 && moveType <= 11) {
@@ -213,7 +213,7 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        // ROM: move.b height_pixels(a0),d3; addq.w #1,d3 (sonic3k.asm:50839-50840)
+        // ROM: move.b height_pixels(a0),d3; addq.w #1,d3 (sonic3k.asm:50879-50880)
         // height_pixels is never modified — only y_radius changes for ObjCheckCeilingDist
         return SolidObjectParams.of(halfWidth, halfHeight, halfHeight + 1);
     }
@@ -335,7 +335,7 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
 
     /**
      * Applies movement based on move type (subtype &amp; 0x0F).
-     * Ported from FloatingPlatformIndex (sonic3k.asm line 50174).
+     * Ported from FloatingPlatformIndex (sonic3k.asm line 50214).
      */
     private void applyMovement(AbstractPlayableSprite player) {
         switch (moveType) {
@@ -356,7 +356,7 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     // ===== Movement type 0: Stationary bob =====
 
     /**
-     * Platform_Stationary (sonic3k.asm lines 50190-50211).
+     * Platform_Stationary (sonic3k.asm lines 50230-50251).
      * <p>
      * Gentle sine-bob in Y when player stands on the platform.
      * Angle increments by +4/frame while standing, decrements by -4 while not,
@@ -370,7 +370,7 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     // ===== Movement types 1-2: Horizontal oscillation =====
 
     /**
-     * Shared horizontal oscillation subroutine (sub_24FDE, sonic3k.asm line 50229).
+     * Shared horizontal oscillation subroutine (sub_24FDE, sonic3k.asm line 50269).
      * <p>
      * ROM: reads oscillation byte, applies xFlip polarity, adds to baseX.
      */
@@ -381,7 +381,7 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     // ===== Movement types 3-4: Vertical oscillation =====
 
     /**
-     * Vertical oscillation (sonic3k.asm lines 50244-50266, loc_2500C).
+     * Vertical oscillation (sonic3k.asm lines 50284-50306, loc_2500C).
      * Same structure as horizontal but applied to Y with subtraction.
      */
     private void applyVerticalOscillation(int oscOffset, int amplitude) {
@@ -391,7 +391,7 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     // ===== Movement type 5: Diagonal up =====
 
     /**
-     * DiagonalUp movement (sonic3k.asm lines 50269-50278).
+     * DiagonalUp movement (sonic3k.asm lines 50309-50318).
      * <p>
      * Calls sub_24FDE for X (osc $1E, amplitude 128), then halves the raw osc byte
      * with lsr.b #1 and applies to Y via loc_2500C (amplitude 64).
@@ -405,7 +405,7 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     // ===== Movement type 6: Diagonal down =====
 
     /**
-     * DiagonalDown movement (sonic3k.asm lines 50281-50292).
+     * DiagonalDown movement (sonic3k.asm lines 50321-50332).
      * <p>
      * Negates X oscillation byte before passing to sub_24FDE (inverts X phase).
      * Y component is identical to DiagonalUp.
@@ -420,7 +420,7 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     // ===== Movement type 7: Rising =====
 
     /**
-     * Weight-triggered rising platform (sonic3k.asm lines 50462-50522).
+     * Weight-triggered rising platform (sonic3k.asm lines 50502-50562).
      * <p>
      * When player stands, activates rising. Uses MoveSprite2 for subpixel movement.
      * Accelerates upward (-8/frame) only when below target (baseY - 0x80).
@@ -440,18 +440,18 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
         }
 
         // ROM MoveSprite2 updates the 32-bit object position with velocity << 8
-        // (sonic3k.asm:36053-36062), preserving the full 16-bit fractional word.
+        // (sonic3k.asm:36093-36102), preserving the full 16-bit fractional word.
         SubpixelMotion.speedToPos(risingState);
         y = risingState.y;
 
-        // Accelerate upward only when below target (sonic3k.asm:50477-50483)
+        // Accelerate upward only when below target (sonic3k.asm:50517-50523)
         // ROM: cmp.w y_pos(a0),d0; bhs.s — unsigned 16-bit comparison
         int target = baseY - RISING_TARGET_OFFSET;
         if (Integer.compareUnsigned(y & 0xFFFF, target & 0xFFFF) > 0) {
             risingState.yVel -= RISING_ACCEL;
         }
 
-        // ObjCheckCeilingDist (sonic3k.asm:50486-50492): ceiling collision resets state
+        // ObjCheckCeilingDist (sonic3k.asm:50526-50532): ceiling collision resets state
         try {
             TerrainCheckResult ceilingResult = ObjectTerrainUtils.checkCeilingDist(
                     x, y, RISING_Y_RADIUS);
@@ -468,7 +468,7 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
             // Safe fallback if terrain check unavailable (test env)
         }
 
-        // Crush detection (sonic3k.asm:50496-50521): kill standing player if headroom < 0
+        // Crush detection (sonic3k.asm:50536-50561): kill standing player if headroom < 0
         if (player != null && isPlayerRiding()) {
             try {
                 TerrainCheckResult headroom = ObjectTerrainUtils.checkCeilingDist(
@@ -485,7 +485,7 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     // ===== Movement types 8-11: Square paths =====
 
     /**
-     * Square orbit path (sonic3k.asm lines 50525-50610, loc_252B8).
+     * Square orbit path (sonic3k.asm lines 50565-50650, loc_252B8).
      * <p>
      * Uses a 4-quadrant state machine that advances when the oscillation delta
      * word is zero. Each quadrant positions the platform along one edge of a
@@ -547,7 +547,7 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     // ===== Movement type 12: Horizontal256 =====
 
     /**
-     * Slow accumulating horizontal sweep (sonic3k.asm lines 50336-50370).
+     * Slow accumulating horizontal sweep (sonic3k.asm lines 50376-50410).
      * <p>
      * Uses a velocity accumulator ($40) and position accumulator ($36) to create
      * a slow, smooth back-and-forth sweep. Direction flag ($3C) controls acceleration.

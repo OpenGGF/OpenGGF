@@ -128,12 +128,12 @@ public class MhzPollenParticleInstance extends AbstractObjectInstance implements
         // Render_Sprites runs after the camera and object pass, setting
         // render_flags bit 7 for loc_3DBE0 to consume on the next dispatch.
         // Sampling here is essential when the camera moves vertically during
-        // the same frame (sonic3k.asm:36347-36365, 81767-81805).
+        // the same frame (sonic3k.asm:36387-36405, 81808-81846).
         renderFlagOnScreen = isWithinRenderSpriteBounds(4, 4);
     }
 
     // Obj_MHZ_Pollen_Spawner writes move.w #0,priority(a1) on both spawn paths
-    // (sonic3k.asm:81662, 81699): display list 0 is the ROM value.
+    // (sonic3k.asm:81703, 81740): display list 0 is the ROM value.
     private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
 
     @Override

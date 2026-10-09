@@ -142,7 +142,7 @@ enters collection routine 6 one frame early.
 This cadence is slot-owned. `Process_Sprites` initializes `d7` to the last SST
 index and decrements it per entry. `Obj_Bouncing_Ring` adds `d7` to
 `V_int_run_count+3` before its every-eighth-frame floor test
-(`docs/skdisasm/sonic3k.asm:35549-35616,35965-35980`). The engine's equivalent
+(`docs/skdisasm/sonic3k.asm:35589-35656,36005-36020`). The engine's equivalent
 phase is consequently `$5E` in slot 15 versus the ROM's `$5D` in slot 16.
 
 | Frame | Source | Slot/object | Position or state | Phase |
@@ -164,7 +164,7 @@ The slot difference predates the ring spill. At f23463 the ROM has
 `loc_3406E` visual helpers in slots 15, 17, and 18. The engine's three
 `MGZSwingingPlatform` reservations are in slots 16, 17, and 19. The ROM
 platform routine really allocates one independent helper with
-`AllocateObjectAfterCurrent` (`docs/skdisasm/sonic3k.asm:70459-70530`);
+`AllocateObjectAfterCurrent` (`docs/skdisasm/sonic3k.asm:70499-70570`);
 the engine correctly represents that pressure, but the helper slots were
 chosen under an already-different earlier inventory.
 
@@ -177,7 +177,7 @@ touch response runs. The first ring agrees in slot 7.
 
 The ROM hurt path allocates the owner with `AllocateObject`, then
 `Obj_Bouncing_Ring` allocates the remainder after the owner
-(`docs/skdisasm/sonic3k.asm:21065-21088,35549-35616`). Engine and ROM therefore
+(`docs/skdisasm/sonic3k.asm:21101-21124,35589-35656`). Engine and ROM therefore
 agree on the allocation algorithm; the unresolved datum is the earlier birth
 or lifetime edge that leaves the path-swap SST live in engine slot 11 at this
 point.

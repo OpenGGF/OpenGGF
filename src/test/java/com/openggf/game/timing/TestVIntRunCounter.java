@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * {@link VIntRunCounter} models ROM {@code V_int_run_count}
- * (docs/skdisasm/sonic3k.asm:542-543): one increment per serviced V-int since
+ * (docs/skdisasm/sonic3k.asm:558-559): one increment per serviced V-int since
  * power-on, carried across every game mode and gameplay session.
  */
 class TestVIntRunCounter {

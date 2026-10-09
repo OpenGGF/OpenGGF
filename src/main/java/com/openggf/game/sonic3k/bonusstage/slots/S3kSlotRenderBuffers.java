@@ -201,16 +201,16 @@ public final class S3kSlotRenderBuffers {
 
         /**
          * Claims a free slot exactly as the ROM's {@code sub_4B57C} scan does
-         * ({@code sonic3k.asm:98376-98390}): the creating branch stores only the
+         * ({@code sonic3k.asm:98422-98436}): the creating branch stores only the
          * animation type, the target layout-byte pointer and the restore id --
-         * see {@code loc_4BF30} ({@code sonic3k.asm:99283-99300}) and its siblings.
+         * see {@code loc_4BF30} ({@code sonic3k.asm:99329-99346}) and its siblings.
          * Every slot is released with {@code clr.l (a0) / clr.l 4(a0)}
-         * ({@code sonic3k.asm:98511-98512}), so a freshly claimed slot always
+         * ({@code sonic3k.asm:98557-98558}), so a freshly claimed slot always
          * starts with countdown 0 and frame index 0, and <b>the layout byte is not
          * written by the creating branch at all</b>. The first animation frame is
          * published by the first {@code sub_4B592} pass, which runs later in the
          * same game frame from {@code Slots_RenderLayout}
-         * ({@code sonic3k.asm:98159-98161}).
+         * ({@code sonic3k.asm:98205-98207}).
          */
         private void start(S3kSlotRenderBuffers buffers, int layoutIndex, byte[] frames, int reload, byte restoreTile) {
             active = true;
@@ -224,9 +224,9 @@ public final class S3kSlotRenderBuffers {
 
         /**
          * One {@code sub_4B592} pass over this slot
-         * ({@code sonic3k.asm:98397-98411} dispatching to {@code loc_4B5C2} /
+         * ({@code sonic3k.asm:98443-98457} dispatching to {@code loc_4B5C2} /
          * {@code loc_4B5F2} / {@code loc_4B65A} / {@code loc_4B626},
-         * {@code sonic3k.asm:98420-98513}). All four handlers share one idiom:
+         * {@code sonic3k.asm:98466-98559}). All four handlers share one idiom:
          *
          * <pre>
          *     subq.b  #1,2(a0)          ; countdown
@@ -244,10 +244,10 @@ public final class S3kSlotRenderBuffers {
          * {@link #start} and <em>also</em> letting that frame's pass decrement the
          * countdown consumed the creation pass twice, so every subsequent step,
          * and the final restore, landed one frame early. For the 24-frame reel
-         * flash ({@code byte_4B688}, {@code sonic3k.asm:98517-98545}) that restored
+         * flash ({@code byte_4B688}, {@code sonic3k.asm:98563-98591}) that restored
          * the advanced reel tile on frame 47 instead of the ROM's frame 48 -- and
          * when the advanced tile is {@code 4}, the goal, the goal-exit routine bump
-         * at {@code loc_4BED0} ({@code sonic3k.asm:99247-99253}) fired a frame
+         * at {@code loc_4BED0} ({@code sonic3k.asm:99293-99299}) fired a frame
          * before the ROM's.
          */
         private void tick(S3kSlotRenderBuffers buffers) {

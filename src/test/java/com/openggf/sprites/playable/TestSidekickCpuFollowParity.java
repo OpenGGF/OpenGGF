@@ -4617,11 +4617,11 @@ class TestSidekickCpuFollowParity {
 
         // TailsCPU_Normal reads the delayed status byte from exactly one
         // Sonic_Pos_Record_Buf slot -- the same slot as the delayed
-        // Ctrl_1_logical word it loads for d1 (sonic3k.asm:26696-26705). There
+        // Ctrl_1_logical word it loads for d1 (sonic3k.asm:26736-26745). There
         // is no second, one-frame-later status read. The bridge that existed
         // here compensated for the engine clearing Status_Push inside the
         // roll-stop movement path, one routine before the ROM's
-        // Animate_Sonic/Animate_Tails clear (sonic3k.asm:29359-29364,
+        // Animate_Sonic/Animate_Tails clear (sonic3k.asm:29399-29404,
         // 29681-29686, which run after Sonic_RecordPos at 21995-22022). With
         // that eager clear removed, the delay-16 sample already carries the
         // ROM byte and the object-order sample double-counts it.

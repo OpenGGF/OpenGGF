@@ -36,7 +36,7 @@ import java.util.Map;
  * S3K S3KL object $18 - LBZ cup elevator.
  *
  * <p>ROM reference: {@code Obj_LBZCupElevator} and
- * {@code LBZCupElevator_Action} (sonic3k.asm:52537-53149).
+ * {@code LBZCupElevator_Action} (sonic3k.asm:52577-53189).
  */
 public final class LbzCupElevatorInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
@@ -45,11 +45,11 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_LBZCupElevator} is installed from the S3K object pointer table at
      * {@code $0002694E} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:52542).
+     * label is defined at docs/skdisasm/sonic3k.asm:52582).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0002}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {

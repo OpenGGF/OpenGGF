@@ -614,7 +614,7 @@ class TestS3kKosStructuralSequence {
     /**
      * A mid-level {@code jsr (LoadEnemyArt).l} runs {@code Queue_Kos_Module}
      * for every entry during its caller's own dispatch
-     * ({@code docs/skdisasm/sonic3k.asm:64281-64313}), so the parent batch is
+     * ({@code docs/skdisasm/sonic3k.asm:64321-64353}), so the parent batch is
      * on the module FIFO before that iteration's
      * {@code Process_Kos_Module_Queue} state step (7908) — no recorded timing
      * signal is involved.

@@ -17,7 +17,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * ROM {@code Obj_SSZCollapsingBridgeDiagonal} ({@code $7B}, sonic3k.asm:90222-90402): the sloped
+ * ROM {@code Obj_SSZCollapsingBridgeDiagonal} ({@code $7B}, sonic3k.asm:90268-90448): the sloped
  * sanctuary walkway that breaks into eight pieces. Thirty-five act-1 placements, {@code $00}
  * thirty-one times and {@code $80} four times — the largest single family in the act.
  *

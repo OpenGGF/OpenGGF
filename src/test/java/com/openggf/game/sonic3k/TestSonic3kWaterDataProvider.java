@@ -41,7 +41,7 @@ public class TestSonic3kWaterDataProvider {
 
     @Test
     public void aiz2KnucklesHasNoWaterOnDirectLoad() {
-        // ROM CheckLevelForWater (sonic3k.asm:9754-9759): Knuckles excluded from AIZ2 water
+        // ROM CheckLevelForWater (sonic3k.asm:9790-9795): Knuckles excluded from AIZ2 water
         // when Apparent_zone_and_act == Current_zone_and_act (direct load / level select).
         assertFalse(provider.hasWater(Sonic3kZoneIds.ZONE_AIZ, 1, PlayerCharacter.KNUCKLES), "AIZ2 Knuckles should NOT have water (direct load)");
         assertFalse(provider.hasWater(Sonic3kZoneIds.ZONE_AIZ, 1, PlayerCharacter.KNUCKLES, false), "AIZ2 Knuckles should NOT have water (seamless=false)");
@@ -51,7 +51,7 @@ public class TestSonic3kWaterDataProvider {
     public void aiz2KnucklesHasWaterOnSeamlessTransition() {
         // ROM: During seamless AIZ1â†’AIZ2 transition, Apparent_zone_and_act still points to
         // AIZ1 (0), not AIZ2 (1). CheckLevelForWater: Apparent != Current â†’ water enabled
-        // even for Knuckles (sonic3k.asm:9756-9757: bne.s loc_78F2).
+        // even for Knuckles (sonic3k.asm:9792-9793: bne.s loc_78F2).
         assertTrue(provider.hasWater(Sonic3kZoneIds.ZONE_AIZ, 1, PlayerCharacter.KNUCKLES, true), "AIZ2 Knuckles should have water during seamless transition from AIZ1");
     }
 
@@ -63,7 +63,7 @@ public class TestSonic3kWaterDataProvider {
 
     @Test
     public void lbz2HasWater() {
-        // Only LBZ2 has water â€” LBZ1 does NOT (sonic3k.asm:9772-9773)
+        // Only LBZ2 has water â€” LBZ1 does NOT (sonic3k.asm:9808-9809)
         assertFalse(provider.hasWater(Sonic3kZoneIds.ZONE_LBZ, 0, PlayerCharacter.SONIC_AND_TAILS), "LBZ1 should NOT have water");
         assertTrue(provider.hasWater(Sonic3kZoneIds.ZONE_LBZ, 1, PlayerCharacter.SONIC_AND_TAILS), "LBZ2 should have water");
     }
@@ -80,7 +80,7 @@ public class TestSonic3kWaterDataProvider {
 
     @Test
     public void cnz2SonicHasWater() {
-        // CNZ2 Sonic/Tails: water (sonic3k.asm:9764-9767)
+        // CNZ2 Sonic/Tails: water (sonic3k.asm:9800-9803)
         assertTrue(provider.hasWater(Sonic3kZoneIds.ZONE_CNZ, 1, PlayerCharacter.SONIC_AND_TAILS), "CNZ2 Sonic should have water");
     }
 
@@ -107,7 +107,7 @@ public class TestSonic3kWaterDataProvider {
 
     @Test
     public void icz2HasWater() {
-        // ICZ2: water (sonic3k.asm:9770-9771)
+        // ICZ2: water (sonic3k.asm:9806-9807)
         assertTrue(provider.hasWater(Sonic3kZoneIds.ZONE_ICZ, 1, PlayerCharacter.SONIC_AND_TAILS), "ICZ2 should have water");
     }
 

@@ -69,7 +69,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
     // ===== ROM constants =====
 
     // ROM word_60D16: dc.w -$24, $48, -8, $10 = (xOffset=-36, width=72, yOffset=-8, height=16)
-    // Check_PlayerInRange / sub_8592C (sonic3k.asm:179994-180031) builds the box as
+    // Check_PlayerInRange / sub_8592C (sonic3k.asm:180085-180122) builds the box as
     //   left = objX + xOffset, right = left + width, top = objY + yOffset, bottom = top + height
     // and tests it HALF-OPEN: `cmp right,px / bhs out` and `cmp bottom,py / bhs out`
     // reject px>=right and py>=bottom, so the inclusive edges are only the low ones
@@ -196,7 +196,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
     // First byte (3) is the per-frame timer; frames are 5, 6, 7, $14, 5, then the $F4
     // control byte invokes the object's $34 routine (loc_60D32) which sets machine bit 3
     // and dispenses the ball.
-    // ROM Animate_RawNoSST (sonic3k.asm:177341): `subq.b #1,anim_frame_timer / bpl skip`,
+    // ROM Animate_RawNoSST (sonic3k.asm:177432): `subq.b #1,anim_frame_timer / bpl skip`,
     // else reload anim_frame_timer from the duration byte (3, i.e. held 4 calls) and
     // advance to the NEXT table entry. anim_frame_timer is 0 on SPIN entry
     // (SetUp_ObjAttributes clears it and the IDLE state never animates), so the FIRST
@@ -435,10 +435,10 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         // so tests can exercise drift logic without requiring services()).
         if (!driftInitialized) {
             // ROM: Obj_GumballMachine seeds RNG_seed from V_int_run_count at init
-            // (move.l (V_int_run_count).w,(RNG_seed).w, sonic3k.asm:127412). The
+            // (move.l (V_int_run_count).w,(RNG_seed).w, sonic3k.asm:127466). The
             // intent is to fold run-history entropy (VBlanks since power-on: menu
             // time, prior acts, etc.) into the bonus-stage RNG so the ball-subtype
-            // roll (sub_612A8, sonic3k.asm:127988-128008) varies run-to-run.
+            // roll (sub_612A8, sonic3k.asm:128042-128062) varies run-to-run.
             //
             // The engine's shared RNG ALREADY carries that run-history entropy when
             // the machine spawns: it has been advanced by all prior gameplay in live
@@ -681,7 +681,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
      * LIVE y (ROM: {@code parent3(a0)}, the container/crank child), matching ROM
      * loc_60EE0's per-frame clamp that keeps the ball from rising above its
      * spawner while the machine itself may still be drifting downward
-     * (sonic3k.asm:127609-127616).
+     * (sonic3k.asm:127663-127670).
      */
     public void onContainerSpawnBall(int x, int y, java.util.function.IntSupplier parentYSupplier) {
         int subtype = chooseBallSubtype();
@@ -1506,9 +1506,9 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
 
         @Override
         public boolean usesPlatformObjectLandingSnap() {
-            // ROM loc_60DAC calls SolidObjectFull2_1P (sonic3k.asm:127528), whose
+            // ROM loc_60DAC calls SolidObjectFull2_1P (sonic3k.asm:127582), whose
             // "d6 clear" fresh-contact path falls through to the shared
-            // SolidObject_cont -> loc_1E154 top-landing branch (sonic3k.asm:41070-
+            // SolidObject_cont -> loc_1E154 top-landing branch (sonic3k.asm:41110-
             // 41072, 41399, 41611-41637): `subq.w #1,y_pos(a1) / sub.w d3,y_pos(a1)`
             // -- the same relative playerY-distY placement resolveContactInternal
             // already produces. It is NOT PlatformObject_ChkYRange's absolute
@@ -1533,7 +1533,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
                 return;
             }
 
-            // ROM sub_22F98 (sonic3k.asm lines 47714-47766) — full red vertical spring bounce.
+            // ROM sub_22F98 (sonic3k.asm lines 47754-47806) — full red vertical spring bounce.
 
             // addq.w #8, y_pos(a1) — nudge player DOWN 8 pixels (start of compression)
             player.setY((short) (player.getY() + 8));

@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 /**
  * {@code Obj_LRZButtonHorizontal} is a full solid, and a falling player lands on its top.
  *
- * <p>{@code loc_42D16} (sonic3k.asm:88236-88242) loads {@code d1 = $10}, {@code d2 = $F},
+ * <p>{@code loc_42D16} (sonic3k.asm:88282-88288) loads {@code d1 = $10}, {@code d2 = $F},
  * {@code d3 = $10} and {@code d4 = x_pos(a0)} and calls {@code SolidObjectFull}. There is no
  * {@code Sprite_OnScreen_Test} and no routine gate in front of it: the button is solid from the
  * frame it is loaded, and {@code d3} is the height a landing player is placed above

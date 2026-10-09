@@ -21,7 +21,7 @@ import java.util.List;
  * Body segments always hurt the player (collision type 0x97/0x98) and cannot
  * be destroyed by player attacks.
  * <p>
- * Based on loc_8778C (sonic3k.asm lines 183389-183515).
+ * Based on loc_8778C (sonic3k.asm lines 183482-183608).
  *
  * <h3>Segment types by index:</h3>
  * <ul>

@@ -15,7 +15,7 @@
 - Never hydrate gameplay from trace physics/aux rows and never alter committed trace fixtures for this fix.
 - Introduce no zone, route, frame, or fixture-name predicate and no fitted timing constant.
 - Preserve the original five `TestS2CompleteEmeraldRunChain` axes exactly; special-stage visual frame 136 remains out of scope.
-- The shared S2/S3K behavior is licensed by S2 `Obj01_Init_Continued` (`s2.asm:36201-36217`) and S3K `Sonic_Init_Continued` / `Reset_Player_Position_Array` (`sonic3k.asm:21931-21940,22166-22178`).
+- The shared S2/S3K behavior is licensed by S2 `Obj01_Init_Continued` (`s2.asm:36201-36217`) and S3K `Sonic_Init_Continued` / `Reset_Player_Position_Array` (`sonic3k.asm:21967-21976,22202-22214`).
 - Keep the existing bootstrap-specific `applyLevelStartSidekickPlacementSkipPrefill()` behavior isolated; production prefill ownership must not use that helper.
 - Develop on `bugfix/ai-s2-visual-bootstrap-ownership` in a linked worktree created from the current `develop` commit. Do not switch the main workspace branch.
 - Use `-Ptrace-replay -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical` for comparable trace measurements.

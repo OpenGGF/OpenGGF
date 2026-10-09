@@ -7,7 +7,7 @@ import com.openggf.level.objects.ObjectInstance;
  *
  * <p>ROM {@code Obj_TeleporterBeamExpand} stores the allocating object in {@code parent2(a0)}
  * ({@code $48}) and, when the beam finishes contracting, does {@code clr.b $38(a1)} on it
- * (sonic3k.asm:91383-91387). Both the HPZ/SSZ teleporter pads ({@code Obj_SSZHPZTeleporter}) and
+ * (sonic3k.asm:91429-91433). Both the HPZ/SSZ teleporter pads ({@code Obj_SSZHPZTeleporter}) and
  * the Sky Sanctuary arrival controller ({@code Obj_57C1E}) are such parents.
  */
 public interface TeleporterBeamOwner extends ObjectInstance {

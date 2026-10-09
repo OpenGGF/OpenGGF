@@ -137,8 +137,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     @Override
     public boolean isHighPriority() {
         // ObjDat_LBZ1Robotnik art make_art_tile(ArtTile_RobotnikShip,0,0) leaves bit 15 clear
-        // (sonic3k.asm:192783) and Obj_RobotnikHead3 copies that bit from the ship
-        // (sonic3k.asm:136198-136200).
+        // (sonic3k.asm:192882) and Obj_RobotnikHead3 copies that bit from the ship
+        // (sonic3k.asm:136263-136265).
         return false;
     }
 
@@ -207,9 +207,9 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         updateDynamicSpawn(motion.x & 0xFFFF, motion.y & 0xFFFF);
     }
 
-    // ObjDat_LBZ1Robotnik priority $100 (sonic3k.asm:192784). The carried ChildObjDat_8D25C box
-    // pieces also start at $100 (ObjDat3_8D23C, sonic3k.asm:192789) and each drifting piece
-    // rewrites $380 at loc_8CF10 (sonic3k.asm:192504); the rig tracks the per-piece word and
+    // ObjDat_LBZ1Robotnik priority $100 (sonic3k.asm:192883). The carried ChildObjDat_8D25C box
+    // pieces also start at $100 (ObjDat3_8D23C, sonic3k.asm:192888) and each drifting piece
+    // rewrites $380 at loc_8CF10 (sonic3k.asm:192603); the rig tracks the per-piece word and
     // this owner draws each piece in that piece's bucket.
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
 
@@ -221,7 +221,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     @Override
     public boolean isHighPriority(int bucket) {
         // Ship/head: see isHighPriority(). Box pieces: ObjDat3_8D23C art
-        // make_art_tile(ArtTile_LBZMinibossBox,2,0) leaves bit 15 clear (sonic3k.asm:192788).
+        // make_art_tile(ArtTile_LBZMinibossBox,2,0) leaves bit 15 clear (sonic3k.asm:192887).
         return false;
     }
 
@@ -250,7 +250,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
             return;
         }
         // Obj_LBZ1Robotnik allocates its head with Child1_MakeRoboHead3 and, at
-        // loc_8CCF8, its flame with Child1_MakeRoboShipFlame (sonic3k.asm:192195-192196,
+        // loc_8CCF8, its flame with Child1_MakeRoboShipFlame (sonic3k.asm:192294-192295,
         // 192308-192309), both via CreateChild1_Normal / AllocateObjectAfterCurrent
         // (176924-176929), so both children sit in later slots than the ship. The
         // ship itself is priority $100 (ObjDat_LBZ1Robotnik, 192784) while the

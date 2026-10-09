@@ -35,9 +35,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Slice 4: what a Sky Sanctuary act-1 death and checkpoint restart does to the act's own state.
  *
  * <p>Two ROM clears own the answer and they are in different routines. {@code LevelSetup}
- * (sonic3k.asm:102185) runs {@code clr.l (Events_bg+$00/$04/$08/$0C).w} on <em>every</em> load, so
+ * (sonic3k.asm:102231) runs {@code clr.l (Events_bg+$00/$04/$08/$0C).w} on <em>every</em> load, so
  * a beaten boss is not remembered across a respawn — nothing skips the arenas, the star posts
- * simply sit past them. And {@code Level:} runs {@code clearRAM _unkFA80,$80} (sonic3k.asm:7623),
+ * simply sit past them. And {@code Level:} runs {@code clearRAM _unkFA80,$80} (sonic3k.asm:7655),
  * which covers {@code _unkFA82} (the EggRobo pairing word), {@code _unkFA8A}, {@code _unkFAA2},
  * {@code _unkFAA4} and {@code _unkFAB0..B8}: none of those has a clear of its own anywhere in the
  * SSZ code, and that block clear is why they start at zero. The engine expresses both by building

@@ -137,7 +137,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// `if FixBugs` (FixBugs=0 in the shipped ROM), so SH_MoveCameraLeft runs straight
 	// to .moveLeft and adds the full (possibly >16px) offset
 	// (docs/s1disasm/_inc/ScrollHoriz & ScrollVertical.asm:59-99). S2 (s2.asm:18102-
-	// 18105) and S3K (sonic3k.asm:38403-38406) cap BOTH directions, so this stays
+	// 18105) and S3K (sonic3k.asm:38443-38446) cap BOTH directions, so this stays
 	// false for them. Set per-game from CameraRules.uncappedLeftwardHorizontalScroll.
 	private boolean uncappedLeftwardHorizontalScroll = false;
 
@@ -187,7 +187,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			//   v_screenposy = MainCharacter.y_pos - $60  (subi.w  #96,d0)
 			// then clamp to the level bounds. References: s1disasm
 			// _inc/LevelSizeLoad & BgScrollSpeed.asm:111,124; s2.asm:14787,14798;
-			// sonic3k.asm:38241. ROM places the sprite at screen-x=160 (right edge
+			// sonic3k.asm:38281. ROM places the sprite at screen-x=160 (right edge
 			// of the 144-160 horizontal scroll deadzone), not the deadzone
 			// midpoint at 152.
 			x = (short) (focusedSprite.getCentreX() - DeadzoneGeometry.rightEdge(width));
@@ -459,7 +459,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			return;
 		}
 		// S2/S3K MoveCameraY masks only a local copy of y_pos
-		// (sonic3k.asm:38440-38446); their player control paths own the write
+		// (sonic3k.asm:38480-38486); their player control paths own the write
 		// (applyScreenYWrapValue). An object-held player skips those paths, so the
 		// camera crossing must not mask it. S1 LZ3/SBZ2 has no control-path mask
 		// and ScrollVertical writes Sonic on the crossing frame.
@@ -468,8 +468,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			return;
 		}
 		// ROM masks only the y_pos word when Screen_Y_wrap_value is active
-		// (sonic3k.asm:21989-21992, 26233-26236; MGZ sets #$FFF at
-		// sonic3k.asm:102200). Preserve y_sub just like a 68000 word write.
+		// (sonic3k.asm:22025-22028, 26273-26276; MGZ sets #$FFF at
+		// sonic3k.asm:102246). Preserve y_sub just like a 68000 word write.
 		focusedSprite.setCentreYPreserveSubpixel((short) (focusedSprite.getCentreY() & verticalWrapMask));
 	}
 
@@ -643,21 +643,21 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * here left the camera unclamped for the whole ascent.
 	 * <p>
 	 * S3K reaches the same clamp by a different route, and it is LIVE — do not gate
-	 * it. Its {@code loc_1C202} (docs/skdisasm/sonic3k.asm:38561-38569) compares d1
+	 * it. Its {@code loc_1C202} (docs/skdisasm/sonic3k.asm:38601-38609) compares d1
 	 * against Camera_max_Y_pos, then subtracts {@code Screen_Y_wrap_value + 1} and
 	 * takes the hard clamp {@code move.w 6(a2),d1} at {@code loc_1C216} only when
 	 * that subtraction borrows. {@code Get_LevelSizeStart} writes
-	 * {@code Screen_Y_wrap_value = -1} (sonic3k.asm:38093), which would make the
+	 * {@code Screen_Y_wrap_value = -1} (sonic3k.asm:38133), which would make the
 	 * subtraction unable to borrow — but that write survives for exactly one
-	 * DeformBgLayer call, because {@code LevelSetup} (sonic3k.asm:102205) then
+	 * DeformBgLayer call, because {@code LevelSetup} (sonic3k.asm:102251) then
 	 * writes {@code #$FFF} unconditionally for every level before LevelLoop begins
-	 * (sonic3k.constants.asm:434 documents the field as "either $7FF or $FFF").
+	 * (sonic3k.constants.asm:447 documents the field as "either $7FF or $FFF").
 	 * So every gameplay frame borrows and clamps. The non-borrowing arm
 	 * ({@code sub.w d3,(a1)}) is the vertical WRAP, reached only where
 	 * Camera_max_Y_pos >= the wrap value + 1 — which the ROM's looping levels do
 	 * arrange, by writing {@code #$7FF} over the {@code $FFF} default in their
-	 * screen-init routines (ICZ1 {@code loc_53648}, sonic3k.asm:110069, commented
-	 * "We're in a looping level!"; SOZ2 :114222/:114251; Slots :119055) or by
+	 * screen-init routines (ICZ1 {@code loc_53648}, sonic3k.asm:110115, commented
+	 * "We're in a looping level!"; SOZ2 :114268/:114251; Slots :119101) or by
 	 * carrying a LevelSizes yend of {@code $1000}. The engine does model that arm:
 	 * {@code LevelManager.initCameraForLevel} calls
 	 * {@link #setVerticalWrapEnabled(boolean, int)} with the layout height for
@@ -873,7 +873,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	/**
 	 * Computes the current-frame BuildSprites visibility that feeds
 	 * {@code render_flags.on_screen}.
-	 * <p>S3K {@code Render_Sprites} (sonic3k.asm:36336) does:
+	 * <p>S3K {@code Render_Sprites} (sonic3k.asm:36376) does:
 	 * <pre>
 	 *   d1 = (y_pos - Camera_Y) + height_pixels  ; height_pixels = 0x18 = 24
 	 *   d1 &= Screen_Y_wrap_value                ; default 0xFFFF (no mask)
@@ -903,7 +903,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 *       algebraically {@code ((relY + 32) & $7FF) < screen_height + 64}. The mask
 	 *       is the literal VDP {@code $7FF}, independent of the level's vertical
 	 *       wrap range. S1 uses the same routine/margin.</li>
-	 *   <li>S3K {@code Render_Sprites} (sonic3k.asm:36356-36364):
+	 *   <li>S3K {@code Render_Sprites} (sonic3k.asm:36396-36404):
 	 *       {@code d1 = ((y_pos - Camera_Y_pos_copy) + height_pixels) & Screen_Y_wrap_value};
 	 *       off-screen iff {@code d1 >= 2*height_pixels + 224}. That is
 	 *       {@code ((relY + margin) & Screen_Y_wrap_value) < screen_height + 2*margin}
@@ -934,7 +934,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			// ROM-accurate wrap window: bias by the low margin BEFORE masking, then
 			// one unsigned-range compare. S2/S1 BuildSprites masks with the literal
 			// VDP $7FF (s2.asm:30601); S3K masks with Screen_Y_wrap_value
-			// (sonic3k.asm:36360, modelled by verticalWrapMask).
+			// (sonic3k.asm:36400, modelled by verticalWrapMask).
 			int mask = useS3kMargin ? verticalWrapMask : 0x7FF;
 			int wrapped = (relY + yMargin) & mask;
 			return wrapped < height + 2 * yMargin;
@@ -1159,9 +1159,9 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Applies the active vertical wrap mask to a playable object's ROM
 	 * {@code y_pos} equivalent when vertical wrapping is active.
 	 * <p>ROM references:
-	 * {@code docs/skdisasm/sonic3k.asm:21989-21992} (Sonic),
-	 * {@code docs/skdisasm/sonic3k.asm:25708-25711} (Tails/player display path),
-	 * {@code docs/skdisasm/sonic3k.asm:26233-26236} (Tails control).
+	 * {@code docs/skdisasm/sonic3k.asm:22025-22028} (Sonic),
+	 * {@code docs/skdisasm/sonic3k.asm:25748-25751} (Tails/player display path),
+	 * {@code docs/skdisasm/sonic3k.asm:26273-26276} (Tails control).
 	 *
 	 * @return true when the sprite's Y coordinate changed.
 	 */
@@ -1332,11 +1332,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Call this each frame while looking up AND look delay counter has elapsed.
 	 */
 	public void incrementLookUpBias() {
-		// S3K loc_112B0 (docs/skdisasm/sonic3k.asm:22638-22660) tests
+		// S3K loc_112B0 (docs/skdisasm/sonic3k.asm:22673-22695) tests
 		// Reverse_gravity_flag before the pan and branches to loc_112E0, whose
 		// target is $18 and whose step is subq.w #2: looking up moves the camera
 		// the other way, because "up" for an inverted player is down the screen.
-		// Tails loc_14ADA (:27891) and Knuckles loc_172E2 (:31919) are the same
+		// Tails loc_14ADA (:27931) and Knuckles loc_172E2 (:31959) are the same
 		// code, and the engine has one camera, so this owns all three rows.
 		var reverseGravityState = GameServices.gameStateOrNull();
 		if (reverseGravityState != null && reverseGravityState.isReverseGravityActive()) {
@@ -1362,9 +1362,9 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Call this each frame while looking down AND look delay counter has elapsed.
 	 */
 	public void decrementLookDownBias() {
-		// S3K loc_11276 (docs/skdisasm/sonic3k.asm:22615-22637) branches to
+		// S3K loc_11276 (docs/skdisasm/sonic3k.asm:22650-22672) branches to
 		// loc_112A6 under the flag: target $D8, step addq.w #2. Tails loc_14AA0
-		// (:27868) and Knuckles loc_172A8 (:31896) repeat it.
+		// (:27908) and Knuckles loc_172A8 (:31936) repeat it.
 		var reverseGravityState = GameServices.gameStateOrNull();
 		if (reverseGravityState != null && reverseGravityState.isReverseGravityActive()) {
 			if (yPosBias < LOOK_DOWN_BIAS_REVERSED) {

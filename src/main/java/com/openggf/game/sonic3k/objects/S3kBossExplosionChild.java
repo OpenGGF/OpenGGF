@@ -22,7 +22,7 @@ import java.util.List;
  * the child's first own entry.
  *
  * ROM animation format: Animate_RawNoSSTMultiDelay — (delay, frame) pairs.
- * AniRaw_BossExplosion (sonic3k.asm:176871):
+ * AniRaw_BossExplosion (sonic3k.asm:176962):
  *   dc.b 0,0, 0,1, 1,1, 2,2, 3,3, 4,4, 5,4, $F4
  * $F4 = end (calls Go_Delete_Sprite via $34 callback).
  */

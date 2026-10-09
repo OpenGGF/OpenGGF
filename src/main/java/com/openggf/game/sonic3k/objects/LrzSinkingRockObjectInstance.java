@@ -22,7 +22,7 @@ import java.util.List;
 
 /**
  * ROM object {@code Obj_LRZSinkingRock} -- object id {@code $17} in the {@code SKL} pointer set
- * (sonic3k.asm:87898-87941, ROM {@code $4279E}; {@code Map_LRZSinkingRock} at ROM {@code $42834}).
+ * (sonic3k.asm:87944-87987, ROM {@code $4279E}; {@code Map_LRZSinkingRock} at ROM {@code $42834}).
  * The {@code S3KL} set spends the same id on {@code Obj_LBZRideGrapple}.
  *
  * <p><b>Shape.</b> A full-solid block that rides a sine curve instead of a velocity. {@code $2E(a0)}
@@ -33,15 +33,15 @@ import java.util.List;
  *
  * <p>ROM references, all in {@code docs/skdisasm/sonic3k.asm}:
  * <ul>
- *   <li>Init {@code Obj_LRZSinkingRock} {@code :87898-87911}; the act branch at {@code :87907-87910}
+ *   <li>Init {@code Obj_LRZSinkingRock} {@code :87944-87957}; the act branch at {@code :87953-87956}
  *       gives act 2 {@code mapping_frame} 1 and the {@code $090} tile base</li>
- *   <li>Routine install {@code loc_427DC} {@code :87913-87914}, which falls straight through into
+ *   <li>Routine install {@code loc_427DC} {@code :87959-87960}, which falls straight through into
  *       the main routine on the same frame</li>
- *   <li>Main {@code loc_427E2} {@code :87916-87922}, rise branch {@code loc_427F8}
- *       {@code :87924-87927}, position and collision {@code loc_42804} {@code :87929-87940}</li>
+ *   <li>Main {@code loc_427E2} {@code :87962-87968}, rise branch {@code loc_427F8}
+ *       {@code :87970-87973}, position and collision {@code loc_42804} {@code :87975-87986}</li>
  * </ul>
  *
- * <p>The {@code Sprite_OnScreen_Test} tail (:87940) draws only in range;
+ * <p>The {@code Sprite_OnScreen_Test} tail (:87986) draws only in range;
  * {@code loc_1B5A0} releases the respawn entry and deletes it outside the
  * coarse X window. The shared post-routine unload models that path.
  *
@@ -53,25 +53,25 @@ public final class LrzSinkingRockObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, RewindRecreatable,
         RomObjectCodePointerProvider {
 
-    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:87903). */
+    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:87949). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);
-    /** {@code move.b #$10,width_pixels(a0)} / {@code height_pixels(a0)} (:87901-87902). */
+    /** {@code move.b #$10,width_pixels(a0)} / {@code height_pixels(a0)} (:87947-87948). */
     private static final int WIDTH_PIXELS = 0x10;
     private static final int HEIGHT_PIXELS = 0x10;
     /**
-     * {@code move.w #$1B,d1 / #$10,d2 / #$11,d3} before {@code SolidObjectFull} (:87934-87937).
+     * {@code move.w #$1B,d1 / #$10,d2 / #$11,d3} before {@code SolidObjectFull} (:87980-87983).
      * The solid box is wider than the drawn block and one pixel deeper on the standing side than on
      * the approach side, which is why the two vertical parameters are not equal.
      */
     private static final int SOLID_HALF_WIDTH = 0x1B;
     private static final int SOLID_HEIGHT_AIR = 0x10;
     private static final int SOLID_HEIGHT_GROUND = 0x11;
-    /** {@code cmpi.b #$40,$2E(a0)} (:87925): the angle stops at a quarter turn. */
+    /** {@code cmpi.b #$40,$2E(a0)} (:87971): the angle stops at a quarter turn. */
     private static final int MAX_ANGLE = 0x40;
 
-    /** ROM {@code $46(a0)}: {@code y_pos} as placed, the curve's origin (:87904). */
+    /** ROM {@code $46(a0)}: {@code y_pos} as placed, the curve's origin (:87950). */
     private int baseY;
-    /** ROM {@code mapping_frame(a0)}: 0 in act 1, 1 in act 2 (:87908). */
+    /** ROM {@code mapping_frame(a0)}: 0 in act 1, 1 in act 2 (:87954). */
     private int mappingFrame;
     /** ROM {@code $2E(a0)}: the angle byte driving the sine. */
     private int angle;
@@ -120,7 +120,7 @@ public final class LrzSinkingRockObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // SolidObjectFull writes status(a0)'s standing bits at the tail of the ROM routine
-        // (:87938), so loc_427E2 at the head of the next frame reads the bits the PREVIOUS frame
+        // (:87984), so loc_427E2 at the head of the next frame reads the bits the PREVIOUS frame
         // left. The engine runs its solid checkpoint after this method, so the latch reproduces
         // that one-frame relationship -- the same shape LrzDashElevatorObjectInstance documents.
         p1StandingLatched = p1Standing;
@@ -128,7 +128,7 @@ public final class LrzSinkingRockObjectInstance extends AbstractObjectInstance
         p1Standing = false;
         p2Standing = false;
 
-        // loc_427E2 (:87916-87922) / loc_427F8 (:87924-87927).
+        // loc_427E2 (:87962-87968) / loc_427F8 (:87970-87973).
         if (p1StandingLatched || p2StandingLatched) {
             if (angle != MAX_ANGLE) {
                 angle++;
@@ -137,7 +137,7 @@ public final class LrzSinkingRockObjectInstance extends AbstractObjectInstance
             angle--;
         }
 
-        // loc_42804 (:87929-87933): GetSineCosine returns the sine in d0 scaled by $100; asr.w #3
+        // loc_42804 (:87975-87979): GetSineCosine returns the sine in d0 scaled by $100; asr.w #3
         // is a signed shift, and the result is a word add onto $46(a0).
         updateDynamicSpawn(getCentreX(), getCentreY());
     }
@@ -175,7 +175,7 @@ public final class LrzSinkingRockObjectInstance extends AbstractObjectInstance
     @Override
     public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
         // The a0.d6 standing bit SolidObjectFull_1P reads is per object
-        // (sonic3k.asm:41021-41034): loc_1DC98's bclr names THIS block's status byte, and another
+        // (sonic3k.asm:41061-41074): loc_1DC98's bclr names THIS block's status byte, and another
         // solid's SolidObjectFull clears only its own. The block's stale-rider branch must
         // therefore still be available when the block's own checkpoint runs, even if an earlier
         // slot's checkpoint already saw the rider airborne. Same contract as
@@ -185,16 +185,16 @@ public final class LrzSinkingRockObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
-        // loc_1DC98 (sonic3k.asm:41028-41034) clears Status_OnObj / d6 and returns d4 = 0 without
+        // loc_1DC98 (sonic3k.asm:41068-41074) clears Status_OnObj / d6 and returns d4 = 0 without
         // falling through to SolidObject_cont, so neither MvSonicOnPtfm nor loc_1E154's
-        // upward-velocity lift (:41608-41637) runs on the frame the rider jumps off. Without this
+        // upward-velocity lift (:41648-41677) runs on the frame the rider jumps off. Without this
         // the block's sink is applied on top of Sonic_Jump's own y_pos change.
         return true;
     }
 
     @Override
     public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
-        // d4 = x_pos(a0) (:87937) and the block only ever moves vertically, so MvSonicOnPtfm's
+        // d4 = x_pos(a0) (:87983) and the block only ever moves vertically, so MvSonicOnPtfm's
         // d4 - x_pos(a0) carry is zero either way.
         return false;
     }
@@ -208,7 +208,7 @@ public final class LrzSinkingRockObjectInstance extends AbstractObjectInstance
         return getSpawn().x() & 0xFFFF;
     }
 
-    /** ROM {@code move.w d0,y_pos(a0)} (:87933): {@code $46(a0) + (sin($2E) >> 3)}, a word. */
+    /** ROM {@code move.w d0,y_pos(a0)} (:87979): {@code $46(a0) + (sin($2E) >> 3)}, a word. */
     public int getCentreY() {
         return (baseY + (TrigLookupTable.sinHex(angle) >> 3)) & 0xFFFF;
     }
@@ -235,7 +235,7 @@ public final class LrzSinkingRockObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isHighPriority() {
         // make_art_tile($0D3,2,0) and make_art_tile($090,2,0) both leave the priority bit clear
-        // (sonic3k.asm:87900, :87910).
+        // (sonic3k.asm:87946, :87956).
         return false;
     }
 

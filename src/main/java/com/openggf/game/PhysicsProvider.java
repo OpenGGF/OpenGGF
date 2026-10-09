@@ -36,7 +36,7 @@ public interface PhysicsProvider {
      * Returns the init-time physics profile for the given character type.
      *
      * <p>S3K loads per-character values from the {@code Character_Speeds} table
-     * (sonic3k.asm:202288) at level init and respawn. These differ from the
+     * (sonic3k.asm:202403) at level init and respawn. These differ from the
      * canonical profile and persist until the first water or speed shoes event.
      *
      * <p>Returns {@code null} for S1/S2 where init values equal the canonical profile.

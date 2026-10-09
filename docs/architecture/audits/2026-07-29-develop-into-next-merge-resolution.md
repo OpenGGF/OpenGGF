@@ -185,9 +185,9 @@ AWT must not be used so native images stay buildable.
   four `execOrder` population sites).
 - **S3K dynamic slot count: 90, not 89.** An earlier pass mechanically took `develop`'s 89
   under develop-wins. That was wrong, and the disassembly is unambiguous:
-  `Dynamic_object_RAM ds.b object_size*90` (sonic3k.constants.asm:307). With
+  `Dynamic_object_RAM ds.b object_size*90` (sonic3k.constants.asm:314). With
   `firstDynamicSlot = 4` the window is absolute slots 4-93, so `lastDynamicSlotExclusive` is
-  94 — exactly the range `Offset_ObjectsDuringTransition` scans (sonic3k.asm:104166-104180,
+  94 — exactly the range `Offset_ObjectsDuringTransition` scans (sonic3k.asm:104212-104226,
   90 `dbf` iterations from `Dynamic_object_RAM + object_size`). Restored to 90.
 - **`S3kResultsScreenObjectInstance.traceDebugDetails` crashed** — the format string gained a
   `children=%d` specifier when `childrenRemaining` was introduced, but the argument list did
@@ -276,8 +276,8 @@ Still open, with what is known about each:
 
   **`develop` is right.** Engine slot 3 sits immediately below the dynamic window, exactly
   where the ROM's `Reserved_object_3` sits below `Dynamic_object_RAM`
-  (sonic3k.constants.asm:303-308), and `SpawnLevelMainSprites` writes
-  `Obj_ResetCollisionResponseList` there at level load (sonic3k.asm:8112). Slot 3 is spoken
+  (sonic3k.constants.asm:310-315), and `SpawnLevelMainSprites` writes
+  `Obj_ResetCollisionResponseList` there at level load (sonic3k.asm:8144). Slot 3 is spoken
   for; an arbitrary FBZ object may not squat on it. The engine does not model
   `Obj_ResetCollisionResponseList` at all, which is why the slot looks free.
 

@@ -114,7 +114,7 @@ The stale code remains cleanup debt, but it is not a cause of this frontier.
    exception: S2 `Obj01_Init_Continued` offsets Player 1 by `(-$20,+4)` and
    fills/clears the rings (`s2.asm:36201-36217`), while S3K
    `Sonic_Init_Continued` calls `Reset_Player_Position_Array` under the same
-   offset (`sonic3k.asm:21931-21940,22166-22178`). No typed per-game rule is
+   offset (`sonic3k.asm:21967-21976,22202-22214`). No typed per-game rule is
    therefore appropriate.
 3. The ownership signal will be granted only to a controller whose
    `getLeader()` is the exact main-player instance whose ring `LevelManager`

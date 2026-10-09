@@ -7,7 +7,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * Decides which of a player's six sensors scan this frame.
  *
  * <p>The ROM has no per-sensor enable. {@code SonicKnux_DoLevelCollision}
- * (sonic3k.asm:24035-24052, and the S1/S2 routines it descends from) computes a movement
+ * (sonic3k.asm:24075-24092, and the S1/S2 routines it descends from) computes a movement
  * quadrant from {@code GetArcTan(x_vel, y_vel)} and then calls only the wall, floor and
  * ceiling routines that quadrant needs; the engine models the same dispatch a second time
  * as an active flag on each sensor, so that {@link Sensor#scan()} can return {@code null}
@@ -30,7 +30,7 @@ public final class PlayerSensorActivation {
                               Sensor[] ceilingSensors,
                               Sensor[] pushSensors) {
         // Which array each airborne probe scans. sub_11FD6 and sub_11FEE
-        // (sonic3k.asm:24127-24151) are the wrappers every quadrant's floor and ceiling
+        // (sonic3k.asm:24167-24191) are the wrappers every quadrant's floor and ceiling
         // check goes through: with Reverse_gravity_flag set the floor probe runs
         // Sonic_CheckCeiling and the ceiling probe runs Sonic_CheckFloor. The ROM simply
         // calls the other routine, so the activation has to follow the same swap that
@@ -38,7 +38,7 @@ public final class PlayerSensorActivation {
         // switches off exactly the array the probe is about to scan.
         //
         // The grounded branch below is deliberately not swapped: Call_Player_AnglePos
-        // (:22329) mirrors angle(a0) around Player_AnglePos instead, so ground attachment
+        // (:22364) mirrors angle(a0) around Player_AnglePos instead, so ground attachment
         // keeps using the ground sensors with a ceiling ground mode.
         var gameState = sprite.currentGameStateOrNull();
         boolean reverseGravity = gameState != null && gameState.isReverseGravityActive();

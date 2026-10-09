@@ -424,10 +424,10 @@ public final class TraceReplayBootstrap {
      *
      * <p>The ROM's setup pass calls {@code Animate_Tiles} after
      * {@code Process_Sprites} and {@code Render_Sprites}, then unlocks
-     * controls (docs/skdisasm/sonic3k.asm:7849-7860). Replay's structural
+     * controls (docs/skdisasm/sonic3k.asm:7881-7892). Replay's structural
      * handoff row is also routed as VBlank-only, so it cannot run the normal
      * {@code LevelLoop} tail where S3K advances level animation
-     * (sonic3k.asm:7884-7911). Advance the engine's native animated-pattern
+     * (sonic3k.asm:7916-7943). Advance the engine's native animated-pattern
      * manager only for the additional structural handoff call. The production
      * initial object lifecycle now owns the setup call for every fresh load.
      * This advances ROM-owned work instead of copying recorded
@@ -479,12 +479,12 @@ public final class TraceReplayBootstrap {
     /**
      * Identifies an S3K bonus-stage trace segment (Gumball/Pachinko/Slots).
      * These fixtures start the player exactly at the ROM's post-Restart_level
-     * spawn coordinates (sonic3k.asm:38160-38183 Get_LevelSizeStart), which for
+     * spawn coordinates (sonic3k.asm:38200-38223 Get_LevelSizeStart), which for
      * Gumball/Pachinko is deliberately positioned at/beyond a terrain edge so
      * the player free-falls into the machine. ROM never runs a pre-LevelLoop
      * terrain probe against this spawn point: {@code SpawnLevelMainSprites}'s
      * zone-specific air/animation branches are skipped whenever
-     * {@code Special_bonus_entry_flag} is set (sonic3k.asm:8117-8118), so the
+     * {@code Special_bonus_entry_flag} is set (sonic3k.asm:8149-8150), so the
      * player's ground/air transition is decided exclusively by the first
      * driven frame's own {@code Player_AnglePos} probe. The generic
      * bootstrap ground-snap (positiveThreshold 14) instead runs that same
@@ -506,7 +506,7 @@ public final class TraceReplayBootstrap {
      * first native motion row. Replay routes that row as {@code VBLANK_ONLY} and
      * does not drive or compare its gameplay, but ROM still ran a full LevelLoop
      * iteration on it — incrementing {@code Level_frame_counter} before
-     * {@code Process_Sprites} (sonic3k.asm:7889-7894). The replay harness therefore
+     * {@code Process_Sprites} (sonic3k.asm:7921-7926). The replay harness therefore
      * ticks the engine's frame counter on this row so the S3K Tails-CPU gates
      * observe the same {@code Level_frame_counter} edge the ROM did, without any
      * trace-profile-gated behaviour in the shared sidekick code.
@@ -522,7 +522,7 @@ public final class TraceReplayBootstrap {
      * Native animated-tile ticks completed on an S3K complete-run handoff row
      * that replay skips for gameplay comparison. The ROM LevelLoop still reaches
      * {@code Animate_Tiles} after {@code Process_Sprites} on that row
-     * (sonic3k.asm:7884-7906), so consumers of {@code Anim_Counters} such as
+     * (sonic3k.asm:7916-7938), so consumers of {@code Anim_Counters} such as
      * MHZ mushroom caps must see the same completed post-object phase before the
      * first driven row.
      */
@@ -642,7 +642,7 @@ public final class TraceReplayBootstrap {
                 // The AIZ end-to-end trace starts while Game_Mode is $4C
                 // (Level with transition bit set). Player_1/Player_2 RAM still
                 // contains title-screen objects such as Obj_TitleBanner and
-                // Obj_TitleSelection (sonic3k.asm:5995, 6168), not gameplay
+                // Obj_TitleSelection (sonic3k.asm:6027, 6200), not gameplay
                 // Sonic/Tails. Advance the BK2/VBlank cursor for these frames,
                 // but do not tick the loaded AIZ level until the first real
                 // Level frame at the Obj_AIZPlaneIntro spawn point.
@@ -654,9 +654,9 @@ public final class TraceReplayBootstrap {
                 // block (loc_62FE..loc_7882 -- Get_LevelSizeStart +
                 // setup-DeformBgLayer + SpawnLevelMainSprites + Pal_FillBlack)
                 // and the first LevelLoop iteration. ROM has already snapped
-                // Camera_Y_pos via setup-DeformBgLayer (sonic3k.asm:7760), but
-                // LevelLoop's Wait_VSync (sonic3k.asm:7888) -> DeformBgLayer
-                // (sonic3k.asm:7897) doesn't run until the NEXT BK2 frame.
+                // Camera_Y_pos via setup-DeformBgLayer (sonic3k.asm:7792), but
+                // LevelLoop's Wait_VSync (sonic3k.asm:7920) -> DeformBgLayer
+                // (sonic3k.asm:7929) doesn't run until the NEXT BK2 frame.
                 //
                 // The headless replay collapses ROM's two-phase setup into
                 // initCameraForLevel + first LevelFrameStep, which already ran
@@ -726,7 +726,7 @@ public final class TraceReplayBootstrap {
      * <p>The normal-step hook or one {@code Pos_table_index} entry proves the
      * playable prefix executed: {@code Tails_Control} runs CPU control and
      * movement, then {@code Sonic_RecordPos}, then {@code Animate_Tails}
-     * (sonic3k.asm:26238-26284). The changed sidekick physics and three-row
+     * (sonic3k.asm:26278-26324). The changed sidekick physics and three-row
      * animation transition prove the first mapping remained visible when the
      * sample interrupted that final animation dispatch. This is native
      * execution scheduling; no recorded value is copied into engine state.
@@ -962,18 +962,18 @@ public final class TraceReplayBootstrap {
      * <p>The recorder cuts a run's segments at the DESTINATION's first gameplay
      * row, so a segment that ends in a level reload carries the whole ROM
      * transition in its own tail. {@code Level:} opens with
-     * {@code bset #7,(Game_mode).w} (sonic3k.asm:7505) and only clears that bit
+     * {@code bset #7,(Game_mode).w} (sonic3k.asm:7537) and only clears that bit
      * again at the destination's first gameplay frame, which the recorder files
      * in the NEXT segment. Everything the ROM records between those two points
      * is inside {@code Level:}:
      *
      * <ul>
      *   <li>{@code Pal_FadeToBlack}'s {@code move.w #$15,d4} + {@code dbf} loop
-     *       (sonic3k.asm:5042-5052, entered at :7522) -- one recorded row per
+     *       (sonic3k.asm:5074-5084, entered at :7554) -- one recorded row per
      *       {@code Wait_VSync} iteration, with the camera, the player and
      *       {@code Level_frame_counter} all frozen while VBlank keeps ticking;</li>
      *   <li>the {@code Clear_DisplayData} / {@code move.w d0,(Level_frame_counter).w}
-     *       RAM wipe (sonic3k.asm:7532-7536);</li>
+     *       RAM wipe (sonic3k.asm:7564-7568);</li>
      *   <li>the destination level's own load.</li>
      * </ul>
      *
@@ -987,8 +987,8 @@ public final class TraceReplayBootstrap {
      * count, a fade length, a zone id, or a segment name, so it holds for a
      * recording with a different fade or load duration. The row that CARRIES the
      * transition is still counted: {@code LevelLoop} increments
-     * {@code Level_frame_counter} (sonic3k.asm:7889) before it tests
-     * {@code Restart_level_flag} and branches to {@code Level:} (:7893-7894), so
+     * {@code Level_frame_counter} (sonic3k.asm:7921) before it tests
+     * {@code Restart_level_flag} and branches to {@code Level:} (:7925-7926), so
      * that row is a complete LevelLoop iteration and must still be compared.
      *
      * @return the number of leading in-level rows, which is the full row count

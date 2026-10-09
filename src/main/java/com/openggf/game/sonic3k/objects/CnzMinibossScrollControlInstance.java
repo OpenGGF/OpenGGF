@@ -129,7 +129,7 @@ public final class CnzMinibossScrollControlInstance extends AbstractObjectInstan
         if (bossDefeatSignalConsumed) {
             // ROM: loc_52042 falls through into Obj_CNZMinibossScrollWait after
             // clearing Events_fg_5; it does not skip directly to the final handoff
-            // based on the current Events_bg+$08 offset (sonic3k.asm:107770-107795).
+            // based on the current Events_bg+$08 offset (sonic3k.asm:107816-107841).
             routine = ROUTINE_WAIT_ALIGN;
             updateWaitAlign(ROUTINE_SLOW);
             return;

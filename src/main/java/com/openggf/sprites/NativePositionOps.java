@@ -55,7 +55,7 @@ public final class NativePositionOps {
      * <p>Object routines that move a captured player vertically do this rather than
      * calling the shared motion code, so the whole {@code y_vel} accumulates in the
      * subpixel half instead of being truncated each frame. {@code Obj_DEZTeleporter}'s
-     * ride (sonic3k.asm:95095-95101) is the pattern: {@code move.l y_pos(a1),d3},
+     * ride (sonic3k.asm:95141-95147) is the pattern: {@code move.l y_pos(a1),d3},
      * {@code move.w y_vel(a1),d0}, {@code ext.l d0}, {@code asl.l #8,d0},
      * {@code add.l d0,d3}, {@code move.l d3,y_pos(a1)}.
      */

@@ -60,7 +60,7 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
     public int romObjectCodePointerHighWord() {
         // Obj_CorkFloor is installed at 0x0002A618 in the S&K-side ROM.
         // Tails_CPU_interact stores word 0 of the stood-on object SST
-        // (docs/skdisasm/sonic3k.asm:26816-26843).
+        // (docs/skdisasm/sonic3k.asm:26856-26883).
         return 0x0002;
     }
 
@@ -206,7 +206,7 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         // ICZ's sloped helper has a deliberately different continued-ride
         // exit from SolidObjectFull: sub_1DDC6/loc_1DE00 clears Status_OnObj
         // and the object's standing bit but does not set Status_InAir
-        // (sonic3k.asm:41221-41264). This lets the next Player_AnglePos hand
+        // (sonic3k.asm:41261-41304). This lets the next Player_AnglePos hand
         // the rider directly to terrain beneath the cork floor. Other cork
         // variants use SolidObjectFull and retain its ordinary airborne exit.
         return mode != Mode.ICZ_PLANE_SWITCH;
@@ -273,7 +273,7 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
             int launchY = rollingBreakPlayer.getCentreY();
             rollingBreakPlayer.setRolling(true);
             // ROM sub_2A58E writes y_radius/x_radius/status directly and does
-            // not alter y_pos (sonic3k.asm:58542-58554). SolidObjectFull may
+            // not alter y_pos (sonic3k.asm:58582-58594). SolidObjectFull may
             // have just restored standing dimensions, so the engine's visual
             // height swap can otherwise move centre Y by five pixels.
             NativePositionOps.writeYPosPreserveSubpixel(rollingBreakPlayer, launchY);
@@ -343,8 +343,8 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
 
         savedPreContactYSpeed = result.preContact().ySpeed();
         // ROM Obj_CorkFloor caches Player_1+anim / Player_2+anim before
-        // SolidObjectFull (sonic3k.asm:58493-58505) and breaks only when that
-        // cached byte is anim=$02 (sonic3k.asm:58515-58528, 58532-58540).
+        // SolidObjectFull (sonic3k.asm:58533-58545) and breaks only when that
+        // cached byte is anim=$02 (sonic3k.asm:58555-58568, 58572-58580).
         // Keep the per-frame decision per rider: the ROM stores P1/P2 cached
         // animation bytes separately, so a later non-rolling sidekick contact
         // must not erase the main player's roll-break checkpoint.
@@ -373,10 +373,10 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
      * ROM loc_2A542/loc_2A716: when BOTH riders are standing on the cork floor
      * and either cached animation byte is $02, the break path runs sub_2A588
      * (sub_2A7B0 for the ICZ sloped variant) once for Player_1 and once for
-     * Player_2 (sonic3k.asm:58527-58534, 58762-58769). The rider whose cached
+     * Player_2 (sonic3k.asm:58567-58574, 58802-58809). The rider whose cached
      * anim is not $02 falls straight through to loc_2A5AC / loc_2A7CE, which
      * still sets Status_InAir, clears Status_OnObj and writes routine 2
-     * (sonic3k.asm:58566-58571, 58764-58768) — it just skips the roll, radii,
+     * (sonic3k.asm:58606-58611, 58804-58808) — it just skips the roll, radii,
      * anim and the -$300 y_vel launch. The engine previously only ever
      * released the rolling breaker, so a standing non-rolling partner stayed
      * grounded on a floor that no longer exists.

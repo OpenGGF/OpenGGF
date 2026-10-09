@@ -308,7 +308,7 @@ Port of the ROM's `Swing_UpAndDown` subroutine. Used by the plane's oscillating 
 
 **Step 1: Write the test**
 
-The ROM logic (sonic3k.asm:177851-177880):
+The ROM logic (sonic3k.asm:177942-177971):
 - Input: acceleration (`$40`), velocity (`y_vel`), max velocity (`$3E`), direction (bit 0 of `$38`)
 - When direction=0 (swinging up): subtract acceleration from velocity. If velocity <= -max, flip direction.
 - When direction=1 (swinging down): add acceleration to velocity. If velocity >= max, flip direction.
@@ -372,7 +372,7 @@ Expected: FAIL
 package uk.co.jamesj999.sonic.physics;
 
 /**
- * Port of Swing_UpAndDown (sonic3k.asm:177851).
+ * Port of Swing_UpAndDown (sonic3k.asm:177942).
  * Oscillating motion utility for pendulum/bobbing objects.
  *
  * The object swings between +max and -max velocity, reversing direction
@@ -580,7 +580,7 @@ package uk.co.jamesj999.sonic.game.sonic3k.objects;
 
 /**
  * Palette cycling for the AIZ1 intro's Super Sonic visual effect.
- * Port of sub_679B8 (sonic3k.asm:135904).
+ * Port of sub_679B8 (sonic3k.asm:135969).
  *
  * This is NOT the SuperStateController palette cycling - it's a standalone
  * helper used only by the intro cutscene object. Cycles through
@@ -964,7 +964,7 @@ Run: `mvn test -Dtest=TestCutsceneKnucklesAiz1Instance -pl . -q`
 
 **Step 3: Implement**
 
-7-routine state machine from ROM `CutsceneKnux_AIZ1` (sonic3k.asm:128608-128752):
+7-routine state machine from ROM `CutsceneKnux_AIZ1` (sonic3k.asm:128665-128809):
 
 | Routine | Field | Action |
 |---------|-------|--------|

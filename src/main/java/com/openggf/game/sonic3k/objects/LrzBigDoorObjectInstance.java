@@ -24,10 +24,10 @@ import java.util.List;
 
 /**
  * ROM object {@code Obj_LRZBigDoor} - object id {@code $1A} in the {@code SKL} pointer set
- * (sonic3k.asm:88070-88145; {@code Obj_LRZBigDoor} at ROM {@code $00042A18},
+ * (sonic3k.asm:88116-88191; {@code Obj_LRZBigDoor} at ROM {@code $00042A18},
  * {@code Map_LRZBigDoor} at {@code $42B24}). One act 1 placement.
  *
- * <p>Nothing triggers this door; proximity does. {@code loc_42A68} (:88089-88097) tests Player 1
+ * <p>Nothing triggers this door; proximity does. {@code loc_42A68} (:88135-88143) tests Player 1
  * only, and both tests are worth reading exactly:
  * <ul>
  *   <li>{@code d0 = y_pos(P1) - y_pos(a0) - $40} then {@code cmpi.w #$80,d0 / bhs} - an
@@ -38,36 +38,36 @@ import java.util.List;
  * </ul>
  *
  * <p>The travel is {@code GetSineCosine($2E) asr #1} added, not subtracted, to the saved
- * {@code $46(a0)} (:88119-88122): this door sinks {@code $80} pixels over its {@code $40} frames,
+ * {@code $46(a0)} (:88165-88168): this door sinks {@code $80} pixels over its {@code $40} frames,
  * which is exactly the {@code addi.w #$80,y_pos(a0)} the already-open branch applies at Init
- * (:88081). {@code Screen_shake_flag} is held at {@code -1} for the whole descent and cleared on
- * the last frame (:88104, :88115), and {@code sfx_BigRumble} replays every sixteenth
- * {@code Level_frame_counter+1} (:88123-88128).
+ * (:88127). {@code Screen_shake_flag} is held at {@code -1} for the whole descent and cleared on
+ * the last frame (:88150, :88161), and {@code sfx_BigRumble} replays every sixteenth
+ * {@code Level_frame_counter+1} (:88169-88174).
  */
 public final class LrzBigDoorObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
 
-    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:88076). */
+    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:88122). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);
-    /** {@code move.b #$30,width_pixels(a0)} / {@code #$40,height_pixels(a0)} (:88074-88075). */
+    /** {@code move.b #$30,width_pixels(a0)} / {@code #$40,height_pixels(a0)} (:88120-88121). */
     private static final int WIDTH_PIXELS = 0x30;
     private static final int HEIGHT_PIXELS = 0x40;
-    /** {@code move.w #$3B,d1 / #$40,d2 / #$41,d3} before {@code SolidObjectFull} (:88130-88133). */
+    /** {@code move.w #$3B,d1 / #$40,d2 / #$41,d3} before {@code SolidObjectFull} (:88176-88179). */
     private static final int SOLID_HALF_WIDTH = 0x3B;
     private static final int SOLID_HEIGHT_AIR = 0x40;
     private static final int SOLID_HEIGHT_GROUND = 0x41;
-    /** {@code addi.w #-$40,d0} and {@code cmpi.w #$80,d0} (:88092-88093). */
+    /** {@code addi.w #-$40,d0} and {@code cmpi.w #$80,d0} (:88138-88139). */
     private static final int TRIGGER_Y_OFFSET = 0x40;
     private static final int TRIGGER_Y_SPAN = 0x80;
-    /** {@code cmpi.w #$50,d0} (:88096). */
+    /** {@code cmpi.w #$50,d0} (:88142). */
     private static final int TRIGGER_X_DISTANCE = 0x50;
-    /** {@code cmpi.b #$40,$2E(a0)} (:88112). */
+    /** {@code cmpi.b #$40,$2E(a0)} (:88158). */
     private static final int OPEN_ANGLE = 0x40;
-    /** {@code asr.w #1,d0} (:88121). */
+    /** {@code asr.w #1,d0} (:88167). */
     private static final int TRAVEL_SHIFT = 1;
-    /** {@code addi.w #$80,y_pos(a0)} on the already-open branch (:88081). */
+    /** {@code addi.w #$80,y_pos(a0)} on the already-open branch (:88127). */
     private static final int OPEN_DROP = 0x80;
-    /** {@code andi.b #$F,d0} on {@code Level_frame_counter+1} (:88124). */
+    /** {@code andi.b #$F,d0} on {@code Level_frame_counter+1} (:88170). */
     private static final int RUMBLE_MASK = 0x0F;
 
     private static final int STAGE_WAITING = 0;
@@ -88,7 +88,7 @@ public final class LrzBigDoorObjectInstance extends AbstractObjectInstance
         this.baseY = spawn.y() & 0xFFFF;
         this.currentY = baseY;
 
-        // move.w respawn_addr(a0),d0 / btst #0,(a2) (sonic3k.asm:88077-88080).
+        // move.w respawn_addr(a0),d0 / btst #0,(a2) (sonic3k.asm:88123-88126).
         var objectServices = tryServices();
         var manager = objectServices == null ? null : objectServices.objectManager();
         // The shared placement owner now preserves the lower respawn-table bits.
@@ -138,7 +138,7 @@ public final class LrzBigDoorObjectInstance extends AbstractObjectInstance
         if (stage != STAGE_OPENING) {
             return;
         }
-        // addq.b #1,$2E(a0) / cmpi.b #$40 (sonic3k.asm:88110-88116).
+        // addq.b #1,$2E(a0) / cmpi.b #$40 (sonic3k.asm:88156-88162).
         openTimer = (openTimer + 1) & 0xFF;
         if (openTimer == OPEN_ANGLE) {
             stage = STAGE_OPEN;
@@ -153,7 +153,7 @@ public final class LrzBigDoorObjectInstance extends AbstractObjectInstance
         }
     }
 
-    /** {@code loc_42A68} (sonic3k.asm:88089-88097). Player 1 only; the sidekick cannot open it. */
+    /** {@code loc_42A68} (sonic3k.asm:88135-88143). Player 1 only; the sidekick cannot open it. */
     boolean playerInTriggerRegion(PlayableEntity playerEntity) {
         if (!(playerEntity instanceof AbstractPlayableSprite player)) {
             return false;
@@ -237,7 +237,7 @@ public final class LrzBigDoorObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        // make_art_tile(ArtTile_LRZMisc,2,0) (sonic3k.asm:88072) leaves the priority bit clear.
+        // make_art_tile(ArtTile_LRZMisc,2,0) (sonic3k.asm:88118) leaves the priority bit clear.
         return false;
     }
 

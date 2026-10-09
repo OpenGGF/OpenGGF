@@ -2811,7 +2811,7 @@ public final class TraceSessionLauncher {
      * the write that left the level came from inside its own object pass, and
      * the loop tests for it on the very next instruction
      * (docs/s1disasm/sonic.asm:3009-3018, docs/s2disasm/s2.asm:5095-5097,
-     * docs/skdisasm/sonic3k.asm:7894-7896). So the first unrecorded row after a
+     * docs/skdisasm/sonic3k.asm:7926-7928). So the first unrecorded row after a
      * segment is an ordinary level iteration, and suppressing it stops the
      * level from ever reaching the write that ends it — a Sonic 1 death's
      * sixtieth {@code Sonic_ResetLevel} decrement lands exactly there

@@ -18,7 +18,7 @@ import com.openggf.physics.TrigLookupTable;
 import java.util.List;
 
 /**
- * ROM {@code loc_461A8}-{@code loc_46282} (sonic3k.asm:92110-92180): the arm itself, drawn as a
+ * ROM {@code loc_461A8}-{@code loc_46282} (sonic3k.asm:92156-92226): the arm itself, drawn as a
  * chain of {@code mainspr_childsprites} sub-sprites stepping away from the hub.
  *
  * <p>Init: {@code render_flags $44} (the multi-sprite bit), {@code height_pixels $68},

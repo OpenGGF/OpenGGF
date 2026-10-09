@@ -6,7 +6,7 @@
 	url = https://github.com/sonicretro/s2disasm.git
 [submodule "docs/skdisasm"]
 	path = docs/skdisasm
-	url = https://github.com/sonicretro/skdisasm.git
+	url = https://github.com/raiscan/skdisasm.git
 
 [submodule "tools/tracechaser"]
 	path = tools/tracechaser

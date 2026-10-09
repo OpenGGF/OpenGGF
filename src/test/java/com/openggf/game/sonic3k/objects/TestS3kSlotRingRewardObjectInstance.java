@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestS3kSlotRingRewardObjectInstance {
 
     /**
-     * ROM Obj_SlotRing routine 0 -&gt; 1 (sonic3k.asm:35862-35887): the cage's active-reward
+     * ROM Obj_SlotRing routine 0 -&gt; 1 (sonic3k.asm:35902-35927): the cage's active-reward
      * count ($30(a0), reached through this object's $2E(a0) pointer) is decremented with
      * {@code subq.w #1,(a1)} at the exact grant instant -- immediately before {@code GiveRing}
      * and the {@code addi.b #2,routine(a0)} bump into the cosmetic sparkle handler

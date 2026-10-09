@@ -26,7 +26,7 @@ public final class S3kBackdropBands {
     }
 
     /**
-     * {@code AIZ1_Deform} (s3.asm:70272-70330) with {@code AIZ1_DeformArray}. With
+     * {@code AIZ1_Deform} (s3.asm:70328-70386) with {@code AIZ1_DeformArray}. With
      * {@code base = (camX - $1300) / 32}: words 0-5 are {@code (11 - 2i) * base / 2} plus
      * {@code 6 - i} times the {@code HScroll_table+$3C} accumulator ({@code +$2000} a frame),
      * word 6 is {@code base}, words 7-19 the one-line ocean ramp {@code base * (8 + k) / 8},
@@ -49,7 +49,7 @@ public final class S3kBackdropBands {
     }
 
     /**
-     * {@code AIZ2_Deform}/{@code AIZ2_BGDeformMake} (s3.asm:70805-70842): seven levels
+     * {@code AIZ2_Deform}/{@code AIZ2_BGDeformMake} (s3.asm:70861-70898): seven levels
      * {@code (32 + 3k) / 64} of camera X scattered by {@code AIZ2_SPEED_MAP} over
      * {@code AIZ2_BGDeformArray}.
      */
@@ -60,7 +60,7 @@ public final class S3kBackdropBands {
     }
 
     /**
-     * {@code HCZ1_Deform} (sonic3k.asm:105801-105960) held in its below-the-waterline state
+     * {@code HCZ1_Deform} (sonic3k.asm:105847-106006) held in its below-the-waterline state
      * (camera at least {@code $80} below the {@code $610} equilibrium): cave words 0-6 are
      * {@code (8 - k) / 32} of camera X mirrored in words 7-12; the 192 one-line waterline words
      * are a ramp from 1 down by {@code 1/128} a line for the upper 96 and the slowest cave word
@@ -82,7 +82,7 @@ public final class S3kBackdropBands {
     }
 
     /**
-     * {@code LBZ1_Deform} with {@code LBZ1_BGDeformArray} (sonic3k.asm:111291), entered at
+     * {@code LBZ1_Deform} with {@code LBZ1_BGDeformArray} (sonic3k.asm:111337), entered at
      * {@code HScroll_table+$008}: {@code camX/16} for the sky, then {@code camX/8} rising by
      * {@code camX/128} a band. The ROM's constant pixel offsets (+10, +4, -2, +7) only shift
      * phase and are left out.
@@ -98,7 +98,7 @@ public final class S3kBackdropBands {
     }
 
     /**
-     * {@code sub_57A60}'s cloud fan (sonic3k.asm:116385-116708) with
+     * {@code sub_57A60}'s cloud fan (sonic3k.asm:116431-116754) with
      * {@code SSZ1_BGDeformArray}: the same word assignments as
      * {@link SwScrlSsz#cloudParameters}, with {@code camX/64} plus one drift unit for the
      * first word and {@code camX/32} plus one drift unit as the step. The drift unit is the

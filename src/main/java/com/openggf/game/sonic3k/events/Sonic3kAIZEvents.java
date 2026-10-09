@@ -92,7 +92,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     /** Camera X threshold for terrain swap (routine 2). Already handled by AizPlaneIntroInstance. */
     private static final int TERRAIN_SWAP_X = 0x1400;
 
-    // --- ROM: loc_1A9EC palette[2][15] per-frame mutation (s3.asm:32171-32195) ---
+    // --- ROM: loc_1A9EC palette[2][15] per-frame mutation (s3.asm:32226-32250) ---
     // Cascading overwrite: $020E → $0004 at $2B00 → $0C02 at $2D80.
     private static final int PALETTE_MUT_THRESHOLD_DARK = 0x2B00;
     private static final int PALETTE_MUT_THRESHOLD_FIRE = 0x2D80;
@@ -400,23 +400,23 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private static final int FIRE_TRANSITION_FALLBACK_FRAMES = 240;
     /**
      * ROM: AIZMinibossCutscene_StartEscape writes #$120 to $2E(a0) for AIZ1
-     * (sonic3k.asm:136869-136885). AIZMinibossCutscene_Escape restores the
+     * (sonic3k.asm:136934-136950). AIZMinibossCutscene_Escape restores the
      * level music after its per-frame decrement makes this timer negative.
      */
     private static final int FIRE_MUSIC_RESTORE_TIME = 0x120;
     // ROM AIZ1BGE_FireTransition, the Camera_Y_pos_BG_copy >= $190 branch
-    // (sonic3k.asm:104674-104716): loc_4FD10 seeds
+    // (sonic3k.asm:104720-104762): loc_4FD10 seeds
     // `move.w #$F,(Draw_delayed_rowcount).w`, bumps Events_routine_bg to
     // AIZ1BGE_FireRefresh, and then falls through `bra.s loc_4FD32` so the FIRST
     // Draw_PlaneVertBottomUp call happens on that same frame. Each call drains TWO
     // rows (Draw_PlaneVertSingleBottomUp runs once, then again while the counter is
-    // still non-negative; sonic3k.asm:103429-103457), and the routine advances to
+    // still non-negative; sonic3k.asm:103475-103503), and the routine advances to
     // AIZ1BGE_Finish on the call that takes the counter negative. The seed and the
     // drain rate give the pass count outright; it is not a measured budget. Same
     // shape, and the same two ROM facts, as AIZ2_FIRE_REDRAW_ROWCOUNT below.
-    /** ROM: {@code move.w #$F,(Draw_delayed_rowcount).w} (sonic3k.asm:104711). */
+    /** ROM: {@code move.w #$F,(Draw_delayed_rowcount).w} (sonic3k.asm:104757). */
     private static final int AIZ1_FIRE_REFRESH_ROWCOUNT = 0x0F;
-    /** Draw_PlaneVertBottomUp drains two rows per call (sonic3k.asm:103429-103457). */
+    /** Draw_PlaneVertBottomUp drains two rows per call (sonic3k.asm:103475-103503). */
     private static final int FIRE_REDRAW_ROWS_PER_CALL = 2;
     /**
      * Passes spent in AIZ1_FIRE_REFRESH after the transition frame, which already
@@ -429,7 +429,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      *
      * <p>The ROM has no such duration. AIZ2's chunk and block tables go live when
      * the three plain {@code Queue_Kos} entries queued at
-     * sonic3k.asm:104678-104688 drain inside {@code Process_Kos_Queue}, which
+     * sonic3k.asm:104724-104734 drain inside {@code Process_Kos_Queue}, which
      * decompresses straight over {@code RAM_start} / {@code Block_table}; there is
      * no separate apply step, and no apply <em>instant</em> either.
      *
@@ -437,7 +437,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * wrong on both counts. Under trace replay {@code KOS_DECOMPRESSION_QUEUE} is
      * {@code RECORDED} (HardwareTimingSchedule), so these handles' readiness is the
      * ROM's own measured drain, matched by ordinal and submission fingerprint. And
-     * {@code Process_Kos_Queue} (sonic3k.asm:2833-2860) carries no work budget at
+     * {@code Process_Kos_Queue} (sonic3k.asm:2865-2892) carries no work budget at
      * all -- it runs the whole archive in one unbounded loop, stopped only by
      * whichever V-int lands inside it and resumed by {@code Set_Kos_Bookmark} -- so
      * no frame-granularity drain model can exist. Re-gating on {@code isReady()}
@@ -463,18 +463,18 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     // ROM: after the AIZ1BGE_Finish reload (Events_routine_bg cleared, act 0->1),
     // the AIZ2 background event chain re-draws the fire plane before releasing the
     // post-reload Camera_max_X_pos lock. Two routines run in sequence:
-    //   - Events_routine_bg $00 = AIZ2BGE_FireRedraw (sonic3k.asm:105036-105050)
-    //   - Events_routine_bg $04 = AIZ2BGE_WaitFire   (sonic3k.asm:105052-105105)
+    //   - Events_routine_bg $00 = AIZ2BGE_FireRedraw (sonic3k.asm:105082-105096)
+    //   - Events_routine_bg $04 = AIZ2BGE_WaitFire   (sonic3k.asm:105098-105151)
     // AIZ1BGE_Finish seeds Draw_delayed_rowcount = $F immediately before clearing
-    // Events_routine_bg (sonic3k.asm:104774-104775). Each AIZ2BGE_FireRedraw pass
+    // Events_routine_bg (sonic3k.asm:104820-104821). Each AIZ2BGE_FireRedraw pass
     // calls Draw_PlaneVertBottomUp, which drains TWO rows per call
     // (Draw_PlaneVertSingleBottomUp runs once, then again while the counter is
-    // still non-negative; sonic3k.asm:103429-103457) and advances the routine when
+    // still non-negative; sonic3k.asm:103475-103503) and advances the routine when
     // that counter goes negative. The pass count therefore falls out of the seed
     // and the drain rate; it is not a measured budget.
-    /** ROM: {@code move.w #$F,(Draw_delayed_rowcount).w} (sonic3k.asm:104774). */
+    /** ROM: {@code move.w #$F,(Draw_delayed_rowcount).w} (sonic3k.asm:104820). */
     private static final int AIZ2_FIRE_REDRAW_ROWCOUNT = 0x0F;
-    // ROM AIZ2BGE_WaitFire (sonic3k.asm:105052-105084): while Events_bg+$00 is
+    // ROM AIZ2BGE_WaitFire (sonic3k.asm:105098-105130): while Events_bg+$00 is
     // clear, the routine waits for the continuous AIZ1_FireRise ramp to put
     // (Camera_Y_pos_BG_copy & $7F) inside [$20,$30); on that pass it re-seats the
     // BG copy to $180 + that residue and latches Events_bg+$00. From then on the
@@ -539,14 +539,14 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
          * True while the ROM is still drawing the fire plane as part of the
          * continuation.  AIZ2BGE_FireRedraw and the pre-latch branch of
          * AIZ2BGE_WaitFire continue the AIZ1 fire rise and draw rows
-         * (sonic3k.asm:105036-105078).  The VDP plane wraps during that
+         * (sonic3k.asm:105082-105124).  The VDP plane wraps during that
          * interval, including when exact art-loading timing leaves the carried
          * fire position beyond the original $310 fire-zone boundary.  After
          * Events_bg+$00 is latched, WaitFire draws the real rows while the rise
-         * approaches $310 (sonic3k.asm:105079-105105), so wrapping must stop
+         * approaches $310 (sonic3k.asm:105125-105151), so wrapping must stop
          * and the trailing fire band can scroll off naturally.  The subsequent
          * AIZ2_BG_REDRAW phase remains unwrapped because the ROM no longer
-         * calls the fire-rise or fire-draw routines (sonic3k.asm:105128-105138).
+         * calls the fire-rise or fire-draw routines (sonic3k.asm:105174-105184).
          */
         boolean wrapFireTiles(boolean waitFireDrawActive) {
             return switch (this) {
@@ -674,7 +674,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             // ROM: SpawnLevelMainSprites clears Level_started_flag as part of the
             // intro bootstrap, before Obj_intPlane executes its first update.
             // It does not dispatch Player_2 here; Tails_Control owns the later
-            // AIZ dormant marker (sonic3k.asm:8111-8128,26389-26397).
+            // AIZ dormant marker (sonic3k.asm:8143-8160,26429-26437).
             camera().setLevelStarted(false);
             introSpawned = spawnIntroObject();
             precomputeIntroTransitionTilemaps();
@@ -739,11 +739,11 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
     /**
      * ROM: {@code SpecialEvents} runs before {@code Process_Sprites}
-     * (docs/skdisasm/sonic3k.asm:7888-7894). During the AIZ2 battleship
+     * (docs/skdisasm/sonic3k.asm:7920-7926). During the AIZ2 battleship
      * sequence it dispatches {@code AIZ2_DoShipLoop}, which advances camera X
      * by 4 and clamps {@code x_pos(a1)} for Player_1 then Player_2 before
      * {@code MoveSprite2} applies velocity
-     * (docs/skdisasm/sonic3k.asm:104082-104091, 105200-105253).
+     * (docs/skdisasm/sonic3k.asm:104128-104137, 105246-105299).
      */
     public void updatePrePhysics(int act) {
         if (act == 0) {
@@ -771,7 +771,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
         // AIZ1_Resize writes Tails_CPU_routine after MoveCamera/Do_ResizeEvents,
         // i.e. after the current Process_Sprites slot but before the next one
-        // (sonic3k.asm:38873-38900). This bridge exposes only a prior committed
+        // (sonic3k.asm:38913-38940). This bridge exposes only a prior committed
         // resize write; a preview-only crossing still belongs to this frame's
         // later resize step.
         releaseAizIntroSidekickMarker();
@@ -872,7 +872,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                     + (isFireTransitionActive() ? ", skipped palette (fire active)" : ", re-applied main palette"));
         }
         if (boundariesUnlocked) {
-            // ROM: Do_ResizeEvents runs *inside* DeformBgLayer (sonic3k.asm:38303-38316),
+            // ROM: Do_ResizeEvents runs *inside* DeformBgLayer (sonic3k.asm:38343-38356),
             // AFTER MoveCameraX/MoveCameraY have committed the new Camera_X_pos. So the
             // resize threshold scan sees the same Camera_X_pos that Process_Sprites will
             // observe on the *next* main-loop iteration.
@@ -925,7 +925,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     private void releaseAizIntroSidekickMarker() {
-        // ROM AIZ1_Resize loc_1C4C4 (sonic3k.asm:38898-38900):
+        // ROM AIZ1_Resize loc_1C4C4 (sonic3k.asm:38938-38940):
         // after the main AIZ palette handoff, Tails_CPU_routine is set to 2.
         SpriteManager sm = spriteManager();
         if (sm == null) {
@@ -1029,7 +1029,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
     private void applyResizeMinYFromX(int cameraX) {
         // ROM AIZ1_Resize loc_1C550 writes Camera_min_Y_pos=0, then raises it
-        // to $02E0 once Camera_X_pos >= $2C00 (sonic3k.asm:38939-38958).
+        // to $02E0 once Camera_X_pos >= $2C00 (sonic3k.asm:38979-38998).
         camera().setMinY((short) (cameraX >= RAISED_MIN_Y_THRESHOLD ? RAISED_MIN_Y : 0));
     }
 
@@ -1040,8 +1040,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (!fireMinXLockReached) {
             // ROM AIZ1_Resize loc_1C594 writes Camera_min_X_pos=$2D80
             // on the threshold frame, then advances Dynamic_resize_routine
-            // (sonic3k.asm:38961-38974). Subsequent routines track
-            // Camera_X_pos into Camera_min_X_pos (sonic3k.asm:38980-39000).
+            // (sonic3k.asm:39001-39014). Subsequent routines track
+            // Camera_X_pos into Camera_min_X_pos (sonic3k.asm:39020-39040).
             camera().setMinX((short) FIRE_MIN_X_LOCK);
             fireMinXLockReached = true;
             return;
@@ -1050,7 +1050,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM: loc_1A9EC per-frame palette[2][15] mutation (s3.asm:32171-32195).
+     * ROM: loc_1A9EC per-frame palette[2][15] mutation (s3.asm:32226-32250).
      *
      * Every frame while routine 4 is active, the ROM writes a cascading color:
      * <ul>
@@ -1105,7 +1105,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
     /**
      * ROM {@code loc_13A10}, the AIZ1 intro branch of {@code Tails_CPU_Control}
-     * (docs/skdisasm/sonic3k.asm:26389-26397):
+     * (docs/skdisasm/sonic3k.asm:26429-26437):
      *
      * <pre>
      * loc_13A10:
@@ -1125,7 +1125,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * the {@code Tails_CPU_star_post_flag} test had no counterpart at all.
      * {@code Tails_CPU_star_post_flag} is written exactly once, by
      * {@code Tails_Init}'s {@code move.b (Last_star_post_hit).w,
-     * (Tails_CPU_star_post_flag).w} (sonic3k.asm:26155), and read exactly once,
+     * (Tails_CPU_star_post_flag).w} (sonic3k.asm:26195), and read exactly once,
      * here -- its whole purpose is to stop the intro marker on a level entered
      * from a star post or the special-stage return that follows one.
      *
@@ -1165,7 +1165,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * The engine's model of {@code Last_star_post_hit} masked as
      * {@code Tails_CPU_star_post_flag} sees it: zero when no star post has been
      * reached. The persistent activation mark is the same value the star post's
-     * own already-hit comparison consumes (sonic3k.asm:61606-61610), and it is
+     * own already-hit comparison consumes (sonic3k.asm:61646-61650), and it is
      * -1 rather than 0 when no post has been reached.
      */
     private int romLastStarPostHit() {
@@ -1185,7 +1185,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (existing != null) {
             // ROM SpawnLevelMainSprites installs Obj_AIZPlaneIntro in a fixed
             // dynamic-object slot before the first Process_Sprites call
-            // (sonic3k.asm:7849-7853, 8111-8126). A duplicate engine event init
+            // (sonic3k.asm:7881-7885, 8143-8158). A duplicate engine event init
             // must re-adopt that live object, not allocate a second parent.
             AizPlaneIntroInstance.adoptActiveIntroInstance(existing);
             return true;
@@ -1617,7 +1617,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // ROM: ShakeScreen_Setup — timed (bomb) and constant (water trigger) modes
         tickScreenShake();
 
-        // ROM: AIZ2_Resize — dynamic boundary state machine (sonic3k.asm:39012)
+        // ROM: AIZ2_Resize — dynamic boundary state machine (sonic3k.asm:39052)
         updateAiz2EndBossSpawn();
     }
 
@@ -1628,8 +1628,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * {@code AIZ1BGE_FireRefresh}, {@code AIZ1BGE_Finish},
      * {@code AIZ2BGE_FireRedraw} and {@code AIZ2BGE_WaitFire} — is reached only
      * through {@code ScreenEvents}, which the level main loop calls after
-     * {@code Wait_VSync} (sonic3k.asm:7889-7899 and :102233-102254, dispatching
-     * via :104557-104558 and :105018-105019). A lag row is a main-loop pass that
+     * {@code Wait_VSync} (sonic3k.asm:7921-7931 and :102279-102300, dispatching
+     * via :104603-104604 and :105064-105065). A lag row is a main-loop pass that
      * never completed, so {@code Level_frame_counter} does not advance and none
      * of those routines run — neither their {@code AIZ1_FireRise} calls nor
      * their {@code Draw_PlaneVertBottomUp} drains, both of which are main-loop
@@ -1645,7 +1645,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * ROM {@code AIZ2BGE_FireRedraw} (Events_routine_bg $00, sonic3k.asm:105036-105050).
      *
      * <p>Each pass runs {@code Draw_PlaneVertBottomUp}, which drains two rows of
-     * {@code Draw_delayed_rowcount} per call (sonic3k.asm:103429-103457). While the
+     * {@code Draw_delayed_rowcount} per call (sonic3k.asm:103475-103503). While the
      * counter stays non-negative the routine falls through to {@code AIZ1_FireRise}
      * and the plain deformation; when it goes negative the routine clears
      * {@code Events_bg+$00}, advances {@code Events_routine_bg} and FALLS THROUGH
@@ -1664,7 +1664,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             return;
         }
         fireSequencePhase = FireSequencePhase.AIZ2_WAIT_FIRE;
-        // ROM clr.w (Events_bg+$00).w at loc_50110 (sonic3k.asm:105049);
+        // ROM clr.w (Events_bg+$00).w at loc_50110 (sonic3k.asm:105095);
         // AIZ2BGE_WaitFire re-latches it on the re-seat pass.
         act2WaitFireDrawActive = false;
         firePhaseFrames = 0;
@@ -1687,7 +1687,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      *
      * <p>The release is therefore the ramp reaching $310 from the re-seat, not a
      * frame budget: with the ramp at its {@code AIZ1_FireRise} cap of $A000 (i.e.
-     * exactly 10px/pass, s3.asm:70383-70399) the duration follows from the residue
+     * exactly 10px/pass, s3.asm:70439-70455) the duration follows from the residue
      * the ramp happens to land on, which is what makes it hold for any recording.
      */
     private void runAiz2WaitFire() {
@@ -1699,7 +1699,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 return;
             }
             setFireBgCopyWord(FIRE_BG_WAIT_RESEAT_BASE + residue);
-            // st (Events_bg+$00).w (sonic3k.asm:105076), then fall through.
+            // st (Events_bg+$00).w (sonic3k.asm:105122), then fall through.
             act2WaitFireDrawActive = true;
         }
         // loc_50160: Draw_TileRow, then the unsigned `blo` against $310.
@@ -1708,7 +1708,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
         // ROM order inside the completed branch is Load_PLC, LoadEnemyArt, the
         // palette-line-4 writes and only then Camera_max_X_pos
-        // (sonic3k.asm:105086-105096), so the enemy batch is admitted on the very
+        // (sonic3k.asm:105132-105142), so the enemy batch is admitted on the very
         // pass that releases the clamp, not the one before it.
         admitAct2EnemyArt();
         // Camera_min_X_pos remains at $0010 so Sonic cannot scroll back into the
@@ -1738,7 +1738,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
     /**
      * AIZ2 dynamic resize state machine.
-     * ROM: AIZ2_Resize (sonic3k.asm:39012-39241)
+     * ROM: AIZ2_Resize (sonic3k.asm:39052-39281)
      *
      * <p>Routes to Sonic or Knuckles path based on player character.
      * Adjusts maxY/minY/minX dynamically as camera moves through the zone,
@@ -1788,11 +1788,11 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * equivalent to checking that {@link LevelManager#getApparentAct()} is 1.
      * The engine's seamless AIZ1 -> AIZ2 fire transition (and the trace
      * reload-resume path) preserves apparentAct, matching ROM where
-     * {@code AIZ1_AIZ2_Transition} (sonic3k.asm:104627) does not write
+     * {@code AIZ1_AIZ2_Transition} (sonic3k.asm:104673) does not write
      * {@code Apparent_zone_and_act}.  Direct AIZ2 entry (level select,
      * starpost respawn from a saved AIZ2 starpost) sets it to $0001 via
-     * {@code LevelSelect_StartZone} (sonic3k.asm:10222) /
-     * {@code Load_Starpost_Settings} (sonic3k.asm:61760), which the engine
+     * {@code LevelSelect_StartZone} (sonic3k.asm:10258) /
+     * {@code Load_Starpost_Settings} (sonic3k.asm:61800), which the engine
      * mirrors through {@link LevelManager#loadZoneAndAct(int, int)} and the
      * results-screen handoff that calls {@link ObjectServices#setApparentAct(int)}.
      */
@@ -1800,7 +1800,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         return levelManager().getApparentAct() == 1;
     }
 
-    // --- Sonic resize routines (sonic3k.asm:39046-39153) ---
+    // --- Sonic resize routines (sonic3k.asm:39086-39193) ---
 
     /** ROM: AIZ2_SonicResize1 — set maxY=$590 at camera X >= $2E0. */
     private void updateAiz2SonicResize1() {
@@ -1809,16 +1809,16 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
         camera().setMaxY((short) AIZ2_DEFAULT_MAX_Y);
         aiz2ResizeRoutine = 4;
-        // ROM (sonic3k.asm:39053): cmpi.w #1, (Apparent_zone_and_act).w
+        // ROM (sonic3k.asm:39093): cmpi.w #1, (Apparent_zone_and_act).w
         //   bne.s locret_1C68E
         // Only skip the miniboss area when ROM's Apparent_zone_and_act equals
         // AIZ2 (zone=0, act=1). The seamless AIZ1 -> AIZ2 fire transition
-        // (sonic3k.asm:104627 AIZ1_AIZ2_Transition) does NOT update
+        // (sonic3k.asm:104673 AIZ1_AIZ2_Transition) does NOT update
         // Apparent_zone_and_act, so it stays at AIZ1=0x0000 across the
         // continuation; the same applies to the engine's reload-resume path
         // because the seamless transition coordinator preserves apparentAct.
         // Direct AIZ2 entry from level select / starpost respawn / save load
-        // sets Apparent_zone_and_act = $0001 (sonic3k.asm:10222, :61760), so
+        // sets Apparent_zone_and_act = $0001 (sonic3k.asm:10258, :61800), so
         // the miniboss-skip path activates only there.
         if (isApparentAct2()) {
             camera().setMinX((short) AIZ2_SONIC_RESIZE2_LOCK_X);
@@ -1828,7 +1828,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
     /** ROM: AIZ2_SonicResize2 — continuous maxY + miniboss spawn. */
     private void updateAiz2SonicResize2() {
-        // ROM: Do_ResizeEvents runs *inside* DeformBgLayer (sonic3k.asm:38303-38316)
+        // ROM: Do_ResizeEvents runs *inside* DeformBgLayer (sonic3k.asm:38343-38356)
         // AFTER MoveCameraX has committed the new Camera_X_pos. LevelFrameStep now
         // runs the zone event handler AFTER camera.updatePosition() (matching that ROM
         // order), so camera().getX() here is already this frame's post-scroll camera X
@@ -1912,7 +1912,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         startBattleshipSequence();
     }
 
-    // --- Knuckles resize routines (sonic3k.asm:39157-39241) ---
+    // --- Knuckles resize routines (sonic3k.asm:39197-39281) ---
 
     /** ROM: AIZ2_KnuxResize1 — set maxY=$590 at camera X >= $2E0. */
     private void updateAiz2KnuxResize1() {
@@ -1921,7 +1921,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
         camera().setMaxY((short) AIZ2_DEFAULT_MAX_Y);
         aiz2ResizeRoutine = 0x14;
-        // ROM (sonic3k.asm:39164): cmpi.w #1, (Apparent_zone_and_act).w —
+        // ROM (sonic3k.asm:39204): cmpi.w #1, (Apparent_zone_and_act).w —
         // same gate as SonicResize1. Only skip the miniboss area when
         // Apparent_zone_and_act equals AIZ2 (direct entry); the AIZ1 fire
         // transition leaves Apparent_zone_and_act at AIZ1, so the miniboss
@@ -2024,7 +2024,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
         // AIZ2SE_Normal falls through to AIZ2SE_ShipRefresh. The plane redraw
         // must report complete on the following ScreenEvents pass before ROM calls
-        // AllocateObject for Obj_AIZBattleship (sonic3k.asm:104885-104925).
+        // AllocateObject for Obj_AIZBattleship (sonic3k.asm:104931-104971).
         // Snapshot-at-entry dispatch above prevents this newly armed work from
         // being consumed in the same pass.
         battleshipSpawnRefreshPasses = 1;
@@ -2036,7 +2036,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
         battleshipSpawned = true;
         // AIZ2SE_ShipRefresh clears Water_flag on the redraw pass that owns
-        // the battleship allocation (sonic3k.asm:104911-104934).
+        // the battleship allocation (sonic3k.asm:104957-104980).
         waterSystem().setWaterEnabled(Sonic3kZoneIds.ZONE_AIZ, 1, false);
         int cameraX = camera().getX();
         int baseSecondaryY = (camera().getY() + 0x08F0) & 0x0FF0;
@@ -2150,7 +2150,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             // Obj_PathSwap subtype $22 at x=$3F68 sets art_tile bit 7 before
             // the waterfall arena. Re-publish that native handoff here so a
             // direct/rewound event entry cannot leave the player behind the
-            // high-priority waterfall tiles (sonic3k.asm:39780-39850).
+            // high-priority waterfall tiles (sonic3k.asm:39820-39890).
             participant.setHighPriority(true);
         }
     }
@@ -2363,10 +2363,10 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
             if (sidekick.getCpuController() != null) {
                 // ROM Tails_Check_Screen_Boundaries reads Camera_min/max directly
-                // during Process_Sprites (sonic3k.asm:28407-28452). The engine's
+                // during Process_Sprites (sonic3k.asm:28447-28492). The engine's
                 // sidekick CPU carries a mirrored bound override, so refresh it
                 // when AIZ2_DoShipLoop rewrites camera bounds before physics
-                // (sonic3k.asm:105200-105253).
+                // (sonic3k.asm:105246-105299).
                 sidekick.getCpuController().setLevelBounds(minX, maxX, maxY);
             }
         }
@@ -2446,7 +2446,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
     /**
      * True while the post-bombing ship loop is repeating the forest section
-     * ({@code AIZ2_DoShipLoop} with {@code Events_bg+$02 = $46C0}, s3.asm:70569,
+     * ({@code AIZ2_DoShipLoop} with {@code Events_bg+$02 = $46C0}, s3.asm:70625,
      * 70956-70971). ROM state only: the auto-scroll loop is active and its wrap
      * boundary is the post-bombing forest boundary. Drives the FG Plane A {@code $200}
      * horizontal wrap that keeps the looped forest canopy continuous across the
@@ -2498,7 +2498,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     /**
      * Ticks the screen shake. Called each frame from {@link #updateAct2Continuation(int)}.
      * <p>
-     * ROM: ShakeScreen_Setup (sonic3k.asm:104183) supports two modes:
+     * ROM: ShakeScreen_Setup (sonic3k.asm:104229) supports two modes:
      * <ul>
      *   <li>Positive Screen_shake_flag → timed countdown with ScreenShakeArray (bomb impacts)</li>
      *   <li>Negative Screen_shake_flag (-1) → constant shake with ScreenShakeArray2,
@@ -2511,7 +2511,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private void tickScreenShake() {
         // AIZ2_ScreenEvent consumes Screen_shake_offset before the background
         // event calls ShakeScreen_Setup to prepare the value for the next frame
-        // (sonic3k.asm:104870-104875,105132-105165). Preserve both registers:
+        // (sonic3k.asm:104916-104921,105178-105211). Preserve both registers:
         // the scroll handler applies the old value while this method computes
         // the new one.
         screenShakeAppliedOffsetY = screenShakeOffsetY;
@@ -2584,7 +2584,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         levelRepeatOffset = 0;
 
         // ROM Obj_AIZ2BossSmall loc_5071A clears Scroll_lock before
-        // loc_50720 writes Camera_max_X_pos=$6000 (docs/skdisasm/sonic3k.asm:105607-105619).
+        // loc_50720 writes Camera_max_X_pos=$6000 (docs/skdisasm/sonic3k.asm:105653-105665).
         releaseBattleshipScrollLockCamera();
 
         // ROM: Adjust_BGDuringLoop continues to track camera deltas into Events_fg_1
@@ -2669,10 +2669,10 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 firePhaseFrames++;
                 // ROM: the AIZ2 chunk and block tables become live exactly when
                 // their three plain `Queue_Kos` entries drain in Process_Kos_Queue
-                // (sonic3k.asm:104678-104688) -- the decompressor writes straight
+                // (sonic3k.asm:104724-104734) -- the decompressor writes straight
                 // over RAM_start / Block_table, so there is no separate "apply"
                 // step and no waiting period of its own. AIZ1BGE_Finish's own wait,
-                // `tst.b (Kos_modules_left).w` (sonic3k.asm:104725-104726), gates
+                // `tst.b (Kos_modules_left).w` (sonic3k.asm:104771-104772), gates
                 // the LEVEL RELOAD on the two Queue_Kos_Module art jobs only, which
                 // is what act2KosArtReady() below covers. The terrain tables land
                 // first and independently, and progressively: the tables are half
@@ -2760,7 +2760,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         postFireHazeActive = false;
         // The fire event ends in AIZ1BGE_Finish's Load_Level of act 2 after
         // AIZ1BGE_FireTransition has queued the act 2 Kos work and waited on
-        // Kos_modules_left (sonic3k.asm:104664-104746). The host-side act 2
+        // Kos_modules_left (sonic3k.asm:104710-104792). The host-side act 2
         // level build (decode, art sheets, tilemaps) has no ROM counterpart,
         // so it runs across this event's own rise-and-wait instead of on the
         // reload frame; the reload joins the build and never waits for it.
@@ -2968,12 +2968,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
         // ROM AIZ1BGE_Finish does NOT touch Camera_Y_pos_BG_copy across the reload:
         // AIZ1_FireRise keeps ramping it through the Kos wait and straight into the
-        // AIZ2 background chain (sonic3k.asm:104727-104775). AIZ2BGE_WaitFire's
+        // AIZ2 background chain (sonic3k.asm:104773-104821). AIZ2BGE_WaitFire's
         // re-seat to $180 + (bgY & $7F) is the only thing that brings it back into
         // the fire zone, so the ramp must stay continuous here — the residue it
         // carries across the reload is exactly what decides the release pass.
         // ROM also seeds Draw_delayed_rowcount = $F immediately before clearing
-        // Events_routine_bg (sonic3k.asm:104774-104775); firePhaseFrames carries
+        // Events_routine_bg (sonic3k.asm:104820-104821); firePhaseFrames carries
         // that counter through AIZ2BGE_FireRedraw.
         pendingFireSequence = new PendingFireSequence(
                 FireSequencePhase.AIZ2_FIRE_REDRAW,
@@ -3018,7 +3018,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                         // ROM: AIZ1BGE_Finish subtracts the same offsets from
                         // Camera_X/Y_pos, writes long #$00100010 at Camera_min_X_pos,
                         // then writes long #$00000260 at Camera_min_Y_pos and word
-                        // $260 to Camera_target_max_Y_pos (sonic3k.asm:104747-104762).
+                        // $260 to Camera_target_max_Y_pos (sonic3k.asm:104793-104808).
                         // That locks camera X at $10 and snaps current maxY to $260;
                         // the camera is not recentered from the player.
                         .preserveOffsetCameraPosition(true)
@@ -3047,15 +3047,15 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     /**
      * ROM: the AIZ2 background continuation falls through to {@code Load_PLC}
      * and {@code jsr (LoadEnemyArt).l} once the fire-plane redraw has drained
-     * ({@code docs/skdisasm/sonic3k.asm:105084-105091}). That call site is an
+     * ({@code docs/skdisasm/sonic3k.asm:105130-105137}). That call site is an
      * ordinary synchronous mid-level {@code LoadEnemyArt}: it runs inside the
      * background-event dispatch, which {@code LevelLoop} reaches
-     * ({@code DeformBgLayer}/{@code ScreenEvents}, sonic3k.asm:7896-7898) ahead
+     * ({@code DeformBgLayer}/{@code ScreenEvents}, sonic3k.asm:7928-7930) ahead
      * of the same iteration's {@code Process_Kos_Module_Queue} (7908). The
      * {@code Queue_Kos_Module} calls in {@code LoadEnemyArt}
-     * ({@code sonic3k.asm:64281-64313}) therefore happen during this frame's
+     * ({@code sonic3k.asm:64321-64353}) therefore happen during this frame's
      * event pass, exactly like {@code HCZGeyser_ReloadEnemyArtAndDelete}
-     * ({@code sonic3k.asm:65002-65004}), and the loop-tail module step sees them.
+     * ({@code sonic3k.asm:65042-65044}), and the loop-tail module step sees them.
      */
     private void admitAct2EnemyArt() {
         if (!(module().getObjectArtProvider()
@@ -3154,7 +3154,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             // starpost respawn from a saved AIZ2 starpost) AND the trace's
             // reload-resume path.  ROM does NOT mark all of these as
             // post-miniboss — only the ones that set Apparent_zone_and_act = $0001
-            // (sonic3k.asm:10222 LevelSelect_StartZone, :61760 Load_Starpost_Settings).
+            // (sonic3k.asm:10258 LevelSelect_StartZone, :61800 Load_Starpost_Settings).
             // The miniboss-skip gate now reads LevelManager.getApparentAct(),
             // which mirrors ROM's Apparent_zone_and_act, so we no longer
             // need a heuristic boolean here.  postFireHazeActive stays true

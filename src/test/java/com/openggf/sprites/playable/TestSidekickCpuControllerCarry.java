@@ -179,7 +179,7 @@ class TestSidekickCpuControllerCarry {
         AbstractPlayableSprite[] pair = prepareCarry();
         AbstractPlayableSprite sonic = pair[0];
 
-        // First tick: ROM loc_13A10 (sonic3k.asm:26414) sets
+        // First tick: ROM loc_13A10 (sonic3k.asm:26454) sets
         // Tails_CPU_routine=$C and rts. Engine mirrors by entering
         // CARRY_INIT and returning without executing the 0x0C body
         // (which writes x_vel=$100).
@@ -189,7 +189,7 @@ class TestSidekickCpuControllerCarry {
         assertEquals((short) 0x0000, sonic.getXSpeed(),
                 "Frame 1 x_speed unchanged — ROM 0x0C body has not fired yet");
 
-        // Second tick: ROM loc_13FC2 (the 0x0C body, sonic3k.asm:26903)
+        // Second tick: ROM loc_13FC2 (the 0x0C body, sonic3k.asm:26943)
         // sets x_vel=$100 and falls through (no rts) to loc_13FFA (the
         // 0x0E body). Engine mirrors by transitioning CARRY_INIT ->
         // CARRYING with the x_speed write.

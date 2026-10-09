@@ -195,7 +195,7 @@ class TestToxomisterBadnikInstance {
     }
 
     /**
-     * {@code Check_LRControllerShake} (sonic3k.asm:179881-179900). {@code $3C(a0)} is loaded with
+     * {@code Check_LRControllerShake} (sonic3k.asm:179972-179991). {@code $3C(a0)} is loaded with
      * {@code 5}, but the escape is {@code subq.b #1,$3C(a0) / bmi}, so it is the reversal that
      * takes the counter BELOW zero that frees the player -- the sixth, not the fifth. Reading the
      * loaded constant as the count would be off by one.

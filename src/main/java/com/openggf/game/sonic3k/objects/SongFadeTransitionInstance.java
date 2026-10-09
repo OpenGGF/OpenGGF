@@ -14,7 +14,7 @@ import java.util.List;
  * native signed wait word, then plays a new track and destroys itself.
  *
  * ROM equivalent: Obj_Song_Fade_Transition / Obj_Song_Fade_ToLevelMusic
- * (sonic3k.asm line 180305). The ROM spawns this as an independent object so
+ * (sonic3k.asm line 180396). The ROM spawns this as an independent object so
  * that the music transition survives the destruction of the cutscene object
  * that initiated it.
  */

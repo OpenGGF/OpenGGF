@@ -82,7 +82,7 @@ import java.util.logging.Logger;
 
 /**
  * Sonic 3&K implementation of dynamic level events.
- * ROM equivalent: ScreenEvents (sonic3k.asm:102228)
+ * ROM equivalent: ScreenEvents (sonic3k.asm:102274)
  *
  * S3K uses dual foreground/background event routines (Events_routine_fg
  * and Events_routine_bg) with a stride of 4 per state transition.
@@ -419,7 +419,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (fbzEvents != null && levelManager != null) {
             // LevelFrameStep already incremented Level_frame_counter before
             // this prelude. AnPal_FBZ reads its low byte at the address
-            // Level_frame_counter+1 (sonic3k.asm:3371), not counter plus one.
+            // Level_frame_counter+1 (sonic3k.asm:3403), not counter plus one.
             var fade = GameServices.fadeOrNull();
             fbzEvents.advanceMagneticPhase(
                     levelManager.getFrameCounter(),
@@ -550,7 +550,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     /**
-     * {@code DDZ_ScreenInit} (sonic3k.asm:118813-118826): {@code AllocateObject} the flight controller
+     * {@code DDZ_ScreenInit} (sonic3k.asm:118859-118872): {@code AllocateObject} the flight controller
      * {@code loc_81492} before the level's first object pass; the {@code _unkEE98..EEA2} words start at
      * zero in the fresh runtime state.
      */
@@ -626,7 +626,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // Clear intro-fall forced animation when players land
         updateIntroFallState();
 
-        // ROM ScreenEvents (sonic3k.asm:102233-102235) copies both live
+        // ROM ScreenEvents (sonic3k.asm:102279-102281) copies both live
         // foreground camera words immediately before dispatching the zone's
         // foreground and background event handlers. Keep these as independent
         // words: transition/deform code can subsequently mutate the copies.
@@ -645,8 +645,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             if (hpzState != null) {
                 // ROM ScreenEvents: HPZS_ScreenEvent and HPZS_BackgroundEvent both
                 // (and HPZ_ScreenEvent / HPZ_BackgroundEvent for $1601,
-                // sonic3k.asm:120075-120076, 120128) read Screen_shake_offset, and the background event tail-calls
-                // ShakeScreen_Setup (sonic3k.asm:120855) for the next frame. The
+                // sonic3k.asm:120121-120122, 120174) read Screen_shake_offset, and the background event tail-calls
+                // ShakeScreen_Setup (sonic3k.asm:120901) for the next frame. The
                 // engine advances the countdown here, at the head of the pass, so
                 // the applied word is the one the previous setup produced and the
                 // scroll handler consumes it without re-running the setup.
@@ -715,7 +715,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     /**
-     * ROM {@code HPZS_ScreenEvent} (sonic3k.asm:120823-120826):
+     * ROM {@code HPZS_ScreenEvent} (sonic3k.asm:120869-120872):
      * {@code move.w (Screen_shake_offset).w,d0 / add.w d0,(Camera_Y_pos_copy).w}
      * before {@code DrawTilesAsYouMove}. The copy is the sprite and foreground
      * vertical scroll source, so this is the only place the sanctuary shake
@@ -758,14 +758,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             sozEvents.updateSpecialEvents(currentAct);
         }
         // ROM LevelLoop dispatches SpecialEvents before Load_Sprites/Process_Sprites;
-        // MHZ uses that slot for its arena repeat loops (sonic3k.asm:7887-7894,
+        // MHZ uses that slot for its arena repeat loops (sonic3k.asm:7919-7926,
         // 104080-104094). ScreenEvents remains in onUpdate() after camera movement.
         if (mhzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MHZ) {
             mhzEvents.updateSpecialEvents(currentAct);
             // Tails_Check_Screen_Boundaries runs later in Process_Sprites and reads
             // the camera words that loc_54CB0/loc_5560C just rewrote. The engine's
             // CPU controller mirrors those words, so publish the same-frame repeat
-            // bounds before the sidekick slot executes (sonic3k.asm:28407-28452).
+            // bounds before the sidekick slot executes (sonic3k.asm:28447-28492).
             syncSidekickBoundsToCamera();
         }
     }
@@ -814,7 +814,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // following player slot. A producer that moves the death plane before
         // DynamicLevelEvents explicitly publishes that post-easing value;
         // unrelated gradual resize owners retain their native cadence
-        // (sonic3k.asm:28410-28443).
+        // (sonic3k.asm:28450-28483).
         if (cnzPublishPending || fbzPublishPending || boundsMovedPastSidekickMirror) {
             syncSidekickBoundsToCamera();
         }
@@ -913,7 +913,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     /**
      * S3K {@code Player_TouchFloor_Check_Spindash} writes {@code anim=Walk}
      * before the current player slot reaches Animate
-     * (sonic3k.asm:24325-24329). The ordinary movement path already consumes
+     * (sonic3k.asm:24365-24369). The ordinary movement path already consumes
      * that write; this callback releases forced-animation owners and mirrors
      * CNZ's later-slot carried-Sonic handoff.
      */
@@ -969,7 +969,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     /**
      * ROM equivalent: SpawnLevelMainSprites zone-specific branches
-     * (sonic3k.asm:8132–8178).
+     * (sonic3k.asm:8164–8210).
      *
      * <p>Sets animation, airborne flag, and jumping state for zones where
      * the player starts mid-air (falling intros). Called after both the main
@@ -1021,7 +1021,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         // ROM: sonic3k.asm loc_68A6 — simple falling intro (anim $1B + airborne).
         // MGZ1 is unconditional; LRZ1 explicitly skips Knuckles at
-        // sonic3k.asm:8161-8165 (Player_mode != 3).
+        // sonic3k.asm:8193-8197 (Player_mode != 3).
         if (currentZone == Sonic3kZoneIds.ZONE_MGZ && currentAct == 0) {
             applySimpleFallingIntro("MGZ1");
         }
@@ -1046,7 +1046,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (usesLevelIntroPlayerRun()) {
             spawnLevelIntroPlayerRun();
         }
-        // ROM SpawnLevelMainSprites loc_68D8 (sonic3k.asm:8187-8197): at CNZ Act 1
+        // ROM SpawnLevelMainSprites loc_68D8 (sonic3k.asm:8219-8229): at CNZ Act 1
         // a throwaway Player_2 Tails is spawned to carry solo Sonic in. This runs
         // after the spawnSidekicks load step (which clears temporary sidekicks),
         // so the carrier survives. The handler self-gates on act 0 + SONIC_ALONE.
@@ -1150,7 +1150,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public void restoreEventOwnedObjectsAfterPlacementReset() {
         // MHZ level setup installs Obj_MHZ_Pollen_Spawner in fixed dynamic
-        // object RAM (sonic3k.asm:7792). Trace/title-card prelude setup resets
+        // object RAM (sonic3k.asm:7824). Trace/title-card prelude setup resets
         // the engine placement manager after level initialization, which clears
         // dynamic objects; rebuild this level-owned controller before executing
         // those prelude object frames so its Random_Number cadence remains native.
@@ -1219,7 +1219,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * <em>init</em> tick: {@code Tails_CPU_Control} dispatches routine 0 to
      * {@code loc_13A32} / {@code loc_13A8E}, which place Tails at the zone's
      * pickup coordinates and write {@code Tails_CPU_routine = $0C} before
-     * {@code rts} (sonic3k.asm:26400-26436). Routine {@code $0C}'s body
+     * {@code rts} (sonic3k.asm:26440-26476). Routine {@code $0C}'s body
      * ({@code loc_13FC2}: {@code x_vel=$100}, {@code sub_1459E} pickup, then
      * fall-through to {@code $0E}) only runs on the frame after that.
      *
@@ -1294,7 +1294,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     /**
-     * SpawnLevelMainSprites loc_6986 (sonic3k.asm:8243-8256): {@code $B00} and {@code $1601} for
+     * SpawnLevelMainSprites loc_6986 (sonic3k.asm:8275-8288): {@code $B00} and {@code $1601} for
      * every character; {@code $300} and {@code $900} only when {@code Player_mode} is Knuckles.
      */
     private boolean usesLevelIntroPlayerRun() {
@@ -1400,7 +1400,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
 
         // Sidekick (Player 2): anim $1B, airborne, jumping=1
-        // ROM: sonic3k.asm:8153–8158
+        // ROM: sonic3k.asm:8185–8190
         for (AbstractPlayableSprite sidekick : sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             sidekick.setForcedAnimationId(Sonic3kAnimationIds.HURT_FALL);
             sidekick.setAir(true);
@@ -2075,7 +2075,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * CNZ1's act reload happens while Obj_LevelResults and Obj_EndSignControl
      * are still alive in ROM. Later, LevelResults loc_2DD06 clears _unkFAA8 and
      * EndSignControlAwaitStart calls Restore_PlayerControl for P1/P2
-     * (docs/skdisasm/sonic3k.asm:62708-62720,180407-180412,180359-180367).
+     * (docs/skdisasm/sonic3k.asm:62748-62760,180498-180503,180450-180458).
      * The engine reload rebuilds the object manager, so this local handoff
      * consumes the results owner's publication boundary without retaining the
      * act-1 controller object.
@@ -2102,7 +2102,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         sprite.setForcedAnimationId(-1);
         sprite.setAir(false);
         // Restore_PlayerControl2 writes both anim and prev_anim to WAIT ($05)
-        // before clearing their frame state (docs/skdisasm/sonic3k.asm:180359-180367).
+        // before clearing their frame state (docs/skdisasm/sonic3k.asm:180450-180458).
         sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
     }
 
@@ -2112,7 +2112,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * Change_Act2Sizes, and spawns the gradual level-size children. CNZ's
      * seamless reload removes that object chain in the engine, so this bridge
      * mirrors the later Change_Act2Sizes/Obj_*Gradual sequence locally
-     * (docs/skdisasm/sonic3k.asm:180415-180419,180575-180632,
+     * (docs/skdisasm/sonic3k.asm:180506-180510,180666-180723,
      * 178154-178168,178192-178224,197460-197468).
      */
     private void updatePendingCnzAct2LevelSizeChange() {
@@ -2124,10 +2124,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 return;
             }
             // Obj_EndSignControlDoStart observes End_of_level_flag and calls
-            // Change_Act2Sizes on that dispatch (sonic3k.asm:180419-180424).
+            // Change_Act2Sizes on that dispatch (sonic3k.asm:180510-180515).
             // Change_Act2Sizes falls through into Make_LevelSizeObj, whose
             // AllocateObjectAfterCurrent children run later in the same
-            // ascending Process_Sprites walk (:180575-180632,:37917-37930).
+            // ascending Process_Sprites walk (:180666-180723,:37917-37930).
             GameServices.gameState().setEndOfLevelFlag(false);
             cnzPendingPostTransitionAct2SizeFrames = 0;
             cnzPostTransitionAct2SizeActive = true;

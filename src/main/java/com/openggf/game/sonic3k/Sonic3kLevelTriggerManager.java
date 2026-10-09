@@ -72,7 +72,7 @@ public class Sonic3kLevelTriggerManager {
     /**
      * Clears the entire trigger byte to zero.
      * ROM: move.b #0,(a3) — used by MGZDashTrigger when its 60-frame arm
-     * timer expires (sonic3k.asm:51539).
+     * timer expires (sonic3k.asm:51579).
      *
      * @param index trigger index (0-15)
      */

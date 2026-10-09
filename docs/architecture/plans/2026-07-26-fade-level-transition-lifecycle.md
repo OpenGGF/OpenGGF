@@ -26,7 +26,7 @@
 - Post-load music and scheduled playback stay in the load port; successful level/mode boundaries are emitted once by their existing owner.
 - Active callback-bearing phases and callback-free fade-in remain non-restorable; no rewind coverage baseline exception.
 - Do not inspect, modify, run, or mention an LBZ fixture or LBZ implementation in execution commands.
-- Every production behavior change must retain the design's ROM citations: `docs/skdisasm/sonic3k.asm:7523-7538,7617-7621,7730-7748,7884-7897,180642-180648`.
+- Every production behavior change must retain the design's ROM citations: `docs/skdisasm/sonic3k.asm:7555-7570,7649-7653,7762-7780,7916-7929,180733-180739`.
 
 ---
 

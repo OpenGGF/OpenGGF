@@ -4,7 +4,7 @@
 > [S3K DEZ bring-up plan](../../plans/2026-09-17-s3k-dez-bring-up.md); each was checked against
 > `docs/skdisasm` revision `1a454a0e`):
 >
-> 1. **Knuckles access.** `LevelSelect_CheckKnuckles` (sonic3k.asm:10174) denies Knuckles only
+> 1. **Knuckles access.** `LevelSelect_CheckKnuckles` (sonic3k.asm:10210) denies Knuckles only
 >    `$A00`, `$C00`, `$1600` and `$1700`. `$B00` and `$B01` are selectable, and the ROM carries
 >    Knuckles reverse-gravity code (glide, slide, wall climb, ledge climb). His story never reaches
 >    DEZ. Project decision: Knuckles reaches `$B00`/`$B01` from level select only.
@@ -19,7 +19,7 @@
 >    debug cheat and the clearer object `loc_7FC3E` that the act 2 boss spawns at defeat (it clears the flag
 >    every frame until `$1700` loads); every writer responds to Player 1 only; `Obj_DEZGravityRoom`, `Hub` and `Puzzle` never touch the flag.
 >    `Obj_DEZGravitySwitch` is a pressed solid that toggles the flag after 4 frames, not a crossing test.
-> 4. **The act-change signal** is `Obj_LevelResultsCreate` (`st (Events_fg_5).w`, sonic3k.asm:62621)
+> 4. **The act-change signal** is `Obj_LevelResultsCreate` (`st (Events_fg_5).w`, sonic3k.asm:62661)
 >    for every act 1 except AIZ and ICZ; no DEZ object sets it.
 > 5. **Both bosses are placed objects** (`$A6` once in act 1, `$A7` once in act 2); counts and
 >    subtypes are in the [placement inventory](dez-object-inventory.md).
@@ -37,7 +37,7 @@
 ## Summary
 
 - **Zone:** Death Egg Zone (DEZ)
-- **Zone Index:** 0x0B (acts 1 and 2; level-select `$B00`/`$B01`, `sonic3k.asm:10158-10159`), 0x17 (act 3 / Final Boss)
+- **Zone Index:** 0x0B (acts 1 and 2; level-select `$B00`/`$B01`, `sonic3k.asm:10194-10195`), 0x17 (act 3 / Final Boss)
 - **Zone Set:** SKL (zones 7-13: MHZ-DDZ)
 - **Acts:** 1, 2, and 3 (Final Boss arena, zone $17 act 0)
 - **Water:** No
@@ -388,7 +388,7 @@ Both acts use `AnimateTiles_DoAniPLC` as the animation driver and the same `AniP
 #### Script 7: Large scrolling conveyor/machinery
 - **Source art:** `ArtUnc_AniDEZ__7` (1600 bytes)
 - **Destination VRAM tile:** $26D
-- **Frame count:** $84 (132 one-byte entries; verified against the table at sonic3k.asm:56128-56260)
+- **Frame count:** $84 (132 one-byte entries; verified against the table at sonic3k.asm:56168-56300)
 - **Tiles per frame:** 5
 - **Global duration:** 0 (each frame held 1 passes; no trigger exists)
 - **Frame tile offsets:** 0, $2D, 0, $2D, 0, $2D, 0, $2D (8 entries cycling through 2 art offsets)
@@ -544,7 +544,7 @@ Act 2 does NOT have the Act 1-specific energy conduit cycling (channel 0).
   - `Obj_DEZTransRingSpawner` creates visual ring effects along the path
 
 - **Seamless Act Transition (Act 1 -> Act 2):**
-  - Triggered via `Events_fg_5` signal (set by `Obj_LevelResultsCreate`, sonic3k.asm:62621, as for every act 1 except AIZ and ICZ)
+  - Triggered via `Events_fg_5` signal (set by `Obj_LevelResultsCreate`, sonic3k.asm:62661, as for every act 1 except AIZ and ICZ)
   - Stage 0: Queues DEZ2 art (16x16 blocks via Kos, 8x8 patterns via KosinskiM, PLC $38 for Nemesis art)
   - Stage 1: Waits for art loading completion, then performs full level reload: changes `Current_zone_and_act` to $B01, clears state variables, calls `Load_Level`/`LoadSolids`, copies DEZ2 palette, offsets all positions (X-=$3600, Y+=$400), reconstructs BG plane
   - This is simpler than the AIZ act transition (no fire sequence, no progressive tile reveals)

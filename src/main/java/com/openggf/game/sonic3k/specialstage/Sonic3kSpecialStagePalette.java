@@ -91,7 +91,7 @@ public class Sonic3kSpecialStagePalette {
 
     /**
      * Update palette rotation based on the current animation frame.
-     * ROM: Rotate_SSPal (sonic3k.asm:11017)
+     * ROM: Rotate_SSPal (sonic3k.asm:11053)
      * <p>
      * The stage palette data contains 16 bytes per frame, and the frame
      * index selects which 16 bytes to use for palette line 3.
@@ -121,7 +121,7 @@ public class Sonic3kSpecialStagePalette {
 
     /**
      * Apply the rotation palette for the given frame index.
-     * ROM: Rotate_SSPal (sonic3k.asm:11028)
+     * ROM: Rotate_SSPal (sonic3k.asm:11064)
      * <p>
      * The palette data is indexed in reverse: frame 0 uses offset 0x10,
      * frame 1 uses offset 0x0E, etc.

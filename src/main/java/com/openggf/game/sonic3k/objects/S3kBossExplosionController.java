@@ -111,7 +111,7 @@ public class S3kBossExplosionController {
             return;
         }
         // ROM timed controls decrement $39 and branch to delete when it becomes zero
-        // before creating a child (sonic3k.asm:176775-176792).
+        // before creating a child (sonic3k.asm:176866-176883).
         timer--;
         if (timer <= 0) {
             timer = -1;
@@ -144,7 +144,7 @@ public class S3kBossExplosionController {
     }
 
     private void spawnExplosionChild() {
-        // ROM: sub_52850 random offset calculation (sonic3k.asm:176746-176751).
+        // ROM: sub_52850 random offset calculation (sonic3k.asm:176837-176842).
         int random = rng.nextRaw();
         int xMask = (xRange * 2) - 1;
         int yMask = (yRange * 2) - 1;

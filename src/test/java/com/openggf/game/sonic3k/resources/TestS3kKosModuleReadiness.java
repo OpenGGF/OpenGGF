@@ -37,7 +37,7 @@ class TestS3kKosModuleReadiness {
             S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
             HardwareWorkHandle handle = queue.queue(rom, 0, 0x500);
 
-            // Process_Kos_Module_Queue (sonic3k.asm:7908) runs immediately after the
+            // Process_Kos_Module_Queue (sonic3k.asm:7940) runs immediately after the
             // object pass and hands the head archive's current module to the direct
             // FIFO through Queue_Kos (2741). Process_Kos_Queue (7887) follows it in the
             // same LevelLoop tail and takes that direct entry to completion

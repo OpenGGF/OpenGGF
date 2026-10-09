@@ -29,16 +29,16 @@ schedule-admission error described below.
 
 | Contract | Native source | Engine result |
 |---|---|---|
-| Emerge allocation | `AIZEndBoss_StartEmerge` loads `ChildObjDat_AIZEndBossWaterfall` and jumps to `CreateChild1_Normal` (`sonic3k.asm:138080-138103`) | Subtype 0 uses forward allocation from the boss slot. |
-| Re-submerge subtype | `AIZEndBoss_StartSubmerge` allocates the same child, then writes subtype 2 through returned `a1` (`sonic3k.asm:138193-138203`) | The allocated child captures effective subtype 2 before its later slot dispatch. |
-| Init boundary | `AIZEndBossWaterfall_Init` calls `SetUp_ObjAttributes2`, installs the animate operation/callback, and returns (`sonic3k.asm:138701-138716`) | A higher-slot child performs init only in the allocation pass; it neither animates nor draws. |
-| Mapping and movement | Both raw scripts contain thirteen zero-delay pairs before `$F4`; subtype 2 installs `y_vel=$800`, then `MoveSprite2` precedes animation (`sonic3k.asm:138718-138739,139193-139221`) | Initial frame `$24`, FlipX toggles, callback boundaries, no-move start-drop row, and +8px drop steps match. |
-| Art attributes | `ObjDat_AIZEndBossWaterfall` uses AIZ boss art, palette 0, high-priority art, priority `$100`, mapping `$24` (`sonic3k.asm:139024-139026`) | ROM-backed AIZ end-boss renderer, explicit palette 0, high priority, bucket 2, mapping `$24`. |
-| Deletion | `Go_Delete_Sprite` writes `Delete_Current_Sprite`, sets status bit 7, and returns (`sonic3k.asm:179136-179143`; locked-on ROM `$852A0 -> $1ABB6`) | A rewind-captured pending state retains the marker for one dispatch, then destroys the object. |
-| Range lifetime | Init, animate, start-drop, and drop contain no off-screen delete call (`sonic3k.asm:138701-138739`) | Object-local `isPersistent()` prevents the shared synthetic range tail. |
+| Emerge allocation | `AIZEndBoss_StartEmerge` loads `ChildObjDat_AIZEndBossWaterfall` and jumps to `CreateChild1_Normal` (`sonic3k.asm:138145-138168`) | Subtype 0 uses forward allocation from the boss slot. |
+| Re-submerge subtype | `AIZEndBoss_StartSubmerge` allocates the same child, then writes subtype 2 through returned `a1` (`sonic3k.asm:138258-138268`) | The allocated child captures effective subtype 2 before its later slot dispatch. |
+| Init boundary | `AIZEndBossWaterfall_Init` calls `SetUp_ObjAttributes2`, installs the animate operation/callback, and returns (`sonic3k.asm:138766-138781`) | A higher-slot child performs init only in the allocation pass; it neither animates nor draws. |
+| Mapping and movement | Both raw scripts contain thirteen zero-delay pairs before `$F4`; subtype 2 installs `y_vel=$800`, then `MoveSprite2` precedes animation (`sonic3k.asm:138783-138804,139258-139286`) | Initial frame `$24`, FlipX toggles, callback boundaries, no-move start-drop row, and +8px drop steps match. |
+| Art attributes | `ObjDat_AIZEndBossWaterfall` uses AIZ boss art, palette 0, high-priority art, priority `$100`, mapping `$24` (`sonic3k.asm:139089-139091`) | ROM-backed AIZ end-boss renderer, explicit palette 0, high priority, bucket 2, mapping `$24`. |
+| Deletion | `Go_Delete_Sprite` writes `Delete_Current_Sprite`, sets status bit 7, and returns (`sonic3k.asm:179227-179234`; locked-on ROM `$852A0 -> $1ABB6`) | A rewind-captured pending state retains the marker for one dispatch, then destroys the object. |
+| Range lifetime | Init, animate, start-drop, and drop contain no off-screen delete call (`sonic3k.asm:138766-138804`) | Object-local `isPersistent()` prevents the shared synthetic range tail. |
 
 `Animate_RawNoSSTMultiDelayFlipX` pre-increments `anim_frame` by two before
-reading a pair (`sonic3k.asm:177628-177650`). That explains why ObjDat's
+reading a pair (`sonic3k.asm:177719-177741`). That explains why ObjDat's
 initial mapping `$24` remains visible through init and the first animation
 dispatch consumes the script's second pair, also `$24`; skipping or
 pre-consuming the first pair in Java would be incorrect.

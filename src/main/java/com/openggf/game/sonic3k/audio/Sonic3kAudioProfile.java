@@ -216,7 +216,7 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
     }
 
     /**
-     * {@code Player_ResetAirTimer} (sonic3k.asm:33663-33686) loads
+     * {@code Player_ResetAirTimer} (sonic3k.asm:33703-33726) loads
      * {@code Current_music}, then overrides it in three tests taken in order:
      * {@code Status_Invincible} and {@code Super_Sonic_Knux_flag} both select
      * {@code mus_Invincibility} ($2C), and {@code Boss_flag} selects

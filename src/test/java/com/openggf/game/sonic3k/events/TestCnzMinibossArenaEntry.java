@@ -78,7 +78,7 @@ class TestCnzMinibossArenaEntry {
 
     @Test
     void arenaThresholdMatchesRom() {
-        // The hard number: ROM sonic3k.asm:144824 reads `move.w #$31E0,d0`.
+        // The hard number: ROM sonic3k.asm:144889 reads `move.w #$31E0,d0`.
         // The scaffold previously held 0x3000; workstream D corrects it.
         assertEquals(0x31E0, Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
     }

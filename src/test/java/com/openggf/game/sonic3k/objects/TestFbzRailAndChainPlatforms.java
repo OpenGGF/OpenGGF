@@ -380,7 +380,7 @@ class TestFbzRailAndChainPlatforms {
 
     @Test void chainJumpReleaseConsumesTheLogicalPressByteNotASynthesizedHeldEdge() {
         // sub_3AA7E receives Ctrl_1_logical/Ctrl_2_logical in d0 and masks
-        // their low-byte A/B/C press bits (sonic3k.asm:78527-78535,78552-78559).
+        // their low-byte A/B/C press bits (sonic3k.asm:78568-78576,78593-78600).
         TestSprite p=new TestSprite("tails");p.setCentreX((short)0x1000);p.setCentreY((short)0x800);
         var chain=new FbzChainLinkObjectInstance(spawn(0x72,0x83));chain.setServices(new PlayersServices(p,List.of()));chain.update(0,null);
         assertTrue(chain.stateForParticipant(0).grabbed());

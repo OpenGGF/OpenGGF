@@ -15,7 +15,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_8249A} (sonic3k.asm:174520-174586): a phase-2 rocket ({@code ObjDat3_83232}: priority
+ * ROM {@code loc_8249A} (sonic3k.asm:174611-174677): a phase-2 rocket ({@code ObjDat3_83232}: priority
  * {@code $300}, frames {@code $31/$32} by {@code byte_832BF}). It is invisible for
  * {@code subtype * 8} frames, then appears at the ship {@code + ($20, $20)} with
  * {@code sfx_TubeLauncher}, a {@code loc_82588} flame and a {@code loc_825BC} exhaust, slides right

@@ -118,7 +118,7 @@ final class MhzMinibossFlameInstance extends AbstractObjectInstance
             return;
         }
         refreshFromParent();
-        // ROM loc_757D6 (sonic3k.asm:156099-156101): move.b (V_int_run_count+3),d0
+        // ROM loc_757D6 (sonic3k.asm:156173-156175): move.b (V_int_run_count+3),d0
         // / btst #0,d0 / bne (skip draw). The thruster is drawn only on even frames
         // so it visibly flickers on/off each frame; the engine previously drew it
         // solid every frame.

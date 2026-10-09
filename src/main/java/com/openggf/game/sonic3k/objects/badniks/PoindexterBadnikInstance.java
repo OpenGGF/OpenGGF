@@ -15,7 +15,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * from ENEMY collision (defeatable) to HURT collision (damages player). Only vulnerable
  * when spikes are retracted (frames 0 and 1).
  *
- * <p>Based on {@code Obj_Poindexter} (sonic3k.asm, lines 184529–184596).
+ * <p>Based on {@code Obj_Poindexter} (sonic3k.asm, lines 184622–184689).
  *
  * <h3>Subtype:</h3>
  * Controls patrol timing. Initial wait = subtype × 4 frames; subsequent waits =
@@ -151,7 +151,7 @@ public final class PoindexterBadnikInstance extends AbstractS3kBadnikInstance im
     }
 
     /**
-     * Set_VelocityXTrackSonic (sonic3k.asm:179322). With d4 = -$40, sets x_vel
+     * Set_VelocityXTrackSonic (sonic3k.asm:179413). With d4 = -$40, sets x_vel
      * so the object drifts toward the player, and sets render_flags to face them.
      *
      * <pre>
@@ -204,7 +204,7 @@ public final class PoindexterBadnikInstance extends AbstractS3kBadnikInstance im
      * reversal callback at $34(a0) → loc_8830E.
      *
      * <pre>
-     * Obj_Wait:                          ; sonic3k.asm:177944
+     * Obj_Wait:                          ; sonic3k.asm:178035
      *     subq.w #1,$2E(a0)
      *     bmi.s  loc_84892              ; branch if negative → call callback
      *     rts

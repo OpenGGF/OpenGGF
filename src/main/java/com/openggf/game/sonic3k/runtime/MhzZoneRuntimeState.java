@@ -18,7 +18,7 @@ import java.util.Objects;
  */
 public final class MhzZoneRuntimeState implements S3kZoneRuntimeState {
     // ROM level setup runs Process_Sprites then Animate_Tiles before LevelLoop
-    // (sonic3k.asm:7853-7855). MHZ caps read Anim_Counters+$F during
+    // (sonic3k.asm:7885-7887). MHZ caps read Anim_Counters+$F during
     // Process_Sprites (82199), and AnimateTiles_MHZ advances it by 2 later
     // in the same frame (54901-54908, 7894-7906).
     private static final int INITIAL_MUSHROOM_CAP_POSITION_COUNTER = 2;

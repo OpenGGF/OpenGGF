@@ -13,7 +13,7 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import java.util.List;
 
 /**
- * SKL {@code $5B}, {@code Obj_DEZGravitySwap} (sonic3k.asm:95472-95543).
+ * SKL {@code $5B}, {@code Obj_DEZGravitySwap} (sonic3k.asm:95518-95589).
  *
  * <p>An invisible Death Egg act 2 trigger: the eleven placements sit in open corridor and
  * write {@code Reverse_gravity_flag} when Player 1 crosses their X, provided the crossing
@@ -25,16 +25,16 @@ import java.util.List;
  * <p><strong>It writes, it never toggles.</strong> Both crossing bodies run
  * {@code move.b #0,(Reverse_gravity_flag).w} first and only then conditionally
  * {@code move.b #1}, so a crossing inside the band always leaves a definite value
- * (:95511-95514, :95536-95539). Crossing back out the way you came writes the opposite
+ * (:95557-95560, :95582-95585). Crossing back out the way you came writes the opposite
  * value, which is how the corridor's gravity survives a player who changes their mind.
  *
  * <p><strong>Player 1 only.</strong> {@code Obj_DEZGravitySwap}'s body passes
- * {@code lea (Player_1).w,a1} and never runs for Player 2 (:95217-95219) — unlike
+ * {@code lea (Player_1).w,a1} and never runs for Player 2 (:95263-95265) — unlike
  * {@code $58}, which at least reads Player 2's contact bits. A sidekick crossing the
  * trigger does nothing at all.
  *
  * <p>Side state. {@code $32(a0)} is the latch the two bodies switch on: the init
- * (:95472-95478) seeds it from the player's position at spawn — 1 when the object's
+ * (:95518-95524) seeds it from the player's position at spawn — 1 when the object's
  * {@code x_pos} is below the player's, meaning the player already stands to the right —
  * and each crossing flips it <em>before</em> the Y-band test, so a crossing outside the
  * band still consumes the latch without writing the flag. {@code $30(a0)} is the constant
@@ -43,7 +43,7 @@ import java.util.List;
 public final class S3kDezGravitySwapObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
 
-    /** ROM {@code move.w #$20,$30(a0)} (sonic3k.asm:95473): half-height of the active Y band. */
+    /** ROM {@code move.w #$20,$30(a0)} (sonic3k.asm:95519): half-height of the active Y band. */
     private static final int Y_BAND_HALF_HEIGHT = 0x20;
 
     /**
@@ -68,12 +68,12 @@ public final class S3kDezGravitySwapObjectInstance extends AbstractObjectInstanc
         int playerX = player.getCentreX() & 0xFFFF;
 
         if (!sideLatchSeeded) {
-            // ROM init (sonic3k.asm:95474-95478): cmp.w x_pos(a1),d1 / bhs.s loc_4920E
+            // ROM init (sonic3k.asm:95520-95524): cmp.w x_pos(a1),d1 / bhs.s loc_4920E
             // leaves $32 at 0 when the object is at or right of the player; the fallthrough
             // move.b #1,$32(a0) marks "player already on the right".
             playerOnRight = objectX < playerX;
             sideLatchSeeded = true;
-            // No rts between `move.l #loc_49214,(a0)` and loc_49214 (:95483-95484): the
+            // No rts between `move.l #loc_49214,(a0)` and loc_49214 (:95529-95530): the
             // init falls straight into the first crossing check, in the same frame. That
             // is not cosmetic -- an object seeded at exactly the player's x keeps the
             // "player on the left" latch (bhs) and then fails the "still on the left"
@@ -81,7 +81,7 @@ public final class S3kDezGravitySwapObjectInstance extends AbstractObjectInstanc
         }
 
         if (!playerOnRight) {
-            // sub_49228 (:95489-95491): cmp.w x_pos(a1),d1 / bhi.s locret — the player is
+            // sub_49228 (:95535-95537): cmp.w x_pos(a1),d1 / bhi.s locret — the player is
             // still on the left while the object's x is strictly greater.
             if (objectX > playerX) {
                 return;
@@ -92,7 +92,7 @@ public final class S3kDezGravitySwapObjectInstance extends AbstractObjectInstanc
             return;
         }
 
-        // loc_49270 (:95518-95520): cmp.w x_pos(a1),d1 / bls.s locret — still on the right
+        // loc_49270 (:95564-95566): cmp.w x_pos(a1),d1 / bls.s locret — still on the right
         // while the object's x is lower or the same.
         if (objectX <= playerX) {
             return;
@@ -102,7 +102,7 @@ public final class S3kDezGravitySwapObjectInstance extends AbstractObjectInstanc
     }
 
     /**
-     * The shared tail of both bodies (:95495-95517 and :95524-95542): the Y-band test, the
+     * The shared tail of both bodies (:95541-95563 and :95570-95588): the Y-band test, the
      * debug-placement test, then {@code move.b #0} followed by the conditional
      * {@code move.b #1}.
      *
@@ -121,7 +121,7 @@ public final class S3kDezGravitySwapObjectInstance extends AbstractObjectInstanc
         if (playerY < top || playerY >= bottom) {
             return;
         }
-        // tst.w (Debug_placement_mode).w / bne.s locret (:95508, :95533). The engine has no
+        // tst.w (Debug_placement_mode).w / bne.s locret (:95554, :95579). The engine has no
         // debug placement mode during gameplay, so this reads as zero -- the same treatment
         // the other Debug_placement_mode sites in the S3K objects carry.
         ObjectServices objectServices = tryServices();

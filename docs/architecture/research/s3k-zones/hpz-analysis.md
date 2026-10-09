@@ -22,16 +22,16 @@ HPZ is **not** a standard zone in the level select order. It is a sub-level that
 | 0x17 | DEZ Boss (DEZ3) | **HPZS** (Super Emerald sanctuary) |
 
 Evidence: the per-act sprite table ends `LRZ3_Sprites, HPZ_Sprites, DEZ3_Sprites, HPZMini_Sprites`
-(`sonic3k.asm:202440-202443`), the screen-event table pairs `HPZ_*` with `$1601` and `HPZS_*`
-with `$1701` (`sonic3k.asm:102347-102354`), the level-select list names `$1601` "LRZ act 4"
-(`sonic3k.asm:10155`), and title-card selection checks `$1601` for Hidden Palace
-(`sonic3k.asm:62150`). An earlier revision of this document placed HPZ at `$1701`; that slot is the sanctuary.
+(`sonic3k.asm:202555-202558`), the screen-event table pairs `HPZ_*` with `$1601` and `HPZS_*`
+with `$1701` (`sonic3k.asm:102393-102400`), the level-select list names `$1601` "LRZ act 4"
+(`sonic3k.asm:10191`), and title-card selection checks `$1601` for Hidden Palace
+(`sonic3k.asm:62190`). An earlier revision of this document placed HPZ at `$1701`; that slot is the sanctuary.
 
 **Entry paths:**
 - **HPZ (`$1601`)** is reached by level progression from LRZ.
-- **HPZS (`$1701`)** is reached via the Special Stage ring (`SSEntryFlash_GoSS` at line 128383). When the player has all 7 Chaos Emeralds and is in an S&K level (or the subtype is negative), the code sets `Special_bonus_entry_flag = 2` and `Current_zone_and_act = $1701` (`sonic3k.asm:128417-128418`).
+- **HPZS (`$1701`)** is reached via the Special Stage ring (`SSEntryFlash_GoSS` at line 128383). When the player has all 7 Chaos Emeralds and is in an S&K level (or the subtype is negative), the code sets `Special_bonus_entry_flag = 2` and `Current_zone_and_act = $1701` (`sonic3k.asm:128471-128472`).
 
-**HPZS (sanctuary) loading:** the custom loading sequence at line 63125 sets `$1701` (`sonic3k.asm:63174`) and belongs to the sanctuary, not the playable HPZ act. It:
+**HPZS (sanctuary) loading:** the custom loading sequence at line 63125 sets `$1701` (`sonic3k.asm:63214`) and belongs to the sanctuary, not the playable HPZ act. It:
 1. Loads `Pal_HPZIntro` palette (intro colors at $CCC) fading to `Pal_HPZ` target palette
 2. Copies `Layout_HPZ` directly to level layout RAM
 3. Decompresses chunks and blocks via `Kos_Decomp` (not standard LevelResourcePlan)

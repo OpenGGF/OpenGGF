@@ -17,18 +17,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Workstream D Task 5 — coverage for CNZ1 miniboss routines 6/8/A per the
- * ROM dispatch table at sonic3k.asm:144874:
+ * ROM dispatch table at sonic3k.asm:144939:
  * <ul>
  *   <li>routine 6 — duplicate Move slot, entered by
- *       {@code Obj_CNZMinibossCloseGo} (sonic3k.asm:144922), where
- *       {@code Obj_CNZMinibossChangeDir} (sonic3k.asm:144935) periodically
+ *       {@code Obj_CNZMinibossCloseGo} (sonic3k.asm:144987), where
+ *       {@code Obj_CNZMinibossChangeDir} (sonic3k.asm:145000) periodically
  *       flips {@code x_vel} via {@code neg.w x_vel(a0)}.</li>
- *   <li>routine 8 — {@code Obj_CNZMinibossOpening} (sonic3k.asm:144941),
+ *   <li>routine 8 — {@code Obj_CNZMinibossOpening} (sonic3k.asm:145006),
  *       Animate_RawMultiDelay body whose animation-complete callback is
- *       {@code Obj_CNZMinibossOpenGo} (sonic3k.asm:144945).</li>
- *   <li>routine A — {@code Obj_CNZMinibossWaitHit} (sonic3k.asm:144954),
+ *       {@code Obj_CNZMinibossOpenGo} (sonic3k.asm:145010).</li>
+ *   <li>routine A — {@code Obj_CNZMinibossWaitHit} (sonic3k.asm:145019),
  *       gates on {@code btst #6,status(a0)}; on hit, {@code loc_6DB4E}
- *       (sonic3k.asm:144960) advances routine to C.</li>
+ *       (sonic3k.asm:145025) advances routine to C.</li>
  * </ul>
  *
  * <p>Note on routine numbers: the workstream plan references
@@ -74,7 +74,7 @@ class TestCnzMinibossOpeningPhase {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x0100, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
-        // ROM dispatch: routine A == Obj_CNZMinibossWaitHit (sonic3k.asm:144954).
+        // ROM dispatch: routine A == Obj_CNZMinibossWaitHit (sonic3k.asm:145019).
         boss.forceRoutineForTest(0xA);
         int routineBefore = boss.getCurrentRoutine();
         for (int i = 0; i < 30; i++) boss.update(i, fixture.sprite());

@@ -121,6 +121,10 @@ class ParseTest(unittest.TestCase):
         self.assertIn('generated', [c.kind for c in cites])
         self.assertNotIn(5, [c.a for c in cites])
 
+    def test_json_takes_explicit_citations_only(self):
+        cites = self.parse('evidence.json', '{"source": "game.asm:10-12", "x": 1234, "note": "then :20"}')
+        self.assertEqual([(c.kind, c.a, c.b) for c in cites], [('explicit', 10, 12)])
+
     def test_markdown_section_scopes_bare_citations(self):
         cites = self.parse('notes.md', 'game.asm:10\n\n:20 same section\n# Next\n:30 new section\n')
         self.assertEqual([(c.kind, c.a) for c in cites], [('explicit', 10), ('bare', 20)])
@@ -151,6 +155,18 @@ class LineMapTest(unittest.TestCase):
         self.assertIsNone(lm.map(40))
         self.assertIsNone(lm.map(41))
         self.assertEqual(lm.map(42), 43)
+
+
+class InPlaceEditTest(unittest.TestCase):
+    def test_carry_edited_accepts_renames_and_refuses_new_code(self):
+        old = ['Obj:', '\tbtst\t#1,status(a1)', '\tbne.s\tObj', '\trts']
+        renamed = ['Obj:', '\tbtst\t#Status_InAir,status(a1)', '\tbne.s\tObj', '\trts']
+        rewritten = ['Obj:', '\tmove.w\td0,d1', '\tbne.s\tObj', '\trts']
+        hunk = [(2, 1, 2, 1)]
+        self.assertIsNone(dc.LineMap(hunk, old, renamed).map_range(1, 3))
+        self.assertEqual(dc.LineMap(hunk, old, renamed).map_range(1, 3, carry_edited=True), (1, 3))
+        self.assertIsNone(dc.LineMap(hunk, old, rewritten).map_range(1, 3, carry_edited=True))
+        self.assertIsNone(dc.LineMap([(2, 0, 3, 1)], old, old + ['x']).map_range(1, 3, carry_edited=True))
 
 
 class CheckAndRemapTest(unittest.TestCase):
@@ -215,6 +231,29 @@ class CheckAndRemapTest(unittest.TestCase):
         self.assertIn(b'\r\n', after)
         self.assertIn('needs review', out.getvalue())   # 24-26 touches the edited line 25
         self.assertIn('moved=2', out.getvalue())
+
+    def test_remap_leaves_hook_protected_history_alone(self):
+        first = '// Obj_A (game.asm:10-12)\n'
+        path = self.fx.write('src/main/java/H.java', first + '// Obj_A again (game.asm:10-12)\n')
+        self.fx.write('.githooks/machine-local-path-grandfather.sha256',
+                      f'# baseline-prefix\t{len(first)}\t{"0" * 64}\tsrc/main/java/H.java\n')
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            dc.main(['--repo', str(self.fx.sup), 'remap', 'fakedisasm', self.fx.A, self.fx.B, '--write'])
+        self.assertEqual(path.read_text(), first + '// Obj_A again (game.asm:13-15)\n')
+        self.assertIn('protected-history', out.getvalue())
+
+    def test_remap_never_rewrites_json_evidence(self):
+        path = self.fx.write('docs/evidence.json', '{"source": "game.asm:10-12"}\n')
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            dc.main(['--repo', str(self.fx.sup), 'remap', 'fakedisasm', self.fx.A, self.fx.B, '--write'])
+        self.assertEqual(path.read_text(), '{"source": "game.asm:10-12"}\n')
+        self.assertIn('json-evidence', out.getvalue())
 
     def test_remap_reports_renamed_files(self):
         self.fx.write('src/main/java/R.java', '// Thing_Main (docs/fakedisasm/obj/01 Thing.asm:3)\n')

@@ -24,7 +24,7 @@ import java.util.Map;
  * S3K Obj 0x03 - AIZ Hollow Tree.
  *
  * <p>Primary disassembly references:
- * Obj_AIZHollowTree / sub_1F7CE / AIZTree_SetPlayerPos (sonic3k.asm:43601-43820).
+ * Obj_AIZHollowTree / sub_1F7CE / AIZTree_SetPlayerPos (sonic3k.asm:43641-43860).
  */
 public class AizHollowTreeObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int TREE_CAPTURE_MIN_X = 0x2C99;
@@ -240,16 +240,16 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
         player.setAnimationId(Sonic3kAnimationIds.WALK);
         setLastDecision(slot, "capture");
         // Obj_AIZHollowTree sets object_control bits 6 and 1 only
-        // (sonic3k.asm:43688-43693). Bit 6 skips Sonic_WalkSpeed's
-        // CalcRoomInFront wall probe (sonic3k.asm:22713-22714), while the
+        // (sonic3k.asm:43728-43733). Bit 6 skips Sonic_WalkSpeed's
+        // CalcRoomInFront wall probe (sonic3k.asm:22748-22749), while the
         // lack of bit 7 means CPU/touch dispatch is not suppressed.
 
         if (mainPlayer) {
             // Obj_AIZHollowTree writes Camera_min/max_X_pos=$2C60 and $38=$3C
-            // immediately after Player_1 capture (sonic3k.asm:43702-43704).
+            // immediately after Player_1 capture (sonic3k.asm:43742-43744).
             // Tails_Check_Screen_Boundaries reads Camera_min_X_pos+$10 on the
             // next Tails physics tick and clamps Tails there when crossed
-            // (sonic3k.asm:28414-28450). The engine camera step runs later in
+            // (sonic3k.asm:28454-28490). The engine camera step runs later in
             // this frame, so defer only the visible horizontal clamp; keep the
             // boundary word live for sidekick/player boundary logic.
             Camera camera = services().camera();

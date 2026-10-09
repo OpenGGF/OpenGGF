@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Verify PlayerCharacter enum ordinals match S3K ROM Player_mode values.
- * ROM reference: docs/skdisasm/sonic3k.asm lines 8090-8101
+ * ROM reference: docs/skdisasm/sonic3k.asm lines 8122-8133
  */
 public class TestTodo14_PlayerModeValues {
 

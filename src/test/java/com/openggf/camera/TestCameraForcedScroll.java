@@ -13,11 +13,11 @@ import static org.mockito.Mockito.*;
  * Tests for the ROM {@code Scroll_force_positions} model on {@link Camera}
  * ({@link Camera#requestForcedScroll(int, int)}).
  *
- * <p>ROM {@code loc_1BFB8} (sonic3k.asm:38296-38300): when
+ * <p>ROM {@code loc_1BFB8} (sonic3k.asm:38336-38340): when
  * {@code Scroll_force_positions} is set, the camera routine clears the flag,
  * zeros {@code H_scroll_frame_offset}, and points the camera-position math at
  * {@code Scroll_forced_X_pos}/{@code Scroll_forced_Y_pos} instead of Player_1
- * for that frame. Setter {@code loc_226F2} (sonic3k.asm:47072-47074) writes the
+ * for that frame. Setter {@code loc_226F2} (sonic3k.asm:47112-47114) writes the
  * flag plus the forced X/Y — the request therefore carries coordinates.
  */
 public class TestCameraForcedScroll {

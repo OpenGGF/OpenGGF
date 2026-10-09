@@ -16,7 +16,7 @@ public interface WaterDataProvider {
 
     /**
      * Check for water considering seamless act transition state.
-     * ROM: CheckLevelForWater (sonic3k.asm:9754-9759) checks Apparent_zone_and_act.
+     * ROM: CheckLevelForWater (sonic3k.asm:9790-9795) checks Apparent_zone_and_act.
      * During seamless transitions, Apparent != Current, which enables water in cases
      * that a direct load (level select) would disable (e.g. AIZ2 Knuckles).
      *
@@ -66,7 +66,7 @@ public interface WaterDataProvider {
      * game has no separate underwater table (the normal cycle data is mirrored
      * into the water palette instead).
      * <p>
-     * ROM: {@code SuperHyper_PalCycle_SonicApply} (sonic3k.asm:4666-4681) writes
+     * ROM: {@code SuperHyper_PalCycle_SonicApply} (sonic3k.asm:4698-4713) writes
      * the cycle frame to {@code Water_palette+$04} whenever {@code Water_flag} is
      * set, choosing between {@code PalCycle_SuperSonicUnderwaterAIZICZ} and
      * {@code PalCycle_SuperSonicUnderwaterHCZCNZLBZ} by {@code Current_zone}.

@@ -25,7 +25,7 @@ import static com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBre
 /**
  * Object 0x39 — HCZ Large Fan (Sonic 3 & Knuckles, Hydrocity Zone).
  *
- * <p>ROM reference: {@code Obj_HCZLargeFan} (sonic3k.asm:65583-65670).
+ * <p>ROM reference: {@code Obj_HCZLargeFan} (sonic3k.asm:65623-65710).
  *
  * <p>The object stays dormant until Sonic enters a narrow trigger window below it.
  * On activation it plays the latch SFX, drops downward for 8 frames, then clears
@@ -109,7 +109,7 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements
             }
         }
 
-        // ROM: sfx_FanBig every 16 frames (sonic3k.asm:65632-65636)
+        // ROM: sfx_FanBig every 16 frames (sonic3k.asm:65672-65676)
         // ROM uses (Level_frame_counter+1) & $F, matching global frame counter
         if ((vIntRunCount & 0x0F) == 0) {
             // ROM: only reaches this code if Sprite_OnScreen_Test passes (object

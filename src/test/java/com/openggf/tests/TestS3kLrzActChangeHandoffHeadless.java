@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code Obj_EndSignControlAwaitStart} (which calls {@code Restore_PlayerControl} as soon as
  * {@code Obj_Results}' {@code loc_2DD06} clears {@code _unkFAA8}) -&gt;
  * {@code Obj_EndSignControlDoStart}, which waits on {@code End_of_level_flag} and then calls
- * {@code Change_Act2Sizes} (sonic3k.asm:180420-180424, 180580-180596). {@code Change_Act2Sizes}
+ * {@code Change_Act2Sizes} (sonic3k.asm:180511-180515, 180671-180687). {@code Change_Act2Sizes}
  * returns early only for Sandopolis ({@code cmpi.b #8,d0}) and Hydrocity
  * ({@code cmpi.b #$10,d0}, the zone shifted left by four), so Lava Reef runs it and gets act 2's
  * stored camera bounds plus {@code Make_LevelSizeObj}'s gradual workers.
@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kLrzActChangeHandoffHeadless {
 
-    /** {@code move.w #$2C00,d0} at {@code loc_56CAA} (sonic3k.asm:115361). */
+    /** {@code move.w #$2C00,d0} at {@code loc_56CAA} (sonic3k.asm:115407). */
     private static final int REBASE_X = 0x2C00;
     /** The measured arena right wall, and so the rebased {@code Camera_max_X_pos}. */
     private static final int REBASED_ARENA_MAX_X = 0x128;

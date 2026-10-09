@@ -101,7 +101,7 @@ Order `updateFalling(...)` as:
 5. wall/floor handling.
 
 Use the citations already present in the focused tests:
-`sonic3k.asm:176149-176160,176347-176405`.
+`sonic3k.asm:176240-176251,176438-176496`.
 
 - [ ] **Step 3: Restore the separate results-child timing adjustment**
 

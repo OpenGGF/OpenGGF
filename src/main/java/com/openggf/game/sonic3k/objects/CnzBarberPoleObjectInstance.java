@@ -54,7 +54,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
     public int romObjectCodePointerHighWord() {
         // loc_33376 and mirrored loc_335A8 are both in the $0003xxxx bank.
         // S3K sub_13EFC copies word 0 of the stood-on object SST into
-        // Tails_CPU_interact (docs/skdisasm/sonic3k.asm:26839-26843,
+        // Tails_CPU_interact (docs/skdisasm/sonic3k.asm:26879-26883,
         // 69350-69353, 69583-69589).
         return ROM_CODE_POINTER_HIGH_WORD;
     }
@@ -104,7 +104,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
         // Delete_Sprite_If_Not_In_Range uses the native unsigned coarse-X
         // window, not the viewport-scaled placement window. A pole just behind
         // Camera_X_pos_coarse_back therefore underflows and deletes immediately
-        // (sonic3k.asm:37301-37317,69348-69357).
+        // (sonic3k.asm:37341-37357,69388-69397).
         int coarseBack = (cameraX - 0x80) & 0xFF80;
         int distance = ((spawn.x() & 0xFF80) - coarseBack) & 0xFFFF;
         return distance > 0x280;
@@ -147,11 +147,11 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
     public void onUnload() {
         /*
          * Obj_CNZBarberPoleSprite ends with Delete_Sprite_If_Not_In_Range
-         * (docs/skdisasm/sonic3k.asm:69348-69357), which zeros the SST via
+         * (docs/skdisasm/sonic3k.asm:69388-69397), which zeros the SST via
          * Delete_Current_Sprite when the pole unloads. Tails then compares
          * the stored interact slot against that cleared SST in sub_13EFC and
          * branches to sub_13ECA's $81/air/$7F00 catch-up marker
-         * (docs/skdisasm/sonic3k.asm:26816-26833, 26800-26808). Mark this
+         * (docs/skdisasm/sonic3k.asm:26856-26873, 26840-26848). Mark this
          * instance destroyed on unload so stale engine latch references see
          * the same freed-slot transition.
          */
@@ -207,7 +207,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
      * store only after {@code movea.w interact(a1),a3; cmpi.l #loc_33376,(a3)}
      * (normal) or {@code #loc_335A8} (mirrored) confirm the currently latched
      * object is a pole sharing this pole's routine — i.e. the same orientation
-     * (docs/skdisasm/sonic3k.asm:69438-69440, 69649-69651). At a CNZ2 X
+     * (docs/skdisasm/sonic3k.asm:69478-69480, 69689-69691). At a CNZ2 X
      * crossing the two poles have opposite orientation, so neither steals the
      * other's rider and the player passes through the crossing pole.
      */
@@ -223,7 +223,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
         if (player.isDebugMode()) {
             /*
              * ROM sub_33392 / sub_335C4 return at tst.w (Debug_placement_mode).w
-             * before storing any latch (docs/skdisasm/sonic3k.asm:69385-69386,
+             * before storing any latch (docs/skdisasm/sonic3k.asm:69425-69426,
              * 69597-69598): poles never grab a player while debug movement mode
              * is active.
              */
@@ -290,7 +290,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
              * loc_33376 dispatches loc_334B6 only when this object's standing
              * bit is set; sub_337D8 clears the previous object's standing bit
              * before writing the new interact object (docs/skdisasm/
-             * sonic3k.asm:69348-69357, 69461, 69775-69782). Engine rider
+             * sonic3k.asm:69388-69397, 69501, 69815-69822). Engine rider
              * state is per instance, so stale pole state must not keep writing
              * the player's position after another pole became interact(a1).
              */
@@ -416,7 +416,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
     private static boolean isUnsignedWordBelowAfterSubtract(int value, int subtract, int limit) {
         /*
          * ROM loc_333F2/loc_33472 and mirrored loc_33622/loc_336A0 use
-         * subi.w + cmpi.w + bhs (docs/skdisasm/sonic3k.asm:69399-69402,
+         * subi.w + cmpi.w + bhs (docs/skdisasm/sonic3k.asm:69439-69442,
          * 69446-69450, 69610-69614, 69657-69661). Negative results are
          * 16-bit unsigned underflows and must compare as >= the limit.
          */

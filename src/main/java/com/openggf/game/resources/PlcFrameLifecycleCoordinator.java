@@ -510,7 +510,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             boolean declaredDmaVblank = nextVblankServicesDmaQueue;
             nextVblankServicesDmaQueue = false;
             // S3K has the same established mid-handler declaration ordering:
-            // VInt_8 calls Process_DMA_Queue (sonic3k.asm:764), returns through
+            // VInt_8 calls Process_DMA_Queue (sonic3k.asm:786), returns through
             // the dispatch at 540, then VInt_Done increments V_int_run_count
             // at 543. This declaration is distinct from genuine VInt_0 lag,
             // whose handler never drains the queue.

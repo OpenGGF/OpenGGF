@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * SKL {@code $60}, {@code Obj_DEZBumperWall} (sonic3k.asm:95958-96082).
+ * SKL {@code $60}, {@code Obj_DEZBumperWall} (sonic3k.asm:96004-96128).
  *
  * <p>Every expected number is a literal from the ROM listing or from the decoded
  * {@code DEZ1_Sprites} layout.
@@ -48,8 +48,8 @@ class TestS3kDezBumperWallHeadless {
     }
 
     /**
-     * {@code loc_497C2} :95983-95985 for subtype 0, and {@code loc_49804} :96013-96017 for a
-     * positive one, where {@code height_pixels} is the subtype itself (:95968) and
+     * {@code loc_497C2} :96029-96031 for subtype 0, and {@code loc_49804} :96059-96063 for a
+     * positive one, where {@code height_pixels} is the subtype itself (:96014) and
      * {@code d3 = d2 + 1}.
      */
     @Test
@@ -77,7 +77,7 @@ class TestS3kDezBumperWallHeadless {
     }
 
     /**
-     * {@code loc_497AE} / {@code loc_497B4} :95974-95981. A negative subtype is the full-height
+     * {@code loc_497AE} / {@code loc_497B4} :96020-96027. A negative subtype is the full-height
      * wall plus one test: {@code cmpi.b #$3F,(MHZ_pollen_counter).w}, and only all six panel
      * bits move it to {@code $7F00}.
      */
@@ -111,7 +111,7 @@ class TestS3kDezBumperWallHeadless {
     }
 
     /**
-     * {@code sub_49848} :96046-96047 plays {@code sfx_Bumper} ({@code $AA}) and falls into
+     * {@code sub_49848} :96092-96093 plays {@code sfx_Bumper} ({@code $AA}) and falls into
      * {@code loc_49850}, the same launch {@code Obj_DEZGravityPuzzle} uses: {@code x_vel}
      * {@code ±$C00} away from the wall, airborne, {@code ground_vel} 1 negated for a
      * left-facing player, and the endless tumble.
@@ -148,7 +148,7 @@ class TestS3kDezBumperWallHeadless {
         }
     }
 
-    /** {@code swap d6 / andi.w #1|2,d6 / beq} (:95989-95991): a touch that is not a push does nothing. */
+    /** {@code swap d6 / andi.w #1|2,d6 / beq} (:96035-96037): a touch that is not a push does nothing. */
     @Test
     void aContactWithoutAPushDoesNothing() {
         HeadlessTestFixture fixture = fixture();

@@ -169,7 +169,7 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
 
         /** Move mean toward target by speed pixels. Returns true if still moving.
          *  ROM adds full speed in one step (add.w d1,(Mean_water_level).w at
-         *  sonic3k.asm:8602), which can overshoot — this is correct behavior. */
+         *  sonic3k.asm:8634), which can overshoot — this is correct behavior. */
         public boolean update() {
             if (meanLevel == targetLevel) {
                 rising = false;

@@ -1,7 +1,7 @@
 package com.openggf.game.sonic3k.events;
 
 /**
- * {@code sub_56DCA} and its table {@code word_56F88} (sonic3k.asm:115457-115497, :115645-115649):
+ * {@code sub_56DCA} and its table {@code word_56F88} (sonic3k.asm:115503-115543, :115691-115695):
  * the three Lava Reef act 1 boxes inside which the background stops scrolling with the camera and
  * locks to the dome.
  *
@@ -65,7 +65,7 @@ public final class LrzDomeRegions {
         }
     }
 
-    /** {@code word_56F88} (sonic3k.asm:115645-115649), in table order. */
+    /** {@code word_56F88} (sonic3k.asm:115691-115695), in table order. */
     private static final Region[] REGIONS = {
             new Region(0x1AC0, 0x1B40, 0x840, 0x8C0, 0x1B00, Axis.X, false),
             new Region(0x2240, 0x2340, 0x840, 0x880, 0x22C0, Axis.X, true),
@@ -117,7 +117,7 @@ public final class LrzDomeRegions {
     }
 
     /**
-     * {@code sub_56DAC} (sonic3k.asm:115442-115452), the locked background's own camera copies:
+     * {@code sub_56DAC} (sonic3k.asm:115488-115498), the locked background's own camera copies:
      * {@code Camera_Y_pos_BG_copy = Camera_Y_pos_copy - $788 + _unkEE9C} and
      * {@code Camera_X_pos_BG_copy = Camera_X_pos_copy - $1500}. The Y term is what ties the
      * background to the dome platform's own rise and fall.

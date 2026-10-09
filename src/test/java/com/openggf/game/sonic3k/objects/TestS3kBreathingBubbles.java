@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The small bubbles {@code Obj_AirCountdown} emits from the player's face
- * while underwater (sonic3k.asm:33300-33370). The fixed
+ * while underwater (sonic3k.asm:33340-33410). The fixed
  * {@code Breathing_bubbles} controller allocates them through the dynamic
  * object path, and each child draws {@code Map_Bubbler} frames 0-2 out of
  * {@code ArtNem_Bubbles} — the same art set the HCZ bubbler uses.
@@ -112,7 +112,7 @@ public class TestS3kBreathingBubbles {
     /**
      * Below 12 air the controller emits countdown bubbles that turn into a
      * digit, park themselves in screen space, then flash
-     * (sonic3k.asm:33410-33453). The digits come from {@code ArtUnc_AirCountdown}
+     * (sonic3k.asm:33450-33493). The digits come from {@code ArtUnc_AirCountdown}
      * rather than the bubble sheet.
      */
     @Test

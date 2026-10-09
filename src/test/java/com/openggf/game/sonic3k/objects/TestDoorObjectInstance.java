@@ -158,12 +158,12 @@ public class TestDoorObjectInstance {
 
     @Test
     public void horizontalDoorReportsRomRenderExtentsForSolidGate() {
-        // ROM byte_30FCE (sonic3k.asm:66167) sets width_pixels = $20 for the
+        // ROM byte_30FCE (sonic3k.asm:66207) sets width_pixels = $20 for the
         // horizontal CNZ door. The engine's solid-contact gate must use that
         // value when testing camera overlap, otherwise the CNZ horizontal
         // door's right edge (0x1940) is rejected as off-screen the moment
         // the camera reaches 0x1928 even though Tails is still standing on
-        // the door's top in the ROM (sonic3k.asm:36336-36370 Render_Sprites
+        // the door's top in the ROM (sonic3k.asm:36376-36410 Render_Sprites
         // computes bit 7 from x_pos +/- width_pixels).
         DoorObjectInstance horizontal = new DoorObjectInstance(
                 new ObjectSpawn(0x1940, 0x0548, 0x3C, 0x80, 0, false, 0));

@@ -16,7 +16,7 @@ public class SpindashDustController {
 
     // Water-entry/exit splash frames from the shared Sonic_Dust art
     // (Ani_obj08 byte_12CA6: 0..9, delay 2 -> 3 ticks/frame). ROM writes
-    // anim=1 into the fixed Sonic_Dust object (sonic3k.asm:22241,22281) rather
+    // anim=1 into the fixed Sonic_Dust object (sonic3k.asm:22277,22317) rather
     // than spawning a FindFreeObj slot, so the splash rides this controller.
     private static final int[] SPLASH_FRAMES = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
     private static final int SPLASH_FRAME_DELAY = 2;

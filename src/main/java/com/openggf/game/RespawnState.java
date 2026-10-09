@@ -41,11 +41,11 @@ public interface RespawnState {
      * index ({@link #getLastCheckpointIndex()}).
      *
      * <p>This models the ROM's per-object star-post respawn bit
-     * ({@code Obj_StarPost} loc_2CFC0 {@code btst #0,(a2)}, sonic3k.asm:61582),
+     * ({@code Obj_StarPost} loc_2CFC0 {@code btst #0,(a2)}, sonic3k.asm:61622),
      * which a star post consults to decide it is already activated. It is
      * separate from {@code Last_star_post_hit} because a star-post BONUS entry
      * zeroes {@code Last_star_post_hit} (loc_2D4CA {@code move.b #0,...},
-     * sonic3k.asm:61924) yet keeps the star post used (its respawn bit stays set
+     * sonic3k.asm:61964) yet keeps the star post used (its respawn bit stays set
      * across the reload via {@code Respawn_table_keep}). Star-post activation
      * guards must consult THIS, not the checkpoint index, so a bonus return does
      * not let the return star post re-trigger.
@@ -62,7 +62,7 @@ public interface RespawnState {
      * level so the checkpoint reload reinstates 0:00 rather than the late time
      * that produced the time over (docs/s1disasm/_incObj/39 Game
      * Over.asm:82-87 (REV01), docs/s2disasm/s2.asm:27749-27751,
-     * docs/skdisasm/sonic3k.asm:62098-62100). A no-op while no star post has
+     * docs/skdisasm/sonic3k.asm:62138-62140). A no-op while no star post has
      * been passed, exactly as the ROM's clear of an unused word is.
      */
     default void clearSavedActTimer() {

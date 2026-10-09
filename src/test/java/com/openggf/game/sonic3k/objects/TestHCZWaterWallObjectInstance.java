@@ -129,7 +129,7 @@ class TestHCZWaterWallObjectInstance {
         assertEquals(wallInitialY, waterWall.getY());
 
         // ROM Process_Kos_Module_Queue retires the last module and clears
-        // Kos_modules_left (sonic3k.asm:2752) from the LevelLoop tail (7908), after
+        // Kos_modules_left (sonic3k.asm:2784) from the LevelLoop tail (7908), after
         // Process_Sprites (7889). The polling object therefore first observes zero on
         // the following iteration's object pass — the update immediately after the
         // module state step, which the engine runs at the frame top.
@@ -221,7 +221,7 @@ class TestHCZWaterWallObjectInstance {
             HardwareServiceBoundary boundary) {
         // Mirrors LevelFrameStep.serviceBoundary: the module state step runs at the
         // frame top, ahead of the ledger service, modelling LevelLoop's tail call to
-        // Process_Kos_Module_Queue (sonic3k.asm:7908) reaching the next iteration's
+        // Process_Kos_Module_Queue (sonic3k.asm:7940) reaching the next iteration's
         // Process_Kos_Queue (7887) across Wait_VSync (7888).
         HardwareBoundaryPump.service(timing, coordinator, boundary);
     }

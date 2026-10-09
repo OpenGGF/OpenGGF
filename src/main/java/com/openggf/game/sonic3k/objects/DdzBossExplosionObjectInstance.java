@@ -12,7 +12,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_826CC} / {@code loc_826E2} (sonic3k.asm:174707-174756): an {@code Obj_BossExplosion1}
+ * ROM {@code loc_826CC} / {@code loc_826E2} (sonic3k.asm:174798-174847): an {@code Obj_BossExplosion1}
  * sprite without its sound that drifts with {@code x_vel $100} decelerating by {@code $100} a frame
  * and the cluster's {@code dy >> 4} as {@code y_vel}. On an exit cluster it also follows the wrap
  * offset and the camera delta. {@code AniRaw_BossExplosion} ends it.

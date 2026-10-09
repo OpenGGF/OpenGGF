@@ -20,18 +20,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>The ROM runs Player 1 (object slot 0) before every placed object, so on the jump frame the
  * player's whole pass happens while the block still holds the previous frame's {@code y_pos}:
  * <ul>
- *   <li>{@code Sonic_Jump} (docs/skdisasm/sonic3k.asm:23288-23349) sets {@code Status_InAir},
+ *   <li>{@code Sonic_Jump} (docs/skdisasm/sonic3k.asm:23323-23384) sets {@code Status_InAir},
  *       swaps {@code y_radius} {@code $13} -> {@code $E} and applies that as
- *       {@code sub.w d0,y_pos(a0)} at {@code loc_118AE} (:23347-23349), i.e. {@code y_pos + 5}.
+ *       {@code sub.w d0,y_pos(a0)} at {@code loc_118AE} (:23382-23384), i.e. {@code y_pos + 5}.
  *       It does <b>not</b> clear {@code Status_OnObj} and it does not touch the block's own
  *       standing bit.</li>
- *   <li>The block then runs {@code loc_427E2} (:87916-87940): it advances {@code $2E(a0)} and
+ *   <li>The block then runs {@code loc_427E2} (:87962-87986): it advances {@code $2E(a0)} and
  *       writes the new {@code y_pos}, then calls {@code SolidObjectFull}. In
- *       {@code SolidObjectFull_1P} (:41021-41034) the object's own {@code d6} standing bit is
+ *       {@code SolidObjectFull_1P} (:41061-41074) the object's own {@code d6} standing bit is
  *       still set and {@code Status_InAir} is now set, so the helper branches to
  *       {@code loc_1DC98}: it clears {@code Status_OnObj}, sets {@code Status_InAir}, clears
  *       {@code d6} and returns {@code d4 = 0}. {@code MvSonicOnPtfm} does not run, and neither
- *       does {@code loc_1E154}'s upward-velocity position lift (:41608-41637).</li>
+ *       does {@code loc_1E154}'s upward-velocity position lift (:41648-41677).</li>
  * </ul>
  *
  * <p>So the block's sink on the jump frame must not reach the player: the jump moves the player
@@ -46,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kLrzSinkingRockJumpOffHeadless {
 
-    /** {@code default_y_radius $13} -> jump {@code y_radius $E} at sonic3k.asm:23341-23349. */
+    /** {@code default_y_radius $13} -> jump {@code y_radius $E} at sonic3k.asm:23376-23384. */
     private static final int JUMP_RADIUS_DROP = 5;
 
     @AfterEach

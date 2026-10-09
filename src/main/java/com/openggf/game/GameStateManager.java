@@ -135,12 +135,12 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
 
     /**
      * Reverse gravity flag (ROM: {@code Reverse_gravity_flag} at $FFFFF7C6,
-     * sonic3k.constants.asm:684). One global byte, not per player: player 2 inverts
+     * sonic3k.constants.asm:703). One global byte, not per player: player 2 inverts
      * with player 1 and every writer acts for player 1 only.
      *
      * <p>Velocity is never inverted — positive {@code y_vel} still means "falling",
      * toward whichever surface is the floor. What inverts is the position integration
-     * ({@code MoveSprite_TestGravity}, sonic3k.asm:36068) and everything that follows
+     * ({@code MoveSprite_TestGravity}, sonic3k.asm:36108) and everything that follows
      * from it: swapped floor/ceiling probes, mirrored terrain angles, negated push-out
      * and radius adjustments, the death plane, and the vertical render mirror.
      *
@@ -220,7 +220,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      *   <li>S2 {@code PauseGame} / {@code Pause_Loop} —
      *       {@code docs/s2disasm/s2.asm:1585-1633}</li>
      *   <li>S3K {@code Pause_Game} / {@code Pause_Loop} —
-     *       {@code docs/skdisasm/s3.asm:1690-1761}</li>
+     *       {@code docs/skdisasm/s3.asm:1713-1784}</li>
      * </ul>
      */
     private boolean gamePaused;
@@ -303,13 +303,13 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         // (s2.asm:37245-37250) keeps withholding the +$40 right-boundary extension.
         currentBossId = 0;
         // Reverse_gravity_flag ($FFFFF7C6) is a level variable in the same sense:
-        // Level_ClrRam runs `clearRAM Tails_CPU_interact,$100` (sonic3k.asm:7621),
+        // Level_ClrRam runs `clearRAM Tails_CPU_interact,$100` (sonic3k.asm:7653),
         // which wipes $F700-$F7FF and so zeroes $F7C6 on a normal load, a death
-        // restart and StartNewLevel (Title_Screen does the same wipe at :5415).
+        // restart and StartNewLevel (Title_Screen does the same wipe at :5447).
         // Nothing else in the ROM clears the byte except Obj_DEZGravitySwap and the
         // clearer object the Death Egg act 2 boss spawns at defeat, so without this a
         // death with gravity inverted would respawn the player upside down.
-        // The seamless act change is NOT this path: loc_593EC (:118724) calls
+        // The seamless act change is NOT this path: loc_593EC (:118770) calls
         // Load_Level/LoadSolids with no RAM wipe, and LevelActTransitionExecutor
         // restores the flag around its resetForLevel() call for exactly that reason.
         reverseGravityActive = false;
@@ -928,16 +928,16 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * Mirrors the universal Start-edge toggle (S1 {@code PauseGame}
      * {@code docs/s1disasm/_inc/PauseGame.asm:5-54}; S2 {@code PauseGame}
      * {@code docs/s2disasm/s2.asm:1585-1633}; S3K {@code Pause_Game}
-     * {@code docs/skdisasm/s3.asm:1690-1761}):
+     * {@code docs/skdisasm/s3.asm:1713-1784}):
      * <ul>
      *   <li>{@code tst.b (v_lives).w; beq.s .unpauseGame}: with no lives left
      *       the ROM clears the pause flag and returns without looking at Start,
      *       so the GAME OVER card can never be paused and a pause held at the
      *       moment the last life goes releases on the next frame
      *       (docs/s1disasm/_inc/PauseGame.asm:8-9 and :47-52,
-     *       docs/s2disasm/s2.asm:1573-1574, docs/skdisasm/s3.asm:1692-1693).</li>
+     *       docs/s2disasm/s2.asm:1573-1574, docs/skdisasm/s3.asm:1715-1716).</li>
      *   <li>{@code Pause_Game} sits at the very top of {@code LevelLoop}
-     *       ({@code docs/skdisasm/sonic3k.asm:7884-7894}). On the press frame it
+     *       ({@code docs/skdisasm/sonic3k.asm:7916-7926}). On the press frame it
      *       enters {@code Pause_Loop}, which runs only the V-int until Start is
      *       pressed again, so the rest of the level update never runs while
      *       paused. On the unpause-press frame it clears {@code Game_paused} and

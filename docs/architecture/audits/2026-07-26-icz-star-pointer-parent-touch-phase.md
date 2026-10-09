@@ -64,10 +64,10 @@ enemy was destroyed by this contact.
 ## Root cause
 
 `Obj_StarPointer` active routines call `MoveSprite2` and then
-`Sprite_CheckDeleteTouch` (`docs/skdisasm/sonic3k.asm:190785-190810`).
+`Sprite_CheckDeleteTouch` (`docs/skdisasm/sonic3k.asm:190878-190903`).
 The collision list stores an SST pointer. Later, `Touch_Loop` reads the
 object's live `x_pos` through that pointer
-(`docs/skdisasm/sonic3k.asm:20656-20693`).
+(`docs/skdisasm/sonic3k.asm:20692-20729`).
 
 At f16361 the ROM's live Star Pointer X is `$0D07`. With collision radius 8,
 its left edge is `$0CFF`; Sonic's left touch boundary is `$0CEF`, producing

@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * The ROM title loop decompresses frames 8-B synchronously inside
- * {@code TitleSonic_LoadFrame} (sonic3k.asm:5834) and queues frame 7's art at
+ * {@code TitleSonic_LoadFrame} (sonic3k.asm:5866) and queues frame 7's art at
  * {@code loc_4040}. Under the FAST load-time manifest those decodes cost the
  * frames the original hardware capture measured; under NONE the cadence is the
  * ROM's uniform four iterations per frame.

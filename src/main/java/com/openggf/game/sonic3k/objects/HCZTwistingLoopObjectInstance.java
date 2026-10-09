@@ -24,7 +24,7 @@ import java.util.logging.Logger;
  * HCZ Twisting Loop — invisible controller that captures the player and
  * spirals them through S-curve water tubes.
  *
- * <p>ROM: Obj_HCZTwistingLoop (sonic3k.asm lines 76425-76744).
+ * <p>ROM: Obj_HCZTwistingLoop (sonic3k.asm lines 76466-76785).
  *
  * <p>The object is invisible (no art/mappings/rendering). It detects when a
  * player enters its trigger zone, forces them into a rolling state, then
@@ -40,7 +40,7 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     private static final Logger LOG = Logger.getLogger(HCZTwistingLoopObjectInstance.class.getName());
 
     // =========================================================================
-    // Loop definition table — ROM: word_3903C (sonic3k.asm line 76398)
+    // Loop definition table — ROM: word_3903C (sonic3k.asm line 76439)
     // Each entry: centerX, topY, pointer to phase sequence table
     // =========================================================================
 
@@ -464,7 +464,7 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
 
     /**
      * Decomposes ground_vel by angle into x_vel/y_vel, then applies slope
-     * gravity. ROM: sub_39208 (sonic3k.asm lines 76566-76602).
+     * gravity. ROM: sub_39208 (sonic3k.asm lines 76607-76643).
      *
      * <p>Gravity of $50 is applied based on sin(angle). Uphill gravity is
      * quartered. Speed capped at $1800 when moving right.

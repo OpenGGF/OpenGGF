@@ -199,7 +199,7 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         // Sprite_CheckDeleteTouch3. S3K's Collision_response_list stores the
         // balloon's SST pointer, so the next player-slot Touch_Loop dereferences
         // that live post-bob y_pos rather than the older pre-update coordinate
-        // (docs/skdisasm/sonic3k.asm:66776-66795,20656-20710).
+        // (docs/skdisasm/sonic3k.asm:66816-66835,20692-20746).
         return true;
     }
 
@@ -302,7 +302,7 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
             final int spawnY = childY;
             // sub_3181E uses AllocateObject for each Obj_Bubbler child, so these
             // effects consume the lowest free SST slots before later placement
-            // loads (docs/skdisasm/sonic3k.asm:66829-66841).
+            // loads (docs/skdisasm/sonic3k.asm:66869-66881).
             spawnFreeChild(() -> new BubblerObjectInstance(
                     new ObjectSpawn(spawnX, spawnY, 0x54, childSubtype, 0, false, 0)));
         }
@@ -360,10 +360,10 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
             frameOffset = POP_FRAME_SEQUENCE[popAnimationIndex++];
         } else {
             // ROM Anim - Balloon.asm pop sequences end with $FB, and Animate_Sprite's
-            // $FB handler writes x_pos = $7F00 itself (sonic3k.asm:36223-36227).
+            // $FB handler writes x_pos = $7F00 itself (sonic3k.asm:36263-36267).
             //
             // FixBugs audit (docs/skdisasm/sonic3k.asm:38, assembled as 0): the
-            // follow-up test at loc_31776 (sonic3k.asm:66786-66793) reads
+            // follow-up test at loc_31776 (sonic3k.asm:66826-66833) reads
             // `tst.b routine` — absolute address $000024, a vector-table byte that
             // is $00 in the retail ROM — instead of `tst.b routine(a0)`. Both
             // branches are behaviourally identical here: the balloon animation never
@@ -371,7 +371,7 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
             // second x_pos write. Audited, no divergence; the engine's $FB-driven
             // offscreen move is the shipped outcome.
             //
-            // Sprite_CheckDeleteTouch3 (sonic3k.asm:37369) then calls
+            // Sprite_CheckDeleteTouch3 (sonic3k.asm:37409) then calls
             // Delete_Current_Sprite only when the normal offscreen test later
             // decides the balloon is past the camera margin.
             movedOffscreen = true;

@@ -20,7 +20,7 @@ import java.util.List;
 /**
  * Object 0xBB - ICZ ice block.
  *
- * <p>ROM reference: {@code Obj_ICZIceBlock} at sonic3k.asm:187768-187790.
+ * <p>ROM reference: {@code Obj_ICZIceBlock} at sonic3k.asm:187861-187883.
  * The block applies {@code ObjDat_ICZIceBlock} and runs {@code SolidObjectTop}
  * every frame with {@code d1=$1B}, {@code d2=$10}, {@code d3=$11}.
  */
@@ -31,11 +31,11 @@ public class IczIceBlockObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_ICZIceBlock} is installed from the S3K object pointer table at
      * {@code $0008A330} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:187773).
+     * label is defined at docs/skdisasm/sonic3k.asm:187866).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0008}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {

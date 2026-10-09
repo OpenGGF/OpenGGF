@@ -621,7 +621,7 @@ None on gameplay determinism or reward correctness (ring/item totals match what 
 The ROM's capture sequences for the HCZ conveyor belt (Obj 0x3E) do not contain an explicit `bclr #Status_Roll,status(a1)`. The capture code clears velocities, sets `object_control` to 3, snaps the player's Y position, and sets the mapping frame, but never directly modifies `Status_Roll`:
 
 ```asm
-; Standing capture (sonic3k.asm:66490-66503):
+; Standing capture (sonic3k.asm:66530-66543):
     clr.w   x_vel(a1)
     clr.w   y_vel(a1)
     clr.w   ground_vel(a1)
@@ -633,7 +633,7 @@ The ROM's capture sequences for the HCZ conveyor belt (Obj 0x3E) do not contain 
     ; ... state init, DPLC call
 ```
 
-The release path unconditionally sets `Status_Roll` via `bset #Status_Roll,status(a1)` (sonic3k.asm:66454).
+The release path unconditionally sets `Status_Roll` via `bset #Status_Roll,status(a1)` (sonic3k.asm:66494).
 
 ### Our Implementation
 
@@ -642,7 +642,7 @@ perform, so that a player captured mid-roll would not count as attacking. That d
 `capturePlayer()` now mirrors the ROM sequence instruction for instruction — velocity clears, render-flip clear,
 Y snap through `NativePositionOps.writeYPosPreserveSubpixel`, `anim = 0`, `object_control = 3` via
 `ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed()`, and the initial mapping frame — with no roll
-write. The release path still sets the roll bit as the ROM does (`sonic3k.asm:66454`).
+write. The release path still sets the roll bit as the ROM does (`sonic3k.asm:66494`).
 
 ### Rationale
 
@@ -865,7 +865,7 @@ Remove this entry once each listed test has been diagnosed (root-cause identifie
 ## Right-Boundary Is Viewport-Independent (Level Edge)
 
 **Location:** `RightBoundary.java`, `PlayableSpriteMovement.doLevelBoundary()`
-**ROM Reference:** `sonic3k.asm:23183-23186` (`Player_Boundary_Sides`, strict path: `Camera_max_X_pos + $128`); `s2.asm:36907-36909` (normal path: `Camera_max_X_pos + $128 + $40`)
+**ROM Reference:** `sonic3k.asm:23218-23221` (`Player_Boundary_Sides`, strict path: `Camera_max_X_pos + $128`); `s2.asm:36907-36909` (normal path: `Camera_max_X_pos + $128 + $40`)
 
 ### Behavior
 
@@ -1345,11 +1345,11 @@ special stages that earned them. This is deliberate -- seeding them from the run
 manifest's `emeralds_before` would be trace hydration under hard rule 4 -- but it
 makes some ROM branches unreachable in a standalone segment replay.
 
-`loc_6170A` (skdisasm/sonic3k.asm:128276-128293) sends a special-stage entry ring
-to the 50-ring award at `loc_61794` (:128325-128333) when `Chaos_emerald_count`
+`loc_6170A` (skdisasm/sonic3k.asm:128330-128347) sends a special-stage entry ring
+to the 50-ring award at `loc_61794` (:128379-128387) when `Chaos_emerald_count`
 is 7 **and** either `SK_alone_flag` is set, or `SSEntry_CheckLevel` says the
-level is an S3-half one (:128433-128443), or the Super Emeralds are also
-complete. Otherwise it runs the capture sequence at `loc_6173A` (:128295-128301),
+level is an S3-half one (:128487-128497), or the Super Emeralds are also
+complete. Otherwise it runs the capture sequence at `loc_6173A` (:128349-128355),
 which writes `move.b #$1C,anim(a1)`, `move.b #0,mapping_frame(a1)` and
 `move.b #$53,object_control(a1)` -- the player is locked and frozen. The engine's
 own branch (`Sonic3kSSEntryRingObjectInstance.awardsFiftyRingsInsteadOfCapture`)
@@ -1797,7 +1797,7 @@ the stock ROM-backed SMPS path remains unchanged.
 The engine's `ObjectManager.vblaCounter` models the ROM V-int run counter --
 `Vint_runcount` (`docs/s2disasm/s2.asm:508`), `v_vblank_count`
 (`docs/s1disasm/sonic.asm:682`) and `V_int_run_count`
-(`docs/skdisasm/sonic3k.asm:543`) -- which the ROM increments once at V-int
+(`docs/skdisasm/sonic3k.asm:559`) -- which the ROM increments once at V-int
 exit regardless of which V-int routine the mode jump table dispatched.
 
 The engine holds the invariant **exactly one tick per serviced V-blank**: the
@@ -2311,7 +2311,7 @@ With the probe armed, engine-vs-ROM occupancy diverges on **2387 of 2387 sampled
 **Corrected 2026-08-15 (same day): the magnitude first published here overstated by ~3x.** The
 60,274 figure counted a comparison artefact. S3K keeps a **32-bit ROM code pointer** in the first
 SST long, not an id byte — `Process_Sprites` does `move.l (a0),d0 / movea.l d0,a1 / jsr (a1)`
-(`sonic3k.asm:35985-35988`) — so the recorder's `slot_dump` carries values like `"0x0002D95C"`.
+(`sonic3k.asm:36025-36028`) — so the recorder's `slot_dump` carries values like `"0x0002D95C"`.
 Both `SlotOccupancyProbe.parseId` and the **committed** `TraceBinder.compareObjectNear`
 (via `parseHexByte`) truncate that to its low byte and compare it against the engine's *layout*
 object id. Different number spaces; the tell is that every "ROM id" printed is even, because
@@ -2330,7 +2330,7 @@ defect.** The follow-up audit
 [*S3K trace object identity: the object pointer tables cannot supply it*](../architecture/audits/2026-08-15-s3k-object-code-pointer-identity.md)
 read both S3K object pointer tables out of the ROM — `Sprite_Listing3 = 0x00094EA2` (256 entries)
 and `Sprite_ListingK = 0x000952A2` (185), both taken from the `203C` immediates the object loader
-itself uses at ROM `0x01B6A8` / `0x01B6C4` (`sonic3k.asm:37411-37430`) — and inverted them.
+itself uses at ROM `0x01B6A8` / `0x01B6C4` (`sonic3k.asm:37451-37470`) — and inverted them.
 **Only 7 of the 189 distinct code pointers in the HCZ `slot_dump` stream are table entries at
 all: 2,428 of 56,993 entries, 4.26%** (2.6% across the full event stream). The S3K SST has no id
 field at any offset (`sonic3k.constants.asm:9,20`), and objects overwrite their own dispatch
@@ -2357,7 +2357,7 @@ ROM everywhere.** Its green is evidence about player physics, not about object l
 **Why this is not cosmetic.** Several ROM behaviours are keyed on an object's own SST slot index.
 `Obj_Bouncing_Ring` gates its floor probe on it —
 `move.b (V_int_run_count+3).w,d0 / add.b d7,d0 / andi.b #7,d0 / bne`
-(`docs/skdisasm/sonic3k.asm:35629-35632`), where `d7` is `Process_Sprites`' live slot countdown.
+(`docs/skdisasm/sonic3k.asm:35669-35672`), where `d7` is `Process_Sprites`' live slot countdown.
 A ring occupying a different slot therefore bounces on different frames. A measured instance:
 after the HCZ boss hurt both trees scatter 32 rings at pixel-identical positions, but ring 0 lands
 in slot 38 on one tree and slot 4 on the other (34 apart, two apart in the `&7` cycle), so it is
@@ -2372,7 +2372,7 @@ surface before slot-sensitive behaviour is judged by these tests.
 [the occupancy scoping audit](../architecture/audits/2026-08-15-s3k-object-slot-occupancy-scoping.md).**
 The 2387/2387 frame figure holds, but **60,274 overstates the real divergence about threefold**.
 S3K stores a 32-bit code pointer in the first long of an SST slot, not an id byte
-(`docs/skdisasm/sonic3k.asm:35985-35988`), so the recorder's `slot_dump` and `object_near` carry
+(`docs/skdisasm/sonic3k.asm:36025-36028`), so the recorder's `slot_dump` and `object_near` carry
 addresses such as `"0x0001365C"`. Both `SlotOccupancyProbe.parseId` and `TraceBinder`'s
 `parseHexByte` truncate that to its low byte and compare it against the engine's layout object id.
 **40,755 of the 60,274 entries (67.6%) are that artefact**, not a divergence; the genuine
@@ -2398,7 +2398,7 @@ wrong.**
 That one pixel changes object-slot occupancy on 16,289 of 31,482 rows. 27,600 frames later the
 boss-hurt ring scatter places ring 0 in slot 4 rather than 38, and `Obj_Bouncing_Ring` gates its
 floor probe on its own SST slot (`move.b (V_int_run_count+3).w,d0 / add.b d7,d0 / andi.b #7,d0 /
-bne`, `sonic3k.asm:35629-35632`, `d7` being `Process_Sprites`' live slot countdown). Those slots
+bne`, `sonic3k.asm:35669-35672`, `d7` being `Process_Sprites`' live slot countdown). Those slots
 are two apart in the `&7` cycle, so the ring bounces on different frames and is collected four
 frames early.
 
@@ -2420,7 +2420,7 @@ large positional error (e.g. expected `x=5376`, actual `512`). The engine loads 
 ### The ROM
 
 `sub_85B0` masks the index -- `andi.w #7,d0` / `move.b d0,(Current_special_stage).w`
-(`docs/skdisasm/sonic3k.asm:10858`) -- so **the stage index is 0-7 in both halves**. The
+(`docs/skdisasm/sonic3k.asm:10894`) -- so **the stage index is 0-7 in both halves**. The
 layout set is chosen entirely by `SK_special_stage_flag` at `loc_85E4` (`:10824-10830`):
 set means `a2 = SSLayoutOffs_RAM` with `d3 = Super_emerald_count`, clear means
 `SStageLayoutPtrs` with `d3 = Chaos_emerald_count`, and the `adda.l #LockOnROM_Start,a2`
@@ -2444,7 +2444,7 @@ archive site (`:1035`) consumes the flag cleanly.
 route and is **not ROM-equivalent**:
 
 - the special-stage demo path sets `move.b #1,(SK_special_stage_flag).w` and then
-  `clr.w (Emerald_counts).w` (`sonic3k.asm:5702-5706`) -- flag set, counts zero;
+  `clr.w (Emerald_counts).w` (`sonic3k.asm:5734-5738`) -- flag set, counts zero;
 - level select picks the flag independently (`:10102`).
 
 So an unseen demo or level-select recording defeats the inference. Replacing the invented
@@ -2478,7 +2478,7 @@ predicate that fails the any-BK2 bar.
 Reconstructing the selector natively instead would need `chaos_emerald_count` (`$FFB0`),
 `super_emerald_count` (`$FFB1`), the seven-byte `collected_emeralds_array`
 (`$FFB2..$FFB8`) -- necessary because the selector inspects individual entries when
-skipping collected stages (`sonic3k.asm:10841`) -- and optionally `emeralds_converted_flag`
+skipping collected stages (`sonic3k.asm:10877`) -- and optionally `emeralds_converted_flag`
 (`$FFBA`).
 
 ### Landable today, independently
@@ -2489,7 +2489,7 @@ request, consume it at every site (layout, palette, emerald art, award inventory
 debug), make `debugToggleLayoutSet()` toggle the flag rather than the stage number, and
 test `(stage 0, flag 0)` against `(stage 0, flag 1)` for distinct ROM-backed layout data.
 The ROM-faithful owner of the flag is the entry object -- `Obj_HPZSuperEmerald` writes it
-at `sonic3k.asm:197730` -- which is not implemented (registry name only).
+at `sonic3k.asm:197837` -- which is not implemented (registry name only).
 
 ---
 

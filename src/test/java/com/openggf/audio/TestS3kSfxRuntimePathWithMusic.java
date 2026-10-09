@@ -92,7 +92,7 @@ class TestS3kSfxRuntimePathWithMusic {
 
     /**
      * Dash is the spindash release
-     * (skdisasm sonic3k.asm:21824's {@code Play_SFX} call from the release
+     * (skdisasm sonic3k.asm:21860's {@code Play_SFX} call from the release
      * routine). Its FM5 track stops at {@code $0F} ticks while its PSG3 noise
      * track sounds for {@code $06 + $4F}
      * (Sound/SFX/B6 - Dash.asm:14-23), so the release must not end when the FM

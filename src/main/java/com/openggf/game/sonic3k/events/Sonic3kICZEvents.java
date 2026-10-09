@@ -44,11 +44,11 @@ import java.util.List;
  *
  * <p>ROM references:
  * <ul>
- *   <li>{@code sonic3k.asm:76984} {@code Obj_LevelIntroICZ1}</li>
- *   <li>{@code sonic3k.asm:110150} {@code ICZ1_BackgroundEvent}</li>
- *   <li>{@code sonic3k.asm:110433} {@code Obj_ICZ1BigSnowPile}</li>
- *   <li>{@code sonic3k.asm:39416} {@code ICZ1_Resize}</li>
- *   <li>{@code sonic3k.asm:39454} {@code ICZ2_Resize}</li>
+ *   <li>{@code sonic3k.asm:77025} {@code Obj_LevelIntroICZ1}</li>
+ *   <li>{@code sonic3k.asm:110196} {@code ICZ1_BackgroundEvent}</li>
+ *   <li>{@code sonic3k.asm:110479} {@code Obj_ICZ1BigSnowPile}</li>
+ *   <li>{@code sonic3k.asm:39456} {@code ICZ1_Resize}</li>
+ *   <li>{@code sonic3k.asm:39494} {@code ICZ2_Resize}</li>
  * </ul>
  *
  * <p>This pass enables the ICZ1 snowboard intro for the ROM Sonic player modes.
@@ -120,7 +120,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     };
 
     /**
-     * ROM: {@code ScreenShakeArray} (sonic3k.asm:104262) — signed byte Y offsets
+     * ROM: {@code ScreenShakeArray} (sonic3k.asm:104308) — signed byte Y offsets
      * indexed by the positive {@code Screen_shake_flag} countdown. Amplitude
      * tapers from ±5 down to ±1 as the timer runs out. Shared with AIZ/CNZ.
      */
@@ -129,7 +129,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     };
 
     /**
-     * ROM: {@code ScreenShakeArray2} (sonic3k.asm:104265) — 64-byte pseudo-random
+     * ROM: {@code ScreenShakeArray2} (sonic3k.asm:104311) — 64-byte pseudo-random
      * offsets (0–3px) indexed by {@code Level_frame_counter & $3F}. Drives the
      * constant/negative {@code Screen_shake_flag} mode, used while the ICZ1 big
      * snow pile is dropping (ICZ1_BigSnowFall sets the flag with {@code st}).
@@ -184,7 +184,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private IczSnowboardIntroInstance snowboardIntro;
     // ROM Screen_shake_flag: 0 = off, positive = timed countdown (ScreenShakeArray),
     // negative = constant jitter (ScreenShakeArray2). The snowboard crash writes
-    // #$14 (sonic3k.asm:76896); the snow pile drop writes it via ICZ1_BigSnowFall.
+    // #$14 (sonic3k.asm:76937); the snow pile drop writes it via ICZ1_BigSnowFall.
     private int screenShakeFlag;
     private int screenShakeOffsetY;
     private int screenShakeAppliedOffsetY;
@@ -252,7 +252,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
 
     /**
      * ROM: {@code move.w #frames,(Screen_shake_flag).w} — start a timed screen
-     * shake. The snowboard-crash release (sonic3k.asm:76896) writes {@code #$14}.
+     * shake. The snowboard-crash release (sonic3k.asm:76937) writes {@code #$14}.
      */
     public void triggerScreenShake(int frames) {
         screenShakeFlag = frames;
@@ -270,7 +270,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM {@code ShakeScreen_Setup} (sonic3k.asm:104219): a zero flag produces no
+     * ROM {@code ShakeScreen_Setup} (sonic3k.asm:104265): a zero flag produces no
      * offset, a negative flag is a constant jitter driven by {@code ScreenShakeArray2}
      * indexed by the frame counter, and a positive flag is a timed countdown that
      * tapers through {@code ScreenShakeArray}.
@@ -983,15 +983,15 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     }
 
     /**
-     * ROM {@code ICZ1SE_Init} (sonic3k.asm:110095-110101): while the screen
+     * ROM {@code ICZ1SE_Init} (sonic3k.asm:110141-110147): while the screen
      * event is still on its first routine, a live {@code Screen_shake_flag}
      * with {@code Ctrl_1_locked} clear means the quake came from the snowboard
      * wall crash, so controller 1 is locked and {@code Ctrl_1_logical} cleared
-     * until {@code Obj_ICZ1BigSnowPile} releases it (sonic3k.asm:110468).
+     * until {@code Obj_ICZ1BigSnowPile} releases it (sonic3k.asm:110514).
      *
      * <p>The predicate is ROM {@code Screen_shake_flag} — the same word
-     * {@code loc_39BEE} writes {@code #$14} into (sonic3k.asm:77370) and
-     * {@code ShakeScreen_Setup} counts down (sonic3k.asm:104193-104198) — not
+     * {@code loc_39BEE} writes {@code #$14} into (sonic3k.asm:77411) and
+     * {@code ShakeScreen_Setup} counts down (sonic3k.asm:104239-104244) — not
      * the shared {@code GameStateManager} shaking flag, which models the
      * unrelated S2 {@code Screen_Shaking_Flag} and is never written here.
      */

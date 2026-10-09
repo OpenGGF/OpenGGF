@@ -23,7 +23,7 @@ import java.util.List;
 /**
  * Object 0x56 — {@code Obj_MGZMovingSpikePlatform}.
  *
- * <p>ROM: {@code sonic3k.asm:71029-71114}. A solid platform whose top is a
+ * <p>ROM: {@code sonic3k.asm:71069-71154}. A solid platform whose top is a
  * narrow safe cap with a block of downward-facing spikes covering the body.
  * The platform oscillates horizontally 1px/frame across a ±$50 pixel range
  * around its spawn X, and bobs vertically by the byte value at
@@ -42,11 +42,11 @@ public class MGZMovingSpikePlatformObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_MGZMovingSpikePlatform} is installed from the S3K object pointer table at
      * {@code $000346E2} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:71034).
+     * label is defined at docs/skdisasm/sonic3k.asm:71074).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0003}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -122,7 +122,7 @@ public class MGZMovingSpikePlatformObjectInstance extends AbstractObjectInstance
 
         // ROM: move.b (Oscillating_table+$12).w,d0 / add.w $32(a0),d0 / move.w d0,y_pos(a0).
         // This routine only reads the global table. OscillateNumDo runs once at
-        // the LevelLoop tail after every object slot (sonic3k.asm:7909,
+        // the LevelLoop tail after every object slot (sonic3k.asm:7941,
         // 71069-71072), so an object-local update would double-advance every
         // oscillator while this platform is active.
         int oscByte = OscillationManager.getByte(OSC_OFFSET) & 0xFF;

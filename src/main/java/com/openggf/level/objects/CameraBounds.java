@@ -99,7 +99,7 @@ public final class CameraBounds {
      * {@code Render_Sprites} reject the right/bottom edges with
      * {@code bge}/{@code bhs} after subtracting/adding object half-extents
      * (S1 BuildSprites.asm:44-60; S2 s2.asm:30372-30395; S3K
-     * sonic3k.asm:36347-36365), so those upper edges are exclusive.
+     * sonic3k.asm:36387-36405), so those upper edges are exclusive.
      * SolidObjectFull's on-screen gate reads that bit on the next object update;
      * using an inclusive upper bound keeps exact edge objects solid one frame
      * longer than the ROM.

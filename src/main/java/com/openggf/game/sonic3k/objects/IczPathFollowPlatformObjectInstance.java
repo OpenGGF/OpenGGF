@@ -31,7 +31,7 @@ import java.util.List;
  * Object 0xB0 - ICZ path-follow platform.
  *
  * <p>ROM reference: {@code Obj_ICZPathFollowPlatform}
- * (sonic3k.asm:187354-187940). The subtype pair selects the starting
+ * (sonic3k.asm:187447-188033). The subtype pair selects the starting
  * routine from {@code byte_89FB2}: stand-triggered falling platform, pushed
  * floor follower, inert platform, or a stand-triggered sink/rebound platform.
  */
@@ -42,11 +42,11 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_ICZPathFollowPlatform} is installed from the S3K object pointer table at
      * {@code $00089F32} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:187359).
+     * label is defined at docs/skdisasm/sonic3k.asm:187452).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0008}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -81,9 +81,9 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     // SolidObjectFull call at loc_89F64 uses d1=$2B, d2=$14, d3=$14.
     private static final int SOLID_HALF_WIDTH = 0x2B;
     private static final int SOLID_HALF_HEIGHT = 0x14;
-    // width_pixels(a0) from ObjDat_ICZPathFollowPlatform (sonic3k.asm:187886, set by
-    // SetUp_ObjAttributes at sonic3k.asm:176908). This is the byte the player on-object
-    // balance routine reads (Sonic_Move move.b width_pixels(a1),d1 at sonic3k.asm:22455),
+    // width_pixels(a0) from ObjDat_ICZPathFollowPlatform (sonic3k.asm:187979, set by
+    // SetUp_ObjAttributes at sonic3k.asm:176999). This is the byte the player on-object
+    // balance routine reads (Sonic_Move move.b width_pixels(a1),d1 at sonic3k.asm:22490),
     // which differs from the $2B SolidObjectFull X-collision half-width above.
     private static final int BALANCE_WIDTH_PIXELS = 0x20;
     private static final SolidObjectParams SOLID_PARAMS =
@@ -439,7 +439,7 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
 
     /**
      * ROM Sonic_Move / Tails_Move on-object balance reads {@code width_pixels(a1)}
-     * ($20 here, sonic3k.asm:22455/27825), NOT the $2B SolidObjectFull X-collision
+     * ($20 here, sonic3k.asm:22490/27825), NOT the $2B SolidObjectFull X-collision
      * half-width. The shared default of 16 px shifts the {@code d1 = player_x +
      * width - object_x} balance window inward by 16 px, which spuriously flipped a
      * rider's facing to LEFT (status bit0) on this wide platform when the ROM kept

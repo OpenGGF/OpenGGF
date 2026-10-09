@@ -46,7 +46,7 @@ public class Sonic3kSpecialStageCollisionQueue {
 
     /**
      * Add a ring collection entry.
-     * ROM: Find_SStageCollisionResponseSlot + move.b #1,(a2) (sonic3k.asm:12742)
+     * ROM: Find_SStageCollisionResponseSlot + move.b #1,(a2) (sonic3k.asm:12778)
      * <p>
      * Skips if this grid index already has a pending entry.
      *
@@ -64,10 +64,10 @@ public class Sonic3kSpecialStageCollisionQueue {
         if (slot < 0) return false;
         types[slot] = RESPONSE_RING;
         // ROM never writes the timer byte at creation (Find_SStageCollisionResponseSlot,
-        // sonic3k.asm:12742-12753, only sets type + gridIndex pointer at 12178-12179);
+        // sonic3k.asm:12778-12789, only sets type + gridIndex pointer at 12178-12179);
         // a fresh slot inherits 0 from the clr.l at clearSlot()/entry release. Since
         // Process_Sprites (creates entries) runs before Touch_SSSprites (decrements
-        // timers) within the same frame (sonic3k.asm:10744-10746), the timer's first
+        // timers) within the same frame (sonic3k.asm:10780-10782), the timer's first
         // decrement (0 -> -1, subq.b/bpl.s at 12785-12786) fires the animation step in
         // the SAME frame the entry is created, not RING_ANIM_TIMER frames later.
         timers[slot] = 0;
@@ -78,7 +78,7 @@ public class Sonic3kSpecialStageCollisionQueue {
 
     /**
      * Add a blue sphere collection entry.
-     * ROM: Find_SStageCollisionResponseSlot + move.b #2,(a2) (sonic3k.asm:12136)
+     * ROM: Find_SStageCollisionResponseSlot + move.b #2,(a2) (sonic3k.asm:12172)
      * <p>
      * Deduplicated: only one entry per grid index to prevent queue saturation.
      * The ROM creates entries every frame but clears them fast enough to avoid
@@ -97,10 +97,10 @@ public class Sonic3kSpecialStageCollisionQueue {
         if (slot < 0) return false;
         types[slot] = RESPONSE_BLUE_SPHERE;
         // ROM never writes the timer byte at creation (Find_SStageCollisionResponseSlot,
-        // sonic3k.asm:12742-12753, only sets type + gridIndex pointer at 12136-12137);
+        // sonic3k.asm:12778-12789, only sets type + gridIndex pointer at 12136-12137);
         // a fresh slot inherits 0 from the clr.l at clearSlot()/entry release. Since
         // Process_Sprites (creates entries) runs before Touch_SSSprites (decrements
-        // timers) within the same frame (sonic3k.asm:10744-10746), the timer's first
+        // timers) within the same frame (sonic3k.asm:10780-10782), the timer's first
         // decrement (0 -> -1, subq.b/bpl.s at 12807-12808) fires Phase 1 (sphere
         // collection, Decrement_BlueSphere_Count) in the SAME frame the entry is
         // created, not BLUE_SPHERE_ANIM_TIMER frames later.
@@ -112,7 +112,7 @@ public class Sonic3kSpecialStageCollisionQueue {
 
     /**
      * Process all queue entries for one frame.
-     * ROM: Touch_SSSprites (sonic3k.asm:12760)
+     * ROM: Touch_SSSprites (sonic3k.asm:12796)
      *
      * @param grid the game grid
      * @param callback callback for blue sphere animation completion
@@ -137,7 +137,7 @@ public class Sonic3kSpecialStageCollisionQueue {
 
     /**
      * Update a ring collection animation entry.
-     * ROM: Touch_SSSprites_Ring (sonic3k.asm:12784)
+     * ROM: Touch_SSSprites_Ring (sonic3k.asm:12820)
      * Ring cell cycles through: 6 -> 7 -> 8 -> 9 -> 0 (disappear)
      */
     private void updateRing(int slot, Sonic3kSpecialStageGrid grid) {
@@ -159,7 +159,7 @@ public class Sonic3kSpecialStageCollisionQueue {
 
     /**
      * Update a blue sphere collection animation entry.
-     * ROM: Touch_SSSprites_BlueSphere (sonic3k.asm:12806)
+     * ROM: Touch_SSSprites_BlueSphere (sonic3k.asm:12842)
      * <p>
      * Two-phase process:
      * <ol>

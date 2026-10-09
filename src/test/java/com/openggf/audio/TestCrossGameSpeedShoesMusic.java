@@ -57,7 +57,7 @@ class TestCrossGameSpeedShoesMusic {
 
     /**
      * S3K has no speed-up/slow-down sound command: the 68k writes
-     * {@code zTempoSpeedup} in Z80 RAM directly (sonic3k.asm:1519), and the
+     * {@code zTempoSpeedup} in Z80 RAM directly (sonic3k.asm:1541), and the
      * driver's E2h/E3h entries are {@code zStopAllSound} and
      * {@code zPSGSilenceAll} (Sound/Z80 Sound Driver.asm:1669-1670). The
      * engine models that direct write as {@link AudioManager#setSpeedMultiplier}
@@ -118,7 +118,7 @@ class TestCrossGameSpeedShoesMusic {
         audio.presentFrame(PresentationMode.SILENT);
         assertEquals(1, musicSequencer().speedMultiplier());
 
-        // Direct zTempoSpeedup write (sonic3k.asm:1519); see the S3K test above.
+        // Direct zTempoSpeedup write (sonic3k.asm:1541); see the S3K test above.
         audio.setSpeedMultiplier(Sonic3kSmpsConstants.SPEED_MULTIPLIER_ON);
         audio.presentFrame(PresentationMode.SILENT);
         assertEquals(Sonic3kSmpsConstants.SPEED_MULTIPLIER_ON,

@@ -37,7 +37,7 @@ The BG scroll rate during the ocean phase is `scrollSpeed / 2` pixels/frame (the
 3. **Routine 0x10 exit (wait after walk right):** `move.w #$C,$40(a0)` → scrollSpeed = 12, BG moves 6 px/frame
 4. **Routine 0x12 exit (walk left complete):** `move.w #$10,$40(a0)` → scrollSpeed = 16, BG moves 8 px/frame
 
-**Root cause of the bug:** `$40(a0)` is a dual-purpose field — `Swing_Setup1` (sonic3k.asm:136829) writes `0x10` as the swing acceleration for `Swing_UpAndDown`, but `sub_67A08` reads the same field as the scroll speed every frame. The engine split these into separate variables (`SWING_ACCEL` for swing math, `scrollSpeed` for scroll) but didn't update `scrollSpeed` at the `Swing_Setup1` call. This meant the ocean scrolled at speed 8 for ~340 extra frames (routines 0x06–0x0E) instead of speed 16.
+**Root cause of the bug:** `$40(a0)` is a dual-purpose field — `Swing_Setup1` (sonic3k.asm:136894) writes `0x10` as the swing acceleration for `Swing_UpAndDown`, but `sub_67A08` reads the same field as the scroll speed every frame. The engine split these into separate variables (`SWING_ACCEL` for swing math, `scrollSpeed` for scroll) but didn't update `scrollSpeed` at the `Swing_Setup1` call. This meant the ocean scrolled at speed 8 for ~340 extra frames (routines 0x06–0x0E) instead of speed 16.
 
 Note that change #3 actually *decreases* speed from 16→12 before #4 restores it. The original analysis assumed a monotonic 8→12→16 progression, but the real progression is 8→16→12→16.
 
@@ -181,7 +181,7 @@ ROM source: Dynamic_resize_routine 2 at `s3.asm` line 32140, BG event at line 70
 
 **The ocean scrolled too slowly because the engine missed a scroll speed change at `Swing_Setup1`.**
 
-In the ROM, `$40(a0)` is a dual-purpose field: `Swing_Setup1` (sonic3k.asm:136829) writes `0x10` to it as the swing acceleration parameter for `Swing_UpAndDown`, but `sub_67A08` reads the same field every frame as the scroll speed. The Java engine split these into separate variables — `SWING_ACCEL` (used only for swing math) and `scrollSpeed` (used only for scroll) — and never updated `scrollSpeed` when entering the swing phase.
+In the ROM, `$40(a0)` is a dual-purpose field: `Swing_Setup1` (sonic3k.asm:136894) writes `0x10` to it as the swing acceleration parameter for `Swing_UpAndDown`, but `sub_67A08` reads the same field every frame as the scroll speed. The Java engine split these into separate variables — `SWING_ACCEL` (used only for swing math) and `scrollSpeed` (used only for scroll) — and never updated `scrollSpeed` when entering the swing phase.
 
 **Impact:** For ~340 frames (routines 0x06 through 0x0E), the engine scrolled at speed 8 instead of 16 — half the correct rate. The ocean background moved at 4 px/frame instead of 8 px/frame during the entire swing, lift-off, landing, flash, and walk-right phases. This made the ocean phase feel sluggish and the overall intro timing ~5.7 seconds too long.
 

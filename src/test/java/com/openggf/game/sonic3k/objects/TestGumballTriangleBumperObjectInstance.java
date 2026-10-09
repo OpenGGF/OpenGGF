@@ -32,7 +32,7 @@ class TestGumballTriangleBumperObjectInstance {
     }
 
     /**
-     * ROM reference: sonic3k.asm:127681-127706 (sub_60F94). Mirrored bumpers
+     * ROM reference: sonic3k.asm:127735-127760 (sub_60F94). Mirrored bumpers
      * (render_flags bit 0 set) keep d0 = -0x300 instead of negating it, so a
      * side/standing SolidObjectFull contact on a mirrored placement bounces
      * the player leftward.

@@ -13,13 +13,13 @@ The model is the same; the encoding and two silent engine defaults are what agen
 
 - **Model.** All three ROMs keep eight `$80`-byte display lists
   (`Sprite_Table_Input` / `Object_Display_Lists`). `DisplaySprite` (S1/S2) and
-  `Draw_Sprite` (S3K, sonic3k.asm:36131) append the object to the list its `priority`
+  `Draw_Sprite` (S3K, sonic3k.asm:36171) append the object to the list its `priority`
   field selects; BuildSprites walks list 0 first, so bucket 0 is front-most. The engine's
   `RenderPriority` (0-7) and `ObjectManager` (paints bucket 7 first) match this.
 - **Encoding.** S1/S2 store the bucket index as a byte (`move.b #4,priority(a0)`).
   S3K stores the list byte offset as a word: `move.w #$280,priority(a0)` is bucket 5
   (`word / $80`), and ObjDat/ObjDat3 tables consumed by `SetUp_ObjAttributes3`
-  (sonic3k.asm:176908) carry the same word third. `$80` reads like a flag but is bucket 1.
+  (sonic3k.asm:176999) carry the same word third. `$80` reads like a flag but is bucket 1.
 - **Silent clamp.** `RenderPriority.clamp(0x280)` returned 7. Four S3K classes returned
   the raw word: `CnzHoverFanInstance`, `CnzCannonInstance` (both `$280`, bucket 5),
   `CnzTrapDoorInstance`, `LrzCollapsingBridgeInstance` (both `$80`, bucket 1). The LRZ
@@ -53,8 +53,8 @@ The model is the same; the encoding and two silent engine defaults are what agen
 
 | Class | ROM writes | Bucket |
 |---|---|---|
-| `AnimalObjectInstance` | S1 `#6` (28, 29 Animals and Points.asm:142), S2 `#6` (s2.asm:24590), S3K `$300` (sonic3k.asm:61043) | 6 |
-| `EggPrisonAnimalInstance` | capsule creates without writing priority (s2.asm:85045, sonic3k.asm:198673); after delay S2 `#1` (24738), S3K `$80` (61203) | 0 waiting, 1 released |
+| `AnimalObjectInstance` | S1 `#6` (28, 29 Animals and Points.asm:142), S2 `#6` (s2.asm:24590), S3K `$300` (sonic3k.asm:61083) | 6 |
+| `EggPrisonAnimalInstance` | capsule creates without writing priority (s2.asm:85045, sonic3k.asm:198780); after delay S2 `#1` (24738), S3K `$80` (61203) | 0 waiting, 1 released |
 | `ExplosionObjectInstance` | S1 `#1` (27, 3F Explosions.asm:35), S2 `#1` (46728), S3K `$80` (42196) | 1 |
 | `SplashObjectInstance` | S1 `#1` (08 LZ Water Splash.asm:21), S2 Obj08 `#1` (42725), S3K Obj_DashDust `$80` (33971) | 1 |
 | `SkidDustObjectInstance` | S2 Obj08 `#1` (42725), S3K Obj_DashDust `$80` (33971) | 1 |
@@ -178,7 +178,7 @@ through `DisplaySprite3`.
 | IczEndBossInstance.IczEndBossDefeatDebrisChild | loc_720F2 / word_72330 | 151293 | $180 | 3 | inherited from the boss via CreateChild1_Normal; already `true` from GravityDebrisChild | override added |
 
 Lead correction to the two `BreakObjectToPieces` rows: `move.b priority(a0),priority(a1)`
-(sonic3k.asm:45811) copies the parent word's HIGH byte, and piece 0 stays in the parent slot
+(sonic3k.asm:45851) copies the parent word's HIGH byte, and piece 0 stays in the parent slot
 (a1=a0). So `RockDebrisChild` under the `$200` rock is bucket 4 on both paths and
 `AizRockFragmentChild` under the `$180` cutscene rock is bucket 3 for piece 0 and bucket 2
 (`$0100`) for pieces 1-11, not bucket 0 as the lane first transcribed.

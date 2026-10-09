@@ -157,19 +157,19 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
     /**
      * Reload value written to {@code Title_anim_delay} by {@code TitleAnim_FlipBuffer}
-     * (skdisasm/sonic3k.asm:5746 and :5749, {@code move.b #4-1,(Title_anim_delay).w}).
+     * (skdisasm/sonic3k.asm:5778 and :5781, {@code move.b #4-1,(Title_anim_delay).w}).
      *
      * <p>The ROM owns no per-frame duration table for the title Sonic animation.
      * {@code TitleAnim_FlipBuffer} runs as V_int routine 4 once per
-     * {@code Wait_TitleS3K} iteration (sonic3k.asm:5533-5536): when the counter
+     * {@code Wait_TitleS3K} iteration (sonic3k.asm:5565-5568): when the counter
      * reads zero it flips the makeshift double buffer and reloads 3, otherwise it
-     * decrements (loc_43AC, sonic3k.asm:5771-5772).
+     * decrements (loc_43AC, sonic3k.asm:5803-5804).
      * {@code Iterate_TitleSonicFrame} then advances to the next frame only on the
-     * iteration where the counter reads 1 (sonic3k.asm:5793). Reload-3 plus that
+     * iteration where the counter reads 1 (sonic3k.asm:5825). Reload-3 plus that
      * single-value test gives a uniform four-iteration cadence for every step of
      * {@code SonicFrameIndex}, not the varying durations a hardware capture shows.
      * The variation visible on real hardware comes from the synchronous
-     * {@code Kos_Decomp} inside {@code TitleSonic_LoadFrame} (sonic3k.asm:5834)
+     * {@code Kos_Decomp} inside {@code TitleSonic_LoadFrame} (sonic3k.asm:5866)
      * overrunning a frame for the larger frames -- a decompression-timing effect,
      * which under the hardware-timing trace contract belongs to the Kosinski
      * pipeline, never to a transcribed duration table.
@@ -197,9 +197,9 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * The one frame whose art the title loop queues ahead of time:
      * {@code loc_4040} runs {@code Queue_Kos} on {@code ArtKos_S3TitleSonic8}
      * into {@code RAM_start} before {@code Wait_TitleS3K} starts
-     * (sonic3k.asm:5525-5528), and {@code TitleSonic_LoadFrame} takes the
+     * (sonic3k.asm:5557-5560), and {@code TitleSonic_LoadFrame} takes the
      * {@code loc_4446} DMA path for it instead of decompressing
-     * ({@code cmpi.w #7,d7 / beq.s loc_4446}, sonic3k.asm:5832-5833).
+     * ({@code cmpi.w #7,d7 / beq.s loc_4446}, sonic3k.asm:5864-5865).
      * {@code Process_Kos_Queue} is resumable across V-ints, so the ROM never
      * stalls on it; the engine only requires it to be ready when frame 7 loads.
      */
@@ -210,7 +210,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * synchronously ({@code bcs.s loc_4466} skips frames below 7, whose
      * {@code ArtKos_S3TitleSonic1} art is already in VRAM). The art each frame
      * decodes is the {@code TitleSonic_Frames} entry indexed by the frame
-     * number (sonic3k.asm:5823-5827): entry 8 is {@code ArtKos_S3TitleSonic9},
+     * number (sonic3k.asm:5855-5859): entry 8 is {@code ArtKos_S3TitleSonic9},
      * 9 is {@code SonicA}, A is {@code SonicB}, B is {@code SonicC}.
      */
     private static final int LAST_SYNCHRONOUS_DECODE_FRAME = 0xB;
@@ -253,12 +253,12 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * The frame whose art and palette are actually in VRAM. While
      * {@code TitleSonic_LoadFrame} is still decompressing the next frame the
      * display keeps showing this one: the new mappings, palette and art only
-     * land after the decode (sonic3k.asm:5846-5871), never piecemeal.
+     * land after the decode (sonic3k.asm:5878-5903), never piecemeal.
      */
     private int displayedAnimFrame = 1;
 
     /**
-     * ROM {@code Title_anim_delay} (sonic3k.constants.asm:953). Reloaded by
+     * ROM {@code Title_anim_delay} (sonic3k.constants.asm:977). Reloaded by
      * {@code TitleAnim_FlipBuffer} and decremented once per title-loop iteration;
      * {@code Iterate_TitleSonicFrame} advances the frame when it reads 1.
      */
@@ -271,9 +271,9 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * Whether the SEGA chant has already been stopped, modelling the ROM's
      * "have we passed {@code loc_3FE4} yet". {@code Wait_SegaS3K} is left
      * either by its own timeout or by a Start press, and both exits run the
-     * single {@code cmd_StopSEGA} at sonic3k.asm:5498-5500. Every later skip
+     * single {@code cmd_StopSEGA} at sonic3k.asm:5530-5532. Every later skip
      * is a Start press inside {@code Wait_TitleS3K}, whose branch to
-     * {@code loc_4090} issues no sound command at all (:5541-5546).
+     * {@code loc_4090} issues no sound command at all (:5573-5578).
      * {@code segaSoundPlayed} cannot answer this: it records that the chant
      * once started, never that it has since been stopped.
      */
@@ -639,7 +639,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     /**
      * Updates the palette transition phase.
      *
-     * <p>From the disassembly (sonic3k.asm lines 5501-5512): each VSync, reads
+     * <p>From the disassembly (sonic3k.asm lines 5533-5544): each VSync, reads
      * 14 bytes from {@code Pal_Title} and writes them to palette line 0 colors 0-6.
      * This gradually changes the SEGA screen background to black while leaving
      * the SEGA text (colors 7+) unchanged. Completes when color 0 becomes $0000.
@@ -662,7 +662,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         }
     }
 
-    /** Transition complete (background now black): loc_4040, sonic3k.asm:5520-5529. */
+    /** Transition complete (background now black): loc_4040, sonic3k.asm:5552-5561. */
     private void enterSonicAnimation() {
         phase = Phase.SONIC_ANIMATION;
         phaseTimer = 0;
@@ -718,14 +718,14 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         }
     }
 
-    /** One title-loop service: {@code Process_Kos_Queue} before {@code Wait_VSync} (sonic3k.asm:5531-5533). */
+    /** One title-loop service: {@code Process_Kos_Queue} before {@code Wait_VSync} (sonic3k.asm:5563-5565). */
     private void serviceTitleLoopKosWork() {
         titleTiming.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
         titleKosQueue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
     }
 
     /**
-     * {@code TitleSonic_LoadFrame} (sonic3k.asm:5822-5871) for the frame just
+     * {@code TitleSonic_LoadFrame} (sonic3k.asm:5854-5903) for the frame just
      * selected by {@code Iterate_TitleSonicFrame}. Frames with Kosinski work
      * present their art only once it is ready; a synchronous decode that is
      * not ready stalls the loop (see {@link #updateSonicAnimation}).
@@ -811,10 +811,10 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
     private void updateSonicAnimation(InputHandler input) {
         // Process_Kos_Queue at the top of every Wait_TitleS3K iteration
-        // (sonic3k.asm:5531): the one service point of the title loop.
+        // (sonic3k.asm:5563): the one service point of the title loop.
         serviceTitleLoopKosWork();
         if (pendingFrameArt != null) {
-            // TitleSonic_LoadFrame's Kos_Decomp (sonic3k.asm:5834) is a
+            // TitleSonic_LoadFrame's Kos_Decomp (sonic3k.asm:5866) is a
             // synchronous 68000 call: until it returns no V-int is serviced,
             // so no input is polled and nothing in the title loop advances.
             // Each stalled iteration is one missed V-int. The profile's
@@ -833,7 +833,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
             return;
         }
 
-        // TitleAnim_FlipBuffer, V_int routine 4 (sonic3k.asm:5744-5772). Zero
+        // TitleAnim_FlipBuffer, V_int routine 4 (sonic3k.asm:5776-5804). Zero
         // reloads the delay (and, on hardware, flips the nametable buffer and
         // copies Target_palette over Normal_palette); anything else decrements.
         // The buffer flip itself is not modelled here -- the engine draws the
@@ -844,7 +844,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
             animFrameTimer--;
         }
 
-        // Iterate_TitleSonicFrame (sonic3k.asm:5792-5800): advance only on the
+        // Iterate_TitleSonicFrame (sonic3k.asm:5824-5832): advance only on the
         // iteration where Title_anim_delay reads exactly 1.
         if (animFrameTimer == 1) {
             animTableIndex++;
@@ -992,11 +992,11 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     private void transitionToWhiteFlash() {
         endTitleLoopKosWork();
         // ROM: Wait_SegaS3K's Start press and its timeout share the one
-        // cmd_StopSEGA at sonic3k.asm:5498-5500, so this stop belongs only to a
+        // cmd_StopSEGA at sonic3k.asm:5530-5532, so this stop belongs only to a
         // skip taken while the chant is still playing. A skip taken later is a
         // Start press inside Wait_TitleS3K, which branches to loc_4090 without
-        // any sound command (:5541-5546). Gating on segaSoundPlayed instead
-        // issued a second stop-all after the title music had started at :5529,
+        // any sound command (:5573-5578). Gating on segaSoundPlayed instead
+        // issued a second stop-all after the title music had started at :5561,
         // silencing it for the rest of the title screen.
         if (!segaChantStopped) {
             GameServices.audio().playMusic(Sonic3kSmpsConstants.CMD_STOP_SEGA);
@@ -1094,7 +1094,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * Updates banner bounce physics per frame.
      *
      * <p>Faithful port of {@code Obj_TitleBanner_Main} from the disassembly
-     * (sonic3k.asm lines 6007-6056). Position is 16.16 fixed point stored as a
+     * (sonic3k.asm lines 6039-6088). Position is 16.16 fixed point stored as a
      * 32-bit signed int. Velocity is signed 16-bit. Each frame:
      * <ol>
      *   <li>Save previous bounce flag</li>

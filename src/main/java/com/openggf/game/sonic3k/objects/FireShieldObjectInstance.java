@@ -118,7 +118,7 @@ public class FireShieldObjectInstance extends ShieldObjectInstance {
     }
 
     /**
-     * ROM: {@code Obj_FireShield_Main} sonic3k.asm:34662-34669 sets the shield's Y-flip bit from
+     * ROM: {@code Obj_FireShield_Main} sonic3k.asm:34702-34709 sets the shield's Y-flip bit from
      * {@code Reverse_gravity_flag} after masking the inherited status down to the
      * orientation bit. See {@link ShieldAnimationArtLifecycle#reverseGravityMirror}.
      */

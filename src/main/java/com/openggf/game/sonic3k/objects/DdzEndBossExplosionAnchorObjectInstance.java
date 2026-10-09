@@ -10,7 +10,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import java.util.List;
 
 /**
- * ROM {@code loc_83004} (sonic3k.asm:175722-175740) and {@code loc_8303E} (175742-175756): anchors
+ * ROM {@code loc_83004} (sonic3k.asm:175813-175831) and {@code loc_8303E} (175742-175756): anchors
  * that follow the end boss at an offset ({@code $90,$60} while it falls in phase 1; {@code $40,$40} at
  * the exit) carrying {@code Obj_CreateBossExplosion} children ({@code $1C}, or two {@code $E}). The
  * phase-1 anchor deletes itself once the boss's {@code $38} bit 4 is set; the exit anchor lives as

@@ -33,7 +33,7 @@ public final class S3kPaletteOwners {
     public static final String HCZ_MINIBOSS = "s3k.hcz.miniboss";
     public static final String HCZ_END_BOSS = "s3k.hcz.endBoss";
     public static final String MHZ_MINIBOSS = "s3k.mhz.miniboss";
-    /** {@code Obj_LRZRockCrusher}: {@code Pal_LRZRockCrusher} on line 1 (sonic3k.asm:197010). */
+    /** {@code Obj_LRZRockCrusher}: {@code Pal_LRZRockCrusher} on line 1 (sonic3k.asm:197117). */
     public static final String LRZ_BOSS_FIRE = "s3k.lrz.bossFire";
     public static final String LRZ_CUTSCENE_KNUCKLES = "s3k.lrz.cutsceneKnuckles";
     public static final String LRZ_ROCK_CRUSHER = "s3k.lrz.rockCrusher";
@@ -96,7 +96,7 @@ public final class S3kPaletteOwners {
      * Owner ID for the Act 1 miniboss palette installed by the arena-entry
      * gate.
      *
-     * <p>ROM: {@code loc_6D9A8} (sonic3k.asm:144830) loads
+     * <p>ROM: {@code loc_6D9A8} (sonic3k.asm:144895) loads
      * {@code Pal_CNZMiniboss} into palette line 1 via
      * {@code PalLoad_Line1}. The engine routes the same 32-byte write through
      * the shared palette ownership registry so post-defeat code (and tests)

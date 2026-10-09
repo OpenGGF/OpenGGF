@@ -101,9 +101,9 @@ class TestS3kSlotLayoutRenderer {
         buffers.startRingAnimationAt(0x21);
 
         // ROM loc_4BF30 and its siblings claim the slot without touching the layout
-        // byte (sonic3k.asm:99283-99300); loc_4B5C2's first sub_4B592 pass publishes
+        // byte (sonic3k.asm:99329-99346); loc_4B5C2's first sub_4B592 pass publishes
         // frames[0] because a cleared slot's countdown is 0 and `subq.b #1 / bpl`
-        // falls straight through (sonic3k.asm:98420-98428). Each later step then
+        // falls straight through (sonic3k.asm:98466-98474). Each later step then
         // costs RING_SPARKLE_DELAY waiting passes plus the publishing pass, since
         // the reload of #5 is tested for negative, not zero.
         renderer.tickTransientAnimations(buffers);
@@ -143,7 +143,7 @@ class TestS3kSlotLayoutRenderer {
 
         buffers.startBumperAnimationAt(compactIndex);
 
-        // loc_4B5F2 (sonic3k.asm:98446-98460): the claiming branch leaves the layout
+        // loc_4B5F2 (sonic3k.asm:98492-98506): the claiming branch leaves the layout
         // byte alone, the first sub_4B592 pass publishes byte_4B622[0] = $A, and the
         // reload of #1 costs one waiting pass before $B.
         renderer.tickTransientAnimations(buffers);

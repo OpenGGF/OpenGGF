@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-/** Exact defeat-family oracle: sonic3k.asm:176659-176890, 147570-147592, 187282-187338. */
+/** Exact defeat-family oracle: sonic3k.asm:176750-176981, 147635-147657, 187375-187431. */
 @ExtendWith(SingletonResetExtension.class)
 @FullReset
 class TestFbzMinibossDefeatChildren {

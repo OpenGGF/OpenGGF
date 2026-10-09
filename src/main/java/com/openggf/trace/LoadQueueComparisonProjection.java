@@ -68,9 +68,9 @@ public record LoadQueueComparisonProjection(
      * <p>The recorder projects this field from bit 15 of {@code Kos_decomp_queue_count}
      * (see {@code LoadQueueStateProjector}), which is the ROM's
      * decompression-<em>in-progress</em> sign bit: {@code Process_Kos_Queue_Main}
-     * (skdisasm {@code sonic3k.asm:2845-2846}) sets it with
+     * (skdisasm {@code sonic3k.asm:2877-2878}) sets it with
      * {@code ori.w #$8000} on entry to the decompression loop, and
-     * {@code Process_Kos_Queue_EndReached} ({@code sonic3k.asm:2938-2941})
+     * {@code Process_Kos_Queue_EndReached} ({@code sonic3k.asm:2970-2973})
      * clears it with {@code andi.w #$7FFF}. A recorded sample reads set only when that
      * frame's V-int landed <em>inside</em> the loop — a sub-frame 68000 cycle
      * position that frame-granularity state cannot reconstruct.

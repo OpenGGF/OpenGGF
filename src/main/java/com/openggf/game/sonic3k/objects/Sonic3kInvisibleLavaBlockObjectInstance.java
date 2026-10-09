@@ -4,7 +4,7 @@ import com.openggf.level.objects.ObjectSpawn;
 
 /**
  * Object {@code $6E} under the SK Set 2 pointer table - {@code Obj_InvisibleLavaBlock}
- * (sonic3k.asm:43270-43272).
+ * (sonic3k.asm:43310-43312).
  *
  * <p>The routine is two instructions long: {@code bset #4,shield_reaction(a0)} and then a fall
  * through into {@code Obj_InvisibleHurtBlockHorizontal}. Everything else - the subtype-derived

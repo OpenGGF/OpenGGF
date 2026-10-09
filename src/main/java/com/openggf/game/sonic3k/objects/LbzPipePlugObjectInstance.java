@@ -31,7 +31,7 @@ import java.util.List;
  * S3K S3KL object $1B - Launch Base Zone Act 2 pipe plug.
  *
  * <p>ROM reference: {@code Obj_LBZPipePlug} and {@code PipePlugSmashObject}
- * ({@code sonic3k.asm:53515-53779}).
+ * ({@code sonic3k.asm:53555-53819}).
  */
 public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, RomObjectCodePointerProvider {
@@ -40,11 +40,11 @@ public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_LBZPipePlug} is installed from the S3K object pointer table at
      * {@code $000273E4} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:53520).
+     * label is defined at docs/skdisasm/sonic3k.asm:53560).
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0002}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {
@@ -258,7 +258,7 @@ public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
                     continue;
                 }
                 // ROM's test-and-clear on the plug's own p2 bit gates the
-                // Player_2 leg (docs/skdisasm/sonic3k.asm:53562, :53587).
+                // Player_2 leg (docs/skdisasm/sonic3k.asm:53602, :53627).
                 services().objectManager().solidContacts().releaseObjectPushLatch(other, this);
                 other.setPushing(false);
                 if (mainPlayerPath && entry.getValue().preContact().animationId() == BREAK_ANIMATION_ID) {
@@ -269,7 +269,7 @@ public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
             }
         }
         // ROM loc_274D6 test-and-clears the plug's own p1 bit before the
-        // Player_1 break (docs/skdisasm/sonic3k.asm:53592).
+        // Player_1 break (docs/skdisasm/sonic3k.asm:53632).
         services().objectManager().solidContacts().releaseObjectPushLatch(player, this);
         player.setPushing(false);
         player.setXSpeed((short) savedXVel);

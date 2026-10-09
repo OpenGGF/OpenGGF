@@ -275,7 +275,7 @@ inventory and encodes a real decision, not a literal swap.
 `rightBoundary = maxX + SCREEN_WIDTH - SONIC_WIDTH`. `SCREEN_WIDTH - SONIC_WIDTH`
 is `320 − 24 = 296 = 0x128` — and `0x128` is a **ROM-cited constant**, not a screen
 width: the S3K strict path (`PhysicsFeatureSet.levelBoundaryRightStrict()`) uses
-`Camera_max_X_pos + $128` directly (`sonic3k.asm:23183-23186, 28418-28421`), with
+`Camera_max_X_pos + $128` directly (`sonic3k.asm:23218-23221, 28458-28461`), with
 **no** normal-play `+$40` (`RIGHT_EXTRA = 0x40`) extension, and the `+$40` is gated
 off during boss fights and end-of-level. `Sonic3kMGZEvents.java:134` duplicates the
 same boundary math for MGZ quake locks.

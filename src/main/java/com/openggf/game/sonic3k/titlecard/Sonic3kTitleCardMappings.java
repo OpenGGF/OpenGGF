@@ -335,7 +335,7 @@ public final class Sonic3kTitleCardMappings {
     /**
      * Zone-name mapping frame for a zone/act. {@code Obj_TitleCardName} adds
      * {@code Apparent_zone} to the base frame, then overrides {@code $1600} (LRZ name),
-     * {@code $1601} (Hidden Palace) and {@code $1700} (Death Egg) (sonic3k.asm:62336-62349).
+     * {@code $1601} (Hidden Palace) and {@code $1700} (Death Egg) (sonic3k.asm:62376-62389).
      */
     public static int getZoneFrame(int zoneIndex, int actIndex) {
         if (zoneIndex == 22) {
@@ -352,7 +352,7 @@ public final class Sonic3kTitleCardMappings {
 
     /**
      * {@code TitleCard_LevelGfx} index: {@code $1600} → LRZ, {@code $1601} → HPZ,
-     * {@code $1700} → DEZ, otherwise {@code Apparent_zone} (sonic3k.asm:62141-62146).
+     * {@code $1700} → DEZ, otherwise {@code Apparent_zone} (sonic3k.asm:62181-62186).
      */
     public static int zoneArtIndex(int zoneIndex, int actIndex) {
         if (zoneIndex == 22) {
@@ -366,7 +366,7 @@ public final class Sonic3kTitleCardMappings {
 
     /**
      * Whether the act number is hidden. {@code Obj_TitleCardAct} deletes itself for Sky
-     * Sanctuary, Doomsday and {@code $1601} Hidden Palace only (sonic3k.asm:62385-62396).
+     * Sanctuary, Doomsday and {@code $1601} Hidden Palace only (sonic3k.asm:62425-62436).
      */
     public static boolean isSingleActZone(int zoneIndex, int actIndex) {
         return zoneIndex == 10 || zoneIndex == 12 || (zoneIndex == 22 && actIndex == 1);

@@ -271,7 +271,7 @@ public final class CnzHoverFanInstance extends AbstractObjectInstance implements
     public int getOutOfRangeReferenceX() {
         // Active moving hover fans end loc_31E36 by feeding the saved spawn X
         // from $30(a0) to Sprite_OnScreen_Test2 after writing the live
-        // oscillating x_pos (docs/skdisasm/sonic3k.asm:67291,67327-67332,
+        // oscillating x_pos (docs/skdisasm/sonic3k.asm:67331,67367-67372,
         // 67349-67350). Static fans have currentX == baseX and use the same
         // Delete_Sprite_If_Not_In_Range result.
         return baseX;

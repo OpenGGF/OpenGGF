@@ -24,7 +24,7 @@ import java.util.List;
 /**
  * Knuckles-route LBZ1 miniboss staging box.
  *
- * <p>ROM: {@code Obj_LBZMinibossBoxKnux} at {@code sonic3k.asm:192537}. It
+ * <p>ROM: {@code Obj_LBZMinibossBoxKnux} at {@code sonic3k.asm:192636}. It
  * locks the camera over the Knuckles arena ({@code word_8CF70}), hosts two
  * closed boxes ({@code loc_8D046}, dx ±$20), spawns two {@code Obj_LBZMiniboss}
  * instances (subtypes 0/2), and after both report defeat ({@code $38} bits 0/2)
@@ -141,7 +141,7 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
             }
         }
         // loc_8CFC8 creates the Child6_IncLevY worker with CreateChild6_Simple
-        // -> AllocateObjectAfterCurrent (sonic3k.asm:192565-192600,177119-177140,
+        // -> AllocateObjectAfterCurrent (sonic3k.asm:192664-192699,177210-177231,
         // 37917-37930), which only ever returns a slot after this object. The
         // ascending Process_Sprites walk therefore reaches the worker later in
         // the same pass, including the pass that creates it.
@@ -294,8 +294,8 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
     }
 
     // Obj_LBZMinibossBoxKnux never draws itself; each loc_8D046 box child spawns ChildObjDat_8D25C
-    // pieces that take ObjDat3_8D23C priority $100 at loc_8CE64 (sonic3k.asm:192789) and each
-    // drifting piece rewrites $380 at loc_8CF10 (sonic3k.asm:192504). The rigs track the per-piece
+    // pieces that take ObjDat3_8D23C priority $100 at loc_8CE64 (sonic3k.asm:192888) and each
+    // drifting piece rewrites $380 at loc_8CF10 (sonic3k.asm:192603). The rigs track the per-piece
     // word and this owner draws each piece in that piece's bucket.
     private static final int PRIORITY_BUCKET = LbzMinibossBoxRig.PIECE_PRIORITY_BUCKET;
 
@@ -307,7 +307,7 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
     @Override
     public boolean isHighPriority(int bucket) {
         // ObjDat3_8D23C art make_art_tile(ArtTile_LBZMinibossBox,2,0) leaves bit 15 clear
-        // (sonic3k.asm:192788) for every piece.
+        // (sonic3k.asm:192887) for every piece.
         return false;
     }
 

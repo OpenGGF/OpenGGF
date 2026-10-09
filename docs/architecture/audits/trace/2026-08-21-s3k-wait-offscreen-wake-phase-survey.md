@@ -11,7 +11,7 @@ to record ready-to-apply.
 ## First, a correction to the population
 
 The earlier report said there were "six other `Obj_WaitOffscreen` callers" and
-listed `sonic3k.asm:128225, 134031, 182275, 182373, 182698, 183323`. That was a
+listed `sonic3k.asm:128279, 134088, 182366, 182464, 182789, 183416`. That was a
 `grep | head` truncated to ten lines and read as the whole result. **There are
 50 call sites**, one per routine, and the six named are simply the first six:
 `loc_6167C`, `Obj_CNZWaterLevelCorkFloor`, `Obj_Bloominator`, `Obj_Rhinobot`,
@@ -54,13 +54,13 @@ one name:
 Obj_Flybot767
 ```
 
-Its install site is `sonic3k.asm:57071`, inside `sub_2949C`, and the two lines
+Its install site is `sonic3k.asm:57111`, inside `sub_2949C`, and the two lines
 around it are the whole explanation:
 
-* `sonic3k.asm:57069` -- `jsr (AllocateObjectAfterCurrent).l`, which takes a slot
+* `sonic3k.asm:57109` -- `jsr (AllocateObjectAfterCurrent).l`, which takes a slot
   **after** the current object, so `Process_Sprites` reaches it later in the same
   frame's walk. Condition 1.
-* `sonic3k.asm:57072-57074` -- the new object is seated at `Player_1`'s `x_pos` /
+* `sonic3k.asm:57112-57114` -- the new object is seated at `Player_1`'s `x_pos` /
   `y_pos`. Condition 2.
 
 Every other waiter is only ever reached as a layout-placed object, so neither

@@ -9,7 +9,7 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 
 import java.util.List;
 
-/** SKL $5E, Obj_DEZHoverMachine / loc_494DA (sonic3k.asm:95699-95733). */
+/** SKL $5E, Obj_DEZHoverMachine / loc_494DA (sonic3k.asm:95745-95779). */
 public final class S3kDezHoverMachineObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
     private boolean initialized;

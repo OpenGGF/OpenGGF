@@ -14,7 +14,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
-/** Locked-on oracle for Obj_FBZMiniboss (sonic3k.asm:146766-148026). */
+/** Locked-on oracle for Obj_FBZMiniboss (sonic3k.asm:146831-148091). */
 class TestFbzAct1Miniboss {
     @Test
     void initializationSubmitsTheNativeMinibossArchiveExactlyOnce() throws Exception {

@@ -33,7 +33,7 @@ import static org.mockito.Mockito.verify;
 /**
  * Tests the MGZ Act 2 Drilling Robotnik mini-event state machine.
  *
- * <p>ROM: {@code MGZ2_QuakeEvent} (sonic3k.asm:106579-106786) and
+ * <p>ROM: {@code MGZ2_QuakeEvent} (sonic3k.asm:106625-106832) and
  * {@code MGZ2_QuakeEventArray} (Screen Events.asm:1027-1030).
  */
 class TestSonic3kMgz2QuakeEvents {

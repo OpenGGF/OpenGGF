@@ -330,7 +330,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * timer, set to 15 frames by the down-spring that launched the arc, participating in
  * the grounded control lock. {@code move_lock} is the ROM's only grounded-input lock
  * and only the HORIZONTAL spring writes it (s2.asm:34031, S1
- * {@code _incObj/41 Springs.asm}:144, sonic3k.asm:47907); the up, down and diagonal
+ * {@code _incObj/41 Springs.asm}:144, sonic3k.asm:47947); the up, down and diagonal
  * launches write none. Fixed in {@code PlayableSpriteMovement} by gating grounded
  * input on {@code move_lock} alone.
  *

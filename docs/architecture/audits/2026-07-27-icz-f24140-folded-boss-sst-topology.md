@@ -31,7 +31,7 @@ floor branch, while native slot 35 is still descending at `$43F3,$06C0`.
 `Obj_Bouncing_Ring` gates its floor probe with
 `(V_int_run_count+3+d7)&7`, where `Process_Sprites` initializes `d7` from
 the SST count and decrements it for each slot
-(`docs/skdisasm/sonic3k.asm:35549-35616,35965-35980`). Native slot 35 has
+(`docs/skdisasm/sonic3k.asm:35589-35656,36005-36020`). Native slot 35 has
 phase `$4A`; engine slot 42 has `$43`. The differing low three bits explain
 the one-frame floor-probe skew without changing motion math or collision
 tolerance.
@@ -61,7 +61,7 @@ Those three missing slots belong to the ICZ end boss:
 At `loc_71C36`, `Obj_ICZEndBoss` creates `ChildObjDat_72336` and
 `ChildObjDat_7233E`: one ship plus three structural children. The ship and
 bottom body then create the two additional children during their object
-dispatches (`docs/skdisasm/sonic3k.asm:150612-150634,150875-150908`).
+dispatches (`docs/skdisasm/sonic3k.asm:150680-150702,150943-150976`).
 All six remain live concurrently.
 
 The engine models their rendering and behavior inside the boss parent, which

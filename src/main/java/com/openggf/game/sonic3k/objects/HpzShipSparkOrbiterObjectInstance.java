@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * ROM {@code loc_65376} / {@code loc_65360} (sonic3k.asm:133153-133290): one link of a spark
+ * ROM {@code loc_65376} / {@code loc_65360} (sonic3k.asm:133210-133347): one link of a spark
  * chain hanging from a {@link HpzShipSparkEmitterObjectInstance}. Each link orbits the previous
  * link ({@code parent3}); {@code $44} is the emitter.
  *

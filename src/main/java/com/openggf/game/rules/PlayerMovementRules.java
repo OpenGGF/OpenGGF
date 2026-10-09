@@ -32,7 +32,7 @@ public record PlayerMovementRules(
          * ($40&gt;&gt;2), which the disassembly notes makes "Tails much worse at this than
          * Sonic when underwater". With fixBugs = 1 it becomes {@code move.w #$20,d4},
          * matching Sonic_RollSpeed. Sonic 2's Sonic_RollSpeed is unconditionally flat $20,
-         * and S3K's Tails_RollSpeed is likewise flat $20 (sonic3k.asm:28178 loc_14D46),
+         * and S3K's Tails_RollSpeed is likewise flat $20 (sonic3k.asm:28218 loc_14D46),
          * so this is true for Sonic 2 only.
          */
         boolean tailsRollSpeedUsesEffectiveDecelQuarter,
@@ -42,10 +42,10 @@ public record PlayerMovementRules(
          * character (a tube, a launcher, a cutscene).
          *
          * <p>S3K only. {@code Sonic_Water} tests {@code object_control(a0)} before
-         * {@code asr x_vel / asr y_vel / asr y_vel} (sonic3k.asm:22235-22239) and again
-         * before {@code asl y_vel} on the way out (sonic3k.asm:22264-22270);
+         * {@code asr x_vel / asr y_vel / asr y_vel} (sonic3k.asm:22271-22275) and again
+         * before {@code asl y_vel} on the way out (sonic3k.asm:22300-22306);
          * {@code Tails_Water} does the same but lets {@code Tails_CPU_routine == 4}
-         * through regardless (sonic3k.asm:27448-27454).
+         * through regardless (sonic3k.asm:27488-27494).
          *
          * <p>Sonic 2 has no such test: {@code Obj01_InWater} runs
          * {@code asr.w x_vel / asr.w y_vel / asr.w y_vel} unconditionally
@@ -62,10 +62,10 @@ public record PlayerMovementRules(
          *
          * <p>S3K gates it explicitly: {@code Player_TouchFloor_Check_Spindash} is
          * {@code tst.b spin_dash_flag(a0) / bne / move.b #0,anim(a0)}
-         * (docs/skdisasm/sonic3k.asm:24325-24329), reached from all five
-         * {@code Player_TouchFloor} landing exits (:24102, :24113, :24222, :24262,
-         * :24317) and mirrored for Tails at {@code Tails_TouchFloor_Check_Spindash}
-         * (:29123-29127, called from :28938, :28949, :29018, :29058, :29113).
+         * (docs/skdisasm/sonic3k.asm:24365-24369), reached from all five
+         * {@code Player_TouchFloor} landing exits (:24142, :24153, :24262, :24302,
+         * :24357) and mirrored for Tails at {@code Tails_TouchFloor_Check_Spindash}
+         * (:29163-29167, called from :28978, :28989, :29058, :29098, :29153).
          * Sonic 2 has the same shape through its spindash alias:
          * {@code Sonic_ResetOnFloor} opens {@code tst.b pinball_mode(a0) / bne.s
          * Sonic_ResetOnFloor_Part3}, skipping the Walk store

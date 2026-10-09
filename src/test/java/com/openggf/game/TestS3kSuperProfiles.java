@@ -8,11 +8,11 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests S3K per-character Super form physics profiles.
  * <p>ROM refs:
  * <ul>
- *   <li>Super Sonic: sonic3k.asm:22084-22086 (max=$A00, accel=$30, decel=$100)</li>
- *   <li>Super Tails: sonic3k.asm:26325-26327,28538-28541 (max=$800, accel=$18, decel=$C0, jump=$680)</li>
- *   <li>Super Knuckles: sonic3k.asm:32611-32613,32454-32457 (max=$800, accel=$18, decel=$C0, jump=$600)</li>
- *   <li>Super Sonic water: sonic3k.asm:22230-22232 ($500/$18/$80)</li>
- *   <li>Super Tails water: sonic3k.asm:27445-27447 ($400/$C/$60)</li>
+ *   <li>Super Sonic: sonic3k.asm:22120-22122 (max=$A00, accel=$30, decel=$100)</li>
+ *   <li>Super Tails: sonic3k.asm:26365-26367,28578-28581 (max=$800, accel=$18, decel=$C0, jump=$680)</li>
+ *   <li>Super Knuckles: sonic3k.asm:32651-32653,32494-32497 (max=$800, accel=$18, decel=$C0, jump=$600)</li>
+ *   <li>Super Sonic water: sonic3k.asm:22266-22268 ($500/$18/$80)</li>
+ *   <li>Super Tails water: sonic3k.asm:27485-27487 ($400/$C/$60)</li>
  * </ul>
  */
 class TestS3kSuperProfiles {

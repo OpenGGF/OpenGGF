@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * ROM {@code Obj_SSZEndBoss} (sonic3k.asm:164162-164490), act 1: Mecha Sonic, the third and last
+ * ROM {@code Obj_SSZEndBoss} (sonic3k.asm:164240-164568), act 1: Mecha Sonic, the third and last
  * of Sky Sanctuary act 1's fights and the only one that is a character rather than a ship.
  *
  * <p><b>It is not placed and not spawned by the zone event.</b> The {@code $79} pad at

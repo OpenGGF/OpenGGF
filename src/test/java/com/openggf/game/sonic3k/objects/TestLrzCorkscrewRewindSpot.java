@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * each restore followed by a forward replay.
  *
  * <p>The ride accumulator is the thing worth pinning. It is a long whose high word is the ride
- * parameter (sonic3k.asm:87613-87616), so a restore that brought back only a truncated value, or
+ * parameter (sonic3k.asm:87659-87662), so a restore that brought back only a truncated value, or
  * that reset it to zero, would still look plausible frame to frame while putting the rider at the
  * wrong point of the turn. Each case therefore asserts the accumulator itself and then replays
  * enough frames to land on the state the uninterrupted timeline reached.

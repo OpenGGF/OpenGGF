@@ -25,7 +25,7 @@ import java.util.Map;
 /**
  * S3K S3KL object $15 - Launch Base player launcher.
  *
- * <p>ROM reference: {@code Obj_LBZPlayerLauncher} (sonic3k.asm:51811-52039).
+ * <p>ROM reference: {@code Obj_LBZPlayerLauncher} (sonic3k.asm:51851-52079).
  */
 public final class LbzPlayerLauncherInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int FAST_LAUNCH_SPEED = 0x1000;
@@ -83,7 +83,7 @@ public final class LbzPlayerLauncherInstance extends AbstractObjectInstance impl
         }
     }
 
-    // Obj_LBZPlayerLauncher writes priority $80 (sonic3k.asm:51821).
+    // Obj_LBZPlayerLauncher writes priority $80 (sonic3k.asm:51861).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
 
     @Override
@@ -165,7 +165,7 @@ public final class LbzPlayerLauncherInstance extends AbstractObjectInstance impl
         player.setDirection(facingLeft ? Direction.LEFT : Direction.RIGHT);
         player.setMoveLockTimer(MOVE_LOCK_FRAMES);
         // ROM sub_261F2 clears both of the launcher's own pushing bits before
-        // the character's Status_Push (docs/skdisasm/sonic3k.asm:51930-51932).
+        // the character's Status_Push (docs/skdisasm/sonic3k.asm:51970-51972).
         services().objectManager().solidContacts().releaseObjectPushLatchForAllPlayers(this);
         player.setPushing(false);
     }
@@ -302,7 +302,7 @@ public final class LbzPlayerLauncherInstance extends AbstractObjectInstance impl
             updateDynamicSpawn(segmentX[CHILD_SPRITE_COUNT], segmentY[CHILD_SPRITE_COUNT]);
         }
 
-        // loc_2629C writes priority $80 on the arm SST (sonic3k.asm:51946).
+        // loc_2629C writes priority $80 on the arm SST (sonic3k.asm:51986).
         private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
 
         @Override

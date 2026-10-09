@@ -14,7 +14,7 @@ import java.util.List;
  * Explicit inventory adapter for S3K post-dynamic fixed SST slots 94-109.
  *
  * <p>The slot labels and order are defined at
- * docs/skdisasm/sonic3k.constants.asm:309-323. Empty visits below are
+ * docs/skdisasm/sonic3k.constants.asm:316-330. Empty visits below are
  * intentional fresh-level invariants, not omitted work. Absolute slot 93 is
  * the first, empty {@code Level_object_RAM} SST, but the ROM's allocation and
  * transition loops include it in the managed 4-93 window.

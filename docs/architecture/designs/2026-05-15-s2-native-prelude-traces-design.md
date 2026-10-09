@@ -1119,7 +1119,7 @@ Stage 6 result: **GREEN on infrastructure; AMBER on acceptance**. The orchestrat
 
 **Performance.** No measurable degradation. Title-card phase now runs more code per frame but the title card is bounded (~3 seconds in-game). Bootstrap comparator runs once per test, not per frame.
 
-**Cross-game parity.** ADR-1 verified universal across three disassemblies (`s1.asm:2766-2794`, `s2.asm:4914-4924`, `sonic3k.asm:7737-7748`). S1 GHZ1 and S1 MZ1 fullruns stayed green; S1 Credits 01/03 regressed (further investigation needed).
+**Cross-game parity.** ADR-1 verified universal across three disassemblies (`s1.asm:2766-2794`, `s2.asm:4914-4924`, `sonic3k.asm:7769-7780`). S1 GHZ1 and S1 MZ1 fullruns stayed green; S1 Credits 01/03 regressed (further investigation needed).
 
 ### 7.2 Blockers / Risks for Merge
 
@@ -1172,9 +1172,9 @@ Orchestrator updated the existing `docs/status/known-discrepancies.md` entry to 
 
 **B2 initial attempt** (per-game gate on `LevelFrameStep` in title-card branch) was structurally correct cross-game but did NOT move the f289 frontier — the root cause wasn't the title-card execution path.
 
-**B2-2 root cause**: `Camera.updatePosition(false)` clamps cam_y to maxY *unconditionally* on every scroll. ROM's `MoveCameraY` (`docs/skdisasm/sonic3k.asm:38556-38568` `loc_1C202`) only clamps via a wrap-value arithmetic path that's a no-op when `Screen_Y_wrap_value = -1` (AIZ1 default). For AIZ1 where `Get_LevelSizeStart` clamps the camera down to maxY at level load, the ROM's setup-block `DeformBgLayer` lets cam_y stay 6 pixels past maxY for one frame — exactly the f289 trace row.
+**B2-2 root cause**: `Camera.updatePosition(false)` clamps cam_y to maxY *unconditionally* on every scroll. ROM's `MoveCameraY` (`docs/skdisasm/sonic3k.asm:38596-38608` `loc_1C202`) only clamps via a wrap-value arithmetic path that's a no-op when `Screen_Y_wrap_value = -1` (AIZ1 default). For AIZ1 where `Get_LevelSizeStart` clamps the camera down to maxY at level load, the ROM's setup-block `DeformBgLayer` lets cam_y stay 6 pixels past maxY for one frame — exactly the f289 trace row.
 
-**Fix**: Added `Camera.armSuppressFirstMaxYClamp()` one-shot + S3K-gated invocation in `LevelManager.initCameraForLevel`. Disasm citations: `sonic3k.asm:7759-7760, 38556-38568, 7882-7888, 7897`.
+**Fix**: Added `Camera.armSuppressFirstMaxYClamp()` one-shot + S3K-gated invocation in `LevelManager.initCameraForLevel`. Disasm citations: `sonic3k.asm:7791-7792, 38596-38608, 7914-7920, 7929`.
 
 **Outcome**: S3K AIZ frontier moved from f289 → f290 (the worker's worktree saw further movement to f4539; in main workspace the engine surfaces a second downstream camera bug at f290 immediately; both are valid — the one-shot suppression eliminated the f289 ROM-vs-engine mismatch). S1/S2 traces unaffected.
 

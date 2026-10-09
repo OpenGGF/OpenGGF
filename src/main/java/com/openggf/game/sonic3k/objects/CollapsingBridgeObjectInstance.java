@@ -66,10 +66,10 @@ import java.util.logging.Logger;
  *       with initial velocities instead of timed collapse.</li>
  * </ul>
  * <p>
- * ROM references: Obj_CollapsingBridge (sonic3k.asm:44886),
- * CollapsingPtfmHandlePlayerAndSmash (sonic3k.asm:45387),
- * ObjPlatformCollapse_SmashObject (sonic3k.asm:45400),
- * Check_CollapsePlayerRelease (sonic3k.asm:45349).
+ * ROM references: Obj_CollapsingBridge (sonic3k.asm:44926),
+ * CollapsingPtfmHandlePlayerAndSmash (sonic3k.asm:45427),
+ * ObjPlatformCollapse_SmashObject (sonic3k.asm:45440),
+ * Check_CollapsePlayerRelease (sonic3k.asm:45389).
  */
 public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider,
@@ -384,7 +384,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
     /**
      * LBZ (zone 6): subtype bits 0-5 = timer, bit 6 = bridge/ledge, bit 7 = directional.
-     * ROM: sonic3k.asm:44890
+     * ROM: sonic3k.asm:44930
      */
     private void initLBZ(int subtype) {
         this.mode = CollapseMode.STANDARD;
@@ -415,7 +415,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
     /**
      * HCZ (zone 1): subtype bit 7 = trigger mode, bits 4-6 = type, bits 0-3 = timer.
-     * ROM: sonic3k.asm:44920
+     * ROM: sonic3k.asm:44960
      */
     private void initHCZ(int subtype) {
         this.artKey = Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_HCZ;
@@ -449,7 +449,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
     /**
      * MGZ (zone 2): bits 4-6 = type, bits 0-3 = timer. Type 2 = stomp variant.
-     * ROM: sonic3k.asm:44964
+     * ROM: sonic3k.asm:45004
      */
     private void initMGZ(int subtype) {
         this.artKey = Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_MGZ;
@@ -476,7 +476,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
     /**
      * ICZ (zone 5): subtype bit 7 = trigger mode, bits 4-6 unused, bits 0-3 = timer.
-     * ROM: sonic3k.asm:45001
+     * ROM: sonic3k.asm:45041
      */
     private void initICZ(int subtype) {
         // Shares mapping file with Object 0x04 (COLLAPSING_PLATFORM_ICZ)
@@ -500,7 +500,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
     /**
      * HPZ (zone 0x16): shared init with LRZ.
-     * ROM: sonic3k.asm:45027
+     * ROM: sonic3k.asm:45067
      */
     private void initHPZ(int subtype) {
         this.artKey = Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_HPZ;
@@ -509,7 +509,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
     /**
      * LRZ (zone 9) via Object 0x0F: shared init with HPZ.
-     * ROM: sonic3k.asm:45035
+     * ROM: sonic3k.asm:45075
      */
     private void initLRZ(int subtype) {
         this.artKey = Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_LRZ;
@@ -518,7 +518,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
     /**
      * Shared HPZ/LRZ initialization.
-     * ROM: sonic3k.asm:45040 (shared code path after zone-specific mappings set)
+     * ROM: sonic3k.asm:45080 (shared code path after zone-specific mappings set)
      */
     private void initHpzLrzShared(int subtype) {
         this.mode = CollapseMode.STANDARD;
@@ -535,7 +535,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * FBZ (zone 4): single type. ROM: sonic3k.asm:45066
+     * FBZ (zone 4): single type. ROM: sonic3k.asm:45106
      */
     private void initFBZ(int subtype) {
         this.artKey = Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_FBZ;
@@ -552,7 +552,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * SOZ (zone 8): single type. ROM: sonic3k.asm:45097
+     * SOZ (zone 8): single type. ROM: sonic3k.asm:45137
      */
     private void initSOZ(int subtype) {
         this.artKey = Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_SOZ;
@@ -601,13 +601,13 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     public boolean rejectsZeroDistanceTopSolidLanding() {
         // SolidObjectTop reaches loc_1E45A for fresh contacts. Its unsigned
         // cmpi.w #-$10,d0 / blo accepts only negative overlap [-$10,-1],
-        // rejecting the exact d0=0 boundary (sonic3k.asm:41982-42015).
+        // rejecting the exact d0=0 boundary (sonic3k.asm:42022-42055).
         return true;
     }
 
     @Override
     public boolean usesPlatformObjectLandingSnap() {
-        // Obj_CollapsingBridge calls SolidObjectTop (sonic3k.asm:45170-45175),
+        // Obj_CollapsingBridge calls SolidObjectTop (sonic3k.asm:45210-45215),
         // whose loc_1E45A landing writes y_pos += d0 + 3 before
         // Player_TouchFloor restores the default radii (41996-42039). It does
         // not use PlatformObject_ChkYRange's absolute surface re-seat.
@@ -618,7 +618,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     public boolean clearsStandingBitOnContinuedRideExit(PlayableEntity player) {
         // SolidObjectTop's out-of-bounds/airborne exit clears both
         // Status_OnObj and this object's d6 standing bit before returning
-        // (sonic3k.asm:41798-41825). Keeping only the engine ride owner clear
+        // (sonic3k.asm:41838-41865). Keeping only the engine ride owner clear
         // leaves a hidden stale bit for Check_CollapsePlayerRelease.
         return true;
     }
@@ -743,7 +743,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
             case 3 -> { // Parent falling
                 // Obj_PlatformCollapseFall consumes the render_flags sign bit
                 // retained from the preceding Render_Sprites pass before it
-                // calls MoveSprite (sonic3k.asm:45317-45326).
+                // calls MoveSprite (sonic3k.asm:45357-45366).
                 if (!romRenderFlag) {
                     setDestroyedByOffscreen();
                     return;
@@ -756,7 +756,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
                 int grav = (mode == CollapseMode.MGZ_STOMP) ? MGZ_GRAVITY : GRAVITY;
 
                 // MoveSprite adds the old velocity to position, then applies
-                // gravity for the following frame (sonic3k.asm:36032-36049).
+                // gravity for the following frame (sonic3k.asm:36072-36089).
                 int y32 = (y << 16) | (yFrac & 0xFFFF);
                 y32 += ((int) (short) velY) << 8;
                 y = y32 >> 16;
@@ -847,7 +847,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     /**
      * Spawns individual fragment children from the fragment mapping frame.
      * Each piece becomes a separate falling object with staggered delay.
-     * ROM: ObjPlatformCollapse_SmashObject (sonic3k.asm:45400)
+     * ROM: ObjPlatformCollapse_SmashObject (sonic3k.asm:45440)
      */
     private void spawnFragments() {
         // Play collapse SFX
@@ -924,7 +924,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         // Release the player from the object without forcing InAir. loc_209FC
         // clears only Status_OnObj after SolidObjectTop has already landed the
         // player this frame; unlike Check_CollapsePlayerRelease, this stomp
-        // path never sets Status_InAir (sonic3k.asm:45189-45216).
+        // path never sets Status_InAir (sonic3k.asm:45229-45256).
         player.setOnObject(false);
         try {
             if (services().objectManager() != null) {
@@ -962,7 +962,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
                 int maxPieces = Math.min(pieceCount, MGZ_STOMP_VELOCITIES.length);
                 // BreakObjectToPieces starts with a1=a0, so piece zero is the
                 // bridge parent itself. Only later pieces consume newly
-                // allocated slots (sonic3k.asm:45772-45811).
+                // allocated slots (sonic3k.asm:45812-45851).
                 for (int i = 1; i < maxPieces; i++) {
                     int xVel = MGZ_STOMP_VELOCITIES[i][0];
                     int yVel = MGZ_STOMP_VELOCITIES[i][1];
@@ -1107,7 +1107,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         player.setOnObject(false);
         player.setPushing(false);
         // Check_CollapsePlayerRelease writes prev_anim=1 after clearing the
-        // standing bits (sonic3k.asm:45349-45383). This intentionally restarts
+        // standing bits (sonic3k.asm:45389-45423). This intentionally restarts
         // an unchanged Roll animation on the following player slot.
         player.getAnimationManager().publishPreviousAnimationId(1);
         try {
@@ -1243,7 +1243,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         protected boolean shouldDeleteBeforeFall() {
             // Obj_PlatformCollapseFall tests the previous Draw_Sprite result
             // before MoveSprite, exactly like the sibling collapsing-platform
-            // fragment routine (sonic3k.asm:45317-45326).
+            // fragment routine (sonic3k.asm:45357-45366).
             return !romRenderFlag;
         }
 

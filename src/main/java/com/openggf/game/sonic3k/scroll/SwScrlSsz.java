@@ -14,12 +14,12 @@ import static com.openggf.level.scroll.M68KMath.negWord;
 /**
  * Sky Sanctuary background scroll. Act 1: {@code SSZ1_BackgroundInit},
  * {@code SSZ1_BackgroundEvent} and the two parameter subroutines {@code sub_579F0}
- * (plain sky) and {@code sub_57A60} (cloud band), sonic3k.asm:116385-116708.
+ * (plain sky) and {@code sub_57A60} (cloud band), sonic3k.asm:116431-116754.
  *
  * <p><b>Two background modes, selected by the wrapped camera Y.</b> Both
  * {@code SSZ1_BackgroundInit} and the event's routine 0 and 8 test
  * {@code Camera_Y_pos &amp; Screen_Y_wrap_value} ({@code $FFF}, {@code LevelSetup}
- * sonic3k.asm:102205) against {@code $800} and {@code $F00}:
+ * sonic3k.asm:102251) against {@code $800} and {@code $F00}:
  * <ul>
  *   <li>inside {@code [$800,$F00)} the sanctuary sits in the cloud band and
  *       {@code sub_57A60} writes thirty per-band scroll words plus a halved,
@@ -51,7 +51,7 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * {@code HScroll_table+$0BE}, which fills {@code Vscroll_buffer}. That buffer only
  * reaches VSRAM through {@code SpecialVInt_VScrollCopy}, and {@code Special_V_int_routine}
  * is non-zero in Sky Sanctuary only during the Death Egg launch
- * ({@code SSZ1_ScreenEvent}, sonic3k.asm:115961 and 116060). Ordinary act-1 frames
+ * ({@code SSZ1_ScreenEvent}, sonic3k.asm:116007 and 116060). Ordinary act-1 frames
  * therefore keep the plain full-screen vertical scroll, and the per-column path belongs
  * to the launch slice.
  *
@@ -69,7 +69,7 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  */
 public class SwScrlSsz extends SwScrlS3kDefault {
 
-    /** {@code SSZ1_BGDeformArray} (sonic3k.asm:117580): 29 finite bands then the remainder. */
+    /** {@code SSZ1_BGDeformArray} (sonic3k.asm:117626): 29 finite bands then the remainder. */
     static final int[] SSZ1_BG_DEFORM = {
             0x1D0, 0x10, 0x08, 0x18, 0x10, 0x10, 0x08, 0x28, 0x10, 0x08,
             0x08, 0x28, 0x08, 0x20, 0x08, 0x08, 0x08, 0x10, 0x18, 0x20,
@@ -294,7 +294,7 @@ public class SwScrlSsz extends SwScrlS3kDefault {
     }
 
     /**
-     * {@code SSZ1_BackgroundInit} (sonic3k.asm:116385-116428) minus its object allocation, which
+     * {@code SSZ1_BackgroundInit} (sonic3k.asm:116431-116474) minus its object allocation, which
      * {@link com.openggf.game.sonic3k.events.Sonic3kSSZEvents} owns: {@code clr.w (Events_bg+$10)}
      * then the same cloud-band test the event routines use, entering either routine 0 with
      * {@code sub_579F0} or routine 8 with {@code sub_57A60}.

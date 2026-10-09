@@ -12,7 +12,7 @@ import java.util.List;
  * <ul>
  *   <li><b>S1:</b> {@code sonic.asm:2956} — 44 steps, phases A-L</li>
  *   <li><b>S2:</b> {@code s2.asm:4753} — 57 steps, phases A-J</li>
- *   <li><b>S3K:</b> {@code sonic3k.asm:7505} — 65 steps, phases A-Q</li>
+ *   <li><b>S3K:</b> {@code sonic3k.asm:7537} — 65 steps, phases A-Q</li>
  * </ul>
  * The engine executes steps in declared order — no topological sorting,
  * no dependency resolution. The disassembly IS the dependency graph.

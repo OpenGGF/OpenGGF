@@ -13,17 +13,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * Step 2a-2 of the S3K Death Egg reverse-gravity slice: which probe is the floor.
  *
- * <p>{@code sub_11FD6} (sonic3k.asm:24127-24137) is the wrapper every "check the floor"
+ * <p>{@code sub_11FD6} (sonic3k.asm:24167-24177) is the wrapper every "check the floor"
  * site in {@code SonicKnux_DoLevelCollision} calls. With {@code Reverse_gravity_flag}
  * ($FFFFF7C6) set it calls {@code Sonic_CheckCeiling} instead, and mirrors the angle the
- * probe returned. {@code sub_11FEE} (:24141-24151) is its opposite: the "check the
+ * probe returned. {@code sub_11FEE} (:24181-24191) is its opposite: the "check the
  * ceiling" wrapper becomes {@code Sonic_CheckFloor}, mirrored the same way. The ten and
  * nine callers of those two wrappers are what spread the swap across the whole airborne
  * collision routine, and Tails' and Knuckles' copies
  * ({@code Tails_DoLevelCollision}, {@code Knux_DoLevelCollision}) do the same.
  *
  * <p>The quadrant dispatch that picks between them is <em>not</em> mirrored:
- * {@code loc_11F00} (:24040-24048) feeds the raw {@code x_vel}/{@code y_vel} to
+ * {@code loc_11F00} (:24080-24088) feeds the raw {@code x_vel}/{@code y_vel} to
  * {@code GetArcTan}. Velocity is never inverted, so "falling" still selects the floor
  * branch — which now probes the ceiling.
  *

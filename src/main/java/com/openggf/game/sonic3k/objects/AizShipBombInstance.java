@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * Individual bomb dropped from the AIZ2 Flying Battery battleship.
  *
- * <p>ROM: Obj_AIZShipBomb (sonic3k.asm:105362).
+ * <p>ROM: Obj_AIZShipBomb (sonic3k.asm:105408).
  * Three states matching the ROM:
  * <ol>
  *   <li><b>READY_DROP</b>: Bomb descends slowly (2px/frame) in the ship's bomb port
@@ -128,8 +128,8 @@ public class AizShipBombInstance extends AbstractObjectInstance implements Touch
         if (initRoutinePending) {
             // ROM: Obj_AIZShipBomb's init ends at `move.w #6,$32(a0)` and is
             // followed immediately by the label Obj_AIZShipBombMain, with no
-            // rts between them (sonic3k.asm:105367-105379), which dispatches
-            // routine 0 straight into AIZShipBomb_ReadyDrop (:105384,:105391).
+            // rts between them (sonic3k.asm:105413-105425), which dispatches
+            // routine 0 straight into AIZShipBomb_ReadyDrop (:105430,:105391).
             // The ship creates the bomb with AllocateObjectAfterCurrent, so the
             // bomb's slot is still ahead of the pass and it runs on its creation
             // frame -- init AND the first ReadyDrop step, not init alone.
@@ -212,7 +212,7 @@ public class AizShipBombInstance extends AbstractObjectInstance implements Touch
             int fragX = getX() + data[0];
             int fragY = currentY + data[1];
             // ROM Obj_AIZShipBomb uses AllocateObjectAfterCurrent for each
-            // fragment (sonic3k.asm:105424), so children consume slots after
+            // fragment (sonic3k.asm:105470), so children consume slots after
             // the bomb and may still execute later in the same object pass.
             spawnChild(() -> new AizBombExplosionInstance(
                     fragX, fragY, data[2], data[3]));

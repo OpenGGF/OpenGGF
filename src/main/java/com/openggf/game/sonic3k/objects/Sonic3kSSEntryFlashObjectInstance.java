@@ -44,7 +44,7 @@ import java.util.logging.Logger;
  * armed with elapses on the 33rd tick, then play sfx_EnterSS and
  * trigger fade-to-white special stage entry.
  * <p>
- * Reference: docs/skdisasm/sonic3k.asm lines 128330-128423
+ * Reference: docs/skdisasm/sonic3k.asm lines 128384-128477
  */
 public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSSEntryFlashObjectInstance.class.getName());
@@ -60,7 +60,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
     // ROM: cmpi.b #3,anim_frame(a0) — checks the 0-based frame counter
     private static final int RING_DELETE_ANIM_INDEX = 3;
 
-    // ROM: move.w #$20,$2E(a0) (skdisasm/sonic3k.asm:128383). Obj_Wait's
+    // ROM: move.w #$20,$2E(a0) (skdisasm/sonic3k.asm:128437). Obj_Wait's
     // subq/bmi pair spends this on the 33rd tick, not the 32nd -- see updateWait.
     private static final int POST_ANIM_WAIT = 0x20;
 
@@ -68,15 +68,15 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
     private Sonic3kSSEntryRingObjectInstance parentRing;
     private S3kBigRingTransitionIntent transitionIntent;
 
-    // ROM Obj_SSEntryFlash (skdisasm/sonic3k.asm:128332-128348) dispatches on
+    // ROM Obj_SSEntryFlash (skdisasm/sonic3k.asm:128386-128402) dispatches on
     // routine(a0) ONCE per frame: routine 0 runs SSEntryFlash_Init, whose
     // SetUp_ObjAttributesSlotted sets routine to 2, so SSEntryFlash_Main -- and
     // therefore the first Animate_RawAdjustFlipX advance -- does not run until
     // the NEXT frame. Obj_SSEntryFlash is allocated by SSEntryRing's touch
-    // response through `jsr (AllocateObject).l` (:128306-128309), which
-    // rescans Dynamic_object_RAM from its base (:37911-37914) and returns the
+    // response through `jsr (AllocateObject).l` (:128360-128363), which
+    // rescans Dynamic_object_RAM from its base (:37951-37954) and returns the
     // LOWEST free SST -- possibly below the ring's own slot. Process_Sprites
-    // walks Object_RAM upwards (:35965-35992), so whether this object's
+    // walks Object_RAM upwards (:36005-36032), so whether this object's
     // routine-0 init runs on the ring-touch frame or on the frame after is
     // decided by the allocated slot, not by a fixed assumption here; see the
     // AllocateObject call site in Sonic3kSSEntryRingObjectInstance.
@@ -175,16 +175,16 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
 
     private void updateWait(AbstractPlayableSprite player) {
         waitTimer--;
-        // ROM Obj_Wait (skdisasm/sonic3k.asm:177947-177950):
+        // ROM Obj_Wait (skdisasm/sonic3k.asm:178038-178041):
         //     subq.w  #1,$2E(a0)
         //     bmi.s   loc_84892
         // The branch is bmi (< 0), not a zero test. Armed with $20 by
-        // SSEntryFlash_Finished (:128381-128385), the $34 handler therefore runs
+        // SSEntryFlash_Finished (:128435-128439), the $34 handler therefore runs
         // on the 33rd invocation -- when the counter passes below zero -- not on
         // the 32nd, when it reaches zero.
         if (waitTimer < 0) {
             state = State.DONE;
-            // ROM SSEntryFlash_GoSS (sonic3k.asm:128387-128392) plays
+            // ROM SSEntryFlash_GoSS (sonic3k.asm:128441-128446) plays
             // sfx_EnterSS, clears sprite/ring memory, then runs Save_Level_Data2
             // BEFORE the destination branch, so both the ordinary special
             // stage and the Super Emerald arena restart go through them.
@@ -192,7 +192,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
             saveLevelData2(player);
             services().gameState().markSpecialRingCollected(transitionIntent.ringBit());
             if (routesToSuperEmeraldArena()) {
-                // ROM loc_618AC (skdisasm/sonic3k.asm:128411-128417):
+                // ROM loc_618AC (skdisasm/sonic3k.asm:128465-128471):
                 //   move.b #2,(Special_bonus_entry_flag).w
                 //   move.w #$1701,(Current_zone_and_act).w
                 //   move.w #$1701,(Apparent_zone_and_act).w
@@ -202,7 +202,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
                 // Zone $17 act 1 is the Super Emerald special-stage arena
                 // (Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA); it is reached by a
                 // level restart, not the Game_mode $34 special-stage entry.
-                // move.b #0,(Last_star_post_hit).w (sonic3k.asm:128414) — the
+                // move.b #0,(Last_star_post_hit).w (sonic3k.asm:128468) — the
                 // arena load must place the player from Sonic_Start_Locations,
                 // not from the Saved2_ block Save_Level_Data2 just wrote.
                 services().clearLastStarPostHit();
@@ -210,7 +210,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
                 services().requestZoneAndAct(
                         Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1, true);
             } else {
-                // ROM loc_61892 (sonic3k.asm:128405-128410): Game_mode $34, the
+                // ROM loc_61892 (sonic3k.asm:128459-128464): Game_mode $34, the
                 // ordinary special-stage entry. SSEntryFlash_GoSS already
                 // played sfx_EnterSS above; the provider returns -1 so
                 // GameLoop does not play it a second time.
@@ -222,8 +222,8 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
     }
 
     /**
-     * ROM {@code Save_Level_Data2} (skdisasm/sonic3k.asm:61735-61753), called by
-     * {@code SSEntryFlash_GoSS} at sonic3k.asm:128392.
+     * ROM {@code Save_Level_Data2} (skdisasm/sonic3k.asm:61775-61793), called by
+     * {@code SSEntryFlash_GoSS} at sonic3k.asm:128446.
      * <p>
      * The call site leaves {@code a0} pointing at the FLASH object -- it is the
      * object currently being executed -- so
@@ -231,14 +231,14 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
      *   move.w  x_pos(a0),(Saved2_X_pos).w
      *   move.w  y_pos(a0),(Saved2_Y_pos).w
      * </pre>
-     * (sonic3k.asm:61738-61739) records the flash's position, which
+     * (sonic3k.asm:61778-61779) records the flash's position, which
      * {@code SSEntryFlash_Init} copied verbatim from the parent giant ring
-     * (sonic3k.asm:128353-128355). Every other field is read from a named global
+     * (sonic3k.asm:128407-128409). Every other field is read from a named global
      * ({@code Player_1+art_tile}, {@code Ring_count}, {@code Camera_X_pos}, ...),
      * so the player's own coordinates are never stored.
      * <p>
      * {@code Load_Starpost_Settings}'s {@code loc_2D2C2}
-     * (sonic3k.asm:61817-61836) then writes {@code Saved2_X_pos}/{@code Saved2_Y_pos}
+     * (sonic3k.asm:61857-61876) then writes {@code Saved2_X_pos}/{@code Saved2_Y_pos}
      * straight into {@code Player_1+x_pos}/{@code y_pos} on the return leg: the
      * player resumes standing at the ring, not where he touched it.
      */
@@ -295,7 +295,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
 
     /**
      * ROM {@code SSEntryFlash_GoSS}'s destination branch
-     * (skdisasm/sonic3k.asm:128393-128401):
+     * (skdisasm/sonic3k.asm:128447-128455):
      * <pre>
      *   tst.b   subtype(a0)
      *   bmi.s   loc_618AC          ; negative subtype always restarts into $1701
@@ -310,7 +310,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
      * {@code SK_alone_flag} is always zero because the engine only models the
      * locked-on ROM ({@code Sonic3k.java:424-427}). The flash's own subtype is
      * copied from the parent ring by {@code SSEntryFlash_Init}
-     * (sonic3k.asm:128357), which is where this reads it from.
+     * (sonic3k.asm:128411), which is where this reads it from.
      */
     private boolean routesToSuperEmeraldArena() {
         if ((transitionIntent.rawSubtype() & 0x80) != 0) {

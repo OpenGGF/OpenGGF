@@ -39,13 +39,13 @@ import java.util.List;
  * does not hurt the player. If the player's animation is 5 (push) at the time
  * of collision, their prev_anim is reset to force an animation restart.
  * <p>
- * ROM reference: Obj_WaterDrop (sonic3k.asm:75145-75239).
+ * ROM reference: Obj_WaterDrop (sonic3k.asm:75186-75280).
  */
 public class HCZWaterDropObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.HCZ_WATER_DROP;
 
-    // ===== Dimensions from ROM (sonic3k.asm:75150-75153) =====
+    // ===== Dimensions from ROM (sonic3k.asm:75191-75194) =====
     private static final int WIDTH_PIXELS = 8;
     private static final int X_RADIUS = 8;
     private static final int Y_RADIUS = 7;
@@ -62,21 +62,21 @@ public class HCZWaterDropObjectInstance extends AbstractObjectInstance implement
     /** Animation 1 (splash): frames 4, 5, $FC */
     private static final int[] ANIM_1_FRAMES = {4, 5};
 
-    // ===== Physics from ROM (sonic3k.asm:75186) =====
+    // ===== Physics from ROM (sonic3k.asm:75227) =====
     /** Gravity: addi.w #8,y_vel(a0) — 8 subpixels/frame */
     private static final int GRAVITY = 8;
 
-    // ===== Collision from ROM (sonic3k.asm:75175) =====
+    // ===== Collision from ROM (sonic3k.asm:75216) =====
     /** collision_flags = $C7: Special type ($C0) + size index 7 */
     private static final int COLLISION_FLAGS = 0xC7;
 
-    // ===== Player animation check (sonic3k.asm:75230) =====
+    // ===== Player animation check (sonic3k.asm:75271) =====
     /** ROM: cmpi.b #5,anim(a2) — push animation ID */
     private static final int PUSH_ANIM_ID = 5;
 
     private int spawnX;
     private int spawnY;
-    /** Spawn interval = subtype * 4 frames (sonic3k.asm:75161-75162) */
+    /** Spawn interval = subtype * 4 frames (sonic3k.asm:75202-75203) */
     private int spawnInterval;
 
     private int spawnTimer;
@@ -142,7 +142,7 @@ public class HCZWaterDropObjectInstance extends AbstractObjectInstance implement
     /**
      * A falling water droplet spawned by the parent WaterDrop object.
      * <p>
-     * Lifecycle (sonic3k.asm:75182-75239):
+     * Lifecycle (sonic3k.asm:75223-75280):
      * <ol>
      *   <li>Play forming animation (frames 0,1,2,2) with routine=0 (no movement)</li>
      *   <li>Animation $FC command increments routine to 2 — enables gravity+movement</li>
@@ -306,7 +306,7 @@ public class HCZWaterDropObjectInstance extends AbstractObjectInstance implement
             if (state == STATE_DELETE || state == STATE_SPLASHING) return;
             if (collisionFlags == 0) return;
 
-            // ROM: sub_38382 (sonic3k.asm:75229-75239)
+            // ROM: sub_38382 (sonic3k.asm:75270-75280)
             // If player's anim is 5 (push), reset prev_anim to force restart
             if (player.getAnimationId() == PUSH_ANIM_ID) {
                 player.forceAnimationRestart();
@@ -318,8 +318,8 @@ public class HCZWaterDropObjectInstance extends AbstractObjectInstance implement
         }
 
         // loc_382DE copies every SST word from subtype down to 0 out of the spawner
-        // (sonic3k.asm:75175-75178), including the priority Obj_WaterDrop wrote as #0
-        // (sonic3k.asm:75154): display list 0 is the ROM value.
+        // (sonic3k.asm:75216-75219), including the priority Obj_WaterDrop wrote as #0
+        // (sonic3k.asm:75195): display list 0 is the ROM value.
         private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
 
         @Override

@@ -15,7 +15,7 @@ AIZ tubes are non-functional. The player enters rolling state (via AutoSpin 0x26
 
 **Extends:** `AbstractObjectInstance`
 
-**Disassembly reference:** `Obj_AutomaticTunnel` (sonic3k.asm lines 57180-57457), path data at lines 202488-203387.
+**Disassembly reference:** `Obj_AutomaticTunnel` (sonic3k.asm lines 57220-57497), path data at lines 202488-203387.
 
 ### State machine (per-character, P1 + sidekick independently)
 

@@ -26,7 +26,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
 /**
- * SKL {@code $61}, {@code Obj_DEZGravityPuzzle} (sonic3k.asm:96087-96245).
+ * SKL {@code $61}, {@code Obj_DEZGravityPuzzle} (sonic3k.asm:96133-96291).
  *
  * <p>One act 1 placement, {@code DEZ1_Sprites} record 301 at {@code $2690,$0840}, subtype
  * {@code $00} — inside the {@code $5F} turbine corridor's {@code $500} px reach, so it is the
@@ -34,11 +34,11 @@ import java.util.List;
  *
  * <p><b>The shaft bobs and the panels are a shared RAM byte.</b> {@code angle(a0)} advances by
  * one an update and {@code GetSineCosine >> 2} of the previous value is added to the stored
- * centre in {@code $46(a0)} (:96104-96110), so the whole 32x48 block rides a ±64-subpixel sine.
+ * centre in {@code $46(a0)} (:96150-96156), so the whole 32x48 block rides a ±64-subpixel sine.
  * Six 16x16 marker panels — three down each side at {@code ±$1C, -$20/0/+$20}
- * ({@code byte_49A5A}, :96236-96245) — live on a child sprite whose Y follows the same bob
- * (:96112-96120). Each panel's <em>pressed</em> state is one bit of
- * {@code MHZ_pollen_counter} ({@code bset d0,(MHZ_pollen_counter).w}, :96229): Mushroom Hill's
+ * ({@code byte_49A5A}, :96282-96291) — live on a child sprite whose Y follows the same bob
+ * (:96158-96166). Each panel's <em>pressed</em> state is one bit of
+ * {@code MHZ_pollen_counter} ({@code bset d0,(MHZ_pollen_counter).w}, :96275): Mushroom Hill's
  * particle counter is reused here as the puzzle's panel bitfield, which is why this class keeps
  * it in {@link S3kDezZoneRuntimeState} rather than anywhere near the MHZ spawner.
  *
@@ -46,22 +46,22 @@ import java.util.List;
  * {@code Map_DEZGravityPuzzle} frames 3 and 4 are <em>empty</em> (both point at
  * {@code word_49AAC}, zero pieces) and frames 1 and 2 are the single mirrored 16x16 marker. The
  * init loop hands each piece frame 3 (left column) or 4 (right), and a push runs
- * {@code subq.b #2} on it (:96234), so pressing a panel is what makes its marker appear.
- * {@code cmpi.b #3,(a2,d0.w) / blo} (:96232-96233) is the guard that stops a second push on the
+ * {@code subq.b #2} on it (:96280), so pressing a panel is what makes its marker appear.
+ * {@code cmpi.b #3,(a2,d0.w) / blo} (:96278-96279) is the guard that stops a second push on the
  * same panel lowering the frame twice.
  *
  * <p><b>The panel a push marks is a clamped row, and a known ROM ordering bug picks the wrong
- * player for it.</b> {@code sub_49A0E} (:96198-96235) takes {@code y_pos(a1) - y_pos(a0) + $30},
+ * player for it.</b> {@code sub_49A0E} (:96244-96281) takes {@code y_pos(a1) - y_pos(a0) + $30},
  * floors it at 0, and replaces anything {@code >= $60} with {@code $40} — not {@code $60} —
  * before {@code lsr.w #5}, giving rows 0-2; {@code x_pos(a1) - x_pos(a0)} without a borrow adds
  * 3 for the right-hand column. Player 1's branch loads {@code a1} before calling it
- * (:96170-96171); <b>Player 2's branch calls it first and loads {@code a1} afterwards</b>
- * (:96177-96179). With {@code FixBugs = 0} that is kept: when both players push on the same
+ * (:96216-96217); <b>Player 2's branch calls it first and loads {@code a1} afterwards</b>
+ * (:96223-96225). With {@code FixBugs = 0} that is kept: when both players push on the same
  * update, Player 2's push marks the panel under <em>Player 1</em>. When only Player 2 pushes,
- * {@code a1} still holds Player 2 from {@code SolidObjectFull2}'s own tail (:41062-41063) and
+ * {@code a1} still holds Player 2 from {@code SolidObjectFull2}'s own tail (:41102-41103) and
  * the panel is right. Fixing it would mark the panel under Player 2 in the two-player case.
  *
- * <p>The launch itself is {@code loc_49850} (:96049-96080), shared with
+ * <p>The launch itself is {@code loc_49850} (:96095-96126), shared with
  * {@code Obj_DEZBumperWall}: {@code x_vel = ±$C00} away from the shaft, airborne,
  * {@code ground_vel = 1} negated for a left-facing player, and the endless tumble
  * ({@code flip_angle} 1 only when it was zero, {@code flips_remaining = -1},
@@ -70,33 +70,33 @@ import java.util.List;
 public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
-    /** {@code move.w #$23,d1 / #$30,d2 / #$31,d3} before {@code SolidObjectFull2} (:96121-96124). */
+    /** {@code move.w #$23,d1 / #$30,d2 / #$31,d3} before {@code SolidObjectFull2} (:96167-96170). */
     private static final SolidObjectParams SOLID_PARAMS = SolidObjectParams.of(0x23, 0x30, 0x31);
 
-    /** {@code asr.w #2,d0} (:96107): the bob is the sine quarter-scaled. */
+    /** {@code asr.w #2,d0} (:96153): the bob is the sine quarter-scaled. */
     private static final int BOB_SHIFT = 2;
 
-    /** {@code addi.w #$30,d0} (:96206) then {@code lsr.w #5} (:96217). */
+    /** {@code addi.w #$30,d0} (:96252) then {@code lsr.w #5} (:96263). */
     private static final int ROW_BIAS = 0x30;
-    /** {@code cmpi.w #$60,d0 / blo} (:96212-96213). */
+    /** {@code cmpi.w #$60,d0 / blo} (:96258-96259). */
     private static final int ROW_LIMIT = 0x60;
-    /** {@code moveq #$40,d0} (:96214): the replacement, which is not the limit. */
+    /** {@code moveq #$40,d0} (:96260): the replacement, which is not the limit. */
     private static final int ROW_CLAMP = 0x40;
     private static final int ROW_SHIFT = 5;
-    /** {@code moveq #3,d1} (:96204): the right-hand column's first panel. */
+    /** {@code moveq #3,d1} (:96250): the right-hand column's first panel. */
     private static final int RIGHT_COLUMN = 3;
 
-    /** {@code move.w #$C00,x_vel(a1)} (:96051). */
+    /** {@code move.w #$C00,x_vel(a1)} (:96097). */
     private static final int LAUNCH_X_VEL = 0xC00;
 
-    /** {@code byte_49A5A} (:96236-96245): six (dx, dy, frame) triples. */
+    /** {@code byte_49A5A} (:96282-96291): six (dx, dy, frame) triples. */
     private static final int[] PIECE_DX = { -0x1C, -0x1C, -0x1C, 0x1C, 0x1C, 0x1C };
     private static final int[] PIECE_DY = { -0x20, 0x00, 0x20, -0x20, 0x00, 0x20 };
     private static final int[] PIECE_FRAME = { 3, 3, 3, 4, 4, 4 };
-    /** {@code subq.b #2,-1(a2)} / {@code subq.b #2,(a2,d0.w)} (:96128, :96234). */
+    /** {@code subq.b #2,-1(a2)} / {@code subq.b #2,(a2,d0.w)} (:96174, :96280). */
     private static final int PRESSED_FRAME_DROP = 2;
 
-    /** {@code move.w #$280,priority(a0)} (:96093). */
+    /** {@code move.w #$280,priority(a0)} (:96139). */
     private static final int PRIORITY_WORD = 0x280;
 
     /** {@code angle(a0)}. */
@@ -120,7 +120,7 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         playerOnePushedThisUpdate = false;
-        // loc_49986 :96101-96110. The sine of the *current* angle is used and the angle is
+        // loc_49986 :96147-96156. The sine of the *current* angle is used and the angle is
         // advanced afterwards, so the first update of the object's life sits at offset 0.
         int sine = TrigLookupTable.sinHex(bobAngle & 0xFF);
         int offset = sine >> BOB_SHIFT;
@@ -142,7 +142,7 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
 
     @Override
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
-        // swap d6 / andi.w #1|2,d6 (:96126-96127) reads returned side-contact bits,
+        // swap d6 / andi.w #1|2,d6 (:96172-96173) reads returned side-contact bits,
         // set by loc_1E094 even in air; status pushing bits are a separate value.
         if (player == null || !contact.touchSide()) {
             return;
@@ -157,7 +157,7 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
             launch(sprite);
             return;
         }
-        // loc_499EC (:96177-96179) with FixBugs = 0: sub_49A0E runs before a1 is reloaded, so
+        // loc_499EC (:96223-96225) with FixBugs = 0: sub_49A0E runs before a1 is reloaded, so
         // the panel marked belongs to whoever a1 already held -- Player 1 when Player 1 pushed
         // on this same update, and Player 2 otherwise because SolidObjectFull2 left a1 there.
         AbstractPlayableSprite panelOwner = sprite;
@@ -171,9 +171,9 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
         launch(sprite);
     }
 
-    /** {@code sub_49A0E} :96198-96235. */
+    /** {@code sub_49A0E} :96244-96281. */
     private void markPanel(AbstractPlayableSprite player) {
-        // move.w x_pos(a1),d0 / sub.w x_pos(a0),d0 / bcs (:96201-96203): an unsigned borrow,
+        // move.w x_pos(a1),d0 / sub.w x_pos(a0),d0 / bcs (:96247-96249): an unsigned borrow,
         // so a player at exactly the shaft's X counts as the right-hand column.
         int column = (player.getCentreX() & 0xFFFF) >= (getX() & 0xFFFF) ? RIGHT_COLUMN : 0;
         int row = (short) (player.getCentreY() - getY()) + ROW_BIAS;
@@ -187,8 +187,8 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
     }
 
     /**
-     * {@code bset d0,(MHZ_pollen_counter).w} (:96229) plus the {@code cmpi.b #3 / blo} guard on
-     * the piece's own frame (:96232-96233). A bit that is already set has a frame below 3, so
+     * {@code bset d0,(MHZ_pollen_counter).w} (:96275) plus the {@code cmpi.b #3 / blo} guard on
+     * the piece's own frame (:96278-96279). A bit that is already set has a frame below 3, so
      * the guard and the bit are the same fact.
      */
     private void setPanelPressed(int index) {
@@ -200,16 +200,16 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
     }
 
     /**
-     * {@code loc_49850} :96049-96080, shared with {@code Obj_DEZBumperWall}'s
+     * {@code loc_49850} :96095-96126, shared with {@code Obj_DEZBumperWall}'s
      * {@code sub_49848}.
      */
     private void launch(AbstractPlayableSprite player) {
         ObjectServices objectServices = tryServices();
         if (objectServices != null) {
-            // sub_49A02 (:96188-96191): the sound plays on the push, before the launch.
+            // sub_49A02 (:96234-96237): the sound plays on the push, before the launch.
             objectServices.playSfx(Sonic3kSfx.TUNNEL_BOOSTER.id);
         }
-        // bclr #Status_Facing / move.w #$C00,x_vel / sub.w x_pos(a0),d0 / bcc (:96050-96056).
+        // bclr #Status_Facing / move.w #$C00,x_vel / sub.w x_pos(a0),d0 / bcc (:96096-96102).
         boolean toTheLeft = (player.getCentreX() & 0xFFFF) < (getX() & 0xFFFF);
         player.setDirection(toTheLeft ? Direction.LEFT : Direction.RIGHT);
         player.setXSpeed((short) (toTheLeft ? -LAUNCH_X_VEL : LAUNCH_X_VEL));
@@ -218,9 +218,9 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
         player.setDoubleJumpFlag(0);
         player.setRollingJump(false);
         player.setJumping(false);
-        // move.w #1,ground_vel(a1) then neg.w for a left-facing player (:96064, :96078-96079).
+        // move.w #1,ground_vel(a1) then neg.w for a left-facing player (:96110, :96124-96125).
         player.setGSpeed((short) (toTheLeft ? -1 : 1));
-        // tst.b flip_angle(a1) / bne (:96065-96067): a player already tumbling keeps the angle
+        // tst.b flip_angle(a1) / bne (:96111-96113): a player already tumbling keeps the angle
         // they had, so a second launch does not restart the spin from upright.
         if ((player.getFlipAngle() & 0xFF) == 0) {
             player.setFlipAngle(1);
@@ -234,12 +234,12 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
 
     /**
      * {@code Map_DEZGravityPuzzle} through {@code make_art_tile(ArtTile_DEZMisc2+$31,1,0)}
-     * (:96088-96089). Frame 0 is the shaft itself, six 16x16 pieces; the marker panels are
+     * (:96134-96135). Frame 0 is the shaft itself, six 16x16 pieces; the marker panels are
      * frames 1 and 2 and only exist once pressed, because their unpressed frames 3 and 4 are
      * empty mapping entries.
      *
      * <p>The ROM draws the markers from a child object at priority {@code $200} against the
-     * shaft's {@code $280} (:96099-96100, :96093). They are drawn here in the shaft's own
+     * shaft's {@code $280} (:96145-96146, :96139). They are drawn here in the shaft's own
      * bucket instead: the markers sit at {@code ±$1C} either side of a {@code $20}-wide shaft,
      * so the two never overlap and the ordering is not observable.
      */
@@ -268,7 +268,7 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
         }
     }
 
-    /** {@code move.b (a3)+,(a2)+} then {@code subq.b #2} per set bit (:96124-96128). */
+    /** {@code move.b (a3)+,(a2)+} then {@code subq.b #2} per set bit (:96170-96174). */
     public int frameForPiece(int piece) {
         if (piece < 0 || piece >= PIECE_FRAME.length) {
             return 0;
@@ -285,7 +285,7 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
     // --- helpers ---
 
     /**
-     * {@code move.w y_pos(a0),$46(a0)} (:96094): the bob's centre is the placement's own Y,
+     * {@code move.w y_pos(a0),$46(a0)} (:96140): the bob's centre is the placement's own Y,
      * written once at init and never changed. It is read from the immutable placement spawn
      * rather than stored, because {@code updateDynamicSpawn} moves the live spawn every update
      * and a stored copy would be object state rewind has to carry for no reason.

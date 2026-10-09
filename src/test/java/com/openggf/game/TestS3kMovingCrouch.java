@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests S3K duck-while-moving feature.
- * <p>ROM ref: sonic3k.asm:23223-23250 (SonicKnux_Roll).
+ * <p>ROM ref: sonic3k.asm:23258-23285 (SonicKnux_Roll).
  * S3K allows ducking at speeds below 0x100, where S2 requires standing still.
  * S3K roll threshold is 0x100 (vs S2's 0x80).
  */

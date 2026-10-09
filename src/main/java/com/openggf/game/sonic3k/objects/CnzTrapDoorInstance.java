@@ -161,9 +161,9 @@ public final class CnzTrapDoorInstance extends AbstractObjectInstance
     @Override
     public int getTopSolidPlayerPositionHistoryFrames(PlayableEntity player) {
         // Obj_CNZTrapDoor runs inside Process_Sprites and immediately calls
-        // SolidObjectTop after checking both players (sonic3k.asm:67217-67225).
+        // SolidObjectTop after checking both players (sonic3k.asm:67257-67265).
         // The helper then reads x_pos/y_pos/y_radius before RideObject_SetRide
-        // (sonic3k.asm:41982-42015). In the engine's split player/object pass,
+        // (sonic3k.asm:42022-42055). In the engine's split player/object pass,
         // using the just-moved player position accepts the exact top boundary
         // one frame early; sample the previous completed player position for
         // new top-solid geometry to match the ROM object phase.

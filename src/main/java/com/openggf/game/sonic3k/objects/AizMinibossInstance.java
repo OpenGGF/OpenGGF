@@ -196,7 +196,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         // Draw_And_Touch_Sprite publishes this parent after its movement
         // routine. Collision_response_list keeps the object-RAM pointer, so
         // the following player slot observes that live post-motion position
-        // (sonic3k.asm:137222-137229,137262-137271,20656-20710).
+        // (sonic3k.asm:137287-137294,137327-137336,20692-20746).
         return true;
     }
 
@@ -265,7 +265,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         state.invulnerabilityTimer = 0;
         loadBossPalette(); // Restore clean boss palette colors on line 1
 
-        // ROM loc_68FE0: jmp (BossDefeated_StopTimer).l (sonic3k.asm:137858).
+        // ROM loc_68FE0: jmp (BossDefeated_StopTimer).l (sonic3k.asm:137923).
         stopLevelTimerOnBossDefeat();
 
         // ROM: loc_46ED4 creates Child6_CreateBossExplosion (sub_52850, subtype 0).
@@ -275,7 +275,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         // ROM loc_68FB6 switches the boss object to Wait_FadeToLevelMusic
         // and creates Child6_CreateBossExplosion; the later loc_68C02
         // Obj_EndSignControl callback is timed by the boss object's $2E,
-        // not by the explosion controller finishing (sonic3k.asm:137793-137806,
+        // not by the explosion controller finishing (sonic3k.asm:137858-137871,
         // 179651-179668,137381-137393).
         defeatHandoffTimer = DEFEAT_WAIT_FADE_TIMER;
 
@@ -418,7 +418,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         // Act 1 results. The retained owner reaches its LoadEnemyArt handoff
         // before the later End_of_level_flag completion edge; Obj_EndSignControl
         // may then run Change_Act2Sizes without waiting for the title overlay's
-        // remaining display-release entries (sonic3k.asm:62220-62253,
+        // remaining display-release entries (sonic3k.asm:62260-62293,
         // 62276-62301, 180415-180419). Do not widen the arena during the child
         // slide-out phase before that owner handoff exists.
         Sonic3kTitleCardManager titleCardManager =
@@ -445,7 +445,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             levelEndSizeChangeStarted = true;
             // ROM Change_Act2Sizes copies Act 2 size words into the stored
             // camera-boundary memory and Camera_target_max_Y_pos, then creates
-            // gradual level-size objects (sonic3k.asm:180575-180609). Keep
+            // gradual level-size objects (sonic3k.asm:180666-180700). Keep
             // X/Y under the ROM gradual objects below; use the engine's target
             // max-Y path for the copied Camera_target_max_Y_pos word. This
             if (level != null) {
@@ -477,7 +477,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             }
             // Obj_EndSignControlDoStart calls Change_Act2Sizes and then
             // Delete_Current_Sprite. The two workers above continue from
-            // their own slots (sonic3k.asm:180415-180419,180575-180609).
+            // their own slots (sonic3k.asm:180506-180510,180666-180700).
             setDestroyed(true);
         }
         camera.setMinX((short) triggerX);
@@ -485,7 +485,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
 
     private void lockArenaCamera(int triggerX) {
         var camera = services().camera();
-        // ROM loc_68556 (sonic3k.asm:136774-136780) writes both
+        // ROM loc_68556 (sonic3k.asm:136839-136845) writes both
         // Camera_min_X_pos and Camera_max_X_pos to d5 before the miniboss wait
         // and fight routines. Reasserting preserves that lock across the
         // engine's seamless AIZ1->AIZ2 reload bookkeeping.

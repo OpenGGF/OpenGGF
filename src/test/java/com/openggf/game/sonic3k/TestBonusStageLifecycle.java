@@ -11,7 +11,7 @@ class TestBonusStageLifecycle {
 
     @Test
     void testSelectBonusStage_ringFormula() {
-        // ROM loc_2D47E dispatch (sonic3k.asm lines 61886-61912):
+        // ROM loc_2D47E dispatch (sonic3k.asm lines 61926-61952):
         //   remainder 0 -> SLOTS ($1500)
         //   remainder 1 -> PACHINKO / GLOWING_SPHERE ($1400)
         //   remainder 2 -> GUMBALL ($1300)

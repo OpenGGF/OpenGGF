@@ -36,7 +36,7 @@ public final class TraceSuppressedRowClosure {
      * that it already dispatches this provider itself during the same
      * iteration -- the normal (fresh-level) title owner is such a caller. The
      * title card is an ordinary object: {@code Obj_TitleCard}
-     * (docs/skdisasm/sonic3k.asm:62095) and S2 {@code Obj34}
+     * (docs/skdisasm/sonic3k.asm:62135) and S2 {@code Obj34}
      * (docs/s2disasm/s2.asm:27307) are each reached once per object scan, so
      * a second dispatch inside one represented iteration has no ROM
      * counterpart.
@@ -58,19 +58,19 @@ public final class TraceSuppressedRowClosure {
         //   * the title card is an ordinary object in each game -- S1
         //     id_TitleCard (docs/s1disasm/sonic.asm:2811), S2 Obj34
         //     (docs/s2disasm/s2.asm:27307), S3K Obj_TitleCard
-        //     (docs/skdisasm/sonic3k.asm:62095) -- so it advances only from an
+        //     (docs/skdisasm/sonic3k.asm:62135) -- so it advances only from an
         //     object scan;
         //   * both loops that can be running reach that scan once per completed
         //     iteration and never otherwise: the fresh-level title loops
         //     (sonic.asm:2814-2821 ExecuteObjects, s2.asm:4914-4924 RunObjects,
-        //     sonic3k.asm:7737-7747 Process_Sprites) and the main level loops
-        //     (s2.asm:5088-5105, sonic3k.asm:7884-7898);
+        //     sonic3k.asm:7769-7779 Process_Sprites) and the main level loops
+        //     (s2.asm:5088-5105, sonic3k.asm:7916-7930);
         //   * a lag frame reaches neither. The V-int handler zeroes its own
         //     routine selector before dispatching (sonic.asm:674-675,
-        //     s2.asm:500-501, sonic3k.asm:535-536), so a second V-int inside one
+        //     s2.asm:500-501, sonic3k.asm:551-552), so a second V-int inside one
         //     unfinished iteration takes routine 0 -- VBlank_Lag
         //     (sonic.asm:712), Vint_Lag (s2.asm:529) and VInt_0
-        //     (sonic3k.asm:566) -- and no path out of any of the three reaches
+        //     (sonic3k.asm:588) -- and no path out of any of the three reaches
         //     an object scan.
         //
         // So no provider's overlay may advance from this path on a suppressed
@@ -135,7 +135,7 @@ public final class TraceSuppressedRowClosure {
         if (titleCardProvider != null
                 && titleCardProvider.ownsOmittedFreshLevelPresentation()) {
             // An omitted presentation still has the owner Level: installed at
-            // sonic3k.asm:7735, and loc_62CC (7736-7748) dispatches it once per
+            // sonic3k.asm:7767, and loc_62CC (7736-7748) dispatches it once per
             // V-int. The boundary set of that loop is the same triple this row
             // already services -- Process_Kos_Queue ahead of Wait_VSync, then
             // Process_Kos_Module_Queue -- so the owner's dispatch goes in the

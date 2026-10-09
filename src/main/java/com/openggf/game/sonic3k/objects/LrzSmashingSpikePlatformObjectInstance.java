@@ -24,7 +24,7 @@ import java.util.List;
 
 /**
  * ROM object {@code Obj_LRZSmashingSpikePlatform} -- object id {@code $21} in the {@code SKL}
- * pointer set (sonic3k.asm:88538-88651, ROM {@code $433E8};
+ * pointer set (sonic3k.asm:88584-88697, ROM {@code $433E8};
  * {@code Map_LRZSmashingSpikePlatform} at ROM {@code $4324A}). The {@code S3KL} set spends the
  * same id on {@code Obj_LBZGateLaser}.
  *
@@ -33,36 +33,36 @@ import java.util.List;
  * its placed Y before falling again.
  *
  * <ul>
- *   <li>Init {@code :88539-88550}: {@code $46(a0)} latches the placed {@code y_pos} and
+ *   <li>Init {@code :88585-88596}: {@code $46(a0)} latches the placed {@code y_pos} and
  *       {@code $38(a0)} is {@code subtype << 3}, the fall distance in whole pixels. Lava Reef's
  *       ten subtypes run {@code $09} to {@code $1D}, so the drop is 72 to 232 pixels.</li>
- *   <li>Fall {@code loc_43128} {@code :88553-88566}: {@code d0} takes the CURRENT {@code y_vel},
+ *   <li>Fall {@code loc_43128} {@code :88599-88612}: {@code d0} takes the CURRENT {@code y_vel},
  *       then {@code y_vel += $40}; {@code d0} is sign-extended, shifted left eight and added to
  *       the 16.16 long at {@code $34(a0)}. The engine keeps that whole long, because the landing
- *       write {@code move.w $38(a0),$34(a0)} (:88569) replaces only the high word and leaves the
+ *       write {@code move.w $38(a0),$34(a0)} (:88615) replaces only the high word and leaves the
  *       fraction standing for the next fall.</li>
- *   <li>Land {@code :88567-88576}: {@code y_vel} cleared, {@code $32(a0)} set, {@code $3A(a0)} =
+ *   <li>Land {@code :88613-88622}: {@code y_vel} cleared, {@code $32(a0)} set, {@code $3A(a0)} =
  *       30, {@code anim_frame} = 0, and {@code sfx_Crash} only when {@code render_flags} bit 7
  *       says the block was drawn last frame -- "was drawn", not "is on screen", the reading
  *       {@link LrzFireballLauncherObjectInstance} records for {@code $1B}.</li>
- *   <li>Squash {@code loc_43178} {@code :88579-88586} steps {@code RawAni_43196} while
+ *   <li>Squash {@code loc_43178} {@code :88625-88632} steps {@code RawAni_43196} while
  *       {@code $3A} counts down; the {@code beq} after the {@code move.b} stops
  *       {@code anim_frame} advancing on the table's trailing zero, so the block sits on frame 0
  *       for the rest of the hold.</li>
- *   <li>Rise {@code loc_431AA} {@code :88592-88603}: one pixel a frame off the high word of
+ *   <li>Rise {@code loc_431AA} {@code :88638-88649}: one pixel a frame off the high word of
  *       {@code $34}, {@code mapping_frame} flickering between {@code 8} and {@code 0}
  *       ({@code addq.b #8} then {@code andi.b #8}), and {@code sfx_Blast} every time
  *       {@code Level_frame_counter+1 & $1F} is zero. At zero {@code loc_431D4} clears
  *       {@code $32} and the frame, and the next update starts a new fall.</li>
- *   <li>Solid and crush {@code loc_431E0} {@code :88609-88628}: {@code d1 = width_pixels + $B}
+ *   <li>Solid and crush {@code loc_431E0} {@code :88655-88674}: {@code d1 = width_pixels + $B}
  *       ({@code $4B}), {@code d2 = height_pixels - (mapping_frame & 7)} and {@code d3 = d2 + 1},
  *       so the squash frames shrink the box with the art. {@code SolidObjectFull} then leaves
  *       bits {@code 4|8} of the swapped {@code d6} set for a player it drove downward
- *       ({@code loc_1E10E}, {@code d4 = d6 + $F} with {@code p1_standing_bit = 3}, :41578-41583),
- *       and each such player is passed to {@code sub_24280} (:49205-49222).</li>
+ *       ({@code loc_1E10E}, {@code d4 = d6 + $F} with {@code p1_standing_bit = 3}, :41618-41623),
+ *       and each such player is passed to {@code sub_24280} (:49245-49262).</li>
  * </ul>
  *
- * <p>Both {@code Sprite_OnScreen_Test} tails (:88631, :88644) draw in range
+ * <p>Both {@code Sprite_OnScreen_Test} tails (:88677, :88690) draw in range
  * and release the respawn entry/delete outside it through {@code loc_1B5A0}.
  * The shared post-routine unload applies in every movement phase.
  */
@@ -70,19 +70,19 @@ public final class LrzSmashingSpikePlatformObjectInstance extends AbstractObject
         implements SolidObjectProvider, SolidObjectListener, RewindRecreatable,
         RomObjectCodePointerProvider {
 
-    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:88544). */
+    /** {@code move.w #$280,priority(a0)} (sonic3k.asm:88590). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);
-    /** {@code move.b #$40,width_pixels(a0)} (:88542). */
+    /** {@code move.b #$40,width_pixels(a0)} (:88588). */
     private static final int WIDTH_PIXELS = 0x40;
-    /** {@code move.b #$20,height_pixels(a0)} (:88543). */
+    /** {@code move.b #$20,height_pixels(a0)} (:88589). */
     private static final int HEIGHT_PIXELS = 0x20;
-    /** {@code addi.w #$B,d1} (:88613). */
+    /** {@code addi.w #$B,d1} (:88659). */
     private static final int SOLID_SIDE_PADDING = 0x0B;
-    /** {@code addi.w #$40,y_vel(a0)} (:88557). */
+    /** {@code addi.w #$40,y_vel(a0)} (:88603). */
     private static final int GRAVITY = 0x40;
-    /** {@code move.w #30,$3A(a0)} (:88571). */
+    /** {@code move.w #30,$3A(a0)} (:88617). */
     private static final int SMASH_HOLD_FRAMES = 30;
-    /** {@code RawAni_43196} (sonic3k.asm:88589). */
+    /** {@code RawAni_43196} (sonic3k.asm:88635). */
     private static final int[] SQUASH_FRAMES =
             {2, 4, 6, 7, 7, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0};
 
@@ -112,7 +112,7 @@ public final class LrzSmashingSpikePlatformObjectInstance extends AbstractObject
     public LrzSmashingSpikePlatformObjectInstance(ObjectSpawn spawn) {
         super(spawn, "LRZSmashingSpikePlatform");
         this.baseY = spawn.y() & 0xFFFF;
-        // moveq #0,d0 / move.b subtype(a0),d0 / lsl.w #3,d0 (sonic3k.asm:88546-88549).
+        // moveq #0,d0 / move.b subtype(a0),d0 / lsl.w #3,d0 (sonic3k.asm:88592-88595).
         this.fallDistance = ((spawn.subtype() & 0xFF) << 3) & 0xFFFF;
     }
 
@@ -143,16 +143,16 @@ public final class LrzSmashingSpikePlatformObjectInstance extends AbstractObject
         } else {
             rise(vIntRunCount);
         }
-        // loc_431E0 (:88609-88611): y_pos = $46(a0) + $34(a0).w, a word add.
+        // loc_431E0 (:88655-88657): y_pos = $46(a0) + $34(a0).w, a word add.
         updateDynamicSpawn(getCentreX(), getCentreY());
     }
 
-    /** {@code loc_43128} (sonic3k.asm:88553-88577). */
+    /** {@code loc_43128} (sonic3k.asm:88599-88623). */
     private void fall(boolean wasRendered) {
         int velocityThisFrame = (short) yVel;
         yVel = (short) (yVel + GRAVITY);
         // ext.l d0 / lsl.l #8,d0 / add.l d0,$34(a0): an 8.8 velocity onto a 16.16 displacement,
-        // the MoveSprite2 scaling (sonic3k.asm:36054-36061).
+        // the MoveSprite2 scaling (sonic3k.asm:36094-36101).
         offset += velocityThisFrame << 8;
         // cmp.w $38(a0),d2 / blo: an UNSIGNED compare of the whole-pixel part.
         int wholePixels = (offset >>> 16) & 0xFFFF;
@@ -171,7 +171,7 @@ public final class LrzSmashingSpikePlatformObjectInstance extends AbstractObject
         }
     }
 
-    /** {@code loc_43178} (sonic3k.asm:88579-88586). */
+    /** {@code loc_43178} (sonic3k.asm:88625-88632). */
     private void squash() {
         holdTimer--;
         mappingFrame = SQUASH_FRAMES[animFrame];
@@ -181,11 +181,11 @@ public final class LrzSmashingSpikePlatformObjectInstance extends AbstractObject
         }
     }
 
-    /** {@code loc_431AA} (sonic3k.asm:88592-88607). */
+    /** {@code loc_431AA} (sonic3k.asm:88638-88653). */
     private void rise(int vIntRunCount) {
         int wholePixels = (offset >>> 16) & 0xFFFF;
         if (wholePixels == 0) {
-            // loc_431D4 (:88609-88610).
+            // loc_431D4 (:88655-88656).
             smashed = false;
             mappingFrame = 0;
             return;
@@ -199,7 +199,7 @@ public final class LrzSmashingSpikePlatformObjectInstance extends AbstractObject
     }
 
     /**
-     * {@code move.b (Level_frame_counter+1).w,d0} (:88600): the LOW byte of the level clock, which
+     * {@code move.b (Level_frame_counter+1).w,d0} (:88646): the LOW byte of the level clock, which
      * is independent of the object-visible {@code V_int_run_count} this method is handed.
      */
     private int levelFrameCounterLowByte(int fallback) {
@@ -222,7 +222,7 @@ public final class LrzSmashingSpikePlatformObjectInstance extends AbstractObject
     @Override
     public SolidObjectParams getSolidParams() {
         // d1 = width_pixels + $B; d2 = height_pixels - (mapping_frame & 7); d3 = d2 + 1
-        // (sonic3k.asm:88612-88621).
+        // (sonic3k.asm:88658-88667).
         int air = HEIGHT_PIXELS - (mappingFrame & 7);
         return SolidObjectParams.of(WIDTH_PIXELS + SOLID_SIDE_PADDING, air, air + 1);
     }
@@ -234,7 +234,7 @@ public final class LrzSmashingSpikePlatformObjectInstance extends AbstractObject
 
     @Override
     public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
-        // d4 = x_pos(a0) (:88622) with the unpadded width_pixels as the retention surface.
+        // d4 = x_pos(a0) (:88668) with the unpadded width_pixels as the retention surface.
         return WIDTH_PIXELS;
     }
 
@@ -249,8 +249,8 @@ public final class LrzSmashingSpikePlatformObjectInstance extends AbstractObject
 
     @Override
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
-        // swap d6 / andi.w #4|8,d6 (:88626-88628). Bits 18 and 19 of d6 are set by loc_1E10E's
-        // "d4 = d6 + $F" (sonic3k.asm:41578-41583) with p1_standing_bit = 3
+        // swap d6 / andi.w #4|8,d6 (:88672-88674). Bits 18 and 19 of d6 are set by loc_1E10E's
+        // "d4 = d6 + $F" (sonic3k.asm:41618-41623) with p1_standing_bit = 3
         // (sonic3k.constants.asm:133), which is the branch that drives an overlapping player
         // DOWNWARD -- the block coming down on their head, not a side push or a landing.
         if (player == null || !contact.touchBottom()) {
@@ -259,7 +259,7 @@ public final class LrzSmashingSpikePlatformObjectInstance extends AbstractObject
         applySub24280(player, frameCounter);
     }
 
-    /** {@code sub_24280} (sonic3k.asm:49205-49222). */
+    /** {@code sub_24280} (sonic3k.asm:49245-49262). */
     private void applySub24280(PlayableEntity player, int frameCounter) {
         if (player.getInvulnerable()) {
             return;
@@ -294,7 +294,7 @@ public final class LrzSmashingSpikePlatformObjectInstance extends AbstractObject
         return getSpawn().x() & 0xFFFF;
     }
 
-    /** {@code move.w $46(a0),d0 / add.w $34(a0),d0 / move.w d0,y_pos(a0)} (:88609-88611). */
+    /** {@code move.w $46(a0),d0 / add.w $34(a0),d0 / move.w d0,y_pos(a0)} (:88655-88657). */
     public int getCentreY() {
         return (baseY + ((offset >>> 16) & 0xFFFF)) & 0xFFFF;
     }
@@ -343,7 +343,7 @@ public final class LrzSmashingSpikePlatformObjectInstance extends AbstractObject
 
     @Override
     public boolean isHighPriority() {
-        // make_art_tile(ArtTile_LRZMisc,2,0) (sonic3k.asm:88540) leaves the priority bit clear.
+        // make_art_tile(ArtTile_LRZMisc,2,0) (sonic3k.asm:88586) leaves the priority bit clear.
         return false;
     }
 

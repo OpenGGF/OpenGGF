@@ -23,9 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Sky Sanctuary act 1 arrival: {@code SSZ1_ScreenInit} (sonic3k.asm:115851-115876) and
+ * Sky Sanctuary act 1 arrival: {@code SSZ1_ScreenInit} (sonic3k.asm:115897-115922) and
  * {@code Obj_57C1E} / {@code loc_57CD2} / {@code Obj_57D64} / {@code loc_57DA2}
- * (sonic3k.asm:116760-116858).
+ * (sonic3k.asm:116806-116904).
  *
  * <p>Every expectation below is a ROM constant from those routines, not a measurement of the
  * engine. On the no-starpost path the screen init forces {@code Camera_max_X = $200},

@@ -35,6 +35,7 @@ from pathlib import Path
 DEFAULT_SCAN = ('src/main/java', 'src/test/java', 'docs', '.agents', '.claude', 'tools')
 SKIP_PREFIXES = ('docs/s1disasm/', 'docs/s2disasm/', 'docs/skdisasm/', 'docs/kis2disasm/', 'docs/scddisasm/')
 SCAN_SUFFIXES = ('.java', '.md', '.py', '.lua', '.ps1', '.sh', '.json')
+LINE_COMMENT = {'.py': '#', '.sh': '#', '.ps1': '#', '.lua': '--'}
 
 # file.asm:N[-M][, N[-M]...]   or   file.asm line(s) N[-M]. The path is read backwards
 # from ".asm" (S1 names contain spaces, e.g. "_incObj/18 Platforms.asm"); the longest
@@ -232,10 +233,14 @@ class Resolver:
 
 
 def is_comment_context(source, text, pos):
-    if not source.endswith('.java'):
+    """True when text[pos] is inside a comment (Java, scripts) or anywhere in Markdown/JSON."""
+    if source.endswith(('.md', '.json')):
         return True
-    s = text.lstrip()
-    return s.startswith(('//', '*', '/*')) or '//' in text[:pos] or '/*' in text[:pos]
+    if source.endswith('.java'):
+        s = text.lstrip()
+        return s.startswith(('//', '*', '/*')) or '//' in text[:pos] or '/*' in text[:pos]
+    marker = LINE_COMMENT.get(Path(source).suffix)
+    return bool(marker) and marker in text[:pos]
 
 
 def parse_file(source, content, resolve):
@@ -275,7 +280,7 @@ def parse_file(source, content, resolve):
             for sa, ea, sb, eb, a, b in ranges:
                 taken.append((sa, eb if b else ea))
                 out.append(_cite(source, n, text, sub, rel, sa, ea, sb, eb, a, b, 'explicit', start))
-        if context and context[0] and ':' in text:
+        if context and context[0] and ':' in text and not source.endswith('.json'):
             for m in BARE.finditer(text):
                 if any(s <= m.start() < e or m.start() == e for s, e in taken):
                     continue
@@ -317,15 +322,23 @@ def anchor_status(c, lines, labels):
 
 def scan(sp, revs, scan_paths):
     resolve = Resolver(sp, revs)
+    protected = protected_prefixes(sp.root)
     cites = []
     for f in sp.tracked(scan_paths):
         try:
-            content = (sp.root / f).read_text(encoding='utf-8', errors='replace')
+            raw = (sp.root / f).read_bytes()
         except OSError:
             continue
+        content = raw.decode('utf-8', errors='replace')
         if ':' not in content and 'line' not in content:
             continue
-        cites.extend(parse_file(f, content, resolve))
+        found = parse_file(f, content, resolve)
+        if f in protected:
+            # lines starting inside the hook-pinned prefix are history, written against older revisions
+            last = raw[:protected[f]].count(b'\n') + (0 if raw[:protected[f]].endswith(b'\n') else 1)
+            found = [c._replace(kind='historic') if c.line < last or (c.line == last and raw[:protected[f]].endswith(b'\n')) else c
+                     for c in found]
+        cites.extend(found)
     return cites
 
 
@@ -360,8 +373,11 @@ def classify(sp, revs, c):
     stale         a named label exists but is elsewhere (the numbers drifted or are wrong)
     unverifiable  the lines exist but no label is named next to the citation
     generated     cites an assembler listing (.lst), which no revision contains
+    historic      inside a hook-protected append-only history; written against an older revision
     missing-file / out-of-range   hard errors; unresolved-file / no-reference   not checked
     """
+    if c.kind == 'historic':
+        return 'historic', 'inside a hook-protected historic prefix; not judged'
     if c.kind == 'generated':
         return 'generated', f'{c.rel}: listing files are build output; cite the .asm line instead'
     if not c.sub:
@@ -425,15 +441,29 @@ class LineMap:
     size change of the hunks before it; a line inside a hunk has no mapping.
     """
 
-    def __init__(self, hunks):
+    def __init__(self, hunks, old_lines=None, new_lines=None):
         self.hunks = hunks          # [(old_start, old_count, new_start, new_count)]
+        self.old, self.new = old_lines or [], new_lines or []
 
-    def map_range(self, a, b):
-        """(new_a, new_b), or None if any line of a..b changed or lines were inserted inside it."""
+    def map_range(self, a, b, carry_edited=False):
+        """(new_a, new_b), or None if any line of a..b changed or lines were inserted inside it.
+
+        carry_edited: also carry a range across in-place edits, i.e. hunks that replace
+        each line with one line of the same kind (same mnemonic, or both labels/comments),
+        such as an upstream rename of a constant. Insertions and deletions still refuse.
+        """
+        shift = {}
         for os_, oc, ns, nc in self.hunks:
             if (oc and os_ <= b and a <= os_ + oc - 1) or (not oc and a <= os_ < b):
-                return None
-        return self.map(a), self.map(b)
+                if not (carry_edited and oc == nc and self._in_place(os_, ns, oc)):
+                    return None
+                for k in range(oc):
+                    shift[os_ + k] = ns + k
+        return shift.get(a) or self.map(a), shift.get(b) or self.map(b)
+
+    def _in_place(self, os_, ns, count):
+        return all(line_kind(self.old[os_ + k - 1]) == line_kind(self.new[ns + k - 1])
+                   for k in range(count) if os_ + k - 1 < len(self.old) and ns + k - 1 < len(self.new))
 
     def map(self, n):
         delta = 0
@@ -445,6 +475,16 @@ class LineMap:
         return n + delta
 
 
+def line_kind(line):
+    """Shape of an assembly line for in-place comparison: mnemonic, 'label', 'comment' or ''."""
+    code = line.split(';', 1)[0]
+    if not code.strip():
+        return 'comment' if line.strip() else ''
+    if LABEL_DEF.match(code):
+        return 'label'
+    return code.split()[0].lower().split('.', 1)[0]
+
+
 def file_linemap(d, a, b, rel):
     p = d.git('diff', '--no-ext-diff', '--no-color', '--ignore-cr-at-eol', '-U0', a, b, '--', rel, check=False)
     hunks = []
@@ -452,7 +492,7 @@ def file_linemap(d, a, b, rel):
         m = re.match(r'^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@', line)
         if m:
             hunks.append((int(m.group(1)), int(m.group(2) or 1), int(m.group(3)), int(m.group(4) or 1)))
-    return LineMap(hunks)
+    return LineMap(hunks, d.lines(a, rel)[0], d.lines(b, rel)[0])
 
 
 def renamed_path(d, a, b, rel):
@@ -476,8 +516,16 @@ def cmd_remap(args):
         if not d.has(r):
             sys.exit(f'{r[:12]} not present; run git -C {d.gitdir()} fetch origin {r}')
     revs = {args.sub: a}
-    cites = [c for c in scan(sp, revs, args.paths or DEFAULT_SCAN) if c.sub == args.sub]
+    every = [c for c in scan(sp, revs, args.paths or DEFAULT_SCAN) if c.sub == args.sub]
+    cites = [c for c in every if c.kind != 'historic' and not c.file.endswith('.json')]
     maps, edits, report = {}, collections.defaultdict(list), collections.Counter()
+    historic = sum(1 for c in every if c.kind == 'historic')
+    if historic:
+        report['protected-history (left as written)'] = historic
+    evidence = sum(1 for c in every if c.kind != 'historic' and c.file.endswith('.json'))
+    if evidence:
+        # JSON evidence may be pinned by hash (e.g. reviewed capture manifests): check it, never rewrite it
+        report['json-evidence (left as written)'] = evidence
     unmapped = []
     for c in cites:
         if c.rel not in maps:
@@ -493,6 +541,10 @@ def cmd_remap(args):
             unmapped.append((c, f'{c.rel} renamed to {new_rel}; edit the path by hand'))
             continue
         mapped = lm.map_range(c.a, c.b)
+        if mapped is None and args.carry_edited:
+            mapped = lm.map_range(c.a, c.b, carry_edited=True)
+            if mapped is not None:
+                report['carried-across-in-place-edits'] += 1
         if mapped is None:
             report['touches-changed-lines'] += 1
             unmapped.append((c, f'{c.a}-{c.b} touches lines changed between revisions'))
@@ -507,26 +559,57 @@ def cmd_remap(args):
     for c, why in unmapped:
         print(f'{c.file}:{c.line}: needs review: {c.sub}/{c.rel}:{c.a}-{c.b}: {why}')
     if args.write:
+        protected = protected_prefixes(sp.root)
         for f, items in edits.items():
-            apply_edits(sp.root / f, items)
+            skipped = apply_edits(sp.root / f, items, protected.get(f, 0))
+            if skipped:
+                report['protected-history (left as written)'] += skipped
+                print(f'{f}: {skipped} cited lines are in the hook-protected historic prefix; left unchanged')
     print(f'{args.sub} {a[:12]} -> {b[:12]}:', ', '.join(f'{k}={v}' for k, v in sorted(report.items())),
           '(written)' if args.write else '(dry run; --write to apply)')
     return 1 if unmapped and args.strict else 0
 
 
-def apply_edits(path, items):
+PROTECTED_LIST = '.githooks/machine-local-path-grandfather.sha256'
+
+
+def protected_prefixes(root):
+    """{path: byte length} of append-only histories whose prefix a commit hook pins by hash."""
+    out = {}
+    try:
+        for line in (root / PROTECTED_LIST).read_text().splitlines():
+            parts = line.split('\t')
+            if len(parts) >= 4 and parts[0] == '# baseline-prefix' and parts[1].isdigit():
+                out[parts[3]] = int(parts[1])
+    except OSError:
+        pass
+    return out
+
+
+def apply_edits(path, items, protected=0):
+    """Rewrite cited numbers in place; lines starting inside a protected byte prefix are kept.
+
+    Returns the number of edited lines skipped because they are protected history.
+    """
     raw = path.read_bytes()
-    text = raw.decode('utf-8')
+    text = raw.decode('utf-8', errors='surrogateescape')
     lines = text.splitlines(keepends=True)
+    starts, offset = [], 0
+    for line in lines:
+        starts.append(offset)
+        offset += len(line.encode('utf-8', errors='surrogateescape'))
     by_line = collections.defaultdict(list)
     for line, spans, new in items:
         by_line[line].extend(zip(spans, new))
+    skipped = sum(1 for line in by_line if starts[line - 1] < protected)
+    by_line = {k: v for k, v in by_line.items() if starts[k - 1] >= protected}
     for line, reps in by_line.items():
         s = lines[line - 1]
         for (start, end), value in sorted(reps, key=lambda r: -r[0][0]):
             s = s[:start] + value + s[end:]
         lines[line - 1] = s
-    path.write_bytes(''.join(lines).encode('utf-8'))
+    path.write_bytes(''.join(lines).encode('utf-8', errors='surrogateescape'))
+    return skipped
 
 
 def parse_rev_args(values):
@@ -558,6 +641,8 @@ def main(argv=None):
     r.add_argument('dst', help='revision to carry them to')
     r.add_argument('paths', nargs='*')
     r.add_argument('--write', action='store_true', help='edit files in place')
+    r.add_argument('--carry-edited', action='store_true',
+                   help='also carry ranges across same-size, same-mnemonic edits (e.g. renamed constants)')
     r.add_argument('--strict', action='store_true', help='exit non-zero when any citation needs review')
     args = p.parse_args(argv)
     return {'check': cmd_check, 'remap': cmd_remap}[args.cmd](args)

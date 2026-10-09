@@ -56,7 +56,7 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
     private static final int PAD_DOWN_MASK = 1 << 1;
     private static final int PAD_LEFT_MASK = 1 << 2;
     private static final int PAD_RIGHT_MASK = 1 << 3;
-    // byte_3E5E8 (sonic3k.asm:82657-82666): the nine pressed-byte values
+    // byte_3E5E8 (sonic3k.asm:82698-82707): the nine pressed-byte values
     // sub_3E598 expects in order. The table ends at an `even` pad byte of 0,
     // which is what the +1 lookahead reads after the ninth match.
     private static final int[] CHEAT_BUTTON_SEQUENCE = {
@@ -262,14 +262,14 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
         hold.heldDirectionsLastFrame = heldDirections;
         if (hold == handle.player1) {
             // loc_3E5F2 calls sub_3E598 before any facing/pull handling; it
-            // returns immediately for a1 != Player_1 (sonic3k.asm:82622-82623).
+            // returns immediately for a1 != Player_1 (sonic3k.asm:82663-82664).
             advanceCheatButtonSequence(handle, pressedDirections);
         }
         snapPlayerToHandle(handle, player);
         boolean downPressed = (heldDirections & PAD_DOWN_MASK) != 0;
         // loc_3E472 clears the handle's $3A pull flag at the start of every
         // child SST update; sub_3E508 sets it again only while DOWN is held
-        // (sonic3k.asm:82511-82518,82687-82696). A released DOWN therefore
+        // (sonic3k.asm:82552-82559,82728-82737). A released DOWN therefore
         // falls through loc_3E4AA and retracts the handle immediately.
         handle.pullActive |= downPressed;
         if ((pressedDirections & PAD_DOWN_MASK) != 0 && isPullEnabled()) {
@@ -280,7 +280,7 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code sub_3E598} (sonic3k.asm:82622-82653): the MHZ pulley debug-cheat
+     * {@code sub_3E598} (sonic3k.asm:82663-82694): the MHZ pulley debug-cheat
      * entry. {@code $40(a0)} on the handle child counts matched presses against
      * {@code byte_3E5E8}; the pressed byte must equal the expected mask exactly,
      * a frame with no press leaves the counter alone, and any other press resets

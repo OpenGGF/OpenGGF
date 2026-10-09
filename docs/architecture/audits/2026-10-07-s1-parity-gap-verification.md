@@ -514,7 +514,7 @@ Cross-game native proof: S2 `KillCharacter` (`s2.asm:85671`) calls
 `Sonic_ResetOnFloor_Part2` (`38128`), which dispatches Tails by object ID;
 rolling Sonic subtracts five, rolling Tails subtracts one (`41024`), while
 nonrolling split radii remain untouched. S3K `Kill_Character`
-(`sonic3k.asm:21136`) calls `Player_TouchFloor` (`24335`), dispatching
+(`sonic3k.asm:21172`) calls `Player_TouchFloor` (`24335`), dispatching
 `Tails_TouchFloor` (`29133`) and `Knux_TouchFloor` (`32829`). All three
 restore default radii before testing rolling and adjust native Y by
 old-minus-default radius, with reverse-gravity and signed angle-plus-quarter-turn

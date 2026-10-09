@@ -117,10 +117,10 @@ arm, Twisting Loop, MHZ Swing Vine, and the MHZ pollen spawner.
 The audit found two candidates. AIZ Draw Bridge is a high-confidence mismatch: Java keeps
 every phase persistent with no self-cull. Its normal/wait operations apply the saved-anchor
 coarse-X tail, delete referenced children, clear the respawn bit, and delete the root
-(`sonic3k.asm:59649-59676`), while the triggered collapse operation deliberately skips that
+(`sonic3k.asm:59689-59716`), while the triggered collapse operation deliberately skips that
 tail during its `$0E` countdown and self-deletes at expiry (`59769-59791`). MHZ Swing Vine
 remains persistent while grabbed, but its ROM root has no grabbed exemption from the
-equivalent child-chain/root range tail (`sonic3k.asm:47164-47192`). The remaining shortlisted
+equivalent child-chain/root range tail (`sonic3k.asm:47204-47232`). The remaining shortlisted
 overrides are justified by exact self-managed range/render deletion, parent-child coupling,
 or fixed/event ownership.
 

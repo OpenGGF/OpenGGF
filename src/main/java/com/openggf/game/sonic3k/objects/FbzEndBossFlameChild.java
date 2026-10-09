@@ -88,7 +88,7 @@ public final class FbzEndBossFlameChild extends AbstractFbzEndBossChild implemen
         rawAnimationIndex++;
         visibleAndTouching = true;
     }
-    // loc_70BB0 runs Child_GetPriority on every drawn frame (sonic3k.asm:149198, 180198-180205):
+    // loc_70BB0 runs Child_GetPriority on every drawn frame (sonic3k.asm:149266, 180289-180296):
     // the flame takes parent3's (the weapon's) priority word and art bit 15.
     @Override public int getPriorityBucket() {
         return weapon != null ? weapon.getPriorityBucket() : RenderPriority.MIN;

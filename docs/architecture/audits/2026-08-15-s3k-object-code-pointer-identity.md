@@ -37,7 +37,7 @@ loc_1B6C4:
 loc_1B6CA:
         move.l  d0,(Object_index_addr).w
 ```
-(`docs/skdisasm/sonic3k.asm:37411-37430` — used for offset discovery only.)
+(`docs/skdisasm/sonic3k.asm:37451-37470` — used for offset discovery only.)
 
 Both `move.l #imm,d0` instructions are `203C` immediates, so the table addresses are readable
 **from the ROM itself** rather than transcribed:
@@ -108,7 +108,7 @@ The seven invertible ones are the objects that dispatch through a `routine` byte
 rewriting their pointer — `Obj_Monitor` (`$01`), `Obj_Bubbler` (`$54`), `Obj_StarPost` (`$34`),
 `Obj_EggCapsule` (`$81`), `Obj_HCZLargeFan` (`$39`), `Obj_HCZEndBoss` (`$9A`),
 `Obj_HCZWaterSplash` (`$6D`). `Obj_Ring` is of that kind too
-(`move.b routine(a0),d0 / jmp Ring_Index(pc,d1.w)`, `sonic3k.asm:35401-35405`) — it simply does
+(`move.b routine(a0),d0 / jmp Ring_Index(pc,d1.w)`, `sonic3k.asm:35441-35445`) — it simply does
 not appear in this run's dumps under its entry address.
 
 Across the whole event stream including `object_near` (399,374 entries, 197 distinct codes) the
@@ -175,7 +175,7 @@ other seven — including the three highest-volume codes overall, `0x0001365C` (
 `0x000160D2` (21,664), `0x00019922` (18,471) — appear **exclusively in `object_near`**. Those
 are the fixed SST records the constants file lists after `Dynamic_object_RAM`: `Player_1`,
 `Player_2`, `Tails_tails`, `Dust`, `Shield`, `Breathing_bubbles`, `Wave_Splash`
-(`sonic3k.constants.asm:304-322`). **They have no object id because they are never spawned from
+(`sonic3k.constants.asm:311-329`). **They have no object id because they are never spawned from
 layout**, and an occupancy comparison must exclude them by *slot range*, which it already does,
 rather than by identity.
 

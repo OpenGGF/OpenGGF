@@ -20,20 +20,20 @@ import java.util.List;
  * tiles of uncompressed art in the original ROM. The engine pre-loads all 96 tiles and
  * selects the appropriate mapping frame per animation step.
  * <p>
- * ROM reference: Obj_HCZWaterSplash subtype 0 (sonic3k.asm:75276-75311).
+ * ROM reference: Obj_HCZWaterSplash subtype 0 (sonic3k.asm:75317-75352).
  * <p>
  * Subtype 1 (interactive water skim) is handled separately by
  * {@link com.openggf.game.sonic3k.features.HCZWaterSkimHandler}.
  */
 public class HCZWaterSplashObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
-    // ===== Animation constants (loc_38464, sonic3k.asm:75286-75311) =====
-    /** Frame timer reset value: 8 ticks per animation step (sonic3k.asm:75290) */
+    // ===== Animation constants (loc_38464, sonic3k.asm:75327-75352) =====
+    /** Frame timer reset value: 8 ticks per animation step (sonic3k.asm:75331) */
     private static final int ANIM_TIMER_RESET = 7;
-    /** Number of animation frames to cycle through: 0-3 (sonic3k.asm:75293) */
+    /** Number of animation frames to cycle through: 0-3 (sonic3k.asm:75334) */
     private static final int ANIM_FRAME_MASK = 3;
 
-    // ===== Render dimensions from ROM (sonic3k.asm:75280-75283) =====
+    // ===== Render dimensions from ROM (sonic3k.asm:75321-75324) =====
     /** width_pixels = $28 (40 pixels) */
     private static final int WIDTH_PIXELS = 0x28;
 
@@ -60,7 +60,7 @@ public class HCZWaterSplashObjectInstance extends AbstractObjectInstance impleme
     public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) return;
 
-        // Animation timer (sonic3k.asm:75286-75293)
+        // Animation timer (sonic3k.asm:75327-75334)
         // ROM: subq.b #1,anim_frame_timer / bpl.s skip
         //      move.b #7,anim_frame_timer / addq.b #1,mapping_frame / andi.b #3,mapping_frame
         // ROM runs animation unconditionally; visibility is only checked at draw time.
@@ -71,7 +71,7 @@ public class HCZWaterSplashObjectInstance extends AbstractObjectInstance impleme
         }
     }
 
-    // Obj_HCZWaterSplash writes priority $300 on both subtype paths (sonic3k.asm:75263, 75285).
+    // Obj_HCZWaterSplash writes priority $300 on both subtype paths (sonic3k.asm:75304, 75326).
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x300);
 
     @Override

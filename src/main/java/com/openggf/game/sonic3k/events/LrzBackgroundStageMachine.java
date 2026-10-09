@@ -4,9 +4,9 @@ import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 
 /**
  * {@code LRZ1_BackgroundEvent}'s stage machine for the dome regions:
- * {@code LRZ1_BackgroundEvent_Index} (sonic3k.asm:115264-115271) and the two tails
- * {@code sub_56DCA} jumps into, {@code loc_56E40} (:115538-115551) and {@code loc_56E66}
- * (:115552-115567).
+ * {@code LRZ1_BackgroundEvent_Index} (sonic3k.asm:115310-115317) and the two tails
+ * {@code sub_56DCA} jumps into, {@code loc_56E40} (:115584-115597) and {@code loc_56E66}
+ * (:115598-115613).
  *
  * <p>Three of the four index entries belong here. Stage 0 ({@code loc_56C28}) runs
  * {@code sub_56DCA} and then the ordinary {@code LRZ1_Deform}; stage 4 ({@code loc_56C6E}) runs
@@ -19,7 +19,7 @@ import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
  */
 public final class LrzBackgroundStageMachine {
 
-    /** {@code LRZ1_BackgroundEvent_Index} (sonic3k.asm:115264-115271). */
+    /** {@code LRZ1_BackgroundEvent_Index} (sonic3k.asm:115310-115317). */
     public static final int BG_STAGE_NORMAL = 0;
     public static final int BG_STAGE_LOCKED = 4;
     public static final int BG_STAGE_REFRESH = 8;
@@ -68,8 +68,8 @@ public final class LrzBackgroundStageMachine {
     }
 
     /**
-     * {@code Draw_PlaneVertBottomUpComplex} (sonic3k.asm:103557-103562) calls {@code sub_4F03E}
-     * once and then again while the {@code subq.w #1,(Draw_delayed_rowcount)} at :103590 left the
+     * {@code Draw_PlaneVertBottomUpComplex} (sonic3k.asm:103603-103608) calls {@code sub_4F03E}
+     * once and then again while the {@code subq.w #1,(Draw_delayed_rowcount)} at :103636 left the
      * counter non-negative: two rows a frame, and the pass ends on the call that takes the counter
      * negative, which is where {@code loc_56C88} clears {@code Events_bg+$02} as a long and the
      * routine word.

@@ -14,7 +14,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_823EE} (sonic3k.asm:174477-174500): a Doomsday asteroid fragment. It keeps the
+ * ROM {@code loc_823EE} (sonic3k.asm:174568-174591): a Doomsday asteroid fragment. It keeps the
  * asteroid's mappings and {@code art_tile}, takes {@code word_83208} (priority {@code $300},
  * frame {@code $29}), and each frame subtracts {@code _unkFAAE}, steps {@code Animate_Raw} through
  * {@code byte_832A8} (subtype 0) or {@code byte_832AE}, moves with {@code MoveSprite2} and deletes

@@ -15,7 +15,7 @@ import static com.openggf.level.scroll.M68KMath.negWord;
 /**
  * Lava Reef Zone background scroll for the two playable acts, {@code $900} and {@code $901}.
  *
- * <p>Act 1 runs {@code LRZ1_Deform} (sonic3k.asm:115389-115435) from
+ * <p>Act 1 runs {@code LRZ1_Deform} (sonic3k.asm:115435-115481) from
  * {@code LRZ1_BackgroundInit}/{@code LRZ1_BackgroundEvent}; act 2 runs {@code sub_57082}
  * (115739-115820) from {@code LRZ2_BackgroundInit}/{@code LRZ2_BackgroundEvent}. Both hold
  * {@code Camera_X_pos_copy} as a 16.16 long and derive two fractions,
@@ -56,10 +56,10 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  */
 public class SwScrlLrz extends SwScrlS3kDefault {
 
-    /** {@code LRZ1_BGDeformArray} (sonic3k.asm:115643); the trailing {@code $7FFF} is the remainder. */
+    /** {@code LRZ1_BGDeformArray} (sonic3k.asm:115689); the trailing {@code $7FFF} is the remainder. */
     private static final int[] ACT1_BG_DEFORM =
             {0x40, 0x20, 0x10, 0x10, 0x10, 0x10, 0x10, 0x100, 0x10, 0x10, 0x10, 0x20, 0x7FFF};
-    /** {@code LRZ2_BGDeformArray} (sonic3k.asm:115845). */
+    /** {@code LRZ2_BGDeformArray} (sonic3k.asm:115891). */
     private static final int[] ACT2_BG_DEFORM =
             {0x20, 0x20, 0x20, 0x10, 0x10, 0x10, 0x10, 0xF0, 0x10, 0x10, 0x10, 0x20, 0x7FFF};
 
@@ -172,7 +172,7 @@ public class SwScrlLrz extends SwScrlS3kDefault {
     }
 
     /**
-     * {@code PlainDeformation} (sonic3k.asm:103598-103613): every line of
+     * {@code PlainDeformation} (sonic3k.asm:103644-103659): every line of
      * {@code H_scroll_buffer} gets {@code -Camera_X_pos_copy} for the foreground and
      * {@code -Camera_X_pos_BG_copy} for the background.
      */

@@ -70,7 +70,7 @@ After arming, snapshots include:
 
 The execute hooks bracket
 `AIZPlaneIntro_UpdateScrollVelocity`
-(`docs/skdisasm/sonic3k.asm:135945-135957`):
+(`docs/skdisasm/sonic3k.asm:136010-136022`):
 
 | PC | Observation point |
 |---|---|

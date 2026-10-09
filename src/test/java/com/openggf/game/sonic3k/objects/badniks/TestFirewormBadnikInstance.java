@@ -216,7 +216,7 @@ class TestFirewormBadnikInstance {
     }
 
     /**
-     * {@code Child_DrawTouch_Sprite_FlickerMove} (sonic3k.asm:178136-178141) only reaches
+     * {@code Child_DrawTouch_Sprite_FlickerMove} (sonic3k.asm:178227-178232) only reaches
      * {@code Add_SpriteToCollisionResponseList} while the parent's {@code status} bit 7 is clear.
      */
     @Test
@@ -242,9 +242,9 @@ class TestFirewormBadnikInstance {
 
     /**
      * The other half of the same retirement. Each flame draws through
-     * {@code Child_DrawTouch_Sprite} (sonic3k.asm:178053-178058), which runs
+     * {@code Child_DrawTouch_Sprite} (sonic3k.asm:178144-178149), which runs
      * {@code Go_Delete_Sprite} as soon as its own parent -- the segment -- has {@code status}
-     * bit 7 set, and {@code loc_849D8} (:178120-178125) sets that bit on the segment the moment
+     * bit 7 set, and {@code loc_849D8} (:178211-178216) sets that bit on the segment the moment
      * the head is gone. So a killed worm takes its flames with it in the same frame the segments
      * stop hurting; a surviving flame is still a {@code collision_flags $98} hurt region.
      */

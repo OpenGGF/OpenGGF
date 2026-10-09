@@ -24,17 +24,17 @@ import java.util.List;
 
 /**
  * {@code loc_9039A}, the eight pieces {@code ChildObjDat_90626} hangs off
- * {@code Obj_LRZRockCrusher} (sonic3k.asm:197378-197508, ROM {@code $9039A}).
+ * {@code Obj_LRZRockCrusher} (sonic3k.asm:197485-197615, ROM {@code $9039A}).
  *
  * <p>{@code CreateChild1_Normal} gives child {@code n} the subtype {@code 2n} and the offset pair
  * from the table: {@code (-$1C,$1C)}, {@code ($1C,$1C)}, {@code (-$24,$1C)}, {@code ($24,$1C)} for
- * the lower four and the same X offsets with {@code -$24} for the upper four (:197446-197463).
+ * the lower four and the same X offsets with {@code -$24} for the upper four (:197553-197570).
  * {@code loc_903CC} then runs {@code SetUp_ObjAttributes3} from {@code word_90614}
  * ({@code priority $200}, a {@code $C x $14} box, {@code mapping_frame} 1, {@code collision_flags}
  * {@code $8B}), and the pieces whose subtype is {@code $8} or more -- the upper row -- take
- * {@code mapping_frame} 2 and {@code collision_flags} {@code $12} instead (:197484-197490).
+ * {@code mapping_frame} 2 and {@code collision_flags} {@code $12} instead (:197591-197597).
  *
- * <p>The shake is {@code loc_90436} (:197486-197508). {@code $40(a0)} is a per-frame delta added
+ * <p>The shake is {@code loc_90436} (:197593-197615). {@code $40(a0)} is a per-frame delta added
  * to {@code child_dy}, {@code $2E(a0)} its remaining frames, and {@code byte_904AC} holds the four
  * {@code (frames, delta)} pairs {@code (1,8)}, {@code (3,-4)}, {@code (3,-4)}, {@code (7,2)}. The
  * pair is chosen by {@code (subtype & 8) >> 1} plus {@code 2} on every other visit
@@ -42,25 +42,25 @@ import java.util.List;
  * each row alternates between its two pairs.
  *
  * <p>{@code $39(a0)} counts two shake bursts and {@code loc_90490} then returns the piece to
- * routine 4 with {@code $2E = (subtype & 8) >> 1 + 4} (:197509-197516).
+ * routine 4 with {@code $2E = (subtype & 8) >> 1 + 4} (:197616-197623).
  */
 public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable {
 
-    /** {@code word_90614}: {@code dc.w $200} (sonic3k.asm:197435). */
+    /** {@code word_90614}: {@code dc.w $200} (sonic3k.asm:197542). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0200);
-    /** {@code dc.b $C,$14}: width and height (:197436). */
+    /** {@code dc.b $C,$14}: width and height (:197543). */
     private static final int HALF_WIDTH = 0x0C;
     private static final int HALF_HEIGHT = 0x14;
-    /** {@code dc.b 1,$8B}: the lower row's frame and collision (:197436). */
+    /** {@code dc.b 1,$8B}: the lower row's frame and collision (:197543). */
     private static final int LOWER_FRAME = 1;
     private static final int LOWER_COLLISION_FLAGS = 0x8B;
-    /** {@code move.b #2,mapping_frame / move.b #$12,collision_flags} (:197488-197489). */
+    /** {@code move.b #2,mapping_frame / move.b #$12,collision_flags} (:197595-197596). */
     private static final int UPPER_FRAME = 2;
     private static final int UPPER_COLLISION_FLAGS = 0x12;
-    /** {@code byte_904AC} (sonic3k.asm:197303-197307): four {@code (frames, delta)} pairs. */
+    /** {@code byte_904AC} (sonic3k.asm:197410-197414): four {@code (frames, delta)} pairs. */
     private static final int[][] SHAKE_TABLE = {{1, 8}, {3, -4}, {3, -4}, {7, 2}};
-    /** {@code move.b #2,$39(a0)} (:197517). */
+    /** {@code move.b #2,$39(a0)} (:197624). */
     private static final int SHAKE_BURSTS = 2;
 
     /** Set_IndexedVelocity(d0=0): Obj_VelocityIndex rows selected by even subtype. */
@@ -108,7 +108,7 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
         boolean upper = this.subtype >= 8;
         this.mappingFrame = upper ? UPPER_FRAME : LOWER_FRAME;
         this.collisionFlags = upper ? UPPER_COLLISION_FLAGS : LOWER_COLLISION_FLAGS;
-        // andi.b #4,d0 / move.b d0,$2E(a0) (:197491-197492).
+        // andi.b #4,d0 / move.b d0,$2E(a0) (:197598-197599).
         this.timer = this.subtype & 4;
     }
 
@@ -133,7 +133,7 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
             return;
         }
         switch (routine) {
-            // loc_903F4 (:197494-197499): wait for the parent's $38 bit 2.
+            // loc_903F4 (:197601-197606): wait for the parent's $38 bit 2.
             case 2 -> {
                 if (parent != null && parent.piecesReleased()) {
                     routine = 4;
@@ -145,7 +145,7 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
             case 4 -> advanceReleaseCountdown();
             case 6 -> shake();
             default -> {
-                // loc_904B4 (:197310): position only.
+                // loc_904B4 (:197417): position only.
             }
         }
         refreshPosition();
@@ -204,7 +204,7 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
         }
     }
 
-    /** {@code loc_90436} (sonic3k.asm:197486-197508). */
+    /** {@code loc_90436} (sonic3k.asm:197593-197615). */
     private void shake() {
         // move.b $40(a0),d0 / add.b d0,$43(a0): the delta lands on child_dy, a BYTE.
         childDy = (byte) (childDy + delta);
@@ -214,13 +214,13 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
         }
         bursts--;
         if (bursts < 0) {
-            // loc_90490 (:197509-197515).
+            // loc_90490 (:197616-197622).
             routine = 4;
             timer = ((subtype & 8) >> 1) + 4;
             return;
         }
         // lsr.w #1,d3 / bchg #2,$38(a0) / beq -> d1 = 0 when the bit WAS clear, 2 when it was
-        // set (:197502-197506). d3 is then a BYTE offset into byte_904AC, whose entries are
+        // set (:197609-197613). d3 is then a BYTE offset into byte_904AC, whose entries are
         // (frames, delta) PAIRS, so the pair index is d3 / 2 and never leaves 0..3.
         int rowByteOffset = (subtype & 8) >> 1;
         boolean wasSet = alternate;
@@ -231,7 +231,7 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
         delta = pair[1];
     }
 
-    /** {@code Refresh_ChildPosition} (sonic3k.asm:197281-197294). */
+    /** {@code Refresh_ChildPosition} (sonic3k.asm:197388-197401). */
     private void refreshPosition() {
         if (parent == null) {
             return;
@@ -299,7 +299,7 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
 
     @Override
     public int getCollisionProperty() {
-        // move.b #-1,collision_property(a0) for the upper row (:197385-197386): the ROM's
+        // move.b #-1,collision_property(a0) for the upper row (:197492-197493): the ROM's
         // "cannot be hurt" marker, the same value the parent carries.
         return subtype >= 8 ? -1 : 0;
     }
@@ -311,7 +311,7 @@ public final class LrzRockCrusherPieceInstance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        // The child copies art_tile from the parent (CreateChild1_Normal, :196933).
+        // The child copies art_tile from the parent (CreateChild1_Normal, :197040).
         return detached ? detachedHighPriority : parent != null && parent.isHighPriority();
     }
 

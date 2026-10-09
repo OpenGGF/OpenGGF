@@ -1073,7 +1073,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.logging.Logger;
 
 /**
- * Gumball Machine triangle bumper (ROM: Obj_GumballTriangleBumper, sonic3k.asm:127634).
+ * Gumball Machine triangle bumper (ROM: Obj_GumballTriangleBumper, sonic3k.asm:127688).
  * <p>
  * Fixed-velocity bounce: X=±$300, Y=-$600. Direction based on h-flip render flag.
  * Placed via object layout data in the Gumball bonus stage.
@@ -1191,7 +1191,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.logging.Logger;
 
 /**
- * Ejected gumball item (ROM: Obj_GumballItem, sonic3k.asm:96814).
+ * Ejected gumball item (ROM: Obj_GumballItem, sonic3k.asm:96860).
  * Shared between Gumball Machine and Pachinko bonus stages.
  * <p>
  * Physics: gravity -4/frame on Y velocity, movement via MoveSprite2.
@@ -1350,7 +1350,7 @@ import java.util.Random;
 import java.util.logging.Logger;
 
 /**
- * Gumball Machine parent object (ROM: Obj_GumballMachine, sonic3k.asm:127399).
+ * Gumball Machine parent object (ROM: Obj_GumballMachine, sonic3k.asm:127453).
  * <p>
  * 4-state machine: IDLE → SPIN → TRIGGERED → POST_TRIGGER → IDLE.
  * Spawns 7 children on init: dispenser, container display, exit trigger,

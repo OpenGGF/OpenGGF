@@ -231,7 +231,7 @@ class TestRewindArchitectureGuard {
             // 2026-09-18 Lava Reef, the Fireworm. The head owns the list of the four segments it
             // created (ChildObjDat_8FA16); each segment reads the head's status bit 7 to decide
             // whether it is still publishing a hurt region (Child_DrawTouch_Sprite_FlickerMove,
-            // sonic3k.asm:178136-178141). A list of live objects is not a scalar and a restore
+            // sonic3k.asm:178227-178232). A list of live objects is not a scalar and a restore
             // cannot rebuild it, so it travels as ObjectRefId sidecars and each restored segment
             // is re-attached to this head. Without it a restored chain would keep hurting after
             // the head was destroyed.

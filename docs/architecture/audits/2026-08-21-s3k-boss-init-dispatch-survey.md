@@ -50,7 +50,7 @@ is a comment rather than a name:
 ### Does NOT model the dispatch — 1
 
 **`MhzEndBossInstance`.** Verified against the ROM, not inferred. `Obj_MHZEndBoss`
-(`sonic3k.asm:156893-156919`) is the object's first-dispatch entry: it runs
+(`sonic3k.asm:156969-156995`) is the object's first-dispatch entry: it runs
 `Check_CameraInRange`, locks the arena, `SetUp_ObjAttributes`, queues art, loads the PLC and
 palette, creates four sets of children, installs the dispatcher with
 `move.l #loc_75FD4,(a0)`, **explicitly undoes `SetUp_ObjAttributes`'s `addq.b #2` with

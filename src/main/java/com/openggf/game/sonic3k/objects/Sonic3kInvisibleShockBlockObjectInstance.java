@@ -5,7 +5,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 
 /**
- * SKL $6D, Obj_InvisibleShockBlock (sonic3k.asm:43265-43267).
+ * SKL $6D, Obj_InvisibleShockBlock (sonic3k.asm:43305-43307).
  * Sets shield_reaction bit 5, then enters the horizontal hurt block.
  * Subtype dimensions, face selection, hurt ordering and immunity are shared.
  */
@@ -21,7 +21,7 @@ public final class Sonic3kInvisibleShockBlockObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         // Obj_InvisibleHurtBlockHorizontal falls through on the unflipped top
-        // branch; either flip installs its routine and returns once (:43292-43312).
+        // branch; either flip installs its routine and returns once (:43332-43352).
         contactsEnabled = initialized || (spawn.renderFlags() & 3) == 0;
         initialized = true;
     }

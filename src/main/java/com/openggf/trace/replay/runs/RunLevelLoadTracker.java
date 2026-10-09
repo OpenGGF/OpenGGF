@@ -41,7 +41,7 @@ public final class RunLevelLoadTracker {
      * event handler -- {@code AIZ1BGE_Finish} writes
      * {@code move.w #1,(Current_zone_and_act).w} and calls {@code Load_Level}
      * without leaving {@code GameModeID_Level} or re-entering the {@code Level:}
-     * routine (docs/skdisasm/sonic3k.asm:104733-104746) -- and the engine
+     * routine (docs/skdisasm/sonic3k.asm:104779-104792) -- and the engine
      * mirrors that with an act transition rather than a {@code FULL} load, so
      * the completed production load generation deliberately does not move. The
      * identity therefore has to be published separately from a load receipt.

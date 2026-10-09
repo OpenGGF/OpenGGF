@@ -134,13 +134,13 @@ public final class LevelFrameStep {
         //
         // For S3K that loss is ROM-correct, not an open defect. Both blocking
         // fades rewrite V_int_routine = $12 on every loop iteration before
-        // Wait_VSync (Pal_FadeToBlack sonic3k.asm:5045-5050, Pal_FadeFromBlack
-        // :4906-4911), so a V-blank inside an S3K fade always dispatches VInt_12
-        // (:849-852) and can never reach VInt_0_Main -- the lag path, taken only
-        // when V_int_routine is 0 (:519-520) and the sole bump of Lag_frame_count
-        // (:570). VInt_12 does the frame's art work (bra.w Process_Nem_Queue,
-        // :852) while deliberately omitting Set_Kos_Bookmark, which VInt_14
-        // (:672) and VInt_16 (:888) do perform: the fade genuinely owns the
+        // Wait_VSync (Pal_FadeToBlack sonic3k.asm:5077-5082, Pal_FadeFromBlack
+        // :4938-4943), so a V-blank inside an S3K fade always dispatches VInt_12
+        // (:871-874) and can never reach VInt_0_Main -- the lag path, taken only
+        // when V_int_routine is 0 (:535-536) and the sole bump of Lag_frame_count
+        // (:592). VInt_12 does the frame's art work (bra.w Process_Nem_Queue,
+        // :874) while deliberately omitting Set_Kos_Bookmark, which VInt_14
+        // (:694) and VInt_16 (:910) do perform: the fade genuinely owns the
         // frame and leaves mode-specific PLC work paused. The LAG label the
         // replay closure passes here is the structural "this row has no gameplay
         // body" classification, not a claim that the ROM ran its lag handler --
@@ -245,7 +245,7 @@ public final class LevelFrameStep {
         }
 
         // S3K fresh-level assembly runs Load_Sprites then Process_Sprites once
-        // before entering LevelLoop (docs/skdisasm/sonic3k.asm:7849-7855,
+        // before entering LevelLoop (docs/skdisasm/sonic3k.asm:7881-7887,
         // 7889-7906). executeWithPause reaches this body only after its pause
         // gate, so a paused first frame retains the one-shot authority.
         if (levelManager.consumePendingInitialProcessSpritesPass()) {
@@ -271,7 +271,7 @@ public final class LevelFrameStep {
         // ROM: the level loop increments Level_frame_counter immediately after
         // the V-blank wait and before the object pass, in all three games
         // (docs/s1disasm/sonic.asm:3001-3006, docs/s2disasm/s2.asm:5090-5094,
-        // docs/skdisasm/sonic3k.asm:7919-7925). Every routine that runs this
+        // docs/skdisasm/sonic3k.asm:7951-7957). Every routine that runs this
         // frame therefore reads the already-incremented value.
         levelManager.advanceLevelFrameCounter();
 
@@ -405,11 +405,11 @@ public final class LevelFrameStep {
                 && bonusStageProvider.updateDuringLevelFrame();
         boolean suppressDefaultCamera = bonusStageProvider != null
                 && bonusStageProvider.suppressesDefaultCameraStep();
-        // ROM: LevelLoop (sonic3k.asm:7895-7896) checks Restart_level_flag
+        // ROM: LevelLoop (sonic3k.asm:7927-7928) checks Restart_level_flag
         // immediately after Process_Sprites (object execution) and branches
         // away to `Level` (skipping DeformBgLayer, the camera-scroll routine)
         // whenever an object set the flag during that same object pass —
-        // e.g. Obj_PachinkoEnergyTrap's exit trigger (sonic3k.asm:96682) when
+        // e.g. Obj_PachinkoEnergyTrap's exit trigger (sonic3k.asm:96728) when
         // Sonic escapes through the top of the Glowing Spheres board. Mirror
         // that skip: once this frame's object pass has flagged bonus-stage
         // completion, the camera must not advance further this same frame
@@ -480,14 +480,14 @@ public final class LevelFrameStep {
         }
 
         // ROM LevelLoop runs ScreenEvents before Process_Kos_Module_Queue
-        // (docs/skdisasm/sonic3k.asm:7898-7908). A completion retired here is
+        // (docs/skdisasm/sonic3k.asm:7930-7940). A completion retired here is
         // therefore first observable by object/event consumers on their next
         // dispatch, never by this frame's ScreenEvents pass.
         // Runtime art queues are consumed once per active gameplay frame. S3K
         // uses this for Queue_Kos_Module workloads whose object routines poll
         // Kos_modules_left on later frames. It runs with the object pass because
         // ROM LevelLoop reaches its producers in ExecuteObjects
-        // (docs/skdisasm/sonic3k.asm:7900-7906), ahead of the
+        // (docs/skdisasm/sonic3k.asm:7932-7938), ahead of the
         // Process_Kos_Module_Queue state step in the loop tail (7908).
         // A results owner can publish an in-level title-card request during
         // ExecuteObjects. Obj_TitleCardInit queues its KosM parents before the
@@ -500,7 +500,7 @@ public final class LevelFrameStep {
         }
 
         // ROM LevelLoop runs ScreenEvents before Process_Kos_Module_Queue
-        // (docs/skdisasm/sonic3k.asm:7898-7908). A completion retired here is
+        // (docs/skdisasm/sonic3k.asm:7930-7940). A completion retired here is
         // therefore first observable by object/event consumers on their next
         // dispatch, never by this frame's ScreenEvents pass.
         if (frame.defersLoopTailPreparation()) {
@@ -509,7 +509,7 @@ public final class LevelFrameStep {
         }
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
 
-        // ROM LevelLoop's Process_Kos_Queue (docs/skdisasm/sonic3k.asm:7887)
+        // ROM LevelLoop's Process_Kos_Queue (docs/skdisasm/sonic3k.asm:7919)
         // runs after this iteration's Process_Kos_Module_Queue (7908) and before
         // Wait_VSync (7888) increments Level_frame_counter (7889), so the direct
         // FIFO service is the tail of THIS frame. Servicing it here lets a
@@ -526,7 +526,7 @@ public final class LevelFrameStep {
         //     boundary easing and post-camera systems observe the changed level.
         levelManager.flushQueuedLayoutMutations();
 
-        // 4c'. ROM ScreenEvents ends in DrawTilesAsYouMove (sonic3k.asm:104978):
+        // 4c'. ROM ScreenEvents ends in DrawTilesAsYouMove (sonic3k.asm:105024):
         //      the AIZ2 forest-loop plane ring pairs this frame's live camera with
         //      its Level_repeat_offset here, before the VBlank publishes scroll.
         LevelForegroundPlane.drawAsYouMove(levelManager);

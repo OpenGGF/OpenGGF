@@ -2,7 +2,7 @@ package com.openggf.game.sonic3k;
 
 /**
  * Per-module model of the S3K cheat-unlock RAM bytes that persist for the
- * whole power cycle ({@code sonic3k.constants.asm:973-981}):
+ * whole power cycle ({@code sonic3k.constants.asm:997-1005}):
  * <pre>
  *   Level_select_flag  ds.b 1   ; $FFFFFFE0
  *   Slow_motion_flag   ds.b 1   ; $FFFFFFE1
@@ -17,17 +17,17 @@ package com.openggf.game.sonic3k;
  *
  * <p>Writers in the locked-on ROM:
  * <ul>
- *   <li>{@code AIZRideVineHandle_CheckButtonSequence} ({@code sonic3k.asm:46560-46586})
+ *   <li>{@code AIZRideVineHandle_CheckButtonSequence} ({@code sonic3k.asm:46600-46626})
  *       stores 1 to {@code Level_select_flag} and {@code Slow_motion_flag} after
  *       L,L,L,R,R,R,U,U,U on the AIZ1 vine handle.</li>
- *   <li>{@code sub_3E598} ({@code sonic3k.asm:82622-82653}), the MHZ pulley-lift
+ *   <li>{@code sub_3E598} ({@code sonic3k.asm:82663-82694}), the MHZ pulley-lift
  *       handle, stores 1 to both bytes of {@code Debug_cheat_flag} after the same
  *       sequence when {@code tst.w (Level_select_flag)} is already nonzero.</li>
  * </ul>
  * Readers: {@code Obj_TitleSelection_Main} ({@code tst.b Level_select_flag}),
  * the title-screen level-select entry, {@code LevelSelect_CheckKnuckles}
  * ({@code tst.w Debug_cheat_flag}), the level-start {@code Debug_mode_flag}
- * write ({@code sonic3k.asm:7635-7638}) and the sound-test extras
+ * write ({@code sonic3k.asm:7667-7670}) and the sound-test extras
  * ({@code loc_663A}, {@code loc_85F4}).
  */
 public final class Sonic3kCheatFlags {

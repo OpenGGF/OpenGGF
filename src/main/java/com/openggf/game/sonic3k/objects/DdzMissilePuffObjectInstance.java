@@ -14,7 +14,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_8218E} / {@code loc_821C2} (sonic3k.asm:174284-174308) and the boss's
+ * ROM {@code loc_8218E} / {@code loc_821C2} (sonic3k.asm:174375-174399) and the boss's
  * {@code loc_826A0} smoke: a puff with {@code word_83202} attributes (priority {@code $200}, frame
  * {@code $18}) that follows the wrap offset, plays {@code byte_832B4} with
  * {@code Animate_RawNoSSTMultiDelay} (deleting at its {@code $F4}), moves with {@code MoveSprite2} and

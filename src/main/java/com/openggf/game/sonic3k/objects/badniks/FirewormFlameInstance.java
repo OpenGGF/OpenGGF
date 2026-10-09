@@ -26,28 +26,28 @@ import java.util.List;
 
 /**
  * The flame every Fireworm segment carries: {@code ChildObjDat_8FA30} -> {@code loc_8F95C}
- * (sonic3k.asm:196382-196452, ROM {@code $8F95C}), created at {@code (0,-$E)} from its segment.
+ * (sonic3k.asm:196487-196557, ROM {@code $8F95C}), created at {@code (0,-$E)} from its segment.
  *
  * <p>{@code loc_8F95C} runs {@code Refresh_ChildPositionAdjusted} first, so the flame is pinned to
  * its segment every frame, flips included, and never moves on its own. Its init
- * ({@code loc_8F97C}, :196392-196399) takes {@code word_8FA08} -- {@code priority $180}, an
+ * ({@code loc_8F97C}, :196497-196504) takes {@code word_8FA08} -- {@code priority $180}, an
  * {@code 8 x 8} box, {@code mapping_frame} 3, {@code collision_flags $98} -- through
  * {@code SetUp_ObjAttributes3}, which does <b>not</b> write mappings or {@code art_tile}: the flame
  * keeps the {@code Map_FirewormSegments} sheet {@code CreateChild1_Normal} copied from the segment.
  * It also sets {@code shield_reaction} bit 4, so this is fire and a fire shield ignores it.
  *
  * <p>The flicker is two states. Routine 2 animates {@code byte_8FA56} through {@code Animate_Raw};
- * the script's {@code $F4} runs {@code loc_8F9A4} (:196406-196414), which parks
+ * the script's {@code $F4} runs {@code loc_8F9A4} (:196511-196519), which parks
  * {@code mapping_frame} on 7 and waits a {@code Random_Number & $3F} number of frames in
- * {@code $2E(a0)}. {@code loc_8F9CE} (:196420-196423) then puts routine 2 back. The wait is the
+ * {@code $2E(a0)}. {@code loc_8F9CE} (:196525-196528) then puts routine 2 back. The wait is the
  * only randomness in the object, which is why every flame in a chain flickers out of step.
  */
 public final class FirewormFlameInstance extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable {
 
-    /** {@code word_8FA08}: {@code dc.w $180} (sonic3k.asm:196450). */
+    /** {@code word_8FA08}: {@code dc.w $180} (sonic3k.asm:196555). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0180);
-    /** {@code dc.b 8,8,3,$98} (:196451). */
+    /** {@code dc.b 8,8,3,$98} (:196556). */
     private static final int HALF_SIZE = 8;
     private static final int INITIAL_MAPPING_FRAME = 3;
     private static final int COLLISION_FLAGS = 0x98;
@@ -103,7 +103,7 @@ public final class FirewormFlameInstance extends AbstractObjectInstance
                 () -> new FirewormFlameInstance(ctx.spawn().x(), ctx.spawn().y()));
     }
 
-    /** {@code Refresh_ChildPositionAdjusted} (sonic3k.asm:177300-177327). */
+    /** {@code Refresh_ChildPositionAdjusted} (sonic3k.asm:177391-177418). */
     void refreshFrom(int parentX, int parentY, boolean parentFlipX, boolean parentFlipY) {
         this.flipX = parentFlipX;
         this.flipY = parentFlipY;
@@ -209,7 +209,7 @@ public final class FirewormFlameInstance extends AbstractObjectInstance
     @Override
     public boolean isHighPriority() {
         // The flame inherits make_art_tile(ArtTile_FirewormSegments,1,1) from the segment
-        // (ObjDat3_8F9FC, sonic3k.asm:196445), whose priority bit is set.
+        // (ObjDat3_8F9FC, sonic3k.asm:196550), whose priority bit is set.
         return true;
     }
 

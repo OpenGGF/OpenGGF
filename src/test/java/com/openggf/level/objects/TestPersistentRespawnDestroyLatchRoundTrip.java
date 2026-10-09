@@ -13,11 +13,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * must be back in place before the return load's first window scan.
  *
  * <p>ROM: the giant-ring entry sets {@code Respawn_table_keep = 1}
- * (docs/skdisasm/sonic3k.asm:128409-128412), so the reload skips the
- * {@code Object_respawn_table} wipe at :37429-37438 and the table is already
- * populated when {@code Load_Sprites} scans the entry window (:37741-37766).
+ * (docs/skdisasm/sonic3k.asm:128463-128466), so the reload skips the
+ * {@code Object_respawn_table} wipe at :37469-37478 and the table is already
+ * populated when {@code Load_Sprites} scans the entry window (:37781-37806).
  * An object deleted through {@code Delete_Current_Sprite} rather than
- * {@code Go_Delete_SpriteSlotted} (:179056-179061) keeps its bit 7 set, so it
+ * {@code Go_Delete_SpriteSlotted} (:179147-179152) keeps its bit 7 set, so it
  * must not be re-created on return.
  */
 class TestPersistentRespawnDestroyLatchRoundTrip {

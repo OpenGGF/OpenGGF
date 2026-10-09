@@ -38,7 +38,7 @@ import java.util.Set;
  * they step off, it recovers by 2 per frame. If the surface is already exhausted at
  * the start of a standing frame, the player is killed and the depth resets.
  *
- * <p>ROM: {@code Obj_SinkingMud} / {@code SolidObjectTop_1P} (sonic3k.asm:68500-68661)
+ * <p>ROM: {@code Obj_SinkingMud} / {@code SolidObjectTop_1P} (sonic3k.asm:68540-68701)
  */
 public class SinkingMudObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider,
@@ -89,7 +89,7 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
     public boolean rejectsZeroDistanceTopSolidLanding() {
         // ROM SolidObjectTop_1P computes surface-playerBottom into d0, then
         // accepts only the unsigned range $FFF0..$FFFF. d0 == 0 is below
-        // $FFF0 and branches to the no-contact return (sonic3k.asm:41998-42007).
+        // $FFF0 and branches to the no-contact return (sonic3k.asm:42038-42047).
         return true;
     }
 

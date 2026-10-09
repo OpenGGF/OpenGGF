@@ -792,16 +792,16 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
      * one modelled here (skdisasm/sonic3k.asm:38). On that branch
      * {@code zSFXTrackInitLoop} calls {@code zFMClearSSGEGOps} for every
      * track including PSG ones, which the listing flags with its own
-     * "(even on PSG tracks!!!)" note at :2099. Nothing reaches the chip for
+     * "(even on PSG tracks!!!)" note at :2121. Nothing reaches the chip for
      * those, because every write goes through {@code zWriteFMIorII}, which
-     * returns at once on bit 7 of {@code VoiceControl} (:2549-2551). The
+     * returns at once on bit 7 of {@code VoiceControl} (:2571-2573). The
      * fixed branch would test that bit at the call site and skip the call
      * instead; the observable SSG-EG clear stream is identical either way.
      *
      * <p>The same routine's second guard is modelled too: {@code
      * zWriteFMIorII} also returns on bit 2 of {@code PlaybackControl}, the
-     * SFX-overriding bit (:2552-2553), and {@code zKeyOffIfActive} returns on
-     * either that bit or the do-not-attack bit (:3338-3341).
+     * SFX-overriding bit (:2574-2575), and {@code zKeyOffIfActive} returns on
+     * either that bit or the do-not-attack bit (:3370-3373).
      *
      * <p>Those two track bits are the driver's whole arbitration here: the
      * writes themselves go out through {@code zWriteFMI} / {@code

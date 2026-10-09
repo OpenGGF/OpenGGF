@@ -74,7 +74,7 @@ Three bounded explorations covered cutscene/support behavior, boss/defeat behavi
 
 ### Cutscene and support-object findings
 
-- `CutsceneKnucklesCnz2AInstance` and `CutsceneKnucklesCnz2BInstance` currently lack the outer `Check_CameraInRange` lifetime gate. Use respawnable `ObjectLifetimeOps` semantics for windows A `$176..$300/$1C00..$1E00` and B `$720..$A00/$45C0..$46E0` (`sonic3k.asm:129034,129269,180433`).
+- `CutsceneKnucklesCnz2AInstance` and `CutsceneKnucklesCnz2BInstance` currently lack the outer `Check_CameraInRange` lifetime gate. Use respawnable `ObjectLifetimeOps` semantics for windows A `$176..$300/$1C00..$1E00` and B `$720..$A00/$45C0..$46E0` (`sonic3k.asm:129091,129326,180524`).
 - `src/main/java/com/openggf/game/sonic3k/objects/bosses/S3kSharedBossCameraGate.java` is prior art for `loc_85CA4`; expose/reuse it in CNZ2A and the boss rather than maintaining `CutsceneKnucklesCnz2AInstance.updateCameraLock()` and boss-local approximations. Music timer, min-Y, and min/max-X convergence are independent goals.
 - Landing calls need `ObjectTerrainUtils.checkFloorDist` with the ROM probe radius `$13`; spawn-Y flooring is not equivalent (`loc_6237C`, `loc_620AA`).
 - Raw animation cadence is run 5, jump 2, laugh 8 engine frames. Both post-bounce waits use `$1C,$1C,$1D`; `$1E,$1F` remains only the initial pose.
@@ -105,7 +105,7 @@ Evidence files: `CnzEndBossInstance.java`, `CnzEndBossMagnetChild.java`, `CnzEnd
 
 ### Capsule, cannon, ICZ, validation, and policy findings
 
-- ROM `loc_6E778/loc_6E7B6/loc_6E7E4/loc_6E80C` is at `sonic3k.asm:146050-146105`. The boss arms when cannon per-P1 byte `$30` becomes 1, counts `$BF`, then waits for raw cannon angle `$12` before writing A/B/C held and press bits.
+- ROM `loc_6E778/loc_6E7B6/loc_6E7E4/loc_6E80C` is at `sonic3k.asm:146115-146170`. The boss arms when cannon per-P1 byte `$30` becomes 1, counts `$BF`, then waits for raw cannon angle `$12` before writing A/B/C held and press bits.
 - `CnzCannonInstance` has matching private states idle/pulling/ready/cooldown and `spinAngle`, but exposes only ready-state/direct-launch APIs. Add capture-state and raw-angle contracts; use its existing `isJumpPressed()` path for the boss-forced launch.
 - `CnzEndBossInstance.updatePostDefeatSequence()` currently arms late and calls `triggerEndSequenceLaunch()` directly. It should set forced jump input at angle `$12`, let the cannon consume it, and clear the forced input after release.
 - `Sonic3kObjectArtProvider.loadArtForZone()` loads ordinary explosion art for every zone, and cannon puffs already render `ObjectArtKeys.EXPLOSION`. F3 is therefore a focused readiness test unless it fails.

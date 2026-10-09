@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * Dissipating smoke puff.
  *
- * <p>ROM reference: {@code Obj_FireShield_Dissipate} ({@code sonic3k.asm:42241}).
+ * <p>ROM reference: {@code Obj_FireShield_Dissipate} ({@code sonic3k.asm:42281}).
  * Drifts with its spawn velocity (MoveSprite2 — no gravity) and plays explosion
  * mapping frames 1 through 4, four frames each, then deletes itself. Spawned by
  * the fire shield when it is quenched underwater and by the LBZ1 tunnel exhaust

@@ -40,7 +40,7 @@ import java.util.List;
  *   <li>TRIGGER_COLLAPSE: Collapses when level trigger fires (non-ICZ negative subtype)
  * </ul>
  *
- * <p>ROM reference: Obj_TensionBridge (sonic3k.asm:75496+)
+ * <p>ROM reference: Obj_TensionBridge (sonic3k.asm:75537+)
  */
 public class TensionBridgeObjectInstance extends AbstractObjectInstance
         implements SlopedSolidProvider, SolidObjectListener, RomObjectCodePointerProvider,
@@ -186,7 +186,7 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getBalanceWidthPixels() {
-        // Obj_TensionBridge init writes width_pixels(a0) = $80 (sonic3k.asm:75516).
+        // Obj_TensionBridge init writes width_pixels(a0) = $80 (sonic3k.asm:75557).
         return 0x80;
     }
 
@@ -222,7 +222,7 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
     public boolean rejectsZeroDistanceTopSolidLanding() {
         // sub_38AA2 sends fresh contacts to sub_1E410. Its unsigned
         // cmpi.w #-$10,d0 / blo accepts only negative overlap [-$10,-1]
-        // and rejects the exact d0=0 boundary (sonic3k.asm:75871-75946,
+        // and rejects the exact d0=0 boundary (sonic3k.asm:75912-75987,
         // 41982-42068).
         return true;
     }
@@ -639,14 +639,14 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
 
         @Override
         public boolean isHighPriority() {
-            // sub_389DE copies art_tile(a3) from the bridge (sonic3k.asm:75861).
+            // sub_389DE copies art_tile(a3) from the bridge (sonic3k.asm:75902).
             return highPri;
         }
 
         @Override
         public int getPriorityBucket() {
             // sub_389DE copies priority(a3) from the bridge on both fragment paths
-            // (sonic3k.asm:75862, 75865), so each fragment keeps the parent's bucket.
+            // (sonic3k.asm:75903, 75906), so each fragment keeps the parent's bucket.
             return priorityBucket;
         }
 

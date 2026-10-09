@@ -121,7 +121,7 @@ public final class TraceRunBoundaryComparator {
      * vsync between them and the main loop's first wait — S3K
      * {@code move.b #0,(Ctrl_1_locked).w} / {@code bclr #7,(Game_mode).w}
      * ahead of {@code LevelLoop}'s {@code Wait_VSync}
-     * (docs/skdisasm/sonic3k.asm:7859, 7883, 7888-7891), S2
+     * (docs/skdisasm/sonic3k.asm:7891, 7915, 7920-7923), S2
      * {@code move.b #0,(Control_Locked).w} /
      * {@code bclr #GameModeFlag_TitleCard,(Game_Mode).w} ahead of
      * {@code Level_MainLoop}'s {@code WaitForVint} (docs/s2disasm/s2.asm:5081,

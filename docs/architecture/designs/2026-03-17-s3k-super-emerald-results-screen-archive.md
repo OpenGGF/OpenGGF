@@ -23,7 +23,7 @@ Additionally, zone-specific gating:
 - Zones $7+ (MHZ onward): Always qualifies
 - Earlier zones: Sonic/Knuckles get Chaos Emerald reveal; Tails gets exit only
 
-## HPZ Background Loading (sonic3k.asm lines 63119-63181)
+## HPZ Background Loading (sonic3k.asm lines 63159-63221)
 
 When the Super Emerald path is active, the setup routine loads:
 1. **Palette**: Pal_HPZIntro+$20 → palette line 3 (with $CCC0CCC fill for Normal, real data for Target)

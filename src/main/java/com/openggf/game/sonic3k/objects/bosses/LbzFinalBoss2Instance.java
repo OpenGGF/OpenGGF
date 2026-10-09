@@ -46,7 +46,7 @@ import java.util.logging.Logger;
  * S3KL object {@code $CC}, {@code Obj_LBZFinalBoss2}: Big Arm.
  *
  * <p>This is a direct port of the native object graph in
- * {@code docs/skdisasm/sonic3k.asm:154231-155584}.  The root dispatch keeps the
+ * {@code docs/skdisasm/sonic3k.asm:154305-155658}.  The root dispatch keeps the
  * ROM routine values (including the grab {@code $1E -> $2A} path); child creation
  * follows {@code ChildObjDat_75122}, {@code ChildObjDat_75144}, and the native
  * defeat child tables in slot order.  Sprite mappings, art, and palette bytes

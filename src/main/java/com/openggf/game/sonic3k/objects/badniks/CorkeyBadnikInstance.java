@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * S3K S3KL Obj $C1 - Corkey (LBZ).
  *
- * <p>ROM reference: {@code Obj_Corkey} at {@code sonic3k.asm:191738}. The
+ * <p>ROM reference: {@code Obj_Corkey} at {@code sonic3k.asm:191831}. The
  * parent paces horizontally, raises status byte {@code $38} bit 1 when ready to
  * fire, and waits until the child nozzle clears that bit after the shot cycle.
  */

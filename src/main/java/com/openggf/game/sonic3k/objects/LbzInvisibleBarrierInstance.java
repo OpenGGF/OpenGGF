@@ -17,7 +17,7 @@ import java.util.List;
  * Invisible solid wall guarding the LBZ1 boss approach during and after the
  * ending-building collapse.
  *
- * <p>ROM: {@code Obj_LBZ1InvisibleBarrier} at {@code sonic3k.asm:111145} —
+ * <p>ROM: {@code Obj_LBZ1InvisibleBarrier} at {@code sonic3k.asm:111191} —
  * pinned at ({@code $3BC0}, {@code $100}) with {@code width_pixels=$40} and
  * {@code SolidObjectFull2} d1={@code $4B}, d2=d3={@code $100}; it deletes
  * itself once {@code Camera_X_pos} reaches {@code $3D80}.
@@ -27,13 +27,13 @@ public final class LbzInvisibleBarrierInstance extends AbstractObjectInstance
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
-     * ROM {@code Obj_LBZ1InvisibleBarrier} (docs/skdisasm/sonic3k.asm:111150) is spawned by its parent rather than from the
+     * ROM {@code Obj_LBZ1InvisibleBarrier} (docs/skdisasm/sonic3k.asm:111196) is spawned by its parent rather than from the
      * object pointer table; every routine in its code block lies in the
      * {@code $0005xxxx} bank.
      * Its whole code block lies in one bank, so the HIGH word that
      * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
      * on the next off-screen on-object frame is {@code $0005}
-     * (docs/skdisasm/sonic3k.asm:26816-26843).
+     * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
     public int romObjectCodePointerHighWord() {

@@ -18,7 +18,7 @@ import com.openggf.sprites.playable.SidekickLevelEventRelease;
 import java.util.List;
 
 /**
- * ROM {@code Obj_57DCC} (sonic3k.asm:116889-116918): the Player 2 half of the Sky Sanctuary
+ * ROM {@code Obj_57DCC} (sonic3k.asm:116935-116964): the Player 2 half of the Sky Sanctuary
  * arrival, allocated by {@code loc_57D18} when the act is 1 and {@code Player_mode == 0}.
  *
  * <p>{@code subtype} counts down {@code $C} frames. On the frame it reaches zero the helper puts

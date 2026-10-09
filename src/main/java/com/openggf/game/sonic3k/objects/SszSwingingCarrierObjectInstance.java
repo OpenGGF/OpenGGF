@@ -15,7 +15,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code Obj_SSZSwingingCarrier} ({@code $75}, sonic3k.asm:92023-92190): the hub of the arm
+ * ROM {@code Obj_SSZSwingingCarrier} ({@code $75}, sonic3k.asm:92069-92236): the hub of the arm
  * that carries a player around a pivot. Eight act-1 placements: five {@code $00}, one {@code $80}
  * and two {@code $82}.
  *
@@ -117,7 +117,7 @@ public final class SszSwingingCarrierObjectInstance extends AbstractObjectInstan
                 this));
     }
 
-    /** {@code Gradual_SwingOffset} (sonic3k.asm:92484-92515); returns the offset's high word. */
+    /** {@code Gradual_SwingOffset} (sonic3k.asm:92530-92561); returns the offset's high word. */
     private int gradualSwingOffset() {
         int step = SWING_ACCELERATION;
         if (swingReversed) {

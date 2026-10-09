@@ -13,7 +13,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
  * {@link #getIntroStartPosition(int, int)} to support its intro sequence.
  */
 public final class Sonic3kBootstrapResolver {
-    // ROM source of truth: sonic3k.asm:38174-38177 (Level_FromSavedGame override)
+    // ROM source of truth: sonic3k.asm:38214-38217 (Level_FromSavedGame override)
     // move.w #$40,(Player_1+x_pos).w / move.w #$420,(Player_1+y_pos).w
     private static final int[] AIZ1_INTRO_START_POS = new int[]{0x40, 0x420};
     private static final int[] LBZ1_INTRO_START_POS = new int[]{0x00B0, 0x0650};
@@ -29,7 +29,7 @@ public final class Sonic3kBootstrapResolver {
 
         // ROM: LoadLevelLoadBlock selects the post-intro AIZ resource profile
         // when Saved2_* state is live for a giant-ring special-stage return
-        // (sonic3k.asm:9727-9739). The return reload must not recreate the
+        // (sonic3k.asm:9763-9775). The return reload must not recreate the
         // surfing intro just because the global skip-intros option is disabled.
         var levelManager = GameServices.levelOrNull();
         if (levelManager != null && levelManager.hasBigRingReturn()) {

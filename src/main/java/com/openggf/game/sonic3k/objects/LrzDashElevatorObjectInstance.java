@@ -26,23 +26,23 @@ import java.util.List;
 
 /**
  * ROM object {@code Obj_LRZDashElevator} - object id {@code $1E} in the {@code SKL} pointer set
- * (sonic3k.asm:88381-88495, ROM {@code $42F2C}).
+ * (sonic3k.asm:88427-88541, ROM {@code $42F2C}).
  *
  * <p>A solid platform that riders drive themselves. A player only latches on while its
  * {@code anim} is {@code 9} (spindash) and it is already standing on the platform; once latched it
  * keeps riding while {@code anim} is {@code 2} (roll) or {@code 9}, and any other animation, or
  * leaving the ground, releases it with {@code x_vel = 0} ({@code sub_4301C},
- * sonic3k.asm:88469-88494). A character with no spindash can therefore never start a ride.
+ * sonic3k.asm:88515-88540). A character with no spindash can therefore never start a ride.
  *
  * <p>Each rider contributes {@code 8 + spin_dash_counter}, negated when it faces right
  * ({@code Status_Facing} clear), to a per-frame accumulator. {@code loc_42F78} swaps that word into
  * the high half of a longword and shifts it right by three, so the platform's 16.16 position moves
  * by {@code accumulator / 8} pixels a frame between 0 and the subtype's travel range
- * (sonic3k.asm:88414-88424). While it moves it also drains each rider's {@code ground_vel} toward
+ * (sonic3k.asm:88460-88470). While it moves it also drains each rider's {@code ground_vel} toward
  * zero by {@code $40} a frame, with the {@code bcc} after the add/subtract clamping at zero rather
- * than overshooting (:88478-88488).
+ * than overshooting (:88524-88534).
  *
- * <p>Init (:88381-88397): the low seven subtype bits times eight are the travel range; bit 7 starts
+ * <p>Init (:88427-88443): the low seven subtype bits times eight are the travel range; bit 7 starts
  * the platform {@code $20} in from the bottom; and status bit 0 (the placement's flip flag) starts
  * it at the far end instead, with the base Y moved up by the whole range.
  */
@@ -50,22 +50,22 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, RewindRecreatable,
         RomObjectCodePointerProvider {
 
-    /** {@code move.w #$80,priority(a0)} (sonic3k.asm:88387): bucket 1. */
+    /** {@code move.w #$80,priority(a0)} (sonic3k.asm:88433): bucket 1. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0080);
-    /** {@code move.b #$20,width_pixels(a0)} / {@code #$10,height_pixels(a0)} (:88385-88386). */
+    /** {@code move.b #$20,width_pixels(a0)} / {@code #$10,height_pixels(a0)} (:88431-88432). */
     private static final int WIDTH_PIXELS = 0x20;
     private static final int HEIGHT_PIXELS = 0x10;
-    /** {@code SolidObjectFull} arguments at {@code loc_43000} (:88462-88466). */
+    /** {@code SolidObjectFull} arguments at {@code loc_43000} (:88508-88512). */
     private static final int SOLID_HALF_WIDTH = 0x2B;
     private static final int SOLID_HEIGHT_AIR = 0x08;
     private static final int SOLID_HEIGHT_GROUND = 0x09;
-    /** {@code moveq #$20,d1} for a subtype with bit 7 set (:88390-88392). */
+    /** {@code moveq #$20,d1} for a subtype with bit 7 set (:88436-88438). */
     private static final int HIGH_BIT_START_OFFSET = 0x20;
-    /** {@code moveq #8,d0 / add.b spin_dash_counter(a1),d0} (:88483-88484), a byte add. */
+    /** {@code moveq #8,d0 / add.b spin_dash_counter(a1),d0} (:88529-88530), a byte add. */
     private static final int RIDER_BASE_PUSH = 8;
-    /** {@code addi.w #$40,d0} / {@code subi.w #$40,d0} (:88472-88477). */
+    /** {@code addi.w #$40,d0} / {@code subi.w #$40,d0} (:88518-88523). */
     private static final int GROUND_VELOCITY_DRAIN = 0x40;
-    /** {@code cmpi.b #3,mapping_frame(a0)} (:88441): three walking frames. */
+    /** {@code cmpi.b #3,mapping_frame(a0)} (:88487): three walking frames. */
     private static final int MAPPING_FRAME_COUNT = 3;
 
     /** ROM {@code $30(a0)}: a 16.16 position whose high word is the pixel offset from the base. */
@@ -97,17 +97,17 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
         int subtype = spawn.subtype() & 0xFF;
         int highBitOffset = 0;
         int startOffset = 0;
-        // move.b subtype(a0),d0 / bpl.s loc_42F54 (sonic3k.asm:88390-88393).
+        // move.b subtype(a0),d0 / bpl.s loc_42F54 (sonic3k.asm:88436-88439).
         if ((subtype & 0x80) != 0) {
             highBitOffset = HIGH_BIT_START_OFFSET;
             startOffset = HIGH_BIT_START_OFFSET;
         }
-        // andi.w #$7F,d0 / lsl.w #3,d0 (:88395-88396).
+        // andi.w #$7F,d0 / lsl.w #3,d0 (:88441-88442).
         int range = (subtype & 0x7F) << 3;
         this.maxPosition = range << 16;
 
         int base = spawn.y() & 0xFFFF;
-        // bclr #0,status(a0) / beq.s loc_42F72 (:88398-88403): a flipped placement starts at the
+        // bclr #0,status(a0) / beq.s loc_42F72 (:88444-88449): a flipped placement starts at the
         // far end of the travel and hangs its base Y a whole range higher.
         if ((spawn.renderFlags() & 0x1) != 0) {
             startOffset = range - highBitOffset;
@@ -142,24 +142,24 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
         p1Standing = false;
         p2Standing = false;
 
-        // moveq #0,d5 and the two sub_4301C calls (sonic3k.asm:88406-88413). Only the low word of
+        // moveq #0,d5 and the two sub_4301C calls (sonic3k.asm:88452-88459). Only the low word of
         // d5 is written by add.w, so the accumulator is a 16-bit quantity.
         int accumulator = 0;
         accumulator += riderPush(playerEntity, true);
         accumulator += riderPush(nativeP2OrNull(), false);
         accumulator &= 0xFFFF;
 
-        // swap d5 / asr.l #3,d5 (:88415-88416): the word becomes the high half of a longword, so
+        // swap d5 / asr.l #3,d5 (:88461-88462): the word becomes the high half of a longword, so
         // the shift keeps its sign and the result is accumulator/8 pixels in 16.16.
         int delta = (accumulator << 16) >> 3;
 
         int next = position + delta;
-        // bpl.s loc_42FA4 (:88418-88421).
+        // bpl.s loc_42FA4 (:88464-88467).
         if (next < 0) {
             next = 0;
             delta = 0;
         }
-        // cmp.l d1,d0 / blo.s loc_42FB0 (:88424-88428). Both operands are non-negative here, so
+        // cmp.l d1,d0 / blo.s loc_42FB0 (:88470-88474). Both operands are non-negative here, so
         // the ROM's unsigned compare and this signed one agree.
         if (next >= maxPosition) {
             next = maxPosition;
@@ -168,14 +168,14 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
         position = next;
         frameDelta = delta;
 
-        // swap d0 / add.w $46(a0),d0 / move.w d0,y_pos(a0) (:88431-88434): a word add.
+        // swap d0 / add.w $46(a0),d0 / move.w d0,y_pos(a0) (:88477-88480): a word add.
         updateDynamicSpawn(getCentreX(), (baseY + (position >> 16)) & 0xFFFF);
 
         advanceAnimationAndSound(levelFrameCounterOrFallback(vIntRunCount));
     }
 
     /**
-     * {@code loc_42FB0} tail (sonic3k.asm:88435-88461). {@code Level_frame_counter+1} is the low
+     * {@code loc_42FB0} tail (sonic3k.asm:88481-88507). {@code Level_frame_counter+1} is the low
      * byte of the level clock, not the object's V-int count: the platform steps one walking frame
      * every fourth level frame while it is actually moving, and re-plays the conveyor loop every
      * sixteenth.
@@ -186,13 +186,13 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
             return;
         }
         if (frameDelta < 0) {
-            // addq.b #1,mapping_frame(a0) with a wrap at 3 (:88438-88443).
+            // addq.b #1,mapping_frame(a0) with a wrap at 3 (:88484-88489).
             mappingFrame = mappingFrame + 1;
             if (mappingFrame >= MAPPING_FRAME_COUNT) {
                 mappingFrame = 0;
             }
         } else {
-            // subq.b #1,mapping_frame(a0) / bcc, else 2 (:88446-88449).
+            // subq.b #1,mapping_frame(a0) / bcc, else 2 (:88492-88495).
             mappingFrame = mappingFrame - 1;
             if (mappingFrame < 0) {
                 mappingFrame = MAPPING_FRAME_COUNT - 1;
@@ -209,7 +209,7 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM {@code sub_4301C} (sonic3k.asm:88469-88494). Returns this rider's contribution to the
+     * ROM {@code sub_4301C} (sonic3k.asm:88515-88540). Returns this rider's contribution to the
      * frame accumulator, which is zero on every path but the ride itself.
      */
     private int riderPush(PlayableEntity entity, boolean isPlayerOne) {
@@ -230,7 +230,7 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
             return 0;
         }
 
-        // loc_4303A (:88489-88492): leaving the ground, or any animation but roll and spindash,
+        // loc_4303A (:88535-88538): leaving the ground, or any animation but roll and spindash,
         // releases the rider with a cleared x_vel.
         int animation = player.getAnimationId();
         boolean keepsRiding = !player.getAir()
@@ -242,7 +242,7 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
             return 0;
         }
 
-        // loc_4305E (:88494-88510).
+        // loc_4305E (:88540-88556).
         NativePositionOps.writeXPosPreserveSubpixel(player, getCentreX());
         int groundVelocity = player.getGSpeed();
         if (groundVelocity != 0) {
@@ -263,7 +263,7 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code addi.w}/{@code subi.w #$40} followed by {@code bcc} (sonic3k.asm:88472-88482): the
+     * {@code addi.w}/{@code subi.w #$40} followed by {@code bcc} (sonic3k.asm:88518-88528): the
      * carry out of the 16-bit operation is what clamps at zero, so a speed already inside
      * {@code $40} of zero lands exactly on zero instead of crossing it.
      */
@@ -316,7 +316,7 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        // move.w #$2B,d1 / #8,d2 / #9,d3 (sonic3k.asm:88462-88465).
+        // move.w #$2B,d1 / #8,d2 / #9,d3 (sonic3k.asm:88508-88511).
         return SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_HEIGHT_AIR, SOLID_HEIGHT_GROUND);
     }
 
@@ -344,7 +344,7 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
-        // d4 = x_pos(a0) (sonic3k.asm:88466); the platform only ever moves vertically.
+        // d4 = x_pos(a0) (sonic3k.asm:88512); the platform only ever moves vertically.
         return false;
     }
 
@@ -387,7 +387,7 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        // make_art_tile(ArtTile_LRZMisc,0,0) (sonic3k.asm:88383) leaves the priority bit clear.
+        // make_art_tile(ArtTile_LRZMisc,0,0) (sonic3k.asm:88429) leaves the priority bit clear.
         return false;
     }
 

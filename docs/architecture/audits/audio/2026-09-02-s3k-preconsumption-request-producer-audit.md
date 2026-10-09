@@ -47,10 +47,10 @@ capability, an executable, or the audio frontier.
 
 Primary evidence:
 
-- `docs/skdisasm/sonic3k.asm:1493-1497` owns `Play_Music`.
+- `docs/skdisasm/sonic3k.asm:1515-1519` owns `Play_Music`.
 - `docs/skdisasm/sonic3k.macros.asm:93-103` owns the stopped-Z80 bus interval.
 - `docs/skdisasm/Sound/Z80 Sound Driver.asm:4370-4400` owns the SEGA-PCM mailbox poll.
-- `docs/skdisasm/sonic3k.constants.asm:1455` defines `cmd_StopSEGA = $FE`.
+- `docs/skdisasm/sonic3k.constants.asm:1480` defines `cmd_StopSEGA = $FE`.
 - `docs/architecture/research/audio/2026-08-30-s3k-sound-driver-routine-map.md:59-117`
   maps the mailbox and stop-all state.
 - `docs/architecture/designs/audio/2026-08-30-s3k-audio-oracle-design.md:90-124` and

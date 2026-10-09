@@ -15,7 +15,7 @@ The donor capability matrix, flight timing, carry rules, CPU recovery, water-tra
 
 `Obj_Tails_Tail_AniSelection` maps flying body animations `$20-$24` to tail animations `$0B/$0C`, but maps swimming animations `$25-$28` to `$00` (blank). The swim body mappings already contain the complete tails. The engine currently maps `$25-$28` to `$0B/$0C`, causing the extra overlay.
 
-Reference: `docs/skdisasm/sonic3k.asm:30076-30107`.
+Reference: `docs/skdisasm/sonic3k.asm:30116-30147`.
 
 ### Idle swim velocity
 
@@ -23,7 +23,7 @@ Reference: `docs/skdisasm/sonic3k.asm:30076-30107`.
 
 The engine currently runs the correct flight update and movement, then unconditionally applies the non-flight underwater `-$28`, changing a resting swimmer from `$0000` to `-$0020` per frame.
 
-Reference: `docs/skdisasm/sonic3k.asm:27553-27644`.
+Reference: `docs/skdisasm/sonic3k.asm:27593-27684`.
 
 ## Design
 

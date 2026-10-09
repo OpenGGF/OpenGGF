@@ -33,7 +33,7 @@ import java.util.logging.Logger;
 /**
  * AIZ Act 2 end boss (Object 0x92) — Eggman's fire-breathing machine.
  *
- * <p>ROM: Obj_AIZEndBoss (sonic3k.asm:137997).
+ * <p>ROM: Obj_AIZEndBoss (sonic3k.asm:138062).
  * Emerges from the waterfall, fires flamethrower projectiles via arm/propeller children,
  * then submerges, repositions to one of 4 random positions, and re-emerges. After two
  * attack cycles the boss is defeated, spawning an Egg Capsule.
@@ -96,7 +96,7 @@ public class AizEndBossInstance extends AbstractBossInstance
     private static final int POST_DEFEAT_KNUX = 0xFF;     // ROM: move.w #$FF
     /**
      * ROM {@code BossDefeated}: {@code move.w #$3F,$2E(a0)}
-     * (sonic3k.asm:180820-180821). {@code AIZEndBoss_StartDefeatCallback} ends
+     * (sonic3k.asm:180911-180912). {@code AIZEndBoss_StartDefeatCallback} ends
      * with {@code jmp (BossDefeated_StopTimer).l}, and that label is a single
      * {@code clr.b (Update_HUD_timer).w} which FALLS THROUGH into
      * {@code BossDefeated} — so the defeat path does write {@code $2E}, and the
@@ -108,7 +108,7 @@ public class AizEndBossInstance extends AbstractBossInstance
     /**
      * ROM {@code loc_85674}: {@code move.w #(2*60)-1,$2E(a0)} — the delay
      * {@code Wait_FadeToLevelMusic} installs on expiry, counted down by
-     * {@code Obj_Wait} before the egg capsule is created (sonic3k.asm:179663).
+     * {@code Obj_Wait} before the egg capsule is created (sonic3k.asm:179754).
      */
     private static final int FADE_TO_LEVEL_MUSIC_WAIT = (2 * 60) - 1;
     // ===== Swing parameters (ROM: loc_6933A) =====
@@ -307,7 +307,7 @@ public class AizEndBossInstance extends AbstractBossInstance
         }
         // ROM ObjDat_AIZEndBoss starts with collision $10, but the revealed
         // setup overwrites it with $16 before touch is active
-        // (sonic3k.asm:138109-138114). Keep the raw enemy-style flag byte:
+        // (sonic3k.asm:138174-138179). Keep the raw enemy-style flag byte:
         // Touch_Enemy treats this as a boss through nonzero collision_property.
         return COLLISION_FLAGS_ACTIVE;
     }
@@ -526,7 +526,7 @@ public class AizEndBossInstance extends AbstractBossInstance
     private int emergeAnimFrame;
     private int emergeAnimTimer;
     // ROM byte_69D98 has thirteen zero-delay raw-animation entries before
-    // the $F4 callback to loc_69302 (sonic3k.asm:139089-139104).
+    // the $F4 callback to loc_69302 (sonic3k.asm:139154-139169).
     private static final int EMERGE_FLICKER_DURATION = 13;
 
     /** ROM: loc_692E2 — Emerge animation (flickering reveal). */
@@ -578,7 +578,7 @@ public class AizEndBossInstance extends AbstractBossInstance
     private int revealedAnimTimer;
     // ROM byte_69DB3 is consumed by Animate_RawNoSSTMultiDelay: $1B/$00,
     // $1B/$04, $1C/$05, $1D/$06, $00/$00, then $F4 callback
-    // (docs/skdisasm/sonic3k.asm:138120-138122,139104-139110,177558-177587).
+    // (docs/skdisasm/sonic3k.asm:138185-138187,139169-139175,177649-177678).
     private static final int REVEALED_FRAME_1B_END = 5;
     private static final int REVEALED_FRAME_1C_END = 11;
     private static final int REVEALED_FRAME_1D_END = 18;
@@ -785,7 +785,7 @@ public class AizEndBossInstance extends AbstractBossInstance
         // ROM AIZEndBoss_StartDefeatCallback installs Wait_FadeToLevelMusic in
         // (a0) and AIZEndBoss_StartDefeat in $34, then tail-jumps through
         // BossDefeated_StopTimer, which falls through into BossDefeated and
-        // sets $2E to $3F (sonic3k.asm:138945-138951, 180814-180821).
+        // sets $2E to $3F (sonic3k.asm:139010-139016, 180905-180912).
         waitTimer = BOSS_DEFEATED_WAIT;
         waitCallback = WaitCallback.START_DEFEAT;
         flags38 |= FLAG_DEFEAT_STARTED;
@@ -800,7 +800,7 @@ public class AizEndBossInstance extends AbstractBossInstance
         defeatSignal = true;
         AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(false);
 
-        // ROM loc_69C36: jmp (BossDefeated_StopTimer).l (sonic3k.asm:139001).
+        // ROM loc_69C36: jmp (BossDefeated_StopTimer).l (sonic3k.asm:139066).
         stopLevelTimerOnBossDefeat();
 
         // ROM: The ship child (Obj_RobotnikShip) creates its own explosion controller
@@ -819,7 +819,7 @@ public class AizEndBossInstance extends AbstractBossInstance
      * {@code (2*60)-1} delay, starts the music fade, and tail-jumps through
      * {@code $34} in the same frame, switching the boss to {@code Obj_Wait}
      * with the capsule sequence as its callback
-     * (sonic3k.asm:179661-179669, 138240-138247).
+     * (sonic3k.asm:179752-179760, 138305-138312).
      */
     private void startDefeat() {
         waitTimer = FADE_TO_LEVEL_MUSIC_WAIT;
@@ -832,14 +832,14 @@ public class AizEndBossInstance extends AbstractBossInstance
             spawnPendingExplosions();
         }
 
-        // ROM Wait_FadeToLevelMusic (sonic3k.asm:179656-179660) and Obj_Wait
-        // (sonic3k.asm:177949-177952) are the same shape -- subq.w #1,$2E then
+        // ROM Wait_FadeToLevelMusic (sonic3k.asm:179747-179751) and Obj_Wait
+        // (sonic3k.asm:178040-178043) are the same shape -- subq.w #1,$2E then
         // bmi through $34 -- so both defeat stages are one countdown over the
         // one timer, differing only in which callback is armed. The countdown
         // stops once the capsule sequence has run, because ROM
         // AIZEndBoss_StartCapsuleSequence installs
         // AIZEndBoss_StartPostDefeatCutscene in (a0) and the boss leaves
-        // Obj_Wait entirely (sonic3k.asm:138248-138249).
+        // Obj_Wait entirely (sonic3k.asm:138313-138314).
         if (waitCallback != WaitCallback.NONE) {
             waitTimer--;
             if (waitTimer < 0) {
@@ -879,7 +879,7 @@ public class AizEndBossInstance extends AbstractBossInstance
             }
             // ROM loc_694AA creates the route-8 capsule through
             // CreateChild6_Simple, which allocates after the current boss
-            // slot (sonic3k.asm:138247-138255, 177114-177129).
+            // slot (sonic3k.asm:138312-138320, 177205-177220).
             spawnChild(() -> Aiz2EndEggCapsuleInstance.createForCamera(
                     services().camera().getX(), services().camera().getY()));
             Aiz2BossEndSequenceState.activateCutsceneOverrideObjects();
@@ -893,7 +893,7 @@ public class AizEndBossInstance extends AbstractBossInstance
             // first in every object scan, which is why the bridge's
             // AIZDrawBridge_WaitCollapseTrigger observes the button's
             // st (_unkFAA9).w on the same frame the button sets it
-            // (sonic3k.asm:59622-59628, 133936-133953).
+            // (sonic3k.asm:59662-59668, 133993-134010).
             S3kCutsceneButtonObjectInstance cutsceneButton = spawnFreeChild(
                     S3kCutsceneButtonObjectInstance::createCutsceneOverride);
             AizDrawBridgeObjectInstance cutsceneBridge = spawnFreeChild(
@@ -931,7 +931,7 @@ public class AizEndBossInstance extends AbstractBossInstance
         var rng = services().rng();
         do {
             // ROM loc_69A66 calls Random_Number and masks the raw word with #$C,
-            // then rejects repeats (sonic3k.asm:138748-138756).
+            // then rejects repeats (sonic3k.asm:138813-138821).
             newAngle = rng.nextBits(0x0C); // 0, 4, 8, or $C
         } while (newAngle == angle);
         angle = newAngle;
@@ -942,7 +942,7 @@ public class AizEndBossInstance extends AbstractBossInstance
 
         // ROM loc_69A66 subtracts the full longword x_pos/y_pos, doubles the
         // 16.16 delta, then takes the high word as velocity
-        // (sonic3k.asm:138756-138771). This preserves subpixel phase from the
+        // (sonic3k.asm:138821-138836). This preserves subpixel phase from the
         // prior hover when the boss dives and repositions.
         state.xVel = velocityTowardTargetLongword(targetX, state.xFixed);
         state.yVel = velocityTowardTargetLongword(targetY, state.yFixed);
@@ -957,7 +957,7 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     private void applyVelocity() {
         // ROM MoveSprite2 adds signed velocity << 8 to the full longword
-        // position, not just an 8-bit fractional byte (sonic3k.asm:36053-36061).
+        // position, not just an 8-bit fractional byte (sonic3k.asm:36093-36101).
         state.xFixed += state.xVel << 8;
         state.yFixed += state.yVel << 8;
         state.x = state.xFixed >> 16;
@@ -1033,7 +1033,7 @@ public class AizEndBossInstance extends AbstractBossInstance
     }
 
     /**
-     * ROM: AfterBoss_AIZ2 (sonic3k.asm:176563-176567).
+     * ROM: AfterBoss_AIZ2 (sonic3k.asm:176654-176658).
      * Restores the fire palette to palette line 1 and reloads the
      * PLC_AfterMiniboss_AIZ art (ArtNem_AIZMisc2 etc.) to refresh
      * level patterns that may have been overwritten by boss art.

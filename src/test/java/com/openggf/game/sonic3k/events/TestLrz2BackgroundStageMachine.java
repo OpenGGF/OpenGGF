@@ -10,17 +10,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * {@code LRZ2_BackgroundEvent}'s three stages: {@code loc_5700C} (sonic3k.asm:115692-115710),
- * {@code loc_57040} (:115712-115722) and {@code loc_57058} (:115724-115738), dispatched through
- * {@code LRZ2_BackgroundEvent_Index} (:115682-115690).
+ * {@code LRZ2_BackgroundEvent}'s three stages: {@code loc_5700C} (sonic3k.asm:115738-115756),
+ * {@code loc_57040} (:115758-115768) and {@code loc_57058} (:115770-115784), dispatched through
+ * {@code LRZ2_BackgroundEvent_Index} (:115728-115736).
  *
  * <p>Only the seamless act change enters at stage 0: {@code loc_56CAA} ends with
- * {@code clr.w (Events_routine_bg)} (:115374) while {@code LRZ2_BackgroundInit} starts a direct
- * {@code $901} load at stage 8 (`move.w #8,(Events_routine_bg)`, :115661).
+ * {@code clr.w (Events_routine_bg)} (:115420) while {@code LRZ2_BackgroundInit} starts a direct
+ * {@code $901} load at stage 8 (`move.w #8,(Events_routine_bg)`, :115707).
  *
- * <p>The drain arithmetic is the ROM's own. {@code Draw_PlaneVertBottomUp} (:103429-103434) calls
+ * <p>The drain arithmetic is the ROM's own. {@code Draw_PlaneVertBottomUp} (:103475-103480) calls
  * {@code Draw_PlaneVertSingleBottomUp} once and, while the {@code subq.w #1,(Draw_delayed_rowcount)}
- * at :103456 left the counter non-negative, a second time: two rows a call. Seeded with {@code $F}
+ * at :103502 left the counter non-negative, a second time: two rows a call. Seeded with {@code $F}
  * the counter runs 15, 13, 11, 9, 7, 5, 3, 1, -1, so the pass ends on the eighth call -- and the
  * first of those eight is stage 0's own, because {@code loc_5700C} leaves through
  * {@code bra.s loc_57044} rather than waiting for the next frame.
@@ -69,7 +69,7 @@ class TestLrz2BackgroundStageMachine {
     @Test
     void stageEightIsWhereADirectLoadLivesAndItNeverRearms() {
         LrzZoneRuntimeState lrz = actTwoState();
-        // LRZ2_BackgroundInit's move.w #8,(Events_routine_bg).w (sonic3k.asm:115661).
+        // LRZ2_BackgroundInit's move.w #8,(Events_routine_bg).w (sonic3k.asm:115707).
         lrz.setBackgroundRoutine(Lrz2BackgroundStageMachine.BG_STAGE_STEADY);
         AtomicInteger refreshes = new AtomicInteger();
 

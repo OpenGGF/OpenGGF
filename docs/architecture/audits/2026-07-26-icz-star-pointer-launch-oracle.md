@@ -66,7 +66,7 @@ Relevant locked-on ROM PCs and disassembly labels:
 - collision response list add: `$1040C-$1041C`
 - `Touch_Process`: `$FF06`; `Touch_Loop` object pointer loaded at `$FF10`
 
-Source references are `docs/skdisasm/sonic3k.asm:190760-190899` and the
+Source references are `docs/skdisasm/sonic3k.asm:190853-190992` and the
 corresponding listings around source lines 204775 and 217810.
 
 At trace frame 15929 the ROM:

@@ -35,7 +35,7 @@ the figures in the existing frontier entry, to the unit.
 
 S3K does not store an object *id* byte in its SST. `Process_Sprites` loads the first long of the
 slot and jumps to it — `move.l (a0),d0 / movea.l d0,a1 / jsr (a1)`
-(`docs/skdisasm/sonic3k.asm:35985-35988`). So the recorder's `slot_dump` carries **32-bit ROM code
+(`docs/skdisasm/sonic3k.asm:36025-36028`). So the recorder's `slot_dump` carries **32-bit ROM code
 pointers**:
 
 ```
@@ -129,8 +129,8 @@ AllocateObjectAfterCurrent:
 .return:
         rts
 ```
-(`docs/skdisasm/sonic3k.asm:37911-37944`; `object_size = $4A`, `Dynamic_object_RAM = 90 objects`,
-`docs/skdisasm/sonic3k.constants.asm:113-114, 303-309`.)
+(`docs/skdisasm/sonic3k.asm:37951-37984`; `object_size = $4A`, `Dynamic_object_RAM = 90 objects`,
+`docs/skdisasm/sonic3k.constants.asm:113-114, 310-316`.)
 
 Three properties, each already carried by the engine:
 

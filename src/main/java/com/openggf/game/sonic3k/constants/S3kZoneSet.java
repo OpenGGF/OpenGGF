@@ -11,7 +11,7 @@ package com.openggf.game.sonic3k.constants;
  *       Zones 7-13 (MHZ, SOZ, LRZ, SSZ, DEZ, DDZ)</li>
  * </ul>
  *
- * <p>Selection logic from sonic3k.asm line 37411: purely zone-based, NOT game-mode-based.
+ * <p>Selection logic from sonic3k.asm line 37451: purely zone-based, NOT game-mode-based.
  */
 public enum S3kZoneSet {
     S3KL,  // S3K-Level Object Set: Zones 0-6 (AIZ, HCZ, MGZ, CNZ, FBZ, ICZ, LBZ)

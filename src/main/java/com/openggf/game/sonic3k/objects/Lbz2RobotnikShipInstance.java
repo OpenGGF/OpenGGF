@@ -528,7 +528,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
 
     /**
      * ROM Obj_LBZ2RobotnikShip removes its flame before Obj_LBZFinalBoss1 builds
-     * the child graph (docs/skdisasm/sonic3k.asm:152024-152044). The ship still
+     * the child graph (docs/skdisasm/sonic3k.asm:152098-152118). The ship still
      * occupies its own SST slot at that boundary, so the graph must see the
      * released flame slot while retaining the ship slot for FindFreeObj.
      */

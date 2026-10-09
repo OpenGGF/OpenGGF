@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Title-card zone/act overrides for the shared $16/$17 slots (sonic3k.asm:62141-62146, 62336-62396). */
+/** Title-card zone/act overrides for the shared $16/$17 slots (sonic3k.asm:62181-62186, 62376-62436). */
 class TestSonic3kTitleCardSublevelMappings {
 
     @Test

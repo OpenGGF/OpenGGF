@@ -17,7 +17,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_916EE}-{@code loc_91750} (sonic3k.asm:198630-198672): the EggRobo's gun arm, the
+ * ROM {@code loc_916EE}-{@code loc_91750} (sonic3k.asm:198737-198779): the EggRobo's gun arm, the
  * second row of {@code ChildObjDat_919D0} at {@code (-$1C,-4)}.
  *
  * <p>{@code word_919C4} gives it priority {@code $280}, {@code $10} by {@code $C} pixels and

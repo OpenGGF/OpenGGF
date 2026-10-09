@@ -75,7 +75,7 @@ public interface ZoneScrollHandler {
      * per-column basis. Each entry maps to a 16-pixel-wide column of the Plane A
      * nametable, mirroring the hardware VDP per-column VSCROLL behavior.
      *
-     * <p>ROM reference: Gumball_SetUpVScroll (s3.asm:76130) writes different
+     * <p>ROM reference: Gumball_SetUpVScroll (s3.asm:76186) writes different
      * VScroll values to HScroll_table+$0, +$4, +$8, +$C, +$10 so that the
      * gumball machine body tiles drift with the machine object.
      *

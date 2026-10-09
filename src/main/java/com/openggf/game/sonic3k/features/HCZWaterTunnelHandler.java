@@ -21,7 +21,7 @@ import java.util.Map;
  * player through water pipes in Hydrocity Zone.
  *
  * <p>ROM equivalent: {@code sub_6F4A} / {@code HCZ_WaterTunnels}
- * (sonic3k.asm:8818–8929).
+ * (sonic3k.asm:8850–8961).
  *
  * <p>Each frame, the system checks whether the player is within any rectangular
  * tunnel region. If so, it applies the region's velocity to push the player
@@ -78,8 +78,8 @@ public final class HCZWaterTunnelHandler {
     // =========================================================================
     // Tunnel region tables
     //
-    // ROM: HCZ1_WaterTunLocs (sonic3k.asm:8932) — 15 entries
-    //      HCZ2_WaterTunLocs (sonic3k.asm:8949) — 2 entries
+    // ROM: HCZ1_WaterTunLocs (sonic3k.asm:8964) — 15 entries
+    //      HCZ2_WaterTunLocs (sonic3k.asm:8981) — 2 entries
     //
     // Each row: {minX, minY, maxX, maxY, xVel, yVel, influenceFlag}
     // Velocities are signed 16-bit subpixel values (0x100 = 1 pixel/frame).
@@ -127,7 +127,7 @@ public final class HCZWaterTunnelHandler {
      * Call once per frame from the zone feature provider's pre-physics update
      * when the current zone is HCZ.
      *
-     * <p>ROM: {@code sub_6F4A} (sonic3k.asm:8818).
+     * <p>ROM: {@code sub_6F4A} (sonic3k.asm:8850).
      *
      * @param act current act index (0 = HCZ1, 1 = HCZ2)
      */

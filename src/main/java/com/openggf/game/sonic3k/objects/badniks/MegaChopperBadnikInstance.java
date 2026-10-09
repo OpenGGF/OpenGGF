@@ -51,7 +51,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     private static final int FRAME_CARRY_ALT = 2;
 
     // Obj_WaitOffscreen installs a $20-by-$20 Map_Offscreen placeholder
-    // (sonic3k.asm:180271-180302 move.b #$20,width_pixels / height_pixels).
+    // (sonic3k.asm:180362-180393 move.b #$20,width_pixels / height_pixels).
     private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20;
 
     private static final int DRAIN_TIMER_START = 60;
@@ -113,7 +113,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         // Obj_MegaChopper's FIRST instruction is jsr (Obj_WaitOffscreen).l
-        // (sonic3k.asm:184233), so no routine runs — not even MegaChopper_Init —
+        // (sonic3k.asm:184326), so no routine runs — not even MegaChopper_Init —
         // until Render_Sprites has set render_flags bit 7 on the $20x$20
         // Map_Offscreen placeholder. Render_Sprites publishes the on-screen bit
         // after the object pass, so the restore (loc_85B02 move.l $34(a0),(a0);
@@ -121,7 +121,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         if (waitingForOnscreen) {
             if (isDeleteSpriteIfNotInRange()) {
                 // loc_85AF0: the placeholder still owns the ordinary coarse-X
-                // deletion path while it waits (sonic3k.asm:180288-180296). Without
+                // deletion path while it waits (sonic3k.asm:180379-180387). Without
                 // it a MegaChopper the camera has passed leaks its SST slot for the
                 // rest of the act, which shifts every later allocation.
                 setDestroyedByOffscreen();
@@ -136,13 +136,13 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         if (initPending) {
-            // MegaChopper_Init (sonic3k.asm:184253-184263) calls
+            // MegaChopper_Init (sonic3k.asm:184346-184356) calls
             // SetUp_ObjAttributes, whose tail is addq.b #2,routine(a0) then rts
-            // (sonic3k.asm:176901-176919), sets the animation script pointer and
+            // (sonic3k.asm:176992-177010), sets the animation script pointer and
             // clears child_dx/child_dy. It does NOT fall through to
             // MegaChopper_Swim: it returns, so this dispatch moves the badnik
             // zero pixels and never reaches MegaChopper_CheckCapture, which is
-            // reachable only from MegaChopper_Swim (sonic3k.asm:184266). The swim
+            // reachable only from MegaChopper_Swim (sonic3k.asm:184359). The swim
             // begins on the following dispatch.
             initPending = false;
             childDx = 0;
@@ -163,7 +163,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     /**
      * {@code loc_85AD2}'s deletion arm: {@code x_pos & $FF80} minus
      * {@code Camera_X_pos_coarse_back}, compared {@code bhi #$280}
-     * ({@code sonic3k.asm:180281-180296}). The compare is unsigned, so a
+     * ({@code sonic3k.asm:180372-180387}). The compare is unsigned, so a
      * placeholder behind the camera wraps high and deletes too.
      */
     private boolean isDeleteSpriteIfNotInRange() {
@@ -191,7 +191,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         }
         if (waitingForOnscreen || initPending) {
             // collision_flags is only written by SetUp_ObjAttributes in
-            // MegaChopper_Init (sonic3k.asm:184253-184255), which Obj_WaitOffscreen
+            // MegaChopper_Init (sonic3k.asm:184346-184348), which Obj_WaitOffscreen
             // suppresses; the freshly allocated SST slot holds zero until then.
             // It stays zero through the Init dispatch too, because the frame's
             // touch scan runs at the player slot before this object's routine.

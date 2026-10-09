@@ -266,7 +266,7 @@ class TestS3kIczAct1TransitionHeadless {
                             icz2Level, patternStart, patternCount),
                     "POST must not publish any pattern prefix before the owning scan");
             if (!parent.ready()) {
-                // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:2750-2752) runs
+                // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:2782-2784) runs
                 // from LevelLoop's tail (7908), reached at the frame top ahead of
                 // Process_Kos_Queue (7887), so the parent can retire across this
                 // boundary. Re-read it: the object pass that follows a retirement is

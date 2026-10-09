@@ -1703,8 +1703,8 @@ public class TestGameLoop {
         invokePrivateMethod(gameLoop, "exitBonusStage");
 
         // loc_61076 raises Restart_level_flag; LevelLoop branches to Level:
-        // (sonic3k.asm:7895-7896), whose Pal_FadeToBlack loops $15 + dbf = 22
-        // V-ints before the reload begins (sonic3k.asm:7523-7524, 5042-5051).
+        // (sonic3k.asm:7927-7928), whose Pal_FadeToBlack loops $15 + dbf = 22
+        // V-ints before the reload begins (sonic3k.asm:7555-7556, 5074-5083).
         final int palFadeToBlackVints = 0x15 + 1;
         for (int vint = 1; vint < palFadeToBlackVints; vint++) {
             fade.update();
@@ -1730,8 +1730,8 @@ public class TestGameLoop {
                 provider, bonusReturnState(0x0001, 0x0000));
 
         // Level/loc_62B6 installs Obj_TitleCard unless the zone is $1701 or
-        // Act3_flag is set (sonic3k.asm:7730-7735); Obj_TitleCardInit draws the
-        // apparent zone and act (sonic3k.asm:62131-62155). The recorded gumball
+        // Act3_flag is set (sonic3k.asm:7762-7767); Obj_TitleCardInit draws the
+        // apparent zone and act (sonic3k.asm:62171-62195). The recorded gumball
         // exit spawns Obj_TitleCard ($2D690) on its reload.
         assertEquals(GameMode.TITLE_CARD, gameLoop.getCurrentGameMode());
         verify(titleCard).initialize(0, 0);

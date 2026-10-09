@@ -22,21 +22,21 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
 /**
- * SKL {@code $60}, {@code Obj_DEZBumperWall} (sonic3k.asm:95958-96082). Ten act 1 placements,
+ * SKL {@code $60}, {@code Obj_DEZBumperWall} (sonic3k.asm:96004-96128). Ten act 1 placements,
  * all of them in the {@code $5F} turbine room; the S3KL table has no object at this number.
  *
  * <p><b>One object, three shapes, chosen by the subtype's sign.</b> The header writes
- * {@code $C} x {@code $20} and then immediately overwrites it (:95962-95970):
+ * {@code $C} x {@code $20} and then immediately overwrites it (:96008-96016):
  *
  * <ul>
- *   <li><b>Subtype 0</b> ({@code loc_497C2}, :95983-95988) is the full-height wall:
+ *   <li><b>Subtype 0</b> ({@code loc_497C2}, :96029-96034) is the full-height wall:
  *       {@code SolidObjectFull2} with {@code d1 = $17}, {@code d2 = $20}, {@code d3 = $21}.
  *       Records 311 and 312, at {@code $2600} y {@code $07C0} and {@code $08C0}.</li>
- *   <li><b>A positive subtype</b> ({@code loc_49804}, :96013-96021) is a narrow post:
+ *   <li><b>A positive subtype</b> ({@code loc_49804}, :96059-96067) is a narrow post:
  *       {@code width_pixels = 8}, {@code height_pixels = subtype}, and the solid takes
  *       {@code d1 = $13} with {@code d2 = height} and {@code d3 = height + 1}. Records 305/306
  *       and 329/330 are {@code $18}; 327/328 are {@code $38}.</li>
- *   <li><b>A negative subtype</b> ({@code loc_497B4}, :95976-95981) is the room's exit gate. It
+ *   <li><b>A negative subtype</b> ({@code loc_497B4}, :96022-96027) is the room's exit gate. It
  *       is the full-height wall <em>plus</em> one test run before the solid every update:
  *       {@code cmpi.b #$3F,(MHZ_pollen_counter).w / bne / move.w #$7F00,x_pos(a0)}. When all six
  *       bits of the byte the {@code $61} gravity puzzle writes are set, the wall moves itself to
@@ -44,45 +44,45 @@ import java.util.List;
  *       y {@code $0820} and {@code $0860} — the two that sit past the puzzle.</li>
  * </ul>
  *
- * <p><b>The push launch is the puzzle's launch.</b> {@code sub_49848} (:96045-96047) plays
+ * <p><b>The push launch is the puzzle's launch.</b> {@code sub_49848} (:96091-96093) plays
  * {@code sfx_Bumper} and falls into {@code loc_49850}, which
  * {@link S3kDezGravityPuzzleObjectInstance} already models: {@code x_vel = ±$C00} away from the
  * wall, airborne, {@code ground_vel = 1} negated for a left-facing player, and the endless
  * tumble ({@code flip_angle} 1 only when it was zero, {@code flips_remaining = -1},
  * {@code flip_speed = 4}, {@code anim = 0}). Only the returned side-contact bits reach it
- * ({@code swap d6 / andi.w #1|2,d6}, :95989-95990), and Player 1 and Player 2 are tested
+ * ({@code swap d6 / andi.w #1|2,d6}, :96035-96036), and Player 1 and Player 2 are tested
  * separately.
  *
- * <p>The positive-subtype posts end on {@code Delete_Sprite_If_Not_In_Range} (:96042) and the
- * other two on {@code Sprite_OnScreen_Test} (:96000); both are the engine's ordinary
+ * <p>The positive-subtype posts end on {@code Delete_Sprite_If_Not_In_Range} (:96088) and the
+ * other two on {@code Sprite_OnScreen_Test} (:96046); both are the engine's ordinary
  * off-screen handling.
  */
 public final class S3kDezBumperWallObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
 
-    /** {@code move.w #$17,d1 / #$20,d2 / #$21,d3} (:95983-95985). */
+    /** {@code move.w #$17,d1 / #$20,d2 / #$21,d3} (:96029-96031). */
     private static final int WALL_HALF_WIDTH = 0x17;
     private static final int WALL_AIR_HALF_HEIGHT = 0x20;
     private static final int WALL_GROUND_HALF_HEIGHT = 0x21;
-    /** {@code move.w #$13,d1} (:96013). */
+    /** {@code move.w #$13,d1} (:96059). */
     private static final int POST_HALF_WIDTH = 0x13;
 
-    /** {@code move.w #$280,priority(a0)} (:95963). */
+    /** {@code move.w #$280,priority(a0)} (:96009). */
     private static final int PRIORITY_WORD = 0x280;
 
-    /** {@code move.w #$C00,x_vel(a1)} (:96051). */
+    /** {@code move.w #$C00,x_vel(a1)} (:96097). */
     private static final int LAUNCH_X_VEL = 0xC00;
 
-    /** {@code cmpi.b #$3F,(MHZ_pollen_counter).w} (:95978): all six puzzle panels. */
+    /** {@code cmpi.b #$3F,(MHZ_pollen_counter).w} (:96024): all six puzzle panels. */
     private static final int ALL_PANELS = 0x3F;
-    /** {@code move.w #$7F00,x_pos(a0)} (:95980). */
+    /** {@code move.w #$7F00,x_pos(a0)} (:96026). */
     private static final int PARKED_X = 0x7F00;
 
     public S3kDezBumperWallObjectInstance(ObjectSpawn spawn) {
         super(spawn, "DEZBumperWall");
     }
 
-    /** {@code tst.b d0 / beq / bmi} on the subtype byte (:95964-95966). */
+    /** {@code tst.b d0 / beq / bmi} on the subtype byte (:96010-96012). */
     private boolean isPost() {
         return (byte) spawn.subtype() > 0;
     }
@@ -96,7 +96,7 @@ public final class S3kDezBumperWallObjectInstance extends AbstractObjectInstance
         if (!isGate()) {
             return;
         }
-        // loc_497B4 :95977-95981. The test runs before the solid every update, so the gate
+        // loc_497B4 :96023-96027. The test runs before the solid every update, so the gate
         // stops being solid on the same update the sixth panel is pressed.
         boolean open = panelBits() == ALL_PANELS;
         updateDynamicSpawn(open ? PARKED_X : spawn.x() & 0xFFFF, getY());
@@ -106,7 +106,7 @@ public final class S3kDezBumperWallObjectInstance extends AbstractObjectInstance
     public SolidObjectParams getSolidParams() {
         if (isPost()) {
             // moveq #0,d2 / move.b height_pixels(a0),d2 / move.w d2,d3 / addq.w #1,d3
-            // (:96014-96017) with height_pixels taken from the subtype (:95968).
+            // (:96060-96063) with height_pixels taken from the subtype (:96014).
             int height = spawn.subtype() & 0xFF;
             return SolidObjectParams.of(POST_HALF_WIDTH, height, height + 1);
         }
@@ -144,14 +144,14 @@ public final class S3kDezBumperWallObjectInstance extends AbstractObjectInstance
         }
         ObjectServices objectServices = tryServices();
         if (objectServices != null) {
-            // sub_49848 (:96046-96047): the sound is the bumper's, not the puzzle's.
+            // sub_49848 (:96092-96093): the sound is the bumper's, not the puzzle's.
             objectServices.playSfx(Sonic3kSfx.BUMPER.id);
         }
         launch(sprite);
     }
 
     /**
-     * {@code loc_49850} :96049-96080, shared verbatim with {@code Obj_DEZGravityPuzzle}'s
+     * {@code loc_49850} :96095-96126, shared verbatim with {@code Obj_DEZGravityPuzzle}'s
      * {@code sub_49A02} tail.
      */
     private void launch(AbstractPlayableSprite player) {
@@ -164,7 +164,7 @@ public final class S3kDezBumperWallObjectInstance extends AbstractObjectInstance
         player.setRollingJump(false);
         player.setJumping(false);
         player.setGSpeed((short) (toTheLeft ? -1 : 1));
-        // tst.b flip_angle(a1) / bne (:96065-96067): an already-tumbling player keeps its angle.
+        // tst.b flip_angle(a1) / bne (:96111-96113): an already-tumbling player keeps its angle.
         if ((player.getFlipAngle() & 0xFF) == 0) {
             player.setFlipAngle(1);
         }
@@ -174,7 +174,7 @@ public final class S3kDezBumperWallObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code (MHZ_pollen_counter).w} (:95978). Mushroom Hill's particle counter is the byte the
+     * {@code (MHZ_pollen_counter).w} (:96024). Mushroom Hill's particle counter is the byte the
      * {@code $61} gravity puzzle writes its six panel bits into, which is why this class reads
      * it from {@link S3kDezZoneRuntimeState} rather than from anything near the MHZ spawner.
      */
@@ -189,8 +189,8 @@ public final class S3kDezBumperWallObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code Map_DEZBumperWall} (:96083, ROM {@code $000498C2}) through
-     * {@code make_art_tile(ArtTile_DEZMisc2+$31,1,0)} (:95960): one frame, two 16x32 pieces
+     * {@code Map_DEZBumperWall} (:96129, ROM {@code $000498C2}) through
+     * {@code make_art_tile(ArtTile_DEZMisc2+$31,1,0)} (:96006): one frame, two 16x32 pieces
      * stacked, the same art block the {@code $61} puzzle draws from.
      */
     @Override

@@ -42,7 +42,7 @@ import java.util.List;
 /**
  * Object 0xB2 - ICZ Freezer.
  *
- * <p>ROM reference: {@code Obj_ICZFreezer} at sonic3k.asm:188153.
+ * <p>ROM reference: {@code Obj_ICZFreezer} at sonic3k.asm:188246.
  * The parent starts a frost jet when a player is within 0x40 pixels on X,
  * toggles the jet every 0x40 frames, spawns visible frost puffs every other
  * active frame, and creates a delayed capture cloud that freezes nearby players.

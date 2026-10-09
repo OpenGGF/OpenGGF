@@ -41,8 +41,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestS3kCgzPaletteCycling {
     // Chrome Gadget is ROM zone $11: OffsAnPal entries 34/35
-    // (skdisasm/sonic3k.asm:3152-3153) and LevelSizes rows 34/35
-    // (sonic3k.asm:38114-38115), both indexed zone*2 + act.
+    // (skdisasm/sonic3k.asm:3184-3185) and LevelSizes rows 34/35
+    // (sonic3k.asm:38154-38155), both indexed zone*2 + act.
     private static final int ZONE_CGZ = 0x11;
     private static final int ACT_1 = 0;
 

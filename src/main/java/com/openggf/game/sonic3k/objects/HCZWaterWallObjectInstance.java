@@ -38,7 +38,7 @@ import java.util.logging.Logger;
  *       Water erupts upward, captures and launches the player.</li>
  * </ul>
  *
- * <p>ROM references: sonic3k.asm lines 64835-65307 (Obj_HCZWaterWall).
+ * <p>ROM references: sonic3k.asm lines 64875-65347 (Obj_HCZWaterWall).
  * Mappings: Map_HCZWaterWall, Map_HCZWaterWallDebris.
  * Art: ArtKosM_HCZGeyserHorz (0x390C02), ArtKosM_HCZGeyserVert (0x391394).
  */
@@ -71,7 +71,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     //   (Player_1+x_pos - x_pos + $30) u< $60  ->  dx in [-$30, +$2F]
     //   (Player_1+y_pos - y_pos + $40) u< $10  ->  dy in [-$40, -$31]
     // The x window is only 0x60 wide *in total* and biased so the geyser fires
-    // when the player is nearly on top of it (sonic3k.asm:65126-65134).
+    // when the player is nearly on top of it (sonic3k.asm:65166-65174).
     private static final int VERT_X_TRIGGER_BIAS = 0x30;
     private static final int VERT_X_TRIGGER_WINDOW = 0x60;
     private static final int VERT_Y_TRIGGER_BIAS = 0x40;
@@ -180,27 +180,27 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
      * the manager must not apply one on the object's behalf.
      *
      * <p>Auditing the whole object body
-     * ({@code docs/skdisasm/sonic3k.asm:64836-65080}) there are exactly three
+     * ({@code docs/skdisasm/sonic3k.asm:64876-65120}) there are exactly three
      * deletes and no range macro at all:
      * <ul>
-     *   <li>{@code HCZWaterWall_Horizontal_CheckPlayerY} (:64845-64850)
+     *   <li>{@code HCZWaterWall_Horizontal_CheckPlayerY} (:64885-64890)
      *       {@code Delete_Current_Sprite} when Player 1 {@code y_pos < $500} —
      *       a player-Y test on the first dispatch, not a camera test;</li>
-     *   <li>{@code HCZWaterWall_Vertical_DeleteIfFar} (:65135-65136)
+     *   <li>{@code HCZWaterWall_Vertical_DeleteIfFar} (:65175-65176)
      *       {@code Delete_Sprite_If_Not_In_Range}, reached only from
      *       {@code HCZWaterWall_Vertical_WaitPlayer} — modelled in
      *       {@link #updateVertProximityCheck};</li>
-     *   <li>{@code HCZGeyser_ReloadEnemyArtAndDelete} (:65002-65005), the end
+     *   <li>{@code HCZGeyser_ReloadEnemyArtAndDelete} (:65042-65045), the end
      *       of the 150-frame {@code HCZGeyser_CleanupDelay} countdown.</li>
      * </ul>
-     * The three {@code Sprite_OnScreen_Test} tails (:64837, :64919, :64994) are
+     * The three {@code Sprite_OnScreen_Test} tails (:64877, :64959, :65034) are
      * draw calls, not unloads.
      *
      * <p>This matters beyond the object itself:
-     * {@code HCZGeyser_CleanupDelay} (:64996-65000) is a bare
+     * {@code HCZGeyser_CleanupDelay} (:65036-65040) is a bare
      * {@code subq.w #1,$30(a0)} with no range test, and its expiry runs
      * {@code jsr (LoadEnemyArt).l} — re-queueing all four {@code PLCKosM_HCZ1}
-     * archives (:64354-64359) whose VRAM the geyser sheet overwrote. The
+     * archives (:64394-64399) whose VRAM the geyser sheet overwrote. The
      * horizontal geyser scrolls off screen long before that countdown ends, so
      * a shared camera unload kills the object mid-countdown and the ROM's
      * {@code Queue_Kos_Module} submissions never happen.
@@ -719,7 +719,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         // Obj_HCZWaterWall owns the native anim byte after setting
         // object_control=$81. HCZ_WaterTunnels returns immediately when that
         // bit is set, so an earlier tunnel animation must no longer remain as
-        // an engine-side forced override (sonic3k.asm:8848-8850, 65161-65168,
+        // an engine-side forced override (sonic3k.asm:8880-8882, 65201-65208,
         // 65223-65230).
         player.setForcedAnimationId(-1);
         player.setAnimationId(animId);
@@ -757,7 +757,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
      * column stays invisible while it waits, loads art and rises. It first
      * appears at {@code loc_3041A} (eruption) and stays visible through
      * {@code loc_3052A} (falling), then vanishes again for the cleanup
-     * countdown (sonic3k.asm:65176-65190, 65238-65246).
+     * countdown (sonic3k.asm:65216-65230, 65278-65286).
      */
     private boolean isDrawnThisPhase() {
         if (isHorizontal) {

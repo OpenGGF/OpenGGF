@@ -37,14 +37,14 @@ final class Sonic3kGlobalAnimationState {
 
     /**
      * {@code Level/loc_64DC}: {@code move.w #$16,(Palette_fade_timer).w} before LevelLoop
-     * (sonic3k.asm:7877). Seamless reloads never reach it.
+     * (sonic3k.asm:7909). Seamless reloads never reach it.
      */
     void armFreshLevelPaletteFade() {
         paletteFadeTimer = 0x16;
     }
 
     /**
-     * {@code Animate_Palette} (sonic3k.asm:5018): while the timer is non-zero the frame runs
+     * {@code Animate_Palette} (sonic3k.asm:5050): while the timer is non-zero the frame runs
      * Pal_FromBlack/Pal_FromWhite and decrements it instead of calling AnPal_Load.
      *
      * @return true when this level frame spends the fade instead of animating palettes

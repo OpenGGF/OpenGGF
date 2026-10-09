@@ -18,19 +18,19 @@ Prefer `docs/skdisasm/sonic3k.asm` labels and S&K-side addresses for all runtime
 
 | Category | Label | Location |
 |----------|-------|----------|
-| Dynamic resize | `LBZ1_Resize` | `sonic3k.asm:39481` |
-| Dynamic resize | `LBZ2_Resize` | `sonic3k.asm:39485` |
-| Palette cycling | `AnPal_LBZ1` / `AnPal_LBZ2` | `sonic3k.asm:3440` / `3445` |
-| Animated tiles | `AnimateTiles_LBZ1` / `AnimateTiles_LBZ2` | `sonic3k.asm:54539` / `54634` |
-| AniPLC data | `AniPLC_LBZ1`, `AniPLC_LBZSpec`, `AniPLC_LBZ2` | `sonic3k.asm:55900`, `55909`, `55926` |
-| Screen/background events | `LBZ1_ScreenInit` / `LBZ1_ScreenEvent` | `sonic3k.asm:110833` / `110880` |
-| Screen/background events | `LBZ1_BackgroundInit` / `LBZ1_BackgroundEvent` | `sonic3k.asm:111163` / `111190` |
-| Screen/background events | `LBZ2_ScreenInit` / `LBZ2_ScreenEvent` | `sonic3k.asm:111290` / `111302` |
-| Screen/background events | `LBZ2_BackgroundInit` / `LBZ2_BackgroundEvent` | `sonic3k.asm:111383` / `111405` |
-| Parallax | `LBZ2_Deform` / `LBZ2_DeathEggDeform` | `sonic3k.asm:111581` / `111847` |
-| Death Egg motion | `LBZ2_DeathEggMoveScreen` | `sonic3k.asm:112060` |
-| Boss/object code | `Obj_LBZFinalBoss1`, `Obj_LBZFinalBossKnux`, `Obj_LBZFinalBoss2` | `sonic3k.asm:151927`, `152493`, `154226` |
-| Robotnik ride ship | `Obj_LBZ2RobotnikShip` | `sonic3k.asm:192827` |
+| Dynamic resize | `LBZ1_Resize` | `sonic3k.asm:39521` |
+| Dynamic resize | `LBZ2_Resize` | `sonic3k.asm:39525` |
+| Palette cycling | `AnPal_LBZ1` / `AnPal_LBZ2` | `sonic3k.asm:3472` / `3445` |
+| Animated tiles | `AnimateTiles_LBZ1` / `AnimateTiles_LBZ2` | `sonic3k.asm:54579` / `54634` |
+| AniPLC data | `AniPLC_LBZ1`, `AniPLC_LBZSpec`, `AniPLC_LBZ2` | `sonic3k.asm:55940`, `55909`, `55926` |
+| Screen/background events | `LBZ1_ScreenInit` / `LBZ1_ScreenEvent` | `sonic3k.asm:110879` / `110880` |
+| Screen/background events | `LBZ1_BackgroundInit` / `LBZ1_BackgroundEvent` | `sonic3k.asm:111209` / `111190` |
+| Screen/background events | `LBZ2_ScreenInit` / `LBZ2_ScreenEvent` | `sonic3k.asm:111336` / `111302` |
+| Screen/background events | `LBZ2_BackgroundInit` / `LBZ2_BackgroundEvent` | `sonic3k.asm:111429` / `111405` |
+| Parallax | `LBZ2_Deform` / `LBZ2_DeathEggDeform` | `sonic3k.asm:111627` / `111847` |
+| Death Egg motion | `LBZ2_DeathEggMoveScreen` | `sonic3k.asm:112106` |
+| Boss/object code | `Obj_LBZFinalBoss1`, `Obj_LBZFinalBossKnux`, `Obj_LBZFinalBoss2` | `sonic3k.asm:152001`, `152493`, `154226` |
+| Robotnik ride ship | `Obj_LBZ2RobotnikShip` | `sonic3k.asm:192926` |
 
 ## Current Engine Routing
 
@@ -248,7 +248,7 @@ Confidence: HIGH.
 | `Obj_LBZ2RobotnikShip` | Implemented by `Lbz2RobotnikShipInstance`; owns player grab, camera opening, launch signal, persistent animated-tile gate, exhaust child, and rider delta consumption. | BLOCKER |
 | `Obj_LBZEndBoss` | Implemented by `LbzEndBossInstance`, including art/palette loading, child platforms, spike balls, and defeat flow. | HIGH |
 | `Obj_LBZFinalBoss1` | Implemented by `LbzFinalBoss1Instance`; includes ship, turret, laser children, Death Egg small art, ending palette hooks, explosion/debris children, and Tails/P2 helpers. | BLOCKER |
-| `Obj_LBZFinalBossKnux` / `Obj_LBZFinalBoss2` | The reviewed port from `sonic3k.asm:154231-155585` (`FixBugs=0`) covers the native `$00-$2A` fight, articulated child/collision graph, grab/throw, defeat, ROM assets/data, floating capsule/results two-signal gate, falling-floor allocation attempts, carrier escape, MHZ handoff, and exact-ID rewind. The earlier `98d968d7f` and uncommitted v2 attempts remain rejected history. Fresh locked-on-ROM/JDK 21 evidence passes 7/7 route, 10/10 graph, 957/957 legacy/route/graph/rewind, and 1,483/1,483 consolidated focused checks; independent final review passed. The canonical replay is separately blocked before execution because the strict compiler cannot represent raw frame 6314's schema-valid VBlank-only `post_objects` timing row. | HIGH |
+| `Obj_LBZFinalBossKnux` / `Obj_LBZFinalBoss2` | The reviewed port from `sonic3k.asm:154305-155659` (`FixBugs=0`) covers the native `$00-$2A` fight, articulated child/collision graph, grab/throw, defeat, ROM assets/data, floating capsule/results two-signal gate, falling-floor allocation attempts, carrier escape, MHZ handoff, and exact-ID rewind. The earlier `98d968d7f` and uncommitted v2 attempts remain rejected history. Fresh locked-on-ROM/JDK 21 evidence passes 7/7 route, 10/10 graph, 957/957 legacy/route/graph/rewind, and 1,483/1,483 consolidated focused checks; independent final review passed. The canonical replay is separately blocked before execution because the strict compiler cannot represent raw frame 6314's schema-valid VBlank-only `post_objects` timing row. | HIGH |
 | `Obj_LBZ1InvisibleBarrier` | Implemented and spawned during collapse/restart paths. | HIGH |
 | LBZ flame thrower, cup elevator, tunnel, bridge, launcher, grapple, pipe objects | Many are implemented in dedicated object classes or shared S3K object utilities. | MIXED |
 

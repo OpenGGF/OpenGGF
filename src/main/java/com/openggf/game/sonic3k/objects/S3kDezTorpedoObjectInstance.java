@@ -10,7 +10,7 @@ import com.openggf.level.objects.TouchResponseProvider;
 
 import java.util.List;
 
-/** Independent AllocateObjectAfterCurrent result, loc_4728A (sonic3k.asm:93073-93084). */
+/** Independent AllocateObjectAfterCurrent result, loc_4728A (sonic3k.asm:93119-93130). */
 public final class S3kDezTorpedoObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable, TouchResponseProvider {
     private int currentX;

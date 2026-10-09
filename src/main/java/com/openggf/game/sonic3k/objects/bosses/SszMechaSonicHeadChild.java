@@ -17,7 +17,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code Obj_MechaSonicHead} / {@code Obj_MechaSonicHeadMain} (sonic3k.asm:136255-136272):
+ * ROM {@code Obj_MechaSonicHead} / {@code Obj_MechaSonicHeadMain} (sonic3k.asm:136320-136337):
  * the head that rides on the Robotnik ship of both Sky Sanctuary recreations.
  *
  * <p>{@code ObjDat_MechaSonicHead}: {@code Map_MechaSonicHead},

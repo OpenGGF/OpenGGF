@@ -31,19 +31,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * tests. This class is the regression that sees it, on the act's own placement rather than a
  * test-constructed spawn.
  *
- * <p><b>The ROM invariant it asserts.</b> {@code Player_AnglePos} (sonic3k.asm:18735-18741)
+ * <p><b>The ROM invariant it asserts.</b> {@code Player_AnglePos} (sonic3k.asm:18771-18777)
  * begins {@code btst #Status_OnObj,status(a0) / beq.s loc_EC5A}, and on the set branch writes
  * {@code 0} to both shared angle outputs and returns: <em>a grounded player standing on an
  * object runs no terrain probe at all</em>, so terrain can never hand them
  * {@code Status_InAir}. The only code that clears {@code Status_OnObj} for a tube rider is the
- * tube's own exit at {@code loc_48FBA} (:95273-95274), reached only when the rider is already
- * airborne ({@code loc_48FA4}, :95262) or has left the X span (:95264-95268). A rider held
+ * tube's own exit at {@code loc_48FBA} (:95319-95320), reached only when the rider is already
+ * airborne ({@code loc_48FA4}, :95308) or has left the X span (:95310-95314). A rider held
  * inside the span therefore keeps {@code Status_OnObj} set and {@code Status_InAir} clear for
- * the whole ride, and the object's angle byte advances by {@code moveq #8,d3} (:95300) every
- * frame, with {@code flip_angle(a1)} (:95314) following it.
+ * the whole ride, and the object's angle byte advances by {@code moveq #8,d3} (:95346) every
+ * frame, with {@code flip_angle(a1)} (:95360) following it.
  *
  * <p>A rider that leaves and re-mounts every few frames produces the opposite signature: the
- * mount table (:95238-95253) re-seeds the same angle from the same {@code dy}, so the ride
+ * mount table (:95284-95299) re-seeds the same angle from the same {@code dy}, so the ride
  * angle stalls, and {@code Status_InAir} is set by the exit and cleared again by the next
  * mount — the 1/0 alternation with {@code y} pinned that the capture showed.
  */
@@ -182,7 +182,7 @@ class TestS3kDezGravityTubeRouteHeadless {
         assertTrue(tube.isRidingForTest(true), "precondition: sub_48F12 mounted the rider");
     }
 
-    /** {@code moveq #8,d3} (:95300), or {@code moveq #4,d3} for a {@code subtype} bit 6 tube. */
+    /** {@code moveq #8,d3} (:95346), or {@code moveq #4,d3} for a {@code subtype} bit 6 tube. */
     private int angleStep(S3kDezGravityTubeObjectInstance tube) {
         return tube.isWideForTest() ? 4 : 8;
     }

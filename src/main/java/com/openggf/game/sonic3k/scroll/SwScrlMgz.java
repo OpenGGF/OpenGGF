@@ -27,11 +27,11 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
     /**
      * ROM {@code Screen_shake_offset}. {@code ShakeScreen_Setup} runs at the
      * tail of the zone's background event ({@code MGZ1BGE_Normal},
-     * docs/skdisasm/sonic3k.asm:106308; routine at :104188-104210), while
+     * docs/skdisasm/sonic3k.asm:106354; routine at :104234-104256), while
      * {@code MGZ1_ScreenEvent}/{@code MGZ2_ScreenEvent} add the offset into
      * {@code Camera_Y_pos_copy} at the *start* of the same
-     * {@code ScreenEvents} pass (sonic3k.asm:102232-102253, :106257-106260,
-     * :106390-106392). The value {@code Render_Sprites} sees on a frame is
+     * {@code ScreenEvents} pass (sonic3k.asm:102278-102299, :106303-106306,
+     * :106436-106438). The value {@code Render_Sprites} sees on a frame is
      * therefore the one this routine computed on the previous frame, which is
      * what {@link #screenShakeOffset} publishes; this field holds the freshly
      * computed sample waiting for the next frame.
@@ -66,10 +66,10 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
     private int lastBgCameraX = Integer.MIN_VALUE;
 
     /**
-     * ROM {@code ScreenShakeArray2} (docs/skdisasm/sonic3k.asm:104233-104236) —
+     * ROM {@code ScreenShakeArray2} (docs/skdisasm/sonic3k.asm:104279-104282) —
      * the 64-entry table {@code ShakeScreen_Setup} indexes with
      * {@code Level_frame_counter & $3F} while {@code Screen_shake_flag} is
-     * negative (sonic3k.asm:104200-104209).
+     * negative (sonic3k.asm:104246-104255).
      */
     private static final int[] SCREEN_SHAKE_CONTINUOUS = {
             1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
@@ -245,9 +245,9 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         }
 
         composer.reset();
-        // ROM ShakeScreen_Setup (sonic3k.asm:104188-104210): with
+        // ROM ShakeScreen_Setup (sonic3k.asm:104234-104256): with
         // Screen_shake_flag negative (continuous — the only mode MGZ's
-        // Tunnelbot/Robotnik raise, sonic3k.asm:184784/:184886/:184907) the
+        // Tunnelbot/Robotnik raise, sonic3k.asm:184877/:184886/:184907) the
         // offset is ScreenShakeArray2[Level_frame_counter & $3F]. It is a
         // level-clock lookup owned by the zone's background event, not a
         // per-object one, so the requesters only raise the flag.

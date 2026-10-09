@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * SKL {@code $5A}, {@code Obj_DEZGravityTube} (sonic3k.asm:95169-95401): the last
+ * SKL {@code $5A}, {@code Obj_DEZGravityTube} (sonic3k.asm:95215-95447): the last
  * {@code Reverse_gravity_flag} <em>reader</em> in the Death Egg object set, and the neighbour
  * of every {@code $5B} gravity-swap trigger.
  */
@@ -40,7 +40,7 @@ class TestS3kDezGravityTubeHeadless {
 
     /**
      * {@code move.w $30(a0),d4 / move.w d4,d5 / add.w d5,d5} then
-     * {@code add.w d4,d0 / cmp.w d5,d0 / bhs} (:95192-95224): the X window is
+     * {@code add.w d4,d0 / cmp.w d5,d0 / bhs} (:95238-95270): the X window is
      * {@code ±(subtype & $3F) << 3}, top-inclusive and bottom-exclusive on the biased compare.
      */
     @Test
@@ -63,7 +63,7 @@ class TestS3kDezGravityTubeHeadless {
     }
 
     /**
-     * {@code byte_48F90} (:95253) and {@code byte_48F98} (:95255), indexed by the biased dy
+     * {@code byte_48F90} (:95299) and {@code byte_48F98} (:95301), indexed by the biased dy
      * shifted right by 3 — and by 4 for the bit 6 tube. The mount angle is what the whole
      * cosine lift is phased from, so a wrong table is a wrong ride from the first frame.
      */
@@ -78,7 +78,7 @@ class TestS3kDezGravityTubeHeadless {
 
     /**
      * {@code move.w #$20,d0} unless {@code btst #6,subtype(a0)}, which makes it {@code $60}
-     * (:95183-95188). Both tubes have the same {@code $40} px span in X and different bands.
+     * (:95229-95234). Both tubes have the same {@code $40} px span in X and different bands.
      */
     @Test
     void subtypeBitSixPicksTheTallerBand() {
@@ -89,7 +89,7 @@ class TestS3kDezGravityTubeHeadless {
     }
 
     /**
-     * {@code loc_48FFE} :95296-95317. The rider's Y is the object's plus
+     * {@code loc_48FFE} :95342-95363. The rider's Y is the object's plus
      * {@code cos(angle) * $1000 >> 16}, and the angle advances by 8 each frame.
      */
     @Test
@@ -115,7 +115,7 @@ class TestS3kDezGravityTubeHeadless {
         }
     }
 
-    /** {@code moveq #4,d3} and {@code move.w #$5000,d0} for the bit 6 tube (:95303-95306). */
+    /** {@code moveq #4,d3} and {@code move.w #$5000,d0} for the bit 6 tube (:95349-95352). */
     @Test
     void theBitSixTubeStepsByFourAndSwingsFurther() {
         HeadlessTestFixture fixture = fixture();
@@ -136,7 +136,7 @@ class TestS3kDezGravityTubeHeadless {
     }
 
     /**
-     * {@code loc_48FBA} :95278-95284, the first of the object's two reverse-gravity rows. It
+     * {@code loc_48FBA} :95324-95330, the first of the object's two reverse-gravity rows. It
      * is a <em>reflection</em>, {@code -(flip_angle + $40) - $40}, not a negation: a rider
      * leaving at {@code flip_angle} 0 leaves at {@code $80}, and one at {@code $20} at
      * {@code $60}.
@@ -149,7 +149,7 @@ class TestS3kDezGravityTubeHeadless {
                 "$20 reflects to $60");
     }
 
-    /** {@code tst.b (Reverse_gravity_flag).w / beq.s locret_48FF4} (:95278-95279). */
+    /** {@code tst.b (Reverse_gravity_flag).w / beq.s locret_48FF4} (:95324-95325). */
     @Test
     void leavingTheTubeUprightLeavesTheFlipAngleAlone() {
         assertEquals(0x20, flipAngleAfterExit(false, 0x20),
@@ -157,9 +157,9 @@ class TestS3kDezGravityTubeHeadless {
     }
 
     /**
-     * {@code Obj_DEZGravityTube}'s init branches on {@code subtype} bit 7 (:95170-95171), and
+     * {@code Obj_DEZGravityTube}'s init branches on {@code subtype} bit 7 (:95216-95217), and
      * the vertical body ({@code sub_49090}) reads {@code Reverse_gravity_flag} nowhere — its
-     * exit at :95420-95428 has no mirror. That asymmetry is a ROM fact worth pinning, because
+     * exit at :95466-95474 has no mirror. That asymmetry is a ROM fact worth pinning, because
      * it is the obvious thing to "fix".
      */
     @Test
@@ -195,7 +195,7 @@ class TestS3kDezGravityTubeHeadless {
 
     /**
      * {@code move.b (a2),d2 / divu.w #$B,d2 / move.b RawAni_491DA(pc,d2.w),mapping_frame(a1)}
-     * (:95450-95453). The divisor is what makes the twenty-six-entry table cover a whole turn
+     * (:95496-95499). The divisor is what makes the twenty-six-entry table cover a whole turn
      * of the eight-step angle, so it is pinned separately from the swing itself: with the
      * divisor wrong the rider still swings correctly and only the pose is nonsense.
      */

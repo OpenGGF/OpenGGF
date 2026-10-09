@@ -69,7 +69,7 @@ public final class CommonSpriteDataLoader {
      * {@code move.b 1(a1,d1.w),d0} with no bounds check, reading straight on
      * into the next script in the block. The longest table that can strand an
      * {@code anim_frame} in another script is {@code AniRaw_Tails_Carry}'s 17
-     * entries (sonic3k.asm:27417-27419, advanced at 24932-24938 against the
+     * entries (sonic3k.asm:27457-27459, advanced at 24932-24938 against the
      * player's shared {@code anim_frame}), so a window this size covers every
      * index those routines can leave behind.
      */

@@ -6,7 +6,7 @@ Disassembly submodule `1a454a0e335137a1a016d1090a9f4528d36944cf`; line numbers a
 `docs/skdisasm/sonic3k.asm` lines at that revision, `loc_`/`sub_` names are ROM addresses.
 
 Count: `grep -c 'Reverse_gravity_flag' docs/skdisasm/sonic3k.asm` = **116** (each line holds one
-reference; the definition in `sonic3k.constants.asm:684` is not counted). Engine search:
+reference; the definition in `sonic3k.constants.asm:703` is not counted). Engine search:
 `grep -rniE 'reverseGravity|reverse_gravity' src/main/java` plus a search by role (classes that
 negate a player Y adjustment, swap floor/ceiling probes or mirror the player sprite). "Engine
 consumer" is what exists today; "new" means the owning object does not exist yet.
@@ -21,7 +21,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
   calls `sub_49228` for `Player_1` alone (asm 95486-95487), `$59` has `cmpa.w #Player_1,a1`
   (`loc_48DCA`). Player 2 can never change gravity.
 - **Velocity is not inverted; position integration is.** `MoveSprite_TestGravity` still adds `$38`
-  to `y_vel` and then adds `-y_vel` to `y_pos` (sonic3k.asm:36069-36083). Positive `y_vel` always
+  to `y_vel` and then adds `-y_vel` to `y_pos` (sonic3k.asm:36109-36123). Positive `y_vel` always
   means "falling", toward whichever surface is the floor. Every other branch follows from this:
   Y *position* adjustments are negated, floor and ceiling probes swap (`sub_11FD6`/`sub_11FEE`),
   the terrain angle is mirrored with `+$40, neg, -$40` around the probe, the death plane moves to
@@ -45,7 +45,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
   `object_control`, and any gravity change near them comes from a `$58`/`$5B` placed alongside.
 - **Clears.** By name the flag is zeroed by `loc_7FC3E` and by `$5B` (`move.b #0` at 95511 and 95536,
   before its conditional set). Level load clears it because
-  `clearRAM Tails_CPU_interact,$100` (`$F700-$F7FF`, sonic3k.asm:7621) covers `$F7C6`; that runs for
+  `clearRAM Tails_CPU_interact,$100` (`$F700-$F7FF`, sonic3k.asm:7653) covers `$F7C6`; that runs for
   a normal load, a death restart and `StartNewLevel` (the same wipe also runs in `Title_Screen`,
   asm 5415). It does **not** run for the seamless
   `$B00` → `$B01` change (`loc_593EC` calls `Load_Level`/`LoadSolids` only), so the flag survives
@@ -72,11 +72,11 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 
 Commit `c122066f827871c768dfb22db358e2e186efa5b4` adds the post-animation reverse-gravity
 vertical mirror to `PlayableSpriteAnimation`. It models the ROM's `eori.b #2,render_flags`
-after `Animate_Sonic` (`sonic3k.asm:22010-22013`); the corresponding Tails and Knuckles paths
+after `Animate_Sonic` (`sonic3k.asm:22046-22049`); the corresponding Tails and Knuckles paths
 are at `26254-26258` and `30452-30456`. The existing object-controlled animation early return
 still skips this step, matching `object_control` bit 1.
 
-`Obj_HyperSonicKnux_Trail` copies `Player_1+render_flags` live at `sonic3k.asm:35396`, so the
+`Obj_HyperSonicKnux_Trail` copies `Player_1+render_flags` live at `sonic3k.asm:35436`, so the
 player's post-animation flip fixes both the body and its afterimages. A trail-only gravity check
 was rejected because it would stop following the source sprite's live flags. The focused
 `TestPlayableSpriteAnimation.s3kReverseGravityMirrorsTheLiveOrientationUsedByHyperTrail` case
@@ -354,12 +354,12 @@ centre coordinates and only needed the negation.
 The jump also needed its **headroom** row (23294 / 28525 / 32441) in the same change, and that was
 discovered by measurement rather than planned: with only the radius rows done, an inverted player
 could not jump at all, because `CalcRoomOverHead` was still probing into the ceiling it was standing
-on. `Sonic_Jump` mirrors the angle it hands to that probe (sonic3k.asm:23290-23300) while the launch
+on. `Sonic_Jump` mirrors the angle it hands to that probe (sonic3k.asm:23325-23335) while the launch
 vector at `loc_1182E` re-reads `angle(a0)` raw — the correction recorded at `b38402c2a`, now
-confirmed line by line for `Tails_Jump` (:28524-28576) and `Knux_Jump` (:32438-32493) as well.
+confirmed line by line for `Tails_Jump` (:28564-28616) and `Knux_Jump` (:32478-32533) as well.
 
-The hurt routines' own death plane (`sub_12318` :24475, `sub_15716` :29220,
-`sub_17C10` :32911) now has a distinguishing terrain-admission test. The earlier
+The hurt routines' own death plane (`sub_12318` :24515, `sub_15716` :29260,
+`sub_17C10` :32951) now has a distinguishing terrain-admission test. The earlier
 world-boundary-only assertions survived removal of the hurt branch because
 `Player_LevelBound` killed later in the same frame. The 2026-09-25 test runs the
 real airborne hurt controller for Sonic, Tails and Knuckles with a collision
@@ -372,7 +372,7 @@ documented held-bound mask divergence in the shared boundary code is unchanged.
 
 **The spring launches (47722, 48095) needed the init swap read first.** `Spring_Up`'s init jumps
 to the `Obj_Spring_Down` body under the flag and `Spring_Down`'s to `Obj_Spring_Up`'s
-(:47576-47637). Under reverse gravity the player falls *up* the screen and stands on ceilings, so
+(:47616-47677). Under reverse gravity the player falls *up* the screen and stands on ceilings, so
 the spring underfoot there is the authored **down** spring running the up-spring body — whose
 negative launch velocity integrates through `MoveSprite_TestGravity`'s negated copy into
 down-screen motion, away from the ceiling. Pair each gravity with the *other* authored subtype and
@@ -383,7 +383,7 @@ mirror flips both inverted cases while both upright controls stay green.
 
 **The monitor and spike object rows are implemented.**
 The earlier spike note conflated movement dispatch with damage dispatch.
-`Obj_Spikes` :48958 XORs initial status Y-flip with the gravity flag and selects
+`Obj_Spikes` :48998 XORs initial status Y-flip with the gravity flag and selects
 `loc_2413E`, overriding both upright and sideways hurt routines. It does not
 change `sub_242B6` movement. The engine now captures that one-time hurt selection,
 including rewind and a later gravity change while the same object stays loaded.
@@ -400,7 +400,7 @@ gravity-reference row and focused presentation is not whole-route certification.
 
 **The seven render-mirror rows are one net effect, not seven XORs.** `Animate_Sonic` clears
 `render_flags` bits 0-1 and rewrites bit 0 from the facing status (`andi.b #$FC` / `or.b d1`,
-:24754-24757) immediately before each `eori.b #2`, so the player's Y-flip is simply *equal to the
+:24794-24797) immediately before each `eori.b #2`, so the player's Y-flip is simply *equal to the
 flag* every frame the animator runs. Porting the XOR literally into an engine whose animator does
 not rewrite the flags would alternate the sprite every frame.
 `AbstractPlayableSprite.renderVFlipForDraw` writes the net instead, under the same

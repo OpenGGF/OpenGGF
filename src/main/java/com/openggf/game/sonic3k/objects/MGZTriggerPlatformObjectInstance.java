@@ -26,7 +26,7 @@ import java.util.List;
 /**
  * Object 0x57 - MGZ Trigger Platform.
  *
- * <p>ROM: Obj_MGZTriggerPlatform (sonic3k.asm:70910-71029).
+ * <p>ROM: Obj_MGZTriggerPlatform (sonic3k.asm:70950-71069).
  * The high subtype nibble selects one of three table-driven platform shapes:
  * a horizontal escape platform (nibble $0) or vertical trigger platforms
  * (nibbles $1 and $2) that move 1px/frame or 2px/frame once their trigger fires.
@@ -193,11 +193,11 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
         // ROM: the object only raises Screen_shake_flag; ShakeScreen_Setup
-        // (docs/skdisasm/sonic3k.asm:104188-104210) samples
+        // (docs/skdisasm/sonic3k.asm:104234-104256) samples
         // ScreenShakeArray2[Level_frame_counter & $3F] once per frame from the
         // zone's background event, and MGZ's screen event consumes the previous
-        // frame's sample into Camera_Y_pos_copy (sonic3k.asm:106257-106260,
-        // :106308). Both the clock and the one-frame publication now live in
+        // frame's sample into Camera_Y_pos_copy (sonic3k.asm:106303-106306,
+        // :106354). Both the clock and the one-frame publication now live in
         // that owner, so no object-clock offset is needed here.
         mgzState.requestContinuousScreenShake();
     }
@@ -219,7 +219,7 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
     public boolean usesInclusiveRightEdge() {
         // ROM SolidObjectFull's horizontal entry check rejects only values
         // above d1*2 (bhi), retaining the exact right edge.
-        // sonic3k.asm:41390-41401.
+        // sonic3k.asm:41430-41441.
         return true;
     }
 
@@ -227,7 +227,7 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
     public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
         // SolidObjectFull2_1P sees this object's retained standing bit before
         // SolidObject_cont. An airborne rider clears the bit and returns without
-        // resolving another contact (sonic3k.asm:41066-41084).
+        // resolving another contact (sonic3k.asm:41106-41124).
         return true;
     }
 
@@ -244,7 +244,7 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         // calling SolidObjectFull, so MvSonicOnPtfm sees no horizontal delta.
         // This is observable while the horizontal variant retracts beneath a
         // rider: the platform moves, but the rider keeps their world X.
-        // sonic3k.asm:70991-71005.
+        // sonic3k.asm:71031-71045.
         return false;
     }
 
@@ -281,7 +281,7 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         // Status_Push. A right-hand sibling was loaded in the ordinary forward
         // order and has already executed in both engines, so it must not be
         // replayed after the landing.
-        // sonic3k.asm:70910-71029,41370-41534.
+        // sonic3k.asm:70950-71069,41410-41574.
         int landingSlot = getSlotIndex();
         ObjectManager objectManager = services().objectManager();
         for (MGZTriggerPlatformObjectInstance sibling :

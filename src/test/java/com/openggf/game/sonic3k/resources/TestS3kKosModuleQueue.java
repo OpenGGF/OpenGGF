@@ -659,7 +659,7 @@ class TestS3kKosModuleQueue {
     /**
      * Drives one ROM module-queue transition: the {@code
      * Process_Kos_Module_Queue} state step the previous {@code LevelLoop}
-     * iteration left in its tail (sonic3k.asm:7908), then the {@code
+     * iteration left in its tail (sonic3k.asm:7940), then the {@code
      * POST_OBJECTS} readiness capture. The direct FIFO is deliberately not
      * serviced in between, so a just-submitted child stays observable.
      */

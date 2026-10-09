@@ -3,7 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.rewind.RewindStateful;
 
 /**
- * ROM {@code Gradual_SwingOffset} (sonic3k.asm:92484-92515).
+ * ROM {@code Gradual_SwingOffset} (sonic3k.asm:92530-92561).
  *
  * <p>{@code $2E(a0)} is a 16.16 speed, {@code $32(a0)} a 16.16 accumulated offset and
  * {@code $36(a0)} the direction flag. The caller passes an initial speed in {@code d0} and a
