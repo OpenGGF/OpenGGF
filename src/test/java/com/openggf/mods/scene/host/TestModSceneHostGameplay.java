@@ -93,4 +93,16 @@ class TestModSceneHostGameplay {
         assertThrows(RuntimeException.class, () -> host.resume(RunEndReason.LEFT));
         assertFalse(host.isOpen());
     }
+
+    @Test
+    void textInputClaimIsForwardedFromTheCreatorScene() {
+        boolean[] typing = {false};
+        RunScene scene = new RunScene() {
+            @Override public boolean capturesTextInput() { return typing[0]; }
+        };
+        host.open(owned(scene), new SceneServices(null, null, temp, null, () -> { }, () -> { }), 320, 224);
+        assertFalse(host.capturesTextInput());
+        typing[0] = true;
+        org.junit.jupiter.api.Assertions.assertTrue(host.capturesTextInput());
+    }
 }

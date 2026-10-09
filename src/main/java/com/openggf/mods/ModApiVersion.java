@@ -35,7 +35,8 @@ public final class ModApiVersion {
      * ghost poses, a screen overlay, end reasons and queued retry/leave commands; the level
      * start reports the act's size and a finished act may pan a spectator camera.
      * Any mod may add one master-title entry opening a scene that launches such runs
-     * and is resumed when each ends.
+     * and is resumed when each ends, learn a game's run fingerprint before launching, and
+     * claim keyboard text input so global shortcuts stay quiet while the player types.
      * Creator helpers include character specifications and lifecycle hooks, decoded
      * placement transforms, owner storage and service bundles, named single-act and
      * multi-act zone factories, shared UI/input and ROM-qualified scene art.

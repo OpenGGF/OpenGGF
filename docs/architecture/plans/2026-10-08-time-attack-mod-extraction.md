@@ -201,3 +201,40 @@ Decisions:
 Open questions for integration: a fault-boundary disable is persisted exactly like a
 player's disable, so it also survives the upgrade that fixes the fault; and a bundled mod
 that registers a startup scene would replace stock titles for every player by default.
+
+## Integration record (lead, 2026-10-09)
+
+Branch `feature/ai-time-attack-mod` from `next` 3c569f98a (after the develop sync merge).
+
+| Commit | Step |
+|---|---|
+| `499970995` | Session `GameplayRunPolicy` replaces the time-attack flag in six ROM objects, the S1/S3K results screens, `LevelManager.advanceToNextLevel` and the GameLoop chokepoints |
+| `46b256bea` | Run API (`com.openggf.game.run`) and `HostedRunController`; Time Attack became a `RunHost` |
+| `02f567fc1` | Title entries (`ModContext.registerTitleEntry`, EXTRAS chooser), `SceneContext.gameplay()`, scene suspend/resume, fault-bounded hosts |
+| merge | Lane A (JDK room host, static state) |
+| `7dfaac2a4` | Engine → `racing/` move; Netty/Bouncy Castle/SQLite test-scoped; `RunLevelStart` level size, post-completion `RunHandle.spectate`; ratchets tightened |
+| merge `f66de8319` | Lane B (bundled source, binary storage, packaging) |
+| `18fdd90c3` | `openggf.bundled.mods=racing/time-attack`; `TestTimeAttackModPackage` |
+
+Decisions taken during integration:
+
+- **No engine headless-replay seam.** The verifier is an operator tool that embeds the engine,
+  so `racing/server`'s `AttemptReplayHarness` keeps using engine internals; only the mod is
+  held to the public API. Revisit if a second replay consumer appears.
+- **Runs admit no mod content, including the host's.** The launching mod takes part only
+  through run-host callbacks and the policy, so a run's simulation is the stock game's and
+  the determinism fingerprint stays engine build + ROM; the jar-hash admission policy
+  ("S6") is unnecessary.
+- **Persisted data stays put.** The mod keeps CWD-relative `ghosts/` and `identity/`
+  (trusted code may use the filesystem); moving to owner storage is a follow-up.
+- **Racing builds inside the engine reactor.** `racing/**` compiles and runs its tests with the
+  engine test classpath (build-helper) so the ordinary suite and CI cover it; the bundled
+  packager builds the mod jar from the same sources.
+- **Lane B open questions:** a fault-triggered disable of a bundled mod persists like a
+  player disable (accepted; distinguishing needs a modstate field); bundled mods must use
+  title entries, not startup scenes (rule; Time Attack complies); a read-only `saves/`
+  blocks the bundled-mod cache (accepted).
+- **Rejected:** keeping multiplayer in the engine while solo moved (the coordinator depends on
+  the attempt runtime, so the engine would have depended on the mod); a generic in-engine
+  netplay transport (no second consumer); moving the race protocol into the public Mod API
+  (develop had just removed `@ModApi` from `ControlMessage`).

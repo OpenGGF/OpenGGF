@@ -63,6 +63,15 @@ class TestSceneRunLauncher {
     }
 
     @Test
+    void fingerprintsAreOfferedOnlyForAvailableGames() {
+        SceneRunLauncher withFingerprints = new SceneRunLauncher(loop, host -> host, List.of("s2"),
+                started::add, returned::add, game -> java.util.Optional.of("0.8:" + game));
+        assertEquals(java.util.Optional.of("0.8:s2"), withFingerprints.determinismFingerprint("s2"));
+        assertEquals(java.util.Optional.empty(), withFingerprints.determinismFingerprint("s3k"),
+                "a game whose ROM is not available has no fingerprint");
+    }
+
+    @Test
     void aFailedLoadReturnsToTheSceneImmediately() {
         launcher.launch(spec("s2", "sonic"), new RunHost() { });
         loop.endHostedRunAfterFailedLaunch(true);

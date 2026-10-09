@@ -23,6 +23,9 @@ public final class DrillsMod implements GgfMod {
 - The scene opens without a loaded game, so ROM art (`SceneContext.art().rom()`) is not
   available to title-entry scenes; draw with `SceneCanvas` text and shapes or PNGs from your mod.
 - `exitToMasterTitle()` (and `exitToGameTitle()`) return to the master title.
+- While a scene takes keyboard text (a name, an address, chat), return `true` from
+  `ModScene.capturesTextInput()`: the engine then holds back its global keyboard shortcuts
+  (display profile, shaders, capture) so typing cannot trigger them.
 
 ## Launch a run
 
@@ -31,7 +34,9 @@ RunSpec spec = new RunSpec("s2", 0, 0, "sonic", GameplayRunPolicy.isolatedAct())
 RunHandle handle = ctx.gameplay().launch(spec, myHost);
 ```
 
-- `ctx.gameplay().availableGames()` lists the games whose ROMs are configured.
+- `ctx.gameplay().availableGames()` lists the games whose ROMs are configured, and
+  `ctx.gameplay().determinismFingerprint(gameId)` gives the fingerprint a run of that game will
+  report, before any run starts (empty without the ROM) — use it to match rooms or recordings.
 - The character must be a stock character of that game.
 - The scene is suspended while the run plays (no `update`/`draw`) and is resumed through
   `ModScene.resumed(ctx, reason)` when it ends: `ACT_COMPLETED`, `LEFT`, `ABORTED` (the player

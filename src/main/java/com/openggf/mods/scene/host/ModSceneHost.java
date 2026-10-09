@@ -121,6 +121,27 @@ public final class ModSceneHost {
     }
 
     /**
+     * True while the open scene claims keyboard text input. Polled from the presentation frame,
+     * so a failing scene is closed and sent back to the master title instead of rethrowing.
+     */
+    public boolean capturesTextInput() {
+        if (scene == null || exiting) {
+            return false;
+        }
+        try {
+            return scene.capturesTextInput();
+        } catch (RuntimeException failure) {
+            Runnable back = context != null ? context.services.toMasterTitle() : null;
+            LOG.log(Level.WARNING, "Mod scene failed while reporting text input; closing it", failure);
+            close();
+            if (back != null) {
+                back.run();
+            }
+            return false;
+        }
+    }
+
+    /**
      * Shows the scene again after a run it launched has ended. The scene was suspended (neither
      * updated nor drawn) while the run played; a creator failure closes it.
      */

@@ -18,6 +18,16 @@ public interface SceneGameplay {
     List<String> availableGames();
 
     /**
+     * The determinism fingerprint a run of {@code gameId} would report in
+     * {@link com.openggf.game.run.RunLevelStart#determinismFingerprint()} (engine build and ROM),
+     * available before any run starts so a host can compare or match recordings and rooms.
+     * Empty when the game's ROM is not available.
+     */
+    default java.util.Optional<String> determinismFingerprint(String gameId) {
+        return java.util.Optional.empty();
+    }
+
+    /**
      * Starts {@code spec} after the scene's current callback returns. The run is a stock,
      * non-saving session with no mod gameplay content; {@code host} observes it.
      *

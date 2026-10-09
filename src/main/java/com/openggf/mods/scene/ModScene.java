@@ -38,6 +38,15 @@ public interface ModScene {
     /** Draws the current state. Must not change game state; it may be skipped or repeated. */
     void draw(SceneContext ctx, SceneCanvas canvas);
 
+    /**
+     * True while the scene takes keyboard text (a name, an address, chat). The engine then holds
+     * back its global keyboard shortcuts (display profile, shaders, capture) so typing cannot
+     * trigger them. Polled once per frame; keep it cheap.
+     */
+    default boolean capturesTextInput() {
+        return false;
+    }
+
     /** A run launched through {@link SceneContext#gameplay()} has ended and the scene is shown again. */
     default void resumed(SceneContext ctx, com.openggf.game.run.RunEndReason reason) {
     }

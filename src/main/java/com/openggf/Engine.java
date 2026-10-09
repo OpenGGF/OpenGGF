@@ -2019,6 +2019,18 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		return true;
 	}
 
+	/** The determinism fingerprint a hosted run of {@code gameId} reports; empty without its ROM. */
+	private Optional<String> fingerprintForGame(String gameId) {
+		try {
+			Rom rom = romManager.getSecondaryRom(gameId);
+			return rom == null ? Optional.empty() : Optional.of(new com.openggf.game.run.DeterminismFingerprint(
+					AppVersion.get(), rom.calculateChecksum()).asString());
+		} catch (IOException | RuntimeException e) {
+			LOGGER.log(java.util.logging.Level.FINE, "No determinism fingerprint for " + gameId, e);
+			return Optional.empty();
+		}
+	}
+
 	/** A hosted run's module: the stock game with built-in patches only (no mod content). */
 	GameModule resolveHostedRunModule(GameModule rootModule, com.openggf.game.run.RunSpec spec) {
 		return moduleResolutionService.resolveForLaunch(rootModule,
@@ -2064,7 +2076,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		ModSceneLauncher.openTitleEntryScene(gameLoop, window, graphicsManager,
 				(int) projectionWidth, (int) realHeight, entry,
 				new SceneRunLauncher(gameLoop, entry.scene()::guard, availableGames,
-						this::startSceneHostedRun, this::returnToHostScene));
+						this::startSceneHostedRun, this::returnToHostScene, this::fingerprintForGame));
 	}
 
 	private static List<String> stockCharacters(String gameId) {
@@ -2668,7 +2680,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				&& inputHandler.isKeyPressed(
 						configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
 		boolean displayShaderPickerHandledInput = com.openggf.game.TitleInputOwnership.routeDisplay(
-				getCurrentGameMode(), masterTitleScreen,
+				getCurrentGameMode(), masterTitleScreen, gameLoop != null && gameLoop.modSceneHost.capturesTextInput(),
 				displayShaderPickerController != null && displayShaderPickerController.isOpen(),
 				this::updateDisplayShaderInput,
 				() -> { if (displayColorProfileController != null) displayColorProfileController.update(inputHandler); },
@@ -3022,6 +3034,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		if (!com.openggf.game.TitleInputOwnership.routeCapture(getCurrentGameMode(), masterTitleScreen,
+				gameLoop != null && gameLoop.modSceneHost.capturesTextInput(),
 				() -> shouldToggleLiveCapture(
 						configService.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY),
 						liveCaptureChord, inputHandler))) {
