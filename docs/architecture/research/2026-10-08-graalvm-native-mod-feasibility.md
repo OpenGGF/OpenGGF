@@ -817,6 +817,91 @@ tests. Development-tree `maven_queue.py -B -Dmse=off -Pguards test` completed
 Portable Windows and Linux packaging controls pass (three cases each).
 This is focused validation, not a whole ordinary-suite pass.
 
-Actual Windows compilation/runtime checks and Wine rendered qualification are
-pending at this source checkpoint. Final artifact hashes, source pins and
-coverage limits will be recorded after those processes finish.
+Actual Windows compilation/runtime checks and Wine rendered qualification were
+pending at correction checkpoint `03b4dec34`. Their terminal evidence follows.
+
+### Terminal Windows qualification and delivery
+
+The correction integrated conflict-free and was pushed as
+`0d3d9c1d6cfa76f8ba451599e7a54239a9f6a4a1`. Its delta from `b84398a29` is
+confined to the standalone Windows tool/workflow, their tests and prose; there
+is zero stock engine/test/API/POM/hook/testing-tool or normal release delta.
+The actual destination's queued fresh `-B -Dmse=off -Pguards test` finished
+2026-10-09 16:24:22Z, exit 0: 87 fresh suite identities, 674 cases, no failures,
+errors or skips, matching the development run by identity and case count.
+The main report directory also held unrelated stale ordinary reports; only
+the 87 suites named by this invocation's terminal log were counted and consumed.
+The Windows and Linux portable packaging suites also pass at the destination.
+
+[Windows build run 37958994125](https://github.com/OpenGGF/OpenGGF/actions/runs/37958994125)
+is terminal **success** at that exact source, including both required jobs.
+On `windows-latest` with the pinned Windows CE/MSVC toolchain, the image compiled
+in 6m29s at 8.35 GiB peak RSS. The actual Windows process passed:
+
+- Contract regression controls and the complete 15,844-entry / 1,210-type audit.
+- Deliberate missing field and method controls rejected with ordinary exit 1.
+- The separately runtime-loaded JDK fixture: records, pattern switches, generated
+  proxy, UTF-8, writers, file copy/atomic replacement, and primitive/reference streams.
+- All 19 exact JVM/native registration comparisons; actual engine boot for all
+  17 code mods through their batch shortcuts. Both data-mod shortcuts and
+  `OpenGGF.bat` passed their diagnostics from a different working directory.
+
+The required independent Ubuntu guard job finished 2026-10-09 16:39:17Z:
+87 fresh report identities / 674 cases, zero failures/errors/skips, Maven exit 0.
+The runner's clean Windows ZIP has 1,406 entries / 139,602,042 bytes, SHA-256
+`af1c0e1f78b04d492d32e95b1f001c066a0b3d716ae84f7b20c74d5710c5d598`.
+Engine/mod and native-builder source pins both equal `0d3d9c1d6cfa76f8ba451599e7a54239a9f6a4a1`;
+`OpenGGF.exe` SHA-256 is
+`ddbf6a9c14ba2704714be14bd7b2f5294d4b18778f5237599f9653588054bc43`.
+
+Local `qualify_wine.py` consumed that immutable ZIP, verified the same three
+original ROM identities, and ran every extracted `.bat` through the Windows PE
+with Wine 11.19 / Mesa software OpenGL, from a path containing spaces. All 19
+rendered smoke checks passed without creator findings or disabled owners, with
+module-state roundtrip and scene reopen where applicable. The existing shared
+recipes cover the title/scene/level paths recorded in the Linux qualification,
+including Eggman's Sky planets, Flappy Tails classic/Sonic play, tower waves,
+Slay combat/shop/map, Starfall cavern/warden and Sitar performance/pause/resume.
+Level samples advance 600 frames and exercise additional acts where supplied.
+Sonic Survivors' capture includes its camp/menu and level updates; it does not
+certify a complete arena run. Eighty-three PNGs and twenty state CSVs were
+retained under `$OPENGGF_WINDOWS_CAPTURE_ROOT/native-captures`, alongside the
+structured qualification and a contact sheet. Sitar's offline PCM peak was
+5,962; this establishes produced audio, not physical device latency or quality.
+The primitive sample Flappy screenshot matches the qualified Linux sample
+pixel-for-pixel; its authored test artwork is not a Windows rendering regression.
+
+A matched local fixture check used the exact same bootstrap JAR bytes as the
+old-image negative: refreshed PE exit 0 / successful registration versus old
+PE exit 3 / unreachable `ObjectMethods.bootstrap`. The normal extracted
+`Launch standalone.bat` also invoked `Engine.main` and remained alive for a
+bounded 12-second startup observation without Java or ROMs beside the bundle;
+only that owned prefix was deliberately stopped afterward. This establishes
+normal startup through the shortcut, not a complete interactive route.
+
+The deliverable was reconstructed from immutable Windows inputs to exclude
+every probe-created config/cache/save, then had separately labelled Wine
+evidence added to `build-info.json` and the README. Final ZIP CRC, complete
+per-file checksums, all mod hashes, native PE hash, 19 launchers, CE/project
+licences and `s1.gen` / `s2.gen` / `s3k.gen` configuration verified. It contains
+no ROMs, JDK or diagnostic bootstrap mod. Output:
+`$OPENGGF_WINDOWS_CAPTURE_ROOT/OpenGGF-experimental-windows-x64-with-mods.zip`,
+1,406 entries / 142,464,410 bytes, SHA-256
+`9ac1ea0642071bd908b4fb6f3e093535fc0fd79f42d4ef7c584676d9e872f1b1`.
+Its checksum sidecar is retained, and the prior 2026-10-08 ZIP remains untouched.
+
+**Limits:** actual Microsoft Windows evidence covers compilation, packaging,
+JDK runtime semantics, registration and boot/shortcuts. Representative rendered
+gameplay was checked under Wine, not on a physical Windows graphics/audio stack.
+This does not certify every route, long session, rewind boundary, multiplayer
+peer, graphics driver or future third-party mod. Static member scans cannot
+prove arbitrary dynamically named reflective members; bootstrap/dispatch
+controls and real gameplay remain necessary alongside metadata audits.
+No whole ordinary-suite or production-native-support claim is made.
+
+The terminal follow-up changes only this research Markdown; it does not alter
+any executable, packaged source or CI qualification input. Consumed Maven/native
+logs and owned Wine state are temporary; rendered captures, final ZIP and light
+source-attributed evidence are retained outside the task worktree. Main's seven
+unrelated dirty/untracked paths were independently byte/state checked and
+preserved through integration.
