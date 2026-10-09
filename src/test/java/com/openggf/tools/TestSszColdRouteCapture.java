@@ -31,6 +31,7 @@ class TestSszColdRouteCapture {
                         + (complete ? "complete" : "upper") + "-320.bk2"));
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
         previousInput.setAccessible(true);
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 10, 0, settings);
             boolean sawBoss = false; boolean sawDefeat = false;
@@ -44,7 +45,7 @@ class TestSszColdRouteCapture {
                     GameServices.configuration().setSessionOverride(
                             com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 }
-                session.step(movie.getFrame(frame)); session.render();
+                session.step(movie.getFrame(frame)); drawing.afterStep(session);
                 if (complete && frame >= 19400 && GameServices.level().getCurrentZone() == 10) {
                     var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
                     if (rewind != null) largestOutgoingRewindFrame = Math.max(largestOutgoingRewindFrame,
@@ -111,13 +112,14 @@ class TestSszColdRouteCapture {
                         && frame != 15890 && frame != 16925 && frame != 17220
                         && frame != 18000 && frame != 18600 && frame != 19350) continue;
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                 var forward = registry.capture();
                 registry.restore(saved);
                 // External controller held-button history is not part of gameplay rewind.
                 previousInput.set(session, movie.getFrame(frame));
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                 var replay = registry.capture();
                 assertEquals(forward.entries().keySet(), replay.entries().keySet());
                 for (String key : forward.entries().keySet()) {
@@ -126,6 +128,7 @@ class TestSszColdRouteCapture {
                 }
                 registry.restore(saved); previousInput.set(session, movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertTrue(sawBoss && sawDefeat, "cold encounter must reach the killing hit");
             assertTrue(GameServices.level().getObjectManager().activeObjectsOfType(SszGhzBossObjectInstance.class).isEmpty());
             assertTrue(sawMtzBoss && sawMtzDefeat, "cold route must also reach the second killing hit");
@@ -139,7 +142,7 @@ class TestSszColdRouteCapture {
                 // The handover clears the old timeline; step the incoming level so a fresh
                 // controller is installed even when the transition fade retired the old one.
                 var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
-                for (int n = 0; n < 30; n++) { session.step(neutral); session.render(); }
+                for (int n = 0; n < 30; n++) { session.step(neutral); drawing.draw(session); }
                 var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
                 assertNotNull(rewind, "DEZ starts a new rewind timeline");
                 assertTrue(rewind.currentFrame() < largestOutgoingRewindFrame,
