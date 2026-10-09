@@ -42,7 +42,11 @@ recorded by the empty `renderedGameplay` list; it does not qualify gameplay.
 
 The generated member contract covers dormant creator callbacks as well as live
 ones. Missing-field and missing-method controls must return ordinary exit 1;
-crashes never pass. Each mod runs in a new native process, through production
+crashes never pass. A separately compiled, runtime-loaded regression mod exercises
+record equality/hash/string and pattern-switch bootstraps; it never enters the
+image classpath or final distribution. `java.lang.runtime` is explicitly preserved
+because preservation of `java.lang` does not include its subpackages.
+Each mod runs in a new native process, through production
 discovery, loaders and owner fault boundaries. Rendered checks exercise scene
 menus/debug routes or 600 real gameplay frames, inspect non-flat framebuffers,
 reject owner findings/disabled owners, roundtrip registered module state and reopen

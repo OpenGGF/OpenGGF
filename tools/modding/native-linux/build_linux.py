@@ -36,6 +36,22 @@ def elf_x64(path):
     if len(data)<64 or data[:6]!=b"\x7fELF\x02\x01" or struct.unpack_from("<H",data,18)[0]!=62:
         raise ValueError("Expected Linux x64 ELF: " + str(path))
 
+def bootstrap_control(work, engine):
+    # Compile separately: this fixture must remain invisible to image analysis.
+    classes=work / "bootstrap-control-classes";classes.mkdir()
+    run([tool("javac"),"--release","21","-cp",engine,"-d",classes,
+        Path(__file__).parent / "BootstrapControl.java"],work)
+    manifest=classes / "META-INF/openggf-mod.yaml";manifest.parent.mkdir()
+    manifest.write_text('formatVersion: 1\nid: native-bootstrap-control\nname: Native bootstrap control\n'
+        'version: 0.1.0\nauthors: [OpenGGF contributors]\ndescription: Runtime-loaded JDK bootstrap regression control.\nengineApiRange: ">=0.7.0 <0.8.0"\n'
+        'type: patch\nbaseGame: s2\nentrypoint: nativecontrol.BootstrapControl\n'
+        'dependencies: []\naudioOverrides: {}\nartOverrides: {}\n')
+    fixture=work / "bootstrap-control.jar"
+    sdk=next((ROOT / "target").glob("*-openggf-mod-sdk.jar"))
+    run([tool("java"),"-cp",os.pathsep.join(map(str,(engine,sdk))),
+        "com.openggf.tools.modsdk.GgfModCli","package","--input",classes,"--out",fixture],work)
+    return fixture
+
 def assemble(bundle, image, engine, inputs, contract, graal, evidence):
     bundle.mkdir(parents=True, exist_ok=False)
     shutil.copy2(image,bundle / "OpenGGF")
@@ -112,7 +128,8 @@ def prepare(args):
     sources=sorted((ROOT / "tools/modding/native-feasibility").glob("NativeModMember*.java"))
     sources += [ROOT / "tools/modding/native-feasibility/NativeModRegistrationProbe.java"]
     sources += sorted((ROOT / "tools/modding/native-windows").glob("*.java"))
-    sources += sorted(Path(__file__).parent.glob("*.java"))
+    sources += sorted(source for source in Path(__file__).parent.glob("*.java")
+        if source.name != "BootstrapControl.java")
     classes=work / "host-classes"
     run([tool("javac"),"--release","21","-cp",os.pathsep.join(map(str,(engine,sdk,ROOT / "target/classes"))),"-d",classes,*sources],work)
     java=[tool("java"),"-cp",os.pathsep.join(map(str,(classes,engine)))]
@@ -120,6 +137,7 @@ def prepare(args):
     contract=work / "contract"
     run([*java,"com.openggf.tools.NativeModMemberContract",engine,inputs / "mods",contract],work)
     run([*java,"com.openggf.tools.NativeModMemberAudit",contract / "members.tsv"],work)
+    bootstrap_control(work,engine)
     metadata=work / "metadata";metadata.mkdir()
     (metadata / "reflect-config.json").write_text('[{"name":"sun.net.www.protocol.jar.Handler","allDeclaredConstructors":true}]\n')
     deps=args.runtime_classpath.resolve(strict=True).read_text().strip()
@@ -128,7 +146,7 @@ def prepare(args):
     arguments=["-march=compatibility","-J-Xmx5g","--parallelism=4",
         "--initialize-at-run-time=org.lwjgl,java.awt,javax.swing,sun.awt,sun.java2d",
         "-H:+UnlockExperimentalVMOptions","-H:+RuntimeClassLoading",
-        f"-H:Preserve=path={contract / 'preserved-engine.jar'},package=java.lang,package=java.lang.invoke,package=java.util,package=java.util.function",
+        f"-H:Preserve=path={contract / 'preserved-engine.jar'},package=java.lang,package=java.lang.invoke,package=java.lang.runtime,package=java.util,package=java.util.function",
         r"-H:IncludeResources=com/openggf/.*\.class",f"-H:ConfigurationFileDirectories={metadata}",
         "-J-Dopenggf.experimental.native.mods=true",
         "-J--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.hub=ALL-UNNAMED",
@@ -178,6 +196,14 @@ def qualify(args):
             (bundle / "native-mod-members.tsv").write_text(f"{kind}\tcom.openggf.game.rules.GameRules\t__absent_control\t{desc}\n")
             run(native_command(args,bundle,"--audit"),bundle,"MISSING native member: "+kind)
         finally: (bundle / "native-mod-members.tsv").write_bytes(original)
+    fixture=bundle / "mods/native-bootstrap-control.jar"
+    try:
+        shutil.copy2(work / "bootstrap-control.jar",fixture)
+        output=run(native_command(args,bundle,"--check-mods","native-bootstrap-control"),bundle)
+        if "PASS registration: native-bootstrap-control; code=true" not in output:
+            raise AssertionError("Runtime-loaded JDK bootstrap control did not pass")
+        evidence["jdkBootstrapControl"]="runtime-loaded record equals/hashCode/toString and pattern switch passed"
+    finally: fixture.unlink(missing_ok=True)
     for mod in json.loads((inputs / "build-info.json").read_text())["mods"]:
         owner,slug=mod["id"],mod["slug"]
         jvm=run([tool("java"),"-Xmx1g","-cp",os.pathsep.join(map(str,(work / "host-classes",engine))),

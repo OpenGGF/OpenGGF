@@ -532,3 +532,16 @@ Java/Lua/PowerShell preflight without executing tests.
 Final binary, source attribution and terminal qualification results are recorded
 below when completed; this initial implementation checkpoint is not a native
 artifact qualification.
+
+The first Linux image at tool source `da8b70bae0c0999a0b93b3a57e2760b46401c9f9`
+passed the member audit, missing-member controls and Eggman's Sky registration and
+engine boot, then aborted (exit 134) during its rendered route. The fatal method
+was `java.lang.runtime.ObjectMethods.bootstrap`, invoked by generated record
+methods. Package preservation is exact: `java.lang` does not retain
+`java.lang.runtime`. A separately compiled runtime-loaded `BootstrapControl`
+reproduced that same fatal without graphics. It exercises record equality,
+hashing, string formatting and a pattern-switch bootstrap. It is excluded from
+the image classpath to prevent closed-world analysis from masking the fault, and
+removed before immutable distribution assembly. The correction preserves the
+small JDK bootstrap package; successful registration alone remains insufficient
+evidence of gameplay support.
