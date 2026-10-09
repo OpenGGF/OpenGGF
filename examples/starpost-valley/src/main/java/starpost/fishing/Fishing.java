@@ -23,6 +23,14 @@ public final class Fishing {
     public record Landed(String id, String message, boolean freed, boolean kept) {
     }
 
+    /**
+     * Fishing-contest points for a catch: 5 plus a fifth of its difficulty, 10 more for a badnik;
+     * junk scores nothing.
+     */
+    public static int contestPoints(FishDef def) {
+        return def == null ? 0 : 5 + def.difficulty() / 5 + (def.isBadnik() ? 10 : 0);
+    }
+
     /** The section, added if a save predates fishing. */
     public static FishingSection section(Game game) {
         FishingSection section = game.section(FishingSection.class);

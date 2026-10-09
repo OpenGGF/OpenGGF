@@ -1003,6 +1003,7 @@ Branch `feature/ai-starpost-waters` (base `93eb0fb10`), packages `starpost.fishi
 | The Bubble Bar | `BubbleBar` (rules), `BubbleBarScreen` | Hold to rise, release to sink. Inside the bubble the catch reels in; outside, tension builds, the bubble shrinks (up to half) and the catch slips; 45 frames' grace while the hook sets. The bubble is Map_Bub's full bubble with its top and bottom halves at 1x and its middle row repeated, giving way to frames 5 and 4 as it shrinks. Badniks move as their objects do, at the column's scale: `Chop_ChgSpeed` (launch -$700, gravity $18: a leap every 149 frames, scaled so a full leap reaches the top; the Red Chopper varies the height and darts between leaps), `Jaws_Swim` (constant speed, turning every 64 frames per subtype), `Obj_Jawz` ($200, aimed at the bubble and never steered), `AniRaw_BlastoidAttack` (128 frames' wait, three shots 15 frames apart, each kicking it up). On a badnik the drowning countdown's digits (Map_Bub 14-18) count down over the bubble with `sfx_AirDing` as the catch slips, as theatre. Barnaby's two-heart lesson (`barnaby_fishing_lesson`) and Fishing levels make the bubble bigger. |
 | The pond | `PondLine` (actor) | With the rod, the action button at the pond's edge casts (the new `FarmView.pondAction` hook; the Water Shield still refills there). The bobber arcs in and bobs; Labyrinth's splash (Nem_Splash, Map_Splash) marks the landing and the bite; walking off reels in. |
 | Waterfall Lake | `LakeScreen` | The valley's `lake` doorway. Green Hill blocks 1 (the shore), 51 (the log bridge over its pool: Barnaby's jetty) and 52 (a waterfall), with their collision; the water shimmers with `PalCycle_GHZ` (Pal_GHZCyc's four steps into line 3, colours 8-11, every 6 frames). Hold the action button to wind up a cast; the throw sets the depth. Fish shadows drift under the surface; Barnaby (Sonic 1's seal) sits on the jetty when People's own schedule puts him there; falling in sends the farmer back to the shore. Once the Capsule's Reef chamber sets `lake_bridge`, Sonic 1's bridge logs (Map_Bri frame 0) run from the jetty to the falls. The clock runs and the day can end there. |
+| Fishing contest | `FishingSystem.contest`, `LakeScreen` | A festival's timed contest (the Festivals lane's Ice Cap Festival hook has the same shape: `FishingSystem::contest`): the lake with a lent rod, the day's clock still, bites twice as soon, points per catch (5 plus a fifth of its difficulty, 10 more for a badnik, none for junk) on a board over the lake; at the whistle (or on walking off) the score is handed back once and the screen returns to the play screen. |
 | Save | `FishingSection` (`fishing`) | Landed counts per catch; unknown ids and bad numbers are dropped, counts clamped, once-only catches kept at one. |
 
 ### Animals and barns
@@ -1055,18 +1056,19 @@ Branch `feature/ai-starpost-waters` (base `93eb0fb10`), packages `starpost.fishi
 
 ### Tests and captures
 
-`src/test/java/starpost/fishing/FishingRulesTest.java` (18) and
+`src/test/java/starpost/fishing/FishingRulesTest.java` (19) and
 `src/test/java/starpost/barn/BarnRulesTest.java` (16), engine-free: the table's size and the
 bundles' ids, the Reef and Hatchery chambers now fillable, bites by spot, season, hour, weather,
 aurora and depth, deep casts favouring badniks, the Red Chopper's story, morning and once-only rules,
 junk rates, a careful hand landing easy fish while an idle one loses them, harder fish escaping more,
 tension and the hook's grace, the bubble rising and sinking, the Chopper's 149-frame leap, the Jawz's
 $200 charge, the bubble's skill and lesson growth, the line's flight, bite, window and miss, each
-catch's rule, badniks freeing animals and the hat, Angler and Reef Hand prices; buying and room,
+catch's rule, badniks freeing animals and the hat, Angler and Reef Hand prices, contest points;
+buying and room,
 laying and hunger, grazing, hoppers and sunflowers, fluff timing with the Shepherd, Ice Eggs and
 truffles by season and weather, Rocky's catch, petting, Cuddlers and big houses, collecting, each
 machine's recipes and timing, oil, the roost's reach and basket, and the sections' and machines'
-round trips with damaged values clamped or dropped and malformed numbers rejecting the save. 88/88
+round trips with damaged values clamped or dropped and malformed numbers rejecting the save. 89/89
 with the other lanes' tests; a mutation check (fluff every four days, Chopper gravity $20, roost
 reach one wider) turned three tests red.
 

@@ -58,6 +58,20 @@ public final class FishingSystem {
         }));
     }
 
+    /**
+     * A timed fishing contest at Waterfall Lake (a festival's): the farmer goes to the lake with a
+     * lent rod for {@code seconds}, {@code done} hears the points once, and the screen returns to
+     * {@code play}. Its shape matches a festival's contest hook, so it can be handed over as
+     * {@code FishingSystem::contest}.
+     */
+    public static void contest(Shell shell, PlayScreen play, int seconds, java.util.function.IntConsumer done) {
+        FishingSystem sys = of(play);
+        if (sys == null) {
+            sys = new FishingSystem(shell, play);
+        }
+        shell.go(new LakeScreen(shell, play, sys, seconds, done));
+    }
+
     /** The fishing system of a play screen (through its pond actor), or null. */
     static FishingSystem of(PlayScreen play) {
         for (Actor actor : play.actors) {
@@ -72,7 +86,7 @@ public final class FishingSystem {
      * Debug ({@code fish ...}): {@code lake} goes to Waterfall Lake; {@code bite} makes the line
      * out bite now; {@code bar ID} opens the Bubble Bar on a catch; {@code land ID} lands one;
      * {@code at X} stands at the lake; {@code flag NAME} sets a story flag (the lake bridge,
-     * Barnaby's story).
+     * Barnaby's story); {@code contest SECONDS} starts a fishing contest.
      */
     public static boolean debug(Shell shell, String[] p) {
         if (shell.game == null || p.length < 2) {
@@ -111,6 +125,11 @@ public final class FishingSystem {
                     return lake.debugFight(id);
                 }
                 return sys.pond.debugFight(shell, id);
+            }
+            case "contest" -> {
+                contest(shell, play, p.length > 2 ? Integer.parseInt(p[2]) : 60,
+                        points -> shell.toast("CONTEST OVER: " + points + " POINTS"));
+                return true;
             }
             case "flag" -> {
                 shell.game.flags.add(id);

@@ -77,11 +77,28 @@ public final class LakeScreen implements Screen {
     private boolean barnaby;
     /** The Capsule's Reef chamber rebuilt the lake bridge: Green Hill's log bridge out to the falls. */
     private boolean bridge;
+    // A fishing contest (a festival's): frames left, points so far, and who hears the score.
+    private final boolean contest;
+    private int contestLeft;
+    private int score;
+    private int contestEnd;
+    private java.util.function.IntConsumer contestDone;
 
     LakeScreen(Shell shell, PlayScreen play, FishingSystem sys) {
+        this(shell, play, sys, 0, null);
+    }
+
+    /**
+     * A fishing contest of {@code seconds} (the day's clock stands still, a rod is lent and bites come
+     * twice as fast); {@code done} hears the score once, when time is up or the farmer walks off.
+     */
+    LakeScreen(Shell shell, PlayScreen play, FishingSystem sys, int seconds, java.util.function.IntConsumer done) {
         this.shell = shell;
         this.play = play;
         this.sys = sys;
+        contest = done != null;
+        contestLeft = Math.max(0, seconds) * 60;
+        contestDone = done;
         poolY = poolTop(shell.art.kit.blockImage(51));
         runner = new Runner(40, ground.floorBelow(40, 0));
         snapCamera();
@@ -166,10 +183,14 @@ public final class LakeScreen implements Screen {
             shell.push(new InventoryMenu());
             return;
         }
-        if (game.calendar.tick() && game.calendar.light() != lastLight) {
+        if (contest) {
+            if (contestTicks(shell)) {
+                return;
+            }
+        } else if (game.calendar.tick() && game.calendar.light() != lastLight) {
             enter(shell);
         }
-        if (game.calendar.overtime()) {
+        if (!contest && game.calendar.overtime()) {
             shell.toast(game.farmer.toUpperCase() + " PASSED OUT...");
             shell.go(new DayEndScreen(true));
             return;
@@ -193,6 +214,7 @@ public final class LakeScreen implements Screen {
             shell.sfx(starpost.scene.Sfx.JUMP);
         }
         if (runner.x < 10 && runner.speed <= 0 && free) {
+            finishContest();
             shell.go(play);
             return;
         }
@@ -209,6 +231,39 @@ public final class LakeScreen implements Screen {
         float target = look - shell.width() / 2f;
         camX += (clampX(target) - camX) * 0.12f;
         animate();
+    }
+
+    /** The contest's clock: true while the final whistle holds the screen. */
+    private boolean contestTicks(Shell shell) {
+        if (contestEnd > 0) {
+            if (--contestEnd == 0) {
+                finishContest();
+                shell.go(play);
+            }
+            return true;
+        }
+        if (contestLeft > 0 && --contestLeft == 0) {
+            line.reelIn();
+            charging = false;
+            contestEnd = 120;
+            shell.toast("TIME! " + score + " POINTS");
+            shell.sfx(starpost.scene.Sfx.SIGNPOST);
+            return true;
+        }
+        return false;
+    }
+
+    private void finishContest() {
+        if (contestDone != null) {
+            java.util.function.IntConsumer done = contestDone;
+            contestDone = null;
+            done.accept(score);
+        }
+    }
+
+    /** The rod is in hand (or lent for a contest). */
+    private boolean rod(Game game) {
+        return contest || Fishing.holdingRod(game);
     }
 
     /** The rod: wind up, cast, wait, strike. */
@@ -237,7 +292,7 @@ public final class LakeScreen implements Screen {
                 cast(shell, game);
             }
         } else if (shell.in.act && runner.onGround) {
-            if (Fishing.holdingRod(game)) {
+            if (rod(game)) {
                 charging = true;
                 charge = 0;
             } else {
@@ -274,6 +329,7 @@ public final class LakeScreen implements Screen {
                 splashX = line.toX;
                 splashAt = shell.ticks;
                 shell.sfx(SFX_PLOP);
+                hurry();
             }
             case Line.BITE_NOW -> {
                 FishingSection section = Fishing.section(game);
@@ -288,9 +344,17 @@ public final class LakeScreen implements Screen {
             case Line.MISSED -> {
                 hooked = null;
                 shell.toast("IT GOT AWAY...");
+                hurry();
             }
             default -> {
             }
+        }
+    }
+
+    /** In a contest the fish bite twice as soon. */
+    private void hurry() {
+        if (contest) {
+            line.timer = Math.max(30, line.timer / 2);
         }
     }
 
@@ -299,7 +363,9 @@ public final class LakeScreen implements Screen {
             landedAt = shell.ticks;
             landedId = landed.id();
             landedFreed = landed.freed();
-            shell.toast(landed.message());
+            int points = contest ? Fishing.contestPoints(sys.table.get(landed.id())) : 0;
+            score += points;
+            shell.toast(points > 0 ? landed.message() + " +" + points : landed.message());
         }, line::reelIn);
     }
 
@@ -495,9 +561,16 @@ public final class LakeScreen implements Screen {
             }
         }
         PlayScreen.drawHud(shell, canvas);
+        if (contest) {
+            int left = (contestLeft + 59) / 60;
+            String board = "CONTEST " + left / 60 + ":" + (left % 60 < 10 ? "0" : "") + left % 60 + "   SCORE " + score;
+            int bw = canvas.textWidth(board) + 16;
+            Text.panel(canvas, (w - bw) / 2, 58, bw, 18);
+            Text.centred(canvas, board, 63, left <= 10 && shell.ticks / 8 % 2 == 0 ? Text.RED : Text.YELLOW);
+        }
         if (charging) {
             drawPower(canvas, runner.x - cx, runner.y - cy - 52);
-        } else if (!line.out() && Fishing.holdingRod(game) && runner.onGround && runner.x > SHORE_END - 60) {
+        } else if (!line.out() && rod(game) && runner.onGround && runner.x > SHORE_END - 60) {
             Text.centred(canvas, "HOLD X TO CAST", canvas.height() - 36, Text.GREY);
         }
     }
@@ -589,7 +662,7 @@ public final class LakeScreen implements Screen {
             Anim.drawTails(canvas, shell.art.tailsTails, anim.id(), shell.ticks, runner.x - cx, originY, style);
         }
         canvas.draw(pose, runner.x - cx, originY, style);
-        if (Fishing.holdingRod(shell.game) && (line.out() || charging)) {
+        if (rod(shell.game) && (line.out() || charging)) {
             float dir = runner.facingLeft ? -1 : 1;
             boolean pulling = line.state == Line.BITE || line.state == Line.FIGHT;
             float back = charging ? power() * 10 : 0;

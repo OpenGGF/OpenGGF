@@ -340,6 +340,23 @@ class FishingRulesTest {
         assertTrue(shell < game.sellPrice(catalog.item("jaws_fin")));
     }
 
+    @Test
+    void contestPointsFavourHardCatchesAndBadniks() {
+        assertEquals(0, Fishing.contestPoints(null), "junk scores nothing");
+        int minnow = Fishing.contestPoints(table.get("spring_minnow"));
+        int gar = Fishing.contestPoints(table.get("labyrinth_gar"));
+        int jaws = Fishing.contestPoints(table.get("jaws_fin"));
+        assertEquals(5 + 12 / 5, minnow);
+        assertTrue(gar > minnow);
+        assertEquals(5 + 62 / 5 + 10, jaws, "a badnik is worth ten more");
+        int winter = 0;
+        for (String id : List.of("snow_smelt", "ice_cap_char", "bubble_bass")) {
+            winter += Fishing.contestPoints(table.get(id));
+        }
+        assertTrue(winter < 41 && winter + Fishing.contestPoints(table.get("snow_smelt")) > 40,
+                "the Ice Cap record of 40 takes four good winter catches");
+    }
+
     // ------------------------------------------------------------------ the save
 
     @Test
