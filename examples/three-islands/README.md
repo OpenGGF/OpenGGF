@@ -13,6 +13,19 @@ powered by the Chaos Emeralds. Sonic starts alone on South Island, meets Tails o
 Island, clashes with (and then recruits) Knuckles on Angel Island, and boards the Death Egg
 for the final battle, where all seven emeralds let him turn Super.
 
+The northwest landmarks in all ten areas are enterable dungeons: shrines, an observatory,
+workshop caverns and archive vaults. Defeat two groups of sentries to open their gates,
+explore a side chamber for supplies, and collect the story discovery inside. Green Hill's
+missing Flicky follows Sonic back to the doorway for her reunion. Entrances stay open after
+completion, and cleared fights and one-time rewards persist. The refuge Starpost restores
+and saves the party; continuing or retrying an indoor save starts inside the entrance room.
+
+Interiors have their own ROM terrain: Marble masonry for the seaside shrine and freight
+catacombs, Mystic Cave for the workshop caverns and lantern shrine, Lava Reef for the
+guardian shrine and mooring vault, Hydrocity for the tidal sanctuary, and the corresponding
+machinery kits for the observatory, pump station and Death Egg archive. Walls and gates use
+the same room boundaries as movement. Battles retain the interior and camera.
+
 ## Requirements
 
 - The OpenGGF JVM build from the `develop` line, which carries the Mod API 0.7 candidate.
@@ -180,15 +193,20 @@ java -cp target/test-classes:target/classes:$(cat target/test-classpath.txt) \
   suite; `TestThreeIslandsScene` plays it against a real S3K session: a new game through the
   field startup and in-world dialogue/save, all zones and bosses, a keyboard-fought battle,
   discovery persistence, free local travel/backtracking, exact battle field/camera identity,
-  and Green Hill's Sonic 1 theme taking over from the stand-in.
+  and Green Hill's Sonic 1 theme taking over from the stand-in. Dungeon checks exercise all
+  available interiors through the actual entrances, both sentry battles, indoor save/continue,
+  the story reward, repeat interaction and returning/re-entering. Model checks flood-fill the
+  gate geometry, preserve old saves/entrances and simulate dungeon combat, including a
+  level-one Sonic in the first shrine.
 
 ## Known limits
 
-- Fields currently share a compact clearing topology, joined by physical exits. Green Hill
+- Outdoor fields share a compact clearing topology; dungeons use connected rooms with
+  alternating north/south wings and two guarded crossings. Green Hill
   has curated ROM decorations; other regions currently use simpler ROM texture composition.
   Character sprites retain their original side-facing poses.
-- Marble Zone is left out: its level kit has floors without block art and a background that
-  decodes as plain sky. Star Light Zone takes its place.
+- Marble Zone is not an outdoor chapter: its stock route and background are unsuitable
+  for the current route renderer. Its decoded masonry is used directly in dungeon rooms.
 - ROM fragments are the initial level-kit art; stock animated tiles and palette cycles are not simulated.
 - Sound effects are silent in Sonic 1 and Sonic 2 fields while their ROM theme plays
   (see Audio).

@@ -271,10 +271,22 @@ Flicky: It sounds like her. But older. Please bring her home.
 > The traveller shares two Super Rings. The northern and southern trails meet beyond the lake.
 
 @ghz-memory
-> A small bird sits beside a broken shrine. In the ring above it, the same shrine stands beneath a red sky.
+> A frightened Flicky waits beside a cracked altar. Three lights pulse in the stone behind her.
 Flicky: That voice said our village would be gone by sundown. Is that tomorrow?
-Sonic: Maybe. But tomorrow hasn't met us yet.
-> Sonic leads her to the safe trail. The echo leaves a pattern of three pulsing lights in the stone.
+Sonic: Maybe. But tomorrow hasn't met us yet. Your sister sent me. Let's get you home.
+Flicky: The machines kept saying "Star Light Observatory". Is that where the voices come from?
+> The Flicky follows Sonic. Return through the western doorway to reunite the sisters.
+
+@ghz-dungeon-enter
+> Beyond the broken shrine, marble halls descend beneath Green Hill. A small voice calls from the inner chamber.
+Sonic: Hang on! I'm coming.
+> Defeat the sentries to open each gate. The refuge Starpost restores the party. Walk west through the doorway to leave.
+
+@ghz-rescue
+> The sisters rush to each other beside the shrine. Above them, the ring of light flickers.
+Flicky: You brought her back! Thank you, Sonic!
+Sonic: Stick together. I'm going to find out what the observatory has to do with all this.
+> The rescued Flicky's clue joins the journal. The shrine remains open for exploration.
 
 @ghz-signal
 > Three lights pulse on a buried machine. Beside it lies a shipping label: STAR LIGHT OBSERVATORY.
@@ -488,3 +500,46 @@ Sonic: Together. All the way.
 Sonic: When I started, I thought this was another badnik problem.
 Tails: Still think you could handle it alone?
 Sonic: Not a chance.
+
+@slz-dungeon-enter
+> Under the observatory, starlit machinery ticks through the same minute again and again.
+Sonic: The old logs must be in the vault. Let's get those doors open.
+
+@syz-dungeon-enter
+> A stairway under the ticket office leads to ancient freight tunnels. New badnik tracks score the marble.
+Sonic: Eggman's been moving more than carnival prizes through here.
+
+@ehz-dungeon-enter
+> Tails opens a hatch beneath the old workshop. Lanterns pick out a winding cavern full of abandoned parts.
+Tails: I hid my calibration notes in the inner workshop. Those badniks weren't here before.
+Sonic: Then let's evict them.
+
+@cpz-dungeon-enter
+> The pump station's service door opens onto a low machinery hall. Locked gates protect the control room.
+Tails: The valve chart should tell us how to drain the evacuation tunnels.
+Sonic: First, the guards. Then we get those people out.
+
+@mcz-dungeon-enter
+> Lanterns still burn inside a forgotten underground shrine. A mine ledger lies beyond two barred crossings.
+Tails: These carvings are older than the mine. Eggman is looking for something down here.
+Sonic: Let's find it first.
+
+@aiz-dungeon-enter
+> Heat rises through the guardian shrine's stone floors. Badnik sentries stand among the memorials.
+Tails: Eggman's machines got in here too.
+Sonic: Then the guardian needs our help, whether he knows it yet or not.
+
+@hcz-dungeon-enter
+> Blue stone halls surround the sanctuary's old water channels. The mural chamber has been sealed.
+Knuckles: These gates were built to protect the water. I'll help you open them.
+Tails: The mural will tell us which channels feed the anchor.
+
+@lbz-dungeon-enter
+> Below the launch tower, volcanic stone supports a humming mooring vault. The flight records are locked inside.
+Knuckles: I can feel the island's power running through these walls.
+Sonic: Then this is where we find out how to give it back.
+
+@dez-dungeon-enter
+> The archive door opens into an empty metal hall. Far above, the Convergence Engine shakes the ceiling.
+Tails: Eggman's final schedule is in the inner terminal. We need to know how to shut this down safely.
+Sonic: Stay together. We're nearly there.

@@ -18,6 +18,8 @@ import threeislands.core.SaveCodec;
 import threeislands.core.Story;
 import threeislands.core.Zone;
 import threeislands.field.Field;
+import threeislands.field.Dungeon;
+import threeislands.field.DungeonArt;
 import threeislands.field.FieldPath;
 import threeislands.field.Stage;
 import threeislands.screen.BattleScreen;
@@ -55,6 +57,7 @@ public final class Game {
     private long ticks;
     private final List<String> notices = new ArrayList<>();
     private Stage cachedStage;
+    private final java.util.Map<Zone, DungeonArt> dungeonArt = new java.util.EnumMap<>(Zone.class);
 
     public Game(SceneContext ctx, byte[] font, byte[] script) {
         this.ctx = ctx;
@@ -298,14 +301,17 @@ public final class Game {
 
     private void openField(Zone zone, int checkpoint, Stage stage) {
         if (stage == null) throw new IllegalStateException("The starting field requires its configured ROM");
+        boolean inside = progress.resumeDungeon() && progress.resumeZone() == zone.ordinal();
         progress.setIsland(zone.island());
         Field field = new Field(zone, stage.path);
         field.restore(progress);
         if (checkpoint > 0) field.resumeAtCamp(checkpoint);
         else if (checkpoint == -1) field.setPosition(864, 336);
         progress.setResume(zone, checkpoint == -1 || checkpoint == 2 ? 2 : checkpoint > 0 ? 1 : 0);
-        swap(new FieldScreen(this, stage, field));
-        save();
+        FieldScreen outside = new FieldScreen(this, stage, field);
+        swap(outside);
+        if (inside) enterDungeon(outside);
+        else save();
     }
 
     /** The stage for a zone, reusing the last one built. */
@@ -343,6 +349,52 @@ public final class Game {
     /** Opens a battle against {@code group} where the party stands. */
     public void battle(FieldScreen field, Field.Spot spot, List<EnemyKind> group) {
         swap(new BattleScreen(this, field, spot, group));
+    }
+
+    /** Each story landmark has an independent interior, with its own ROM artwork. */
+    public void enterDungeon(FieldScreen outside) {
+        Dungeon dungeon = Dungeon.of(outside.zone());
+        DungeonArt graphics = dungeonArt.computeIfAbsent(outside.zone(), ignored -> {
+            var kit = art.kit(dungeon.zone().game, dungeon.artZone(), dungeon.artAct());
+            if (kit == null) throw new IllegalStateException("Missing interior kit for " + dungeon.label());
+            return new DungeonArt(kit, dungeon);
+        });
+        Field inside = new Field(outside.zone(), outside.stage().path, dungeon);
+        inside.restore(progress);
+        FieldScreen room = new FieldScreen(this, outside.stage(), inside, graphics, outside);
+        progress.setResume(outside.zone(), 1);
+        progress.setResumeDungeon(true);
+        save();
+        playStory(outside.zone().key + "-dungeon-enter", room, () -> swap(room));
+    }
+
+    public void leaveDungeon(FieldScreen room) {
+        FieldScreen outside = room.overworld();
+        if (outside == null) throw new IllegalStateException("Dungeon lost its entrance");
+        outside.field().restore(progress);
+        outside.field().setPosition(240, 176);
+        progress.setResume(outside.zone(), 1);
+        save();
+        if (outside.zone() == Zone.GREEN_HILL && room.field().dungeonComplete()) {
+            playStory("ghz-rescue", outside, () -> { save(); swap(outside); });
+        } else swap(outside);
+    }
+
+    /** Collecting the inner-room discovery advances its journal entry and grants rewards once. */
+    public void completeDungeon(FieldScreen room, Field.Spot relic) {
+        Field field = room.field();
+        if (!field.guardDefeated(0) || !field.guardDefeated(1)) return;
+        boolean first = !progress.seen(field.zone.key + "-field-memory");
+        field.complete(progress, relic);
+        if (first) {
+            for (var hero : progress.party()) if (hero.level() < field.zone.level + 1) hero.setLevel(field.zone.level + 1);
+            progress.addItem(threeislands.core.Item.SUPER_RING, 2);
+        }
+        progress.restAll();
+        progress.setResume(field.zone, 1);
+        progress.setResumeDungeon(true);
+        save();
+        swap(room);
     }
 
     public void title() {

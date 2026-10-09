@@ -28,6 +28,7 @@ public final class Progress {
     private int resumeZone = -1;
     private int resumeX;
     private boolean finished;
+    private boolean resumeDungeon;
 
     public Progress(long seed) {
         for (HeroId id : HeroId.values()) heroes[id.ordinal()] = new Hero(id);
@@ -119,8 +120,11 @@ public final class Progress {
     /** The zone and position of the last Starpost touched, or -1 when resuming on the map. */
     public int resumeZone() { return resumeZone; }
     public int resumeX() { return resumeX; }
+    public boolean resumeDungeon() { return resumeDungeon; }
+    public void setResumeDungeon(boolean value) { resumeDungeon = value && resumeZone >= 0; }
 
     public void setResume(Zone zone, int x) {
+        resumeDungeon = false;
         resumeZone = zone == null ? -1 : zone.ordinal();
         resumeX = zone == null ? 0 : Math.max(0, x);
     }

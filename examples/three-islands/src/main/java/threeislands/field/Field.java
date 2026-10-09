@@ -9,7 +9,7 @@ import threeislands.core.Zone;
 
 /** An explorable two-dimensional area. Terrain, interaction and encounter distance share coordinates. */
 public final class Field {
-    public enum Kind { ENCOUNTER, MONITOR, STARPOST, DISCOVERY, FRIEND, MERCHANT, MIDBOSS, BOSS }
+    public enum Kind { ENCOUNTER, MONITOR, STARPOST, DISCOVERY, FRIEND, MERCHANT, MIDBOSS, BOSS, DUNGEON, GUARDIAN, RELIC }
     public static final int WIDTH = 960, HEIGHT = 640;
     public static final double WALK = 1.6, RUN = 2.8;
     public static final int TRAIL = 96, FOLLOW_GAP = 12, TOUCH = 18;
@@ -36,10 +36,11 @@ public final class Field {
         public double x(long ticks) {
             return homeX + (kind == Kind.ENCOUNTER ? Math.sin(ticks / 70.0 + homeX) * 12 : 0);
         }
-        public boolean hostile() { return kind == Kind.ENCOUNTER || kind == Kind.MIDBOSS || kind == Kind.BOSS; }
+        public boolean hostile() { return kind == Kind.ENCOUNTER || kind == Kind.MIDBOSS || kind == Kind.BOSS || kind == Kind.GUARDIAN; }
     }
 
     public final Zone zone;
+    public final Dungeon dungeon;
     /** The stock act route is retained solely for battle scenery. */
     public final FieldPath path;
     public final List<Spot> spots = new ArrayList<>();
@@ -50,36 +51,59 @@ public final class Field {
     private double distance;
 
     public Field(Zone zone, FieldPath path) {
+        this(zone, path, null);
+    }
+
+    public Field(Zone zone, FieldPath path, Dungeon dungeon) {
         this.zone = zone;
         this.path = path;
-        place();
+        this.dungeon = dungeon;
+        if (dungeon == null) place();
+        else placeDungeon();
         resetTrail();
+    }
+
+    private void placeDungeon() {
+        add(Kind.STARPOST, 176, 368, "dungeon-rest", "Refuge Starpost");
+        for (int i = 0; i < 2; i++) {
+            spots.add(new Spot(Kind.GUARDIAN, i == 0 ? 352 : 656, i == 0 ? 336 : dungeon.y(272),
+                    dungeon.guards(i), null, 0, "dungeon-guard-" + i, i == 0 ? "Outer sentries" : "Inner sentries"));
+        }
+        spots.add(new Spot(Kind.ENCOUNTER, 520, dungeon.y(208), dungeon.guards(2), null, 0,
+                "dungeon-patrol", "Chamber patrol"));
+        spots.add(new Spot(Kind.MONITOR, 544, dungeon.y(432), List.of(), Item.BLUE_SPHERE, 0,
+                "dungeon-cache", "Sealed supplies"));
+        add(Kind.RELIC, 832, dungeon.y(176), "dungeon-goal", dungeon.goal());
+    }
+
+    public boolean dungeonComplete() {
+        for (Spot spot : spots) if (spot.kind == Kind.RELIC && spot.done) return true;
+        return false;
+    }
+
+    public boolean guardDefeated(int index) {
+        String id = index == 0 ? "dungeon-guard-0" : "dungeon-guard-1";
+        for (Spot spot : spots) if (spot.id.equals(id)) return spot.done;
+        return false;
+    }
+
+    /** Physical portcullises cannot be bypassed by walking around the sentries. */
+    public boolean sealed(double px, double py) {
+        if (dungeon == null) return false;
+        return (!guardDefeated(0) && px >= 384 && px < 400 && py >= 304 && py <= 368)
+                || (!guardDefeated(1) && px >= 688 && px < 704
+                    && py >= dungeon.y(272) - 32 && py <= dungeon.y(272) + 32);
     }
 
     private void add(Kind kind, int x, int y, String id, String label) {
         spots.add(new Spot(kind, x, y, List.of(), null, 0, id, label));
     }
 
-    private String memoryLabel() {
-        return switch (zone) {
-            case GREEN_HILL -> "Broken shrine";
-            case STAR_LIGHT -> "Observatory log";
-            case SPRING_YARD -> "Freight records";
-            case EMERALD_HILL -> "Old workshop";
-            case CHEMICAL_PLANT -> "Pump chart";
-            case MYSTIC_CAVE -> "Mine ledger";
-            case ANGEL_ISLAND -> "Guardian memorial";
-            case HYDROCITY -> "Ancient mural";
-            case LAUNCH_BASE -> "Flight records";
-            case DEATH_EGG -> "Sky archive";
-        };
-    }
-
     private void place() {
         add(Kind.STARPOST, 144, 336, "camp", "Trail camp");
         add(Kind.MERCHANT, 192, 416, "merchant", "Pocky's travelling stall");
         add(Kind.FRIEND, 208, 288, "friend", "Stranded traveller");
-        add(Kind.DISCOVERY, 240, 144, "memory", memoryLabel());
+        add(Kind.DUNGEON, 240, 144, "memory", Dungeon.of(zone).label());
         add(Kind.DISCOVERY, 736, 496, "signal", "Anchor relay");
         add(Kind.STARPOST, 784, 240, "sanctuary", "Sanctuary");
         spots.add(new Spot(Kind.MONITOR, 112, 528, List.of(), Item.SUPER_RING, 0, "cache-a", "Medicine cache"));
@@ -106,15 +130,20 @@ public final class Field {
     public String key(Spot spot) { return zone.key + "-field-" + spot.id; }
     public void restore(Progress progress) {
         for (Spot spot : spots) spot.done = progress.seen(key(spot))
-                || (progress.isCleared(zone) && (spot.kind == Kind.BOSS || spot.kind == Kind.MIDBOSS));
+                || (dungeon == null && progress.isCleared(zone) && (spot.kind == Kind.BOSS || spot.kind == Kind.MIDBOSS));
     }
     public void complete(Progress progress, Spot spot) {
+        if (spot.kind == Kind.RELIC && (!guardDefeated(0) || !guardDefeated(1))) return;
         spot.done = true;
         progress.markSeen(key(spot));
+        if (spot.kind == Kind.RELIC) {
+            progress.markSeen(dungeon.completionKey());
+            progress.markSeen(zone.key + "-field-memory");
+        }
     }
     public int discoveries() {
         int n = 0;
-        for (Spot spot : spots) if (spot.kind == Kind.DISCOVERY && spot.done) n++;
+        for (Spot spot : spots) if ((spot.kind == Kind.DISCOVERY || spot.kind == Kind.DUNGEON) && spot.done) n++;
         return n;
     }
     public boolean bossReady() {
@@ -123,6 +152,12 @@ public final class Field {
         return true;
     }
     public String objective() {
+        if (dungeon != null) {
+            if (dungeonComplete()) return "Return west to the entrance when ready.";
+            if (!guardDefeated(0)) return "Defeat the sentries to open the first gate.";
+            if (!guardDefeated(1)) return "Explore the chamber and open the inner gate.";
+            return "Find " + dungeon.goal().toLowerCase() + " in the inner chamber.";
+        }
         if (boss().done) return "The eastern trail is open. Keep exploring, or follow it.";
         if (!bossReady()) return "Defeat the guardian at the northern crossing.";
         return "Reach the rift anchor in the northeast.";
@@ -130,6 +165,7 @@ public final class Field {
 
     /** A lake/shaft divides the clearing; north and south paths reconnect around it. */
     public boolean walkable(double px, double py) {
+        if (dungeon != null) return dungeon.floor(px, py) && !sealed(px, py);
         if (px < 48 || px > WIDTH - 48 || py < 88 || py > HEIGHT - 48) return false;
         // The central bridge is broad enough for the whole formation.
         boolean lake = px > 400 && px < 560 && py > 224 && py < 432;
@@ -192,7 +228,7 @@ public final class Field {
         Spot best = null;
         double nearest = 38;
         for (Spot spot : spots) {
-            if (spot.kind == Kind.ENCOUNTER || (spot.done && spot.kind != Kind.STARPOST && spot.kind != Kind.FRIEND && spot.kind != Kind.MERCHANT)) continue;
+            if (spot.kind == Kind.ENCOUNTER || (spot.done && spot.kind != Kind.STARPOST && spot.kind != Kind.FRIEND && spot.kind != Kind.MERCHANT && spot.kind != Kind.DUNGEON && spot.kind != Kind.RELIC)) continue;
             double d = Math.hypot(spot.x(ticks) - x, spot.homeY - y);
             if (d < nearest) { nearest = d; best = spot; }
         }
@@ -208,7 +244,7 @@ public final class Field {
     }
     public boolean atStart() { return x <= 64 && Math.abs(y - 336) < 44; }
     public Spot nextAhead() {
-        for (Spot spot : spots) if (!spot.done && spot.kind == Kind.DISCOVERY) return spot;
+        for (Spot spot : spots) if (!spot.done && (spot.kind == Kind.DISCOVERY || spot.kind == Kind.DUNGEON || spot.kind == Kind.RELIC)) return spot;
         return boss();
     }
     /** Debug only. Runtime resumes restore a camp, never infer completed content from position. */

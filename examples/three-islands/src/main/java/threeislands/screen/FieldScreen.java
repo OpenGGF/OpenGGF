@@ -13,6 +13,7 @@ import threeislands.core.HeroId;
 import threeislands.core.Story;
 import threeislands.core.Zone;
 import threeislands.field.Field;
+import threeislands.field.DungeonArt;
 import threeislands.field.Stage;
 import threeislands.view.Ui;
 
@@ -28,30 +29,40 @@ public final class FieldScreen implements Screen {
     private boolean entranceQueued;
     private int exitCooldown;
     private double cameraX, cameraY;
+    private final DungeonArt dungeonArt;
+    private final FieldScreen overworld;
 
     public FieldScreen(Game game, Stage stage, Field field) {
+        this(game, stage, field, null, null);
+    }
+
+    public FieldScreen(Game game, Stage stage, Field field, DungeonArt dungeonArt, FieldScreen overworld) {
         this.stage = stage;
         this.field = field;
+        this.dungeonArt = dungeonArt;
+        this.overworld = overworld;
         zone = stage.zone;
-        entranceQueued = game.progress.seen(zone.key + "-enter") && game.progress.seen(zone.island().key() + "-arrive");
+        entranceQueued = field.dungeon != null || (game.progress.seen(zone.key + "-enter") && game.progress.seen(zone.island().key() + "-arrive"));
         field.restore(game.progress);
         camera(game);
     }
-    public String name() { return "FIELD"; }
+    public String name() { return field.dungeon == null ? "FIELD" : "DUNGEON"; }
     public Field field() { return field; }
     public Stage stage() { return stage; }
     public Zone zone() { return zone; }
+    public FieldScreen overworld() { return overworld; }
 
     public void update(Game game) {
         ticks++;
         game.progress.tick();
-        game.audio.music(zone.game, zone.music, zone.island().mapMusic);
+        game.audio.music(zone.game, field.dungeon == null ? zone.music : field.dungeon.music(), zone.island().mapMusic);
         if (toastTicks > 0) toastTicks--;
         if (game.transitioning()) return;
         if (game.controls.menu()) { game.swap(new MenuScreen(game, this, false)); return; }
         int dx = game.controls.horizontal();
         if (exitCooldown > 0) exitCooldown--;
-        if (exitCooldown == 0 && ((dx < 0 && field.atStart())
+        if (field.dungeon != null && dx < 0 && field.atStart()) { game.leaveDungeon(this); return; }
+        if (field.dungeon == null && exitCooldown == 0 && ((dx < 0 && field.atStart())
                 || (dx > 0 && field.x() >= 896 && Math.abs(field.y() - 336) < 44))) {
             if (!game.travel(this, dx > 0)) {
                 say(dx > 0 ? "The passage is sealed. The island's anchors must be freed first." : "The trail ends here. Your friends are up ahead.");
@@ -84,6 +95,18 @@ public final class FieldScreen implements Screen {
 
     private void touch(Game game, Field.Spot spot) {
         switch (spot.kind) {
+            case DUNGEON -> game.enterDungeon(this);
+            case GUARDIAN -> game.battle(this, spot, spot.group);
+            case RELIC -> {
+                if (!field.guardDefeated(0) || !field.guardDefeated(1)) {
+                    say("The inner chamber is still sealed.");
+                    return;
+                }
+                game.replayStory(zone.key + "-memory", this, () -> {
+                    game.completeDungeon(this, spot);
+                    say("Journal updated. The party is restored. Return west to the entrance.");
+                });
+            }
             case MERCHANT -> game.swap(new ShopScreen(game, this));
             case ENCOUNTER -> game.battle(this, spot, spot.group);
             case MONITOR -> {
@@ -96,8 +119,13 @@ public final class FieldScreen implements Screen {
                 field.complete(game.progress, spot);
                 game.progress.restAll();
                 game.progress.setResume(zone, spot.id.equals("sanctuary") ? 2 : 1);
+                game.progress.setResumeDungeon(field.dungeon != null);
                 game.save();
                 game.audio.sfx(Audio.SFX_STARPOST);
+                if (field.dungeon != null) {
+                    say("Party restored. Journey saved inside the dungeon.");
+                    return;
+                }
                 game.playStory(zone.key + "-camp", this, () -> {
                     game.save();
                     say("Party restored. Journey saved.");
@@ -118,19 +146,21 @@ public final class FieldScreen implements Screen {
                             new Story.Line(null, field.objective())), this, returnToField));
                 } else game.replayStory(zone.key + "-friend", this, returnToField);
             }
-            case DISCOVERY -> game.replayStory(zone.key + "-" + spot.id, this, () -> {
-                field.complete(game.progress, spot);
-                // Discoveries carry progression so avoiding optional battles never requires grinding.
-                for (Hero hero : game.progress.party()) {
-                    int target = zone.level + (field.discoveries() == 2 ? 1 : 0);
-                    if (hero.level() < target) hero.setLevel(target);
-                }
-                game.progress.restAll();
-                game.progress.setResume(zone, spot.id.equals("signal") ? 2 : 1);
-                game.save();
-                say("Journal updated. The party is restored.");
-                game.swap(this);
-            });
+            case DISCOVERY -> {
+                game.replayStory(zone.key + "-" + spot.id, this, () -> {
+                    field.complete(game.progress, spot);
+                    // Discoveries carry progression so avoiding optional battles never requires grinding.
+                    for (Hero hero : game.progress.party()) {
+                        int target = zone.level + (field.discoveries() == 2 ? 1 : 0);
+                        if (hero.level() < target) hero.setLevel(target);
+                    }
+                    game.progress.restAll();
+                    game.progress.setResume(zone, spot.id.equals("signal") ? 2 : 1);
+                    game.save();
+                    say("Journal updated. The party is restored.");
+                    game.swap(this);
+                });
+            }
             case MIDBOSS -> {
                 game.playStory(zone.key + "-mid", this, () -> game.battle(this, spot, spot.group));
             }
@@ -148,6 +178,14 @@ public final class FieldScreen implements Screen {
     public void afterBattle(Game game, Field.Spot spot, boolean won) {
         if (won) {
             field.complete(game.progress, spot);
+            if (field.dungeon != null) {
+                game.progress.setResume(zone, 1);
+                game.progress.setResumeDungeon(true);
+                game.save();
+                say(spot.kind == Field.Kind.GUARDIAN ? "The sentries fall. The gate opens." : "Caught your breath: recovered HP and EP.");
+                game.swap(this);
+                return;
+            }
             if (spot.kind == Field.Kind.BOSS) { game.zoneCleared(zone, this); return; }
             say("Caught your breath: recovered HP and EP.");
         } else field.retreat(spot);
@@ -161,8 +199,10 @@ public final class FieldScreen implements Screen {
 
     /** The battle and dialogue keep this exact world and camera underneath their actors/UI. */
     public void drawWorld(Game game, SceneCanvas c, Field.Spot hidden, boolean showParty) {
-        stage.fieldArt.draw(c, field, cameraX, cameraY, game.ticks());
-        if (hidden == null) {
+        if (dungeonArt != null) dungeonArt.draw(c, field, cameraX, cameraY, game.ticks());
+        else stage.fieldArt.draw(c, field, cameraX, cameraY, game.ticks());
+        if (field.dungeon != null) game.font.shadowed(c, "< Exit", sx(60), sy(312), Ui.GOLD);
+        if (hidden == null && field.dungeon == null) {
             Zone next = null;
             for (Zone candidate : Zone.values()) if (candidate.ordinal() > zone.ordinal() && game.art.has(candidate.game)) { next = candidate; break; }
             if (next != null) {
@@ -173,6 +213,9 @@ public final class FieldScreen implements Screen {
                     if (ring != null) c.draw(ring.frame((int) (game.ticks() / 8 % 4)), sx(896), sy(328), SceneDraw.plain().withScale(3));
                 }
             }
+        }
+        if (showParty && field.dungeon != null && zone == Zone.GREEN_HILL && field.dungeonComplete()) {
+            sprite(game, c, "s1:flicky", (int) (ticks / 8 % 2), sx(field.followerX(1)), sy(field.followerY(1)) - 8);
         }
         // World objects and followers share a depth order; feet are the sorting point.
         List<double[]> order = new ArrayList<>();
@@ -202,7 +245,7 @@ public final class FieldScreen implements Screen {
         if (x < -80 || y < -80 || x > c.width() + 80 || y > c.height() + 80) return;
         c.fill(x - 10, y - 2, 20, 4, 0x50000000);
         switch (spot.kind) {
-            case ENCOUNTER, MIDBOSS, BOSS -> {
+            case ENCOUNTER, MIDBOSS, BOSS, GUARDIAN -> {
                 game.enemies.draw(c, spot.group.get(0), x, y, ticks, SceneDraw.plain());
                 if (spot.kind == Field.Kind.ENCOUNTER) game.font.shadowed(c, "x" + spot.group.size(), x + 10, y - 26, Ui.DIM);
             }
@@ -219,7 +262,25 @@ public final class FieldScreen implements Screen {
                 if (zone == Zone.EMERALD_HILL && !game.progress.hasJoined(HeroId.TAILS)) {
                     game.heroes.draw(c, "s2", HeroId.TAILS, Heroes.IDLE, x, y, true, ticks, SceneDraw.plain(), -1);
                 } else sprite(game, c, zone.game + ":flicky", 0, x, y - 8);
+                if (zone == Zone.GREEN_HILL && game.progress.seen("ghz-dungeon-complete")) {
+                    sprite(game, c, "s1:flicky", 1, x + 18, y - 8);
+                }
                 game.font.shadowed(c, spot.done ? "..." : "!", x - 2, y - 30, Ui.GOLD);
+            }
+            case DUNGEON -> {
+                // An arch reads as an entrance rather than a collectible story marker.
+                c.fill(x - 16, y - 34, 32, 34, 0xFF151526);
+                c.fill(x - 20, y - 38, 40, 6, 0xFF9996B1);
+                c.fill(x - 20, y - 32, 5, 32, 0xFF66647F);
+                c.fill(x + 15, y - 32, 5, 32, 0xFF66647F);
+                game.font.shadowed(c, spot.label, x - game.font.width(spot.label) / 2, y - 50, Ui.GOLD);
+            }
+            case RELIC -> {
+                if (zone == Zone.GREEN_HILL) {
+                    if (!spot.done) sprite(game, c, "s1:flicky", (int) (ticks / 8 % 2), x, y - 8);
+                } else sprite(game, c, "s3k:ring", (int) (ticks / 8 % 4), x, y - 18);
+                game.font.shadowed(c, spot.done ? "Recorded" : spot.label,
+                        x - game.font.width(spot.done ? "Recorded" : spot.label) / 2, y - 38, Ui.GOLD);
             }
             case DISCOVERY -> {
                 sprite(game, c, "s3k:ring", (int) (ticks / 8 % 4), x, y - 18);
@@ -235,7 +296,7 @@ public final class FieldScreen implements Screen {
     private void hud(Game game, SceneCanvas c) {
         int w = c.width(), h = c.height();
         c.fill(0, 0, w, 32, 0xE0102030);
-        game.font.draw(c, zone.label.toUpperCase(), 8, 5, Ui.GOLD);
+        game.font.draw(c, field.dungeon == null ? zone.label.toUpperCase() : field.dungeon.label().toUpperCase(), 8, 5, Ui.GOLD);
         game.font.draw(c, entranceQueued ? field.objective() : "Someone is calling from the trail ahead...", 8, 18, Ui.TEXT);
         miniMap(c, w - 82, 40);
         int py = 95;
@@ -262,8 +323,8 @@ public final class FieldScreen implements Screen {
             if (field.walkable(mx * 16 + 8, my * 16 + 8)) c.fill(x + 8 + mx, y + 5 + my, 1, 1, 0xFF4B776D);
         }
         for (Field.Spot spot : field.spots) {
-            if (spot.done && spot.kind != Field.Kind.STARPOST) continue;
-            int colour = spot.kind == Field.Kind.DISCOVERY ? Ui.GOLD : spot.hostile() ? Ui.BAD : Ui.GOOD;
+            if (spot.done && spot.kind != Field.Kind.STARPOST && spot.kind != Field.Kind.DUNGEON) continue;
+            int colour = (spot.kind == Field.Kind.DISCOVERY || spot.kind == Field.Kind.DUNGEON || spot.kind == Field.Kind.RELIC) ? Ui.GOLD : spot.hostile() ? Ui.BAD : Ui.GOOD;
             c.fill(x + 7 + (int) spot.homeX / 16, y + 4 + (int) spot.homeY / 16, 2, 2, colour);
         }
         c.fill(x + 7 + (int) field.x() / 16, y + 4 + (int) field.y() / 16, 3, 3, Ui.TEXT);
@@ -271,11 +332,11 @@ public final class FieldScreen implements Screen {
 
     public void journal(Game game) {
         List<Story.Line> lines = new ArrayList<>();
-        lines.add(new Story.Line(null, zone.label + ": " + field.objective()));
+        lines.add(new Story.Line(null, (field.dungeon == null ? zone.label : field.dungeon.label()) + ": " + field.objective()));
         for (Field.Spot spot : field.spots) {
-            if (spot.kind != Field.Kind.DISCOVERY) continue;
-            if (spot.done) lines.addAll(game.story.scene(zone.key + "-" + spot.id));
-            else lines.add(new Story.Line(null, spot.id.equals("memory")
+            if (spot.kind != Field.Kind.DISCOVERY && spot.kind != Field.Kind.DUNGEON && spot.kind != Field.Kind.RELIC) continue;
+            if (spot.done) lines.addAll(game.story.scene(zone.key + "-" + (spot.kind == Field.Kind.RELIC ? "memory" : spot.id)));
+            else lines.add(new Story.Line(null, field.dungeon != null ? "Open both gates and investigate the inner chamber. The refuge Starpost restores the party and saves your progress." : spot.id.equals("memory")
                     ? "An echo waits at the northwest ruins. Take the path north of the trail camp."
                     : "An anchor relay is calling from the southeast. The bridge and the lakeside paths all lead there."));
         }

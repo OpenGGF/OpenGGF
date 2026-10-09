@@ -48,7 +48,7 @@ class ContentTest {
     @Test
     void theStoryHasEverySceneTheGameAsksFor() throws IOException {
         Story story = new Story(resource("text/story.txt"));
-        List<String> wanted = new ArrayList<>(List.of("prologue", "ending"));
+        List<String> wanted = new ArrayList<>(List.of("prologue", "ending", "ghz-rescue"));
         for (Island island : Island.values()) {
             wanted.add(island.key() + "-arrive");
             wanted.add("village-" + island.key());
@@ -57,7 +57,7 @@ class ContentTest {
             wanted.add(zone.key + "-enter");
             wanted.add(zone.key + "-boss");
             wanted.add(zone.key + "-clear");
-            for (String suffix : List.of("friend", "memory", "signal", "camp")) wanted.add(zone.key + "-" + suffix);
+            for (String suffix : List.of("friend", "memory", "signal", "camp", "dungeon-enter")) wanted.add(zone.key + "-" + suffix);
             if (zone.bossKinds().size() > 1) wanted.add(zone.key + "-mid");
         }
         for (String scene : wanted) assertTrue(story.has(scene), "missing scene " + scene);

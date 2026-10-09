@@ -85,6 +85,19 @@ class BalanceTest {
     }
 
     @Test
+    void dungeonRoutesAreSurvivableIncludingTheOpeningShrineAtLevelOne() {
+        for (Zone zone : Zone.values()) for (int seed = 1; seed <= 20; seed++) {
+            int level = zone == Zone.GREEN_HILL ? 1 : zone.level;
+            Progress p = partyFor(zone, seed, level);
+            var dungeon = threeislands.field.Dungeon.of(zone);
+            for (int group : new int[] {0, 2, 1}) {
+                assertTrue(play(new Battle(p, dungeon.guards(group), Math.min(zone.level, p.partyLevel() + 1))) > 0,
+                        zone + " dungeon, group " + group + " seed " + seed);
+            }
+        }
+    }
+
+    @Test
     void ordinaryFightsAtTheSuggestedLevelAreWonAndBrisk() {
         List<String> report = new ArrayList<>();
         for (Zone zone : Zone.values()) {

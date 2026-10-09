@@ -32,6 +32,7 @@ import threeislands.screen.ShopScreen;
  *   <li>{@code title}, {@code new}, {@code ending}, {@code gameover}</li>
  *   <li>{@code map:<island>} (south, west, angel, death_egg), {@code village}, {@code shop}, {@code menu}</li>
  *   <li>{@code field:<zone>[:<fraction of the route>]} with zone keys ghz slz syz ehz cpz mcz aiz hcz lbz dez</li>
+ *   <li>{@code dungeon:<zone>}, {@code position:<x>:<y>} for interior captures</li>
  *   <li>{@code battle:<zone>[:KIND,KIND,...]}, {@code boss:<zone>}, {@code win}</li>
  *   <li>{@code story:<scene>}, {@code level:<n>}, {@code emeralds}</li>
  *   <li>{@code audiostate}: writes {@code audio.txt} (what music is wanted, playing or being prepared)</li>
@@ -105,6 +106,17 @@ public final class IslandsScene implements ModScene, DebuggableScene {
                     FieldScreen field = field(zone, fraction);
                     if (field == null) return false;
                     game.swap(field);
+                }
+                case "dungeon" -> {
+                    Zone zone = zone(parts[1]);
+                    reach(zone);
+                    FieldScreen outside = field(zone, 0);
+                    if (outside == null) return false;
+                    game.enterDungeon(outside);
+                }
+                case "position" -> {
+                    if (!(game.screen() instanceof FieldScreen current)) return false;
+                    current.field().setPosition(Double.parseDouble(parts[1]), Double.parseDouble(parts[2]));
                 }
                 case "battle", "boss" -> {
                     Zone zone = zone(parts[1]);

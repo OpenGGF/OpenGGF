@@ -213,15 +213,15 @@ class TestThreeIslandsScene {
             setPosition.invoke(field, 848.0, 148.0);
             harness.press(GLFW_KEY_ENTER); play(harness, 3);
             assertEquals("FIELD", screen(harness), "boss remains locked until its story is understood");
-            for (double[] position : new double[][] {{736, 516}, {240, 164}}) {
+            for (double[] position : new double[][] {{736, 516}}) {
                 setPosition.invoke(field, position[0], position[1]);
                 harness.press(GLFW_KEY_ENTER); play(harness, 3);
                 assertEquals("STORY", screen(harness), "a discovery opens dialogue");
                 harness.press(GLFW_KEY_BACKSPACE); play(harness, 3);
                 assertEquals("FIELD", screen(harness));
             }
-            assertEquals(2, field.getClass().getMethod("discoveries").invoke(field));
-            // Both orders are supported: the last discovery above saves at the western camp.
+            assertEquals(1, field.getClass().getMethod("discoveries").invoke(field));
+            // The relay saves at the eastern sanctuary; dungeon discoveries are checked separately.
             java.util.Optional<?> saved = (java.util.Optional<?>) game.getClass().getMethod("readSave").invoke(game);
             assertTrue(saved.isPresent());
             game.getClass().getMethod("continueGame", saved.get().getClass()).invoke(game, saved.get());
@@ -233,9 +233,9 @@ class TestThreeIslandsScene {
             assertEquals("FIELD", screen(harness));
             Object resumedScreen = game.getClass().getMethod("screen").invoke(game);
             Object resumed = resumedScreen.getClass().getMethod("field").invoke(resumedScreen);
-            assertEquals(2, resumed.getClass().getMethod("discoveries").invoke(resumed));
-            assertEquals(144.0, resumed.getClass().getMethod("x").invoke(resumed));
-            assertEquals(360.0, resumed.getClass().getMethod("y").invoke(resumed));
+            assertEquals(1, resumed.getClass().getMethod("discoveries").invoke(resumed));
+            assertEquals(784.0, resumed.getClass().getMethod("x").invoke(resumed));
+            assertEquals(264.0, resumed.getClass().getMethod("y").invoke(resumed));
             assertEquals(false, resumed.getClass().getMethod("bossReady").invoke(resumed), "Flame Craft still guards the anchor");
             clean(harness);
         }
@@ -337,6 +337,110 @@ class TestThreeIslandsScene {
             assertEquals(192.0, westModel.getClass().getMethod("x").invoke(westModel));
             assertEquals(396.0, westModel.getClass().getMethod("y").invoke(westModel));
             clean(harness);
+        }
+    }
+
+    private static Object value(Object owner, String method) throws Exception {
+        return owner.getClass().getMethod(method).invoke(owner);
+    }
+
+    private static void position(Object field, double x, double y) throws Exception {
+        field.getClass().getMethod("setPosition", double.class, double.class).invoke(field, x, y);
+    }
+
+    private static Object spot(Object field, String kind) throws Exception {
+        for (Object entry : (List<?>) field.getClass().getField("spots").get(field)) {
+            if (entry.getClass().getField("kind").get(entry).toString().equals(kind)) return entry;
+        }
+        throw new AssertionError("No " + kind);
+    }
+
+    private static void finishDialogue(ExampleModHarness harness) throws Exception {
+        for (int i = 0; i < 4 && screen(harness).equals("STORY"); i++) {
+            harness.press(GLFW_KEY_BACKSPACE); play(harness, 2);
+        }
+    }
+
+    @Test
+    void allStoryLandmarksHavePlayableInteriorsWithIndependentGatesSavesAndRewards() throws Exception {
+        try (ExampleModHarness harness = open()) {
+            int played = 0;
+            for (String zone : ZONES) {
+                if (!harness.debugJump("field:" + zone)) {
+                    assertFalse(S3K_ZONES.contains(zone));
+                    continue;
+                }
+                played++;
+                Object game = value(harness.scene(), "game");
+                Object outside = value(game, "screen");
+                position(value(outside, "field"), 240, 176);
+                harness.press(GLFW_KEY_ENTER); play(harness, 2);
+                finishDialogue(harness);
+                assertEquals("DUNGEON", screen(harness), zone + " enters through its actual doorway");
+                Object room = value(game, "screen");
+                Object field = value(room, "field");
+                Object progress = game.getClass().getField("progress").get(game);
+                Object cleared = value(progress, "clearedMask");
+                Object joined = value(progress, "joinedMask");
+                Object emeralds = value(progress, "emeralds");
+                assertTrue((boolean) value(progress, "resumeDungeon"));
+                assertFalse(harness.host().recordedFrame().isEmpty(), zone + " renders indoors");
+                for (int gate = 0; gate < 2; gate++) {
+                    List<?> spots = (List<?>) field.getClass().getField("spots").get(field);
+                    Object guard = null;
+                    for (Object candidate : spots) if (candidate.getClass().getField("id").get(candidate)
+                            .equals("dungeon-guard-" + gate)) guard = candidate;
+                    org.junit.jupiter.api.Assertions.assertNotNull(guard);
+                    position(field, (double) guard.getClass().getField("homeX").get(guard) - 24,
+                            (double) guard.getClass().getField("homeY").get(guard));
+                    harness.press(GLFW_KEY_ENTER); play(harness, 2);
+                    assertTrue(screen(harness).startsWith("BATTLE"), zone + " gate " + gate + " starts a fight, got " + screen(harness));
+                    Object battle = value(game, "screen");
+                    assertEquals(room, value(battle, "battlefield"), "battle retains interior artwork/camera");
+                    assertTrue(harness.debugJump("win"));
+                    assertTrue(until(harness, "BATTLE_RESULTS", 300));
+                    play(harness, 40); harness.press(GLFW_KEY_ENTER); play(harness, 3);
+                    assertEquals("DUNGEON", screen(harness));
+                    assertEquals(cleared, value(progress, "clearedMask"), "indoor sentries never clear the outdoor chapter");
+                    assertEquals(joined, value(progress, "joinedMask"), "no premature Knuckles recruitment");
+                    assertEquals(emeralds, value(progress, "emeralds"), "no duplicate chapter emerald");
+                    if (gate == 0) {
+                        var saved = (java.util.Optional<?>) value(game, "readSave");
+                        assertTrue(saved.isPresent());
+                        game.getClass().getMethod("continueGame", saved.get().getClass()).invoke(game, saved.get());
+                        assertTrue(until(harness, "LOADING", 60));
+                        for (int tick = 0; tick < 700 && !screen(harness).equals("DUNGEON"); tick++) {
+                            finishDialogue(harness); play(harness, 1);
+                        }
+                        assertEquals("DUNGEON", screen(harness), zone + " reloads inside");
+                        room = value(game, "screen"); field = value(room, "field");
+                        progress = game.getClass().getField("progress").get(game);
+                        assertEquals(true, field.getClass().getMethod("guardDefeated", int.class).invoke(field, 0));
+                        assertEquals(false, field.getClass().getMethod("guardDefeated", int.class).invoke(field, 1));
+                    }
+                }
+                Object relic = spot(field, "RELIC");
+                position(field, (double) relic.getClass().getField("homeX").get(relic),
+                        (double) relic.getClass().getField("homeY").get(relic) + 24);
+                harness.press(GLFW_KEY_ENTER); play(harness, 2); finishDialogue(harness);
+                assertEquals(true, value(field, "dungeonComplete"), zone + " reward collected in the room");
+                assertEquals(true, progress.getClass().getMethod("seen", String.class).invoke(progress, zone + "-field-memory"));
+                Class<?> bagType = Class.forName("threeislands.core.Item", true, progress.getClass().getClassLoader());
+                Object superRing = bagType.getField("SUPER_RING").get(null);
+                Object count = progress.getClass().getMethod("count", bagType).invoke(progress, superRing);
+                harness.press(GLFW_KEY_ENTER); play(harness, 2); finishDialogue(harness);
+                assertEquals(count, progress.getClass().getMethod("count", bagType).invoke(progress, superRing), "no repeated rewards");
+                position(field, 56, 336); harness.press(GLFW_KEY_LEFT); play(harness, 2); finishDialogue(harness);
+                assertEquals("FIELD", screen(harness));
+                assertEquals(false, value(progress, "resumeDungeon"));
+                assertEquals(240.0, value(value(value(game, "screen"), "field"), "x"), "return to the actual doorway");
+                harness.press(GLFW_KEY_ENTER); play(harness, 2); finishDialogue(harness);
+                assertEquals("DUNGEON", screen(harness), "completed entrances remain usable");
+                assertEquals(true, value(value(value(game, "screen"), "field"), "dungeonComplete"));
+                clean(harness);
+            }
+            System.out.println("Three Islands interiors exercised: " + played + " of " + ZONES.size());
+            assertTrue(played >= S3K_ZONES.size());
         }
     }
 

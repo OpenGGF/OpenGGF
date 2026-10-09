@@ -82,7 +82,7 @@ class FieldTest {
         for (boolean reverse : new boolean[] {false, true}) {
             Field field = new Field(Zone.ANGEL_ISLAND, null);
             Progress progress = new Progress(1);
-            var clues = field.spots.stream().filter(s -> s.kind == Field.Kind.DISCOVERY).toList();
+            var clues = field.spots.stream().filter(s -> (s.kind == Field.Kind.DISCOVERY || s.kind == Field.Kind.DUNGEON)).toList();
             assertFalse(field.bossReady());
             field.complete(progress, clues.get(reverse ? 1 : 0));
             assertEquals(1, field.discoveries());

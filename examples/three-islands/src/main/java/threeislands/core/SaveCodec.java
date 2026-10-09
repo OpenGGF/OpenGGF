@@ -24,6 +24,7 @@ public final class SaveCodec {
         out.append("island=").append(progress.island().ordinal()).append('\n');
         out.append("ticks=").append(progress.playTicks()).append('\n');
         out.append("resume=").append(progress.resumeZone()).append(',').append(progress.resumeX()).append('\n');
+        out.append("dungeon=").append(progress.resumeDungeon() ? 1 : 0).append('\n');
         out.append("finished=").append(progress.finished() ? 1 : 0).append('\n');
         for (HeroId id : HeroId.values()) {
             Hero hero = progress.hero(id);
@@ -80,6 +81,7 @@ public final class SaveCodec {
         if (resume.length != 2) throw new IllegalArgumentException("Bad resume line");
         progress.loadResume(Integer.parseInt(resume[0]), Integer.parseInt(resume[1]),
                 values.getOrDefault("finished", "0").equals("1"));
+        progress.setResumeDungeon(values.getOrDefault("dungeon", "0").equals("1"));
         return progress;
     }
 }
