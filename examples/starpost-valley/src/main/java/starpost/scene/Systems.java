@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import starpost.core.SaveSection;
+import starpost.valley.Pickups;
 
 /**
  * Where the game's systems plug in: each contributes its save section, its actors and the
@@ -18,10 +19,15 @@ public final class Systems {
     /** Fresh sections for a new or loaded game. */
     public static List<SaveSection> sections(Shell shell) {
         List<SaveSection> out = new ArrayList<>();
+        out.add(new Pickups());
         return out;
     }
 
     /** Adds the systems' actors and place handlers to a new play screen. */
     public static void install(Shell shell, PlayScreen play, List<Actor> actors, Map<String, Consumer<Shell>> places) {
+        Pickups pickups = shell.game.section(Pickups.class);
+        if (pickups != null) {
+            actors.addAll(pickups.today(shell.game, play.valley().valley));
+        }
     }
 }

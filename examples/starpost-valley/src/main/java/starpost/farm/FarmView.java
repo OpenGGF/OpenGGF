@@ -40,7 +40,7 @@ public final class FarmView {
     public static final int SIGNPOST_X = 150;
     public static final int GATE_X = FIELD_X + Farm.COLUMNS * 16 + 56;
     public static final int WIDTH = 5 * Art.BLOCK;
-    private final int[] wall = {13, 45, 60, 60, 45};
+    private final int[] wall = {13, 45, 60, 60, 53};
     /** Feet range: the back of the field to the bottom of the screen. */
     private static final int DEPTH_MIN = FIELD_TOP + 4;
     private static final int DEPTH_MAX = 208;
@@ -55,6 +55,13 @@ public final class FarmView {
     private int lastActionRow = -1;
     private int lastActionColumn = -1;
     private final Anim anim = new Anim();
+    /** The farm loop (block 53 standing in the back wall): a lap at speed refills Momentum. */
+    private static final float LOOP_X = 4 * Art.BLOCK;
+    private static final float LOOP_CY = WALL_FLOOR - Art.FLOOR + 111;
+    private static final float LOOP_R = 60;
+    private boolean looping;
+    private float loopAngle;
+    private int lastLapAt = -1000;
     /** Set by the play screen: the farm's actors, and the action button offered to them first. */
     public java.util.function.IntFunction<List<Actor>> actors = view -> List.of();
     public java.util.function.BooleanSupplier interact = () -> false;
@@ -92,6 +99,7 @@ public final class FarmView {
 
     public Request update(Controls in) {
         Game game = shell.game;
+        float previousX = runner.x;
         Request request = Request.NONE;
         // Spin dash: hold the action button to charge, release to roll along the row tilling.
         boolean holdAct = shell.ctx.buttonDown(com.openggf.mods.scene.SceneButtons.B)
@@ -113,7 +121,9 @@ public final class FarmView {
         }
         boolean charged = chargeTicks >= DASH_CHARGE_TICKS;
         float maxDepth = DEPTH_MAX - DEPTH_MIN;
-        if (dashing) {
+        if (looping) {
+            stepLoop(game);
+        } else if (dashing) {
             runner.speed -= Math.signum(runner.speed) * 0.125f;
             runner.x = Math.max(16, Math.min(WIDTH - 16, runner.x + runner.speed));
             tillUnderfoot(game);
@@ -127,6 +137,13 @@ public final class FarmView {
                 shell.sfx(Sfx.JUMP);
             }
         }
+        float entry = LOOP_X + 110;
+        if (!looping && runner.depth < 10 && runner.height == 0 && runner.speed >= 4
+                && previousX < entry && runner.x >= entry) {
+            looping = true;
+            loopAngle = 0;
+            runner.rolling = true;
+        }
         // The house door: walk to it and press up at the back of the field.
         if (Math.abs(runner.x - DOOR_X) < 12 && runner.depth < 6 && in.upPressed) {
             request = Request.SLEEP;
@@ -137,6 +154,34 @@ public final class FarmView {
         camera += (clampCamera(runner.x - shell.width() / 2f + (runner.facingLeft ? -20 : 20)) - camera) * 0.15f;
         animate(charged);
         return request;
+    }
+
+    /**
+     * Round the loop as a ball (screen coordinates: the loop stands in the back wall), then a
+     * Momentum bonus: a full 30 once an hour of game time, a token 5 for laps in between.
+     */
+    private void stepLoop(Game game) {
+        loopAngle += Math.max(0.08f, Math.abs(runner.speed) / LOOP_R);
+        if (loopAngle >= (float) (Math.PI * 2)) {
+            looping = false;
+            runner.rolling = false;
+            runner.x = LOOP_X + 136;
+            runner.depth = 2;
+            int now = game.calendar.minutes();
+            int bonus = now - lastLapAt >= 60 ? 30 : 5;
+            lastLapAt = now;
+            game.restore(bonus);
+            shell.toast("LAP! +" + bonus + " MOMENTUM");
+            shell.sfx(Sfx.RING);
+        }
+    }
+
+    private float loopX() {
+        return LOOP_X + 126 + (float) Math.sin(loopAngle) * LOOP_R;
+    }
+
+    private float loopY() {
+        return LOOP_CY + (float) Math.cos(loopAngle) * LOOP_R;
     }
 
     /** The action button: work the plot underfoot, or use the signpost. */
@@ -302,7 +347,7 @@ public final class FarmView {
 
     private void animate(boolean charged) {
         float speed = Math.max(Math.abs(runner.speed), Math.abs(runner.depthSpeed) * 2);
-        if (dashing || runner.rolling) {
+        if (looping || dashing || runner.rolling) {
             anim.set(Anim.ROLL, Math.max(0, 4 - (int) speed));
         } else if (charged || chargeTicks > 6) {
             anim.set(Anim.SPINDASH, 0);
@@ -438,6 +483,11 @@ public final class FarmView {
     }
 
     private void drawFarmer(SceneCanvas canvas, SceneDraw tint, int cx) {
+        if (looping) {
+            SceneSprite ball = anim.pose(shell.art.farmer(shell.game.farmer));
+            canvas.draw(ball, loopX() - cx, loopY(), tint.withFlipX(false));
+            return;
+        }
         float x = runner.x - cx, ground = feetY();
         canvas.fill(Math.round(x) - 9, Math.round(ground) - 2, 18, 4, 0x60000000);
         SceneSpriteSet set = shell.art.farmer(shell.game.farmer);
