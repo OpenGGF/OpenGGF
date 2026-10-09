@@ -2382,3 +2382,30 @@ exception-prefix/blob-hash normalization described above.
 | <code>com.openggf.tools.audio.parity.TestS1OpenGgfAudioCapture#capturesTheCompleteReferenceControlledInterval</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: local deterministic BizHawk reference required</code> |
 | <code>com.openggf.tools.audio.timeline.TestS1Ghz1OpenGgfAudioTimelineCapture#captureRequestedOutput</code> | <code>org.opentest4j.TestAbortedException: Assumption failed: no local OpenGGF timeline capture was requested</code> |
 | <code>com.openggf.tools.TestS3kSlotsGlassNative#glassOccludesPlayerAfterRealBonusFrame(String, int)</code> | <code>System property &#91;openggf.test.gl.native&#93; does not exist</code> |
+
+## Publication and owned cleanup
+
+The qualified integration and complete updated-main negative-case table are
+pushed to develop at `9c563bf3067ec6739bb1d0533d431287dff8338d`;
+an independent remote-ref query matches that full SHA. Its delta from tested
+b317 changes only this audit, with zero executable, test, build or API change.
+Normal commit/push hooks and the CI push policy validator pass.
+
+After that verified push, all six owned R3 worktrees are inspected clean and
+fully merged, then removed with their local task branches and exact worktree
+metadata. Ignored contents are accounted for: Maven output, Python caches,
+generated rewind-probe reports and ROM image-cache manifests, post-checkout
+symlinks, and an identical config example. No unknown source or unmerged
+change is discarded. Unrelated worktree metadata is identical before/after.
+
+Both owned main wrapper/status pairs are removed after their exact category
+runs were consumed and acknowledged. No owning process remains. The three
+durable native-capture directories remain outside the repository. The seven
+known main dirty/untracked paths and their bytes, unrelated jobs/requests,
+and app-owned saved agent conversations are preserved. No provider state is
+deleted because those conversations belong to the app, not this run.
+
+This final follow-up changes audit prose only; completed engine checks are
+not repeated. Its prepared message and lifecycle registry remain through the
+verified push, then the small lifecycle cleanup receipt records their exact
+teardown outside the removed registry.
