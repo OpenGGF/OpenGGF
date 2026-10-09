@@ -112,6 +112,27 @@ master hub and selected native title before certifying the route. The corrected
 recipe reaches the Sonic 1 title and Green Hill menu without changing Engine
 startup, native input or gameplay readiness.
 
+FFmpeg PCM length can differ from a Vorbis stream's declared length (2026-10-09,
+Eggman's Sky compression): a generated 9,606-frame mono control retained exactly
+9,606 frames in its Ogg granule count, while FFmpeg's native and libvorbis decoders
+each emitted 9,478 frames. Do not derive a game queue lease from this external
+decoder's byte count or compensate with a fitted offset. Verify stream duration
+and check exact frame counts through the game's production decoder; use external
+PCM separately for signal and clipping checks.
+
+A replay control must work in full-drawing mode before it can isolate drawing
+policy (2026-10-09, route-test throughput): two MHZ prefix controls restored
+starting snapshots exactly but differed in 20 normal-palette RGB bytes after
+420 replay ticks. The complete failure matched with full per-tick drawing and
+with skipped drawing. Pending palette writes in the render path were an initial
+hypothesis, not the demonstrated cause. The attempted independent cold control
+also failed before evaluating the gap: `RewindSnapshotDiff` checks spawn and
+player-owner reference identities within a session. Raw snapshots from different
+cold sessions are not directly comparable through that API. Keep full MHZ drawing,
+omit discarded readback only, and retain existing route replay assertions and
+inherited negatives. Do not normalize these references or repair unrelated runtime
+owners merely to qualify a performance harness.
+
 A frozen local source does not freeze another clone's publication (2026-10-08,
 stock parity delivery): local main's complete ordinary/guard run retained its
 exact HEAD and input fingerprint while remote develop acquired independent

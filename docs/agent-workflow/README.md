@@ -97,12 +97,25 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 
 ## Test harness helpers
 
+- `tools/modding/native-linux/build_linux.py` uses a pinned rootless Ubuntu/CE
+  toolchain for the experimental Linux ZIP, preserving the isolated Windows
+  feature. Its native gameplay probe uses production loaders, real OpenGL,
+  prepared music, scene lifecycle and module-state checks for every packaged mod.
+  The shared `NativeGameplayCheck` also exercises every declared one-shot sample
+  through the production session wrapper into final mixed PCM (`sfx-pcm.csv`),
+  catching prepared-audio delegation gaps (2026-10-09 Eggman's Sky Vorbis refresh).
+  Origin: [Linux friends ZIP, 2026-10-09](../../tools/modding/native-linux/README.md).
+
 - `tools/modding/native-windows/build_inputs.py` rebuilds all friends mods with
   the real converters and package validator; `build_windows.py` compiles a
   separately labelled Windows native image, audits retained members, qualifies
-  registration and the actual engine boot path, and assembles the ZIP with
+  exact JVM/native registration, runtime-loaded JDK bootstrap controls and the
+  actual engine boot path through `.bat` shortcuts, and assembles the ZIP with
   per-mod shortcuts and retained licences. Origin: [experimental Windows ZIP,
   2026-10-08](../../tools/modding/native-windows/README.md).
+  `qualify_wine.py` consumes that immutable Windows ZIP, checks every extracted
+  shortcut through representative OpenGL gameplay using original local ROMs,
+  and adds explicitly labelled Wine compatibility evidence to a clean archive.
 
 - `tools/modding/native-feasibility/probe.py` builds closed-world, Crema and optional
   JIT controls around the production mod classloader, then compiles two external
@@ -243,7 +256,7 @@ Run `AgentWorkflowTool` for a preflight, read the matching runbook, scaffold wit
 [`runbooks/runbook-jvm-benchmark.md`](runbooks/runbook-jvm-benchmark.md) rather
 than the benchmark CLIs directly — the numbers are easy to misread.
 
-Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven_queue.py) waits automatically for a shared execution slot across linked worktrees; category runs use it too; `--stats` summarises its wait/hold/memory telemetry.
+Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_queue.py) waits automatically for a shared execution slot across linked worktrees; category runs use it too; `--stats` summarises test wait/hold/memory telemetry. Recognized build-only commands bypass shared admission and hold only their own worktree's build/test lock. Direct Maven builds are allowed when that worktree is otherwise idle; see the [build and test guide](../../tools/testing/README.md#build-only-maven-execution-and-queued-tests).
 
 ## Test harness helpers
 

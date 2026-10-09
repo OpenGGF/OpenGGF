@@ -993,3 +993,35 @@ fail-closed launch check. There is no reason to repeat the unchanged full run.
 The Opus session limit interrupted its final prose handoff after packaging,
 not the completed compilation/tests. Root retains the inspected terminal commands
 and light comparisons; separate Opus promo and PR215 delivery remain pending.
+
+### PR215 composition with published develop (2026-10-09)
+
+The PR delivery tree fast-forwarded from its original `7f496fc1` to accepted
+polish/safety composition `1136bf343`, then intent-merged published develop
+`256ec7192aa321e587dda17143cdfb6aad8c412b`. Only the measurement catalogue
+conflicted; both the Mutator Lab and incoming decoder/drawing notes remain.
+The promo reads the frozen accepted source and compiled Opus artifacts in their
+original worktrees while this separate PR worktree owns composition verification.
+
+Relative to the qualified `8668a901` destination, incoming production changes
+are native object/scroll low-byte clock corrections and existing art-admission
+and session-PCM forwarding. They do not overlap the mutator source, redesign
+its algorithms, or alter the API pin/POM. The reviewed clock changes keep the
+ROM owners: `V_int_run_count` for object gates, `Level_frame_counter` where the
+native routine reads that word, and address offsets rather than fitted tick
+offsets. Native source/test changes remain exactly the published versions.
+The merged guidance preserves build-only admission and prohibits shared-desktop
+focus/key automation. AGENTS and CLAUDE remain identical.
+
+The actual destination plan selects all 3,119 ordinary classes plus fresh
+guards because it includes the complete feature. Its substantive implementation
+and polish full runs are already completed above. This disjoint composition
+uses proportionate focused verification of the changed native gates, their
+art/audio consumers, mutator world/load/pacing/rewind/menu/head consumers, API
+reflection, real packaged example, and both native level-loading classes plus
+the other three mandated S3K checks. A separate fresh guard JVM and actual
+compiled SDK/pin verification cover the composition boundary. The initial
+preflight rejected ambient Lua 5.5; explicit `LUA_BIN=/usr/bin/lua5.4` passed.
+No runner selection is edited and no prior full result is relabelled as a
+whole-current-destination pass. These focused composition results and promo
+acceptance remain pending before PR publication.
