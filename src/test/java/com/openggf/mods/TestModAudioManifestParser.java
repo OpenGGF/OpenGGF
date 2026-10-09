@@ -34,6 +34,40 @@ class TestModAudioManifestParser {
     }
 
     @Test
+    void anSfxMayDeclareARetroDacRenderingOfItsAssetAndWritesItCanonically() throws Exception {
+        String yaml = """
+                formatVersion: 1
+                tracks: []
+                sfx:
+                  - id: voice-title
+                    assetPath: audio/voice/title.ogg
+                    gain: 1.0
+                  - id: voice-title-md
+                    assetPath: audio/voice/title.ogg
+                    gain: 1.0
+                    dac:
+                      sampleRate: 8000
+                      bits: 7
+                      lowpassHz: 3400
+                      recoveryMix: 0.1
+                      recoveryHighpassHz: 2400
+                """;
+        ModAudioManifestParser parser = parser();
+        ModAudioManifest manifest = parser.parse(bytes(yaml));
+        assertNull(manifest.sfx().getFirst().dac());
+        assertEquals(new ModSfxDac(8000, 7, 3400, 0.1f, 2400), manifest.sfx().get(1).dac());
+        assertArrayEquals(bytes(yaml), parser.writeCanonical(manifest));
+        java.util.Map<String, String> broken = java.util.Map.of(
+                "sampleRate: 8000", "sampleRate: 1000",
+                "bits: 7", "bits: 1",
+                "lowpassHz: 3400", "lowpassHz: 90000",
+                "recoveryMix: 0.1", "recoveryMix: 1.5",
+                "recoveryHighpassHz: 2400", "recoveryHighpassHz: 2400\n      pitch: 2");
+        broken.forEach((good, bad) -> assertThrows(ModManifestException.class,
+                () -> parser().parse(bytes(yaml.replace(good, bad))), bad));
+    }
+
+    @Test
     void emptyAndNonLoopingFormsApplyExactOmissionRules() throws Exception {
         ModAudioManifest empty = parser().parse(bytes("formatVersion: 1\ntracks: []\n"));
         assertTrue(empty.tracks().isEmpty());

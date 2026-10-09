@@ -18,13 +18,21 @@ public final class Encounter {
     /** A scheduled arrival, in advanced rows since the stand began. */
     record Arrival(int row, Species species, boolean elite, boolean fromLeft, boolean airborne) { }
 
+    /** A scheduled pickup: a monitor, a decoy or a fleeing animal. */
+    record PickupArrival(int row, Pickup.Kind kind, boolean fromLeft) { }
+
     static final int STRIKE_DISTANCE = 20;
     static final int RECOIL_ROWS = 36;
     static final int SPAWN_MARGIN = 40;
 
     private final boolean boss;
+    private boolean endless;
+    private int wave;
     private final List<Arrival> arrivals = new ArrayList<>();
     private final List<Enemy> enemies = new ArrayList<>();
+    private final List<PickupArrival> pickupArrivals = new ArrayList<>();
+    private final List<Pickup> pickups = new ArrayList<>();
+    private int nextPickup;
     private final Effects effects = new Effects();
     private final Boss bossFight;
     private int row;
@@ -56,8 +64,46 @@ public final class Encounter {
             at += gap + random.nextInt(gap);
             if (i % 4 == 3) at += 60;
         }
+        Pickup.Kind[] powers = {Pickup.Kind.SHIELD, Pickup.Kind.SPEED, Pickup.Kind.INVINCIBLE, Pickup.Kind.SUPER_RING,
+                Pickup.Kind.SUPER_RING, Pickup.Kind.EXTRA_LIFE};
+        int span = Math.max(120, at);
+        encounter.pickupArrivals.add(new PickupArrival(span / 3 + random.nextInt(60),
+                powers[random.nextInt(powers.length)], random.nextBoolean()));
+        if (standNumber >= 2) encounter.pickupArrivals.add(new PickupArrival(span / 2 + random.nextInt(80),
+                Pickup.Kind.DECOY, random.nextBoolean()));
+        for (int i = 0; i < 1 + standNumber / 3; i++) {
+            encounter.pickupArrivals.add(new PickupArrival(80 + random.nextInt(span), Pickup.Kind.RESCUE, random.nextBoolean()));
+        }
+        encounter.pickupArrivals.sort(java.util.Comparator.comparingInt(PickupArrival::row));
         return encounter;
     }
+
+    /** Endless: one stand whose waves keep coming, faster and longer each time, until game over. */
+    static Encounter endless(Course course) {
+        Encounter encounter = stand(course, 1);
+        encounter.endless = true;
+        return encounter;
+    }
+
+    /** Endless: plans the next, harder wave once the current one has fully arrived. */
+    private void extendEndless(Course course) {
+        if (!endless || nextArrival < arrivals.size()) return;
+        wave++;
+        List<Species> cast = course.assets().cast(course.intent().game()).zone(course.intent().zone());
+        if (cast.isEmpty()) return;
+        var random = course.random();
+        int gap = Math.max(18, 70 - wave * 4);
+        int at = row + 90;
+        for (int i = 0; i < 6 + wave * 2; i++) {
+            Species species = cast.get(random.nextInt(cast.size()));
+            arrivals.add(new Arrival(at, species, i % 5 == 4, random.nextBoolean(),
+                    species.archetype() == Species.Archetype.DIVER));
+            at += gap + random.nextInt(gap);
+        }
+        course.hud().banner("WAVE " + (wave + 1), 0xFFFFD000);
+    }
+
+    int wave() { return wave; }
 
     static Encounter boss(Course course) {
         return new Encounter(true, Boss.forAct(course));
@@ -67,8 +113,19 @@ public final class Encounter {
 
     boolean finished() {
         if (boss) return bossFight != null && bossFight.defeated() && effects.idle();
-        return nextArrival >= arrivals.size() && enemies.isEmpty() && effects.idle();
+        return !endless && nextArrival >= arrivals.size() && enemies.isEmpty() && effects.idle();
     }
+
+    /** Drops pickups still on screen when the stand ends. */
+    void clearPickups(Course course) {
+        for (Pickup pickup : pickups) {
+            course.field().remove(pickup.targetId);
+            course.stagehand().remove(pickup.visual);
+        }
+        pickups.clear();
+    }
+
+    List<Pickup> pickups() { return pickups; }
 
     List<Enemy> enemies() { return enemies; }
     Effects effects() { return effects; }
@@ -78,11 +135,16 @@ public final class Encounter {
 
     void advance(Course course) {
         row++;
+        extendEndless(course);
         int px = course.playerX();
         int py = course.playerY();
         while (nextArrival < arrivals.size() && arrivals.get(nextArrival).row() <= row) {
             spawn(course, arrivals.get(nextArrival++), px, py);
         }
+        while (nextPickup < pickupArrivals.size() && pickupArrivals.get(nextPickup).row() <= row) {
+            spawnPickup(course, pickupArrivals.get(nextPickup++), px, py);
+        }
+        for (Pickup pickup : List.copyOf(pickups)) movePickup(course, pickup);
         double speedScale = course.intent().difficulty().speed * (course.intent().slowMotion() ? 0.6 : 1.0);
         for (Enemy enemy : List.copyOf(enemies)) move(course, enemy, px, py, speedScale);
         if (bossFight != null) bossFight.advance(course, this);
@@ -110,12 +172,92 @@ public final class Encounter {
         Prompt prompt = pickPrompt(course, arrival.elite() ? 4 : course.intent().difficulty().tier, arrival.elite());
         Enemy.Part part = new Enemy.Part(prompt, body);
         part.targetId = course.field().add(prompt, enemy.rowsToReach(px));
+        if (course.invincible()) course.field().assist(part.targetId, prompt.typed().length() / 2);
         enemy.parts.add(part);
         enemies.add(enemy);
     }
 
+    private void spawnPickup(Course course, PickupArrival arrival, int px, int py) {
+        var camera = GameServices.camera();
+        var intent = course.intent();
+        var art = course.assets().props(intent.game()).get(arrival.kind().prop);
+        String word = arrival.kind().word;
+        if (arrival.kind() == Pickup.Kind.RESCUE) {
+            word = course.picker().pick(List.of("rescues"), 3, 10, lead -> !course.field().leadInUse(lead));
+            if (word == null) word = "hop";
+        }
+        Prompt prompt = Prompt.of(word, intent.capitals(), intent.punctuation());
+        int x, y, vx;
+        if (arrival.kind().monitor()) {
+            int offset = 56 + course.random().nextInt(48);
+            x = px + (arrival.fromLeft() ? -offset : offset);
+            y = py + 19 - 16;
+            vx = 0;
+        } else {
+            x = arrival.fromLeft() ? px - 24 : px + 24;
+            y = py + 19 - 12;
+            vx = arrival.fromLeft() ? -0x180 : 0x180;
+        }
+        var visual = course.stagehand().add(art == null ? "animal" : art.artKey(), x, y);
+        visual.frame = art == null ? 0 : art.frame();
+        visual.visible = art != null || arrival.kind() == Pickup.Kind.RESCUE;
+        int id = course.field().add(prompt, arrival.kind().monitor() ? Pickup.MONITOR_ROWS : 90);
+        pickups.add(new Pickup(arrival.kind(), prompt, visual, id, x, y, vx));
+    }
+
+    private void movePickup(Course course, Pickup pickup) {
+        pickup.rows++;
+        pickup.animTick++;
+        if (pickup.kind == Pickup.Kind.RESCUE) {
+            pickup.x += pickup.vx;
+            pickup.visual.x = pickup.px();
+            int hop = (pickup.animTick % 24);
+            pickup.visual.y = pickup.y - (hop < 12 ? hop : 24 - hop);
+            pickup.visual.flipX = pickup.vx > 0;
+            pickup.visual.frame = hop < 12 ? 1 : 0;
+            var camera = GameServices.camera();
+            if (pickup.px() < camera.getX() - 16 || pickup.px() > camera.getX() + camera.getWidth() + 16) removePickup(course, pickup);
+        } else if (pickup.rows > Pickup.MONITOR_ROWS) {
+            removePickup(course, pickup);
+        } else if (pickup.rows > Pickup.MONITOR_ROWS - 90) {
+            pickup.visual.blink = pickup.rows;
+        }
+    }
+
+    private void removePickup(Course course, Pickup pickup) {
+        course.field().remove(pickup.targetId);
+        course.stagehand().remove(pickup.visual);
+        pickups.remove(pickup);
+    }
+
+    private boolean completePickup(Course course, int targetId) {
+        for (Pickup pickup : List.copyOf(pickups)) {
+            if (pickup.targetId != targetId) continue;
+            pickups.remove(pickup);
+            course.stagehand().remove(pickup.visual);
+            switch (pickup.kind) {
+                case DECOY -> {
+                    course.hud().banner("IT'S A TRAP!", 0xFFFF4040);
+                    course.hitSonic();
+                }
+                case RESCUE -> {
+                    int points = course.card().rescue(pickup.prompt);
+                    course.play(Sounds.Cue.RING);
+                    effects.score(course, pickup.px(), pickup.y, points);
+                }
+                default -> {
+                    course.play(Sounds.Cue.MONITOR);
+                    effects.kill(course, pickup.px(), pickup.y, 100);
+                    course.grant(pickup.kind);
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
     /** Picks a word whose lead is not already on screen. {@code tier} 1 short .. 4 long/phrase. */
-    Prompt pickPrompt(Course course, int tier, boolean phrase) {
+    static Prompt pickPrompt(Course course, int tier, boolean phrase) {
         var intent = course.intent();
         var lexicon = course.assets().lexicon();
         var picker = course.picker();
@@ -184,6 +326,7 @@ public final class Encounter {
                     bossFight.onComplete(course, this, event.target());
                     return;
                 }
+                if (completePickup(course, event.target())) return;
                 complete(course, event.target());
             }
             case ERROR -> {
