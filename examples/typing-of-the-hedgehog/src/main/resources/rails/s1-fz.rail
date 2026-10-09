@@ -1,0 +1,10 @@
+# s1 fz: built by TypingHedgehogRailBuilderProbe from src/test/resources/traces/s1/fz_completerun (0 repairs, ended boss)
+game s1
+zone 6
+act 0
+team sonic
+validated 161
+engine 0.7.prerelease-26bf29066
+rom AFE05EEE
+program 41:8,17:18,93:8,10:18
+boss 161
