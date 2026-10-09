@@ -184,24 +184,24 @@ public final class Field {
     public String mechanism(Progress progress, Spot spot) {
         if (spot.kind != Kind.MECHANISM || !expanded()) return "";
         if (spot.id.startsWith("sluice-")) {
-            if (spot.done) return "The wheel rests against its stop. Water trickles through the stonework.";
+            if (spot.done) return "The wheel rests against its stop. The inlet is closed.";
             complete(progress, spot);
-            return orchardOpen() ? "The two channels answer each other. Water slips away from the orchard's old stone crossing."
-                    : "The wheel turns. Water runs along one channel, but the pool still presses back from the other side.";
+            return orchardOpen() ? "Both inlets are closed. The water drains away, exposing the orchard's old crossing."
+                    : "The wheel turns. One inlet stops flowing, but water is still coming in from the other side.";
         }
-        if (bellsOpen()) return "The bells carry their little song across the garden. Nothing answers from beneath the stone.";
+        if (bellsOpen()) return "The bells ring. The storage compartment is already open.";
         String[] phrase = {"bell-dusk", "bell-dawn", "bell-noon"};
         if (!spot.id.equals(phrase[bellPhrase])) {
             bellPhrase = spot.id.equals(phrase[0]) ? 1 : 0;
-            return bellPhrase == 1 ? "A low note. Beneath the garden, something begins to hum." : "A lone note fades. The answering hum falls silent.";
+            return bellPhrase == 1 ? "The low bell rings. A catch moves inside the stone housing." : "The bell rings, but the catch drops back into place.";
         }
         bellPhrase++;
-        if (bellPhrase < phrase.length) return bellPhrase == 1 ? "A low note. Beneath the garden, something begins to hum." : "A bright note joins the low one. The stone holds both sounds.";
+        if (bellPhrase < phrase.length) return bellPhrase == 1 ? "The low bell rings. A catch moves inside the stone housing." : "A second bell rings. Another catch moves inside the housing.";
         bellPhrase = 0;
         for (Spot bell : spots) if (bell.id.startsWith("bell-")) complete(progress, bell);
         progress.markSeen("ghz-garden-song");
         progress.addItem(Item.LIGHTNING_SHIELD, 1);
-        return "Three notes linger together. A hollow stone opens: a Lightning Shield beside a child's drawing of three separate skies.";
+        return "The final catch releases. The compartment holds a Lightning Shield and a faded photograph of the garden crew.";
     }
 
     /** Water and raised banks are shared with the renderer, including the revealed causeway. */

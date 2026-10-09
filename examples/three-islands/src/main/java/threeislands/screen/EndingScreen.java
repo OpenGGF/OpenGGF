@@ -15,7 +15,7 @@ import threeislands.view.Ui;
 /** The credits roll over Angel Island's sky with the party running beneath. */
 public final class EndingScreen implements Screen {
     private final List<String> credits = List.of(
-            "THREE ISLANDS", "", "A story across three skies", "", "",
+            "THREE ISLANDS", "", "A story across three islands", "", "",
             "Starring", "Sonic the Hedgehog", "Miles \"Tails\" Prower", "Knuckles the Echidna", "", "",
             "Featuring", "South Island  (Sonic the Hedgehog)", "West Side Island  (Sonic the Hedgehog 2)",
             "Angel Island  (Sonic 3 & Knuckles)", "", "",

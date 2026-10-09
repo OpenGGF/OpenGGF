@@ -82,3 +82,44 @@ class; the completed compilation was used for the successful captures.
 Installation uses `python3 examples/three-islands/build.py --skip-engine --install`
 against the unchanged local engine. It preserves saves and other mod entries and
 updates only Three Islands' installed jar and exact-hash trust entry.
+
+## Grounded story review
+
+Follow-up requested after `1327bef32ed8858c2b0f60b118410f78c23a4a16`: sense-check the
+whole script and replace the "cheesy mysterious" voice. Reviewed all 122 scenes
+against `Game`, `FieldScreen`, `Dungeon`, zone rewards and optional interaction order.
+This supersedes the earlier story treatment above; progression gates remain intact.
+
+| Problem in the first pass | Revised account |
+| --- | --- |
+| Unexplained tomorrow letters, prophetic logs, talking stone and reflected aircraft | Local maintenance records, personal concerns, a work-bell mechanism and a gardener's supplies; no time-travel claims without a supporting story. |
+| A stolen lens apparently inside both the Bomb and the relay | Lens on the relay, emerald in the Bomb; the vault's maintenance setting unlocks the relay lens. |
+| Vague reversal of current, water, power and sky treated as interchangeable | Local shield circuits, a pump power transfer, a turbine bypass, and a distinct main engine. Disabling a shield does not also stop its controller or the road barrier. |
+| Angel Island shares underground water with other islands despite floating | Hydrocity's intake, chambers and spillways are all inside Angel Island. |
+| Characters announce changes to scenery that the interaction does not render | Reports concern local controls, gauges or the operating state; no restored waterfall animation is promised. |
+| A flight in the Tornado despite actual ring travel | Service rings handle island and ship crossings. Escape pods cover the shutdown; the Tornado remains at the workshop. |
+| Knuckles rejects obvious written proof, then changes his mind after a fight | He believes the anchor stabilises the island during emerald repairs, refuses a risky shutdown, then examines a load report and the cable routing. He switches off his own controller and joins to recover the emerald. |
+| Optional camps and NPCs know unvisited discoveries | Camps work before or after local progress. Follow-ups require the dungeon record; Green Hill requires the actual reunion. A legacy relay-only save cannot trigger them. |
+| Main engine must remain a threat after all local anchors fall | Local controllers secure Eggman's installations; the Master Emerald still powers the central engine. The archive's survey and discharge settings prepare a safe core shutdown. |
+| Bell reward, journal and sluice labels tell different stories | The bell compartment and journal both contain equipment and a crew photograph. Turning the wheels closes the inlets; the prompts now say Open/Closed. |
+
+Removed repeated one-liners, slogan-like declarations and unsupported technical
+confidence. Sonic asks direct questions and offers practical help; Tails explains
+what he can measure and where he is uncertain; Knuckles has a specific responsibility
+and mistake. Written puzzle clues remain optional, with no new objective checklist.
+The unused legacy prologue/village scenes, title, credits and manifest were also
+reviewed so debug/replay text does not reintroduce the old premise.
+
+The change-based plan again selects 3,075 classes plus guards through the examples
+fallback. The isolated mod still qualifies for proportionate validation: content,
+UI labels and one bounded dialogue selection correction; no shared engine changes.
+The focused commands above cover all creator rules and the full ten-area scene route.
+A new host regression visits every traveller with relay-only, dungeon and reunion
+flags, exercising the actual interaction and checking the chosen script.
+
+Validation completed on 2026-10-09 against the follow-up base above plus this change:
+all 50 creator tests, package validation and 11 ROM scene-host tests passed with zero
+failures or skips. All ten dungeon/relay/guardian routes and the new traveller-state
+checks ran. Story scene coverage, font coverage and the 160-character dialogue limit
+passed. This is focused mod validation, not a full engine-suite pass. Installation
+uses the same build/install command and preserves existing save files.

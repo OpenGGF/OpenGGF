@@ -65,7 +65,7 @@ public final class FieldScreen implements Screen {
         if (field.dungeon == null && exitCooldown == 0 && ((dx < 0 && field.atStart())
                 || (dx > 0 && field.x() >= field.exitX() - (game.canTravelForward(zone) ? 0 : 18) && Math.abs(field.y() - 336) < 44))) {
             if (!game.travel(this, dx > 0)) {
-                if (dx > 0) speak(game, "Sonic", "Same pulse as that guardian. This trail isn't going anywhere while it's still holding the anchor.");
+                if (dx > 0) speak(game, "Sonic", "The barrier's still powered. I can't get through here yet.");
                 else say("The trail disappears into the surf.");
                 exitCooldown = 90;
             }
@@ -154,7 +154,9 @@ public final class FieldScreen implements Screen {
                     if (helped) say("Received 2 Super Rings.");
                     game.swap(this);
                 };
-                game.replayStory(zone.key + (field.discoveries() > 0 ? "-friend-after" : "-friend"), this, returnToField);
+                boolean followUp = zone == Zone.GREEN_HILL ? game.progress.seen("ghz-rescue")
+                        : game.progress.seen(zone.key + "-field-memory");
+                game.replayStory(zone.key + (followUp ? "-friend-after" : "-friend"), this, returnToField);
             }
             case DISCOVERY -> {
                 if (!field.relayReady()) {
@@ -311,7 +313,7 @@ public final class FieldScreen implements Screen {
                 sprite(game, c, "s3k:starpost", spot.done ? 2 : 1, x, y - 16);
                 String mark = spot.id.startsWith("bell-") ? switch (spot.id) {
                     case "bell-dawn" -> "Sunrise"; case "bell-noon" -> "High sun"; default -> "Sunset";
-                } : spot.done ? "Flowing" : "Still";
+                } : spot.done ? "Closed" : "Open";
                 game.font.shadowed(c, mark, x - game.font.width(mark) / 2, y - 42, Ui.DIM);
             }
             case DUNGEON -> {

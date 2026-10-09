@@ -461,6 +461,37 @@ class TestThreeIslandsScene {
     }
 
     @Test
+    void travellerDialogueWaitsForTheDiscoveryOrRescueItDescribes() throws Exception {
+        try (ExampleModHarness harness = open()) {
+            for (String zone : ZONES) {
+                if (!harness.debugJump("field:" + zone)) continue;
+                Object game = value(harness.scene(), "game");
+                Object outside = value(game, "screen");
+                Object field = value(outside, "field");
+                Object progress = game.getClass().getField("progress").get(game);
+                // Old saves can contain a relay discovery without having visited the dungeon.
+                for (String evidence : List.of("-field-signal", "-field-memory", "-rescue")) {
+                    progress.getClass().getMethod("markSeen", String.class).invoke(progress, zone + evidence);
+                    field.getClass().getMethod("restore", progress.getClass()).invoke(field, progress);
+                    position(field, 208, 310);
+                    harness.press(GLFW_KEY_ENTER); play(harness, 2);
+                    assertEquals("STORY", screen(harness));
+                    Object dialogue = value(game, "screen");
+                    var lines = dialogue.getClass().getDeclaredField("lines");
+                    lines.setAccessible(true);
+                    boolean followUp = zone.equals("ghz") ? evidence.equals("-rescue") : !evidence.equals("-field-signal");
+                    Object story = game.getClass().getField("story").get(game);
+                    Object expected = story.getClass().getMethod("scene", String.class)
+                            .invoke(story, zone + (followUp ? "-friend-after" : "-friend"));
+                    assertEquals(expected, lines.get(dialogue), zone + " dialogue must not assume unearned knowledge");
+                    finishDialogue(harness);
+                }
+            }
+            clean(harness);
+        }
+    }
+
+    @Test
     void allStoryLandmarksHavePlayableInteriorsWithIndependentGatesSavesAndRewards() throws Exception {
         try (ExampleModHarness harness = open()) {
             int played = 0;

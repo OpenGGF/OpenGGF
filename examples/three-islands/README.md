@@ -6,12 +6,14 @@ borrows from all three of your Sonic ROMs: Sonic 1 for South Island, Sonic 2 for
 Island and Sonic 3 & Knuckles for Angel Island and the Death Egg. Java 21 and the matching
 development JVM build are required; code mods do not load in native builds.
 
-> Three islands. Three skies. Three adventures that were never meant to meet.
+> Three islands, cut off by Eggman's machines.
 
-Dr. Eggman's **Convergence Engine** is pulling the islands into one sky through Warp Rings,
-powered by the Chaos Emeralds. Sonic starts alone on South Island, meets Tails on West Side
-Island, clashes with (and then recruits) Knuckles on Angel Island, and boards the Death Egg
-for the final battle, where all seven emeralds let him turn Super.
+Dr. Eggman's **Convergence Engine** is pulling the islands toward his base through Warp Rings.
+Local anchors block the roads, while shield relays protect their controllers. The Chaos
+Emeralds power those installations; the stolen Master Emerald supplies the central engine.
+Sonic starts alone on South Island, meets Tails on West Side Island, clashes with (and then recruits) Knuckles on Angel Island, and boards the Death Egg
+for the final battle, where all seven emeralds let him turn Super. Island crossings use the
+service Warp Rings; the party prepares a safe shutdown and escapes in a pod.
 
 The northwest landmarks in all ten areas are enterable dungeons: shrines, an observatory,
 workshop caverns and archive vaults. Defeat two groups of sentries to open their gates,
@@ -67,9 +69,9 @@ level-selection map or village hub. The title is also accessible through the pau
 it is never part of travel or chapter progression.
 
 **Travel and exploration.** Use all four directions to explore, and walk through the eastern
-or western trail openings to move between connected areas. Eggman's anchors fold the onward
-roads into rifts: a visible curtain of light blocks each eastern trail until its guardian
-falls. Local dungeon discoveries let the party operate the area's relay; shutting it down
+or western trail openings to move between connected areas. Eggman's anchors protect his
+installations with powered barriers: a visible curtain of light blocks each eastern trail
+until its guardian falls. Local dungeon discoveries let the party operate the area's relay; shutting it down
 removes the guardians' shields. Defeat those guardians to free the anchor and reopen the
 trail. Backtracking remains available. Island-crossing Warp Rings open after that island's
 anchors are freed. Defeating a boss leaves the party in the same field; cross when ready.
@@ -80,8 +82,8 @@ travelling stall sells supplies in the field; closing it returns to the same spo
 provide repeatable free rest. Visible patrols can be avoided. The minimap shows terrain, your position, and places you have already investigated;
 it does not reveal unseen discoveries or patrols. Nearby interaction prompts retain the controls.
 
-**Story and journal.** Sonic wants to give everyone their own sky back. Following Eggman's
-anchors brings him to the Convergence Engine, while Tails and Knuckles discover how to
+**Story and journal.** Sonic starts by helping people trapped behind Eggman's barriers.
+Following Eggman's installations brings him to the Convergence Engine, while Tails and Knuckles discover how to
 return the stolen power safely. Characters explain the stakes, respond to local changes,
 and offer observations when something resists them. Dungeon discoveries and relays matter
 to progression; side puzzles, caches and ordinary patrols remain optional. **Menu -> Journal**
@@ -90,7 +92,7 @@ objectives. Boss milestones and discoveries provide level catch-up and supplies 
 requiring patrol grinding.
 
 **Green Hill.** The 1536 x 1024 overworld extends beyond the original clearing into a
-bell garden, a flooded orchard, a southern grove and an unfamiliar reflected shoreline.
+bell garden, a flooded orchard, a southern grove and a lookout over the coast.
 Inscriptions and physical responses provide the clues. Both puzzles are optional; mistakes
 cost no items and never block the main route. Solved bells, individual sluices, discoveries
 and their one-time rewards survive saving and revisiting. An unfinished bell phrase starts

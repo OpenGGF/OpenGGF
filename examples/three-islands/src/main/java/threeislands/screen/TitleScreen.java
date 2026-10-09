@@ -129,7 +129,7 @@ public final class TitleScreen implements Screen {
         int tw = game.font.width(title) * scale;
         game.font.draw(c, title, (w - tw) / 2 + 3, 27, 0xFF101040, scale);
         game.font.draw(c, title, (w - tw) / 2, 24, Ui.GOLD, scale);
-        game.font.centered(c, "A turn-based adventure across three skies", w / 2, 56, Ui.TEXT);
+        game.font.centered(c, "A turn-based adventure across three islands", w / 2, 56, Ui.TEXT);
         // Each island's hero in its own game's art.
         String[] games = {"s1", "s2", "s3k"};
         HeroId[] heroes = {HeroId.SONIC, HeroId.TAILS, HeroId.KNUCKLES};
