@@ -329,3 +329,57 @@ gate objects, act-practice and hello-scene examples, every `openggf/timeattack` 
 `openggf/racing` test) 120 classes, 866 tests, 0 failures, 0 skips. The ordinary suite was not
 repeated: the fix is package moves and one constructor-shape change, covered by the guards
 and the focused set.
+
+## PR 217 CI follow-up (2026-10-09)
+
+Review input at `b548d49b4`: no submitted reviews or inline comments. CI run
+`37916774445` had two failures: `TestOpenAlPcmSink#warmedAudibleCursorQueriesReusePrimitiveLedgerWithoutAllocation`
+reported 88 allocated bytes; `TestObjectUpdateClockTerminologyGuard` reached its
+two-minute child deadline and then threw `IOException: Stream closed` while
+reading the forcibly closed diagnostic pipe. Both tests passed in the unchanged
+focused baseline (18 tests, no skips), with the terminology scan taking 58 seconds
+and approaching its 1 GiB child heap limit.
+
+The follow-up changes test infrastructure only. The cursor test reads allocation
+counters directly around a warmed query loop, keeping the exact zero-byte budget
+and checksum. This removes the shared benchmark probe's unrelated work and
+polymorphic `Runnable` dispatch; deoptimization/class-loading noise is a plausible
+explanation for the CI-only bytes, not an attributed allocation stack. The
+terminology child retains isolated attribution, uses a bounded 2 GiB heap and a
+four-minute deadline, writes diagnostics to a temporary file before waiting, and
+is stopped on every exit path. The file also avoids deadlock if compiler errors
+fill an unread pipe. Rejected: tolerating a nonzero allocation floor, skipping the
+guard, or changing gameplay to address test-harness failures.
+
+Validation scope: the change-based plan against pre-follow-up `b548d49b4` selects
+2,250 ordinary classes (`audio`, `common`, `gameplay`). Under proportionate
+validation, the two failing tests, neighboring audio allocation checks, deliberate
+failure controls, and the complete structural guard suite cover this test-only
+change; engine production code, build policy, and fixture inputs are unchanged.
+Tool preflight passes with `LUA_BIN=/usr/bin/lua5.4` (the default `lua` is older).
+
+Completed checks on `b548d49b4` plus this follow-up in `.worktrees/ai-time-attack-mod`:
+`PR217_ROM_ROOT` resolves to the main workspace; the three existing ROM identities
+matched `AGENTS.md`.
+
+```bash
+PR217_ROM_ROOT="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  "-Dsonic1.rom.path=$PR217_ROM_ROOT/s1.gen" \
+  "-Dsonic2.rom.path=$PR217_ROM_ROOT/s2.gen" \
+  "-Ds3k.rom.path=$PR217_ROM_ROOT/s3k.gen" test -B
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestOpenAlPcmSink,TestAudioPresentationAllocationBudget test
+```
+
+- Guards: all 86 classes, 674 tests, no failures/errors/skips (4 min 35 s);
+  terminology attribution completed in 58 seconds.
+- Focused audio: 22 tests, no failures/errors/skips. This is focused ordinary
+  validation, not a full ordinary-suite pass; the new PR CI run remains separate.
+- Deliberate controls: an escaping `long[64]` per cursor query failed the zero-byte
+  assertion (5,280,000 measured bytes); renaming the projectile hook's first
+  parameter to `frameCounter` failed the terminology guard with the owning method
+  identified. A child emitting 480 KB of diagnostics and failing returned the
+  expected assertion in under a second, without a timeout or closed-stream error.
+  Every mutation was restored before the final checks; no controls or raw logs
+  are retained as fixtures.
