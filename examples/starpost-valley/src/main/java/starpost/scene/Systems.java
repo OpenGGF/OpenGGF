@@ -25,6 +25,15 @@ public final class Systems {
         out.add(new starpost.core.Skills());
         out.add(new starpost.ruins.RuinsSection());
         out.add(new starpost.people.People());
+        out.add(new starpost.fishing.FishingSection());
+        out.add(new starpost.barn.Barn());
+        return out;
+    }
+
+    /** What the systems offer at Tails's workshop today (buildings, upgrades). */
+    public static List<WorkshopOffer> workshopOffers(Shell shell) {
+        List<WorkshopOffer> out = new ArrayList<>();
+        out.addAll(starpost.barn.BarnSystem.workshopOffers(shell));
         return out;
     }
 
@@ -37,5 +46,7 @@ public final class Systems {
         }
         starpost.ruins.RuinsSystem.install(shell, play, places);
         starpost.people.PeopleSystem.install(shell, play, actors);
+        starpost.fishing.FishingSystem.install(shell, play, actors, places);
+        starpost.barn.BarnSystem.install(shell, play, actors);
     }
 }

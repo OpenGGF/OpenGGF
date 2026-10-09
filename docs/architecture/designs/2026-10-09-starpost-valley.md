@@ -1066,3 +1066,105 @@ with no ceilings and dry, its arithmetic is unchanged for the valley.
 Not done: Scrap Brain Depths, pushable blocks and electric beams, solid rocks (rocks are
 non-solid so they never block the route), slope speed, Knuckles's and Tails's own moves in the
 Ruins, and Pud's lamp (People lane).
+
+## 17. Waters and barns (lane)
+
+Branch `feature/ai-starpost-waters` (base `93eb0fb10`), packages `starpost.fishing` and
+`starpost.barn`: fishing (§6.6), animals and their buildings (§6.1, §6.7), the artisan machines
+(§6.8) and the Flicky Roost (§6.1, §9.11).
+
+### Fishing
+
+| Part | Where | Notes |
+|---|---|---|
+| Who bites | `FishDef`, `FishTable` | 16 original fish and 5 submerged badniks by spot (farm pond, Waterfall Lake), season, hour, weather (dry, wet, storm, snow, the morning after a swarm, the Emerald Aurora), cast depth and story flag. Robo Cola is the junk catch (12% at the pond, 7% at the lake, always from empty water). Deep casts scale badnik weights by half plus the depth. The Reef bundles' ids (`bubble_bass`, `loop_pike`, `ring_carp`, `chopper_shell`, `jaws_fin`) are all here. |
+| The legends | `FishTable`, `Fishing.land` | Sonic 1's Chopper (pond and lake) and Jaws (lake, fall and winter), S3K's Jawz (rain) and Blastoid (storms), and the Red Chopper: lake, summer or fall mornings, deep casts, once a game, only after Barnaby has told the hat story (`red_chopper_story`). Landing one pops it: an animal goes free (`game.free()`) and its shell is kept; the Red Chopper also returns Barnaby's hat (he loves it). |
+| Catches that do things | `Fishing.land` | Ring Carp +5 rings, Bubble Bass +5 Water Shield charges, Scrap Sucker +1 scrap, Emerald Koi +30 Momentum; experience by difficulty, half again for a perfect catch. Badnik shells carry a `badnik:` icon key so the Reef Hand profession (+50%) pays for them in `Game.sellPrice`; the Angler's +25% covers every catch. |
+| The Bubble Bar | `BubbleBar` (rules), `BubbleBarScreen` | Hold to rise, release to sink. Inside the bubble the catch reels in; outside, tension builds, the bubble shrinks (up to half) and the catch slips; 45 frames' grace while the hook sets. The bubble is Map_Bub's full bubble with its top and bottom halves at 1x and its middle row repeated, giving way to frames 5 and 4 as it shrinks. Badniks move as their objects do, at the column's scale: `Chop_ChgSpeed` (launch -$700, gravity $18: a leap every 149 frames, scaled so a full leap reaches the top; the Red Chopper varies the height and darts between leaps), `Jaws_Swim` (constant speed, turning every 64 frames per subtype), `Obj_Jawz` ($200, aimed at the bubble and never steered), `AniRaw_BlastoidAttack` (128 frames' wait, three shots 15 frames apart, each kicking it up). On a badnik the drowning countdown's digits (Map_Bub 14-18) count down over the bubble with `sfx_AirDing` as the catch slips, as theatre. Barnaby's two-heart lesson (`barnaby_fishing_lesson`) and Fishing levels make the bubble bigger. |
+| The pond | `PondLine` (actor) | With the rod, the action button at the pond's edge casts (the new `FarmView.pondAction` hook; the Water Shield still refills there). The bobber arcs in and bobs; Labyrinth's splash (Nem_Splash, Map_Splash) marks the landing and the bite; walking off reels in. |
+| Waterfall Lake | `LakeScreen` | The valley's `lake` doorway. Green Hill blocks 1 (the shore), 51 (the log bridge over its pool: Barnaby's jetty) and 52 (a waterfall), with their collision; the water shimmers with `PalCycle_GHZ` (Pal_GHZCyc's four steps into line 3, colours 8-11, every 6 frames). Hold the action button to wind up a cast; the throw sets the depth. Fish shadows drift under the surface; Barnaby (Sonic 1's seal) sits on the jetty when People's own schedule puts him there; falling in sends the farmer back to the shore. Once the Capsule's Reef chamber sets `lake_bridge`, Sonic 1's bridge logs (Map_Bri frame 0) run from the jetty to the falls. The clock runs and the day can end there. |
+| Fishing contest | `FishingSystem.contest`, `LakeScreen` | A festival's timed contest (the Festivals lane's Ice Cap Festival hook has the same shape: `FishingSystem::contest`): the lake with a lent rod, the day's clock still, bites twice as soon, points per catch (5 plus a fifth of its difficulty, 10 more for a badnik, none for junk) on a board over the lake; at the whistle (or on walking off) the score is handed back once and the screen returns to the play screen. |
+| Save | `FishingSection` (`fishing`) | Landed counts per catch; unknown ids and bad numbers are dropped, counts clamped, once-only catches kept at one. |
+
+### Animals and barns
+
+| Part | Where | Notes |
+|---|---|---|
+| Buildings | `BarnSystem.workshopOffers`, `BuildingActor`, `BarnArt` | The Cucky Coop (2,000 rings) and Pocky Pen (4,000) are Tails's workshop offers; the Big Coop and Big Pen need `big_coop` (the Hatchery chamber or Robomart) and Hill Cloth. They stand on the back wall behind columns 25-46, assembled from Green Hill's pixels like the town (checker walls, sod roofs, log stilts, ramps and fence, plank doors), with Sonic 1's Cucky or Pocky standing on a plank sign. Up or the action button at the door opens the house's menu; goods wait by the door. |
+| Animals | `Animals`, `Animal`, `AnimalActor` | Cucky (eggs daily), Pecky (Ice Eggs every other day, winter only), Pocky (fluff every three days, two for a Shepherd), Picky (Hill Truffles dug into open grass on dry days outside winter, picked up as `TruffleActor`s), Rocky (up to two, in the farm pond, a pond fish a day, handed over when petted). Bought at the coop or pen; 4 to a small house, 8 to a big one. They wander before their house on dry days (Peckies in snow too) from 07:00 to 19:30, Sonic 1's sprites at 1x (Map_Animal 0-1 hopping, 2 standing); Rocky swims with only his top half showing. |
+| Rules | `Barn` (`barn` section) | Overnight: animals fed yesterday may give when grown and due, with a chance of 50% plus up to 50% from affection (two at once now and then above four hearts); affection drifts (-4 without a pet, -20 hungry, +3 in a big house); then each eats for the new day by grazing (dry weather outside winter, four plots of open grass each) or from its hopper (a fibre a day; in the coop a sunflower is three days, the sunflower's own rule). Petting once a day: +15, +30 for a Cuddler. |
+| Artisan machines | `Artisan`, core `Machine` | Monitor Jar (a crop or forage, three days, a jar worth twice the input plus 50; drawn as S3K's monitor, its screen static when empty and showing its item when loaded), Spring Yard Keg (fruit fizz in five days at three times the fruit; Spring Yard Hops make Spring Yard Fizz in two; its yellow spring bounces when ready), Fluff Loom (Hill Cloth overnight), Sunflower Press (oil overnight, Truffle Oil in two days). Sunflower oil dabbed on a working machine finishes it a day sooner. Jars and fizzes are generated per crop and forage from the catalogue (Kind ARTISAN). |
+| Flicky Roost | `Barn.harvestRoosts`, `FlickyFlock` | Recipe offered once `flicky_roost` is set. Each morning it picks ripe crops within 6 columns on its row into its 12-slot basket (chest storage, opened with the action button); its four blue Flickies (S3K Map_Animals1) fly each crop home, then circle the roof in `Obj_SuperTailsBirds`' formation (four birds a quarter turn apart, the angle advancing 2 of 256 a frame, aiming at sine/8 across and cosine/16 down from a point $20 above, accelerating $20 a frame and four times that to turn, vertical speed capped at $1000, wings every second frame). At night and in bad weather they perch. |
+
+### Seams outside the packages
+
+- `core`: `Content.register` calls `FishingContent` and `BarnContent`; `Game.sellPrice` applies Reef
+  Hand to `badnik:` icon keys; `PlaceableDef` gains `MACHINE` and `ROOST` and `slots()`; `Farm.machines`
+  holds `Machine` work; `SaveCodec` writes `machine.r.c` lines (kept only on a plot holding a
+  machine, with known items, count and day clamped) and restores chest contents into any object with
+  `slots()` (roost baskets).
+- `farm/FarmView`: `pondAction`, and `objectHooks` (`ObjectHook.use`, `removable`, `draw`); a loaded
+  machine or full basket is not knocked loose ("EMPTY IT FIRST").
+- `scene`: `Systems.sections`, `install` and the new `workshopOffers` with the `WorkshopOffer`
+  record; `WorkshopMenu` lists system offers and now honours `Recipe.unlock`; `PlayScreen.drawHud`
+  public; `Debug` routes `fish ...` and `barn ...`.
+- `people/cast/Barnaby`: loves `barnabys_hat`. `LakeScreen` reads Barnaby's schedule through People's
+  public API.
+
+### Decisions and rejected approaches
+
+- **Peckies and Pickies in the plain coop and pen.** §6.1 puts the Pecky behind the coop's second
+  upgrade, but the Hatchery bundle that grants `big_coop` asks for Ice Eggs and Hill Truffles: gated
+  animals would deadlock the chamber (only Robomart's 20,000-ring form could break it). The upgrade
+  gives room and comfort instead.
+- **The lake's pool from one column.** Block 51's water is see-through stripes over the background;
+  scanning one column for its first pixel ran to row ~240, so the lake showed Green Hill's background
+  hills and block 52's ground through the water (pixel samples alternated water and ground colours).
+  The pool now starts at the first row a quarter drawn, lies on a bed of its darkest water colour,
+  and the waterfall stops at it.
+- **A roost under its own roof.** The grass lip used as a sod roof is 24 pixels tall and hid the
+  16-pixel walls, so the first roost vanished into the field; the walls now sit below the roof.
+- **A held button after the Bubble Bar.** FarmView acts on the release of a short press, so the hold
+  carried over from the bar cast a new line after every escape (a capture showed a bobber in flight
+  after "IT GOT AWAY"); the pond ignores casts for 30 frames after a fight.
+- **The Red Chopper overhead.** Held up at twice the size above the farmer it left the screen on the
+  jetty; it now stands beside him.
+- **The Flickies' formation.** The brief names the S3K ending; the ending's flock was not found in the
+  disassembly, so the flock uses S3K's own Flicky formation, Super Tails's birds, with its numbers.
+- **Fish movement.** Fish seek targets on an original model (no ROM analogue); only the badniks use
+  their objects' motions.
+
+### Tests and captures
+
+`src/test/java/starpost/fishing/FishingRulesTest.java` (19) and
+`src/test/java/starpost/barn/BarnRulesTest.java` (16), engine-free: the table's size and the
+bundles' ids, the Reef and Hatchery chambers now fillable, bites by spot, season, hour, weather,
+aurora and depth, deep casts favouring badniks, the Red Chopper's story, morning and once-only rules,
+junk rates, a careful hand landing easy fish while an idle one loses them, harder fish escaping more,
+tension and the hook's grace, the bubble rising and sinking, the Chopper's 149-frame leap, the Jawz's
+$200 charge, the bubble's skill and lesson growth, the line's flight, bite, window and miss, each
+catch's rule, badniks freeing animals and the hat, Angler and Reef Hand prices, contest points;
+buying and room,
+laying and hunger, grazing, hoppers and sunflowers, fluff timing with the Shepherd, Ice Eggs and
+truffles by season and weather, Rocky's catch, petting, Cuddlers and big houses, collecting, each
+machine's recipes and timing, oil, the roost's reach and basket, and the sections' and machines'
+round trips with damaged values clamped or dropped and malformed numbers rejecting the save. 89/89
+with the other lanes' tests; a mutation check (fluff every four days, Chopper gravity $20, roost
+reach one wider) turned three tests red.
+
+```
+# fast creator tests (RunCreatorTests, a throwaway runner outside the repository)
+java -cp "$R/out:$CP" RunCreatorTests $R/tests $R/main
+# captures (ExampleModCapture; jump=fish_..., jump=barn_...); validation: "Validation passed: 0 findings"
+java -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom "$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --mod examples/starpost-valley --out <dir> --script-file <script> --every 10 --ticks 540
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off -Dtest=TestStarpostValleyExample test
+```
+
+Captures in `~/scratch/sv-waters/final/` (`contact-sheet.png`).
+
+Not done: Rocky's Pool, crab pots, bait and lures (the Trapper, Pot Master and Lure Maker
+professions do nothing yet), the river, the Labyrinth Cistern and Angel Island's shore, the Egg
+Machine and Scrap Brain Furnace, the Ricky Roost and Buzz Hive, S2's bear and monkey, naming
+animals, a collection page for catches (the section counts them), and talking to Barnaby at the lake
+(he talks in the valley).

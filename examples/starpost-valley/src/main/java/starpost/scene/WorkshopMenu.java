@@ -67,7 +67,13 @@ final class WorkshopMenu implements Screen {
         tool(out, game, "fire_shield", 300, inputs("scrap", 5, "marble_chip", 0));
         tool(out, game, "lightning_shield", 2500, inputs("scrap", 20, "marble_chip", 20));
         tool(out, game, "fishing_rod", 400, inputs("scrap", 3, "palm_wood", 10));
+        for (WorkshopOffer offer : Systems.workshopOffers(shell)) {
+            out.add(new Offer(offer.name(), offer.icon(), offer.rings(), offer.inputs(), offer.effect(), offer.text()));
+        }
         for (Recipe recipe : shell.catalog.recipes()) {
+            if (recipe.unlock() != null && !game.flags.contains(recipe.unlock())) {
+                continue;                       // offered once its story flag is set
+            }
             Item product = game.item(recipe.product());
             out.add(new Offer(product.name() + (recipe.count() > 1 ? " X" + recipe.count() : ""), product.id(),
                     recipe.rings(), recipe.inputs(), () -> game.inventory.add(product, recipe.count()), product.text()));

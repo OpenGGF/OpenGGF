@@ -25,7 +25,7 @@ public final class Barnaby {
         VillagerDef v = cast.villager("barnaby", "BARNABY")
                 .about("ROCKY. OLD FISHERMAN ON THE JETTY. ONE STORY.")
                 .body("animal:rocky").home("jetty").birthday(FALL, 3).animal()
-                .loves("ice_egg", "frost_ring", "palm_coconut")
+                .loves("ice_egg", "frost_ring", "palm_coconut", "barnabys_hat")
                 .likes("snow_spud", "loop_berry")
                 .kind(Kind.FISH, Taste.LOVE).kind(Kind.FORAGE, Taste.LIKE)
                 .dislikes("fire_pepper", "spring_yard_hops")

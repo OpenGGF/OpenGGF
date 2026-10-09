@@ -22,7 +22,15 @@ public final class Farm {
         return garden && row < 2 && column < 12;
     }
 
-    /** Item Monitors' contents, keyed "row.column". */
+    /** Machines' work in progress, keyed "row.column" (see {@link Machine}). */
+    public final java.util.Map<String, Machine> machines = new java.util.LinkedHashMap<>();
+
+    /** The work of the machine on a plot, or null when it is empty. */
+    public Machine machine(int row, int column) {
+        return machines.get(row + "." + column);
+    }
+
+    /** Item Monitors' contents (and roosts' baskets), keyed "row.column". */
     public final java.util.Map<String, Inventory> chests = new java.util.LinkedHashMap<>();
 
     /** The storage of the Item Monitor on a plot, created on first use. */

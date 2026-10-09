@@ -313,7 +313,7 @@ public final class PlayScreen implements Screen {
         }
     }
 
-    static void drawHud(Shell shell, SceneCanvas canvas) {
+    public static void drawHud(Shell shell, SceneCanvas canvas) {
         Game game = shell.game;
         Calendar cal = game.calendar;
         // Sonic 1's HUD: TIME turns red after midnight, RINGS when there are none (flashing, as in the ROM).
