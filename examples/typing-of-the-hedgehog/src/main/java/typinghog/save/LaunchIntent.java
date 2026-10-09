@@ -20,8 +20,8 @@ public record LaunchIntent(Mode mode, String game, int zone, int act, Difficulty
     public enum Mode { STORY, ARCADE, BOSS_RUSH, ENDLESS }
 
     /**
-     * How voice lines play: the Mega Drive DAC render ({@code voice-<line>}), the clean render
-     * ({@code voice-<line>-clean}) or not at all.
+     * How voice lines play: the Mega Drive DAC rendering the engine derives from the clean recording
+     * ({@code voice-<line>-md}), the clean recording ({@code voice-<line>}) or not at all.
      */
     public enum Voice {
         MEGADRIVE, CLEAN, OFF;
