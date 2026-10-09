@@ -44,6 +44,10 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     /** Rows an attract demo plays before handing back to the title (two minutes). */
 
     static final int DEMO_ROWS = 7200;
+    /** Most rows Boss Rush waits for Sonic to land before the boss arrives anyway. */
+    static final int BOSS_RUSH_LANDING_ROWS = 600;
+    /** Rows a demo word must be on screen before the demo typist starts it. */
+    static final int DEMO_REACTION_ROWS = 20;
 
     static final int START_RINGS = 10;
     static final int START_LIVES = 3;
@@ -86,6 +90,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     private SplittableRandom demoRandom;
     private int demoWait;
     private long demoStartRow;
+    /** Row each target was first seen on screen, for the demo typist's reaction delay. */
+    private final java.util.Map<Integer, Long> demoSeen = new java.util.HashMap<>();
     private typinghog.core.Lexicon.Picker picker;
     private final KeyStats keyStats = new KeyStats();
     private final RunTags runTags = new RunTags();
@@ -158,7 +164,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     }
 
     @Override public LogicalInputSnapshot nativeInput(CourseControl course) {
-        int mask = phase == Phase.RUN || phase == Phase.ENTRY ? cursor.next() & PAD_BITS : 0;
+        boolean railed = (phase == Phase.RUN || phase == Phase.ENTRY) && intent.mode() != LaunchIntent.Mode.BOSS_RUSH;
+        int mask = railed ? cursor.next() & PAD_BITS : 0;
         int action = (mask & AbstractPlayableSprite.INPUT_JUMP) != 0 ? InputActionMasks.ACTION_A : 0;
         int previousAction = (previousMask & AbstractPlayableSprite.INPUT_JUMP) != 0 ? InputActionMasks.ACTION_A : 0;
         var p1 = PlayerInputState.of(mask, mask & ~previousMask, action, action & ~previousAction, false, false);
@@ -212,6 +219,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         demoRandom = new SplittableRandom(intent.seed() ^ 0xDE30L);
         demoWait = 30;
         demoStartRow = rows;
+        demoSeen.clear();
         picker = assets.lexicon().new Picker(intent.seed() ^ 0x5EED, 48);
         keyStats.clear();
         announcer.clear();
@@ -238,7 +246,10 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     private boolean entry(CourseControl course) {
         if (!course.presentationReady()) return true;
         if (intent.mode() == LaunchIntent.Mode.BOSS_RUSH) {
-            // Boss Rush skips the run: the boss arrives where the act begins.
+            // Boss Rush skips the run: the boss arrives where the act begins, once Sonic has landed
+            // (some acts drop him in), with the pad left alone meanwhile (nativeInput).
+            var player = GameServices.camera().getFocusedSprite();
+            if (player != null && player.getAir() && phaseRows < BOSS_RUSH_LANDING_ROWS) return true;
             beginStand(course, true);
             return stand(course);
         }
@@ -248,19 +259,27 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     }
 
     /**
-     * A demo intent's typist: the locked word's next letter, else the most urgent word's first, at
-     * a steady human pace (about ten keys a second), on its own random stream so a demo plays the
-     * same course a player would.
+     * A demo intent's typist plays like a quick human, so a demo shows the badniks: about sixty
+     * words a minute, and a new word only once its badnik has been on screen for a third of a
+     * second (the locked word's next letter, else the boss quiz's answer, else the most urgent
+     * word). It draws on its own random stream so a demo plays the same course a player would.
      */
     private String demoTyped() {
         if (!intent.demo() || field == null || demoRandom == null) return "";
+        if (encounter != null) {
+            for (TypingField.Target t : field.targets()) {
+                if (encounter.onScreen(t.id())) demoSeen.putIfAbsent(t.id(), rows);
+                else demoSeen.remove(t.id());
+            }
+        }
         if (--demoWait > 0) return "";
-        demoWait = 4 + demoRandom.nextInt(5);
+        demoWait = 9 + demoRandom.nextInt(7);
         TypingField.Target target = field.locked() >= 0 ? field.target(field.locked()) : null;
         int preferred = encounter == null ? -1 : encounter.preferredTarget();
         if (target == null && preferred >= 0) target = field.target(preferred);
         if (target == null) {
             target = field.targets().stream().filter(TypingField.Target::typeable)
+                    .filter(t -> encounter == null || rows - demoSeen.getOrDefault(t.id(), rows) >= DEMO_REACTION_ROWS)
                     .min(java.util.Comparator.comparingInt(TypingField.Target::urgency)).orElse(null);
         }
         if (target == null) return "";

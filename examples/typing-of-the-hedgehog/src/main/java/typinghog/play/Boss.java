@@ -98,7 +98,7 @@ public final class Boss {
         stateRow++;
         int px = course.playerX(), py = course.playerY();
         var camera = GameServices.camera();
-        if (!spawned) spawn(course, camera.getX() + camera.getWidth() + 64, py - rig.height());
+        if (!spawned) spawn(course, camera.getX() + camera.getWidth() + 64, inView(py - rig.height()));
         if (flash > 0) flash--;
         if (laughRows > 0) laughRows--;
         if (recoil > 0) recoil--;
@@ -122,7 +122,7 @@ public final class Boss {
             lunge(course, px, py);
         } else {
             x += Integer.signum(homeX - x) * Math.min(3, Math.abs(homeX - x));
-            y = py - rig.height() + bob;
+            y = inView(py - rig.height() + bob);
             if (targetId < 0 && answerIds.length == 0) {
                 if (stateRow > (hits == 0 ? ENTRY_ROWS : RECOVER_ROWS)) openWindow(course);
             } else {
@@ -191,7 +191,7 @@ public final class Boss {
             int homeX = camera.getX() + camera.getWidth() * 3 / 4;
             double t = ease((lungeRow - WIND_UP_ROWS - DASH_ROWS) / (double) RETURN_ROWS);
             x = targetX + (int) Math.round((homeX - targetX) * t);
-            y = targetY + (int) Math.round((py - rig.height() - targetY) * t);
+            y = targetY + (int) Math.round((inView(py - rig.height()) - targetY) * t);
         } else {
             lungeRow = -1;
             stateRow = 0;
@@ -199,6 +199,12 @@ public final class Boss {
     }
 
     private static double ease(double t) { return t * t * (3 - 2 * t); }
+
+    /** Keeps a hovering boss inside the view, below the HUD and its hit pips. */
+    private static int inView(int wantY) {
+        var camera = GameServices.camera();
+        return Math.max(camera.getY() + 64, Math.min(camera.getY() + 224 - 40, wantY));
+    }
 
     private BossRig.Mood currentMood() {
         if (defeated) return defeatRows <= EXPLODE_ROWS ? BossRig.Mood.DEFEAT : BossRig.Mood.FLEE;

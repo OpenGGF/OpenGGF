@@ -134,6 +134,25 @@ public final class Encounter {
     Effects effects() { return effects; }
     Boss bossFight() { return bossFight; }
 
+    /** True when {@code target} belongs to something inside the camera view (or to the boss). */
+    boolean onScreen(int target) {
+        var camera = com.openggf.game.GameServices.camera();
+        int left = camera.getX() + 8, right = camera.getX() + camera.getWidth() - 8;
+        if (bossFight != null && bossFight.owns(target)) return true;
+        for (Enemy enemy : enemies) {
+            for (Enemy.Part part : enemy.parts) {
+                if (part.targetId == target) {
+                    int x = enemy.x() + part.dx;
+                    return x >= left && x <= right;
+                }
+            }
+        }
+        for (Pickup pickup : pickups) {
+            if (pickup.targetId == target) return pickup.x >= left && pickup.x <= right;
+        }
+        return true;
+    }
+
     // ---- per advanced row ------------------------------------------------------------------------
 
     void advance(Course course) {

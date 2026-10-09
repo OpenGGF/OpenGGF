@@ -229,7 +229,7 @@ public final class Hud {
             // Below the score panel, wrapped to the screen: trivia runs longer than 320 pixels.
             java.util.List<String> lines = wrap(boss.question(), width - 32);
             int lineHeight = PlateFont.HEIGHT + 3;
-            int top = 38;
+            int top = 46;
             canvas.fill(10, top - 4, width - 20, lines.size() * lineHeight + 6, 0xC0201040);
             for (int i = 0; i < lines.size(); i++) {
                 String line = lines.get(i);
