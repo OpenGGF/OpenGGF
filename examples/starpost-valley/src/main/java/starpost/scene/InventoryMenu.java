@@ -34,6 +34,12 @@ final class InventoryMenu implements Screen {
             shell.pop();
             return;
         }
+        if (shell.in.nextTool || shell.in.upPressed && cursor < COLUMNS) {
+            // The neighbours' page sits "above" the monitor slots (starpost.people).
+            shell.pop();
+            shell.push(new starpost.people.SocialPage(() -> shell.push(new InventoryMenu())));
+            return;
+        }
         int size = inv.size();
         if (shell.in.rightPressed) {
             cursor = (cursor + 1) % size;
@@ -100,6 +106,7 @@ final class InventoryMenu implements Screen {
                 }
             }
         }
+        Text.right(canvas, "UP/E: NEIGHBOURS", x + w - 10, y + h - 13, Text.BLUE);
         if (inv.id(cursor) != null) {
             Item item = game.item(inv.id(cursor));
             int ty = y + 44 + rows * slot;

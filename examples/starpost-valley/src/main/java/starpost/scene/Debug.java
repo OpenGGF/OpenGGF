@@ -12,7 +12,8 @@ import starpost.core.Plot;
  *   <li>{@code valley X} — walk out to the valley at x; {@code farm X DEPTH} — the farm;</li>
  *   <li>{@code give ITEM N}, {@code rings N}, {@code momentum N}, {@code select SLOT};</li>
  *   <li>{@code demo} — a planted, half-grown field to look at; {@code sleep} — end the day;</li>
- *   <li>{@code music on|off}.</li>
+ *   <li>{@code music on|off};</li>
+ *   <li>{@code people ...} — the neighbours (see {@code starpost.people.PeopleDebug}).</li>
  * </ul>
  */
 final class Debug {
@@ -50,6 +51,9 @@ final class Debug {
                 case "demo" -> demo(shell.game);
                 case "sleep" -> shell.go(new DayEndScreen(false));
                 case "music" -> shell.music.setEnabled(p[1].equals("on"));
+                case "people" -> {
+                    return starpost.people.PeopleDebug.apply(shell, p);
+                }
                 default -> {
                     return false;
                 }
