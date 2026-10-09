@@ -162,6 +162,13 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
   prints the `RouteCompletionEvidence` line of each of the eleven FBZ2 complete-route
   matrix rows without asserting; diff the output before and after a route-controller
   or primitives refactor to prove byte-identical behaviour.
+- `TypingHedgehogRailProbe` (test scope, opt-in `-Dmse=off -Dtypinghog.rails=true`, optional
+  `typinghog.rails.only/phases/out`) replays committed BK2 pad programs and the S3K cold routes
+  per act as cold starts under a mod configuration (400 px, forced FAST load time, donation
+  off, solo or Sonic+Tails, lag rows kept or dropped, stock badniks optionally removed) and
+  writes validated length, failure class, first divergence from the recording
+  (comparison-only), boss/act-end rows and course-checkpoint stand determinism as TSV.
+  Origin: Typing of the Hedgehog rail kill tests, 2026-10-09.
 
 ## Docs
 
