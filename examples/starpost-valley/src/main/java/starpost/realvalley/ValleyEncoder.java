@@ -375,7 +375,8 @@ public final class ValleyEncoder {
             int wy = (flip & 2) != 0 ? 15 - i : i;
             int height = source.heights()[sourceId * 16 + hx];
             int width = source.widths()[sourceId * 16 + wy];
-            profile[i] = (byte) ((flip & 2) != 0 ? -height : height);
+            // FindFloor leaves the full-tile sentinel $10 positive under a vertical flip.
+            profile[i] = (byte) ((flip & 2) != 0 && height != 16 ? -height : height);
             profile[16 + i] = (byte) ((flip & 1) != 0 ? -width : width);
         }
         int angle = source.angles()[sourceId] & 255;

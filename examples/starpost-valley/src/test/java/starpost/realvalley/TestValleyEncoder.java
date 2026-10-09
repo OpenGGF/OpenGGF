@@ -107,6 +107,25 @@ class TestValleyEncoder {
         assertEquals((byte) -0x40, encoded.angles()[twin]);
     }
 
+    @Test void verticalReflectionKeepsFullTileHeightAndReversesWidths() {
+        S1Terrain source = terrain();
+        Arrays.fill(source.blocks()[1], 0xF801);
+        Arrays.fill(source.blocks()[2], 0xF001);
+        for (int i = 0; i < 16; i++) {
+            source.heights()[16 + i] = (byte) (i + 1);
+            source.widths()[16 + i] = (byte) (i + 1);
+        }
+        EncodedValley encoded = encode(source, 1, 2);
+        int block = encoded.foreground()[2] & 255;
+        int chunk = word(encoded.blocks(), block * 128) & 0x3FF;
+        int twin = encoded.secondary()[chunk];
+        for (int i = 0; i < 16; i++) {
+            assertEquals(i == 15 ? 16 : -(i + 1), encoded.heights()[twin * 16 + i]);
+            assertEquals(16 - i, encoded.widths()[twin * 16 + i]);
+        }
+        assertEquals(0x40, encoded.angles()[twin]);
+    }
+
     @Test void doesNotAliasCollisionInputAndCompactsRepeatedQuadrants() {
         S1Terrain source = terrain();
         EncodedValley encoded = encode(source, -1, -1);

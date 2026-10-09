@@ -1453,3 +1453,123 @@ Chaos Sneakers farmer), the formal `TestStarpostValleyExample` bridge (the lead 
 of a Ruins part or relic drop (random; the drop path is the Ruins' own pickup with the museum's
 icons), more minerals than the Ruins' eight, and tree-specific gifts or recipes (the Chaos Cherry and
 coconut only sell, fill jars and restore Momentum).
+
+
+## §20 The real valley (P1 lane)
+
+Continuation of checkpoint `4b1a7af90` in `.worktrees/ai-starpost-realvalley`,
+base `acb094c76`. Working milestone `13f582554` replaces the scene controller
+for this one act with the real S3K engine player. The startup scene remains the
+existing scene; this lane exposes `ZoneKey.Mod("starpost-valley", "valley")` for
+tests and debug launches with a production logical-ROM PatchContext. Town
+villagers, buildings and doorways belong to the separate Town lane (§21).
+
+`starpost.realvalley` registers an original empty placeholder and wraps its
+backing content patch. At load, the published logical-ROM/game contracts decode
+S1 GHZ1, copy primitive terrain data, and call the S3K `ModZoneAdapter.load` with
+format-v2 `ModZoneLevelData`. The foreground source blocks are
+`13,45,60,60,60,60,45,3,45,53,38,1,16`; each 256px block becomes four 128px
+blocks, with an empty 128px sky row. The GHZ background is also split and
+compacted. No Sega asset bytes are committed or bundled. Without S1, the
+placeholder remains; a debug launcher with a null PatchContext cannot provide
+S1. Creator packaging reports zero validator findings.
+
+### Assumptions and measured evidence
+
+| Assumption | Evidence |
+|---|---|
+| A2: fits host limits | Source 1,345 patterns/439 chunks/83 blocks; reachable foreground and background compact to **522 patterns/279 chunks/60 blocks/38 collision profiles**, below 2048/1024/256/256. |
+| A1: palette claims avoid HUD cells | **28 claims**, 24 remapped pattern uses; **2,129,920** foreground/background pixels match source RGB, transparency and priority after 20 host frames. No art uses line 0, line-1 cells 1/5/12/14/15, or the placeholder's line-3 cell 15. |
+| A3: collision/floor equality | **3,407,872** pixel comparisons cover both paths and both solidity bits; **3,072** production floor probes match source floors. Empty columns have no floor to probe. |
+| A4: traversable loop with occlusion | Sonic/Knuckles apex y=165, Tails y=161; grounded, secondary path observed, exits x=2604/2611/2604 and primary path restored. Native frame 77 covers 578 Sonic pixels with high-priority near-side terrain. |
+
+The loop's secondary collision comes from S1 block 54. Six cells in row 11,
+columns 5–10, require a relative horizontal reflection on simultaneously solid
+paths. The initial rejection proved that copying one path's flip would lose the
+other surface. Profiles are compacted by all 33 bytes, with exact relative
+height/width/angle reflection. Vertical reflection preserves FindFloor's positive
+full-tile `$10` sentinel. Three stock PATH_SWAP objects select the paths; original
+pattern priority is retained. These are intentional S3K object placements, not a
+claim of instruction-for-instruction S1 `Sonic_Loops` parity.
+
+The source's block 3 has a 64px ledge: held-right stalls at x=1785. The route
+uses a native jump onto it, rather than changing collision. A stock yellow Spring
+sits there; a stock Star Post sits at the farm gate. No scene objects or physics
+are used in this act.
+
+### Host corrections and rejected approaches
+
+The no-engine-change assumption failed in two bounded load consumers, fixed in
+`13f582554`: stock dynamic-start lookup read unrelated ROM coordinates for the
+additive zone (Sonic/Tails x=5024, Knuckles x=30), overriding descriptor x=150;
+additive acts now use their descriptor start. Native captures also exposed stale
+GPU pattern indices after the source decoder published S1 art. Additive CPU
+levels now publish their own patterns and palettes before tilemaps are built.
+Stock level loading still follows its original paths. Both changes are private
+host implementation; there is no Mod API surface or signature-pin change.
+
+Rejected: non-API `Sonic1.buildDetachedLevel` inside creator code (four validator
+warnings); published ROM detection/game loading packages cleanly. Rejected:
+trusting CPU pixel comparisons as proof of GPU presentation. The first native
+images had wrong art despite exact CPU data; publication and inspected captures
+were required. The registered placeholder's palette bridge resubmits its own
+claims each frame, so its one claimed cell is explicitly excluded from real art.
+
+### Act/character route matrix and rewind spots
+
+| Act/route | Cold load and traversal | Independent interaction/presentation | Capture/restore and forward replay |
+|---|---|---|---|
+| Valley / solo Sonic | Fresh descriptor start, 320 and 400px; runs to x>=3128 with ledge jump, alive | 400px loop apex/secondary/exit; native loop occlusion and spin-dash dust | Mid-valley capture, 300 input frames, restore/replay; x/y/ground speed and object-manager snapshot match |
+| Valley / solo Tails | Same two widths and route | 400px loop; native flight and tails | Character-specific ability/loop rewind still open |
+| Valley / solo Knuckles | Same two widths and route | 400px loop; native glide pose | Character-specific ability/loop rewind still open |
+
+Short art/palette/floor/ability checks are independent of the long route. The
+current rewind spot is a forward-replay regression, not whole-registry or
+whole-route certification. Stock Spring/Star Post activation, checkpoint respawn,
+loop-boundary rewind, load/history isolation, other supported widths, donors,
+paired teams and reverse traversal remain explicit matrix gaps. There is no
+boss, results handoff, town doorway or scene/act round trip in P1. Those gaps
+must be addressed when those features become supported; this matrix does not
+certify stock GHZ or the complete level-testing standard.
+
+### Validation and captures
+
+Every queued command has prefix `python3 tools/testing/maven_queue.py --lean -B -Dmse=off`
+and suffix `test`. ROM properties are absolute paths to this worktree's
+`Sonic and Knuckles & Sonic 3 (W) [!].gen` and
+`Sonic The Hedgehog (W) (REV01) [!].gen`.
+
+Java 21 and exact ROM identity verified: S1 REV01 CRC32 `AFE05EEE`, S3K
+locked-on `63522553`. All Maven tests use `tools/testing/maven_queue.py`,
+`-Dmse=off`, exact selectors and absolute `sonic1.rom.path`/`s3k.rom.path`.
+
+- `-Dtest=TestStarpostRealValley,TestStarpostValleyExample`: **15 passed**, no
+  failures/errors/skips; creator bridge **175 passed**, zero findings.
+- After adding the vertical-reflection sentinel regression,
+  `-Dtest=TestStarpostValleyExample`: **2 passed**, creator bridge **176 passed**,
+  no skips or validator findings (six pure encoder tests).
+- `-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kModZoneLifecycle`:
+  **62 passed**, no failures/errors/skips.
+- `-Dtest=TestS3kModZoneAdapter,TestModZoneAdapterRouting,TestModZoneLoader,TestModZoneRuntimeProfile,TestModZoneEventLifecycle,TestSonic3kModZoneObjectSet,TestSonic3kLivesHudPaletteOverride`:
+  **82 passed**, no failures/errors/skips.
+- `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base acb094c76 --preflight`:
+  passed Java/Lua/PowerShell prerequisites. The default Lua executable initially
+  failed preflight; Lua 5.4 corrected the prerequisite.
+
+The combined change-based plan selected all **3,080 ordinary classes plus
+guards**, largely through unclassified example sources. Proportionate validation
+uses direct encoder invariants, production mod loading, character physics,
+rewind, native GPU capture and affected S3K/additive consumers. The host edits
+are conditional spawn/publication corrections for additive acts; no shared
+physics algorithm, public contract, timing port or selection policy changes.
+No full ordinary-suite or full structural-guard pass is claimed. Integration and
+broader delivery verification belong to the lead lane; this branch stays local.
+
+Inspected native PNGs and four short 60fps videos are under
+`~/scratch/sv-realvalley/final/`: `loop-apex.png`,
+`loop-occlusion.png`, `tails-flight.png`, `knuckles-glide.png`,
+`spindash-dust.png` and corresponding `sonic-loop.mp4`, `tails-ability.mp4`,
+`knuckles-ability.mp4`, `sonic-dust.mp4`. Per-frame state CSVs and a diagnostic
+unoccluded same-frame reference quantify loop presentation. The scratch
+`RealValleyCapture.java` uses `HeadlessGameBoot` + `GameLoop.step`, not
+`ExampleModCapture`; no simulation step uses the diagnostic rendering override.
