@@ -1025,3 +1025,145 @@ changed reports preserved. Normal worktree removal succeeded; the fully merged
 Original ROMs, unrelated worktrees, main's three dirty disassemblies and four known
 untracked paths, foreign jobs and the external rendered visualization were preserved.
 No temporary agents were created for this task.
+
+## SOZ drawing-gap follow-up (2026-10-08)
+
+Task base `d2a501ebc9919e6c43412a2eedf02a372eac5309`, isolated branch
+`feature/ai-soz-skip-frame-drawing`. The user explicitly authorized trying skipped
+frame drawing. No production Java, movie input, physics, build or selection policy
+changed. The SOZ-only test policy services queued render-thread work after every
+simulation tick, omits traversal drawing, draws every snapshot checkpoint, draws
+both complete 45-frame replay branches, and draws the final playable destination.
+Prepared loads can depend on the render-thread queue even when no scene is drawn.
+
+The first queued command remained in every-frame mode while the drawing policy was
+introduced before admission, under the worktree metadata lease. Its default was
+initially true. The matched skipped command changes only
+`-Dopenggf.soz.drawEveryFrame=false`; all three Java test-source hashes were identical
+through both runs. Both completed **14 cases, zero failures/errors/skips**, with
+identical fully qualified case identities/outcomes. The five unchanged capture
+rendering controls took 2.661 / 2.664 seconds. The nine SOZ cases took
+**138.309 → 45.423 seconds: 67.2% less, 3.04× faster** in this one matched pair.
+
+| Route | Every-frame drawing (s) | Checkpoint/replay drawing (s) |
+|---|---:|---:|
+| Solo Sonic Act 1 | 15.058 | 4.592 |
+| Solo Sonic Act 2 | 16.113 | 5.787 |
+| Solo Tails Act 1 | 8.409 | 2.141 |
+| Solo Tails Act 2 | 14.916 | 5.125 |
+| Solo Knuckles Act 1 | 9.943 | 2.903 |
+| Sonic + Tails Act 1 | 15.337 | 3.582 |
+| Sonic + Tails Act 2 | 20.121 | 6.341 |
+| Solo Knuckles Act 2, 320 | 17.252 | 6.680 |
+| Solo Knuckles Act 2, 800 | 21.142 | 8.256 |
+
+All nine printed destination-ready frames, traversal/destination replay counts and
+semantic event sets match exactly. Drawing falls from **295,065 to 36,227 calls**,
+while 259,245 traversal drawing calls are omitted. Both modes still execute
+295,065 simulation steps: the skipped mode's drawings include 407 additional
+checkpoint/final draws without simulation ticks, plus 35,820 replay-step draws.
+Every world key/field restore and forward-replay comparison, real boss/results,
+bonus/puzzle/capsule checks, roster/width/death checks and 180 playable destination
+frames remain. This does not compare every intermediate world state or pixel
+between modes, and the default no longer establishes every-frame presentation.
+
+Four independent short controls pass in 4.326 seconds with zero skips: native
+Sonic Act 1 and Knuckles Act 2 at 320/800 widths. Each compares fully drawn and
+skipped 420-frame branches from an engine-owned prefix checkpoint after 600 real
+movie inputs. Every snapshot key/field and all final pixels match. The old
+framebuffer is first cleared to one magenta colour and checked as uniform, so
+stale pixels from the fully drawn branch cannot fake success. These are bounded
+engine-path controls, not new full-route/wider/donor or native-ROM visual certification.
+
+```bash
+# Fully drawn control: the prototype still defaulted to every-frame drawing.
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozColdRouteCapture,TestGameplayCaptureFrameRendering \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+# Same sources and selection; only the SOZ drawing mode changes.
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozColdRouteCapture,TestGameplayCaptureFrameRendering \
+  -Dopenggf.soz.drawEveryFrame=false \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+# Strict checkpoint reconstruction controls, independently executed.
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozColdRouteFrameDrawing \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The actual commands used the original absolute main ROM path. Java 21, lean 1 GiB
+heaps and no JFR were matched. Class time excludes queue wait and compilation;
+Maven totals of 3m45s / 1m11s include different cold compilation costs and are not
+an end-to-end throughput benchmark. The baseline waited roughly 44 minutes for
+admission. No foreign job was cancelled, and no queue priority or reservation changed.
+
+After those controls passed, the normal default became checkpoint/replay drawing;
+`-Dopenggf.soz.drawEveryFrame=true` retains every-frame traversal drawing. Capture
+tools, screenshot tests and other routes keep their existing drawing behavior.
+The [headless guide](../../guide/contributing/headless-testing.md) and both SOZ
+act matrices record the presentation coverage limit and fully drawn invocation.
+
+The change-based plan selects **3,059 ordinary classes plus guards** because the
+new non-test-named helper is unclassified. Its only consumers are the two SOZ
+JUnit classes; its methods delegate to existing drawing/render-task APIs and own
+only per-invocation counters and a boolean. Under proportionate validation, the
+14-case matched route/render pair, four strict state/pixel controls and the required
+60 S3K loading/bootstrap/decoding/AIZ cases directly cover the bounded change.
+No runner selection was edited or narrowed, and no new full-suite/guard pass is
+claimed by this task. Actual tool preflight passed Java 21, Lua 5.4 and PowerShell.
+
+The actual destination advanced to `ad3d6a9965952a38b6a0ac2e9eb0285f721ee895`.
+Its delta from the task pin adds standalone experimental Windows packaging,
+workflow/probe files and prose, with no engine/POM/test-input changes. Task code
+commit `b5cbc5b9c` merged that base as
+`4efa6f59316fa42e9de8e31a0af6fd027f0a5ee7`, without conflicts. The final default-mode
+command passes **78 cases, zero failures/errors/skips**, exit 0, in 1m15s including
+compilation, finishing at18:58:52Z. All original14 case identities/outcomes remain
+passing; default route milestones and draw/skip counts exactly match the measured
+explicit-false mode. The SOZ class took46.407s; that validation time is separate
+from the matched138.309/45.423s benchmark.
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozColdRouteCapture,TestSozColdRouteFrameDrawing,TestGameplayCaptureFrameRendering,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dsonic1.rom.path=${OPENGGF_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+```
+
+
+### Published-base drawing qualification and renewed main coordination (2026-10-09)
+
+The parity owner released main/publication holds at published
+`019dd454b0d63b10a1d0585450bb28f34e360c04`. Its complete ordinary/guard evidence
+is attributed to tested `b317e94ebdce60c6f81553113543295c75b1d826`, with an
+independently verified audit-only publication successor, in the
+[updated parity negative-case table](../audits/2026-10-07-stock-parity-gap-verification.md#updated-actual-main-full-assertion-and-skip-summary).
+Those are the parity owner's full results, not a new full run by this task.
+
+Private merge `5b44c0ccb6c6c12052829ed7d2a5ce9df9f05499` reconciles that published
+base without conflicts. All three drawing-test source hashes remain unchanged;
+production/build inputs exactly inherit the base. The same focused command above
+completed at 2026-10-09T03:41:33Z: **78 cases, zero failures/errors/skips**, Maven
+exit0, 2m06s including compilation. Every fully qualified case identity/outcome
+and all nine printed route result lines match the earlier terminal78-case check.
+The SOZ class took45.740s; this is qualification, not another matched benchmark.
+The selected eight report identities retain5 capture controls,9 routes,4 strict
+state/pixel controls and60 required S3K loading/bootstrap/decoding/AIZ cases.
+Actual tool preflight again passed Java21, Lua5.4 and PowerShell. The current
+change-based fallback selects3069 ordinary classes plus guards; the previously
+explained bounded proportionate validation remains the chosen scope.
+
+Before main integration, published develop advanced to
+`efedf9198eef5e717c8827f1aa34dc7728cb92fd`. Its complete delta is one Windows
+research Markdown path, with no executable/test/build/API change. Private
+prose-only merge `c05940fb1da72cf2915a41840e403d9c5cc4aa0c` preserves that update;
+the completed qualification remains attributed to5b44. Both destination checks
+stopped before writing any main input or commit. Main then acquired the unrelated
+voice integration `0103b9bdc880c142301073fba9024750ccf4f1c2`, whose owner had already
+submitted its normal full destination command against efedf. Its
+[delivery plan](../designs/2026-10-07-eggmans-sky.md) freezes main inputs and HEAD
+through ordinary and fresh guards. This task preserves that invocation and
+all foreign jobs; SOZ has not reached main. Updated private composition,
+actual-main focused qualification, publication and owned cleanup remain pending
+that owner's completed delivery. No post-merge result is claimed.

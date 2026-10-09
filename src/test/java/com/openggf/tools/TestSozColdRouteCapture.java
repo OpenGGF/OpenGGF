@@ -23,7 +23,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.CsvSource;
 
-/** Cold controller-only routes with rendered full-world replay, independent of optional video output. */
+/** Cold controller-only routes with drawn checkpoints and fully rendered rewind replay. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSozColdRouteCapture {
     @ParameterizedTest
@@ -75,6 +75,7 @@ class TestSozColdRouteCapture {
                 : java.util.Set.of(27290, 28090, 28150, 29200, 29400,
                         29575, 29720, 29855, 29900, 30850, 31020);
         long outgoingHistory = 0;
+        var drawing = new SozColdRouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             GameServices.configuration().setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS, false);
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 8, act, settings);
@@ -101,7 +102,7 @@ class TestSozColdRouteCapture {
                 var pendingSpots = new HashSet<String>();
                 var input = input(movie, frame);
                 session.step(input);
-                session.renderFrame();
+                drawing.afterStep(session);
                 if (bonusRoute && frame >= 3100 && frame < 3800
                         && beforeLevel != GameServices.level().getCurrentLevel()) {
                     assertTrue(beforeHistoryFrame > 10, "outgoing bonus boundary history at " + frame);
@@ -192,17 +193,19 @@ class TestSozColdRouteCapture {
                         || (bonusRoute && (frame == 3100 || frame == 3400 || frame == 3500 || frame == 3700))
                         || (knucklesActTwo && knucklesPuzzleSpots.contains(frame))
                         || (readyFrame >= 0 && frame == readyFrame + 30)) {
-                    replay(session, movie, frame);
+                    replay(session, movie, frame, drawing);
                     checked.add(frame);
                     semanticChecked.addAll(pendingSpots);
                     pendingSpots.clear();
                 }
                 if (!pendingSpots.isEmpty()) {
-                    replay(session, movie, frame);
+                    replay(session, movie, frame, drawing);
                     semanticChecked.addAll(pendingSpots);
                 }
-                if (readyFrame >= 0 && frame >= readyFrame + 180)
+                if (readyFrame >= 0 && frame >= readyFrame + 180) {
+                    drawing.checkpoint(session);
                     break;
+                }
             }
             if (bonusRoute) assertEquals(2, bonusLoads, "real bonus entry and return loads");
             assertTrue(bossSeen, "cold route reaches its real boss");
@@ -232,7 +235,8 @@ class TestSozColdRouteCapture {
                 assertNotNull(SessionManager.getCurrentGameplayMode().getRewindController());
             }
             System.out.println("SOZ" + (act + 1) + (paired ? " cold pair: ready=" : " cold " + main + " solo: ready=") + readyFrame
-                    + ", width=" + width + ", replay windows=" + checked.size() + ", semantic=" + semanticChecked);
+                    + ", width=" + width + ", replay windows=" + checked.size() + ", semantic=" + semanticChecked
+                    + ", drawn frames=" + drawing.drawnFrames() + ", skipped draws=" + drawing.skippedFrames());
         }
     }
     private static Bk2FrameInput input(com.openggf.debug.playback.Bk2Movie movie, int frame) {
@@ -240,13 +244,17 @@ class TestSozColdRouteCapture {
                                              : new Bk2FrameInput(frame, 0, 0, false, "");
     }
     private static void replay(
-            GameplayCaptureSession session, com.openggf.debug.playback.Bk2Movie movie, int frame) {
+            GameplayCaptureSession session, com.openggf.debug.playback.Bk2Movie movie, int frame,
+            SozColdRouteFrameDrawing drawing) {
+        // Every replay begins from a drawn checkpoint, then draws both complete
+        // 45-frame branches. Only traversal outside those checks omits drawing.
+        drawing.checkpoint(session);
         var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
         var level = GameServices.level().getCurrentLevel();
         var saved = registry.capture();
         for (int n = 1; n <= 45; n++) {
             session.step(input(movie, frame + n));
-            session.renderFrame();
+            drawing.draw(session);
         }
         assertSame(level, GameServices.level().getCurrentLevel(), "replay window crosses a load at " + frame);
         var forward = registry.capture();
@@ -255,7 +263,7 @@ class TestSozColdRouteCapture {
         session.restoreInputHistory(input(movie, frame));
         for (int n = 1; n <= 45; n++) {
             session.step(input(movie, frame + n));
-            session.renderFrame();
+            drawing.draw(session);
         }
         same(forward, registry.capture(), "replay " + frame);
         registry.restore(saved);

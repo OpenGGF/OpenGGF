@@ -65,8 +65,20 @@ frame-driving stubs once rather than restubbing identical values on each tick.
 Rendered route checks that discard pixels can use
 `GameplayCaptureSession.renderFrame()`. It performs the same drawing, overlays,
 effects and GPU completion as `render()` without framebuffer readback. Keep
-`render()` for screenshots and pixel comparisons. Omitting drawing altogether
-would miss render-state progression and is not equivalent validation.
+`render()` for screenshots and pixel comparisons.
+
+SOZ cold-route checks now omit scene drawing during traversal between checkpoints.
+Every gameplay tick still executes, and queued render-thread work is serviced each
+tick so prepared loads can complete. Each snapshot checkpoint and both complete
+45-frame replay branches draw normally, as does the final playable destination.
+The bounded SOZ controls compare every world snapshot key and actual checkpoint
+pixels after drawing gaps at 320/800 widths, including a cleared framebuffer that
+rejects stale-image success. This validates checkpoint reconstruction, not presentation
+on every intermediate frame. To draw every traversal frame as well, add
+`-Dopenggf.soz.drawEveryFrame=true` to the focused Maven command. This property is
+specific to the SOZ cold-route tests; capture tools and pixel tests keep their own
+drawing/readback behavior. Keep the fully drawn mode for whole-route presentation
+investigations and validation of changes that need every-frame rendering evidence.
 
 ## Manual setup (legacy)
 
