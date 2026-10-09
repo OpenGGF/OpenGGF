@@ -25,10 +25,11 @@ import typinghog.hub.model.WordMenu;
 final class SchoolScreen implements Screen {
     private enum Mode { MENU, PLAY, RESULT }
 
-    private static final int GRID_X = 200;
     private static final int GRID_Y = 30;
-    private static final int CELL_W = 97;
-    private static final int CELL_H = 17;
+    /** The drill arena's left edge; Tails and his speech bubble stand left of it. */
+    private static final int ARENA_LEFT = 114;
+    private static final int CELL_W = 95;
+    private static final int CELL_H = 15;
     private static final int ROWS = 7;
 
     private final List<Drill> left = List.of(Drill.HOME_ROW, Drill.TOP_ROW, Drill.BOTTOM_ROW, Drill.NUMBERS,
@@ -69,6 +70,7 @@ final class SchoolScreen implements Screen {
         items.add(WordMenu.Item.of("BACK", "back", "menu"));
         words = new WordMenu(items);
         say(hub, hub.material.tails("welcome", (int) (hub.ticks / 7)));
+        hub.say(typinghog.audio.VoiceLine.TAILS_WELCOME);
         hub.audio.theme(HubAudio.Theme.SCHOOL);
     }
 
@@ -168,6 +170,7 @@ final class SchoolScreen implements Screen {
         modeTick = hub.ticks;
         typed = "";
         say(hub, hub.material.tails(drill.name(), 0));
+        hub.say(HubScene.line("TAILS_" + drill.name()));
         hub.audio.cue(HubAudio.Cue.CONFIRM);
     }
 
@@ -202,12 +205,17 @@ final class SchoolScreen implements Screen {
                 hub.audio.cue(HubAudio.Cue.ERROR);
                 if (e.signal() == DrillSession.Signal.RESTART || session.card().errors() % 4 == 1) {
                     say(hub, hub.material.tails("oops", session.card().errors()));
+                    hub.say(session.card().errors() % 8 == 1 ? typinghog.audio.VoiceLine.TAILS_KEEP_GOING
+                            : typinghog.audio.VoiceLine.TAILS_SLOW_DOWN);
                 }
             }
             case COMPLETE -> {
                 hub.audio.cue(HubAudio.Cue.CONFIRM);
                 int chain = session.card().chain();
-                if (chain > 0 && chain % 6 == 0) say(hub, hub.material.tails("cheer", chain / 6));
+                if (chain > 0 && chain % 6 == 0) {
+                    say(hub, hub.material.tails("cheer", chain / 6));
+                    hub.say(chain % 12 == 0 ? typinghog.audio.VoiceLine.TAILS_AWESOME : typinghog.audio.VoiceLine.TAILS_GREAT);
+                }
             }
             case ROUND_WON -> {
                 hub.audio.cue(HubAudio.Cue.REGISTER);
@@ -225,10 +233,17 @@ final class SchoolScreen implements Screen {
         mode = Mode.RESULT;
         modeTick = hub.ticks;
         typed = "";
+        boolean examWasOpen = School.examUnlocked(hub.profile);
         improved = School.record(hub.profile, session);
         hub.save();
         DrillSession.Result r = session.result();
         say(hub, hub.material.tails("grade." + r.grade(), (int) hub.ticks));
+        if (r.drill() == Drill.FINAL_EXAM && Grades.atLeast(r.grade(), "C")) {
+            hub.say(typinghog.audio.VoiceLine.TAILS_EXAM_PASSED);
+        } else {
+            hub.say(HubScene.line("TAILS_GRADE_" + r.grade()));
+        }
+        if (!examWasOpen && School.examUnlocked(hub.profile)) hub.say(typinghog.audio.VoiceLine.TAILS_UNLOCKED);
     }
 
     // ---- result -----------------------------------------------------------------------------
@@ -265,52 +280,61 @@ final class SchoolScreen implements Screen {
         }
     }
 
+    /** The drill grid's left edge: two {@link #CELL_W}-wide columns against the right edge. */
+    private static int gridX(int width) { return width - 2 * CELL_W - 6; }
+
+    /** Keycap size for the menu heatmap: smaller on narrow screens. */
+    private static int heatKey(int width) { return width >= 380 ? 12 : 10; }
+
     private void drawMenu(HubScene hub, SceneCanvas c, long t) {
-        hub.header(c, "TAILS' TYPING SCHOOL", School.examUnlocked(hub.profile) ? "FINAL EXAM OPEN" : School.drillsBelowC(hub.profile)
-                + " DRILLS TO PASS");
-        Hero.instructor(c, hub.art, hub.game, t, 30, 118, t - speechTick < 60);
-        Hero.speech(c, hub.font, speech, 50, 30, 140, 56, t - speechTick);
-        // The lifetime heatmap.
-        hub.font.shadow(c, "YOUR KEYS", 8, 126, Gfx.GOLD, 1);
-        keyboard.draw(c, hub.font, 12, 141, 12, 11, -1, hub.profile, t);
+        int w = c.width();
+        int gx = gridX(w);
+        hub.header(c, w >= 380 ? "TAILS' TYPING SCHOOL" : "TYPING SCHOOL", School.examUnlocked(hub.profile)
+                ? "FINAL EXAM OPEN" : School.drillsBelowC(hub.profile) + " DRILLS TO PASS");
+        Hero.instructor(c, hub.art, hub.game, t, 28, 132, t - speechTick < 60);
+        Hero.speech(c, hub.font, speech, 38, 26, Math.min(160, gx - 44), 44, t - speechTick);
+        // The lifetime heatmap, and the selected drill beside it.
+        int key = heatKey(w);
+        hub.font.shadow(c, "YOUR KEYS", 8, 136, Gfx.GOLD, 1);
+        keyboard.draw(c, hub.font, 12, 150, key, 9, -1, hub.profile, t);
         int shake = t - shakeTick < 10 ? (int) Math.round(Math.sin((t - shakeTick) * 2.2) * 3) : 0;
-        hub.font.shadow(c, "LESSONS", GRID_X + 4, GRID_Y - 2 + 0, 0xFF80D0FF, 1);
-        hub.font.shadow(c, "DRILLS", GRID_X + CELL_W + 4, GRID_Y - 2, 0xFF80D0FF, 1);
+        hub.font.shadow(c, "LESSONS", gx + 4, GRID_Y - 4, 0xFF80D0FF, 1);
+        hub.font.shadow(c, "DRILLS", gx + CELL_W + 4, GRID_Y - 4, 0xFF80D0FF, 1);
         for (int ci = 0; ci < 2; ci++) {
             List<Drill> list = ci == 0 ? left : right;
             for (int ri = 0; ri < list.size(); ri++) {
                 Drill d = list.get(ri);
-                int x = GRID_X + ci * CELL_W + shake, y = GRID_Y + 9 + ri * CELL_H;
+                int x = gx + ci * CELL_W + shake, y = GRID_Y + 6 + ri * CELL_H;
                 boolean on = ci == col && ri == row;
                 boolean locked = d == Drill.FINAL_EXAM && !School.examUnlocked(hub.profile);
                 if (on) Gfx.highlight(c, x, y, CELL_W - 3, CELL_H - 2, t);
                 else Gfx.panel(c, x, y, CELL_W - 3, CELL_H - 2, 0xC0101C48, d.exam() ? Gfx.GOLD_DARK : 0xFF3058B0);
                 String label = d.label.toUpperCase();
-                hub.font.shadow(c, label, x + 4, y + 3, locked ? 0xFF687088 : on ? Gfx.WHITE : Gfx.TEXT, 1);
+                hub.font.shadow(c, label, x + 4, y + 2, locked ? 0xFF687088 : on ? Gfx.WHITE : Gfx.TEXT, 1);
                 int index = all().indexOf(d);
                 if (on && words.matched(index) > 0 && words.spelling(index).equalsIgnoreCase(d.word)) {
-                    hub.font.draw(c, label.substring(0, Math.min(label.length(), words.matched(index))), x + 4, y + 3,
+                    hub.font.draw(c, label.substring(0, Math.min(label.length(), words.matched(index))), x + 4, y + 2,
                             Gfx.TYPED, 1);
                 }
                 String grade = hub.profile.grade(d.name());
                 if (locked) {
                     SceneImage lock = hub.art.image("lock");
-                    if (lock != null) c.draw(lock, x + CELL_W - 15, y + 2);
+                    if (lock != null) c.draw(lock, x + CELL_W - 15, y + 1);
                 } else if (grade != null) {
-                    badge(hub, c, grade, x + CELL_W - 14, y + 1);
+                    badge(hub, c, grade, x + CELL_W - 15, y);
                 }
             }
         }
         Drill d = selected();
-        int iy = GRID_Y + 9 + ROWS * CELL_H + 4;
-        Gfx.panel(c, GRID_X, iy, c.width() - GRID_X - 6, 46);
-        hub.font.shadow(c, d.label.toUpperCase(), GRID_X + 6, iy + 5, Gfx.GOLD, 1);
+        int ix = 12 + Keyboard.width(key) + 14, iy = GRID_Y + 6 + ROWS * CELL_H + 5, iw = w - ix - 6;
+        Gfx.panel(c, ix, iy, iw, 204 - iy);
+        hub.font.shadow(c, d.label.toUpperCase(), ix + 6, iy + 5, Gfx.GOLD, 1);
         String best = hub.profile.grade(d.name());
-        hub.font.right(c, best == null ? "NOT TRIED" : "BEST " + best, c.width() - 12, iy + 5, Grades.colour(best), 1);
+        hub.font.right(c, best == null ? "NOT TRIED" : "BEST " + best, w - 12, iy + 5, Grades.colour(best), 1);
         int ly = iy + 17;
-        for (String line : hub.font.wrap(describe(d), c.width() - GRID_X - 18, 1)) {
-            if (ly > iy + 38) break;
-            hub.font.shadow(c, line, GRID_X + 6, ly, Gfx.TEXT, 1);
+        for (String line : hub.font.wrap(describe(d), iw - 12, 1)) {
+            if (ly > 204 - 12) break;
+            hub.font.shadow(c, line, ix + 6, ly, Gfx.TEXT, 1);
             ly += 10;
         }
         hub.footer(c, words.buffer(), "TYPE A LESSON OR DRILL");
@@ -355,13 +379,15 @@ final class SchoolScreen implements Screen {
         }
         hub.header(c, d.label.toUpperCase(), right);
         var card = session.card();
-        String hud = String.format(java.util.Locale.ROOT, "WPM %d   ACC %.0f%%   CHAIN %d   SCORE %d",
-                Math.round(card.wpm()), card.accuracy() * 100, card.chain(), card.score());
-        hub.font.shadow(c, hud, 118, 28, Gfx.TEXT, 1);
+        String hud = String.format(java.util.Locale.ROOT, "WPM %d  ACC %.0f%%  CHAIN %d",
+                Math.round(card.wpm()), card.accuracy() * 100, card.chain());
+        String score = "SCORE " + card.score();
+        if (hub.font.width(hud + "  " + score, 1) <= w - ARENA_LEFT - 8) hud += "  " + score;
+        hub.font.shadow(c, hud, ARENA_LEFT + 4, 28, Gfx.TEXT, 1);
         Hero.instructor(c, hub.art, hub.game, t, 24, 140, t - speechTick < 60);
         Hero.speech(c, hub.font, speech, 6, 28, 104, 20, t - speechTick);
         int shake = t - shakeTick < 10 ? (int) Math.round(Math.sin((t - shakeTick) * 2.2) * 3) : 0;
-        int cx = 110 + (w - 110) / 2;
+        int cx = ARENA_LEFT + (w - ARENA_LEFT - 6) / 2;
         if (session.phase() == DrillSession.Phase.READY) {
             String word = session.rows() < 50 ? "READY?" : "GO!";
             hub.font.outline(c, word, cx - hub.font.width(word, 3) / 2, 70, session.rows() < 50 ? Gfx.WHITE : Gfx.GOLD,
@@ -369,8 +395,9 @@ final class SchoolScreen implements Screen {
         } else {
             arena(hub, c, cx, shake, t);
         }
-        int kw = Keyboard.width(18);
-        keyboard.draw(c, hub.font, (w - kw) / 2, 144, 18, 13, session.expected(), null, t);
+        int key = w >= 380 ? 18 : 16;
+        int kw = Keyboard.width(key);
+        keyboard.draw(c, hub.font, (w - kw) / 2, 144, key, 13, session.expected(), null, t);
     }
 
     private void arena(HubScene hub, SceneCanvas c, int cx, int shake, long t) {
@@ -385,25 +412,31 @@ final class SchoolScreen implements Screen {
         }
         switch (item.kind()) {
             case QUIZ -> {
-                Gfx.panel(c, 116, 40, c.width() - 124, 34, 0xE0401018, 0xFFFF6040);
-                hub.font.shadow(c, "ROBOTNIK'S QUIZ", 122, 44, 0xFFFF9080, 1);
-                int qy = 55;
-                for (String line : hub.font.wrap(item.display(), c.width() - 136, 1)) {
-                    hub.font.shadow(c, line, 122, qy, Gfx.WHITE, 1);
+                int aw = c.width() - ARENA_LEFT - 6;
+                var question = hub.font.wrap(item.display(), aw - 12, 1);
+                Gfx.panel(c, ARENA_LEFT, 38, aw, 16 + question.size() * 10, 0xE0401018, 0xFFFF6040);
+                hub.font.shadow(c, "ROBOTNIK'S QUIZ", ARENA_LEFT + 6, 42, 0xFFFF9080, 1);
+                int qy = 53;
+                for (String line : question) {
+                    hub.font.shadow(c, line, ARENA_LEFT + 6, qy, Gfx.WHITE, 1);
                     qy += 10;
                 }
                 int n = targets.size();
+                int widest = 0;
+                for (TypingField.Target target : targets) widest = Math.max(widest, hub.font.width(target.prompt().display(), 1) + 10);
+                boolean side = widest * n <= aw;
                 for (int i = 0; i < n; i++) {
                     TypingField.Target target = targets.get(i);
-                    int px = 116 + (c.width() - 124) * (2 * i + 1) / (2 * n);
+                    int px = side ? ARENA_LEFT + aw * (2 * i + 1) / (2 * n) : ARENA_LEFT + aw / 2;
+                    int py = side ? Math.max(qy + 8, 92) : qy + 6 + i * 15;
                     boolean locked = target.id() == session.lockedId();
-                    Gfx.plate(c, hub.font, target.prompt().display(), target.progress(), px, 92,
+                    Gfx.plate(c, hub.font, target.prompt().display(), target.progress(), px, py,
                             locked ? Gfx.GOLD : 0xFFE0E0E0, 1, locked ? shake : 0);
                 }
             }
             case LETTER -> {
                 int index = session.completed() * 7 + 3;
-                int px = 140 + Math.floorMod(index * 53, c.width() - 170);
+                int px = ARENA_LEFT + 26 + Math.floorMod(index * 53, c.width() - ARENA_LEFT - 58);
                 int py = 48 + Math.floorMod(index * 29, 60);
                 float fade = rowsLeft < 0 ? 1 : Math.min(1, rowsLeft / 30f);
                 int rim = Gfx.alpha(0xFFFF6040, 0.4f + 0.6f * fade);
@@ -419,7 +452,7 @@ final class SchoolScreen implements Screen {
                         ? 0xFFFF9080 : 0xFF80D0FF, 1);
                 TypingField.Target target = targets.getFirst();
                 String text = target.prompt().display();
-                int scale = hub.font.width(text, 2) + 12 > c.width() - 120 ? 1 : 2;
+                int scale = hub.font.width(text, 2) + 16 > c.width() - ARENA_LEFT - 6 ? 1 : 2;
                 int progress = displayProgress(target, item);
                 Gfx.plate(c, hub.font, text, progress, cx, 64, target.id() == session.lockedId() ? Gfx.GOLD : 0xFFE0E0E0,
                         scale, shake);
@@ -427,7 +460,10 @@ final class SchoolScreen implements Screen {
                 int ny = 64 + Gfx.plateHeight(scale) + 8;
                 for (int i = 0; i < next.size(); i++) {
                     int alpha = 200 - i * 60;
-                    hub.font.centred(c, next.get(i), cx, ny + i * 11, (alpha << 24) | 0xC8D0E8, 1);
+                    String upcoming = next.get(i);
+                    int room = (c.width() - ARENA_LEFT - 12) / HubFont.ADVANCE;
+                    if (upcoming.length() > room) upcoming = upcoming.substring(0, Math.max(1, room - 1)).strip() + ".";
+                    hub.font.centred(c, upcoming, cx, ny + i * 11, (alpha << 24) | 0xC8D0E8, 1);
                 }
             }
         }
@@ -438,7 +474,7 @@ final class SchoolScreen implements Screen {
                 case TALK_BACK -> DrillSession.TALK_BACK_ROWS;
                 default -> DrillSession.QUIZ_ROWS;
             };
-            Gfx.meter(c, 120, 132, c.width() - 132, 3, rowsLeft / (double) limit, rowsLeft < limit / 4 ? Gfx.RED : Gfx.GOLD);
+            Gfx.meter(c, ARENA_LEFT + 6, 134, c.width() - ARENA_LEFT - 18, 3, rowsLeft / (double) limit, rowsLeft < limit / 4 ? Gfx.RED : Gfx.GOLD);
         }
     }
 
@@ -459,10 +495,12 @@ final class SchoolScreen implements Screen {
         DrillSession.Result r = session.result();
         long age = t - modeTick;
         int w = c.width();
+        // The report card sits on the right, up to 200 wide; Tails reads it out on the left.
+        int pw = Math.min(200, w - 120), px = w - pw - 6;
         hub.header(c, r.drill().label.toUpperCase(), "RESULTS");
-        Hero.instructor(c, hub.art, hub.game, t, 30, 118, t - speechTick < 60);
-        Hero.speech(c, hub.font, speech, 50, 34, 140, 56, t - speechTick);
-        Gfx.panel(c, 200, 30, w - 206, 150);
+        Hero.instructor(c, hub.art, hub.game, t, 30, 132, t - speechTick < 60);
+        Hero.speech(c, hub.font, speech, 6, 30, Math.min(140, px - 12), 24, t - speechTick);
+        Gfx.panel(c, px, 30, pw, 152);
         String[] labels = {"SPEED", "ACCURACY", "WORDS", "BEST CHAIN", "SCORE"};
         String[] values = {Math.round(r.wpm()) + " WPM", String.format(java.util.Locale.ROOT, "%.1f%%", r.accuracy() * 100),
                 r.completed() + (r.total() > 0 ? " / " + r.total() : ""), Integer.toString(r.bestChain()),
@@ -476,12 +514,13 @@ final class SchoolScreen implements Screen {
             labels[2] = "ROUNDS WON";
             values[2] = r.successes() + " / " + r.total();
         }
+        int tx = px + 8;
         for (int i = 0; i < labels.length; i++) {
             if (age < 6 + i * 4L) break;
-            hub.font.shadow(c, labels[i], 208, 40 + i * 14, Gfx.TEXT, 1);
+            hub.font.shadow(c, labels[i], tx, 40 + i * 14, Gfx.TEXT, 1);
             hub.font.right(c, values[i], w - 70, 40 + i * 14, Gfx.WHITE, 1);
         }
-        if (r.failed()) hub.font.shadow(c, "ONE SLIP AND OUT!", 208, 112, Gfx.RED, 1);
+        if (r.failed()) hub.font.shadow(c, "ONE SLIP AND OUT!", tx, 112, Gfx.RED, 1);
         if (age >= 24) {
             long g = age - 24;
             int s = g < 8 ? (int) (5 + (8 - g)) : 5;
@@ -492,17 +531,18 @@ final class SchoolScreen implements Screen {
                     if (dx != 0 || dy != 0) hub.font.draw(c, grade, gx + dx * 2, gy + dy * 2, 0xFF101028, s);
             hub.font.draw(c, grade, gx, gy, Grades.colour(grade), s);
             hub.font.centred(c, "GRADE", w - 38, 36, Gfx.DIM, 1);
-            if (improved) hub.font.shadow(c, (t / 8) % 2 == 0 ? "NEW BEST GRADE!" : "", 208, 126, Gfx.GOLD, 1);
+            if (improved) hub.font.shadow(c, (t / 8) % 2 == 0 ? "NEW BEST GRADE!" : "", tx, 126, Gfx.GOLD, 1);
             if (r.drill() == Drill.FINAL_EXAM && Grades.atLeast(r.grade(), "C")) {
-                hub.font.shadow(c, "GRADUATED! TYPING MASTER SONIC", 208, 140, 0xFF60FF70, 1);
+                hub.font.shadow(c, "GRADUATED! TYPING MASTER", tx, 140, 0xFF60FF70, 1);
             }
             if (School.examUnlocked(hub.profile) && r.drill() != Drill.FINAL_EXAM && improved) {
-                hub.font.shadow(c, "THE FINAL EXAM IS OPEN!", 208, 154, 0xFF80D0FF, 1);
+                hub.font.shadow(c, "THE FINAL EXAM IS OPEN!", tx, 140, 0xFF80D0FF, 1);
             }
         }
-        // The keys this drill missed, on the keyboard.
-        hub.font.shadow(c, "MISSED KEYS: " + missed(session), 10, 132, Gfx.DIM, 1);
-        if (age > 20 && (t / 20) % 3 != 0) hub.font.centred(c, "ENTER: BACK TO CLASS   AGAIN: TRY AGAIN", w / 2, 192, Gfx.WHITE, 1);
+        // The keys this drill missed.
+        hub.font.shadow(c, "MISSED: " + missed(session), tx, 166, Gfx.DIM, 1);
+        if (age > 20 && (t / 20) % 3 != 0) hub.font.centred(c, "ENTER: BACK TO CLASS   AGAIN: TRY AGAIN", w / 2, 192,
+                Gfx.WHITE, 1);
     }
 
     private static String missed(DrillSession s) {

@@ -13,13 +13,13 @@ final class TitleScreen implements Screen {
     private static final String WORD = "start";
     private static final int DROP = 36;
     private static final int EXIT = 40;
-    private static final int SONIC_X = 92;
 
     private long opened;
     private int typed;
     private long shakeTick = -100;
     private long exitTick = -1;
     private boolean skipIntro;
+    private boolean prompted;
 
     @Override public String name() { return "TITLE"; }
 
@@ -31,6 +31,7 @@ final class TitleScreen implements Screen {
         typed = 0;
         exitTick = -1;
         hub.audio.theme(HubAudio.Theme.TITLE);
+        prompted = false;
     }
 
     @Override public void update(HubScene hub) {
@@ -38,6 +39,11 @@ final class TitleScreen implements Screen {
         if (exitTick >= 0) {
             if (hub.ticks - exitTick >= EXIT) hub.go(hub.menu);
             return;
+        }
+        if (age == DROP) hub.say(typinghog.audio.VoiceLine.ANNOUNCER_TITLE);
+        if (!prompted && typed == 0 && age >= DROP + 480) {
+            prompted = true;
+            hub.say(typinghog.audio.VoiceLine.ANNOUNCER_PRESS_ANY_KEY);
         }
         if (age < DROP / 2) return;
         Controls in = hub.controls;
@@ -72,15 +78,16 @@ final class TitleScreen implements Screen {
         long age = t - opened;
         hub.stage.draw(c, t);
         int w = c.width();
+        int sonicX = sonicX(w);
         // Sonic, waiting; on START he curls up and rockets off.
-        int floor = hub.stage.floorRow(SONIC_X, t);
+        int floor = hub.stage.floorRow(sonicX, t);
         if (exitTick < 0) {
-            Hero.sonic(c, hub.art, hub.game, HubArt.ANIM_WAIT, t, SONIC_X, floor, false, 1f);
-            letters(hub, c, t, floor);
+            Hero.sonic(c, hub.art, hub.game, HubArt.ANIM_WAIT, t, sonicX, floor, false, 1f);
+            letters(hub, c, t, sonicX, floor);
         } else {
             long e = t - exitTick;
             int anim = e < 10 ? HubArt.ANIM_ROLL : HubArt.ANIM_RUN;
-            int x = SONIC_X + (int) (e < 10 ? 0 : (e - 10) * (e - 10) / 2);
+            int x = sonicX + (int) (e < 10 ? 0 : (e - 10) * (e - 10) / 2);
             Hero.sonic(c, hub.art, hub.game, anim, t, x, hub.stage.floorRow(Math.min(w - 1, x), t), false, 1f);
         }
         // The logo drops in with a bounce.
@@ -98,7 +105,8 @@ final class TitleScreen implements Screen {
         if (age < DROP / 2) return;
         // The prompt plate.
         int shake = t - shakeTick < 10 ? (int) Math.round(Math.sin((t - shakeTick) * 2.2) * 3) : 0;
-        int px = w / 2 + 64, py = 128;
+        // The plate sits in the right-hand two thirds, clear of Sonic at any width.
+        int px = (sonicX + 40 + w) / 2 + 6, py = 128;
         float pop = Math.min(1, (age - DROP / 2f) / 10f);
         if (pop > 0.2f) {
             Gfx.plate(c, hub.font, "START", typed, px, py, typed > 0 ? Gfx.GOLD : 0xFFE0E0E0, 2, shake);
@@ -120,8 +128,11 @@ final class TitleScreen implements Screen {
         hub.font.shadow(c, "AN OPENGGF EXAMPLE MOD", 8, c.height() - 14, 0xC0FFFFFF, 1);
     }
 
+    /** Sonic's spot: a quarter of the way in, but never further than on a 4:3 screen's 92. */
+    static int sonicX(int width) { return Math.min(92, Math.max(56, width / 4)); }
+
     /** Letters drifting up out of Sonic's keyboard. */
-    private void letters(HubScene hub, SceneCanvas c, long t, int floor) {
+    private void letters(HubScene hub, SceneCanvas c, long t, int sonicX, int floor) {
         String pool = "TYPINGHEDGEHOG";
         for (int i = 0; i < 5; i++) {
             long life = (t + i * 37) % 110;
@@ -129,7 +140,7 @@ final class TitleScreen implements Screen {
             int seed = (int) ((t + i * 37) / 110) * 7 + i * 13;
             char ch = pool.charAt(Math.floorMod(seed, pool.length()));
             float rise = life / 80f;
-            int x = SONIC_X - 22 + (int) Math.round(Math.sin(life * 0.12 + i) * 8) - (int) (rise * 14);
+            int x = sonicX - 22 + (int) Math.round(Math.sin(life * 0.12 + i) * 8) - (int) (rise * 14);
             int y = floor - 34 - (int) (rise * 56);
             float a = rise < 0.7f ? 1f : (1 - rise) / 0.3f;
             int colour = (i % 2 == 0) ? 0xFFFFE060 : 0xFFFFFFFF;
