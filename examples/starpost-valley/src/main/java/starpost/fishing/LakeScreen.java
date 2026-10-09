@@ -51,6 +51,8 @@ public final class LakeScreen implements Screen {
     private final Runner runner;
     private final Ground ground = new Ground();
     private final Anim anim = new Anim();
+    private final starpost.art.Dust dust;
+    private final starpost.art.TailsTails tails;
     private final Line line = new Line();
     /** The pool's surface: the first water row under block 51's log. */
     private final int poolY;
@@ -66,6 +68,10 @@ public final class LakeScreen implements Screen {
     private String landedId;
     private boolean landedFreed;
     private int fallen;
+    /** When the line last went out and came back in (the rod's whip and lift), and whether it is out. */
+    private long castAt = -1000;
+    private long inAt = -1000;
+    private boolean wasOut;
     /** The water's four cycle steps: block 52 whole, and the pool rows of block 51. */
     private final SceneImage[] fall = new SceneImage[4];
     private final SceneImage[] pool = new SceneImage[4];
@@ -96,6 +102,8 @@ public final class LakeScreen implements Screen {
         this.shell = shell;
         this.play = play;
         this.sys = sys;
+        this.dust = shell.art.newDust();
+        this.tails = shell.art.newTails();
         contest = done != null;
         contestLeft = Math.max(0, seconds) * 60;
         contestDone = done;
@@ -208,6 +216,14 @@ public final class LakeScreen implements Screen {
             return;
         }
         fish(shell, game);
+        if (line.out() != wasOut) {
+            wasOut = line.out();
+            if (wasOut) {
+                castAt = shell.ticks;
+            } else {
+                inAt = shell.ticks;
+            }
+        }
         boolean free = !line.out() && !charging;
         if (runner.step(ground, free && shell.in.left, free && shell.in.right, free && shell.in.down,
                 free && shell.in.jump, free && shell.in.jumpHeld, (int) shell.ticks)) {
@@ -308,9 +324,15 @@ public final class LakeScreen implements Screen {
         return p > 1 ? 2 - p : p;
     }
 
+    /** The rod wound back over the shoulder as the cast's power builds. */
+    private float windAngle() {
+        return Rod.REST + (Rod.BACK - Rod.REST) * power();
+    }
+
     private void cast(Shell shell, Game game) {
         float dir = runner.facingLeft ? -1 : 1;
-        float tipX = runner.x + dir * 19, tipY = runner.y - 33;
+        float[] tip = Rod.tip(game.farmer, windAngle());
+        float tipX = runner.x + dir * tip[0], tipY = runner.y - tip[1];
         float tx = tipX + dir * (30 + power() * 230);
         if (tx < SHORE_END + 8) {
             shell.toast("THE LINE LANDS ON THE BANK");
@@ -396,16 +418,34 @@ public final class LakeScreen implements Screen {
 
     private void animate() {
         float speed = Math.abs(runner.speed);
-        if (runner.rolling || !runner.onGround) {
+        if (runner.flying) {
+            anim.set(Anim.flying(runner.flyTimer == 0, runner.ySpeed), 0x0B);
+        } else if (runner.gliding) {
+            anim.set(0x20, 3);                                // Knuckles's glide
+        } else if (runner.climbing) {
+            anim.set(0x22, 8);                                // GLIDE_LAND frames on the wall
+        } else if (runner.rolling || !runner.onGround) {
             anim.set(Anim.ROLL, Math.max(0, 4 - (int) speed));
+        } else if (runner.dashing) {
+            anim.set(Anim.SPINDASH, 0);
         } else if (runner.ducking) {
             anim.set(Anim.DUCK, 6);
         } else if (speed > 0.05f) {
             anim.set(speed >= Runner.TOP ? Anim.RUN : Anim.WALK, Math.max(0, 8 - (int) speed));
+        } else if (line.out() || charging || rod(shell.game)) {
+            anim.hold(Anim.WAIT);                             // holding still at the rod: the standing frame
         } else {
             anim.set(Anim.WAIT, 6);
         }
         anim.tick();
+        dust.update(anim.id() == Anim.SPINDASH, false, false, false, runner.x, originY(runner.y));
+        tails.update(anim.id(), runner.facingLeft, runner.speed, runner.onGround ? 0 : runner.ySpeed);
+    }
+
+    /** The farmer's body origin (the ROM's x_pos/y_pos row) for feet at world row {@code feet}. */
+    private float originY(float feet) {
+        SceneSprite pose = anim.pose(shell.art.farmer(shell.game.farmer));
+        return anim.id() == Anim.ROLL ? feet - 15 : feet - (pose.height() - pose.originY());
     }
 
     /** Builds the water's cycle frames for the season (in update: never in draw). */
@@ -656,30 +696,55 @@ public final class LakeScreen implements Screen {
         var set = shell.art.farmer(shell.game.farmer);
         SceneSprite pose = anim.pose(set);
         SceneDraw style = tint.withFlipX(runner.facingLeft);
-        float feet = runner.y - cy;
-        float originY = anim.id() == Anim.ROLL ? feet - 15 : feet - (pose.height() - pose.originY());
+        float originY = originY(runner.y) - cy;
         if (shell.game.farmer.equals("tails")) {
-            Anim.drawTails(canvas, shell.art.tailsTails, anim.id(), shell.ticks, runner.x - cx, originY, style);
+            tails.draw(canvas, shell.art.tailsTails, runner.x - cx, originY, style);
         }
         canvas.draw(pose, runner.x - cx, originY, style);
-        if (rod(shell.game) && (line.out() || charging)) {
-            float dir = runner.facingLeft ? -1 : 1;
-            boolean pulling = line.state == Line.BITE || line.state == Line.FIGHT;
-            float back = charging ? power() * 10 : 0;
-            float bend = pulling ? (float) Math.sin(shell.ticks / 2.0) * 2 + 6 : 0;
-            PondLine.drawLine(canvas, runner.x - cx + dir * 6, feet - 17, runner.x - cx + dir * (19 - back - bend / 2),
-                    feet - 33 - back / 2 + bend, 0xFF924900, 0);
+        SceneSpriteSet puffs = shell.art.dust(shell.game.farmer);
+        dust.drawDash(canvas, puffs, runner.x - cx, originY, runner.facingLeft, tint);
+        dust.drawPuffs(canvas, puffs, cx, cy, tint);
+        float[] rod = rodPose();
+        if (rod != null) {
+            Rod.draw(canvas, rod[0] - cx, rod[1] - cy, rod[2], rod[3], rod[4]);
         }
     }
 
-    private void drawLine(Shell shell, SceneCanvas canvas, int cx, int cy) {
-        if (!line.out()) {
-            return;
+    /**
+     * The rod in hand as {hand x, hand y, direction, angle, bend} in world pixels, or null when no
+     * rod shows: wound back while charging, whipped forward by the cast, low while waiting, bent
+     * on a bite, lifted as the line comes in, up at rest while he stands holding it.
+     */
+    private float[] rodPose() {
+        boolean still = runner.onGround && runner.speed == 0 && !runner.dashing && !runner.ducking && anim.id() == Anim.WAIT;
+        if (fallen > 0 || !rod(shell.game) || !line.out() && !charging && !still) {
+            return null;
         }
         float dir = runner.facingLeft ? -1 : 1;
+        float[] hand = Rod.hand(shell.game.farmer);
         boolean pulling = line.state == Line.BITE || line.state == Line.FIGHT;
-        float bend = pulling ? (float) Math.sin(shell.ticks / 2.0) * 2 + 6 : 0;
-        float tipX = runner.x - cx + dir * (19 - bend / 2), tipY = runner.y - cy - 33 + bend;
+        float angle = charging ? windAngle()
+                : line.state == Line.FLYING ? Rod.castAngle((int) (shell.ticks - castAt))
+                : line.out() ? (pulling ? Rod.BITE : Rod.WAIT)
+                : Rod.reelAngle((int) Math.min(shell.ticks - inAt, 1000));
+        float bend = Rod.bend(shell.ticks, pulling) + (line.nibble > 0 ? 2 : 0);
+        return new float[] {runner.x + dir * hand[0], runner.y - hand[1], dir, angle, bend};
+    }
+
+    private void drawLine(Shell shell, SceneCanvas canvas, int cx, int cy) {
+        float[] rod = rodPose();
+        float[] rodTip = rod == null ? null : Rod.tipAt(rod[0] - cx, rod[1] - cy, rod[2], rod[3], rod[4]);
+        if (rodTip != null && !line.out() && shell.ticks - inAt < Rod.REEL_TICKS) {
+            // The line winds in to the tip from where the bobber lay.
+            float t = (shell.ticks - inAt) / (float) Rod.REEL_TICKS;
+            float bx = line.toX - cx + (rodTip[0] - (line.toX - cx)) * t, by = line.toY - cy + (rodTip[1] - (line.toY - cy)) * t;
+            PondLine.drawLine(canvas, rodTip[0], rodTip[1], bx, by, 0xC0FFFFFF, 0);
+        }
+        if (!line.out() || rodTip == null) {
+            return;
+        }
+        boolean pulling = line.state == Line.BITE || line.state == Line.FIGHT;
+        float tipX = rodTip[0], tipY = rodTip[1];
         float bx = line.bobberX() - cx, by = line.bobberY() - cy;
         PondLine.drawLine(canvas, tipX, tipY, bx, by, 0xC0FFFFFF, pulling ? 0 : 10);
         if (line.state == Line.WAITING || line.state == Line.FLYING) {

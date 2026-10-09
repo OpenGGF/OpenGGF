@@ -33,6 +33,8 @@ public final class ValleyView {
     private boolean looping;
     private float loopAngle;
     private final Anim anim = new Anim();
+    private final starpost.art.Dust dust;
+    private final starpost.art.TailsTails tails;
     /** Set by the play screen: the valley's actors, and the action button offered to them. */
     public java.util.function.IntFunction<List<Actor>> actors = view -> List.of();
     public java.util.function.BooleanSupplier interact = () -> false;
@@ -53,6 +55,8 @@ public final class ValleyView {
     public ValleyView(Shell shell) {
         this.shell = shell;
         this.valley = new Valley(shell.art);
+        this.dust = shell.art.newDust();
+        this.tails = shell.art.newTails();
     }
 
     /** Arrives from the farm gate, running east. */
@@ -113,6 +117,10 @@ public final class ValleyView {
             }
         }
         animate();
+        dust.update(anim.id() == Anim.SPINDASH, false, false, false, runner.x, originY(runner.y));
+        // Round the loop his velocity is the circle's tangent (the angle grows anticlockwise on screen).
+        tails.update(anim.id(), runner.facingLeft, looping ? (float) Math.cos(loopAngle) : runner.speed,
+                looping ? -(float) Math.sin(loopAngle) : runner.onGround ? 0 : runner.ySpeed);
         float targetX = runner.x - shell.width() / 2f + (runner.facingLeft ? -24 : 24);
         camX += (clampX(targetX) - camX) * 0.18f;
         camY += (clampY(runner.y - 150) - camY) * 0.15f;
@@ -144,7 +152,7 @@ public final class ValleyView {
     private void animate() {
         float speed = Math.abs(runner.speed);
         if (runner.flying) {
-            anim.set(runner.flyTimer > 0 ? 0x20 : 0x24, runner.flyTimer > 0 ? 1 : 4);   // TAILS_FLY, TAILS_FLY_TIRED
+            anim.set(Anim.flying(runner.flyTimer == 0, runner.ySpeed), 0x0B);           // AniTails24's delay
         } else if (runner.gliding) {
             anim.set(0x20, 3);                                                         // Knuckles's glide
         } else if (runner.climbing) {
@@ -236,16 +244,24 @@ public final class ValleyView {
         }
     }
 
+    /** The farmer's body origin (the ROM's x_pos/y_pos row) for feet at {@code feet}. */
+    private float originY(float feet) {
+        SceneSprite pose = anim.pose(shell.art.farmer(shell.game.farmer));
+        return looping ? feet : anim.id() == Anim.ROLL ? feet - 15 : feet - (pose.height() - pose.originY());
+    }
+
     private void drawFarmer(SceneCanvas canvas, SceneDraw tint, int cx, int cy) {
         SceneSpriteSet set = shell.art.farmer(shell.game.farmer);
         SceneSprite pose = anim.pose(set);
         SceneDraw style = tint.withFlipX(runner.facingLeft);
-        float feet = runner.y - cy;
-        float originY = looping ? feet : anim.id() == Anim.ROLL ? feet - 15 : feet - (pose.height() - pose.originY());
+        float originY = originY(runner.y) - cy;
         if (shell.game.farmer.equals("tails")) {
-            Anim.drawTails(canvas, shell.art.tailsTails, anim.id(), shell.ticks, runner.x - cx, originY, style);
+            tails.draw(canvas, shell.art.tailsTails, runner.x - cx, originY, style);
         }
         canvas.draw(pose, runner.x - cx, originY, style);
+        SceneSpriteSet puffs = shell.art.dust(shell.game.farmer);
+        dust.drawDash(canvas, puffs, runner.x - cx, originY, runner.facingLeft, tint);
+        dust.drawPuffs(canvas, puffs, cx, cy, tint);
     }
 
     static void drawSprite(SceneCanvas canvas, SceneSpriteSet set, int frame, float x, float feet, SceneDraw style,

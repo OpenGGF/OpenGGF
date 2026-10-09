@@ -1453,3 +1453,146 @@ Chaos Sneakers farmer), the formal `TestStarpostValleyExample` bridge (the lead 
 of a Ruins part or relic drop (random; the drop path is the Ruins' own pickup with the museum's
 icons), more minerals than the Ruins' eight, and tree-specific gifts or recipes (the Chaos Cherry and
 coconut only sell, fill jars and restore Momentum).
+
+## 20. ROM-art polish (lane)
+
+Branch `feature/ai-starpost-polish` (base `6b849cca0`, checkpoint `bdb01073d`). The user's notes on the highlight reel: the
+spin dash had no dust, Tails flew without his tails, the loop did not hide Sonic as the real game's
+priority does, and the fishing rod was missing. Following the lead's course change, everything
+reuses the engine's scene art toolkit (`StockSceneArt`, `SceneArtCache`, `PaletteAssembly`,
+`RomAnimationPlayer`) and plays the ROM's own animation tables, read from the ROM at run time.
+The belt-view farm is the main target: the valley, the lake and the Ruins may move onto the engine's
+real player and levels, so their hooks are kept thin.
+
+### Dust
+
+| Part | Where | Notes |
+|---|---|---|
+| Art | `StockSceneArt.S3K_DASH_DUST` (engine) | `ArtUnc_DashDust` ($18A604, 5,952 bytes) through `DPLC_DashSplashDrown` ($18EE2, player DPLC layout) with `Map_DashDust` ($18DF4). Obj_DashDust's `art_tile` is `make_art_tile(ArtTile_DashDust,0,0)`: palette line 0, the player's own, so each farmer's bank uses `PaletteAssembly().line(0, characterPalette(farmer))`, held in a `SceneArtCache`. |
+| Scripts | `art/Dust` | `Ani_DashSplashDrown` ($18DC0, 52 bytes) read from the ROM and played by `RomAnimationPlayer`. Charging: animation 2 (frames $A-$10, two ticks each) at the player's x_pos/y_pos and facing (loc_18C20), back to the blank animation 0 on release. Skidding: routine 6 (loc_18CB6) allocates a puff every fourth frame of the skid animation $D, starting at once, at x and y+$10, unflipped; each plays animation 3 ($11-$14, four ticks each) where it fell, and the script's $FC ends it. Sonic_MoveLeft/Right first sets the parent dust's mapping frame to $15, whose DPLC loads the shared 16-tile bank. The child frames $11-$14 have empty cues and select four quadrants of that bank. `Art.DustBank` combines the charge recipe with a cached uncompressed request derived from cue $15's ROM bytes, retaining the original mappings; decoding child cues independently produces blank puffs. No puffs under water; nothing while short of air (air_left < 12). The object's priority $80 draws it in front of the player ($100). |
+| Skid | `farm/BeltRunner` | Sonic_MoveLeft/Right (sub_113F6 $113F6, sub_11482 $11482) skid when braking leaves $400 or more. FixBugs off: the angle check overwrites the speed's low byte first, so the compare sees the speed with its low byte cleared: $400 from the right, just over $300 from the left. Braking keeps the farmer facing his slide; turning or leaving the ground ends it. The skid plays AniSonic0D's 16 ticks. Holding into the field boundary now stops movement and plays the push pose (including Tails's matching tail script); releasing or jumping ends it, and the east gate still exits. This correction is `5a2413cde`. |
+| Views | `FarmView` (all farmers); `ValleyView`, `LakeScreen`, `RuinsScreen` (spin dash only) | Drawn right after the farmer at his body origin. |
+
+### Tails's tails
+
+`art/TailsTails` runs Obj_Tails_Tail ($160A6): `Obj_Tails_Tail_AniSelection` ($16164, 50 bytes) picks
+the tails' script when Tails's body animation changes, and `AniTails_Tail` ($16196, 100 bytes) is
+played by `RomAnimationPlayer`; both tables are read from the ROM. Walking and running give the
+blank script (those body frames carry their own tails); waiting and ducking swish; looking up flicks
+once and swishes ($FD); spin dash, skid and push have their own; flying ($20) and tired ($24) flap
+Fly1, rising ($21) Fly2. Roll's script has the delay byte $FC, which Animate_Tails_Part2 hands to
+loc_15A3C ($15A3C) and `RomAnimationPlayer` does not cover: every fourth frame GetArcTan ($1FE4) of
+Tails's velocity picks one of four frame groups and mirrors both ways for the other half circle, so
+rolling and jumping tails trail along his path (round the farm loop, the circle's tangent). The
+tails share his origin, flip and priority band and are drawn before him (behind). The flying body
+animation now follows Tails_Set_Flying_Animation ($148AC): $21 rising, $20 sinking, $24 tired.
+
+### Fishing rod
+
+`fishing/Rod` is an original drawing in Mega Drive colours (no ROM has a rod): a red blank with a
+dark outline tapering to a white tip, a grip at the hand and a grey reel. Its angle follows the
+line: up at rest while the farmer stands holding it, wound back over the shoulder while the lake's
+cast charges, whipped forward by the cast (6 ticks), low while waiting, dipped by a nibble, bent
+and shaking on a bite, lifted as the line comes in while the line winds back to the tip. The
+farmer holds the standing frame while holding the rod (`FarmView.holdStill`, `Anim.hold`), so the
+idle fidgets do not fight it. The cast starts from the rod's tip. Each farmer has a hand position
+in his standing frame.
+
+### Parked (lead's course change)
+
+The valley and the Ruins may move onto the engine's real player and levels, which would make a
+scene-side loop occlusion moot, so these were built and set aside unmerged
+(patches in `~/scratch/sv-polish/parked/`):
+
+- **Loop occlusion by tile priority.** Sonic_Loops (s1disasm `_incObj/01 Sonic.asm`) only toggles
+  `sprite_looping_bit`, which FindNearestTile uses to pick the loop's alternate collision chunk;
+  the visual effect is pure VDP priority: Sonic's art tile (`ArtTile_Sonic`) is low priority, so
+  the plane's high-priority tiles (part of block $35's ring) cover him. The parked change added
+  `SceneLevelKit.blockImage(id, highPriority)` (filtering `DetachedLevelKit.blockPixels` by each
+  8x8 tile's priority bit) and drew the high layer after the farmer in the valley and the farm
+  loop.
+- **The valley controller's skid** (`Runner.skid`, the same rule as the farm's).
+
+### Seams outside the packages
+
+Engine: `StockSceneArt.S3K_DASH_DUST` (one additive pin entry, `ModApiVersion` note, creator-helpers
+guide, compatibility note, CHANGELOG.0.7). Mod: `farm/FarmView` (dust, skid, tails, `holdStill`,
+`charging()`), `farm/BeltRunner` (skid), `valley/ValleyView`, `fishing/LakeScreen` and
+`ruins/RuinsScreen` (dust and tails hooks; the lake also gains the spin dash, flight and glide
+poses its animation lacked), `fishing/PondLine` and `FishingSystem` (the rod).
+
+### Rejected on the way
+
+- **Hand-written tail and dust frame tables.** The first pass transcribed AniTails_Tail and
+  Ani_DashSplashDrown into switch statements; replaced by the ROM's tables played through
+  `RomAnimationPlayer` (the lead's rule: reuse the toolkit).
+- **Dust behind the farmer.** The brief said behind his feet; the ROM gives Obj_DashDust priority $80,
+  in front of the player's $100, with the mapping offset to trail behind him (x -32..0).
+- **The old rod.** A one-pixel brown line from hand to tip, shown only with the line out; it vanished
+  against the grass and the farmer's own outline.
+
+### Verification and evidence
+
+`0a61fa157` added recipe geometry/nonempty-pixel assertions. Their first run failed on
+`TestStockSceneArtRom` frame 17: the captured skid had no puffs, and the ROM's empty child
+DPLC explained why. The final stock-recipe check asserts the seven independently streamed
+charge frames; `TestStarpostValleyScene` checks nonempty child frames $11-$14 through the
+mod's prepared bank for every farmer. A descriptor comment was also rejected by the strict
+policy parser and removed; the descriptor still names unpublished candidate `0.7.0`, matching
+`ModApiVersion` and the single additive `S3K_DASH_DUST` signature-pin entry. No API version
+bump or parked loop-priority change was applied.
+
+Validation scope is this lane's requested creator, API policy, ROM-art and scene paths, plus
+the four required S3K baseline classes; these are focused checks, not a full-suite certification.
+
+
+The skid-bank correction is `150ad6b60`. Final behavioral verification ran in this worktree
+against the same source tree before that commit (documentation is the only subsequent change):
+
+```bash
+# All commands start in .worktrees/ai-starpost-polish; Java 21.0.12.1.
+python3 tools/testing/maven_queue.py -B -q -Dmse=off -DskipTests test-compile dependency:build-classpath -Dmdep.outputFile=target/test-classpath.txt
+# Compile creator sources, tests and the scratch runner per LANE-RULES.md, then:
+CP="target/classes:$(cat target/test-classpath.txt)"
+R=$HOME/scratch/sv-polish/final/creator
+java -cp "$R/out:$CP" RunCreatorTests "$R/tests" "$R/main"
+# 176/176 passed, zero skips (including 8 PolishArtTest tests).
+python3 tools/testing/maven_queue.py -B -Dmse=off \
+  '-Dtest=TestModApiPinPolicy,TestModApiSignatureSurface,TestModApiReleasePolicy,TestStockSceneArtRom,TestStarpostValleyExample,TestStarpostValleyScene,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+# 90/90 passed, zero skips; both bridge/scene packages: Validation passed: 0 findings.
+CP="target/test-classes:target/classes:$(cat target/test-classpath.txt)"
+java -cp "$CP" com.openggf.mods.code.ExampleModCapture \
+  --rom "$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" --mod examples/starpost-valley \
+  --out $HOME/scratch/sv-polish/final/farm-tails \
+  --script-file $HOME/scratch/sv-polish/final/scripts/farm-tails.txt --every 4 --ticks 1060
+```
+
+ROM identity was checked: S1 CRC32 `AFE05EEE`, SHA-1
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`; S3K CRC32 `63522553`, SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`. Existing root ROM links were used unchanged.
+
+Captures and scripts are under `$HOME/scratch/sv-polish/final/`. The farm command above
+was run for **sonic, tails and knuckles** (1060 ticks); pond/lake scripts for each farmer ran
+580 ticks, with `jump=fish_lake` for Waterfall Lake. An additional `fly-tails` capture ran
+680 ticks. All ten captures reported **Validation passed: 0 findings**. The PNGs were opened
+and inspected; summaries are `farm-sonic-sheet.png`, `farm-tails-sheet.png`,
+`farm-knuckles-sheet.png`, `pond-sheet.png`, `lake-sheet.png`. Original full frames remain in
+`farm-{sonic,tails,knuckles}/`, `pond-{sonic,tails,knuckles}/`, `lake-{sonic,tails,knuckles}/`
+and `fly-tails/`.
+
+- Farm frames 160/200/320: idle, walk and run; 328/336: skid puffs at the feet, remaining
+  where dropped; 416/600: spin-dash charge dust in both facing directions; 624: leftward roll;
+  780/900/944: leftward walk, push and idle; 1008: airborne roll. Tails's accessories align
+  with the body and mirror with it in every requested farm pose; walk/run use embedded tails.
+- Pond frames 160/184/192/208/228/328/360/404 and lake frames
+  180/220/240/252/280/304/468/500: every farmer's rod at rest, winding up, whipping forward,
+  waiting and biting, in both facing directions. The grip sits at the hand; the line starts
+  at the actual bent tip. Flying Tails's rotating tails are visible in `fly-tails/frame-00240.png`.
+
+The first capture rerun rejected an existing output jar; subsequent captures used fresh output
+directories. A direct creator run overlapping the engine rebuild hit missing classfiles; rerunning
+after compilation restored 176/176. These incomplete/failed attempts are not the final results.
+The parked priority API and valley skid remain unapplied. No push, merge, rebase or integration
+was performed by this lane.

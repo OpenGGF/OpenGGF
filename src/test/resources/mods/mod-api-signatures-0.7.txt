@@ -2619,6 +2619,7 @@ FIELD com.openggf.mods.scene.ScenePeer$State public,static,final com.openggf.mod
 FIELD com.openggf.mods.scene.ScenePeer$State public,static,final com.openggf.mods.scene.ScenePeer$State LISTENING
 FIELD com.openggf.mods.scene.art.StockSceneArt public,static,final com.openggf.mods.scene.art.StockSceneArt S3K_BLUE_FLICKY
 FIELD com.openggf.mods.scene.art.StockSceneArt public,static,final com.openggf.mods.scene.art.StockSceneArt S3K_BUGGERNAUT
+FIELD com.openggf.mods.scene.art.StockSceneArt public,static,final com.openggf.mods.scene.art.StockSceneArt S3K_DASH_DUST
 FIELD com.openggf.mods.scene.art.StockSceneArt public,static,final com.openggf.mods.scene.art.StockSceneArt S3K_EGG_CAPSULE
 FIELD com.openggf.mods.scene.art.StockSceneArt public,static,final com.openggf.mods.scene.art.StockSceneArt S3K_EGG_ROBO
 FIELD com.openggf.mods.scene.art.StockSceneArt public,static,final com.openggf.mods.scene.art.StockSceneArt S3K_EXPLOSION

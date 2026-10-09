@@ -55,6 +55,13 @@ class TestStarpostValleyScene {
             play(harness, 30);
             for (String farmer : new String[] {"sonic", "tails", "knuckles"}) {
                 step(harness, "new " + farmer, 30);
+                Object art = shell(harness).getClass().getField("art").get(shell(harness));
+                var dust = (com.openggf.mods.scene.SceneSpriteSet) art.getClass()
+                        .getMethod("dust", String.class).invoke(art, farmer);
+                for (int index = 0x11; index <= 0x14; index++) {
+                    assertTrue(java.util.Arrays.stream(dust.frame(index).image().pixels())
+                            .anyMatch(pixel -> (pixel >>> 24) != 0), farmer + " skid puff " + index);
+                }
                 step(harness, "demo", 1);
                 step(harness, "farm 400 30", 90);
                 assertEquals("PlayScreen", screen(harness), farmer + " on the farm");
@@ -108,11 +115,15 @@ class TestStarpostValleyScene {
 
     /** The simple class name of the scene's current screen ("PlayScreen", "RuinsScreen"...). */
     private static String screen(ExampleModHarness harness) throws Exception {
+        Object shell = shell(harness);
+        return shell.getClass().getMethod("screen").invoke(shell).getClass().getSimpleName();
+    }
+
+    private static Object shell(ExampleModHarness harness) throws Exception {
         Object scene = harness.scene();
         java.lang.reflect.Field field = scene.getClass().getDeclaredField("shell");
         field.setAccessible(true);
-        Object shell = field.get(scene);
-        return shell.getClass().getMethod("screen").invoke(shell).getClass().getSimpleName();
+        return field.get(scene);
     }
 
     private static void step(ExampleModHarness harness, String command, int frames) {

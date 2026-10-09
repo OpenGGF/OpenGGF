@@ -76,6 +76,8 @@ public final class FarmView {
     private int lastActionRow = -1;
     private int lastActionColumn = -1;
     private final Anim anim = new Anim();
+    private final starpost.art.Dust dust;
+    private final starpost.art.TailsTails tails;
     /** The farm loop (block 53 standing in the back wall): a lap at speed refills Momentum. */
     private static final float LOOP_X = 4 * Art.BLOCK;
     private static final float LOOP_CY = WALL_FLOOR - Art.FLOOR + 111;
@@ -88,6 +90,8 @@ public final class FarmView {
     public java.util.function.BooleanSupplier interact = () -> false;
     /** The action button at the pond's edge without the Water Shield (fishing): true when it was used. */
     public java.util.function.BooleanSupplier pondAction = () -> false;
+    /** Whether the farmer holds his pose still when standing (a rod in hand): the standing frame, no fidgets. */
+    public java.util.function.BooleanSupplier holdStill = () -> false;
     /** Placed objects other systems own (machines, roosts), asked before the built-in behaviour. */
     public final List<ObjectHook> objectHooks = new ArrayList<>();
 
@@ -125,6 +129,8 @@ public final class FarmView {
 
     public FarmView(Shell shell) {
         this.shell = shell;
+        this.dust = shell.art.newDust();
+        this.tails = shell.art.newTails();
     }
 
     /** Puts the farmer at the house door (morning) or at the gate (coming home). */
@@ -148,6 +154,11 @@ public final class FarmView {
 
     public float feetY() {
         return DEPTH_MIN + runner.depth;
+    }
+
+    /** Whether the action button is held for a spin dash (or a press not yet released). */
+    public boolean charging() {
+        return chargeTicks > 0;
     }
 
     public Request update(Controls in) {
@@ -211,13 +222,22 @@ public final class FarmView {
         if (Math.abs(runner.x - DOOR_X) < 12 && runner.depth < 6 && in.upPressed) {
             request = Request.SLEEP;
         }
-        if (runner.x >= GATE_X + 8 && runner.speed > 0) {
+        if (runner.x >= GATE_X + 8 && (runner.speed > 0 || runner.pushing && !runner.facingLeft)) {
             request = Request.TO_VALLEY;
         }
         float target = Float.isNaN(cameraTarget) ? runner.x - shell.width() / 2f + (runner.facingLeft ? -20 : 20)
                 : cameraTarget - shell.width() / 2f;
         camera += (clampCamera(target) - camera) * (Float.isNaN(cameraTarget) ? 0.15f : 0.04f);
+        if (chargeTicks > 0 || dashing || looping) {
+            runner.skid = 0;
+            runner.pushing = false;
+        }
         animate(charged);
+        dust.update(anim.id() == Anim.SPINDASH, anim.id() == Anim.SKID, false, false, runner.x,
+                originY(feetY() - runner.height));
+        // Round the loop his velocity is the circle's tangent (anticlockwise on screen).
+        tails.update(anim.id(), !looping && runner.facingLeft, looping ? (float) Math.cos(loopAngle) : runner.speed,
+                looping ? -(float) Math.sin(loopAngle) : runner.height > 0 ? runner.ySpeed : 0);
         return request;
     }
 
@@ -582,8 +602,14 @@ public final class FarmView {
             anim.set(Anim.ROLL, Math.max(0, 4 - (int) speed));
         } else if (charged || chargeTicks > 6) {
             anim.set(Anim.SPINDASH, 0);
+        } else if (runner.skid > 0 && runner.height == 0) {
+            anim.set(Anim.SKID, 3);                       // AniSonic0D: delay 3
+        } else if (runner.pushing) {
+            anim.set(Anim.PUSH, 9);                       // AniTails04 / AniSonic04
         } else if (speed > 0.05f) {
             anim.set(speed >= 6 ? Anim.RUN : Anim.WALK, Math.max(0, 8 - (int) speed));
+        } else if (holdStill.getAsBoolean() && runner.height == 0) {
+            anim.hold(Anim.WAIT);
         } else {
             anim.set(Anim.WAIT, 6);
         }
@@ -777,10 +803,24 @@ public final class FarmView {
         }
     }
 
+    /** The farmer's body origin (the ROM's x_pos/y_pos row) for feet on screen row {@code feet}. */
+    private float originY(float feet) {
+        if (looping) {
+            return loopY();
+        }
+        SceneSprite pose = anim.pose(shell.art.farmer(shell.game.farmer));
+        return anim.id() == Anim.ROLL ? feet - 15 : feet - (pose.height() - pose.originY());
+    }
+
     private void drawFarmer(SceneCanvas canvas, SceneDraw tint, int cx) {
+        boolean isTails = shell.game.farmer.equals("tails");
         if (looping) {
             SceneSprite ball = anim.pose(shell.art.farmer(shell.game.farmer));
-            canvas.draw(ball, loopX() - cx, loopY(), tint.withFlipX(false));
+            SceneDraw style = tint.withFlipX(false);
+            if (isTails) {
+                tails.draw(canvas, shell.art.tailsTails, loopX() - cx, loopY(), style);
+            }
+            canvas.draw(ball, loopX() - cx, loopY(), style);
             return;
         }
         float x = runner.x - cx, ground = feetY();
@@ -788,12 +828,14 @@ public final class FarmView {
         SceneSpriteSet set = shell.art.farmer(shell.game.farmer);
         SceneSprite pose = anim.pose(set);
         SceneDraw style = tint.withFlipX(runner.facingLeft);
-        float feet = ground - runner.height;
-        float originY = anim.id() == Anim.ROLL ? feet - 15 : feet - (pose.height() - pose.originY());
-        if (shell.game.farmer.equals("tails")) {
-            Anim.drawTails(canvas, shell.art.tailsTails, anim.id(), shell.ticks, x, originY, style);
+        float originY = originY(ground - runner.height);
+        if (isTails) {
+            tails.draw(canvas, shell.art.tailsTails, x, originY, style);
         }
         canvas.draw(pose, x, originY, style);
+        SceneSpriteSet puffs = shell.art.dust(shell.game.farmer);
+        dust.drawDash(canvas, puffs, x, originY, runner.facingLeft, tint);
+        dust.drawPuffs(canvas, puffs, cx, 0, tint);
     }
 
     static void drawSprite(SceneCanvas canvas, SceneSpriteSet set, int frame, float x, float feet, SceneDraw style,
