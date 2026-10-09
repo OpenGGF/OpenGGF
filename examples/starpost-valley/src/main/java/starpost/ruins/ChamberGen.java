@@ -90,9 +90,8 @@ public final class ChamberGen {
                 reach.explore(entry);
                 int far = farthest(reach, entry);
                 int score = reach.reachedCount() + 2 * reachedColumns(reach) + far / 4;
-                if (Boolean.getBoolean("starpost.ruins.debug")) {
-                    System.out.printf("  #%d attempt %d act %d %dx%d entry (%d,%d) spots %d reached %d far %d%n", number,
-                            attempt, act, w, h, reach.x(entry), reach.y(entry), reach.spotCount(), reach.reachedCount(), far);
+                if (medianReachedY(reach) < 100) {
+                    score /= 3;   // play hugging the top edge: the room above was cut off
                 }
                 if (score > bestScore) {
                     best = chamber;
@@ -100,7 +99,8 @@ public final class ChamberGen {
                     bestEntry = entry;
                     bestScore = score;
                 }
-                if (reach.reachedCount() >= GOOD_SPOTS && far >= Math.max(200, chamber.width * 45 / 100)) {
+                if (reach.reachedCount() >= GOOD_SPOTS && far >= Math.max(200, chamber.width * 45 / 100)
+                        && medianReachedY(reach) >= 100) {
                     good = true;
                     break;
                 }
@@ -115,6 +115,21 @@ public final class ChamberGen {
         bestReach.explore(bestEntry);
         furnish(best, bestReach, bestEntry, rng);
         return best;
+    }
+
+    /** The middle height of the reached spots. */
+    private static int medianReachedY(Reach reach) {
+        List<Integer> ys = new ArrayList<>();
+        for (int i = 0; i < reach.spotCount(); i++) {
+            if (reach.reached(i)) {
+                ys.add(reach.y(i));
+            }
+        }
+        if (ys.isEmpty()) {
+            return 0;
+        }
+        java.util.Collections.sort(ys);
+        return ys.get(ys.size() / 2);
     }
 
     /** How many spot columns have a reached spot: how much of the room's width is playable. */

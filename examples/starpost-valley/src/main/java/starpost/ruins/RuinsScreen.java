@@ -33,7 +33,7 @@ import starpost.valley.Runner;
  */
 public final class RuinsScreen implements Screen {
     private static final int FADE = 16;
-    private static final int CARD = 100;
+    private static final int CARD = 80;
     private static final int FAINT_TICKS = 110;
     /** Sfx not in the scene's own list (Sonic3kSfx). */
     private static final int SFX_DEATH = 0x35;
@@ -49,6 +49,9 @@ public final class RuinsScreen implements Screen {
     private static final int ANIM_DROWN = 0x17;
     private static final int ANIM_DEATH = 0x18;
     private static final int ANIM_HURT = 0x1A;
+    /** Map_Monitor: the ten-ring screen, and the broken husk. */
+    private static final int MONITOR_RINGS = 4;
+    private static final int MONITOR_BROKEN = 11;
 
     private final Shell shell;
     private final PlayScreen play;
@@ -73,6 +76,7 @@ public final class RuinsScreen implements Screen {
     private int fireDash;
     private boolean elevatorLit;
     private int springAt = -100;
+    private long litAt = -100;
     private long ticks;
 
     // The chamber's contents.
@@ -207,6 +211,9 @@ public final class RuinsScreen implements Screen {
             return;
         }
         things(shell);
+        if (faint > 0 || fade > 0) {
+            return;   // a hit with no rings (or the way down) began this frame
+        }
         if (flash > 0) {
             flash--;
         }
@@ -249,6 +256,7 @@ public final class RuinsScreen implements Screen {
         if (chamber.elevatorX >= 0 && near(chamber.elevatorX, chamber.elevatorY, 16)) {
             if (!elevatorLit) {
                 elevatorLit = true;
+                litAt = ticks;
                 shell.sfx(Sfx.STARPOST);
                 if (section.reachElevator(number)) {
                     shell.toast("ELEVATOR " + number + " REACHED");
@@ -770,6 +778,8 @@ public final class RuinsScreen implements Screen {
         shell.music.stop();
         if (losesItems) {
             faintLosses = RuinsRules.faint(shell.game, rng);
+        } else {
+            shell.game.rings += ringsInHand;   // the day ran out: what was carried is kept
         }
         ringsInHand = 0;
     }
@@ -830,9 +840,36 @@ public final class RuinsScreen implements Screen {
         ringsInHand = Math.max(0, n);
     }
 
+    /** Debug: a badnik of a kind {@code dx} pixels ahead of Sonic, on the floor there (or level with him). */
+    void debugSpawn(int kind, int dx) {
+        int x = Math.round(runner.x) + dx;
+        int floor = chamber.floorBelow(x, Math.round(runner.y) - 40);
+        int[] at = Badnik.walker(kind) && floor < chamber.height ? new int[] {x, floor - Badnik.halfHeight(kind)}
+                : new int[] {x, Math.round(runner.y) - 40};
+        badniks.add(new Badnik(kind, at[0], at[1]));
+    }
+
     void debugHit() {
         flash = 0;
         hurt(shell, runner.x + (runner.facingLeft ? -10 : 10), SFX_DEATH);
+    }
+
+    /** Debug: stand at the exit hatch, the elevator, or the entry. */
+    void debugGoto(String where) {
+        switch (where) {
+            case "exit" -> debugAt(chamber.exitX - 24, chamber.exitY - 8);
+            case "elevator" -> debugAt(chamber.elevatorX - 30, chamber.elevatorY - 8);
+            case "monitor", "rock" -> {
+                int type = where.equals("monitor") ? Chamber.MONITOR : Chamber.ROCK;
+                for (Chamber.Thing t : chamber.things) {
+                    if (t.type() == type) {
+                        debugAt(t.x() - 70, t.y() - 8);
+                        return;
+                    }
+                }
+            }
+            default -> debugAt(chamber.entryX, chamber.entryY - 8);
+        }
     }
 
     void debugAt(float x, float y) {
@@ -955,17 +992,22 @@ public final class RuinsScreen implements Screen {
             drawHatch(canvas, chamber.exitX - cx, chamber.exitY - cy);
         }
         if (chamber.elevatorX >= 0) {
-            drawSprite(canvas, art.art.starpost, 0, chamber.elevatorX - cx, chamber.elevatorY - cy, wet(plain, chamber.elevatorY - 20));
-            if (elevatorLit && (ticks / 8) % 2 == 0) {
-                canvas.fill(chamber.elevatorX - cx - 3, chamber.elevatorY - cy - 52, 6, 6, 0xFFFFDB00);
-            }
+            // Map_StarPost: frame 0 is the post with its first ball, 4 with the lit one; it flickers
+            // between them for half a second when touched.
+            boolean flicker = ticks - litAt < 30 && (ticks / 4) % 2 == 0;
+            int frame = elevatorLit && !flicker ? 4 : 0;
+            drawSprite(canvas, art.art.starpost, frame, chamber.elevatorX - cx, chamber.elevatorY - cy,
+                    wet(plain, chamber.elevatorY - 20));
         }
         for (int i = 0; i < chamber.things.size(); i++) {
-            if (taken[i]) {
-                continue;
-            }
             Chamber.Thing t = chamber.things.get(i);
             int x = t.x() - cx, y = t.y() - cy;
+            if (taken[i]) {
+                if (t.type() == Chamber.MONITOR) {
+                    drawSprite(canvas, art.art.monitor, MONITOR_BROKEN, x, y, wet(plain, t.y() - 8));
+                }
+                continue;
+            }
             if (x < -40 || x > canvas.width() + 40 || y < -60 || y > canvas.height() + 60) {
                 continue;
             }
@@ -1016,16 +1058,20 @@ public final class RuinsScreen implements Screen {
         canvas.draw(s, x, y, style);
     }
 
+    /**
+     * A monitor (Map_Monitor): the ring monitor's own frame, or for a find the static frame with
+     * the find's icon on its screen (design doc §6.1: monitors show what is inside).
+     */
     private void drawMonitor(SceneCanvas canvas, Chamber.Thing t, int x, int y, SceneDraw style) {
-        drawSprite(canvas, art.art.monitor, 0, x, y, style);
         String prize = t.param() >= 0 && t.param() < chamber.prizes.size() ? chamber.prizes.get(t.param()) : null;
-        if (prize != null) {
+        if (prize == null) {
+            drawSprite(canvas, art.art.monitor, MONITOR_RINGS, x, y, style);
+            return;
+        }
+        drawSprite(canvas, art.art.monitor, (int) (ticks / 4 % 3), x, y, style);
+        if ((ticks / 4) % 3 != 0) {
             Item item = shell.game.item(prize);
-            canvas.fill(x - 7, y - 24, 14, 12, 0xFF000000);
-            shell.art.icons.draw(canvas, item, x - 8, y - 26, style.withScale(1));
-        } else if (art.art.monitor.frameCount() > 2) {
-            SceneSprite icon = art.art.monitor.frame(2);
-            canvas.draw(icon.image(), x - icon.width() / 2f, y - 26, style);
+            shell.art.icons.draw(canvas, item, x - 8, y - 29, style);
         }
     }
 
@@ -1104,7 +1150,8 @@ public final class RuinsScreen implements Screen {
                 }
                 default -> {
                     int tw = canvas.textWidth(p.text);
-                    Text.shadow(canvas, p.text, Math.round(p.x - cx - tw / 2f), Math.round(p.y - cy), Text.WHITE);
+                    int tx = Math.max(4, Math.min(canvas.width() - 4 - tw, Math.round(p.x - cx - tw / 2f)));
+                    Text.shadow(canvas, p.text, tx, Math.max(44, Math.round(p.y - cy)), Text.WHITE);
                 }
             }
         }
@@ -1257,7 +1304,9 @@ public final class RuinsScreen implements Screen {
         int a = Math.min(200, (age - 40) * 8);
         canvas.fill(0, 0, canvas.width(), canvas.height(), a << 24);
         Text.centred(canvas, faintReason, 80, Text.YELLOW);
-        if (faintLosesItems) {
+        if (!faintLosesItems) {
+            Text.centred(canvas, "TOO TIRED TO CLIMB OUT", 100, Text.WHITE);
+        } else {
             Text.centred(canvas, "THE RINGS IN HAND ARE GONE", 100, Text.WHITE);
             int y = 116;
             for (RuinsRules.Loss loss : faintLosses) {

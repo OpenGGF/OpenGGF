@@ -131,7 +131,9 @@ public final class Chamber implements Runner.Ground {
         for (int x = 0; x <= width; x++) {
             int surface = -1;
             if (x < width) {
-                for (int y = 1; y < height - 2; y++) {
+                // From row 40: a window cut through the bottom of a pool above leaves its floor
+                // at the very top edge, where nothing can stand.
+                for (int y = 40; y < height - 2; y++) {
                     if (floor(x, y) && !floor(x, y - 1) && !opaque(x, y) && !opaque(x, y + 2) && !opaque(x, y - 2)) {
                         surface = y;
                         break;

@@ -55,7 +55,7 @@ public final class RuinsSystem {
         String[] options = new String[starts.size() + 1];
         for (int i = 0; i < starts.size(); i++) {
             int c = starts.get(i);
-            options[i] = "CHAMBER " + c + (c == 1 ? "" : "  " + RuinsRules.bandName(RuinsRules.band(c)));
+            options[i] = "CHAMBER " + c + (c == 1 ? "" : "  " + Landmarks.spec(c).name());
         }
         options[starts.size()] = "NOT NOW";
         shell.push(new RuinsMenu("MARBLE RUINS ELEVATOR", options, choice -> {
@@ -68,7 +68,8 @@ public final class RuinsSystem {
     /**
      * Debug ({@code ruins N}): straight into chamber N. {@code ruins rings N} sets the rings in
      * hand, {@code ruins hit} hurts Sonic, {@code ruins deepest N} sets the elevator, {@code ruins
-     * elevator} opens the doorway's elevator menu, {@code ruins at X Y} moves Sonic.
+     * elevator} opens the doorway's elevator menu, {@code ruins at X Y} moves Sonic, {@code ruins
+     * spawn KIND DX} puts a badnik ahead of him, {@code ruins state} shows the controller's state.
      */
     public static boolean debug(Shell shell, String[] p) {
         if (shell.game == null || p.length < 2) {
@@ -93,6 +94,20 @@ public final class RuinsSystem {
             case "at" -> {
                 if (screen instanceof RuinsScreen ruins) {
                     ruins.debugAt(Float.parseFloat(p[2]), Float.parseFloat(p[3]));
+                    return true;
+                }
+                return false;
+            }
+            case "spawn" -> {
+                if (screen instanceof RuinsScreen ruins) {
+                    ruins.debugSpawn(Integer.parseInt(p[2]), p.length > 3 ? Integer.parseInt(p[3]) : 64);
+                    return true;
+                }
+                return false;
+            }
+            case "goto" -> {
+                if (screen instanceof RuinsScreen ruins) {
+                    ruins.debugGoto(p[2]);
                     return true;
                 }
                 return false;

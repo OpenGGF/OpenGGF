@@ -15,7 +15,8 @@ final class BadnikFrames {
 
     static int frame(Badnik b, long ticks) {
         return switch (b.kind) {
-            case Badnik.CATERKILLER -> 0;
+            // Map_Cat: the head shuts (0) while it crawls and opens (16) between pulls.
+            case Badnik.CATERKILLER -> b.state == 1 ? 0 : 16;
             // Ani_Bas: still 0, falling 1, flying 1 2 3 2 (delay 3).
             case Badnik.BATBRAIN -> b.state == 0 ? 0 : b.state == 1 ? 1 : seq(ticks, 4, 1, 2, 3, 2);
             // Ani_Buzz: flying 0 1 (delay 1); firing 4 5.
