@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import starpost.core.Capsule;
 import starpost.core.SaveSection;
 import starpost.valley.Pickups;
 
@@ -20,6 +21,7 @@ public final class Systems {
     public static List<SaveSection> sections(Shell shell) {
         List<SaveSection> out = new ArrayList<>();
         out.add(new Pickups());
+        out.add(new Capsule());
         return out;
     }
 

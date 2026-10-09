@@ -50,7 +50,7 @@ public final class PlayScreen implements Screen {
         places.put("inn", s -> s.toast("THE LAMPPOST INN OPENS SOON"));
         places.put("workshop", s -> s.push(new WorkshopMenu()));
         places.put("egg", s -> s.toast("EGG: OPENING NEXT SEASON"));
-        places.put("capsule", s -> s.toast("THE GREAT CAPSULE IS CRACKED AND SILENT"));
+        places.put("capsule", s -> s.push(new CapsuleMenu()));
         places.put("ruins", s -> s.toast("THE RUINS ARE DARK. PUD WON'T GO IN."));
         places.put("lake", s -> s.toast("BARNABY'S JETTY. NO ROD YET."));
         Systems.install(shell, this, actors, places);

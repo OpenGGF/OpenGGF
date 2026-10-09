@@ -15,6 +15,13 @@ public final class Farm {
 
     private final Plot[][] plots = new Plot[ROWS][COLUMNS];
     private int open = START_COLUMNS;
+    /** The Capsule Garden: once restored, the back two rows of the first twelve columns ignore the seasons. */
+    public boolean garden;
+
+    public boolean inGarden(int row, int column) {
+        return garden && row < 2 && column < 12;
+    }
+
     /** Item Monitors' contents, keyed "row.column". */
     public final java.util.Map<String, Inventory> chests = new java.util.LinkedHashMap<>();
 
@@ -105,7 +112,7 @@ public final class Farm {
                 Plot plot = plots[r][c];
                 if (plot.crop != null && !plot.dead) {
                     CropDef crop = catalog.crop(plot.crop);
-                    if (crop == null || !crop.grows(season)) {
+                    if (crop == null || !crop.grows(season) && !inGarden(r, c)) {
                         plot.dead = true;
                     } else if (plot.watered && plot.age < crop.days()) {
                         plot.age++;

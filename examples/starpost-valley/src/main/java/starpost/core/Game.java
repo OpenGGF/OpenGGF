@@ -107,6 +107,7 @@ public final class Game {
         calendar.nextDay();
         raining = rainTomorrow;
         rainTomorrow = calendar.season() != Calendar.WINTER && rng.nextInt(100) < (calendar.season() == Calendar.SUMMER ? 12 : 20);
+        farm.garden = flags.contains("capsule_garden");
         farm.nextDay(catalog, calendar.season(), raining, rng);
         for (SaveSection section : sections) {
             section.nextDay(this);

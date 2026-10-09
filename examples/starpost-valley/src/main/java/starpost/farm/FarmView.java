@@ -298,7 +298,8 @@ public final class FarmView {
             if (!plot.tilled || plot.crop != null) {
                 shell.toast(plot.tilled ? "SOMETHING IS ALREADY GROWING" : "TILL THE SOIL FIRST");
                 shell.sfx(Sfx.ERROR);
-            } else if (!crop.grows(game.calendar.season())) {
+            } else if (!crop.grows(game.calendar.season())
+                    && !(game.flags.contains("capsule_garden") && row < 2 && column < 12)) {
                 shell.toast(held.name() + " WON'T GROW THIS SEASON");
                 shell.sfx(Sfx.ERROR);
             } else {
@@ -469,6 +470,9 @@ public final class FarmView {
                 }
             }
         }
+        if (game.flags.contains("capsule_garden")) {
+            drawGarden(canvas, cx);
+        }
         drawCursor(canvas, cx);
         List<float[]> order = new ArrayList<>();       // {screen y, kind, row, column}
         for (int row = 0; row < Farm.ROWS; row++) {
@@ -505,6 +509,18 @@ public final class FarmView {
         // The farmhouse stands at the back of the field; its door (x 56-76 in the picture) is DOOR_X.
         SceneImage house = look.farmhouse;
         canvas.draw(house, DOOR_X - 66 - cx, FIELD_TOP + 4 - house.height(), tint);
+    }
+
+    /** The Capsule Garden: the restored capsule's glass over the first twelve columns of the back two rows. */
+    private void drawGarden(SceneCanvas canvas, int cx) {
+        int x = FIELD_X - cx, y = ROW_Y - PLOT_H - 6, w = 12 * 16, h = ROW_STEP + PLOT_H + 8;
+        canvas.fill(x, y, w, h, 0x286DB6FF);
+        canvas.fill(x, y, w, 1, 0xA0FFFFFF);
+        canvas.fill(x, y + h - 1, w, 1, 0x80B6DBFF);
+        for (int i = 0; i <= 12; i += 3) {
+            canvas.fill(x + i * 16, y, 1, h, 0x80FFFFFF);
+        }
+        drawSprite(canvas, shell.art.capsule, 0, x + w / 2f, WALL_FLOOR + 4, SceneDraw.plain(), false);
     }
 
     private void drawCursor(SceneCanvas canvas, int cx) {
