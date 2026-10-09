@@ -47,6 +47,10 @@ public final class Controls {
         return ctx.buttonPressed(SceneButtons.START) || ctx.keyPressed(SceneKeys.M);
     }
 
+    public int vertical() {
+        return (ctx.buttonDown(SceneButtons.DOWN) ? 1 : 0) - (ctx.buttonDown(SceneButtons.UP) ? 1 : 0);
+    }
+
     /** Horizontal direction held: -1, 0 or 1. */
     public int horizontal() {
         return (holdRight() ? 1 : 0) - (holdLeft() ? 1 : 0);

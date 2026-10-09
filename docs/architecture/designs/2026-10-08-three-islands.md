@@ -118,3 +118,159 @@ ending. Raw captures were working material and are not kept.
 
 Not covered: a full unassisted playthrough to the ending at real speed, real-device audio
 latency, the native build (code mods do not load there) and the full engine suite.
+
+## 2026-10-09: exploration and narrative revision
+
+User feedback: the single collision-following route played like a linear side-scroller,
+not the intended story-led JRPG, and battles felt too hard. Revision base:
+`38def484c14fb9094e54d55e758ed0e2c84d5bfc`, current checkout
+`feature/ai-three-islands`. The original delivery notes above describe the earlier design.
+
+### What changed
+
+- Replaced runtime field traversal with a 960x640 two-dimensional area. North, south and
+  central routes reconnect; a lake/shaft, bridge, groves/ruins and perimeter share explicit
+  collision with navigation. Diagonal speed is normalised, followers remember both axes,
+  and formation placement avoids piling everyone onto the leader at checkpoints.
+- Encounters use two-dimensional distance. Ordinary patrols can be avoided; conversations,
+  caches, Starposts and bosses require an explicit interaction. Bosses require two story
+  discoveries, in either order, plus any zone midboss. Camera, depth sorting, minimap,
+  location labels, interaction prompts and region palettes replace the old progress strip.
+- Added forty story scenes: two discoveries, a traveller conversation and a camp moment per
+  zone. The arc now follows the displaced islanders, Tails' unanswered signal, Eggman's
+  forged warning to Knuckles, and the party's plan to separate the islands safely. Traveller
+  responses acknowledge discoveries. The menu journal replays discovered evidence and gives
+  directions to the remaining landmarks.
+- Discovery milestones catch underlevelled heroes up to the chapter level (the second clue
+  reaches one level above it), restore the party and save. Optional battles therefore aren't
+  required for levelling. Starposts offer repeatable free rest. Completed field content uses
+  namespaced existing save flags, preserving save format 1. Checkpoint values 1/2 identify
+  the new camps; old horizontal coordinates resume at the entrance camp without discarding
+  party/chapter progress or guessing which new discoveries have been completed.
+- Ordinary escape is reliable. Enemy attack is 80% of its previous formula and random enemy
+  critical hits are removed; telegraphed attacks, guarding and all full-wait rules remain.
+  Victory grants XP to fallen heroes too, restores everyone to at least 60% HP and returns
+  20% maximum EP (minimum 2). Starting medicine is increased. Encounter level is capped at
+  the lesser of the chapter level and party level + 1.
+- ROM level kits and the old collision route remain **battle scenery only**. Field terrain
+  is original geometry rendered by the scene; sprites and music still come from the ROMs.
+  The creator mod's engine/API scope is unchanged.
+
+### Decisions and evidence
+
+The side-on route was rejected for exploration rather than patched with more horizontal
+stops: its contact test had only an X coordinate, making fights effectively unavoidable.
+The new topology has a flood-fill regression that reaches every landmark in every zone
+while excluding patrol contact radii, including their horizontal movement allowance.
+
+The earlier battle simulation restored the party and supplied extra items before every
+fight. That could not measure exploration attrition. A new test carries the same party,
+HP/EP and bag through six ordinary encounters and the zone's boss chain. Its first failure
+was Death Egg / Convergence Engine at seed 7: the setup omitted the seven emeralds that
+normal chapter progression guarantees. Corrected that setup rather than weakening the
+final boss to accommodate an impossible story state. The established 60-seed per-encounter
+simulation reports 60/60 victories in each zone and against every boss, with ordinary fights
+averaging 2.0–4.4 rounds and bosses 4.4–8.6 rounds. This is evidence for that scripted policy,
+not a measured human win rate.
+
+Native GL captures exposed companions sharing a position after a debug jump/checkpoint;
+formation reset now lays a valid initial trail. Captures also checked the bridge, Green Hill,
+Chemical Plant, Hydrocity, party menu and the new dialogue. The scene test exercises actual
+vertical keyboard movement, explicit interaction, locked bosses, reverse discovery order,
+save/Continue and the surviving Flame Craft gate. Separate rules tests cover legacy
+checkpoints, both discovery orders, collision, escape, party recovery and beginner attacks.
+
+### Validation scope
+
+The change-based plan at the base above selected 3,068 ordinary engine classes plus guards
+because `examples/three-islands` is unclassified; it also included a pre-existing untracked
+Sonic 2 movie outside this task. Proportionate validation applies to this isolated creator
+scene and its existing engine test bridge. No engine, API, physics, trace, build policy or
+stock S3K implementation changed. The full engine suite and guards were not run for this
+revision. The unrelated movie directory was left alone.
+
+Commands (Java 21; absolute existing root ROM paths supplied):
+
+```sh
+python3 tools/testing/run_categories.py --base 38def484c14fb9094e54d55e758ed0e2c84d5bfc
+python3 tools/testing/maven_queue.py -B -Dmse=off \
+  '-Dtest=TestThreeIslandsExample,TestThreeIslandsScene' \
+  '-Ds3k.rom.path=<root S3K ROM>' '-Dsonic1.rom.path=<root S1 ROM>' \
+  '-Dsonic2.rom.path=<root S2 ROM>' test
+python3 examples/three-islands/build.py --skip-engine --install
+```
+
+Final focused result on the working changes over the stated base: **40/40 creator rules
+tests passed; 7/7 engine bridge tests passed (including five ROM scene tests), zero skips**,
+all ten zones exercised. Maven completed successfully in 47.077 seconds. A final test-only correction made the
+beginner simulation use the live screen's level cap; rerunning `maven_queue.py --lean -B
+-Dmse=off -Dtest=TestThreeIslandsExample test` passed all 40 creator tests and both bridge
+checks, zero skips, in 34.826 seconds. Production code was unchanged after the ROM scene run. The installed jar
+matches the packaged jar and its enabled/trusted local state pins that exact hash. Packaging runs
+through the production creator validator. Native rendering uses `ExampleModCapture` with
+macOS's `-XstartOnFirstThread` and the established native graphics permissions. Captures
+and raw Maven logs are temporary review material and are removed after inspection.
+
+Remaining limitations: fields share a compact clearing topology with different materials,
+landmark names and stories; a full set of individually designed towns/dungeons is future
+work. ROM heroes still have side-facing poses. This revision does not certify a complete
+unassisted human playthrough, real-device audio latency, or the full engine suite.
+
+
+## 2026-10-09: continuous field correction
+
+This supersedes the exploration revision above. User review rejected the remaining
+level-selection/village loop and the generic Green Hill rendering. Adding two-dimensional
+movement alone had not delivered the intended continuous, story-driven adventure.
+
+The scene now starts or resumes directly on Sonic in the field. Walking triggers the
+opening conversation; dialogue overlays the current scene. Physical west/east trails
+connect regions and allow backtracking, including travel within an island before its
+bosses are defeated. Specific story barriers control island crossings and the Angel
+Island rival encounter. MapScreen and VillageScreen are removed. A merchant is a field
+interaction whose shop returns to the same position. Tails joins during the West Island
+arrival in the field. Legacy saves resume at a valid field checkpoint.
+
+Battles retain the actual field instance and camera, hide the contacted patrol, and move
+the combatants into nearby walkable formation positions. Victory returns to that same
+field and position. Boss victories play their story there; they do not select another
+level. Optional discoveries no longer gate ordinary bosses. The last boss on each island
+still requires the preceding chapter threats to be resolved.
+
+Green Hill is composed from decoded ROM grass, checkerboard cliff, palm, plant and water
+fragments. The first composition stretched too much grass texture across the ground and
+was visually noisy; native captures led to sparse grass accents over a ROM-palette ground
+colour. Other regions use their own decoded ROM textures and backdrops. Terrain geometry
+remains authored for overhead movement rather than copying the original side-scrolling
+collision layout. No extracted art is bundled in the mod.
+
+A story-only simulation, without optional fights or discoveries, exposed a Spring Yard
+level deficit and attrition between Angel Island bosses. First chapter completions now
+provide catch-up levels and modest medicine, and boss victories restore the party. Plain
+Progress.clear remains a pure flag setter: putting rewards there changed HP while decoding
+saves. The separate idempotent completeChapter operation owns the gameplay rewards.
+
+### Final correction validation
+
+Working changes over `38def484c14fb9094e54d55e758ed0e2c84d5bfc`, current checkout.
+The queued focused Maven command documented above completed in 47.370 seconds:
+**43/43 creator rules tests and 9/9 engine bridge tests passed, zero skips**. The bridge
+includes seven ROM scene tests and exercised all ten zones. The production creator
+validator reported zero findings. Coverage includes direct field startup, walking-triggered
+dialogue, physical travel/backtracking, narrative barriers, encounter field/camera identity,
+save/resume, optional discoveries, field recruitment, and merchant return position.
+The story-only balance simulation covers twenty seeds through the complete chapter route.
+These are scripted checks, not a measured human difficulty rating.
+
+Native ExampleModCapture walkthroughs were inspected for the opening field, inline dialogue
+and Motobug battle. The change-based plan still selects 3,068 ordinary classes plus guards;
+the isolated creator scene and bridge justify focused validation as described above.
+The full engine suite and guards were not run. Fields still share a compact clearing
+topology; individually authored town and dungeon layouts remain a limitation. Original
+side-facing character art also remains. Temporary probes and raw logs are removed after
+inspection; no stock engine or public Mod API behavior changed.
+
+The corrected package was installed with `build.py --skip-engine --install`; its SHA-256
+matches the installed jar and the enabled/trusted local state. Final native field and
+battle captures were inspected after installation; two curated preview images are kept
+outside the repository, while capture build directories, probes and raw logs were removed.

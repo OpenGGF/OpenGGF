@@ -22,7 +22,6 @@ import threeislands.core.Item;
 import threeislands.core.Kinds;
 import threeislands.core.Skill;
 import threeislands.field.Field;
-import threeislands.field.Stage;
 import threeislands.view.Ui;
 
 /**
@@ -52,7 +51,7 @@ public final class BattleScreen implements Screen {
 
     private final FieldScreen field;
     private final Field.Spot spot;
-    private final Stage stage;
+    private final Map<Combatant, double[]> formation = new HashMap<>();
     public final Battle battle;
     private final Map<Combatant, Look> looks = new HashMap<>();
     private final List<Popup> popups = new ArrayList<>();
@@ -72,18 +71,13 @@ public final class BattleScreen implements Screen {
     private long ticks;
     private int resultsAge;
     private int superFlash;
-    private final double levelLeft;
 
     public BattleScreen(Game game, FieldScreen field, Field.Spot spot, List<EnemyKind> group) {
         this.field = field;
         this.spot = spot;
-        this.stage = field.stage();
-        this.battle = new Battle(game.progress, group, field.zone().level);
-        double x = field.field().x();
-        stage.look(x + 90, stage.path.heightAt(x), 200, 150, game.width(), game.height(), 1);
-        levelLeft = stage.camX();
-        for (Combatant c : battle.party) looks.put(c, new Look());
-        for (Combatant c : battle.foes) looks.put(c, new Look());
+        this.battle = new Battle(game.progress, group, Math.min(field.zone().level, game.progress.partyLevel() + 1));
+        for (Combatant c : battle.party) { looks.put(c, new Look()); place(c); }
+        for (Combatant c : battle.foes) { looks.put(c, new Look()); place(c); }
         battle.start();
         load(game);
         music(game);
@@ -93,6 +87,8 @@ public final class BattleScreen implements Screen {
     public String name() {
         return "BATTLE_" + mode.name();
     }
+
+    public FieldScreen battlefield() { return field; }
 
     private void music(Game game) {
         int id = Audio.MUS_MINIBOSS;
@@ -106,12 +102,32 @@ public final class BattleScreen implements Screen {
 
     // ------------------------------------------------------------------ layout
 
-    /** Screen x of a fighter's home position. */
+    /** Assemble the formation on walkable ground in the encounter's unchanged camera. */
+    private void place(Combatant c) {
+        double startX = c.isHero() ? field.sx(c.slot == 0 ? field.field().x() : field.field().followerX(c.slot))
+                : field.sx(spot.x(0)) + c.slot * 12;
+        double startY = c.isHero() ? field.sy(c.slot == 0 ? field.field().y() : field.field().followerY(c.slot))
+                : field.sy(spot.homeY);
+        int desiredX = c.isHero() ? 148 - c.slot * 36 : 250 + c.slot * 44;
+        int desiredY = 130 + (c.slot % 2) * 12;
+        double best = Double.MAX_VALUE;
+        int chosenX = (int) startX, chosenY = (int) startY;
+        for (int y = 88; y <= 148; y += 4) for (int x = 32; x <= 364; x += 4) {
+            if (!field.field().walkable(field.worldX(x - 10), field.worldY(y))
+                    || !field.field().walkable(field.worldX(x + 10), field.worldY(y))) continue;
+            boolean free = true;
+            for (double[] other : formation.values()) if (Math.hypot(x - other[2], y - other[3]) < 30) free = false;
+            if (!free) continue;
+            double score = Math.hypot(x - desiredX, (y - desiredY) * 2);
+            if (score < best) { best = score; chosenX = x; chosenY = y; }
+        }
+        formation.put(c, new double[] {startX, startY, chosenX, chosenY});
+    }
+
     private int homeX(Combatant c) {
-        if (c.isHero()) return 132 - c.slot * 38;
-        int count = battle.foes.size();
-        if (count == 1) return c.kind.boss ? 300 - (c.kind.scale - 100) * 3 / 5 : 276;
-        return 238 + c.slot * (count > 2 ? 52 : 70);
+        double[] p = formation.get(c);
+        double t = Math.min(1, ticks / 24.0);
+        return (int) Math.round(p[0] + (p[2] - p[0]) * t);
     }
 
     private double screenX(Combatant c) {
@@ -121,9 +137,9 @@ public final class BattleScreen implements Screen {
     }
 
     private int floorY(Combatant c) {
-        int lead = stage.sy(stage.path.heightAt(levelLeft + 132));
-        int y = stage.sy(stage.path.heightAt(levelLeft + homeX(c)));
-        return Math.max(lead - 36, Math.min(lead + 24, Math.max(70, Math.min(152, y))));
+        double[] p = formation.get(c);
+        double t = Math.min(1, ticks / 24.0);
+        return (int) Math.round(p[1] + (p[3] - p[1]) * t);
     }
 
     // ------------------------------------------------------------------ flow
@@ -523,8 +539,7 @@ public final class BattleScreen implements Screen {
     public void draw(Game game, SceneCanvas c) {
         int w = c.width();
         int h = c.height();
-        stage.draw(c, ticks);
-        c.fill(0, 0, w, h, 0x38000018);
+        field.drawWorld(game, c, spot, false);
         // Foes, then heroes in front.
         for (Combatant foe : battle.foes) drawFoe(game, c, foe);
         for (int i = battle.party.size() - 1; i >= 0; i--) drawHero(game, c, battle.party.get(i));
@@ -569,7 +584,7 @@ public final class BattleScreen implements Screen {
         Look look = looks.get(hero);
         double x = screenX(hero);
         int feet = floorY(hero);
-        int pose = Heroes.IDLE;
+        int pose = ticks < 24 ? Heroes.WALK : Heroes.IDLE;
         if (!hero.alive()) pose = Heroes.DOWN;
         else if (look.hurt > 0) pose = Heroes.HURT;
         else if (look.out > 0.1) pose = hero.hero.id == HeroId.TAILS ? Heroes.RUN : Heroes.ROLL;

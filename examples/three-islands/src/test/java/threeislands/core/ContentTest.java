@@ -57,6 +57,7 @@ class ContentTest {
             wanted.add(zone.key + "-enter");
             wanted.add(zone.key + "-boss");
             wanted.add(zone.key + "-clear");
+            for (String suffix : List.of("friend", "memory", "signal", "camp")) wanted.add(zone.key + "-" + suffix);
             if (zone.bossKinds().size() > 1) wanted.add(zone.key + "-mid");
         }
         for (String scene : wanted) assertTrue(story.has(scene), "missing scene " + scene);

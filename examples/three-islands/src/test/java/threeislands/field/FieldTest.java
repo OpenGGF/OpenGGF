@@ -1,104 +1,129 @@
 package threeislands.field;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.List;
+import static org.junit.jupiter.api.Assertions.*;
+import java.util.ArrayDeque;
 import org.junit.jupiter.api.Test;
+import threeislands.core.Progress;
+import threeislands.core.SaveCodec;
 import threeislands.core.Zone;
 
-/** Things on the path, walking, contact and the boss gate. */
+/** Exploration topology and persistence, independent of battle scenery and engine APIs. */
 class FieldTest {
-    private static FieldPath flat(int length) {
-        Terrain terrain = new Terrain() {
-            @Override
-            public boolean solid(int x, int y) {
-                return y >= 600;
-            }
+    private Field field() { return new Field(Zone.GREEN_HILL, null); }
 
-            @Override
-            public int[] area() {
-                return new int[] {0, 0, length, 1024};
-            }
-        };
-        return FieldPath.build(terrain, 0, length - 1, 580);
+    @Test
+    void diagonalMovementHasTheSameSpeedAndFollowersRememberBothAxes() {
+        Field straight = field(), diagonal = field();
+        straight.setPosition(240, 336);
+        diagonal.setPosition(240, 336);
+        assertTrue(straight.followerX(1) < straight.x(), "companions must not pile up at spawn");
+        assertTrue(straight.followerX(2) < straight.followerX(1));
+        straight.step(1, 0, false, 0);
+        diagonal.step(1, 1, false, 0);
+        assertEquals(straight.distance(), diagonal.distance(), 0.00001);
+        for (int i = 0; i < 30; i++) diagonal.step(1, 1, false, i);
+        assertTrue(diagonal.followerX(1) < diagonal.x());
+        assertTrue(diagonal.followerY(1) < diagonal.y());
+        assertTrue(diagonal.followerX(2) < diagonal.followerX(1));
     }
 
     @Test
-    void layoutIsFixedPerZoneAndEndsWithTheBoss() {
-        Field a = new Field(Zone.CHEMICAL_PLANT, flat(9000));
-        Field b = new Field(Zone.CHEMICAL_PLANT, flat(9000));
-        assertEquals(a.spots.size(), b.spots.size());
-        for (int i = 0; i < a.spots.size(); i++) {
-            assertEquals(a.spots.get(i).homeX, b.spots.get(i).homeX);
-            assertEquals(a.spots.get(i).group, b.spots.get(i).group);
-        }
-        Field.Spot last = a.spots.get(a.spots.size() - 1);
-        assertEquals(Field.Kind.BOSS, last.kind);
-        assertTrue(a.spots.stream().filter(s -> s.kind == Field.Kind.STARPOST).count() == 2);
-        assertTrue(a.spots.stream().filter(s -> s.kind == Field.Kind.ENCOUNTER).count() >= 6);
-        assertTrue(a.spots.stream().filter(s -> s.kind == Field.Kind.MONITOR).count() >= 3);
-        Field dez = new Field(Zone.DEATH_EGG, flat(12000));
-        assertEquals(1, dez.spots.stream().filter(s -> s.kind == Field.Kind.MIDBOSS).count());
+    void waterBlocksWalkingButTheBridgeAllowsCrossing() {
+        Field field = field();
+        field.setPosition(390, 270);
+        for (int i = 0; i < 100; i++) field.step(1, 0, true, i);
+        assertTrue(field.x() <= 400);
+        field.setPosition(390, 332);
+        for (int i = 0; i < 70; i++) field.step(1, 0, true, i);
+        assertTrue(field.x() > 560);
     }
 
     @Test
-    void walkingTouchesThingsInOrderAndTheBossBarsTheWay() {
-        Field field = new Field(Zone.GREEN_HILL, flat(6000));
-        List<Field.Spot> touched = new java.util.ArrayList<>();
-        long tick = 0;
-        for (int i = 0; i < 20000 && touched.size() < field.spots.size(); i++) {
-            Field.Spot spot = field.step(1, true, tick++);
-            if (spot != null) {
-                touched.add(spot);
-                spot.done = true;
+    void everyLandmarkCanBeReachedWithoutTouchingAnOrdinaryEnemy() {
+        for (Zone zone : Zone.values()) {
+            Field f = new Field(zone, null);
+            // Flood fill all safely walkable eight-pixel cells, allowing for patrol movement.
+            boolean[][] seen = new boolean[120][80];
+            ArrayDeque<int[]> queue = new ArrayDeque<>();
+            queue.add(new int[] {11, 42}); seen[11][42] = true;
+            while (!queue.isEmpty()) {
+                int[] point = queue.removeFirst();
+                for (int[] d : new int[][] {{1,0},{-1,0},{0,1},{0,-1}}) {
+                    int x = point[0] + d[0], y = point[1] + d[1];
+                    if (x < 0 || y < 0 || x >= 120 || y >= 80 || seen[x][y] || !f.walkable(x * 8, y * 8)) continue;
+                    boolean safe = true;
+                    for (Field.Spot spot : f.spots) if (spot.kind == Field.Kind.ENCOUNTER
+                            && Math.hypot(spot.homeX - x * 8, spot.homeY - y * 8) < Field.TOUCH + 16) safe = false;
+                    if (safe) { seen[x][y] = true; queue.add(new int[] {x,y}); }
+                }
             }
-        }
-        assertEquals(field.spots.size(), touched.size(), "every spot is reached");
-        assertEquals(Field.Kind.BOSS, touched.get(touched.size() - 1).kind);
-        assertTrue(field.x() <= field.boss().homeX + Field.TOUCH);
-    }
-
-    @Test
-    void theBossCannotBePassedUntilBeaten() {
-        Field field = new Field(Zone.GREEN_HILL, flat(6000));
-        field.skipTo(field.boss().homeX - 30);
-        for (int i = 0; i < 100; i++) {
-            Field.Spot spot = field.step(1, true, i);
-            if (spot != null) {
-                assertEquals(Field.Kind.BOSS, spot.kind);
-                break;
+            for (Field.Spot spot : f.spots) if (spot.kind != Field.Kind.ENCOUNTER) {
+                assertTrue(f.walkable(spot.homeX, spot.homeY), zone + ": landmark on solid ground " + spot.id);
+                assertTrue(seen[(int) spot.homeX / 8][(int) spot.homeY / 8], zone + ": reachable " + spot.id);
             }
         }
-        assertTrue(field.x() <= field.boss().homeX);
     }
 
     @Test
-    void escapingABattleStepsBackAndIgnoresBadniksBriefly() {
-        Field field = new Field(Zone.EMERALD_HILL, flat(8000));
-        Field.Spot first = null;
-        for (int i = 0; i < 5000 && first == null; i++) {
-            Field.Spot spot = field.step(1, false, 0);
-            if (spot != null && spot.kind == Field.Kind.ENCOUNTER) first = spot;
-            else if (spot != null) spot.done = true;
+    void passingAtADifferentDepthAvoidsBattleAndInteractionsNeedConfirmation() {
+        Field field = field();
+        Field.Spot enemy = field.spots.stream().filter(s -> s.kind == Field.Kind.ENCOUNTER).findFirst().orElseThrow();
+        field.setPosition(enemy.homeX, enemy.homeY + 60);
+        assertNull(field.step(0, 0, false, 0));
+        field.setPosition(enemy.x(0), enemy.homeY);
+        assertSame(enemy, field.step(0, 0, false, 0));
+        field.setPosition(144, 336);
+        assertNull(field.step(0, 0, false, 0), "camps do not interrupt on contact");
+        assertEquals(Field.Kind.STARPOST, field.nearby(0).kind);
+    }
+
+    @Test
+    void discoveriesWorkInEitherOrderAndTheGuardianCannotBeSkipped() {
+        for (boolean reverse : new boolean[] {false, true}) {
+            Field field = new Field(Zone.ANGEL_ISLAND, null);
+            Progress progress = new Progress(1);
+            var clues = field.spots.stream().filter(s -> s.kind == Field.Kind.DISCOVERY).toList();
+            assertFalse(field.bossReady());
+            field.complete(progress, clues.get(reverse ? 1 : 0));
+            assertEquals(1, field.discoveries());
+            field.complete(progress, clues.get(reverse ? 0 : 1));
+            assertFalse(field.bossReady(), "the Flame Craft still guards Knuckles");
+            field.complete(progress, field.spots.stream().filter(s -> s.kind == Field.Kind.MIDBOSS).findFirst().orElseThrow());
+            assertTrue(field.bossReady());
         }
-        assertNotNull(first);
-        field.retreat(first);
-        assertTrue(Math.abs(field.x() - first.homeX) > Field.TOUCH);
-        assertNull(field.step(1, false, 0), "grace period");
-        assertFalse(first.done);
     }
 
     @Test
-    void followersTrailTheLeader() {
-        Field field = new Field(Zone.EMERALD_HILL, flat(8000));
-        double start = field.x();
-        for (int i = 0; i < 40; i++) field.step(1, false, 0);
-        assertTrue(field.followerX(1) < field.x());
-        assertTrue(field.followerX(2) < field.followerX(1));
-        assertTrue(field.followerX(2) >= start);
+    void completedContentSurvivesSavingAndCampsRemainUsable() {
+        Field field = field();
+        Progress progress = new Progress(42);
+        for (Field.Spot spot : field.spots) field.complete(progress, spot);
+        Progress loaded = SaveCodec.decode(SaveCodec.encode(progress));
+        Field resumed = field(); resumed.restore(loaded);
+        for (Field.Spot spot : resumed.spots) assertTrue(spot.done, spot.id);
+        resumed.resumeAtCamp(1);
+        assertEquals(Field.Kind.STARPOST, resumed.nearby(0).kind);
+        resumed.resumeAtCamp(2);
+        assertEquals(784, resumed.x()); assertEquals(264, resumed.y());
+        resumed.resumeAtCamp(5280);
+        assertEquals(144, resumed.x(), "old side-scrolling checkpoints migrate to camp");
+        assertEquals(2, resumed.discoveries());
     }
+
+    @Test
+    void escapeDoesNotRetriggerABattleAndKeepsThePartyOnLand() {
+        Field field = field();
+        Field.Spot enemy = field.spots.stream().filter(s -> s.kind == Field.Kind.ENCOUNTER).findFirst().orElseThrow();
+        field.setPosition(enemy.homeX, enemy.homeY);
+        field.retreat(enemy);
+        assertTrue(field.walkable(field.x(), field.y()));
+        assertNull(field.step(0, 0, false, 0));
+        assertFalse(enemy.done);
+    }
+    @Test
+    void optionalCluesDoNotGateAnOtherwiseReachableBoss() {
+        assertTrue(field().bossReady());
+        assertEquals(0, field().discoveries());
+    }
+
 }

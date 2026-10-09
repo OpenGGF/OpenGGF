@@ -24,7 +24,6 @@ import threeislands.screen.BattleScreen;
 import threeislands.screen.EndingScreen;
 import threeislands.screen.FieldScreen;
 import threeislands.screen.LoadingScreen;
-import threeislands.screen.MapScreen;
 import threeislands.screen.Screen;
 import threeislands.screen.StoryScreen;
 import threeislands.screen.TitleScreen;
@@ -71,7 +70,10 @@ public final class Game {
         for (Island island : Island.values()) {
             if (!art.has(island.game)) notices.add(name(island.game) + " ROM not found: " + island.label + " will be skipped.");
         }
-        screen = new TitleScreen(this);
+        Optional<Progress> saved = readSave();
+        if (saved.isPresent()) progress = saved.get();
+        Zone start = saved.isPresent() ? resumeDestination() : firstAvailable();
+        openField(start, progress.resumeZone() == start.ordinal() ? progress.resumeX() : 0, stage(start));
     }
 
     public static String name(String game) {
@@ -163,44 +165,98 @@ public final class Game {
 
     public void newGame() {
         progress = new Progress(System.nanoTime() ^ 0x7131A5D5L);
-        playStory("prologue", null, () -> arrive(Island.SOUTH));
+        enterZone(firstAvailable(), 0);
+    }
+
+    private Zone firstAvailable() {
+        for (Zone zone : Zone.values()) {
+            if (art.has(zone.game)) return zone;
+            skipMissing(zone);
+        }
+        return Zone.ANGEL_ISLAND;
+    }
+
+    private void skipMissing(Zone zone) {
+        progress.clear(zone);
+        progress.addEmerald(zone.emerald);
+        for (var hero : progress.party()) if (hero.level() < zone.level + 1) hero.setLevel(zone.level + 1);
+        if (zone.islandIndex >= Island.WEST.ordinal()) progress.join(HeroId.TAILS);
+        if (zone == Zone.ANGEL_ISLAND) progress.join(HeroId.KNUCKLES);
+    }
+
+    private Zone resumeDestination() {
+        if (progress.resumeZone() >= 0) {
+            Zone zone = Zone.values()[progress.resumeZone()];
+            if (art.has(zone.game)) return zone;
+        }
+        for (Zone zone : Zone.values()) {
+            if (!art.has(zone.game)) { if (!progress.isCleared(zone)) skipMissing(zone); }
+            else if (!progress.isCleared(zone)) return zone;
+        }
+        return firstAvailable();
     }
 
     public void continueGame(Progress loaded) {
         progress = loaded;
-        if (progress.resumeZone() >= 0) {
-            Zone zone = Zone.values()[progress.resumeZone()];
-            if (art.has(zone.game) && progress.isOpen(zone) && !progress.isCleared(zone)) {
-                enterZone(zone, progress.resumeX());
-                return;
-            }
-        }
-        go(new MapScreen(this));
+        Zone zone = resumeDestination();
+        enterZone(zone, progress.resumeZone() == zone.ordinal() ? progress.resumeX() : 0);
     }
 
-    /**
-     * Arrives on an island. Islands whose ROM is missing are skipped: their zones count as
-     * cleared and their emeralds are handed over, so the story still adds up.
-     */
+    /** Used by chapter transitions and legacy debug tools; travel always arrives in the world. */
     public void arrive(Island island) {
-        while (!art.has(island.game) && island.ordinal() < Island.values().length - 1) {
-            for (Zone zone : Zone.of(island)) {
-                progress.clear(zone);
-                progress.addEmerald(zone.emerald);
-                for (var hero : progress.party()) hero.setLevel(Math.max(hero.level(), zone.level + 1));
-            }
-            joinFor(island);
-            island = Island.values()[island.ordinal() + 1];
+        for (Zone zone : Zone.values()) {
+            if (zone.islandIndex < island.ordinal()) continue;
+            if (art.has(zone.game)) { enterZone(zone, 0); return; }
+            skipMissing(zone);
         }
-        progress.setIsland(island);
-        progress.setResume(null, 0);
-        Island arrived = island;
-        save();
-        playStory(island.key() + "-arrive", null, () -> {
-            joinFor(arrived);
+    }
+
+    /** The neighbouring field in the world, skipping chapters whose ROM is unavailable. */
+    public Zone neighbour(Zone current, int direction) {
+        for (int i = current.ordinal() + direction; i >= 0 && i < Zone.values().length; i += direction) {
+            if (art.has(Zone.values()[i].game)) return Zone.values()[i];
+        }
+        return null;
+    }
+
+    public boolean canTravelForward(Zone current) {
+        Zone next = neighbour(current, 1);
+        if (next == null) return false;
+        if (current == Zone.ANGEL_ISLAND && !progress.isCleared(current)) return false;
+        return next.island() == current.island() || progress.islandComplete(current.island());
+    }
+
+    public boolean chapterBossReady(Zone zone) {
+        List<Zone> chapter = Zone.of(zone.island());
+        if (chapter.get(chapter.size() - 1) != zone) return true;
+        for (Zone earlier : chapter) if (earlier != zone && !progress.isCleared(earlier)) return false;
+        return true;
+    }
+
+    /** Walking is the only travel UI. Local paths are open; chapter crossings follow the story. */
+    public boolean travel(FieldScreen from, boolean forward) {
+        Zone current = from.zone();
+        if (forward && !canTravelForward(current)) return false;
+        Zone destination = neighbour(current, forward ? 1 : -1);
+        if (destination == null) return false;
+        if (forward) for (int i = current.ordinal() + 1; i < destination.ordinal(); i++) skipMissing(Zone.values()[i]);
+        enterZone(destination, forward ? 0 : -1);
+        return true;
+    }
+
+    /** A short scene begins after the player walks into an arrival, over the live field. */
+    public void fieldEntrance(FieldScreen field) {
+        Zone zone = field.zone();
+        Runnable zoneScene = () -> playStory(zone.key + "-enter", field, () -> {
             save();
-            go(new MapScreen(this));
+            swap(field);
         });
+        if (!progress.seen(zone.island().key() + "-arrive")) {
+            playStory(zone.island().key() + "-arrive", field, () -> {
+                joinFor(zone.island());
+                zoneScene.run();
+            });
+        } else zoneScene.run();
     }
 
     /** Tails joins on West Side Island; Knuckles joins after the Angel Island rivalry. */
@@ -235,14 +291,21 @@ public final class Game {
     }
 
     /** Loads a zone (level kit, route, block pictures and foes) behind a loading screen. */
-    public void enterZone(Zone zone, int resumeX) {
-        go(new LoadingScreen(this, zone, stage -> {
-            Field field = new Field(zone, stage.path);
-            if (resumeX > 0) field.skipTo(resumeX);
-            FieldScreen fieldScreen = new FieldScreen(this, stage, field);
-            swap(fieldScreen);
-            playStory(zone.key + "-enter", fieldScreen, () -> swap(fieldScreen));
-        }));
+    public void enterZone(Zone zone, int checkpoint) {
+        Screen under = screen instanceof FieldScreen ? screen : null;
+        go(new LoadingScreen(this, zone, under, stage -> openField(zone, checkpoint, stage)));
+    }
+
+    private void openField(Zone zone, int checkpoint, Stage stage) {
+        if (stage == null) throw new IllegalStateException("The starting field requires its configured ROM");
+        progress.setIsland(zone.island());
+        Field field = new Field(zone, stage.path);
+        field.restore(progress);
+        if (checkpoint > 0) field.resumeAtCamp(checkpoint);
+        else if (checkpoint == -1) field.setPosition(864, 336);
+        progress.setResume(zone, checkpoint == -1 || checkpoint == 2 ? 2 : checkpoint > 0 ? 1 : 0);
+        swap(new FieldScreen(this, stage, field));
+        save();
     }
 
     /** The stage for a zone, reusing the last one built. */
@@ -259,23 +322,20 @@ public final class Game {
     public void zoneCleared(Zone zone, Screen background) {
         boolean emerald = zone.emerald >= 0 && (progress.emeralds() & (1 << zone.emerald)) == 0;
         progress.addEmerald(zone.emerald);
-        progress.clear(zone);
-        progress.setResume(null, 0);
+        progress.completeChapter(zone);
+        progress.setResume(zone, 2);
         if (zone == Zone.ANGEL_ISLAND) progress.join(HeroId.KNUCKLES);
         progress.restAll();
         if (emerald) audio.jingle(threeislands.audio.Audio.MUS_EMERALD);
         save();
         playStory(zone.key + "-clear", background, () -> {
-            List<Zone> zones = Zone.of(zone.island());
-            boolean last = zones.get(zones.size() - 1) == zone;
             if (zone == Zone.DEATH_EGG) {
                 progress.setFinished(true);
                 save();
                 playStory("ending", background, () -> go(new EndingScreen(this)));
-            } else if (last) {
-                arrive(Island.values()[zone.island().ordinal() + 1]);
             } else {
-                go(new MapScreen(this));
+                save();
+                swap(background);
             }
         });
     }

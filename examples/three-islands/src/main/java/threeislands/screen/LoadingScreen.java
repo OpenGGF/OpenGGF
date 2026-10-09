@@ -18,6 +18,7 @@ import threeislands.view.Ui;
  */
 public final class LoadingScreen implements Screen {
     private final Zone zone;
+    private final Screen under;
     private final Consumer<Stage> then;
     private int step;
     private Stage stage;
@@ -28,8 +29,9 @@ public final class LoadingScreen implements Screen {
     private long shown;
     private boolean failed;
 
-    public LoadingScreen(Game game, Zone zone, Consumer<Stage> then) {
+    public LoadingScreen(Game game, Zone zone, Screen under, Consumer<Stage> then) {
         this.zone = zone;
+        this.under = under;
         this.then = then;
         foes.addAll(zone.enemyKinds());
         foes.addAll(zone.bossKinds());
@@ -44,7 +46,7 @@ public final class LoadingScreen implements Screen {
     public void update(Game game) {
         shown++;
         if (failed) {
-            if (game.controls.accept() || game.controls.back()) game.go(new MapScreen(game));
+            if (game.controls.accept() || game.controls.back()) game.swap(under == null ? new TitleScreen(game) : under);
             return;
         }
         long budget = System.nanoTime() + 6_000_000L;
@@ -82,7 +84,7 @@ public final class LoadingScreen implements Screen {
         // S3K stand-in covers whatever synthesis remains.
         game.audio.music(zone.game, zone.music, zone.island().mapMusic);
         // Keep the card up long enough to read, even when loading is quick.
-        if (step >= 5 && shown >= 45 && (game.audio.ready() || shown >= 240)) then.accept(stage);
+        if (step >= 5) then.accept(stage);
     }
 
     @Override
@@ -90,22 +92,17 @@ public final class LoadingScreen implements Screen {
         int w = c.width();
         int h = c.height();
         c.clear(0x000010);
-        int slide = (int) Math.max(0, 40 - shown * 4);
-        int island = zone.island().color;
-        c.fill(0, 70 - slide, w, 26, island);
-        c.fill(0, 96 - slide, w, 3, 0xFF000000);
-        c.fill(w / 2 - 70 + slide, 108, 140, 30, 0xFFFFD020);
-        game.font.shadowed(c, zone.island().label.toUpperCase(), 24, 79 - slide, Ui.TEXT);
-        String title = zone.label.toUpperCase() + " ZONE";
-        game.font.shadowed(c, title, w / 2 - game.font.width(title), 114, 0xFF101010, 2);
+        if (under != null) under.draw(game, c);
+        game.ui.window(c, 8, h - 42, w - 16, 34);
+        game.font.draw(c, "Following the trail to " + zone.label + "...", 16, h - 34, Ui.TEXT);
         if (failed) {
             game.font.centered(c, "This zone's level data could not be read.", w / 2, 160, Ui.BAD);
-            game.font.centered(c, "Press any button to return to the map.", w / 2, 174, Ui.DIM);
+            game.font.centered(c, "Press a button to return to the trail.", w / 2, 174, Ui.DIM);
             return;
         }
         int total = Math.max(1, blocks.size() + foes.size() + 3);
         int done = Math.min(total, (step >= 1 ? 1 : 0) + warmed + foeIndex + (step >= 4 ? 2 : 0));
-        game.ui.bar(c, w / 2 - 80, 168, 160, 4, done, total, Ui.GOLD);
-        game.font.centered(c, step >= 5 ? "Ready!" : "Loading...", w / 2, 178, Ui.DIM);
+        game.ui.bar(c, w / 2 - 80, h - 18, 160, 4, done, total, Ui.GOLD);
+
     }
 }

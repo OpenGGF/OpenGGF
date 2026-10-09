@@ -12,73 +12,28 @@ import threeislands.core.Item;
 import threeislands.core.Progress;
 import threeislands.view.Ui;
 
-/** The island's village over its map: rest and save, the monitor shop, and the villagers' news. */
-public final class VillageScreen implements Screen {
-    private final MapScreen map;
-    private boolean shopping;
-    private int selected;
+/** Trading with a physical traveller; closing the shop returns to the same field position. */
+public final class ShopScreen implements Screen {
+    private final Screen field;
     private int shopSelected;
     private String message;
     private int messageTicks;
     private long ticks;
 
-    public VillageScreen(Game game, MapScreen map) {
-        this.map = map;
+    public ShopScreen(Game game, Screen field) {
+        this.field = field;
     }
 
     @Override
     public String name() {
-        return shopping ? "SHOP" : "VILLAGE";
+        return "SHOP";
     }
-
-    /** Debug jump: open the shop directly. */
-    public void debugOpenShop() {
-        shopping = true;
-    }
-
-    private static final int REST = 0;
-    private static final int SHOP = 1;
-    private static final int TALK = 2;
-    private static final int LEAVE = 3;
 
     @Override
     public void update(Game game) {
         ticks++;
-        map.loadStep(game);
         if (messageTicks > 0) messageTicks--;
-        if (shopping) {
-            updateShop(game);
-            return;
-        }
-        if (game.controls.up()) {
-            selected = (selected + 3) % 4;
-            game.audio.sfx(Audio.SFX_CURSOR);
-        }
-        if (game.controls.down()) {
-            selected = (selected + 1) % 4;
-            game.audio.sfx(Audio.SFX_CURSOR);
-        }
-        if (game.controls.back()) {
-            game.swap(map);
-            return;
-        }
-        if (!game.controls.accept()) return;
-        switch (selected) {
-            case REST -> {
-                game.progress.restAll();
-                game.progress.setResume(null, 0);
-                game.save();
-                game.audio.sfx(Audio.SFX_STARPOST);
-                message = "Everyone is rested. Your journey has been saved.";
-                messageTicks = 150;
-            }
-            case SHOP -> {
-                shopping = true;
-                game.audio.sfx(Audio.SFX_REGISTER);
-            }
-            case TALK -> game.replayStory("village-" + game.progress.island().key(), this, () -> game.swap(this));
-            default -> game.swap(map);
-        }
+        updateShop(game);
     }
 
     private void updateShop(Game game) {
@@ -92,7 +47,7 @@ public final class VillageScreen implements Screen {
             game.audio.sfx(Audio.SFX_CURSOR);
         }
         if (game.controls.back()) {
-            shopping = false;
+            game.swap(field);
             return;
         }
         if (game.controls.accept()) {
@@ -115,40 +70,19 @@ public final class VillageScreen implements Screen {
 
     @Override
     public void draw(Game game, SceneCanvas c) {
-        map.draw(game, c);
+        field.draw(game, c);
         int w = c.width();
         int h = c.height();
         c.fill(0, 0, w, h, 0x70000010);
-        String title = game.progress.island().village;
+        String title = "Pocky's travelling stall";
         game.ui.window(c, 10, 10, w - 20, 26);
         game.font.shadowed(c, title, 18, 18, Ui.GOLD);
         String rings = "~ " + game.progress.rings() + " rings";
         game.font.draw(c, rings, w - 20 - game.font.width(rings), 18, Ui.GOLD);
-        villagers(game, c, w);
-        if (shopping) {
-            drawShop(game, c, w, h);
-        } else {
-            List<String> labels = List.of("Rest and save", "Shop", "Talk", "Leave");
-            game.ui.window(c, 10, 44, 120, 56);
-            game.ui.list(c, 16, 50, 108, 4, labels, null, selected, null, ticks);
-        }
+        drawShop(game, c, w, h);
         if (messageTicks > 0 && message != null) {
             game.ui.window(c, 10, h - 30, w - 20, 22);
             game.font.draw(c, message, 18, h - 24, Ui.TEXT);
-        }
-    }
-
-    private void villagers(Game game, SceneCanvas c, int w) {
-        String island = game.progress.island().game;
-        String[] folk = island.equals("s2") ? new String[] {"flicky", "pocky", "tocky"}
-                : island.equals("s1") ? new String[] {"flicky", "pocky", "rocky", "picky"}
-                : new String[] {"flicky", "pocky", "ricky"};
-        for (int k = 0; k < folk.length; k++) {
-            SceneSpriteSet set = game.art.sprites(island + ":" + folk[k]);
-            if (set == null) continue;
-            double hop = Math.abs(Math.sin((ticks + k * 17) / 11.0)) * 8;
-            c.draw(set.frame((int) ((ticks / 8 + k) % 2)), w - 140 + k * 30, (float) (92 - hop),
-                    SceneDraw.plain().withScale(2).withFlipX(k % 2 == 1));
         }
     }
 

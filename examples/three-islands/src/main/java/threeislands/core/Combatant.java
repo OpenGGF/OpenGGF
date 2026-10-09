@@ -68,7 +68,7 @@ public final class Combatant {
             default -> kind.boss ? 130 : 260;
         };
         int hp = (24 + 7 * level) * kind.hpPct / 100 * partyPct / 100;
-        int atk = (7 + 2 * level) * kind.atkPct / 100;
+        int atk = (7 + 2 * level) * kind.atkPct * 4 / 500;
         int def = (2 + level * 8 / 5) * kind.defPct / 100;
         int spd = (6 + level * 9 / 5) * kind.spdPct / 100;
         int xp = (4 + level * level * 3 / 4) * Math.max(100, kind.hpPct * 2 / 3) / 100;

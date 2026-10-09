@@ -383,19 +383,9 @@ public final class Battle {
     }
 
     private void attemptFlee(Combatant hero) {
-        int ours = 0, theirs = 0;
-        for (Combatant c : livingParty()) ours += c.spd();
-        for (Combatant c : livingFoes()) theirs += c.spd();
-        ours /= Math.max(1, livingParty().size());
-        theirs /= Math.max(1, livingFoes().size());
-        int chance = Math.max(25, Math.min(90, 55 + (ours - theirs) * 3));
-        if (rng.chance(chance)) {
-            events.add(new BattleEvent(BattleEvent.FLEE, hero, null, 0, "The party gets away!", Element.NONE, false));
-            phase = Phase.FLED;
-            writeBack();
-        } else {
-            events.add(BattleEvent.message("Couldn't get away!"));
-        }
+        events.add(new BattleEvent(BattleEvent.FLEE, hero, null, 0, "The party gets away!", Element.NONE, false));
+        phase = Phase.FLED;
+        writeBack();
     }
 
     private boolean drainSuper(Combatant sonic) {
@@ -521,7 +511,7 @@ public final class Battle {
         double base = attacker.atk() * power / 10.0;
         double damage = Math.max(base * 0.15, base - target.def() * 0.5);
         damage *= 0.9 + rng.nextDouble() * 0.2;
-        boolean critical = rng.chance(attacker.isHero() ? (bonusCrit ? 10 : 7) : 4);
+        boolean critical = attacker.isHero() && rng.chance(bonusCrit ? 10 : 7);
         if (critical) damage *= 1.5;
         String note = "";
         if (!target.isHero() && element != Element.NONE) {
@@ -592,11 +582,11 @@ public final class Battle {
         for (Item item : drops) progress.addItem(item, 1);
         writeBack();
         for (Combatant c : party) {
-            if (!c.alive()) continue;
             int gained = c.hero.gainXp(xpReward);
             if (gained > 0) levelUps.add(c.name + " reached level " + c.hero.level() + "!" + newSkills(c.hero, gained));
         }
-        progress.reviveFallen();
+        if (bossBattle) progress.restAll();
+        else progress.recoverAfterBattle();
         events.add(BattleEvent.message("Victory!"));
     }
 

@@ -208,4 +208,21 @@ class BattleTest {
         battle.submit(Command.item(Item.ONE_UP, other));
         assertEquals(other.maxHp / 2, other.hp);
     }
+    @Test
+    void fallenHeroesShareRewardsAndThePartyRecoversAfterVictory() {
+        Progress progress = new Progress(1);
+        progress.join(HeroId.TAILS);
+        Battle battle = new Battle(progress, List.of(EnemyKind.MOTOBUG), 1);
+        battle.party.get(0).hp = 0;
+        battle.party.get(0).ep = 0;
+        battle.party.get(1).hp = 1;
+        battle.forceVictory();
+        assertTrue(progress.hero(HeroId.SONIC).xp() > 0, "fallen heroes must not fall behind in XP");
+        for (Hero hero : progress.party()) {
+            assertTrue(hero.hp() >= hero.maxHp() * 3 / 5);
+            assertTrue(hero.ep() >= 2);
+            assertTrue(hero.ep() <= hero.maxEp());
+        }
+    }
+
 }

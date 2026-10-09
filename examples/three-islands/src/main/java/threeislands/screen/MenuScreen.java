@@ -46,7 +46,7 @@ public final class MenuScreen implements Screen {
     }
 
     private List<String> rootLabels() {
-        return List.of("Items", "Skills", onMap ? "Save" : "Save (at Starposts)", "Quit to title", "Close");
+        return List.of("Items", "Skills", onMap ? "Save" : "Save (at Starposts)", "Quit to title", "Journal", "Close");
     }
 
     private List<Item> items(Game game) {
@@ -81,7 +81,6 @@ public final class MenuScreen implements Screen {
     @Override
     public void update(Game game) {
         ticks++;
-        if (under instanceof MapScreen map) map.loadStep(game);
         if (messageTicks > 0) messageTicks--;
         List<Hero> party = game.progress.party();
         switch (mode) {
@@ -107,10 +106,14 @@ public final class MenuScreen implements Screen {
                                 game.audio.sfx(Audio.SFX_STARPOST);
                                 say(game, "Game saved.");
                             } else {
-                                say(game, "Touch a Starpost to save in a zone.");
+                                say(game, "Interact with a Starpost to rest and save.");
                             }
                         }
                         case 3 -> mode = Mode.CONFIRM_QUIT;
+                        case 4 -> {
+                            if (under instanceof FieldScreen field) field.journal(game);
+                            else say(game, "Enter a zone to investigate its rift echoes.");
+                        }
                         default -> game.swap(under);
                     }
                 }
@@ -257,14 +260,14 @@ public final class MenuScreen implements Screen {
         int w = c.width();
         int h = c.height();
         c.fill(0, 0, w, h, 0x80000010);
-        game.ui.window(c, 8, 8, 112, 70);
-        game.ui.list(c, 14, 14, 100, 5, rootLabels(), null, root, null, mode == Mode.ROOT ? ticks : 0);
+        game.ui.window(c, 8, 8, 112, 82);
+        game.ui.list(c, 14, 14, 100, 6, rootLabels(), null, root, null, mode == Mode.ROOT ? ticks : 0);
         Progress progress = game.progress;
-        game.ui.window(c, 8, 82, 112, 52);
-        game.font.draw(c, "~ " + progress.rings() + " rings", 14, 88, Ui.GOLD);
-        game.font.draw(c, "Emeralds " + progress.emeraldCount() + "/7", 14, 100, Ui.TEXT);
+        game.ui.window(c, 8, 94, 112, 52);
+        game.font.draw(c, "~ " + progress.rings() + " rings", 14, 100, Ui.GOLD);
+        game.font.draw(c, "Emeralds " + progress.emeraldCount() + "/7", 14, 112, Ui.TEXT);
         long minutes = progress.playTicks() / 3600;
-        game.font.draw(c, "Time " + minutes / 60 + ":" + String.format("%02d", minutes % 60), 14, 112, Ui.DIM);
+        game.font.draw(c, "Time " + minutes / 60 + ":" + String.format("%02d", minutes % 60), 14, 124, Ui.DIM);
         // Party cards.
         List<Hero> party = progress.party();
         int cardH = 62;

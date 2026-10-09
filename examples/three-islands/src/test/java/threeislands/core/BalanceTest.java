@@ -65,7 +65,7 @@ class BalanceTest {
         if (charging && actor.hp * 100 / actor.maxHp < 60) return Command.guard();
         if (battle.canTransform()) return Command.transform();
         Skill best = null;
-        int bestScore = 10 * foes.size() > 1 ? 0 : 0;
+        int bestScore = 0;
         for (Skill skill : battle.availableSkills()) {
             if ((skill.effect != Kinds.DAMAGE && skill.effect != Kinds.BREAK) || battle.unusableReason(skill) != null) continue;
             int score = skill.power * (skill.target == Kinds.ALL_ENEMIES ? foes.size() : 1)
@@ -139,4 +139,65 @@ class BalanceTest {
         }
         System.out.println("Bosses: " + report);
     }
+    @Test
+    void anExplorationSessionDoesNotAssumeFreshHpEpOrItemsBeforeEveryFight() {
+        for (Zone zone : Zone.values()) {
+            for (int seed = 1; seed <= 20; seed++) {
+                Progress p = partyFor(zone, seed, zone.level);
+                // Only the new-game bag: no artificial per-battle supply grants.
+                p.addItem(Item.SUPER_RING, -3);
+                // The story awards all seven emeralds before boarding the Death Egg.
+                if (zone == Zone.DEATH_EGG) for (int emerald = 0; emerald < 7; emerald++) p.addEmerald(emerald);
+                threeislands.field.Field field = new threeislands.field.Field(zone, null);
+                for (var spot : field.spots) {
+                    if (spot.kind != threeislands.field.Field.Kind.ENCOUNTER) continue;
+                    assertTrue(play(new Battle(p, spot.group, zone.level)) > 0,
+                            zone + " exhausted the party at " + spot.id + " seed " + seed);
+                    for (Hero hero : p.party()) assertTrue(hero.hp() >= hero.maxHp() * 3 / 5);
+                }
+                // The sanctuary is a real, free, repeatable checkpoint before the boss chain.
+                p.restAll();
+                for (EnemyKind boss : zone.bossKinds()) {
+                    assertTrue(play(new Battle(p, List.of(boss), zone.level)) > 0,
+                            zone + " boss chain failed at " + boss + " seed " + seed);
+                }
+            }
+        }
+    }
+
+    @Test
+    void aBeginnerCanUseBasicAttacksThroughTheFirstArea() {
+        for (int seed = 1; seed <= 40; seed++) {
+            Progress p = new Progress(seed);
+            for (int fight = 0; fight < 6; fight++) {
+                Battle b = new Battle(p, List.of(EnemyKind.MOTOBUG), Math.min(Zone.GREEN_HILL.level, p.partyLevel() + 1));
+                b.start();
+                for (int turn = 0; turn < 200 && b.phase() != Battle.Phase.VICTORY && b.phase() != Battle.Phase.DEFEAT; turn++) {
+                    if (b.phase() == Battle.Phase.CHOOSE) b.submit(Command.attack(b.livingFoes().get(0)));
+                    else b.advance();
+                }
+                assertTrue(b.phase() == Battle.Phase.VICTORY, "basic attacks: seed " + seed + " fight " + fight);
+            }
+        }
+    }
+
+    @Test
+    void theStoryCanBeFinishedWithoutGrindingOrCollectingOptionalClues() {
+        for (int seed = 1; seed <= 20; seed++) {
+            Progress p = new Progress(seed);
+            for (Zone zone : Zone.values()) {
+                if (zone == Zone.EMERALD_HILL) p.join(HeroId.TAILS);
+                for (EnemyKind boss : zone.bossKinds()) {
+                    int level = Math.min(zone.level, p.partyLevel() + 1);
+                    assertTrue(play(new Battle(p, List.of(boss), level)) > 0,
+                            "story-only route: " + zone + " / " + boss + " seed " + seed);
+                }
+                p.completeChapter(zone);
+                p.addEmerald(zone.emerald);
+                if (zone == Zone.ANGEL_ISLAND) p.join(HeroId.KNUCKLES);
+                p.restAll(); // a cleared anchor restores the party in the real game
+            }
+        }
+    }
+
 }

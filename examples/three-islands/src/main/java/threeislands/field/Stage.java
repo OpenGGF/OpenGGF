@@ -18,6 +18,7 @@ public final class Stage {
     public final Zone zone;
     public final SceneLevelKit kit;
     public final FieldPath path;
+    public final FieldArt fieldArt;
     private final int size;
     private final int[] area;
     private double camX;
@@ -31,6 +32,7 @@ public final class Stage {
         this.zone = zone;
         this.kit = kit;
         this.path = path;
+        this.fieldArt = new FieldArt(zone, kit);
         this.size = kit.blockSize();
         this.area = KitTerrain.extent(kit);
     }

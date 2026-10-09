@@ -48,4 +48,18 @@ class ProgressTest {
         assertEquals(10 + sonic.maxHp() - maxBefore, sonic.hp());
         assertTrue(sonic.atk() > HeroId.SONIC.baseAtk);
     }
+    @org.junit.jupiter.api.Test
+    void chapterRewardsAreOnceOnlyAndPlainFlagsDoNotRestoreHealth() {
+        Progress p = new Progress(1);
+        p.hero(HeroId.SONIC).setHp(3);
+        p.clear(Zone.GREEN_HILL);
+        org.junit.jupiter.api.Assertions.assertEquals(3, p.hero(HeroId.SONIC).hp());
+        int supplies = p.count(Item.SUPER_RING);
+        p.completeChapter(Zone.STAR_LIGHT);
+        org.junit.jupiter.api.Assertions.assertEquals(Zone.STAR_LIGHT.level + 1, p.partyLevel());
+        org.junit.jupiter.api.Assertions.assertEquals(supplies + 2, p.count(Item.SUPER_RING));
+        p.completeChapter(Zone.STAR_LIGHT);
+        org.junit.jupiter.api.Assertions.assertEquals(supplies + 2, p.count(Item.SUPER_RING));
+    }
+
 }

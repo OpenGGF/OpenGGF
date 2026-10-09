@@ -19,11 +19,10 @@ import threeislands.screen.BattleScreen;
 import threeislands.screen.EndingScreen;
 import threeislands.screen.FieldScreen;
 import threeislands.screen.GameOverScreen;
-import threeislands.screen.MapScreen;
 import threeislands.screen.MenuScreen;
 import threeislands.screen.Screen;
 import threeislands.screen.TitleScreen;
-import threeislands.screen.VillageScreen;
+import threeislands.screen.ShopScreen;
 
 /**
  * The startup scene. All game logic lives in {@link Game} and its screens; this class adapts
@@ -94,24 +93,10 @@ public final class IslandsScene implements ModScene, DebuggableScene {
                 case "new" -> game.newGame();
                 case "ending" -> game.swap(new EndingScreen(game));
                 case "gameover" -> game.swap(new GameOverScreen(game));
-                case "map" -> {
-                    Island island = parts.length > 1 ? Island.valueOf(parts[1].toUpperCase(Locale.ROOT)) : Island.SOUTH;
-                    reach(Zone.of(island).get(0));
-                    game.swap(new MapScreen(game));
-                }
-                case "village", "shop" -> {
-                    if (game.progress.party().size() == 0) reach(Zone.GREEN_HILL);
-                    MapScreen map = new MapScreen(game);
-                    VillageScreen village = new VillageScreen(game, map);
-                    game.swap(village);
-                    if (verb.equals("shop")) {
-                        // Village option 1 is the shop.
-                        village.debugOpenShop();
-                    }
-                }
-                case "menu" -> {
-                    MapScreen map = new MapScreen(game);
-                    game.swap(new MenuScreen(game, map, true));
+                case "shop", "menu" -> {
+                    FieldScreen field = game.screen() instanceof FieldScreen f ? f : field(Zone.GREEN_HILL, 0);
+                    if (field == null) return false;
+                    game.swap(verb.equals("shop") ? new ShopScreen(game, field) : new MenuScreen(game, field, false));
                 }
                 case "field" -> {
                     Zone zone = zone(parts[1]);
@@ -136,14 +121,17 @@ public final class IslandsScene implements ModScene, DebuggableScene {
                     double fraction = verb.equals("boss") ? 0.97 : 0.25;
                     FieldScreen field = field(zone, fraction);
                     if (field == null) return false;
-                    Field.Spot spot = verb.equals("boss") ? field.field().boss() : field.field().spots.get(0);
+                    Field.Spot spot = verb.equals("boss") ? field.field().boss() : field.field().spots.stream().filter(s -> s.kind == Field.Kind.ENCOUNTER).findFirst().orElseThrow();
                     game.battle(field, spot, group);
                 }
                 case "win" -> {
                     if (!(game.screen() instanceof BattleScreen battle)) return false;
                     battle.forceVictory(game);
                 }
-                case "story" -> game.playStory(parts[1], game.screen(), () -> game.swap(new MapScreen(game)));
+                case "story" -> {
+                    Screen under = game.screen();
+                    game.replayStory(parts[1], under, () -> game.swap(under));
+                }
                 case "level" -> {
                     int level = Integer.parseInt(parts[1]);
                     for (Hero hero : game.progress.party()) hero.setLevel(level);
@@ -220,10 +208,12 @@ public final class IslandsScene implements ModScene, DebuggableScene {
     private FieldScreen field(Zone zone, double fraction) {
         Stage stage = game.stage(zone);
         if (stage == null) return null;
+        game.progress.markSeen(zone.key + "-enter");
+        game.progress.markSeen(zone.island().key() + "-arrive");
         Field field = new Field(zone, stage.path);
         if (fraction > 0) {
-            double x = stage.path.startX() + (stage.path.length() - 1) * Math.min(1, fraction);
-            field.skipTo(Math.min(x, field.boss().homeX - 40));
+            double x = 88 + 760 * Math.min(1, fraction);
+            field.skipTo(x);
         }
         return new FieldScreen(game, stage, field);
     }

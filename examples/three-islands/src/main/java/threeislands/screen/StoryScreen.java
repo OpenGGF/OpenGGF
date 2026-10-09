@@ -84,7 +84,7 @@ public final class StoryScreen implements Screen {
         if (index >= lines.size()) return;
         Story.Line line = lines.get(index);
         boolean narration = line.speaker() == null;
-        c.fill(0, 0, w, h, narration ? 0x90000000 : 0x40000000);
+        if (!(background instanceof FieldScreen)) c.fill(0, 0, w, h, narration ? 0x90000000 : 0x40000000);
         int y = h - BOX_H - 6;
         game.ui.window(c, 6, y, w - 12, BOX_H);
         int textX = 16;

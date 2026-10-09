@@ -32,8 +32,8 @@ public final class Progress {
     public Progress(long seed) {
         for (HeroId id : HeroId.values()) heroes[id.ordinal()] = new Hero(id);
         rng = new Rng(seed);
-        items[Item.SUPER_RING.ordinal()] = 3;
-        items[Item.BLUE_SPHERE.ordinal()] = 1;
+        items[Item.SUPER_RING.ordinal()] = 5;
+        items[Item.BLUE_SPHERE.ordinal()] = 3;
     }
 
     public Hero hero(HeroId id) { return heroes[id.ordinal()]; }
@@ -84,6 +84,15 @@ public final class Progress {
 
     public boolean isCleared(Zone zone) { return (cleared & zone.bit()) != 0; }
     public void clear(Zone zone) { cleared |= zone.bit(); }
+
+    public void completeChapter(Zone zone) {
+        if (isCleared(zone)) return;
+        clear(zone);
+        // Story milestones carry progression even when the player avoids patrols and side stories.
+        for (Hero hero : party()) if (hero.level() < zone.level + 1) hero.setLevel(zone.level + 1);
+        addItem(Item.SUPER_RING, 2);
+        addItem(Item.BLUE_SPHERE, 1);
+    }
     public int clearedMask() { return cleared; }
 
     /** A zone is open once every earlier zone of its island is cleared. */
@@ -131,6 +140,14 @@ public final class Progress {
     /** After a won battle fallen heroes get back up with 1 HP. */
     public void reviveFallen() {
         for (Hero hero : party()) if (hero.hp() <= 0) hero.setHp(1);
+    }
+
+    /** A breathing space after victory; exploration should not become a healing-item tax. */
+    public void recoverAfterBattle() {
+        for (Hero hero : party()) {
+            hero.setHp(Math.max(hero.hp(), hero.maxHp() * 3 / 5));
+            hero.setEp(hero.ep() + Math.max(2, hero.maxEp() / 5));
+        }
     }
 
     /** Highest level in the party. */
