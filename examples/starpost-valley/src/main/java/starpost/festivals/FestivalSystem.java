@@ -168,7 +168,8 @@ public final class FestivalSystem {
             signSpinAt = shell.ticks;
         }
         lastPosted = festivals.board.posted().size();
-        if (!notices.isEmpty() && shell.ticks - noticeAt > 140 && !shell.hasOverlay() && !play.clockStopped) {
+        if (!notices.isEmpty() && shell.ticks - noticeAt > 140 && !shell.hasOverlay() && !play.clockStopped
+                && !shell.transitioning()) {
             shell.toast(notices.poll());
             noticeAt = shell.ticks;
         }

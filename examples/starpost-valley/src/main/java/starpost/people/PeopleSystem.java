@@ -188,7 +188,7 @@ public final class PeopleSystem implements Actor {
             morningDone = true;
             notices.addAll(people.morning(game));
         }
-        if (!notices.isEmpty() && shell.ticks - noticeAt > 130) {
+        if (!notices.isEmpty() && shell.ticks - noticeAt > 130 && !shell.transitioning() && !play.clockStopped) {
             shell.toast(notices.poll());
             noticeAt = shell.ticks;
         }
