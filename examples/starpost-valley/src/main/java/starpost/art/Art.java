@@ -53,6 +53,8 @@ public final class Art {
     public final SceneSpriteSet lamppost;
     public final SceneSpriteSet capsule;
     public final SceneSpriteSet bridge;
+    /** Sonic 1's act-clear text (Map_Got: 0 "SONIC HAS", 1 "PASSED"). */
+    public final SceneSpriteSet gotThrough;
     private final Map<String, SceneSpriteSet> animals = new HashMap<>();
 
     /** Rows below the floor line that are grass (the lip a tilled plot replaces). */
@@ -174,6 +176,7 @@ public final class Art {
         lamppost = s1.sprites(RomSpriteRequest.of(0x3AE64, Compression.NEMESIS, 0x178A4, 0), ghzPalette); // Nem_Lamp, Map_Lamp
         capsule = s1.sprites(RomSpriteRequest.of(0x5DC4A, Compression.NEMESIS, 0x1B52A, 0), ghzPalette); // Nem_Prison, Map_Pri
         bridge = s1.sprites(RomSpriteRequest.of(0x2FA2C, Compression.NEMESIS, 0x7FB2, 2), ghzPalette);  // Nem_Bridge, Map_Bri
+        gotThrough = s1.sprites(RomSpriteRequest.of(0x39204, Compression.NEMESIS, 0xD266, 0), ghzPalette); // Nem_TitleCard, Map_Got
         // Anml_Variables: the animals Sonic 1 frees (Nem_Rabbit ... Nem_Squirrel, Map_Animal1-3).
         animal("pocky", 0x3B884, 0x9AE4);
         animal("cucky", 0x3B9DC, 0x9AFC);

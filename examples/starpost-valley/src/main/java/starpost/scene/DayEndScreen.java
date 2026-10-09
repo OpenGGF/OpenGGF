@@ -40,7 +40,7 @@ final class DayEndScreen implements Screen {
         shell.save();
         started = shell.ticks;
         phaseAt = shell.ticks;
-        shell.music.stop();
+        shell.music.want("s1", Music.S1_GOT_THROUGH);
         shell.sfx(Sfx.SIGNPOST);
     }
 
@@ -78,8 +78,19 @@ final class DayEndScreen implements Screen {
             SceneSprite sign = shell.art.signpost.frame(frame);
             canvas.draw(sign, w / 2f, 64, SceneDraw.plain().withScale(1));
         }
-        String head = fainted ? game.farmer.toUpperCase() + " PASSED OUT" : "DAY COMPLETE";
-        Text.centred(canvas, head, 100, Text.YELLOW);
+        if (fainted) {
+            Text.centred(canvas, game.farmer.toUpperCase() + " PASSED OUT", 100, Text.YELLOW);
+        } else if (game.farmer.equals("sonic") && shell.art.gotThrough.frameCount() > 1) {
+            // Sonic 1's own words for the end of an act: he passed the day.
+            var has = shell.art.gotThrough.frame(0);
+            var passed = shell.art.gotThrough.frame(1);
+            float total = has.width() + 8 + passed.width();
+            canvas.draw(has, (w - total) / 2f + has.originX(), 96 + has.originY(), SceneDraw.plain());
+            canvas.draw(passed, (w - total) / 2f + has.width() + 8 + passed.originX(), 96 + passed.originY(),
+                    SceneDraw.plain());
+        } else {
+            shell.art.cardFont.centred(canvas, game.farmer.toUpperCase() + " GOT THROUGH", 90, SceneDraw.plain());
+        }
         int y = 118;
         int total = 0;
         for (int i = 0; i < items.size() && y < h - 30; i++) {
@@ -90,13 +101,14 @@ final class DayEndScreen implements Screen {
             Item item = items.get(i);
             int value = game.sellPrice(item) * counts.get(i);
             total += value;
-            Text.shadow(canvas, item.name() + " X" + counts.get(i), w / 2 - 120, y, Text.WHITE);
-            Text.right(canvas, Integer.toString(value), w / 2 + 120, y, Text.WHITE);
+            Text.shadow(canvas, Text.fit(canvas, item.name(), 170), w / 2 - 140, y, Text.WHITE);
+            Text.right(canvas, "X" + counts.get(i), w / 2 + 70, y, Text.GREY);
+            Text.right(canvas, Integer.toString(value), w / 2 + 140, y, Text.WHITE);
             y += 12;
         }
         if (!items.isEmpty() && age > 60 + items.size() * COUNT_TICKS * 4L) {
-            Text.shadow(canvas, "TOTAL", w / 2 - 120, y + 6, Text.YELLOW);
-            Text.right(canvas, paid + " RINGS", w / 2 + 120, y + 6, Text.YELLOW);
+            Text.shadow(canvas, "TOTAL", w / 2 - 140, y + 6, Text.YELLOW);
+            Text.right(canvas, paid + " RINGS", w / 2 + 140, y + 6, Text.YELLOW);
         }
         if (items.isEmpty() && age > 60) {
             Text.centred(canvas, "NOTHING SHIPPED TODAY", 118, Text.GREY);
