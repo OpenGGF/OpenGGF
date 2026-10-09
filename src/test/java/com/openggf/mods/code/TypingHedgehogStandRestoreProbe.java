@@ -216,6 +216,75 @@ class TypingHedgehogStandRestoreProbe {
         }
     }
 
+    /**
+     * The S2 MTZ act 3 boss art question: drives {@code s2-mtz3.rail} through the real Course and
+     * reports, at 240 controlled rows and at the rail's boss stand, whether the object art provider
+     * has a {@code mtz_boss} renderer and whether a stock MTZ boss is live (and has one to draw
+     * with). Opt-in: {@code -Dtypinghog.mtz3art=true}.
+     */
+    @Test @RequiresRom(SonicGame.SONIC_2) void mtz3BossArt() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("typinghog.mtz3art"), "opt-in: -Dtypinghog.mtz3art=true");
+        String text = Files.readString(SOURCE.resolve("src/main/resources/rails/s2-mtz3.rail"));
+        int zone = intKey(text, "zone"), act = intKey(text, "act"), boss = intKey(text, "boss");
+        Path project = temp.resolve("project-mtz3");
+        try (Stream<Path> files = Files.walk(SOURCE)) {
+            for (Path p : files.toList()) {
+                Path target = project.resolve(SOURCE.relativize(p).toString());
+                if (Files.isDirectory(p)) Files.createDirectories(target);
+                else Files.copy(p, target);
+            }
+        }
+        Path work = temp.resolve("work-mtz3");
+        try (ExampleModHarness harness = ExampleModHarness.build(project, work)) {
+            bootstrap = SharedLevel.load(SonicGame.SONIC_2, zone, act);
+            var config = SonicConfigurationService.getInstance();
+            config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+            config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+            config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+            config.resolveDisplayAspect();
+            config.setSessionOverride(SonicConfiguration.LOAD_TIME_SIMULATION, "FAST");
+            config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            GameServices.graphics().setProjectionWidth(config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+            GameModule effective = harness.apply(GameServices.module());
+            Path storage = work.resolve("storage").resolve("mods").resolve(MOD);
+            Files.createDirectories(storage);
+            Files.writeString(storage.resolve("intent.txt"), "mode=ARCADE\ngame=s2\nzone=" + zone + "\nact=" + act
+                    + "\ndifficulty=EASY\ncapitals=false\npunctuation=false\ndictionaries=standard\nseed=7\n"
+                    + "bossStars=1\nnoFail=true\nslowMotion=false\n");
+            SessionManager.clear();
+            GameModuleRegistry.setCurrent(effective);
+            TestEnvironment.activeGameplayMode();
+            var fixture = HeadlessTestFixture.builder().withZoneAndAct(zone, act).build();
+            var input = new InputHandler();
+            Class<?> courseType = harness.loader().loadClass("typinghog.play.Course");
+            System.out.println("RESTOREPROBE|M MTZ3 loaded: engine zone " + GameServices.level().getCurrentZone()
+                    + " act " + GameServices.level().getCurrentAct() + "; renderer keys "
+                    + GameServices.module().getObjectArtProvider().getRendererKeys().stream()
+                            .filter(k -> k.contains("boss")).toList());
+            for (int i = 0; i < 40_000; i++) {
+                Object course = GameModuleRegistry.getCurrent().getGameService(courseType);
+                Object view = course.getClass().getMethod("view").invoke(course);
+                String phase = (String) get(view, "phase");
+                if (i == 240 || phase.equals("BOSS")) {
+                    var art = GameServices.module().getObjectArtProvider();
+                    var bosses = GameServices.level().getObjectManager().objectQuery()
+                            .activeObjectsOfType(com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance.class);
+                    var p = GameServices.camera().getFocusedSprite();
+                    System.out.println("RESTOREPROBE|M " + (phase.equals("BOSS") ? "boss stand (rail row " + get(view, "railRow")
+                            + ", rail boss " + boss + ")" : "row 240") + ": mtz_boss renderer "
+                            + (art.getRenderer("mtz_boss") == null ? "NULL" : "present")
+                            + "; live MTZ bosses " + bosses.size() + "; Sonic x=" + p.getCentreX()
+                            + " camera x=" + GameServices.camera().getX() + " boss flag "
+                            + GameServices.gameState().isBossFightActive());
+                    if (phase.equals("BOSS")) break;
+                }
+                if (phase.equals("STAND")) typeNext(view, input);
+                ControlledFrameRuntime.step(fixture.runtime(), input, LogicalInputSnapshot.neutral());
+                input.update();
+            }
+        }
+    }
+
     static int[] programMasks(String text) {
         List<Integer> out = new ArrayList<>();
         int validated = intKey(text, "validated");
