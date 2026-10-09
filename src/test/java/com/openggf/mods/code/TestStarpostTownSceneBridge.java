@@ -33,6 +33,7 @@ class TestStarpostTownSceneBridge {
                 if (door.equals("museum")) {
                     assertTrue(harness.debugJump("museum fill relics 5"));
                     render(town,"museum-restored",1283);
+                    assertTrue(harness.debugJump("festival trophies"));
                     render(town,"board-and-shelf",900);
                 }
                 TestStarpostTownAct.call(town,"request",door,null,896,173);

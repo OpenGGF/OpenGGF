@@ -1567,3 +1567,110 @@ creator main/tests compiled with `javac --release 21`; SDK packaging reported
 **Validation passed: 0 findings**; the creator launcher ran **178/178**, no skips,
 including eight town rule tests. Running-act and full scene bridge verification
 are the next milestone. No terrain or scene-round-trip claim is implied.
+
+### Town delivery: running objects, hand-back and evidence
+
+Implementation milestones: `bfb7d7e41` (rules/state), `8cd3c2301` (seven running-act
+checks), `c5dd65f5c` (floor reprojection and rendering), `d5ea971f2` (overlay order
+and accepted invitations). The initial qualified registration names were rejected
+at runtime: `registerObject` needs owner-local names, while placements use qualified
+keys. The new `TestStarpostTownAct` packages/validates the external mod and loads a
+real additive `Sonic3kLevel` with test-only flat collision, no stock events or
+objects and the actual S3K player. Sonic, Tails and Knuckles walk the same town.
+This test level supplies no production terrain or asset fallback.
+
+Rejected setup: relying on a baked additive start alone. Native S3K's dynamic ROM
+start provider placed the fixture at AIZ coordinates (observed centre 3224,1036
+after 30 ticks), rather than the declared 440,173. An explicit centre start through
+`HeadlessTestFixture` fixes the test. **E1 must apply `ActLaunch.spawnX/spawnY` after
+native start selection**, then recenter and initialize the destination normally.
+Do not hide this issue with player writes in a town object. E1 also retains the
+native health ring count through `ActResult`, separately from the saved wallet.
+
+`TownContent.placements()` supplies the controller; its first update attaches
+public act collision and creates the registered villagers, doors, decorations and
+pickups. Keep scene/act layout width and anchors identical for daily pickup
+identity; `Pickups.placeOnGround` reprojects floor placements while retaining taken
+bits, rejecting incompatible identities. Schedule movement stops at pits/cliffs;
+this does not certify a connected route in the phase-1 terrain.
+
+Integration registers `TownContent.registerInput(context, destination, town)`
+against the tagged valley `ZoneKey.Mod`, using the session already returned by
+`TownContent.register`. The destination filter removes pad B from the native jump
+union (A/C still jump), and suppresses native movement while modal. The overlay
+reads raw input edges before filtering. `StarpostScene.prepareTownAct()` binds the
+same PlayScreen/Game before suspension; `TownSession.handBack().payload()` carries
+the proposed exit payload; `resumeTownAct()` consumes it exactly once after return.
+A confirmed festival invitation now calls the existing event directly, avoiding a
+second question. Door/menu close and automatic act relaunch are E1's remaining glue.
+
+The first CPU pictures exposed rings and names drawing above dialogue because
+villagers/pickups inherited bucket 0. Explicit buckets 4/3 keep them below the
+controller's bucket 0 HUD/dialogue; a pixel regression checks the opaque dialogue
+region. Buildings remain bucket 6, dressing 7/1. Museum rendering reuses the actual
+Annex actor's restoration/trophy-window renderer, not a duplicate facade rule.
+
+Observed focused validation in this worktree, with both absolute ROM properties.
+Set `TOWN_WORKTREE` to this lane's absolute checkout and `TOWN_CAPTURE_DIR` to an
+absolute external task directory (this run used `~/scratch/sv-town/act-pictures`).
+
+```bash
+cd "$TOWN_WORKTREE"
+S3K="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+S1="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen"
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off \
+  '-Dtest=TestStarpostTownAct,TestStarpostValleyExample,TestStarpostValleyScene,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Dstarpost.town.capture.dir=$TOWN_CAPTURE_DIR" \
+  "-Ds3k.rom.path=$S3K" "-Dsonic1.rom.path=$S1" test
+# 71/71, zero failures/errors/skips; creator bridge includes 180/180.
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off \
+  '-Dtest=TestStarpostTownAct,TestStarpostTownSceneBridge,TestStarpostValleyExample,TestStarpostValleyScene' \
+  "-Dstarpost.town.capture.dir=$TOWN_CAPTURE_DIR" \
+  "-Ds3k.rom.path=$S3K" "-Dsonic1.rom.path=$S1" test
+# After presentation/festival fixes: 12/12, zero failures/errors/skips; creator 180/180.
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off \
+  '-Dtest=TestStarpostTownAct,TestStarpostTownSceneBridge' \
+  "-Dstarpost.town.capture.dir=$TOWN_CAPTURE_DIR" \
+  "-Ds3k.rom.path=$S3K" "-Dsonic1.rom.path=$S1" test
+# Final rendering regression/bridge pictures: 9/9, zero failures/errors/skips.
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off \
+  '-Dtest=TestStarpostTownSceneBridge' \
+  "-Dstarpost.town.capture.dir=$TOWN_CAPTURE_DIR" \
+  "-Ds3k.rom.path=$S3K" "-Dsonic1.rom.path=$S1" test
+# Trophy-populated shelf capture: 1/1, zero failures/errors/skips.
+```
+
+Every packaging run reported **Validation passed: 0 findings**. Town checks cover
+scheduled walking/indoor entry, raw pad-B dialogue, modal player/clock holds, gifts,
+latched door exits, bank/Momentum/native-ring collection and full registry town
+restore plus forward replay, including dialogue/control. Creator tests cover
+translator, daily gifting, decline, full bags, invitations, session isolation,
+clock fractions/random state and changed floor placement. Bridge checks dispatch
+all town doors, farm and inventory without replacing Game, and open Ring Hunt
+without another Ask. Existing year-of-scenes smoke and the four S3K obligations
+passed; `TestSonic3kLevelLoading` selects both package variants (36 + 7 cases).
+
+Visual witnesses under the external `TOWN_CAPTURE_DIR` were inspected:
+`stall.png`, `inn.png`, `capsule.png`, `pictures.png`, `museum-restored.png`,
+`board-and-shelf.png`, `festival-dressing.png`. These paint the actual level canvas
+rectangle commands over an explicitly flat test background; they exclude native
+player/terrain drawing and do not establish GPU performance. Board/shelf and
+festival/museum pictures use the real bridge's reused presentation.
+
+Proportionate validation: the change-based plan at base `acb094c763` selects all
+3,080 ordinary classes because example paths have no category mapping. Only
+creator code/tests and the design changed; no engine production, API/build or
+selection policy changed. Direct creator, scene, act, input, pickup, registry and
+S3K consumer checks cover the bounded behaviors instead of that fallback broad
+run. Broad preflight reports missing/wrong **Lua 5.4**; no broad/guard or full-suite
+pass is claimed. The initial compile/setup failures were fixed and the completed
+runs above supersede them. Engine regressions outside this scope were not assessed.
+
+**Blocked on phase 2:** there is no `SceneContext.startAct`, `ModScene.resume` or
+`ObjectServices.requestActExit` in this branch. Nothing pretends to perform that
+transition. The existing startup scene remains the active route until E1 and the
+phase-1 controller placement/input registration are integrated. Production title
+→ scene → valley act → door/menu → same act, native rendering/performance and
+walkable terrain anchors remain unverified. Required E1 signatures and payload are
+above; keep the scene/art/session alive across suspension, latch the exit at a
+frame boundary, release modal controls and establish fresh timeline boundaries.
