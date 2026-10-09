@@ -39,6 +39,14 @@ public final class HeartEvent {
         this.hearts = hearts;
     }
 
+    /**
+     * A scene for another system to play with {@link PeopleSystem#playScene} (a festival's
+     * speeches): written like an event, never triggered or remembered as one.
+     */
+    public static HeartEvent scene(String id, String villager) {
+        return new HeartEvent(id, villager, 0);
+    }
+
     // ------------------------------------------------------------------ trigger
 
     /** In the valley, within {@code radius} pixels of an anchor. */

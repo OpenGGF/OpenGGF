@@ -47,6 +47,7 @@ public final class Cast {
         ElderTotem.define(this);
         Moto.define(this);
         Mail.define(this);
+        starpost.festivals.FestivalMail.define(this);
     }
 
     public VillagerDef villager(String id, String name) {

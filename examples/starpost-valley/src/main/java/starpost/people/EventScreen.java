@@ -33,9 +33,17 @@ final class EventScreen implements Screen {
     private long opened;
     private boolean musicChanged;
 
+    /** Runs when the scene ends (another system's scene), or null. */
+    private final Runnable after;
+
     EventScreen(PeopleSystem sys, HeartEvent event) {
+        this(sys, event, null);
+    }
+
+    EventScreen(PeopleSystem sys, HeartEvent event, Runnable after) {
         this.sys = sys;
         this.event = event;
+        this.after = after;
     }
 
     @Override
@@ -252,6 +260,9 @@ final class EventScreen implements Screen {
         shell.pop();
         if (musicChanged) {
             sys.play.enter(shell);   // the place's own music again
+        }
+        if (after != null) {
+            after.run();
         }
     }
 

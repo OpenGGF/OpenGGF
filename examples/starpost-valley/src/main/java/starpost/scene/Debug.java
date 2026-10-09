@@ -13,7 +13,8 @@ import starpost.core.Plot;
  *   <li>{@code give ITEM N}, {@code rings N}, {@code momentum N}, {@code select SLOT};</li>
  *   <li>{@code demo} — a planted, half-grown field to look at; {@code sleep} — end the day;</li>
  *   <li>{@code music on|off};</li>
- *   <li>{@code people ...} — the neighbours (see {@code starpost.people.PeopleDebug}).</li>
+ *   <li>{@code people ...} — the neighbours (see {@code starpost.people.PeopleDebug});</li>
+ *   <li>{@code festival ...}, {@code board ...} — festivals and the board ({@code starpost.festivals.FestivalDebug}).</li>
  * </ul>
  */
 final class Debug {
@@ -79,6 +80,9 @@ final class Debug {
                 }
                 case "people" -> {
                     return starpost.people.PeopleDebug.apply(shell, p);
+                }
+                case "festival", "board" -> {
+                    return starpost.festivals.FestivalDebug.apply(shell, p);
                 }
                 default -> {
                     return false;

@@ -45,6 +45,11 @@ public final class PeopleSystem implements Actor {
     VillagerActor labelled;
     /** A letter left in the box for want of room: not re-delivered until something new arrives. */
     String heldLetter;
+    /**
+     * While true the neighbours are not drawn or talked to: a festival that stages the valley's
+     * cast itself (a parade, a feast) sets it and clears it when it ends.
+     */
+    public boolean offstage;
     // The farmer's emote during events.
     String farmerEmote;
     long farmerEmoteUntil;
@@ -89,8 +94,7 @@ public final class PeopleSystem implements Actor {
     // ------------------------------------------------------------------ where things are
 
     Spot spotFor(VillagerDef v) {
-        Game g = shell.game;
-        return v.schedule().resolve(g.calendar.season(), g.calendar.weekday(), g.raining, g.calendar.minutes(), g.flags);
+        return people.spotFor(v, shell.game);
     }
 
     /** An anchor's x: a valley doorway's own position when the valley has it, else the fallback. */
@@ -211,7 +215,8 @@ public final class PeopleSystem implements Actor {
             }
             return;
         }
-        if (shell.ticks % EVENT_CHECK_TICKS == 0 && !shell.transitioning() && readyForEvent()) {
+        // No heart events while a cutscene or festival holds the clock.
+        if (shell.ticks % EVENT_CHECK_TICKS == 0 && !shell.transitioning() && !play.clockStopped && readyForEvent()) {
             HeartEvent event = people.dueEvent(game, play.onFarm(), farmerX(), id -> Math.round(anchorX(id, false)));
             if (event != null) {
                 startEvent(event);
@@ -236,6 +241,20 @@ public final class PeopleSystem implements Actor {
             play.valley().runner.speed = 0;
         }
         shell.push(new EventScreen(this, event));
+    }
+
+    /**
+     * Plays a scene from another system (see {@link HeartEvent#scene}) over the world, then runs
+     * {@code after}. Its villagers are scripted for the scene and go back to their day after.
+     */
+    public void playScene(HeartEvent scene, Runnable after) {
+        shell.push(new EventScreen(this, scene, after));
+    }
+
+    /** Whether a villager is in the valley today (arrived, and not the one farming). */
+    public boolean present(String id) {
+        VillagerDef v = people.cast.get(id);
+        return v != null && people.present(v, shell.game);
     }
 
     void talk(VillagerActor actor) {

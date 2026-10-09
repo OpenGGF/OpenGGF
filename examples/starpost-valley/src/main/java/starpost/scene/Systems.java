@@ -25,6 +25,7 @@ public final class Systems {
         out.add(new starpost.core.Skills());
         out.add(new starpost.ruins.RuinsSection());
         out.add(new starpost.people.People());
+        out.add(new starpost.festivals.Festivals());
         return out;
     }
 
@@ -37,5 +38,12 @@ public final class Systems {
         }
         starpost.ruins.RuinsSystem.install(shell, play, places);
         starpost.people.PeopleSystem.install(shell, play, actors);
+        starpost.festivals.FestivalSystem.install(shell, play, actors, places);
+    }
+
+    /** A line for the morning card from the systems (today's festival), or null. */
+    static String morningNote(Shell shell) {
+        starpost.festivals.Festivals festivals = shell.game.section(starpost.festivals.Festivals.class);
+        return festivals == null ? null : festivals.morningNote(shell.game);
     }
 }

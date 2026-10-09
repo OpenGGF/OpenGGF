@@ -111,6 +111,11 @@ public final class PlayScreen implements Screen {
         chooseMusic(shell);
     }
 
+    /** Stands the farmer in the valley at x, still (festivals start from their place; debug). */
+    public void placeInValley(float x) {
+        debugPlace(false, x, 0);
+    }
+
     /** Debug: stand at a spot on the farm (x, depth) or in the valley (x). */
     void debugPlace(boolean toFarm, float x, float depth) {
         onFarm = toFarm;

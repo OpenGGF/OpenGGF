@@ -55,5 +55,9 @@ final class MorningCard implements Screen {
             Text.centred(canvas, Game.weatherName(game.weather) + " TODAY", 150,
                     game.weather == Game.SWARM ? Text.RED : Text.BLUE);
         }
+        String note = Systems.morningNote(shell);   // today's festival (or tomorrow's)
+        if (note != null && age > 40) {
+            Text.centred(canvas, note, game.weather != Game.SUN ? 166 : 150, Text.YELLOW);
+        }
     }
 }

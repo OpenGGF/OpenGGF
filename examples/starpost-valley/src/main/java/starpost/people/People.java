@@ -53,6 +53,24 @@ public final class People implements SaveSection {
     public record Talk(Line line, boolean firstToday, int points) {
     }
 
+    /**
+     * Another system's say over where a villager is, ahead of their schedule (a festival gathers
+     * the valley in the plaza). Game sections implementing it are asked in order.
+     */
+    public interface Gathering {
+        /** Where the villager should be now, or null to leave it to their schedule. */
+        Spot spot(VillagerDef villager, Game game);
+    }
+
+    /**
+     * Something another system has the villager say first when the farmer talks to them (an
+     * errand from the Signpost Board, done). Game sections implementing it are asked in order.
+     */
+    public interface Errands {
+        /** Finishes the errand and returns what they say, or null when there is none to finish. */
+        Line errand(VillagerDef villager, Game game);
+    }
+
     public final Cast cast;
     private final Map<String, Bond> bonds = new LinkedHashMap<>();
     private final Map<String, Integer> seen = new LinkedHashMap<>();
@@ -120,6 +138,38 @@ public final class People implements SaveSection {
         return new Situation(c.year(), c.season(), c.day(), c.weekday(), c.dayNumber(), c.minutes(), game.raining,
                 game.farmer, game.flags, bond == null ? 0 : bond.hearts(), bond != null && bond.met,
                 v != null && birthday(v, c), seen);
+    }
+
+    /** Where a villager should be now: a {@link Gathering}'s spot, else their schedule. */
+    public Spot spotFor(VillagerDef v, Game game) {
+        for (SaveSection section : game.sections) {
+            if (section instanceof Gathering gathering) {
+                Spot spot = gathering.spot(v, game);
+                if (spot != null) {
+                    return spot;
+                }
+            }
+        }
+        Calendar c = game.calendar;
+        return v.schedule().resolve(c.season(), c.weekday(), game.raining, c.minutes(), game.flags);
+    }
+
+    /** An errand finished by talking to a villager (see {@link Errands}), or null. */
+    public Line errand(String id, Game game) {
+        VillagerDef v = cast.get(id);
+        if (v == null) {
+            return null;
+        }
+        for (SaveSection section : game.sections) {
+            if (section instanceof Errands errands) {
+                Line line = errands.errand(v, game);
+                if (line != null) {
+                    bond(id).met = true;
+                    return line;
+                }
+            }
+        }
+        return null;
     }
 
     /** The villagers met so far, in cast order. */
