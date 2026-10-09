@@ -72,12 +72,16 @@ class TestStarpostTownAct {
             ModContext context=new ModContext(OWNER,"s3k",assets);
             ((GgfMod)loader.loadClass("starpost.StarpostValleyMod").getConstructor().newInstance()).register(context);
             var plan=context.freeze();
+            Object registeredTown=plan.serviceBundles().get("town").get()
+                .services().get(loader.loadClass("starpost.realtown.TownSession"));
+            GameplayInputFilter filter=(GameplayInputFilter)loader.loadClass("starpost.realtown.TownInput")
+                .getConstructor(loader.loadClass("starpost.realtown.TownSession")).newInstance(registeredTown);
             var declaration=ModZoneContribution.singleAct(ZONE.localName(),new BakedLevelRef("test-only/level.json"),null,null,false);
             var prepared=PreparedModZone.prepared(OWNER,declaration,placeholder());
             var combined=new ModRegistrationPlan(plan.ownerModId(),plan.baseGameId(),plan.objectFactories(),
                 plan.objectArt(),plan.preparedObjectArt(),plan.explicitPatches(),List.of(declaration),List.of(prepared),
                 plan.objectPreviewArtKeys(),plan.characters(),plan.standaloneModule(),plan.romObjectArt(),plan.launchTeams(),
-                plan.inputFilters(),plan.hudProfiles(),plan.startupScene(),plan.requiredDisplayAspect(),
+                Map.of(ZONE,filter),plan.hudProfiles(),plan.startupScene(),plan.requiredDisplayAspect(),
                 plan.serviceBundles(),plan.decodedLevelPatches(),plan.contributionLimit());
             var boundary=new ModFaultBoundary(Map.of(),findings,ignored->new com.openggf.mods.ModStateSaveResult.Saved(),
                 ignored->{ });
@@ -106,6 +110,9 @@ class TestStarpostTownAct {
             }
             public Optional<String> ownerOf(Class<?> type) { return type.getName().startsWith("starpost.")?Optional.of(OWNER):Optional.empty(); }
         });
+        assertNotNull(effective.getGameplayPolicyProvider().inputFilter(ZONE).orElse(null));
+        var b=PlayerInputState.of(0,0,InputActionMasks.ACTION_B,InputActionMasks.ACTION_B,false,false);
+        assertEquals(0,effective.getGameplayPolicyProvider().inputFilter(ZONE).orElseThrow().filter(b).heldMask());
         fixture.stepIdleFrames(30);
         assertInstanceOf(com.openggf.game.sonic3k.Sonic3kLevel.class,GameServices.level().getCurrentLevel());
         assertEquals(zone,GameServices.level().getCurrentZone());
@@ -197,6 +204,69 @@ class TestStarpostTownAct {
         fixture.stepIdleFrames(100); action(); assertFalse((boolean)call(town,"modal"));
         registry.restore(speaking); assertEquals(dialogue,call(town,"capture"));
         assertTrue(fixture.sprite().isObjectControlled());
+    }
+    @Test void romTownPresentationQueuesVisiblePicturesWithoutMutatingRules() throws Exception {
+        launch("sonic");
+        artLibrary=new SceneRomLibrary(effective,GameServices.rom().getRom(),GameServices.rom());
+        assertNotNull(artLibrary.rom("s1"),"Sonic 1 must be supplied for ROM town art");
+        var artType=loader.loadClass("starpost.art.Art");
+        Object art=artType.getConstructor(com.openggf.mods.scene.SceneRomArt.class,com.openggf.mods.scene.SceneRomArt.class)
+            .newInstance(artLibrary.rom("s1"),artLibrary.rom("s3k"));
+        Object presentation=loader.loadClass("starpost.realtown.TownPresentation")
+            .getConstructor(artType,loader.loadClass("starpost.festivals.FestivalSystem")).newInstance(art,null);
+        call(town,"bind",game,call(town,"layout"),presentation);
+        renderTown("stall",624);
+        renderTown("inn",896);
+        renderTown("capsule",3192);
+        Object dandel=villager("dandel"); moveTo(Math.round((float)call(dandel,"x")),173); action();
+        renderTown("pictures",fixture.sprite().getCentreX());
+    }
+    /** CPU witness of the actual object rectangle commands, not a native player/terrain capture.
+     * Opt-in external pictures: -Dstarpost.town.capture.dir=/absolute/task/directory. */
+    private void renderTown(String name,int centre) throws Exception {
+        fixture.camera().setX((short)Math.max(0,centre-200)); fixture.camera().setY((short)0);
+        Object before=call(town,"capture");
+        var graphics=new RectangleWitness();
+        graphics.paint.setColor(new java.awt.Color(0x5068C0)); graphics.paint.fillRect(0,0,400,224);
+        graphics.paint.setColor(new java.awt.Color(0x306830)); graphics.paint.fillRect(0,192,400,32);
+        var accessor=AbstractObjectInstance.class.getDeclaredMethod("services"); accessor.setAccessible(true);
+        var objects=new ArrayList<>(GameServices.level().getObjectManager().getActiveObjects().stream()
+            .filter(AbstractObjectInstance.class::isInstance).map(AbstractObjectInstance.class::cast).toList());
+        objects.sort(Comparator.comparingInt(AbstractObjectInstance::getPriorityBucket).reversed());
+        for (var object:objects) {
+            if (!object.getClass().getName().startsWith("starpost.realtown.")) continue;
+            ObjectServices original=(ObjectServices)accessor.invoke(object);
+            ObjectServices witness=(ObjectServices)java.lang.reflect.Proxy.newProxyInstance(
+                ObjectServices.class.getClassLoader(),new Class<?>[]{ObjectServices.class},(proxy,method,args)->
+                    method.getName().equals("graphicsManager")?graphics:method.invoke(original,args));
+            object.setServices(witness);
+            try { object.appendRenderCommands(new ArrayList<>()); }
+            finally { object.setServices(original); }
+        }
+        assertTrue(graphics.rectangles>100,"ROM art and labels emitted visible rectangle commands");
+        assertEquals(before,call(town,"capture"),"drawing may repeat without advancing town rules");
+        String external=System.getProperty("starpost.town.capture.dir");
+        Path directory=external==null?temp.resolve("pictures"):Path.of(external);
+        assertTrue(directory.isAbsolute()); Files.createDirectories(directory);
+        javax.imageio.ImageIO.write(graphics.image,"png",directory.resolve(name+".png").toFile());
+        graphics.paint.dispose();
+    }
+    private static final class RectangleWitness extends com.openggf.graphics.GraphicsManager {
+        final java.awt.image.BufferedImage image=new java.awt.image.BufferedImage(400,224,java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        final java.awt.Graphics2D paint=image.createGraphics();
+        int rectangles;
+        public void registerCommand(com.openggf.graphics.GLCommandable command) {
+            if (!(command instanceof com.openggf.graphics.GLCommand rect)) throw new AssertionError("Unexpected command");
+            try {
+                var right=rect.getClass().getDeclaredField("x2"); right.setAccessible(true);
+                var bottom=rect.getClass().getDeclaredField("y2"); bottom.setAccessible(true);
+                var height=rect.getClass().getDeclaredField("screenHeightPixels"); height.setAccessible(true);
+                int y=height.getInt(rect)-(int)rect.getY1();
+                paint.setColor(new java.awt.Color(rect.getColour1(),rect.getColour2(),rect.getColour3(),rect.getAlpha()));
+                paint.fillRect((int)rect.getX1(),y,right.getInt(rect)-(int)rect.getX1(),
+                    height.getInt(rect)-bottom.getInt(rect)-y); rectangles++;
+            } catch (ReflectiveOperationException invalid) { throw new AssertionError(invalid); }
+        }
     }
     static Object field(Object obj,String name) throws Exception { return obj.getClass().getField(name).get(obj); }
     static void setField(Object obj,String name,Object value) throws Exception { obj.getClass().getField(name).set(obj,value); }

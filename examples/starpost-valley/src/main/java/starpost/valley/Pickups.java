@@ -109,6 +109,25 @@ public final class Pickups implements SaveSection {
         return pickups;
     }
 
+    /** Reproject daily floor placements after an act load without respawning collected items.
+     * Scene and act layouts must preserve the daily identity/order and width. */
+    public void placeOnGround(Game game, Runner.Ground ground, int springX, int loopX) {
+        today(game, ground, springX, loopX);
+        List<Pickup> previous = List.copyOf(pickups);
+        Snapshot before = capture();
+        build(game, ground, springX, loopX);
+        boolean same = previous.size() == pickups.size();
+        for (int i = 0; same && i < previous.size(); i++) {
+            Pickup old = previous.get(i), next = pickups.get(i);
+            same = old.x == next.x && java.util.Objects.equals(old.item, next.item);
+        }
+        if (!same) {
+            pickups.clear(); pickups.addAll(previous); restore(before);
+            throw new IllegalArgumentException("Scene/act pickup identities differ; preserve layout width and anchors");
+        }
+        restore(before);
+    }
+
     private void build(Game game, Runner.Ground ground, int springX, int loopX) {
         pickups.clear();
         int n = 0;

@@ -118,12 +118,27 @@ class TownRulesTest {
         TownSession town=town(); TownInput input=new TownInput(town);
         var raw=com.openggf.control.PlayerInputState.of(8,8,7,7,true,true);
         var filtered=input.filter(raw);
-        assertEquals(8,filtered.heldMask()); assertEquals(5,filtered.actionHeldMask());
+        assertEquals(raw.heldMask(),filtered.heldMask()); assertEquals(5,filtered.actionHeldMask());
         assertEquals(5,filtered.actionPressedMask()); assertTrue(filtered.startPressed());
+        var onlyB=com.openggf.control.PlayerInputState.of(8,8,2,2,false,false);
+        assertEquals(8,input.filter(onlyB).heldMask(),"pad B loses the native jump union");
         town.game().inventory.select(11); town.talk("dandel");
         assertEquals(com.openggf.control.PlayerInputState.neutral(),input.filter(raw));
         town.request("inn",null,896,173); town.consumeHandBack();
         assertSame(raw,input.filter(raw),"suspended town must not filter other acts");
+    }
+
+    @Test void realGroundReprojectsPickupsWithoutRespawningCollectedItems() {
+        TownSession town=town(); town.pickups().collect(0,null,town.game());
+        var ground=new starpost.valley.Runner.Ground() {
+            public boolean solid(int x,int y) { return y>=208; }
+            public int floorBelow(int x,int from) { return 208; }
+            public int left() { return 0; }
+            public int right() { return town.layout().ground.right(); }
+        };
+        town.pickups().placeOnGround(town.game(),ground,town.layout().springX,town.layout().loopX);
+        assertEquals(192,town.pickups().today(town.game(),ground,town.layout().springX,town.layout().loopX).get(0).y());
+        assertTrue(town.pickups().taken(0));
     }
 
 }

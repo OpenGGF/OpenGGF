@@ -60,7 +60,10 @@ public final class TownSession implements RewindSnapshottable<TownSession.Snapsh
         game.section(Pickups.class).today(game, layout.ground, layout.springX, layout.loopX);
     }
 
-    public void attachGround(ActGround ground) { layout = layout.withGround(ground); }
+    public void attachGround(ActGround ground) {
+        pickups().placeOnGround(game,ground,layout.springX,layout.loopX);
+        layout = layout.withGround(ground);
+    }
     public Game game() { return game; }
     public People people() { return game.section(People.class); }
     public Pickups pickups() { return game.section(Pickups.class); }
