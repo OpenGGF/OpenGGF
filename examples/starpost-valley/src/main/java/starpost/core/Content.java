@@ -26,6 +26,7 @@ final class Content {
         forage();
         materials();
         food();
+        new starpost.ruins.RuinsContent(catalog).register();
     }
 
     private void tools() {

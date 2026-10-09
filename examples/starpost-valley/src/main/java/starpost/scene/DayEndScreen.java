@@ -15,7 +15,7 @@ import starpost.ui.Text;
  * The night: the shipping signpost spins like the end of an act and the day's tally counts up
  * (each shipped item, then the total), then the next morning's title card. The game saves here.
  */
-final class DayEndScreen implements Screen {
+public final class DayEndScreen implements Screen {
     private static final int COUNT_TICKS = 6;
 
     private final boolean fainted;
@@ -26,7 +26,7 @@ final class DayEndScreen implements Screen {
     private int phase;          // 0 tally, 1 title card
     private long phaseAt;
 
-    DayEndScreen(boolean fainted) {
+    public DayEndScreen(boolean fainted) {
         this.fainted = fainted;
     }
 

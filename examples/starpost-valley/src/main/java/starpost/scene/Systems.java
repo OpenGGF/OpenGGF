@@ -18,10 +18,12 @@ public final class Systems {
     /** Fresh sections for a new or loaded game. */
     public static List<SaveSection> sections(Shell shell) {
         List<SaveSection> out = new ArrayList<>();
+        out.add(new starpost.ruins.RuinsSection());
         return out;
     }
 
     /** Adds the systems' actors and place handlers to a new play screen. */
     public static void install(Shell shell, PlayScreen play, List<Actor> actors, Map<String, Consumer<Shell>> places) {
+        starpost.ruins.RuinsSystem.install(shell, play, places);
     }
 }

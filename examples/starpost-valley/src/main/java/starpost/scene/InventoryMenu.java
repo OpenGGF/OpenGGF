@@ -12,7 +12,7 @@ import starpost.ui.Text;
  * The monitor slots: move the cursor, confirm to pick a stack up and confirm again to put it
  * down (swapping), or confirm on food to eat it. The first row is the hotbar.
  */
-final class InventoryMenu implements Screen {
+public final class InventoryMenu implements Screen {
     private static final int COLUMNS = 12;
     private int cursor;
     private int held = -1;
@@ -60,6 +60,9 @@ final class InventoryMenu implements Screen {
                     shell.sfx(Sfx.ERROR);
                 } else {
                     game.restore(item.momentum());
+                    if (item.id().equals("fire_pepper")) {
+                        game.flags.add(starpost.ruins.RuinsSection.LAVA_FLAG); // lava immunity until morning
+                    }
                     inv.useOne(cursor);
                     shell.sfx(Sfx.RING);
                     shell.toast("ATE " + item.name() + " +" + item.momentum());

@@ -5,6 +5,7 @@ import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneImage;
 import com.openggf.mods.scene.SceneSprite;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import starpost.core.Item;
 import starpost.core.Kind;
@@ -23,6 +24,12 @@ public final class ItemIcons {
     private final Art art;
     private final Map<String, SceneImage> cache = new HashMap<>();
     private final CropArt crops;
+    private final Map<String, Source> sources = new LinkedHashMap<>();
+
+    /** Icons supplied by another system for its own items; null leaves an item to the built-in pictures. */
+    public interface Source {
+        SceneImage icon(Item item);
+    }
 
     ItemIcons(Art art) {
         this.art = art;
@@ -46,7 +53,27 @@ public final class ItemIcons {
         canvas.draw(image, x + (16 - image.width()) / 2f, y + (16 - image.height()) / 2f, style);
     }
 
+    /** Adds (or, under the same key, replaces) a system's icons; they are asked before the built-in pictures. */
+    public void addSource(String key, Source source) {
+        sources.put(key, source);
+        cache.clear();
+    }
+
+    /**
+     * A small pixel picture from rows of colour letters (the crop letters of {@code CropArt}, with
+     * {@code F}/{@code f} as the light and dark accent): for other systems' icons.
+     */
+    public static SceneImage picture(String[] rows, int light, int dark) {
+        return grid(rows, light, dark);
+    }
+
     private SceneImage build(Item item) {
+        for (Source source : sources.values()) {
+            SceneImage image = source.icon(item);
+            if (image != null) {
+                return image;
+            }
+        }
         if (item.kind() == Kind.CROP) {
             return fit(crops.stage(item.id(), 4, false));
         }
