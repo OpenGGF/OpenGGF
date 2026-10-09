@@ -13,6 +13,7 @@ import starpost.core.Plot;
  *   <li>{@code give ITEM N}, {@code rings N}, {@code momentum N}, {@code select SLOT};</li>
  *   <li>{@code demo} — a planted, half-grown field to look at; {@code sleep} — end the day;</li>
  *   <li>{@code music on|off};</li>
+ *   <li>{@code card LINE [/ LINE]}, {@code night [N]} — a chapter card and a watered time-lapse night, for promo captures;</li>
  *   <li>{@code people ...} — the neighbours (see {@code starpost.people.PeopleDebug});</li>
  *   <li>{@code fish ...} — fishing (see {@code starpost.fishing.FishingSystem#debug});</li>
  *   <li>{@code barn ...} — animals, machines and roosts (see {@code starpost.barn.BarnSystem#debug});</li>
@@ -79,6 +80,33 @@ final class Debug {
                     shell.goNow(new IntroScreen());
                 }
                 case "sleep" -> shell.go(new DayEndScreen(false));
+                case "card" -> {
+                    // Promotional captures: a chapter card, "/" between its two lines.
+                    String all = String.join(" ", java.util.Arrays.copyOfRange(p, 1, p.length));
+                    String[] lines = all.split("\\s*/\\s*", 2);
+                    shell.push(new PromoCard(lines[0].trim(), lines.length > 1 ? lines[1].trim() : ""));
+                }
+                case "night" -> {
+                    // Promotional time-lapses: N nights with the field watered, then the next morning.
+                    int nights = p.length > 1 ? Integer.parseInt(p[1]) : 1;
+                    for (int i = 0; i < nights; i++) {
+                        for (int r = 0; r < starpost.core.Farm.ROWS; r++) {
+                            for (int c = 0; c < starpost.core.Farm.COLUMNS; c++) {
+                                Plot plot = shell.game.farm.raw(r, c);
+                                plot.watered |= plot.tilled;
+                            }
+                        }
+                        shell.game.sleep(false);
+                    }
+                    // The time-lapse's mornings come without the post (letters are marked read).
+                    starpost.people.People people = shell.game.section(starpost.people.People.class);
+                    if (people != null) {
+                        for (String id : new java.util.ArrayList<>(people.mailbox())) {
+                            people.read(id);
+                        }
+                    }
+                    shell.goNow(new PlayScreen(shell));
+                }
                 case "music" -> shell.music.setEnabled(p[1].equals("on"));
                 case "ruins" -> {
                     return starpost.ruins.RuinsSystem.debug(shell, p);

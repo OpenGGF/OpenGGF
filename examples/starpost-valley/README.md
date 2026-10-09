@@ -93,7 +93,7 @@ valley, and a Flicky brings the morning's letters. The animals talk in pictures 
 Chirp Translator. Two neighbours can become Partners.
 
 **The Marble Ruins.** Down from the valley's doorway: forty chambers, new every morning, with rings
-as your health, minerals, geodes and lost Records to find, and a Star Post elevator every fifth
+as your health (you carry up to ten of your own down, and bank what you bring back), minerals, geodes and lost Records to find, and a Star Post elevator every fifth
 chamber.
 
 **Waters and barns.** Fish the farm pond and Waterfall Lake (the legends are badniks). Build a coop
