@@ -338,6 +338,17 @@ baseline assertion independently retained by its owner. Preserve every concrete
 field during comparison, and distinguish a full assertion match from equality
 of unreported world state.
 
+Abort stack caps can hide valid causal evidence (2026-10-09, Mutator Lab expansion):
+32 expected Infinite Sonic skips had complete, matching first causal lines, but
+the category summary cut their JUnit stack envelopes at 4,096 characters. The
+strict comparator correctly rejected those envelopes because it could not verify
+the missing tail. Validate the entire uncapped XML stack before projecting its
+causal line; only complete Java `at ...(...)` frames may follow a JUnit abort.
+Record the original length and validated frame count. Chained causes, malformed
+tails and capped causal lines still require review. Keep the old comparison
+invalid and qualify any narrow supplemental check against its exact source and
+skip identities; do not relabel it as another full-suite execution.
+
 
 Pitch is not note tempo (2026-10-02): accelerated sample-voice tests passed at
 `5637105e5c` while real SMPS songs retained normal note durations. Their chip

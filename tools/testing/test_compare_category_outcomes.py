@@ -7,6 +7,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
+
+import run_categories as runner
 
 SCRIPT = Path(__file__).with_name('compare_category_outcomes.py')
 spec = importlib.util.spec_from_file_location('category_comparison', SCRIPT)
@@ -60,6 +63,24 @@ class CategoryOutcomeComparisonTest(unittest.TestCase):
         result = self.compare()
         self.assertFalse(result['negative_cases_unchanged'])
         self.assertEqual(['pkg.Probe#optIn'], result['changed_skip_causes'])
+
+    def test_producer_projection_preserves_changed_cause_and_new_skip_identity(self):
+        cause = 'org.opentest4j.TestAbortedException: Assumption failed: missing donor ROM'
+        stack = cause + '\n' + '\n'.join(['\tat pkg.Probe.optIn(Probe.java:17)'] * 150)
+        with tempfile.TemporaryDirectory() as tmp:
+            suite = ET.Element('testsuite', tests='1', skipped='1', failures='0', errors='0')
+            case = ET.SubElement(suite, 'testcase', classname='pkg.Probe', name='optIn')
+            ET.SubElement(case, 'skipped', message=stack)
+            ET.ElementTree(suite).write(Path(tmp) / 'TEST-probe.xml', encoding='unicode')
+            self.lanes[0]['skipped_cases'] = runner.summarize(Path(tmp))['skipped_cases']
+        result = self.compare()
+        self.assertFalse(result['negative_cases_unchanged'])
+        self.assertEqual(['pkg.Probe#optIn'], result['changed_skip_causes'])
+        self.assertEqual(cause, result['skip_causes']['pkg.Probe#optIn'])
+        self.lanes[0]['skipped_cases'][0]['test'] = 'newSkip'
+        result = self.compare()
+        self.assertEqual(['pkg.Probe#newSkip'], result['new_skips'])
+        self.assertEqual(['pkg.Probe#optIn'], result['missing_expected_skips'])
 
     def test_junit_abort_stack_rejects_additional_cause_or_unrecognized_tail(self):
         for tail in ('Caused by: java.io.IOException: different failure',

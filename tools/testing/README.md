@@ -479,7 +479,12 @@ duplicate identities, and unavailable full assertions. It recovers a capped
 2 KiB assertion only from matching complete runner detail. A Surefire JUnit abort message
 may contain a stack: the tool compares its complete first causal line only when every
 remaining line is a stack frame. Chained causes, arbitrary multiline tails and capped
-messages remain invalid evidence. Changed or absent failures, changed skip causes,
+messages remain invalid evidence. The runner checks the entire uncapped XML abort
+stack before projecting its complete causal line, recording the projection kind,
+original character count and validated frame count. This keeps long framework stacks
+from exhausting the 4 KiB message bound. Unrecognized tails and causal lines that
+reach that bound remain capped excerpts; the comparator still rejects them.
+Changed or absent failures, changed skip causes,
 and any guard failure/skip require review. Exit
 0 means unchanged negative cases; 1 means differences; 2 means invalid evidence.
 A failed comparison writes an invalid verdict rather than leaving a prior

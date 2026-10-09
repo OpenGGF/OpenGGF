@@ -180,6 +180,20 @@ def rom_args(root, rom_directory=None):
     return [f'-D{key}={value}' for key, value in sorted(found.items())]
 
 
+def summarize_skip_reason(reason):
+    """Validate an uncapped JUnit abort stack before retaining its causal line."""
+    lines = reason.rstrip('\r\n').splitlines()
+    if (len(lines) > 1 and len(lines[0]) < 4096
+            and lines[0].startswith('org.opentest4j.TestAbortedException: ')
+            and all(re.fullmatch(r'\s+at [^\r\n]+\([^\r\n]+\)', frame)
+                    for frame in lines[1:])):
+        return {'reason': lines[0], 'reason_projection': 'validated-junit-abort-cause',
+                'reason_source_chars': len(reason), 'reason_stack_frames': len(lines) - 1}
+    # Unknown or chained tails remain bounded excerpts and cannot become proof
+    # of a complete cause merely because their first line looks familiar.
+    return {'reason': reason[:4096]}
+
+
 def summarize(reports):
     totals = Counter(tests=0, failures=0, errors=0, skipped=0)
     skipped = []
@@ -197,7 +211,7 @@ def summarize(reports):
                 if len(skipped) < 1000:
                     skipped.append({'class': (case.get('classname') or '')[:512],
                                     'test': (case.get('name') or '')[:512],
-                                    'reason': skip.get('message', skip.text or '')[:4096]})
+                                    **summarize_skip_reason(skip.get('message', skip.text or ''))})
             for kind in ('failure', 'error'):
                 failure = case.find(kind)
                 if failure is not None:

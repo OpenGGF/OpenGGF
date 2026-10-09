@@ -812,3 +812,40 @@ This is source-qualified reuse with explicit limits, not a whole-8668 full-suite
 claim. The final normal candidate plan selects all 3,115 ordinary classes and
 fresh guards against actual base 8668; that combined run remains required before
 implementation handoff, Opus polish, promo and the existing PR215 update.
+
+## Completed full candidate and bounded skip-projection repair
+
+The final normal candidate run `20261009T130202Z-cdeaf173` completed at clean
+`af7b51865b344852ff7d545c268a63c7c4e593e3` against published 8668. All 3,115
+selected classes reconcile to 3,113 ordinary reports/26,933 cases: 26,843 passes,
+27 assertions, no errors and 63 skips, in 5,154.23 seconds. Separate fresh guards
+complete 88 reports/675 passing cases, no skips, in 243.01 seconds. Source hashes
+are unchanged. All 95 previously additional skipped identities execute and pass;
+all 60 mandated S3K cases and 218 mutator/native-pacing cases pass without skips.
+
+All 26 recorded baseline assertions match their complete kind/type/message, and
+all 63 complete first causal skip lines match literally. The additional Eggman
+menu assertion is the same identity/type/full `expected: <BatchMode> but was:
+<SurfaceMode>` message reproduced by the separate clean exact-8668 control;
+that bounded attribution does not change the full baseline's counts. Only the
+previously verified named SSZ blob hashes and exception prefix are normalized.
+The run is consumed and acknowledged, with its exact processes absent.
+
+Qualification remains blocked by an evidence projection defect: the maintained
+comparison returns invalid because 32 Infinite Sonic skip stack envelopes reach
+the 4 KiB cap. Their observed first causes match, but the capped tail cannot prove
+that only stack frames follow. That invalid verdict is retained. The producer
+now validates the entire uncapped JUnit abort stack before retaining its full
+causal line and bounded projection metadata. Unknown/chained/malformed tails and
+overlong causal lines remain invalid; the comparator is unchanged.
+
+Four regression controls cover message/text XML, long valid stacks, invalid tails
+past the cap, long or non-abort causes, and changed/new skips. They reproduce the
+cap failure before the fix and pass afterward. The Python safety suite completes
+252 tests with one expected skip; actual Java 21/Lua 5.4/PowerShell preflight
+passes. This change is confined to runner summarization, its tests and prose,
+without Java, selection-policy, POM, workflow or hook changes. A single normal
+bounded Infinite Sonic check will qualify the 32 affected records against the
+unchanged fully tested runtime/test inputs. No unchanged whole-engine rerun or
+new baseline is required for this projection repair; supplemental evidence must
+remain separately attributed before implementation handoff.

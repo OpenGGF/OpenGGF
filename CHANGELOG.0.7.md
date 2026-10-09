@@ -1222,8 +1222,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   incomplete evidence and preserving the existing runner selection and cleanup.
   Isolated runs can discover original ROMs in an explicit directory without
   Java environment injection or ROM aliases; affected fixtures honor supplied
-  absolute paths. JUnit abort stacks retain their complete first causal line
-  for strict negative-case comparison.
+  absolute paths. JUnit abort stacks are validated before summary bounds are
+  applied, retaining their complete first causal line for strict negative-case
+  comparison without accepting chained or malformed tails.
 
 - **CI trigger policy:** `develop` and `next` run the smoke suite once a branch has had
   no push for 30 minutes, so bursts of pushes cost one run; non-draft
