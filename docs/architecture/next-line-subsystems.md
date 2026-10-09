@@ -145,8 +145,9 @@ This required wire-field change uses protocol version 2; version 1 clients and
 servers cannot mix on control connections.
 
 ```bash
-java -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar com.openggf.tools.net.GhostLoadTestTool --n 256 --duration 30 --mix adversarial
-java -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar com.openggf.tools.verifier.VerifierMain --master https://host:27900 --registration-token <token> --rom s3k.gen --data ./verifier-data
+python3 racing/server/build.py
+target/racing-server/racing-server load-test --n 256 --duration 30 --mix adversarial
+target/racing-server/racing-server verifier --master https://host:27900 --registration-token <token> --rom s3k.gen --data ./verifier-data
 ```
 
 The CI scale gate runs 32 in-JVM bots through `TestGhostLoadTest`; the 128/256-player gate

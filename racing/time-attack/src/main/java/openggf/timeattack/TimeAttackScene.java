@@ -44,7 +44,7 @@ public final class TimeAttackScene implements ModScene {
     @Override
     public void update(SceneContext ctx) {
         if (state == null) {
-            if (backPressed(ctx) || ctx.buttonPressed(SceneButtons.START)) {
+            if (backPressed(ctx) || acceptPressed(ctx)) {
                 ctx.exitToMasterTitle();
             }
             return;
