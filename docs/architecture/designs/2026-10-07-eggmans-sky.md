@@ -699,3 +699,72 @@ paid API request, save change or Mod Manager state change was needed.
 This prose-only successor records focused delivery and live playback evidence;
 it does not replace the earlier inherited-failure whole-suite qualification
 with a new full-suite pass.
+
+### Compact voice delivery (2026-10-09)
+
+The compression task starts from `50004a4172e0` on local
+`feature/ai-mod-audio-vorbis`. Incoming `bf699414675c` adds only the preceding
+installed-playback record and is retained unchanged before integration. The
+user approved replacing the voice bank's WAV delivery with Ogg/Vorbis quality 4.
+No engine codec, PCM cache, audio routing, source performance, or queue algorithm
+changes are needed: the production bounded decoder already supports Vorbis SFX.
+
+All 122 processed 48 kHz mono 16-bit WAV masters, original provenance, selected
+source MP3s, edits and verification reports are preserved and hash-verified under
+`$TASK_ARCHIVE/cache/` in the external `eggmans-sky-vorbis-20261009` task archive
+(original provenance is at the task root). The original synthesis cache is preserved too.
+The publisher now renders `processed.wav` into the external cache, verifies the
+master and raw-source identities and existing word check, and encodes a complete
+staged bank with `libvorbis -q:a 4`, stripped metadata and bit-exact flags before
+replacing delivery files. Matching legacy WAVs are removed only after these
+checks. Failure on a later source check leaves the existing bank intact; this
+is not a filesystem-wide transaction claim.
+
+Provenance v2 distinguishes each shipped Ogg hash from its processed-WAV hash
+and names that WAV hash as the blind word check's input. The original source
+hashes, text, edits, transcripts, frame counts and generated `VoiceLine` leases
+are unchanged. Word checks are inherited from the approved processed WAVs;
+no new synthesis, API request, blind Ogg transcription or subjective listening
+qualification is claimed.
+
+ZIP-only compression was rejected as insufficient: the WAV bank occupies
+25.090 MiB in source and 16.180 MiB in the original JAR. Vorbis occupies 2.874 MiB
+in source and 2.775 MiB in the new JAR. The validated package shrinks from
+17,285,297 to 3,240,732 bytes (about 81% for the entire mod, 83% for packaged
+audio); all 77 non-audio file entries remain byte-identical. The new JAR's
+SHA-256 is `6eaf6ed5edd4928881df9fbf8abbcb50a5eebe70bab013f7a333d3759618bb22`.
+Every actual clip also retains its full PCM length under FFmpeg; measured RMS
+ratios range from 0.9864 to 1.0035 and decoded peaks stay below clipping. These
+are signal observations, not a perceptual quality verdict or a RAM reduction.
+
+The generated short control rejects external decoded-byte count as lease
+authority: FFprobe reports the preserved 9,606-frame Vorbis duration while both
+FFmpeg decoders emit 9,478 frames. The publisher checks exact stream duration;
+the Java bank regression independently checks exact production stb PCM length
+for every shipped clip. The measurement hazard is recorded in the existing
+[catalogue](../../agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).
+
+Focused validation replaces the fallback selection of all 3,076 classes under
+the repository's proportionate-validation policy. This bounded asset/publisher
+change exercises its actual packaging, source identity, exact duration, owner,
+queue, decoder limits and final-mixer paths directly; engine/physics/public API
+contracts remain unchanged. It is not a whole-suite qualification.
+
+- Actual-main baseline `bf699414675c`: 22 cases, zero failures/errors/skips,
+  `python3 tools/testing/maven_queue.py --lean -B -q -Dmse=off
+  '-Dtest=TestEggmansSkyVoiceAssets,TestEggmansSkyVoice,TestModAudioPreparer' test`.
+- Candidate: 31 cases, zero failures/errors/skips, the same command with
+  `TestBoundedAudioDecode` added. All 122 clips traverse real packaging,
+  production preparation, exact Vorbis frame checks, queue leases and final
+  stereo PCM mixing.
+- Python: eight cases pass with the task NumPy/SciPy environment,
+  `python -m unittest discover -s tools/audio/tests`. The publisher regressions
+  cover deterministic encoding, master preservation, rejected changed masters,
+  unverified words and preservation of an existing bank after a later failure.
+- Tool preflight passes with `LUA_BIN=/usr/bin/lua5.4`; the default `lua` had
+  the wrong version and no tests ran in that initial failed preflight.
+- `python3 examples/build_example.py eggmans-sky --skip-engine` packages with
+  zero validation findings. The engine/classpath build used the normal worktree
+  lock after inspecting the classpath plugin's no-fork lifecycle descriptor;
+  the earlier queued build was cancelled before execution. Byte checks cover
+  every packaged Ogg, preserved provenance and absence of shipped WAV masters.

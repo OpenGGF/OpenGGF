@@ -126,10 +126,16 @@ and resolved vital warnings are removed. The queue waits for each clip's actual 
 Choose **SYSTEM → VOICE: ON/OFF** to mute announcements separately from ROM music/effects.
 This setting persists in `settings.txt`; an already playing short clip finishes when muted.
 
-The text/direction catalogue is [voice-bank.json](voice-bank.json), and shipped WAV identities,
-blind word checks and source-edit provenance are in `audio/voice/provenance.json` inside the jar.
-To regenerate offline, use Python with NumPy/SciPy and FFmpeg. Keep raw takes and API receipts
-outside the repository, and provide `OPENROUTER_API_KEY` privately in the environment or `.env`:
+The text/direction catalogue is [voice-bank.json](voice-bank.json). The jar ships mono 48 kHz
+Ogg/Vorbis at quality 4; the 122 clips total about 2.9 MiB. Their encoded identities,
+processed-WAV identities, blind word checks and source-edit provenance are in
+`audio/voice/provenance.json`. Word checks identify the processed WAV input, before lossy
+encoding. Publication verifies the encoded duration, and the engine integration test checks
+every clip's exact decoded frame count, queue lease and final mixed PCM.
+
+To regenerate offline, use Python with NumPy/SciPy, FFmpeg and FFprobe. Keep raw takes,
+API receipts, clean masters and processed WAV masters outside the repository, and provide
+`OPENROUTER_API_KEY` privately in the environment or `.env`:
 
 ```bash
 python3 tools/audio/eggmans_sky_voice.py \
@@ -145,7 +151,12 @@ python3 tools/audio/eggmans_sky_voice.py \
 
 Inspect any failed word check before publishing. Synthesis is variable; a fresh bank may need
 whole-utterance edits at quiet gaps. The generator preserves completed sources and refuses to
-repeat an uncertain paid request. Publication requires every clip's current hash and word check.
+repeat an uncertain paid request. Rendering writes each `processed.wav` into its external cache
+folder; `--publish-only` requires that master's current hash and word check, encodes the Oggs
+offline, and removes matching legacy shipped WAVs only after verifying the complete bank.
+The bit-exact encoder flags keep repeated publication identical with the same FFmpeg version.
+Listen to regenerated assets before accepting their performance and encoding quality. WAV
+masters stay in the cache; they are excluded from the jar.
 
 ## How it is built
 

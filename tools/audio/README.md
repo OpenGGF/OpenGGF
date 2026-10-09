@@ -64,5 +64,8 @@ gameplay-sourced S1 audio capture.
 ## Original creator voice assets
 
 `eggmans_sky_voice.py` is the offline OpenRouter generator for Eggman's Sky's original
-Alice announcements. It requires FFmpeg, NumPy and SciPy. Its private key and raw-source
-cache stay outside shipped assets; see the [mod's regeneration instructions](../../examples/eggmans-sky/README.md#system-voice).
+Alice announcements. It requires FFmpeg/FFprobe, NumPy and SciPy. Rendering preserves
+clean and processed WAV masters in the external source/verification cache; publication
+ships only Ogg/Vorbis quality 4 and records the distinct master and encoded identities.
+Its private key and raw-source cache stay outside shipped assets; see the
+[mod's regeneration instructions](../../examples/eggmans-sky/README.md#system-voice).
