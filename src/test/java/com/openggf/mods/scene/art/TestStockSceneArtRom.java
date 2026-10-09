@@ -28,6 +28,18 @@ class TestStockSceneArtRom {
                     assertEquals(16, named.frame(0).height());
                     assertEquals(24, named.frame(2).height());
                 }
+                if (recipe == StockSceneArt.S3K_DASH_DUST) {
+                    // Map_DashDust has 30 pointers; DashDust_Load_DPLC uses player-layout cues.
+                    assertEquals(30, named.frameCount());
+                    assertEquals(32, named.frame(0x0A).width());
+                    assertEquals(-4, named.frame(0x0A).originY());
+                    assertEquals(16, named.frame(0x11).width());
+                    assertEquals(8, named.frame(0x11).originY());
+                    for (int index = 0x0A; index <= 0x14; index++) {
+                        assertTrue(java.util.Arrays.stream(named.frame(index).image().pixels())
+                                .anyMatch(pixel -> (pixel >>> 24) != 0), "dust frame " + index);
+                    }
+                }
                 for(int index=0;index<raw.frameCount();index++) {
                     SceneSprite a=raw.frame(index),b=named.frame(index);
                     assertEquals(a.originX(),b.originX()); assertEquals(a.originY(),b.originY());
